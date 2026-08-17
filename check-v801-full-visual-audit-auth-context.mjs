@@ -5,38 +5,60 @@ import assert from 'node:assert/strict';
 const workflow = fs.readFileSync('.github/workflows/full-live-visual-audit-v792.yml', 'utf8');
 const runner = fs.readFileSync('scripts/full-live-visual-audit-v792.mjs', 'utf8');
 const fixtures = fs.readFileSync('scripts/full-live-visual-fixtures-v801.mjs', 'utf8');
+const dataPlaneProbe = fs.readFileSync('check-live-data-plane.mjs', 'utf8');
 
 assert.match(workflow, /SUPABASE_SERVICE_ROLE_KEY:\s*\$\{\{ secrets\.SUPABASE_SERVICE_ROLE_KEY \}\}/, 'visual audit fixture CRUD must use the existing service-role secret');
 assert.match(workflow, /SUPABASE_URL:\s*https:\/\/uiqntazgnrxwliaidkmy\.supabase\.co/, 'visual audit must target the checked production Supabase project');
 assert.match(workflow, /GEJAST_VISUAL_DB_NAME:\s*postgres/, 'visual audit must pin the database name used by the legacy PIN hash contract');
-assert.match(workflow, /node scripts\/full-live-visual-fixtures-v801\.mjs provision/, 'visual audit must provision disposable identities through the REST fixture manager');
-assert.match(workflow, /node scripts\/full-live-visual-fixtures-v801\.mjs cleanup/, 'visual audit must always invoke REST fixture cleanup');
+assert.match(workflow, /'check-live-data-plane\.mjs'/, 'changes to the shared data-plane probe must retrigger the visual audit');
+assert.match(workflow, /node --check check-live-data-plane\.mjs/, 'visual audit must syntax-check its shared data-plane preflight');
+assert.match(workflow, /node scripts\/full-live-visual-fixtures-v801\.mjs provision/, 'visual audit must provision disposable identities through the REST fixture manager when the data plane is healthy');
+assert.match(workflow, /node scripts\/full-live-visual-fixtures-v801\.mjs cleanup/, 'visual audit must retain REST fixture cleanup for attempted provisioning');
 assert.match(workflow, /node --check scripts\/full-live-visual-fixtures-v801\.mjs/, 'visual audit must syntax-check the REST fixture manager before use');
 assert.doesNotMatch(workflow, /\bpsql\b|SUPABASE_DB_URL|\.pooler\.supabase\.com/, 'visual audit must not depend on direct Postgres or Supavisor connectivity');
 assert.match(workflow, /if-no-files-found:\s*warn/, 'pre-screenshot infrastructure failures must not add a second artifact-upload failure');
 
+const dataPlaneStep = workflow.match(/- name: Probe Supabase auth data plane before fixture provisioning([\s\S]*?)(?=\n\s*- name:)/)?.[1] || '';
+assert.ok(dataPlaneStep, 'visual audit must expose an inspectable read-only data-plane preflight');
+assert.match(dataPlaneStep, /id:\s*data_plane/, 'data-plane preflight must expose its true outcome for fixture short-circuiting');
+assert.match(dataPlaneStep, /continue-on-error:\s*true/, 'data-plane outage must lead to degraded evidence rather than suppressing screenshots');
+assert.match(dataPlaneStep, /GEJAST_DATA_PLANE_TIMEOUT_MS:\s*'8000'/, 'visual preflight must use a bounded eight-second timeout');
+assert.match(dataPlaneStep, /GEJAST_DATA_PLANE_ATTEMPTS:\s*'1'/, 'visual preflight must not repeat a known outage before falling back');
+assert.match(dataPlaneStep, /GEJAST_DATA_PLANE_RETRY_DELAY_MS:\s*'0'/, 'single-attempt visual preflight must not add retry delay');
+assert.match(dataPlaneStep, /run:\s*node check-live-data-plane\.mjs/, 'visual preflight must reuse the pinned read-only auth RPC probe');
+assert.match(dataPlaneProbe, /const rpcName = 'account_public_state_v687'/, 'visual preflight must remain grounded in the shipped read-only auth RPC');
+assert.doesNotMatch(dataPlaneProbe, /SERVICE_ROLE|service[_-]?role|SUPABASE_DB_URL|DATABASE_URL|\bpsql\b|execute_sql/i, 'visual preflight must remain public and non-privileged');
+
 const provisionStep = workflow.match(/- name: Provision disposable visual-audit identities through current login contract([\s\S]*?)(?=\n\s*- name:)/)?.[1] || '';
 assert.ok(provisionStep, 'visual audit provisioning step must remain inspectable');
 assert.match(provisionStep, /id:\s*provision/, 'fixture provisioning must expose an outcome for degraded fallback control');
-assert.match(provisionStep, /continue-on-error:\s*true/, 'fixture provisioning failure must not suppress all screenshot evidence');
+assert.match(provisionStep, /if:\s*steps\.data_plane\.outcome == 'success'/, 'fixture writes must never be attempted after a failed data-plane preflight');
+assert.match(provisionStep, /continue-on-error:\s*true/, 'fixture provisioning failure after a healthy preflight must not suppress screenshot evidence');
+
 const fallbackStep = workflow.match(/- name: Fall back to anonymous perimeter coverage when fixtures are unavailable([\s\S]*?)(?=\n\s*- name:)/)?.[1] || '';
 assert.ok(fallbackStep, 'visual audit must retain an explicit anonymous fallback step');
-assert.match(fallbackStep, /if:\s*steps\.provision\.outcome == 'failure'/, 'only an actual fixture failure may activate explicit anonymous visual fallback');
+assert.match(fallbackStep, /if:\s*steps\.data_plane\.outcome == 'failure' \|\| steps\.provision\.outcome == 'failure'/, 'data-plane or fixture-provision failure must activate explicit anonymous visual fallback');
 assert.doesNotMatch(fallbackStep, /GEJAST_PLAYER1_TOKEN|GEJAST_PLAYER2_TOKEN|GEJAST_FAMILY_TOKEN/, 'degraded fallback must not seed synthetic player sessions');
-assert.match(fallbackStep, /GEJAST_PLAYER1_NAME=\$\{GEJAST_PLAYER1_NAME:-VisualA_\$\{suffix\}\}/, 'degraded fallback must preserve an already-exported real fixture name for cleanup');
-assert.match(fallbackStep, /GEJAST_PLAYER2_NAME=\$\{GEJAST_PLAYER2_NAME:-VisualB_\$\{suffix\}\}/, 'degraded fallback must preserve Friends B fixture naming for cleanup');
-assert.match(fallbackStep, /GEJAST_FAMILY_NAME=\$\{GEJAST_FAMILY_NAME:-VisualFamily_\$\{suffix\}\}/, 'degraded fallback must preserve Family fixture naming for cleanup');
+assert.match(fallbackStep, /GEJAST_PLAYER1_NAME=\$\{GEJAST_PLAYER1_NAME:-VisualA_\$\{suffix\}\}/, 'degraded fallback must preserve an already-exported real fixture name when provisioning was attempted');
+assert.match(fallbackStep, /GEJAST_PLAYER2_NAME=\$\{GEJAST_PLAYER2_NAME:-VisualB_\$\{suffix\}\}/, 'degraded fallback must preserve Friends B fixture naming');
+assert.match(fallbackStep, /GEJAST_FAMILY_NAME=\$\{GEJAST_FAMILY_NAME:-VisualFamily_\$\{suffix\}\}/, 'degraded fallback must preserve Family fixture naming');
 assert.match(fallbackStep, /GEJAST_VISUAL_TIMEOUT_MS=5000/, 'degraded fallback must bound navigation waiting so anonymous coverage can finish');
 assert.match(fallbackStep, /GEJAST_VISUAL_SETTLE_MS=1200/, 'degraded fallback must use a bounded settle period');
-assert.match(fallbackStep, /GEJAST_VISUAL_DEGRADED_FIXTURES=1/, 'fixture failure must explicitly tell the runner it is operating in degraded mode');
-assert.match(workflow, /- name: Screenshot and inspect every tracked live HTML page\s*\n\s*if:\s*always\(\) && \(steps\.provision\.outcome == 'success' \|\| steps\.provision\.outcome == 'failure'\)/, 'screenshot execution must run after attempted provisioning but not misclassify skipped setup as fixture failure');
+assert.match(fallbackStep, /GEJAST_VISUAL_DEGRADED_FIXTURES=1/, 'fixture unavailability must explicitly tell the runner it is operating in degraded mode');
+
+assert.match(workflow, /- name: Screenshot and inspect every tracked live HTML page\s*\n\s*if:\s*always\(\) && \(steps\.data_plane\.outcome == 'failure' \|\| steps\.provision\.outcome == 'success' \|\| steps\.provision\.outcome == 'failure'\)/, 'screenshots must run after either a failed preflight or an attempted fixture provision, but not after unrelated setup failure');
 assert.match(workflow, /DEGRADED_FIXTURE_PROVISIONING\.txt/, 'degraded artifacts must carry an unmistakable fixture-failure marker');
+assert.match(workflow, /read-only Supabase data-plane preflight or disposable authenticated Friends\/Family fixture provisioning failed/, 'degraded artifact marker must distinguish preflight or provisioning failure');
 assert.match(workflow, /truly anonymous browser contexts: no player session token was seeded/, 'degraded artifact marker must describe the true no-session fallback');
 assert.match(workflow, /MUST NOT be treated as authenticated visual certification or zero-residue proof/, 'degraded artifact marker must explicitly forbid false certification');
-assert.match(workflow, /- name: Cleanup disposable visual-audit state\s*\n\s*if:\s*always\(\)/, 'fixture cleanup must remain unconditional after degraded coverage');
+assert.match(workflow, /If the preflight failed, no fixture provisioning write was attempted/, 'degraded marker must document the no-write short-circuit');
+assert.match(workflow, /If fixture provisioning itself failed after a healthy preflight, cleanup was still attempted/, 'degraded marker must document cleanup after partial provisioning risk');
+const cleanupStep = workflow.match(/- name: Cleanup disposable visual-audit state([\s\S]*?)$/)?.[1] || '';
+assert.ok(cleanupStep, 'visual audit must retain cleanup after attempted fixture provisioning');
+assert.match(cleanupStep, /if:\s*always\(\) && \(steps\.provision\.outcome == 'success' \|\| steps\.provision\.outcome == 'failure'\)/, 'cleanup must run after any attempted provisioning, but skip when failed preflight proved no fixture write was attempted');
 
 assert.match(fixtures, /SUPABASE_SERVICE_ROLE_KEY/, 'fixture manager must require service-role authorization for disposable row CRUD');
-assert.match(fixtures, /RETRY_ATTEMPTS\s*=\s*4/, 'fixture REST access must retain a bounded retry budget');
+assert.match(fixtures, /RETRY_ATTEMPTS\s*=\s*4/, 'fixture REST access must retain a bounded retry budget for failures after a healthy preflight');
 assert.match(fixtures, /\/rest\/v1\//, 'fixture manager must use the Supabase REST surface');
 assert.match(fixtures, /account_login_v687/, 'fixture manager must create sessions through the current public login RPC');
 assert.match(fixtures, /key:\s*PUBLIC_KEY/, 'session creation must exercise the public publishable-key boundary rather than service-role RPC authentication');
@@ -58,7 +80,7 @@ assert.match(fixtures, /new Set\(nameList\.map\(\(name\) => name\.toLowerCase\(\
 const provisionBody = fixtures.match(/async function provision\(\) \{([\s\S]*?)\n\}\n\nconst names = fixtureNames\(\);/)?.[1] || '';
 assert.ok(provisionBody, 'fixture manager provision body must remain inspectable');
 assert.doesNotMatch(provisionBody, /cleanupState\s*\(/, 'run-unique provisioning must not multiply database pressure with speculative pre-cleanup');
-assert.match(provisionBody, /appendGithubEnv\(\{ GEJAST_PLAYER1_NAME:[\s\S]*?\}\);[\s\S]*?request\('players\?select=id,display_name,site_scope'/, 'fixture names must be exported before the first write so always-cleanup can target partial provisioning');
+assert.match(provisionBody, /appendGithubEnv\(\{ GEJAST_PLAYER1_NAME:[\s\S]*?\}\);[\s\S]*?request\('players\?select=id,display_name,site_scope'/, 'fixture names must be exported before the first write so cleanup can target partial provisioning');
 
 assert.match(runner, /GEJAST_FAMILY_TOKEN/, 'runner must retain Family auth context in normal mode');
 assert.match(runner, /if \(!degradedFixtures && \(!token1 \|\| !token2 \|\| !familyToken\)\) throw new Error/, 'runner must require real sessions only outside degraded fixture mode');
@@ -95,4 +117,4 @@ assert.match(runner, /if \(!degradedFixtures\)[\s\S]*?contextualFamilyRoutes\(\)
 assert.match(runner, /FULL_LIVE_VISUAL_AUDIT_DEGRADED fixture provisioning unavailable; artifact is not certification eligible/, 'degraded runner must emit an explicit fail-closed marker');
 assert.match(runner, /if \(degradedFixtures\) \{[\s\S]*?process\.exitCode = 1;/, 'degraded evidence must keep the workflow red even when no individual screenshot is broken');
 
-console.log('PASS v801 full visual audit REST-fixture/auth-context + true-anonymous degraded-mode contract');
+console.log('PASS v801 full visual audit data-plane-preflight + REST-fixture/auth-context + true-anonymous degraded-mode contract');
