@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_version": "v803",
+  "current_version": "v804",
   "status": "REVALIDATION_REQUIRED",
   "prior_certification": {
     "version": "v792",
@@ -8,7 +8,7 @@
     "artifact": "final-acceptance-v792.json"
   },
   "current_audit_issue": 153,
-  "reason": "v803 is live from merge 4bb1af4e1c5f285da8f755579e1e5998e0d38554 and exact-main deployment health run 31981729447 attempt 2 is green. The proven legacy one-second homepage-live request storm is fixed: fresh-browser live cadence run 31982033700 observed one early desktop call and one early mobile call with no repeats after 3 seconds. Certification remains blocked because exact-v803 full visual run 31981729455 failed before screenshot capture when the production Supabase data plane timed out on all disposable-identity provisioning attempts; no visual artifact exists and cleanup/residue verification also timed out. The separate SQL-only Toepen v801a ownership repair remains deliberately undeployed without explicit authorization.",
+  "reason": "v804 is a release candidate hardening the legacy v725 compatibility runtime after exact-v803 browser proof showed repeated Pikken and Paardenrace side effects. All current live/deployment evidence remains inherited from v803 until v804 is merged and deployed. Production Supabase data-plane access remains unreliable, exact-current authenticated visual/live-write revalidation is still required, and SQL-only Toepen v801a remains undeployed pending explicit authorization.",
   "current_evidence": {
     "frontend_version": "v803",
     "live_frontend_version": "v803",
@@ -37,7 +37,9 @@
     "v803_visual_audit_run": 31981729455,
     "v803_visual_audit_status": "FAILED_BEFORE_SCREENSHOTS_SUPABASE_DATA_PLANE",
     "v803_visual_artifact": null,
-    "v803_visual_cleanup_status": "UNVERIFIED_DATA_PLANE_TIMEOUT"
+    "v803_visual_cleanup_status": "UNVERIFIED_DATA_PLANE_TIMEOUT",
+    "candidate_version": "v804",
+    "candidate_status": "SOURCE_VERIFICATION_PENDING_THEN_DEPLOYMENT_REVALIDATION"
   },
   "required_next": [
     "Restore reliable production Supabase data-plane access, then rerun the exact-current full live visual audit through authenticated Friends/Family fixture provisioning, screenshot capture, artifact upload, zero-residue cleanup and manual screenshot review.",
