@@ -1,4 +1,4 @@
-name: Build v804 idempotent v725 boot
+name: Finalize v804 idempotent v725 boot
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  finalize:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -21,75 +21,55 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-      - name: Apply narrow v804 repair and synchronize version
+      - name: Add permanent regression and remove temporary builder
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
-          from pathlib import Path
-          import json
+          cat > check-v804-v725-idempotent-boot.mjs <<'EOF'
+          #!/usr/bin/env node
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
 
-          p=Path('gejast-v725-repair.js')
-          s=p.read_text()
-          replacements=[
-            (
-              "function patchPikkenPage(){ if(!/pikken\\.html/i.test(location.pathname)) return; try{",
-              "function patchPikkenPage(){ if(!/pikken\\.html/i.test(location.pathname)) return; if(window.__gejastV725PikkenPagePatched) return; window.__gejastV725PikkenPagePatched=true; try{"
-            ),
-            (
-              "function patchPaardenracePages(){ if(!/paardenrace(_live)?\\.html/i.test(location.pathname)) return; document.body.classList.add('gejast-v724-strong-card');",
-              "function patchPaardenracePages(){ if(!/paardenrace(_live)?\\.html/i.test(location.pathname)) return; if(window.__gejastV725PaardenracePagePatched) return; window.__gejastV725PaardenracePagePatched=true; document.body.classList.add('gejast-v724-strong-card');"
-            ),
-            (
-              "function boot(){ injectCss(); patchPikkenContract(); patchPikkenPage(); patchPaardenraceApi(); patchPaardenracePages(); patchHomepageLiveCards(); monitorPaardenraceLive(); }\n  ready(boot); setInterval(()=>{ boot(); if(!document.hidden) monitorPaardenraceLive(); },1000);",
-              "let booted=false;\n  function boot(){ if(booted) return; booted=true; injectCss(); patchPikkenContract(); patchPikkenPage(); patchPaardenraceApi(); patchPaardenracePages(); patchHomepageLiveCards(); if(!document.hidden) monitorPaardenraceLive(); }\n  ready(boot);\n  if(!window.__gejastV725PaardenraceMonitorTimer){ window.__gejastV725PaardenraceMonitorTimer=setInterval(()=>{ if(!document.hidden) monitorPaardenraceLive(); },2500); }"
-            )
-          ]
-          for old,new in replacements:
-            count=s.count(old)
-            if count != 1:
-              raise SystemExit(f'Expected exactly one source match, got {count}: {old[:80]}')
-            s=s.replace(old,new,1)
-          p.write_text(s)
-          Path('VERSION').write_text('v804\n')
+          const version = fs.readFileSync('VERSION','utf8').trim();
+          const versionNumber = Number(version.match(/^v(\d+)$/)?.[1] || 0);
+          assert(versionNumber >= 804, `v804 idempotent-boot regression requires v804+, got ${version}`);
 
-          cert=json.loads(Path('release-certification.json').read_text())
-          cert['current_version']='v804'
-          cert['status']='REVALIDATION_REQUIRED'
-          cert['reason']='v804 is a release candidate hardening the legacy v725 compatibility runtime after exact-v803 browser proof showed repeated Pikken and Paardenrace side effects. All current live/deployment evidence remains inherited from v803 until v804 is merged and deployed. Production Supabase data-plane access remains unreliable, exact-current authenticated visual/live-write revalidation is still required, and SQL-only Toepen v801a remains undeployed pending explicit authorization.'
-          cert.setdefault('current_evidence',{})['candidate_version']='v804'
-          cert['current_evidence']['candidate_status']='SOURCE_VERIFICATION_PENDING_THEN_DEPLOYMENT_REVALIDATION'
-          Path('release-certification.json').write_text(json.dumps(cert,indent=2,ensure_ascii=False)+'\n')
+          const source = fs.readFileSync('gejast-v725-repair.js','utf8');
+          assert(source.includes('if(window.__gejastV725PikkenPagePatched) return; window.__gejastV725PikkenPagePatched=true;'), 'Pikken page compatibility patch must be one-shot');
+          assert(source.includes('if(window.__gejastV725PaardenracePagePatched) return; window.__gejastV725PaardenracePagePatched=true;'), 'Paardenrace page compatibility patch must be one-shot');
+          assert(source.includes('let booted=false;'), 'v725 compatibility boot must have a local one-shot state');
+          assert(/function boot\(\)\{ if\(booted\) return; booted=true;/.test(source), 'v725 compatibility boot must return after first initialization');
+          assert(source.includes('ready(boot);'), 'v725 compatibility boot must still initialize when DOM is ready');
+          assert(!/setInterval\(\(\)=>\{\s*boot\(\)/.test(source), 'v725 compatibility boot must not be re-run by an interval');
+          assert(source.includes('window.__gejastV725PaardenraceMonitorTimer=setInterval'), 'Paardenrace compatibility monitor must have one global timer owner');
+          assert(/__gejastV725PaardenraceMonitorTimer=setInterval\(\(\)=>\{ if\(!document\.hidden\) monitorPaardenraceLive\(\); \},2500\)/.test(source), 'Paardenrace compatibility monitor cadence must remain 2500ms');
+          assert(/__gejastV725PikkenFeedTimer[^\n]*setInterval\(\(\)=>\{ if\(!document\.hidden\) refreshPikkenFeeds\(\);\},2500\)/.test(source), 'Pikken compatibility feed cadence must remain 2500ms');
+          assert(!/ready\(boot\);\s*setInterval\(\(\)=>\{ boot\(\);/.test(source), 'legacy one-second boot loop must stay removed');
 
-          readiness=json.loads(Path('beta-readiness.json').read_text())
-          readiness['site_version']='release candidate v804 / live v803'
-          readiness['last_updated']='2026-08-17'
-          dep=readiness.setdefault('deployment_identity',{})
-          dep['release_candidate_version']='v804'
-          dep['live_version']='v803'
-          dep['note']='Release candidate v804 / live v803. v804 makes the legacy v725 compatibility boot idempotent after exact-v803 proof measured repeated Pikken feed work and duplicated Paardenrace room-state monitoring. No live-v804 deployment claim is made yet. Existing v803 deployment/cadence evidence remains inherited; exact-v804 health and live proof are required after merge. Supabase data-plane recovery and Toepen v801a authorization remain separate blockers.'
-          Path('beta-readiness.json').write_text(json.dumps(readiness,indent=2,ensure_ascii=False)+'\n')
-
-          gameplay=json.loads(Path('gameplay-acceptance.json').read_text())
-          gameplay['site_version']='v804'
-          gameplay['last_updated']='2026-08-17'
-          Path('gameplay-acceptance.json').write_text(json.dumps(gameplay,indent=2,ensure_ascii=False)+'\n')
-
-          checklist=json.loads(Path('beta-live-write-checklist.json').read_text())
-          checklist['site_version']='v804'
-          if checklist.get('items') != []:
-            raise SystemExit('Refusing to arm live-write checklist during v804 build')
-          Path('beta-live-write-checklist.json').write_text(json.dumps(checklist,indent=2,ensure_ascii=False)+'\n')
-          PY
-          node fix-version-drift.mjs
+          console.log(`PASS v804 v725 idempotent boot contract at ${version}`);
+          EOF
+          node - <<'NODE'
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('package.json','utf8'));
+          const marker='node check-v803-homepage-live-request-cadence.mjs';
+          const add='node check-v804-v725-idempotent-boot.mjs';
+          let s=p.scripts['verify:static'];
+          if(!s.includes(add)) {
+            if(!s.includes(marker)) throw new Error('Could not locate v803 cadence verifier insertion point');
+            s=s.replace(marker, marker+' && '+add);
+            p.scripts['verify:static']=s;
+          }
+          fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n');
+          NODE
+          git rm .github/workflows/v804-builder.yml
           npm ci
           npm run verify
-      - name: Commit verified v804 product tree
+      - name: Commit cleaned verified v804 tree
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'JesperOaths'
           git config user.email '150788310+JesperOaths@users.noreply.github.com'
           git add -A
-          git commit -m 'fix: make legacy v725 boot idempotent'
+          git commit -m 'test: lock v804 idempotent compatibility boot'
           git push origin HEAD:agent/v804-v725-idempotent-boot
