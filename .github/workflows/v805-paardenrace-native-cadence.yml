@@ -1,0 +1,92 @@
+name: v805 Paardenrace native cadence proof
+
+on:
+  push:
+    branches: [proof/v805-paardenrace-native-cadence]
+    paths: ['.github/workflows/v805-paardenrace-native-cadence.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  cadence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v805-paardenrace-native-cadence
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Prove exact candidate with proof-only drift
+        shell: bash
+        run: |
+          set -euo pipefail
+          exact=614b7136325c96db62a01c71b09a1c61cb32c773
+          test "$(git show "$exact:VERSION" | tr -d '\r\n')" = 'v805'
+          unexpected="$(git diff --name-only "$exact"..HEAD | grep -Ev '^\.github/workflows/v805-paardenrace-native-cadence\.yml$' || true)"
+          test -z "$unexpected" || { echo 'Unexpected product drift:'; echo "$unexpected"; exit 1; }
+          node check-v805-paardenrace-native-poll-owner.mjs
+      - name: Install Chromium runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Exercise actual candidate Paardenrace live page
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8128 --bind 127.0.0.1 >/tmp/v805-http.log 2>&1 &
+          server=$!
+          trap 'kill $server 2>/dev/null || true' EXIT
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          try {
+            const context=await browser.newContext({viewport:{width:1280,height:900}});
+            const token='e'.repeat(48);
+            await context.addInitScript(({token})=>{
+              localStorage.setItem('jas_session_token_v11',token);
+              sessionStorage.setItem('jas_session_token_v11',token);
+            },{token});
+            const counts=new Map();
+            await context.route('https://uiqntazgnrxwliaidkmy.supabase.co/**',async route=>{
+              const url=new URL(route.request().url());
+              const rpc=url.pathname.split('/rpc/')[1]||url.pathname;
+              counts.set(rpc,(counts.get(rpc)||0)+1);
+              let body={};
+              if(rpc==='account_public_state_v687') body={ok:true,site_scope:'friends',player_name:'V805NativeProof'};
+              else if(rpc.includes('paardenrace_room_state')) body={
+                room:{room_code:'TEST',stage:'race',stage_label:'Race',can_draw:false},
+                match:{resolved_gates:[],positions:{},draw_remaining:20},
+                players:[{player_name:'V805NativeProof',selected_suit:'hearts',is_ready:true},{player_name:'Other',selected_suit:'clubs',is_ready:true}],
+                viewer:{player_name:'V805NativeProof',is_host:false,can_nominate:false}
+              };
+              else if(rpc.includes('cleanup_stale_paardenrace')) body={ok:true};
+              await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
+            });
+            const page=await context.newPage();
+            const errors=[]; page.on('pageerror',e=>errors.push(String(e?.message||e)));
+            await page.goto('http://127.0.0.1:8128/paardenrace_live.html?room=TEST&live=TEST',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForFunction(()=>document.documentElement.getAttribute('data-gejast-auth-state')==='authenticated',{timeout:15000});
+            await page.waitForTimeout(4600);
+            const stateCalls=[...counts].filter(([k])=>k.includes('paardenrace_room_state')).reduce((n,[,v])=>n+v,0);
+            const state=await page.evaluate(()=>({
+              compatTimer:!!window.__gejastV725PaardenraceMonitorTimer,
+              compatPatched:!!window.__gejastV725PaardenracePagePatched,
+              auth:document.documentElement.getAttribute('data-gejast-auth-state'),
+              path:location.pathname
+            }));
+            console.log('rpcCounts=',JSON.stringify(Object.fromEntries(counts)),'state=',JSON.stringify(state),'errors=',JSON.stringify(errors));
+            if(stateCalls!==3) throw new Error(`Expected native immediate + 1800ms polls only (3 calls); observed ${stateCalls}`);
+            if(state.compatTimer) throw new Error('Redundant v725 Paardenrace monitor timer still exists');
+            if(!state.compatPatched||state.auth!=='authenticated'||errors.length) throw new Error(`Candidate page instability: ${JSON.stringify({state,errors})}`);
+            console.log(`RESULT=V805_PAARDENRACE_NATIVE_CADENCE_PASS state_calls=${stateCalls} compat_timer=false`);
+            await context.close();
+          } finally { await browser.close(); }
+          NODE
