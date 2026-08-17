@@ -17,8 +17,8 @@ requireText("entered_pin: pin", 'account_login_v687 entered_pin argument');
 requireText("site_scope_input: scope", 'account_login_v687 site_scope_input argument');
 requireText("client_meta: {}", 'account_login_v687 client_meta argument');
 forbidText("display_name_input: displayName", 'account_login_v687 display_name_input argument');
-requireText("select: 'session_token', display_name: inFilter(names)", 'session cleanup verification using session_token');
-forbidText("select: 'id', display_name: inFilter(names)", 'session cleanup verification using nonexistent id column');
+requireText("selectRows('gejast_player_sessions_v746', { select: 'session_token', display_name: inFilter(names)", 'session cleanup verification using session_token');
+forbidText("selectRows('gejast_player_sessions_v746', { select: 'id', display_name: inFilter(names)", 'session cleanup verification using nonexistent id column');
 
 if (failures.length) {
   console.error(`V808 visual fixture live-contract check failed: ${failures.join('; ')}`);
