@@ -1,0 +1,92 @@
+name: v803 exact-current logged-out auth boundary proof
+
+on:
+  push:
+    branches: [proof/v803-auth-boundary]
+    paths: ['.github/workflows/v803-auth-boundary-proof.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  auth-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out proof branch rooted at exact current main
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v803-auth-boundary
+          fetch-depth: 0
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Prove exact v803 product identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git show 6b75a29b5010b73ee175753a22cbbd63901451c7:VERSION | tr -d '\r\n')" = 'v803'
+          test "$(curl -fsS --max-time 10 https://kalenel.nl/VERSION | tr -d '\r\n')" = 'v803'
+          unexpected="$(git diff --name-only 6b75a29b5010b73ee175753a22cbbd63901451c7..HEAD | grep -Ev '^\.github/workflows/v803-auth-boundary-proof\.yml$' || true)"
+          test -z "$unexpected" || { echo 'Unexpected product drift:'; echo "$unexpected"; exit 1; }
+
+      - name: Install browser runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Prove protected UI never reveals before login redirect
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          const base='https://kalenel.nl/';
+          const routes=['index.html','home.html','leaderboard.html','profiles.html','drinks.html','despimarkt.html','toepen.html','boerenbridge.html','beerpong.html','pikken.html','paardenrace.html','klaverjas_online.html','rad.html'];
+          const browser=await chromium.launch({headless:true});
+          try {
+            const context=await browser.newContext({viewport:{width:390,height:844}});
+            const leaks=[];
+            await context.exposeBinding('__recordGejastLeak',(_source,data)=>{leaks.push(data);});
+            await context.addInitScript(()=>{
+              const excluded=new Set(['/login.html','/request.html','/activate.html']);
+              let sent=false;
+              const sample=()=>{
+                try {
+                  if(sent||excluded.has(location.pathname)) return;
+                  const body=(document.body?.innerText||'').replace(/\s+/g,' ').trim();
+                  const htmlVis=getComputedStyle(document.documentElement).visibility;
+                  if(body.length>20 && htmlVis!=='hidden') {
+                    sent=true;
+                    window.__recordGejastLeak({path:location.pathname,visibility:htmlVis,state:document.documentElement.getAttribute('data-gejast-auth-state'),body:body.slice(0,160)});
+                  }
+                } catch {}
+              };
+              new MutationObserver(sample).observe(document,{subtree:true,childList:true,attributes:true});
+              const tick=()=>{sample();requestAnimationFrame(tick)};
+              requestAnimationFrame(tick);
+            });
+            for (const route of routes) {
+              const page=await context.newPage();
+              await page.goto(new URL(route,base).toString(),{waitUntil:'commit',timeout:25000});
+              await page.waitForURL(u=>u.pathname==='/login.html',{timeout:12000});
+              if(new URL(page.url()).pathname!=='/login.html') throw new Error(`${route} did not reach canonical login`);
+              await page.close();
+            }
+            if(leaks.length) throw new Error(`protected UI leak before redirect: ${JSON.stringify(leaks)}`);
+            const family=await context.newPage();
+            await family.goto(new URL('familie/index.html',base).toString(),{waitUntil:'commit',timeout:25000});
+            await family.waitForURL(u=>u.pathname==='/login.html'&&u.searchParams.get('scope')==='family',{timeout:12000});
+            if(new URL(family.url()).searchParams.get('scope')!=='family') throw new Error('Family scope was not preserved');
+            await family.close();
+            await context.close();
+            console.log(`RESULT=V803_LOGGED_OUT_AUTH_BOUNDARY_PASS routes=${routes.length} visible_leaks=0 family_scope=PASS`);
+          } finally { await browser.close(); }
+          NODE
