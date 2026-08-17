@@ -27,6 +27,8 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
+          import json
+
           p=Path('gejast-v725-repair.js')
           s=p.read_text()
           replacements=[
@@ -50,6 +52,28 @@ jobs:
             s=s.replace(old,new,1)
           p.write_text(s)
           Path('VERSION').write_text('v804\n')
+
+          cert=json.loads(Path('release-certification.json').read_text())
+          cert['current_version']='v804'
+          cert['status']='REVALIDATION_REQUIRED'
+          cert['reason']='v804 is a release candidate hardening the legacy v725 compatibility runtime after exact-v803 browser proof showed repeated Pikken and Paardenrace side effects. All current live/deployment evidence remains inherited from v803 until v804 is merged and deployed. Production Supabase data-plane access remains unreliable, exact-current authenticated visual/live-write revalidation is still required, and SQL-only Toepen v801a remains undeployed pending explicit authorization.'
+          cert.setdefault('current_evidence',{})['candidate_version']='v804'
+          cert['current_evidence']['candidate_status']='SOURCE_VERIFICATION_PENDING_THEN_DEPLOYMENT_REVALIDATION'
+          Path('release-certification.json').write_text(json.dumps(cert,indent=2,ensure_ascii=False)+'\n')
+
+          readiness=json.loads(Path('beta-readiness.json').read_text())
+          readiness['site_version']='release candidate v804 / live v803'
+          readiness['last_updated']='2026-08-17'
+          dep=readiness.setdefault('deployment_identity',{})
+          dep['release_candidate_version']='v804'
+          dep['live_version']='v803'
+          dep['note']='Release candidate v804 / live v803. v804 makes the legacy v725 compatibility boot idempotent after exact-v803 proof measured repeated Pikken feed work and duplicated Paardenrace room-state monitoring. No live-v804 deployment claim is made yet. Existing v803 deployment/cadence evidence remains inherited; exact-v804 health and live proof are required after merge. Supabase data-plane recovery and Toepen v801a authorization remain separate blockers.'
+          Path('beta-readiness.json').write_text(json.dumps(readiness,indent=2,ensure_ascii=False)+'\n')
+
+          gameplay=json.loads(Path('gameplay-acceptance.json').read_text())
+          gameplay['site_version']='v804'
+          gameplay['last_updated']='2026-08-17'
+          Path('gameplay-acceptance.json').write_text(json.dumps(gameplay,indent=2,ensure_ascii=False)+'\n')
           PY
           node fix-version-drift.mjs
           npm ci
