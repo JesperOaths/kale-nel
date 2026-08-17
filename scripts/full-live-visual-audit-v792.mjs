@@ -15,7 +15,8 @@ const siteScope = String(process.env.GEJAST_SITE_SCOPE || 'friends').trim() || '
 const profileTarget = String(process.env.GEJAST_VISUAL_PROFILE_TARGET || 'Antoni').trim() || 'Antoni';
 const timeout = Number(process.env.GEJAST_VISUAL_TIMEOUT_MS || 25000);
 const settleMs = Number(process.env.GEJAST_VISUAL_SETTLE_MS || 1800);
-const authSettleTimeout = Math.min(timeout, 12000);
+const degradedFixtures = String(process.env.GEJAST_VISUAL_DEGRADED_FIXTURES || '') === '1';
+const authSettleTimeout = degradedFixtures ? Math.min(timeout, 1500) : Math.min(timeout, 12000);
 const outDir = path.resolve('visual-audit');
 const screenshotsDir = path.join(outDir, 'screenshots');
 
@@ -61,6 +62,11 @@ const tokenPayload = (token, extra = {}) => ({ session_token: token, session_tok
 const first = (...values) => values.find((value) => value !== undefined && value !== null && String(value).trim() !== '');
 
 async function setupContextRooms() {
+  if (degradedFixtures) {
+    console.log('DEGRADED_FIXTURE_MODE: skipping authenticated context-room creation; tracked-route/perimeter evidence only.');
+    return;
+  }
+
   try {
     const pikken = await rpc('pikken_create_lobby_fast_v687', tokenPayload(token1, { config_input: { penalty_mode: 'wrong_loses', start_dice: 3, visual_audit: true } }));
     state.pikkenId = String(first(pikken?.game?.id, pikken?.game_id, pikken?.id) || '');
@@ -316,6 +322,8 @@ function writeReports() {
     schema_version: 1,
     generated_at: new Date().toISOString(),
     base_url: BASE,
+    degraded_fixture_mode: degradedFixtures,
+    certification_eligible: !degradedFixtures,
     tracked_html_count: trackedHtml.length,
     contextual_route_count: records.filter((row) => row.kind === 'context').length,
     total_screenshots: records.length,
@@ -331,6 +339,8 @@ function writeReports() {
     '# Full live visual audit',
     '',
     `Generated: ${report.generated_at}`,
+    `Fixture mode: ${degradedFixtures ? 'DEGRADED — anonymous/perimeter evidence only' : 'authenticated disposable fixtures'}`,
+    `Certification eligible: ${report.certification_eligible ? 'yes' : 'no'}`,
     `Tracked HTML pages: ${trackedHtml.length}`,
     `Contextual variants: ${report.contextual_route_count}`,
     `Screenshots: ${records.length}`,
@@ -348,11 +358,15 @@ function writeReports() {
   fs.writeFileSync(path.join(outDir, 'report.md'), md);
 
   const cards = records.map((row) => `<article class="card ${row.judgement}"><a href="${row.screenshot}"><img src="${row.screenshot}" loading="lazy" alt="${row.label.replaceAll('&','&amp;').replaceAll('"','&quot;')}"></a><div class="copy"><b>${row.judgement.toUpperCase()}</b><code>${row.route.replaceAll('&','&amp;').replaceAll('<','&lt;')}</code><span>${String(row.title || '').replaceAll('&','&amp;').replaceAll('<','&lt;')}</span><small>HTTP ${row.status} · overflow ${row.horizontal_overflow_px}px · loading ${row.stale_loading_count}</small><p>${row.reasons.join('; ').replaceAll('&','&amp;').replaceAll('<','&lt;')}</p></div></article>`).join('\n');
-  fs.writeFileSync(path.join(outDir, 'index.html'), `<!doctype html><meta charset="utf-8"><title>Kalenel visual audit</title><style>body{font-family:system-ui;margin:20px;background:#eee;color:#111}.summary{position:sticky;top:0;background:#111;color:#fff;padding:12px 16px;border-radius:14px;z-index:2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:16px}.card{background:#fff;border:3px solid #bbb;border-radius:14px;overflow:hidden}.card.broken{border-color:#c00}.card.warn{border-color:#d78b00}.card.protected{border-color:#4682b4}.card img{width:100%;height:300px;object-fit:cover;object-position:top;display:block;background:#ddd}.copy{padding:12px;display:grid;gap:6px}.copy code{white-space:normal;overflow-wrap:anywhere}.copy p{margin:0;color:#a00}</style><div class="summary">${records.length} screenshots · ${trackedHtml.length} tracked HTML · ${JSON.stringify(counts)}</div><div class="grid">${cards}</div>`);
+  fs.writeFileSync(path.join(outDir, 'index.html'), `<!doctype html><meta charset="utf-8"><title>Kalenel visual audit</title><style>body{font-family:system-ui;margin:20px;background:#eee;color:#111}.summary{position:sticky;top:0;background:#111;color:#fff;padding:12px 16px;border-radius:14px;z-index:2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:16px}.card{background:#fff;border:3px solid #bbb;border-radius:14px;overflow:hidden}.card.broken{border-color:#c00}.card.warn{border-color:#d78b00}.card.protected{border-color:#4682b4}.card img{width:100%;height:300px;object-fit:cover;object-position:top;display:block;background:#ddd}.copy{padding:12px;display:grid;gap:6px}.copy code{white-space:normal;overflow-wrap:anywhere}.copy p{margin:0;color:#a00}</style><div class="summary">${records.length} screenshots · ${trackedHtml.length} tracked HTML · degraded=${degradedFixtures ? 'yes' : 'no'} · ${JSON.stringify(counts)}</div><div class="grid">${cards}</div>`);
 
-  console.log(`RESULT=FULL_LIVE_VISUAL_AUDIT_COMPLETE tracked=${trackedHtml.length} screenshots=${records.length} broken=${counts.broken || 0} warn=${counts.warn || 0} protected=${counts.protected || 0} pass=${counts.pass || 0}`);
+  console.log(`RESULT=FULL_LIVE_VISUAL_AUDIT_COMPLETE tracked=${trackedHtml.length} screenshots=${records.length} broken=${counts.broken || 0} warn=${counts.warn || 0} protected=${counts.protected || 0} pass=${counts.pass || 0} degraded=${degradedFixtures ? 1 : 0}`);
   if ((counts.broken || 0) > 0) {
     console.error(`FULL_LIVE_VISUAL_AUDIT_FAIL broken=${counts.broken}`);
+    process.exitCode = 1;
+  }
+  if (degradedFixtures) {
+    console.error('FULL_LIVE_VISUAL_AUDIT_DEGRADED fixture provisioning unavailable; artifact is not certification eligible');
     process.exitCode = 1;
   }
   return counts;
@@ -368,15 +382,17 @@ try {
     try { await capture(context, htmlPath, htmlPath, index++, 'tracked'); }
     finally { await context.close(); }
   }
-  for (const [route, label] of contextualRoutes()) {
-    const context = await newContext(browser, token1, state.paardenCode);
-    try { await capture(context, route, label, index++, 'context'); }
-    finally { await context.close(); }
-  }
-  for (const [route, label] of contextualFamilyRoutes()) {
-    const context = await newContext(browser, familyToken, '');
-    try { await capture(context, route, label, index++, 'context'); }
-    finally { await context.close(); }
+  if (!degradedFixtures) {
+    for (const [route, label] of contextualRoutes()) {
+      const context = await newContext(browser, token1, state.paardenCode);
+      try { await capture(context, route, label, index++, 'context'); }
+      finally { await context.close(); }
+    }
+    for (const [route, label] of contextualFamilyRoutes()) {
+      const context = await newContext(browser, familyToken, '');
+      try { await capture(context, route, label, index++, 'context'); }
+      finally { await context.close(); }
+    }
   }
 } finally {
   await browser.close();
