@@ -1,0 +1,123 @@
+name: v803 v725 repeated side-effects proof
+
+on:
+  push:
+    branches: [proof/v803-v725-repeat-side-effects]
+    paths: ['.github/workflows/v803-v725-repeat-side-effects.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v803-v725-repeat-side-effects
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install fresh Chromium against exact live v803
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = 'v803'
+          test "$(curl -fsS --max-time 10 "https://kalenel.nl/VERSION?cb=${GITHUB_RUN_ID}" | tr -d '\r\n')" = 'v803'
+          npm ci
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Measure deployed v803 repeated Pikken and Paardenrace work with Supabase intercepted locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > .v803-v725-repeat-side-effects.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          const token='c'.repeat(48);
+
+          async function runCase({name,path,waitMs}){
+            const context=await browser.newContext({viewport:{width:1280,height:900}});
+            await context.addInitScript(({token})=>{
+              localStorage.setItem('jas_session_token_v11',token);
+              sessionStorage.setItem('jas_session_token_v11',token);
+              window.__proofClickRegistrations=0;
+              const original=Document.prototype.addEventListener;
+              Document.prototype.addEventListener=function(type,listener,opts){
+                if(type==='click') window.__proofClickRegistrations++;
+                return original.call(this,type,listener,opts);
+              };
+            },{token});
+            const rpcCounts=new Map();
+            await context.route('https://uiqntazgnrxwliaidkmy.supabase.co/**',async route=>{
+              const req=route.request();
+              const url=new URL(req.url());
+              const rpc=url.pathname.split('/rpc/')[1]||url.pathname;
+              rpcCounts.set(rpc,(rpcCounts.get(rpc)||0)+1);
+              let body={};
+              if(rpc==='account_public_state_v687') body={ok:true,site_scope:'friends',player_name:'V803RepeatProof'};
+              else if(rpc.includes('pikken_open_lobbies')||rpc.includes('pikken_live_matches')) body=[];
+              else if(rpc.includes('paardenrace_room_state')) body={room:{stage:'race',room_code:'TEST'},players:[{name:'A'},{name:'B'}]};
+              else if(rpc.includes('homepage')) body={ok:true,entries:{},site_scope:'friends'};
+              else if(rpc.includes('drinks_homepage_top5')) body=[];
+              return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
+            });
+            const page=await context.newPage();
+            const errors=[];
+            page.on('pageerror',e=>errors.push(String(e?.message||e)));
+            await page.goto(`https://kalenel.nl/${path}?cb=${Date.now()}-${name}`,{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForFunction(()=>document.documentElement.getAttribute('data-gejast-auth-state')==='authenticated',{timeout:15000});
+            await page.waitForTimeout(waitMs);
+            const pageState=await page.evaluate(()=>({
+              clicks:window.__proofClickRegistrations||0,
+              pikkenPatched:!!(window.GEJAST_PIKKEN_CONTRACT&&window.GEJAST_PIKKEN_CONTRACT.__v724Patched),
+              paardPatched:!!(window.GEJAST_PAARDENRACE&&window.GEJAST_PAARDENRACE.__v724Patched),
+              overflow:Math.max(0,document.documentElement.scrollWidth-document.documentElement.clientWidth)
+            }));
+            console.log(name,'rpcCounts=',JSON.stringify(Object.fromEntries(rpcCounts)),'state=',JSON.stringify(pageState),'errors=',JSON.stringify(errors));
+            await context.close();
+            return {rpcCounts:Object.fromEntries(rpcCounts),pageState,errors};
+          }
+
+          const pikken=await runCase({name:'pikken',path:'pikken.html',waitMs:5600});
+          const openCalls=Object.entries(pikken.rpcCounts).filter(([k])=>k.includes('pikken_open_lobbies')).reduce((n,[,v])=>n+v,0);
+          const liveCalls=Object.entries(pikken.rpcCounts).filter(([k])=>k.includes('pikken_live_matches')).reduce((n,[,v])=>n+v,0);
+          if(openCalls<4||liveCalls<4) throw new Error(`Expected v803 repeated Pikken feed work; observed open=${openCalls}, live=${liveCalls}`);
+          if(!pikken.pageState.pikkenPatched||pikken.errors.length) throw new Error('Pikken surface itself did not remain stable during defect proof');
+
+          const paard=await runCase({name:'paardenrace-live',path:'paardenrace_live.html&room=TEST'}).catch(()=>null);
+          // use a clean URL form for the actual Paardenrace measurement
+          const context=await browser.newContext({viewport:{width:1280,height:900}});
+          await context.addInitScript(({token})=>{
+            localStorage.setItem('jas_session_token_v11',token);
+            sessionStorage.setItem('jas_session_token_v11',token);
+            window.__proofClickRegistrations=0;
+            const original=Document.prototype.addEventListener;
+            Document.prototype.addEventListener=function(type,listener,opts){ if(type==='click') window.__proofClickRegistrations++; return original.call(this,type,listener,opts); };
+          },{token});
+          let roomStateCalls=0;
+          await context.route('https://uiqntazgnrxwliaidkmy.supabase.co/**',async route=>{
+            const url=new URL(route.request().url());
+            const rpc=url.pathname.split('/rpc/')[1]||'';
+            let body={};
+            if(rpc==='account_public_state_v687') body={ok:true,site_scope:'friends',player_name:'V803RepeatProof'};
+            else if(rpc.includes('paardenrace_room_state')) { roomStateCalls++; body={room:{stage:'race',room_code:'TEST'},players:[{name:'A'},{name:'B'}]}; }
+            return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
+          });
+          const page=await context.newPage();
+          const errors=[]; page.on('pageerror',e=>errors.push(String(e?.message||e)));
+          await page.goto(`https://kalenel.nl/paardenrace_live.html?room=TEST&cb=${Date.now()}`,{waitUntil:'domcontentloaded',timeout:30000});
+          await page.waitForFunction(()=>document.documentElement.getAttribute('data-gejast-auth-state')==='authenticated',{timeout:15000});
+          await page.waitForTimeout(4600);
+          const paardState=await page.evaluate(()=>({clicks:window.__proofClickRegistrations||0,patched:!!(window.GEJAST_PAARDENRACE&&window.GEJAST_PAARDENRACE.__v724Patched)}));
+          console.log('paardenrace-live roomStateCalls=',roomStateCalls,'state=',JSON.stringify(paardState),'errors=',JSON.stringify(errors));
+          if(roomStateCalls<7) throw new Error(`Expected duplicated v803 Paardenrace monitor calls; observed ${roomStateCalls}`);
+          if(!paardState.patched||errors.length) throw new Error('Paardenrace surface itself did not remain stable during defect proof');
+          console.log(`RESULT=V803_V725_REPEAT_SIDE_EFFECTS_PROVEN pikken_open=${openCalls} pikken_live=${liveCalls} paard_state=${roomStateCalls}`);
+          await context.close();
+          await browser.close();
+          EOF
+          node .v803-v725-repeat-side-effects.mjs
+          rm .v803-v725-repeat-side-effects.mjs
