@@ -74,9 +74,6 @@ jobs:
             echo "GEJAST_PLAYER1_NAME=${GEJAST_PLAYER1_NAME:-VisualA_${suffix}}"
             echo "GEJAST_PLAYER2_NAME=${GEJAST_PLAYER2_NAME:-VisualB_${suffix}}"
             echo "GEJAST_FAMILY_NAME=${GEJAST_FAMILY_NAME:-VisualFamily_${suffix}}"
-            echo 'GEJAST_PLAYER1_TOKEN=111111111111111111111111111111111111111111111111'
-            echo 'GEJAST_PLAYER2_TOKEN=222222222222222222222222222222222222222222222222'
-            echo 'GEJAST_FAMILY_TOKEN=333333333333333333333333333333333333333333333333'
             echo 'GEJAST_VISUAL_TIMEOUT_MS=5000'
             echo 'GEJAST_VISUAL_SETTLE_MS=1200'
             echo 'GEJAST_VISUAL_DEGRADED_FIXTURES=1'
@@ -95,7 +92,7 @@ jobs:
           cat > visual-audit/DEGRADED_FIXTURE_PROVISIONING.txt <<'EOF'
           DEGRADED_FIXTURE_PROVISIONING
           Disposable authenticated Friends/Family fixture provisioning failed.
-          The audit continued with synthetic invalid 48-hex session tokens so tracked routes and the login/admin perimeter still produced visual evidence.
+          The audit continued with truly anonymous browser contexts: no player session token was seeded. Tracked gated routes therefore exercise the immediate no-session login boundary while admin routes still exercise the Cloudflare perimeter.
           This artifact is partial evidence only and MUST NOT be treated as authenticated visual certification or zero-residue proof.
           The workflow remains fail-closed until real fixture provisioning, contextual authenticated captures and cleanup succeed.
           EOF

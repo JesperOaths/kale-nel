@@ -19,16 +19,19 @@ const provisionStep = workflow.match(/- name: Provision disposable visual-audit 
 assert.ok(provisionStep, 'visual audit provisioning step must remain inspectable');
 assert.match(provisionStep, /id:\s*provision/, 'fixture provisioning must expose an outcome for degraded fallback control');
 assert.match(provisionStep, /continue-on-error:\s*true/, 'fixture provisioning failure must not suppress all screenshot evidence');
-assert.match(workflow, /- name: Fall back to anonymous perimeter coverage when fixtures are unavailable[\s\S]*?if:\s*steps\.provision\.outcome == 'failure'/, 'only an actual fixture failure may activate explicit anonymous visual fallback');
-assert.match(workflow, /GEJAST_PLAYER1_TOKEN=([0-9a-f])\1{47}/i, 'degraded fallback must use a well-formed synthetic 48-hex token for Friends A');
-assert.match(workflow, /GEJAST_PLAYER2_TOKEN=([0-9a-f])\1{47}/i, 'degraded fallback must use a well-formed synthetic 48-hex token for Friends B');
-assert.match(workflow, /GEJAST_FAMILY_TOKEN=([0-9a-f])\1{47}/i, 'degraded fallback must use a well-formed synthetic 48-hex token for Family');
-assert.match(workflow, /GEJAST_PLAYER1_NAME=\$\{GEJAST_PLAYER1_NAME:-VisualA_\$\{suffix\}\}/, 'degraded fallback must preserve an already-exported real fixture name for cleanup');
-assert.match(workflow, /GEJAST_VISUAL_TIMEOUT_MS=5000/, 'degraded fallback must bound auth/data-plane waiting so anonymous coverage can finish');
-assert.match(workflow, /GEJAST_VISUAL_SETTLE_MS=1200/, 'degraded fallback must use a bounded settle period');
-assert.match(workflow, /GEJAST_VISUAL_DEGRADED_FIXTURES=1/, 'fixture failure must explicitly tell the runner it is operating in degraded mode');
+const fallbackStep = workflow.match(/- name: Fall back to anonymous perimeter coverage when fixtures are unavailable([\s\S]*?)(?=\n\s*- name:)/)?.[1] || '';
+assert.ok(fallbackStep, 'visual audit must retain an explicit anonymous fallback step');
+assert.match(fallbackStep, /if:\s*steps\.provision\.outcome == 'failure'/, 'only an actual fixture failure may activate explicit anonymous visual fallback');
+assert.doesNotMatch(fallbackStep, /GEJAST_PLAYER1_TOKEN|GEJAST_PLAYER2_TOKEN|GEJAST_FAMILY_TOKEN/, 'degraded fallback must not seed synthetic player sessions');
+assert.match(fallbackStep, /GEJAST_PLAYER1_NAME=\$\{GEJAST_PLAYER1_NAME:-VisualA_\$\{suffix\}\}/, 'degraded fallback must preserve an already-exported real fixture name for cleanup');
+assert.match(fallbackStep, /GEJAST_PLAYER2_NAME=\$\{GEJAST_PLAYER2_NAME:-VisualB_\$\{suffix\}\}/, 'degraded fallback must preserve Friends B fixture naming for cleanup');
+assert.match(fallbackStep, /GEJAST_FAMILY_NAME=\$\{GEJAST_FAMILY_NAME:-VisualFamily_\$\{suffix\}\}/, 'degraded fallback must preserve Family fixture naming for cleanup');
+assert.match(fallbackStep, /GEJAST_VISUAL_TIMEOUT_MS=5000/, 'degraded fallback must bound navigation waiting so anonymous coverage can finish');
+assert.match(fallbackStep, /GEJAST_VISUAL_SETTLE_MS=1200/, 'degraded fallback must use a bounded settle period');
+assert.match(fallbackStep, /GEJAST_VISUAL_DEGRADED_FIXTURES=1/, 'fixture failure must explicitly tell the runner it is operating in degraded mode');
 assert.match(workflow, /- name: Screenshot and inspect every tracked live HTML page\s*\n\s*if:\s*always\(\) && \(steps\.provision\.outcome == 'success' \|\| steps\.provision\.outcome == 'failure'\)/, 'screenshot execution must run after attempted provisioning but not misclassify skipped setup as fixture failure');
 assert.match(workflow, /DEGRADED_FIXTURE_PROVISIONING\.txt/, 'degraded artifacts must carry an unmistakable fixture-failure marker');
+assert.match(workflow, /truly anonymous browser contexts: no player session token was seeded/, 'degraded artifact marker must describe the true no-session fallback');
 assert.match(workflow, /MUST NOT be treated as authenticated visual certification or zero-residue proof/, 'degraded artifact marker must explicitly forbid false certification');
 assert.match(workflow, /- name: Cleanup disposable visual-audit state\s*\n\s*if:\s*always\(\)/, 'fixture cleanup must remain unconditional after degraded coverage');
 
@@ -57,14 +60,18 @@ assert.ok(provisionBody, 'fixture manager provision body must remain inspectable
 assert.doesNotMatch(provisionBody, /cleanupState\s*\(/, 'run-unique provisioning must not multiply database pressure with speculative pre-cleanup');
 assert.match(provisionBody, /appendGithubEnv\(\{ GEJAST_PLAYER1_NAME:[\s\S]*?\}\);[\s\S]*?request\('players\?select=id,display_name,site_scope'/, 'fixture names must be exported before the first write so always-cleanup can target partial provisioning');
 
-assert.match(runner, /GEJAST_FAMILY_TOKEN/, 'runner must require Family auth context');
-assert.match(runner, /for \(const store of \[localStorage, sessionStorage\]\)/, 'runner must seed current session into both browser stores');
+assert.match(runner, /GEJAST_FAMILY_TOKEN/, 'runner must retain Family auth context in normal mode');
+assert.match(runner, /if \(!degradedFixtures && \(!token1 \|\| !token2 \|\| !familyToken\)\) throw new Error/, 'runner must require real sessions only outside degraded fixture mode');
+assert.match(runner, /if \(token\) text = text\.replaceAll\(token, label\)/, 'runner must never call replaceAll with an empty degraded token');
+assert.match(runner, /if \(sessionToken\) \{\s*for \(const store of \[localStorage, sessionStorage\]\)/s, 'runner must seed current session into both browser stores only when a real session exists');
 assert.match(runner, /contextual authenticated capture ended at login/, 'context captures must fail if redirected to login');
 assert.match(runner, /authState !== 'authenticated'/, 'context captures must require authenticated auth state');
-assert.match(runner, /context__index__authenticated/, 'authenticated main page must be visually captured');
-assert.match(runner, /context__family__index/, 'authenticated Family main page must be visually captured');
-assert.match(runner, /const familyRoute = htmlPath === 'familie\.html' \|\| htmlPath\.startsWith\('familie\/'\)/, 'tracked Family pages must use Family sessions');
-assert.match(runner, /const context = await newContext\(browser, familyRoute \? familyToken : token1/, 'tracked captures must isolate scope-correct sessions');
+assert.match(runner, /context__index__authenticated/, 'authenticated main page must be visually captured in normal mode');
+assert.match(runner, /context__family__index/, 'authenticated Family main page must be visually captured in normal mode');
+assert.match(runner, /const familyRoute = htmlPath === 'familie\.html' \|\| htmlPath\.startsWith\('familie\/'\)/, 'tracked Family pages must still be identified by scope');
+assert.match(runner, /const sessionToken = degradedFixtures \? '' : \(familyRoute \? familyToken : token1\)/, 'degraded tracked routes must receive no player session token while normal routes retain scope-correct sessions');
+assert.match(runner, /const paardCode = \(degradedFixtures \|\| familyRoute\) \? '' : state\.paardenCode/, 'degraded contexts must not seed saved Paardenrace room state');
+assert.match(runner, /const context = await newContext\(browser, sessionToken, paardCode\)/, 'tracked captures must use the explicitly resolved anonymous or authenticated context state');
 assert.match(runner, /finally \{ await context\.close\(\); \}/, 'per-route contexts must be closed to prevent storage poisoning');
 assert.doesNotMatch(runner, /const context = await newContext\(browser\);\s*try \{\s*let index = 0;/s, 'single shared authenticated context must not return');
 assert.match(runner, /GEJAST_VISUAL_PROFILE_TARGET \|\| 'Antoni'/, 'context profile capture must use a visible profile target rather than the hidden audit identity');
@@ -79,7 +86,7 @@ assert.match(runner, /seriousConsole\.length && judgement !== 'broken' && judgem
 
 assert.match(runner, /const degradedFixtures = String\(process\.env\.GEJAST_VISUAL_DEGRADED_FIXTURES \|\| ''\) === '1'/, 'runner must consume the workflow degraded-fixture flag explicitly');
 assert.match(runner, /const authSettleTimeout = degradedFixtures \? Math\.min\(timeout, 1500\) : Math\.min\(timeout, 12000\)/, 'degraded mode must bound per-page auth-gate waiting more tightly than authenticated certification');
-assert.match(runner, /async function setupContextRooms\(\) \{\s*if \(degradedFixtures\) \{[\s\S]*?tracked-route\/perimeter evidence only\.[\s\S]*?return;/, 'degraded mode must not attempt authenticated game-room setup with synthetic sessions');
+assert.match(runner, /async function setupContextRooms\(\) \{\s*if \(degradedFixtures\) \{[\s\S]*?tracked-route\/perimeter evidence only\.[\s\S]*?return;/, 'degraded mode must not attempt authenticated game-room setup');
 assert.match(runner, /degraded_fixture_mode:\s*degradedFixtures/, 'report.json must record whether fixture mode was degraded');
 assert.match(runner, /certification_eligible:\s*!degradedFixtures/, 'report.json must explicitly deny certification eligibility in degraded mode');
 assert.match(runner, /Fixture mode: \$\{degradedFixtures \? 'DEGRADED — anonymous\/perimeter evidence only'/, 'human-readable report must label degraded evidence');
@@ -88,4 +95,4 @@ assert.match(runner, /if \(!degradedFixtures\)[\s\S]*?contextualFamilyRoutes\(\)
 assert.match(runner, /FULL_LIVE_VISUAL_AUDIT_DEGRADED fixture provisioning unavailable; artifact is not certification eligible/, 'degraded runner must emit an explicit fail-closed marker');
 assert.match(runner, /if \(degradedFixtures\) \{[\s\S]*?process\.exitCode = 1;/, 'degraded evidence must keep the workflow red even when no individual screenshot is broken');
 
-console.log('PASS v801 full visual audit REST-fixture/auth-context + explicit degraded-mode contract');
+console.log('PASS v801 full visual audit REST-fixture/auth-context + true-anonymous degraded-mode contract');
