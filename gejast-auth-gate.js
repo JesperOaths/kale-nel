@@ -5,7 +5,7 @@
   const LEGACY_SESSION_KEY='jas_session_token_v10';
   const ACTIVITY_KEY='jas_last_activity_at_v1';
   const SERVER_TOUCH_KEY='jas_last_server_touch_at_v1';
-  const CONFIG_SRC='/gejast-config.js?v804';
+  const CONFIG_SRC='/gejast-config.js?v805';
   root.setAttribute('data-gejast-auth-state','checking');
   root.style.setProperty('visibility','hidden','important');
 
