@@ -1,0 +1,104 @@
+name: Build v805 native Paardenrace polling
+
+on:
+  push:
+    branches: [agent/v805-remove-redundant-paardenrace-monitor]
+    paths: ['.github/workflows/v805-builder.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v805-remove-redundant-paardenrace-monitor
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Remove redundant compatibility monitor and align v805 truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import json,re
+
+          p=Path('gejast-v725-repair.js')
+          s=p.read_text()
+          s2,n=re.subn(r"\n  let paardNoPlayerCount=0;\n  async function monitorPaardenraceLive\(\)\{.*?\n  \}\n  let homepageLiveCardsChecked=false;", "\n  let homepageLiveCardsChecked=false;", s, count=1, flags=re.S)
+          if n != 1:
+            raise SystemExit(f'Expected one Paardenrace compatibility monitor block, removed {n}')
+          old="function boot(){ if(booted) return; booted=true; injectCss(); patchPikkenContract(); patchPikkenPage(); patchPaardenraceApi(); patchPaardenracePages(); patchHomepageLiveCards(); if(!document.hidden) monitorPaardenraceLive(); }\n  ready(boot);\n  if(!window.__gejastV725PaardenraceMonitorTimer){ window.__gejastV725PaardenraceMonitorTimer=setInterval(()=>{ if(!document.hidden) monitorPaardenraceLive(); },2500); }"
+          new="function boot(){ if(booted) return; booted=true; injectCss(); patchPikkenContract(); patchPikkenPage(); patchPaardenraceApi(); patchPaardenracePages(); patchHomepageLiveCards(); }\n  ready(boot);"
+          if s2.count(old)!=1:
+            raise SystemExit(f'Expected one v804 boot tail, found {s2.count(old)}')
+          s2=s2.replace(old,new,1)
+          p.write_text(s2)
+          Path('VERSION').write_text('v805\n')
+
+          checker=Path('check-v804-v725-idempotent-boot.mjs')
+          c=checker.read_text()
+          old_checks="assert(source.includes('window.__gejastV725PaardenraceMonitorTimer=setInterval'), 'Paardenrace compatibility monitor must have one global timer owner');\nassert(/__gejastV725PaardenraceMonitorTimer=setInterval\\(\\(\\)=>\\{ if\\(!document\\.hidden\\) monitorPaardenraceLive\\(\\); \\},2500\\)/.test(source), 'Paardenrace compatibility monitor cadence must remain 2500ms');"
+          new_checks="if (versionNumber === 804) {\n  assert(source.includes('window.__gejastV725PaardenraceMonitorTimer=setInterval'), 'v804 Paardenrace compatibility monitor must have one global timer owner');\n} else {\n  assert(!source.includes('__gejastV725PaardenraceMonitorTimer'), 'v805+ must not reinstall a redundant Paardenrace compatibility poll timer');\n  assert(!source.includes('monitorPaardenraceLive'), 'v805+ must rely on the native Paardenrace live-page state poll');\n}"
+          if c.count(old_checks)!=1:
+            raise SystemExit('Could not locate v804 monitor assertions')
+          checker.write_text(c.replace(old_checks,new_checks,1))
+
+          Path('check-v805-paardenrace-native-poll-owner.mjs').write_text("""#!/usr/bin/env node
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const version=fs.readFileSync('VERSION','utf8').trim();
+const n=Number(version.match(/^v(\\d+)$/)?.[1]||0);
+assert(n>=805,`v805 Paardenrace native poll regression requires v805+, got ${version}`);
+const compat=fs.readFileSync('gejast-v725-repair.js','utf8');
+const live=fs.readFileSync('paardenrace_live.html','utf8');
+assert(!compat.includes('monitorPaardenraceLive'),'legacy v725 Paardenrace room-state monitor must stay removed');
+assert(!compat.includes('__gejastV725PaardenraceMonitorTimer'),'legacy v725 Paardenrace monitor timer must stay removed');
+assert(live.includes('loadState({ noAutoClose:true }).then(()=>{'),'native Paardenrace live page must retain its immediate state load');
+assert(/statePollTimer = setInterval\\(async \\(\\)=>\\{[\\s\\S]*?\\}, 1800\\);/.test(live),'native Paardenrace live page must retain its 1800ms state poll');
+assert(live.includes("['countdown','race','nominations','live','active'].includes(liveStage) && livePlayers.length < 2"),'native live-page insufficient-player guard must stay present');
+assert(live.includes("bounceToLobby('Deze race heeft te weinig actieve spelers en is gesloten. Je gaat terug naar de lobby.');"),'native live-page stale/undersized race recovery must stay present');
+console.log(`PASS v805 Paardenrace native state-poll ownership at ${version}`);
+""")
+
+          cert=json.loads(Path('release-certification.json').read_text())
+          cert['current_version']='v805'; cert['status']='REVALIDATION_REQUIRED'
+          cert['reason']='v805 is a release candidate removing the redundant legacy v725 Paardenrace room-state monitor after exact-live v804 proof measured five room-state calls in 4.6 seconds: three are owned by the native live page (immediate + 1800ms poll) and two by the weaker compatibility monitor. v805 retains the stronger native insufficient-player recovery and removes the duplicate compatibility reads. Exact-v804 live health passed, but exact-current authenticated visual/live-write certification remains blocked by Supabase data-plane timeouts, and SQL-only Toepen v801a remains undeployed pending explicit authorization.'
+          ev=cert.setdefault('current_evidence',{}); ev['candidate_version']='v805'; ev['candidate_status']='SOURCE_VERIFICATION_PENDING_THEN_DEPLOYMENT_REVALIDATION'; ev['v804_live_deployment_health_run']=31984946122; ev['v804_live_cadence_diagnostic_run']=31985032771
+          Path('release-certification.json').write_text(json.dumps(cert,indent=2,ensure_ascii=False)+'\n')
+
+          readiness=json.loads(Path('beta-readiness.json').read_text())
+          readiness['site_version']='release candidate v805 / live v804'; readiness['last_updated']='2026-08-17'
+          dep=readiness.setdefault('deployment_identity',{}); dep['release_candidate_version']='v805'; dep['live_version']='v804'; dep['note']='Release candidate v805 / live v804. Exact-v804 live health 31984946122 is green. v805 removes the redundant v725 Paardenrace room-state monitor while preserving the native immediate + 1800ms live-page poll and its stronger insufficient-player recovery. Exact-current visual/live-write proof remains blocked by Supabase data-plane timeouts; Toepen v801a remains separately permission-gated.'
+          Path('beta-readiness.json').write_text(json.dumps(readiness,indent=2,ensure_ascii=False)+'\n')
+
+          gameplay=json.loads(Path('gameplay-acceptance.json').read_text()); gameplay['site_version']='v805'; gameplay['last_updated']='2026-08-17'; Path('gameplay-acceptance.json').write_text(json.dumps(gameplay,indent=2,ensure_ascii=False)+'\n')
+          checklist=json.loads(Path('beta-live-write-checklist.json').read_text()); checklist['site_version']='v805';
+          if checklist.get('items') != []: raise SystemExit('Refusing to arm live-write checklist')
+          Path('beta-live-write-checklist.json').write_text(json.dumps(checklist,indent=2,ensure_ascii=False)+'\n')
+          PY
+          node - <<'NODE'
+          const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json','utf8'));
+          const marker='node check-v804-v725-idempotent-boot.mjs'; const add='node check-v805-paardenrace-native-poll-owner.mjs';
+          let s=p.scripts['verify:static']; if(!s.includes(add)){ if(!s.includes(marker)) throw new Error('v804 checker insertion point missing'); s=s.replace(marker,marker+' && '+add); p.scripts['verify:static']=s; }
+          fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n');
+          NODE
+          node fix-version-drift.mjs
+          git rm .github/workflows/v805-builder.yml
+          npm ci
+          npm run verify
+      - name: Commit cleaned verified v805 tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'JesperOaths'
+          git config user.email '150788310+JesperOaths@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: let native Paardenrace page own state polling'
+          git push origin HEAD:agent/v805-remove-redundant-paardenrace-monitor
