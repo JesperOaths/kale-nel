@@ -41,41 +41,54 @@ jobs:
           cat > .v803-live-cadence.mjs <<'EOF'
           import { chromium } from 'playwright';
           const browser = await chromium.launch({headless:true});
-          const context = await browser.newContext();
           const token = 'a'.repeat(48);
-          await context.addInitScript(({token}) => {
-            localStorage.setItem('jas_session_token_v11', token);
-            sessionStorage.setItem('jas_session_token_v11', token);
-          }, {token});
-          const calls=[];
-          await context.route('https://uiqntazgnrxwliaidkmy.supabase.co/rest/v1/**', async route => {
-            const url=route.request().url();
-            const path=new URL(url).pathname;
-            if(path.endsWith('/rpc/account_public_state_v687')) {
-              return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,site_scope:'friends',player_name:'V803Proof'})});
-            }
-            if(path.endsWith('/rpc/get_homepage_live_state_public_scoped')) {
-              calls.push(Date.now());
-              return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,players:[],rooms:[],site_scope:'friends'})});
-            }
-            if(path.endsWith('/rpc/get_drinks_homepage_top5_public')) {
-              return route.fulfill({status:200,contentType:'application/json',body:'[]'});
-            }
-            return route.fulfill({status:200,contentType:'application/json',body:'{}'});
-          });
-          const page=await context.newPage();
-          const started=Date.now();
-          await page.goto(`https://kalenel.nl/index.html?cb=${Date.now()}`, {waitUntil:'domcontentloaded',timeout:30000});
-          await page.waitForFunction(() => document.documentElement.getAttribute('data-gejast-auth-state')==='authenticated',{timeout:15000});
-          await page.waitForTimeout(7500);
-          const offsets=calls.map(t=>t-started);
-          console.log('homepage-live calls=',calls.length,'offset_ms=',JSON.stringify(offsets));
-          if(calls.length>3) throw new Error(`Fresh v803 emitted ${calls.length} homepage-live calls in 7.5s; expected <=3 boot calls`);
-          const late=offsets.filter(ms=>ms>3000);
-          if(late.length>0) throw new Error(`Fresh v803 emitted late/repeating homepage-live calls after 3s: ${JSON.stringify(late)}`);
-          const v725=await page.evaluate(() => ({loaded:!!window.GEJAST_V725_REPAIR, canonical:!!window.GEJAST_LIVE_SUMMARY}));
-          if(!v725.loaded||!v725.canonical) throw new Error(`Expected both v725 compatibility and canonical live-summary runtimes: ${JSON.stringify(v725)}`);
-          console.log('RESULT=V803_FRESH_LIVE_HOMEPAGE_CADENCE_PASS');
+
+          async function exercise(label, viewport, { requireCanonicalCall=false }={}) {
+            const context = await browser.newContext({viewport});
+            await context.addInitScript(({token}) => {
+              localStorage.setItem('jas_session_token_v11', token);
+              sessionStorage.setItem('jas_session_token_v11', token);
+            }, {token});
+            const calls=[];
+            await context.route('https://uiqntazgnrxwliaidkmy.supabase.co/rest/v1/**', async route => {
+              const path=new URL(route.request().url()).pathname;
+              if(path.endsWith('/rpc/account_public_state_v687')) {
+                return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,site_scope:'friends',player_name:'V803Proof'})});
+              }
+              if(path.endsWith('/rpc/get_homepage_live_state_public_scoped')) {
+                calls.push(Date.now());
+                return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,entries:{},site_scope:'friends'})});
+              }
+              if(path.endsWith('/rpc/get_drinks_homepage_top5_public')) {
+                return route.fulfill({status:200,contentType:'application/json',body:'[]'});
+              }
+              return route.fulfill({status:200,contentType:'application/json',body:'{}'});
+            });
+            const page=await context.newPage();
+            const started=Date.now();
+            await page.goto(`https://kalenel.nl/index.html?cb=${Date.now()}-${label}`, {waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForFunction(() => document.documentElement.getAttribute('data-gejast-auth-state')==='authenticated',{timeout:15000});
+            await page.waitForTimeout(7500);
+            const offsets=calls.map(t=>t-started);
+            const runtime=await page.evaluate(() => ({
+              canonical: !!window.GEJAST_LIVE_SUMMARY,
+              v725Css: !!document.getElementById('gejastV725Css'),
+              v725Resource: performance.getEntriesByType('resource').some((entry)=>String(entry.name||'').includes('gejast-v725-repair.js'))
+            }));
+            console.log(`${label} homepage-live calls=${calls.length} offset_ms=${JSON.stringify(offsets)} runtime=${JSON.stringify(runtime)}`);
+            if(!runtime.canonical) throw new Error(`${label}: canonical live-summary runtime missing`);
+            if(!runtime.v725Css && !runtime.v725Resource) throw new Error(`${label}: v725 compatibility runtime was not observed`);
+            if(calls.length>2) throw new Error(`${label}: emitted ${calls.length} homepage-live calls in 7.5s; expected at most 2 boot calls`);
+            const late=offsets.filter(ms=>ms>3000);
+            if(late.length>0) throw new Error(`${label}: emitted late/repeating homepage-live calls after 3s: ${JSON.stringify(late)}`);
+            if(requireCanonicalCall && calls.length<1) throw new Error(`${label}: canonical mobile homepage-live one-shot call was not observed`);
+            await context.close();
+            return {count:calls.length, offsets};
+          }
+
+          const desktop=await exercise('desktop',{width:1280,height:900});
+          const mobile=await exercise('mobile',{width:390,height:844},{requireCanonicalCall:true});
+          console.log(`RESULT=V803_FRESH_LIVE_HOMEPAGE_CADENCE_PASS desktop=${desktop.count} mobile=${mobile.count}`);
           await browser.close();
           EOF
           node .v803-live-cadence.mjs
