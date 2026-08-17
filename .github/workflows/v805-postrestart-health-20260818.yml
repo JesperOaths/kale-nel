@@ -6,7 +6,7 @@ on:
     paths: ['.github/workflows/v805-postrestart-health-20260818.yml']
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   live-health:
@@ -21,6 +21,18 @@ jobs:
           ref: proof/v805-postrestart-health-20260818
           fetch-depth: 0
 
+      - name: Record proof run identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .proof
+          printf '%s\n' "$GITHUB_RUN_ID" > .proof/postrestart-health-run-id.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .proof/postrestart-health-run-id.txt
+          git commit -m 'test: record post-restart health proof run id'
+          git push origin HEAD:proof/v805-postrestart-health-20260818
+
       - name: Set up Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
@@ -31,7 +43,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = 'v805'
-          unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^\.github/workflows/v805-postrestart-health-20260818\.yml$' || true)"
+          unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^(\.github/workflows/v805-postrestart-health-20260818\.yml|\.proof/postrestart-health-run-id\.txt)$' || true)"
           test -z "$unexpected" || { echo 'Unexpected proof-branch drift:'; echo "$unexpected"; exit 1; }
           echo 'GEJAST_EXPECTED_VERSION=v805' >> "$GITHUB_ENV"
           echo 'RESULT=V805_POSTRESTART_EXACT_MAIN_PASS'
