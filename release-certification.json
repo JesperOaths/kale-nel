@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_version": "v802",
+  "current_version": "v803",
   "status": "REVALIDATION_REQUIRED",
   "prior_certification": {
     "version": "v792",
@@ -8,11 +8,14 @@
     "artifact": "final-acceptance-v792.json"
   },
   "current_audit_issue": 153,
-  "reason": "v802 is live from frontend merge a0af7b08dba0222fee78f9f6fbf68e26e0bf7610 and exact-main deployment health run 31974690719 is green. Certification remains blocked because full visual run 31974690727 failed before Chromium when the production Supabase data plane timed out on all disposable-identity provisioning attempts; no screenshot artifact was produced and cleanup/residue verification also timed out. The separate SQL-only Toepen v801a ownership repair remains deliberately undeployed without explicit authorization.",
+  "reason": "v803 is a frontend candidate that removes a proven once-per-second legacy homepage-live RPC storm while preserving the v725 Pikken/Paardenrace compatibility layer. Live production remains v802 until this candidate is merged and deployed. Certification remains blocked by the production Supabase data-plane outage that prevents authenticated visual/live-write revalidation, and the separate SQL-only Toepen v801a ownership repair remains deliberately undeployed without explicit authorization.",
   "current_evidence": {
-    "frontend_version": "v802",
-    "frontend_merge": "a0af7b08dba0222fee78f9f6fbf68e26e0bf7610",
-    "audited_repository_head": "a0af7b08dba0222fee78f9f6fbf68e26e0bf7610",
+    "frontend_version": "v803",
+    "candidate_parent_main": "e3798a3b0002052c3a52a7a99569850bd3917bf6",
+    "live_frontend_version": "v802",
+    "live_frontend_merge": "a0af7b08dba0222fee78f9f6fbf68e26e0bf7610",
+    "v803_homepage_request_cadence_inventory_run": 31981237343,
+    "v803_legacy_repair_load_graph_run": 31981327145,
     "inherited_v801_full_visual_audit_run": 31943987257,
     "inherited_v801_phase1_live_auth_gameplay_run": 31944683360,
     "inherited_v801_phase2_deep_live_run": 31952351394,
@@ -29,6 +32,7 @@
     "v802_visual_cleanup_status": "UNVERIFIED_DATA_PLANE_TIMEOUT"
   },
   "required_next": [
+    "Merge and deploy v803 only after canonical repository verification passes; then prove the production homepage no longer emits the legacy one-second homepage-live request cadence.",
     "Restore reliable production Supabase data-plane access, then rerun the exact-current full live visual audit through authenticated Friends/Family fixture provisioning, screenshot capture, artifact upload, zero-residue cleanup and manual screenshot review.",
     "Obtain explicit authorization before applying GEJAST_v801a_toepen_idempotency_owner_guard.sql to production Supabase.",
     "After v801a deployment, prove same-owner Toepen idempotency still returns the same game while unrelated-owner, invalid-session and wrong-scope replay fail closed, with zero residue.",
