@@ -1,0 +1,206 @@
+name: v805 Pikken fresh-room render stress
+
+on:
+  push:
+    branches: [proof/v805-pikken-render-stress-20260818]
+    paths: ['.github/workflows/v805-pikken-render-stress-20260818.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v805-pikken-render-stress-20260818
+  cancel-in-progress: false
+
+jobs:
+  pikken-render-stress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      GEJAST_EXACT_MAIN_SHA: b64a116f2b2684d1fbd475b40c2b76f569d40942
+      GEJAST_BASE_URL: https://kalenel.nl/
+      GEJAST_SITE_SCOPE: friends
+      PGCONNECT_TIMEOUT: '10'
+      PGOPTIONS: '-c statement_timeout=20000'
+    steps:
+      - name: Check out exact-current proof branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v805-pikken-render-stress-20260818
+          fetch-depth: 0
+
+      - name: Record proof run identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .proof
+          printf '%s\n' "$GITHUB_RUN_ID" > .proof/v805-pikken-stress-run-id.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .proof/v805-pikken-stress-run-id.txt
+          git commit -m 'test: record v805 Pikken stress run id'
+          git push origin HEAD:proof/v805-pikken-render-stress-20260818
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Prove exact v805 product tree and healthy data plane
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = 'v805'
+          test "$(curl -fsS --max-time 10 https://kalenel.nl/VERSION | tr -d '\r\n')" = 'v805'
+          unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^(\.github/workflows/v805-pikken-render-stress-20260818\.yml|\.proof/v805-pikken-stress-run-id\.txt)$' || true)"
+          test -z "$unexpected" || { echo 'Unexpected proof-branch drift:'; echo "$unexpected"; exit 1; }
+          GEJAST_DATA_PLANE_TIMEOUT_MS=10000 GEJAST_DATA_PLANE_ATTEMPTS=2 GEJAST_DATA_PLANE_RETRY_DELAY_MS=750 node check-live-data-plane.mjs
+          echo 'RESULT=V805_PIKKEN_STRESS_EXACT_MAIN_PASS'
+
+      - name: Install browser runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Provision two hidden disposable players
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          name1="V805PkStressA_${suffix}"
+          name2="V805PkStressB_${suffix}"
+          pin1='4826'; pin2='7314'
+          echo "::add-mask::$pin1"; echo "::add-mask::$pin2"
+          {
+            echo "GEJAST_PLAYER1_NAME=$name1"
+            echo "GEJAST_PLAYER2_NAME=$name2"
+          } >> "$GITHUB_ENV"
+          timeout 25s psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v name1="$name1" -v name2="$name2" -v pin1="$pin1" -v pin2="$pin2" <<'SQL'
+          insert into public.players(slug,display_name,active,pin_hash,approved,hidden_from_public,is_dummy,site_scope)
+          values
+            ('v805-pkstress-a-'||lower(:'name1'),:'name1',true,'md5:'||md5(:'pin1'||':'||current_database()),true,true,true,'friends'),
+            ('v805-pkstress-b-'||lower(:'name2'),:'name2',true,'md5:'||md5(:'pin2'||':'||current_database()),true,true,true,'friends');
+          SQL
+          sessions="$(timeout 25s psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v name1="$name1" -v name2="$name2" -v pin1="$pin1" -v pin2="$pin2" <<'SQL'
+          select public.account_login_v687(:'name1',:'pin1','friends','{"proof":"v805-pikken-stress"}'::jsonb)->>'session_token',
+                 public.account_login_v687(:'name2',:'pin2','friends','{"proof":"v805-pikken-stress"}'::jsonb)->>'session_token';
+          SQL
+          )"
+          IFS='|' read -r token1 token2 <<< "$sessions"
+          [[ "$token1" =~ ^[0-9a-f]{48}$ && "$token2" =~ ^[0-9a-f]{48}$ ]]
+          echo "::add-mask::$token1"; echo "::add-mask::$token2"
+          {
+            echo "GEJAST_PLAYER1_TOKEN=$token1"
+            echo "GEJAST_PLAYER2_TOKEN=$token2"
+          } >> "$GITHUB_ENV"
+          echo 'RESULT=V805_PIKKEN_STRESS_FIXTURES_PASS'
+
+      - name: Run 20 fresh-room two-context stress cycles with no retries
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/v805-pikken-stress.mjs <<'JS'
+          import fs from 'node:fs';
+          import { chromium } from 'playwright';
+
+          const BASE = 'https://kalenel.nl/';
+          const token1 = process.env.GEJAST_PLAYER1_TOKEN;
+          const token2 = process.env.GEJAST_PLAYER2_TOKEN;
+          const name1 = process.env.GEJAST_PLAYER1_NAME;
+          const name2 = process.env.GEJAST_PLAYER2_NAME;
+          const configText = fs.readFileSync('gejast-config.js','utf8');
+          const supabaseUrl = configText.match(/SUPABASE_URL:\s*'([^']+)'/)?.[1];
+          const key = configText.match(/SUPABASE_PUBLISHABLE_KEY:\s*'([^']+)'/)?.[1];
+          if (!supabaseUrl || !key || !token1 || !token2 || !name1 || !name2) throw new Error('missing proof configuration');
+          const created = [];
+          const timeout = 20000;
+          const safe = (x) => String(x?.message || x || 'unknown').replaceAll(token1,'[TOKEN1]').replaceAll(token2,'[TOKEN2]');
+          const tokenPayload = (token, extra={}) => ({session_token:token,session_token_input:token,site_scope_input:'friends',...extra});
+          async function rpc(name,payload={}) {
+            const controller=new AbortController(); const timer=setTimeout(()=>controller.abort(),timeout);
+            try {
+              const res=await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json',apikey:key,Authorization:`Bearer ${key}`},body:JSON.stringify(payload),signal:controller.signal});
+              const text=await res.text(); let data=null; try{data=text?JSON.parse(text):null}catch{data={raw:text}}
+              if(!res.ok) throw new Error(`${name}: ${data?.message||data?.error||`HTTP ${res.status}`}`);
+              return data && data[name]!==undefined ? data[name] : data;
+            } finally { clearTimeout(timer); }
+          }
+          async function context(browser,token){
+            const c=await browser.newContext({viewport:{width:1365,height:900}});
+            await c.addInitScript((t)=>{localStorage.setItem('jas_session_token_v11',t);localStorage.setItem('jas_session_token_v10',t);localStorage.setItem('jas_last_activity_at_v1',String(Date.now()));},token);
+            return c;
+          }
+          async function assertRendered(page,label){
+            await page.waitForTimeout(900);
+            if(/login\.html/i.test(page.url())) throw new Error(`${label} login bounce url=${page.url()}`);
+            const body=(await page.locator('body').innerText()).trim();
+            if(body.length<20) throw new Error(`${label} empty body len=${body.length} url=${page.url()}`);
+            await page.waitForFunction(({a,b})=>{const text=document.querySelector('#pkPlayers')?.textContent||'';return text.toLowerCase().includes(a.toLowerCase())&&text.toLowerCase().includes(b.toLowerCase());},{a:name1,b:name2},{timeout:10000});
+            const wm=(await page.locator('[data-version-watermark], .site-credit-watermark').allTextContents().catch(()=>[])).join(' ');
+            if(!wm.includes('v805')) throw new Error(`${label} missing v805 watermark`);
+          }
+          const browser=await chromium.launch({headless:true});
+          try {
+            for(let i=1;i<=20;i++){
+              const lobby=await rpc('pikken_create_lobby_fast_v687',tokenPayload(token1,{config_input:{penalty_mode:'wrong_loses',start_dice:1,pikken_render_stress:true}}));
+              const id=String(lobby?.game?.id||lobby?.game_id||lobby?.id||'').trim();
+              const code=String(lobby?.game?.lobby_code||lobby?.lobby_code||lobby?.code||'').trim();
+              if(!id||!code) throw new Error(`cycle ${i} create missing id/code`);
+              created.push(id);
+              await rpc('pikken_join_lobby_fast_v687',tokenPayload(token2,{lobby_code_input:code}));
+              const c1=await context(browser,token1); const c2=await context(browser,token2);
+              try {
+                const p1=await c1.newPage(); const p2=await c2.newPage();
+                const errs=[];
+                for(const [p,label] of [[p1,'p1'],[p2,'p2']]){
+                  p.on('pageerror',e=>errs.push(`${label}:pageerror:${safe(e)}`));
+                  p.on('console',m=>{if(m.type()==='error'&&!/favicon|Failed to load resource.*404/i.test(m.text())) errs.push(`${label}:console:${m.text()}`);});
+                }
+                const url=new URL(`pikken.html?game_id=${encodeURIComponent(id)}`,BASE).toString();
+                const [r1,r2]=await Promise.all([p1.goto(url,{waitUntil:'domcontentloaded',timeout}),p2.goto(url,{waitUntil:'domcontentloaded',timeout})]);
+                if(!r1||r1.status()>=500||!r2||r2.status()>=500) throw new Error(`cycle ${i} document status ${r1?.status()}/${r2?.status()}`);
+                await Promise.all([assertRendered(p1,`cycle ${i} p1 initial`),assertRendered(p2,`cycle ${i} p2 initial`)]);
+                await p2.reload({waitUntil:'domcontentloaded',timeout});
+                await assertRendered(p2,`cycle ${i} p2 reload`);
+                if(errs.length) throw new Error(`cycle ${i} browser errors ${errs.join(' | ')}`);
+                console.log(`PIKKEN_STRESS_CYCLE_PASS cycle=${i} initial_pair=true p2_reload=true`);
+              } finally { await c1.close(); await c2.close(); }
+              await rpc('pikken_destroy_game_fast_v687',tokenPayload(token1,{game_id_input:id}));
+              created.splice(created.indexOf(id),1);
+            }
+            console.log('RESULT=V805_PIKKEN_FRESH_ROOM_RENDER_STRESS_PASS cycles=20 concurrent_initial_loads=40 p2_reloads=20 retries=0');
+          } finally {
+            for(const id of [...created]){ try{await rpc('pikken_destroy_game_fast_v687',tokenPayload(token1,{game_id_input:id}));}catch(e){console.log(`cleanup warning game=${id} ${safe(e)}`)} }
+            await browser.close();
+          }
+          JS
+          node /tmp/v805-pikken-stress.mjs
+
+      - name: Cleanup controlled fixtures and prove zero residue
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GEJAST_PLAYER1_NAME:-}" ]; then echo 'No controlled identities were provisioned.'; exit 0; fi
+          timeout 30s psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v n1="$GEJAST_PLAYER1_NAME" -v n2="$GEJAST_PLAYER2_NAME" <<'SQL'
+          begin;
+          delete from public.pikken_games where created_by_player_name in (:'n1',:'n2') or created_by_player_id in (select id from public.players where display_name in (:'n1',:'n2'));
+          delete from public.gejast_active_player_metadata_v679 where lower(coalesce(player_name,'')) in (lower(:'n1'),lower(:'n2'));
+          delete from public.gejast_player_sessions_v746 where player_id in (select id from public.players where display_name in (:'n1',:'n2'));
+          delete from public.players where display_name in (:'n1',:'n2') and hidden_from_public=true and is_dummy=true;
+          commit;
+          SQL
+          residue="$(timeout 25s psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v n1="$GEJAST_PLAYER1_NAME" -v n2="$GEJAST_PLAYER2_NAME" <<'SQL'
+          select (select count(*) from public.players where display_name in (:'n1',:'n2')),
+                 (select count(*) from public.gejast_player_sessions_v746 where display_name in (:'n1',:'n2')),
+                 (select count(*) from public.gejast_active_player_metadata_v679 where lower(coalesce(player_name,'')) in (lower(:'n1'),lower(:'n2'))),
+                 (select count(*) from public.pikken_games where created_by_player_name in (:'n1',:'n2'));
+          SQL
+          )"
+          test "$residue" = '0|0|0|0'
+          echo 'RESULT=V805_PIKKEN_STRESS_ZERO_RESIDUE_PASS'
