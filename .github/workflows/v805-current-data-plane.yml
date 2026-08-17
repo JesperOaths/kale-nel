@@ -1,0 +1,31 @@
+name: v805 current data-plane recovery proof
+
+on:
+  push:
+    branches: [proof/v805-current-recovery]
+    paths: ['.github/workflows/v805-current-data-plane.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  data-plane:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: proof/v805-current-recovery
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: '24'
+      - name: Prove exact current tree and browser-facing auth RPC
+        run: |
+          set -euo pipefail
+          exact=77b32764942c2fc6185c3452ba9cbe4a317676e6
+          test "$(git show "$exact:VERSION" | tr -d '\r\n')" = v805
+          unexpected="$(git diff --name-only "$exact"..HEAD | grep -Ev '^\.github/workflows/v805-current-data-plane\.yml$' || true)"
+          test -z "$unexpected"
+          node check-live-data-plane.mjs
+          echo 'RESULT=V805_CURRENT_PUBLIC_DATA_PLANE_PASS'
