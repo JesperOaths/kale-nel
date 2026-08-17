@@ -13,8 +13,12 @@ assert(source.includes('let booted=false;'), 'v725 compatibility boot must have 
 assert(/function boot\(\)\{ if\(booted\) return; booted=true;/.test(source), 'v725 compatibility boot must return after first initialization');
 assert(source.includes('ready(boot);'), 'v725 compatibility boot must still initialize when DOM is ready');
 assert(!/setInterval\(\(\)=>\{\s*boot\(\)/.test(source), 'v725 compatibility boot must not be re-run by an interval');
-assert(source.includes('window.__gejastV725PaardenraceMonitorTimer=setInterval'), 'Paardenrace compatibility monitor must have one global timer owner');
-assert(/__gejastV725PaardenraceMonitorTimer=setInterval\(\(\)=>\{ if\(!document\.hidden\) monitorPaardenraceLive\(\); \},2500\)/.test(source), 'Paardenrace compatibility monitor cadence must remain 2500ms');
+if (versionNumber === 804) {
+  assert(source.includes('window.__gejastV725PaardenraceMonitorTimer=setInterval'), 'v804 Paardenrace compatibility monitor must have one global timer owner');
+} else {
+  assert(!source.includes('__gejastV725PaardenraceMonitorTimer'), 'v805+ must not reinstall a redundant Paardenrace compatibility poll timer');
+  assert(!source.includes('monitorPaardenraceLive'), 'v805+ must rely on the native Paardenrace live-page state poll');
+}
 assert(/__gejastV725PikkenFeedTimer[^\n]*setInterval\(\(\)=>\{ if\(!document\.hidden\) refreshPikkenFeeds\(\);\},2500\)/.test(source), 'Pikken compatibility feed cadence must remain 2500ms');
 assert(!/ready\(boot\);\s*setInterval\(\(\)=>\{ boot\(\);/.test(source), 'legacy one-second boot loop must stay removed');
 

@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "site_version": "release candidate v804 / live v803",
+  "site_version": "release candidate v805 / live v804",
   "last_updated": "2026-08-17",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -11,7 +11,7 @@
   },
   "deployment_identity": {
     "status": "verified_complete",
-    "live_version": "v803",
+    "live_version": "v804",
     "frontend_release_merge": "4bb1af4e1c5f285da8f755579e1e5998e0d38554",
     "repository_head_at_audit": "4bb1af4e1c5f285da8f755579e1e5998e0d38554",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
@@ -37,8 +37,8 @@
       "2026-08-14 live v792: frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 completed its own Live deployment health run #60 successfully; later SQL-only repository audit head 141e7301944a79452eca9d354180a684249cdcd2 also passed Live deployment health without changing frontend VERSION.",
       "v793 candidate: full production screenshot audit found and repairs visible Klaverjas duplication, ladder game-key mismatch, stale game status RPC owners, Pikken spectator context loss and Rad stats aggregation failure; current release remains REVALIDATION_REQUIRED until post-deploy screenshots and gameplay are re-run."
     ],
-    "note": "Release candidate v804 / live v803. v804 makes the legacy v725 compatibility boot idempotent after exact-v803 proof measured repeated Pikken feed work and duplicated Paardenrace room-state monitoring. No live-v804 deployment claim is made yet. Existing v803 deployment/cadence evidence remains inherited; exact-v804 health and live proof are required after merge. Supabase data-plane recovery and Toepen v801a authorization remain separate blockers.",
-    "release_candidate_version": "v804"
+    "note": "Release candidate v805 / live v804. Exact-v804 live health 31984946122 is green. v805 removes the redundant v725 Paardenrace room-state monitor while preserving the native immediate + 1800ms live-page poll and its stronger insufficient-player recovery. Exact-current visual/live-write proof remains blocked by Supabase data-plane timeouts; Toepen v801a remains separately permission-gated.",
+    "release_candidate_version": "v805"
   },
   "baseline_checks": [
     {
