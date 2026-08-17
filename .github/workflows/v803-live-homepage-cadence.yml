@@ -38,7 +38,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat > /tmp/v803-live-cadence.mjs <<'EOF'
+          cat > .v803-live-cadence.mjs <<'EOF'
           import { chromium } from 'playwright';
           const browser = await chromium.launch({headless:true});
           const context = await browser.newContext();
@@ -78,4 +78,5 @@ jobs:
           console.log('RESULT=V803_FRESH_LIVE_HOMEPAGE_CADENCE_PASS');
           await browser.close();
           EOF
-          node /tmp/v803-live-cadence.mjs
+          node .v803-live-cadence.mjs
+          rm .v803-live-cadence.mjs
