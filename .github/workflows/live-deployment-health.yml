@@ -32,6 +32,12 @@ jobs:
         env:
           GEJAST_ADMIN_AUTH_TIMEOUT_MS: '15000'
         run: node check-live-admin-auth-boundary.mjs
+      - name: Verify Supabase auth data-plane liveness
+        env:
+          GEJAST_DATA_PLANE_TIMEOUT_MS: '10000'
+          GEJAST_DATA_PLANE_ATTEMPTS: '2'
+          GEJAST_DATA_PLANE_RETRY_DELAY_MS: '750'
+        run: node check-live-data-plane.mjs
       - name: Run primary read-only beta acceptance
         env:
           GEJAST_BETA_SURFACE_TIMEOUT_MS: '15000'
