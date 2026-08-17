@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "site_version": "live v803 / current frontend release v803",
+  "site_version": "release candidate v804 / live v803",
   "last_updated": "2026-08-17",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -37,7 +37,8 @@
       "2026-08-14 live v792: frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 completed its own Live deployment health run #60 successfully; later SQL-only repository audit head 141e7301944a79452eca9d354180a684249cdcd2 also passed Live deployment health without changing frontend VERSION.",
       "v793 candidate: full production screenshot audit found and repairs visible Klaverjas duplication, ladder game-key mismatch, stale game status RPC owners, Pikken spectator context loss and Rad stats aggregation failure; current release remains REVALIDATION_REQUIRED until post-deploy screenshots and gameplay are re-run."
     ],
-    "note": "Live v803 PASS identity: merge 4bb1af4e1c5f285da8f755579e1e5998e0d38554 is deployed. Exact-main Live deployment health run 31981729447 attempt 2 passed public/admin routes, GitHub OAuth perimeter, base+extended read-only acceptance and performance after one transient drinks_history HTTP 503 on attempt 1. Fresh-browser live cadence proof 31982033700 PASS observed exactly one early homepage-live call on desktop (598 ms) and one on 390x844 mobile (449 ms), with zero calls after 3 seconds while both canonical live-summary and v725 compatibility runtime were present. Exact-v803 visual run 31981729455 remains blocked before Chromium screenshots because all four Supabase service-role fixture attempts and all four cleanup attempts timed out; no artifact exists and residue is unverified. Historical Chromium/axe and isolated no-write mobile Chromium evidence remains preserved in baseline checks. SQL-only Toepen v801a remains permission-gated and undeployed."
+    "note": "Release candidate v804 / live v803. v804 makes the legacy v725 compatibility boot idempotent after exact-v803 proof measured repeated Pikken feed work and duplicated Paardenrace room-state monitoring. No live-v804 deployment claim is made yet. Existing v803 deployment/cadence evidence remains inherited; exact-v804 health and live proof are required after merge. Supabase data-plane recovery and Toepen v801a authorization remain separate blockers.",
+    "release_candidate_version": "v804"
   },
   "baseline_checks": [
     {
