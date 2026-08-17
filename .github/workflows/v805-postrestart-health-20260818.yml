@@ -1,0 +1,73 @@
+name: v805 post-restart exact-current health proof
+
+on:
+  push:
+    branches: [proof/v805-postrestart-health-20260818]
+    paths: ['.github/workflows/v805-postrestart-health-20260818.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  live-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GEJAST_EXACT_MAIN_SHA: b64a116f2b2684d1fbd475b40c2b76f569d40942
+    steps:
+      - name: Check out exact proof branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v805-postrestart-health-20260818
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+
+      - name: Prove exact current product tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = 'v805'
+          unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^\.github/workflows/v805-postrestart-health-20260818\.yml$' || true)"
+          test -z "$unexpected" || { echo 'Unexpected proof-branch drift:'; echo "$unexpected"; exit 1; }
+          echo 'GEJAST_EXPECTED_VERSION=v805' >> "$GITHUB_ENV"
+          echo 'RESULT=V805_POSTRESTART_EXACT_MAIN_PASS'
+
+      - name: Verify deployed public and admin surfaces
+        env:
+          GEJAST_DEPLOY_WAIT_SECONDS: '240'
+          GEJAST_SMOKE_TIMEOUT_MS: '15000'
+        run: node check-live-routes.mjs
+
+      - name: Verify live admin GitHub OAuth outer boundary
+        env:
+          GEJAST_ADMIN_AUTH_TIMEOUT_MS: '15000'
+        run: node check-live-admin-auth-boundary.mjs
+
+      - name: Verify Supabase auth data-plane liveness
+        env:
+          GEJAST_DATA_PLANE_TIMEOUT_MS: '10000'
+          GEJAST_DATA_PLANE_ATTEMPTS: '2'
+          GEJAST_DATA_PLANE_RETRY_DELAY_MS: '750'
+        run: node check-live-data-plane.mjs
+
+      - name: Run primary read-only beta acceptance
+        env:
+          GEJAST_BETA_SURFACE_TIMEOUT_MS: '15000'
+        run: node check-beta-readonly-surfaces.mjs
+
+      - name: Run extended read-only beta acceptance
+        env:
+          GEJAST_BETA_SURFACE_TIMEOUT_MS: '15000'
+        run: node check-beta-readonly-extended.mjs
+
+      - name: Record live beta performance probe
+        env:
+          GEJAST_PERF_TIMEOUT_MS: '20000'
+        run: node check-beta-performance.mjs
+
+      - name: Final marker
+        run: echo 'RESULT=V805_POSTRESTART_LIVE_HEALTH_PASS'
