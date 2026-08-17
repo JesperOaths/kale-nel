@@ -8,6 +8,7 @@ on:
       - '.github/workflows/full-live-visual-audit-v792.yml'
       - 'scripts/full-live-visual-audit-v792.mjs'
       - 'scripts/full-live-visual-fixtures-v801.mjs'
+      - 'scripts/refine-degraded-visual-report-v807.mjs'
       - 'check-live-data-plane.mjs'
       - '*.html'
       - 'familie/**.html'
@@ -55,6 +56,7 @@ jobs:
           npx playwright install --with-deps chromium
           node --check scripts/full-live-visual-audit-v792.mjs
           node --check scripts/full-live-visual-fixtures-v801.mjs
+          node --check scripts/refine-degraded-visual-report-v807.mjs
           node --check check-live-data-plane.mjs
 
       - name: Probe Supabase auth data plane before fixture provisioning
@@ -95,6 +97,10 @@ jobs:
         if: always() && (steps.data_plane.outcome == 'failure' || steps.provision.outcome == 'success' || steps.provision.outcome == 'failure')
         run: node scripts/full-live-visual-audit-v792.mjs
 
+      - name: Classify expected degraded login redirects
+        if: always() && env.GEJAST_VISUAL_DEGRADED_FIXTURES == '1'
+        run: node scripts/refine-degraded-visual-report-v807.mjs
+
       - name: Record degraded visual-audit status
         if: always() && (steps.data_plane.outcome == 'failure' || steps.provision.outcome == 'failure')
         shell: bash
@@ -105,6 +111,7 @@ jobs:
           DEGRADED_FIXTURE_PROVISIONING
           The read-only Supabase data-plane preflight or disposable authenticated Friends/Family fixture provisioning failed.
           The audit continued with truly anonymous browser contexts: no player session token was seeded. Tracked gated routes therefore exercise the immediate no-session login boundary while admin routes still exercise the Cloudflare perimeter.
+          Auth-gated tracked routes that reach /login.html with only redirect-aborted request noise are classified as LOGIN-GATED, not WARN; raw failed-request evidence remains in report.json.
           This artifact is partial evidence only and MUST NOT be treated as authenticated visual certification or zero-residue proof.
           If the preflight failed, no fixture provisioning write was attempted. If fixture provisioning itself failed after a healthy preflight, cleanup was still attempted for any partial run-specific state.
           The workflow remains fail-closed until real fixture provisioning, contextual authenticated captures and cleanup succeed.
