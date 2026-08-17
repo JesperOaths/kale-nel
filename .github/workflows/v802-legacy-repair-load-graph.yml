@@ -1,0 +1,49 @@
+name: v802 legacy repair load graph
+
+on:
+  push:
+    branches: [proof/v802-legacy-repair-load-graph]
+    paths: ['.github/workflows/v802-legacy-repair-load-graph.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  load-graph:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GEJAST_EXACT_MAIN_SHA: e3798a3b0002052c3a52a7a99569850bd3917bf6
+    steps:
+      - name: Check out proof branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v802-legacy-repair-load-graph
+          fetch-depth: 0
+
+      - name: Prove exact v802 product tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = 'v802'
+          unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^\.github/workflows/v802-legacy-repair-load-graph\.yml$' || true)"
+          test -z "$unexpected" || { echo 'Unexpected product drift:'; echo "$unexpected"; exit 1; }
+
+      - name: Map all legacy repair and homepage-live loaders
+        shell: bash
+        run: |
+          set -euo pipefail
+          targets=(gejast-v724-repair.js gejast-v725-repair.js gejast-index-top5-route-overrides.js gejast-spectator-pages.js gejast-v720-repair.js)
+          for target in "${targets[@]}"; do
+            echo "=== references to $target ==="
+            grep -RIn --exclude-dir=.git --exclude="$target" --include='*.html' --include='*.js' --include='*.mjs' --include='*.json' -- "$target" . || true
+          done
+          echo '=== dynamic script loaders mentioning v724/v725/spectator/top5/v720 ==='
+          grep -RInE --exclude-dir=.git --include='*.html' --include='*.js' --include='*.mjs' '(createElement\(.script.|loadScript|appendChild\(.*script|\.src\s*=).*(v724|v725|spectator-pages|index-top5-route-overrides|v720)' . || true
+          echo '=== homepage/index active script src inventory ==='
+          for f in index.html home.html familie/index.html; do
+            [ -f "$f" ] || continue
+            echo "--- $f ---"
+            grep -oE '<script[^>]+src="[^"]+"' "$f" | sed -E 's/.*src="([^"]+)"/\1/' || true
+          done
+          echo 'RESULT=V802_LEGACY_REPAIR_LOAD_GRAPH_COMPLETE'
