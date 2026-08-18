@@ -1,7 +1,7 @@
 {
   "version": 8,
-  "site_version": "release candidate v805 / live v804",
-  "last_updated": "2026-08-17",
+  "site_version": "release candidate v806 / live certified v805",
+  "last_updated": "2026-08-18",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
     "ready_to_test": "Code exists and surface checks pass, but real beta proof is still needed.",
@@ -10,12 +10,15 @@
     "blocked_external": "Requires external device, account, secret, or user action."
   },
   "deployment_identity": {
-    "status": "verified_complete",
-    "live_version": "v804",
-    "frontend_release_merge": "4bb1af4e1c5f285da8f755579e1e5998e0d38554",
-    "repository_head_at_audit": "4bb1af4e1c5f285da8f755579e1e5998e0d38554",
+    "status": "ready_to_test",
+    "live_version": "v805",
+    "frontend_release_merge": "b64a116f2b2684d1fbd475b40c2b76f569d40942",
+    "repository_head_at_audit": "fe69dfdbad20b2489ff050c9799dc276f8dbd733",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
     "evidence": [
+      "2026-08-18 certified v805: post-v801a health 32084207898 PASS; deep live 32085432145 PASS; authenticated 137-screenshot visual audit 32085275503 PASS with manual review; production migration 20260818001412 and public Toepen owner/scope proof 32084142660 PASS; final controlled residue zero.",
+      "2026-08-18 certified live v805: immutable release branch/tag point to b64a116f2b2684d1fbd475b40c2b76f569d40942; post-v801a health 32084207898, deep-live 32085432145 and authenticated visual 32085275503 all PASS; all 137 screenshots manually reviewed; independent production residue sweep zero.",
+      "2026-08-18 production Toepen v801a: migration 20260818001412 gejast_v801a_toepen_idempotency_owner_guard deployed; public REST proof 32084142660 PASS with same-owner replay preserved, cross-owner/invalid-session/wrong-scope rejected and cleanup zero residue.",
       "2026-08-17 live v803: exact-main Live deployment health run 31981729447 attempt 2 PASS after deployment of merge 4bb1af4e1c5f285da8f755579e1e5998e0d38554; all deployed public/admin surfaces, admin GitHub OAuth boundary, base+extended read-only acceptance and performance passed.",
       "2026-08-17 live v803: fresh-browser cadence proof 31982033700 PASS; desktop homepage-live calls=1 at 598 ms and 390x844 mobile calls=1 at 449 ms, with zero late/repeating calls after 3 seconds; canonical live-summary plus v725 compatibility runtime both observed.",
       "2026-08-17 live v803: full visual run 31981729455 failed before screenshots because all four service-role REST provisioning attempts timed out; no screenshot artifact was produced and all four cleanup attempts also timed out, so residue remains unverified.",
@@ -37,8 +40,8 @@
       "2026-08-14 live v792: frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 completed its own Live deployment health run #60 successfully; later SQL-only repository audit head 141e7301944a79452eca9d354180a684249cdcd2 also passed Live deployment health without changing frontend VERSION.",
       "v793 candidate: full production screenshot audit found and repairs visible Klaverjas duplication, ladder game-key mismatch, stale game status RPC owners, Pikken spectator context loss and Rad stats aggregation failure; current release remains REVALIDATION_REQUIRED until post-deploy screenshots and gameplay are re-run."
     ],
-    "note": "Release candidate v805 / live v804. Exact-v804 live health 31984946122 is green. v805 removes the redundant v725 Paardenrace room-state monitor while preserving the native immediate + 1800ms live-page poll and its stronger insufficient-player recovery. Exact-current visual/live-write proof remains blocked by Supabase data-plane timeouts; Toepen v801a remains separately permission-gated.",
-    "release_candidate_version": "v805"
+    "note": "Live v805 is the certified baseline pinned by release/v805-certified-20260818 and tag v805-certified-20260818. v806 is a release candidate that canonicalizes player-session runtime calls and root-resolves shared Family assets; it remains REVALIDATION_REQUIRED until fresh health, deep gameplay, authenticated visual/manual review and zero-residue evidence pass.",
+    "release_candidate_version": "v806"
   },
   "baseline_checks": [
     {
@@ -87,7 +90,7 @@
       "id": "live_write_safety_gate",
       "status": "verified_complete",
       "command": "npm run beta:write:readiness / beta:readiness",
-      "evidence": "The live-write checklist remains fully disarmed with zero automated mutation targets. One live-proven Toepen backend repair is explicitly permission-gated and not armed; v801a requires separate human authorization before production deployment."
+      "evidence": "The live-write checklist remains disarmed by default. The previously permission-gated Toepen v801a owner/scope repair was explicitly authorized, deployed as migration 20260818001412, publicly proven in run 32084142660, and cleaned to zero residue. No pending production mutation is armed."
     }
   ],
   "beta_gaps": [
@@ -104,10 +107,10 @@
       "id": "toepen_backend_live",
       "priority": 2,
       "area": "Toepen",
-      "status": "needs_permission",
-      "proof_needed": "Current live blocker: exact-v801 run 31952921912 proved unrelated authenticated same-scope client_match_id replay returns a foreign existing Toepen game_id. v801a is merged and rollback-proven against the production schema but not deployed.",
-      "next_action": "With explicit authorization, apply GEJAST_v801a_toepen_idempotency_owner_guard.sql to production Supabase, then rerun same-owner idempotency, unrelated-owner denial, invalid-session/wrong-scope denial, totals guard, deep gameplay regression and zero-residue checks.",
-      "latest_probe": "2026-08-16: owner-control run 31952921912 proved the live defect and Boerenbridge/Beerpong controls; rollback-only v801a production-schema run 31953380650 passed owner/session/scope/totals assertions and proved production remained untouched after rollback."
+      "status": "verified_complete",
+      "proof_needed": "Complete: v801a production migration 20260818001412 adds the Toepen client_match_id owner/scope guard and the public PostgREST proof verifies same-owner idempotency plus cross-owner, invalid-session and wrong-scope rejection.",
+      "next_action": "No Toepen v801a owner-guard deployment action remains. Revalidate only if the Toepen persistence contract or create_toepen_game function changes.",
+      "latest_probe": "2026-08-18: v801a public PostgREST security proof run 32084142660 / job 95553027731 PASS after migration 20260818001412; post-mutation health 32084207898 and deep gameplay 32085432145 PASS; independent residue sweep zero."
     },
     {
       "id": "admin_host_security",

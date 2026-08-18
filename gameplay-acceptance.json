@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "site_version": "v805",
-  "last_updated": "2026-08-17",
+  "site_version": "v806",
+  "last_updated": "2026-08-18",
   "scope": "Gameplay acceptance is tracked separately from general beta readiness. Deterministic engine proof is not labeled as live multiplayer proof, and route/RPC reachability is not labeled as play-to-completion proof. Player-count limits are only recorded as exact when current shipped source or deterministic acceptance grounds them; unknown backend-owned limits remain explicitly unknown.",
   "live_write_approval": {
     "name": "GEJAST_ALLOW_LIVE_WRITE_BETA",
@@ -38,9 +38,9 @@
       },
       "deterministic_status": "verified_complete",
       "deterministic_evidence": "check-toepen-gameplay-matrix-v792.mjs plays the shipped engine through completion at every supported player count and covers fold/stake/undo behavior.",
-      "live_status": "owner_isolation_defect_proven_fix_requires_authorization",
-      "live_evidence": "Exact-v801 live owner-control run 31952921912 saved a structurally valid completed Toepen match, confirmed invalid-session denial, and proved an unrelated authenticated Friends player can replay the creator's client_match_id and receive already_saved=true with the foreign game_id. The foreign game is not mutated. SQL-only v801a is merged and rollback-proven but not deployed.",
-      "remaining_gap": "Authorize and deploy v801a, then rerun same-owner idempotency, unrelated-owner denial, invalid-session/wrong-scope denial, totals consistency and zero-residue proof."
+      "live_status": "owner_isolation_and_persistence_proven",
+      "live_evidence": "Production migration 20260818001412 (v801a) is deployed. Public REST proof run 32084142660 proved first save plus same-owner idempotent replay, cross-owner rejection, invalid-session rejection and wrong-scope rejection with zero controlled residue. Post-mutation health 32084207898 and deep-live run 32085432145 passed; the deep run also revalidated authenticated Toepen desktop/mobile route behavior alongside the wider gameplay campaign.",
+      "remaining_gap": "No Toepen owner/session/scope production blocker remains. The deterministic shipped engine remains the 2-8 player completion authority; fresh v806 release-wide browser revalidation is tracked by release-certification.json rather than represented as an unresolved Toepen backend defect."
     },
     {
       "id": "boerenbridge",
@@ -124,7 +124,7 @@
       "deterministic_status": "rules_and_live_viewmodel_proven",
       "deterministic_evidence": "check-pikken-pik-conversion-v790.mjs protects bid ordering and pik conversion, while check-pikken-live-viewmodel-v792.mjs executes shipped live-view helpers for dice ordering, bid labels, winner detection, phase normalization, viewer membership and completion/abandonment handoff wiring. This still does not claim backend play-to-completion.",
       "live_status": "two_player_natural_completion_reconnect_proven",
-      "live_evidence": "Exact-v801 Phase-2 deep live run 31952351394 used disposable authenticated identities and multiple browser contexts to create/join/start Pikken, exercise reconnect/state reread, naturally reach terminal completion, persist/reread the winner and completed state, and clean all controlled fixtures to zero residue.",
+      "live_evidence": "Exact-v805 post-v801a deep-live run 32085432145 revalidated authenticated multi-context/mobile Pikken routing, reconnect/state reread and natural two-player completion; post-game sessions stayed valid and controlled cleanup was zero residue. Exact-v801 Phase-2 deep live run 31952351394 used disposable authenticated identities and multiple browser contexts to create/join/start Pikken, exercise reconnect/state reread, naturally reach terminal completion, persist/reread the winner and completed state, and clean all controlled fixtures to zero residue.",
       "remaining_gap": "The exact checked-in Pikken start RPC and deployed provenance ground the minimum at 2. Phase-2 now proves natural two-player completion, but no authoritative room/join constraint proves a maximum player count, so the maximum remains unknown and higher player-count live completion is not inferred."
     },
     {
@@ -151,7 +151,7 @@
       "deterministic_status": "engine_and_live_viewmodel_proven",
       "deterministic_evidence": "check-paardenrace-engine-v792.mjs covers shipped card parsing, four-horse progress, ten gates, draw accounting, ready/wager summary and winner summary; check-paardenrace-live-viewmodel-v792.mjs executes shipped live helpers for race logs, player/ready/winner presentation, host kick boundaries, nomination targeting, the two-player live-state sanity guard and close/leave handoff wiring. This still does not claim backend play-to-completion.",
       "live_status": "two_player_natural_completion_reconnect_proven",
-      "live_evidence": "Exact-v801 Phase-2 deep live run 31952351394 used disposable authenticated identities and multiple browser contexts to create/join/start Paardenrace, exercise reconnect/state reread and nominations, naturally reach terminal completion, persist/reread terminal state, and clean all controlled fixtures to zero residue.",
+      "live_evidence": "Exact-v805 post-v801a deep-live run 32085432145 revalidated authenticated multi-context/mobile Paardenrace routing, reconnect/state reread and natural two-player completion; post-game sessions stayed valid and controlled cleanup was zero residue. Exact-v801 Phase-2 deep live run 31952351394 used disposable authenticated identities and multiple browser contexts to create/join/start Paardenrace, exercise reconnect/state reread and nominations, naturally reach terminal completion, persist/reread terminal state, and clean all controlled fixtures to zero residue.",
       "remaining_gap": "The exact checked-in Paardenrace start RPC and shipped lobby ground the minimum at 2. Phase-2 now proves natural two-player completion, but no authoritative room/join/schema constraint proves a maximum human room size; higher player-count live completion is not inferred from the four horse suits."
     },
     {
