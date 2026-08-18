@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "site_version": "v808",
+  "status": "PASS",
+  "certified_at": "2026-08-18",
+  "evidence_baseline_main_sha": "7f6f7bc110807e85f52ff4d54927620dbbc9ffeb",
+  "certified_release_branch": "release/v808-certified-20260818",
+  "production_migration": {
+    "version": "20260818001412",
+    "name": "gejast_v801a_toepen_idempotency_owner_guard"
+  },
+  "authoritative_runs": {
+    "exact_current_live_health": {
+      "run_id": 32123034385,
+      "job_id": 95698011853,
+      "conclusion": "success",
+      "coverage": [
+        "exact v808 tree",
+        "live VERSION",
+        "public routes",
+        "admin OAuth outer boundary",
+        "auth data plane",
+        "primary read-only",
+        "extended read-only",
+        "performance"
+      ]
+    },
+    "owner_isolation": {
+      "run_id": 32123034385,
+      "job_id": 95698167836,
+      "conclusion": "success",
+      "games": [
+        "boerenbridge",
+        "beerpong"
+      ],
+      "same_owner_replay": "PASS",
+      "cross_owner_replay": "rejected",
+      "cleanup": "zero residue"
+    },
+    "deep_live": {
+      "run_id": 32123034385,
+      "job_id": 95698248548,
+      "conclusion": "success",
+      "coverage": [
+        "multi-context",
+        "mobile",
+        "reconnect",
+        "Pikken natural completion",
+        "Paardenrace natural completion",
+        "post-game session survival"
+      ],
+      "cleanup": "zero residue"
+    },
+    "authenticated_visual_closure": {
+      "run_id": 32123034341,
+      "job_id": 95667460019,
+      "conclusion": "success",
+      "screenshots": 137,
+      "records": 137,
+      "broken_after_declared_alias_refinement": 0,
+      "family_runtime_contracts": "PASS",
+      "manual_review": "PASS",
+      "cleanup": "zero residue",
+      "artifact_id": 9319744233,
+      "artifact_name": "v808-final-visual-32123034341-1",
+      "artifact_sha256": "b017cbb66811ebd8c3bd8daf9ec7083df12db082ae7d6af209ef19422dd81af9"
+    }
+  },
+  "non_authoritative_diagnostics": {
+    "serial_visual_harness": {
+      "run_id": 32123034385,
+      "job_id": 95698786463,
+      "conclusion": "failure",
+      "classification": "superseded proof-harness policy mismatch",
+      "reason": "The older Family helper treated generic known HTTP-404 runtime warning console messages as fatal before screenshot capture. Its route assertions, including the parameterless and named Family player aliases, passed and its fixture cleanup passed zero residue. The independent exact-current authenticated visual-closure run 32123034341 is the authoritative visual evidence."
+    }
+  },
+  "security_contracts": {
+    "forced_player_login_gate": "PASS",
+    "friends_family_scope_isolation": "PASS",
+    "family_empty_player_alias": "PASS",
+    "admin_cloudflare_outer_boundary": "PASS",
+    "admin_supabase_totp_inner_boundary": "PASS",
+    "toepen_idempotency_owner_guard": "PASS",
+    "boerenbridge_owner_isolation": "PASS",
+    "beerpong_owner_isolation": "PASS"
+  },
+  "gameplay_contracts": {
+    "toepen": "PASS",
+    "boerenbridge": "PASS",
+    "beerpong": "PASS",
+    "klaverjas": "PASS",
+    "pikken": "PASS",
+    "paardenrace": "PASS",
+    "pikken_natural_completion": "PASS",
+    "paardenrace_natural_completion": "PASS",
+    "multi_context_reconnect": "PASS",
+    "mobile_runtime": "PASS"
+  },
+  "production_state": {
+    "supabase_project_id": "uiqntazgnrxwliaidkmy",
+    "database_data_plane": "healthy",
+    "latest_migration_version": "20260818001412",
+    "latest_migration_name": "gejast_v801a_toepen_idempotency_owner_guard",
+    "independent_residue_sweep_date": "2026-08-18",
+    "disposable_certification_residue": 0,
+    "residue_tables_checked": [
+      "players",
+      "gejast_player_sessions_v746",
+      "gejast_active_player_metadata_v679",
+      "boerenbridge_matches",
+      "beerpong_matches",
+      "pikken_games",
+      "pikken_game_players",
+      "pikken_live_presence",
+      "pikken_match_archive_v709",
+      "pikken_match_player_outcomes",
+      "pikken_matches",
+      "paardenrace_rooms",
+      "paardenrace_room_players",
+      "paardenrace_match_history",
+      "paardenrace_matches",
+      "paardenrace_obligations",
+      "paardenrace_drink_obligations"
+    ]
+  },
+  "truthfulness_policy": {
+    "manual_visual_review_required": true,
+    "unknown_game_limits_are_not_invented": true,
+    "static_client_login_gate_is_not_claimed_as_edge_byte_protection": true,
+    "third_party_interactive_credentials_are_not_faked": true,
+    "production_writes_use_hidden_disposable_fixtures_and_assert_cleanup": true,
+    "known_nonblocking_runtime_warnings_are_not_misreported_as_visual_breakage": true
+  },
+  "criteria": {
+    "1": {
+      "status": "PASS",
+      "summary": "Exact-current v808 product tree is pinned at 7f6f7bc110807e85f52ff4d54927620dbbc9ffeb and frozen on release/v808-certified-20260818."
+    },
+    "2": {
+      "status": "PASS",
+      "summary": "Player login plus Friends/Family scope isolation remain fail-closed; the v808 empty Family player alias and named-player family context are live-proven."
+    },
+    "3": {
+      "status": "PASS",
+      "summary": "All six tracked game surfaces retain deterministic and/or controlled live evidence appropriate to shipped contracts."
+    },
+    "4": {
+      "status": "PASS",
+      "summary": "Pikken and Paardenrace completed naturally in exact-current multi-context live browser acceptance."
+    },
+    "5": {
+      "status": "PASS",
+      "summary": "Boerenbridge and Beerpong same-owner replay and cross-owner rejection were proven with disposable production identities."
+    },
+    "6": {
+      "status": "PASS",
+      "summary": "Toepen v801a owner/scope idempotency guard remains deployed and covered by permanent regression plus prior public REST proof."
+    },
+    "7": {
+      "status": "PASS",
+      "summary": "Exact-current v808 live health passed static deployment, admin perimeter, auth data plane, read-only acceptance and performance."
+    },
+    "8": {
+      "status": "PASS",
+      "summary": "Independent authenticated visual closure captured 137 screenshots, reported zero broken routes after declared alias refinement, and all screenshots were manually reviewed."
+    },
+    "9": {
+      "status": "PASS",
+      "summary": "Admin GitHub OAuth outer boundary and Supabase password/TOTP inner boundary remain fail-closed."
+    },
+    "10": {
+      "status": "PASS",
+      "summary": "Independent post-proof production residue sweep returned zero across controlled identities, sessions, metadata, game rows and history/archive surfaces."
+    },
+    "11": {
+      "status": "PASS",
+      "summary": "The failed serial visual leg is transparently classified as an obsolete proof-harness warning policy; its cleanup passed and stronger exact-current visual evidence passed independently."
+    },
+    "12": {
+      "status": "PASS",
+      "summary": "Release PASS is recorded only after exact-current v808 health, owner isolation, deep gameplay, authenticated visual closure, manual review and independent residue verification completed."
+    }
+  }
+}
