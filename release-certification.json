@@ -5,6 +5,8 @@
   "previous_certified_version": "v808",
   "previous_certified_product_sha": "7f6f7bc110807e85f52ff4d54927620dbbc9ffeb",
   "previous_certified_release_branch": "release/v808-certified-20260818",
+  "verified_candidate_runtime_sha": "fba9a55e153e162ba97b294e530f8cddfdf470fc",
+  "candidate_builder_static_verification": "PASS",
   "reason": "v809 removes proven frontend/PostgREST contract drift and redundant empty compatibility reads. Fresh exact-current v809 live health and browser warning evidence are required before PASS.",
   "remaining_release_blockers": [
     "Fresh exact-current v809 live health must pass.",
