@@ -18,6 +18,7 @@ for (const needle of [
   '_web_push_apply_action(text,bigint,text,bigint)',
   'set_initial_pin(text,text)',
   'get_account_identity_summary_scoped(text)',
+  'request_pin_reset_reactivation_action(text,text,text)',
   'despimarkt_try_create_market_from_match_row_v646()',
   'gejast_cleanup_activation_link_duplicates_before_insert()',
   "p.proname like 'admin\\_%'",
@@ -79,7 +80,7 @@ for (const rel of files) {
   if (/\.from\s*\([^)]*\)\s*\.\s*(?:insert|update|delete|upsert)\s*\(/i.test(text)) {
     violations.push(`${rel}: direct Supabase table mutation`);
   }
-  for (const retiredRpc of ['set_initial_pin', 'get_account_identity_summary_scoped']) {
+  for (const retiredRpc of ['set_initial_pin', 'get_account_identity_summary_scoped', 'request_pin_reset_reactivation_action']) {
     if (text.toLowerCase().includes(retiredRpc)) {
       violations.push(`${rel}: active browser references retired v812f RPC ${retiredRpc}`);
     }
