@@ -1,0 +1,63 @@
+name: one-shot v811 candidate executor
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/ops-v811-builder-executor.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-shot-v811-candidate-executor
+  cancel-in-progress: false
+
+env:
+  BASE_SHA: fba531c35d076d1e0a3065683eed8908c38627b6
+  TARGET_BRANCH: agent/v811-analytics-rpc-contract
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v811-analytics-rpc-contract
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Execute reviewed branch-local builder
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          main_drift="$(git diff --name-only "$BASE_SHA"..origin/main | grep -Ev '^\.github/workflows/ops-v811-builder-executor\.yml$' || true)"
+          test -z "$main_drift" || { echo 'Unexpected main drift:'; echo "$main_drift"; exit 1; }
+          branch_drift="$(git diff --name-only "$BASE_SHA"..HEAD | grep -Ev '^\.github/workflows/v811-analytics-rpc-builder\.yml$' || true)"
+          test -z "$branch_drift" || { echo 'Unexpected v811 branch drift:'; echo "$branch_drift"; exit 1; }
+          python3 <<'PY'
+          from pathlib import Path
+          src=Path('.github/workflows/v811-analytics-rpc-builder.yml').read_text().splitlines()
+          marker='        run: |'
+          try: idx=src.index(marker)
+          except ValueError: raise SystemExit('v811 builder run block not found')
+          body=[]
+          for line in src[idx+1:]:
+              body.append(line[10:] if line.startswith('          ') else line)
+          script='\n'.join(body)+'\n'
+          old='test "$(git rev-parse origin/main)" = "$BASE_SHA"\n'
+          replacement='main_drift="$(git diff --name-only "$BASE_SHA"..origin/main | grep -Ev \'^\\.github/workflows/ops-v811-builder-executor\\.yml$\' || true)"\ntest -z "$main_drift" || { echo "Unexpected main drift during builder:"; echo "$main_drift"; exit 1; }\n'
+          if old not in script: raise SystemExit('main SHA guard anchor missing')
+          script=script.replace(old,replacement,1)
+          anchor='git add -A\n'
+          proof='mkdir -p .proof\nprintf "%s\\n" "$GITHUB_RUN_ID" > .proof/v811-builder-executor-run-id.txt\n'
+          if anchor not in script: raise SystemExit('git add anchor missing')
+          script=script.replace(anchor,proof+anchor,1)
+          Path('/tmp/v811-builder.sh').write_text(script)
+          PY
+          chmod +x /tmp/v811-builder.sh
+          bash /tmp/v811-builder.sh
+          echo 'RESULT=V811_ONE_SHOT_EXECUTOR_PASS'
