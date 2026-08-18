@@ -60,8 +60,8 @@ jobs:
           session1="v812a_rest_s1_${suffix}"
           session2="v812a_rest_s2_${suffix}"
           { echo "PROOF_VISITOR=$visitor"; echo "PROOF_SESSION1=$session1"; echo "PROOF_SESSION2=$session2"; } >> "$GITHUB_ENV"
-          PROOF_VISITOR="$visitor" PROOF_SESSION1="$session1" PROOF_SESSION2="$session2" node <<'JS'
-          const fs=require('fs');
+          PROOF_VISITOR="$visitor" PROOF_SESSION1="$session1" PROOF_SESSION2="$session2" node --input-type=module <<'JS'
+          import fs from 'node:fs';
           const cfg=fs.readFileSync('gejast-config.js','utf8');
           const url=cfg.match(/SUPABASE_URL:\s*'([^']+)'/)?.[1];
           const key=cfg.match(/SUPABASE_PUBLISHABLE_KEY:\s*'([^']+)'/)?.[1];
