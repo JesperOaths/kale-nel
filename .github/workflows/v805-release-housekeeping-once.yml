@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths: ['.github/workflows/v805-release-housekeeping-once.yml']
 
+# Triggered after workflow installation so GitHub schedules the one-shot cleanup.
 permissions:
   contents: write
 
