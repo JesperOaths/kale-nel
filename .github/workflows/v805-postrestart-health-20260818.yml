@@ -1,4 +1,4 @@
-name: v805 post-restart exact-current health proof
+name: v805 post-v801a exact-current health proof
 
 on:
   push:
@@ -30,7 +30,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add .proof/postrestart-health-run-id.txt
-          git commit -m 'test: record post-restart health proof run id'
+          git commit -m 'test: record post-v801a health proof run id'
           git push origin HEAD:proof/v805-postrestart-health-20260818
 
       - name: Set up Node.js
@@ -46,7 +46,7 @@ jobs:
           unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^(\.github/workflows/v805-postrestart-health-20260818\.yml|\.proof/postrestart-health-run-id\.txt)$' || true)"
           test -z "$unexpected" || { echo 'Unexpected proof-branch drift:'; echo "$unexpected"; exit 1; }
           echo 'GEJAST_EXPECTED_VERSION=v805' >> "$GITHUB_ENV"
-          echo 'RESULT=V805_POSTRESTART_EXACT_MAIN_PASS'
+          echo 'RESULT=V805_POSTV801A_EXACT_MAIN_PASS'
 
       - name: Verify deployed public and admin surfaces
         env:
@@ -82,4 +82,4 @@ jobs:
         run: node check-beta-performance.mjs
 
       - name: Final marker
-        run: echo 'RESULT=V805_POSTRESTART_LIVE_HEALTH_PASS'
+        run: echo 'RESULT=V805_POSTV801A_LIVE_HEALTH_PASS'
