@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const sql = fs.readFileSync('GEJAST_v812a_track_site_event_conflict_guard.sql', 'utf8');
+const boundarySql = fs.readFileSync('GEJAST_v812b_analytics_table_privilege_boundary.sql', 'utf8');
 const prepare = fs.readFileSync('scripts/prepare-visual-audit-runtime-v812.mjs', 'utf8');
 const visualWorkflow = fs.readFileSync('.github/workflows/full-live-visual-audit-v792.yml', 'utf8');
 const version = fs.readFileSync('VERSION', 'utf8').trim();
 
-assert.equal(version, 'v812', 'v812a is SQL/test-only and must not advance the shipped product version');
+assert.equal(version, 'v812', 'v812a/b are SQL/test-only and must not advance the shipped product version');
 
 assert.match(sql, /create or replace function public\.track_site_event\s*\(/i, 'v812a must replace the deployed analytics RPC');
 assert.doesNotMatch(sql, /create or replace function public\._gejast_elo_for_game_scope/i, 'v812a must not bundle the unrelated v806a ELO repair');
@@ -17,6 +18,13 @@ assert.doesNotMatch(sql, /on conflict\s*\(\s*visitor_id\s*\)/i, 'ambiguous visit
 assert.doesNotMatch(sql, /on conflict\s*\(\s*session_id\s*\)/i, 'ambiguous session_id conflict target must not return');
 assert.match(sql, /security definer/i, 'analytics RPC security-definer contract must be preserved');
 assert.match(sql, /set search_path to 'public'/i, 'analytics RPC fixed search_path must be preserved');
+
+for (const table of ['site_visitors', 'site_visit_sessions', 'site_visitor_events']) {
+  assert.match(boundarySql, new RegExp(`revoke all privileges on table public\\.${table} from public, anon, authenticated`, 'i'), `${table} must not remain directly exposed to browser roles`);
+}
+assert.match(boundarySql, /grant execute on function public\.track_site_event\(text,text,text,text,text,text,text,text,text,text,text,text,integer,integer,text,text,text,boolean,text,boolean,jsonb\)[\s\S]*to anon, authenticated, service_role/i, 'current public analytics RPC must remain executable');
+assert.match(boundarySql, /grant execute on function public\.admin_get_site_analytics_action\(text,integer,integer\)[\s\S]*to anon, authenticated, service_role/i, 'admin analytics RPC must remain callable so its session guard can enforce access');
+assert.doesNotMatch(boundarySql, /grant\s+(?:select|insert|update|delete|all(?:\s+privileges)?)\s+on\s+(?:table\s+)?public\.site_(?:visitors|visit_sessions|visitor_events)\s+to\s+(?:anon|authenticated)/i, 'v812b must never re-grant direct analytics-table access to browser roles');
 
 assert.match(prepare, /declaredRedirectTarget/, 'visual runtime must derive checked-in redirect intent');
 assert.match(prepare, /redirectDestinationReached/, 'visual runtime must wait for the declared destination');
@@ -32,4 +40,4 @@ assert.doesNotMatch(visualWorkflow, /npx\s+playwright\s+install|playwright\s+ins
 assert.match(visualWorkflow, /Refine declared authenticated redirect aliases/, 'existing fail-closed declared-alias refinement must remain wired');
 assert.match(visualWorkflow, /Cleanup disposable visual-audit state/, 'visual fixture cleanup must remain wired');
 
-console.log('RESULT=V812A_FINAL_CERT_BLOCKERS_GUARD_PASS');
+console.log('RESULT=V812AB_FINAL_CERT_BLOCKERS_GUARD_PASS');
