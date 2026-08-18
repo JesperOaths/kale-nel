@@ -1,0 +1,142 @@
+name: v805 post-v801a fast visual audit
+
+on:
+  push:
+    branches: [proof/v805-postv801a-fast-visual-20260818]
+    paths: ['.github/workflows/v805-postv801a-fast-visual-20260818.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v805-postv801a-fast-visual-20260818
+  cancel-in-progress: false
+
+jobs:
+  screenshot-every-page:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SUPABASE_URL: https://uiqntazgnrxwliaidkmy.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GEJAST_VISUAL_DB_NAME: postgres
+      GEJAST_BASE_URL: https://kalenel.nl/
+      GEJAST_SITE_SCOPE: friends
+      GEJAST_VISUAL_TIMEOUT_MS: '25000'
+      GEJAST_VISUAL_SETTLE_MS: '5000'
+      GEJAST_EXACT_MAIN_SHA: b64a116f2b2684d1fbd475b40c2b76f569d40942
+    steps:
+      - name: Check out exact-current proof branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v805-postv801a-fast-visual-20260818
+          fetch-depth: 0
+
+      - name: Record run identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .proof
+          printf '%s.%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > .proof/v805-postv801a-fast-visual-run-id.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .proof/v805-postv801a-fast-visual-run-id.txt
+          git commit -m 'test: record post-v801a fast visual run id'
+          git push origin HEAD:proof/v805-postv801a-fast-visual-20260818
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Prove exact v805 tree and prepare system Chrome runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_SERVICE_ROLE_KEY:-}"
+          test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = 'v805'
+          test "$(curl -fsS --max-time 10 https://kalenel.nl/VERSION | tr -d '\r\n')" = 'v805'
+          unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^(\.github/workflows/v805-postv801a-fast-visual-20260818\.yml|\.proof/v805-postv801a-fast-visual-run-id\.txt)$' || true)"
+          test -z "$unexpected" || { echo 'Unexpected proof branch drift:'; echo "$unexpected"; exit 1; }
+          npm ci
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.55.0
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || true)"
+          test -n "$chrome"
+          echo "GEJAST_SYSTEM_CHROME=$chrome" >> "$GITHUB_ENV"
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('scripts/full-live-visual-audit-v792.mjs')
+          src=p.read_text()
+          old="chromium.launch({ headless: true })"
+          new="chromium.launch({ headless: true, executablePath: process.env.GEJAST_SYSTEM_CHROME })"
+          if old not in src: raise SystemExit('visual Chromium launch patch target missing')
+          p.write_text(src.replace(old,new))
+          PY
+          node --check scripts/full-live-visual-audit-v792.mjs
+          node --check scripts/full-live-visual-fixtures-v801.mjs
+          node --check scripts/refine-degraded-visual-report-v807.mjs
+          node --check scripts/refine-expected-visual-aliases-v809.mjs
+          node --check check-live-data-plane.mjs
+          "$chrome" --version
+          echo 'RESULT=V805_POSTV801A_FAST_VISUAL_RUNTIME_PASS'
+
+      - name: Probe Supabase auth data plane
+        id: data_plane
+        continue-on-error: true
+        env:
+          GEJAST_DATA_PLANE_TIMEOUT_MS: '8000'
+          GEJAST_DATA_PLANE_ATTEMPTS: '1'
+          GEJAST_DATA_PLANE_RETRY_DELAY_MS: '0'
+        run: node check-live-data-plane.mjs
+
+      - name: Provision disposable authenticated visual identities
+        id: provision
+        if: steps.data_plane.outcome == 'success'
+        continue-on-error: true
+        run: node scripts/full-live-visual-fixtures-v801.mjs provision
+
+      - name: Fail closed if authenticated fixtures are unavailable
+        if: steps.data_plane.outcome != 'success' || steps.provision.outcome != 'success'
+        run: |
+          echo 'Authenticated post-v801a visual certification requires a healthy data plane and real disposable fixtures.'
+          exit 1
+
+      - name: Screenshot and inspect every tracked live HTML page
+        continue-on-error: true
+        run: node scripts/full-live-visual-audit-v792.mjs
+
+      - name: Refine declared authenticated redirect aliases
+        if: always() && steps.provision.outcome == 'success'
+        run: node scripts/refine-expected-visual-aliases-v809.mjs
+
+      - name: Upload visual audit artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: postv801a-fast-visual-${{ github.run_id }}-${{ github.run_attempt }}
+          path: visual-audit/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Cleanup disposable visual state
+        if: always() && (steps.provision.outcome == 'success' || steps.provision.outcome == 'failure')
+        run: node scripts/full-live-visual-fixtures-v801.mjs cleanup
+
+      - name: Enforce authenticated visual certification result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.data_plane.outcome }}" = 'success'
+          test "${{ steps.provision.outcome }}" = 'success'
+          test -f visual-audit/report.json
+          node <<'JS'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('visual-audit/report.json','utf8'));
+          const rows=Array.isArray(r.records)?r.records:(Array.isArray(r.routes)?r.routes:[]);
+          const broken=rows.filter(x=>String(x.judgement||x.status||'').toLowerCase()==='broken');
+          if(broken.length){ console.error(JSON.stringify(broken.slice(0,10),null,2)); process.exit(1); }
+          console.log(`VISUAL_REPORT_PASS records=${rows.length} broken=0`);
+          JS
+          echo 'RESULT=V805_POSTV801A_FAST_VISUAL_AUDIT_PASS'
