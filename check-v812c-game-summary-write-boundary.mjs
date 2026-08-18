@@ -3,12 +3,17 @@ import fs from 'node:fs';
 const file = 'GEJAST_v812c_game_summary_write_boundary.sql';
 const sql = fs.readFileSync(file, 'utf8');
 const lower = sql.toLowerCase();
+const klaverjasProvenance = fs.readFileSync('GEJAST_v812d_restore_klaverjas_runtime_bundle_v687_compat.sql', 'utf8');
+const klaverjasLower = klaverjasProvenance.toLowerCase();
 
 const requireText = (needle, message) => {
   if (!lower.includes(needle.toLowerCase())) throw new Error(message);
 };
 const rejectText = (needle, message) => {
   if (lower.includes(needle.toLowerCase())) throw new Error(message);
+};
+const requireKlaverjas = (needle, message) => {
+  if (!klaverjasLower.includes(needle.toLowerCase())) throw new Error(message);
 };
 
 requireText('unique (site_scope, game_type, client_match_id)', 'v812c must scope generic match identity');
@@ -32,4 +37,11 @@ rejectText('insert into public.live_match_summaries', 'v812c must never write th
 rejectText('on conflict (game_type, client_match_id)', 'global cross-scope conflict target must not return');
 rejectText('set site_scope = v_scope', 'contract wrapper must not rewrite scope after persistence');
 
-console.log('PASS v812c game summary write boundary contract');
+requireKlaverjas('20260818202647 restore_klaverjas_runtime_bundle_v687_compat', 'v812d must record the exact deployed migration identity');
+requireKlaverjas('create or replace function public.get_klaverjas_runtime_bundle_v687(', 'v812d compatibility wrapper missing');
+requireKlaverjas('select public.get_klaverjas_runtime_bundle_v673(site_scope_input)', 'v812d wrapper must delegate exactly to v673');
+requireKlaverjas("set search_path to 'public'", 'v812d wrapper must retain fixed search_path');
+requireKlaverjas('revoke execute on function public.get_klaverjas_runtime_bundle_v687(text) from public', 'v812d must not leave PUBLIC execute');
+requireKlaverjas('grant execute on function public.get_klaverjas_runtime_bundle_v687(text) to anon, authenticated, service_role', 'v812d must preserve expected callable roles');
+
+console.log('PASS v812c game summary boundary + v812d Klaverjas migration provenance');
