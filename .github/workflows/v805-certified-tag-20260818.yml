@@ -1,4 +1,4 @@
-name: Create immutable v805 certification tag
+name: Finalize immutable v805 certification
 
 on:
   push:
@@ -9,14 +9,14 @@ permissions:
   contents: write
 
 jobs:
-  tag:
+  finalize:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
-      - name: Create or verify immutable certification tag
+      - name: Verify immutable certification pointers
         shell: bash
         env:
           TARGET_SHA: b64a116f2b2684d1fbd475b40c2b76f569d40942
@@ -25,17 +25,44 @@ jobs:
           set -euo pipefail
           git fetch origin release/v805-certified-20260818 --tags --force
           test "$(git rev-parse origin/release/v805-certified-20260818)" = "$TARGET_SHA"
-          remote="$(git ls-remote --tags origin "refs/tags/$TAG_NAME" "refs/tags/$TAG_NAME^{}")"
-          if [ -n "$remote" ]; then
-            resolved="$(printf '%s\n' "$remote" | awk '$2 ~ /\^\{\}$/ {print $1; found=1} END{if(!found) exit 1}')"
-            test "$resolved" = "$TARGET_SHA"
-            echo "RESULT=V805_CERTIFIED_TAG_ALREADY_CORRECT sha=$resolved"
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git tag -a "$TAG_NAME" "$TARGET_SHA" -m 'Kalenel v805 certified production baseline — 2026-08-18'
-          git push origin "refs/tags/$TAG_NAME"
           resolved="$(git ls-remote --tags origin "refs/tags/$TAG_NAME^{}" | awk '{print $1}')"
           test "$resolved" = "$TARGET_SHA"
-          echo "RESULT=V805_CERTIFIED_TAG_CREATED sha=$resolved"
+          echo "RESULT=V805_CERTIFICATION_POINTERS_PASS sha=$TARGET_SHA"
+      - name: Delete exact disposable proof branch allowlist
+        shell: bash
+        run: |
+          set -euo pipefail
+          branches=(
+            proof/v805-current-recovery
+            proof/v805-main-run-discovery
+            proof/v805-paardenrace-native-cadence
+            proof/v805-phase2-deep-live-20260818
+            proof/v805-phase2-owner-isolation
+            proof/v805-pikken-render-stress2-20260818
+            proof/v805-pikken-render-stress-20260818
+            proof/v805-postrestart-health-20260818
+            proof/v805-postv801a-fast-deep-20260818
+            proof/v805-postv801a-fast-visual-20260818
+            proof/v805-toepen-v801a-rest-20260818
+            proof/cancel-obsolete-visual-20260818
+          )
+          for branch in "${branches[@]}"; do
+            case "$branch" in
+              main|release/*) echo "Refusing protected branch: $branch"; exit 1 ;;
+            esac
+            if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+              git push origin --delete "$branch"
+              echo "deleted=$branch"
+            else
+              echo "already_absent=$branch"
+            fi
+          done
+          test "$(git ls-remote --heads origin release/v805-certified-20260818 | awk '{print $1}')" = 'b64a116f2b2684d1fbd475b40c2b76f569d40942'
+          test "$(git ls-remote --tags origin 'refs/tags/v805-certified-20260818^{}' | awk '{print $1}')" = 'b64a116f2b2684d1fbd475b40c2b76f569d40942'
+          echo 'RESULT=V805_DISPOSABLE_PROOF_BRANCH_CLEANUP_PASS'
+      - name: Remove temporary ops branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git push origin --delete ops/v805-release-tag-20260818
+          echo 'RESULT=V805_TEMP_OPS_BRANCH_REMOVED_PASS'
