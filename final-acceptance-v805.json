@@ -5,6 +5,7 @@
   "certified_at": "2026-08-18",
   "evidence_baseline_main_sha": "b64a116f2b2684d1fbd475b40c2b76f569d40942",
   "certified_release_branch": "release/v805-certified-20260818",
+  "certified_tag": "v805-certified-20260818",
   "production_migration": {
     "version": "20260818001412",
     "name": "gejast_v801a_toepen_idempotency_owner_guard"
@@ -100,7 +101,7 @@
     "production_writes_use_hidden_disposable_fixtures_and_assert_cleanup": true
   },
   "criteria": {
-    "1": {"status":"PASS","summary":"Exact-current v805 product tree is pinned at b64a116f2b2684d1fbd475b40c2b76f569d40942 and preserved as release/v805-certified-20260818."},
+    "1": {"status":"PASS","summary":"Exact-current v805 product tree is pinned at b64a116f2b2684d1fbd475b40c2b76f569d40942 and preserved by both release/v805-certified-20260818 and immutable tag v805-certified-20260818."},
     "2": {"status":"PASS","summary":"Player login and Friends/Family scope isolation are fail-closed and live-proven."},
     "3": {"status":"PASS","summary":"All six tracked game surfaces have deterministic and/or controlled live gameplay evidence appropriate to their shipped contracts."},
     "4": {"status":"PASS","summary":"Pikken and Paardenrace completed naturally in exact-current multi-context live browser acceptance after the final backend migration."},
