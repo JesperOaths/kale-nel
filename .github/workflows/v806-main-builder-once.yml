@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths: ['.github/workflows/v806-main-builder-once.yml']
 
+# Re-run after aligning the v786 carry-forward guard with the deployed v801a proof.
 permissions:
   contents: write
 
@@ -45,64 +46,28 @@ jobs:
           python3 <<'PY'
           import json, os
           from pathlib import Path
-
-          # Release truth: v806 is a product candidate until fresh live evidence exists.
           p=Path('release-certification.json')
           old=json.loads(p.read_text())
-          data={
-            'schema_version': 1,
-            'current_version': 'v806',
-            'status': 'REVALIDATION_REQUIRED',
-            'previous_certified_version': 'v805',
-            'previous_certified_product_sha': 'b64a116f2b2684d1fbd475b40c2b76f569d40942',
-            'previous_certified_release_branch': 'release/v805-certified-20260818',
-            'previous_certified_tag': 'v805-certified-20260818',
-            'reason': 'v806 changes shipped player-session runtime and nested shared-asset resolution; fresh exact-current evidence is required before PASS.',
-            'remaining_release_blockers': [
-              'Fresh exact-current v806 live health must pass.',
-              'Fresh exact-current v806 multi-context/deep gameplay must pass.',
-              'Fresh authenticated v806 visual audit plus manual screenshot review must pass.',
-              'Controlled production fixtures must be independently verified at zero residue.'
-            ],
-            'required_next': [
-              'Run exact-current v806 health.',
-              'Run exact-current v806 deep live gameplay acceptance.',
-              'Run full authenticated v806 visual audit and manually inspect the artifact.',
-              'Verify zero residue and then write final-acceptance-v806.json before setting PASS.'
-            ],
-            'previous_certification_snapshot': {
-              'certified_at': old.get('certified_at'),
-              'visual_artifact_sha256': (old.get('authoritative_evidence') or {}).get('post_v801a_visual_artifact_sha256')
-            }
-          }
-          p.write_text(json.dumps(data,indent=2,ensure_ascii=False)+'\n')
-
-          # Beta readiness must describe current reality, not the pre-v801a permission state.
-          p=Path('beta-readiness.json')
-          tracker=json.loads(p.read_text())
-          tracker['site_version']='release candidate v806 / live certified v805'
-          tracker['last_updated']='2026-08-18'
-          dep=tracker.setdefault('deployment_identity',{})
-          dep['status']='ready_to_test'
-          dep['live_version']='v805'
-          dep['release_candidate_version']='v806'
-          dep['frontend_release_merge']='b64a116f2b2684d1fbd475b40c2b76f569d40942'
-          dep['repository_head_at_audit']=os.environ['CURRENT_MAIN_SHA']
+          p.write_text(json.dumps({
+            'schema_version':1,'current_version':'v806','status':'REVALIDATION_REQUIRED',
+            'previous_certified_version':'v805','previous_certified_product_sha':'b64a116f2b2684d1fbd475b40c2b76f569d40942',
+            'previous_certified_release_branch':'release/v805-certified-20260818','previous_certified_tag':'v805-certified-20260818',
+            'reason':'v806 changes shipped player-session runtime and nested shared-asset resolution; fresh exact-current evidence is required before PASS.',
+            'remaining_release_blockers':['Fresh exact-current v806 live health must pass.','Fresh exact-current v806 multi-context/deep gameplay must pass.','Fresh authenticated v806 visual audit plus manual screenshot review must pass.','Controlled production fixtures must be independently verified at zero residue.'],
+            'required_next':['Run exact-current v806 health.','Run exact-current v806 deep live gameplay acceptance.','Run full authenticated v806 visual audit and manually inspect the artifact.','Verify zero residue and then write final-acceptance-v806.json before setting PASS.'],
+            'previous_certification_snapshot':{'certified_at':old.get('certified_at'),'visual_artifact_sha256':(old.get('authoritative_evidence') or {}).get('post_v801a_visual_artifact_sha256')}
+          },indent=2,ensure_ascii=False)+'\n')
+          p=Path('beta-readiness.json'); tracker=json.loads(p.read_text())
+          tracker['site_version']='release candidate v806 / live certified v805'; tracker['last_updated']='2026-08-18'
+          dep=tracker.setdefault('deployment_identity',{}); dep['status']='ready_to_test'; dep['live_version']='v805'; dep['release_candidate_version']='v806'; dep['frontend_release_merge']='b64a116f2b2684d1fbd475b40c2b76f569d40942'; dep['repository_head_at_audit']=os.environ['CURRENT_MAIN_SHA']
           dep['note']='Live v805 is the certified baseline pinned by release/v805-certified-20260818 and tag v805-certified-20260818. v806 is a release candidate that canonicalizes player-session runtime calls and root-resolves shared Family assets; it remains REVALIDATION_REQUIRED until fresh health, deep gameplay, authenticated visual/manual review and zero-residue evidence pass.'
-          evidence=dep.setdefault('evidence',[])
-          current='2026-08-18 certified v805: post-v801a health 32084207898 PASS; deep live 32085432145 PASS; authenticated 137-screenshot visual audit 32085275503 PASS with manual review; production migration 20260818001412 and public Toepen owner/scope proof 32084142660 PASS; final controlled residue zero.'
-          if current not in evidence: evidence.insert(0,current)
-
-          gaps={g.get('id'):g for g in tracker.get('beta_gaps',[]) if isinstance(g,dict)}
-          toep=gaps.get('toepen_backend_live')
+          ev=dep.setdefault('evidence',[]); current='2026-08-18 certified v805: post-v801a health 32084207898 PASS; deep live 32085432145 PASS; authenticated 137-screenshot visual audit 32085275503 PASS with manual review; production migration 20260818001412 and public Toepen owner/scope proof 32084142660 PASS; final controlled residue zero.'
+          if current not in ev: ev.insert(0,current)
+          gaps={g.get('id'):g for g in tracker.get('beta_gaps',[]) if isinstance(g,dict)}; toep=gaps.get('toepen_backend_live')
           if not toep: raise SystemExit('toepen_backend_live gap missing')
-          toep['status']='verified_complete'
-          toep['proof_needed']='Complete: v801a production migration 20260818001412 adds the Toepen client_match_id owner/scope guard and the public PostgREST proof verifies same-owner idempotency plus cross-owner, invalid-session and wrong-scope rejection.'
-          toep['next_action']='No Toepen v801a owner-guard deployment action remains. Revalidate only if the Toepen persistence contract or create_toepen_game function changes.'
-          toep['latest_probe']='2026-08-18: v801a public PostgREST security proof run 32084142660 / job 95553027731 PASS after migration 20260818001412; post-mutation health 32084207898 and deep gameplay 32085432145 PASS; independent residue sweep zero.'
+          toep['status']='verified_complete'; toep['proof_needed']='Complete: v801a production migration 20260818001412 adds the Toepen client_match_id owner/scope guard and the public PostgREST proof verifies same-owner idempotency plus cross-owner, invalid-session and wrong-scope rejection.'; toep['next_action']='No Toepen v801a owner-guard deployment action remains. Revalidate only if the Toepen persistence contract or create_toepen_game function changes.'; toep['latest_probe']='2026-08-18: v801a public PostgREST security proof run 32084142660 / job 95553027731 PASS after migration 20260818001412; post-mutation health 32084207898 and deep gameplay 32085432145 PASS; independent residue sweep zero.'
           for item in tracker.get('baseline_checks',[]):
-            if item.get('id')=='live_write_safety_gate':
-              item['evidence']='The live-write checklist remains disarmed by default. The previously permission-gated Toepen v801a owner/scope repair was explicitly authorized, deployed as migration 20260818001412, publicly proven in run 32084142660, and cleaned to zero residue. No pending production mutation is armed.'
+            if item.get('id')=='live_write_safety_gate': item['evidence']='The live-write checklist remains disarmed by default. The previously permission-gated Toepen v801a owner/scope repair was explicitly authorized, deployed as migration 20260818001412, publicly proven in run 32084142660, and cleaned to zero residue. No pending production mutation is armed.'
           p.write_text(json.dumps(tracker,indent=2,ensure_ascii=False)+'\n')
           PY
           node check-version-drift.mjs
@@ -115,9 +80,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -f .github/workflows/prepare-v806-canonical-session-runtime.yml
-          rm -f scripts/prepare-v806-canonical-session-runtime.py
-          rm -f scripts/prepare-v806-tracker-state.py
+          rm -f .github/workflows/prepare-v806-canonical-session-runtime.yml scripts/prepare-v806-canonical-session-runtime.py scripts/prepare-v806-tracker-state.py
           git add -A
           git commit -m 'fix: canonicalize session runtime and family assets v806'
           git push origin HEAD:agent/v806-canonical-session-runtime
