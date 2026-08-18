@@ -1,4 +1,4 @@
-# registered workflow trigger
+# registered workflow trace trigger
 name: one-shot v812 profile source line-ending cleanup
 
 on:
@@ -23,6 +23,13 @@ jobs:
         run: |
           set -euo pipefail
           test "$(cat VERSION | tr -d '\r\n')" = 'v812'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          mkdir -p .proof
+          printf '%s\n' "$GITHUB_RUN_ID" > .proof/v812-crlf-run-id.txt
+          git add .proof/v812-crlf-run-id.txt
+          git commit -m 'test: record v812 CRLF cleanup run'
+          git push origin HEAD:agent/v812-player-profile-runtime-cleanup
           python3 <<'PY'
           from pathlib import Path
           p=Path('gejast-profile-source.js')
@@ -31,10 +38,7 @@ jobs:
           PY
           node check-v812-player-profile-runtime-cleanup.mjs
           git diff --check
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add gejast-profile-source.js
-          git diff --cached --quiet && exit 0
-          git commit -m 'chore: preserve profile source line endings'
+          git diff --cached --quiet || git commit -m 'chore: preserve profile source line endings'
           git push origin HEAD:agent/v812-player-profile-runtime-cleanup
           echo 'RESULT=V812_PROFILE_CRLF_CLEANUP_PASS'
