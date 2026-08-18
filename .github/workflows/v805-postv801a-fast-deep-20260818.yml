@@ -77,12 +77,14 @@ jobs:
           src = src.replace('v792','v805').replace('V792','V805')
           src = src.replace("chromium.launch({ headless: true })", "chromium.launch({ headless: true, executablePath: process.env.GEJAST_SYSTEM_CHROME })")
           old = """  await page.waitForTimeout(900);\n  if (/login\\.html/i.test(page.url())) throw new Error(`${label} unexpectedly redirected to login`);\n  const body = (await page.locator('body').innerText()).trim();"""
-          new = """  await page.waitForFunction(() => document.documentElement.getAttribute('data-gejast-auth-state') === 'authenticated' || /login\\.html/i.test(location.pathname), null, { timeout });\n  if (/login\\.html/i.test(page.url())) throw new Error(`${label} unexpectedly redirected to login`);\n  await page.waitForTimeout(150);\n  const body = (await page.locator('body').innerText()).trim();"""
+          new = """  await page.waitForFunction(() => {\n    const root = document.documentElement;\n    const primary = root.getAttribute('data-gejast-auth-state');\n    const legacySettled = !root.classList.contains('gejast-auth-pending');\n    return /login\\.html/i.test(location.pathname) || (primary === 'authenticated' && legacySettled);\n  }, null, { timeout });\n  if (/login\\.html/i.test(page.url())) throw new Error(`${label} unexpectedly redirected to login`);\n  await page.waitForTimeout(150);\n  const body = (await page.locator('body').innerText()).trim();"""
           if old not in src:
               raise SystemExit('auth-aware loadRoute patch target missing')
           src = src.replace(old, new)
           if "executablePath: process.env.GEJAST_SYSTEM_CHROME" not in src:
               raise SystemExit('system Chrome launch patch missing')
+          if "legacySettled" not in src:
+              raise SystemExit('dual-gate settle patch missing')
           Path('scripts/v805-postv801a-fast-deep.mjs').write_text(src)
           PY
           node --check scripts/v805-postv801a-fast-deep.mjs
