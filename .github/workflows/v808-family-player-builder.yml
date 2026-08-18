@@ -1,6 +1,9 @@
 name: v808 family player alias builder
 
 on:
+  pull_request:
+    branches: [main]
+    types: [opened]
   push:
     branches: [agent/v808-family-player-empty-alias]
     paths: ['.github/workflows/v808-family-player-builder.yml']
