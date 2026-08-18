@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "site_version": "v805",
+  "status": "PASS",
+  "certified_at": "2026-08-18",
+  "evidence_baseline_main_sha": "b64a116f2b2684d1fbd475b40c2b76f569d40942",
+  "certified_release_branch": "release/v805-certified-20260818",
+  "production_migration": {
+    "version": "20260818001412",
+    "name": "gejast_v801a_toepen_idempotency_owner_guard"
+  },
+  "authoritative_runs": {
+    "post_restart_health": {
+      "run_id": 32080416102,
+      "job_id": 95542172881,
+      "conclusion": "success"
+    },
+    "owner_isolation": {
+      "run_id": 32078012416,
+      "job_id": 95535170700,
+      "conclusion": "success",
+      "games": ["boerenbridge", "beerpong"]
+    },
+    "toepen_v801a_public_rest": {
+      "run_id": 32084142660,
+      "job_id": 95553027731,
+      "conclusion": "success",
+      "same_owner_replay": "same_game_already_saved",
+      "cross_owner_replay": "rejected",
+      "invalid_session": "rejected",
+      "wrong_scope": "rejected"
+    },
+    "post_v801a_health": {
+      "run_id": 32084207898,
+      "job_id": 95553226539,
+      "conclusion": "success"
+    },
+    "post_v801a_deep_live": {
+      "run_id": 32085432145,
+      "job_id": 95556873292,
+      "conclusion": "success",
+      "markers": [
+        "RESULT=V805_LIVE_BROWSER_MULTI_CONTEXT_PASS",
+        "RESULT=V805_PIKKEN_PLAY_TO_COMPLETION_PASS",
+        "RESULT=V805_PAARDENRACE_PLAY_TO_COMPLETION_PASS",
+        "RESULT=V805_LIVE_GAME_COMPLETION_CERTIFICATION_PASS",
+        "RESULT=V805_POSTV801A_FAST_DEEP_POST_GAME_SESSIONS_PASS",
+        "RESULT=V805_POSTV801A_FAST_DEEP_ZERO_RESIDUE_PASS",
+        "RESULT=V805_POSTV801A_FAST_DEEP_LIVE_PASS"
+      ]
+    },
+    "post_v801a_visual": {
+      "run_id": 32085275503,
+      "job_id": 95556413880,
+      "conclusion": "success",
+      "screenshots": 137,
+      "records": 137,
+      "broken_after_declared_alias_refinement": 0,
+      "manual_review": "PASS",
+      "artifact_id": 9306774932,
+      "artifact_name": "postv801a-fast-visual-32085275503-1",
+      "artifact_sha256": "7757d1e51ae99152ee730efb640a27566a28d05eb2d635957bf40f40118495c5"
+    }
+  },
+  "security_contracts": {
+    "forced_player_login_gate": "PASS",
+    "friends_family_scope_isolation": "PASS",
+    "admin_cloudflare_outer_boundary": "PASS",
+    "admin_supabase_totp_inner_boundary": "PASS",
+    "toepen_idempotency_owner_guard": "PASS",
+    "boerenbridge_owner_isolation": "PASS",
+    "beerpong_owner_isolation": "PASS"
+  },
+  "gameplay_contracts": {
+    "toepen": "PASS",
+    "boerenbridge": "PASS",
+    "beerpong": "PASS",
+    "klaverjas": "PASS",
+    "pikken": "PASS",
+    "paardenrace": "PASS",
+    "pikken_natural_completion": "PASS",
+    "paardenrace_natural_completion": "PASS",
+    "multi_context_reconnect": "PASS",
+    "mobile_touch_390x844": "PASS"
+  },
+  "production_state": {
+    "supabase_project_id": "uiqntazgnrxwliaidkmy",
+    "database_data_plane": "healthy_after_controlled_restart",
+    "latest_migration_version": "20260818001412",
+    "latest_migration_name": "gejast_v801a_toepen_idempotency_owner_guard",
+    "disposable_certification_residue": 0,
+    "paardenrace_history_residue": 0,
+    "obsolete_pending_fixture_jobs": 0
+  },
+  "truthfulness_policy": {
+    "manual_visual_review_required": true,
+    "unknown_game_limits_are_not_invented": true,
+    "static_client_login_gate_is_not_claimed_as_edge_byte_protection": true,
+    "third_party_interactive_credentials_are_not_faked": true,
+    "production_writes_use_hidden_disposable_fixtures_and_assert_cleanup": true
+  },
+  "criteria": {
+    "1": {"status":"PASS","summary":"Exact-current v805 product tree is pinned at b64a116f2b2684d1fbd475b40c2b76f569d40942 and preserved as release/v805-certified-20260818."},
+    "2": {"status":"PASS","summary":"Player login and Friends/Family scope isolation are fail-closed and live-proven."},
+    "3": {"status":"PASS","summary":"All six tracked game surfaces have deterministic and/or controlled live gameplay evidence appropriate to their shipped contracts."},
+    "4": {"status":"PASS","summary":"Pikken and Paardenrace completed naturally in exact-current multi-context live browser acceptance after the final backend migration."},
+    "5": {"status":"PASS","summary":"Boerenbridge and Beerpong owner-isolation were proven through disposable production identities with zero residue."},
+    "6": {"status":"PASS","summary":"Toepen v801a owner/scope idempotency guard is deployed and proven through the public PostgREST contract."},
+    "7": {"status":"PASS","summary":"Post-mutation live health passed across static deployment, admin perimeter, auth data plane, read-only acceptance and performance."},
+    "8": {"status":"PASS","summary":"Authenticated visual audit captured 137 screenshots; declared aliases were correctly classified and all screenshots were manually reviewed."},
+    "9": {"status":"PASS","summary":"Admin GitHub OAuth outer boundary and Supabase password/TOTP inner boundary remain fail-closed."},
+    "10": {"status":"PASS","summary":"Final independent residue sweeps found zero controlled players, sessions, metadata, game rows, Toepen rows and Paardenrace history rows."},
+    "11": {"status":"PASS","summary":"Obsolete stalled browser-install jobs terminated before fixture provisioning and cannot create late production residue."},
+    "12": {"status":"PASS","summary":"Release PASS is recorded only after post-restart and post-v801a revalidation completed end-to-end."}
+  }
+}
