@@ -40,6 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/prepare-v806-canonical-session-runtime.py
+          python3 scripts/prepare-v806-tracker-state.py
           export CURRENT_MAIN_SHA="$(git rev-parse origin/main)"
           python3 <<'PY'
           import json, os
@@ -125,6 +126,7 @@ jobs:
           set -euo pipefail
           rm -f .github/workflows/prepare-v806-canonical-session-runtime.yml
           rm -f scripts/prepare-v806-canonical-session-runtime.py
+          rm -f scripts/prepare-v806-tracker-state.py
           git add -A
           git commit -m 'fix: canonicalize session runtime and family assets v806'
           git push origin HEAD:agent/v806-canonical-session-runtime
