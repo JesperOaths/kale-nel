@@ -74,7 +74,6 @@ try {
       // Redirect-only aliases may immediately land on canonical pages where the gate
       // has already settled before this wait begins; capture the current state below.
     });
-    await page.waitForTimeout(900);
 
     const final = new URL(page.url());
     if (/\/login\.html$/i.test(final.pathname)) throw new Error(`${spec.route}: unexpectedly redirected to login`);
@@ -82,6 +81,20 @@ try {
     for (const piece of spec.required) {
       if (!`${final.searchParams.toString()}`.includes(piece)) throw new Error(`${spec.route}: missing final query fragment ${piece}; final=${final.href}`);
     }
+
+    // player.html loads its public profile bundle asynchronously after auth settles.
+    // Wait for the requested identity rather than assuming a fixed network latency.
+    if (spec.namedAlias) {
+      await page.waitForFunction((expected) => {
+        const title = (document.getElementById('title')?.textContent || '').trim().toLowerCase();
+        const body = (document.body?.innerText || '').toLowerCase();
+        const wanted = String(expected || '').trim().toLowerCase();
+        return !!wanted && (title.includes(wanted) || body.includes(wanted));
+      }, familyName, { timeout });
+    } else {
+      await page.waitForTimeout(500);
+    }
+
     const rootState = await page.evaluate(() => ({
       auth: document.documentElement.getAttribute('data-gejast-auth-state') || '',
       pending: document.documentElement.classList.contains('gejast-auth-pending'),
@@ -93,7 +106,7 @@ try {
     if (rootState.visibility === 'hidden') throw new Error(`${spec.route}: body remained hidden after authentication`);
     if (rootState.body.length < 20) throw new Error(`${spec.route}: rendered body is unexpectedly empty`);
     if (spec.namedAlias && !rootState.body.toLowerCase().includes(familyName.toLowerCase())) {
-      throw new Error(`${spec.route}: named Family player page did not render the requested fixture`);
+      throw new Error(`${spec.route}: named Family player page did not render the requested fixture after bounded async settle`);
     }
     if (routeErrors.some((x) => /mime type|refused to execute script/i.test(x))) {
       throw new Error(`${spec.route}: nested asset MIME/runtime error: ${routeErrors.join(' | ')}`);
