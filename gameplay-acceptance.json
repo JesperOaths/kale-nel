@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "site_version": "v805",
-  "last_updated": "2026-08-17",
+  "site_version": "v806",
+  "last_updated": "2026-08-18",
   "scope": "Gameplay acceptance is tracked separately from general beta readiness. Deterministic engine proof is not labeled as live multiplayer proof, and route/RPC reachability is not labeled as play-to-completion proof. Player-count limits are only recorded as exact when current shipped source or deterministic acceptance grounds them; unknown backend-owned limits remain explicitly unknown.",
   "live_write_approval": {
     "name": "GEJAST_ALLOW_LIVE_WRITE_BETA",
@@ -38,9 +38,9 @@
       },
       "deterministic_status": "verified_complete",
       "deterministic_evidence": "check-toepen-gameplay-matrix-v792.mjs plays the shipped engine through completion at every supported player count and covers fold/stake/undo behavior.",
-      "live_status": "owner_isolation_defect_proven_fix_requires_authorization",
-      "live_evidence": "Exact-v801 live owner-control run 31952921912 saved a structurally valid completed Toepen match, confirmed invalid-session denial, and proved an unrelated authenticated Friends player can replay the creator's client_match_id and receive already_saved=true with the foreign game_id. The foreign game is not mutated. SQL-only v801a is merged and rollback-proven but not deployed.",
-      "remaining_gap": "Authorize and deploy v801a, then rerun same-owner idempotency, unrelated-owner denial, invalid-session/wrong-scope denial, totals consistency and zero-residue proof."
+      "live_status": "owner_isolation_and_idempotency_proven",
+      "live_evidence": "Production migration 20260818001412 gejast_v801a_toepen_idempotency_owner_guard is deployed. Public PostgREST proof 32084142660 / job 95553027731 proved first save, same-owner idempotent replay to the same game, cross-owner rejection, invalid-session rejection, wrong-scope rejection and cleanup. Post-mutation health 32084207898 passed, and the final independent controlled Toepen/player/session residue sweep was zero.",
+      "remaining_gap": "No known Toepen owner/idempotency production gap remains. Revalidate if create_toepen_game, session ownership, scope semantics, totals validation or persistence contracts change."
     },
     {
       "id": "boerenbridge",
