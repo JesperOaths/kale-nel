@@ -1,0 +1,208 @@
+name: v806 final authenticated visual proof
+
+on:
+  push:
+    branches: [proof/v806-final-certification-20260818]
+    paths: ['.github/workflows/v806-final-visual-20260818.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v806-final-visual-20260818
+  cancel-in-progress: false
+
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      SUPABASE_URL: https://uiqntazgnrxwliaidkmy.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GEJAST_VISUAL_DB_NAME: postgres
+      GEJAST_BASE_URL: https://kalenel.nl/
+      GEJAST_SITE_SCOPE: friends
+      GEJAST_VISUAL_TIMEOUT_MS: '25000'
+      GEJAST_VISUAL_SETTLE_MS: '5000'
+      GEJAST_EXACT_MAIN_SHA: 87fa814d28c00035b770c0ff8959def27a00f059
+    steps:
+      - name: Check out exact proof branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v806-final-certification-20260818
+          fetch-depth: 0
+      - name: Record run identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .proof
+          printf '%s.%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > .proof/v806-final-visual-run-id.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .proof/v806-final-visual-run-id.txt
+          git commit -m 'test: record v806 final visual run id'
+          git push origin HEAD:proof/v806-final-certification-20260818
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Prove exact v806 tree and prepare deterministic system Chrome
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_SERVICE_ROLE_KEY:-}"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$GEJAST_EXACT_MAIN_SHA"
+          test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = 'v806'
+          test "$(curl -fsS --max-time 10 https://kalenel.nl/VERSION | tr -d '\r\n')" = 'v806'
+          unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^(\.github/workflows/v806-final-[^/]+\.yml|\.proof/v806-final-[^/]+\.txt)$' || true)"
+          test -z "$unexpected" || { echo 'Unexpected proof branch product drift:'; echo "$unexpected"; exit 1; }
+          npm ci
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.55.0
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || true)"
+          test -n "$chrome"
+          echo "GEJAST_SYSTEM_CHROME=$chrome" >> "$GITHUB_ENV"
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('scripts/full-live-visual-audit-v792.mjs')
+          src=p.read_text()
+          old="chromium.launch({ headless: true })"
+          new="chromium.launch({ headless: true, executablePath: process.env.GEJAST_SYSTEM_CHROME })"
+          if old not in src: raise SystemExit('visual Chrome launch target missing')
+          p.write_text(src.replace(old,new))
+          PY
+          node --check scripts/full-live-visual-audit-v792.mjs
+          node --check scripts/full-live-visual-fixtures-v801.mjs
+          node --check scripts/refine-expected-visual-aliases-v809.mjs
+          node --check check-live-data-plane.mjs
+          node check-v806-canonical-session-runtime.mjs
+          "$chrome" --version
+          echo 'RESULT=V806_FINAL_VISUAL_RUNTIME_PASS'
+      - name: Probe Supabase auth data plane
+        env:
+          GEJAST_DATA_PLANE_TIMEOUT_MS: '8000'
+          GEJAST_DATA_PLANE_ATTEMPTS: '1'
+          GEJAST_DATA_PLANE_RETRY_DELAY_MS: '0'
+        run: node check-live-data-plane.mjs
+      - name: Provision disposable authenticated Friends and Family identities
+        id: provision
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/full-live-visual-fixtures-v801.mjs provision
+          test -n "${GEJAST_PLAYER1_TOKEN:-}"
+          test -n "${GEJAST_FAMILY_TOKEN:-}"
+          echo 'RESULT=V806_FINAL_VISUAL_FIXTURES_PASS'
+      - name: Prove nested Family session and root asset runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > scripts/v806-family-runtime-proof.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const token=process.env.GEJAST_FAMILY_TOKEN||'';
+          const familyName=process.env.GEJAST_FAMILY_NAME||'';
+          const chrome=process.env.GEJAST_SYSTEM_CHROME||'';
+          if(!/^[0-9a-f]{48}$/.test(token)) throw new Error('family token missing/invalid');
+          if(!familyName) throw new Error('family name missing');
+          if(!chrome) throw new Error('system Chrome missing');
+          const browser=await chromium.launch({headless:true,executablePath:chrome});
+          const context=await browser.newContext({viewport:{width:1280,height:900}});
+          await context.addInitScript(({token})=>{
+            try{localStorage.setItem('jas_session_token_v11',token);sessionStorage.setItem('jas_session_token_v11',token);}catch(_){}
+          },{token});
+          const pages=[
+            '/familie/index.html',
+            '/familie/profiles.html',
+            `/familie/player.html?player=${encodeURIComponent(familyName)}&scope=family`,
+            '/familie/boerenbridge.html',
+            '/familie/scorer.html'
+          ];
+          const forbiddenAssetPrefixes=['/familie/gejast-site-announcements.js','/familie/gejast-scope-hardening.js','/familie/gejast-v725-repair.js','/familie/VERSION'];
+          const requiredRootAssets=['/gejast-site-announcements.js','/gejast-scope-hardening.js','/gejast-v725-repair.js','/VERSION'];
+          const seenRoot=new Set();
+          const allUrls=[];
+          const rpcUrls=[];
+          try{
+            for(const route of pages){
+              const page=await context.newPage();
+              page.on('request',req=>{
+                const u=new URL(req.url());
+                allUrls.push(u.pathname);
+                if(u.pathname.includes('/rest/v1/rpc/')) rpcUrls.push(u.pathname);
+                for(const root of requiredRootAssets) if(u.pathname===root) seenRoot.add(root);
+              });
+              await page.goto(`https://kalenel.nl${route}`,{waitUntil:'domcontentloaded',timeout:25000});
+              await page.waitForFunction(()=>{
+                const root=document.documentElement;
+                return /login\.html/i.test(location.pathname) || root.getAttribute('data-gejast-auth-state')==='authenticated';
+              },null,{timeout:25000});
+              if(/login\.html/i.test(page.url())) throw new Error(`${route} redirected to login`);
+              await page.waitForTimeout(1800);
+              const state=await page.evaluate(()=>({
+                auth:document.documentElement.getAttribute('data-gejast-auth-state'),
+                legacyPending:document.documentElement.classList.contains('gejast-auth-pending'),
+                legacyDelegated:window.GEJAST_HOME_GATE&&window.GEJAST_HOME_GATE.delegated||'',
+                body:(document.body?.innerText||'').trim().length
+              }));
+              if(state.auth!=='authenticated') throw new Error(`${route} auth state ${state.auth}`);
+              if(state.legacyPending) throw new Error(`${route} legacy gate still pending`);
+              if(state.body<10) throw new Error(`${route} rendered empty body`);
+              console.log(`FAMILY_ROUTE_PASS ${route} delegated=${state.legacyDelegated||'n/a'} body=${state.body}`);
+              await page.close();
+            }
+            for(const bad of forbiddenAssetPrefixes){
+              if(allUrls.some(p=>p===bad)) throw new Error(`nested relative shared asset requested: ${bad}`);
+            }
+            for(const root of requiredRootAssets){
+              if(!seenRoot.has(root)) throw new Error(`required root shared asset was never requested: ${root}`);
+            }
+            if(!rpcUrls.some(p=>p.endsWith('/account_public_state_v687'))) throw new Error('canonical account_public_state_v687 not observed');
+            if(rpcUrls.some(p=>p.endsWith('/get_public_state'))) throw new Error('stale get_public_state observed on v806 Family runtime');
+            console.log(`RESULT=V806_FAMILY_ROOT_RUNTIME_PASS routes=${pages.length} canonical_auth_calls=${rpcUrls.filter(p=>p.endsWith('/account_public_state_v687')).length}`);
+          } finally {
+            await context.close().catch(()=>{});
+            await browser.close().catch(()=>{});
+          }
+          JS
+          node scripts/v806-family-runtime-proof.mjs
+      - name: Screenshot and inspect every tracked live HTML page
+        id: audit
+        continue-on-error: true
+        run: node scripts/full-live-visual-audit-v792.mjs
+      - name: Refine declared authenticated redirect aliases
+        id: alias_refinement
+        if: always()
+        run: node scripts/refine-expected-visual-aliases-v809.mjs
+      - name: Upload exact v806 visual audit artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: v806-final-visual-${{ github.run_id }}-${{ github.run_attempt }}
+          path: visual-audit/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Cleanup disposable visual state
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/full-live-visual-fixtures-v801.mjs cleanup
+      - name: Enforce authenticated visual certification result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.provision.outcome }}" = 'success'
+          test "${{ steps.alias_refinement.outcome }}" = 'success'
+          test -f visual-audit/report.json
+          node <<'JS'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('visual-audit/report.json','utf8'));
+          const rows=Array.isArray(r.records)?r.records:(Array.isArray(r.routes)?r.routes:[]);
+          const broken=rows.filter(x=>String(x.judgement||x.status||'').toLowerCase()==='broken');
+          if(broken.length){console.error(JSON.stringify(broken.slice(0,10),null,2));process.exit(1);}
+          const warn=rows.filter(x=>String(x.judgement||x.status||'').toLowerCase()==='warn');
+          console.log(`VISUAL_REPORT_PASS records=${rows.length} broken=0 warn=${warn.length}`);
+          JS
+          echo 'RESULT=V806_FINAL_AUTHENTICATED_VISUAL_PASS'
