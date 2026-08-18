@@ -96,9 +96,9 @@ jobs:
           toep=gaps.get('toepen_backend_live')
           if not toep: raise SystemExit('toepen_backend_live gap missing')
           toep['status']='verified_complete'
-          toep['proof_needed']='Complete: production migration 20260818001412 adds the Toepen client_match_id owner/scope guard and the public PostgREST proof verifies same-owner idempotency plus cross-owner, invalid-session and wrong-scope rejection.'
-          toep['next_action']='No Toepen owner-guard deployment action remains. Revalidate only if the Toepen persistence contract or create_toepen_game function changes.'
-          toep['latest_probe']='2026-08-18: public PostgREST security proof run 32084142660 / job 95553027731 PASS after migration 20260818001412; post-mutation health 32084207898 and deep gameplay 32085432145 PASS; independent residue sweep zero.'
+          toep['proof_needed']='Complete: v801a production migration 20260818001412 adds the Toepen client_match_id owner/scope guard and the public PostgREST proof verifies same-owner idempotency plus cross-owner, invalid-session and wrong-scope rejection.'
+          toep['next_action']='No Toepen v801a owner-guard deployment action remains. Revalidate only if the Toepen persistence contract or create_toepen_game function changes.'
+          toep['latest_probe']='2026-08-18: v801a public PostgREST security proof run 32084142660 / job 95553027731 PASS after migration 20260818001412; post-mutation health 32084207898 and deep gameplay 32085432145 PASS; independent residue sweep zero.'
           for item in tracker.get('baseline_checks',[]):
             if item.get('id')=='live_write_safety_gate':
               item['evidence']='The live-write checklist remains disarmed by default. The previously permission-gated Toepen v801a owner/scope repair was explicitly authorized, deployed as migration 20260818001412, publicly proven in run 32084142660, and cleaned to zero residue. No pending production mutation is armed.'
