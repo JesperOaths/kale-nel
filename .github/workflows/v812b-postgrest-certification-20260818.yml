@@ -1,0 +1,143 @@
+name: v812b analytics boundary certification
+
+on:
+  push:
+    branches: [proof/v812b-postgrest-certification-20260818]
+    paths: ['.github/workflows/v812b-postgrest-certification-20260818.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v812b-postgrest-certification-20260818
+  cancel-in-progress: false
+
+env:
+  EXPECTED_MAIN_SHA: 8984988a19a5d1ffc6682d9a75712d34c8ed23a4
+  SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+  PGCONNECT_TIMEOUT: '10'
+  PGOPTIONS: '-c statement_timeout=20000'
+
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact proof branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v812b-postgrest-certification-20260818
+          fetch-depth: 0
+
+      - name: Record run identity and prove exact main tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          mkdir -p .proof
+          printf '%s.%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > .proof/v812b-postgrest-run-id.txt
+          git add .proof/v812b-postgrest-run-id.txt
+          git commit -m 'test: record v812b PostgREST proof run'
+          git push origin HEAD:proof/v812b-postgrest-certification-20260818
+          test "$(git show "$EXPECTED_MAIN_SHA:VERSION" | tr -d '\r\n')" = 'v812'
+          unexpected="$(git diff --name-only "$EXPECTED_MAIN_SHA"..HEAD | grep -Ev '^(\.github/workflows/v812b-postgrest-certification-20260818\.yml|\.proof/v812b-postgrest-run-id\.txt)$' || true)"
+          test -z "$unexpected" || { echo 'Unexpected proof branch drift:'; echo "$unexpected"; exit 1; }
+          echo 'RESULT=V812B_POSTGREST_EXACT_MAIN_PASS'
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Prove allowed RPC and forbidden direct table API
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          visitor="v812b_rest_vis_${suffix}"
+          session1="v812b_rest_s1_${suffix}"
+          session2="v812b_rest_s2_${suffix}"
+          { echo "PROOF_VISITOR=$visitor"; echo "PROOF_SESSION1=$session1"; echo "PROOF_SESSION2=$session2"; } >> "$GITHUB_ENV"
+          PROOF_VISITOR="$visitor" PROOF_SESSION1="$session1" PROOF_SESSION2="$session2" node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const cfg=fs.readFileSync('gejast-config.js','utf8');
+          const url=cfg.match(/SUPABASE_URL:\s*'([^']+)'/)?.[1];
+          const key=cfg.match(/SUPABASE_PUBLISHABLE_KEY:\s*'([^']+)'/)?.[1];
+          if(!url||!key) throw new Error('checked-in public Supabase config missing');
+          const headers={'Content-Type':'application/json',Accept:'application/json',apikey:key,Authorization:`Bearer ${key}`};
+          const base={event_name:'page_view',event_category:'certification',page_path:'/__v812b_rest_proof__',page_url:'https://kalenel.nl/__v812b_rest_proof__',visitor_id:process.env.PROOF_VISITOR,device_type:'desktop',browser_name:'Chrome',os_name:'Linux',viewport_width:1440,viewport_height:1000,language_code:'en',time_zone:'UTC',user_agent:'v812b-proof',is_logged_in:false,is_admin:false,extra:{proof:'v812b-postgrest'}};
+          async function rpc(label,session){
+            const res=await fetch(`${url}/rest/v1/rpc/track_site_event`,{method:'POST',headers,body:JSON.stringify({...base,event_label:label,session_id:session})});
+            const text=await res.text(); let data; try{data=text?JSON.parse(text):null}catch{data={raw:text}}
+            if(res.status!==200||!data||data.ok!==true) throw new Error(`${label} HTTP ${res.status}: ${text}`);
+            return data;
+          }
+          const first=await rpc('first',process.env.PROOF_SESSION1);
+          const replay=await rpc('replay',process.env.PROOF_SESSION1);
+          const returning=await rpc('returning',process.env.PROOF_SESSION2);
+          if(first.is_new_visitor!==true||first.is_new_session!==true||first.is_returning_visitor!==false) throw new Error(`first flags ${JSON.stringify(first)}`);
+          if(replay.is_new_visitor!==false||replay.is_new_session!==false||replay.is_returning_visitor!==false) throw new Error(`replay flags ${JSON.stringify(replay)}`);
+          if(returning.is_new_visitor!==false||returning.is_new_session!==true||returning.is_returning_visitor!==true) throw new Error(`returning flags ${JSON.stringify(returning)}`);
+
+          for(const table of ['site_visitors','site_visit_sessions','site_visitor_events']){
+            const read=await fetch(`${url}/rest/v1/${table}?select=*`,{headers});
+            if(read.status<400) throw new Error(`${table} anonymous SELECT unexpectedly allowed HTTP ${read.status}`);
+            const insert=await fetch(`${url}/rest/v1/${table}`,{method:'POST',headers:{...headers,Prefer:'return=minimal'},body:JSON.stringify({})});
+            if(insert.status<400) throw new Error(`${table} anonymous INSERT unexpectedly allowed HTTP ${insert.status}`);
+          }
+
+          const admin=await fetch(`${url}/rest/v1/rpc/admin_get_site_analytics_action`,{method:'POST',headers,body:JSON.stringify({admin_session_token:'v812b-invalid-admin-token',range_days:1,recent_limit:1})});
+          if(admin.status<400) throw new Error(`invalid admin analytics token unexpectedly allowed HTTP ${admin.status}`);
+          console.log('RESULT=V812B_ANON_ANALYTICS_BOUNDARY_PASS rpc=200 direct_tables=denied invalid_admin=denied');
+          JS
+
+      - name: Verify persistence and database privilege boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          state="$(timeout 25s psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v v="$PROOF_VISITOR" -v s1="$PROOF_SESSION1" -v s2="$PROOF_SESSION2" <<'SQL'
+          select
+            (select count(*) from public.site_visitor_events where visitor_id=:'v'),
+            (select count(*) from public.site_visit_sessions where visitor_id=:'v'),
+            (select count(*) from public.site_visitors where visitor_id=:'v'),
+            (select total_events from public.site_visitors where visitor_id=:'v'),
+            (select total_sessions from public.site_visitors where visitor_id=:'v'),
+            (select event_count from public.site_visit_sessions where session_id=:'s1'),
+            (select event_count from public.site_visit_sessions where session_id=:'s2'),
+            has_table_privilege('anon','public.site_visitors','SELECT,INSERT,UPDATE,DELETE'),
+            has_table_privilege('anon','public.site_visit_sessions','SELECT,INSERT,UPDATE,DELETE'),
+            has_table_privilege('anon','public.site_visitor_events','SELECT,INSERT,UPDATE,DELETE'),
+            has_table_privilege('authenticated','public.site_visitors','SELECT,INSERT,UPDATE,DELETE');
+          SQL
+          )"
+          echo "PERSISTENCE=$state"
+          test "$state" = '3|2|1|3|2|2|1|f|f|f|f'
+          echo 'RESULT=V812B_ANALYTICS_PERSISTENCE_PRIVILEGE_PASS'
+
+      - name: Cleanup synthetic analytics proof and prove zero residue
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${PROOF_VISITOR:-}" ]; then echo 'No analytics proof rows were created.'; exit 0; fi
+          timeout 25s psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v v="$PROOF_VISITOR" <<'SQL'
+          begin;
+          delete from public.site_visitor_events where visitor_id=:'v';
+          delete from public.site_visit_sessions where visitor_id=:'v';
+          delete from public.site_visitors where visitor_id=:'v';
+          commit;
+          SQL
+          residue="$(timeout 25s psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v v="$PROOF_VISITOR" <<'SQL'
+          select
+            (select count(*) from public.site_visitor_events where visitor_id=:'v'),
+            (select count(*) from public.site_visit_sessions where visitor_id=:'v'),
+            (select count(*) from public.site_visitors where visitor_id=:'v');
+          SQL
+          )"
+          test "$residue" = '0|0|0'
+          echo 'RESULT=V812B_ANALYTICS_ZERO_RESIDUE_PASS'
+
+      - name: Final marker
+        run: echo 'RESULT=V812B_POSTGREST_CERTIFICATION_PASS'
