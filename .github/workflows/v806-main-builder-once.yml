@@ -35,14 +35,17 @@ jobs:
         run: |
           set -euo pipefail
           grep -RIn --exclude-dir=.git --exclude='*.sql' --exclude='*.md' --exclude='*.json' -E 'get_public_state|player_touch_session|get_player_site_announcements_scoped|track_site_event|get_all_pending_drink_event_verifications_public|get_drink_event_vote_queue_public|get_public_player_unified_scoped|save_game_match_summary|get_klaverjas_runtime_bundle_v687|cleanup_stale_paardenrace_rooms_v706|get_player_runtime_bundle_v687|paardenrace_cleanup_idle_lobbies_v495' . || true
-      - name: Apply deterministic v806 patch
+      - name: Apply deterministic v806 patch and current release bookkeeping
         shell: bash
         run: |
           set -euo pipefail
           python3 scripts/prepare-v806-canonical-session-runtime.py
+          export CURRENT_MAIN_SHA="$(git rev-parse origin/main)"
           python3 <<'PY'
-          import json
+          import json, os
           from pathlib import Path
+
+          # Release truth: v806 is a product candidate until fresh live evidence exists.
           p=Path('release-certification.json')
           old=json.loads(p.read_text())
           data={
@@ -61,9 +64,9 @@ jobs:
               'Controlled production fixtures must be independently verified at zero residue.'
             ],
             'required_next': [
-              'Run exact-current health.',
-              'Run deep live gameplay acceptance.',
-              'Run full authenticated visual audit and manually inspect the artifact.',
+              'Run exact-current v806 health.',
+              'Run exact-current v806 deep live gameplay acceptance.',
+              'Run full authenticated v806 visual audit and manually inspect the artifact.',
               'Verify zero residue and then write final-acceptance-v806.json before setting PASS.'
             ],
             'previous_certification_snapshot': {
@@ -72,13 +75,51 @@ jobs:
             }
           }
           p.write_text(json.dumps(data,indent=2,ensure_ascii=False)+'\n')
+
+          # Beta readiness must describe current reality, not the pre-v801a permission state.
+          p=Path('beta-readiness.json')
+          tracker=json.loads(p.read_text())
+          tracker['site_version']='release candidate v806 / live certified v805'
+          tracker['last_updated']='2026-08-18'
+          dep=tracker.setdefault('deployment_identity',{})
+          dep['status']='verified_complete'
+          dep['live_version']='v805'
+          dep['release_candidate_version']='v806'
+          dep['frontend_release_merge']='b64a116f2b2684d1fbd475b40c2b76f569d40942'
+          dep['repository_head_at_audit']=os.environ['CURRENT_MAIN_SHA']
+          dep['note']='Live v805 is the certified baseline pinned by release/v805-certified-20260818 and tag v805-certified-20260818. v806 is a release candidate that canonicalizes player-session runtime calls and root-resolves shared Family assets; it remains REVALIDATION_REQUIRED until fresh health, deep gameplay, authenticated visual/manual review and zero-residue evidence pass.'
+          evidence=dep.setdefault('evidence',[])
+          current='2026-08-18 certified v805: post-v801a health 32084207898 PASS; deep live 32085432145 PASS; authenticated 137-screenshot visual audit 32085275503 PASS with manual review; production migration 20260818001412 and public Toepen owner/scope proof 32084142660 PASS; final controlled residue zero.'
+          if current not in evidence: evidence.insert(0,current)
+
+          gaps={g.get('id'):g for g in tracker.get('beta_gaps',[]) if isinstance(g,dict)}
+          toep=gaps.get('toepen_backend_live')
+          if not toep: raise SystemExit('toepen_backend_live gap missing')
+          toep['status']='verified_complete'
+          toep['proof_needed']='Complete: production migration 20260818001412 adds the Toepen client_match_id owner/scope guard and the public PostgREST proof verifies same-owner idempotency plus cross-owner, invalid-session and wrong-scope rejection.'
+          toep['next_action']='No Toepen owner-guard deployment action remains. Revalidate only if the Toepen persistence contract or create_toepen_game function changes.'
+          toep['latest_probe']='2026-08-18: public PostgREST security proof run 32084142660 / job 95553027731 PASS after migration 20260818001412; post-mutation health 32084207898 and deep gameplay 32085432145 PASS; independent residue sweep zero.'
+          for item in tracker.get('baseline_checks',[]):
+            if item.get('id')=='live_write_safety_gate':
+              item['evidence']='The live-write checklist remains disarmed by default. The previously permission-gated Toepen v801a owner/scope repair was explicitly authorized, deployed as migration 20260818001412, publicly proven in run 32084142660, and cleaned to zero residue. No pending production mutation is armed.'
+          p.write_text(json.dumps(tracker,indent=2,ensure_ascii=False)+'\n')
+
+          # The current-state checker must now require the closed Toepen blocker rather than preserve stale permission gating.
+          p=Path('check-beta-readiness-current-v770d.mjs')
+          s=p.read_text()
+          s=s.replace("if (toepenGap?.status !== 'needs_permission') failures.push('toepen_backend_live must remain explicitly needs_permission until the live-proven v801a repair is authorized and deployed');", "if (toepenGap?.status !== 'verified_complete') failures.push('toepen_backend_live must remain verified_complete after the deployed/proven v801a owner guard');")
+          s=s.replace("if (!/v801a/i.test(String(toepenGap?.next_action || ''))) failures.push('Toepen permission blocker must name the v801a deployment action');", "if (!/32084142660/.test(String(toepenGap?.latest_probe || '')) || !/20260818001412/.test(String(toepenGap?.latest_probe || ''))) failures.push('Toepen completion must retain exact v801a public-proof run and migration evidence');")
+          s=s.replace("if (JSON.stringify(permissionIds) !== JSON.stringify(['toepen_backend_live'])) failures.push(`expected only Toepen to be permission-gated, got: ${permissionIds.join(', ') || '(none)'}`);", "if (permissionIds.length) failures.push(`no beta gap should remain permission-gated after v801a closure, got: ${permissionIds.join(', ')}`);")
+          s=s.replace("if (completeCount !== 11 || permission.length !== 1) failures.push(`expected current readiness split 11 complete / 1 permission-gated, got ${completeCount} / ${permission.length}`);", "if (completeCount !== 12 || permission.length !== 0) failures.push(`expected current readiness split 12 complete / 0 permission-gated, got ${completeCount} / ${permission.length}`);")
+          p.write_text(s)
           PY
           node check-version-drift.mjs
           node check-v806-canonical-session-runtime.mjs
           node check-release-certification-state.mjs
+          node check-beta-readiness-current-v770d.mjs
           npm ci
           npm run verify
-      - name: Commit only the v806 product candidate
+      - name: Commit only the verified v806 product candidate
         shell: bash
         run: |
           set -euo pipefail
