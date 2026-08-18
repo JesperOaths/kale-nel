@@ -1,0 +1,70 @@
+name: Prepare exact visual warning diagnostics
+
+on:
+  push:
+    branches: [test/v805-visual-warning-diagnostics]
+    paths: ['.github/workflows/prepare-v805-warning-diagnostics.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: test/v805-visual-warning-diagnostics
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Add exact HTTP response diagnostics and guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('scripts/full-live-visual-audit-v792.mjs')
+          s=p.read_text()
+          old="""  const failedRequests = [];\n  page.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(safe(msg.text())); });"""
+          new="""  const failedRequests = [];\n  const httpErrors = [];\n  page.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(safe(msg.text())); });"""
+          if old not in s: raise SystemExit('capture diagnostics declaration target missing')
+          s=s.replace(old,new,1)
+          old="""  page.on('requestfailed', (request) => {\n    const failure = request.failure()?.errorText || 'failed';\n    if (!/favicon/i.test(request.url())) failedRequests.push(`${request.method()} ${request.url()} :: ${failure}`);\n  });\n\n  let response = null;"""
+          new="""  page.on('requestfailed', (request) => {\n    const failure = request.failure()?.errorText || 'failed';\n    if (!/favicon/i.test(request.url())) failedRequests.push(`${request.method()} ${request.url()} :: ${failure}`);\n  });\n  page.on('response', (res) => {\n    const status = res.status();\n    if (status >= 400 && !/favicon/i.test(res.url())) {\n      const request = res.request();\n      httpErrors.push(`${request.method()} ${res.url()} :: HTTP ${status}`);\n    }\n  });\n\n  let response = null;"""
+          if old not in s: raise SystemExit('response listener insertion target missing')
+          s=s.replace(old,new,1)
+          old="""  const seriousConsole = consoleErrors.filter((entry) => !/favicon|Failed to load resource.*404|net::ERR_ABORTED/i.test(entry));\n  const seriousRequestFailures = failedRequests.filter((entry) => !/favicon|google-analytics|doubleclick/i.test(entry));"""
+          new="""  const seriousConsole = consoleErrors.filter((entry) => !/favicon|Failed to load resource.*404|net::ERR_ABORTED/i.test(entry));\n  const seriousRequestFailures = failedRequests.filter((entry) => !/favicon|google-analytics|doubleclick/i.test(entry));\n  const seriousHttpErrors = httpErrors.filter((entry) => !/favicon|google-analytics|doubleclick/i.test(entry));"""
+          if old not in s: raise SystemExit('serious diagnostics target missing')
+          s=s.replace(old,new,1)
+          old="""  if (seriousRequestFailures.length && judgement === 'pass') { judgement = 'warn'; reasons.push(`${seriousRequestFailures.length} failed request(s)`); }\n  if (overflow > 16 && judgement === 'pass')"""
+          new="""  if (seriousRequestFailures.length && judgement === 'pass') { judgement = 'warn'; reasons.push(`${seriousRequestFailures.length} failed request(s)`); }\n  if (seriousHttpErrors.length && judgement === 'pass') { judgement = 'warn'; reasons.push(`${seriousHttpErrors.length} HTTP error response(s)`); }\n  if (overflow > 16 && judgement === 'pass')"""
+          if old not in s: raise SystemExit('HTTP warning judgement target missing')
+          s=s.replace(old,new,1)
+          old="""    failed_requests: seriousRequestFailures.slice(0, 20),\n    judgement,"""
+          new="""    failed_requests: seriousRequestFailures.slice(0, 20),\n    http_errors: seriousHttpErrors.slice(0, 20),\n    judgement,"""
+          if old not in s: raise SystemExit('record diagnostics target missing')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+
+          check=Path('check-v805-visual-response-diagnostics.mjs')
+          check.write_text("""#!/usr/bin/env node\nimport fs from 'node:fs';\nconst s=fs.readFileSync('scripts/full-live-visual-audit-v792.mjs','utf8');\nconst required=[\n  "const httpErrors = [];",\n  "page.on('response', (res) =>",\n  "httpErrors.push(`${request.method()} ${res.url()} :: HTTP ${status}`)",\n  "const seriousHttpErrors = httpErrors.filter",\n  "http_errors: seriousHttpErrors.slice(0, 20)",\n  "HTTP error response(s)"\n];\nfor(const needle of required){if(!s.includes(needle)){console.error(`Missing visual HTTP diagnostic contract: ${needle}`);process.exit(1);}}\nconsole.log('PASS exact visual HTTP response diagnostics');\n""")
+
+          pkg=Path('package.json')
+          q=pkg.read_text()
+          anchor='node check-v809-visual-alias-redirect-refinement.mjs && node check-v794-group-b-compat-panel.mjs'
+          repl='node check-v809-visual-alias-redirect-refinement.mjs && node check-v805-visual-response-diagnostics.mjs && node check-v794-group-b-compat-panel.mjs'
+          if anchor not in q: raise SystemExit('package verify insertion target missing')
+          pkg.write_text(q.replace(anchor,repl,1))
+          PY
+          node --check scripts/full-live-visual-audit-v792.mjs
+          node check-v805-visual-response-diagnostics.mjs
+          rm .github/workflows/prepare-v805-warning-diagnostics.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/full-live-visual-audit-v792.mjs check-v805-visual-response-diagnostics.mjs package.json .github/workflows/prepare-v805-warning-diagnostics.yml
+          git commit -m 'test: record exact visual HTTP warning sources'
+          git push origin HEAD:test/v805-visual-warning-diagnostics
+          echo 'RESULT=V805_VISUAL_WARNING_DIAGNOSTICS_PREPARED_PASS'
