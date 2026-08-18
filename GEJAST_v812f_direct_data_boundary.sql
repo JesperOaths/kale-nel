@@ -44,8 +44,22 @@ $v812f$;
 -- Earlier v813 hardening already removed client EXECUTE from SECURITY DEFINER underscore
 -- helpers. Do not revoke every remaining underscore helper: several safe SECURITY INVOKER
 -- read RPCs depend on normalization/read helpers. The one remaining client-executable
--- underscore routine with table mutation is locked explicitly.
+-- underscore routine with ordinary function mutation is locked explicitly.
 revoke execute on function public._web_push_apply_action(text,bigint,text,bigint) from public, anon, authenticated;
+
+-- Legacy/noncanonical identity surfaces. The shipped activation flow uses activation-token
+-- RPCs; set_initial_pin is unused by active browser code and must not remain an anonymous
+-- credential setter. The identity-summary RPC is likewise unused by shipped code and has an
+-- email-bearing return schema, so it is removed from the browser API even when current email
+-- values happen to be NULL.
+revoke execute on function public.set_initial_pin(text,text) from public, anon, authenticated;
+revoke execute on function public.get_account_identity_summary_scoped(text) from public, anon, authenticated;
+
+-- Trigger functions are implementation details rather than browser RPCs. Lock the two named
+-- non-underscore trigger helpers that remained client-executable after earlier hardening.
+-- Existing trigger bindings are not altered.
+revoke execute on function public.despimarkt_try_create_market_from_match_row_v646() from public, anon, authenticated;
+revoke execute on function public.gejast_cleanup_activation_link_duplicates_before_insert() from public, anon, authenticated;
 
 -- Admin-prefixed routines without an admin-session argument are legacy diagnostics/helpers.
 -- Keep only the actual login credential-entry RPC and the player-session Paardenrace
