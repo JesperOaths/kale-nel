@@ -36,6 +36,13 @@
       "artifact_sha256": "b017cbb66811ebd8c3bd8daf9ec7083df12db082ae7d6af209ef19422dd81af9",
       "manual_review": "PASS"
     },
-    "independent_residue": "PASS_ZERO"
+    "independent_residue": "PASS_ZERO",
+    "certification_record_builder": {
+      "run_id": 32133791741,
+      "job_id": 95700442600,
+      "conclusion": "success",
+      "canonical_verification": "PASS",
+      "dependency_audit": "PASS"
+    }
   }
 }
