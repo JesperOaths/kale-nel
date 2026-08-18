@@ -1,0 +1,77 @@
+name: v806 final exact health proof
+
+on:
+  push:
+    branches: [proof/v806-final-certification-20260818]
+    paths: ['.github/workflows/v806-final-health-20260818.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GEJAST_EXACT_MAIN_SHA: 87fa814d28c00035b770c0ff8959def27a00f059
+      GEJAST_EXPECTED_VERSION: v806
+    steps:
+      - name: Check out exact proof branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v806-final-certification-20260818
+          fetch-depth: 0
+      - name: Record run identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .proof
+          printf '%s.%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > .proof/v806-final-health-run-id.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .proof/v806-final-health-run-id.txt
+          git commit -m 'test: record v806 final health run id'
+          git push origin HEAD:proof/v806-final-certification-20260818
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Prove exact current product tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$GEJAST_EXACT_MAIN_SHA"
+          test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = "$GEJAST_EXPECTED_VERSION"
+          unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^(\.github/workflows/v806-final-health-20260818\.yml|\.proof/v806-final-health-run-id\.txt)$' || true)"
+          test -z "$unexpected" || { echo 'Unexpected proof-branch drift:'; echo "$unexpected"; exit 1; }
+          echo 'RESULT=V806_FINAL_HEALTH_EXACT_TREE_PASS'
+      - name: Verify deployed public and admin surfaces
+        env:
+          GEJAST_DEPLOY_WAIT_SECONDS: '300'
+          GEJAST_SMOKE_TIMEOUT_MS: '15000'
+        run: node check-live-routes.mjs
+      - name: Verify live admin GitHub OAuth outer boundary
+        env:
+          GEJAST_ADMIN_AUTH_TIMEOUT_MS: '15000'
+        run: node check-live-admin-auth-boundary.mjs
+      - name: Verify Supabase auth data-plane liveness
+        env:
+          GEJAST_DATA_PLANE_TIMEOUT_MS: '10000'
+          GEJAST_DATA_PLANE_ATTEMPTS: '2'
+          GEJAST_DATA_PLANE_RETRY_DELAY_MS: '750'
+        run: node check-live-data-plane.mjs
+      - name: Run primary read-only beta acceptance
+        env:
+          GEJAST_BETA_SURFACE_TIMEOUT_MS: '15000'
+        run: node check-beta-readonly-surfaces.mjs
+      - name: Run extended read-only beta acceptance
+        env:
+          GEJAST_BETA_SURFACE_TIMEOUT_MS: '15000'
+        run: node check-beta-readonly-extended.mjs
+      - name: Record live beta performance probe
+        env:
+          GEJAST_PERF_TIMEOUT_MS: '20000'
+        run: node check-beta-performance.mjs
+      - name: Final marker
+        run: echo 'RESULT=V806_FINAL_EXACT_HEALTH_PASS'
