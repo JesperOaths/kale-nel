@@ -5,6 +5,7 @@
   "certified_at": "2026-08-18",
   "certified_product_sha": "b64a116f2b2684d1fbd475b40c2b76f569d40942",
   "certified_release_branch": "release/v805-certified-20260818",
+  "certified_tag": "v805-certified-20260818",
   "final_acceptance_artifact": "final-acceptance-v805.json",
   "production_backend": {
     "supabase_project_id": "uiqntazgnrxwliaidkmy",
@@ -29,7 +30,8 @@
     "Supabase data-plane outage recovered after authorized project restart and exact-current health revalidation.",
     "GEJAST_v801a_toepen_idempotency_owner_guard was explicitly authorized, deployed as migration 20260818001412, and proven through public PostgREST.",
     "Exact-current authenticated visual certification completed with artifact upload, manual review and zero-residue cleanup.",
-    "Exact-current deep Phase-2 gameplay and Boerenbridge/Beerpong owner-isolation completed with zero residue."
+    "Exact-current deep Phase-2 gameplay and Boerenbridge/Beerpong owner-isolation completed with zero residue.",
+    "Certified v805 product bytes are permanently pinned by release/v805-certified-20260818 and immutable tag v805-certified-20260818."
   ],
   "remaining_release_blockers": [],
   "required_next": []

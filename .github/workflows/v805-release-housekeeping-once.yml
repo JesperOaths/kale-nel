@@ -1,0 +1,69 @@
+name: One-shot v805 release housekeeping
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/v805-release-housekeeping-once.yml']
+
+# Triggered after workflow installation so GitHub schedules the one-shot cleanup.
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - name: Verify certified v805 pointers before cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          target='b64a116f2b2684d1fbd475b40c2b76f569d40942'
+          branch_sha="$(git ls-remote --heads origin release/v805-certified-20260818 | awk '{print $1}')"
+          tag_sha="$(git ls-remote --tags origin 'refs/tags/v805-certified-20260818^{}' | awk '{print $1}')"
+          test "$branch_sha" = "$target"
+          test "$tag_sha" = "$target"
+          echo 'RESULT=V805_CERTIFIED_POINTERS_PRE_CLEANUP_PASS'
+      - name: Delete exact disposable branch allowlist
+        shell: bash
+        run: |
+          set -euo pipefail
+          branches=(
+            proof/v805-current-recovery
+            proof/v805-main-run-discovery
+            proof/v805-paardenrace-native-cadence
+            proof/v805-phase2-deep-live-20260818
+            proof/v805-phase2-owner-isolation
+            proof/v805-pikken-render-stress2-20260818
+            proof/v805-pikken-render-stress-20260818
+            proof/v805-postrestart-health-20260818
+            proof/v805-postv801a-fast-deep-20260818
+            proof/v805-postv801a-fast-visual-20260818
+            proof/v805-toepen-v801a-rest-20260818
+            proof/cancel-obsolete-visual-20260818
+            ops/v805-release-tag-20260818
+            ops/v805-release-housekeeping
+            test/v805-visual-warning-diagnostics
+          )
+          for branch in "${branches[@]}"; do
+            case "$branch" in
+              main|release/*|agent/v806-*) echo "Refusing protected/current branch: $branch"; exit 1 ;;
+            esac
+            if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+              git push origin --delete "$branch"
+              echo "deleted=$branch"
+            else
+              echo "already_absent=$branch"
+            fi
+          done
+      - name: Verify certified pointers after cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          target='b64a116f2b2684d1fbd475b40c2b76f569d40942'
+          test "$(git ls-remote --heads origin release/v805-certified-20260818 | awk '{print $1}')" = "$target"
+          test "$(git ls-remote --tags origin 'refs/tags/v805-certified-20260818^{}' | awk '{print $1}')" = "$target"
+          echo 'RESULT=V805_DISPOSABLE_BRANCH_CLEANUP_PASS'
