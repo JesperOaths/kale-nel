@@ -1,0 +1,41 @@
+name: Create immutable v805 certification tag
+
+on:
+  push:
+    branches: [ops/v805-release-tag-20260818]
+    paths: ['.github/workflows/v805-certified-tag-20260818.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - name: Create or verify immutable certification tag
+        shell: bash
+        env:
+          TARGET_SHA: b64a116f2b2684d1fbd475b40c2b76f569d40942
+          TAG_NAME: v805-certified-20260818
+        run: |
+          set -euo pipefail
+          git fetch origin release/v805-certified-20260818 --tags --force
+          test "$(git rev-parse origin/release/v805-certified-20260818)" = "$TARGET_SHA"
+          remote="$(git ls-remote --tags origin "refs/tags/$TAG_NAME" "refs/tags/$TAG_NAME^{}")"
+          if [ -n "$remote" ]; then
+            resolved="$(printf '%s\n' "$remote" | awk '$2 ~ /\^\{\}$/ {print $1; found=1} END{if(!found) exit 1}')"
+            test "$resolved" = "$TARGET_SHA"
+            echo "RESULT=V805_CERTIFIED_TAG_ALREADY_CORRECT sha=$resolved"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "$TAG_NAME" "$TARGET_SHA" -m 'Kalenel v805 certified production baseline — 2026-08-18'
+          git push origin "refs/tags/$TAG_NAME"
+          resolved="$(git ls-remote --tags origin "refs/tags/$TAG_NAME^{}" | awk '{print $1}')"
+          test "$resolved" = "$TARGET_SHA"
+          echo "RESULT=V805_CERTIFIED_TAG_CREATED sha=$resolved"
