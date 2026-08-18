@@ -10,9 +10,9 @@ permissions:
   contents: read
 
 jobs:
-  release-quality:
+  supplemental-quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
     steps:
       - name: Check out repository
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -20,48 +20,23 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
-          node-version: '24'
+          node-version: '18'
+          cache: npm
 
-      - name: Show manifest / lockfile identity
-        shell: bash
-        run: |
-          set -euo pipefail
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          const l = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
-          console.log('PACKAGE_JSON', { name: p.name, version: p.version, dependencies: p.dependencies || {}, devDependencies: p.devDependencies || {} });
-          console.log('LOCK_ROOT', l.packages && l.packages[''] ? l.packages[''] : { name: l.name, version: l.version });
-          NODE
+      - name: Install exact dependency graph
+        run: npm ci
 
-      - name: Prove committed lockfile can support clean install
-        id: committed_lock
-        continue-on-error: true
-        run: npm ci --ignore-scripts
+      - name: Run canonical repository verification
+        run: npm run verify
 
-      - name: Record committed lock result
-        shell: bash
-        run: echo "COMMITTED_LOCK_NPM_CI=${{ steps.committed_lock.outcome }}"
+      - name: Run PR safety rules
+        run: node scripts/check-pr-rules.mjs
 
-      - name: Regenerate lockfile from package.json
-        run: npm install --package-lock-only --ignore-scripts
+      - name: Run Pages publication boundary check
+        run: node scripts/check-pages-publication-boundary-v792.mjs
 
-      - name: Upload regenerated lockfile
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: v813-regenerated-package-lock
-          path: package-lock.json
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Install exact regenerated dependency graph
-        run: npm ci --ignore-scripts
-
-      - name: Install Chromium for Playwright
-        run: npx playwright install --with-deps chromium
-
-      - name: Run full release suite
-        run: npm run test:release
+      - name: Run independent static publication integrity audit
+        run: node scripts/audit-v813-static-integrity.mjs
 
       - name: Audit dependency graph
         run: npm audit --audit-level=high
