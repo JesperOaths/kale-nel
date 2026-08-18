@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "site_version": "release candidate v810 / live v809 / certified rollback v808",
+  "site_version": "release candidate v811 / live v810 / certified rollback v808",
   "last_updated": "2026-08-18",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -11,11 +11,12 @@
   },
   "deployment_identity": {
     "status": "ready_to_test",
-    "live_version": "v809",
-    "frontend_release_merge": "6b2e28175aa07705945db42107cff112800864b7",
-    "repository_head_at_audit": "6b2e28175aa07705945db42107cff112800864b7",
+    "live_version": "v810",
+    "frontend_release_merge": "fba531c35d076d1e0a3065683eed8908c38627b6",
+    "repository_head_at_audit": "fba531c35d076d1e0a3065683eed8908c38627b6",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
     "evidence": [
+      "2026-08-18 exact-current v810 runtime proof 32136704477 PASS: get_player_runtime_bundle_v687 returned HTTP 200; retired pending/vote/get_public_state calls remained zero; account/drinks/announcements succeeded; track_site_event returned PGRST202 specifically because the browser payload included unsupported site_scope; cleanup PASS_ZERO; artifact 9324297597 sha256 62a80b4ec09e2b8526c6bc0a4fbfbc190801c1454cba713eb5bfdac4a1c5a595.",
       "2026-08-18 v809 diagnostic run 32135584678: get_all_pending_drink_event_verifications_public=0, get_drink_event_vote_queue_public=0, get_public_state=0; account_public_state_v687=13 successful responses, get_drinks_page_public=4, get_player_site_announcements_scoped=6; get_player_runtime_bundle_v687 returned HTTP 300 because the two-argument payload matched two production overloads; cleanup PASS_ZERO.",
       "2026-08-18 v809 candidate grounding: audit run 32134119010 / job 95701442104 mapped active warning callers; production signature/definition reads confirmed announcement and Drinks compatibility contracts plus canonical account/player runtime arguments. No production SQL mutation was performed.",
       "2026-08-18 live v808: exact-current health run 32123034385 job 95698011853 PASS across deployed routes, admin OAuth perimeter, Supabase auth data plane, primary+extended read-only acceptance and performance.",
@@ -46,8 +47,8 @@
       "2026-08-14 live v792: frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 completed its own Live deployment health run #60 successfully; later SQL-only repository audit head 141e7301944a79452eca9d354180a684249cdcd2 also passed Live deployment health without changing frontend VERSION.",
       "v793 candidate: full production screenshot audit found and repairs visible Klaverjas duplication, ladder game-key mismatch, stale game status RPC owners, Pikken spectator context loss and Rad stats aggregation failure; current release remains REVALIDATION_REQUIRED until post-deploy screenshots and gameplay are re-run."
     ],
-    "note": "v810 is a one-owner frontend follow-up over live v809. Exact-current v809 proof 32135584678 established zero calls to the three removed stale RPCs and successful canonical account/Drinks/announcement responses, while exposing HTTP 300 on the overloaded player runtime bundle. v810 sends the explicit third player_input argument to select the full production overload. Certified rollback remains v808.",
-    "release_candidate_version": "v810"
+    "note": "v811 is a one-owner frontend follow-up over live v810. Exact-current v810 run 32136704477 passed health and authenticated runtime contracts, proving the player bundle overload fix; its response-body diagnostics showed track_site_event PGRST202 because site_scope was sent as an unsupported top-level RPC parameter. v811 preserves site_scope in extra metadata and removes it from the RPC signature. Certified rollback remains v808.",
+    "release_candidate_version": "v811"
   },
   "baseline_checks": [
     {
