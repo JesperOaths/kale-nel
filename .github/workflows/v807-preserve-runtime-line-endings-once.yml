@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   cleanup:
-    if: github.head_ref == 'agent/v807-remove-active-stale-session-probes'
+    if: github.head_ref == 'ops/v807-line-ending-trigger'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -122,13 +122,14 @@ jobs:
           node check-v807-active-session-callers.mjs
           npm ci
           npm run verify
-      - name: Commit minimized runtime diff
+      - name: Commit minimized runtime diff and remove temporary marker
         shell: bash
         run: |
           set -euo pipefail
+          rm -f .proof/v807-line-ending-trigger.txt
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add site-analytics.js gejast-player-session-ui.js
+          git add -A
           git commit -m 'chore: preserve runtime line endings in v807'
           git push origin HEAD:agent/v807-remove-active-stale-session-probes
           echo 'RESULT=V807_RUNTIME_LINE_ENDINGS_PRESERVED_PASS'
