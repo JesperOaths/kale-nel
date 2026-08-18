@@ -1,3 +1,4 @@
+# execution trigger after branch workflow registration
 name: v811 analytics RPC builder
 
 on:
@@ -62,7 +63,7 @@ jobs:
           if old not in s: raise SystemExit('site-analytics sendEvent patch target missing')
           p.write_text(s.replace(old,new,1))
 
-          Path('check-v811-analytics-rpc-contract.mjs').write_text("""#!/usr/bin/env node\nimport assert from 'node:assert/strict';\nimport fs from 'node:fs';\nconst version=fs.readFileSync('VERSION','utf8').trim();\nassert(Number(version.replace(/^v/i,''))>=811,'v811+ required');\nconst src=fs.readFileSync('site-analytics.js','utf8');\nassert(src.includes("Object.prototype.hasOwnProperty.call(normalizedPayload, 'site_scope')"),'analytics sendEvent must normalize site_scope');\nassert(src.includes("normalizedPayload.extra = Object.assign({}, normalizedPayload.extra || {}, { site_scope: normalizedPayload.site_scope })"),'site_scope must be preserved inside analytics extra metadata');\nassert(src.includes('delete normalizedPayload.site_scope'),'unsupported top-level site_scope RPC argument must be removed');\nassert(src.includes('const body = JSON.stringify(normalizedPayload);'),'analytics RPC body must serialize normalized payload');\nassert(!src.includes('const body = JSON.stringify(payload);'),'raw payload serialization must not bypass normalization');\nconsole.log('PASS v811 analytics RPC contract');\n""")
+          Path('check-v811-analytics-rpc-contract.mjs').write_text("""#!/usr/bin/env node\nimport assert from 'node:assert/strict';\nimport fs from 'node:fs';\nconst version=fs.readFileSync('VERSION','utf8').trim();\nassert(Number(version.replace(/^v/i,''))>=811,'v811+ required');\nconst src=fs.readFileSync('site-analytics.js','utf8');\nassert(src.includes(\"Object.prototype.hasOwnProperty.call(normalizedPayload, 'site_scope')\"),'analytics sendEvent must normalize site_scope');\nassert(src.includes(\"normalizedPayload.extra = Object.assign({}, normalizedPayload.extra || {}, { site_scope: normalizedPayload.site_scope })\"),'site_scope must be preserved inside analytics extra metadata');\nassert(src.includes('delete normalizedPayload.site_scope'),'unsupported top-level site_scope RPC argument must be removed');\nassert(src.includes('const body = JSON.stringify(normalizedPayload);'),'analytics RPC body must serialize normalized payload');\nassert(!src.includes('const body = JSON.stringify(payload);'),'raw payload serialization must not bypass normalization');\nconsole.log('PASS v811 analytics RPC contract');\n""")
 
           pkg=Path('package.json'); data=json.loads(pkg.read_text()); script=data['scripts']['verify:static']
           anchor='node check-v810-player-runtime-overload-disambiguation.mjs'; addition='node check-v811-analytics-rpc-contract.mjs'
