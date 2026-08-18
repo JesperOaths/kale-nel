@@ -1,0 +1,30 @@
+name: v806ab prepared runtime-warning SQL proof
+
+on:
+  push:
+    branches: [sql/v806a-runtime-warning-backend-repairs]
+    paths: ['.github/workflows/v806ab-prepared-runtime-warning-sql-proof.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: sql/v806a-runtime-warning-backend-repairs
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Verify prepared-only repairs without applying SQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          node check-v806a-runtime-warning-backend-repairs.mjs
+          node check-v806b-game-match-summary-ambiguity.mjs
+          grep -Fq 'PREPARED ONLY. Do not apply to production without explicit authorization.' GEJAST_v806a_runtime_warning_backend_repairs.sql
+          grep -Fq 'PREPARED ONLY. Do not apply to production without explicit authorization.' GEJAST_v806b_game_match_summary_ambiguity.sql
+          echo 'RESULT=V806AB_PREPARED_SQL_STATIC_PASS'
