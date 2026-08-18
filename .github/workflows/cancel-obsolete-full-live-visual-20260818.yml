@@ -1,0 +1,17 @@
+name: Cancel obsolete full visual run
+
+on:
+  push:
+    branches: [proof/cancel-obsolete-visual-20260818]
+    paths: ['.github/workflows/cancel-obsolete-full-live-visual-20260818.yml']
+
+concurrency:
+  group: full-live-visual-audit
+  cancel-in-progress: true
+
+jobs:
+  cancel-obsolete:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: echo 'Obsolete stalled full-live visual run cancelled by shared concurrency group.'
