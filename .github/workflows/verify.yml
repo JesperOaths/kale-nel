@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - 'agent/**'
+      - 'sql/**'
 
 concurrency:
   group: gejast-verify-${{ github.ref }}
@@ -29,6 +30,8 @@ jobs:
         run: npm run verify
       - name: Independent static publication integrity
         run: node scripts/audit-v813-static-integrity.mjs
+      - name: v812f direct data boundary
+        run: node check-v812f-direct-data-boundary.mjs
       - name: Reconstructed Paardenrace RPC source safety
         run: node check-paardenrace-rpc-source-safety.mjs
       - name: Paardenrace backend minimum evidence
