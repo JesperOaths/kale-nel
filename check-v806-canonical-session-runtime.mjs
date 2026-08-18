@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 const version=fs.readFileSync('VERSION','utf8').trim();
-if(version!=='v806') throw new Error(`Expected v806, got ${version}`);
+const versionNumber=Number(version.match(/^v(\d+)$/)?.[1]||0);
+if(versionNumber<806) throw new Error(`Expected v806+, got ${version}`);
 const home=fs.readFileSync('gejast-home-gate.js','utf8');
 const cfg=fs.readFileSync('gejast-config.js','utf8');
 for(const needle of ["hasAttribute('data-gejast-auth-state')","delegated: 'gejast-auth-gate'","rpc('account_public_state_v687'",'session_token_input: token','site_scope_input: currentScope()']) if(!home.includes(needle)) throw new Error(`Home gate missing: ${needle}`);

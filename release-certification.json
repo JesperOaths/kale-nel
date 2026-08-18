@@ -1,23 +1,26 @@
 {
   "schema_version": 1,
-  "current_version": "v806",
+  "current_version": "v807",
   "status": "REVALIDATION_REQUIRED",
   "previous_certified_version": "v805",
   "previous_certified_product_sha": "b64a116f2b2684d1fbd475b40c2b76f569d40942",
   "previous_certified_release_branch": "release/v805-certified-20260818",
   "previous_certified_tag": "v805-certified-20260818",
-  "reason": "v806 changes shipped player-session runtime and nested shared-asset resolution; fresh exact-current evidence is required before PASS.",
+  "superseded_uncertified_version": "v806",
+  "superseded_uncertified_product_sha": "87fa814d28c00035b770c0ff8959def27a00f059",
+  "reason": "v807 removes three active stale frontend session probes discovered during strict v806 Family certification; fresh exact-current evidence is required before PASS.",
   "remaining_release_blockers": [
-    "Fresh exact-current v806 live health must pass.",
-    "Fresh exact-current v806 multi-context/deep gameplay must pass.",
-    "Fresh authenticated v806 visual audit plus manual screenshot review must pass.",
+    "Fresh exact-current v807 live health must pass.",
+    "Fresh exact-current v807 owner isolation and deep gameplay must pass.",
+    "Targeted Family runtime must show zero get_public_state calls.",
+    "Fresh authenticated v807 visual audit plus manual screenshot review must pass.",
     "Controlled production fixtures must be independently verified at zero residue."
   ],
   "required_next": [
-    "Run exact-current v806 health.",
-    "Run exact-current v806 deep live gameplay acceptance.",
-    "Run full authenticated v806 visual audit and manually inspect the artifact.",
-    "Verify zero residue and then write final-acceptance-v806.json before setting PASS."
+    "Merge only after canonical verification.",
+    "Run exact-current v807 health, owner isolation and deep live.",
+    "Run Family stale-RPC trace and full authenticated visual audit.",
+    "Manually review all screenshots and independently prove zero residue before setting PASS."
   ],
   "previous_certification_snapshot": {
     "certified_at": "2026-08-18",
