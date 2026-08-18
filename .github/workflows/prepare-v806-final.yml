@@ -5,6 +5,7 @@ on:
     branches: [agent/v806-canonical-session-runtime-final]
     paths: ['.github/workflows/prepare-v806-final.yml']
 
+# Trigger after workflow registration; product files remain unchanged by this commit.
 permissions:
   contents: write
 
