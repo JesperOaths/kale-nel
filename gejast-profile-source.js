@@ -219,15 +219,6 @@ function writeProfilesCache(value) {
     const drinks = await RPC.callRpc('get_drink_player_public_scoped', { player_name: playerName, site_scope_input: scope })
       .catch(() => RPC.callRpc('get_drink_player_public', { player_name: playerName }).catch(() => ({ })));
 
-    const unified = await RPC.callRpc('get_public_player_unified_scoped', { player_name: playerName, site_scope_input: scope }).catch(() => null);
-    if (unified) {
-      return {
-        unified: unified || {},
-        drinks: drinks || {},
-        badge_facts: {}
-      };
-    }
-
     const fallbackBundle = await loadProfilesPageBundle().catch(async () => {
       const players = await loadProfilesList().catch(() => ({ players: [] }));
       return { players: players?.players || [] };
@@ -247,10 +238,16 @@ function writeProfilesCache(value) {
   }
 
   async function loadPlayerGamePanels({ playerName, gameKey = 'klaverjas' }) {
-    const bundle = await loadPlayerBundle({ playerName, gameKey }).catch(() => ({ shared_stats: {}, game_insights: { cards: [] } }));
+    const scope = CTX.getScope();
+    const fallback = await loadPlayerBundle({ playerName, gameKey }).catch(() => ({ shared_stats: {}, game_insights: { cards: [] } }));
+    const payload = { game_key_input: gameKey, player_name_input: playerName, site_scope_input: scope };
+    const [sharedStats, gameInsights] = await Promise.all([
+      RPC.callRpc('get_public_shared_player_stats_scoped', payload).catch(() => fallback?.shared_stats || {}),
+      RPC.callRpc('get_public_player_game_insights_scoped', payload).catch(() => fallback?.game_insights || { cards: [] })
+    ]);
     return {
-      shared_stats: bundle?.shared_stats || {},
-      game_insights: bundle?.game_insights || { cards: [] }
+      shared_stats: sharedStats || fallback?.shared_stats || {},
+      game_insights: gameInsights || fallback?.game_insights || { cards: [] }
     };
   }
 
