@@ -63,7 +63,10 @@
     global.document.head.appendChild(style);
   }
   async function consumeAnnouncement(row){
-    try { await rpc('consume_player_site_announcement_scoped', { announcement_id_input: row.announcement_id, site_scope_input: scope() }); } catch(_){}
+    let sessionToken = '';
+    try { sessionToken = cfg().getPlayerSessionToken ? String(cfg().getPlayerSessionToken()||'').trim() : ''; } catch(_) {}
+    if (!sessionToken) return;
+    try { await rpc('consume_player_site_announcement_scoped', { session_token: sessionToken, announcement_id_input: row.announcement_id, site_scope_input: scope() }); } catch(_){}
   }
   async function showResolvedOverlay(row){
     ensureStyles();
@@ -120,7 +123,7 @@
   async function poll(){
     if (STATE.disabled || !hasPlayer() || STATE.showing) return;
     try {
-      const data = await rpc('get_player_site_announcements_scoped', { site_scope_input: scope(), limit_count: 8 });
+      const data = await rpc('get_player_site_announcements_scoped', { site_scope_input: scope() });
       const rows = normalizeRows(data?.rows || data);
       if (!rows.length) return;
       const first = rows[0];

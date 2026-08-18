@@ -110,15 +110,14 @@
   async function fallback(opts={}){
     const session_token = opts.session_token || token();
     const payload = { session_token, viewer_lat: opts.viewer_lat ?? null, viewer_lng: opts.viewer_lng ?? null };
-    const [pageRaw, verifyRaw, mineRaw, historyRaw, speedRaw] = await Promise.allSettled([
+    const [pageRaw, mineRaw, historyRaw, speedRaw] = await Promise.allSettled([
       rpc('get_drinks_page_public', payload),
-      rpc('get_all_pending_drink_event_verifications_public', { session_token }),
       rpc('get_my_pending_drink_requests_public', { session_token }),
       rpc('get_verified_drinks_history_public', { limit_count: opts.history_limit ?? 40 }),
       rpc('get_drink_speed_page_public', payload)
     ]);
     const page = pageRaw.status==='fulfilled' ? (pageRaw.value?.get_drinks_page_public||pageRaw.value||{}) : {};
-    const verify_queue = verifyRaw.status==='fulfilled' ? (verifyRaw.value?.get_all_pending_drink_event_verifications_public||verifyRaw.value||[]) : (page.verify_queue||[]);
+    const verify_queue = Array.isArray(page.verify_queue) ? page.verify_queue : (Array.isArray(page.all_pending_verifications) ? page.all_pending_verifications : []);
     const my_pending_events = mineRaw.status==='fulfilled' ? (mineRaw.value?.get_my_pending_drink_requests_public||mineRaw.value||[]) : (page.my_pending_events||[]);
     const verified_history = historyRaw.status==='fulfilled' ? (historyRaw.value?.get_verified_drinks_history_public||historyRaw.value||[]) : (page.recent_verified||[]);
     const speed_page = speedRaw.status==='fulfilled' ? (speedRaw.value?.get_drink_speed_page_public||speedRaw.value||{}) : {};

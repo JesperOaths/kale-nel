@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="nl">
-<head><script src="/gejast-auth-gate.js?v808"></script>
+<head><script src="/gejast-auth-gate.js?v809"></script>
     <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drank toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v808';</script><script src="./gejast-config.js?v808"></script><script src="./gejast-mobile-route-fixes-v583.js?v808" defer></script><script src="./gejast-mobile-foundation-v583.js?v808" defer></script><script src="./gejast-drinks-push-bridge.js?v808"></script><script src="./gejast-home-gate.js?v808"></script><script src="./gejast-push-runtime.js?v808"></script><script src="./gejast-clickable-cards.js?v808"></script><script src="./gejast-scope-context.js?v808"></script><script src="./gejast-family-rollout.js?v808"></script>
+  <script>window.GEJAST_PAGE_VERSION='v809';</script><script src="./gejast-config.js?v809"></script><script src="./gejast-mobile-route-fixes-v583.js?v809" defer></script><script src="./gejast-mobile-foundation-v583.js?v809" defer></script><script src="./gejast-drinks-push-bridge.js?v809"></script><script src="./gejast-home-gate.js?v809"></script><script src="./gejast-push-runtime.js?v809"></script><script src="./gejast-clickable-cards.js?v809"></script><script src="./gejast-scope-context.js?v809"></script><script src="./gejast-family-rollout.js?v809"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -193,9 +193,9 @@
     </div>
   </div>
 
-  <div class="site-credit-watermark" data-version-watermark>v808  -  Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v809  -  Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v808"></script><script src="./drinks-verify-float.js?v808"></script><script src="./gejast-drinks-workflow.js?v808"></script>
+  <script src="./gejast-geo.js?v809"></script><script src="./drinks-verify-float.js?v809"></script><script src="./gejast-drinks-workflow.js?v809"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
@@ -255,18 +255,16 @@
       { key:'wijnfles', label:'Fles Wijn', unit_value:9 }
     ];
     async function loadPageDataLegacy(payload){
-      const [pageState, verifyState, mineState, recentState] = await Promise.allSettled([
+      const [pageState, mineState, recentState] = await Promise.allSettled([
         rpcWithTimeout('get_drinks_page_public', payload, 1100),
-        rpcWithTimeout('get_all_pending_drink_event_verifications_public', {session_token:token()}, 1400),
         rpcWithTimeout('get_my_pending_drink_requests_public', {session_token:token()}, 1400),
         rpcWithTimeout('get_verified_drinks_history_public', {limit_count:8}, 1400)
       ]);
       const pageRaw = pageState.status==='fulfilled' ? pageState.value : {};
       const page = pageRaw?.get_drinks_page_public || pageRaw || {};
-      const verifyRaw = verifyState.status==='fulfilled' ? verifyState.value : [];
       const mineRaw = mineState.status==='fulfilled' ? mineState.value : [];
       const recentRaw = recentState.status==='fulfilled' ? recentState.value : [];
-      const verifyQueue = Array.isArray(verifyRaw) ? verifyRaw : (verifyRaw?.items || verifyRaw?.verify_queue || []);
+      const verifyQueue = Array.isArray(page.verify_queue) ? page.verify_queue : (Array.isArray(page.all_pending_verifications) ? page.all_pending_verifications : []);
       const myPendingEvents = Array.isArray(mineRaw) ? mineRaw : (mineRaw?.items || mineRaw?.my_pending_events || []);
       const recentVerified = Array.isArray(recentRaw) ? recentRaw : (recentRaw?.items || recentRaw?.recent_verified || []);
       const anyData = !!(verifyQueue.length || myPendingEvents.length || recentVerified.length || Object.keys(page).length);
@@ -459,6 +457,6 @@
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./site-analytics.js?v808"></script>
+<script src="./site-analytics.js?v809"></script>
 <script id="gejast-drinks-push-boot">(function(){function boot(){try{window.GEJAST_DRINKS_PUSH_BRIDGE&&window.GEJAST_DRINKS_PUSH_BRIDGE.bootPanel&&window.GEJAST_DRINKS_PUSH_BRIDGE.bootPanel();}catch(_){}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();})();</script></body>
 </html>

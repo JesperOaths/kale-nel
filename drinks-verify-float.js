@@ -299,28 +299,17 @@
         if (speedItem && canShowFor(`speed:${speedItem.id}`)) { speedItem.kind = 'speed'; item = speedItem; }
       } catch (_) {}
       if (!item) {
-        try{
-          const allRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_all_pending_drink_event_verifications_public`, {
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`, {
             method:'POST',
             headers: headers(),
-            body: JSON.stringify({session_token: token()})
+            body: JSON.stringify({session_token: token(), viewer_lat: pos?.coords?.latitude ?? null, viewer_lng: pos?.coords?.longitude ?? null})
           });
-          const allRaw = await parse(allRes);
-          const allRows = allRaw?.get_all_pending_drink_event_verifications_public || allRaw || {};
-          const drinkItem = Array.isArray(allRows) ? allRows[0] : null;
+          const raw = await parse(res);
+          const data = raw?.get_drinks_page_public || raw || {};
+          const drinkItem = Array.isArray(data.verify_queue) ? data.verify_queue[0] : null;
           if (drinkItem && canShowFor(`drink:${drinkItem.id}`)) { drinkItem.kind = 'drink'; item = drinkItem; }
-        }catch(_){}
-      }
-      if (!item) {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_event_vote_queue_public`, {
-          method:'POST',
-          headers: headers(),
-          body: JSON.stringify({session_token: token(), viewer_lat: pos?.coords?.latitude ?? null, viewer_lng: pos?.coords?.longitude ?? null})
-        });
-        const raw = await parse(res);
-        const data = raw?.get_drink_event_vote_queue_public || raw || {};
-        const drinkItem = Array.isArray(data.verify_queue) ? data.verify_queue[0] : null;
-        if (drinkItem && canShowFor(`drink:${drinkItem.id}`)) { drinkItem.kind = 'drink'; item = drinkItem; }
+        } catch (_) {}
       }
       if (!item || !canShowFor(`${item.kind||'drink'}:${item.id}`)) {
         const withinGrace = activePromptItem && activePromptId && activePromptId !== '__approved__' && Date.now() < activePromptGraceUntil;

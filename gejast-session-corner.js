@@ -7,24 +7,23 @@
   function getToken(){ for (const key of SESSION_KEYS){ const v=localStorage.getItem(key)||sessionStorage.getItem(key); if(v) return v; } return ''; }
   function clearTokens(){ for (const key of SESSION_KEYS){ localStorage.removeItem(key); sessionStorage.removeItem(key); } }
   function rpcHeaders(){ return { 'Content-Type':'application/json', apikey: SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}` }; }
+  function scope(){ try { if(window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope) return window.GEJAST_SCOPE_UTILS.getScope(); } catch(_){} try { return new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'; } catch(_){} return 'friends'; }
   async function fetchViewer(token){
     if (!token || !SUPABASE_URL || !SUPABASE_KEY) return { name:'', coins:0 };
-    const payload = JSON.stringify({ session_token: token, session_token_input: token });
-    for (const rpc of ['get_public_state','get_gejast_homepage_state','get_jas_app_state']){
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpc}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: payload });
-        const data = await res.json().catch(()=>null);
-        if (!res.ok) continue;
-        const name = data?.my_name || data?.display_name || data?.player_name || '';
-        if (name) return { name, coins: Number(data?.caute_coins ?? data?.coin_balance ?? data?.viewer?.caute_coins ?? 0) || 0 };
-      } catch {}
-    }
+    let name = '';
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_my_caute_coins_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: payload });
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/account_public_state_v687`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token_input: token, site_scope_input: scope() }) });
       const data = await res.json().catch(()=>null);
-      return { name:'', coins: Number(data?.balance ?? data?.caute_coins ?? 0) || 0 };
+      if (res.ok && data?.ok === true) name = data?.my_name || data?.display_name || data?.player_name || '';
     } catch {}
-    return { name:'', coins:0 };
+    if (!name) return { name:'', coins:0 };
+    let coins = 0;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_my_caute_coins_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token: token, session_token_input: token }) });
+      const data = await res.json().catch(()=>null);
+      if (res.ok) coins = Number(data?.balance ?? data?.caute_coins ?? data?.coin_balance ?? 0) || 0;
+    } catch {}
+    return { name, coins };
   }
   function mount(){
     if (document.getElementById('playerSessionCorner')) return document.getElementById('playerSessionCorner');

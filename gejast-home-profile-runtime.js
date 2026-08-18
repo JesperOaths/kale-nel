@@ -89,7 +89,7 @@
   }
   async function loadHome(){ const data=await rpc(RPC.home,{site_scope_input:scope(),session_token:null,session_token_input:playerSession()||null}); renderHome(data); return data; }
   async function loadProfiles(){ const data=await rpc(RPC.profiles,{site_scope_input:scope(),limit_input:80}); renderProfiles(data); return data; }
-  async function loadPlayer(){ const p=new URLSearchParams(location.search).get('player')||''; if(!p) return null; const data=await rpc(RPC.player,{player_name_input:p,site_scope_input:scope(),session_token_input:playerSession()||null}); renderPlayer(data); return data; }
+  async function loadPlayer(){ const p=new URLSearchParams(location.search).get('player')||''; if(!p) return null; const data=await rpc(RPC.player,{player_name_input:p,site_scope_input:scope()}); renderPlayer(data); return data; }
   async function loadAdmin(){
     injectStyles();
     const out=$('runtimeOutput'); if(!out) return;
