@@ -50,30 +50,24 @@
   }
   async function fetchViewer(token){
     if (!token || !SUPABASE_URL || !SUPABASE_KEY) return null;
-    const payloads = [
-      ['get_public_state', { session_token: token }],
-      ['get_gejast_homepage_state', { session_token: token }],
-      ['get_jas_app_state', { session_token: token }],
-      ['get_public_state', { session_token_input: token }],
-      ['get_gejast_homepage_state', { session_token_input: token }],
-      ['get_jas_app_state', { session_token_input: token }]
-    ];
-    for (const [rpc, body] of payloads){
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpc}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(body) });
-        const data = await parseJson(res);
-        const name = data?.my_name || data?.display_name || data?.player_name || data?.viewer?.display_name || '';
-        if (name) {
-          return {
-            name,
-            avatar: data?.my_avatar_url || data?.avatar_url || data?.viewer?.avatar_url || '',
-            coins: Number(data?.caute_coins ?? data?.coin_balance ?? data?.viewer?.caute_coins ?? data?.viewer?.coin_balance ?? 0) || 0,
-            profileHref: './my_profile.html'
-          };
-        }
-      } catch (_) {}
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/account_public_state_v687`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ session_token: token, session_token_input: token, site_scope_input: inferScope() })
+      });
+      const data = await parseJson(res);
+      const responseScope = String(data?.site_scope || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
+      const name = data?.my_name || data?.display_name || data?.player_name || data?.viewer?.display_name || data?.player?.display_name || '';
+      if (data?.ok !== true || responseScope !== inferScope() || !name) return null;
+      return {
+        name,
+        avatar: data?.my_avatar_url || data?.avatar_url || data?.viewer?.avatar_url || data?.player?.avatar_url || '',
+        coins: Number(data?.caute_coins ?? data?.coin_balance ?? data?.viewer?.caute_coins ?? data?.viewer?.coin_balance ?? 0) || 0,
+        profileHref: './my_profile.html'
+      };
+    } catch (_) {
+      return null;
     }
-    return null;
   }
 
   async function fetchCoins(token){

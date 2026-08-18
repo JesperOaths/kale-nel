@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "site_version": "release candidate v806 / live certified v805",
+  "site_version": "release candidate v807 / live v806 / certified rollback v805",
   "last_updated": "2026-08-18",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -11,9 +11,9 @@
   },
   "deployment_identity": {
     "status": "ready_to_test",
-    "live_version": "v805",
-    "frontend_release_merge": "b64a116f2b2684d1fbd475b40c2b76f569d40942",
-    "repository_head_at_audit": "fe69dfdbad20b2489ff050c9799dc276f8dbd733",
+    "live_version": "v806",
+    "frontend_release_merge": "87fa814d28c00035b770c0ff8959def27a00f059",
+    "repository_head_at_audit": "87fa814d28c00035b770c0ff8959def27a00f059",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
     "evidence": [
       "2026-08-18 certified v805: post-v801a health 32084207898 PASS; deep live 32085432145 PASS; authenticated 137-screenshot visual audit 32085275503 PASS with manual review; production migration 20260818001412 and public Toepen owner/scope proof 32084142660 PASS; final controlled residue zero.",
@@ -40,8 +40,8 @@
       "2026-08-14 live v792: frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 completed its own Live deployment health run #60 successfully; later SQL-only repository audit head 141e7301944a79452eca9d354180a684249cdcd2 also passed Live deployment health without changing frontend VERSION.",
       "v793 candidate: full production screenshot audit found and repairs visible Klaverjas duplication, ladder game-key mismatch, stale game status RPC owners, Pikken spectator context loss and Rad stats aggregation failure; current release remains REVALIDATION_REQUIRED until post-deploy screenshots and gameplay are re-run."
     ],
-    "note": "Live v805 is the certified baseline pinned by release/v805-certified-20260818 and tag v805-certified-20260818. v806 is a release candidate that canonicalizes player-session runtime calls and root-resolves shared Family assets; it remains REVALIDATION_REQUIRED until fresh health, deep gameplay, authenticated visual/manual review and zero-residue evidence pass.",
-    "release_candidate_version": "v806"
+    "note": "v807 is a release candidate over live v806; certified rollback remains v805 b64a116f2b2684d1fbd475b40c2b76f569d40942. v807 removes the three active stale get_public_state session callers proven by v806 Family diagnostic run 32099711741. Fresh exact-current health, owner isolation, deep gameplay, authenticated Family runtime/visual/manual review and zero-residue proof are required before PASS.",
+    "release_candidate_version": "v807"
   },
   "baseline_checks": [
     {

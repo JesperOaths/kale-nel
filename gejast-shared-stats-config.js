@@ -1,6 +1,6 @@
 (function(){
   window.GEJAST_SHARED_STATS_CONFIG={
-    version:'v806',
+    version:'v807',
     cache_key:'gejast_shared_stats_cache_v661',
     rpc:{
       summary:'get_shared_stats_summary_v661',

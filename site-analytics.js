@@ -113,10 +113,16 @@
 
     if (playerToken) {
       try {
-        const data = await rpc('get_public_state', { session_token: playerToken });
-        if (data && data.my_name) {
-          profile.player_name = data.my_name;
+        const data = await rpc('account_public_state_v687', {
+          session_token: playerToken,
+          session_token_input: playerToken,
+          site_scope_input: (() => { try { return new URLSearchParams(location.search || '').get('scope') === 'family' ? 'family' : 'friends'; } catch (_) { return 'friends'; } })()
+        });
+        const playerName = data && (data.my_name || data.display_name || data.player_name || data.viewer?.display_name || data.player?.display_name || '');
+        if (data && data.ok === true && playerName) {
+          profile.player_name = playerName;
           profile.is_logged_in = true;
+          profile.site_scope = data.site_scope === 'family' ? 'family' : 'friends';
         }
       } catch (_) {}
     }
