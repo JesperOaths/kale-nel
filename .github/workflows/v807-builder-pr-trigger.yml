@@ -28,6 +28,25 @@ jobs:
           set -euo pipefail
           git fetch origin main
           test "$(git rev-parse origin/main)" = '87fa814d28c00035b770c0ff8959def27a00f059'
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('scripts/prepare-v807-stale-session-probe-removal.py')
+          s=p.read_text()
+          old="""if old not in s: raise SystemExit('scorer stale fetchMyName block missing')
+p.write_text(s.replace(old,new,1))
+
+# 4) Make the v806 canonical runtime guard durable for newer releases.
+"""
+          new="""start=s.index('  async function fetchMyName(token){')
+end=s.index('  function show(', start)
+p.write_text(s[:start]+new+s[end:])
+
+# 4) Make the v806 canonical runtime guard durable for newer releases.
+"""
+          if old not in s:
+              raise SystemExit('builder-script scorer apply anchor missing')
+          p.write_text(s.replace(old,new,1))
+          PY
           python3 scripts/prepare-v807-stale-session-probe-removal.py
           node check-version-drift.mjs
           node check-v806-canonical-session-runtime.mjs
