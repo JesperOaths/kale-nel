@@ -1,0 +1,146 @@
+name: v810 runtime contract proof
+
+on:
+  push:
+    branches: [proof/v810-runtime-contract]
+    paths: ['.github/workflows/v810-runtime-contract-proof.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v810-runtime-contract-proof
+  cancel-in-progress: false
+
+env:
+  PRODUCT_SHA: fba531c35d076d1e0a3065683eed8908c38627b6
+  PROOF_BRANCH: proof/v810-runtime-contract
+  SUPABASE_URL: https://uiqntazgnrxwliaidkmy.supabase.co
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+  GEJAST_VISUAL_DB_NAME: postgres
+  GEJAST_BASE_URL: https://kalenel.nl/
+  GEJAST_WARNING_PROOF_TIMEOUT_MS: '25000'
+  GEJAST_WARNING_PROOF_SETTLE_MS: '4500'
+
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v810-runtime-contract
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Pin exact-current v810 and prepare system Chrome
+        id: prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$PRODUCT_SHA"
+          test "$(git show "$PRODUCT_SHA:VERSION" | tr -d '\r\n')" = 'v810'
+          test -n "${SUPABASE_SERVICE_ROLE_KEY:-}" || { echo 'SUPABASE_SERVICE_ROLE_KEY missing'; exit 1; }
+          npm ci
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.55.0
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || true)"
+          test -n "$chrome" || { echo 'system Chrome missing'; exit 1; }
+          echo "GEJAST_SYSTEM_CHROME=$chrome" >> "$GITHUB_ENV"
+          node --check scripts/v810-runtime-contract-live-proof.mjs
+          "$chrome" --version
+      - name: Exact-current live health
+        id: health
+        shell: bash
+        env:
+          GEJAST_EXPECTED_VERSION: v810
+          GEJAST_DEPLOY_WAIT_SECONDS: '240'
+          GEJAST_SMOKE_TIMEOUT_MS: '15000'
+          GEJAST_ADMIN_AUTH_TIMEOUT_MS: '15000'
+          GEJAST_DATA_PLANE_TIMEOUT_MS: '10000'
+          GEJAST_DATA_PLANE_ATTEMPTS: '2'
+          GEJAST_DATA_PLANE_RETRY_DELAY_MS: '750'
+          GEJAST_BETA_SURFACE_TIMEOUT_MS: '15000'
+          GEJAST_PERF_TIMEOUT_MS: '20000'
+        run: |
+          set -euo pipefail
+          node check-live-routes.mjs
+          node check-live-admin-auth-boundary.mjs
+          node check-live-data-plane.mjs
+          node check-beta-readonly-surfaces.mjs
+          node check-beta-readonly-extended.mjs
+          node check-beta-performance.mjs
+          echo 'RESULT=V810_EXACT_CURRENT_HEALTH_PASS'
+      - name: Provision disposable Friends and Family proof identities
+        id: provision
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/full-live-visual-fixtures-v801.mjs provision
+      - name: Run authenticated v810 RPC contract proof
+        id: rpc_proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/v810-runtime-contract-live-proof.mjs
+      - name: Cleanup disposable proof state
+        id: cleanup
+        if: always() && (steps.provision.outcome == 'success' || steps.provision.outcome == 'failure')
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/full-live-visual-fixtures-v801.mjs cleanup
+          mkdir -p v810-runtime-proof
+          echo 'PASS_ZERO' > v810-runtime-proof/cleanup.txt
+      - name: Upload runtime proof artifact
+        id: artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: v810-runtime-contract-${{ github.run_id }}
+          path: v810-runtime-proof/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Enforce exact-current proof
+        id: enforce
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test '${{ steps.prepare.outcome }}' = 'success'
+          test '${{ steps.health.outcome }}' = 'success'
+          test '${{ steps.provision.outcome }}' = 'success'
+          test '${{ steps.rpc_proof.outcome }}' = 'success'
+          test '${{ steps.cleanup.outcome }}' = 'success'
+          test -f v810-runtime-proof/report.json
+          test -f v810-runtime-proof/cleanup.txt
+          echo 'RESULT=V810_RUNTIME_CONTRACT_EVIDENCE_PASS'
+      - name: Record successful proof run
+        if: steps.enforce.outcome == 'success'
+        shell: bash
+        env:
+          ARTIFACT_ID: ${{ steps.artifact.outputs.artifact-id }}
+          ARTIFACT_DIGEST: ${{ steps.artifact.outputs.artifact-digest }}
+        run: |
+          set -euo pipefail
+          mkdir -p .proof
+          cat > .proof/v810-runtime-contract.json <<EOF
+          {
+            "run_id": ${GITHUB_RUN_ID},
+            "run_attempt": ${GITHUB_RUN_ATTEMPT},
+            "product_sha": "${PRODUCT_SHA}",
+            "version": "v810",
+            "artifact_id": "${ARTIFACT_ID}",
+            "artifact_digest": "${ARTIFACT_DIGEST}",
+            "health": "PASS",
+            "runtime_contract": "PASS",
+            "cleanup": "PASS_ZERO"
+          }
+          EOF
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .proof/v810-runtime-contract.json
+          git commit -m 'test: record successful v810 runtime contract evidence'
+          git push origin HEAD:"$PROOF_BRANCH"
