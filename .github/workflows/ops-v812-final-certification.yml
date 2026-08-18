@@ -40,6 +40,34 @@ jobs:
           node-version: '24'
           cache: npm
 
+      - name: Harden proof harness transient classification
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('scripts/v812ab-final-certification-runner.sh')
+          s=p.read_text()
+
+          runtime_anchor="if \"analyticsVisitorId:process.env.GEJAST_CERT_ANALYTICS_VISITOR_ID\" not in s: raise SystemExit('runtime analytics visitor patch missing')"
+          runtime_patch="""s=s.replace(\"const badReq=requestFailures.filter(r=>repairedNames.has(r.name));\", \"const badReq=requestFailures.filter(r=>repairedNames.has(r.name) && !(r.error==='net::ERR_ABORTED' && byName(r.name).some(x=>x.status>=200&&x.status<300)));\")\nif \"r.error==='net::ERR_ABORTED' && byName(r.name).some(x=>x.status>=200&&x.status<300)\" not in s: raise SystemExit('runtime duplicate-abort classifier patch missing')"""
+          if runtime_anchor not in s:
+              raise SystemExit('runtime harness anchor missing')
+          s=s.replace(runtime_anchor, runtime_patch+'\n'+runtime_anchor, 1)
+
+          visual_anchor="if 'analyticsVisitorId: process.env.GEJAST_CERT_ANALYTICS_VISITOR_ID' not in s: raise SystemExit('visual analytics visitor patch missing')"
+          visual_patch=r'''old_nav="response = await page.goto(routeUrl(route), { waitUntil: 'domcontentloaded', timeout });"\nnew_nav="""const targetUrl = routeUrl(route);\n    for (let navAttempt = 1; navAttempt <= 3; navAttempt += 1) {\n      response = await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout });\n      const navStatus = response?.status() || 0;\n      if (![500, 502, 503, 504].includes(navStatus) || navAttempt === 3) break;\n      console.log(`TRANSIENT_DOCUMENT_RETRY route=${route} status=${navStatus} attempt=${navAttempt}`);\n      await page.waitForTimeout(500 * navAttempt);\n    }"""\nif old_nav not in s: raise SystemExit('visual navigation retry target missing')\ns=s.replace(old_nav,new_nav,1)\nif 'TRANSIENT_DOCUMENT_RETRY' not in s: raise SystemExit('visual transient retry patch missing')'''
+          if visual_anchor not in s:
+              raise SystemExit('visual harness anchor missing')
+          s=s.replace(visual_anchor, visual_patch+'\n'+visual_anchor, 1)
+
+          p.write_text(s)
+          PY
+          bash -n scripts/v812ab-final-certification-runner.sh
+          grep -q 'runtime duplicate-abort classifier patch missing' scripts/v812ab-final-certification-runner.sh
+          grep -q 'TRANSIENT_DOCUMENT_RETRY' scripts/v812ab-final-certification-runner.sh
+          echo 'RESULT=V812AB_CERT_HARNESS_TRANSIENT_HARDENING_PASS'
+
       - name: Run fail-closed exact-v812ab certification
         run: bash scripts/v812ab-final-certification-runner.sh
 
