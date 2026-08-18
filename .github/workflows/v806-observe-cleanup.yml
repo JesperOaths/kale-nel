@@ -1,0 +1,28 @@
+name: Observe v806 cleanup
+on:
+  push:
+    branches: [agent/v806-release-finalization]
+    paths: ['.github/workflows/v806-observe-cleanup.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Record cleanup run state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .proof
+          gh run list --workflow v806-apply-runtime-cleanup.yml --branch agent/v806-release-finalization --limit 5 --json databaseId,status,conclusion,headSha,createdAt > .proof/v806-cleanup-runs.json
+          cat .proof/v806-cleanup-runs.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .proof/v806-cleanup-runs.json
+          git commit -m 'test: record v806 cleanup workflow state'
+          git push origin HEAD:agent/v806-release-finalization
