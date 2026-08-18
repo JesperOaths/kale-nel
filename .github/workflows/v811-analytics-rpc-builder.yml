@@ -1,4 +1,4 @@
-# execution trigger after branch workflow registration
+# clean execution trigger after branch workflow registration
 name: v811 analytics RPC builder
 
 on:
