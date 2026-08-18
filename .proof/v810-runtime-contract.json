@@ -1,0 +1,11 @@
+{
+  "run_id": 32136704477,
+  "run_attempt": 1,
+  "product_sha": "fba531c35d076d1e0a3065683eed8908c38627b6",
+  "version": "v810",
+  "artifact_id": "9324297597",
+  "artifact_digest": "62a80b4ec09e2b8526c6bc0a4fbfbc190801c1454cba713eb5bfdac4a1c5a595",
+  "health": "PASS",
+  "runtime_contract": "PASS",
+  "cleanup": "PASS_ZERO"
+}
