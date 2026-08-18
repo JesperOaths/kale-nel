@@ -38,10 +38,14 @@ rejectText('on conflict (game_type, client_match_id)', 'global cross-scope confl
 rejectText('set site_scope = v_scope', 'contract wrapper must not rewrite scope after persistence');
 
 requireKlaverjas('20260818202647 restore_klaverjas_runtime_bundle_v687_compat', 'v812d must record the exact deployed migration identity');
-requireKlaverjas('create or replace function public.get_klaverjas_runtime_bundle_v687(', 'v812d compatibility wrapper missing');
+requireKlaverjas('create or replace function public.get_klaverjas_runtime_bundle_v687(site_scope_input text default \'friends\')', 'v812d exact compatibility signature missing');
+requireKlaverjas('security invoker', 'v812d must record the deployed invoker-security mode explicitly');
+requireKlaverjas('set search_path = public', 'v812d must record the deployed fixed search_path syntax');
 requireKlaverjas('select public.get_klaverjas_runtime_bundle_v673(site_scope_input)', 'v812d wrapper must delegate exactly to v673');
-requireKlaverjas("set search_path to 'public'", 'v812d wrapper must retain fixed search_path');
-requireKlaverjas('revoke execute on function public.get_klaverjas_runtime_bundle_v687(text) from public', 'v812d must not leave PUBLIC execute');
-requireKlaverjas('grant execute on function public.get_klaverjas_runtime_bundle_v687(text) to anon, authenticated, service_role', 'v812d must preserve expected callable roles');
+requireKlaverjas('revoke all on function public.get_klaverjas_runtime_bundle_v687(text) from public', 'v812d must record the deployed PUBLIC revoke exactly');
+requireKlaverjas('grant execute on function public.get_klaverjas_runtime_bundle_v687(text) to anon, authenticated', 'v812d must record the deployed grant list exactly');
+if (/grant execute on function public\.get_klaverjas_runtime_bundle_v687\(text\) to[^;]*service_role/i.test(klaverjasProvenance)) {
+  throw new Error('v812d provenance must not invent service_role in the recorded migration grant statement');
+}
 
-console.log('PASS v812c game summary boundary + v812d Klaverjas migration provenance');
+console.log('PASS v812c game summary boundary + exact v812d Klaverjas migration provenance');
