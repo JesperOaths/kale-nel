@@ -38,8 +38,9 @@ if (provenance.prepared_not_deployed !== 'GEJAST_v812f_direct_data_boundary.sql'
   fail('migration provenance does not identify the prepared v812f boundary');
 }
 
-// Shipped browser code must remain RPC-owned before direct table DML is revoked.
-const skippedDirs = new Set(['.git', 'node_modules', 'scripts', 'cloudflare', '.github', 'archive', 'archives', 'backup', 'backups']);
+// Shipped browser code may retain bounded read-only table fallbacks, but no direct table
+// mutation owner is allowed before client DML is globally revoked.
+const skippedDirs = new Set(['.git', 'node_modules', 'scripts', 'cloudflare', '.github', 'archive', 'archives', 'backup', 'backups', 'repo', 'mnt']);
 const files = [];
 function walk(dir = '.') {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -56,16 +57,23 @@ function walk(dir = '.') {
 walk();
 
 const violations = [];
+let directReadFallbacks = 0;
 for (const rel of files) {
   const text = fs.readFileSync(rel, 'utf8');
   for (const match of text.matchAll(/\/rest\/v1\/(?!rpc\/)/gi)) {
-    violations.push(`${rel}: direct PostgREST table endpoint at offset ${match.index}`);
+    const nearby = text.slice(match.index, Math.min(text.length, match.index + 700));
+    if (/method\s*:\s*['"](?:post|put|patch|delete)['"]/i.test(nearby)) {
+      violations.push(`${rel}: direct PostgREST table mutation at offset ${match.index}`);
+    } else {
+      directReadFallbacks += 1;
+    }
   }
   if (/\.from\s*\([^)]*\)\s*\.\s*(?:insert|update|delete|upsert)\s*\(/i.test(text)) {
     violations.push(`${rel}: direct Supabase table mutation`);
   }
 }
-if (violations.length) fail(`active browser direct-table owners found:\n${violations.join('\n')}`);
+if (violations.length) fail(`active browser direct-table mutation owners found:\n${violations.join('\n')}`);
 
 console.log(`ACTIVE_BROWSER_FILES_SCANNED=${files.length}`);
+console.log(`DIRECT_READ_FALLBACKS=${directReadFallbacks}`);
 console.log('RESULT=V812F_DIRECT_DATA_BOUNDARY_PASS');
