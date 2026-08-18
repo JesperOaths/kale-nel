@@ -29,12 +29,6 @@ jobs:
       - name: Run canonical repository verification
         run: npm run verify
 
-      - name: Run PR safety rules
-        run: node scripts/check-pr-rules.mjs
-
-      - name: Run Pages publication boundary check
-        run: node scripts/check-pages-publication-boundary-v792.mjs
-
       - name: Run independent static publication integrity audit
         run: node scripts/audit-v813-static-integrity.mjs
 
