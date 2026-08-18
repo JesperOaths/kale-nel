@@ -1,0 +1,134 @@
+name: One-shot v807 runtime line-ending cleanup
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v807-line-ending-cleanup-once
+  cancel-in-progress: true
+
+jobs:
+  cleanup:
+    if: github.head_ref == 'agent/v807-remove-active-stale-session-probes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v807-remove-active-stale-session-probes
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Restore v806 bytes and reapply only semantic v807 edits
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout 87fa814d28c00035b770c0ff8959def27a00f059 -- site-analytics.js gejast-player-session-ui.js
+          python3 <<'PY'
+          from pathlib import Path
+
+          def patch_preserving_newlines(path, old_text, new_text):
+              p=Path(path)
+              data=p.read_bytes()
+              newline='\r\n' if b'\r\n' in data else '\n'
+              text=data.decode('utf-8')
+              old=old_text.replace('\n', newline)
+              new=new_text.replace('\n', newline)
+              if old not in text:
+                  raise SystemExit(f'{path}: semantic patch target missing')
+              text=text.replace(old,new,1)
+              p.write_bytes(text.encode('utf-8'))
+
+          patch_preserving_newlines('site-analytics.js', """        const data = await rpc('get_public_state', { session_token: playerToken });
+        if (data && data.my_name) {
+          profile.player_name = data.my_name;
+          profile.is_logged_in = true;
+        }
+""", """        const data = await rpc('account_public_state_v687', {
+          session_token: playerToken,
+          session_token_input: playerToken,
+          site_scope_input: (() => { try { return new URLSearchParams(location.search || '').get('scope') === 'family' ? 'family' : 'friends'; } catch (_) { return 'friends'; } })()
+        });
+        const playerName = data && (data.my_name || data.display_name || data.player_name || data.viewer?.display_name || data.player?.display_name || '');
+        if (data && data.ok === true && playerName) {
+          profile.player_name = playerName;
+          profile.is_logged_in = true;
+          profile.site_scope = data.site_scope === 'family' ? 'family' : 'friends';
+        }
+""")
+
+          patch_preserving_newlines('gejast-player-session-ui.js', """  async function fetchViewer(token){
+    if (!token || !SUPABASE_URL || !SUPABASE_KEY) return null;
+    const payloads = [
+      ['get_public_state', { session_token: token }],
+      ['get_gejast_homepage_state', { session_token: token }],
+      ['get_jas_app_state', { session_token: token }],
+      ['get_public_state', { session_token_input: token }],
+      ['get_gejast_homepage_state', { session_token_input: token }],
+      ['get_jas_app_state', { session_token_input: token }]
+    ];
+    for (const [rpc, body] of payloads){
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpc}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(body) });
+        const data = await parseJson(res);
+        const name = data?.my_name || data?.display_name || data?.player_name || data?.viewer?.display_name || '';
+        if (name) {
+          return {
+            name,
+            avatar: data?.my_avatar_url || data?.avatar_url || data?.viewer?.avatar_url || '',
+            coins: Number(data?.caute_coins ?? data?.coin_balance ?? data?.viewer?.caute_coins ?? data?.viewer?.coin_balance ?? 0) || 0,
+            profileHref: './my_profile.html'
+          };
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
+""", """  async function fetchViewer(token){
+    if (!token || !SUPABASE_URL || !SUPABASE_KEY) return null;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/account_public_state_v687`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ session_token: token, session_token_input: token, site_scope_input: inferScope() })
+      });
+      const data = await parseJson(res);
+      const responseScope = String(data?.site_scope || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
+      const name = data?.my_name || data?.display_name || data?.player_name || data?.viewer?.display_name || data?.player?.display_name || '';
+      if (data?.ok !== true || responseScope !== inferScope() || !name) return null;
+      return {
+        name,
+        avatar: data?.my_avatar_url || data?.avatar_url || data?.viewer?.avatar_url || data?.player?.avatar_url || '',
+        coins: Number(data?.caute_coins ?? data?.coin_balance ?? data?.viewer?.caute_coins ?? data?.viewer?.coin_balance ?? 0) || 0,
+        profileHref: './my_profile.html'
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+""")
+
+          for path in ['site-analytics.js','gejast-player-session-ui.js']:
+              data=Path(path).read_bytes()
+              if b'\r\n' not in data:
+                  raise SystemExit(f'{path}: CRLF preservation failed')
+          print('v807 semantic runtime edits reapplied with original CRLF line endings')
+          PY
+          node check-v807-active-session-callers.mjs
+          npm ci
+          npm run verify
+      - name: Commit minimized runtime diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add site-analytics.js gejast-player-session-ui.js
+          git commit -m 'chore: preserve runtime line endings in v807'
+          git push origin HEAD:agent/v807-remove-active-stale-session-probes
+          echo 'RESULT=V807_RUNTIME_LINE_ENDINGS_PRESERVED_PASS'
