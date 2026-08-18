@@ -1,0 +1,302 @@
+name: v813 exact-current finalization builder
+
+on:
+  push:
+    branches: [agent/v813-finalize-current]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v813-finalize-current-builder
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out candidate branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v813-finalize-current
+          fetch-depth: 0
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Build v813 candidate from exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = 'ec76adc9306c65c7adeb24150dd119d88b4ec7e3'
+          test "$(git show origin/main:VERSION | tr -d '\r\n')" = 'v812'
+          python3 <<'PY'
+          from pathlib import Path
+          import json, re
+
+          root = Path('.')
+          (root/'VERSION').write_text('v813\n')
+
+          # 1. Analytics: always use the proven compact overload. Rich metadata remains in extra.
+          p = root/'site-analytics.js'
+          s = p.read_text()
+          old = """    var normalizedPayload = Object.assign({}, payload || {});\n    if (Object.prototype.hasOwnProperty.call(normalizedPayload, 'site_scope')) {\n      normalizedPayload.extra = Object.assign({}, normalizedPayload.extra || {}, { site_scope: normalizedPayload.site_scope });\n      delete normalizedPayload.site_scope;\n    }"""
+          new = """    var normalizedPayload = Object.assign({}, payload || {});\n    var rpcExtraKeys = ['site_scope','event_category','event_label','page_url','is_logged_in','player_name','is_admin'];\n    rpcExtraKeys.forEach(function(key){\n      if (!Object.prototype.hasOwnProperty.call(normalizedPayload, key)) return;\n      normalizedPayload.extra = Object.assign({}, normalizedPayload.extra || {}, { [key]: normalizedPayload[key] });\n      delete normalizedPayload[key];\n    });"""
+          if old not in s:
+              raise SystemExit('site-analytics v812 normalization block not found')
+          p.write_text(s.replace(old,new,1))
+
+          # 2. Homepage: retire the duplicate/timeout-prone aggregate owner; keep existing component RPC owners.
+          p = root/'gejast-combined-readers.js'
+          s = p.read_text()
+          start = s.index('  async function loadHomepageBootBundle(siteScope, sessionToken){')
+          end = s.index('\n  async function loadPlayerPageBundle', start)
+          replacement = '''  async function loadHomepageBootBundle(siteScope, sessionToken){\n    const scope = scoped(siteScope);\n    const [state, ladders, drinks, coins, cards] = await Promise.allSettled([\n      RPC.callRpc('get_public_state', { site_scope_input: scope }),\n      RPC.callRpc('get_homepage_ladders_public_scoped', { site_scope_input: scope }),\n      RPC.callRpc('get_drinks_homepage_top5_public_scoped', { site_scope_input: scope }),\n      RPC.callRpc('get_caute_coin_top5_public_scoped', { site_scope_input: scope }),\n      RPC.callRpc('get_homepage_game_live_cards_v724', { session_token: sessionToken || null, site_scope_input: scope })\n    ]);\n    const value = (r, fallback) => r.status === 'fulfilled' ? r.value : fallback;\n    return {\n      source: 'component_reads_v813',\n      state: value(state, {}),\n      ladders: value(ladders, []),\n      drinks_top5: value(drinks, []),\n      caute_top5: value(coins, []),\n      live_cards: value(cards, [])\n    };\n  }\n'''
+          p.write_text(s[:start] + replacement + s[end:])
+
+          migration = r'''-- GEJAST v813c: direct data / internal RPC boundary hardening.
+-- Prepared against production on 2026-08-18. This file is canonical source and MUST
+-- be applied only once through the tracked Supabase migration path after explicit approval.
+-- It intentionally leaves SELECT on ordinary public gameplay/stat tables untouched for
+-- compatibility, while removing every direct client-side data mutation privilege.
+
+begin;
+
+-- The shipped browser application is RPC-owned. Client roles must never mutate base
+-- tables directly; SECURITY DEFINER RPCs retain owner rights and service_role is untouched.
+revoke insert, update, delete, truncate on all tables in schema public from public, anon, authenticated;
+alter default privileges in schema public revoke insert, update, delete, truncate on tables from public, anon, authenticated;
+
+-- Sequences are backend implementation details; clients do not own them directly.
+revoke usage, select, update on all sequences in schema public from public, anon, authenticated;
+alter default privileges in schema public revoke usage, select, update on sequences from public, anon, authenticated;
+
+-- Sensitive RLS-off stores must not be directly readable through PostgREST either.
+do $v813c$
+declare r record;
+begin
+  for r in
+    select n.nspname, c.relname
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relkind in ('r','p')
+      and (
+        c.relname like 'admin\_%' escape '\\'
+        or c.relname ~* '(session|activation|claim|email|invite|token)'
+        or c.relname in (
+          'allowed_usernames','available_names','hidden_site_names',
+          'active_web_push_presence','web_push_delivery_queue','web_push_job_attempts',
+          'native_push_jobs','match_change_log',
+          'scope_quarantine_boerenbridge_matches','scope_quarantine_game_match_summaries'
+        )
+      )
+  loop
+    execute format('revoke select on table %I.%I from public, anon, authenticated', r.nspname, r.relname);
+  end loop;
+end
+$v813c$;
+
+-- All underscore-prefixed routines are implementation helpers, never public API.
+do $v813c$
+declare r record;
+begin
+  for r in
+    select n.nspname, p.proname, pg_get_function_identity_arguments(p.oid) as args
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname like '\_%' escape '\\'
+  loop
+    execute format('revoke execute on function %I.%I(%s) from public, anon, authenticated', r.nspname, r.proname, r.args);
+  end loop;
+end
+$v813c$;
+
+-- Admin-prefixed routines without an admin session were legacy diagnostics/helpers.
+-- Keep only the actual credential-entry login RPC and the player-session Paardenrace
+-- overview compatibility RPC; all others are not client API.
+do $v813c$
+declare r record;
+begin
+  for r in
+    select n.nspname, p.proname, pg_get_function_identity_arguments(p.oid) as args
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname like 'admin\_%' escape '\\'
+      and pg_get_function_identity_arguments(p.oid) !~* 'admin_session_token'
+      and p.proname not in ('admin_login','admin_get_paardenrace_overview_v667')
+  loop
+    execute format('revoke execute on function %I.%I(%s) from public, anon, authenticated', r.nspname, r.proname, r.args);
+  end loop;
+end
+$v813c$;
+
+-- Retire remaining unauthenticated worker/mutation compatibility entry points.
+revoke execute on function public.claim_web_push_jobs(integer) from public, anon, authenticated;
+revoke execute on function public.consume_web_push_action_v3(uuid) from public, anon, authenticated;
+revoke execute on function public.enqueue_email_job(text,jsonb) from public, anon, authenticated;
+revoke execute on function public.queue_activation_email(text,text) from public, anon, authenticated;
+revoke execute on function public.queue_nearby_verification_pushes_v3(text,bigint,integer) from public, anon, authenticated;
+revoke execute on function public.despimarkt_finalize_caute_mint_from_verified_drink(bigint) from public, anon, authenticated;
+revoke execute on function public.despimarkt_finalize_debt_clear_from_verified_drink(bigint) from public, anon, authenticated;
+revoke execute on function public.validate_outbound_email_job_public(bigint,boolean) from public, anon, authenticated;
+
+commit;
+'''
+          (root/'GEJAST_v813c_direct_data_boundary.sql').write_text(migration)
+
+          provenance = {
+            'version': 1,
+            'site_version': 'v813',
+            'captured_at': '2026-08-18',
+            'project_id': 'uiqntazgnrxwliaidkmy',
+            'note': 'Observed in Supabase migration history and already applied before repository reconciliation. Names/versions are provenance only; DDL bodies are intentionally not reconstructed or re-applied.',
+            'already_applied_production_migrations': [
+              ['20260818213834','lock_internal_player_mutation_helpers_v813'],
+              ['20260818213913','lock_additional_internal_mutation_helpers_v813'],
+              ['20260818214248','lock_legacy_web_push_worker_rpcs_v813b'],
+              ['20260818214444','lock_critical_internal_admin_auth_email_helpers_v813'],
+              ['20260818214559','lock_legacy_email_worker_control_rpcs_v813'],
+              ['20260818214742','lock_legacy_pin_reset_overload_v813'],
+              ['20260818214816','lock_direct_activation_email_helpers_v813'],
+              ['20260818214856','lock_unauthenticated_make_email_callbacks_v813'],
+              ['20260818214941','lock_player_creation_and_despimarkt_internal_mutators_v813'],
+              ['20260818215027','lock_remaining_despimarkt_internal_namespace_v813'],
+              ['20260818215107','lock_pikken_paardenrace_internal_namespaces_v813'],
+              ['20260818215146','lock_gejast_internal_namespace_v813'],
+              ['20260818215225','lock_all_remaining_internal_secdef_helpers_v813'],
+              ['20260818215348','lock_push_worker_and_raw_queue_controls_v813'],
+              ['20260818215418','lock_web_push_action_token_overload_v813'],
+              ['20260818215515','lock_unauthenticated_maintenance_and_rebuild_rpcs_v813'],
+              ['20260818215706','lock_legacy_game_push_and_maintenance_aliases_v813'],
+              ['20260818215744','lock_public_login_diagnostics_credential_leak_v813'],
+              ['20260818215950','lock_obsolete_final_runtime_diagnostic_v813'],
+              ['20260818220025','lock_remaining_public_login_diagnostics_v813']
+            ],
+            'pending_repository_migration': 'GEJAST_v813c_direct_data_boundary.sql'
+          }
+          (root/'production-migrations-v813.json').write_text(json.dumps(provenance,indent=2)+'\n')
+
+          checker = r'''import fs from 'node:fs';
+import path from 'node:path';
+const fail = (m) => { console.error(`FAIL ${m}`); process.exit(1); };
+const version = fs.readFileSync('VERSION','utf8').trim();
+if (version !== 'v813') fail(`VERSION expected v813, got ${version}`);
+const analytics = fs.readFileSync('site-analytics.js','utf8');
+for (const key of ['site_scope','event_category','event_label','page_url','is_logged_in','player_name','is_admin']) {
+  if (!analytics.includes(`'${key}'`)) fail(`analytics compact-overload normalization missing ${key}`);
+}
+if (!analytics.includes('rpcExtraKeys.forEach')) fail('analytics rich metadata normalizer missing');
+const readers = fs.readFileSync('gejast-combined-readers.js','utf8');
+if (readers.includes("RPC.callRpc('get_homepage_boot_bundle_scoped'")) fail('retired aggregate homepage RPC still has an active caller');
+if (!readers.includes("source: 'component_reads_v813'")) fail('v813 component-read owner marker missing');
+const sql = fs.readFileSync('GEJAST_v813c_direct_data_boundary.sql','utf8');
+for (const needle of [
+  'revoke insert, update, delete, truncate on all tables in schema public from public, anon, authenticated',
+  'alter default privileges in schema public revoke insert, update, delete, truncate on tables from public, anon, authenticated',
+  "p.proname like '\\_%'",
+  "p.proname like 'admin\\_%'",
+  'claim_web_push_jobs(integer)',
+  'consume_web_push_action_v3(uuid)',
+  'enqueue_email_job(text,jsonb)',
+  'queue_activation_email(text,text)',
+  'queue_nearby_verification_pushes_v3(text,bigint,integer)',
+  'despimarkt_finalize_caute_mint_from_verified_drink(bigint)',
+  'despimarkt_finalize_debt_clear_from_verified_drink(bigint)',
+  'validate_outbound_email_job_public(bigint,boolean)'
+]) if (!sql.toLowerCase().includes(needle.toLowerCase())) fail(`migration contract missing: ${needle}`);
+const prov = JSON.parse(fs.readFileSync('production-migrations-v813.json','utf8'));
+if (prov.site_version !== 'v813' || prov.already_applied_production_migrations.length !== 20) fail('v813 production migration provenance incomplete');
+const cert = JSON.parse(fs.readFileSync('release-certification.json','utf8'));
+if (cert.current_version !== 'v813' || cert.status !== 'REVALIDATION_REQUIRED') fail('release truth must remain v813 REVALIDATION_REQUIRED before production proof');
+if (!JSON.stringify(cert).includes('GEJAST_v813c_direct_data_boundary.sql')) fail('release blockers omit v813c deployment boundary');
+
+// Active browser runtime must not own direct PostgREST table mutations.
+const skipDirs = new Set(['.git','node_modules','scripts','cloudflare','.github','archive','archives','backup','backups']);
+const active = [];
+function walk(dir='.') {
+  for (const e of fs.readdirSync(dir,{withFileTypes:true})) {
+    if (e.isDirectory()) { if (!skipDirs.has(e.name)) walk(path.join(dir,e.name)); continue; }
+    const rel = path.join(dir,e.name).replaceAll('\\','/').replace(/^\.\//,'');
+    if (!/\.(?:html|m?js)$/i.test(rel) || /^check-/i.test(e.name) || /^fix-/i.test(e.name)) continue;
+    active.push(rel);
+  }
+}
+walk();
+const direct = [];
+for (const rel of active) {
+  const text = fs.readFileSync(rel,'utf8');
+  if (/\/rest\/v1\/(?!rpc\/)/i.test(text)) direct.push(`${rel}: direct rest/v1 table endpoint`);
+  if (/\.from\s*\([^)]*\)\s*\.\s*(?:insert|update|delete|upsert)\s*\(/i.test(text)) direct.push(`${rel}: supabase direct table mutation`);
+}
+if (direct.length) fail(`active browser direct table mutation owners found:\n${direct.join('\n')}`);
+console.log(`ACTIVE_BROWSER_FILES_SCANNED=${active.length}`);
+console.log('RESULT=V813C_DIRECT_DATA_BOUNDARY_PASS');
+'''
+          (root/'check-v813c-direct-data-boundary.mjs').write_text(checker)
+
+          warning_checker = r'''import fs from 'node:fs';
+const fail = m => { console.error(`FAIL ${m}`); process.exit(1); };
+if (fs.readFileSync('VERSION','utf8').trim() !== 'v813') fail('VERSION is not v813');
+const a = fs.readFileSync('site-analytics.js','utf8');
+if (!a.includes("var rpcExtraKeys = ['site_scope','event_category','event_label','page_url','is_logged_in','player_name','is_admin']")) fail('analytics v813 overload normalization missing');
+const h = fs.readFileSync('gejast-combined-readers.js','utf8');
+if (h.includes("RPC.callRpc('get_homepage_boot_bundle_scoped'")) fail('aggregate homepage owner remains');
+for (const rpc of ['get_public_state','get_homepage_ladders_public_scoped','get_drinks_homepage_top5_public_scoped','get_caute_coin_top5_public_scoped','get_homepage_game_live_cards_v724']) if (!h.includes(rpc)) fail(`component owner missing ${rpc}`);
+console.log('RESULT=V813_WARNING_CLEANUP_PASS');
+'''
+          (root/'check-v813-warning-cleanup.mjs').write_text(warning_checker)
+
+          cert = json.loads((root/'release-certification.json').read_text())
+          cert['current_version'] = 'v813'
+          cert['status'] = 'REVALIDATION_REQUIRED'
+          cert['reason'] = ('v813 reconciles already-applied production routine lockdown provenance, removes the duplicate homepage aggregate read owner, '
+                            'forces analytics onto the proven compact RPC overload, and prepares GEJAST_v813c_direct_data_boundary.sql to close direct client table mutation, '
+                            'sensitive direct-read, underscore-helper, no-token admin diagnostic and legacy worker RPC exposure. v813c is not deployed by this repository commit.')
+          cert['required_before_pass'] = [
+            'Explicit production authorization and tracked deployment of GEJAST_v813c_direct_data_boundary.sql.',
+            'Post-deploy proof: zero PUBLIC/anon/authenticated INSERT/UPDATE/DELETE/TRUNCATE privileges on public tables and zero client EXECUTE on underscore helpers / retired worker-admin aliases.',
+            'Exact-current live deployment health and auth-data-plane proof.',
+            'Strict authenticated runtime proof: analytics 2xx on compact overload and no get_homepage_boot_bundle_scoped browser call.',
+            'Exact-current deep gameplay / ownership isolation with controlled fixtures and independent zero residue.',
+            'Full authenticated visual audit, artifact, manual screenshot review and independent zero residue.'
+          ]
+          (root/'release-certification.json').write_text(json.dumps(cert,indent=2)+'\n')
+
+          for name in ['gameplay-acceptance.json','beta-live-write-checklist.json']:
+            p=root/name; d=json.loads(p.read_text()); d['site_version']='v813'; p.write_text(json.dumps(d,indent=2)+'\n')
+          p=root/'beta-readiness.json'; d=json.loads(p.read_text())
+          d['site_version']='release candidate v813 / live v812 / certified rollback v808'
+          if isinstance(d.get('deployment_identity'),dict):
+            d['deployment_identity']['release_candidate_version']='v813'
+            d['deployment_identity']['note']='v813 finalization is fail-closed until the prepared v813c direct-data boundary is explicitly deployed and exact-current production revalidation passes.'
+          p.write_text(json.dumps(d,indent=2)+'\n')
+
+          package = json.loads((root/'package.json').read_text())
+          static = package['scripts']['verify:static']
+          anchor = 'node check-v812a-final-cert-blockers.mjs'
+          addition = 'node check-v812a-final-cert-blockers.mjs && node scripts/audit-v813-static-integrity.mjs && node check-v813-warning-cleanup.mjs && node check-v813c-direct-data-boundary.mjs'
+          if anchor not in static: raise SystemExit('package verify anchor missing')
+          package['scripts']['verify:static'] = static.replace(anchor, addition, 1)
+          (root/'package.json').write_text(json.dumps(package,indent=2)+'\n')
+          PY
+
+          node fix-version-drift.mjs
+          node check-v813-warning-cleanup.mjs
+          node check-v813c-direct-data-boundary.mjs
+          npm ci
+          npm run verify
+          npm audit --omit=dev --audit-level=high
+
+          rm .github/workflows/v813-finalize-current-builder.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git status --short
+          git commit -m 'release: prepare v813 final security boundary'
+          git push origin HEAD:agent/v813-finalize-current
