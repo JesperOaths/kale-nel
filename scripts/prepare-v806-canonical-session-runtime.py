@@ -188,6 +188,15 @@ p.write_text(s)
 Path('VERSION').write_text('v806\n')
 subprocess.run(['node', 'fix-version-drift.mjs'], check=True)
 
+# Keep the live-write safety metadata synchronized while preserving the
+# deliberately empty/unarmed production mutation checklist.
+checklist_path = Path('beta-live-write-checklist.json')
+checklist = json.loads(checklist_path.read_text())
+if checklist.get('items') != []:
+    raise SystemExit('refusing v806 build: live-write checklist is armed')
+checklist['site_version'] = 'v806'
+checklist_path.write_text(json.dumps(checklist, indent=2, ensure_ascii=False) + '\n')
+
 checker = """#!/usr/bin/env node
 import fs from 'node:fs';
 const version=fs.readFileSync('VERSION','utf8').trim();
