@@ -1,0 +1,163 @@
+name: Apply robust v806 release-finalization candidate
+
+on:
+  push:
+    branches: [agent/v806-release-finalization]
+    paths: ['.github/workflows/v806-apply-runtime-cleanup3.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v806-release-finalization
+          fetch-depth: 0
+      - name: Record run identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .proof
+          printf '%s.%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > .proof/v806-apply3-run-id.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .proof/v806-apply3-run-id.txt
+          git commit -m 'test: record robust v806 candidate run'
+          git push origin HEAD:agent/v806-release-finalization
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Reapply grounded runtime transformation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import textwrap
+          wf=Path('.github/workflows/v806-apply-runtime-cleanup.yml').read_text()
+          def extract(start_marker,end_marker):
+              start=wf.index(start_marker)+len(start_marker)
+              end=wf.index(end_marker,start)
+              return textwrap.dedent(wf[start:end])
+          py=extract("          python3 <<'PY'\n","\n          PY")
+          ns={}
+          exec(compile(py,'v806-grounded-transform.py','exec'),ns,ns)
+          Path('gejast-home-gate.js').write_text(extract("          cat > gejast-home-gate.js <<'JS'\n","\n          JS"))
+          Path('check-v806-release-finalization.mjs').write_text(extract("          cat > check-v806-release-finalization.mjs <<'JS'\n","\n          JS"))
+          PY
+          printf 'v806\n' > VERSION
+          node fix-version-drift.mjs
+      - name: Bypass known-broken profile helper through healthy scoped readers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          p=Path('gejast-profile-source.js'); s=p.read_text()
+          start=s.index('  async function loadSafeBase(playerName, scope) {')
+          end=s.index('\n\n  async function loadPlayerBundle',start)
+          replacement="""  async function loadSafeBase(playerName, scope) {
+            const drinks = await RPC.callRpc('get_drink_player_public_scoped', { player_name: playerName, site_scope_input: scope })
+              .catch(() => RPC.callRpc('get_drink_player_public', { player_name: playerName }).catch(() => ({ })));
+
+            // get_public_player_unified_scoped currently reaches a production helper with
+            // an ambiguous game_key reference. The existing scoped profile-list path is healthy.
+            const fallbackBundle = await loadProfilesPageBundle().catch(async () => {
+              const players = await loadProfilesList().catch(() => ({ players: [] }));
+              return { players: players?.players || [] };
+            });
+            const playerRow = findPlayerInBundle(fallbackBundle, playerName);
+            return {
+              unified: buildUnifiedFromPlayerRow(playerRow, playerName),
+              drinks: drinks || {},
+              badge_facts: {}
+            };
+          }"""
+          p.write_text(s[:start]+replacement+s[end:])
+
+          p=Path('gejast-combined-readers.js'); s=p.read_text()
+          start=s.index('  async function loadPlayerPageBundle(playerName, gameKey) {')
+          end=s.index('\n\n  async function loadProfilesPageBundle()',start)
+          replacement="""  async function loadPlayerPageBundle(playerName, gameKey) {
+            const scope = RPC.getScope();
+            const key = gameKey || 'klaverjas';
+            const [profiles, shared, insights, drinks, badges] = await Promise.allSettled([
+              RPC.callRpc('get_player_profiles_public_scoped', { site_scope_input: scope }),
+              RPC.callRpc('get_public_shared_player_stats_scoped', { game_key_input: key, player_name_input: playerName, site_scope_input: scope }),
+              RPC.callRpc('get_public_player_game_insights_scoped', { game_key_input: key, player_name_input: playerName, site_scope_input: scope }),
+              RPC.callRpc('get_drink_player_public_scoped', { player_name: playerName, site_scope_input: scope }),
+              RPC.callRpc('get_player_badge_bundle_scoped', { player_name: playerName, site_scope_input: scope }).catch(() => ({}))
+            ]);
+            const envelope = profiles.status === 'fulfilled' ? (profiles.value || {}) : {};
+            const rows = Array.isArray(envelope) ? envelope : (Array.isArray(envelope.players) ? envelope.players : (Array.isArray(envelope.profiles) ? envelope.profiles : []));
+            const target = String(playerName || '').trim().toLowerCase();
+            const row = rows.find((item) => [item?.display_name,item?.player_name,item?.public_display_name,item?.nickname,item?.chosen_username].some((v) => String(v || '').trim().toLowerCase() === target)) || {};
+            return {
+              player_name: playerName,
+              game_key: key,
+              site_scope: scope,
+              unified: { ...row, player_name:row.player_name||row.display_name||playerName, display_name:row.display_name||row.public_display_name||row.player_name||playerName },
+              shared_stats: shared.status === 'fulfilled' ? shared.value : {},
+              game_insights: insights.status === 'fulfilled' ? insights.value : {},
+              drinks: drinks.status === 'fulfilled' ? drinks.value : {},
+              badges: badges.status === 'fulfilled' ? badges.value : {},
+              perf_hints: { defer_matches_accordion:true, defer_drinks_panel:true, chunk_match_render:true }
+            };
+          }"""
+          p.write_text(s[:start]+replacement+s[end:])
+          PY
+      - name: Keep v806 certification fail-closed until post-merge proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'JS'
+          const fs=require('fs');
+          const p='release-certification.json';
+          const state=JSON.parse(fs.readFileSync(p,'utf8'));
+          state.current_version='v806';
+          state.status='REVALIDATION_REQUIRED';
+          state.reason='v806 release-finalization candidate: canonical player session/RPC contracts, Family-safe runtime URLs, healthy profile-reader fallback, and deterministic browser CI. v805 remains immutably frozen as v805-certified-20260818. v806 cannot be PASS before exact-current candidate and post-merge evidence.';
+          state.current_evidence={...(state.current_evidence||{}),candidate_version:'v806',candidate_status:'SOURCE_REVALIDATION_IN_PROGRESS',certified_v805_commit:'b64a116f2b2684d1fbd475b40c2b76f569d40942',certified_v805_tag:'v805-certified-20260818',certified_v805_release_freeze_run:32089112972,certified_v805_health_run:32084207898,certified_v805_deep_live_run:32085432145,certified_v805_visual_run:32085275503,certified_v805_visual_sha256:'7757d1e51ae99152ee730efb640a27566a28d05eb2d635957bf40f40118495c5'};
+          state.required_next=['Prove v806 candidate browser regression against production RPC contracts without changing production schema.','Merge only after candidate checks pass; then rerun exact-current live health, authenticated full visual/manual review, deep gameplay, ownership isolation and zero-residue proof.','Keep known backend ambiguity defects in _gejast_elo_for_game_scope and the full track_site_event overload out of production until separately authorized.','Set PASS only after all v806 post-merge evidence is complete.'];
+          fs.writeFileSync(p,JSON.stringify(state,null,2)+'\n');
+          JS
+          node -e "let p=require('./package.json'); const needle='node check-v805-paardenrace-native-poll-owner.mjs'; if(!p.scripts['verify:static'].includes('check-v806-release-finalization.mjs')) p.scripts['verify:static']=p.scripts['verify:static'].replace(needle, needle+' && node check-v806-release-finalization.mjs'); require('fs').writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+          cat >> check-v806-release-finalization.mjs <<'JS'
+          const profileSource=read('gejast-profile-source.js');
+          assert(!profileSource.includes("RPC.callRpc('get_public_player_unified_scoped'"),'profile source must bypass known-broken unified profile RPC');
+          const combined=read('gejast-combined-readers.js');
+          assert(!combined.includes("RPC.callRpc('get_player_page_bundle_scoped'")&&!combined.includes("RPC.callRpc('get_public_player_unified_scoped'"),'combined reader must bypass broken player bundle/unified RPCs');
+          const cert=JSON.parse(read('release-certification.json'));
+          assert(cert.current_version==='v806'&&cert.status==='REVALIDATION_REQUIRED','v806 certification must remain fail-closed before live revalidation');
+          console.log('PASS v806 healthy profile fallback and certification state');
+          JS
+          node check-v806-release-finalization.mjs
+          node check-release-certification-state.mjs
+          node check-version-drift.mjs
+          node --check gejast-profile-source.js
+          node --check gejast-combined-readers.js
+      - name: Run full canonical verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run verify
+      - name: Commit verified product candidate only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          rm -f .github/workflows/v806-apply-runtime-cleanup.yml .github/workflows/v806-apply-runtime-cleanup2.yml .github/workflows/v806-apply-runtime-cleanup3.yml .github/workflows/v806-warning-diagnostic.yml .github/workflows/v806-observe-cleanup.yml
+          rm -rf .proof
+          git add -A
+          git status --short
+          git commit -m 'fix: finalize v806 runtime contracts and browser CI'
+          git push origin HEAD:agent/v806-release-finalization
+          echo 'RESULT=V806_RUNTIME_CANDIDATE_COMMITTED'
