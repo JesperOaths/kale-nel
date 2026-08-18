@@ -1,0 +1,39 @@
+name: one-shot v812 profile source line-ending cleanup
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/ops-v812-crlf-cleanup.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v812-player-profile-runtime-cleanup
+          fetch-depth: 0
+      - name: Restore canonical CRLF without changing runtime text
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat VERSION | tr -d '\r\n')" = 'v812'
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('gejast-profile-source.js')
+          b=p.read_bytes().replace(b'\r\n',b'\n').replace(b'\r',b'\n')
+          p.write_bytes(b.replace(b'\n',b'\r\n'))
+          PY
+          node check-v812-player-profile-runtime-cleanup.mjs
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add gejast-profile-source.js
+          git diff --cached --quiet && exit 0
+          git commit -m 'chore: preserve profile source line endings'
+          git push origin HEAD:agent/v812-player-profile-runtime-cleanup
+          echo 'RESULT=V812_PROFILE_CRLF_CLEANUP_PASS'
