@@ -1,16 +1,16 @@
 name: One-shot v805 release housekeeping
 
 on:
-  push:
+  pull_request:
     branches: [main]
     paths: ['.github/workflows/v805-release-housekeeping-once.yml']
 
-# Triggered after workflow installation so GitHub schedules the one-shot cleanup.
 permissions:
   contents: write
 
 jobs:
   cleanup:
+    if: github.head_ref == 'ops/run-one-shots-via-pr'
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
