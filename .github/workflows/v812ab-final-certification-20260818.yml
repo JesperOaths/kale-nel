@@ -1,3 +1,4 @@
+# registration-trigger: 2
 name: v812 + v812a-b final certification
 
 on:
@@ -44,7 +45,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$PRODUCT_SHA"
+          test "$(git merge-base "$PRODUCT_SHA" HEAD)" = "$PRODUCT_SHA"
           test "$(git show "$PRODUCT_SHA:VERSION" | tr -d '\r\n')" = 'v812'
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
