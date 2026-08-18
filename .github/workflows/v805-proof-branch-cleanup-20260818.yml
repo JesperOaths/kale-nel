@@ -1,0 +1,57 @@
+name: Remove disposable v805 proof branches
+
+on:
+  push:
+    branches: [ops/v805-release-tag-20260818]
+    paths: ['.github/workflows/v805-proof-branch-cleanup-20260818.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - name: Delete exact disposable branch allowlist
+        shell: bash
+        run: |
+          set -euo pipefail
+          branches=(
+            proof/v805-current-recovery
+            proof/v805-main-run-discovery
+            proof/v805-paardenrace-native-cadence
+            proof/v805-phase2-deep-live-20260818
+            proof/v805-phase2-owner-isolation
+            proof/v805-pikken-render-stress2-20260818
+            proof/v805-pikken-render-stress-20260818
+            proof/v805-postrestart-health-20260818
+            proof/v805-postv801a-fast-deep-20260818
+            proof/v805-postv801a-fast-visual-20260818
+            proof/v805-toepen-v801a-rest-20260818
+            proof/cancel-obsolete-visual-20260818
+          )
+          for branch in "${branches[@]}"; do
+            case "$branch" in
+              main|release/*) echo "Refusing protected branch: $branch"; exit 1 ;;
+            esac
+            if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+              git push origin --delete "$branch"
+              echo "deleted=$branch"
+            else
+              echo "already_absent=$branch"
+            fi
+          done
+          test "$(git ls-remote --heads origin release/v805-certified-20260818 | awk '{print $1}')" = 'b64a116f2b2684d1fbd475b40c2b76f569d40942'
+          test "$(git ls-remote --tags origin 'refs/tags/v805-certified-20260818^{}' | awk '{print $1}')" = 'b64a116f2b2684d1fbd475b40c2b76f569d40942'
+          echo 'RESULT=V805_DISPOSABLE_PROOF_BRANCH_CLEANUP_PASS'
+      - name: Remove this temporary ops branch
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git push origin --delete ops/v805-release-tag-20260818
+          echo 'RESULT=V805_TEMP_OPS_BRANCH_REMOVED_PASS'
