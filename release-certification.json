@@ -1,38 +1,26 @@
 {
   "schema_version": 1,
-  "current_version": "v805",
-  "status": "PASS",
-  "certified_at": "2026-08-18",
-  "certified_product_sha": "b64a116f2b2684d1fbd475b40c2b76f569d40942",
-  "certified_release_branch": "release/v805-certified-20260818",
-  "certified_tag": "v805-certified-20260818",
-  "final_acceptance_artifact": "final-acceptance-v805.json",
-  "production_backend": {
-    "supabase_project_id": "uiqntazgnrxwliaidkmy",
-    "latest_migration_version": "20260818001412",
-    "latest_migration_name": "gejast_v801a_toepen_idempotency_owner_guard"
-  },
-  "authoritative_evidence": {
-    "post_restart_health_run": 32080416102,
-    "owner_isolation_run": 32078012416,
-    "toepen_v801a_public_rest_run": 32084142660,
-    "post_v801a_health_run": 32084207898,
-    "post_v801a_deep_live_run": 32085432145,
-    "post_v801a_visual_run": 32085275503,
-    "post_v801a_visual_job": 95556413880,
-    "post_v801a_visual_screenshots": 137,
-    "post_v801a_visual_manual_review": "PASS",
-    "post_v801a_visual_artifact_id": 9306774932,
-    "post_v801a_visual_artifact_sha256": "7757d1e51ae99152ee730efb640a27566a28d05eb2d635957bf40f40118495c5",
-    "final_disposable_residue": 0
-  },
-  "closed_blockers": [
-    "Supabase data-plane outage recovered after authorized project restart and exact-current health revalidation.",
-    "GEJAST_v801a_toepen_idempotency_owner_guard was explicitly authorized, deployed as migration 20260818001412, and proven through public PostgREST.",
-    "Exact-current authenticated visual certification completed with artifact upload, manual review and zero-residue cleanup.",
-    "Exact-current deep Phase-2 gameplay and Boerenbridge/Beerpong owner-isolation completed with zero residue.",
-    "Certified v805 product bytes are permanently pinned by release/v805-certified-20260818 and immutable tag v805-certified-20260818."
+  "current_version": "v806",
+  "status": "REVALIDATION_REQUIRED",
+  "previous_certified_version": "v805",
+  "previous_certified_product_sha": "b64a116f2b2684d1fbd475b40c2b76f569d40942",
+  "previous_certified_release_branch": "release/v805-certified-20260818",
+  "previous_certified_tag": "v805-certified-20260818",
+  "reason": "v806 changes shipped player-session runtime and nested shared-asset resolution; fresh exact-current evidence is required before PASS.",
+  "remaining_release_blockers": [
+    "Fresh exact-current v806 live health must pass.",
+    "Fresh exact-current v806 multi-context/deep gameplay must pass.",
+    "Fresh authenticated v806 visual audit plus manual screenshot review must pass.",
+    "Controlled production fixtures must be independently verified at zero residue."
   ],
-  "remaining_release_blockers": [],
-  "required_next": []
+  "required_next": [
+    "Run exact-current v806 health.",
+    "Run exact-current v806 deep live gameplay acceptance.",
+    "Run full authenticated v806 visual audit and manually inspect the artifact.",
+    "Verify zero residue and then write final-acceptance-v806.json before setting PASS."
+  ],
+  "previous_certification_snapshot": {
+    "certified_at": "2026-08-18",
+    "visual_artifact_sha256": "7757d1e51ae99152ee730efb640a27566a28d05eb2d635957bf40f40118495c5"
+  }
 }

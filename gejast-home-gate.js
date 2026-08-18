@@ -1,6 +1,11 @@
 (function(){
   var cfg = window.GEJAST_CONFIG || {};
   var VERSION = 'v747';
+  var root = document.documentElement;
+  if (root && root.hasAttribute('data-gejast-auth-state')) {
+    window.GEJAST_HOME_GATE = { VERSION: VERSION, delegated: 'gejast-auth-gate' };
+    return;
+  }
   try {
     document.documentElement.classList.add('gejast-auth-pending');
     var style = document.createElement('style');
@@ -36,22 +41,19 @@
   }
   function invalidState(data){ return !!(data && (data.session_valid === false || data.is_logged_in === false || data.valid === false)); }
   async function fetchViewerState(token){
-    var attempts=[['get_public_state',{session_token:token}],['get_public_state',{session_token_input:token}],['account_public_state_v687',{session_token_input:token}]];
-    var hardInvalid=false;
-    var checks = attempts.map(function(attempt){
-      return rpc(attempt[0], attempt[1], 1500).then(function(data){
-        if(validState(data)) return { ok:true, data:data };
-        if(invalidState(data)) hardInvalid=true;
-        return { ok:false, transient:true };
-      }).catch(function(){ return { ok:false, transient:true }; });
-    });
     try {
-      var results = await Promise.all(checks);
-      for(var i=0;i<results.length;i++){
-        if(results[i] && results[i].ok) return results[i];
-      }
-    } catch(_) {}
-    return hardInvalid ? { ok:false, hardInvalid:true } : { ok:false, transient:true };
+      var data = await rpc('account_public_state_v687', {
+        session_token: token,
+        session_token_input: token,
+        site_scope_input: currentScope()
+      }, 1800);
+      var responseScope = String(data && data.site_scope || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
+      if (validState(data) && responseScope === currentScope()) return { ok:true, data:data };
+      if (invalidState(data)) return { ok:false, hardInvalid:true };
+      return { ok:false, transient:true };
+    } catch(_) {
+      return { ok:false, transient:true };
+    }
   }
   function redirectToLogin(){ try{ location.replace(loginUrl()); }catch(_){ location.href='./login.html'; } }
   if (isAdminSurface()) { showPage(); window.GEJAST_HOME_GATE = { VERSION: VERSION, skipped: 'admin-surface' }; return; }

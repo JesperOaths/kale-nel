@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v805',
+    VERSION:'v806',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: '',
@@ -88,7 +88,7 @@
   }
   async function refreshVersionFromFile(){
     try {
-      const res = await fetch('./VERSION?ts=' + Date.now(), { cache:'no-store' });
+      const res = await fetch('/VERSION?ts=' + Date.now(), { cache:'no-store' });
       if (!res.ok) return currentVersion;
       const text = String(await res.text() || '').trim();
       const parsed = text.match(/v?\d+/i);
@@ -438,40 +438,36 @@ async function touchPlayerSessionServer(force){
     Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}`,
     Accept:'application/json'
   };
-  const payloads = [
-    { input_token: token },
-    { session_token: token },
-    { token }
-  ];
-  for (const payload of payloads){
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timeout = controller ? window.setTimeout(()=>{ try { controller.abort(); } catch (_) {} }, 4000) : null;
-    try {
-      const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/player_touch_session`, {
-        method:'POST',
-        mode:'cors',
-        cache:'no-store',
-        headers,
-        body: JSON.stringify(payload),
-        signal: controller ? controller.signal : undefined
-      });
-      const text = await res.text();
-      let data = null;
-      try { data = text ? JSON.parse(text) : null; } catch (_) { data = null; }
-      if (res.ok) {
-        const stamp = String(now);
-        localStorage.setItem(CONFIG.PLAYER_LAST_SERVER_TOUCH_KEY, stamp);
-        sessionStorage.setItem(CONFIG.PLAYER_LAST_SERVER_TOUCH_KEY, stamp);
-        return data;
-      }
-      const raw = String((data && (data.message || data.error || data.hint)) || text || `HTTP ${res.status}`);
-      if (!/schema cache|could not find the function|no function matches|does not exist|rpc/i.test(raw)) break;
-    } catch (_) {
-    } finally {
-      if (timeout) window.clearTimeout(timeout);
-    }
+  const payload = {
+    session_token: token,
+    session_token_input: token,
+    page_input: (location.pathname || '').split('/').pop() || null,
+    site_scope_input: inferRuntimeScope()
+  };
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeout = controller ? window.setTimeout(()=>{ try { controller.abort(); } catch (_) {} }, 4000) : null;
+  try {
+    const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/player_touch_session`, {
+      method:'POST',
+      mode:'cors',
+      cache:'no-store',
+      headers,
+      body: JSON.stringify(payload),
+      signal: controller ? controller.signal : undefined
+    });
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (_) { data = null; }
+    if (!res.ok) return null;
+    const stamp = String(now);
+    localStorage.setItem(CONFIG.PLAYER_LAST_SERVER_TOUCH_KEY, stamp);
+    sessionStorage.setItem(CONFIG.PLAYER_LAST_SERVER_TOUCH_KEY, stamp);
+    return data;
+  } catch (_) {
+    return null;
+  } finally {
+    if (timeout) window.clearTimeout(timeout);
   }
-  return null;
 }
 function touchPlayerActivity(options){
   const token = getPlayerSessionToken();
@@ -553,43 +549,33 @@ async function fetchPlayerSessionSnapshot(token){
     Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}`,
     Accept:'application/json'
   };
-  const attempts = [
-    ['get_public_state', { session_token: value }],
-    ['get_gejast_homepage_state', { session_token: value }],
-    ['get_jas_app_state', { session_token: value }],
-    ['get_public_state', { session_token_input: value }],
-    ['get_gejast_homepage_state', { session_token_input: value }],
-    ['get_jas_app_state', { session_token_input: value }]
-  ];
-  let hadResponse = false;
-  for (const [name, payload] of attempts){
-    try {
-      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      const timeout = controller ? window.setTimeout(()=>{ try { controller.abort(); } catch (_) {} }, 4000) : null;
-      try {
-        const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${name}`, {
-          method:'POST',
-          mode:'cors',
-          cache:'no-store',
-          headers,
-          body: JSON.stringify(payload),
-          signal: controller ? controller.signal : undefined
-        });
-        const text = await res.text();
-        let data = null;
-        try { data = text ? JSON.parse(text) : null; } catch (_) { data = null; }
-        hadResponse = true;
-        if (!res.ok) continue;
-        const aliases = playerSessionNamesFromState(data);
-        if (aliases.length || (data && (data.viewer || data.player || data.session_valid === true || data.is_logged_in === true))) {
-          return { status:'valid', state:data, aliases };
-        }
-      } finally {
-        if (timeout) window.clearTimeout(timeout);
-      }
-    } catch (_) {}
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeout = controller ? window.setTimeout(()=>{ try { controller.abort(); } catch (_) {} }, 4000) : null;
+  try {
+    const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/account_public_state_v687`, {
+      method:'POST',
+      mode:'cors',
+      cache:'no-store',
+      headers,
+      body: JSON.stringify({
+        session_token: value,
+        session_token_input: value,
+        site_scope_input: inferRuntimeScope()
+      }),
+      signal: controller ? controller.signal : undefined
+    });
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (_) { data = null; }
+    if (!res.ok) return { status:'unknown', state:null, aliases:[] };
+    const aliases = playerSessionNamesFromState(data);
+    if (data && data.ok === true) return { status:'valid', state:data, aliases };
+    return { status:'invalid', state:data, aliases:[] };
+  } catch (_) {
+    return { status:'unknown', state:null, aliases:[] };
+  } finally {
+    if (timeout) window.clearTimeout(timeout);
   }
-  return { status: hadResponse ? 'invalid' : 'unknown', state:null, aliases:[] };
 }
 function inferRuntimeScope(){ try { const qs = new URLSearchParams(location.search); if (qs.get('scope')==='family') return 'family'; if ((location.pathname||'').includes('/familie/')) return 'family'; } catch(_){} return 'friends'; }
 
@@ -754,7 +740,7 @@ function buildRequestUrl(returnTo, scope){
       setTimeout(showPageNow, 0);
     }
     setTimeout(showPageNow, 650);
-    return { VERSION:'v805', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
+    return { VERSION:'v806', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
   })();
   window.GEJAST_FAST_RUNTIME = FAST_RUNTIME;
 
@@ -798,7 +784,7 @@ function buildRequestUrl(returnTo, scope){
       if (/\/admin/.test(path)) return;
       if (document.querySelector('script[data-despimarkt-announcements]')) return;
       const script = document.createElement('script');
-      script.src = `./gejast-site-announcements.js?${effectiveVersion}`;
+      script.src = `/gejast-site-announcements.js?${effectiveVersion}`;
       script.async = false;
       script.setAttribute('data-despimarkt-announcements','1');
       document.head.appendChild(script);
@@ -810,7 +796,7 @@ function buildRequestUrl(returnTo, scope){
       if (window.GEJAST_SCOPE_HARDENING && window.GEJAST_SCOPE_HARDENING.version === 'v687') return;
       if (document.querySelector('script[data-gejast-scope-hardening]')) return;
       const script = document.createElement('script');
-      script.src = `./gejast-scope-hardening.js?${effectiveVersion}`;
+      script.src = `/gejast-scope-hardening.js?${effectiveVersion}`;
       script.async = false;
       script.setAttribute('data-gejast-scope-hardening','1');
       document.head.appendChild(script);
@@ -821,7 +807,7 @@ function buildRequestUrl(returnTo, scope){
     try {
       if (window.GEJAST_V725_REPAIR || document.querySelector('script[data-gejast-v725-repair]')) return;
       const script = document.createElement('script');
-      script.src = `./gejast-v725-repair.js?${effectiveVersion}`;
+      script.src = `/gejast-v725-repair.js?${effectiveVersion}`;
       script.defer = true;
       script.setAttribute('data-gejast-v725-repair','1');
       document.head.appendChild(script);
