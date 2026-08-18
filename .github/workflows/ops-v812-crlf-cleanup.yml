@@ -1,3 +1,4 @@
+# registered workflow trigger
 name: one-shot v812 profile source line-ending cleanup
 
 on:
