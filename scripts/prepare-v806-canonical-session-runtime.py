@@ -197,6 +197,58 @@ if checklist.get('items') != []:
 checklist['site_version'] = 'v806'
 checklist_path.write_text(json.dumps(checklist, indent=2, ensure_ascii=False) + '\n')
 
+# Carry the fully certified v805 production truth into the v806 candidate.
+# v806 itself remains a release candidate until fresh post-deploy evidence exists.
+readiness_path = Path('beta-readiness.json')
+readiness = json.loads(readiness_path.read_text())
+readiness['site_version'] = 'release candidate v806 / live v805'
+readiness['last_updated'] = '2026-08-18'
+identity = readiness.setdefault('deployment_identity', {})
+identity['status'] = 'ready_to_test'
+identity['live_version'] = 'v805'
+identity['frontend_release_merge'] = 'b64a116f2b2684d1fbd475b40c2b76f569d40942'
+identity['repository_head_at_audit'] = 'fe69dfdbad20b2489ff050c9799dc276f8dbd733'
+identity['release_candidate_version'] = 'v806'
+identity['note'] = ('Release candidate v806 / certified live v805. v805 is the immutable rollback baseline at '
+                    'b64a116f2b2684d1fbd475b40c2b76f569d40942. Production Toepen v801a migration '
+                    '20260818001412 is deployed and fully proven. v806 canonicalizes the shipped player-session '
+                    'runtime and nested shared-asset resolution; release certification remains REVALIDATION_REQUIRED '
+                    'until fresh exact-current v806 health, deep gameplay, authenticated visual/manual review and '
+                    'zero-residue evidence pass.')
+evidence = identity.setdefault('evidence', [])
+current_evidence = [
+    '2026-08-18 certified live v805: immutable release branch/tag point to b64a116f2b2684d1fbd475b40c2b76f569d40942; post-v801a health 32084207898, deep-live 32085432145 and authenticated visual 32085275503 all PASS; all 137 screenshots manually reviewed; independent production residue sweep zero.',
+    '2026-08-18 production Toepen v801a: migration 20260818001412 gejast_v801a_toepen_idempotency_owner_guard deployed; public REST proof 32084142660 PASS with same-owner replay preserved, cross-owner/invalid-session/wrong-scope rejected and cleanup zero residue.'
+]
+for item in reversed(current_evidence):
+    if item not in evidence:
+        evidence.insert(0, item)
+
+for check in readiness.get('baseline_checks', []):
+    if check.get('id') == 'live_write_safety_gate':
+        check['evidence'] = ('The live-write checklist remains fully disarmed with zero automated mutation targets. '
+                             'The previously permission-gated Toepen v801a owner/scope repair was explicitly authorized, '
+                             'deployed as production migration 20260818001412, proven through public REST run 32084142660 '
+                             'and followed by full health/deep/visual revalidation with zero controlled residue.')
+        break
+else:
+    raise SystemExit('beta readiness missing live_write_safety_gate baseline')
+
+toepen = next((item for item in readiness.get('beta_gaps', []) if item.get('id') == 'toepen_backend_live'), None)
+if toepen is None:
+    raise SystemExit('beta readiness missing toepen_backend_live gap')
+toepen['status'] = 'verified_complete'
+toepen['proof_needed'] = ('Complete: production migration 20260818001412 (v801a Toepen idempotency owner/scope guard) '
+                          'is deployed. Same-owner idempotent replay remains stable while cross-owner, invalid-session '
+                          'and wrong-scope replay fail closed.')
+toepen['next_action'] = ('No Toepen v801a deployment action remains. Re-run the owner/session/scope proof only if the '
+                         'Toepen save RPC, session contract or scope contract changes.')
+toepen['latest_probe'] = ('2026-08-18: public REST proof run 32084142660 PASS after production migration 20260818001412; '
+                          'same-owner replay returned the original game, cross-owner/invalid-session/wrong-scope calls '
+                          'were rejected. Post-mutation live health 32084207898, deep gameplay 32085432145 and visual '
+                          'audit 32085275503 PASS; independent controlled-residue sweep zero.')
+readiness_path.write_text(json.dumps(readiness, indent=2, ensure_ascii=False) + '\n')
+
 checker = """#!/usr/bin/env node
 import fs from 'node:fs';
 const version=fs.readFileSync('VERSION','utf8').trim();
