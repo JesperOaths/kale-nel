@@ -1,0 +1,220 @@
+name: Apply v806 release-finalization runtime cleanup
+
+on:
+  push:
+    branches: [agent/v806-release-finalization]
+    paths: ['.github/workflows/v806-apply-runtime-cleanup.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v806-release-finalization
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Apply grounded runtime repairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          def replace(path, old, new, count=None):
+              p=Path(path); s=p.read_text()
+              hits=s.count(old)
+              if hits == 0: raise SystemExit(f'{path}: target not found: {old[:80]!r}')
+              if count is not None and hits != count: raise SystemExit(f'{path}: expected {count} targets, found {hits}')
+              p.write_text(s.replace(old,new))
+              print(f'updated {path}: replacements={hits}')
+
+          # Family aliases execute root runtimes; dynamic runtime URLs must not inherit /familie/.
+          replace('gejast-config.js', "script.src = `./gejast-site-announcements.js?${effectiveVersion}`;", "script.src = `/gejast-site-announcements.js?${effectiveVersion}`;", 1)
+          replace('gejast-config.js', "script.src = `./gejast-scope-hardening.js?${effectiveVersion}`;", "script.src = `/gejast-scope-hardening.js?${effectiveVersion}`;", 1)
+          replace('gejast-config.js', "script.src = `./gejast-v725-repair.js?${effectiveVersion}`;", "script.src = `/gejast-v725-repair.js?${effectiveVersion}`;", 1)
+
+          # Canonical session heartbeat payload. Production accepts these exact four names.
+          p=Path('gejast-config.js'); s=p.read_text()
+          old="""  const payloads = [\n    { input_token: token },\n    { session_token: token },\n    { token }\n  ];\n  for (const payload of payloads){"""
+          new="""  const payloads = [{\n    session_token: token,\n    session_token_input: token,\n    page_input: `${location.pathname || ''}${location.search || ''}`,\n    site_scope_input: inferRuntimeScope()\n  }];\n  for (const payload of payloads){"""
+          if old not in s: raise SystemExit('gejast-config.js canonical touch target missing')
+          s=s.replace(old,new,1)
+
+          # Session snapshot must use the authenticated account contract, not legacy get_public_state signatures.
+          old="""  const attempts = [\n    ['get_public_state', { session_token: value }],\n    ['get_gejast_homepage_state', { session_token: value }],\n    ['get_jas_app_state', { session_token: value }],\n    ['get_public_state', { session_token_input: value }],\n    ['get_gejast_homepage_state', { session_token_input: value }],\n    ['get_jas_app_state', { session_token_input: value }]\n  ];"""
+          new="""  const attempts = [\n    ['account_public_state_v687', { session_token: value, session_token_input: value, site_scope_input: inferRuntimeScope() }]\n  ];"""
+          if old not in s: raise SystemExit('gejast-config.js snapshot attempts target missing')
+          p.write_text(s.replace(old,new,1))
+
+          # Announcement RPC has only site_scope_input; normalize the current JSON envelope.
+          replace('gejast-site-announcements.js', "const data = await rpc('get_player_site_announcements_scoped', { site_scope_input: scope(), limit_count: 8 });\n      const rows = normalizeRows(data?.rows || data);", "const data = await rpc('get_player_site_announcements_scoped', { site_scope_input: scope() });\n      const rows = normalizeRows(data?.rows || data?.items || data?.announcements || data);", 1)
+          replace('gejast-site-announcements.js', "function normalizeRows(v){ return Array.isArray(v) ? v : Array.isArray(v?.rows) ? v.rows : []; }", "function normalizeRows(v){ return Array.isArray(v) ? v : Array.isArray(v?.rows) ? v.rows : Array.isArray(v?.items) ? v.items : Array.isArray(v?.announcements) ? v.announcements : []; }", 1)
+
+          # Drinks public verification readers are scope-only in production.
+          p=Path('drinks-verify-float.js'); s=p.read_text()
+          anchor="function token(){ for (const key of SESSION_KEYS){ const value = localStorage.getItem(key) || sessionStorage.getItem(key); if (value) return value; } return ''; }"
+          if anchor not in s: raise SystemExit('drinks-verify-float token anchor missing')
+          s=s.replace(anchor, anchor+"\n  function scope(){ try{ if(window.GEJAST_SCOPE_UTILS?.getScope) return window.GEJAST_SCOPE_UTILS.getScope(); const q=new URLSearchParams(location.search||''); return q.get('scope')==='family'||location.pathname.includes('/familie/')?'family':'friends'; }catch(_){ return 'friends'; } }",1)
+          s=s.replace("body: JSON.stringify({session_token: token()})", "body: JSON.stringify({site_scope_input: scope()})",1)
+          s=s.replace("body: JSON.stringify({session_token: token(), viewer_lat: pos?.coords?.latitude ?? null, viewer_lng: pos?.coords?.longitude ?? null})", "body: JSON.stringify({site_scope_input: scope()})",1)
+          s=s.replace("const allRows = allRaw?.get_all_pending_drink_event_verifications_public || allRaw || {};\n          const drinkItem = Array.isArray(allRows) ? allRows[0] : null;", "const allRows = allRaw?.get_all_pending_drink_event_verifications_public || allRaw || {};\n          const allItems = Array.isArray(allRows) ? allRows : (Array.isArray(allRows?.items) ? allRows.items : (Array.isArray(allRows?.rows) ? allRows.rows : []));\n          const drinkItem = allItems[0] || null;",1)
+          s=s.replace("const data = raw?.get_drink_event_vote_queue_public || raw || {};\n        const drinkItem = Array.isArray(data.verify_queue) ? data.verify_queue[0] : null;", "const data = raw?.get_drink_event_vote_queue_public || raw || {};\n        const queueItems = Array.isArray(data) ? data : (Array.isArray(data?.verify_queue) ? data.verify_queue : (Array.isArray(data?.items) ? data.items : (Array.isArray(data?.rows) ? data.rows : [])));\n        const drinkItem = queueItems[0] || null;",1)
+          p.write_text(s)
+
+          replace('gejast-drinks-workflow.js', "rpc('get_all_pending_drink_event_verifications_public', { session_token }),", "rpc('get_all_pending_drink_event_verifications_public', { site_scope_input: inferScope() }),", 1)
+          replace('gejast-drinks-workflow.js', "const verify_queue = verifyRaw.status==='fulfilled' ? (verifyRaw.value?.get_all_pending_drink_event_verifications_public||verifyRaw.value||[]) : (page.verify_queue||[]);", "const verifyEnvelope = verifyRaw.status==='fulfilled' ? (verifyRaw.value?.get_all_pending_drink_event_verifications_public||verifyRaw.value||[]) : (page.verify_queue||[]);\n    const verify_queue = Array.isArray(verifyEnvelope) ? verifyEnvelope : (Array.isArray(verifyEnvelope?.items) ? verifyEnvelope.items : (Array.isArray(verifyEnvelope?.rows) ? verifyEnvelope.rows : []));", 1)
+          replace('drinks_add.html', "rpcWithTimeout('get_all_pending_drink_event_verifications_public', {session_token:token()}, 1400),", "rpcWithTimeout('get_all_pending_drink_event_verifications_public', {site_scope_input:scopeCtx.getScope()}, 1400),", 1)
+
+          # Account runtime session read: one canonical authenticated contract.
+          replace('gejast-account-runtime.js', "async function getPublicState(){ const token=playerToken(); if(!token) return null; try{ return await rpcFirst([{name:'get_public_state', body:{session_token:token}, options:{timeoutMs:1200}},{name:'account_public_state_v687', body:{session_token_input:token}, options:{timeoutMs:1200}}]); }catch(_){ return null; } }", "async function getPublicState(){ const token=playerToken(); if(!token) return null; try{ return await rpcFirst([{name:'account_public_state_v687', body:{session_token:token,session_token_input:token,site_scope_input:scope()}, options:{timeoutMs:1800}}]); }catch(_){ return null; } }", 1)
+
+          # Analytics profile resolution must not call scope-only get_public_state with a session_token argument.
+          replace('site-analytics.js', "const data = await rpc('get_public_state', { session_token: playerToken });", "const data = await rpc('account_public_state_v687', { session_token: playerToken, session_token_input: playerToken, site_scope_input: (window.GEJAST_SCOPE_UTILS?.getScope?.() || ((location.pathname||'').includes('/familie/') ? 'family' : 'friends')) });", 1)
+
+          # Combined homepage fallback no longer sends a token to scope-only get_public_state.
+          replace('gejast-combined-readers.js', "RPC.callRpc('get_gejast_homepage_state', { session_token: sessionToken }).catch(() => RPC.callRpc('get_public_state', { session_token: sessionToken })),", "RPC.callRpc('get_gejast_homepage_state', { session_token: sessionToken }).catch(() => RPC.callRpc('get_gejast_homepage_state', {})),", 1)
+
+          # Session UI/corner: canonical account state only.
+          p=Path('gejast-player-session-ui.js'); s=p.read_text()
+          start=s.index('  async function fetchViewer(token){')
+          end=s.index('\n\n  async function fetchCoins(token){', start)
+          replacement="""  async function fetchViewer(token){\n    if (!token || !SUPABASE_URL || !SUPABASE_KEY) return null;\n    try {\n      const scope = inferScope();\n      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/account_public_state_v687`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token:token, session_token_input:token, site_scope_input:scope }) });\n      const data = await parseJson(res);\n      const name = data?.my_name || data?.display_name || data?.player_name || data?.viewer?.display_name || data?.player?.display_name || '';\n      if (!name) return null;\n      return {\n        name,\n        avatar: data?.my_avatar_url || data?.avatar_url || data?.viewer?.avatar_url || data?.player?.avatar_url || '',\n        coins: Number(data?.caute_coins ?? data?.coin_balance ?? data?.viewer?.caute_coins ?? data?.viewer?.coin_balance ?? 0) || 0,\n        profileHref: './my_profile.html'\n      };\n    } catch (_) { return null; }\n  }"""
+          p.write_text(s[:start]+replacement+s[end:])
+
+          p=Path('gejast-session-corner.js'); s=p.read_text()
+          start=s.index('  async function fetchViewer(token){')
+          end=s.index('\n  function mount(){', start)
+          replacement="""  async function fetchViewer(token){\n    if (!token || !SUPABASE_URL || !SUPABASE_KEY) return { name:'', coins:0 };\n    try {\n      const scope = window.GEJAST_SCOPE_UTILS?.getScope?.() || ((location.pathname||'').includes('/familie/') ? 'family' : 'friends');\n      const payload = JSON.stringify({ session_token:token, session_token_input:token, site_scope_input:scope });\n      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/account_public_state_v687`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: payload });\n      const data = await res.json().catch(()=>null);\n      if (res.ok) {\n        const name = data?.my_name || data?.display_name || data?.player_name || data?.viewer?.display_name || data?.player?.display_name || '';\n        if (name) return { name, coins: Number(data?.caute_coins ?? data?.coin_balance ?? data?.viewer?.caute_coins ?? 0) || 0 };\n      }\n    } catch (_) {}\n    try {\n      const payload = JSON.stringify({ session_token:token, session_token_input:token });\n      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_my_caute_coins_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: payload });\n      const data = await res.json().catch(()=>null);\n      return { name:'', coins: Number(data?.balance ?? data?.caute_coins ?? 0) || 0 };\n    } catch (_) {}\n    return { name:'', coins:0 };\n  }"""
+          p.write_text(s[:start]+replacement+s[end:])
+
+          # Full visual audit can use the runner's already-installed Chrome; retain bounded download fallback.
+          p=Path('scripts/full-live-visual-audit-v792.mjs'); s=p.read_text()
+          old='chromium.launch({ headless: true })'
+          new="chromium.launch({ headless: true, ...(process.env.GEJAST_SYSTEM_CHROME ? { executablePath: process.env.GEJAST_SYSTEM_CHROME } : {}) })"
+          if old not in s: raise SystemExit('visual launch target missing')
+          p.write_text(s.replace(old,new,1))
+
+          p=Path('scripts/final-cert-live-browser-v792.mjs'); s=p.read_text()
+          if old in s: p.write_text(s.replace(old,new,1))
+
+          p=Path('.github/workflows/full-live-visual-audit-v792.yml'); s=p.read_text()
+          oldblock="""          npm ci\n          npm install --no-save --package-lock=false playwright@1.55.0\n          npx playwright install --with-deps chromium\n          node --check scripts/full-live-visual-audit-v792.mjs"""
+          newblock="""          npm ci\n          npm install --no-save --package-lock=false --ignore-scripts playwright@1.55.0\n          chrome=\"$(command -v google-chrome || command -v google-chrome-stable || true)\"\n          if [ -n \"$chrome\" ]; then\n            echo \"GEJAST_SYSTEM_CHROME=$chrome\" >> \"$GITHUB_ENV\"\n            \"$chrome\" --version\n          else\n            timeout 180s npx playwright install chromium\n          fi\n          node --check scripts/full-live-visual-audit-v792.mjs"""
+          if oldblock not in s: raise SystemExit('visual workflow install target missing')
+          p.write_text(s.replace(oldblock,newblock,1))
+          PY
+
+          cat > gejast-home-gate.js <<'JS'
+          (function(){
+            'use strict';
+            var cfg = window.GEJAST_CONFIG || {};
+            var VERSION = 'v806';
+            try {
+              document.documentElement.classList.add('gejast-auth-pending');
+              var style = document.createElement('style');
+              style.setAttribute('data-gejast-auth-gate', 'true');
+              style.textContent = 'html.gejast-auth-pending body{visibility:hidden!important}html.gejast-auth-ready body{visibility:visible!important}';
+              (document.head || document.documentElement).appendChild(style);
+            } catch(_) {}
+            function isAdminSurface(){ try { var file=((location.pathname||'').split('/').pop()||'').toLowerCase(); return file==='admin'||file==='admin.html'||/^admin_.*\.html$/i.test(file); } catch(_) { return false; } }
+            function getToken(){ try { return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; } catch(_){ return ''; } }
+            function clearTokens(){ try{ cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens(); }catch(_){} }
+            function currentScope(){ try{ if(window.GEJAST_SCOPE_UTILS?.getScope) return window.GEJAST_SCOPE_UTILS.getScope(); if((location.pathname||'').includes('/familie/')) return 'family'; return new URLSearchParams(location.search).get('scope')==='family'?'family':'friends'; }catch(_){ return 'friends'; } }
+            function currentTarget(){ try{ return cfg.currentReturnTarget ? cfg.currentReturnTarget((location.pathname||'').split('/').pop()||'index.html') : ((location.pathname||'').split('/').pop()||'index.html')+(location.search||'')+(location.hash||''); }catch(_){ return 'index.html'; } }
+            function loginUrl(){ try{ return cfg.buildLoginUrl ? cfg.buildLoginUrl(currentTarget(),currentScope()) : '/login.html'+(currentScope()==='family'?'?scope=family':''); }catch(_){ return '/login.html'; } }
+            function showPage(){ try{ document.documentElement.classList.remove('gejast-auth-pending'); document.documentElement.classList.add('gejast-auth-ready'); if(document.body){document.body.classList.remove('boot-pending');document.body.classList.remove('page-loading');} }catch(_){} }
+            function redirectToLogin(){ try{ location.replace(loginUrl()); }catch(_){ location.href='/login.html'; } }
+            function headers(){ return {'Content-Type':'application/json',Accept:'application/json',apikey:(cfg.SUPABASE_PUBLISHABLE_KEY||''),Authorization:'Bearer '+(cfg.SUPABASE_PUBLISHABLE_KEY||'')}; }
+            async function canonicalCheck(token){
+              var c=window.GEJAST_CONFIG||cfg; var controller=new AbortController(); var timer=setTimeout(function(){controller.abort();},8000);
+              try{
+                var res=await fetch((c.SUPABASE_URL||'')+'/rest/v1/rpc/account_public_state_v687',{method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify({session_token:token,session_token_input:token,site_scope_input:currentScope()}),signal:controller.signal});
+                if(!res.ok) return {ok:false,transient:true};
+                var data=await res.json(); var s=String(data&&data.site_scope||'').toLowerCase()==='family'?'family':'friends';
+                return {ok:!!(data&&data.ok===true&&s===currentScope()),hardInvalid:!!(data&&data.ok===false),data:data};
+              }catch(_){ return {ok:false,transient:true}; } finally{ clearTimeout(timer); }
+            }
+            if(isAdminSurface()){ showPage(); window.GEJAST_HOME_GATE={VERSION:VERSION,skipped:'admin-surface'}; return; }
+            var token=getToken(); if(!token){ redirectToLogin(); return; }
+            try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity({force:false}); }catch(_){}
+            var primary=window.GEJAST_AUTH_GATE;
+            var task=primary&&typeof primary.then==='function'
+              ? primary.then(function(ok){ return {ok:ok===true,hardInvalid:ok===false,source:'primary-auth-gate'}; })
+              : canonicalCheck(token);
+            window.GEJAST_HOME_GATE_PROMISE=Promise.resolve(task).then(function(result){
+              if(result&&result.ok){ showPage(); return true; }
+              if(result&&result.hardInvalid){ clearTokens(); redirectToLogin(); return false; }
+              showPage(); return true;
+            }).catch(function(){ showPage(); return true; });
+            window.GEJAST_HOME_GATE={VERSION:VERSION,source:primary?'primary-auth-gate':'canonical-fallback'};
+          })();
+          JS
+
+          # Frontend version boundary.
+          printf 'v806\n' > VERSION
+          node fix-version-drift.mjs
+
+          cat > check-v806-release-finalization.mjs <<'JS'
+          import fs from 'node:fs';
+          const read=(p)=>fs.readFileSync(p,'utf8');
+          const assert=(x,m)=>{if(!x){console.error('FAIL',m);process.exit(1);}};
+          assert(read('VERSION').trim()==='v806','VERSION must be v806');
+          const cfg=read('gejast-config.js');
+          for(const p of ['/gejast-site-announcements.js?','/gejast-scope-hardening.js?','/gejast-v725-repair.js?']) assert(cfg.includes('`'+p+'${effectiveVersion}`'),'root-absolute runtime missing '+p);
+          assert(!cfg.includes("['get_public_state', { session_token: value }]")&&!cfg.includes("['get_public_state', { session_token_input: value }]") ,'session snapshot must not use scope-only get_public_state');
+          assert(cfg.includes("['account_public_state_v687', { session_token: value, session_token_input: value, site_scope_input: inferRuntimeScope() }]") ,'canonical account snapshot missing');
+          assert(cfg.includes('page_input: `${location.pathname || \'\'}${location.search || \'\'}`')&&cfg.includes('site_scope_input: inferRuntimeScope()'),'canonical session touch payload missing');
+          const home=read('gejast-home-gate.js');
+          assert(home.includes('window.GEJAST_AUTH_GATE')&&home.includes('account_public_state_v687'),'home gate must reuse primary gate with canonical fallback');
+          assert(!home.includes("get_public_state'"),'home gate must not probe stale public-state signature');
+          const ann=read('gejast-site-announcements.js');
+          assert(!ann.includes('limit_count: 8')&&ann.includes("get_player_site_announcements_scoped', { site_scope_input: scope() }"),'announcement signature mismatch remains');
+          const drinks=[read('drinks-verify-float.js'),read('gejast-drinks-workflow.js'),read('drinks_add.html')].join('\n');
+          assert(!/get_all_pending_drink_event_verifications_public[^\n]{0,160}session_token/.test(drinks),'pending drink public reader still sends session_token');
+          assert(!/get_drink_event_vote_queue_public[^\n]{0,180}session_token/.test(drinks),'drink vote queue still sends session_token');
+          const sessionUi=read('gejast-player-session-ui.js'); const corner=read('gejast-session-corner.js');
+          assert(!sessionUi.includes("['get_public_state'")&&!corner.includes("for (const rpc of ['get_public_state'"),'session UI stale state probes remain');
+          const analytics=read('site-analytics.js'); assert(analytics.includes("rpc('account_public_state_v687'")&&!analytics.includes("rpc('get_public_state', { session_token:"),'analytics session lookup must use account state');
+          const wf=read('.github/workflows/full-live-visual-audit-v792.yml');
+          assert(wf.includes('command -v google-chrome')&&wf.includes('timeout 180s npx playwright install chromium')&&!wf.includes('playwright install --with-deps chromium'),'visual CI must prefer system Chrome with bounded fallback');
+          const visual=read('scripts/full-live-visual-audit-v792.mjs'); assert(visual.includes('GEJAST_SYSTEM_CHROME'),'visual harness must honor system Chrome');
+          console.log('PASS v806 release-finalization runtime contracts');
+          JS
+
+          node -e "let p=require('./package.json'); const needle='node check-v805-paardenrace-native-poll-owner.mjs'; if(!p.scripts['verify:static'].includes('check-v806-release-finalization.mjs')) p.scripts['verify:static']=p.scripts['verify:static'].replace(needle, needle+' && node check-v806-release-finalization.mjs'); require('fs').writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+          node check-v806-release-finalization.mjs
+          node check-version-drift.mjs
+          node --check gejast-config.js
+          node --check gejast-home-gate.js
+          node --check gejast-player-session-ui.js
+          node --check gejast-session-corner.js
+          node --check gejast-site-announcements.js
+          node --check drinks-verify-float.js
+          node --check gejast-drinks-workflow.js
+          node --check site-analytics.js
+      - name: Run full repository verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run verify
+      - name: Commit v806 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git status --short
+          git commit -m 'fix: finalize v806 runtime contracts and browser CI'
+          git push origin HEAD:agent/v806-release-finalization
+          echo 'RESULT=V806_RUNTIME_CANDIDATE_COMMITTED'
