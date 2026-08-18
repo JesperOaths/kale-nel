@@ -185,11 +185,19 @@ async function capture(context, route, label, index, kind = 'tracked') {
   const consoleErrors = [];
   const pageErrors = [];
   const failedRequests = [];
+  const httpErrors = [];
   page.on('console', (msg) => { if (msg.type() === 'error') consoleErrors.push(safe(msg.text())); });
   page.on('pageerror', (error) => pageErrors.push(safe(error)));
   page.on('requestfailed', (request) => {
     const failure = request.failure()?.errorText || 'failed';
     if (!/favicon/i.test(request.url())) failedRequests.push(`${request.method()} ${request.url()} :: ${failure}`);
+  });
+  page.on('response', (res) => {
+    const status = res.status();
+    if (status >= 400 && !/favicon/i.test(res.url())) {
+      const request = res.request();
+      httpErrors.push(`${request.method()} ${res.url()} :: HTTP ${status}`);
+    }
   });
 
   let response = null;
@@ -240,6 +248,7 @@ async function capture(context, route, label, index, kind = 'tracked') {
 
   const seriousConsole = consoleErrors.filter((entry) => !/favicon|Failed to load resource.*404|net::ERR_ABORTED/i.test(entry));
   const seriousRequestFailures = failedRequests.filter((entry) => !/favicon|google-analytics|doubleclick/i.test(entry));
+  const seriousHttpErrors = httpErrors.filter((entry) => !/favicon|google-analytics|doubleclick/i.test(entry));
   let judgement = 'pass';
   const reasons = [];
   if (protectedGate) { judgement = 'protected'; reasons.push('live Cloudflare admin perimeter correctly visible instead of protected asset'); }
@@ -252,6 +261,7 @@ async function capture(context, route, label, index, kind = 'tracked') {
   if (kind === 'context' && authState !== 'authenticated') { judgement = 'broken'; reasons.push(`contextual auth state is ${authState || 'missing'}, expected authenticated`); }
   if (seriousConsole.length && judgement !== 'broken' && judgement !== 'protected') { judgement = 'warn'; reasons.push(`${seriousConsole.length} console error(s)`); }
   if (seriousRequestFailures.length && judgement === 'pass') { judgement = 'warn'; reasons.push(`${seriousRequestFailures.length} failed request(s)`); }
+  if (seriousHttpErrors.length && judgement === 'pass') { judgement = 'warn'; reasons.push(`${seriousHttpErrors.length} HTTP error response(s)`); }
   if (overflow > 16 && judgement === 'pass') { judgement = 'warn'; reasons.push(`horizontal overflow ${overflow}px`); }
   if (staleLoadingCount > 0 && judgement === 'pass') { judgement = 'warn'; reasons.push(`${staleLoadingCount} visible loading placeholder(s) after ${settleMs}ms`); }
 
@@ -281,6 +291,7 @@ async function capture(context, route, label, index, kind = 'tracked') {
     console_errors: seriousConsole.slice(0, 20),
     page_errors: pageErrors.slice(0, 20),
     failed_requests: seriousRequestFailures.slice(0, 20),
+    http_errors: seriousHttpErrors.slice(0, 20),
     judgement,
     reasons,
   };
