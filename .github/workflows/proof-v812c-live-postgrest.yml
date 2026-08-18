@@ -1,0 +1,162 @@
+name: v812c live PostgREST proof
+
+on:
+  push:
+    branches: [proof/v812c-live-postgrest-20260818]
+    paths: ['.github/workflows/proof-v812c-live-postgrest.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_URL: https://uiqntazgnrxwliaidkmy.supabase.co
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA
+      PGCONNECT_TIMEOUT: '10'
+      PGOPTIONS: '-c statement_timeout=20000'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v812c-live-postgrest-20260818
+          fetch-depth: 0
+
+      - name: Record proof identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .proof
+          printf '%s.%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > .proof/v812c-live-postgrest-run-id.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .proof/v812c-live-postgrest-run-id.txt
+          git commit -m 'test: record v812c live PostgREST run'
+          git push origin HEAD:proof/v812c-live-postgrest-20260818
+
+      - name: Provision hidden disposable identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          a="V812CLiveA_${suffix}"
+          b="V812CLiveB_${suffix}"
+          f="V812CLiveF_${suffix}"
+          {
+            echo "PROOF_A=$a"
+            echo "PROOF_B=$b"
+            echo "PROOF_F=$f"
+          } >> "$GITHUB_ENV"
+          timeout 25s psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v a="$a" -v b="$b" -v f="$f" <<'SQL'
+          insert into public.players(slug,display_name,active,pin_hash,approved,hidden_from_public,is_dummy,site_scope)
+          values
+            ('v812c-live-a-'||lower(:'a'),:'a',true,'md5:'||md5('4826'||':'||current_database()),true,true,true,'friends'),
+            ('v812c-live-b-'||lower(:'b'),:'b',true,'md5:'||md5('7314'||':'||current_database()),true,true,true,'friends'),
+            ('v812c-live-f-'||lower(:'f'),:'f',true,'md5:'||md5('6193'||':'||current_database()),true,true,true,'family');
+          SQL
+          tokens="$(timeout 25s psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v a="$a" -v b="$b" -v f="$f" <<'SQL'
+          select public.account_login_v687(:'a','4826','friends','{"proof":"v812c-live-postgrest"}'::jsonb)->>'session_token',
+                 public.account_login_v687(:'b','7314','friends','{"proof":"v812c-live-postgrest"}'::jsonb)->>'session_token',
+                 public.account_login_v687(:'f','6193','family','{"proof":"v812c-live-postgrest"}'::jsonb)->>'session_token';
+          SQL
+          )"
+          IFS='|' read -r ta tb tf <<< "$tokens"
+          [[ "$ta" =~ ^[0-9a-f]{48}$ && "$tb" =~ ^[0-9a-f]{48}$ && "$tf" =~ ^[0-9a-f]{48}$ ]]
+          echo "::add-mask::$ta"; echo "::add-mask::$tb"; echo "::add-mask::$tf"
+          {
+            echo "TOKEN_A=$ta"
+            echo "TOKEN_B=$tb"
+            echo "TOKEN_F=$tf"
+          } >> "$GITHUB_ENV"
+          echo 'RESULT=V812C_LIVE_FIXTURES_PASS'
+
+      - name: Prove public PostgREST authorization and scope contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/v812c-live-proof.mjs <<'JS'
+          const base=process.env.SUPABASE_URL;
+          const key=process.env.SUPABASE_PUBLISHABLE_KEY;
+          const headers={'Content-Type':'application/json',apikey:key,Authorization:`Bearer ${key}`,Accept:'application/json'};
+          const rpc=async(name,body)=>{
+            const r=await fetch(`${base}/rest/v1/rpc/${name}`,{method:'POST',headers,body:JSON.stringify(body)});
+            const text=await r.text();
+            let data=null; try{data=text?JSON.parse(text):null}catch{data=text}
+            return {status:r.status,data,text};
+          };
+          const save=async(token,scope,id,player,recap='x')=>rpc('save_game_match_summary_scoped',{
+            session_token:token,game_type:'klaverjas',client_match_id:id,
+            summary_payload:{participants:[player],winner_names:[player],recap_text:recap},site_scope_input:scope
+          });
+          const expect2xx=(x,label)=>{if(x.status<200||x.status>=300)throw Error(`${label}: expected 2xx, got ${x.status} ${x.text}`)};
+          const expectReject=(x,label,needle)=>{if(x.status<400)throw Error(`${label}: unexpectedly accepted ${x.status} ${x.text}`);if(needle&&!x.text.includes(needle))throw Error(`${label}: rejection missing ${needle}: ${x.status} ${x.text}`)};
+          const id='v812c-live-'+process.env.GITHUB_RUN_ID;
+          let r=await save(process.env.TOKEN_A,'friends',id,process.env.PROOF_A,'first'); expect2xx(r,'first save');
+          r=await save(process.env.TOKEN_A,'friends',id,process.env.PROOF_A,'replay'); expect2xx(r,'same-owner replay');
+          r=await save(process.env.TOKEN_B,'friends',id,process.env.PROOF_B); expectReject(r,'cross-owner replay','game_summary_owner_mismatch');
+          r=await save(process.env.TOKEN_F,'family',id,process.env.PROOF_F); expect2xx(r,'cross-scope same key');
+          r=await save(process.env.TOKEN_F,'friends',id+'-wrongscope',process.env.PROOF_F); expectReject(r,'wrong scope','game_summary_scope_mismatch');
+          r=await save('0'.repeat(48),'friends',id+'-invalid',process.env.PROOF_A); expectReject(r,'invalid session','Niet ingelogd');
+          r=await save(process.env.TOKEN_A,'friends',id+'-notparticipant',process.env.PROOF_B); expectReject(r,'owner not participant','game_summary_owner_not_participant');
+
+          r=await rpc('contract_live_write_v1',{session_token:process.env.TOKEN_F,game_type:'beerpong',client_match_id:id+'-contract',summary_payload:{participants:[process.env.PROOF_F]},site_scope_input:'family'});
+          expect2xx(r,'contract live write transport');
+          const contractData=Array.isArray(r.data)?r.data[0]:r.data;
+          if(!contractData?.ok) throw Error(`contract live write semantic failure: ${r.text}`);
+          r=await rpc('contract_live_write_v1',{session_token:process.env.TOKEN_F,game_type:'beerpong',client_match_id:id+'-contract-bad',summary_payload:{participants:[process.env.PROOF_F]},site_scope_input:'friends'});
+          expect2xx(r,'contract wrong-scope transport');
+          const badContract=Array.isArray(r.data)?r.data[0]:r.data;
+          if(badContract?.ok!==false) throw Error(`contract wrong scope unexpectedly succeeded: ${r.text}`);
+
+          for(const path of ['game_match_summaries?select=id&limit=1','live_match_summaries?select=client_match_id&limit=1']){
+            const q=await fetch(`${base}/rest/v1/${path}`,{headers:{apikey:key,Authorization:`Bearer ${key}`,Accept:'application/json'}});
+            const t=await q.text();
+            if(q.status<400) throw Error(`direct REST surface remained readable: ${path} -> ${q.status} ${t}`);
+            console.log(`DIRECT_SURFACE_DENIED path=${path.split('?')[0]} status=${q.status}`);
+          }
+          console.log('RESULT=V812C_LIVE_POSTGREST_BOUNDARY_PASS');
+          JS
+          node /tmp/v812c-live-proof.mjs
+
+      - name: Prove persisted scope/owner state
+        shell: bash
+        run: |
+          set -euo pipefail
+          id="v812c-live-${GITHUB_RUN_ID}"
+          state="$(timeout 25s psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v id="$id" -v a="$PROOF_A" -v f="$PROOF_F" <<'SQL'
+          select
+            (select count(*) from public.game_match_summaries where client_match_id=:'id'),
+            (select count(*) from public.game_match_summaries g join public.players p on p.id=g.created_by_player_id where g.client_match_id=:'id' and g.site_scope='friends' and p.display_name=:'a'),
+            (select count(*) from public.game_match_summaries g join public.players p on p.id=g.created_by_player_id where g.client_match_id=:'id' and g.site_scope='family' and p.display_name=:'f'),
+            (select recap_text from public.game_match_summaries where client_match_id=:'id' and site_scope='friends');
+          SQL
+          )"
+          test "$state" = '2|1|1|replay'
+          echo 'RESULT=V812C_LIVE_PERSISTED_STATE_PASS'
+
+      - name: Cleanup controlled production fixtures
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${PROOF_A:-}" ]; then echo 'No fixtures provisioned.'; exit 0; fi
+          timeout 30s psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v a="$PROOF_A" -v b="$PROOF_B" -v f="$PROOF_F" -v prefix="v812c-live-${GITHUB_RUN_ID}%" <<'SQL'
+          begin;
+          delete from public.game_match_summaries where client_match_id like :'prefix';
+          delete from public.gejast_active_player_metadata_v679 where player_name in (:'a',:'b',:'f');
+          delete from public.gejast_player_sessions_v746 where player_id in (select id from public.players where display_name in (:'a',:'b',:'f'));
+          delete from public.players where display_name in (:'a',:'b',:'f') and hidden_from_public=true and is_dummy=true;
+          commit;
+          SQL
+          residue="$(timeout 25s psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v a="$PROOF_A" -v b="$PROOF_B" -v f="$PROOF_F" -v prefix="v812c-live-${GITHUB_RUN_ID}%" <<'SQL'
+          select
+            (select count(*) from public.players where display_name in (:'a',:'b',:'f')),
+            (select count(*) from public.gejast_player_sessions_v746 where display_name in (:'a',:'b',:'f')),
+            (select count(*) from public.gejast_active_player_metadata_v679 where player_name in (:'a',:'b',:'f')),
+            (select count(*) from public.game_match_summaries where client_match_id like :'prefix');
+          SQL
+          )"
+          test "$residue" = '0|0|0|0'
+          echo 'RESULT=V812C_LIVE_ZERO_RESIDUE_PASS'
