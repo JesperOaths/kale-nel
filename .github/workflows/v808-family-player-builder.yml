@@ -1,0 +1,101 @@
+name: v808 family player alias builder
+
+on:
+  push:
+    branches: [agent/v808-family-player-empty-alias]
+    paths: ['.github/workflows/v808-family-player-builder.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v808-family-player-builder
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v808-family-player-empty-alias
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Build exact v808 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = 'ea703996c8a7c811d79b33d3928fbabbce2b5d4d'
+          printf 'v808\n' > VERSION
+          python3 <<'PY'
+          from pathlib import Path
+          import json
+
+          p=Path('familie/player.html')
+          s=p.read_text()
+          old="const q=new URLSearchParams(location.search);q.set('scope','family');location.replace('../player.html?'+q.toString());"
+          new="const q=new URLSearchParams(location.search);const player=String(q.get('player')||'').trim();if(!player){location.replace('../profiles.html?scope=family');}else{q.set('scope','family');location.replace('../player.html?'+q.toString());}"
+          if old not in s:
+              raise SystemExit('familie/player.html patch target missing')
+          p.write_text(s.replace(old,new))
+
+          checker=Path('check-v808-family-player-empty-alias.mjs')
+          checker.write_text("""#!/usr/bin/env node\nimport assert from 'node:assert/strict';\nimport fs from 'node:fs';\nconst version=fs.readFileSync('VERSION','utf8').trim();\nassert(Number(version.replace(/^v/i,''))>=808,'v808+ required');\nconst html=fs.readFileSync('familie/player.html','utf8');\nassert(html.includes(\"const player=String(q.get('player')||'').trim()\"),'Family player alias must inspect player query');\nassert(html.includes(\"if(!player){location.replace('../profiles.html?scope=family');}\"),'empty Family player alias must route to Family profiles');\nassert(html.includes(\"q.set('scope','family');location.replace('../player.html?'+q.toString())\"),'named Family player alias must preserve canonical player redirect with family scope');\nconsole.log('PASS v808 Family player empty alias contract');\n""")
+
+          pkg=Path('package.json')
+          data=json.loads(pkg.read_text())
+          script=data['scripts']['verify:static']
+          anchor='node check-v807-active-session-callers.mjs'
+          addition='node check-v808-family-player-empty-alias.mjs'
+          if addition not in script:
+              if anchor not in script:
+                  raise SystemExit('package verify anchor missing')
+              script=script.replace(anchor, anchor+' && '+addition)
+          data['scripts']['verify:static']=script
+          pkg.write_text(json.dumps(data,indent=2,ensure_ascii=False)+'\n')
+
+          cert=Path('release-certification.json')
+          state=json.loads(cert.read_text())
+          state.update({
+            'current_version':'v808',
+            'status':'REVALIDATION_REQUIRED',
+            'previous_certified_version':'v805',
+            'previous_certified_product_sha':'b64a116f2b2684d1fbd475b40c2b76f569d40942',
+            'previous_certified_release_branch':'release/v805-certified-20260818',
+            'previous_certified_tag':'v805-certified-20260818',
+            'superseded_uncertified_version':'v807',
+            'superseded_uncertified_product_sha':'ea703996c8a7c811d79b33d3928fbabbce2b5d4d',
+            'reason':'v808 fixes the exact-current v807 visual blocker: the parameterless /familie/player.html alias now routes to Family profiles instead of an empty canonical player page. Fresh exact-current v808 production evidence is required before PASS.',
+            'remaining_release_blockers':[
+              'Fresh exact-current v808 live health must pass.',
+              'Fresh exact-current v808 owner isolation and deep gameplay must pass.',
+              'Targeted Family runtime must preserve zero stale session RPCs and prove the empty player alias.',
+              'Fresh authenticated v808 visual audit plus manual screenshot review must pass.',
+              'Controlled production fixtures must be independently verified at zero residue.'
+            ],
+            'required_next':[
+              'Merge only after canonical verification.',
+              'Run exact-current v808 health, owner isolation and deep live.',
+              'Run Family canonical runtime and full authenticated visual audit.',
+              'Manually review all screenshots and independently prove zero residue before setting PASS.'
+            ]
+          })
+          cert.write_text(json.dumps(state,indent=2,ensure_ascii=False)+'\n')
+          PY
+          node fix-version-drift.mjs
+          node check-v808-family-player-empty-alias.mjs
+          npm ci
+          npm run verify
+          npm audit --omit=dev --audit-level=high
+          mkdir -p .proof
+          printf '%s.%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > .proof/v808-builder-run-id.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: route empty Family player alias to profiles v808'
+          git push origin HEAD:agent/v808-family-player-empty-alias
