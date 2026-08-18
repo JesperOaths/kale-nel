@@ -1,7 +1,7 @@
 {
   "version": 8,
-  "site_version": "release candidate v805 / live v804",
-  "last_updated": "2026-08-17",
+  "site_version": "release candidate v806 / live v805",
+  "last_updated": "2026-08-18",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
     "ready_to_test": "Code exists and surface checks pass, but real beta proof is still needed.",
@@ -11,11 +11,12 @@
   },
   "deployment_identity": {
     "status": "verified_complete",
-    "live_version": "v804",
-    "frontend_release_merge": "4bb1af4e1c5f285da8f755579e1e5998e0d38554",
-    "repository_head_at_audit": "4bb1af4e1c5f285da8f755579e1e5998e0d38554",
+    "live_version": "v805",
+    "frontend_release_merge": "b64a116f2b2684d1fbd475b40c2b76f569d40942",
+    "repository_head_at_audit": "56112b6f097cda9a46d29cba1217785a1de27754",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
     "evidence": [
+      "2026-08-18 certified v805: health 32084207898 PASS; deep-live 32085432145 PASS; authenticated visual 32085275503 PASS with 137 screenshots manually reviewed and artifact sha256 7757d1e51ae99152ee730efb640a27566a28d05eb2d635957bf40f40118495c5; final controlled residue zero.",
       "2026-08-17 live v803: exact-main Live deployment health run 31981729447 attempt 2 PASS after deployment of merge 4bb1af4e1c5f285da8f755579e1e5998e0d38554; all deployed public/admin surfaces, admin GitHub OAuth boundary, base+extended read-only acceptance and performance passed.",
       "2026-08-17 live v803: fresh-browser cadence proof 31982033700 PASS; desktop homepage-live calls=1 at 598 ms and 390x844 mobile calls=1 at 449 ms, with zero late/repeating calls after 3 seconds; canonical live-summary plus v725 compatibility runtime both observed.",
       "2026-08-17 live v803: full visual run 31981729455 failed before screenshots because all four service-role REST provisioning attempts timed out; no screenshot artifact was produced and all four cleanup attempts also timed out, so residue remains unverified.",
@@ -37,8 +38,8 @@
       "2026-08-14 live v792: frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 completed its own Live deployment health run #60 successfully; later SQL-only repository audit head 141e7301944a79452eca9d354180a684249cdcd2 also passed Live deployment health without changing frontend VERSION.",
       "v793 candidate: full production screenshot audit found and repairs visible Klaverjas duplication, ladder game-key mismatch, stale game status RPC owners, Pikken spectator context loss and Rad stats aggregation failure; current release remains REVALIDATION_REQUIRED until post-deploy screenshots and gameplay are re-run."
     ],
-    "note": "Release candidate v805 / live v804. Exact-v804 live health 31984946122 is green. v805 removes the redundant v725 Paardenrace room-state monitor while preserving the native immediate + 1800ms live-page poll and its stronger insufficient-player recovery. Exact-current visual/live-write proof remains blocked by Supabase data-plane timeouts; Toepen v801a remains separately permission-gated.",
-    "release_candidate_version": "v805"
+    "note": "Release candidate v806 / certified live baseline v805. v805 completed post-restart, post-v801a health, deep live gameplay, owner-isolation and 137-screenshot authenticated visual certification with zero controlled residue. Production migration 20260818001412 gejast_v801a_toepen_idempotency_owner_guard is deployed and public PostgREST proof 32084142660 passed same-owner replay plus cross-owner, invalid-session and wrong-scope denial. v806 changes only nested shared-runtime asset/VERSION resolution to root-absolute paths and remains REVALIDATION_REQUIRED until post-deploy focused Family and full visual evidence complete.",
+    "release_candidate_version": "v806"
   },
   "baseline_checks": [
     {
@@ -87,7 +88,7 @@
       "id": "live_write_safety_gate",
       "status": "verified_complete",
       "command": "npm run beta:write:readiness / beta:readiness",
-      "evidence": "The live-write checklist remains fully disarmed with zero automated mutation targets. One live-proven Toepen backend repair is explicitly permission-gated and not armed; v801a requires separate human authorization before production deployment."
+      "evidence": "The live-write checklist remains fully disarmed with zero automated mutation targets. The previously permission-gated Toepen v801a owner/idempotency repair was explicitly authorized, deployed as production migration 20260818001412, proven through public PostgREST run 32084142660, and cleaned to zero controlled residue."
     }
   ],
   "beta_gaps": [
@@ -104,10 +105,10 @@
       "id": "toepen_backend_live",
       "priority": 2,
       "area": "Toepen",
-      "status": "needs_permission",
-      "proof_needed": "Current live blocker: exact-v801 run 31952921912 proved unrelated authenticated same-scope client_match_id replay returns a foreign existing Toepen game_id. v801a is merged and rollback-proven against the production schema but not deployed.",
-      "next_action": "With explicit authorization, apply GEJAST_v801a_toepen_idempotency_owner_guard.sql to production Supabase, then rerun same-owner idempotency, unrelated-owner denial, invalid-session/wrong-scope denial, totals guard, deep gameplay regression and zero-residue checks.",
-      "latest_probe": "2026-08-16: owner-control run 31952921912 proved the live defect and Boerenbridge/Beerpong controls; rollback-only v801a production-schema run 31953380650 passed owner/session/scope/totals assertions and proved production remained untouched after rollback."
+      "status": "verified_complete",
+      "proof_needed": "Complete: production migration 20260818001412 gejast_v801a_toepen_idempotency_owner_guard is deployed. Public PostgREST proof 32084142660 passed same-owner idempotent replay, cross-owner rejection, invalid-session rejection, wrong-scope rejection and cleanup.",
+      "next_action": "No Toepen owner-idempotency action required unless create_toepen_game, session ownership, scope semantics or persistence contracts change.",
+      "latest_probe": "2026-08-18: public REST proof 32084142660 / job 95553027731 PASS after migration 20260818001412; post-mutation health 32084207898 PASS; final independent Toepen/player/session residue sweep zero."
     },
     {
       "id": "admin_host_security",
