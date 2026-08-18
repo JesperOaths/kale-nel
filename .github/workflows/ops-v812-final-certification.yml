@@ -95,7 +95,18 @@ jobs:
           s=s.replace(deep_anchor, deep_patch+'\n'+deep_anchor, 1)
 
           visual_anchor="if 'analyticsVisitorId: process.env.GEJAST_CERT_ANALYTICS_VISITOR_ID' not in s: raise SystemExit('visual analytics visitor patch missing')"
-          visual_patch=r'''old_nav="response = await page.goto(routeUrl(route), { waitUntil: 'domcontentloaded', timeout });"\nnew_nav="""const targetUrl = routeUrl(route);\n    for (let navAttempt = 1; navAttempt <= 3; navAttempt += 1) {\n      response = await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout });\n      const navStatus = response?.status() || 0;\n      if (![500, 502, 503, 504].includes(navStatus) || navAttempt === 3) break;\n      console.log(`TRANSIENT_DOCUMENT_RETRY route=${route} status=${navStatus} attempt=${navAttempt}`);\n      await page.waitForTimeout(500 * navAttempt);\n    }"""\nif old_nav not in s: raise SystemExit('visual navigation retry target missing')\ns=s.replace(old_nav,new_nav,1)\nif 'TRANSIENT_DOCUMENT_RETRY' not in s: raise SystemExit('visual transient retry patch missing')'''
+          visual_patch=r'''old_nav="response = await page.goto(routeUrl(route), { waitUntil: 'domcontentloaded', timeout });"
+          new_nav="""const targetUrl = routeUrl(route);
+              for (let navAttempt = 1; navAttempt <= 3; navAttempt += 1) {
+                response = await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout });
+                const navStatus = response?.status() || 0;
+                if (![500, 502, 503, 504].includes(navStatus) || navAttempt === 3) break;
+                console.log(`TRANSIENT_DOCUMENT_RETRY route=${route} status=${navStatus} attempt=${navAttempt}`);
+                await page.waitForTimeout(500 * navAttempt);
+              }"""
+          if old_nav not in s: raise SystemExit('visual navigation retry target missing')
+          s=s.replace(old_nav,new_nav,1)
+          if 'TRANSIENT_DOCUMENT_RETRY' not in s: raise SystemExit('visual transient retry patch missing')'''
           if visual_anchor not in s:
               raise SystemExit('visual harness anchor missing')
           s=s.replace(visual_anchor, visual_patch+'\n'+visual_anchor, 1)
