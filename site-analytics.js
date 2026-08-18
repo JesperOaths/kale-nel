@@ -176,7 +176,12 @@
 
   function sendEvent(payload){
     const endpoint = `${SUPABASE_URL}/rest/v1/rpc/track_site_event`;
-    const body = JSON.stringify(payload);
+    const normalizedPayload = Object.assign({}, payload || {});
+    if (Object.prototype.hasOwnProperty.call(normalizedPayload, 'site_scope')) {
+      normalizedPayload.extra = Object.assign({}, normalizedPayload.extra || {}, { site_scope: normalizedPayload.site_scope });
+      delete normalizedPayload.site_scope;
+    }
+    const body = JSON.stringify(normalizedPayload);
     let sameOrigin = false;
     try { sameOrigin = new URL(endpoint, location.href).origin === location.origin; } catch (_) {}
     if (sameOrigin && navigator.sendBeacon) {

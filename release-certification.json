@@ -1,21 +1,21 @@
 {
   "schema_version": 1,
-  "current_version": "v810",
+  "current_version": "v811",
   "status": "REVALIDATION_REQUIRED",
   "previous_certified_version": "v808",
   "previous_certified_product_sha": "7f6f7bc110807e85f52ff4d54927620dbbc9ffeb",
   "previous_certified_release_branch": "release/v808-certified-20260818",
-  "superseded_uncertified_version": "v809",
-  "superseded_uncertified_product_sha": "6b2e28175aa07705945db42107cff112800864b7",
-  "reason": "v810 disambiguates the production get_player_runtime_bundle_v687 overload by sending player_name_input, player_input and site_scope_input explicitly. v809 browser proof showed the stale 404 families were removed but the two-argument player bundle call returned HTTP 300.",
+  "superseded_uncertified_version": "v810",
+  "superseded_uncertified_product_sha": "fba531c35d076d1e0a3065683eed8908c38627b6",
+  "reason": "v811 aligns site analytics with the deployed 21-argument track_site_event contract by moving site_scope into extra metadata instead of sending it as an unsupported top-level PostgREST parameter. v810 runtime proof 32136704477 confirmed the player runtime overload is fixed and exposed this exact PGRST202 mismatch.",
   "remaining_release_blockers": [
-    "Fresh exact-current v810 live health must pass.",
-    "Authenticated browser proof must show get_player_runtime_bundle_v687 succeeds and the v809 repaired stale RPC families remain clean.",
-    "Fresh visual/runtime evidence and independent zero-residue cleanup are required before PASS."
+    "Fresh exact-current v811 live health must pass.",
+    "Authenticated browser proof must show track_site_event no longer fails with PGRST202 and must preserve the v809/v810 RPC repairs.",
+    "Fresh full visual/runtime evidence and independent zero-residue cleanup are required before PASS."
   ],
   "required_next": [
-    "Merge only after canonical verification.",
-    "Run exact-current v810 health plus targeted authenticated RPC proof.",
+    "Merge only after canonical verification and after the currently running exact-v810 automatic visual audit has cleaned its fixtures.",
+    "Run exact-current v811 health plus authenticated RPC diagnostics.",
     "Run full authenticated visual audit and independently confirm zero controlled residue before certification."
   ]
 }
