@@ -67,6 +67,21 @@ jobs:
           checklist_state['site_version']='v808'
           checklist.write_text(json.dumps(checklist_state,indent=2,ensure_ascii=False)+'\n')
 
+          readiness=Path('beta-readiness.json')
+          tracker=json.loads(readiness.read_text())
+          tracker['site_version']='release candidate v808 / live v807 / certified rollback v805'
+          tracker['last_updated']='2026-08-18'
+          ident=tracker.setdefault('deployment_identity',{})
+          ident.update({
+            'status':'ready_to_test',
+            'live_version':'v807',
+            'frontend_release_merge':'ea703996c8a7c811d79b33d3928fbabbce2b5d4d',
+            'repository_head_at_audit':'ea703996c8a7c811d79b33d3928fbabbce2b5d4d',
+            'release_candidate_version':'v808',
+            'note':'v808 is a release candidate over live v807; certified rollback remains v805 b64a116f2b2684d1fbd475b40c2b76f569d40942. v808 fixes the parameterless Family player alias so it routes to Family profiles instead of an empty canonical player surface. Fresh exact-current health, owner isolation, deep gameplay, authenticated Family runtime/visual/manual review and zero-residue proof are required before PASS.'
+          })
+          readiness.write_text(json.dumps(tracker,indent=2,ensure_ascii=False)+'\n')
+
           cert=Path('release-certification.json')
           state=json.loads(cert.read_text())
           state.update({
