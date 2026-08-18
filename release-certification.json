@@ -1,48 +1,23 @@
 {
   "schema_version": 1,
-  "current_version": "v808",
-  "status": "PASS",
-  "previous_certified_version": "v805",
-  "previous_certified_product_sha": "b64a116f2b2684d1fbd475b40c2b76f569d40942",
-  "previous_certified_release_branch": "release/v805-certified-20260818",
-  "previous_certified_tag": "v805-certified-20260818",
-  "superseded_uncertified_version": "v807",
-  "superseded_uncertified_product_sha": "ea703996c8a7c811d79b33d3928fbabbce2b5d4d",
-  "reason": "Exact-current v808 production certification completed: live health, owner isolation, deep gameplay, authenticated 137-screenshot visual closure, manual review and independent zero-residue verification all passed.",
+  "current_version": "v809",
+  "status": "REVALIDATION_REQUIRED",
+  "previous_certified_version": "v808",
+  "previous_certified_product_sha": "7f6f7bc110807e85f52ff4d54927620dbbc9ffeb",
+  "previous_certified_release_branch": "release/v808-certified-20260818",
+  "reason": "v809 removes proven frontend/PostgREST contract drift and redundant empty compatibility reads. Fresh exact-current v809 live health and browser warning evidence are required before PASS.",
+  "remaining_release_blockers": [
+    "Fresh exact-current v809 live health must pass.",
+    "Targeted authenticated browser proof must show the repaired RPC owners no longer emit their prior 404s.",
+    "Fresh visual/runtime regression evidence and cleanup must pass before certification."
+  ],
+  "required_next": [
+    "Merge only after canonical verification.",
+    "Run exact-current v809 health and targeted warning diagnostics.",
+    "Run authenticated visual/runtime closure and independently confirm zero controlled residue before PASS."
+  ],
   "previous_certification_snapshot": {
     "certified_at": "2026-08-18",
-    "visual_artifact_sha256": "7757d1e51ae99152ee730efb640a27566a28d05eb2d635957bf40f40118495c5"
-  },
-  "certified_at": "2026-08-18",
-  "certified_product_sha": "7f6f7bc110807e85f52ff4d54927620dbbc9ffeb",
-  "certified_release_branch": "release/v808-certified-20260818",
-  "authoritative_evidence": {
-    "live_health": {
-      "run_id": 32123034385,
-      "job_id": 95698011853
-    },
-    "owner_isolation": {
-      "run_id": 32123034385,
-      "job_id": 95698167836
-    },
-    "deep_live": {
-      "run_id": 32123034385,
-      "job_id": 95698248548
-    },
-    "visual": {
-      "run_id": 32123034341,
-      "job_id": 95667460019,
-      "artifact_id": 9319744233,
-      "artifact_sha256": "b017cbb66811ebd8c3bd8daf9ec7083df12db082ae7d6af209ef19422dd81af9",
-      "manual_review": "PASS"
-    },
-    "independent_residue": "PASS_ZERO",
-    "certification_record_builder": {
-      "run_id": 32133791741,
-      "job_id": 95700442600,
-      "conclusion": "success",
-      "canonical_verification": "PASS",
-      "dependency_audit": "PASS"
-    }
+    "visual_artifact_sha256": "b017cbb66811ebd8c3bd8daf9ec7083df12db082ae7d6af209ef19422dd81af9"
   }
 }

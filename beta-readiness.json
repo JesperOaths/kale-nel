@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "site_version": "live v808 / current frontend release v808",
+  "site_version": "release candidate v809 / live v808 / certified rollback v808",
   "last_updated": "2026-08-18",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -10,12 +10,13 @@
     "blocked_external": "Requires external device, account, secret, or user action."
   },
   "deployment_identity": {
-    "status": "verified_complete",
+    "status": "ready_to_test",
     "live_version": "v808",
     "frontend_release_merge": "7f6f7bc110807e85f52ff4d54927620dbbc9ffeb",
-    "repository_head_at_audit": "7f6f7bc110807e85f52ff4d54927620dbbc9ffeb",
+    "repository_head_at_audit": "41b9643029595c22e68223ed7e860da4d2b6040b",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
     "evidence": [
+      "2026-08-18 v809 candidate grounding: audit run 32134119010 / job 95701442104 mapped active warning callers; production signature/definition reads confirmed announcement and Drinks compatibility contracts plus canonical account/player runtime arguments. No production SQL mutation was performed.",
       "2026-08-18 live v808: exact-current health run 32123034385 job 95698011853 PASS across deployed routes, admin OAuth perimeter, Supabase auth data plane, primary+extended read-only acceptance and performance.",
       "2026-08-18 live v808: owner-isolation job 95698167836 PASS for Boerenbridge and Beerpong same-owner replay/cross-owner rejection with zero-residue cleanup; deep-live job 95698248548 PASS for multi-context/mobile/reconnect plus natural Pikken and Paardenrace completion with zero-residue cleanup.",
       "2026-08-18 live v808: independent authenticated visual closure run 32123034341 job 95667460019 PASS; 137 screenshots, zero broken after declared alias refinement, Family empty/named player routes proven, artifact 9319744233 sha256 b017cbb66811ebd8c3bd8daf9ec7083df12db082ae7d6af209ef19422dd81af9, manual review PASS, cleanup zero residue.",
@@ -44,7 +45,8 @@
       "2026-08-14 live v792: frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 completed its own Live deployment health run #60 successfully; later SQL-only repository audit head 141e7301944a79452eca9d354180a684249cdcd2 also passed Live deployment health without changing frontend VERSION.",
       "v793 candidate: full production screenshot audit found and repairs visible Klaverjas duplication, ladder game-key mismatch, stale game status RPC owners, Pikken spectator context loss and Rad stats aggregation failure; current release remains REVALIDATION_REQUIRED until post-deploy screenshots and gameplay are re-run."
     ],
-    "note": "v808 PASS: exact-current live health 32123034385/95698011853, owner isolation 32123034385/95698167836, deep gameplay 32123034385/95698248548, and authenticated visual closure 32123034341/95667460019 all passed. Visual artifact contains 137 screenshots and was manually reviewed; independent production residue sweep is zero. Certified product SHA 7f6f7bc110807e85f52ff4d54927620dbbc9ffeb."
+    "note": "v809 is a frontend-only release candidate over certified live v808. It replaces proven stale session and Drinks/announcement RPC payloads with current production contracts and removes redundant empty compatibility reads. No backend schema or gameplay rule changes. Fresh exact-current health and authenticated warning/visual proof are required before PASS.",
+    "release_candidate_version": "v809"
   },
   "baseline_checks": [
     {

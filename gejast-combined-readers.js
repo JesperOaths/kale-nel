@@ -34,7 +34,7 @@
       return writeCache(HOMEPAGE_BUNDLE_CACHE_KEY, value);
     } catch (_) {
       const [homepageState, extraPoll, ladders, drinksHome, drinksTop5, liveEntries] = await Promise.allSettled([
-        RPC.callRpc('get_gejast_homepage_state', { session_token: sessionToken }).catch(() => RPC.callRpc('get_public_state', { session_token: sessionToken })),
+        RPC.callRpc('get_gejast_homepage_state', { session_token: sessionToken }).catch(() => RPC.callRpc('account_public_state_v687', { session_token_input: sessionToken, site_scope_input: RPC.getScope() })),
         RPC.callRpc('get_site_poll_state', { poll_key_input: 'gejast_drinks_donderdag', session_token: sessionToken }).catch(() => ({})),
         RPC.callRpc('get_homepage_ladders_public_scoped', {}),
         RPC.callRpc('get_drinks_homepage_public_scoped', {}),

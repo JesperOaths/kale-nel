@@ -147,7 +147,7 @@
     try { await storeActivePlayerMetadata({player_name_input:data?.display_name||data?.player_name||name, event_type_input:'login_success', event_source_input:'login.html', session_token_input:data?.session_token||null, metadata_input:activePlayerMeta({event:'login_success'})}); } catch (_) {}
     return data;
   }
-  async function getPublicState(){ const token=playerToken(); if(!token) return null; try{ return await rpcFirst([{name:'get_public_state', body:{session_token:token}, options:{timeoutMs:1200}},{name:'account_public_state_v687', body:{session_token_input:token}, options:{timeoutMs:1200}}]); }catch(_){ return null; } }
+  async function getPublicState(){ const token=playerToken(); if(!token) return null; try{ return await rpc('account_public_state_v687', {session_token_input:token, site_scope_input:scope()}, {timeoutMs:1200}); }catch(_){ return null; } }
   function storageProbe(kind){
     try {
       const s = kind === 'session' ? sessionStorage : localStorage;
