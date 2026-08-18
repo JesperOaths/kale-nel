@@ -1,0 +1,172 @@
+name: Apply v806 release-finalization candidate 5
+
+on:
+  push:
+    branches: [agent/v806-release-finalization]
+    paths: ['.github/workflows/v806-apply-runtime-cleanup5.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v806-release-finalization
+          fetch-depth: 0
+      - name: Record run identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .proof
+          printf '%s.%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > .proof/v806-apply5-run-id.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .proof/v806-apply5-run-id.txt
+          git commit -m 'test: record v806 candidate 5 run'
+          git push origin HEAD:agent/v806-release-finalization
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Reconstruct v806 candidate workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import textwrap
+          base=Path('.github/workflows/v806-apply-runtime-cleanup.yml').read_text()
+          def extract(text,start_marker,end_marker,start_at=0):
+              start=text.index(start_marker,start_at)+len(start_marker)
+              end=text.index(end_marker,start)
+              return textwrap.dedent(text[start:end])
+          py=extract(base,"          python3 <<'PY'\n","\n          PY")
+          ns={}; exec(compile(py,'v806-grounded-transform.py','exec'),ns,ns)
+          Path('gejast-home-gate.js').write_text(extract(base,"          cat > gejast-home-gate.js <<'JS'\n","\n          JS"))
+          Path('check-v806-release-finalization.mjs').write_text(extract(base,"          cat > check-v806-release-finalization.mjs <<'JS'\n","\n          JS"))
+          wf3=Path('.github/workflows/v806-apply-runtime-cleanup3.yml').read_text()
+          pos=wf3.index('      - name: Bypass known-broken profile helper through healthy scoped readers')
+          profile_py=extract(wf3,"          python3 <<'PY'\n","\n          PY",pos)
+          ns={}; exec(compile(profile_py,'v806-profile-fallback.py','exec'),ns,ns)
+          PY
+          printf 'v806\n' > VERSION
+          node fix-version-drift.mjs
+      - name: Reconcile fail-closed release and beta-readiness metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'JS'
+          const fs=require('fs');
+          const cert=JSON.parse(fs.readFileSync('release-certification.json','utf8'));
+          cert.current_version='v806';
+          cert.status='REVALIDATION_REQUIRED';
+          cert.reason='v806 release-finalization candidate: canonical player session/RPC contracts, Family-safe runtime URLs, healthy profile-reader fallback, and deterministic browser CI. v805 remains immutably frozen as v805-certified-20260818. v806 cannot be PASS before exact-current candidate and post-merge evidence.';
+          cert.current_evidence={...(cert.current_evidence||{}),candidate_version:'v806',candidate_status:'SOURCE_REVALIDATION_IN_PROGRESS',certified_v805_commit:'b64a116f2b2684d1fbd475b40c2b76f569d40942',certified_v805_tag:'v805-certified-20260818',certified_v805_release_freeze_run:32089112972,certified_v805_toepen_rest_run:32084142660,certified_v805_health_run:32084207898,certified_v805_deep_live_run:32085432145,certified_v805_visual_run:32085275503,certified_v805_visual_sha256:'7757d1e51ae99152ee730efb640a27566a28d05eb2d635957bf40f40118495c5'};
+          cert.required_next=['Prove v806 candidate browser regression against production RPC contracts without changing production schema.','Merge only after candidate checks pass; then rerun exact-current live health, authenticated full visual/manual review, deep gameplay, ownership isolation and zero-residue proof.','Keep the separately prepared v806a backend ambiguity repairs undeployed until explicitly authorized.','Set PASS only after all v806 post-merge evidence is complete.'];
+          fs.writeFileSync('release-certification.json',JSON.stringify(cert,null,2)+'\n');
+
+          const checklist=JSON.parse(fs.readFileSync('beta-live-write-checklist.json','utf8'));
+          checklist.site_version='v806';
+          if(!Array.isArray(checklist.items)||checklist.items.length!==0) throw new Error('v806 live-write checklist must remain unarmed');
+          fs.writeFileSync('beta-live-write-checklist.json',JSON.stringify(checklist,null,2)+'\n');
+
+          const ready=JSON.parse(fs.readFileSync('beta-readiness.json','utf8'));
+          ready.site_version='release candidate v806 / live v805';
+          ready.last_updated='2026-08-18';
+          ready.deployment_identity={
+            ...(ready.deployment_identity||{}),
+            status:'verified_complete',
+            live_version:'v805',
+            frontend_release_merge:'b64a116f2b2684d1fbd475b40c2b76f569d40942',
+            repository_head_at_audit:'b64a116f2b2684d1fbd475b40c2b76f569d40942',
+            release_candidate_version:'v806',
+            note:'Release candidate v806 / live certified v805. v805 is frozen by tag v805-certified-20260818 after Toepen v801a production closure, exact-current health, deep gameplay, authenticated 137-screenshot visual review and independent zero-residue proof. v806 is not yet promoted and remains REVALIDATION_REQUIRED pending candidate and post-merge evidence.'
+          };
+          ready.deployment_identity.evidence=Array.isArray(ready.deployment_identity.evidence)?ready.deployment_identity.evidence:[];
+          ready.deployment_identity.evidence.unshift('2026-08-18 certified live v805: immutable tag v805-certified-20260818 pins b64a116f2b2684d1fbd475b40c2b76f569d40942. Toepen v801a migration 20260818001412 is deployed; public REST owner/scope proof 32084142660 PASS, post-migration health 32084207898 PASS, deep-live 32085432145 PASS, authenticated visual 32085275503 PASS with 137 screenshots manually reviewed, and independent controlled-fixture residue is zero.');
+          const gap=(ready.beta_gaps||[]).find(x=>x.id==='toepen_backend_live');
+          if(!gap) throw new Error('toepen readiness gap missing');
+          gap.status='verified_complete';
+          gap.proof_needed='Complete: production migration 20260818001412 deploys the v801a idempotency owner/scope guard. Same-owner replay remains idempotent; cross-owner replay, invalid session and wrong scope fail closed through the public PostgREST path.';
+          gap.next_action='No Toepen backend action required unless the create_toepen_game ownership/idempotency contract changes.';
+          gap.latest_probe='2026-08-18: production v801a public REST proof 32084142660 / 95553027731 PASS; same-owner replay returned the same game with already_saved=true, unrelated owner was rejected with toepen_game_owner_mismatch, invalid session and wrong scope failed closed, and cleanup plus independent residue verification returned zero.';
+          const liveGate=(ready.baseline_checks||[]).find(x=>x.id==='live_write_safety_gate');
+          if(liveGate) liveGate.evidence='The live-write checklist remains fully disarmed with zero automated mutation targets. The previously permission-gated Toepen v801a repair was explicitly authorized, deployed as migration 20260818001412 and production-proven on 2026-08-18; no permission-gated beta gap remains.';
+          fs.writeFileSync('beta-readiness.json',JSON.stringify(ready,null,2)+'\n');
+
+          const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+          const needle='node check-v805-paardenrace-native-poll-owner.mjs';
+          if(!pkg.scripts['verify:static'].includes('check-v806-release-finalization.mjs')) pkg.scripts['verify:static']=pkg.scripts['verify:static'].replace(needle,needle+' && node check-v806-release-finalization.mjs');
+          fs.writeFileSync('package.json',JSON.stringify(pkg,null,2)+'\n');
+          JS
+
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('check-beta-readiness-current-v770d.mjs'); s=p.read_text()
+          old="""const toepenGap = gaps.get('toepen_backend_live');
+if (toepenGap?.status !== 'needs_permission') failures.push('toepen_backend_live must remain explicitly needs_permission until the live-proven v801a repair is authorized and deployed');
+if (!/v801a/i.test(String(toepenGap?.next_action || ''))) failures.push('Toepen permission blocker must name the v801a deployment action');
+const blocked = [...gaps.values()].filter((item) => item.status === 'blocked_external');
+const permission = [...gaps.values()].filter((item) => item.status === 'needs_permission');
+const permissionIds = permission.map((item) => item.id).sort();
+if (blocked.length) failures.push(`tracker unexpectedly has blocked_external gaps: ${blocked.map((item) => item.id).join(', ')}`);
+if (JSON.stringify(permissionIds) !== JSON.stringify(['toepen_backend_live'])) failures.push(`expected only Toepen to be permission-gated, got: ${permissionIds.join(', ') || '(none)'}`);
+const completeCount = [...gaps.values()].filter((item) => item.status === 'verified_complete').length;
+if (completeCount !== 11 || permission.length !== 1) failures.push(`expected current readiness split 11 complete / 1 permission-gated, got ${completeCount} / ${permission.length}`);"""
+          new="""const toepenGap = gaps.get('toepen_backend_live');
+if (toepenGap?.status !== 'verified_complete') failures.push('toepen_backend_live must remain verified_complete after the explicitly authorized production v801a deployment');
+const toepenProof = [toepenGap?.proof_needed,toepenGap?.latest_probe].map(String).join(' ');
+if (!/20260818001412|32084142660/.test(toepenProof)) failures.push('Toepen completion must retain production migration/public-REST proof evidence');
+const blocked = [...gaps.values()].filter((item) => item.status === 'blocked_external');
+const permission = [...gaps.values()].filter((item) => item.status === 'needs_permission');
+if (blocked.length) failures.push(`tracker unexpectedly has blocked_external gaps: ${blocked.map((item) => item.id).join(', ')}`);
+if (permission.length) failures.push(`tracker unexpectedly has permission-gated gaps after v801a closure: ${permission.map((item) => item.id).join(', ')}`);
+const completeCount = [...gaps.values()].filter((item) => item.status === 'verified_complete').length;
+if (completeCount !== 12) failures.push(`expected current readiness split 12 complete / 0 permission-gated, got ${completeCount} / ${permission.length}`);"""
+          if old not in s: raise SystemExit('beta readiness Toepen checker target missing')
+          p.write_text(s.replace(old,new,1))
+          PY
+
+          cat >> check-v806-release-finalization.mjs <<'JS'
+          const profileSource=read('gejast-profile-source.js');
+          assert(!profileSource.includes("RPC.callRpc('get_public_player_unified_scoped'"),'profile source must bypass known-broken unified profile RPC');
+          const combined=read('gejast-combined-readers.js');
+          assert(!combined.includes("RPC.callRpc('get_player_page_bundle_scoped'")&&!combined.includes("RPC.callRpc('get_public_player_unified_scoped'"),'combined reader must bypass broken player bundle/unified RPCs');
+          const cert=JSON.parse(read('release-certification.json'));
+          assert(cert.current_version==='v806'&&cert.status==='REVALIDATION_REQUIRED','v806 certification must remain fail-closed before live revalidation');
+          const liveWrite=JSON.parse(read('beta-live-write-checklist.json'));
+          assert(liveWrite.site_version==='v806'&&Array.isArray(liveWrite.items)&&liveWrite.items.length===0,'v806 live-write checklist must track version and remain unarmed');
+          const readiness=JSON.parse(read('beta-readiness.json'));
+          const toepen=(readiness.beta_gaps||[]).find(x=>x.id==='toepen_backend_live');
+          assert(readiness.deployment_identity?.release_candidate_version==='v806'&&readiness.deployment_identity?.live_version==='v805','readiness must distinguish v806 candidate from certified live v805');
+          assert(toepen?.status==='verified_complete'&&String(toepen.latest_probe||'').includes('32084142660'),'readiness must preserve proven Toepen v801a production closure');
+          console.log('PASS v806 healthy profile fallback and reconciled release/readiness truth');
+          JS
+          node check-v806-release-finalization.mjs
+          node check-beta-readiness-current-v770d.mjs
+          node check-release-certification-state.mjs
+          node check-live-write-safety-v770e.mjs
+          node check-version-drift.mjs
+      - name: Run full canonical verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run verify
+      - name: Commit verified product candidate only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          rm -f .github/workflows/v806-apply-runtime-cleanup.yml .github/workflows/v806-apply-runtime-cleanup2.yml .github/workflows/v806-apply-runtime-cleanup3.yml .github/workflows/v806-apply-runtime-cleanup4.yml .github/workflows/v806-apply-runtime-cleanup5.yml .github/workflows/v806-warning-diagnostic.yml .github/workflows/v806-observe-cleanup.yml
+          rm -rf .proof
+          git add -A
+          git status --short
+          git commit -m 'fix: finalize v806 runtime contracts and browser CI'
+          git push origin HEAD:agent/v806-release-finalization
+          echo 'RESULT=V806_RUNTIME_CANDIDATE_COMMITTED'
