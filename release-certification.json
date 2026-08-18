@@ -1,25 +1,21 @@
 {
   "schema_version": 1,
-  "current_version": "v809",
+  "current_version": "v810",
   "status": "REVALIDATION_REQUIRED",
   "previous_certified_version": "v808",
   "previous_certified_product_sha": "7f6f7bc110807e85f52ff4d54927620dbbc9ffeb",
   "previous_certified_release_branch": "release/v808-certified-20260818",
-  "verified_candidate_runtime_sha": "fba9a55e153e162ba97b294e530f8cddfdf470fc",
-  "candidate_builder_static_verification": "PASS",
-  "reason": "v809 removes proven frontend/PostgREST contract drift and redundant empty compatibility reads. Fresh exact-current v809 live health and browser warning evidence are required before PASS.",
+  "superseded_uncertified_version": "v809",
+  "superseded_uncertified_product_sha": "6b2e28175aa07705945db42107cff112800864b7",
+  "reason": "v810 disambiguates the production get_player_runtime_bundle_v687 overload by sending player_name_input, player_input and site_scope_input explicitly. v809 browser proof showed the stale 404 families were removed but the two-argument player bundle call returned HTTP 300.",
   "remaining_release_blockers": [
-    "Fresh exact-current v809 live health must pass.",
-    "Targeted authenticated browser proof must show the repaired RPC owners no longer emit their prior 404s.",
-    "Fresh visual/runtime regression evidence and cleanup must pass before certification."
+    "Fresh exact-current v810 live health must pass.",
+    "Authenticated browser proof must show get_player_runtime_bundle_v687 succeeds and the v809 repaired stale RPC families remain clean.",
+    "Fresh visual/runtime evidence and independent zero-residue cleanup are required before PASS."
   ],
   "required_next": [
     "Merge only after canonical verification.",
-    "Run exact-current v809 health and targeted warning diagnostics.",
-    "Run authenticated visual/runtime closure and independently confirm zero controlled residue before PASS."
-  ],
-  "previous_certification_snapshot": {
-    "certified_at": "2026-08-18",
-    "visual_artifact_sha256": "b017cbb66811ebd8c3bd8daf9ec7083df12db082ae7d6af209ef19422dd81af9"
-  }
+    "Run exact-current v810 health plus targeted authenticated RPC proof.",
+    "Run full authenticated visual audit and independently confirm zero controlled residue before certification."
+  ]
 }

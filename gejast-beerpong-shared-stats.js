@@ -43,6 +43,6 @@
     style.textContent = '.bp-stat-card{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:20px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.04)}.bp-stat-card h3{margin:0 0 12px;font-size:18px}.bp-stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.bp-stat-grid div{background:#faf7ef;border-radius:14px;padding:10px}.bp-stat-grid span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8a7a55;font-weight:800}.bp-stat-grid strong{display:block;margin-top:4px;font-size:20px}.bp-muted,.bp-error{padding:14px;border-radius:16px;background:#fff;border:1px solid rgba(0,0,0,.08);color:#6b6257}.bp-error{color:#8b2d20}@media(max-width:640px){.bp-stat-grid{grid-template-columns:1fr 1fr}}';
     document.head.appendChild(style);
   }
-  window.GEJAST_BEERPONG_SHARED_STATS = { VERSION:'v809', loadLeaderboard, loadMine, installStyles };
+  window.GEJAST_BEERPONG_SHARED_STATS = { VERSION:'v810', loadLeaderboard, loadMine, installStyles };
   document.addEventListener('DOMContentLoaded', installStyles, { once:true });
 })();
