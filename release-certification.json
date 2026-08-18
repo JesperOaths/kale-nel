@@ -1,52 +1,36 @@
 {
   "schema_version": 1,
   "current_version": "v805",
-  "status": "REVALIDATION_REQUIRED",
-  "prior_certification": {
-    "version": "v792",
-    "issue": 131,
-    "artifact": "final-acceptance-v792.json"
+  "status": "PASS",
+  "certified_at": "2026-08-18",
+  "certified_product_sha": "b64a116f2b2684d1fbd475b40c2b76f569d40942",
+  "certified_release_branch": "release/v805-certified-20260818",
+  "final_acceptance_artifact": "final-acceptance-v805.json",
+  "production_backend": {
+    "supabase_project_id": "uiqntazgnrxwliaidkmy",
+    "latest_migration_version": "20260818001412",
+    "latest_migration_name": "gejast_v801a_toepen_idempotency_owner_guard"
   },
-  "current_audit_issue": 153,
-  "reason": "v805 is a release candidate removing the redundant legacy v725 Paardenrace room-state monitor after exact-live v804 proof measured five room-state calls in 4.6 seconds: three are owned by the native live page (immediate + 1800ms poll) and two by the weaker compatibility monitor. v805 retains the stronger native insufficient-player recovery and removes the duplicate compatibility reads. Exact-v804 live health passed, but exact-current authenticated visual/live-write certification remains blocked by Supabase data-plane timeouts, and SQL-only Toepen v801a remains undeployed pending explicit authorization.",
-  "current_evidence": {
-    "frontend_version": "v803",
-    "live_frontend_version": "v803",
-    "live_frontend_merge": "4bb1af4e1c5f285da8f755579e1e5998e0d38554",
-    "v803_homepage_request_cadence_inventory_run": 31981237343,
-    "v803_legacy_repair_load_graph_run": 31981327145,
-    "inherited_v801_full_visual_audit_run": 31943987257,
-    "inherited_v801_phase1_live_auth_gameplay_run": 31944683360,
-    "inherited_v801_phase2_deep_live_run": 31952351394,
-    "toepen_owner_defect_control_run": 31952921912,
-    "v801a_rollback_only_schema_proof_run": 31953380650,
-    "inherited_v801_postmerge_live_health_run": 31953491375,
-    "inherited_v801_klaverjas_postgres_persistence_run": 31953687334,
-    "inherited_v801_klaverjas_postgres_roem_run": 31953687328,
-    "inherited_v801_klaverjas_postgres_recovery_run": 31953687352,
-    "v802_visual_audit_status": "FAILED_BEFORE_SCREENSHOTS_SUPABASE_DATA_PLANE",
-    "v802_live_deployment_health_run": 31974690719,
-    "v802_visual_audit_run": 31974690727,
-    "v802_visual_artifact": null,
-    "v802_visual_cleanup_status": "UNVERIFIED_DATA_PLANE_TIMEOUT",
-    "audited_repository_head": "4bb1af4e1c5f285da8f755579e1e5998e0d38554",
-    "v803_live_deployment_health_run": 31981729447,
-    "v803_live_deployment_health_attempt": 2,
-    "v803_fresh_live_homepage_cadence_run": 31982033700,
-    "v803_fresh_live_homepage_cadence_result": "PASS_DESKTOP_1_AT_598MS_MOBILE_1_AT_449MS_ZERO_AFTER_3S",
-    "v803_visual_audit_run": 31981729455,
-    "v803_visual_audit_status": "FAILED_BEFORE_SCREENSHOTS_SUPABASE_DATA_PLANE",
-    "v803_visual_artifact": null,
-    "v803_visual_cleanup_status": "UNVERIFIED_DATA_PLANE_TIMEOUT",
-    "candidate_version": "v805",
-    "candidate_status": "SOURCE_VERIFICATION_PENDING_THEN_DEPLOYMENT_REVALIDATION",
-    "v804_live_deployment_health_run": 31984946122,
-    "v804_live_cadence_diagnostic_run": 31985032771
+  "authoritative_evidence": {
+    "post_restart_health_run": 32080416102,
+    "owner_isolation_run": 32078012416,
+    "toepen_v801a_public_rest_run": 32084142660,
+    "post_v801a_health_run": 32084207898,
+    "post_v801a_deep_live_run": 32085432145,
+    "post_v801a_visual_run": 32085275503,
+    "post_v801a_visual_job": 95556413880,
+    "post_v801a_visual_screenshots": 137,
+    "post_v801a_visual_manual_review": "PASS",
+    "post_v801a_visual_artifact_id": 9306774932,
+    "post_v801a_visual_artifact_sha256": "7757d1e51ae99152ee730efb640a27566a28d05eb2d635957bf40f40118495c5",
+    "final_disposable_residue": 0
   },
-  "required_next": [
-    "Restore reliable production Supabase data-plane access, then rerun the exact-current full live visual audit through authenticated Friends/Family fixture provisioning, screenshot capture, artifact upload, zero-residue cleanup and manual screenshot review.",
-    "Once the data plane is reliable, rerun exact-current live Boerenbridge/Beerpong owner-isolation and the remaining deep Phase-2 live-write campaign with explicit zero-residue cleanup.",
-    "Obtain explicit authorization before applying GEJAST_v801a_toepen_idempotency_owner_guard.sql to production Supabase.",
-    "After any authorized v801a deployment, prove same-owner Toepen idempotency still returns the same game while unrelated-owner, invalid-session and wrong-scope replay fail closed, with zero residue, then rerun exact-current live health/deep gameplay before considering PASS."
-  ]
+  "closed_blockers": [
+    "Supabase data-plane outage recovered after authorized project restart and exact-current health revalidation.",
+    "GEJAST_v801a_toepen_idempotency_owner_guard was explicitly authorized, deployed as migration 20260818001412, and proven through public PostgREST.",
+    "Exact-current authenticated visual certification completed with artifact upload, manual review and zero-residue cleanup.",
+    "Exact-current deep Phase-2 gameplay and Boerenbridge/Beerpong owner-isolation completed with zero residue."
+  ],
+  "remaining_release_blockers": [],
+  "required_next": []
 }
