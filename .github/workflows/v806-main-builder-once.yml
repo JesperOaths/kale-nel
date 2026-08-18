@@ -1,16 +1,16 @@
 name: One-shot v806 branch builder
 
 on:
-  push:
+  pull_request:
     branches: [main]
     paths: ['.github/workflows/v806-main-builder-once.yml']
 
-# Triggered after workflow installation so GitHub schedules the one-shot builder.
 permissions:
   contents: write
 
 jobs:
   build-v806:
+    if: github.head_ref == 'ops/run-one-shots-via-pr'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -22,6 +22,19 @@ jobs:
         with:
           node-version: '24'
           cache: npm
+      - name: Rebase candidate onto exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin main
+          git merge --no-edit origin/main
+      - name: Record stale RPC caller inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -RIn --exclude-dir=.git --exclude='*.sql' --exclude='*.md' --exclude='*.json' -E 'get_public_state|player_touch_session|get_player_site_announcements_scoped|track_site_event|get_all_pending_drink_event_verifications_public|get_drink_event_vote_queue_public|get_public_player_unified_scoped|save_game_match_summary|get_klaverjas_runtime_bundle_v687|cleanup_stale_paardenrace_rooms_v706|get_player_runtime_bundle_v687|paardenrace_cleanup_idle_lobbies_v495' . || true
       - name: Apply deterministic v806 patch
         shell: bash
         run: |
@@ -71,8 +84,6 @@ jobs:
           set -euo pipefail
           rm -f .github/workflows/prepare-v806-canonical-session-runtime.yml
           rm -f scripts/prepare-v806-canonical-session-runtime.py
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           git commit -m 'fix: canonicalize session runtime and family assets v806'
           git push origin HEAD:agent/v806-canonical-session-runtime
