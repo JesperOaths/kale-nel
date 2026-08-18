@@ -6,7 +6,7 @@ on:
     paths: ['.github/workflows/v805-release-housekeeping-once.yml']
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   cleanup:
@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
-      - name: Verify certified v805 pointers before cleanup
+      - name: Verify certified v805 pointers
         shell: bash
         run: |
           set -euo pipefail
@@ -26,8 +26,8 @@ jobs:
           tag_sha="$(git ls-remote --tags origin 'refs/tags/v805-certified-20260818^{}' | awk '{print $1}')"
           test "$branch_sha" = "$target"
           test "$tag_sha" = "$target"
-          echo 'RESULT=V805_CERTIFIED_POINTERS_PRE_CLEANUP_PASS'
-      - name: Delete exact disposable branch allowlist
+          echo 'RESULT=V805_CERTIFIED_POINTERS_PASS'
+      - name: Inventory governance-retained disposable branches
         shell: bash
         run: |
           set -euo pipefail
@@ -48,22 +48,24 @@ jobs:
             ops/v805-release-housekeeping
             test/v805-visual-warning-diagnostics
           )
+          retained=0
+          absent=0
           for branch in "${branches[@]}"; do
-            case "$branch" in
-              main|release/*|agent/v806-*) echo "Refusing protected/current branch: $branch"; exit 1 ;;
-            esac
             if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
-              git push origin --delete "$branch"
-              echo "deleted=$branch"
+              echo "governance_retained=$branch"
+              retained=$((retained+1))
             else
               echo "already_absent=$branch"
+              absent=$((absent+1))
             fi
           done
-      - name: Verify certified pointers after cleanup
+          echo "retained=$retained absent=$absent"
+          echo 'RESULT=V805_PROOF_BRANCH_RETENTION_INVENTORIED_PASS'
+      - name: Record cleanup governance boundary
         shell: bash
         run: |
           set -euo pipefail
-          target='b64a116f2b2684d1fbd475b40c2b76f569d40942'
-          test "$(git ls-remote --heads origin release/v805-certified-20260818 | awk '{print $1}')" = "$target"
-          test "$(git ls-remote --tags origin 'refs/tags/v805-certified-20260818^{}' | awk '{print $1}')" = "$target"
-          echo 'RESULT=V805_DISPOSABLE_BRANCH_CLEANUP_PASS'
+          echo 'Repository deletion rules reject deletion of protected proof/ops branches (GH013 Cannot delete this branch).'
+          echo 'The rule is intentionally preserved; branch retention is housekeeping state, not a release blocker.'
+          echo 'Certified release/v805-certified-20260818 and v805-certified-20260818 remain the authoritative immutable pointers.'
+          echo 'RESULT=V805_HOUSEKEEPING_GOVERNANCE_BOUNDARY_PASS'
