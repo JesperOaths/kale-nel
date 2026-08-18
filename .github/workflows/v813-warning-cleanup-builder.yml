@@ -1,0 +1,144 @@
+name: v813 warning cleanup builder
+
+on:
+  push:
+    branches: [agent/v813-warning-cleanup]
+    paths: ['.github/workflows/v813-warning-cleanup-builder.yml']
+
+permissions:
+  contents: write
+
+env:
+  BASE_SHA: 710213fabda6dc520aa6f92696b918d221e29866
+  TARGET_BRANCH: agent/v813-warning-cleanup
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v813-warning-cleanup
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Build exact v813 warning cleanup candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          unexpected="$(git diff --name-only "$BASE_SHA"..HEAD | grep -Ev '^\.github/workflows/v813-warning-cleanup-builder\.yml$' || true)"
+          test -z "$unexpected" || { echo 'Unexpected branch drift:'; echo "$unexpected"; exit 1; }
+          printf 'v813\n' > VERSION
+          python3 <<'PY'
+          from pathlib import Path
+          import json
+
+          # Analytics: always select the proven 15-argument event-only overload.
+          p=Path('site-analytics.js'); s=p.read_text()
+          old="""    const normalizedPayload = Object.assign({}, payload || {});
+    if (Object.prototype.hasOwnProperty.call(normalizedPayload, 'site_scope')) {
+      normalizedPayload.extra = Object.assign({}, normalizedPayload.extra || {}, { site_scope: normalizedPayload.site_scope });
+      delete normalizedPayload.site_scope;
+    }
+    const body = JSON.stringify(normalizedPayload);
+"""
+          new="""    const normalizedPayload = Object.assign({}, payload || {});
+    const richMetadataKeys = ['site_scope','event_category','event_label','page_url','is_logged_in','player_name','is_admin'];
+    for (const key of richMetadataKeys) {
+      if (!Object.prototype.hasOwnProperty.call(normalizedPayload, key)) continue;
+      normalizedPayload.extra = Object.assign({}, normalizedPayload.extra || {}, { [key]: normalizedPayload[key] });
+      delete normalizedPayload[key];
+    }
+    const body = JSON.stringify(normalizedPayload);
+"""
+          if old not in s: raise SystemExit('v812 analytics normalization block missing')
+          p.write_text(s.replace(old,new,1))
+
+          # Homepage: skip the timeout-prone aggregate and use the already-shipped resilient component reads directly.
+          p=Path('gejast-combined-readers.js'); s=p.read_text()
+          start=s.index('  async function loadHomepageBootBundle() {')
+          end=s.index('\n\n  async function loadPlayerPageBundle', start)
+          replacement="""  async function loadHomepageBootBundle() {
+    const cached = readCache(HOMEPAGE_BUNDLE_CACHE_KEY, HOMEPAGE_BUNDLE_TTL);
+    if (cached) return cached;
+    const sessionToken = RPC.getSessionToken();
+    const [homepageState, extraPoll, ladders, drinksHome, drinksTop5, liveEntries] = await Promise.allSettled([
+      RPC.callRpc('get_gejast_homepage_state', { session_token: sessionToken }).catch(() => RPC.callRpc('account_public_state_v687', { session_token_input: sessionToken, site_scope_input: RPC.getScope() })),
+      RPC.callRpc('get_site_poll_state', { poll_key_input: 'gejast_drinks_donderdag', session_token: sessionToken }).catch(() => ({})),
+      RPC.callRpc('get_homepage_ladders_public_scoped', {}),
+      RPC.callRpc('get_drinks_homepage_public_scoped', {}),
+      RPC.callRpc('get_drinks_homepage_top5_public_scoped', {}),
+      RPC.callRpc('get_homepage_live_state_public_scoped', { session_token: sessionToken }).catch(() => RPC.callRpc('get_homepage_live_state_public', { session_token: sessionToken }))
+    ]);
+    return writeCache(HOMEPAGE_BUNDLE_CACHE_KEY, {
+      homepage_state: homepageState.status === 'fulfilled' ? homepageState.value : {},
+      extra_poll_state: extraPoll.status === 'fulfilled' ? extraPoll.value : {},
+      ladders: ladders.status === 'fulfilled' ? ladders.value : {},
+      drinks_home: drinksHome.status === 'fulfilled' ? drinksHome.value : {},
+      drinks_top5: drinksTop5.status === 'fulfilled' ? drinksTop5.value : {},
+      live_entries: liveEntries.status === 'fulfilled' ? liveEntries.value : {},
+      perf_hints: {
+        defer_drinks_top5_rotation: true,
+        defer_ladders_until_visible: RPC.getScope() === 'family' ? false : true,
+        chunk_profile_cards: true
+      }
+    });
+  }"""
+          p.write_text(s[:start]+replacement+s[end:])
+
+          Path('check-v813-warning-cleanup.mjs').write_text("""#!/usr/bin/env node
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const version=fs.readFileSync('VERSION','utf8').trim();
+assert(Number(version.replace(/^v/i,''))>=813,'v813+ required');
+const analytics=fs.readFileSync('site-analytics.js','utf8');
+assert(analytics.includes("const richMetadataKeys = ['site_scope','event_category','event_label','page_url','is_logged_in','player_name','is_admin']"),'analytics rich metadata normalization missing');
+assert(analytics.includes('normalizedPayload.extra = Object.assign({}, normalizedPayload.extra || {}, { [key]: normalizedPayload[key] })'),'rich analytics metadata must be preserved in extra');
+assert(analytics.includes('delete normalizedPayload[key]'),'rich analytics keys must be removed before RPC serialization');
+const readers=fs.readFileSync('gejast-combined-readers.js','utf8');
+const home=readers.slice(readers.indexOf('async function loadHomepageBootBundle'), readers.indexOf('async function loadPlayerPageBundle'));
+assert(!home.includes("callRpc('get_homepage_boot_bundle_scoped'"),'active homepage reader must not call timeout-prone aggregate bundle');
+for(const rpc of ['get_gejast_homepage_state','get_site_poll_state','get_homepage_ladders_public_scoped','get_drinks_homepage_public_scoped','get_drinks_homepage_top5_public_scoped','get_homepage_live_state_public_scoped']) assert(home.includes(`callRpc('${rpc}'`),`homepage resilient component read missing: ${rpc}`);
+console.log('PASS v813 analytics/homepage warning cleanup');
+""")
+
+          pkg=Path('package.json'); data=json.loads(pkg.read_text()); script=data['scripts']['verify:static']
+          anchor='node check-v812-player-profile-runtime-cleanup.mjs'; addition='node check-v813-warning-cleanup.mjs'
+          if addition not in script:
+            if anchor not in script: raise SystemExit('v812 verify anchor missing')
+            script=script.replace(anchor,anchor+' && '+addition)
+          data['scripts']['verify:static']=script; pkg.write_text(json.dumps(data,indent=2,ensure_ascii=False)+'\n')
+
+          for name in ['beta-live-write-checklist.json','gameplay-acceptance.json']:
+            path=Path(name); obj=json.loads(path.read_text()); obj['site_version']='v813'
+            if name=='gameplay-acceptance.json': obj['last_updated']='2026-08-18'
+            path.write_text(json.dumps(obj,indent=2,ensure_ascii=False)+'\n')
+
+          cert={
+            'schema_version':1,'current_version':'v813','status':'REVALIDATION_REQUIRED',
+            'previous_certified_version':'v808','previous_certified_product_sha':'7f6f7bc110807e85f52ff4d54927620dbbc9ffeb','previous_certified_release_branch':'release/v808-certified-20260818',
+            'superseded_uncertified_version':'v812','superseded_uncertified_product_sha':'710213fabda6dc520aa6f92696b918d221e29866',
+            'reason':'v813 removes two proven warning sources without backend mutation: analytics now preserves rich metadata inside extra while selecting the working 15-argument track_site_event overload, avoiding the broken 21-argument visitor_id ambiguity; the desktop homepage now uses the already-shipped resilient component reads directly instead of first invoking the timeout-prone aggregate bundle and then duplicating the same reads on failure.',
+            'remaining_release_blockers':['Complete exact-v812 visual warning attribution and fold any additional safe frontend caller repairs into v813 before merge.','Run canonical verification and dependency audit on the final v813 candidate.','After merge, run exact-current health, strict authenticated runtime diagnostics, deep gameplay, full authenticated visual audit, manual review and independent zero-residue proof before PASS.'],
+            'required_next':['Do not merge until the v812 full visual report has been inspected.','Require every repaired analytics response to be 2xx and zero calls to the retired/broken aggregate player/homepage RPCs where applicable.','Promote only after all final evidence is green.']
+          }
+          Path('release-certification.json').write_text(json.dumps(cert,indent=2,ensure_ascii=False)+'\n')
+          rpath=Path('beta-readiness.json'); r=json.loads(rpath.read_text()); r['site_version']='release candidate v813 / live v812 / certified rollback v808'; r['last_updated']='2026-08-18'
+          ident=r.setdefault('deployment_identity',{}); ident['status']='ready_to_test'; ident['live_version']='v812'; ident['release_candidate_version']='v813'; ident['frontend_release_merge']='710213fabda6dc520aa6f92696b918d221e29866'; ident['repository_head_at_audit']='710213fabda6dc520aa6f92696b918d221e29866'; ident['note']='v813 is a frontend-only warning cleanup grounded in exact-v812 live API/Postgres evidence: the rich analytics overload executes with visitor_id ambiguity, while the homepage aggregate can time out before its existing component fallback. Rich analytics fields remain preserved in extra; homepage component data sources remain unchanged.'
+          rpath.write_text(json.dumps(r,indent=2,ensure_ascii=False)+'\n')
+          PY
+          node fix-version-drift.mjs
+          node check-v813-warning-cleanup.mjs
+          rm -f .github/workflows/v813-warning-cleanup-builder.yml
+          npm ci
+          npm run verify
+          npm audit --omit=dev --audit-level=high
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: remove proven runtime warning sources v813'
+          git push origin HEAD:"$TARGET_BRANCH"
+          echo 'RESULT=V813_WARNING_CLEANUP_BUILDER_PASS'
