@@ -1,0 +1,13 @@
+name: cancel obsolete pre-v812c certification
+on:
+  push:
+    branches: [proof/cancel-pre-v812c-cert-20260818]
+    paths: ['.github/workflows/cancel-pre-v812c-cert.yml']
+concurrency:
+  group: v812ab-final-certification-20260818
+  cancel-in-progress: true
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Obsolete pre-v812c certification cancelled; no production action.'
