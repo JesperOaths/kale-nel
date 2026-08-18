@@ -1,5 +1,5 @@
 (function(w){
-const K=w.GEJAST_KLAVERJAS_ONLINE;if(!K||w.GEJAST_KLAVERJAS_V750_POLISH)return;w.GEJAST_KLAVERJAS_V750_POLISH={VERSION:'v807'};
+const K=w.GEJAST_KLAVERJAS_ONLINE;if(!K||w.GEJAST_KLAVERJAS_V750_POLISH)return;w.GEJAST_KLAVERJAS_V750_POLISH={VERSION:'v808'};
 let remote=null,last=null,busy=false,timer=0;const SYM=K.SUIT_SYMBOLS||{hearts:'♥',spades:'♠',diamonds:'♦',clubs:'♣'},LAB=K.SUIT_LABELS||{hearts:'Harten',spades:'Schoppen',diamonds:'Ruiten',clubs:'Klaver',sans:'Sans'},COL=['#c7912d','#2563eb','#dc2626','#059669'];
 const $=id=>document.getElementById(id),q=s=>document.querySelector(s),qa=s=>Array.from(document.querySelectorAll(s));
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
