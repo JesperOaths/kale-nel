@@ -1,0 +1,37 @@
+# Kalenel v805 certified baseline — 2026-08-18
+
+Status: **PASS**
+
+Certified product commit: `b64a116f2b2684d1fbd475b40c2b76f569d40942`
+
+Permanent certified branch: `release/v805-certified-20260818`
+
+Production Supabase project: `uiqntazgnrxwliaidkmy`
+
+Final production migration: `20260818001412 — gejast_v801a_toepen_idempotency_owner_guard`
+
+## Authoritative evidence
+
+- Post-restart exact-current health: run `32080416102`, job `95542172881` — PASS.
+- Boerenbridge/Beerpong owner isolation: run `32078012416`, job `95535170700` — PASS; independent residue sweep zero.
+- Toepen v801a public PostgREST security proof: run `32084142660`, job `95553027731` — PASS. Same-owner replay remains idempotent; cross-owner, invalid-session and wrong-scope replay fail closed.
+- Post-v801a exact-current health: run `32084207898`, job `95553226539` — PASS.
+- Post-v801a deep live gameplay: run `32085432145`, job `95556873292` — PASS. Desktop/mobile contexts, reconnects, natural Pikken completion, natural Paardenrace completion, post-game session validity and zero-residue cleanup all passed.
+- Post-v801a authenticated visual audit: run `32085275503`, job `95556413880` — PASS after declared alias refinement. 137 screenshots captured and manually reviewed.
+- Visual artifact: ID `9306774932`, `postv801a-fast-visual-32085275503-1`, SHA-256 `7757d1e51ae99152ee730efb640a27566a28d05eb2d635957bf40f40118495c5`.
+
+## Final production state
+
+The final independent sweep found zero controlled players, sessions, metadata, Toepen games/participants/rounds/results, Klaverjas games, Pikken games, Paardenrace rooms and Paardenrace history rows. The two obsolete browser-install jobs were terminal before fixture provisioning, so no late test state remained possible.
+
+The deployed Toepen function still contains owner capture, owner rejection and scope capture after the final sweep. `anon` and `authenticated` retain the guarded RPC boundary while direct Toepen table mutation remains unavailable to those roles.
+
+## Certification boundary
+
+This record certifies the v805 product tree at the commit above. Subsequent product changes must not be described as v805-certified merely because they descend from this commit. They require a new version and fresh evidence. Test/documentation-only changes may preserve the certified product baseline when they do not alter shipped product behavior.
+
+The browser-facing player login gate is a fail-closed UI/runtime gate for the static site; it is not represented as byte-level edge protection of GitHub Pages assets. Admin assets remain separately protected by the Cloudflare GitHub OAuth perimeter and Supabase/TOTP inner boundary.
+
+## Result
+
+All known Phase-1 and Phase-2 certification blockers are closed. `final-acceptance-v805.json` and `release-certification.json` are the machine-readable release truth for this baseline.
