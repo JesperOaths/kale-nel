@@ -1,6 +1,7 @@
 name: Full live visual audit
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -21,12 +22,12 @@ permissions:
 
 concurrency:
   group: full-live-visual-audit
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   screenshot-every-page:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 35
     env:
       SUPABASE_URL: https://uiqntazgnrxwliaidkmy.supabase.co
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -35,6 +36,7 @@ jobs:
       GEJAST_SITE_SCOPE: friends
       GEJAST_VISUAL_TIMEOUT_MS: '25000'
       GEJAST_VISUAL_SETTLE_MS: '5000'
+
     steps:
       - name: Check out exact merged main
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -47,19 +49,37 @@ jobs:
           node-version: '24'
           cache: npm
 
-      - name: Install screenshot runtime
+      - name: Prepare deterministic system Chrome screenshot runtime
         shell: bash
         run: |
           set -euo pipefail
           test -n "${SUPABASE_SERVICE_ROLE_KEY:-}" || { echo 'SUPABASE_SERVICE_ROLE_KEY missing'; exit 1; }
           npm ci
-          npm install --no-save --package-lock=false playwright@1.55.0
-          npx playwright install --with-deps chromium
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.55.0
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || true)"
+          test -n "$chrome" || { echo 'GitHub runner system Chrome missing'; exit 1; }
+          echo "GEJAST_SYSTEM_CHROME=$chrome" >> "$GITHUB_ENV"
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('scripts/full-live-visual-audit-v792.mjs')
+          src = p.read_text()
+          old = "chromium.launch({ headless: true })"
+          new = "chromium.launch({ headless: true, executablePath: process.env.GEJAST_SYSTEM_CHROME })"
+          if old not in src:
+              raise SystemExit('visual Chromium launch patch target missing')
+          p.write_text(src.replace(old, new))
+          PY
           node --check scripts/full-live-visual-audit-v792.mjs
           node --check scripts/full-live-visual-fixtures-v801.mjs
           node --check scripts/refine-degraded-visual-report-v807.mjs
           node --check scripts/refine-expected-visual-aliases-v809.mjs
           node --check check-live-data-plane.mjs
+          "$chrome" --version
+          if grep -qE 'npx[[:space:]]+playwright[[:space:]]+install|playwright[[:space:]]+install[[:space:]]+--with-deps' .github/workflows/full-live-visual-audit-v792.yml; then
+            echo 'Unbounded Playwright browser download reintroduced.'
+            exit 1
+          fi
+          echo 'RESULT=VISUAL_SYSTEM_CHROME_RUNTIME_PASS'
 
       - name: Probe Supabase auth data plane before fixture provisioning
         id: data_plane
@@ -96,6 +116,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Screenshot and inspect every tracked live HTML page
+        id: visual
         if: always() && (steps.data_plane.outcome == 'failure' || steps.provision.outcome == 'success' || steps.provision.outcome == 'failure')
         continue-on-error: ${{ steps.provision.outcome == 'success' }}
         run: node scripts/full-live-visual-audit-v792.mjs
@@ -105,6 +126,7 @@ jobs:
         run: node scripts/refine-degraded-visual-report-v807.mjs
 
       - name: Refine declared authenticated redirect aliases
+        id: alias_refinement
         if: always() && steps.provision.outcome == 'success'
         run: node scripts/refine-expected-visual-aliases-v809.mjs
 
@@ -118,10 +140,7 @@ jobs:
           DEGRADED_FIXTURE_PROVISIONING
           The read-only Supabase data-plane preflight or disposable authenticated Friends/Family fixture provisioning failed.
           The audit continued with truly anonymous browser contexts: no player session token was seeded. Tracked gated routes therefore exercise the immediate no-session login boundary while admin routes still exercise the Cloudflare perimeter.
-          Auth-gated tracked routes that reach /login.html with only redirect-aborted request noise are classified as LOGIN-GATED, not WARN; raw failed-request evidence remains in report.json.
           This artifact is partial evidence only and MUST NOT be treated as authenticated visual certification or zero-residue proof.
-          If the preflight failed, no fixture provisioning write was attempted. If fixture provisioning itself failed after a healthy preflight, cleanup was still attempted for any partial run-specific state.
-          The workflow remains fail-closed until real fixture provisioning, contextual authenticated captures and cleanup succeed.
           EOF
 
       - name: Upload visual audit artifact
@@ -134,8 +153,31 @@ jobs:
           retention-days: 14
 
       - name: Cleanup disposable visual-audit state
+        id: cleanup
         if: always() && (steps.provision.outcome == 'success' || steps.provision.outcome == 'failure')
         shell: bash
         run: |
           set -euo pipefail
           node scripts/full-live-visual-fixtures-v801.mjs cleanup
+
+      - name: Enforce authenticated visual certification result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.data_plane.outcome }}" != 'success' ] || [ "${{ steps.provision.outcome }}" != 'success' ]; then
+            echo 'Authenticated visual certification unavailable: data-plane/provisioning did not succeed.'
+            exit 1
+          fi
+          test "${{ steps.alias_refinement.outcome }}" = 'success'
+          test "${{ steps.cleanup.outcome }}" = 'success'
+          test -f visual-audit/report.json
+          node <<'JS'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('visual-audit/report.json','utf8'));
+          const rows=Array.isArray(r.records)?r.records:(Array.isArray(r.routes)?r.routes:[]);
+          const broken=rows.filter(x=>String(x.judgement||x.status||'').toLowerCase()==='broken');
+          if(broken.length){ console.error(JSON.stringify(broken.slice(0,10),null,2)); process.exit(1); }
+          console.log(`VISUAL_REPORT_PASS records=${rows.length} broken=0`);
+          JS
+          echo 'RESULT=FULL_LIVE_VISUAL_AUDIT_PASS'
