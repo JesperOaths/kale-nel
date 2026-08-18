@@ -2,6 +2,9 @@
 name: v811 analytics RPC builder
 
 on:
+  pull_request:
+    branches: [main]
+    types: [opened]
   push:
     branches: [agent/v811-analytics-rpc-contract]
     paths: ['.github/workflows/v811-analytics-rpc-builder.yml']
@@ -19,6 +22,7 @@ env:
 
 jobs:
   build:
+    if: github.head_ref == 'agent/v811-analytics-rpc-contract' || github.ref == 'refs/heads/agent/v811-analytics-rpc-contract'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
