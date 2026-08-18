@@ -1,0 +1,119 @@
+name: Apply v806 release-finalization candidate 4
+
+on:
+  push:
+    branches: [agent/v806-release-finalization]
+    paths: ['.github/workflows/v806-apply-runtime-cleanup4.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v806-release-finalization
+          fetch-depth: 0
+      - name: Record run identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .proof
+          printf '%s.%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > .proof/v806-apply4-run-id.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .proof/v806-apply4-run-id.txt
+          git commit -m 'test: record v806 candidate 4 run'
+          git push origin HEAD:agent/v806-release-finalization
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Reconstruct verified v806 candidate workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          # Reuse the already-grounded v806 base transformation from candidate 1.
+          base=Path('.github/workflows/v806-apply-runtime-cleanup.yml').read_text()
+          def extract(text,start_marker,end_marker,start_at=0):
+              start=text.index(start_marker,start_at)+len(start_marker)
+              end=text.index(end_marker,start)
+              return textwrap.dedent(text[start:end])
+          py=extract(base,"          python3 <<'PY'\n","\n          PY")
+          ns={}; exec(compile(py,'v806-grounded-transform.py','exec'),ns,ns)
+          Path('gejast-home-gate.js').write_text(extract(base,"          cat > gejast-home-gate.js <<'JS'\n","\n          JS"))
+          Path('check-v806-release-finalization.mjs').write_text(extract(base,"          cat > check-v806-release-finalization.mjs <<'JS'\n","\n          JS"))
+
+          # Reuse the robust profile-function boundary patch from candidate 3.
+          wf3=Path('.github/workflows/v806-apply-runtime-cleanup3.yml').read_text()
+          pos=wf3.index('      - name: Bypass known-broken profile helper through healthy scoped readers')
+          profile_py=extract(wf3,"          python3 <<'PY'\n","\n          PY",pos)
+          ns={}; exec(compile(profile_py,'v806-profile-fallback.py','exec'),ns,ns)
+          PY
+
+          printf 'v806\n' > VERSION
+          node fix-version-drift.mjs
+
+          node <<'JS'
+          const fs=require('fs');
+          const state=JSON.parse(fs.readFileSync('release-certification.json','utf8'));
+          state.current_version='v806';
+          state.status='REVALIDATION_REQUIRED';
+          state.reason='v806 release-finalization candidate: canonical player session/RPC contracts, Family-safe runtime URLs, healthy profile-reader fallback, and deterministic browser CI. v805 remains immutably frozen as v805-certified-20260818. v806 cannot be PASS before exact-current candidate and post-merge evidence.';
+          state.current_evidence={...(state.current_evidence||{}),candidate_version:'v806',candidate_status:'SOURCE_REVALIDATION_IN_PROGRESS',certified_v805_commit:'b64a116f2b2684d1fbd475b40c2b76f569d40942',certified_v805_tag:'v805-certified-20260818',certified_v805_release_freeze_run:32089112972,certified_v805_health_run:32084207898,certified_v805_deep_live_run:32085432145,certified_v805_visual_run:32085275503,certified_v805_visual_sha256:'7757d1e51ae99152ee730efb640a27566a28d05eb2d635957bf40f40118495c5'};
+          state.required_next=['Prove v806 candidate browser regression against production RPC contracts without changing production schema.','Merge only after candidate checks pass; then rerun exact-current live health, authenticated full visual/manual review, deep gameplay, ownership isolation and zero-residue proof.','Keep known backend ambiguity defects in _gejast_elo_for_game_scope and the full track_site_event overload out of production until separately authorized.','Set PASS only after all v806 post-merge evidence is complete.'];
+          fs.writeFileSync('release-certification.json',JSON.stringify(state,null,2)+'\n');
+
+          const checklist=JSON.parse(fs.readFileSync('beta-live-write-checklist.json','utf8'));
+          checklist.site_version='v806';
+          if(!Array.isArray(checklist.items) || checklist.items.length!==0) throw new Error('v806 finalization must not arm live-write checklist items');
+          fs.writeFileSync('beta-live-write-checklist.json',JSON.stringify(checklist,null,2)+'\n');
+
+          const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+          const needle='node check-v805-paardenrace-native-poll-owner.mjs';
+          if(!pkg.scripts['verify:static'].includes('check-v806-release-finalization.mjs')) pkg.scripts['verify:static']=pkg.scripts['verify:static'].replace(needle,needle+' && node check-v806-release-finalization.mjs');
+          fs.writeFileSync('package.json',JSON.stringify(pkg,null,2)+'\n');
+          JS
+
+          cat >> check-v806-release-finalization.mjs <<'JS'
+          const profileSource=read('gejast-profile-source.js');
+          assert(!profileSource.includes("RPC.callRpc('get_public_player_unified_scoped'"),'profile source must bypass known-broken unified profile RPC');
+          const combined=read('gejast-combined-readers.js');
+          assert(!combined.includes("RPC.callRpc('get_player_page_bundle_scoped'")&&!combined.includes("RPC.callRpc('get_public_player_unified_scoped'"),'combined reader must bypass broken player bundle/unified RPCs');
+          const cert=JSON.parse(read('release-certification.json'));
+          assert(cert.current_version==='v806'&&cert.status==='REVALIDATION_REQUIRED','v806 certification must remain fail-closed before live revalidation');
+          const liveWrite=JSON.parse(read('beta-live-write-checklist.json'));
+          assert(liveWrite.site_version==='v806'&&Array.isArray(liveWrite.items)&&liveWrite.items.length===0,'v806 live-write checklist must track version and remain unarmed');
+          console.log('PASS v806 healthy profile fallback and fail-closed release metadata');
+          JS
+
+          node check-v806-release-finalization.mjs
+          node check-release-certification-state.mjs
+          node check-version-drift.mjs
+          node check-live-write-safety-v770e.mjs
+      - name: Run full canonical verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run verify
+      - name: Commit verified product candidate only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          rm -f .github/workflows/v806-apply-runtime-cleanup.yml .github/workflows/v806-apply-runtime-cleanup2.yml .github/workflows/v806-apply-runtime-cleanup3.yml .github/workflows/v806-apply-runtime-cleanup4.yml .github/workflows/v806-warning-diagnostic.yml .github/workflows/v806-observe-cleanup.yml
+          rm -rf .proof
+          git add -A
+          git status --short
+          git commit -m 'fix: finalize v806 runtime contracts and browser CI'
+          git push origin HEAD:agent/v806-release-finalization
+          echo 'RESULT=V806_RUNTIME_CANDIDATE_COMMITTED'
