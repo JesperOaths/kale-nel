@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths: ['.github/workflows/v806-main-builder-once.yml']
 
+# Triggered after workflow installation so GitHub schedules the one-shot builder.
 permissions:
   contents: write
 
