@@ -1,0 +1,43 @@
+name: v806 warning source diagnostic
+
+on:
+  push:
+    branches: [agent/v806-release-finalization]
+    paths: ['.github/workflows/v806-warning-diagnostic.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - name: Locate warning-producing runtime references
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== RPC REFERENCES ==='
+          for term in get_public_state player_touch_session track_site_event get_jas_app_state get_gejast_homepage_state get_player_site_announcements_scoped get_drink_event_vote_queue_public get_all_pending_drink_event_verifications_public get_public_player_unified_scoped save_game_match_summary; do
+            echo "--- $term ---"
+            grep -RIn --exclude-dir=.git --exclude='*.md' --exclude='*.sql' -- "$term" . | head -80 || true
+          done
+          echo '=== FAMILY RELATIVE GEJAST SCRIPT REFERENCES ==='
+          grep -RIn --include='*.html' -E 'src="(\./)?gejast-|src='"'"'(\./)?gejast-'"'"'' familie | head -200 || true
+          echo '=== ROOT DYNAMIC SCRIPT CREATION ==='
+          grep -RIn --exclude-dir=.git -E 'createElement\(.script.|script\.src|gejast-site-announcements|gejast-scope-hardening|gejast-v725-repair' -- *.html gejast-*.js 2>/dev/null | head -250 || true
+          echo 'RESULT=V806_WARNING_SOURCE_DIAGNOSTIC_PASS'
+      - name: Record run id
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .proof
+          printf '%s.%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > .proof/v806-warning-diagnostic-run-id.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .proof/v806-warning-diagnostic-run-id.txt
+          git commit -m 'test: record v806 warning diagnostic run'
+          git push origin HEAD:agent/v806-release-finalization
