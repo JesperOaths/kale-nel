@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: v807-builder-main-once
+  cancel-in-progress: true
+
 jobs:
   build-v807:
     runs-on: ubuntu-latest
@@ -17,6 +21,17 @@ jobs:
         with:
           ref: agent/v807-remove-active-stale-session-probes
           fetch-depth: 0
+      - name: Record builder run identity temporarily
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .proof
+          printf '%s.%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > .proof/v807-builder-run-id.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .proof/v807-builder-run-id.txt
+          git commit -m 'test: record v807 builder run id'
+          git push origin HEAD:agent/v807-remove-active-stale-session-probes
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '24'
@@ -60,6 +75,7 @@ p.write_text(s[:start]+new+s[end:])
           set -euo pipefail
           rm -f .github/workflows/v807-builder-once.yml
           rm -f scripts/prepare-v807-stale-session-probe-removal.py
+          rm -f .proof/v807-builder-run-id.txt
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
