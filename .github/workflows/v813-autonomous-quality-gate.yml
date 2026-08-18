@@ -1,0 +1,67 @@
+name: v813 autonomous quality gate
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+
+      - name: Show manifest / lockfile identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const l = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          console.log('PACKAGE_JSON', { name: p.name, version: p.version, dependencies: p.dependencies || {}, devDependencies: p.devDependencies || {} });
+          console.log('LOCK_ROOT', l.packages && l.packages[''] ? l.packages[''] : { name: l.name, version: l.version });
+          NODE
+
+      - name: Prove committed lockfile can support clean install
+        id: committed_lock
+        continue-on-error: true
+        run: npm ci --ignore-scripts
+
+      - name: Record committed lock result
+        shell: bash
+        run: echo "COMMITTED_LOCK_NPM_CI=${{ steps.committed_lock.outcome }}"
+
+      - name: Regenerate lockfile from package.json
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Upload regenerated lockfile
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: v813-regenerated-package-lock
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Install exact regenerated dependency graph
+        run: npm ci --ignore-scripts
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Run full release suite
+        run: npm run test:release
+
+      - name: Audit dependency graph
+        run: npm audit --audit-level=high
