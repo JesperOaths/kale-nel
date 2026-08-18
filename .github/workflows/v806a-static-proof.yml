@@ -1,0 +1,44 @@
+name: v806a prepared SQL static proof
+
+on:
+  push:
+    branches: [sql/v806a-runtime-warning-backend-repairs]
+    paths:
+      - 'GEJAST_v806a_runtime_warning_backend_repairs.sql'
+      - 'check-v806a-runtime-warning-backend-repairs.mjs'
+      - '.github/workflows/v806a-static-proof.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  static-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: sql/v806a-runtime-warning-backend-repairs
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Prove prepared migration contract without database access
+        shell: bash
+        run: |
+          set -euo pipefail
+          node check-v806a-runtime-warning-backend-repairs.mjs
+          test "$(grep -ci 'create or replace function' GEJAST_v806a_runtime_warning_backend_repairs.sql)" -eq 2
+          ! grep -Eqi '^\s*(grant|revoke|alter table|drop|truncate|delete|update|insert)\b' GEJAST_v806a_runtime_warning_backend_repairs.sql
+          grep -Fq 'PREPARED ONLY. Do not apply to production without explicit authorization.' GEJAST_v806a_runtime_warning_backend_repairs.sql
+          echo 'RESULT=V806A_PREPARED_SQL_STATIC_PASS'
+      - name: Record proof run
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .proof
+          printf '%s.%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > .proof/v806a-static-run-id.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .proof/v806a-static-run-id.txt
+          git commit -m 'test: record v806a static proof run'
+          git push origin HEAD:sql/v806a-runtime-warning-backend-repairs
