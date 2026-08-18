@@ -6,6 +6,10 @@ Certified product commit: `b64a116f2b2684d1fbd475b40c2b76f569d40942`
 
 Permanent certified branch: `release/v805-certified-20260818`
 
+Immutable certified tag: `v805-certified-20260818`
+
+Both the release branch and immutable tag resolve exactly to the certified product commit above.
+
 Production Supabase project: `uiqntazgnrxwliaidkmy`
 
 Final production migration: `20260818001412 — gejast_v801a_toepen_idempotency_owner_guard`
