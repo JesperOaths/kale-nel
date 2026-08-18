@@ -1,0 +1,66 @@
+name: v809 runtime warning caller audit
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened]
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    if: github.head_ref == 'audit/v809-runtime-warning-callers'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: audit/v809-runtime-warning-callers
+          fetch-depth: 0
+      - name: Inventory exact active callers
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = '41b9643029595c22e68223ed7e860da4d2b6040b'
+          python3 <<'PY'
+          from pathlib import Path
+          names=[
+            'get_player_site_announcements_scoped',
+            'consume_player_site_announcement_scoped',
+            'get_all_pending_drink_event_verifications_public',
+            'get_drink_event_vote_queue_public',
+            'get_public_state',
+            'paardenrace_cleanup_idle_lobbies_v495',
+            'cleanup_stale_paardenrace_rooms_v706',
+            'get_public_player_unified_scoped',
+            'save_game_match_summary',
+            'track_site_event',
+            'get_player_runtime_bundle_v687',
+            'get_login_active_names_v687',
+            'get_player_selector_source_v1'
+          ]
+          ignored={'.git','node_modules','scripts','.github','sql','archive','archives','backup','backups','patch_bundles'}
+          files=[]
+          for p in Path('.').rglob('*'):
+            if not p.is_file() or p.suffix.lower() not in {'.js','.html','.mjs'}: continue
+            parts=set(p.parts)
+            if parts & ignored: continue
+            if p.name.startswith('check-') or p.name.startswith('test-'): continue
+            files.append(p)
+          for name in names:
+            print(f'=== RPC {name} ===')
+            hits=0
+            for p in sorted(files):
+              try: lines=p.read_text(errors='replace').splitlines()
+              except Exception: continue
+              for i,line in enumerate(lines):
+                if name not in line: continue
+                hits+=1
+                lo=max(0,i-2); hi=min(len(lines),i+4)
+                print(f'CALLER {p}:{i+1}')
+                for j in range(lo,hi): print(f'  {j+1}: {lines[j]}')
+            print(f'COUNT {name} {hits}')
+          PY
+          echo 'RESULT=V809_RUNTIME_WARNING_CALLER_INVENTORY_PASS'
