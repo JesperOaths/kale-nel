@@ -15,7 +15,7 @@ alter default privileges in schema public revoke usage, select, update on sequen
 
 -- Sensitive RLS-off stores must not be directly readable through PostgREST.
 -- Ordinary public gameplay/stat source-table SELECT grants are deliberately preserved for
--- compatibility with a small number of legacy SECURITY INVOKER read RPCs.
+-- compatibility with legacy SECURITY INVOKER read RPCs.
 do $v812f$
 declare r record;
 begin
@@ -41,24 +41,11 @@ begin
 end
 $v812f$;
 
--- Underscore-prefixed routines are implementation helpers, including SECURITY INVOKER
--- helpers that earlier v813 routine lockdowns did not cover.
-do $v812f$
-declare r record;
-begin
-  for r in
-    select n.nspname, p.proname, pg_get_function_identity_arguments(p.oid) as args
-    from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public' and p.proname like '\_%' escape '\'
-  loop
-    execute format(
-      'revoke execute on function %I.%I(%s) from public, anon, authenticated',
-      r.nspname, r.proname, r.args
-    );
-  end loop;
-end
-$v812f$;
+-- Earlier v813 hardening already removed client EXECUTE from SECURITY DEFINER underscore
+-- helpers. Do not revoke every remaining underscore helper: several safe SECURITY INVOKER
+-- read RPCs depend on normalization/read helpers. The one remaining client-executable
+-- underscore routine with table mutation is locked explicitly.
+revoke execute on function public._web_push_apply_action(text,bigint,text,bigint) from public, anon, authenticated;
 
 -- Admin-prefixed routines without an admin-session argument are legacy diagnostics/helpers.
 -- Keep only the actual login credential-entry RPC and the player-session Paardenrace

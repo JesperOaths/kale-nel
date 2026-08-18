@@ -15,7 +15,7 @@ for (const needle of [
   'revoke insert, update, delete, truncate on all tables in schema public from public, anon, authenticated',
   'alter default privileges in schema public revoke insert, update, delete, truncate on tables from public, anon, authenticated',
   'revoke usage, select, update on all sequences in schema public from public, anon, authenticated',
-  "p.proname like '\\_%'",
+  '_web_push_apply_action(text,bigint,text,bigint)',
   "p.proname like 'admin\\_%'",
   "p.proname not in ('admin_login','admin_get_paardenrace_overview_v667')",
   'claim_web_push_jobs(integer)',
@@ -28,6 +28,9 @@ for (const needle of [
   'validate_outbound_email_job_public(bigint,boolean)'
 ]) {
   if (!sql.includes(needle)) fail(`migration contract missing: ${needle}`);
+}
+if (sql.includes("where n.nspname = 'public' and p.proname like '\\_%'")) {
+  fail('v812f must not globally revoke underscore read helpers; rollback rehearsal proved invoker RPC compatibility depends on them');
 }
 
 const provenance = JSON.parse(fs.readFileSync('production-migrations-v813.json', 'utf8'));
