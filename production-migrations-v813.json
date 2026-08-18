@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "site_version_at_capture": "v812",
+  "captured_at": "2026-08-18",
+  "project_id": "uiqntazgnrxwliaidkmy",
+  "note": "Observed in Supabase migration history and already applied before repository reconciliation. Names and versions are provenance only; DDL bodies are intentionally not reconstructed or re-applied.",
+  "already_applied_production_migrations": [
+    ["20260818213834", "lock_internal_player_mutation_helpers_v813"],
+    ["20260818213913", "lock_additional_internal_mutation_helpers_v813"],
+    ["20260818214248", "lock_legacy_web_push_worker_rpcs_v813b"],
+    ["20260818214444", "lock_critical_internal_admin_auth_email_helpers_v813"],
+    ["20260818214559", "lock_legacy_email_worker_control_rpcs_v813"],
+    ["20260818214742", "lock_legacy_pin_reset_overload_v813"],
+    ["20260818214816", "lock_direct_activation_email_helpers_v813"],
+    ["20260818214856", "lock_unauthenticated_make_email_callbacks_v813"],
+    ["20260818214941", "lock_player_creation_and_despimarkt_internal_mutators_v813"],
+    ["20260818215027", "lock_remaining_despimarkt_internal_namespace_v813"],
+    ["20260818215107", "lock_pikken_paardenrace_internal_namespaces_v813"],
+    ["20260818215146", "lock_gejast_internal_namespace_v813"],
+    ["20260818215225", "lock_all_remaining_internal_secdef_helpers_v813"],
+    ["20260818215348", "lock_push_worker_and_raw_queue_controls_v813"],
+    ["20260818215418", "lock_web_push_action_token_overload_v813"],
+    ["20260818215515", "lock_unauthenticated_maintenance_and_rebuild_rpcs_v813"],
+    ["20260818215706", "lock_legacy_game_push_and_maintenance_aliases_v813"],
+    ["20260818215744", "lock_public_login_diagnostics_credential_leak_v813"],
+    ["20260818215950", "lock_obsolete_final_runtime_diagnostic_v813"],
+    ["20260818220025", "lock_remaining_public_login_diagnostics_v813"]
+  ],
+  "prepared_not_deployed": "GEJAST_v812f_direct_data_boundary.sql"
+}
