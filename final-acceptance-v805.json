@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "site_version": "v805",
+  "status": "PASS",
+  "certified_at": "2026-08-18",
+  "evidence_baseline_main_sha": "b64a116f2b2684d1fbd475b40c2b76f569d40942",
+  "certified_rollback_ref": "release/v805-certified-20260818",
+  "truthfulness_policy": {
+    "unknown_limits_are_not_invented": true,
+    "third_party_interactive_auth_is_not_faked": true,
+    "production_writes_are_disposable_and_cleanup_asserted": true,
+    "visual_pass_requires_manual_screenshot_review": true
+  },
+  "authoritative_runs": {
+    "phase1_forced_login_and_gameplay": {
+      "run_id": 31944683360,
+      "conclusion": "success"
+    },
+    "post_restart_health": {
+      "run_id": 32080416102,
+      "job_id": 95542172881,
+      "conclusion": "success"
+    },
+    "owner_isolation_boerenbridge_beerpong": {
+      "run_id": 32078012416,
+      "job_id": 95535170700,
+      "conclusion": "success",
+      "cleanup": "zero_residue"
+    },
+    "toepen_v801a_public_rest_guard": {
+      "run_id": 32084142660,
+      "job_id": 95553027731,
+      "conclusion": "success",
+      "same_owner_replay": "pass",
+      "cross_owner_replay": "rejected",
+      "invalid_session": "rejected",
+      "wrong_scope": "rejected",
+      "cleanup": "zero_residue"
+    },
+    "post_v801a_live_health": {
+      "run_id": 32084207898,
+      "job_id": 95553226539,
+      "conclusion": "success"
+    },
+    "post_v801a_deep_live_gameplay": {
+      "run_id": 32085432145,
+      "job_id": 95556873292,
+      "conclusion": "success",
+      "markers": [
+        "RESULT=V805_LIVE_BROWSER_MULTI_CONTEXT_PASS",
+        "RESULT=V805_PIKKEN_PLAY_TO_COMPLETION_PASS",
+        "RESULT=V805_PAARDENRACE_PLAY_TO_COMPLETION_PASS",
+        "RESULT=V805_LIVE_GAME_COMPLETION_CERTIFICATION_PASS",
+        "RESULT=V805_POSTV801A_FAST_DEEP_ZERO_RESIDUE_PASS",
+        "RESULT=V805_POSTV801A_FAST_DEEP_LIVE_PASS"
+      ]
+    },
+    "post_v801a_authenticated_visual": {
+      "run_id": 32085275503,
+      "job_id": 95556413880,
+      "conclusion": "success",
+      "screenshots": 137,
+      "records": 137,
+      "broken_after_declared_alias_refinement": 0,
+      "manual_review": "pass_all_137",
+      "artifact_id": 9306774932,
+      "artifact_sha256": "7757d1e51ae99152ee730efb640a27566a28d05eb2d635957bf40f40118495c5",
+      "cleanup": "zero_residue"
+    },
+    "pikken_auth_aware_render_stress": {
+      "run_id": 32081479227,
+      "conclusion": "success",
+      "fresh_rooms": 20,
+      "protected_page_loads": 60,
+      "retries": 0
+    }
+  },
+  "production_state": {
+    "supabase_project_id": "uiqntazgnrxwliaidkmy",
+    "latest_required_migration": "gejast_v801a_toepen_idempotency_owner_guard",
+    "latest_required_migration_version": "20260818001412",
+    "toepen_owner_guard_deployed": true,
+    "toepen_owner_capture_proven": true,
+    "toepen_cross_owner_rejection_proven": true,
+    "toepen_scope_capture_proven": true,
+    "final_disposable_players": 0,
+    "final_disposable_sessions": 0,
+    "final_disposable_metadata": 0,
+    "final_disposable_toepen_games": 0,
+    "final_disposable_klaverjas_games": 0,
+    "final_disposable_pikken_games": 0,
+    "final_disposable_paardenrace_rooms": 0,
+    "final_disposable_paardenrace_history": 0
+  },
+  "certification_scope": {
+    "forced_login_gate": "pass",
+    "friends_family_scope_isolation": "pass",
+    "admin_outer_oauth_boundary": "pass",
+    "supabase_auth_data_plane": "pass",
+    "boerenbridge_beerpong_owner_isolation": "pass",
+    "toepen_idempotency_owner_scope_guard": "pass",
+    "multi_context_gameplay": "pass",
+    "mobile_touch_rendering": "pass",
+    "pikken_natural_completion": "pass",
+    "paardenrace_natural_completion": "pass",
+    "authenticated_visual_audit": "pass",
+    "manual_visual_review": "pass",
+    "zero_residue": "pass"
+  },
+  "criteria": {
+    "1": {"status": "PASS", "summary": "Forced-login, storage cleanup, token validation and Friends/Family scope isolation are live and machine-checked."},
+    "2": {"status": "PASS", "summary": "All tracked game surfaces render behind the player gate with independent authenticated contexts and mobile coverage."},
+    "3": {"status": "PASS", "summary": "Pikken and Paardenrace complete naturally in live production acceptance with valid sessions after gameplay."},
+    "4": {"status": "PASS", "summary": "Boerenbridge and Beerpong cross-owner isolation is proven through controlled production fixtures."},
+    "5": {"status": "PASS", "summary": "Toepen v801a is deployed and proves same-owner idempotency while rejecting cross-owner, invalid-session and wrong-scope replay."},
+    "6": {"status": "PASS", "summary": "Post-restart and post-migration health prove the production data plane, static deployment and admin/OAuth boundaries are healthy."},
+    "7": {"status": "PASS", "summary": "The full authenticated visual audit captured 137 screenshots with no broken route after declared alias classification."},
+    "8": {"status": "PASS", "summary": "All 137 screenshots were manually reviewed; no blank protected content, clipping, malformed layout or incorrect alias destination was found."},
+    "9": {"status": "PASS", "summary": "Every controlled production namespace was independently swept to zero residue after certification."},
+    "10": {"status": "PASS", "summary": "The exact v805 rollback baseline is preserved at b64a116f2b2684d1fbd475b40c2b76f569d40942."},
+    "11": {"status": "PASS", "summary": "No known authorized Phase-1 or Phase-2 certification blocker remains."},
+    "12": {"status": "PASS", "summary": "FINAL ACCEPTANCE is stamped PASS only after all required production, security, gameplay, visual and cleanup evidence is green."}
+  }
+}
