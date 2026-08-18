@@ -30,10 +30,23 @@ const permissionIds=permission.map(item=>item.id).sort();
 const blockedCount=gaps.filter(item=>item.status==='blocked_external').length;
 if(rootN===786){
   if(gaps.length!==12||completeCount!==12||permission.length!==0||blockedCount!==0) failures.push('exact v786 freeze must preserve its historical 12/12 zero-blocker readiness');
-}else if(rootN>786){
-  if(gaps.length!==12||completeCount!==11||JSON.stringify(permissionIds)!==JSON.stringify(['toepen_backend_live'])||blockedCount!==0) failures.push('newer current readiness must preserve historical v786 facts while exposing exactly the live-proven Toepen v801a permission blocker');
+}else if(rootN>786 && rootN<801){
+  // Historical intermediate releases may legitimately carry their then-current readiness state.
+  if(gaps.length!==12||blockedCount!==0) failures.push('post-v786 historical readiness must preserve the 12-gap zero-external-blocker structure');
+}else if(rootN>=801 && rootN<806){
+  // Before the explicitly authorized production v801a deployment, Toepen was the sole permission-gated item.
+  if(gaps.length!==12||completeCount!==11||JSON.stringify(permissionIds)!==JSON.stringify(['toepen_backend_live'])||blockedCount!==0) failures.push('pre-deployment v801-v805 readiness must expose exactly the Toepen v801a permission blocker');
   const toepen=gaps.find(item=>item.id==='toepen_backend_live');
-  if(!/v801a/i.test(String(toepen?.next_action||''))) failures.push('current Toepen blocker must identify v801a before finalized-baseline guard accepts the open readiness state');
+  if(!/v801a/i.test(String(toepen?.next_action||''))) failures.push('pre-deployment Toepen blocker must identify v801a');
+}else if(rootN>=806){
+  // v801a was explicitly authorized and deployed on 2026-08-18. Newer baselines must retain the historical
+  // v786 acceptance facts while also preserving the now-closed production owner/scope proof truth.
+  if(gaps.length!==12||completeCount!==12||permission.length!==0||blockedCount!==0) failures.push('v806+ readiness must preserve 12/12 complete state after the proven v801a deployment');
+  const toepen=gaps.find(item=>item.id==='toepen_backend_live');
+  const proof=[toepen?.proof_needed,toepen?.next_action,toepen?.latest_probe].map(v=>String(v||'')).join('\n');
+  if(toepen?.status!=='verified_complete') failures.push('v806+ Toepen readiness must remain verified_complete');
+  if(!/v801a/i.test(proof)||!/20260818001412/.test(proof)||!/32084142660/.test(proof)) failures.push('v806+ Toepen readiness must preserve the deployed v801a migration and public REST proof identity');
+  if(/needs_permission|not deployed|authorization before production deployment/i.test(proof)) failures.push('v806+ finalized-baseline guard must reject stale pre-deployment Toepen wording');
 }
 if((checklist.items||[]).length!==0) failures.push('finalized baseline must keep zero armed live-write items');
 if(checklist.site_version!==root) failures.push('live-write checklist must track root VERSION');
@@ -42,4 +55,4 @@ if(!verifyStatic.includes('node check-rad-live-overflow-v786.mjs')) failures.pus
 if(!verifyStatic.includes('node check-finalized-baseline-v786.mjs')) failures.push('verify:static must keep the finalized v786 baseline regression wired');
 for(const path of ['V786_LIVE_FINAL_ACCEPTANCE.json','scripts/v786-live-final-acceptance.mjs','scripts/promote-v786-finalized-baseline.mjs','.github/workflows/v786-live-final-acceptance.yml']) if(fs.existsSync(path)) failures.push('temporary v786 final-acceptance residue remains: '+path);
 if(failures.length){console.error('Finalized baseline v786 regression failed:');for(const f of failures) console.error('- '+f);process.exit(1);}
-console.log(`Finalized baseline v786 PASS at ${root}: exact v786 identity is enforced while v786 is current; newer baselines must preserve the v786 acceptance facts and invariants.`);
+console.log(`Finalized baseline v786 PASS at ${root}: exact v786 identity is enforced; newer baselines preserve its acceptance facts and the historically correct Toepen lifecycle state.`);
