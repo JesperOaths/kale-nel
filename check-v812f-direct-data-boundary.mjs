@@ -16,6 +16,11 @@ for (const needle of [
   'alter default privileges in schema public revoke insert, update, delete, truncate on tables from public, anon, authenticated',
   'revoke usage, select, update on all sequences in schema public from public, anon, authenticated',
   '_web_push_apply_action(text,bigint,text,bigint)',
+  'set_initial_pin(text,text)',
+  'get_account_identity_summary_scoped(text)',
+  'request_pin_reset_reactivation_action(text,text,text)',
+  'despimarkt_try_create_market_from_match_row_v646()',
+  'gejast_cleanup_activation_link_duplicates_before_insert()',
   "p.proname like 'admin\\_%'",
   "p.proname not in ('admin_login','admin_get_paardenrace_overview_v667')",
   'claim_web_push_jobs(integer)',
@@ -42,7 +47,8 @@ if (provenance.prepared_not_deployed !== 'GEJAST_v812f_direct_data_boundary.sql'
 }
 
 // Shipped browser code may retain bounded read-only table fallbacks, but no direct table
-// mutation owner is allowed before client DML is globally revoked.
+// mutation owner is allowed before client DML is globally revoked. Legacy credential/privacy
+// RPCs revoked by v812f may still be named in compatibility metadata, but must not be invoked.
 const skippedDirs = new Set(['.git', 'node_modules', 'scripts', 'cloudflare', '.github', 'archive', 'archives', 'backup', 'backups', 'repo', 'mnt']);
 const files = [];
 function walk(dir = '.') {
@@ -61,6 +67,7 @@ walk();
 
 const violations = [];
 let directReadFallbacks = 0;
+const retiredRpcs = ['set_initial_pin', 'get_account_identity_summary_scoped', 'request_pin_reset_reactivation_action'];
 for (const rel of files) {
   const text = fs.readFileSync(rel, 'utf8');
   for (const match of text.matchAll(/\/rest\/v1\/(?!rpc\/)/gi)) {
@@ -74,8 +81,18 @@ for (const rel of files) {
   if (/\.from\s*\([^)]*\)\s*\.\s*(?:insert|update|delete|upsert)\s*\(/i.test(text)) {
     violations.push(`${rel}: direct Supabase table mutation`);
   }
+  for (const retiredRpc of retiredRpcs) {
+    const escaped = retiredRpc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const invocationPatterns = [
+      new RegExp(`(?:callRpcCompat|postRpc|rpc)\\s*\\(\\s*['\"]${escaped}['\"]`, 'i'),
+      new RegExp(`/rest/v1/rpc/${escaped}(?:\\b|\\?)`, 'i')
+    ];
+    if (invocationPatterns.some((pattern) => pattern.test(text))) {
+      violations.push(`${rel}: active browser invokes retired v812f RPC ${retiredRpc}`);
+    }
+  }
 }
-if (violations.length) fail(`active browser direct-table mutation owners found:\n${violations.join('\n')}`);
+if (violations.length) fail(`active browser boundary violations found:\n${violations.join('\n')}`);
 
 console.log(`ACTIVE_BROWSER_FILES_SCANNED=${files.length}`);
 console.log(`DIRECT_READ_FALLBACKS=${directReadFallbacks}`);

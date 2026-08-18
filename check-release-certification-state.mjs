@@ -9,6 +9,13 @@ assert.equal(state.schema_version, 1, 'unsupported release certification schema'
 assert.equal(state.current_version, version, 'release certification state must track root VERSION');
 assert(['REVALIDATION_REQUIRED', 'PASS'].includes(state.status), 'invalid release certification state');
 
+// v812 cannot be promoted while its prepared direct-data boundary drifts from the repository
+// contract. Keep this conditional so future frontend versions are not permanently coupled to
+// a historical SQL-only checker.
+if (version === 'v812') {
+  await import('./check-v812f-direct-data-boundary.mjs');
+}
+
 if (state.status === 'PASS') {
   const acceptancePath = `final-acceptance-${version}.json`;
   assert(fs.existsSync(acceptancePath), `PASS requires ${acceptancePath}`);
