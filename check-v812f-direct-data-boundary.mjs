@@ -48,7 +48,7 @@ if (provenance.prepared_not_deployed !== 'GEJAST_v812f_direct_data_boundary.sql'
 
 // Shipped browser code may retain bounded read-only table fallbacks, but no direct table
 // mutation owner is allowed before client DML is globally revoked. Legacy credential/privacy
-// RPCs revoked by v812f must likewise have no active browser caller.
+// RPCs revoked by v812f may still be named in compatibility metadata, but must not be invoked.
 const skippedDirs = new Set(['.git', 'node_modules', 'scripts', 'cloudflare', '.github', 'archive', 'archives', 'backup', 'backups', 'repo', 'mnt']);
 const files = [];
 function walk(dir = '.') {
@@ -67,6 +67,7 @@ walk();
 
 const violations = [];
 let directReadFallbacks = 0;
+const retiredRpcs = ['set_initial_pin', 'get_account_identity_summary_scoped', 'request_pin_reset_reactivation_action'];
 for (const rel of files) {
   const text = fs.readFileSync(rel, 'utf8');
   for (const match of text.matchAll(/\/rest\/v1\/(?!rpc\/)/gi)) {
@@ -80,9 +81,14 @@ for (const rel of files) {
   if (/\.from\s*\([^)]*\)\s*\.\s*(?:insert|update|delete|upsert)\s*\(/i.test(text)) {
     violations.push(`${rel}: direct Supabase table mutation`);
   }
-  for (const retiredRpc of ['set_initial_pin', 'get_account_identity_summary_scoped', 'request_pin_reset_reactivation_action']) {
-    if (text.toLowerCase().includes(retiredRpc)) {
-      violations.push(`${rel}: active browser references retired v812f RPC ${retiredRpc}`);
+  for (const retiredRpc of retiredRpcs) {
+    const escaped = retiredRpc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const invocationPatterns = [
+      new RegExp(`(?:callRpcCompat|postRpc|rpc)\\s*\\(\\s*['\"]${escaped}['\"]`, 'i'),
+      new RegExp(`/rest/v1/rpc/${escaped}(?:\\b|\\?)`, 'i')
+    ];
+    if (invocationPatterns.some((pattern) => pattern.test(text))) {
+      violations.push(`${rel}: active browser invokes retired v812f RPC ${retiredRpc}`);
     }
   }
 }
