@@ -1,21 +1,21 @@
 {
   "schema_version": 1,
-  "current_version": "v811",
+  "current_version": "v812",
   "status": "REVALIDATION_REQUIRED",
   "previous_certified_version": "v808",
   "previous_certified_product_sha": "7f6f7bc110807e85f52ff4d54927620dbbc9ffeb",
   "previous_certified_release_branch": "release/v808-certified-20260818",
-  "superseded_uncertified_version": "v810",
-  "superseded_uncertified_product_sha": "fba531c35d076d1e0a3065683eed8908c38627b6",
-  "reason": "v811 aligns site analytics with the deployed 21-argument track_site_event contract by moving site_scope into extra metadata instead of sending it as an unsupported top-level PostgREST parameter. v810 runtime proof 32136704477 confirmed the player runtime overload is fixed and exposed this exact PGRST202 mismatch.",
+  "superseded_uncertified_version": "v811",
+  "superseded_uncertified_product_sha": "c3cb4b5e35f32e699b6432aca6502fae6b151007",
+  "reason": "v812 removes the active call to production get_public_player_unified_scoped, which is proven to fail with PostgreSQL 42702 because _gejast_elo_for_game_scope ambiguously references game_key. The player page retains its existing profile/drinks fallback and now reads shared stats and game insights directly through healthy scoped RPCs. No backend/schema mutation.",
   "remaining_release_blockers": [
-    "Fresh exact-current v811 live health must pass.",
-    "Authenticated browser proof must show track_site_event no longer fails with PGRST202 and must preserve the v809/v810 RPC repairs.",
-    "Fresh full visual/runtime evidence and independent zero-residue cleanup are required before PASS."
+    "Fresh exact-current v812 health must pass.",
+    "Authenticated runtime proof must show analytics remains repaired, player runtime bundle stays 2xx, the broken unified RPC is no longer called, and scoped player stats/insights succeed.",
+    "Fresh deep gameplay plus full authenticated visual evidence and independent zero-residue cleanup are required before PASS."
   ],
   "required_next": [
-    "Merge only after canonical verification and after the currently running exact-v810 automatic visual audit has cleaned its fixtures.",
-    "Run exact-current v811 health plus authenticated RPC diagnostics.",
-    "Run full authenticated visual audit and independently confirm zero controlled residue before certification."
+    "Merge only after canonical verification and dependency audit.",
+    "Run exact-current v812 authenticated RPC diagnostics and deep gameplay.",
+    "Run the full authenticated visual audit, manually review its screenshots, independently confirm zero controlled residue, then promote v812 to PASS."
   ]
 }
