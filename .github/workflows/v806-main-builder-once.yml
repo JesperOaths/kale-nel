@@ -83,7 +83,7 @@ jobs:
           tracker['site_version']='release candidate v806 / live certified v805'
           tracker['last_updated']='2026-08-18'
           dep=tracker.setdefault('deployment_identity',{})
-          dep['status']='verified_complete'
+          dep['status']='ready_to_test'
           dep['live_version']='v805'
           dep['release_candidate_version']='v806'
           dep['frontend_release_merge']='b64a116f2b2684d1fbd475b40c2b76f569d40942'
@@ -104,15 +104,6 @@ jobs:
             if item.get('id')=='live_write_safety_gate':
               item['evidence']='The live-write checklist remains disarmed by default. The previously permission-gated Toepen v801a owner/scope repair was explicitly authorized, deployed as migration 20260818001412, publicly proven in run 32084142660, and cleaned to zero residue. No pending production mutation is armed.'
           p.write_text(json.dumps(tracker,indent=2,ensure_ascii=False)+'\n')
-
-          # The current-state checker must now require the closed Toepen blocker rather than preserve stale permission gating.
-          p=Path('check-beta-readiness-current-v770d.mjs')
-          s=p.read_text()
-          s=s.replace("if (toepenGap?.status !== 'needs_permission') failures.push('toepen_backend_live must remain explicitly needs_permission until the live-proven v801a repair is authorized and deployed');", "if (toepenGap?.status !== 'verified_complete') failures.push('toepen_backend_live must remain verified_complete after the deployed/proven v801a owner guard');")
-          s=s.replace("if (!/v801a/i.test(String(toepenGap?.next_action || ''))) failures.push('Toepen permission blocker must name the v801a deployment action');", "if (!/32084142660/.test(String(toepenGap?.latest_probe || '')) || !/20260818001412/.test(String(toepenGap?.latest_probe || ''))) failures.push('Toepen completion must retain exact v801a public-proof run and migration evidence');")
-          s=s.replace("if (JSON.stringify(permissionIds) !== JSON.stringify(['toepen_backend_live'])) failures.push(`expected only Toepen to be permission-gated, got: ${permissionIds.join(', ') || '(none)'}`);", "if (permissionIds.length) failures.push(`no beta gap should remain permission-gated after v801a closure, got: ${permissionIds.join(', ')}`);")
-          s=s.replace("if (completeCount !== 11 || permission.length !== 1) failures.push(`expected current readiness split 11 complete / 1 permission-gated, got ${completeCount} / ${permission.length}`);", "if (completeCount !== 12 || permission.length !== 0) failures.push(`expected current readiness split 12 complete / 0 permission-gated, got ${completeCount} / ${permission.length}`);")
-          p.write_text(s)
           PY
           node check-version-drift.mjs
           node check-v806-canonical-session-runtime.mjs
