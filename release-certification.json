@@ -7,15 +7,16 @@
   "previous_certified_release_branch": "release/v808-certified-20260818",
   "superseded_uncertified_version": "v811",
   "superseded_uncertified_product_sha": "c3cb4b5e35f32e699b6432aca6502fae6b151007",
-  "reason": "v812 removes the active call to production get_public_player_unified_scoped, which is proven to fail with PostgreSQL 42702 because _gejast_elo_for_game_scope ambiguously references game_key. The player page retains its existing profile/drinks fallback and now reads shared stats and game insights directly through healthy scoped RPCs. No backend/schema mutation.",
+  "reason": "v812f is a SQL-only security closure prepared after exact production privilege grounding found that anon/authenticated still retain broad direct table mutation rights, sensitive RLS-off table reads, underscore implementation-helper EXECUTE, no-token admin diagnostics and several legacy worker/mutation RPC aliases. Twenty earlier v813-named routine-lockdown migrations are already present in production and are recorded separately as provenance; GEJAST_v812f_direct_data_boundary.sql is prepared but not yet deployed.",
   "remaining_release_blockers": [
-    "Fresh exact-current v812 health must pass.",
-    "Authenticated runtime proof must show analytics remains repaired, player runtime bundle stays 2xx, the broken unified RPC is no longer called, and scoped player stats/insights succeed.",
-    "Fresh deep gameplay plus full authenticated visual evidence and independent zero-residue cleanup are required before PASS."
+    "Explicit authorization and tracked production deployment of GEJAST_v812f_direct_data_boundary.sql.",
+    "Post-deploy proof must show zero PUBLIC/anon/authenticated INSERT/UPDATE/DELETE/TRUNCATE privileges on public tables, no client EXECUTE on underscore helpers or retired worker/admin aliases, and sensitive direct-read grants removed.",
+    "Fresh exact-current v812 health and authenticated runtime proof must pass after the database mutation.",
+    "Fresh deep gameplay and ownership isolation plus full authenticated visual evidence, manual screenshot review and independent zero-residue cleanup are required before PASS."
   ],
   "required_next": [
-    "Merge only after canonical verification and dependency audit.",
-    "Run exact-current v812 authenticated RPC diagnostics and deep gameplay.",
-    "Run the full authenticated visual audit, manually review its screenshots, independently confirm zero controlled residue, then promote v812 to PASS."
+    "Merge the v812f SQL/provenance/checker record only after canonical verification.",
+    "After explicit production-SQL authorization, deploy GEJAST_v812f_direct_data_boundary.sql once through the tracked Supabase migration path.",
+    "Run exact-current health, strict authenticated runtime diagnostics, deep gameplay/ownership isolation and the full authenticated visual audit; manually review screenshots and independently prove zero controlled residue before promotion to PASS."
   ]
 }
