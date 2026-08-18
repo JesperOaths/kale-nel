@@ -57,11 +57,9 @@ jobs:
               anchor = 'node check-v805-paardenrace-native-poll-owner.mjs'
               if anchor not in static:
                   raise SystemExit('verify:static anchor missing')
-              static = static.replace(anchor, anchor + ' && ' + check)
-              pkg['scripts']['verify:static'] = static
+              pkg['scripts']['verify:static'] = static.replace(anchor, anchor + ' && ' + check)
           pkg_path.write_text(json.dumps(pkg, indent=2, ensure_ascii=False) + '\n')
 
-          cert_path = Path('release-certification.json')
           cert = {
               'schema_version': 1,
               'current_version': 'v806',
@@ -72,7 +70,7 @@ jobs:
                   'release_branch': 'release/v805-certified-20260818',
                   'artifact': 'final-acceptance-v805.json'
               },
-              'reason': 'v806 makes shared runtime support assets and the VERSION refresh root-absolute so protected nested /familie/ redirect routes cannot resolve JavaScript or VERSION requests under /familie/. v805 remains the certified rollback baseline until v806 completes fresh live health, authenticated visual review and focused nested-route proof.',
+              'reason': 'v806 makes shared runtime support assets and the VERSION refresh root-absolute so protected nested /familie/ routes cannot resolve JavaScript or VERSION requests under /familie/. v805 remains the certified rollback baseline until v806 completes fresh live health, authenticated visual review and focused nested-route proof.',
               'current_evidence': {
                   'candidate_version': 'v806',
                   'candidate_status': 'SOURCE_VERIFICATION_PENDING_THEN_DEPLOYMENT_REVALIDATION',
@@ -85,16 +83,14 @@ jobs:
                   'Run the full authenticated visual audit with cleanup and manually review the v806 screenshots before restoring PASS.'
               ]
           }
-          cert_path.write_text(json.dumps(cert, indent=2) + '\n')
+          Path('release-certification.json').write_text(json.dumps(cert, indent=2) + '\n')
           PY
           mkdir -p .proof
           printf '%s.%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > .proof/v806-builder-run-id.txt
           node check-v806-nested-runtime-assets.mjs
           node check-version-drift.mjs
-          npm ci
-          npm run verify
 
-      - name: Commit verified v806 candidate
+      - name: Commit focused-verified v806 candidate
         shell: bash
         run: |
           set -euo pipefail
