@@ -1,0 +1,142 @@
+name: v812c game summary transactional proof
+
+on:
+  push:
+    branches: [proof/v812c-game-summary-txn]
+    paths: ['.github/workflows/proof-v812c-game-summary-txn.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '10'
+      PGOPTIONS: '-c statement_timeout=20000'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v812c-game-summary-txn
+          fetch-depth: 0
+
+      - name: Record proof identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .proof
+          printf '%s.%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > .proof/v812c-game-summary-txn-run-id.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .proof/v812c-game-summary-txn-run-id.txt
+          git commit -m 'test: record v812c transactional proof run'
+          git push origin HEAD:proof/v812c-game-summary-txn
+
+      - name: Prove exact migration in a rolled-back transaction
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          sed '/^begin;$/d;/^commit;$/d' GEJAST_v812c_game_summary_write_boundary.sql > /tmp/v812c-body.sql
+          cat > /tmp/v812c-proof.sql <<'SQL'
+          \set ON_ERROR_STOP on
+          begin;
+          \i /tmp/v812c-body.sql
+
+          insert into public.players(slug,display_name,active,pin_hash,approved,hidden_from_public,is_dummy,site_scope) values
+            ('v812c-txn-a','V812C_TXN_A',true,'md5:'||md5('4826'||':'||current_database()),true,true,true,'friends'),
+            ('v812c-txn-b','V812C_TXN_B',true,'md5:'||md5('7314'||':'||current_database()),true,true,true,'friends'),
+            ('v812c-txn-f','V812C_TXN_F',true,'md5:'||md5('6193'||':'||current_database()),true,true,true,'family');
+
+          create temporary table _v812c_tokens(a text,b text,f text) on commit drop;
+          insert into _v812c_tokens
+          select public.account_login_v687('V812C_TXN_A','4826','friends','{"proof":"v812c-txn"}'::jsonb)->>'session_token',
+                 public.account_login_v687('V812C_TXN_B','7314','friends','{"proof":"v812c-txn"}'::jsonb)->>'session_token',
+                 public.account_login_v687('V812C_TXN_F','6193','family','{"proof":"v812c-txn"}'::jsonb)->>'session_token';
+
+          do $$
+          declare
+            ta text; tb text; tf text; r jsonb; c integer;
+          begin
+            select a,b,f into ta,tb,tf from _v812c_tokens;
+            if ta !~ '^[0-9a-f]{48}$' or tb !~ '^[0-9a-f]{48}$' or tf !~ '^[0-9a-f]{48}$' then
+              raise exception 'token proof failed';
+            end if;
+
+            r := public.save_game_match_summary_scoped(ta,'klaverjas','v812c-scope-key','{"participants":["V812C_TXN_A"],"recap_text":"first"}'::jsonb,'friends');
+            if coalesce((r->>'ok')::boolean,false) is not true then raise exception 'first save failed'; end if;
+            r := public.save_game_match_summary_scoped(ta,'klaverjas','v812c-scope-key','{"participants":["V812C_TXN_A"],"recap_text":"replay"}'::jsonb,'friends');
+            select count(*) into c from public.game_match_summaries where site_scope='friends' and game_type='klaverjas' and client_match_id='v812c-scope-key';
+            if c <> 1 then raise exception 'same-owner replay duplicated'; end if;
+            if (select recap_text from public.game_match_summaries where site_scope='friends' and game_type='klaverjas' and client_match_id='v812c-scope-key') <> 'replay' then
+              raise exception 'same-owner replay did not update';
+            end if;
+
+            begin
+              perform public.save_game_match_summary_scoped(tb,'klaverjas','v812c-scope-key','{"participants":["V812C_TXN_B"]}'::jsonb,'friends');
+              raise exception 'cross-owner unexpectedly accepted';
+            exception when others then
+              if sqlerrm not like '%game_summary_owner_mismatch%' then raise; end if;
+            end;
+
+            r := public.save_game_match_summary_scoped(tf,'klaverjas','v812c-scope-key','{"participants":["V812C_TXN_F"]}'::jsonb,'family');
+            select count(*) into c from public.game_match_summaries where game_type='klaverjas' and client_match_id='v812c-scope-key';
+            if c <> 2 then raise exception 'cross-scope key isolation failed'; end if;
+
+            begin
+              perform public.save_game_match_summary_scoped(tf,'klaverjas','v812c-wrong-scope','{"participants":["V812C_TXN_F"]}'::jsonb,'friends');
+              raise exception 'scope mismatch accepted';
+            exception when others then
+              if sqlerrm not like '%game_summary_scope_mismatch%' then raise; end if;
+            end;
+
+            begin
+              perform public.save_game_match_summary_scoped('000000000000000000000000000000000000000000000000','klaverjas','v812c-invalid','{}'::jsonb,'friends');
+              raise exception 'invalid session accepted';
+            exception when others then
+              if sqlerrm not like '%Niet ingelogd.%' then raise; end if;
+            end;
+
+            begin
+              perform public.save_game_match_summary_scoped(ta,'klaverjas','v812c-participants','{"participants":["V812C_TXN_B"]}'::jsonb,'friends');
+              raise exception 'nonparticipant owner accepted';
+            exception when others then
+              if sqlerrm not like '%game_summary_owner_not_participant%' then raise; end if;
+            end;
+
+            r := public.save_game_match_summary(ta,'boerenbridge','v812c-unscoped','{"participants":["V812C_TXN_A"]}'::jsonb);
+            if r->>'site_scope' <> 'friends' then raise exception 'unscoped scope bind failed'; end if;
+
+            r := public.contract_live_write_v1(tf,'beerpong','v812c-contract','{"participants":["V812C_TXN_F"]}'::jsonb,'family');
+            if coalesce((r->>'ok')::boolean,false) is not true then raise exception 'contract write failed: %',r; end if;
+            r := public.contract_live_write_v1(tf,'beerpong','v812c-contract-bad','{"participants":["V812C_TXN_F"]}'::jsonb,'friends');
+            if coalesce((r->>'ok')::boolean,true) is not false then raise exception 'contract scope mismatch accepted'; end if;
+
+            if has_table_privilege('anon','public.game_match_summaries','SELECT')
+               or has_table_privilege('anon','public.game_match_summaries','INSERT')
+               or has_table_privilege('authenticated','public.game_match_summaries','UPDATE')
+               or has_table_privilege('anon','public.live_match_summaries','SELECT') then
+              raise exception 'direct table/view privilege remained';
+            end if;
+          end $$;
+
+          rollback;
+          select 'RESULT=V812C_TRANSACTIONAL_PROOF_PASS' as result;
+          SQL
+          timeout 60s psql "$SUPABASE_DB_URL" -X -f /tmp/v812c-proof.sql
+
+      - name: Prove rollback left zero residue
+        shell: bash
+        run: |
+          set -euo pipefail
+          residue="$(timeout 25s psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 <<'SQL'
+          select
+            (select count(*) from public.players where display_name like 'V812C_TXN_%'),
+            (select count(*) from public.gejast_player_sessions_v746 where display_name like 'V812C_TXN_%'),
+            (select count(*) from public.game_match_summaries where client_match_id like 'v812c-%');
+          SQL
+          )"
+          test "$residue" = '0|0|0'
+          echo 'RESULT=V812C_ROLLBACK_ZERO_RESIDUE_PASS'
