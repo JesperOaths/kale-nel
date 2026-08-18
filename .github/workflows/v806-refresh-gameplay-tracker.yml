@@ -1,0 +1,49 @@
+name: v806 gameplay tracker truth builder
+
+on:
+  push:
+    branches: [agent/v806-family-alias-runtime-light]
+    paths: ['.github/workflows/v806-refresh-gameplay-tracker.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v806-family-alias-runtime-light
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Reconcile gameplay tracker with deployed v801a and v806 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import json
+
+          p = Path('gameplay-acceptance.json')
+          data = json.loads(p.read_text())
+          data['site_version'] = 'v806'
+          data['last_updated'] = '2026-08-18'
+          toep = next((g for g in data.get('games', []) if g.get('id') == 'toepen'), None)
+          if not toep:
+              raise SystemExit('Toepen gameplay row missing')
+          toep['live_status'] = 'owner_isolation_and_idempotency_proven'
+          toep['live_evidence'] = ('Production migration 20260818001412 gejast_v801a_toepen_idempotency_owner_guard is deployed. Public PostgREST proof 32084142660 / job 95553027731 proved first save, same-owner idempotent replay to the same game, cross-owner rejection, invalid-session rejection, wrong-scope rejection and cleanup. Post-mutation health 32084207898 passed, and the final independent controlled Toepen/player/session residue sweep was zero.')
+          toep['remaining_gap'] = 'No known Toepen owner/idempotency production gap remains. Revalidate if create_toepen_game, session ownership, scope semantics, totals validation or persistence contracts change.'
+          p.write_text(json.dumps(data, indent=2, ensure_ascii=False) + '\n')
+          PY
+          node check-gameplay-acceptance-current.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add gameplay-acceptance.json
+          git commit -m 'docs: reconcile gameplay acceptance after v801a deployment'
+          git push origin HEAD:agent/v806-family-alias-runtime-light
+          echo 'RESULT=V806_GAMEPLAY_TRACKER_REFRESH_PASS'
