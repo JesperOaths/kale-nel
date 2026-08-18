@@ -1,0 +1,78 @@
+name: Prepare v806 final candidate
+
+on:
+  push:
+    branches: [agent/v806-canonical-session-runtime-final]
+    paths: ['.github/workflows/prepare-v806-final.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-v806:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v806-canonical-session-runtime-final
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Apply grounded v806 runtime repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin agent/v806-canonical-session-runtime
+          git show origin/agent/v806-canonical-session-runtime:scripts/prepare-v806-canonical-session-runtime.py > /tmp/prepare-v806.py
+          python3 /tmp/prepare-v806.py
+          python3 <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('release-certification.json')
+          old=json.loads(p.read_text())
+          p.write_text(json.dumps({
+            'schema_version': 1,
+            'current_version': 'v806',
+            'status': 'REVALIDATION_REQUIRED',
+            'previous_certified_version': 'v805',
+            'previous_certified_product_sha': 'b64a116f2b2684d1fbd475b40c2b76f569d40942',
+            'previous_certified_release_branch': 'release/v805-certified-20260818',
+            'previous_certified_tag': 'v805-certified-20260818',
+            'reason': 'v806 changes shipped player-session runtime and nested shared-asset resolution; fresh exact-current evidence is required before PASS.',
+            'remaining_release_blockers': [
+              'Fresh exact-current v806 live health must pass.',
+              'Fresh exact-current v806 multi-context/deep gameplay must pass.',
+              'Fresh authenticated v806 visual audit plus manual screenshot review must pass.',
+              'Controlled production fixtures must be independently verified at zero residue.'
+            ],
+            'required_next': [
+              'Run exact-current v806 health.',
+              'Run exact-current v806 deep live gameplay.',
+              'Run full authenticated v806 visual audit and manually inspect the artifact.',
+              'Verify zero controlled residue, record final-acceptance-v806.json, then set PASS.'
+            ],
+            'previous_certification_snapshot': {
+              'certified_at': old.get('certified_at'),
+              'visual_artifact_sha256': (old.get('authoritative_evidence') or {}).get('post_v801a_visual_artifact_sha256')
+            }
+          }, indent=2, ensure_ascii=False)+'\n')
+          PY
+          node check-version-drift.mjs
+          node check-v806-canonical-session-runtime.mjs
+          node check-release-certification-state.mjs
+          npm ci
+          npm run verify
+      - name: Commit verified v806 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/prepare-v806-final.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: canonicalize session runtime and family assets v806'
+          git push origin HEAD:agent/v806-canonical-session-runtime-final
+          echo 'RESULT=V806_FINAL_CANDIDATE_PREPARED_PASS'
