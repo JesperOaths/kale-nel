@@ -1,0 +1,82 @@
+name: v806 readiness truth builder
+
+on:
+  push:
+    branches: [agent/v806-family-alias-runtime-light]
+    paths: ['.github/workflows/v806-refresh-readiness.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v806-family-alias-runtime-light
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Refresh readiness metadata and invariant
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import json
+
+          path = Path('beta-readiness.json')
+          data = json.loads(path.read_text())
+          data['site_version'] = 'release candidate v806 / live v805'
+          data['last_updated'] = '2026-08-18'
+          dep = data.setdefault('deployment_identity', {})
+          dep['live_version'] = 'v805'
+          dep['release_candidate_version'] = 'v806'
+          dep['frontend_release_merge'] = 'b64a116f2b2684d1fbd475b40c2b76f569d40942'
+          dep['repository_head_at_audit'] = '56112b6f097cda9a46d29cba1217785a1de27754'
+          dep['note'] = ('Release candidate v806 / certified live baseline v805. v805 completed post-restart, post-v801a health, deep live gameplay, owner-isolation and 137-screenshot authenticated visual certification with zero controlled residue. '
+                         'Production migration 20260818001412 gejast_v801a_toepen_idempotency_owner_guard is deployed and public PostgREST proof 32084142660 passed same-owner replay plus cross-owner, invalid-session and wrong-scope denial. '
+                         'v806 changes only nested shared-runtime asset/VERSION resolution to root-absolute paths and remains REVALIDATION_REQUIRED until post-deploy focused Family and full visual evidence complete.')
+          evidence = dep.setdefault('evidence', [])
+          current = ('2026-08-18 certified v805: health 32084207898 PASS; deep-live 32085432145 PASS; authenticated visual 32085275503 PASS with 137 screenshots manually reviewed and artifact sha256 7757d1e51ae99152ee730efb640a27566a28d05eb2d635957bf40f40118495c5; final controlled residue zero.')
+          if current not in evidence:
+              evidence.insert(0, current)
+          toep = next((x for x in data.get('beta_gaps', []) if x.get('id') == 'toepen_backend_live'), None)
+          if not toep:
+              raise SystemExit('toepen_backend_live gap missing')
+          toep.update({
+              'status': 'verified_complete',
+              'proof_needed': 'Complete: production migration 20260818001412 gejast_v801a_toepen_idempotency_owner_guard is deployed. Public PostgREST proof 32084142660 passed same-owner idempotent replay, cross-owner rejection, invalid-session rejection, wrong-scope rejection and cleanup.',
+              'next_action': 'No Toepen owner-idempotency action required unless create_toepen_game, session ownership, scope semantics or persistence contracts change.',
+              'latest_probe': '2026-08-18: public REST proof 32084142660 / job 95553027731 PASS after migration 20260818001412; post-mutation health 32084207898 PASS; final independent Toepen/player/session residue sweep zero.'
+          })
+          gate = next((x for x in data.get('baseline_checks', []) if x.get('id') == 'live_write_safety_gate'), None)
+          if gate:
+              gate['evidence'] = ('The live-write checklist remains fully disarmed with zero automated mutation targets. The previously permission-gated Toepen v801a owner/idempotency repair was explicitly authorized, deployed as production migration 20260818001412, proven through public PostgREST run 32084142660, and cleaned to zero controlled residue.')
+          path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + '\n')
+
+          checker = Path('check-beta-readiness-current-v770d.mjs')
+          src = checker.read_text()
+          replacements = {
+            "if (toepenGap?.status !== 'needs_permission') failures.push('toepen_backend_live must remain explicitly needs_permission until the live-proven v801a repair is authorized and deployed');": "if (toepenGap?.status !== 'verified_complete') failures.push('toepen_backend_live must remain verified_complete after production v801a deployment');",
+            "if (!/v801a/i.test(String(toepenGap?.next_action || ''))) failures.push('Toepen permission blocker must name the v801a deployment action');": "if (!/20260818001412|32084142660/i.test([toepenGap?.proof_needed,toepenGap?.latest_probe].join(' '))) failures.push('Toepen completion evidence must preserve the production v801a migration or public REST proof');",
+            "if (JSON.stringify(permissionIds) !== JSON.stringify(['toepen_backend_live'])) failures.push(`expected only Toepen to be permission-gated, got: ${permissionIds.join(', ') || '(none)'}`);": "if (permissionIds.length) failures.push(`current readiness must have no permission-gated gaps, got: ${permissionIds.join(', ')}`);",
+            "if (completeCount !== 11 || permission.length !== 1) failures.push(`expected current readiness split 11 complete / 1 permission-gated, got ${completeCount} / ${permission.length}`);": "if (completeCount !== 12 || permission.length !== 0) failures.push(`expected current readiness split 12 complete / 0 permission-gated, got ${completeCount} / ${permission.length}`);",
+          }
+          for old, new in replacements.items():
+              if old not in src:
+                  raise SystemExit('readiness checker replacement target missing: ' + old[:90])
+              src = src.replace(old, new)
+          checker.write_text(src)
+          PY
+          node check-beta-readiness-current-v770d.mjs
+          node check-production-acceptance-v774.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add beta-readiness.json check-beta-readiness-current-v770d.mjs
+          git commit -m 'docs: reconcile beta readiness after v801a deployment'
+          git push origin HEAD:agent/v806-family-alias-runtime-light
+          echo 'RESULT=V806_READINESS_REFRESH_PASS'
