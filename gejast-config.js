@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v805',
+    VERSION:'v806',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: '',
@@ -88,7 +88,7 @@
   }
   async function refreshVersionFromFile(){
     try {
-      const res = await fetch('./VERSION?ts=' + Date.now(), { cache:'no-store' });
+      const res = await fetch('/VERSION?ts=' + Date.now(), { cache:'no-store' });
       if (!res.ok) return currentVersion;
       const text = String(await res.text() || '').trim();
       const parsed = text.match(/v?\d+/i);
@@ -754,7 +754,7 @@ function buildRequestUrl(returnTo, scope){
       setTimeout(showPageNow, 0);
     }
     setTimeout(showPageNow, 650);
-    return { VERSION:'v805', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
+    return { VERSION:'v806', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
   })();
   window.GEJAST_FAST_RUNTIME = FAST_RUNTIME;
 
@@ -798,7 +798,7 @@ function buildRequestUrl(returnTo, scope){
       if (/\/admin/.test(path)) return;
       if (document.querySelector('script[data-despimarkt-announcements]')) return;
       const script = document.createElement('script');
-      script.src = `./gejast-site-announcements.js?${effectiveVersion}`;
+      script.src = `/gejast-site-announcements.js?${effectiveVersion}`;
       script.async = false;
       script.setAttribute('data-despimarkt-announcements','1');
       document.head.appendChild(script);
@@ -810,7 +810,7 @@ function buildRequestUrl(returnTo, scope){
       if (window.GEJAST_SCOPE_HARDENING && window.GEJAST_SCOPE_HARDENING.version === 'v687') return;
       if (document.querySelector('script[data-gejast-scope-hardening]')) return;
       const script = document.createElement('script');
-      script.src = `./gejast-scope-hardening.js?${effectiveVersion}`;
+      script.src = `/gejast-scope-hardening.js?${effectiveVersion}`;
       script.async = false;
       script.setAttribute('data-gejast-scope-hardening','1');
       document.head.appendChild(script);
@@ -821,7 +821,7 @@ function buildRequestUrl(returnTo, scope){
     try {
       if (window.GEJAST_V725_REPAIR || document.querySelector('script[data-gejast-v725-repair]')) return;
       const script = document.createElement('script');
-      script.src = `./gejast-v725-repair.js?${effectiveVersion}`;
+      script.src = `/gejast-v725-repair.js?${effectiveVersion}`;
       script.defer = true;
       script.setAttribute('data-gejast-v725-repair','1');
       document.head.appendChild(script);
