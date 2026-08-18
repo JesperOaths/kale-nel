@@ -55,6 +55,45 @@ jobs:
               raise SystemExit('runtime harness anchor missing')
           s=s.replace(runtime_anchor, runtime_patch+'\n'+runtime_anchor, 1)
 
+          deep_anchor="if 'analyticsVisitorId: certAnalyticsVisitorId' not in src: raise SystemExit('deep analytics visitor patch failed')"
+          deep_patch=r'''watch_init="function watchPage(page, label) {\n  const errs = [];"
+          watch_init_new="function watchPage(page, label) {\n  const errs = [];\n  const http = [];\n  let responseSeq = 0;"
+          if watch_init not in src: raise SystemExit('deep response diagnostic init target missing')
+          src=src.replace(watch_init,watch_init_new,1)
+          console_line="  page.on('console', (msg) => { if (msg.type() === 'error') errs.push(`console ${msg.text()}`); });"
+          response_line=r"""  page.on('response', (response) => {
+            const status = response.status();
+            const url = response.url();
+            if (status >= 500 || /\/rest\/v1\/rpc\/account_public_state_v687(?:\?|$)/.test(url)) {
+              http.push({ seq: ++responseSeq, status, url, method: response.request().method() });
+            }
+          });"""
+          if console_line not in src: raise SystemExit('deep response diagnostic console target missing')
+          src=src.replace(console_line,console_line+'\n'+response_line,1)
+          serious_old="    const serious = errs.filter((x) => !/favicon|Failed to load resource.*404/i.test(x));\n    if (serious.length) throw new Error(`${label} browser errors: ${serious.join(' | ')}`);"
+          serious_new=r"""    const isAuthRpc = (x) => x.method === 'POST' && /\/rest\/v1\/rpc\/account_public_state_v687(?:\?|$)/.test(x.url);
+            const auth = http.filter(isAuthRpc);
+            const auth5xx = auth.filter((x) => x.status >= 500);
+            const recoveredAuth5xx = auth5xx.filter((failure) => auth.some((success) => success.seq > failure.seq && success.status >= 200 && success.status < 300));
+            const unrelated5xx = http.filter((x) => x.status >= 500 && !isAuthRpc(x));
+            const generic500 = errs.filter((x) => /Failed to load resource.*status of 500/i.test(x));
+            const authRecoveryOk = auth5xx.length === 1 && recoveredAuth5xx.length === 1 && unrelated5xx.length === 0 && generic500.length <= 1;
+            const serious = errs.filter((x) => {
+              if (/favicon|Failed to load resource.*404/i.test(x)) return false;
+              if (/Failed to load resource.*status of 500/i.test(x) && authRecoveryOk) return false;
+              return true;
+            });
+            if (unrelated5xx.length) throw new Error(`${label} HTTP 5xx: ${unrelated5xx.map((x) => `${x.method} ${x.status} ${x.url}`).join(' | ')}`);
+            if (auth5xx.length && !authRecoveryOk) throw new Error(`${label} auth RPC 5xx was not a single recovered transient: ${auth5xx.map((x) => `${x.method} ${x.status} ${x.url}`).join(' | ')}`);
+            if (serious.length) throw new Error(`${label} browser errors: ${serious.join(' | ')}`);
+            if (authRecoveryOk) console.log(`TRANSIENT_AUTH_RPC_RECOVERED label=${label} status=${auth5xx[0].status}`);"""
+          if serious_old not in src: raise SystemExit('deep transient auth classifier target missing')
+          src=src.replace(serious_old,serious_new,1)
+          if 'TRANSIENT_AUTH_RPC_RECOVERED' not in src: raise SystemExit('deep transient auth classifier patch missing')'''
+          if deep_anchor not in s:
+              raise SystemExit('deep harness anchor missing')
+          s=s.replace(deep_anchor, deep_patch+'\n'+deep_anchor, 1)
+
           visual_anchor="if 'analyticsVisitorId: process.env.GEJAST_CERT_ANALYTICS_VISITOR_ID' not in s: raise SystemExit('visual analytics visitor patch missing')"
           visual_patch=r'''old_nav="response = await page.goto(routeUrl(route), { waitUntil: 'domcontentloaded', timeout });"\nnew_nav="""const targetUrl = routeUrl(route);\n    for (let navAttempt = 1; navAttempt <= 3; navAttempt += 1) {\n      response = await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout });\n      const navStatus = response?.status() || 0;\n      if (![500, 502, 503, 504].includes(navStatus) || navAttempt === 3) break;\n      console.log(`TRANSIENT_DOCUMENT_RETRY route=${route} status=${navStatus} attempt=${navAttempt}`);\n      await page.waitForTimeout(500 * navAttempt);\n    }"""\nif old_nav not in s: raise SystemExit('visual navigation retry target missing')\ns=s.replace(old_nav,new_nav,1)\nif 'TRANSIENT_DOCUMENT_RETRY' not in s: raise SystemExit('visual transient retry patch missing')'''
           if visual_anchor not in s:
@@ -65,6 +104,8 @@ jobs:
           PY
           bash -n scripts/v812ab-final-certification-runner.sh
           grep -q 'runtime duplicate-abort classifier patch missing' scripts/v812ab-final-certification-runner.sh
+          grep -q 'TRANSIENT_AUTH_RPC_RECOVERED' scripts/v812ab-final-certification-runner.sh
+          grep -q 'auth5xx.length === 1' scripts/v812ab-final-certification-runner.sh
           grep -q 'TRANSIENT_DOCUMENT_RETRY' scripts/v812ab-final-certification-runner.sh
           echo 'RESULT=V812AB_CERT_HARNESS_TRANSIENT_HARDENING_PASS'
 
