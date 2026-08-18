@@ -1,0 +1,50 @@
+name: One-shot v807 product builder trigger
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/v807-builder-pr-trigger.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  build-v807:
+    if: github.head_ref == 'ops/v807-builder-trigger'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v807-remove-active-stale-session-probes
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Apply and verify exact v807 correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = '87fa814d28c00035b770c0ff8959def27a00f059'
+          python3 scripts/prepare-v807-stale-session-probe-removal.py
+          node check-version-drift.mjs
+          node check-v806-canonical-session-runtime.mjs
+          node check-v807-active-session-callers.mjs
+          node check-release-certification-state.mjs
+          node check-beta-readiness-current-v770d.mjs
+          npm ci
+          npm run verify
+      - name: Commit only verified v807 product files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/v807-builder-once.yml
+          rm -f scripts/prepare-v807-stale-session-probe-removal.py
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: remove active stale session probes v807'
+          git push origin HEAD:agent/v807-remove-active-stale-session-probes
+          echo 'RESULT=V807_STALE_SESSION_CALLER_BUILDER_PASS'
