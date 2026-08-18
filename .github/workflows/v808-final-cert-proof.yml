@@ -1,0 +1,441 @@
+name: v808 exact-current final certification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/v808-final-cert-proof.yml'
+      - 'scripts/v808-family-runtime-proof.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v808-final-cert-20260818
+  cancel-in-progress: true
+
+env:
+  GEJAST_EXACT_MAIN_SHA: 7f6f7bc110807e85f52ff4d54927620dbbc9ffeb
+  GEJAST_EXPECTED_VERSION: v808
+  GEJAST_BASE_URL: https://kalenel.nl/
+
+jobs:
+  live-health:
+    if: github.head_ref == 'proof/v808-final-cert-20260818'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact-current proof branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v808-final-cert-20260818
+          fetch-depth: 0
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Prove exact v808 tree and canonical repository state
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = 'v808'
+          test "$(git show HEAD:VERSION | tr -d '\r\n')" = 'v808'
+          unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^(\.github/workflows/v808-final-cert-proof\.yml|scripts/v808-family-runtime-proof\.mjs)$' || true)"
+          test -z "$unexpected" || { echo 'Unexpected proof branch drift:'; echo "$unexpected"; exit 1; }
+          npm ci
+          npm run verify
+          node check-v807-active-session-callers.mjs
+          node check-v808-family-player-empty-alias.mjs
+          node check-toepen-idempotency-owner-guard-v801a.mjs
+          echo 'RESULT=V808_EXACT_TREE_AND_VERIFY_PASS'
+      - name: Prove live v808 deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          live="$(curl -fsS --max-time 15 https://kalenel.nl/VERSION | tr -d '\r\n')"
+          test "$live" = 'v808'
+          echo 'RESULT=V808_LIVE_VERSION_PASS'
+      - name: Verify deployed public and admin surfaces
+        env:
+          GEJAST_DEPLOY_WAIT_SECONDS: '240'
+          GEJAST_SMOKE_TIMEOUT_MS: '15000'
+        run: node check-live-routes.mjs
+      - name: Verify live admin GitHub OAuth outer boundary
+        env:
+          GEJAST_ADMIN_AUTH_TIMEOUT_MS: '15000'
+        run: node check-live-admin-auth-boundary.mjs
+      - name: Verify Supabase auth data plane
+        env:
+          GEJAST_DATA_PLANE_TIMEOUT_MS: '10000'
+          GEJAST_DATA_PLANE_ATTEMPTS: '2'
+          GEJAST_DATA_PLANE_RETRY_DELAY_MS: '750'
+        run: node check-live-data-plane.mjs
+      - name: Primary read-only acceptance
+        env:
+          GEJAST_BETA_SURFACE_TIMEOUT_MS: '15000'
+        run: node check-beta-readonly-surfaces.mjs
+      - name: Extended read-only acceptance
+        env:
+          GEJAST_BETA_SURFACE_TIMEOUT_MS: '15000'
+        run: node check-beta-readonly-extended.mjs
+      - name: Performance probe
+        env:
+          GEJAST_PERF_TIMEOUT_MS: '20000'
+        run: node check-beta-performance.mjs
+      - name: Final health marker
+        run: echo 'RESULT=V808_LIVE_HEALTH_PASS'
+
+  owner-isolation:
+    needs: live-health
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '10'
+      PGOPTIONS: '-c statement_timeout=10000'
+    steps:
+      - name: Check out exact-current proof branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v808-final-cert-20260818
+          fetch-depth: 0
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Prove exact tree and deterministic owner-control contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = 'v808'
+          test "$(curl -fsS --max-time 15 https://kalenel.nl/VERSION | tr -d '\r\n')" = 'v808'
+          unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^(\.github/workflows/v808-final-cert-proof\.yml|scripts/v808-family-runtime-proof\.mjs)$' || true)"
+          test -z "$unexpected"
+          npm ci
+          node check-toepen-engine-v792.mjs
+          node check-boerenbridge-engine-v792.mjs
+          node check-beerpong-gameplay-v792.mjs
+          node check-klaverjas-online.mjs
+          node check-klaverjas-online-transition-v792b.mjs
+          node check-klaverjas-online-rules-v792c.mjs
+          node check-klaverjas-online-persistence-v792f.mjs
+          node check-toepen-idempotency-owner-guard-v801a.mjs
+          echo 'RESULT=V808_OWNER_DETERMINISTIC_PASS'
+      - name: Provision two hidden current-login identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          n1="V808OwnA_${suffix}"; n2="V808OwnB_${suffix}"; p1='4826'; p2='7314'
+          echo "::add-mask::$p1"; echo "::add-mask::$p2"
+          echo "GEJAST_PLAYER1_NAME=$n1" >> "$GITHUB_ENV"; echo "GEJAST_PLAYER2_NAME=$n2" >> "$GITHUB_ENV"
+          timeout 20s psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v n1="$n1" -v n2="$n2" -v p1="$p1" -v p2="$p2" <<'SQL'
+          insert into public.players(slug,display_name,active,pin_hash,approved,hidden_from_public,is_dummy,site_scope)
+          values ('v808-own-a-'||lower(:'n1'),:'n1',true,'md5:'||md5(:'p1'||':'||current_database()),true,true,true,'friends'),
+                 ('v808-own-b-'||lower(:'n2'),:'n2',true,'md5:'||md5(:'p2'||':'||current_database()),true,true,true,'friends');
+          SQL
+          sessions="$(timeout 20s psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v n1="$n1" -v n2="$n2" -v p1="$p1" -v p2="$p2" <<'SQL'
+          select public.account_login_v687(:'n1',:'p1','friends','{"proof":"v808-owner"}'::jsonb)->>'session_token',
+                 public.account_login_v687(:'n2',:'p2','friends','{"proof":"v808-owner"}'::jsonb)->>'session_token';
+          SQL
+          )"
+          IFS='|' read -r t1 t2 <<< "$sessions"
+          [[ "$t1" =~ ^[0-9a-f]{48}$ && "$t2" =~ ^[0-9a-f]{48}$ ]]
+          echo "::add-mask::$t1"; echo "::add-mask::$t2"
+          echo "GEJAST_PLAYER1_TOKEN=$t1" >> "$GITHUB_ENV"; echo "GEJAST_PLAYER2_TOKEN=$t2" >> "$GITHUB_ENV"
+          echo 'RESULT=V808_OWNER_FIXTURES_PASS'
+      - name: Prove Boerenbridge owner isolation and same-owner replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          bb="v808-bb-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"; echo "GEJAST_BB_CLIENT=$bb" >> "$GITHUB_ENV"
+          first="$(timeout 20s psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER1_TOKEN" -v bb="$bb" <<'SQL'
+          select public.save_boerenbridge_match(:'token',:'bb','v808-cert','v808',jsonb_build_object('match_name','v808 owner proof','site_scope','friends','rounds',18));
+          SQL
+          )"
+          echo "$first" | grep -q '"ok": true'
+          replay="$(timeout 20s psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER1_TOKEN" -v bb="$bb" <<'SQL'
+          select public.save_boerenbridge_match(:'token',:'bb','v808-cert','v808',jsonb_build_object('match_name','v808 owner replay','site_scope','friends','rounds',18));
+          SQL
+          )"
+          echo "$replay" | grep -q '"ok": true'
+          if timeout 20s psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER2_TOKEN" -v bb="$bb" >/tmp/bb-cross.out 2>&1 <<'SQL'
+          select public.save_boerenbridge_match(:'token',:'bb','v808-cert','v808','{}'::jsonb);
+          SQL
+          then cat /tmp/bb-cross.out; echo 'Boerenbridge cross-owner replay unexpectedly succeeded'; exit 1; fi
+          grep -q 'boerenbridge_match_owner_mismatch' /tmp/bb-cross.out
+          echo 'RESULT=V808_BOERENBRIDGE_OWNER_ISOLATION_PASS'
+      - name: Prove Beerpong owner isolation and same-owner replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          bp="v808-bp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"; echo "GEJAST_BP_CLIENT=$bp" >> "$GITHUB_ENV"
+          payload="$(printf '{\"format\":\"1v1\",\"status\":\"finished\",\"team_a_player_names\":[\"%s\"],\"team_b_player_names\":[\"%s\"],\"winner_team\":\"team_a\",\"cups_left_team_a\":10,\"cups_left_team_b\":4}' "$GEJAST_PLAYER1_NAME" "$GEJAST_PLAYER2_NAME")"
+          first="$(timeout 20s psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER1_TOKEN" -v bp="$bp" -v payload="$payload" <<'SQL'
+          select public.save_beerpong_match(:'token',:'bp',:'payload'::jsonb);
+          SQL
+          )"
+          echo "$first" | grep -q '"ok": true'; echo "$first" | grep -q '"already_saved": false'
+          replay="$(timeout 20s psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER1_TOKEN" -v bp="$bp" -v payload="$payload" <<'SQL'
+          select public.save_beerpong_match(:'token',:'bp',:'payload'::jsonb);
+          SQL
+          )"
+          echo "$replay" | grep -q '"already_saved": true'
+          if timeout 20s psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER2_TOKEN" -v bp="$bp" -v payload="$payload" >/tmp/bp-cross.out 2>&1 <<'SQL'
+          select public.save_beerpong_match(:'token',:'bp',:'payload'::jsonb);
+          SQL
+          then cat /tmp/bp-cross.out; echo 'Beerpong cross-owner replay unexpectedly succeeded'; exit 1; fi
+          grep -q 'beerpong_match_owner_mismatch' /tmp/bp-cross.out
+          echo 'RESULT=V808_BEERPONG_OWNER_ISOLATION_PASS'
+      - name: Cleanup owner fixtures and prove zero residue
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GEJAST_PLAYER1_NAME:-}" ]; then echo 'No owner fixtures provisioned.'; exit 0; fi
+          timeout 25s psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v n1="$GEJAST_PLAYER1_NAME" -v n2="$GEJAST_PLAYER2_NAME" -v bb="${GEJAST_BB_CLIENT:-__none__}" -v bp="${GEJAST_BP_CLIENT:-__none__}" <<'SQL'
+          begin;
+          delete from public.boerenbridge_matches where client_match_id=:'bb';
+          delete from public.beerpong_matches where client_match_id=:'bp';
+          delete from public.gejast_active_player_metadata_v679 where lower(coalesce(player_name,'')) in (lower(:'n1'),lower(:'n2'));
+          delete from public.gejast_player_sessions_v746 where player_id in (select id from public.players where display_name in (:'n1',:'n2'));
+          delete from public.players where display_name in (:'n1',:'n2') and is_dummy=true and hidden_from_public=true;
+          commit;
+          SQL
+          residue="$(timeout 20s psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v n1="$GEJAST_PLAYER1_NAME" -v n2="$GEJAST_PLAYER2_NAME" -v bb="${GEJAST_BB_CLIENT:-__none__}" -v bp="${GEJAST_BP_CLIENT:-__none__}" <<'SQL'
+          select (select count(*) from public.players where display_name in (:'n1',:'n2')),
+                 (select count(*) from public.gejast_player_sessions_v746 where display_name in (:'n1',:'n2')),
+                 (select count(*) from public.boerenbridge_matches where client_match_id=:'bb'),
+                 (select count(*) from public.beerpong_matches where client_match_id=:'bp');
+          SQL
+          )"
+          test "$residue" = '0|0|0|0'
+          echo 'RESULT=V808_OWNER_ZERO_RESIDUE_PASS'
+      - name: Final owner marker
+        run: echo 'RESULT=V808_OWNER_ISOLATION_PASS'
+
+  deep-live:
+    needs: owner-isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      GEJAST_SITE_SCOPE: friends
+      GEJAST_BROWSER_TIMEOUT_MS: '25000'
+      PGCONNECT_TIMEOUT: '10'
+      PGOPTIONS: '-c statement_timeout=20000'
+    steps:
+      - name: Check out exact-current proof branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v808-final-cert-20260818
+          fetch-depth: 0
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Prepare exact-current deterministic Chrome gameplay runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = 'v808'
+          test "$(curl -fsS --max-time 15 https://kalenel.nl/VERSION | tr -d '\r\n')" = 'v808'
+          unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^(\.github/workflows/v808-final-cert-proof\.yml|scripts/v808-family-runtime-proof\.mjs)$' || true)"
+          test -z "$unexpected"
+          GEJAST_DATA_PLANE_TIMEOUT_MS=10000 GEJAST_DATA_PLANE_ATTEMPTS=2 GEJAST_DATA_PLANE_RETRY_DELAY_MS=750 node check-live-data-plane.mjs
+          node check-toepen-idempotency-owner-guard-v801a.mjs
+          npm ci
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.55.0
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || true)"
+          test -n "$chrome"; echo "GEJAST_SYSTEM_CHROME=$chrome" >> "$GITHUB_ENV"
+          python3 <<'PY'
+          from pathlib import Path
+          src=Path('scripts/final-cert-live-browser-v792.mjs').read_text()
+          src=src.replace('v792','v808').replace('V792','V808')
+          src=src.replace("chromium.launch({ headless: true })", "chromium.launch({ headless: true, executablePath: process.env.GEJAST_SYSTEM_CHROME })")
+          old="""  await page.waitForTimeout(900);\n  if (/login\\.html/i.test(page.url())) throw new Error(`${label} unexpectedly redirected to login`);\n  const body = (await page.locator('body').innerText()).trim();"""
+          new="""  await page.waitForFunction(() => {\n    const root=document.documentElement;\n    const primary=root.getAttribute('data-gejast-auth-state');\n    return /login\\.html/i.test(location.pathname) || (primary === 'authenticated' && !root.classList.contains('gejast-auth-pending'));\n  }, null, { timeout });\n  if (/login\\.html/i.test(page.url())) throw new Error(`${label} unexpectedly redirected to login`);\n  await page.waitForTimeout(150);\n  const body = (await page.locator('body').innerText()).trim();"""
+          if old not in src: raise SystemExit('deep-live auth settle patch target missing')
+          src=src.replace(old,new)
+          Path('scripts/v808-final-cert-live.mjs').write_text(src)
+          PY
+          node --check scripts/v808-final-cert-live.mjs
+          "$chrome" --version
+          echo 'RESULT=V808_DEEP_RUNTIME_READY_PASS'
+      - name: Provision two hidden disposable players
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          n1="V808CertA_${suffix}"; n2="V808CertB_${suffix}"; p1='4826'; p2='7314'
+          echo "::add-mask::$p1"; echo "::add-mask::$p2"
+          echo "GEJAST_PLAYER1_NAME=$n1" >> "$GITHUB_ENV"; echo "GEJAST_PLAYER2_NAME=$n2" >> "$GITHUB_ENV"
+          timeout 25s psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v n1="$n1" -v n2="$n2" -v p1="$p1" -v p2="$p2" <<'SQL'
+          insert into public.players(slug,display_name,active,pin_hash,approved,hidden_from_public,is_dummy,site_scope)
+          values ('v808-cert-a-'||lower(:'n1'),:'n1',true,'md5:'||md5(:'p1'||':'||current_database()),true,true,true,'friends'),
+                 ('v808-cert-b-'||lower(:'n2'),:'n2',true,'md5:'||md5(:'p2'||':'||current_database()),true,true,true,'friends');
+          SQL
+          sessions="$(timeout 25s psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v n1="$n1" -v n2="$n2" -v p1="$p1" -v p2="$p2" <<'SQL'
+          select public.account_login_v687(:'n1',:'p1','friends','{"proof":"v808-final-cert"}'::jsonb)->>'session_token',
+                 public.account_login_v687(:'n2',:'p2','friends','{"proof":"v808-final-cert"}'::jsonb)->>'session_token';
+          SQL
+          )"
+          IFS='|' read -r t1 t2 <<< "$sessions"
+          [[ "$t1" =~ ^[0-9a-f]{48}$ && "$t2" =~ ^[0-9a-f]{48}$ ]]
+          echo "::add-mask::$t1"; echo "::add-mask::$t2"
+          echo "GEJAST_PLAYER1_TOKEN=$t1" >> "$GITHUB_ENV"; echo "GEJAST_PLAYER2_TOKEN=$t2" >> "$GITHUB_ENV"
+          echo 'RESULT=V808_DEEP_FIXTURES_PASS'
+      - name: Run multi-context mobile reconnect and natural completion campaign
+        run: node scripts/v808-final-cert-live.mjs
+      - name: Prove sessions survive gameplay
+        shell: bash
+        run: |
+          set -euo pipefail
+          state="$(timeout 25s psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v t1="$GEJAST_PLAYER1_TOKEN" -v t2="$GEJAST_PLAYER2_TOKEN" <<'SQL'
+          with s as (select public.account_public_state_v687(:'t1',:'t1','friends') a, public.account_public_state_v687(:'t2',:'t2','friends') b)
+          select coalesce(a->>'ok','false'),coalesce(b->>'ok','false') from s;
+          SQL
+          )"
+          test "$state" = 'true|true'
+          echo 'RESULT=V808_DEEP_POST_GAME_SESSIONS_PASS'
+      - name: Cleanup deep-live fixtures and prove zero residue
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GEJAST_PLAYER1_NAME:-}" ]; then echo 'No deep fixtures provisioned.'; exit 0; fi
+          timeout 30s psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v n1="$GEJAST_PLAYER1_NAME" -v n2="$GEJAST_PLAYER2_NAME" <<'SQL'
+          begin;
+          delete from public.paardenrace_match_history h using public.paardenrace_rooms r where h.room_id=r.id and (r.host_name in (:'n1',:'n2') or r.host_player_id in (select id from public.players where display_name in (:'n1',:'n2')) or r.created_by_player_id in (select id from public.players where display_name in (:'n1',:'n2')));
+          delete from public.klaverjas_online_games where created_by_player_name in (:'n1',:'n2') or created_by_player_id in (select id from public.players where display_name in (:'n1',:'n2'));
+          delete from public.pikken_games where created_by_player_name in (:'n1',:'n2') or created_by_player_id in (select id from public.players where display_name in (:'n1',:'n2'));
+          delete from public.paardenrace_rooms where host_name in (:'n1',:'n2') or host_player_id in (select id from public.players where display_name in (:'n1',:'n2')) or created_by_player_id in (select id from public.players where display_name in (:'n1',:'n2'));
+          delete from public.gejast_active_player_metadata_v679 where lower(coalesce(player_name,'')) in (lower(:'n1'),lower(:'n2'));
+          delete from public.gejast_player_sessions_v746 where player_id in (select id from public.players where display_name in (:'n1',:'n2'));
+          delete from public.players where display_name in (:'n1',:'n2') and hidden_from_public=true and is_dummy=true;
+          commit;
+          SQL
+          residue="$(timeout 25s psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v n1="$GEJAST_PLAYER1_NAME" -v n2="$GEJAST_PLAYER2_NAME" <<'SQL'
+          select (select count(*) from public.players where display_name in (:'n1',:'n2')),(select count(*) from public.gejast_player_sessions_v746 where display_name in (:'n1',:'n2')),(select count(*) from public.gejast_active_player_metadata_v679 where lower(coalesce(player_name,'')) in (lower(:'n1'),lower(:'n2'))),(select count(*) from public.klaverjas_online_games where created_by_player_name in (:'n1',:'n2')),(select count(*) from public.pikken_games where created_by_player_name in (:'n1',:'n2')),(select count(*) from public.paardenrace_rooms where host_name in (:'n1',:'n2'));
+          SQL
+          )"
+          test "$residue" = '0|0|0|0|0|0'
+          echo 'RESULT=V808_DEEP_ZERO_RESIDUE_PASS'
+      - name: Final deep marker
+        run: echo 'RESULT=V808_DEEP_LIVE_PASS'
+
+  authenticated-visual:
+    needs: deep-live
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      SUPABASE_URL: https://uiqntazgnrxwliaidkmy.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GEJAST_VISUAL_DB_NAME: postgres
+      GEJAST_SITE_SCOPE: friends
+      GEJAST_VISUAL_TIMEOUT_MS: '25000'
+      GEJAST_VISUAL_SETTLE_MS: '5000'
+      GEJAST_BROWSER_TIMEOUT_MS: '25000'
+    steps:
+      - name: Check out exact-current proof branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v808-final-cert-20260818
+          fetch-depth: 0
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Prepare exact-current deterministic visual runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_SERVICE_ROLE_KEY:-}"
+          test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = 'v808'
+          test "$(curl -fsS --max-time 15 https://kalenel.nl/VERSION | tr -d '\r\n')" = 'v808'
+          unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^(\.github/workflows/v808-final-cert-proof\.yml|scripts/v808-family-runtime-proof\.mjs)$' || true)"
+          test -z "$unexpected"
+          npm ci
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.55.0
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || true)"
+          test -n "$chrome"; echo "GEJAST_SYSTEM_CHROME=$chrome" >> "$GITHUB_ENV"
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('scripts/full-live-visual-audit-v792.mjs'); s=p.read_text(); old='chromium.launch({ headless: true })'; new='chromium.launch({ headless: true, executablePath: process.env.GEJAST_SYSTEM_CHROME })'
+          if old not in s: raise SystemExit('visual launch patch target missing')
+          p.write_text(s.replace(old,new))
+          PY
+          node --check scripts/full-live-visual-audit-v792.mjs
+          node --check scripts/v808-family-runtime-proof.mjs
+          "$chrome" --version
+          echo 'RESULT=V808_VISUAL_RUNTIME_READY_PASS'
+      - name: Probe data plane
+        id: data_plane
+        env:
+          GEJAST_DATA_PLANE_TIMEOUT_MS: '8000'
+          GEJAST_DATA_PLANE_ATTEMPTS: '1'
+          GEJAST_DATA_PLANE_RETRY_DELAY_MS: '0'
+        run: node check-live-data-plane.mjs
+      - name: Provision authenticated Friends and Family fixtures
+        id: provision
+        run: node scripts/full-live-visual-fixtures-v801.mjs provision
+      - name: Prove exact-current Family runtime and empty player alias
+        run: node scripts/v808-family-runtime-proof.mjs
+      - name: Capture and inspect every tracked live page
+        id: capture
+        continue-on-error: true
+        run: node scripts/full-live-visual-audit-v792.mjs
+      - name: Refine declared redirect aliases
+        id: alias_refinement
+        if: always() && steps.provision.outcome == 'success'
+        run: node scripts/refine-expected-visual-aliases-v809.mjs
+      - name: Record exact report warning inventory
+        if: always() && steps.provision.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f visual-audit/report.json
+          node <<'JS'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('visual-audit/report.json','utf8'));
+          const rows=Array.isArray(r.records)?r.records:(Array.isArray(r.routes)?r.routes:[]);
+          const warn=rows.filter(x=>String(x.judgement||x.status||'').toLowerCase()==='warn');
+          const broken=rows.filter(x=>String(x.judgement||x.status||'').toLowerCase()==='broken');
+          console.log(`V808_VISUAL_INVENTORY records=${rows.length} warn=${warn.length} broken=${broken.length}`);
+          for(const x of warn) console.log(`V808_VISUAL_WARN ${x.route||x.path||''} :: ${x.reason||x.notes||''}`);
+          JS
+      - name: Upload exact-current visual artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: v808-final-cert-visual-${{ github.run_id }}-${{ github.run_attempt }}
+          path: visual-audit/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Cleanup visual fixtures and prove zero residue
+        if: always() && (steps.provision.outcome == 'success' || steps.provision.outcome == 'failure')
+        run: node scripts/full-live-visual-fixtures-v801.mjs cleanup
+      - name: Enforce authenticated visual certification result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.data_plane.outcome }}" = 'success'
+          test "${{ steps.provision.outcome }}" = 'success'
+          test "${{ steps.alias_refinement.outcome }}" = 'success'
+          test -f visual-audit/report.json
+          node <<'JS'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('visual-audit/report.json','utf8'));
+          const rows=Array.isArray(r.records)?r.records:(Array.isArray(r.routes)?r.routes:[]);
+          const broken=rows.filter(x=>String(x.judgement||x.status||'').toLowerCase()==='broken');
+          if(broken.length){ console.error(JSON.stringify(broken.slice(0,10),null,2)); process.exit(1); }
+          console.log(`V808_VISUAL_REPORT_PASS records=${rows.length} broken=0`);
+          JS
+          echo 'RESULT=V808_AUTHENTICATED_VISUAL_PASS'
