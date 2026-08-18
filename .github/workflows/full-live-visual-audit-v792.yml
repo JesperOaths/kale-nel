@@ -8,6 +8,7 @@ on:
     paths:
       - '.github/workflows/full-live-visual-audit-v792.yml'
       - 'scripts/full-live-visual-audit-v792.mjs'
+      - 'scripts/prepare-visual-audit-runtime-v812.mjs'
       - 'scripts/full-live-visual-fixtures-v801.mjs'
       - 'scripts/refine-degraded-visual-report-v807.mjs'
       - 'scripts/refine-expected-visual-aliases-v809.mjs'
@@ -59,17 +60,9 @@ jobs:
           chrome="$(command -v google-chrome || command -v google-chrome-stable || true)"
           test -n "$chrome" || { echo 'GitHub runner system Chrome missing'; exit 1; }
           echo "GEJAST_SYSTEM_CHROME=$chrome" >> "$GITHUB_ENV"
-          python3 <<'PY'
-          from pathlib import Path
-          p = Path('scripts/full-live-visual-audit-v792.mjs')
-          src = p.read_text()
-          old = "chromium.launch({ headless: true })"
-          new = "chromium.launch({ headless: true, executablePath: process.env.GEJAST_SYSTEM_CHROME })"
-          if old not in src:
-              raise SystemExit('visual Chromium launch patch target missing')
-          p.write_text(src.replace(old, new))
-          PY
+          GEJAST_SYSTEM_CHROME="$chrome" node scripts/prepare-visual-audit-runtime-v812.mjs
           node --check scripts/full-live-visual-audit-v792.mjs
+          node --check scripts/prepare-visual-audit-runtime-v812.mjs
           node --check scripts/full-live-visual-fixtures-v801.mjs
           node --check scripts/refine-degraded-visual-report-v807.mjs
           node --check scripts/refine-expected-visual-aliases-v809.mjs
