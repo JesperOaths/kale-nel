@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import './check-v812c-game-summary-write-boundary.mjs';
 
 const sql = fs.readFileSync('GEJAST_v812a_track_site_event_conflict_guard.sql', 'utf8');
 const boundarySql = fs.readFileSync('GEJAST_v812b_analytics_table_privilege_boundary.sql', 'utf8');
@@ -8,7 +9,7 @@ const prepare = fs.readFileSync('scripts/prepare-visual-audit-runtime-v812.mjs',
 const visualWorkflow = fs.readFileSync('.github/workflows/full-live-visual-audit-v792.yml', 'utf8');
 const version = fs.readFileSync('VERSION', 'utf8').trim();
 
-assert.equal(version, 'v812', 'v812a/b are SQL/test-only and must not advance the shipped product version');
+assert.equal(version, 'v812', 'v812a/b/c are SQL/test-only and must not advance the shipped product version');
 
 assert.match(sql, /create or replace function public\.track_site_event\s*\(/i, 'v812a must replace the deployed analytics RPC');
 assert.doesNotMatch(sql, /create or replace function public\._gejast_elo_for_game_scope/i, 'v812a must not bundle the unrelated v806a ELO repair');
@@ -40,4 +41,4 @@ assert.doesNotMatch(visualWorkflow, /npx\s+playwright\s+install|playwright\s+ins
 assert.match(visualWorkflow, /Refine declared authenticated redirect aliases/, 'existing fail-closed declared-alias refinement must remain wired');
 assert.match(visualWorkflow, /Cleanup disposable visual-audit state/, 'visual fixture cleanup must remain wired');
 
-console.log('RESULT=V812AB_FINAL_CERT_BLOCKERS_GUARD_PASS');
+console.log('RESULT=V812ABC_FINAL_CERT_BLOCKERS_GUARD_PASS');
