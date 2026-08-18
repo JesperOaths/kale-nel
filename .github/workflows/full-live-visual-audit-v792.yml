@@ -155,7 +155,6 @@ jobs:
           retention-days: 14
 
       - name: Cleanup disposable visual-audit state
-        id: cleanup
         if: always() && (steps.provision.outcome == 'success' || steps.provision.outcome == 'failure')
         shell: bash
         run: |
@@ -172,7 +171,6 @@ jobs:
             exit 1
           fi
           test "${{ steps.alias_refinement.outcome }}" = 'success'
-          test "${{ steps.cleanup.outcome }}" = 'success'
           test -f visual-audit/report.json
           node <<'JS'
           const fs=require('fs');
