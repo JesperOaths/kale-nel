@@ -1,0 +1,125 @@
+name: Final one-shot v805 release housekeeping
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v805-release-housekeeping-final
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify immutable v805 evidence before mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          target='b64a116f2b2684d1fbd475b40c2b76f569d40942'
+          checksum='7757d1e51ae99152ee730efb640a27566a28d05eb2d635957bf40f40118495c5'
+
+          certified_sha="$(git ls-remote --heads origin release/v805-certified-20260818 | awk '{print $1}')"
+          freeze_sha="$(git ls-remote --heads origin release/v805-certified-freeze-20260818 | awk '{print $1}')"
+          record_sha="$(git ls-remote --heads origin release/v805-finalization-record | awk '{print $1}')"
+          test "$certified_sha" = "$target"
+          test "$freeze_sha" = "$target"
+          test -n "$record_sha"
+
+          git fetch --quiet --force origin refs/tags/v805-certified-20260818:refs/tags/v805-certified-20260818
+          tag_sha="$(git rev-list -n 1 refs/tags/v805-certified-20260818)"
+          test "$tag_sha" = "$target"
+
+          git fetch --quiet origin release/v805-finalization-record
+          git show FETCH_HEAD:RELEASE_V805_CERTIFICATION_20260818.md | grep -Fq "$target"
+          git show FETCH_HEAD:RELEASE_V805_CERTIFICATION_20260818.md | grep -Fq "$checksum"
+          grep -Fq "$target" docs/releases/v805-certified-20260818.md
+          grep -Fq "$checksum" docs/releases/v805-certified-20260818.md
+          echo 'RESULT=V805_FINAL_HOUSEKEEPING_PREFLIGHT_PASS'
+
+      - name: Delete exact disposable branch inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          branches=(
+            agent/v805-release-finalization
+            agent/v805-remove-redundant-paardenrace-monitor
+            agent/v813-release-baseline-ci-hardening
+            agent/v813-v805-housekeeping-fix
+            agent/v813-visual-warning-rebaseline
+            agent/v813-v805-final-housekeeping
+            proof/v805-current-recovery
+            proof/v805-main-run-discovery
+            proof/v805-paardenrace-native-cadence
+            proof/v805-phase2-deep-live-20260818
+            proof/v805-phase2-owner-isolation
+            proof/v805-pikken-render-stress2-20260818
+            proof/v805-pikken-render-stress-20260818
+            proof/v805-postrestart-health-20260818
+            proof/v805-postv801a-fast-deep-20260818
+            proof/v805-postv801a-fast-visual-20260818
+            proof/v805-toepen-v801a-rest-20260818
+            proof/cancel-obsolete-visual-20260818
+            ops/v805-release-tag-20260818
+            ops/v805-release-housekeeping
+            test/v805-visual-warning-diagnostics
+          )
+
+          failures=0
+          for branch in "${branches[@]}"; do
+            case "$branch" in
+              main|release/*) echo "SAFETY REFUSAL: $branch"; exit 1 ;;
+            esac
+            if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+              if git push origin --delete "$branch"; then
+                echo "deleted=$branch"
+              else
+                echo "delete_failed=$branch"
+                failures=$((failures + 1))
+              fi
+            else
+              echo "already_absent=$branch"
+            fi
+          done
+
+          for branch in "${branches[@]}"; do
+            if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+              echo "residue=$branch"
+              failures=$((failures + 1))
+            fi
+          done
+          test "$failures" -eq 0
+          echo 'RESULT=V805_DISPOSABLE_BRANCH_ZERO_RESIDUE_PASS'
+
+      - name: Verify exact retained v805 release refs
+        shell: bash
+        run: |
+          set -euo pipefail
+          target='b64a116f2b2684d1fbd475b40c2b76f569d40942'
+          test "$(git ls-remote --heads origin release/v805-certified-20260818 | awk '{print $1}')" = "$target"
+          test "$(git ls-remote --heads origin release/v805-certified-freeze-20260818 | awk '{print $1}')" = "$target"
+          test -n "$(git ls-remote --heads origin release/v805-finalization-record | awk '{print $1}')"
+          git fetch --quiet --force origin refs/tags/v805-certified-20260818:refs/tags/v805-certified-20260818
+          test "$(git rev-list -n 1 refs/tags/v805-certified-20260818)" = "$target"
+
+          remaining="$(git ls-remote --heads origin | awk '{ref=$2; sub(/^refs\/heads\//,"",ref); if (ref ~ /v805/) print ref}' | sort)"
+          expected="$(printf '%s\n' \
+            release/v805-certified-20260818 \
+            release/v805-certified-freeze-20260818 \
+            release/v805-finalization-record | sort)"
+          if [ "$remaining" != "$expected" ]; then
+            echo 'Unexpected v805 branch inventory remains:'
+            printf '%s\n' "$remaining"
+            exit 1
+          fi
+          echo 'RESULT=V805_RELEASE_HOUSEKEEPING_FINAL_PASS'
