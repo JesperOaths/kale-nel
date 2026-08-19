@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/final-certification-live-browser-v792.yml'
       - 'scripts/final-cert-live-browser-v792.mjs'
+      - 'scripts/prepare-live-browser-runtime-v813.mjs'
 
 permissions:
   contents: read
@@ -37,16 +38,27 @@ jobs:
           node-version: '24'
           cache: npm
 
-      - name: Install deterministic test runtime
+      - name: Prepare deterministic system Chrome test runtime
         shell: bash
         run: |
           set -euo pipefail
           test -n "${SUPABASE_DB_URL:-}" || { echo 'SUPABASE_DB_URL missing'; exit 1; }
           npm ci
-          npm install --no-save --package-lock=false playwright@1.55.0
-          npx playwright install --with-deps chromium
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.55.0
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || true)"
+          test -n "$chrome" || { echo 'GitHub runner system Chrome missing'; exit 1; }
+          echo "GEJAST_SYSTEM_CHROME=$chrome" >> "$GITHUB_ENV"
+          GEJAST_SYSTEM_CHROME="$chrome" node scripts/prepare-live-browser-runtime-v813.mjs
+          node --check scripts/prepare-live-browser-runtime-v813.mjs
+          node --check scripts/.generated-final-cert-live-browser-system-chrome.mjs
+          "$chrome" --version
+          if grep -qE 'npx[[:space:]]+playwright[[:space:]]+install|playwright[[:space:]]+install[[:space:]]+--with-deps' .github/workflows/final-certification-live-browser-v792.yml; then
+            echo 'Unbounded Playwright browser download reintroduced.'
+            exit 1
+          fi
           sudo apt-get update >/dev/null
           sudo apt-get install -y postgresql-client >/dev/null
+          echo 'RESULT=V792_FINAL_CERT_SYSTEM_CHROME_RUNTIME_PASS'
 
       - name: Provision randomized disposable certification identities
         shell: bash
@@ -115,10 +127,11 @@ jobs:
           # same-version deployment is converging. The campaign is destructive only to
           # its own disposable fixtures and has its own room cleanup, so allow exactly
           # one full clean retry. A deterministic product failure still fails twice.
-          if ! node scripts/final-cert-live-browser-v792.mjs; then
+          runtime='scripts/.generated-final-cert-live-browser-system-chrome.mjs'
+          if ! node "$runtime"; then
             echo 'First browser campaign attempt failed; retrying once after edge settle.'
             sleep 4
-            node scripts/final-cert-live-browser-v792.mjs
+            node "$runtime"
           fi
 
       - name: Cleanup all disposable certification state
