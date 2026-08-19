@@ -12,6 +12,7 @@ on:
       - 'scripts/full-live-visual-fixtures-v801.mjs'
       - 'scripts/refine-degraded-visual-report-v807.mjs'
       - 'scripts/refine-expected-visual-aliases-v809.mjs'
+      - 'scripts/summarize-visual-warning-evidence-v813.mjs'
       - 'check-live-data-plane.mjs'
       - '*.html'
       - 'familie/**.html'
@@ -66,6 +67,7 @@ jobs:
           node --check scripts/full-live-visual-fixtures-v801.mjs
           node --check scripts/refine-degraded-visual-report-v807.mjs
           node --check scripts/refine-expected-visual-aliases-v809.mjs
+          node --check scripts/summarize-visual-warning-evidence-v813.mjs
           node --check check-live-data-plane.mjs
           "$chrome" --version
           if grep -qE 'npx[[:space:]]+playwright[[:space:]]+install|playwright[[:space:]]+install[[:space:]]+--with-deps' .github/workflows/full-live-visual-audit-v792.yml; then
@@ -121,6 +123,10 @@ jobs:
         id: alias_refinement
         if: always() && steps.provision.outcome == 'success'
         run: node scripts/refine-expected-visual-aliases-v809.mjs
+
+      - name: Summarize visual warning evidence
+        if: always()
+        run: node scripts/summarize-visual-warning-evidence-v813.mjs
 
       - name: Record degraded visual-audit status
         if: always() && (steps.data_plane.outcome == 'failure' || steps.provision.outcome == 'failure')
