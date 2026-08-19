@@ -7,6 +7,7 @@ on:
   push:
     branches: [main]
 
+# Temporary pull_request trigger keeps the final cleanup observable; remove this workflow after PASS.
 permissions:
   contents: write
 
