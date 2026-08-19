@@ -23,9 +23,15 @@ jobs:
         run: |
           set -euo pipefail
           target='b64a116f2b2684d1fbd475b40c2b76f569d40942'
+          resolve_tag_commit() {
+            local tag="$1" direct peeled
+            direct="$(git ls-remote --tags origin "refs/tags/$tag" | awk '{print $1}')"
+            peeled="$(git ls-remote --tags origin "refs/tags/$tag^{}" | awk '{print $1}')"
+            printf '%s\n' "${peeled:-$direct}"
+          }
           certified_sha="$(git ls-remote --heads origin release/v805-certified-20260818 | awk '{print $1}')"
           freeze_sha="$(git ls-remote --heads origin release/v805-certified-freeze-20260818 | awk '{print $1}')"
-          tag_sha="$(git ls-remote --tags origin 'refs/tags/v805-certified-20260818^{}' | awk '{print $1}')"
+          tag_sha="$(resolve_tag_commit v805-certified-20260818)"
           record_sha="$(git ls-remote --heads origin release/v805-finalization-record | awk '{print $1}')"
           test "$certified_sha" = "$target"
           test "$freeze_sha" = "$target"
@@ -84,8 +90,14 @@ jobs:
         run: |
           set -euo pipefail
           target='b64a116f2b2684d1fbd475b40c2b76f569d40942'
+          resolve_tag_commit() {
+            local tag="$1" direct peeled
+            direct="$(git ls-remote --tags origin "refs/tags/$tag" | awk '{print $1}')"
+            peeled="$(git ls-remote --tags origin "refs/tags/$tag^{}" | awk '{print $1}')"
+            printf '%s\n' "${peeled:-$direct}"
+          }
           test "$(git ls-remote --heads origin release/v805-certified-20260818 | awk '{print $1}')" = "$target"
           test "$(git ls-remote --heads origin release/v805-certified-freeze-20260818 | awk '{print $1}')" = "$target"
-          test "$(git ls-remote --tags origin 'refs/tags/v805-certified-20260818^{}' | awk '{print $1}')" = "$target"
+          test "$(resolve_tag_commit v805-certified-20260818)" = "$target"
           test -n "$(git ls-remote --heads origin release/v805-finalization-record | awk '{print $1}')"
           echo 'RESULT=V805_RELEASE_HOUSEKEEPING_PASS'
