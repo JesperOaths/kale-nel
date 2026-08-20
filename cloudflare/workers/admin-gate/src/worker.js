@@ -13,7 +13,7 @@ const SESSION_TTL_SECONDS = 30 * 60;
 const OAUTH_TTL_SECONDS = 10 * 60;
 const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
-const ADMIN_BUILD = 'v765-security-proxy';
+const ADMIN_BUILD = 'v766-dual-camera-security';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -97,7 +97,7 @@ async function handlePublicSecurity(request, env, url) {
   if (!outer || outer.kind !== 'security-session' || outer.exp <= now() || !isAllowedGithubAccount(env, outer.github)) {
     if (request.method === 'GET' || request.method === 'HEAD') {
       const target = new URL('/login', `https://${ADMIN_HOST}`);
-      target.searchParams.set('return_to', '/security/');
+      target.searchParams.set('return_to', securityPageReturnTo(url.pathname));
       return new Response(null, { status: 302, headers: secureHeaders({ Location: target.toString(), 'Cache-Control': 'no-store' }) });
     }
     return securityJson({ ok: false, error: 'github_session_required' }, 401);
@@ -115,7 +115,11 @@ async function handlePublicSecurity(request, env, url) {
   }
 
   if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();
-  if (url.pathname === '/security/') return await serveSecurityAsset(request, env);
+  if (url.pathname === '/security/new-clips') return canonicalRedirect('/security/new-clips/');
+  if (url.pathname === '/security/s3-clips') return canonicalRedirect('/security/s3-clips/');
+  if (url.pathname === '/security/' || url.pathname === '/security/new-clips/' || url.pathname === '/security/s3-clips/') {
+    return await serveSecurityAsset(request, env);
+  }
 
   const media = await readEncryptedCookie(request, env, SECURITY_MEDIA_COOKIE);
   if (!validSecurityMediaSession(env, media, outer)) {
@@ -164,7 +168,18 @@ function canonicalizeAdminReturnTo(value) {
   return safe;
 }
 function isSecurityPath(pathname) { return pathname === '/security' || pathname.startsWith('/security/'); }
-function isSecurityReturnTo(value) { return value === '/security' || value === '/security/'; }
+function securityPageReturnTo(value) {
+  const path = String(value || '').split('?', 1)[0];
+  if (path === '/security/new-clips' || path === '/security/new-clips/') return '/security/new-clips/';
+  if (path === '/security/s3-clips' || path === '/security/s3-clips/') return '/security/s3-clips/';
+  return '/security/';
+}
+function isSecurityReturnTo(value) {
+  const path = String(value || '').split('?', 1)[0];
+  return path === '/security' || path === '/security/' ||
+    path === '/security/new-clips' || path === '/security/new-clips/' ||
+    path === '/security/s3-clips' || path === '/security/s3-clips/';
+}
 
 function canonicalRedirect(location) {
   return new Response(null, {
@@ -369,6 +384,21 @@ function cleanSecurityFilename(raw, extension = '') {
   return name;
 }
 function securityUpstreamPath(pathname) {
+  for (const camera of ['s3', 'new']) {
+    const prefix = `/security/${camera}`;
+    if (pathname === `${prefix}/api/events`) return `/${camera}/api/events`;
+    if (pathname === `${prefix}/api/status`) return `/${camera}/api/status`;
+    if (pathname === `${prefix}/live.mjpg`) return `/${camera}/live.mjpg`;
+    if (pathname.startsWith(`${prefix}/snap/`)) {
+      const name = cleanSecurityFilename(pathname.slice(`${prefix}/snap/`.length));
+      return name ? `/${camera}/snap/${encodeURIComponent(name)}` : '';
+    }
+    if (pathname.startsWith(`${prefix}/clip/`)) {
+      const name = cleanSecurityFilename(pathname.slice(`${prefix}/clip/`.length), '.mp4');
+      return name ? `/${camera}/clip/${encodeURIComponent(name)}` : '';
+    }
+  }
+  // Backwards compatibility: pre-v766 unprefixed security media remains S3.
   if (pathname === '/security/api/events') return '/api/events';
   if (pathname === '/security/api/status') return '/api/status';
   if (pathname === '/security/live.mjpg') return '/live.mjpg';
@@ -465,7 +495,7 @@ function loginPage(url, reason, status = 401) {
 
 function oauthCompletePage(returnTo) {
   const safeReturnTo = canonicalizeAdminReturnTo(returnTo);
-  const destination = isSecurityReturnTo(safeReturnTo) ? `https://${PUBLIC_HOST}/security/` : safeReturnTo;
+  const destination = isSecurityReturnTo(safeReturnTo) ? `https://${PUBLIC_HOST}${securityPageReturnTo(safeReturnTo)}` : safeReturnTo;
   const href = escapeHtml(destination);
   return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="1;url=${href}"><title>Kalenel admin login voltooid</title><style>body{font-family:system-ui,sans-serif;background:#0f1115;color:#f7f3e8;display:grid;place-items:center;min-height:100vh;margin:0}.card{max-width:520px;padding:28px;border:1px solid #d4af3744;border-radius:18px;background:#171a22}a{display:inline-block;margin-top:16px;color:#111;background:#d4af37;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800}</style></head><body><main class="card"><h1>GitHub-login voltooid</h1><p>Je beveiligde sessie is gezet. Ga verder naar de adminomgeving via een same-origin navigatie.</p><a href="${href}">Verder naar admin</a></main></body></html>`;
 }
