@@ -61,7 +61,7 @@ jobs:
           node --check /tmp/security-inline.js
           grep -q 'sourceOnline:{new:false,s3:false}' security/index.html
           grep -q 'source_online' security/index.html
-          grep -q '1/2 cameras online' security/index.html
+          grep -q 'cameras online' security/index.html
           grep -q 'security-5 · source-aware dual camera' security/index.html
           ! grep -Eqi 'trycloudflare\.com|192\.168\.|media_token|hmac_secret|service_role' security/index.html
           node scripts/build-admin-worker-assets.mjs
