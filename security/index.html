@@ -19,7 +19,7 @@
     .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.toolbar h2{margin:0;font-size:20px}.button{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:11px;padding:9px 13px;font-weight:750;cursor:pointer}
     .clips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.clip{overflow:hidden;cursor:pointer;transition:transform .12s ease,border-color .12s ease}.clip:hover{transform:translateY(-1px);border-color:#39566d}.thumb{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#000}.clip-body{padding:12px}.clip-row{display:flex;justify-content:space-between;gap:10px}.clip-title{font-weight:850}.clip-time,.clip-reason{color:var(--muted);font-size:13px}.clip-reason{margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.badge{font-size:11px;border:1px solid #315067;border-radius:999px;padding:3px 7px;color:var(--accent)}.empty{padding:28px;color:var(--muted);text-align:center}
     dialog{border:1px solid var(--line);border-radius:18px;background:#071018;color:var(--text);padding:0;width:min(960px,calc(100vw - 28px));box-shadow:0 30px 90px #000b}dialog::backdrop{background:#000c}.modal-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}.modal-head strong{font-size:15px}.close{border:0;background:transparent;color:var(--text);font-size:24px;cursor:pointer}.player{display:block;width:100%;max-height:75vh;background:#000}.modal-meta{padding:12px 14px;color:var(--muted);font-size:13px}
-    .error{padding:14px 16px;border:1px solid #713b3b;background:#261515;border-radius:14px;color:#ffd0d0;margin-bottom:14px}.hidden{display:none!important}.watermark{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:20;padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:#071018e8;color:#7f929f;font-size:11px;letter-spacing:.05em}
+    .error{padding:14px 16px;border:1px solid #713b3b;background:#261515;border-radius:14px;color:#ffd0d0;margin-bottom:14px}.login-card{max-width:660px;margin:42px auto;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}.login-card h2{margin:0 0 6px}.login-card p{color:var(--muted);margin:0 0 16px}.login-grid{display:grid;gap:10px}.login-grid input{width:100%;padding:12px;border-radius:11px;border:1px solid var(--line);background:#071018;color:var(--text);font:inherit}.hidden{display:none!important}.watermark{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:20;padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:#071018e8;color:#7f929f;font-size:11px;letter-spacing:.05em}
     @media(max-width:850px){.clips{grid-template-columns:repeat(2,minmax(0,1fr))}.top{align-items:stretch;flex-direction:column}.status{align-self:flex-start}}
     @media(max-width:560px){body{padding:12px;padding-bottom:68px}.clips{grid-template-columns:1fr}.title{font-size:26px}.live-meta{flex-direction:column;gap:3px}}
   </style>
@@ -31,6 +31,17 @@
       <div id="connection" class="status"><span class="dot"></span><span id="connectionText">Connecting…</span></div>
     </header>
     <div id="errorBox" class="error hidden"></div>
+    <section id="innerLogin" class="login-card hidden">
+      <h2>Private security login</h2>
+      <p>GitHub perimeter passed. Confirm the existing Kalenel admin password and 6-digit authenticator code.</p>
+      <form id="innerLoginForm" class="login-grid">
+        <input id="usernameInput" type="text" autocomplete="username" placeholder="Username" required>
+        <input id="passwordInput" type="password" autocomplete="current-password" placeholder="Password" required>
+        <input id="totpInput" type="text" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="Authenticator code" required>
+        <button class="button" type="submit">Unlock security</button>
+      </form>
+    </section>
+    <div id="securityApp" class="hidden">
     <nav class="tabs" aria-label="Security views">
       <button class="tab active" type="button" data-tab="live">Live</button>
       <button class="tab" type="button" data-tab="recordings">Recordings</button>
@@ -46,19 +57,21 @@
       <div id="clips" class="clips"></div>
       <div id="empty" class="empty hidden">No recordings are stored on the C720P.</div>
     </section>
+    </div>
   </main>
   <dialog id="viewer">
     <div class="modal-head"><strong id="viewerTitle">Recording</strong><button id="closeViewer" class="close" type="button" aria-label="Close">×</button></div>
     <video id="player" class="player" controls playsinline preload="metadata"></video>
     <div id="viewerMeta" class="modal-meta"></div>
   </dialog>
-  <div class="watermark">Kalenel · security-1</div>
+  <div class="watermark">Kalenel · security-2</div>
 <script>
 (() => {
   'use strict';
   const SESSION_KEY = 'jas_admin_session_v8';
   const CONTROL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-control?action=session';
-  const LOGIN = '/admin.html?return_to=security/';
+  const SUPABASE_URL='https://uiqntazgnrxwliaidkmy.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY='sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
   const state = { origin:'', mediaToken:'', expiresAt:0, events:[], refreshTimer:null, liveRetry:null };
   const $ = (id) => document.getElementById(id);
   const enc = encodeURIComponent;
@@ -66,20 +79,31 @@
   function adminToken(){ return sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY) || ''; }
   function saveAdminToken(token){ if(!token) return; sessionStorage.setItem(SESSION_KEY, token); localStorage.setItem(SESSION_KEY, token); }
   function clearAdminToken(){ sessionStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_KEY); }
-  function login(){ location.replace(LOGIN); }
+  function rpcHeaders(){return {apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,'content-type':'application/json',accept:'application/json'};}
+  async function parseResponse(res){const text=await res.text();let data={};try{data=text?JSON.parse(text):{};}catch{throw new Error(text||`HTTP ${res.status}`);}if(!res.ok)throw new Error(data?.message||data?.error||data?.details||`HTTP ${res.status}`);return Array.isArray(data)?(data[0]||{}):data;}
+  function showInnerLogin(message=''){ $('innerLogin').classList.remove('hidden');$('securityApp').classList.add('hidden');setConnection(false,'Locked');if(message)showError(message); }
+  function showSecurityApp(){ $('innerLogin').classList.add('hidden');$('securityApp').classList.remove('hidden');clearError(); }
+  async function adminLogin(){
+    const username=$('usernameInput').value.trim(),password=$('passwordInput').value,totp=$('totpInput').value.replace(/\D/g,'').trim();
+    if(!username||!password||!/^\d{6}$/.test(totp)) throw new Error('Enter username, password and the 6-digit authenticator code.');
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_login`,{method:'POST',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify({input_username:username,input_password:password,input_totp_code:totp})});
+    const data=await parseResponse(res),token=data.admin_session_token||data.token;
+    if(!token) throw new Error('Admin login returned no session.');
+    saveAdminToken(token); return data;
+  }
   function setConnection(ok,text){ $('connection').classList.toggle('ok',!!ok); $('connectionText').textContent=text; }
   function showError(message){ $('errorBox').textContent=message; $('errorBox').classList.remove('hidden'); }
   function clearError(){ $('errorBox').classList.add('hidden'); $('errorBox').textContent=''; }
 
   async function openSession(force=false){
     const token=adminToken();
-    if(!token) return login();
+    if(!token) throw new Error('admin_session_required');
     if(!force && state.origin && state.mediaToken && Date.now() < state.expiresAt - 120000) return;
     setConnection(false,'Authenticating…');
     const res=await fetch(CONTROL,{method:'POST',cache:'no-store',headers:{'content-type':'application/json'},body:JSON.stringify({admin_session_token:token})});
     const data=await res.json().catch(()=>({}));
     if(res.status===401 || data.error==='admin_session_invalid' || data.error==='admin_session_required'){
-      clearAdminToken(); return login();
+      clearAdminToken(); throw new Error('admin_session_invalid');
     }
     if(!res.ok || !data.ok || !data.origin || !data.media_token) throw new Error(data.error || `Security session failed (${res.status})`);
     state.origin=String(data.origin).replace(/\/+$/,'');
@@ -160,11 +184,21 @@
   $('viewer').addEventListener('cancel',(e)=>{e.preventDefault();closeViewer();});
   $('liveImage').addEventListener('load',()=>{setConnection(true,'Live');$('liveState').textContent='S3 live camera · online';});
   $('liveImage').addEventListener('error',()=>{setConnection(false,'Reconnecting…');$('liveState').textContent='Live stream interrupted; reconnecting…';clearTimeout(state.liveRetry);state.liveRetry=setTimeout(()=>openSession(true).then(startLive).catch(()=>{}),2500);});
-  document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopLive(); else refresh(); });
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopLive(); else if(!$('securityApp').classList.contains('hidden')) refresh(); });
   window.addEventListener('beforeunload',()=>{stopLive();clearTimeout(state.liveRetry);clearInterval(state.refreshTimer);});
 
-  refresh();
-  state.refreshTimer=setInterval(()=>{ if(!document.hidden) refresh(); },60000);
+  async function boot(){
+    if(!adminToken()){showInnerLogin();return;}
+    try{await openSession(true);showSecurityApp();await refresh();}
+    catch(err){clearAdminToken();showInnerLogin('Admin session expired. Authenticate again.');}
+  }
+  $('innerLoginForm').addEventListener('submit',async(e)=>{
+    e.preventDefault();clearError();
+    try{setConnection(false,'Authenticating…');await adminLogin();await openSession(true);showSecurityApp();await refresh();}
+    catch(err){showInnerLogin(err?.message||'Login failed.');}
+  });
+  boot();
+  state.refreshTimer=setInterval(()=>{ if(!document.hidden && !$('securityApp').classList.contains('hidden')) refresh(); },60000);
 })();
 </script>
 </body>

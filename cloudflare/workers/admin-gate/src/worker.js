@@ -3,11 +3,12 @@ const PUBLIC_HOST = 'kalenel.nl';
 const SESSION_COOKIE = '__Host-kalenel_admin_session';
 const OAUTH_COOKIE = '__Host-kalenel_admin_oauth';
 const ATTEMPT_COOKIE = '__Host-kalenel_admin_attempts';
+const SECURITY_COOKIE = '__Secure-kalenel_security_session';
 const SESSION_TTL_SECONDS = 30 * 60;
 const OAUTH_TTL_SECONDS = 10 * 60;
 const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
-const ADMIN_BUILD = 'v763';
+const ADMIN_BUILD = 'v764-security';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -53,7 +54,7 @@ export default {
         });
       }
       if (url.hostname === PUBLIC_HOST || url.hostname === `www.${PUBLIC_HOST}`) {
-        return handlePublicApex(request, url);
+        return await handlePublicApex(request, env, url);
       }
       if (url.hostname !== ADMIN_HOST) return notFound();
       return await handleAdminHost(request, env, url);
@@ -63,8 +64,9 @@ export default {
   }
 };
 
-async function handlePublicApex(request, url) {
+async function handlePublicApex(request, env, url) {
   if (!isSafePath(url.pathname)) return notFound();
+  if (isSecurityPath(url.pathname)) return await handlePublicSecurity(request, env, url);
   if (!isProtectedPublicPath(url.pathname)) {
     const response = await fetch(request);
     return withPublicSecurityHeaders(response);
@@ -77,6 +79,22 @@ async function handlePublicApex(request, url) {
       'Cache-Control': 'no-store'
     })
   });
+}
+
+
+async function handlePublicSecurity(request, env, url) {
+  if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();
+  if (url.pathname === '/security') return canonicalRedirect('/security/');
+  const session = await readSignedCookie(request, env, SECURITY_COOKIE);
+  if (!session || session.kind !== 'security-session' || session.exp <= now() || !isAllowedGithubAccount(env, session.github)) {
+    const target = new URL('/login', `https://${ADMIN_HOST}`);
+    target.searchParams.set('return_to', '/security/');
+    return new Response(null, {
+      status: 302,
+      headers: secureHeaders({ Location: target.toString(), 'Cache-Control': 'no-store' })
+    });
+  }
+  return await serveSecurityAsset(request, env);
 }
 
 async function handleAdminHost(request, env, url) {
@@ -115,6 +133,8 @@ function canonicalizeAdminReturnTo(value) {
   if (safe.startsWith('/admin?')) return `/admin.html${safe.slice('/admin'.length)}`;
   return safe;
 }
+function isSecurityPath(pathname) { return pathname === '/security' || pathname === '/security/'; }
+function isSecurityReturnTo(value) { return value === '/security' || value === '/security/'; }
 
 function canonicalRedirect(location) {
   return new Response(null, {
@@ -195,6 +215,10 @@ async function oauthCallback(request, env, url) {
     'Cache-Control': 'no-store'
   });
   headers.append('Set-Cookie', await signedCookie(env, SESSION_COOKIE, session, SESSION_TTL_SECONDS));
+  if (isSecurityReturnTo(returnTo)) {
+    const securitySession = { ...session, kind: 'security-session' };
+    headers.append('Set-Cookie', await signedDomainCookie(env, SECURITY_COOKIE, securitySession, SESSION_TTL_SECONDS, '/security/'));
+  }
   headers.append('Set-Cookie', expireCookie(OAUTH_COOKIE));
   headers.append('Set-Cookie', expireCookie(ATTEMPT_COOKIE));
   return new Response(oauthCompletePage(returnTo), { status: 200, headers });
@@ -205,7 +229,23 @@ function logout(url) {
   headers.append('Set-Cookie', expireCookie(SESSION_COOKIE));
   headers.append('Set-Cookie', expireCookie(OAUTH_COOKIE));
   headers.append('Set-Cookie', expireCookie(ATTEMPT_COOKIE));
+  headers.append('Set-Cookie', expireDomainCookie(SECURITY_COOKIE, '/security/'));
   return new Response(null, { status: 302, headers });
+}
+
+async function serveSecurityAsset(request, env) {
+  if (!env.ASSETS || typeof env.ASSETS.fetch !== 'function') return failClosed(new Error('ASSETS binding missing'));
+  const assetUrl = new URL(request.url);
+  assetUrl.pathname = '/security/index.html';
+  assetUrl.search = '';
+  const response = await env.ASSETS.fetch(new Request(assetUrl, request));
+  if (!response || response.status === 404) return notFound();
+  const headers = new Headers(response.headers);
+  applySecurityViewerHeaders(headers);
+  headers.set('Cache-Control', 'no-store');
+  headers.set('X-Kalenel-Security-Gate', 'github+totp');
+  headers.set('X-Kalenel-Admin-Build', ADMIN_BUILD);
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
 async function serveProtectedAsset(request, env, pathname) {
@@ -231,7 +271,8 @@ function loginPage(url, reason, status = 401) {
 
 function oauthCompletePage(returnTo) {
   const safeReturnTo = canonicalizeAdminReturnTo(returnTo);
-  const href = escapeHtml(safeReturnTo);
+  const destination = isSecurityReturnTo(safeReturnTo) ? `https://${PUBLIC_HOST}/security/` : safeReturnTo;
+  const href = escapeHtml(destination);
   return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="1;url=${href}"><title>Kalenel admin login voltooid</title><style>body{font-family:system-ui,sans-serif;background:#0f1115;color:#f7f3e8;display:grid;place-items:center;min-height:100vh;margin:0}.card{max-width:520px;padding:28px;border:1px solid #d4af3744;border-radius:18px;background:#171a22}a{display:inline-block;margin-top:16px;color:#111;background:#d4af37;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800}</style></head><body><main class="card"><h1>GitHub-login voltooid</h1><p>Je beveiligde sessie is gezet. Ga verder naar de adminomgeving via een same-origin navigatie.</p><a href="${href}">Verder naar admin</a></main></body></html>`;
 }
 
@@ -287,7 +328,9 @@ function constantTimeEqual(a, b) { a = String(a); b = String(b); if (a.length !=
 function parseCookies(request) { const raw = request.headers.get('Cookie') || ''; const out = {}; for (const part of raw.split(';')) { const idx = part.indexOf('='); if (idx > -1) out[part.slice(0, idx).trim()] = part.slice(idx + 1).trim(); } return out; }
 async function readSignedCookie(request, env, name) { const raw = parseCookies(request)[name]; if (!raw) return null; const [payload, sig] = raw.split('.'); if (!payload || !sig) return null; const expected = await hmac(env, payload); if (!constantTimeEqual(sig, expected)) return null; const text = atob(payload.replace(/-/g, '+').replace(/_/g, '/')); return JSON.parse(text); }
 async function signedCookie(env, name, value, maxAge, sameSite = 'Strict') { const payload = btoa(JSON.stringify(value)).replace(/[+/=]/g, (m) => ({ '+': '-', '/': '_', '=': '' }[m])); const sig = await hmac(env, payload); return `${name}=${payload}.${sig}; Max-Age=${maxAge}; Path=/; HttpOnly; Secure; SameSite=${sameSite}`; }
+async function signedDomainCookie(env, name, value, maxAge, path = '/') { const payload = btoa(JSON.stringify(value)).replace(/[+/=]/g, (m) => ({ '+': '-', '/': '_', '=': '' }[m])); const sig = await hmac(env, payload); return `${name}=${payload}.${sig}; Max-Age=${maxAge}; Domain=${PUBLIC_HOST}; Path=${path}; HttpOnly; Secure; SameSite=Strict`; }
 function expireCookie(name) { return `${name}=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Strict`; }
+function expireDomainCookie(name, path = '/') { return `${name}=; Max-Age=0; Domain=${PUBLIC_HOST}; Path=${path}; HttpOnly; Secure; SameSite=Strict`; }
 async function hmac(env, payload) { const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.COOKIE_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']); const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload)); return btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/[+/=]/g, (m) => ({ '+': '-', '/': '_', '=': '' }[m])); }
 async function readAttemptCookie(request, env) { const v = await readSignedCookie(request, env, ATTEMPT_COOKIE); if (!v || v.resetAt <= now()) return { count: 0, resetAt: now() + ATTEMPT_WINDOW_SECONDS }; return v; }
 function bumpAttempts(v) { return { kind: 'attempts', count: Number(v.count || 0) + 1, resetAt: v.resetAt || (now() + ATTEMPT_WINDOW_SECONDS) }; }
@@ -305,6 +348,14 @@ function applyPublicSecurityHeaders(headers) {
 }
 
 function secureHeaders(init = {}) { const headers = new Headers(init); applySecurityHeaders(headers); return headers; }
+function applySecurityViewerHeaders(headers) {
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('Referrer-Policy', 'no-referrer');
+  headers.set('X-Frame-Options', 'DENY');
+  headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  headers.set('Content-Security-Policy', "default-src 'self'; connect-src 'self' https://uiqntazgnrxwliaidkmy.supabase.co https://*.trycloudflare.com; img-src 'self' data: blob: https://*.trycloudflare.com; media-src 'self' blob: https://*.trycloudflare.com; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+}
+
 function applySecurityHeaders(headers) {
   headers.set('X-Content-Type-Options', 'nosniff');
   headers.set('Referrer-Policy', 'no-referrer');
