@@ -2,6 +2,13 @@ name: Full live visual audit
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/full-live-visual-audit-v792.yml'
+      - 'scripts/refine-expected-visual-aliases-v809.mjs'
+      - 'scripts/check-v813-visual-warning-cleanup.mjs'
   push:
     branches:
       - main
