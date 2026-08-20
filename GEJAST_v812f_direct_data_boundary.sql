@@ -1,5 +1,5 @@
 -- GEJAST v812f: direct data / internal RPC boundary hardening.
--- SQL-only release. Prepared against production on 2026-08-18.
+-- SQL-only release. Prepared against production on 2026-08-18 and re-grounded on 2026-08-21.
 -- Apply once through the tracked Supabase migration path only after explicit authorization.
 -- service_role and function-owner privileges are intentionally untouched.
 
@@ -51,12 +51,13 @@ revoke execute on function public._web_push_apply_action(text,bigint,text,bigint
 -- RPCs; set_initial_pin is unused by active browser code and must not remain an anonymous
 -- credential setter. The identity-summary RPC is likewise unused by shipped code and has an
 -- email-bearing return schema, so it is removed from the browser API even when current email
--- values happen to be NULL. The legacy reset action is also unused by shipped code and returns
--- a fresh activation URL directly to an unauthenticated caller after name+email matching;
--- reset credentials must only travel through the canonical email/token activation path.
+-- values happen to be NULL. Both historical reset overloads are unused by shipped code and
+-- can return or initiate reset credentials from unauthenticated name/email input; reset
+-- credentials must only travel through the canonical email/token activation path.
 revoke execute on function public.set_initial_pin(text,text) from public, anon, authenticated;
 revoke execute on function public.get_account_identity_summary_scoped(text) from public, anon, authenticated;
 revoke execute on function public.request_pin_reset_reactivation_action(text,text,text) from public, anon, authenticated;
+revoke execute on function public.request_pin_reset_reactivation_action(text,text) from public, anon, authenticated;
 
 -- Trigger functions are implementation details rather than browser RPCs. Lock the two named
 -- non-underscore trigger helpers that remained client-executable after earlier hardening.
