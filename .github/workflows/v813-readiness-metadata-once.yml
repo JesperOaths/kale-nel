@@ -1,0 +1,56 @@
+name: v813 readiness metadata once
+
+on:
+  push:
+    branches:
+      - agent/v813-housekeeping-observable
+    paths:
+      - '.github/workflows/v813-readiness-metadata-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out v813 working branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v813-housekeeping-observable
+          fetch-depth: 0
+
+      - name: Synchronize release-candidate identity and self-remove
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('beta-readiness.json')
+          d=json.loads(p.read_text())
+          d['site_version']='release candidate v813 / live v812 / certified rollback v808'
+          d['last_updated']='2026-08-21'
+          ident=d.setdefault('deployment_identity',{})
+          ident['status']='ready_to_test'
+          ident['live_version']='v812'
+          ident['release_candidate_version']='v813'
+          ident['frontend_release_merge']='a62b6ff4a73a1419f2aeb1c4f83e64d2bf780bbc'
+          ident['repository_head_at_audit']='a62b6ff4a73a1419f2aeb1c4f83e64d2bf780bbc'
+          ident['note']='v813 release candidate: production data-boundary and browser cleanup compatibility migrations are applied; Klaverjas long-name overflow is contained; authenticated visual certification is fail-closed on any WARN/BROKEN result. Exact-current health, deep gameplay/ownership, private security viewer, post-deploy visual review and zero-residue proof remain required before promotion.'
+          p.write_text(json.dumps(d,indent=2,ensure_ascii=False)+'\n')
+          PY
+          python3 - <<'PY'
+          import json
+          d=json.load(open('beta-readiness.json'))
+          assert d['site_version']=='release candidate v813 / live v812 / certified rollback v808'
+          assert d['deployment_identity']['release_candidate_version']=='v813'
+          assert d['deployment_identity']['live_version']=='v812'
+          PY
+          rm .github/workflows/v813-readiness-metadata-once.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add beta-readiness.json .github/workflows/v813-readiness-metadata-once.yml
+          git commit -m 'chore(release): synchronize v813 readiness identity'
+          git push origin HEAD:agent/v813-housekeeping-observable
