@@ -12,11 +12,11 @@ const refiner = fs.readFileSync(refinerPath, 'utf8');
 assert.match(workflow, /scripts\/refine-expected-visual-aliases-v809\.mjs/, 'visual workflow must track the expected-alias refiner');
 assert.match(workflow, /node --check scripts\/refine-expected-visual-aliases-v809\.mjs/, 'visual workflow must syntax-check the expected-alias refiner');
 assert.match(workflow, /- name: Screenshot and inspect every tracked live HTML page\s*\n\s*if:\s*always\(\) && \(steps\.data_plane\.outcome == 'failure' \|\| steps\.provision\.outcome == 'success' \|\| steps\.provision\.outcome == 'failure'\)[\s\S]*?continue-on-error:\s*\$\{\{ steps\.provision\.outcome == 'success' \}\}/, 'authenticated capture must preserve the existing trigger and continue only far enough to run fail-closed alias refinement');
-assert.match(workflow, /- name: Refine declared authenticated redirect aliases[\s\S]*?if:\s*always\(\) && steps\.provision\.outcome == 'success'[\s\S]*?node scripts\/refine-expected-visual-aliases-v809\.mjs/, 'alias refinement must run only after authenticated fixture provisioning and even when raw capture reports broken aliases');
+assert.match(workflow, /- name: Refine (?:declared authenticated redirect aliases|authenticated redirects and proven transient aborts)[\s\S]*?if:\s*always\(\) && steps\.provision\.outcome == 'success'[\s\S]*?node scripts\/refine-expected-visual-aliases-v809\.mjs/, 'alias refinement must run only after authenticated fixture provisioning and even when raw capture reports broken aliases');
 assert.match(workflow, /- name: Upload visual audit artifact\s*\n\s*if:\s*always\(\)/, 'artifact upload must remain available after a fail-closed refinement failure');
 assert.match(workflow, /- name: Cleanup disposable visual-audit state\s*\n\s*if:\s*always\(\) && \(steps\.provision\.outcome == 'success' \|\| steps\.provision\.outcome == 'failure'\)/, 'fixture cleanup must remain unconditional after attempted authenticated provisioning');
 
-assert.ok(refiner.includes("source.match(/window\\.location\\.replace"), 'refiner must derive redirect intent from the checked-in alias source');
+assert.match(refiner, /source\.match\(\/(?:\(\?:window\\\.\)\?|window\\\.)?location\\\.replace/, 'refiner must derive redirect intent from the checked-in alias source');
 assert.match(refiner, /finalUrl\.href === target\.href/, 'public aliases must match the exact declared redirect destination');
 assert.match(refiner, /finalUrl\.hostname === 'admin\.kalenel\.nl'/, 'protected alias refinement must require the live admin hostname');
 assert.match(refiner, /samePathAndQuery\(target, finalUrl\)/, 'protected alias refinement must preserve the declared path and query');
@@ -24,6 +24,8 @@ assert.match(refiner, /String\(record\?\.title \|\| ''\) === 'Kalenel admin logi
 assert.match(refiner, /Admin login vereist/, 'protected aliases must visibly render the admin login requirement');
 assert.match(refiner, /reasons\.length === 1/, 'refiner must not erase unrelated broken reasons');
 assert.match(refiner, /remaining_broken/, 'remaining genuine broken pages must still fail the workflow');
+assert.match(refiner, /OVERFLOW_TOLERANCE_PX\s*=\s*4/, 'authenticated refinement must preserve the v813 horizontal-overflow fail-closed guard');
+assert.match(refiner, /exactLoginReadAborts/, 'authenticated refinement must keep transient login abort matching explicit');
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gejast-v809-'));
 try {
@@ -34,7 +36,7 @@ try {
 
   const baseRecord = {
     kind: 'tracked', judgement: 'broken', reasons: ['auth gate did not settle within 12000ms (last state missing)'],
-    body_chars: 200, issue_signals: [], page_errors: [], status: 200, horizontal_overflow_px: 0, stale_loading_count: 0,
+    body_chars: 200, issue_signals: [], page_errors: [], http_errors: [], status: 200, horizontal_overflow_px: 0, stale_loading_count: 0,
     screenshot: 'screenshots/test.jpg', failed_requests: [], console_errors: [], label: 'fixture',
   };
   const report = {
