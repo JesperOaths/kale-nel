@@ -1,0 +1,34 @@
+name: v813 version sync once
+
+on:
+  push:
+    branches:
+      - agent/v813-housekeeping-observable
+    paths:
+      - .github/workflows/v813-version-sync-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: agent/v813-housekeeping-observable
+          fetch-depth: 0
+      - name: Synchronize all active product version markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          node fix-version-drift.mjs
+          node check-version-drift.mjs
+          rm .github/workflows/v813-version-sync-once.yml
+          git config user.name 'Kalenel Release Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'release(v813): synchronize active product version markers'
+          git push origin HEAD:agent/v813-housekeeping-observable
