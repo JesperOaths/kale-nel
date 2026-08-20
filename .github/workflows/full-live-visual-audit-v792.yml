@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - agent/v813-housekeeping-observable
     paths:
       - '.github/workflows/full-live-visual-audit-v792.yml'
       - 'scripts/full-live-visual-audit-v792.mjs'
@@ -12,6 +13,7 @@ on:
       - 'scripts/full-live-visual-fixtures-v801.mjs'
       - 'scripts/refine-degraded-visual-report-v807.mjs'
       - 'scripts/refine-expected-visual-aliases-v809.mjs'
+      - 'scripts/refine-benign-visual-aborts-v813.mjs'
       - 'scripts/summarize-visual-warning-evidence-v813.mjs'
       - 'check-live-data-plane.mjs'
       - '*.html'
@@ -40,7 +42,7 @@ jobs:
       GEJAST_VISUAL_SETTLE_MS: '5000'
 
     steps:
-      - name: Check out exact merged main
+      - name: Check out exact tested revision
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.sha }}
@@ -67,6 +69,7 @@ jobs:
           node --check scripts/full-live-visual-fixtures-v801.mjs
           node --check scripts/refine-degraded-visual-report-v807.mjs
           node --check scripts/refine-expected-visual-aliases-v809.mjs
+          node --check scripts/refine-benign-visual-aborts-v813.mjs
           node --check scripts/summarize-visual-warning-evidence-v813.mjs
           node --check check-live-data-plane.mjs
           "$chrome" --version
@@ -124,6 +127,11 @@ jobs:
         if: always() && steps.provision.outcome == 'success'
         run: node scripts/refine-expected-visual-aliases-v809.mjs
 
+      - name: Refine proven benign visual aborts
+        id: abort_refinement
+        if: always() && steps.provision.outcome == 'success'
+        run: node scripts/refine-benign-visual-aborts-v813.mjs
+
       - name: Summarize visual warning evidence
         if: always()
         run: node scripts/summarize-visual-warning-evidence-v813.mjs
@@ -170,13 +178,18 @@ jobs:
             exit 1
           fi
           test "${{ steps.alias_refinement.outcome }}" = 'success'
+          test "${{ steps.abort_refinement.outcome }}" = 'success'
           test -f visual-audit/report.json
           node <<'JS'
           const fs=require('fs');
           const r=JSON.parse(fs.readFileSync('visual-audit/report.json','utf8'));
           const rows=Array.isArray(r.records)?r.records:(Array.isArray(r.routes)?r.routes:[]);
           const broken=rows.filter(x=>String(x.judgement||x.status||'').toLowerCase()==='broken');
-          if(broken.length){ console.error(JSON.stringify(broken.slice(0,10),null,2)); process.exit(1); }
-          console.log(`VISUAL_REPORT_PASS records=${rows.length} broken=0`);
+          const warnings=rows.filter(x=>String(x.judgement||x.status||'').toLowerCase()==='warn');
+          if(broken.length || warnings.length){
+            console.error(JSON.stringify({broken:broken.slice(0,10),warnings:warnings.slice(0,10)},null,2));
+            process.exit(1);
+          }
+          console.log(`VISUAL_REPORT_PASS records=${rows.length} broken=0 warn=0`);
           JS
           echo 'RESULT=FULL_LIVE_VISUAL_AUDIT_PASS'
