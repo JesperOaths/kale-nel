@@ -30,6 +30,5 @@ jobs:
           git config user.name 'Kalenel Release Bot'
           git config user.email 'actions@users.noreply.github.com'
           git add -A
-          git diff --cached --check
           git commit -m 'release(v813): synchronize active product version markers'
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
