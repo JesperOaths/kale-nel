@@ -1,9 +1,9 @@
 name: v813 version sync once
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/v813-housekeeping-observable
+      - main
     paths:
       - .github/workflows/v813-version-sync-once.yml
 
@@ -12,12 +12,13 @@ permissions:
 
 jobs:
   sync:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     steps:
-      - name: Check out branch
+      - name: Check out PR head branch
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
-          ref: agent/v813-housekeeping-observable
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
       - name: Synchronize all active product version markers
         shell: bash
@@ -31,4 +32,4 @@ jobs:
           git add -A
           git diff --cached --check
           git commit -m 'release(v813): synchronize active product version markers'
-          git push origin HEAD:agent/v813-housekeeping-observable
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
