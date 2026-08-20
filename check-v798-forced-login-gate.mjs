@@ -23,7 +23,9 @@ const securityIndex='security/index.html';
 assert.ok(fs.existsSync(securityIndex),'private security surface missing');
 const securityBody=fs.readFileSync(securityIndex,'utf8');
 assert(!securityBody.includes('/gejast-auth-gate.js?'),'security perimeter must not depend on player-session gate');
-for(const required of ['Private security login','/security/auth/login','/security/auth/logout','/security/s3/api/status']) assert(securityBody.includes(required),`security perimeter missing independent auth contract: ${required}`);
+for(const required of ['Private security login','/security/auth/login','/security/auth/logout','/api/status']) assert(securityBody.includes(required),`security perimeter missing independent auth contract: ${required}`);
+assert(securityBody.includes("fetch(`/security/${camera}/api/status`"),'security perimeter must status-check the selected protected camera source');
+assert(securityBody.includes("api('new','/api/status')")&&securityBody.includes("api('s3','/api/status')"),'security live view must status-check both protected camera sources');
 const missing=[]; const leaked=[]; let protectedCount=0;
 for(const file of walk(process.cwd())){
   const r=rel(file);const body=fs.readFileSync(file,'utf8');
