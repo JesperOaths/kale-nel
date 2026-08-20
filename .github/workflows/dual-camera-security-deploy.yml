@@ -24,10 +24,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Preserve production rollback source
+      - name: Preserve patcher and production rollback source
         shell: bash
         run: |
           set -euo pipefail
+          cp scripts/patch-dual-camera-worker.py /tmp/patch-dual-camera-worker.py
+          python3 -m py_compile /tmp/patch-dual-camera-worker.py
           git fetch origin main "$TARGET_BRANCH"
           git show origin/main:cloudflare/workers/admin-gate/src/worker.js > /tmp/production-worker.js
           git show origin/main:security/index.html > /tmp/production-security.html
@@ -42,140 +44,29 @@ jobs:
           unexpected=$(git diff --name-only origin/main...HEAD | grep -Ev '^security/index\.html$' || true)
           test -z "$unexpected"
 
-      - name: Patch dual-camera Worker routing
+      - name: Patch and validate dual-camera candidate
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('cloudflare/workers/admin-gate/src/worker.js')
-          s=p.read_text()
-          def once(old,new,label):
-              global s
-              if s.count(old)!=1:
-                  raise SystemExit(f'BLOCKER={label}_COUNT_{s.count(old)}')
-              s=s.replace(old,new,1)
-
-          once("const ADMIN_BUILD = 'v765-security-proxy';", "const ADMIN_BUILD = 'v766-dual-camera-security';", 'BUILD')
-
-          once("""      target.searchParams.set('return_to', '/security/');""",
-               """      target.searchParams.set('return_to', securityPageReturnTo(url.pathname));""", 'OUTER_RETURN')
-
-          once("""  if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();
-  if (url.pathname === '/security/') return await serveSecurityAsset(request, env);
-
-  const media = await readEncryptedCookie(request, env, SECURITY_MEDIA_COOKIE);""",
-               """  if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();
-  if (url.pathname === '/security/new-clips') return canonicalRedirect('/security/new-clips/');
-  if (url.pathname === '/security/s3-clips') return canonicalRedirect('/security/s3-clips/');
-  if (url.pathname === '/security/' || url.pathname === '/security/new-clips/' || url.pathname === '/security/s3-clips/') {
-    return await serveSecurityAsset(request, env);
-  }
-
-  const media = await readEncryptedCookie(request, env, SECURITY_MEDIA_COOKIE);""", 'SECURITY_PAGE_ROUTING')
-
-          once("""function isSecurityPath(pathname) { return pathname === '/security' || pathname.startsWith('/security/'); }
-function isSecurityReturnTo(value) { return value === '/security' || value === '/security/'; }""",
-               """function isSecurityPath(pathname) { return pathname === '/security' || pathname.startsWith('/security/'); }
-function securityPageReturnTo(value) {
-  const path = String(value || '').split('?', 1)[0];
-  if (path === '/security/new-clips' || path === '/security/new-clips/') return '/security/new-clips/';
-  if (path === '/security/s3-clips' || path === '/security/s3-clips/') return '/security/s3-clips/';
-  return '/security/';
-}
-function isSecurityReturnTo(value) {
-  const path = String(value || '').split('?', 1)[0];
-  return path === '/security' || path === '/security/' ||
-    path === '/security/new-clips' || path === '/security/new-clips/' ||
-    path === '/security/s3-clips' || path === '/security/s3-clips/';
-}""", 'SECURITY_RETURN_HELPERS')
-
-          once("""  const destination = isSecurityReturnTo(safeReturnTo) ? `https://${PUBLIC_HOST}/security/` : safeReturnTo;""",
-               """  const destination = isSecurityReturnTo(safeReturnTo) ? `https://${PUBLIC_HOST}${securityPageReturnTo(safeReturnTo)}` : safeReturnTo;""", 'OAUTH_DESTINATION')
-
-          old="""function securityUpstreamPath(pathname) {
-  if (pathname === '/security/api/events') return '/api/events';
-  if (pathname === '/security/api/status') return '/api/status';
-  if (pathname === '/security/live.mjpg') return '/live.mjpg';
-  if (pathname.startsWith('/security/snap/')) {
-    const name = cleanSecurityFilename(pathname.slice('/security/snap/'.length));
-    return name ? `/snap/${encodeURIComponent(name)}` : '';
-  }
-  if (pathname.startsWith('/security/clip/')) {
-    const name = cleanSecurityFilename(pathname.slice('/security/clip/'.length), '.mp4');
-    return name ? `/clip/${encodeURIComponent(name)}` : '';
-  }
-  return '';
-}"""
-          new="""function securityUpstreamPath(pathname) {
-  for (const camera of ['s3', 'new']) {
-    const prefix = `/security/${camera}`;
-    if (pathname === `${prefix}/api/events`) return `/${camera}/api/events`;
-    if (pathname === `${prefix}/api/status`) return `/${camera}/api/status`;
-    if (pathname === `${prefix}/live.mjpg`) return `/${camera}/live.mjpg`;
-    if (pathname.startsWith(`${prefix}/snap/`)) {
-      const name = cleanSecurityFilename(pathname.slice(`${prefix}/snap/`.length));
-      return name ? `/${camera}/snap/${encodeURIComponent(name)}` : '';
-    }
-    if (pathname.startsWith(`${prefix}/clip/`)) {
-      const name = cleanSecurityFilename(pathname.slice(`${prefix}/clip/`.length), '.mp4');
-      return name ? `/${camera}/clip/${encodeURIComponent(name)}` : '';
-    }
-  }
-  // Backwards compatibility: pre-v766 unprefixed security media remains S3.
-  if (pathname === '/security/api/events') return '/api/events';
-  if (pathname === '/security/api/status') return '/api/status';
-  if (pathname === '/security/live.mjpg') return '/live.mjpg';
-  if (pathname.startsWith('/security/snap/')) {
-    const name = cleanSecurityFilename(pathname.slice('/security/snap/'.length));
-    return name ? `/snap/${encodeURIComponent(name)}` : '';
-  }
-  if (pathname.startsWith('/security/clip/')) {
-    const name = cleanSecurityFilename(pathname.slice('/security/clip/'.length), '.mp4');
-    return name ? `/clip/${encodeURIComponent(name)}` : '';
-  }
-  return '';
-}"""
-          once(old,new,'UPSTREAM_ROUTER')
-          p.write_text(s)
-          print('DUAL_CAMERA_WORKER_PATCH=APPLIED')
-          PY
-
-      - name: Validate scoped candidate
-        shell: bash
-        run: |
-          set -euo pipefail
+          python3 /tmp/patch-dual-camera-worker.py
           node --check cloudflare/workers/admin-gate/src/worker.js
-          python3 - <<'PY'
-          import re
-          from pathlib import Path
-          s=Path('security/index.html').read_text()
-          m=re.search(r'<script>(.*?)</script>',s,re.S)
-          if not m: raise SystemExit('BLOCKER=INLINE_SCRIPT_NOT_FOUND')
-          Path('/tmp/security-inline.js').write_text(m.group(1))
-          PY
           node --check /tmp/security-inline.js
           node scripts/build-admin-worker-assets.mjs
           test -s cloudflare/workers/admin-gate/static/security/index.html
           grep -q "ADMIN_BUILD = 'v766-dual-camera-security'" cloudflare/workers/admin-gate/src/worker.js
-          grep -q "'/security/new-clips/'" cloudflare/workers/admin-gate/src/worker.js
-          grep -q "'/security/s3-clips/'" cloudflare/workers/admin-gate/src/worker.js
           grep -q "for (const camera of \['s3', 'new'\])" cloudflare/workers/admin-gate/src/worker.js
-          grep -q '/security/new/live.mjpg' security/index.html || grep -q '\${camera}/live.mjpg' security/index.html
           grep -q '/security/new-clips/' security/index.html
           grep -q '/security/s3-clips/' security/index.html
           grep -q 'security-4 · dual camera' security/index.html
           ! grep -Eqi 'trycloudflare\.com|192\.168\.|media_token|hmac_secret|service_role' security/index.html
           git diff --check -- cloudflare/workers/admin-gate/src/worker.js security/index.html
-          unexpected=$(git diff --name-only origin/main...HEAD -- . ':!security/index.html' ':!cloudflare/workers/admin-gate/src/worker.js' || true)
-          test -z "$unexpected"
           echo DUAL_CAMERA_STATIC_VALIDATION=PASS
 
       - name: Deploy with automatic production rollback
         shell: bash
         run: |
           set -euo pipefail
-          rollback(){
+          rollback() {
             rc=$?
             if [ "$rc" -ne 0 ]; then
               echo DUAL_CAMERA_DEPLOY_VERIFY_FAILED_ROLLING_BACK=YES
@@ -189,36 +80,27 @@ function isSecurityReturnTo(value) {
           }
           trap rollback EXIT
           (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy)
-
-          verify(){
-            local label="$1" url="$2" expected="$3" expected_location="${4:-}" method="${5:-GET}" body="${6:-}"
-            local h b code loc
-            h=$(mktemp); b=$(mktemp)
-            if [ "$method" = POST ]; then
-              code=$(curl -sS -D "$h" -o "$b" -H 'content-type: application/json' --data "$body" -w '%{http_code}' "$url" || true)
-            else
-              code=$(curl -sS -D "$h" -o "$b" -w '%{http_code}' "$url" || true)
-            fi
-            loc=$(awk 'BEGIN{IGNORECASE=1}/^location:/{sub(/\r$/,"");print substr($0,index($0,":")+2);exit}' "$h" || true)
-            echo "VERIFY_${label}_HTTP=$code LOCATION=$loc"
-            test "$code" = "$expected" || { rm -f "$h" "$b"; return 1; }
-            if [ -n "$expected_location" ]; then test "$loc" = "$expected_location" || { rm -f "$h" "$b"; return 1; }; fi
-            if [ "$label" = LOGIN_WITHOUT_OUTER ]; then grep -q 'github_session_required' "$b" || { rm -f "$h" "$b"; return 1; }; fi
-            rm -f "$h" "$b"
-          }
-
           ok=0
           for attempt in $(seq 1 12); do
-            echo "EDGE_VERIFY_ATTEMPT=$attempt"
-            if verify SECURITY_ROOT https://kalenel.nl/security/ 302 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2F' && \
-               verify NEW_CLIPS https://kalenel.nl/security/new-clips/ 302 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2Fnew-clips%2F' && \
-               verify S3_CLIPS https://kalenel.nl/security/s3-clips/ 302 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2Fs3-clips%2F' && \
-               verify NEW_API https://kalenel.nl/security/new/api/status 302 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2F' && \
-               verify S3_API https://kalenel.nl/security/s3/api/status 302 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2F' && \
-               verify LOGIN_WITHOUT_OUTER https://kalenel.nl/security/auth/login 401 '' POST '{"username":"x","password":"x","totp":"000000"}' && \
-               verify PUBLIC_ROOT https://kalenel.nl/ 200 && \
-               verify ADMIN_APEX https://kalenel.nl/admin.html 302 'https://admin.kalenel.nl/admin.html'; then
-              ok=1; break
+            echo EDGE_VERIFY_ATTEMPT=$attempt
+            root_code=$(curl -sS -o /dev/null -D /tmp/root.h -w '%{http_code}' https://kalenel.nl/security/ || true)
+            new_code=$(curl -sS -o /dev/null -D /tmp/new.h -w '%{http_code}' https://kalenel.nl/security/new-clips/ || true)
+            s3_code=$(curl -sS -o /dev/null -D /tmp/s3.h -w '%{http_code}' https://kalenel.nl/security/s3-clips/ || true)
+            new_api_code=$(curl -sS -o /dev/null -D /tmp/newapi.h -w '%{http_code}' https://kalenel.nl/security/new/api/status || true)
+            s3_api_code=$(curl -sS -o /dev/null -D /tmp/s3api.h -w '%{http_code}' https://kalenel.nl/security/s3/api/status || true)
+            root_loc=$(awk 'BEGIN{IGNORECASE=1}/^location:/{sub(/\r$/,"");print substr($0,index($0,":")+2);exit}' /tmp/root.h || true)
+            new_loc=$(awk 'BEGIN{IGNORECASE=1}/^location:/{sub(/\r$/,"");print substr($0,index($0,":")+2);exit}' /tmp/new.h || true)
+            s3_loc=$(awk 'BEGIN{IGNORECASE=1}/^location:/{sub(/\r$/,"");print substr($0,index($0,":")+2);exit}' /tmp/s3.h || true)
+            new_api_loc=$(awk 'BEGIN{IGNORECASE=1}/^location:/{sub(/\r$/,"");print substr($0,index($0,":")+2);exit}' /tmp/newapi.h || true)
+            s3_api_loc=$(awk 'BEGIN{IGNORECASE=1}/^location:/{sub(/\r$/,"");print substr($0,index($0,":")+2);exit}' /tmp/s3api.h || true)
+            login_code=$(curl -sS -o /tmp/login.body -H 'content-type: application/json' --data '{"username":"x","password":"x","totp":"000000"}' -w '%{http_code}' https://kalenel.nl/security/auth/login || true)
+            public_code=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/ || true)
+            admin_code=$(curl -sS -o /dev/null -D /tmp/admin.h -w '%{http_code}' https://kalenel.nl/admin.html || true)
+            admin_loc=$(awk 'BEGIN{IGNORECASE=1}/^location:/{sub(/\r$/,"");print substr($0,index($0,":")+2);exit}' /tmp/admin.h || true)
+            echo ROOT=$root_code:$root_loc NEW=$new_code:$new_loc S3=$s3_code:$s3_loc NEW_API=$new_api_code:$new_api_loc S3_API=$s3_api_code:$s3_api_loc LOGIN=$login_code PUBLIC=$public_code ADMIN=$admin_code:$admin_loc
+            if [ "$root_code" = 302 ] && [ "$root_loc" = 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2F' ] && [ "$new_code" = 302 ] && [ "$new_loc" = 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2Fnew-clips%2F' ] && [ "$s3_code" = 302 ] && [ "$s3_loc" = 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2Fs3-clips%2F' ] && [ "$new_api_code" = 302 ] && [ "$new_api_loc" = 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2F' ] && [ "$s3_api_code" = 302 ] && [ "$s3_api_loc" = 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2F' ] && [ "$login_code" = 401 ] && grep -q 'github_session_required' /tmp/login.body && [ "$public_code" = 200 ] && [ "$admin_code" = 302 ] && [ "$admin_loc" = 'https://admin.kalenel.nl/admin.html' ]; then
+              ok=1
+              break
             fi
             sleep 4
           done
