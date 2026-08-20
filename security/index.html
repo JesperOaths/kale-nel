@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none">
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Referrer-Policy" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://uiqntazgnrxwliaidkmy.supabase.co https://*.trycloudflare.com; img-src 'self' data: blob: https://*.trycloudflare.com; media-src 'self' blob: https://*.trycloudflare.com;">
+  <title>Kalenel Security</title>
+  <style>
+    :root{color-scheme:dark;--bg:#071018;--card:#101b26;--line:#243849;--text:#f4f7f9;--muted:#93a5b3;--accent:#70d7ff;--ok:#78e6b1;--warn:#ffbf69}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font:15px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body{padding:18px;padding-bottom:74px}.wrap{max-width:1180px;margin:0 auto}.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}.eyebrow{color:var(--accent);font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.title{font-size:30px;line-height:1.1;margin:4px 0 5px;letter-spacing:-.035em}.sub{margin:0;color:var(--muted)}
+    .status{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);background:var(--card);border-radius:999px;color:var(--muted);white-space:nowrap}.dot{width:8px;height:8px;border-radius:50%;background:var(--warn)}.status.ok .dot{background:var(--ok)}
+    .tabs{display:flex;gap:8px;margin:0 0 14px}.tab{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:12px;padding:10px 15px;font-weight:800;cursor:pointer}.tab.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+    .panel{display:none}.panel.active{display:block}.live-card,.meta-card,.empty,.clip{background:var(--card);border:1px solid var(--line);border-radius:18px}.live-card{overflow:hidden}.live-frame{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#000}.live-meta{display:flex;justify-content:space-between;gap:16px;padding:13px 15px;color:var(--muted)}
+    .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.toolbar h2{margin:0;font-size:20px}.button{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:11px;padding:9px 13px;font-weight:750;cursor:pointer}
+    .clips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.clip{overflow:hidden;cursor:pointer;transition:transform .12s ease,border-color .12s ease}.clip:hover{transform:translateY(-1px);border-color:#39566d}.thumb{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#000}.clip-body{padding:12px}.clip-row{display:flex;justify-content:space-between;gap:10px}.clip-title{font-weight:850}.clip-time,.clip-reason{color:var(--muted);font-size:13px}.clip-reason{margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.badge{font-size:11px;border:1px solid #315067;border-radius:999px;padding:3px 7px;color:var(--accent)}.empty{padding:28px;color:var(--muted);text-align:center}
+    dialog{border:1px solid var(--line);border-radius:18px;background:#071018;color:var(--text);padding:0;width:min(960px,calc(100vw - 28px));box-shadow:0 30px 90px #000b}dialog::backdrop{background:#000c}.modal-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}.modal-head strong{font-size:15px}.close{border:0;background:transparent;color:var(--text);font-size:24px;cursor:pointer}.player{display:block;width:100%;max-height:75vh;background:#000}.modal-meta{padding:12px 14px;color:var(--muted);font-size:13px}
+    .error{padding:14px 16px;border:1px solid #713b3b;background:#261515;border-radius:14px;color:#ffd0d0;margin-bottom:14px}.hidden{display:none!important}.watermark{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:20;padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:#071018e8;color:#7f929f;font-size:11px;letter-spacing:.05em}
+    @media(max-width:850px){.clips{grid-template-columns:repeat(2,minmax(0,1fr))}.top{align-items:stretch;flex-direction:column}.status{align-self:flex-start}}
+    @media(max-width:560px){body{padding:12px;padding-bottom:68px}.clips{grid-template-columns:1fr}.title{font-size:26px}.live-meta{flex-direction:column;gap:3px}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div><div class="eyebrow">Private</div><h1 class="title">Kalenel Security</h1><p class="sub">Front-yard live camera and locally stored C720P recordings.</p></div>
+      <div id="connection" class="status"><span class="dot"></span><span id="connectionText">Connecting…</span></div>
+    </header>
+    <div id="errorBox" class="error hidden"></div>
+    <nav class="tabs" aria-label="Security views">
+      <button class="tab active" type="button" data-tab="live">Live</button>
+      <button class="tab" type="button" data-tab="recordings">Recordings</button>
+    </nav>
+    <section id="livePanel" class="panel active">
+      <div class="live-card">
+        <img id="liveImage" class="live-frame" alt="S3 live camera" decoding="async">
+        <div class="live-meta"><span id="liveState">Waiting for camera…</span><span id="lastEvent">Last motion: —</span></div>
+      </div>
+    </section>
+    <section id="recordingsPanel" class="panel">
+      <div class="toolbar"><h2>Recordings</h2><button id="refreshBtn" class="button" type="button">Refresh</button></div>
+      <div id="clips" class="clips"></div>
+      <div id="empty" class="empty hidden">No recordings are stored on the C720P.</div>
+    </section>
+  </main>
+  <dialog id="viewer">
+    <div class="modal-head"><strong id="viewerTitle">Recording</strong><button id="closeViewer" class="close" type="button" aria-label="Close">×</button></div>
+    <video id="player" class="player" controls playsinline preload="metadata"></video>
+    <div id="viewerMeta" class="modal-meta"></div>
+  </dialog>
+  <div class="watermark">Kalenel · security-1</div>
+<script>
+(() => {
+  'use strict';
+  const SESSION_KEY = 'jas_admin_session_v8';
+  const CONTROL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-control?action=session';
+  const LOGIN = '/admin.html?return_to=security/';
+  const state = { origin:'', mediaToken:'', expiresAt:0, events:[], refreshTimer:null, liveRetry:null };
+  const $ = (id) => document.getElementById(id);
+  const enc = encodeURIComponent;
+
+  function adminToken(){ return sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY) || ''; }
+  function saveAdminToken(token){ if(!token) return; sessionStorage.setItem(SESSION_KEY, token); localStorage.setItem(SESSION_KEY, token); }
+  function clearAdminToken(){ sessionStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_KEY); }
+  function login(){ location.replace(LOGIN); }
+  function setConnection(ok,text){ $('connection').classList.toggle('ok',!!ok); $('connectionText').textContent=text; }
+  function showError(message){ $('errorBox').textContent=message; $('errorBox').classList.remove('hidden'); }
+  function clearError(){ $('errorBox').classList.add('hidden'); $('errorBox').textContent=''; }
+
+  async function openSession(force=false){
+    const token=adminToken();
+    if(!token) return login();
+    if(!force && state.origin && state.mediaToken && Date.now() < state.expiresAt - 120000) return;
+    setConnection(false,'Authenticating…');
+    const res=await fetch(CONTROL,{method:'POST',cache:'no-store',headers:{'content-type':'application/json'},body:JSON.stringify({admin_session_token:token})});
+    const data=await res.json().catch(()=>({}));
+    if(res.status===401 || data.error==='admin_session_invalid' || data.error==='admin_session_required'){
+      clearAdminToken(); return login();
+    }
+    if(!res.ok || !data.ok || !data.origin || !data.media_token) throw new Error(data.error || `Security session failed (${res.status})`);
+    state.origin=String(data.origin).replace(/\/+$/,'');
+    state.mediaToken=String(data.media_token);
+    state.expiresAt=Date.parse(data.expires_at)||Date.now()+600000;
+    if(data.admin_session_token) saveAdminToken(data.admin_session_token);
+    setConnection(true,'Connected');
+  }
+
+  function mediaUrl(path){ return `${state.origin}${path}?token=${enc(state.mediaToken)}`; }
+  async function api(path){
+    await openSession();
+    let res=await fetch(mediaUrl(path),{cache:'no-store',referrerPolicy:'no-referrer'});
+    if(res.status===401){ await openSession(true); res=await fetch(mediaUrl(path),{cache:'no-store',referrerPolicy:'no-referrer'}); }
+    if(!res.ok) throw new Error(`Camera service ${res.status}`);
+    return res.json();
+  }
+
+  function startLive(){
+    if(!state.origin || !state.mediaToken) return;
+    const img=$('liveImage');
+    img.src=mediaUrl('/live.mjpg')+'&t='+Date.now();
+    $('liveState').textContent='S3 live camera';
+  }
+  function stopLive(){ $('liveImage').removeAttribute('src'); }
+
+  function clipCard(e){
+    const card=document.createElement('article'); card.className='clip'; card.tabIndex=0; card.setAttribute('role','button');
+    const img=document.createElement('img'); img.className='thumb'; img.loading='lazy'; img.alt='Motion recording thumbnail';
+    if(e.snapshot_name) img.src=mediaUrl('/snap/'+enc(e.snapshot_name));
+    const body=document.createElement('div'); body.className='clip-body';
+    const row=document.createElement('div'); row.className='clip-row';
+    const title=document.createElement('div'); title.className='clip-title'; title.textContent=e.timestamp || `Clip #${e.clip_no ?? '—'}`;
+    row.appendChild(title);
+    if(e.saved){ const badge=document.createElement('span'); badge.className='badge'; badge.textContent='Saved'; row.appendChild(badge); }
+    const reason=document.createElement('div'); reason.className='clip-reason'; reason.textContent=e.reason || 'Motion event';
+    const duration=document.createElement('div'); duration.className='clip-time'; duration.textContent=e.duration_target_seconds ? `${e.duration_target_seconds}s target` : 'Recording';
+    body.append(row,reason,duration); card.append(img,body);
+    const open=()=>openClip(e); card.addEventListener('click',open); card.addEventListener('keydown',(ev)=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();open();}});
+    return card;
+  }
+
+  function renderEvents(){
+    const box=$('clips'); box.replaceChildren();
+    const playable=state.events.filter(e=>e && e.clip_name);
+    $('empty').classList.toggle('hidden',playable.length!==0);
+    for(const e of playable) box.appendChild(clipCard(e));
+  }
+
+  function openClip(e){
+    if(!e.clip_name) return;
+    const p=$('player'); p.src=mediaUrl('/clip/'+enc(e.clip_name));
+    $('viewerTitle').textContent=e.timestamp || `Clip #${e.clip_no ?? ''}`;
+    $('viewerMeta').textContent=[e.reason,e.method,e.duration_target_seconds?`${e.duration_target_seconds}s target`:null].filter(Boolean).join(' · ');
+    $('viewer').showModal();
+  }
+  function closeViewer(){ const p=$('player'); p.pause(); p.removeAttribute('src'); p.load(); $('viewer').close(); }
+
+  async function refresh(){
+    clearError();
+    try{
+      await openSession();
+      const [events,status]=await Promise.all([api('/api/events'),api('/api/status')]);
+      state.events=Array.isArray(events.events)?events.events:[]; renderEvents();
+      $('lastEvent').textContent=`Last motion: ${status.last_event_at || '—'}`;
+      if(document.querySelector('.tab.active')?.dataset.tab==='live') startLive();
+    }catch(err){ setConnection(false,'Unavailable'); showError(err?.message || 'Security service unavailable.'); }
+  }
+
+  document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));
+    $('livePanel').classList.toggle('active',btn.dataset.tab==='live');
+    $('recordingsPanel').classList.toggle('active',btn.dataset.tab==='recordings');
+    if(btn.dataset.tab==='live') startLive(); else stopLive();
+  }));
+  $('refreshBtn').addEventListener('click',refresh);
+  $('closeViewer').addEventListener('click',closeViewer);
+  $('viewer').addEventListener('cancel',(e)=>{e.preventDefault();closeViewer();});
+  $('liveImage').addEventListener('load',()=>{setConnection(true,'Live');$('liveState').textContent='S3 live camera · online';});
+  $('liveImage').addEventListener('error',()=>{setConnection(false,'Reconnecting…');$('liveState').textContent='Live stream interrupted; reconnecting…';clearTimeout(state.liveRetry);state.liveRetry=setTimeout(()=>openSession(true).then(startLive).catch(()=>{}),2500);});
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopLive(); else refresh(); });
+  window.addEventListener('beforeunload',()=>{stopLive();clearTimeout(state.liveRetry);clearInterval(state.refreshTimer);});
+
+  refresh();
+  state.refreshTimer=setInterval(()=>{ if(!document.hidden) refresh(); },60000);
+})();
+</script>
+</body>
+</html>
