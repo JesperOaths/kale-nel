@@ -1,7 +1,7 @@
 {
   "version": 8,
-  "site_version": "release candidate v812 / live v811 / certified rollback v808",
-  "last_updated": "2026-08-18",
+  "site_version": "release candidate v813 / live v812 / certified rollback v808",
+  "last_updated": "2026-08-21",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
     "ready_to_test": "Code exists and surface checks pass, but real beta proof is still needed.",
@@ -11,9 +11,9 @@
   },
   "deployment_identity": {
     "status": "ready_to_test",
-    "live_version": "v811",
-    "frontend_release_merge": "c3cb4b5e35f32e699b6432aca6502fae6b151007",
-    "repository_head_at_audit": "c3cb4b5e35f32e699b6432aca6502fae6b151007",
+    "live_version": "v812",
+    "frontend_release_merge": "a62b6ff4a73a1419f2aeb1c4f83e64d2bf780bbc",
+    "repository_head_at_audit": "a62b6ff4a73a1419f2aeb1c4f83e64d2bf780bbc",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
     "evidence": [
       "2026-08-18 v812 grounding: direct production read proved get_public_player_unified_scoped fails with PostgreSQL 42702 from ambiguous game_key in _gejast_elo_for_game_scope; get_profiles_page_bundle_scoped, get_public_shared_player_stats_scoped and get_public_player_game_insights_scoped all succeeded for a scoped player read. v812 removes only the failing active aggregate call and preserves healthy fallbacks.",
@@ -48,8 +48,8 @@
       "2026-08-14 live v792: frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 completed its own Live deployment health run #60 successfully; later SQL-only repository audit head 141e7301944a79452eca9d354180a684249cdcd2 also passed Live deployment health without changing frontend VERSION.",
       "v793 candidate: full production screenshot audit found and repairs visible Klaverjas duplication, ladder game-key mismatch, stale game status RPC owners, Pikken spectator context loss and Rad stats aggregation failure; current release remains REVALIDATION_REQUIRED until post-deploy screenshots and gameplay are re-run."
     ],
-    "note": "v812 removes the known-broken get_public_player_unified_scoped frontend call without hiding a backend failure: production read-only diagnosis proves PostgreSQL 42702 in _gejast_elo_for_game_scope. Current UI already fell back whenever it failed; v812 goes directly to that healthy profile path and uses get_public_shared_player_stats_scoped plus get_public_player_game_insights_scoped for game panels. No production SQL mutation.",
-    "release_candidate_version": "v812"
+    "note": "v813 release candidate: production data-boundary and browser cleanup compatibility migrations are applied; Klaverjas long-name overflow is contained; authenticated visual certification is fail-closed on any WARN/BROKEN result. Exact-current health, deep gameplay/ownership, private security viewer, post-deploy visual review and zero-residue proof remain required before promotion.",
+    "release_candidate_version": "v813"
   },
   "baseline_checks": [
     {
