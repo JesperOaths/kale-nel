@@ -4,11 +4,16 @@ const SESSION_COOKIE = '__Host-kalenel_admin_session';
 const OAUTH_COOKIE = '__Host-kalenel_admin_oauth';
 const ATTEMPT_COOKIE = '__Host-kalenel_admin_attempts';
 const SECURITY_COOKIE = '__Secure-kalenel_security_session';
+const SECURITY_MEDIA_COOKIE = '__Host-kalenel_security_media';
+const SECURITY_MEDIA_TTL_SECONDS = 15 * 60;
+const SUPABASE_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
+const SECURITY_CONTROL_URL = `${SUPABASE_URL}/functions/v1/c720p-security-control?action=session`;
 const SESSION_TTL_SECONDS = 30 * 60;
 const OAUTH_TTL_SECONDS = 10 * 60;
 const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
-const ADMIN_BUILD = 'v764-security';
+const ADMIN_BUILD = 'v765-security-proxy';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -83,18 +88,43 @@ async function handlePublicApex(request, env, url) {
 
 
 async function handlePublicSecurity(request, env, url) {
-  if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();
-  if (url.pathname === '/security') return canonicalRedirect('/security/');
-  const session = await readSignedCookie(request, env, SECURITY_COOKIE);
-  if (!session || session.kind !== 'security-session' || session.exp <= now() || !isAllowedGithubAccount(env, session.github)) {
-    const target = new URL('/login', `https://${ADMIN_HOST}`);
-    target.searchParams.set('return_to', '/security/');
-    return new Response(null, {
-      status: 302,
-      headers: secureHeaders({ Location: target.toString(), 'Cache-Control': 'no-store' })
-    });
+  if (url.pathname === '/security') {
+    if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();
+    return canonicalRedirect('/security/');
   }
-  return await serveSecurityAsset(request, env);
+
+  const outer = await readSignedCookie(request, env, SECURITY_COOKIE);
+  if (!outer || outer.kind !== 'security-session' || outer.exp <= now() || !isAllowedGithubAccount(env, outer.github)) {
+    if (request.method === 'GET' || request.method === 'HEAD') {
+      const target = new URL('/login', `https://${ADMIN_HOST}`);
+      target.searchParams.set('return_to', '/security/');
+      return new Response(null, { status: 302, headers: secureHeaders({ Location: target.toString(), 'Cache-Control': 'no-store' }) });
+    }
+    return securityJson({ ok: false, error: 'github_session_required' }, 401);
+  }
+
+  if (url.pathname === '/security/auth/login') {
+    if (request.method !== 'POST') return securityMethodNotAllowed('POST');
+    return await securityInnerLogin(request, env, outer);
+  }
+  if (url.pathname === '/security/auth/logout') {
+    if (request.method !== 'POST') return securityMethodNotAllowed('POST');
+    const headers = securityResponseHeaders({ 'Content-Type': 'application/json; charset=utf-8' });
+    headers.append('Set-Cookie', expireCookie(SECURITY_MEDIA_COOKIE));
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
+  }
+
+  if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();
+  if (url.pathname === '/security/') return await serveSecurityAsset(request, env);
+
+  const media = await readEncryptedCookie(request, env, SECURITY_MEDIA_COOKIE);
+  if (!validSecurityMediaSession(env, media, outer)) {
+    return securityJson({ ok: false, error: 'security_unlock_required' }, 401, true);
+  }
+
+  const upstreamPath = securityUpstreamPath(url.pathname);
+  if (!upstreamPath) return notFound();
+  return await proxySecurityOrigin(request, media, upstreamPath);
 }
 
 async function handleAdminHost(request, env, url) {
@@ -133,7 +163,7 @@ function canonicalizeAdminReturnTo(value) {
   if (safe.startsWith('/admin?')) return `/admin.html${safe.slice('/admin'.length)}`;
   return safe;
 }
-function isSecurityPath(pathname) { return pathname === '/security' || pathname === '/security/'; }
+function isSecurityPath(pathname) { return pathname === '/security' || pathname.startsWith('/security/'); }
 function isSecurityReturnTo(value) { return value === '/security' || value === '/security/'; }
 
 function canonicalRedirect(location) {
@@ -248,6 +278,170 @@ async function serveSecurityAsset(request, env) {
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
+function securityResponseHeaders(init = {}) {
+  const headers = new Headers(init);
+  headers.set('Cache-Control', 'private, no-store, max-age=0');
+  headers.set('Pragma', 'no-cache');
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('Referrer-Policy', 'no-referrer');
+  headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+  headers.set('Cross-Origin-Resource-Policy', 'same-origin');
+  return headers;
+}
+function securityJson(data, status = 200, clearMedia = false) {
+  const headers = securityResponseHeaders({ 'Content-Type': 'application/json; charset=utf-8' });
+  if (clearMedia) headers.append('Set-Cookie', expireCookie(SECURITY_MEDIA_COOKIE));
+  return new Response(JSON.stringify(data), { status, headers });
+}
+function securityMethodNotAllowed(allow) {
+  return new Response('Method not allowed', { status: 405, headers: securityResponseHeaders({ Allow: allow, 'Content-Type': 'text/plain; charset=utf-8' }) });
+}
+async function securityInnerLogin(request, env, outer) {
+  let body;
+  try { body = await request.json(); } catch { return securityJson({ ok:false, error:'invalid_request' }, 400); }
+  const username = String(body?.username || '').trim();
+  const password = String(body?.password || '');
+  const totp = String(body?.totp || '').replace(/\D/g, '');
+  if (!username || username.length > 160 || !password || password.length > 512 || !/^\d{6}$/.test(totp)) {
+    return securityJson({ ok:false, error:'invalid_credentials' }, 400);
+  }
+
+  const loginRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify({ input_username: username, input_password: password, input_totp_code: totp })
+  });
+  const loginText = await loginRes.text();
+  let loginData = {};
+  try { loginData = loginText ? JSON.parse(loginText) : {}; } catch {}
+  if (Array.isArray(loginData)) loginData = loginData[0] || {};
+  const adminToken = String(loginData?.admin_session_token || loginData?.token || '').trim();
+  if (!loginRes.ok || adminToken.length < 20 || adminToken.length > 500) {
+    return securityJson({ ok:false, error:'invalid_credentials' }, 401);
+  }
+
+  const controlRes = await fetch(SECURITY_CONTROL_URL, {
+    method: 'POST',
+    headers: { Origin: `https://${PUBLIC_HOST}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ admin_session_token: adminToken })
+  });
+  const control = await controlRes.json().catch(() => ({}));
+  const origin = String(control?.origin || '').replace(/\/+$/, '');
+  const mediaToken = String(control?.media_token || '');
+  const expiryMs = Date.parse(String(control?.expires_at || ''));
+  if (!controlRes.ok || control?.ok !== true ||
+      !/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i.test(origin) ||
+      mediaToken.length < 32 || mediaToken.length > 512 ||
+      !Number.isFinite(expiryMs) || expiryMs <= Date.now()) {
+    return securityJson({ ok:false, error:'camera_origin_unavailable' }, 503);
+  }
+
+  const exp = Math.min(outer.exp, Math.floor(expiryMs / 1000), now() + SECURITY_MEDIA_TTL_SECONDS);
+  if (exp <= now()) return securityJson({ ok:false, error:'security_session_expired' }, 401);
+  const session = {
+    kind: 'security-media',
+    github: { id: String(outer.github?.id || ''), login: String(outer.github?.login || '') },
+    origin, mediaToken, iat: now(), exp
+  };
+  const headers = securityResponseHeaders({ 'Content-Type': 'application/json; charset=utf-8' });
+  headers.append('Set-Cookie', await encryptedCookie(env, SECURITY_MEDIA_COOKIE, session, Math.max(1, exp - now())));
+  return new Response(JSON.stringify({ ok:true, expires_at:new Date(exp * 1000).toISOString() }), { status:200, headers });
+}
+function validSecurityMediaSession(env, media, outer) {
+  if (!media || media.kind !== 'security-media' || media.exp <= now()) return false;
+  if (!media.github || !isAllowedGithubAccount(env, media.github)) return false;
+  if (normalizeGithubId(media.github.id) !== normalizeGithubId(outer.github?.id)) return false;
+  if (normalizeGithubLogin(media.github.login) !== normalizeGithubLogin(outer.github?.login)) return false;
+  if (!/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i.test(String(media.origin || ''))) return false;
+  const token = String(media.mediaToken || '');
+  return token.length >= 32 && token.length <= 512;
+}
+function cleanSecurityFilename(raw, extension = '') {
+  let name = '';
+  try { name = decodeURIComponent(String(raw || '')); } catch { return ''; }
+  if (!/^[A-Za-z0-9._-]{1,180}$/.test(name) || name.includes('..')) return '';
+  if (extension && !name.toLowerCase().endsWith(extension)) return '';
+  return name;
+}
+function securityUpstreamPath(pathname) {
+  if (pathname === '/security/api/events') return '/api/events';
+  if (pathname === '/security/api/status') return '/api/status';
+  if (pathname === '/security/live.mjpg') return '/live.mjpg';
+  if (pathname.startsWith('/security/snap/')) {
+    const name = cleanSecurityFilename(pathname.slice('/security/snap/'.length));
+    return name ? `/snap/${encodeURIComponent(name)}` : '';
+  }
+  if (pathname.startsWith('/security/clip/')) {
+    const name = cleanSecurityFilename(pathname.slice('/security/clip/'.length), '.mp4');
+    return name ? `/clip/${encodeURIComponent(name)}` : '';
+  }
+  return '';
+}
+async function proxySecurityOrigin(request, media, upstreamPath) {
+  let base;
+  try { base = new URL(media.origin); } catch { return securityJson({ok:false,error:'camera_origin_invalid'},502,true); }
+  base.pathname = upstreamPath;
+  base.search = '';
+  base.searchParams.set('token', media.mediaToken);
+  const upstreamHeaders = new Headers();
+  for (const name of ['Range', 'If-Range', 'If-None-Match', 'If-Modified-Since']) {
+    const value = request.headers.get(name);
+    if (value) upstreamHeaders.set(name, value);
+  }
+  let response;
+  try { response = await fetch(base.toString(), { method: request.method, headers: upstreamHeaders, redirect: 'error' }); }
+  catch { return securityJson({ ok:false, error:'camera_origin_unavailable' }, 502); }
+  if (response.status === 401 || response.status === 403) return securityJson({ ok:false, error:'security_unlock_required' }, 401, true);
+  const headers = securityResponseHeaders();
+  for (const name of ['Content-Type','Content-Length','Content-Range','Accept-Ranges','ETag','Last-Modified','Content-Disposition']) {
+    const value = response.headers.get(name);
+    if (value) headers.set(name, value);
+  }
+  return new Response(request.method === 'HEAD' ? null : response.body, { status: response.status, statusText: response.statusText, headers });
+}
+function bytesToB64url(bytes) {
+  let text = '';
+  for (const b of bytes) text += String.fromCharCode(b);
+  return btoa(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+function b64urlToBytes(value) {
+  const s = String(value);
+  const padded = s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (s.length % 4)) % 4);
+  const raw = atob(padded);
+  return Uint8Array.from(raw, c => c.charCodeAt(0));
+}
+async function securityEncryptionKey(env) {
+  requireEnv(env, ['COOKIE_SECRET']);
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`kalenel-security-media-v1:${env.COOKIE_SECRET}`));
+  return crypto.subtle.importKey('raw', digest, { name:'AES-GCM' }, false, ['encrypt','decrypt']);
+}
+async function encryptedCookie(env, name, value, maxAge) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await securityEncryptionKey(env);
+  const plaintext = new TextEncoder().encode(JSON.stringify(value));
+  const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, plaintext));
+  return `${name}=${bytesToB64url(iv)}.${bytesToB64url(ciphertext)}; Max-Age=${maxAge}; Path=/; HttpOnly; Secure; SameSite=Strict`;
+}
+async function readEncryptedCookie(request, env, name) {
+  const raw = parseCookies(request)[name];
+  if (!raw) return null;
+  const parts = raw.split('.');
+  if (parts.length !== 2) return null;
+  try {
+    const iv = b64urlToBytes(parts[0]);
+    const ciphertext = b64urlToBytes(parts[1]);
+    if (iv.length !== 12 || ciphertext.length < 17 || ciphertext.length > 4096) return null;
+    const key = await securityEncryptionKey(env);
+    const plaintext = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, ciphertext);
+    return JSON.parse(new TextDecoder().decode(plaintext));
+  } catch { return null; }
+}
+
 async function serveProtectedAsset(request, env, pathname) {
   if (!env.ASSETS || typeof env.ASSETS.fetch !== 'function') return failClosed(new Error('ASSETS binding missing'));
   if (!isSafePath(pathname)) return notFound();
@@ -352,8 +546,11 @@ function applySecurityViewerHeaders(headers) {
   headers.set('X-Content-Type-Options', 'nosniff');
   headers.set('Referrer-Policy', 'no-referrer');
   headers.set('X-Frame-Options', 'DENY');
+  headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+  headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  headers.set('Cross-Origin-Resource-Policy', 'same-origin');
   headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
-  headers.set('Content-Security-Policy', "default-src 'self'; connect-src 'self' https://uiqntazgnrxwliaidkmy.supabase.co https://*.trycloudflare.com; img-src 'self' data: blob: https://*.trycloudflare.com; media-src 'self' blob: https://*.trycloudflare.com; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+  headers.set('Content-Security-Policy', "default-src 'self'; connect-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
 }
 
 function applySecurityHeaders(headers) {

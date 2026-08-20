@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Referrer-Policy" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://uiqntazgnrxwliaidkmy.supabase.co https://*.trycloudflare.com; img-src 'self' data: blob: https://*.trycloudflare.com; media-src 'self' blob: https://*.trycloudflare.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:;">
   <title>Kalenel Security</title>
   <style>
     :root{color-scheme:dark;--bg:#071018;--card:#101b26;--line:#243849;--text:#f4f7f9;--muted:#93a5b3;--accent:#70d7ff;--ok:#78e6b1;--warn:#ffbf69}
@@ -64,141 +64,57 @@
     <video id="player" class="player" controls playsinline preload="metadata"></video>
     <div id="viewerMeta" class="modal-meta"></div>
   </dialog>
-  <div class="watermark">Kalenel · security-2</div>
+  <div class="watermark">Kalenel · security-3</div>
 <script>
 (() => {
   'use strict';
-  const SESSION_KEY = 'jas_admin_session_v8';
-  const CONTROL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-control?action=session';
-  const SUPABASE_URL='https://uiqntazgnrxwliaidkmy.supabase.co';
-  const SUPABASE_PUBLISHABLE_KEY='sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
-  const state = { origin:'', mediaToken:'', expiresAt:0, events:[], refreshTimer:null, liveRetry:null };
+  const state = { events:[], refreshTimer:null, liveRetry:null, unlocked:false };
   const $ = (id) => document.getElementById(id);
   const enc = encodeURIComponent;
-
-  function adminToken(){ return sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY) || ''; }
-  function saveAdminToken(token){ if(!token) return; sessionStorage.setItem(SESSION_KEY, token); localStorage.setItem(SESSION_KEY, token); }
-  function clearAdminToken(){ sessionStorage.removeItem(SESSION_KEY); localStorage.removeItem(SESSION_KEY); }
-  function rpcHeaders(){return {apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,'content-type':'application/json',accept:'application/json'};}
-  async function parseResponse(res){const text=await res.text();let data={};try{data=text?JSON.parse(text):{};}catch{throw new Error(text||`HTTP ${res.status}`);}if(!res.ok)throw new Error(data?.message||data?.error||data?.details||`HTTP ${res.status}`);return Array.isArray(data)?(data[0]||{}):data;}
-  function showInnerLogin(message=''){ $('innerLogin').classList.remove('hidden');$('securityApp').classList.add('hidden');setConnection(false,'Locked');if(message)showError(message); }
-  function showSecurityApp(){ $('innerLogin').classList.add('hidden');$('securityApp').classList.remove('hidden');clearError(); }
-  async function adminLogin(){
-    const username=$('usernameInput').value.trim(),password=$('passwordInput').value,totp=$('totpInput').value.replace(/\D/g,'').trim();
-    if(!username||!password||!/^\d{6}$/.test(totp)) throw new Error('Enter username, password and the 6-digit authenticator code.');
-    const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_login`,{method:'POST',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify({input_username:username,input_password:password,input_totp_code:totp})});
-    const data=await parseResponse(res),token=data.admin_session_token||data.token;
-    if(!token) throw new Error('Admin login returned no session.');
-    saveAdminToken(token); return data;
-  }
   function setConnection(ok,text){ $('connection').classList.toggle('ok',!!ok); $('connectionText').textContent=text; }
   function showError(message){ $('errorBox').textContent=message; $('errorBox').classList.remove('hidden'); }
   function clearError(){ $('errorBox').classList.add('hidden'); $('errorBox').textContent=''; }
-
-  async function openSession(force=false){
-    const token=adminToken();
-    if(!token) throw new Error('admin_session_required');
-    if(!force && state.origin && state.mediaToken && Date.now() < state.expiresAt - 120000) return;
-    setConnection(false,'Authenticating…');
-    const res=await fetch(CONTROL,{method:'POST',cache:'no-store',headers:{'content-type':'application/json'},body:JSON.stringify({admin_session_token:token})});
-    const data=await res.json().catch(()=>({}));
-    if(res.status===401 || data.error==='admin_session_invalid' || data.error==='admin_session_required'){
-      clearAdminToken(); throw new Error('admin_session_invalid');
-    }
-    if(!res.ok || !data.ok || !data.origin || !data.media_token) throw new Error(data.error || `Security session failed (${res.status})`);
-    state.origin=String(data.origin).replace(/\/+$/,'');
-    state.mediaToken=String(data.media_token);
-    state.expiresAt=Date.parse(data.expires_at)||Date.now()+600000;
-    if(data.admin_session_token) saveAdminToken(data.admin_session_token);
-    setConnection(true,'Connected');
-  }
-
-  function mediaUrl(path){ return `${state.origin}${path}?token=${enc(state.mediaToken)}`; }
-  async function api(path){
-    await openSession();
-    let res=await fetch(mediaUrl(path),{cache:'no-store',referrerPolicy:'no-referrer'});
-    if(res.status===401){ await openSession(true); res=await fetch(mediaUrl(path),{cache:'no-store',referrerPolicy:'no-referrer'}); }
-    if(!res.ok) throw new Error(`Camera service ${res.status}`);
-    return res.json();
-  }
-
-  function startLive(){
-    if(!state.origin || !state.mediaToken) return;
-    const img=$('liveImage');
-    img.src=mediaUrl('/live.mjpg')+'&t='+Date.now();
-    $('liveState').textContent='S3 live camera';
-  }
   function stopLive(){ $('liveImage').removeAttribute('src'); }
-
+  function showInnerLogin(message=''){ state.unlocked=false;stopLive();$('innerLogin').classList.remove('hidden');$('securityApp').classList.add('hidden');setConnection(false,'Locked');if(message)showError(message); }
+  function showSecurityApp(){ state.unlocked=true;$('innerLogin').classList.add('hidden');$('securityApp').classList.remove('hidden');clearError(); }
+  async function readJson(res){ const text=await res.text();let data={};try{data=text?JSON.parse(text):{};}catch{}return {res,data}; }
+  async function unlock(){
+    const username=$('usernameInput').value.trim(),password=$('passwordInput').value,totp=$('totpInput').value.replace(/\D/g,'');
+    if(!username||!password||!/^\d{6}$/.test(totp))throw new Error('Enter username, password and the 6-digit authenticator code.');
+    const {res,data}=await readJson(await fetch('/security/auth/login',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'content-type':'application/json'},body:JSON.stringify({username,password,totp})}));
+    $('passwordInput').value='';$('totpInput').value='';
+    if(!res.ok||data.ok!==true)throw new Error(res.status===401?'Authentication failed.':(data.error||`Security login failed (${res.status})`));
+  }
+  async function api(path){
+    const {res,data}=await readJson(await fetch(`/security${path}`,{method:'GET',credentials:'same-origin',cache:'no-store'}));
+    if(res.status===401){showInnerLogin('Security session expired. Authenticate again.');throw new Error('security_unlock_required');}
+    if(!res.ok)throw new Error(data.error||`Camera service ${res.status}`);return data;
+  }
+  function startLive(){ if(!state.unlocked)return;$('liveImage').src=`/security/live.mjpg?t=${Date.now()}`;$('liveState').textContent='S3 live camera'; }
   function clipCard(e){
-    const card=document.createElement('article'); card.className='clip'; card.tabIndex=0; card.setAttribute('role','button');
-    const img=document.createElement('img'); img.className='thumb'; img.loading='lazy'; img.alt='Motion recording thumbnail';
-    if(e.snapshot_name) img.src=mediaUrl('/snap/'+enc(e.snapshot_name));
-    const body=document.createElement('div'); body.className='clip-body';
-    const row=document.createElement('div'); row.className='clip-row';
-    const title=document.createElement('div'); title.className='clip-title'; title.textContent=e.timestamp || `Clip #${e.clip_no ?? '—'}`;
-    row.appendChild(title);
-    if(e.saved){ const badge=document.createElement('span'); badge.className='badge'; badge.textContent='Saved'; row.appendChild(badge); }
-    const reason=document.createElement('div'); reason.className='clip-reason'; reason.textContent=e.reason || 'Motion event';
-    const duration=document.createElement('div'); duration.className='clip-time'; duration.textContent=e.duration_target_seconds ? `${e.duration_target_seconds}s target` : 'Recording';
-    body.append(row,reason,duration); card.append(img,body);
-    const open=()=>openClip(e); card.addEventListener('click',open); card.addEventListener('keydown',(ev)=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();open();}});
-    return card;
+    const card=document.createElement('article');card.className='clip';card.tabIndex=0;card.setAttribute('role','button');
+    const img=document.createElement('img');img.className='thumb';img.loading='lazy';img.alt='Motion recording thumbnail';if(e.snapshot_name)img.src=`/security/snap/${enc(e.snapshot_name)}`;
+    const body=document.createElement('div');body.className='clip-body';const row=document.createElement('div');row.className='clip-row';const title=document.createElement('div');title.className='clip-title';title.textContent=e.timestamp||`Clip #${e.clip_no??'—'}`;row.appendChild(title);
+    if(e.saved){const badge=document.createElement('span');badge.className='badge';badge.textContent='Saved';row.appendChild(badge);}
+    const reason=document.createElement('div');reason.className='clip-reason';reason.textContent=e.reason||'Motion event';const duration=document.createElement('div');duration.className='clip-time';duration.textContent=e.duration_target_seconds?`${e.duration_target_seconds}s target`:'Recording';
+    body.append(row,reason,duration);card.append(img,body);const open=()=>openClip(e);card.addEventListener('click',open);card.addEventListener('keydown',(ev)=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();open();}});return card;
   }
-
-  function renderEvents(){
-    const box=$('clips'); box.replaceChildren();
-    const playable=state.events.filter(e=>e && e.clip_name);
-    $('empty').classList.toggle('hidden',playable.length!==0);
-    for(const e of playable) box.appendChild(clipCard(e));
-  }
-
-  function openClip(e){
-    if(!e.clip_name) return;
-    const p=$('player'); p.src=mediaUrl('/clip/'+enc(e.clip_name));
-    $('viewerTitle').textContent=e.timestamp || `Clip #${e.clip_no ?? ''}`;
-    $('viewerMeta').textContent=[e.reason,e.method,e.duration_target_seconds?`${e.duration_target_seconds}s target`:null].filter(Boolean).join(' · ');
-    $('viewer').showModal();
-  }
-  function closeViewer(){ const p=$('player'); p.pause(); p.removeAttribute('src'); p.load(); $('viewer').close(); }
-
+  function renderEvents(){const box=$('clips');box.replaceChildren();const playable=state.events.filter(e=>e&&e.clip_name);$('empty').classList.toggle('hidden',playable.length!==0);for(const e of playable)box.appendChild(clipCard(e));}
+  function openClip(e){if(!e.clip_name)return;const p=$('player');p.src=`/security/clip/${enc(e.clip_name)}`;$('viewerTitle').textContent=e.timestamp||`Clip #${e.clip_no??''}`;$('viewerMeta').textContent=[e.reason,e.method,e.duration_target_seconds?`${e.duration_target_seconds}s target`:null].filter(Boolean).join(' · ');$('viewer').showModal();}
+  function closeViewer(){const p=$('player');p.pause();p.removeAttribute('src');p.load();$('viewer').close();}
   async function refresh(){
-    clearError();
-    try{
-      await openSession();
-      const [events,status]=await Promise.all([api('/api/events'),api('/api/status')]);
-      state.events=Array.isArray(events.events)?events.events:[]; renderEvents();
-      $('lastEvent').textContent=`Last motion: ${status.last_event_at || '—'}`;
-      if(document.querySelector('.tab.active')?.dataset.tab==='live') startLive();
-    }catch(err){ setConnection(false,'Unavailable'); showError(err?.message || 'Security service unavailable.'); }
+    if(!state.unlocked)return;clearError();
+    try{const [events,status]=await Promise.all([api('/api/events'),api('/api/status')]);state.events=Array.isArray(events.events)?events.events:[];renderEvents();$('lastEvent').textContent=`Last motion: ${status.last_event_at||'—'}`;setConnection(true,'Connected');if(document.querySelector('.tab.active')?.dataset.tab==='live')startLive();}
+    catch(err){if(String(err?.message||'')==='security_unlock_required')return;setConnection(false,'Unavailable');showError(err?.message||'Security service unavailable.');}
   }
-
-  document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
-    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));
-    $('livePanel').classList.toggle('active',btn.dataset.tab==='live');
-    $('recordingsPanel').classList.toggle('active',btn.dataset.tab==='recordings');
-    if(btn.dataset.tab==='live') startLive(); else stopLive();
-  }));
-  $('refreshBtn').addEventListener('click',refresh);
-  $('closeViewer').addEventListener('click',closeViewer);
-  $('viewer').addEventListener('cancel',(e)=>{e.preventDefault();closeViewer();});
+  document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));$('livePanel').classList.toggle('active',btn.dataset.tab==='live');$('recordingsPanel').classList.toggle('active',btn.dataset.tab==='recordings');if(btn.dataset.tab==='live')startLive();else stopLive();}));
+  $('refreshBtn').addEventListener('click',refresh);$('closeViewer').addEventListener('click',closeViewer);$('viewer').addEventListener('cancel',(e)=>{e.preventDefault();closeViewer();});
   $('liveImage').addEventListener('load',()=>{setConnection(true,'Live');$('liveState').textContent='S3 live camera · online';});
-  $('liveImage').addEventListener('error',()=>{setConnection(false,'Reconnecting…');$('liveState').textContent='Live stream interrupted; reconnecting…';clearTimeout(state.liveRetry);state.liveRetry=setTimeout(()=>openSession(true).then(startLive).catch(()=>{}),2500);});
-  document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopLive(); else if(!$('securityApp').classList.contains('hidden')) refresh(); });
-  window.addEventListener('beforeunload',()=>{stopLive();clearTimeout(state.liveRetry);clearInterval(state.refreshTimer);});
-
-  async function boot(){
-    if(!adminToken()){showInnerLogin();return;}
-    try{await openSession(true);showSecurityApp();await refresh();}
-    catch(err){clearAdminToken();showInnerLogin('Admin session expired. Authenticate again.');}
-  }
-  $('innerLoginForm').addEventListener('submit',async(e)=>{
-    e.preventDefault();clearError();
-    try{setConnection(false,'Authenticating…');await adminLogin();await openSession(true);showSecurityApp();await refresh();}
-    catch(err){showInnerLogin(err?.message||'Login failed.');}
-  });
-  boot();
-  state.refreshTimer=setInterval(()=>{ if(!document.hidden && !$('securityApp').classList.contains('hidden')) refresh(); },60000);
+  $('liveImage').addEventListener('error',()=>{if(!state.unlocked)return;setConnection(false,'Reconnecting…');$('liveState').textContent='Live stream interrupted; reconnecting…';clearTimeout(state.liveRetry);state.liveRetry=setTimeout(startLive,2500);});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)stopLive();else if(state.unlocked)refresh();});window.addEventListener('beforeunload',()=>{stopLive();clearTimeout(state.liveRetry);clearInterval(state.refreshTimer);});
+  $('innerLoginForm').addEventListener('submit',async(e)=>{e.preventDefault();clearError();try{setConnection(false,'Authenticating…');await unlock();showSecurityApp();await refresh();}catch(err){showInnerLogin(err?.message||'Login failed.');}});
+  async function boot(){const {res}=await readJson(await fetch('/security/api/status',{credentials:'same-origin',cache:'no-store'}));if(res.status===401){showInnerLogin();return;}if(!res.ok){showInnerLogin('Security service is temporarily unavailable.');return;}showSecurityApp();await refresh();}
+  boot();state.refreshTimer=setInterval(()=>{if(!document.hidden&&state.unlocked)refresh();},60000);
 })();
 </script>
 </body>
