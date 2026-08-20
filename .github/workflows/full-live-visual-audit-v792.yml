@@ -13,7 +13,7 @@ on:
       - 'scripts/full-live-visual-fixtures-v801.mjs'
       - 'scripts/refine-degraded-visual-report-v807.mjs'
       - 'scripts/refine-expected-visual-aliases-v809.mjs'
-      - 'scripts/refine-benign-visual-aborts-v813.mjs'
+      - 'scripts/check-v813-visual-warning-cleanup.mjs'
       - 'scripts/summarize-visual-warning-evidence-v813.mjs'
       - 'check-live-data-plane.mjs'
       - '*.html'
@@ -69,9 +69,10 @@ jobs:
           node --check scripts/full-live-visual-fixtures-v801.mjs
           node --check scripts/refine-degraded-visual-report-v807.mjs
           node --check scripts/refine-expected-visual-aliases-v809.mjs
-          node --check scripts/refine-benign-visual-aborts-v813.mjs
+          node --check scripts/check-v813-visual-warning-cleanup.mjs
           node --check scripts/summarize-visual-warning-evidence-v813.mjs
           node --check check-live-data-plane.mjs
+          node scripts/check-v813-visual-warning-cleanup.mjs
           "$chrome" --version
           if grep -qE 'npx[[:space:]]+playwright[[:space:]]+install|playwright[[:space:]]+install[[:space:]]+--with-deps' .github/workflows/full-live-visual-audit-v792.yml; then
             echo 'Unbounded Playwright browser download reintroduced.'
@@ -122,15 +123,10 @@ jobs:
         if: always() && env.GEJAST_VISUAL_DEGRADED_FIXTURES == '1'
         run: node scripts/refine-degraded-visual-report-v807.mjs
 
-      - name: Refine declared authenticated redirect aliases
+      - name: Refine authenticated redirects and proven transient aborts
         id: alias_refinement
         if: always() && steps.provision.outcome == 'success'
         run: node scripts/refine-expected-visual-aliases-v809.mjs
-
-      - name: Refine proven benign visual aborts
-        id: abort_refinement
-        if: always() && steps.provision.outcome == 'success'
-        run: node scripts/refine-benign-visual-aborts-v813.mjs
 
       - name: Summarize visual warning evidence
         if: always()
@@ -178,7 +174,6 @@ jobs:
             exit 1
           fi
           test "${{ steps.alias_refinement.outcome }}" = 'success'
-          test "${{ steps.abort_refinement.outcome }}" = 'success'
           test -f visual-audit/report.json
           node <<'JS'
           const fs=require('fs');
