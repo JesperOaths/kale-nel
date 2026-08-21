@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import worker from './cloudflare/workers/admin-gate/src/worker.js';
 
 const source=fs.readFileSync('cloudflare/workers/admin-gate/src/worker.js','utf8');
-assert.match(source,/async function handlePublicApex\(request, url\)/);
+assert.match(source,/async function handlePublicApex\(request, env, url\)/);
+assert.match(source,/if \(isSecurityPath\(url\.pathname\)\) return await handlePublicSecurity\(request, env, url\)/);
 assert.match(source,/return withPublicSecurityHeaders\(response\)/);
 const helperStart=source.indexOf('function applyPublicSecurityHeaders(headers)');
 const helperEnd=source.indexOf('function secureHeaders(',helperStart);
@@ -48,4 +49,4 @@ assert.match(protectedRedirect.headers.get('Content-Security-Policy')||'',/frame
 const adminTest=fs.readFileSync('scripts/test-admin-worker-gate.mjs','utf8');
 assert.match(adminTest,/const FRONTEND_VERSION = fs.readFileSync/);
 assert.doesNotMatch(adminTest,/GEJAST_PAGE_VERSION=\\'v762/);
-console.log('v775b public edge header regression PASS: ordinary public responses get the compatible baseline, protected paths retain the strict admin policy, and the admin fixture follows root VERSION.');
+console.log('v775b public edge header regression PASS: ordinary public responses get the compatible baseline, the security viewer is routed through its dedicated perimeter, protected paths retain the strict admin policy, and the admin fixture follows root VERSION.');
