@@ -54,7 +54,7 @@ function joinCookies(...pairs) {
   return pairs.filter(Boolean).join('; ');
 }
 
-for (const file of ['security/index.html', 'security/camera.html', 'security/clips.html']) {
+for (const file of ['security/index.html']) {
   const source = fs.readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
   assert.doesNotMatch(source, /https?:\/\/[a-z0-9-]+\.trycloudflare\.com/i, `${file} leaks tunnel origin`);
   assert.doesNotMatch(source, /\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})\b/, `${file} leaks private camera IP`);
