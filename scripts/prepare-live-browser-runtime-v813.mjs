@@ -33,17 +33,24 @@ runtime = runtime
 // The historical campaign waited a fixed 900 ms and could navigate away while the
 // asynchronous fail-closed auth gate was still validating the disposable session.
 // Wait for the gate itself so route acceptance proves authentication instead of racing it.
+const navAnchor = "  const response = await page.goto(new URL(route, BASE).toString(), { waitUntil: 'domcontentloaded', timeout });";
+const navMatches = runtime.split(navAnchor).length - 1;
+if (navMatches !== 1) {
+  throw new Error(`Expected exactly one historical navigation anchor in ${sourcePath}; found ${navMatches}`);
+}
+runtime = runtime.replace(navAnchor, "  const preNavToken = await page.evaluate(() => { try { return localStorage.getItem('jas_session_token_v11') || sessionStorage.getItem('jas_session_token_v11') || localStorage.getItem('jas_session_token_v10') || sessionStorage.getItem('jas_session_token_v10') || ''; } catch (_) { return ''; } }).catch(() => '');\n  const response = await page.goto(new URL(route, BASE).toString(), { waitUntil: 'domcontentloaded', timeout });");
+
 const authAnchor = "  await page.waitForTimeout(900);\n  if (/login\\.html/i.test(page.url())) throw new Error(`${label} unexpectedly redirected to login`);";
 const authMatches = runtime.split(authAnchor).length - 1;
 if (authMatches !== 1) {
   throw new Error(`Expected exactly one historical auth-wait anchor in ${sourcePath}; found ${authMatches}`);
 }
-const authReplacement = "  await page.waitForFunction(() => document.documentElement.getAttribute('data-gejast-auth-state') === 'authenticated' || /login\\.html/i.test(location.pathname), undefined, { timeout });\n  if (/login\\.html/i.test(page.url())) throw new Error(`${label} unexpectedly redirected to login`);\n  const authState = await page.locator('html').getAttribute('data-gejast-auth-state');\n  if (authState !== 'authenticated') throw new Error(`${label} auth gate did not authenticate; state=${authState || 'missing'}`);\n  await page.waitForTimeout(200);";
+const authReplacement = "  await page.waitForFunction(() => document.documentElement.getAttribute('data-gejast-auth-state') === 'authenticated' || /login\\.html/i.test(location.pathname), undefined, { timeout });\n  if (/login\\.html/i.test(page.url())) {\n    const postNavTokenPresent = await page.evaluate(() => { try { return !!(localStorage.getItem('jas_session_token_v11') || sessionStorage.getItem('jas_session_token_v11') || localStorage.getItem('jas_session_token_v10') || sessionStorage.getItem('jas_session_token_v10')); } catch (_) { return false; } }).catch(() => false);\n    let directProbe = 'not-run';\n    if (preNavToken) {\n      try { const state = await rpc('account_public_state_v687', { session_token: preNavToken, session_token_input: preNavToken, site_scope_input: siteScope }); directProbe = `ok=${state?.ok === true};scope=${String(state?.site_scope || '') || 'missing'}`; }\n      catch (error) { directProbe = `error=${safe(error)}`; }\n    }\n    throw new Error(`${label} unexpectedly redirected to login (token_before=${!!preNavToken}; token_after=${postNavTokenPresent}; direct_probe=${directProbe})`);\n  }\n  const authState = await page.locator('html').getAttribute('data-gejast-auth-state');\n  if (authState !== 'authenticated') throw new Error(`${label} auth gate did not authenticate; state=${authState || 'missing'}`);\n  await page.waitForTimeout(200);";
 runtime = runtime.replace(authAnchor, authReplacement);
 
 if (!runtime.includes('executablePath:')) throw new Error('System Chrome runtime patch did not apply');
 if (!runtime.includes(`includes(${JSON.stringify(releaseVersion)})`)) throw new Error('Current release watermark runtime patch did not apply');
-if (!runtime.includes("auth gate did not authenticate")) throw new Error('Auth-gate synchronization runtime patch did not apply');
+if (!runtime.includes('direct_probe=')) throw new Error('Auth-gate diagnostic runtime patch did not apply');
 fs.writeFileSync(runtimePath, runtime, 'utf8');
 console.log(`Prepared deterministic system Chrome runtime for ${releaseVersion}: ${runtimePath}`);
 console.log('RESULT=LIVE_BROWSER_SYSTEM_CHROME_RUNTIME_PASS');
