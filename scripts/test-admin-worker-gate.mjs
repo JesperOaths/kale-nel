@@ -3,6 +3,9 @@ import fs from 'node:fs';
 import worker, { __test } from '../cloudflare/workers/admin-gate/src/worker.js';
 
 const FRONTEND_VERSION = fs.readFileSync(new URL('../VERSION', import.meta.url), 'utf8').trim();
+const WORKER_SOURCE = fs.readFileSync(new URL('../cloudflare/workers/admin-gate/src/worker.js', import.meta.url), 'utf8');
+const ADMIN_BUILD = WORKER_SOURCE.match(/const ADMIN_BUILD = '([^']+)'/)?.[1] || '';
+assert.ok(ADMIN_BUILD, 'worker ADMIN_BUILD marker missing');
 
 const FAKE_COOKIE_SIGNING_VALUE = `not-real-${'x'.repeat(40)}`;
 const ENV_KEYS = {
@@ -54,7 +57,7 @@ const anonymous = await req('https://admin.kalenel.nl/admin.html');
 assert.equal(anonymous.status, 401);
 assert.match(await anonymous.text(), /Admin login vereist/);
 assert.equal(anonymous.headers.get('Cache-Control'), 'no-store');
-assert.equal(anonymous.headers.get('X-Kalenel-Admin-Build'), 'v763');
+assert.equal(anonymous.headers.get('X-Kalenel-Admin-Build'), ADMIN_BUILD);
 assert.equal(anonymous.headers.get('X-Frame-Options'), 'DENY');
 
 const anonymousAdminAliasRedirect = await req('https://admin.kalenel.nl/admin', { redirect: 'manual' });
@@ -76,7 +79,7 @@ const approved = await req('https://admin.kalenel.nl/admin.html', { headers: { C
 assert.equal(approved.status, 200);
 assert.equal(approved.headers.get('X-Kalenel-Admin-Gate'), 'worker');
 assert.equal(approved.headers.get('Cache-Control'), 'no-store');
-assert.equal(approved.headers.get('X-Kalenel-Admin-Build'), 'v763');
+assert.equal(approved.headers.get('X-Kalenel-Admin-Build'), ADMIN_BUILD);
 const approvedHtml = await approved.text();
 assert.match(approvedHtml, /Beheerhub/);
 assert.ok(approvedHtml.includes(`GEJAST_PAGE_VERSION='${FRONTEND_VERSION}'`));
@@ -97,7 +100,7 @@ const asset = await req('https://admin.kalenel.nl/admin.js', { headers: { Cookie
 assert.equal(asset.status, 200);
 assert.equal(asset.headers.get('X-Kalenel-Admin-Gate'), 'worker');
 assert.equal(asset.headers.get('Cache-Control'), 'no-store');
-assert.equal(asset.headers.get('X-Kalenel-Admin-Build'), 'v763');
+assert.equal(asset.headers.get('X-Kalenel-Admin-Build'), ADMIN_BUILD);
 
 const loginStart = await req('https://admin.kalenel.nl/login?return_to=/admin.html', { redirect: 'manual' });
 assert.equal(loginStart.status, 302);
