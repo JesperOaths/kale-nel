@@ -5,7 +5,10 @@ const migrationPath = 'GEJAST_v813b_visual_warning_cleanup_contracts.sql';
 const refinerPath = 'scripts/refine-expected-visual-aliases-v809.mjs';
 const workflowPath = '.github/workflows/full-live-visual-audit-v792.yml';
 const klaverjasRoomPath = 'klaverjas_room.html';
-for (const file of [migrationPath, refinerPath, workflowPath, klaverjasRoomPath]) {
+const mobileFoundationPath = 'gejast-mobile-foundation-v583.js';
+const authGatePath = 'gejast-auth-gate.js';
+const scoreAliasPath = 'score.html';
+for (const file of [migrationPath, refinerPath, workflowPath, klaverjasRoomPath, mobileFoundationPath, authGatePath, scoreAliasPath]) {
   if (!fs.existsSync(file)) throw new Error(`V813_VISUAL_WARNING_CLEANUP_FAIL missing ${file}`);
 }
 
@@ -13,6 +16,9 @@ const sql = fs.readFileSync(migrationPath, 'utf8');
 const refiner = fs.readFileSync(refinerPath, 'utf8');
 const workflow = fs.readFileSync(workflowPath, 'utf8');
 const klaverjasRoom = fs.readFileSync(klaverjasRoomPath, 'utf8');
+const mobileFoundation = fs.readFileSync(mobileFoundationPath, 'utf8');
+const authGate = fs.readFileSync(authGatePath, 'utf8');
+const scoreAlias = fs.readFileSync(scoreAliasPath, 'utf8');
 const need = (text, token, label) => { if (!text.includes(token)) throw new Error(`V813_VISUAL_WARNING_CLEANUP_FAIL ${label}`); };
 const forbid = (text, regex, label) => { if (regex.test(text)) throw new Error(`V813_VISUAL_WARNING_CLEANUP_FAIL ${label}`); };
 
@@ -39,6 +45,21 @@ need(refiner, 'OVERFLOW_TOLERANCE_PX = 4', 'overflow regression guard missing');
 
 need(klaverjasRoom, '.score-cell{min-width:0;overflow:hidden;', 'Klaverjas score cells must be shrinkable and clipped to the sidebar');
 need(klaverjasRoom, '.score-cell .muted{min-width:0;overflow-wrap:anywhere;word-break:break-word}', 'Klaverjas long player names must wrap inside score cells');
+need(mobileFoundation, 'fixKlaverjasRoomOverflow', 'Klaverjas runtime overflow containment missing');
+need(mobileFoundation, '.roombar,.game-layout,.side,.stat,.score-grid,.score-cell,.lobby-seat-grid,.lobby-seat{min-width:0}', 'Klaverjas grid min-width containment missing');
+need(mobileFoundation, '.stat strong,.score-cell,.score-cell strong,.lobby-seat strong{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}', 'Klaverjas long-name runtime wrapping missing');
+
+need(authGate, "const nativeFetch=typeof window.fetch==='function'?window.fetch.bind(window):null;", 'native fetch boundary missing');
+need(authGate, "/\\/rest\\/v1\\/allowed_usernames(?:[?#]|$)/i", 'legacy allowed_usernames interception missing');
+need(authGate, "['get_login_active_names_v687',{site_scope_input:scope}]", 'active-login RPC compatibility source missing');
+need(authGate, "['get_player_selector_source_v1',{site_scope_input:scope}]", 'selector RPC compatibility fallback missing');
+need(authGate, "return names.map(display_name=>({display_name,status:'active',site_scope:scope}));", 'safe compatibility row projection missing');
+need(authGate, "direct_allowed_usernames_network:false", 'direct-read network compatibility marker missing');
+forbid(authGate, /allowed_usernames[^\n]{0,120}(?:apikey|Authorization)/i, 'auth gate must not perform direct allowed_usernames table fetch');
+
+need(scoreAlias, '<script src="/gejast-auth-gate.js?v813"></script>', 'score alias must authenticate before redirect');
+need(scoreAlias, "new URL('./klaverjas_scorer_v596_repo_ready.html',location.href)", 'score alias canonical destination missing');
+need(scoreAlias, 'location.replace(url.toString())', 'score alias must preserve canonical replace redirect');
 
 need(workflow, 'node --check scripts/refine-expected-visual-aliases-v809.mjs', 'workflow refiner syntax check missing');
 need(workflow, 'run: node scripts/refine-expected-visual-aliases-v809.mjs', 'workflow refiner execution missing');
