@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - 'VERSION'
       - '.github/workflows/final-certification-account-v792.yml'
       - 'scripts/final-cert-account-v792.mjs'
 
@@ -106,9 +107,6 @@ jobs:
           commit;
           SQL
 
-          # Fixture approval is deliberately direct DB state setup: calling the
-          # admin approval RPC would enqueue a real activation email and is not
-          # needed to prove the browser request/activation/login contract.
           mail_count="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -v email="$GEJAST_ACCOUNT_EMAIL" <<'SQL'
           select count(*) from public.outbound_email_jobs
           where lower(coalesce(recipient_email,to_email,''))=lower(:'email');
