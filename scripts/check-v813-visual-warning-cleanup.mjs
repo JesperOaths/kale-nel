@@ -57,7 +57,7 @@ need(authGate, "return names.map(display_name=>({display_name,status:'active',si
 need(authGate, "direct_allowed_usernames_network:false", 'direct-read network compatibility marker missing');
 forbid(authGate, /allowed_usernames[^\n]{0,120}(?:apikey|Authorization)/i, 'auth gate must not perform direct allowed_usernames table fetch');
 
-need(scoreAlias, '<script src="/gejast-auth-gate.js?v813"></script>', 'score alias must authenticate before redirect');
+forbid(scoreAlias, /gejast-auth-gate\.js/i, 'score alias must remain runtime-light');
 need(scoreAlias, "new URL('./klaverjas_scorer_v596_repo_ready.html',location.href)", 'score alias canonical destination missing');
 need(scoreAlias, 'location.replace(url.toString())', 'score alias must preserve canonical replace redirect');
 
