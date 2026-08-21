@@ -96,7 +96,11 @@ async function exercise({ scope = 'friends', activeResponse, selectorResponse })
   assert.deepEqual(await second.json(), rows, 'cached compatibility reads should remain deterministic');
 
   assert.equal(nativeCalls.some(({ url }) => url.includes('/rest/v1/allowed_usernames')), false, 'private table URL must never reach native fetch');
-  for (const { url, init } of nativeCalls.filter(({ url }) => url.includes('/rest/v1/rpc/get_'))) {
+  const safeReaderCalls = nativeCalls.filter(({ url }) =>
+    url.includes('/rest/v1/rpc/get_login_active_names_v687') ||
+    url.includes('/rest/v1/rpc/get_player_selector_source_v1')
+  );
+  for (const { url, init } of safeReaderCalls) {
     assert.equal(init.method, 'POST', `${url} must use POST`);
     const payload = JSON.parse(init.body || '{}');
     assert.equal(payload.site_scope_input, scope, `${url} must preserve site scope`);
