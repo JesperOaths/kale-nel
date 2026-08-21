@@ -87,6 +87,39 @@ jobs:
           fi
           echo 'RESULT=VISUAL_SYSTEM_CHROME_RUNTIME_PASS'
 
+      - name: Resolve deployed version parity
+        id: live_version
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_version="$(tr -d '\r\n ' < VERSION)"
+          live_version=''
+          attempts=1
+          delay=0
+          if [ "${GITHUB_REF:-}" = 'refs/heads/main' ]; then
+            attempts=60
+            delay=10
+          fi
+          for i in $(seq 1 "$attempts"); do
+            live_version="$(curl -fsS --max-time 10 "https://kalenel.nl/VERSION?ts=$(date +%s)" 2>/dev/null | tr -d '\r\n ' || true)"
+            if [ "$live_version" = "$source_version" ]; then
+              break
+            fi
+            if [ "$i" -lt "$attempts" ]; then sleep "$delay"; fi
+          done
+          match=0
+          if [ "$live_version" = "$source_version" ]; then match=1; fi
+          {
+            echo "GEJAST_SOURCE_VERSION=$source_version"
+            echo "GEJAST_LIVE_VERSION=$live_version"
+            echo "GEJAST_LIVE_VERSION_MATCH=$match"
+          } >> "$GITHUB_ENV"
+          echo "source_version=$source_version live_version=${live_version:-unavailable} parity=$match ref=${GITHUB_REF:-unknown}"
+          if [ "${GITHUB_REF:-}" = 'refs/heads/main' ] && [ "$match" != '1' ]; then
+            echo 'Main visual certification requires the deployed VERSION to match the tested source revision.'
+            exit 1
+          fi
+
       - name: Probe Supabase auth data plane before fixture provisioning
         id: data_plane
         continue-on-error: true
@@ -182,6 +215,19 @@ jobs:
           fi
           test "${{ steps.alias_refinement.outcome }}" = 'success'
           test -f visual-audit/report.json
+          if [ "${GEJAST_LIVE_VERSION_MATCH:-0}" != '1' ]; then
+            node <<'JS'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('visual-audit/report.json','utf8'));
+          const rows=Array.isArray(r.records)?r.records:(Array.isArray(r.routes)?r.routes:[]);
+          const broken=rows.filter(x=>String(x.judgement||x.status||'').toLowerCase()==='broken').length;
+          const warnings=rows.filter(x=>String(x.judgement||x.status||'').toLowerCase()==='warn').length;
+          console.log(`PREDEPLOY_VISUAL_OBSERVATION source=${process.env.GEJAST_SOURCE_VERSION||'unknown'} live=${process.env.GEJAST_LIVE_VERSION||'unknown'} records=${rows.length} broken=${broken} warn=${warnings}`);
+          JS
+            echo 'Deployed VERSION differs from the tested source; this run is evidence only and is not authenticated visual certification.'
+            echo 'RESULT=FULL_LIVE_VISUAL_AUDIT_PREDEPLOY_OBSERVATION'
+            exit 0
+          fi
           node <<'JS'
           const fs=require('fs');
           const r=JSON.parse(fs.readFileSync('visual-audit/report.json','utf8'));
