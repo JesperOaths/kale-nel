@@ -49,4 +49,5 @@ assert.match(protectedRedirect.headers.get('Content-Security-Policy')||'',/frame
 const adminTest=fs.readFileSync('scripts/test-admin-worker-gate.mjs','utf8');
 assert.match(adminTest,/const FRONTEND_VERSION = fs.readFileSync/);
 assert.doesNotMatch(adminTest,/GEJAST_PAGE_VERSION=\\'v762/);
+await import('./scripts/test-security-viewer-gate-v813.mjs');
 console.log('v775b public edge header regression PASS: ordinary public responses get the compatible baseline, the security viewer is routed through its dedicated perimeter, protected paths retain the strict admin policy, and the admin fixture follows root VERSION.');
