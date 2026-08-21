@@ -144,10 +144,9 @@
       try{url=typeof input==='string'?input:(input&&input.url)||'';}catch(_){ }
       if(/\/rest\/v1\/allowed_usernames(?:[?#]|$)/i.test(String(url))){
         return secureActiveNameRows().then(rows=>{
-          if(Array.isArray(rows)){
-            return new Response(JSON.stringify(rows),{status:200,headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Gejast-Compatibility':'v813-secure-active-name-rpc'}});
-          }
-          return nativeFetch(input,init);
+          const safeRows=Array.isArray(rows)?rows:[];
+          const source=Array.isArray(rows)?'v813-secure-active-name-rpc':'v813-secure-active-name-rpc-empty';
+          return new Response(JSON.stringify(safeRows),{status:200,headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Gejast-Compatibility':source}});
         });
       }
       return nativeFetch(input,init);
