@@ -8,8 +8,17 @@ const boundarySql = fs.readFileSync('GEJAST_v812b_analytics_table_privilege_boun
 const prepare = fs.readFileSync('scripts/prepare-visual-audit-runtime-v812.mjs', 'utf8');
 const visualWorkflow = fs.readFileSync('.github/workflows/full-live-visual-audit-v792.yml', 'utf8');
 const version = fs.readFileSync('VERSION', 'utf8').trim();
+const certification = JSON.parse(fs.readFileSync('release-certification.json', 'utf8'));
+const versionNumber = Number((version.match(/^v(\d+)$/) || [])[1]);
 
-assert.equal(version, 'v812', 'v812a/b/c are SQL/test-only and must not advance the shipped product version');
+assert.ok(Number.isInteger(versionNumber) && versionNumber >= 812, 'v812a/b/c guard requires shipped product v812 or newer');
+assert.equal(certification.current_version, version, 'release certification state must track the shipped product version');
+if (versionNumber > 812) {
+  assert.equal(certification.status, 'REVALIDATION_REQUIRED', 'a post-v812 product candidate must remain fail-closed until exact-current certification completes');
+  assert.equal(certification.superseded_uncertified_version, 'v812', 'the first post-v812 candidate must preserve v812 as the superseded uncertified product baseline');
+  assert.ok(Array.isArray(certification.remaining_release_blockers) && certification.remaining_release_blockers.length > 0, 'post-v812 revalidation must retain explicit release blockers');
+  assert.ok(Array.isArray(certification.required_next) && certification.required_next.length > 0, 'post-v812 revalidation must retain explicit next certification steps');
+}
 
 assert.match(sql, /create or replace function public\.track_site_event\s*\(/i, 'v812a must replace the deployed analytics RPC');
 assert.doesNotMatch(sql, /create or replace function public\._gejast_elo_for_game_scope/i, 'v812a must not bundle the unrelated v806a ELO repair');
@@ -38,7 +47,7 @@ assert.match(prepare, /executablePath: process\.env\.GEJAST_SYSTEM_CHROME/, 'vis
 assert.match(visualWorkflow, /scripts\/prepare-visual-audit-runtime-v812\.mjs/, 'permanent visual workflow must apply the v812 runtime preparation');
 assert.match(visualWorkflow, /node --check scripts\/prepare-visual-audit-runtime-v812\.mjs/, 'permanent visual workflow must syntax-check the runtime preparation');
 assert.doesNotMatch(visualWorkflow, /npx\s+playwright\s+install|playwright\s+install\s+--with-deps/, 'unbounded Playwright browser download must remain absent');
-assert.match(visualWorkflow, /Refine declared authenticated redirect aliases/, 'existing fail-closed declared-alias refinement must remain wired');
+assert.match(visualWorkflow, /Refine (?:declared authenticated redirect aliases|authenticated redirects and proven transient aborts)/, 'fail-closed authenticated alias/runtime refinement must remain wired');
 assert.match(visualWorkflow, /Cleanup disposable visual-audit state/, 'visual fixture cleanup must remain wired');
 
 console.log('RESULT=V812ABC_FINAL_CERT_BLOCKERS_GUARD_PASS');

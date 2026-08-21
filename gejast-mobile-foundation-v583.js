@@ -53,9 +53,19 @@
       document.body.style.setProperty('overflow-x', 'hidden', 'important');
     }catch(_){ }
   }
+  function fixKlaverjasRoomOverflow(){
+    try{
+      if (!/\/klaverjas_room\.html$/i.test(location.pathname)) return;
+      if (document.getElementById('gejast-v813-klaverjas-overflow-fix')) return;
+      const style = document.createElement('style');
+      style.id = 'gejast-v813-klaverjas-overflow-fix';
+      style.textContent = '.roombar,.game-layout,.side,.stat,.score-grid,.score-cell,.lobby-seat-grid,.lobby-seat{min-width:0}.game-layout,.side{max-width:100%}.stat strong,.score-cell,.score-cell strong,.lobby-seat strong{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}.roombar>*{min-width:0}';
+      (document.head || document.documentElement).appendChild(style);
+    }catch(_){ }
+  }
   function bindViewportResync(){
     try{
-      const handler = ()=>{ markMobile(); relaxBackgroundAttachment(); trackKeyboard(); };
+      const handler = ()=>{ markMobile(); relaxBackgroundAttachment(); trackKeyboard(); fixKlaverjasRoomOverflow(); };
       window.addEventListener('resize', handler, { passive:true });
       window.addEventListener('orientationchange', handler, { passive:true });
       if (window.visualViewport && typeof window.visualViewport.addEventListener === 'function') {
@@ -67,11 +77,12 @@
     ensureViewport();
     markMobile();
     relaxBackgroundAttachment();
+    fixKlaverjasRoomOverflow();
     document.addEventListener('focusin', trackKeyboard, true);
     document.addEventListener('focusout', ()=>window.setTimeout(trackKeyboard, 50), true);
     trackKeyboard();
     bindViewportResync();
-    if (mq && typeof mq.addEventListener === 'function') mq.addEventListener('change', ()=>{ markMobile(); relaxBackgroundAttachment(); });
-    else if (mq && typeof mq.addListener === 'function') mq.addListener(()=>{ markMobile(); relaxBackgroundAttachment(); });
+    if (mq && typeof mq.addEventListener === 'function') mq.addEventListener('change', ()=>{ markMobile(); relaxBackgroundAttachment(); fixKlaverjasRoomOverflow(); });
+    else if (mq && typeof mq.addListener === 'function') mq.addListener(()=>{ markMobile(); relaxBackgroundAttachment(); fixKlaverjasRoomOverflow(); });
   });
 })();

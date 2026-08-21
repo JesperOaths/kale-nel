@@ -6,8 +6,9 @@ const fail = (message) => {
   process.exit(1);
 };
 
-if (fs.readFileSync('VERSION', 'utf8').trim() !== 'v812') {
-  fail('v812f is SQL-only and must not change the frontend VERSION');
+const releaseVersion = fs.readFileSync('VERSION', 'utf8').trim();
+if (!/^v(?:812|813)$/.test(releaseVersion)) {
+  fail(`v812f boundary is only certified as provenance for v812/v813, got ${releaseVersion}`);
 }
 
 const sql = fs.readFileSync('GEJAST_v812f_direct_data_boundary.sql', 'utf8').toLowerCase();
@@ -19,6 +20,7 @@ for (const needle of [
   'set_initial_pin(text,text)',
   'get_account_identity_summary_scoped(text)',
   'request_pin_reset_reactivation_action(text,text,text)',
+  'request_pin_reset_reactivation_action(text,text)',
   'despimarkt_try_create_market_from_match_row_v646()',
   'gejast_cleanup_activation_link_duplicates_before_insert()',
   "p.proname like 'admin\\_%'",
@@ -40,14 +42,23 @@ if (sql.includes("where n.nspname = 'public' and p.proname like '\\_%'")) {
 
 const provenance = JSON.parse(fs.readFileSync('production-migrations-v813.json', 'utf8'));
 if (!Array.isArray(provenance.already_applied_production_migrations) || provenance.already_applied_production_migrations.length !== 20) {
-  fail('production v813 migration provenance must contain all 20 observed migrations');
+  fail('production v813 migration provenance must preserve all 20 observed pre-reconciliation migrations');
 }
-if (provenance.prepared_not_deployed !== 'GEJAST_v812f_direct_data_boundary.sql') {
-  fail('migration provenance does not identify the prepared v812f boundary');
+const subsequent = new Map(Array.isArray(provenance.subsequently_applied_production_migrations) ? provenance.subsequently_applied_production_migrations : []);
+for (const [version, name] of [
+  ['20260820232332', 'gejast_v812f_direct_data_boundary'],
+  ['20260820232519', 'gejast_v812g_sensitive_view_boundary'],
+  ['20260820232529', 'gejast_v813a_client_cleanup_compatibility'],
+  ['20260820233409', 'gejast_v813b_visual_warning_cleanup_contracts']
+]) {
+  if (subsequent.get(version) !== name) fail(`production migration provenance missing ${version} ${name}`);
+}
+if (provenance.prepared_not_deployed !== null) {
+  fail('v812f production provenance is stale: the tracked boundary is already deployed');
 }
 
 // Shipped browser code may retain bounded read-only table fallbacks, but no direct table
-// mutation owner is allowed before client DML is globally revoked. Legacy credential/privacy
+// mutation owner is allowed after client DML is globally revoked. Legacy credential/privacy
 // RPCs revoked by v812f may still be named in compatibility metadata, but must not be invoked.
 const skippedDirs = new Set(['.git', 'node_modules', 'scripts', 'cloudflare', '.github', 'archive', 'archives', 'backup', 'backups', 'repo', 'mnt']);
 const files = [];

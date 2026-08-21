@@ -2,9 +2,17 @@ name: Full live visual audit
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/full-live-visual-audit-v792.yml'
+      - 'scripts/refine-expected-visual-aliases-v809.mjs'
+      - 'scripts/check-v813-visual-warning-cleanup.mjs'
   push:
     branches:
       - main
+      - agent/v813-housekeeping-observable
     paths:
       - '.github/workflows/full-live-visual-audit-v792.yml'
       - 'scripts/full-live-visual-audit-v792.mjs'
@@ -12,6 +20,7 @@ on:
       - 'scripts/full-live-visual-fixtures-v801.mjs'
       - 'scripts/refine-degraded-visual-report-v807.mjs'
       - 'scripts/refine-expected-visual-aliases-v809.mjs'
+      - 'scripts/check-v813-visual-warning-cleanup.mjs'
       - 'scripts/summarize-visual-warning-evidence-v813.mjs'
       - 'check-live-data-plane.mjs'
       - '*.html'
@@ -40,7 +49,7 @@ jobs:
       GEJAST_VISUAL_SETTLE_MS: '5000'
 
     steps:
-      - name: Check out exact merged main
+      - name: Check out exact tested revision
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.sha }}
@@ -67,14 +76,49 @@ jobs:
           node --check scripts/full-live-visual-fixtures-v801.mjs
           node --check scripts/refine-degraded-visual-report-v807.mjs
           node --check scripts/refine-expected-visual-aliases-v809.mjs
+          node --check scripts/check-v813-visual-warning-cleanup.mjs
           node --check scripts/summarize-visual-warning-evidence-v813.mjs
           node --check check-live-data-plane.mjs
+          node scripts/check-v813-visual-warning-cleanup.mjs
           "$chrome" --version
           if grep -qE 'npx[[:space:]]+playwright[[:space:]]+install|playwright[[:space:]]+install[[:space:]]+--with-deps' .github/workflows/full-live-visual-audit-v792.yml; then
             echo 'Unbounded Playwright browser download reintroduced.'
             exit 1
           fi
           echo 'RESULT=VISUAL_SYSTEM_CHROME_RUNTIME_PASS'
+
+      - name: Resolve deployed version parity
+        id: live_version
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_version="$(tr -d '\r\n ' < VERSION)"
+          live_version=''
+          attempts=1
+          delay=0
+          if [ "${GITHUB_REF:-}" = 'refs/heads/main' ]; then
+            attempts=60
+            delay=10
+          fi
+          for i in $(seq 1 "$attempts"); do
+            live_version="$(curl -fsS --max-time 10 "https://kalenel.nl/VERSION?ts=$(date +%s)" 2>/dev/null | tr -d '\r\n ' || true)"
+            if [ "$live_version" = "$source_version" ]; then
+              break
+            fi
+            if [ "$i" -lt "$attempts" ]; then sleep "$delay"; fi
+          done
+          match=0
+          if [ "$live_version" = "$source_version" ]; then match=1; fi
+          {
+            echo "GEJAST_SOURCE_VERSION=$source_version"
+            echo "GEJAST_LIVE_VERSION=$live_version"
+            echo "GEJAST_LIVE_VERSION_MATCH=$match"
+          } >> "$GITHUB_ENV"
+          echo "source_version=$source_version live_version=${live_version:-unavailable} parity=$match ref=${GITHUB_REF:-unknown}"
+          if [ "${GITHUB_REF:-}" = 'refs/heads/main' ] && [ "$match" != '1' ]; then
+            echo 'Main visual certification requires the deployed VERSION to match the tested source revision.'
+            exit 1
+          fi
 
       - name: Probe Supabase auth data plane before fixture provisioning
         id: data_plane
@@ -119,7 +163,7 @@ jobs:
         if: always() && env.GEJAST_VISUAL_DEGRADED_FIXTURES == '1'
         run: node scripts/refine-degraded-visual-report-v807.mjs
 
-      - name: Refine declared authenticated redirect aliases
+      - name: Refine authenticated redirects and proven transient aborts
         id: alias_refinement
         if: always() && steps.provision.outcome == 'success'
         run: node scripts/refine-expected-visual-aliases-v809.mjs
@@ -171,12 +215,29 @@ jobs:
           fi
           test "${{ steps.alias_refinement.outcome }}" = 'success'
           test -f visual-audit/report.json
+          if [ "${GEJAST_LIVE_VERSION_MATCH:-0}" != '1' ]; then
+            node <<'JS'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('visual-audit/report.json','utf8'));
+          const rows=Array.isArray(r.records)?r.records:(Array.isArray(r.routes)?r.routes:[]);
+          const broken=rows.filter(x=>String(x.judgement||x.status||'').toLowerCase()==='broken').length;
+          const warnings=rows.filter(x=>String(x.judgement||x.status||'').toLowerCase()==='warn').length;
+          console.log(`PREDEPLOY_VISUAL_OBSERVATION source=${process.env.GEJAST_SOURCE_VERSION||'unknown'} live=${process.env.GEJAST_LIVE_VERSION||'unknown'} records=${rows.length} broken=${broken} warn=${warnings}`);
+          JS
+            echo 'Deployed VERSION differs from the tested source; this run is evidence only and is not authenticated visual certification.'
+            echo 'RESULT=FULL_LIVE_VISUAL_AUDIT_PREDEPLOY_OBSERVATION'
+            exit 0
+          fi
           node <<'JS'
           const fs=require('fs');
           const r=JSON.parse(fs.readFileSync('visual-audit/report.json','utf8'));
           const rows=Array.isArray(r.records)?r.records:(Array.isArray(r.routes)?r.routes:[]);
           const broken=rows.filter(x=>String(x.judgement||x.status||'').toLowerCase()==='broken');
-          if(broken.length){ console.error(JSON.stringify(broken.slice(0,10),null,2)); process.exit(1); }
-          console.log(`VISUAL_REPORT_PASS records=${rows.length} broken=0`);
+          const warnings=rows.filter(x=>String(x.judgement||x.status||'').toLowerCase()==='warn');
+          if(broken.length || warnings.length){
+            console.error(JSON.stringify({broken:broken.slice(0,10),warnings:warnings.slice(0,10)},null,2));
+            process.exit(1);
+          }
+          console.log(`VISUAL_REPORT_PASS records=${rows.length} broken=0 warn=0`);
           JS
           echo 'RESULT=FULL_LIVE_VISUAL_AUDIT_PASS'

@@ -1,22 +1,23 @@
 {
   "schema_version": 1,
-  "current_version": "v812",
+  "current_version": "v813",
   "status": "REVALIDATION_REQUIRED",
   "previous_certified_version": "v808",
   "previous_certified_product_sha": "7f6f7bc110807e85f52ff4d54927620dbbc9ffeb",
   "previous_certified_release_branch": "release/v808-certified-20260818",
-  "superseded_uncertified_version": "v811",
-  "superseded_uncertified_product_sha": "c3cb4b5e35f32e699b6432aca6502fae6b151007",
-  "reason": "v812f is a SQL-only security closure prepared after exact production privilege grounding found 168 public tables directly mutable by client roles, 31 sensitive tables directly readable, one remaining client-executable mutating underscore helper, legacy anonymous worker/mutation aliases, an unused anonymous initial-PIN setter, an unused email-bearing identity-summary RPC, an unused unauthenticated reset RPC that directly returns a fresh activation URL after name+email matching, and two named non-underscore trigger helpers still carrying client EXECUTE. Rollback-only production-schema rehearsal proved that safe SECURITY INVOKER read RPCs depend on some underscore normalization/read helpers, so v812f deliberately preserves those read helpers while removing the grounded mutation/privacy/credential surfaces. Twenty earlier v813-named routine-lockdown migrations are already present in production and recorded separately as provenance; GEJAST_v812f_direct_data_boundary.sql is prepared but not yet deployed.",
+  "superseded_uncertified_version": "v812",
+  "superseded_uncertified_product_sha": "a62b6ff4a73a1419f2aeb1c4f83e64d2bf780bbc",
+  "reason": "v813 closes the grounded direct-data boundary and the remaining authenticated visual-runtime warning contracts. Production migrations gejast_v812f_direct_data_boundary, gejast_v812g_sensitive_view_boundary, gejast_v813a_client_cleanup_compatibility and gejast_v813b_visual_warning_cleanup_contracts are applied; the earlier v812a_visual_warning_cleanup_contracts migration remains historical provenance and is superseded by v813b. Post-deploy grounding shows zero PUBLIC/anon/authenticated base-table mutation grants, zero sensitive direct-read grants under the release classifier, zero exposed legacy no-token admin RPCs, and destructive v718 Pikken/Paardenrace stale-room maintenance restricted to service_role while browser compatibility aliases are non-mutating. The frontend also synchronizes active product markers to v813, contains the reproduced Klaverjas room overflow, and makes authenticated visual certification fail on any residual WARN or BROKEN route. Certification remains fail-closed until exact-current health, deep gameplay/ownership isolation, private security-viewer validation and a clean authenticated full visual rerun with manual screenshot review and zero residue are complete.",
   "remaining_release_blockers": [
-    "Explicit authorization and tracked production deployment of GEJAST_v812f_direct_data_boundary.sql.",
-    "Post-deploy proof must show zero PUBLIC/anon/authenticated INSERT/UPDATE/DELETE/TRUNCATE privileges on public tables, removal of sensitive direct-read grants, no client EXECUTE on _web_push_apply_action, set_initial_pin, get_account_identity_summary_scoped, request_pin_reset_reactivation_action, the named trigger helpers or retired worker/admin aliases, while required public read/login/activation/game RPCs remain functional.",
-    "Fresh exact-current v812 health and authenticated runtime proof must pass after the database mutation.",
-    "Fresh deep gameplay and ownership isolation plus full authenticated visual evidence, manual screenshot review and independent zero-residue cleanup are required before PASS."
+    "Fresh exact-current v813 health and authenticated runtime proof must pass after the production database boundary migrations.",
+    "Fresh deep gameplay and ownership-isolation proof must pass for all tracked games.",
+    "The private dual-camera security viewer added after the prior visual baseline must pass its GitHub perimeter, inner TOTP/session, same-origin media proxy, source-isolation, offline/online, clip-access and logout/session-expiry checks.",
+    "Fresh exact-current authenticated full visual evidence must complete with zero BROKEN and zero WARN routes, including the reproduced Klaverjas room overflow context; screenshots must be manually reviewed and disposable fixtures independently proven zero-residue."
   ],
   "required_next": [
-    "Merge the final compatibility-safe v812f SQL/checker record only after canonical verification and a successful rollback-only production-schema rehearsal.",
-    "After explicit production-SQL authorization, deploy GEJAST_v812f_direct_data_boundary.sql once through the tracked Supabase migration path.",
-    "Run exact-current health, strict authenticated runtime diagnostics, privacy/token boundary probes, deep gameplay/ownership isolation and the full authenticated visual audit; manually review screenshots and independently prove zero controlled residue before promotion to PASS."
+    "Run canonical repository verification and dependency/gameplay gates on the exact v813 candidate.",
+    "Run exact-current health, strict authenticated runtime diagnostics, privacy/token boundary probes and deep gameplay/ownership isolation.",
+    "Run the full authenticated visual audit against exact-current v813, manually inspect the produced screenshots/contact sheets and prove zero controlled residue before promotion to PASS.",
+    "Only after all gates pass, merge the exact candidate, revalidate the merged main SHA, promote release-certification.json to PASS and freeze a v813 certified release ref."
   ]
 }

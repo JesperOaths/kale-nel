@@ -5,7 +5,7 @@
   const LEGACY_SESSION_KEY='jas_session_token_v10';
   const ACTIVITY_KEY='jas_last_activity_at_v1';
   const SERVER_TOUCH_KEY='jas_last_server_touch_at_v1';
-  const CONFIG_SRC='/gejast-config.js?v812';
+  const CONFIG_SRC='/gejast-config.js?v813';
   root.setAttribute('data-gejast-auth-state','checking');
   root.style.setProperty('visibility','hidden','important');
 
@@ -68,6 +68,92 @@
       setTimeout(fail,8000);
     });
   }
+
+  const nativeFetch=typeof window.fetch==='function'?window.fetch.bind(window):null;
+  const allowedUsernameSourceCache=new Map();
+  function normalizeName(value){return String(value||'').replace(/\s+/g,' ').trim();}
+  function extractActiveNames(raw){
+    const values=[];
+    const queue=[raw];
+    const seen=new Set();
+    while(queue.length){
+      const value=queue.shift();
+      if(value==null) continue;
+      if(typeof value==='string'){values.push(value);continue;}
+      if(Array.isArray(value)){queue.push(...value);continue;}
+      if(typeof value!=='object'||seen.has(value)) continue;
+      seen.add(value);
+      const direct=value.display_name||value.public_display_name||value.chosen_username||value.nickname||value.player_name||value.name||value.label||value.desired_name||'';
+      if(direct) values.push(direct);
+      for(const key of ['names','players','profiles','items','rows','data','active_names','activated_names','login_names']){
+        if(value[key]!=null) queue.push(value[key]);
+      }
+    }
+    const unique=[];
+    const keys=new Set();
+    for(const value of values){
+      const name=normalizeName(value);
+      const key=name.toLowerCase();
+      if(!name||keys.has(key)) continue;
+      keys.add(key);
+      unique.push(name);
+    }
+    return unique;
+  }
+  async function secureActiveNameRows(){
+    const scope=requestedScope();
+    if(allowedUsernameSourceCache.has(scope)) return allowedUsernameSourceCache.get(scope);
+    const task=(async()=>{
+      if(!nativeFetch) return null;
+      let cfg;
+      try{cfg=await loadConfig();}catch(_){return null;}
+      const base=String(cfg.SUPABASE_URL||'').replace(/\/+$/,'');
+      const key=String(cfg.SUPABASE_PUBLISHABLE_KEY||'').trim();
+      if(!base||!key) return null;
+      const attempts=[
+        ['get_login_active_names_v687',{site_scope_input:scope}],
+        ['get_player_selector_source_v1',{site_scope_input:scope}],
+        ['get_player_selector_source_v1',{session_token:null,site_scope_input:scope}]
+      ];
+      for(const [name,payload] of attempts){
+        const controller=typeof AbortController!=='undefined'?new AbortController():null;
+        const timer=controller?setTimeout(()=>{try{controller.abort();}catch(_){}},2200):null;
+        try{
+          const response=await nativeFetch(base+'/rest/v1/rpc/'+name,{
+            method:'POST',mode:'cors',cache:'no-store',
+            headers:{'Content-Type':'application/json',Accept:'application/json',apikey:key,Authorization:'Bearer '+key},
+            body:JSON.stringify(payload),signal:controller?controller.signal:undefined
+          });
+          if(!response.ok) continue;
+          const raw=await response.json();
+          const names=extractActiveNames(raw&&raw[name]!==undefined?raw[name]:raw);
+          if(names.length){
+            return names.map(display_name=>({display_name,status:'active',site_scope:scope}));
+          }
+        }catch(_){ }
+        finally{if(timer) clearTimeout(timer);}
+      }
+      return null;
+    })();
+    allowedUsernameSourceCache.set(scope,task);
+    return task;
+  }
+  if(nativeFetch){
+    window.fetch=function(input,init){
+      let url='';
+      try{url=typeof input==='string'?input:(input&&input.url)||'';}catch(_){ }
+      if(/\/rest\/v1\/allowed_usernames(?:[?#]|$)/i.test(String(url))){
+        return secureActiveNameRows().then(rows=>{
+          const safeRows=Array.isArray(rows)?rows:[];
+          const source=Array.isArray(rows)?'v813-secure-active-name-rpc':'v813-secure-active-name-rpc-empty';
+          return new Response(JSON.stringify(safeRows),{status:200,headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Gejast-Compatibility':source}});
+        });
+      }
+      return nativeFetch(input,init);
+    };
+    window.GEJAST_DIRECT_READ_COMPAT_V813={source:'active-login-rpc',direct_allowed_usernames_network:false};
+  }
+
   async function validate(token){
     const cfg=await loadConfig();
     const url=String(cfg.SUPABASE_URL||'').replace(/\/+$/,'')+'/rest/v1/rpc/account_public_state_v687';
