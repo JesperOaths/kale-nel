@@ -1,9 +1,9 @@
 {
-  "version": 1,
-  "site_version_at_capture": "v812",
-  "captured_at": "2026-08-18",
+  "version": 2,
+  "site_version_at_capture": "v813",
+  "captured_at": "2026-08-21",
   "project_id": "uiqntazgnrxwliaidkmy",
-  "note": "Observed in Supabase migration history and already applied before repository reconciliation. Names and versions are provenance only; DDL bodies are intentionally not reconstructed or re-applied.",
+  "note": "The first 20 entries were observed in Supabase migration history before repository reconciliation. The subsequent tracked migrations were applied through the production migration path during v813 hardening and independently rechecked against the live catalog. Names and versions are provenance; historical DDL bodies are not reconstructed.",
   "already_applied_production_migrations": [
     ["20260818213834", "lock_internal_player_mutation_helpers_v813"],
     ["20260818213913", "lock_additional_internal_mutation_helpers_v813"],
@@ -26,5 +26,12 @@
     ["20260818215950", "lock_obsolete_final_runtime_diagnostic_v813"],
     ["20260818220025", "lock_remaining_public_login_diagnostics_v813"]
   ],
-  "prepared_not_deployed": "GEJAST_v812f_direct_data_boundary.sql"
+  "subsequently_applied_production_migrations": [
+    ["20260820232332", "gejast_v812f_direct_data_boundary"],
+    ["20260820232519", "gejast_v812g_sensitive_view_boundary"],
+    ["20260820232529", "gejast_v813a_client_cleanup_compatibility"],
+    ["20260820232855", "v812a_visual_warning_cleanup_contracts"],
+    ["20260820233409", "gejast_v813b_visual_warning_cleanup_contracts"]
+  ],
+  "prepared_not_deployed": null
 }
