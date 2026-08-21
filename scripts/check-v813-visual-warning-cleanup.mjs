@@ -54,8 +54,11 @@ need(authGate, "/\\/rest\\/v1\\/allowed_usernames(?:[?#]|$)/i", 'legacy allowed_
 need(authGate, "['get_login_active_names_v687',{site_scope_input:scope}]", 'active-login RPC compatibility source missing');
 need(authGate, "['get_player_selector_source_v1',{site_scope_input:scope}]", 'selector RPC compatibility fallback missing');
 need(authGate, "return names.map(display_name=>({display_name,status:'active',site_scope:scope}));", 'safe compatibility row projection missing');
+need(authGate, "const safeRows=Array.isArray(rows)?rows:[];", 'legacy direct-read interception must fail closed to an empty safe projection');
+need(authGate, "v813-secure-active-name-rpc-empty", 'safe empty compatibility marker missing');
 need(authGate, "direct_allowed_usernames_network:false", 'direct-read network compatibility marker missing');
 forbid(authGate, /allowed_usernames[^\n]{0,120}(?:apikey|Authorization)/i, 'auth gate must not perform direct allowed_usernames table fetch');
+forbid(authGate, /if\(Array\.isArray\(rows\)\)[\s\S]{0,450}return nativeFetch\(input,init\);/, 'legacy allowed_usernames compatibility must not fall back to a direct table request');
 
 forbid(scoreAlias, /gejast-auth-gate\.js/i, 'score alias must remain runtime-light');
 need(scoreAlias, "new URL('./klaverjas_scorer_v596_repo_ready.html',location.href)", 'score alias canonical destination missing');
