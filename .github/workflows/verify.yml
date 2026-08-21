@@ -28,6 +28,8 @@ jobs:
         run: npm ci
       - name: Canonical repository verification
         run: npm run verify
+      - name: v813 private security worker boundary
+        run: node scripts/test-security-worker-gate-v813.mjs
       - name: v813 secure active-name compatibility runtime
         run: node scripts/test-auth-gate-active-names-v813.mjs
       - name: Independent static publication integrity
