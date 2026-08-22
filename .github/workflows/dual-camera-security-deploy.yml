@@ -1,4 +1,4 @@
-name: Kalenel security canonical route v767
+name: Persist Kalenel security canonical route v767
 
 on:
   push:
@@ -10,25 +10,20 @@ on:
 permissions:
   contents: write
 
-env:
-  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
 jobs:
-  deploy:
+  persist:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: main
           fetch-depth: 0
 
-      - name: Patch canonical security route
+      - name: Recreate deployed v767 Worker source
         shell: bash
         run: |
           set -euo pipefail
-          cp cloudflare/workers/admin-gate/src/worker.js /tmp/worker.before.js
           python3 - <<'PY'
           from pathlib import Path
           p=Path('cloudflare/workers/admin-gate/src/worker.js')
@@ -36,70 +31,27 @@ jobs:
           s=s.replace("const ADMIN_BUILD = 'v766-dual-camera-security';", "const ADMIN_BUILD = 'v767-security-canonical-route';", 1)
           needle="  const canonical = canonicalAdminRedirectTarget(url);\n  if (canonical) return canonicalRedirect(canonical);\n"
           insert=needle+"\n  if (url.pathname === '/admin_security.html') {\n    return new Response(null, {\n      status: 302,\n      headers: secureHeaders({\n        Location: `https://${PUBLIC_HOST}/security/`,\n        'Cache-Control': 'no-store'\n      })\n    });\n  }\n"
-          if "v767-security-canonical-route" not in s:
-              raise SystemExit('build marker patch failed')
+          if "v767-security-canonical-route" not in s: raise SystemExit('build patch failed')
           if "url.pathname === '/admin_security.html'" not in s:
-              if needle not in s: raise SystemExit('admin canonical insertion point changed')
+              if needle not in s: raise SystemExit('route insertion point changed')
               s=s.replace(needle,insert,1)
           p.write_text(s)
           PY
           node --check cloudflare/workers/admin-gate/src/worker.js
-          node scripts/build-admin-worker-assets.mjs
+          git diff --check -- cloudflare/workers/admin-gate/src/worker.js
           grep -q "ADMIN_BUILD = 'v767-security-canonical-route'" cloudflare/workers/admin-gate/src/worker.js
           grep -q "url.pathname === '/admin_security.html'" cloudflare/workers/admin-gate/src/worker.js
-          grep -q '/security/new-clips/' security/index.html
-          grep -q '/security/s3-clips/' security/index.html
-          git diff --check -- cloudflare/workers/admin-gate/src/worker.js
-          echo V767_STATIC_VALIDATION=PASS
 
-      - name: Deploy with rollback
-        shell: bash
-        run: |
-          set -euo pipefail
-          rollback() {
-            rc=$?
-            if [ "$rc" -ne 0 ]; then
-              echo V767_VERIFY_FAILED_ROLLBACK=YES
-              cp /tmp/worker.before.js cloudflare/workers/admin-gate/src/worker.js
-              node scripts/build-admin-worker-assets.mjs
-              (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy) || true
-            fi
-            exit "$rc"
-          }
-          trap rollback EXIT
-          (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy)
-          ok=0
-          for attempt in $(seq 1 15); do
-            echo VERIFY_ATTEMPT=$attempt
-            admin_sec_code=$(curl -sS -o /dev/null -D /tmp/adminsec.h -w '%{http_code}' https://admin.kalenel.nl/admin_security.html || true)
-            admin_sec_loc=$(awk 'BEGIN{IGNORECASE=1}/^location:/{sub(/\r$/,"");print substr($0,index($0,":")+2);exit}' /tmp/adminsec.h || true)
-            build=$(awk 'BEGIN{IGNORECASE=1}/^x-kalenel-admin-build:/{sub(/\r$/,"");print substr($0,index($0,":")+2);exit}' /tmp/adminsec.h || true)
-            root_code=$(curl -sS -o /dev/null -D /tmp/root.h -w '%{http_code}' https://kalenel.nl/security/ || true)
-            root_loc=$(awk 'BEGIN{IGNORECASE=1}/^location:/{sub(/\r$/,"");print substr($0,index($0,":")+2);exit}' /tmp/root.h || true)
-            public_code=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/ || true)
-            echo ADMIN_SECURITY=$admin_sec_code:$admin_sec_loc BUILD=$build SECURITY_ROOT=$root_code:$root_loc PUBLIC=$public_code
-            if [ "$admin_sec_code" = 302 ] && [ "$admin_sec_loc" = 'https://kalenel.nl/security/' ] && [ "$root_code" = 302 ] && [ "$root_loc" = 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2F' ] && [ "$public_code" = 200 ]; then
-              ok=1
-              break
-            fi
-            sleep 4
-          done
-          test "$ok" = 1
-          trap - EXIT
-          echo V767_EDGE_ROUTE=PASS
-          echo V767_SECURITY_OUTER_GATE=PASS
-          echo V767_PUBLIC_REGRESSION=PASS
-
-      - name: Persist Worker source to main
+      - name: Push source reconciliation branch
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'Kalenel Security Bot'
           git config user.email 'actions@users.noreply.github.com'
+          git checkout -B agent/security-canonical-route-v767
           git add -- cloudflare/workers/admin-gate/src/worker.js
           git diff --cached --check
           test "$(git diff --cached --name-only | wc -l)" -eq 1
-          test "$(git diff --cached --name-only)" = 'cloudflare/workers/admin-gate/src/worker.js'
           git commit -m 'Route admin security to protected camera console'
-          git push origin HEAD:main
-          echo V767_SOURCE_PERSISTED=PASS
+          git push --force-with-lease origin HEAD:agent/security-canonical-route-v767
+          echo V767_PR_BRANCH_PUSHED=PASS
