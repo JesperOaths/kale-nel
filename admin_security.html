@@ -1,127 +1,19 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
-  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="referrer" content="no-referrer" />
-  <title>Security - Wordt er gejast?</title>
-  <style>
-    :root{--card:#f9f7f2;--muted:#6b655b;--gold:#9a8241;--ok:#2b5b37;--warn:#8b3a30;--line:rgba(0,0,0,.08)}
-    *{box-sizing:border-box} body{margin:0;padding:20px 20px 74px;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(rgba(232,228,217,.92),rgba(232,228,217,.92)),url('./site-bg-desktop.webp') center/cover no-repeat fixed;min-height:100vh;color:#171717}
-    .main-card{background:var(--card);border-radius:24px;padding:28px;max-width:1240px;margin:0 auto;box-shadow:0 20px 50px rgba(0,0,0,.08)}
-    .top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap}.top h1{margin:14px 0 4px;font-size:30px;letter-spacing:-.035em}.muted{color:var(--muted);line-height:1.5}.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:#111;background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px 14px;font:inherit;font-weight:800;cursor:pointer}.btn.primary{background:var(--gold);border-color:var(--gold)}
-    .summary{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.pill{background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;font-weight:800}.pill.ok{color:var(--ok)}.pill.warn{color:var(--warn)}
-    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:18px}.camera{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;min-width:0}.camera-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.camera h2{margin:0;font-size:20px}.status{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}.status.online{color:var(--ok)}.status.offline{color:var(--warn)}
-    .live-wrap{position:relative;aspect-ratio:16/9;background:#111;border-radius:14px;overflow:hidden;display:grid;place-items:center}.live-wrap img{width:100%;height:100%;object-fit:contain;display:block}.offline-copy{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;color:#ddd;background:#151515}.offline-copy.hidden{display:none}.camera-meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}
-    .events{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px}.events h2{margin:0 0 12px;font-size:20px}.event-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.event-list{border:1px solid var(--line);border-radius:14px;padding:12px;min-width:0}.event-list h3{margin:0 0 8px}.event{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:9px 0;border-top:1px solid rgba(0,0,0,.06);font-size:13px}.event:first-of-type{border-top:0}.event small{display:block;color:var(--muted);margin-top:3px;word-break:break-word}.clip-btn{border:1px solid var(--line);background:#f7f5ef;border-radius:9px;padding:7px 9px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.empty{color:var(--muted);font-size:13px;padding:8px 0}
-    .player-shell{margin-top:14px;display:none}.player-shell.open{display:block}.player-shell video{width:100%;max-height:70vh;background:#111;border-radius:14px}.player-bar{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:8px}.error{margin-top:14px;padding:12px 14px;border-radius:12px;background:#fff0ed;color:var(--warn);font-size:13px;display:none}.error.show{display:block}
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,.18)}
-    .page-floating-logo{position:fixed;top:18px;right:18px;z-index:9998;display:inline-flex;width:64px;height:64px;border-radius:50%;background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);box-shadow:0 14px 32px rgba(0,0,0,.10);align-items:center;justify-content:center;backdrop-filter:blur(8px)}.page-floating-logo img{width:52px;height:52px;display:block}
-    @media(max-width:760px){.grid,.event-grid{grid-template-columns:1fr}.main-card{padding:20px}.page-floating-logo{top:12px;right:12px;width:58px;height:58px}.page-floating-logo img{width:46px;height:46px}.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
-  </style>
-  <script>window.GEJAST_PAGE_VERSION='v814';</script>
-  <script src="./gejast-config.js?v814"></script>
-  <script src="./admin-session-sync.js?v814"></script>
-  <script src="./gejast-admin-rpc.js?v814"></script>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none">
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="refresh" content="0;url=https://kalenel.nl/security/">
+  <title>Security · Kalenel</title>
+  <script>window.GEJAST_PAGE_VERSION='v815';location.replace('https://kalenel.nl/security/');</script>
+  <style>body{font:15px/1.5 Inter,system-ui,sans-serif;background:#071018;color:#f4f7f9;margin:0;display:grid;place-items:center;min-height:100vh}.box{padding:24px;text-align:center}.box a{color:#70d7ff}.watermark{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);padding:7px 11px;border:1px solid #243849;border-radius:999px;background:#071018;color:#7f929f;font-size:11px}</style>
 </head>
 <body>
-  <a class="page-floating-logo" href="./index.html" aria-label="Terug naar home"><img src="./logo-small.png" alt="Logo"></a>
-  <main class="main-card">
-    <div class="top">
-      <div>
-        <a class="btn" href="./admin.html">← Terug naar hub</a>
-        <h1>Security</h1>
-        <div class="muted">Privé livebeeld en bewegingsarchief van de C720P-hub. Toegang vereist de bestaande beheerderssessie met Google Authenticator.</div>
-      </div>
-      <button class="btn primary" id="refreshBtn" type="button">Opnieuw verbinden</button>
-    </div>
-    <div class="summary">
-      <span class="pill" id="sessionState">Sessieslot controleren…</span>
-      <span class="pill" id="relayState">Relay controleren…</span>
-    </div>
-    <div class="error" id="errorBox"></div>
-
-    <section class="grid" aria-label="Live camera's">
-      <article class="camera" data-camera="new">
-        <div class="camera-head"><h2>Nieuwe camera</h2><span class="status offline" id="newStatus">Controleren</span></div>
-        <div class="live-wrap"><img id="newLive" alt="Livebeeld nieuwe camera" decoding="async"><div class="offline-copy" id="newOffline">Livebeeld wordt gecontroleerd…</div></div>
-        <div class="camera-meta"><span id="newEvents">0 events</span><span id="newRecording">Niet aan het opnemen</span></div>
-      </article>
-      <article class="camera" data-camera="s3">
-        <div class="camera-head"><h2>S3 camera</h2><span class="status offline" id="s3Status">Controleren</span></div>
-        <div class="live-wrap"><img id="s3Live" alt="Livebeeld S3 camera" decoding="async"><div class="offline-copy" id="s3Offline">Livebeeld wordt gecontroleerd…</div></div>
-        <div class="camera-meta"><span id="s3Events">0 events</span><span id="s3Recording">Niet aan het opnemen</span></div>
-      </article>
-    </section>
-
-    <section class="events">
-      <h2>Recente bewegingsopnames</h2>
-      <div class="event-grid"><div class="event-list"><h3>Nieuwe camera</h3><div id="newEventList" class="empty">Laden…</div></div><div class="event-list"><h3>S3 camera</h3><div id="s3EventList" class="empty">Laden…</div></div></div>
-      <div class="player-shell" id="playerShell"><div class="player-bar"><strong id="playerTitle">Opname</strong><button class="btn" id="closePlayer" type="button">Sluiten</button></div><video id="archivePlayer" controls playsinline preload="metadata"></video></div>
-    </section>
-  </main>
-  <div class="site-credit-watermark" data-version-watermark>v814 - Made by Bruis</div>
-  <script>
-    (()=>{
-      const CONTROL_ACTION='c720p-security-control?action=session';
-      let media=null, reconnectTimer=null, pollTimer=null;
-      const $=id=>document.getElementById(id);
-      const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-      function setPill(id,text,kind=''){const e=$(id);e.textContent=text;e.className='pill'+(kind?' '+kind:'');}
-      function fail(message){$('errorBox').textContent=message;$('errorBox').classList.add('show');}
-      function clearFail(){$('errorBox').classList.remove('show');$('errorBox').textContent='';}
-      function tunnel(path){return `${media.origin}${path}${path.includes('?')?'&':'?'}token=${encodeURIComponent(media.media_token)}`;}
-      async function json(url,init={}){const r=await fetch(url,{...init,cache:'no-store',referrerPolicy:'no-referrer'});const t=await r.text();let d;try{d=JSON.parse(t)}catch(_){throw new Error(`Ongeldig antwoord (${r.status})`)}if(!r.ok)throw new Error(d.error||d.message||`HTTP ${r.status}`);return d;}
-      async function openSession(){
-        const admin=window.GEJAST_ADMIN_RPC;
-        if(!admin)throw new Error('Adminbeveiliging niet geladen.');
-        const ok=await admin.requirePage('admin_security.html'); if(!ok)return false;
-        setPill('sessionState','Adminsessie geldig','ok');
-        const cfg=window.GEJAST_CONFIG||{}; if(!cfg.SUPABASE_URL)throw new Error('Supabase-config ontbreekt.');
-        const url=`${String(cfg.SUPABASE_URL).replace(/\/$/,'')}/functions/v1/${CONTROL_ACTION}`;
-        media=await json(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({admin_session_token:admin.getSessionToken()})});
-        if(!media?.origin||!media?.media_token)throw new Error('Geen geldige camera-relaysessie ontvangen.');
-        setPill('relayState','Privérelay verbonden','ok');
-        return true;
-      }
-      async function loadCamera(cam){
-        const prefix=cam==='new'?'new':'s3';
-        try{
-          const [st,ev]=await Promise.all([json(tunnel(`/${cam}/api/status`)),json(tunnel(`/${cam}/api/events`))]);
-          const online=!!st.source_online;
-          $(prefix+'Status').textContent=online?'Online':'Offline';$(prefix+'Status').className='status '+(online?'online':'offline');
-          $(prefix+'Recording').textContent=st.recording?'Neemt nu op':'Niet aan het opnemen';
-          $(prefix+'Events').textContent=`${Number(st.event_count||0)} events`;
-          const img=$(prefix+'Live'),off=$(prefix+'Offline');
-          if(online){off.classList.add('hidden');const next=tunnel(`/${cam}/live.mjpg`);if(img.dataset.src!==next){img.dataset.src=next;img.src=next;}}
-          else{img.removeAttribute('src');img.dataset.src='';off.textContent='Camera is momenteel offline. De hub blijft automatisch op herstel controleren.';off.classList.remove('hidden');}
-          renderEvents(cam,Array.isArray(ev.events)?ev.events.slice(0,12):[]);
-        }catch(e){
-          $(prefix+'Status').textContent='Offline';$(prefix+'Status').className='status offline';$(prefix+'Live').removeAttribute('src');$(prefix+'Offline').textContent='Livebeeld niet bereikbaar.';$(prefix+'Offline').classList.remove('hidden');
-          $(prefix+'EventList').innerHTML='<div class="empty">Archief tijdelijk niet bereikbaar.</div>';
-        }
-      }
-      function renderEvents(cam,rows){
-        const root=$(cam==='new'?'newEventList':'s3EventList');
-        if(!rows.length){root.innerHTML='<div class="empty">Nog geen opnames beschikbaar.</div>';return;}
-        root.className='';root.innerHTML=rows.map((e,i)=>{const when=esc(e.timestamp||'Onbekend tijdstip');const reason=esc(e.reason||e.method||'Beweging');const clip=e.clip_name?`<button class="clip-btn" type="button" data-cam="${cam}" data-clip="${esc(e.clip_name)}">Afspelen</button>`:'';return `<div class="event"><div><strong>${when}</strong><small>${reason}</small></div>${clip}</div>`}).join('');
-        root.querySelectorAll('[data-clip]').forEach(b=>b.addEventListener('click',()=>playClip(b.dataset.cam,b.dataset.clip)));
-      }
-      function playClip(cam,name){const v=$('archivePlayer');v.pause();v.src=tunnel(`/${cam}/clip/${encodeURIComponent(name)}`);$('playerTitle').textContent=`${cam==='new'?'Nieuwe camera':'S3'} · ${name}`;$('playerShell').classList.add('open');v.load();v.play().catch(()=>{});}
-      async function refresh(){
-        clearFail();clearTimeout(reconnectTimer);clearInterval(pollTimer);
-        try{if(!(await openSession()))return;await Promise.all([loadCamera('new'),loadCamera('s3')]);pollTimer=setInterval(()=>{if(!document.hidden&&media)Promise.all([loadCamera('new'),loadCamera('s3')]).catch(()=>{});},30000);reconnectTimer=setTimeout(refresh,8*60*1000);}
-        catch(e){setPill('relayState','Relay niet bereikbaar','warn');fail(e?.message||'Securityverbinding mislukt.');reconnectTimer=setTimeout(refresh,20000);}
-      }
-      $('refreshBtn').addEventListener('click',refresh);$('closePlayer').addEventListener('click',()=>{$('archivePlayer').pause();$('archivePlayer').removeAttribute('src');$('playerShell').classList.remove('open');});
-      document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
-      window.addEventListener('beforeunload',()=>{clearTimeout(reconnectTimer);clearInterval(pollTimer)});
-      refresh();
-    })();
-  </script>
-  <script src="./site-analytics.js?v814"></script>
+  <div class="box">Security openen…<br><a href="https://kalenel.nl/security/">Ga naar Kalenel Security</a></div>
+  <div class="watermark">v815 · Made by Bruis</div>
 </body>
 </html>
