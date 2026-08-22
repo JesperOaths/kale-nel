@@ -5,17 +5,19 @@ import fs from 'node:fs';
 const migrationPath = 'GEJAST_v813b_visual_warning_cleanup_contracts.sql';
 const refinerPath = 'scripts/refine-expected-visual-aliases-v809.mjs';
 const workflowPath = '.github/workflows/full-live-visual-audit-v792.yml';
+const liveBrowserWorkflowPath = '.github/workflows/final-certification-live-browser-v792.yml';
 const klaverjasRoomPath = 'klaverjas_room.html';
 const mobileFoundationPath = 'gejast-mobile-foundation-v583.js';
 const authGatePath = 'gejast-auth-gate.js';
 const scoreAliasPath = 'score.html';
-for (const file of [migrationPath, refinerPath, workflowPath, klaverjasRoomPath, mobileFoundationPath, authGatePath, scoreAliasPath]) {
+for (const file of [migrationPath, refinerPath, workflowPath, liveBrowserWorkflowPath, klaverjasRoomPath, mobileFoundationPath, authGatePath, scoreAliasPath]) {
   if (!fs.existsSync(file)) throw new Error(`V813_VISUAL_WARNING_CLEANUP_FAIL missing ${file}`);
 }
 
 const sql = fs.readFileSync(migrationPath, 'utf8');
 const refiner = fs.readFileSync(refinerPath, 'utf8');
 const workflow = fs.readFileSync(workflowPath, 'utf8');
+const liveBrowserWorkflow = fs.readFileSync(liveBrowserWorkflowPath, 'utf8');
 const klaverjasRoom = fs.readFileSync(klaverjasRoomPath, 'utf8');
 const mobileFoundation = fs.readFileSync(mobileFoundationPath, 'utf8');
 const authGate = fs.readFileSync(authGatePath, 'utf8');
@@ -68,7 +70,17 @@ need(scoreAlias, 'location.replace(url.toString())', 'score alias must preserve 
 need(workflow, 'node --check scripts/refine-expected-visual-aliases-v809.mjs', 'workflow refiner syntax check missing');
 need(workflow, 'run: node scripts/refine-expected-visual-aliases-v809.mjs', 'workflow refiner execution missing');
 need(workflow, 'node scripts/check-v813-visual-warning-cleanup.mjs', 'workflow contract check missing');
+need(workflow, "GEJAST_DATA_PLANE_ATTEMPTS: '3'", 'visual data-plane transient retry contract missing');
 need(workflow, 'const warnings=rows.filter', 'workflow warning enumeration missing');
 need(workflow, 'if(broken.length || warnings.length)', 'authenticated certification must fail on WARN or BROKEN');
+
+// The shipped browser session parser accepts exactly 48 hexadecimal characters.
+// Certification fixtures must use that same contract so SQL/RPC-only success cannot
+// mask a browser-side session rejection and false login redirect.
+need(liveBrowserWorkflow, 'token1="$(openssl rand -hex 24)"', 'browser fixture token1 must be 48 hex characters');
+need(liveBrowserWorkflow, 'token2="$(openssl rand -hex 24)"', 'browser fixture token2 must be 48 hex characters');
+need(liveBrowserWorkflow, '[[ "$token1" =~ ^[0-9a-f]{48}$ ]]', 'browser fixture token1 format assertion missing');
+need(liveBrowserWorkflow, '[[ "$token2" =~ ^[0-9a-f]{48}$ ]]', 'browser fixture token2 format assertion missing');
+forbid(liveBrowserWorkflow, /token[12]="v792-cert-/, 'legacy prefixed certification token reintroduced');
 
 console.log('RESULT=V813_VISUAL_WARNING_CLEANUP_CONTRACT_PASS');
