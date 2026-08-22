@@ -1,4 +1,4 @@
-name: Kalenel security direct-origin controls v772
+name: Kalenel security controls v773
 
 on:
   push:
@@ -6,7 +6,6 @@ on:
       - agent/dual-camera-security-deploy
     paths:
       - '.github/workflows/dual-camera-security-deploy.yml'
-      - 'scripts/deploy-security-controls-v772.py'
 
 permissions:
   contents: write
@@ -22,30 +21,41 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          ref: agent/dual-camera-security-deploy
+          ref: agent/security-controls-v772
           fetch-depth: 0
 
-      - name: Prepare v772 from main v771 and current Security UI
+      - name: Prepare v773
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin main
-          git checkout origin/main -- cloudflare/workers/admin-gate/src/worker.js security/index.html
           cp cloudflare/workers/admin-gate/src/worker.js /tmp/worker.before.js
           cp security/index.html /tmp/security.before.html
-          python3 scripts/deploy-security-controls-v772.py
+          python3 - <<'PY'
+          from pathlib import Path
+          w=Path('cloudflare/workers/admin-gate/src/worker.js')
+          s=w.read_text()
+          old="const ADMIN_BUILD = 'v772-security-camera-controls';"
+          if old not in s:
+              raise SystemExit('v772 worker marker missing')
+          s=s.replace(old,"const ADMIN_BUILD = 'v773-security-controls-60s';",1)
+          w.write_text(s)
+
+          p=Path('security/index.html')
+          s=p.read_text()
+          if '120000' not in s:
+              raise SystemExit('two-minute timer marker missing')
+          s=s.replace('120000','60000',1)
+          s=s.replace('automatically stops after 2 minutes','automatically stops after 1 minute',1)
+          s=s.replace('Kalenel · security-5 · source-aware dual camera','Kalenel · security-6 · v773 · protected camera controls',1)
+          p.write_text(s)
+          PY
           node --check cloudflare/workers/admin-gate/src/worker.js
           node scripts/build-admin-worker-assets.mjs
           git diff --check -- cloudflare/workers/admin-gate/src/worker.js security/index.html
-          grep -q "ADMIN_BUILD = 'v772-security-direct-origin-controls'" cloudflare/workers/admin-gate/src/worker.js
-          grep -q 'cameraOrigin' cloudflare/workers/admin-gate/src/worker.js
-          grep -q 'cameraToken' cloudflare/workers/admin-gate/src/worker.js
-          grep -q 'api/controls' cloudflare/workers/admin-gate/src/worker.js
-          grep -q 'api/control' cloudflare/workers/admin-gate/src/worker.js
-          ! grep -q "fetch(target, { method: request.method, headers: upstreamHeaders, redirect: 'follow' })" cloudflare/workers/admin-gate/src/worker.js
-          grep -q 'newControls' security/index.html
-          grep -q 'Frame with strongest detected motion' security/index.html
-          echo V772_STATIC=PASS
+          grep -q "ADMIN_BUILD = 'v773-security-controls-60s'" cloudflare/workers/admin-gate/src/worker.js
+          grep -q 'automatically stops after 1 minute' security/index.html
+          grep -q '60000' security/index.html
+          ! grep -q '120000' security/index.html
 
       - name: Deploy with rollback
         shell: bash
@@ -54,7 +64,6 @@ jobs:
           rollback() {
             rc=$?
             if [ "$rc" -ne 0 ]; then
-              echo V772_ROLLBACK=YES
               cp /tmp/worker.before.js cloudflare/workers/admin-gate/src/worker.js
               cp /tmp/security.before.html security/index.html
               node scripts/build-admin-worker-assets.mjs
@@ -66,14 +75,13 @@ jobs:
           (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy)
           ok=0
           for attempt in $(seq 1 15); do
-            root_code=$(curl -sS -o /dev/null -D /tmp/root.h -w '%{http_code}' https://kalenel.nl/security/ || true)
-            root_loc=$(awk 'BEGIN{IGNORECASE=1}/^location:/{sub(/\r$/,"");print substr($0,index($0,":")+2);exit}' /tmp/root.h || true)
-            controls_code=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/security/new/api/controls || true)
-            post_code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' --data '{"key":"torch","value":"off"}' https://kalenel.nl/security/new/api/control || true)
-            public_code=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/ || true)
             build=$(curl -sS -o /dev/null -D - https://admin.kalenel.nl/admin.html | awk 'BEGIN{IGNORECASE=1}/^x-kalenel-admin-build:/{sub(/\r$/,"");print $2;exit}')
-            echo TRY=$attempt BUILD=$build ROOT=$root_code:$root_loc UNAUTH_CONTROLS=$controls_code UNAUTH_POST=$post_code PUBLIC=$public_code
-            if [ "$build" = 'v772-security-direct-origin-controls' ] && [ "$root_code" = 302 ] && [ "$root_loc" = 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2F' ] && [ "$controls_code" = 302 ] && [ "$post_code" = 401 ] && [ "$public_code" = 200 ]; then
+            root=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/security/ || true)
+            controls=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/security/new/api/controls || true)
+            post=$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' --data '{"key":"torch","value":"off"}' https://kalenel.nl/security/new/api/control || true)
+            public=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/ || true)
+            echo "TRY=$attempt BUILD=$build ROOT=$root CONTROLS=$controls POST=$post PUBLIC=$public"
+            if [ "$build" = 'v773-security-controls-60s' ] && [ "$root" = 302 ] && [ "$controls" = 302 ] && [ "$post" = 401 ] && [ "$public" = 200 ]; then
               ok=1
               break
             fi
@@ -81,20 +89,15 @@ jobs:
           done
           test "$ok" = 1
           trap - EXIT
-          echo V772_EDGE=PASS
 
-      - name: Push reconciled source branch
+      - name: Push source branch
         shell: bash
         run: |
           set -euo pipefail
-          cp cloudflare/workers/admin-gate/src/worker.js /tmp/worker.v772.js
-          git checkout -B agent/security-direct-v772 origin/main
-          cp /tmp/worker.v772.js cloudflare/workers/admin-gate/src/worker.js
           git config user.name 'Kalenel Security Bot'
           git config user.email 'actions@users.noreply.github.com'
-          git add -- cloudflare/workers/admin-gate/src/worker.js
+          git checkout -B agent/security-controls-v773
+          git add -- cloudflare/workers/admin-gate/src/worker.js security/index.html
           git diff --cached --check
-          test "$(git diff --cached --name-only | wc -l)" -eq 1
-          git commit -m 'Proxy protected camera media directly at Kalenel edge'
-          git push --force origin HEAD:agent/security-direct-v772
-          echo V772_SOURCE_BRANCH=PASS
+          git commit -m 'Use one-minute guarded live camera controls'
+          git push --force origin HEAD:agent/security-controls-v773
