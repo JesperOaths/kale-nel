@@ -5,16 +5,13 @@ const configText = fs.readFileSync('gejast-config.js', 'utf8');
 const supabaseUrl = configText.match(/SUPABASE_URL:\s*'([^']+)'/)?.[1]?.replace(/\/+$/, '');
 const publishableKey = configText.match(/SUPABASE_PUBLISHABLE_KEY:\s*'([^']+)'/)?.[1]?.trim();
 
-// This is a release-certification preflight, not an interactive request. A single
-// transient edge/database stall must not force the entire visual campaign into
-// degraded anonymous mode. Keep the probe bounded and fail closed after three
-// independent attempts.
-const requestedTimeoutMs = Number(process.env.GEJAST_DATA_PLANE_TIMEOUT_MS || 10000);
-const requestedAttempts = Number(process.env.GEJAST_DATA_PLANE_ATTEMPTS || 3);
-const requestedRetryDelayMs = Number(process.env.GEJAST_DATA_PLANE_RETRY_DELAY_MS || 1500);
-const timeoutMs = Math.max(10000, requestedTimeoutMs);
-const attempts = Math.max(3, requestedAttempts);
-const retryDelayMs = Math.max(1500, requestedRetryDelayMs);
+// The shared probe stays policy-neutral: deployment health can request its
+// normal two attempts, while the release visual campaign can request three.
+// All callers remain bounded by the hard limits below and fail closed after
+// their requested budget is exhausted.
+const timeoutMs = Number(process.env.GEJAST_DATA_PLANE_TIMEOUT_MS || 10000);
+const attempts = Number(process.env.GEJAST_DATA_PLANE_ATTEMPTS || 2);
+const retryDelayMs = Number(process.env.GEJAST_DATA_PLANE_RETRY_DELAY_MS || 750);
 const rpcName = 'account_public_state_v687';
 const invalidSession = '000000000000000000000000000000000000000000000000';
 
