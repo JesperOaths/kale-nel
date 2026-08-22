@@ -1,4 +1,4 @@
-name: Kalenel security relay v771
+name: Kalenel security controls v772
 
 on:
   push:
@@ -21,10 +21,10 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          ref: main
+          ref: agent/security-relay-v771
           fetch-depth: 0
 
-      - name: Patch Worker media auth transport
+      - name: Add protected camera controls
         shell: bash
         run: |
           set -euo pipefail
@@ -33,48 +33,74 @@ jobs:
           from pathlib import Path
           p=Path('cloudflare/workers/admin-gate/src/worker.js')
           s=p.read_text()
-          s=s.replace("const ADMIN_BUILD = 'v768-security-same-origin-media-proxy';", "const ADMIN_BUILD = 'v771-security-custom-media-header';", 1)
-          s=s.replace("const SECURITY_MEDIA_PROXY_URL = `${SUPABASE_URL}/functions/v1/c720p-security-media?action=proxy`;", "const SECURITY_MEDIA_PROXY_URL = `${SUPABASE_URL}/functions/v1/c720p-security-relay`;", 1)
-          old="const upstreamHeaders = new Headers({ Authorization: `Bearer ${media.mediaToken}`, Origin: `https://${PUBLIC_HOST}` });"
-          new="const upstreamHeaders = new Headers({ 'X-Kalenel-Media-Token': String(media.mediaToken) });"
-          if old not in s: raise SystemExit('upstream auth header contract changed')
+          s=s.replace("const ADMIN_BUILD = 'v771-security-custom-media-header';", "const ADMIN_BUILD = 'v772-security-camera-controls';", 1)
+
+          old="  if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();\n  if (url.pathname === '/security/new-clips')"
+          new="  const controlPost = request.method === 'POST' && /^\\/security\\/(?:new|s3)\\/api\\/control$/.test(url.pathname);\n  if (request.method !== 'GET' && request.method !== 'HEAD' && !controlPost) return methodNotAllowed();\n  if (url.pathname === '/security/new-clips')"
+          if old not in s: raise SystemExit('public security method marker missing')
           s=s.replace(old,new,1)
-          old="fetch(target, { method: request.method, headers: upstreamHeaders, redirect: 'error' })"
-          new="fetch(target, { method: request.method, headers: upstreamHeaders, redirect: 'follow' })"
-          if old not in s: raise SystemExit('proxy fetch contract changed')
+
+          old="    if (pathname === `${prefix}/api/events`) return `/${camera}/api/events`;\n    if (pathname === `${prefix}/api/status`) return `/${camera}/api/status`;\n    if (pathname === `${prefix}/live.mjpg`)"
+          new="    if (pathname === `${prefix}/api/events`) return `/${camera}/api/events`;\n    if (pathname === `${prefix}/api/status`) return `/${camera}/api/status`;\n    if (pathname === `${prefix}/api/controls`) return `/${camera}/api/controls`;\n    if (pathname === `${prefix}/api/control`) return `/${camera}/api/control`;\n    if (pathname === `${prefix}/live.mjpg`)"
+          if old not in s: raise SystemExit('upstream route marker missing')
           s=s.replace(old,new,1)
+
+          old="  const m = String(upstreamPath || '').match(/^\\/(new|s3)\\/(api\\/(status|events)|live\\.mjpg|snap\\/([^/]+)|clip\\/([^/]+))$/);"
+          new="  const m = String(upstreamPath || '').match(/^\\/(new|s3)\\/(api\\/(status|events|controls|control)|live\\.mjpg|snap\\/([^/]+)|clip\\/([^/]+))$/);"
+          if old not in s: raise SystemExit('proxy regex marker missing')
+          s=s.replace(old,new,1)
+          old="  if (m[3] === 'status' || m[3] === 'events') u.searchParams.set('kind', m[3]);"
+          new="  if (['status','events','controls','control'].includes(m[3])) u.searchParams.set('kind', m[3]);"
+          if old not in s: raise SystemExit('proxy kind marker missing')
+          s=s.replace(old,new,1)
+
+          old="  let response;\n  try { response = await fetch(target, { method: request.method, headers: upstreamHeaders, redirect: 'follow' }); }"
+          new="  let response;\n  let body;\n  if (request.method === 'POST') { const text = await request.text(); if (!text || text.length > 4096) return securityJson({ok:false,error:'bad_request'},400); upstreamHeaders.set('Content-Type','application/json'); body=text; }\n  try { response = await fetch(target, { method: request.method, headers: upstreamHeaders, body, redirect: 'follow' }); }"
+          if old not in s: raise SystemExit('proxy fetch marker missing')
+          s=s.replace(old,new,1)
+
+          injection=r'''\nconst SECURITY_CONTROLS_INJECTION = `<style id="security-controls-style">\n.security-controls{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:14px}.security-control-card{background:#101b26;border:1px solid #243849;border-radius:18px;padding:14px}.security-control-card h2{margin:0 0 10px;font-size:17px}.security-control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.security-control{display:grid;gap:5px;color:#93a5b3;font-size:12px}.security-control select{width:100%;padding:9px;border:1px solid #243849;border-radius:9px;background:#071018;color:#f4f7f9;font:inherit;font-weight:700}.security-control-note{margin-top:10px;color:#93a5b3;font-size:12px}.security-control-card .button{margin-top:10px}@media(max-width:900px){.security-controls{grid-template-columns:1fr}}@media(max-width:560px){.security-control-grid{grid-template-columns:1fr}}\n</style><section id="cameraControlsPanel" class="security-controls"><article class="security-control-card"><h2>New camera controls</h2><div id="newCameraControls" class="security-control-grid"></div><div id="newCameraControlNote" class="security-control-note">Waiting for Security unlock…</div><button class="button" type="button" data-reload-controls="new">Reload</button></article><article class="security-control-card"><h2>S3 camera controls</h2><div id="s3CameraControls" class="security-control-grid"></div><div id="s3CameraControlNote" class="security-control-note">Waiting for Security unlock…</div><button class="button" type="button" data-reload-controls="s3">Reload</button></article></section><script>\n(()=>{const $=id=>document.getElementById(id);const app=$('securityApp'),panel=$('cameraControlsPanel');if(!app||!panel)return;app.appendChild(panel);const pretty=k=>k.replaceAll('_',' ');async function readJson(r){const t=await r.text();try{return [r,t?JSON.parse(t):{}]}catch{return [r,{}]}}async function load(cam){const box=$(cam+'CameraControls'),note=$(cam+'CameraControlNote');if(!box||!note)return;box.replaceChildren();note.textContent='Loading capabilities…';try{const [r,d]=await readJson(await fetch('/security/'+cam+'/api/controls',{credentials:'same-origin',cache:'no-store'}));if(r.status===401){note.textContent='Unlock Security to use camera controls.';return}if(!r.ok||!d.ok)throw new Error(d.error||'unavailable');const controls=d.controls||{};for(const [key,c] of Object.entries(controls)){const label=document.createElement('label');label.className='security-control';const title=document.createElement('span');title.textContent=pretty(key);const select=document.createElement('select');const vals=Array.isArray(c.available)?c.available:[];for(const v of vals){const o=document.createElement('option');o.value=String(v);o.textContent=String(v);if(String(v)===String(c.value))o.selected=true;select.appendChild(o)}if(!vals.length){const o=document.createElement('option');o.value=String(c.value??'');o.textContent=String(c.value??'n/a');select.appendChild(o);select.disabled=true}select.addEventListener('change',async()=>{select.disabled=true;note.textContent='Applying '+pretty(key)+'…';try{const [rr,x]=await readJson(await fetch('/security/'+cam+'/api/control',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'content-type':'application/json'},body:JSON.stringify({key,value:select.value})}));if(!rr.ok||!x.ok)throw new Error(x.error||'failed');note.textContent=pretty(key)+' = '+String(x.value);setTimeout(()=>load(cam),700)}catch(e){note.textContent='Could not change '+pretty(key)+': '+e.message;select.disabled=false}});label.append(title,select);box.appendChild(label)}note.textContent=Object.keys(controls).length+' safe controls available. Resolution and recorder-critical settings stay locked.'}catch(e){note.textContent='Controls unavailable on this camera right now.'}}function loadAll(){if(!app.classList.contains('hidden')){load('new');load('s3')}}document.querySelectorAll('[data-reload-controls]').forEach(b=>b.addEventListener('click',()=>load(b.dataset.reloadControls)));new MutationObserver(loadAll).observe(app,{attributes:true,attributeFilter:['class']});setTimeout(loadAll,400)})();\n<\/script>`;\n'''
+          marker='async function serveSecurityAsset(request, env) {'
+          if marker not in s: raise SystemExit('serveSecurityAsset marker missing')
+          s=s.replace(marker,injection+'\n'+marker,1)
+          old="  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });"
+          new="  const text = await response.text();\n  const enhanced = text.includes('</body>') ? text.replace('</body>', SECURITY_CONTROLS_INJECTION + '</body>') : text;\n  headers.delete('Content-Length');\n  return new Response(enhanced, { status: response.status, statusText: response.statusText, headers });"
+          # Replace the first occurrence after serveSecurityAsset only.
+          pos=s.index(marker); tail=s[pos:]
+          if old not in tail: raise SystemExit('security asset response marker missing')
+          tail=tail.replace(old,new,1);s=s[:pos]+tail
           p.write_text(s)
           PY
           node --check cloudflare/workers/admin-gate/src/worker.js
           node scripts/build-admin-worker-assets.mjs
           git diff --check -- cloudflare/workers/admin-gate/src/worker.js
-          grep -q "ADMIN_BUILD = 'v771-security-custom-media-header'" cloudflare/workers/admin-gate/src/worker.js
-          grep -q 'functions/v1/c720p-security-relay' cloudflare/workers/admin-gate/src/worker.js
-          grep -q 'X-Kalenel-Media-Token' cloudflare/workers/admin-gate/src/worker.js
-          ! grep -q 'Authorization: `Bearer ${media.mediaToken}`' cloudflare/workers/admin-gate/src/worker.js
-          echo V771_STATIC=PASS
+          grep -q "ADMIN_BUILD = 'v772-security-camera-controls'" cloudflare/workers/admin-gate/src/worker.js
+          grep -q "api/controls" cloudflare/workers/admin-gate/src/worker.js
+          grep -q "cameraControlsPanel" cloudflare/workers/admin-gate/src/worker.js
+          echo V772_STATIC=PASS
 
       - name: Deploy with rollback
         shell: bash
         run: |
           set -euo pipefail
-          rollback(){ rc=$?; if [ "$rc" -ne 0 ]; then echo V771_ROLLBACK=YES; cp /tmp/worker.before.js cloudflare/workers/admin-gate/src/worker.js; node scripts/build-admin-worker-assets.mjs; (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy) || true; fi; exit "$rc"; }
+          rollback(){ rc=$?; if [ "$rc" -ne 0 ]; then echo V772_ROLLBACK=YES; cp /tmp/worker.before.js cloudflare/workers/admin-gate/src/worker.js; node scripts/build-admin-worker-assets.mjs; (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy) || true; fi; exit "$rc"; }
           trap rollback EXIT
           (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy)
           ok=0
           for attempt in $(seq 1 15); do
             root_code=$(curl -sS -o /dev/null -D /tmp/root.h -w '%{http_code}' https://kalenel.nl/security/ || true)
             root_loc=$(awk 'BEGIN{IGNORECASE=1}/^location:/{sub(/\r$/,"");print substr($0,index($0,":")+2);exit}' /tmp/root.h || true)
-            media_code=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/security/new/api/status || true)
+            media_code=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/security/new/api/controls || true)
+            post_code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' --data '{"key":"torch","value":"off"}' https://kalenel.nl/security/new/api/control || true)
             public_code=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/ || true)
             build=$(curl -sS -o /dev/null -D - https://admin.kalenel.nl/admin.html | awk 'BEGIN{IGNORECASE=1}/^x-kalenel-admin-build:/{sub(/\r$/,"");print $2;exit}')
-            echo TRY=$attempt BUILD=$build ROOT=$root_code:$root_loc UNAUTH_MEDIA=$media_code PUBLIC=$public_code
-            if [ "$build" = 'v771-security-custom-media-header' ] && [ "$root_code" = 302 ] && [ "$root_loc" = 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2F' ] && [ "$media_code" = 302 ] && [ "$public_code" = 200 ]; then ok=1; break; fi
+            echo TRY=$attempt BUILD=$build ROOT=$root_code:$root_loc UNAUTH_CONTROLS=$media_code UNAUTH_POST=$post_code PUBLIC=$public_code
+            if [ "$build" = 'v772-security-camera-controls' ] && [ "$root_code" = 302 ] && [ "$media_code" = 302 ] && [ "$post_code" = 401 ] && [ "$public_code" = 200 ]; then ok=1; break; fi
             sleep 4
           done
           test "$ok" = 1
           trap - EXIT
-          echo V771_EDGE=PASS
+          echo V772_EDGE=PASS
 
       - name: Push source branch
         shell: bash
@@ -82,10 +108,10 @@ jobs:
           set -euo pipefail
           git config user.name 'Kalenel Security Bot'
           git config user.email 'actions@users.noreply.github.com'
-          git checkout -B agent/security-relay-v771
+          git checkout -B agent/security-controls-v772
           git add -- cloudflare/workers/admin-gate/src/worker.js
           git diff --cached --check
           test "$(git diff --cached --name-only | wc -l)" -eq 1
-          git commit -m 'Use custom media auth header for security relay'
-          git push --force origin HEAD:agent/security-relay-v771
-          echo V771_SOURCE_BRANCH=PASS
+          git commit -m 'Add protected camera controls to Security'
+          git push --force origin HEAD:agent/security-controls-v772
+          echo V772_SOURCE_BRANCH=PASS
