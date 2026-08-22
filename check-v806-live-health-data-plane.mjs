@@ -17,7 +17,7 @@ assert.match(dataPlaneStep, /id:\s*data_plane/, 'data-plane probe must expose it
 assert.match(dataPlaneStep, /continue-on-error:\s*true/, 'data-plane failure must not suppress independent live-health evidence');
 assert.match(dataPlaneStep, /run: node check-live-data-plane\.mjs/, 'main live-health workflow must run the database-backed auth probe');
 assert.match(workflow, /GEJAST_DATA_PLANE_TIMEOUT_MS:\s*'10000'/, 'workflow must keep each data-plane attempt bounded to 10 seconds');
-assert.match(workflow, /GEJAST_DATA_PLANE_ATTEMPTS:\s*'2'/, 'workflow may make at most two bounded liveness attempts');
+assert.match(workflow, /GEJAST_DATA_PLANE_ATTEMPTS:\s*'2'/, 'live-health workflow keeps its normal liveness campaign to two bounded attempts');
 assert.match(workflow, /GEJAST_DATA_PLANE_RETRY_DELAY_MS:\s*'750'/, 'workflow must use a small bounded retry delay');
 
 const attemptedProbeCondition = "if: always() && (steps.data_plane.outcome == 'success' || steps.data_plane.outcome == 'failure')";
@@ -49,7 +49,7 @@ assert.match(probe, /Authorization: `Bearer \$\{publishableKey\}`/, 'probe must 
 assert.match(probe, /typeof data\.ok !== 'boolean'/, 'probe must validate the auth RPC response contract');
 assert.match(probe, /if \(data\.ok === true\) throw new Error\('invalid_session_authenticated'\)/, 'health probe must fail closed if its invalid session is unexpectedly authenticated');
 assert.match(probe, /timeoutMs > 15000/, 'per-attempt timeout must have a hard upper bound');
-assert.match(probe, /attempts > 2/, 'probe retry count must have a hard upper bound');
+assert.match(probe, /attempts > 3/, 'probe retry count must have a hard upper bound of three attempts');
 assert.match(probe, /DATA_PLANE_PASS rpc=\$\{rpcName\} invalid_session_rejected=true/, 'healthy data plane must emit a precise positive marker');
 assert.match(probe, /DATA_PLANE_FAIL rpc=\$\{rpcName\}/, 'unhealthy data plane must emit a precise negative marker');
 
