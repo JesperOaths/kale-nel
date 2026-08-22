@@ -14,6 +14,11 @@ const LOGIN_ABORT_RPCS = new Set([
   'get_login_active_names_v687',
   'get_player_selector_source_v1',
 ]);
+const SAFE_BACKGROUND_ABORT_RPCS = new Set([
+  'player_touch_session',
+  'get_login_active_names_v687',
+  'get_player_selector_source_v1',
+]);
 
 if (!fs.existsSync(reportPath)) throw new Error('VISUAL_ALIAS_REFINE_FAIL visual-audit/report.json missing');
 const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
@@ -58,6 +63,11 @@ function parseAbort(entry) {
   try { return { method:m[1].toUpperCase(), url:new URL(m[2]) }; }
   catch { return null; }
 }
+function rpcNameFromAbort(entry) {
+  const p = parseAbort(entry);
+  if (!p || p.method !== 'POST' || p.url.hostname !== 'uiqntazgnrxwliaidkmy.supabase.co') return '';
+  return p.url.pathname.match(/^\/rest\/v1\/rpc\/([^/]+)$/)?.[1] || '';
+}
 function exactSourceAssetAborts(record) {
   const failures = Array.isArray(record?.failed_requests) ? record.failed_requests : [];
   if (failures.length !== SOURCE_ABORT_ASSETS.size) return false;
@@ -81,6 +91,14 @@ function exactLoginReadAborts(record) {
     seen.add(m[1]);
   }
   return seen.size === failures.length;
+}
+function onlySafeBackgroundAborts(record) {
+  const failures = Array.isArray(record?.failed_requests) ? record.failed_requests : [];
+  if (!failures.length) return false;
+  return failures.every((entry) => SAFE_BACKGROUND_ABORT_RPCS.has(rpcNameFromAbort(entry)));
+}
+function visibleFailureText(record) {
+  return /(?:timeout|konden? niet laden|kon niet worden geladen|laden mislukt|request failed|fout bij laden)/i.test(String(record?.body_preview || ''));
 }
 function isOnlyUnsettledAuthGate(record) {
   const reasons = Array.isArray(record?.reasons) ? record.reasons : [];
@@ -115,12 +133,26 @@ function warningRedirectMatches(record) {
   }
   return false;
 }
+function exactPerfumeCspNoise(record) {
+  if (repoPathForRoute(record?.route) !== 'parfum/index.html' || record?.judgement !== 'warn') return false;
+  if (Number(record?.body_chars || 0) < 100 || !/Locked|Unlock collection/i.test(String(record?.body_preview || ''))) return false;
+  if (!emptyList(record?.http_errors) || !emptyList(record?.page_errors) || !emptyList(record?.issue_signals) || Number(record?.stale_loading_count || 0) !== 0) return false;
+  const consoleErrors = Array.isArray(record?.console_errors) ? record.console_errors : [];
+  const failed = Array.isArray(record?.failed_requests) ? record.failed_requests : [];
+  return consoleErrors.length === 2
+    && consoleErrors.some((x) => /frame-ancestors.*ignored when delivered via a <meta>/i.test(String(x)))
+    && consoleErrors.some((x) => /static\.cloudflareinsights\.com\/beacon\.min\.js.*violates.*Content Security Policy/i.test(String(x)))
+    && failed.length === 1
+    && /GET https:\/\/static\.cloudflareinsights\.com\/beacon\.min\.js\/.+ :: csp/i.test(String(failed[0]));
+}
 
 let refined = 0;
 let protectedAliases = 0;
 let publicAliases = 0;
 let transientLoginAborts = 0;
 let redirectAbortAliases = 0;
+let safeBackgroundAborts = 0;
+let platformCspNoise = 0;
 for (const record of report.records) {
   if (isOnlyUnsettledAuthGate(record)) {
     const target = declaredRedirectTarget(record);
@@ -175,6 +207,25 @@ for (const record of report.records) {
     transientLoginAborts += 1;
   }
 
+  if (record?.judgement === 'warn'
+      && record?.auth_state === 'authenticated'
+      && Number(record?.body_chars || 0) >= 20
+      && noHardRuntimeEvidence(record)
+      && onlySafeBackgroundAborts(record)
+      && !visibleFailureText(record)) {
+    record.expected_background_abort = true;
+    record.judgement = 'pass';
+    record.reasons = ['authenticated page rendered cleanly; only non-critical keepalive/selector requests were browser-aborted during capture teardown'];
+    safeBackgroundAborts += 1;
+  }
+
+  if (exactPerfumeCspNoise(record)) {
+    record.expected_platform_csp_noise = true;
+    record.judgement = 'pass';
+    record.reasons = ['locked perfume shell rendered correctly; Cloudflare analytics injection was blocked by the page CSP and the browser reported the known unsupported meta frame-ancestors directive'];
+    platformCspNoise += 1;
+  }
+
   const overflow = Number(record?.horizontal_overflow_px || 0);
   if (overflow > OVERFLOW_TOLERANCE_PX && record?.judgement !== 'broken' && record?.judgement !== 'protected') {
     record.judgement = 'warn';
@@ -196,6 +247,8 @@ report.expected_alias_admin_count = protectedAliases;
 report.expected_alias_public_count = publicAliases;
 report.expected_redirect_source_abort_count = redirectAbortAliases;
 report.expected_transient_login_abort_count = transientLoginAborts;
+report.expected_safe_background_abort_count = safeBackgroundAborts;
+report.expected_platform_csp_noise_count = platformCspNoise;
 report.horizontal_overflow_tolerance_px = OVERFLOW_TOLERANCE_PX;
 fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
 
@@ -206,6 +259,7 @@ const md = [
   `Tracked HTML pages: ${report.tracked_html_count}`,`Contextual variants: ${report.contextual_route_count}`,
   `Screenshots: ${report.total_screenshots}`,`Expected redirect aliases refined: ${refined}`,
   `Expected redirect source aborts refined: ${redirectAbortAliases}`,`Expected login fallback aborts refined: ${transientLoginAborts}`,
+  `Expected safe background aborts refined: ${safeBackgroundAborts}`,`Expected platform CSP noise refined: ${platformCspNoise}`,
   `Horizontal overflow tolerance: ${OVERFLOW_TOLERANCE_PX}px`,`Judgements: ${JSON.stringify(counts)}`,'','## Broken / warning pages','',
   ...(bad.length ? bad.map((row) => `- **${String(row.judgement).toUpperCase()}** \`${row.route}\` — HTTP ${row.status}; ${(row.reasons || []).join('; ') || 'see report.json'}; screenshot \`${row.screenshot}\``) : ['- None detected by automated runtime heuristics.']),
   '','## All pages','',...report.records.map((row) => `- ${String(row.judgement).toUpperCase()} — \`${row.route}\` — ${row.title || '(no title)'} — \`${row.screenshot}\``),'',
@@ -214,9 +268,9 @@ fs.writeFileSync(markdownPath, md);
 
 const escapeHtml = (value) => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const cards = report.records.map((row) => `<article class="card ${escapeHtml(row.judgement)}"><a href="${escapeHtml(row.screenshot)}"><img src="${escapeHtml(row.screenshot)}" loading="lazy" alt="${escapeHtml(row.label)}"></a><div class="copy"><b>${escapeHtml(String(row.judgement).toUpperCase())}</b><code>${escapeHtml(row.route)}</code><span>${escapeHtml(row.title)}</span><small>HTTP ${escapeHtml(row.status)} · overflow ${escapeHtml(row.horizontal_overflow_px)}px · loading ${escapeHtml(row.stale_loading_count)}</small><p>${escapeHtml((row.reasons || []).join('; '))}</p></div></article>`).join('\n');
-fs.writeFileSync(galleryPath, `<!doctype html><meta charset="utf-8"><title>Kalenel visual audit</title><style>body{font-family:system-ui;margin:20px;background:#eee;color:#111}.summary{position:sticky;top:0;background:#111;color:#fff;padding:12px 16px;border-radius:14px;z-index:2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:16px}.card{background:#fff;border:3px solid #bbb;border-radius:14px;overflow:hidden}.card.broken{border-color:#c00}.card.warn{border-color:#d78b00}.card.protected{border-color:#4682b4}.card.pass{border-color:#2e8b57}.card img{width:100%;height:300px;object-fit:cover;object-position:top;display:block;background:#ddd}.copy{padding:12px;display:grid;gap:6px}.copy code{white-space:normal;overflow-wrap:anywhere}.copy p{margin:0;color:#555}</style><div class="summary">${report.total_screenshots} screenshots · ${report.tracked_html_count} tracked HTML · authenticated=yes · aliases=${refined} · login_aborts=${transientLoginAborts} · ${escapeHtml(JSON.stringify(counts))}</div><div class="grid">${cards}</div>`);
+fs.writeFileSync(galleryPath, `<!doctype html><meta charset="utf-8"><title>Kalenel visual audit</title><style>body{font-family:system-ui;margin:20px;background:#eee;color:#111}.summary{position:sticky;top:0;background:#111;color:#fff;padding:12px 16px;border-radius:14px;z-index:2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:16px}.card{background:#fff;border:3px solid #bbb;border-radius:14px;overflow:hidden}.card.broken{border-color:#c00}.card.warn{border-color:#d78b00}.card.protected{border-color:#4682b4}.card.pass{border-color:#2e8b57}.card img{width:100%;height:300px;object-fit:cover;object-position:top;display:block;background:#ddd}.copy{padding:12px;display:grid;gap:6px}.copy code{white-space:normal;overflow-wrap:anywhere}.copy p{margin:0;color:#555}</style><div class="summary">${report.total_screenshots} screenshots · ${report.tracked_html_count} tracked HTML · authenticated=yes · aliases=${refined} · login_aborts=${transientLoginAborts} · background_aborts=${safeBackgroundAborts} · csp_noise=${platformCspNoise} · ${escapeHtml(JSON.stringify(counts))}</div><div class="grid">${cards}</div>`);
 
-console.log(`RESULT=VISUAL_EXPECTED_ALIASES_REFINED aliases=${refined} redirects=${redirectAbortAliases} public=${publicAliases} protected=${protectedAliases} login_aborts=${transientLoginAborts} broken=${counts.broken || 0} warn=${counts.warn || 0} pass=${counts.pass || 0} protected_total=${counts.protected || 0}`);
+console.log(`RESULT=VISUAL_EXPECTED_ALIASES_REFINED aliases=${refined} redirects=${redirectAbortAliases} public=${publicAliases} protected=${protectedAliases} login_aborts=${transientLoginAborts} background_aborts=${safeBackgroundAborts} csp_noise=${platformCspNoise} broken=${counts.broken || 0} warn=${counts.warn || 0} pass=${counts.pass || 0} protected_total=${counts.protected || 0}`);
 if ((counts.broken || 0) > 0) {
   console.error(`VISUAL_ALIAS_REFINE_FAIL remaining_broken=${counts.broken}`);
   process.exit(1);
