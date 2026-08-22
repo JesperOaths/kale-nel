@@ -13,7 +13,7 @@ const SESSION_TTL_SECONDS = 30 * 60;
 const OAUTH_TTL_SECONDS = 10 * 60;
 const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
-const ADMIN_BUILD = 'v766-dual-camera-security';
+const ADMIN_BUILD = 'v767-security-canonical-route';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -137,6 +137,16 @@ async function handleAdminHost(request, env, url) {
 
   const canonical = canonicalAdminRedirectTarget(url);
   if (canonical) return canonicalRedirect(canonical);
+
+  if (url.pathname === '/admin_security.html') {
+    return new Response(null, {
+      status: 302,
+      headers: secureHeaders({
+        Location: `https://${PUBLIC_HOST}/security/`,
+        'Cache-Control': 'no-store'
+      })
+    });
+  }
 
   if (url.pathname === '/logout') return logout(url);
   if (url.pathname === '/oauth/callback') return await oauthCallback(request, env, url);

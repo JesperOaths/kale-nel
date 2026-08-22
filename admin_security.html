@@ -1,108 +1,19 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
-  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Beveiliging & hosting - Wordt er gejast?</title>
-  <style>
-    :root { --card:#f9f7f2; --muted:#666; }
-    * { box-sizing:border-box; }
-    body { margin:0; padding:20px; font-family:Inter,sans-serif; background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./site-bg-desktop.webp') center/cover no-repeat scroll; min-height:100vh; }
-    .main-card { background:var(--card); border-radius:24px; padding:28px; max-width:920px; margin:0 auto; box-shadow:0 20px 50px rgba(0,0,0,0.08); }
-    h1 { margin:0; font-size:30px; }
-    p, li { line-height:1.55; }
-    .muted { color:var(--muted); }
-    .block { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:18px; padding:18px; margin-top:14px; }
-    .btn { display:inline-block; text-decoration:none; color:#111; background:#fff; border:1px solid rgba(0,0,0,0.08); border-radius:12px; padding:12px 14px; font-weight:800; }
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
-    @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
-  </style>
-  <script>window.GEJAST_PAGE_VERSION='v813';</script><script src="./gejast-config.js?v813"></script><script src="./gejast-mobile-route-fixes-v583.js?v813" defer></script><script src="./gejast-mobile-foundation-v583.js?v813" defer></script><script src="./admin-session-sync.js?v813"></script>
-  <script src="./gejast-home-gate.js?v813"></script><script src="./gejast-scope-context.js?v813"></script>
-
-  <style id="page-floating-logo-style">
-    .page-floating-logo{position:fixed;top:18px;right:18px;z-index:9998;display:inline-flex;width:64px;height:64px;border-radius:50%;background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);box-shadow:0 14px 32px rgba(0,0,0,.10);align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-    .page-floating-logo img{width:52px;height:52px;display:block}
-    @media(max-width:640px){.page-floating-logo{top:12px;right:12px;width:58px;height:58px}.page-floating-logo img{width:46px;height:46px}}
-  </style>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none">
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta name="referrer" content="no-referrer">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="refresh" content="0;url=https://kalenel.nl/security/">
+  <title>Security · Kalenel</title>
+  <script>window.GEJAST_PAGE_VERSION='v813';location.replace('https://kalenel.nl/security/');</script>
+  <style>body{font:15px/1.5 Inter,system-ui,sans-serif;background:#071018;color:#f4f7f9;margin:0;display:grid;place-items:center;min-height:100vh}.box{padding:24px;text-align:center}.box a{color:#70d7ff}.watermark{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);padding:7px 11px;border:1px solid #243849;border-radius:999px;background:#071018;color:#7f929f;font-size:11px}</style>
 </head>
 <body>
-  <a class="page-floating-logo" href="./index.html" aria-label="Terug naar home"><img src="./logo-small.png" alt="Logo"></a>
-  <main class="main-card">
-    <a class="btn" href="./admin.html">← Terug naar hub</a>
-    <h1 style="margin-top:16px;">Beveiliging & hosting</h1>
-    <p class="muted">Dit is nu het echte stappenplan voor het afschermen van de admin-hub en alle admin-subpagina’s. Doel: de publieke site publiek houden, maar de admin-laag alleen bereikbaar maken voor jou via een extra toegangspoort vóór GitHub Pages.</p>
-
-    <div class="block">
-      <h2>Huidige situatie</h2>
-      <ul>
-        <li><strong>Goed als tweede slot:</strong> admin-sessies in Supabase, RPC-validatie, en <code>noindex,nofollow</code>.</li>
-        <li><strong>Nog niet goed genoeg:</strong> zolang <code>admin.html</code> en de andere admin-bestanden als gewone statische pagina’s op hetzelfde publieke domein staan, zijn ze nog steeds direct opvraagbaar met de URL.</li>
-        <li><strong>Conclusie:</strong> de admin-pagina’s moeten achter een hosting-laag komen die eerst identiteit controleert en pas daarna de HTML doorlaat.</li>
-      </ul>
-    </div>
-
-    <div class="block">
-      <h2>Aanbevolen doelarchitectuur</h2>
-      <p><strong>Publiek houden:</strong> <code>index.html</code>, <code>request.html</code>, <code>activate.html</code>, <code>login.html</code>, <code>scorer.html</code>.</p>
-      <p><strong>Afschermen:</strong> <code>admin.html</code>, <code>admin_claims.html</code>, <code>admin_expired.html</code>, <code>admin_reserved_names.html</code>, <code>admin_security.html</code>, <code>vault.html</code> en bij voorkeur ook <code>leaderboard.html</code>.</p>
-      <p><strong>Voorkeursvorm:</strong> verplaats de admin-laag naar <code>admin.kalenel.nl</code>. Dat is schoner en robuuster dan losse losse paden op de root.</p>
-    </div>
-
-    <div class="block">
-      <h2>Cloudflare-plan in echte stappen</h2>
-      <ol>
-        <li><strong>Zet het domein in Cloudflare</strong> en zorg dat DNS voor <code>kalenel.nl</code> en het nieuwe <code>admin.kalenel.nl</code> daar beheerd wordt.</li>
-        <li><strong>Laat de publieke root</strong> gewoon wijzen naar de bestaande GitHub Pages-site voor de gewone bezoekersflow.</li>
-        <li><strong>Maak een aparte admin-hostname</strong> zoals <code>admin.kalenel.nl</code>.</li>
-        <li><strong>Laat die hostname landen op dezelfde statische bundle</strong> of op een aparte admin-bundle, maar alleen via een proxied Cloudflare-record.</li>
-        <li><strong>Maak in Cloudflare Zero Trust een Access-application</strong> voor <code>admin.kalenel.nl</code>.</li>
-        <li><strong>Sta alleen jouw identiteit toe</strong> via e-mail, Google-login, One-Time PIN of hardware key. Hou het op één of hooguit twee expliciet toegestane identiteiten.</li>
-        <li><strong>Zet sessieduur kort</strong> voor admin, bijvoorbeeld 8 tot 24 uur, zodat langdurig openstaande browsers minder risico geven.</li>
-        <li><strong>Verhuis alle admin-links</strong> in de hub zodat ze naar de beschermde hostname wijzen, niet meer naar het publieke rootpad.</li>
-        <li><strong>Laat Supabase admin_check_session en alle admin-RPC’s bestaan</strong> als tweede controlelaag. Cloudflare is de buitenpoort; Supabase blijft het binnenslot.</li>
-        <li><strong>Haal daarna publieke admin-links weg</strong> uit de root waar ze niet nodig zijn, of laat ze alleen nog verwijzen naar de beschermde host.</li>
-      </ol>
-    </div>
-
-    <div class="block">
-      <h2>Concreet pad voor jouw site</h2>
-      <ol>
-        <li>Publieke site blijft op <code>https://kalenel.nl</code>.</li>
-        <li>Admin krijgt een nieuwe ingang op <code>https://admin.kalenel.nl</code>.</li>
-        <li>De bestanden <code>admin*.html</code>, <code>vault.html</code> en <code>leaderboard.html</code> worden vanaf daar geserveerd.</li>
-        <li>Cloudflare Access laat alleen jouw account door.</li>
-        <li>Na succesvolle Access-login laad je pas de HTML, daarna pas de Supabase admin-login.</li>
-      </ol>
-      <p>Dat is precies het model: <strong>Cloudflare buitenlaag → admin HTML → Supabase admin sessie → admin RPC’s</strong>.</p>
-    </div>
-
-    <div class="block">
-      <h2>Wat je hierna nog moet nalopen</h2>
-      <ul>
-        <li>GitHub Pages HTTPS enforcement aanzetten.</li>
-        <li>Custom domain bij GitHub verifiëren.</li>
-        <li>Root-HTML geen directe links meer laten geven naar onbeveiligde admin-bestanden.</li>
-        <li>Na de verhuizing testen: directe URL zonder Access, admin hub mét Access, daarna Supabase admin-login, daarna vault en expired queue.</li>
-      </ul>
-    </div>
-
-    <div class="block">
-      <h2>Alternatieven</h2>
-      <ul>
-        <li><strong>Netlify Identity</strong>: goed als je de admin-laag naar Netlify verplaatst.</li>
-        <li><strong>Vercel middleware</strong>: goed als je route-level auth in Vercel wilt doen.</li>
-        <li><strong>Reverse proxy</strong>: goed als je zelf een kleine server/proxy wilt beheren.</li>
-      </ul>
-      <p>Voor deze site blijft <strong>Cloudflare + aparte admin-subdomain</strong> de logische route.</p>
-    </div>
-  </main>
-  <div class="site-credit-watermark" data-version-watermark>v813  -  Made by Bruis</div>
-  <script src="./site-analytics.js?v813"></script>
-
-<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <div class="box">Security openen…<br><a href="https://kalenel.nl/security/">Ga naar Kalenel Security</a></div>
+  <div class="watermark">v813 · Made by Bruis</div>
 </body>
 </html>
