@@ -7,6 +7,7 @@ const sql = fs.readFileSync('GEJAST_v812a_track_site_event_conflict_guard.sql', 
 const boundarySql = fs.readFileSync('GEJAST_v812b_analytics_table_privilege_boundary.sql', 'utf8');
 const prepare = fs.readFileSync('scripts/prepare-visual-audit-runtime-v812.mjs', 'utf8');
 const visualWorkflow = fs.readFileSync('.github/workflows/full-live-visual-audit-v792.yml', 'utf8');
+const liveBrowserWorkflow = fs.readFileSync('.github/workflows/final-certification-live-browser-v792.yml', 'utf8');
 const version = fs.readFileSync('VERSION', 'utf8').trim();
 const certification = JSON.parse(fs.readFileSync('release-certification.json', 'utf8'));
 const versionNumber = Number((version.match(/^v(\d+)$/) || [])[1]);
@@ -49,5 +50,10 @@ assert.match(visualWorkflow, /node --check scripts\/prepare-visual-audit-runtime
 assert.doesNotMatch(visualWorkflow, /npx\s+playwright\s+install|playwright\s+install\s+--with-deps/, 'unbounded Playwright browser download must remain absent');
 assert.match(visualWorkflow, /Refine (?:declared authenticated redirect aliases|authenticated redirects and proven transient aborts)/, 'fail-closed authenticated alias/runtime refinement must remain wired');
 assert.match(visualWorkflow, /Cleanup disposable visual-audit state/, 'visual fixture cleanup must remain wired');
+
+assert.match(liveBrowserWorkflow, /GEJAST_CERT_HEAD_SHA:\s*\$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/, 'PR browser certification must serialize using the pull-request head SHA rather than the synthetic merge SHA');
+assert.match(liveBrowserWorkflow, /head_sha=\$\{GEJAST_CERT_HEAD_SHA\}/, 'visual sibling discovery must query the exact PR head SHA indexed by Actions');
+assert.doesNotMatch(liveBrowserWorkflow, /head_sha=\$\{GITHUB_SHA\}/, 'synthetic PR merge SHA must never be used to discover sibling visual runs');
+assert.match(liveBrowserWorkflow, /Same-revision visual campaign did not finish before serialization timeout/, 'browser certification must fail closed if sibling visual serialization does not settle');
 
 console.log('RESULT=V812ABC_FINAL_CERT_BLOCKERS_GUARD_PASS');
