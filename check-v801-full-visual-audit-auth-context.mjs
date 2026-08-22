@@ -23,8 +23,8 @@ assert.ok(dataPlaneStep, 'visual audit must expose an inspectable read-only data
 assert.match(dataPlaneStep, /id:\s*data_plane/, 'data-plane preflight must expose its true outcome for fixture short-circuiting');
 assert.match(dataPlaneStep, /continue-on-error:\s*true/, 'data-plane outage must lead to degraded evidence rather than suppressing screenshots');
 assert.match(dataPlaneStep, /GEJAST_DATA_PLANE_TIMEOUT_MS:\s*'8000'/, 'visual preflight must use a bounded eight-second timeout');
-assert.match(dataPlaneStep, /GEJAST_DATA_PLANE_ATTEMPTS:\s*'1'/, 'visual preflight must not repeat a known outage before falling back');
-assert.match(dataPlaneStep, /GEJAST_DATA_PLANE_RETRY_DELAY_MS:\s*'0'/, 'single-attempt visual preflight must not add retry delay');
+assert.match(dataPlaneStep, /GEJAST_DATA_PLANE_ATTEMPTS:\s*'3'/, 'visual preflight must tolerate brief transient jitter but remain tightly bounded');
+assert.match(dataPlaneStep, /GEJAST_DATA_PLANE_RETRY_DELAY_MS:\s*'750'/, 'visual preflight retry delay must remain short and bounded');
 assert.match(dataPlaneStep, /run:\s*node check-live-data-plane\.mjs/, 'visual preflight must reuse the pinned read-only auth RPC probe');
 assert.match(dataPlaneProbe, /const rpcName = 'account_public_state_v687'/, 'visual preflight must remain grounded in the shipped read-only auth RPC');
 assert.doesNotMatch(dataPlaneProbe, /SERVICE_ROLE|service[_-]?role|SUPABASE_DB_URL|DATABASE_URL|\bpsql\b|execute_sql/i, 'visual preflight must remain public and non-privileged');
@@ -119,4 +119,4 @@ assert.match(runner, /if \(!degradedFixtures\)[\s\S]*?contextualFamilyRoutes\(\)
 assert.match(runner, /FULL_LIVE_VISUAL_AUDIT_DEGRADED fixture provisioning unavailable; artifact is not certification eligible/, 'degraded runner must emit an explicit fail-closed marker');
 assert.match(runner, /if \(degradedFixtures\) \{[\s\S]*?process\.exitCode = 1;/, 'degraded evidence must keep the workflow red even when no individual screenshot is broken');
 
-console.log('PASS v801 full visual audit data-plane-preflight + REST-fixture/auth-context + true-anonymous degraded-mode contract');
+console.log('PASS v801 full visual audit data-plane-preflight + REST-fixture/auth-context + bounded-retry true-anonymous degraded-mode contract');

@@ -18,7 +18,7 @@ const authPublic=new Set(['login.html','request.html','activate.html']);
 const redirectOnly=new Set(['score.html','pikken_spectator.html','klaverjas_live_v596.html','familie/index.html','familie/login.html','familie/scorer.html','familie/leaderboard.html','familie/player.html']);
 function walk(dir,out=[]){for(const ent of fs.readdirSync(dir,{withFileTypes:true})){if(ent.isDirectory()){if(!ignoredDirs.has(ent.name))walk(path.join(dir,ent.name),out);}else if(ent.name.toLowerCase().endsWith('.html'))out.push(path.join(dir,ent.name));}return out;}
 function rel(file){return path.relative(process.cwd(),file).replaceAll('\\','/');}
-function separatelyProtected(r){const base=path.basename(r).toLowerCase();return base==='admin.html'||base.startsWith('admin_')||base.startsWith('admin-')||r.startsWith('admin/')||r.startsWith('security/');}
+function separatelyProtected(r){const base=path.basename(r).toLowerCase();return base==='admin.html'||base.startsWith('admin_')||base.startsWith('admin-')||r.startsWith('admin/')||r.startsWith('security/')||r.startsWith('parfum/');}
 const securityIndex='security/index.html';
 assert.ok(fs.existsSync(securityIndex),'private security surface missing');
 const securityBody=fs.readFileSync(securityIndex,'utf8');
@@ -26,6 +26,11 @@ assert(!securityBody.includes('/gejast-auth-gate.js?'),'security perimeter must 
 for(const required of ['Private security login','/security/auth/login','/security/auth/logout','/api/status']) assert(securityBody.includes(required),`security perimeter missing independent auth contract: ${required}`);
 assert(securityBody.includes("fetch(`/security/${camera}/api/status`"),'security perimeter must status-check the selected protected camera source');
 assert(securityBody.includes("api('new','/api/status')")&&securityBody.includes("api('s3','/api/status')"),'security live view must status-check both protected camera sources');
+const perfumeIndex='parfum/index.html';
+assert.ok(fs.existsSync(perfumeIndex),'private perfume surface missing');
+const perfumeBody=fs.readFileSync(perfumeIndex,'utf8');
+assert(!perfumeBody.includes('/gejast-auth-gate.js?'),'perfume admin surface must not depend on player-session gate');
+for(const required of ['/rest/v1/rpc/admin_login','/functions/v1/perfume-dashboard','admin_session_token','Authenticator code']) assert(perfumeBody.includes(required),`perfume perimeter missing independent admin auth contract: ${required}`);
 const missing=[]; const leaked=[]; let protectedCount=0;
 for(const file of walk(process.cwd())){
   const r=rel(file);const body=fs.readFileSync(file,'utf8');
@@ -43,4 +48,4 @@ assert(protectedCount>=40,`protected publication inventory unexpectedly small: $
 assert.deepEqual(missing,[],`published pages missing forced-login gate:\n${missing.join('\n')}`);
 assert.deepEqual(leaked,[],`auth-entry/redirect-only pages must not bootstrap the player gate:\n${leaked.join('\n')}`);
 for(const r of ['index.html','home.html','toepen.html','boerenbridge.html','beerpong.html','pikken.html','paardenrace.html','klaverjas_online.html','rad.html'])assert(fs.readFileSync(r,'utf8').includes('/gejast-auth-gate.js?'),`representative protected page lacks gate: ${r}`);
-console.log('v798 forced-login publication boundary ok; gated app pages=',protectedCount,'runtime-light aliases=',redirectOnly.size,'separate_security_perimeter=1');
+console.log('v798 forced-login publication boundary ok; gated app pages=',protectedCount,'runtime-light aliases=',redirectOnly.size,'separate_security_perimeter=1','separate_perfume_admin_perimeter=1');
