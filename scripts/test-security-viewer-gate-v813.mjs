@@ -6,7 +6,8 @@ const COOKIE_SECRET = `security-test-${'x'.repeat(40)}`;
 const APPROVED_ID = '12345';
 const APPROVED_LOGIN = 'bruis-approved';
 const MEDIA_TOKEN = `media-${'m'.repeat(48)}`;
-const ORIGIN = 'https://unit-security.trycloudflare.com';
+const MEDIA_SESSION_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-media?action=session';
+const MEDIA_PROXY_PREFIX = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-media?action=proxy';
 
 function env(extra = {}) {
   return {
@@ -102,17 +103,26 @@ globalThis.fetch = async (input, init = {}) => {
     assert.deepEqual(body, { input_username: 'admin', input_password: 'pw', input_totp_code: '123456' });
     return Response.json({ admin_session_token: `admin-${'a'.repeat(40)}` });
   }
-  if (url === 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-control?action=session') {
+  if (url === MEDIA_SESSION_URL) {
     assert.equal(init.method, 'POST');
     assert.equal(init.headers?.Origin, 'https://kalenel.nl');
-    return Response.json({ ok: true, origin: ORIGIN, media_token: MEDIA_TOKEN, expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() });
+    return Response.json({ ok: true, media_token: MEDIA_TOKEN, expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() });
   }
-  if (url.startsWith(`${ORIGIN}/`)) {
+  if (url.startsWith(MEDIA_PROXY_PREFIX)) {
     upstreamCalls.push({ url, init });
     const parsed = new URL(url);
-    assert.equal(parsed.searchParams.get('token'), MEDIA_TOKEN);
-    if (parsed.pathname.endsWith('/unauthorized')) return new Response('denied', { status: 401 });
-    return Response.json({ ok: true, path: parsed.pathname, source_online: true });
+    assert.equal(init.headers?.get ? init.headers.get('Authorization') : init.headers?.Authorization, `Bearer ${MEDIA_TOKEN}`);
+    assert.equal(init.headers?.get ? init.headers.get('Origin') : init.headers?.Origin, 'https://kalenel.nl');
+    const camera = parsed.searchParams.get('camera');
+    const kind = parsed.searchParams.get('kind');
+    const name = parsed.searchParams.get('name');
+    assert.ok(camera === 'new' || camera === 's3');
+    assert.ok(['status', 'events', 'live', 'snap', 'clip'].includes(kind));
+    let path = `/${camera}`;
+    if (kind === 'status' || kind === 'events') path += `/api/${kind}`;
+    else if (kind === 'live') path += '/live.mjpg';
+    else path += `/${kind}/${name}`;
+    return Response.json({ ok: true, path, source_online: true });
   }
   throw new Error(`unexpected fetch ${url}`);
 };
@@ -185,12 +195,13 @@ try {
   const disallowedHost = await req('https://evil.example/security/new/api/status', { headers: { Cookie: authCookies } });
   assert.equal(disallowedHost.status, 404);
 
-  assert.equal(upstreamCalls.some((call) => call.url.includes('/new/api/status?token=')), true);
-  assert.equal(upstreamCalls.some((call) => call.url.includes('/s3/api/status?token=')), true);
-  assert.equal(upstreamCalls.some((call) => call.url.includes('/new/clip/new-001.mp4?token=')), true);
-  assert.equal(upstreamCalls.some((call) => call.url.includes('/s3/clip/s3-001.mp4?token=')), true);
+  assert.equal(upstreamCalls.some(({url}) => { const u=new URL(url); return u.searchParams.get('camera')==='new' && u.searchParams.get('kind')==='status'; }), true);
+  assert.equal(upstreamCalls.some(({url}) => { const u=new URL(url); return u.searchParams.get('camera')==='s3' && u.searchParams.get('kind')==='status'; }), true);
+  assert.equal(upstreamCalls.some(({url}) => { const u=new URL(url); return u.searchParams.get('camera')==='new' && u.searchParams.get('kind')==='clip' && u.searchParams.get('name')==='new-001.mp4'; }), true);
+  assert.equal(upstreamCalls.some(({url}) => { const u=new URL(url); return u.searchParams.get('camera')==='s3' && u.searchParams.get('kind')==='clip' && u.searchParams.get('name')==='s3-001.mp4'; }), true);
+  assert.equal(upstreamCalls.some(({url}) => /trycloudflare/i.test(url)), false);
 } finally {
   globalThis.fetch = originalFetch;
 }
 
-console.log('v813 security viewer gate PASS: GitHub perimeter, inner login, encrypted media session, camera isolation, traversal rejection, no-origin leakage, lock and proxy boundaries are deterministic.');
+console.log('v813 security viewer gate PASS: GitHub perimeter, inner login, encrypted media session, same-origin Supabase camera proxy, camera isolation, traversal rejection, no-origin leakage, lock and proxy boundaries are deterministic.');
