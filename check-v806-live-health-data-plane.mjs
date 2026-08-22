@@ -49,7 +49,7 @@ assert.match(probe, /Authorization: `Bearer \$\{publishableKey\}`/, 'probe must 
 assert.match(probe, /typeof data\.ok !== 'boolean'/, 'probe must validate the auth RPC response contract');
 assert.match(probe, /if \(data\.ok === true\) throw new Error\('invalid_session_authenticated'\)/, 'health probe must fail closed if its invalid session is unexpectedly authenticated');
 assert.match(probe, /timeoutMs > 15000/, 'per-attempt timeout must have a hard upper bound');
-assert.match(probe, /attempts > 2/, 'probe retry count must have a hard upper bound');
+assert.match(probe, /attempts > 3/, 'probe retry count must have a hard upper bound of three');
 assert.match(probe, /DATA_PLANE_PASS rpc=\$\{rpcName\} invalid_session_rejected=true/, 'healthy data plane must emit a precise positive marker');
 assert.match(probe, /DATA_PLANE_FAIL rpc=\$\{rpcName\}/, 'unhealthy data plane must emit a precise negative marker');
 
