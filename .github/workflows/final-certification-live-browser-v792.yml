@@ -10,6 +10,7 @@ on:
       - 'scripts/prepare-live-browser-runtime-v813.mjs'
       - 'gejast-auth-gate.js'
       - 'gejast-config.js'
+      - 'release-certification.json'
       - 'VERSION'
   push:
     branches:
@@ -20,22 +21,27 @@ on:
       - 'scripts/prepare-live-browser-runtime-v813.mjs'
       - 'gejast-auth-gate.js'
       - 'gejast-config.js'
+      - 'release-certification.json'
       - 'VERSION'
 
 permissions:
   contents: read
+  actions: read
 
-# Share the visual-audit concurrency key so the two database-heavy browser
-# campaigns cannot saturate Supabase at the same time for the same candidate.
+# Use a dedicated concurrency group. Sharing the visual-audit group caused one
+# of two simultaneously-triggered workflows to be discarded because GitHub
+# only retains one pending run per concurrency key. A preflight below waits for
+# the same-revision visual run, when present, so the database-heavy campaigns
+# remain serialized without losing either proof.
 concurrency:
-  group: full-live-visual-audit-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: false
+  group: v792-final-live-browser-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   live-browser:
     runs-on: ubuntu-latest
     if: github.repository == 'JesperOaths/kale-nel' && (github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
-    timeout-minutes: 20
+    timeout-minutes: 40
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       GEJAST_BASE_URL: https://kalenel.nl/
@@ -63,6 +69,35 @@ jobs:
           echo "FINAL_BROWSER_LIVE_VERSION=${live_version:-unavailable}"
           test "$live_version" = "$source_version"
           echo 'RESULT=FINAL_BROWSER_DEPLOYED_VERSION_PARITY_PASS'
+
+      - name: Serialize behind same-revision visual campaign when present
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/full-live-visual-audit-v792.yml/runs?head_sha=${GITHUB_SHA}&per_page=20"
+          state='absent'
+          conclusion=''
+          for i in $(seq 1 180); do
+            payload="$(curl -fsS --max-time 15 \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "$api")"
+            state="$(printf '%s' "$payload" | jq -r '.workflow_runs | sort_by(.created_at) | last | .status // "absent"')"
+            conclusion="$(printf '%s' "$payload" | jq -r '.workflow_runs | sort_by(.created_at) | last | .conclusion // ""')"
+            if [ "$state" = 'absent' ] || [ "$state" = 'completed' ]; then
+              break
+            fi
+            if [ "$i" -lt 180 ]; then sleep 10; fi
+          done
+          if [ "$state" != 'absent' ] && [ "$state" != 'completed' ]; then
+            echo "Same-revision visual campaign did not finish before serialization timeout: state=$state"
+            exit 1
+          fi
+          echo "VISUAL_SERIALIZATION_STATE=$state conclusion=${conclusion:-none}"
+          echo 'RESULT=V813_BROWSER_CAMPAIGN_SERIALIZATION_PASS'
 
       - name: Set up Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
@@ -191,6 +226,34 @@ jobs:
           expected="$GEJAST_PLAYER1_NAME|$GEJAST_PLAYER2_NAME|$GEJAST_PLAYER1_NAME|$GEJAST_PLAYER2_NAME"
           test "$resolved" = "$expected"
           echo 'Both disposable account/player session resolver chains PASS.'
+
+      - name: Prove concurrent session reads remain lock-free
+        shell: bash
+        run: |
+          set -euo pipefail
+          sql_file="$(mktemp)"
+          trap 'rm -f "$sql_file"' EXIT
+          cat > "$sql_file" <<'SQL'
+          set statement_timeout = '5s';
+          select coalesce((public.account_public_state_v687(:'token1')->>'ok')::boolean,false),
+                 coalesce((public._jas_session_player(:'token1')).display_name,'');
+          SQL
+          pids=()
+          for i in $(seq 1 8); do
+            psql "$SUPABASE_CI_DB_URL" -X -v ON_ERROR_STOP=1 -At \
+              -v token1="$GEJAST_PLAYER1_TOKEN" -f "$sql_file" >"/tmp/v813-session-read-$i.out" &
+            pids+=("$!")
+          done
+          failed=0
+          for pid in "${pids[@]}"; do
+            if ! wait "$pid"; then failed=1; fi
+          done
+          test "$failed" = '0'
+          for i in $(seq 1 8); do
+            test "$(cat "/tmp/v813-session-read-$i.out" | tail -n1)" = "t|$GEJAST_PLAYER1_NAME"
+            rm -f "/tmp/v813-session-read-$i.out"
+          done
+          echo 'RESULT=V813_CONCURRENT_SESSION_READ_LOCK_ELISION_PASS'
 
       - name: Run live Chromium multi-context mobile and completion acceptance
         shell: bash
