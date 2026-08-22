@@ -1,4 +1,4 @@
-name: Persist Kalenel security canonical route v767
+name: Kalenel security media proxy v768
 
 on:
   push:
@@ -10,48 +10,82 @@ on:
 permissions:
   contents: write
 
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
 jobs:
-  persist:
+  deploy:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: main
           fetch-depth: 0
 
-      - name: Recreate deployed v767 Worker source
+      - name: Patch Worker to Supabase media proxy
         shell: bash
         run: |
           set -euo pipefail
+          cp cloudflare/workers/admin-gate/src/worker.js /tmp/worker.before.js
           python3 - <<'PY'
           from pathlib import Path
           p=Path('cloudflare/workers/admin-gate/src/worker.js')
           s=p.read_text()
-          s=s.replace("const ADMIN_BUILD = 'v766-dual-camera-security';", "const ADMIN_BUILD = 'v767-security-canonical-route';", 1)
-          needle="  const canonical = canonicalAdminRedirectTarget(url);\n  if (canonical) return canonicalRedirect(canonical);\n"
-          insert=needle+"\n  if (url.pathname === '/admin_security.html') {\n    return new Response(null, {\n      status: 302,\n      headers: secureHeaders({\n        Location: `https://${PUBLIC_HOST}/security/`,\n        'Cache-Control': 'no-store'\n      })\n    });\n  }\n"
-          if "v767-security-canonical-route" not in s: raise SystemExit('build patch failed')
-          if "url.pathname === '/admin_security.html'" not in s:
-              if needle not in s: raise SystemExit('route insertion point changed')
-              s=s.replace(needle,insert,1)
+          s=s.replace("const ADMIN_BUILD = 'v767-security-canonical-route';", "const ADMIN_BUILD = 'v768-security-same-origin-media-proxy';", 1)
+          s=s.replace("const SECURITY_CONTROL_URL = `${SUPABASE_URL}/functions/v1/c720p-security-control?action=session`;", "const SECURITY_MEDIA_SESSION_URL = `${SUPABASE_URL}/functions/v1/c720p-security-media?action=session`;\nconst SECURITY_MEDIA_PROXY_URL = `${SUPABASE_URL}/functions/v1/c720p-security-media?action=proxy`;", 1)
+          old='''  const controlRes = await fetch(SECURITY_CONTROL_URL, {\n    method: 'POST',\n    headers: { Origin: `https://${PUBLIC_HOST}`, 'Content-Type': 'application/json', Accept: 'application/json' },\n    body: JSON.stringify({ admin_session_token: adminToken })\n  });\n  const control = await controlRes.json().catch(() => ({}));\n  const origin = String(control?.origin || '').replace(/\\/+$/, '');\n  const mediaToken = String(control?.media_token || '');\n  const expiryMs = Date.parse(String(control?.expires_at || ''));\n  if (!controlRes.ok || control?.ok !== true ||\n      !/^https:\\/\\/[a-z0-9-]+\\.trycloudflare\\.com$/i.test(origin) ||\n      mediaToken.length < 32 || mediaToken.length > 512 ||\n      !Number.isFinite(expiryMs) || expiryMs <= Date.now()) {\n    return securityJson({ ok:false, error:'camera_origin_unavailable' }, 503);\n  }\n\n  const exp = Math.min(outer.exp, Math.floor(expiryMs / 1000), now() + SECURITY_MEDIA_TTL_SECONDS);\n  if (exp <= now()) return securityJson({ ok:false, error:'security_session_expired' }, 401);\n  const session = {\n    kind: 'security-media',\n    github: { id: String(outer.github?.id || ''), login: String(outer.github?.login || '') },\n    origin, mediaToken, iat: now(), exp\n  };'''
+          new='''  const mediaRes = await fetch(SECURITY_MEDIA_SESSION_URL, {\n    method: 'POST',\n    headers: { Origin: `https://${PUBLIC_HOST}`, 'Content-Type': 'application/json', Accept: 'application/json' },\n    body: JSON.stringify({ admin_session_token: adminToken })\n  });\n  const mediaData = await mediaRes.json().catch(() => ({}));\n  const mediaToken = String(mediaData?.media_token || '');\n  const expiryMs = Date.parse(String(mediaData?.expires_at || ''));\n  if (!mediaRes.ok || mediaData?.ok !== true ||\n      mediaToken.length < 32 || mediaToken.length > 256 ||\n      !Number.isFinite(expiryMs) || expiryMs <= Date.now()) {\n    return securityJson({ ok:false, error:'camera_origin_unavailable' }, 503);\n  }\n\n  const exp = Math.min(outer.exp, Math.floor(expiryMs / 1000), now() + SECURITY_MEDIA_TTL_SECONDS);\n  if (exp <= now()) return securityJson({ ok:false, error:'security_session_expired' }, 401);\n  const session = {\n    kind: 'security-media',\n    github: { id: String(outer.github?.id || ''), login: String(outer.github?.login || '') },\n    mediaToken, iat: now(), exp\n  };'''
+          if old not in s: raise SystemExit('inner login block changed')
+          s=s.replace(old,new,1)
+          s=s.replace("  if (!/^https:\\/\\/[a-z0-9-]+\\.trycloudflare\\.com$/i.test(String(media.origin || ''))) return false;\n",'',1)
+          oldproxy='''async function proxySecurityOrigin(request, media, upstreamPath) {\n  let base;\n  try { base = new URL(media.origin); } catch { return securityJson({ok:false,error:'camera_origin_invalid'},502,true); }\n  base.pathname = upstreamPath;\n  base.search = '';\n  base.searchParams.set('token', media.mediaToken);\n  const upstreamHeaders = new Headers();\n  for (const name of ['Range', 'If-Range', 'If-None-Match', 'If-Modified-Since']) {\n    const value = request.headers.get(name);\n    if (value) upstreamHeaders.set(name, value);\n  }\n  let response;\n  try { response = await fetch(base.toString(), { method: request.method, headers: upstreamHeaders, redirect: 'error' }); }\n  catch { return securityJson({ ok:false, error:'camera_origin_unavailable' }, 502); }\n  if (response.status === 401 || response.status === 403) return securityJson({ ok:false, error:'security_unlock_required' }, 401, true);\n  const headers = securityResponseHeaders();\n  for (const name of ['Content-Type','Content-Length','Content-Range','Accept-Ranges','ETag','Last-Modified','Content-Disposition']) {\n    const value = response.headers.get(name);\n    if (value) headers.set(name, value);\n  }\n  return new Response(request.method === 'HEAD' ? null : response.body, { status: response.status, statusText: response.statusText, headers });\n}'''
+          newproxy='''function securityProxyTarget(upstreamPath) {\n  const m = String(upstreamPath || '').match(/^\\/(new|s3)\\/(api\\/(status|events)|live\\.mjpg|snap\\/([^/]+)|clip\\/([^/]+))$/);\n  if (!m) return '';\n  const u = new URL(SECURITY_MEDIA_PROXY_URL);\n  u.searchParams.set('camera', m[1]);\n  if (m[3] === 'status' || m[3] === 'events') u.searchParams.set('kind', m[3]);\n  else if (m[2] === 'live.mjpg') u.searchParams.set('kind', 'live');\n  else if (m[4]) { u.searchParams.set('kind', 'snap'); u.searchParams.set('name', decodeURIComponent(m[4])); }\n  else if (m[5]) { u.searchParams.set('kind', 'clip'); u.searchParams.set('name', decodeURIComponent(m[5])); }\n  else return '';\n  return u.toString();\n}\nasync function proxySecurityOrigin(request, media, upstreamPath) {\n  const target = securityProxyTarget(upstreamPath);\n  if (!target) return notFound();\n  const upstreamHeaders = new Headers({ Authorization: `Bearer ${media.mediaToken}`, Origin: `https://${PUBLIC_HOST}` });\n  for (const name of ['Range', 'If-Range', 'If-None-Match', 'If-Modified-Since']) {\n    const value = request.headers.get(name);\n    if (value) upstreamHeaders.set(name, value);\n  }\n  let response;\n  try { response = await fetch(target, { method: request.method, headers: upstreamHeaders, redirect: 'error' }); }\n  catch { return securityJson({ ok:false, error:'camera_origin_unavailable' }, 502); }\n  if (response.status === 401 || response.status === 403) return securityJson({ ok:false, error:'security_unlock_required' }, 401, true);\n  const headers = securityResponseHeaders();\n  for (const name of ['Content-Type','Content-Length','Content-Range','Accept-Ranges','ETag','Last-Modified','Content-Disposition']) {\n    const value = response.headers.get(name);\n    if (value) headers.set(name, value);\n  }\n  return new Response(request.method === 'HEAD' ? null : response.body, { status: response.status, statusText: response.statusText, headers });\n}'''
+          if oldproxy not in s: raise SystemExit('proxy block changed')
+          s=s.replace(oldproxy,newproxy,1)
           p.write_text(s)
           PY
           node --check cloudflare/workers/admin-gate/src/worker.js
+          node scripts/build-admin-worker-assets.mjs
           git diff --check -- cloudflare/workers/admin-gate/src/worker.js
-          grep -q "ADMIN_BUILD = 'v767-security-canonical-route'" cloudflare/workers/admin-gate/src/worker.js
-          grep -q "url.pathname === '/admin_security.html'" cloudflare/workers/admin-gate/src/worker.js
+          grep -q "ADMIN_BUILD = 'v768-security-same-origin-media-proxy'" cloudflare/workers/admin-gate/src/worker.js
+          grep -q 'SECURITY_MEDIA_SESSION_URL' cloudflare/workers/admin-gate/src/worker.js
+          grep -q 'SECURITY_MEDIA_PROXY_URL' cloudflare/workers/admin-gate/src/worker.js
+          ! grep -q 'fetch(base.toString()' cloudflare/workers/admin-gate/src/worker.js
+          echo V768_STATIC=PASS
 
-      - name: Push source reconciliation branch
+      - name: Deploy with rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          rollback(){ rc=$?; if [ "$rc" -ne 0 ]; then echo V768_ROLLBACK=YES; cp /tmp/worker.before.js cloudflare/workers/admin-gate/src/worker.js; node scripts/build-admin-worker-assets.mjs; (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy) || true; fi; exit "$rc"; }
+          trap rollback EXIT
+          (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy)
+          ok=0
+          for attempt in $(seq 1 15); do
+            root_code=$(curl -sS -o /dev/null -D /tmp/root.h -w '%{http_code}' https://kalenel.nl/security/ || true)
+            root_loc=$(awk 'BEGIN{IGNORECASE=1}/^location:/{sub(/\r$/,"");print substr($0,index($0,":")+2);exit}' /tmp/root.h || true)
+            media_code=$(curl -sS -o /tmp/media.body -w '%{http_code}' https://kalenel.nl/security/new/api/status || true)
+            public_code=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/ || true)
+            echo TRY=$attempt ROOT=$root_code:$root_loc UNAUTH_MEDIA=$media_code PUBLIC=$public_code
+            if [ "$root_code" = 302 ] && [ "$root_loc" = 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2F' ] && [ "$media_code" = 302 ] && [ "$public_code" = 200 ]; then ok=1; break; fi
+            sleep 4
+          done
+          test "$ok" = 1
+          trap - EXIT
+          echo V768_EDGE=PASS
+
+      - name: Push source branch
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'Kalenel Security Bot'
           git config user.email 'actions@users.noreply.github.com'
-          git checkout -B agent/security-canonical-route-v767
+          git checkout -B agent/security-same-origin-media-v768
           git add -- cloudflare/workers/admin-gate/src/worker.js
           git diff --cached --check
           test "$(git diff --cached --name-only | wc -l)" -eq 1
-          git commit -m 'Route admin security to protected camera console'
-          git push --force-with-lease origin HEAD:agent/security-canonical-route-v767
-          echo V767_PR_BRANCH_PUSHED=PASS
+          git commit -m 'Proxy protected security media through Supabase'
+          git push --force origin HEAD:agent/security-same-origin-media-v768
+          echo V768_SOURCE_BRANCH=PASS
