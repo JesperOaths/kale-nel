@@ -1,0 +1,208 @@
+name: v813 live ownership isolation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/v813-live-ownership-isolation.yml'
+      - 'scripts/live-ownership-isolation-v813.mjs'
+      - 'release-certification.json'
+      - 'VERSION'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/v813-live-ownership-isolation.yml'
+      - 'scripts/live-ownership-isolation-v813.mjs'
+      - 'release-certification.json'
+      - 'VERSION'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: v813-live-ownership-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  ownership-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: github.repository == 'JesperOaths/kale-nel' && (github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      GEJAST_SITE_SCOPE: friends
+      GEJAST_OWNERSHIP_TIMEOUT_MS: '20000'
+
+    steps:
+      - name: Check out exact tested revision
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Validate ownership proof source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/live-ownership-isolation-v813.mjs
+          test -n "${SUPABASE_DB_URL:-}" || { echo 'SUPABASE_DB_URL missing'; exit 1; }
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y postgresql-client >/dev/null
+          echo 'RESULT=V813_OWNERSHIP_SOURCE_PASS'
+
+      - name: Serialize behind active browser and visual certification work
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch='${{ github.head_ref || github.ref_name }}'
+          for i in $(seq 1 210); do
+            busy=0
+            for workflow in full-live-visual-audit-v792.yml final-certification-live-browser-v792.yml; do
+              api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?branch=${branch}&per_page=10"
+              payload="$(curl -fsS --max-time 15 \
+                -H "Authorization: Bearer ${GH_TOKEN}" \
+                -H 'Accept: application/vnd.github+json' \
+                -H 'X-GitHub-Api-Version: 2022-11-28' \
+                "$api")"
+              active="$(printf '%s' "$payload" | jq '[.workflow_runs[] | select(.status == "queued" or .status == "in_progress" or .status == "pending" or .status == "waiting")] | length')"
+              if [ "$active" -gt 0 ]; then busy=1; fi
+            done
+            if [ "$busy" = '0' ]; then break; fi
+            if [ "$i" -eq 210 ]; then echo 'Timed out waiting for browser/visual certification serialization'; exit 1; fi
+            sleep 10
+          done
+          echo 'RESULT=V813_OWNERSHIP_SERIALIZATION_PASS'
+
+      - name: Use transaction pooler for short-lived CI SQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          ci_db_url="$SUPABASE_DB_URL"
+          case "$SUPABASE_DB_URL" in
+            *".pooler.supabase.com:5432/") ci_db_url="${SUPABASE_DB_URL/:5432\//:6543/}" ;;
+          esac
+          echo "::add-mask::$ci_db_url"
+          echo "SUPABASE_CI_DB_URL=$ci_db_url" >> "$GITHUB_ENV"
+
+      - name: Provision two canonical disposable player sessions
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          owner_name="OwnA_${suffix}"
+          member_name="OwnB_${suffix}"
+          owner_token="$(openssl rand -hex 24)"
+          member_token="$(openssl rand -hex 24)"
+          [[ "$owner_token" =~ ^[0-9a-f]{48}$ ]]
+          [[ "$member_token" =~ ^[0-9a-f]{48}$ ]]
+          echo "::add-mask::$owner_token"
+          echo "::add-mask::$member_token"
+          echo "GEJAST_OWNER_NAME=$owner_name" >> "$GITHUB_ENV"
+          echo "GEJAST_MEMBER_NAME=$member_name" >> "$GITHUB_ENV"
+          echo "GEJAST_OWNER_TOKEN=$owner_token" >> "$GITHUB_ENV"
+          echo "GEJAST_MEMBER_TOKEN=$member_token" >> "$GITHUB_ENV"
+
+          sql_file="$(mktemp)"
+          trap 'rm -f "$sql_file"' EXIT
+          cat > "$sql_file" <<'SQL'
+          begin;
+          with ins as (
+            insert into public.players(slug,display_name,active,approved,hidden_from_public,is_dummy,site_scope)
+            values
+              ('ownership-a-' || lower(:'name1'), :'name1', true, true, true, true, 'friends'),
+              ('ownership-b-' || lower(:'name2'), :'name2', true, true, true, true, 'friends')
+            returning id,display_name
+          )
+          insert into public.gejast_player_sessions_v746(session_token,player_id,display_name,site_scope,expires_at)
+          select case when display_name=:'name1' then :'token1' else :'token2' end,id,display_name,'friends',now()+interval '30 minutes'
+          from ins;
+
+          with ins as (
+            insert into public.gejast_account_players_v671(site_scope,display_name,email,activated_at)
+            values
+              ('friends', :'name1', lower(:'name1') || '@example.invalid', now()),
+              ('friends', :'name2', lower(:'name2') || '@example.invalid', now())
+            returning id,display_name
+          )
+          insert into public.gejast_account_sessions_v671(session_token,player_id,site_scope,expires_at)
+          select case when display_name=:'name1' then :'token1' else :'token2' end,id,'friends',now()+interval '30 minutes'
+          from ins;
+          commit;
+          SQL
+          psql "$SUPABASE_CI_DB_URL" -X -v ON_ERROR_STOP=1 \
+            -v name1="$owner_name" -v name2="$member_name" -v token1="$owner_token" -v token2="$member_token" \
+            -f "$sql_file"
+
+      - name: Prove host-only operations reject the authenticated non-host
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/live-ownership-isolation-v813.mjs
+
+      - name: Cleanup ownership proof state and require zero residue
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GEJAST_OWNER_NAME:-}" ] || [ -z "${GEJAST_MEMBER_NAME:-}" ]; then
+            echo 'Ownership fixtures were never provisioned; nothing to clean.'
+            exit 0
+          fi
+          db_url="${SUPABASE_CI_DB_URL:-$SUPABASE_DB_URL}"
+          cleanup_sql="$(mktemp)"; residue_sql="$(mktemp)"
+          trap 'rm -f "$cleanup_sql" "$residue_sql"' EXIT
+          cat > "$cleanup_sql" <<'SQL'
+          begin;
+          delete from public.paardenrace_match_history h
+          using public.paardenrace_rooms r
+          where h.room_id = r.id
+            and (r.host_name in (:'name1', :'name2')
+              or r.host_player_id in (select id from public.players where display_name in (:'name1', :'name2'))
+              or r.created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2')));
+          delete from public.klaverjas_online_games
+          where created_by_player_name in (:'name1', :'name2')
+             or created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'));
+          delete from public.pikken_games
+          where created_by_player_name in (:'name1', :'name2')
+             or created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'));
+          delete from public.paardenrace_rooms
+          where host_name in (:'name1', :'name2')
+             or host_player_id in (select id from public.players where display_name in (:'name1', :'name2'))
+             or created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'));
+          delete from public.gejast_player_sessions_v746 where session_token in (:'token1', :'token2');
+          delete from public.gejast_account_sessions_v671 where session_token in (:'token1', :'token2');
+          delete from public.players where display_name in (:'name1', :'name2') and is_dummy=true and hidden_from_public=true;
+          delete from public.gejast_account_players_v671 where display_name in (:'name1', :'name2') and email like '%@example.invalid';
+          commit;
+          SQL
+          cat > "$residue_sql" <<'SQL'
+          select (select count(*) from public.players where display_name in (:'name1',:'name2')),
+                 (select count(*) from public.gejast_account_players_v671 where display_name in (:'name1',:'name2')),
+                 (select count(*) from public.gejast_player_sessions_v746 where session_token in (:'token1',:'token2')),
+                 (select count(*) from public.gejast_account_sessions_v671 where session_token in (:'token1',:'token2')),
+                 (select count(*) from public.klaverjas_online_games where created_by_player_name in (:'name1',:'name2')),
+                 (select count(*) from public.pikken_games where created_by_player_name in (:'name1',:'name2')),
+                 (select count(*) from public.paardenrace_rooms where host_name in (:'name1',:'name2'));
+          SQL
+          psql "$db_url" -X -v ON_ERROR_STOP=1 \
+            -v name1="$GEJAST_OWNER_NAME" -v name2="$GEJAST_MEMBER_NAME" \
+            -v token1="${GEJAST_OWNER_TOKEN:-missing}" -v token2="${GEJAST_MEMBER_TOKEN:-missing}" \
+            -f "$cleanup_sql"
+          residue="$(psql "$db_url" -X -v ON_ERROR_STOP=1 -At -F'|' \
+            -v name1="$GEJAST_OWNER_NAME" -v name2="$GEJAST_MEMBER_NAME" \
+            -v token1="${GEJAST_OWNER_TOKEN:-missing}" -v token2="${GEJAST_MEMBER_TOKEN:-missing}" \
+            -f "$residue_sql")"
+          test "$residue" = '0|0|0|0|0|0|0'
+          echo 'RESULT=V813_OWNERSHIP_ZERO_RESIDUE_PASS'
+
+      - name: Ownership certification marker
+        if: success()
+        run: echo 'RESULT=V813_LIVE_OWNERSHIP_CERTIFICATION_PASS'
