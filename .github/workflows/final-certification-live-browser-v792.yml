@@ -149,8 +149,11 @@ jobs:
           suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
           name1="CertA_${suffix}"
           name2="CertB_${suffix}"
-          token1="v792-cert-$(openssl rand -hex 32)"
-          token2="v792-cert-$(openssl rand -hex 32)"
+          # Match the browser's real session-token contract exactly: 48 lowercase hex chars.
+          token1="$(openssl rand -hex 24)"
+          token2="$(openssl rand -hex 24)"
+          [[ "$token1" =~ ^[0-9a-f]{48}$ ]]
+          [[ "$token2" =~ ^[0-9a-f]{48}$ ]]
           echo "::add-mask::$token1"
           echo "::add-mask::$token2"
           echo "GEJAST_PLAYER1_TOKEN=$token1" >> "$GITHUB_ENV"
