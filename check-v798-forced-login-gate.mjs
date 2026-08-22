@@ -30,7 +30,9 @@ const perfumeIndex='parfum/index.html';
 assert.ok(fs.existsSync(perfumeIndex),'private perfume surface missing');
 const perfumeBody=fs.readFileSync(perfumeIndex,'utf8');
 assert(!perfumeBody.includes('/gejast-auth-gate.js?'),'perfume admin surface must not depend on player-session gate');
-for(const required of ['/rest/v1/rpc/admin_login','/functions/v1/perfume-dashboard','admin_session_token','Authenticator code']) assert(perfumeBody.includes(required),`perfume perimeter missing independent admin auth contract: ${required}`);
+for(const required of ["rpc('admin_login'",'/rest/v1/rpc/${name}','/functions/v1/perfume-dashboard','admin_session_token','Authenticator code']) assert(perfumeBody.includes(required),`perfume perimeter missing independent admin auth contract: ${required}`);
+assert(perfumeBody.includes("credentials:'omit'"),'perfume browser requests must not inherit ambient credential cookies');
+assert(!/service[_-]?role/i.test(perfumeBody),'perfume browser surface must never contain a service-role credential');
 const missing=[]; const leaked=[]; let protectedCount=0;
 for(const file of walk(process.cwd())){
   const r=rel(file);const body=fs.readFileSync(file,'utf8');

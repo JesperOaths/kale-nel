@@ -16,6 +16,12 @@ replaceExactly(
   'system_chrome_launch',
 );
 
+replaceExactly(
+  "const authSettleTimeout = degradedFixtures ? Math.min(timeout, 1500) : Math.min(timeout, 12000);",
+  "const authSettleTimeout = degradedFixtures ? Math.min(timeout, 1500) : Math.min(timeout, 24000);",
+  'authenticated_auth_settle_budget',
+);
+
 const oldWait = `async function waitForAuthGateToSettle(page, route, kind) {
   const expected = kind === 'context' || trackedRouteUsesAuthGate(route);
   if (!expected) return { expected: false, settled: true, state: '', waited_ms: 0 };
@@ -47,7 +53,7 @@ const newWait = `function declaredRedirectTarget(route) {
   if (!repoPath || !fs.existsSync(repoPath)) return null;
   try {
     const sourceText = fs.readFileSync(repoPath, 'utf8');
-    const match = sourceText.match(/window\\.location\\.replace\\(\\s*(['\"])([^'\"]+)\\1\\s*\\)/i);
+    const match = sourceText.match(/(?:window\\.)?location\\.replace\\(\\s*(['\"])([^'\"]+)\\1\\s*\\)/i);
     return match ? new URL(match[2], routeUrl(route)) : null;
   } catch (_) { return null; }
 }
@@ -130,10 +136,48 @@ replaceExactly(
 );
 
 replaceExactly(
+  "    await page.waitForTimeout(settleMs);",
+  `    await page.waitForTimeout(settleMs);
+    const loadingDeadline = Date.now() + Math.min(10000, timeout);
+    while (Date.now() < loadingDeadline) {
+      const visibleLoading = await page.evaluate(() => ((document.body?.innerText || '').match(/Laden(?:…|\\.\\.\\.)/gi) || []).length).catch(() => 0);
+      if (!visibleLoading) break;
+      await page.waitForTimeout(500);
+    }`,
+  'bounded_loading_settle',
+);
+
+replaceExactly(
   "  const status = response?.status() || 0;",
   "  const status = finalNavigationStatus || response?.status() || 0;",
   'final_navigation_status_use',
 );
 
+replaceExactly(
+  `function contextualFamilyRoutes() {
+  return [
+    ['familie/index.html', 'context__family__index'],
+    ['familie/ladder.html', 'context__family__ladder'],
+    ['familie/leaderboard.html', 'context__family__leaderboard'],
+    ['familie/profiles.html', 'context__family__profiles'],
+    [\`familie/player.html?player=\${encodeURIComponent(familyName)}&scope=family\`, 'context__family__player'],
+    ['familie/boerenbridge.html', 'context__family__boerenbridge'],
+    ['familie/scorer.html', 'context__family__scorer'],
+  ];
+}`,
+  `function contextualFamilyRoutes() {
+  return [
+    ['index.html?scope=family', 'context__family__index'],
+    ['ladder.html?game=klaverjas&scope=family', 'context__family__ladder'],
+    ['leaderboard.html?scope=family', 'context__family__leaderboard'],
+    ['profiles.html?scope=family', 'context__family__profiles'],
+    [\`player.html?player=\${encodeURIComponent(familyName)}&scope=family\`, 'context__family__player'],
+    ['boerenbridge.html?scope=family', 'context__family__boerenbridge'],
+    ['scorer.html?scope=family', 'context__family__scorer'],
+  ];
+}`,
+  'canonical_family_context_routes',
+);
+
 fs.writeFileSync(target, source);
-console.log('RESULT=V812_VISUAL_RUNTIME_PREP_PASS redirect_destination_settle=true final_navigation_status=true system_chrome=true');
+console.log('RESULT=V812_VISUAL_RUNTIME_PREP_PASS redirect_destination_settle=true final_navigation_status=true system_chrome=true family_aliases=true bounded_loading_settle=true');

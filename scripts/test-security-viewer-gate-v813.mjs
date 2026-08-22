@@ -5,9 +5,9 @@ import worker, { __test } from '../cloudflare/workers/admin-gate/src/worker.js';
 const COOKIE_SECRET = `security-test-${'x'.repeat(40)}`;
 const APPROVED_ID = '12345';
 const APPROVED_LOGIN = 'bruis-approved';
-const MEDIA_TOKEN = `media-${'m'.repeat(48)}`;
+const CAMERA_ORIGIN = 'https://viewer-unit.trycloudflare.com';
+const CAMERA_TOKEN = `${'a'.repeat(32)}.${'b'.repeat(64)}`;
 const MEDIA_SESSION_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-media?action=session';
-const MEDIA_PROXY_PREFIX = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-relay';
 
 function env(extra = {}) {
   return {
@@ -81,10 +81,12 @@ assert.doesNotMatch(page.headers.get('Content-Security-Policy') || '', /trycloud
 
 const securityHtml = fs.readFileSync(new URL('../security/index.html', import.meta.url), 'utf8');
 assert.doesNotMatch(securityHtml, /trycloudflare\.com/i);
-assert.doesNotMatch(securityHtml, /media_token/i);
+assert.doesNotMatch(securityHtml, /(?:camera_token|media_token)/i);
 assert.doesNotMatch(securityHtml, /(?:192\.168\.|10\.\d+\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.)/);
 assert.match(securityHtml, /\/security\/\$\{camera\}\/live\.mjpg/);
 assert.match(securityHtml, /\/security\/\$\{clipCamera\}\/clip\//);
+assert.match(securityHtml, /\/api\/controls/);
+assert.match(securityHtml, /\/api\/control/);
 
 const invalidInner = await req('https://kalenel.nl/security/auth/login', {
   method: 'POST',
@@ -106,25 +108,32 @@ globalThis.fetch = async (input, init = {}) => {
   if (url === MEDIA_SESSION_URL) {
     assert.equal(init.method, 'POST');
     assert.equal(init.headers?.Origin, 'https://kalenel.nl');
-    return Response.json({ ok: true, media_token: MEDIA_TOKEN, expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() });
+    return Response.json({
+      ok: true,
+      camera_origin: CAMERA_ORIGIN,
+      camera_token: CAMERA_TOKEN,
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+      camera_token_expires_at: new Date(Date.now() + 8 * 60 * 1000).toISOString()
+    });
   }
-  if (url.startsWith(MEDIA_PROXY_PREFIX)) {
+  if (url.startsWith(CAMERA_ORIGIN + '/')) {
     upstreamCalls.push({ url, init });
     const parsed = new URL(url);
     const headers = new Headers(init.headers || {});
-    assert.equal(headers.get('X-Kalenel-Media-Token'), MEDIA_TOKEN);
+    assert.equal(parsed.searchParams.get('token'), CAMERA_TOKEN);
+    assert.equal(headers.get('X-Kalenel-Media-Token'), null);
     assert.equal(headers.get('Authorization'), null);
-    assert.equal(init.redirect, 'follow');
-    const camera = parsed.searchParams.get('camera');
-    const kind = parsed.searchParams.get('kind');
-    const name = parsed.searchParams.get('name');
-    assert.ok(camera === 'new' || camera === 's3');
-    assert.ok(['status', 'events', 'live', 'snap', 'clip'].includes(kind));
-    let path = `/${camera}`;
-    if (kind === 'status' || kind === 'events') path += `/api/${kind}`;
-    else if (kind === 'live') path += '/live.mjpg';
-    else path += `/${kind}/${name}`;
-    return Response.json({ ok: true, path, source_online: true });
+    assert.equal(init.redirect, 'error');
+    const match = parsed.pathname.match(/^\/(new|s3)\/(api\/(status|events|controls|control)|live\.mjpg|snap\/([^/]+)|clip\/([^/]+))$/);
+    assert.ok(match, `unexpected direct camera path ${parsed.pathname}`);
+    const camera = match[1];
+    const kind = match[3] || (match[2] === 'live.mjpg' ? 'live' : match[4] ? 'snap' : match[5] ? 'clip' : '');
+    if (kind === 'control') {
+      assert.equal(init.method, 'POST');
+      assert.equal(headers.get('Content-Type'), 'application/json');
+      assert.deepEqual(JSON.parse(String(init.body || '{}')), { action: 'torch', value: true });
+    }
+    return Response.json({ ok: true, path: parsed.pathname, source_online: true });
   }
   throw new Error(`unexpected fetch ${url}`);
 };
@@ -140,6 +149,8 @@ try {
   const loginBody = await login.json();
   assert.equal(loginBody.ok, true);
   assert.equal(Object.hasOwn(loginBody, 'origin'), false);
+  assert.equal(Object.hasOwn(loginBody, 'camera_origin'), false);
+  assert.equal(Object.hasOwn(loginBody, 'camera_token'), false);
   assert.equal(Object.hasOwn(loginBody, 'media_token'), false);
   const setCookie = login.headers.get('Set-Cookie') || '';
   assert.match(setCookie, /__Host-kalenel_security_media=/);
@@ -148,6 +159,8 @@ try {
   assert.match(setCookie, /Secure/);
   assert.match(setCookie, /SameSite=Strict/);
   assert.doesNotMatch(setCookie, /Domain=/i);
+  assert.doesNotMatch(setCookie, /trycloudflare\.com/i);
+  assert.doesNotMatch(setCookie, new RegExp(CAMERA_TOKEN.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   mediaCookie = cookieValue(setCookie, '__Host-kalenel_security_media');
   assert.ok(mediaCookie);
 
@@ -163,9 +176,22 @@ try {
   assert.equal(s3Status.status, 200);
   assert.deepEqual(await s3Status.json(), { ok: true, path: '/s3/api/status', source_online: true });
 
-  const newClip = await req('https://kalenel.nl/security/new/clip/new-001.mp4', { headers: { Cookie: authCookies } });
+  const controls = await req('https://kalenel.nl/security/new/api/controls', { headers: { Cookie: authCookies } });
+  assert.equal(controls.status, 200);
+  assert.equal((await controls.json()).path, '/new/api/controls');
+
+  const control = await req('https://kalenel.nl/security/new/api/control', {
+    method: 'POST',
+    headers: { Cookie: authCookies, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'torch', value: true })
+  });
+  assert.equal(control.status, 200);
+  assert.equal((await control.json()).path, '/new/api/control');
+
+  const newClip = await req('https://kalenel.nl/security/new/clip/new-001.mp4', { headers: { Cookie: authCookies, Range: 'bytes=0-999' } });
   assert.equal(newClip.status, 200);
   assert.equal((await newClip.json()).path, '/new/clip/new-001.mp4');
+  assert.equal(new Headers(upstreamCalls.at(-1).init.headers || {}).get('Range'), 'bytes=0-999');
 
   const s3Clip = await req('https://kalenel.nl/security/s3/clip/s3-001.mp4', { headers: { Cookie: authCookies } });
   assert.equal(s3Clip.status, 200);
@@ -173,9 +199,10 @@ try {
 
   const wrongExtension = await req('https://kalenel.nl/security/new/clip/not-video.jpg', { headers: { Cookie: authCookies } });
   assert.equal(wrongExtension.status, 404);
-
   const traversal = await req('https://kalenel.nl/security/new/clip/%2e%2e%2fsecret.mp4', { headers: { Cookie: authCookies } });
   assert.equal(traversal.status, 404);
+  const badControl = await req('https://kalenel.nl/security/new/api/control', { method:'POST', headers:{ Cookie:authCookies, 'Content-Type':'application/json' }, body:'not-json' });
+  assert.equal(badControl.status, 400);
 
   const tamperedMedia = await req('https://kalenel.nl/security/new/api/status', { headers: { Cookie: `${outerCookie}; __Host-kalenel_security_media=bad.payload` } });
   assert.equal(tamperedMedia.status, 401);
@@ -197,13 +224,14 @@ try {
   const disallowedHost = await req('https://evil.example/security/new/api/status', { headers: { Cookie: authCookies } });
   assert.equal(disallowedHost.status, 404);
 
-  assert.equal(upstreamCalls.some(({url}) => { const u=new URL(url); return u.searchParams.get('camera')==='new' && u.searchParams.get('kind')==='status'; }), true);
-  assert.equal(upstreamCalls.some(({url}) => { const u=new URL(url); return u.searchParams.get('camera')==='s3' && u.searchParams.get('kind')==='status'; }), true);
-  assert.equal(upstreamCalls.some(({url}) => { const u=new URL(url); return u.searchParams.get('camera')==='new' && u.searchParams.get('kind')==='clip' && u.searchParams.get('name')==='new-001.mp4'; }), true);
-  assert.equal(upstreamCalls.some(({url}) => { const u=new URL(url); return u.searchParams.get('camera')==='s3' && u.searchParams.get('kind')==='clip' && u.searchParams.get('name')==='s3-001.mp4'; }), true);
-  assert.equal(upstreamCalls.some(({url}) => /trycloudflare/i.test(url)), false);
+  assert.equal(upstreamCalls.some(({url}) => new URL(url).pathname === '/new/api/status'), true);
+  assert.equal(upstreamCalls.some(({url}) => new URL(url).pathname === '/s3/api/status'), true);
+  assert.equal(upstreamCalls.some(({url}) => new URL(url).pathname === '/new/clip/new-001.mp4'), true);
+  assert.equal(upstreamCalls.some(({url}) => new URL(url).pathname === '/s3/clip/s3-001.mp4'), true);
+  assert.equal(upstreamCalls.some(({url,init}) => new URL(url).pathname === '/new/api/control' && init.method === 'POST'), true);
+  assert.equal(upstreamCalls.every(({url}) => /^https:\/\/[a-z0-9-]+\.trycloudflare\.com\//i.test(url)), true);
 } finally {
   globalThis.fetch = originalFetch;
 }
 
-console.log('v813 security viewer gate PASS: GitHub perimeter, inner login, encrypted media session, same-origin Supabase relay, custom media header, camera isolation, traversal rejection, no-origin leakage, lock and proxy boundaries are deterministic.');
+console.log('v813 security viewer gate PASS: GitHub perimeter, inner password+TOTP, encrypted identity-bound media session, strict direct camera origin, redirect refusal, dual-camera controls, traversal rejection, no browser origin/token leakage, logout and proxy boundaries are deterministic.');
