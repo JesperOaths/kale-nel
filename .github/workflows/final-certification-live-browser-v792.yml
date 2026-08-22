@@ -28,11 +28,9 @@ permissions:
   contents: read
   actions: read
 
-# Use a dedicated concurrency group. Sharing the visual-audit group caused one
-# of two simultaneously-triggered workflows to be discarded because GitHub
-# only retains one pending run per concurrency key. A preflight below waits for
-# the same-revision visual run, when present, so the database-heavy campaigns
-# remain serialized without losing either proof.
+# Keep this workflow in its own concurrency group. The explicit discovery/wait
+# step below serializes it behind a same-revision visual run without allowing
+# GitHub's single-pending-run rule to discard either certification campaign.
 concurrency:
   group: v792-final-live-browser-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
@@ -73,13 +71,18 @@ jobs:
       - name: Serialize behind same-revision visual campaign when present
         env:
           GH_TOKEN: ${{ github.token }}
+          GEJAST_CERT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         shell: bash
         run: |
           set -euo pipefail
-          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/full-live-visual-audit-v792.yml/runs?head_sha=${GITHUB_SHA}&per_page=20"
+          test -n "${GEJAST_CERT_HEAD_SHA:-}"
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/full-live-visual-audit-v792.yml/runs?head_sha=${GEJAST_CERT_HEAD_SHA}&per_page=20"
           state='absent'
           conclusion=''
-          for i in $(seq 1 180); do
+          # PR workflow runs are indexed by the pull request head SHA, while
+          # GITHUB_SHA points at GitHub's synthetic merge commit. Give the
+          # sibling visual run a short discovery window before deciding absent.
+          for discovery in $(seq 1 12); do
             payload="$(curl -fsS --max-time 15 \
               -H "Authorization: Bearer ${GH_TOKEN}" \
               -H 'Accept: application/vnd.github+json' \
@@ -87,13 +90,27 @@ jobs:
               "$api")"
             state="$(printf '%s' "$payload" | jq -r '.workflow_runs | sort_by(.created_at) | last | .status // "absent"')"
             conclusion="$(printf '%s' "$payload" | jq -r '.workflow_runs | sort_by(.created_at) | last | .conclusion // ""')"
-            if [ "$state" = 'absent' ] || [ "$state" = 'completed' ]; then break; fi
-            if [ "$i" -lt 180 ]; then sleep 10; fi
+            if [ "$state" != 'absent' ]; then break; fi
+            if [ "$discovery" -lt 12 ]; then sleep 5; fi
           done
+          if [ "$state" != 'absent' ] && [ "$state" != 'completed' ]; then
+            for i in $(seq 1 180); do
+              sleep 10
+              payload="$(curl -fsS --max-time 15 \
+                -H "Authorization: Bearer ${GH_TOKEN}" \
+                -H 'Accept: application/vnd.github+json' \
+                -H 'X-GitHub-Api-Version: 2022-11-28' \
+                "$api")"
+              state="$(printf '%s' "$payload" | jq -r '.workflow_runs | sort_by(.created_at) | last | .status // "absent"')"
+              conclusion="$(printf '%s' "$payload" | jq -r '.workflow_runs | sort_by(.created_at) | last | .conclusion // ""')"
+              if [ "$state" = 'completed' ]; then break; fi
+            done
+          fi
           if [ "$state" != 'absent' ] && [ "$state" != 'completed' ]; then
             echo "Same-revision visual campaign did not finish before serialization timeout: state=$state"
             exit 1
           fi
+          echo "VISUAL_SERIALIZATION_HEAD_SHA=$GEJAST_CERT_HEAD_SHA"
           echo "VISUAL_SERIALIZATION_STATE=$state conclusion=${conclusion:-none}"
           echo 'RESULT=V813_BROWSER_CAMPAIGN_SERIALIZATION_PASS'
 
@@ -149,6 +166,7 @@ jobs:
           token2="$(openssl rand -hex 24)"
           [[ "$token1" =~ ^[0-9a-f]{48}$ ]]
           [[ "$token2" =~ ^[0-9a-f]{48}$ ]]
+          test "$token1" != "$token2"
           echo "::add-mask::$token1"
           echo "::add-mask::$token2"
           echo "GEJAST_PLAYER1_TOKEN=$token1" >> "$GITHUB_ENV"
