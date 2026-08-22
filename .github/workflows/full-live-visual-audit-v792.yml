@@ -124,8 +124,8 @@ jobs:
         continue-on-error: true
         env:
           GEJAST_DATA_PLANE_TIMEOUT_MS: '8000'
-          GEJAST_DATA_PLANE_ATTEMPTS: '1'
-          GEJAST_DATA_PLANE_RETRY_DELAY_MS: '0'
+          GEJAST_DATA_PLANE_ATTEMPTS: '3'
+          GEJAST_DATA_PLANE_RETRY_DELAY_MS: '750'
         run: node check-live-data-plane.mjs
 
       - name: Provision disposable visual-audit identities through current login contract
