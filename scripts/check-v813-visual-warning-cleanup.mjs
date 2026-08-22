@@ -86,4 +86,5 @@ need(liveBrowserWorkflow, '[[ "$token1" =~ ^[0-9a-f]{48}$ ]]', 'browser fixture 
 need(liveBrowserWorkflow, '[[ "$token2" =~ ^[0-9a-f]{48}$ ]]', 'browser fixture token2 format assertion missing');
 forbid(liveBrowserWorkflow, /token[12]="v792-cert-/, 'legacy prefixed certification token reintroduced');
 
+// Metadata-only post-deploy trigger: product code is identical to deployed main d85cbde6.
 console.log('RESULT=V813_VISUAL_WARNING_CLEANUP_CONTRACT_PASS');
