@@ -1,136 +1,134 @@
 #!/usr/bin/env python3
 from pathlib import Path
 
-# Patch the already-live v771 Worker source checked out by the deployment workflow.
 p = Path('cloudflare/workers/admin-gate/src/worker.js')
 s = p.read_text()
+
 old = "const ADMIN_BUILD = 'v771-security-custom-media-header';"
-new = "const ADMIN_BUILD = 'v772-security-camera-controls';"
+new = "const ADMIN_BUILD = 'v772-security-direct-origin-controls';"
 if old not in s:
     raise SystemExit('v771 build marker missing')
 s = s.replace(old, new, 1)
 
+# Permit only the authenticated, narrowly-scoped camera control POST in addition
+# to the existing auth endpoints. All other /security methods remain fail-closed.
 old = "  if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();\n  if (url.pathname === '/security/new-clips')"
-new = "  const controlPost = request.method === 'POST' && /^\\/security\\/(?:new|s3)\\/api\\/control$/.test(url.pathname);\n  if (request.method !== 'GET' && request.method !== 'HEAD' && !controlPost) return methodNotAllowed();\n  if (url.pathname === '/security/new-clips')"
+new = "  const cameraControlPost = request.method === 'POST' && /^\\/security\\/(?:new|s3)\\/api\\/control$/.test(url.pathname);\n  if (request.method !== 'GET' && request.method !== 'HEAD' && !cameraControlPost) return methodNotAllowed();\n  if (url.pathname === '/security/new-clips')"
 if old not in s:
     raise SystemExit('security method marker missing')
 s = s.replace(old, new, 1)
 
-old = "    if (pathname === `${prefix}/api/events`) return `/${camera}/api/events`;\n    if (pathname === `${prefix}/api/status`) return `/${camera}/api/status`;\n    if (pathname === `${prefix}/live.mjpg`)"
-new = "    if (pathname === `${prefix}/api/events`) return `/${camera}/api/events`;\n    if (pathname === `${prefix}/api/status`) return `/${camera}/api/status`;\n    if (pathname === `${prefix}/api/controls`) return `/${camera}/api/controls`;\n    if (pathname === `${prefix}/api/control`) return `/${camera}/api/control`;\n    if (pathname === `${prefix}/live.mjpg`)"
+# The session mint is still a tiny Supabase request. In addition to the opaque
+# media session it returns a short-lived HMAC camera token and the strictly
+# validated quick-tunnel origin. They are stored only in the AES-GCM HttpOnly
+# Worker cookie and are never returned to browser JavaScript.
+old = """  const mediaData = await mediaRes.json().catch(() => ({}));
+  const mediaToken = String(mediaData?.media_token || '');
+  const expiryMs = Date.parse(String(mediaData?.expires_at || ''));
+  if (!mediaRes.ok || mediaData?.ok !== true ||
+      mediaToken.length < 32 || mediaToken.length > 256 ||
+      !Number.isFinite(expiryMs) || expiryMs <= Date.now()) {
+    return securityJson({ ok:false, error:'camera_origin_unavailable' }, 503);
+  }
+
+  const exp = Math.min(outer.exp, Math.floor(expiryMs / 1000), now() + SECURITY_MEDIA_TTL_SECONDS);
+  if (exp <= now()) return securityJson({ ok:false, error:'security_session_expired' }, 401);
+  const session = {
+    kind: 'security-media',
+    github: { id: String(outer.github?.id || ''), login: String(outer.github?.login || '') },
+    mediaToken, iat: now(), exp
+  };"""
+new = """  const mediaData = await mediaRes.json().catch(() => ({}));
+  const cameraOrigin = String(mediaData?.camera_origin || '').trim().replace(/\\/+$/, '');
+  const cameraToken = String(mediaData?.camera_token || '').trim();
+  const expiryMs = Date.parse(String(mediaData?.expires_at || ''));
+  const cameraExpiryMs = Date.parse(String(mediaData?.camera_token_expires_at || mediaData?.expires_at || ''));
+  if (!mediaRes.ok || mediaData?.ok !== true ||
+      !/^https:\\/\\/[a-z0-9-]+\\.trycloudflare\\.com$/i.test(cameraOrigin) ||
+      !/^[A-Za-z0-9_-]{16,1024}\\.[A-Za-z0-9_-]{32,256}$/.test(cameraToken) ||
+      !Number.isFinite(expiryMs) || expiryMs <= Date.now() ||
+      !Number.isFinite(cameraExpiryMs) || cameraExpiryMs <= Date.now()) {
+    return securityJson({ ok:false, error:'camera_origin_unavailable' }, 503);
+  }
+
+  const exp = Math.min(outer.exp, Math.floor(expiryMs / 1000), Math.floor(cameraExpiryMs / 1000), now() + SECURITY_MEDIA_TTL_SECONDS);
+  if (exp <= now()) return securityJson({ ok:false, error:'security_session_expired' }, 401);
+  const session = {
+    kind: 'security-media',
+    github: { id: String(outer.github?.id || ''), login: String(outer.github?.login || '') },
+    cameraOrigin, cameraToken, iat: now(), exp
+  };"""
+if old not in s:
+    raise SystemExit('security media session marker missing')
+s = s.replace(old, new, 1)
+
+old = """  const token = String(media.mediaToken || '');
+  return token.length >= 32 && token.length <= 512;"""
+new = """  const origin = String(media.cameraOrigin || '');
+  const token = String(media.cameraToken || '');
+  return /^https:\\/\\/[a-z0-9-]+\\.trycloudflare\\.com$/i.test(origin) &&
+    /^[A-Za-z0-9_-]{16,1024}\\.[A-Za-z0-9_-]{32,256}$/.test(token);"""
+if old not in s:
+    raise SystemExit('media validation marker missing')
+s = s.replace(old, new, 1)
+
+old = """    if (pathname === `${prefix}/api/events`) return `/${camera}/api/events`;
+    if (pathname === `${prefix}/api/status`) return `/${camera}/api/status`;
+    if (pathname === `${prefix}/live.mjpg`) return `/${camera}/live.mjpg`;"""
+new = """    if (pathname === `${prefix}/api/events`) return `/${camera}/api/events`;
+    if (pathname === `${prefix}/api/status`) return `/${camera}/api/status`;
+    if (pathname === `${prefix}/api/controls`) return `/${camera}/api/controls`;
+    if (pathname === `${prefix}/api/control`) return `/${camera}/api/control`;
+    if (pathname === `${prefix}/live.mjpg`) return `/${camera}/live.mjpg`;"""
 if old not in s:
     raise SystemExit('upstream path marker missing')
 s = s.replace(old, new, 1)
 
-old = "  const m = String(upstreamPath || '').match(/^\\/(new|s3)\\/(api\\/(status|events)|live\\.mjpg|snap\\/([^/]+)|clip\\/([^/]+))$/);"
-new = "  const m = String(upstreamPath || '').match(/^\\/(new|s3)\\/(api\\/(status|events|controls|control)|live\\.mjpg|snap\\/([^/]+)|clip\\/([^/]+))$/);"
-if old not in s:
-    raise SystemExit('proxy regex marker missing')
-s = s.replace(old, new, 1)
-
-old = "  if (m[3] === 'status' || m[3] === 'events') u.searchParams.set('kind', m[3]);"
-new = "  if (['status','events','controls','control'].includes(m[3])) u.searchParams.set('kind', m[3]);"
-if old not in s:
-    raise SystemExit('proxy kind marker missing')
-s = s.replace(old, new, 1)
-
-old = "  let response;\n  try { response = await fetch(target, { method: request.method, headers: upstreamHeaders, redirect: 'follow' }); }"
-new = "  let response;\n  let body;\n  if (request.method === 'POST') { const text = await request.text(); if (!text || text.length > 4096) return securityJson({ok:false,error:'bad_request'},400); upstreamHeaders.set('Content-Type','application/json'); body=text; }\n  try { response = await fetch(target, { method: request.method, headers: upstreamHeaders, body, redirect: 'follow' }); }"
-if old not in s:
-    raise SystemExit('proxy fetch marker missing')
-s = s.replace(old, new, 1)
-p.write_text(s)
-
-# Patch the static, protected Security UI. It stays same-origin and never receives
-# the C720P tunnel URL or HMAC secret.
-p = Path('security/index.html')
-s = p.read_text()
-css = """
-    .remote-live-actions{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px;border-top:1px solid var(--line)}.remote-live-actions .button{font-size:12px;padding:7px 10px}.bandwidth-note{margin:12px 0 0;padding:10px 12px;border:1px solid #5d4928;background:#1d180f;border-radius:12px;color:#d7c08f;font-size:12px}
-    .controls{margin-top:14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.control-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}.control-card h2{margin:0 0 10px;font-size:17px}.control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.ctl{display:grid;gap:5px;color:var(--muted);font-size:12px}.ctl select{width:100%;padding:9px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);font:inherit;font-weight:700}.control-note{margin-top:10px;color:var(--muted);font-size:12px}
-"""
-marker = "    .clips{display:grid;"
-if marker not in s:
-    raise SystemExit('css marker missing')
-s = s.replace(marker, css + '\n' + marker, 1)
-s = s.replace('@media(max-width:900px){.clips{', '@media(max-width:900px){.controls{grid-template-columns:1fr}.clips{', 1)
-s = s.replace('@media(max-width:560px){body{', '@media(max-width:560px){.control-grid{grid-template-columns:1fr}body{', 1)
-
-old = '''          <article class="live-card"><div class="live-head"><span class="cam-name">New camera</span><span id="newState" class="cam-state">waiting…</span></div><img id="newLive" class="live-frame" alt="New camera live stream" decoding="async"><div class="live-meta"><span>New IP camera</span><span id="newLast">Last motion: —</span></div></article>
-          <article class="live-card"><div class="live-head"><span class="cam-name">S3 camera</span><span id="s3State" class="cam-state">waiting…</span></div><img id="s3Live" class="live-frame" alt="S3 camera live stream" decoding="async"><div class="live-meta"><span>Existing S3 camera</span><span id="s3Last">Last motion: —</span></div></article>'''
-new = '''          <article class="live-card"><div class="live-head"><span class="cam-name">New camera</span><span id="newState" class="cam-state">waiting…</span></div><img id="newLive" class="live-frame" alt="New camera live stream" decoding="async"><div class="live-meta"><span>New IP camera</span><span id="newLast">Last motion: —</span></div><div class="remote-live-actions"><button class="button" type="button" data-live="new">Start live</button><button class="button" type="button" data-stop="new">Stop</button></div></article>
-          <article class="live-card"><div class="live-head"><span class="cam-name">S3 camera</span><span id="s3State" class="cam-state">waiting…</span></div><img id="s3Live" class="live-frame" alt="S3 camera live stream" decoding="async"><div class="live-meta"><span>Existing S3 camera</span><span id="s3Last">Last motion: —</span></div><div class="remote-live-actions"><button class="button" type="button" data-live="s3">Start live</button><button class="button" type="button" data-stop="s3">Stop</button></div></article>'''
-if old not in s:
-    raise SystemExit('live cards marker missing')
-s = s.replace(old, new, 1)
-
-old = '''        </div>
-      </section>
-      <section id="clipsView"'''
-new = '''        </div>
-        <div class="bandwidth-note">Remote live video is click-to-start and automatically stops after 2 minutes to protect the private relay data allowance. Local C720P live view is not limited.</div>
-        <section class="controls"><article class="control-card"><h2>New camera controls</h2><div id="newControls" class="control-grid"></div><div id="newControlNote" class="control-note">Loading capabilities…</div><button class="button" type="button" data-reload-controls="new">Reload</button></article><article class="control-card"><h2>S3 camera controls</h2><div id="s3Controls" class="control-grid"></div><div id="s3ControlNote" class="control-note">Loading capabilities…</div><button class="button" type="button" data-reload-controls="s3">Reload</button></article></section>
-      </section>
-      <section id="clipsView"'''
-if old not in s:
-    raise SystemExit('live section marker missing')
-s = s.replace(old, new, 1)
-
-old = "const state={unlocked:false,events:[],retries:{new:null,s3:null},sourceOnline:{new:false,s3:false},statusTimer:null},$=id=>document.getElementById(id),enc=encodeURIComponent;"
-new = "const state={unlocked:false,events:[],retries:{new:null,s3:null},liveTimers:{new:null,s3:null},sourceOnline:{new:false,s3:false},statusTimer:null},$=id=>document.getElementById(id),enc=encodeURIComponent;"
-if old not in s:
-    raise SystemExit('state marker missing')
-s = s.replace(old, new, 1)
-
-old = "  async function api(camera,p){const {res,data}=await readJson(await fetch(`/security/${camera}${p}`,{credentials:'same-origin',cache:'no-store'}));if(res.status===401){showInnerLogin('Security session expired. Authenticate again.');throw new Error('security_unlock_required')}if(!res.ok)throw new Error(data.error||`${camera} camera service ${res.status}`);return data}\n"
-new = old + "  async function apiPost(camera,p,body){const {res,data}=await readJson(await fetch(`/security/${camera}${p}`,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'content-type':'application/json'},body:JSON.stringify(body)}));if(res.status===401){showInnerLogin('Security session expired. Authenticate again.');throw new Error('security_unlock_required')}if(!res.ok)throw new Error(data.error||`${camera} camera service ${res.status}`);return data}\n"
-if old not in s:
-    raise SystemExit('api marker missing')
-s = s.replace(old, new, 1)
-
-old = "  function startLive(camera,force=false){if(!state.unlocked||mode!=='live'||state.sourceOnline[camera]!==true)return;const img=$(camera+'Live');if(!force&&img.getAttribute('src'))return;img.src=`/security/${camera}/live.mjpg?t=${Date.now()}`;$(camera+'State').textContent='connecting…';$(camera+'State').className='cam-state'}\n"
-new = "  function startLive(camera,force=false){if(!state.unlocked||mode!=='live'||state.sourceOnline[camera]!==true)return;const img=$(camera+'Live');if(!force&&img.getAttribute('src'))return;clearTimeout(state.liveTimers[camera]);img.src=`/security/${camera}/live.mjpg?t=${Date.now()}`;$(camera+'State').textContent='connecting…';$(camera+'State').className='cam-state';state.liveTimers[camera]=setTimeout(()=>{stopLive(camera);$(camera+'State').textContent='online · live stopped';$(camera+'State').className='cam-state ok'},120000)}\n"
-if old not in s:
-    raise SystemExit('startLive marker missing')
-s = s.replace(old, new, 1)
-
-old = "if(online){el.textContent=data?.recording?'recording':'online';el.className='cam-state ok';startLive(camera)}else"
-new = "if(online){el.textContent=data?.recording?'recording':'online';el.className='cam-state ok'}else"
-if old not in s:
-    raise SystemExit('auto-live marker missing')
-s = s.replace(old, new, 1)
-
-controls_js = """
-  function prettyControl(k){return String(k).replaceAll('_',' ')}
-  async function loadControls(camera){if(mode!=='live'||!state.unlocked)return;const box=$(camera+'Controls'),note=$(camera+'ControlNote');if(!box||!note)return;box.replaceChildren();note.textContent='Loading capabilities…';try{const d=await api(camera,'/api/controls'),controls=d.controls||{};for(const [key,c] of Object.entries(controls)){const label=document.createElement('label');label.className='ctl';const title=document.createElement('span');title.textContent=prettyControl(key);const sel=document.createElement('select');const vals=Array.isArray(c.available)?c.available:[];for(const v of vals){const o=document.createElement('option');o.value=String(v);o.textContent=String(v);if(String(v)===String(c.value))o.selected=true;sel.appendChild(o)}if(!vals.length){const o=document.createElement('option');o.value=String(c.value??'');o.textContent=String(c.value??'n/a');sel.appendChild(o);sel.disabled=true}sel.addEventListener('change',async()=>{sel.disabled=true;note.textContent='Applying '+prettyControl(key)+'…';try{const x=await apiPost(camera,'/api/control',{key,value:sel.value});note.textContent=prettyControl(key)+' = '+String(x.value);setTimeout(()=>loadControls(camera),700)}catch(e){if(String(e?.message||'')!=='security_unlock_required')note.textContent='Could not change '+prettyControl(key)+': '+e.message;sel.disabled=false}});label.append(title,sel);box.appendChild(label)}note.textContent=Object.keys(controls).length+' safe controls available. Recorder-critical settings stay locked.'}catch(e){if(String(e?.message||'')!=='security_unlock_required')note.textContent='Controls unavailable on this camera right now.'}}
-  function loadAllControls(){loadControls('new');loadControls('s3')}
-"""
-marker = "  async function lock(){"
-if marker not in s:
-    raise SystemExit('lock marker missing')
-s = s.replace(marker, controls_js + '\n' + marker, 1)
-
-old = "  bindLive('new');bindLive('s3');$('refreshBtn').addEventListener('click',refresh);"
-new = "  bindLive('new');bindLive('s3');document.querySelectorAll('[data-live]').forEach(b=>b.addEventListener('click',()=>startLive(b.dataset.live,true)));document.querySelectorAll('[data-stop]').forEach(b=>b.addEventListener('click',()=>stopLive(b.dataset.stop)));document.querySelectorAll('[data-reload-controls]').forEach(b=>b.addEventListener('click',()=>loadControls(b.dataset.reloadControls)));$('refreshBtn').addEventListener('click',()=>{refresh();loadAllControls()});"
-if old not in s:
-    raise SystemExit('bind marker missing')
-s = s.replace(old, new, 1)
-
-old = "await unlock();showApp();await refresh()"
-new = "await unlock();showApp();await refresh();loadAllControls()"
-if old not in s:
-    raise SystemExit('unlock refresh marker missing')
-s = s.replace(old, new, 1)
-
-old = "showApp();await refresh()}boot();"
-new = "showApp();await refresh();loadAllControls()}boot();"
-if old not in s:
-    raise SystemExit('boot marker missing')
-s = s.replace(old, new, 1)
-
-old = "for(const k of Object.keys(state.retries))clearTimeout(state.retries[k])"
-new = "for(const k of Object.keys(state.retries))clearTimeout(state.retries[k]);for(const k of Object.keys(state.liveTimers))clearTimeout(state.liveTimers[k])"
-if old not in s:
-    raise SystemExit('unload marker missing')
-s = s.replace(old, new, 1)
+start = s.index('function securityProxyTarget(upstreamPath) {')
+end = s.index('\nfunction bytesToB64url(bytes) {', start)
+replacement = r'''function securityProxyTarget(media, upstreamPath) {
+  const origin = String(media?.cameraOrigin || '').replace(/\/+$/, '');
+  const token = String(media?.cameraToken || '');
+  if (!/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i.test(origin) ||
+      !/^[A-Za-z0-9_-]{16,1024}\.[A-Za-z0-9_-]{32,256}$/.test(token)) return '';
+  if (!/^\/(?:new|s3)\/(?:api\/(?:status|events|controls|control)|live\.mjpg|snap\/[A-Za-z0-9._%-]+|clip\/[A-Za-z0-9._%-]+)$/.test(String(upstreamPath || ''))) return '';
+  const u = new URL(origin + upstreamPath);
+  u.searchParams.set('token', token);
+  return u.toString();
+}
+async function proxySecurityOrigin(request, media, upstreamPath) {
+  const target = securityProxyTarget(media, upstreamPath);
+  if (!target) return notFound();
+  const upstreamHeaders = new Headers();
+  for (const name of ['Range', 'If-Range', 'If-None-Match', 'If-Modified-Since']) {
+    const value = request.headers.get(name);
+    if (value) upstreamHeaders.set(name, value);
+  }
+  let body;
+  if (request.method === 'POST') {
+    const text = await request.text();
+    if (!text || text.length > 4096) return securityJson({ok:false,error:'bad_request'},400);
+    try { JSON.parse(text); } catch { return securityJson({ok:false,error:'bad_request'},400); }
+    upstreamHeaders.set('Content-Type','application/json');
+    body = text;
+  }
+  let response;
+  try {
+    // The origin is a strict trycloudflare hostname minted into an encrypted
+    // session. Refuse redirects so the HMAC query token can never leak onward.
+    response = await fetch(target, { method: request.method, headers: upstreamHeaders, body, redirect: 'error' });
+  } catch {
+    return securityJson({ ok:false, error:'camera_origin_unavailable' }, 502);
+  }
+  if (response.status === 401 || response.status === 403) {
+    return securityJson({ ok:false, error:'security_unlock_required' }, 401, true);
+  }
+  const headers = securityResponseHeaders();
+  for (const name of ['Content-Type','Content-Length','Content-Range','Accept-Ranges','ETag','Last-Modified','Content-Disposition']) {
+    const value = response.headers.get(name);
+    if (value) headers.set(name, value);
+  }
+  return new Response(request.method === 'HEAD' ? null : response.body, { status: response.status, statusText: response.statusText, headers });
+}'''
+s = s[:start] + replacement + s[end:]
 p.write_text(s)
