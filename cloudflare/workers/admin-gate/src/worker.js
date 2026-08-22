@@ -9,12 +9,12 @@ const SECURITY_MEDIA_TTL_SECONDS = 15 * 60;
 const SUPABASE_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
 const SECURITY_MEDIA_SESSION_URL = `${SUPABASE_URL}/functions/v1/c720p-security-media?action=session`;
-const SECURITY_MEDIA_PROXY_URL = `${SUPABASE_URL}/functions/v1/c720p-security-media?action=proxy`;
+const SECURITY_MEDIA_PROXY_URL = `${SUPABASE_URL}/functions/v1/c720p-security-relay`;
 const SESSION_TTL_SECONDS = 30 * 60;
 const OAUTH_TTL_SECONDS = 10 * 60;
 const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
-const ADMIN_BUILD = 'v768-security-same-origin-media-proxy';
+const ADMIN_BUILD = 'v769-security-clock-skew-safe-relay';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
