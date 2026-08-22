@@ -25,6 +25,12 @@ jobs:
           ref: agent/dual-camera-security-deploy
           fetch-depth: 0
 
+      - name: Mark deployment started
+        shell: bash
+        run: |
+          set -euo pipefail
+          git push --force origin HEAD:agent/v774-stage-started
+
       - name: Prepare v774 from certified v772 components
         shell: bash
         run: |
@@ -45,6 +51,7 @@ jobs:
           grep -q "cameraOrigin" cloudflare/workers/admin-gate/src/worker.js
           grep -q "securityProxyTarget(media" cloudflare/workers/admin-gate/src/worker.js
           grep -q "trycloudflare\\.com" cloudflare/workers/admin-gate/src/worker.js
+          git push --force origin HEAD:agent/v774-stage-prepared
           echo V774_STATIC=PASS
 
       - name: Deploy with rollback
@@ -64,6 +71,7 @@ jobs:
           }
           trap rollback EXIT
           (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy)
+          git push --force origin HEAD:agent/v774-stage-deployed
           ok=0
           for attempt in $(seq 1 15); do
             build=$(curl -sS -o /dev/null -D - https://admin.kalenel.nl/admin.html | awk 'BEGIN{IGNORECASE=1}/^x-kalenel-admin-build:/{sub(/\r$/,"");print $2;exit}')
@@ -80,6 +88,7 @@ jobs:
           done
           test "$ok" = 1
           trap - EXIT
+          git push --force origin HEAD:agent/v774-stage-edge-pass
           echo V774_EDGE=PASS
 
       - name: Push reconciled source branch
