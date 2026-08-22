@@ -14,7 +14,7 @@ const SESSION_TTL_SECONDS = 30 * 60;
 const OAUTH_TTL_SECONDS = 10 * 60;
 const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
-const ADMIN_BUILD = 'v771-security-custom-media-header';
+const ADMIN_BUILD = 'v772-security-camera-controls';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -115,7 +115,8 @@ async function handlePublicSecurity(request, env, url) {
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
   }
 
-  if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();
+  const controlPost = request.method === 'POST' && /^\/security\/(?:new|s3)\/api\/control$/.test(url.pathname);
+  if (request.method !== 'GET' && request.method !== 'HEAD' && !controlPost) return methodNotAllowed();
   if (url.pathname === '/security/new-clips') return canonicalRedirect('/security/new-clips/');
   if (url.pathname === '/security/s3-clips') return canonicalRedirect('/security/s3-clips/');
   if (url.pathname === '/security/' || url.pathname === '/security/new-clips/' || url.pathname === '/security/s3-clips/') {
@@ -396,6 +397,8 @@ function securityUpstreamPath(pathname) {
     const prefix = `/security/${camera}`;
     if (pathname === `${prefix}/api/events`) return `/${camera}/api/events`;
     if (pathname === `${prefix}/api/status`) return `/${camera}/api/status`;
+    if (pathname === `${prefix}/api/controls`) return `/${camera}/api/controls`;
+    if (pathname === `${prefix}/api/control`) return `/${camera}/api/control`;
     if (pathname === `${prefix}/live.mjpg`) return `/${camera}/live.mjpg`;
     if (pathname.startsWith(`${prefix}/snap/`)) {
       const name = cleanSecurityFilename(pathname.slice(`${prefix}/snap/`.length));
@@ -421,11 +424,11 @@ function securityUpstreamPath(pathname) {
   return '';
 }
 function securityProxyTarget(upstreamPath) {
-  const m = String(upstreamPath || '').match(/^\/(new|s3)\/(api\/(status|events)|live\.mjpg|snap\/([^/]+)|clip\/([^/]+))$/);
+  const m = String(upstreamPath || '').match(/^\/(new|s3)\/(api\/(status|events|controls|control)|live\.mjpg|snap\/([^/]+)|clip\/([^/]+))$/);
   if (!m) return '';
   const u = new URL(SECURITY_MEDIA_PROXY_URL);
   u.searchParams.set('camera', m[1]);
-  if (m[3] === 'status' || m[3] === 'events') u.searchParams.set('kind', m[3]);
+  if (['status','events','controls','control'].includes(m[3])) u.searchParams.set('kind', m[3]);
   else if (m[2] === 'live.mjpg') u.searchParams.set('kind', 'live');
   else if (m[4]) { u.searchParams.set('kind', 'snap'); u.searchParams.set('name', decodeURIComponent(m[4])); }
   else if (m[5]) { u.searchParams.set('kind', 'clip'); u.searchParams.set('name', decodeURIComponent(m[5])); }
@@ -441,7 +444,9 @@ async function proxySecurityOrigin(request, media, upstreamPath) {
     if (value) upstreamHeaders.set(name, value);
   }
   let response;
-  try { response = await fetch(target, { method: request.method, headers: upstreamHeaders, redirect: 'follow' }); }
+  let body;
+  if (request.method === 'POST') { const text = await request.text(); if (!text || text.length > 4096) return securityJson({ok:false,error:'bad_request'},400); upstreamHeaders.set('Content-Type','application/json'); body=text; }
+  try { response = await fetch(target, { method: request.method, headers: upstreamHeaders, body, redirect: 'follow' }); }
   catch { return securityJson({ ok:false, error:'camera_origin_unavailable' }, 502); }
   if (response.status === 401 || response.status === 403) return securityJson({ ok:false, error:'security_unlock_required' }, 401, true);
   const headers = securityResponseHeaders();
