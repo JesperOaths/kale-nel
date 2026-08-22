@@ -4,16 +4,24 @@ import fs from 'node:fs';
 const configText = fs.readFileSync('gejast-config.js', 'utf8');
 const supabaseUrl = configText.match(/SUPABASE_URL:\s*'([^']+)'/)?.[1]?.replace(/\/+$/, '');
 const publishableKey = configText.match(/SUPABASE_PUBLISHABLE_KEY:\s*'([^']+)'/)?.[1]?.trim();
-const timeoutMs = Number(process.env.GEJAST_DATA_PLANE_TIMEOUT_MS || 10000);
-const attempts = Number(process.env.GEJAST_DATA_PLANE_ATTEMPTS || 2);
-const retryDelayMs = Number(process.env.GEJAST_DATA_PLANE_RETRY_DELAY_MS || 750);
+
+// This is a release-certification preflight, not an interactive request. A single
+// transient edge/database stall must not force the entire visual campaign into
+// degraded anonymous mode. Keep the probe bounded and fail closed after three
+// independent attempts.
+const requestedTimeoutMs = Number(process.env.GEJAST_DATA_PLANE_TIMEOUT_MS || 10000);
+const requestedAttempts = Number(process.env.GEJAST_DATA_PLANE_ATTEMPTS || 3);
+const requestedRetryDelayMs = Number(process.env.GEJAST_DATA_PLANE_RETRY_DELAY_MS || 1500);
+const timeoutMs = Math.max(10000, requestedTimeoutMs);
+const attempts = Math.max(3, requestedAttempts);
+const retryDelayMs = Math.max(1500, requestedRetryDelayMs);
 const rpcName = 'account_public_state_v687';
 const invalidSession = '000000000000000000000000000000000000000000000000';
 
 if (!supabaseUrl || !publishableKey) throw new Error('DATA_PLANE_FAIL checked-in Supabase public config unavailable');
 if (!Number.isFinite(timeoutMs) || timeoutMs < 1000 || timeoutMs > 15000) throw new Error(`DATA_PLANE_FAIL timeout out of bounds: ${timeoutMs}`);
-if (!Number.isInteger(attempts) || attempts < 1 || attempts > 2) throw new Error(`DATA_PLANE_FAIL attempts out of bounds: ${attempts}`);
-if (!Number.isFinite(retryDelayMs) || retryDelayMs < 0 || retryDelayMs > 2000) throw new Error(`DATA_PLANE_FAIL retry delay out of bounds: ${retryDelayMs}`);
+if (!Number.isInteger(attempts) || attempts < 1 || attempts > 3) throw new Error(`DATA_PLANE_FAIL attempts out of bounds: ${attempts}`);
+if (!Number.isFinite(retryDelayMs) || retryDelayMs < 0 || retryDelayMs > 2500) throw new Error(`DATA_PLANE_FAIL retry delay out of bounds: ${retryDelayMs}`);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
