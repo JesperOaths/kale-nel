@@ -40,24 +40,7 @@ jobs:
           git checkout origin/agent/security-controls-v772 -- security/index.html
           cp cloudflare/workers/admin-gate/src/worker.js /tmp/worker.before.js
           cp security/index.html /tmp/security.before.html
-          set +e
-          python3 scripts/deploy-security-v774.py >/tmp/v774-patch.log 2>&1
-          rc=$?
-          {
-            echo PATCH_RC=$rc
-            cat /tmp/v774-patch.log
-            echo WORKER_BUILD_LINES
-            grep -n "ADMIN_BUILD" cloudflare/workers/admin-gate/src/worker.js || true
-            echo UI_MARKERS
-            grep -nE 'newStorage|data-preset|loadControls|newControls' security/index.html | head -40 || true
-          } > v774-prepare-diagnostic.txt
-          git config user.name 'Kalenel Security Bot'
-          git config user.email 'actions@users.noreply.github.com'
-          git add -- cloudflare/workers/admin-gate/src/worker.js security/index.html v774-prepare-diagnostic.txt
-          git commit -m 'Capture v774 prepare output' || true
-          git push --force origin HEAD:agent/v774-prepare-output
-          test "$rc" = 0
-          set -e
+          python3 scripts/deploy-security-v774.py
           node --check cloudflare/workers/admin-gate/src/worker.js
           node scripts/build-admin-worker-assets.mjs
           git diff --check -- cloudflare/workers/admin-gate/src/worker.js security/index.html
@@ -67,7 +50,7 @@ jobs:
           grep -q "SECURITY_MEDIA_SESSION_URL" cloudflare/workers/admin-gate/src/worker.js
           grep -q "cameraOrigin" cloudflare/workers/admin-gate/src/worker.js
           grep -q "securityProxyTarget(media" cloudflare/workers/admin-gate/src/worker.js
-          grep -q "trycloudflare\\.com" cloudflare/workers/admin-gate/src/worker.js
+          grep -Fq "trycloudflare\\.com" cloudflare/workers/admin-gate/src/worker.js
           git push --force origin HEAD:agent/v774-stage-prepared
           echo V774_STATIC=PASS
 
