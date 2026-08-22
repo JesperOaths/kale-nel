@@ -32,6 +32,8 @@ jobs:
         run: node scripts/test-security-worker-gate-v813.mjs
       - name: v813 secure active-name compatibility runtime
         run: node scripts/test-auth-gate-active-names-v813.mjs
+      - name: v813 bounded transient auth retry
+        run: node scripts/test-auth-gate-transient-v813.mjs
       - name: v813 login-name public RPC boundary
         run: node scripts/test-login-names-fallback-v813.mjs
       - name: Independent static publication integrity
