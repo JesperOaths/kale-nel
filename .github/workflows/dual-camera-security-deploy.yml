@@ -91,15 +91,21 @@ jobs:
           git push --force origin HEAD:agent/v774-stage-edge-pass
           echo V774_EDGE=PASS
 
-      - name: Push reconciled source branch
+      - name: Push clean reconciled source branch
         shell: bash
         run: |
           set -euo pipefail
+          cp cloudflare/workers/admin-gate/src/worker.js /tmp/worker.v774.js
+          cp security/index.html /tmp/security.v774.html
+          git fetch origin main
+          git checkout -B agent/security-v774-clean origin/main
+          cp /tmp/worker.v774.js cloudflare/workers/admin-gate/src/worker.js
+          cp /tmp/security.v774.html security/index.html
           git config user.name 'Kalenel Security Bot'
           git config user.email 'actions@users.noreply.github.com'
-          git checkout -B agent/security-v774
           git add -- cloudflare/workers/admin-gate/src/worker.js security/index.html
           git diff --cached --check
-          git commit -m 'Add Security storage metrics and safe camera presets' || true
-          git push --force origin HEAD:agent/security-v774
+          test "$(git diff --cached --name-only | wc -l)" -eq 2
+          git commit -m 'Add Security storage metrics and safe camera presets'
+          git push --force origin HEAD:agent/security-v774-clean
           echo V774_SOURCE_BRANCH=PASS
