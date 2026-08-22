@@ -42,8 +42,9 @@ jobs:
           grep -q 'newStorage' security/index.html
           grep -q 'data-preset="maxnight"' security/index.html
           grep -q "SECURITY_MEDIA_SESSION_URL" cloudflare/workers/admin-gate/src/worker.js
-          grep -q "media.origin" cloudflare/workers/admin-gate/src/worker.js
-          ! grep -q "SECURITY_MEDIA_PROXY_URL" cloudflare/workers/admin-gate/src/worker.js
+          grep -q "cameraOrigin" cloudflare/workers/admin-gate/src/worker.js
+          grep -q "securityProxyTarget(media" cloudflare/workers/admin-gate/src/worker.js
+          grep -q "trycloudflare\\.com" cloudflare/workers/admin-gate/src/worker.js
           echo V774_STATIC=PASS
 
       - name: Deploy with rollback
