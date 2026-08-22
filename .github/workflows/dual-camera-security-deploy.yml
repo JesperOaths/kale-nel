@@ -1,4 +1,4 @@
-name: Kalenel security relay v770
+name: Kalenel security relay v771
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Patch Worker relay transport
+      - name: Patch Worker media auth transport
         shell: bash
         run: |
           set -euo pipefail
@@ -33,8 +33,12 @@ jobs:
           from pathlib import Path
           p=Path('cloudflare/workers/admin-gate/src/worker.js')
           s=p.read_text()
-          s=s.replace("const ADMIN_BUILD = 'v768-security-same-origin-media-proxy';", "const ADMIN_BUILD = 'v770-security-relay-fetch-follow';", 1)
+          s=s.replace("const ADMIN_BUILD = 'v768-security-same-origin-media-proxy';", "const ADMIN_BUILD = 'v771-security-custom-media-header';", 1)
           s=s.replace("const SECURITY_MEDIA_PROXY_URL = `${SUPABASE_URL}/functions/v1/c720p-security-media?action=proxy`;", "const SECURITY_MEDIA_PROXY_URL = `${SUPABASE_URL}/functions/v1/c720p-security-relay`;", 1)
+          old="const upstreamHeaders = new Headers({ Authorization: `Bearer ${media.mediaToken}`, Origin: `https://${PUBLIC_HOST}` });"
+          new="const upstreamHeaders = new Headers({ 'X-Kalenel-Media-Token': String(media.mediaToken) });"
+          if old not in s: raise SystemExit('upstream auth header contract changed')
+          s=s.replace(old,new,1)
           old="fetch(target, { method: request.method, headers: upstreamHeaders, redirect: 'error' })"
           new="fetch(target, { method: request.method, headers: upstreamHeaders, redirect: 'follow' })"
           if old not in s: raise SystemExit('proxy fetch contract changed')
@@ -44,16 +48,17 @@ jobs:
           node --check cloudflare/workers/admin-gate/src/worker.js
           node scripts/build-admin-worker-assets.mjs
           git diff --check -- cloudflare/workers/admin-gate/src/worker.js
-          grep -q "ADMIN_BUILD = 'v770-security-relay-fetch-follow'" cloudflare/workers/admin-gate/src/worker.js
+          grep -q "ADMIN_BUILD = 'v771-security-custom-media-header'" cloudflare/workers/admin-gate/src/worker.js
           grep -q 'functions/v1/c720p-security-relay' cloudflare/workers/admin-gate/src/worker.js
-          grep -q "redirect: 'follow'" cloudflare/workers/admin-gate/src/worker.js
-          echo V770_STATIC=PASS
+          grep -q 'X-Kalenel-Media-Token' cloudflare/workers/admin-gate/src/worker.js
+          ! grep -q 'Authorization: `Bearer ${media.mediaToken}`' cloudflare/workers/admin-gate/src/worker.js
+          echo V771_STATIC=PASS
 
       - name: Deploy with rollback
         shell: bash
         run: |
           set -euo pipefail
-          rollback(){ rc=$?; if [ "$rc" -ne 0 ]; then echo V770_ROLLBACK=YES; cp /tmp/worker.before.js cloudflare/workers/admin-gate/src/worker.js; node scripts/build-admin-worker-assets.mjs; (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy) || true; fi; exit "$rc"; }
+          rollback(){ rc=$?; if [ "$rc" -ne 0 ]; then echo V771_ROLLBACK=YES; cp /tmp/worker.before.js cloudflare/workers/admin-gate/src/worker.js; node scripts/build-admin-worker-assets.mjs; (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy) || true; fi; exit "$rc"; }
           trap rollback EXIT
           (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy)
           ok=0
@@ -64,12 +69,12 @@ jobs:
             public_code=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/ || true)
             build=$(curl -sS -o /dev/null -D - https://admin.kalenel.nl/admin.html | awk 'BEGIN{IGNORECASE=1}/^x-kalenel-admin-build:/{sub(/\r$/,"");print $2;exit}')
             echo TRY=$attempt BUILD=$build ROOT=$root_code:$root_loc UNAUTH_MEDIA=$media_code PUBLIC=$public_code
-            if [ "$build" = 'v770-security-relay-fetch-follow' ] && [ "$root_code" = 302 ] && [ "$root_loc" = 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2F' ] && [ "$media_code" = 302 ] && [ "$public_code" = 200 ]; then ok=1; break; fi
+            if [ "$build" = 'v771-security-custom-media-header' ] && [ "$root_code" = 302 ] && [ "$root_loc" = 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2F' ] && [ "$media_code" = 302 ] && [ "$public_code" = 200 ]; then ok=1; break; fi
             sleep 4
           done
           test "$ok" = 1
           trap - EXIT
-          echo V770_EDGE=PASS
+          echo V771_EDGE=PASS
 
       - name: Push source branch
         shell: bash
@@ -77,10 +82,10 @@ jobs:
           set -euo pipefail
           git config user.name 'Kalenel Security Bot'
           git config user.email 'actions@users.noreply.github.com'
-          git checkout -B agent/security-relay-v770
+          git checkout -B agent/security-relay-v771
           git add -- cloudflare/workers/admin-gate/src/worker.js
           git diff --cached --check
           test "$(git diff --cached --name-only | wc -l)" -eq 1
-          git commit -m 'Allow trusted security relay redirects'
-          git push --force origin HEAD:agent/security-relay-v770
-          echo V770_SOURCE_BRANCH=PASS
+          git commit -m 'Use custom media auth header for security relay'
+          git push --force origin HEAD:agent/security-relay-v771
+          echo V771_SOURCE_BRANCH=PASS
