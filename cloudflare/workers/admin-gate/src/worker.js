@@ -8,12 +8,13 @@ const SECURITY_MEDIA_COOKIE = '__Host-kalenel_security_media';
 const SECURITY_MEDIA_TTL_SECONDS = 15 * 60;
 const SUPABASE_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
-const SECURITY_CONTROL_URL = `${SUPABASE_URL}/functions/v1/c720p-security-control?action=session`;
+const SECURITY_MEDIA_SESSION_URL = `${SUPABASE_URL}/functions/v1/c720p-security-media?action=session`;
+const SECURITY_MEDIA_PROXY_URL = `${SUPABASE_URL}/functions/v1/c720p-security-media?action=proxy`;
 const SESSION_TTL_SECONDS = 30 * 60;
 const OAUTH_TTL_SECONDS = 10 * 60;
 const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
-const ADMIN_BUILD = 'v767-security-canonical-route';
+const ADMIN_BUILD = 'v768-security-same-origin-media-proxy';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -350,18 +351,16 @@ async function securityInnerLogin(request, env, outer) {
     return securityJson({ ok:false, error:'invalid_credentials' }, 401);
   }
 
-  const controlRes = await fetch(SECURITY_CONTROL_URL, {
+  const mediaRes = await fetch(SECURITY_MEDIA_SESSION_URL, {
     method: 'POST',
     headers: { Origin: `https://${PUBLIC_HOST}`, 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({ admin_session_token: adminToken })
   });
-  const control = await controlRes.json().catch(() => ({}));
-  const origin = String(control?.origin || '').replace(/\/+$/, '');
-  const mediaToken = String(control?.media_token || '');
-  const expiryMs = Date.parse(String(control?.expires_at || ''));
-  if (!controlRes.ok || control?.ok !== true ||
-      !/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i.test(origin) ||
-      mediaToken.length < 32 || mediaToken.length > 512 ||
+  const mediaData = await mediaRes.json().catch(() => ({}));
+  const mediaToken = String(mediaData?.media_token || '');
+  const expiryMs = Date.parse(String(mediaData?.expires_at || ''));
+  if (!mediaRes.ok || mediaData?.ok !== true ||
+      mediaToken.length < 32 || mediaToken.length > 256 ||
       !Number.isFinite(expiryMs) || expiryMs <= Date.now()) {
     return securityJson({ ok:false, error:'camera_origin_unavailable' }, 503);
   }
@@ -371,7 +370,7 @@ async function securityInnerLogin(request, env, outer) {
   const session = {
     kind: 'security-media',
     github: { id: String(outer.github?.id || ''), login: String(outer.github?.login || '') },
-    origin, mediaToken, iat: now(), exp
+    mediaToken, iat: now(), exp
   };
   const headers = securityResponseHeaders({ 'Content-Type': 'application/json; charset=utf-8' });
   headers.append('Set-Cookie', await encryptedCookie(env, SECURITY_MEDIA_COOKIE, session, Math.max(1, exp - now())));
@@ -382,7 +381,6 @@ function validSecurityMediaSession(env, media, outer) {
   if (!media.github || !isAllowedGithubAccount(env, media.github)) return false;
   if (normalizeGithubId(media.github.id) !== normalizeGithubId(outer.github?.id)) return false;
   if (normalizeGithubLogin(media.github.login) !== normalizeGithubLogin(outer.github?.login)) return false;
-  if (!/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i.test(String(media.origin || ''))) return false;
   const token = String(media.mediaToken || '');
   return token.length >= 32 && token.length <= 512;
 }
@@ -422,19 +420,28 @@ function securityUpstreamPath(pathname) {
   }
   return '';
 }
+function securityProxyTarget(upstreamPath) {
+  const m = String(upstreamPath || '').match(/^\/(new|s3)\/(api\/(status|events)|live\.mjpg|snap\/([^/]+)|clip\/([^/]+))$/);
+  if (!m) return '';
+  const u = new URL(SECURITY_MEDIA_PROXY_URL);
+  u.searchParams.set('camera', m[1]);
+  if (m[3] === 'status' || m[3] === 'events') u.searchParams.set('kind', m[3]);
+  else if (m[2] === 'live.mjpg') u.searchParams.set('kind', 'live');
+  else if (m[4]) { u.searchParams.set('kind', 'snap'); u.searchParams.set('name', decodeURIComponent(m[4])); }
+  else if (m[5]) { u.searchParams.set('kind', 'clip'); u.searchParams.set('name', decodeURIComponent(m[5])); }
+  else return '';
+  return u.toString();
+}
 async function proxySecurityOrigin(request, media, upstreamPath) {
-  let base;
-  try { base = new URL(media.origin); } catch { return securityJson({ok:false,error:'camera_origin_invalid'},502,true); }
-  base.pathname = upstreamPath;
-  base.search = '';
-  base.searchParams.set('token', media.mediaToken);
-  const upstreamHeaders = new Headers();
+  const target = securityProxyTarget(upstreamPath);
+  if (!target) return notFound();
+  const upstreamHeaders = new Headers({ Authorization: `Bearer ${media.mediaToken}`, Origin: `https://${PUBLIC_HOST}` });
   for (const name of ['Range', 'If-Range', 'If-None-Match', 'If-Modified-Since']) {
     const value = request.headers.get(name);
     if (value) upstreamHeaders.set(name, value);
   }
   let response;
-  try { response = await fetch(base.toString(), { method: request.method, headers: upstreamHeaders, redirect: 'error' }); }
+  try { response = await fetch(target, { method: request.method, headers: upstreamHeaders, redirect: 'error' }); }
   catch { return securityJson({ ok:false, error:'camera_origin_unavailable' }, 502); }
   if (response.status === 401 || response.status === 403) return securityJson({ ok:false, error:'security_unlock_required' }, 401, true);
   const headers = securityResponseHeaders();
