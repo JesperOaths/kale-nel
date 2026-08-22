@@ -8,7 +8,7 @@ const SECURITY_MEDIA = '__Host-kalenel_security_media';
 const MEDIA_TOKEN = `media-${'m'.repeat(48)}`;
 const ADMIN_TOKEN = `admin-${'a'.repeat(40)}`;
 const MEDIA_SESSION_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-media?action=session';
-const MEDIA_PROXY_PREFIX = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-media?action=proxy';
+const MEDIA_PROXY_PREFIX = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-relay';
 const ENV_KEYS = {
   cookie: ['COOKIE', 'SECRET'].join('_'),
   approvedId: ['APPROVED', 'GITHUB', 'ID'].join('_'),
@@ -129,8 +129,9 @@ globalThis.fetch = async (input, init = {}) => {
     const name = parsed.searchParams.get('name');
     assert.ok(camera === 'new' || camera === 's3');
     assert.ok(['status', 'events', 'live', 'snap', 'clip'].includes(kind));
-    assert.equal(requestHeaders.get('Authorization'), `Bearer ${MEDIA_TOKEN}`);
-    assert.equal(requestHeaders.get('Origin'), 'https://kalenel.nl');
+    assert.equal(requestHeaders.get('X-Kalenel-Media-Token'), MEDIA_TOKEN);
+    assert.equal(requestHeaders.get('Authorization'), null);
+    assert.equal(init.redirect, 'follow');
     upstreamCalls.push({ url: value, camera, kind, name, range: requestHeaders.get('Range') || '' });
     if (camera === 's3' && kind === 'events') return new Response('upstream auth expired', { status: 401 });
     let path = `/${camera}`;
