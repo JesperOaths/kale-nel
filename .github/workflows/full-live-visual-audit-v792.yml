@@ -123,9 +123,11 @@ jobs:
         id: data_plane
         continue-on-error: true
         env:
-          GEJAST_DATA_PLANE_TIMEOUT_MS: '8000'
-          GEJAST_DATA_PLANE_ATTEMPTS: '1'
-          GEJAST_DATA_PLANE_RETRY_DELAY_MS: '0'
+          # A single slow edge/database response must not discard an otherwise valid
+          # authenticated visual campaign. Three bounded probes still fail closed.
+          GEJAST_DATA_PLANE_TIMEOUT_MS: '10000'
+          GEJAST_DATA_PLANE_ATTEMPTS: '3'
+          GEJAST_DATA_PLANE_RETRY_DELAY_MS: '1500'
         run: node check-live-data-plane.mjs
 
       - name: Provision disposable visual-audit identities through current login contract
