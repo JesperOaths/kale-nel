@@ -49,6 +49,21 @@ jobs:
           sudo apt-get update >/dev/null
           sudo apt-get install -y postgresql-client >/dev/null
 
+      - name: Use transaction pooler for short-lived CI SQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          ci_db_url="$SUPABASE_DB_URL"
+          case "$SUPABASE_DB_URL" in
+            *".pooler.supabase.com:5432/"*)
+              ci_db_url="${SUPABASE_DB_URL/:5432\//:6543/}"
+              ;;
+          esac
+          test -n "$ci_db_url"
+          echo "::add-mask::$ci_db_url"
+          echo "SUPABASE_DB_URL=$ci_db_url" >> "$GITHUB_ENV"
+          echo 'RESULT=V813_ACCOUNT_SHORT_LIVED_DB_POOL_READY'
+
       - name: Provision one randomized requestable identity only
         shell: bash
         run: |
