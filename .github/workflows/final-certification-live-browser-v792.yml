@@ -28,11 +28,9 @@ permissions:
   contents: read
   actions: read
 
-# Use a dedicated concurrency group. Sharing the visual-audit group caused one
-# of two simultaneously-triggered workflows to be discarded because GitHub
-# only retains one pending run per concurrency key. A preflight below waits for
-# the same-revision visual run, when present, so the database-heavy campaigns
-# remain serialized without losing either proof.
+# Keep this workflow in its own concurrency group. The explicit discovery/wait
+# step below serializes it behind a same-revision visual run without allowing
+# GitHub's single-pending-run rule to discard either certification campaign.
 concurrency:
   group: v792-final-live-browser-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
@@ -79,7 +77,10 @@ jobs:
           api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/full-live-visual-audit-v792.yml/runs?head_sha=${GITHUB_SHA}&per_page=20"
           state='absent'
           conclusion=''
-          for i in $(seq 1 180); do
+          # Give the sibling workflow time to appear in the Actions API. The old
+          # implementation treated the first 'absent' response as authoritative,
+          # which allowed both DB-heavy campaigns to start together.
+          for discovery in $(seq 1 12); do
             payload="$(curl -fsS --max-time 15 \
               -H "Authorization: Bearer ${GH_TOKEN}" \
               -H 'Accept: application/vnd.github+json' \
@@ -87,11 +88,22 @@ jobs:
               "$api")"
             state="$(printf '%s' "$payload" | jq -r '.workflow_runs | sort_by(.created_at) | last | .status // "absent"')"
             conclusion="$(printf '%s' "$payload" | jq -r '.workflow_runs | sort_by(.created_at) | last | .conclusion // ""')"
-            if [ "$state" = 'absent' ] || [ "$state" = 'completed' ]; then
-              break
-            fi
-            if [ "$i" -lt 180 ]; then sleep 10; fi
+            if [ "$state" != 'absent' ]; then break; fi
+            if [ "$discovery" -lt 12 ]; then sleep 5; fi
           done
+          if [ "$state" != 'absent' ] && [ "$state" != 'completed' ]; then
+            for i in $(seq 1 180); do
+              sleep 10
+              payload="$(curl -fsS --max-time 15 \
+                -H "Authorization: Bearer ${GH_TOKEN}" \
+                -H 'Accept: application/vnd.github+json' \
+                -H 'X-GitHub-Api-Version: 2022-11-28' \
+                "$api")"
+              state="$(printf '%s' "$payload" | jq -r '.workflow_runs | sort_by(.created_at) | last | .status // "absent"')"
+              conclusion="$(printf '%s' "$payload" | jq -r '.workflow_runs | sort_by(.created_at) | last | .conclusion // ""')"
+              if [ "$state" = 'completed' ]; then break; fi
+            done
+          fi
           if [ "$state" != 'absent' ] && [ "$state" != 'completed' ]; then
             echo "Same-revision visual campaign did not finish before serialization timeout: state=$state"
             exit 1
@@ -133,9 +145,7 @@ jobs:
           set -euo pipefail
           ci_db_url="$SUPABASE_DB_URL"
           case "$SUPABASE_DB_URL" in
-            *".pooler.supabase.com:5432/"*)
-              ci_db_url="${SUPABASE_DB_URL/:5432\//:6543/}"
-              ;;
+            *".pooler.supabase.com:5432/"*) ci_db_url="${SUPABASE_DB_URL/:5432\//:6543/}" ;;
           esac
           test -n "$ci_db_url"
           echo "::add-mask::$ci_db_url"
@@ -149,8 +159,14 @@ jobs:
           suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
           name1="CertA_${suffix}"
           name2="CertB_${suffix}"
-          token1="v792-cert-$(openssl rand -hex 32)"
-          token2="v792-cert-$(openssl rand -hex 32)"
+          # Production gejast-config.js intentionally accepts canonical login
+          # sessions only: exactly 48 hexadecimal characters. Certification must
+          # use the same contract rather than a synthetic prefixed token format.
+          token1="$(openssl rand -hex 24)"
+          token2="$(openssl rand -hex 24)"
+          [[ "$token1" =~ ^[0-9a-f]{48}$ ]]
+          [[ "$token2" =~ ^[0-9a-f]{48}$ ]]
+          test "$token1" != "$token2"
           echo "::add-mask::$token1"
           echo "::add-mask::$token2"
           echo "GEJAST_PLAYER1_TOKEN=$token1" >> "$GITHUB_ENV"
@@ -210,13 +226,11 @@ jobs:
                  coalesce((public._jas_session_player(:'token1')).display_name,''),
                  coalesce((public._jas_session_player(:'token2')).display_name,'');
           SQL
-
           resolved=''
           ok=0
           for attempt in 1 2 3; do
             if resolved="$(psql "$SUPABASE_CI_DB_URL" -X -v ON_ERROR_STOP=1 -At -F'|' \
-              -v token1="$GEJAST_PLAYER1_TOKEN" -v token2="$GEJAST_PLAYER2_TOKEN" \
-              -f "$sql_file")"; then
+              -v token1="$GEJAST_PLAYER1_TOKEN" -v token2="$GEJAST_PLAYER2_TOKEN" -f "$sql_file")"; then
               ok=1
               break
             fi
@@ -250,7 +264,7 @@ jobs:
           done
           test "$failed" = '0'
           for i in $(seq 1 8); do
-            test "$(cat "/tmp/v813-session-read-$i.out" | tail -n1)" = "t|$GEJAST_PLAYER1_NAME"
+            test "$(tail -n1 "/tmp/v813-session-read-$i.out")" = "t|$GEJAST_PLAYER1_NAME"
             rm -f "/tmp/v813-session-read-$i.out"
           done
           echo 'RESULT=V813_CONCURRENT_SESSION_READ_LOCK_ELISION_PASS'
@@ -276,7 +290,6 @@ jobs:
             exit 0
           fi
           db_url="${SUPABASE_CI_DB_URL:-$SUPABASE_DB_URL}"
-
           cleanup_sql="$(mktemp)"
           residue_sql="$(mktemp)"
           trap 'rm -f "$cleanup_sql" "$residue_sql"' EXIT
@@ -290,27 +303,22 @@ jobs:
               or r.host_player_id in (select id from public.players where display_name in (:'name1', :'name2'))
               or r.created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'))
             );
-
           delete from public.klaverjas_online_games
           where created_by_player_name in (:'name1', :'name2')
              or created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'));
-
           delete from public.pikken_games
           where created_by_player_name in (:'name1', :'name2')
              or created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'));
-
           delete from public.paardenrace_rooms
           where host_name in (:'name1', :'name2')
              or host_player_id in (select id from public.players where display_name in (:'name1', :'name2'))
              or created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'));
-
           delete from public.gejast_player_sessions_v746 where session_token in (:'token1', :'token2');
           delete from public.gejast_account_sessions_v671 where session_token in (:'token1', :'token2');
           delete from public.players where display_name in (:'name1', :'name2') and is_dummy=true and hidden_from_public=true;
           delete from public.gejast_account_players_v671 where display_name in (:'name1', :'name2') and email like '%@example.invalid';
           commit;
           SQL
-
           cat > "$residue_sql" <<'SQL'
           select (select count(*) from public.players where display_name in (:'name1',:'name2')),
                  (select count(*) from public.gejast_account_players_v671 where display_name in (:'name1',:'name2')),
@@ -320,7 +328,6 @@ jobs:
                  (select count(*) from public.pikken_games where created_by_player_name in (:'name1',:'name2')),
                  (select count(*) from public.paardenrace_rooms where host_name in (:'name1',:'name2'));
           SQL
-
           cleaned=0
           for attempt in 1 2 3; do
             if psql "$db_url" -X -v ON_ERROR_STOP=1 \
@@ -333,7 +340,6 @@ jobs:
             if [ "$attempt" -lt 3 ]; then sleep $((attempt * 2)); fi
           done
           test "$cleaned" = '1'
-
           residue=''
           checked=0
           for attempt in 1 2 3; do
