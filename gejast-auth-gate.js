@@ -154,7 +154,8 @@
     window.GEJAST_DIRECT_READ_COMPAT_V813={source:'active-login-rpc',direct_allowed_usernames_network:false};
   }
 
-  async function validate(token){
+  const sleep=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
+  async function validateOnce(token){
     const cfg=await loadConfig();
     const url=String(cfg.SUPABASE_URL||'').replace(/\/+$/,'')+'/rest/v1/rpc/account_public_state_v687';
     const key=String(cfg.SUPABASE_PUBLISHABLE_KEY||'').trim();
@@ -174,6 +175,19 @@
       const responseScope=String(data&&data.site_scope||'').trim().toLowerCase()==='family'?'family':'friends';
       return data&&data.ok===true&&responseScope===requestedScope();
     }finally{clearTimeout(timeout);}
+  }
+  async function validate(token){
+    let lastError=null;
+    for(let attempt=1;attempt<=3;attempt++){
+      try{
+        return await validateOnce(token);
+      }catch(error){
+        lastError=error;
+        root.setAttribute('data-gejast-auth-attempt',String(attempt));
+        if(attempt<3) await sleep(attempt===1?250:700);
+      }
+    }
+    throw lastError||new Error('auth_validation_failed');
   }
 
   const token=readToken();

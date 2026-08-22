@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - 'VERSION'
       - '.github/workflows/final-certification-account-v792.yml'
       - 'scripts/final-cert-account-v792.mjs'
 
@@ -47,6 +48,21 @@ jobs:
           npx playwright install --with-deps chromium
           sudo apt-get update >/dev/null
           sudo apt-get install -y postgresql-client >/dev/null
+
+      - name: Use transaction pooler for short-lived CI SQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          ci_db_url="$SUPABASE_DB_URL"
+          case "$SUPABASE_DB_URL" in
+            *".pooler.supabase.com:5432/"*)
+              ci_db_url="${SUPABASE_DB_URL/:5432\//:6543/}"
+              ;;
+          esac
+          test -n "$ci_db_url"
+          echo "::add-mask::$ci_db_url"
+          echo "SUPABASE_DB_URL=$ci_db_url" >> "$GITHUB_ENV"
+          echo 'RESULT=V813_ACCOUNT_SHORT_LIVED_DB_POOL_READY'
 
       - name: Provision one randomized requestable identity only
         shell: bash
@@ -106,9 +122,6 @@ jobs:
           commit;
           SQL
 
-          # Fixture approval is deliberately direct DB state setup: calling the
-          # admin approval RPC would enqueue a real activation email and is not
-          # needed to prove the browser request/activation/login contract.
           mail_count="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -v email="$GEJAST_ACCOUNT_EMAIL" <<'SQL'
           select count(*) from public.outbound_email_jobs
           where lower(coalesce(recipient_email,to_email,''))=lower(:'email');

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 
+// Product-neutral post-deployment certification trigger for the merged v813 runtime.
 const migrationPath = 'GEJAST_v813b_visual_warning_cleanup_contracts.sql';
 const refinerPath = 'scripts/refine-expected-visual-aliases-v809.mjs';
 const workflowPath = '.github/workflows/full-live-visual-audit-v792.yml';
@@ -55,7 +56,7 @@ need(authGate, "['get_login_active_names_v687',{site_scope_input:scope}]", 'acti
 need(authGate, "['get_player_selector_source_v1',{site_scope_input:scope}]", 'selector RPC compatibility fallback missing');
 need(authGate, "return names.map(display_name=>({display_name,status:'active',site_scope:scope}));", 'safe compatibility row projection missing');
 need(authGate, "const safeRows=Array.isArray(rows)?rows:[];", 'legacy direct-read interception must fail closed to an empty safe projection');
-need(authGate, "v813-secure-active-name-rpc-empty", 'safe empty compatibility marker missing');
+need(authGate, "v813-secure-active-name-rpc-empty", 'safe empty compatibility source marker missing');
 need(authGate, "direct_allowed_usernames_network:false", 'direct-read network compatibility marker missing');
 forbid(authGate, /allowed_usernames[^\n]{0,120}(?:apikey|Authorization)/i, 'auth gate must not perform direct allowed_usernames table fetch');
 forbid(authGate, /if\(Array\.isArray\(rows\)\)[\s\S]{0,450}return nativeFetch\(input,init\);/, 'legacy allowed_usernames compatibility must not fall back to a direct table request');

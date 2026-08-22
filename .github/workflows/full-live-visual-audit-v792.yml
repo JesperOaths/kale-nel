@@ -12,7 +12,6 @@ on:
   push:
     branches:
       - main
-      - agent/v813-housekeeping-observable
     paths:
       - '.github/workflows/full-live-visual-audit-v792.yml'
       - 'scripts/full-live-visual-audit-v792.mjs'
@@ -32,7 +31,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: full-live-visual-audit
+  group: full-live-visual-audit-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:

@@ -1,6 +1,17 @@
 name: v792 final live browser certification
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/final-certification-live-browser-v792.yml'
+      - 'scripts/final-cert-live-browser-v792.mjs'
+      - 'scripts/prepare-live-browser-runtime-v813.mjs'
+      - 'gejast-auth-gate.js'
+      - 'gejast-config.js'
+      - 'release-certification.json'
+      - 'VERSION'
   push:
     branches:
       - main
@@ -8,29 +19,85 @@ on:
       - '.github/workflows/final-certification-live-browser-v792.yml'
       - 'scripts/final-cert-live-browser-v792.mjs'
       - 'scripts/prepare-live-browser-runtime-v813.mjs'
+      - 'gejast-auth-gate.js'
+      - 'gejast-config.js'
+      - 'release-certification.json'
+      - 'VERSION'
 
 permissions:
   contents: read
+  actions: read
 
+# Use a dedicated concurrency group. Sharing the visual-audit group caused one
+# of two simultaneously-triggered workflows to be discarded because GitHub
+# only retains one pending run per concurrency key. A preflight below waits for
+# the same-revision visual run, when present, so the database-heavy campaigns
+# remain serialized without losing either proof.
 concurrency:
-  group: v792-final-live-browser-certification
-  cancel-in-progress: false
+  group: v792-final-live-browser-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   live-browser:
     runs-on: ubuntu-latest
-    if: github.repository == 'JesperOaths/kale-nel' && github.ref == 'refs/heads/main'
-    timeout-minutes: 20
+    if: github.repository == 'JesperOaths/kale-nel' && (github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
+    timeout-minutes: 40
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       GEJAST_BASE_URL: https://kalenel.nl/
       GEJAST_SITE_SCOPE: friends
       GEJAST_BROWSER_TIMEOUT_MS: '25000'
+
     steps:
-      - name: Check out exact merged main
+      - name: Check out exact tested revision
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.sha }}
+
+      - name: Require deployed VERSION parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_version="$(tr -d '\r\n ' < VERSION)"
+          live_version=''
+          for i in $(seq 1 30); do
+            live_version="$(curl -fsS --max-time 10 "https://kalenel.nl/VERSION?ts=$(date +%s)" 2>/dev/null | tr -d '\r\n ' || true)"
+            if [ "$live_version" = "$source_version" ]; then break; fi
+            if [ "$i" -lt 30 ]; then sleep 5; fi
+          done
+          echo "FINAL_BROWSER_SOURCE_VERSION=$source_version"
+          echo "FINAL_BROWSER_LIVE_VERSION=${live_version:-unavailable}"
+          test "$live_version" = "$source_version"
+          echo 'RESULT=FINAL_BROWSER_DEPLOYED_VERSION_PARITY_PASS'
+
+      - name: Serialize behind same-revision visual campaign when present
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/full-live-visual-audit-v792.yml/runs?head_sha=${GITHUB_SHA}&per_page=20"
+          state='absent'
+          conclusion=''
+          for i in $(seq 1 180); do
+            payload="$(curl -fsS --max-time 15 \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "$api")"
+            state="$(printf '%s' "$payload" | jq -r '.workflow_runs | sort_by(.created_at) | last | .status // "absent"')"
+            conclusion="$(printf '%s' "$payload" | jq -r '.workflow_runs | sort_by(.created_at) | last | .conclusion // ""')"
+            if [ "$state" = 'absent' ] || [ "$state" = 'completed' ]; then
+              break
+            fi
+            if [ "$i" -lt 180 ]; then sleep 10; fi
+          done
+          if [ "$state" != 'absent' ] && [ "$state" != 'completed' ]; then
+            echo "Same-revision visual campaign did not finish before serialization timeout: state=$state"
+            exit 1
+          fi
+          echo "VISUAL_SERIALIZATION_STATE=$state conclusion=${conclusion:-none}"
+          echo 'RESULT=V813_BROWSER_CAMPAIGN_SERIALIZATION_PASS'
 
       - name: Set up Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
@@ -60,6 +127,21 @@ jobs:
           sudo apt-get install -y postgresql-client >/dev/null
           echo 'RESULT=V792_FINAL_CERT_SYSTEM_CHROME_RUNTIME_PASS'
 
+      - name: Use transaction pooler for short-lived CI SQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          ci_db_url="$SUPABASE_DB_URL"
+          case "$SUPABASE_DB_URL" in
+            *".pooler.supabase.com:5432/"*)
+              ci_db_url="${SUPABASE_DB_URL/:5432\//:6543/}"
+              ;;
+          esac
+          test -n "$ci_db_url"
+          echo "::add-mask::$ci_db_url"
+          echo "SUPABASE_CI_DB_URL=$ci_db_url" >> "$GITHUB_ENV"
+          echo 'RESULT=V813_SHORT_LIVED_DB_POOL_READY'
+
       - name: Provision randomized disposable certification identities
         shell: bash
         run: |
@@ -76,8 +158,9 @@ jobs:
           echo "GEJAST_PLAYER1_NAME=$name1" >> "$GITHUB_ENV"
           echo "GEJAST_PLAYER2_NAME=$name2" >> "$GITHUB_ENV"
 
-          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 \
-            -v name1="$name1" -v name2="$name2" -v token1="$token1" -v token2="$token2" <<'SQL'
+          sql_file="$(mktemp)"
+          trap 'rm -f "$sql_file"' EXIT
+          cat > "$sql_file" <<'SQL'
           begin;
           with ins as (
             insert into public.players(slug,display_name,active,approved,hidden_from_public,is_dummy,site_scope)
@@ -103,30 +186,79 @@ jobs:
           commit;
           SQL
 
+          ok=0
+          for attempt in 1 2 3; do
+            if psql "$SUPABASE_CI_DB_URL" -X -v ON_ERROR_STOP=1 \
+              -v name1="$name1" -v name2="$name2" -v token1="$token1" -v token2="$token2" \
+              -f "$sql_file"; then
+              ok=1
+              break
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep $((attempt * 2)); fi
+          done
+          test "$ok" = '1'
+
       - name: Prove both session resolver chains before browser writes
         shell: bash
         run: |
           set -euo pipefail
-          resolved="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -F'|' \
-            -v token1="$GEJAST_PLAYER1_TOKEN" -v token2="$GEJAST_PLAYER2_TOKEN" <<'SQL'
+          sql_file="$(mktemp)"
+          trap 'rm -f "$sql_file"' EXIT
+          cat > "$sql_file" <<'SQL'
           select coalesce(public._gejast_v687_session_name(:'token1'),''),
                  coalesce(public._gejast_v687_session_name(:'token2'),''),
                  coalesce((public._jas_session_player(:'token1')).display_name,''),
                  coalesce((public._jas_session_player(:'token2')).display_name,'');
           SQL
-          )"
+
+          resolved=''
+          ok=0
+          for attempt in 1 2 3; do
+            if resolved="$(psql "$SUPABASE_CI_DB_URL" -X -v ON_ERROR_STOP=1 -At -F'|' \
+              -v token1="$GEJAST_PLAYER1_TOKEN" -v token2="$GEJAST_PLAYER2_TOKEN" \
+              -f "$sql_file")"; then
+              ok=1
+              break
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep $((attempt * 2)); fi
+          done
+          test "$ok" = '1'
           expected="$GEJAST_PLAYER1_NAME|$GEJAST_PLAYER2_NAME|$GEJAST_PLAYER1_NAME|$GEJAST_PLAYER2_NAME"
           test "$resolved" = "$expected"
           echo 'Both disposable account/player session resolver chains PASS.'
+
+      - name: Prove concurrent session reads remain lock-free
+        shell: bash
+        run: |
+          set -euo pipefail
+          sql_file="$(mktemp)"
+          trap 'rm -f "$sql_file"' EXIT
+          cat > "$sql_file" <<'SQL'
+          set statement_timeout = '5s';
+          select coalesce((public.account_public_state_v687(:'token1')->>'ok')::boolean,false),
+                 coalesce((public._jas_session_player(:'token1')).display_name,'');
+          SQL
+          pids=()
+          for i in $(seq 1 8); do
+            psql "$SUPABASE_CI_DB_URL" -X -v ON_ERROR_STOP=1 -At \
+              -v token1="$GEJAST_PLAYER1_TOKEN" -f "$sql_file" >"/tmp/v813-session-read-$i.out" &
+            pids+=("$!")
+          done
+          failed=0
+          for pid in "${pids[@]}"; do
+            if ! wait "$pid"; then failed=1; fi
+          done
+          test "$failed" = '0'
+          for i in $(seq 1 8); do
+            test "$(cat "/tmp/v813-session-read-$i.out" | tail -n1)" = "t|$GEJAST_PLAYER1_NAME"
+            rm -f "/tmp/v813-session-read-$i.out"
+          done
+          echo 'RESULT=V813_CONCURRENT_SESSION_READ_LOCK_ELISION_PASS'
 
       - name: Run live Chromium multi-context mobile and completion acceptance
         shell: bash
         run: |
           set -euo pipefail
-          # The public Pages/edge path can briefly return an empty document while a
-          # same-version deployment is converging. The campaign is destructive only to
-          # its own disposable fixtures and has its own room cleanup, so allow exactly
-          # one full clean retry. A deterministic product failure still fails twice.
           runtime='scripts/.generated-final-cert-live-browser-system-chrome.mjs'
           if ! node "$runtime"; then
             echo 'First browser campaign attempt failed; retrying once after edge settle.'
@@ -143,14 +275,13 @@ jobs:
             echo 'Fixture names were never exported; nothing to clean.'
             exit 0
           fi
-          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 \
-            -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" \
-            -v token1="${GEJAST_PLAYER1_TOKEN:-missing}" -v token2="${GEJAST_PLAYER2_TOKEN:-missing}" <<'SQL'
-          begin;
+          db_url="${SUPABASE_CI_DB_URL:-$SUPABASE_DB_URL}"
 
-          -- Remove browser-created game parents first. Their child rows are either
-          -- CASCADE-owned or become harmless history rows; test-owned history is
-          -- removed explicitly before its Paardenrace parent disappears.
+          cleanup_sql="$(mktemp)"
+          residue_sql="$(mktemp)"
+          trap 'rm -f "$cleanup_sql" "$residue_sql"' EXIT
+          cat > "$cleanup_sql" <<'SQL'
+          begin;
           delete from public.paardenrace_match_history h
           using public.paardenrace_rooms r
           where h.room_id = r.id
@@ -180,9 +311,7 @@ jobs:
           commit;
           SQL
 
-          residue="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -F'|' \
-            -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" \
-            -v token1="${GEJAST_PLAYER1_TOKEN:-missing}" -v token2="${GEJAST_PLAYER2_TOKEN:-missing}" <<'SQL'
+          cat > "$residue_sql" <<'SQL'
           select (select count(*) from public.players where display_name in (:'name1',:'name2')),
                  (select count(*) from public.gejast_account_players_v671 where display_name in (:'name1',:'name2')),
                  (select count(*) from public.gejast_player_sessions_v746 where session_token in (:'token1',:'token2')),
@@ -191,7 +320,33 @@ jobs:
                  (select count(*) from public.pikken_games where created_by_player_name in (:'name1',:'name2')),
                  (select count(*) from public.paardenrace_rooms where host_name in (:'name1',:'name2'));
           SQL
-          )"
+
+          cleaned=0
+          for attempt in 1 2 3; do
+            if psql "$db_url" -X -v ON_ERROR_STOP=1 \
+              -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" \
+              -v token1="${GEJAST_PLAYER1_TOKEN:-missing}" -v token2="${GEJAST_PLAYER2_TOKEN:-missing}" \
+              -f "$cleanup_sql"; then
+              cleaned=1
+              break
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep $((attempt * 2)); fi
+          done
+          test "$cleaned" = '1'
+
+          residue=''
+          checked=0
+          for attempt in 1 2 3; do
+            if residue="$(psql "$db_url" -X -v ON_ERROR_STOP=1 -At -F'|' \
+              -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" \
+              -v token1="${GEJAST_PLAYER1_TOKEN:-missing}" -v token2="${GEJAST_PLAYER2_TOKEN:-missing}" \
+              -f "$residue_sql")"; then
+              checked=1
+              break
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep $((attempt * 2)); fi
+          done
+          test "$checked" = '1'
           test "$residue" = '0|0|0|0|0|0|0'
           echo 'Disposable browser-certification identities, sessions and game parents cleanup PASS.'
 
