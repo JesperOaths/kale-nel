@@ -1,0 +1,1 @@
+Exact-current v813 release certification only. No product feature expansion. Required evidence: repository/dependency checks, authenticated live-browser using real 48-hex session tokens, full authenticated visual audit with zero WARN/BROKEN, gameplay and ownership isolation, private security viewer boundary, manual screenshot review, and zero disposable-state residue.
