@@ -9,12 +9,12 @@ const SECURITY_MEDIA_TTL_SECONDS = 15 * 60;
 const SUPABASE_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
 const SECURITY_MEDIA_SESSION_URL = `${SUPABASE_URL}/functions/v1/c720p-security-media?action=session`;
-const SECURITY_MEDIA_PROXY_URL = `${SUPABASE_URL}/functions/v1/c720p-security-media?action=proxy`;
+const SECURITY_MEDIA_PROXY_URL = `${SUPABASE_URL}/functions/v1/c720p-security-relay`;
 const SESSION_TTL_SECONDS = 30 * 60;
 const OAUTH_TTL_SECONDS = 10 * 60;
 const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
-const ADMIN_BUILD = 'v768-security-same-origin-media-proxy';
+const ADMIN_BUILD = 'v771-security-custom-media-header';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -435,13 +435,13 @@ function securityProxyTarget(upstreamPath) {
 async function proxySecurityOrigin(request, media, upstreamPath) {
   const target = securityProxyTarget(upstreamPath);
   if (!target) return notFound();
-  const upstreamHeaders = new Headers({ Authorization: `Bearer ${media.mediaToken}`, Origin: `https://${PUBLIC_HOST}` });
+  const upstreamHeaders = new Headers({ 'X-Kalenel-Media-Token': String(media.mediaToken) });
   for (const name of ['Range', 'If-Range', 'If-None-Match', 'If-Modified-Since']) {
     const value = request.headers.get(name);
     if (value) upstreamHeaders.set(name, value);
   }
   let response;
-  try { response = await fetch(target, { method: request.method, headers: upstreamHeaders, redirect: 'error' }); }
+  try { response = await fetch(target, { method: request.method, headers: upstreamHeaders, redirect: 'follow' }); }
   catch { return securityJson({ ok:false, error:'camera_origin_unavailable' }, 502); }
   if (response.status === 401 || response.status === 403) return securityJson({ ok:false, error:'security_unlock_required' }, 401, true);
   const headers = securityResponseHeaders();
