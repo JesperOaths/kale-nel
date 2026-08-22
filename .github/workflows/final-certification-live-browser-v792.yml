@@ -47,6 +47,7 @@ jobs:
       GEJAST_BASE_URL: https://kalenel.nl/
       GEJAST_SITE_SCOPE: friends
       GEJAST_BROWSER_TIMEOUT_MS: '25000'
+      GEJAST_CERT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
     steps:
       - name: Check out exact tested revision
@@ -76,9 +77,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/full-live-visual-audit-v792.yml/runs?head_sha=${GITHUB_SHA}&per_page=20"
+          test -n "${GEJAST_CERT_HEAD_SHA:-}"
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/full-live-visual-audit-v792.yml/runs?head_sha=${GEJAST_CERT_HEAD_SHA}&per_page=20"
           state='absent'
           conclusion=''
+          # GitHub can register sibling pull-request workflow runs a few seconds
+          # apart. Give the visual run a bounded discovery window before treating
+          # it as absent, then wait for it to finish before starting DB-heavy work.
           for i in $(seq 1 180); do
             payload="$(curl -fsS --max-time 15 \
               -H "Authorization: Bearer ${GH_TOKEN}" \
@@ -87,14 +92,18 @@ jobs:
               "$api")"
             state="$(printf '%s' "$payload" | jq -r '.workflow_runs | sort_by(.created_at) | last | .status // "absent"')"
             conclusion="$(printf '%s' "$payload" | jq -r '.workflow_runs | sort_by(.created_at) | last | .conclusion // ""')"
-            if [ "$state" = 'absent' ] || [ "$state" = 'completed' ]; then break; fi
+            if [ "$state" = 'completed' ]; then break; fi
+            if [ "$state" = 'absent' ]; then
+              if [ "$i" -lt 7 ]; then sleep 5; continue; fi
+              break
+            fi
             if [ "$i" -lt 180 ]; then sleep 10; fi
           done
           if [ "$state" != 'absent' ] && [ "$state" != 'completed' ]; then
-            echo "Same-revision visual campaign did not finish before serialization timeout: state=$state"
+            echo "Same-revision visual campaign did not finish before serialization timeout: state=$state head=$GEJAST_CERT_HEAD_SHA"
             exit 1
           fi
-          echo "VISUAL_SERIALIZATION_STATE=$state conclusion=${conclusion:-none}"
+          echo "VISUAL_SERIALIZATION_HEAD=$GEJAST_CERT_HEAD_SHA state=$state conclusion=${conclusion:-none}"
           echo 'RESULT=V813_BROWSER_CAMPAIGN_SERIALIZATION_PASS'
 
       - name: Set up Node.js
