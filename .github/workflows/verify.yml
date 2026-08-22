@@ -36,6 +36,8 @@ jobs:
         run: node scripts/test-auth-gate-transient-v813.mjs
       - name: v813 login-name public RPC boundary
         run: node scripts/test-login-names-fallback-v813.mjs
+      - name: v813 data-plane retry contract
+        run: node scripts/test-data-plane-probe-contract-v813.mjs
       - name: Independent static publication integrity
         run: node scripts/audit-v813-static-integrity.mjs
       - name: v812f direct data boundary
