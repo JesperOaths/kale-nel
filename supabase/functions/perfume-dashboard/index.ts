@@ -5,7 +5,7 @@ if (!DB_URL) throw new Error("SUPABASE_DB_URL missing");
 const sql = postgres(DB_URL,{max:2,prepare:false,idle_timeout:20});
 const ALLOWED_ORIGINS=new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl"]);
 
-function headers(origin:string|null){const h:Record<string,string>={"content-type":"application/json; charset=utf-8","cache-control":"private, no-store, max-age=0","pragma":"no-cache","x-content-type-options":"nosniff","vary":"Origin"};if(origin&&ALLOWED_ORIGINS.has(origin))h["access-control-allow-origin"]=origin;return h}
+function headers(origin:string|null){const h:Record<string,string>={"content-type":"application/json; charset=utf-8","cache-control":"private, no-store, max-age=0","pragma":"no-cache","x-content-type-options":"nosniff","vary":"Origin","access-control-allow-methods":"POST, OPTIONS","access-control-allow-headers":"content-type, authorization, apikey","access-control-max-age":"600"};if(origin&&ALLOWED_ORIGINS.has(origin))h["access-control-allow-origin"]=origin;return h}
 function json(data:unknown,status=200,origin:string|null=null){return new Response(JSON.stringify(data),{status,headers:headers(origin)})}
 async function auth(token:string){if(token.length<20||token.length>500)return null;const rows=await sql`select public.admin_check_session(${token}) as data`;const checked=rows?.[0]?.data as Record<string,unknown>|undefined;if(!checked||checked.ok!==true)return null;const username=String(checked.username||"").slice(0,160);return username?{username,checked}:null}
 function bool(v:unknown){return v===true}
