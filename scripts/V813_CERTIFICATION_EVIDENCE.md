@@ -1,0 +1,1 @@
+v813 is not certified by this file. It records the evidence requirements for the exact-current candidate: authenticated runtime, gameplay/ownership isolation, private security boundary, authenticated full visual audit with zero WARN/BROKEN, manual screenshot review, and zero controlled residue.
