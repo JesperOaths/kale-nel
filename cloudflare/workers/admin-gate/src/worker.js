@@ -14,7 +14,7 @@ const SESSION_TTL_SECONDS = 30 * 60;
 const OAUTH_TTL_SECONDS = 10 * 60;
 const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
-const ADMIN_BUILD = 'v771-security-custom-media-header';
+const ADMIN_BUILD = 'v772-security-direct-origin-controls';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -115,7 +115,8 @@ async function handlePublicSecurity(request, env, url) {
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
   }
 
-  if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();
+  const cameraControlPost = request.method === 'POST' && /^\/security\/(?:new|s3)\/api\/control$/.test(url.pathname);
+  if (request.method !== 'GET' && request.method !== 'HEAD' && !cameraControlPost) return methodNotAllowed();
   if (url.pathname === '/security/new-clips') return canonicalRedirect('/security/new-clips/');
   if (url.pathname === '/security/s3-clips') return canonicalRedirect('/security/s3-clips/');
   if (url.pathname === '/security/' || url.pathname === '/security/new-clips/' || url.pathname === '/security/s3-clips/') {
@@ -357,20 +358,24 @@ async function securityInnerLogin(request, env, outer) {
     body: JSON.stringify({ admin_session_token: adminToken })
   });
   const mediaData = await mediaRes.json().catch(() => ({}));
-  const mediaToken = String(mediaData?.media_token || '');
+  const cameraOrigin = String(mediaData?.camera_origin || '').trim().replace(/\/+$/, '');
+  const cameraToken = String(mediaData?.camera_token || '').trim();
   const expiryMs = Date.parse(String(mediaData?.expires_at || ''));
+  const cameraExpiryMs = Date.parse(String(mediaData?.camera_token_expires_at || mediaData?.expires_at || ''));
   if (!mediaRes.ok || mediaData?.ok !== true ||
-      mediaToken.length < 32 || mediaToken.length > 256 ||
-      !Number.isFinite(expiryMs) || expiryMs <= Date.now()) {
+      !/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i.test(cameraOrigin) ||
+      !/^[A-Za-z0-9_-]{16,1024}\.[A-Za-z0-9_-]{32,256}$/.test(cameraToken) ||
+      !Number.isFinite(expiryMs) || expiryMs <= Date.now() ||
+      !Number.isFinite(cameraExpiryMs) || cameraExpiryMs <= Date.now()) {
     return securityJson({ ok:false, error:'camera_origin_unavailable' }, 503);
   }
 
-  const exp = Math.min(outer.exp, Math.floor(expiryMs / 1000), now() + SECURITY_MEDIA_TTL_SECONDS);
+  const exp = Math.min(outer.exp, Math.floor(expiryMs / 1000), Math.floor(cameraExpiryMs / 1000), now() + SECURITY_MEDIA_TTL_SECONDS);
   if (exp <= now()) return securityJson({ ok:false, error:'security_session_expired' }, 401);
   const session = {
     kind: 'security-media',
     github: { id: String(outer.github?.id || ''), login: String(outer.github?.login || '') },
-    mediaToken, iat: now(), exp
+    cameraOrigin, cameraToken, iat: now(), exp
   };
   const headers = securityResponseHeaders({ 'Content-Type': 'application/json; charset=utf-8' });
   headers.append('Set-Cookie', await encryptedCookie(env, SECURITY_MEDIA_COOKIE, session, Math.max(1, exp - now())));
@@ -381,8 +386,10 @@ function validSecurityMediaSession(env, media, outer) {
   if (!media.github || !isAllowedGithubAccount(env, media.github)) return false;
   if (normalizeGithubId(media.github.id) !== normalizeGithubId(outer.github?.id)) return false;
   if (normalizeGithubLogin(media.github.login) !== normalizeGithubLogin(outer.github?.login)) return false;
-  const token = String(media.mediaToken || '');
-  return token.length >= 32 && token.length <= 512;
+  const origin = String(media.cameraOrigin || '');
+  const token = String(media.cameraToken || '');
+  return /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i.test(origin) &&
+    /^[A-Za-z0-9_-]{16,1024}\.[A-Za-z0-9_-]{32,256}$/.test(token);
 }
 function cleanSecurityFilename(raw, extension = '') {
   let name = '';
@@ -396,6 +403,8 @@ function securityUpstreamPath(pathname) {
     const prefix = `/security/${camera}`;
     if (pathname === `${prefix}/api/events`) return `/${camera}/api/events`;
     if (pathname === `${prefix}/api/status`) return `/${camera}/api/status`;
+    if (pathname === `${prefix}/api/controls`) return `/${camera}/api/controls`;
+    if (pathname === `${prefix}/api/control`) return `/${camera}/api/control`;
     if (pathname === `${prefix}/live.mjpg`) return `/${camera}/live.mjpg`;
     if (pathname.startsWith(`${prefix}/snap/`)) {
       const name = cleanSecurityFilename(pathname.slice(`${prefix}/snap/`.length));
@@ -420,30 +429,43 @@ function securityUpstreamPath(pathname) {
   }
   return '';
 }
-function securityProxyTarget(upstreamPath) {
-  const m = String(upstreamPath || '').match(/^\/(new|s3)\/(api\/(status|events)|live\.mjpg|snap\/([^/]+)|clip\/([^/]+))$/);
-  if (!m) return '';
-  const u = new URL(SECURITY_MEDIA_PROXY_URL);
-  u.searchParams.set('camera', m[1]);
-  if (m[3] === 'status' || m[3] === 'events') u.searchParams.set('kind', m[3]);
-  else if (m[2] === 'live.mjpg') u.searchParams.set('kind', 'live');
-  else if (m[4]) { u.searchParams.set('kind', 'snap'); u.searchParams.set('name', decodeURIComponent(m[4])); }
-  else if (m[5]) { u.searchParams.set('kind', 'clip'); u.searchParams.set('name', decodeURIComponent(m[5])); }
-  else return '';
+function securityProxyTarget(media, upstreamPath) {
+  const origin = String(media?.cameraOrigin || '').replace(/\/+$/, '');
+  const token = String(media?.cameraToken || '');
+  if (!/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i.test(origin) ||
+      !/^[A-Za-z0-9_-]{16,1024}\.[A-Za-z0-9_-]{32,256}$/.test(token)) return '';
+  if (!/^\/(?:new|s3)\/(?:api\/(?:status|events|controls|control)|live\.mjpg|snap\/[A-Za-z0-9._%-]+|clip\/[A-Za-z0-9._%-]+)$/.test(String(upstreamPath || ''))) return '';
+  const u = new URL(origin + upstreamPath);
+  u.searchParams.set('token', token);
   return u.toString();
 }
 async function proxySecurityOrigin(request, media, upstreamPath) {
-  const target = securityProxyTarget(upstreamPath);
+  const target = securityProxyTarget(media, upstreamPath);
   if (!target) return notFound();
-  const upstreamHeaders = new Headers({ 'X-Kalenel-Media-Token': String(media.mediaToken) });
+  const upstreamHeaders = new Headers();
   for (const name of ['Range', 'If-Range', 'If-None-Match', 'If-Modified-Since']) {
     const value = request.headers.get(name);
     if (value) upstreamHeaders.set(name, value);
   }
+  let body;
+  if (request.method === 'POST') {
+    const text = await request.text();
+    if (!text || text.length > 4096) return securityJson({ok:false,error:'bad_request'},400);
+    try { JSON.parse(text); } catch { return securityJson({ok:false,error:'bad_request'},400); }
+    upstreamHeaders.set('Content-Type','application/json');
+    body = text;
+  }
   let response;
-  try { response = await fetch(target, { method: request.method, headers: upstreamHeaders, redirect: 'follow' }); }
-  catch { return securityJson({ ok:false, error:'camera_origin_unavailable' }, 502); }
-  if (response.status === 401 || response.status === 403) return securityJson({ ok:false, error:'security_unlock_required' }, 401, true);
+  try {
+    // The origin is a strict trycloudflare hostname minted into an encrypted
+    // session. Refuse redirects so the HMAC query token can never leak onward.
+    response = await fetch(target, { method: request.method, headers: upstreamHeaders, body, redirect: 'error' });
+  } catch {
+    return securityJson({ ok:false, error:'camera_origin_unavailable' }, 502);
+  }
+  if (response.status === 401 || response.status === 403) {
+    return securityJson({ ok:false, error:'security_unlock_required' }, 401, true);
+  }
   const headers = securityResponseHeaders();
   for (const name of ['Content-Type','Content-Length','Content-Range','Accept-Ranges','ETag','Last-Modified','Content-Disposition']) {
     const value = response.headers.get(name);
