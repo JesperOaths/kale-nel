@@ -7,7 +7,7 @@ const APPROVED_ID = '12345';
 const APPROVED_LOGIN = 'bruis-approved';
 const MEDIA_TOKEN = `media-${'m'.repeat(48)}`;
 const MEDIA_SESSION_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-media?action=session';
-const MEDIA_PROXY_PREFIX = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-media?action=proxy';
+const MEDIA_PROXY_PREFIX = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-relay';
 
 function env(extra = {}) {
   return {
@@ -111,8 +111,10 @@ globalThis.fetch = async (input, init = {}) => {
   if (url.startsWith(MEDIA_PROXY_PREFIX)) {
     upstreamCalls.push({ url, init });
     const parsed = new URL(url);
-    assert.equal(init.headers?.get ? init.headers.get('Authorization') : init.headers?.Authorization, `Bearer ${MEDIA_TOKEN}`);
-    assert.equal(init.headers?.get ? init.headers.get('Origin') : init.headers?.Origin, 'https://kalenel.nl');
+    const headers = init.headers instanceof Headers ? init.headers : new Headers(init.headers || {});
+    assert.equal(headers.get('X-Kalenel-Media-Token'), MEDIA_TOKEN);
+    assert.equal(headers.get('Authorization'), null);
+    assert.equal(headers.get('Origin'), null);
     const camera = parsed.searchParams.get('camera');
     const kind = parsed.searchParams.get('kind');
     const name = parsed.searchParams.get('name');
@@ -204,4 +206,4 @@ try {
   globalThis.fetch = originalFetch;
 }
 
-console.log('v813 security viewer gate PASS: GitHub perimeter, inner login, encrypted media session, same-origin Supabase camera proxy, camera isolation, traversal rejection, no-origin leakage, lock and proxy boundaries are deterministic.');
+console.log('v813 security viewer gate PASS: GitHub perimeter, inner login, encrypted media session, same-origin Supabase camera relay, custom media-token header, camera isolation, traversal rejection, no-origin leakage, lock and proxy boundaries are deterministic.');
