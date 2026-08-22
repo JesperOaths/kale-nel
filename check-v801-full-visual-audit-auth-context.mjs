@@ -27,9 +27,9 @@ assert.match(dataPlaneStep, /GEJAST_DATA_PLANE_ATTEMPTS:\s*'3'/, 'visual preflig
 assert.match(dataPlaneStep, /GEJAST_DATA_PLANE_RETRY_DELAY_MS:\s*'1500'/, 'visual preflight retries must remain bounded and spaced');
 assert.match(dataPlaneStep, /run:\s*node check-live-data-plane\.mjs/, 'visual preflight must reuse the pinned read-only auth RPC probe');
 assert.match(dataPlaneProbe, /const rpcName = 'account_public_state_v687'/, 'visual preflight must remain grounded in the shipped read-only auth RPC');
-assert.match(dataPlaneProbe, /const timeoutMs = Math\.max\(10000, requestedTimeoutMs\)/, 'shared preflight must enforce at least the release-safe ten-second timeout');
-assert.match(dataPlaneProbe, /const attempts = Math\.max\(3, requestedAttempts\)/, 'shared preflight must enforce the three-attempt release budget');
-assert.match(dataPlaneProbe, /const retryDelayMs = Math\.max\(1500, requestedRetryDelayMs\)/, 'shared preflight must enforce a bounded retry separation');
+assert.match(dataPlaneProbe, /attempts > 3/, 'shared preflight must enforce a hard three-attempt maximum');
+assert.match(dataPlaneProbe, /timeoutMs > 15000/, 'shared preflight must enforce a hard per-attempt timeout maximum');
+assert.match(dataPlaneProbe, /retryDelayMs > 2500/, 'shared preflight must enforce a hard retry-delay maximum');
 assert.doesNotMatch(dataPlaneProbe, /SERVICE_ROLE|service[_-]?role|SUPABASE_DB_URL|DATABASE_URL|\bpsql\b|execute_sql/i, 'visual preflight must remain public and non-privileged');
 
 const provisionStep = workflow.match(/- name: Provision disposable visual-audit identities through current login contract([\s\S]*?)(?=\n\s*- name:)/)?.[1] || '';
@@ -122,4 +122,4 @@ assert.match(runner, /if \(!degradedFixtures\)[\s\S]*?contextualFamilyRoutes\(\)
 assert.match(runner, /FULL_LIVE_VISUAL_AUDIT_DEGRADED fixture provisioning unavailable; artifact is not certification eligible/, 'degraded runner must emit an explicit fail-closed marker');
 assert.match(runner, /if \(degradedFixtures\) \{[\s\S]*?process\.exitCode = 1;/, 'degraded evidence must keep the workflow red even when no individual screenshot is broken');
 
-console.log('PASS v801 full visual audit resilient-data-plane-preflight + REST-fixture/auth-context + true-anonymous degraded-mode contract');
+console.log('PASS v801 full visual audit caller-owned resilient data-plane budget + REST-fixture/auth-context + true-anonymous degraded-mode contract');
