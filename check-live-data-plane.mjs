@@ -12,7 +12,7 @@ const invalidSession = '000000000000000000000000000000000000000000000000';
 
 if (!supabaseUrl || !publishableKey) throw new Error('DATA_PLANE_FAIL checked-in Supabase public config unavailable');
 if (!Number.isFinite(timeoutMs) || timeoutMs < 1000 || timeoutMs > 15000) throw new Error(`DATA_PLANE_FAIL timeout out of bounds: ${timeoutMs}`);
-if (!Number.isInteger(attempts) || attempts < 1 || attempts > 2) throw new Error(`DATA_PLANE_FAIL attempts out of bounds: ${attempts}`);
+if (!Number.isInteger(attempts) || attempts < 1 || attempts > 3) throw new Error(`DATA_PLANE_FAIL attempts out of bounds: ${attempts}`);
 if (!Number.isFinite(retryDelayMs) || retryDelayMs < 0 || retryDelayMs > 2000) throw new Error(`DATA_PLANE_FAIL retry delay out of bounds: ${retryDelayMs}`);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
