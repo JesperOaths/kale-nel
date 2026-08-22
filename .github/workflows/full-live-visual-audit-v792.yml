@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - '.github/workflows/full-live-visual-audit-v792.yml'
+      - 'check-live-data-plane.mjs'
       - 'scripts/refine-expected-visual-aliases-v809.mjs'
       - 'scripts/check-v813-visual-warning-cleanup.mjs'
   push:
