@@ -73,3 +73,4 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
 
 console.error(`DATA_PLANE_FAIL rpc=${rpcName} attempts=${attempts} auth_data_plane_unreachable_or_contract_broken=true`);
 process.exit(1);
+// v813 finalization: this bounded probe path is part of exact-current authenticated visual evidence.
