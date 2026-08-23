@@ -14,7 +14,7 @@ const SESSION_TTL_SECONDS = 30 * 60;
 const OAUTH_TTL_SECONDS = 10 * 60;
 const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
-const ADMIN_BUILD = 'v775-security-resilient-on-demand';
+const ADMIN_BUILD = 'v776-security-direct-relay-fallback';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -360,11 +360,13 @@ async function securityInnerLogin(request, env, outer) {
   const mediaData = await mediaRes.json().catch(() => ({}));
   const cameraOrigin = String(mediaData?.camera_origin || '').trim().replace(/\/+$/, '');
   const cameraToken = String(mediaData?.camera_token || '').trim();
+  const mediaToken = String(mediaData?.media_token || '').trim();
   const expiryMs = Date.parse(String(mediaData?.expires_at || ''));
   const cameraExpiryMs = Date.parse(String(mediaData?.camera_token_expires_at || mediaData?.expires_at || ''));
   if (!mediaRes.ok || mediaData?.ok !== true ||
       !/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i.test(cameraOrigin) ||
       !/^[A-Za-z0-9_-]{16,1024}\.[A-Za-z0-9_-]{32,256}$/.test(cameraToken) ||
+      mediaToken.length < 32 || mediaToken.length > 256 ||
       !Number.isFinite(expiryMs) || expiryMs <= Date.now() ||
       !Number.isFinite(cameraExpiryMs) || cameraExpiryMs <= Date.now()) {
     return securityJson({ ok:false, error:'camera_origin_unavailable' }, 503);
@@ -375,7 +377,7 @@ async function securityInnerLogin(request, env, outer) {
   const session = {
     kind: 'security-media',
     github: { id: String(outer.github?.id || ''), login: String(outer.github?.login || '') },
-    cameraOrigin, cameraToken, iat: now(), exp
+    cameraOrigin, cameraToken, mediaToken, iat: now(), exp
   };
   const headers = securityResponseHeaders({ 'Content-Type': 'application/json; charset=utf-8' });
   headers.append('Set-Cookie', await encryptedCookie(env, SECURITY_MEDIA_COOKIE, session, Math.max(1, exp - now())));
@@ -388,8 +390,10 @@ function validSecurityMediaSession(env, media, outer) {
   if (normalizeGithubLogin(media.github.login) !== normalizeGithubLogin(outer.github?.login)) return false;
   const origin = String(media.cameraOrigin || '');
   const token = String(media.cameraToken || '');
+  const relayToken = String(media.mediaToken || '');
   return /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i.test(origin) &&
-    /^[A-Za-z0-9_-]{16,1024}\.[A-Za-z0-9_-]{32,256}$/.test(token);
+    /^[A-Za-z0-9_-]{16,1024}\.[A-Za-z0-9_-]{32,256}$/.test(token) &&
+    relayToken.length >= 32 && relayToken.length <= 256;
 }
 function cleanSecurityFilename(raw, extension = '') {
   let name = '';
@@ -439,6 +443,30 @@ function securityProxyTarget(media, upstreamPath) {
   u.searchParams.set('token', token);
   return u.toString();
 }
+function securityRelayTarget(upstreamPath) {
+  const s = String(upstreamPath || '');
+  let camera = '', kind = '', name = '';
+  let m = s.match(/^\/(new|s3)\/api\/(status|events|controls|control)$/);
+  if (m) { camera=m[1]; kind=m[2]; }
+  if (!m && (m=s.match(/^\/(new|s3)\/live\.mjpg$/))) { camera=m[1]; kind='live'; }
+  if (!m && (m=s.match(/^\/(new|s3)\/snap\/([A-Za-z0-9._%-]+)$/))) { camera=m[1]; kind='snap'; try{name=decodeURIComponent(m[2])}catch{return '';} }
+  if (!m && (m=s.match(/^\/(new|s3)\/clip\/([A-Za-z0-9._%-]+)$/))) { camera=m[1]; kind='clip'; try{name=decodeURIComponent(m[2])}catch{return '';} }
+  if (!camera || !kind) return '';
+  const u = new URL(SECURITY_MEDIA_PROXY_URL);
+  u.searchParams.set('camera', camera);
+  u.searchParams.set('kind', kind);
+  if (name) u.searchParams.set('name', name);
+  return u.toString();
+}
+function securityProxyResponse(response, requestMethod, mediaPath) {
+  const headers = securityResponseHeaders();
+  for (const name of ['Content-Type','Content-Length','Content-Range','Accept-Ranges','ETag','Last-Modified','Content-Disposition']) {
+    const value = response.headers.get(name);
+    if (value) headers.set(name, value);
+  }
+  headers.set('X-Kalenel-Security-Media-Path', mediaPath);
+  return new Response(requestMethod === 'HEAD' ? null : response.body, { status: response.status, statusText: response.statusText, headers });
+}
 async function proxySecurityOrigin(request, media, upstreamPath) {
   const target = securityProxyTarget(media, upstreamPath);
   if (!target) return notFound();
@@ -455,23 +483,43 @@ async function proxySecurityOrigin(request, media, upstreamPath) {
     upstreamHeaders.set('Content-Type','application/json');
     body = text;
   }
-  let response;
+  let response = null;
+  let directFailed = false;
   try {
-    // The origin is a strict trycloudflare hostname minted into an encrypted
-    // session. Refuse redirects so the HMAC query token can never leak onward.
+    // Prefer the direct tunnel so successful traffic does not consume Supabase
+    // egress. Refuse redirects so the HMAC query token cannot leak onward.
     response = await fetch(target, { method: request.method, headers: upstreamHeaders, body, redirect: 'error' });
-  } catch {
-    return securityJson({ ok:false, error:'camera_origin_unavailable' }, 502);
+  } catch { directFailed = true; }
+  if (!directFailed && response && response.status !== 401 && response.status !== 403 && response.status < 500) {
+    return securityProxyResponse(response, request.method, 'direct');
   }
-  if (response.status === 401 || response.status === 403) {
+  if (!directFailed && response && (response.status === 401 || response.status === 403)) {
     return securityJson({ ok:false, error:'security_unlock_required' }, 401, true);
   }
-  const headers = securityResponseHeaders();
-  for (const name of ['Content-Type','Content-Length','Content-Range','Accept-Ranges','ETag','Last-Modified','Content-Disposition']) {
-    const value = response.headers.get(name);
-    if (value) headers.set(name, value);
+
+  // Cloudflare Quick Tunnels can occasionally be unreachable specifically from
+  // another Cloudflare Worker while remaining healthy from normal internet
+  // clients. Fall back to the authenticated Supabase relay for that transport
+  // failure only. Browser URLs remain same-origin and no tunnel credential is
+  // exposed to JavaScript.
+  const relayTarget = securityRelayTarget(upstreamPath);
+  const relayToken = String(media?.mediaToken || '');
+  if (!relayTarget || relayToken.length < 32 || relayToken.length > 256) {
+    return securityJson({ ok:false, error:'camera_origin_unavailable' }, 502);
   }
-  return new Response(request.method === 'HEAD' ? null : response.body, { status: response.status, statusText: response.statusText, headers });
+  const relayHeaders = new Headers({ 'X-Kalenel-Media-Token': relayToken });
+  for (const name of ['Range','If-Range','If-None-Match','If-Modified-Since']) {
+    const value = request.headers.get(name);
+    if (value) relayHeaders.set(name, value);
+  }
+  if (body !== undefined) relayHeaders.set('Content-Type','application/json');
+  let relayResponse;
+  try { relayResponse = await fetch(relayTarget, { method: request.method, headers: relayHeaders, body, redirect:'follow' }); }
+  catch { return securityJson({ ok:false, error:'camera_origin_unavailable' }, 502); }
+  if (relayResponse.status === 401 || relayResponse.status === 403) {
+    return securityJson({ ok:false, error:'security_unlock_required' }, 401, true);
+  }
+  return securityProxyResponse(relayResponse, request.method, 'supabase-fallback');
 }
 function bytesToB64url(bytes) {
   let text = '';
