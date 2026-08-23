@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 
+// Exact-current v813 proof refresh trigger: keep the visual contract attached to the same candidate SHA.
 // Product-neutral post-deployment certification trigger for the merged v813 runtime.
 const migrationPath = 'GEJAST_v813b_visual_warning_cleanup_contracts.sql';
 const refinerPath = 'scripts/refine-expected-visual-aliases-v809.mjs';
