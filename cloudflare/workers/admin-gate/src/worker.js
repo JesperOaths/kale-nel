@@ -14,7 +14,7 @@ const SESSION_TTL_SECONDS = 30 * 60;
 const OAUTH_TTL_SECONDS = 10 * 60;
 const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
-const ADMIN_BUILD = 'v776-security-direct-relay-fallback';
+const ADMIN_BUILD = 'v777-security-dedicated-unlock';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -93,6 +93,10 @@ async function handlePublicSecurity(request, env, url) {
     if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();
     return canonicalRedirect('/security/');
   }
+  if (url.pathname === '/security/unlock') {
+    if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();
+    return canonicalRedirect('/security/unlock/');
+  }
 
   const outer = await readSignedCookie(request, env, SECURITY_COOKIE);
   if (!outer || outer.kind !== 'security-session' || outer.exp <= now() || !isAllowedGithubAccount(env, outer.github)) {
@@ -119,7 +123,7 @@ async function handlePublicSecurity(request, env, url) {
   if (request.method !== 'GET' && request.method !== 'HEAD' && !cameraControlPost) return methodNotAllowed();
   if (url.pathname === '/security/new-clips') return canonicalRedirect('/security/new-clips/');
   if (url.pathname === '/security/s3-clips') return canonicalRedirect('/security/s3-clips/');
-  if (url.pathname === '/security/' || url.pathname === '/security/new-clips/' || url.pathname === '/security/s3-clips/') {
+  if (url.pathname === '/security/' || url.pathname === '/security/unlock/' || url.pathname === '/security/new-clips/' || url.pathname === '/security/s3-clips/') {
     return await serveSecurityAsset(request, env);
   }
 
@@ -144,7 +148,7 @@ async function handleAdminHost(request, env, url) {
     return new Response(null, {
       status: 302,
       headers: secureHeaders({
-        Location: `https://${PUBLIC_HOST}/security/`,
+        Location: `https://${PUBLIC_HOST}/security/unlock/`,
         'Cache-Control': 'no-store'
       })
     });
@@ -182,6 +186,7 @@ function canonicalizeAdminReturnTo(value) {
 function isSecurityPath(pathname) { return pathname === '/security' || pathname.startsWith('/security/'); }
 function securityPageReturnTo(value) {
   const path = String(value || '').split('?', 1)[0];
+  if (path === '/security/unlock' || path === '/security/unlock/') return '/security/unlock/';
   if (path === '/security/new-clips' || path === '/security/new-clips/') return '/security/new-clips/';
   if (path === '/security/s3-clips' || path === '/security/s3-clips/') return '/security/s3-clips/';
   return '/security/';
@@ -189,6 +194,7 @@ function securityPageReturnTo(value) {
 function isSecurityReturnTo(value) {
   const path = String(value || '').split('?', 1)[0];
   return path === '/security' || path === '/security/' ||
+    path === '/security/unlock' || path === '/security/unlock/' ||
     path === '/security/new-clips' || path === '/security/new-clips/' ||
     path === '/security/s3-clips' || path === '/security/s3-clips/';
 }
