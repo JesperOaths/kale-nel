@@ -71,6 +71,7 @@
 
   const nativeFetch=typeof window.fetch==='function'?window.fetch.bind(window):null;
   const allowedUsernameSourceCache=new Map();
+  const boundedProtectedReadRpcs=new Set(['get_game_player_names_fast_v687','get_profiles_fast_v687']);
   function normalizeName(value){return String(value||'').replace(/\s+/g,' ').trim();}
   function extractActiveNames(raw){
     const values=[];
@@ -138,6 +139,20 @@
     allowedUsernameSourceCache.set(scope,task);
     return task;
   }
+  function protectedReadRpcName(url){
+    const match=String(url||'').match(/\/rest\/v1\/rpc\/([^/?#]+)/i);
+    const name=match?decodeURIComponent(match[1]):'';
+    return boundedProtectedReadRpcs.has(name)?name:'';
+  }
+  async function boundedProtectedRead(input,init){
+    const options=Object.assign({},init||{});
+    const controller=typeof AbortController!=='undefined'?new AbortController():null;
+    const timer=controller?setTimeout(()=>{try{controller.abort();}catch(_){}},6500):null;
+    if(controller) options.signal=controller.signal;
+    else delete options.signal;
+    try{return await nativeFetch(input,options);}
+    finally{if(timer) clearTimeout(timer);}
+  }
   if(nativeFetch){
     window.fetch=function(input,init){
       let url='';
@@ -149,9 +164,10 @@
           return new Response(JSON.stringify(safeRows),{status:200,headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Gejast-Compatibility':source}});
         });
       }
+      if(protectedReadRpcName(url)) return boundedProtectedRead(input,init);
       return nativeFetch(input,init);
     };
-    window.GEJAST_DIRECT_READ_COMPAT_V813={source:'active-login-rpc',direct_allowed_usernames_network:false};
+    window.GEJAST_DIRECT_READ_COMPAT_V813={source:'active-login-rpc',direct_allowed_usernames_network:false,bounded_profile_reads:true};
   }
 
   const sleep=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
