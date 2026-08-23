@@ -30,6 +30,8 @@ jobs:
         run: npm run verify
       - name: v813 private security worker boundary
         run: node scripts/test-security-worker-gate-v813.mjs
+      - name: v779 security live relay and auto-start boundary
+        run: node scripts/test-security-v779-live-relay.mjs
       - name: v813 secure active-name compatibility runtime
         run: node scripts/test-auth-gate-active-names-v813.mjs
       - name: v813 bounded transient auth retry
