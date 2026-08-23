@@ -1,0 +1,96 @@
+name: Kalenel Security resilient v775
+
+on:
+  push:
+    branches:
+      - agent/security-v775-work
+    paths:
+      - '.github/workflows/security-v775-deploy.yml'
+      - 'scripts/deploy-security-v775.py'
+
+permissions:
+  contents: write
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/security-v775-work
+          fetch-depth: 0
+
+      - name: Prepare current-main v775
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp cloudflare/workers/admin-gate/src/worker.js /tmp/worker.before.js
+          cp security/index.html /tmp/security.before.html
+          python3 scripts/deploy-security-v775.py
+          cp cloudflare/workers/admin-gate/src/worker.js /tmp/worker.v775.js
+          cp security/index.html /tmp/security.v775.html
+          node --check cloudflare/workers/admin-gate/src/worker.js
+          node scripts/build-admin-worker-assets.mjs
+          git diff --check -- cloudflare/workers/admin-gate/src/worker.js security/index.html
+          grep -q "ADMIN_BUILD = 'v775-security-resilient-on-demand'" cloudflare/workers/admin-gate/src/worker.js
+          grep -q 'data-live="new"' security/index.html
+          grep -q 'liveRequested' security/index.html
+          grep -q 'setTimeout(()=>stopLive(camera),120000)' security/index.html
+          grep -q "preset:'Preset'" security/index.html
+          grep -q 'v813 - Kalenel Security' security/index.html
+          echo V775_STATIC=PASS
+
+      - name: Deploy with rollback guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          rollback() {
+            rc=$?
+            if [ "$rc" -ne 0 ]; then
+              echo V775_ROLLBACK=YES
+              cp /tmp/worker.before.js cloudflare/workers/admin-gate/src/worker.js
+              cp /tmp/security.before.html security/index.html
+              node scripts/build-admin-worker-assets.mjs
+              (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy) || true
+            fi
+            exit "$rc"
+          }
+          trap rollback EXIT
+          (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy)
+          ok=0
+          for attempt in $(seq 1 15); do
+            build=$(curl -sS -o /dev/null -D - https://admin.kalenel.nl/admin.html | awk 'BEGIN{IGNORECASE=1}/^x-kalenel-admin-build:/{sub(/\r$/,"");print $2;exit}')
+            root=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/security/ || true)
+            controls=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/security/new/api/controls || true)
+            post=$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' --data '{"key":"preset","value":"auto"}' https://kalenel.nl/security/new/api/control || true)
+            public=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/ || true)
+            echo "TRY=$attempt BUILD=$build ROOT=$root CONTROLS=$controls POST=$post PUBLIC=$public"
+            if [ "$build" = 'v775-security-resilient-on-demand' ] && [ "$root" = 302 ] && [ "$controls" = 302 ] && [ "$post" = 401 ] && [ "$public" = 200 ]; then
+              ok=1; break
+            fi
+            sleep 4
+          done
+          test "$ok" = 1
+          trap - EXIT
+          echo V775_EDGE=PASS
+
+      - name: Publish reconciled source branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Kalenel Security Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git fetch origin main
+          git checkout -B agent/security-v775-deployed origin/main
+          cp /tmp/worker.v775.js cloudflare/workers/admin-gate/src/worker.js
+          cp /tmp/security.v775.html security/index.html
+          git add -- cloudflare/workers/admin-gate/src/worker.js security/index.html
+          git diff --cached --check
+          git commit -m 'Harden Security live streaming and controls'
+          git push --force origin HEAD:agent/security-v775-deployed
+          echo V775_SOURCE_BRANCH=PASS
