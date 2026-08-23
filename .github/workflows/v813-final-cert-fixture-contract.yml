@@ -1,0 +1,30 @@
+name: v813 final certification fixture contract
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/final-certification-live-browser-v792.yml'
+      - '.github/workflows/full-live-visual-audit-v792.yml'
+      - '.github/workflows/v813-final-cert-fixture-contract.yml'
+      - 'scripts/check-v813-final-cert-fixture-contract.mjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/final-certification-live-browser-v792.yml'
+      - '.github/workflows/full-live-visual-audit-v792.yml'
+      - '.github/workflows/v813-final-cert-fixture-contract.yml'
+      - 'scripts/check-v813-final-cert-fixture-contract.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  fixture-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: '24'
+      - run: node scripts/check-v813-final-cert-fixture-contract.mjs
