@@ -7,6 +7,7 @@ const OUTER='__Secure-kalenel_security_session';
 const MEDIA='__Host-kalenel_security_media';
 const CAMERA_ORIGIN='https://unit-camera.trycloudflare.com';
 const CAMERA_TOKEN=`${'a'.repeat(32)}.${'b'.repeat(64)}`;
+const MEDIA_TOKEN=`relay-${'c'.repeat(48)}`;
 const ADMIN_TOKEN=`admin-${'a'.repeat(40)}`;
 const SESSION_URL='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-media?action=session';
 
@@ -49,7 +50,7 @@ globalThis.fetch=async(input,init={})=>{
   }
   if(url===SESSION_URL){
     assert.equal(init.method,'POST'); assert.equal(init.headers?.Origin,'https://kalenel.nl');
-    return Response.json({ok:true,camera_origin:CAMERA_ORIGIN,camera_token:CAMERA_TOKEN,expires_at:new Date(Date.now()+300000).toISOString(),camera_token_expires_at:new Date(Date.now()+240000).toISOString()});
+    return Response.json({ok:true,camera_origin:CAMERA_ORIGIN,camera_token:CAMERA_TOKEN,media_token:MEDIA_TOKEN,expires_at:new Date(Date.now()+300000).toISOString(),camera_token_expires_at:new Date(Date.now()+240000).toISOString()});
   }
   if(url.startsWith(CAMERA_ORIGIN+'/')){
     const u=new URL(url),h=new Headers(init.headers||{});
@@ -75,11 +76,11 @@ globalThis.fetch=async(input,init={})=>{
 
 try{
   const login=await req('https://kalenel.nl/security/auth/login',{method:'POST',headers:{Cookie:outerCookie,'Content-Type':'application/json'},body:JSON.stringify({username:'admin',password:'pw',totp:'123456'})},e);
-  assert.equal(login.status,200); const body=await login.json(); assert.equal(body.ok,true); assert.equal(Object.hasOwn(body,'camera_token'),false); assert.equal(Object.hasOwn(body,'camera_origin'),false);
-  const setCookie=login.headers.get('Set-Cookie')||''; assert.match(setCookie,new RegExp(`${MEDIA}=[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+`)); assert.match(setCookie,/HttpOnly/); assert.match(setCookie,/Secure/); assert.match(setCookie,/SameSite=Strict/); assert.doesNotMatch(setCookie,new RegExp(CAMERA_TOKEN.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))); assert.doesNotMatch(setCookie,/trycloudflare\.com/i);
+  assert.equal(login.status,200); const body=await login.json(); assert.equal(body.ok,true); assert.equal(Object.hasOwn(body,'camera_token'),false); assert.equal(Object.hasOwn(body,'camera_origin'),false); assert.equal(Object.hasOwn(body,'media_token'),false);
+  const setCookie=login.headers.get('Set-Cookie')||''; assert.match(setCookie,new RegExp(`${MEDIA}=[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+`)); assert.match(setCookie,/HttpOnly/); assert.match(setCookie,/Secure/); assert.match(setCookie,/SameSite=Strict/); assert.doesNotMatch(setCookie,new RegExp(CAMERA_TOKEN.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))); assert.doesNotMatch(setCookie,new RegExp(MEDIA_TOKEN.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))); assert.doesNotMatch(setCookie,/trycloudflare\.com/i);
   const mediaCookie=pair(setCookie,MEDIA); const auth=cookies(outerCookie,mediaCookie); assert.ok(mediaCookie);
 
-  const n=await req('https://kalenel.nl/security/new/api/status',{headers:{Cookie:auth}},e); assert.equal(n.status,200); assert.deepEqual(await n.json(),{ok:true,path:'/new/api/status'}); assert.equal(n.headers.get('X-Upstream-Secret'),null);
+  const n=await req('https://kalenel.nl/security/new/api/status',{headers:{Cookie:auth}},e); assert.equal(n.status,200); assert.deepEqual(await n.json(),{ok:true,path:'/new/api/status'}); assert.equal(n.headers.get('X-Upstream-Secret'),null); assert.equal(n.headers.get('X-Kalenel-Security-Media-Path'),'direct');
   const s=await req('https://kalenel.nl/security/s3/api/status',{headers:{Cookie:auth}},e); assert.equal(s.status,200); assert.deepEqual(await s.json(),{ok:true,path:'/s3/api/status'});
   const controls=await req('https://kalenel.nl/security/new/api/controls',{headers:{Cookie:auth}},e); assert.equal(controls.status,200); assert.deepEqual(await controls.json(),{ok:true,path:'/new/api/controls'});
   const control=await req('https://kalenel.nl/security/new/api/control',{method:'POST',headers:{Cookie:auth,'Content-Type':'application/json'},body:JSON.stringify({action:'torch',value:true})},e); assert.equal(control.status,200); assert.deepEqual(await control.json(),{ok:true,path:'/new/api/control'});
@@ -102,4 +103,4 @@ try{
 }finally{globalThis.fetch=originalFetch;}
 
 const expiredOuter=await outer(e,{id:'12345',login:'bruis-approved'},-1); const expiredPage=await req('https://kalenel.nl/security/',{headers:{Cookie:expiredOuter},redirect:'manual'},e); assert.equal(expiredPage.status,302);
-console.log('v813 private security worker boundary tests passed for v772 direct-origin controls');
+console.log('v813 private security worker boundary tests passed for v776 direct-origin controls with relay-capable encrypted session');
