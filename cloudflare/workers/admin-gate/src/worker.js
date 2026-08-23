@@ -14,7 +14,7 @@ const SESSION_TTL_SECONDS = 30 * 60;
 const OAUTH_TTL_SECONDS = 10 * 60;
 const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
-const ADMIN_BUILD = 'v773-security-storage-presets';
+const ADMIN_BUILD = 'v775-security-resilient-on-demand';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
