@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 
 // Product-neutral post-deployment certification trigger for the merged v813 runtime.
-// Re-run against the exact-current v813 + Security v773 baseline before release promotion.
+// Re-run against the exact-current v813 + Security v776 baseline before release promotion.
 const migrationPath = 'GEJAST_v813b_visual_warning_cleanup_contracts.sql';
 const refinerPath = 'scripts/refine-expected-visual-aliases-v809.mjs';
 const workflowPath = '.github/workflows/full-live-visual-audit-v792.yml';
