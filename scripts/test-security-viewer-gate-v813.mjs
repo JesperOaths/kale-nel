@@ -56,6 +56,16 @@ const canonical = await req('https://kalenel.nl/security', { redirect: 'manual' 
 assert.equal(canonical.status, 302);
 assert.equal(canonical.headers.get('Location'), '/security/');
 
+
+const unlockCanonical = await req('https://kalenel.nl/security/unlock', { redirect: 'manual' });
+assert.equal(unlockCanonical.status, 302);
+assert.equal(unlockCanonical.headers.get('Location'), '/security/unlock/');
+
+const anonymousUnlock = await req('https://kalenel.nl/security/unlock/', { redirect: 'manual' });
+assert.equal(anonymousUnlock.status, 302);
+assert.equal(anonymousUnlock.headers.get('Location'), 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2Funlock%2F');
+assert.equal(anonymousUnlock.headers.get('Cache-Control'), 'no-store');
+
 const anonymousPage = await req('https://kalenel.nl/security/', { redirect: 'manual' });
 assert.equal(anonymousPage.status, 302);
 assert.equal(anonymousPage.headers.get('Location'), 'https://admin.kalenel.nl/login?return_to=%2Fsecurity%2F');
@@ -79,6 +89,11 @@ assert.equal(page.headers.get('X-Kalenel-Security-Gate'), 'github+totp');
 assert.equal(page.headers.get('X-Frame-Options'), 'DENY');
 assert.equal(page.headers.get('Cross-Origin-Resource-Policy'), 'same-origin');
 assert.match(page.headers.get('Content-Security-Policy') || '', /connect-src 'self'/);
+
+const unlockPage = await req('https://kalenel.nl/security/unlock/', { headers: { Cookie: outerCookie } });
+assert.equal(unlockPage.status, 200);
+assert.equal(unlockPage.headers.get('X-Kalenel-Security-Gate'), 'github+totp');
+assert.equal(unlockPage.headers.get('Cache-Control'), 'no-store');
 assert.doesNotMatch(page.headers.get('Content-Security-Policy') || '', /trycloudflare/i);
 
 const securityHtml = fs.readFileSync(new URL('../security/index.html', import.meta.url), 'utf8');
