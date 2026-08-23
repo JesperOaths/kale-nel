@@ -54,3 +54,4 @@ if (!runtime.includes('direct_probe=')) throw new Error('Auth-gate diagnostic ru
 fs.writeFileSync(runtimePath, runtime, 'utf8');
 console.log(`Prepared deterministic system Chrome runtime for ${releaseVersion}: ${runtimePath}`);
 console.log('RESULT=LIVE_BROWSER_SYSTEM_CHROME_RUNTIME_PASS');
+// v813 finalization: touching this preparation path deliberately triggers exact-current live-browser evidence.
