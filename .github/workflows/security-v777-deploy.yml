@@ -1,0 +1,89 @@
+name: Kalenel Security dedicated unlock v777
+
+on:
+  push:
+    branches:
+      - agent/security-v777-work
+    paths:
+      - '.github/workflows/security-v777-deploy.yml'
+      - 'scripts/deploy-security-v777.py'
+
+permissions:
+  contents: write
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/security-v777-work
+          fetch-depth: 0
+      - name: Prepare and verify v777
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp cloudflare/workers/admin-gate/src/worker.js /tmp/worker.before.js
+          cp scripts/test-security-viewer-gate-v813.mjs /tmp/test.before.mjs
+          python3 scripts/deploy-security-v777.py
+          cp cloudflare/workers/admin-gate/src/worker.js /tmp/worker.v777.js
+          cp scripts/test-security-viewer-gate-v813.mjs /tmp/test.v777.mjs
+          node --check cloudflare/workers/admin-gate/src/worker.js
+          node scripts/build-admin-worker-assets.mjs
+          git diff --check -- cloudflare/workers/admin-gate/src/worker.js scripts/test-security-viewer-gate-v813.mjs
+          grep -q "ADMIN_BUILD = 'v777-security-dedicated-unlock'" cloudflare/workers/admin-gate/src/worker.js
+          grep -q "'/security/unlock/'" cloudflare/workers/admin-gate/src/worker.js
+          npm ci
+          npm run verify
+          echo V777_STATIC_AND_FULL_VERIFY=PASS
+      - name: Deploy with rollback guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          rollback() {
+            rc=$?
+            if [ "$rc" -ne 0 ]; then
+              echo V777_ROLLBACK=YES
+              cp /tmp/worker.before.js cloudflare/workers/admin-gate/src/worker.js
+              node scripts/build-admin-worker-assets.mjs
+              (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy) || true
+            fi
+            exit "$rc"
+          }
+          trap rollback EXIT
+          (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy)
+          ok=0
+          for attempt in $(seq 1 15); do
+            build=$(curl -sS -o /dev/null -D - https://admin.kalenel.nl/admin.html | awk 'BEGIN{IGNORECASE=1}/^x-kalenel-admin-build:/{sub(/\r$/,"");print $2;exit}')
+            unlock=$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' https://kalenel.nl/security/unlock/ || true)
+            root=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/security/ || true)
+            post=$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' --data '{"key":"preset","value":"auto"}' https://kalenel.nl/security/new/api/control || true)
+            public=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/ || true)
+            echo "TRY=$attempt BUILD=$build UNLOCK=$unlock ROOT=$root POST=$post PUBLIC=$public"
+            case "$unlock" in "302 https://admin.kalenel.nl/login?return_to=%2Fsecurity%2Funlock%2F"*) unlock_ok=1;; *) unlock_ok=0;; esac
+            if [ "$build" = 'v777-security-dedicated-unlock' ] && [ "$unlock_ok" = 1 ] && [ "$root" = 302 ] && [ "$post" = 401 ] && [ "$public" = 200 ]; then ok=1; break; fi
+            sleep 4
+          done
+          test "$ok" = 1
+          trap - EXIT
+          echo V777_EDGE=PASS
+      - name: Publish reconciled source branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Kalenel Security Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git fetch origin main
+          git checkout -B agent/security-v777-deployed origin/main
+          cp /tmp/worker.v777.js cloudflare/workers/admin-gate/src/worker.js
+          cp /tmp/test.v777.mjs scripts/test-security-viewer-gate-v813.mjs
+          git add cloudflare/workers/admin-gate/src/worker.js scripts/test-security-viewer-gate-v813.mjs
+          git diff --cached --check
+          git commit -m 'Add dedicated protected Security unlock route'
+          git push --force origin HEAD:agent/security-v777-deployed
+          echo V777_SOURCE_BRANCH=PASS
