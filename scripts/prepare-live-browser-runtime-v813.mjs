@@ -3,12 +3,24 @@ import fs from 'node:fs';
 
 const sourcePath = 'scripts/final-cert-live-browser-v792.mjs';
 const runtimePath = 'scripts/.generated-final-cert-live-browser-system-chrome.mjs';
+const workflowPath = '.github/workflows/final-certification-live-browser-v792.yml';
 const chrome = String(process.env.GEJAST_SYSTEM_CHROME || '').trim();
 const releaseVersion = fs.readFileSync('VERSION', 'utf8').trim();
+const workflowText = fs.readFileSync(workflowPath, 'utf8');
+const configText = fs.readFileSync('gejast-config.js', 'utf8');
 
 if (!chrome) throw new Error('GEJAST_SYSTEM_CHROME is required');
 if (!fs.existsSync(chrome)) throw new Error(`Configured system Chrome does not exist: ${chrome}`);
 if (!/^v\d+$/.test(releaseVersion)) throw new Error(`Invalid checked-in VERSION: ${releaseVersion || 'empty'}`);
+if (!workflowText.includes('token1="$(openssl rand -hex 24)"') || !workflowText.includes('token2="$(openssl rand -hex 24)"')) {
+  throw new Error('Final certification fixtures must generate production-format 48-hex session tokens');
+}
+if (!workflowText.includes('[[ "$token1" =~ ^[0-9a-f]{48}$ ]]') || !workflowText.includes('[[ "$token2" =~ ^[0-9a-f]{48}$ ]]')) {
+  throw new Error('Final certification fixture token format assertions are missing');
+}
+if (!configText.includes("return /^[0-9a-f]{48}$/i.test(token);")) {
+  throw new Error('Browser session parser contract changed; update final certification fixtures before running acceptance');
+}
 
 let runtime = fs.readFileSync(sourcePath, 'utf8');
 const launchAnchor = 'const browser = await chromium.launch({ headless: true });';
