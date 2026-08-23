@@ -87,3 +87,4 @@ need(liveBrowserWorkflow, '[[ "$token2" =~ ^[0-9a-f]{48}$ ]]', 'browser fixture 
 forbid(liveBrowserWorkflow, /token[12]="v792-cert-/, 'legacy prefixed certification token reintroduced');
 
 console.log('RESULT=V813_VISUAL_WARNING_CLEANUP_CONTRACT_PASS');
+// v813 exact-current finalization evidence rerun.
