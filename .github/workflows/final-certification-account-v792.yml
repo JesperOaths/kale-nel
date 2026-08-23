@@ -38,16 +38,25 @@ jobs:
           node-version: '24'
           cache: npm
 
-      - name: Install deterministic browser and database clients
+      - name: Install deterministic system Chrome and database clients
         shell: bash
         run: |
           set -euo pipefail
           test -n "${SUPABASE_DB_URL:-}" || { echo 'SUPABASE_DB_URL missing'; exit 1; }
           npm ci
-          npm install --no-save --package-lock=false playwright@1.55.0
-          npx playwright install --with-deps chromium
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.55.0
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || true)"
+          test -n "$chrome" || { echo 'GitHub runner system Chrome missing'; exit 1; }
+          echo "GEJAST_SYSTEM_CHROME=$chrome" >> "$GITHUB_ENV"
+          node --check scripts/final-cert-account-v792.mjs
+          "$chrome" --version
+          if grep -qE 'npx[[:space:]]+playwright[[:space:]]+install|playwright[[:space:]]+install[[:space:]]+--with-deps' .github/workflows/final-certification-account-v792.yml; then
+            echo 'Unbounded Playwright browser download reintroduced.'
+            exit 1
+          fi
           sudo apt-get update >/dev/null
           sudo apt-get install -y postgresql-client >/dev/null
+          echo 'RESULT=V813_ACCOUNT_SYSTEM_CHROME_RUNTIME_PASS'
 
       - name: Use transaction pooler for short-lived CI SQL
         shell: bash
