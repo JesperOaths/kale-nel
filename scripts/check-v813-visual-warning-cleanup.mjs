@@ -62,6 +62,11 @@ need(authGate, "return names.map(display_name=>({display_name,status:'active',si
 need(authGate, "const safeRows=Array.isArray(rows)?rows:[];", 'legacy direct-read interception must fail closed to an empty safe projection');
 need(authGate, "v813-secure-active-name-rpc-empty", 'safe empty compatibility source marker missing');
 need(authGate, "direct_allowed_usernames_network:false", 'direct-read network compatibility marker missing');
+need(authGate, "const boundedProtectedReadRpcs=new Set(['get_game_player_names_fast_v687','get_profiles_fast_v687']);", 'bounded protected profile-read allowlist missing');
+need(authGate, "setTimeout(()=>{try{controller.abort();}catch(_){}},6500)", 'bounded protected profile-read timeout missing');
+need(authGate, "if(protectedReadRpcName(url)) return boundedProtectedRead(input,init);", 'bounded protected profile-read routing missing');
+need(authGate, "bounded_profile_reads:true", 'bounded protected profile-read marker missing');
+forbid(authGate, /boundedProtectedReadRpcs=new Set\([^\n]*(?:insert|update|delete|create|join|start|submit|admin_)/i, 'mutation/admin RPC added to bounded read allowlist');
 forbid(authGate, /allowed_usernames[^\n]{0,120}(?:apikey|Authorization)/i, 'auth gate must not perform direct allowed_usernames table fetch');
 forbid(authGate, /if\(Array\.isArray\(rows\)\)[\s\S]{0,450}return nativeFetch\(input,init\);/, 'legacy allowed_usernames compatibility must not fall back to a direct table request');
 
