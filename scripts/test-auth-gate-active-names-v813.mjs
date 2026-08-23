@@ -33,6 +33,12 @@ async function exercise({ scope = 'friends', activeResponse, selectorResponse })
     if (url.includes('/rest/v1/rpc/get_player_selector_source_v1')) {
       return selectorResponse();
     }
+    if (url.includes('/rest/v1/rpc/get_game_player_names_fast_v687')) {
+      return jsonResponse({ names: ['Profile Reader'] });
+    }
+    if (url.includes('/rest/v1/rpc/get_profiles_fast_v687')) {
+      return jsonResponse({ players: [{ display_name: 'Profile Reader' }] });
+    }
     if (url.includes('/rest/v1/allowed_usernames')) {
       throw new Error('direct allowed_usernames network access escaped the v813 compatibility boundary');
     }
@@ -87,6 +93,7 @@ async function exercise({ scope = 'friends', activeResponse, selectorResponse })
   assert.equal(attributes.get('data-gejast-auth-state'), 'authenticated');
   assert.equal(location.replaced, null, 'successful auth must not redirect');
   assert.equal(context.GEJAST_DIRECT_READ_COMPAT_V813?.direct_allowed_usernames_network, false);
+  assert.equal(context.GEJAST_DIRECT_READ_COMPAT_V813?.bounded_profile_reads, true);
 
   const legacyUrl = 'https://example.supabase.co/rest/v1/allowed_usernames?select=display_name,status,site_scope&site_scope=eq.' + scope;
   const first = await context.fetch(legacyUrl, { headers: { apikey: 'legacy-client-value' } });
@@ -105,6 +112,22 @@ async function exercise({ scope = 'friends', activeResponse, selectorResponse })
     const payload = JSON.parse(init.body || '{}');
     assert.equal(payload.site_scope_input, scope, `${url} must preserve site scope`);
   }
+
+  for (const rpcName of ['get_game_player_names_fast_v687', 'get_profiles_fast_v687']) {
+    const callerController = new AbortController();
+    callerController.abort();
+    const response = await context.fetch(`https://example.supabase.co/rest/v1/rpc/${rpcName}`, {
+      method: 'POST',
+      body: JSON.stringify({ site_scope_input: scope }),
+      signal: callerController.signal
+    });
+    assert.equal(response.status, 200, `${rpcName} must use the protected bounded read transport`);
+    const nativeCall = nativeCalls.filter(({ url }) => url.includes('/rest/v1/rpc/' + rpcName)).at(-1);
+    assert.ok(nativeCall, `${rpcName} must reach native fetch`);
+    assert.notEqual(nativeCall.init.signal, callerController.signal, `${rpcName} must not inherit the page's aggressive abort signal`);
+    assert.equal(nativeCall.init.signal?.aborted, false, `${rpcName} bounded transport must start live`);
+  }
+
   return { rows, nativeCalls };
 }
 
