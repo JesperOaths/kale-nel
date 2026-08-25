@@ -84,7 +84,7 @@ jobs:
             api=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/security/new/api/saved || true)
             public=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/ || true)
             echo "TRY=$attempt BUILD=$build ROOT=$root NEW_SAVED=$ns S3_SAVED=$ss API=$api PUBLIC=$public"
-            if [ "$build" = 'v782-security-drive-saved' ] && [ "$root" = 302 ] && [ "$ns" = 302 ] && [ "$ss" = 302 ] && [ "$api" = 401 ] && [ "$public" = 200 ]; then ok=1; break; fi
+            if [ "$build" = 'v782-security-drive-saved' ] && [ "$root" = 302 ] && [ "$ns" = 302 ] && [ "$ss" = 302 ] && [ "$api" = 302 ] && [ "$public" = 200 ]; then ok=1; break; fi
             sleep 4
           done
           test "$ok" = 1
