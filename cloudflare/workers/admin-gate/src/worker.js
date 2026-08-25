@@ -14,7 +14,9 @@ const SESSION_TTL_SECONDS = 30 * 60;
 const OAUTH_TTL_SECONDS = 10 * 60;
 const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
-const ADMIN_BUILD = 'v779-security-stable-live-relay';
+const SECURITY_LOGIN_UPSTREAM_TIMEOUT_MS = 9000;
+const SECURITY_MEDIA_SESSION_TIMEOUT_MS = 12000;
+const ADMIN_BUILD = 'v780-security-login-resilience';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -329,6 +331,18 @@ function securityJson(data, status = 200, clearMedia = false) {
 function securityMethodNotAllowed(allow) {
   return new Response('Method not allowed', { status: 405, headers: securityResponseHeaders({ Allow: allow, 'Content-Type': 'text/plain; charset=utf-8' }) });
 }
+async function securityFetchWithTimeout(url, init = {}, timeoutMs = SECURITY_LOGIN_UPSTREAM_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+function isTransientSecurityUpstreamStatus(status) {
+  return status === 408 || status === 429 || status >= 500;
+}
 async function securityInnerLogin(request, env, outer) {
   let body;
   try { body = await request.json(); } catch { return securityJson({ ok:false, error:'invalid_request' }, 400); }
@@ -339,16 +353,24 @@ async function securityInnerLogin(request, env, outer) {
     return securityJson({ ok:false, error:'invalid_credentials' }, 400);
   }
 
-  const loginRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
-    body: JSON.stringify({ input_username: username, input_password: password, input_totp_code: totp })
-  });
+  let loginRes;
+  try {
+    loginRes = await securityFetchWithTimeout(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify({ input_username: username, input_password: password, input_totp_code: totp })
+    }, SECURITY_LOGIN_UPSTREAM_TIMEOUT_MS);
+  } catch {
+    return securityJson({ ok:false, error:'authentication_service_unavailable' }, 503);
+  }
+  if (isTransientSecurityUpstreamStatus(loginRes.status)) {
+    return securityJson({ ok:false, error:'authentication_service_unavailable' }, 503);
+  }
   const loginText = await loginRes.text();
   let loginData = {};
   try { loginData = loginText ? JSON.parse(loginText) : {}; } catch {}
@@ -358,11 +380,19 @@ async function securityInnerLogin(request, env, outer) {
     return securityJson({ ok:false, error:'invalid_credentials' }, 401);
   }
 
-  const mediaRes = await fetch(SECURITY_MEDIA_SESSION_URL, {
-    method: 'POST',
-    headers: { Origin: `https://${PUBLIC_HOST}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ admin_session_token: adminToken })
-  });
+  let mediaRes;
+  try {
+    mediaRes = await securityFetchWithTimeout(SECURITY_MEDIA_SESSION_URL, {
+      method: 'POST',
+      headers: { Origin: `https://${PUBLIC_HOST}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ admin_session_token: adminToken })
+    }, SECURITY_MEDIA_SESSION_TIMEOUT_MS);
+  } catch {
+    return securityJson({ ok:false, error:'camera_origin_unavailable' }, 503);
+  }
+  if (isTransientSecurityUpstreamStatus(mediaRes.status)) {
+    return securityJson({ ok:false, error:'camera_origin_unavailable' }, 503);
+  }
   const mediaData = await mediaRes.json().catch(() => ({}));
   const cameraOrigin = String(mediaData?.camera_origin || '').trim().replace(/\/+$/, '');
   const cameraToken = String(mediaData?.camera_token || '').trim();
