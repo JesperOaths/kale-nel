@@ -3,6 +3,7 @@ import fs from 'node:fs';
 
 // Product-neutral post-deployment certification trigger for the merged v813 runtime.
 const migrationPath = 'GEJAST_v813b_visual_warning_cleanup_contracts.sql';
+const paardenraceScratchMigrationPath = 'GEJAST_v813h_paardenrace_ladder_scratch_contract.sql';
 const refinerPath = 'scripts/refine-expected-visual-aliases-v809.mjs';
 const workflowPath = '.github/workflows/full-live-visual-audit-v792.yml';
 const liveBrowserWorkflowPath = '.github/workflows/final-certification-live-browser-v792.yml';
@@ -11,11 +12,12 @@ const klaverjasRoomPath = 'klaverjas_room.html';
 const mobileFoundationPath = 'gejast-mobile-foundation-v583.js';
 const authGatePath = 'gejast-auth-gate.js';
 const scoreAliasPath = 'score.html';
-for (const file of [migrationPath, refinerPath, workflowPath, liveBrowserWorkflowPath, dataPlanePath, klaverjasRoomPath, mobileFoundationPath, authGatePath, scoreAliasPath]) {
+for (const file of [migrationPath, paardenraceScratchMigrationPath, refinerPath, workflowPath, liveBrowserWorkflowPath, dataPlanePath, klaverjasRoomPath, mobileFoundationPath, authGatePath, scoreAliasPath]) {
   if (!fs.existsSync(file)) throw new Error(`V813_VISUAL_WARNING_CLEANUP_FAIL missing ${file}`);
 }
 
 const sql = fs.readFileSync(migrationPath, 'utf8');
+const paardenraceScratchSql = fs.readFileSync(paardenraceScratchMigrationPath, 'utf8');
 const refiner = fs.readFileSync(refinerPath, 'utf8');
 const workflow = fs.readFileSync(workflowPath, 'utf8');
 const liveBrowserWorkflow = fs.readFileSync(liveBrowserWorkflowPath, 'utf8');
@@ -37,9 +39,23 @@ need(sql, "'source', 'v813b_client_noop'", 'v813b client no-op marker missing');
 need(sql, "'source', 'v813b_retired_noop'", 'v813b retired no-op marker missing');
 forbid(sql, /grant execute on function public\.cleanup_stale_(?:paardenrace|pikken)_rooms_v718\(text\) to [^;]*(?:anon|authenticated)/i, 'v718 mutation grant widened to browser role');
 
+need(paardenraceScratchSql, 'create table if not exists public._scratch_paardenrace_history_work', 'Paardenrace ladder history scratch relation missing');
+for (const table of ['_scratch_paardenrace_ladder_work','_scratch_paardenrace_match_participants','_scratch_paardenrace_history_work']) {
+  need(paardenraceScratchSql, `revoke all privileges on table public.${table} from public, anon, authenticated;`, `${table} browser revoke missing`);
+  need(paardenraceScratchSql, `grant all privileges on table public.${table} to service_role;`, `${table} service grant missing`);
+}
+need(paardenraceScratchSql, 'v_result := jsonb_build_object(', 'Paardenrace ladder result must be assembled before scratch cleanup');
+need(paardenraceScratchSql, 'return v_result;', 'Paardenrace ladder materialized result return missing');
+need(paardenraceScratchSql, "raise exception 'expected pre-return cleanup anchor not found'", 'Paardenrace ladder function drift guard missing');
+forbid(paardenraceScratchSql, /grant\s+(?:select|insert|update|delete|all privileges)[^;]*_scratch_paardenrace_[^;]*\b(?:anon|authenticated)\b/i, 'Paardenrace scratch table access widened to browser role');
+
 for (const route of ['boerenbridge_spectator.html','despimarkt_force.html','klaverjas_quick_stats_v596_repo.html','klaverjas_room.html','klaverjas_spectator.html','klaverjas_online.html']) need(refiner, route, `redirect allowlist missing ${route}`);
 for (const asset of ['gejast-mobile-route-fixes-v583.js','gejast-mobile-foundation-v583.js']) need(refiner, asset, `source abort allowlist missing ${asset}`);
 for (const rpc of ['get_login_active_names_v687','get_player_selector_source_v1']) need(refiner, rpc, `login read-abort allowlist missing ${rpc}`);
+for (const rpc of ['cleanup_stale_paardenrace_rooms_v706','cleanup_stale_pikken_rooms_v706']) need(refiner, rpc, `safe background abort allowlist missing ${rpc}`);
+need(refiner, "record?.auth_state === 'authenticated'", 'safe background abort must require authenticated route');
+need(refiner, 'Number(record?.body_chars || 0) >= 120', 'safe background abort must require substantive rendered body');
+need(refiner, '!visibleFailureText(record)', 'safe background abort must reject visible failure text');
 need(refiner, 'Number(record?.stale_loading_count || 0) === 0', 'stale-loading guard missing');
 need(refiner, 'emptyList(record?.http_errors)', 'HTTP error guard missing');
 need(refiner, 'emptyList(record?.page_errors)', 'page error guard missing');

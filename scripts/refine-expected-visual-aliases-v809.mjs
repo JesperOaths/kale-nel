@@ -20,6 +20,7 @@ const SAFE_BACKGROUND_ABORT_RPCS = new Set([
   'get_login_active_names_v687',
   'get_player_selector_source_v1',
   'pikken_get_state_scoped',
+  'cleanup_stale_pikken_rooms_v706',
   'cleanup_stale_paardenrace_rooms_v706',
   'get_paardenrace_open_rooms_fast_v687',
   'get_paardenrace_room_state_fast_v687',
