@@ -16,7 +16,7 @@ const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
 const SECURITY_LOGIN_UPSTREAM_TIMEOUT_MS = 9000;
 const SECURITY_MEDIA_SESSION_TIMEOUT_MS = 12000;
-const ADMIN_BUILD = 'v780-security-login-resilience';
+const ADMIN_BUILD = 'v782-security-drive-saved';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -125,7 +125,9 @@ async function handlePublicSecurity(request, env, url) {
   if (request.method !== 'GET' && request.method !== 'HEAD' && !cameraControlPost) return methodNotAllowed();
   if (url.pathname === '/security/new-clips') return canonicalRedirect('/security/new-clips/');
   if (url.pathname === '/security/s3-clips') return canonicalRedirect('/security/s3-clips/');
-  if (url.pathname === '/security/' || url.pathname === '/security/unlock/' || url.pathname === '/security/new-clips/' || url.pathname === '/security/s3-clips/') {
+  if (url.pathname === '/security/new-saved') return canonicalRedirect('/security/new-saved/');
+  if (url.pathname === '/security/s3-saved') return canonicalRedirect('/security/s3-saved/');
+  if (url.pathname === '/security/' || url.pathname === '/security/unlock/' || url.pathname === '/security/new-clips/' || url.pathname === '/security/s3-clips/' || url.pathname === '/security/new-saved/' || url.pathname === '/security/s3-saved/') {
     return await serveSecurityAsset(request, env);
   }
 
@@ -191,6 +193,8 @@ function securityPageReturnTo(value) {
   if (path === '/security/unlock' || path === '/security/unlock/') return '/security/unlock/';
   if (path === '/security/new-clips' || path === '/security/new-clips/') return '/security/new-clips/';
   if (path === '/security/s3-clips' || path === '/security/s3-clips/') return '/security/s3-clips/';
+  if (path === '/security/new-saved' || path === '/security/new-saved/') return '/security/new-saved/';
+  if (path === '/security/s3-saved' || path === '/security/s3-saved/') return '/security/s3-saved/';
   return '/security/';
 }
 function isSecurityReturnTo(value) {
@@ -198,7 +202,9 @@ function isSecurityReturnTo(value) {
   return path === '/security' || path === '/security/' ||
     path === '/security/unlock' || path === '/security/unlock/' ||
     path === '/security/new-clips' || path === '/security/new-clips/' ||
-    path === '/security/s3-clips' || path === '/security/s3-clips/';
+    path === '/security/s3-clips' || path === '/security/s3-clips/' ||
+    path === '/security/new-saved' || path === '/security/new-saved/' ||
+    path === '/security/s3-saved' || path === '/security/s3-saved/';
 }
 
 function canonicalRedirect(location) {
@@ -442,6 +448,7 @@ function securityUpstreamPath(pathname) {
   for (const camera of ['s3', 'new']) {
     const prefix = `/security/${camera}`;
     if (pathname === `${prefix}/api/events`) return `/${camera}/api/events`;
+    if (pathname === `${prefix}/api/saved`) return `/${camera}/api/saved`;
     if (pathname === `${prefix}/api/status`) return `/${camera}/api/status`;
     if (pathname === `${prefix}/api/controls`) return `/${camera}/api/controls`;
     if (pathname === `${prefix}/api/control`) return `/${camera}/api/control`;
@@ -453,6 +460,14 @@ function securityUpstreamPath(pathname) {
     if (pathname.startsWith(`${prefix}/clip/`)) {
       const name = cleanSecurityFilename(pathname.slice(`${prefix}/clip/`.length), '.mp4');
       return name ? `/${camera}/clip/${encodeURIComponent(name)}` : '';
+    }
+    if (pathname.startsWith(`${prefix}/saved/snap/`)) {
+      const name = cleanSecurityFilename(pathname.slice(`${prefix}/saved/snap/`.length), '.jpg');
+      return name ? `/${camera}/saved/snap/${encodeURIComponent(name)}` : '';
+    }
+    if (pathname.startsWith(`${prefix}/saved/clip/`)) {
+      const name = cleanSecurityFilename(pathname.slice(`${prefix}/saved/clip/`.length), '.mp4');
+      return name ? `/${camera}/saved/clip/${encodeURIComponent(name)}` : '';
     }
   }
   // Backwards compatibility: pre-v766 unprefixed security media remains S3.
@@ -474,7 +489,7 @@ function securityProxyTarget(media, upstreamPath) {
   const token = String(media?.cameraToken || '');
   if (!/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i.test(origin) ||
       !/^[A-Za-z0-9_-]{16,1024}\.[A-Za-z0-9_-]{32,256}$/.test(token)) return '';
-  if (!/^\/(?:new|s3)\/(?:api\/(?:status|events|controls|control)|live\.mjpg|snap\/[A-Za-z0-9._%-]+|clip\/[A-Za-z0-9._%-]+)$/.test(String(upstreamPath || ''))) return '';
+  if (!/^\/(?:new|s3)\/(?:api\/(?:status|events|saved|controls|control)|live\.mjpg|snap\/[A-Za-z0-9._%-]+|clip\/[A-Za-z0-9._%-]+|saved\/(?:snap|clip)\/[A-Za-z0-9._%-]+)$/.test(String(upstreamPath || ''))) return '';
   const u = new URL(origin + upstreamPath);
   u.searchParams.set('token', token);
   return u.toString();
@@ -482,11 +497,13 @@ function securityProxyTarget(media, upstreamPath) {
 function securityRelayTarget(upstreamPath) {
   const s = String(upstreamPath || '');
   let camera = '', kind = '', name = '';
-  let m = s.match(/^\/(new|s3)\/api\/(status|events|controls|control)$/);
+  let m = s.match(/^\/(new|s3)\/api\/(status|events|saved|controls|control)$/);
   if (m) { camera=m[1]; kind=m[2]; }
   if (!m && (m=s.match(/^\/(new|s3)\/live\.mjpg$/))) { camera=m[1]; kind='live'; }
   if (!m && (m=s.match(/^\/(new|s3)\/snap\/([A-Za-z0-9._%-]+)$/))) { camera=m[1]; kind='snap'; try{name=decodeURIComponent(m[2])}catch{return '';} }
   if (!m && (m=s.match(/^\/(new|s3)\/clip\/([A-Za-z0-9._%-]+)$/))) { camera=m[1]; kind='clip'; try{name=decodeURIComponent(m[2])}catch{return '';} }
+  if (!m && (m=s.match(/^\/(new|s3)\/saved\/snap\/([A-Za-z0-9._%-]+)$/))) { camera=m[1]; kind='savedsnap'; try{name=decodeURIComponent(m[2])}catch{return '';} }
+  if (!m && (m=s.match(/^\/(new|s3)\/saved\/clip\/([A-Za-z0-9._%-]+)$/))) { camera=m[1]; kind='savedclip'; try{name=decodeURIComponent(m[2])}catch{return '';} }
   if (!camera || !kind) return '';
   const u = new URL(SECURITY_MEDIA_PROXY_URL);
   u.searchParams.set('camera', camera);
