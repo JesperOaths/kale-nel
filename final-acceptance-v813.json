@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "site_version": "v813",
+  "status": "PASS",
+  "certified_at": "2026-08-25",
+  "evidence_baseline_main_sha": "570ef4bded55493a226d1fc7c8afbb1e35244f56",
+  "certified_release_branch": "release/v813-certified-20260825",
+  "production_migration": {
+    "version": "20260825063031",
+    "name": "v813i_read_path_timeout_hardening"
+  },
+  "authoritative_runs": {
+    "gejast_verification": {
+      "run_id": 32830627340,
+      "job_id": 97748259845,
+      "conclusion": "success",
+      "coverage": [
+        "exact merged-main v813 tree",
+        "canonical repository verification",
+        "private Security worker boundary",
+        "Security live relay and autostart boundary",
+        "secure active-name compatibility",
+        "bounded auth retry",
+        "direct-data boundary",
+        "Paardenrace ladder scratch contract",
+        "v813i read-path timeout hardening",
+        "Paardenrace backend source safety"
+      ]
+    },
+    "dependency_security": {
+      "run_id": 32830627410,
+      "conclusion": "success"
+    },
+    "pages_deployment": {
+      "run_id": 32830626434,
+      "conclusion": "success"
+    },
+    "authenticated_visual_closure": {
+      "run_id": 32830627364,
+      "job_id": 97748260059,
+      "conclusion": "success",
+      "screenshots": 140,
+      "records": 140,
+      "broken_after_refinement": 0,
+      "warnings_after_refinement": 0,
+      "manual_review": "PASS",
+      "cleanup": "zero residue",
+      "artifact_id": 9557069626,
+      "artifact_name": "full-live-visual-audit-32830627364",
+      "artifact_sha256": "905391f3598fa2a4bb59c9a5be7b9437d58b32ea27250d88e1829886703577b6"
+    },
+    "exact_main_live_browser": {
+      "run_id": 32830627407,
+      "job_id": 97748260251,
+      "conclusion": "success",
+      "coverage": [
+        "deployed VERSION parity",
+        "same-revision visual serialization",
+        "48-hex browser session resolver chains",
+        "eight concurrent lock-free session reads",
+        "desktop routes",
+        "390x844 touch mobile routes",
+        "multi-context reconnect",
+        "Pikken natural completion",
+        "Paardenrace natural completion with real draw-pile reshuffle",
+        "post-run cleanup"
+      ],
+      "cleanup": "zero residue"
+    }
+  },
+  "security_contracts": {
+    "admin_cloudflare_github_outer_boundary": "PASS",
+    "admin_password_totp_inner_boundary": "PASS",
+    "security_identity_bound_media_session": "PASS",
+    "security_camera_source_isolation": "PASS",
+    "security_live_relay_autostart": "PASS",
+    "security_traversal_rejection": "PASS",
+    "security_browser_credential_non_leakage": "PASS",
+    "security_logout_and_expiry_boundary": "PASS",
+    "friends_family_scope_isolation": "PASS",
+    "direct_data_boundary": "PASS",
+    "session_read_lock_elision": "PASS",
+    "paardenrace_scratch_browser_access": "DENIED_AS_REQUIRED"
+  },
+  "gameplay_contracts": {
+    "toepen": "PASS",
+    "boerenbridge": "PASS",
+    "beerpong": "PASS",
+    "klaverjas": "PASS",
+    "pikken": "PASS",
+    "paardenrace": "PASS",
+    "pikken_natural_completion": "PASS",
+    "paardenrace_natural_completion": "PASS",
+    "paardenrace_real_reshuffle_path": "PASS",
+    "multi_context_reconnect": "PASS",
+    "mobile_runtime": "PASS"
+  },
+  "production_state": {
+    "supabase_project_id": "uiqntazgnrxwliaidkmy",
+    "database_data_plane": "healthy",
+    "latest_migration_version": "20260825063031",
+    "latest_migration_name": "v813i_read_path_timeout_hardening",
+    "statement_timeout_watch": "PASS_NO_NEW_STATEMENT_TIMEOUT_AFTER_2026-08-25T06:42:30.957Z",
+    "visual_fixture_cleanup": "zero residue",
+    "browser_certification_residue": "0|0|0|0|0|0|0"
+  },
+  "truthfulness_policy": {
+    "manual_visual_review_required": true,
+    "visual_warnings_must_be_zero_after_strict_refinement": true,
+    "browser_abort_allowlist_is_fail_closed": true,
+    "static_security_checks_are_not_substituted_for_live_browser_evidence": true,
+    "third_party_interactive_credentials_are_not_faked": true,
+    "production_writes_use_hidden_disposable_fixtures_and_assert_cleanup": true,
+    "historical_overlapping_campaign_timeouts_are_not_misreported_as_current_failures": true,
+    "expected_paardenrace_draw_pile_exhaustion_is_only_accepted_when_real_reshuffle_and_persisted_completion_pass": true
+  },
+  "criteria": {
+    "1": {
+      "status": "PASS",
+      "summary": "Exact v813 product tree is pinned at 570ef4bded55493a226d1fc7c8afbb1e35244f56 and frozen on release/v813-certified-20260825."
+    },
+    "2": {
+      "status": "PASS",
+      "summary": "Canonical exact-main GEJAST verification passed the v813 data, session, Paardenrace and private Security boundaries."
+    },
+    "3": {
+      "status": "PASS",
+      "summary": "Dependency security and GitHub Pages deployment passed on the exact certified product SHA."
+    },
+    "4": {
+      "status": "PASS",
+      "summary": "Authenticated visual closure captured 140 records with zero BROKEN and zero WARN after strict expected-condition refinement, all contact sheets were manually reviewed, and fixtures cleaned to zero residue."
+    },
+    "5": {
+      "status": "PASS",
+      "summary": "Final live-browser certification waited for the same-revision visual campaign and passed real-format sessions, concurrent lock-free reads, multi-context reconnect and mobile runtime."
+    },
+    "6": {
+      "status": "PASS",
+      "summary": "Pikken and Paardenrace completed naturally; Paardenrace exercised the real empty-draw-pile reshuffle contract and persisted a valid winner."
+    },
+    "7": {
+      "status": "PASS",
+      "summary": "Private Security coverage passed GitHub perimeter, password+TOTP inner gate, identity-bound media session, dual-source isolation, relay/autostart, traversal, credential non-leakage, logout and expiry boundaries."
+    },
+    "8": {
+      "status": "PASS",
+      "summary": "The v813i Paardenrace/profile hot read paths are hardened against the historical statement-timeout failure mode without widening database timeouts or browser cleanup privileges."
+    },
+    "9": {
+      "status": "PASS",
+      "summary": "No new PostgreSQL statement-timeout event was observed after the historical overlapping-campaign burst ending 2026-08-25T06:42:30.957Z, including during serialized exact-main visual and browser certification."
+    },
+    "10": {
+      "status": "PASS",
+      "summary": "Both visual and browser certification campaigns independently proved zero controlled residue after production writes."
+    },
+    "11": {
+      "status": "PASS",
+      "summary": "Certification metadata records exact run IDs, job IDs, product SHA, release branch and visual artifact digest; no diagnostic failure is silently promoted to authoritative evidence."
+    },
+    "12": {
+      "status": "PASS",
+      "summary": "v813 PASS is recorded only after the exact merged product SHA completed repository, security, deployment, authenticated visual, manual review, live gameplay, concurrency and cleanup gates."
+    }
+  }
+}
