@@ -52,6 +52,10 @@ forbid(paardenraceScratchSql, /grant\s+(?:select|insert|update|delete|all privil
 for (const route of ['boerenbridge_spectator.html','despimarkt_force.html','klaverjas_quick_stats_v596_repo.html','klaverjas_room.html','klaverjas_spectator.html','klaverjas_online.html']) need(refiner, route, `redirect allowlist missing ${route}`);
 for (const asset of ['gejast-mobile-route-fixes-v583.js','gejast-mobile-foundation-v583.js']) need(refiner, asset, `source abort allowlist missing ${asset}`);
 for (const rpc of ['get_login_active_names_v687','get_player_selector_source_v1']) need(refiner, rpc, `login read-abort allowlist missing ${rpc}`);
+for (const rpc of ['cleanup_stale_paardenrace_rooms_v706','cleanup_stale_pikken_rooms_v706']) need(refiner, rpc, `safe background abort allowlist missing ${rpc}`);
+need(refiner, "record?.auth_state === 'authenticated'", 'safe background abort must require authenticated route');
+need(refiner, 'Number(record?.body_chars || 0) >= 120', 'safe background abort must require substantive rendered body');
+need(refiner, '!visibleFailureText(record)', 'safe background abort must reject visible failure text');
 need(refiner, 'Number(record?.stale_loading_count || 0) === 0', 'stale-loading guard missing');
 need(refiner, 'emptyList(record?.http_errors)', 'HTTP error guard missing');
 need(refiner, 'emptyList(record?.page_errors)', 'page error guard missing');
