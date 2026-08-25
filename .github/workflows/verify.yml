@@ -44,6 +44,8 @@ jobs:
         run: node check-v812f-direct-data-boundary.mjs
       - name: v813h Paardenrace ladder scratch contract
         run: node scripts/check-v813h-paardenrace-ladder-contract.mjs
+      - name: v813i read-path timeout hardening
+        run: node scripts/check-v813i-read-path-timeout-hardening.mjs
       - name: Reconstructed Paardenrace RPC source safety
         run: node check-paardenrace-rpc-source-safety.mjs
       - name: Paardenrace backend minimum evidence
