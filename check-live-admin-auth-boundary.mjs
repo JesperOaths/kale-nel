@@ -1,7 +1,13 @@
 #!/usr/bin/env node
 
+import { readFile } from 'node:fs/promises';
+
 const ADMIN_BASE = String(process.env.GEJAST_ADMIN_BASE_URL || 'https://admin.kalenel.nl').replace(/\/+$/, '');
 const timeoutMs = Number(process.env.GEJAST_ADMIN_AUTH_TIMEOUT_MS || 15000);
+const workerSource = await readFile(new URL('./cloudflare/workers/admin-gate/src/worker.js', import.meta.url), 'utf8');
+const adminBuildMatch = workerSource.match(/const\s+ADMIN_BUILD\s*=\s*['"]([^'"]+)['"]/);
+if (!adminBuildMatch) throw new Error('Could not resolve ADMIN_BUILD from current admin Worker source');
+const expectedAdminBuild = adminBuildMatch[1];
 
 async function request(url, options = {}) {
   const controller = new AbortController();
@@ -26,12 +32,13 @@ function setCookies(response) {
 const protectedUrl = `${ADMIN_BASE}/admin.html?final_certification=131`;
 const protectedRes = await request(protectedUrl);
 assert(protectedRes.status === 401, `anonymous admin perimeter expected 401, got ${protectedRes.status}`);
-assert(protectedRes.headers.get('x-kalenel-admin-build') === 'v763', `admin perimeter build mismatch: ${protectedRes.headers.get('x-kalenel-admin-build') || '<none>'}`);
+const liveAdminBuild = protectedRes.headers.get('x-kalenel-admin-build') || '';
+assert(liveAdminBuild === expectedAdminBuild, `admin perimeter build mismatch: expected ${expectedAdminBuild}, got ${liveAdminBuild || '<none>'}`);
 assert(/no-store/i.test(protectedRes.headers.get('cache-control') || ''), 'anonymous admin perimeter must be no-store');
 const protectedBody = await protectedRes.text();
 assert(/GitHub-login/i.test(protectedBody), 'anonymous admin gate must explain GitHub outer login');
 assert(/Supabase admin\/TOTP/i.test(protectedBody), 'anonymous admin gate must preserve the Supabase/TOTP inner boundary');
-console.log('Admin anonymous outer perimeter: 401 build=v763 PASS');
+console.log(`Admin anonymous outer perimeter: 401 build=${expectedAdminBuild} PASS`);
 
 const loginUrl = `${ADMIN_BASE}/login?return_to=${encodeURIComponent('/admin.html')}`;
 const loginRes = await request(loginUrl);
