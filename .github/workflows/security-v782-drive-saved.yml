@@ -1,0 +1,111 @@
+name: Kalenel Security v782 Drive saved archive
+
+on:
+  push:
+    branches:
+      - agent/security-v782-drive-saved
+    paths:
+      - '.github/workflows/security-v782-drive-saved.yml'
+      - 'scripts/deploy-security-v782.py'
+
+permissions:
+  contents: write
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/security-v782-drive-saved
+          fetch-depth: 0
+
+      - name: Preserve rollback source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp cloudflare/workers/admin-gate/src/worker.js /tmp/worker.before.js
+          cp security/index.html /tmp/security.before.html
+
+      - name: Prepare and verify v782
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/deploy-security-v782.py
+          node --check cloudflare/workers/admin-gate/src/worker.js
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          s=Path('security/index.html').read_text();m=re.search(r'<script>(.*?)</script>',s,re.S)
+          if not m: raise SystemExit('BLOCKER=INLINE_SCRIPT_NOT_FOUND')
+          Path('/tmp/security-inline.js').write_text(m.group(1))
+          PY
+          node --check /tmp/security-inline.js
+          node scripts/build-admin-worker-assets.mjs
+          git diff --check -- cloudflare/workers/admin-gate/src/worker.js security/index.html
+          grep -q "ADMIN_BUILD = 'v782-security-drive-saved'" cloudflare/workers/admin-gate/src/worker.js
+          grep -q '/security/new-saved/' cloudflare/workers/admin-gate/src/worker.js
+          grep -q 'saved/clip' cloudflare/workers/admin-gate/src/worker.js
+          grep -q 'saved/snap' cloudflare/workers/admin-gate/src/worker.js
+          grep -q 'New camera saved' security/index.html
+          grep -q 'S3 camera saved' security/index.html
+          grep -q "savedMode?'/api/saved':'/api/events'" security/index.html
+          grep -q 'v782 - Kalenel Security' security/index.html
+          echo V782_STATIC=PASS
+
+      - name: Deploy with rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          rollback() {
+            rc=$?
+            if [ "$rc" -ne 0 ]; then
+              echo V782_ROLLBACK=YES
+              cp /tmp/worker.before.js cloudflare/workers/admin-gate/src/worker.js
+              cp /tmp/security.before.html security/index.html
+              node scripts/build-admin-worker-assets.mjs
+              (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy) || true
+            fi
+            exit "$rc"
+          }
+          trap rollback EXIT
+          (cd cloudflare/workers/admin-gate && npx --yes wrangler@4.33.1 deploy)
+          ok=0
+          for attempt in $(seq 1 15); do
+            build=$(curl -sS -o /dev/null -D - https://admin.kalenel.nl/admin.html | awk 'BEGIN{IGNORECASE=1}/^x-kalenel-admin-build:/{sub(/\r$/,"");print $2;exit}')
+            root=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/security/ || true)
+            ns=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/security/new-saved/ || true)
+            ss=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/security/s3-saved/ || true)
+            api=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/security/new/api/saved || true)
+            public=$(curl -sS -o /dev/null -w '%{http_code}' https://kalenel.nl/ || true)
+            echo "TRY=$attempt BUILD=$build ROOT=$root NEW_SAVED=$ns S3_SAVED=$ss API=$api PUBLIC=$public"
+            if [ "$build" = 'v782-security-drive-saved' ] && [ "$root" = 302 ] && [ "$ns" = 302 ] && [ "$ss" = 302 ] && [ "$api" = 401 ] && [ "$public" = 200 ]; then ok=1; break; fi
+            sleep 4
+          done
+          test "$ok" = 1
+          trap - EXIT
+          echo V782_EDGE=PASS
+
+      - name: Push clean reconciled source branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp cloudflare/workers/admin-gate/src/worker.js /tmp/worker.v782.js
+          cp security/index.html /tmp/security.v782.html
+          git fetch origin main
+          git checkout -B agent/security-v782-clean origin/main
+          cp /tmp/worker.v782.js cloudflare/workers/admin-gate/src/worker.js
+          cp /tmp/security.v782.html security/index.html
+          git config user.name 'Kalenel Security Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -- cloudflare/workers/admin-gate/src/worker.js security/index.html
+          git diff --cached --check
+          test "$(git diff --cached --name-only | wc -l)" -eq 2
+          git commit -m 'Add protected Google Drive saved camera archives'
+          git push --force origin HEAD:agent/security-v782-clean
+          echo V782_SOURCE_BRANCH=PASS
