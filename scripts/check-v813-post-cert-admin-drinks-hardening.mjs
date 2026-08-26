@@ -12,49 +12,38 @@ const searchSql=fs.readFileSync(searchPathFile,'utf8');
 const aclSql=fs.readFileSync(aclFile,'utf8');
 const acceptance=JSON.parse(fs.readFileSync(acceptanceFile,'utf8'));
 const fail=(message)=>{throw new Error(`V813_POST_CERT_DB_PROVENANCE_FAIL ${message}`);};
+const normalize=(text)=>text.toLowerCase().replace(/\s+/g,' ').trim();
+const searchNorm=normalize(searchSql);
+const aclNorm=normalize(aclSql);
 
 const signatures=[
-  'public.admin_activate_release(text, text)',
-  'public.admin_list_allowed_emails(text)',
-  'public.admin_list_invites(text)',
-  'public.admin_set_allowed_email(text, text, boolean, text)',
-  'public.admin_set_invite_email(text, text, boolean)',
-  'public.admin_set_player_banned(text, bigint, boolean, text)',
-  'public.admin_set_release_channel(text, text, text)',
-  'public.admin_set_reuse_expected_domain(text, text, text)',
-  'public.admin_set_reuse_expected_origin(text, text, text)',
-  'public.admin_upsert_release(text, text, text, text, text)',
-  'public.admin_upsert_release_manifest(text, text, text, text, text, boolean)',
-  'public.admin_revoke_player_access(text, bigint, text)',
-  'public.admin_resolve_player_access(text, bigint, text)',
-  'public.admin_create_player(text, text, text, text, text, text)',
-  'public.admin_create_drink(text, text, numeric, numeric, integer)',
-  'public.admin_update_drink(text, bigint, text, numeric, numeric, integer, boolean)',
-  'public.admin_delete_drink(text, bigint)',
-  'public.admin_settings_list_drinks(text)',
-  'public.get_ingame_drinks_v1()',
-  'public.admin_reset_game_stats4035(text, text)'
+  'public.admin_batch_update_drink_event_entries(text,bigint[],text)',
+  'public.admin_batch_update_drink_speed_attempt_entries(text,bigint[],text)',
+  'public.admin_delete_drink_event_entry(text,bigint)',
+  'public.admin_delete_drink_speed_attempt_entry(text,bigint)',
+  'public.admin_get_web_push_runtime_diagnostics(text,text)',
+  'public.admin_revoke_player_access(text,bigint,text)',
+  'public.admin_undo_drinks_action(text,bigint)',
+  'public.admin_update_drink_event_entry(text,bigint,text,numeric,text)',
+  'public.admin_update_drink_speed_attempt_entry(text,bigint,text,numeric,text)',
+  'public.get_drinks_admin_console(text)'
 ];
 
-const alterCount=(searchSql.match(/\bALTER\s+FUNCTION\b/gi)||[]).length;
-const revokeCount=(aclSql.match(/\bREVOKE\s+EXECUTE\s+ON\s+FUNCTION\b/gi)||[]).length;
-const grantCount=(aclSql.match(/\bGRANT\s+EXECUTE\s+ON\s+FUNCTION\b/gi)||[]).length;
+const alterCount=(searchSql.match(/\balter\s+function\b/gi)||[]).length;
+const revokeCount=(aclSql.match(/\brevoke\s+execute\s+on\s+function\b/gi)||[]).length;
+const grantCount=(aclSql.match(/\bgrant\s+execute\s+on\s+function\b/gi)||[]).length;
 if(alterCount!==signatures.length) fail(`expected ${signatures.length} ALTER FUNCTION statements, got ${alterCount}`);
 if(revokeCount!==signatures.length) fail(`expected ${signatures.length} REVOKE statements, got ${revokeCount}`);
 if(grantCount!==signatures.length) fail(`expected ${signatures.length} GRANT statements, got ${grantCount}`);
 
 for(const sig of signatures) {
-  const escaped=sig.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  const searchPattern=new RegExp(`ALTER\\s+FUNCTION\\s+${escaped}\\s+SET\\s+search_path\\s*=\\s*public\\s*;`,'i');
-  const revokePattern=new RegExp(`REVOKE\\s+EXECUTE\\s+ON\\s+FUNCTION\\s+${escaped}\\s+FROM\\s+PUBLIC\\s*;`,'i');
-  const grantPattern=new RegExp(`GRANT\\s+EXECUTE\\s+ON\\s+FUNCTION\\s+${escaped}\\s+TO\\s+anon\\s*,\\s*authenticated\\s*,\\s*service_role\\s*;`,'i');
-  if(!searchPattern.test(searchSql)) fail(`fixed search_path statement missing for ${sig}`);
-  if(!revokePattern.test(aclSql)) fail(`PUBLIC revoke missing for ${sig}`);
-  if(!grantPattern.test(aclSql)) fail(`explicit role grant missing for ${sig}`);
+  if(!searchNorm.includes(`alter function ${sig} set search_path = public;`)) fail(`fixed search_path statement missing for ${sig}`);
+  if(!aclNorm.includes(`revoke execute on function ${sig} from public;`)) fail(`PUBLIC revoke missing for ${sig}`);
+  if(!aclNorm.includes(`grant execute on function ${sig} to anon, authenticated, service_role;`)) fail(`explicit role grant missing for ${sig}`);
 }
 
 for(const [name,sql] of [[searchPathFile,searchSql],[aclFile,aclSql]]) {
-  if(/\bALTER\s+ROLE\b/i.test(sql)) fail(`${name} must not alter roles`);
+  if(/\balter\s+role\b/i.test(sql)) fail(`${name} must not alter roles`);
   if(/\bstatement_timeout\b/i.test(sql)) fail(`${name} must not change statement_timeout`);
 }
 
