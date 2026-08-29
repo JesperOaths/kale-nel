@@ -3,7 +3,7 @@ name: GEJAST web push scheduler watchdog
 on:
   workflow_dispatch:
   schedule:
-    # Independent, low-frequency freshness check away from the dispatcher's five-minute boundaries.
+    # Independent fallback cadence away from the primary dispatcher's five-minute boundaries.
     - cron: '17,47 * * * *'
   push:
     branches:
@@ -22,12 +22,13 @@ concurrency:
 jobs:
   freshness:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     env:
       DISPATCHER_WORKFLOW: web-push-dispatcher.yml
-      MAX_AGE_SECONDS: '2700'
+      MAX_AGE_SECONDS: '1200'
     steps:
       - name: Check latest successful scheduled dispatcher run
+        id: freshness
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -39,42 +40,84 @@ jobs:
           latest="$(jq -r '.workflow_runs | map(select(.event == "schedule" and .conclusion == "success")) | sort_by(.updated_at) | last | .updated_at // empty' <<<"$payload")"
           latest_url="$(jq -r '.workflow_runs | map(select(.event == "schedule" and .conclusion == "success")) | sort_by(.updated_at) | last | .html_url // empty' <<<"$payload")"
 
-          if [ -z "$latest" ]; then
-            message="No successful scheduled ${DISPATCHER_WORKFLOW} run is visible in the latest workflow history."
-            echo "$message"
-            echo "### Web Push scheduler freshness" >> "$GITHUB_STEP_SUMMARY"
-            echo "- Status: **STALE / NO SCHEDULED SUCCESS FOUND**" >> "$GITHUB_STEP_SUMMARY"
-            echo "- Dispatcher: \`${DISPATCHER_WORKFLOW}\`" >> "$GITHUB_STEP_SUMMARY"
-            if [ "$GITHUB_EVENT_NAME" = "push" ]; then
-              echo "::warning::$message"
-              exit 0
+          stale=true
+          status='STALE / NO SCHEDULED SUCCESS FOUND'
+          age_minutes='unknown'
+
+          if [ -n "$latest" ]; then
+            latest_epoch="$(date -u -d "$latest" +%s)"
+            now_epoch="$(date -u +%s)"
+            age_seconds="$((now_epoch - latest_epoch))"
+            age_minutes="$((age_seconds / 60))"
+            if [ "$age_seconds" -le "$MAX_AGE_SECONDS" ]; then
+              stale=false
+              status='FRESH'
+            else
+              status='STALE / FALLBACK REQUIRED'
             fi
-            echo "::error::$message"
-            exit 1
+            echo "latest_scheduled_success=${latest} age_seconds=${age_seconds} url=${latest_url}"
+          else
+            echo "No successful scheduled ${DISPATCHER_WORKFLOW} run is visible in the latest workflow history."
           fi
 
-          latest_epoch="$(date -u -d "$latest" +%s)"
-          now_epoch="$(date -u +%s)"
-          age_seconds="$((now_epoch - latest_epoch))"
-          age_minutes="$((age_seconds / 60))"
-
-          echo "latest_scheduled_success=${latest} age_seconds=${age_seconds} url=${latest_url}"
+          echo "stale=${stale}" >> "$GITHUB_OUTPUT"
           {
             echo "### Web Push scheduler freshness"
-            echo "- Latest successful scheduled dispatcher: \`${latest}\`"
+            echo "- Primary scheduler: **${status}**"
+            echo "- Latest successful scheduled dispatcher: \`${latest:-none}\`"
             echo "- Age: **${age_minutes} minutes**"
-            echo "- Maximum allowed age: **$((MAX_AGE_SECONDS / 60)) minutes**"
-            echo "- Run: ${latest_url}"
+            echo "- Primary freshness target: **$((MAX_AGE_SECONDS / 60)) minutes**"
+            if [ -n "$latest_url" ]; then
+              echo "- Last scheduled run: ${latest_url}"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "$age_seconds" -gt "$MAX_AGE_SECONDS" ]; then
-            message="Scheduled Web Push dispatcher is stale: latest success is ${age_minutes} minutes old (limit $((MAX_AGE_SECONDS / 60)) minutes)."
-            if [ "$GITHUB_EVENT_NAME" = "push" ]; then
-              echo "::warning::$message"
-              exit 0
-            fi
-            echo "::error::$message"
-            exit 1
+          if [ "$stale" = 'true' ]; then
+            echo "::warning::Primary Web Push scheduler is stale; watchdog fallback will run the dispatcher."
+          else
+            echo "Primary scheduled Web Push dispatcher is within the freshness target."
           fi
 
-          echo "Scheduled Web Push dispatcher freshness is within the allowed window."
+      - name: Check out repository for fallback
+        if: steps.freshness.outputs.stale == 'true'
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Set up Node.js for fallback
+        if: steps.freshness.outputs.stale == 'true'
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install pinned dispatcher dependencies for fallback
+        if: steps.freshness.outputs.stale == 'true'
+        run: npm ci
+
+      - name: Run fallback dispatcher
+        if: steps.freshness.outputs.stale == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          WEB_PUSH_VAPID_PUBLIC_KEY: ${{ secrets.WEB_PUSH_VAPID_PUBLIC_KEY }}
+          WEB_PUSH_VAPID_PRIVATE_KEY: ${{ secrets.WEB_PUSH_VAPID_PRIVATE_KEY }}
+          WEB_PUSH_VAPID_SUBJECT: ${{ secrets.WEB_PUSH_VAPID_SUBJECT }}
+          WEB_PUSH_WORKER_ID: github-actions-watchdog-fallback
+          WEB_PUSH_DRY_RUN: 'false'
+          WEB_PUSH_REQUIRE_EXPLICIT_TARGET: 'false'
+          WEB_PUSH_TARGET_SUBSCRIPTION_ID: ''
+          WEB_PUSH_MAX_JOBS: '25'
+        run: |
+          set -euo pipefail
+          node web_push_dispatcher.js
+          {
+            echo
+            echo "### Watchdog fallback"
+            echo "- Result: **dispatcher completed successfully**"
+            echo "- Worker: \`github-actions-watchdog-fallback\`"
+            echo "- Trigger: \`${GITHUB_EVENT_NAME}\`"
+            echo "- Completed: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record healthy primary scheduler
+        if: steps.freshness.outputs.stale != 'true'
+        run: echo 'Primary scheduler is fresh; fallback was not needed.' >> "$GITHUB_STEP_SUMMARY"
