@@ -1,21 +1,22 @@
 const products = [
-  { id:'jellyfish', name:'Pastel Jellyfish Illustration Tee', type:'marine', typeLabel:'Marine', price:24, description:'Soft sea-life artwork with a dreamy jellyfish glow and calm ocean feel.', image:'https://images.printify.com/mockup/6a878552828b6188a0031a81/12100/92570/pastel-jellyfish-illustration-tee-watercolor-sea-life-shirt.jpg?camera_label=front&s=640&use_cdn_redirect=true&t=1787432257261' },
-  { id:'hydrangea', name:'Hydrangea Watercolor Shirt', type:'floral', typeLabel:'Flowers', price:24, description:'A gentle hydrangea bloom with airy petals and a fresh botanical look.', image:'https://images.printify.com/mockup/6a877906eb76ae387b05cc0f/73207/98445/hydrangea-watercolor-shirt-floral-botanical-tee.jpg?camera_label=front&s=640&use_cdn_redirect=true&t=1787265232256' },
-  { id:'lace', name:'Queen Anne’s Lace Illustration Tee', type:'floral', typeLabel:'Flowers', price:24, description:'Delicate Queen Anne’s lace with airy stems and pressed-flower elegance.', image:'https://images.printify.com/mockup/6a877defbecced59b0037078/12100/92570/queen-annes-lace-illustration-tee-botanical-flower-shirt.jpg?camera_label=front&s=640&use_cdn_redirect=true&t=1787265185363' },
-  { id:'thistle', name:'Scottish Thistle T-Shirt', type:'botanical', typeLabel:'Botanical', price:24, description:'A crisp thistle study with spiky leaves, soft bloom, and field-guide character.', image:'https://images.printify.com/mockup/6a8769e26a41fe0f530b538f/12100/92570/scottish-thistle-t-shirt-botanical-floral-illustration.jpg?camera_label=front&s=640&use_cdn_redirect=true&t=1787265262278' },
-  { id:'mantis', name:'Pink Flower Mantis T-Shirt', type:'insect', typeLabel:'Insects', price:24, description:'A floral mantis motif with delicate petals and a strange garden charm.', image:'https://images.printify.com/mockup/6a8781c676f52ce62f082d19/12100/102005/pink-flower-mantis-t-shirt-botanical-insect-illustration-floral-praying-mantis.jpg?camera_label=front-2&s=640&use_cdn_redirect=true&t=1787265529973' },
-  { id:'fly', name:'Realistic Green Fly Illustration T-Shirt', type:'insect', typeLabel:'Insects', price:24, description:'A sharp green fly illustration for people who like curious, unusual nature details.', image:'https://images.printify.com/mockup/6a871b6035cea7fe2c005ee6/103548/100285/realistic-green-fly-illustration-t-shirt-insect-nature-tee.jpg?camera_label=front&s=640&use_cdn_redirect=true&t=1787265166493' },
-  { id:'axolotl', name:'Pink Axolotl Illustration T-Shirt', type:'aquatic', typeLabel:'Aquatic', price:24, description:'A playful axolotl with soft aquatic character and a sweet pond-life mood.', image:'https://images.printify.com/mockup/6a877d2aeb76ae387b05cfae/12100/102005/pink-axolotl-illustration-t-shirt-cute-aquatic-creature-tee.jpg?camera_label=front-2&s=640&use_cdn_redirect=true&t=1787265207176' },
+  { id:'jellyfish', name:'Pastel Jellyfish Illustration Tee', type:'marine', typeLabel:'Marine', price:35.44, priceMax:40.14, description:'Soft sea-life artwork with a dreamy jellyfish glow and calm ocean feel.', image:'https://images.printify.com/mockup/6a878552828b6188a0031a81/12100/92570/pastel-jellyfish-illustration-tee-watercolor-sea-life-shirt.jpg?camera_label=front&s=640&use_cdn_redirect=true&t=1787432257261' },
+  { id:'hydrangea', name:'Hydrangea Watercolor Shirt', type:'floral', typeLabel:'Flowers', price:30.02, priceMax:38.75, description:'A gentle hydrangea bloom with airy petals and a fresh botanical look.', image:'https://images.printify.com/mockup/6a877906eb76ae387b05cc0f/73207/98445/hydrangea-watercolor-shirt-floral-botanical-tee.jpg?camera_label=front&s=640&use_cdn_redirect=true&t=1787265232256' },
+  { id:'lace', name:'Queen Anne’s Lace Illustration Tee', type:'floral', typeLabel:'Flowers', price:27.25, priceMax:33.38, description:'Delicate Queen Anne’s lace with airy stems and pressed-flower elegance.', image:'https://images.printify.com/mockup/6a877defbecced59b0037078/12100/92570/queen-annes-lace-illustration-tee-botanical-flower-shirt.jpg?camera_label=front&s=640&use_cdn_redirect=true&t=1787265185363' },
+  { id:'thistle', name:'Scottish Thistle T-Shirt', type:'botanical', typeLabel:'Botanical', price:27.25, priceMax:33.38, description:'A crisp thistle study with spiky leaves, soft bloom, and field-guide character.', image:'https://images.printify.com/mockup/6a8769e26a41fe0f530b538f/12100/92570/scottish-thistle-t-shirt-botanical-floral-illustration.jpg?camera_label=front&s=640&use_cdn_redirect=true&t=1787265262278' },
+  { id:'mantis', name:'Pink Flower Mantis T-Shirt', type:'insect', typeLabel:'Insects', price:27.25, priceMax:33.38, description:'A floral mantis motif with delicate petals and a strange garden charm.', image:'https://images.printify.com/mockup/6a8781c676f52ce62f082d19/12100/102005/pink-flower-mantis-t-shirt-botanical-insect-illustration-floral-praying-mantis.jpg?camera_label=front-2&s=640&use_cdn_redirect=true&t=1787265529973' },
+  { id:'fly', name:'Realistic Green Fly Illustration T-Shirt', type:'insect', typeLabel:'Insects', price:39.83, priceMax:44.13, description:'A sharp green fly illustration for people who like curious, unusual nature details.', image:'https://images.printify.com/mockup/6a871b6035cea7fe2c005ee6/103548/100285/realistic-green-fly-illustration-t-shirt-insect-nature-tee.jpg?camera_label=front&s=640&use_cdn_redirect=true&t=1787265166493' },
+  { id:'axolotl', name:'Pink Axolotl Illustration T-Shirt', type:'aquatic', typeLabel:'Aquatic', price:27.25, priceMax:33.38, description:'A playful axolotl with soft aquatic character and a sweet pond-life mood.', image:'https://images.printify.com/mockup/6a877d2aeb76ae387b05cfae/12100/102005/pink-axolotl-illustration-t-shirt-cute-aquatic-creature-tee.jpg?camera_label=front-2&s=640&use_cdn_redirect=true&t=1787265207176' },
 ];
 
 const typeOrder = ['floral','botanical','insect','marine','aquatic'];
-const sizes = ['S','M','L','XL','2XL'];
+const sizes = ['S','M','L','XL','2XL','3XL','4XL','5XL'];
 const cartKey = 'bruisCartV1';
 let filter = 'all';
 let sort = 'type';
 let cart = JSON.parse(localStorage.getItem(cartKey) || '[]');
 
-const euro = value => `€${value.toFixed(2).replace('.00','')}`;
+const money = value => `$${value.toFixed(2)}`;
+const priceRange = product => `${money(product.price)}–${money(product.priceMax)}`;
 const qs = sel => document.querySelector(sel);
 const qsa = sel => [...document.querySelectorAll(sel)];
 
@@ -30,8 +31,11 @@ function mockups(product){
     { label:'Front', cls:'mock-front', image:mockupUrl(product.image, 'front') },
     { label:'Alternate front', cls:'mock-alt', image:mockupUrl(product.image, 'front-2') },
     { label:'Back', cls:'mock-back', image:mockupUrl(product.image, 'back') },
+    { label:'Alternate back', cls:'mock-back2', image:mockupUrl(product.image, 'back-2') },
     { label:'Side', cls:'mock-side', image:mockupUrl(product.image, 'side') },
     { label:'Lifestyle', cls:'mock-life', image:mockupUrl(product.image, 'lifestyle') },
+    { label:'Flat lay', cls:'mock-flat', image:mockupUrl(product.image, 'flat') },
+    { label:'On body', cls:'mock-person', image:mockupUrl(product.image, 'person') },
     { label:'Folded', cls:'mock-folded', image:mockupUrl(product.image, 'folded') },
   ];
 }
@@ -57,7 +61,8 @@ function renderProducts(){
           </figure>`).join('')}
       </div>
       <div class="product-copy">
-        <div class="product-meta"><span class="tag">${product.typeLabel}</span><strong>${euro(product.price)}</strong></div>
+        <div class="product-meta"><span class="tag">${product.typeLabel}</span><strong>${priceRange(product)}</strong></div>
+        <p class="price-note">Retail range by size · 8 sizes</p>
         <h3>${product.name}</h3>
         <p>${product.description}</p>
         <div class="buy-box">
@@ -79,7 +84,7 @@ function cartCount(){ return cart.reduce((sum,item) => sum + item.qty, 0); }
 
 function renderCart(){
   qsa('[data-cart-count]').forEach(el => el.textContent = cartCount());
-  qs('[data-cart-subtotal]').textContent = euro(cartTotal());
+  qs('[data-cart-subtotal]').textContent = money(cartTotal());
   const items = qs('[data-cart-items]');
   if(!cart.length){
     items.innerHTML = '<p class="empty-cart">Your cart is empty. Add a shirt from the collection.</p>';
@@ -89,7 +94,7 @@ function renderCart(){
         <img src="${item.image}" alt="${item.name}" />
         <div>
           <strong>${item.name}</strong>
-          <span>${item.size} · ${item.qty} × ${euro(item.price)}</span>
+          <span>${item.size} · ${item.qty} × ${money(item.price)} from-price</span>
           <button type="button" data-remove="${index}">Remove</button>
         </div>
       </article>`).join('');
