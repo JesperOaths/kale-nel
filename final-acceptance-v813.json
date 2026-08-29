@@ -7,7 +7,8 @@
   "certified_release_branch": "release/v813-certified-20260825",
   "production_migration": {
     "version": "20260825063031",
-    "name": "v813i_read_path_timeout_hardening"
+    "name": "v813i_read_path_timeout_hardening",
+    "record_scope": "certification_baseline_at_authoritative_run"
   },
   "authoritative_runs": {
     "gejast_verification": {
@@ -98,11 +99,46 @@
   "production_state": {
     "supabase_project_id": "uiqntazgnrxwliaidkmy",
     "database_data_plane": "healthy",
-    "latest_migration_version": "20260825063031",
-    "latest_migration_name": "v813i_read_path_timeout_hardening",
+    "latest_migration_version": "20260825203049",
+    "latest_migration_name": "restrict_admin_drinks_rpc_execute_public_20260825",
     "statement_timeout_watch": "PASS_NO_NEW_STATEMENT_TIMEOUT_AFTER_2026-08-25T06:42:30.957Z",
     "visual_fixture_cleanup": "zero residue",
     "browser_certification_residue": "0|0|0|0|0|0|0"
+  },
+  "post_certification_database_provenance": {
+    "verified_on": "2026-08-26",
+    "scope": "production security hardening applied after certification; source-control provenance backfill only",
+    "certified_product_sha_unchanged": true,
+    "certified_product_sha": "570ef4bded55493a226d1fc7c8afbb1e35244f56",
+    "frozen_branch": "release/v813-certified-20260825",
+    "migrations_reapplied": false,
+    "live_contract_verified": true,
+    "expected_contract": {
+      "security_definer_search_path": "public",
+      "public_execute": "revoked",
+      "explicit_execute_roles": [
+        "anon",
+        "authenticated",
+        "service_role"
+      ],
+      "statement_timeout_changed": false
+    },
+    "migrations": [
+      {
+        "version": "20260825203001",
+        "name": "harden_admin_drinks_security_definer_search_path_20260825",
+        "source_file": "GEJAST_20260825203001_harden_admin_drinks_security_definer_search_path.sql"
+      },
+      {
+        "version": "20260825203049",
+        "name": "restrict_admin_drinks_rpc_execute_public_20260825",
+        "source_file": "GEJAST_20260825203049_restrict_admin_drinks_rpc_execute_public.sql"
+      }
+    ],
+    "latest_production_migration": {
+      "version": "20260825203049",
+      "name": "restrict_admin_drinks_rpc_execute_public_20260825"
+    }
   },
   "truthfulness_policy": {
     "manual_visual_review_required": true,
