@@ -60,6 +60,7 @@ function renderProducts(){
             <figcaption>${m.label}</figcaption>
           </figure>`).join('')}
       </div>
+      <div class="mockup-hint">9 matching views · scroll sideways</div>
       <div class="product-copy">
         <div class="product-meta"><span class="tag">${product.typeLabel}</span><strong>${priceRange(product)}</strong></div>
         <p class="price-note">Retail range by size · 8 sizes</p>
