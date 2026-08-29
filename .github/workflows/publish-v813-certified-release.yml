@@ -1,0 +1,99 @@
+name: Publish v813 certified release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/publish-v813-certified-release.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CERTIFIED_SHA: 570ef4bded55493a226d1fc7c8afbb1e35244f56
+      RELEASE_TAG: v813
+    steps:
+      - name: Check out repository with history
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+
+      - name: Verify frozen v813 provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e "${CERTIFIED_SHA}^{commit}"
+          version="$(git show "${CERTIFIED_SHA}:VERSION" | tr -d '\r\n')"
+          test "$version" = "v813"
+          CERTIFIED_SHA="$CERTIFIED_SHA" node <<'NODE'
+          const fs = require('fs');
+          const acceptance = JSON.parse(fs.readFileSync('final-acceptance-v813.json', 'utf8'));
+          const expected = process.env.CERTIFIED_SHA;
+          if (acceptance.site_version !== 'v813' || acceptance.status !== 'PASS') {
+            throw new Error('final-acceptance-v813.json is not a PASS record for v813');
+          }
+          const pinned = acceptance.post_certification_database_provenance?.certified_product_sha || acceptance.evidence_baseline_main_sha;
+          if (pinned !== expected || acceptance.evidence_baseline_main_sha !== expected) {
+            throw new Error(`certified SHA mismatch: expected ${expected}, found ${pinned}`);
+          }
+          if (acceptance.certified_release_branch !== 'release/v813-certified-20260825') {
+            throw new Error('unexpected certified release branch');
+          }
+          NODE
+
+      - name: Publish immutable v813 tag and GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch --force --tags origin
+
+          if git show-ref --verify --quiet "refs/tags/${RELEASE_TAG}"; then
+            actual="$(git rev-list -n 1 "${RELEASE_TAG}")"
+            if [ "$actual" != "$CERTIFIED_SHA" ]; then
+              echo "REFUSING: ${RELEASE_TAG} already points to ${actual}, expected ${CERTIFIED_SHA}." >&2
+              exit 1
+            fi
+            echo "${RELEASE_TAG} already exists at the certified SHA."
+          else
+            git tag "${RELEASE_TAG}" "$CERTIFIED_SHA"
+            git push origin "refs/tags/${RELEASE_TAG}"
+            echo "Created ${RELEASE_TAG} at ${CERTIFIED_SHA}."
+          fi
+
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "GitHub Release ${RELEASE_TAG} already exists; leaving it unchanged."
+          else
+            cat > /tmp/v813-release-notes.md <<EOF
+          Certified production release for GEJAST v813.
+
+          Certified application commit: \`${CERTIFIED_SHA}\`
+          Frozen certification branch: \`release/v813-certified-20260825\`
+
+          Certification evidence records PASS across repository verification, dependency security, deployment, authenticated visual closure (140/140 screenshots; 0 BROKEN; 0 WARN), exact-main live-browser coverage, Pikken and Paardenrace natural completion, security boundaries, and zero-residue cleanup.
+
+          Post-certification operational/provenance commits on \`main\` are intentionally not included in this immutable product tag. They do not change the certified product SHA.
+          EOF
+            gh release create "${RELEASE_TAG}" \
+              --verify-tag \
+              --title "v813 — certified production release" \
+              --notes-file /tmp/v813-release-notes.md
+          fi
+
+      - name: Verify published release target
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch --force --tags origin
+          actual="$(git rev-list -n 1 "${RELEASE_TAG}")"
+          test "$actual" = "$CERTIFIED_SHA"
+          gh release view "${RELEASE_TAG}" --json tagName,url,isDraft,isPrerelease \
+            --jq 'if .tagName == "v813" and .isDraft == false and .isPrerelease == false then .url else error("release verification failed") end'
