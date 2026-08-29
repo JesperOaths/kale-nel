@@ -1,0 +1,80 @@
+name: GEJAST web push scheduler watchdog
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Independent, low-frequency freshness check away from the dispatcher's five-minute boundaries.
+    - cron: '17,47 * * * *'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/web-push-scheduler-watchdog.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: gejast-web-push-scheduler-watchdog
+  cancel-in-progress: true
+
+jobs:
+  freshness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DISPATCHER_WORKFLOW: web-push-dispatcher.yml
+      MAX_AGE_SECONDS: '2700'
+    steps:
+      - name: Check latest successful scheduled dispatcher run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          api_path="repos/${GITHUB_REPOSITORY}/actions/workflows/${DISPATCHER_WORKFLOW}/runs?event=schedule&status=success&per_page=20"
+          payload="$(gh api "$api_path")"
+          latest="$(jq -r '.workflow_runs | map(select(.event == "schedule" and .conclusion == "success")) | sort_by(.updated_at) | last | .updated_at // empty' <<<"$payload")"
+          latest_url="$(jq -r '.workflow_runs | map(select(.event == "schedule" and .conclusion == "success")) | sort_by(.updated_at) | last | .html_url // empty' <<<"$payload")"
+
+          if [ -z "$latest" ]; then
+            message="No successful scheduled ${DISPATCHER_WORKFLOW} run is visible in the latest workflow history."
+            echo "$message"
+            echo "### Web Push scheduler freshness" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Status: **STALE / NO SCHEDULED SUCCESS FOUND**" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Dispatcher: \`${DISPATCHER_WORKFLOW}\`" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+              echo "::warning::$message"
+              exit 0
+            fi
+            echo "::error::$message"
+            exit 1
+          fi
+
+          latest_epoch="$(date -u -d "$latest" +%s)"
+          now_epoch="$(date -u +%s)"
+          age_seconds="$((now_epoch - latest_epoch))"
+          age_minutes="$((age_seconds / 60))"
+
+          echo "latest_scheduled_success=${latest} age_seconds=${age_seconds} url=${latest_url}"
+          {
+            echo "### Web Push scheduler freshness"
+            echo "- Latest successful scheduled dispatcher: \`${latest}\`"
+            echo "- Age: **${age_minutes} minutes**"
+            echo "- Maximum allowed age: **$((MAX_AGE_SECONDS / 60)) minutes**"
+            echo "- Run: ${latest_url}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$age_seconds" -gt "$MAX_AGE_SECONDS" ]; then
+            message="Scheduled Web Push dispatcher is stale: latest success is ${age_minutes} minutes old (limit $((MAX_AGE_SECONDS / 60)) minutes)."
+            if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+              echo "::warning::$message"
+              exit 0
+            fi
+            echo "::error::$message"
+            exit 1
+          fi
+
+          echo "Scheduled Web Push dispatcher freshness is within the allowed window."
