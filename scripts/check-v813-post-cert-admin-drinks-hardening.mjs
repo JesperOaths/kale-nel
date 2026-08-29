@@ -74,7 +74,7 @@ for(const [version,name,source_file] of expectedMigrations) {
   const row=provenance.migrations.find((item)=>item.version===version);
   if(!row || row.name!==name || row.source_file!==source_file) fail(`provenance mismatch for ${version}`);
 }
-if(provenance.latest_production_migration?.version!=='20260825203049' || provenance.latest_production_migration?.name!=='restrict_admin_drinks_rpc_execute_public_20260825') fail('latest production migration provenance mismatch');
-if(acceptance.production_state?.latest_migration_version!=='20260825203049' || acceptance.production_state?.latest_migration_name!=='restrict_admin_drinks_rpc_execute_public_20260825') fail('production_state latest migration is stale');
+if(provenance.latest_production_migration?.version!=='20260825203049' || provenance.latest_production_migration?.name!=='restrict_admin_drinks_rpc_execute_public_20260825') fail('scoped admin/drinks provenance mismatch');
+if(acceptance.production_state?.latest_migration_version!=='20260829231158' || acceptance.production_state?.latest_migration_name!=='restore_safe_drinks_push_v661_diagnostics') fail('production_state latest migration is stale');
 
 console.log('RESULT=V813_POST_CERT_ADMIN_DRINKS_HARDENING_PASS');
