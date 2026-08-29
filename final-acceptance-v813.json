@@ -99,8 +99,8 @@
   "production_state": {
     "supabase_project_id": "uiqntazgnrxwliaidkmy",
     "database_data_plane": "healthy",
-    "latest_migration_version": "20260825203049",
-    "latest_migration_name": "restrict_admin_drinks_rpc_execute_public_20260825",
+    "latest_migration_version": "20260829231158",
+    "latest_migration_name": "restore_safe_drinks_push_v661_diagnostics",
     "statement_timeout_watch": "PASS_NO_NEW_STATEMENT_TIMEOUT_AFTER_2026-08-25T06:42:30.957Z",
     "visual_fixture_cleanup": "zero residue",
     "browser_certification_residue": "0|0|0|0|0|0|0"
@@ -138,6 +138,44 @@
     "latest_production_migration": {
       "version": "20260825203049",
       "name": "restrict_admin_drinks_rpc_execute_public_20260825"
+    }
+  },
+  "post_certification_web_push_rpc_security": {
+    "verified_on": "2026-08-30",
+    "scope": "confirmed legacy SECURITY DEFINER raw-row exposure containment plus safe aggregate-only v661 compatibility restoration; production database hardening after certification",
+    "certified_product_sha_unchanged": true,
+    "certified_product_sha": "570ef4bded55493a226d1fc7c8afbb1e35244f56",
+    "frozen_branch": "release/v813-certified-20260825",
+    "migrations_reapplied": false,
+    "live_contract_verified": true,
+    "confirmed_incident": "legacy_v660_unauthenticated_raw_row_information_exposure_contained",
+    "legacy_v660_execute": "service_role_only",
+    "safe_v661_execute": "anon_authenticated_service_role_explicit_only",
+    "safe_v661_raw_subscription_rows_returned": false,
+    "safe_v661_raw_presence_rows_returned": false,
+    "anon_legacy_call": "DENIED_42501",
+    "anon_safe_v661_call": "PASS_SANITIZED_AGGREGATE_ONLY",
+    "recent_api_log_review": "no legacy summary calls visible in available recent API log sample; this is not evidence that no earlier access occurred",
+    "migrations": [
+      {
+        "version": "20260829223803",
+        "name": "lock_legacy_drinks_push_summary_rpc_exposure_20260830",
+        "source_file": "GEJAST_20260829223803_lock_legacy_drinks_push_summary_rpc_exposure_20260830.sql"
+      },
+      {
+        "version": "20260829224000",
+        "name": "lock_legacy_drinks_pending_summary_rpc_exposure_20260830",
+        "source_file": "GEJAST_20260829224000_lock_legacy_drinks_pending_summary_rpc_exposure_20260830.sql"
+      },
+      {
+        "version": "20260829231158",
+        "name": "restore_safe_drinks_push_v661_diagnostics",
+        "source_file": "GEJAST_20260829231158_restore_safe_drinks_push_v661_diagnostics.sql"
+      }
+    ],
+    "latest_production_migration": {
+      "version": "20260829231158",
+      "name": "restore_safe_drinks_push_v661_diagnostics"
     }
   },
   "truthfulness_policy": {
