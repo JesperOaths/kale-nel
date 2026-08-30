@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bruis - Nature tees</title>
-  <meta name="description" content="Bruis nature-inspired tees. Shipping calculated after address entry." />
+  <meta name="description" content="Bruis nature-inspired tees. Choose a shirt collection, then shop the designs in that fit." />
   <meta property="og:title" content="Bruis" />
   <meta property="og:description" content="Nature-inspired tees." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://kalenel.nl/shop/" />
-  <link rel="stylesheet" href="styles.css?v=20260830-bare" />
+  <link rel="stylesheet" href="styles.css?v=20260830-collections-v1" />
 </head>
 <body>
   <header class="site-header">
@@ -20,10 +20,40 @@
   <main>
     <section class="hero">
       <h1>Nature tees</h1>
-      <p>Clean shirts with quiet nature artwork. Shipping calculated at checkout.</p>
+      <p>Choose the shirt shape first, then browse every design available in that collection.</p>
     </section>
 
-    <section class="shop-section" id="shop">
+    <section class="collection-section" aria-labelledby="collection-title">
+      <div class="collection-heading">
+        <p class="section-kicker">Choose your shirt</p>
+        <h2 id="collection-title">Three collections, one visual language.</h2>
+        <p>Normal contains the current range. Boxy and All Over Print are ready for future products and will fill automatically once products are assigned to those collections.</p>
+      </div>
+      <div class="collection-grid" role="list" aria-label="Shirt collections">
+        <button class="collection-card active" type="button" data-collection="normal" aria-pressed="true">
+          <span class="collection-image"><img src="assets/collection-normal.webp" alt="Normal classic T-shirt outline" /></span>
+          <span class="collection-copy"><strong>Normal</strong><small>Classic everyday T-shirt fit</small><span class="collection-count" data-collection-count="normal">0 shirts</span></span>
+        </button>
+        <button class="collection-card" type="button" data-collection="boxy" aria-pressed="false">
+          <span class="collection-image"><img src="assets/collection-boxy.webp" alt="Boxy T-shirt outline" /></span>
+          <span class="collection-copy"><strong>Boxy</strong><small>Shorter, wider, square silhouette</small><span class="collection-count" data-collection-count="boxy">0 shirts</span></span>
+        </button>
+        <button class="collection-card" type="button" data-collection="all-over" aria-pressed="false">
+          <span class="collection-image"><img src="assets/collection-all-over.webp" alt="All-over print T-shirt outline" /></span>
+          <span class="collection-copy"><strong>All Over Print</strong><small>Artwork repeated across the whole shirt</small><span class="collection-count" data-collection-count="all-over">0 shirts</span></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="shop-section" id="shop" aria-labelledby="shop-title">
+      <div class="shop-heading">
+        <div>
+          <p class="section-kicker">Selected collection</p>
+          <h2 id="shop-title" data-collection-title>Normal shirts</h2>
+        </div>
+        <button class="collection-back" type="button" data-scroll-collections>Change collection</button>
+      </div>
+      <p class="collection-empty" data-collection-empty hidden></p>
       <div class="product-grid" data-products aria-live="polite"></div>
     </section>
   </main>
@@ -38,14 +68,16 @@
       <div class="cart-summary">
         <div><span>Total</span><strong data-cart-subtotal>€0</strong></div>
         <p>Shipping is calculated after the address is entered.</p>
-        <a class="button primary full" data-mail-order href="mailto:hello@example.com?subject=Bruis%20order%20request">Request order link</a>
+        <button class="button primary full" type="button" data-shop-checkout>Secure checkout</button>
+        <p class="payment-status" data-payment-status role="status" aria-live="polite"></p>
       </div>
     </div>
   </aside>
 
   <footer class="footer">Bruis - Nature-inspired clothing.</footer>
 
-  <script src="catalog-data.js?v=20260830-no-shipping" defer></script>
-  <script src="store.js?v=20260830-no-shipping" defer></script>
+  <script src="catalog-data.js?v=20260830-collections-v1" defer></script>
+  <script src="store.js?v=20260830-collections-v1" defer></script>
+  <script src="payments.js?v=20260830-payments-v2" defer></script>
 </body>
 </html>
