@@ -50,13 +50,16 @@ jobs:
           node --check gejast-sw.js
           node --check scripts/check-v814-web-push-display-ack.mjs
           node check-active-js-syntax.mjs
-      - name: Remove one-shot builder machinery
+      - name: Verify final state in workspace
         run: |
           rm scripts/apply-v814-web-push-display-ack.mjs
           rm .github/workflows/v814-web-push-display-ack-builder.yml
-      - name: Verify permanent v814 lifecycle and provenance guard
-        run: node scripts/check-v814-web-push-display-ack.mjs
-      - name: Commit finalized v814 release branch
+          node scripts/check-v814-web-push-display-ack.mjs
+      - name: Restore workflow files for bot-safe push
+        run: |
+          git restore --source=HEAD -- .github/workflows/verify.yml
+          git restore --source=HEAD -- .github/workflows/v814-web-push-display-ack-builder.yml
+      - name: Commit validated non-workflow v814 output
         shell: bash
         run: |
           if git diff --quiet; then
@@ -66,5 +69,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          git commit -m 'Finalize v814 Web Push display ACK lifecycle'
+          git commit -m 'Finalize v814 Web Push display ACK runtime and provenance'
           git push origin HEAD:agent/v814-web-push-display-ack
