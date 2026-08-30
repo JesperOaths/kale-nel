@@ -1,6 +1,25 @@
 const FALLBACK_PRODUCTS = [];
 const cartKey = 'bruisCartV3';
+const COLLECTIONS = {
+  normal: {
+    label: 'Classic',
+    heading: 'Classic shirts',
+    empty: 'No Classic shirts are available yet.'
+  },
+  boxy: {
+    label: 'Boxy',
+    heading: 'Boxy shirts',
+    empty: 'No Boxy shirts yet. This collection is coming soon.'
+  },
+  'all-over': {
+    label: 'All Over Print',
+    heading: 'All Over Print shirts',
+    empty: 'No All Over Print shirts yet. This collection is coming soon.'
+  }
+};
+
 let products = [];
+let selectedCollection = null;
 let cart = JSON.parse(localStorage.getItem(cartKey) || '[]');
 
 const qs = sel => document.querySelector(sel);
@@ -8,6 +27,13 @@ const qsa = sel => [...document.querySelectorAll(sel)];
 const money = value => `€${Math.ceil(Number(value || 0))}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const slug = text => String(text || 'product').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,80) || 'product';
+
+function normalizeCollection(value){
+  const raw = String(value || '').trim().toLowerCase().replace(/_/g, '-');
+  if(raw === 'boxy' || raw === 'oversized') return 'boxy';
+  if(raw === 'all-over' || raw === 'all over' || raw === 'all-over-print' || raw === 'all over print') return 'all-over';
+  return 'normal';
+}
 
 function normalizeProduct(raw){
   const mockups = Array.isArray(raw.mockups) ? raw.mockups.filter(m => m && m.image) : [];
@@ -18,7 +44,10 @@ function normalizeProduct(raw){
     sizes: Array.isArray(raw.sizes) && raw.sizes.length ? raw.sizes : ['S','M','L','XL','2XL'],
     mockups,
     image: mockups[0]?.image || raw.image || '',
-    baseLabel: raw.baseLabel || 'Shirt base pending'
+    baseLabel: raw.baseLabel || 'Shirt base pending',
+    // Existing catalog rows have no collection yet, so every current product
+    // intentionally lands in Classic. Future rows can set boxy or all-over.
+    collection: normalizeCollection(raw.collection || raw.shirtCollection || raw.fit)
   };
 }
 
@@ -35,7 +64,7 @@ async function loadCatalog(){
     if(imported.length) return sortByShirtBase(imported);
   }
   try {
-    const response = await fetch('catalog.json?v=20260830-no-shipping', { cache: 'no-store' });
+    const response = await fetch('catalog.json?v=20260830-shape-entry-live1', { cache: 'no-store' });
     if(response.ok){
       const payload = await response.json();
       const rawProducts = Array.isArray(payload) ? payload : (payload.products || []);
@@ -46,10 +75,55 @@ async function loadCatalog(){
   return FALLBACK_PRODUCTS;
 }
 
+function productsForCollection(collection = selectedCollection){
+  if(!collection) return [];
+  return products.filter(product => product.collection === collection);
+}
+
+function updateCollectionCounts(){
+  Object.keys(COLLECTIONS).forEach(key => {
+    const count = productsForCollection(key).length;
+    qsa(`[data-collection-count="${key}"]`).forEach(el => {
+      el.textContent = count === 0 && key !== 'normal'
+        ? 'Coming soon'
+        : `${count} ${count === 1 ? 'shirt' : 'shirts'}`;
+    });
+  });
+}
+
+function updateShapeControls(){
+  qsa('[data-collection]').forEach(button => {
+    const active = button.dataset.collection === selectedCollection;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+}
+
 function renderProducts(){
   const wrap = qs('[data-products]');
-  wrap.innerHTML = products.map(product => `
-    <article class="product-card">
+  const empty = qs('[data-collection-empty]');
+  if(!selectedCollection){
+    wrap.innerHTML = '';
+    empty.hidden = true;
+    return;
+  }
+
+  const collection = COLLECTIONS[selectedCollection] || COLLECTIONS.normal;
+  const list = productsForCollection();
+  qs('[data-collection-title]').textContent = collection.heading;
+  updateShapeControls();
+
+  if(!list.length){
+    wrap.innerHTML = '';
+    empty.hidden = false;
+    empty.textContent = collection.empty;
+    return;
+  }
+
+  empty.hidden = true;
+  empty.textContent = '';
+  wrap.innerHTML = list.map(product => `
+    <article class="product-card" data-product-collection="${esc(product.collection)}">
       <div class="mockup-rail" aria-label="${esc(product.name)} images">
         ${product.mockups.map(m => `
           <figure class="mockup mock-${slug(m.label)}">
@@ -67,6 +141,7 @@ function renderProducts(){
       <div class="product-copy">
         <div class="product-top">
           <div>
+            <span class="product-collection-label">${esc(collection.label)}</span>
             <h3>${esc(product.name)}</h3>
             <p class="shirt-base">${esc(product.baseLabel)}</p>
           </div>
@@ -84,6 +159,34 @@ function renderProducts(){
       </div>
     </article>`).join('');
   initializeGalleries();
+}
+
+function openShoppingView({ scroll = true } = {}){
+  qs('[data-shape-entry]').hidden = true;
+  qs('[data-shop-section]').hidden = false;
+  if(scroll) qs('#shop')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function openShapeEntry({ scroll = true, updateUrl = true } = {}){
+  qs('[data-shop-section]').hidden = true;
+  qs('[data-shape-entry]').hidden = false;
+  updateShapeControls();
+  if(updateUrl){
+    const url = new URL(window.location.href);
+    url.searchParams.delete('collection');
+    history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+  }
+  if(scroll) qs('[data-shape-entry]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function setCollection(collection, { scroll = true } = {}){
+  const next = COLLECTIONS[collection] ? collection : 'normal';
+  selectedCollection = next;
+  const url = new URL(window.location.href);
+  url.searchParams.set('collection', next);
+  history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+  renderProducts();
+  openShoppingView({ scroll });
 }
 
 function initializeGalleries(){
@@ -143,27 +246,62 @@ function addToCart(id){
   const size = qs(`[data-size="${CSS.escape(id)}"]`)?.value || product.sizes[0];
   const qty = Math.max(1, Math.min(9, Number(qs(`[data-qty="${CSS.escape(id)}"]`)?.value || 1)));
   const existing = cart.find(item => item.id === id && item.size === size);
-  if(existing) existing.qty += qty;
-  else cart.push({ id, name: product.name, price: product.price, size, qty, image: product.image });
+  if(existing) existing.qty = Math.min(10, existing.qty + qty);
+  else cart.push({ id, name: product.name, price: product.price, size, qty, image: product.image, collection: product.collection });
   saveCart();
   renderCart();
   openCart();
 }
 
-function openCart(){ qs('[data-cart-drawer]').classList.add('open'); qs('[data-cart-drawer]').setAttribute('aria-hidden','false'); }
-function closeCart(){ qs('[data-cart-drawer]').classList.remove('open'); qs('[data-cart-drawer]').setAttribute('aria-hidden','true'); }
+function openCart(){
+  qs('[data-cart-drawer]').classList.add('open');
+  qs('[data-cart-drawer]').setAttribute('aria-hidden','false');
+}
+
+function closeCart(){
+  qs('[data-cart-drawer]').classList.remove('open');
+  qs('[data-cart-drawer]').setAttribute('aria-hidden','true');
+}
 
 document.addEventListener('click', event => {
+  const collection = event.target.closest('[data-collection]');
+  if(collection){
+    setCollection(collection.dataset.collection);
+    return;
+  }
+
+  if(event.target.closest('[data-expand-shapes]')){
+    openShapeEntry();
+    return;
+  }
+
   const add = event.target.closest('[data-add]');
   if(add) addToCart(add.dataset.add);
+
   const remove = event.target.closest('[data-remove]');
-  if(remove){ cart.splice(Number(remove.dataset.remove),1); saveCart(); renderCart(); }
+  if(remove){
+    cart.splice(Number(remove.dataset.remove),1);
+    saveCart();
+    renderCart();
+  }
+
   if(event.target.closest('[data-open-cart]')) openCart();
   if(event.target.closest('[data-close-cart]') || event.target === qs('[data-cart-drawer]')) closeCart();
 });
 
 loadCatalog().then(list => {
   products = list;
-  renderProducts();
+  updateCollectionCounts();
   renderCart();
+
+  const requested = new URLSearchParams(window.location.search).get('collection');
+  if(COLLECTIONS[requested]){
+    selectedCollection = requested;
+    renderProducts();
+    openShoppingView({ scroll: false });
+  } else {
+    selectedCollection = null;
+    updateShapeControls();
+    openShapeEntry({ scroll: false, updateUrl: false });
+  }
 });
