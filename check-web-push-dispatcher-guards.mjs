@@ -121,10 +121,17 @@ async function exerciseClaimAwareMarking({ fail = false } = {}) {
 }
 
 const successCalls = await exerciseClaimAwareMarking();
-const sentCall = successCalls.find((call) => call.name === 'mark_web_push_job_sent_v763');
-assert(sentCall, 'scheduled claimed item must use claim-aware sent marker');
-assert.equal(sentCall.args.worker_id_input, 'dispatcher', 'sent marker must use the worker that actually owns the claim');
-assert(!successCalls.some((call) => call.name === 'mark_web_push_job_sent_v3'), 'claim-aware scheduled send must not fall back to legacy marker');
+const prepareCall = successCalls.find((call) => call.name === 'prepare_web_push_display_ack_v814');
+const providerCall = successCalls.find((call) => call.name === 'record_web_push_provider_sent_v814');
+assert(prepareCall, 'scheduled claimed item must prepare a claim-bound display ACK capability');
+assert.equal(prepareCall.args.worker_id_input, 'dispatcher', 'display ACK preparation must use the worker that actually owns the claim');
+assert.equal(prepareCall.args.claim_token_input, claimedItem().claim_token, 'display ACK preparation must use the authoritative claim token');
+assert(providerCall, 'provider acceptance must use the v814 claim-aware provider marker');
+assert.equal(providerCall.args.worker_id_input, 'dispatcher', 'provider marker must use the worker that actually owns the claim');
+assert.equal(providerCall.args.claim_token_input, claimedItem().claim_token, 'provider marker must use the authoritative claim token');
+assert.equal(providerCall.args.provider_message_id_input, 'https://provider.example.invalid/message/1', 'provider marker must preserve provider message id');
+assert(successCalls.indexOf(prepareCall) < successCalls.indexOf(providerCall), 'display ACK preparation must precede provider acceptance recording');
+assert(!successCalls.some((call) => call.name === 'mark_web_push_job_sent_v763' || call.name === 'mark_web_push_job_sent_v3'), 'v814 provider acceptance must not finalize the job as sent before browser display ACK');
 
 const failureCalls = await exerciseClaimAwareMarking({ fail: true });
 const failedCall = failureCalls.find((call) => call.name === 'mark_web_push_job_failed_v763');
