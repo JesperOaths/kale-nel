@@ -2,8 +2,8 @@ const FALLBACK_PRODUCTS = [];
 const cartKey = 'bruisCartV3';
 const COLLECTIONS = {
   normal: { label: 'Normal', heading: 'Normal shirts', empty: 'No Normal shirts are available yet.' },
-  boxy: { label: 'Boxy', heading: 'Boxy shirts', empty: 'No Boxy shirts yet. This collection is ready for the first boxy products.' },
-  'all-over': { label: 'All Over Print', heading: 'All Over Print shirts', empty: 'No All Over Print shirts yet. Products assigned to this collection will appear here automatically.' }
+  boxy: { label: 'Boxy', heading: 'Boxy shirts', empty: 'No Boxy shirts yet. This collection is coming soon.' },
+  'all-over': { label: 'All Over Print', heading: 'All Over Print shirts', empty: 'No All Over Print shirts yet. This collection is coming soon.' }
 };
 let products = [];
 let selectedCollection = 'normal';
@@ -70,7 +70,9 @@ function updateCollectionCounts(){
   Object.keys(COLLECTIONS).forEach(key => {
     const count = productsForCollection(key).length;
     qsa(`[data-collection-count="${key}"]`).forEach(el => {
-      el.textContent = `${count} ${count === 1 ? 'shirt' : 'shirts'}`;
+      el.textContent = count === 0 && key !== 'normal'
+        ? 'Coming soon'
+        : `${count} ${count === 1 ? 'shirt' : 'shirts'}`;
     });
   });
 }
