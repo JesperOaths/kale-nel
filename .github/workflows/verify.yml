@@ -52,6 +52,8 @@ jobs:
         run: node scripts/check-v813-post-cert-web-push-rpc-hardening.mjs
       - name: v813 post-certification admin-session RPC hardening
         run: node scripts/check-v813-post-cert-admin-session-rpc-hardening.mjs
+      - name: v813 final anonymous SECURITY DEFINER hardening
+        run: node scripts/check-v813-final-anon-security-definer-hardening.mjs
       - name: Reconstructed Paardenrace RPC source safety
         run: node check-paardenrace-rpc-source-safety.mjs
       - name: Paardenrace backend minimum evidence
