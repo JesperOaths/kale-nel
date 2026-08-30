@@ -34,21 +34,25 @@
     .mockup-rail {
       grid-auto-columns: 100% !important;
       gap: 0 !important;
-      padding: 10px !important;
+      padding: 8px !important;
     }
     .mockup-rail .mock-front-print {
       background: #fff !important;
       overflow: hidden !important;
+      min-height: 0;
     }
     .mockup-rail .mock-front-print img {
+      width: 100% !important;
+      height: 100% !important;
+      aspect-ratio: 1 / 1 !important;
       padding: 0 !important;
       object-fit: contain !important;
       object-position: center !important;
-      transform: scale(1.82);
+      transform: scale(3.55);
       transform-origin: center;
     }
     @media (max-width: 620px) {
-      .mockup-rail .mock-front-print img { transform: scale(1.68); }
+      .mockup-rail .mock-front-print img { transform: scale(3.25); }
     }
   `;
   document.head.appendChild(style);
