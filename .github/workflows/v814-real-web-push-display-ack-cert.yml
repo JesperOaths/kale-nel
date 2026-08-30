@@ -92,7 +92,8 @@ jobs:
           echo "GEJAST_PLAYER_TOKEN=$token" >> "$GITHUB_ENV"
 
           sql_file="$(mktemp)"
-          trap 'rm -f "$sql_file"' EXIT
+          resolver_sql="$(mktemp)"
+          trap 'rm -f "$sql_file" "$resolver_sql"' EXIT
           cat > "$sql_file" <<'SQL'
           begin;
           with ins as (
@@ -112,8 +113,11 @@ jobs:
           select :'token',id,'friends',now()+interval '30 minutes' from ins;
           commit;
           SQL
+          cat > "$resolver_sql" <<'SQL'
+          select coalesce((public._jas_session_player(:'token')).display_name,'');
+          SQL
           psql "$SUPABASE_CI_DB_URL" -X -v ON_ERROR_STOP=1 -v name="$name" -v token="$token" -f "$sql_file"
-          resolved="$(psql "$SUPABASE_CI_DB_URL" -X -v ON_ERROR_STOP=1 -At -v token="$token" -c "select coalesce((public._jas_session_player(:'token')).display_name,'');")"
+          resolved="$(psql "$SUPABASE_CI_DB_URL" -X -v ON_ERROR_STOP=1 -At -v token="$token" -f "$resolver_sql")"
           test "$resolved" = "$name"
           echo 'RESULT=V814_REAL_PUSH_DISPOSABLE_IDENTITY_PASS'
 
