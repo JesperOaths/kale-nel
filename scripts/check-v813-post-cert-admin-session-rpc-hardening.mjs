@@ -11,7 +11,8 @@ for(const path of [...sqlFiles,proofFile]) if(!fs.existsSync(path)) fail(`missin
 
 const sqlParts=sqlFiles.map(path=>fs.readFileSync(path,'utf8'));
 const sql=sqlParts.join('\n');
-const norm=sql.toLowerCase().replace(/\s+/g,' ').trim();
+const executableSql=sqlParts.map(part=>part.replace(/^\s*--.*$/gm,'')).join('\n');
+const norm=executableSql.toLowerCase().replace(/\s+/g,' ').trim();
 const proof=JSON.parse(fs.readFileSync(proofFile,'utf8'));
 const functions=[
   'admin_get_home_profile_runtime_audit_v682',
@@ -28,22 +29,19 @@ const functions=[
 for(const name of functions) {
   if(!norm.includes(`create or replace function public.${name}(`)) fail(`definition missing for ${name}`);
 }
-const createCount=(sql.match(/\bcreate\s+or\s+replace\s+function\s+public\./gi)||[]).length;
-const guardCount=(sql.match(/_gejast_require_admin_session_v792m\s*\(\s*admin_session_token(?:_input)?\s*\)/gi)||[]).length;
-const securityDefinerCount=(sql.match(/\bsecurity\s+definer\b/gi)||[]).length;
-const searchPathCount=(sql.match(/\bset\s+search_path\s+to\s+'public'/gi)||[]).length;
-const materializedGuardCount=(sql.match(/with\s+_guard\s+as\s+materialized/gi)||[]).length;
+const createCount=(executableSql.match(/\bcreate\s+or\s+replace\s+function\s+public\./gi)||[]).length;
+const guardCount=(executableSql.match(/_gejast_require_admin_session_v792m\s*\(\s*admin_session_token(?:_input)?\s*\)/gi)||[]).length;
+const securityDefinerCount=(executableSql.match(/\bsecurity\s+definer\b/gi)||[]).length;
+const searchPathCount=(executableSql.match(/\bset\s+search_path\s+to\s+'public'/gi)||[]).length;
+const materializedGuardCount=(executableSql.match(/with\s+_guard\s+as\s+materialized/gi)||[]).length;
 if(createCount!==9) fail(`expected 9 function definitions, got ${createCount}`);
 if(guardCount!==9) fail(`expected 9 canonical admin-session guard calls, got ${guardCount}`);
 if(securityDefinerCount!==9) fail(`expected 9 SECURITY DEFINER declarations, got ${securityDefinerCount}`);
 if(searchPathCount!==9) fail(`expected 9 fixed public search_path declarations, got ${searchPathCount}`);
 if(materializedGuardCount!==4) fail(`expected 4 materialized SQL-language guard CTEs, got ${materializedGuardCount}`);
 
-for(const part of sqlParts) {
-  const executable=part.replace(/^--.*$/gm,'');
-  for(const forbidden of [/\bgrant\b/i,/\brevoke\b/i,/\balter\s+role\b/i,/\bstatement_timeout\b/i]) {
-    if(forbidden.test(executable)) fail(`unexpected privilege/timeout mutation matching ${forbidden}`);
-  }
+for(const forbidden of [/\bgrant\b/i,/\brevoke\b/i,/\balter\s+role\b/i,/\bstatement_timeout\b/i]) {
+  if(forbidden.test(executableSql)) fail(`unexpected privilege/timeout mutation matching ${forbidden}`);
 }
 
 if(proof.site_version!=='v813') fail('proof site_version mismatch');
