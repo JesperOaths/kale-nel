@@ -18,6 +18,7 @@
     const id = String(product?.id || '');
     if (id === DRAGONFLY_PRODUCT_ID) {
       product.name = 'Dragonfly Illustration T-Shirt';
+      product.collection = 'boxy';
     }
 
     const image = PRODUCT_PREVIEWS[id];
