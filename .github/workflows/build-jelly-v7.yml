@@ -1,6 +1,9 @@
 name: Build Jellyfish v7 preview
 
 on:
+  push:
+    branches:
+      - fix/shop-jellyfish-nonblank-v7
   workflow_dispatch:
 
 permissions:
@@ -8,6 +11,7 @@ permissions:
 
 jobs:
   build:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
