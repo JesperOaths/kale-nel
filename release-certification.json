@@ -5,6 +5,8 @@
   "previous_certified_version": "v813",
   "previous_certified_product_sha": "570ef4bded55493a226d1fc7c8afbb1e35244f56",
   "previous_certified_release_branch": "release/v813-certified-20260825",
+  "superseded_uncertified_version": "v812",
+  "superseded_uncertified_product_sha": "a62b6ff4a73a1419f2aeb1c4f83e64d2bf780bbc",
   "reason": "v814 adds explicit Web Push display acknowledgement telemetry. The dispatcher now prepares a one-time display-ACK capability before provider send, records provider acceptance separately, and the service worker acknowledges display only after showNotification resolves. The two production migrations applied on 2026-08-30 are preserved verbatim in source control together with a permanent lifecycle/provenance guard. The v813 certified product remains the last fully certified baseline; v814 must not inherit the v813 140/140 visual or live-browser certification without fresh exact-current evidence.",
   "remaining_release_blockers": [
     "Canonical GEJAST verification and dependency security must pass on the final v814 branch/PR state.",
