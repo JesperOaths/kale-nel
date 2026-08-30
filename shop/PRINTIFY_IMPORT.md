@@ -1,6 +1,6 @@
 # Bruis shop catalog import
 
-The shop is static and reads `shop/catalog.json` when that file exists, falling back to `shop/catalog.printify.json` and then the built-in catalog.
+The shop is static and first reads `shop/catalog-data.js`, which is GitHub Pages friendly because this repository's Jekyll config excludes JSON files from publishing. It can also fall back to `shop/catalog.json`, `shop/catalog.printify.json`, and then the built-in catalog.
 
 ## Safe import flow
 
@@ -9,10 +9,10 @@ The shop is static and reads `shop/catalog.json` when that file exists, falling 
 3. Run:
 
 ```bash
-node scripts/import-printify-catalog.mjs path/to/printify-products.json --out shop/catalog.json
+node scripts/import-printify-catalog.mjs path/to/printify-products.json --out shop/catalog-data.js
 ```
 
-This writes `shop/catalog.json` with only public catalog data: product title, description, enabled variant prices, sizes, base shirt identifiers, and mockup image URLs.
+This writes `shop/catalog-data.js` with only public catalog data: product title, description, enabled variant prices, sizes, base shirt identifiers, and mockup image URLs.
 
 ## Supported input shapes
 

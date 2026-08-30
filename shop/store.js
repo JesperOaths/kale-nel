@@ -465,6 +465,11 @@ function normalizeProduct(raw){
 }
 
 async function loadCatalog(){
+  if(window.BRUIS_CATALOG){
+    const rawProducts = Array.isArray(window.BRUIS_CATALOG) ? window.BRUIS_CATALOG : (window.BRUIS_CATALOG.products || window.BRUIS_CATALOG.data || []);
+    const imported = rawProducts.map(normalizeProduct).filter(p => p.name && p.mockups.length);
+    if(imported.length) return imported;
+  }
   for(const path of ['catalog.json?v=20260830', 'catalog.printify.json?v=20260830']){
     try {
       const response = await fetch(path, { cache:'no-store' });

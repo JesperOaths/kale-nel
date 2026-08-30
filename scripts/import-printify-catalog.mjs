@@ -131,6 +131,11 @@ if(!products.length){
   process.exit(1);
 }
 
+const catalog = { generatedAt:new Date().toISOString(), products };
+const isJs = outPath.endsWith('.js');
+const content = isJs
+  ? `window.BRUIS_CATALOG = ${JSON.stringify(catalog, null, 2)};\n`
+  : `${JSON.stringify(catalog, null, 2)}\n`;
 await mkdir(dirname(outPath), { recursive:true });
-await writeFile(outPath, `${JSON.stringify({ generatedAt:new Date().toISOString(), products }, null, 2)}\n`);
+await writeFile(outPath, content);
 console.log(`Wrote ${products.length} products to ${outPath}`);
