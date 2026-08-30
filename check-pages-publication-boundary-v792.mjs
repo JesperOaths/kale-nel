@@ -108,13 +108,29 @@ const excludedTrackedFiles = tracked.filter((file) =>
   globallyExcludedExtensions.has(path.extname(file).toLowerCase())
 );
 
+// Bruis deliberately publishes public product data through shop/catalog-data.js so
+// the repository can keep JSON globally excluded from Pages. store.js retains the
+// two historical JSON fetch names only as a backwards-compatible fallback path.
+// Treat those exact source->artifact pairs as safe only while the published JS
+// adapter is tracked and store.js consumes window.BRUIS_CATALOG first.
+const shopCatalogAdapter = 'shop/catalog-data.js';
+const shopStore = 'shop/store.js';
+const shopStoreBody = tracked.includes(shopStore) ? fs.readFileSync(shopStore, 'utf8') : '';
+assert.ok(tracked.includes(shopCatalogAdapter), 'Bruis public catalog JS adapter must remain tracked');
+assert.match(shopStoreBody, /window\.BRUIS_CATALOG/, 'Bruis store must consume the published JS catalog adapter');
+const deliberateExcludedDependencyExceptions = new Set([
+  `${shopStore} -> shop/catalog.json`,
+  `${shopStore} -> shop/catalog.printify.json`
+]);
+
 const sourceBodies = activeSources.map((file) => [file, fs.readFileSync(file, 'utf8')]);
 const dependencyViolations = [];
 for (const excludedFile of excludedTrackedFiles) {
   const basename = path.basename(excludedFile);
   for (const [sourceFile, body] of sourceBodies) {
     if (body.includes(excludedFile) || body.includes(basename)) {
-      dependencyViolations.push(`${sourceFile} -> ${excludedFile}`);
+      const edge = `${sourceFile} -> ${excludedFile}`;
+      if (!deliberateExcludedDependencyExceptions.has(edge)) dependencyViolations.push(edge);
     }
   }
 }
