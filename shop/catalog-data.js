@@ -1,13 +1,13 @@
 window.BRUIS_CATALOG = {
-  "generatedAt": "2026-08-30T01:20:00+02:00",
+  "generatedAt": "2026-08-30T12:37:00+02:00",
   "products": [
     {
       "id": "6a878552828b6188a0031a81",
       "name": "Pastel Jellyfish Illustration Tee",
       "type": "marine",
       "typeLabel": "Marine",
-      "price": 35.44,
-      "priceMax": 40.14,
+      "price": 33.21,
+      "priceMax": 33.21,
       "description": "Soft sea-life artwork with a dreamy jellyfish glow and calm ocean feel.",
       "sizes": [
         "S",
@@ -54,15 +54,20 @@ window.BRUIS_CATALOG = {
           "label": "Sleeve right",
           "image": "https://images.printify.com/mockup/6a878552828b6188a0031a81/12100/109212/pastel-jellyfish-illustration-tee-watercolor-sea-life-shirt.jpg?camera_label=person-10-sleeve-right-closeup&s=640&use_cdn_redirect=true&t=1788045605490"
         }
-      ]
+      ],
+      "currency": "EUR",
+      "productionCostUsd": 32.85,
+      "productionCostEur": 28.21,
+      "marginEur": 5,
+      "pricingFormula": "highest selected Printify production cost USD 32.85 / 1.1643 + EUR 5.00"
     },
     {
       "id": "6a877906eb76ae387b05cc0f",
       "name": "Hydrangea Watercolor Shirt",
       "type": "floral",
       "typeLabel": "Flowers",
-      "price": 30.02,
-      "priceMax": 38.75,
+      "price": 25.63,
+      "priceMax": 25.63,
       "description": "A gentle hydrangea bloom with airy petals and a fresh botanical look.",
       "sizes": [
         "S",
@@ -97,15 +102,20 @@ window.BRUIS_CATALOG = {
           "label": "On body back",
           "image": "https://images.printify.com/mockup/6a877906eb76ae387b05cc0f/73207/112434/hydrangea-watercolor-shirt-floral-botanical-tee.jpg?camera_label=person-1-back&s=640&use_cdn_redirect=true&t=1788045627747"
         }
-      ]
+      ],
+      "currency": "EUR",
+      "productionCostUsd": 24.02,
+      "productionCostEur": 20.63,
+      "marginEur": 5,
+      "pricingFormula": "highest selected Printify production cost USD 24.02 / 1.1643 + EUR 5.00"
     },
     {
       "id": "6a877defbecced59b0037078",
       "name": "Queen Anne’s Lace Illustration Tee",
       "type": "floral",
       "typeLabel": "Flowers",
-      "price": 27.25,
-      "priceMax": 33.38,
+      "price": 22.61,
+      "priceMax": 22.61,
       "description": "Delicate Queen Anne’s lace with airy stems and pressed-flower elegance.",
       "sizes": [
         "S",
@@ -156,15 +166,20 @@ window.BRUIS_CATALOG = {
           "label": "On body back 2",
           "image": "https://images.printify.com/mockup/6a877defbecced59b0037078/12100/101995/queen-annes-lace-illustration-tee-botanical-flower-shirt.jpg?camera_label=person-8-back&s=640&use_cdn_redirect=true&t=1788045703634"
         }
-      ]
+      ],
+      "currency": "EUR",
+      "productionCostUsd": 20.5,
+      "productionCostEur": 17.61,
+      "marginEur": 5,
+      "pricingFormula": "highest selected Printify production cost USD 20.50 / 1.1643 + EUR 5.00"
     },
     {
       "id": "6a8769e26a41fe0f530b538f",
       "name": "Scottish Thistle T-Shirt",
       "type": "botanical",
       "typeLabel": "Botanical",
-      "price": 27.25,
-      "priceMax": 33.38,
+      "price": 22.61,
+      "priceMax": 22.61,
       "description": "A crisp thistle study with spiky leaves, soft bloom, and field-guide character.",
       "sizes": [
         "S",
@@ -195,15 +210,20 @@ window.BRUIS_CATALOG = {
           "label": "Alternate back",
           "image": "https://images.printify.com/mockup/6a8769e26a41fe0f530b538f/12100/102006/scottish-thistle-t-shirt-botanical-floral-illustration.jpg?camera_label=back-2&s=640&use_cdn_redirect=true&t=1788045672820"
         }
-      ]
+      ],
+      "currency": "EUR",
+      "productionCostUsd": 20.5,
+      "productionCostEur": 17.61,
+      "marginEur": 5,
+      "pricingFormula": "highest selected Printify production cost USD 20.50 / 1.1643 + EUR 5.00"
     },
     {
       "id": "6a8781c676f52ce62f082d19",
       "name": "Pink Flower Mantis T-Shirt",
       "type": "insect",
       "typeLabel": "Insects",
-      "price": 27.25,
-      "priceMax": 33.38,
+      "price": 22.61,
+      "priceMax": 22.61,
       "description": "A floral mantis motif with delicate petals and a strange garden charm.",
       "sizes": [
         "S",
@@ -238,15 +258,20 @@ window.BRUIS_CATALOG = {
           "label": "Duo",
           "image": "https://images.printify.com/mockup/6a8781c676f52ce62f082d19/12100/93747/pink-flower-mantis-t-shirt-botanical-insect-illustration-floral-praying-mantis.jpg?camera_label=duo&s=640&use_cdn_redirect=true&t=1788045640217"
         }
-      ]
+      ],
+      "currency": "EUR",
+      "productionCostUsd": 20.5,
+      "productionCostEur": 17.61,
+      "marginEur": 5,
+      "pricingFormula": "highest selected Printify production cost USD 20.50 / 1.1643 + EUR 5.00"
     },
     {
       "id": "6a877d2aeb76ae387b05cfae",
       "name": "Pink Axolotl Illustration T-Shirt",
       "type": "aquatic",
       "typeLabel": "Aquatic",
-      "price": 27.25,
-      "priceMax": 33.38,
+      "price": 22.61,
+      "priceMax": 22.61,
       "description": "A playful axolotl with soft aquatic character and a sweet pond-life mood.",
       "sizes": [
         "S",
@@ -285,15 +310,20 @@ window.BRUIS_CATALOG = {
           "label": "On body 2",
           "image": "https://images.printify.com/mockup/6a877d2aeb76ae387b05cfae/12100/92661/pink-axolotl-illustration-t-shirt-cute-aquatic-creature-tee.jpg?camera_label=person-4&s=640&use_cdn_redirect=true&t=1788045689148"
         }
-      ]
+      ],
+      "currency": "EUR",
+      "productionCostUsd": 20.5,
+      "productionCostEur": 17.61,
+      "marginEur": 5,
+      "pricingFormula": "highest selected Printify production cost USD 20.50 / 1.1643 + EUR 5.00"
     },
     {
       "id": "6a871b6035cea7fe2c005ee6",
       "name": "Realistic Green Fly Illustration T-Shirt",
       "type": "insect",
       "typeLabel": "Insects",
-      "price": 39.83,
-      "priceMax": 44.13,
+      "price": 30.19,
+      "priceMax": 30.19,
       "description": "A sharp green fly illustration for people who like curious, unusual nature details.",
       "sizes": [
         "S",
@@ -324,7 +354,19 @@ window.BRUIS_CATALOG = {
           "label": "On body",
           "image": "https://images.printify.com/mockup/6a871b6035cea7fe2c005ee6/103548/100476/realistic-green-fly-illustration-t-shirt-insect-nature-tee.jpg?camera_label=person-1-front&s=640&use_cdn_redirect=true&t=1788045715502"
         }
-      ]
+      ],
+      "currency": "EUR",
+      "productionCostUsd": 29.33,
+      "productionCostEur": 25.19,
+      "marginEur": 5,
+      "pricingFormula": "highest selected Printify production cost USD 29.33 / 1.1643 + EUR 5.00"
     }
-  ]
+  ],
+  "pricing": {
+    "currency": "EUR",
+    "source": "Printify rendered Pricing table checked 2026-08-30; ECB reference rate 2026-08-28",
+    "rateUsdPerEur": 1.1643,
+    "marginEur": 5,
+    "rule": "fixed retail price = highest selected variant production cost in USD converted to EUR + EUR 5.00; shipping/tax/platform/payment fees excluded"
+  }
 };
