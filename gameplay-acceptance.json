@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "site_version": "v813",
-  "last_updated": "2026-08-21",
+  "site_version": "v814",
+  "last_updated": "2026-08-30",
   "scope": "Gameplay acceptance is tracked separately from general beta readiness. Deterministic engine proof is not labeled as live multiplayer proof, and route/RPC reachability is not labeled as play-to-completion proof. Player-count limits are only recorded as exact when current shipped source or deterministic acceptance grounds them; unknown backend-owned limits remain explicitly unknown.",
   "live_write_approval": {
     "name": "GEJAST_ALLOW_LIVE_WRITE_BETA",
@@ -180,5 +180,6 @@
       "live_evidence": "Production v792b-v792h is applied. On 2026-08-16 a controlled production smoke used two randomized disposable player sessions to create a zero-bot room, join a second human, read state independently as both viewers, close the room as host, and physically remove room/session/player fixtures; post-cleanup counts were zero. Exact-v801 Phase-1 run 31944683360 again created a two-human room with distinct seats, and Phase-2 deep run 31952351394 exercised multi-context Klaverjas state/reconnect behavior. No full four-human production play-to-completion claim is made.",
       "remaining_gap": "No backend/frontend gap remains for the controlled two-human room lifecycle. Full four-seat rules/completion are covered by deterministic and isolated PostgreSQL acceptance; a full four-human production browser completion remains unclaimed."
     }
-  ]
+  ],
+  "current_release_note": "v814 carries forward the machine-checked gameplay contracts and historical production evidence classes; these are regression baselines, not a claim that exact-current v814 gameplay/visual certification has already been rerun. Fresh v814 live-browser/gameplay evidence remains part of release revalidation."
 }
