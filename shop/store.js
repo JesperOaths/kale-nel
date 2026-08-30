@@ -32,6 +32,8 @@ function normalizeProduct(raw){
     mockups,
     image: mockups[0]?.image || raw.image || '',
     baseLabel: raw.baseLabel || 'Shirt base pending',
+    // Current products do not yet carry a collection field, so they intentionally
+    // resolve to Normal. Future catalog rows can set boxy or all-over explicitly.
     collection: normalizeCollection(raw.collection || raw.shirtCollection || raw.fit)
   };
 }
@@ -207,6 +209,13 @@ function addToCart(id){
   openCart();
 }
 
+function clearCart(){
+  cart = [];
+  saveCart();
+  renderCart();
+  closeCart();
+}
+
 function openCart(){ qs('[data-cart-drawer]').classList.add('open'); qs('[data-cart-drawer]').setAttribute('aria-hidden','false'); }
 function closeCart(){ qs('[data-cart-drawer]').classList.remove('open'); qs('[data-cart-drawer]').setAttribute('aria-hidden','true'); }
 
@@ -222,6 +231,7 @@ document.addEventListener('click', event => {
   if(event.target.closest('[data-open-cart]')) openCart();
   if(event.target.closest('[data-close-cart]') || event.target === qs('[data-cart-drawer]')) closeCart();
 });
+window.addEventListener('bruis:cart-clear', clearCart);
 
 loadCatalog().then(list => {
   products = list;
