@@ -34,16 +34,6 @@
     });
   }
 
-  function orderRequestHref() {
-    const summary = getCart().map((item) => `${item.qty} x ${item.name} (${item.size})`).join('\n') || 'I would like to order Bruis tees.';
-    return `mailto:info@kalenel.nl?subject=Bruis%20order%20request&body=${encodeURIComponent(summary)}`;
-  }
-
-  function refreshFallbackLink() {
-    const fallback = document.querySelector('[data-mail-order]');
-    if (fallback) fallback.href = orderRequestHref();
-  }
-
   async function startCheckout() {
     if (busy) return;
     const cart = getCart();
@@ -76,7 +66,7 @@
       window.location.assign(data.url);
     } catch (error) {
       console.error('Secure checkout failed', error);
-      setStatus(`${error?.message || 'Secure checkout is unavailable.'} You can still send an order request.`, true);
+      setStatus(error?.message || 'Secure checkout is not available yet.', true);
       setBusy(false);
     }
   }
@@ -135,16 +125,12 @@
 
   document.addEventListener('click', (event) => {
     const checkout = event.target.closest('[data-shop-checkout]');
-    if (checkout) {
-      event.preventDefault();
-      startCheckout();
-      return;
-    }
-    if (event.target.closest('[data-mail-order]')) refreshFallbackLink();
+    if (!checkout) return;
+    event.preventDefault();
+    startCheckout();
   });
 
   window.addEventListener('DOMContentLoaded', () => {
-    refreshFallbackLink();
     const params = new URLSearchParams(window.location.search);
     const payment = params.get('payment');
     if (payment === 'success' && params.get('session_id')) verifyReturnedPayment();
