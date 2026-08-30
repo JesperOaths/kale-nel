@@ -7,6 +7,7 @@
   "frozen_certified_branch": "release/v813-certified-20260825",
   "source_baseline_main_sha": "73cbe3b2c80b86c74c41c01cbc3e932ab526ba5a",
   "ci_revalidated_base_main_sha": "40c7329b22182c7fe627afa8c4c24490bcfab3e0",
+  "source_reconciliation_base_main_sha": "322d25cbf0afd084d76a15751477e401831b9ec9",
   "production_migrations": [
     {
       "version": "20260830001727",
@@ -19,18 +20,25 @@
       "name": "harden_remaining_home_profile_admin_session_rpcs",
       "source_file": "GEJAST_20260830002126_harden_remaining_home_profile_admin_session_rpcs.sql",
       "functions_hardened": 3
+    },
+    {
+      "version": "20260830100535",
+      "name": "harden_presence_only_admin_diagnostics",
+      "source_file": "GEJAST_20260830100535_harden_presence_only_admin_diagnostics.sql",
+      "functions_hardened": 7
     }
   ],
   "latest_production_migration": {
-    "version": "20260830002126",
-    "name": "harden_remaining_home_profile_admin_session_rpcs"
+    "version": "20260830100535",
+    "name": "harden_presence_only_admin_diagnostics"
   },
-  "scope": "post-certification database-only hardening of legacy client-executable SECURITY DEFINER admin diagnostics whose declared admin session token parameter was previously ignored",
+  "scope": "post-certification database-only hardening of legacy client-executable SECURITY DEFINER admin diagnostics that either ignored the declared admin session token or treated token presence/non-emptiness as authentication",
   "frontend_changed": false,
   "function_signatures_changed": false,
   "security_definer_changed": false,
   "execute_acl_changed": false,
   "search_path_changed": false,
+  "successful_result_shapes_changed": false,
   "statement_timeout_changed": false,
   "canonical_guard": "public._gejast_require_admin_session_v792m(<declared admin session token parameter>)",
   "functions": [
@@ -42,19 +50,30 @@
     "admin_get_phase_runtime_smoke_v647",
     "admin_get_home_profile_runtime_audit_v685",
     "admin_get_home_profile_runtime_audit_v686",
-    "admin_get_home_profile_runtime_audit_v687"
+    "admin_get_home_profile_runtime_audit_v687",
+    "admin_get_boot_bundle_perf_audit_v656",
+    "admin_get_deployment_verification_audit_v650",
+    "admin_get_ops_observability_audit_v656",
+    "admin_get_player_selector_audit_v656",
+    "admin_get_profile_badge_restore_audit_v656",
+    "admin_get_profiles_bundle_alignment_v656",
+    "admin_get_version_alignment_audit_v656"
   ],
-  "catalog_guard_proof": "9/9",
-  "anon_null_token_rejection": "9/9 admin_session_invalid",
+  "catalog_guard_proof": "16/16",
+  "anon_null_token_rejection": "16/16 admin_session_invalid",
+  "anon_nonempty_invalid_token_special_proof": "admin_get_deployment_verification_audit_v650 rejects admin_session_invalid",
   "residual_ignored_admin_token_classifier_rows": 0,
-  "classifier_scope": "client-executable public SECURITY DEFINER functions with an argument named admin_session_token or admin_session_token_input",
+  "residual_presence_only_or_nonempty_token_classifier_rows": 0,
+  "classifier_scope": "client-executable public SECURITY DEFINER functions with an argument named admin_session_token or admin_session_token_input; exact unused-token plus weak presence/nonempty patterns, excluding known validating/delegating guard owners and possession-semantic admin_logout",
   "migrations_reapplied": false,
   "live_contract_verified": true,
   "notes": [
-    "The functions remain browser-callable under their pre-existing ACLs, but SECURITY DEFINER data access now requires the already-declared admin session token to validate.",
+    "The functions remain browser-callable under their pre-existing ACLs, but SECURITY DEFINER diagnostic access now requires the already-declared admin session token to validate.",
     "No active admin token, JWT, push subscription endpoint, push auth/DH material, or other secret is stored in this proof artifact.",
     "The first attempted 20260830001727 migration submission was rejected transactionally by PostgreSQL for a syntax error before any function was changed; the corrected migration was then applied successfully under version 20260830001727.",
     "A follow-on exact ignored-parameter classifier found three additional home/profile diagnostics v685-v687; migration 20260830002126 hardened those three and the same classifier then returned zero rows.",
-    "CI was revalidated against main 40c7329b22182c7fe627afa8c4c24490bcfab3e0 after PR #309 repaired an unrelated Bruis shop Pages-boundary checker regression without relaxing the global JSON publication exclusion."
+    "CI for the first two migrations was revalidated against main 40c7329b22182c7fe627afa8c4c24490bcfab3e0 after PR #309 repaired an unrelated Bruis shop Pages-boundary checker regression without relaxing the global JSON publication exclusion.",
+    "The broader guard-family sweep then found seven diagnostics that used only token presence/non-emptiness rather than session validity. Migration 20260830100535 added the canonical guard to those seven; 7/7 anonymous NULL calls now reject, v650 also rejects a non-empty invalid token, and the weak-auth classifier returns zero rows.",
+    "admin_logout is intentionally not classified as weak auth: possession of the supplied token identifies only the session row to revoke, and an invalid token deletes nothing."
   ]
 }
