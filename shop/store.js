@@ -1,6 +1,12 @@
 const FALLBACK_PRODUCTS = [];
 const cartKey = 'bruisCartV3';
+const COLLECTIONS = {
+  normal: { label: 'Normal', heading: 'Normal shirts', empty: 'No Normal shirts are available yet.' },
+  boxy: { label: 'Boxy', heading: 'Boxy shirts', empty: 'No Boxy shirts yet. This collection is ready for the first boxy products.' },
+  'all-over': { label: 'All Over Print', heading: 'All Over Print shirts', empty: 'No All Over Print shirts yet. Products assigned to this collection will appear here automatically.' }
+};
 let products = [];
+let selectedCollection = 'normal';
 let cart = JSON.parse(localStorage.getItem(cartKey) || '[]');
 
 const qs = sel => document.querySelector(sel);
@@ -8,6 +14,13 @@ const qsa = sel => [...document.querySelectorAll(sel)];
 const money = value => `€${Math.ceil(Number(value || 0))}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const slug = text => String(text || 'product').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,80) || 'product';
+
+function normalizeCollection(value){
+  const raw = String(value || '').trim().toLowerCase().replace(/_/g, '-');
+  if(raw === 'boxy') return 'boxy';
+  if(raw === 'all-over' || raw === 'all over' || raw === 'all-over-print' || raw === 'all over print') return 'all-over';
+  return 'normal';
+}
 
 function normalizeProduct(raw){
   const mockups = Array.isArray(raw.mockups) ? raw.mockups.filter(m => m && m.image) : [];
@@ -18,7 +31,8 @@ function normalizeProduct(raw){
     sizes: Array.isArray(raw.sizes) && raw.sizes.length ? raw.sizes : ['S','M','L','XL','2XL'],
     mockups,
     image: mockups[0]?.image || raw.image || '',
-    baseLabel: raw.baseLabel || 'Shirt base pending'
+    baseLabel: raw.baseLabel || 'Shirt base pending',
+    collection: normalizeCollection(raw.collection || raw.shirtCollection || raw.fit)
   };
 }
 
@@ -35,7 +49,7 @@ async function loadCatalog(){
     if(imported.length) return sortByShirtBase(imported);
   }
   try {
-    const response = await fetch('catalog.json?v=20260830-no-shipping', { cache: 'no-store' });
+    const response = await fetch('catalog.json?v=20260830-collections-v1', { cache: 'no-store' });
     if(response.ok){
       const payload = await response.json();
       const rawProducts = Array.isArray(payload) ? payload : (payload.products || []);
@@ -46,10 +60,43 @@ async function loadCatalog(){
   return FALLBACK_PRODUCTS;
 }
 
+function productsForCollection(collection = selectedCollection){
+  return products.filter(product => product.collection === collection);
+}
+
+function updateCollectionCounts(){
+  Object.keys(COLLECTIONS).forEach(key => {
+    const count = productsForCollection(key).length;
+    qsa(`[data-collection-count="${key}"]`).forEach(el => {
+      el.textContent = `${count} ${count === 1 ? 'shirt' : 'shirts'}`;
+    });
+  });
+}
+
 function renderProducts(){
   const wrap = qs('[data-products]');
-  wrap.innerHTML = products.map(product => `
-    <article class="product-card">
+  const empty = qs('[data-collection-empty]');
+  const collection = COLLECTIONS[selectedCollection] || COLLECTIONS.normal;
+  const list = productsForCollection();
+
+  qs('[data-collection-title]').textContent = collection.heading;
+  qsa('[data-collection]').forEach(button => {
+    const active = button.dataset.collection === selectedCollection;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+
+  if(!list.length){
+    wrap.innerHTML = '';
+    empty.hidden = false;
+    empty.textContent = collection.empty;
+    return;
+  }
+
+  empty.hidden = true;
+  empty.textContent = '';
+  wrap.innerHTML = list.map(product => `
+    <article class="product-card" data-product-collection="${esc(product.collection)}">
       <div class="mockup-rail" aria-label="${esc(product.name)} images">
         ${product.mockups.map(m => `
           <figure class="mockup mock-${slug(m.label)}">
@@ -67,6 +114,7 @@ function renderProducts(){
       <div class="product-copy">
         <div class="product-top">
           <div>
+            <span class="product-collection-label">${esc(collection.label)}</span>
             <h3>${esc(product.name)}</h3>
             <p class="shirt-base">${esc(product.baseLabel)}</p>
           </div>
@@ -84,6 +132,17 @@ function renderProducts(){
       </div>
     </article>`).join('');
   initializeGalleries();
+}
+
+function setCollection(collection, { scroll = true } = {}){
+  const next = COLLECTIONS[collection] ? collection : 'normal';
+  selectedCollection = next;
+  const url = new URL(window.location.href);
+  if(next === 'normal') url.searchParams.delete('collection');
+  else url.searchParams.set('collection', next);
+  history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+  renderProducts();
+  if(scroll) qs('#shop')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function initializeGalleries(){
@@ -133,8 +192,6 @@ function renderCart(){
         </div>
       </article>`).join('');
   }
-  const summary = cart.map(i => `${i.qty} x ${i.name} (${i.size})`).join('\n') || 'I would like to order Bruis tees.';
-  qs('[data-mail-order]').href = `mailto:hello@example.com?subject=Bruis%20order%20request&body=${encodeURIComponent(summary)}`;
 }
 
 function addToCart(id){
@@ -143,8 +200,8 @@ function addToCart(id){
   const size = qs(`[data-size="${CSS.escape(id)}"]`)?.value || product.sizes[0];
   const qty = Math.max(1, Math.min(9, Number(qs(`[data-qty="${CSS.escape(id)}"]`)?.value || 1)));
   const existing = cart.find(item => item.id === id && item.size === size);
-  if(existing) existing.qty += qty;
-  else cart.push({ id, name: product.name, price: product.price, size, qty, image: product.image });
+  if(existing) existing.qty = Math.min(10, existing.qty + qty);
+  else cart.push({ id, name: product.name, price: product.price, size, qty, image: product.image, collection: product.collection });
   saveCart();
   renderCart();
   openCart();
@@ -154,6 +211,10 @@ function openCart(){ qs('[data-cart-drawer]').classList.add('open'); qs('[data-c
 function closeCart(){ qs('[data-cart-drawer]').classList.remove('open'); qs('[data-cart-drawer]').setAttribute('aria-hidden','true'); }
 
 document.addEventListener('click', event => {
+  const collection = event.target.closest('[data-collection]');
+  if(collection) setCollection(collection.dataset.collection);
+  const change = event.target.closest('[data-scroll-collections]');
+  if(change) qs('.collection-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const add = event.target.closest('[data-add]');
   if(add) addToCart(add.dataset.add);
   const remove = event.target.closest('[data-remove]');
@@ -164,6 +225,9 @@ document.addEventListener('click', event => {
 
 loadCatalog().then(list => {
   products = list;
+  const requested = new URLSearchParams(window.location.search).get('collection');
+  selectedCollection = COLLECTIONS[requested] ? requested : 'normal';
+  updateCollectionCounts();
   renderProducts();
   renderCart();
 });
