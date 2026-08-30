@@ -6,7 +6,7 @@ const COLLECTIONS = {
   'all-over': { label: 'All Over Print', heading: 'All Over Print shirts', empty: 'No All Over Print shirts yet. This collection is coming soon.' }
 };
 let products = [];
-let selectedCollection = 'normal';
+let selectedCollection = null;
 let cart = JSON.parse(localStorage.getItem(cartKey) || '[]');
 
 const qs = sel => document.querySelector(sel);
@@ -32,8 +32,8 @@ function normalizeProduct(raw){
     mockups,
     image: mockups[0]?.image || raw.image || '',
     baseLabel: raw.baseLabel || 'Shirt base pending',
-    // Current products do not yet carry a collection field, so they intentionally
-    // resolve to Normal. Future catalog rows can set boxy or all-over explicitly.
+    // Existing products have no collection field yet, so they deliberately
+    // fall into Normal. Future catalog rows can set boxy or all-over.
     collection: normalizeCollection(raw.collection || raw.shirtCollection || raw.fit)
   };
 }
@@ -51,7 +51,7 @@ async function loadCatalog(){
     if(imported.length) return sortByShirtBase(imported);
   }
   try {
-    const response = await fetch('catalog.json?v=20260830-collections-v1', { cache: 'no-store' });
+    const response = await fetch('catalog.json?v=20260830-shape-entry-v2', { cache: 'no-store' });
     if(response.ok){
       const payload = await response.json();
       const rawProducts = Array.isArray(payload) ? payload : (payload.products || []);
@@ -63,6 +63,7 @@ async function loadCatalog(){
 }
 
 function productsForCollection(collection = selectedCollection){
+  if(!collection) return [];
   return products.filter(product => product.collection === collection);
 }
 
@@ -77,18 +78,27 @@ function updateCollectionCounts(){
   });
 }
 
-function renderProducts(){
-  const wrap = qs('[data-products]');
-  const empty = qs('[data-collection-empty]');
-  const collection = COLLECTIONS[selectedCollection] || COLLECTIONS.normal;
-  const list = productsForCollection();
-
-  qs('[data-collection-title]').textContent = collection.heading;
+function updateShapeControls(){
   qsa('[data-collection]').forEach(button => {
     const active = button.dataset.collection === selectedCollection;
     button.classList.toggle('active', active);
     button.setAttribute('aria-pressed', active ? 'true' : 'false');
   });
+}
+
+function renderProducts(){
+  const wrap = qs('[data-products]');
+  const empty = qs('[data-collection-empty]');
+  if(!selectedCollection){
+    wrap.innerHTML = '';
+    empty.hidden = true;
+    return;
+  }
+
+  const collection = COLLECTIONS[selectedCollection] || COLLECTIONS.normal;
+  const list = productsForCollection();
+  qs('[data-collection-title]').textContent = collection.heading;
+  updateShapeControls();
 
   if(!list.length){
     wrap.innerHTML = '';
@@ -138,15 +148,27 @@ function renderProducts(){
   initializeGalleries();
 }
 
+function openShoppingView({ scroll = true } = {}){
+  qs('[data-shape-entry]').hidden = true;
+  qs('[data-shop-section]').hidden = false;
+  if(scroll) qs('#shop')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function openShapeEntry({ scroll = true } = {}){
+  qs('[data-shop-section]').hidden = true;
+  qs('[data-shape-entry]').hidden = false;
+  updateShapeControls();
+  if(scroll) qs('[data-shape-entry]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function setCollection(collection, { scroll = true } = {}){
   const next = COLLECTIONS[collection] ? collection : 'normal';
   selectedCollection = next;
   const url = new URL(window.location.href);
-  if(next === 'normal') url.searchParams.delete('collection');
-  else url.searchParams.set('collection', next);
+  url.searchParams.set('collection', next);
   history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
   renderProducts();
-  if(scroll) qs('#shop')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  openShoppingView({ scroll });
 }
 
 function initializeGalleries(){
@@ -223,9 +245,14 @@ function closeCart(){ qs('[data-cart-drawer]').classList.remove('open'); qs('[da
 
 document.addEventListener('click', event => {
   const collection = event.target.closest('[data-collection]');
-  if(collection) setCollection(collection.dataset.collection);
-  const change = event.target.closest('[data-scroll-collections]');
-  if(change) qs('.collection-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if(collection){
+    setCollection(collection.dataset.collection);
+    return;
+  }
+  if(event.target.closest('[data-expand-shapes]')){
+    openShapeEntry();
+    return;
+  }
   const add = event.target.closest('[data-add]');
   if(add) addToCart(add.dataset.add);
   const remove = event.target.closest('[data-remove]');
@@ -237,9 +264,17 @@ window.addEventListener('bruis:cart-clear', clearCart);
 
 loadCatalog().then(list => {
   products = list;
-  const requested = new URLSearchParams(window.location.search).get('collection');
-  selectedCollection = COLLECTIONS[requested] ? requested : 'normal';
   updateCollectionCounts();
-  renderProducts();
   renderCart();
+
+  const requested = new URLSearchParams(window.location.search).get('collection');
+  if(COLLECTIONS[requested]){
+    selectedCollection = requested;
+    renderProducts();
+    openShoppingView({ scroll: false });
+  } else {
+    selectedCollection = null;
+    updateShapeControls();
+    openShapeEntry({ scroll: false });
+  }
 });
