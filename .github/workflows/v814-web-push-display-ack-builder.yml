@@ -1,4 +1,4 @@
-name: One-shot v814 Web Push display ACK builder
+name: One-shot v814 Web Push display ACK finalizer
 
 on:
   push:
@@ -26,36 +26,25 @@ jobs:
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '24'
-      - name: Apply v814 Web Push display ACK patch
+      - name: Finalize v814 runtime and provenance
         run: node scripts/apply-v814-web-push-display-ack.mjs
       - name: Propagate v814 active-runtime version
         run: node fix-version-drift.mjs
       - name: Verify version consistency
         run: node check-version-drift.mjs
-      - name: Verify display ACK runtime syntax
+      - name: Verify final runtime and guard syntax
         run: |
           node --check web_push_dispatcher.js
           node --check gejast-sw.js
-          node --check scripts/apply-v814-web-push-display-ack.mjs
+          node --check scripts/check-v814-web-push-display-ack.mjs
           node check-active-js-syntax.mjs
-      - name: Verify display ACK runtime invariants
-        shell: bash
+      - name: Remove one-shot builder machinery
         run: |
-          grep -F "prepare_web_push_display_ack_v814" web_push_dispatcher.js
-          grep -F "if (!options.dryRun) item = await prepareDisplayAck(item);" web_push_dispatcher.js
-          grep -F "ack_web_push_display_v814" gejast-sw.js
-          node - <<'NODE'
-          const fs=require('fs');
-          const d=fs.readFileSync('web_push_dispatcher.js','utf8');
-          const s=fs.readFileSync('gejast-sw.js','utf8');
-          const prep=d.indexOf('item = await prepareDisplayAck(item)');
-          const send=d.indexOf('push.sendNotification');
-          const show=s.indexOf('await self.registration.showNotification');
-          const ack=s.indexOf('await ackDisplay(data)', show);
-          if(prep<0||send<0||prep>send) throw new Error('display ACK preparation is not before provider send');
-          if(show<0||ack<0||show>ack) throw new Error('display ACK is not after showNotification resolution');
-          NODE
-      - name: Commit generated v814 runtime
+          rm scripts/apply-v814-web-push-display-ack.mjs
+          rm .github/workflows/v814-web-push-display-ack-builder.yml
+      - name: Verify permanent v814 lifecycle and provenance guard
+        run: node scripts/check-v814-web-push-display-ack.mjs
+      - name: Commit finalized v814 release branch
         shell: bash
         run: |
           if git diff --quiet; then
@@ -65,5 +54,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          git commit -m 'Build v814 Web Push display ACK runtime'
+          git commit -m 'Finalize v814 Web Push display ACK lifecycle'
           git push origin HEAD:agent/v814-web-push-display-ack
