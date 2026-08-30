@@ -126,7 +126,7 @@ jobs:
           index.write_text(html.replace(old_cache, new_cache), encoding='utf-8')
           PY
 
-      - name: Commit transparent assets
+      - name: Commit transparent assets to PR branch
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
@@ -134,4 +134,4 @@ jobs:
           git add shop/assets/product-previews/*-front-v5.webp shop/product-preview-overrides.js shop/index.html
           git diff --cached --stat
           git commit -m 'Shop: use transparent Drive masters for front artwork'
-          git push origin HEAD:main
+          git push origin HEAD:refs/heads/fix/shop-transparent-drive-v5
