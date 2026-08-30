@@ -483,11 +483,11 @@ function sortedProducts(){
   let list = filter === 'all' ? [...products] : products.filter(p => p.type === filter);
   list.sort((a,b) => {
     if(sort === 'name') return a.name.localeCompare(b.name);
-    if(sort === 'price-high') return b.price-a.price || a.baseKey.localeCompare(b.baseKey) || a.name.localeCompare(b.name);
-    if(sort === 'base') return a.baseKey.localeCompare(b.baseKey) || a.price-b.price || a.name.localeCompare(b.name);
-    if(sort === 'base-price') return a.baseKey.localeCompare(b.baseKey) || a.price-b.price || a.name.localeCompare(b.name);
+    if(sort === 'price-high') return b.price-a.price || a.baseLabel.localeCompare(b.baseLabel) || a.name.localeCompare(b.name);
+    if(sort === 'base') return a.baseLabel.localeCompare(b.baseLabel) || a.price-b.price || a.name.localeCompare(b.name);
+    if(sort === 'base-price') return a.baseLabel.localeCompare(b.baseLabel) || a.price-b.price || a.name.localeCompare(b.name);
     if(sort === 'type') return typeOrder.indexOf(a.type)-typeOrder.indexOf(b.type) || a.price-b.price || a.name.localeCompare(b.name);
-    return a.price-b.price || a.baseKey.localeCompare(b.baseKey) || a.name.localeCompare(b.name);
+    return a.price-b.price || a.baseLabel.localeCompare(b.baseLabel) || a.name.localeCompare(b.name);
   });
   return list;
 }
