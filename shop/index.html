@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bruis - Nature tees</title>
-  <meta name="description" content="Bruis nature-inspired tees. Choose a shirt collection, then shop the designs in that fit." />
+  <meta name="description" content="Bruis nature-inspired tees. Choose a shirt shape, then browse the designs available in that collection." />
   <meta property="og:title" content="Bruis" />
   <meta property="og:description" content="Nature-inspired tees." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://kalenel.nl/shop/" />
-  <link rel="stylesheet" href="styles.css?v=20260830-collections-v1" />
+  <link rel="stylesheet" href="styles.css?v=20260830-shape-entry-v2" />
 </head>
 <body>
   <header class="site-header">
@@ -18,41 +18,68 @@
   </header>
 
   <main>
-    <section class="hero">
-      <h1>Nature tees</h1>
-      <p>Choose the shirt shape first, then browse every design available in that collection.</p>
-    </section>
-
-    <section class="collection-section" aria-labelledby="collection-title">
-      <div class="collection-heading">
+    <section class="shape-entry" data-shape-entry aria-labelledby="shape-entry-title">
+      <div class="shape-entry-heading">
         <p class="section-kicker">Choose your shirt</p>
-        <h2 id="collection-title">Three collections, one visual language.</h2>
-        <p>Normal contains the current range. Boxy and All Over Print are ready for future products and will fill automatically once products are assigned to those collections.</p>
+        <h1 id="shape-entry-title">Pick the shape first.</h1>
+        <p>Select a shirt silhouette to open only the designs available in that collection.</p>
       </div>
-      <div class="collection-grid" role="list" aria-label="Shirt collections">
-        <button class="collection-card active" type="button" data-collection="normal" aria-pressed="true">
+
+      <div class="collection-grid collection-grid-large" role="list" aria-label="Shirt shapes">
+        <button class="collection-card" type="button" data-collection="normal" aria-pressed="false">
           <span class="collection-image"><img src="assets/collection-normal.webp" alt="Normal classic T-shirt outline" /></span>
-          <span class="collection-copy"><strong>Normal</strong><small>Classic everyday T-shirt fit</small><span class="collection-count" data-collection-count="normal">0 shirts</span></span>
+          <span class="collection-copy">
+            <strong>Normal</strong>
+            <small>Classic everyday T-shirt fit</small>
+            <span class="collection-count" data-collection-count="normal">Loading…</span>
+          </span>
         </button>
         <button class="collection-card" type="button" data-collection="boxy" aria-pressed="false">
           <span class="collection-image"><img src="assets/collection-boxy.webp" alt="Boxy T-shirt outline" /></span>
-          <span class="collection-copy"><strong>Boxy</strong><small>Shorter, wider, square silhouette</small><span class="collection-count" data-collection-count="boxy">0 shirts</span></span>
+          <span class="collection-copy">
+            <strong>Boxy</strong>
+            <small>Shorter, wider, square silhouette</small>
+            <span class="collection-count" data-collection-count="boxy">Loading…</span>
+          </span>
         </button>
         <button class="collection-card" type="button" data-collection="all-over" aria-pressed="false">
           <span class="collection-image"><img src="assets/collection-all-over.webp" alt="All-over print T-shirt outline" /></span>
-          <span class="collection-copy"><strong>All Over Print</strong><small>Artwork repeated across the whole shirt</small><span class="collection-count" data-collection-count="all-over">0 shirts</span></span>
+          <span class="collection-copy">
+            <strong>All Over Print</strong>
+            <small>Artwork repeated across the whole shirt</small>
+            <span class="collection-count" data-collection-count="all-over">Loading…</span>
+          </span>
         </button>
       </div>
     </section>
 
-    <section class="shop-section" id="shop" aria-labelledby="shop-title">
+    <section class="shop-section" id="shop" data-shop-section aria-labelledby="shop-title" hidden>
       <div class="shop-heading">
         <div>
-          <p class="section-kicker">Selected collection</p>
+          <p class="section-kicker">Selected shape</p>
           <h2 id="shop-title" data-collection-title>Normal shirts</h2>
         </div>
-        <button class="collection-back" type="button" data-scroll-collections>Change collection</button>
+        <button class="collection-back" type="button" data-expand-shapes>View shapes larger</button>
       </div>
+
+      <nav class="shape-switcher" data-shape-switcher aria-label="Change shirt shape">
+        <span class="shape-switcher-label">Change shape</span>
+        <div class="shape-switcher-options">
+          <button class="shape-mini" type="button" data-collection="normal" aria-pressed="false">
+            <img src="assets/collection-normal.webp" alt="" aria-hidden="true" />
+            <span>Normal</span>
+          </button>
+          <button class="shape-mini" type="button" data-collection="boxy" aria-pressed="false">
+            <img src="assets/collection-boxy.webp" alt="" aria-hidden="true" />
+            <span>Boxy</span>
+          </button>
+          <button class="shape-mini" type="button" data-collection="all-over" aria-pressed="false">
+            <img src="assets/collection-all-over.webp" alt="" aria-hidden="true" />
+            <span>All Over</span>
+          </button>
+        </div>
+      </nav>
+
       <p class="collection-empty" data-collection-empty hidden></p>
       <div class="product-grid" data-products aria-live="polite"></div>
     </section>
@@ -76,8 +103,8 @@
 
   <footer class="footer">Bruis - Nature-inspired clothing.</footer>
 
-  <script src="catalog-data.js?v=20260830-collections-v1" defer></script>
-  <script src="store.js?v=20260830-collections-v1" defer></script>
+  <script src="catalog-data.js?v=20260830-shape-entry-v2" defer></script>
+  <script src="store.js?v=20260830-shape-entry-v2" defer></script>
   <script src="payments.js?v=20260830-payments-v2" defer></script>
 </body>
 </html>
