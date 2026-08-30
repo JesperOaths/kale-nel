@@ -1,14 +1,11 @@
 window.BRUIS_CATALOG = {
-  "generatedAt": "2026-08-30T12:37:00+02:00",
+  "generatedAt": "2026-08-30T13:10:00+02:00",
   "products": [
     {
       "id": "6a878552828b6188a0031a81",
       "name": "Pastel Jellyfish Illustration Tee",
-      "type": "marine",
-      "typeLabel": "Marine",
-      "price": 33.21,
-      "priceMax": 33.21,
-      "description": "Soft sea-life artwork with a dreamy jellyfish glow and calm ocean feel.",
+      "price": 45,
+      "priceMax": 45,
       "sizes": [
         "S",
         "M",
@@ -45,30 +42,21 @@ window.BRUIS_CATALOG = {
         {
           "label": "Duo",
           "image": "https://images.printify.com/mockup/6a878552828b6188a0031a81/12100/101997/pastel-jellyfish-illustration-tee-watercolor-sea-life-shirt.jpg?camera_label=duo-3&s=640&use_cdn_redirect=true&t=1788045605490"
-        },
-        {
-          "label": "Sleeve left",
-          "image": "https://images.printify.com/mockup/6a878552828b6188a0031a81/12100/109210/pastel-jellyfish-illustration-tee-watercolor-sea-life-shirt.jpg?camera_label=person-10-sleeve-left-closeup&s=640&use_cdn_redirect=true&t=1788045605490"
-        },
-        {
-          "label": "Sleeve right",
-          "image": "https://images.printify.com/mockup/6a878552828b6188a0031a81/12100/109212/pastel-jellyfish-illustration-tee-watercolor-sea-life-shirt.jpg?camera_label=person-10-sleeve-right-closeup&s=640&use_cdn_redirect=true&t=1788045605490"
         }
       ],
       "currency": "EUR",
       "productionCostUsd": 32.85,
       "productionCostEur": 28.21,
-      "marginEur": 5,
-      "pricingFormula": "highest selected Printify production cost USD 32.85 / 1.1643 + EUR 5.00"
+      "shippingCostUsd": 13.5,
+      "shippingCostEur": 11.59,
+      "includedShippingDestination": "Netherlands / EU estimate",
+      "marginEur": 5
     },
     {
       "id": "6a877906eb76ae387b05cc0f",
       "name": "Hydrangea Watercolor Shirt",
-      "type": "floral",
-      "typeLabel": "Flowers",
-      "price": 25.63,
-      "priceMax": 25.63,
-      "description": "A gentle hydrangea bloom with airy petals and a fresh botanical look.",
+      "price": 38,
+      "priceMax": 38,
       "sizes": [
         "S",
         "M",
@@ -106,17 +94,16 @@ window.BRUIS_CATALOG = {
       "currency": "EUR",
       "productionCostUsd": 24.02,
       "productionCostEur": 20.63,
-      "marginEur": 5,
-      "pricingFormula": "highest selected Printify production cost USD 24.02 / 1.1643 + EUR 5.00"
+      "shippingCostUsd": 13.5,
+      "shippingCostEur": 11.59,
+      "includedShippingDestination": "Netherlands / EU estimate",
+      "marginEur": 5
     },
     {
       "id": "6a877defbecced59b0037078",
-      "name": "Queen Anne’s Lace Illustration Tee",
-      "type": "floral",
-      "typeLabel": "Flowers",
-      "price": 22.61,
-      "priceMax": 22.61,
-      "description": "Delicate Queen Anne’s lace with airy stems and pressed-flower elegance.",
+      "name": "Queen Anne's Lace Illustration Tee",
+      "price": 35,
+      "priceMax": 35,
       "sizes": [
         "S",
         "M",
@@ -153,34 +140,21 @@ window.BRUIS_CATALOG = {
         {
           "label": "On body back",
           "image": "https://images.printify.com/mockup/6a877defbecced59b0037078/12100/101990/queen-annes-lace-illustration-tee-botanical-flower-shirt.jpg?camera_label=person-6-back&s=640&use_cdn_redirect=true&t=1788045703634"
-        },
-        {
-          "label": "On body",
-          "image": "https://images.printify.com/mockup/6a877defbecced59b0037078/12100/92576/queen-annes-lace-illustration-tee-botanical-flower-shirt.jpg?camera_label=person-6&s=640&use_cdn_redirect=true&t=1788045703634"
-        },
-        {
-          "label": "On body front",
-          "image": "https://images.printify.com/mockup/6a877defbecced59b0037078/12100/101994/queen-annes-lace-illustration-tee-botanical-flower-shirt.jpg?camera_label=person-8-front&s=640&use_cdn_redirect=true&t=1788045703634"
-        },
-        {
-          "label": "On body back 2",
-          "image": "https://images.printify.com/mockup/6a877defbecced59b0037078/12100/101995/queen-annes-lace-illustration-tee-botanical-flower-shirt.jpg?camera_label=person-8-back&s=640&use_cdn_redirect=true&t=1788045703634"
         }
       ],
       "currency": "EUR",
       "productionCostUsd": 20.5,
       "productionCostEur": 17.61,
-      "marginEur": 5,
-      "pricingFormula": "highest selected Printify production cost USD 20.50 / 1.1643 + EUR 5.00"
+      "shippingCostUsd": 13.5,
+      "shippingCostEur": 11.59,
+      "includedShippingDestination": "Netherlands / EU estimate",
+      "marginEur": 5
     },
     {
       "id": "6a8769e26a41fe0f530b538f",
       "name": "Scottish Thistle T-Shirt",
-      "type": "botanical",
-      "typeLabel": "Botanical",
-      "price": 22.61,
-      "priceMax": 22.61,
-      "description": "A crisp thistle study with spiky leaves, soft bloom, and field-guide character.",
+      "price": 35,
+      "priceMax": 35,
       "sizes": [
         "S",
         "M",
@@ -214,17 +188,16 @@ window.BRUIS_CATALOG = {
       "currency": "EUR",
       "productionCostUsd": 20.5,
       "productionCostEur": 17.61,
-      "marginEur": 5,
-      "pricingFormula": "highest selected Printify production cost USD 20.50 / 1.1643 + EUR 5.00"
+      "shippingCostUsd": 13.5,
+      "shippingCostEur": 11.59,
+      "includedShippingDestination": "Netherlands / EU estimate",
+      "marginEur": 5
     },
     {
       "id": "6a8781c676f52ce62f082d19",
       "name": "Pink Flower Mantis T-Shirt",
-      "type": "insect",
-      "typeLabel": "Insects",
-      "price": 22.61,
-      "priceMax": 22.61,
-      "description": "A floral mantis motif with delicate petals and a strange garden charm.",
+      "price": 35,
+      "priceMax": 35,
       "sizes": [
         "S",
         "M",
@@ -262,17 +235,16 @@ window.BRUIS_CATALOG = {
       "currency": "EUR",
       "productionCostUsd": 20.5,
       "productionCostEur": 17.61,
-      "marginEur": 5,
-      "pricingFormula": "highest selected Printify production cost USD 20.50 / 1.1643 + EUR 5.00"
+      "shippingCostUsd": 13.5,
+      "shippingCostEur": 11.59,
+      "includedShippingDestination": "Netherlands / EU estimate",
+      "marginEur": 5
     },
     {
       "id": "6a877d2aeb76ae387b05cfae",
       "name": "Pink Axolotl Illustration T-Shirt",
-      "type": "aquatic",
-      "typeLabel": "Aquatic",
-      "price": 22.61,
-      "priceMax": 22.61,
-      "description": "A playful axolotl with soft aquatic character and a sweet pond-life mood.",
+      "price": 35,
+      "priceMax": 35,
       "sizes": [
         "S",
         "M",
@@ -314,17 +286,16 @@ window.BRUIS_CATALOG = {
       "currency": "EUR",
       "productionCostUsd": 20.5,
       "productionCostEur": 17.61,
-      "marginEur": 5,
-      "pricingFormula": "highest selected Printify production cost USD 20.50 / 1.1643 + EUR 5.00"
+      "shippingCostUsd": 13.5,
+      "shippingCostEur": 11.59,
+      "includedShippingDestination": "Netherlands / EU estimate",
+      "marginEur": 5
     },
     {
       "id": "6a871b6035cea7fe2c005ee6",
       "name": "Realistic Green Fly Illustration T-Shirt",
-      "type": "insect",
-      "typeLabel": "Insects",
-      "price": 30.19,
-      "priceMax": 30.19,
-      "description": "A sharp green fly illustration for people who like curious, unusual nature details.",
+      "price": 42,
+      "priceMax": 42,
       "sizes": [
         "S",
         "M",
@@ -358,15 +329,10 @@ window.BRUIS_CATALOG = {
       "currency": "EUR",
       "productionCostUsd": 29.33,
       "productionCostEur": 25.19,
-      "marginEur": 5,
-      "pricingFormula": "highest selected Printify production cost USD 29.33 / 1.1643 + EUR 5.00"
+      "shippingCostUsd": 13.5,
+      "shippingCostEur": 11.59,
+      "includedShippingDestination": "Netherlands / EU estimate",
+      "marginEur": 5
     }
-  ],
-  "pricing": {
-    "currency": "EUR",
-    "source": "Printify rendered Pricing table checked 2026-08-30; ECB reference rate 2026-08-28",
-    "rateUsdPerEur": 1.1643,
-    "marginEur": 5,
-    "rule": "fixed retail price = highest selected variant production cost in USD converted to EUR + EUR 5.00; shipping/tax/platform/payment fees excluded"
-  }
+  ]
 };
