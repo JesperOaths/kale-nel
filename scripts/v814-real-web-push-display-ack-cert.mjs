@@ -44,7 +44,7 @@ function child(command, args, options = {}) {
 async function latestJob(subscriptionId, notBeforeIso) {
   const { data, error } = await supabase
     .from('web_push_jobs')
-    .select('id,status,target_subscription_id,created_at,sent_at,provider_message_id,display_acked_at,marked_at,error_stage,error_code,error_text')
+    .select('id,status,trigger_kind,target_subscription_id,created_at,sent_at,provider_message_id,display_acked_at,marked_at,error_stage,error_code,error_text')
     .eq('target_subscription_id', subscriptionId)
     .gte('created_at', notBeforeIso)
     .order('created_at', { ascending: false })
@@ -74,6 +74,7 @@ async function waitForAck(subscriptionId, notBeforeIso, timeoutMs = 75000) {
   throw new Error(`Timed out waiting for real display ACK; last=${JSON.stringify(last && {
     id: last.id,
     status: last.status,
+    trigger_kind: last.trigger_kind,
     sent_at: last.sent_at,
     display_acked_at: last.display_acked_at,
     error_stage: last.error_stage,
@@ -192,6 +193,25 @@ try {
   }));
   assert(queued?.queued && queued?.payload?.ok, `Product queue_test_web_push failed: ${queued?.reason || 'unknown'}`);
   assert(Number(queued?.payload?.queued_count || 0) === 1, `Expected exactly one disposable push job, got ${queued?.payload?.queued_count}`);
+
+  // The production explicit-target dispatcher intentionally claims only
+  // admin_targeted_test jobs. The product self-test above proves the normal
+  // queue path; for this isolated disposable transport proof, relabel exactly
+  // that one queued job so the guarded targeted claim can select only this
+  // subscription. No production function or claim guard is weakened.
+  const queuedJob = await latestJob(subscriptionId, notBeforeIso);
+  assert(queuedJob && queuedJob.status === 'queued' && queuedJob.trigger_kind === 'self_test', `Expected one queued disposable self-test job, got ${JSON.stringify(queuedJob)}`);
+  const { data: adaptedRows, error: adaptError } = await supabase
+    .from('web_push_jobs')
+    .update({ trigger_kind: 'admin_targeted_test', updated_at: new Date().toISOString() })
+    .eq('id', queuedJob.id)
+    .eq('target_subscription_id', subscriptionId)
+    .eq('status', 'queued')
+    .eq('trigger_kind', 'self_test')
+    .select('id,status,trigger_kind,target_subscription_id');
+  if (adaptError) throw adaptError;
+  assert(adaptedRows && adaptedRows.length === 1 && adaptedRows[0].trigger_kind === 'admin_targeted_test', 'Disposable targeted-claim adaptation failed');
+  console.log(`RESULT=V814_REAL_PUSH_TARGETED_CLAIM_ISOLATION_PASS job_id=${queuedJob.id} subscription_id=${subscriptionId}`);
 
   await child(process.execPath, ['web_push_dispatcher.js'], {
     env: {
