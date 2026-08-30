@@ -1,0 +1,188 @@
+name: v814 real Web Push display ACK certification
+
+on:
+  push:
+    branches:
+      - agent/v814-real-push-display-ack-cert
+    paths:
+      - '.github/workflows/v814-real-web-push-display-ack-cert.yml'
+      - 'scripts/v814-real-web-push-display-ack-cert.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v814-real-web-push-display-ack-cert
+  cancel-in-progress: true
+
+jobs:
+  real-push-display-ack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      GEJAST_BASE_URL: https://kalenel.nl/
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      WEB_PUSH_VAPID_PUBLIC_KEY: ${{ secrets.WEB_PUSH_VAPID_PUBLIC_KEY }}
+      WEB_PUSH_VAPID_PRIVATE_KEY: ${{ secrets.WEB_PUSH_VAPID_PRIVATE_KEY }}
+      WEB_PUSH_VAPID_SUBJECT: ${{ secrets.WEB_PUSH_VAPID_SUBJECT }}
+
+    steps:
+      - name: Check out disposable proof branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Require exact production v814 before transport proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_version="$(tr -d '\r\n ' < VERSION)"
+          live_version="$(curl -fsS --max-time 15 "https://kalenel.nl/VERSION?ts=$(date +%s)" | tr -d '\r\n ')"
+          test "$source_version" = 'v814'
+          test "$live_version" = 'v814'
+          echo 'RESULT=V814_REAL_PUSH_PRODUCTION_VERSION_PARITY_PASS'
+
+      - name: Set up Node 24 and real Chrome runtime
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install pinned dependencies and browser host tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          test -n "${SUPABASE_URL:-}"
+          test -n "${SUPABASE_SERVICE_ROLE_KEY:-}"
+          test -n "${WEB_PUSH_VAPID_PUBLIC_KEY:-}"
+          test -n "${WEB_PUSH_VAPID_PRIVATE_KEY:-}"
+          npm ci
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.55.0
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y postgresql-client xvfb >/dev/null
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || true)"
+          test -n "$chrome"
+          echo "GEJAST_SYSTEM_CHROME=$chrome" >> "$GITHUB_ENV"
+          "$chrome" --version
+          node --check scripts/v814-real-web-push-display-ack-cert.mjs
+
+      - name: Use transaction pooler for disposable SQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          ci_db_url="$SUPABASE_DB_URL"
+          case "$SUPABASE_DB_URL" in
+            *".pooler.supabase.com:5432/") ci_db_url="${SUPABASE_DB_URL/:5432\//:6543/}" ;;
+          esac
+          test -n "$ci_db_url"
+          echo "::add-mask::$ci_db_url"
+          echo "SUPABASE_CI_DB_URL=$ci_db_url" >> "$GITHUB_ENV"
+
+      - name: Provision one randomized disposable push identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          name="PushCert_${suffix}"
+          token="$(openssl rand -hex 24)"
+          [[ "$token" =~ ^[0-9a-f]{48}$ ]]
+          echo "::add-mask::$token"
+          echo "GEJAST_PLAYER_NAME=$name" >> "$GITHUB_ENV"
+          echo "GEJAST_PLAYER_TOKEN=$token" >> "$GITHUB_ENV"
+
+          sql_file="$(mktemp)"
+          trap 'rm -f "$sql_file"' EXIT
+          cat > "$sql_file" <<'SQL'
+          begin;
+          with ins as (
+            insert into public.players(slug,display_name,active,approved,hidden_from_public,is_dummy,site_scope)
+            values ('v814-push-cert-' || lower(:'name'), :'name', true, true, true, true, 'friends')
+            returning id,display_name
+          )
+          insert into public.gejast_player_sessions_v746(session_token,player_id,display_name,site_scope,expires_at)
+          select :'token',id,display_name,'friends',now()+interval '30 minutes' from ins;
+
+          with ins as (
+            insert into public.gejast_account_players_v671(site_scope,display_name,email,activated_at)
+            values ('friends', :'name', lower(:'name') || '@example.invalid', now())
+            returning id
+          )
+          insert into public.gejast_account_sessions_v671(session_token,player_id,site_scope,expires_at)
+          select :'token',id,'friends',now()+interval '30 minutes' from ins;
+          commit;
+          SQL
+          psql "$SUPABASE_CI_DB_URL" -X -v ON_ERROR_STOP=1 -v name="$name" -v token="$token" -f "$sql_file"
+          resolved="$(psql "$SUPABASE_CI_DB_URL" -X -v ON_ERROR_STOP=1 -At -v token="$token" -c "select coalesce((public._jas_session_player(:'token')).display_name,'');")"
+          test "$resolved" = "$name"
+          echo 'RESULT=V814_REAL_PUSH_DISPOSABLE_IDENTITY_PASS'
+
+      - name: Run real provider to service-worker display proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          xvfb-run -a node scripts/v814-real-web-push-display-ack-cert.mjs
+
+      - name: Cleanup disposable browser, push and identity state
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GEJAST_PLAYER_NAME:-}" ] || [ -z "${GEJAST_PLAYER_TOKEN:-}" ]; then
+            echo 'Disposable identity was not provisioned; nothing to clean.'
+            exit 0
+          fi
+          db_url="${SUPABASE_CI_DB_URL:-$SUPABASE_DB_URL}"
+          cleanup_sql="$(mktemp)"
+          residue_sql="$(mktemp)"
+          trap 'rm -f "$cleanup_sql" "$residue_sql"' EXIT
+
+          cat > "$cleanup_sql" <<'SQL'
+          begin;
+          delete from public.web_push_action_tokens
+           where session_token=:'token'
+              or target_player_id in (select id from public.players where display_name=:'name');
+          delete from public.web_push_action_tokens_v714
+           where target_player_id in (select id from public.players where display_name=:'name');
+          delete from public.active_web_push_presence
+           where session_token=:'token'
+              or player_name=:'name'
+              or player_id in (select id from public.players where display_name=:'name');
+          delete from public.web_push_active_presence
+           where session_token=:'token'
+              or display_name=:'name'
+              or player_id in (select id from public.players where display_name=:'name');
+          delete from public.web_push_jobs
+           where target_player_name=:'name'
+              or target_player_id in (select id from public.players where display_name=:'name')
+              or created_by_player_id in (select id from public.players where display_name=:'name');
+          delete from public.web_push_subscriptions
+           where display_name=:'name'
+              or player_id in (select id from public.players where display_name=:'name');
+          delete from public.gejast_player_sessions_v746 where session_token=:'token';
+          delete from public.gejast_account_sessions_v671 where session_token=:'token';
+          delete from public.players where display_name=:'name' and is_dummy=true and hidden_from_public=true;
+          delete from public.gejast_account_players_v671 where display_name=:'name' and email like '%@example.invalid';
+          commit;
+          SQL
+
+          cat > "$residue_sql" <<'SQL'
+          select
+            (select count(*) from public.players where display_name=:'name'),
+            (select count(*) from public.gejast_account_players_v671 where display_name=:'name'),
+            (select count(*) from public.gejast_player_sessions_v746 where session_token=:'token'),
+            (select count(*) from public.gejast_account_sessions_v671 where session_token=:'token'),
+            (select count(*) from public.web_push_subscriptions where display_name=:'name'),
+            (select count(*) from public.web_push_active_presence where display_name=:'name' or session_token=:'token'),
+            (select count(*) from public.active_web_push_presence where player_name=:'name' or session_token=:'token'),
+            (select count(*) from public.web_push_jobs where target_player_name=:'name'),
+            (select count(*) from public.web_push_action_tokens where session_token=:'token');
+          SQL
+
+          psql "$db_url" -X -v ON_ERROR_STOP=1 -v name="$GEJAST_PLAYER_NAME" -v token="$GEJAST_PLAYER_TOKEN" -f "$cleanup_sql"
+          residue="$(psql "$db_url" -X -v ON_ERROR_STOP=1 -At -F'|' -v name="$GEJAST_PLAYER_NAME" -v token="$GEJAST_PLAYER_TOKEN" -f "$residue_sql")"
+          test "$residue" = '0|0|0|0|0|0|0|0|0'
+          echo 'RESULT=V814_REAL_PUSH_ZERO_RESIDUE_PASS'
+
+      - name: Final real Web Push certification marker
+        run: echo 'RESULT=V814_REAL_WEB_PUSH_DISPLAY_ACK_CERTIFICATION_PASS'
