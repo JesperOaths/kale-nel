@@ -4,7 +4,7 @@
  *
  * Usage:
  *   node scripts/import-printify-catalog.mjs printify-products.json
- *   node scripts/import-printify-catalog.mjs product-a.json product-b.json --out shop/catalog.printify.json
+ *   node scripts/import-printify-catalog.mjs product-a.json product-b.json --out shop/catalog.json
  *
  * This script never needs a Printify API token. Keep tokens out of the repo: export
  * product JSON elsewhere, then run this importer on the downloaded JSON file(s).
@@ -14,11 +14,11 @@ import { dirname, resolve } from 'node:path';
 
 const args = process.argv.slice(2);
 const outFlag = args.indexOf('--out');
-const outPath = resolve(outFlag >= 0 ? args[outFlag + 1] : 'shop/catalog.printify.json');
+const outPath = resolve(outFlag >= 0 ? args[outFlag + 1] : 'shop/catalog.json');
 const inputPaths = args.filter((arg, index) => arg !== '--out' && index !== outFlag + 1);
 
 if(!inputPaths.length){
-  console.error('Usage: node scripts/import-printify-catalog.mjs <printify-json...> [--out shop/catalog.printify.json]');
+  console.error('Usage: node scripts/import-printify-catalog.mjs <printify-json...> [--out shop/catalog.json]');
   process.exit(2);
 }
 

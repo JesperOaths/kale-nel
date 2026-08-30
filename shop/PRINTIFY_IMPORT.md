@@ -1,6 +1,6 @@
 # Bruis shop catalog import
 
-The shop is static and reads `shop/catalog.printify.json` when that file exists. If it is missing, the built-in fallback catalog is used.
+The shop is static and reads `shop/catalog.json` when that file exists, falling back to `shop/catalog.printify.json` and then the built-in catalog.
 
 ## Safe import flow
 
@@ -9,10 +9,10 @@ The shop is static and reads `shop/catalog.printify.json` when that file exists.
 3. Run:
 
 ```bash
-node scripts/import-printify-catalog.mjs path/to/printify-products.json
+node scripts/import-printify-catalog.mjs path/to/printify-products.json --out shop/catalog.json
 ```
 
-This writes `shop/catalog.printify.json` with only public catalog data: product title, description, enabled variant prices, sizes, base shirt identifiers, and mockup image URLs.
+This writes `shop/catalog.json` with only public catalog data: product title, description, enabled variant prices, sizes, base shirt identifiers, and mockup image URLs.
 
 ## Supported input shapes
 
@@ -23,7 +23,7 @@ The importer accepts:
 - `{ "products": [...] }`
 - `{ "data": [...] }`
 
-The frontend can also read a raw Printify-like `catalog.printify.json` directly, but the importer is cleaner because it strips private/unneeded fields.
+The frontend can also read a raw Printify-like catalog JSON directly, but the importer is cleaner because it strips private/unneeded fields.
 
 ## What the storefront uses
 
