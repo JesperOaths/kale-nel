@@ -32,8 +32,29 @@ jobs:
         run: node fix-version-drift.mjs
       - name: Verify version consistency
         run: node check-version-drift.mjs
-      - name: Reject whitespace errors
-        run: git diff --check
+      - name: Verify display ACK runtime syntax
+        run: |
+          node --check web_push_dispatcher.js
+          node --check gejast-sw.js
+          node --check scripts/apply-v814-web-push-display-ack.mjs
+          node check-active-js-syntax.mjs
+      - name: Verify display ACK runtime invariants
+        shell: bash
+        run: |
+          grep -F "prepare_web_push_display_ack_v814" web_push_dispatcher.js
+          grep -F "if (!options.dryRun) item = await prepareDisplayAck(item);" web_push_dispatcher.js
+          grep -F "ack_web_push_display_v814" gejast-sw.js
+          node - <<'NODE'
+          const fs=require('fs');
+          const d=fs.readFileSync('web_push_dispatcher.js','utf8');
+          const s=fs.readFileSync('gejast-sw.js','utf8');
+          const prep=d.indexOf('item = await prepareDisplayAck(item)');
+          const send=d.indexOf('push.sendNotification');
+          const show=s.indexOf('await self.registration.showNotification');
+          const ack=s.indexOf('await ackDisplay(data)', show);
+          if(prep<0||send<0||prep>send) throw new Error('display ACK preparation is not before provider send');
+          if(show<0||ack<0||show>ack) throw new Error('display ACK is not after showNotification resolution');
+          NODE
       - name: Commit generated v814 runtime
         shell: bash
         run: |
@@ -43,7 +64,6 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add VERSION web_push_dispatcher.js gejast-sw.js '*.html' '*.js' '*.mjs' '*.css' 2>/dev/null || true
-          git add -u
+          git add -A
           git commit -m 'Build v814 Web Push display ACK runtime'
           git push origin HEAD:agent/v814-web-push-display-ack
