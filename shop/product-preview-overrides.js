@@ -1,12 +1,12 @@
 (() => {
   const PRODUCT_PREVIEWS = {
-    '6a877906eb76ae387b05cc0f': 'assets/product-previews/hydrangea-front-v3.webp',
-    '6a877d2aeb76ae387b05cfae': 'assets/product-previews/axolotl-front-v3.webp',
-    '6a8781c676f52ce62f082d19': 'assets/product-previews/mantis-front-v3.webp',
-    '6a877defbecced59b0037078': 'assets/product-previews/queen-annes-lace-front-v3.webp',
-    '6a8769e26a41fe0f530b538f': 'assets/product-previews/thistle-front-v3.webp',
-    '6a878552828b6188a0031a81': 'assets/product-previews/jellyfish-front-v3.webp',
-    '6a871b6035cea7fe2c005ee6': 'assets/product-previews/dragonfly-front-v3.webp'
+    '6a877906eb76ae387b05cc0f': 'assets/product-previews/hydrangea-front-v4.webp',
+    '6a877d2aeb76ae387b05cfae': 'assets/product-previews/axolotl-front-v4.webp',
+    '6a8781c676f52ce62f082d19': 'assets/product-previews/mantis-front-v4.webp',
+    '6a877defbecced59b0037078': 'assets/product-previews/queen-annes-lace-front-v4.webp',
+    '6a8769e26a41fe0f530b538f': 'assets/product-previews/thistle-front-v4.webp',
+    '6a878552828b6188a0031a81': 'assets/product-previews/jellyfish-front-v4.webp',
+    '6a871b6035cea7fe2c005ee6': 'assets/product-previews/dragonfly-front-v4.webp'
   };
   const DRAGONFLY_PRODUCT_ID = '6a871b6035cea7fe2c005ee6';
 
@@ -38,7 +38,8 @@
       padding: 8px !important;
     }
     .mockup-rail .mock-front-print {
-      background: #fff !important;
+      background: transparent !important;
+      border-color: transparent !important;
       overflow: hidden !important;
       min-height: 0;
     }
@@ -47,6 +48,7 @@
       height: 100% !important;
       aspect-ratio: 1 / 1 !important;
       padding: 0 !important;
+      background: transparent !important;
       object-fit: contain !important;
       object-position: center !important;
       transform: none !important;
