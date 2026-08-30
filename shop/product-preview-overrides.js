@@ -5,7 +5,8 @@
     '6a8781c676f52ce62f082d19': 'assets/product-previews/mantis-front.webp',
     '6a877defbecced59b0037078': 'assets/product-previews/queen-annes-lace-front.webp',
     '6a8769e26a41fe0f530b538f': 'assets/product-previews/thistle-front.webp',
-    '6a878552828b6188a0031a81': 'assets/product-previews/jellyfish-front.webp'
+    '6a878552828b6188a0031a81': 'assets/product-previews/jellyfish-front.webp',
+    '6a871b6035cea7fe2c005ee6': 'assets/product-previews/dragonfly-front.webp'
   };
   const DRAGONFLY_PRODUCT_ID = '6a871b6035cea7fe2c005ee6';
 
@@ -51,8 +52,14 @@
       transform: scale(3.55);
       transform-origin: center;
     }
+    /* The exact dragonfly master already fills most of its A3 canvas, so it
+       needs a smaller display zoom to keep the full insect visible and large. */
+    .mockup-rail .mock-front-print img[src$="dragonfly-front.webp"] {
+      transform: scale(1.30);
+    }
     @media (max-width: 620px) {
       .mockup-rail .mock-front-print img { transform: scale(3.25); }
+      .mockup-rail .mock-front-print img[src$="dragonfly-front.webp"] { transform: scale(1.26); }
     }
   `;
   document.head.appendChild(style);
