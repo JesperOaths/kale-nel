@@ -1,0 +1,35 @@
+{
+  "release": "v814",
+  "status": "PASS",
+  "supabase_project_id": "uiqntazgnrxwliaidkmy",
+  "migrations": [
+    {
+      "version": "20260830122459",
+      "name": "web_push_display_ack_v814",
+      "source_file": "GEJAST_20260830122459_web_push_display_ack_v814.sql"
+    },
+    {
+      "version": "20260830130604",
+      "name": "web_push_display_ack_v814_hardening",
+      "source_file": "GEJAST_20260830130604_web_push_display_ack_v814_hardening.sql"
+    }
+  ],
+  "lifecycle": "claimed -> provider accepted (status remains claimed) -> service-worker display ACK -> sent",
+  "security": {
+    "public_ack_security": "INVOKER",
+    "private_ack_security": "DEFINER",
+    "private_schema": "web_push_private",
+    "claim_token_bound": true,
+    "raw_display_capability_persisted_in_notification_data": false,
+    "authenticated_ack_execute": false
+  },
+  "live_verification": {
+    "security_advisor_v814_specific_findings": 0,
+    "performance_advisor_v814_warning_or_error_findings": 0,
+    "anon_wrapper_probe": {
+      "ok": false,
+      "reason": "invalid_capability"
+    }
+  },
+  "verified_at": "2026-08-30T13:06:00Z"
+}

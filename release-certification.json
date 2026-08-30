@@ -1,59 +1,21 @@
 {
   "schema_version": 1,
-  "current_version": "v813",
-  "status": "PASS",
-  "previous_certified_version": "v808",
-  "previous_certified_product_sha": "7f6f7bc110807e85f52ff4d54927620dbbc9ffeb",
-  "previous_certified_release_branch": "release/v808-certified-20260818",
+  "current_version": "v814",
+  "status": "REVALIDATION_REQUIRED",
+  "previous_certified_version": "v813",
+  "previous_certified_product_sha": "570ef4bded55493a226d1fc7c8afbb1e35244f56",
+  "previous_certified_release_branch": "release/v813-certified-20260825",
   "superseded_uncertified_version": "v812",
   "superseded_uncertified_product_sha": "a62b6ff4a73a1419f2aeb1c4f83e64d2bf780bbc",
-  "reason": "Exact-current v813 production certification completed on merged main product SHA 570ef4bded55493a226d1fc7c8afbb1e35244f56. Canonical GEJAST/security verification, dependency security, GitHub Pages deployment, serialized authenticated 140-screenshot visual certification with manual review, exact-main multi-context live-browser/game-completion certification, concurrent session-read lock-elision, and independent disposable-state cleanup all passed. The exact-main PostgreSQL watch recorded no new statement-timeout errors after the historical overlapping-campaign burst ending 2026-08-25T06:42:30.957Z. Paardenrace certification also exercised the real draw-pile exhaustion and reshuffle path and continued to a persisted natural winner.",
-  "certified_at": "2026-08-25",
-  "certified_product_sha": "570ef4bded55493a226d1fc7c8afbb1e35244f56",
-  "certified_release_branch": "release/v813-certified-20260825",
-  "authoritative_evidence": {
-    "gejast_verification": {
-      "run_id": 32830627340,
-      "job_id": 97748259845,
-      "conclusion": "success",
-      "security_viewer": "PASS",
-      "security_live_relay_autostart": "PASS",
-      "direct_data_boundary": "PASS",
-      "paardenrace_ladder_scratch_contract": "PASS",
-      "read_path_timeout_hardening": "PASS"
-    },
-    "dependency_security": {
-      "run_id": 32830627410,
-      "conclusion": "success"
-    },
-    "deployment": {
-      "run_id": 32830626434,
-      "conclusion": "success"
-    },
-    "visual": {
-      "run_id": 32830627364,
-      "job_id": 97748260059,
-      "artifact_id": 9557069626,
-      "artifact_sha256": "905391f3598fa2a4bb59c9a5be7b9437d58b32ea27250d88e1829886703577b6",
-      "records": 140,
-      "broken": 0,
-      "warnings": 0,
-      "manual_review": "PASS",
-      "cleanup": "PASS_ZERO"
-    },
-    "live_browser": {
-      "run_id": 32830627407,
-      "job_id": 97748260251,
-      "conclusion": "success",
-      "deployed_version_parity": "PASS",
-      "visual_serialization": "PASS",
-      "session_resolver_chains": "PASS",
-      "concurrent_session_read_lock_elision": "PASS",
-      "multi_context_mobile": "PASS",
-      "pikken_completion": "PASS",
-      "paardenrace_completion": "PASS_WITH_REAL_RESHUFFLE",
-      "cleanup": "PASS_ZERO"
-    },
-    "postgres_statement_timeout_watch": "PASS_NO_NEW_STATEMENT_TIMEOUT_AFTER_2026-08-25T06:42:30.957Z"
-  }
+  "reason": "v814 adds explicit Web Push display acknowledgement telemetry. The dispatcher now prepares a one-time display-ACK capability before provider send, records provider acceptance separately, and the service worker acknowledges display only after showNotification resolves. The two production migrations applied on 2026-08-30 are preserved verbatim in source control together with a permanent lifecycle/provenance guard. The v813 certified product remains the last fully certified baseline; v814 must not inherit the v813 140/140 visual or live-browser certification without fresh exact-current evidence.",
+  "remaining_release_blockers": [
+    "Canonical GEJAST verification and dependency security must pass on the final v814 branch/PR state.",
+    "Exact-current v814 deployment and live Web Push proof must confirm provider send, provider-accepted telemetry, service-worker notification presentation, and display ACK are distinct and functioning without leaking the display capability.",
+    "Fresh authenticated visual/live-browser revalidation and independent zero-residue cleanup are required before v814 can be promoted from REVALIDATION_REQUIRED to PASS."
+  ],
+  "required_next": [
+    "Merge only after canonical verification and dependency audit are green.",
+    "Deploy exact-current v814 and perform a controlled targeted Web Push display-ACK proof against the production contract.",
+    "Run the required exact-current authenticated visual/live-browser certification and cleanup, then create final-acceptance-v814.json and promote release-certification.json to PASS only if all evidence succeeds."
+  ]
 }

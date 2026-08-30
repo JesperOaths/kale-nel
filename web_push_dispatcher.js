@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+const { randomBytes, createHash } = require('node:crypto');
+
 function loadWebPush() {
   return require('web-push');
 }
@@ -37,6 +39,11 @@ function val(item) {
   return null;
 }
 
+function makeDisplayAckCapability() {
+  const token = randomBytes(32).toString('base64url');
+  return { token, hash: createHash('sha256').update(token, 'utf8').digest('hex') };
+}
+
 function classifyFailure(err) {
   const status = err && (err.statusCode || err.status);
   const msg = sanitizeLogText((err && (err.body || err.message)) || err || 'unknown_error');
@@ -44,6 +51,7 @@ function classifyFailure(err) {
   if (/payload_invalid|malformed/i.test(msg)) return { stage: 'payload', code: 'payload_invalid', text: msg, disableSubscription: false };
   if (/auth|p256dh|decrypt/i.test(msg)) return { stage: 'send', code: 'subscription_auth_invalid', text: msg, disableSubscription: true };
   if (/mint/i.test(msg)) return { stage: 'mint', code: 'mint_failed', text: msg, disableSubscription: false };
+  if (/display[_ -]?ack|DISPLAY_ACK/i.test(msg)) return { stage: 'display_ack_prepare', code: 'display_ack_prepare_failed', text: msg, disableSubscription: false };
   return { stage: 'send', code: 'transient_send_failure', text: msg, disableSubscription: false };
 }
 
@@ -103,18 +111,17 @@ function createDispatcher(options, deps = {}) {
     return Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : []);
   }
 
-  async function markSent(item, providerMessageId = null) {
+  async function recordProviderAccepted(item, providerMessageId = null) {
     const jobId = val(item, 'job_id', 'id');
     const claimToken = val(item, 'claim_token');
-    if (claimToken) {
-      return rpc('mark_web_push_job_sent_v763', {
-        job_id_input: jobId,
-        claim_token_input: claimToken,
-        worker_id_input: val(item, 'claimed_by', 'worker_id') || options.workerId,
-        provider_message_id_input: providerMessageId,
-      });
-    }
-    return rpc('mark_web_push_job_sent_v3', { job_id_input: jobId, provider_message_id_input: providerMessageId });
+    const workerId = val(item, 'claimed_by', 'worker_id') || options.workerId;
+    if (!jobId || !claimToken || !workerId) throw new Error('PROVIDER_SENT_CONTEXT_MISSING');
+    return rpc('record_web_push_provider_sent_v814', {
+      job_id_input: Number(jobId),
+      claim_token_input: claimToken,
+      worker_id_input: workerId,
+      provider_message_id_input: providerMessageId,
+    });
   }
 
   async function markFailed(item, stage, code, errorText, disableSubscription = false) {
@@ -146,6 +153,29 @@ function createDispatcher(options, deps = {}) {
       job_id_input: val(item, 'job_id', 'id'),
       claim_token_input: claimToken,
       worker_id_input: val(item, 'claimed_by', 'worker_id') || options.workerId,
+    });
+  }
+
+  async function prepareDisplayAck(item) {
+    if (!item) return item;
+    const jobId = val(item, 'job_id', 'id');
+    const claimToken = val(item, 'claim_token');
+    const subscriptionId = val(item, 'target_subscription_id');
+    const workerId = val(item, 'claimed_by', 'worker_id') || options.workerId;
+    if (!jobId || !claimToken || !subscriptionId || !workerId) throw new Error('DISPLAY_ACK_CONTEXT_MISSING');
+    const capability = makeDisplayAckCapability();
+    await rpc('prepare_web_push_display_ack_v814', {
+      job_id_input: Number(jobId),
+      claim_token_input: claimToken,
+      worker_id_input: workerId,
+      token_hash_input: capability.hash,
+      expires_in_seconds_input: 900,
+    });
+    return Object.assign({}, item, {
+      displayAckToken: capability.token,
+      display_ack_token: capability.token,
+      displayAckSubscriptionId: Number(subscriptionId),
+      display_ack_subscription_id: Number(subscriptionId),
     });
   }
 
@@ -189,6 +219,8 @@ function createDispatcher(options, deps = {}) {
     const verifyToken = val(item, 'verifyActionToken', 'verify_action_token');
     const rejectToken = val(item, 'rejectActionToken', 'reject_action_token');
     const wantsActions = !!(verifyToken || rejectToken);
+    const displayAckToken = val(item, 'displayAckToken', 'display_ack_token');
+    const displayAckSubscriptionId = val(item, 'displayAckSubscriptionId', 'display_ack_subscription_id', 'target_subscription_id');
     return {
       title: val(item, 'title', 'notification_title') || 'Gejast',
       body: val(item, 'body', 'message') || 'Er staat iets voor je klaar.',
@@ -198,6 +230,10 @@ function createDispatcher(options, deps = {}) {
       trace_id: val(item, 'traceId', 'trace_id'),
       jobId: val(item, 'job_id', 'id'),
       job_id: val(item, 'job_id', 'id'),
+      subscriptionId: displayAckSubscriptionId,
+      subscription_id: displayAckSubscriptionId,
+      displayAckToken,
+      display_ack_token: displayAckToken,
       kind: val(item, 'kind', 'trigger_kind') || 'push',
       requestKind: val(item, 'requestKind', 'request_kind'),
       request_kind: val(item, 'requestKind', 'request_kind'),
@@ -219,16 +255,19 @@ function createDispatcher(options, deps = {}) {
     const items = await claimCoreJobs();
     if (!items.length) {
       console.log('no-web-push-jobs', JSON.stringify({ at: new Date().toISOString(), dryRun: options.dryRun, targetSubscriptionId: options.targetSubscriptionId || null }));
-      return { total: 0, sent: 0, failed: 0, dryRun: options.dryRun };
+      return { total: 0, providerAccepted: 0, providerRecordFailed: 0, failed: 0, dryRun: options.dryRun };
     }
 
-    let sentCount = 0;
+    let providerAcceptedCount = 0;
+    let providerRecordFailedCount = 0;
     let failedCount = 0;
     let dryRunCount = 0;
     for (let item of items) {
+      let providerAccepted = false;
       try {
         assertExplicitTarget(item);
         item = await ensureActionTokens(item);
+        if (!options.dryRun) item = await prepareDisplayAck(item);
         const payload = buildPayload(item);
         const endpoint = val(item, 'endpoint');
         const p256dh = val(item, 'p256dh_key', 'p256dh');
@@ -241,10 +280,16 @@ function createDispatcher(options, deps = {}) {
           continue;
         }
         const response = await push.sendNotification({ endpoint, keys: { p256dh, auth } }, JSON.stringify(payload));
-        await markSent(item, response && response.headers && response.headers.location || null);
-        sentCount += 1;
-        console.log('sent', JSON.stringify({ jobId: payload.jobId, targetSubscriptionId: val(item, 'target_subscription_id') || null, kind: payload.requestKind || payload.kind || 'generic' }));
+        providerAccepted = true;
+        await recordProviderAccepted(item, response && response.headers && response.headers.location || null);
+        providerAcceptedCount += 1;
+        console.log('provider-accepted', JSON.stringify({ jobId: payload.jobId, targetSubscriptionId: val(item, 'target_subscription_id') || null, kind: payload.requestKind || payload.kind || 'generic' }));
       } catch (err) {
+        if (providerAccepted) {
+          providerRecordFailedCount += 1;
+          console.error('provider-record-failed', JSON.stringify({ jobId: val(item, 'job_id', 'id') || null, error: sanitizeLogText(err && err.message || err) }));
+          continue;
+        }
         const meta = classifyFailure(err);
         try { await markFailed(item, meta.stage, meta.code, meta.text, meta.disableSubscription); }
         catch (markErr) { console.error('mark-failed-error', JSON.stringify({ jobId: val(item, 'job_id', 'id') || null, error: sanitizeLogText(markErr && markErr.message || markErr) })); }
@@ -252,7 +297,7 @@ function createDispatcher(options, deps = {}) {
         console.error('failed', JSON.stringify({ jobId: val(item, 'job_id', 'id') || null, code: meta.code, error: meta.text }));
       }
     }
-    const summary = { total: items.length, sent: sentCount, failed: failedCount, dryRun: dryRunCount, at: new Date().toISOString(), targetSubscriptionId: options.targetSubscriptionId || null };
+    const summary = { total: items.length, providerAccepted: providerAcceptedCount, providerRecordFailed: providerRecordFailedCount, failed: failedCount, dryRun: dryRunCount, at: new Date().toISOString(), targetSubscriptionId: options.targetSubscriptionId || null };
     console.log('web-push-run-complete', JSON.stringify(summary));
     return summary;
   }
@@ -270,4 +315,4 @@ if (require.main === module) {
   main().catch((err) => { console.error(sanitizeLogText(err && err.message || err)); process.exit(1); });
 }
 
-module.exports = { buildOptions, createDispatcher, classifyFailure, sanitizeLogText, parsePositiveInt, envFlag };
+module.exports = { buildOptions, createDispatcher, classifyFailure, sanitizeLogText, parsePositiveInt, envFlag, makeDisplayAckCapability };
