@@ -7,8 +7,9 @@ const fail = (message) => {
 };
 
 const releaseVersion = fs.readFileSync('VERSION', 'utf8').trim();
-if (!/^v(?:812|813)$/.test(releaseVersion)) {
-  fail(`v812f boundary is only certified as provenance for v812/v813, got ${releaseVersion}`);
+const releaseMatch = /^v(\d+)$/.exec(releaseVersion);
+if (!releaseMatch || Number(releaseMatch[1]) < 812) {
+  fail(`v812f boundary is persistent provenance for v812+ releases, got ${releaseVersion}`);
 }
 
 const sql = fs.readFileSync('GEJAST_v812f_direct_data_boundary.sql', 'utf8').toLowerCase();
