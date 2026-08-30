@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "verified_on": "2026-08-30",
+  "site_version": "v813",
+  "certified_product_sha_unchanged": true,
+  "certified_product_sha": "570ef4bded55493a226d1fc7c8afbb1e35244f56",
+  "frozen_certified_branch": "release/v813-certified-20260825",
+  "source_baseline_main_sha": "73cbe3b2c80b86c74c41c01cbc3e932ab526ba5a",
+  "production_migration": {
+    "version": "20260830001727",
+    "name": "harden_ignored_admin_session_token_admin_rpcs",
+    "source_file": "GEJAST_20260830001727_harden_ignored_admin_session_token_admin_rpcs.sql"
+  },
+  "scope": "post-certification database-only hardening of legacy SECURITY DEFINER admin diagnostics whose declared admin_session_token parameter was previously ignored",
+  "frontend_changed": false,
+  "function_signatures_changed": false,
+  "security_definer_changed": false,
+  "execute_acl_changed": false,
+  "search_path_changed": false,
+  "statement_timeout_changed": false,
+  "canonical_guard": "public._gejast_require_admin_session_v792m(admin_session_token)",
+  "functions": [
+    "admin_get_home_profile_runtime_audit_v682",
+    "admin_get_home_profile_runtime_audit_v683",
+    "admin_get_klaverjassen_alignment_audit_v644",
+    "admin_get_phase_completion_audit_v647",
+    "admin_get_phase_completion_registry_v647",
+    "admin_get_phase_runtime_smoke_v647"
+  ],
+  "catalog_guard_proof": "6/6",
+  "anon_null_token_rejection": "6/6 admin_session_invalid",
+  "migration_reapplied": false,
+  "live_contract_verified": true,
+  "notes": [
+    "The functions remain browser-callable under their pre-existing ACLs, but SECURITY DEFINER data access now requires the already-declared admin session token to validate.",
+    "No active admin token, JWT, push subscription endpoint, push auth/DH material, or other secret is stored in this proof artifact.",
+    "The first attempted migration was rejected transactionally by PostgreSQL for a syntax error before any function was changed; the corrected migration is the sole applied production migration at version 20260830001727."
+  ]
+}
