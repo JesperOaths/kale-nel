@@ -50,14 +50,14 @@
     <section class="stats" aria-label="Collection summary">
       <div><strong data-product-count>7</strong><span>nature shirts</span></div>
       <div><strong>Native catalog</strong><span>imports product images, prices, sizes and base shirt data</span></div>
-      <div><strong>Cart ready</strong><span>sizes, quantities, checkout notes</span></div>
+      <div><strong>Secure checkout</strong><span>Stripe payment + Printify fulfilment pipeline</span></div>
     </section>
 
     <section class="shop-section" id="shop">
       <div class="section-heading">
         <p class="eyebrow">Shop</p>
         <h2>Sort by price or base shirt, pick a size, build a cart.</h2>
-        <p>Filter by motif, scroll through imported mockup views, choose size and quantity, then prepare an order from the cart.</p>
+        <p>Filter by motif, scroll through imported mockup views, choose size and quantity, then check out securely.</p>
       </div>
 
       <div class="toolbar" aria-label="Shop controls">
@@ -107,15 +107,15 @@
 
     <section class="checkout-info" id="checkout">
       <p class="eyebrow">Checkout</p>
-      <h2>Cart works now. Payment links are ready to connect.</h2>
-      <p>The cart is ready for order requests now. Card, iDEAL, and PayPal can be connected after the products are published and the final checkout provider is approved.</p>
+      <h2>Secure payment, then automatic Printify order creation.</h2>
+      <p>Checkout uses Stripe’s hosted payment page. Eligible methods are shown dynamically, including cards and wallets, iDEAL | Wero for Dutch customers, and PayPal when enabled on the Stripe account.</p>
       <div class="payment-grid">
-        <article><strong>Card / Apple Pay</strong><span>Best via Stripe Payment Links.</span></article>
-        <article><strong>iDEAL</strong><span>Best via Mollie or Stripe Netherlands checkout.</span></article>
-        <article><strong>PayPal</strong><span>Use PayPal checkout or PayPal.me link.</span></article>
+        <article><strong>Card / wallets</strong><span>Card plus eligible Apple Pay, Google Pay and Link options.</span></article>
+        <article><strong>iDEAL | Wero</strong><span>Dutch bank checkout through Stripe.</span></article>
+        <article><strong>PayPal</strong><span>Available through the same Stripe checkout when activated.</span></article>
       </div>
       <button class="button primary" type="button" data-open-cart>Review cart</button>
-      <p class="small-note">No live payment is charged on this page yet. Payment buttons stay disabled until the real provider links are approved.</p>
+      <p class="small-note">Prices and Printify variant IDs are verified by the server before a payment session is created. Printify fulfilment starts only after payment is confirmed.</p>
     </section>
   </main>
 
@@ -128,11 +128,12 @@
       <div class="cart-items" data-cart-items></div>
       <div class="cart-summary">
         <div><span>Subtotal</span><strong data-cart-subtotal>€0</strong></div>
-        <p>Shipping and final taxes are confirmed at checkout once payment links are connected.</p>
-        <a class="button primary full" data-mail-order href="mailto:hello@example.com?subject=Bruis%20order%20request">Request order link</a>
-        <div class="checkout-buttons" aria-label="Payment options to connect">
-          <button type="button" disabled>Card</button><button type="button" disabled>iDEAL</button><button type="button" disabled>PayPal</button>
+        <p>Shipping and any configured taxes are shown in secure checkout.</p>
+        <a class="button primary full" data-mail-order href="mailto:info@kalenel.nl?subject=Bruis%20order%20request">Secure checkout</a>
+        <div class="checkout-buttons" aria-label="Supported payment methods">
+          <button type="button" data-shop-checkout>Card</button><button type="button" data-shop-checkout>iDEAL | Wero</button><button type="button" data-shop-checkout>PayPal</button>
         </div>
+        <p class="small-note" data-payment-status role="status" aria-live="polite"></p>
       </div>
     </div>
   </aside>
@@ -144,5 +145,6 @@
 
   <script src="catalog-data.js?v=20260830-printify-adapter4" defer></script>
   <script src="store.js?v=20260830-printify-adapter4" defer></script>
+  <script src="payments.js?v=20260830-shop-payments1" defer></script>
 </body>
 </html>
