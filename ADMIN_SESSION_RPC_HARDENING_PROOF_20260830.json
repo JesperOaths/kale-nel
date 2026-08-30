@@ -6,6 +6,7 @@
   "certified_product_sha": "570ef4bded55493a226d1fc7c8afbb1e35244f56",
   "frozen_certified_branch": "release/v813-certified-20260825",
   "source_baseline_main_sha": "73cbe3b2c80b86c74c41c01cbc3e932ab526ba5a",
+  "ci_revalidated_base_main_sha": "40c7329b22182c7fe627afa8c4c24490bcfab3e0",
   "production_migrations": [
     {
       "version": "20260830001727",
@@ -53,6 +54,7 @@
     "The functions remain browser-callable under their pre-existing ACLs, but SECURITY DEFINER data access now requires the already-declared admin session token to validate.",
     "No active admin token, JWT, push subscription endpoint, push auth/DH material, or other secret is stored in this proof artifact.",
     "The first attempted 20260830001727 migration submission was rejected transactionally by PostgreSQL for a syntax error before any function was changed; the corrected migration was then applied successfully under version 20260830001727.",
-    "A follow-on exact ignored-parameter classifier found three additional home/profile diagnostics v685-v687; migration 20260830002126 hardened those three and the same classifier then returned zero rows."
+    "A follow-on exact ignored-parameter classifier found three additional home/profile diagnostics v685-v687; migration 20260830002126 hardened those three and the same classifier then returned zero rows.",
+    "CI was revalidated against main 40c7329b22182c7fe627afa8c4c24490bcfab3e0 after PR #309 repaired an unrelated Bruis shop Pages-boundary checker regression without relaxing the global JSON publication exclusion."
   ]
 }
