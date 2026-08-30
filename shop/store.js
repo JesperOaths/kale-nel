@@ -17,23 +17,30 @@ function normalizeProduct(raw){
     price: Math.ceil(Number(raw.price || 0)),
     sizes: Array.isArray(raw.sizes) && raw.sizes.length ? raw.sizes : ['S','M','L','XL','2XL'],
     mockups,
-    image: mockups[0]?.image || raw.image || ''
+    image: mockups[0]?.image || raw.image || '',
+    baseLabel: raw.baseLabel || 'Shirt base pending'
   };
+}
+
+function sortByShirtBase(list){
+  return [...list].sort((a, b) =>
+    String(a.baseLabel || '').localeCompare(String(b.baseLabel || '')) || a.price - b.price || a.name.localeCompare(b.name)
+  );
 }
 
 async function loadCatalog(){
   if(window.BRUIS_CATALOG){
     const rawProducts = Array.isArray(window.BRUIS_CATALOG) ? window.BRUIS_CATALOG : (window.BRUIS_CATALOG.products || []);
     const imported = rawProducts.map(normalizeProduct).filter(p => p.name && p.mockups.length && p.price > 0);
-    if(imported.length) return imported;
+    if(imported.length) return sortByShirtBase(imported);
   }
   try {
-    const response = await fetch('catalog.json?v=20260830-bare', { cache: 'no-store' });
+    const response = await fetch('catalog.json?v=20260830-no-shipping', { cache: 'no-store' });
     if(response.ok){
       const payload = await response.json();
       const rawProducts = Array.isArray(payload) ? payload : (payload.products || []);
       const imported = rawProducts.map(normalizeProduct).filter(p => p.name && p.mockups.length && p.price > 0);
-      if(imported.length) return imported;
+      if(imported.length) return sortByShirtBase(imported);
     }
   } catch {}
   return FALLBACK_PRODUCTS;
@@ -59,7 +66,10 @@ function renderProducts(){
       </div>
       <div class="product-copy">
         <div class="product-top">
-          <h3>${esc(product.name)}</h3>
+          <div>
+            <h3>${esc(product.name)}</h3>
+            <p class="shirt-base">${esc(product.baseLabel)}</p>
+          </div>
           <strong class="price">${money(product.price)}</strong>
         </div>
         <div class="buy-box">
