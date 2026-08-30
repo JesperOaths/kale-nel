@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "site_version": "v813",
+  "verified_on": "2026-08-30",
+  "supabase_project_id": "uiqntazgnrxwliaidkmy",
+  "source_baseline_main_sha": "83bea253dc9eb1e736b7be9f3c0a3e697574fa2c",
+  "certified_product_sha_unchanged": true,
+  "certified_product_sha": "570ef4bded55493a226d1fc7c8afbb1e35244f56",
+  "frozen_certified_branch": "release/v813-certified-20260825",
+  "production_migration": {
+    "version": "20260830113728",
+    "name": "harden_remaining_anon_security_definer_search_paths_v813",
+    "source_file": "GEJAST_20260830113728_harden_remaining_anon_security_definer_search_paths_v813.sql",
+    "functions_hardened": 34,
+    "migrations_reapplied_for_provenance": false
+  },
+  "live_catalog_proof": {
+    "expected_signatures": 34,
+    "resolved_signatures": 34,
+    "security_definer": 34,
+    "fixed_search_path_public": 34,
+    "anon_execute": 34,
+    "authenticated_execute": 34,
+    "service_role_execute": 34,
+    "function_bodies_with_dml_keyword": 18,
+    "missing_signatures": 0
+  },
+  "final_anonymous_mutator_classification": {
+    "status": "PASS_NO_NEW_UNAUTHENTICATED_AUTHORITATIVE_STATE_BYPASS_FOUND",
+    "credential_gated_public_entrypoints": [
+      "account_login_v671",
+      "account_login_bridge_v687"
+    ],
+    "intentional_public_claim_writes": [
+      "account_request_claim_v671",
+      "request_claim",
+      "request_claim_action"
+    ],
+    "intentional_public_analytics_writes": [
+      "track_site_event"
+    ],
+    "analytics_caveat": "The long track_site_event overload accepts client-claimed login/player/admin metadata. Those fields are forgeable telemetry unless downstream consumers explicitly treat them as untrusted client claims.",
+    "intentional_public_ephemeral_compute_writes": [
+      "get_paardenrace_ladder_public_scoped",
+      "get_pikken_ladder_public_scoped"
+    ],
+    "compute_caveat": "The public ladder RPCs mutate run-scoped scratch rows and clean them on success and exception paths. They do not write authoritative gameplay state, but repeated anonymous calls remain a resource-amplification/rate-limit concern.",
+    "claim_caveat": "Anonymous claim-request endpoints are product-intended writes and remain a spam/rate-limit surface.",
+    "authorization_conclusion": "Anonymous execution is not equivalent to unauthenticated authorization: reviewed authoritative mutators retain session/admin/capability-token or credential checks, while the residual public writers are intentional product entrypoints, telemetry, or ephemeral computation."
+  },
+  "supabase_advisor_verification": {
+    "security_function_search_path_findings": 0,
+    "security_remaining_warnings": [
+      "auth_leaked_password_protection",
+      "auth_insufficient_mfa_options"
+    ],
+    "performance_severity": "INFO_ONLY",
+    "performance_summary": "Informational optimization findings only, primarily unused indexes plus a small number of missing primary-key/covering-index observations; no warning/error-class performance finding was returned."
+  },
+  "non_target_contract": {
+    "frontend_changed": false,
+    "function_signatures_changed": false,
+    "execute_acl_changed_by_final_34_function_migration": false,
+    "statement_timeout_changed": false,
+    "certified_product_tree_changed": false
+  },
+  "live_contract_verified": true
+}
