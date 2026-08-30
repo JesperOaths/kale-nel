@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bruis - Nature tees</title>
-  <meta name="description" content="Bruis nature-inspired tees. Shipping calculated after address entry." />
+  <meta name="description" content="Bruis nature-inspired tees. Choose a shirt shape, then browse the designs in that collection." />
   <meta property="og:title" content="Bruis" />
   <meta property="og:description" content="Nature-inspired tees." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://kalenel.nl/shop/" />
-  <link rel="stylesheet" href="styles.css?v=20260830-bare" />
+  <link rel="stylesheet" href="styles.css?v=20260830-shape-entry-live1" />
 </head>
 <body>
   <header class="site-header">
@@ -18,12 +18,69 @@
   </header>
 
   <main>
-    <section class="hero">
-      <h1>Nature tees</h1>
-      <p>Clean shirts with quiet nature artwork. Shipping calculated at checkout.</p>
+    <section class="shape-entry-shell" data-shape-entry>
+      <div class="shape-entry-heading">
+        <p class="section-kicker">Choose your shirt shape</p>
+        <h1>Pick a fit.</h1>
+        <p>Start with the silhouette you want. You can switch shape again at any time while browsing.</p>
+      </div>
+
+      <div class="collection-grid collection-grid-large" role="list" aria-label="Shirt shapes">
+        <button class="collection-card" type="button" data-collection="normal" aria-pressed="false">
+          <span class="collection-image"><img src="assets/collection-normal.webp" alt="Classic T-shirt outline" /></span>
+          <span class="collection-copy">
+            <strong>Classic</strong>
+            <small>Regular everyday T-shirt shape</small>
+            <span class="collection-count" data-collection-count="normal">Loading…</span>
+          </span>
+        </button>
+
+        <button class="collection-card" type="button" data-collection="boxy" aria-pressed="false">
+          <span class="collection-image"><img src="assets/collection-boxy.webp" alt="Boxy T-shirt outline" /></span>
+          <span class="collection-copy">
+            <strong>Boxy</strong>
+            <small>Wider, shorter and more oversized silhouette</small>
+            <span class="collection-count" data-collection-count="boxy">Loading…</span>
+          </span>
+        </button>
+
+        <button class="collection-card" type="button" data-collection="all-over" aria-pressed="false">
+          <span class="collection-image"><img src="assets/collection-all-over.webp" alt="All-over print T-shirt outline" /></span>
+          <span class="collection-copy">
+            <strong>All Over Print</strong>
+            <small>Artwork printed across the whole shirt</small>
+            <span class="collection-count" data-collection-count="all-over">Loading…</span>
+          </span>
+        </button>
+      </div>
     </section>
 
-    <section class="shop-section" id="shop">
+    <section class="shop-section" id="shop" data-shop-section hidden aria-labelledby="shop-title">
+      <div class="compact-shape-bar" aria-label="Change shirt shape">
+        <div class="compact-shape-copy">
+          <p class="section-kicker">Shirt shape</p>
+          <h2 id="shop-title" data-collection-title>Classic shirts</h2>
+        </div>
+
+        <div class="compact-shape-grid" role="list" aria-label="Switch shirt shape">
+          <button class="compact-shape-card" type="button" data-collection="normal" aria-pressed="false" aria-label="Show Classic shirts">
+            <img src="assets/collection-normal.webp" alt="" />
+            <span>Classic</span>
+          </button>
+          <button class="compact-shape-card" type="button" data-collection="boxy" aria-pressed="false" aria-label="Show Boxy shirts">
+            <img src="assets/collection-boxy.webp" alt="" />
+            <span>Boxy</span>
+          </button>
+          <button class="compact-shape-card" type="button" data-collection="all-over" aria-pressed="false" aria-label="Show All Over Print shirts">
+            <img src="assets/collection-all-over.webp" alt="" />
+            <span>All Over</span>
+          </button>
+        </div>
+
+        <button class="view-shapes-large" type="button" data-expand-shapes>View shapes larger</button>
+      </div>
+
+      <p class="collection-empty" data-collection-empty hidden></p>
       <div class="product-grid" data-products aria-live="polite"></div>
     </section>
   </main>
@@ -45,7 +102,7 @@
 
   <footer class="footer">Bruis - Nature-inspired clothing.</footer>
 
-  <script src="catalog-data.js?v=20260830-no-shipping" defer></script>
-  <script src="store.js?v=20260830-no-shipping" defer></script>
+  <script src="catalog-data.js?v=20260830-shape-entry-live1" defer></script>
+  <script src="store.js?v=20260830-shape-entry-live1" defer></script>
 </body>
 </html>
