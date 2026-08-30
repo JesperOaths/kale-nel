@@ -58,3 +58,5 @@ jobs:
         run: node check-paardenrace-rpc-source-safety.mjs
       - name: Paardenrace backend minimum evidence
         run: node check-paardenrace-minimum-backend-v792.mjs
+      - name: v814 Web Push display ACK lifecycle and provenance
+        run: node scripts/check-v814-web-push-display-ack.mjs
