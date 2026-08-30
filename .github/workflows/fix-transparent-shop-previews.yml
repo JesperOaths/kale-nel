@@ -64,7 +64,7 @@ jobs:
           for slug, (file_id, source_name) in sources.items():
               src = tmpdir / source_name
               print(f'Downloading {source_name}...')
-              result = gdown.download(id=file_id, output=str(src), quiet=False, fuzzy=True)
+              result = gdown.download(id=file_id, output=str(src), quiet=False)
               if not result or not src.exists() or src.stat().st_size == 0:
                   raise RuntimeError(f'Download failed for {source_name}')
 
