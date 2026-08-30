@@ -50,6 +50,8 @@ jobs:
         run: node scripts/check-v813-post-cert-admin-drinks-hardening.mjs
       - name: v813 post-certification Web Push RPC hardening
         run: node scripts/check-v813-post-cert-web-push-rpc-hardening.mjs
+      - name: v813 post-certification admin-session RPC hardening
+        run: node scripts/check-v813-post-cert-admin-session-rpc-hardening.mjs
       - name: Reconstructed Paardenrace RPC source safety
         run: node check-paardenrace-rpc-source-safety.mjs
       - name: Paardenrace backend minimum evidence
