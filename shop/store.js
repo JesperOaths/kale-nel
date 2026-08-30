@@ -1,4 +1,4 @@
-const products = [
+const FALLBACK_PRODUCTS = [
   { id:'jellyfish', name:'Pastel Jellyfish Illustration Tee', type:'marine', typeLabel:'Marine', price:35.44, priceMax:40.14, description:'Soft sea-life artwork with a dreamy jellyfish glow and calm ocean feel.', image:'https://images.printify.com/mockup/6a878552828b6188a0031a81/12100/92570/pastel-jellyfish-illustration-tee-watercolor-sea-life-shirt.jpg?camera_label=front&s=640&use_cdn_redirect=true&t=1787432257261' },
   { id:'hydrangea', name:'Hydrangea Watercolor Shirt', type:'floral', typeLabel:'Flowers', price:30.02, priceMax:38.75, description:'A gentle hydrangea bloom with airy petals and a fresh botanical look.', image:'https://images.printify.com/mockup/6a877906eb76ae387b05cc0f/73207/98445/hydrangea-watercolor-shirt-floral-botanical-tee.jpg?camera_label=front&s=640&use_cdn_redirect=true&t=1787265232256' },
   { id:'lace', name:'Queen Anne’s Lace Illustration Tee', type:'floral', typeLabel:'Flowers', price:27.25, priceMax:33.38, description:'Delicate Queen Anne’s lace with airy stems and pressed-flower elegance.', image:'https://images.printify.com/mockup/6a877defbecced59b0037078/12100/92570/queen-annes-lace-illustration-tee-botanical-flower-shirt.jpg?camera_label=front&s=640&use_cdn_redirect=true&t=1787265185363' },
@@ -8,72 +8,195 @@ const products = [
   { id:'axolotl', name:'Pink Axolotl Illustration T-Shirt', type:'aquatic', typeLabel:'Aquatic', price:27.25, priceMax:33.38, description:'A playful axolotl with soft aquatic character and a sweet pond-life mood.', image:'https://images.printify.com/mockup/6a877d2aeb76ae387b05cfae/12100/102005/pink-axolotl-illustration-t-shirt-cute-aquatic-creature-tee.jpg?camera_label=front-2&s=640&use_cdn_redirect=true&t=1787265207176' },
 ];
 
-const typeOrder = ['floral','botanical','insect','marine','aquatic'];
-const sizes = ['S','M','L','XL','2XL','3XL','4XL','5XL'];
-const cartKey = 'bruisCartV1';
+const typeOrder = ['floral','botanical','insect','marine','aquatic','other'];
+const fallbackSizes = ['S','M','L','XL','2XL','3XL','4XL','5XL'];
+const mockupLabels = [
+  ['front', 'Front'], ['front-2', 'Alternate front'], ['back', 'Back'], ['back-2', 'Alternate back'],
+  ['side', 'Side'], ['lifestyle', 'Lifestyle'], ['flat', 'Flat lay'], ['person', 'On body'], ['folded', 'Folded'],
+];
+const cartKey = 'bruisCartV2';
+let products = [];
 let filter = 'all';
-let sort = 'type';
+let sort = 'price-low';
 let cart = JSON.parse(localStorage.getItem(cartKey) || '[]');
 
-const money = value => `$${value.toFixed(2)}`;
-const priceRange = product => `${money(product.price)}–${money(product.priceMax)}`;
+const money = value => `$${Number(value || 0).toFixed(2)}`;
+const priceRange = product => product.priceMax > product.price ? `${money(product.price)}–${money(product.priceMax)}` : money(product.price);
 const qs = sel => document.querySelector(sel);
 const qsa = sel => [...document.querySelectorAll(sel)];
+const slug = text => String(text || 'product').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,80) || 'product';
+const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
-function mockupUrl(image, label){
-  const url = new URL(image);
-  url.searchParams.set('camera_label', label);
-  url.searchParams.set('s', '640');
-  return url.toString();
+function uniqueBy(items, keyFn){
+  const seen = new Set();
+  return items.filter(item => {
+    const key = keyFn(item);
+    if(!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
-function mockups(product){
-  return [
-    { label:'Front', cls:'mock-front', image:mockupUrl(product.image, 'front') },
-    { label:'Alternate front', cls:'mock-alt', image:mockupUrl(product.image, 'front-2') },
-    { label:'Back', cls:'mock-back', image:mockupUrl(product.image, 'back') },
-    { label:'Alternate back', cls:'mock-back2', image:mockupUrl(product.image, 'back-2') },
-    { label:'Side', cls:'mock-side', image:mockupUrl(product.image, 'side') },
-    { label:'Lifestyle', cls:'mock-life', image:mockupUrl(product.image, 'lifestyle') },
-    { label:'Flat lay', cls:'mock-flat', image:mockupUrl(product.image, 'flat') },
-    { label:'On body', cls:'mock-person', image:mockupUrl(product.image, 'person') },
-    { label:'Folded', cls:'mock-folded', image:mockupUrl(product.image, 'folded') },
-  ];
+
+function parsePrice(value){
+  if(value == null || value === '') return null;
+  const n = Number(value);
+  if(!Number.isFinite(n)) return null;
+  return n > 999 ? n / 100 : n;
+}
+
+function cameraMockupUrl(image, label){
+  try {
+    const url = new URL(image);
+    url.searchParams.set('camera_label', label);
+    url.searchParams.set('s', '640');
+    return url.toString();
+  } catch {
+    return image;
+  }
+}
+
+function deriveBaseFromUrl(image){
+  try {
+    const parts = new URL(image).pathname.split('/').filter(Boolean);
+    const mockupAt = parts.indexOf('mockup');
+    if(mockupAt >= 0 && parts[mockupAt + 2] && parts[mockupAt + 3]) {
+      return { key:`${parts[mockupAt + 2]}-${parts[mockupAt + 3]}`, label:`Base ${parts[mockupAt + 2]} / ${parts[mockupAt + 3]}` };
+    }
+  } catch {}
+  return { key:'unknown', label:'Base pending import' };
+}
+
+function motifFromTitle(title){
+  const t = String(title || '').toLowerCase();
+  if(/jellyfish|marine|sea|ocean/.test(t)) return ['marine','Marine'];
+  if(/axolotl|aquatic|pond/.test(t)) return ['aquatic','Aquatic'];
+  if(/mantis|fly|insect|beetle|moth|butterfly/.test(t)) return ['insect','Insects'];
+  if(/flower|hydrangea|lace|floral|rose|poppy|petal/.test(t)) return ['floral','Flowers'];
+  if(/botanical|thistle|leaf|plant|mushroom|fungi/.test(t)) return ['botanical','Botanical'];
+  return ['other','Nature'];
+}
+
+function optionTitleMap(raw){
+  const map = new Map();
+  (raw.options || []).forEach(option => (option.values || []).forEach(value => {
+    map.set(value.id, { option:String(option.name || option.title || '').toLowerCase(), title:value.title || value.name || String(value.id) });
+  }));
+  return map;
+}
+
+function sizesFromPrintify(raw){
+  const optionMap = optionTitleMap(raw);
+  const sizes = [];
+  (raw.variants || []).filter(v => v.is_enabled !== false && v.is_available !== false).forEach(variant => {
+    (variant.options || []).forEach(id => {
+      const opt = optionMap.get(id);
+      if(opt && /size/.test(opt.option) && !sizes.includes(opt.title)) sizes.push(opt.title);
+    });
+  });
+  return sizes.length ? sizes : fallbackSizes;
+}
+
+function pricesFromPrintify(raw){
+  const variantPrices = (raw.variants || [])
+    .filter(v => v.is_enabled !== false && v.is_available !== false)
+    .map(v => parsePrice(v.price))
+    .filter(v => v != null);
+  const direct = [parsePrice(raw.price), parsePrice(raw.priceMax || raw.price_max || raw.max_price)].filter(v => v != null);
+  const prices = variantPrices.length ? variantPrices : direct;
+  if(!prices.length) return { price:0, priceMax:0 };
+  return { price:Math.min(...prices), priceMax:Math.max(...prices) };
+}
+
+function mockupsFromPrintify(raw, fallbackImage){
+  const images = (raw.images || raw.mockups || [])
+    .map((image, index) => {
+      const src = image.src || image.url || image.image || image.preview_url || image;
+      const label = image.label || image.camera_label || image.position || image.view || mockupLabels[index]?.[1] || `View ${index + 1}`;
+      return src ? { image:src, label:String(label).replace(/[-_]/g,' ').replace(/\b\w/g, c => c.toUpperCase()) } : null;
+    })
+    .filter(Boolean);
+  if(images.length) return uniqueBy(images, item => item.image).slice(0,12);
+  if(!fallbackImage) return [];
+  return [{ label:'Available view', image:fallbackImage }];
+}
+
+function normalizeProduct(raw){
+  const name = raw.name || raw.title || raw.product_title || 'Untitled shirt';
+  const image = raw.image || raw.default_image || raw.visible_image || raw.images?.find?.(i => i.is_default)?.src || raw.images?.[0]?.src || raw.images?.[0]?.url || '';
+  const [type, typeLabel] = raw.type && raw.typeLabel ? [raw.type, raw.typeLabel] : motifFromTitle(`${name} ${raw.description || ''}`);
+  const prices = pricesFromPrintify(raw);
+  const base = raw.base || raw.baseShirt || raw.base_shirt || raw.printifyBase || deriveBaseFromUrl(image);
+  const baseKey = raw.baseKey || raw.base_key || (raw.blueprint_id && raw.print_provider_id ? `${raw.blueprint_id}-${raw.print_provider_id}` : base.key || 'unknown');
+  const baseLabel = raw.baseLabel || raw.base_label || raw.blueprint_title || raw.blueprint?.title || raw.print_provider_name || base.label || `Base ${baseKey}`;
+  const mockups = mockupsFromPrintify(raw, image);
+  return {
+    id:String(raw.id || raw.external_id || slug(name)),
+    name,
+    type,
+    typeLabel,
+    price:prices.price,
+    priceMax:prices.priceMax,
+    description:raw.description || raw.body_html?.replace(/<[^>]*>/g,' ') || 'Nature-inspired shirt from the Bruis collection.',
+    image:mockups[0]?.image || image,
+    mockups,
+    sizes:raw.sizes || sizesFromPrintify(raw),
+    baseKey:String(baseKey || 'unknown'),
+    baseLabel:String(baseLabel || 'Base pending import'),
+    source:'printify-compatible',
+  };
+}
+
+async function loadCatalog(){
+  try {
+    const response = await fetch('catalog.printify.json?v=20260830', { cache:'no-store' });
+    if(response.ok){
+      const payload = await response.json();
+      const rawProducts = Array.isArray(payload) ? payload : (payload.products || payload.data || []);
+      const imported = rawProducts.map(normalizeProduct).filter(p => p.name && p.mockups.length);
+      if(imported.length) return imported;
+    }
+  } catch {}
+  return FALLBACK_PRODUCTS.map(normalizeProduct);
 }
 
 function sortedProducts(){
   let list = filter === 'all' ? [...products] : products.filter(p => p.type === filter);
-  if(sort === 'type') list.sort((a,b) => typeOrder.indexOf(a.type)-typeOrder.indexOf(b.type) || a.name.localeCompare(b.name));
-  if(sort === 'name') list.sort((a,b) => a.name.localeCompare(b.name));
-  if(sort === 'price-low') list.sort((a,b) => a.price-b.price);
-  if(sort === 'price-high') list.sort((a,b) => b.price-a.price);
+  list.sort((a,b) => {
+    if(sort === 'name') return a.name.localeCompare(b.name);
+    if(sort === 'price-high') return b.price-a.price || a.baseKey.localeCompare(b.baseKey) || a.name.localeCompare(b.name);
+    if(sort === 'base') return a.baseKey.localeCompare(b.baseKey) || a.price-b.price || a.name.localeCompare(b.name);
+    if(sort === 'base-price') return a.baseKey.localeCompare(b.baseKey) || a.price-b.price || a.name.localeCompare(b.name);
+    if(sort === 'type') return typeOrder.indexOf(a.type)-typeOrder.indexOf(b.type) || a.price-b.price || a.name.localeCompare(b.name);
+    return a.price-b.price || a.baseKey.localeCompare(b.baseKey) || a.name.localeCompare(b.name);
+  });
   return list;
 }
 
 function renderProducts(){
   const wrap = qs('[data-products]');
   wrap.innerHTML = sortedProducts().map(product => `
-    <article class="product-card" data-type="${product.type}">
-      <div class="mockup-rail" aria-label="${product.name} mockups">
-        ${mockups(product).map(m => `
-          <figure class="mockup ${m.cls}">
-            <img src="${m.image}" alt="${product.name} — ${m.label}" loading="lazy" />
-            <figcaption>${m.label}</figcaption>
+    <article class="product-card" data-type="${esc(product.type)}" data-base="${esc(product.baseKey)}" data-price="${product.price}">
+      <div class="mockup-rail" aria-label="${esc(product.name)} mockups">
+        ${product.mockups.map((m, index) => `
+          <figure class="mockup mock-${slug(m.label)}">
+            <img src="${esc(m.image)}" alt="${esc(product.name)} — ${esc(m.label)}" loading="lazy" />
+            <figcaption>${esc(m.label)}</figcaption>
           </figure>`).join('')}
       </div>
-      <div class="mockup-hint">9 matching views · scroll sideways</div>
+      <div class="mockup-hint">${product.mockups.length} imported views · scroll sideways</div>
       <div class="product-copy">
-        <div class="product-meta"><span class="tag">${product.typeLabel}</span><strong>${priceRange(product)}</strong></div>
-        <p class="price-note">Retail range by size · 8 sizes</p>
-        <h3>${product.name}</h3>
-        <p>${product.description}</p>
+        <div class="product-meta"><span class="tag">${esc(product.typeLabel)}</span><strong>${priceRange(product)}</strong></div>
+        <p class="price-note">Retail range by size · ${product.sizes.length} sizes · ${esc(product.baseLabel)}</p>
+        <h3>${esc(product.name)}</h3>
+        <p>${esc(product.description)}</p>
         <div class="buy-box">
           <label>Size
-            <select data-size="${product.id}">${sizes.map(s => `<option>${s}</option>`).join('')}</select>
+            <select data-size="${esc(product.id)}">${product.sizes.map(s => `<option>${esc(s)}</option>`).join('')}</select>
           </label>
           <label>Qty
-            <input data-qty="${product.id}" type="number" min="1" max="9" value="1" />
+            <input data-qty="${esc(product.id)}" type="number" min="1" max="9" value="1" />
           </label>
-          <button type="button" class="button primary small" data-add="${product.id}">Add to cart</button>
+          <button type="button" class="button primary small" data-add="${esc(product.id)}">Add to cart</button>
         </div>
       </div>
     </article>`).join('');
@@ -92,20 +215,21 @@ function renderCart(){
   } else {
     items.innerHTML = cart.map((item, index) => `
       <article class="cart-line">
-        <img src="${item.image}" alt="${item.name}" />
+        <img src="${esc(item.image)}" alt="${esc(item.name)}" />
         <div>
-          <strong>${item.name}</strong>
-          <span>${item.size} · ${item.qty} × ${money(item.price)} from-price</span>
+          <strong>${esc(item.name)}</strong>
+          <span>${esc(item.size)} · ${item.qty} × ${money(item.price)} from-price</span>
           <button type="button" data-remove="${index}">Remove</button>
         </div>
       </article>`).join('');
   }
-  const summary = cart.map(i => `${i.qty}× ${i.name} (${i.size})`).join('%0A');
-  qs('[data-mail-order]').href = `mailto:hello@example.com?subject=Bruis%20order%20request&body=${summary || 'I would like to order Bruis shirts.'}`;
+  const summary = cart.map(i => `${i.qty}× ${i.name} (${i.size})`).join('\n') || 'I would like to order Bruis shirts.';
+  qs('[data-mail-order]').href = `mailto:hello@example.com?subject=Bruis%20order%20request&body=${encodeURIComponent(summary)}`;
 }
 
 function addToCart(id){
   const product = products.find(p => p.id === id);
+  if(!product) return;
   const size = qs(`[data-size="${id}"]`).value;
   const qty = Math.max(1, Math.min(9, Number(qs(`[data-qty="${id}"]`).value || 1)));
   const existing = cart.find(item => item.id === id && item.size === size);
@@ -117,7 +241,14 @@ function addToCart(id){
 function openCart(){ qs('[data-cart-drawer]').classList.add('open'); qs('[data-cart-drawer]').setAttribute('aria-hidden','false'); }
 function closeCart(){ qs('[data-cart-drawer]').classList.remove('open'); qs('[data-cart-drawer]').setAttribute('aria-hidden','true'); }
 
-renderProducts(); renderCart();
+async function init(){
+  products = await loadCatalog();
+  renderProducts(); renderCart();
+  const count = qs('[data-product-count]');
+  if(count) count.textContent = products.length;
+}
+
+init();
 
 document.addEventListener('click', event => {
   const add = event.target.closest('[data-add]');

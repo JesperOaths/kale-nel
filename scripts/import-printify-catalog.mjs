@@ -1,0 +1,136 @@
+#!/usr/bin/env node
+/**
+ * Convert a Printify product export/API response into the static Bruis shop catalog.
+ *
+ * Usage:
+ *   node scripts/import-printify-catalog.mjs printify-products.json
+ *   node scripts/import-printify-catalog.mjs product-a.json product-b.json --out shop/catalog.printify.json
+ *
+ * This script never needs a Printify API token. Keep tokens out of the repo: export
+ * product JSON elsewhere, then run this importer on the downloaded JSON file(s).
+ */
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+
+const args = process.argv.slice(2);
+const outFlag = args.indexOf('--out');
+const outPath = resolve(outFlag >= 0 ? args[outFlag + 1] : 'shop/catalog.printify.json');
+const inputPaths = args.filter((arg, index) => arg !== '--out' && index !== outFlag + 1);
+
+if(!inputPaths.length){
+  console.error('Usage: node scripts/import-printify-catalog.mjs <printify-json...> [--out shop/catalog.printify.json]');
+  process.exit(2);
+}
+
+const slug = text => String(text || 'product').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,80) || 'product';
+const parsePrice = value => {
+  if(value == null || value === '') return null;
+  const n = Number(value);
+  if(!Number.isFinite(n)) return null;
+  return n > 999 ? Math.round(n) / 100 : n;
+};
+const motifFromTitle = title => {
+  const t = String(title || '').toLowerCase();
+  if(/jellyfish|marine|sea|ocean/.test(t)) return ['marine','Marine'];
+  if(/axolotl|aquatic|pond/.test(t)) return ['aquatic','Aquatic'];
+  if(/mantis|fly|insect|beetle|moth|butterfly/.test(t)) return ['insect','Insects'];
+  if(/flower|hydrangea|lace|floral|rose|poppy|petal/.test(t)) return ['floral','Flowers'];
+  if(/botanical|thistle|leaf|plant|mushroom|fungi/.test(t)) return ['botanical','Botanical'];
+  return ['other','Nature'];
+};
+
+function flattenProducts(payload){
+  if(Array.isArray(payload)) return payload;
+  if(Array.isArray(payload.products)) return payload.products;
+  if(Array.isArray(payload.data)) return payload.data;
+  if(payload.id || payload.title || payload.name) return [payload];
+  return [];
+}
+
+function optionTitleMap(raw){
+  const map = new Map();
+  (raw.options || []).forEach(option => (option.values || []).forEach(value => {
+    map.set(value.id, { option:String(option.name || option.title || '').toLowerCase(), title:value.title || value.name || String(value.id) });
+  }));
+  return map;
+}
+
+function sizesFromPrintify(raw){
+  const optionMap = optionTitleMap(raw);
+  const sizes = [];
+  (raw.variants || []).filter(v => v.is_enabled !== false && v.is_available !== false).forEach(variant => {
+    (variant.options || []).forEach(id => {
+      const opt = optionMap.get(id);
+      if(opt && /size/.test(opt.option) && !sizes.includes(opt.title)) sizes.push(opt.title);
+    });
+  });
+  return sizes.length ? sizes : ['S','M','L','XL','2XL','3XL','4XL','5XL'];
+}
+
+function pricesFromPrintify(raw){
+  const variantPrices = (raw.variants || [])
+    .filter(v => v.is_enabled !== false && v.is_available !== false)
+    .map(v => parsePrice(v.price))
+    .filter(v => v != null);
+  const direct = [parsePrice(raw.price), parsePrice(raw.priceMax || raw.price_max || raw.max_price)].filter(v => v != null);
+  const prices = variantPrices.length ? variantPrices : direct;
+  if(!prices.length) return { price:0, priceMax:0 };
+  return { price:Math.min(...prices), priceMax:Math.max(...prices) };
+}
+
+function uniqueBy(items, keyFn){
+  const seen = new Set();
+  return items.filter(item => {
+    const key = keyFn(item);
+    if(!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function mockupsFromPrintify(raw){
+  return uniqueBy((raw.images || raw.mockups || []).map((image, index) => {
+    const src = image.src || image.url || image.image || image.preview_url || image;
+    const label = image.label || image.camera_label || image.position || image.view || `View ${index + 1}`;
+    return src ? { image:src, label:String(label).replace(/[-_]/g,' ').replace(/\b\w/g, c => c.toUpperCase()) } : null;
+  }).filter(Boolean), item => item.image).slice(0,12);
+}
+
+function normalize(raw){
+  const name = raw.title || raw.name || raw.product_title || 'Untitled shirt';
+  const [type, typeLabel] = motifFromTitle(`${name} ${raw.description || ''}`);
+  const prices = pricesFromPrintify(raw);
+  const mockups = mockupsFromPrintify(raw);
+  const baseKey = raw.blueprint_id && raw.print_provider_id ? `${raw.blueprint_id}-${raw.print_provider_id}` : String(raw.baseKey || raw.base_key || 'unknown');
+  const baseLabel = raw.blueprint_title || raw.blueprint?.title || raw.print_provider_name || raw.baseLabel || raw.base_label || (baseKey === 'unknown' ? 'Base pending import' : `Base ${baseKey}`);
+  return {
+    id:String(raw.id || raw.external_id || slug(name)),
+    name,
+    type,
+    typeLabel,
+    price:prices.price,
+    priceMax:prices.priceMax,
+    description:raw.description || raw.body_html?.replace(/<[^>]*>/g,' ') || 'Nature-inspired shirt from the Bruis collection.',
+    image:mockups[0]?.image || raw.visible_image || raw.default_image || '',
+    mockups,
+    sizes:sizesFromPrintify(raw),
+    baseKey,
+    baseLabel,
+  };
+}
+
+const rawProducts = [];
+for(const input of inputPaths){
+  const payload = JSON.parse((await readFile(resolve(input), 'utf8')).replace(/^\uFEFF/, ''));
+  rawProducts.push(...flattenProducts(payload));
+}
+
+const products = rawProducts.map(normalize).filter(product => product.name && product.mockups.length);
+if(!products.length){
+  console.error('No products with mockup images were found in the input JSON.');
+  process.exit(1);
+}
+
+await mkdir(dirname(outPath), { recursive:true });
+await writeFile(outPath, `${JSON.stringify({ generatedAt:new Date().toISOString(), products }, null, 2)}\n`);
+console.log(`Wrote ${products.length} products to ${outPath}`);

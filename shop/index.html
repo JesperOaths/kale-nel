@@ -9,7 +9,7 @@
   <meta property="og:description" content="Nature-inspired shirts with clean white space and detailed illustrated artwork." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://kalenel.nl/shop/" />
-  <link rel="stylesheet" href="styles.css?v=20260830-store3" />
+  <link rel="stylesheet" href="styles.css?v=20260830-printify-adapter" />
 </head>
 <body>
   <div class="botanical-bg" aria-hidden="true">
@@ -48,16 +48,16 @@
     </section>
 
     <section class="stats" aria-label="Collection summary">
-      <div><strong>7</strong><span>nature shirts</span></div>
-      <div><strong>5 types</strong><span>flowers, insects, marine, aquatic, botanical</span></div>
+      <div><strong data-product-count>7</strong><span>nature shirts</span></div>
+      <div><strong>Native catalog</strong><span>imports product images, prices, sizes and base shirt data</span></div>
       <div><strong>Cart ready</strong><span>sizes, quantities, checkout notes</span></div>
     </section>
 
     <section class="shop-section" id="shop">
       <div class="section-heading">
         <p class="eyebrow">Shop</p>
-        <h2>Sort by type, pick a size, build a cart.</h2>
-        <p>Filter by motif, scroll through matching mockup views, choose size and quantity, then prepare an order from the cart.</p>
+        <h2>Sort by price or base shirt, pick a size, build a cart.</h2>
+        <p>Filter by motif, scroll through imported mockup views, choose size and quantity, then prepare an order from the cart.</p>
       </div>
 
       <div class="toolbar" aria-label="Shop controls">
@@ -71,10 +71,12 @@
         </div>
         <label class="sort-label">Sort
           <select data-sort>
+            <option value="price-low" selected>Price low to high</option>
+            <option value="price-high">Price high to low</option>
+            <option value="base-price">Base shirt + price</option>
+            <option value="base">Base shirt</option>
             <option value="type">Type</option>
             <option value="name">Name</option>
-            <option value="price-low">Price low to high</option>
-            <option value="price-high">Price high to low</option>
           </select>
         </label>
       </div>
@@ -92,7 +94,7 @@
         <ul>
           <li>Pressed flowers, stems, petals and leaf shapes.</li>
           <li>Pond creatures, jellyfish, small animals and odd insects.</li>
-          <li>Homogeneous product cards so the collection feels intentional.</li>
+          <li>Homogeneous product cards fed by an importable product catalog, not one-off hardcoded cards.</li>
         </ul>
       </div>
     </section>
@@ -140,6 +142,6 @@
     <p>Nature-inspired clothing by Bruis.</p>
   </footer>
 
-  <script src="store.js?v=20260830-store3" defer></script>
+  <script src="store.js?v=20260830-printify-adapter" defer></script>
 </body>
 </html>
