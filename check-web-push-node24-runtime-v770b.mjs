@@ -54,7 +54,8 @@ function createRpcMock({ dryRun = false, failure = false } = {}) {
         return { data: { items: [structuredClone(claimedItem)] }, error: null };
       }
       if (name === 'requeue_web_push_job_dry_run_v763') return { data: { ok: true }, error: null };
-      if (name === 'mark_web_push_job_sent_v763') return { data: { ok: true }, error: null };
+      if (name === 'prepare_web_push_display_ack_v814') return { data: { ok: true }, error: null };
+      if (name === 'record_web_push_provider_sent_v814') return { data: { ok: true }, error: null };
       if (name === 'mark_web_push_job_failed_v763') return { data: { ok: true }, error: null };
       return { data: null, error: new Error(`unexpected rpc ${name}`) };
     },
@@ -82,12 +83,15 @@ function createRpcMock({ dryRun = false, failure = false } = {}) {
   });
   const result = await app.run();
   assert.equal(result.total, 1);
-  assert.equal(result.sent, 0);
+  assert.equal(result.providerAccepted, 0);
+  assert.equal(result.providerRecordFailed, 0);
   assert.equal(result.failed, 0);
   assert.equal(result.dryRun, 1);
   assert.equal(mock.sends, 0, 'dry-run must never call sendNotification');
   assert(mock.calls.some((call) => call.name === 'claim_web_push_jobs_targeted_v763'), 'targeted claim RPC must be used');
   assert(mock.calls.some((call) => call.name === 'requeue_web_push_job_dry_run_v763'), 'dry-run must requeue claimed job');
+  assert(!mock.calls.some((call) => call.name === 'prepare_web_push_display_ack_v814'), 'dry-run must not prepare a display ACK capability');
+  assert(!mock.calls.some((call) => call.name === 'record_web_push_provider_sent_v814'), 'dry-run must not record provider acceptance');
   assert(!mock.calls.some((call) => call.name.startsWith('mark_web_push_job_sent')), 'dry-run must not mark sent');
 }
 
@@ -99,13 +103,20 @@ function createRpcMock({ dryRun = false, failure = false } = {}) {
   });
   const result = await app.run();
   assert.equal(result.total, 1);
-  assert.equal(result.sent, 1);
+  assert.equal(result.providerAccepted, 1);
+  assert.equal(result.providerRecordFailed, 0);
   assert.equal(result.failed, 0);
   assert.equal(mock.sends, 1);
-  const sent = mock.calls.find((call) => call.name === 'mark_web_push_job_sent_v763');
-  assert(sent, 'successful send must use guarded v763 sent RPC');
-  assert.equal(sent.args.worker_id_input, 'node24-runtime-proof');
-  assert.equal(sent.args.claim_token_input, 'claim-proof');
+  const prepared = mock.calls.find((call) => call.name === 'prepare_web_push_display_ack_v814');
+  const provider = mock.calls.find((call) => call.name === 'record_web_push_provider_sent_v814');
+  assert(prepared, 'successful send must prepare the v814 display ACK capability');
+  assert(provider, 'successful send must use the v814 claim-aware provider marker');
+  assert.equal(prepared.args.worker_id_input, 'node24-runtime-proof');
+  assert.equal(prepared.args.claim_token_input, 'claim-proof');
+  assert.equal(provider.args.worker_id_input, 'node24-runtime-proof');
+  assert.equal(provider.args.claim_token_input, 'claim-proof');
+  assert.equal(provider.args.provider_message_id_input, 'provider-proof-id');
+  assert(!mock.calls.some((call) => call.name.startsWith('mark_web_push_job_sent')), 'provider acceptance must not finalize sent state before display ACK');
 }
 
 {
@@ -116,9 +127,12 @@ function createRpcMock({ dryRun = false, failure = false } = {}) {
   });
   const result = await app.run();
   assert.equal(result.total, 1);
-  assert.equal(result.sent, 0);
+  assert.equal(result.providerAccepted, 0);
+  assert.equal(result.providerRecordFailed, 0);
   assert.equal(result.failed, 1);
   assert.equal(mock.sends, 1);
+  assert(mock.calls.some((call) => call.name === 'prepare_web_push_display_ack_v814'), 'failed provider send still follows display ACK preparation');
+  assert(!mock.calls.some((call) => call.name === 'record_web_push_provider_sent_v814'), 'failed provider send must not record provider acceptance');
   const failed = mock.calls.find((call) => call.name === 'mark_web_push_job_failed_v763');
   assert(failed, 'failed send must use guarded v763 failure RPC');
   assert.equal(failed.args.error_code_input, 'endpoint_gone');
