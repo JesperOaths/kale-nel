@@ -1,6 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void };
+
 const PRINTIFY_BASE = "https://api.printify.com/v1";
 const SHOPIFY_API_VERSION = "2026-07";
 const DEFAULT_SHOPIFY_DOMAIN = "n75mh8-bu.myshopify.com";
@@ -642,6 +644,37 @@ async function syncShopifyStorefront(supabase: any, domain: string) {
   return await replaceCatalogForSource(supabase, "shopify-storefront", rows, 1);
 }
 
+async function refreshCatalog(
+  supabase: any,
+  printifyToken: string,
+  shopifyAdminToken: string,
+  shopifyDomain: string,
+) {
+  const attempts: Array<{ source: string; run: () => Promise<any> }> = [];
+  if (printifyToken) attempts.push({ source: "printify", run: () => syncPrintify(supabase, printifyToken) });
+  if (shopifyAdminToken) attempts.push({ source: "shopify-admin", run: () => syncShopifyAdmin(supabase, shopifyDomain, shopifyAdminToken) });
+  attempts.push({ source: "shopify-storefront", run: () => syncShopifyStorefront(supabase, shopifyDomain) });
+
+  const sourceErrors: Array<{ source: string; error: string }> = [];
+  for (const attempt of attempts) {
+    try {
+      return { syncResult: await attempt.run(), sourceErrors };
+    } catch (error) {
+      const message = text(error instanceof Error ? error.message : error).slice(0, 500);
+      sourceErrors.push({ source: attempt.source, error: message });
+      console.warn(`${attempt.source} catalog sync failed`, error);
+    }
+  }
+
+  const errorSummary = sourceErrors.map((item) => `${item.source}: ${item.error}`).join(" | ").slice(0, 1000);
+  await supabase.from("shop_catalog_sync_state").upsert({
+    id: 1,
+    next_refresh_at: new Date(Date.now() + RETRY_MS).toISOString(),
+    last_error: errorSummary || "No catalog source is currently readable",
+  });
+  return { syncResult: null, sourceErrors };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "GET") return json({ error: "method_not_allowed" }, 405);
@@ -668,34 +701,19 @@ Deno.serve(async (req: Request) => {
     const nextRefresh = state?.next_refresh_at ? Date.parse(state.next_refresh_at) : 0;
     const stale = !nextRefresh || nextRefresh <= Date.now();
     let syncResult: any = null;
-    const sourceErrors: Array<{ source: string; error: string }> = [];
+    let sourceErrors: Array<{ source: string; error: string }> = [];
 
-    if (!cached.length || stale) {
-      const attempts: Array<{ source: string; run: () => Promise<any> }> = [];
-      if (printifyToken) attempts.push({ source: "printify", run: () => syncPrintify(supabase, printifyToken) });
-      if (shopifyAdminToken) attempts.push({ source: "shopify-admin", run: () => syncShopifyAdmin(supabase, shopifyDomain, shopifyAdminToken) });
-      attempts.push({ source: "shopify-storefront", run: () => syncShopifyStorefront(supabase, shopifyDomain) });
-
-      for (const attempt of attempts) {
-        try {
-          syncResult = await attempt.run();
-          cached = await readCachedCatalog(supabase);
-          break;
-        } catch (error) {
-          const message = text(error instanceof Error ? error.message : error).slice(0, 500);
-          sourceErrors.push({ source: attempt.source, error: message });
-          console.warn(`${attempt.source} catalog sync failed`, error);
-        }
-      }
-
-      if (!syncResult) {
-        const errorSummary = sourceErrors.map((item) => `${item.source}: ${item.error}`).join(" | ").slice(0, 1000);
-        await supabase.from("shop_catalog_sync_state").upsert({
-          id: 1,
-          next_refresh_at: new Date(Date.now() + RETRY_MS).toISOString(),
-          last_error: errorSummary || "No catalog source is currently readable",
-        });
-      }
+    if (!cached.length) {
+      ({ syncResult, sourceErrors } = await refreshCatalog(supabase, printifyToken, shopifyAdminToken, shopifyDomain));
+      cached = await readCachedCatalog(supabase);
+    } else if (stale) {
+      await supabase
+        .from("shop_catalog_sync_state")
+        .update({ next_refresh_at: new Date(Date.now() + RETRY_MS).toISOString() })
+        .eq("id", 1);
+      const refreshPromise = refreshCatalog(supabase, printifyToken, shopifyAdminToken, shopifyDomain)
+        .catch((error) => console.error("background shop-catalog refresh failed", error));
+      EdgeRuntime.waitUntil(refreshPromise);
     }
 
     return json({

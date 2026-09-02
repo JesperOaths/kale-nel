@@ -99,7 +99,7 @@ async function loadCatalog(){
     if(imported.length) return sortByShirtBase(imported);
   }
   try {
-    const response = await fetch('catalog.json?v=20260902-shop-commerce-v817', { cache: 'no-store' });
+    const response = await fetch('catalog.json?v=20260902-shop-commerce-v818', { cache: 'no-store' });
     if(response.ok){
       const payload = await response.json();
       const rawProducts = Array.isArray(payload) ? payload : (payload.products || []);

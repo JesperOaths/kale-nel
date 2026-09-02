@@ -3,6 +3,9 @@
 
   const SHOPIFY_DOMAIN = 'n75mh8-bu.myshopify.com';
   const FRONT_PRINT_PREVIEWS = [
+    [/^dogwood$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/dogwood-front-artwork.png?v=1788361669'],
+    [/^snowdrop$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/snowdrop-front-artwork.png?v=1788361662'],
+    [/^dispuut despinoza(?: lange roos)?$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/despinoza-dd-front-artwork.png?v=1788361676'],
     [/^coral$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/coral-front-artwork.png?v=1788359906'],
     [/^orchid$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/orchid-front-artwork.png?v=1788359884'],
     [/^honeysuckle$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/honeysuckle-front-artwork.png?v=1788359866'],

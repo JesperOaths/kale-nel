@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "site_version": "v817",
+  "site_version": "v818",
   "last_updated": "2026-09-02",
   "scope": "Gameplay acceptance is tracked separately from general beta readiness. Deterministic engine proof is not labeled as live multiplayer proof, and route/RPC reachability is not labeled as play-to-completion proof. Player-count limits are only recorded as exact when current shipped source or deterministic acceptance grounds them; unknown backend-owned limits remain explicitly unknown.",
   "live_write_approval": {
@@ -181,5 +181,5 @@
       "remaining_gap": "No backend/frontend gap remains for the controlled two-human room lifecycle. Full four-seat rules/completion are covered by deterministic and isolated PostgreSQL acceptance; a full four-human production browser completion remains unclaimed."
     }
   ],
-  "current_release_note": "v817 carries forward the machine-checked gameplay contracts and historical production evidence classes; these are regression baselines, not a claim that exact-current v817 gameplay/visual certification has already been rerun. Fresh v817 live-browser/gameplay evidence remains part of release revalidation."
+  "current_release_note": "v818 carries forward the machine-checked gameplay contracts and historical production evidence classes; these are regression baselines, not a claim that exact-current v818 gameplay/visual certification has already been rerun. Fresh v818 live-browser/gameplay evidence remains part of release revalidation."
 }

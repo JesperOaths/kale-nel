@@ -6,15 +6,15 @@ import fs from 'node:fs';
 const read = path => fs.readFileSync(path, 'utf8');
 const index = read('shop/index.html');
 const store = read('shop/store.js');
-const checkout = read('shop/shopify-checkout-v817.js');
-const refresh = read('shop/live-catalog-refresh-v817.js');
+const checkout = read('shop/shopify-checkout-v818.js');
+const refresh = read('shop/live-catalog-refresh-v818.js');
 const edge = read('supabase/functions/shop-catalog/index.ts');
 
-assert.equal(read('VERSION').trim(), 'v817');
+assert.equal(read('VERSION').trim(), 'v818');
 assert.match(index, /collection-merch-despinoza\.png/);
-assert.match(index, /shopify-checkout-v817\.js/);
-assert.match(index, /live-catalog-refresh-v817\.js/);
-assert.match(index, /version-watermark[^>]*>v817</);
+assert.match(index, /shopify-checkout-v818\.js/);
+assert.match(index, /live-catalog-refresh-v818\.js/);
+assert.match(index, /version-watermark[^>]*>v818</);
 
 const merchImage = fs.readFileSync('shop/assets/collection-merch-despinoza.png');
 assert.equal(
@@ -24,6 +24,9 @@ assert.equal(
 );
 
 for (const filename of [
+  'dogwood-front-artwork.png',
+  'snowdrop-front-artwork.png',
+  'despinoza-dd-front-artwork.png',
   'coral-front-artwork.png',
   'orchid-front-artwork.png',
   'honeysuckle-front-artwork.png',
@@ -45,7 +48,8 @@ assert.match(checkout, /\/cart\/\$\{lines\.join\(','\)\}/, 'Checkout must use ex
 assert.match(refresh, /POLL_MS\s*=\s*30\s*\*\s*1000/);
 assert.match(edge, /REFRESH_MS\s*=\s*60\s*\*\s*1000/);
 assert.match(edge, /private, no-store, max-age=0/);
+assert.match(edge, /EdgeRuntime\.waitUntil\(refreshPromise\)/, 'Stale catalog refresh must not block cached responses');
 assert.match(edge, /productTitle\.includes\("despinoza"\).*return "merch"/s);
 assert.match(edge, /oversized\|boxy/);
 
-console.log('Shop commerce v817 contract passed.');
+console.log('Shop commerce v818 contract passed.');
