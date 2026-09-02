@@ -123,6 +123,9 @@ function mockupsFromProduct(raw: any) {
 }
 
 function categoryFor(raw: any, blueprint: any) {
+  const productTitle = text(raw?.title).toLowerCase();
+  if (productTitle.includes("despinoza")) return "merch";
+
   const haystack = [
     raw?.title,
     ...(Array.isArray(raw?.tags) ? raw.tags : []),
@@ -239,6 +242,18 @@ async function readCachedCatalog(supabase: any) {
   return Array.isArray(data) ? data : [];
 }
 
+async function resolvePrintifyToken(supabase: any) {
+  const environmentToken = text(Deno.env.get("PRINTIFY_API_TOKEN"));
+  if (environmentToken) return environmentToken;
+
+  const { data, error } = await supabase.rpc("get_printify_api_token_v815a");
+  if (error) {
+    console.warn("Printify Vault token resolver unavailable", error.message || error);
+    return "";
+  }
+  return text(data);
+}
+
 function publicProduct(row: any) {
   return {
     id: row.printify_product_id,
@@ -324,7 +339,7 @@ Deno.serve(async (req: Request) => {
       .eq("id", 1)
       .maybeSingle();
 
-    const token = text(Deno.env.get("PRINTIFY_API_TOKEN"));
+    const token = await resolvePrintifyToken(supabase);
     const nextRefresh = state?.next_refresh_at ? Date.parse(state.next_refresh_at) : 0;
     const stale = !nextRefresh || nextRefresh <= Date.now();
     let syncResult: any = null;
