@@ -130,6 +130,12 @@ h3 { font-size: 1.08rem; }
   object-fit: cover;
   object-position: center bottom;
 }
+.collection-image .collection-merch-image,
+.compact-shape-card .collection-merch-image {
+  object-fit: contain;
+  object-position: center;
+  background: #fff;
+}
 .collection-copy {
   display: grid;
   gap: 5px;
@@ -257,6 +263,8 @@ h3 { font-size: 1.08rem; }
   background: #d8cbb8;
 }
 .mockup figcaption { display: none; }
+.mock-front-artwork,
+.mock-front-artwork img { background: #fff; }
 .mock-folded img, .mock-flat img { padding: 8px; }
 .mock-on-body img, .mock-lifestyle img, .mock-duo img { object-fit: cover; padding: 0; }
 .gallery-controls {

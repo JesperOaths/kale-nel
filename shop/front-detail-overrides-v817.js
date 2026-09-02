@@ -11,7 +11,7 @@
 
     const existing = Array.isArray(product.mockups) ? product.mockups.filter(Boolean) : [];
     product.mockups = [
-      { label: 'Front print', image: preview },
+      { label: 'Front artwork', image: preview },
       ...existing.filter(mockup => mockup?.image !== preview)
     ];
     product.image = preview;

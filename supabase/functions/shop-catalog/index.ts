@@ -4,8 +4,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const PRINTIFY_BASE = "https://api.printify.com/v1";
 const SHOPIFY_API_VERSION = "2026-07";
 const DEFAULT_SHOPIFY_DOMAIN = "n75mh8-bu.myshopify.com";
-const REFRESH_MS = 15 * 60 * 1000;
-const RETRY_MS = 2 * 60 * 1000;
+const REFRESH_MS = 60 * 1000;
+const RETRY_MS = 30 * 1000;
 const MAX_PAGES_PER_SOURCE = 100;
 const MAX_MOCKUPS = 12;
 
@@ -18,7 +18,7 @@ const corsHeaders = {
 const jsonHeaders = {
   ...corsHeaders,
   "Content-Type": "application/json; charset=utf-8",
-  "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+  "Cache-Control": "private, no-store, max-age=0",
 };
 
 function json(body: unknown, status = 200) {
