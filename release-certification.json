@@ -1,21 +1,23 @@
 {
   "schema_version": 1,
-  "current_version": "v814",
+  "current_version": "v815",
   "status": "REVALIDATION_REQUIRED",
   "previous_certified_version": "v813",
   "previous_certified_product_sha": "570ef4bded55493a226d1fc7c8afbb1e35244f56",
   "previous_certified_release_branch": "release/v813-certified-20260825",
-  "superseded_uncertified_version": "v812",
-  "superseded_uncertified_product_sha": "a62b6ff4a73a1419f2aeb1c4f83e64d2bf780bbc",
-  "reason": "v814 adds explicit Web Push display acknowledgement telemetry. The dispatcher now prepares a one-time display-ACK capability before provider send, records provider acceptance separately, and the service worker acknowledges display only after showNotification resolves. The two production migrations applied on 2026-08-30 are preserved verbatim in source control together with a permanent lifecycle/provenance guard. The v813 certified product remains the last fully certified baseline; v814 must not inherit the v813 140/140 visual or live-browser certification without fresh exact-current evidence.",
+  "superseded_uncertified_version": "v814",
+  "superseded_uncertified_product_sha": "e0a0ad6b13d5217fcb2a7734dc4443ab4c1c7238",
+  "reason": "v815 replaces the shop's static-only Printify catalog path with a server-side Supabase Edge Function and private RLS-protected cache. The integration enumerates Printify shops and products, derives shirt-base metadata from Printify blueprints, prioritizes front/default mockups, and maps products into exactly Classic or Oversized Boxy while retaining the existing static catalog as an outage fallback. Production database schema and the JWT-protected shop-catalog Edge Function were deployed on 2026-09-02. The Printify API token is intentionally not stored in source control and was confirmed absent from the current Supabase Edge Function environment, so live Printify ingestion remains authorization-blocked until that secret is configured. The v813 certified product remains the last fully certified baseline; v815 must not inherit older visual/live-browser certification without fresh exact-current evidence.",
   "remaining_release_blockers": [
-    "Canonical GEJAST verification and dependency security must pass on the final v814 branch/PR state.",
-    "Exact-current v814 deployment and live Web Push proof must confirm provider send, provider-accepted telemetry, service-worker notification presentation, and display ACK are distinct and functioning without leaking the display capability.",
-    "Fresh authenticated visual/live-browser revalidation and independent zero-residue cleanup are required before v814 can be promoted from REVALIDATION_REQUIRED to PASS."
+    "Canonical GEJAST verification and dependency security must pass on the final v815 branch/PR state.",
+    "PRINTIFY_API_TOKEN must be configured as a Supabase Edge Function secret and the first authenticated Printify sync must populate the private catalog cache successfully.",
+    "Exact-current v815 live-shop proof must confirm all synced products render, Printify front/default mockups appear first, and products resolve only to Classic or Oversized Boxy with no stale hard-coded fit override.",
+    "Fresh authenticated visual/live-browser revalidation and independent zero-residue cleanup are required before v815 can be promoted from REVALIDATION_REQUIRED to PASS."
   ],
   "required_next": [
     "Merge only after canonical verification and dependency audit are green.",
-    "Deploy exact-current v814 and perform a controlled targeted Web Push display-ACK proof against the production contract.",
-    "Run the required exact-current authenticated visual/live-browser certification and cleanup, then create final-acceptance-v814.json and promote release-certification.json to PASS only if all evidence succeeds."
+    "Configure PRINTIFY_API_TOKEN in the Supabase Edge Function environment, trigger shop-catalog, and verify product counts/categories against the Printify account.",
+    "Deploy exact-current v815 and validate Classic/Oversized Boxy navigation, front-image ordering, fallback behavior, and cart regression behavior.",
+    "Run the required exact-current authenticated visual/live-browser certification and cleanup, then create final-acceptance-v815.json and promote release-certification.json to PASS only if all evidence succeeds."
   ]
 }
