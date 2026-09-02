@@ -9,6 +9,7 @@ const store = read('shop/store.js');
 const checkout = read('shop/shopify-checkout-v817.js');
 const runtime = read('shop/shop-runtime-v819.js');
 const mockupBackground = read('shop/mockup-background-v819.js');
+const lightbox = read('shop/image-lightbox-v820.js');
 const refresh = read('shop/live-catalog-refresh-v818.js');
 const catalogEdge = read('supabase/functions/shop-catalog/index.ts');
 const priceEdge = read('supabase/functions/shop-price-v818/index.ts');
@@ -21,9 +22,10 @@ assert.equal(read('VERSION').trim(), 'v817');
 assert.match(index, /collection-merch-despinoza\.png/);
 assert.match(index, /shop-runtime-v819\.js/);
 assert.match(index, /mockup-background-v819\.js/);
+assert.match(index, /image-lightbox-v820\.js/);
 assert.match(index, /shopify-checkout-v817\.js/);
 assert.match(index, /live-catalog-refresh-v818\.js/);
-assert.match(index, /version-watermark[^>]*>v819</);
+assert.match(index, /version-watermark[^>]*>v820</);
 
 const merchImage = fs.readFileSync('shop/assets/collection-merch-despinoza.png');
 assert.equal(
@@ -86,8 +88,38 @@ assert.match(mockupBackground, /TARGET\s*=\s*\[222,\s*214,\s*202\]/);
 assert.match(mockupBackground, /function floodBackdrop/);
 assert.match(mockupBackground, /stats\.lightness < 185 \|\| stats\.spread > 24 \|\| stats\.sigma > 12/);
 assert.match(mockupBackground, /ratio < 0\.08 \|\| ratio > 0\.88/);
+assert.match(mockupBackground, /BRUIS_MATCH_MOCKUP_BACKGROUND/);
 assert.match(mockupBackground, /IntersectionObserver/);
 assert.match(mockupBackground, /MutationObserver/);
+
+// v820 product images expand from the clicked card into a full-window lightbox,
+// keep the complete product gallery enlarged, and collapse back when dismissed.
+assert.match(lightbox, /\.product-card \.mockup img/);
+assert.match(lightbox, /role', 'dialog'/);
+assert.match(lightbox, /aria-modal', 'true'/);
+assert.match(lightbox, /stageTransformFrom/);
+assert.match(lightbox, /getBoundingClientRect/);
+assert.match(lightbox, /--lb-dx/);
+assert.match(lightbox, /--lb-sx/);
+assert.match(lightbox, /transform:\s*translate\(-50%, -50%\).*scale\(var\(--lb-sx\), var\(--lb-sy\)\)/s);
+assert.match(lightbox, /target === active\.overlay/);
+assert.match(lightbox, /event\.key === 'Escape'/);
+assert.match(lightbox, /event\.key === 'ArrowLeft'/);
+assert.match(lightbox, /event\.key === 'ArrowRight'/);
+assert.match(lightbox, /SWIPE_THRESHOLD\s*=\s*56/);
+assert.match(lightbox, /pointerdown/);
+assert.match(lightbox, /pointermove/);
+assert.match(lightbox, /pointerup/);
+assert.match(lightbox, /pointercancel/);
+assert.match(lightbox, /window\.BRUIS_MATCH_MOCKUP_BACKGROUND/);
+assert.match(lightbox, /function syncCardGallery/);
+assert.match(lightbox, /rail\.scrollLeft/);
+assert.match(lightbox, /shop-lightbox-open/);
+assert.match(lightbox, /overflow:\s*hidden\s*!important/);
+assert.match(lightbox, /width:\s*min\(94vw, 1180px\)/);
+assert.match(lightbox, /height:\s*min\(91vh, 940px\)/);
+assert.match(lightbox, /background:\s*#ded6ca/);
+assert.match(lightbox, /prefers-reduced-motion/);
 
 // Price/media changes refresh visibly without a hard reload, while cart lines
 // retain the selected Shopify variant price instead of falling back to min price.
@@ -122,4 +154,4 @@ assert.match(catalogEdge, /private, no-store, max-age=0/);
 assert.match(catalogEdge, /productTitle\.includes\("despinoza"\).*return "merch"/s);
 assert.match(catalogEdge, /oversized\|boxy/);
 
-console.log('Shop commerce v819 contract passed.');
+console.log('Shop commerce v820 contract passed.');

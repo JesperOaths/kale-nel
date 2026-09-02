@@ -172,6 +172,11 @@
     return task;
   }
 
+  // v820 uses the exact same conservative transformer in the enlarged gallery,
+  // including for mockups whose small thumbnail has not entered the viewport yet.
+  window.BRUIS_MATCH_MOCKUP_BACKGROUND = url =>
+    isRasterMockup(url) ? transformedUrl(url) : Promise.resolve(url);
+
   async function matchImage(img){
     if(seen.has(img)) return;
     const raw = img.currentSrc || img.src || '';
