@@ -1,31 +1,32 @@
--- v816: make the live Shopify/Printify catalog eligible for refresh every two minutes.
--- The Edge Function remains the only upstream fetch owner. This cron job only marks
--- the private cache stale; the next authenticated shop catalog request performs the
--- actual source refresh, avoiding secret duplication and needless network traffic.
+-- v816: keep the live Printify/Shopify catalog refresh window short without duplicating upstream secrets.
+-- The Edge Function remains the only upstream fetch owner. This trigger clamps the function's
+-- persisted refresh eligibility to two minutes after success and 30 seconds after a recorded error.
 
-create extension if not exists pg_cron with schema pg_catalog;
-
-grant usage on schema cron to postgres;
-grant all privileges on all tables in schema cron to postgres;
-
-do $$
-declare
-  existing_job bigint;
+create or replace function public.clamp_shop_catalog_refresh_v816()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
 begin
-  for existing_job in
-    select jobid from cron.job where jobname = 'shop_catalog_mark_stale_v816'
-  loop
-    perform cron.unschedule(existing_job);
-  end loop;
-end
+  if new.next_refresh_at is not null then
+    if new.last_error is not null then
+      new.next_refresh_at := least(new.next_refresh_at, now() + interval '30 seconds');
+    else
+      new.next_refresh_at := least(new.next_refresh_at, now() + interval '2 minutes');
+    end if;
+  end if;
+  return new;
+end;
 $$;
 
-select cron.schedule(
-  'shop_catalog_mark_stale_v816',
-  '*/2 * * * *',
-  $cron$
-    update public.shop_catalog_sync_state
-    set next_refresh_at = now()
-    where id = 1;
-  $cron$
-);
+drop trigger if exists trg_shop_catalog_fast_refresh_v816 on public.shop_catalog_sync_state;
+create trigger trg_shop_catalog_fast_refresh_v816
+before insert or update of next_refresh_at, last_error
+on public.shop_catalog_sync_state
+for each row
+execute function public.clamp_shop_catalog_refresh_v816();
+
+update public.shop_catalog_sync_state
+set next_refresh_at = now()
+where id = 1;
