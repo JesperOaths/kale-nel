@@ -10,6 +10,7 @@ const checkout = read('shop/shopify-checkout-v817.js');
 const runtime = read('shop/shop-runtime-v819.js');
 const mockupBackground = read('shop/mockup-background-v819.js');
 const lightbox = read('shop/image-lightbox-v820.js');
+const frontLightboxFit = read('shop/front-lightbox-fit-v821.js');
 const refresh = read('shop/live-catalog-refresh-v818.js');
 const catalogEdge = read('supabase/functions/shop-catalog/index.ts');
 const priceEdge = read('supabase/functions/shop-price-v818/index.ts');
@@ -23,9 +24,10 @@ assert.match(index, /collection-merch-despinoza\.png/);
 assert.match(index, /shop-runtime-v819\.js/);
 assert.match(index, /mockup-background-v819\.js/);
 assert.match(index, /image-lightbox-v820\.js/);
+assert.match(index, /front-lightbox-fit-v821\.js/);
 assert.match(index, /shopify-checkout-v817\.js/);
 assert.match(index, /live-catalog-refresh-v818\.js/);
-assert.match(index, /version-watermark[^>]*>v820</);
+assert.match(index, /version-watermark[^>]*>v821</);
 
 const merchImage = fs.readFileSync('shop/assets/collection-merch-despinoza.png');
 assert.equal(
@@ -121,6 +123,23 @@ assert.match(lightbox, /height:\s*min\(91vh, 940px\)/);
 assert.match(lightbox, /background:\s*#ded6ca/);
 assert.match(lightbox, /prefers-reduced-motion/);
 
+// v821 fits the first/front image to its visible artwork instead of merely centering
+// a potentially padded transparent canvas. The source/listing image is not modified.
+assert.match(frontLightboxFit, /function cropTransparentMargins/);
+assert.match(frontLightboxFit, /ALPHA_THRESHOLD\s*=\s*8/);
+assert.match(frontLightboxFit, /createImageBitmap/);
+assert.match(frontLightboxFit, /minX\s*=\s*width/);
+assert.match(frontLightboxFit, /maxX\s*=\s*-1/);
+assert.match(frontLightboxFit, /occupiedWidth/);
+assert.match(frontLightboxFit, /occupiedHeight/);
+assert.match(frontLightboxFit, /output\.toBlob\(resolve, 'image\/png'\)/);
+assert.match(frontLightboxFit, /isFirstImage/);
+assert.match(frontLightboxFit, /is-front-fit-v821/);
+assert.match(frontLightboxFit, /object-position:\s*50% 50%/);
+assert.match(frontLightboxFit, /object-fit:\s*contain/);
+assert.match(frontLightboxFit, /MutationObserver/);
+assert.doesNotMatch(frontLightboxFit, /querySelectorAll\('\.mockup img'\)/, 'v821 popup fitting must not rewrite listing thumbnails');
+
 // Price/media changes refresh visibly without a hard reload, while cart lines
 // retain the selected Shopify variant price instead of falling back to min price.
 assert.match(refresh, /POLL_MS\s*=\s*15\s*\*\s*1000/);
@@ -154,4 +173,4 @@ assert.match(catalogEdge, /private, no-store, max-age=0/);
 assert.match(catalogEdge, /productTitle\.includes\("despinoza"\).*return "merch"/s);
 assert.match(catalogEdge, /oversized\|boxy/);
 
-console.log('Shop commerce v820 contract passed.');
+console.log('Shop commerce v821 contract passed.');
