@@ -5,32 +5,32 @@
   const PRICE_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-price-v818';
 
   const TRANSPARENT_FALLBACKS = [
-    [/^axolotl$/i, 'assets/product-previews/axolotl-front-v5.webp'],
-    [/^dragonfly$/i, 'assets/product-previews/dragonfly-front-v5.webp'],
-    [/^hydrangea$/i, 'assets/product-previews/hydrangea-front-v5.webp'],
-    [/^jellyfish$/i, 'assets/product-previews/jellyfish-front-v7.webp'],
-    [/^orchid mantis$/i, 'assets/product-previews/mantis-front-v5.webp'],
-    [/^thistle$/i, 'assets/product-previews/thistle-front-v5.webp'],
-    [/^wild carrot$/i, 'assets/product-previews/queen-annes-lace-front-v5.webp'],
-    [/^coral$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/coral-front-artwork.png?v=1788359906'],
-    [/^daffodil$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/daffodil-front-artwork.png?v=1788359914'],
-    [/^dispuut despinoza$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/despinoza-dd-front-artwork-sharp.png?v=1788362436'],
-    [/^dispuut despinoza lange roos$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/despinoza-dd-front-artwork-sharp.png?v=1788362436'],
-    [/^dogwood$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/dogwood-front-artwork.png?v=1788361669'],
-    [/^honeysuckle$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/honeysuckle-front-artwork.png?v=1788359866'],
-    [/^horseshoe crab$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/horseshoe-crab-front-artwork.png?v=1788359876'],
-    [/^lily$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/lily-front-artwork.png?v=1788359898'],
-    [/^magnolia$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/magnolia-front-artwork.png?v=1788359890'],
-    [/^monstera$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/monstera-front-artwork.png?v=1788359921'],
-    [/^orchid$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/orchid-front-artwork.png?v=1788359884'],
-    [/^seahorse$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/seahorse-front-artwork.png?v=1788359936'],
-    [/^seaweed$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/seaweed-front-artwork.png?v=1788359928'],
-    [/^snowdrop$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/snowdrop-front-artwork.png?v=1788361662']
+    [/axolotl/i, 'assets/product-previews/axolotl-front-v5.webp'],
+    [/dragonfly/i, 'assets/product-previews/dragonfly-front-v5.webp'],
+    [/hydrangea/i, 'assets/product-previews/hydrangea-front-v5.webp'],
+    [/jellyfish/i, 'assets/product-previews/jellyfish-front-v7.webp'],
+    [/(?:orchid|flower).*mantis|mantis/i, 'assets/product-previews/mantis-front-v5.webp'],
+    [/thistle/i, 'assets/product-previews/thistle-front-v5.webp'],
+    [/(?:wild\s*carrot|queen\s*anne)/i, 'assets/product-previews/queen-annes-lace-front-v5.webp'],
+    [/coral/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/coral-front-artwork.png?v=1788359906'],
+    [/daffodil/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/daffodil-front-artwork.png?v=1788359914'],
+    [/despinoza/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/despinoza-dd-front-artwork-sharp.png?v=1788362436'],
+    [/dogwood/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/dogwood-front-artwork.png?v=1788361669'],
+    [/honeysuckle/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/honeysuckle-front-artwork.png?v=1788359866'],
+    [/horseshoe\s*crab/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/horseshoe-crab-front-artwork.png?v=1788359876'],
+    [/\blily\b/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/lily-front-artwork.png?v=1788359898'],
+    [/magnolia/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/magnolia-front-artwork.png?v=1788359890'],
+    [/monstera/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/monstera-front-artwork.png?v=1788359921'],
+    [/\borchid\b/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/orchid-front-artwork.png?v=1788359884'],
+    [/seahorse/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/seahorse-front-artwork.png?v=1788359936'],
+    [/seaweed|kelp/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/seaweed-front-artwork.png?v=1788359928'],
+    [/snowdrop/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/snowdrop-front-artwork.png?v=1788361662']
   ];
 
   const cleanName = value => String(value || '').trim().replace(/\s+/g, ' ');
   const titleKey = value => cleanName(value).toLowerCase();
   const imageUrl = item => String(item?.image || item?.url || '').trim();
+  const variantSku = variant => String(variant?.sku || '').trim();
   const isTransparentAsset = url => /\.(?:png|webp)(?:[?#]|$)/i.test(String(url || '')) || /front-artwork/i.test(String(url || ''));
 
   function fallbackFor(name){
@@ -40,8 +40,8 @@
   }
 
   function transparentMedia(product, liveProduct){
-    const name = cleanName(product?.name || product?.title || liveProduct?.name);
-    const fallback = fallbackFor(name);
+    const canonicalName = cleanName(liveProduct?.name || product?.name || product?.title);
+    const fallback = fallbackFor(canonicalName);
     const live = Array.isArray(liveProduct?.mockups) ? liveProduct.mockups : [];
     const catalog = Array.isArray(product?.mockups) ? product.mockups : [];
     const candidates = [
@@ -73,11 +73,32 @@
     const liveProducts = Array.isArray(pricePayload?.products) ? pricePayload.products : [];
     const byId = new Map(liveProducts.map(item => [String(item?.id || ''), item]));
     const byTitle = new Map(liveProducts.map(item => [titleKey(item?.name), item]));
+    const bySku = new Map();
+
+    liveProducts.forEach(item => {
+      (Array.isArray(item?.variants) ? item.variants : []).forEach(variant => {
+        const sku = variantSku(variant);
+        if(sku && !bySku.has(sku)) bySku.set(sku, item);
+      });
+    });
+
+    const liveFor = product => {
+      const id = String(product?.id || product?.source_product_id || '');
+      const name = cleanName(product?.name || product?.title);
+      const exact = byId.get(id) || byTitle.get(titleKey(name));
+      if(exact) return exact;
+
+      const variants = Array.isArray(product?.variants) ? product.variants : [];
+      for(const variant of variants){
+        const sku = variantSku(variant);
+        if(sku && bySku.has(sku)) return bySku.get(sku);
+      }
+      return null;
+    };
 
     const merged = catalogProducts.map(product => {
       const id = String(product?.id || product?.source_product_id || '');
-      const name = cleanName(product?.name || product?.title);
-      const live = byId.get(id) || byTitle.get(titleKey(name));
+      const live = liveFor(product);
       const media = transparentMedia(product, live);
       const next = {
         ...product,
@@ -87,6 +108,7 @@
 
       if(live){
         next.id = String(live.id || id);
+        next.name = String(live.name || product?.name || product?.title || '');
         next.price = Number(live.price || product?.price || 0);
         next.priceMax = Number(live.priceMax || live.price || product?.priceMax || product?.price || 0);
         next.variants = Array.isArray(live.variants) ? live.variants : (Array.isArray(product?.variants) ? product.variants : []);
