@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 700" role="img" aria-labelledby="title desc">
+  <title id="title">Spinoza-inspired philosopher outline</title>
+  <desc id="desc">Original line-art bust inspired by a seventeenth-century philosopher, with a lens and geometric motif.</desc>
+  <rect width="800" height="700" fill="#fff"/>
+  <g fill="none" stroke="#24351f" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="602" cy="183" r="92" opacity=".18"/>
+    <path d="M548 244 659 123M575 112l99 143" opacity=".18"/>
+    <path d="M252 485c-78 23-132 80-147 164h590c-16-84-69-141-148-164"/>
+    <path d="M306 430c-6 37-15 65-28 83 29 31 69 48 122 48s93-17 122-48c-13-18-22-46-28-83"/>
+    <path d="M298 427c-25-26-39-63-39-108 0-101 58-175 141-175s141 74 141 175c0 45-14 82-39 108-28 29-63 47-102 47s-74-18-102-47Z"/>
+    <path d="M276 319c-29-9-42 9-34 38 6 21 20 34 37 35M524 319c29-9 42 9 34 38-6 21-20 34-37 35"/>
+    <path d="M277 303c-20-31-14-81 9-112 10-14 24-27 40-36-3-27 21-50 50-38 18-22 59-22 77 1 30-11 57 9 56 37 25 14 43 36 51 64 11 36 8 68 3 84"/>
+    <path d="M303 191c-29 22-43 52-39 86M340 159c-27 21-41 48-38 79M382 143c-25 18-39 42-38 69M428 144c24 18 37 42 36 69M470 160c26 21 39 48 36 79M503 192c27 22 39 51 34 85"/>
+    <path d="M331 306c16-10 35-10 50 0M419 306c16-10 35-10 50 0"/>
+    <path d="M354 329c9 5 18 5 27 0M419 329c9 5 18 5 27 0"/>
+    <path d="M398 326c-4 24-8 43-14 58 10 7 21 9 33 4"/>
+    <path d="M357 413c27 20 59 20 86 0"/>
+    <path d="M330 468 400 523l70-55M300 518l46 90M500 518l-46 90"/>
+    <path d="M346 608h108"/>
+  </g>
+  <g fill="#24351f">
+    <circle cx="366" cy="328" r="5"/>
+    <circle cx="434" cy="328" r="5"/>
+  </g>
+</svg>
