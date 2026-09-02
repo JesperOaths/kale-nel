@@ -1,7 +1,7 @@
 {
   "version": 8,
-  "site_version": "release candidate v814 / live v813 / certified baseline v813",
-  "last_updated": "2026-08-30",
+  "site_version": "release candidate v815 / live v813 / certified baseline v813",
+  "last_updated": "2026-09-02",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
     "ready_to_test": "Code exists and surface checks pass, but real beta proof is still needed.",
@@ -48,8 +48,8 @@
       "2026-08-14 live v792: frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 completed its own Live deployment health run #60 successfully; later SQL-only repository audit head 141e7301944a79452eca9d354180a684249cdcd2 also passed Live deployment health without changing frontend VERSION.",
       "v793 candidate: full production screenshot audit found and repairs visible Klaverjas duplication, ladder game-key mismatch, stale game status RPC owners, Pikken spectator context loss and Rad stats aggregation failure; current release remains REVALIDATION_REQUIRED until post-deploy screenshots and gameplay are re-run."
     ],
-    "note": "v814 release candidate: explicit Web Push display-ACK telemetry is implemented with separate provider-accepted and browser-display states; production migrations are reconciled in source control and the permanent lifecycle/provenance guard is wired into CI. v813 remains the last fully certified baseline. Exact-current v814 deployment, controlled targeted display-ACK proof, authenticated visual/live-browser revalidation and zero-residue cleanup remain required before promotion.",
-    "release_candidate_version": "v814"
+    "note": "v815 release candidate: live Printify shop catalog support is implemented with a JWT-protected Supabase Edge Function and private RLS-protected cache; products normalize to Classic or Oversized Boxy with front/default mockups first and static fallback retained. v813 remains the last fully certified baseline. PRINTIFY_API_TOKEN is not yet configured, so first real Printify ingestion plus exact-current v815 shop/visual/live-browser proof and zero-residue cleanup remain required before promotion.",
+    "release_candidate_version": "v815"
   },
   "baseline_checks": [
     {

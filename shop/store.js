@@ -1,5 +1,10 @@
 const FALLBACK_PRODUCTS = [];
 const cartKey = 'bruisCartV3';
+const LIVE_CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog';
+// Supabase legacy anon key is intentionally publishable/browser-safe. RLS blocks
+// direct reads/writes to the private Printify cache; the Edge Function returns
+// only the sanitized catalog projection.
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpcW50YXpnbnJ4d2xpYWlka215Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MjkxNDUsImV4cCI6MjA4OTUwNTE0NX0.w21i9sYLybl0auVSJpc0OFwRoE3a-rRcJG8NtUF_xn8';
 const COLLECTIONS = {
   normal: {
     label: 'Classic',
@@ -7,14 +12,9 @@ const COLLECTIONS = {
     empty: 'No Classic shirts are available yet.'
   },
   boxy: {
-    label: 'Boxy',
-    heading: 'Boxy shirts',
-    empty: 'No Boxy shirts yet. This collection is coming soon.'
-  },
-  'all-over': {
-    label: 'All Over Print',
-    heading: 'All Over Print shirts',
-    empty: 'No All Over Print shirts yet. This collection is coming soon.'
+    label: 'Oversized Boxy',
+    heading: 'Oversized Boxy shirts',
+    empty: 'No Oversized Boxy shirts are available yet.'
   }
 };
 
@@ -30,8 +30,7 @@ const slug = text => String(text || 'product').toLowerCase().replace(/[^a-z0-9]+
 
 function normalizeCollection(value){
   const raw = String(value || '').trim().toLowerCase().replace(/_/g, '-');
-  if(raw === 'boxy' || raw === 'oversized') return 'boxy';
-  if(raw === 'all-over' || raw === 'all over' || raw === 'all-over-print' || raw === 'all over print') return 'all-over';
+  if(raw === 'boxy' || raw === 'oversized' || raw === 'oversized-boxy' || raw === 'oversized boxy') return 'boxy';
   return 'normal';
 }
 
@@ -41,12 +40,12 @@ function normalizeProduct(raw){
     id: String(raw.id || slug(raw.name)),
     name: raw.name || 'Untitled tee',
     price: Math.ceil(Number(raw.price || 0)),
+    priceMax: Math.ceil(Number(raw.priceMax || raw.price || 0)),
     sizes: Array.isArray(raw.sizes) && raw.sizes.length ? raw.sizes : ['S','M','L','XL','2XL'],
     mockups,
     image: mockups[0]?.image || raw.image || '',
     baseLabel: raw.baseLabel || 'Shirt base pending',
-    // Existing catalog rows have no collection yet, so every current product
-    // intentionally lands in Classic. Future rows can set boxy or all-over.
+    variants: Array.isArray(raw.variants) ? raw.variants : [],
     collection: normalizeCollection(raw.collection || raw.shirtCollection || raw.fit)
   };
 }
@@ -57,14 +56,40 @@ function sortByShirtBase(list){
   );
 }
 
+async function loadLiveCatalog(){
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(LIVE_CATALOG_URL, {
+      cache: 'no-store',
+      signal: controller.signal,
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+      }
+    });
+    if(!response.ok) return [];
+    const payload = await response.json();
+    const rawProducts = Array.isArray(payload) ? payload : (payload.products || []);
+    return rawProducts.map(normalizeProduct).filter(p => p.name && p.mockups.length && p.price > 0);
+  } catch {
+    return [];
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
 async function loadCatalog(){
+  const liveProducts = await loadLiveCatalog();
+  if(liveProducts.length) return sortByShirtBase(liveProducts);
+
   if(window.BRUIS_CATALOG){
     const rawProducts = Array.isArray(window.BRUIS_CATALOG) ? window.BRUIS_CATALOG : (window.BRUIS_CATALOG.products || []);
     const imported = rawProducts.map(normalizeProduct).filter(p => p.name && p.mockups.length && p.price > 0);
     if(imported.length) return sortByShirtBase(imported);
   }
   try {
-    const response = await fetch('catalog.json?v=20260830-shape-entry-live1', { cache: 'no-store' });
+    const response = await fetch('catalog.json?v=20260902-printify-live-v815', { cache: 'no-store' });
     if(response.ok){
       const payload = await response.json();
       const rawProducts = Array.isArray(payload) ? payload : (payload.products || []);
@@ -84,9 +109,7 @@ function updateCollectionCounts(){
   Object.keys(COLLECTIONS).forEach(key => {
     const count = productsForCollection(key).length;
     qsa(`[data-collection-count="${key}"]`).forEach(el => {
-      el.textContent = count === 0 && key !== 'normal'
-        ? 'Coming soon'
-        : `${count} ${count === 1 ? 'shirt' : 'shirts'}`;
+      el.textContent = `${count} ${count === 1 ? 'shirt' : 'shirts'}`;
     });
   });
 }

@@ -14,8 +14,21 @@ const versionNumber = Number((version.match(/^v(\d+)$/) || [])[1]);
 assert.ok(Number.isInteger(versionNumber) && versionNumber >= 812, 'v812a/b/c guard requires shipped product v812 or newer');
 assert.equal(certification.current_version, version, 'release certification state must track the shipped product version');
 if (versionNumber > 812) {
-  assert.equal(certification.superseded_uncertified_version, 'v812', 'the first post-v812 candidate must preserve v812 as the superseded uncertified product baseline');
   if (certification.status === 'REVALIDATION_REQUIRED') {
+    const supersededVersion = String(certification.superseded_uncertified_version || '');
+    const supersededNumber = Number((supersededVersion.match(/^v(\d+)$/) || [])[1]);
+    const previousCertifiedVersion = String(certification.previous_certified_version || '');
+    const previousCertifiedNumber = Number((previousCertifiedVersion.match(/^v(\d+)$/) || [])[1]);
+
+    assert.ok(Number.isInteger(supersededNumber) && supersededNumber >= 812 && supersededNumber < versionNumber,
+      'post-v812 revalidation must identify an earlier superseded uncertified product baseline');
+    if (versionNumber === 813) {
+      assert.equal(supersededVersion, 'v812', 'the first post-v812 candidate must preserve v812 as the superseded uncertified product baseline');
+    }
+    if (Number.isInteger(previousCertifiedNumber) && versionNumber > previousCertifiedNumber + 1) {
+      assert.equal(supersededVersion, `v${versionNumber - 1}`,
+        'a chained candidate after the last certified release must supersede the immediately preceding uncertified product baseline');
+    }
     assert.ok(Array.isArray(certification.remaining_release_blockers) && certification.remaining_release_blockers.length > 0, 'post-v812 revalidation must retain explicit release blockers');
     assert.ok(Array.isArray(certification.required_next) && certification.required_next.length > 0, 'post-v812 revalidation must retain explicit next certification steps');
   } else {
