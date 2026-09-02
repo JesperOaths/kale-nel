@@ -88,6 +88,7 @@ assert.match(mockupBackground, /TARGET\s*=\s*\[222,\s*214,\s*202\]/);
 assert.match(mockupBackground, /function floodBackdrop/);
 assert.match(mockupBackground, /stats\.lightness < 185 \|\| stats\.spread > 24 \|\| stats\.sigma > 12/);
 assert.match(mockupBackground, /ratio < 0\.08 \|\| ratio > 0\.88/);
+assert.match(mockupBackground, /BRUIS_MATCH_MOCKUP_BACKGROUND/);
 assert.match(mockupBackground, /IntersectionObserver/);
 assert.match(mockupBackground, /MutationObserver/);
 
@@ -109,6 +110,10 @@ assert.match(lightbox, /SWIPE_THRESHOLD\s*=\s*56/);
 assert.match(lightbox, /pointerdown/);
 assert.match(lightbox, /pointermove/);
 assert.match(lightbox, /pointerup/);
+assert.match(lightbox, /pointercancel/);
+assert.match(lightbox, /window\.BRUIS_MATCH_MOCKUP_BACKGROUND/);
+assert.match(lightbox, /function syncCardGallery/);
+assert.match(lightbox, /rail\.scrollLeft/);
 assert.match(lightbox, /shop-lightbox-open/);
 assert.match(lightbox, /overflow:\s*hidden\s*!important/);
 assert.match(lightbox, /width:\s*min\(94vw, 1180px\)/);
