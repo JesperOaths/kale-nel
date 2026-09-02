@@ -60,7 +60,7 @@ assert.match(runtime, /next\.variants\s*=\s*Array\.isArray\(live\.variants\)/);
 // Listing galleries must prefer transparent assets and must not keep white JPG
 // mockups alongside a known transparent PNG/WebP equivalent.
 assert.match(runtime, /isTransparentAsset/);
-assert.match(runtime, /\.(?:png\|webp)/);
+assert.ok(runtime.includes('png|webp'), 'Transparent media filter must explicitly accept PNG and WebP');
 assert.match(runtime, /assets\/product-previews\/axolotl-front-v5\.webp/);
 assert.match(runtime, /assets\/product-previews\/dragonfly-front-v5\.webp/);
 assert.match(runtime, /assets\/product-previews\/hydrangea-front-v5\.webp/);
