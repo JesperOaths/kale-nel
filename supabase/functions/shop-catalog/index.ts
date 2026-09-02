@@ -70,7 +70,7 @@ function categoryFromText(title: unknown, values: unknown[] = []) {
   const productTitle = text(title).toLowerCase();
   if (productTitle.includes("despinoza")) return "merch";
   const haystack = [title, ...values].map(text).join(" ").toLowerCase();
-  return /\bboxy\b/.test(haystack) || /oversized[\s-]*boxy|boxy[\s-]*oversized/.test(haystack)
+  return /\b(?:oversized|boxy)\b/.test(haystack)
     ? "oversized-boxy"
     : "classic";
 }
