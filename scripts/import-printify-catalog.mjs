@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
  * Convert a Printify product export/API response into the static Bruis shop catalog.
+ * This remains the offline/fallback path; production normally reads the live
+ * server-side Printify cache through the shop-catalog Edge Function.
  *
  * Usage:
  *   node scripts/import-printify-catalog.mjs printify-products.json
  *   node scripts/import-printify-catalog.mjs product-a.json product-b.json --out shop/catalog.json
  *
- * This script never needs a Printify API token. Keep tokens out of the repo: export
- * product JSON elsewhere, then run this importer on the downloaded JSON file(s).
+ * This script never needs a Printify API token. Keep tokens out of the repo.
  */
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
@@ -37,6 +38,20 @@ const motifFromTitle = title => {
   if(/flower|hydrangea|lace|floral|rose|poppy|petal/.test(t)) return ['floral','Flowers'];
   if(/botanical|thistle|leaf|plant|mushroom|fungi/.test(t)) return ['botanical','Botanical'];
   return ['other','Nature'];
+};
+const collectionFromPrintify = raw => {
+  const haystack = [
+    raw.title,
+    raw.name,
+    ...(Array.isArray(raw.tags) ? raw.tags : []),
+    raw.blueprint_title,
+    raw.blueprint?.title,
+    raw.baseLabel,
+    raw.base_label,
+  ].filter(Boolean).join(' ').toLowerCase();
+  return /\bboxy\b/.test(haystack) || /oversized[\s-]*boxy|boxy[\s-]*oversized/.test(haystack)
+    ? 'oversized-boxy'
+    : 'classic';
 };
 
 function flattenProducts(payload){
@@ -89,11 +104,21 @@ function uniqueBy(items, keyFn){
 }
 
 function mockupsFromPrintify(raw){
-  return uniqueBy((raw.images || raw.mockups || []).map((image, index) => {
-    const src = image.src || image.url || image.image || image.preview_url || image;
-    const label = image.label || image.camera_label || image.position || image.view || `View ${index + 1}`;
-    return src ? { image:src, label:String(label).replace(/[-_]/g,' ').replace(/\b\w/g, c => c.toUpperCase()) } : null;
-  }).filter(Boolean), item => item.image).slice(0,12);
+  const ranked = (raw.images || raw.mockups || []).map((image, index) => {
+    const src = image?.src || image?.url || image?.image || image?.preview_url || image;
+    if(!src) return null;
+    const position = String(image?.position || '').toLowerCase();
+    const isDefault = image?.is_default === true;
+    const rank = position === 'front' && isDefault ? 0 : position === 'front' ? 1 : isDefault ? 2 : 3;
+    const label = image?.label || image?.camera_label || image?.position || image?.view || `View ${index + 1}`;
+    return {
+      image:src,
+      label:String(label).replace(/[-_]/g,' ').replace(/\b\w/g, c => c.toUpperCase()),
+      rank,
+      index,
+    };
+  }).filter(Boolean).sort((a,b) => a.rank - b.rank || a.index - b.index);
+  return uniqueBy(ranked, item => item.image).slice(0,12).map(({ image, label }) => ({ image, label }));
 }
 
 function normalize(raw){
@@ -108,6 +133,7 @@ function normalize(raw){
     name,
     type,
     typeLabel,
+    collection:collectionFromPrintify(raw),
     price:prices.price,
     priceMax:prices.priceMax,
     description:raw.description || raw.body_html?.replace(/<[^>]*>/g,' ') || 'Nature-inspired shirt from the Bruis collection.',
