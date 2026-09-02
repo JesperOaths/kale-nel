@@ -1,0 +1,40 @@
+name: v816 one-time readiness sync
+
+on:
+  push:
+    branches:
+      - agent/v816-shopify-checkout
+
+permissions:
+  contents: write
+
+jobs:
+  sync-readiness:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: agent/v816-shopify-checkout
+      - name: Update current release-candidate identity
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'beta-readiness.json';
+          const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+          data.site_version = 'release candidate v816 / live v813 / certified baseline v813';
+          data.last_updated = '2026-09-02';
+          data.deployment_identity.release_candidate_version = 'v816';
+          data.deployment_identity.note = 'v816 release candidate: Kalenel shop uses the live Shopify Storefront catalog with exact selected-variant pricing and a real Shopify checkout handoff. Existing Printify-backed Shopify delivery profiles calculate destination-specific shipping, while Shopify checkout handles taxes and available payment methods. The supplied Despinoza shirt image is used for Merch and approved transparent front-print artwork is restored first where exact assets exist. v813 remains the last fully certified baseline; exact-current v816 deployed shop and visual/live-browser proof remain required before promotion.';
+          fs.writeFileSync(path, JSON.stringify(data, null, 2) + '\n');
+          NODE
+          rm -f .github/workflows/v816-readiness-sync-once.yml
+      - name: Commit readiness identity update
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add beta-readiness.json .github/workflows/v816-readiness-sync-once.yml
+          git commit -m 'v816: align beta readiness release-candidate identity'
+          git push origin HEAD:agent/v816-shopify-checkout
