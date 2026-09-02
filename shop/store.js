@@ -15,6 +15,11 @@ const COLLECTIONS = {
     label: 'Oversized Boxy',
     heading: 'Oversized Boxy shirts',
     empty: 'No Oversized Boxy shirts are available yet.'
+  },
+  merch: {
+    label: 'Merch',
+    heading: 'Merch',
+    empty: 'No Merch products are available yet.'
   }
 };
 
@@ -30,15 +35,20 @@ const slug = text => String(text || 'product').toLowerCase().replace(/[^a-z0-9]+
 
 function normalizeCollection(value){
   const raw = String(value || '').trim().toLowerCase().replace(/_/g, '-');
+  if(raw === 'merch') return 'merch';
   if(raw === 'boxy' || raw === 'oversized' || raw === 'oversized-boxy' || raw === 'oversized boxy') return 'boxy';
   return 'normal';
 }
 
 function normalizeProduct(raw){
   const mockups = Array.isArray(raw.mockups) ? raw.mockups.filter(m => m && m.image) : [];
+  const name = raw.name || raw.title || 'Untitled tee';
+  const collection = /despinoza/i.test(name)
+    ? 'merch'
+    : normalizeCollection(raw.collection || raw.shirtCollection || raw.fit);
   return {
-    id: String(raw.id || slug(raw.name)),
-    name: raw.name || 'Untitled tee',
+    id: String(raw.id || slug(name)),
+    name,
     price: Math.ceil(Number(raw.price || 0)),
     priceMax: Math.ceil(Number(raw.priceMax || raw.price || 0)),
     sizes: Array.isArray(raw.sizes) && raw.sizes.length ? raw.sizes : ['S','M','L','XL','2XL'],
@@ -46,7 +56,7 @@ function normalizeProduct(raw){
     image: mockups[0]?.image || raw.image || '',
     baseLabel: raw.baseLabel || 'Shirt base pending',
     variants: Array.isArray(raw.variants) ? raw.variants : [],
-    collection: normalizeCollection(raw.collection || raw.shirtCollection || raw.fit)
+    collection
   };
 }
 
@@ -108,8 +118,9 @@ function productsForCollection(collection = selectedCollection){
 function updateCollectionCounts(){
   Object.keys(COLLECTIONS).forEach(key => {
     const count = productsForCollection(key).length;
+    const noun = key === 'merch' ? (count === 1 ? 'product' : 'products') : (count === 1 ? 'shirt' : 'shirts');
     qsa(`[data-collection-count="${key}"]`).forEach(el => {
-      el.textContent = `${count} ${count === 1 ? 'shirt' : 'shirts'}`;
+      el.textContent = `${count} ${noun}`;
     });
   });
 }
