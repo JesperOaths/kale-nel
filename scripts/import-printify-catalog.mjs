@@ -40,6 +40,9 @@ const motifFromTitle = title => {
   return ['other','Nature'];
 };
 const collectionFromPrintify = raw => {
+  const productTitle = String(raw.title || raw.name || raw.product_title || '').trim().toLowerCase();
+  if(productTitle.includes('despinoza')) return 'merch';
+
   const haystack = [
     raw.title,
     raw.name,
