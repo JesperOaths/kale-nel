@@ -9,7 +9,7 @@
   <meta property="og:description" content="Nature-inspired tees and Merch." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://kalenel.nl/shop/" />
-  <link rel="stylesheet" href="styles.css?v=20260902-printify-live-v815" />
+  <link rel="stylesheet" href="styles.css?v=20260902-shopify-checkout-v816" />
 </head>
 <body>
   <header class="site-header">
@@ -45,7 +45,7 @@
         </button>
 
         <button class="collection-card" type="button" data-collection="merch" aria-pressed="false">
-          <span class="collection-image"><img src="assets/collection-merch-spinoza.svg" alt="Spinoza-inspired Merch outline" /></span>
+          <span class="collection-image"><img class="collection-merch-image" src="assets/collection-merch-despinoza.webp" alt="Despinoza Merch T-shirt" style="object-fit:contain;object-position:center;background:white" /></span>
           <span class="collection-copy">
             <strong>Merch</strong>
             <small>Despinoza and philosophy-inspired pieces</small>
@@ -72,7 +72,7 @@
             <span>Oversized Boxy</span>
           </button>
           <button class="compact-shape-card" type="button" data-collection="merch" aria-pressed="false" aria-label="Show Merch products">
-            <img src="assets/collection-merch-spinoza.svg" alt="" />
+            <img class="collection-merch-image" src="assets/collection-merch-despinoza.webp" alt="" style="object-fit:contain;object-position:center;background:white" />
             <span>Merch</span>
           </button>
         </div>
@@ -93,17 +93,18 @@
       </div>
       <div class="cart-items" data-cart-items></div>
       <div class="cart-summary">
-        <div><span>Total</span><strong data-cart-subtotal>€0</strong></div>
-        <p>Shipping is calculated after the address is entered.</p>
-        <a class="button primary full" data-mail-order href="mailto:hello@example.com?subject=Bruis%20order%20request">Request order link</a>
+        <div><span>Product subtotal</span><strong data-cart-subtotal>€0.00</strong></div>
+        <p>Shipping, taxes and available payment methods are calculated securely by Shopify after the delivery address is entered.</p>
+        <button class="button primary full" type="button" data-checkout disabled>Secure checkout with Shopify</button>
       </div>
     </div>
   </aside>
 
-  <footer class="footer">Bruis - Nature-inspired clothing.</footer>
+  <footer class="footer">Bruis - Nature-inspired clothing. <span class="version-watermark">v816</span></footer>
 
-  <script src="catalog-data.js?v=20260902-printify-live-v815" defer></script>
-  <script src="product-preview-overrides.js?v=20260902-printify-live-v815" defer></script>
-  <script src="store.js?v=20260902-printify-live-v815" defer></script>
+  <script src="catalog-data.js?v=20260902-shopify-checkout-v816" defer></script>
+  <script src="product-preview-overrides.js?v=20260902-shopify-checkout-v816" defer></script>
+  <script src="store.js?v=20260902-shopify-checkout-v816" defer></script>
+  <script src="shopify-checkout-v816.js?v=20260902-shopify-checkout-v816" defer></script>
 </body>
 </html>
