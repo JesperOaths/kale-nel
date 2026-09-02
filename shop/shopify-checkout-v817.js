@@ -3,6 +3,16 @@
 
   const SHOPIFY_DOMAIN = 'n75mh8-bu.myshopify.com';
   const FRONT_PRINT_PREVIEWS = [
+    [/^coral$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/coral-front-artwork.png?v=1788359906'],
+    [/^orchid$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/orchid-front-artwork.png?v=1788359884'],
+    [/^honeysuckle$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/honeysuckle-front-artwork.png?v=1788359866'],
+    [/^horseshoe crab$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/horseshoe-crab-front-artwork.png?v=1788359876'],
+    [/^lily$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/lily-front-artwork.png?v=1788359898'],
+    [/^magnolia$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/magnolia-front-artwork.png?v=1788359890'],
+    [/^monstera$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/monstera-front-artwork.png?v=1788359921'],
+    [/^daffodil$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/daffodil-front-artwork.png?v=1788359914'],
+    [/^seahorse$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/seahorse-front-artwork.png?v=1788359936'],
+    [/^seaweed$/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/seaweed-front-artwork.png?v=1788359928'],
     [/hydrangea/i, 'assets/product-previews/hydrangea-front-v5.webp'],
     [/axolotl/i, 'assets/product-previews/axolotl-front-v5.webp'],
     [/mantis/i, 'assets/product-previews/mantis-front-v5.webp'],
@@ -54,7 +64,7 @@
       if(preview){
         const existing = Array.isArray(product.mockups) ? product.mockups.filter(Boolean) : [];
         product.mockups = [
-          { label: 'Front print', image: preview },
+          { label: 'Front artwork', image: preview },
           ...existing.filter(mockup => mockup?.image !== preview)
         ];
         product.image = preview;

@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "site_version": "release candidate v816 / live v813 / certified baseline v813",
+  "site_version": "release candidate v817 / live v813 / certified baseline v813",
   "last_updated": "2026-09-02",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -48,8 +48,8 @@
       "2026-08-14 live v792: frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 completed its own Live deployment health run #60 successfully; later SQL-only repository audit head 141e7301944a79452eca9d354180a684249cdcd2 also passed Live deployment health without changing frontend VERSION.",
       "v793 candidate: full production screenshot audit found and repairs visible Klaverjas duplication, ladder game-key mismatch, stale game status RPC owners, Pikken spectator context loss and Rad stats aggregation failure; current release remains REVALIDATION_REQUIRED until post-deploy screenshots and gameplay are re-run."
     ],
-    "note": "v816 release candidate: Kalenel shop uses the live Shopify Storefront catalog with exact selected-variant pricing and a real Shopify checkout handoff. Existing Printify-backed Shopify delivery profiles calculate destination-specific shipping, while Shopify checkout handles taxes and available payment methods. The supplied Despinoza shirt image is used for Merch and approved transparent front-print artwork is restored first where exact assets exist. v813 remains the last fully certified baseline; exact-current v816 deployed shop and visual/live-browser proof remain required before promotion.",
-    "release_candidate_version": "v816"
+    "note": "v817 release candidate: Kalenel shop uses the live Shopify Storefront catalog with exact selected-variant pricing and a real Shopify checkout handoff. Existing Printify-backed Shopify delivery profiles calculate destination-specific shipping, while Shopify checkout handles taxes and available payment methods. The supplied Despinoza shirt image is used for Merch and approved transparent front-print artwork is restored first where exact assets exist. v813 remains the last fully certified baseline; exact-current v817 deployed shop and visual/live-browser proof remain required before promotion.",
+    "release_candidate_version": "v817"
   },
   "baseline_checks": [
     {

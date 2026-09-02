@@ -1,21 +1,21 @@
 {
   "schema_version": 1,
-  "current_version": "v816",
+  "current_version": "v817",
   "status": "REVALIDATION_REQUIRED",
   "previous_certified_version": "v813",
   "previous_certified_product_sha": "570ef4bded55493a226d1fc7c8afbb1e35244f56",
   "previous_certified_release_branch": "release/v813-certified-20260825",
-  "superseded_uncertified_version": "v815",
-  "superseded_uncertified_product_sha": "22a5c53cc6f92c1be99b21cc7e3933c1b42d277f",
-  "reason": "v816 converts the Kalenel shop from the placeholder email-order flow to a real Shopify checkout handoff using the exact selected Shopify variant IDs and exact cents-level variant prices. Shopify remains the buyer-facing source of truth for the Printify-published retail variants, while Shopify's configured Printify delivery profiles calculate destination-specific shipping and checkout handles taxes and available payment methods. The release also uses the user-provided Despinoza shirt image for Merch and restores approved transparent close-up front-print previews first where exact assets already exist. A live cart-permalink probe for an actual variant returned HTTP 200 and generated a real checkout destination without placing an order. The v813 certified product remains the last fully certified baseline; v816 must not inherit older visual/live-browser certification without fresh exact-current evidence.",
+  "superseded_uncertified_version": "v816",
+  "superseded_uncertified_product_sha": "84298a842b1bd4c44f7733ecd7f958fe28e48fc4",
+  "reason": "v817 completes the Kalenel shop handoff to Shopify checkout using exact selected Shopify variant IDs and exact cents-level prices for the Printify-published products. Shopify's configured Printify delivery profiles calculate destination-specific shipping, while checkout owns taxes, discounts, and available payment methods. The exact supplied Despinoza shirt PNG is the Merch collection image, and ten supplied transparent front artworks were uploaded to Shopify, attached to their matching products, and moved to image position one without removing the existing mockups. Browser catalog checks now run every 30 seconds and the server refresh window is one minute with cache bypass. A live cart-permalink probe for an actual variant generated a real Shopify checkout without placing an order. The v813 certified product remains the last fully certified baseline; v817 must not inherit older visual/live-browser certification without fresh exact-current evidence.",
   "remaining_release_blockers": [
-    "Canonical GEJAST verification, dependency security, and gameplay acceptance must pass on the final v816 branch/PR state.",
-    "Exact-current v816 live-shop proof must confirm the deployed Merch collection image, exact size-sensitive prices, cart variant identity, transparent front-print ordering where approved assets exist, and successful Shopify checkout handoff.",
-    "Fresh authenticated visual/live-browser revalidation and independent zero-residue cleanup are required before v816 can be promoted from REVALIDATION_REQUIRED to PASS."
+    "Canonical GEJAST verification, dependency security, and gameplay acceptance must pass on the final v817 branch/PR state.",
+    "Exact-current v817 live-shop proof must confirm the deployed Merch collection image, exact size-sensitive prices, cart variant identity, transparent front-print ordering where approved assets exist, and successful Shopify checkout handoff.",
+    "Fresh authenticated visual/live-browser revalidation and independent zero-residue cleanup are required before v817 can be promoted from REVALIDATION_REQUIRED to PASS."
   ],
   "required_next": [
     "Merge only after canonical verification and dependency audit are green on the final branch state.",
-    "Deploy exact-current v816 and validate Classic/Oversized Boxy/Merch navigation, exact selected-size pricing, front-image ordering, cart behavior, and live Shopify checkout handoff without completing a purchase.",
-    "Run the required exact-current authenticated visual/live-browser certification and cleanup, then create final-acceptance-v816.json and promote release-certification.json to PASS only if all evidence succeeds."
+    "Deploy exact-current v817 and validate Classic/Oversized Boxy/Merch navigation, exact selected-size pricing, front-image ordering, cart behavior, and live Shopify checkout handoff without completing a purchase.",
+    "Run the required exact-current authenticated visual/live-browser certification and cleanup, then create final-acceptance-v817.json and promote release-certification.json to PASS only if all evidence succeeds."
   ]
 }

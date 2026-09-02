@@ -1,8 +1,8 @@
 (() => {
   'use strict';
 
-  const POLL_MS = 60 * 1000;
-  const FIRST_POLL_MS = 12 * 1000;
+  const POLL_MS = 30 * 1000;
+  const FIRST_POLL_MS = 5 * 1000;
   let lastSignature = '';
   let pendingReload = false;
   let checking = false;

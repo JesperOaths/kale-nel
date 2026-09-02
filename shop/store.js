@@ -29,7 +29,7 @@ let cart = JSON.parse(localStorage.getItem(cartKey) || '[]');
 
 const qs = sel => document.querySelector(sel);
 const qsa = sel => [...document.querySelectorAll(sel)];
-const money = value => `€${Math.ceil(Number(value || 0))}`;
+const money = value => `€${Number(value || 0).toFixed(2)}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const slug = text => String(text || 'product').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,80) || 'product';
 
@@ -49,8 +49,8 @@ function normalizeProduct(raw){
   return {
     id: String(raw.id || slug(name)),
     name,
-    price: Math.ceil(Number(raw.price || 0)),
-    priceMax: Math.ceil(Number(raw.priceMax || raw.price || 0)),
+    price: Number(raw.price || 0),
+    priceMax: Number(raw.priceMax || raw.price || 0),
     sizes: Array.isArray(raw.sizes) && raw.sizes.length ? raw.sizes : ['S','M','L','XL','2XL'],
     mockups,
     image: mockups[0]?.image || raw.image || '',
@@ -99,7 +99,7 @@ async function loadCatalog(){
     if(imported.length) return sortByShirtBase(imported);
   }
   try {
-    const response = await fetch('catalog.json?v=20260902-printify-live-v815', { cache: 'no-store' });
+    const response = await fetch('catalog.json?v=20260902-shop-commerce-v817', { cache: 'no-store' });
     if(response.ok){
       const payload = await response.json();
       const rawProducts = Array.isArray(payload) ? payload : (payload.products || []);
