@@ -30,18 +30,59 @@
       .sort((a, b) => a.id.localeCompare(b.id))
   );
 
+  const idTail = value => {
+    const raw = String(value || '').trim();
+    return raw.includes('/') ? raw.split('/').pop() : raw;
+  };
+
+  const variantSize = variant => {
+    const options = Array.isArray(variant?.options) ? variant.options : [];
+    const explicit = options.find(option => /size/i.test(String(option?.name || '')))?.value;
+    if(explicit) return String(explicit);
+    return String(variant?.title || '').split('/').map(part => part.trim()).find(part => /^(?:xs|s|m|l|xl|[2-9]xl)$/i.test(part)) || '';
+  };
+
+  const currentVariantFor = (product, item) => {
+    const variants = Array.isArray(product?.variants) ? product.variants : [];
+    const wantedId = idTail(item?.variantId);
+    if(wantedId){
+      const exact = variants.find(variant => idTail(variant?.id) === wantedId);
+      if(exact) return exact;
+    }
+    const wantedSize = String(item?.size || '').trim().toLowerCase();
+    if(wantedSize){
+      const bySize = variants.find(variant => variantSize(variant).toLowerCase() === wantedSize);
+      if(bySize) return bySize;
+    }
+    return variants.find(variant => variant?.is_enabled !== false && variant?.is_available !== false) || variants[0] || null;
+  };
+
   function reconcileCart(){
     if(!Array.isArray(cart) || !Array.isArray(products)) return;
     let changed = false;
     cart.forEach(item => {
+      const wantedProductId = String(item?.productId || item?.id || '');
       const product = products.find(candidate =>
-        String(candidate?.id || '') === String(item?.id || '') ||
+        String(candidate?.id || '') === wantedProductId ||
         String(candidate?.name || '').trim().toLowerCase() === String(item?.name || '').trim().toLowerCase()
       );
       if(!product) return;
-      const nextPrice = Number(product.price || 0);
+
+      const variant = currentVariantFor(product, item);
+      const nextPrice = Number(variant?.price || product.price || 0);
+      const nextVariantId = idTail(variant?.id || item?.variantId);
+      const nextSize = variantSize(variant) || item?.size;
+
       if(nextPrice > 0 && Number(item.price || 0) !== nextPrice){
         item.price = nextPrice;
+        changed = true;
+      }
+      if(nextVariantId && String(item.variantId || '') !== nextVariantId){
+        item.variantId = nextVariantId;
+        changed = true;
+      }
+      if(nextSize && item.size !== nextSize){
+        item.size = nextSize;
         changed = true;
       }
       if(product.image && item.image !== product.image){
