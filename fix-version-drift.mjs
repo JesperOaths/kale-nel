@@ -42,15 +42,6 @@ function isArchivedFile(rel){
   if (/^README_v\d+/i.test(base) || /^PATCH_NOTES_v\d+/i.test(base) || /^GEJAST_v\d+/i.test(base)) return true;
   return false;
 }
-function normalizeChangedLines(before, after){
-  const beforeLines = before.split('\n');
-  const afterLines = after.split('\n');
-  if (beforeLines.length !== afterLines.length) return after;
-  return afterLines.map((line, index) => {
-    if (line === beforeLines[index]) return line;
-    return line.replace(/[ \t]*\r?$/, '');
-  }).join('\n');
-}
 
 let changed = 0;
 for (const file of walk(root)) {
@@ -60,13 +51,12 @@ for (const file of walk(root)) {
   if (!activeExt.has(path.extname(file).toLowerCase())) continue;
   const before = fs.readFileSync(file, 'utf8');
   const preserveStaticV762 = allowedStaticVersionFiles.has(rel);
-  let after = before
+    let after = before
     .replace(/\?v(\d+)/gi, (match, digits) => preserveStaticV762 && digits === '762' ? match : `?${rootVersion}`)
     .replace(/(GEJAST_PAGE_VERSION\s*=\s*['"])v(\d+)(['"])/gi, (match, prefix, digits, suffix) => preserveStaticV762 && digits === '762' ? match : `${prefix}${rootVersion}${suffix}`)
     .replace(/(GEJAST_SITE_VERSION\s*=\s*['"])v(\d+)(['"])/gi, (match, prefix, digits, suffix) => preserveStaticV762 && digits === '762' ? match : `${prefix}${rootVersion}${suffix}`)
     .replace(/(VERSION\s*:\s*['"])v(\d+)(['"])/gi, (match, prefix, digits, suffix) => preserveStaticV762 && digits === '762' ? match : `${prefix}${rootVersion}${suffix}`)
     .replace(/v(\d+)\s*[^\w\r\n<>]{0,12}\s*Made by Bruis/gi, (match, digits) => preserveStaticV762 && digits === '762' ? match : `${rootVersion}  -  Made by Bruis`);
-  after = normalizeChangedLines(before, after);
   if (after !== before) {
     fs.writeFileSync(file, after, 'utf8');
     changed += 1;
