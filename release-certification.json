@@ -1,23 +1,21 @@
 {
   "schema_version": 1,
-  "current_version": "v815",
+  "current_version": "v816",
   "status": "REVALIDATION_REQUIRED",
   "previous_certified_version": "v813",
   "previous_certified_product_sha": "570ef4bded55493a226d1fc7c8afbb1e35244f56",
   "previous_certified_release_branch": "release/v813-certified-20260825",
-  "superseded_uncertified_version": "v814",
-  "superseded_uncertified_product_sha": "e0a0ad6b13d5217fcb2a7734dc4443ab4c1c7238",
-  "reason": "v815 replaces the shop's static-only Printify catalog path with a server-side Supabase Edge Function and private RLS-protected cache. The integration enumerates Printify shops and products, derives shirt-base metadata from Printify blueprints, prioritizes front/default mockups, and maps products into exactly Classic or Oversized Boxy while retaining the existing static catalog as an outage fallback. Production database schema and the JWT-protected shop-catalog Edge Function were deployed on 2026-09-02. The Printify API token is intentionally not stored in source control and was confirmed absent from the current Supabase Edge Function environment, so live Printify ingestion remains authorization-blocked until that secret is configured. The v813 certified product remains the last fully certified baseline; v815 must not inherit older visual/live-browser certification without fresh exact-current evidence.",
+  "superseded_uncertified_version": "v815",
+  "superseded_uncertified_product_sha": "22a5c53cc6f92c1be99b21cc7e3933c1b42d277f",
+  "reason": "v816 converts the Kalenel shop from the placeholder email-order flow to a real Shopify checkout handoff using the exact selected Shopify variant IDs and exact cents-level variant prices. Shopify remains the buyer-facing source of truth for the Printify-published retail variants, while Shopify's configured Printify delivery profiles calculate destination-specific shipping and checkout handles taxes and available payment methods. The release also uses the user-provided Despinoza shirt image for Merch and restores approved transparent close-up front-print previews first where exact assets already exist. A live cart-permalink probe for an actual variant returned HTTP 200 and generated a real checkout destination without placing an order. The v813 certified product remains the last fully certified baseline; v816 must not inherit older visual/live-browser certification without fresh exact-current evidence.",
   "remaining_release_blockers": [
-    "Canonical GEJAST verification and dependency security must pass on the final v815 branch/PR state.",
-    "PRINTIFY_API_TOKEN must be configured as a Supabase Edge Function secret and the first authenticated Printify sync must populate the private catalog cache successfully.",
-    "Exact-current v815 live-shop proof must confirm all synced products render, Printify front/default mockups appear first, and products resolve only to Classic or Oversized Boxy with no stale hard-coded fit override.",
-    "Fresh authenticated visual/live-browser revalidation and independent zero-residue cleanup are required before v815 can be promoted from REVALIDATION_REQUIRED to PASS."
+    "Canonical GEJAST verification, dependency security, and gameplay acceptance must pass on the final v816 branch/PR state.",
+    "Exact-current v816 live-shop proof must confirm the deployed Merch collection image, exact size-sensitive prices, cart variant identity, transparent front-print ordering where approved assets exist, and successful Shopify checkout handoff.",
+    "Fresh authenticated visual/live-browser revalidation and independent zero-residue cleanup are required before v816 can be promoted from REVALIDATION_REQUIRED to PASS."
   ],
   "required_next": [
-    "Merge only after canonical verification and dependency audit are green.",
-    "Configure PRINTIFY_API_TOKEN in the Supabase Edge Function environment, trigger shop-catalog, and verify product counts/categories against the Printify account.",
-    "Deploy exact-current v815 and validate Classic/Oversized Boxy navigation, front-image ordering, fallback behavior, and cart regression behavior.",
-    "Run the required exact-current authenticated visual/live-browser certification and cleanup, then create final-acceptance-v815.json and promote release-certification.json to PASS only if all evidence succeeds."
+    "Merge only after canonical verification and dependency audit are green on the final branch state.",
+    "Deploy exact-current v816 and validate Classic/Oversized Boxy/Merch navigation, exact selected-size pricing, front-image ordering, cart behavior, and live Shopify checkout handoff without completing a purchase.",
+    "Run the required exact-current authenticated visual/live-browser certification and cleanup, then create final-acceptance-v816.json and promote release-certification.json to PASS only if all evidence succeeds."
   ]
 }
