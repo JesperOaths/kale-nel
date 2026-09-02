@@ -4,9 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bruis - Nature tees</title>
-  <meta name="description" content="Bruis nature-inspired tees. Choose Classic or Oversized Boxy, then browse the designs in that collection." />
+  <meta name="description" content="Bruis nature-inspired tees and Merch. Choose Classic, Oversized Boxy or Merch, then browse the designs in that collection." />
   <meta property="og:title" content="Bruis" />
-  <meta property="og:description" content="Nature-inspired tees." />
+  <meta property="og:description" content="Nature-inspired tees and Merch." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://kalenel.nl/shop/" />
   <link rel="stylesheet" href="styles.css?v=20260902-printify-live-v815" />
@@ -20,12 +20,12 @@
   <main>
     <section class="shape-entry-shell" data-shape-entry>
       <div class="shape-entry-heading">
-        <p class="section-kicker">Choose your shirt shape</p>
+        <p class="section-kicker">Choose a collection</p>
         <h1>Pick a fit.</h1>
-        <p>Start with the silhouette you want. You can switch shape again at any time while browsing.</p>
+        <p>Start with Classic or Oversized Boxy, or open Merch for Despinoza and philosophy-inspired pieces. You can switch again at any time while browsing.</p>
       </div>
 
-      <div class="collection-grid collection-grid-large" role="list" aria-label="Shirt shapes">
+      <div class="collection-grid collection-grid-large" role="list" aria-label="Shop collections">
         <button class="collection-card" type="button" data-collection="normal" aria-pressed="false">
           <span class="collection-image"><img src="assets/collection-normal.webp" alt="Classic T-shirt outline" /></span>
           <span class="collection-copy">
@@ -43,17 +43,26 @@
             <span class="collection-count" data-collection-count="boxy">Loading…</span>
           </span>
         </button>
+
+        <button class="collection-card" type="button" data-collection="merch" aria-pressed="false">
+          <span class="collection-image"><img src="assets/collection-merch-spinoza.svg" alt="Spinoza-inspired Merch outline" /></span>
+          <span class="collection-copy">
+            <strong>Merch</strong>
+            <small>Despinoza and philosophy-inspired pieces</small>
+            <span class="collection-count" data-collection-count="merch">Loading…</span>
+          </span>
+        </button>
       </div>
     </section>
 
     <section class="shop-section" id="shop" data-shop-section hidden aria-labelledby="shop-title">
-      <div class="compact-shape-bar" aria-label="Change shirt shape">
+      <div class="compact-shape-bar" aria-label="Change shop collection">
         <div class="compact-shape-copy">
-          <p class="section-kicker">Shirt shape</p>
+          <p class="section-kicker">Collection</p>
           <h2 id="shop-title" data-collection-title>Classic shirts</h2>
         </div>
 
-        <div class="compact-shape-grid" role="list" aria-label="Switch shirt shape">
+        <div class="compact-shape-grid" role="list" aria-label="Switch shop collection">
           <button class="compact-shape-card" type="button" data-collection="normal" aria-pressed="false" aria-label="Show Classic shirts">
             <img src="assets/collection-normal.webp" alt="" />
             <span>Classic</span>
@@ -62,9 +71,13 @@
             <img src="assets/collection-boxy.webp" alt="" />
             <span>Oversized Boxy</span>
           </button>
+          <button class="compact-shape-card" type="button" data-collection="merch" aria-pressed="false" aria-label="Show Merch products">
+            <img src="assets/collection-merch-spinoza.svg" alt="" />
+            <span>Merch</span>
+          </button>
         </div>
 
-        <button class="view-shapes-large" type="button" data-expand-shapes>View shapes larger</button>
+        <button class="view-shapes-large" type="button" data-expand-shapes>View collections larger</button>
       </div>
 
       <p class="collection-empty" data-collection-empty hidden></p>
