@@ -9,6 +9,7 @@ const store = read('shop/store.js');
 const checkout = read('shop/shopify-checkout-v817.js');
 const runtime = read('shop/shop-runtime-v819.js');
 const recovery = read('shop/catalog-recovery-v822.js');
+const previewOverrides = read('shop/product-preview-overrides.js');
 const mockupBackground = read('shop/mockup-background-v819.js');
 const lightbox = read('shop/image-lightbox-v820.js');
 const frontLightboxFit = read('shop/front-lightbox-fit-v821.js');
@@ -21,6 +22,8 @@ const priceRuleState = read('supabase/migrations/20260902160835_shop_price_rule_
 const liveShopCheck = read('check-live-shop.mjs');
 const liveHealthWorkflow = read('.github/workflows/live-deployment-health.yml');
 
+const JELLYFISH_FRONT = 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/jellyfish-front-artwork.png?v=1788453508';
+
 assert.equal(read('VERSION').trim(), 'v817');
 assert.match(index, /collection-merch-despinoza\.png/);
 assert.match(index, /shop-runtime-v819\.js/);
@@ -30,7 +33,8 @@ assert.match(index, /image-lightbox-v820\.js/);
 assert.match(index, /front-lightbox-fit-v821\.js/);
 assert.match(index, /shopify-checkout-v817\.js/);
 assert.match(index, /live-catalog-refresh-v818\.js/);
-assert.match(index, /version-watermark[^>]*>v822</);
+assert.match(index, /version-watermark[^>]*>v823</);
+assert.match(index, /20260903-shop-commerce-v823/);
 
 const merchImage = fs.readFileSync('shop/assets/collection-merch-despinoza.png');
 assert.equal(
@@ -43,6 +47,13 @@ assert.match(store, /toFixed\(2\)/, 'Prices must preserve exact cents');
 assert.doesNotMatch(store, /price:\s*Math\.ceil/, 'Product prices must not be rounded up');
 assert.match(checkout, /n75mh8-bu\.myshopify\.com/);
 assert.match(checkout, /\/cart\/\$\{lines\.join\(','\)\}/, 'Checkout must use exact Shopify variant cart lines');
+
+// v823 pins the exact user-supplied Jellyfish artwork as front #1 across every
+// storefront fallback layer so Shopify and the custom gallery cannot disagree.
+for (const source of [runtime, recovery, previewOverrides]) {
+  assert.ok(source.includes(JELLYFISH_FRONT), 'Every Jellyfish fallback layer must use the new Shopify-hosted front artwork');
+  assert.doesNotMatch(source, /jellyfish-front-v7\.webp/, 'The old Jellyfish preview must not remain active');
+}
 
 // v822 prevents a single Edge Function/JWT/CORS failure from blanking the shop.
 assert.match(recovery, /shop-catalog-v822/);
@@ -80,8 +91,10 @@ assert.match(liveShopCheck, /https:\/\/kalenel\.nl\/shop\//);
 assert.match(liveShopCheck, /functions\/v1\/shop-catalog'/);
 assert.match(liveShopCheck, /functions\/v1\/shop-catalog-v822'/);
 assert.match(liveShopCheck, /MIN_PRODUCTS/);
-assert.match(liveShopCheck, /version-watermark[^\n]*v822/);
-assert.match(liveShopCheck, /RESULT=V822_LIVE_SHOP_CATALOG_PASS/);
+assert.match(liveShopCheck, /version-watermark[^\n]*v823/);
+assert.match(liveShopCheck, /jellyfish-front-artwork\.png/);
+assert.match(liveShopCheck, /Jellyfish first image/);
+assert.match(liveShopCheck, /RESULT=V823_LIVE_SHOP_JELLYFISH_PASS/);
 
 // Shopify Storefront remains the final customer-facing price authority.
 assert.match(runtime, /shop-price-v818/);
@@ -160,4 +173,4 @@ assert.match(priceRuleState, /alter table public\.shop_price_rule_state enable r
 assert.match(priceRuleState, /revoke all on table public\.shop_price_rule_state from public, anon, authenticated/);
 assert.match(priceRuleState, /grant all on table public\.shop_price_rule_state to service_role/);
 
-console.log('Shop commerce v822b live recovery contract passed.');
+console.log('Shop commerce v823 Jellyfish front artwork contract passed.');
