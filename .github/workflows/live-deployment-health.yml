@@ -28,6 +28,11 @@ jobs:
           GEJAST_DEPLOY_WAIT_SECONDS: '240'
           GEJAST_SMOKE_TIMEOUT_MS: '15000'
         run: node check-live-routes.mjs
+      - name: Verify live Shopify shop catalog
+        env:
+          GEJAST_SHOP_TIMEOUT_MS: '15000'
+          GEJAST_SHOP_MIN_PRODUCTS: '20'
+        run: node check-live-shop.mjs
       - name: Verify live admin GitHub OAuth outer boundary
         env:
           GEJAST_ADMIN_AUTH_TIMEOUT_MS: '15000'
