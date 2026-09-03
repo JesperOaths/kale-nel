@@ -18,6 +18,8 @@ const catalogV822 = read('supabase/functions/shop-catalog-v822/index.ts');
 const priceEdge = read('supabase/functions/shop-price-v818/index.ts');
 const priceRule = read('supabase/functions/shop-price-rule-v819/index.ts');
 const priceRuleState = read('supabase/migrations/20260902160835_shop_price_rule_state_v819.sql');
+const liveShopCheck = read('check-live-shop.mjs');
+const liveHealthWorkflow = read('.github/workflows/live-deployment-health.yml');
 
 assert.equal(read('VERSION').trim(), 'v817');
 assert.match(index, /collection-merch-despinoza\.png/);
@@ -53,15 +55,33 @@ assert.match(recovery, /despinoza/);
 assert.match(recovery, /FRONT_PREVIEWS/);
 assert.match(recovery, /wild\\s\*carrot\|queen\\s\*anne/);
 assert.match(recovery, /X-Kalenel-Catalog-Authority/);
-assert.match(catalogV822, /SHOPIFY_DOMAIN\s*=\s*"n75mh8-bu\.myshopify\.com"/);
-assert.match(catalogV822, /products\(first:\s*100/);
-assert.match(catalogV822, /variants\(first:\s*250\)/);
-assert.match(catalogV822, /featuredImage/);
-assert.match(catalogV822, /images\(first:\s*50\)/);
-assert.match(catalogV822, /collectionFor/);
-assert.match(catalogV822, /oversized\|boxy/);
-assert.match(catalogV822, /mockups\.length > 0/);
-assert.doesNotMatch(catalogV822, /SUPABASE_SERVICE_ROLE_KEY|SHOPIFY_ADMIN_ACCESS_TOKEN|PRINTIFY_API_TOKEN/);
+
+for (const source of [catalogEdge, catalogV822]) {
+  assert.match(source, /SHOPIFY_DOMAIN\s*=\s*"n75mh8-bu\.myshopify\.com"/);
+  assert.match(source, /products\(first:\s*100/);
+  assert.match(source, /variants\(first:\s*250\)/);
+  assert.match(source, /featuredImage/);
+  assert.match(source, /images\(first:\s*50\)/);
+  assert.match(source, /collectionFor/);
+  assert.match(source, /oversized\|boxy/);
+  assert.match(source, /mockups\.length > 0/);
+  assert.match(source, /public, max-age=5, stale-while-revalidate=30/);
+  assert.doesNotMatch(source, /createClient|SUPABASE_SERVICE_ROLE_KEY|SHOPIFY_ADMIN_ACCESS_TOKEN|PRINTIFY_API_TOKEN|PRINTIFY_BASE/);
+}
+
+// Old cached clients must also receive the direct Shopify catalog. The legacy slug
+// is deliberately kept as a compatibility alias, not a database-backed cache.
+assert.doesNotMatch(catalogEdge, /shop_catalog_products|shop_catalog_sync_state|get_printify_api_token/);
+
+// Every main deployment permanently checks the actual public shop plus both catalog slugs.
+assert.match(liveHealthWorkflow, /Verify live Shopify shop catalog/);
+assert.match(liveHealthWorkflow, /node check-live-shop\.mjs/);
+assert.match(liveShopCheck, /https:\/\/kalenel\.nl\/shop\//);
+assert.match(liveShopCheck, /functions\/v1\/shop-catalog'/);
+assert.match(liveShopCheck, /functions\/v1\/shop-catalog-v822'/);
+assert.match(liveShopCheck, /MIN_PRODUCTS/);
+assert.match(liveShopCheck, /version-watermark[^\n]*v822/);
+assert.match(liveShopCheck, /RESULT=V822_LIVE_SHOP_CATALOG_PASS/);
 
 // Shopify Storefront remains the final customer-facing price authority.
 assert.match(runtime, /shop-price-v818/);
@@ -140,8 +160,4 @@ assert.match(priceRuleState, /alter table public\.shop_price_rule_state enable r
 assert.match(priceRuleState, /revoke all on table public\.shop_price_rule_state from public, anon, authenticated/);
 assert.match(priceRuleState, /grant all on table public\.shop_price_rule_state to service_role/);
 
-// Legacy cached catalog remains present only as an additional compatibility fallback.
-assert.match(catalogEdge, /private, no-store, max-age=0/);
-assert.match(catalogEdge, /oversized\|boxy/);
-
-console.log('Shop commerce v822 recovery contract passed.');
+console.log('Shop commerce v822b live recovery contract passed.');
