@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - ".github/workflows/supabase-emergency-repair.yml"
       - "ops/supabase-emergency-trigger.txt"
 
 permissions:
@@ -17,7 +18,8 @@ jobs:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       PGCONNECT_TIMEOUT: "12"
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Build masked pooler URLs
         shell: bash
         run: |
@@ -31,20 +33,25 @@ jobs:
           for name,port in [('POOLER_TX_URL',6543),('POOLER_SESSION_URL',5432)]:
               url=f'postgresql://{user}:{pw}@{host}:{port}/postgres?sslmode=require'
               print(f'::add-mask::{url}')
-              with open(os.environ['GITHUB_ENV'],'a') as f: f.write(f'{name}={url}\n')
+              with open(os.environ['GITHUB_ENV'],'a') as f:
+                  f.write(f'{name}={url}\n')
           PY
       - name: Ensure psql
         shell: bash
         run: |
-          command -v psql >/dev/null || { sudo apt-get update && sudo apt-get install -y postgresql-client; }
+          set -euo pipefail
+          command -v psql >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null; }
       - name: Apply bounded rescue
         shell: bash
         run: |
           set -euo pipefail
-          for target in "$POOLER_TX_URL" "$POOLER_SESSION_URL" "$SUPABASE_DB_URL"; do
+          targets=("$POOLER_TX_URL" "$POOLER_SESSION_URL" "$SUPABASE_DB_URL")
+          labels=("transaction-pooler" "session-pooler" "direct")
+          for i in 0 1 2; do
             for attempt in 1 2; do
-              if timeout 25s psql "$target" --set ON_ERROR_STOP=1 --file GEJAST_v799z_supabase_connection_rescue.sql; then
-                echo "RESCUE_APPLIED=1"
+              echo "attempt ${attempt} via ${labels[$i]}"
+              if timeout 25s psql "${targets[$i]}" -X --set ON_ERROR_STOP=1 --file GEJAST_v799z_supabase_connection_rescue.sql; then
+                echo "RESCUE_APPLIED=${labels[$i]}"
                 exit 0
               fi
               sleep 5
