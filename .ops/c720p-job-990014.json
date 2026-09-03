@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "id": 990014,
+  "lease_token": "908ccf66-fcc4-4de7-b189-a506259e9014",
+  "timeout_seconds": 35,
+  "attempts": 1,
+  "command": "bash -lc 'LOCK=/tmp/c720p-job-990014.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; echo ===PS===; ps -eo pid,ppid,user,comm,args --sort=pid | grep -Ei \"[h]ome-assistant|[h]omeassistant|[h]ass|python.*homeassistant\" | head -25; echo ===USER_UNITS===; systemctl --user list-units --type=service --all --no-pager | grep -Ei \"home|hass|assistant\" | head -25 || true; echo ===SYSTEM_UNITS===; systemctl list-units --type=service --all --no-pager | grep -Ei \"home|hass|assistant\" | head -25 || true; echo ===DOCKER===; docker ps --format \"{{.ID}}|{{.Names}}|{{.Image}}|{{.Status}}\" 2>/dev/null | grep -Ei \"home|hass|assistant\" | head -20 || true; echo ===PODMAN===; podman ps --format \"{{.ID}}|{{.Names}}|{{.Image}}|{{.Status}}\" 2>/dev/null | grep -Ei \"home|hass|assistant\" | head -20 || true; echo ===PORT8123===; ss -ltnp \"sport = :8123\" 2>/dev/null || true'"
+}
