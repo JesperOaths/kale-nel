@@ -1,0 +1,53 @@
+name: Supabase emergency repair
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ops/supabase-emergency-trigger.txt"
+
+permissions:
+  contents: read
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: "12"
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Build masked pooler URLs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, urllib.parse
+          u=urllib.parse.urlsplit(os.environ['SUPABASE_DB_URL'])
+          pw=urllib.parse.quote(urllib.parse.unquote(u.password or ''), safe='')
+          user='postgres.uiqntazgnrxwliaidkmy'
+          host='aws-0-eu-west-1.pooler.supabase.com'
+          for name,port in [('POOLER_TX_URL',6543),('POOLER_SESSION_URL',5432)]:
+              url=f'postgresql://{user}:{pw}@{host}:{port}/postgres?sslmode=require'
+              print(f'::add-mask::{url}')
+              with open(os.environ['GITHUB_ENV'],'a') as f: f.write(f'{name}={url}\n')
+          PY
+      - name: Ensure psql
+        shell: bash
+        run: |
+          command -v psql >/dev/null || { sudo apt-get update && sudo apt-get install -y postgresql-client; }
+      - name: Apply bounded rescue
+        shell: bash
+        run: |
+          set -euo pipefail
+          for target in "$POOLER_TX_URL" "$POOLER_SESSION_URL" "$SUPABASE_DB_URL"; do
+            for attempt in 1 2; do
+              if timeout 25s psql "$target" --set ON_ERROR_STOP=1 --file GEJAST_v799z_supabase_connection_rescue.sql; then
+                echo "RESCUE_APPLIED=1"
+                exit 0
+              fi
+              sleep 5
+            done
+          done
+          exit 1
