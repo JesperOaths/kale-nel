@@ -1,6 +1,6 @@
 -- GEJAST_v799z_supabase_connection_rescue.sql
 -- Bounded operational recovery for the 2026-09-03 Supabase connection starvation incident.
--- Retry marker: official restart path enabled 2026-09-03.
+-- Retry marker: official restart path retriggered after workflow registration.
 -- 1) Stop the known runaway cron job 1.
 -- 2) Cancel only long-running client queries.
 -- 3) Terminate only stale idle-in-transaction client sessions.
