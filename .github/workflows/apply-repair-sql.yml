@@ -58,6 +58,22 @@ jobs:
           fi
           echo "SQL_FILE=$sql_file" >> "$GITHUB_ENV"
 
+      - name: Derive masked pooler URLs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, urllib.parse
+          u=urllib.parse.urlsplit(os.environ['SUPABASE_DB_URL'])
+          pw=urllib.parse.quote(urllib.parse.unquote(u.password or ''), safe='')
+          user='postgres.uiqntazgnrxwliaidkmy'
+          host='aws-0-eu-west-1.pooler.supabase.com'
+          for name,port in [('POOLER_TX_URL',6543),('POOLER_SESSION_URL',5432)]:
+              url=f'postgresql://{user}:{pw}@{host}:{port}/postgres?sslmode=require'
+              print(f'::add-mask::{url}')
+              with open(os.environ['GITHUB_ENV'],'a') as f: f.write(f'{name}={url}\n')
+          PY
+
       - name: Install psql client
         shell: bash
         run: |
@@ -65,18 +81,23 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      - name: Apply SQL with bounded retries
+      - name: Apply SQL through available database path
         shell: bash
         env:
-          PGCONNECT_TIMEOUT: "20"
+          PGCONNECT_TIMEOUT: "15"
         run: |
           set -euo pipefail
-          for attempt in 1 2 3 4 5 6; do
-            echo "repair attempt $attempt/6"
-            if psql "$SUPABASE_DB_URL" --set ON_ERROR_STOP=1 --set statement_timeout=30000 --file "$SQL_FILE"; then
-              exit 0
-            fi
-            sleep $((attempt * 10))
+          targets=("$POOLER_TX_URL" "$POOLER_SESSION_URL" "$SUPABASE_DB_URL")
+          labels=("transaction-pooler" "session-pooler" "direct")
+          for round in 1 2 3; do
+            for i in 0 1 2; do
+              echo "repair round $round via ${labels[$i]}"
+              if psql "${targets[$i]}" --set ON_ERROR_STOP=1 --file "$SQL_FILE"; then
+                echo "repair succeeded via ${labels[$i]}"
+                exit 0
+              fi
+            done
+            sleep $((round * 10))
           done
           exit 1
 
