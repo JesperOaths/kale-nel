@@ -1,0 +1,81 @@
+name: Temporary Supabase C720P Rescue
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/temporary-supabase-c720p-rescue.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  rescue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PROJECT_REF: uiqntazgnrxwliaidkmy
+    steps:
+      - name: Prefer official project restart
+        id: restart
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            echo 'Management token available; requesting official project restart.'
+            code=$(curl -sS -o /tmp/restart-body -w '%{http_code}' \
+              --connect-timeout 10 --max-time 30 \
+              -X POST "https://api.supabase.com/v1/projects/${PROJECT_REF}/restart" \
+              -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+              -H 'Content-Type: application/json' || true)
+            echo "restart_http=${code}"
+            if [ "$code" = 200 ] || [ "$code" = 201 ] || [ "$code" = 202 ]; then
+              echo 'used_management_restart=true' >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo 'Management restart was unavailable; falling back to direct DB rescue.'
+          else
+            echo 'No SUPABASE_ACCESS_TOKEN repository secret; using direct DB rescue.'
+          fi
+          echo 'used_management_restart=false' >> "$GITHUB_OUTPUT"
+
+      - name: Wait after official restart
+        if: steps.restart.outputs.used_management_restart == 'true'
+        shell: bash
+        run: sleep 75
+
+      - name: Direct DB rescue fallback
+        if: steps.restart.outputs.used_management_restart != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo 'SUPABASE_DB_URL missing.'
+            exit 2
+          fi
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client >/dev/null
+          export PGCONNECT_TIMEOUT=12
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 \
+            -c "set statement_timeout='12s'; set lock_timeout='4s'; select now() as connected_at;" \
+            -c "select cron.alter_job(job_id := 1, active := false) where exists (select 1 from cron.job where jobid=1 and active);" \
+            -c "select pid, pg_terminate_backend(pid) as terminated from pg_stat_activity where pid <> pg_backend_pid() and datname=current_database() and backend_type='client backend' and state='idle' and usename in ('postgres','authenticator') and now()-state_change > interval '2 minutes';" \
+            -c "notify pgrst, 'reload config';"
+
+      - name: Verify database accepts fresh connections
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client >/dev/null
+          export PGCONNECT_TIMEOUT=12
+          for i in 1 2 3 4 5 6; do
+            if psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -c "set statement_timeout='8s'; select 'DB_OK '||now();"; then
+              exit 0
+            fi
+            sleep 15
+          done
+          echo 'Database still refuses fresh connections.'
+          exit 3
