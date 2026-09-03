@@ -6,6 +6,7 @@ const LEGACY_CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v
 const V822_CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v822';
 const TIMEOUT_MS = Number(process.env.GEJAST_SHOP_TIMEOUT_MS || 15000);
 const MIN_PRODUCTS = Number(process.env.GEJAST_SHOP_MIN_PRODUCTS || 20);
+const JELLYFISH_FRONT = 'jellyfish-front-artwork.png';
 
 async function fetchWithTimeout(url, options = {}) {
   const controller = new AbortController();
@@ -35,7 +36,7 @@ async function catalog(url, label) {
   assert.ok(payload.products.length >= MIN_PRODUCTS, `${label} returned only ${payload.products.length} products`);
 
   const names = new Set(payload.products.map(product => String(product?.name || '').trim().toLowerCase()));
-  for (const expected of ['coral', 'hydrangea', 'wild carrot']) {
+  for (const expected of ['coral', 'hydrangea', 'wild carrot', 'jellyfish']) {
     assert.ok(names.has(expected), `${label} missing ${expected}`);
   }
   assert.ok([...names].some(name => name.includes('despinoza')), `${label} missing Despinoza merch`);
@@ -49,20 +50,26 @@ async function catalog(url, label) {
     assert.ok(Array.isArray(product?.mockups) && product.mockups.length > 0, `${label} product ${product?.name} has no mockups`);
     assert.ok(Array.isArray(product?.sizes) && product.sizes.length > 0, `${label} product ${product?.name} has no sizes`);
   }
+
+  const jellyfish = payload.products.find(product => String(product?.name || '').trim().toLowerCase() === 'jellyfish');
+  assert.ok(jellyfish, `${label} missing Jellyfish`);
+  const jellyfishFront = String(jellyfish?.mockups?.[0]?.image || jellyfish?.image || '');
+  assert.ok(jellyfishFront.includes(JELLYFISH_FRONT), `${label} Jellyfish first image is not ${JELLYFISH_FRONT}: ${jellyfishFront}`);
+
   assert.ok(counts.normal > 0, `${label} has no Classic products`);
   assert.ok(counts.boxy > 0, `${label} has no Oversized Boxy products`);
   assert.ok(counts.merch > 0, `${label} has no Merch products`);
-  console.log(`${label}: HTTP 200, products=${payload.products.length}, classic=${counts.normal}, boxy=${counts.boxy}, merch=${counts.merch}, ${elapsed}ms`);
+  console.log(`${label}: HTTP 200, products=${payload.products.length}, classic=${counts.normal}, boxy=${counts.boxy}, merch=${counts.merch}, Jellyfish front=PASS, ${elapsed}ms`);
   return payload;
 }
 
 const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(SHOP_URL);
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
-assert.match(html, /version-watermark[^>]*>v822</, 'Live shop must expose v822 watermark');
-assert.match(html, /catalog-recovery-v822\.js\?v=20260903-shop-commerce-v822/, 'Live shop must load v822 catalog recovery');
+assert.match(html, /version-watermark[^>]*>v823</, 'Live shop must expose v823 watermark');
+assert.match(html, /catalog-recovery-v822\.js\?v=20260903-shop-commerce-v823/, 'Live shop must load catalog recovery with v823 cache key');
 assert.match(html, /shopify-checkout-v817\.js/, 'Live shop must retain Shopify checkout');
-console.log(`shop page: HTTP 200, v822 present, ${pageElapsed}ms`);
+console.log(`shop page: HTTP 200, v823 present, ${pageElapsed}ms`);
 
 const legacy = await catalog(LEGACY_CATALOG_URL, 'shop-catalog');
 const v822 = await catalog(V822_CATALOG_URL, 'shop-catalog-v822');
@@ -73,4 +80,4 @@ for (const product of v822.products) {
   assert.ok(legacyIds.has(String(product?.id || '')), `legacy catalog missing Shopify product id ${product?.id}`);
 }
 
-console.log('RESULT=V822_LIVE_SHOP_CATALOG_PASS');
+console.log('RESULT=V823_LIVE_SHOP_JELLYFISH_PASS');
