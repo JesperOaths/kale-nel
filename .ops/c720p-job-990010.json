@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "id": 990010,
+  "lease_token": "9ea1c671-ec7c-463e-ac2d-1d6e4f6c9010",
+  "timeout_seconds": 45,
+  "attempts": 1,
+  "command": "bash -lc 'LOCK=/tmp/c720p-job-990010.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; python3 <<'\"'\"'PY'\"'\"'\nimport json,pathlib,socket,urllib.request,urllib.parse\nout=[]; s=pathlib.Path(\"/opt/homeassistant/config/.storage\")\ntry:\n e=json.loads((s/\"core.config_entries\").read_text()).get(\"data\",{}).get(\"entries\",[])\n for x in e:\n  if x.get(\"domain\")==\"tuya\": out.append(\"TUYA|id=%s|title=%s|source=%s|state=%s|disabled=%s\"%(x.get(\"entry_id\"),x.get(\"title\"),x.get(\"source\"),x.get(\"state\"),x.get(\"disabled_by\")))\nexcept Exception as ex: out.append(\"ENTRYERR=\"+type(ex).__name__)\nfor h in [\"openapi.tuyaeu.com\",\"a1.tuyaeu.com\",\"mq.gw.tuyaeu.com\"]:\n try:\n  ips=sorted({z[4][0] for z in socket.getaddrinfo(h,443,type=socket.SOCK_STREAM)}); out.append(\"DNS|%s=%s\"%(h,\",\".join(ips[:3])))\n except Exception as ex: out.append(\"DNS|%s=ERR:%s\"%(h,type(ex).__name__))\ntry:\n p=pathlib.Path(\"/opt/homeassistant/config/home-assistant.log\"); lines=p.read_text(errors=\"ignore\").splitlines()[-8000:] if p.exists() else []\n hits=[z[-450:] for z in lines if \"tuya\" in z.lower() and any(k in z.lower() for k in [\"error\",\"exception\",\"failed\",\"timeout\",\"auth\",\"login\",\"connect\",\"unavailable\"])]\n out.append(\"LOGS=\"+\" || \".join(hits[-12:])[:2400])\nexcept Exception as ex: out.append(\"LOGERR=\"+type(ex).__name__)\ndiag=\"\\n\".join(out)[:3500]\ntry: urllib.request.urlopen(\"https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-run-ok?diag=\"+urllib.parse.quote(diag,safe=\"\"),timeout=5).read()\nexcept Exception: pass\nprint(diag)\nPY'"
+}
