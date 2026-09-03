@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "id": 990012,
+  "lease_token": "db568c7e-2ffd-4bc2-a29a-1bb2098d9012",
+  "timeout_seconds": 45,
+  "attempts": 1,
+  "command": "bash -lc 'LOCK=/tmp/c720p-job-990012.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; { echo ===NET===; for h in openapi.tuyaeu.com a1.tuyaeu.com mq.gw.tuyaeu.com; do printf \"$h v4=\"; timeout 7 curl -4 -sS -o /dev/null -w \"%{http_code}/%{time_connect}\" https://$h/ 2>&1 || true; echo; printf \"$h v6=\"; timeout 7 curl -6 -sS -o /dev/null -w \"%{http_code}/%{time_connect}\" https://$h/ 2>&1 || true; echo; done; echo ===ROUTES===; ip -4 route | head -8; ip -6 route | head -10; echo ===TRACE===; python3 - <<'\"'\"'PY'\"'\"'\nfrom pathlib import Path\np=Path(\"/opt/homeassistant/config/home-assistant.log\")\nif p.exists():\n lines=p.read_text(errors=\"ignore\").splitlines()\n idx=[i for i,z in enumerate(lines) if \"Error setting up entry\" in z and \"tuya\" in z.lower()]\n if idx:\n  i=idx[-1]\n  print(\"\\n\".join(lines[i:min(len(lines),i+65)]))\nPY\n} | tail -c 6200'"
+}
