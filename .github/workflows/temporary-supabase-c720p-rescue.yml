@@ -1,0 +1,36 @@
+name: Temporary Supabase C720P Rescue
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/temporary-supabase-c720p-rescue.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  rescue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: uiqntazgnrxwliaidkmy
+    steps:
+      - name: Request official Supabase project restart
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_ACCESS_TOKEN:-}"
+          code=$(curl -sS -o /tmp/body -w '%{http_code}' --connect-timeout 10 --max-time 45 \
+            -X POST "https://api.supabase.com/v1/projects/${PROJECT_REF}/restart" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H 'Content-Type: application/json')
+          echo "restart_http=$code"
+          case "$code" in 200|201|202) exit 0 ;; esac
+          cat /tmp/body || true
+          exit 1
+
+      - name: Wait for database restart
+        run: sleep 75
