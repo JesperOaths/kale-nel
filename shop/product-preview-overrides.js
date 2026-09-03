@@ -5,7 +5,7 @@
     '6a8781c676f52ce62f082d19': 'assets/product-previews/mantis-front-v5.webp',
     '6a877defbecced59b0037078': 'assets/product-previews/queen-annes-lace-front-v5.webp',
     '6a8769e26a41fe0f530b538f': 'assets/product-previews/thistle-front-v5.webp',
-    '6a878552828b6188a0031a81': 'assets/product-previews/jellyfish-front-v7.webp',
+    '6a878552828b6188a0031a81': 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/jellyfish-front-artwork.png?v=1788453508',
     '6a871b6035cea7fe2c005ee6': 'assets/product-previews/dragonfly-front-v5.webp'
   };
 
