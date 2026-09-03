@@ -1,5 +1,6 @@
 -- GEJAST_v799z_supabase_connection_rescue.sql
 -- Bounded operational recovery for the 2026-09-03 Supabase connection starvation incident.
+-- Retry marker: pooler fallback enabled.
 -- 1) Stop the known runaway cron job 1.
 -- 2) Cancel only long-running client queries.
 -- 3) Terminate only stale idle-in-transaction client sessions.
