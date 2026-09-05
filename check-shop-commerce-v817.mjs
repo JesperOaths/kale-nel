@@ -7,6 +7,7 @@ const read = path => fs.readFileSync(path, 'utf8');
 const index = read('shop/index.html');
 const store = read('shop/store.js');
 const checkout = read('shop/shopify-checkout-v817.js');
+const paymentGuard = read('shop/payment-readiness-v824.js');
 const runtime = read('shop/shop-runtime-v819.js');
 const recovery = read('shop/catalog-recovery-v822.js');
 const previewOverrides = read('shop/product-preview-overrides.js');
@@ -31,10 +32,12 @@ assert.match(index, /catalog-recovery-v822\.js/);
 assert.match(index, /mockup-background-v819\.js/);
 assert.match(index, /image-lightbox-v820\.js/);
 assert.match(index, /front-lightbox-fit-v821\.js/);
+assert.match(index, /payment-readiness-v824\.js/);
 assert.match(index, /shopify-checkout-v817\.js/);
 assert.match(index, /live-catalog-refresh-v818\.js/);
-assert.match(index, /version-watermark[^>]*>v823</);
-assert.match(index, /20260903-shop-commerce-v823/);
+assert.match(index, /payment-readiness-v824\.js[\s\S]*shopify-checkout-v817\.js/, 'Payment guard must load before the checkout redirect owner');
+assert.match(index, /version-watermark[^>]*>v824</);
+assert.match(index, /20260905-shop-commerce-v824/);
 
 const merchImage = fs.readFileSync('shop/assets/collection-merch-despinoza.png');
 assert.equal(
@@ -47,6 +50,21 @@ assert.match(store, /toFixed\(2\)/, 'Prices must preserve exact cents');
 assert.doesNotMatch(store, /price:\s*Math\.ceil/, 'Product prices must not be rounded up');
 assert.match(checkout, /n75mh8-bu\.myshopify\.com/);
 assert.match(checkout, /\/cart\/\$\{lines\.join\(','\)\}/, 'Checkout must use exact Shopify variant cart lines');
+
+// v824 fail-closes checkout before the existing Shopify redirect unless Shopify's
+// own Storefront API advertises at least one accepted card brand. This prevents a
+// repeat of orders that are confirmed while received=0 and no payment transaction exists.
+assert.match(paymentGuard, /KalenelPaymentReadiness/);
+assert.match(paymentGuard, /acceptedCardBrands/);
+assert.match(paymentGuard, /supportedDigitalWallets/);
+assert.match(paymentGuard, /cardsAvailable:\s*acceptedCardBrands\.length > 0/);
+assert.match(paymentGuard, /event\.stopImmediatePropagation\(\)/);
+assert.match(paymentGuard, /button\.dataset\.paymentBlocked\s*=\s*'cards-unavailable'/);
+assert.match(paymentGuard, /No order has been submitted/);
+assert.match(paymentGuard, /bypassNextCheckoutClick\s*=\s*true/);
+assert.match(paymentGuard, /button\.click\(\)/);
+assert.match(paymentGuard, /BRUIS_PAYMENT_READINESS_V824/);
+assert.doesNotMatch(paymentGuard, /cardNumber|cvv|cvc|expiry|expiration/i, 'Custom storefront must never collect raw card credentials');
 
 // v823 pins the exact user-supplied Jellyfish artwork as front #1 across every
 // storefront fallback layer so Shopify and the custom gallery cannot disagree.
@@ -84,17 +102,22 @@ for (const source of [catalogEdge, catalogV822]) {
 // is deliberately kept as a compatibility alias, not a database-backed cache.
 assert.doesNotMatch(catalogEdge, /shop_catalog_products|shop_catalog_sync_state|get_printify_api_token/);
 
-// Every main deployment permanently checks the actual public shop plus both catalog slugs.
+// Every main deployment permanently checks the actual public shop, catalog slugs,
+// and that Shopify still advertises a real card gateway before commerce is healthy.
 assert.match(liveHealthWorkflow, /Verify live Shopify shop catalog/);
 assert.match(liveHealthWorkflow, /node check-live-shop\.mjs/);
 assert.match(liveShopCheck, /https:\/\/kalenel\.nl\/shop\//);
 assert.match(liveShopCheck, /functions\/v1\/shop-catalog'/);
 assert.match(liveShopCheck, /functions\/v1\/shop-catalog-v822'/);
+assert.match(liveShopCheck, /n75mh8-bu\.myshopify\.com\/api\/2026-07\/graphql\.json/);
+assert.match(liveShopCheck, /acceptedCardBrands/);
+assert.match(liveShopCheck, /brands\.length > 0/);
 assert.match(liveShopCheck, /MIN_PRODUCTS/);
-assert.match(liveShopCheck, /version-watermark[^\n]*v823/);
+assert.match(liveShopCheck, /version-watermark[^\n]*v824/);
+assert.match(liveShopCheck, /payment-readiness-v824/);
 assert.match(liveShopCheck, /jellyfish-front-artwork\.png/);
 assert.match(liveShopCheck, /Jellyfish first image/);
-assert.match(liveShopCheck, /RESULT=V823_LIVE_SHOP_JELLYFISH_PASS/);
+assert.match(liveShopCheck, /RESULT=V824_LIVE_SHOP_CARD_PAYMENT_PASS/);
 
 // Shopify Storefront remains the final customer-facing price authority.
 assert.match(runtime, /shop-price-v818/);
@@ -173,4 +196,4 @@ assert.match(priceRuleState, /alter table public\.shop_price_rule_state enable r
 assert.match(priceRuleState, /revoke all on table public\.shop_price_rule_state from public, anon, authenticated/);
 assert.match(priceRuleState, /grant all on table public\.shop_price_rule_state to service_role/);
 
-console.log('Shop commerce v823 Jellyfish front artwork contract passed.');
+console.log('Shop commerce v824 card payment readiness contract passed.');
