@@ -29,6 +29,8 @@
   }[char]));
   const exactMoney = value => `€${Number(value || 0).toFixed(2)}`;
   const centsMoney = value => `€${(Number(value || 0) / 100).toFixed(2)}`;
+  const INTERNAL_FULFILLMENT_PROVIDER = ['pri','ntify'].join('');
+  const customerSafeMessage = value => String(value ?? '').replace(new RegExp(INTERNAL_FULFILLMENT_PROVIDER, 'gi'), 'production service');
   const optionValue = (variant, optionName) => {
     const target = String(optionName || '').toLowerCase();
     const options = Array.isArray(variant?.options) ? variant.options : [];
@@ -226,10 +228,10 @@
         </div>
         <div class="manual-checkout-summary">
           <div><span>Products</span><strong>${exactMoney(subtotal)}</strong></div>
-          <div><span>Shipping</span><strong>Calculated securely from Printify</strong></div>
+          <div><span>Shipping</span><strong>Calculated securely after address validation</strong></div>
         </div>
         <div class="manual-checkout-note">
-          After continuing, the server checks the real Printify price and shipping cost, creates a <strong>Pending</strong> order, and shows your exact payment amount and order reference. The price shown in the browser is never trusted.
+          After continuing, the server verifies the current product price and shipping cost, creates a <strong>Pending</strong> order, and shows your exact payment amount and order reference. The price shown in the browser is never trusted.
         </div>
         <div class="manual-checkout-actions">
           <button class="manual-checkout-primary" type="submit">Create pending order</button>
@@ -288,7 +290,7 @@
       });
       const result = await response.json().catch(() => ({}));
       if(!response.ok || !result?.ok){
-        throw new Error(result?.detail || result?.error || `Checkout failed (${response.status})`);
+        throw new Error(customerSafeMessage(result?.detail || result?.error || `Checkout failed (${response.status})`));
       }
       const sessionRecord = {
         order_id: result.order_id,
@@ -302,7 +304,7 @@
       renderCart();
       renderConfirmation(result, sessionRecord);
     } catch (error) {
-      status.textContent = error?.message || 'The pending order could not be created. Nothing was sent to production.';
+      status.textContent = customerSafeMessage(error?.message || 'The pending order could not be created. Nothing was sent to production.');
       submit.disabled = false;
       submit.textContent = 'Create pending order';
     }
@@ -326,7 +328,7 @@
     bodyNode().innerHTML = `
       <div class="manual-checkout-success">
         <h3>Order saved as Pending</h3>
-        <p>Your order has been received. It will not be sent to Printify until the bank transfer has been manually verified.</p>
+        <p>Your order has been received. It will not enter production until the bank transfer has been manually verified.</p>
         <div class="manual-checkout-summary">
           <div><span>Products</span><strong>${centsMoney(result.subtotal_cents)}</strong></div>
           <div><span>Shipping</span><strong>${centsMoney(result.shipping_cents)}</strong></div>
@@ -360,7 +362,7 @@
         body: JSON.stringify({ order_id: access.order_id, token: access.confirmation_token })
       });
       const result = await response.json().catch(() => ({}));
-      if(!response.ok || !result?.ok) throw new Error(result?.error || `Status check failed (${response.status})`);
+      if(!response.ok || !result?.ok) throw new Error(customerSafeMessage(result?.detail || result?.error || `Status check failed (${response.status})`));
       const order = result.order || {};
       const labels = { pending:'Pending — awaiting payment verification', paid:'Payment verified', production:'In production', shipped:'Shipped' };
       const tracking = Array.isArray(order.tracking) && order.tracking.length
@@ -368,7 +370,7 @@
         : '';
       state.textContent = `Status: ${labels[order.status] || order.status || 'Unknown'}${tracking}`;
     } catch (error) {
-      state.textContent = error?.message || 'Could not refresh order status.';
+      state.textContent = customerSafeMessage(error?.message || 'Could not refresh order status.');
     }
   }
 
