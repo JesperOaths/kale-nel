@@ -45,10 +45,9 @@ function isArchivedFile(rel){
 }
 
 function isAllowedVersionDrift(rel, found){
-  // Shop order management is versioned independently from the v817 game/admin app.
-  // Only its dedicated page and the commerce contract checker may name the current
-  // shop-admin release, so unrelated frontend files remain protected by drift checks.
+  // Shop operations are versioned independently from the v817 game/admin app.
   if (found === 'v826' && (rel === 'admin_shop_orders.html' || rel === 'check-shop-commerce-v817.mjs')) return true;
+  if (found === 'v827' && rel === 'admin_shop_connection.html') return true;
   if (found !== 'v762') return false;
   return rel === 'admin.html'
     || rel === 'cloudflare/workers/admin-gate/static/admin.html'
@@ -73,9 +72,7 @@ for (const file of walk(root)) {
 
 if (offenders.length) {
   console.error(`Version drift found. Root VERSION is ${rootVersion}.`);
-  for (const item of offenders) {
-    console.error(`- ${item.file}: ${item.text} -> ${item.found}`);
-  }
+  for (const item of offenders) console.error(`- ${item.file}: ${item.text} -> ${item.found}`);
   process.exit(1);
 }
 console.log(`No version drift found. Root VERSION is ${rootVersion}.`);
