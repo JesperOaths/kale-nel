@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate explicit deployment approval and credentials
+      - name: Validate explicit deployment approval and token
         shell: bash
         run: |
           set -euo pipefail
@@ -44,10 +44,63 @@ jobs:
             echo "Refusing deployment: confirmation must equal DEPLOY_ADMIN_WORKER." >&2
             exit 1
           fi
-          if [[ -z "${CLOUDFLARE_API_TOKEN:-}" || -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
-            echo "Refusing deployment: CLOUDFARE_API_TOKEN_ONE and CLOUDFLARE_ACCOUNT_ID must be configured as GitHub Actions secrets." >&2
+          if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+            echo "Refusing deployment: CLOUDFARE_API_TOKEN_ONE must be configured as a GitHub Actions secret." >&2
             exit 1
           fi
+
+      - name: Resolve Cloudflare account ID automatically
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
+            echo "Using configured Cloudflare account ID."
+            exit 0
+          fi
+
+          api='https://api.cloudflare.com/client/v4'
+          auth="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+
+          accounts_json="$(curl --silent --show-error --fail --max-time 20 -H "$auth" "$api/accounts?per_page=50")" || accounts_json=''
+          account_id="$(printf '%s' "$accounts_json" | node --input-type=module -e '
+            let raw="";
+            process.stdin.setEncoding("utf8");
+            process.stdin.on("data", c => raw += c);
+            process.stdin.on("end", () => {
+              try {
+                const j = JSON.parse(raw || "{}");
+                const rows = Array.isArray(j.result) ? j.result.filter(x => /^[a-f0-9]{32}$/i.test(String(x?.id || ""))) : [];
+                if (j.success === true && rows.length === 1) process.stdout.write(String(rows[0].id));
+              } catch {}
+            });
+          ')"
+
+          if [[ -z "$account_id" ]]; then
+            memberships_json="$(curl --silent --show-error --fail --max-time 20 -H "$auth" "$api/memberships?status=accepted&per_page=50")" || memberships_json=''
+            account_id="$(printf '%s' "$memberships_json" | node --input-type=module -e '
+              let raw="";
+              process.stdin.setEncoding("utf8");
+              process.stdin.on("data", c => raw += c);
+              process.stdin.on("end", () => {
+                try {
+                  const j = JSON.parse(raw || "{}");
+                  const ids = [...new Set((Array.isArray(j.result) ? j.result : [])
+                    .map(x => String(x?.account?.id || ""))
+                    .filter(x => /^[a-f0-9]{32}$/i.test(x)))];
+                  if (j.success === true && ids.length === 1) process.stdout.write(ids[0]);
+                } catch {}
+              });
+            ')"
+          fi
+
+          if [[ ! "$account_id" =~ ^[A-Fa-f0-9]{32}$ ]]; then
+            echo "Could not uniquely resolve the Cloudflare account ID from the scoped token." >&2
+            echo "The token must be scoped to one account and retain Account Settings Read or Memberships Read." >&2
+            exit 1
+          fi
+
+          echo "CLOUDFLARE_ACCOUNT_ID=$account_id" >> "$GITHUB_ENV"
+          echo "Resolved the Cloudflare account ID from the scoped API token."
 
       - name: Build protected static asset bundle
         run: node scripts/build-admin-worker-assets.mjs
