@@ -47,7 +47,11 @@ assert.ok(adminDeploy.includes(`uses: ${setupNodeV5}`), 'admin Worker deploy mus
 assert.match(adminDeploy, /ref:\s*\$\{\{\s*github\.sha\s*\}\}/, 'admin Worker deploy checkout must pin the dispatched main SHA');
 assert.match(adminDeploy, /CONFIRMATION_INPUT:\s*\$\{\{\s*inputs\.confirmation\s*\}\}/, 'admin Worker confirmation input must enter shell through env');
 assert.match(adminDeploy, /CLOUDFLARE_API_TOKEN:\s*\$\{\{\s*secrets\.CLOUDFARE_API_TOKEN_ONE\s*\}\}/, 'admin Worker deploy must source API token from the configured Actions secret');
-assert.match(adminDeploy, /CLOUDFLARE_ACCOUNT_ID:\s*\$\{\{\s*secrets\.CLOUDFLARE_ACCOUNT_ID\s*\}\}/, 'admin Worker deploy must source account ID from Actions secrets');
+assert.match(adminDeploy, /CLOUDFLARE_ACCOUNT_ID:\s*\$\{\{\s*secrets\.CLOUDFLARE_ACCOUNT_ID\s*\}\}/, 'admin Worker deploy may accept an optional account ID override from Actions secrets');
+assert.ok(adminDeploy.includes('Resolve Cloudflare account ID automatically'), 'admin Worker deploy must resolve account ID automatically when no override secret exists');
+assert.ok(adminDeploy.includes("$api/accounts?per_page=50"), 'admin Worker deploy must attempt scoped account discovery through the Cloudflare API');
+assert.ok(adminDeploy.includes("$api/memberships?status=accepted&per_page=50"), 'admin Worker deploy must retain membership fallback for account discovery');
+assert.match(adminDeploy, /echo "CLOUDFLARE_ACCOUNT_ID=\$account_id" >> "\$GITHUB_ENV"/, 'resolved Cloudflare account ID must be passed through GitHub environment state');
 assert.match(adminDeploy, /npx --yes wrangler@4\.118\.0 deploy --config cloudflare\/workers\/admin-gate\/wrangler\.toml\s*$/m, 'admin Worker deploy must use the pinned known-good Wrangler version');
 assert.ok(adminDeploy.includes('admin_shop_orders.html'), 'admin Worker deploy must verify the v826 Shop orders asset before deployment');
 assert.ok(adminDeploy.includes("[[ \"$admin_status\" == '401' ]]"), 'admin Worker deploy must verify the Shop orders page remains protected after deployment');
