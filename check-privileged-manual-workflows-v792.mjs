@@ -46,7 +46,7 @@ assert.ok(adminDeploy.includes(`uses: ${checkoutV5}`), 'admin Worker deploy chec
 assert.ok(adminDeploy.includes(`uses: ${setupNodeV5}`), 'admin Worker deploy must use the approved immutable setup-node v5 commit');
 assert.match(adminDeploy, /ref:\s*\$\{\{\s*github\.sha\s*\}\}/, 'admin Worker deploy checkout must pin the dispatched main SHA');
 assert.match(adminDeploy, /CONFIRMATION_INPUT:\s*\$\{\{\s*inputs\.confirmation\s*\}\}/, 'admin Worker confirmation input must enter shell through env');
-assert.match(adminDeploy, /CLOUDFLARE_API_TOKEN:\s*\$\{\{\s*secrets\.CLOUDFARE_API_TOKEN_ONE\s*\}\}/, 'admin Worker deploy must source API token from the configured Actions secret');
+assert.match(adminDeploy, /CLOUDFLARE_API_TOKEN:\s*\$\{\{\s*secrets\.CLOUDFARE_API_TOKEN_ONE\s*\|\|\s*secrets\.CLOUDFLARE_API_TOKEN_ONE\s*\|\|\s*secrets\.CLOUDFLARE_API_TOKEN\s*\}\}/, 'admin Worker deploy must support the configured Cloudflare token secret aliases');
 assert.match(adminDeploy, /CLOUDFLARE_ACCOUNT_ID:\s*\$\{\{\s*secrets\.CLOUDFLARE_ACCOUNT_ID\s*\}\}/, 'admin Worker deploy may accept an optional account ID override from Actions secrets');
 assert.ok(adminDeploy.includes('Resolve Cloudflare account ID automatically'), 'admin Worker deploy must resolve account ID automatically when no override secret exists');
 assert.ok(adminDeploy.includes("$api/accounts?per_page=50"), 'admin Worker deploy must attempt scoped account discovery through the Cloudflare API');
