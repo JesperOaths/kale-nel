@@ -14,6 +14,7 @@ const adminEdge = read('supabase/functions/shop-admin-orders-v825/index.ts');
 const webhookEdge = read('supabase/functions/shop-printify-webhook-v825/index.ts');
 const migration = read('supabase/migrations/20260910070731_shop_manual_payment_v825.sql');
 const idempotencyMigration = read('supabase/migrations/20260910070905_shop_checkout_idempotency_v825.sql');
+const paymentAmountMigration = read('supabase/migrations/20260910103800_shop_admin_payment_amount_v826.sql');
 const liveShopCheck = read('check-live-shop.mjs');
 const liveHealthWorkflow = read('.github/workflows/live-deployment-health.yml');
 const store = read('shop/store.js');
@@ -74,17 +75,27 @@ assert.match(statusEdge, /Referrer-Policy/);
 assert.doesNotMatch(statusEdge, /searchParams\.get\("token"\)/);
 
 // Admin payment verification and Printify release remain separate transitions.
+// v826 additionally records the amount actually received and enforces sufficiency
+// again on the server before any Printify production release can occur.
+assert.match(adminPage, /GEJAST_PAGE_VERSION='v826'/);
 assert.match(adminPage, /verify_payment/);
 assert.match(adminPage, /submit_printify/);
-assert.match(adminPage, /Verify transfer/);
+assert.match(adminPage, /Verify (?:transfer|payment)/);
+assert.match(adminPage, /Amount actually received/);
+assert.match(adminPage, /paid_amount_cents/);
 assert.match(adminPage, /Send to Printify/);
 assert.match(adminNav, /admin_shop_orders\.html/);
 assert.match(adminEdge, /payment_not_verified/);
 assert.match(adminEdge, /payment_verified_at/);
+assert.match(adminEdge, /paid_amount_cents/);
+assert.match(adminEdge, /payment_amount_insufficient/);
+assert.match(adminEdge, /paidAmount<required/);
 assert.match(adminEdge, /send_to_production\.json/);
 assert.match(adminEdge, /already_submitted/);
 assert.match(adminEdge, /printify_order_id/);
 assert.match(adminEdge, /_require_valid_admin_session/);
+assert.match(paymentAmountMigration, /ADD COLUMN IF NOT EXISTS paid_amount_cents integer/i);
+assert.match(paymentAmountMigration, /payment_verified_at IS NOT NULL/i);
 
 // Printify callbacks are never trusted as shipment truth: the webhook re-fetches
 // the canonical Printify order before updating tracking and claiming the one-time
@@ -146,4 +157,4 @@ assert.match(liveShopCheck, /shop-printify-webhook-v825/);
 assert.match(liveShopCheck, /RESULT=V825_LIVE_SHOP_MANUAL_PAYMENT_PASS/);
 assert.doesNotMatch(liveShopCheck, /acceptedCardBrands|verifyCardPayments|PAYMENT_QUERY/);
 
-console.log('Shop commerce v825 manual-payment contract passed.');
+console.log('Shop commerce v826 payment-aware admin approval contract passed.');
