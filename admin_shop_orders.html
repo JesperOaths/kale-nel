@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none">
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shop orders - Bruis admin</title>
+  <script>window.GEJAST_PAGE_VERSION='v825';</script>
+  <script src="./gejast-config.js?v825"></script>
+  <script src="./admin-session-sync.js?v825"></script>
+  <script src="./admin-topnav.js?v825" defer></script>
+  <style>
+    :root{--gold:#9a8241;--paper:#fffaf2;--line:rgba(0,0,0,.09);--muted:#6b6257;--ok:#285b38;--warn:#8a3a30;--blue:#264e6d}
+    *{box-sizing:border-box}
+    body{margin:0;padding:22px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(rgba(232,228,217,.93),rgba(232,228,217,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:#17130f;min-height:100vh}
+    .wrap{max-width:1240px;margin:0 auto;background:rgba(255,250,242,.97);border:1px solid rgba(255,255,255,.72);border-radius:28px;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.08)}
+    .top{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start}
+    h1{margin:0;font-size:34px;letter-spacing:-.04em}.sub{color:var(--muted);max-width:760px;line-height:1.5}
+    .actions{display:flex;gap:9px;flex-wrap:wrap}.btn,button{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:850;border:0;cursor:pointer;font:inherit}
+    .btn.alt,button.alt{background:#fff;color:#111;border:1px solid var(--line)}button:disabled{opacity:.48;cursor:not-allowed}
+    .status{margin:14px 0 0;min-height:20px;font-size:14px}.status.ok{color:var(--ok)}.status.warn{color:var(--warn)}
+    .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-top:18px}.metric{background:#fff;border:1px solid var(--line);border-radius:18px;padding:15px}.metric span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#83765e}.metric strong{display:block;margin-top:5px;font-size:28px}
+    .panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px;margin-top:16px}.panel h2{margin:0 0 6px;font-size:20px}.panel>p{margin:0;color:var(--muted);line-height:1.45}
+    .settings{display:grid;grid-template-columns:180px minmax(220px,1fr) 1fr auto;gap:12px;align-items:end;margin-top:14px}.field{display:grid;gap:6px}.field label{font-size:12px;font-weight:800;color:#5f5548}.field input,.field select,.field textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid #d8d3ca;background:#fff;font:inherit}.field textarea{min-height:42px;resize:vertical}
+    .switch{display:flex;gap:8px;align-items:center;padding-bottom:10px;font-weight:800}.switch input{width:auto}
+    .provider-help{margin-top:10px;padding:12px 14px;border-radius:14px;background:#f6f1e7;color:#51493e;font-size:13px;line-height:1.5}
+    .orders{display:grid;gap:13px;margin-top:14px}.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed #d7d0c4;border-radius:16px}
+    .order{border:1px solid var(--line);border-radius:18px;padding:16px;background:#fff}.order-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.order-ref{font:800 16px ui-monospace,SFMono-Regular,Menlo,monospace}.order-meta{color:var(--muted);font-size:13px;margin-top:4px}.pill{display:inline-flex;padding:6px 9px;border-radius:999px;font-size:12px;font-weight:850;background:#eee}.pill.pending{background:#fff0cc;color:#6e5000}.pill.paid{background:#dcefe2;color:#1e5b32}.pill.production{background:#dceaf4;color:#244d6a}.pill.shipped{background:#e7e2f4;color:#4a3971}
+    .order-grid{display:grid;grid-template-columns:1.05fr 1.15fr .8fr;gap:16px;margin-top:14px}.order-block h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#83765e;margin:0 0 7px}.order-block p{margin:3px 0;font-size:13px;line-height:1.45;word-break:break-word}.items{margin:0;padding-left:18px;font-size:13px;line-height:1.5}
+    .money{font-weight:850}.order-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:13px;border-top:1px solid #eee}.order-actions button.verify{background:#5b4710}.order-actions button.release{background:#285b38}.order-actions button.refresh{background:#264e6d}.danger-note{font-size:12px;color:var(--muted);margin-top:9px}
+    .error{color:var(--warn);font-size:12px;margin-top:8px;white-space:pre-wrap}
+    .watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;box-shadow:0 12px 24px rgba(0,0,0,.18)}
+    @media(max-width:920px){.metrics{grid-template-columns:1fr 1fr}.settings{grid-template-columns:1fr 1fr}.order-grid{grid-template-columns:1fr 1fr}.settings .wide-mobile{grid-column:1/-1}}
+    @media(max-width:620px){body{padding:10px}.wrap{padding:16px;border-radius:20px}.metrics,.settings,.order-grid{grid-template-columns:1fr}.settings .wide-mobile{grid-column:auto}.watermark{bottom:10px;font-size:12px}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <div>
+        <h1>Shop orders</h1>
+        <p class="sub">Manual-transfer workflow for Bruis. New checkouts are Pending. Verify the bank transfer yourself, then separately release the order to Printify. Shipment tracking triggers the buyer's “on the way” email.</p>
+      </div>
+      <div class="actions">
+        <a class="btn alt" href="./admin.html">Admin hub</a>
+        <a class="btn alt" href="./shop/" target="_blank" rel="noopener">Open shop</a>
+        <button id="refreshBtn" type="button">Refresh</button>
+      </div>
+    </div>
+    <div id="statusBox" class="status" role="status" aria-live="polite"></div>
+
+    <div class="metrics">
+      <div class="metric"><span>Pending</span><strong id="countPending">0</strong></div>
+      <div class="metric"><span>Payment verified</span><strong id="countPaid">0</strong></div>
+      <div class="metric"><span>Production</span><strong id="countProduction">0</strong></div>
+      <div class="metric"><span>Shipped</span><strong id="countShipped">0</strong></div>
+    </div>
+
+    <section class="panel">
+      <h2>Payment link</h2>
+      <p>Choose how buyers should pay after a Pending order is created. A bunq.me link is reusable; the exact amount and unique order reference are shown beside it. Tikkie Business can generate a separate link per order when its API credentials are configured server-side.</p>
+      <form id="settingsForm" class="settings">
+        <div class="field">
+          <label for="provider">Provider</label>
+          <select id="provider">
+            <option value="bunq_me">bunq.me</option>
+            <option value="tikkie">Tikkie</option>
+            <option value="manual_transfer">Manual transfer</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="paymentUrl">Personal/static payment link</label>
+          <input id="paymentUrl" type="url" inputmode="url" placeholder="https://bunq.me/your-link" autocomplete="off">
+        </div>
+        <div class="field wide-mobile">
+          <label for="instructions">Internal/payment instructions</label>
+          <textarea id="instructions" maxlength="1000" placeholder="Optional instructions"></textarea>
+        </div>
+        <label class="switch"><input id="paymentsEnabled" type="checkbox" checked> Enabled</label>
+        <div class="actions wide-mobile"><button type="submit">Save payment settings</button></div>
+      </form>
+      <div id="providerHelp" class="provider-help"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Orders</h2>
+      <p>“Verify transfer” only changes the database state to paid. “Send to Printify” is deliberately separate because that action can start production and incur fulfillment cost.</p>
+      <div id="ordersBox" class="orders"><div class="empty">Loading orders…</div></div>
+    </section>
+  </main>
+  <div class="watermark">v825 - Made by Bruis</div>
+
+<script>
+(() => {
+  'use strict';
+  const ENDPOINT = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-admin-orders-v825';
+  const cfg = window.GEJAST_CONFIG || {};
+  const API_KEY = cfg.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
+  const $ = id => document.getElementById(id);
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const euros = cents => `€${(Number(cents || 0) / 100).toFixed(2)}`;
+  const dateTime = value => {
+    if(!value) return '—';
+    try { return new Intl.DateTimeFormat('en-NL',{dateStyle:'medium',timeStyle:'short'}).format(new Date(value)); }
+    catch { return String(value); }
+  };
+  const token = () => window.GEJAST_ADMIN_SESSION?.getToken?.() || '';
+  let current = { orders: [], settings: null };
+
+  function setStatus(message='', tone=''){
+    $('statusBox').textContent = message;
+    $('statusBox').className = `status ${tone}`.trim();
+  }
+
+  async function callAdmin(action, extra={}){
+    const adminToken = token();
+    if(!adminToken) throw new Error('No valid admin session found.');
+    const response = await fetch(ENDPOINT, {
+      method:'POST',
+      mode:'cors',
+      cache:'no-store',
+      headers:{
+        apikey:API_KEY,
+        Authorization:`Bearer ${API_KEY}`,
+        'Content-Type':'application/json',
+        Accept:'application/json'
+      },
+      body:JSON.stringify({ action, admin_session_token:adminToken, ...extra })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if(response.status === 401){
+      window.GEJAST_ADMIN_SESSION?.clearBundle?.();
+      window.GEJAST_ADMIN_SESSION?.redirectToAdminLogin?.('session_invalid','admin_shop_orders.html');
+      throw new Error('Admin session expired.');
+    }
+    if(!response.ok || !payload?.ok) throw new Error(payload?.detail || payload?.error || `HTTP ${response.status}`);
+    return payload;
+  }
+
+  function providerHelp(){
+    const provider = $('provider').value;
+    const url = $('paymentUrl');
+    if(provider === 'bunq_me'){
+      url.disabled = false;
+      url.placeholder = 'https://bunq.me/your-link';
+      $('providerHelp').innerHTML = '<strong>bunq.me:</strong> paste your personal bunq.me URL. Every buyer sees the server-calculated total plus a unique BRUIS order reference and must enter both when paying. You still verify the transfer manually.';
+    } else if(provider === 'tikkie'){
+      url.disabled = false;
+      url.placeholder = 'https://tikkie.me/pay/... (optional fallback)';
+      $('providerHelp').innerHTML = '<strong>Tikkie:</strong> with Tikkie Business API credentials configured in Supabase, checkout generates a unique Tikkie payment request for each order. This field can remain empty in that setup; otherwise it can hold a valid static Tikkie fallback link.';
+    } else {
+      url.disabled = true;
+      url.value = '';
+      url.placeholder = 'Not used';
+      $('providerHelp').innerHTML = '<strong>Manual transfer:</strong> no external payment button is shown. The buyer keeps the order reference and the order remains Pending until you verify payment.';
+    }
+  }
+
+  function renderSettings(settings){
+    const data = settings || {};
+    $('provider').value = data.provider || 'bunq_me';
+    $('paymentUrl').value = data.payment_url || '';
+    $('instructions').value = data.payment_instructions || '';
+    $('paymentsEnabled').checked = data.enabled !== false;
+    providerHelp();
+  }
+
+  function setCounts(orders){
+    $('countPending').textContent = orders.filter(o => o.status === 'pending').length;
+    $('countPaid').textContent = orders.filter(o => o.status === 'paid').length;
+    $('countProduction').textContent = orders.filter(o => o.status === 'production').length;
+    $('countShipped').textContent = orders.filter(o => o.status === 'shipped').length;
+  }
+
+  function addressHtml(address){
+    const a = address || {};
+    return [a.first_name && a.last_name ? `${a.first_name} ${a.last_name}` : '', a.address1, a.address2, [a.zip,a.city].filter(Boolean).join(' '), a.region, a.country]
+      .filter(Boolean).map(esc).join('<br>');
+  }
+
+  function itemsHtml(items){
+    if(!Array.isArray(items) || !items.length) return '<p>—</p>';
+    return `<ul class="items">${items.map(item =>
+      `<li>${Number(item.qty || 0)} × ${esc(item.name)}${item.size ? ` — ${esc(item.size)}` : ''} <span class="money">${euros(Number(item.unit_price_cents || 0) * Number(item.qty || 0))}</span></li>`
+    ).join('')}</ul>`;
+  }
+
+  function trackingHtml(tracking){
+    if(!Array.isArray(tracking) || !tracking.length) return 'No tracking yet';
+    return tracking.map(item => {
+      const number = esc(item.number || 'tracking');
+      const carrier = item.carrier ? ` (${esc(item.carrier)})` : '';
+      if(item.url){
+        let href = '';
+        try { const u = new URL(item.url); if(u.protocol === 'https:' || u.protocol === 'http:') href = u.toString(); } catch {}
+        if(href) return `<a href="${esc(href)}" target="_blank" rel="noopener">${number}</a>${carrier}`;
+      }
+      return `${number}${carrier}`;
+    }).join('<br>');
+  }
+
+  function orderHtml(order){
+    const status = String(order.status || 'pending');
+    const canVerify = status === 'pending' && !order.payment_verified_at;
+    const canRelease = !!order.payment_verified_at && !order.printify_order_id && ['paid','pending'].includes(status);
+    const canRefresh = !!order.printify_order_id && status !== 'shipped';
+    const link = order.payment_request_url ? `<p>Payment link: <a href="${esc(order.payment_request_url)}" target="_blank" rel="noopener">${esc(order.payment_provider || 'payment')}</a></p>` : '';
+    return `<article class="order" data-order-id="${esc(order.id)}">
+      <div class="order-head">
+        <div>
+          <div class="order-ref">${esc(order.payment_reference || order.id)}</div>
+          <div class="order-meta">${dateTime(order.created_at)} · ${esc(order.customer_name || '')} · ${esc(order.customer_email || '')}</div>
+        </div>
+        <span class="pill ${esc(status)}">${esc(status)}</span>
+      </div>
+      <div class="order-grid">
+        <div class="order-block">
+          <h3>Buyer & delivery</h3>
+          <p>${esc(order.customer_name || '')}<br>${esc(order.customer_email || '')}${order.customer_phone ? `<br>${esc(order.customer_phone)}` : ''}</p>
+          <p>${addressHtml(order.shipping_address)}</p>
+        </div>
+        <div class="order-block">
+          <h3>Items</h3>
+          ${itemsHtml(order.line_items)}
+          <p>Shipping: <span class="money">${euros(order.shipping_cents)}</span> (${esc(order.shipping_method || '')})</p>
+          <p>Total: <span class="money">${euros(order.total_cents)}</span></p>
+        </div>
+        <div class="order-block">
+          <h3>Payment & fulfillment</h3>
+          <p>Provider: ${esc(order.payment_provider || 'manual')}</p>
+          <p>Verified: ${order.payment_verified_at ? dateTime(order.payment_verified_at) : 'No'}</p>
+          ${link}
+          <p>Printify: ${esc(order.printify_status || 'not submitted')}</p>
+          <p>Tracking: ${trackingHtml(order.tracking)}</p>
+          <p>Shipment email: ${order.shipment_notified_at ? `sent ${dateTime(order.shipment_notified_at)}` : 'not sent yet'}</p>
+        </div>
+      </div>
+      ${order.last_error ? `<div class="error">${esc(order.last_error)}</div>` : ''}
+      <div class="order-actions">
+        <button class="verify" type="button" data-action="verify_payment" ${canVerify ? '' : 'disabled'}>Verify transfer</button>
+        <button class="release" type="button" data-action="submit_printify" ${canRelease ? '' : 'disabled'}>Send to Printify</button>
+        <button class="refresh" type="button" data-action="refresh" ${canRefresh ? '' : 'disabled'}>Refresh shipment</button>
+      </div>
+      <div class="danger-note">Verification never starts production. Releasing to Printify is a separate action.</div>
+    </article>`;
+  }
+
+  function renderOrders(orders){
+    const box = $('ordersBox');
+    setCounts(orders);
+    box.innerHTML = orders.length ? orders.map(orderHtml).join('') : '<div class="empty">No shop orders yet.</div>';
+  }
+
+  async function load(){
+    setStatus('Loading orders…');
+    const session = await window.GEJAST_ADMIN_SESSION?.validate?.();
+    if(!session) throw new Error('Admin session validation failed.');
+    const result = await callAdmin('list');
+    current = { orders:result.orders || [], settings:result.settings || null };
+    renderSettings(current.settings);
+    renderOrders(current.orders);
+    setStatus(`Loaded ${current.orders.length} order${current.orders.length === 1 ? '' : 's'}.`,'ok');
+  }
+
+  $('provider').addEventListener('change', providerHelp);
+  $('settingsForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    const button = event.submitter;
+    if(button) button.disabled = true;
+    try{
+      setStatus('Saving payment settings…');
+      const result = await callAdmin('save_settings',{
+        provider:$('provider').value,
+        payment_url:$('paymentUrl').disabled ? '' : $('paymentUrl').value.trim(),
+        payment_instructions:$('instructions').value.trim(),
+        enabled:$('paymentsEnabled').checked
+      });
+      current.settings = result.settings;
+      renderSettings(result.settings);
+      setStatus('Payment settings saved.','ok');
+    }catch(error){
+      setStatus(error?.message || 'Could not save payment settings.','warn');
+    }finally{
+      if(button) button.disabled = false;
+    }
+  });
+
+  $('ordersBox').addEventListener('click', async event => {
+    const button = event.target.closest('button[data-action]');
+    if(!button || button.disabled) return;
+    const order = button.closest('[data-order-id]');
+    const orderId = order?.dataset.orderId;
+    const action = button.dataset.action;
+    if(!orderId) return;
+    const row = current.orders.find(item => item.id === orderId);
+    if(!row) return;
+
+    if(action === 'verify_payment'){
+      const ok = window.confirm(`Verify only if the bank transfer for ${row.payment_reference} (${euros(row.total_cents)}) is actually visible in your bank account. Continue?`);
+      if(!ok) return;
+    }
+    if(action === 'submit_printify'){
+      const ok = window.confirm(`Send ${row.payment_reference} to Printify production? This can incur fulfillment cost. Payment must already have been verified.`);
+      if(!ok) return;
+    }
+
+    button.disabled = true;
+    try{
+      setStatus(action === 'refresh' ? 'Refreshing Printify status…' : action === 'verify_payment' ? 'Verifying transfer…' : 'Submitting to Printify…');
+      await callAdmin(action,{order_id:orderId});
+      await load();
+    }catch(error){
+      setStatus(error?.message || 'Order action failed.','warn');
+      button.disabled = false;
+    }
+  });
+
+  $('refreshBtn').addEventListener('click', () => load().catch(error => setStatus(error?.message || 'Refresh failed.','warn')));
+  window.addEventListener('gejast:admin-session-updated', () => {
+    if(token()) load().catch(() => {});
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    load().catch(error => {
+      setStatus(error?.message || 'Could not load shop orders.','warn');
+    });
+  }, {once:true});
+})();
+</script>
+</body>
+</html>

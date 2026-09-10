@@ -10,10 +10,6 @@ on:
       confirmation:
         description: "Type APPLY_LIVE_REPAIR_SQL"
         required: true
-  push:
-    branches: [main]
-    paths:
-      - "GEJAST_v799z_supabase_connection_rescue.sql"
 
 permissions:
   contents: read
@@ -27,8 +23,8 @@ jobs:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       PROJECT_REF: uiqntazgnrxwliaidkmy
-      SQL_FILE_INPUT: ${{ github.event_name == 'push' && 'GEJAST_v799z_supabase_connection_rescue.sql' || inputs.sql_file }}
-      CONFIRMATION_INPUT: ${{ github.event_name == 'push' && 'APPLY_LIVE_REPAIR_SQL' || inputs.confirmation }}
+      SQL_FILE_INPUT: ${{ inputs.sql_file }}
+      CONFIRMATION_INPUT: ${{ inputs.confirmation }}
     steps:
       - name: Check confirmation
         shell: bash
