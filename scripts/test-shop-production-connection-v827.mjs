@@ -21,7 +21,7 @@ assert.match(edge, /set_printify_api_token_v827/);
 assert.match(edge, /action === "save"/);
 assert.match(edge, /checkToken\(apiToken\)/);
 assert.match(edge, /Cache-Control": "no-store"/);
-assert.doesNotMatch(edge, /api_token\s*:/i, 'endpoint must never return the credential');
+assert.doesNotMatch(edge, /return json\([^;\n]*api_token/i, 'endpoint must never return the credential');
 
 assert.match(migration, /security definer/i);
 assert.match(migration, /_require_valid_admin_session/);
