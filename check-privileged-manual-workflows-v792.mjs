@@ -5,6 +5,7 @@ import fs from 'node:fs';
 const repoGuard = "github.repository == 'JesperOaths/kale-nel'";
 const mainGuard = "github.ref == 'refs/heads/main'";
 const checkoutV5 = 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09';
+const setupNodeV5 = 'actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444';
 
 function read(path) {
   return fs.readFileSync(path, 'utf8');
@@ -37,6 +38,20 @@ assert.match(game, /ref:\s*\$\{\{\s*github\.sha\s*\}\}/, 'controlled game checko
 const betaPath = '.github/workflows/setup-beta-users.yml';
 const beta = read(betaPath);
 guard(betaPath, beta);
+
+const adminDeployPath = '.github/workflows/deploy-admin-worker.yml';
+const adminDeploy = read(adminDeployPath);
+guard(adminDeployPath, adminDeploy);
+assert.ok(adminDeploy.includes(`uses: ${checkoutV5}`), 'admin Worker deploy checkout must use the approved immutable checkout v5 commit');
+assert.ok(adminDeploy.includes(`uses: ${setupNodeV5}`), 'admin Worker deploy must use the approved immutable setup-node v5 commit');
+assert.match(adminDeploy, /ref:\s*\$\{\{\s*github\.sha\s*\}\}/, 'admin Worker deploy checkout must pin the dispatched main SHA');
+assert.match(adminDeploy, /CONFIRMATION_INPUT:\s*\$\{\{\s*inputs\.confirmation\s*\}\}/, 'admin Worker confirmation input must enter shell through env');
+assert.match(adminDeploy, /CLOUDFLARE_API_TOKEN:\s*\$\{\{\s*secrets\.CLOUDFLARE_API_TOKEN\s*\}\}/, 'admin Worker deploy must source API token from Actions secrets');
+assert.match(adminDeploy, /CLOUDFLARE_ACCOUNT_ID:\s*\$\{\{\s*secrets\.CLOUDFLARE_ACCOUNT_ID\s*\}\}/, 'admin Worker deploy must source account ID from Actions secrets');
+assert.match(adminDeploy, /npx --yes wrangler@4\.118\.0 deploy --config cloudflare\/workers\/admin-gate\/wrangler\.toml\s*$/m, 'admin Worker deploy must use the pinned known-good Wrangler version');
+assert.ok(adminDeploy.includes('admin_shop_orders.html'), 'admin Worker deploy must verify the v826 Shop orders asset before deployment');
+assert.ok(adminDeploy.includes("[[ \"$admin_status\" == '401' ]]"), 'admin Worker deploy must verify the Shop orders page remains protected after deployment');
+assert.doesNotMatch(adminDeploy, /\bCLOUDFLARE_API_TOKEN\s*=\s*['\"][^$]/, 'Cloudflare API token must never be embedded in workflow source');
 
 console.log('Privileged manual workflow guard PASS.');
 console.log('RESULT=PRIVILEGED_MANUAL_WORKFLOWS_V792_PASS');
