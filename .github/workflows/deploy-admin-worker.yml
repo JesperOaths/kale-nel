@@ -7,6 +7,18 @@ on:
         description: 'Type DEPLOY_ADMIN_WORKER to publish the protected admin Worker and assets'
         required: true
         type: string
+  push:
+    branches:
+      - main
+    paths:
+      - 'admin*.html'
+      - 'admin-session-sync.js'
+      - 'admin-topnav.js'
+      - 'gejast-config.js'
+      - 'scripts/build-admin-worker-assets.mjs'
+      - 'scripts/test-admin-worker-gate.mjs'
+      - 'cloudflare/workers/admin-gate/**'
+      - '.github/workflows/deploy-admin-worker.yml'
 
 permissions:
   contents: read
@@ -36,13 +48,16 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate explicit deployment approval and token
+      - name: Validate deployment authorization and token
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "$CONFIRMATION_INPUT" != "DEPLOY_ADMIN_WORKER" ]]; then
-            echo "Refusing deployment: confirmation must equal DEPLOY_ADMIN_WORKER." >&2
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$CONFIRMATION_INPUT" != "DEPLOY_ADMIN_WORKER" ]]; then
+            echo "Refusing manual deployment: confirmation must equal DEPLOY_ADMIN_WORKER." >&2
             exit 1
+          fi
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            echo "Protected admin asset/source change on main: automatic Worker deployment authorized."
           fi
           if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
             echo "Refusing deployment: no supported Cloudflare API token secret is configured." >&2
@@ -105,23 +120,29 @@ jobs:
       - name: Build protected static asset bundle
         run: node scripts/build-admin-worker-assets.mjs
 
-      - name: Verify v826 Shop orders asset is in deployment bundle
+      - name: Verify current Shop admin assets are in deployment bundle
         shell: bash
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           const base = 'cloudflare/workers/admin-gate/static';
-          const page = `${base}/admin_shop_orders.html`;
           const manifestPath = `${base}/admin-worker-manifest.json`;
-          if (!fs.existsSync(page)) throw new Error('admin_shop_orders.html missing from Worker asset bundle');
-          const html = fs.readFileSync(page, 'utf8');
-          if (!html.includes('v826')) throw new Error('Shop orders asset is not v826');
+          const expected = new Map([
+            ['admin_shop_orders.html', 'v826'],
+            ['admin_shop_connection.html', 'v828'],
+          ]);
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-          if (!manifest.protected_entrypoints.includes('admin_shop_orders.html')) {
-            throw new Error('admin_shop_orders.html missing from protected entrypoint manifest');
+          for (const [name, version] of expected) {
+            const page = `${base}/${name}`;
+            if (!fs.existsSync(page)) throw new Error(`${name} missing from Worker asset bundle`);
+            const html = fs.readFileSync(page, 'utf8');
+            if (!html.includes(version)) throw new Error(`${name} asset is not ${version}`);
+            if (!manifest.protected_entrypoints.includes(name)) {
+              throw new Error(`${name} missing from protected entrypoint manifest`);
+            }
+            console.log(`Verified ${page} at ${version} and protected manifest entry.`);
           }
-          console.log(`Verified ${page} and protected manifest entry.`);
           NODE
 
       - name: Run admin Worker security tests
@@ -149,6 +170,12 @@ jobs:
           grep -qi '^cache-control: no-store' "$admin_headers" || { echo 'Missing no-store on protected admin response' >&2; exit 1; }
           grep -qi 'Admin login vereist' "$admin_body" || { echo 'Protected admin login body missing' >&2; exit 1; }
 
+          connection_headers="$(mktemp)"
+          connection_body="$(mktemp)"
+          connection_status="$(curl --silent --show-error --max-time 20 --dump-header "$connection_headers" --output "$connection_body" --write-out '%{http_code}' 'https://admin.kalenel.nl/admin_shop_connection.html')"
+          [[ "$connection_status" == '401' ]] || { echo "Expected protected connection page to return 401 anonymously, got $connection_status" >&2; cat "$connection_headers" >&2; exit 1; }
+          grep -qi '^cache-control: no-store' "$connection_headers" || { echo 'Missing no-store on protected connection response' >&2; exit 1; }
+
           apex_headers="$(mktemp)"
           apex_status="$(curl --silent --show-error --max-time 20 --dump-header "$apex_headers" --output /dev/null --write-out '%{http_code}' "$apex_url")"
           [[ "$apex_status" == '302' ]] || { echo "Expected apex admin route to redirect, got $apex_status" >&2; cat "$apex_headers" >&2; exit 1; }
@@ -159,4 +186,4 @@ jobs:
           [[ "$login_status" == '302' ]] || { echo "Expected OAuth login start to return 302, got $login_status" >&2; cat "$login_headers" >&2; exit 1; }
           grep -qi '^location: https://github\.com/login/oauth/authorize' "$login_headers" || { echo 'GitHub OAuth entrypoint missing after deployment' >&2; cat "$login_headers" >&2; exit 1; }
 
-          echo 'Protected v826 admin route, apex redirect, and OAuth entrypoint verified.'
+          echo 'Protected v826/v828 admin routes, apex redirect, and OAuth entrypoint verified.'
