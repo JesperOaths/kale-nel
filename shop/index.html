@@ -9,7 +9,7 @@
   <meta property="og:description" content="Nature-inspired tees and Merch." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://kalenel.nl/shop/" />
-  <link rel="stylesheet" href="styles.css?v=20260910-shop-neutral-v827" />
+  <link rel="stylesheet" href="styles.css?v=20260910-shop-direct-v827" />
 </head>
 <body>
   <header class="site-header">
@@ -28,58 +28,29 @@
       <div class="collection-grid collection-grid-large" role="list" aria-label="Shop collections">
         <button class="collection-card" type="button" data-collection="normal" aria-pressed="false">
           <span class="collection-image"><img src="assets/collection-normal.webp" alt="Classic T-shirt outline" /></span>
-          <span class="collection-copy">
-            <strong>Classic</strong>
-            <small>Regular everyday T-shirt shape</small>
-            <span class="collection-count" data-collection-count="normal">Loading…</span>
-          </span>
+          <span class="collection-copy"><strong>Classic</strong><small>Regular everyday T-shirt shape</small><span class="collection-count" data-collection-count="normal">Loading…</span></span>
         </button>
-
         <button class="collection-card" type="button" data-collection="boxy" aria-pressed="false">
           <span class="collection-image"><img src="assets/collection-boxy.webp" alt="Oversized Boxy T-shirt outline" /></span>
-          <span class="collection-copy">
-            <strong>Oversized Boxy</strong>
-            <small>Wider, shorter and more oversized silhouette</small>
-            <span class="collection-count" data-collection-count="boxy">Loading…</span>
-          </span>
+          <span class="collection-copy"><strong>Oversized Boxy</strong><small>Wider, shorter and more oversized silhouette</small><span class="collection-count" data-collection-count="boxy">Loading…</span></span>
         </button>
-
         <button class="collection-card" type="button" data-collection="merch" aria-pressed="false">
           <span class="collection-image"><img class="collection-merch-image" src="assets/collection-merch-despinoza.png" alt="Despinoza Merch T-shirt" /></span>
-          <span class="collection-copy">
-            <strong>Merch</strong>
-            <small>Despinoza and philosophy-inspired pieces</small>
-            <span class="collection-count" data-collection-count="merch">Loading…</span>
-          </span>
+          <span class="collection-copy"><strong>Merch</strong><small>Despinoza and philosophy-inspired pieces</small><span class="collection-count" data-collection-count="merch">Loading…</span></span>
         </button>
       </div>
     </section>
 
     <section class="shop-section" id="shop" data-shop-section hidden aria-labelledby="shop-title">
       <div class="compact-shape-bar" aria-label="Change shop collection">
-        <div class="compact-shape-copy">
-          <p class="section-kicker">Collection</p>
-          <h2 id="shop-title" data-collection-title>Classic shirts</h2>
-        </div>
-
+        <div class="compact-shape-copy"><p class="section-kicker">Collection</p><h2 id="shop-title" data-collection-title>Classic shirts</h2></div>
         <div class="compact-shape-grid" role="list" aria-label="Switch shop collection">
-          <button class="compact-shape-card" type="button" data-collection="normal" aria-pressed="false" aria-label="Show Classic shirts">
-            <img src="assets/collection-normal.webp" alt="" />
-            <span>Classic</span>
-          </button>
-          <button class="compact-shape-card" type="button" data-collection="boxy" aria-pressed="false" aria-label="Show Oversized Boxy shirts">
-            <img src="assets/collection-boxy.webp" alt="" />
-            <span>Oversized Boxy</span>
-          </button>
-          <button class="compact-shape-card" type="button" data-collection="merch" aria-pressed="false" aria-label="Show Merch products">
-            <img class="collection-merch-image" src="assets/collection-merch-despinoza.png" alt="" />
-            <span>Merch</span>
-          </button>
+          <button class="compact-shape-card" type="button" data-collection="normal" aria-pressed="false" aria-label="Show Classic shirts"><img src="assets/collection-normal.webp" alt="" /><span>Classic</span></button>
+          <button class="compact-shape-card" type="button" data-collection="boxy" aria-pressed="false" aria-label="Show Oversized Boxy shirts"><img src="assets/collection-boxy.webp" alt="" /><span>Oversized Boxy</span></button>
+          <button class="compact-shape-card" type="button" data-collection="merch" aria-pressed="false" aria-label="Show Merch products"><img class="collection-merch-image" src="assets/collection-merch-despinoza.png" alt="" /><span>Merch</span></button>
         </div>
-
         <button class="view-shapes-large" type="button" data-expand-shapes>View collections larger</button>
       </div>
-
       <p class="collection-empty" data-collection-empty hidden></p>
       <div class="product-grid" data-products aria-live="polite"></div>
     </section>
@@ -87,10 +58,7 @@
 
   <aside class="cart-drawer" data-cart-drawer aria-hidden="true" aria-label="Shopping cart">
     <div class="cart-panel" role="dialog" aria-modal="true" aria-labelledby="cart-title">
-      <div class="cart-head">
-        <h2 id="cart-title">Cart</h2>
-        <button class="icon-button" type="button" data-close-cart aria-label="Close cart">x</button>
-      </div>
+      <div class="cart-head"><h2 id="cart-title">Cart</h2><button class="icon-button" type="button" data-close-cart aria-label="Close cart">x</button></div>
       <div class="cart-items" data-cart-items></div>
       <div class="cart-summary">
         <div><span>Product subtotal</span><strong data-cart-subtotal>€0.00</strong></div>
@@ -102,16 +70,13 @@
 
   <footer class="footer">Bruis - Nature-inspired clothing. <span class="version-watermark">v827</span></footer>
 
-  <script src="catalog-data.js?v=20260910-shop-neutral-v827" defer></script>
-  <script src="product-preview-overrides.js?v=20260910-shop-neutral-v827" defer></script>
-  <script src="shop-runtime-v819.js?v=20260910-shop-neutral-v827" defer></script>
-  <script src="catalog-recovery-v822.js?v=20260910-shop-neutral-v827" defer></script>
-  <script src="mockup-background-v819.js?v=20260910-shop-neutral-v827" defer></script>
-  <script src="store.js?v=20260910-shop-neutral-v827" defer></script>
-  <script src="manual-checkout-v825.js?v=20260910-shop-neutral-v827" defer></script>
-  <script src="image-lightbox-v820.js?v=20260910-shop-neutral-v827" defer></script>
-  <script src="front-lightbox-fit-v821.js?v=20260910-shop-neutral-v827" defer></script>
-  <script src="front-detail-overrides-v817.js?v=20260910-shop-neutral-v827" defer></script>
-  <script src="live-catalog-refresh-v818.js?v=20260910-shop-neutral-v827" defer></script>
+  <script src="catalog-data.js?v=20260910-shop-direct-v827" defer></script>
+  <script src="direct-catalog-v827.js?v=20260910-shop-direct-v827" defer></script>
+  <script src="mockup-background-v827.js?v=20260910-shop-direct-v827" defer></script>
+  <script src="store.js?v=20260910-shop-direct-v827" defer></script>
+  <script src="manual-checkout-v827.js?v=20260910-shop-direct-v827" defer></script>
+  <script src="image-lightbox-v820.js?v=20260910-shop-direct-v827" defer></script>
+  <script src="shop-ui-v827.js?v=20260910-shop-direct-v827" defer></script>
+  <script src="live-catalog-refresh-v818.js?v=20260910-shop-direct-v827" defer></script>
 </body>
 </html>
