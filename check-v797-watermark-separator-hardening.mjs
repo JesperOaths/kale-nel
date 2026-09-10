@@ -11,7 +11,7 @@ const ignoredDirs=new Set(['.git','node_modules','dist','build','.next','.vercel
 const ignoredFiles=new Set(['check-version-drift.mjs','fix-version-drift.mjs','check-v797-watermark-separator-hardening.mjs']);
 function walk(dir,out=[]){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){if(entry.isDirectory()){if(!ignoredDirs.has(entry.name))walk(path.join(dir,entry.name),out);}else out.push(path.join(dir,entry.name));}return out;}
 function archived(rel){const base=path.basename(rel);return (/^gejast-v\d+-repair\.js$/i.test(base)&&!base.toLowerCase().includes(version.toLowerCase()))||/^README_v\d+/i.test(base)||/^PATCH_NOTES_v\d+/i.test(base)||/^GEJAST_v\d+/i.test(base);}
-function allowedIndependentWatermark(rel,found){return rel==='admin_shop_orders.html'&&found==='825';}
+function allowedIndependentWatermark(rel,found){return rel==='admin_shop_orders.html'&&found==='826';}
 const stale=[]; const damaged=[];
 for(const file of walk(process.cwd())){const rel=path.relative(process.cwd(),file).replaceAll('\\','/');if(archived(rel)||ignoredFiles.has(path.basename(file))||!activeExt.has(path.extname(file).toLowerCase()))continue;const text=fs.readFileSync(file,'utf8');for(const m of text.matchAll(/v(\d+)\s*([^\w\r\n<>]{0,12})\s*Made by Bruis/gi)){if(`v${m[1]}`!==version && !allowedIndependentWatermark(rel,m[1]) && !(m[1]==='762' && ['admin.html','cloudflare/workers/admin-gate/static/admin.html','scripts/test-admin-static-assets-html-handling.mjs','scripts/test-admin-worker-gate.mjs'].includes(rel)))stale.push(`${rel}: ${m[0]}`);if(/[?�]/.test(m[2]))damaged.push(`${rel}: ${m[0]}`);}}
 assert.deepEqual(stale,[],`stale active visible watermarks remain:\n${stale.join('\n')}`);
