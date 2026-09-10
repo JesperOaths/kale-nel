@@ -8,13 +8,13 @@
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shop production connection - Bruis admin</title>
-  <script>window.GEJAST_PAGE_VERSION='v827';</script>
-  <script src="./gejast-config.js?v827"></script>
-  <script src="./admin-session-sync.js?v827"></script>
-  <script src="./admin-topnav.js?v827" defer></script>
+  <script>window.GEJAST_PAGE_VERSION='v828';</script>
+  <script src="./gejast-config.js?v828"></script>
+  <script src="./admin-session-sync.js?v828"></script>
+  <script src="./admin-topnav.js?v828" defer></script>
   <style>
     :root{--paper:#fffaf2;--line:rgba(0,0,0,.10);--muted:#6b6257;--ok:#285b38;--warn:#8a3a30}
-    *{box-sizing:border-box}body{margin:0;padding:22px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(rgba(232,228,217,.93),rgba(232,228,217,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:#17130f;min-height:100vh}.wrap{max-width:760px;margin:34px auto;background:rgba(255,250,242,.98);border:1px solid rgba(255,255,255,.72);border-radius:28px;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.08)}h1{margin:0;font-size:34px;letter-spacing:-.04em}.sub{color:var(--muted);line-height:1.55}.card{margin-top:18px;padding:18px;border:1px solid var(--line);border-radius:20px;background:#fff}.state{display:flex;align-items:center;gap:9px;font-weight:850}.dot{width:11px;height:11px;border-radius:50%;background:#aaa}.state.ok .dot{background:var(--ok)}.state.warn .dot{background:var(--warn)}label{display:grid;gap:7px;margin-top:18px;font-size:13px;font-weight:850}input{width:100%;padding:12px;border:1px solid #d8d3ca;border-radius:12px;font:inherit}button,.btn{display:inline-flex;align-items:center;justify-content:center;margin-top:14px;padding:11px 16px;border:0;border-radius:999px;background:#111;color:#fff;text-decoration:none;font:inherit;font-weight:850;cursor:pointer}button.alt,.btn.alt{background:#fff;color:#111;border:1px solid var(--line)}button:disabled{opacity:.5;cursor:not-allowed}.actions{display:flex;gap:9px;flex-wrap:wrap}.status{min-height:22px;margin-top:12px;font-size:13px}.status.ok{color:var(--ok)}.status.warn{color:var(--warn)}.note{font-size:12px;color:var(--muted);line-height:1.5;margin-top:12px}.watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;pointer-events:none}@media(max-width:640px){body{padding:10px}.wrap{margin:12px auto;padding:18px;border-radius:20px}}
+    *{box-sizing:border-box}body{margin:0;padding:22px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(rgba(232,228,217,.93),rgba(232,228,217,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:#17130f;min-height:100vh}.wrap{max-width:760px;margin:34px auto;background:rgba(255,250,242,.98);border:1px solid rgba(255,255,255,.72);border-radius:28px;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.08)}h1{margin:0;font-size:34px;letter-spacing:-.04em}.sub{color:var(--muted);line-height:1.55}.card{margin-top:18px;padding:18px;border:1px solid var(--line);border-radius:20px;background:#fff}.state{display:flex;align-items:center;gap:9px;font-weight:850}.dot{width:11px;height:11px;border-radius:50%;background:#aaa}.state.ok .dot{background:var(--ok)}.state.warn .dot{background:var(--warn)}label{display:grid;gap:7px;margin-top:18px;font-size:13px;font-weight:850}input{width:100%;padding:12px;border:1px solid #d8d3ca;border-radius:12px;font:inherit}button,.btn{display:inline-flex;align-items:center;justify-content:center;margin-top:14px;padding:11px 16px;border:0;border-radius:999px;background:#111;color:#fff;text-decoration:none;font:inherit;font-weight:850;cursor:pointer}button.alt,.btn.alt{background:#fff;color:#111;border:1px solid var(--line)}button:disabled{opacity:.5;cursor:not-allowed}.actions{display:flex;gap:9px;flex-wrap:wrap}.status{min-height:22px;margin-top:12px;font-size:13px}.status.ok{color:var(--ok)}.status.warn{color:var(--warn)}.note{font-size:12px;color:var(--muted);line-height:1.5;margin-top:12px}.token-meta{font-size:12px;color:var(--muted);font-weight:600;margin-top:2px}.watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;pointer-events:none}@media(max-width:640px){body{padding:10px}.wrap{margin:12px auto;padding:18px;border-radius:20px}}
   </style>
 </head>
 <body>
@@ -26,7 +26,8 @@
     <div id="details" class="note"></div>
     <form id="connectionForm" autocomplete="off">
       <label>Production API token
-        <input id="apiToken" type="password" autocomplete="new-password" spellcheck="false" placeholder="Paste the private token here" required minlength="20" maxlength="1000">
+        <input id="apiToken" type="password" autocomplete="new-password" spellcheck="false" placeholder="Paste the private token here" required minlength="20" maxlength="4096">
+        <span id="tokenMeta" class="token-meta">0 token characters entered.</span>
       </label>
       <div class="actions">
         <button id="saveBtn" type="submit">Test &amp; save connection</button>
@@ -38,20 +39,22 @@
     </form>
   </section>
 </main>
-<div class="watermark">v827 - Made by Bruis</div>
+<div class="watermark">v828 - Made by Bruis</div>
 <script>
 (() => {
   'use strict';
-  const ENDPOINT='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-production-connection-v827';
+  const ENDPOINT='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-production-connection-v828';
   const cfg=window.GEJAST_CONFIG||{};
   const API_KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
   const $=id=>document.getElementById(id);
   const adminToken=()=>window.GEJAST_ADMIN_SESSION?.getToken?.()||'';
   function status(message='',tone=''){$('status').textContent=message;$('status').className=`status ${tone}`.trim();}
   function render(data){const ok=!!data?.connected;$('state').className=`state ${ok?'ok':'warn'}`;$('state').querySelector('span:last-child').textContent=ok?'Connection active':'Connection not configured';$('details').textContent=ok?`Verified server connection${Number(data?.shop_count)>0?` · ${Number(data.shop_count)} shop${Number(data.shop_count)===1?'':'s'} available`:''}.`:'Live catalog, delivery quoting and production submission remain unavailable until this private connection is configured.';}
+  function updateTokenMeta(){const n=$('apiToken').value.length;$('tokenMeta').textContent=`${n} token character${n===1?'':'s'} entered.`;}
   async function call(action,apiToken=''){const token=adminToken();if(!token)throw new Error('No valid admin session found.');const response=await fetch(ENDPOINT,{method:'POST',cache:'no-store',headers:{apikey:API_KEY,Authorization:`Bearer ${API_KEY}`,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({action,admin_session_token:token,...(apiToken?{api_token:apiToken}:{})})});const data=await response.json().catch(()=>({}));if(response.status===401){window.GEJAST_ADMIN_SESSION?.clearBundle?.();window.GEJAST_ADMIN_SESSION?.redirectToAdminLogin?.('session_invalid','admin_shop_connection.html');throw new Error('Admin session expired.');}if(!response.ok||!data?.ok)throw new Error(data?.detail||data?.error||`HTTP ${response.status}`);return data;}
   async function check(){status('Checking connection…');try{const session=await window.GEJAST_ADMIN_SESSION?.validate?.();if(!session)throw new Error('Admin session validation failed.');const data=await call('status');render(data);status(data.connected?'Connection verified.':'Connection is not configured yet.',data.connected?'ok':'warn');}catch(error){status(error?.message||'Connection check failed.','warn');}}
-  $('connectionForm').addEventListener('submit',async event=>{event.preventDefault();const button=$('saveBtn'),input=$('apiToken'),token=input.value.trim();if(token.length<20){status('Enter the private API token first.','warn');return;}button.disabled=true;status('Testing and saving connection…');try{const data=await call('save',token);input.value='';render(data);status('Connection verified and saved securely.','ok');}catch(error){status(error?.message||'The connection could not be saved.','warn');}finally{button.disabled=false;}});
+  $('apiToken').addEventListener('input',updateTokenMeta);
+  $('connectionForm').addEventListener('submit',async event=>{event.preventDefault();const button=$('saveBtn'),input=$('apiToken'),token=input.value.trim();if(token.length<20){status('Enter the private API token first.','warn');return;}button.disabled=true;status(`Testing complete token (${token.length} characters)…`);try{const data=await call('save',token);input.value='';updateTokenMeta();render(data);status('Connection verified and saved securely.','ok');}catch(error){status(error?.message||'The connection could not be saved.','warn');}finally{button.disabled=false;}});
   $('checkBtn').addEventListener('click',check);
   document.addEventListener('DOMContentLoaded',check,{once:true});
 })();
