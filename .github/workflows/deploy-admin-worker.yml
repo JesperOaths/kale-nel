@@ -7,18 +7,6 @@ on:
         description: 'Type DEPLOY_ADMIN_WORKER to publish the protected admin Worker and assets'
         required: true
         type: string
-  push:
-    branches:
-      - main
-    paths:
-      - 'admin*.html'
-      - 'admin-session-sync.js'
-      - 'admin-topnav.js'
-      - 'gejast-config.js'
-      - 'scripts/build-admin-worker-assets.mjs'
-      - 'scripts/test-admin-worker-gate.mjs'
-      - 'cloudflare/workers/admin-gate/**'
-      - '.github/workflows/deploy-admin-worker.yml'
 
 permissions:
   contents: read
@@ -48,16 +36,13 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate deployment authorization and token
+      - name: Validate explicit deployment approval and token
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$CONFIRMATION_INPUT" != "DEPLOY_ADMIN_WORKER" ]]; then
-            echo "Refusing manual deployment: confirmation must equal DEPLOY_ADMIN_WORKER." >&2
+          if [[ "$CONFIRMATION_INPUT" != "DEPLOY_ADMIN_WORKER" ]]; then
+            echo "Refusing deployment: confirmation must equal DEPLOY_ADMIN_WORKER." >&2
             exit 1
-          fi
-          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
-            echo "Protected admin asset/source change on main: automatic Worker deployment authorized."
           fi
           if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
             echo "Refusing deployment: no supported Cloudflare API token secret is configured." >&2
