@@ -102,8 +102,8 @@ assert.match(webhookEdge, /order:updated/);
 for (const table of ['shop_orders','shop_payment_settings','shop_webhook_events']) {
   assert.match(migration, new RegExp(`alter table public\\.${table} enable row level security`, 'i'));
 }
-assert.match(migration, /revoke all on table public\.shop_orders from public, anon, authenticated/i);
-assert.match(migration, /grant all on table public\.shop_orders to service_role/i);
+assert.match(migration, /revoke all on table public\.shop_orders from anon, authenticated/i);
+assert.match(migration, /grant select, insert, update, delete on table public\.shop_orders to service_role/i);
 assert.match(idempotencyMigration, /idempotency/i);
 assert.match(idempotencyMigration, /unique/i);
 
