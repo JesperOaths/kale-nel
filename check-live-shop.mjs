@@ -96,7 +96,7 @@ for (const product of v822.products) {
   assert.ok(legacyIds.has(String(product?.id || '')), `legacy catalog missing product id ${product?.id}`);
 }
 
-await health(CHECKOUT_URL, 'shop-manual-checkout-v825', 'manual-transfer-v825');
+await health(CHECKOUT_URL, 'shop-manual-checkout-v825', 'manual-payment-v825');
 await health(STATUS_URL, 'shop-order-status-v825', 'order-status-v825');
 await health(ADMIN_URL, 'shop-admin-orders-v825', 'admin-orders-v825');
 await health(WEBHOOK_URL, 'shop-printify-webhook-v825', 'printify-webhook-v825');
