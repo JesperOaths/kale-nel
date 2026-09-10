@@ -46,7 +46,7 @@ assert.ok(adminDeploy.includes(`uses: ${checkoutV5}`), 'admin Worker deploy chec
 assert.ok(adminDeploy.includes(`uses: ${setupNodeV5}`), 'admin Worker deploy must use the approved immutable setup-node v5 commit');
 assert.match(adminDeploy, /ref:\s*\$\{\{\s*github\.sha\s*\}\}/, 'admin Worker deploy checkout must pin the dispatched main SHA');
 assert.match(adminDeploy, /CONFIRMATION_INPUT:\s*\$\{\{\s*inputs\.confirmation\s*\}\}/, 'admin Worker confirmation input must enter shell through env');
-assert.match(adminDeploy, /CLOUDFLARE_API_TOKEN:\s*\$\{\{\s*secrets\.CLOUDFLARE_API_TOKEN\s*\}\}/, 'admin Worker deploy must source API token from Actions secrets');
+assert.match(adminDeploy, /CLOUDFLARE_API_TOKEN:\s*\$\{\{\s*secrets\.CLOUDFARE_API_TOKEN_ONE\s*\}\}/, 'admin Worker deploy must source API token from the configured Actions secret');
 assert.match(adminDeploy, /CLOUDFLARE_ACCOUNT_ID:\s*\$\{\{\s*secrets\.CLOUDFLARE_ACCOUNT_ID\s*\}\}/, 'admin Worker deploy must source account ID from Actions secrets');
 assert.match(adminDeploy, /npx --yes wrangler@4\.118\.0 deploy --config cloudflare\/workers\/admin-gate\/wrangler\.toml\s*$/m, 'admin Worker deploy must use the pinned known-good Wrangler version');
 assert.ok(adminDeploy.includes('admin_shop_orders.html'), 'admin Worker deploy must verify the v826 Shop orders asset before deployment');
