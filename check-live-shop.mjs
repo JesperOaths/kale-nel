@@ -4,22 +4,13 @@ import assert from 'node:assert/strict';
 const SHOP_URL = 'https://kalenel.nl/shop/';
 const LEGACY_CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog';
 const V822_CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v822';
-const SHOPIFY_STOREFRONT_URL = 'https://n75mh8-bu.myshopify.com/api/2026-07/graphql.json';
+const CHECKOUT_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-manual-checkout-v825';
+const STATUS_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-order-status-v825?health=1';
+const ADMIN_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-admin-orders-v825';
+const WEBHOOK_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-printify-webhook-v825';
 const TIMEOUT_MS = Number(process.env.GEJAST_SHOP_TIMEOUT_MS || 15000);
 const MIN_PRODUCTS = Number(process.env.GEJAST_SHOP_MIN_PRODUCTS || 20);
 const JELLYFISH_FRONT = 'jellyfish-front-artwork.png';
-const PAYMENT_QUERY = `
-  query KalenelPaymentReadiness {
-    shop {
-      paymentSettings {
-        acceptedCardBrands
-        supportedDigitalWallets
-        countryCode
-        currencyCode
-      }
-    }
-  }
-`;
 
 async function fetchWithTimeout(url, options = {}) {
   const controller = new AbortController();
@@ -31,7 +22,7 @@ async function fetchWithTimeout(url, options = {}) {
       signal: controller.signal,
       cache: 'no-store',
       headers: {
-        'User-Agent': 'GEJAST-Live-Shop-Health/1.0',
+        'User-Agent': 'GEJAST-Live-Shop-Health/1.1',
         ...(options.headers || {})
       }
     });
@@ -76,43 +67,38 @@ async function catalog(url, label) {
   return payload;
 }
 
-async function verifyCardPayments(){
-  const { response, elapsed } = await fetchWithTimeout(SHOPIFY_STOREFRONT_URL, {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ query: PAYMENT_QUERY })
-  });
-  assert.equal(response.status, 200, `Shopify payment readiness must return HTTP 200, got ${response.status}`);
+async function health(url, label, expectedMode) {
+  const { response, elapsed } = await fetchWithTimeout(url, { method: 'GET' });
+  assert.equal(response.status, 200, `${label} health must return HTTP 200, got ${response.status}`);
   const payload = await response.json();
-  assert.ok(!Array.isArray(payload?.errors), `Shopify payment readiness returned GraphQL errors: ${JSON.stringify(payload?.errors || [])}`);
-  const settings = payload?.data?.shop?.paymentSettings;
-  assert.ok(settings, 'Shopify Storefront returned no paymentSettings');
-  const brands = Array.isArray(settings.acceptedCardBrands) ? settings.acceptedCardBrands.filter(Boolean) : [];
-  assert.ok(brands.length > 0, 'Shopify advertises zero accepted card brands; card checkout must remain blocked');
-  console.log(`Shopify card gateway: PASS, brands=${brands.join(',')}, wallets=${(settings.supportedDigitalWallets || []).join(',') || 'none'}, ${elapsed}ms`);
-  return settings;
+  assert.equal(payload?.ok, true, `${label} health must report ok=true`);
+  assert.equal(payload?.mode, expectedMode, `${label} returned unexpected mode ${payload?.mode}`);
+  console.log(`${label}: health PASS, ${elapsed}ms`);
 }
 
+// This smoke test is deliberately read-only. It never POSTs a checkout, verifies a
+// payment, submits a Printify order, or simulates a webhook.
 const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(SHOP_URL);
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
-assert.match(html, /version-watermark[^>]*>v824</, 'Live shop must expose v824 watermark');
-assert.match(html, /catalog-recovery-v822\.js\?v=20260905-shop-commerce-v824/, 'Live shop must load catalog recovery with v824 cache key');
-assert.match(html, /payment-readiness-v824\.js\?v=20260905-shop-commerce-v824/, 'Live shop must load the v824 payment readiness guard');
-assert.match(html, /shopify-checkout-v817\.js/, 'Live shop must retain Shopify checkout');
-console.log(`shop page: HTTP 200, v824 present, ${pageElapsed}ms`);
+assert.match(html, /version-watermark[^>]*>v825</, 'Live shop must expose v825 watermark');
+assert.match(html, /manual-checkout-v825\.js\?v=20260910-shop-manual-v825/, 'Live shop must load v825 manual checkout');
+assert.match(html, /catalog-recovery-v822\.js\?v=20260910-shop-manual-v825/, 'Live shop must load catalog recovery with v825 cache key');
+assert.doesNotMatch(html, /payment-readiness-v824\.js/, 'Old card-payment guard must not be active');
+assert.doesNotMatch(html, /shopify-checkout-v817\.js/, 'Old Shopify checkout redirect must not be active');
+console.log(`shop page: HTTP 200, v825 present, ${pageElapsed}ms`);
 
 const legacy = await catalog(LEGACY_CATALOG_URL, 'shop-catalog');
 const v822 = await catalog(V822_CATALOG_URL, 'shop-catalog-v822');
 assert.equal(legacy.products.length, v822.products.length, 'legacy and v822 catalog product counts must match');
-
 const legacyIds = new Set(legacy.products.map(product => String(product?.id || '')));
 for (const product of v822.products) {
-  assert.ok(legacyIds.has(String(product?.id || '')), `legacy catalog missing Shopify product id ${product?.id}`);
+  assert.ok(legacyIds.has(String(product?.id || '')), `legacy catalog missing product id ${product?.id}`);
 }
 
-await verifyCardPayments();
-console.log('RESULT=V824_LIVE_SHOP_CARD_PAYMENT_PASS');
+await health(CHECKOUT_URL, 'shop-manual-checkout-v825', 'manual-transfer-v825');
+await health(STATUS_URL, 'shop-order-status-v825', 'order-status-v825');
+await health(ADMIN_URL, 'shop-admin-orders-v825', 'admin-orders-v825');
+await health(WEBHOOK_URL, 'shop-printify-webhook-v825', 'printify-webhook-v825');
+
+console.log('RESULT=V825_LIVE_SHOP_MANUAL_PAYMENT_PASS');
