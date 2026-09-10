@@ -45,6 +45,10 @@ function isArchivedFile(rel){
 }
 
 function isAllowedVersionDrift(rel, found){
+  // The shop is released independently from the v817 game/admin application.
+  // Keep its dedicated order-management surface on the same v825 cache/version
+  // contract without forcing an unrelated global-site version bump.
+  if (found === 'v825' && rel === 'admin_shop_orders.html') return true;
   if (found !== 'v762') return false;
   return rel === 'admin.html'
     || rel === 'cloudflare/workers/admin-gate/static/admin.html'
