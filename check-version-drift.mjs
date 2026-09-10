@@ -45,10 +45,10 @@ function isArchivedFile(rel){
 }
 
 function isAllowedVersionDrift(rel, found){
-  // The shop is released independently from the v817 game/admin application.
-  // Keep its dedicated order-management surface on the same v825 cache/version
-  // contract without forcing an unrelated global-site version bump.
-  if (found === 'v825' && rel === 'admin_shop_orders.html') return true;
+  // Shop order management is versioned independently from the v817 game/admin app.
+  // Only its dedicated page and the commerce contract checker may name the current
+  // shop-admin release, so unrelated frontend files remain protected by drift checks.
+  if (found === 'v826' && (rel === 'admin_shop_orders.html' || rel === 'check-shop-commerce-v817.mjs')) return true;
   if (found !== 'v762') return false;
   return rel === 'admin.html'
     || rel === 'cloudflare/workers/admin-gate/static/admin.html'
