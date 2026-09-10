@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 20
     env:
       CONFIRMATION_INPUT: ${{ inputs.confirmation }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFARE_API_TOKEN_ONE }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFARE_API_TOKEN_ONE || secrets.CLOUDFLARE_API_TOKEN_ONE || secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - name: Check out dispatched main commit
@@ -45,7 +45,7 @@ jobs:
             exit 1
           fi
           if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
-            echo "Refusing deployment: CLOUDFARE_API_TOKEN_ONE must be configured as a GitHub Actions secret." >&2
+            echo "Refusing deployment: no supported Cloudflare API token secret is configured." >&2
             exit 1
           fi
 
