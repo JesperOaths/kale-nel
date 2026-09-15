@@ -9,9 +9,9 @@ const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl",
 const text = (v: unknown) => String(v ?? "").trim();
 const clean = (v: unknown) => text(v).replace(/\s+/g, " ");
 const money = (cents: unknown) => `€${(Number(cents || 0) / 100).toFixed(2)}`;
-const retailCentsFromCost = (cost: unknown) => {
-  const n = Math.round(Number(cost));
-  return Number.isFinite(n) && n > 0 ? Math.ceil((n + 500) / 100) * 100 : 0;
+const retailCentsFromPrice = (price: unknown) => {
+  const n = Math.round(Number(price));
+  return Number.isFinite(n) && n > 0 ? Math.ceil(n / 100) * 100 : 0;
 };
 
 function cors(req: Request) {
@@ -151,7 +151,7 @@ Deno.serve(async (req: Request) => {
     return json(req, {
       ok: true,
       mode: "manual-payment-v832",
-      pricing: "fulfillment-cost-plus-5-rounded-up",
+      pricing: "printify-retail-rounded-up",
       creates_pending_orders: true,
       sends_to_production: false,
       cached_products: Array.isArray(cache?.payload?.products) ? cache.payload.products.length : 0,
@@ -220,8 +220,8 @@ Deno.serve(async (req: Request) => {
       const qty = Math.floor(qtyRaw);
       if (!Number.isFinite(qtyRaw) || qty < 1 || qty > MAX_QTY) throw new Error("Invalid quantity");
       if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isWhiteVariant(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
-      const unit = retailCentsFromCost(freshVariant?.cost);
-      if (!unit) throw new Error(`Invalid authoritative cost: ${clean(row.cached.product.name)}`);
+      const unit = retailCentsFromPrice(freshVariant?.price);
+      if (!unit) throw new Error(`Invalid authoritative retail price: ${clean(row.cached.product.name)}`);
       const size = sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase();
       subtotalCents += unit * qty;
       authoritative.push({
