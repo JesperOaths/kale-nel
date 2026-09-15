@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 
 const SHOP_URL = 'https://kalenel.nl/shop/';
-const ASSET_VERSION = '20260915-storefront-v832-r2';
+const ASSET_VERSION = '20260915-storefront-v832-r3';
 const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v832.js?v=${ASSET_VERSION}`;
 const POLISH_URL = `https://kalenel.nl/shop/storefront-polish-v832.js?v=${ASSET_VERSION}`;
 const POLISH_CSS_URL = `https://kalenel.nl/shop/storefront-polish-v832.css?v=${ASSET_VERSION}`;
@@ -144,15 +144,15 @@ const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
 assert.match(html, /version-watermark[^>]*>v832</, 'Live shop must expose v832 watermark');
-assert.match(html, /direct-commerce-v832\.js\?v=20260915-storefront-v832-r2/, 'Live shop must load v832 direct commerce bridge');
-assert.match(html, /manual-checkout-v825\.js\?v=20260915-storefront-v832-r2/, 'Live shop must retain hardened checkout UI shell');
-assert.match(html, /storefront-polish-v832\.js\?v=20260915-storefront-v832-r2/, 'Live shop must load artwork-primary storefront policy');
-assert.match(html, /storefront-polish-v832\.css\?v=20260915-storefront-v832-r2/, 'Live shop must load transparent media CSS');
-assert.match(html, /product-preview-overrides\.js\?v=20260915-storefront-v832-r2/, 'Live shop must load artwork-first compatibility layer');
-assert.match(html, /gallery-fixes-v832\.js\?v=20260915-storefront-v832-r2/, 'Live shop must load exact carousel repair');
-assert.match(html, /mockup-transparency-v832\.js\?v=20260915-storefront-v832-r2/, 'Live shop must load safe background transparency processor');
-assert.match(html, /collection-media-v831\.js\?v=20260915-storefront-v832-r2/, 'Live shop must retain collection media normalization');
-assert.match(html, /image-lightbox-v832\.js\?v=20260915-storefront-v832-r2/, 'Live shop must load full-view v832 lightbox');
+assert.match(html, /direct-commerce-v832\.js\?v=20260915-storefront-v832-r3/, 'Live shop must load v832 direct commerce bridge');
+assert.match(html, /manual-checkout-v825\.js\?v=20260915-storefront-v832-r3/, 'Live shop must retain hardened checkout UI shell');
+assert.match(html, /storefront-polish-v832\.js\?v=20260915-storefront-v832-r3/, 'Live shop must load artwork-primary storefront policy');
+assert.match(html, /storefront-polish-v832\.css\?v=20260915-storefront-v832-r3/, 'Live shop must load transparent media CSS');
+assert.match(html, /product-preview-overrides\.js\?v=20260915-storefront-v832-r3/, 'Live shop must load artwork-first compatibility layer');
+assert.match(html, /gallery-fixes-v832\.js\?v=20260915-storefront-v832-r3/, 'Live shop must load exact carousel repair');
+assert.match(html, /mockup-transparency-v832\.js\?v=20260915-storefront-v832-r3/, 'Live shop must load safe background transparency processor');
+assert.match(html, /collection-media-v831\.js\?v=20260915-storefront-v832-r3/, 'Live shop must retain collection media normalization');
+assert.match(html, /image-lightbox-v832\.js\?v=20260915-storefront-v832-r3/, 'Live shop must load full-view v832 lightbox');
 assert.doesNotMatch(html, /direct-commerce-v828\.js|mockup-background-v830\.js|image-lightbox-v830\.js/, 'old active media/commerce handlers must not remain in the live page');
 assert.doesNotMatch(html, />[^<]*Printify[^<]*</i, 'Public shop must not expose supplier branding');
 console.log(`shop page: HTTP 200, v832 present, ${pageElapsed}ms`);
@@ -196,10 +196,10 @@ assert.match(collectionMedia, /preservesWhiteGarment:\s*true/, 'collection media
 assert.match(collectionMedia, /cropsToLargestGarment:\s*true/, 'collection media must scale collection shirts consistently');
 
 const lightbox = await textAsset(LIGHTBOX_URL, 'image-lightbox-v832.js');
-assert.match(lightbox, /width:100%!important/, 'Fit must use a definite media-sized image box');
-assert.match(lightbox, /height:100%!important/, 'Fit must use a definite media-sized image box');
-assert.match(lightbox, /max-width:100%!important/, 'Fit must not overflow the media frame horizontally');
-assert.match(lightbox, /max-height:100%!important/, 'Fit must not overflow the media frame vertically');
+assert.match(lightbox, /position:absolute!important/, 'Fit must use absolute contained image positioning');
+assert.match(lightbox, /inset:var\(--lb-pad-y\) var\(--lb-pad-x\)!important/, 'Fit must keep controlled lightbox padding');
+assert.match(lightbox, /width:calc\(100% - var\(--lb-pad-x\) - var\(--lb-pad-x\)\)!important/, 'Fit must not overflow the media frame horizontally');
+assert.match(lightbox, /height:calc\(100% - var\(--lb-pad-y\) - var\(--lb-pad-y\)\)!important/, 'Fit must not overflow the media frame vertically');
 assert.match(lightbox, /fitMode:'media-contained'/, 'lightbox must advertise contained media fit');
 assert.match(lightbox, /allGalleryImages:true/, 'lightbox must include artwork and tag views in gallery order');
 assert.doesNotMatch(lightbox, /EXCLUDE_FROM_EXPANDED_RE/, 'v832 lightbox must not silently omit artwork/detail views');
