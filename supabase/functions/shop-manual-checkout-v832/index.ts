@@ -184,7 +184,7 @@ Deno.serve(async (req: Request) => {
     const { count: routingMappingCount } = await sb.from("shop_fulfillment_mappings").select("approval_id", { count: "exact", head: true }).eq("approved", true);
     return json(req, {
       ok: true,
-      mode: "manual-payment-v833-routing",
+      mode: "manual-payment-v832",
       pricing: "fulfillment-cost-plus-5-rounded-up",
       pricingBase: "printify-variant-cost",
       marginEuros: MARGIN_CENTS / 100,
