@@ -6,6 +6,7 @@ import fs from 'node:fs';
 const read = path => fs.readFileSync(path, 'utf8');
 const index = read('shop/index.html');
 const directCommerce = read('shop/direct-commerce-v832.js');
+const deliveryEstimate = read('shop/delivery-estimate-v833.js');
 const manualCheckout = read('shop/manual-checkout-v825.js');
 const storefrontPolish = read('shop/storefront-polish-v832.js');
 const storefrontCss = read('shop/storefront-polish-v832.css');
@@ -18,6 +19,8 @@ const adminPage = read('admin_shop_orders.html');
 const adminNav = read('admin-topnav.js');
 const checkoutEdge = read('supabase/functions/shop-manual-checkout-v832/index.ts');
 const fulfillmentRouting = read('supabase/functions/shop-manual-checkout-v832/fulfillment-routing.mjs');
+const deliveryPreviewEdge = read('supabase/functions/shop-delivery-preview-v833/index.ts');
+const deliveryPreviewRouting = read('supabase/functions/shop-delivery-preview-v833/fulfillment-routing.mjs');
 const catalogEdge = read('supabase/functions/shop-catalog-v828/index.ts');
 const connectionEdge = read('supabase/functions/shop-production-connection-v828/index.ts');
 const statusEdge = read('supabase/functions/shop-order-status-v825/index.ts');
@@ -33,12 +36,12 @@ const deployWorkflow = read('.github/workflows/deploy-shop-fixes-v829.yml');
 const store = read('shop/store.js');
 const refresh = read('shop/live-catalog-refresh-v818.js');
 
-// v832 is the user-facing media/pricing revision. The legacy UI shell remains,
-// but catalog and checkout authority are v832 and all frontend assets are cache-busted.
+// v833 is the user-facing delivery-estimate revision. The hardened catalog and
+// checkout authorities remain v832, while all frontend assets are cache-busted.
 assert.match(index, /direct-commerce-v832\.js/);
 assert.match(index, /manual-checkout-v825\.js/);
-assert.match(index, /version-watermark[^>]*>v832</);
-assert.match(index, /20260915-storefront-v832-r3/);
+assert.match(index, /version-watermark[^>]*>v833</);
+assert.match(index, /20260916-storefront-v833-r1/);
 assert.match(index, /storefront-polish-v832\.css/);
 assert.match(index, /storefront-polish-v832\.js/);
 assert.match(index, /product-preview-overrides\.js/);
@@ -50,10 +53,12 @@ assert.match(index, /live-catalog-refresh-v818\.js/);
 assert.doesNotMatch(index, /direct-commerce-v828\.js|mockup-background-v830\.js|image-lightbox-v830\.js/);
 assert.doesNotMatch(index, /shop-runtime-v819\.js|catalog-recovery-v822\.js|payment-readiness-v824\.js|shopify-checkout-v817\.js/);
 
-// Browser bridge routes the public catalog to the hardened direct Printify endpoint
-// and the checkout UI to the new server-side cost-based checkout authority.
+// Browser bridge routes the public catalog to the hardened direct Printify endpoint,
+// checkout to the cost-based authority, and injects the non-blocking delivery panel.
 assert.match(directCommerce, /shop-catalog-v828/);
 assert.match(directCommerce, /shop-manual-checkout-v832/);
+assert.match(directCommerce, /delivery-estimate-v833\.js/);
+assert.match(directCommerce, /shop-delivery-preview-v833/);
 assert.match(directCommerce, /X-Kalenel-Catalog-Authority/);
 assert.match(directCommerce, /printify-direct-v832/);
 assert.match(directCommerce, /pricing:'fulfillment-cost-plus-5-rounded-up'/);
@@ -62,6 +67,34 @@ assert.match(directCommerce, /wholeEuroPricing:true/);
 assert.match(directCommerce, /usesShopifyCatalogApi:false/);
 assert.match(directCommerce, /usesShopifyPriceApi:false/);
 assert.doesNotMatch(directCommerce, /shop-manual-checkout-v828|shop-price-v818|shop-catalog-v822/);
+
+// Delivery preview must be address-aware, non-blocking, and explicit about the
+// payment-verification delay and possible split fulfillment.
+assert.match(deliveryEstimate, /shop-delivery-preview-v833/);
+assert.match(deliveryEstimate, /Ships from/);
+assert.match(deliveryEstimate, /Estimated arrival/);
+assert.match(deliveryEstimate, /business days after payment verification/);
+assert.match(deliveryEstimate, /may_arrive_separately/);
+assert.match(deliveryEstimate, /Calculate delivery/);
+assert.match(deliveryEstimate, /Refresh estimate/);
+assert.match(deliveryEstimate, /delivery_address_incomplete|addressReady/);
+
+// Delivery authority reuses the same safe route-selection rules as checkout. Fixed
+// providers use Printify provider locations and route-specific V2 delivery ranges;
+// Printify Choice stays transparent about dynamic facility assignment and fallback.
+assert.match(deliveryPreviewEdge, /CHOICE_PROVIDER_ID = 99/);
+assert.match(deliveryPreviewEdge, /shop_fulfillment_mappings/);
+assert.match(deliveryPreviewEdge, /chooseCheapestFulfillment/);
+assert.match(deliveryPreviewEdge, /catalog\/print_providers/);
+assert.match(deliveryPreviewEdge, /printifyV2/);
+assert.match(deliveryPreviewEdge, /Printify Choice/);
+assert.match(deliveryPreviewEdge, /fallback_min_business_days/);
+assert.match(deliveryPreviewEdge, /exact_for_selected_route/);
+assert.match(deliveryPreviewEdge, /strictCountry/);
+assert.match(deliveryPreviewRouting, /function validateMappedCandidate/);
+assert.match(deliveryPreviewRouting, /variant_options_mismatch/);
+assert.match(deliveryPreviewRouting, /artwork_mismatch/);
+assert.match(deliveryPreviewRouting, /function chooseCheapestFulfillment/);
 
 // Artwork is now the actual first/primary image. Original Printify artwork PNGs win;
 // local v5 previews are only a temporary fallback while an older cache is refreshing.
@@ -246,17 +279,20 @@ assert.doesNotMatch(refresh, /window\.location\.reload/);
 assert.match(store, /const wholeEuro/);
 assert.match(store, /price:\s*wholeEuro/);
 
-// Main deployment check must validate the exact v832 customer assets and remain
-// read-only: it may GET health/catalog data but must never create an order in CI.
+// Main deployment check validates the v833 customer shell and all authoritative
+// shop functions while remaining read-only: it never creates an order in CI.
 assert.match(liveHealthWorkflow, /node check-live-shop\.mjs/);
 assert.match(deployWorkflow, /supabase\/functions\/shop-catalog-v828\/\*\*/);
 assert.match(deployWorkflow, /supabase\/functions\/shop-manual-checkout-v832\/\*\*/);
-assert.match(deployWorkflow, /functions deploy \"\$function_name\"/);
+assert.match(deployWorkflow, /supabase\/functions\/shop-delivery-preview-v833\/\*\*/);
+assert.match(deployWorkflow, /functions deploy "\$function_name"/);
 assert.match(deployWorkflow, /deploy_function shop-catalog-v828/);
 assert.match(deployWorkflow, /deploy_function shop-manual-checkout-v832/);
+assert.match(deployWorkflow, /deploy_function shop-delivery-preview-v833/);
 assert.doesNotMatch(deployWorkflow, /functions deploy shop-manual-checkout-v828/);
 assert.doesNotMatch(catalogEdge, /jellyfish[\s\S]{0,120}media\.slice\(1\)/i);
-assert.match(liveShopCheck, /20260915-storefront-v832-r3/);
+assert.match(liveShopCheck, /20260916-storefront-v833-r1/);
+assert.match(liveShopCheck, /delivery-estimate-v833/);
 assert.match(liveShopCheck, /direct-commerce-v832/);
 assert.match(liveShopCheck, /storefront-polish-v832/);
 assert.match(liveShopCheck, /gallery-fixes-v832/);
@@ -264,8 +300,8 @@ assert.match(liveShopCheck, /mockup-transparency-v832/);
 assert.match(liveShopCheck, /image-lightbox-v832/);
 assert.match(liveShopCheck, /shop-catalog-v828/);
 assert.match(liveShopCheck, /shop-manual-checkout-v832/);
-assert.match(liveShopCheck, /RESULT=V832_ARTWORK_PRICE_TRANSPARENCY_PASS/);
+assert.match(liveShopCheck, /RESULT=V833_DELIVERY_ESTIMATE_PASS/);
 assert.match(liveShopCheck, /Deliberately read-only/);
 assert.doesNotMatch(liveShopCheck, /method:\s*['"]POST['"]/);
 
-console.log('Shop commerce v832 artwork-first + cost+5 + transparent-media contract passed.');
+console.log('Shop commerce v833 delivery-estimate + artwork-first + cost+5 + transparent-media contract passed.');
