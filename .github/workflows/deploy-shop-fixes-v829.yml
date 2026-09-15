@@ -40,7 +40,7 @@ jobs:
             fi
             cat "$log_file"
             local summary
-            summary="$(grep -Ei 'error|failed|unauthorized|forbidden|token|project' "$log_file" | tail -n 1 || true)"
+            summary="$(grep -Ei 'error|failed|unauthorized|forbidden|token|project|unexpected|denied' "$log_file" | head -n 1 || true)"
             summary="$(printf '%s' "${summary:-Deployment command failed without a diagnostic line.}" | sed -E 's/sbp_[A-Za-z0-9_-]+/[redacted]/g; s/[A-Za-z0-9_-]{40,}/[redacted]/g; s/::/: :/g')"
             echo "::error title=Supabase ${function_name} deploy failed::$summary"
             return 1
