@@ -1,0 +1,117 @@
+/* Bruis shop v830 — storefront presentation layer */
+
+/* Keep product photography visually clean and make detail shots intentional. */
+.mockup-rail {
+  background: #ded6ca !important;
+}
+.mockup {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+.mockup img {
+  object-fit: contain !important;
+  object-position: center !important;
+}
+.mockup[class*="collar"],
+.mockup[class*="closeup"],
+.mockup[class*="close-up"],
+.mockup[class*="neck"],
+.mockup[class*="tag"],
+.mockup[class*="label"],
+.mockup[class*="detail"],
+.mockup[class*="collar"] img,
+.mockup[class*="closeup"] img,
+.mockup[class*="close-up"] img,
+.mockup[class*="neck"] img,
+.mockup[class*="tag"] img,
+.mockup[class*="label"] img,
+.mockup[class*="detail"] img {
+  background: #fff !important;
+}
+
+/* Merch gets the same visual weight as the other two collection cards. */
+.collection-card[data-collection="merch"] .collection-image {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 43%, rgba(255,253,248,.98) 0 31%, rgba(255,253,248,.62) 32% 45%, transparent 46%),
+    linear-gradient(145deg, #d7d0c4 0%, #eee8de 52%, #c8c0b3 100%) !important;
+}
+.collection-card[data-collection="merch"] .collection-image::before,
+.collection-card[data-collection="merch"] .collection-image::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  width: 67%;
+  height: 78%;
+  top: 14%;
+  background: url("assets/collection-merch-despinoza.png") center / contain no-repeat;
+  opacity: .58;
+  filter: saturate(.9) drop-shadow(0 13px 18px rgba(32,29,24,.13));
+  pointer-events: none;
+}
+.collection-card[data-collection="merch"] .collection-image::before {
+  left: -10%;
+  transform: rotate(-7deg) scale(.88);
+}
+.collection-card[data-collection="merch"] .collection-image::after {
+  right: -10%;
+  transform: rotate(7deg) scale(.88);
+}
+.collection-card[data-collection="merch"] .collection-merch-image {
+  position: relative;
+  z-index: 2;
+  width: 72% !important;
+  height: 88% !important;
+  margin: 6% auto 0;
+  object-fit: contain !important;
+  object-position: center !important;
+  background: transparent !important;
+  filter: drop-shadow(0 16px 22px rgba(32,29,24,.18));
+  transform: scale(1.03);
+}
+.collection-card[data-collection="merch"]:hover .collection-merch-image {
+  transform: scale(1.055);
+}
+.collection-card[data-collection="merch"] .collection-merch-image {
+  transition: transform .2s ease;
+}
+
+/* Compact selector: polished, but not visually busy. */
+.compact-shape-card[data-collection="merch"] {
+  background: linear-gradient(145deg, #eee8de, #d7d0c4);
+}
+.compact-shape-card[data-collection="merch"] .collection-merch-image {
+  width: 88%;
+  margin-inline: auto;
+  padding: 4px;
+  object-fit: contain !important;
+  background: transparent !important;
+  filter: drop-shadow(0 4px 5px rgba(32,29,24,.12));
+}
+
+/* Customer-facing checkout should read like a store, not an engineering panel. */
+.manual-checkout-note {
+  color: #4f504a;
+  border: 1px solid #e7e1d8;
+  background: #f8f5ef !important;
+}
+.manual-checkout-status:empty { display: none; }
+
+@media (max-width: 620px) {
+  .collection-card[data-collection="merch"] .collection-image::before,
+  .collection-card[data-collection="merch"] .collection-image::after {
+    width: 62%;
+    height: 72%;
+    top: 17%;
+  }
+  .collection-card[data-collection="merch"] .collection-merch-image {
+    width: 68% !important;
+    height: 86% !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collection-card[data-collection="merch"] .collection-merch-image { transition: none; }
+}
