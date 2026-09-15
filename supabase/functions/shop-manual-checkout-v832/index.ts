@@ -107,7 +107,7 @@ function validPaymentUrl(raw: unknown, provider: string) {
     const u = new URL(text(raw));
     if (u.protocol !== "https:") return "";
     const host = u.hostname.toLowerCase();
-    if (provider === "bunq_me" && (host === "bunq.me" || host.endsWith(".bunq.me"))) return u.toString();
+    if ((provider === "bunq" || provider === "bunq_me") && (host === "bunq.me" || host.endsWith(".bunq.me"))) return u.toString();
     if (provider === "tikkie" && (host === "tikkie.me" || host.endsWith(".tikkie.me"))) return u.toString();
   } catch {}
   return "";
