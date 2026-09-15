@@ -1,0 +1,44 @@
+name: One-shot Bunq provider compatibility fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/one-shot-fix-bunq-provider-20260915.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-clean-up:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: main
+      - name: Patch existing Bunq provider spelling and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('supabase/functions/shop-manual-checkout-v832/index.ts')
+          text = path.read_text(encoding='utf-8')
+          old = 'if (provider === "bunq_me" && (host === "bunq.me" || host.endsWith(".bunq.me"))) return u.toString();'
+          new = 'if ((provider === "bunq" || provider === "bunq_me") && (host === "bunq.me" || host.endsWith(".bunq.me"))) return u.toString();'
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f'Expected exactly one Bunq validator target, found {count}')
+          text = text.replace(old, new)
+          path.write_text(text, encoding='utf-8')
+          PY
+          rm -f .github/workflows/one-shot-fix-bunq-provider-20260915.yml
+          git diff --check
+          grep -F 'provider === "bunq" || provider === "bunq_me"' supabase/functions/shop-manual-checkout-v832/index.ts
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add supabase/functions/shop-manual-checkout-v832/index.ts .github/workflows/one-shot-fix-bunq-provider-20260915.yml
+          git commit -m 'Accept bunq alias for Bunq.me checkout'
+          git push origin HEAD:main
