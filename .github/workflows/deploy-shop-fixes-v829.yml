@@ -31,5 +31,19 @@ jobs:
           fi
           echo "::notice title=Supabase credential available::The repository secret is configured; deploying with the current CLI."
           npx --yes supabase@2.117.0 --version
-          npx --yes supabase@2.117.0 functions deploy shop-catalog-v828 --project-ref "$PROJECT_REF" --no-verify-jwt
-          npx --yes supabase@2.117.0 functions deploy shop-manual-checkout-v832 --project-ref "$PROJECT_REF" --no-verify-jwt
+          deploy_function() {
+            local function_name="$1"
+            local log_file="$RUNNER_TEMP/${function_name}.log"
+            if npx --yes supabase@2.117.0 functions deploy "$function_name" --project-ref "$PROJECT_REF" --no-verify-jwt >"$log_file" 2>&1; then
+              cat "$log_file"
+              return 0
+            fi
+            cat "$log_file"
+            local summary
+            summary="$(grep -Ei 'error|failed|unauthorized|forbidden|token|project' "$log_file" | tail -n 1 || true)"
+            summary="$(printf '%s' "${summary:-Deployment command failed without a diagnostic line.}" | sed -E 's/sbp_[A-Za-z0-9_-]+/[redacted]/g; s/[A-Za-z0-9_-]{40,}/[redacted]/g; s/::/: :/g')"
+            echo "::error title=Supabase ${function_name} deploy failed::$summary"
+            return 1
+          }
+          deploy_function shop-catalog-v828
+          deploy_function shop-manual-checkout-v832
