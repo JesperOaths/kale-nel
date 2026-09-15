@@ -2,9 +2,11 @@
 import assert from 'node:assert/strict';
 
 const SHOP_URL = 'https://kalenel.nl/shop/';
-const ASSET_VERSION = '20260915-storefront-v830';
+const ASSET_VERSION = '20260915-storefront-v831';
 const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v828.js?v=${ASSET_VERSION}`;
-const POLISH_URL = `https://kalenel.nl/shop/storefront-polish-v830.js?v=${ASSET_VERSION}`;
+const POLISH_URL = `https://kalenel.nl/shop/storefront-polish-v831.js?v=${ASSET_VERSION}`;
+const COLLECTION_MEDIA_URL = `https://kalenel.nl/shop/collection-media-v831.js?v=${ASSET_VERSION}`;
+const PREVIEWS_URL = `https://kalenel.nl/shop/product-preview-overrides.js?v=${ASSET_VERSION}`;
 const LIGHTBOX_URL = `https://kalenel.nl/shop/image-lightbox-v830.js?v=${ASSET_VERSION}`;
 const BACKGROUND_URL = `https://kalenel.nl/shop/mockup-background-v830.js?v=${ASSET_VERSION}`;
 const CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828';
@@ -27,7 +29,7 @@ async function fetchWithTimeout(url, options = {}) {
       signal: controller.signal,
       cache: 'no-store',
       headers: {
-        'User-Agent': 'GEJAST-Live-Shop-Health/1.4',
+        'User-Agent': 'GEJAST-Live-Shop-Health/1.5',
         'Cache-Control': 'no-cache',
         ...(options.headers || {})
       }
@@ -101,20 +103,19 @@ async function textAsset(url, label) {
 const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(`${SHOP_URL}?v=${ASSET_VERSION}`);
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
-assert.match(html, /version-watermark[^>]*>v830</, 'Live shop must expose v830 watermark');
-assert.match(html, /direct-commerce-v828\.js\?v=20260915-storefront-v830/, 'Live shop must load the direct commerce bridge with the v830 cache key');
-assert.match(html, /manual-checkout-v825\.js\?v=20260915-storefront-v830/, 'Live shop must retain the hardened manual checkout UI');
-assert.match(html, /storefront-polish-v830\.js\?v=20260915-storefront-v830/, 'Live shop must load the v830 storefront policy');
-assert.match(html, /image-lightbox-v830\.js\?v=20260915-storefront-v830/, 'Live shop must load the v830 fit-to-shirt lightbox');
-assert.match(html, /mockup-background-v830\.js\?v=20260915-storefront-v830/, 'Live shop must load the safe v830 mockup background matcher');
+assert.match(html, /version-watermark[^>]*>v831</, 'Live shop must expose v831 watermark');
+assert.match(html, /direct-commerce-v828\.js\?v=20260915-storefront-v831/, 'Live shop must load direct commerce with the v831 cache key');
+assert.match(html, /manual-checkout-v825\.js\?v=20260915-storefront-v831/, 'Live shop must retain hardened manual checkout');
+assert.match(html, /storefront-polish-v831\.js\?v=20260915-storefront-v831/, 'Live shop must load v831 storefront policy');
+assert.match(html, /product-preview-overrides\.js\?v=20260915-storefront-v831/, 'Live shop must restore artwork details');
+assert.match(html, /collection-media-v831\.js\?v=20260915-storefront-v831/, 'Live shop must load collection media normalization');
+assert.match(html, /image-lightbox-v830\.js\?v=20260915-storefront-v831/, 'Live shop must retain whole-garment lightbox');
+assert.match(html, /mockup-background-v830\.js\?v=20260915-storefront-v831/, 'Live shop must retain safe mockup background matcher');
+assert.doesNotMatch(html, /storefront-polish-v830\.(?:css|js)/, 'Old v830 storefront presentation layer must not remain active');
 assert.doesNotMatch(html, /image-lightbox-v820\.js|mockup-background-v819\.js|front-lightbox-fit-v821\.js/, 'Legacy image handlers must not be active');
-assert.doesNotMatch(html, /product-preview-overrides\.js|front-detail-overrides-v817\.js/, 'Artwork-only preview injectors must not be active');
 assert.doesNotMatch(html, />[^<]*Printify[^<]*</i, 'Public shop must not expose supplier branding');
-assert.doesNotMatch(html, /shop-runtime-v819\.js/, 'Shopify price-authority runtime must not be loaded');
-assert.doesNotMatch(html, /catalog-recovery-v822\.js/, 'v822 catalog recovery must not be loaded');
-assert.doesNotMatch(html, /payment-readiness-v824\.js/, 'Old card-payment guard must not be active');
-assert.doesNotMatch(html, /shopify-checkout-v817\.js/, 'Old Shopify checkout redirect must not be active');
-console.log(`shop page: HTTP 200, v830 present, ${pageElapsed}ms`);
+assert.doesNotMatch(html, /shop-runtime-v819\.js|catalog-recovery-v822\.js|payment-readiness-v824\.js|shopify-checkout-v817\.js/, 'Legacy commerce handlers must not be active');
+console.log(`shop page: HTTP 200, v831 present, ${pageElapsed}ms`);
 
 const bridge = await textAsset(DIRECT_BRIDGE_URL, 'direct-commerce-v828.js');
 assert.match(bridge, /shop-catalog-v828/, 'bridge must use v828 catalog');
@@ -122,18 +123,33 @@ assert.match(bridge, /shop-manual-checkout-v828/, 'bridge must use v828 checkout
 assert.match(bridge, /usesShopifyCatalogApi:\s*false/, 'bridge must declare Shopify catalog API disabled');
 assert.match(bridge, /usesShopifyPriceApi:\s*false/, 'bridge must declare Shopify price API disabled');
 assert.doesNotMatch(bridge, /shop-price-v818|shop-catalog-v822/, 'bridge must not call legacy catalog/price endpoints');
-assert.doesNotMatch(bridge, /jellyfish-front-(?:artwork|v7)|FRONT_PREVIEWS/, 'bridge must not inject artwork-only previews');
 assert.match(bridge, /wholeEuro/, 'bridge must normalize displayed item prices upward to whole euros');
 
-const polish = await textAsset(POLISH_URL, 'storefront-polish-v830.js');
+const previews = await textAsset(PREVIEWS_URL, 'product-preview-overrides.js');
+assert.match(previews, /hydrangea-front-v5\.webp/, 'Hydrangea artwork preview must be restored');
+assert.match(previews, /dragonfly-front-v5\.webp/, 'Dragonfly artwork preview must be restored');
+assert.match(previews, /label:\s*'Artwork detail'/, 'restored preview must be labelled as artwork detail');
+assert.match(previews, /placement:\s*'after-primary-garment'/, 'artwork must sit after the primary garment view');
+assert.match(previews, /preservesGarmentPrimaryImage:\s*true/, 'artwork restore must not replace the shirt/cart image');
+
+const polish = await textAsset(POLISH_URL, 'storefront-polish-v831.js');
 assert.match(polish, /wholeEuroPricing:\s*true/, 'storefront policy must enforce whole-euro pricing');
-assert.match(polish, /garmentFirstGallery:\s*true/, 'storefront policy must enforce garment-first galleries');
-assert.match(polish, /Shipping is calculated from your delivery address/, 'checkout copy must be customer-facing');
+assert.match(polish, /artworkDetailsRestored:\s*true/, 'storefront policy must retain restored artwork details');
+assert.match(polish, /garmentPrimaryImage:\s*true/, 'storefront policy must keep garment as product primary image');
+assert.match(polish, /Shipping is calculated from your delivery address/, 'checkout copy must remain customer-facing');
 assert.doesNotMatch(polish, /price shown in the browser is never trusted/i, 'storefront policy must not expose engineering trust language');
+
+const collectionMedia = await textAsset(COLLECTION_MEDIA_URL, 'collection-media-v831.js');
+assert.match(collectionMedia, /TARGET\s*=\s*\[222, 214, 202, 255\]/, 'collection cards must use the beige image backdrop');
+assert.match(collectionMedia, /function floodOuterBackground/, 'collection media must isolate connected outer white');
+assert.match(collectionMedia, /function largestForegroundBox/, 'collection media must find and crop the actual shirt');
+assert.match(collectionMedia, /preservesWhiteGarment:\s*true/, 'collection media must preserve white shirt fill');
+assert.match(collectionMedia, /cropsToLargestGarment:\s*true/, 'collection media must scale the shirt consistently');
 
 const lightbox = await textAsset(LIGHTBOX_URL, 'image-lightbox-v830.js');
 assert.match(lightbox, /object-fit:contain!important/, 'lightbox must fit the complete garment');
 assert.match(lightbox, /function fit\(\)/, 'lightbox must provide a deterministic fit reset');
+assert.match(lightbox, /EXCLUDE_FROM_EXPANDED_RE/, 'lightbox must keep artwork/detail slides out of expanded garment navigation');
 
 const background = await textAsset(BACKGROUND_URL, 'mockup-background-v830.js');
 assert.match(background, /centralHits\s*>=\s*4/, 'background matcher must reject center leakage into garments');
@@ -153,4 +169,4 @@ await health(STATUS_URL, 'shop-order-status-v825', 'order-status-v825');
 await health(ADMIN_URL, 'shop-admin-orders-v825', 'admin-orders-v825');
 await health(WEBHOOK_URL, 'shop-printify-webhook-v825', 'printify-webhook-v825');
 
-console.log('RESULT=V830_LIVE_SHOP_POLISH_PASS');
+console.log('RESULT=V831_LIVE_SHOP_MEDIA_PASS');
