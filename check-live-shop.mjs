@@ -2,8 +2,9 @@
 import assert from 'node:assert/strict';
 
 const SHOP_URL = 'https://kalenel.nl/shop/';
-const ASSET_VERSION = '20260915-storefront-v832-r3';
+const ASSET_VERSION = '20260916-storefront-v833-r1';
 const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v832.js?v=${ASSET_VERSION}`;
+const DELIVERY_UI_URL = 'https://kalenel.nl/shop/delivery-estimate-v833.js?v=20260916-delivery-v833-r1';
 const POLISH_URL = `https://kalenel.nl/shop/storefront-polish-v832.js?v=${ASSET_VERSION}`;
 const POLISH_CSS_URL = `https://kalenel.nl/shop/storefront-polish-v832.css?v=${ASSET_VERSION}`;
 const COLLECTION_MEDIA_URL = `https://kalenel.nl/shop/collection-media-v831.js?v=${ASSET_VERSION}`;
@@ -35,7 +36,7 @@ async function fetchWithTimeout(url, options = {}) {
       signal: controller.signal,
       cache: 'no-store',
       headers: {
-        'User-Agent': 'GEJAST-Live-Shop-Health/1.6',
+        'User-Agent': 'GEJAST-Live-Shop-Health/1.7',
         'Cache-Control': 'no-cache',
         ...(options.headers || {})
       }
@@ -138,32 +139,42 @@ async function textAsset(url, label) {
   return response.text();
 }
 
-// Deliberately read-only: never POST checkout, verify payment, submit an order,
-// mutate prices, or simulate a webhook.
+// Deliberately read-only: never POST checkout, delivery preview, verify payment,
+// submit an order, mutate prices, or simulate a webhook. Delivery preview behavior
+// is covered separately by its route-level smoke tests; this check verifies wiring.
 const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(`${SHOP_URL}?v=${ASSET_VERSION}`);
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
-assert.match(html, /version-watermark[^>]*>v832</, 'Live shop must expose v832 watermark');
-assert.match(html, /direct-commerce-v832\.js\?v=20260915-storefront-v832-r3/, 'Live shop must load v832 direct commerce bridge');
-assert.match(html, /manual-checkout-v825\.js\?v=20260915-storefront-v832-r3/, 'Live shop must retain hardened checkout UI shell');
-assert.match(html, /storefront-polish-v832\.js\?v=20260915-storefront-v832-r3/, 'Live shop must load artwork-primary storefront policy');
-assert.match(html, /storefront-polish-v832\.css\?v=20260915-storefront-v832-r3/, 'Live shop must load transparent media CSS');
-assert.match(html, /product-preview-overrides\.js\?v=20260915-storefront-v832-r3/, 'Live shop must load artwork-first compatibility layer');
-assert.match(html, /gallery-fixes-v832\.js\?v=20260915-storefront-v832-r3/, 'Live shop must load exact carousel repair');
-assert.match(html, /mockup-transparency-v832\.js\?v=20260915-storefront-v832-r3/, 'Live shop must load safe background transparency processor');
-assert.match(html, /collection-media-v831\.js\?v=20260915-storefront-v832-r3/, 'Live shop must retain collection media normalization');
-assert.match(html, /image-lightbox-v832\.js\?v=20260915-storefront-v832-r3/, 'Live shop must load full-view v832 lightbox');
+assert.match(html, /version-watermark[^>]*>v833</, 'Live shop must expose v833 watermark');
+assert.match(html, /direct-commerce-v832\.js\?v=20260916-storefront-v833-r1/, 'Live shop must load the v833-busted direct commerce bridge');
+assert.match(html, /manual-checkout-v825\.js\?v=20260916-storefront-v833-r1/, 'Live shop must retain hardened checkout UI shell');
+assert.match(html, /storefront-polish-v832\.js\?v=20260916-storefront-v833-r1/, 'Live shop must load artwork-primary storefront policy');
+assert.match(html, /storefront-polish-v832\.css\?v=20260916-storefront-v833-r1/, 'Live shop must load transparent media CSS');
+assert.match(html, /product-preview-overrides\.js\?v=20260916-storefront-v833-r1/, 'Live shop must load artwork-first compatibility layer');
+assert.match(html, /gallery-fixes-v832\.js\?v=20260916-storefront-v833-r1/, 'Live shop must load exact carousel repair');
+assert.match(html, /mockup-transparency-v832\.js\?v=20260916-storefront-v833-r1/, 'Live shop must load safe background transparency processor');
+assert.match(html, /collection-media-v831\.js\?v=20260916-storefront-v833-r1/, 'Live shop must retain collection media normalization');
+assert.match(html, /image-lightbox-v832\.js\?v=20260916-storefront-v833-r1/, 'Live shop must load full-view lightbox');
 assert.doesNotMatch(html, /direct-commerce-v828\.js|mockup-background-v830\.js|image-lightbox-v830\.js/, 'old active media/commerce handlers must not remain in the live page');
-assert.doesNotMatch(html, />[^<]*Printify[^<]*</i, 'Public shop must not expose supplier branding');
-console.log(`shop page: HTTP 200, v832 present, ${pageElapsed}ms`);
+assert.doesNotMatch(html, />[^<]*Printify[^<]*</i, 'Public shop shell must not expose supplier branding');
+console.log(`shop page: HTTP 200, v833 present, ${pageElapsed}ms`);
 
 const bridge = await textAsset(DIRECT_BRIDGE_URL, 'direct-commerce-v832.js');
 assert.match(bridge, /shop-catalog-v828/, 'bridge must use direct catalog endpoint');
 assert.match(bridge, /shop-manual-checkout-v832/, 'bridge must route checkout to v832 authority');
+assert.match(bridge, /delivery-estimate-v833\.js/, 'bridge must load the v833 delivery estimate UI');
+assert.match(bridge, /shop-delivery-preview-v833/, 'bridge must declare the v833 delivery preview authority');
 assert.match(bridge, /pricing:'fulfillment-cost-plus-5-rounded-up'/, 'bridge must declare cost+€5 pricing');
 assert.match(bridge, /artworkFirstGallery:true/, 'bridge must declare artwork-first gallery');
 assert.match(bridge, /usesShopifyCatalogApi:false/, 'bridge must declare Shopify catalog API disabled');
 assert.match(bridge, /usesShopifyPriceApi:false/, 'bridge must declare Shopify price API disabled');
+
+const deliveryUi = await textAsset(DELIVERY_UI_URL, 'delivery-estimate-v833.js');
+assert.match(deliveryUi, /Ships from/, 'checkout delivery panel must show fulfillment origin');
+assert.match(deliveryUi, /Estimated arrival/, 'checkout delivery panel must show estimated arrival');
+assert.match(deliveryUi, /business days after payment verification/, 'arrival estimate must start after payment verification');
+assert.match(deliveryUi, /may_arrive_separately/, 'checkout delivery panel must warn about split fulfillment');
+assert.match(deliveryUi, /Refresh estimate/, 'delivery estimate must be refreshable without blocking checkout');
 
 const previews = await textAsset(PREVIEWS_URL, 'product-preview-overrides.js');
 assert.match(previews, /prefersOriginalArtworkPng:\s*true/, 'original Printify artwork PNG must be preferred');
@@ -202,7 +213,7 @@ assert.match(lightbox, /width:calc\(100% - var\(--lb-pad-x\) - var\(--lb-pad-x\)
 assert.match(lightbox, /height:calc\(100% - var\(--lb-pad-y\) - var\(--lb-pad-y\)\)!important/, 'Fit must not overflow the media frame vertically');
 assert.match(lightbox, /fitMode:'media-contained'/, 'lightbox must advertise contained media fit');
 assert.match(lightbox, /allGalleryImages:true/, 'lightbox must include artwork and tag views in gallery order');
-assert.doesNotMatch(lightbox, /EXCLUDE_FROM_EXPANDED_RE/, 'v832 lightbox must not silently omit artwork/detail views');
+assert.doesNotMatch(lightbox, /EXCLUDE_FROM_EXPANDED_RE/, 'lightbox must not silently omit artwork/detail views');
 
 const liveCatalog = await catalog();
 const hydrangea = liveCatalog.products.find(product => /^hydrangea$/i.test(String(product?.name || '').trim()));
@@ -233,4 +244,4 @@ await health(STATUS_URL, 'shop-order-status-v825', 'order-status-v825');
 await health(ADMIN_URL, 'shop-admin-orders-v825', 'admin-orders-v825');
 await health(WEBHOOK_URL, 'shop-printify-webhook-v825', 'printify-webhook-v825');
 
-console.log('RESULT=V832_ARTWORK_PRICE_TRANSPARENCY_PASS');
+console.log('RESULT=V833_DELIVERY_ESTIMATE_PASS');
