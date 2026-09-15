@@ -2,10 +2,11 @@
 import assert from 'node:assert/strict';
 
 const SHOP_URL = 'https://kalenel.nl/shop/';
-const DIRECT_BRIDGE_URL = 'https://kalenel.nl/shop/direct-commerce-v828.js';
-const POLISH_URL = 'https://kalenel.nl/shop/storefront-polish-v830.js';
-const LIGHTBOX_URL = 'https://kalenel.nl/shop/image-lightbox-v830.js';
-const BACKGROUND_URL = 'https://kalenel.nl/shop/mockup-background-v830.js';
+const ASSET_VERSION = '20260915-storefront-v830';
+const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v828.js?v=${ASSET_VERSION}`;
+const POLISH_URL = `https://kalenel.nl/shop/storefront-polish-v830.js?v=${ASSET_VERSION}`;
+const LIGHTBOX_URL = `https://kalenel.nl/shop/image-lightbox-v830.js?v=${ASSET_VERSION}`;
+const BACKGROUND_URL = `https://kalenel.nl/shop/mockup-background-v830.js?v=${ASSET_VERSION}`;
 const CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828';
 const CATALOG_HEALTH_URL = `${CATALOG_URL}?health=1`;
 const CHECKOUT_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-manual-checkout-v828';
@@ -26,7 +27,8 @@ async function fetchWithTimeout(url, options = {}) {
       signal: controller.signal,
       cache: 'no-store',
       headers: {
-        'User-Agent': 'GEJAST-Live-Shop-Health/1.3',
+        'User-Agent': 'GEJAST-Live-Shop-Health/1.4',
+        'Cache-Control': 'no-cache',
         ...(options.headers || {})
       }
     });
@@ -96,7 +98,7 @@ async function textAsset(url, label) {
 
 // Deliberately read-only: never POST checkout, verify payment, submit an order,
 // mutate prices, or simulate a webhook.
-const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(SHOP_URL);
+const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(`${SHOP_URL}?v=${ASSET_VERSION}`);
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
 assert.match(html, /version-watermark[^>]*>v830</, 'Live shop must expose v830 watermark');
