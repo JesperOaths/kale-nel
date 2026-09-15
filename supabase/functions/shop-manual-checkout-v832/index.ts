@@ -1,10 +1,18 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import {
+  buildFulfillmentPlans,
+  cheapestShippingQuote,
+  chooseCheapestFulfillment,
+  parseFulfillmentMappings,
+  validateMappedCandidate,
+} from "./fulfillment-routing.mjs";
 
 const PRINTIFY_BASE = "https://api.printify.com/v1";
 const TIKKIE_URL = "https://api.abnamro.com/v2/tikkie/paymentrequests";
 const MAX_ITEMS = 20;
 const MAX_QTY = 10;
+const MAX_FULFILLMENT_PLANS = 64;
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl", "https://jesperoaths.github.io"]);
 const text = (v: unknown) => String(v ?? "").trim();
 const clean = (v: unknown) => text(v).replace(/\s+/g, " ");
@@ -158,6 +166,7 @@ Deno.serve(async (req: Request) => {
       rounding: "whole-euro-ceiling",
       creates_pending_orders: true,
       sends_to_production: false,
+      fulfillment_routing: "cheapest-valid-approved-route",
       cached_products: Array.isArray(cache?.payload?.products) ? cache.payload.products.length : 0,
       catalog_generated_at: cache?.generated_at || null,
       catalog_error: cache?.last_error || null,
@@ -204,14 +213,23 @@ Deno.serve(async (req: Request) => {
     const resolved = items.map((item: any) => ({ raw: item, cached: cachedResolution(cache.payload, item) }));
     if (resolved.some((row: any) => !row.cached)) throw new Error("One or more selected variants are no longer in the live catalog");
 
+    const mappings = parseFulfillmentMappings(Deno.env.get("PRINTIFY_FULFILLMENT_MAPPINGS"));
+    const eligibleMappings = mappings.filter((mapping: any) => mapping.countries.includes(country) && resolved.some((row: any) =>
+      mapping.source.product_id === text(row.cached.product.id) && mapping.source.variant_id === Number(row.cached.variant.id)
+    ));
     const printifyToken = await resolvePrintifyToken(sb);
     const freshProducts = new Map<string, any>();
-    for (const productId of [...new Set(resolved.map((row: any) => text(row.cached.product.id)))]) {
+    const productIds = [...new Set([
+      ...resolved.map((row: any) => text(row.cached.product.id)),
+      ...eligibleMappings.map((mapping: any) => text(mapping.target.product_id)),
+    ])];
+    for (const productId of productIds) {
       if (!/^[a-zA-Z0-9_-]{8,80}$/.test(productId)) throw new Error("Invalid Printify product id");
       freshProducts.set(productId, await printify(printifyToken, `/shops/${shopId}/products/${encodeURIComponent(productId)}.json`));
     }
 
     const authoritative: any[] = [];
+    const candidateGroups: any[][] = [];
     let subtotalCents = 0;
     for (const row of resolved) {
       const raw = row.raw;
@@ -233,18 +251,79 @@ Deno.serve(async (req: Request) => {
         unit_price_cents: unit, printify_product_id: productId, printify_variant_id: variantId,
         image: text(raw?.image || row.cached.product.image), collection: text(row.cached.product.collection), color: "White",
       });
+      const candidates: any[] = [{
+        product_id: productId,
+        variant_id: variantId,
+        quantity: qty,
+        cost_cents: Math.round(Number(freshVariant.cost)),
+        mapping_approval_id: "",
+      }];
+      for (const mapping of eligibleMappings.filter((entry: any) => entry.source.product_id === productId && entry.source.variant_id === variantId)) {
+        const targetProduct = freshProducts.get(mapping.target.product_id);
+        const targetVariant = (Array.isArray(targetProduct?.variants) ? targetProduct.variants : []).find((variant: any) => Number(variant?.id) === mapping.target.variant_id);
+        const validation = validateMappedCandidate(mapping, country, freshProduct, freshVariant, targetProduct, targetVariant);
+        if (!validation.ok) {
+          console.warn("Ignoring unsafe Printify fulfillment mapping", mapping.approval_id, validation.reason);
+          continue;
+        }
+        candidates.push({
+          product_id: mapping.target.product_id,
+          variant_id: mapping.target.variant_id,
+          quantity: qty,
+          cost_cents: validation.cost_cents,
+          mapping_approval_id: mapping.approval_id,
+          blueprint_id: mapping.target.blueprint_id,
+          print_provider_id: mapping.target.print_provider_id,
+        });
+      }
+      candidateGroups.push(candidates);
     }
     if (subtotalCents <= 0 || subtotalCents > 1000000) throw new Error("Order total outside allowed range");
 
     const nm = splitName(fullName);
     const addressTo = { ...nm, email, phone, country, region, address1, address2, city, zip };
-    const pfLineItems = authoritative.map((i, idx) => ({ product_id: i.printify_product_id, variant_id: i.printify_variant_id, quantity: i.qty, external_id: `${checkoutKey}-${idx + 1}`.slice(0, 100) }));
-    const shippingQuote = await printify(printifyToken, `/shops/${shopId}/orders/shipping.json`, { method: "POST", body: JSON.stringify({ line_items: pfLineItems, address_to: addressTo }) });
-    let shippingMethod = "standard", shippingMethodCode = 1, shippingCents = Number(shippingQuote?.standard);
-    if (!Number.isFinite(shippingCents)) { shippingMethod = "economy"; shippingMethodCode = 4; shippingCents = Number(shippingQuote?.economy); }
-    if (!Number.isFinite(shippingCents)) { shippingMethod = "priority"; shippingMethodCode = 2; shippingCents = Number(shippingQuote?.priority ?? shippingQuote?.express); }
-    if (!Number.isFinite(shippingCents) || shippingCents < 0) throw new Error("No shipping method available for this address");
-    shippingCents = Math.round(shippingCents);
+    const plans = buildFulfillmentPlans(candidateGroups, MAX_FULFILLMENT_PLANS);
+    const quotedPlans: any[] = [];
+    for (const plan of plans) {
+      const pfLineItems = plan.candidates.map((candidate: any, idx: number) => ({
+        product_id: candidate.product_id,
+        variant_id: candidate.variant_id,
+        quantity: candidate.quantity,
+        external_id: `${checkoutKey}-${idx + 1}`.slice(0, 100),
+      }));
+      try {
+        const quote = await printify(printifyToken, `/shops/${shopId}/orders/shipping.json`, { method: "POST", body: JSON.stringify({ line_items: pfLineItems, address_to: addressTo }) });
+        const shipping = cheapestShippingQuote(quote);
+        if (shipping) quotedPlans.push({ plan, shipping, route_key: pfLineItems.map((item: any) => `${item.product_id}:${item.variant_id}`).join("|") });
+      } catch (error) {
+        console.warn("Printify fulfillment route was not shippable", error instanceof Error ? error.message.slice(0, 180) : "unknown");
+      }
+    }
+    const selected = chooseCheapestFulfillment(quotedPlans);
+    if (!selected) throw new Error("No shipping method available for this address");
+    const shippingMethod = selected.shipping.name;
+    const shippingMethodCode = selected.shipping.code;
+    const shippingCents = selected.shipping.cents;
+    authoritative.forEach((item, index) => {
+      const route = selected.plan.candidates[index];
+      const sourceProductId = item.printify_product_id;
+      const sourceVariantId = item.printify_variant_id;
+      item.catalog_printify_product_id = sourceProductId;
+      item.catalog_printify_variant_id = sourceVariantId;
+      item.printify_product_id = route.product_id;
+      item.printify_variant_id = route.variant_id;
+      item.fulfillment_cost_cents = route.cost_cents;
+      item.fulfillment_route = route.mapping_approval_id ? {
+        type: "approved_regional_mapping",
+        approval_id: route.mapping_approval_id,
+        source_product_id: sourceProductId,
+        source_variant_id: sourceVariantId,
+        target_product_id: route.product_id,
+        target_variant_id: route.variant_id,
+        blueprint_id: route.blueprint_id,
+        print_provider_id: route.print_provider_id,
+      } : { type: "catalog_product" };
+    });
 
     const totalCents = subtotalCents + shippingCents;
     const orderId = crypto.randomUUID();
