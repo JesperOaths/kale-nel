@@ -163,7 +163,6 @@ function mediaFor(product: any) {
       return true;
     })
     .sort((a: any, b: any) => a.index - b.index);
-  if (/jellyfish/i.test(text(product?.title)) && media.length > 1) media = media.slice(1);
   return media.slice(0, 24).map(({ image, label }: any) => ({ image, label }));
 }
 function publicProduct(product: any) {

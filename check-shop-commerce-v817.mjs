@@ -242,6 +242,7 @@ assert.match(deployWorkflow, /functions deploy \"\$function_name\"/);
 assert.match(deployWorkflow, /deploy_function shop-catalog-v828/);
 assert.match(deployWorkflow, /deploy_function shop-manual-checkout-v832/);
 assert.doesNotMatch(deployWorkflow, /functions deploy shop-manual-checkout-v828/);
+assert.doesNotMatch(catalogEdge, /jellyfish[\s\S]{0,120}media\.slice\(1\)/i);
 assert.match(liveShopCheck, /20260915-storefront-v832-r3/);
 assert.match(liveShopCheck, /direct-commerce-v832/);
 assert.match(liveShopCheck, /storefront-polish-v832/);
