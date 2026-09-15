@@ -1,6 +1,6 @@
 name: Deploy shop commerce functions
 
-# Deploys only after validating the repository credential without exposing it.
+# Deploys only after validating the corrected repository credential without exposing it.
 on:
   push:
     branches: [main]
