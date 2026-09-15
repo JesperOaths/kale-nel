@@ -8,15 +8,45 @@ export const SHIPPING_METHODS = Object.freeze([
   Object.freeze({ name: "express", code: 3 }),
 ]);
 
+function shippingCents(raw) {
+  if (raw === null || raw === undefined || raw === "" || typeof raw === "boolean") return Number.NaN;
+  const cents = Number(raw);
+  return Number.isFinite(cents) && cents >= 0 ? Math.round(cents) : Number.NaN;
+}
+
+function addShippingCandidate(out, name, code, raw) {
+  const cents = shippingCents(raw);
+  if (Number.isFinite(cents)) out.push({ name, code, cents });
+}
+
 export function cheapestShippingQuote(quote) {
-  const valid = SHIPPING_METHODS
-    .map(method => {
-      const raw = quote?.[method.name];
-      return { ...method, cents: raw === null || raw === undefined || raw === "" || typeof raw === "boolean" ? Number.NaN : Number(raw) };
-    })
-    .filter(method => Number.isFinite(method.cents) && method.cents >= 0)
-    .map(method => ({ ...method, cents: Math.round(method.cents) }))
-    .sort((a, b) => a.cents - b.cents || a.code - b.code);
+  const valid = [];
+  addShippingCandidate(valid, "economy", 4, quote?.economy);
+  addShippingCandidate(valid, "standard", 1, quote?.standard);
+
+  const priority = shippingCents(quote?.priority);
+  const transitionalExpress = shippingCents(quote?.express);
+  const printifyExpress = shippingCents(quote?.printify_express);
+
+  if (Number.isFinite(priority)) {
+    valid.push({ name: "priority", code: 2, cents: priority });
+  } else if (Number.isFinite(transitionalExpress) && !Number.isFinite(printifyExpress)) {
+    // Legacy V1 responses used `express` for shipping method code 2.
+    // Treat an otherwise-unqualified `express` field as legacy priority so we
+    // never accidentally submit code 3 for a code-2 quote.
+    valid.push({ name: "priority", code: 2, cents: transitionalExpress });
+  }
+
+  if (Number.isFinite(printifyExpress)) {
+    // Current transitional V1 responses expose Printify Express as
+    // `printify_express`; shipping method code 3 must use this quote.
+    valid.push({ name: "express", code: 3, cents: printifyExpress });
+  } else if (Number.isFinite(priority) && Number.isFinite(transitionalExpress)) {
+    // Future/final naming uses `priority` for code 2 and `express` for code 3.
+    valid.push({ name: "express", code: 3, cents: transitionalExpress });
+  }
+
+  valid.sort((a, b) => a.cents - b.cents || a.code - b.code);
   return valid[0] || null;
 }
 
