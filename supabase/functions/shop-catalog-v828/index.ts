@@ -9,8 +9,8 @@ const BOXY_TITLES = new Set(["coral", "daffodil", "dragonfly", "honeysuckle", "h
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl", "https://jesperoaths.github.io"]);
 
 const text = (value: unknown) => String(value ?? "").trim();
-const priceEuros = (cents: unknown) => {
-  const n = Number(cents);
+const retailEurosFromCost = (costCents: unknown) => {
+  const n = Number(costCents);
   return Number.isFinite(n) && n > 0 ? Math.ceil((Math.round(n) + 500) / 100) : 0;
 };
 
@@ -43,7 +43,7 @@ async function printify(token: string, path: string) {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      "User-Agent": "Kalenel-Direct-Catalog/8.28",
+      "User-Agent": "Kalenel-Direct-Catalog/8.32",
     },
   });
   const raw = await response.text();
@@ -128,6 +128,26 @@ function collectionFor(product: any) {
   if (/\b(?:oversized|boxy)\b/i.test(title) || BOXY_TITLES.has(key)) return "boxy";
   return "normal";
 }
+function artworkFor(product: any) {
+  const seen = new Set<string>();
+  const out: any[] = [];
+  for (const area of Array.isArray(product?.print_areas) ? product.print_areas : []) {
+    for (const placeholder of Array.isArray(area?.placeholders) ? area.placeholders : []) {
+      if (!/^front$/i.test(text(placeholder?.position))) continue;
+      for (const image of Array.isArray(placeholder?.images) ? placeholder.images : []) {
+        const src = text(image?.src);
+        if (!src || seen.has(src)) continue;
+        try {
+          const url = new URL(src);
+          if (url.protocol !== "https:") continue;
+        } catch { continue; }
+        seen.add(src);
+        out.push({ image: src, label: "Artwork PNG" });
+      }
+    }
+  }
+  return out.slice(0, 1);
+}
 function mediaFor(product: any) {
   const seen = new Set<string>();
   let media = (Array.isArray(product?.images) ? product.images : [])
@@ -154,7 +174,7 @@ function publicProduct(product: any) {
       title: text(variant?.title),
       size: sizeFrom(product, variant),
       color: colorFrom(product, variant) || "White",
-      price: priceEuros(variant?.price),
+      price: retailEurosFromCost(variant?.cost),
       is_enabled: variant?.is_enabled !== false,
       is_available: variant?.is_available !== false,
       options: resolvedOptions(product, variant).map((item) => ({ name: item.name, value: item.value })),
@@ -165,10 +185,17 @@ function publicProduct(product: any) {
   const prices = priced.map((variant: any) => variant.price);
   const sizes: string[] = [];
   for (const variant of priced) if (variant.size && !sizes.includes(variant.size)) sizes.push(variant.size);
-  const mockups = mediaFor(product);
+  const artwork = artworkFor(product);
+  const garment = mediaFor(product);
+  const mediaSeen = new Set<string>();
+  const mockups = [...artwork, ...garment].filter((item: any) => {
+    if (!item?.image || mediaSeen.has(item.image)) return false;
+    mediaSeen.add(item.image);
+    return true;
+  });
   const collection = collectionFor(product);
   return {
-    id: text(product?.id), source: "printify-direct-v828", name: text(product?.title), description: text(product?.description),
+    id: text(product?.id), source: "printify-direct-v832", name: text(product?.title), description: text(product?.description),
     collection, price: prices.length ? Math.min(...prices) : 0, priceMax: prices.length ? Math.max(...prices) : 0,
     sizes, mockups, image: mockups[0]?.image || "", baseKey: String(product?.blueprint_id || "shirt"),
     baseLabel: collection === "boxy" ? "Oversized Boxy T-Shirt" : "Classic T-Shirt",
@@ -183,7 +210,7 @@ async function buildCatalog(supabase: any) {
     .map(publicProduct)
     .filter((product: any) => product.id && product.name && product.price > 0 && product.mockups.length > 0 && product.variants.length > 0);
   return {
-    generatedAt: new Date().toISOString(), source: "printify-direct-v828",
+    generatedAt: new Date().toISOString(), source: "printify-direct-v832",
     shop: { id: String(shop?.id || ""), salesChannel: text(shop?.sales_channel) }, products: cleanProducts,
   };
 }
@@ -236,14 +263,15 @@ Deno.serve(async (req: Request) => {
 
   if (url.searchParams.get("health") === "1") {
     return json(req, {
-      ok: true, mode: "printify-direct-catalog-v828", usesShopifyApi: false, whiteVariantsOnly: true,
+      ok: true, mode: "printify-direct-catalog-v832", usesShopifyApi: false, whiteVariantsOnly: true,
+      pricing: "fulfillment-cost-plus-5-rounded-up", artworkFirst: true,
       cachedProducts: products.length, cacheAgeSeconds: Number.isFinite(ageMs) ? Math.round(ageMs / 1000) : null,
       refreshScheduled,
     });
   }
 
   if (!products.length) {
-    return json(req, { ok: false, warming: true, source: "printify-direct-v828", products: [], refreshScheduled }, 202);
+    return json(req, { ok: false, warming: true, source: "printify-direct-v832", products: [], refreshScheduled }, 202);
   }
 
   return json(req, {
