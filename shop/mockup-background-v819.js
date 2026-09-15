@@ -121,7 +121,7 @@
     }
 
     const ratio = matched / total;
-    if(ratio < 0.08 || ratio > 0.88) return false;
+    if(ratio < 0.08 || ratio > 0.985) return false;
 
     for(let index = 0; index < total; index += 1){
       if(!visited[index]) continue;
@@ -161,7 +161,7 @@
         if(!floodBackdrop(imageData)) return url;
         context.putImageData(imageData, 0, 0);
 
-        const output = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.94));
+        const output = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         return output ? URL.createObjectURL(output) : url;
       } finally {
         bitmap.close?.();

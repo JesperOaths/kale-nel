@@ -215,7 +215,8 @@ Deno.serve(async (req: Request) => {
       const qty = Math.floor(qtyRaw);
       if (!Number.isFinite(qtyRaw) || qty < 1 || qty > MAX_QTY) throw new Error("Invalid quantity");
       if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isWhiteVariant(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
-      const unit = Math.round(Number(freshVariant?.price));
+      const cost = Math.round(Number(freshVariant?.price));
+      const unit = Math.ceil((cost + 500) / 100) * 100;
       if (!Number.isFinite(unit) || unit <= 0) throw new Error(`Invalid authoritative price: ${clean(row.cached.product.name)}`);
       const size = sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase();
       subtotalCents += unit * qty;

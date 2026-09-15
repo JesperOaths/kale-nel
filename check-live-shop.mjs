@@ -63,6 +63,7 @@ async function catalog() {
       assert.ok(!skus.has(String(variant.sku)), `duplicate variant SKU ${variant.sku}`);
       skus.add(String(variant.sku));
       assert.ok(Number(variant?.price || 0) > 0, `${product?.name} variant ${variant?.id} has invalid price`);
+      assert.equal(Number.isInteger(Number(variant.price)), true, `${product?.name} variant ${variant?.id} price must be a whole euro`);
     }
   }
 
@@ -88,14 +89,16 @@ async function health(url, label, expectedMode) {
 const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(SHOP_URL);
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
-assert.match(html, /version-watermark[^>]*>v828</, 'Live shop must expose v828 watermark');
-assert.match(html, /direct-commerce-v828\.js\?v=20260910-shop-direct-v828/, 'Live shop must load v828 direct-commerce bridge');
-assert.match(html, /manual-checkout-v825\.js\?v=20260910-shop-direct-v828/, 'Live shop must retain the hardened manual checkout UI');
+assert.match(html, /version-watermark[^>]*>v829</, 'Live shop must expose v829 watermark');
+assert.match(html, /direct-commerce-v828\.js\?v=20260910-shop-fixes-v829/, 'Live shop must load the v828 bridge with the v829 cache key');
+assert.match(html, /manual-checkout-v825\.js\?v=20260910-shop-fixes-v829/, 'Live shop must retain the hardened manual checkout UI');
+assert.doesNotMatch(html, /front-lightbox-fit-v821\.js/, 'Legacy auto-crop must not make the popup start zoomed in');
+assert.doesNotMatch(html, />[^<]*Printify[^<]*</i, 'Public shop must not expose supplier branding');
 assert.doesNotMatch(html, /shop-runtime-v819\.js/, 'Shopify price-authority runtime must not be loaded');
 assert.doesNotMatch(html, /catalog-recovery-v822\.js/, 'v822 catalog recovery must not be loaded');
 assert.doesNotMatch(html, /payment-readiness-v824\.js/, 'Old card-payment guard must not be active');
 assert.doesNotMatch(html, /shopify-checkout-v817\.js/, 'Old Shopify checkout redirect must not be active');
-console.log(`shop page: HTTP 200, v828 present, ${pageElapsed}ms`);
+console.log(`shop page: HTTP 200, v829 present, ${pageElapsed}ms`);
 
 const { response: bridgeResponse } = await fetchWithTimeout(DIRECT_BRIDGE_URL);
 assert.equal(bridgeResponse.status, 200, `direct-commerce-v828.js must return HTTP 200, got ${bridgeResponse.status}`);
@@ -105,6 +108,8 @@ assert.match(bridge, /shop-manual-checkout-v828/, 'bridge must use v828 checkout
 assert.match(bridge, /usesShopifyCatalogApi:\s*false/, 'bridge must declare Shopify catalog API disabled');
 assert.match(bridge, /usesShopifyPriceApi:\s*false/, 'bridge must declare Shopify price API disabled');
 assert.doesNotMatch(bridge, /shop-price-v818|shop-catalog-v822/, 'bridge must not call legacy catalog/price endpoints');
+assert.doesNotMatch(bridge, /jellyfish-front-(?:artwork|v7)/i, 'bridge must not reinsert the removed Jellyfish first image');
+assert.match(bridge, /wholeEuro/, 'bridge must normalize displayed shirt prices upward to whole euros');
 
 await catalog();
 const catalogHealth = await health(CATALOG_HEALTH_URL, 'shop-catalog-v828', 'printify-direct-catalog-v828');
@@ -120,4 +125,4 @@ await health(STATUS_URL, 'shop-order-status-v825', 'order-status-v825');
 await health(ADMIN_URL, 'shop-admin-orders-v825', 'admin-orders-v825');
 await health(WEBHOOK_URL, 'shop-printify-webhook-v825', 'printify-webhook-v825');
 
-console.log('RESULT=V828_LIVE_SHOP_DIRECT_PRINTIFY_PASS');
+console.log('RESULT=V829_LIVE_SHOP_DIRECT_PRINTIFY_PASS');

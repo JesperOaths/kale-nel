@@ -8,7 +8,6 @@
     [/axolotl/i, 'assets/product-previews/axolotl-front-v5.webp'],
     [/dragonfly/i, 'assets/product-previews/dragonfly-front-v5.webp'],
     [/hydrangea/i, 'assets/product-previews/hydrangea-front-v5.webp'],
-    [/jellyfish/i, 'https://cdn.shopify.com/s/files/1/1110/0209/1869/files/jellyfish-front-artwork.png?v=1788453508'],
     [/(?:orchid|flower).*mantis|mantis/i, 'assets/product-previews/mantis-front-v5.webp'],
     [/thistle/i, 'assets/product-previews/thistle-front-v5.webp'],
     [/(?:wild\s*carrot|queen\s*anne)/i, 'assets/product-previews/queen-annes-lace-front-v5.webp'],
@@ -187,8 +186,14 @@
       gap: 0 !important;
       padding: 12px !important;
       background: #ded6ca !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+      overscroll-behavior-inline: contain;
     }
     .mockup {
+      width: 100% !important;
+      min-width: 100% !important;
+      overflow: hidden !important;
       background: transparent !important;
       border-color: transparent !important;
       box-shadow: none !important;

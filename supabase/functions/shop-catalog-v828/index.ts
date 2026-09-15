@@ -11,7 +11,7 @@ const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl",
 const text = (value: unknown) => String(value ?? "").trim();
 const priceEuros = (cents: unknown) => {
   const n = Number(cents);
-  return Number.isFinite(n) && n > 0 ? Math.round(n) / 100 : 0;
+  return Number.isFinite(n) && n > 0 ? Math.ceil((Math.round(n) + 500) / 100) : 0;
 };
 
 function cors(req: Request) {

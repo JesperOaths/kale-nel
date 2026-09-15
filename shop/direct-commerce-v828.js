@@ -23,7 +23,6 @@
     [/axolotl/i, 'assets/product-previews/axolotl-front-v5.webp'],
     [/mantis/i, 'assets/product-previews/mantis-front-v5.webp'],
     [/thistle/i, 'assets/product-previews/thistle-front-v5.webp'],
-    [/jellyfish/i, 'assets/product-previews/jellyfish-front-v7.webp'],
     [/dragonfly/i, 'assets/product-previews/dragonfly-front-v5.webp'],
     [/(?:wild\s*carrot|queen\s*anne)/i, 'assets/product-previews/queen-annes-lace-front-v5.webp']
   ];
@@ -111,8 +110,8 @@
   const style = document.createElement('style');
   style.dataset.directCommerceV828 = 'true';
   style.textContent = `
-    .mockup-rail { grid-auto-columns: 100% !important; gap: 0 !important; padding: 12px !important; background: #ded6ca !important; }
-    .mockup { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+    .mockup-rail { grid-auto-columns: 100% !important; gap: 0 !important; padding: 12px !important; background: #ded6ca !important; overflow: hidden !important; }
+    .mockup { min-width: 100% !important; background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
     .mockup img { width: 100% !important; aspect-ratio: 1 / 1 !important; object-fit: contain !important; object-position: center !important; padding: 8px !important; background: transparent !important; }
     .product-card:has(.mockup:only-child) .gallery-controls { display: none !important; }
     .cart-line img { object-fit: contain !important; background: #ded6ca !important; border-radius: 12px; }

@@ -32,15 +32,15 @@ const refresh = read('shop/live-catalog-refresh-v818.js');
 // hardened manual-payment UI and manual production-release boundary.
 assert.match(index, /direct-commerce-v828\.js/);
 assert.match(index, /manual-checkout-v825\.js/);
-assert.match(index, /version-watermark[^>]*>v828</);
-assert.match(index, /20260910-shop-direct-v828/);
+assert.match(index, /version-watermark[^>]*>v829</);
+assert.match(index, /20260910-shop-fixes-v829/);
 assert.doesNotMatch(index, /payment-readiness-v824\.js/);
 assert.doesNotMatch(index, /shopify-checkout-v817\.js/);
 assert.doesNotMatch(index, /shop-runtime-v819\.js/);
 assert.doesNotMatch(index, /catalog-recovery-v822\.js/);
 assert.match(index, /mockup-background-v819\.js/);
 assert.match(index, /image-lightbox-v820\.js/);
-assert.match(index, /front-lightbox-fit-v821\.js/);
+assert.doesNotMatch(index, /front-lightbox-fit-v821\.js/);
 assert.match(index, /live-catalog-refresh-v818\.js/);
 
 // The browser bridge must use only the new direct Printify catalog and v828
@@ -53,7 +53,7 @@ assert.match(directCommerce, /printify-direct-v828/);
 assert.match(directCommerce, /usesShopifyCatalogApi:\s*false/);
 assert.match(directCommerce, /usesShopifyPriceApi:\s*false/);
 assert.doesNotMatch(directCommerce, /shop-price-v818|shop-catalog-v822/);
-assert.match(directCommerce, /assets\/product-previews\/jellyfish-front-v7\.webp/);
+assert.doesNotMatch(directCommerce, /jellyfish-front-(?:artwork|v7)/i);
 
 // Buyer UI remains capability-token based, server-priced and free of card/Stripe
 // checkout logic. Its network call is intercepted by directCommerce before fetch.
@@ -83,17 +83,18 @@ assert.match(checkoutEdge, /payment_reference/);
 assert.match(checkoutEdge, /checkout_idempotency_key/);
 assert.match(checkoutEdge, /RESEND_API_KEY/);
 assert.match(checkoutEdge, /sends_to_production:\s*false/);
+assert.match(checkoutEdge, /Math\.ceil\(\(cost \+ 500\) \/ 100\) \* 100/);
 assert.doesNotMatch(checkoutEdge, /send_to_production\.json/);
 assert.doesNotMatch(checkoutEdge, /STRIPE_SECRET|stripe\.com/i);
 
-// Direct catalog is server-token-only, exact-cent priced, white-variant-only,
+// Direct catalog is server-token-only, whole-euro priced, white-variant-only,
 // cached behind RLS, and refreshed asynchronously rather than making browsers
 // wait on the full Printify product payload.
 assert.match(catalogEdge, /shop_catalog_cache_v828/);
 assert.match(catalogEdge, /EdgeRuntime\.waitUntil/);
 assert.match(catalogEdge, /whiteVariantsOnly:\s*true/);
 assert.match(catalogEdge, /isWhiteVariant/);
-assert.match(catalogEdge, /Math\.round\(n\)\s*\/\s*100/);
+assert.match(catalogEdge, /Math\.ceil\(\(Math\.round\(n\) \+ 500\) \/ 100\)/);
 assert.match(catalogEdge, /get_printify_api_token_v815a/);
 assert.match(catalogEdge, /Authorization:\s*`Bearer \$\{token\}`/);
 assert.doesNotMatch(catalogEdge, /shop-price-v818|shop-catalog-v822|cdn\.shopify\.com/);
@@ -123,7 +124,8 @@ assert.match(adminPage, /verify_payment/);
 assert.match(adminPage, /submit_printify/);
 assert.match(adminPage, /Amount actually received/);
 assert.match(adminPage, /paid_amount_cents/);
-assert.match(adminPage, /Send to Printify/);
+assert.match(adminPage, /Send to production/);
+assert.doesNotMatch(adminPage, /Send to Printify|Payment & Printify|Refreshing Printify status/i);
 assert.match(adminNav, /admin_shop_orders\.html/);
 assert.match(adminEdge, /payment_not_verified/);
 assert.match(adminEdge, /payment_verified_at/);
@@ -171,17 +173,17 @@ assert.equal(
   '230ee9f150e1c65e14185fac1691a04e67788c53dacb6625be7d83c6cfbf2b1b',
   'Merch collection image must remain the exact supplied PNG'
 );
-assert.match(previewOverrides, /jellyfish/i);
+assert.doesNotMatch(previewOverrides, /jellyfish-front-(?:artwork|v7)/i);
 assert.match(mockupBackground, /function floodBackdrop/);
 assert.match(mockupBackground, /BRUIS_MATCH_MOCKUP_BACKGROUND/);
 assert.match(lightbox, /aria-modal', 'true'/);
 assert.match(lightbox, /event\.key === 'Escape'/);
-assert.match(frontLightboxFit, /function cropTransparentMargins/);
-assert.match(frontLightboxFit, /is-front-fit-v821/);
+assert.match(lightbox, /function resetView/);
+assert.match(lightbox, /data-lightbox-fit/);
 assert.match(refresh, /POLL_MS\s*=\s*15\s*\*\s*1000/);
 assert.doesNotMatch(refresh, /window\.location\.reload/);
-assert.match(store, /toFixed\(2\)/);
-assert.doesNotMatch(store, /price:\s*Math\.ceil/);
+assert.match(store, /const wholeEuro/);
+assert.match(store, /price:\s*wholeEuro/);
 
 // Main-deployment health must verify the direct Printify/manual-payment release
 // read-only: no fake checkout or production order is permitted in CI.
@@ -192,7 +194,7 @@ assert.match(liveShopCheck, /shop-manual-checkout-v828/);
 assert.match(liveShopCheck, /shop-order-status-v825/);
 assert.match(liveShopCheck, /shop-admin-orders-v825/);
 assert.match(liveShopCheck, /shop-printify-webhook-v825/);
-assert.match(liveShopCheck, /RESULT=V828_LIVE_SHOP_DIRECT_PRINTIFY_PASS/);
+assert.match(liveShopCheck, /RESULT=V829_LIVE_SHOP_DIRECT_PRINTIFY_PASS/);
 assert.match(liveShopCheck, /Deliberately read-only/);
 assert.doesNotMatch(liveShopCheck, /method:\s*['"]POST['"]/);
 

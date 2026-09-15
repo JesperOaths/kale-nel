@@ -30,6 +30,10 @@ function numeric(value: unknown) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function wholeEuro(value: unknown) {
+  return Math.ceil(Math.max(0, numeric(value)) - 1e-9);
+}
+
 function gidTail(value: unknown) {
   const raw = text(value);
   const match = raw.match(/\/([^/]+)$/);
@@ -60,6 +64,7 @@ function mediaFor(raw: any) {
   const seen = new Set<string>();
   return source
     .filter((item) => {
+      if (/^jellyfish$/i.test(text(raw?.title)) && /jellyfish-front-artwork/i.test(item.image)) return false;
       if (!item.image || seen.has(item.image)) return false;
       seen.add(item.image);
       return true;
@@ -144,8 +149,8 @@ Deno.serve(async (req: Request) => {
       return {
         id: gidTail(raw?.id),
         name: text(raw?.title),
-        price: numeric(raw?.priceRange?.minVariantPrice?.amount),
-        priceMax: numeric(raw?.priceRange?.maxVariantPrice?.amount),
+        price: wholeEuro(raw?.priceRange?.minVariantPrice?.amount),
+        priceMax: wholeEuro(raw?.priceRange?.maxVariantPrice?.amount),
         currency: text(raw?.priceRange?.minVariantPrice?.currencyCode || "EUR"),
         updatedAt: raw?.updatedAt || null,
         mockups,
@@ -154,7 +159,7 @@ Deno.serve(async (req: Request) => {
           id: gidTail(variant?.id),
           sku: text(variant?.sku),
           title: text(variant?.title),
-          price: numeric(variant?.price?.amount),
+          price: wholeEuro(variant?.price?.amount),
           is_enabled: true,
           is_available: variant?.availableForSale !== false,
           options: (Array.isArray(variant?.selectedOptions) ? variant.selectedOptions : []).map((option: any) => ({

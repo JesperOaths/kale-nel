@@ -19,7 +19,6 @@
     [/axolotl/i, 'assets/product-previews/axolotl-front-v5.webp'],
     [/mantis/i, 'assets/product-previews/mantis-front-v5.webp'],
     [/thistle/i, 'assets/product-previews/thistle-front-v5.webp'],
-    [/jellyfish/i, 'assets/product-previews/jellyfish-front-v7.webp'],
     [/dragonfly/i, 'assets/product-previews/dragonfly-front-v5.webp'],
     [/queen anne/i, 'assets/product-previews/queen-annes-lace-front-v5.webp']
   ];
@@ -27,7 +26,8 @@
   const escLocal = value => String(value ?? '').replace(/[&<>"']/g, char => ({
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
   }[char]));
-  const exactMoney = value => `€${Number(value || 0).toFixed(2)}`;
+  const wholeEuro = value => Math.ceil(Math.max(0, Number(value || 0)) - 1e-9);
+  const exactMoney = value => `€${wholeEuro(value)}`;
   const centsMoney = value => `€${(Number(value || 0) / 100).toFixed(2)}`;
   const optionValue = (variant, optionName) => {
     const target = String(optionName || '').toLowerCase();
@@ -40,7 +40,7 @@
     return String(variant?.title || '').split('/').map(part => part.trim())
       .find(part => /^(?:xs|s|m|l|xl|[2-9]xl)$/i.test(part)) || '';
   };
-  const variantPrice = variant => Number(variant?.price || 0);
+  const variantPrice = variant => wholeEuro(variant?.price);
   const variantAvailable = variant => variant?.is_enabled !== false && variant?.is_available !== false;
   const frontPreviewFor = name => FRONT_PRINT_PREVIEWS.find(([pattern]) => pattern.test(String(name || '')))?.[1] || '';
   const randomToken = bytes => {
@@ -102,7 +102,8 @@
     for(const item of cart){
       const product = productForId(item.productId || item.id);
       if(!product) continue;
-      const requestedSize = String(item.size || product.sizes?.[0] || 'S');
+      const defaultSize = product.sizes?.find(size => String(size).trim().toUpperCase() === 'M') || product.sizes?.[0] || 'S';
+      const requestedSize = String(item.size || defaultSize);
       const variant = variantForSize(product, requestedSize);
       if(!variant) continue;
       const price = variantPrice(variant) || Number(product.price || 0);
@@ -226,10 +227,10 @@
         </div>
         <div class="manual-checkout-summary">
           <div><span>Products</span><strong>${exactMoney(subtotal)}</strong></div>
-          <div><span>Shipping</span><strong>Calculated securely from Printify</strong></div>
+          <div><span>Shipping</span><strong>Calculated securely from your delivery address</strong></div>
         </div>
         <div class="manual-checkout-note">
-          After continuing, the server checks the real Printify price and shipping cost, creates a <strong>Pending</strong> order, and shows your exact payment amount and order reference. The price shown in the browser is never trusted.
+          After continuing, the server verifies the product price and shipping cost, creates a <strong>Pending</strong> order, and shows your exact payment amount and order reference. The price shown in the browser is never trusted.
         </div>
         <div class="manual-checkout-actions">
           <button class="manual-checkout-primary" type="submit">Create pending order</button>
@@ -288,7 +289,10 @@
       });
       const result = await response.json().catch(() => ({}));
       if(!response.ok || !result?.ok){
-        throw new Error(result?.detail || result?.error || `Checkout failed (${response.status})`);
+        const detail = String(result?.detail || result?.error || '');
+        throw new Error(/printify|token unavailable|production connection/i.test(detail)
+          ? 'Ordering is temporarily unavailable while the production connection is being restored. Your cart is safe; please try again shortly.'
+          : (detail || `Checkout failed (${response.status})`));
       }
       const sessionRecord = {
         order_id: result.order_id,
@@ -326,7 +330,7 @@
     bodyNode().innerHTML = `
       <div class="manual-checkout-success">
         <h3>Order saved as Pending</h3>
-        <p>Your order has been received. It will not be sent to Printify until the bank transfer has been manually verified.</p>
+        <p>Your order has been received. It will not be sent to production until the bank transfer has been manually verified.</p>
         <div class="manual-checkout-summary">
           <div><span>Products</span><strong>${centsMoney(result.subtotal_cents)}</strong></div>
           <div><span>Shipping</span><strong>${centsMoney(result.shipping_cents)}</strong></div>
@@ -436,7 +440,7 @@
     const product = productForId(add.dataset.add);
     if(!product) return;
     const select = qs(`[data-size="${CSS.escape(String(product.id))}"]`);
-    const size = select?.value || product.sizes?.[0] || 'S';
+    const size = select?.value || product.sizes?.find(value => String(value).trim().toUpperCase() === 'M') || product.sizes?.[0] || 'S';
     const variant = variantForSize(product, size);
     if(!variant) return;
     const qtyInput = qs(`[data-qty="${CSS.escape(String(product.id))}"]`);

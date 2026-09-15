@@ -22,6 +22,7 @@ const numeric = (value: unknown) => {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
 };
+const wholeEuro = (value: unknown) => Math.ceil(Math.max(0, numeric(value)) - 1e-9);
 const gidTail = (value: unknown) => text(value).split("/").pop() || text(value);
 
 function collectionFor(raw: any) {
@@ -44,6 +45,7 @@ function mediaFor(raw: any) {
   const seen = new Set<string>();
   return source
     .filter((item) => {
+      if (/^jellyfish$/i.test(text(raw?.title)) && /jellyfish-front-artwork/i.test(item.image)) return false;
       if (!item.image || seen.has(item.image)) return false;
       seen.add(item.image);
       return true;
@@ -58,7 +60,7 @@ function variantsFor(raw: any) {
     id: gidTail(variant?.id),
     sku: text(variant?.sku),
     title: text(variant?.title),
-    price: numeric(variant?.price?.amount),
+    price: wholeEuro(variant?.price?.amount),
     is_enabled: true,
     is_available: variant?.availableForSale !== false,
     options: (Array.isArray(variant?.selectedOptions) ? variant.selectedOptions : []).map((option: any) => ({
@@ -139,8 +141,8 @@ Deno.serve(async (req: Request) => {
         name: text(raw?.title),
         description: text(raw?.description),
         collection: collectionFor(raw),
-        price: numeric(raw?.priceRange?.minVariantPrice?.amount),
-        priceMax: numeric(raw?.priceRange?.maxVariantPrice?.amount),
+        price: wholeEuro(raw?.priceRange?.minVariantPrice?.amount),
+        priceMax: wholeEuro(raw?.priceRange?.maxVariantPrice?.amount),
         sizes: sizesFor(variants),
         mockups,
         image: mockups[0]?.image || "",

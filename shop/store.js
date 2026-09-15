@@ -29,7 +29,8 @@ let cart = JSON.parse(localStorage.getItem(cartKey) || '[]');
 
 const qs = sel => document.querySelector(sel);
 const qsa = sel => [...document.querySelectorAll(sel)];
-const money = value => `€${Number(value || 0).toFixed(2)}`;
+const wholeEuro = value => Math.ceil(Math.max(0, Number(value || 0)) - 1e-9);
+const money = value => `€${wholeEuro(value)}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const slug = text => String(text || 'product').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,80) || 'product';
 
@@ -41,21 +42,26 @@ function normalizeCollection(value){
 }
 
 function normalizeProduct(raw){
-  const mockups = Array.isArray(raw.mockups) ? raw.mockups.filter(m => m && m.image) : [];
   const name = raw.name || raw.title || 'Untitled tee';
+  const mockups = (Array.isArray(raw.mockups) ? raw.mockups.filter(m => m && m.image) : [])
+    .filter((mockup, index) => !(
+      index === 0 &&
+      /^jellyfish$/i.test(String(name).trim()) &&
+      /jellyfish-front-artwork/i.test(String(mockup.image || ''))
+    ));
   const collection = /despinoza/i.test(name)
     ? 'merch'
     : normalizeCollection(raw.collection || raw.shirtCollection || raw.fit);
   return {
     id: String(raw.id || slug(name)),
     name,
-    price: Number(raw.price || 0),
-    priceMax: Number(raw.priceMax || raw.price || 0),
+    price: wholeEuro(raw.price),
+    priceMax: wholeEuro(raw.priceMax || raw.price),
     sizes: Array.isArray(raw.sizes) && raw.sizes.length ? raw.sizes : ['S','M','L','XL','2XL'],
     mockups,
     image: mockups[0]?.image || raw.image || '',
     baseLabel: raw.baseLabel || 'Shirt base pending',
-    variants: Array.isArray(raw.variants) ? raw.variants : [],
+    variants: Array.isArray(raw.variants) ? raw.variants.map(variant => ({ ...variant, price: wholeEuro(variant.price) })) : [],
     collection
   };
 }
@@ -183,7 +189,7 @@ function renderProducts(){
         </div>
         <div class="buy-box">
           <label>Size
-            <select data-size="${esc(product.id)}">${product.sizes.map(s => `<option>${esc(s)}</option>`).join('')}</select>
+            <select data-size="${esc(product.id)}">${product.sizes.map((s, index) => `<option${String(s).trim().toUpperCase() === 'M' || (!product.sizes.some(size => String(size).trim().toUpperCase() === 'M') && index === 0) ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select>
           </label>
           <label>Qty
             <input data-qty="${esc(product.id)}" type="number" min="1" max="9" value="1" />

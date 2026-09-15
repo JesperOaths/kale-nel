@@ -84,7 +84,9 @@ function pricedVariants(product: any) {
     }
     return {
       id: Number(variant?.id),
-      price: Math.round(cost) + MARGIN_CENTS,
+      // Retail is fulfillment cost + exactly €5, then rounded upward to the
+      // next whole euro so every published/displayed shirt price is integral.
+      price: Math.ceil((Math.round(cost) + MARGIN_CENTS) / 100) * 100,
       is_enabled: variant?.is_enabled !== false,
     };
   });

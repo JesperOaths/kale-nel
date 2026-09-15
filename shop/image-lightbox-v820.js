@@ -59,6 +59,11 @@
         <button class="shop-lightbox-nav shop-lightbox-next" type="button" data-lightbox-next aria-label="Next image">›</button>
         <div class="shop-lightbox-meta">
           <span data-lightbox-label></span>
+          <span class="shop-lightbox-zoom" aria-label="Image zoom controls">
+            <button type="button" data-lightbox-zoom-out aria-label="Zoom out">−</button>
+            <button type="button" data-lightbox-fit>Fit</button>
+            <button type="button" data-lightbox-zoom-in aria-label="Zoom in">+</button>
+          </span>
           <span data-lightbox-count></span>
         </div>
         <div class="shop-lightbox-dots" data-lightbox-dots aria-label="Choose enlarged image"></div>
@@ -84,6 +89,10 @@
       pointerX: 0,
       pointerY: 0,
       renderId: 0,
+      scale: 1,
+      panX: 0,
+      panY: 0,
+      dragging: false,
       closing: false
     };
 
@@ -138,12 +147,45 @@
     }).catch(() => {});
   }
 
+  function applyView(){
+    if(!active) return;
+    active.image.style.transform = `translate(${active.panX}px, ${active.panY}px) scale(${active.scale})`;
+    active.media.classList.toggle('is-zoomed', active.scale > 1.001);
+  }
+
+  function resetView(){
+    if(!active) return;
+    active.scale = 1;
+    active.panX = 0;
+    active.panY = 0;
+    active.dragging = false;
+    applyView();
+  }
+
+  function setZoom(nextScale, clientX, clientY){
+    if(!active) return;
+    const previous = active.scale;
+    const next = Math.max(1, Math.min(4, Number(nextScale) || 1));
+    if(clientX != null && clientY != null && next !== previous){
+      const rect = active.media.getBoundingClientRect();
+      const x = clientX - (rect.left + rect.width / 2);
+      const y = clientY - (rect.top + rect.height / 2);
+      const ratio = next / previous;
+      active.panX = (active.panX - x) * ratio + x;
+      active.panY = (active.panY - y) * ratio + y;
+    }
+    active.scale = next;
+    if(next === 1){ active.panX = 0; active.panY = 0; }
+    applyView();
+  }
+
   function renderActive(direction = 0, animate = true){
     if(!active) return;
     const item = active.items[active.index];
     const renderId = ++active.renderId;
     active.image.src = item.src;
     active.image.alt = item.alt;
+    resetView();
     active.overlay.querySelector('[data-lightbox-label]').textContent = item.label;
     active.overlay.querySelector('[data-lightbox-count]').textContent = `${active.index + 1} / ${active.items.length}`;
     [...active.dots.children].forEach((dot, index) => {
@@ -242,6 +284,18 @@
       goTo(active.index + 1, 1);
       return;
     }
+    if(target.closest?.('[data-lightbox-zoom-in]')){
+      setZoom(active.scale + .5);
+      return;
+    }
+    if(target.closest?.('[data-lightbox-zoom-out]')){
+      setZoom(active.scale - .5);
+      return;
+    }
+    if(target.closest?.('[data-lightbox-fit]')){
+      resetView();
+      return;
+    }
     const dot = target.closest?.('[data-lightbox-dot]');
     if(dot){
       goTo(Number(dot.dataset.lightboxDot));
@@ -287,6 +341,7 @@
     active.pointerId = event.pointerId;
     active.pointerX = event.clientX;
     active.pointerY = event.clientY;
+    active.dragging = active.scale > 1.001;
     active.media.setPointerCapture?.(event.pointerId);
   });
 
@@ -294,7 +349,11 @@
     if(!active || active.pointerId !== event.pointerId) return;
     const dx = event.clientX - active.pointerX;
     const dy = event.clientY - active.pointerY;
-    if(Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)){
+    if(active.dragging){
+      active.panX += event.movementX || 0;
+      active.panY += event.movementY || 0;
+      applyView();
+    } else if(Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)){
       active.image.style.transform = `translateX(${Math.max(-90, Math.min(90, dx * 0.32))}px)`;
     }
   });
@@ -303,15 +362,31 @@
     if(!active || active.pointerId !== event.pointerId) return;
     const dx = event.clientX - active.pointerX;
     const dy = event.clientY - active.pointerY;
-    active.image.style.transform = '';
+    if(active.dragging) applyView();
+    else active.image.style.transform = '';
+    const wasDragging = active.dragging;
+    active.dragging = false;
     active.pointerId = null;
-    if(event.type !== 'pointercancel' && Math.abs(dx) >= SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)){
+    if(!wasDragging && event.type !== 'pointercancel' && Math.abs(dx) >= SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)){
       goTo(active.index + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
     }
   }
 
   document.addEventListener('pointerup', finishPointer);
   document.addEventListener('pointercancel', finishPointer);
+
+  document.addEventListener('wheel', event => {
+    if(!active || !event.target.closest?.('[data-lightbox-media]')) return;
+    event.preventDefault();
+    setZoom(active.scale + (event.deltaY < 0 ? .35 : -.35), event.clientX, event.clientY);
+  }, { passive: false });
+
+  document.addEventListener('dblclick', event => {
+    if(!active || !event.target.closest?.('[data-lightbox-media]')) return;
+    event.preventDefault();
+    if(active.scale > 1.001) resetView();
+    else setZoom(2, event.clientX, event.clientY);
+  });
 
   const style = document.createElement('style');
   style.dataset.shopLightboxV820 = 'true';
@@ -373,9 +448,10 @@
       display: grid;
       place-items: center;
       overflow: hidden;
+      padding: clamp(16px, 2.5vw, 34px);
       border-radius: 16px;
       background: #ded6ca;
-      touch-action: pan-y;
+      touch-action: none;
       user-select: none;
     }
     .shop-lightbox-media img {
@@ -389,7 +465,10 @@
       user-select: none;
       -webkit-user-drag: none;
       transition: transform 120ms ease-out;
+      transform-origin: center;
     }
+    .shop-lightbox-media.is-zoomed { cursor: grab; }
+    .shop-lightbox-media.is-zoomed:active { cursor: grabbing; }
     .shop-lightbox-close,
     .shop-lightbox-nav {
       border: 0;
@@ -426,6 +505,18 @@
       min-height: 24px;
       font: 600 13px/1.35 system-ui, sans-serif;
       color: rgba(31,28,24,.78);
+    }
+    .shop-lightbox-zoom { display:flex; align-items:center; gap:6px; }
+    .shop-lightbox-zoom button {
+      min-width: 38px;
+      height: 34px;
+      padding: 0 10px;
+      border: 1px solid rgba(31,28,24,.16);
+      border-radius: 10px;
+      background: rgba(255,255,255,.72);
+      color: #1f1c18;
+      font: 700 14px/1 system-ui,sans-serif;
+      cursor: pointer;
     }
     .shop-lightbox-dots {
       grid-column: 1 / -1;
