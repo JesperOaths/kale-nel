@@ -9,9 +9,34 @@ import {
   validateMappedCandidate,
 } from '../supabase/functions/shop-manual-checkout-v832/fulfillment-routing.mjs';
 
-assert.deepEqual(cheapestShippingQuote({ standard: 900, economy: 550, priority: 1200, express: 1500 }), { name: 'economy', code: 4, cents: 550 });
-assert.deepEqual(cheapestShippingQuote({ standard: 700, economy: 700 }), { name: 'standard', code: 1, cents: 700 });
-assert.deepEqual(cheapestShippingQuote({ standard: '800', express: 650.4, priority: null }), { name: 'express', code: 3, cents: 650 });
+assert.deepEqual(
+  cheapestShippingQuote({ standard: 900, economy: 550, priority: 1200, express: 1500 }),
+  { name: 'economy', code: 4, cents: 550 },
+);
+assert.deepEqual(
+  cheapestShippingQuote({ standard: 700, economy: 700 }),
+  { name: 'standard', code: 1, cents: 700 },
+);
+assert.deepEqual(
+  cheapestShippingQuote({ standard: '800', express: 650.4, priority: null }),
+  { name: 'priority', code: 2, cents: 650 },
+  'legacy lone express must remain shipping method code 2',
+);
+assert.deepEqual(
+  cheapestShippingQuote({ standard: 1200, express: 900, priority: 900, printify_express: 700 }),
+  { name: 'express', code: 3, cents: 700 },
+  'transitional printify_express must map to shipping method code 3',
+);
+assert.deepEqual(
+  cheapestShippingQuote({ standard: 1200, priority: 900, express: 700 }),
+  { name: 'express', code: 3, cents: 700 },
+  'final express naming must map to code 3 when explicit priority is also present',
+);
+assert.deepEqual(
+  cheapestShippingQuote({ standard: 1200, priority: 800 }),
+  { name: 'priority', code: 2, cents: 800 },
+  'priority must use shipping method code 2',
+);
 assert.equal(cheapestShippingQuote({ standard: -1, economy: 'nope' }), null);
 
 const sourceProduct = {
