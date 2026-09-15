@@ -1,0 +1,370 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import {
+  buildFulfillmentPlans,
+  cheapestShippingQuote,
+  chooseCheapestFulfillment,
+  parseFulfillmentMappings,
+  validateMappedCandidate,
+} from "./fulfillment-routing.mjs";
+
+const PRINTIFY_V1 = "https://api.printify.com/v1";
+const PRINTIFY_V2 = "https://api.printify.com/v2";
+const MAX_ITEMS = 20;
+const MAX_QTY = 10;
+const MAX_FULFILLMENT_PLANS = 64;
+const CHOICE_PROVIDER_ID = 99;
+const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl", "https://jesperoaths.github.io"]);
+const text = (v: unknown) => String(v ?? "").trim();
+const clean = (v: unknown) => text(v).replace(/\s+/g, " ");
+
+function cors(req: Request) {
+  const origin = text(req.headers.get("origin"));
+  const allow = ALLOWED_ORIGINS.has(origin) || /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(origin) ? origin : "https://kalenel.nl";
+  return {
+    "Access-Control-Allow-Origin": allow,
+    "Vary": "Origin",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    "Referrer-Policy": "no-referrer",
+  };
+}
+const json = (req: Request, body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: cors(req) });
+function normalizeCountry(v: unknown) { return text(v || "NL").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2); }
+
+async function printifyV1(token: string, path: string, init: RequestInit = {}) {
+  const res = await fetch(`${PRINTIFY_V1}${path}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": "Kalenel-Delivery-Preview/8.33", ...(init.headers || {}) },
+  });
+  const raw = await res.text();
+  let payload: any = null;
+  try { payload = raw ? JSON.parse(raw) : null; } catch { payload = raw; }
+  if (!res.ok) throw new Error(`Printify ${res.status}: ${text(payload?.message || payload?.error || raw).slice(0, 250)}`);
+  return payload;
+}
+
+async function printifyV2(token: string, path: string) {
+  const res = await fetch(`${PRINTIFY_V2}${path}`, {
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": "Kalenel-Delivery-Preview/8.33" },
+  });
+  const raw = await res.text();
+  let payload: any = null;
+  try { payload = raw ? JSON.parse(raw) : null; } catch { payload = raw; }
+  if (!res.ok) throw new Error(`Printify V2 ${res.status}: ${text(payload?.message || payload?.error || raw).slice(0, 250)}`);
+  return payload;
+}
+
+async function resolvePrintifyToken(sb: any) {
+  const envToken = text(Deno.env.get("PRINTIFY_API_TOKEN"));
+  if (envToken) return envToken;
+  const { data, error } = await sb.rpc("get_printify_api_token_v815a");
+  if (error || !text(data)) throw new Error("Printify token unavailable");
+  return text(data);
+}
+
+function cachedResolution(payload: any, item: any) {
+  const products = Array.isArray(payload?.products) ? payload.products : [];
+  const sku = text(item?.sku);
+  const requestedProductId = text(item?.product_id || item?.productId);
+  const requestedVariantId = text(item?.variant_id || item?.variantId);
+  if (requestedProductId && requestedVariantId) {
+    const product = products.find((p: any) => text(p?.id) === requestedProductId);
+    const variant = (Array.isArray(product?.variants) ? product.variants : []).find((v: any) => text(v?.id) === requestedVariantId);
+    if (product && variant) return { product, variant };
+  }
+  if (sku) {
+    for (const product of products) {
+      const variant = (Array.isArray(product?.variants) ? product.variants : []).find((v: any) => text(v?.sku) === sku);
+      if (variant) return { product, variant };
+    }
+  }
+  const name = clean(item?.name).toLowerCase();
+  const size = clean(item?.size).toUpperCase();
+  const product = products.find((p: any) => clean(p?.name).toLowerCase() === name);
+  if (!product) return null;
+  const variants = Array.isArray(product?.variants) ? product.variants : [];
+  const variant = variants.find((v: any) => text(v?.size).toUpperCase() === size) || null;
+  return variant ? { product, variant } : null;
+}
+
+function optionMap(product: any) {
+  const map = new Map<string, { type: string; value: string }>();
+  for (const option of Array.isArray(product?.options) ? product.options : []) {
+    const type = text(option?.type).toLowerCase();
+    for (const value of Array.isArray(option?.values) ? option.values : []) map.set(String(value?.id), { type, value: text(value?.title) });
+  }
+  return map;
+}
+function optionValues(product: any, variant: any) {
+  const map = optionMap(product);
+  return (Array.isArray(variant?.options) ? variant.options : []).map((id: unknown) => map.get(String(id))).filter(Boolean) as { type: string; value: string }[];
+}
+function isWhiteVariant(product: any, variant: any) {
+  const color = optionValues(product, variant).find(x => x.type === "color")?.value;
+  return !color || /^white$/i.test(text(color));
+}
+
+function dbMappingPayload(rows: any[]) {
+  return {
+    version: 1,
+    mappings: (Array.isArray(rows) ? rows : []).map(row => ({
+      approval_id: row.approval_id,
+      approved: row.approved === true,
+      countries: row.countries,
+      estimated_import_cents_per_unit: row.estimated_import_cents_per_unit,
+      source: {
+        product_id: row.source_product_id,
+        variant_id: row.source_variant_id,
+        blueprint_id: row.source_blueprint_id,
+        print_provider_id: row.source_print_provider_id,
+      },
+      target: {
+        product_id: row.target_product_id,
+        variant_id: row.target_variant_id,
+        blueprint_id: row.target_blueprint_id,
+        print_provider_id: row.target_print_provider_id,
+      },
+    })),
+  };
+}
+
+function regionName(code: string) {
+  try {
+    const dn = new Intl.DisplayNames(["en"], { type: "region" });
+    return dn.of(code) || code;
+  } catch {
+    return code;
+  }
+}
+
+async function providerOrigin(token: string, providerId: number) {
+  if (providerId === CHOICE_PROVIDER_ID) {
+    return {
+      provider_id: providerId,
+      provider: "Printify Choice",
+      label: "Printify Choice network — facility assigned near the destination after the order is placed",
+      exact: false,
+    };
+  }
+  try {
+    const provider = await printifyV1(token, `/catalog/print_providers/${providerId}.json`);
+    const loc = provider?.location || {};
+    const city = clean(loc?.city);
+    const region = clean(loc?.region);
+    const countryCode = normalizeCountry(loc?.country);
+    const country = countryCode ? regionName(countryCode) : "";
+    const place = [city, region && region !== city ? region : "", country].filter(Boolean).join(", ");
+    return {
+      provider_id: providerId,
+      provider: clean(provider?.title) || `Print provider ${providerId}`,
+      city: city || null,
+      region: region || null,
+      country_code: countryCode || null,
+      label: place || clean(provider?.title) || `Print provider ${providerId}`,
+      exact: !!place,
+    };
+  } catch {
+    return {
+      provider_id: providerId,
+      provider: `Print provider ${providerId}`,
+      label: `Print provider ${providerId} — origin location temporarily unavailable`,
+      exact: false,
+    };
+  }
+}
+
+async function deliveryRange(token: string, candidate: any, shippingMethod: string, country: string) {
+  const blueprintId = Number(candidate?.blueprint_id);
+  const providerId = Number(candidate?.print_provider_id);
+  const variantId = Number(candidate?.variant_id);
+  if (![blueprintId, providerId, variantId].every(Number.isInteger)) return null;
+  try {
+    const payload = await printifyV2(token, `/catalog/blueprints/${blueprintId}/print_providers/${providerId}/shipping/${encodeURIComponent(shippingMethod)}.json`);
+    const rows = (Array.isArray(payload?.data) ? payload.data : []).filter((row: any) => Number(row?.attributes?.variantId) === variantId);
+    const exact = rows.find((row: any) => text(row?.attributes?.country?.code).toUpperCase() === country);
+    const fallback = rows.find((row: any) => text(row?.attributes?.country?.code).toUpperCase() === "REST_OF_THE_WORLD");
+    const attrs = (exact || fallback)?.attributes;
+    const from = Number(attrs?.handlingTime?.from);
+    const to = Number(attrs?.handlingTime?.to);
+    if (!Number.isFinite(from) || !Number.isFinite(to) || from < 0 || to < from) return null;
+    return { from: Math.round(from), to: Math.round(to), source: exact ? "country-specific" : "rest-of-world" };
+  } catch {
+    return null;
+  }
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors(req) });
+  if (req.method !== "POST") return json(req, { error: "method_not_allowed" }, 405);
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceKey) return json(req, { error: "server_not_configured" }, 503);
+  const sb = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+
+  try {
+    const body = await req.json();
+    const customer = body?.customer || {};
+    const country = normalizeCountry(customer?.country);
+    const address1 = clean(customer?.address1);
+    const address2 = clean(customer?.address2).slice(0, 100);
+    const city = clean(customer?.city);
+    const region = clean(customer?.region).slice(0, 100);
+    const zip = clean(customer?.zip).slice(0, 24);
+    const items = Array.isArray(body?.items) ? body.items : [];
+
+    if (!address1 || !city || !zip || country.length !== 2) return json(req, { error: "delivery_address_incomplete" }, 400);
+    if (!items.length || items.length > MAX_ITEMS) return json(req, { error: "invalid_cart" }, 400);
+
+    const { data: cache, error: cacheError } = await sb.from("shop_catalog_cache_v828").select("payload").eq("id", 1).maybeSingle();
+    if (cacheError || !Array.isArray(cache?.payload?.products) || !cache.payload.products.length) throw new Error("Live Printify catalog is not ready");
+    const shopId = Number(cache.payload?.shop?.id);
+    if (!Number.isFinite(shopId)) throw new Error("Printify shop id unavailable");
+
+    const resolved = items.map((item: any) => ({ raw: item, cached: cachedResolution(cache.payload, item) }));
+    if (resolved.some((row: any) => !row.cached)) throw new Error("One or more selected variants are no longer in the live catalog");
+
+    const envMappings = parseFulfillmentMappings(Deno.env.get("PRINTIFY_FULFILLMENT_MAPPINGS"));
+    const { data: dbMappingRows, error: dbMappingError } = await sb.from("shop_fulfillment_mappings")
+      .select("approval_id,approved,countries,source_product_id,source_variant_id,source_blueprint_id,source_print_provider_id,target_product_id,target_variant_id,target_blueprint_id,target_print_provider_id,estimated_import_cents_per_unit")
+      .eq("approved", true);
+    if (dbMappingError) throw new Error("Fulfillment routing catalog unavailable");
+    const dbMappings = parseFulfillmentMappings(JSON.stringify(dbMappingPayload(dbMappingRows || [])));
+    const mappingsByApproval = new Map<string, any>();
+    for (const mapping of envMappings) mappingsByApproval.set(mapping.approval_id, mapping);
+    for (const mapping of dbMappings) mappingsByApproval.set(mapping.approval_id, mapping);
+    const mappings = [...mappingsByApproval.values()];
+    const eligibleMappings = mappings.filter((mapping: any) => mapping.countries.includes(country) && resolved.some((row: any) =>
+      mapping.source.product_id === text(row.cached.product.id) && mapping.source.variant_id === Number(row.cached.variant.id)
+    ));
+
+    const printifyToken = await resolvePrintifyToken(sb);
+    const freshProducts = new Map<string, any>();
+    const productIds = [...new Set([
+      ...resolved.map((row: any) => text(row.cached.product.id)),
+      ...eligibleMappings.map((mapping: any) => text(mapping.target.product_id)),
+    ])];
+    for (const productId of productIds) {
+      if (!/^[a-zA-Z0-9_-]{8,80}$/.test(productId)) throw new Error("Invalid Printify product id");
+      freshProducts.set(productId, await printifyV1(printifyToken, `/shops/${shopId}/products/${encodeURIComponent(productId)}.json`));
+    }
+
+    const candidateGroups: any[][] = [];
+    for (const row of resolved) {
+      const raw = row.raw;
+      const productId = text(row.cached.product.id);
+      const freshProduct = freshProducts.get(productId);
+      const variantId = Number(row.cached.variant.id);
+      const freshVariant = (Array.isArray(freshProduct?.variants) ? freshProduct.variants : []).find((v: any) => Number(v?.id) === variantId);
+      const qtyRaw = Number(raw?.qty || 0);
+      const qty = Math.floor(qtyRaw);
+      if (!Number.isFinite(qtyRaw) || qty < 1 || qty > MAX_QTY) throw new Error("Invalid quantity");
+      if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isWhiteVariant(freshProduct, freshVariant)) {
+        throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
+      }
+      const cost = Math.round(Number(freshVariant?.cost));
+      if (!Number.isFinite(cost) || cost <= 0) throw new Error(`Invalid authoritative production cost: ${clean(row.cached.product.name)}`);
+
+      const candidates: any[] = [{
+        product_id: productId,
+        variant_id: variantId,
+        quantity: qty,
+        cost_cents: cost,
+        mapping_approval_id: "",
+        blueprint_id: Number(freshProduct?.blueprint_id),
+        print_provider_id: Number(freshProduct?.print_provider_id),
+        estimated_import_cents_per_unit: 0,
+      }];
+
+      for (const mapping of eligibleMappings.filter((entry: any) => entry.source.product_id === productId && entry.source.variant_id === variantId)) {
+        const targetProduct = freshProducts.get(mapping.target.product_id);
+        const targetVariant = (Array.isArray(targetProduct?.variants) ? targetProduct.variants : []).find((variant: any) => Number(variant?.id) === mapping.target.variant_id);
+        const validation = validateMappedCandidate(mapping, country, freshProduct, freshVariant, targetProduct, targetVariant);
+        if (!validation.ok) continue;
+        candidates.push({
+          product_id: mapping.target.product_id,
+          variant_id: mapping.target.variant_id,
+          quantity: qty,
+          cost_cents: validation.cost_cents,
+          mapping_approval_id: mapping.approval_id,
+          blueprint_id: mapping.target.blueprint_id,
+          print_provider_id: mapping.target.print_provider_id,
+          estimated_import_cents_per_unit: validation.estimated_import_cents_per_unit || 0,
+        });
+      }
+      candidateGroups.push(candidates);
+    }
+
+    const addressTo = {
+      first_name: "Checkout",
+      last_name: "Estimate",
+      email: "checkout@kalenel.nl",
+      phone: "",
+      country,
+      region,
+      address1,
+      address2,
+      city,
+      zip,
+    };
+    const plans = buildFulfillmentPlans(candidateGroups, MAX_FULFILLMENT_PLANS);
+    const quotedPlans: any[] = [];
+    for (const plan of plans) {
+      const lineItems = plan.candidates.map((candidate: any, idx: number) => ({
+        product_id: candidate.product_id,
+        variant_id: candidate.variant_id,
+        quantity: candidate.quantity,
+        external_id: `estimate-${idx + 1}`,
+      }));
+      try {
+        const quote = await printifyV1(printifyToken, `/shops/${shopId}/orders/shipping.json`, {
+          method: "POST",
+          body: JSON.stringify({ line_items: lineItems, address_to: addressTo }),
+        });
+        const shipping = cheapestShippingQuote(quote);
+        if (shipping) quotedPlans.push({ plan, shipping, route_key: lineItems.map((item: any) => `${item.product_id}:${item.variant_id}`).join("|") });
+      } catch {
+        // Ignore unshippable candidate plans and continue to other approved routes.
+      }
+    }
+
+    const selected = chooseCheapestFulfillment(quotedPlans);
+    if (!selected) throw new Error("No shipping method available for this address");
+
+    const uniqueProviders = [...new Set(selected.plan.candidates.map((candidate: any) => Number(candidate.print_provider_id)).filter(Number.isInteger))];
+    const origins = await Promise.all(uniqueProviders.map(providerId => providerOrigin(printifyToken, providerId)));
+    const ranges = (await Promise.all(selected.plan.candidates.map((candidate: any) => deliveryRange(printifyToken, candidate, selected.shipping.name, country)))).filter(Boolean) as { from: number; to: number; source: string }[];
+    const delivery = ranges.length === selected.plan.candidates.length
+      ? {
+          min_business_days: Math.max(...ranges.map(range => range.from)),
+          max_business_days: Math.max(...ranges.map(range => range.to)),
+          exact_for_selected_route: true,
+        }
+      : {
+          min_business_days: null,
+          max_business_days: null,
+          exact_for_selected_route: false,
+        };
+
+    return json(req, {
+      ok: true,
+      shipping_cents: selected.shipping.cents,
+      shipping_method: selected.shipping.name,
+      shipping_method_code: selected.shipping.code,
+      origins,
+      provider_groups: Number(selected.plan.provider_groups || uniqueProviders.length || 1),
+      may_arrive_separately: Number(selected.plan.provider_groups || 1) > 1,
+      delivery,
+      note: delivery.exact_for_selected_route
+        ? "Estimated business-day range from Printify for the currently selected fulfillment route. Delays can still occur."
+        : "Printify has not exposed a complete route-specific delivery range yet. The exact estimate can update when the fulfillment facility is assigned.",
+    });
+  } catch (error) {
+    const detail = text(error instanceof Error ? error.message : error).slice(0, 350);
+    console.error("shop-delivery-preview-v833 failed", error instanceof Error ? error.name : "unknown");
+    return json(req, { error: "delivery_preview_failed", detail }, 502);
+  }
+});
