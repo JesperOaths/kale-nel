@@ -1,0 +1,86 @@
+/* Bruis shop v831 — artwork restored, unified beige image fields */
+
+:root { --shop-image-backdrop: #ded6ca; }
+
+/* Product galleries: the field around shirts/artwork is always the shop backdrop.
+   Transparent artwork previews therefore sit on beige instead of another white box. */
+.mockup-rail,
+.mockup,
+.mockup img,
+.mockup[class*="artwork"],
+.mockup[class*="artwork"] img,
+.mockup[class*="front-print"],
+.mockup[class*="front-print"] img {
+  background: var(--shop-image-backdrop) !important;
+}
+.mockup {
+  border-color: transparent !important;
+}
+.mockup img {
+  object-fit: contain !important;
+  object-position: center !important;
+}
+
+/* Preserve true detail photographs as photographs. */
+.mockup[class*="collar"],
+.mockup[class*="closeup"],
+.mockup[class*="close-up"],
+.mockup[class*="neck"],
+.mockup[class*="tag"],
+.mockup[class*="label"],
+.mockup[class*="detail"],
+.mockup[class*="collar"] img,
+.mockup[class*="closeup"] img,
+.mockup[class*="close-up"] img,
+.mockup[class*="neck"] img,
+.mockup[class*="tag"] img,
+.mockup[class*="label"] img,
+.mockup[class*="detail"] img {
+  background: #fff !important;
+}
+
+/* All three collection cards use one visual treatment. The white shirt itself is
+   retained by collection-media-v831.js; only the connected outer white field is
+   changed to the beige shop backdrop and the shirt is cropped/scaled consistently. */
+.collection-image {
+  position: relative;
+  overflow: hidden;
+  background: var(--shop-image-backdrop) !important;
+}
+.collection-image img,
+.collection-image .collection-merch-image {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  background: var(--shop-image-backdrop) !important;
+  filter: none !important;
+  transform: none !important;
+}
+.collection-card[data-collection="merch"] .collection-image::before,
+.collection-card[data-collection="merch"] .collection-image::after {
+  content: none !important;
+  display: none !important;
+}
+
+.compact-shape-card,
+.compact-shape-card img,
+.compact-shape-card .collection-merch-image {
+  background: var(--shop-image-backdrop) !important;
+}
+.compact-shape-card img,
+.compact-shape-card .collection-merch-image {
+  object-fit: contain !important;
+  object-position: center !important;
+  filter: none !important;
+}
+
+/* Customer-facing checkout should read like a store, not an engineering panel. */
+.manual-checkout-note {
+  color: #4f504a;
+  border: 1px solid #e7e1d8;
+  background: #f8f5ef !important;
+}
+.manual-checkout-status:empty { display: none; }
