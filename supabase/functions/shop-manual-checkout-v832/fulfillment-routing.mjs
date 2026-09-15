@@ -114,10 +114,12 @@ export function parseFulfillmentMappings(raw) {
     const countries = [...new Set((Array.isArray(mapping?.countries) ? mapping.countries : [])
       .map(country => text(country).toUpperCase())
       .filter(country => /^[A-Z]{2}$/.test(country)))];
+    const importCents = Number(mapping?.estimated_import_cents_per_unit ?? 0);
     const normalized = {
       approval_id: approvalId,
       approved: mapping?.approved === true,
       countries,
+      estimated_import_cents_per_unit: Number.isFinite(importCents) ? Math.round(importCents) : Number.NaN,
       source: {
         product_id: validId(source?.product_id, 8, 80),
         variant_id: Number(source?.variant_id),
@@ -133,7 +135,8 @@ export function parseFulfillmentMappings(raw) {
     };
     const ids = [normalized.source.variant_id, normalized.source.blueprint_id, normalized.source.print_provider_id,
       normalized.target.variant_id, normalized.target.blueprint_id, normalized.target.print_provider_id];
-    if (!normalized.approved || !approvalId || !countries.length || !normalized.source.product_id || !normalized.target.product_id || ids.some(id => !Number.isInteger(id) || id <= 0)) {
+    if (!normalized.approved || !approvalId || !countries.length || !normalized.source.product_id || !normalized.target.product_id || ids.some(id => !Number.isInteger(id) || id <= 0)
+      || !Number.isInteger(normalized.estimated_import_cents_per_unit) || normalized.estimated_import_cents_per_unit < 0) {
       throw new Error(`Invalid approved Printify fulfillment mapping at index ${index}`);
     }
     if (normalized.source.product_id === normalized.target.product_id && normalized.source.variant_id === normalized.target.variant_id) {
@@ -168,19 +171,34 @@ export function validateMappedCandidate(mapping, country, sourceProduct, sourceV
   if (!sourceArtwork || sourceArtwork !== targetArtwork) return { ok: false, reason: "artwork_mismatch" };
   const cost = Math.round(Number(targetVariant?.cost));
   if (!Number.isFinite(cost) || cost <= 0) return { ok: false, reason: "target_cost_invalid" };
-  return { ok: true, cost_cents: cost };
+  return { ok: true, cost_cents: cost, estimated_import_cents_per_unit: mapping.estimated_import_cents_per_unit || 0 };
+}
+
+function providerIdsWith(plan, candidate) {
+  const candidateProvider = Number(candidate?.print_provider_id);
+  const ids = [...(Array.isArray(plan?.provider_ids) ? plan.provider_ids : [])];
+  if (Number.isInteger(candidateProvider) && candidateProvider > 0) ids.push(candidateProvider);
+  return [...new Set(ids)].sort((a, b) => a - b);
 }
 
 export function buildFulfillmentPlans(candidateGroups, maxPlans = 64) {
-  let plans = [{ candidates: [], production_cents: 0, mapped_count: 0 }];
+  let plans = [{ candidates: [], production_cents: 0, estimated_import_cents: 0, mapped_count: 0, provider_ids: [], provider_groups: 0 }];
   for (const group of candidateGroups) {
     if (!Array.isArray(group) || !group.length) throw new Error("No safe fulfillment candidate for a cart item");
     if (plans.length * group.length > maxPlans) throw new Error("Approved fulfillment mappings exceed the safe routing plan limit");
-    plans = plans.flatMap(plan => group.map(candidate => ({
-      candidates: [...plan.candidates, candidate],
-      production_cents: plan.production_cents + Number(candidate.cost_cents) * Number(candidate.quantity),
-      mapped_count: plan.mapped_count + (candidate.mapping_approval_id ? 1 : 0),
-    })));
+    plans = plans.flatMap(plan => group.map(candidate => {
+      const quantity = Number(candidate.quantity);
+      const importPerUnit = Math.max(0, Math.round(Number(candidate.estimated_import_cents_per_unit || 0)));
+      const providerIds = providerIdsWith(plan, candidate);
+      return {
+        candidates: [...plan.candidates, candidate],
+        production_cents: plan.production_cents + Number(candidate.cost_cents) * quantity,
+        estimated_import_cents: plan.estimated_import_cents + importPerUnit * quantity,
+        mapped_count: plan.mapped_count + (candidate.mapping_approval_id ? 1 : 0),
+        provider_ids: providerIds,
+        provider_groups: providerIds.length,
+      };
+    }));
   }
   return plans;
 }
@@ -188,9 +206,10 @@ export function buildFulfillmentPlans(candidateGroups, maxPlans = 64) {
 export function chooseCheapestFulfillment(results) {
   const valid = (Array.isArray(results) ? results : []).filter(result => result?.shipping && Number.isFinite(result?.plan?.production_cents));
   valid.sort((a, b) => {
-    const aTotal = a.plan.production_cents + a.shipping.cents;
-    const bTotal = b.plan.production_cents + b.shipping.cents;
+    const aTotal = a.plan.production_cents + a.shipping.cents + Number(a.plan.estimated_import_cents || 0);
+    const bTotal = b.plan.production_cents + b.shipping.cents + Number(b.plan.estimated_import_cents || 0);
     return aTotal - bTotal
+      || Number(a.plan.provider_groups || 0) - Number(b.plan.provider_groups || 0)
       || a.plan.mapped_count - b.plan.mapped_count
       || a.shipping.cents - b.shipping.cents
       || String(a.route_key || "").localeCompare(String(b.route_key || ""));
