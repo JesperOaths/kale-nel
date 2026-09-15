@@ -49,12 +49,13 @@ assert.doesNotMatch(index, /direct-commerce-v828\.js|mockup-background-v830\.js|
 assert.doesNotMatch(index, /shop-runtime-v819\.js|catalog-recovery-v822\.js|payment-readiness-v824\.js|shopify-checkout-v817\.js/);
 
 // Browser bridge routes the public catalog to the hardened direct Printify endpoint
-// and the checkout UI to the new server-side cost-based checkout authority.
+// and checkout to v832. Printify's configured retail price is already the intended
+// base-cost + €5 price, so the site rounds it but never adds another markup.
 assert.match(directCommerce, /shop-catalog-v828/);
 assert.match(directCommerce, /shop-manual-checkout-v832/);
 assert.match(directCommerce, /X-Kalenel-Catalog-Authority/);
 assert.match(directCommerce, /printify-direct-v832/);
-assert.match(directCommerce, /pricing:'fulfillment-cost-plus-5-rounded-up'/);
+assert.match(directCommerce, /pricing:'printify-retail-rounded-up'/);
 assert.match(directCommerce, /artworkFirstGallery:true/);
 assert.match(directCommerce, /wholeEuroPricing:true/);
 assert.match(directCommerce, /usesShopifyCatalogApi:false/);
@@ -116,20 +117,20 @@ assert.match(lightbox, /allGalleryImages:true/);
 assert.match(lightbox, /fitMaxPercent:80/);
 assert.doesNotMatch(lightbox, /EXCLUDE_FROM_EXPANDED_RE/);
 
-// Catalog pricing is derived from Printify fulfillment cost, not retail price:
-// retail = base cost + €5, rounded upward to the next whole euro. Original front
-// artwork from print_areas is inserted before generated garment mockups.
-assert.match(catalogEdge, /retailEurosFromCost/);
-assert.match(catalogEdge, /Math\.ceil\(\(Math\.round\(n\) \+ 500\) \/ 100\)/);
-assert.match(catalogEdge, /price:\s*retailEurosFromCost\(variant\?\.cost\)/);
-assert.doesNotMatch(catalogEdge, /priceEuros\(variant\?\.price\)/);
+// Catalog price is the configured Printify retail price rounded upward to whole
+// euros. That retail value is already the intended base-cost + €5 price, so v832
+// must never add another €5 and turn a €23 shirt into €28.
+assert.match(catalogEdge, /retailEurosFromPrice/);
+assert.match(catalogEdge, /Math\.ceil\(Math\.round\(n\) \/ 100\)/);
+assert.match(catalogEdge, /price:\s*retailEurosFromPrice\(variant\?\.price\)/);
+assert.doesNotMatch(catalogEdge, /retailEurosFromCost|variant\?\.cost\)/);
 assert.match(catalogEdge, /function artworkFor/);
 assert.match(catalogEdge, /product\?\.print_areas/);
 assert.match(catalogEdge, /label:\s*"Artwork PNG"/);
 assert.match(catalogEdge, /const mockups = \[\.\.\.artwork, \.\.\.garment\]/);
 assert.match(catalogEdge, /source:\s*"printify-direct-v832"/);
 assert.match(catalogEdge, /mode:\s*"printify-direct-catalog-v832"/);
-assert.match(catalogEdge, /pricing:\s*"fulfillment-cost-plus-5-rounded-up"/);
+assert.match(catalogEdge, /pricing:\s*"printify-retail-rounded-up"/);
 assert.match(catalogEdge, /artworkFirst:\s*true/);
 assert.match(catalogEdge, /whiteVariantsOnly:\s*true/);
 assert.match(catalogEdge, /EdgeRuntime\.waitUntil/);
@@ -137,14 +138,14 @@ assert.match(catalogEdge, /get_printify_api_token_v815a/);
 assert.doesNotMatch(catalogEdge, /shop-price-v818|shop-catalog-v822|cdn\.shopify\.com/);
 
 // Checkout re-fetches the exact selected Printify product/variant and applies the
-// same cost+€5 rounded-up rule server-side, so the displayed and charged prices
+// same fresh retail-price rounding server-side, so displayed and charged prices
 // cannot diverge. Customer checkout still only creates a Pending local order.
 assert.match(checkoutEdge, /mode:\s*"manual-payment-v832"/);
-assert.match(checkoutEdge, /pricing:\s*"fulfillment-cost-plus-5-rounded-up"/);
-assert.match(checkoutEdge, /retailCentsFromCost/);
-assert.match(checkoutEdge, /Math\.ceil\(\(n \+ 500\) \/ 100\) \* 100/);
-assert.match(checkoutEdge, /retailCentsFromCost\(freshVariant\?\.cost\)/);
-assert.doesNotMatch(checkoutEdge, /Math\.round\(Number\(freshVariant\?\.price\)\)/);
+assert.match(checkoutEdge, /pricing:\s*"printify-retail-rounded-up"/);
+assert.match(checkoutEdge, /retailCentsFromPrice/);
+assert.match(checkoutEdge, /Math\.ceil\(n \/ 100\) \* 100/);
+assert.match(checkoutEdge, /retailCentsFromPrice\(freshVariant\?\.price\)/);
+assert.doesNotMatch(checkoutEdge, /retailCentsFromCost|freshVariant\?\.cost/);
 assert.match(checkoutEdge, /shop_catalog_cache_v828/);
 assert.match(checkoutEdge, /cachedResolution/);
 assert.match(checkoutEdge, /freshProducts/);
@@ -228,4 +229,4 @@ assert.match(liveShopCheck, /RESULT=V832_ARTWORK_PRICE_TRANSPARENCY_PASS/);
 assert.match(liveShopCheck, /Deliberately read-only/);
 assert.doesNotMatch(liveShopCheck, /method:\s*['"]POST['"]/);
 
-console.log('Shop commerce v832 artwork-first + cost+5 + transparent-media contract passed.');
+console.log('Shop commerce v832 artwork-first + Printify-retail + transparent-media contract passed.');
