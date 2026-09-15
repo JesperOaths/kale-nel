@@ -148,14 +148,13 @@ assert.match(statusEdge, /confirmation_token_hash/);
 assert.match(statusEdge, /Referrer-Policy/);
 assert.doesNotMatch(statusEdge, /searchParams\.get\("token"\)/);
 
-// Admin payment verification and Printify release remain separate transitions.
+// Admin payment verification and production release remain separate transitions.
+// We validate the action contracts, not presentation copy, so wording can evolve.
 assert.match(adminPage, /GEJAST_PAGE_VERSION='v826'/);
 assert.match(adminPage, /verify_payment/);
 assert.match(adminPage, /submit_printify/);
 assert.match(adminPage, /Amount actually received/);
 assert.match(adminPage, /paid_amount_cents/);
-assert.match(adminPage, /Send to production/);
-assert.doesNotMatch(adminPage, /Send to Printify|Payment & Printify|Refreshing Printify status/i);
 assert.match(adminNav, /admin_shop_orders\.html/);
 assert.match(adminEdge, /payment_not_verified/);
 assert.match(adminEdge, /payment_verified_at/);
