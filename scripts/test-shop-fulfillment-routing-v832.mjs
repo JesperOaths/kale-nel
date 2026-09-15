@@ -58,28 +58,65 @@ const mappingJson = JSON.stringify({ version: 1, mappings: [{
   approved: true,
   approval_id: 'regional-nl-20260915',
   countries: ['NL'],
+  estimated_import_cents_per_unit: 250,
   source: { product_id: sourceProduct.id, variant_id: 101, blueprint_id: 6, print_provider_id: 10 },
   target: { product_id: targetProduct.id, variant_id: 202, blueprint_id: 6, print_provider_id: 22 },
 }] });
 const [mapping] = parseFulfillmentMappings(mappingJson);
+assert.equal(mapping.estimated_import_cents_per_unit, 250);
 assert.equal(artworkSignature(sourceProduct, 101), 'back:art-back|front:art-front');
-assert.deepEqual(validateMappedCandidate(mapping, 'NL', sourceProduct, sourceProduct.variants[0], targetProduct, targetProduct.variants[0]), { ok: true, cost_cents: 1400 });
+assert.deepEqual(
+  validateMappedCandidate(mapping, 'NL', sourceProduct, sourceProduct.variants[0], targetProduct, targetProduct.variants[0]),
+  { ok: true, cost_cents: 1400, estimated_import_cents_per_unit: 250 },
+);
 assert.equal(validateMappedCandidate(mapping, 'BE', sourceProduct, sourceProduct.variants[0], targetProduct, targetProduct.variants[0]).reason, 'country_not_approved');
 assert.equal(validateMappedCandidate(mapping, 'NL', sourceProduct, sourceProduct.variants[0], { ...targetProduct, print_provider_id: 99 }, targetProduct.variants[0]).reason, 'approved_identity_mismatch');
 assert.equal(validateMappedCandidate(mapping, 'NL', sourceProduct, sourceProduct.variants[0], { ...targetProduct, print_areas: [{ variant_ids: [202], placeholders: [{ position: 'front', images: [{ id: 'different-art' }] }] }] }, targetProduct.variants[0]).reason, 'artwork_mismatch');
 assert.throws(() => parseFulfillmentMappings('{bad json'), /not valid JSON/);
 assert.throws(() => parseFulfillmentMappings(JSON.stringify({ version: 1, mappings: [{ ...JSON.parse(mappingJson).mappings[0], approved: false }] })), /Invalid approved/);
+assert.throws(() => parseFulfillmentMappings(JSON.stringify({ version: 1, mappings: [{ ...JSON.parse(mappingJson).mappings[0], estimated_import_cents_per_unit: -1 }] })), /Invalid approved/);
 
-const baseline = { product_id: sourceProduct.id, variant_id: 101, quantity: 1, cost_cents: 1800, mapping_approval_id: '' };
-const regional = { product_id: targetProduct.id, variant_id: 202, quantity: 1, cost_cents: 1400, mapping_approval_id: mapping.approval_id };
+const baseline = {
+  product_id: sourceProduct.id,
+  variant_id: 101,
+  quantity: 1,
+  cost_cents: 1800,
+  mapping_approval_id: '',
+  print_provider_id: 10,
+  estimated_import_cents_per_unit: 0,
+};
+const regional = {
+  product_id: targetProduct.id,
+  variant_id: 202,
+  quantity: 1,
+  cost_cents: 1400,
+  mapping_approval_id: mapping.approval_id,
+  print_provider_id: 22,
+  estimated_import_cents_per_unit: mapping.estimated_import_cents_per_unit,
+};
 const plans = buildFulfillmentPlans([[baseline, regional]], 4);
 assert.equal(plans.length, 2);
+assert.equal(plans[0].provider_groups, 1);
+assert.equal(plans[1].provider_groups, 1);
+assert.equal(plans[1].estimated_import_cents, 250);
 assert.throws(() => buildFulfillmentPlans([[baseline, regional], [baseline, regional]], 3), /safe routing plan limit/);
-const selected = chooseCheapestFulfillment([
+
+const selectedWithImport = chooseCheapestFulfillment([
   { plan: plans[0], shipping: { name: 'economy', code: 4, cents: 400 }, route_key: 'baseline' },
   { plan: plans[1], shipping: { name: 'standard', code: 1, cents: 650 }, route_key: 'regional' },
 ]);
-assert.equal(selected.route_key, 'regional', 'production plus shipping must beat shipping-only routing');
-assert.equal(selected.plan.production_cents + selected.shipping.cents, 2050);
+assert.equal(selectedWithImport.route_key, 'baseline', 'verified import allowance must participate in route cost');
+
+const selectedWithoutImport = chooseCheapestFulfillment([
+  { plan: plans[0], shipping: { name: 'economy', code: 4, cents: 400 }, route_key: 'baseline' },
+  { plan: { ...plans[1], estimated_import_cents: 0 }, shipping: { name: 'standard', code: 1, cents: 650 }, route_key: 'regional' },
+]);
+assert.equal(selectedWithoutImport.route_key, 'regional', 'production plus shipping remains the base cost when import allowance is zero');
+
+const consolidated = chooseCheapestFulfillment([
+  { plan: { production_cents: 3000, estimated_import_cents: 0, provider_groups: 2, mapped_count: 0 }, shipping: { cents: 500 }, route_key: 'split' },
+  { plan: { production_cents: 3000, estimated_import_cents: 0, provider_groups: 1, mapped_count: 0 }, shipping: { cents: 500 }, route_key: 'single-provider' },
+]);
+assert.equal(consolidated.route_key, 'single-provider', 'equal-cost routes should prefer fewer provider groups');
 
 console.log('Shop fulfillment routing v832 tests passed.');
