@@ -32,7 +32,20 @@ jobs:
         env:
           GEJAST_SHOP_TIMEOUT_MS: '15000'
           GEJAST_SHOP_MIN_PRODUCTS: '20'
-        run: node check-live-shop.mjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            if node check-live-shop.mjs; then
+              exit 0
+            fi
+            if [[ "$attempt" -eq 6 ]]; then
+              echo "Shop verification still failed after ${attempt} attempts."
+              exit 1
+            fi
+            echo "Shop deployment may still be converging; retrying in 15 seconds (${attempt}/6)."
+            sleep 15
+          done
       - name: Verify live admin GitHub OAuth outer boundary
         env:
           GEJAST_ADMIN_AUTH_TIMEOUT_MS: '15000'
