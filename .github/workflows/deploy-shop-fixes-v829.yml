@@ -8,6 +8,7 @@ on:
       - '.github/workflows/deploy-shop-fixes-v829.yml'
       - 'supabase/functions/shop-catalog-v828/**'
       - 'supabase/functions/shop-manual-checkout-v832/**'
+      - 'supabase/functions/shop-delivery-preview-v833/**'
 
 permissions:
   contents: read
@@ -21,7 +22,7 @@ jobs:
       PROJECT_REF: uiqntazgnrxwliaidkmy
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-      - name: Deploy authoritative shop catalog and checkout
+      - name: Deploy authoritative shop catalog, checkout and delivery preview
         shell: bash
         run: |
           set -euo pipefail
@@ -47,3 +48,4 @@ jobs:
           }
           deploy_function shop-catalog-v828
           deploy_function shop-manual-checkout-v832
+          deploy_function shop-delivery-preview-v833
