@@ -1,5 +1,6 @@
 name: Deploy shop commerce functions
 
+# Retriggered after restoring the repository deployment credential.
 on:
   push:
     branches: [main]
