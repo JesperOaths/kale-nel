@@ -77,9 +77,18 @@
   `;
   document.head.appendChild(style);
 
+  if(!document.querySelector('script[data-delivery-estimate-v833]')){
+    const deliveryScript=document.createElement('script');
+    deliveryScript.dataset.deliveryEstimateV833='true';
+    deliveryScript.src='delivery-estimate-v833.js?v=20260916-delivery-v833-r1';
+    deliveryScript.async=false;
+    document.head.appendChild(deliveryScript);
+  }
+
   window.BRUIS_DIRECT_COMMERCE_V832=Object.freeze({
     catalogAuthority:'printify-direct-v832',
     checkoutAuthority:'shop-manual-checkout-v832',
+    deliveryPreview:'shop-delivery-preview-v833',
     pricing:'fulfillment-cost-plus-5-rounded-up',
     wholeEuroPricing:true,
     artworkFirstGallery:true,
