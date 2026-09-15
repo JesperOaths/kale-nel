@@ -1,6 +1,6 @@
 name: Deploy shop commerce functions
 
-# Retriggered after restoring the repository deployment credential.
+# Deploys only after validating the repository credential without exposing it.
 on:
   push:
     branches: [main]
@@ -25,6 +25,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -n "${SUPABASE_ACCESS_TOKEN:-}"
-          npx --yes supabase@2.45.4 functions deploy shop-catalog-v828 --project-ref "$PROJECT_REF" --no-verify-jwt
-          npx --yes supabase@2.45.4 functions deploy shop-manual-checkout-v832 --project-ref "$PROJECT_REF" --no-verify-jwt
+          if [[ -z "${SUPABASE_ACCESS_TOKEN:-}" ]]; then
+            echo "::error title=Missing Supabase credential::The SUPABASE_ACCESS_TOKEN repository secret is empty."
+            exit 1
+          fi
+          echo "::notice title=Supabase credential available::The repository secret is configured; deploying with the current CLI."
+          npx --yes supabase@2.117.0 --version
+          npx --yes supabase@2.117.0 functions deploy shop-catalog-v828 --project-ref "$PROJECT_REF" --no-verify-jwt
+          npx --yes supabase@2.117.0 functions deploy shop-manual-checkout-v832 --project-ref "$PROJECT_REF" --no-verify-jwt
