@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 
 const SHOP_URL = 'https://kalenel.nl/shop/';
-const ASSET_VERSION = '20260915-storefront-v832';
+const ASSET_VERSION = '20260915-storefront-v832-r1';
 const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v832.js?v=${ASSET_VERSION}`;
 const POLISH_URL = `https://kalenel.nl/shop/storefront-polish-v832.js?v=${ASSET_VERSION}`;
 const POLISH_CSS_URL = `https://kalenel.nl/shop/storefront-polish-v832.css?v=${ASSET_VERSION}`;
@@ -96,6 +96,9 @@ async function catalog() {
     assert.ok(Array.isArray(product?.mockups) && product.mockups.length > 0, `product ${product?.name} has no media`);
     assert.ok(Array.isArray(product?.sizes) && product.sizes.length > 0, `product ${product?.name} has no sizes`);
     if (!/artwork/i.test(String(product.mockups[0]?.label || ''))) missingArtwork.push(String(product?.name || product?.id || 'unknown'));
+    const mediaUrls = product.mockups.map(view => String(view?.image || '')).filter(Boolean);
+    assert.equal(new Set(mediaUrls).size, mediaUrls.length, `${product?.name} must not contain duplicate image URLs`);
+    assert.equal(product.mockups.filter(view => /artwork/i.test(String(view?.label || ''))).length, 1, `${product?.name} must contain exactly one artwork slide`);
     assert.equal(String(product?.image || ''), String(product.mockups[0]?.image || ''), `${product?.name} primary image must be first artwork image`);
 
     const variantPrices = [];
@@ -141,15 +144,15 @@ const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
 assert.match(html, /version-watermark[^>]*>v832</, 'Live shop must expose v832 watermark');
-assert.match(html, /direct-commerce-v832\.js\?v=20260915-storefront-v832/, 'Live shop must load v832 direct commerce bridge');
-assert.match(html, /manual-checkout-v825\.js\?v=20260915-storefront-v832/, 'Live shop must retain hardened checkout UI shell');
-assert.match(html, /storefront-polish-v832\.js\?v=20260915-storefront-v832/, 'Live shop must load artwork-primary storefront policy');
-assert.match(html, /storefront-polish-v832\.css\?v=20260915-storefront-v832/, 'Live shop must load transparent media CSS');
-assert.match(html, /product-preview-overrides\.js\?v=20260915-storefront-v832/, 'Live shop must load artwork-first compatibility layer');
-assert.match(html, /gallery-fixes-v832\.js\?v=20260915-storefront-v832/, 'Live shop must load exact carousel repair');
-assert.match(html, /mockup-transparency-v832\.js\?v=20260915-storefront-v832/, 'Live shop must load safe background transparency processor');
-assert.match(html, /collection-media-v831\.js\?v=20260915-storefront-v832/, 'Live shop must retain collection media normalization');
-assert.match(html, /image-lightbox-v832\.js\?v=20260915-storefront-v832/, 'Live shop must load full-view v832 lightbox');
+assert.match(html, /direct-commerce-v832\.js\?v=20260915-storefront-v832-r1/, 'Live shop must load v832 direct commerce bridge');
+assert.match(html, /manual-checkout-v825\.js\?v=20260915-storefront-v832-r1/, 'Live shop must retain hardened checkout UI shell');
+assert.match(html, /storefront-polish-v832\.js\?v=20260915-storefront-v832-r1/, 'Live shop must load artwork-primary storefront policy');
+assert.match(html, /storefront-polish-v832\.css\?v=20260915-storefront-v832-r1/, 'Live shop must load transparent media CSS');
+assert.match(html, /product-preview-overrides\.js\?v=20260915-storefront-v832-r1/, 'Live shop must load artwork-first compatibility layer');
+assert.match(html, /gallery-fixes-v832\.js\?v=20260915-storefront-v832-r1/, 'Live shop must load exact carousel repair');
+assert.match(html, /mockup-transparency-v832\.js\?v=20260915-storefront-v832-r1/, 'Live shop must load safe background transparency processor');
+assert.match(html, /collection-media-v831\.js\?v=20260915-storefront-v832-r1/, 'Live shop must retain collection media normalization');
+assert.match(html, /image-lightbox-v832\.js\?v=20260915-storefront-v832-r1/, 'Live shop must load full-view v832 lightbox');
 assert.doesNotMatch(html, /direct-commerce-v828\.js|mockup-background-v830\.js|image-lightbox-v830\.js/, 'old active media/commerce handlers must not remain in the live page');
 assert.doesNotMatch(html, />[^<]*Printify[^<]*</i, 'Public shop must not expose supplier branding');
 console.log(`shop page: HTTP 200, v832 present, ${pageElapsed}ms`);
@@ -205,10 +208,16 @@ const catalogHealth = await health(CATALOG_HEALTH_URL, 'shop-catalog-v828', 'pri
 assert.equal(catalogHealth?.usesShopifyApi, false, 'catalog health must report no Shopify API use');
 assert.equal(catalogHealth?.whiteVariantsOnly, true, 'catalog health must report white-only variants');
 assert.equal(catalogHealth?.pricing, 'fulfillment-cost-plus-5-rounded-up', 'catalog health must report cost+€5 pricing');
+assert.equal(catalogHealth?.pricingBase, 'printify-variant-cost', 'catalog must price from Printify production cost');
+assert.equal(catalogHealth?.marginEuros, 5, 'catalog margin must be exactly €5');
+assert.equal(catalogHealth?.rounding, 'whole-euro-ceiling', 'catalog must round upward to whole euros');
 assert.equal(catalogHealth?.artworkFirst, true, 'catalog health must report artwork-first media');
 
 const checkoutHealth = await health(CHECKOUT_URL, 'shop-manual-checkout-v832', 'manual-payment-v832');
 assert.equal(checkoutHealth?.pricing, 'fulfillment-cost-plus-5-rounded-up', 'checkout must use same cost+€5 pricing authority');
+assert.equal(checkoutHealth?.pricingBase, 'printify-variant-cost', 'checkout must reprice from fresh Printify production cost');
+assert.equal(checkoutHealth?.marginEuros, 5, 'checkout margin must be exactly €5');
+assert.equal(checkoutHealth?.rounding, 'whole-euro-ceiling', 'checkout must round upward to whole euros');
 assert.equal(checkoutHealth?.sends_to_production, false, 'customer checkout must not send orders to production');
 assert.ok(Number(checkoutHealth?.cached_products || 0) >= MIN_PRODUCTS, 'checkout must see the cached catalog');
 assert.equal(checkoutHealth?.payment_configured, true, 'manual payment must be configured');

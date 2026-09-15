@@ -3,20 +3,10 @@
 
   function normalizeRail(rail){
     if(!rail || rail.dataset.exactCarouselV832 === 'true') return;
+    // Movement is implemented directly in store.js. This layer only marks rails
+    // and supplies layout/snap guarantees; it deliberately does not monkey-patch
+    // native scrolling, which previously made touch and resize behavior brittle.
     rail.dataset.exactCarouselV832 = 'true';
-
-    const originalScrollTo = rail.scrollTo.bind(rail);
-    rail.scrollTo = function(arg1, arg2){
-      if(arg1 && typeof arg1 === 'object' && Number.isFinite(Number(arg1.left))){
-        const width = Math.max(1, this.clientWidth);
-        const raw = Number(arg1.left);
-        // store.js historically subtracts 14px from the target. Normalize every
-        // programmatic gallery move back to an exact full-slide boundary.
-        const index = Math.max(0, Math.round((raw + 14) / width));
-        return originalScrollTo({ ...arg1, left: index * width });
-      }
-      return originalScrollTo(arg1, arg2);
-    };
   }
 
   function scan(root=document){

@@ -235,23 +235,33 @@ function initializeGalleries(){
     const slides = [...card.querySelectorAll('.mockup')];
     const dots = [...card.querySelectorAll('[data-gallery-dot]')];
     if(!rail || !slides.length || !dots.length) return;
-    const setActive = index => dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
-    const currentIndex = () => {
-      const nearest = slides.reduce((best, slide, index) => {
-        const dist = Math.abs(slide.offsetLeft - rail.scrollLeft - rail.offsetLeft);
-        return dist < best.dist ? { index, dist } : best;
-      }, { index: 0, dist: Infinity });
-      return nearest.index;
+    let activeIndex = 0;
+    let previousWidth = Math.max(1, rail.clientWidth);
+    const setActive = index => {
+      activeIndex = Math.max(0, Math.min(slides.length - 1, index));
+      dots.forEach((dot, i) => dot.classList.toggle('active', i === activeIndex));
     };
-    const goTo = index => {
+    const currentIndex = () => Math.max(0, Math.min(slides.length - 1,
+      Math.round(rail.scrollLeft / Math.max(1, rail.clientWidth))));
+    const goTo = (index, behavior = 'smooth') => {
       const next = (index + slides.length) % slides.length;
-      rail.scrollTo({ left: slides[next].offsetLeft - rail.offsetLeft - 14, behavior: 'smooth' });
+      rail.scrollTo({ left: next * Math.max(1, rail.clientWidth), behavior });
       setActive(next);
     };
     dots.forEach((dot, index) => dot.addEventListener('click', () => goTo(index)));
     card.querySelector('[data-gallery-prev]')?.addEventListener('click', () => goTo(currentIndex() - 1));
     card.querySelector('[data-gallery-next]')?.addEventListener('click', () => goTo(currentIndex() + 1));
     rail.addEventListener('scroll', () => window.requestAnimationFrame(() => setActive(currentIndex())), { passive: true });
+    rail.addEventListener('scrollend', () => goTo(currentIndex(), 'auto'), { passive: true });
+    if('ResizeObserver' in window){
+      const resizeObserver = new ResizeObserver(() => {
+        const width = Math.max(1, rail.clientWidth);
+        if(Math.abs(width - previousWidth) < 1) return;
+        previousWidth = width;
+        goTo(activeIndex, 'auto');
+      });
+      resizeObserver.observe(rail);
+    }
   });
 }
 

@@ -80,7 +80,7 @@
   window.BRUIS_DIRECT_COMMERCE_V832=Object.freeze({
     catalogAuthority:'printify-direct-v832',
     checkoutAuthority:'shop-manual-checkout-v832',
-    pricing:'printify-retail-rounded-up',
+    pricing:'fulfillment-cost-plus-5-rounded-up',
     wholeEuroPricing:true,
     artworkFirstGallery:true,
     usesShopifyCatalogApi:false,

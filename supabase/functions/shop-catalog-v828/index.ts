@@ -9,9 +9,10 @@ const BOXY_TITLES = new Set(["coral", "daffodil", "dragonfly", "honeysuckle", "h
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl", "https://jesperoaths.github.io"]);
 
 const text = (value: unknown) => String(value ?? "").trim();
-const retailEurosFromPrice = (priceCents: unknown) => {
-  const n = Number(priceCents);
-  return Number.isFinite(n) && n > 0 ? Math.ceil(Math.round(n) / 100) : 0;
+const MARGIN_CENTS = 500;
+const retailEurosFromCost = (costCents: unknown) => {
+  const n = Number(costCents);
+  return Number.isFinite(n) && n > 0 ? Math.ceil((Math.round(n) + MARGIN_CENTS) / 100) : 0;
 };
 
 function cors(req: Request) {
@@ -174,7 +175,7 @@ function publicProduct(product: any) {
       title: text(variant?.title),
       size: sizeFrom(product, variant),
       color: colorFrom(product, variant) || "White",
-      price: retailEurosFromPrice(variant?.price),
+      price: retailEurosFromCost(variant?.cost),
       is_enabled: variant?.is_enabled !== false,
       is_available: variant?.is_available !== false,
       options: resolvedOptions(product, variant).map((item) => ({ name: item.name, value: item.value })),
@@ -264,7 +265,8 @@ Deno.serve(async (req: Request) => {
   if (url.searchParams.get("health") === "1") {
     return json(req, {
       ok: true, mode: "printify-direct-catalog-v832", usesShopifyApi: false, whiteVariantsOnly: true,
-      pricing: "printify-retail-rounded-up", artworkFirst: true,
+      pricing: "fulfillment-cost-plus-5-rounded-up", pricingBase: "printify-variant-cost",
+      marginEuros: MARGIN_CENTS / 100, rounding: "whole-euro-ceiling", artworkFirst: true,
       cachedProducts: products.length, cacheAgeSeconds: Number.isFinite(ageMs) ? Math.round(ageMs / 1000) : null,
       refreshScheduled,
     });
