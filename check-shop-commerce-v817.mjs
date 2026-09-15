@@ -28,6 +28,7 @@ const paymentAmountMigration = read('supabase/migrations/20260910103800_shop_adm
 const directMigration = read('supabase/migrations/20260910183000_shop_printify_direct_v828.sql');
 const liveShopCheck = read('check-live-shop.mjs');
 const liveHealthWorkflow = read('.github/workflows/live-deployment-health.yml');
+const deployWorkflow = read('.github/workflows/deploy-shop-fixes-v829.yml');
 const store = read('shop/store.js');
 const refresh = read('shop/live-catalog-refresh-v818.js');
 
@@ -229,6 +230,11 @@ assert.match(store, /price:\s*wholeEuro/);
 // Main deployment check must validate the exact v832 customer assets and remain
 // read-only: it may GET health/catalog data but must never create an order in CI.
 assert.match(liveHealthWorkflow, /node check-live-shop\.mjs/);
+assert.match(deployWorkflow, /supabase\/functions\/shop-catalog-v828\/\*\*/);
+assert.match(deployWorkflow, /supabase\/functions\/shop-manual-checkout-v832\/\*\*/);
+assert.match(deployWorkflow, /functions deploy shop-catalog-v828/);
+assert.match(deployWorkflow, /functions deploy shop-manual-checkout-v832/);
+assert.doesNotMatch(deployWorkflow, /functions deploy shop-manual-checkout-v828/);
 assert.match(liveShopCheck, /20260915-storefront-v832-r1/);
 assert.match(liveShopCheck, /direct-commerce-v832/);
 assert.match(liveShopCheck, /storefront-polish-v832/);

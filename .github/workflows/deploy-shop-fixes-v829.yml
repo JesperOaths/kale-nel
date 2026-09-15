@@ -1,10 +1,12 @@
-name: Deploy shop fixes v829
+name: Deploy shop commerce functions
 
 on:
   push:
     branches: [main]
     paths:
       - '.github/workflows/deploy-shop-fixes-v829.yml'
+      - 'supabase/functions/shop-catalog-v828/**'
+      - 'supabase/functions/shop-manual-checkout-v832/**'
 
 permissions:
   contents: read
@@ -18,10 +20,10 @@ jobs:
       PROJECT_REF: uiqntazgnrxwliaidkmy
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-      - name: Deploy shop catalog and pending-order checkout
+      - name: Deploy authoritative shop catalog and checkout
         shell: bash
         run: |
           set -euo pipefail
           test -n "${SUPABASE_ACCESS_TOKEN:-}"
           npx --yes supabase@2.45.4 functions deploy shop-catalog-v828 --project-ref "$PROJECT_REF" --no-verify-jwt
-          npx --yes supabase@2.45.4 functions deploy shop-manual-checkout-v828 --project-ref "$PROJECT_REF" --no-verify-jwt
+          npx --yes supabase@2.45.4 functions deploy shop-manual-checkout-v832 --project-ref "$PROJECT_REF" --no-verify-jwt
