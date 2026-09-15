@@ -1,0 +1,88 @@
+(() => {
+  'use strict';
+
+  const wholeEuro=value=>Math.ceil(Math.max(0,Number(value||0))-1e-9);
+
+  function sanitizeProduct(product){
+    if(!product||typeof product!=='object')return product;
+    product.price=wholeEuro(product.price);
+    product.priceMax=wholeEuro(product.priceMax||product.price);
+    if(Array.isArray(product.variants)) product.variants=product.variants.map(variant=>({...variant,price:wholeEuro(variant?.price)}));
+    const views=Array.isArray(product.mockups)?product.mockups.filter(item=>item?.image):[];
+    if(views.length){
+      product.mockups=views;
+      // v832 intentionally uses the first catalog view as the primary image.
+      // shop-catalog-v828 now supplies the original transparent artwork PNG first.
+      product.image=views[0].image||product.image||'';
+    }
+    return product;
+  }
+
+  if(typeof normalizeProduct==='function'){
+    const previousNormalizeProduct=normalizeProduct;
+    normalizeProduct=raw=>sanitizeProduct(previousNormalizeProduct(raw));
+  }
+
+  function normalizeCurrentState(){
+    try{
+      if(typeof products!=='undefined'&&Array.isArray(products)&&products.length){
+        products=products.map(sanitizeProduct);
+        if(typeof updateCollectionCounts==='function')updateCollectionCounts();
+        if(typeof renderProducts==='function')renderProducts();
+      }
+    }catch{}
+    try{
+      if(typeof cart!=='undefined'&&Array.isArray(cart)){
+        let changed=false;
+        cart=cart.map(item=>{
+          const next=wholeEuro(item?.price);
+          if(next!==Number(item?.price||0))changed=true;
+          return {...item,price:next};
+        });
+        if(changed&&typeof saveCart==='function')saveCart();
+        if(typeof renderCart==='function')renderCart();
+      }
+    }catch{}
+  }
+
+  function setText(node,value){if(node&&node.textContent!==value)node.textContent=value;}
+  function polishCheckout(root=document){
+    const overlay=root.matches?.('[data-manual-checkout-overlay]')?root:root.querySelector?.('[data-manual-checkout-overlay]')||document.querySelector('[data-manual-checkout-overlay]');
+    if(!overlay)return;
+    setText(overlay.querySelector('.manual-checkout-head p'),'Enter your delivery details, then review shipping and payment before placing your order.');
+    const note=overlay.querySelector('.manual-checkout-note');
+    if(note)setText(note,'Shipping is calculated from your delivery address. Your payment amount and order reference are shown on the next step.');
+    overlay.querySelectorAll('.manual-checkout-summary > div').forEach(row=>{
+      const label=row.querySelector('span')?.textContent?.trim();
+      const value=row.querySelector('strong');
+      if(label==='Shipping'&&/^Calculated securely/i.test(value?.textContent||''))setText(value,'Calculated at checkout');
+      if(label==='Products'&&value){const match=value.textContent.trim().match(/^€(\d+)\.00$/);if(match)setText(value,`€${match[1]}`);}
+    });
+    overlay.querySelectorAll('button').forEach(button=>{if(button.textContent.trim()==='Create pending order')setText(button,'Continue to payment');});
+    const success=overlay.querySelector('.manual-checkout-success');
+    if(success){
+      const heading=success.querySelector('h3');
+      if(heading&&/Order saved as Pending/i.test(heading.textContent))setText(heading,'Order received');
+      success.querySelectorAll(':scope > p').forEach(p=>{
+        const value=p.textContent.trim();
+        if(/will not be sent to production until|transfer has been manually verified/i.test(value))setText(p,'We’ve received your order. Production begins once payment has been confirmed.');
+        else if(/confirmation email has been sent|confirmation email could not be confirmed/i.test(value))p.hidden=true;
+        else if(/second email will be sent automatically|tracking confirms that the clothes are on the way/i.test(value))setText(p,'We’ll email you when your order ships.');
+      });
+    }
+    const state=overlay.querySelector('[data-manual-order-state]');
+    if(state&&/^Status:\s*Pending(?:\s*[—-].*)?$/i.test(state.textContent.trim()))setText(state,'Status: Awaiting payment');
+  }
+
+  normalizeCurrentState();polishCheckout(document);
+  const observer=new MutationObserver(records=>{if(records.some(record=>record.type==='characterData'||record.addedNodes?.length))requestAnimationFrame(()=>polishCheckout(document));});
+  observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
+  window.addEventListener('pageshow',normalizeCurrentState,{once:true});
+
+  window.BRUIS_STOREFRONT_V832=Object.freeze({
+    wholeEuroPricing:true,
+    artworkPrimaryImage:true,
+    transparentProductMedia:true,
+    customerCopyPolish:true
+  });
+})();
