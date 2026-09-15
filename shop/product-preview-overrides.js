@@ -1,4 +1,6 @@
 (() => {
+  'use strict';
+
   const PRODUCT_PREVIEWS = {
     '6a877906eb76ae387b05cc0f': 'assets/product-previews/hydrangea-front-v5.webp',
     '6a877d2aeb76ae387b05cfae': 'assets/product-previews/axolotl-front-v5.webp',
@@ -8,45 +10,39 @@
     '6a871b6035cea7fe2c005ee6': 'assets/product-previews/dragonfly-front-v5.webp'
   };
 
-  const catalog = window.BRUIS_CATALOG;
-  const products = Array.isArray(catalog) ? catalog : catalog?.products;
-  if (!Array.isArray(products)) return;
+  function decorate(product){
+    if(!product || typeof product !== 'object') return product;
+    const id = String(product.id || '');
+    const artwork = PRODUCT_PREVIEWS[id];
+    if(!artwork) return product;
 
-  products.forEach(product => {
-    const id = String(product?.id || '');
-    const image = PRODUCT_PREVIEWS[id];
-    if (!image) return;
-    const existing = Array.isArray(product.mockups) ? product.mockups.filter(Boolean) : [];
-    product.mockups = [
-      { label: 'Front print', image },
-      ...existing.filter(mockup => mockup?.image !== image)
-    ];
+    const current = Array.isArray(product.mockups) ? product.mockups.filter(item => item?.image) : [];
+    const views = current.filter(item => String(item.image) !== artwork && !/^artwork detail$/i.test(String(item.label || '')));
+    const artworkView = { label: 'Artwork detail', image: artwork };
+
+    if(views.length){
+      product.mockups = [views[0], artworkView, ...views.slice(1)];
+      product.image = views[0].image;
+    } else {
+      product.mockups = [artworkView];
+      product.image ||= artwork;
+    }
+    return product;
+  }
+
+  if(window.BRUIS_CATALOG){
+    const rows = Array.isArray(window.BRUIS_CATALOG) ? window.BRUIS_CATALOG : window.BRUIS_CATALOG.products;
+    if(Array.isArray(rows)) rows.forEach(decorate);
+  }
+
+  if(typeof normalizeProduct === 'function'){
+    const previousNormalizeProduct = normalizeProduct;
+    normalizeProduct = raw => decorate(previousNormalizeProduct(raw));
+  }
+
+  window.BRUIS_PRODUCT_PREVIEWS_V831 = Object.freeze({
+    count: Object.keys(PRODUCT_PREVIEWS).length,
+    placement: 'after-primary-garment',
+    preservesGarmentPrimaryImage: true
   });
-
-  const style = document.createElement('style');
-  style.dataset.shopFrontArtworkZoom = 'true';
-  style.textContent = `
-    .mockup-rail {
-      grid-auto-columns: 100% !important;
-      gap: 0 !important;
-      padding: 8px !important;
-    }
-    .mockup-rail .mock-front-print {
-      background: transparent !important;
-      border-color: transparent !important;
-      overflow: hidden !important;
-      min-height: 0;
-    }
-    .mockup-rail .mock-front-print img {
-      width: 100% !important;
-      height: 100% !important;
-      aspect-ratio: 1 / 1 !important;
-      padding: 0 !important;
-      background: transparent !important;
-      object-fit: contain !important;
-      object-position: center !important;
-      transform: none !important;
-    }
-  `;
-  document.head.appendChild(style);
 })();
