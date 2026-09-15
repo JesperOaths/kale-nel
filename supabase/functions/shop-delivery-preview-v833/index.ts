@@ -15,6 +15,7 @@ const MAX_QTY = 10;
 const MAX_FULFILLMENT_PLANS = 64;
 const CHOICE_PROVIDER_ID = 99;
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl", "https://jesperoaths.github.io"]);
+const EU = new Set(["AT","BE","BG","HR","CY","CZ","DK","EE","FI","FR","DE","GR","HU","IE","IT","LV","LT","LU","MT","NL","PL","PT","RO","SK","SI","ES","SE"]);
 const text = (v: unknown) => String(v ?? "").trim();
 const clean = (v: unknown) => text(v).replace(/\s+/g, " ");
 
@@ -33,29 +34,31 @@ function cors(req: Request) {
 }
 const json = (req: Request, body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: cors(req) });
 function normalizeCountry(v: unknown) { return text(v || "NL").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2); }
-
-async function printifyV1(token: string, path: string, init: RequestInit = {}) {
-  const res = await fetch(`${PRINTIFY_V1}${path}`, {
-    ...init,
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": "Kalenel-Delivery-Preview/8.33", ...(init.headers || {}) },
-  });
-  const raw = await res.text();
-  let payload: any = null;
-  try { payload = raw ? JSON.parse(raw) : null; } catch { payload = raw; }
-  if (!res.ok) throw new Error(`Printify ${res.status}: ${text(payload?.message || payload?.error || raw).slice(0, 250)}`);
-  return payload;
+function strictCountry(v: unknown) {
+  const code = text(v).toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2);
+  return code.length === 2 ? code : "";
 }
 
-async function printifyV2(token: string, path: string) {
-  const res = await fetch(`${PRINTIFY_V2}${path}`, {
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": "Kalenel-Delivery-Preview/8.33" },
-  });
-  const raw = await res.text();
-  let payload: any = null;
-  try { payload = raw ? JSON.parse(raw) : null; } catch { payload = raw; }
-  if (!res.ok) throw new Error(`Printify V2 ${res.status}: ${text(payload?.message || payload?.error || raw).slice(0, 250)}`);
-  return payload;
+async function printify(base: string, token: string, path: string, init: RequestInit = {}, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${base}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": "Kalenel-Delivery-Preview/8.33", ...(init.headers || {}) },
+    });
+    const raw = await res.text();
+    let payload: any = null;
+    try { payload = raw ? JSON.parse(raw) : null; } catch { payload = raw; }
+    if (!res.ok) throw new Error(`Printify ${res.status}: ${text(payload?.message || payload?.error || raw).slice(0, 250)}`);
+    return payload;
+  } finally {
+    clearTimeout(timer);
+  }
 }
+const printifyV1 = (token: string, path: string, init: RequestInit = {}, timeoutMs = 10000) => printify(PRINTIFY_V1, token, path, init, timeoutMs);
+const printifyV2 = (token: string, path: string, timeoutMs = 6500) => printify(PRINTIFY_V2, token, path, {}, timeoutMs);
 
 async function resolvePrintifyToken(sb: any) {
   const envToken = text(Deno.env.get("PRINTIFY_API_TOKEN"));
@@ -132,29 +135,33 @@ function dbMappingPayload(rows: any[]) {
 }
 
 function regionName(code: string) {
-  try {
-    const dn = new Intl.DisplayNames(["en"], { type: "region" });
-    return dn.of(code) || code;
-  } catch {
-    return code;
-  }
+  try { return new Intl.DisplayNames(["en"], { type: "region" }).of(code) || code; }
+  catch { return code; }
+}
+function choiceRegion(country: string) {
+  if (EU.has(country)) return `${regionName(country)} / EU`;
+  if (country === "GB") return "United Kingdom";
+  if (country === "CA") return "Canada";
+  if (country === "AU" || country === "NZ") return "Australia / New Zealand region";
+  if (country === "US") return "United States";
+  return regionName(country);
 }
 
-async function providerOrigin(token: string, providerId: number) {
+async function providerOrigin(token: string, providerId: number, destinationCountry: string) {
   if (providerId === CHOICE_PROVIDER_ID) {
     return {
       provider_id: providerId,
       provider: "Printify Choice",
-      label: "Printify Choice network — facility assigned near the destination after the order is placed",
+      label: `Printify Choice network — Printify will try to fulfill in or near ${choiceRegion(destinationCountry)}; if no suitable nearby facility is available, it may ship from the US`,
       exact: false,
     };
   }
   try {
-    const provider = await printifyV1(token, `/catalog/print_providers/${providerId}.json`);
+    const provider = await printifyV1(token, `/catalog/print_providers/${providerId}.json`, {}, 6500);
     const loc = provider?.location || {};
     const city = clean(loc?.city);
     const region = clean(loc?.region);
-    const countryCode = normalizeCountry(loc?.country);
+    const countryCode = strictCountry(loc?.country);
     const country = countryCode ? regionName(countryCode) : "";
     const place = [city, region && region !== city ? region : "", country].filter(Boolean).join(", ");
     return {
@@ -167,19 +174,29 @@ async function providerOrigin(token: string, providerId: number) {
       exact: !!place,
     };
   } catch {
-    return {
-      provider_id: providerId,
-      provider: `Print provider ${providerId}`,
-      label: `Print provider ${providerId} — origin location temporarily unavailable`,
-      exact: false,
-    };
+    return { provider_id: providerId, provider: `Print provider ${providerId}`, label: `Print provider ${providerId} — origin location temporarily unavailable`, exact: false };
   }
+}
+
+function choiceDelivery(shippingMethod: string, destinationCountry: string) {
+  const method = text(shippingMethod).toLowerCase();
+  if (method === "express") return { from: 2, to: 3, source: "printify-choice-express", choice: true, fallback: null };
+  if (method === "priority") return { from: destinationCountry === "US" ? 4 : 5, to: destinationCountry === "US" ? 10 : 12, source: "printify-choice-typical", choice: true, fallback: destinationCountry === "US" ? null : { from: 5, to: 12 } };
+  if (method === "economy") return { from: 6, to: 15, source: "printify-choice-typical", choice: true, fallback: null };
+  return {
+    from: 4,
+    to: 12,
+    source: "printify-choice-local-typical",
+    choice: true,
+    fallback: destinationCountry === "US" ? null : { from: 12, to: 37 },
+  };
 }
 
 async function deliveryRange(token: string, candidate: any, shippingMethod: string, country: string) {
   const blueprintId = Number(candidate?.blueprint_id);
   const providerId = Number(candidate?.print_provider_id);
   const variantId = Number(candidate?.variant_id);
+  if (providerId === CHOICE_PROVIDER_ID) return choiceDelivery(shippingMethod, country);
   if (![blueprintId, providerId, variantId].every(Number.isInteger)) return null;
   try {
     const payload = await printifyV2(token, `/catalog/blueprints/${blueprintId}/print_providers/${providerId}/shipping/${encodeURIComponent(shippingMethod)}.json`);
@@ -190,7 +207,7 @@ async function deliveryRange(token: string, candidate: any, shippingMethod: stri
     const from = Number(attrs?.handlingTime?.from);
     const to = Number(attrs?.handlingTime?.to);
     if (!Number.isFinite(from) || !Number.isFinite(to) || from < 0 || to < from) return null;
-    return { from: Math.round(from), to: Math.round(to), source: exact ? "country-specific" : "rest-of-world" };
+    return { from: Math.round(from), to: Math.round(to), source: exact ? "country-specific" : "rest-of-world", choice: false, fallback: null };
   } catch {
     return null;
   }
@@ -215,7 +232,6 @@ Deno.serve(async (req: Request) => {
     const region = clean(customer?.region).slice(0, 100);
     const zip = clean(customer?.zip).slice(0, 24);
     const items = Array.isArray(body?.items) ? body.items : [];
-
     if (!address1 || !city || !zip || country.length !== 2) return json(req, { error: "delivery_address_incomplete" }, 400);
     if (!items.length || items.length > MAX_ITEMS) return json(req, { error: "invalid_cart" }, 400);
 
@@ -242,15 +258,13 @@ Deno.serve(async (req: Request) => {
     ));
 
     const printifyToken = await resolvePrintifyToken(sb);
-    const freshProducts = new Map<string, any>();
     const productIds = [...new Set([
       ...resolved.map((row: any) => text(row.cached.product.id)),
       ...eligibleMappings.map((mapping: any) => text(mapping.target.product_id)),
     ])];
-    for (const productId of productIds) {
-      if (!/^[a-zA-Z0-9_-]{8,80}$/.test(productId)) throw new Error("Invalid Printify product id");
-      freshProducts.set(productId, await printifyV1(printifyToken, `/shops/${shopId}/products/${encodeURIComponent(productId)}.json`));
-    }
+    if (productIds.some(id => !/^[a-zA-Z0-9_-]{8,80}$/.test(id))) throw new Error("Invalid Printify product id");
+    const freshEntries = await Promise.all(productIds.map(async productId => [productId, await printifyV1(printifyToken, `/shops/${shopId}/products/${encodeURIComponent(productId)}.json`)] as const));
+    const freshProducts = new Map<string, any>(freshEntries);
 
     const candidateGroups: any[][] = [];
     for (const row of resolved) {
@@ -262,9 +276,7 @@ Deno.serve(async (req: Request) => {
       const qtyRaw = Number(raw?.qty || 0);
       const qty = Math.floor(qtyRaw);
       if (!Number.isFinite(qtyRaw) || qty < 1 || qty > MAX_QTY) throw new Error("Invalid quantity");
-      if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isWhiteVariant(freshProduct, freshVariant)) {
-        throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
-      }
+      if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isWhiteVariant(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
       const cost = Math.round(Number(freshVariant?.cost));
       if (!Number.isFinite(cost) || cost <= 0) throw new Error(`Invalid authoritative production cost: ${clean(row.cached.product.name)}`);
 
@@ -278,7 +290,6 @@ Deno.serve(async (req: Request) => {
         print_provider_id: Number(freshProduct?.print_provider_id),
         estimated_import_cents_per_unit: 0,
       }];
-
       for (const mapping of eligibleMappings.filter((entry: any) => entry.source.product_id === productId && entry.source.variant_id === variantId)) {
         const targetProduct = freshProducts.get(mapping.target.product_id);
         const targetVariant = (Array.isArray(targetProduct?.variants) ? targetProduct.variants : []).find((variant: any) => Number(variant?.id) === mapping.target.variant_id);
@@ -298,56 +309,52 @@ Deno.serve(async (req: Request) => {
       candidateGroups.push(candidates);
     }
 
-    const addressTo = {
-      first_name: "Checkout",
-      last_name: "Estimate",
-      email: "checkout@kalenel.nl",
-      phone: "",
-      country,
-      region,
-      address1,
-      address2,
-      city,
-      zip,
-    };
+    const addressTo = { first_name: "Checkout", last_name: "Estimate", email: "checkout@kalenel.nl", phone: "", country, region, address1, address2, city, zip };
     const plans = buildFulfillmentPlans(candidateGroups, MAX_FULFILLMENT_PLANS);
     const quotedPlans: any[] = [];
     for (const plan of plans) {
-      const lineItems = plan.candidates.map((candidate: any, idx: number) => ({
-        product_id: candidate.product_id,
-        variant_id: candidate.variant_id,
-        quantity: candidate.quantity,
-        external_id: `estimate-${idx + 1}`,
-      }));
+      const lineItems = plan.candidates.map((candidate: any, idx: number) => ({ product_id: candidate.product_id, variant_id: candidate.variant_id, quantity: candidate.quantity, external_id: `estimate-${idx + 1}` }));
       try {
-        const quote = await printifyV1(printifyToken, `/shops/${shopId}/orders/shipping.json`, {
-          method: "POST",
-          body: JSON.stringify({ line_items: lineItems, address_to: addressTo }),
-        });
+        const quote = await printifyV1(printifyToken, `/shops/${shopId}/orders/shipping.json`, { method: "POST", body: JSON.stringify({ line_items: lineItems, address_to: addressTo }) }, 8500);
         const shipping = cheapestShippingQuote(quote);
         if (shipping) quotedPlans.push({ plan, shipping, route_key: lineItems.map((item: any) => `${item.product_id}:${item.variant_id}`).join("|") });
-      } catch {
-        // Ignore unshippable candidate plans and continue to other approved routes.
-      }
+      } catch {}
     }
-
     const selected = chooseCheapestFulfillment(quotedPlans);
     if (!selected) throw new Error("No shipping method available for this address");
 
     const uniqueProviders = [...new Set(selected.plan.candidates.map((candidate: any) => Number(candidate.print_provider_id)).filter(Number.isInteger))];
-    const origins = await Promise.all(uniqueProviders.map(providerId => providerOrigin(printifyToken, providerId)));
-    const ranges = (await Promise.all(selected.plan.candidates.map((candidate: any) => deliveryRange(printifyToken, candidate, selected.shipping.name, country)))).filter(Boolean) as { from: number; to: number; source: string }[];
-    const delivery = ranges.length === selected.plan.candidates.length
-      ? {
-          min_business_days: Math.max(...ranges.map(range => range.from)),
-          max_business_days: Math.max(...ranges.map(range => range.to)),
-          exact_for_selected_route: true,
-        }
-      : {
-          min_business_days: null,
-          max_business_days: null,
-          exact_for_selected_route: false,
-        };
+    const [origins, rawRanges] = await Promise.all([
+      Promise.all(uniqueProviders.map(providerId => providerOrigin(printifyToken, providerId, country))),
+      Promise.all(selected.plan.candidates.map((candidate: any) => deliveryRange(printifyToken, candidate, selected.shipping.name, country))),
+    ]);
+    const ranges = rawRanges.filter(Boolean) as { from: number; to: number; source: string; choice?: boolean; fallback?: { from: number; to: number } | null }[];
+    const complete = ranges.length === selected.plan.candidates.length;
+    const hasChoice = ranges.some(range => range.choice);
+    const choiceFallback = ranges.find(range => range.choice && range.fallback)?.fallback || null;
+    const delivery = complete ? {
+      min_business_days: Math.max(...ranges.map(range => range.from)),
+      max_business_days: Math.max(...ranges.map(range => range.to)),
+      exact_for_selected_route: !hasChoice,
+      estimate_type: hasChoice ? "printify-choice-typical-local-route" : "printify-route-specific",
+      fallback_min_business_days: choiceFallback?.from ?? null,
+      fallback_max_business_days: choiceFallback?.to ?? null,
+    } : {
+      min_business_days: null,
+      max_business_days: null,
+      exact_for_selected_route: false,
+      estimate_type: "incomplete",
+      fallback_min_business_days: null,
+      fallback_max_business_days: null,
+    };
+
+    const note = complete
+      ? hasChoice
+        ? choiceFallback
+          ? `Printify Choice will try to use a nearby facility. The ${delivery.min_business_days}–${delivery.max_business_days} business-day range is the typical local-route estimate; if local fulfillment is unavailable, an international fallback can take roughly ${choiceFallback.from}–${choiceFallback.to} business days. Estimates are not guaranteed.`
+          : `Printify Choice will assign the fulfillment facility after the order is placed. The shown range is a typical estimate for the selected shipping method and is not guaranteed.`
+        : "Estimated business-day range from Printify for the currently selected fulfillment route. Delays can still occur."
+      : "Printify has not exposed a complete route-specific delivery range yet. The exact estimate can update when the fulfillment facility is assigned.";
 
     return json(req, {
       ok: true,
@@ -358,9 +365,7 @@ Deno.serve(async (req: Request) => {
       provider_groups: Number(selected.plan.provider_groups || uniqueProviders.length || 1),
       may_arrive_separately: Number(selected.plan.provider_groups || 1) > 1,
       delivery,
-      note: delivery.exact_for_selected_route
-        ? "Estimated business-day range from Printify for the currently selected fulfillment route. Delays can still occur."
-        : "Printify has not exposed a complete route-specific delivery range yet. The exact estimate can update when the fulfillment facility is assigned.",
+      note,
     });
   } catch (error) {
     const detail = text(error instanceof Error ? error.message : error).slice(0, 350);
