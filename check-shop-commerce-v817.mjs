@@ -37,7 +37,7 @@ const refresh = read('shop/live-catalog-refresh-v818.js');
 assert.match(index, /direct-commerce-v832\.js/);
 assert.match(index, /manual-checkout-v825\.js/);
 assert.match(index, /version-watermark[^>]*>v832</);
-assert.match(index, /20260915-storefront-v832-r1/);
+assert.match(index, /20260915-storefront-v832-r2/);
 assert.match(index, /storefront-polish-v832\.css/);
 assert.match(index, /storefront-polish-v832\.js/);
 assert.match(index, /product-preview-overrides\.js/);
@@ -106,19 +106,25 @@ assert.match(mockupTransparency, /data\[index\*4\+3\]=0/);
 assert.match(mockupTransparency, /preservesWhiteGarments:true/);
 assert.match(mockupTransparency, /tagViewIncluded:true/);
 assert.match(mockupTransparency, /allProductMockups:true/);
+assert.match(mockupTransparency, /safeFallbackToOriginal:true/);
+assert.match(mockupTransparency, /noOneSidedSpanBridge:true/);
+assert.match(mockupTransparency, /function outputLooksSafe/);
+assert.match(mockupTransparency, /edgeOpaque>0/);
 assert.doesNotMatch(mockupTransparency, /shouldPreserve|preserved-detail/);
 
 // The expanded viewer includes the same gallery order (including artwork and tag)
-// and its Fit state deliberately uses only 80% of the viewport, providing a full
-// uncropped image with visible breathing room before the user zooms in.
+// and its initial Fit state uses a full media-sized object-fit:contain box, so
+// portrait transparent artwork cannot overflow the media area and get cropped.
 assert.match(lightbox, /aria-modal','true'/);
 assert.match(lightbox, /function fit\(\)/);
 assert.match(lightbox, /data-lb-fit/);
 assert.match(lightbox, /object-fit:contain!important/);
-assert.match(lightbox, /max-width:80%!important/);
-assert.match(lightbox, /max-height:80%!important/);
+assert.match(lightbox, /width:100%!important/);
+assert.match(lightbox, /height:100%!important/);
+assert.match(lightbox, /max-width:100%!important/);
+assert.match(lightbox, /max-height:100%!important/);
 assert.match(lightbox, /allGalleryImages:true/);
-assert.match(lightbox, /fitMaxPercent:80/);
+assert.match(lightbox, /fitMode:'media-contained'/);
 assert.doesNotMatch(lightbox, /EXCLUDE_FROM_EXPANDED_RE/);
 
 // Catalog pricing is derived from Printify fulfillment cost, not retail price:
@@ -235,7 +241,7 @@ assert.match(deployWorkflow, /supabase\/functions\/shop-manual-checkout-v832\/\*
 assert.match(deployWorkflow, /functions deploy shop-catalog-v828/);
 assert.match(deployWorkflow, /functions deploy shop-manual-checkout-v832/);
 assert.doesNotMatch(deployWorkflow, /functions deploy shop-manual-checkout-v828/);
-assert.match(liveShopCheck, /20260915-storefront-v832-r1/);
+assert.match(liveShopCheck, /20260915-storefront-v832-r2/);
 assert.match(liveShopCheck, /direct-commerce-v832/);
 assert.match(liveShopCheck, /storefront-polish-v832/);
 assert.match(liveShopCheck, /gallery-fixes-v832/);

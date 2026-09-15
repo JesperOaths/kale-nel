@@ -82,19 +82,52 @@
       }
     }
 
-    // Bridge sparse rows from nearby visible garment/artwork rows. This protects
-    // white fabric even when some parts are almost the same RGB as the backdrop.
+    // Bridge sparse rows only when there is real subject signal both above and
+    // below the row. The previous one-sided copy extended the protected garment
+    // span beyond the shirt and preserved vertical bars / rectangular garbage.
+    const sourceLeft=new Int32Array(left);
+    const sourceRight=new Int32Array(right);
     for(let y=0;y<height;y++){
       if(right[y]>=left[y]) continue;
-      let best=-1;
+      let above=-1, below=-1;
       for(let d=1;d<=Math.max(18,Math.floor(height*.035));d++){
-        const a=y-d,b=y+d;
-        if(a>=0&&right[a]>=left[a]){best=a;break;}
-        if(b<height&&right[b]>=left[b]){best=b;break;}
+        if(above<0&&y-d>=0&&sourceRight[y-d]>=sourceLeft[y-d]) above=y-d;
+        if(below<0&&y+d<height&&sourceRight[y+d]>=sourceLeft[y+d]) below=y+d;
+        if(above>=0&&below>=0) break;
       }
-      if(best>=0){left[y]=left[best];right[y]=right[best];}
+      if(above>=0&&below>=0){
+        left[y]=Math.min(sourceLeft[above],sourceLeft[below]);
+        right[y]=Math.max(sourceRight[above],sourceRight[below]);
+      }
     }
     return {left,right};
+  }
+
+  function alphaBounds(imageData){
+    const {data,width,height}=imageData;
+    let opaque=0,minX=width,minY=height,maxX=-1,maxY=-1,edgeOpaque=0,bottomOpaque=0;
+    for(let y=0;y<height;y++){
+      for(let x=0;x<width;x++){
+        const alpha=data[(y*width+x)*4+3];
+        if(alpha<=16) continue;
+        opaque++;
+        if(x<minX) minX=x; if(x>maxX) maxX=x;
+        if(y<minY) minY=y; if(y>maxY) maxY=y;
+        if(x<4||y<4||x>width-5||y>height-5) edgeOpaque++;
+        if(y>height*.82) bottomOpaque++;
+      }
+    }
+    return {opaque,minX,minY,maxX,maxY,edgeOpaque,bottomOpaque,ratio:opaque/(width*height)};
+  }
+
+  function outputLooksSafe(imageData){
+    const {width,height}=imageData;
+    const b=alphaBounds(imageData);
+    if(b.ratio<.08||b.ratio>.82) return false;
+    if(b.edgeOpaque>0) return false;
+    if(b.maxY>=height-4) return false;
+    if(b.bottomOpaque/(width*height)>.035) return false;
+    return true;
   }
 
   function applyTransparency(imageData){
@@ -126,7 +159,7 @@
       data[index*4+3]=0;
       removed++;
     }
-    return removed>width*height*.025;
+    return removed>width*height*.025&&outputLooksSafe(imageData);
   }
 
   async function transparentUrl(url){
@@ -199,5 +232,5 @@
   };
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-  window.BRUIS_TRANSPARENCY_V832=Object.freeze({allProductMockups:true,preservesWhiteGarments:true,tagViewIncluded:true});
+  window.BRUIS_TRANSPARENCY_V832=Object.freeze({allProductMockups:true,preservesWhiteGarments:true,tagViewIncluded:true,safeFallbackToOriginal:true,noOneSidedSpanBridge:true});
 })();
