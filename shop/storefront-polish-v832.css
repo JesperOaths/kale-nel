@@ -1,0 +1,68 @@
+/* Bruis shop v832 — transparent product media, exact galleries, unified collection fields */
+
+:root { --shop-image-backdrop: #ded6ca; }
+
+/* The card field stays beige, while the image itself stays transparent. */
+.mockup-rail,
+.mockup {
+  background: var(--shop-image-backdrop) !important;
+  border-color: transparent !important;
+}
+.mockup img,
+.mockup[class*="artwork"] img,
+.mockup[class*="front-print"] img,
+.mockup[class*="collar"] img,
+.mockup[class*="closeup"] img,
+.mockup[class*="close-up"] img,
+.mockup[class*="neck"] img,
+.mockup[class*="tag"] img,
+.mockup[class*="label"] img,
+.mockup[class*="detail"] img {
+  background: transparent !important;
+  object-fit: contain !important;
+  object-position: center !important;
+}
+
+/* Collection cards retain the beige field; the garment itself is kept white by
+   collection-media-v831.js. */
+.collection-image {
+  position: relative;
+  overflow: hidden;
+  background: var(--shop-image-backdrop) !important;
+}
+.collection-image img,
+.collection-image .collection-merch-image {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  background: var(--shop-image-backdrop) !important;
+  filter: none !important;
+  transform: none !important;
+}
+.collection-card[data-collection="merch"] .collection-image::before,
+.collection-card[data-collection="merch"] .collection-image::after {
+  content: none !important;
+  display: none !important;
+}
+
+.compact-shape-card,
+.compact-shape-card img,
+.compact-shape-card .collection-merch-image {
+  background: var(--shop-image-backdrop) !important;
+}
+.compact-shape-card img,
+.compact-shape-card .collection-merch-image {
+  object-fit: contain !important;
+  object-position: center !important;
+  filter: none !important;
+}
+
+.manual-checkout-note {
+  color: #4f504a;
+  border: 1px solid #e7e1d8;
+  background: #f8f5ef !important;
+}
+.manual-checkout-status:empty { display: none; }
