@@ -45,7 +45,7 @@ async function sha256(value: string) { const d = await crypto.subtle.digest("SHA
 async function printify(token: string, path: string, init: RequestInit = {}) {
   const res = await fetch(`${PRINTIFY_BASE}${path}`, {
     ...init,
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": "Kalenel-Manual-Shop/8.32", ...(init.headers || {}) },
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": "Kalenel-Manual-Shop/8.33", ...(init.headers || {}) },
   });
   const raw = await res.text();
   let payload: any = null;
@@ -147,6 +147,30 @@ async function sendEmail(to: string, subject: string, html: string, plain: strin
   return res.ok ? { ok: true, skipped: false } : { ok: false, skipped: false, error: `Resend ${res.status}: ${raw.slice(0, 300)}` };
 }
 
+function dbMappingPayload(rows: any[]) {
+  return {
+    version: 1,
+    mappings: (Array.isArray(rows) ? rows : []).map(row => ({
+      approval_id: row.approval_id,
+      approved: row.approved === true,
+      countries: row.countries,
+      estimated_import_cents_per_unit: row.estimated_import_cents_per_unit,
+      source: {
+        product_id: row.source_product_id,
+        variant_id: row.source_variant_id,
+        blueprint_id: row.source_blueprint_id,
+        print_provider_id: row.source_print_provider_id,
+      },
+      target: {
+        product_id: row.target_product_id,
+        variant_id: row.target_variant_id,
+        blueprint_id: row.target_blueprint_id,
+        print_provider_id: row.target_print_provider_id,
+      },
+    })),
+  };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(req) });
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -157,16 +181,19 @@ Deno.serve(async (req: Request) => {
   if (req.method === "GET") {
     const { data: cache } = await sb.from("shop_catalog_cache_v828").select("payload,generated_at,last_error").eq("id", 1).maybeSingle();
     const { data: settings } = await sb.from("shop_payment_settings").select("provider,payment_url,enabled").eq("id", 1).maybeSingle();
+    const { count: routingMappingCount } = await sb.from("shop_fulfillment_mappings").select("approval_id", { count: "exact", head: true }).eq("approved", true);
     return json(req, {
       ok: true,
-      mode: "manual-payment-v832",
+      mode: "manual-payment-v833-routing",
       pricing: "fulfillment-cost-plus-5-rounded-up",
       pricingBase: "printify-variant-cost",
       marginEuros: MARGIN_CENTS / 100,
       rounding: "whole-euro-ceiling",
       creates_pending_orders: true,
       sends_to_production: false,
-      fulfillment_routing: "cheapest-valid-approved-route",
+      fulfillment_routing: "production-plus-live-shipping-plus-verified-import",
+      fulfillment_provider_consolidation: "equal-cost-tiebreaker",
+      approved_regional_mappings: Number(routingMappingCount || 0),
       cached_products: Array.isArray(cache?.payload?.products) ? cache.payload.products.length : 0,
       catalog_generated_at: cache?.generated_at || null,
       catalog_error: cache?.last_error || null,
@@ -213,7 +240,16 @@ Deno.serve(async (req: Request) => {
     const resolved = items.map((item: any) => ({ raw: item, cached: cachedResolution(cache.payload, item) }));
     if (resolved.some((row: any) => !row.cached)) throw new Error("One or more selected variants are no longer in the live catalog");
 
-    const mappings = parseFulfillmentMappings(Deno.env.get("PRINTIFY_FULFILLMENT_MAPPINGS"));
+    const envMappings = parseFulfillmentMappings(Deno.env.get("PRINTIFY_FULFILLMENT_MAPPINGS"));
+    const { data: dbMappingRows, error: dbMappingError } = await sb.from("shop_fulfillment_mappings")
+      .select("approval_id,approved,countries,source_product_id,source_variant_id,source_blueprint_id,source_print_provider_id,target_product_id,target_variant_id,target_blueprint_id,target_print_provider_id,estimated_import_cents_per_unit")
+      .eq("approved", true);
+    if (dbMappingError) throw new Error("Fulfillment routing catalog unavailable");
+    const dbMappings = parseFulfillmentMappings(JSON.stringify(dbMappingPayload(dbMappingRows || [])));
+    const mappingsByApproval = new Map<string, any>();
+    for (const mapping of envMappings) mappingsByApproval.set(mapping.approval_id, mapping);
+    for (const mapping of dbMappings) mappingsByApproval.set(mapping.approval_id, mapping);
+    const mappings = [...mappingsByApproval.values()];
     const eligibleMappings = mappings.filter((mapping: any) => mapping.countries.includes(country) && resolved.some((row: any) =>
       mapping.source.product_id === text(row.cached.product.id) && mapping.source.variant_id === Number(row.cached.variant.id)
     ));
@@ -257,6 +293,9 @@ Deno.serve(async (req: Request) => {
         quantity: qty,
         cost_cents: Math.round(Number(freshVariant.cost)),
         mapping_approval_id: "",
+        blueprint_id: Number(freshProduct?.blueprint_id),
+        print_provider_id: Number(freshProduct?.print_provider_id),
+        estimated_import_cents_per_unit: 0,
       }];
       for (const mapping of eligibleMappings.filter((entry: any) => entry.source.product_id === productId && entry.source.variant_id === variantId)) {
         const targetProduct = freshProducts.get(mapping.target.product_id);
@@ -274,6 +313,7 @@ Deno.serve(async (req: Request) => {
           mapping_approval_id: mapping.approval_id,
           blueprint_id: mapping.target.blueprint_id,
           print_provider_id: mapping.target.print_provider_id,
+          estimated_import_cents_per_unit: validation.estimated_import_cents_per_unit || 0,
         });
       }
       candidateGroups.push(candidates);
@@ -304,6 +344,9 @@ Deno.serve(async (req: Request) => {
     const shippingMethod = selected.shipping.name;
     const shippingMethodCode = selected.shipping.code;
     const shippingCents = selected.shipping.cents;
+    const fulfillmentEstimatedImportCents = Math.max(0, Math.round(Number(selected.plan.estimated_import_cents || 0)));
+    const fulfillmentProviderGroups = Math.max(1, Math.round(Number(selected.plan.provider_groups || 1)));
+    const fulfillmentScoreCents = Math.round(Number(selected.plan.production_cents) + shippingCents + fulfillmentEstimatedImportCents);
     authoritative.forEach((item, index) => {
       const route = selected.plan.candidates[index];
       const sourceProductId = item.printify_product_id;
@@ -313,6 +356,7 @@ Deno.serve(async (req: Request) => {
       item.printify_product_id = route.product_id;
       item.printify_variant_id = route.variant_id;
       item.fulfillment_cost_cents = route.cost_cents;
+      item.fulfillment_estimated_import_cents_per_unit = route.estimated_import_cents_per_unit || 0;
       item.fulfillment_route = route.mapping_approval_id ? {
         type: "approved_regional_mapping",
         approval_id: route.mapping_approval_id,
@@ -322,7 +366,12 @@ Deno.serve(async (req: Request) => {
         target_variant_id: route.variant_id,
         blueprint_id: route.blueprint_id,
         print_provider_id: route.print_provider_id,
-      } : { type: "catalog_product" };
+        estimated_import_cents_per_unit: route.estimated_import_cents_per_unit || 0,
+      } : {
+        type: "catalog_product",
+        blueprint_id: route.blueprint_id,
+        print_provider_id: route.print_provider_id,
+      };
     });
 
     const totalCents = subtotalCents + shippingCents;
@@ -334,6 +383,7 @@ Deno.serve(async (req: Request) => {
     const orderRow = {
       id: orderId, status: "pending", currency: "eur", subtotal_cents: subtotalCents, shipping_cents: shippingCents, tax_cents: 0, discount_cents: 0, total_cents: totalCents,
       shipping_method: shippingMethod, shipping_method_code: shippingMethodCode, line_items: authoritative, shipping_address: addressTo,
+      fulfillment_estimated_import_cents: fulfillmentEstimatedImportCents, fulfillment_provider_groups: fulfillmentProviderGroups, fulfillment_score_cents: fulfillmentScoreCents,
       customer_email: email, customer_name: fullName, customer_phone: phone || null, payment_provider: payment.provider || "manual_transfer",
       payment_reference: reference, payment_request_token: payment.token || null, payment_request_url: payment.url || null, payment_request_expires_at: payment.expires_at,
       confirmation_token_hash: tokenHash, checkout_idempotency_key: checkoutKey, printify_shop_id: shopId,
