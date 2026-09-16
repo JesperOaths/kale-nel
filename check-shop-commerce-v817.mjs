@@ -9,6 +9,7 @@ const index = read('shop/index.html');
 const directCommerce = read('shop/direct-commerce-v832.js');
 const deliveryEstimate = read('shop/delivery-estimate-v833.js');
 const manualCheckout = read('shop/manual-checkout-v825.js');
+const customerFacingCheckout = read('shop/customer-facing-checkout-v837.js');
 const storefrontPolish = read('shop/storefront-polish-v832.js');
 const storefrontCss = read('shop/storefront-polish-v832.css');
 const styles = read('shop/styles.css');
@@ -41,12 +42,16 @@ const deployWorkflow = read('.github/workflows/deploy-shop-fixes-v829.yml');
 const store = read('shop/store.js');
 const refresh = read('shop/live-catalog-refresh-v818.js');
 
-// v836 presents the shop entirely as Bruis, keeps the cart control always available,
-// and restores pure converted production cost + €5 pricing without a €23 floor.
+// v837 presents the shop entirely as Bruis, keeps the cart control always available,
+// restores pure converted production cost + €5 pricing, and exposes a final total
+// that includes the address-specific shipping quote.
 assert.match(index, /direct-commerce-v832\.js/);
 assert.match(index, /manual-checkout-v825\.js/);
-assert.match(index, /version-watermark[^>]*>v836</);
-assert.match(index, /20260916-storefront-v836-r1/);
+assert.match(index, /customer-facing-checkout-v837\.js/);
+assert.match(index, /version-watermark[^>]*>v837</);
+assert.match(index, /20260916-storefront-v837-r1/);
+assert.match(index, /20260916-delivery-v833-r2/);
+assert.match(index, /20260916-storefront-v837-r2/);
 assert.match(index, /storefront-polish-v832\.css/);
 assert.match(index, /storefront-polish-v832\.js/);
 assert.match(index, /product-preview-overrides\.js/);
@@ -99,9 +104,19 @@ assert.match(deliveryPreviewEdge, /\"UNITED KINGDOM\": \"GB\"/);
 assert.match(manualCheckout, /UK↔EU/);
 assert.match(manualCheckout, /Stacked shipping/);
 
+// v837 customer-facing checkout layer must show the address-specific shipping total
+// at the bottom and rewrite any legacy supplier/factory wording before it is visible.
+assert.match(customerFacingCheckout, /Total incl\. shipping/);
+assert.match(customerFacingCheckout, /Products \$\{money\(subtotal\)\} \+ shipping \$\{money\(shipping\)\}/);
+assert.match(customerFacingCheckout, /shippingInclusiveTotal:\s*true/);
+assert.match(customerFacingCheckout, /supplierBrandingHidden:\s*true/);
+assert.match(customerFacingCheckout, /replace\(\/\\bPrintify\\b\/gi, 'Bruis'\)/);
+assert.match(customerFacingCheckout, /replace\(\/\\bfactories\\b\/gi, 'production locations'\)/);
+assert.match(customerFacingCheckout, /replace\(\/\\bfactory\\b\/gi, 'production location'\)/);
+
 // Delivery authority reuses the same safe route-selection rules as checkout. Fixed
-// providers use Printify provider locations and route-specific V2 delivery ranges;
-// Printify Choice stays transparent about dynamic facility assignment and fallback.
+// providers use supplier provider locations and route-specific V2 delivery ranges;
+// Choice routing stays transparent about dynamic facility assignment and fallback.
 assert.match(deliveryPreviewEdge, /CHOICE_PROVIDER_ID = 99/);
 assert.match(deliveryPreviewEdge, /shop_fulfillment_mappings/);
 assert.match(deliveryPreviewEdge, /chooseCheapestFulfillment/);
@@ -116,7 +131,7 @@ assert.match(deliveryPreviewRouting, /variant_options_mismatch/);
 assert.match(deliveryPreviewRouting, /artwork_mismatch/);
 assert.match(deliveryPreviewRouting, /function chooseCheapestFulfillment/);
 
-// Artwork is now the actual first/primary image. Original Printify artwork PNGs win;
+// Artwork is now the actual first/primary image. Original supplier artwork PNGs win;
 // local v5 previews are only a temporary fallback while an older cache is refreshing.
 assert.match(productPreviews, /serverArtwork/);
 assert.match(productPreviews, /product\.mockups\s*=\s*\[serverArtwork, \.\.\.rest\]/);
@@ -181,7 +196,7 @@ assert.match(lightbox, /allGalleryImages:true/);
 assert.match(lightbox, /fitMode:'media-contained'/);
 assert.doesNotMatch(lightbox, /EXCLUDE_FROM_EXPANDED_RE/);
 
-// Printify API money fields are USD cents. Every customer-facing EUR amount and
+// Supplier API money fields are USD cents. Every customer-facing EUR amount and
 // every fulfillment score is converted server-side before the €5 margin or totals
 // are applied; raw USD source amounts and the exact FX snapshot remain auditable.
 const ecbSample = parseEcbUsdRate("<Cube time='2026-09-15'><Cube currency='USD' rate='1.1539'/></Cube>");
@@ -207,7 +222,7 @@ assert.match(obsoletePriceRule, /status: 410/);
 assert.match(obsoletePriceRule, /shop-catalog-v828/);
 assert.doesNotMatch(obsoletePriceRule, /createClient|PRINTIFY_BASE|pricedVariants|method:\s*["']PUT["']/);
 
-// Catalog pricing is derived from Printify fulfillment cost, not retail price:
+// Catalog pricing is derived from fulfillment cost, not retail price:
 // retail = base cost + €5, rounded upward to the next whole euro. Original front
 // artwork from print_areas is inserted before generated garment mockups.
 assert.match(catalogEdge, /const MARGIN_CENTS = 500/);
@@ -233,7 +248,7 @@ assert.match(catalogEdge, /EdgeRuntime\.waitUntil/);
 assert.match(catalogEdge, /get_printify_api_token_v815a/);
 assert.doesNotMatch(catalogEdge, /shop-price-v818|shop-catalog-v822|cdn\.shopify\.com/);
 
-// Checkout re-fetches the exact selected Printify product/variant and applies the
+// Checkout re-fetches the exact selected supplier product/variant and applies the
 // same cost+€5 rounded-up rule server-side, so the displayed and charged prices
 // cannot diverge. Customer checkout still only creates a Pending local order.
 assert.match(checkoutEdge, /mode:\s*"manual-payment-v832"/);
@@ -330,7 +345,7 @@ assert.doesNotMatch(refresh, /window\.location\.reload/);
 assert.match(store, /const wholeEuro/);
 assert.match(store, /price:\s*wholeEuro/);
 
-// Main deployment check validates the v833 customer shell and all authoritative
+// Main deployment check validates the v837 customer shell and all authoritative
 // shop functions while remaining read-only: it never creates an order in CI.
 assert.match(liveHealthWorkflow, /node check-live-shop\.mjs/);
 assert.match(deployWorkflow, /supabase\/functions\/shop-catalog-v828\/\*\*/);
@@ -342,7 +357,10 @@ assert.match(deployWorkflow, /deploy_function shop-manual-checkout-v832/);
 assert.match(deployWorkflow, /deploy_function shop-delivery-preview-v833/);
 assert.doesNotMatch(deployWorkflow, /functions deploy shop-manual-checkout-v828/);
 assert.doesNotMatch(catalogEdge, /jellyfish[\s\S]{0,120}media\.slice\(1\)/i);
-assert.match(liveShopCheck, /20260916-storefront-v836-r1/);
+assert.match(liveShopCheck, /20260916-storefront-v837-r1/);
+assert.match(liveShopCheck, /20260916-delivery-v833-r2/);
+assert.match(liveShopCheck, /customer-facing-checkout-v837/);
+assert.match(liveShopCheck, /Total incl\\\. shipping|Total incl\. shipping/);
 assert.match(liveShopCheck, /delivery-estimate-v833/);
 assert.match(liveShopCheck, /direct-commerce-v832/);
 assert.match(liveShopCheck, /storefront-polish-v832/);
@@ -351,14 +369,17 @@ assert.match(liveShopCheck, /mockup-transparency-v832/);
 assert.match(liveShopCheck, /image-lightbox-v832/);
 assert.match(liveShopCheck, /shop-catalog-v828/);
 assert.match(liveShopCheck, /shop-manual-checkout-v832/);
-assert.match(liveShopCheck, /RESULT=V836_BRUIS_SHOP_PASS/);
+assert.match(liveShopCheck, /RESULT=V837_BRUIS_SHOP_PASS/);
 assert.match(liveShopCheck, /Deliberately read-only/);
 assert.doesNotMatch(liveShopCheck, /method:\s*['"]POST['"]/);
 
-assert.doesNotMatch([directCommerce, deliveryEstimate, manualCheckout, store].join('\n'), /printify|factor(?:y|ies)/i);
+// Customer-facing shop sources must not expose supplier/factory wording. The v837
+// compatibility layer is excluded here because it intentionally contains the old
+// words only as search patterns so it can rewrite stale cached copy before display.
+assert.doesNotMatch([index, directCommerce, deliveryEstimate, manualCheckout, storefrontPolish, store].join('\n'), /printify|factor(?:y|ies)/i);
 assert.match(storefrontCss + styles, /position:\s*fixed/);
 assert.match(styles, /\.cart-button[\s\S]*z-index:\s*1200/);
 assert.doesNotMatch(catalogEdge, /MIN_RETAIL_CENTS/);
 assert.doesNotMatch(checkoutEdge, /MIN_RETAIL_CENTS/);
 
-console.log('Shop commerce v836 Bruis-copy + sticky-cart + cost-plus-5 contract passed.');
+console.log('Shop commerce v837 Bruis-copy + shipping-total + sticky-cart + cost-plus-5 contract passed.');
