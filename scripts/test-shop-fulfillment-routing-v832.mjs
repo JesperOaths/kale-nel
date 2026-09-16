@@ -76,6 +76,14 @@ assert.throws(() => parseFulfillmentMappings('{bad json'), /not valid JSON/);
 assert.throws(() => parseFulfillmentMappings(JSON.stringify({ version: 1, mappings: [{ ...JSON.parse(mappingJson).mappings[0], approved: false }] })), /Invalid approved/);
 assert.throws(() => parseFulfillmentMappings(JSON.stringify({ version: 1, mappings: [{ ...JSON.parse(mappingJson).mappings[0], estimated_import_cents_per_unit: -1 }] })), /Invalid approved/);
 
+const manyMappings = Array.from({ length: 416 }, (_, index) => ({
+  ...JSON.parse(mappingJson).mappings[0],
+  approval_id: `regional-scale-${String(index).padStart(3, '0')}`,
+  source: { ...JSON.parse(mappingJson).mappings[0].source, variant_id: 1000 + index },
+  target: { ...JSON.parse(mappingJson).mappings[0].target, variant_id: 2000 + index },
+}));
+assert.equal(parseFulfillmentMappings(JSON.stringify({ version: 1, mappings: manyMappings })).length, 416, 'regional routing catalog must support all Gildan mappings');
+
 const baseline = {
   product_id: sourceProduct.id,
   variant_id: 101,
@@ -99,7 +107,16 @@ assert.equal(plans.length, 2);
 assert.equal(plans[0].provider_groups, 1);
 assert.equal(plans[1].provider_groups, 1);
 assert.equal(plans[1].estimated_import_cents, 250);
-assert.throws(() => buildFulfillmentPlans([[baseline, regional], [baseline, regional]], 3), /safe routing plan limit/);
+
+const boundedPlans = buildFulfillmentPlans([[baseline, regional], [baseline, regional]], 3);
+assert.ok(boundedPlans.length <= 3, 'large routing spaces must stay bounded');
+assert.deepEqual(boundedPlans[0].candidates.map(candidate => candidate.mapping_approval_id), ['', ''], 'bounded routing must retain the all-original fallback');
+assert.ok(boundedPlans.some(plan => plan.candidates.every(candidate => candidate.mapping_approval_id === mapping.approval_id)), 'bounded routing must retain the consolidated mapped route');
+
+const largeCartPlans = buildFulfillmentPlans(Array.from({ length: 20 }, () => [baseline, regional]), 64);
+assert.ok(largeCartPlans.length <= 64, '20-line carts must not explode the routing plan space');
+assert.ok(largeCartPlans.some(plan => plan.candidates.every(candidate => !candidate.mapping_approval_id)), 'large-cart routing must retain the original Printify route');
+assert.ok(largeCartPlans.some(plan => plan.candidates.every(candidate => candidate.mapping_approval_id === mapping.approval_id)), 'large-cart routing must retain the fully regional route');
 
 const selectedWithImport = chooseCheapestFulfillment([
   { plan: plans[0], shipping: { name: 'economy', code: 4, cents: 400 }, route_key: 'baseline' },
