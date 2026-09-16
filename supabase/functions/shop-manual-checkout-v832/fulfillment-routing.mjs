@@ -1,6 +1,17 @@
 const text = value => String(value ?? "").trim();
 const clean = value => text(value).replace(/\s+/g, " ");
 
+const DESPINOZA_SOURCE_PRODUCT_IDS = new Set([
+  "6a975ec45d07cc05a702a491",
+  "6a9742c08816f2362104d5cc",
+]);
+const DESPINOZA_NATIVE_TEXT_ID = "7b14de2d-815d-a93b-cdd3-69d9c2cb3e2f";
+const DESPINOZA_INTERNAL_TEXT_ID = "5941187eb8e7e37b3f0e62e5";
+const DESPINOZA_STATIC_TEXT_ID = "6aa9f09621bcc1035c7dae61";
+const DESPINOZA_TEXT_MARKER = "__despinoza_text__";
+const DESPINOZA_REGIONAL_PROVIDERS = new Set([27, 30, 331, 438]);
+
+
 export const SHIPPING_METHODS = Object.freeze([
   Object.freeze({ name: "economy", code: 4 }),
   Object.freeze({ name: "standard", code: 1 }),
@@ -83,6 +94,46 @@ export function artworkSignature(product, variantId) {
   return [...new Set(entries)].sort().join("|");
 }
 
+
+function despinozaCanonicalArtworkSignature(product, variantId, role) {
+  const wanted = Number(variantId);
+  const entries = [];
+  for (const area of Array.isArray(product?.print_areas) ? product.print_areas : []) {
+    const variantIds = Array.isArray(area?.variant_ids) ? area.variant_ids.map(Number) : [];
+    if (variantIds.length && !variantIds.includes(wanted)) continue;
+    for (const placeholder of Array.isArray(area?.placeholders) ? area.placeholders : []) {
+      const position = text(placeholder?.position).toLowerCase();
+      for (const image of Array.isArray(placeholder?.images) ? placeholder.images : []) {
+        let id = text(image?.id);
+        if (!position || !id) continue;
+        if (role === "source" && id === DESPINOZA_INTERNAL_TEXT_ID) continue;
+        if (role === "source" && id === DESPINOZA_NATIVE_TEXT_ID) id = DESPINOZA_TEXT_MARKER;
+        if (role === "target" && id === DESPINOZA_STATIC_TEXT_ID) id = DESPINOZA_TEXT_MARKER;
+        entries.push(`${position}:${id}`);
+      }
+    }
+  }
+  return [...new Set(entries)].sort().join("|");
+}
+
+function despinozaStaticArtworkEquivalent(mapping, sourceProduct, sourceVariant, targetProduct, targetVariant) {
+  const sourceId = text(sourceProduct?.id);
+  if (!DESPINOZA_SOURCE_PRODUCT_IDS.has(sourceId)) return false;
+  if (sourceId !== text(mapping?.source?.product_id)) return false;
+  if (Number(sourceVariant?.id) !== Number(mapping?.source?.variant_id)) return false;
+  if (Number(targetVariant?.id) !== Number(mapping?.target?.variant_id)) return false;
+  if (!DESPINOZA_REGIONAL_PROVIDERS.has(Number(targetProduct?.print_provider_id))) return false;
+  if (targetProduct?.visible !== false) return false;
+  const approval = text(mapping?.approval_id);
+  const expectedTail = `_${sourceId}_${Number(sourceVariant?.id)}`;
+  if (!/^g5000_(?:eu|uk|ca|au)_/.test(approval) || !approval.endsWith(expectedTail)) return false;
+  const sourceArtwork = despinozaCanonicalArtworkSignature(sourceProduct, sourceVariant?.id, "source");
+  const targetArtwork = despinozaCanonicalArtworkSignature(targetProduct, targetVariant?.id, "target");
+  return sourceArtwork.includes(`neck:${DESPINOZA_TEXT_MARKER}`)
+    && targetArtwork.includes(`neck:${DESPINOZA_TEXT_MARKER}`)
+    && sourceArtwork === targetArtwork;
+}
+
 function validId(value, min = 1, max = 100) {
   const id = text(value);
   return id.length >= min && id.length <= max && /^[A-Za-z0-9_-]+$/.test(id) ? id : "";
@@ -162,7 +213,8 @@ export function validateMappedCandidate(mapping, country, sourceProduct, sourceV
   }
   const sourceArtwork = artworkSignature(sourceProduct, sourceVariant?.id);
   const targetArtwork = artworkSignature(targetProduct, targetVariant?.id);
-  if (!sourceArtwork || sourceArtwork !== targetArtwork) return { ok: false, reason: "artwork_mismatch" };
+  const approvedStaticTextEquivalent = despinozaStaticArtworkEquivalent(mapping, sourceProduct, sourceVariant, targetProduct, targetVariant);
+  if (!sourceArtwork || (sourceArtwork !== targetArtwork && !approvedStaticTextEquivalent)) return { ok: false, reason: "artwork_mismatch" };
   const cost = Math.round(Number(targetVariant?.cost));
   if (!Number.isFinite(cost) || cost <= 0) return { ok: false, reason: "target_cost_invalid" };
   return { ok: true, cost_cents: cost, estimated_import_cents_per_unit: mapping.estimated_import_cents_per_unit || 0 };
