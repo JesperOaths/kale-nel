@@ -158,11 +158,25 @@ function artworkFor(product: any) {
   }
   return out.slice(0, 1);
 }
+function versionedMockupUrl(src: string, updatedAt: unknown) {
+  const raw = text(src);
+  if (!raw) return "";
+  try {
+    const url = new URL(raw);
+    if (url.hostname === "images.printify.com") {
+      const stamp = Date.parse(text(updatedAt));
+      if (Number.isFinite(stamp)) url.searchParams.set("kv", String(stamp));
+    }
+    return url.toString();
+  } catch {
+    return raw;
+  }
+}
 function mediaFor(product: any) {
   const seen = new Set<string>();
   let media = (Array.isArray(product?.images) ? product.images : [])
     .map((image: any, index: number) => ({
-    image: text(image?.src),
+    image: versionedMockupUrl(text(image?.src), product?.updated_at),
     label: text(image?.position || `View ${index + 1}`),
     index,
     variantIds: Array.isArray(image?.variant_ids) ? image.variant_ids.map((id: unknown) => String(id)) : [],

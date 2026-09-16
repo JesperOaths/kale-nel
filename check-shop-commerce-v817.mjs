@@ -268,6 +268,9 @@ assert.match(catalogEdge, /toteHandleColors:\s*\["Black", "White"\]/);
 assert.match(catalogEdge, /isPublicVariant/);
 assert.match(catalogEdge, /variantIds/);
 assert.match(catalogEdge, /EdgeRuntime\.waitUntil/);
+assert.match(catalogEdge, /function versionedMockupUrl/);
+assert.match(catalogEdge, /url\.searchParams\.set\("kv", String\(stamp\)\)/);
+assert.match(catalogEdge, /versionedMockupUrl\(text\(image\?\.src\), product\?\.updated_at\)/);
 assert.match(catalogEdge, /get_printify_api_token_v815a/);
 assert.doesNotMatch(catalogEdge, /shop-price-v818|shop-catalog-v822|cdn\.shopify\.com/);
 

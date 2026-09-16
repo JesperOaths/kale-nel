@@ -245,6 +245,13 @@ assert.match(lightbox, /allGalleryImages:true/, 'lightbox must include artwork a
 assert.doesNotMatch(lightbox, /EXCLUDE_FROM_EXPANDED_RE/, 'lightbox must not silently omit artwork/detail views');
 
 const liveCatalog = await catalog();
+const dispuutShirts = liveCatalog.products.filter(product => /^Dispuut Despinoza(?: Lange Roos)?$/i.test(String(product?.name || '').trim()));
+assert.equal(dispuutShirts.length, 2, 'both Dispuut shirt products must exist');
+for (const product of dispuutShirts) {
+  const back = (Array.isArray(product?.mockups) ? product.mockups : []).find(item => String(item?.label || '').toLowerCase() === 'back');
+  assert.ok(back?.image, `${product.name} must expose a back mockup`);
+  assert.match(String(back.image), /[?&]kv=\d+/, `${product.name} back mockup must be cache-busted by product updated_at`);
+}
 const hydrangea = liveCatalog.products.find(product => /^hydrangea$/i.test(String(product?.name || '').trim()));
 assert.ok(hydrangea, 'Hydrangea product must exist');
 console.log(`Hydrangea live price: €${hydrangea.price}`);
