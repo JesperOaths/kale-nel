@@ -1,0 +1,61 @@
+name: C720P OAuth recovery audit
+
+on:
+  push:
+    branches: ['ops/c720p-drive-oauth-recovery']
+    paths: ['.github/workflows/ops-c720p-oauth-recovery.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: uiqntazgnrxwliaidkmy
+    steps:
+      - name: Enqueue fixed C720P OAuth audit through Supabase Management API
+        shell: python
+        run: |
+          import json, os, time, urllib.request, urllib.error
+          token=os.environ.get('SUPABASE_ACCESS_TOKEN','')
+          if not token:
+              raise SystemExit('SUPABASE_ACCESS_TOKEN missing')
+          ref=os.environ['PROJECT_REF']
+          api=f'https://api.supabase.com/v1/projects/{ref}/database/query'
+          headers={'Authorization':f'Bearer {token}','Content-Type':'application/json'}
+          command_b64='c2V0IC11CmVjaG8gJz09PSBPQVVUSCBSRUNPVkVSWSBHSCBBVURJVCA9PT0nOyBkYXRlIC1JcwpwcmludGYgJ1xuLS0tIEhPU1QgLS0tXG4nOyBob3N0bmFtZTsgaWQgLXVuCnByaW50ZiAnXG4tLS0gR0NMT1VEIC0tLVxuJzsgY29tbWFuZCAtdiBnY2xvdWQgfHwgdHJ1ZTsgZ2Nsb3VkIHZlcnNpb24gMj4vZGV2L251bGwgfCBoZWFkIC04IHx8IHRydWU7IGdjbG91ZCBhdXRoIGxpc3QgLS1maWx0ZXI9c3RhdHVzOkFDVElWRSAtLWZvcm1hdD0ndmFsdWUoYWNjb3VudCknIDI+L2Rldi9udWxsIHx8IHRydWU7IGdjbG91ZCBjb25maWcgZ2V0LXZhbHVlIHByb2plY3QgMj4vZGV2L251bGwgfHwgdHJ1ZQpwcmludGYgJ1xuLS0tIE9BVVRIIFNUQVRFIC0tLVxuJzsgY2F0IC9ob21lL2plc3Blcm4vYzcyMHAtaG9tZS1odWIvc3RhdGUvZHJpdmUtb2F1dGgtYm9vdHN0cmFwLmpzb24gMj4vZGV2L251bGwgfHwgdHJ1ZQpwcmludGYgJ1xuLS0tIFBSSVZBVEUgQ0xJRU5UIEZJTEUgLS0tXG4nOyBweXRob24zIC0gPDwnUFknCmltcG9ydCBqc29uLHBhdGhsaWIsaGFzaGxpYgpwPXBhdGhsaWIuUGF0aCgnL29wdC9pbmJveC10cmlhZ2UtYWdlbnQvc2VjcmV0cy9nb29nbGVfb2F1dGhfY2xpZW50Lmpzb24nKQp0cnk6CiBkPWpzb24ubG9hZHMocC5yZWFkX3RleHQoKSk7IHg9ZC5nZXQoJ2luc3RhbGxlZCcpIG9yIGQuZ2V0KCd3ZWInKSBvciB7fQogcHJpbnQoJ3R5cGU9JysoJ2luc3RhbGxlZCcgaWYgZC5nZXQoJ2luc3RhbGxlZCcpIGVsc2UgJ3dlYicpKQogcHJpbnQoJ3Byb2plY3RfaWQ9JytzdHIoeC5nZXQoJ3Byb2plY3RfaWQnKSBvciAnJykpCiBwcmludCgnY2xpZW50X2hhc2g9JytoYXNobGliLnNoYTI1NihzdHIoeC5nZXQoJ2NsaWVudF9pZCcpIG9yICcnKS5lbmNvZGUoKSkuaGV4ZGlnZXN0KClbOjE2XSkKZXhjZXB0IEV4Y2VwdGlvbiBhcyBlOiBwcmludCh0eXBlKGUpLl9fbmFtZV9fKQpQWQpwcmludGYgJ1xuLS0tIFBSSVZBVEUgQ0hST01JVU0gLS0tXG4nOyBwZ3JlcCAtYWYgJ2M3MjBwLWRyaXZlLXByaXZhdGUtb2F1dGgtY2hyb21pdW0nIHx8IHRydWUKY3VybCAtZnNTIC0tbWF4LXRpbWUgMyBodHRwOi8vMTI3LjAuMC4xOjkzMzMvanNvbi92ZXJzaW9uIDI+L2Rldi9udWxsIHwgcHl0aG9uMyAtYyAnaW1wb3J0IHN5cyxqc29uOyBkPWpzb24ubG9hZChzeXMuc3RkaW4pOyBwcmludCgiYnJvd3Nlcj0iK3N0cihkLmdldCgiQnJvd3NlciIsIiIpKSsiIHByb3RvY29sPSIrc3RyKGQuZ2V0KCJQcm90b2NvbC1WZXJzaW9uIiwiIikpKScgMj4vZGV2L251bGwgfHwgdHJ1ZQpjdXJsIC1mc1MgLS1tYXgtdGltZSAzIGh0dHA6Ly8xMjcuMC4wLjE6OTMzMy9qc29uL2xpc3QgMj4vZGV2L251bGwgfCBweXRob24zIC0gPDwnUFknCmltcG9ydCBzeXMsanNvbix1cmxsaWIucGFyc2UKdHJ5OiByb3dzPWpzb24ubG9hZChzeXMuc3RkaW4pCmV4Y2VwdDogcm93cz1bXQpmb3IgciBpbiByb3dzOgogaWYgci5nZXQoJ3R5cGUnKSE9J3BhZ2UnOiBjb250aW51ZQogdT11cmxsaWIucGFyc2UudXJsc3BsaXQoci5nZXQoJ3VybCcsJycpKQogcHJpbnQoJ1BBR0UgaG9zdD0lcyBwYXRoPSVzIHRpdGxlPSVzJyAlICh1Lmhvc3RuYW1lIG9yICcnLHUucGF0aCwoci5nZXQoJ3RpdGxlJykgb3IgJycpWzoxMDBdKSkKUFkKcHJpbnRmICdcbi0tLSBGSVJFRk9YL0NIUk9NSVVNIFdJTkRPV1MgLS0tXG4nOyBESVNQTEFZPTowIHdtY3RsIC1seCAyPi9kZXYvbnVsbCB8IGdyZXAgLUVpICdjaHJvbWl1bXxmaXJlZm94fEdvb2dsZSBDbG91ZHxHb29nbGUgQWNjb3VudHMnIHwgdGFpbCAtMjAgfHwgdHJ1ZQpwcmludGYgJ1xuLS0tIFBST0RVQ1RJT04gUkNMT05FIC0tLVxuJzsgL2hvbWUvamVzcGVybi9jNzIwcC1ob21lLWh1Yi9iaW4vcmNsb25lIC0tY29uZmlnIC9ob21lL2plc3Blcm4vLmNvbmZpZy9yY2xvbmUvcmNsb25lLmNvbmYgYWJvdXQgYzcyMHBkcml2ZTogLS1qc29uIDI+JjEgfCB0YWlsIC0yMCB8fCB0cnVlCmVjaG8gUkVTVUxUPU9BVVRIX1JFQ09WRVJZX0dIX0FVRElUX0RPTkU='
+          sql=f"""insert into c720p_agent.jobs(command,timeout_seconds,idempotency_key)
+          values (convert_from(decode('{command_b64}','base64'),'UTF8'),180,'oauth-recovery-gh-audit-20260916-v1')
+          on conflict (idempotency_key) do update set idempotency_key=excluded.idempotency_key
+          returning id,state,created_at;"""
+          def query(q, read_only=False):
+              body=json.dumps({'query':q,'read_only':read_only}).encode()
+              req=urllib.request.Request(api,data=body,headers=headers,method='POST')
+              try:
+                  with urllib.request.urlopen(req,timeout=45) as r:
+                      return json.loads(r.read().decode())
+              except urllib.error.HTTPError as e:
+                  text=e.read().decode(errors='replace')
+                  raise RuntimeError(f'Management API HTTP {e.code}: {text[:500]}')
+          res=query(sql)
+          print('ENQUEUE_RESPONSE=',json.dumps(res))
+          row=res[0] if isinstance(res,list) and res else res
+          job_id=int(row['id'])
+          for i in range(48):
+              time.sleep(5)
+              rows=query(f"select id,state,attempts,exit_code,finished_at,stdout,stderr from c720p_agent.jobs where id={job_id};", True)
+              row=rows[0] if isinstance(rows,list) and rows else {}
+              print(f"POLL {i+1}: state={row.get('state')} exit={row.get('exit_code')}")
+              if row.get('state') in ('done','error','failed'):
+                  print('=== C720P STDOUT ===')
+                  print(row.get('stdout') or '')
+                  print('=== C720P STDERR ===')
+                  print(row.get('stderr') or '')
+                  if row.get('state')!='done' or row.get('exit_code') not in (0,None):
+                      raise SystemExit(2)
+                  break
+          else:
+              raise SystemExit('Timed out waiting for C720P job')
