@@ -4,13 +4,14 @@ name: "Patch regional routing backend v834"
   push:
     branches:
       - main
+    paths:
+      - .github/workflows/patch-regional-routing-v834.yml
 
 permissions:
   contents: write
 
 jobs:
   patch:
-    if: ${{ github.event.head_commit.message == 'ops: patch regional routing backend' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
