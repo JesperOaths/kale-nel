@@ -5,6 +5,7 @@ const PRINTIFY_BASE = "https://api.printify.com/v1";
 const CACHE_FRESH_MS = 60_000;
 const REFRESH_LEASE_MS = 120_000;
 const MAX_PAGES = 100;
+const ROUTE_PREFIX = "__KALENEL_ROUTE_";
 const BOXY_TITLES = new Set(["coral", "daffodil", "dragonfly", "honeysuckle", "horseshoe crab", "seahorse", "seaweed"]);
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl", "https://jesperoaths.github.io"]);
 
@@ -44,7 +45,7 @@ async function printify(token: string, path: string) {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      "User-Agent": "Kalenel-Direct-Catalog/8.32",
+      "User-Agent": "Kalenel-Direct-Catalog/8.34",
     },
   });
   const raw = await response.text();
@@ -206,7 +207,8 @@ function publicProduct(product: any) {
 async function buildCatalog(supabase: any) {
   const token = await resolveToken(supabase);
   const { shop, products } = await selectShopAndProducts(token);
-  const cleanProducts = products.filter((product: any) => product?.visible !== false)
+  const cleanProducts = products
+    .filter((product: any) => product?.visible !== false && !text(product?.title).startsWith(ROUTE_PREFIX))
     .map(publicProduct)
     .filter((product: any) => product.id && product.name && product.price > 0 && product.mockups.length > 0 && product.variants.length > 0);
   return {
