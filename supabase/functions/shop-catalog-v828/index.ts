@@ -12,7 +12,6 @@ const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl",
 
 const text = (value: unknown) => String(value ?? "").trim();
 const MARGIN_CENTS = 500;
-const MIN_RETAIL_CENTS = 2300;
 
 function cors(req: Request) {
   const origin = text(req.headers.get("origin"));
@@ -173,7 +172,7 @@ function publicProduct(product: any, fx: any) {
       title: text(variant?.title),
       size: sizeFrom(product, variant),
       color: colorFrom(product, variant) || "White",
-      price: retailEurCentsFromUsdCost(variant?.cost, fx, MARGIN_CENTS, MIN_RETAIL_CENTS) / 100,
+      price: retailEurCentsFromUsdCost(variant?.cost, fx, MARGIN_CENTS) / 100,
       is_enabled: variant?.is_enabled !== false,
       is_available: variant?.is_available !== false,
       options: resolvedOptions(product, variant).map((item) => ({ name: item.name, value: item.value })),
@@ -194,7 +193,7 @@ function publicProduct(product: any, fx: any) {
   });
   const collection = collectionFor(product);
   return {
-    id: text(product?.id), source: "printify-direct-v832", name: text(product?.title), description: text(product?.description),
+    id: text(product?.id), source: "bruis-direct-v836", name: text(product?.title), description: text(product?.description),
     collection, price: prices.length ? Math.min(...prices) : 0, priceMax: prices.length ? Math.max(...prices) : 0,
     sizes, mockups, image: mockups[0]?.image || "", baseKey: String(product?.blueprint_id || "shirt"),
     baseLabel: collection === "boxy" ? "Oversized Boxy T-Shirt" : "Classic T-Shirt",
@@ -211,7 +210,7 @@ async function buildCatalog(supabase: any) {
     .map((product: any) => publicProduct(product, fx))
     .filter((product: any) => product.id && product.name && product.price > 0 && product.mockups.length > 0 && product.variants.length > 0);
   return {
-    generatedAt: new Date().toISOString(), source: "printify-direct-v832", fx: fxAuditSnapshot(fx),
+    generatedAt: new Date().toISOString(), source: "bruis-direct-v836", fx: fxAuditSnapshot(fx),
     shop: { id: String(shop?.id || ""), salesChannel: text(shop?.sales_channel) }, products: cleanProducts,
   };
 }
@@ -264,16 +263,16 @@ Deno.serve(async (req: Request) => {
 
   if (url.searchParams.get("health") === "1") {
     return json(req, {
-      ok: true, mode: "printify-direct-catalog-v832", usesShopifyApi: false, whiteVariantsOnly: true,
-      pricing: "fulfillment-cost-plus-5-rounded-up", pricingBase: "printify-variant-cost",
-      marginEuros: MARGIN_CENTS / 100, minimumRetailEuros: MIN_RETAIL_CENTS / 100, rounding: "whole-euro-ceiling", sourceCurrency: "USD", displayCurrency: "EUR", fx: payload?.fx || null, artworkFirst: true,
+      ok: true, mode: "bruis-direct-catalog-v836", usesShopifyApi: false, whiteVariantsOnly: true,
+      pricing: "production-cost-plus-5-rounded-up", pricingBase: "production-cost",
+      marginEuros: MARGIN_CENTS / 100, rounding: "whole-euro-ceiling", sourceCurrency: "USD", displayCurrency: "EUR", fx: payload?.fx || null, artworkFirst: true,
       cachedProducts: products.length, cacheAgeSeconds: Number.isFinite(ageMs) ? Math.round(ageMs / 1000) : null,
       refreshScheduled,
     });
   }
 
   if (!products.length) {
-    return json(req, { ok: false, warming: true, source: "printify-direct-v832", products: [], refreshScheduled }, 202);
+    return json(req, { ok: false, warming: true, source: "bruis-direct-v836", products: [], refreshScheduled }, 202);
   }
 
   return json(req, {

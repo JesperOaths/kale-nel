@@ -17,7 +17,7 @@
     if(!payload||!Array.isArray(payload.products))return payload;
     return {
       ...payload,
-      source:'printify-direct-v832',
+      source:'bruis-direct-v836',
       products:payload.products.map(product=>{
         const seen=new Set();
         const mockups=(Array.isArray(product?.mockups)?product.mockups:[]).filter(item=>{
@@ -31,7 +31,7 @@
         const prices=availablePrices.length?availablePrices:allPrices;
         return {
           ...product,
-          source:'printify-direct-v832',
+          source:'bruis-direct-v836',
           price:prices.length?Math.min(...prices):wholeEuro(product?.price),
           priceMax:prices.length?Math.max(...prices):wholeEuro(product?.priceMax||product?.price),
           variants,
@@ -54,7 +54,7 @@
         const payload=await response.clone().json();
         const headers=new Headers(response.headers);
         headers.set('Content-Type','application/json; charset=utf-8');
-        headers.set('X-Kalenel-Catalog-Authority','printify-direct-v832');
+        headers.set('X-Kalenel-Catalog-Authority','bruis-direct-v836');
         return new Response(JSON.stringify(decorateCatalog(payload)),{status:response.status,statusText:response.statusText,headers});
       }catch{return response;}
     }
@@ -86,10 +86,10 @@
   }
 
   window.BRUIS_DIRECT_COMMERCE_V832=Object.freeze({
-    catalogAuthority:'printify-direct-v832',
+    catalogAuthority:'bruis-direct-v836',
     checkoutAuthority:'shop-manual-checkout-v832',
     deliveryPreview:'shop-delivery-preview-v833',
-    pricing:'fulfillment-cost-plus-5-rounded-up',
+    pricing:'production-cost-plus-5-rounded-up',
     wholeEuroPricing:true,
     artworkFirstGallery:true,
     usesShopifyCatalogApi:false,

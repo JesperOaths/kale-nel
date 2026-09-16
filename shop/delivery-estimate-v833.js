@@ -78,7 +78,7 @@
     return form.querySelector('[data-delivery-preview-output]');
   }
 
-  function waitingMessage(form, message = 'Enter the delivery address to calculate the live fulfillment origin and delivery time.'){
+  function waitingMessage(form, message = 'Enter your delivery address so we can calculate shipping and delivery time.'){
     const output = outputNode(form);
     if(output) output.innerHTML = `<div class="manual-delivery-preview-note">${esc(message)}</div>`;
   }
@@ -104,45 +104,45 @@
       return 'Import-cost warning: this route ships from the EU into the United Kingdom. UK import VAT, customs duties where applicable, and carrier handling fees may be charged on arrival; these costs are not included in the displayed shipping price.';
     }
     if(crossesCustomsBorder){
-      return 'Import-cost warning: this is an international fulfillment route. Import taxes, customs duties, and carrier handling fees may be charged by the destination country; these costs are not included in the displayed shipping price.';
+      return 'Import-cost warning: we need to send this order across a customs border. Import taxes, customs duties, and carrier handling fees may be charged by the destination country; these costs are not included in the displayed shipping price.';
     }
-    return 'Import-cost warning: Printify will assign the exact facility after ordering. If it fulfills outside your destination customs area, import VAT or taxes, customs duties, and carrier handling fees may apply and are not included in the displayed shipping price.';
+    return 'Import-cost warning: we will confirm the exact production location after ordering. If we send your order from outside your customs area, import VAT or taxes, customs duties, and carrier handling fees may apply and are not included in the displayed shipping price.';
   }
 
   function renderResult(form, result){
     const output = outputNode(form);
     if(!output) return;
     const origins = Array.isArray(result.origins) && result.origins.length
-      ? result.origins.map(origin => esc(origin.label || origin.provider || 'Printify fulfillment network')).join('<br>')
-      : 'Fulfillment origin unavailable';
+      ? result.origins.map(origin => esc(origin.label || origin.provider || 'Bruis production network')).join('<br>')
+      : 'Production location unavailable';
     const delivery = result.delivery || {};
     const eta = Number.isFinite(Number(delivery.min_business_days)) && Number.isFinite(Number(delivery.max_business_days))
       ? `${Number(delivery.min_business_days)}–${Number(delivery.max_business_days)} business days after payment verification`
-      : 'Exact route-specific delivery range becomes available when Printify confirms the facility';
+      : 'We will confirm the exact delivery range when your production location is assigned';
     const groups = Array.isArray(result.shipping_breakdown) ? result.shipping_breakdown : [];
     const groupRows = groups.map(group => {
       const items = Array.isArray(group.items) ? group.items.map(item => `${Number(item.quantity || 1)}× ${esc(item.name || 'Shirt')}${item.size ? ` (${esc(item.size)})` : ''}`).join(', ') : '';
-      const label = esc(group.origin || group.provider || `Print provider ${group.provider_id || ''}`);
+      const label = esc(group.origin || group.provider || 'Bruis production location');
       return `<div class="manual-shipping-breakdown-row"><span><strong>${label}</strong><br><span class="manual-shipping-breakdown-items">${items}</span></span><strong>${centsMoney(group.shipping_cents)}</strong></div>`;
     }).join('');
     const breakdown = groupRows
       ? `<div class="manual-shipping-breakdown"><strong>Where your shipping fee comes from</strong>${groupRows}<div class="manual-shipping-breakdown-row"><span><strong>Total shipping</strong></span><strong>${centsMoney(result.shipping_cents)}</strong></div></div>`
       : '';
     const split = result.shipping_stacks || result.may_arrive_separately
-      ? `<div class="manual-delivery-preview-warning">Stacked shipping: Printify is creating ${Number(result.provider_groups || groups.length || 2)} separate fulfilment shipments, so each factory adds its own shipping charge. The amounts above are added together and parcels may arrive separately.</div>`
+      ? `<div class="manual-delivery-preview-warning">Stacked shipping: we need to send this order in ${Number(result.provider_groups || groups.length || 2)} separate parcels from different production locations. Each parcel has its own shipping charge, so the amounts above are added together and parcels may arrive separately.</div>`
       : (groups.some(group => (group.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0) > 1)
-        ? '<div class="manual-delivery-preview-note">Multiple pieces from one factory use Printify\'s first-item rate plus a reduced additional-item rate. Shipping therefore rises with quantity, but usually by less than another full first-item charge.</div>'
+        ? '<div class="manual-delivery-preview-note">When we send multiple pieces together, shipping uses one base charge plus a smaller additional-item charge. Shipping therefore rises with quantity, but usually by less than another full base charge.</div>'
         : '');
     const importWarning = customsWarning(form, result);
     const customs = importWarning ? `<div class="manual-delivery-preview-warning">${esc(importWarning)}</div>` : '';
     output.innerHTML = `
-      <div class="manual-delivery-preview-row"><span>Ships from</span><strong>${origins}</strong></div>
+      <div class="manual-delivery-preview-row"><span>Prepared in</span><strong>${origins}</strong></div>
       <div class="manual-delivery-preview-row"><span>Estimated arrival</span><strong>${esc(eta)}</strong></div>
       <div class="manual-delivery-preview-row"><span>Shipping</span><strong>${centsMoney(result.shipping_cents)} · ${esc(titleCase(result.shipping_method || 'standard'))}</strong></div>
       ${breakdown}
       ${split}
       ${customs}
-      <div class="manual-delivery-preview-note">${esc(result.note || 'Delivery dates are estimates and can change if Printify reroutes production or a carrier is delayed.')}</div>`;
+      <div class="manual-delivery-preview-note">${esc(result.note || 'Delivery dates are estimates and can change if we move production or a carrier is delayed.')}</div>`;
   }
 
   async function calculate(form, force = false){
@@ -159,7 +159,7 @@
     const output = outputNode(form);
     const serial = ++requestSerial;
     if(button){ button.disabled = true; button.textContent = 'Calculating…'; }
-    if(output) output.innerHTML = '<div class="manual-delivery-preview-note">Checking the cheapest live Printify route, origin and delivery window…</div>';
+    if(output) output.innerHTML = '<div class="manual-delivery-preview-note">We are finding the best available shipping route and delivery window…</div>';
 
     try {
       const response = await fetch(PREVIEW_ENDPOINT, {
@@ -209,7 +209,7 @@
         <button class="manual-delivery-preview-button" type="button" data-delivery-preview-button>Calculate delivery</button>
       </div>
       <div class="manual-delivery-preview-output" data-delivery-preview-output>
-        <div class="manual-delivery-preview-note">Enter the delivery address to calculate the live fulfillment origin and delivery time.</div>
+        <div class="manual-delivery-preview-note">Enter your delivery address so we can calculate shipping and delivery time.</div>
       </div>`;
     summary.insertAdjacentElement('afterend', panel);
 

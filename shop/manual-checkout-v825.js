@@ -204,7 +204,7 @@
           <div><span>Shipping</span><strong>Calculated securely from your delivery address</strong></div>
         </div>
         <div class="manual-checkout-note">
-          After continuing, the server verifies the product price and shipping cost, creates a <strong>Pending</strong> order, and shows your exact payment amount and order reference. The price shown in the browser is never trusted.<br><br><strong>Import costs:</strong> if the selected production route crosses a customs border—including UK↔EU or another non-EU→EU route—import VAT or taxes, customs duties where applicable, and carrier handling fees may be charged on arrival. These charges are not included in the displayed shipping price.<br><br><strong>Stacked shipping:</strong> products assigned to different factories are separate fulfilment shipments. Each factory contributes its own shipping charge, those charges are added together, and parcels may arrive separately.
+          After continuing, the server verifies the product price and shipping cost, creates a <strong>Pending</strong> order, and shows your exact payment amount and order reference. The price shown in the browser is never trusted.<br><br><strong>Import costs:</strong> if the selected production route crosses a customs border—including UK↔EU or another non-EU→EU route—import VAT or taxes, customs duties where applicable, and carrier handling fees may be charged on arrival. These charges are not included in the displayed shipping price.<br><br><strong>Stacked shipping:</strong> when we prepare items in different locations, we send them as separate parcels. Each parcel has its own shipping charge, those charges are added together, and parcels may arrive separately.
         </div>
         <div class="manual-checkout-actions">
           <button class="manual-checkout-primary" type="submit">Create pending order</button>
@@ -264,7 +264,7 @@
       const result = await response.json().catch(() => ({}));
       if(!response.ok || !result?.ok){
         const detail = String(result?.detail || result?.error || '');
-        throw new Error(/printify|token unavailable|production connection/i.test(detail)
+        throw new Error(/token unavailable|production connection/i.test(detail)
           ? 'Ordering is temporarily unavailable while the production connection is being restored. Your cart is safe; please try again shortly.'
           : (detail || `Checkout failed (${response.status})`));
       }
