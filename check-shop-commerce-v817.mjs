@@ -11,6 +11,7 @@ const deliveryEstimate = read('shop/delivery-estimate-v833.js');
 const manualCheckout = read('shop/manual-checkout-v825.js');
 const storefrontPolish = read('shop/storefront-polish-v832.js');
 const storefrontCss = read('shop/storefront-polish-v832.css');
+const styles = read('shop/styles.css');
 const productPreviews = read('shop/product-preview-overrides.js');
 const galleryFixes = read('shop/gallery-fixes-v832.js');
 const mockupTransparency = read('shop/mockup-transparency-v832.js');
@@ -40,12 +41,12 @@ const deployWorkflow = read('.github/workflows/deploy-shop-fixes-v829.yml');
 const store = read('shop/store.js');
 const refresh = read('shop/live-catalog-refresh-v818.js');
 
-// v835 adds per-factory stacked-shipping breakdowns, server-authored customs notices,
-// and the €23 minimum shirt price. The hardened checkout authority remains v832.
+// v836 presents the shop entirely as Bruis, keeps the cart control always available,
+// and restores pure converted production cost + €5 pricing without a €23 floor.
 assert.match(index, /direct-commerce-v832\.js/);
 assert.match(index, /manual-checkout-v825\.js/);
-assert.match(index, /version-watermark[^>]*>v835</);
-assert.match(index, /20260916-storefront-v835-r1/);
+assert.match(index, /version-watermark[^>]*>v836</);
+assert.match(index, /20260916-storefront-v836-r1/);
 assert.match(index, /storefront-polish-v832\.css/);
 assert.match(index, /storefront-polish-v832\.js/);
 assert.match(index, /product-preview-overrides\.js/);
@@ -57,15 +58,15 @@ assert.match(index, /live-catalog-refresh-v818\.js/);
 assert.doesNotMatch(index, /direct-commerce-v828\.js|mockup-background-v830\.js|image-lightbox-v830\.js/);
 assert.doesNotMatch(index, /shop-runtime-v819\.js|catalog-recovery-v822\.js|payment-readiness-v824\.js|shopify-checkout-v817\.js/);
 
-// Browser bridge routes the public catalog to the hardened direct Printify endpoint,
+// Browser bridge routes the public catalog to the hardened Bruis catalog endpoint,
 // checkout to the cost-based authority, and injects the non-blocking delivery panel.
 assert.match(directCommerce, /shop-catalog-v828/);
 assert.match(directCommerce, /shop-manual-checkout-v832/);
 assert.match(directCommerce, /delivery-estimate-v833\.js/);
 assert.match(directCommerce, /shop-delivery-preview-v833/);
 assert.match(directCommerce, /X-Kalenel-Catalog-Authority/);
-assert.match(directCommerce, /printify-direct-v832/);
-assert.match(directCommerce, /pricing:'fulfillment-cost-plus-5-rounded-up'/);
+assert.match(directCommerce, /bruis-direct-v836/);
+assert.match(directCommerce, /pricing:'production-cost-plus-5-rounded-up'/);
 assert.match(directCommerce, /artworkFirstGallery:true/);
 assert.match(directCommerce, /wholeEuroPricing:true/);
 assert.match(directCommerce, /usesShopifyCatalogApi:false/);
@@ -75,7 +76,7 @@ assert.doesNotMatch(directCommerce, /shop-manual-checkout-v828|shop-price-v818|s
 // Delivery preview must be address-aware, non-blocking, and explicit about the
 // payment-verification delay and possible split fulfillment.
 assert.match(deliveryEstimate, /shop-delivery-preview-v833/);
-assert.match(deliveryEstimate, /Ships from/);
+assert.match(deliveryEstimate, /Prepared in/);
 assert.match(deliveryEstimate, /Estimated arrival/);
 assert.match(deliveryEstimate, /business days after payment verification/);
 assert.match(deliveryEstimate, /may_arrive_separately/);
@@ -88,7 +89,7 @@ assert.match(deliveryEstimate, /EU customs area/);
 assert.match(deliveryEstimate, /carrier handling fees/);
 assert.match(deliveryEstimate, /Where your shipping fee comes from/);
 assert.match(deliveryEstimate, /Stacked shipping/);
-assert.match(deliveryEstimate, /first-item rate plus a reduced additional-item rate/);
+assert.match(deliveryEstimate, /one base charge plus a smaller additional-item charge/);
 assert.match(deliveryPreviewEdge, /shipping_breakdown/);
 assert.match(deliveryPreviewEdge, /customs_notice/);
 assert.match(deliveryPreviewEdge, /shippingBreakdown/);
@@ -106,7 +107,7 @@ assert.match(deliveryPreviewEdge, /shop_fulfillment_mappings/);
 assert.match(deliveryPreviewEdge, /chooseCheapestFulfillment/);
 assert.match(deliveryPreviewEdge, /catalog\/print_providers/);
 assert.match(deliveryPreviewEdge, /printifyV2/);
-assert.match(deliveryPreviewEdge, /Printify Choice/);
+assert.match(deliveryPreviewEdge, /Bruis production network/);
 assert.match(deliveryPreviewEdge, /fallback_min_business_days/);
 assert.match(deliveryPreviewEdge, /exact_for_selected_route/);
 assert.match(deliveryPreviewEdge, /strictCountry/);
@@ -210,10 +211,9 @@ assert.doesNotMatch(obsoletePriceRule, /createClient|PRINTIFY_BASE|pricedVariant
 // retail = base cost + €5, rounded upward to the next whole euro. Original front
 // artwork from print_areas is inserted before generated garment mockups.
 assert.match(catalogEdge, /const MARGIN_CENTS = 500/);
-assert.match(catalogEdge, /const MIN_RETAIL_CENTS = 2300/);
 assert.match(catalogEdge, /resolveUsdEurRate/);
 assert.match(catalogEdge, /retailEurCentsFromUsdCost/);
-assert.match(catalogEdge, /price:\s*retailEurCentsFromUsdCost\(variant\?\.cost, fx, MARGIN_CENTS, MIN_RETAIL_CENTS\) \/ 100/);
+assert.match(catalogEdge, /price:\s*retailEurCentsFromUsdCost\(variant\?\.cost, fx, MARGIN_CENTS\) \/ 100/);
 assert.match(catalogEdge, /sourceCurrency:\s*"USD"/);
 assert.match(catalogEdge, /displayCurrency:\s*"EUR"/);
 assert.doesNotMatch(catalogEdge, /priceEuros\(variant\?\.price\)/);
@@ -221,10 +221,10 @@ assert.match(catalogEdge, /function artworkFor/);
 assert.match(catalogEdge, /product\?\.print_areas/);
 assert.match(catalogEdge, /label:\s*"Artwork PNG"/);
 assert.match(catalogEdge, /const mockups = \[\.\.\.artwork, \.\.\.garment\]/);
-assert.match(catalogEdge, /source:\s*"printify-direct-v832"/);
-assert.match(catalogEdge, /mode:\s*"printify-direct-catalog-v832"/);
-assert.match(catalogEdge, /pricing:\s*"fulfillment-cost-plus-5-rounded-up"/);
-assert.match(catalogEdge, /pricingBase:\s*"printify-variant-cost"/);
+assert.match(catalogEdge, /source:\s*"bruis-direct-v836"/);
+assert.match(catalogEdge, /mode:\s*"bruis-direct-catalog-v836"/);
+assert.match(catalogEdge, /pricing:\s*"production-cost-plus-5-rounded-up"/);
+assert.match(catalogEdge, /pricingBase:\s*"production-cost"/);
 assert.match(catalogEdge, /marginEuros:\s*MARGIN_CENTS \/ 100/);
 assert.match(catalogEdge, /rounding:\s*"whole-euro-ceiling"/);
 assert.match(catalogEdge, /artworkFirst:\s*true/);
@@ -237,15 +237,14 @@ assert.doesNotMatch(catalogEdge, /shop-price-v818|shop-catalog-v822|cdn\.shopify
 // same cost+€5 rounded-up rule server-side, so the displayed and charged prices
 // cannot diverge. Customer checkout still only creates a Pending local order.
 assert.match(checkoutEdge, /mode:\s*"manual-payment-v832"/);
-assert.match(checkoutEdge, /pricing:\s*"fulfillment-cost-plus-5-rounded-up"/);
-assert.match(checkoutEdge, /pricingBase:\s*"printify-variant-cost"/);
+assert.match(checkoutEdge, /pricing:\s*"production-cost-plus-5-rounded-up"/);
+assert.match(checkoutEdge, /pricingBase:\s*"production-cost"/);
 assert.match(checkoutEdge, /marginEuros:\s*MARGIN_CENTS \/ 100/);
 assert.match(checkoutEdge, /rounding:\s*"whole-euro-ceiling"/);
 assert.match(checkoutEdge, /const MARGIN_CENTS = 500/);
-assert.match(checkoutEdge, /const MIN_RETAIL_CENTS = 2300/);
 assert.match(checkoutEdge, /resolveUsdEurRate/);
 assert.match(checkoutEdge, /retailEurCentsFromUsdCost/);
-assert.match(checkoutEdge, /retailEurCentsFromUsdCost\(freshVariant\?\.cost, fx, MARGIN_CENTS, MIN_RETAIL_CENTS\)/);
+assert.match(checkoutEdge, /retailEurCentsFromUsdCost\(freshVariant\?\.cost, fx, MARGIN_CENTS\)/);
 assert.match(checkoutEdge, /usdCentsToEurCents/);
 assert.match(checkoutEdge, /shipping_source_cents/);
 assert.match(checkoutEdge, /fx_snapshot:\s*fxAuditSnapshot\(fx\)/);
@@ -343,7 +342,7 @@ assert.match(deployWorkflow, /deploy_function shop-manual-checkout-v832/);
 assert.match(deployWorkflow, /deploy_function shop-delivery-preview-v833/);
 assert.doesNotMatch(deployWorkflow, /functions deploy shop-manual-checkout-v828/);
 assert.doesNotMatch(catalogEdge, /jellyfish[\s\S]{0,120}media\.slice\(1\)/i);
-assert.match(liveShopCheck, /20260916-storefront-v833-r1/);
+assert.match(liveShopCheck, /20260916-storefront-v836-r1/);
 assert.match(liveShopCheck, /delivery-estimate-v833/);
 assert.match(liveShopCheck, /direct-commerce-v832/);
 assert.match(liveShopCheck, /storefront-polish-v832/);
@@ -352,8 +351,14 @@ assert.match(liveShopCheck, /mockup-transparency-v832/);
 assert.match(liveShopCheck, /image-lightbox-v832/);
 assert.match(liveShopCheck, /shop-catalog-v828/);
 assert.match(liveShopCheck, /shop-manual-checkout-v832/);
-assert.match(liveShopCheck, /RESULT=V833_DELIVERY_ESTIMATE_PASS/);
+assert.match(liveShopCheck, /RESULT=V836_BRUIS_SHOP_PASS/);
 assert.match(liveShopCheck, /Deliberately read-only/);
 assert.doesNotMatch(liveShopCheck, /method:\s*['"]POST['"]/);
 
-console.log('Shop commerce v835 shipping-breakdown + import-warning + €23-floor contract passed.');
+assert.doesNotMatch([directCommerce, deliveryEstimate, manualCheckout, store].join('\n'), /printify|factor(?:y|ies)/i);
+assert.match(storefrontCss + styles, /position:\s*fixed/);
+assert.match(styles, /\.cart-button[\s\S]*z-index:\s*1200/);
+assert.doesNotMatch(catalogEdge, /MIN_RETAIL_CENTS/);
+assert.doesNotMatch(checkoutEdge, /MIN_RETAIL_CENTS/);
+
+console.log('Shop commerce v836 Bruis-copy + sticky-cart + cost-plus-5 contract passed.');
