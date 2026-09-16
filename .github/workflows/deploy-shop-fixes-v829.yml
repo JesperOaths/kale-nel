@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy-shop-fixes-v829.yml'
+      - 'supabase/functions/_shared/shop-fx.mjs'
       - 'supabase/functions/shop-catalog-v828/**'
       - 'supabase/functions/shop-manual-checkout-v832/**'
       - 'supabase/functions/shop-delivery-preview-v833/**'
