@@ -1,23 +1,25 @@
 name: Finish Gildan 5000 regionalization v834
 
-on:
+"on":
   push:
-    branches: [main]
+    branches:
+      - main
+    paths:
+      - '.github/workflows/printify-regionalize-v834-retry.yml'
 
 permissions:
   contents: read
 
 jobs:
   regionalize:
-    if: github.event.head_commit.message == 'ops: finish Gildan 5000 regionalization'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Regionalize all Gildan 5000 products
+        shell: bash
         env:
           ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-regionalize-gildan5000-v834
           RUN_KEY: xgqDK-T7Ri6SpqUrmL51bt-A9axN0nQuTn66uFNUCGw
-        shell: bash
         run: |
           set -u
           failed=0
