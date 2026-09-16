@@ -160,9 +160,9 @@ async function providerOrigin(token: string, providerId: number, destinationCoun
   if (providerId === CHOICE_PROVIDER_ID) {
     return {
       provider_id: providerId,
-      provider: "Printify Choice",
+      provider: "Bruis production network",
       country_code: null,
-      label: `Printify Choice network — Printify will try to fulfill in or near ${choiceRegion(destinationCountry)}; if no suitable nearby facility is available, it may ship from the US`,
+      label: `Our production network — we will try to prepare your order in or near ${choiceRegion(destinationCountry)}; if no nearby location is available, we may send it internationally`,
       exact: false,
     };
   }
@@ -176,15 +176,15 @@ async function providerOrigin(token: string, providerId: number, destinationCoun
     const place = [city, region && region !== city ? region : "", country].filter(Boolean).join(", ");
     return {
       provider_id: providerId,
-      provider: clean(provider?.title) || `Print provider ${providerId}`,
+      provider: "Bruis production partner",
       city: city || null,
       region: region || null,
       country_code: countryCode || null,
-      label: place || clean(provider?.title) || `Print provider ${providerId}`,
+      label: place || "Bruis production location",
       exact: !!place,
     };
   } catch {
-    return { provider_id: providerId, provider: `Print provider ${providerId}`, label: `Print provider ${providerId} — origin location temporarily unavailable`, exact: false };
+    return { provider_id: providerId, provider: "Bruis production partner", label: "Production location temporarily unavailable", exact: false };
   }
 }
 
@@ -223,7 +223,7 @@ async function shippingBreakdown(token: string, shopId: string, selected: any, a
     const origin = originMap.get(providerId) || {};
     return {
       provider_id: providerId,
-      provider: origin.provider || `Print provider ${providerId}`,
+      provider: origin.provider || "Bruis production partner",
       origin: origin.label || null,
       country_code: origin.country_code || null,
       shipping_cents: usdCentsToEurCents(Number(sourceCents), fx),
@@ -252,19 +252,19 @@ function customsNotice(destination: string, origins: any[]) {
   if (EU.has(destination) && originCountries.some(origin => !EU.has(origin))) return "Import-cost warning: this route ships into the EU from outside the EU customs area. Import VAT, customs duties where applicable, and carrier handling fees may be charged on arrival; these costs are not included in shipping.";
   if (destination === "GB" && originCountries.some(origin => EU.has(origin))) return "Import-cost warning: this route ships from the EU into the United Kingdom. UK import VAT, customs duties where applicable, and carrier handling fees may be charged on arrival; these costs are not included in shipping.";
   if (crosses) return "Import-cost warning: this route crosses a customs border. Import taxes, customs duties, and carrier handling fees may be charged by the destination country and are not included in shipping.";
-  if (unknownOrigin) return "Import-cost warning: Printify assigns the exact facility later. If it ships from outside your customs area, import VAT or taxes, customs duties, and carrier handling fees may apply and are not included in shipping.";
+  if (unknownOrigin) return "Import-cost warning: we will confirm the exact production location after ordering. If we send your order from outside your customs area, import VAT or taxes, customs duties, and carrier handling fees may apply and are not included in shipping.";
   return null;
 }
 
 function choiceDelivery(shippingMethod: string, destinationCountry: string) {
   const method = text(shippingMethod).toLowerCase();
-  if (method === "express") return { from: 2, to: 3, source: "printify-choice-express", choice: true, fallback: null };
-  if (method === "priority") return { from: destinationCountry === "US" ? 4 : 5, to: destinationCountry === "US" ? 10 : 12, source: "printify-choice-typical", choice: true, fallback: destinationCountry === "US" ? null : { from: 5, to: 12 } };
-  if (method === "economy") return { from: 6, to: 15, source: "printify-choice-typical", choice: true, fallback: null };
+  if (method === "express") return { from: 2, to: 3, source: "bruis-network-express", choice: true, fallback: null };
+  if (method === "priority") return { from: destinationCountry === "US" ? 4 : 5, to: destinationCountry === "US" ? 10 : 12, source: "bruis-network-typical", choice: true, fallback: destinationCountry === "US" ? null : { from: 5, to: 12 } };
+  if (method === "economy") return { from: 6, to: 15, source: "bruis-network-typical", choice: true, fallback: null };
   return {
     from: 4,
     to: 12,
-    source: "printify-choice-local-typical",
+    source: "bruis-network-local-typical",
     choice: true,
     fallback: destinationCountry === "US" ? null : { from: 12, to: 37 },
   };
@@ -434,7 +434,7 @@ Deno.serve(async (req: Request) => {
       min_business_days: Math.max(...ranges.map(range => range.from)),
       max_business_days: Math.max(...ranges.map(range => range.to)),
       exact_for_selected_route: !hasChoice,
-      estimate_type: hasChoice ? "printify-choice-typical-local-route" : "printify-route-specific",
+      estimate_type: hasChoice ? "bruis-network-typical-local-route" : "bruis-route-specific",
       fallback_min_business_days: choiceFallback?.from ?? null,
       fallback_max_business_days: choiceFallback?.to ?? null,
     } : {
@@ -449,10 +449,10 @@ Deno.serve(async (req: Request) => {
     const note = complete
       ? hasChoice
         ? choiceFallback
-          ? `Printify Choice will try to use a nearby facility. The ${delivery.min_business_days}–${delivery.max_business_days} business-day range is the typical local-route estimate; if local fulfillment is unavailable, an international fallback can take roughly ${choiceFallback.from}–${choiceFallback.to} business days. Estimates are not guaranteed.`
-          : `Printify Choice will assign the fulfillment facility after the order is placed. The shown range is a typical estimate for the selected shipping method and is not guaranteed.`
-        : "Estimated business-day range from Printify for the currently selected fulfillment route. Delays can still occur."
-      : "Printify has not exposed a complete route-specific delivery range yet. The exact estimate can update when the fulfillment facility is assigned.";
+          ? `We will try to prepare your order nearby. The ${delivery.min_business_days}–${delivery.max_business_days} business-day range is the typical local estimate; if nearby production is unavailable, international delivery can take roughly ${choiceFallback.from}–${choiceFallback.to} business days. Estimates are not guaranteed.`
+          : `We will assign the production location after the order is placed. The shown range is a typical estimate for the selected shipping method and is not guaranteed.`
+        : "Estimated business-day range for the route we selected. Delays can still occur."
+      : "We do not have a complete route-specific delivery range yet. The estimate can update when we assign the production location.";
 
     return json(req, {
       ok: true,
@@ -473,7 +473,7 @@ Deno.serve(async (req: Request) => {
     });
   } catch (error) {
     const detail = text(error instanceof Error ? error.message : error).slice(0, 350);
-    console.error("shop-delivery-preview-v833 failed", error instanceof Error ? error.name : "unknown");
-    return json(req, { error: "delivery_preview_failed", detail }, 502);
+    console.error("shop-delivery-preview-v833 failed", error instanceof Error ? `${error.name}: ${detail}` : detail);
+    return json(req, { error: "delivery_preview_failed", detail: "We could not calculate shipping right now. Please try again." }, 502);
   }
 });
