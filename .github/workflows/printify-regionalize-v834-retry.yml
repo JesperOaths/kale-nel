@@ -3,7 +3,7 @@ name: Finalize Dispuut regional routing validator
 "on":
   push:
     branches:
-      - main
+      - fix/dispuut-regional-validator-v834
     paths:
       - '.github/workflows/printify-regionalize-v834-retry.yml'
 
