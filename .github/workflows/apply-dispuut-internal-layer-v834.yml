@@ -1,0 +1,111 @@
+name: Apply Dispuut regional internal-layer fix v834
+
+"on":
+  push:
+    branches:
+      - fix/dispuut-regional-internal-layer-v834
+    paths:
+      - '.github/workflows/apply-dispuut-internal-layer-v834.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+      - name: Ignore Printify internal text artifact on both validated sides
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          paths = [
+              Path('supabase/functions/shop-manual-checkout-v832/fulfillment-routing.mjs'),
+              Path('supabase/functions/shop-delivery-preview-v833/fulfillment-routing.mjs'),
+          ]
+          old = 'if (role === "source" && id === DESPINOZA_INTERNAL_TEXT_ID) continue;'
+          new = 'if (id === DESPINOZA_INTERNAL_TEXT_ID) continue;'
+          for path in paths:
+              text = path.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'missing Despinoza internal-layer anchor: {path}')
+              text = text.replace(old, new, 1)
+              path.write_text(text, encoding='utf-8')
+          PY
+
+          node --check supabase/functions/shop-manual-checkout-v832/fulfillment-routing.mjs
+          node --check supabase/functions/shop-delivery-preview-v833/fulfillment-routing.mjs
+
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { validateMappedCandidate } from './supabase/functions/shop-manual-checkout-v832/fulfillment-routing.mjs';
+
+          const sourceId = '6a9742c08816f2362104d5cc';
+          const variantId = 12102;
+          const opts = [
+            {type:'color', values:[{id:14,title:'White'}]},
+            {type:'size', values:[{id:521,title:'S'}]},
+          ];
+          const source = {
+            id: sourceId, blueprint_id: 6, print_provider_id: 99, visible: true, options: opts,
+            print_areas: [{variant_ids:[variantId],placeholders:[
+              {position:'front',images:[{id:'front-art'}]},
+              {position:'back',images:[{id:'back-art'}]},
+              {position:'neck',images:[
+                {id:'5941187eb8e7e37b3f0e62e5'},
+                {id:'6a871b428ded250de18aeebf'},
+                {id:'7b14de2d-815d-a93b-cdd3-69d9c2cb3e2f'},
+              ]},
+            ]}],
+          };
+          const target = {
+            id:'6aa9f1aa3bf706b6080c7e5b', blueprint_id:6, print_provider_id:30, visible:false, options:opts,
+            print_areas:[{variant_ids:[variantId],placeholders:[
+              {position:'front',images:[{id:'front-art'}]},
+              {position:'back',images:[{id:'back-art'}]},
+              {position:'neck',images:[
+                {id:'5941187eb8e7e37b3f0e62e5'},
+                {id:'6a871b428ded250de18aeebf'},
+                {id:'6aa9f09621bcc1035c7dae61'},
+              ]},
+            ]}],
+          };
+          const mapping = {
+            approval_id:`g5000_eu_${sourceId}_${variantId}`,
+            countries:['NL'], estimated_import_cents_per_unit:0,
+            source:{product_id:sourceId,variant_id:variantId,blueprint_id:6,print_provider_id:99},
+            target:{product_id:target.id,variant_id:variantId,blueprint_id:6,print_provider_id:30},
+          };
+          const sv={id:variantId,options:[14,521]};
+          const tv={id:variantId,options:[521,14],is_enabled:true,is_available:true,cost:1693};
+
+          assert.equal(validateMappedCandidate(mapping,'NL',source,sv,target,tv).ok,true, 'verified current Printify target should validate');
+
+          const wrongStatic = structuredClone(target);
+          wrongStatic.print_areas[0].placeholders[2].images[2].id='wrong-static-layer';
+          assert.equal(validateMappedCandidate(mapping,'NL',source,sv,wrongStatic,tv).ok,false, 'unapproved static neck image must fail closed');
+
+          const visible = structuredClone(target);
+          visible.visible=true;
+          assert.equal(validateMappedCandidate(mapping,'NL',source,sv,visible,tv).ok,false, 'regional target must remain hidden');
+
+          const wrongFront = structuredClone(target);
+          wrongFront.print_areas[0].placeholders[0].images[0].id='wrong-front';
+          assert.equal(validateMappedCandidate(mapping,'NL',source,sv,wrongFront,tv).ok,false, 'front artwork drift must fail closed');
+
+          console.log('Current Dispuut regional target validation passed');
+          NODE
+
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add supabase/functions/shop-manual-checkout-v832/fulfillment-routing.mjs \
+                  supabase/functions/shop-delivery-preview-v833/fulfillment-routing.mjs
+          git commit -m 'fix: accept verified Dispuut regional internal text artifact'
+          git push
