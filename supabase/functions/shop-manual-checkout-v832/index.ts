@@ -4,6 +4,7 @@ import {
   buildFulfillmentPlans,
   cheapestShippingQuote,
   chooseCheapestFulfillment,
+  estimatedImportAllowanceCentsPerUnit,
   parseFulfillmentMappings,
   validateMappedCandidate,
 } from "./fulfillment-routing.mjs";
@@ -301,17 +302,20 @@ Deno.serve(async (req: Request) => {
         unit_price_cents: unit, printify_product_id: productId, printify_variant_id: variantId,
         image: text(raw?.image || row.cached.product.image), collection: text(row.cached.product.collection), color,
       });
+      const sourceFulfillmentCostCents = usdCentsToEurCents(freshVariant.cost, fx);
       const candidates: any[] = [{
         product_id: productId,
         variant_id: variantId,
         quantity: qty,
-        cost_cents: usdCentsToEurCents(freshVariant.cost, fx),
+        cost_cents: sourceFulfillmentCostCents,
         source_cost_cents: Math.round(Number(freshVariant.cost)),
         source_currency: PRINTIFY_SOURCE_CURRENCY,
         mapping_approval_id: "",
         blueprint_id: Number(freshProduct?.blueprint_id),
         print_provider_id: Number(freshProduct?.print_provider_id),
-        estimated_import_cents_per_unit: 0,
+        estimated_import_cents_per_unit: estimatedImportAllowanceCentsPerUnit(
+          country, Number(freshProduct?.blueprint_id), Number(freshProduct?.print_provider_id), sourceFulfillmentCostCents,
+        ),
       }];
       for (const mapping of eligibleMappings.filter((entry: any) => entry.source.product_id === productId && entry.source.variant_id === variantId)) {
         const targetProduct = freshProducts.get(mapping.target.product_id);

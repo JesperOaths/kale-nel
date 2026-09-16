@@ -11,6 +11,21 @@ const DESPINOZA_STATIC_TEXT_ID = "6aa9f09621bcc1035c7dae61";
 const DESPINOZA_TEXT_MARKER = "__despinoza_text__";
 const DESPINOZA_REGIONAL_PROVIDERS = new Set([27, 30, 331, 438]);
 
+// Routing estimate only: Canada's 2026 MFN customs tariff for cotton T-shirts
+// (HS 6109.10) is 18%. Apply it only to the known fixed Prague Gildan 5000
+// source when shipping to Canada. It is never added to the customer's charge.
+export const CANADA_COTTON_TEE_IMPORT_DUTY_BPS = 1800;
+export function estimatedImportAllowanceCentsPerUnit(country, blueprintId, providerId, eurUnitCostCents) {
+  const destination = text(country).toUpperCase();
+  const blueprint = Number(blueprintId);
+  const provider = Number(providerId);
+  const cost = Math.max(0, Math.round(Number(eurUnitCostCents) || 0));
+  if (destination === "CA" && blueprint === 6 && provider === 30 && cost > 0) {
+    return Math.ceil(cost * CANADA_COTTON_TEE_IMPORT_DUTY_BPS / 10000);
+  }
+  return 0;
+}
+
 
 export const SHIPPING_METHODS = Object.freeze([
   Object.freeze({ name: "economy", code: 4 }),
