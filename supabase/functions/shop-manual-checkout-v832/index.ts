@@ -233,6 +233,7 @@ Deno.serve(async (req: Request) => {
     const confirmationToken = text(body?.confirmation_token);
 
     if (fullName.length < 2 || fullName.length > 120 || !validEmail(email) || !address1 || !city || !zip || country.length !== 2) return json(req, { error: "invalid_customer_or_address" }, 400);
+    if (country === "US" && phone.replace(/\D/g, "").length < 7) return json(req, { error: "phone_required_for_destination", country: "US" }, 400);
     if (!items.length || items.length > MAX_ITEMS) return json(req, { error: "invalid_cart" }, 400);
     if (!/^[A-Za-z0-9_-]{20,100}$/.test(checkoutKey) || confirmationToken.length < 32 || confirmationToken.length > 200) return json(req, { error: "invalid_checkout_token" }, 400);
 

@@ -180,6 +180,17 @@
     confirmation_token: randomToken(48)
   });
 
+  function syncPhoneRequirement(form){
+    const countryInput = form?.elements?.namedItem('country');
+    const phoneInput = form?.elements?.namedItem('phone');
+    const label = form?.querySelector('[data-manual-phone-label]');
+    if(!(countryInput instanceof HTMLInputElement) || !(phoneInput instanceof HTMLInputElement)) return;
+    const required = String(countryInput.value || '').trim().toUpperCase() === 'US';
+    phoneInput.required = required;
+    phoneInput.setAttribute('aria-required', required ? 'true' : 'false');
+    if(label) label.childNodes[0].textContent = required ? 'Phone (required for US delivery)' : 'Phone (optional)';
+  }
+
   function renderCheckoutForm(){
     reconcileCart();
     openOverlay();
@@ -190,7 +201,7 @@
         <div class="manual-checkout-grid">
           <label class="wide">Full name<input name="name" autocomplete="name" maxlength="120" required></label>
           <label>Email<input name="email" type="email" autocomplete="email" maxlength="254" required></label>
-          <label>Phone (optional)<input name="phone" autocomplete="tel" maxlength="40"></label>
+          <label data-manual-phone-label>Phone (optional)<input data-manual-phone-input name="phone" type="tel" autocomplete="tel" maxlength="40"></label>
           <label class="wide">Address<input name="address1" autocomplete="address-line1" maxlength="160" required></label>
           <label class="wide">Address line 2 (optional)<input name="address2" autocomplete="address-line2" maxlength="100"></label>
           <label>Postcode<input name="zip" autocomplete="postal-code" maxlength="24" required></label>
@@ -214,6 +225,12 @@
       </form>`;
     const form = bodyNode().querySelector('[data-manual-checkout-form]');
     form.addEventListener('submit', submitCheckout);
+    const countryInput = form.elements.namedItem('country');
+    if(countryInput instanceof HTMLInputElement){
+      countryInput.addEventListener('input', () => syncPhoneRequirement(form));
+      countryInput.addEventListener('change', () => syncPhoneRequirement(form));
+    }
+    syncPhoneRequirement(form);
   }
 
   async function submitCheckout(event){
@@ -240,6 +257,14 @@
       region: String(data.get('region') || '').trim(),
       country: String(data.get('country') || 'NL').trim().toUpperCase()
     };
+    if(customer.country === 'US' && customer.phone.replace(/\D/g, '').length < 7){
+      status.textContent = 'A phone number is required for delivery to the United States.';
+      const phoneInput = form.elements.namedItem('phone');
+      if(phoneInput instanceof HTMLInputElement) phoneInput.focus();
+      submit.disabled = false;
+      submit.textContent = 'Create pending order';
+      return;
+    }
     const payload = {
       customer,
       website: String(data.get('website') || ''),
