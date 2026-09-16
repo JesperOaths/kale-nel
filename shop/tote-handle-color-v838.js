@@ -90,7 +90,7 @@
   });
 
   window.BRUIS_TOTE_HANDLE_COLOR_V838 = Object.freeze({
-    version: 'v838',
+    release: 'v838',
     selectorLabel: 'Handle color',
     colors: COLORS,
     variantBoundMockups: true,
