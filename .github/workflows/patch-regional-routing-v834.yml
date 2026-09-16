@@ -1,0 +1,192 @@
+name: "Patch regional routing backend v834"
+
+"on":
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ github.event.head_commit.message == 'ops: patch regional routing backend' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch routing code
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          catalog = Path('supabase/functions/shop-catalog-v828/index.ts')
+          s = catalog.read_text()
+          s = s.replace(
+              'const MAX_PAGES = 100;\nconst BOXY_TITLES',
+              'const MAX_PAGES = 100;\nconst ROUTE_PREFIX = "__KALENEL_ROUTE_";\nconst BOXY_TITLES',
+          )
+          s = s.replace(
+              'const cleanProducts = products.filter((product: any) => product?.visible !== false)\n    .map(publicProduct)',
+              'const cleanProducts = products\n    .filter((product: any) => product?.visible !== false && !text(product?.title).startsWith(ROUTE_PREFIX))\n    .map(publicProduct)',
+          )
+          catalog.write_text(s)
+
+          query_old = '''    const envMappings = parseFulfillmentMappings(Deno.env.get("PRINTIFY_FULFILLMENT_MAPPINGS"));
+    const { data: dbMappingRows, error: dbMappingError } = await sb.from("shop_fulfillment_mappings")
+      .select("approval_id,approved,countries,source_product_id,source_variant_id,source_blueprint_id,source_print_provider_id,target_product_id,target_variant_id,target_blueprint_id,target_print_provider_id,estimated_import_cents_per_unit")
+      .eq("approved", true);'''
+          query_new = '''    const envMappings = parseFulfillmentMappings(Deno.env.get("PRINTIFY_FULFILLMENT_MAPPINGS"));
+    const sourceProductIds = [...new Set(resolved.map((row: any) => text(row.cached.product.id)).filter(Boolean))];
+    const sourceVariantIds = [...new Set(resolved.map((row: any) => Number(row.cached.variant.id)).filter(Number.isInteger))];
+    let dbMappingQuery = sb.from("shop_fulfillment_mappings")
+      .select("approval_id,approved,countries,source_product_id,source_variant_id,source_blueprint_id,source_print_provider_id,target_product_id,target_variant_id,target_blueprint_id,target_print_provider_id,estimated_import_cents_per_unit")
+      .eq("approved", true)
+      .contains("countries", [country]);
+    if (sourceProductIds.length) dbMappingQuery = dbMappingQuery.in("source_product_id", sourceProductIds);
+    if (sourceVariantIds.length) dbMappingQuery = dbMappingQuery.in("source_variant_id", sourceVariantIds);
+    const { data: dbMappingRows, error: dbMappingError } = await dbMappingQuery;'''
+          for name in ['supabase/functions/shop-manual-checkout-v832/index.ts', 'supabase/functions/shop-delivery-preview-v833/index.ts']:
+              p = Path(name)
+              t = p.read_text()
+              if query_old not in t:
+                  raise SystemExit(f'mapping query pattern missing in {name}')
+              p.write_text(t.replace(query_old, query_new, 1))
+
+          build_new = r'''function candidateUnitScore(candidate) {
+  return Number(candidate?.cost_cents || 0) + Math.max(0, Number(candidate?.estimated_import_cents_per_unit || 0));
+}
+
+function planFromCandidates(candidates) {
+  let productionCents = 0;
+  let importCents = 0;
+  let mappedCount = 0;
+  const providerIds = [];
+  for (const candidate of candidates) {
+    const quantity = Number(candidate?.quantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) throw new Error("Invalid fulfillment candidate quantity");
+    const cost = Number(candidate?.cost_cents);
+    if (!Number.isFinite(cost) || cost <= 0) throw new Error("Invalid fulfillment candidate cost");
+    const importPerUnit = Math.max(0, Math.round(Number(candidate?.estimated_import_cents_per_unit || 0)));
+    productionCents += cost * quantity;
+    importCents += importPerUnit * quantity;
+    mappedCount += candidate?.mapping_approval_id ? 1 : 0;
+    const providerId = Number(candidate?.print_provider_id);
+    if (Number.isInteger(providerId) && providerId > 0 && !providerIds.includes(providerId)) providerIds.push(providerId);
+  }
+  providerIds.sort((a, b) => a - b);
+  return {
+    candidates: [...candidates],
+    production_cents: productionCents,
+    estimated_import_cents: importCents,
+    mapped_count: mappedCount,
+    provider_ids: providerIds,
+    provider_groups: providerIds.length,
+  };
+}
+
+function candidateKey(candidate) {
+  return `${text(candidate?.product_id)}:${Number(candidate?.variant_id)}:${text(candidate?.mapping_approval_id)}`;
+}
+
+function cheapestCandidate(candidates) {
+  return [...candidates].sort((a, b) => candidateUnitScore(a) - candidateUnitScore(b) || candidateKey(a).localeCompare(candidateKey(b)))[0];
+}
+
+export function buildFulfillmentPlans(candidateGroups, maxPlans = 64) {
+  if (!Number.isInteger(maxPlans) || maxPlans < 1) throw new Error("Invalid fulfillment plan limit");
+  for (const group of candidateGroups) {
+    if (!Array.isArray(group) || !group.length) throw new Error("No safe fulfillment candidate for a cart item");
+  }
+  if (!candidateGroups.length) return [];
+
+  let combinationCount = 1;
+  for (const group of candidateGroups) {
+    combinationCount *= group.length;
+    if (combinationCount > maxPlans) break;
+  }
+  if (combinationCount <= maxPlans) {
+    let combinations = [[]];
+    for (const group of candidateGroups) combinations = combinations.flatMap(plan => group.map(candidate => [...plan, candidate]));
+    return combinations.map(planFromCandidates);
+  }
+
+  const plans = [];
+  const seen = new Set();
+  const add = candidates => {
+    if (plans.length >= maxPlans) return;
+    const key = candidates.map(candidateKey).join("|");
+    if (seen.has(key)) return;
+    seen.add(key);
+    plans.push(planFromCandidates(candidates));
+  };
+
+  const baseline = candidateGroups.map(group => group[0]);
+  const cheapest = candidateGroups.map(group => cheapestCandidate(group));
+  const mappedPreferred = candidateGroups.map(group => {
+    const mapped = group.filter(candidate => !!candidate?.mapping_approval_id);
+    return mapped.length ? cheapestCandidate(mapped) : group[0];
+  });
+  add(baseline);
+  add(cheapest);
+  add(mappedPreferred);
+
+  const providers = [...new Set(candidateGroups.flatMap(group => group.map(candidate => Number(candidate?.print_provider_id)).filter(id => Number.isInteger(id) && id > 0)))].sort((a, b) => a - b);
+  for (const providerId of providers) {
+    add(candidateGroups.map(group => {
+      const providerCandidates = group.filter(candidate => Number(candidate?.print_provider_id) === providerId);
+      return providerCandidates.length ? cheapestCandidate(providerCandidates) : group[0];
+    }));
+  }
+
+  for (let index = 0; index < candidateGroups.length && plans.length < maxPlans; index += 1) {
+    for (const candidate of candidateGroups[index].slice(1)) {
+      const next = [...baseline];
+      next[index] = candidate;
+      add(next);
+      if (plans.length >= maxPlans) break;
+    }
+  }
+  for (let index = 0; index < candidateGroups.length && plans.length < maxPlans; index += 1) {
+    for (const candidate of candidateGroups[index]) {
+      if (candidateKey(candidate) === candidateKey(mappedPreferred[index])) continue;
+      const next = [...mappedPreferred];
+      next[index] = candidate;
+      add(next);
+      if (plans.length >= maxPlans) break;
+    }
+  }
+  return plans;
+}
+'''
+          pattern = re.compile(r'function providerIdsWith\(plan, candidate\) \{.*?\n\}\n\nexport function buildFulfillmentPlans\(candidateGroups, maxPlans = 64\) \{.*?\n\}\n(?=\nexport function chooseCheapestFulfillment)', re.S)
+          for name in ['supabase/functions/shop-manual-checkout-v832/fulfillment-routing.mjs', 'supabase/functions/shop-delivery-preview-v833/fulfillment-routing.mjs']:
+              p = Path(name)
+              t = p.read_text()
+              t2, count = pattern.subn(build_new.rstrip(), t, count=1)
+              if count != 1:
+                  raise SystemExit(f'plan builder pattern missing in {name}')
+              p.write_text(t2)
+
+          test = Path('scripts/test-shop-fulfillment-routing-v832.mjs')
+          t = test.read_text()
+          old = "assert.throws(() => buildFulfillmentPlans([[baseline, regional], [baseline, regional]], 3), /safe routing plan limit/);"
+          new = """const boundedPlans = buildFulfillmentPlans([[baseline, regional], [baseline, regional]], 3);\nassert.ok(boundedPlans.length <= 3, 'large routing spaces must stay bounded');\nassert.deepEqual(boundedPlans[0].candidates.map(candidate => candidate.mapping_approval_id), ['', ''], 'bounded routing must retain the all-original fallback');\nassert.ok(boundedPlans.some(plan => plan.candidates.every(candidate => candidate.mapping_approval_id === mapping.approval_id)), 'bounded routing must retain the consolidated mapped route');"""
+          if old not in t:
+              raise SystemExit('routing regression assertion pattern missing')
+          test.write_text(t.replace(old, new, 1))
+          PY
+          node scripts/test-shop-fulfillment-routing-v832.mjs
+          git diff --check
+          git status --short
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name "JesperOaths"
+          git config user.email "150788310+JesperOaths@users.noreply.github.com"
+          git add supabase/functions/shop-catalog-v828/index.ts supabase/functions/shop-manual-checkout-v832/index.ts supabase/functions/shop-manual-checkout-v832/fulfillment-routing.mjs supabase/functions/shop-delivery-preview-v833/index.ts supabase/functions/shop-delivery-preview-v833/fulfillment-routing.mjs scripts/test-shop-fulfillment-routing-v832.mjs
+          git commit -m "feat(shop): scale regional fulfillment routing"
+          git push origin HEAD:main
