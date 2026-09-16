@@ -1,0 +1,41 @@
+name: C720P private Cloud browser inspect
+
+on:
+  push:
+    branches: ['ops/c720p-drive-oauth-recovery']
+    paths: ['.github/workflows/ops-c720p-cdp-inspect.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: uiqntazgnrxwliaidkmy
+    steps:
+      - name: Relaunch only isolated OAuth browser and inspect Cloud page
+        shell: python
+        run: |
+          import json, os, time, urllib.request
+          token=os.environ['SUPABASE_ACCESS_TOKEN']; ref=os.environ['PROJECT_REF']
+          api=f'https://api.supabase.com/v1/projects/{ref}/database/query'
+          headers={'Authorization':f'Bearer {token}','Content-Type':'application/json'}
+          command_b64='c2V0IC1ldW8gcGlwZWZhaWwKZWNobyAnPT09IFBSSVZBVEUgQ0hST01JVU0gQ0RQIFJFTEFVTkNIL0lOU1BFQ1QgPT09JzsgZGF0ZSAtSXMKUFJPRklMRT0vaG9tZS9qZXNwZXJuLy5jb25maWcvYzcyMHAtZHJpdmUtcHJpdmF0ZS1vYXV0aC1jaHJvbWl1bQojIFN0b3Agb25seSB0aGUgaXNvbGF0ZWQgT0F1dGgvQ2xvdWQgQ29uc29sZSBicm93c2VyLCBuZXZlciB0aGUga2lvc2sgYnJvd3Nlci4KcGtpbGwgLWYgLS0gIiRQUk9GSUxFIiAyPi9kZXYvbnVsbCB8fCB0cnVlCnNsZWVwIDIKRElTUExBWT06MCBYREdfUlVOVElNRV9ESVI9L3J1bi91c2VyLzEwMDAgL3Vzci9iaW4vY2hyb21pdW0gXAogIC0tdXNlci1kYXRhLWRpcj0iJFBST0ZJTEUiIFwKICAtLXJlbW90ZS1kZWJ1Z2dpbmctYWRkcmVzcz0xMjcuMC4wLjEgXAogIC0tcmVtb3RlLWRlYnVnZ2luZy1wb3J0PTkzMzMgXAogIC0tcmVtb3RlLWFsbG93LW9yaWdpbnM9aHR0cDovLzEyNy4wLjAuMTo5MzMzIFwKICAtLW5vLWZpcnN0LXJ1biAtLW5vLWRlZmF1bHQtYnJvd3Nlci1jaGVjayAtLWRpc2FibGUtc2Vzc2lvbi1jcmFzaGVkLWJ1YmJsZSBcCiAgLS1uZXctd2luZG93ICdodHRwczovL2NvbnNvbGUuY2xvdWQuZ29vZ2xlLmNvbS9wcm9qZWN0Y3JlYXRlJyBcCiAgPi90bXAvYzcyMHAtcHJpdmF0ZS1jaHJvbWl1bS5sb2cgMj4mMSAmCnNsZWVwIDgKZWNobyAnLS0tIENEUCBWRVJTSU9OIC0tLScKY3VybCAtZnNTIC0tbWF4LXRpbWUgMyBodHRwOi8vMTI3LjAuMC4xOjkzMzMvanNvbi92ZXJzaW9uIHwgcHl0aG9uMyAtYyAnaW1wb3J0IHN5cyxqc29uO2Q9anNvbi5sb2FkKHN5cy5zdGRpbik7cHJpbnQoZC5nZXQoIkJyb3dzZXIiLCIiKSxkLmdldCgiUHJvdG9jb2wtVmVyc2lvbiIsIiIpKScKY3VybCAtZnNTIC0tbWF4LXRpbWUgMyBodHRwOi8vMTI3LjAuMC4xOjkzMzMvanNvbi9saXN0ID4gL3RtcC9jNzIwcC1jZHAtcGFnZXMuanNvbgplY2hvICctLS0gUEFHRSBNRVRBIC0tLScKcHl0aG9uMyAtIDw8J1BZJwppbXBvcnQganNvbiwgdXJsbGliLnBhcnNlCnJvd3M9anNvbi5sb2FkKG9wZW4oJy90bXAvYzcyMHAtY2RwLXBhZ2VzLmpzb24nKSkKZm9yIGksciBpbiBlbnVtZXJhdGUocm93cyk6CiBpZiByLmdldCgndHlwZScpIT0ncGFnZSc6IGNvbnRpbnVlCiB1PXVybGxpYi5wYXJzZS51cmxzcGxpdChyLmdldCgndXJsJywnJykpCiBwcmludChpLCB1Lmhvc3RuYW1lIG9yICcnLCB1LnBhdGgsIChyLmdldCgndGl0bGUnKSBvciAnJylbOjEyMF0pClBZCmVjaG8gJy0tLSBTQU5JVElaRUQgQUNUSVZFIFBBR0UgVEVYVCAtLS0nCi9ob21lL2plc3Blcm4vLnZlbnZzL2M3MjBwLW9hdXRoLXNlbGVuaXVtL2Jpbi9weXRob24gLSA8PCdQWScKaW1wb3J0IGpzb24sIHVybGxpYi5yZXF1ZXN0LCB3ZWJzb2NrZXQsIHVybGxpYi5wYXJzZSwgaXRlcnRvb2xzCnJvd3M9anNvbi5sb2FkKHVybGxpYi5yZXF1ZXN0LnVybG9wZW4oJ2h0dHA6Ly8xMjcuMC4wLjE6OTMzMy9qc29uL2xpc3QnLHRpbWVvdXQ9MykpCnBhZ2VzPVtyIGZvciByIGluIHJvd3MgaWYgci5nZXQoJ3R5cGUnKT09J3BhZ2UnXQppZiBub3QgcGFnZXM6IHJhaXNlIFN5c3RlbUV4aXQoJ05PX1BBR0UnKQpwPXBhZ2VzWzBdCndzPXdlYnNvY2tldC5jcmVhdGVfY29ubmVjdGlvbihwWyd3ZWJTb2NrZXREZWJ1Z2dlclVybCddLG9yaWdpbj0naHR0cDovLzEyNy4wLjAuMTo5MzMzJyx0aW1lb3V0PTUpCnNlcT1pdGVydG9vbHMuY291bnQoMSkKZGVmIGNhbGwobWV0aG9kLHBhcmFtcz1Ob25lKToKIGk9bmV4dChzZXEpOyB3cy5zZW5kKGpzb24uZHVtcHMoeyd pZCc6aSwibWV0aG9kIjptZXRob2QsInBhcmFtcyI6cGFyYW1zIG9yIHt9fSkucmVwbGFjZSgiJyAiLCIiKSkKIHdoaWxlIFRydWU6CiAgeD1qc29uLmxvYWRzKHdzLnJlY3YoKSkKICBpZiB4LmdldCgnaWQnKT09aTogcmV0dXJuIHgKcj1jYWxsKCdSdW50aW1lLmV2YWx1YXRlJyx7J2V4cHJlc3Npb24nOicnJygpPT4oe2hvc3Q6bG9jYXRpb24uaG9zdG5hbWUscGF0aDpsb2NhdGlvbi5wYXRobmFtZSx0aXRsZTpkb2N1bWVudC50aXRsZSx0ZXh0Oihkb2N1bWVudC5ib2R5JiZkb2N1bWVudC5ib2R5LmlubmVyVGV4dHx8IiIpLnNsaWNlKDAsNTAwMCksaW5wdXRzOltbLi4uZG9jdW1lbnQucXVlcnlTZWxlY3RvckFsbCgiaW5wdXQiKV0ubWFwKHg9Pih7dHlwZTp4LnR5cGUsbmFtZTp4Lm5hbWUsYXV0b2NvbXBsZXRlOnguYXV0b2NvbXBsZXRlfSkpLnNsaWNlKDAsMjApLGJ1dHRvbnM6Wy4uLmRvY3VtZW50LnF1ZXJ5U2VsZWN0b3JBbGwoImJ1dHRvbiIpXS5tYXAoeD0+KHguaW5uZXJUZXh0fHx4LmdldEF0dHJpYnV0ZSgiYXJpYS1sYWJlbCIpfHwiIikudHJpbSgpKS5maWx0ZXIoQm9vbGVhbikuc2xpY2UoMCw0MCl9KSkoKScnJywncmV0dXJuQnlWYWx1ZSc6VHJ1ZX0pCnY9KCgo ci5nZXQoJ3Jlc3VsdCcpIG9yIHt9KS5nZXQoJ3Jlc3VsdCcpIG9yIHt9KS5nZXQoJ3ZhbHVlJykgb3Ige30KcHJpbnQoJ0hPU1Q9JytzdHIodi5nZXQoJ2hvc3QnLCcnKSkpCnByaW50KCdQQVRIPScrc3RyKHYuZ2V0KCdwYXRoJywnJykpKQpwcmludCgnVElUTEU9JytzdHIodi5nZXQoJ3RpdGxlJywnJykpKQpwcmludCgnSU5QVVRTPScranNvbi5kdW1wcyh2LmdldCgnaW5wdXRzJyxbXSksZW5zdXJlX2FzY2lpPUZhbHNlKSkKcHJpbnQoJ0JVVFRPTlM9Jytqc29uLmR1bXBzKHYuZ2V0KCdidXR0b25zJyxbXSksZW5zdXJlX2FzY2lpPUZhbHNlKSkKcHJpbnQoJ1RFWFRfQkVHSU4nKQpwcmludCh2LmdldCgndGV4dCcsJycpKQpwcmludCgnVEVYVF9FTkQnKQp3cy5jbG9zZSgpClBZCnJtIC1mIC90bXAvYzcyMHAtY2RwLXBhZ2VzLmpzb24KZWNobyBSRVNVTFQ9UFJJVkFURV9DSFJPTUlVTV9DRFBfSU5TUEVDVF9ET05FCg=='
+          def q(sql, read_only=False):
+              req=urllib.request.Request(api,data=json.dumps({'query':sql,'read_only':read_only}).encode(),headers=headers,method='POST')
+              with urllib.request.urlopen(req,timeout=45) as r: return json.loads(r.read().decode())
+          ins=f"insert into c720p_agent.jobs(command,timeout_seconds,idempotency_key) values (convert_from(decode('{command_b64}','base64'),'UTF8'),120,'oauth-cdp-inspect-20260916-v1') returning id,state;"
+          row=q(ins)[0]; job=int(row['id']); print('JOB=',job)
+          for i in range(45):
+              time.sleep(4)
+              r=q(f"select id,state,attempts,exit_code,finished_at,stdout,stderr from c720p_agent.jobs where id={job};",True)[0]
+              print(f"POLL {i+1}: {r.get('state')} exit={r.get('exit_code')}")
+              if r.get('state') in ('done','error','cancelled'):
+                  print('=== STDOUT ==='); print(r.get('stdout') or '')
+                  print('=== STDERR ==='); print(r.get('stderr') or '')
+                  if r.get('state')!='done' or r.get('exit_code') not in (0,None): raise SystemExit(2)
+                  break
+          else: raise SystemExit('Timed out waiting for browser inspect')
