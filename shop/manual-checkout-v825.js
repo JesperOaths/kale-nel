@@ -204,7 +204,7 @@
           <div><span>Shipping</span><strong>Calculated securely from your delivery address</strong></div>
         </div>
         <div class="manual-checkout-note">
-          After continuing, the server verifies the product price and shipping cost, creates a <strong>Pending</strong> order, and shows your exact payment amount and order reference. The price shown in the browser is never trusted.
+          After continuing, the server verifies the product price and shipping cost, creates a <strong>Pending</strong> order, and shows your exact payment amount and order reference. The price shown in the browser is never trusted.<br><br><strong>Import costs:</strong> if the selected production route crosses a customs border—including UK↔EU or another non-EU→EU route—import VAT or taxes, customs duties where applicable, and carrier handling fees may be charged on arrival. These charges are not included in the displayed shipping price.
         </div>
         <div class="manual-checkout-actions">
           <button class="manual-checkout-primary" type="submit">Create pending order</button>
