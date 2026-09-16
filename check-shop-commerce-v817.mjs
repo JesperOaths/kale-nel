@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import { parseEcbUsdRate, retailEurCentsFromUsdCost, usdCentsToEurCents } from './supabase/functions/_shared/shop-fx.mjs';
 import fs from 'node:fs';
 
 const read = path => fs.readFileSync(path, 'utf8');
@@ -22,6 +23,7 @@ const fulfillmentRouting = read('supabase/functions/shop-manual-checkout-v832/fu
 const deliveryPreviewEdge = read('supabase/functions/shop-delivery-preview-v833/index.ts');
 const deliveryPreviewRouting = read('supabase/functions/shop-delivery-preview-v833/fulfillment-routing.mjs');
 const catalogEdge = read('supabase/functions/shop-catalog-v828/index.ts');
+const fxShared = read('supabase/functions/_shared/shop-fx.mjs');
 const connectionEdge = read('supabase/functions/shop-production-connection-v828/index.ts');
 const statusEdge = read('supabase/functions/shop-order-status-v825/index.ts');
 const adminEdge = read('supabase/functions/shop-admin-orders-v825/index.ts');
@@ -30,6 +32,7 @@ const migration = read('supabase/migrations/20260910070731_shop_manual_payment_v
 const idempotencyMigration = read('supabase/migrations/20260910070905_shop_checkout_idempotency_v825.sql');
 const paymentAmountMigration = read('supabase/migrations/20260910103800_shop_admin_payment_amount_v826.sql');
 const directMigration = read('supabase/migrations/20260910183000_shop_printify_direct_v828.sql');
+const fxMigration = read('supabase/migrations/20260916014900_shop_usd_eur_fx_v834.sql');
 const liveShopCheck = read('check-live-shop.mjs');
 const liveHealthWorkflow = read('.github/workflows/live-deployment-health.yml');
 const deployWorkflow = read('.github/workflows/deploy-shop-fixes-v829.yml');
@@ -161,13 +164,34 @@ assert.match(lightbox, /allGalleryImages:true/);
 assert.match(lightbox, /fitMode:'media-contained'/);
 assert.doesNotMatch(lightbox, /EXCLUDE_FROM_EXPANDED_RE/);
 
+// Printify API money fields are USD cents. Every customer-facing EUR amount and
+// every fulfillment score is converted server-side before the €5 margin or totals
+// are applied; raw USD source amounts and the exact FX snapshot remain auditable.
+const ecbSample = parseEcbUsdRate("<Cube time='2026-09-15'><Cube currency='USD' rate='1.1539'/></Cube>");
+assert.equal(ecbSample.eur_usd, 1.1539);
+assert.equal(ecbSample.usd_eur, 0.8666262241);
+assert.equal(usdCentsToEurCents(1661, ecbSample.usd_eur), 1439);
+assert.equal(retailEurCentsFromUsdCost(1661, ecbSample.usd_eur, 500), 2000);
+assert.equal(usdCentsToEurCents(1039, ecbSample.usd_eur), 900);
+assert.match(fxShared, /shop_fx_rates/);
+assert.match(fxShared, /eurofxref-daily\.xml/);
+assert.match(fxShared, /MAX_OBSERVED_AGE_MS/);
+assert.match(fxMigration, /fx_snapshot jsonb/);
+assert.match(fxMigration, /shipping_source_currency text/);
+assert.match(fxMigration, /shipping_source_cents integer/);
+assert.match(deliveryPreviewEdge, /usdCentsToEurCents/);
+assert.match(deliveryPreviewEdge, /shipping_source_cents/);
+assert.match(deliveryPreviewEdge, /fxAuditSnapshot/);
+
 // Catalog pricing is derived from Printify fulfillment cost, not retail price:
 // retail = base cost + €5, rounded upward to the next whole euro. Original front
 // artwork from print_areas is inserted before generated garment mockups.
 assert.match(catalogEdge, /const MARGIN_CENTS = 500/);
-assert.match(catalogEdge, /retailEurosFromCost/);
-assert.match(catalogEdge, /Math\.ceil\(\(Math\.round\(n\) \+ MARGIN_CENTS\) \/ 100\)/);
-assert.match(catalogEdge, /price:\s*retailEurosFromCost\(variant\?\.cost\)/);
+assert.match(catalogEdge, /resolveUsdEurRate/);
+assert.match(catalogEdge, /retailEurCentsFromUsdCost/);
+assert.match(catalogEdge, /price:\s*retailEurCentsFromUsdCost\(variant\?\.cost, fx, MARGIN_CENTS\) \/ 100/);
+assert.match(catalogEdge, /sourceCurrency:\s*"USD"/);
+assert.match(catalogEdge, /displayCurrency:\s*"EUR"/);
 assert.doesNotMatch(catalogEdge, /priceEuros\(variant\?\.price\)/);
 assert.match(catalogEdge, /function artworkFor/);
 assert.match(catalogEdge, /product\?\.print_areas/);
@@ -194,9 +218,12 @@ assert.match(checkoutEdge, /pricingBase:\s*"printify-variant-cost"/);
 assert.match(checkoutEdge, /marginEuros:\s*MARGIN_CENTS \/ 100/);
 assert.match(checkoutEdge, /rounding:\s*"whole-euro-ceiling"/);
 assert.match(checkoutEdge, /const MARGIN_CENTS = 500/);
-assert.match(checkoutEdge, /retailCentsFromCost/);
-assert.match(checkoutEdge, /Math\.ceil\(\(n \+ MARGIN_CENTS\) \/ 100\) \* 100/);
-assert.match(checkoutEdge, /retailCentsFromCost\(freshVariant\?\.cost\)/);
+assert.match(checkoutEdge, /resolveUsdEurRate/);
+assert.match(checkoutEdge, /retailEurCentsFromUsdCost/);
+assert.match(checkoutEdge, /retailEurCentsFromUsdCost\(freshVariant\?\.cost, fx, MARGIN_CENTS\)/);
+assert.match(checkoutEdge, /usdCentsToEurCents/);
+assert.match(checkoutEdge, /shipping_source_cents/);
+assert.match(checkoutEdge, /fx_snapshot:\s*fxAuditSnapshot\(fx\)/);
 assert.doesNotMatch(checkoutEdge, /Math\.round\(Number\(freshVariant\?\.price\)\)/);
 assert.match(checkoutEdge, /shop_catalog_cache_v828/);
 assert.match(checkoutEdge, /cachedResolution/);

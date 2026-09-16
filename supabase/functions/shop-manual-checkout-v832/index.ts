@@ -7,6 +7,13 @@ import {
   parseFulfillmentMappings,
   validateMappedCandidate,
 } from "./fulfillment-routing.mjs";
+import {
+  fxAuditSnapshot,
+  PRINTIFY_SOURCE_CURRENCY,
+  resolveUsdEurRate,
+  retailEurCentsFromUsdCost,
+  usdCentsToEurCents,
+} from "../_shared/shop-fx.mjs";
 
 const PRINTIFY_BASE = "https://api.printify.com/v1";
 const TIKKIE_URL = "https://api.abnamro.com/v2/tikkie/paymentrequests";
@@ -18,10 +25,6 @@ const text = (v: unknown) => String(v ?? "").trim();
 const clean = (v: unknown) => text(v).replace(/\s+/g, " ");
 const money = (cents: unknown) => `€${(Number(cents || 0) / 100).toFixed(2)}`;
 const MARGIN_CENTS = 500;
-const retailCentsFromCost = (cost: unknown) => {
-  const n = Math.round(Number(cost));
-  return Number.isFinite(n) && n > 0 ? Math.ceil((n + MARGIN_CENTS) / 100) * 100 : 0;
-};
 
 function cors(req: Request) {
   const origin = text(req.headers.get("origin"));
@@ -254,6 +257,7 @@ Deno.serve(async (req: Request) => {
       mapping.source.product_id === text(row.cached.product.id) && mapping.source.variant_id === Number(row.cached.variant.id)
     ));
     const printifyToken = await resolvePrintifyToken(sb);
+    const fx = await resolveUsdEurRate(sb);
     const freshProducts = new Map<string, any>();
     const productIds = [...new Set([
       ...resolved.map((row: any) => text(row.cached.product.id)),
@@ -278,7 +282,7 @@ Deno.serve(async (req: Request) => {
       const qty = Math.floor(qtyRaw);
       if (!Number.isFinite(qtyRaw) || qty < 1 || qty > MAX_QTY) throw new Error("Invalid quantity");
       if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isWhiteVariant(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
-      const unit = retailCentsFromCost(freshVariant?.cost);
+      const unit = retailEurCentsFromUsdCost(freshVariant?.cost, fx, MARGIN_CENTS);
       if (!unit) throw new Error(`Invalid authoritative production cost: ${clean(row.cached.product.name)}`);
       const size = sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase();
       subtotalCents += unit * qty;
@@ -291,7 +295,9 @@ Deno.serve(async (req: Request) => {
         product_id: productId,
         variant_id: variantId,
         quantity: qty,
-        cost_cents: Math.round(Number(freshVariant.cost)),
+        cost_cents: usdCentsToEurCents(freshVariant.cost, fx),
+        source_cost_cents: Math.round(Number(freshVariant.cost)),
+        source_currency: PRINTIFY_SOURCE_CURRENCY,
         mapping_approval_id: "",
         blueprint_id: Number(freshProduct?.blueprint_id),
         print_provider_id: Number(freshProduct?.print_provider_id),
@@ -309,7 +315,9 @@ Deno.serve(async (req: Request) => {
           product_id: mapping.target.product_id,
           variant_id: mapping.target.variant_id,
           quantity: qty,
-          cost_cents: validation.cost_cents,
+          cost_cents: usdCentsToEurCents(validation.cost_cents, fx),
+          source_cost_cents: validation.cost_cents,
+          source_currency: PRINTIFY_SOURCE_CURRENCY,
           mapping_approval_id: mapping.approval_id,
           blueprint_id: mapping.target.blueprint_id,
           print_provider_id: mapping.target.print_provider_id,
@@ -333,8 +341,16 @@ Deno.serve(async (req: Request) => {
       }));
       try {
         const quote = await printify(printifyToken, `/shops/${shopId}/orders/shipping.json`, { method: "POST", body: JSON.stringify({ line_items: pfLineItems, address_to: addressTo }) });
-        const shipping = cheapestShippingQuote(quote);
-        if (shipping) quotedPlans.push({ plan, shipping, route_key: pfLineItems.map((item: any) => `${item.product_id}:${item.variant_id}`).join("|") });
+        const sourceShipping = cheapestShippingQuote(quote);
+        if (sourceShipping) {
+          const shipping = {
+            ...sourceShipping,
+            cents: usdCentsToEurCents(sourceShipping.cents, fx),
+            source_cents: sourceShipping.cents,
+            source_currency: PRINTIFY_SOURCE_CURRENCY,
+          };
+          quotedPlans.push({ plan, shipping, route_key: pfLineItems.map((item: any) => `${item.product_id}:${item.variant_id}`).join("|") });
+        }
       } catch (error) {
         console.warn("Printify fulfillment route was not shippable", error instanceof Error ? error.message.slice(0, 180) : "unknown");
       }
@@ -344,6 +360,7 @@ Deno.serve(async (req: Request) => {
     const shippingMethod = selected.shipping.name;
     const shippingMethodCode = selected.shipping.code;
     const shippingCents = selected.shipping.cents;
+    const shippingSourceCents = Math.max(0, Math.round(Number(selected.shipping.source_cents || 0)));
     const fulfillmentEstimatedImportCents = Math.max(0, Math.round(Number(selected.plan.estimated_import_cents || 0)));
     const fulfillmentProviderGroups = Math.max(1, Math.round(Number(selected.plan.provider_groups || 1)));
     const fulfillmentScoreCents = Math.round(Number(selected.plan.production_cents) + shippingCents + fulfillmentEstimatedImportCents);
@@ -356,6 +373,8 @@ Deno.serve(async (req: Request) => {
       item.printify_product_id = route.product_id;
       item.printify_variant_id = route.variant_id;
       item.fulfillment_cost_cents = route.cost_cents;
+      item.fulfillment_source_cost_cents = route.source_cost_cents;
+      item.fulfillment_source_currency = route.source_currency || PRINTIFY_SOURCE_CURRENCY;
       item.fulfillment_estimated_import_cents_per_unit = route.estimated_import_cents_per_unit || 0;
       item.fulfillment_route = route.mapping_approval_id ? {
         type: "approved_regional_mapping",
@@ -382,7 +401,7 @@ Deno.serve(async (req: Request) => {
 
     const orderRow = {
       id: orderId, status: "pending", currency: "eur", subtotal_cents: subtotalCents, shipping_cents: shippingCents, tax_cents: 0, discount_cents: 0, total_cents: totalCents,
-      shipping_method: shippingMethod, shipping_method_code: shippingMethodCode, line_items: authoritative, shipping_address: addressTo,
+      shipping_method: shippingMethod, shipping_method_code: shippingMethodCode, shipping_source_currency: PRINTIFY_SOURCE_CURRENCY, shipping_source_cents: shippingSourceCents, fx_snapshot: fxAuditSnapshot(fx), line_items: authoritative, shipping_address: addressTo,
       fulfillment_estimated_import_cents: fulfillmentEstimatedImportCents, fulfillment_provider_groups: fulfillmentProviderGroups, fulfillment_score_cents: fulfillmentScoreCents,
       customer_email: email, customer_name: fullName, customer_phone: phone || null, payment_provider: payment.provider || "manual_transfer",
       payment_reference: reference, payment_request_token: payment.token || null, payment_request_url: payment.url || null, payment_request_expires_at: payment.expires_at,
