@@ -207,7 +207,7 @@ async function shippingBreakdown(token: string, shopId: string, selected: any, a
     groups.get(providerId)!.push(candidate);
   }
   const originMap = new Map(origins.map(origin => [Number(origin?.provider_id), origin]));
-  return await Promise.all([...groups.entries()].map(async ([providerId, candidates]) => {
+  const breakdown = await Promise.all([...groups.entries()].map(async ([providerId, candidates]) => {
     const lineItems = candidates.map((candidate: any, index: number) => ({
       product_id: candidate.product_id,
       variant_id: candidate.variant_id,
@@ -235,6 +235,13 @@ async function shippingBreakdown(token: string, shopId: string, selected: any, a
       })),
     };
   }));
+  const convertedTotal = breakdown.reduce((sum, group) => sum + Number(group.shipping_cents || 0), 0);
+  const roundingDelta = Math.round(Number(selected.shipping.cents || 0) - convertedTotal);
+  if (breakdown.length && roundingDelta) {
+    breakdown[breakdown.length - 1].shipping_cents += roundingDelta;
+    breakdown[breakdown.length - 1].fx_rounding_adjustment_cents = roundingDelta;
+  }
+  return breakdown;
 }
 
 function customsNotice(destination: string, origins: any[]) {
