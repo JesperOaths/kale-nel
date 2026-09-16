@@ -1,4 +1,4 @@
-name: Diagnose Despinoza Gildan 5000 sources
+name: Inspect Despinoza Gildan 5000 text layers
 
 "on":
   push:
@@ -15,11 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Discover source products
+      - name: Inspect source and regional text layers
         shell: bash
         env:
-          ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-despinoza-gildan5000-v834
-          RUN_KEY: despinoza-g5000-20260916-Yp6Wq9uN
+          ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-despinoza-diagnostic-v834
+          RUN_KEY: despinoza-diag-20260916-J7qvF4bM
         run: |
           set -euo pipefail
           curl --silent --show-error --max-time 900 \
