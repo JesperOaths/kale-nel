@@ -1,4 +1,4 @@
-name: Probe Despinoza text-layer preservation
+name: Probe complete Despinoza text payload
 
 "on":
   push:
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Probe hidden EU route copy
+      - name: Probe hidden EU route copy with full text payload
         shell: bash
         env:
           ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-despinoza-textlayer-probe-v834
