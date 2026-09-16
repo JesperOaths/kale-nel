@@ -11,7 +11,7 @@ const deliveryEstimate = read('shop/delivery-estimate-v833.js');
 const manualCheckout = read('shop/manual-checkout-v825.js');
 const customerFacingCheckout = read('shop/customer-facing-checkout-v837.js');
 const storefrontPolish = read('shop/storefront-polish-v832.js');
-const toteHandleColor = read('shop/tote-handle-color-v838.js');
+const toteHandleColor = read('shop/tote-handle-color-v839.js');
 const storefrontCss = read('shop/storefront-polish-v832.css');
 const styles = read('shop/styles.css');
 const productPreviews = read('shop/product-preview-overrides.js');
@@ -43,17 +43,19 @@ const deployWorkflow = read('.github/workflows/deploy-shop-fixes-v829.yml');
 const store = read('shop/store.js');
 const refresh = read('shop/live-catalog-refresh-v818.js');
 
-// v838 keeps the Bruis checkout behavior and adds exact tote handle-color selection,
+// v839 keeps the Bruis checkout behavior and adds exact tote handle-color selection,
 // restores pure converted production cost + €5 pricing, and exposes a final total
 // that includes the address-specific shipping quote.
 assert.match(index, /direct-commerce-v832\.js/);
 assert.match(index, /manual-checkout-v825\.js/);
 assert.match(index, /customer-facing-checkout-v837\.js/);
-assert.match(index, /tote-handle-color-v838\.js\?v=20260916-storefront-v838-r1/);
+assert.match(index, /tote-handle-color-v839\.js\?v=20260916-storefront-v839-r1/);
 assert.match(toteHandleColor, /Handle color/);
 assert.match(toteHandleColor, /variantBoundMockups:\s*true/);
+assert.match(toteHandleColor, /sharedArtworkFirst:\s*true/);
+assert.match(toteHandleColor, /artwork\|print file\|design png/i);
 assert.match(toteHandleColor, /exactVariantSelection:\s*true/);
-assert.match(index, /version-watermark[^>]*>v838</);
+assert.match(index, /version-watermark[^>]*>v839</);
 assert.match(index, /20260916-storefront-v837-r1/);
 assert.match(index, /20260916-delivery-v833-r2/);
 assert.match(index, /20260916-storefront-v837-r2/);
@@ -355,7 +357,7 @@ assert.doesNotMatch(refresh, /window\.location\.reload/);
 assert.match(store, /const wholeEuro/);
 assert.match(store, /price:\s*wholeEuro/);
 
-// Main deployment check validates the v838 customer shell and all authoritative
+// Main deployment check validates the v839 customer shell and all authoritative
 // shop functions while remaining read-only: it never creates an order in CI.
 assert.match(liveHealthWorkflow, /node check-live-shop\.mjs/);
 assert.match(deployWorkflow, /supabase\/functions\/shop-catalog-v828\/\*\*/);
@@ -379,7 +381,7 @@ assert.match(liveShopCheck, /mockup-transparency-v832/);
 assert.match(liveShopCheck, /image-lightbox-v832/);
 assert.match(liveShopCheck, /shop-catalog-v828/);
 assert.match(liveShopCheck, /shop-manual-checkout-v832/);
-assert.match(liveShopCheck, /RESULT=V838_BRUIS_SHOP_PASS/);
+assert.match(liveShopCheck, /RESULT=V839_BRUIS_SHOP_PASS/);
 assert.match(liveShopCheck, /Deliberately read-only/);
 assert.doesNotMatch(liveShopCheck, /method:\s*['"]POST['"]/);
 
@@ -392,4 +394,4 @@ assert.match(styles, /\.cart-button[\s\S]*z-index:\s*1200/);
 assert.doesNotMatch(catalogEdge, /MIN_RETAIL_CENTS/);
 assert.doesNotMatch(checkoutEdge, /MIN_RETAIL_CENTS/);
 
-console.log('Shop commerce v838 tote-handle-color + Bruis-copy + shipping-total + sticky-cart + cost-plus-5 contract passed.');
+console.log('Shop commerce v839 tote-handle-color + Bruis-copy + shipping-total + sticky-cart + cost-plus-5 contract passed.');

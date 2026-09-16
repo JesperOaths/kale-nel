@@ -148,9 +148,9 @@ async function textAsset(url, label) {
 const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(`${SHOP_URL}?v=${ASSET_VERSION}`);
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
-assert.match(html, /version-watermark[^>]*>v838</, 'Live shop must expose v838 watermark');
+assert.match(html, /version-watermark[^>]*>v839</, 'Live shop must expose v839 watermark');
 assert.match(html, /direct-commerce-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must retain the direct commerce bridge');
-assert.match(html, /tote-handle-color-v838\.js\?v=20260916-storefront-v838-r1/, 'Live shop must load tote handle-color behavior');
+assert.match(html, /tote-handle-color-v839\.js\?v=20260916-storefront-v839-r1/, 'Live shop must load tote handle-color behavior');
 assert.match(html, /delivery-estimate-v833\.js\?v=20260916-delivery-v833-r2/, 'Live shop must load the current delivery estimate UI');
 assert.match(html, /manual-checkout-v825\.js\?v=20260916-storefront-v837-r1/, 'Live shop must retain hardened checkout UI shell');
 assert.match(html, /customer-facing-checkout-v837\.js\?v=20260916-storefront-v837-r2/, 'Live shop must load v837 customer-facing checkout totals/copy layer');
@@ -163,12 +163,13 @@ assert.match(html, /collection-media-v831\.js\?v=20260916-storefront-v837-r1/, '
 assert.match(html, /image-lightbox-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load full-view lightbox');
 assert.doesNotMatch(html, /direct-commerce-v828\.js|mockup-background-v830\.js|image-lightbox-v830\.js/, 'old active media/commerce handlers must not remain in the live page');
 assert.doesNotMatch(html, />[^<]*(?:Printify|factor(?:y|ies))[^<]*</i, 'Public shop shell must not expose supplier/factory wording');
-console.log(`shop page: HTTP 200, v838 present, ${pageElapsed}ms`);
+console.log(`shop page: HTTP 200, v839 present, ${pageElapsed}ms`);
 
-const toteUi = await textAsset('https://kalenel.nl/shop/tote-handle-color-v838.js?v=20260916-storefront-v838-r1', 'tote-handle-color-v838.js');
+const toteUi = await textAsset('https://kalenel.nl/shop/tote-handle-color-v839.js?v=20260916-storefront-v839-r1', 'tote-handle-color-v839.js');
 assert.match(toteUi, /Handle color/, 'tote selector must be Handle color');
 assert.match(toteUi, /Black.*White|White.*Black/s, 'tote selector must expose Black and White');
 assert.match(toteUi, /variantBoundMockups:\s*true/, 'tote gallery must use selected-variant mockups');
+assert.match(toteUi, /sharedArtworkFirst:\s*true/, 'tote gallery must keep the artwork as slide one for every handle color');
 assert.match(toteUi, /exactVariantSelection:\s*true/, 'tote cart must use the exact selected variant');
 
 const bridge = await textAsset(DIRECT_BRIDGE_URL, 'direct-commerce-v832.js');
@@ -266,4 +267,4 @@ await health(STATUS_URL, 'shop-order-status-v825', 'order-status-v825');
 await health(ADMIN_URL, 'shop-admin-orders-v825', 'admin-orders-v825');
 await health(WEBHOOK_URL, 'shop-printify-webhook-v825', 'printify-webhook-v825');
 
-console.log('RESULT=V838_BRUIS_SHOP_PASS');
+console.log('RESULT=V839_BRUIS_SHOP_PASS');
