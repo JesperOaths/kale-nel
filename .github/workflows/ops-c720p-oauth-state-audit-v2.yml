@@ -1,0 +1,41 @@
+name: C720P OAuth state audit v2
+
+on:
+  push:
+    branches: ['ops/c720p-drive-oauth-recovery']
+    paths: ['.github/workflows/ops-c720p-oauth-state-audit-v2.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: uiqntazgnrxwliaidkmy
+    steps:
+      - name: Enqueue fixed OAuth recovery audit and wait
+        shell: python
+        run: |
+          import json, os, time, urllib.request, urllib.error
+          token=os.environ['SUPABASE_ACCESS_TOKEN']; ref=os.environ['PROJECT_REF']
+          api=f'https://api.supabase.com/v1/projects/{ref}/database/query'
+          headers={'Authorization':f'Bearer {token}','Content-Type':'application/json'}
+          command_b64='c2V0IC11CmVjaG8gJz09PSBDNzIwUCBEUklWRSBPQVVUSCBSRUNPVkVSWSBBVURJVCA9PT0nOyBkYXRlIC1JcwplY2hvICctLS0gT0FVVEggU1RBVEUgLS0tJwpjYXQgL2hvbWUvamVzcGVybi9jNzIwcC1ob21lLWh1Yi9zdGF0ZS9kcml2ZS1vYXV0aC1ib290c3RyYXAuanNvbiAyPi9kZXYvbnVsbCB8fCB0cnVlCmVjaG8gJy0tLSBHQ0xPVUQgQklOL0FVVEgvUFJPSkVDVCAtLS0nCmNvbW1hbmQgLXYgZ2Nsb3VkIHx8IHRydWUKZ2Nsb3VkIHZlcnNpb24gMj4vZGV2L251bGwgfCBoZWFkIC0xMiB8fCB0cnVlCmdjbG91ZCBhdXRoIGxpc3QgLS1maWx0ZXI9c3RhdHVzOkFDVElWRSAtLWZvcm1hdD0ndmFsdWUoYWNjb3VudCknIDI+L2Rldi9udWxsIHx8IHRydWUKZ2Nsb3VkIGNvbmZpZyBnZXQtdmFsdWUgcHJvamVjdCAyPi9kZXYvbnVsbCB8fCB0cnVlCmVjaG8gJy0tLSBHQ0xPVUQgQ09NTUFORCBESVNDT1ZFUlkgLS0tJwpnY2xvdWQgcHJvamVjdHMgLS1oZWxwIDI+L2Rldi9udWxsIHwgZ3JlcCAtRSAnY3JlYXRlfGRlc2NyaWJlfGxpc3QnIHwgaGVhZCAtMjAgfHwgdHJ1ZQpnY2xvdWQgc2VydmljZXMgLS1oZWxwIDI+L2Rldi9udWxsIHwgZ3JlcCAtRSAnZW5hYmxlfGxpc3QnIHwgaGVhZCAtMjAgfHwgdHJ1ZQpnY2xvdWQgaWFtIG9hdXRoLWNsaWVudHMgLS1oZWxwIDI+L2Rldi9udWxsIHwgaGVhZCAtODAgfHwgdHJ1ZQpnY2xvdWQgYWxwaGEgaWFtIG9hdXRoLWNsaWVudHMgLS1oZWxwIDI+L2Rldi9udWxsIHwgaGVhZCAtMTAwIHx8IHRydWUKZWNobyAnLS0tIFBSSVZBVEUgQ0hST01JVU0vQ0RQIC0tLScKcGdyZXAgLWFmICdjNzIwcC1kcml2ZS1wcml2YXRlLW9hdXRoLWNocm9taXVtJyB8fCB0cnVlCmN1cmwgLWZzUyAtLW1heC10aW1lIDMgaHR0cDovLzEyNy4wLjAuMTo5MzMzL2pzb24vdmVyc2lvbiAyPi9kZXYvbnVsbCB8IHB5dGhvbjMgLWMgJ2ltcG9ydCBzeXMsanNvbjsgZD1qc29uLmxvYWQoc3lzLnN0ZGluKTsgcHJpbnQoIkJST1dTRVI9IitzdHIoZC5nZXQoIkJyb3dzZXIiLCIiKSkrIiBQUk9UT0NPTD0iK3N0cihkLmdldCgiUHJvdG9jb2wtVmVyc2lvbiIsIiIpKSknIDI+L2Rldi9udWxsIHx8IHRydWUKY3VybCAtZnNTIC0tbWF4LXRpbWUgMyBodHRwOi8vMTI3LjAuMC4xOjkzMzMvanNvbi9saXN0IDI+L2Rldi9udWxsID4gL3RtcC9jNzIwcC1jZHAtbGlzdC5qc29uIHx8IHRydWUKcHl0aG9uMyAtIDw8J1BZJwppbXBvcnQganNvbiwgdXJsbGliLnBhcnNlCnRyeToKIHJvd3M9anNvbi5sb2FkKG9wZW4oJy90bXAvYzcyMHAtY2RwLWxpc3QuanNvbicpKQpleGNlcHQgRXhjZXB0aW9uOgogcm93cz1bXQpmb3IgciBpbiByb3dzOgogaWYgci5nZXQoJ3R5cGUnKSE9J3BhZ2UnOiBjb250aW51ZQogdT11cmxsaWIucGFyc2UudXJsc3BsaXQoci5nZXQoJ3VybCcsJycpKQogcHJpbnQoJ1BBR0UgaG9zdD0lcyBwYXRoPSVzIHRpdGxlPSVzJyAlICh1Lmhvc3RuYW1lIG9yICcnLHUucGF0aCwoci5nZXQoJ3RpdGxlJykgb3IgJycpWzoxMDBdKSkKUFkKcm0gLWYgL3RtcC9jNzIwcC1jZHAtbGlzdC5qc29uCmVjaG8gJy0tLSBQUklWQVRFIENMSUVOVCBNRVRBREFUQSAtLS0nCnB5dGhvbjMgLSA8PCdQWScKaW1wb3J0IGpzb24sIHBhdGhsaWIsIGhhc2hsaWIKcD1wYXRobGliLlBhdGgoJy9vcHQvaW5ib3gtdHJpYWdlLWFnZW50L3NlY3JldHMvZ29vZ2xlX29hdXRoX2NsaWVudC5qc29uJykKdHJ5OgogZD1qc29uLmxvYWRzKHAucmVhZF90ZXh0KCkpOyB4PWQuZ2V0KCdpbnN0YWxsZWQnKSBvciBkLmdldCgnd2ViJykgb3Ige30KIHByaW50KCdDTElFTlRfVFlQRT0nKygnaW5zdGFsbGVkJyBpZiBkLmdldCgnaW5zdGFsbGVkJykgZWxzZSAnd2ViJykpCiBwcmludCgnUFJPSkVDVF9JRD0nK3N0cih4LmdldCgncHJvamVjdF9pZCcsJycpKSkKIHByaW50KCdDTElFTlRfSEFTSD0nK2hhc2hsaWIuc2hhMjU2KHN0cih4LmdldCgnY2xpZW50X2lkJywnJykpLmVuY29kZSgpKS5oZXhkaWdlc3QoKVs6MTZdKQpleGNlcHQgRXhjZXB0aW9uIGFzIGU6IHByaW50KCdDTElFTlRfTUVUQURBVEFfRVJST1I9Jyt0eXBlKGUpLl9fbmFtZV9fKQpQWQplY2hvICctLS0gUFJPRFVDVElPTiBSQ0xPTkUgLS0tJwovaG9tZS9qZXNwZXJuL2M3MjBwLWhvbWUtaHViL2Jpbi9yY2xvbmUgLS1jb25maWcgL2hvbWUvamVzcGVybi8uY29uZmlnL3JjbG9uZS9yY2xvbmUuY29uZiBhYm91dCBjNzIwcGRyaXZlOiAtLWpzb24gMj4mMSB8IHRhaWwgLTMwIHx8IHRydWUKZWNobyBSRVNVTFQ9QzcyMFBfRFJJVkVfT0FVVEhfUkVDT1ZFUllfQVVESVRfRE9ORQo='
+          def q(sql, read_only=False):
+              req=urllib.request.Request(api,data=json.dumps({'query':sql,'read_only':read_only}).encode(),headers=headers,method='POST')
+              with urllib.request.urlopen(req,timeout=45) as r: return json.loads(r.read().decode())
+          ins=f"insert into c720p_agent.jobs(command,timeout_seconds,idempotency_key) values (convert_from(decode('{command_b64}','base64'),'UTF8'),180,'oauth-recovery-gh-audit-20260916-v2') returning id,state;"
+          row=q(ins)[0]; job=int(row['id']); print('JOB=',job)
+          for i in range(60):
+              time.sleep(4)
+              r=q(f"select id,state,attempts,exit_code,finished_at,stdout,stderr from c720p_agent.jobs where id={job};",True)[0]
+              print(f"POLL {i+1}: {r.get('state')} exit={r.get('exit_code')}")
+              if r.get('state') in ('done','error','cancelled'):
+                  print('=== STDOUT ==='); print(r.get('stdout') or '')
+                  print('=== STDERR ==='); print(r.get('stderr') or '')
+                  if r.get('state')!='done' or r.get('exit_code') not in (0,None): raise SystemExit(2)
+                  break
+          else: raise SystemExit('Timed out waiting for C720P audit')
