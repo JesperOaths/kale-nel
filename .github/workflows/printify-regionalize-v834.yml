@@ -1,24 +1,25 @@
-name: Printify Gildan 5000 regionalization v834
+name: "Printify Gildan 5000 regionalization v834"
 
-on:
+"on":
   push:
-    branches: [main]
+    branches:
+      - main
 
 permissions:
   contents: read
 
 jobs:
   regionalize:
-    if: github.event.head_commit.message == 'ops: run gildan regionalization'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Build EU, UK, Canada and Australia routes
+      - name: Regionalize Gildan 5000 products
+        shell: bash
         env:
-          ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-regionalize-gildan5000-v834
-          ADMIN_KEY: uNw2kKDleHLyM4GyRm-ZbNzhs8czhHCYMPPtKZ6H4cPfqTFggrpGmZsQVx-kPOgX
+          ENDPOINT: "https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-regionalize-gildan5000-v834"
+          ADMIN_KEY: "uNw2kKDleHLyM4GyRm-ZbNzhs8czhHCYMPPtKZ6H4cPfqTFggrpGmZsQVx-kPOgX"
         run: |
-          set -uo pipefail
+          set -u
           failed=0
           for region in EU UK CA AU; do
             echo "=== ${region} ==="
@@ -29,9 +30,16 @@ jobs:
               --header 'content-type: application/json' \
               --header "x-admin-key: $ADMIN_KEY" \
               --data "{\"region\":\"${region}\"}") || code=000
-            jq '{ok,region,provider_id,source_count,routed_count,mapping_rows,upsert_error,results:[.results[]|{title,target_id,created,ok,visible,enabled_count,shipping,error,validation}]}' "result-${region}.json" || cat "result-${region}.json"
-            if [ "$code" != "200" ] || [ "$(jq -r '.ok // false' "result-${region}.json" 2>/dev/null)" != "true" ]; then
-              echo "Regionalization failed for ${region} (HTTP ${code})"
+            cat "result-${region}.json"
+            echo
+            if [ "$code" != "200" ]; then
+              echo "HTTP failure for ${region}: ${code}"
+              failed=1
+              continue
+            fi
+            ok=$(jq -r '.ok // false' "result-${region}.json" 2>/dev/null || echo false)
+            if [ "$ok" != "true" ]; then
+              echo "Regionalization failed for ${region}"
               failed=1
             fi
           done
