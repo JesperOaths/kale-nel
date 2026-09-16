@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 const SHOP_URL = 'https://kalenel.nl/shop/';
 const ASSET_VERSION = '20260916-storefront-v837-r1';
 const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v832.js?v=${ASSET_VERSION}`;
-const DELIVERY_UI_URL = 'https://kalenel.nl/shop/delivery-estimate-v833.js?v=20260916-delivery-v833-r2';
+const DELIVERY_UI_URL = 'https://kalenel.nl/shop/delivery-estimate-v833.js?v=20260916-delivery-v840-r1';
+const MANUAL_CHECKOUT_UI_URL = 'https://kalenel.nl/shop/manual-checkout-v825.js?v=20260916-checkout-v840-r1';
 const CUSTOMER_UI_URL = 'https://kalenel.nl/shop/customer-facing-checkout-v837.js?v=20260916-storefront-v837-r2';
 const POLISH_URL = `https://kalenel.nl/shop/storefront-polish-v832.js?v=${ASSET_VERSION}`;
 const POLISH_CSS_URL = `https://kalenel.nl/shop/storefront-polish-v832.css?v=${ASSET_VERSION}`;
@@ -148,11 +149,11 @@ async function textAsset(url, label) {
 const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(`${SHOP_URL}?v=${ASSET_VERSION}`);
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
-assert.match(html, /version-watermark[^>]*>v839</, 'Live shop must expose v839 watermark');
+assert.match(html, /version-watermark[^>]*>v840</, 'Live shop must expose v840 watermark');
 assert.match(html, /direct-commerce-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must retain the direct commerce bridge');
 assert.match(html, /tote-handle-color-v839\.js\?v=20260916-storefront-v839-r1/, 'Live shop must load tote handle-color behavior');
-assert.match(html, /delivery-estimate-v833\.js\?v=20260916-delivery-v833-r2/, 'Live shop must load the current delivery estimate UI');
-assert.match(html, /manual-checkout-v825\.js\?v=20260916-storefront-v837-r1/, 'Live shop must retain hardened checkout UI shell');
+assert.match(html, /delivery-estimate-v833\.js\?v=20260916-delivery-v840-r1/, 'Live shop must load the current delivery estimate UI');
+assert.match(html, /manual-checkout-v825\.js\?v=20260916-checkout-v840-r1/, 'Live shop must retain hardened checkout UI shell');
 assert.match(html, /customer-facing-checkout-v837\.js\?v=20260916-storefront-v837-r2/, 'Live shop must load v837 customer-facing checkout totals/copy layer');
 assert.match(html, /storefront-polish-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load artwork-primary storefront policy');
 assert.match(html, /storefront-polish-v832\.css\?v=20260916-storefront-v837-r1/, 'Live shop must load transparent media CSS');
@@ -163,7 +164,7 @@ assert.match(html, /collection-media-v831\.js\?v=20260916-storefront-v837-r1/, '
 assert.match(html, /image-lightbox-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load full-view lightbox');
 assert.doesNotMatch(html, /direct-commerce-v828\.js|mockup-background-v830\.js|image-lightbox-v830\.js/, 'old active media/commerce handlers must not remain in the live page');
 assert.doesNotMatch(html, />[^<]*(?:Printify|factor(?:y|ies))[^<]*</i, 'Public shop shell must not expose supplier/factory wording');
-console.log(`shop page: HTTP 200, v839 present, ${pageElapsed}ms`);
+console.log(`shop page: HTTP 200, v840 present, ${pageElapsed}ms`);
 
 const toteUi = await textAsset('https://kalenel.nl/shop/tote-handle-color-v839.js?v=20260916-storefront-v839-r1', 'tote-handle-color-v839.js');
 assert.match(toteUi, /Handle color/, 'tote selector must be Handle color');
@@ -181,6 +182,12 @@ assert.match(bridge, /pricing:'production-cost-plus-5-rounded-up'/, 'bridge must
 assert.match(bridge, /artworkFirstGallery:true/, 'bridge must declare artwork-first gallery');
 assert.match(bridge, /usesShopifyCatalogApi:false/, 'bridge must declare Shopify catalog API disabled');
 assert.match(bridge, /usesShopifyPriceApi:false/, 'bridge must declare Shopify price API disabled');
+
+
+const manualCheckoutUi = await textAsset(MANUAL_CHECKOUT_UI_URL, 'manual-checkout-v825.js');
+assert.match(manualCheckoutUi, /syncPhoneRequirement/, 'checkout UI must dynamically require phone for US delivery');
+assert.match(manualCheckoutUi, /Phone \(required for US delivery\)/, 'checkout UI must explain why the US phone is required');
+assert.match(manualCheckoutUi, /A phone number is required for delivery to the United States/, 'checkout UI must stop a US order without a phone');
 
 const deliveryUi = await textAsset(DELIVERY_UI_URL, 'delivery-estimate-v833.js');
 assert.match(deliveryUi, /Prepared in/, 'checkout delivery panel must show production location');
@@ -238,6 +245,13 @@ assert.match(lightbox, /allGalleryImages:true/, 'lightbox must include artwork a
 assert.doesNotMatch(lightbox, /EXCLUDE_FROM_EXPANDED_RE/, 'lightbox must not silently omit artwork/detail views');
 
 const liveCatalog = await catalog();
+const dispuutShirts = liveCatalog.products.filter(product => /^Dispuut Despinoza(?: Lange Roos)?$/i.test(String(product?.name || '').trim()));
+assert.equal(dispuutShirts.length, 2, 'both Dispuut shirt products must exist');
+for (const product of dispuutShirts) {
+  const back = (Array.isArray(product?.mockups) ? product.mockups : []).find(item => String(item?.label || '').toLowerCase() === 'back');
+  assert.ok(back?.image, `${product.name} must expose a back mockup`);
+  assert.match(String(back.image), /[?&]kv=\d+/, `${product.name} back mockup must be cache-busted by product updated_at`);
+}
 const hydrangea = liveCatalog.products.find(product => /^hydrangea$/i.test(String(product?.name || '').trim()));
 assert.ok(hydrangea, 'Hydrangea product must exist');
 console.log(`Hydrangea live price: €${hydrangea.price}`);

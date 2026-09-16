@@ -55,10 +55,11 @@ assert.match(toteHandleColor, /variantBoundMockups:\s*true/);
 assert.match(toteHandleColor, /sharedArtworkFirst:\s*true/);
 assert.match(toteHandleColor, /artwork\|print file\|design png/i);
 assert.match(toteHandleColor, /exactVariantSelection:\s*true/);
-assert.match(index, /version-watermark[^>]*>v839</);
+assert.match(index, /version-watermark[^>]*>v840</);
 assert.match(index, /20260916-storefront-v837-r1/);
-assert.match(index, /20260916-delivery-v833-r2/);
+assert.match(index, /20260916-delivery-v840-r1/);
 assert.match(index, /20260916-storefront-v837-r2/);
+assert.match(index, /20260916-checkout-v840-r1/);
 assert.match(index, /storefront-polish-v832\.css/);
 assert.match(index, /storefront-polish-v832\.js/);
 assert.match(index, /product-preview-overrides\.js/);
@@ -84,6 +85,18 @@ assert.match(directCommerce, /wholeEuroPricing:true/);
 assert.match(directCommerce, /usesShopifyCatalogApi:false/);
 assert.match(directCommerce, /usesShopifyPriceApi:false/);
 assert.doesNotMatch(directCommerce, /shop-manual-checkout-v828|shop-price-v818|shop-catalog-v822/);
+
+
+// US shipping quotes require a phone. Preview uses a fictitious quote-only number
+// that is never stored; real checkout requires the customer's own phone.
+assert.match(deliveryPreviewEdge, /US_QUOTE_ONLY_PHONE = "\+12025550123"/);
+assert.match(deliveryPreviewEdge, /phone: country === "US" \? US_QUOTE_ONLY_PHONE : ""/);
+assert.match(checkoutEdge, /phone_required_for_destination/);
+assert.match(checkoutEdge, /country === "US" && phone\.replace\(\/\\D\/g, ""\)\.length < 7/);
+assert.match(manualCheckout, /data-manual-phone-label/);
+assert.match(manualCheckout, /Phone \(required for US delivery\)/);
+assert.match(manualCheckout, /syncPhoneRequirement/);
+assert.match(manualCheckout, /A phone number is required for delivery to the United States/);
 
 // Delivery preview must be address-aware, non-blocking, and explicit about the
 // payment-verification delay and possible split fulfillment.
@@ -255,6 +268,9 @@ assert.match(catalogEdge, /toteHandleColors:\s*\["Black", "White"\]/);
 assert.match(catalogEdge, /isPublicVariant/);
 assert.match(catalogEdge, /variantIds/);
 assert.match(catalogEdge, /EdgeRuntime\.waitUntil/);
+assert.match(catalogEdge, /function versionedMockupUrl/);
+assert.match(catalogEdge, /url\.searchParams\.set\("kv", String\(stamp\)\)/);
+assert.match(catalogEdge, /versionedMockupUrl\(text\(image\?\.src\), product\?\.updated_at\)/);
 assert.match(catalogEdge, /get_printify_api_token_v815a/);
 assert.doesNotMatch(catalogEdge, /shop-price-v818|shop-catalog-v822|cdn\.shopify\.com/);
 
@@ -370,7 +386,7 @@ assert.match(deployWorkflow, /deploy_function shop-delivery-preview-v833/);
 assert.doesNotMatch(deployWorkflow, /functions deploy shop-manual-checkout-v828/);
 assert.doesNotMatch(catalogEdge, /jellyfish[\s\S]{0,120}media\.slice\(1\)/i);
 assert.match(liveShopCheck, /20260916-storefront-v837-r1/);
-assert.match(liveShopCheck, /20260916-delivery-v833-r2/);
+assert.match(liveShopCheck, /20260916-delivery-v840-r1/);
 assert.match(liveShopCheck, /customer-facing-checkout-v837/);
 assert.match(liveShopCheck, /Total incl\\\. shipping|Total incl\. shipping/);
 assert.match(liveShopCheck, /delivery-estimate-v833/);

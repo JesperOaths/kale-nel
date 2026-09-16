@@ -16,6 +16,7 @@ const MAX_ITEMS = 20;
 const MAX_QTY = 10;
 const MAX_FULFILLMENT_PLANS = 64;
 const CHOICE_PROVIDER_ID = 99;
+const US_QUOTE_ONLY_PHONE = "+12025550123"; // fictitious NANP 555 number; quote-only and never persisted
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl", "https://jesperoaths.github.io"]);
 const EU = new Set(["AT","BE","BG","HR","CY","CZ","DK","EE","FI","FR","DE","GR","HU","IE","IT","LV","LT","LU","MT","NL","PL","PT","RO","SK","SI","ES","SE"]);
 const text = (v: unknown) => String(v ?? "").trim();
@@ -409,7 +410,7 @@ Deno.serve(async (req: Request) => {
       candidateGroups.push(candidates);
     }
 
-    const addressTo = { first_name: "Checkout", last_name: "Estimate", email: "checkout@kalenel.nl", phone: "", country, region, address1, address2, city, zip };
+    const addressTo = { first_name: "Checkout", last_name: "Estimate", email: "checkout@kalenel.nl", phone: country === "US" ? US_QUOTE_ONLY_PHONE : "", country, region, address1, address2, city, zip };
     const plans = buildFulfillmentPlans(candidateGroups, MAX_FULFILLMENT_PLANS);
     const quotedPlans: any[] = [];
     for (const plan of plans) {
