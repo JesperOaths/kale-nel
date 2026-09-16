@@ -92,6 +92,8 @@ assert.match(deliveryEstimate, /first-item rate plus a reduced additional-item r
 assert.match(deliveryPreviewEdge, /shipping_breakdown/);
 assert.match(deliveryPreviewEdge, /customs_notice/);
 assert.match(deliveryPreviewEdge, /shippingBreakdown/);
+assert.match(deliveryPreviewEdge, /roundingDelta/);
+assert.match(deliveryPreviewEdge, /fx_rounding_adjustment_cents/);
 assert.match(deliveryPreviewEdge, /\"UNITED KINGDOM\": \"GB\"/);
 assert.match(manualCheckout, /UK↔EU/);
 assert.match(manualCheckout, /Stacked shipping/);
