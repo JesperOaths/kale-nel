@@ -1,0 +1,62 @@
+name: One-shot Supabase restart recovery
+
+on:
+  push:
+    branches: ['ops/c720p-drive-oauth-recovery']
+    paths: ['.github/workflows/ops-supabase-restart-20260916.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  restart-and-verify-control-plane:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: uiqntazgnrxwliaidkmy
+    steps:
+      - name: Restart Supabase project database service
+        shell: python
+        run: |
+          import json, os, time, urllib.request, urllib.error
+          token=os.environ.get('SUPABASE_ACCESS_TOKEN','')
+          if not token:
+              raise SystemExit('SUPABASE_ACCESS_TOKEN missing')
+          ref=os.environ['PROJECT_REF']
+          headers={'Authorization':f'Bearer {token}','Content-Type':'application/json'}
+          def request(url, method='GET', body=None, timeout=45):
+              data=None if body is None else json.dumps(body).encode()
+              req=urllib.request.Request(url,data=data,headers=headers,method=method)
+              try:
+                  with urllib.request.urlopen(req,timeout=timeout) as r:
+                      raw=r.read().decode(errors='replace')
+                      return r.status, raw
+              except urllib.error.HTTPError as e:
+                  raw=e.read().decode(errors='replace')
+                  return e.code, raw
+          status,raw=request(f'https://api.supabase.com/v1/projects/{ref}/restart','POST',{})
+          print('RESTART_HTTP=',status)
+          print('RESTART_BODY=',raw[:500])
+          if status not in (200,201,202,204):
+              raise SystemExit('Supabase restart request failed')
+          print('Restart accepted; waiting for database to return...')
+          query_url=f'https://api.supabase.com/v1/projects/{ref}/database/query'
+          last=''
+          for i in range(60):
+              time.sleep(5)
+              qstatus,qraw=request(query_url,'POST',{'query':'select 1 as ok;','read_only':True},20)
+              print(f'PROBE {i+1}: HTTP {qstatus}')
+              last=qraw
+              if qstatus==200:
+                  try:
+                      parsed=json.loads(qraw)
+                  except Exception:
+                      parsed=None
+                  print('QUERY_RESULT=',json.dumps(parsed))
+                  if isinstance(parsed,list) and parsed and parsed[0].get('ok')==1:
+                      print('RESULT=SUPABASE_RESTART_SQL_HEALTHY')
+                      break
+          else:
+              print('LAST_BODY=',last[:500])
+              raise SystemExit('Database did not recover within verification window')
