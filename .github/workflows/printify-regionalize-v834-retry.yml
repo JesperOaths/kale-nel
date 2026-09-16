@@ -1,4 +1,4 @@
-name: Inspect Despinoza Gildan 5000 text layers
+name: Probe Despinoza text-layer preservation
 
 "on":
   push:
@@ -15,15 +15,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Inspect source and regional text layers
+      - name: Probe hidden EU route copy
         shell: bash
         env:
-          ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-despinoza-diagnostic-v834
-          RUN_KEY: despinoza-diag-20260916-J7qvF4bM
+          ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-despinoza-textlayer-probe-v834
+          RUN_KEY: despinoza-textlayer-probe-20260916-U6rP9x
         run: |
           set -euo pipefail
-          curl --silent --show-error --max-time 900 \
+          code=$(curl --silent --show-error --max-time 900 \
+            --output result.json \
+            --write-out '%{http_code}' \
             --request POST "$ENDPOINT" \
             --header 'content-type: application/json' \
             --header "x-run-key: $RUN_KEY" \
-            --data '{}' | jq .
+            --data '{}')
+          jq . result.json
+          test "$code" = "200"
+          test "$(jq -r '.ok // false' result.json)" = "true"
