@@ -24,6 +24,7 @@ const deliveryPreviewEdge = read('supabase/functions/shop-delivery-preview-v833/
 const deliveryPreviewRouting = read('supabase/functions/shop-delivery-preview-v833/fulfillment-routing.mjs');
 const catalogEdge = read('supabase/functions/shop-catalog-v828/index.ts');
 const fxShared = read('supabase/functions/_shared/shop-fx.mjs');
+const obsoletePriceRule = read('supabase/functions/shop-price-rule-v819/index.ts');
 const connectionEdge = read('supabase/functions/shop-production-connection-v828/index.ts');
 const statusEdge = read('supabase/functions/shop-order-status-v825/index.ts');
 const adminEdge = read('supabase/functions/shop-admin-orders-v825/index.ts');
@@ -39,12 +40,12 @@ const deployWorkflow = read('.github/workflows/deploy-shop-fixes-v829.yml');
 const store = read('shop/store.js');
 const refresh = read('shop/live-catalog-refresh-v818.js');
 
-// v833 is the user-facing delivery-estimate revision. The hardened catalog and
-// checkout authorities remain v832, while all frontend assets are cache-busted.
+// v834 adds customs/import-cost warnings and permanently tombstones the obsolete price writer.
+// The hardened catalog and checkout authorities remain v832, while all frontend assets are cache-busted.
 assert.match(index, /direct-commerce-v832\.js/);
 assert.match(index, /manual-checkout-v825\.js/);
-assert.match(index, /version-watermark[^>]*>v833</);
-assert.match(index, /20260916-storefront-v833-r1/);
+assert.match(index, /version-watermark[^>]*>v834</);
+assert.match(index, /20260916-storefront-v834-r1/);
 assert.match(index, /storefront-polish-v832\.css/);
 assert.match(index, /storefront-polish-v832\.js/);
 assert.match(index, /product-preview-overrides\.js/);
@@ -81,6 +82,11 @@ assert.match(deliveryEstimate, /may_arrive_separately/);
 assert.match(deliveryEstimate, /Calculate delivery/);
 assert.match(deliveryEstimate, /Refresh estimate/);
 assert.match(deliveryEstimate, /delivery_address_incomplete|addressReady/);
+assert.match(deliveryEstimate, /Import-cost warning/);
+assert.match(deliveryEstimate, /United Kingdom into the EU/);
+assert.match(deliveryEstimate, /EU customs area/);
+assert.match(deliveryEstimate, /carrier handling fees/);
+assert.match(manualCheckout, /UK↔EU/);
 
 // Delivery authority reuses the same safe route-selection rules as checkout. Fixed
 // providers use Printify provider locations and route-specific V2 delivery ranges;
@@ -182,6 +188,12 @@ assert.match(fxMigration, /shipping_source_cents integer/);
 assert.match(deliveryPreviewEdge, /usdCentsToEurCents/);
 assert.match(deliveryPreviewEdge, /shipping_source_cents/);
 assert.match(deliveryPreviewEdge, /fxAuditSnapshot/);
+
+// The obsolete mutating endpoint must remain a non-writing tombstone so it cannot be redeployed accidentally.
+assert.match(obsoletePriceRule, /endpoint_disabled/);
+assert.match(obsoletePriceRule, /status: 410/);
+assert.match(obsoletePriceRule, /shop-catalog-v828/);
+assert.doesNotMatch(obsoletePriceRule, /createClient|PRINTIFY_BASE|pricedVariants|method:\s*["']PUT["']/);
 
 // Catalog pricing is derived from Printify fulfillment cost, not retail price:
 // retail = base cost + €5, rounded upward to the next whole euro. Original front

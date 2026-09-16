@@ -3,6 +3,7 @@
 
   const PREVIEW_ENDPOINT = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-delivery-preview-v833';
   const ADDRESS_FIELDS = ['address1', 'address2', 'zip', 'city', 'region', 'country'];
+  const EU_COUNTRIES = new Set(['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE']);
   let debounceTimer = 0;
   let requestSerial = 0;
   let lastQuotedSignature = '';
@@ -82,6 +83,31 @@
     if(output) output.innerHTML = `<div class="manual-delivery-preview-note">${esc(message)}</div>`;
   }
 
+  function customsWarning(form, result){
+    const destination = String(form?.elements?.namedItem('country')?.value || '').trim().toUpperCase();
+    const origins = Array.isArray(result?.origins) ? result.origins : [];
+    if(!destination || !origins.length) return '';
+
+    const unknownOrigin = origins.some(origin => !origin?.exact || !String(origin?.country_code || '').trim());
+    const originCountries = [...new Set(origins.map(origin => String(origin?.country_code || '').trim().toUpperCase()).filter(Boolean))];
+    const crossesCustomsBorder = originCountries.some(origin => origin !== destination && !(EU_COUNTRIES.has(origin) && EU_COUNTRIES.has(destination)));
+
+    if(!crossesCustomsBorder && !unknownOrigin) return '';
+    if(originCountries.includes('GB') && EU_COUNTRIES.has(destination)){
+      return 'Import-cost warning: this route ships from the United Kingdom into the EU. Import VAT, customs duties where applicable, and carrier handling fees may be charged on arrival; these costs are not included in the displayed shipping price.';
+    }
+    if(EU_COUNTRIES.has(destination) && originCountries.some(origin => !EU_COUNTRIES.has(origin))){
+      return 'Import-cost warning: this route ships into the EU from outside the EU customs area. Import VAT, customs duties where applicable, and carrier handling fees may be charged on arrival; these costs are not included in the displayed shipping price.';
+    }
+    if(destination === 'GB' && originCountries.some(origin => EU_COUNTRIES.has(origin))){
+      return 'Import-cost warning: this route ships from the EU into the United Kingdom. UK import VAT, customs duties where applicable, and carrier handling fees may be charged on arrival; these costs are not included in the displayed shipping price.';
+    }
+    if(crossesCustomsBorder){
+      return 'Import-cost warning: this is an international fulfillment route. Import taxes, customs duties, and carrier handling fees may be charged by the destination country; these costs are not included in the displayed shipping price.';
+    }
+    return 'Import-cost warning: Printify will assign the exact facility after ordering. If it fulfills outside your destination customs area, import VAT or taxes, customs duties, and carrier handling fees may apply and are not included in the displayed shipping price.';
+  }
+
   function renderResult(form, result){
     const output = outputNode(form);
     if(!output) return;
@@ -95,11 +121,14 @@
     const split = result.may_arrive_separately
       ? '<div class="manual-delivery-preview-warning">This cart may be produced by more than one facility and can arrive in separate parcels.</div>'
       : '';
+    const importWarning = customsWarning(form, result);
+    const customs = importWarning ? `<div class="manual-delivery-preview-warning">${esc(importWarning)}</div>` : '';
     output.innerHTML = `
       <div class="manual-delivery-preview-row"><span>Ships from</span><strong>${origins}</strong></div>
       <div class="manual-delivery-preview-row"><span>Estimated arrival</span><strong>${esc(eta)}</strong></div>
       <div class="manual-delivery-preview-row"><span>Shipping</span><strong>${centsMoney(result.shipping_cents)} · ${esc(titleCase(result.shipping_method || 'standard'))}</strong></div>
       ${split}
+      ${customs}
       <div class="manual-delivery-preview-note">${esc(result.note || 'Delivery dates are estimates and can change if Printify reroutes production or a carrier is delayed.')}</div>`;
   }
 
