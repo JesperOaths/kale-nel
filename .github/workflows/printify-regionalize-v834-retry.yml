@@ -1,4 +1,4 @@
-name: Finish Despinoza Gildan 5000 routes
+name: Diagnose Despinoza Gildan 5000 sources
 
 "on":
   push:
@@ -15,20 +15,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Preserve text layers and regionalize Despinoza Gildans
+      - name: Discover source products
         shell: bash
         env:
           ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-despinoza-gildan5000-v834
           RUN_KEY: despinoza-g5000-20260916-Yp6Wq9uN
         run: |
           set -euo pipefail
-          code=$(curl --silent --show-error --max-time 900 \
-            --output result.json \
-            --write-out '%{http_code}' \
+          curl --silent --show-error --max-time 900 \
             --request POST "$ENDPOINT" \
             --header 'content-type: application/json' \
             --header "x-run-key: $RUN_KEY" \
-            --data '{}')
-          jq '{ok,sources,routed,mapping_rows,upsert_error,error,results}' result.json || cat result.json
-          test "$code" = "200"
-          test "$(jq -r '.ok // false' result.json)" = "true"
+            --data '{}' | jq .
