@@ -68,7 +68,7 @@
       .manual-delivery-preview-row{display:grid;grid-template-columns:minmax(105px,.34fr) 1fr;gap:12px}
       .manual-delivery-preview-row span:first-child{color:#6b6b6b}
       .manual-delivery-preview-note{margin-top:3px;color:#737373;font-size:12px}
-      .manual-delivery-preview-warning{margin-top:3px;color:#725222;font-size:12px;font-weight:700}
+      .manual-delivery-preview-warning{margin-top:8px;padding:10px 12px;border:1px solid #d8b36c;border-radius:10px;background:#fff7e7;color:#6b4200;font-size:12px;font-weight:800}\n      .manual-shipping-breakdown{margin-top:9px;padding:10px 12px;border:1px solid #ddd8cf;border-radius:10px;background:#fff}\n      .manual-shipping-breakdown-row{display:flex;justify-content:space-between;gap:12px;margin:5px 0}\n      .manual-shipping-breakdown-items{color:#6b6b6b;font-size:12px;font-weight:400}
       @media(max-width:560px){.manual-delivery-preview-row{grid-template-columns:1fr;gap:2px}}
     `;
     document.head.appendChild(style);
@@ -84,6 +84,7 @@
   }
 
   function customsWarning(form, result){
+    if(String(result?.customs_notice || '').trim()) return String(result.customs_notice).trim();
     const destination = String(form?.elements?.namedItem('country')?.value || '').trim().toUpperCase();
     const origins = Array.isArray(result?.origins) ? result.origins : [];
     if(!destination || !origins.length) return '';
@@ -118,15 +119,27 @@
     const eta = Number.isFinite(Number(delivery.min_business_days)) && Number.isFinite(Number(delivery.max_business_days))
       ? `${Number(delivery.min_business_days)}–${Number(delivery.max_business_days)} business days after payment verification`
       : 'Exact route-specific delivery range becomes available when Printify confirms the facility';
-    const split = result.may_arrive_separately
-      ? '<div class="manual-delivery-preview-warning">This cart may be produced by more than one facility and can arrive in separate parcels.</div>'
+    const groups = Array.isArray(result.shipping_breakdown) ? result.shipping_breakdown : [];
+    const groupRows = groups.map(group => {
+      const items = Array.isArray(group.items) ? group.items.map(item => `${Number(item.quantity || 1)}× ${esc(item.name || 'Shirt')}${item.size ? ` (${esc(item.size)})` : ''}`).join(', ') : '';
+      const label = esc(group.origin || group.provider || `Print provider ${group.provider_id || ''}`);
+      return `<div class="manual-shipping-breakdown-row"><span><strong>${label}</strong><br><span class="manual-shipping-breakdown-items">${items}</span></span><strong>${centsMoney(group.shipping_cents)}</strong></div>`;
+    }).join('');
+    const breakdown = groupRows
+      ? `<div class="manual-shipping-breakdown"><strong>Where your shipping fee comes from</strong>${groupRows}<div class="manual-shipping-breakdown-row"><span><strong>Total shipping</strong></span><strong>${centsMoney(result.shipping_cents)}</strong></div></div>`
       : '';
+    const split = result.shipping_stacks || result.may_arrive_separately
+      ? `<div class="manual-delivery-preview-warning">Stacked shipping: Printify is creating ${Number(result.provider_groups || groups.length || 2)} separate fulfilment shipments, so each factory adds its own shipping charge. The amounts above are added together and parcels may arrive separately.</div>`
+      : (groups.some(group => (group.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0) > 1)
+        ? '<div class="manual-delivery-preview-note">Multiple pieces from one factory use Printify\'s first-item rate plus a reduced additional-item rate. Shipping therefore rises with quantity, but usually by less than another full first-item charge.</div>'
+        : '');
     const importWarning = customsWarning(form, result);
     const customs = importWarning ? `<div class="manual-delivery-preview-warning">${esc(importWarning)}</div>` : '';
     output.innerHTML = `
       <div class="manual-delivery-preview-row"><span>Ships from</span><strong>${origins}</strong></div>
       <div class="manual-delivery-preview-row"><span>Estimated arrival</span><strong>${esc(eta)}</strong></div>
       <div class="manual-delivery-preview-row"><span>Shipping</span><strong>${centsMoney(result.shipping_cents)} · ${esc(titleCase(result.shipping_method || 'standard'))}</strong></div>
+      ${breakdown}
       ${split}
       ${customs}
       <div class="manual-delivery-preview-note">${esc(result.note || 'Delivery dates are estimates and can change if Printify reroutes production or a carrier is delayed.')}</div>`;
