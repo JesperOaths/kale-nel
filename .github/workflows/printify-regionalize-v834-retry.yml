@@ -1,4 +1,4 @@
-name: Finish Gildan 5000 regionalization v834
+name: Finish missing AU Gildan 5000 routes
 
 "on":
   push:
@@ -13,29 +13,22 @@ permissions:
 jobs:
   regionalize:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
-      - name: Regionalize all Gildan 5000 products
+      - name: Finish missing AU routes
         shell: bash
         env:
-          ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-regionalize-gildan5000-v834
-          RUN_KEY: xgqDK-T7Ri6SpqUrmL51bt-A9axN0nQuTn66uFNUCGw
+          ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-au-gildan5000-missing-v834
+          RUN_KEY: g5000-au-missing-20260916-GR2x3jdpPvF7
         run: |
-          set -u
-          failed=0
-          for region in EU UK CA AU; do
-            echo "=== ${region} ==="
-            code=$(curl --silent --show-error --max-time 300 \
-              --output "result-${region}.json" \
-              --write-out '%{http_code}' \
-              --request POST "$ENDPOINT" \
-              --header 'content-type: application/json' \
-              --header "x-admin-key: $RUN_KEY" \
-              --data "{\"region\":\"${region}\"}") || code=000
-            jq '{ok,region,provider_id,source_count,routed_count,mapping_rows,upsert_error,error,results:[(.results // [])[]|{title,target_id,created,ok,visible,enabled_count,shipping,error,validation}]}' "result-${region}.json" 2>/dev/null || cat "result-${region}.json"
-            if [ "$code" != "200" ] || [ "$(jq -r '.ok // false' "result-${region}.json" 2>/dev/null)" != "true" ]; then
-              echo "Regionalization did not fully pass for ${region} (HTTP ${code})"
-              failed=1
-            fi
-          done
-          exit "$failed"
+          set -euo pipefail
+          code=$(curl --silent --show-error --max-time 600 \
+            --output result.json \
+            --write-out '%{http_code}' \
+            --request POST "$ENDPOINT" \
+            --header 'content-type: application/json' \
+            --header "x-run-key: $RUN_KEY" \
+            --data '{}')
+          jq '{ok,routed,mapping_rows,upsert_error,error,results}' result.json || cat result.json
+          test "$code" = "200"
+          test "$(jq -r '.ok // false' result.json)" = "true"
