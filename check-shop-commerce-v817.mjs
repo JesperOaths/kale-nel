@@ -40,12 +40,12 @@ const deployWorkflow = read('.github/workflows/deploy-shop-fixes-v829.yml');
 const store = read('shop/store.js');
 const refresh = read('shop/live-catalog-refresh-v818.js');
 
-// v834 adds customs/import-cost warnings and permanently tombstones the obsolete price writer.
-// The hardened catalog and checkout authorities remain v832, while all frontend assets are cache-busted.
+// v835 adds per-factory stacked-shipping breakdowns, server-authored customs notices,
+// and the €23 minimum shirt price. The hardened checkout authority remains v832.
 assert.match(index, /direct-commerce-v832\.js/);
 assert.match(index, /manual-checkout-v825\.js/);
-assert.match(index, /version-watermark[^>]*>v834</);
-assert.match(index, /20260916-storefront-v834-r1/);
+assert.match(index, /version-watermark[^>]*>v835</);
+assert.match(index, /20260916-storefront-v835-r1/);
 assert.match(index, /storefront-polish-v832\.css/);
 assert.match(index, /storefront-polish-v832\.js/);
 assert.match(index, /product-preview-overrides\.js/);
@@ -86,7 +86,15 @@ assert.match(deliveryEstimate, /Import-cost warning/);
 assert.match(deliveryEstimate, /United Kingdom into the EU/);
 assert.match(deliveryEstimate, /EU customs area/);
 assert.match(deliveryEstimate, /carrier handling fees/);
+assert.match(deliveryEstimate, /Where your shipping fee comes from/);
+assert.match(deliveryEstimate, /Stacked shipping/);
+assert.match(deliveryEstimate, /first-item rate plus a reduced additional-item rate/);
+assert.match(deliveryPreviewEdge, /shipping_breakdown/);
+assert.match(deliveryPreviewEdge, /customs_notice/);
+assert.match(deliveryPreviewEdge, /shippingBreakdown/);
+assert.match(deliveryPreviewEdge, /\"UNITED KINGDOM\": \"GB\"/);
 assert.match(manualCheckout, /UK↔EU/);
+assert.match(manualCheckout, /Stacked shipping/);
 
 // Delivery authority reuses the same safe route-selection rules as checkout. Fixed
 // providers use Printify provider locations and route-specific V2 delivery ranges;
@@ -178,6 +186,7 @@ assert.equal(ecbSample.eur_usd, 1.1539);
 assert.equal(ecbSample.usd_eur, 0.8666262241);
 assert.equal(usdCentsToEurCents(1661, ecbSample.usd_eur), 1439);
 assert.equal(retailEurCentsFromUsdCost(1661, ecbSample.usd_eur, 500), 2000);
+assert.equal(retailEurCentsFromUsdCost(1661, ecbSample.usd_eur, 500, 2300), 2300);
 assert.equal(usdCentsToEurCents(1039, ecbSample.usd_eur), 900);
 assert.match(fxShared, /shop_fx_rates/);
 assert.match(fxShared, /eurofxref-daily\.xml/);
@@ -199,9 +208,10 @@ assert.doesNotMatch(obsoletePriceRule, /createClient|PRINTIFY_BASE|pricedVariant
 // retail = base cost + €5, rounded upward to the next whole euro. Original front
 // artwork from print_areas is inserted before generated garment mockups.
 assert.match(catalogEdge, /const MARGIN_CENTS = 500/);
+assert.match(catalogEdge, /const MIN_RETAIL_CENTS = 2300/);
 assert.match(catalogEdge, /resolveUsdEurRate/);
 assert.match(catalogEdge, /retailEurCentsFromUsdCost/);
-assert.match(catalogEdge, /price:\s*retailEurCentsFromUsdCost\(variant\?\.cost, fx, MARGIN_CENTS\) \/ 100/);
+assert.match(catalogEdge, /price:\s*retailEurCentsFromUsdCost\(variant\?\.cost, fx, MARGIN_CENTS, MIN_RETAIL_CENTS\) \/ 100/);
 assert.match(catalogEdge, /sourceCurrency:\s*"USD"/);
 assert.match(catalogEdge, /displayCurrency:\s*"EUR"/);
 assert.doesNotMatch(catalogEdge, /priceEuros\(variant\?\.price\)/);
@@ -230,9 +240,10 @@ assert.match(checkoutEdge, /pricingBase:\s*"printify-variant-cost"/);
 assert.match(checkoutEdge, /marginEuros:\s*MARGIN_CENTS \/ 100/);
 assert.match(checkoutEdge, /rounding:\s*"whole-euro-ceiling"/);
 assert.match(checkoutEdge, /const MARGIN_CENTS = 500/);
+assert.match(checkoutEdge, /const MIN_RETAIL_CENTS = 2300/);
 assert.match(checkoutEdge, /resolveUsdEurRate/);
 assert.match(checkoutEdge, /retailEurCentsFromUsdCost/);
-assert.match(checkoutEdge, /retailEurCentsFromUsdCost\(freshVariant\?\.cost, fx, MARGIN_CENTS\)/);
+assert.match(checkoutEdge, /retailEurCentsFromUsdCost\(freshVariant\?\.cost, fx, MARGIN_CENTS, MIN_RETAIL_CENTS\)/);
 assert.match(checkoutEdge, /usdCentsToEurCents/);
 assert.match(checkoutEdge, /shipping_source_cents/);
 assert.match(checkoutEdge, /fx_snapshot:\s*fxAuditSnapshot\(fx\)/);
@@ -343,4 +354,4 @@ assert.match(liveShopCheck, /RESULT=V833_DELIVERY_ESTIMATE_PASS/);
 assert.match(liveShopCheck, /Deliberately read-only/);
 assert.doesNotMatch(liveShopCheck, /method:\s*['"]POST['"]/);
 
-console.log('Shop commerce v833 delivery-estimate + artwork-first + cost+5 + transparent-media contract passed.');
+console.log('Shop commerce v835 shipping-breakdown + import-warning + €23-floor contract passed.');

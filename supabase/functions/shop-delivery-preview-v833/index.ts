@@ -36,8 +36,16 @@ function cors(req: Request) {
 const json = (req: Request, body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: cors(req) });
 function normalizeCountry(v: unknown) { return text(v || "NL").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2); }
 function strictCountry(v: unknown) {
-  const code = text(v).toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2);
-  return code.length === 2 ? code : "";
+  const raw = text(v);
+  const code = raw.toUpperCase().replace(/[^A-Z]/g, "");
+  if (/^[A-Z]{2}$/.test(code)) return code;
+  const aliases: Record<string, string> = {
+    "UNITED KINGDOM": "GB", "GREAT BRITAIN": "GB", "ENGLAND": "GB",
+    "UNITED STATES": "US", "UNITED STATES OF AMERICA": "US", "USA": "US",
+    "CZECH REPUBLIC": "CZ", "CZECHIA": "CZ", "NETHERLANDS": "NL",
+    "GERMANY": "DE", "FRANCE": "FR", "CANADA": "CA", "AUSTRALIA": "AU",
+  };
+  return aliases[raw.toUpperCase()] || "";
 }
 
 async function printify(base: string, token: string, path: string, init: RequestInit = {}, timeoutMs = 10000) {
@@ -153,6 +161,7 @@ async function providerOrigin(token: string, providerId: number, destinationCoun
     return {
       provider_id: providerId,
       provider: "Printify Choice",
+      country_code: null,
       label: `Printify Choice network — Printify will try to fulfill in or near ${choiceRegion(destinationCountry)}; if no suitable nearby facility is available, it may ship from the US`,
       exact: false,
     };
@@ -177,6 +186,67 @@ async function providerOrigin(token: string, providerId: number, destinationCoun
   } catch {
     return { provider_id: providerId, provider: `Print provider ${providerId}`, label: `Print provider ${providerId} — origin location temporarily unavailable`, exact: false };
   }
+}
+
+function quoteCentsForCode(quote: any, code: number) {
+  const raw = code === 4 ? quote?.economy
+    : code === 1 ? quote?.standard
+    : code === 2 ? (quote?.priority ?? quote?.express)
+    : code === 3 ? (quote?.printify_express ?? quote?.express)
+    : null;
+  const cents = Number(raw);
+  return Number.isFinite(cents) && cents >= 0 ? Math.round(cents) : null;
+}
+
+async function shippingBreakdown(token: string, shopId: string, selected: any, addressTo: any, fx: any, origins: any[]) {
+  const groups = new Map<number, any[]>();
+  for (const candidate of selected.plan.candidates) {
+    const providerId = Number(candidate?.print_provider_id);
+    if (!Number.isInteger(providerId)) continue;
+    if (!groups.has(providerId)) groups.set(providerId, []);
+    groups.get(providerId)!.push(candidate);
+  }
+  const originMap = new Map(origins.map(origin => [Number(origin?.provider_id), origin]));
+  return await Promise.all([...groups.entries()].map(async ([providerId, candidates]) => {
+    const lineItems = candidates.map((candidate: any, index: number) => ({
+      product_id: candidate.product_id,
+      variant_id: candidate.variant_id,
+      quantity: candidate.quantity,
+      external_id: `breakdown-${providerId}-${index + 1}`,
+    }));
+    const quote = await printifyV1(token, `/shops/${shopId}/orders/shipping.json`, {
+      method: "POST",
+      body: JSON.stringify({ line_items: lineItems, address_to: addressTo }),
+    }, 8500);
+    const sourceCents = quoteCentsForCode(quote, Number(selected.shipping.code)) ?? cheapestShippingQuote(quote)?.cents;
+    if (!Number.isFinite(Number(sourceCents))) throw new Error("Shipping breakdown unavailable");
+    const origin = originMap.get(providerId) || {};
+    return {
+      provider_id: providerId,
+      provider: origin.provider || `Print provider ${providerId}`,
+      origin: origin.label || null,
+      country_code: origin.country_code || null,
+      shipping_cents: usdCentsToEurCents(Number(sourceCents), fx),
+      shipping_source_cents: Number(sourceCents),
+      items: candidates.map((candidate: any) => ({
+        name: clean(candidate.item_name) || "Shirt",
+        size: clean(candidate.item_size) || null,
+        quantity: Math.max(1, Math.round(Number(candidate.quantity || 1))),
+      })),
+    };
+  }));
+}
+
+function customsNotice(destination: string, origins: any[]) {
+  const originCountries = [...new Set(origins.map(origin => strictCountry(origin?.country_code)).filter(Boolean))];
+  const unknownOrigin = origins.some(origin => origin?.exact !== true || !strictCountry(origin?.country_code));
+  const crosses = originCountries.some(origin => origin !== destination && !(EU.has(origin) && EU.has(destination)));
+  if (originCountries.includes("GB") && EU.has(destination)) return "Import-cost warning: this route ships from the United Kingdom into the EU. Import VAT, customs duties where applicable, and carrier handling fees may be charged on arrival; these costs are not included in shipping.";
+  if (EU.has(destination) && originCountries.some(origin => !EU.has(origin))) return "Import-cost warning: this route ships into the EU from outside the EU customs area. Import VAT, customs duties where applicable, and carrier handling fees may be charged on arrival; these costs are not included in shipping.";
+  if (destination === "GB" && originCountries.some(origin => EU.has(origin))) return "Import-cost warning: this route ships from the EU into the United Kingdom. UK import VAT, customs duties where applicable, and carrier handling fees may be charged on arrival; these costs are not included in shipping.";
+  if (crosses) return "Import-cost warning: this route crosses a customs border. Import taxes, customs duties, and carrier handling fees may be charged by the destination country and are not included in shipping.";
+  if (unknownOrigin) return "Import-cost warning: Printify assigns the exact facility later. If it ships from outside your customs area, import VAT or taxes, customs duties, and carrier handling fees may apply and are not included in shipping.";
+  return null;
 }
 
 function choiceDelivery(shippingMethod: string, destinationCountry: string) {
@@ -294,6 +364,8 @@ Deno.serve(async (req: Request) => {
         blueprint_id: Number(freshProduct?.blueprint_id),
         print_provider_id: Number(freshProduct?.print_provider_id),
         estimated_import_cents_per_unit: 0,
+        item_name: clean(row.cached.product.name),
+        item_size: clean(row.cached.variant.size),
       }];
       for (const mapping of eligibleMappings.filter((entry: any) => entry.source.product_id === productId && entry.source.variant_id === variantId)) {
         const targetProduct = freshProducts.get(mapping.target.product_id);
@@ -311,6 +383,8 @@ Deno.serve(async (req: Request) => {
           blueprint_id: mapping.target.blueprint_id,
           print_provider_id: mapping.target.print_provider_id,
           estimated_import_cents_per_unit: validation.estimated_import_cents_per_unit || 0,
+          item_name: clean(row.cached.product.name),
+          item_size: clean(row.cached.variant.size),
         });
       }
       candidateGroups.push(candidates);
@@ -343,6 +417,8 @@ Deno.serve(async (req: Request) => {
       Promise.all(uniqueProviders.map(providerId => providerOrigin(printifyToken, providerId, country))),
       Promise.all(selected.plan.candidates.map((candidate: any) => deliveryRange(printifyToken, candidate, selected.shipping.name, country))),
     ]);
+    const shipping_breakdown = await shippingBreakdown(printifyToken, shopId, selected, addressTo, fx, origins);
+    const customs_notice = customsNotice(country, origins);
     const ranges = rawRanges.filter(Boolean) as { from: number; to: number; source: string; choice?: boolean; fallback?: { from: number; to: number } | null }[];
     const complete = ranges.length === selected.plan.candidates.length;
     const hasChoice = ranges.some(range => range.choice);
@@ -380,6 +456,9 @@ Deno.serve(async (req: Request) => {
       shipping_method: selected.shipping.name,
       shipping_method_code: selected.shipping.code,
       origins,
+      shipping_breakdown,
+      customs_notice,
+      shipping_stacks: shipping_breakdown.length > 1,
       provider_groups: Number(selected.plan.provider_groups || uniqueProviders.length || 1),
       may_arrive_separately: Number(selected.plan.provider_groups || 1) > 1,
       delivery,
