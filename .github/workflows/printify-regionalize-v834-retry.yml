@@ -1,4 +1,4 @@
-name: Regionalize Dispuut Gildan 5000 shirts
+name: Finalize Dispuut regional routing validator
 
 "on":
   push:
@@ -8,62 +8,165 @@ name: Regionalize Dispuut Gildan 5000 shirts
       - '.github/workflows/printify-regionalize-v834-retry.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   regionalize:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
-      - name: Build portable Despinoza neck text artwork
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Teach checkout validator about the verified static neck layer
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq fonts-montserrat python3-pil
           python3 - <<'PY'
-          from PIL import Image, ImageDraw, ImageFont
-          import subprocess
-          text = 'Despinoza'
-          ratio = 953.8000400000001 / 180.8
-          font_path = subprocess.check_output(['fc-match','-f','%{file}','Montserrat:style=Black'], text=True).strip()
-          if not font_path:
-              raise SystemExit('Montserrat Black font unavailable')
-          font = ImageFont.truetype(font_path, 900)
-          scratch = Image.new('RGBA', (7000, 1800), (0,0,0,0))
-          draw = ImageDraw.Draw(scratch)
-          box = draw.textbbox((0,0), text, font=font)
-          draw.text((-box[0], -box[1]), text, font=font, fill=(0,0,0,255))
-          crop = scratch.crop(scratch.getbbox())
-          w = 4096
-          h = round(w / ratio)
-          crop = crop.resize((w,h), Image.Resampling.LANCZOS)
-          crop.save('despinoza-neck-v834.png', optimize=True)
-          print(f'Generated static neck text: {w}x{h}, font={font_path}')
-          PY
-          python3 - <<'PY'
-          import base64, json
-          with open('despinoza-neck-v834.png','rb') as f:
-              contents = base64.b64encode(f.read()).decode('ascii')
-          with open('payload.json','w',encoding='utf-8') as f:
-              json.dump({'contents': contents}, f, separators=(',',':'))
+          from pathlib import Path
+
+          paths = [
+              Path('supabase/functions/shop-manual-checkout-v832/fulfillment-routing.mjs'),
+              Path('supabase/functions/shop-delivery-preview-v833/fulfillment-routing.mjs'),
+          ]
+
+          constants = '''
+          const DESPINOZA_SOURCE_PRODUCT_IDS = new Set([
+            "6a975ec45d07cc05a702a491",
+            "6a9742c08816f2362104d5cc",
+          ]);
+          const DESPINOZA_NATIVE_TEXT_ID = "7b14de2d-815d-a93b-cdd3-69d9c2cb3e2f";
+          const DESPINOZA_INTERNAL_TEXT_ID = "5941187eb8e7e37b3f0e62e5";
+          const DESPINOZA_STATIC_TEXT_ID = "6aa9f09621bcc1035c7dae61";
+          const DESPINOZA_TEXT_MARKER = "__despinoza_text__";
+          const DESPINOZA_REGIONAL_PROVIDERS = new Set([27, 30, 331, 438]);
+          '''
+
+          helper = '''
+          function despinozaCanonicalArtworkSignature(product, variantId, role) {
+            const wanted = Number(variantId);
+            const entries = [];
+            for (const area of Array.isArray(product?.print_areas) ? product.print_areas : []) {
+              const variantIds = Array.isArray(area?.variant_ids) ? area.variant_ids.map(Number) : [];
+              if (variantIds.length && !variantIds.includes(wanted)) continue;
+              for (const placeholder of Array.isArray(area?.placeholders) ? area.placeholders : []) {
+                const position = text(placeholder?.position).toLowerCase();
+                for (const image of Array.isArray(placeholder?.images) ? placeholder.images : []) {
+                  let id = text(image?.id);
+                  if (!position || !id) continue;
+                  if (role === "source" && id === DESPINOZA_INTERNAL_TEXT_ID) continue;
+                  if (role === "source" && id === DESPINOZA_NATIVE_TEXT_ID) id = DESPINOZA_TEXT_MARKER;
+                  if (role === "target" && id === DESPINOZA_STATIC_TEXT_ID) id = DESPINOZA_TEXT_MARKER;
+                  entries.push(`${position}:${id}`);
+                }
+              }
+            }
+            return [...new Set(entries)].sort().join("|");
+          }
+
+          function despinozaStaticArtworkEquivalent(mapping, sourceProduct, sourceVariant, targetProduct, targetVariant) {
+            const sourceId = text(sourceProduct?.id);
+            if (!DESPINOZA_SOURCE_PRODUCT_IDS.has(sourceId)) return false;
+            if (sourceId !== text(mapping?.source?.product_id)) return false;
+            if (Number(sourceVariant?.id) !== Number(mapping?.source?.variant_id)) return false;
+            if (Number(targetVariant?.id) !== Number(mapping?.target?.variant_id)) return false;
+            if (!DESPINOZA_REGIONAL_PROVIDERS.has(Number(targetProduct?.print_provider_id))) return false;
+            if (targetProduct?.visible !== false) return false;
+            const approval = text(mapping?.approval_id);
+            const expectedTail = `_${sourceId}_${Number(sourceVariant?.id)}`;
+            if (!/^g5000_(?:eu|uk|ca|au)_/.test(approval) || !approval.endsWith(expectedTail)) return false;
+            const sourceArtwork = despinozaCanonicalArtworkSignature(sourceProduct, sourceVariant?.id, "source");
+            const targetArtwork = despinozaCanonicalArtworkSignature(targetProduct, targetVariant?.id, "target");
+            return sourceArtwork.includes(`neck:${DESPINOZA_TEXT_MARKER}`)
+              && targetArtwork.includes(`neck:${DESPINOZA_TEXT_MARKER}`)
+              && sourceArtwork === targetArtwork;
+          }
+
+          '''
+
+          old_block = '''  const sourceArtwork = artworkSignature(sourceProduct, sourceVariant?.id);
+            const targetArtwork = artworkSignature(targetProduct, targetVariant?.id);
+            if (!sourceArtwork || sourceArtwork !== targetArtwork) return { ok: false, reason: "artwork_mismatch" };
+          '''
+          new_block = '''  const sourceArtwork = artworkSignature(sourceProduct, sourceVariant?.id);
+            const targetArtwork = artworkSignature(targetProduct, targetVariant?.id);
+            const approvedStaticTextEquivalent = despinozaStaticArtworkEquivalent(mapping, sourceProduct, sourceVariant, targetProduct, targetVariant);
+            if (!sourceArtwork || (sourceArtwork !== targetArtwork && !approvedStaticTextEquivalent)) return { ok: false, reason: "artwork_mismatch" };
+          '''
+
+          for path in paths:
+              source = path.read_text(encoding='utf-8')
+              anchor = 'const clean = value => text(value).replace(/\\s+/g, " ");\n'
+              if 'DESPINOZA_SOURCE_PRODUCT_IDS' not in source:
+                  if anchor not in source:
+                      raise SystemExit(f'constant anchor missing: {path}')
+                  source = source.replace(anchor, anchor + constants + '\n', 1)
+              if 'function despinozaStaticArtworkEquivalent' not in source:
+                  marker = 'function validId(value, min = 1, max = 100) {'
+                  if marker not in source:
+                      raise SystemExit(f'helper anchor missing: {path}')
+                  source = source.replace(marker, helper + marker, 1)
+              if new_block not in source:
+                  if old_block not in source:
+                      raise SystemExit(f'validator block missing: {path}')
+                  source = source.replace(old_block, new_block, 1)
+              path.write_text(source, encoding='utf-8')
           PY
 
-      - name: Create and validate all regional Dispuut routes
-        shell: bash
-        env:
-          ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-despinoza-regionalize-v834
-          RUN_KEY: despinoza-final-regional-20260916-F7cN4r
-        run: |
-          set -euo pipefail
-          code=$(curl --silent --show-error --max-time 1500 \
-            --output result.json \
-            --write-out '%{http_code}' \
-            --request POST "$ENDPOINT" \
-            --header 'content-type: application/json' \
-            --header "x-run-key: $RUN_KEY" \
-            --data-binary @payload.json)
-          jq '{ok,static_upload,routed,mapping_rows,results}' result.json
-          test "$code" = "200"
-          test "$(jq -r '.ok // false' result.json)" = "true"
-          test "$(jq -r '.mapping_rows // 0' result.json)" = "64"
+          node --check supabase/functions/shop-manual-checkout-v832/fulfillment-routing.mjs
+          node --check supabase/functions/shop-delivery-preview-v833/fulfillment-routing.mjs
+
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { validateMappedCandidate } from './supabase/functions/shop-manual-checkout-v832/fulfillment-routing.mjs';
+          const sourceId = '6a9742c08816f2362104d5cc';
+          const variantId = 12102;
+          const opts = [
+            {type:'color', values:[{id:1,title:'White'}]},
+            {type:'size', values:[{id:2,title:'S'}]},
+          ];
+          const source = {
+            id: sourceId, blueprint_id: 6, print_provider_id: 99, visible: true, options: opts,
+            print_areas: [{variant_ids:[variantId],placeholders:[
+              {position:'front',images:[{id:'front-art'}]},
+              {position:'back',images:[{id:'back-art'}]},
+              {position:'neck',images:[
+                {id:'5941187eb8e7e37b3f0e62e5'},
+                {id:'bruis-logo'},
+                {id:'7b14de2d-815d-a93b-cdd3-69d9c2cb3e2f'},
+              ]},
+            ]}],
+          };
+          const target = {
+            id:'regional-target', blueprint_id:6, print_provider_id:30, visible:false, options:opts,
+            print_areas:[{variant_ids:[variantId],placeholders:[
+              {position:'front',images:[{id:'front-art'}]},
+              {position:'back',images:[{id:'back-art'}]},
+              {position:'neck',images:[{id:'bruis-logo'},{id:'6aa9f09621bcc1035c7dae61'}]},
+            ]}],
+          };
+          const mapping = {
+            approval_id:`g5000_eu_${sourceId}_${variantId}`,
+            countries:['NL'], estimated_import_cents_per_unit:0,
+            source:{product_id:sourceId,variant_id:variantId,blueprint_id:6,print_provider_id:99},
+            target:{product_id:'regional-target',variant_id:variantId,blueprint_id:6,print_provider_id:30},
+          };
+          const sv={id:variantId,options:[1,2]};
+          const tv={id:variantId,options:[1,2],is_enabled:true,is_available:true,cost:1700};
+          assert.equal(validateMappedCandidate(mapping,'NL',source,sv,target,tv).ok,true);
+          const tampered=structuredClone(target);
+          tampered.print_areas[0].placeholders[1].images[0].id='wrong-back-art';
+          assert.equal(validateMappedCandidate(mapping,'NL',source,sv,tampered,tv).ok,false);
+          const visible=structuredClone(target); visible.visible=true;
+          assert.equal(validateMappedCandidate(mapping,'NL',source,sv,visible,tv).ok,false);
+          console.log('Dispuut regional validator tests passed');
+          NODE
+
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add supabase/functions/shop-manual-checkout-v832/fulfillment-routing.mjs \
+                  supabase/functions/shop-delivery-preview-v833/fulfillment-routing.mjs
+          git commit -m 'fix: accept validated Dispuut regional neck artwork'
+          git push
