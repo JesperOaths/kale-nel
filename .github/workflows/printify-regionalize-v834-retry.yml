@@ -1,4 +1,4 @@
-name: Inspect Despinoza mockup assets
+name: Inspect Despinoza regional mockups
 
 "on":
   push:
@@ -15,11 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Inspect source mockups and print assets
+      - name: Inspect source and hidden regional collar mockups
         shell: bash
         env:
-          ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-despinoza-mockup-diag-v834
-          RUN_KEY: despinoza-mockup-diag-20260916-4Kp8z
+          ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-despinoza-target-images-v834
+          RUN_KEY: despinoza-target-images-20260916-R8mQ2
         run: |
           set -euo pipefail
           curl --silent --show-error --max-time 900 \
