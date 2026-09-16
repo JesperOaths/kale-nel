@@ -25,13 +25,12 @@ jobs:
 
           def replace_once(path, old, new):
               p = Path(path)
-              s = p.read_text()
-              if old not in s:
-                  raise SystemExit(f'Missing expected block in {path}: {old[:120]!r}')
-              s2 = s.replace(old, new, 1)
-              p.write_text(s2)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f'Missing expected text in {path}: {old[:140]!r}')
+              p.write_text(text.replace(old, new, 1))
 
-          # 1) Catalog: expose only Black + White tote handle variants, retain variant-bound mockups.
+          # Catalog: clothing remains white-only, tote exposes only Black and White handles.
           path = 'supabase/functions/shop-catalog-v828/index.ts'
           replace_once(path,
           '''function isWhiteVariant(product: any, variant: any) {
@@ -48,7 +47,6 @@ jobs:
             if (isToteProduct(product)) return /^(?:black|white)$/i.test(color);
             return !color || /^white$/i.test(color);
           }''')
-
           replace_once(path,
           '''    .map((image: any, index: number) => ({ image: text(image?.src), label: text(image?.position || `View ${index + 1}`), index }))''',
           '''    .map((image: any, index: number) => ({
@@ -57,34 +55,29 @@ jobs:
               index,
               variantIds: Array.isArray(image?.variant_ids) ? image.variant_ids.map((id: unknown) => String(id)) : [],
             }))''')
-
           replace_once(path,
           '''  return media.slice(0, 24).map(({ image, label }: any) => ({ image, label }));''',
           '''  return media.slice(0, 24).map(({ image, label, variantIds }: any) => ({ image, label, variantIds }));''')
-
           replace_once(path,
           '''    .filter((variant: any) => isWhiteVariant(product, variant))''',
           '''    .filter((variant: any) => isPublicVariant(product, variant))''')
-
           replace_once(path,
           '''  const collection = collectionFor(product);
             return {
-              id: text(product?.id), source: "bruis-direct-v836", name: text(product?.title), description: text(product?.description),
-              collection, price: prices.length ? Math.min(...prices) : 0, priceMax: prices.length ? Math.max(...prices) : 0,
-              sizes, mockups, image: mockups[0]?.image || "", baseKey: String(product?.blueprint_id || "shirt"),''',
+              id: text(product?.id), source: "bruis-direct-v836", name: text(product?.title), description: text(product?.description),''',
           '''  const collection = collectionFor(product);
             const colors = [...new Set(priced.map((variant: any) => text(variant?.color)).filter(Boolean))];
             const selectorType = isToteProduct(product) ? "handle-color" : "size";
             return {
-              id: text(product?.id), source: "bruis-direct-v836", name: text(product?.title), description: text(product?.description),
-              collection, price: prices.length ? Math.min(...prices) : 0, priceMax: prices.length ? Math.max(...prices) : 0,
-              sizes, colors, selectorType, mockups, image: mockups[0]?.image || "", baseKey: String(product?.blueprint_id || "shirt"),''')
-
+              id: text(product?.id), source: "bruis-direct-v836", name: text(product?.title), description: text(product?.description),''')
+          replace_once(path,
+          '''    sizes, mockups, image: mockups[0]?.image || "", baseKey: String(product?.blueprint_id || "shirt"),''',
+          '''    sizes, colors, selectorType, mockups, image: mockups[0]?.image || "", baseKey: String(product?.blueprint_id || "shirt"),''')
           replace_once(path,
           '''      ok: true, mode: "bruis-direct-catalog-v836", usesShopifyApi: false, whiteVariantsOnly: true,''',
           '''      ok: true, mode: "bruis-direct-catalog-v836", usesShopifyApi: false, whiteVariantsOnly: false, toteHandleColors: ["Black", "White"],''')
 
-          # 2) Checkout authority: permit Black/White only for tote products and preserve chosen handle color in the order.
+          # Checkout authority: accept Black/White tote variants, preserve exact color in the order.
           path = 'supabase/functions/shop-manual-checkout-v832/index.ts'
           replace_once(path,
           '''function isWhiteVariant(product: any, variant: any) {
@@ -102,31 +95,20 @@ jobs:
             if (isToteProduct(product)) return /^(?:black|white)$/i.test(color);
             return !color || /^white$/i.test(color);
           }''')
-
           replace_once(path,
           '''      if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isWhiteVariant(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);''',
           '''      if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isCustomerVariantAllowed(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);''')
-
           replace_once(path,
-          '''      const size = sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase();
-            subtotalCents += unit * qty;
-            authoritative.push({
-              name: clean(freshProduct?.title || row.cached.product.name), size, sku: text(freshVariant?.sku), qty,
-              unit_price_cents: unit, printify_product_id: productId, printify_variant_id: variantId,
-              image: text(raw?.image || row.cached.product.image), collection: text(row.cached.product.collection), color: "White",
-            });''',
+          '''      const size = sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase();''',
           '''      const color = colorFromVariant(freshProduct, freshVariant) || "White";
             const size = isToteProduct(freshProduct)
               ? `${color} handles`
-              : (sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase());
-            subtotalCents += unit * qty;
-            authoritative.push({
-              name: clean(freshProduct?.title || row.cached.product.name), size, sku: text(freshVariant?.sku), qty,
-              unit_price_cents: unit, printify_product_id: productId, printify_variant_id: variantId,
-              image: text(raw?.image || row.cached.product.image), collection: text(row.cached.product.collection), color,
-            });''')
+              : (sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase());''')
+          replace_once(path,
+          '''        image: text(raw?.image || row.cached.product.image), collection: text(row.cached.product.collection), color: "White",''',
+          '''        image: text(raw?.image || row.cached.product.image), collection: text(row.cached.product.collection), color,''')
 
-          # 3) Delivery preview: same variant policy, with handle-color wording in parcel breakdown.
+          # Delivery preview: same safe variant policy and customer-facing handle label.
           path = 'supabase/functions/shop-delivery-preview-v833/index.ts'
           replace_once(path,
           '''function isWhiteVariant(product: any, variant: any) {
@@ -144,263 +126,234 @@ jobs:
             if (isToteProduct(product)) return /^(?:black|white)$/i.test(color);
             return !color || /^white$/i.test(color);
           }''')
-
           replace_once(path,
           '''      if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isWhiteVariant(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);''',
           '''      if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isCustomerVariantAllowed(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);''')
-
           replace_once(path,
-          '''      const cost = usdCentsToEurCents(sourceCost, fx);
-
-            const candidates: any[] = [{''',
+          '''      const cost = usdCentsToEurCents(sourceCost, fx);''',
           '''      const cost = usdCentsToEurCents(sourceCost, fx);
             const color = colorFromVariant(freshProduct, freshVariant) || "White";
-            const itemLabel = isToteProduct(freshProduct) ? `${color} handles` : clean(row.cached.variant.size);
+            const itemLabel = isToteProduct(freshProduct) ? `${color} handles` : clean(row.cached.variant.size);''')
+          p = Path(path)
+          text = p.read_text()
+          count = text.count('item_size: clean(row.cached.variant.size),')
+          if count != 2:
+              raise SystemExit(f'Expected 2 delivery item_size occurrences, got {count}')
+          p.write_text(text.replace('item_size: clean(row.cached.variant.size),', 'item_size: itemLabel,'))
 
-            const candidates: any[] = [{''')
-
-          text = Path(path).read_text()
-          text = text.replace('item_size: clean(row.cached.variant.size),', 'item_size: itemLabel,')
-          if text.count('item_size: itemLabel,') < 2:
-              raise SystemExit('Expected both delivery-preview item_size replacements')
-          Path(path).write_text(text)
-
-          # 4) Browser behavior: Black/White selector controls exact Printify variant and matching mockups.
-          tote_js = r'''(() => {
+          # Frontend: convert the tote's existing size dropdown into a Black/White handle-color dropdown.
+          # The public catalog now carries Printify variantIds on each mockup, so gallery filtering is exact.
+          Path('shop/tote-handle-color-v838.js').write_text(r'''(() => {
             'use strict';
 
-            const ALLOWED_COLORS = ['Black', 'White'];
-            const selectedColors = new Map();
+            const COLORS = Object.freeze(['Black', 'White']);
+            const selected = new Map();
             const isTote = product => /\btote\b/i.test(String(product?.name || product?.title || product?.baseLabel || ''));
             const optionValue = (variant, name) => String((Array.isArray(variant?.options) ? variant.options : [])
-              .find(option => String(option?.name || '').toLowerCase() === String(name || '').toLowerCase())?.value || '');
-            const handleColor = variant => String(variant?.handleColor || variant?.color || optionValue(variant, 'color') || '').trim();
-            const allowedColor = value => ALLOWED_COLORS.find(color => color.toLowerCase() === String(value || '').trim().toLowerCase()) || '';
+              .find(option => String(option?.name || '').trim().toLowerCase() === String(name || '').trim().toLowerCase())?.value || '').trim();
+            const colorOf = variant => String(variant?.handleColor || variant?.color || optionValue(variant, 'color') || '').trim();
+            const allowed = value => COLORS.find(color => color.toLowerCase() === String(value || '').trim().toLowerCase()) || '';
 
-            const originalNormalizeProduct = normalizeProduct;
-            normalizeProduct = raw => {
-              const product = originalNormalizeProduct(raw);
-              if(!isTote(product)) return product;
-
-              product.selectorType = 'handle-color';
-              product.allMockups = Array.isArray(product.mockups) ? product.mockups.map(mockup => ({ ...mockup })) : [];
-              product.variants = (Array.isArray(product.variants) ? product.variants : [])
-                .filter(variant => !!allowedColor(handleColor(variant)))
-                .map(variant => {
-                  const color = allowedColor(handleColor(variant));
-                  const physicalSize = String(variant?.size || optionValue(variant, 'size') || '').trim();
-                  const options = (Array.isArray(variant?.options) ? variant.options : []).map(option =>
-                    String(option?.name || '').toLowerCase() === 'size'
-                      ? { ...option, value: color }
-                      : { ...option }
-                  );
-                  return { ...variant, physicalSize, handleColor: color, size: color, options };
-                });
-
-              const available = ALLOWED_COLORS.filter(color => product.variants.some(variant => handleColor(variant) === color));
-              product.colors = available;
-              product.sizes = available;
-              const current = allowedColor(selectedColors.get(String(product.id))) || available[0] || 'Black';
-              selectedColors.set(String(product.id), current);
-              applyToteMedia(product, current);
-              return product;
-            };
-
-            function mockupsFor(product, color){
-              const variant = (Array.isArray(product?.variants) ? product.variants : []).find(v => handleColor(v) === color);
+            function viewsFor(product, color){
+              const variant = (Array.isArray(product?.variants) ? product.variants : []).find(item => colorOf(item) === color);
               const variantId = String(variant?.id || '');
               const all = Array.isArray(product?.allMockups) ? product.allMockups : (Array.isArray(product?.mockups) ? product.mockups : []);
               if(!variantId) return all;
-              const matched = all.filter(mockup => Array.isArray(mockup?.variantIds) && mockup.variantIds.map(String).includes(variantId));
-              return matched.length ? matched : all;
+              const exact = all.filter(view => Array.isArray(view?.variantIds) && view.variantIds.map(String).includes(variantId));
+              return exact.length ? exact : all;
             }
 
-            function applyToteMedia(product, color){
-              const views = mockupsFor(product, color);
+            function applyMedia(product, color){
+              const views = viewsFor(product, color);
               product.mockups = views;
               product.image = views[0]?.image || product.image || '';
             }
 
-            function selectedVariant(product, color){
-              return (Array.isArray(product?.variants) ? product.variants : []).find(variant => handleColor(variant) === color && variant?.is_enabled !== false && variant?.is_available !== false)
-                || (Array.isArray(product?.variants) ? product.variants : []).find(variant => handleColor(variant) === color)
-                || null;
+            if(typeof normalizeProduct === 'function'){
+              const beforeToteV838 = normalizeProduct;
+              normalizeProduct = raw => {
+                const product = beforeToteV838(raw);
+                if(!isTote(product)) return product;
+                product.selectorType = 'handle-color';
+                product.allMockups = Array.isArray(product.mockups) ? product.mockups.map(view => ({...view})) : [];
+                product.variants = (Array.isArray(product.variants) ? product.variants : [])
+                  .filter(variant => !!allowed(colorOf(variant)))
+                  .map(variant => {
+                    const color = allowed(colorOf(variant));
+                    const physicalSize = String(variant?.size || optionValue(variant, 'size') || '').trim();
+                    const options = (Array.isArray(variant?.options) ? variant.options : []).map(option =>
+                      String(option?.name || '').trim().toLowerCase() === 'size'
+                        ? {...option, value: color}
+                        : {...option}
+                    );
+                    return {...variant, physicalSize, handleColor: color, size: color, options};
+                  });
+                const colors = COLORS.filter(color => product.variants.some(variant => colorOf(variant) === color));
+                product.colors = colors;
+                product.sizes = colors;
+                const current = allowed(selected.get(String(product.id))) || colors[0] || 'Black';
+                selected.set(String(product.id), current);
+                applyMedia(product, current);
+                return product;
+              };
             }
 
-            const originalRenderProducts = renderProducts;
-            renderProducts = function(){
-              if(Array.isArray(products)){
+            if(typeof renderProducts === 'function'){
+              const beforeRenderToteV838 = renderProducts;
+              renderProducts = function(){
+                if(Array.isArray(products)){
+                  products.filter(isTote).forEach(product => {
+                    const id = String(product.id);
+                    const current = allowed(selected.get(id)) || product.sizes?.[0] || 'Black';
+                    selected.set(id, current);
+                    applyMedia(product, current);
+                  });
+                }
+                beforeRenderToteV838();
+                if(!Array.isArray(products)) return;
                 products.filter(isTote).forEach(product => {
                   const id = String(product.id);
-                  const color = allowedColor(selectedColors.get(id)) || product.sizes?.[0] || 'Black';
-                  selectedColors.set(id, color);
-                  applyToteMedia(product, color);
+                  const select = document.querySelector(`[data-size="${CSS.escape(id)}"]`);
+                  if(!select) return;
+                  select.value = allowed(selected.get(id)) || product.sizes?.[0] || 'Black';
+                  select.dataset.handleColor = 'true';
+                  const label = select.closest('label');
+                  if(label && label.firstChild?.nodeType === Node.TEXT_NODE) label.firstChild.nodeValue = 'Handle color\n            ';
                 });
-              }
-              originalRenderProducts();
-
-              if(!Array.isArray(products)) return;
-              products.filter(isTote).forEach(product => {
-                const id = String(product.id);
-                const select = document.querySelector(`[data-size="${CSS.escape(id)}"]`);
-                if(!select) return;
-                const color = allowedColor(selectedColors.get(id)) || product.sizes?.[0] || 'Black';
-                select.value = color;
-                select.dataset.handleColor = 'true';
-                const label = select.closest('label');
-                if(label && label.firstChild?.nodeType === Node.TEXT_NODE) label.firstChild.nodeValue = 'Handle color\n            ';
-              });
-            };
-
-            const originalAddToCart = addToCart;
-            addToCart = function(id){
-              const product = Array.isArray(products) ? products.find(item => String(item.id) === String(id)) : null;
-              if(!product || !isTote(product)) return originalAddToCart(id);
-
-              const select = document.querySelector(`[data-size="${CSS.escape(String(id))}"]`);
-              const color = allowedColor(select?.value) || allowedColor(selectedColors.get(String(id))) || product.sizes?.[0] || 'Black';
-              const variant = selectedVariant(product, color);
-              if(!variant) return;
-              selectedColors.set(String(id), color);
-              applyToteMedia(product, color);
-
-              const qty = Math.max(1, Math.min(9, Number(document.querySelector(`[data-qty="${CSS.escape(String(id))}"]`)?.value || 1)));
-              const price = wholeEuro(variant?.price || product.price);
-              const existing = cart.find(item => String(item.productId || item.id) === String(id) && String(item.variantId || '') === String(variant.id));
-              if(existing){
-                existing.qty = Math.min(10, Number(existing.qty || 0) + qty);
-                existing.image = product.image;
-                existing.size = color;
-                existing.sku = String(variant?.sku || existing.sku || '');
-              } else {
-                cart.push({
-                  id: String(id),
-                  productId: String(id),
-                  variantId: String(variant.id || ''),
-                  sku: String(variant?.sku || ''),
-                  name: product.name,
-                  price,
-                  size: color,
-                  selectionType: 'handle-color',
-                  selectionLabel: `${color} handles`,
-                  qty,
-                  image: product.image,
-                  collection: product.collection
-                });
-              }
-              saveCart();
-              renderCart();
-              openCart();
-            };
-
-            const originalRenderCart = renderCart;
-            renderCart = function(){
-              if(Array.isArray(cart) && Array.isArray(products) && products.length){
-                for(const item of cart){
-                  const product = products.find(p => String(p.id) === String(item.productId || item.id));
-                  if(!product || !isTote(product)) continue;
-                  let color = allowedColor(item.size);
-                  if(!color) color = 'White'; // preserve the previously single exposed tote variant for old carts
-                  const variant = selectedVariant(product, color);
-                  if(!variant) continue;
-                  item.id = String(product.id);
-                  item.productId = String(product.id);
-                  item.variantId = String(variant.id || '');
-                  item.sku = String(variant.sku || '');
-                  item.size = color;
-                  item.selectionType = 'handle-color';
-                  item.selectionLabel = `${color} handles`;
-                  item.price = wholeEuro(variant.price || product.price);
-                  const views = mockupsFor(product, color);
-                  item.image = views[0]?.image || item.image || product.image;
-                }
-                saveCart();
-              }
-              originalRenderCart();
-              document.querySelectorAll('.cart-line').forEach((line, index) => {
-                const item = cart[index];
-                if(item?.selectionType !== 'handle-color') return;
-                const span = line.querySelector('span');
-                if(span) span.textContent = `${item.selectionLabel || `${item.size} handles`} - ${item.qty} x ${money(item.price)}`;
-              });
-            };
+              };
+            }
 
             document.addEventListener('change', event => {
               const select = event.target.closest?.('select[data-size][data-handle-color="true"]');
               if(!select) return;
-              const productId = String(select.dataset.size || '');
-              const product = Array.isArray(products) ? products.find(item => String(item.id) === productId) : null;
-              if(!product || !isTote(product)) return;
-              const color = allowedColor(select.value);
-              if(!color) return;
-              selectedColors.set(productId, color);
-              applyToteMedia(product, color);
+              const id = String(select.dataset.size || '');
+              const product = Array.isArray(products) ? products.find(item => String(item.id) === id) : null;
+              const color = allowed(select.value);
+              if(!product || !isTote(product) || !color) return;
+              selected.set(id, color);
+              applyMedia(product, color);
               renderProducts();
             });
 
             window.BRUIS_TOTE_HANDLE_COLOR_V838 = Object.freeze({
               version: 'v838',
-              selector: 'handle-color',
-              colors: Object.freeze(['Black', 'White']),
+              selectorLabel: 'Handle color',
+              colors: COLORS,
               variantBoundMockups: true,
-              cartVariantPinned: true
+              exactVariantSelection: true
             });
           })();
-          '''
-          Path('shop/tote-handle-color-v838.js').write_text(tote_js)
+          ''')
 
-          # 5) Load the v838 behavior and bump the visible storefront watermark.
+          # Manual checkout owns add-to-cart in capture phase. Preserve the selected handle color label/image there.
+          path = 'shop/manual-checkout-v825.js'
+          replace_once(path,
+          '''      const price = variantPrice(variant) || Number(product.price || 0);
+              next.push({''',
+          '''      const price = variantPrice(variant) || Number(product.price || 0);
+              const resolvedSize = variantSize(variant) || requestedSize;
+              const selectionLabel = product?.selectorType === 'handle-color' ? `${resolvedSize} handles` : '';
+              next.push({''')
+          replace_once(path,
+          '''        size: variantSize(variant) || requestedSize,
+                qty: Math.max(1, Math.min(10, Number(item.qty || 1))),
+                image: product.image || product.mockups?.[0]?.image || item.image || '',
+                collection: product.collection || item.collection || ''''',
+          '''        size: resolvedSize,
+                selectionLabel,
+                qty: Math.max(1, Math.min(10, Number(item.qty || 1))),
+                image: item.image || product.image || product.mockups?.[0]?.image || '',
+                collection: product.collection || item.collection || ''')
+          replace_once(path,
+          '''                  <span>${escLocal(item.size)} · ${item.qty} × ${exactMoney(item.price)}</span>''',
+          '''                  <span>${escLocal(item.selectionLabel || item.size)} · ${item.qty} × ${exactMoney(item.price)}</span>''')
+          replace_once(path,
+          '''    const resolvedSize = variantSize(variant) || size;
+              const sku = String(variant?.sku || '').trim();''',
+          '''    const resolvedSize = variantSize(variant) || size;
+              const selectionLabel = product?.selectorType === 'handle-color' ? `${resolvedSize} handles` : '';
+              const sku = String(variant?.sku || '').trim();''')
+          replace_once(path,
+          '''      existing.sku = sku;
+              } else {''',
+          '''      existing.sku = sku;
+                existing.size = resolvedSize;
+                existing.selectionLabel = selectionLabel;
+                existing.image = product.image || existing.image || '';
+              } else {''')
+          replace_once(path,
+          '''        size: resolvedSize,
+                qty,
+                image: product.image || product.mockups?.[0]?.image || '',
+                collection: product.collection''',
+          '''        size: resolvedSize,
+                selectionLabel,
+                qty,
+                image: product.image || product.mockups?.[0]?.image || '',
+                collection: product.collection''')
+
+          # Wire v838 into the page and bump the visible shop watermark.
           path = 'shop/index.html'
           replace_once(path,
           '''  <script src="store.js?v=20260916-storefront-v837-r1" defer></script>''',
           '''  <script src="store.js?v=20260916-storefront-v837-r1" defer></script>
             <script src="tote-handle-color-v838.js?v=20260916-storefront-v838-r1" defer></script>''')
-          replace_once(path,
-          '''<span class="version-watermark">v837</span>''',
-          '''<span class="version-watermark">v838</span>''')
+          replace_once(path, '<span class="version-watermark">v837</span>', '<span class="version-watermark">v838</span>')
 
-          # 6) Strengthen the live verification for the tote exception and v838 wiring.
+          # Live checker: validate v838 wiring and allow only the tote's Black/White exception.
           path = 'check-live-shop.mjs'
-          text = Path(path).read_text()
+          p = Path(path); text = p.read_text()
           text = text.replace("assert.match(html, /version-watermark[^>]*>v837</, 'Live shop must expose v837 watermark');",
                               "assert.match(html, /version-watermark[^>]*>v838</, 'Live shop must expose v838 watermark');")
           text = text.replace("assert.match(html, /direct-commerce-v832\\.js\\?v=20260916-storefront-v837-r1/, 'Live shop must load the v837 direct commerce bridge');",
-                              "assert.match(html, /direct-commerce-v832\\.js\\?v=20260916-storefront-v837-r1/, 'Live shop must retain the current direct commerce bridge');\nassert.match(html, /tote-handle-color-v838\\.js\\?v=20260916-storefront-v838-r1/, 'Live shop must load tote handle-color behavior');")
-          text = text.replace("console.log(`shop page: HTTP 200, v837 present, ${pageElapsed}ms`);",
-                              "console.log(`shop page: HTTP 200, v838 present, ${pageElapsed}ms`);")
-          text = text.replace("      assert.match(String(variant?.color || ''), /^white$/i, `${product?.name} exposed a non-white variant`);",
-                              "      const tote = /\\btote\\b/i.test(String(product?.name || product?.baseLabel || ''));\n      if(tote) assert.match(String(variant?.color || ''), /^(?:black|white)$/i, `${product?.name} exposed an unsupported tote handle color`);\n      else assert.match(String(variant?.color || ''), /^white$/i, `${product?.name} exposed a non-white clothing variant`);")
+                              "assert.match(html, /direct-commerce-v832\\.js\\?v=20260916-storefront-v837-r1/, 'Live shop must retain the direct commerce bridge');\nassert.match(html, /tote-handle-color-v838\\.js\\?v=20260916-storefront-v838-r1/, 'Live shop must load tote handle-color behavior');")
+          old = "    assert.ok(Array.isArray(product?.sizes) && product.sizes.length > 0, `product ${product?.name} has no sizes`);"
+          new = "    if(!/\\btote\\b/i.test(String(product?.name || product?.baseLabel || ''))) assert.ok(Array.isArray(product?.sizes) && product.sizes.length > 0, `product ${product?.name} has no sizes`);"
+          if old not in text: raise SystemExit('live checker size assertion missing')
+          text = text.replace(old, new, 1)
+          old = "      assert.match(String(variant?.color || ''), /^white$/i, `${product?.name} exposed a non-white variant`);"
+          new = "      const tote = /\\btote\\b/i.test(String(product?.name || product?.baseLabel || ''));\n      if(tote) assert.match(String(variant?.color || ''), /^(?:black|white)$/i, `${product?.name} exposed an unsupported tote handle color`);\n      else assert.match(String(variant?.color || ''), /^white$/i, `${product?.name} exposed a non-white clothing variant`);"
+          if old not in text: raise SystemExit('live checker white variant assertion missing')
+          text = text.replace(old, new, 1)
+          text = text.replace("console.log(`shop page: HTTP 200, v837 present, ${pageElapsed}ms`);", "console.log(`shop page: HTTP 200, v838 present, ${pageElapsed}ms`);")
+          bridge = "const bridge = await textAsset(DIRECT_BRIDGE_URL, 'direct-commerce-v832.js');"
+          if bridge not in text: raise SystemExit('live checker bridge marker missing')
+          text = text.replace(bridge,
+          "const toteUi = await textAsset('https://kalenel.nl/shop/tote-handle-color-v838.js?v=20260916-storefront-v838-r1', 'tote-handle-color-v838.js');\nassert.match(toteUi, /Handle color/, 'tote selector must be Handle color');\nassert.match(toteUi, /Black.*White|White.*Black/s, 'tote selector must expose Black and White');\nassert.match(toteUi, /variantBoundMockups:\\s*true/, 'tote gallery must use selected-variant mockups');\nassert.match(toteUi, /exactVariantSelection:\\s*true/, 'tote cart must use the exact selected variant');\n\n" + bridge, 1)
           text = text.replace("assert.equal(catalogHealth?.whiteVariantsOnly, true, 'catalog health must report white-only variants');",
                               "assert.equal(catalogHealth?.whiteVariantsOnly, false, 'catalog health must report the tote color exception');\nassert.deepEqual(catalogHealth?.toteHandleColors, ['Black', 'White'], 'catalog health must expose exactly Black and White tote handle colors');")
           text = text.replace("console.log('RESULT=V837_BRUIS_SHOP_PASS');", "console.log('RESULT=V838_BRUIS_SHOP_PASS');")
-          # Fetch and assert the new behavior asset.
-          marker = "const bridge = await textAsset(DIRECT_BRIDGE_URL, 'direct-commerce-v832.js');"
-          insert = "const toteUi = await textAsset('https://kalenel.nl/shop/tote-handle-color-v838.js?v=20260916-storefront-v838-r1', 'tote-handle-color-v838.js');\nassert.match(toteUi, /Handle color/, 'tote UI must relabel the selector to Handle color');\nassert.match(toteUi, /Black.*White|White.*Black/s, 'tote UI must expose Black and White handle choices');\nassert.match(toteUi, /variantBoundMockups:\\s*true/, 'tote UI must bind galleries to the selected variant');\nassert.match(toteUi, /cartVariantPinned:\\s*true/, 'tote UI must pin the chosen Printify variant in cart state');\n\n" + marker
-          if marker not in text:
-              raise SystemExit('Missing live-check bridge marker')
-          text = text.replace(marker, insert, 1)
-          Path(path).write_text(text)
+          p.write_text(text)
 
-          # 7) Canonical source checker: v838, new file, and new checkout policy.
+          # Canonical checker: assert the new contract and updated backend policy.
           path = 'check-shop-commerce-v817.mjs'
-          text = Path(path).read_text()
+          p = Path(path); text = p.read_text()
           text = text.replace("const storefrontPolish = read('shop/storefront-polish-v832.js');",
                               "const storefrontPolish = read('shop/storefront-polish-v832.js');\nconst toteHandleColor = read('shop/tote-handle-color-v838.js');")
-          text = text.replace('assert.match(checkoutEdge, /isWhiteVariant/);', 'assert.match(checkoutEdge, /isCustomerVariantAllowed/);')
+          text = text.replace('// v837 presents the shop entirely as Bruis, keeps the cart control always available,', '// v838 keeps the Bruis checkout behavior and adds exact tote handle-color selection,')
+          text = text.replace("assert.match(index, /customer-facing-checkout-v837\\.js/);",
+                              "assert.match(index, /customer-facing-checkout-v837\\.js/);\nassert.match(index, /tote-handle-color-v838\\.js\\?v=20260916-storefront-v838-r1/);\nassert.match(toteHandleColor, /Handle color/);\nassert.match(toteHandleColor, /variantBoundMockups:\\s*true/);\nassert.match(toteHandleColor, /exactVariantSelection:\\s*true/);")
           text = text.replace("assert.match(index, /version-watermark[^>]*>v837</);", "assert.match(index, /version-watermark[^>]*>v838</);")
-          # Some checker versions express the watermark as a literal instead of the regex above.
-          text = text.replace("assert.match(index, /v837/);", "assert.match(index, /v838/);")
-          # Add tote contract assertions near existing v837/v838 storefront checks.
-          anchor = "assert.match(index, /customer-facing-checkout-v837\\.js/);"
-          if anchor in text:
-              text = text.replace(anchor, anchor + "\nassert.match(index, /tote-handle-color-v838\\.js\\?v=20260916-storefront-v838-r1/);\nassert.match(toteHandleColor, /Handle color/);\nassert.match(toteHandleColor, /variantBoundMockups:\\s*true/);\nassert.match(toteHandleColor, /cartVariantPinned:\\s*true/);", 1)
-          text = text.replace('Shop commerce v837 Bruis-copy + shipping-total + sticky-cart + cost-plus-5 contract passed.',
-                              'Shop commerce v838 tote-handle-color + Bruis-copy + shipping-total + sticky-cart + cost-plus-5 contract passed.')
-          Path(path).write_text(text)
+          text = text.replace("assert.match(catalogEdge, /whiteVariantsOnly:\\s*true/);",
+                              "assert.match(catalogEdge, /whiteVariantsOnly:\\s*false/);\nassert.match(catalogEdge, /toteHandleColors:\\s*\\[\"Black\", \"White\"\\]/);\nassert.match(catalogEdge, /isPublicVariant/);\nassert.match(catalogEdge, /variantIds/);")
+          text = text.replace("assert.match(checkoutEdge, /isWhiteVariant/);", "assert.match(checkoutEdge, /isCustomerVariantAllowed/);\nassert.match(checkoutEdge, /isToteProduct/);\nassert.match(checkoutEdge, /\\$\\{color\\} handles/);")
+          text = text.replace('// Main deployment check validates the v837 customer shell and all authoritative', '// Main deployment check validates the v838 customer shell and all authoritative')
+          text = text.replace("assert.match(liveShopCheck, /RESULT=V837_BRUIS_SHOP_PASS/);", "assert.match(liveShopCheck, /RESULT=V838_BRUIS_SHOP_PASS/);")
+          text = text.replace('// Customer-facing shop sources must not expose supplier/factory wording. The v837', '// Customer-facing shop sources must not expose supplier/factory wording. The v837')
+          text = text.replace("console.log('Shop commerce v837 Bruis-copy + shipping-total + sticky-cart + cost-plus-5 contract passed.');",
+                              "console.log('Shop commerce v838 tote-handle-color + Bruis-copy + shipping-total + sticky-cart + cost-plus-5 contract passed.');")
+          p.write_text(text)
 
-          # 8) Remove this one-shot workflow from the resulting commit.
+          # One-shot workflow cleans itself up in the final v838 commit.
           Path('.github/workflows/apply-tote-handle-color-v838.yml').unlink()
           PY
+
+      - name: Verify source contract
+        shell: bash
+        run: |
+          node --check shop/tote-handle-color-v838.js
+          node --check shop/manual-checkout-v825.js
+          node check-shop-commerce-v817.mjs
 
       - name: Commit v838
         shell: bash
@@ -409,5 +362,5 @@ jobs:
           git config user.email "150788310+JesperOaths@users.noreply.github.com"
           git add -A
           git diff --cached --check
-          git commit -m "v838: add tote handle-color selection"
+          git commit -m "v838: tote handle color selection"
           git push origin HEAD:main
