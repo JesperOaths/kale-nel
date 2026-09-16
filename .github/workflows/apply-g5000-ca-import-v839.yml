@@ -1,0 +1,107 @@
+name: Apply Gildan Canada import routing v839
+
+"on":
+  push:
+    branches:
+      - fix/g5000-canada-import-routing-v839
+    paths:
+      - '.github/workflows/apply-g5000-ca-import-v839.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24
+          cache: npm
+      - name: Add Canada import allowance to Gildan routing
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(s, old, new, label):
+              if old not in s:
+                  raise SystemExit(f'missing patch anchor: {label}')
+              return s.replace(old, new, 1)
+
+          helper = '''const DESPINOZA_REGIONAL_PROVIDERS = new Set([27, 30, 331, 438]);\n\n// Routing estimate only: Canada's 2026 MFN customs tariff for cotton T-shirts\n// (HS 6109.10) is 18%. Apply it only to the known fixed Prague Gildan 5000\n// source when shipping to Canada. It is never added to the customer's charge.\nexport const CANADA_COTTON_TEE_IMPORT_DUTY_BPS = 1800;\nexport function estimatedImportAllowanceCentsPerUnit(country, blueprintId, providerId, eurUnitCostCents) {\n  const destination = text(country).toUpperCase();\n  const blueprint = Number(blueprintId);\n  const provider = Number(providerId);\n  const cost = Math.max(0, Math.round(Number(eurUnitCostCents) || 0));\n  if (destination === "CA" && blueprint === 6 && provider === 30 && cost > 0) {\n    return Math.ceil(cost * CANADA_COTTON_TEE_IMPORT_DUTY_BPS / 10000);\n  }\n  return 0;\n}\n'''
+          for name in [
+              'supabase/functions/shop-manual-checkout-v832/fulfillment-routing.mjs',
+              'supabase/functions/shop-delivery-preview-v833/fulfillment-routing.mjs',
+          ]:
+              path = Path(name)
+              s = path.read_text(encoding='utf-8')
+              s = replace_once(s,
+                  'const DESPINOZA_REGIONAL_PROVIDERS = new Set([27, 30, 331, 438]);\n',
+                  helper,
+                  f'{name} import allowance helper')
+              path.write_text(s, encoding='utf-8')
+
+          path = Path('supabase/functions/shop-manual-checkout-v832/index.ts')
+          s = path.read_text(encoding='utf-8')
+          s = replace_once(s,
+              '  cheapestShippingQuote,\n  chooseCheapestFulfillment,\n',
+              '  cheapestShippingQuote,\n  chooseCheapestFulfillment,\n  estimatedImportAllowanceCentsPerUnit,\n',
+              'checkout helper import')
+          s = replace_once(s,
+              '''      const candidates: any[] = [{\n        product_id: productId,\n        variant_id: variantId,\n        quantity: qty,\n        cost_cents: usdCentsToEurCents(freshVariant.cost, fx),\n        source_cost_cents: Math.round(Number(freshVariant.cost)),\n        source_currency: PRINTIFY_SOURCE_CURRENCY,\n        mapping_approval_id: "",\n        blueprint_id: Number(freshProduct?.blueprint_id),\n        print_provider_id: Number(freshProduct?.print_provider_id),\n        estimated_import_cents_per_unit: 0,\n      }];\n''',
+              '''      const sourceFulfillmentCostCents = usdCentsToEurCents(freshVariant.cost, fx);\n      const candidates: any[] = [{\n        product_id: productId,\n        variant_id: variantId,\n        quantity: qty,\n        cost_cents: sourceFulfillmentCostCents,\n        source_cost_cents: Math.round(Number(freshVariant.cost)),\n        source_currency: PRINTIFY_SOURCE_CURRENCY,\n        mapping_approval_id: "",\n        blueprint_id: Number(freshProduct?.blueprint_id),\n        print_provider_id: Number(freshProduct?.print_provider_id),\n        estimated_import_cents_per_unit: estimatedImportAllowanceCentsPerUnit(\n          country, Number(freshProduct?.blueprint_id), Number(freshProduct?.print_provider_id), sourceFulfillmentCostCents,\n        ),\n      }];\n''',
+              'checkout source import allowance')
+          path.write_text(s, encoding='utf-8')
+
+          path = Path('supabase/functions/shop-delivery-preview-v833/index.ts')
+          s = path.read_text(encoding='utf-8')
+          s = replace_once(s,
+              '  cheapestShippingQuote,\n  chooseCheapestFulfillment,\n',
+              '  cheapestShippingQuote,\n  chooseCheapestFulfillment,\n  estimatedImportAllowanceCentsPerUnit,\n',
+              'preview helper import')
+          s = replace_once(s,
+              '''        blueprint_id: Number(freshProduct?.blueprint_id),\n        print_provider_id: Number(freshProduct?.print_provider_id),\n        estimated_import_cents_per_unit: 0,\n        item_name: clean(row.cached.product.name),\n''',
+              '''        blueprint_id: Number(freshProduct?.blueprint_id),\n        print_provider_id: Number(freshProduct?.print_provider_id),\n        estimated_import_cents_per_unit: estimatedImportAllowanceCentsPerUnit(\n          country, Number(freshProduct?.blueprint_id), Number(freshProduct?.print_provider_id), cost,\n        ),\n        item_name: clean(row.cached.product.name),\n''',
+              'preview source import allowance')
+          s = replace_once(s,
+              '''      shipping_source_currency: PRINTIFY_SOURCE_CURRENCY,\n      fx: fxAuditSnapshot(fx),\n''',
+              '''      shipping_source_currency: PRINTIFY_SOURCE_CURRENCY,\n      estimated_import_cents: Math.max(0, Math.round(Number(selected.plan.estimated_import_cents || 0))),\n      fx: fxAuditSnapshot(fx),\n''',
+              'preview estimated import response')
+          path.write_text(s, encoding='utf-8')
+
+          path = Path('scripts/test-shop-fulfillment-routing-v832.mjs')
+          s = path.read_text(encoding='utf-8')
+          s = replace_once(s,
+              '  chooseCheapestFulfillment,\n  parseFulfillmentMappings,\n',
+              '  chooseCheapestFulfillment,\n  estimatedImportAllowanceCentsPerUnit,\n  parseFulfillmentMappings,\n',
+              'routing test helper import')
+          s = replace_once(s,
+              "assert.equal(cheapestShippingQuote({ standard: -1, economy: 'nope' }), null);\n",
+              """assert.equal(cheapestShippingQuote({ standard: -1, economy: 'nope' }), null);\n\nassert.equal(estimatedImportAllowanceCentsPerUnit('CA', 6, 30, 1467), 265, 'Canada fixed Prague Gildan route must include the 18% customs estimate');\nassert.equal(estimatedImportAllowanceCentsPerUnit('CA', 6, 27, 2157), 0, 'Canadian local production has no import allowance');\nassert.equal(estimatedImportAllowanceCentsPerUnit('AU', 6, 30, 1467), 0, 'Australia must not inherit the Canada-specific estimate');\nassert.equal(estimatedImportAllowanceCentsPerUnit('CA', 1382, 30, 1467), 0, 'non-Gildan products must not inherit the Gildan estimate');\n""",
+              'routing import allowance tests')
+          s = s.replace('Array.from({ length: 416 }', 'Array.from({ length: 448 }', 1)
+          s = s.replace(".length, 416, 'regional routing catalog must support all Gildan mappings'", ".length, 448, 'regional routing catalog must support all Gildan mappings'", 1)
+          path.write_text(s, encoding='utf-8')
+          PY
+
+          npm ci
+          node scripts/test-shop-fulfillment-routing-v832.mjs
+          node check-shop-commerce-v817.mjs
+          npm run verify
+          git diff --check
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add supabase/functions/shop-manual-checkout-v832/index.ts \
+                  supabase/functions/shop-manual-checkout-v832/fulfillment-routing.mjs \
+                  supabase/functions/shop-delivery-preview-v833/index.ts \
+                  supabase/functions/shop-delivery-preview-v833/fulfillment-routing.mjs \
+                  scripts/test-shop-fulfillment-routing-v832.mjs
+          git commit -m 'fix: include Canada import estimate in Gildan routing'
+          git push
