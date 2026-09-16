@@ -9,9 +9,34 @@ const MAX_PAGES = 100;
 const ROUTE_PREFIX = "__KALENEL_ROUTE_";
 const BOXY_TITLES = new Set(["coral", "daffodil", "dragonfly", "honeysuckle", "horseshoe crab", "seahorse", "seaweed"]);
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl", "https://jesperoaths.github.io"]);
+const PUBLIC_TITLE_RULES: ReadonlyArray<readonly [RegExp, string]> = [
+  [/\baye[- ]?aye\b/i, "Aye-Aye"],
+  [/\bocelot\b/i, "Ocelot"],
+  [/\bfennec fox\b/i, "Fennec Fox"],
+  [/\bhumpback whale\b/i, "Humpback Whale"],
+  [/(?:\bjapanese maple\b|\bautumn maple leaf\b)/i, "Japanese Maple"],
+  [/\bjerboa\b/i, "Jerboa"],
+  [/\bspider crab\b/i, "Japanese Spider Crab"],
+  [/\bshrimp\b/i, "Shrimp"],
+  [/(?:\bleaf[- ]tailed gecko\b|\bleaf camouflage gecko\b|\bleaf gecko\b)/i, "Leaf-Tailed Gecko"],
+  [/\bleaping seal\b|\bseal\b/i, "Seal"],
+  [/\bkudu\b/i, "Kudu"],
+  [/(?:\bgarden spider\b|\borb[- ]?weaver\b)/i, "Orb-Weaver"],
+  [/\bhermit crab\b/i, "Hermit Crab"],
+  [/\bpuffer\s*fish\b/i, "Pufferfish"],
+  [/\bsecretary bird\b/i, "Secretary Bird"],
+  [/(?:\bmanta ray\b|\bocean stingray\b)/i, "Manta Ray"],
+  [/\bbearded dragon\b/i, "Bearded Dragon"],
+];
 
 const text = (value: unknown) => String(value ?? "").trim();
 const MARGIN_CENTS = 500;
+
+function publicTitle(product: any) {
+  const raw = text(product?.title);
+  for (const [pattern, title] of PUBLIC_TITLE_RULES) if (pattern.test(raw)) return title;
+  return raw;
+}
 
 function cors(req: Request) {
   const origin = text(req.headers.get("origin"));
@@ -42,7 +67,7 @@ async function printify(token: string, path: string) {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      "User-Agent": "Kalenel-Direct-Catalog/8.34",
+      "User-Agent": "Kalenel-Direct-Catalog/8.37",
     },
   });
   const raw = await response.text();
@@ -225,7 +250,7 @@ function publicProduct(product: any, fx: any) {
   const colors = [...new Set(priced.map((variant: any) => text(variant?.color)).filter(Boolean))];
   const selectorType = isToteProduct(product) ? "handle-color" : "size";
   return {
-    id: text(product?.id), source: "bruis-direct-v836", name: text(product?.title), description: text(product?.description),
+    id: text(product?.id), source: "bruis-direct-v837", name: publicTitle(product), description: text(product?.description),
     collection, price: prices.length ? Math.min(...prices) : 0, priceMax: prices.length ? Math.max(...prices) : 0,
     sizes, colors, selectorType, mockups, image: mockups[0]?.image || "", baseKey: String(product?.blueprint_id || "shirt"),
     baseLabel: /\btote\b/i.test(text(product?.title)) ? "Tote Bag" : collection === "boxy" ? "Oversized Boxy T-Shirt" : "Classic T-Shirt",
@@ -242,7 +267,7 @@ async function buildCatalog(supabase: any) {
     .map((product: any) => publicProduct(product, fx))
     .filter((product: any) => product.id && product.name && product.price > 0 && product.mockups.length > 0 && product.variants.length > 0);
   return {
-    generatedAt: new Date().toISOString(), source: "bruis-direct-v836", fx: fxAuditSnapshot(fx),
+    generatedAt: new Date().toISOString(), source: "bruis-direct-v837", fx: fxAuditSnapshot(fx),
     shop: { id: String(shop?.id || ""), salesChannel: text(shop?.sales_channel) }, products: cleanProducts,
   };
 }
@@ -295,7 +320,7 @@ Deno.serve(async (req: Request) => {
 
   if (url.searchParams.get("health") === "1") {
     return json(req, {
-      ok: true, mode: "bruis-direct-catalog-v836", usesShopifyApi: false, whiteVariantsOnly: false, toteHandleColors: ["Black", "White"],
+      ok: true, mode: "bruis-direct-catalog-v837", usesShopifyApi: false, whiteVariantsOnly: false, toteHandleColors: ["Black", "White"],
       pricing: "production-cost-plus-5-rounded-up", pricingBase: "production-cost",
       marginEuros: MARGIN_CENTS / 100, rounding: "whole-euro-ceiling", sourceCurrency: "USD", displayCurrency: "EUR", fx: payload?.fx || null, artworkFirst: true,
       cachedProducts: products.length, cacheAgeSeconds: Number.isFinite(ageMs) ? Math.round(ageMs / 1000) : null,
@@ -304,7 +329,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (!products.length) {
-    return json(req, { ok: false, warming: true, source: "bruis-direct-v836", products: [], refreshScheduled }, 202);
+    return json(req, { ok: false, warming: true, source: "bruis-direct-v837", products: [], refreshScheduled }, 202);
   }
 
   return json(req, {
