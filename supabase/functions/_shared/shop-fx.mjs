@@ -139,11 +139,13 @@ export function usdCentsToEurCents(rawUsdCents, snapshotOrRate) {
   return Math.round(cents * rateValue(snapshotOrRate));
 }
 
-export function retailEurCentsFromUsdCost(rawUsdCents, snapshotOrRate, marginEurCents = 500) {
+export function retailEurCentsFromUsdCost(rawUsdCents, snapshotOrRate, marginEurCents = 500, minimumRetailEurCents = 0) {
   const margin = Math.round(Number(marginEurCents));
+  const minimum = Math.round(Number(minimumRetailEurCents));
   if (!Number.isFinite(margin) || margin < 0) throw new Error("Invalid EUR margin");
+  if (!Number.isFinite(minimum) || minimum < 0) throw new Error("Invalid minimum EUR retail price");
   const converted = usdCentsToEurCents(rawUsdCents, snapshotOrRate);
-  return Math.ceil((converted + margin) / 100) * 100;
+  return Math.max(minimum, Math.ceil((converted + margin) / 100) * 100);
 }
 
 export function eurCentsToUsdCents(rawEurCents, snapshotOrRate) {
