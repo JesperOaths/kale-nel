@@ -1,4 +1,4 @@
-name: Finish missing AU Gildan 5000 routes
+name: Finish Despinoza Gildan 5000 routes
 
 "on":
   push:
@@ -13,22 +13,22 @@ permissions:
 jobs:
   regionalize:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - name: Finish missing AU routes
+      - name: Preserve text layers and regionalize Despinoza Gildans
         shell: bash
         env:
-          ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-au-gildan5000-missing-v834
-          RUN_KEY: g5000-au-missing-20260916-GR2x3jdpPvF7
+          ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-despinoza-gildan5000-v834
+          RUN_KEY: despinoza-g5000-20260916-Yp6Wq9uN
         run: |
           set -euo pipefail
-          code=$(curl --silent --show-error --max-time 600 \
+          code=$(curl --silent --show-error --max-time 900 \
             --output result.json \
             --write-out '%{http_code}' \
             --request POST "$ENDPOINT" \
             --header 'content-type: application/json' \
             --header "x-run-key: $RUN_KEY" \
             --data '{}')
-          jq '{ok,routed,mapping_rows,upsert_error,error,results}' result.json || cat result.json
+          jq '{ok,sources,routed,mapping_rows,upsert_error,error,results}' result.json || cat result.json
           test "$code" = "200"
           test "$(jq -r '.ok // false' result.json)" = "true"
