@@ -1,4 +1,4 @@
-name: Inspect Despinoza regional mockups
+name: Regionalize Dispuut Gildan 5000 shirts
 
 "on":
   push:
@@ -13,17 +13,57 @@ permissions:
 jobs:
   regionalize:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
-      - name: Inspect source and hidden regional collar mockups
+      - name: Build portable Despinoza neck text artwork
         shell: bash
-        env:
-          ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-despinoza-target-images-v834
-          RUN_KEY: despinoza-target-images-20260916-R8mQ2
         run: |
           set -euo pipefail
-          curl --silent --show-error --max-time 900 \
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-montserrat python3-pil
+          python3 - <<'PY'
+          from PIL import Image, ImageDraw, ImageFont
+          import subprocess
+          text = 'Despinoza'
+          ratio = 953.8000400000001 / 180.8
+          font_path = subprocess.check_output(['fc-match','-f','%{file}','Montserrat:style=Black'], text=True).strip()
+          if not font_path:
+              raise SystemExit('Montserrat Black font unavailable')
+          font = ImageFont.truetype(font_path, 900)
+          scratch = Image.new('RGBA', (7000, 1800), (0,0,0,0))
+          draw = ImageDraw.Draw(scratch)
+          box = draw.textbbox((0,0), text, font=font)
+          draw.text((-box[0], -box[1]), text, font=font, fill=(0,0,0,255))
+          crop = scratch.crop(scratch.getbbox())
+          w = 4096
+          h = round(w / ratio)
+          crop = crop.resize((w,h), Image.Resampling.LANCZOS)
+          crop.save('despinoza-neck-v834.png', optimize=True)
+          print(f'Generated static neck text: {w}x{h}, font={font_path}')
+          PY
+          python3 - <<'PY'
+          import base64, json
+          with open('despinoza-neck-v834.png','rb') as f:
+              contents = base64.b64encode(f.read()).decode('ascii')
+          with open('payload.json','w',encoding='utf-8') as f:
+              json.dump({'contents': contents}, f, separators=(',',':'))
+          PY
+
+      - name: Create and validate all regional Dispuut routes
+        shell: bash
+        env:
+          ENDPOINT: https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/printify-despinoza-regionalize-v834
+          RUN_KEY: despinoza-final-regional-20260916-F7cN4r
+        run: |
+          set -euo pipefail
+          code=$(curl --silent --show-error --max-time 1500 \
+            --output result.json \
+            --write-out '%{http_code}' \
             --request POST "$ENDPOINT" \
             --header 'content-type: application/json' \
             --header "x-run-key: $RUN_KEY" \
-            --data '{}' | jq .
+            --data-binary @payload.json)
+          jq '{ok,static_upload,routed,mapping_rows,results}' result.json
+          test "$code" = "200"
+          test "$(jq -r '.ok // false' result.json)" = "true"
+          test "$(jq -r '.mapping_rows // 0' result.json)" = "64"
