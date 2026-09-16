@@ -99,7 +99,7 @@ function despinozaCanonicalArtworkSignature(product, variantId, role) {
       for (const image of Array.isArray(placeholder?.images) ? placeholder.images : []) {
         let id = text(image?.id);
         if (!position || !id) continue;
-        if (role === "source" && id === DESPINOZA_INTERNAL_TEXT_ID) continue;
+        if (id === DESPINOZA_INTERNAL_TEXT_ID) continue;
         if (role === "source" && id === DESPINOZA_NATIVE_TEXT_ID) id = DESPINOZA_TEXT_MARKER;
         if (role === "target" && id === DESPINOZA_STATIC_TEXT_ID) id = DESPINOZA_TEXT_MARKER;
         entries.push(`${position}:${id}`);
