@@ -87,8 +87,9 @@
     const totalNode = ensureGrandTotal(form);
 
     if(!Number.isFinite(subtotal) || !Number.isFinite(shipping)){
-      totalNode.hidden = true;
-      totalNode.replaceChildren();
+      if(!totalNode.hidden) totalNode.hidden = true;
+      if(totalNode.childNodes.length) totalNode.replaceChildren();
+      delete totalNode.dataset.totalSignature;
       return;
     }
 
@@ -97,6 +98,9 @@
     if(summaryShippingValue && parseEuro(summaryShippingValue.textContent) !== shipping){
       summaryShippingValue.textContent = money(shipping);
     }
+
+    const signature = `${subtotal.toFixed(2)}|${shipping.toFixed(2)}`;
+    if(totalNode.dataset.totalSignature === signature && !totalNode.hidden) return;
 
     const total = subtotal + shipping;
     const left = document.createElement('span');
@@ -109,6 +113,7 @@
     amount.className = 'manual-checkout-grand-total-amount';
     amount.textContent = money(total);
     totalNode.replaceChildren(left, amount);
+    totalNode.dataset.totalSignature = signature;
     totalNode.hidden = false;
   }
 
