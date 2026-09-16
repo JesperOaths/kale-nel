@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { fxAuditSnapshot, resolveUsdEurRate, retailEurCentsFromUsdCost } from "../_shared/shop-fx.mjs";
 
 const PRINTIFY_BASE = "https://api.printify.com/v1";
 const CACHE_FRESH_MS = 60_000;
@@ -11,10 +12,6 @@ const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl",
 
 const text = (value: unknown) => String(value ?? "").trim();
 const MARGIN_CENTS = 500;
-const retailEurosFromCost = (costCents: unknown) => {
-  const n = Number(costCents);
-  return Number.isFinite(n) && n > 0 ? Math.ceil((Math.round(n) + MARGIN_CENTS) / 100) : 0;
-};
 
 function cors(req: Request) {
   const origin = text(req.headers.get("origin"));
@@ -166,7 +163,7 @@ function mediaFor(product: any) {
     .sort((a: any, b: any) => a.index - b.index);
   return media.slice(0, 24).map(({ image, label }: any) => ({ image, label }));
 }
-function publicProduct(product: any) {
+function publicProduct(product: any, fx: any) {
   const variants = (Array.isArray(product?.variants) ? product.variants : [])
     .filter((variant: any) => isWhiteVariant(product, variant))
     .map((variant: any) => ({
@@ -175,7 +172,7 @@ function publicProduct(product: any) {
       title: text(variant?.title),
       size: sizeFrom(product, variant),
       color: colorFrom(product, variant) || "White",
-      price: retailEurosFromCost(variant?.cost),
+      price: retailEurCentsFromUsdCost(variant?.cost, fx, MARGIN_CENTS) / 100,
       is_enabled: variant?.is_enabled !== false,
       is_available: variant?.is_available !== false,
       options: resolvedOptions(product, variant).map((item) => ({ name: item.name, value: item.value })),
@@ -206,13 +203,14 @@ function publicProduct(product: any) {
 
 async function buildCatalog(supabase: any) {
   const token = await resolveToken(supabase);
+  const fx = await resolveUsdEurRate(supabase);
   const { shop, products } = await selectShopAndProducts(token);
   const cleanProducts = products
     .filter((product: any) => product?.visible !== false && !text(product?.title).startsWith(ROUTE_PREFIX))
-    .map(publicProduct)
+    .map((product: any) => publicProduct(product, fx))
     .filter((product: any) => product.id && product.name && product.price > 0 && product.mockups.length > 0 && product.variants.length > 0);
   return {
-    generatedAt: new Date().toISOString(), source: "printify-direct-v832",
+    generatedAt: new Date().toISOString(), source: "printify-direct-v832", fx: fxAuditSnapshot(fx),
     shop: { id: String(shop?.id || ""), salesChannel: text(shop?.sales_channel) }, products: cleanProducts,
   };
 }
@@ -267,7 +265,7 @@ Deno.serve(async (req: Request) => {
     return json(req, {
       ok: true, mode: "printify-direct-catalog-v832", usesShopifyApi: false, whiteVariantsOnly: true,
       pricing: "fulfillment-cost-plus-5-rounded-up", pricingBase: "printify-variant-cost",
-      marginEuros: MARGIN_CENTS / 100, rounding: "whole-euro-ceiling", artworkFirst: true,
+      marginEuros: MARGIN_CENTS / 100, rounding: "whole-euro-ceiling", sourceCurrency: "USD", displayCurrency: "EUR", fx: payload?.fx || null, artworkFirst: true,
       cachedProducts: products.length, cacheAgeSeconds: Number.isFinite(ageMs) ? Math.round(ageMs / 1000) : null,
       refreshScheduled,
     });

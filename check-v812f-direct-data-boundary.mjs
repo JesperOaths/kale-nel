@@ -59,9 +59,11 @@ if (provenance.prepared_not_deployed !== null) {
 }
 
 // Shipped browser code may retain bounded read-only table fallbacks, but no direct table
-// mutation owner is allowed after client DML is globally revoked. Legacy credential/privacy
-// RPCs revoked by v812f may still be named in compatibility metadata, but must not be invoked.
-const skippedDirs = new Set(['.git', 'node_modules', 'scripts', 'cloudflare', '.github', 'archive', 'archives', 'backup', 'backups', 'repo', 'mnt']);
+// mutation owner is allowed after client DML is globally revoked. Server-side Supabase
+// Edge Functions are intentionally excluded: they run with service credentials and are
+// not browser code. Legacy credential/privacy RPCs revoked by v812f may still be named
+// in compatibility metadata, but must not be invoked.
+const skippedDirs = new Set(['.git', 'node_modules', 'scripts', 'cloudflare', '.github', 'supabase', 'archive', 'archives', 'backup', 'backups', 'repo', 'mnt']);
 const files = [];
 function walk(dir = '.') {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

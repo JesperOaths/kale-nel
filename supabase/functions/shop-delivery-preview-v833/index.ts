@@ -7,6 +7,7 @@ import {
   parseFulfillmentMappings,
   validateMappedCandidate,
 } from "./fulfillment-routing.mjs";
+import { fxAuditSnapshot, PRINTIFY_SOURCE_CURRENCY, resolveUsdEurRate, usdCentsToEurCents } from "../_shared/shop-fx.mjs";
 
 const PRINTIFY_V1 = "https://api.printify.com/v1";
 const PRINTIFY_V2 = "https://api.printify.com/v2";
@@ -258,6 +259,7 @@ Deno.serve(async (req: Request) => {
     ));
 
     const printifyToken = await resolvePrintifyToken(sb);
+    const fx = await resolveUsdEurRate(sb);
     const productIds = [...new Set([
       ...resolved.map((row: any) => text(row.cached.product.id)),
       ...eligibleMappings.map((mapping: any) => text(mapping.target.product_id)),
@@ -277,14 +279,17 @@ Deno.serve(async (req: Request) => {
       const qty = Math.floor(qtyRaw);
       if (!Number.isFinite(qtyRaw) || qty < 1 || qty > MAX_QTY) throw new Error("Invalid quantity");
       if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isWhiteVariant(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
-      const cost = Math.round(Number(freshVariant?.cost));
-      if (!Number.isFinite(cost) || cost <= 0) throw new Error(`Invalid authoritative production cost: ${clean(row.cached.product.name)}`);
+      const sourceCost = Math.round(Number(freshVariant?.cost));
+      if (!Number.isFinite(sourceCost) || sourceCost <= 0) throw new Error(`Invalid authoritative production cost: ${clean(row.cached.product.name)}`);
+      const cost = usdCentsToEurCents(sourceCost, fx);
 
       const candidates: any[] = [{
         product_id: productId,
         variant_id: variantId,
         quantity: qty,
         cost_cents: cost,
+        source_cost_cents: sourceCost,
+        source_currency: PRINTIFY_SOURCE_CURRENCY,
         mapping_approval_id: "",
         blueprint_id: Number(freshProduct?.blueprint_id),
         print_provider_id: Number(freshProduct?.print_provider_id),
@@ -299,7 +304,9 @@ Deno.serve(async (req: Request) => {
           product_id: mapping.target.product_id,
           variant_id: mapping.target.variant_id,
           quantity: qty,
-          cost_cents: validation.cost_cents,
+          cost_cents: usdCentsToEurCents(validation.cost_cents, fx),
+          source_cost_cents: validation.cost_cents,
+          source_currency: PRINTIFY_SOURCE_CURRENCY,
           mapping_approval_id: mapping.approval_id,
           blueprint_id: mapping.target.blueprint_id,
           print_provider_id: mapping.target.print_provider_id,
@@ -316,8 +323,16 @@ Deno.serve(async (req: Request) => {
       const lineItems = plan.candidates.map((candidate: any, idx: number) => ({ product_id: candidate.product_id, variant_id: candidate.variant_id, quantity: candidate.quantity, external_id: `estimate-${idx + 1}` }));
       try {
         const quote = await printifyV1(printifyToken, `/shops/${shopId}/orders/shipping.json`, { method: "POST", body: JSON.stringify({ line_items: lineItems, address_to: addressTo }) }, 8500);
-        const shipping = cheapestShippingQuote(quote);
-        if (shipping) quotedPlans.push({ plan, shipping, route_key: lineItems.map((item: any) => `${item.product_id}:${item.variant_id}`).join("|") });
+        const sourceShipping = cheapestShippingQuote(quote);
+        if (sourceShipping) {
+          const shipping = {
+            ...sourceShipping,
+            cents: usdCentsToEurCents(sourceShipping.cents, fx),
+            source_cents: sourceShipping.cents,
+            source_currency: PRINTIFY_SOURCE_CURRENCY,
+          };
+          quotedPlans.push({ plan, shipping, route_key: lineItems.map((item: any) => `${item.product_id}:${item.variant_id}`).join("|") });
+        }
       } catch {}
     }
     const selected = chooseCheapestFulfillment(quotedPlans);
@@ -359,6 +374,9 @@ Deno.serve(async (req: Request) => {
     return json(req, {
       ok: true,
       shipping_cents: selected.shipping.cents,
+      shipping_source_cents: Math.max(0, Math.round(Number(selected.shipping.source_cents || 0))),
+      shipping_source_currency: PRINTIFY_SOURCE_CURRENCY,
+      fx: fxAuditSnapshot(fx),
       shipping_method: selected.shipping.name,
       shipping_method_code: selected.shipping.code,
       origins,
