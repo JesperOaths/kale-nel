@@ -96,7 +96,7 @@ async function catalog() {
     assert.equal(Number.isInteger(Number(product?.price)), true, `${product?.name} display price must be a whole euro`);
     assert.ok(Array.isArray(product?.variants) && product.variants.length > 0, `product ${product?.name} has no variants`);
     assert.ok(Array.isArray(product?.mockups) && product.mockups.length > 0, `product ${product?.name} has no media`);
-    assert.ok(Array.isArray(product?.sizes) && product.sizes.length > 0, `product ${product?.name} has no sizes`);
+    if(!/\btote\b/i.test(String(product?.name || product?.baseLabel || ''))) assert.ok(Array.isArray(product?.sizes) && product.sizes.length > 0, `product ${product?.name} has no sizes`);
     if (!/artwork/i.test(String(product.mockups[0]?.label || ''))) missingArtwork.push(String(product?.name || product?.id || 'unknown'));
     const mediaUrls = product.mockups.map(view => String(view?.image || '')).filter(Boolean);
     assert.equal(new Set(mediaUrls).size, mediaUrls.length, `${product?.name} must not contain duplicate image URLs`);
@@ -105,7 +105,9 @@ async function catalog() {
 
     const variantPrices = [];
     for (const variant of product.variants) {
-      assert.match(String(variant?.color || ''), /^white$/i, `${product?.name} exposed a non-white variant`);
+      const tote = /\btote\b/i.test(String(product?.name || product?.baseLabel || ''));
+      if(tote) assert.match(String(variant?.color || ''), /^(?:black|white)$/i, `${product?.name} exposed an unsupported tote handle color`);
+      else assert.match(String(variant?.color || ''), /^white$/i, `${product?.name} exposed a non-white clothing variant`);
       assert.ok(String(variant?.sku || '').trim(), `${product?.name} has a blank variant SKU`);
       assert.ok(!skus.has(String(variant.sku)), `duplicate variant SKU ${variant.sku}`);
       skus.add(String(variant.sku));
@@ -146,8 +148,9 @@ async function textAsset(url, label) {
 const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(`${SHOP_URL}?v=${ASSET_VERSION}`);
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
-assert.match(html, /version-watermark[^>]*>v837</, 'Live shop must expose v837 watermark');
-assert.match(html, /direct-commerce-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load the v837 direct commerce bridge');
+assert.match(html, /version-watermark[^>]*>v838</, 'Live shop must expose v838 watermark');
+assert.match(html, /direct-commerce-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must retain the direct commerce bridge');
+assert.match(html, /tote-handle-color-v838\.js\?v=20260916-storefront-v838-r1/, 'Live shop must load tote handle-color behavior');
 assert.match(html, /delivery-estimate-v833\.js\?v=20260916-delivery-v833-r2/, 'Live shop must load the current delivery estimate UI');
 assert.match(html, /manual-checkout-v825\.js\?v=20260916-storefront-v837-r1/, 'Live shop must retain hardened checkout UI shell');
 assert.match(html, /customer-facing-checkout-v837\.js\?v=20260916-storefront-v837-r2/, 'Live shop must load v837 customer-facing checkout totals/copy layer');
@@ -160,7 +163,13 @@ assert.match(html, /collection-media-v831\.js\?v=20260916-storefront-v837-r1/, '
 assert.match(html, /image-lightbox-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load full-view lightbox');
 assert.doesNotMatch(html, /direct-commerce-v828\.js|mockup-background-v830\.js|image-lightbox-v830\.js/, 'old active media/commerce handlers must not remain in the live page');
 assert.doesNotMatch(html, />[^<]*(?:Printify|factor(?:y|ies))[^<]*</i, 'Public shop shell must not expose supplier/factory wording');
-console.log(`shop page: HTTP 200, v837 present, ${pageElapsed}ms`);
+console.log(`shop page: HTTP 200, v838 present, ${pageElapsed}ms`);
+
+const toteUi = await textAsset('https://kalenel.nl/shop/tote-handle-color-v838.js?v=20260916-storefront-v838-r1', 'tote-handle-color-v838.js');
+assert.match(toteUi, /Handle color/, 'tote selector must be Handle color');
+assert.match(toteUi, /Black.*White|White.*Black/s, 'tote selector must expose Black and White');
+assert.match(toteUi, /variantBoundMockups:\s*true/, 'tote gallery must use selected-variant mockups');
+assert.match(toteUi, /exactVariantSelection:\s*true/, 'tote cart must use the exact selected variant');
 
 const bridge = await textAsset(DIRECT_BRIDGE_URL, 'direct-commerce-v832.js');
 assert.match(bridge, /shop-catalog-v828/, 'bridge must use direct catalog endpoint');
@@ -234,7 +243,8 @@ console.log(`Hydrangea live price: €${hydrangea.price}`);
 
 const catalogHealth = await health(CATALOG_HEALTH_URL, 'shop-catalog-v828', 'bruis-direct-catalog-v836');
 assert.equal(catalogHealth?.usesShopifyApi, false, 'catalog health must report no Shopify API use');
-assert.equal(catalogHealth?.whiteVariantsOnly, true, 'catalog health must report white-only variants');
+assert.equal(catalogHealth?.whiteVariantsOnly, false, 'catalog health must report the tote color exception');
+assert.deepEqual(catalogHealth?.toteHandleColors, ['Black', 'White'], 'catalog health must expose exactly Black and White tote handle colors');
 assert.equal(catalogHealth?.pricing, 'production-cost-plus-5-rounded-up', 'catalog health must report cost+€5 pricing');
 assert.equal(catalogHealth?.pricingBase, 'production-cost', 'catalog must price from converted production cost');
 assert.equal(catalogHealth?.marginEuros, 5, 'catalog margin must be exactly €5');
@@ -256,4 +266,4 @@ await health(STATUS_URL, 'shop-order-status-v825', 'order-status-v825');
 await health(ADMIN_URL, 'shop-admin-orders-v825', 'admin-orders-v825');
 await health(WEBHOOK_URL, 'shop-printify-webhook-v825', 'printify-webhook-v825');
 
-console.log('RESULT=V837_BRUIS_SHOP_PASS');
+console.log('RESULT=V838_BRUIS_SHOP_PASS');

@@ -114,9 +114,16 @@ function optionValues(product: any, variant: any) {
   const map = optionMap(product);
   return (Array.isArray(variant?.options) ? variant.options : []).map((id: unknown) => map.get(String(id))).filter(Boolean) as { type: string; value: string }[];
 }
-function isWhiteVariant(product: any, variant: any) {
-  const color = optionValues(product, variant).find(x => x.type === "color")?.value;
-  return !color || /^white$/i.test(text(color));
+function colorFromVariant(product: any, variant: any) {
+  return text(optionValues(product, variant).find(x => x.type === "color")?.value);
+}
+function isToteProduct(product: any) {
+  return /\btote\b/i.test(text(product?.title));
+}
+function isCustomerVariantAllowed(product: any, variant: any) {
+  const color = colorFromVariant(product, variant);
+  if (isToteProduct(product)) return /^(?:black|white)$/i.test(color);
+  return !color || /^white$/i.test(color);
 }
 
 function dbMappingPayload(rows: any[]) {
@@ -355,10 +362,12 @@ Deno.serve(async (req: Request) => {
       const qtyRaw = Number(raw?.qty || 0);
       const qty = Math.floor(qtyRaw);
       if (!Number.isFinite(qtyRaw) || qty < 1 || qty > MAX_QTY) throw new Error("Invalid quantity");
-      if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isWhiteVariant(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
+      if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isCustomerVariantAllowed(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
       const sourceCost = Math.round(Number(freshVariant?.cost));
       if (!Number.isFinite(sourceCost) || sourceCost <= 0) throw new Error(`Invalid authoritative production cost: ${clean(row.cached.product.name)}`);
       const cost = usdCentsToEurCents(sourceCost, fx);
+      const color = colorFromVariant(freshProduct, freshVariant) || "White";
+      const itemLabel = isToteProduct(freshProduct) ? `${color} handles` : clean(row.cached.variant.size);
 
       const candidates: any[] = [{
         product_id: productId,
@@ -372,7 +381,7 @@ Deno.serve(async (req: Request) => {
         print_provider_id: Number(freshProduct?.print_provider_id),
         estimated_import_cents_per_unit: 0,
         item_name: clean(row.cached.product.name),
-        item_size: clean(row.cached.variant.size),
+        item_size: itemLabel,
       }];
       for (const mapping of eligibleMappings.filter((entry: any) => entry.source.product_id === productId && entry.source.variant_id === variantId)) {
         const targetProduct = freshProducts.get(mapping.target.product_id);
@@ -391,7 +400,7 @@ Deno.serve(async (req: Request) => {
           print_provider_id: mapping.target.print_provider_id,
           estimated_import_cents_per_unit: validation.estimated_import_cents_per_unit || 0,
           item_name: clean(row.cached.product.name),
-          item_size: clean(row.cached.variant.size),
+          item_size: itemLabel,
         });
       }
       candidateGroups.push(candidates);

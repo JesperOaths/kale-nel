@@ -82,9 +82,16 @@ function sizeFromVariant(product: any, variant: any) {
   const m = clean(variant?.title).match(/(?:^|\s|\/|\|)(xs|s|m|l|xl|2xl|3xl|4xl|5xl)(?:$|\s|\/|\|)/i);
   return m ? m[1].toUpperCase() : "";
 }
-function isWhiteVariant(product: any, variant: any) {
-  const color = optionValues(product, variant).find(x => x.type === "color")?.value;
-  return !color || /^white$/i.test(text(color));
+function colorFromVariant(product: any, variant: any) {
+  return text(optionValues(product, variant).find(x => x.type === "color")?.value);
+}
+function isToteProduct(product: any) {
+  return /\btote\b/i.test(text(product?.title));
+}
+function isCustomerVariantAllowed(product: any, variant: any) {
+  const color = colorFromVariant(product, variant);
+  if (isToteProduct(product)) return /^(?:black|white)$/i.test(color);
+  return !color || /^white$/i.test(color);
 }
 
 function cachedResolution(payload: any, item: any) {
@@ -281,15 +288,18 @@ Deno.serve(async (req: Request) => {
       const qtyRaw = Number(raw?.qty || 0);
       const qty = Math.floor(qtyRaw);
       if (!Number.isFinite(qtyRaw) || qty < 1 || qty > MAX_QTY) throw new Error("Invalid quantity");
-      if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isWhiteVariant(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
+      if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isCustomerVariantAllowed(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
       const unit = retailEurCentsFromUsdCost(freshVariant?.cost, fx, MARGIN_CENTS);
       if (!unit) throw new Error(`Invalid authoritative production cost: ${clean(row.cached.product.name)}`);
-      const size = sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase();
+      const color = colorFromVariant(freshProduct, freshVariant) || "White";
+      const size = isToteProduct(freshProduct)
+        ? `${color} handles`
+        : (sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase());
       subtotalCents += unit * qty;
       authoritative.push({
         name: clean(freshProduct?.title || row.cached.product.name), size, sku: text(freshVariant?.sku), qty,
         unit_price_cents: unit, printify_product_id: productId, printify_variant_id: variantId,
-        image: text(raw?.image || row.cached.product.image), collection: text(row.cached.product.collection), color: "White",
+        image: text(raw?.image || row.cached.product.image), collection: text(row.cached.product.collection), color,
       });
       const candidates: any[] = [{
         product_id: productId,

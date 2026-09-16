@@ -115,10 +115,14 @@ function sizeFrom(product: any, variant: any) {
 function colorFrom(product: any, variant: any) {
   return text(resolvedOptions(product, variant).find((item) => item.type === "color")?.value);
 }
-function isWhiteVariant(product: any, variant: any) {
+function isToteProduct(product: any) {
+  return /\btote\b/i.test(text(product?.title));
+}
+function isPublicVariant(product: any, variant: any) {
   if (variant?.is_enabled === false) return false;
-  const color = resolvedOptions(product, variant).find((item) => item.type === "color");
-  return !color || /^white$/i.test(text(color.value));
+  const color = colorFrom(product, variant);
+  if (isToteProduct(product)) return /^(?:black|white)$/i.test(color);
+  return !color || /^white$/i.test(color);
 }
 function collectionFor(product: any) {
   const title = text(product?.title);
@@ -157,7 +161,12 @@ function artworkFor(product: any) {
 function mediaFor(product: any) {
   const seen = new Set<string>();
   let media = (Array.isArray(product?.images) ? product.images : [])
-    .map((image: any, index: number) => ({ image: text(image?.src), label: text(image?.position || `View ${index + 1}`), index }))
+    .map((image: any, index: number) => ({
+    image: text(image?.src),
+    label: text(image?.position || `View ${index + 1}`),
+    index,
+    variantIds: Array.isArray(image?.variant_ids) ? image.variant_ids.map((id: unknown) => String(id)) : [],
+  }))
     .filter((item: any) => {
       if (!item.image || seen.has(item.image)) return false;
       try {
@@ -168,11 +177,11 @@ function mediaFor(product: any) {
       return true;
     })
     .sort((a: any, b: any) => a.index - b.index);
-  return media.slice(0, 24).map(({ image, label }: any) => ({ image, label }));
+  return media.slice(0, 24).map(({ image, label, variantIds }: any) => ({ image, label, variantIds }));
 }
 function publicProduct(product: any, fx: any) {
   const variants = (Array.isArray(product?.variants) ? product.variants : [])
-    .filter((variant: any) => isWhiteVariant(product, variant))
+    .filter((variant: any) => isPublicVariant(product, variant))
     .map((variant: any) => ({
       id: String(variant?.id || ""),
       sku: text(variant?.sku),
@@ -199,10 +208,12 @@ function publicProduct(product: any, fx: any) {
     return true;
   });
   const collection = collectionFor(product);
+  const colors = [...new Set(priced.map((variant: any) => text(variant?.color)).filter(Boolean))];
+  const selectorType = isToteProduct(product) ? "handle-color" : "size";
   return {
     id: text(product?.id), source: "bruis-direct-v836", name: text(product?.title), description: text(product?.description),
     collection, price: prices.length ? Math.min(...prices) : 0, priceMax: prices.length ? Math.max(...prices) : 0,
-    sizes, mockups, image: mockups[0]?.image || "", baseKey: String(product?.blueprint_id || "shirt"),
+    sizes, colors, selectorType, mockups, image: mockups[0]?.image || "", baseKey: String(product?.blueprint_id || "shirt"),
     baseLabel: /\btote\b/i.test(text(product?.title)) ? "Tote Bag" : collection === "boxy" ? "Oversized Boxy T-Shirt" : "Classic T-Shirt",
     variants, updatedAt: product?.updated_at || null,
   };
@@ -270,7 +281,7 @@ Deno.serve(async (req: Request) => {
 
   if (url.searchParams.get("health") === "1") {
     return json(req, {
-      ok: true, mode: "bruis-direct-catalog-v836", usesShopifyApi: false, whiteVariantsOnly: true,
+      ok: true, mode: "bruis-direct-catalog-v836", usesShopifyApi: false, whiteVariantsOnly: false, toteHandleColors: ["Black", "White"],
       pricing: "production-cost-plus-5-rounded-up", pricingBase: "production-cost",
       marginEuros: MARGIN_CENTS / 100, rounding: "whole-euro-ceiling", sourceCurrency: "USD", displayCurrency: "EUR", fx: payload?.fx || null, artworkFirst: true,
       cachedProducts: products.length, cacheAgeSeconds: Number.isFinite(ageMs) ? Math.round(ageMs / 1000) : null,
