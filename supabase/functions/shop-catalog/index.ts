@@ -27,9 +27,9 @@ const gidTail = (value: unknown) => text(value).split("/").pop() || text(value);
 
 function collectionFor(raw: any) {
   const title = text(raw?.title);
-  if (/despinoza/i.test(title)) return "merch";
-  const haystack = [title, raw?.productType, raw?.vendor, ...(Array.isArray(raw?.tags) ? raw.tags : [])]
+  const haystack = [title, raw?.description, raw?.productType, raw?.vendor, ...(Array.isArray(raw?.tags) ? raw.tags : [])]
     .map(text).join(" ");
+  if (/(?:dispuut|spinoza)/i.test(haystack)) return "merch";
   return /\b(?:oversized|boxy)\b/i.test(haystack) ? "boxy" : "normal";
 }
 
