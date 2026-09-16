@@ -2,7 +2,7 @@ const FALLBACK_PRODUCTS = [];
 const cartKey = 'bruisCartV3';
 const LIVE_CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog';
 // Supabase legacy anon key is intentionally publishable/browser-safe. RLS blocks
-// direct reads/writes to the private Printify cache; the Edge Function returns
+// direct reads/writes to the private production catalog; the Edge Function returns
 // only the sanitized catalog projection.
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpcW50YXpnbnJ4d2xpYWlka215Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MjkxNDUsImV4cCI6MjA4OTUwNTE0NX0.w21i9sYLybl0auVSJpc0OFwRoE3a-rRcJG8NtUF_xn8';
 const COLLECTIONS = {
