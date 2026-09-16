@@ -123,7 +123,14 @@ function isWhiteVariant(product: any, variant: any) {
 function collectionFor(product: any) {
   const title = text(product?.title);
   const key = title.toLowerCase();
-  if (/despinoza/i.test(title)) return "merch";
+  const haystack = [
+    title,
+    product?.description,
+    product?.product_type,
+    product?.productType,
+    ...(Array.isArray(product?.tags) ? product.tags : []),
+  ].map(text).join(" ");
+  if (/(?:dispuut|spinoza)/i.test(haystack)) return "merch";
   if (/\b(?:oversized|boxy)\b/i.test(title) || BOXY_TITLES.has(key)) return "boxy";
   return "normal";
 }
@@ -196,7 +203,7 @@ function publicProduct(product: any, fx: any) {
     id: text(product?.id), source: "bruis-direct-v836", name: text(product?.title), description: text(product?.description),
     collection, price: prices.length ? Math.min(...prices) : 0, priceMax: prices.length ? Math.max(...prices) : 0,
     sizes, mockups, image: mockups[0]?.image || "", baseKey: String(product?.blueprint_id || "shirt"),
-    baseLabel: collection === "boxy" ? "Oversized Boxy T-Shirt" : "Classic T-Shirt",
+    baseLabel: /\btote\b/i.test(text(product?.title)) ? "Tote Bag" : collection === "boxy" ? "Oversized Boxy T-Shirt" : "Classic T-Shirt",
     variants, updatedAt: product?.updated_at || null,
   };
 }
