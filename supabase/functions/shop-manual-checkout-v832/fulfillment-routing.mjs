@@ -31,18 +31,12 @@ export function cheapestShippingQuote(quote) {
   if (Number.isFinite(priority)) {
     valid.push({ name: "priority", code: 2, cents: priority });
   } else if (Number.isFinite(transitionalExpress) && !Number.isFinite(printifyExpress)) {
-    // Legacy V1 responses used `express` for shipping method code 2.
-    // Treat an otherwise-unqualified `express` field as legacy priority so we
-    // never accidentally submit code 3 for a code-2 quote.
     valid.push({ name: "priority", code: 2, cents: transitionalExpress });
   }
 
   if (Number.isFinite(printifyExpress)) {
-    // Current transitional V1 responses expose Printify Express as
-    // `printify_express`; shipping method code 3 must use this quote.
     valid.push({ name: "express", code: 3, cents: printifyExpress });
   } else if (Number.isFinite(priority) && Number.isFinite(transitionalExpress)) {
-    // Future/final naming uses `priority` for code 2 and `express` for code 3.
     valid.push({ name: "express", code: 3, cents: transitionalExpress });
   }
 
@@ -105,7 +99,7 @@ export function parseFulfillmentMappings(raw) {
   if (Number(payload?.version) !== 1 || !Array.isArray(payload?.mappings)) {
     throw new Error("PRINTIFY_FULFILLMENT_MAPPINGS must use version 1 with a mappings array");
   }
-  if (payload.mappings.length > 100) throw new Error("Too many Printify fulfillment mappings");
+  if (payload.mappings.length > 1000) throw new Error("Too many Printify fulfillment mappings");
 
   return payload.mappings.map((mapping, index) => {
     const source = mapping?.source || {};
@@ -174,31 +168,108 @@ export function validateMappedCandidate(mapping, country, sourceProduct, sourceV
   return { ok: true, cost_cents: cost, estimated_import_cents_per_unit: mapping.estimated_import_cents_per_unit || 0 };
 }
 
-function providerIdsWith(plan, candidate) {
-  const candidateProvider = Number(candidate?.print_provider_id);
-  const ids = [...(Array.isArray(plan?.provider_ids) ? plan.provider_ids : [])];
-  if (Number.isInteger(candidateProvider) && candidateProvider > 0) ids.push(candidateProvider);
-  return [...new Set(ids)].sort((a, b) => a - b);
+function candidateUnitScore(candidate) {
+  return Number(candidate?.cost_cents || 0) + Math.max(0, Number(candidate?.estimated_import_cents_per_unit || 0));
+}
+
+function planFromCandidates(candidates) {
+  let productionCents = 0;
+  let importCents = 0;
+  let mappedCount = 0;
+  const providerIds = [];
+  for (const candidate of candidates) {
+    const quantity = Number(candidate?.quantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) throw new Error("Invalid fulfillment candidate quantity");
+    const cost = Number(candidate?.cost_cents);
+    if (!Number.isFinite(cost) || cost <= 0) throw new Error("Invalid fulfillment candidate cost");
+    const importPerUnit = Math.max(0, Math.round(Number(candidate?.estimated_import_cents_per_unit || 0)));
+    productionCents += cost * quantity;
+    importCents += importPerUnit * quantity;
+    mappedCount += candidate?.mapping_approval_id ? 1 : 0;
+    const providerId = Number(candidate?.print_provider_id);
+    if (Number.isInteger(providerId) && providerId > 0 && !providerIds.includes(providerId)) providerIds.push(providerId);
+  }
+  providerIds.sort((a, b) => a - b);
+  return {
+    candidates: [...candidates],
+    production_cents: productionCents,
+    estimated_import_cents: importCents,
+    mapped_count: mappedCount,
+    provider_ids: providerIds,
+    provider_groups: providerIds.length,
+  };
+}
+
+function candidateKey(candidate) {
+  return `${text(candidate?.product_id)}:${Number(candidate?.variant_id)}:${text(candidate?.mapping_approval_id)}`;
+}
+
+function cheapestCandidate(candidates) {
+  return [...candidates].sort((a, b) => candidateUnitScore(a) - candidateUnitScore(b) || candidateKey(a).localeCompare(candidateKey(b)))[0];
 }
 
 export function buildFulfillmentPlans(candidateGroups, maxPlans = 64) {
-  let plans = [{ candidates: [], production_cents: 0, estimated_import_cents: 0, mapped_count: 0, provider_ids: [], provider_groups: 0 }];
+  if (!Number.isInteger(maxPlans) || maxPlans < 1) throw new Error("Invalid fulfillment plan limit");
   for (const group of candidateGroups) {
     if (!Array.isArray(group) || !group.length) throw new Error("No safe fulfillment candidate for a cart item");
-    if (plans.length * group.length > maxPlans) throw new Error("Approved fulfillment mappings exceed the safe routing plan limit");
-    plans = plans.flatMap(plan => group.map(candidate => {
-      const quantity = Number(candidate.quantity);
-      const importPerUnit = Math.max(0, Math.round(Number(candidate.estimated_import_cents_per_unit || 0)));
-      const providerIds = providerIdsWith(plan, candidate);
-      return {
-        candidates: [...plan.candidates, candidate],
-        production_cents: plan.production_cents + Number(candidate.cost_cents) * quantity,
-        estimated_import_cents: plan.estimated_import_cents + importPerUnit * quantity,
-        mapped_count: plan.mapped_count + (candidate.mapping_approval_id ? 1 : 0),
-        provider_ids: providerIds,
-        provider_groups: providerIds.length,
-      };
+  }
+  if (!candidateGroups.length) return [];
+
+  let combinationCount = 1;
+  for (const group of candidateGroups) {
+    combinationCount *= group.length;
+    if (combinationCount > maxPlans) break;
+  }
+  if (combinationCount <= maxPlans) {
+    let combinations = [[]];
+    for (const group of candidateGroups) combinations = combinations.flatMap(plan => group.map(candidate => [...plan, candidate]));
+    return combinations.map(planFromCandidates);
+  }
+
+  const plans = [];
+  const seen = new Set();
+  const add = candidates => {
+    if (plans.length >= maxPlans) return;
+    const key = candidates.map(candidateKey).join("|");
+    if (seen.has(key)) return;
+    seen.add(key);
+    plans.push(planFromCandidates(candidates));
+  };
+
+  const baseline = candidateGroups.map(group => group[0]);
+  const cheapest = candidateGroups.map(group => cheapestCandidate(group));
+  const mappedPreferred = candidateGroups.map(group => {
+    const mapped = group.filter(candidate => !!candidate?.mapping_approval_id);
+    return mapped.length ? cheapestCandidate(mapped) : group[0];
+  });
+  add(baseline);
+  add(cheapest);
+  add(mappedPreferred);
+
+  const providers = [...new Set(candidateGroups.flatMap(group => group.map(candidate => Number(candidate?.print_provider_id)).filter(id => Number.isInteger(id) && id > 0)))].sort((a, b) => a - b);
+  for (const providerId of providers) {
+    add(candidateGroups.map(group => {
+      const providerCandidates = group.filter(candidate => Number(candidate?.print_provider_id) === providerId);
+      return providerCandidates.length ? cheapestCandidate(providerCandidates) : group[0];
     }));
+  }
+
+  for (let index = 0; index < candidateGroups.length && plans.length < maxPlans; index += 1) {
+    for (const candidate of candidateGroups[index].slice(1)) {
+      const next = [...baseline];
+      next[index] = candidate;
+      add(next);
+      if (plans.length >= maxPlans) break;
+    }
+  }
+  for (let index = 0; index < candidateGroups.length && plans.length < maxPlans; index += 1) {
+    for (const candidate of candidateGroups[index]) {
+      if (candidateKey(candidate) === candidateKey(mappedPreferred[index])) continue;
+      const next = [...mappedPreferred];
+      next[index] = candidate;
+      add(next);
+      if (plans.length >= maxPlans) break;
+    }
   }
   return plans;
 }
