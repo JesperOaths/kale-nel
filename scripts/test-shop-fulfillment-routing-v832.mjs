@@ -5,6 +5,7 @@ import {
   buildFulfillmentPlans,
   cheapestShippingQuote,
   chooseCheapestFulfillment,
+  estimatedImportAllowanceCentsPerUnit,
   parseFulfillmentMappings,
   validateMappedCandidate,
 } from '../supabase/functions/shop-manual-checkout-v832/fulfillment-routing.mjs';
@@ -38,6 +39,11 @@ assert.deepEqual(
   'priority must use shipping method code 2',
 );
 assert.equal(cheapestShippingQuote({ standard: -1, economy: 'nope' }), null);
+
+assert.equal(estimatedImportAllowanceCentsPerUnit('CA', 6, 30, 1467), 265, 'Canada fixed Prague Gildan route must include the 18% customs estimate');
+assert.equal(estimatedImportAllowanceCentsPerUnit('CA', 6, 27, 2157), 0, 'Canadian local production has no import allowance');
+assert.equal(estimatedImportAllowanceCentsPerUnit('AU', 6, 30, 1467), 0, 'Australia must not inherit the Canada-specific estimate');
+assert.equal(estimatedImportAllowanceCentsPerUnit('CA', 1382, 30, 1467), 0, 'non-Gildan products must not inherit the Gildan estimate');
 
 const sourceProduct = {
   id: 'source-product-1', blueprint_id: 6, print_provider_id: 10,
@@ -76,13 +82,13 @@ assert.throws(() => parseFulfillmentMappings('{bad json'), /not valid JSON/);
 assert.throws(() => parseFulfillmentMappings(JSON.stringify({ version: 1, mappings: [{ ...JSON.parse(mappingJson).mappings[0], approved: false }] })), /Invalid approved/);
 assert.throws(() => parseFulfillmentMappings(JSON.stringify({ version: 1, mappings: [{ ...JSON.parse(mappingJson).mappings[0], estimated_import_cents_per_unit: -1 }] })), /Invalid approved/);
 
-const manyMappings = Array.from({ length: 416 }, (_, index) => ({
+const manyMappings = Array.from({ length: 448 }, (_, index) => ({
   ...JSON.parse(mappingJson).mappings[0],
   approval_id: `regional-scale-${String(index).padStart(3, '0')}`,
   source: { ...JSON.parse(mappingJson).mappings[0].source, variant_id: 1000 + index },
   target: { ...JSON.parse(mappingJson).mappings[0].target, variant_id: 2000 + index },
 }));
-assert.equal(parseFulfillmentMappings(JSON.stringify({ version: 1, mappings: manyMappings })).length, 416, 'regional routing catalog must support all Gildan mappings');
+assert.equal(parseFulfillmentMappings(JSON.stringify({ version: 1, mappings: manyMappings })).length, 448, 'regional routing catalog must support all Gildan mappings');
 
 const baseline = {
   product_id: sourceProduct.id,

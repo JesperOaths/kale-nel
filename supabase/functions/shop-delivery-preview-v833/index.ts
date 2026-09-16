@@ -4,6 +4,7 @@ import {
   buildFulfillmentPlans,
   cheapestShippingQuote,
   chooseCheapestFulfillment,
+  estimatedImportAllowanceCentsPerUnit,
   parseFulfillmentMappings,
   validateMappedCandidate,
 } from "./fulfillment-routing.mjs";
@@ -379,7 +380,9 @@ Deno.serve(async (req: Request) => {
         mapping_approval_id: "",
         blueprint_id: Number(freshProduct?.blueprint_id),
         print_provider_id: Number(freshProduct?.print_provider_id),
-        estimated_import_cents_per_unit: 0,
+        estimated_import_cents_per_unit: estimatedImportAllowanceCentsPerUnit(
+          country, Number(freshProduct?.blueprint_id), Number(freshProduct?.print_provider_id), cost,
+        ),
         item_name: clean(row.cached.product.name),
         item_size: itemLabel,
       }];
@@ -468,6 +471,7 @@ Deno.serve(async (req: Request) => {
       shipping_cents: selected.shipping.cents,
       shipping_source_cents: Math.max(0, Math.round(Number(selected.shipping.source_cents || 0))),
       shipping_source_currency: PRINTIFY_SOURCE_CURRENCY,
+      estimated_import_cents: Math.max(0, Math.round(Number(selected.plan.estimated_import_cents || 0))),
       fx: fxAuditSnapshot(fx),
       shipping_method: selected.shipping.name,
       shipping_method_code: selected.shipping.code,
