@@ -25,6 +25,7 @@ const text = (v: unknown) => String(v ?? "").trim();
 const clean = (v: unknown) => text(v).replace(/\s+/g, " ");
 const money = (cents: unknown) => `€${(Number(cents || 0) / 100).toFixed(2)}`;
 const MARGIN_CENTS = 500;
+const MIN_RETAIL_CENTS = 2300;
 
 function cors(req: Request) {
   const origin = text(req.headers.get("origin"));
@@ -190,7 +191,7 @@ Deno.serve(async (req: Request) => {
       mode: "manual-payment-v832",
       pricing: "fulfillment-cost-plus-5-rounded-up",
       pricingBase: "printify-variant-cost",
-      marginEuros: MARGIN_CENTS / 100,
+      marginEuros: MARGIN_CENTS / 100, minimumRetailEuros: MIN_RETAIL_CENTS / 100,
       rounding: "whole-euro-ceiling",
       creates_pending_orders: true,
       sends_to_production: false,
@@ -282,7 +283,7 @@ Deno.serve(async (req: Request) => {
       const qty = Math.floor(qtyRaw);
       if (!Number.isFinite(qtyRaw) || qty < 1 || qty > MAX_QTY) throw new Error("Invalid quantity");
       if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isWhiteVariant(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
-      const unit = retailEurCentsFromUsdCost(freshVariant?.cost, fx, MARGIN_CENTS);
+      const unit = retailEurCentsFromUsdCost(freshVariant?.cost, fx, MARGIN_CENTS, MIN_RETAIL_CENTS);
       if (!unit) throw new Error(`Invalid authoritative production cost: ${clean(row.cached.product.name)}`);
       const size = sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase();
       subtotalCents += unit * qty;
