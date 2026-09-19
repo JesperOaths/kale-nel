@@ -11,22 +11,22 @@ const BOXY_TITLES = new Set(["coral", "daffodil", "dragonfly", "honeysuckle", "h
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl", "https://jesperoaths.github.io"]);
 const PUBLIC_TITLE_RULES: ReadonlyArray<readonly [RegExp, string]> = [
   [/\baye[- ]?aye\b/i, "Aye-Aye"],
-  [/\bocelot\b/i, "Ocelot"],
+  [/\bocelot\b/i, "Banded Linsang"],
   [/\bfennec fox\b/i, "Fennec Fox"],
   [/\bhumpback whale\b/i, "Humpback Whale"],
   [/(?:\bjapanese maple\b|\bautumn maple leaf\b)/i, "Japanese Maple"],
   [/\bjerboa\b/i, "Jerboa"],
   [/\bspider crab\b/i, "Japanese Spider Crab"],
-  [/\bshrimp\b/i, "Shrimp"],
+  [/\bshrimp\b/i, "Krill"],
   [/(?:\bleaf[- ]tailed gecko\b|\bleaf camouflage gecko\b|\bleaf gecko\b)/i, "Leaf-Tailed Gecko"],
-  [/\bleaping seal\b|\bseal\b/i, "Seal"],
+  [/\bleaping seal\b|\bseal\b/i, "Leopard Seal"],
   [/\bkudu\b/i, "Kudu"],
   [/(?:\bgarden spider\b|\borb[- ]?weaver\b)/i, "Orb-Weaver"],
-  [/\bhermit crab\b/i, "Hermit Crab"],
+  [/\bhermit crab\b/i, "Pom-Pom Crab"],
   [/\bpuffer\s*fish\b/i, "Pufferfish"],
   [/\bsecretary bird\b/i, "Secretary Bird"],
   [/(?:\bmanta ray\b|\bocean stingray\b)/i, "Manta Ray"],
-  [/\bbearded dragon\b/i, "Bearded Dragon"],
+  [/\bbearded dragon\b/i, "Thorny Devil"],
 ];
 
 const text = (value: unknown) => String(value ?? "").trim();
@@ -67,7 +67,7 @@ async function printify(token: string, path: string) {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      "User-Agent": "Kalenel-Direct-Catalog/8.37",
+      "User-Agent": "Kalenel-Direct-Catalog/8.38",
     },
   });
   const raw = await response.text();
@@ -250,7 +250,7 @@ function publicProduct(product: any, fx: any) {
   const colors = [...new Set(priced.map((variant: any) => text(variant?.color)).filter(Boolean))];
   const selectorType = isToteProduct(product) ? "handle-color" : "size";
   return {
-    id: text(product?.id), source: "bruis-direct-v837", name: publicTitle(product), description: text(product?.description),
+    id: text(product?.id), source: "bruis-direct-v838", name: publicTitle(product), description: text(product?.description),
     collection, price: prices.length ? Math.min(...prices) : 0, priceMax: prices.length ? Math.max(...prices) : 0,
     sizes, colors, selectorType, mockups, image: mockups[0]?.image || "", baseKey: String(product?.blueprint_id || "shirt"),
     baseLabel: /\btote\b/i.test(text(product?.title)) ? "Tote Bag" : collection === "boxy" ? "Oversized Boxy T-Shirt" : "Classic T-Shirt",
@@ -267,7 +267,7 @@ async function buildCatalog(supabase: any) {
     .map((product: any) => publicProduct(product, fx))
     .filter((product: any) => product.id && product.name && product.price > 0 && product.mockups.length > 0 && product.variants.length > 0);
   return {
-    generatedAt: new Date().toISOString(), source: "bruis-direct-v837", fx: fxAuditSnapshot(fx),
+    generatedAt: new Date().toISOString(), source: "bruis-direct-v838", fx: fxAuditSnapshot(fx),
     shop: { id: String(shop?.id || ""), salesChannel: text(shop?.sales_channel) }, products: cleanProducts,
   };
 }
@@ -329,7 +329,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (!products.length) {
-    return json(req, { ok: false, warming: true, source: "bruis-direct-v837", products: [], refreshScheduled }, 202);
+    return json(req, { ok: false, warming: true, source: "bruis-direct-v838", products: [], refreshScheduled }, 202);
   }
 
   return json(req, {
