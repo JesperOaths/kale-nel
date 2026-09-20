@@ -149,11 +149,12 @@ assert.match(customerFacingCheckout, /replace\(\/\\bPrintify\\b\/gi, 'Bruis'\)/)
 assert.match(customerFacingCheckout, /replace\(\/\\bfactories\\b\/gi, 'production locations'\)/);
 assert.match(customerFacingCheckout, /replace\(\/\\bfactory\\b\/gi, 'production location'\)/);
 
-// Delivery authority reuses the same safe route-selection rules as checkout. Fixed
-// providers use supplier provider locations and route-specific V2 delivery ranges;
-// Choice routing stays transparent about dynamic facility assignment and fallback.
+// Delivery authority now quotes the customer's canonical selected product and lets
+// the supplier's native routing own provider selection. The legacy regional mapping
+// parser remains tested in the shared routing helper, but preview mappings stay inert.
 assert.match(deliveryPreviewEdge, /CHOICE_PROVIDER_ID = 99/);
-assert.match(deliveryPreviewEdge, /shop_fulfillment_mappings/);
+assert.match(deliveryPreviewEdge, /const mappings:\s*any\[\]\s*=\s*\[\]/);
+assert.match(deliveryPreviewEdge, /native routing owns provider selection/);
 assert.match(deliveryPreviewEdge, /chooseCheapestFulfillment/);
 assert.match(deliveryPreviewEdge, /catalog\/print_providers/);
 assert.match(deliveryPreviewEdge, /printifyV2/);
