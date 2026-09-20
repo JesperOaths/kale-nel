@@ -45,6 +45,19 @@ async function requireAdmin(sb,token){
   return row;
 }
 
+async function buildPlan(sb,force=false){
+  const state=await getState(sb),hour=localHour(),day=localDate(),week=localWeekKey();
+  return {
+    costs:force||hoursSince(state.last_cost_refresh_at)>=6,
+    catalog:force||hoursSince(state.last_catalog_check_at)>=6,
+    orders:true,
+    backup:force||hoursSince(state.last_backup_at)>=23,
+    daily_brief:force||(hour>=7&&state.last_daily_brief_date!==day),
+    weekly_brief:force||(hour>=7&&state.last_weekly_brief_key!==week),
+    local_hour:hour,local_date:day,local_week_key:week
+  };
+}
+
 async function runCostStep(sb){
   const settings=await getSettings(sb),state=await getState(sb);
   const result=await refreshCostsAndCheck(sb,settings,state,ANALYTICS_URL,SERVICE_KEY);
@@ -153,9 +166,10 @@ Deno.serve(async req=>{
   const action=text(body?.action||"status");
 
   try{
-    const schedulerActions=["run","health","run_costs","run_catalog","run_orders","run_backup","run_daily_brief","run_weekly_brief"];
+    const schedulerActions=["run","health","plan","run_costs","run_catalog","run_orders","run_backup","run_daily_brief","run_weekly_brief"];
     if(scheduler&&!schedulerActions.includes(action))return json(req,{ok:false,error:"scheduler_action_not_allowed"},403);
     if(action==="health")return json(req,{ok:true,mode:"shop-ops-v847"});
+    if(action==="plan")return json(req,{ok:true,result:await buildPlan(sb,body?.force===true)});
     if(action==="run_costs")return json(req,{ok:true,result:await runCostStep(sb)});
     if(action==="run_catalog")return json(req,{ok:true,result:await runCatalogStep(sb)});
     if(action==="run_orders")return json(req,{ok:true,result:await runOrderStep(sb)});
