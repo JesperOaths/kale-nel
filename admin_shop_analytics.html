@@ -449,9 +449,11 @@
       const result=await call('refresh_costs_only',{}, {timeout_ms:20000});
       catalog=result.catalog_costs||catalog||{};
       intelligence={...(intelligence||{}),margin_risk:Array.isArray(result.margin_risk)?result.margin_risk:(intelligence?.margin_risk||[])};
-      renderMetrics();
-      renderProducts();
-      renderIntelligence();
+      if(data){
+        renderMetrics();
+        renderProducts();
+        renderIntelligence();
+      }
       if(window.BRUIS_SHOP_ADMIN_STATE){
         window.BRUIS_SHOP_ADMIN_STATE.catalog=catalog;
         window.BRUIS_SHOP_ADMIN_STATE.intelligence=intelligence;
