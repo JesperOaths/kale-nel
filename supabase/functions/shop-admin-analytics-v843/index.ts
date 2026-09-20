@@ -5,6 +5,7 @@ import { buildGrowthIntelligence, recordPriceCostHistory } from "../_shared/shop
 
 const PRINTIFY_BASE = "https://api.printify.com/v1";
 const COST_CACHE_MS = 10 * 60 * 1000;
+const PRINTIFY_FETCH_TIMEOUT_MS = 9000;
 const MAX_PAGES = 100;
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const CATEGORIES = new Set(["marketing","packaging","payment_fee","refund","chargeback","tax","software","shipping_adjustment","discount","other"]);
@@ -46,14 +47,24 @@ async function resolveToken(sb: any) {
   return text(data);
 }
 async function printify(token: string, path: string) {
-  const response = await fetch(PRINTIFY_BASE + path, {
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": "Kalenel-Shop-Analytics/8.43" },
-  });
-  const raw = await response.text();
-  let payload: any = null;
-  try { payload = raw ? JSON.parse(raw) : null; } catch { payload = raw; }
-  if (!response.ok) throw new Error(`printify_${response.status}:${text(payload?.message || payload?.error || raw).slice(0,180)}`);
-  return payload;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PRINTIFY_FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(PRINTIFY_BASE + path, {
+      signal: controller.signal,
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": "Kalenel-Shop-Analytics/8.46" },
+    });
+    const raw = await response.text();
+    let payload: any = null;
+    try { payload = raw ? JSON.parse(raw) : null; } catch { payload = raw; }
+    if (!response.ok) throw new Error(`printify_${response.status}:${text(payload?.message || payload?.error || raw).slice(0,180)}`);
+    return payload;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") throw new Error("production_cost_refresh_timeout");
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 async function loadProducts(token: string, shopId: number) {
   const rows: any[] = [];
@@ -91,9 +102,10 @@ async function currentCostSnapshot(sb: any, force = false) {
     const catalogProducts = Array.isArray(catalog?.products) ? catalog.products : [];
     if (!catalogProducts.length) throw new Error("catalog_cache_empty");
     const token = await resolveToken(sb);
-    const fx = await resolveUsdEurRate(sb);
-    const shopId = await resolveShopId(token, catalog);
-    const liveProducts = await loadProducts(token, shopId);
+    const fxPromise = resolveUsdEurRate(sb);
+    const shopIdPromise = resolveShopId(token, catalog);
+    const liveProductsPromise = shopIdPromise.then((shopId) => loadProducts(token, shopId));
+    const [fx, shopId, liveProducts] = await Promise.all([fxPromise, shopIdPromise, liveProductsPromise]);
     const liveMap = new Map(liveProducts.map((p: any) => [text(p?.id), p]));
     const products = catalogProducts.map((product: any) => {
       const live = liveMap.get(text(product?.id));
@@ -507,14 +519,44 @@ Deno.serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}));
     const admin = await requireAdmin(sb, text(body?.admin_session_token));
     const action = text(body?.action || "dashboard");
-    if (action === "dashboard" || action === "refresh_costs") {
+    if (action === "refresh_costs" || action === "refresh_costs_only") {
+      const startedAt = Date.now();
+      const catalog_costs = await currentCostSnapshot(sb, true);
+      let history_rows_added = 0;
+      if (catalog_costs?.cache?.stale !== true) history_rows_added = await recordPriceCostHistory(sb, catalog_costs);
+      const margin_risk = marginRisk(catalog_costs);
+      const product_count = Array.isArray(catalog_costs?.products) ? catalog_costs.products.length : 0;
+      const variant_count = (Array.isArray(catalog_costs?.products) ? catalog_costs.products : []).reduce(
+        (sum: number, product: any) => sum + (Array.isArray(product?.variants) ? product.variants.length : 0), 0
+      );
+      const duration_ms = Date.now() - startedAt;
+      await auditAdminAction(sb, admin, "refresh_costs", { metadata: {
+        product_count, variant_count, history_rows_added, margin_risk_count: margin_risk.length,
+        duration_ms, stale: catalog_costs?.cache?.stale === true,
+      } });
+      return json(req, {
+        ok: true,
+        catalog_costs,
+        margin_risk,
+        refresh: {
+          duration_ms,
+          product_count,
+          variant_count,
+          history_rows_added,
+          generated_at: catalog_costs?.cache?.generated_at || catalog_costs?.generated_at || null,
+          stale: catalog_costs?.cache?.stale === true,
+          error: catalog_costs?.cache?.error || null,
+        },
+      });
+    }
+    if (action === "dashboard") {
       const range = safeRange(body);
       const span = Math.max(86400000, Date.parse(range.to) - Date.parse(range.from));
       const previousRange = { from: new Date(Date.parse(range.from) - span).toISOString(), to: range.from };
       const [currentSnapshotResult, previousSnapshotResult, catalog_costs, operations, previousOperations, intelligence] = await Promise.all([
         sb.rpc("shop_admin_analytics_snapshot_v841", { p_from: range.from, p_to: range.to }),
         sb.rpc("shop_admin_analytics_snapshot_v841", { p_from: previousRange.from, p_to: previousRange.to }),
-        currentCostSnapshot(sb, action === "refresh_costs" || body?.force_cost_refresh === true),
+        currentCostSnapshot(sb, body?.force_cost_refresh === true),
         operationalBreakdown(sb, range),
         operationalBreakdown(sb, previousRange),
         intelligenceBreakdown(sb, range),
