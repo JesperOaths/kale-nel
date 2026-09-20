@@ -21,7 +21,7 @@ permissions:
 
 concurrency:
   group: bruis-shop-operations-v847
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   run:
