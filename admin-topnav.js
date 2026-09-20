@@ -4,6 +4,7 @@
     { href:'./admin_claims.html', label:'Claims' },
     { href:'./admin_shop_orders.html', label:'Shop orders' },
     { href:'./admin_shop_analytics.html', label:'Shop analytics' },
+    { href:'./admin_shop_operations.html', label:'Shop operations' },
     { href:'./admin_shop_connection.html', label:'Shop connection' },
     { href:'./match_control.html', label:'Wedstrijden' },
     { href:'./match_swap.html', label:'Speler vervangen' },
