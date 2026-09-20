@@ -448,7 +448,7 @@ for (const marker of [
 for (const marker of [/shop_campaign_spend_v843/,/shop_goals_v843/,/shop_annotations_v843/,/shop_price_cost_history_v843/]) {
   assert.match(analyticsGrowthSchemaV843, marker);
 }
-assert.match(adminGrowthUiV843, /Export CSV/);
+assert.match(adminAnalyticsPage, /Export CSV/);
 assert.match(adminGrowthUiV843, /campaign_spend_add/);
 assert.match(adminGrowthUiV843, /goal_upsert/);
 assert.match(adminGrowthUiV843, /annotation_add/);
