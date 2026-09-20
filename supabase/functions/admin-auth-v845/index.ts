@@ -48,8 +48,8 @@ Deno.serve(async req=>{
     return json(req,{ok:false,error:"invalid_request"},400);
   }
 
-  const username=text(body?.username);
-  const password=String(body?.password??"");
+  const username=text(body?.username ?? body?.input_username);
+  const password=String(body?.password ?? body?.input_password ?? "");
   const totp=String(body?.totp??"").replace(/\D/g,"");
 
   if(!username||username.length>160||!password||password.length>512||!/^\d{6}$/.test(totp)){
