@@ -33,9 +33,12 @@ const obsoletePriceRule = read('supabase/functions/shop-price-rule-v819/index.ts
 const connectionEdge = read('supabase/functions/shop-production-connection-v828/index.ts');
 const statusEdge = read('supabase/functions/shop-order-status-v825/index.ts');
 const adminEdge = read('supabase/functions/shop-admin-orders-v825/index.ts');
-const adminAnalyticsEdge = read('supabase/functions/shop-admin-analytics-v842/index.ts');
+const adminAnalyticsEdge = read('supabase/functions/shop-admin-analytics-v843/index.ts');
 const analyticsSchema = read('GEJAST_v841_shop_analytics.sql');
 const analyticsSecurityV842 = read('supabase/migrations/20260920130000_shop_admin_security_intelligence_v842.sql');
+const analyticsGrowthV843 = read('supabase/functions/_shared/shop-admin-growth-v843.mjs');
+const analyticsGrowthSchemaV843 = read('supabase/migrations/20260920154000_shop_admin_growth_intelligence_v843.sql');
+const adminGrowthUiV843 = read('admin-shop-growth-v843.js');
 const webhookEdge = read('supabase/functions/shop-printify-webhook-v825/index.ts');
 const migration = read('supabase/migrations/20260910070731_shop_manual_payment_v825.sql');
 const idempotencyMigration = read('supabase/migrations/20260910070905_shop_checkout_idempotency_v825.sql');
@@ -373,7 +376,7 @@ assert.match(adminPage, /submit_printify/);
 assert.match(adminNav, /admin_shop_orders\.html/);
 assert.match(adminNav, /admin_shop_analytics\.html/);
 assert.match(adminAnalyticsPage, /Shop analytics/);
-assert.match(adminAnalyticsPage, /shop-admin-analytics-v842/);
+assert.match(adminAnalyticsPage, /shop-admin-analytics-v843/);
 assert.match(adminAnalyticsPage, /Profit & cost anatomy/);
 assert.match(adminAnalyticsPage, /Business cost & income ledger/);
 assert.match(adminAnalyticsPage, /Unique customers/);
@@ -388,6 +391,28 @@ assert.match(adminAnalyticsPage, /Revenue attribution/);
 assert.match(adminAnalyticsPage, /Frequently bought together/);
 assert.match(adminAnalyticsPage, /Best sales times/);
 assert.match(adminAnalyticsPage, /Admin activity audit/);
+for (const marker of [
+  /Business summary & period comparison/,
+  /Full operating profit waterfall/,
+  /Product opportunity matrix/,
+  /Marketing spend, ROAS & CAC/,
+  /Customer retention/,
+  /Goals & forecast-to-target/,
+  /Bundle suggestions/,
+  /Margin simulator/,
+  /Shipping leakage/,
+  /Order SLA scorecard/,
+  /Supplier cost & price-change alerts/,
+  /FX exposure/,
+  /Anomaly detection/,
+  /Live shop health/,
+  /Data quality/,
+  /Customer geography/,
+  /Hour × day heatmap/,
+  /Product lifecycle trends/,
+  /Business annotations/,
+  /Admin security & sessions/
+]) assert.match(adminAnalyticsPage, marker);
 assert.match(adminAnalyticsEdge, /_require_valid_admin_session/);
 assert.match(adminAnalyticsEdge, /shop_product_cost_cache_v841/);
 assert.match(adminAnalyticsEdge, /shop_finance_ledger_v841/);
@@ -402,6 +427,34 @@ assert.match(adminAnalyticsEdge, /basket_pairs/);
 assert.match(adminAnalyticsEdge, /sales_timing/);
 assert.match(adminAnalyticsEdge, /attribution/);
 assert.match(adminAnalyticsEdge, /order_created/);
+assert.match(adminAnalyticsEdge, /buildGrowthIntelligence/);
+assert.match(adminAnalyticsEdge, /recordPriceCostHistory/);
+assert.match(adminAnalyticsEdge, /campaign_spend_add/);
+assert.match(adminAnalyticsEdge, /goal_upsert/);
+assert.match(adminAnalyticsEdge, /annotation_add/);
+for (const marker of [
+  /productOpportunities/,
+  /retentionMetrics/,
+  /slaMetrics/,
+  /shippingLeakage/,
+  /hour_day_heatmap/,
+  /product_lifecycle/,
+  /campaign_performance/,
+  /supplier_cost_alerts/,
+  /fx_history/,
+  /data_quality/,
+  /weeklyMonthlySummary/
+]) assert.match(analyticsGrowthV843, marker);
+for (const marker of [/shop_campaign_spend_v843/,/shop_goals_v843/,/shop_annotations_v843/,/shop_price_cost_history_v843/]) {
+  assert.match(analyticsGrowthSchemaV843, marker);
+}
+assert.match(adminGrowthUiV843, /Export CSV/);
+assert.match(adminGrowthUiV843, /campaign_spend_add/);
+assert.match(adminGrowthUiV843, /goal_upsert/);
+assert.match(adminGrowthUiV843, /annotation_add/);
+assert.match(adminGrowthUiV843, /geoMap/);
+assert.match(adminGrowthUiV843, /heatmap/);
+assert.match(adminGrowthUiV843, /margin simulator|simProduct/i);
 assert.match(adminEdge, /shop_admin_audit_v842/);
 assert.match(analyticsSchema, /shop_finance_ledger_v841/);
 assert.match(analyticsSchema, /shop_product_cost_cache_v841/);
@@ -436,12 +489,12 @@ assert.match(liveHealthWorkflow, /node check-live-shop\.mjs/);
 assert.match(deployWorkflow, /supabase\/functions\/shop-catalog-v828\/\*\*/);
 assert.match(deployWorkflow, /supabase\/functions\/shop-manual-checkout-v832\/\*\*/);
 assert.match(deployWorkflow, /supabase\/functions\/shop-delivery-preview-v833\/\*\*/);
-assert.match(deployWorkflow, /supabase\/functions\/shop-admin-analytics-v842\/\*\*/);
+assert.match(deployWorkflow, /supabase\/functions\/shop-admin-analytics-v843\/\*\*/);
 assert.match(deployWorkflow, /functions deploy "\$function_name"/);
 assert.match(deployWorkflow, /deploy_function shop-catalog-v828/);
 assert.match(deployWorkflow, /deploy_function shop-manual-checkout-v832/);
 assert.match(deployWorkflow, /deploy_function shop-delivery-preview-v833/);
-assert.match(deployWorkflow, /deploy_function shop-admin-analytics-v842/);
+assert.match(deployWorkflow, /deploy_function shop-admin-analytics-v843/);
 assert.doesNotMatch(deployWorkflow, /functions deploy shop-manual-checkout-v828/);
 assert.doesNotMatch(catalogEdge, /jellyfish[\s\S]{0,120}media\.slice\(1\)/i);
 assert.match(liveShopCheck, /20260916-storefront-v837-r1/);
