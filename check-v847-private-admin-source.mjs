@@ -46,6 +46,8 @@ for (const rel of [
 const build = fs.readFileSync('scripts/build-admin-worker-assets.mjs', 'utf8');
 const extract = fs.readFileSync('scripts/extract-private-admin-source.mjs', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/deploy-admin-worker.yml', 'utf8');
+const verifyWorkflow = fs.readFileSync('.github/workflows/verify.yml', 'utf8');
+const overlay = fs.readFileSync('scripts/overlay-private-admin-source.mjs', 'utf8');
 const gitignore = fs.readFileSync('.gitignore', 'utf8');
 
 assert.match(build, /KALENEL_PRIVATE_ADMIN_SOURCE_DIR/);
@@ -61,6 +63,11 @@ assert.match(workflow, /KALENEL_REQUIRE_PRIVATE_ADMIN_SOURCE/);
 assert.match(workflow, /path: \.private-admin-source/);
 assert.match(workflow, /persist-credentials: false/);
 assert.doesNotMatch(workflow, /^\s{2}push:/m);
+assert.match(verifyWorkflow, /KALENEL_ADMIN_SOURCE_REPOSITORY/);
+assert.match(verifyWorkflow, /KALENEL_ADMIN_SOURCE_TOKEN/);
+assert.match(verifyWorkflow, /overlay-private-admin-source\.mjs/);
+assert.match(overlay, /readPrivateManifest/);
+assert.match(overlay, /private-admin-source-overlay/);
 assert.match(gitignore, /private-admin-source-export-v847\//);
 assert.match(gitignore, /\.private-admin-source\//);
 
