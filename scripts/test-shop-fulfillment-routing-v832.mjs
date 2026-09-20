@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   artworkSignature,
   buildFulfillmentPlans,
@@ -141,5 +142,13 @@ const consolidated = chooseCheapestFulfillment([
   { plan: { production_cents: 3000, estimated_import_cents: 0, provider_groups: 1, mapped_count: 0 }, shipping: { cents: 500 }, route_key: 'single-provider' },
 ]);
 assert.equal(consolidated.route_key, 'single-provider', 'equal-cost routes should prefer fewer provider groups');
+
+const checkoutSource = readFileSync(new URL('../supabase/functions/shop-manual-checkout-v832/index.ts', import.meta.url), 'utf8');
+const previewSource = readFileSync(new URL('../supabase/functions/shop-delivery-preview-v833/index.ts', import.meta.url), 'utf8');
+assert.match(checkoutSource, /fulfillment_routing:\s*"printify-native-canonical-products"/);
+assert.match(checkoutSource, /const mappings:\s*any\[\]\s*=\s*\[\]/, 'checkout must keep regional clone mappings inert');
+assert.match(previewSource, /const mappings:\s*any\[\]\s*=\s*\[\]/, 'delivery preview must quote canonical products only');
+assert.doesNotMatch(checkoutSource, /\.from\("shop_fulfillment_mappings"\)/, 'checkout must not read regional clone mappings');
+assert.doesNotMatch(previewSource, /\.from\("shop_fulfillment_mappings"\)/, 'delivery preview must not read regional clone mappings');
 
 console.log('Shop fulfillment routing v832 tests passed.');

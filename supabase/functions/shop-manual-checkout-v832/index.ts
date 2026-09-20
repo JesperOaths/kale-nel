@@ -192,7 +192,6 @@ Deno.serve(async (req: Request) => {
   if (req.method === "GET") {
     const { data: cache } = await sb.from("shop_catalog_cache_v828").select("payload,generated_at,last_error").eq("id", 1).maybeSingle();
     const { data: settings } = await sb.from("shop_payment_settings").select("provider,payment_url,enabled").eq("id", 1).maybeSingle();
-    const { count: routingMappingCount } = await sb.from("shop_fulfillment_mappings").select("approval_id", { count: "exact", head: true }).eq("approved", true);
     return json(req, {
       ok: true,
       mode: "manual-payment-v832",
@@ -202,9 +201,9 @@ Deno.serve(async (req: Request) => {
       rounding: "whole-euro-ceiling",
       creates_pending_orders: true,
       sends_to_production: false,
-      fulfillment_routing: "production-plus-live-shipping-plus-verified-import",
-      fulfillment_provider_consolidation: "equal-cost-tiebreaker",
-      approved_regional_mappings: Number(routingMappingCount || 0),
+      fulfillment_routing: "printify-native-canonical-products",
+      fulfillment_provider_consolidation: "printify-native-order-routing",
+      approved_regional_mappings: 0,
       cached_products: Array.isArray(cache?.payload?.products) ? cache.payload.products.length : 0,
       catalog_generated_at: cache?.generated_at || null,
       catalog_error: cache?.last_error || null,
@@ -252,16 +251,10 @@ Deno.serve(async (req: Request) => {
     const resolved = items.map((item: any) => ({ raw: item, cached: cachedResolution(cache.payload, item) }));
     if (resolved.some((row: any) => !row.cached)) throw new Error("One or more selected variants are no longer in the live catalog");
 
-    const envMappings = parseFulfillmentMappings(Deno.env.get("PRINTIFY_FULFILLMENT_MAPPINGS"));
-    const { data: dbMappingRows, error: dbMappingError } = await sb.from("shop_fulfillment_mappings")
-      .select("approval_id,approved,countries,source_product_id,source_variant_id,source_blueprint_id,source_print_provider_id,target_product_id,target_variant_id,target_blueprint_id,target_print_provider_id,estimated_import_cents_per_unit")
-      .eq("approved", true);
-    if (dbMappingError) throw new Error("Fulfillment routing catalog unavailable");
-    const dbMappings = parseFulfillmentMappings(JSON.stringify(dbMappingPayload(dbMappingRows || [])));
-    const mappingsByApproval = new Map<string, any>();
-    for (const mapping of envMappings) mappingsByApproval.set(mapping.approval_id, mapping);
-    for (const mapping of dbMappings) mappingsByApproval.set(mapping.approval_id, mapping);
-    const mappings = [...mappingsByApproval.values()];
+    // Keep checkout product identity simple: one customer-visible Printify product is
+    // also the product submitted for fulfillment. Printify's own native order routing
+    // can choose the production location; internal regional clone mappings stay inert.
+    const mappings: any[] = [];
     const eligibleMappings = mappings.filter((mapping: any) => mapping.countries.includes(country) && resolved.some((row: any) =>
       mapping.source.product_id === text(row.cached.product.id) && mapping.source.variant_id === Number(row.cached.variant.id)
     ));

@@ -330,16 +330,9 @@ Deno.serve(async (req: Request) => {
     const resolved = items.map((item: any) => ({ raw: item, cached: cachedResolution(cache.payload, item) }));
     if (resolved.some((row: any) => !row.cached)) throw new Error("One or more selected variants are no longer in the live catalog");
 
-    const envMappings = parseFulfillmentMappings(Deno.env.get("PRINTIFY_FULFILLMENT_MAPPINGS"));
-    const { data: dbMappingRows, error: dbMappingError } = await sb.from("shop_fulfillment_mappings")
-      .select("approval_id,approved,countries,source_product_id,source_variant_id,source_blueprint_id,source_print_provider_id,target_product_id,target_variant_id,target_blueprint_id,target_print_provider_id,estimated_import_cents_per_unit")
-      .eq("approved", true);
-    if (dbMappingError) throw new Error("Fulfillment routing catalog unavailable");
-    const dbMappings = parseFulfillmentMappings(JSON.stringify(dbMappingPayload(dbMappingRows || [])));
-    const mappingsByApproval = new Map<string, any>();
-    for (const mapping of envMappings) mappingsByApproval.set(mapping.approval_id, mapping);
-    for (const mapping of dbMappings) mappingsByApproval.set(mapping.approval_id, mapping);
-    const mappings = [...mappingsByApproval.values()];
+    // Quote the same canonical product that the customer selected. Printify's
+    // native routing owns provider selection; internal regional clones stay inert.
+    const mappings: any[] = [];
     const eligibleMappings = mappings.filter((mapping: any) => mapping.countries.includes(country) && resolved.some((row: any) =>
       mapping.source.product_id === text(row.cached.product.id) && mapping.source.variant_id === Number(row.cached.variant.id)
     ));
