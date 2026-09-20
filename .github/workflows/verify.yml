@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   verify:
+    if: github.event_name != 'pull_request' || vars.KALENEL_REQUIRE_PRIVATE_ADMIN_SOURCE != '1'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -22,7 +23,14 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Reject untrusted private-source push
+        if: github.event_name == 'push' && vars.KALENEL_REQUIRE_PRIVATE_ADMIN_SOURCE == '1' && github.actor != 'JesperOaths'
+        run: |
+          echo "Private admin source verification is restricted to trusted JesperOaths pushes." >&2
+          exit 1
+
       - name: Validate optional private admin source for CI
+        if: github.event_name == 'push' && github.actor == 'JesperOaths'
         shell: bash
         env:
           ADMIN_SOURCE_REPOSITORY: ${{ vars.KALENEL_ADMIN_SOURCE_REPOSITORY }}
@@ -41,7 +49,7 @@ jobs:
           fi
 
       - name: Check out private admin source for CI
-        if: vars.KALENEL_ADMIN_SOURCE_REPOSITORY != ''
+        if: github.event_name == 'push' && github.actor == 'JesperOaths' && vars.KALENEL_ADMIN_SOURCE_REPOSITORY != ''
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           repository: ${{ vars.KALENEL_ADMIN_SOURCE_REPOSITORY }}
@@ -51,7 +59,7 @@ jobs:
           persist-credentials: false
 
       - name: Overlay verified private admin source for legacy regressions
-        if: vars.KALENEL_ADMIN_SOURCE_REPOSITORY != ''
+        if: github.event_name == 'push' && github.actor == 'JesperOaths' && vars.KALENEL_ADMIN_SOURCE_REPOSITORY != ''
         env:
           KALENEL_PRIVATE_ADMIN_SOURCE_DIR: ${{ github.workspace }}/.private-admin-source
         run: node scripts/overlay-private-admin-source.mjs
