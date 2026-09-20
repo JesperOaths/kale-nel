@@ -54,19 +54,43 @@ export async function refreshCostsAndCheck(sb,settings,state,analyticsUrl,servic
   const payload=await response.json().catch(()=>({}));
   if(!response.ok||payload?.ok!==true)throw new Error(payload?.detail||payload?.error||"cost_refresh_http_"+response.status);
   const products=Array.isArray(payload?.catalog_costs?.products)?payload.catalog_costs.products:[],created=[],lowRows=[];
+  const threshold=Math.max(0,Math.min(10000,Number(settings.low_margin_bps||2000)));
   for(const p of products)for(const v of Array.isArray(p?.variants)?p.variants:[]){
     if(v?.available===false)continue;
     const retail=Number(v?.retail_cents),margin=Number(v?.gross_product_margin_cents);
     if(!(retail>0)||!Number.isFinite(margin))continue;
     const bps=Math.round(margin/retail*10000);
-    if(bps<Number(settings.low_margin_bps||2000)){
-      lowRows.push({product_id:p.product_id,product_name:p.product_name,variant_id:v.id,size:v.size||String(v.id),retail_cents:retail,margin_cents:margin,margin_bps:bps});
+    if(bps<threshold){
+      const explicitCost=Number(v?.production_cost_cents);
+      const inferredCost=retail-margin;
+      const cost=Number.isFinite(explicitCost)&&explicitCost>=0?explicitCost:(Number.isFinite(inferredCost)&&inferredCost>=0?inferredCost:null);
+      const exactTarget=cost!=null&&threshold<10000?Math.ceil(cost*10000/(10000-threshold)):null;
+      const wholeEuroTarget=exactTarget==null?null:Math.ceil(exactTarget/100)*100;
+      lowRows.push({
+        product_id:p.product_id,product_name:p.product_name,variant_id:v.id,size:v.size||String(v.id),
+        retail_cents:retail,production_cost_cents:cost,margin_cents:margin,margin_bps:bps,
+        threshold_bps:threshold,threshold_price_cents:exactTarget,whole_euro_threshold_price_cents:wholeEuroTarget,
+        threshold_gap_cents:wholeEuroTarget==null?null:Math.max(0,wholeEuroTarget-retail)
+      });
     }
   }
   if(lowRows.length){
-    lowRows.sort((a,b)=>a.margin_bps-b.margin_bps);
-    const productsAffected=new Set(lowRows.map(x=>String(x.product_id))).size,worst=lowRows[0],threshold=Number(settings.low_margin_bps||2000);
-    const a=await ensureAlert(sb,{kind:"low_margin",severity:lowRows.some(x=>x.margin_bps<=0)?"high":"medium",title:"Low product margins",message:lowRows.length+" variants across "+productsAffected+" products are below "+(threshold/100).toFixed(1)+"% gross product margin. Worst: "+worst.product_name+" "+worst.size+" at "+(worst.margin_bps/100).toFixed(1)+"%.",entity_type:"shop",entity_id:"margin",dedupe_key:"low_margin:aggregate",metadata:{threshold_bps:threshold,variant_count:lowRows.length,product_count:productsAffected,worst,variants:lowRows.slice(0,100)}});
+    lowRows.sort((a,b)=>a.margin_bps-b.margin_bps||Number(b.threshold_gap_cents||0)-Number(a.threshold_gap_cents||0));
+    const productsAffected=new Set(lowRows.map(x=>String(x.product_id))).size,worst=lowRows[0];
+    const targetText=worst.whole_euro_threshold_price_cents==null
+      ?" No finite target exists at a 100% threshold."
+      :" At the current product cost, the configured threshold corresponds to a whole-euro price of EUR "+(worst.whole_euro_threshold_price_cents/100).toFixed(2)+".";
+    const a=await ensureAlert(sb,{
+      kind:"low_margin",severity:lowRows.some(x=>x.margin_bps<=0)?"high":"medium",title:"Low product margins",
+      message:lowRows.length+" variants across "+productsAffected+" products are below "+(threshold/100).toFixed(1)+"% gross product margin. Worst: "+worst.product_name+" "+worst.size+" at "+(worst.margin_bps/100).toFixed(1)+"%."+targetText+" No prices were changed.",
+      entity_type:"shop",entity_id:"margin",dedupe_key:"low_margin:aggregate",
+      metadata:{
+        threshold_bps:threshold,variant_count:lowRows.length,product_count:productsAffected,worst,
+        diagnostic_basis:"gross product margin only; current retail minus current production cost; excludes shipping, payment fees, VAT and other ledger costs",
+        pricing_action:"none",
+        variants:lowRows.slice(0,100)
+      }
+    });
     if(a.created)created.push(a.row);
     await resolveKindExcept(sb,"low_margin",new Set(["low_margin:aggregate"]));
   }else{
