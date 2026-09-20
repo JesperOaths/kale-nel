@@ -15,6 +15,13 @@ function client(){
   if(!url||!key)throw new Error("server_not_configured");
   return createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
 }
+function isServiceRole(req){
+  const key=text(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
+  const bearer=text(req.headers.get("authorization")).replace(/^Bearer\s+/i,"");
+  if(!key||!bearer||key.length!==bearer.length)return false;
+  let diff=0;for(let i=0;i<key.length;i++)diff|=key.charCodeAt(i)^bearer.charCodeAt(i);
+  return diff===0;
+}
 async function requireAdmin(sb,token){
   const {data,error}=await sb.rpc("_require_valid_admin_session",{admin_session_token:token});
   if(error)throw error;
@@ -54,7 +61,8 @@ Deno.serve(async req=>{
   const sb=client();
   let body={};try{body=await req.json();}catch{return json(req,{ok:false,error:"invalid_json"},400);}
   try{
-    await requireAdmin(sb,text(body?.admin_session_token));
+    const serviceSelfTest=isServiceRole(req)&&text(body?.action)==="self_test";
+    if(!serviceSelfTest)await requireAdmin(sb,text(body?.admin_session_token));
     const month=text(body?.month),range=monthRange(month);
     const [orders,ledger,invoices,fees,tax]=await Promise.all([
       sb.from("shop_orders").select("id,payment_reference,created_at,status,customer_name,customer_email,subtotal_cents,shipping_cents,total_cents,paid_amount_cents,payment_provider,payment_fee_cents,payment_fee_source,invoice_number,payment_verified_at,submitted_to_printify_at,shipped_at").gte("created_at",range.from).lt("created_at",range.to).order("created_at"),
@@ -78,9 +86,13 @@ Deno.serve(async req=>{
     }]),"Tax settings");
     const bytes=XLSX.write(wb,{type:"array",bookType:"xlsx"});
     const u8=new Uint8Array(bytes);
+    const counts={orders:(orders.data||[]).length,ledger:(ledger.data||[]).length,invoices:(invoices.data||[]).length};
+    if(serviceSelfTest){
+      return json(req,{ok:true,self_test:true,valid_xlsx_header:u8[0]===0x50&&u8[1]===0x4b,byte_size:u8.length,counts});
+    }
     let binary="";for(let i=0;i<u8.length;i+=0x8000)binary+=String.fromCharCode(...u8.subarray(i,i+0x8000));
     const base64=btoa(binary);
-    return json(req,{ok:true,filename:"bruis-bookkeeping-"+month+".xlsx",mime:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",base64,counts:{orders:(orders.data||[]).length,ledger:(ledger.data||[]).length,invoices:(invoices.data||[]).length}});
+    return json(req,{ok:true,filename:"bruis-bookkeeping-"+month+".xlsx",mime:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",base64,counts});
   }catch(error){
     const msg=text(error instanceof Error?error.message:error);
     return json(req,{ok:false,error:/invalid_admin_session/i.test(msg)?"invalid_admin_session":"export_failed",detail:msg.slice(0,500)},/invalid_admin_session/i.test(msg)?401:502);
