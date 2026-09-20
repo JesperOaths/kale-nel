@@ -1,4 +1,4 @@
-import { text,nowIso,hoursSince,daysSince,sha256,ensureAlert,resolveAlert,resolveKindExcept,saveState } from "./shop-ops-core-v847.mjs";
+import { text,nowIso,hoursSince,daysSince,sha256,ensureAlert,resolveAlert,resolveKindExcept,saveState,sendEmail } from "./shop-ops-core-v847.mjs";
 
 export function normalizeCatalog(payload){
   const out=[];
@@ -53,19 +53,25 @@ export async function refreshCostsAndCheck(sb,settings,state,analyticsUrl,servic
   const response=await fetch(analyticsUrl,{method:"POST",headers:{Authorization:"Bearer "+serviceKey,apikey:serviceKey,"Content-Type":"application/json"},body:JSON.stringify({action:"refresh_costs_only"})});
   const payload=await response.json().catch(()=>({}));
   if(!response.ok||payload?.ok!==true)throw new Error(payload?.detail||payload?.error||"cost_refresh_http_"+response.status);
-  const products=Array.isArray(payload?.catalog_costs?.products)?payload.catalog_costs.products:[],activeLow=new Set(),created=[];
+  const products=Array.isArray(payload?.catalog_costs?.products)?payload.catalog_costs.products:[],created=[],lowRows=[];
   for(const p of products)for(const v of Array.isArray(p?.variants)?p.variants:[]){
     if(v?.available===false)continue;
     const retail=Number(v?.retail_cents),margin=Number(v?.gross_product_margin_cents);
     if(!(retail>0)||!Number.isFinite(margin))continue;
-    const bps=Math.round(margin/retail*10000),key="low_margin:"+p.product_id+":"+v.id;
+    const bps=Math.round(margin/retail*10000);
     if(bps<Number(settings.low_margin_bps||2000)){
-      activeLow.add(key);
-      const a=await ensureAlert(sb,{kind:"low_margin",severity:bps<=0?"high":"medium",title:"Low product margin",message:p.product_name+" "+(v.size||v.id)+" is at "+(bps/100).toFixed(1)+"% gross product margin.",entity_type:"variant",entity_id:String(v.id),dedupe_key:key,metadata:{product_id:p.product_id,variant_id:v.id,retail_cents:retail,margin_cents:margin,margin_bps:bps}});
-      if(a.created)created.push(a.row);
+      lowRows.push({product_id:p.product_id,product_name:p.product_name,variant_id:v.id,size:v.size||String(v.id),retail_cents:retail,margin_cents:margin,margin_bps:bps});
     }
   }
-  await resolveKindExcept(sb,"low_margin",activeLow);
+  if(lowRows.length){
+    lowRows.sort((a,b)=>a.margin_bps-b.margin_bps);
+    const productsAffected=new Set(lowRows.map(x=>String(x.product_id))).size,worst=lowRows[0],threshold=Number(settings.low_margin_bps||2000);
+    const a=await ensureAlert(sb,{kind:"low_margin",severity:lowRows.some(x=>x.margin_bps<=0)?"high":"medium",title:"Low product margins",message:lowRows.length+" variants across "+productsAffected+" products are below "+(threshold/100).toFixed(1)+"% gross product margin. Worst: "+worst.product_name+" "+worst.size+" at "+(worst.margin_bps/100).toFixed(1)+"%.",entity_type:"shop",entity_id:"margin",dedupe_key:"low_margin:aggregate",metadata:{threshold_bps:threshold,variant_count:lowRows.length,product_count:productsAffected,worst,variants:lowRows.slice(0,100)}});
+    if(a.created)created.push(a.row);
+    await resolveKindExcept(sb,"low_margin",new Set(["low_margin:aggregate"]));
+  }else{
+    await resolveKindExcept(sb,"low_margin",new Set());
+  }
   const since=state?.last_cost_refresh_at||new Date(Date.now()-12*3600000).toISOString();
   const {data:history}=await sb.from("shop_price_cost_history_v843").select("captured_at,product_id,variant_id,product_name,size,production_cost_cents").gte("captured_at",since).order("captured_at",{ascending:false}).limit(3000);
   const grouped=new Map();
@@ -84,11 +90,26 @@ export async function refreshCostsAndCheck(sb,settings,state,analyticsUrl,servic
   return {refresh:payload.refresh||{},new_alerts:created};
 }
 export async function checkOrdersAndTelemetry(sb,settings){
-  const {data:orders,error}=await sb.from("shop_orders").select("id,status,payment_reference,created_at,payment_verified_at,submitted_to_printify_at,shipped_at,tracking,last_error,total_cents,payment_fee_cents,invoice_number").order("created_at",{ascending:false}).limit(2000);
+  const {data:orders,error}=await sb.from("shop_orders").select("id,status,payment_reference,created_at,payment_verified_at,submitted_to_printify_at,shipped_at,tracking,last_error,total_cents,subtotal_cents,shipping_cents,payment_fee_cents,invoice_number,customer_name,customer_email,payment_provider,payment_request_url,order_confirmation_notified_at,shipment_notified_at,notification_error,notification_error_at").order("created_at",{ascending:false}).limit(2000);
   if(error)throw error;
-  const active=new Map([["order_error",new Set()],["paid_not_submitted",new Set()],["production_stuck",new Set()],["shipped_no_tracking",new Set()]]),created=[];
+  const active=new Map([["order_error",new Set()],["paid_not_submitted",new Set()],["production_stuck",new Set()],["shipped_no_tracking",new Set()]]),created=[],notificationFailures=[];
   for(const o of orders||[]){
     const ref=text(o.payment_reference)||String(o.id).slice(0,8);
+    if(o.status==="pending"&&!o.order_confirmation_notified_at&&text(o.notification_error)&&text(o.customer_email)){
+      const money=c=>"€"+(Number(c||0)/100).toFixed(2);
+      const paymentLink=text(o.payment_request_url)?'<p><a href="'+text(o.payment_request_url).replace(/["<>]/g,"")+'">Pay order</a></p>':"";
+      const html='<div style="font-family:Arial,sans-serif;line-height:1.55;color:#111"><h2>We received your Bruis order</h2><p>Hi '+text(o.customer_name).replace(/[<>&]/g,"")+',</p><p>Your order <strong>'+ref+'</strong> is saved as <strong>Pending</strong>.</p><p><strong>Total: '+money(o.total_cents)+'</strong><br>Products: '+money(o.subtotal_cents)+'<br>Shipping: '+money(o.shipping_cents)+'<br>Payment reference: <strong>'+ref+'</strong></p>'+paymentLink+'<p>We only send the order to production after the payment has been verified.</p></div>';
+      const plain='We received your Bruis order '+ref+'.\nStatus: Pending\nTotal: '+money(o.total_cents)+'\nShipping: '+money(o.shipping_cents)+'\nPayment reference: '+ref+(text(o.payment_request_url)?'\nPayment link: '+text(o.payment_request_url):'')+'\nWe only send the order to production after payment has been verified.';
+      const mailed=await sendEmail(text(o.customer_email),'Bruis order '+ref+' received',html,plain);
+      if(mailed.ok){
+        await sb.from("shop_orders").update({order_confirmation_notified_at:nowIso(),notification_error:null,notification_error_at:null}).eq("id",o.id);
+        o.notification_error=null;
+      }else if(!mailed.skipped){
+        await sb.from("shop_orders").update({notification_error:mailed.error,notification_error_at:nowIso()}).eq("id",o.id);
+        o.notification_error=mailed.error;
+      }
+    }
+    if(text(o.notification_error))notificationFailures.push({order_id:o.id,reference:ref,status:o.status,error:text(o.notification_error).slice(0,500),at:o.notification_error_at||null});
     if(o.payment_verified_at&&o.payment_fee_cents==null){
       const fee=await sb.rpc("shop_apply_payment_fee_v847",{order_id_input:o.id,admin_id_input:null});
       if(fee.error)console.warn("historical payment fee backfill failed",fee.error.message||fee.error);
@@ -115,6 +136,14 @@ export async function checkOrdersAndTelemetry(sb,settings){
     }
   }
   for(const [kind,keys] of active)await resolveKindExcept(sb,kind,keys);
+  if(notificationFailures.length){
+    const commonResend=notificationFailures.every(x=>/^Resend\s/i.test(x.error));
+    const a=await ensureAlert(sb,{kind:"notification_delivery",severity:"high",title:"Customer email delivery is failing",message:notificationFailures.length+" order notification"+(notificationFailures.length===1?"":"s")+" could not be delivered"+(commonResend?". Resend/domain configuration needs attention.":".")+"",entity_type:"shop",entity_id:"email",dedupe_key:"notification_delivery:aggregate",metadata:{count:notificationFailures.length,orders:notificationFailures}});
+    if(a.created)created.push(a.row);
+    await resolveKindExcept(sb,"notification_delivery",new Set(["notification_delivery:aggregate"]));
+  }else{
+    await resolveKindExcept(sb,"notification_delivery",new Set());
+  }
   const {data:event}=await sb.from("site_visitor_events").select("created_at").like("page_path","/shop%").order("created_at",{ascending:false}).limit(1).maybeSingle();
   const staleHours=event?.created_at?hoursSince(event.created_at):Infinity,key="telemetry_stale:shop";
   if(staleHours>=Number(settings.telemetry_stale_hours||12)){
