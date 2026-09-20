@@ -62,14 +62,26 @@
   }
   function renderWaterfall(){
     const d=state?.data||{},o=d.orders||{},l=d.ledger||{},spend=(state?.growth?.campaign_spend||[]).reduce((s,r)=>s+n(r.amount_cents),0);
+    const byCat=Array.isArray(l.by_category)?l.by_category:[];
+    const cost=(cat)=>byCat.filter(r=>r.direction==='cost'&&r.category===cat).reduce((s,r)=>s+n(r.amount_cents),0);
+    const income=byCat.filter(r=>r.direction==='income').reduce((s,r)=>s+n(r.amount_cents),0);
     const rows=[
       ['Recognized sales',n(o.recognized_sales_cents),1],
+      ['Discounts',cost('discount'),-1],
+      ['Refunds',cost('refund'),-1],
+      ['Chargebacks',cost('chargeback'),-1],
+      ['Payment fees',cost('payment_fee'),-1],
       ['Product COGS',n(o.paid_known_product_cost_cents),-1],
       ['Supplier shipping',n(o.paid_known_shipping_cost_cents),-1],
+      ['Shipping adjustments',cost('shipping_adjustment'),-1],
       ['Import allowance',n(o.paid_import_allowance_cents),-1],
-      ['General ledger costs',n(l.costs_cents),-1],
       ['Campaign spend',spend,-1],
-      ['Ledger income',n(l.income_cents),1]
+      ['Other marketing ledger',cost('marketing'),-1],
+      ['Packaging',cost('packaging'),-1],
+      ['Software',cost('software'),-1],
+      ['VAT / tax reserve',cost('tax'),-1],
+      ['Other ledger costs',cost('other'),-1],
+      ['Ledger income',income,1]
     ];
     let running=0;
     $('waterfallRows').innerHTML=rows.map(([label,val,sign])=>{running+=sign*val;return '<div class="waterfall-row"><span>'+esc(label)+'</span><strong class="'+(sign>0?'good':'bad')+'">'+(sign>0?'+':'−')+eur(val)+'</strong><small>running '+eur(running)+'</small></div>'}).join('')+
@@ -81,6 +93,8 @@
     const devices=state?.growth?.device_funnel||[],sources=state?.growth?.source_funnel||[];
     $('deviceFunnelRows').innerHTML=devices.length?devices.map(r=>'<tr><td>'+esc(r.device)+'</td><td class="num">'+int(r.sessions)+'</td><td class="num">'+int(r.product_views)+'</td><td class="num">'+int(r.adds)+'</td><td class="num">'+int(r.checkout_starts)+'</td><td class="num">'+int(r.orders_created)+'</td><td class="num">'+pct(r.session_to_order)+'</td></tr>').join(''):'<tr><td colspan="7" class="muted">No device funnel data.</td></tr>';
     $('sourceFunnelRows').innerHTML=sources.length?sources.slice(0,30).map(r=>'<tr><td>'+esc(r.source)+'</td><td class="num">'+int(r.sessions)+'</td><td class="num">'+int(r.product_views)+'</td><td class="num">'+int(r.adds)+'</td><td class="num">'+int(r.checkout_starts)+'</td><td class="num">'+int(r.orders_created)+'</td><td class="num">'+pct(r.session_to_order)+'</td></tr>').join(''):'<tr><td colspan="7" class="muted">No acquisition funnel data.</td></tr>';
+    const countries=state?.growth?.country_funnel||[];
+    $('countryFunnelRows').innerHTML=countries.length?countries.map(r=>'<tr><td>'+esc(r.country)+'</td><td class="num">'+int(r.sessions)+'</td><td class="num">'+int(r.product_views)+'</td><td class="num">'+int(r.adds)+'</td><td class="num">'+int(r.checkout_starts)+'</td><td class="num">'+int(r.checkout_submits)+'</td><td class="num">'+int(r.orders_created)+'</td><td class="num">'+pct(r.submit_to_order)+'</td></tr>').join(''):'<tr><td colspan="8" class="muted">Country funnel begins once checkout submissions include a country.</td></tr>';
   }
   function renderMarketing(){
     const rows=state?.growth?.campaign_performance||[];
@@ -168,7 +182,7 @@
     const rows=state?.growth?.goals||[];
     const fmt=(r)=>r.metric.includes('_cents')?eur(r.target_value):r.metric.includes('rate')?pct(r.target_value):int(r.target_value);
     const cur=(r)=>r.metric.includes('_cents')?eur(r.current_value):r.metric.includes('rate')?pct(r.current_value):int(r.current_value);
-    $('goalRows').innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.period_month)+'</td><td>'+esc(r.metric.replaceAll('_',' '))+'</td><td class="num">'+fmt(r)+'</td><td class="num">'+cur(r)+'</td><td><div class="goal-track"><div style="width:'+Math.min(100,Math.max(0,100*n(r.progress)))+'%"></div></div><small>'+pct(r.progress)+'</small></td><td><button class="alt" data-delete-goal="'+r.id+'">Delete</button></td></tr>').join(''):'<tr><td colspan="6" class="muted">No goals configured.</td></tr>';
+    $('goalRows').innerHTML=rows.length?rows.map(r=>{const forecast=r.metric.includes('_cents')?eur(r.forecast_value):r.metric.includes('rate')?pct(r.forecast_value):int(r.forecast_value);return '<tr><td>'+esc(r.period_month)+'</td><td>'+esc(r.metric.replaceAll('_',' '))+'</td><td class="num">'+fmt(r)+'</td><td class="num">'+cur(r)+'</td><td class="num">'+forecast+'</td><td><div class="goal-track"><div style="width:'+Math.min(100,Math.max(0,100*n(r.forecast_progress)))+'%"></div></div><small>'+pct(r.forecast_progress)+' forecast</small></td><td><button class="alt" data-delete-goal="'+r.id+'">Delete</button></td></tr>'}).join(''):'<tr><td colspan="7" class="muted">No goals configured.</td></tr>';
   }
   function renderAnnotations(){
     const rows=state?.growth?.annotations||[];
