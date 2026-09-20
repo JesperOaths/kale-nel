@@ -11,7 +11,7 @@ export const allowedExtensions = new Set([
 
 export function normalizeRel(value) {
   return String(value || '')
-    .replaceAll('\\\\', '/')
+    .replaceAll('\\', '/')
     .replace(/^\.\//, '')
     .replace(/^\/+/, '')
     .split('/')
@@ -20,9 +20,13 @@ export function normalizeRel(value) {
 }
 
 export function isSafeRelativePath(value) {
-  const rel = normalizeRel(value);
-  if (!rel || rel.startsWith('../') || rel.includes('/../') || path.posix.isAbsolute(rel)) return false;
-  return rel.split('/').every((part) => part !== '..' && part !== '');
+  const raw = String(value || '');
+  if (!raw || raw.includes('\\0')) return false;
+  if (/^[\\/]/.test(raw) || /^[A-Za-z]:[\\/]/.test(raw)) return false;
+  const slash = raw.replaceAll('\\\\', '/');
+  if (slash.split('/').some((part) => part === '..')) return false;
+  const rel = normalizeRel(raw);
+  return Boolean(rel) && !path.posix.isAbsolute(rel);
 }
 
 export function isPrivateAdminSourcePath(value) {
