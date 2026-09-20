@@ -22,7 +22,7 @@
     .form-grid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;margin-top:12px}.field{display:grid;gap:5px}.field label{font-weight:800;font-size:12px}.field input,.field select,.field textarea{padding:9px 10px;border:1px solid #d7d1c8;border-radius:10px;font:inherit;width:100%}.field textarea{min-height:70px}
     .check{display:flex;gap:8px;align-items:center}.check input{width:auto}.table-wrap{overflow:auto;margin-top:10px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px 10px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}th{font-size:10px;text-transform:uppercase;color:var(--muted)}tbody tr:nth-child(even){background:#fcfaf6}
     .pill{display:inline-flex;padding:4px 8px;border-radius:999px;background:#eee;font-weight:800}.pill.high{background:#f8d8d2;color:#7d2118}.pill.medium{background:#fff0c7;color:#6e5000}.pill.info{background:#dfeaf2;color:#264e6d}.good{color:var(--ok)}.bad{color:var(--warn)}
-    code{font-size:11px}.watermark{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);background:#111;color:#f0d98f;border-radius:999px;padding:7px 12px;font-weight:800;pointer-events:none}
+    code{font-size:11px}.alert-detail{margin-top:8px}.alert-detail summary{cursor:pointer;font-weight:800;color:#57481f}.alert-detail .note{margin:7px 0;color:var(--muted);font-size:11px}.alert-detail table{min-width:760px;background:#fff}.alert-detail th,.alert-detail td{padding:6px 8px}.alert-detail .gap{font-weight:900}.watermark{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);background:#111;color:#f0d98f;border-radius:999px;padding:7px 12px;font-weight:800;pointer-events:none}
     @media(max-width:950px){.metrics,.grid2,.grid3,.form-grid{grid-template-columns:1fr 1fr}}@media(max-width:600px){body{padding:8px}.wrap{padding:15px}.metrics,.grid2,.grid3,.form-grid{grid-template-columns:1fr}}
   </style>
 </head>
@@ -129,10 +129,18 @@
     if(r.status===401){window.GEJAST_ADMIN_SESSION?.redirectToAdminLogin?.("session_invalid","admin_shop_operations.html");throw new Error("Admin session expired.");}
     if(!r.ok||p?.ok===false)throw new Error(p?.detail||p?.error||("HTTP "+r.status));return p;
   }
+  function marginDetails(x){
+    if(x?.kind!=="low_margin")return "";
+    const m=x?.metadata||{},rows=Array.isArray(m.variants)?m.variants:[];
+    if(!rows.length)return "";
+    const threshold=Number(m.threshold_bps||0)/100;
+    const body=rows.map(v=>"<tr><td><strong>"+esc(v.product_name||v.product_id||"Product")+"</strong></td><td>"+esc(v.size||v.variant_id||"—")+"</td><td>"+eur(v.retail_cents)+"</td><td>"+eur(v.production_cost_cents)+"</td><td>"+(Number(v.margin_bps||0)/100).toFixed(1)+"%</td><td>"+(v.whole_euro_threshold_price_cents==null?"—":eur(v.whole_euro_threshold_price_cents))+"</td><td class='gap'>"+(v.threshold_gap_cents==null?"—":v.threshold_gap_cents>0?("+"+eur(v.threshold_gap_cents)):eur(0))+"</td></tr>").join("");
+    return "<details class='alert-detail'><summary>Show "+rows.length+" affected variant"+(rows.length===1?"":"s")+" and threshold-price diagnostic</summary><div class='note'>Gross product margin only. Target uses the current product cost and the configured "+threshold.toFixed(1)+"% threshold, rounded up to a whole-euro shop price. This is diagnostic only; no price is changed automatically.</div><div class='table-wrap'><table><thead><tr><th>Product</th><th>Variant</th><th>Current price</th><th>Product cost</th><th>Margin</th><th>"+threshold.toFixed(1)+"% price</th><th>Gap</th></tr></thead><tbody>"+body+"</tbody></table></div></details>";
+  }
   function render(){
     const a=state.alerts||[],open=a.filter(x=>!x.resolved_at),hi=open.filter(x=>x.severity==="high");
     $("mAlerts").textContent=int(open.length);$("mHigh").textContent=int(hi.length);$("mRun").textContent=state.state?.last_run_at?dt(state.state.last_run_at):"never";$("mBackups").textContent=int((state.backups||[]).length);
-    $("alertsRows").innerHTML=a.length?a.map(x=>"<tr><td>"+dt(x.created_at)+"</td><td><span class='pill "+esc(x.severity)+"'>"+esc(x.severity)+"</span></td><td>"+esc(x.kind)+"</td><td><strong>"+esc(x.title)+"</strong><br>"+esc(x.message)+"</td><td>"+(x.resolved_at?"resolved":x.acknowledged_at?"acknowledged":"open")+"</td><td>"+(!x.acknowledged_at&&!x.resolved_at?"<button class='alt' data-ack='"+x.id+"'>Acknowledge</button>":"")+"</td></tr>").join(""):"<tr><td colspan='6'>No alerts.</td></tr>";
+    $("alertsRows").innerHTML=a.length?a.map(x=>"<tr><td>"+dt(x.created_at)+"</td><td><span class='pill "+esc(x.severity)+"'>"+esc(x.severity)+"</span></td><td>"+esc(x.kind)+"</td><td><strong>"+esc(x.title)+"</strong><br>"+esc(x.message)+marginDetails(x)+"</td><td>"+(x.resolved_at?"resolved":x.acknowledged_at?"acknowledged":"open")+"</td><td>"+(!x.acknowledged_at&&!x.resolved_at?"<button class='alt' data-ack='"+x.id+"'>Acknowledge</button>":"")+"</td></tr>").join(""):"<tr><td colspan='6'>No alerts.</td></tr>";
 
     const s=state.settings||{};$("ownerEmail").value=s.owner_email||"";$("emailAlerts").checked=s.email_alerts_enabled===true;$("dailyBrief").checked=s.daily_brief_enabled!==false;$("weeklyBrief").checked=s.weekly_brief_enabled!==false;$("paidHours").value=s.paid_not_submitted_hours||2;$("prodDays").value=s.production_stuck_days||7;$("telemetryHours").value=s.telemetry_stale_hours||12;$("costChange").value=((s.cost_change_alert_cents||100)/100).toFixed(2);$("lowMargin").value=((s.low_margin_bps||2000)/100).toFixed(1);
 

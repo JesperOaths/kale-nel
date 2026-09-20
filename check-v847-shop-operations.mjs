@@ -16,6 +16,7 @@ const page=read('admin_shop_operations.html');
 const nav=read('admin-topnav.js');
 const scheduler=read('.github/workflows/shop-operations-v847.yml');
 const schedulerRunner=read('scripts/run-shop-ops-v847.mjs');
+const marginDiagnosticSelfTest=read('scripts/verify-shop-margin-diagnostic-v847.mjs');
 const deploy=read('.github/workflows/deploy-shop-fixes-v829.yml');
 const adminDeploy=read('.github/workflows/deploy-admin-worker.yml');
 
@@ -47,6 +48,13 @@ assert.match(ops,/security_revoke_others/);
 for(const marker of ['createBackup','generateBrief','notifyNewAlerts']) assert.ok(core.includes(marker));
 for(const marker of ['paid_not_submitted','production_stuck','shipped_no_tracking','telemetry_stale','catalogDiff','cost_change','low_margin','shop_issue_invoice_v847','shop_apply_payment_fee_v847']) assert.ok(checks.includes(marker),'checks missing '+marker);
 
+for(const marker of ['whole_euro_threshold_price_cents','threshold_gap_cents','diagnostic_basis','pricing_action:"none"']) assert.ok(checks.includes(marker),'low-margin diagnostic missing '+marker);
+assert.match(page,/function marginDetails\(x\)/);
+assert.match(page,/diagnostic only; no price is changed automatically/i);
+assert.match(page,/whole-euro shop price/i);
+assert.doesNotMatch(checks,/action\s*[:=]\s*["'](?:set|update|change)[_-]?price["']/i,'low-margin monitoring must not mutate prices');
+assert.doesNotMatch(page,/data-(?:set|update|change)-price/i,'operations page must not expose automatic repricing controls');
+
 assert.match(catalog,/const priced = available;/);
 assert.match(catalog,/variants: available/);
 assert.doesNotMatch(catalog,/available\.length \? available : variants/);
@@ -68,6 +76,10 @@ assert.match(scheduler,/scripts\/run-shop-ops-v847\.mjs run_costs/);
 assert.match(scheduler,/scripts\/run-shop-ops-v847\.mjs run_catalog/);
 assert.match(scheduler,/scripts\/run-shop-ops-v847\.mjs run_orders/);
 assert.match(scheduler,/scripts\/run-shop-ops-v847\.mjs run_backup/);
+assert.match(scheduler,/scripts\/verify-shop-margin-diagnostic-v847\.mjs/);
+assert.match(marginDiagnosticSelfTest,/pricing_action!=='none'/);
+assert.match(marginDiagnosticSelfTest,/whole_euro_threshold_price_cents/);
+assert.match(marginDiagnosticSelfTest,/margin-diagnostic-self-test/);
 assert.match(schedulerRunner,/shop_ops_mint_scheduler_token_v847/);
 assert.match(schedulerRunner,/x-shop-ops-token/);
 assert.match(schedulerRunner,/170000/);

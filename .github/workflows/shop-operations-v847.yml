@@ -43,6 +43,10 @@ jobs:
         if: steps.plan.outputs.costs == 'true'
         run: node scripts/run-shop-ops-v847.mjs run_costs
 
+      - name: Verify low-margin diagnostics are read-only and complete
+        if: env.FORCE_RUN == 'true'
+        run: node scripts/verify-shop-margin-diagnostic-v847.mjs
+
       - name: Refresh catalog and check drift
         if: steps.plan.outputs.catalog == 'true'
         run: node scripts/run-shop-ops-v847.mjs run_catalog
