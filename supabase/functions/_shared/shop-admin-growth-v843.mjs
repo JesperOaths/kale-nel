@@ -308,7 +308,7 @@ export async function buildGrowthIntelligence(sb,{range,snapshot,previousSnapsho
     cost_cache_generated_at:catalogCosts?.cache?.generated_at||null,cost_cache_stale:!!catalogCosts?.cache?.stale,cost_cache_error:catalogCosts?.cache?.error||null,
     last_shop_event_at:intelligence?.last_shop_event_at||null,payment_provider:paymentRes.data?.provider||null,payment_enabled:paymentRes.data?.enabled===true,payment_updated_at:paymentRes.data?.updated_at||null,
     email_configured:!!text(Deno.env.get("RESEND_API_KEY"))&&!!text(Deno.env.get("RESEND_FROM_EMAIL")),
-    production_connection_configured:!!text(Deno.env.get("PRINTIFY_API_TOKEN"))||true,
+    production_connection_configured:!!text(Deno.env.get("PRINTIFY_API_TOKEN"))||!!text(Deno.env.get("SUPABASE_URL")),
     latest_webhook_at:recentWebhook?.created_at||null,latest_webhook_processed:recentWebhook?.processed??null,latest_webhook_error:recentWebhook?.last_error||null,
     active_admin_sessions:activeSessions.length,failed_admin_logins_30d:failedLogins.length,successful_admin_logins_30d:successfulLogins.length
   };
