@@ -29,6 +29,7 @@ jobs:
       FORCE_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.force || 'false' }}
     steps:
       - name: Run protected shop operations
+        id: ops
         shell: bash
         run: |
           set -euo pipefail
@@ -60,8 +61,39 @@ jobs:
             orders_checked:body?.result?.orders?.orders_checked??null
           };
           console.log('shop-ops-v847',JSON.stringify(safe));
+          if(safe.backup_id) fs.appendFileSync(process.env.GITHUB_OUTPUT, 'backup_id='+safe.backup_id+'\n');
           if(Number(status)!==200||body?.ok!==true){
             console.error('shop operations failed:',String(body?.detail||body?.error||'unknown').slice(0,500));
             process.exit(1);
           }
           NODE
+
+      - name: Export and encrypt newly-created backup
+        if: steps.ops.outputs.backup_id != ''
+        shell: bash
+        env:
+          BACKUP_ID: ${{ steps.ops.outputs.backup_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bruis-backup"
+          raw="$RUNNER_TEMP/bruis-backup/backup.json"
+          enc="$RUNNER_TEMP/bruis-backup/bruis-shop-backup-${BACKUP_ID}.json.enc"
+          curl --silent --show-error --fail --max-time 120             "${SUPABASE_URL}/rest/v1/shop_backup_snapshots_v847?id=eq.${BACKUP_ID}&select=*"             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}"             -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}"             -H 'Accept: application/json' > "$raw"
+          node --input-type=module - "$raw" <<'NODE'
+          import fs from 'node:fs';
+          const file=process.argv[2];
+          const rows=JSON.parse(fs.readFileSync(file,'utf8'));
+          if(!Array.isArray(rows)||rows.length!==1||!rows[0]?.payload_sha256) throw new Error('Backup export did not return exactly one valid snapshot');
+          NODE
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in "$raw" -out "$enc" -pass env:SUPABASE_SERVICE_ROLE_KEY
+          rm -f "$raw"
+          echo "Encrypted backup artifact prepared: $(basename "$enc")"
+
+      - name: Upload encrypted offsite backup artifact
+        if: steps.ops.outputs.backup_id != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: bruis-shop-backup-${{ steps.ops.outputs.backup_id }}
+          path: ${{ runner.temp }}/bruis-backup/*.enc
+          if-no-files-found: error
+          retention-days: 90
