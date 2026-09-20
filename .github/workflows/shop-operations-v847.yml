@@ -45,8 +45,23 @@ jobs:
           if [[ "${FORCE_RUN}" == "true" ]]; then
             payload='{"action":"run","force":true}'
           fi
+          mint_file="$RUNNER_TEMP/shop-ops-mint.json"
+          mint_status="$(curl --silent --show-error --max-time 60             --output "$mint_file" --write-out '%{http_code}'             -X POST "${SUPABASE_URL}/rest/v1/rpc/shop_ops_mint_scheduler_token_v847"             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}"             -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}"             -H 'Content-Type: application/json'             --data '{}')"
+          if [[ "$mint_status" != "200" ]]; then
+            echo "::error::Could not mint one-time shop operations scheduler token (HTTP $mint_status)"
+            exit 1
+          fi
+          scheduler_token="$(node --input-type=module - "$mint_file" <<'NODE'
+          import fs from 'node:fs';
+          const v=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+          if(typeof v!=='string'||!/^[a-f0-9]{64}$/i.test(v)) throw new Error('Malformed scheduler token');
+          process.stdout.write(v);
+          NODE
+          )"
+          rm -f "$mint_file"
+
           response_file="$RUNNER_TEMP/shop-ops.json"
-          status="$(curl --silent --show-error --max-time 600             --output "$response_file" --write-out '%{http_code}'             -X POST "${SUPABASE_URL}/functions/v1/shop-ops-v847"             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}"             -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}"             -H 'Content-Type: application/json'             --data "$payload")"
+          status="$(curl --silent --show-error --max-time 600             --output "$response_file" --write-out '%{http_code}'             -X POST "${SUPABASE_URL}/functions/v1/shop-ops-v847"             -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}"             -H "x-shop-ops-token: ${scheduler_token}"             -H 'Content-Type: application/json'             --data "$payload")"
           node --input-type=module - "$response_file" "$status" <<'NODE'
           import fs from 'node:fs';
           const [file,status]=process.argv.slice(2);
