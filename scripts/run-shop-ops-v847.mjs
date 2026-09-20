@@ -31,6 +31,24 @@ function mint(){
   return body;
 }
 
+function exportSelfTest(){
+  const token=mint();
+  const month=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Amsterdam',year:'numeric',month:'2-digit'}).format(new Date()).slice(0,7);
+  const body=curlJson([
+    '--silent','--show-error','--fail-with-body','--max-time','90',
+    '-X','POST',base+'/functions/v1/shop-admin-export-v847',
+    '-H','apikey: '+key,
+    '-H','x-shop-ops-token: '+token,
+    '-H','Content-Type: application/json',
+    '--data',JSON.stringify({action:'self_test',month})
+  ],95000);
+  if(body?.ok!==true||body?.self_test!==true||body?.valid_xlsx_header!==true||!(Number(body?.byte_size)>1000)){
+    throw new Error('XLSX self-test failed: '+JSON.stringify(body).slice(0,400));
+  }
+  console.log('xlsx-self-test',JSON.stringify({byte_size:body.byte_size,counts:body.counts}));
+  return body;
+}
+
 function call(){
   const token=mint();
   const payload={action};
@@ -45,6 +63,11 @@ function call(){
   ],170000);
   if(body?.ok!==true) throw new Error('shop-ops '+action+' failed: '+String(body?.detail||body?.error||'unknown').slice(0,300));
   return body;
+}
+
+if(action==='export_self_test'){
+  exportSelfTest();
+  process.exit(0);
 }
 
 const body=call();
