@@ -24,12 +24,26 @@ function serviceClient(){
   if(!PROJECT_URL||!SERVICE_KEY)throw new Error("server_not_configured");
   return createClient(PROJECT_URL,SERVICE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
 }
-function timingSafeEqual(a,b){
-  if(!a||!b||a.length!==b.length)return false;
-  let diff=0;for(let i=0;i<a.length;i++)diff|=a.charCodeAt(i)^b.charCodeAt(i);return diff===0;
-}
-function isServiceRole(req){
-  return timingSafeEqual(text(req.headers.get("authorization")).replace(/^Bearer\s+/i,""),SERVICE_KEY);
+async function isServiceRole(req){
+  const apiKey=text(req.headers.get("apikey"));
+  const authorization=text(req.headers.get("authorization"));
+  if(!apiKey&&!authorization)return false;
+  try{
+    const r=await fetch(PROJECT_URL+"/rest/v1/rpc/shop_ops_service_role_probe_v847",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "apikey":apiKey||authorization.replace(/^Bearer\\s+/i,""),
+        "Authorization":authorization||("Bearer "+apiKey)
+      },
+      body:"{}"
+    });
+    if(!r.ok)return false;
+    const payload=await r.json().catch(()=>false);
+    return payload===true;
+  }catch{
+    return false;
+  }
 }
 async function requireAdmin(sb,token){
   const {data,error}=await sb.rpc("_require_valid_admin_session",{admin_session_token:token});
@@ -101,7 +115,7 @@ Deno.serve(async req=>{
 
   const sb=serviceClient();
   let body={};try{body=await req.json();}catch{return json(req,{ok:false,error:"invalid_json"},400);}
-  const service=isServiceRole(req);
+  const service=await isServiceRole(req);
   let admin=null;
   if(!service){
     try{admin=await requireAdmin(sb,text(body?.admin_session_token));}
