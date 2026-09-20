@@ -45,6 +45,43 @@ async function requireAdmin(sb,token){
   return row;
 }
 
+async function runCostStep(sb){
+  const settings=await getSettings(sb),state=await getState(sb);
+  const result=await refreshCostsAndCheck(sb,settings,state,ANALYTICS_URL,SERVICE_KEY);
+  await notifyNewAlerts(sb,settings,result.new_alerts||[]);
+  await saveState(sb,{last_run_at:nowIso(),last_error:null});
+  return result;
+}
+async function runCatalogStep(sb){
+  const settings=await getSettings(sb),state=await getState(sb);
+  const result=await refreshCatalogAndCheck(sb,state,CATALOG_URL);
+  await notifyNewAlerts(sb,settings,result.new_alerts||[]);
+  await saveState(sb,{last_run_at:nowIso(),last_error:null});
+  return result;
+}
+async function runOrderStep(sb){
+  const settings=await getSettings(sb);
+  const result=await checkOrdersAndTelemetry(sb,settings);
+  await notifyNewAlerts(sb,settings,result.new_alerts||[]);
+  await saveState(sb,{last_run_at:nowIso(),last_error:null});
+  return result;
+}
+async function runBackupStep(sb,reason="scheduled"){
+  const settings=await getSettings(sb);
+  const result=await createBackup(sb,settings,reason);
+  await saveState(sb,{last_run_at:nowIso(),last_error:null});
+  return result;
+}
+async function runBriefStep(sb,type){
+  const settings=await getSettings(sb);
+  const result=await generateBrief(sb,settings,type,true);
+  const patch={last_run_at:nowIso(),last_error:null};
+  if(type==="daily")patch.last_daily_brief_date=localDate();
+  else patch.last_weekly_brief_key=localWeekKey();
+  await saveState(sb,patch);
+  return result;
+}
+
 async function runOperations(sb,force=false){
   const settings=await getSettings(sb),state=await getState(sb),newAlerts=[],result={started_at:nowIso()};
   try{
@@ -116,8 +153,15 @@ Deno.serve(async req=>{
   const action=text(body?.action||"status");
 
   try{
-    if(scheduler&&!["run","health"].includes(action))return json(req,{ok:false,error:"scheduler_action_not_allowed"},403);
+    const schedulerActions=["run","health","run_costs","run_catalog","run_orders","run_backup","run_daily_brief","run_weekly_brief"];
+    if(scheduler&&!schedulerActions.includes(action))return json(req,{ok:false,error:"scheduler_action_not_allowed"},403);
     if(action==="health")return json(req,{ok:true,mode:"shop-ops-v847"});
+    if(action==="run_costs")return json(req,{ok:true,result:await runCostStep(sb)});
+    if(action==="run_catalog")return json(req,{ok:true,result:await runCatalogStep(sb)});
+    if(action==="run_orders")return json(req,{ok:true,result:await runOrderStep(sb)});
+    if(action==="run_backup")return json(req,{ok:true,result:await runBackupStep(sb,body?.force===true?"manual_run":"scheduled")});
+    if(action==="run_daily_brief")return json(req,{ok:true,result:await runBriefStep(sb,"daily")});
+    if(action==="run_weekly_brief")return json(req,{ok:true,result:await runBriefStep(sb,"weekly")});
     if(action==="run"||action==="run_now")return json(req,{ok:true,result:await runOperations(sb,action==="run_now"||body?.force===true)});
     if(action==="status")return json(req,{ok:true,...await statusPayload(sb,text(body.admin_session_token))});
 
