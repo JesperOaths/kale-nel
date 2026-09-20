@@ -14,11 +14,55 @@ concurrency:
 
 jobs:
   verify:
+    if: github.event_name != 'pull_request' || vars.KALENEL_REQUIRE_PRIVATE_ADMIN_SOURCE != '1'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Reject untrusted private-source push
+        if: github.event_name == 'push' && vars.KALENEL_REQUIRE_PRIVATE_ADMIN_SOURCE == '1' && github.actor != 'JesperOaths'
+        run: |
+          echo "Private admin source verification is restricted to trusted JesperOaths pushes." >&2
+          exit 1
+
+      - name: Validate optional private admin source for CI
+        if: github.event_name == 'push' && github.actor == 'JesperOaths'
+        shell: bash
+        env:
+          ADMIN_SOURCE_REPOSITORY: ${{ vars.KALENEL_ADMIN_SOURCE_REPOSITORY }}
+          REQUIRE_PRIVATE_ADMIN_SOURCE: ${{ vars.KALENEL_REQUIRE_PRIVATE_ADMIN_SOURCE }}
+          ADMIN_SOURCE_TOKEN: ${{ secrets.KALENEL_ADMIN_SOURCE_TOKEN }}
+        run: |
+          set -euo pipefail
+          require_private="${REQUIRE_PRIVATE_ADMIN_SOURCE,,}"
+          if [[ "$require_private" =~ ^(1|true|yes)$ ]] && [[ -z "${ADMIN_SOURCE_REPOSITORY:-}" ]]; then
+            echo "Private admin source is required for verification but KALENEL_ADMIN_SOURCE_REPOSITORY is not configured." >&2
+            exit 1
+          fi
+          if [[ -n "${ADMIN_SOURCE_REPOSITORY:-}" && -z "${ADMIN_SOURCE_TOKEN:-}" ]]; then
+            echo "Private admin source repository is configured but KALENEL_ADMIN_SOURCE_TOKEN is missing." >&2
+            exit 1
+          fi
+
+      - name: Check out private admin source for CI
+        if: github.event_name == 'push' && github.actor == 'JesperOaths' && vars.KALENEL_ADMIN_SOURCE_REPOSITORY != ''
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          repository: ${{ vars.KALENEL_ADMIN_SOURCE_REPOSITORY }}
+          ref: ${{ vars.KALENEL_ADMIN_SOURCE_REF || 'main' }}
+          token: ${{ secrets.KALENEL_ADMIN_SOURCE_TOKEN }}
+          path: .private-admin-source
+          persist-credentials: false
+
+      - name: Overlay verified private admin source for legacy regressions
+        if: github.event_name == 'push' && github.actor == 'JesperOaths' && vars.KALENEL_ADMIN_SOURCE_REPOSITORY != ''
+        env:
+          KALENEL_PRIVATE_ADMIN_SOURCE_DIR: ${{ github.workspace }}/.private-admin-source
+        run: node scripts/overlay-private-admin-source.mjs
       - name: Set up Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:

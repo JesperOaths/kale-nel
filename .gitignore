@@ -3,3 +3,8 @@ cloudflare/workers/admin-gate/static/
 
 # Local/CI dependency install; dependencies are reproducible from package-lock.json
 node_modules/
+
+
+# Never commit generated private-admin migration material back into the public repository
+private-admin-source-export-v847/
+.private-admin-source/

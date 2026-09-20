@@ -1,15 +1,16 @@
 # Public/admin deployment model — Kalenel
 
-Updated: 2026-07-29.
+Updated: 2026-09-20.
 
 ## Current state
 
 - Public host: `https://kalenel.nl`.
-- Live frontend version: `v761`.
-- `admin.kalenel.nl` resolves through Cloudflare.
-- `https://admin.kalenel.nl/` returns `404` until the Worker Custom Domain is deployed.
-- `https://kalenel.nl/admin.html` still returns `200` static admin HTML until public apex Worker routes are deployed.
-- Admin pages have Supabase admin-session/TOTP gates, but those run after static files load and are not a network perimeter.
+- The protected admin host `https://admin.kalenel.nl` is live behind the `kalenel-admin-gate` Cloudflare Worker.
+- GitHub OAuth is the outer gate and Supabase admin-session/TOTP remains the independent inner lock.
+- Public apex admin routes are intercepted by the Worker and redirect to the protected admin host instead of serving admin HTML directly.
+- Protected responses use `Cache-Control: no-store`; direct anonymous access to protected admin pages is denied.
+- The v847 Shop Operations console is live in the protected bundle.
+- Protected admin frontend **source still exists in the public GitHub repository**. The migration tooling in `PRIVATE_ADMIN_SOURCE_MIGRATION_v847.md` prepares a separate private-source repository and fail-closed cutover without changing the live perimeter.
 
 ## Required free-only model
 
@@ -46,6 +47,17 @@ Activation, request, login, homepage, public game pages, public stats/history pa
 ## Implementation caution
 
 A JavaScript redirect from public admin pages to `admin.kalenel.nl` is not a security perimeter by itself. Public admin paths and direct protected asset requests must be intercepted by Cloudflare Worker routes before static content is served.
+
+## Private-source separation
+
+The Worker perimeter is the security boundary; source privacy is an additional hardening layer, not a substitute for authentication.
+
+- `npm run admin-source:extract` creates the one-time private-source migration package.
+- `admin-source-manifest.json` SHA-256 binds the external private source.
+- The admin Worker deploy workflow supports `external-private` mode.
+- GEJAST CI can overlay the same verified private source in its ephemeral workspace.
+- Do not remove current public protected source until the external-private deploy and CI overlay are both proven.
+- See `PRIVATE_ADMIN_SOURCE_MIGRATION_v847.md`.
 
 ## Build/test/deploy
 
