@@ -465,7 +465,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       if (!username) throw new Error('Vul een gebruikersnaam in');
       if (!password) throw new Error('Vul een wachtwoord in');
       if (!/^\d{6}$/.test(totp)) throw new Error('Vul je 6-cijferige Google Authenticator-code in');
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ input_username: username, input_password: password, input_totp_code: totp }) });
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-auth-v845`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ username, password, totp }) });
       const data = await parseResponse(res);
       const token = data.admin_session_token || data.token;
       if (!token) throw new Error('Login gaf geen admin-sessie terug');
