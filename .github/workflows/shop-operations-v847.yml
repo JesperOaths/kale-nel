@@ -26,72 +26,49 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 18
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       FORCE_RUN: ${{ github.event_name == 'push' && 'true' || (github.event_name == 'workflow_dispatch' && inputs.force || 'false') }}
     steps:
-      - name: Run protected shop operations
-        id: ops
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ -z "${SUPABASE_URL:-}" || -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
-            echo "::error::Missing Supabase runtime secrets"
-            exit 1
-          fi
-          payload='{"action":"run"}'
-          if [[ "${FORCE_RUN}" == "true" ]]; then
-            payload='{"action":"run","force":true}'
-          fi
-          mint_file="$RUNNER_TEMP/shop-ops-mint.json"
-          mint_status="$(curl --silent --show-error --max-time 60             --output "$mint_file" --write-out '%{http_code}'             -X POST "${SUPABASE_URL}/rest/v1/rpc/shop_ops_mint_scheduler_token_v847"             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}"             -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}"             -H 'Content-Type: application/json'             --data '{}')"
-          if [[ "$mint_status" != "200" ]]; then
-            echo "::error::Could not mint one-time shop operations scheduler token (HTTP $mint_status)"
-            exit 1
-          fi
-          scheduler_token="$(node --input-type=module - "$mint_file" <<'NODE'
-          import fs from 'node:fs';
-          const v=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
-          if(typeof v!=='string'||!/^[a-f0-9]{64}$/i.test(v)) throw new Error('Malformed scheduler token');
-          process.stdout.write(v);
-          NODE
-          )"
-          rm -f "$mint_file"
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-          response_file="$RUNNER_TEMP/shop-ops.json"
-          status="$(curl --silent --show-error --max-time 600             --output "$response_file" --write-out '%{http_code}'             -X POST "${SUPABASE_URL}/functions/v1/shop-ops-v847"             -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}"             -H "x-shop-ops-token: ${scheduler_token}"             -H 'Content-Type: application/json'             --data "$payload")"
-          node --input-type=module - "$response_file" "$status" <<'NODE'
-          import fs from 'node:fs';
-          const [file,status]=process.argv.slice(2);
-          const raw=fs.readFileSync(file,'utf8');
-          let body={};
-          try{body=JSON.parse(raw)}catch{}
-          const safe={
-            status:Number(status),
-            ok:body?.ok===true,
-            started_at:body?.result?.started_at||null,
-            completed_at:body?.result?.completed_at||null,
-            new_alerts:body?.result?.new_alerts??null,
-            backup_id:body?.result?.backup?.id||null,
-            cost_refresh_ms:body?.result?.costs?.refresh?.duration_ms??null,
-            catalog_changes:body?.result?.catalog?.changes??null,
-            orders_checked:body?.result?.orders?.orders_checked??null
-          };
-          console.log('shop-ops-v847',JSON.stringify(safe));
-          if(safe.backup_id) fs.appendFileSync(process.env.GITHUB_OUTPUT, 'backup_id='+safe.backup_id+'\n');
-          if(Number(status)!==200||body?.ok!==true){
-            console.error('shop operations failed:',String(body?.detail||body?.error||'unknown').slice(0,500));
-            process.exit(1);
-          }
-          NODE
+      - name: Build due-work plan
+        id: plan
+        run: node scripts/run-shop-ops-v847.mjs plan
+
+      - name: Refresh current costs
+        if: steps.plan.outputs.costs == 'true'
+        run: node scripts/run-shop-ops-v847.mjs run_costs
+
+      - name: Refresh catalog and check drift
+        if: steps.plan.outputs.catalog == 'true'
+        run: node scripts/run-shop-ops-v847.mjs run_catalog
+
+      - name: Check order exceptions and telemetry
+        if: steps.plan.outputs.orders == 'true'
+        run: node scripts/run-shop-ops-v847.mjs run_orders
+
+      - name: Create private backup snapshot
+        if: steps.plan.outputs.backup == 'true'
+        id: backup
+        run: node scripts/run-shop-ops-v847.mjs run_backup
+
+      - name: Generate daily owner brief
+        if: steps.plan.outputs.daily_brief == 'true'
+        run: node scripts/run-shop-ops-v847.mjs run_daily_brief
+
+      - name: Generate weekly owner brief
+        if: steps.plan.outputs.weekly_brief == 'true'
+        run: node scripts/run-shop-ops-v847.mjs run_weekly_brief
 
       - name: Export and encrypt newly-created backup
-        if: steps.ops.outputs.backup_id != ''
+        if: steps.backup.outputs.backup_id != ''
         shell: bash
         env:
-          BACKUP_ID: ${{ steps.ops.outputs.backup_id }}
+          BACKUP_ID: ${{ steps.backup.outputs.backup_id }}
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/bruis-backup"
@@ -109,10 +86,10 @@ jobs:
           echo "Encrypted backup artifact prepared: $(basename "$enc")"
 
       - name: Upload encrypted offsite backup artifact
-        if: steps.ops.outputs.backup_id != ''
+        if: steps.backup.outputs.backup_id != ''
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: bruis-shop-backup-${{ steps.ops.outputs.backup_id }}
+          name: bruis-shop-backup-${{ steps.backup.outputs.backup_id }}
           path: ${{ runner.temp }}/bruis-backup/*.enc
           if-no-files-found: error
           retention-days: 90
