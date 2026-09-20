@@ -145,6 +145,18 @@ async function textAsset(url, label) {
   return response.text();
 }
 
+async function assertAdminDenied(url, label) {
+  const { response } = await fetchWithTimeout(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ action: 'dashboard', admin_session_token: 'definitely-invalid-admin-session' })
+  });
+  assert.equal(response.status, 401, `${label} must reject an invalid admin session with HTTP 401, got ${response.status}`);
+  const payload = await response.json().catch(() => ({}));
+  assert.equal(payload?.error, 'invalid_admin_session', `${label} must fail closed with invalid_admin_session`);
+  console.log(`${label}: invalid admin session correctly denied`);
+}
+
 // Deliberately read-only: never POST checkout, delivery preview, verify payment,
 // submit an order, mutate prices, or simulate a webhook. Delivery preview behavior
 // is covered separately by its route-level smoke tests; this check verifies wiring.
@@ -290,6 +302,8 @@ await health(CONNECTION_URL, 'shop-production-connection-v828', 'production-conn
 await health(STATUS_URL, 'shop-order-status-v825', 'order-status-v825');
 await health(ADMIN_URL, 'shop-admin-orders-v825', 'admin-orders-v825');
 await health(ADMIN_ANALYTICS_URL, 'shop-admin-analytics-v842', 'shop-admin-analytics-v842');
+await assertAdminDenied(ADMIN_ANALYTICS_URL, 'shop-admin-analytics-v842');
+await assertAdminDenied(ADMIN_URL, 'shop-admin-orders-v825');
 await health(WEBHOOK_URL, 'shop-printify-webhook-v825', 'printify-webhook-v825');
 
 console.log('RESULT=V839_BRUIS_SHOP_PASS');
