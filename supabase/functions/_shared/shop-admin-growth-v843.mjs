@@ -156,6 +156,27 @@ function sourceFunnel(events){
   }
   return [...map.values()].map(r=>({...r,sessions:r.sessions.size,session_to_order:r.sessions.size?r.orders_created/r.sessions.size:null})).sort((a,b)=>b.sessions-a.sessions).slice(0,100);
 }
+function countryFunnel(events){
+  const sessionCountry=new Map();
+  for(const e of events){
+    const x=e.extra&&typeof e.extra==="object"?e.extra:{};
+    const country=text(x.country).toUpperCase();
+    if(e.session_id&&/^[A-Z]{2}$/.test(country))sessionCountry.set(e.session_id,country);
+  }
+  const map=new Map();
+  for(const e of events){
+    const country=sessionCountry.get(e.session_id);if(!country)continue;
+    const r=map.get(country)||{country,sessions:new Set(),product_views:0,adds:0,checkout_starts:0,checkout_submits:0,orders_created:0};
+    if(e.session_id)r.sessions.add(e.session_id);
+    if(e.event_name==="product_view")r.product_views++;
+    if(e.event_name==="add_to_cart")r.adds++;
+    if(e.event_name==="checkout_start")r.checkout_starts++;
+    if(e.event_name==="checkout_submit")r.checkout_submits++;
+    if(e.event_name==="order_created")r.orders_created++;
+    map.set(country,r);
+  }
+  return [...map.values()].map(r=>({...r,sessions:r.sessions.size,submit_to_order:r.checkout_submits?r.orders_created/r.checkout_submits:null})).sort((a,b)=>b.checkout_submits-a.checkout_submits||b.sessions-a.sessions);
+}
 function lifecycle(events,orders){
   const map=new Map();
   const key=(day,name)=>day+"|||"+name;
@@ -223,7 +244,12 @@ function campaignMetrics(attribution,spendRows){
 }
 function goalProgress(goals,snapshot,operations){
   const values={recognized_sales_cents:num(snapshot?.orders?.recognized_sales_cents),known_contribution_cents:knownContribution(snapshot),paid_orders:num(snapshot?.orders?.paid_orders),conversion_rate:num(snapshot?.events?.sessions)?num(snapshot?.orders?.orders_created)/num(snapshot?.events?.sessions):0,repeat_customer_rate:num(operations?.repeat_customer_rate)};
-  return goals.map(g=>({...g,current_value:num(values[g.metric]),progress:num(g.target_value)>0?num(values[g.metric])/num(g.target_value):null}));
+  const p=amsterdamParts(new Date().toISOString()),year=Number(p?.year),month=Number(p?.month),day=Number(p?.day)||1,daysInMonth=new Date(Date.UTC(year,month,0)).getUTCDate(),elapsed=Math.max(1,Math.min(daysInMonth,day))/Math.max(1,daysInMonth);
+  return goals.map(g=>{
+    const current=num(values[g.metric]),target=num(g.target_value),isRate=String(g.metric).includes("rate");
+    const forecast=isRate?current:(elapsed>0?current/elapsed:current);
+    return {...g,current_value:current,progress:target>0?current/target:null,forecast_value:forecast,forecast_progress:target>0?forecast/target:null};
+  });
 }
 function weeklyMonthlySummary(orders,snapshot,operations){
   const now=Date.now(),week=orders.filter(o=>Date.parse(o.created_at)>=now-7*dayMs),monthParts=amsterdamParts(new Date().toISOString());
@@ -317,6 +343,7 @@ export async function buildGrowthIntelligence(sb,{range,snapshot,previousSnapsho
     product_opportunities:productOpportunities(snapshot,previousSnapshot,catalogCosts),
     device_funnel:deviceFunnel(events),
     source_funnel:sourceFunnel(events),
+    country_funnel:countryFunnel(events),
     retention:retentionMetrics(allOrders),
     sla:slaMetrics(orders),
     shipping_leakage:shippingLeakage(orders),
