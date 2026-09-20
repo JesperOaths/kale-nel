@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-import { text,nowIso,validEmail,hoursSince,getSettings,getState,saveState,notifyNewAlerts,createBackup,generateBrief,localDate,localWeekKey } from "../_shared/shop-ops-core-v847.mjs";
+import { text,nowIso,validEmail,hoursSince,getSettings,getState,saveState,notifyNewAlerts,createBackup,generateBrief,localDate,localWeekKey,localHour } from "../_shared/shop-ops-core-v847.mjs";
 import { refreshCatalogAndCheck,refreshCostsAndCheck,checkOrdersAndTelemetry } from "../_shared/shop-ops-checks-v847.mjs";
 
 const PROJECT_URL=text(Deno.env.get("SUPABASE_URL"));
@@ -54,13 +54,14 @@ async function runOperations(sb,force=false){
     newAlerts.push(...(result.orders.new_alerts||[]));
     if(force||hoursSince(state.last_backup_at)>=23)result.backup=await createBackup(sb,settings,force?"manual_run":"scheduled");
 
+    const hour=localHour();
     const day=localDate();
-    if(force||state.last_daily_brief_date!==day){
+    if(force||(hour>=7&&state.last_daily_brief_date!==day)){
       result.daily_brief=await generateBrief(sb,settings,"daily",force);
       await saveState(sb,{last_daily_brief_date:day});
     }
     const week=localWeekKey();
-    if(force||state.last_weekly_brief_key!==week){
+    if(force||(hour>=7&&state.last_weekly_brief_key!==week)){
       result.weekly_brief=await generateBrief(sb,settings,"weekly",force);
       await saveState(sb,{last_weekly_brief_key:week});
     }
