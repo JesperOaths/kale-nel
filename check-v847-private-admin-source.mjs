@@ -27,6 +27,14 @@ for (const rel of [
 ]) assert.equal(isPrivateAdminSourcePath(rel), true, `expected private admin path: ${rel}`);
 
 for (const rel of [
+  '../admin.html',
+  '/admin.html',
+  '\\\\server\\share\\admin.html',
+  'C:\\\\temp\\admin.html',
+  'nested/../admin.html'
+]) assert.equal(isPrivateAdminSourcePath(rel), false, `unsafe admin path must be rejected: ${rel}`);
+
+for (const rel of [
   'index.html',
   'shop/index.html',
   'gejast-config.js',
