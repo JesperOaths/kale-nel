@@ -11,6 +11,10 @@ on:
         options: ['false','true']
   schedule:
     - cron: '37 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/shop-operations-v847.trigger'
 
 permissions:
   contents: read
@@ -26,7 +30,7 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      FORCE_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.force || 'false' }}
+      FORCE_RUN: ${{ github.event_name == 'push' && 'true' || (github.event_name == 'workflow_dispatch' && inputs.force || 'false') }}
     steps:
       - name: Run protected shop operations
         id: ops
