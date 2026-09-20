@@ -36,6 +36,10 @@ const redacted = dispatcher.sanitizeLogText('endpoint=https://push.example/send/
 assert(!redacted.includes('https://push.example'), 'log sanitizer must redact URLs');
 assert(!redacted.includes('shouldredact'), 'log sanitizer must redact endpoint auth material');
 
+assert.equal(dispatcher.isTransientRpcError({ status: 522, message: 'Connection timed out' }), true, 'HTTP 522 must be transient');
+assert.equal(dispatcher.isTransientRpcError({ message: 'supabase.co | 503 temporarily unavailable' }), true, 'HTTP 503 text must be transient');
+assert.equal(dispatcher.isTransientRpcError({ status: 400, message: 'bad request' }), false, 'HTTP 400 must not be transient');
+
 const sql = fs.readFileSync('GEJAST_v755i_targeted_push_test_guard.sql', 'utf8');
 assert.match(sql, /admin_check_session\(admin_session_token\)/, 'targeted queue RPC must require admin session');
 assert.match(sql, /v_admin_state->>'ok'/, 'targeted queue RPC must require admin session ok=true');
@@ -140,5 +144,54 @@ assert.equal(failedCall.args.worker_id_input, 'dispatcher', 'failure marker must
 assert.equal(failedCall.args.error_code_input, 'endpoint_gone', 'HTTP 410 must remain classified as endpoint_gone');
 assert.equal(failedCall.args.disable_subscription_input, true, 'HTTP 410 must disable the dead subscription');
 assert(!failureCalls.some((call) => call.name === 'mark_web_push_job_failed_v3'), 'claim-aware scheduled failure must not fall back to legacy marker');
+
+async function exerciseTransientClaimRetry() {
+  let claimAttempts = 0;
+  const supabase = {
+    async rpc(name) {
+      if (name === 'requeue_stale_web_push_claims_v3') return { data: { ok: true }, error: null };
+      if (name === 'claim_web_push_jobs_v3') {
+        claimAttempts += 1;
+        if (claimAttempts === 1) return { data: null, error: { status: 522, message: 'supabase.co | 522: Connection timed out' } };
+        return { data: { items: [] }, error: null };
+      }
+      return { data: null, error: null };
+    },
+  };
+  const instance = dispatcher.createDispatcher(runtimeOptions(), {
+    supabase,
+    webpush: { async sendNotification() { throw new Error('should not send'); } },
+    sleep: async () => {},
+  });
+  const summary = await instance.run();
+  return { claimAttempts, summary };
+}
+
+const transientRetry = await exerciseTransientClaimRetry();
+assert.equal(transientRetry.claimAttempts, 2, 'transient claim failure must retry exactly once');
+assert.equal(transientRetry.summary.total, 0, 'successful retry with no jobs should finish cleanly');
+
+async function exercisePermanentClaimFailure() {
+  let claimAttempts = 0;
+  const supabase = {
+    async rpc(name) {
+      if (name === 'requeue_stale_web_push_claims_v3') return { data: { ok: true }, error: null };
+      if (name === 'claim_web_push_jobs_v3') {
+        claimAttempts += 1;
+        return { data: null, error: { status: 400, message: 'bad request' } };
+      }
+      return { data: null, error: null };
+    },
+  };
+  const instance = dispatcher.createDispatcher(runtimeOptions(), {
+    supabase,
+    webpush: { async sendNotification() { throw new Error('should not send'); } },
+    sleep: async () => {},
+  });
+  await assert.rejects(instance.run(), /bad request/);
+  return claimAttempts;
+}
+
+assert.equal(await exercisePermanentClaimFailure(), 1, 'non-transient claim failure must not retry');
 
 console.log('Web push dispatcher guard regression ok.');
