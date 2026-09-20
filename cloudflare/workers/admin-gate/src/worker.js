@@ -16,7 +16,7 @@ const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
 const SECURITY_LOGIN_UPSTREAM_TIMEOUT_MS = 9000;
 const SECURITY_MEDIA_SESSION_TIMEOUT_MS = 12000;
-const ADMIN_BUILD = 'v844-trusted-admin-session';
+const ADMIN_BUILD = 'v845-resilient-admin-auth';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -361,7 +361,7 @@ async function securityInnerLogin(request, env, outer) {
 
   let loginRes;
   try {
-    loginRes = await securityFetchWithTimeout(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, {
+    loginRes = await securityFetchWithTimeout(`${SUPABASE_URL}/functions/v1/admin-auth-v845`, {
       method: 'POST',
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -369,7 +369,7 @@ async function securityInnerLogin(request, env, outer) {
         'Content-Type': 'application/json',
         Accept: 'application/json'
       },
-      body: JSON.stringify({ input_username: username, input_password: password, input_totp_code: totp })
+      body: JSON.stringify({ username, password, totp })
     }, SECURITY_LOGIN_UPSTREAM_TIMEOUT_MS);
   } catch {
     return securityJson({ ok:false, error:'authentication_service_unavailable' }, 503);
