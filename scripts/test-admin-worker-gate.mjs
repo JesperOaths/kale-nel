@@ -13,7 +13,9 @@ const ENV_KEYS = {
   clientId: ['GITHUB', 'CLIENT', 'ID'].join('_'),
   clientSecret: ['GITHUB', 'CLIENT', 'SECRET'].join('_'),
   approvedId: ['APPROVED', 'GITHUB', 'ID'].join('_'),
-  approvedLogin: ['APPROVED', 'GITHUB', 'LOGIN'].join('_')
+  approvedLogin: ['APPROVED', 'GITHUB', 'LOGIN'].join('_'),
+  approvedIds: ['APPROVED', 'GITHUB', 'IDS'].join('_'),
+  approvedLogins: ['APPROVED', 'GITHUB', 'LOGINS'].join('_')
 };
 
 function env(extra = {}) {
@@ -131,6 +133,9 @@ assert.equal(__test.isAllowedGithubAccount(env(), { id: ' 12345 ', login: 'anyth
 assert.equal(__test.isAllowedGithubAccount(env(), { id: 999, login: 'bruis-approved' }), true);
 assert.equal(__test.isAllowedGithubAccount(env(), { id: 999, login: ' Bruis-Approved ' }), true);
 assert.equal(__test.isAllowedGithubAccount(env(), { id: 999, login: 'other' }), false);
+assert.equal(__test.isAllowedGithubAccount(env({ [ENV_KEYS.approvedIds]: '67890, 77777' }), { id: 67890, login: 'other' }), true);
+assert.equal(__test.isAllowedGithubAccount(env({ [ENV_KEYS.approvedLogins]: 'second-admin; third-admin' }), { id: 999, login: 'SECOND-ADMIN' }), true);
+assert.equal(__test.isAllowedGithubAccount(env({ [ENV_KEYS.approvedIds]: '67890', [ENV_KEYS.approvedLogins]: 'second-admin' }), { id: 999, login: 'not-allowed' }), false);
 assert.equal(__test.adminAssetPath('/'), '/admin.html');
 assert.equal(__test.adminAssetPath('/admin'), '/admin');
 assert.equal(__test.adminAssetPath('/admin/'), '/admin/');
