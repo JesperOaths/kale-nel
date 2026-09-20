@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bruis shop operations</title>
+  <script src="./config.js"></script>
+  <script src="./admin-session-sync.js?v847"></script>
+  <script src="./admin-topnav.js?v847" defer></script>
+  <style>
+    :root{--gold:#9a8241;--paper:#fffaf2;--line:rgba(0,0,0,.13);--muted:#5d554c;--ok:#285b38;--warn:#8a3a30;--ink:#17130f}
+    *{box-sizing:border-box}body{margin:0;padding:22px;font:14px/1.5 Inter,system-ui,sans-serif;background:#e9e4da;color:var(--ink)}
+    .wrap{max-width:1500px;margin:auto;background:rgba(255,250,242,.98);border-radius:28px;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.08)}
+    h1{font-size:34px;letter-spacing:-.04em;margin:0}h2{margin:0 0 6px;font-size:22px}.sub,.muted{color:var(--muted)}
+    .top,.panel-head,.actions{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .btn,button{border:0;border-radius:999px;background:#17130f;color:#fff;padding:10px 14px;font:800 13px/1 Inter,sans-serif;cursor:pointer}.alt{background:#fff!important;color:#111!important;border:1px solid var(--line)!important}
+    button:disabled{opacity:.55;cursor:wait}.status{min-height:22px;margin:12px 0}.status.ok{color:var(--ok)}.status.warn{color:var(--warn)}
+    .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.metric,.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px}.panel{margin-top:14px}
+    .metric span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}.metric strong{font-size:26px;display:block;margin-top:4px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .form-grid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;margin-top:12px}.field{display:grid;gap:5px}.field label{font-weight:800;font-size:12px}.field input,.field select,.field textarea{padding:9px 10px;border:1px solid #d7d1c8;border-radius:10px;font:inherit;width:100%}.field textarea{min-height:70px}
+    .check{display:flex;gap:8px;align-items:center}.check input{width:auto}.table-wrap{overflow:auto;margin-top:10px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px 10px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}th{font-size:10px;text-transform:uppercase;color:var(--muted)}tbody tr:nth-child(even){background:#fcfaf6}
+    .pill{display:inline-flex;padding:4px 8px;border-radius:999px;background:#eee;font-weight:800}.pill.high{background:#f8d8d2;color:#7d2118}.pill.medium{background:#fff0c7;color:#6e5000}.pill.info{background:#dfeaf2;color:#264e6d}.good{color:var(--ok)}.bad{color:var(--warn)}
+    code{font-size:11px}.watermark{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);background:#111;color:#f0d98f;border-radius:999px;padding:7px 12px;font-weight:800;pointer-events:none}
+    @media(max-width:950px){.metrics,.grid2,.grid3,.form-grid{grid-template-columns:1fr 1fr}}@media(max-width:600px){body{padding:8px}.wrap{padding:15px}.metrics,.grid2,.grid3,.form-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <div class="top">
+    <div><h1>Shop operations</h1><p class="sub">Alerts, automated checks, backups, bookkeeping, invoices, payment fees, and trusted admin devices.</p></div>
+    <div class="actions"><button id="runNow">Run all checks now</button><a class="btn alt" href="./admin_shop_analytics.html">Analytics</a><a class="btn alt" href="./admin_shop_orders.html">Orders</a></div>
+  </div>
+  <div id="status" class="status" role="status"></div>
+
+  <section class="metrics">
+    <article class="metric"><span>Open alerts</span><strong id="mAlerts">—</strong></article>
+    <article class="metric"><span>High alerts</span><strong id="mHigh">—</strong></article>
+    <article class="metric"><span>Last ops run</span><strong id="mRun">—</strong></article>
+    <article class="metric"><span>Backups</span><strong id="mBackups">—</strong></article>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><div><h2>Alerts</h2><p class="muted">Automatically generated for stuck orders, stale telemetry, cost/margin problems and catalog drift.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>When</th><th>Severity</th><th>Type</th><th>Alert</th><th>State</th><th></th></tr></thead><tbody id="alertsRows"></tbody></table></div>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <h2>Automation settings</h2><p class="muted">The hourly scheduler checks orders every run; costs/catalog refresh every six hours; backups roughly daily.</p>
+      <form id="settingsForm" class="form-grid">
+        <div class="field"><label>Owner email</label><input id="ownerEmail" type="email" placeholder="Optional"></div>
+        <label class="check"><input id="emailAlerts" type="checkbox"> Email new alerts</label>
+        <label class="check"><input id="dailyBrief" type="checkbox"> Daily brief</label>
+        <label class="check"><input id="weeklyBrief" type="checkbox"> Weekly brief</label>
+        <div class="field"><label>Paid → production alert (hours)</label><input id="paidHours" type="number" min="1" max="168"></div>
+        <div class="field"><label>Production stuck (days)</label><input id="prodDays" type="number" min="1" max="60"></div>
+        <div class="field"><label>Telemetry stale (hours)</label><input id="telemetryHours" type="number" min="1" max="168"></div>
+        <div class="field"><label>Cost-change alert (€)</label><input id="costChange" type="number" min=".01" step=".01"></div>
+        <div class="field"><label>Low-margin threshold (%)</label><input id="lowMargin" type="number" min="0" max="100" step=".1"></div>
+        <div><button type="submit">Save automation settings</button></div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Monthly bookkeeping export</h2><p class="muted">XLSX package with orders, ledger, invoices, fee rules and tax settings.</p>
+      <div class="actions" style="justify-content:flex-start;margin-top:12px"><input id="exportMonth" type="month"><button id="exportXlsx" type="button">Download XLSX</button><button id="dailyNow" type="button" class="alt">Generate daily brief</button><button id="weeklyNow" type="button" class="alt">Generate weekly brief</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Brief</th><th>Period</th><th>Generated</th><th>Sales</th><th>Alerts</th><th>Email</th></tr></thead><tbody id="briefRows"></tbody></table></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2>Payment-fee rules</h2><p class="muted">Disabled by default. Only enable a rule after checking the provider's authoritative fee schedule. Enabled rules are applied once when payment is verified.</p>
+    <div class="table-wrap"><table><thead><tr><th>Provider</th><th>Enabled</th><th>Rate %</th><th>Fixed €</th><th>Note</th><th></th></tr></thead><tbody id="feeRows"></tbody></table></div>
+  </section>
+
+  <section class="panel">
+    <h2>Invoice & VAT settings</h2><p class="muted">Invoices can be issued without VAT calculation. VAT calculations stay disabled until you deliberately configure the rate and seller details.</p>
+    <form id="taxForm" class="form-grid">
+      <label class="check"><input id="invoiceEnabled" type="checkbox"> Issue invoice records</label>
+      <label class="check"><input id="taxCalcEnabled" type="checkbox"> Enable VAT calculation</label>
+      <div class="field"><label>Invoice prefix</label><input id="invoicePrefix"></div>
+      <div class="field"><label>VAT rate (%)</label><input id="vatRate" type="number" min="0" max="100" step=".01"></div>
+      <div class="field"><label>Seller name</label><input id="sellerName"></div>
+      <div class="field"><label>Address</label><input id="sellerAddress"></div>
+      <div class="field"><label>Postal code / city</label><input id="sellerPostalCity"></div>
+      <div class="field"><label>Country code</label><input id="sellerCountry" maxlength="2"></div>
+      <div class="field"><label>VAT number</label><input id="vatNumber"></div>
+      <div class="field"><label>KVK number</label><input id="kvkNumber"></div>
+      <div class="field"><label>Invoice note</label><textarea id="invoiceNote"></textarea></div>
+      <div><button type="submit">Save invoice settings</button></div>
+    </form>
+    <div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Issued</th><th>Order</th><th>Gross</th><th>Net</th><th>VAT</th><th>Status</th></tr></thead><tbody id="invoiceRows"></tbody></table></div>
+  </section>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="panel-head"><div><h2>Backups & restore</h2><p class="muted">Private JSON snapshots. Restore action only inserts orders that are missing; it never overwrites existing orders.</p></div><button id="backupNow" type="button">Create backup now</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Created</th><th>Reason</th><th>Counts</th><th>Hash</th><th></th></tr></thead><tbody id="backupRows"></tbody></table></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><div><h2>Admin sessions & trusted computers</h2><p class="muted">Revoke lost/old computers and other sessions without touching the database.</p></div><button id="revokeOthers" type="button" class="alt">Revoke other sessions</button></div>
+      <h3>Active sessions</h3><div class="table-wrap"><table><thead><tr><th>ID</th><th>Created</th><th>Last used</th><th>Expires</th><th></th></tr></thead><tbody id="sessionRows"></tbody></table></div>
+      <h3>Trusted devices</h3><div class="table-wrap"><table><thead><tr><th>Device</th><th>Trusted</th><th>Last seen</th><th>Expires</th><th>State</th><th></th></tr></thead><tbody id="deviceRows"></tbody></table></div>
+    </section>
+  </div>
+</main>
+<div class="watermark">v847 - Made by Bruis</div>
+
+<script>
+(()=>{
+  "use strict";
+  const OPS="https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-ops-v847";
+  const EXPORT="https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-admin-export-v847";
+  const cfg=window.GEJAST_CONFIG||{},KEY=cfg.SUPABASE_PUBLISHABLE_KEY||"sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+  const $=id=>document.getElementById(id),esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const dt=v=>v?new Intl.DateTimeFormat("nl-NL",{dateStyle:"short",timeStyle:"short"}).format(new Date(v)):"—";
+  const eur=c=>c==null?"—":new Intl.NumberFormat("nl-NL",{style:"currency",currency:"EUR"}).format(Number(c)/100);
+  const int=v=>new Intl.NumberFormat("nl-NL").format(Number(v||0));
+  let state=null;
+  function status(m,t=""){$("status").textContent=m;$("status").className="status "+t}
+  async function session(){const s=await window.GEJAST_ADMIN_SESSION?.validate?.();if(!s)throw new Error("Admin session validation failed.");return window.GEJAST_ADMIN_SESSION.getToken();}
+  async function api(action,extra={}){
+    const token=await session();
+    const r=await fetch(OPS,{method:"POST",cache:"no-store",headers:{apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"},body:JSON.stringify({action,admin_session_token:token,...extra})});
+    const p=await r.json().catch(()=>({}));
+    if(r.status===401){window.GEJAST_ADMIN_SESSION?.redirectToAdminLogin?.("session_invalid","admin_shop_operations.html");throw new Error("Admin session expired.");}
+    if(!r.ok||p?.ok===false)throw new Error(p?.detail||p?.error||("HTTP "+r.status));return p;
+  }
+  function render(){
+    const a=state.alerts||[],open=a.filter(x=>!x.resolved_at),hi=open.filter(x=>x.severity==="high");
+    $("mAlerts").textContent=int(open.length);$("mHigh").textContent=int(hi.length);$("mRun").textContent=state.state?.last_run_at?dt(state.state.last_run_at):"never";$("mBackups").textContent=int((state.backups||[]).length);
+    $("alertsRows").innerHTML=a.length?a.map(x=>"<tr><td>"+dt(x.created_at)+"</td><td><span class='pill "+esc(x.severity)+"'>"+esc(x.severity)+"</span></td><td>"+esc(x.kind)+"</td><td><strong>"+esc(x.title)+"</strong><br>"+esc(x.message)+"</td><td>"+(x.resolved_at?"resolved":x.acknowledged_at?"acknowledged":"open")+"</td><td>"+(!x.acknowledged_at&&!x.resolved_at?"<button class='alt' data-ack='"+x.id+"'>Acknowledge</button>":"")+"</td></tr>").join(""):"<tr><td colspan='6'>No alerts.</td></tr>";
+
+    const s=state.settings||{};$("ownerEmail").value=s.owner_email||"";$("emailAlerts").checked=s.email_alerts_enabled===true;$("dailyBrief").checked=s.daily_brief_enabled!==false;$("weeklyBrief").checked=s.weekly_brief_enabled!==false;$("paidHours").value=s.paid_not_submitted_hours||2;$("prodDays").value=s.production_stuck_days||7;$("telemetryHours").value=s.telemetry_stale_hours||12;$("costChange").value=((s.cost_change_alert_cents||100)/100).toFixed(2);$("lowMargin").value=((s.low_margin_bps||2000)/100).toFixed(1);
+
+    $("feeRows").innerHTML=(state.fee_rules||[]).map(x=>"<tr data-fee='"+esc(x.provider)+"'><td><strong>"+esc(x.provider)+"</strong></td><td><input data-fee-enabled type='checkbox' "+(x.enabled?"checked":"")+"></td><td><input data-fee-rate type='number' min='0' max='100' step='.01' value='"+(Number(x.rate_bps||0)/100)+"'></td><td><input data-fee-fixed type='number' min='0' step='.01' value='"+(Number(x.fixed_fee_cents||0)/100).toFixed(2)+"'></td><td><input data-fee-note value='"+esc(x.note||"")+"'></td><td><button data-save-fee>Save</button></td></tr>").join("");
+
+    const t=state.tax_settings||{};$("invoiceEnabled").checked=t.invoicing_enabled!==false;$("taxCalcEnabled").checked=t.tax_calculation_enabled===true;$("invoicePrefix").value=t.invoice_prefix||"BRUIS";$("vatRate").value=t.default_vat_rate_bps==null?"":(Number(t.default_vat_rate_bps)/100);$("sellerName").value=t.seller_name||"Bruis";$("sellerAddress").value=t.seller_address||"";$("sellerPostalCity").value=t.seller_postal_city||"";$("sellerCountry").value=t.seller_country||"NL";$("vatNumber").value=t.vat_number||"";$("kvkNumber").value=t.kvk_number||"";$("invoiceNote").value=t.invoice_note||"";
+    $("invoiceRows").innerHTML=(state.invoices||[]).map(x=>"<tr><td><strong>"+esc(x.invoice_number)+"</strong></td><td>"+dt(x.issued_at)+"</td><td><code>"+esc(String(x.order_id).slice(0,8))+"…</code></td><td>"+eur(x.gross_total_cents)+"</td><td>"+eur(x.net_total_cents)+"</td><td>"+eur(x.vat_total_cents)+"</td><td>"+esc(x.tax_status)+"</td></tr>").join("")||"<tr><td colspan='7'>No invoices yet.</td></tr>";
+
+    $("backupRows").innerHTML=(state.backups||[]).map(x=>"<tr><td>"+dt(x.created_at)+"</td><td>"+esc(x.reason)+"</td><td><code>"+esc(JSON.stringify(x.counts||{}))+"</code></td><td><code>"+esc(String(x.payload_sha256||"").slice(0,12))+"…</code></td><td><button class='alt' data-download-backup='"+x.id+"'>Download</button> <button class='alt' data-restore-backup='"+x.id+"'>Restore missing orders</button></td></tr>").join("")||"<tr><td colspan='5'>No backups yet.</td></tr>";
+
+    $("briefRows").innerHTML=(state.briefs||[]).map(x=>"<tr><td>"+esc(x.period_type)+"</td><td>"+esc(x.period_key)+"</td><td>"+dt(x.generated_at)+"</td><td>"+eur(x.summary?.recognized_sales_cents)+"</td><td>"+int(x.summary?.open_alerts)+"</td><td>"+(x.email_sent_at?"sent "+dt(x.email_sent_at):x.email_error?esc(x.email_error):"not sent")+"</td></tr>").join("")||"<tr><td colspan='6'>No briefs yet.</td></tr>";
+
+    const sec=state.security||{};$("sessionRows").innerHTML=(sec.sessions||[]).map(x=>"<tr><td>"+x.id+(x.is_current?" <span class='pill info'>current</span>":"")+"</td><td>"+dt(x.created_at)+"</td><td>"+dt(x.last_used_at)+"</td><td>"+dt(x.expires_at)+"</td><td>"+(!x.is_current?"<button class='alt' data-revoke-session='"+x.id+"'>Revoke</button>":"")+"</td></tr>").join("")||"<tr><td colspan='5'>No sessions.</td></tr>";
+    $("deviceRows").innerHTML=(sec.devices||[]).map(x=>"<tr><td>"+esc(x.device_label||("Device #"+x.id))+"</td><td>"+dt(x.trusted_at)+"</td><td>"+dt(x.last_seen_at)+"</td><td>"+dt(x.expires_at)+"</td><td>"+(x.active?"active":"revoked/expired")+"</td><td>"+(x.active?"<button class='alt' data-revoke-device='"+x.id+"'>Revoke</button>":"")+"</td></tr>").join("")||"<tr><td colspan='6'>No trusted devices.</td></tr>";
+  }
+  async function load(){status("Loading operations…");state=await api("status");render();status("Operations loaded.","ok")}
+  async function mutate(action,payload,msg){status("Saving…");await api(action,payload);await load();status(msg,"ok")}
+
+  $("runNow").onclick=async()=>{const b=$("runNow");b.disabled=true;try{status("Running all operational checks…");const r=await api("run_now",{force:true});await load();status("Checks complete. New alerts: "+int(r.result?.new_alerts)+".","ok")}catch(e){status(e.message,"warn")}finally{b.disabled=false}};
+  $("settingsForm").onsubmit=async e=>{e.preventDefault();try{await mutate("settings_save",{owner_email:$("ownerEmail").value,email_alerts_enabled:$("emailAlerts").checked,daily_brief_enabled:$("dailyBrief").checked,weekly_brief_enabled:$("weeklyBrief").checked,paid_not_submitted_hours:Number($("paidHours").value),production_stuck_days:Number($("prodDays").value),telemetry_stale_hours:Number($("telemetryHours").value),cost_change_alert_cents:Math.round(Number($("costChange").value)*100),low_margin_bps:Math.round(Number($("lowMargin").value)*100)},"Automation settings saved.")}catch(e){status(e.message,"warn")}};
+  $("taxForm").onsubmit=async e=>{e.preventDefault();try{await mutate("tax_settings_save",{invoicing_enabled:$("invoiceEnabled").checked,tax_calculation_enabled:$("taxCalcEnabled").checked,invoice_prefix:$("invoicePrefix").value,default_vat_rate_bps:$("vatRate").value===""?null:Math.round(Number($("vatRate").value)*100),seller_name:$("sellerName").value,seller_address:$("sellerAddress").value,seller_postal_city:$("sellerPostalCity").value,seller_country:$("sellerCountry").value,vat_number:$("vatNumber").value,kvk_number:$("kvkNumber").value,invoice_note:$("invoiceNote").value},"Invoice settings saved.")}catch(e){status(e.message,"warn")}};
+
+  document.addEventListener("click",async e=>{
+    const t=e.target.closest("button");if(!t)return;
+    try{
+      if(t.dataset.ack)await mutate("alert_ack",{id:Number(t.dataset.ack)},"Alert acknowledged.");
+      if(t.dataset.saveFee!==undefined){const row=t.closest("[data-fee]");await mutate("fee_rule_save",{provider:row.dataset.fee,enabled:row.querySelector("[data-fee-enabled]").checked,rate_bps:Math.round(Number(row.querySelector("[data-fee-rate]").value)*100),fixed_fee_cents:Math.round(Number(row.querySelector("[data-fee-fixed]").value)*100),note:row.querySelector("[data-fee-note]").value},"Fee rule saved.");}
+      if(t.dataset.revokeSession){if(confirm("Revoke this admin session?"))await mutate("security_revoke_session",{id:Number(t.dataset.revokeSession)},"Session revoked.");}
+      if(t.dataset.revokeDevice){if(confirm("Revoke this trusted computer? It will need password + Authenticator again."))await mutate("security_revoke_device",{id:Number(t.dataset.revokeDevice)},"Trusted device revoked.");}
+      if(t.dataset.downloadBackup){const r=await api("backup_get",{id:t.dataset.downloadBackup});const blob=new Blob([JSON.stringify(r.backup,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="bruis-shop-backup-"+r.backup.created_at.slice(0,10)+".json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+      if(t.dataset.restoreBackup){if(confirm("Restore only orders missing from the current database? Existing orders will not be changed.")){const r=await api("restore_missing_orders",{id:t.dataset.restoreBackup,confirmation:"RESTORE_MISSING_ORDERS"});await load();status("Restored "+r.restored_orders+" missing order(s).","ok")}}
+    }catch(err){status(err.message||"Action failed.","warn")}
+  });
+
+  $("backupNow").onclick=()=>mutate("backup_now",{},"Backup created.").catch(e=>status(e.message,"warn"));
+  $("revokeOthers").onclick=async()=>{if(confirm("Revoke every other active admin session?"))try{await mutate("security_revoke_others",{},"Other sessions revoked.")}catch(e){status(e.message,"warn")}};
+  $("dailyNow").onclick=()=>mutate("brief_generate",{period_type:"daily"},"Daily brief generated.").catch(e=>status(e.message,"warn"));
+  $("weeklyNow").onclick=()=>mutate("brief_generate",{period_type:"weekly"},"Weekly brief generated.").catch(e=>status(e.message,"warn"));
+  $("exportMonth").value=new Date().toISOString().slice(0,7);
+  $("exportXlsx").onclick=async()=>{const b=$("exportXlsx");b.disabled=true;try{status("Building XLSX…");const token=await session();const r=await fetch(EXPORT,{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"},body:JSON.stringify({admin_session_token:token,month:$("exportMonth").value})});const p=await r.json();if(!r.ok||!p.ok)throw new Error(p.detail||p.error||"Export failed");const bin=atob(p.base64),bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);const blob=new Blob([bytes],{type:p.mime});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=p.filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);status("XLSX downloaded: "+p.counts.orders+" orders, "+p.counts.ledger+" ledger rows.","ok")}catch(e){status(e.message,"warn")}finally{b.disabled=false}};
+  document.addEventListener("DOMContentLoaded",()=>load().catch(e=>status(e.message,"warn")),{once:true});
+})();
+</script>
+</body>
+</html>
