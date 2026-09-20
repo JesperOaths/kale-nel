@@ -151,8 +151,9 @@ async function createPaymentRequest(settings: any, totalCents: number, reference
 function htmlEscape(v: unknown) { return text(v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] || c)); }
 async function sendEmail(to: string, subject: string, html: string, plain: string) {
   const key = text(Deno.env.get("RESEND_API_KEY"));
-  const from = text(Deno.env.get("RESEND_FROM_EMAIL"));
-  if (!key || !from) return { ok: false, skipped: true, error: "Resend not configured" };
+  const configuredFrom = text(Deno.env.get("RESEND_FROM_EMAIL"));
+  const from = /@kalenel\.nl>?$/i.test(configuredFrom) ? configuredFrom : "Bruis <orders@kalenel.nl>";
+  if (!key) return { ok: false, skipped: true, error: "Resend not configured" };
   const res = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ from, to: [to], subject, html, text: plain }) });
   const raw = await res.text();
   return res.ok ? { ok: true, skipped: false } : { ok: false, skipped: false, error: `Resend ${res.status}: ${raw.slice(0, 300)}` };
@@ -422,8 +423,8 @@ Deno.serve(async (req: Request) => {
     const html = `<div style="font-family:Arial,sans-serif;line-height:1.55;color:#111"><h2>We received your Bruis order</h2><p>Hi ${htmlEscape(fullName)},</p><p>Your order <strong>${htmlEscape(reference)}</strong> is saved as <strong>Pending</strong>. We will only send it to production after the transfer has been manually verified.</p><p><strong>Total: ${money(totalCents)}</strong><br>Products: ${money(subtotalCents)}<br>Shipping: ${money(shippingCents)}<br>Payment reference: <strong>${htmlEscape(reference)}</strong></p>${payLine}<p>If you use bunq.me, enter exactly <strong>${money(totalCents)}</strong> and use <strong>${htmlEscape(reference)}</strong> as the description/reference.</p><p>You will receive another email as soon as your shipment is on the way.</p></div>`;
     const plain = `We received your Bruis order ${reference}.\nStatus: Pending\nTotal: ${money(totalCents)}\nShipping: ${money(shippingCents)}\nPayment reference: ${reference}\n${payment.url ? `Payment link: ${payment.url}\n` : ""}We only send the order to production after the transfer is manually verified. You will receive another email when the shipment is on the way.`;
     const mailed = await sendEmail(email, `Bruis order ${reference} received`, html, plain);
-    if (mailed.ok) await sb.from("shop_orders").update({ order_confirmation_notified_at: new Date().toISOString() }).eq("id", orderId);
-    else if (!mailed.skipped) await sb.from("shop_orders").update({ last_error: mailed.error }).eq("id", orderId);
+    if (mailed.ok) await sb.from("shop_orders").update({ order_confirmation_notified_at: new Date().toISOString(), notification_error: null, notification_error_at: null }).eq("id", orderId);
+    else if (!mailed.skipped) await sb.from("shop_orders").update({ notification_error: mailed.error, notification_error_at: new Date().toISOString() }).eq("id", orderId);
 
     return json(req, { ok: true, order_id: orderId, status: "pending", subtotal_cents: subtotalCents, shipping_cents: shippingCents, total_cents: totalCents, shipping_method: shippingMethod, payment_reference: reference, payment_provider: payment.provider, payment_url: payment.url, payment_expires_at: payment.expires_at, confirmation_token: confirmationToken, confirmation_email_sent: !!mailed.ok });
   } catch (error) {
