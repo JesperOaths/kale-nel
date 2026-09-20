@@ -50,6 +50,7 @@ function isAllowedVersionDrift(rel, found){
   if (found === 'v827' && rel === 'scripts/test-shop-production-connection-v827.mjs') return true;
   if (found === 'v828' && rel === 'admin_shop_connection.html') return true;
   if (found === 'v843' && rel === 'admin_shop_analytics.html') return true;
+  if (found === 'v847' && rel === 'admin_shop_operations.html') return true;
   if (found !== 'v762') return false;
   return rel === 'admin.html'
     || rel === 'cloudflare/workers/admin-gate/static/admin.html'
