@@ -21,17 +21,17 @@ export function normalizeRel(value) {
 
 export function isSafeRelativePath(value) {
   const raw = String(value || '');
-  if (!raw || raw.includes('\\0')) return false;
+  if (!raw || raw.includes(String.fromCharCode(0))) return false;
   if (/^[\\/]/.test(raw) || /^[A-Za-z]:[\\/]/.test(raw)) return false;
-  const slash = raw.replaceAll('\\\\', '/');
+  const slash = raw.replaceAll('\\', '/');
   if (slash.split('/').some((part) => part === '..')) return false;
   const rel = normalizeRel(raw);
   return Boolean(rel) && !path.posix.isAbsolute(rel);
 }
 
 export function isPrivateAdminSourcePath(value) {
+  if (!isSafeRelativePath(value)) return false;
   const rel = normalizeRel(value);
-  if (!isSafeRelativePath(rel)) return false;
   const base = path.posix.basename(rel);
   const ext = path.posix.extname(base).toLowerCase();
   if (!allowedExtensions.has(ext)) return false;
