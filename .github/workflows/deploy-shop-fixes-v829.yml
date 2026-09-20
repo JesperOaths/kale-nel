@@ -12,6 +12,8 @@ on:
       - 'supabase/functions/shop-delivery-preview-v833/**'
       - 'supabase/functions/shop-admin-analytics-v841/**'
       - 'supabase/functions/shop-admin-analytics-v842/**'
+      - 'supabase/functions/shop-admin-analytics-v843/**'
+      - 'supabase/functions/_shared/shop-admin-growth-v843.mjs'
 
 permissions:
   contents: read
@@ -54,3 +56,4 @@ jobs:
           deploy_function shop-delivery-preview-v833
           deploy_function shop-admin-analytics-v841
           deploy_function shop-admin-analytics-v842
+          deploy_function shop-admin-analytics-v843
