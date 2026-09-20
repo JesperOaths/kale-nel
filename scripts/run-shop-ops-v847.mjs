@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 
 const base=String(process.env.SUPABASE_URL||'').replace(/\/$/,'');
 const key=String(process.env.SUPABASE_SERVICE_ROLE_KEY||'').trim();
@@ -9,43 +10,44 @@ const force=String(process.env.FORCE_RUN||'false').toLowerCase()==='true';
 if(!base||!key) throw new Error('Missing Supabase runtime secrets');
 if(!action) throw new Error('Missing shop operations action');
 
-async function mint(){
-  const r=await fetch(base+'/rest/v1/rpc/shop_ops_mint_scheduler_token_v847',{
-    method:'POST',
-    headers:{Authorization:'Bearer '+key,apikey:key,'Content-Type':'application/json'},
-    body:'{}'
-  });
-  const raw=await r.text();
-  if(!r.ok) throw new Error('Could not mint scheduler token: HTTP '+r.status+' '+raw.slice(0,180));
-  let token;
-  try{token=JSON.parse(raw)}catch{}
-  if(typeof token!=='string'||!/^[a-f0-9]{64}$/i.test(token)) throw new Error('Malformed scheduler token');
-  return token;
+function curlJson(args,timeoutMs){
+  const r=spawnSync('curl',args,{encoding:'utf8',timeout:timeoutMs,maxBuffer:16*1024*1024});
+  if(r.error) throw r.error;
+  if(r.status!==0) throw new Error('curl failed ('+r.status+'): '+String(r.stderr||'').slice(0,300));
+  let body={};try{body=JSON.parse(r.stdout)}catch{}
+  return body;
 }
 
-async function call(){
-  const token=await mint();
+function mint(){
+  const body=curlJson([
+    '--silent','--show-error','--fail-with-body','--max-time','45',
+    '-X','POST',base+'/rest/v1/rpc/shop_ops_mint_scheduler_token_v847',
+    '-H','Authorization: Bearer '+key,
+    '-H','apikey: '+key,
+    '-H','Content-Type: application/json',
+    '--data','{}'
+  ],50000);
+  if(typeof body!=='string'||!/^[a-f0-9]{64}$/i.test(body)) throw new Error('Malformed scheduler token');
+  return body;
+}
+
+function call(){
+  const token=mint();
   const payload={action};
   if(action==='plan'||action==='run_backup') payload.force=force;
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),170000);
-  try{
-    const r=await fetch(base+'/functions/v1/shop-ops-v847',{
-      method:'POST',
-      signal:controller.signal,
-      headers:{apikey:key,'x-shop-ops-token':token,'Content-Type':'application/json'},
-      body:JSON.stringify(payload)
-    });
-    const raw=await r.text();
-    let body={};try{body=JSON.parse(raw)}catch{}
-    if(!r.ok||body?.ok!==true) throw new Error('shop-ops '+action+' failed: HTTP '+r.status+' '+String(body?.detail||body?.error||raw).slice(0,300));
-    return body;
-  }finally{
-    clearTimeout(timer);
-  }
+  const body=curlJson([
+    '--silent','--show-error','--fail-with-body','--max-time','165',
+    '-X','POST',base+'/functions/v1/shop-ops-v847',
+    '-H','apikey: '+key,
+    '-H','x-shop-ops-token: '+token,
+    '-H','Content-Type: application/json',
+    '--data',JSON.stringify(payload)
+  ],170000);
+  if(body?.ok!==true) throw new Error('shop-ops '+action+' failed: '+String(body?.detail||body?.error||'unknown').slice(0,300));
+  return body;
 }
 
-const body=await call();
+const body=call();
 const result=body?.result||{};
 const safe={action,ok:true};
 if(action==='plan'){
