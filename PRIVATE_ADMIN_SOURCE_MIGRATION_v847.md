@@ -75,6 +75,8 @@ After creating the private repository, configure these on the public `kale-nel` 
 
 The admin deployment workflow automatically checks out the private repository into `.private-admin-source`, verifies the manifest and hashes, and builds the Worker bundle from public shared assets plus private protected assets.
 
+The normal **GEJAST verification** workflow uses the same private checkout and overlays the verified private files into the ephemeral Actions workspace before running legacy regressions. This is intentionally a CI-only overlay; it does not commit the protected files back into the public repository.
+
 ## Required migration sequence
 
 1. Generate the extraction package from the current trusted public `main`.
@@ -84,9 +86,10 @@ The admin deployment workflow automatically checks out the private repository in
 5. Confirm the workflow reports `admin_source_mode: external-private`.
 6. Re-run the protected perimeter/OAuth verification and the inner admin/TOTP browser proof.
 7. Set `KALENEL_REQUIRE_PRIVATE_ADMIN_SOURCE=1` and repeat the deployment.
-8. Only after both external-private deployments pass, remove the corresponding protected source files from public `kale-nel`.
-9. Run the full repository verification and another protected Worker deployment.
-10. If desired, separately plan a Git history rewrite. Deleting current files does **not** erase older public Git history.
+8. Confirm GEJAST verification also passes with its private-source CI overlay.
+9. Only after the external-private deploys and CI overlay both pass, remove the corresponding protected source files from public `kale-nel`.
+10. Run the full repository verification and another protected Worker deployment.
+11. If desired, separately plan a Git history rewrite. Deleting current files does **not** erase older public Git history.
 
 ## Public-source deletion gate
 
