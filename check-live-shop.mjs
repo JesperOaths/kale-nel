@@ -5,7 +5,8 @@ const SHOP_URL = 'https://kalenel.nl/shop/';
 const ASSET_VERSION = '20260916-storefront-v837-r1';
 const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v832.js?v=${ASSET_VERSION}`;
 const DELIVERY_UI_URL = 'https://kalenel.nl/shop/delivery-estimate-v833.js?v=20260916-delivery-v840-r1';
-const MANUAL_CHECKOUT_UI_URL = 'https://kalenel.nl/shop/manual-checkout-v825.js?v=20260916-checkout-v840-r1';\nconst SHOP_ANALYTICS_URL = 'https://kalenel.nl/shop/shop-analytics-v841.js?v=20260920-shop-analytics-v841-r1';
+const MANUAL_CHECKOUT_UI_URL = 'https://kalenel.nl/shop/manual-checkout-v825.js?v=20260916-checkout-v840-r1';
+const SHOP_ANALYTICS_URL = 'https://kalenel.nl/shop/shop-analytics-v841.js?v=20260920-shop-analytics-v841-r1';
 const CUSTOMER_UI_URL = 'https://kalenel.nl/shop/customer-facing-checkout-v837.js?v=20260916-storefront-v837-r2';
 const POLISH_URL = `https://kalenel.nl/shop/storefront-polish-v832.js?v=${ASSET_VERSION}`;
 const POLISH_CSS_URL = `https://kalenel.nl/shop/storefront-polish-v832.css?v=${ASSET_VERSION}`;
@@ -19,7 +20,8 @@ const CATALOG_HEALTH_URL = `${CATALOG_URL}?health=1`;
 const CHECKOUT_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-manual-checkout-v832';
 const CONNECTION_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-production-connection-v828';
 const STATUS_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-order-status-v825?health=1';
-const ADMIN_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-admin-orders-v825';\nconst ADMIN_ANALYTICS_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-admin-analytics-v841';
+const ADMIN_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-admin-orders-v825';
+const ADMIN_ANALYTICS_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-admin-analytics-v841';
 const WEBHOOK_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-printify-webhook-v825';
 const TIMEOUT_MS = Number(process.env.GEJAST_SHOP_TIMEOUT_MS || 20000);
 const MIN_PRODUCTS = Number(process.env.GEJAST_SHOP_MIN_PRODUCTS || 20);
@@ -184,8 +186,16 @@ assert.match(bridge, /usesShopifyCatalogApi:false/, 'bridge must declare Shopify
 assert.match(bridge, /usesShopifyPriceApi:false/, 'bridge must declare Shopify price API disabled');
 
 
-const analyticsUi = await textAsset(SHOP_ANALYTICS_URL, 'shop-analytics-v841.js');\nassert.match(analyticsUi, /gejast_visitor_id_v2/, 'shop analytics must reuse the site visitor identity');\nassert.match(analyticsUi, /product_view/, 'shop analytics must track product views');\nassert.match(analyticsUi, /add_to_cart/, 'shop analytics must track cart additions');\nassert.match(analyticsUi, /checkout_start/, 'shop analytics must track checkout starts');\nassert.match(analyticsUi, /order_created/, 'shop analytics must track created orders');\n\nconst manualCheckoutUi = await textAsset(MANUAL_CHECKOUT_UI_URL, 'manual-checkout-v825.js');
-assert.match(manualCheckoutUi, /bruis:order-created/, 'checkout must emit the v841 order-created analytics event');\nassert.match(manualCheckoutUi, /syncPhoneRequirement/, 'checkout UI must dynamically require phone for US delivery');
+const analyticsUi = await textAsset(SHOP_ANALYTICS_URL, 'shop-analytics-v841.js');
+assert.match(analyticsUi, /gejast_visitor_id_v2/, 'shop analytics must reuse the site visitor identity');
+assert.match(analyticsUi, /product_view/, 'shop analytics must track product views');
+assert.match(analyticsUi, /add_to_cart/, 'shop analytics must track cart additions');
+assert.match(analyticsUi, /checkout_start/, 'shop analytics must track checkout starts');
+assert.match(analyticsUi, /order_created/, 'shop analytics must track created orders');
+
+const manualCheckoutUi = await textAsset(MANUAL_CHECKOUT_UI_URL, 'manual-checkout-v825.js');
+assert.match(manualCheckoutUi, /bruis:order-created/, 'checkout must emit the v841 order-created analytics event');
+assert.match(manualCheckoutUi, /syncPhoneRequirement/, 'checkout UI must dynamically require phone for US delivery');
 assert.match(manualCheckoutUi, /Phone \(required for US delivery\)/, 'checkout UI must explain why the US phone is required');
 assert.match(manualCheckoutUi, /A phone number is required for delivery to the United States/, 'checkout UI must stop a US order without a phone');
 
@@ -278,7 +288,8 @@ assert.equal(checkoutHealth?.email_configured, true, 'buyer confirmation email m
 
 await health(CONNECTION_URL, 'shop-production-connection-v828', 'production-connection-v828');
 await health(STATUS_URL, 'shop-order-status-v825', 'order-status-v825');
-await health(ADMIN_URL, 'shop-admin-orders-v825', 'admin-orders-v825');\nawait health(ADMIN_ANALYTICS_URL, 'shop-admin-analytics-v841', 'shop-admin-analytics-v841');
+await health(ADMIN_URL, 'shop-admin-orders-v825', 'admin-orders-v825');
+await health(ADMIN_ANALYTICS_URL, 'shop-admin-analytics-v841', 'shop-admin-analytics-v841');
 await health(WEBHOOK_URL, 'shop-printify-webhook-v825', 'printify-webhook-v825');
 
 console.log('RESULT=V839_BRUIS_SHOP_PASS');
