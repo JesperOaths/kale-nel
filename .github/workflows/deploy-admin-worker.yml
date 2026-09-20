@@ -7,6 +7,10 @@ on:
         description: 'Type DEPLOY_ADMIN_WORKER to publish the protected admin Worker and assets'
         required: true
         type: string
+  push:
+    branches: [main]
+    paths:
+      - '.github/admin-worker-deploy-v841.trigger'
 
 permissions:
   contents: read
@@ -21,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      CONFIRMATION_INPUT: ${{ inputs.confirmation }}
+      CONFIRMATION_INPUT: ${{ github.event_name == 'push' && 'DEPLOY_ADMIN_WORKER' || inputs.confirmation }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFARE_API_TOKEN_ONE || secrets.CLOUDFLARE_API_TOKEN_ONE || secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
