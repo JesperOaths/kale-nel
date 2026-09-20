@@ -33,7 +33,7 @@ async function isServiceRole(req){
       method:"POST",
       headers:{
         "Content-Type":"application/json",
-        "apikey":apiKey||authorization.replace(/^Bearer\\s+/i,""),
+        "apikey":apiKey||authorization.replace(/^Bearer\s+/i,""),
         "Authorization":authorization||("Bearer "+apiKey)
       },
       body:"{}"
