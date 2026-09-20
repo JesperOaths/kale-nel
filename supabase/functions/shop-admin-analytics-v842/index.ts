@@ -1,0 +1,559 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { fxAuditSnapshot, resolveUsdEurRate, usdCentsToEurCents } from "../_shared/shop-fx.mjs";
+
+const PRINTIFY_BASE = "https://api.printify.com/v1";
+const COST_CACHE_MS = 10 * 60 * 1000;
+const MAX_PAGES = 100;
+const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
+const CATEGORIES = new Set(["marketing","packaging","payment_fee","refund","chargeback","tax","software","shipping_adjustment","discount","other"]);
+const text = (v: unknown) => String(v ?? "").trim();
+
+function cors(req: Request) {
+  const origin = text(req.headers.get("origin"));
+  const allow = ALLOWED_ORIGINS.has(origin) || /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(origin) ? origin : "https://admin.kalenel.nl";
+  return {
+    "Access-Control-Allow-Origin": allow,
+    "Vary": "Origin",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    "Referrer-Policy": "no-referrer",
+  };
+}
+const json = (req: Request, body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: cors(req) });
+
+function serviceClient() {
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) throw new Error("server_not_configured");
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+}
+async function requireAdmin(sb: any, token: string) {
+  const { data, error } = await sb.rpc("_require_valid_admin_session", { admin_session_token: token });
+  if (error) throw new Error(error.message || String(error));
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row?.ok) throw new Error("invalid_admin_session");
+  return row;
+}
+async function resolveToken(sb: any) {
+  const envToken = text(Deno.env.get("PRINTIFY_API_TOKEN"));
+  if (envToken) return envToken;
+  const { data, error } = await sb.rpc("get_printify_api_token_v815a");
+  if (error || !text(data)) throw new Error("production_connection_missing");
+  return text(data);
+}
+async function printify(token: string, path: string) {
+  const response = await fetch(PRINTIFY_BASE + path, {
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": "Kalenel-Shop-Analytics/8.42" },
+  });
+  const raw = await response.text();
+  let payload: any = null;
+  try { payload = raw ? JSON.parse(raw) : null; } catch { payload = raw; }
+  if (!response.ok) throw new Error(`printify_${response.status}:${text(payload?.message || payload?.error || raw).slice(0,180)}`);
+  return payload;
+}
+async function loadProducts(token: string, shopId: number) {
+  const rows: any[] = [];
+  for (let page = 1; page <= MAX_PAGES; page += 1) {
+    const payload = await printify(token, `/shops/${shopId}/products.json?limit=50&page=${page}`);
+    const batch = Array.isArray(payload?.data) ? payload.data : [];
+    rows.push(...batch);
+    const last = Number(payload?.last_page || 0);
+    if (!batch.length || batch.length < 50 || (last && page >= last)) break;
+  }
+  return rows;
+}
+async function resolveShopId(token: string, catalogPayload: any) {
+  const cached = Number(catalogPayload?.shop?.id);
+  if (Number.isFinite(cached) && cached > 0) return cached;
+  const configured = Number(Deno.env.get("PRINTIFY_SHOP_ID"));
+  if (Number.isFinite(configured) && configured > 0) return configured;
+  const shops = await printify(token, "/shops.json");
+  const rows = Array.isArray(shops) ? shops : [];
+  const shop = rows.find((r: any) => /shopify/i.test(text(r?.sales_channel))) || rows.find((r: any) => text(r?.sales_channel).toLowerCase() !== "disconnected") || rows[0];
+  const id = Number(shop?.id);
+  if (!Number.isFinite(id)) throw new Error("no_shop_available");
+  return id;
+}
+async function currentCostSnapshot(sb: any, force = false) {
+  const { data: cache } = await sb.from("shop_product_cost_cache_v841").select("payload,generated_at,last_error").eq("id",1).maybeSingle();
+  const age = cache?.generated_at ? Date.now() - Date.parse(cache.generated_at) : Infinity;
+  if (!force && age < COST_CACHE_MS && Array.isArray(cache?.payload?.products) && cache.payload.products.length) {
+    return { ...cache.payload, cache: { generated_at: cache.generated_at, age_seconds: Math.round(age / 1000), stale: false } };
+  }
+  try {
+    const { data: catalogRow, error: catalogError } = await sb.from("shop_catalog_cache_v828").select("payload,generated_at").eq("id",1).maybeSingle();
+    if (catalogError) throw catalogError;
+    const catalog = catalogRow?.payload || {};
+    const catalogProducts = Array.isArray(catalog?.products) ? catalog.products : [];
+    if (!catalogProducts.length) throw new Error("catalog_cache_empty");
+    const token = await resolveToken(sb);
+    const fx = await resolveUsdEurRate(sb);
+    const shopId = await resolveShopId(token, catalog);
+    const liveProducts = await loadProducts(token, shopId);
+    const liveMap = new Map(liveProducts.map((p: any) => [text(p?.id), p]));
+    const products = catalogProducts.map((product: any) => {
+      const live = liveMap.get(text(product?.id));
+      const liveVariants = new Map((Array.isArray((live as any)?.variants) ? (live as any).variants : []).map((v: any) => [String(v?.id || ""), v]));
+      const variants = (Array.isArray(product?.variants) ? product.variants : []).map((variant: any) => {
+        const source: any = liveVariants.get(String(variant?.id || ""));
+        const rawUsdCents = Number(source?.cost);
+        const productionCostCents = Number.isFinite(rawUsdCents) && rawUsdCents >= 0 ? usdCentsToEurCents(rawUsdCents, fx) : null;
+        const retailCents = Math.round(Number(variant?.price || 0) * 100);
+        return {
+          id: String(variant?.id || ""),
+          sku: text(variant?.sku),
+          size: text(variant?.size),
+          color: text(variant?.color),
+          retail_cents: retailCents,
+          production_cost_cents: productionCostCents,
+          gross_product_margin_cents: productionCostCents == null ? null : retailCents - productionCostCents,
+          source_cost_usd_cents: Number.isFinite(rawUsdCents) ? Math.round(rawUsdCents) : null,
+          available: variant?.is_available !== false && variant?.is_enabled !== false,
+        };
+      }).filter((v: any) => v.id && v.retail_cents > 0);
+      const available = variants.filter((v: any) => v.available);
+      const basis = available.length ? available : variants;
+      const known = basis.filter((v: any) => v.production_cost_cents != null);
+      const vals = (key: string, rows = basis) => rows.map((v: any) => Number(v[key])).filter((n: number) => Number.isFinite(n));
+      const retail = vals("retail_cents");
+      const costs = vals("production_cost_cents", known);
+      const margins = vals("gross_product_margin_cents", known);
+      return {
+        product_id: text(product?.id),
+        product_name: text(product?.name),
+        collection: text(product?.collection) || "unknown",
+        base_label: text(product?.baseLabel),
+        retail_min_cents: retail.length ? Math.min(...retail) : null,
+        retail_max_cents: retail.length ? Math.max(...retail) : null,
+        production_cost_min_cents: costs.length ? Math.min(...costs) : null,
+        production_cost_max_cents: costs.length ? Math.max(...costs) : null,
+        gross_product_margin_min_cents: margins.length ? Math.min(...margins) : null,
+        gross_product_margin_max_cents: margins.length ? Math.max(...margins) : null,
+        variants,
+      };
+    }).filter((p: any) => p.product_id);
+    const now = new Date().toISOString();
+    const payload = { generated_at: now, catalog_generated_at: catalogRow?.generated_at || null, fx: fxAuditSnapshot(fx), products };
+    const { error: saveError } = await sb.from("shop_product_cost_cache_v841").update({ payload, generated_at: now, last_error: null, updated_at: now }).eq("id",1);
+    if (saveError) throw saveError;
+    return { ...payload, cache: { generated_at: now, age_seconds: 0, stale: false } };
+  } catch (error) {
+    const message = text(error instanceof Error ? error.message : error).slice(0,400);
+    await sb.from("shop_product_cost_cache_v841").update({ last_error: message, updated_at: new Date().toISOString() }).eq("id",1);
+    if (Array.isArray(cache?.payload?.products) && cache.payload.products.length) {
+      return { ...cache.payload, cache: { generated_at: cache.generated_at, age_seconds: Number.isFinite(age) ? Math.round(age/1000) : null, stale: true, error: message } };
+    }
+    throw error;
+  }
+}
+function isoOrNull(value: unknown) {
+  const raw = text(value);
+  if (!raw) return null;
+  const ms = Date.parse(raw);
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+}
+function safeRange(body: any) {
+  const now = Date.now();
+  let to = isoOrNull(body?.to) || new Date(now).toISOString();
+  let from = isoOrNull(body?.from) || new Date(now - 30*86400000).toISOString();
+  if (Date.parse(from) >= Date.parse(to)) throw new Error("invalid_date_range");
+  if (Date.parse(to) - Date.parse(from) > 5*365*86400000) throw new Error("range_too_large");
+  return { from, to };
+}
+
+function average(values: number[]) {
+  const rows = values.filter((v) => Number.isFinite(v) && v >= 0);
+  return rows.length ? rows.reduce((sum, v) => sum + v, 0) / rows.length : null;
+}
+function supplierShippingEurCents(row: any) {
+  const shipping = Number(row?.shipping_cents || 0);
+  if (shipping === 0) return 0;
+  const source = Number(row?.shipping_source_cents);
+  const currency = text(row?.shipping_source_currency).toLowerCase();
+  if (!Number.isFinite(source) || source < 0) return null;
+  if (currency === "eur") return Math.round(source);
+  if (currency === "usd") {
+    const rate = Number(row?.fx_snapshot?.rate);
+    if (Number.isFinite(rate) && rate > 0) return Math.round(source * rate);
+  }
+  return null;
+}
+async function operationalBreakdown(sb: any, range: { from: string; to: string }) {
+  const { data, error } = await sb.from("shop_orders")
+    .select("id,status,created_at,payment_verified_at,submitted_to_printify_at,shipped_at,payment_provider,shipping_method,shipping_cents,shipping_source_currency,shipping_source_cents,fx_snapshot,paid_amount_cents,total_cents,customer_email,line_items")
+    .gte("created_at", range.from).lt("created_at", range.to)
+    .order("created_at", { ascending: false }).limit(5000);
+  if (error) throw error;
+  const rows = Array.isArray(data) ? data : [];
+  const customers = new Map<string, number>();
+  const payments = new Map<string, any>();
+  const statuses = new Map<string, number>();
+  const shippingMethods = new Map<string, any>();
+  const providers = new Map<string, any>();
+  const paymentMinutes: number[] = [], productionHours: number[] = [], shipDays: number[] = [];
+  let knownShippingRevenueCents = 0, knownShippingCostCents = 0, knownShippingOrders = 0, missingShippingCostOrders = 0, overpaymentCents = 0;
+
+  const addTime = (bucket: number[], from: unknown, to: unknown, divisor: number) => {
+    const a = Date.parse(text(from)), b = Date.parse(text(to));
+    if (Number.isFinite(a) && Number.isFinite(b) && b >= a) bucket.push((b - a) / divisor);
+  };
+
+  for (const row of rows) {
+    const paid = !!row?.payment_verified_at;
+    const email = text(row?.customer_email).toLowerCase();
+    if (email) customers.set(email, (customers.get(email) || 0) + 1);
+
+    const status = text(row?.status) || "unknown";
+    statuses.set(status, (statuses.get(status) || 0) + 1);
+
+    const provider = text(row?.payment_provider) || "manual";
+    const payment = payments.get(provider) || { provider, orders: 0, paid_orders: 0, paid_sales_cents: 0 };
+    payment.orders += 1;
+    if (paid) { payment.paid_orders += 1; payment.paid_sales_cents += Number(row?.total_cents || 0); }
+    payments.set(provider, payment);
+
+    const shipMethod = text(row?.shipping_method) || "unknown";
+    const sm = shippingMethods.get(shipMethod) || { method: shipMethod, orders: 0, paid_orders: 0, shipping_revenue_cents: 0 };
+    sm.orders += 1;
+    if (paid) { sm.paid_orders += 1; sm.shipping_revenue_cents += Number(row?.shipping_cents || 0); }
+    shippingMethods.set(shipMethod, sm);
+
+    if (paid) {
+      const paidAmount = Number(row?.paid_amount_cents);
+      const total = Number(row?.total_cents || 0);
+      if (Number.isFinite(paidAmount) && paidAmount > total) overpaymentCents += paidAmount - total;
+      const supplier = supplierShippingEurCents(row);
+      if (supplier == null && Number(row?.shipping_cents || 0) > 0) {
+        missingShippingCostOrders += 1;
+      } else if (supplier != null) {
+        knownShippingOrders += 1;
+        knownShippingRevenueCents += Number(row?.shipping_cents || 0);
+        knownShippingCostCents += supplier;
+      }
+    }
+
+    addTime(paymentMinutes, row?.created_at, row?.payment_verified_at, 60000);
+    addTime(productionHours, row?.payment_verified_at, row?.submitted_to_printify_at, 3600000);
+    addTime(shipDays, row?.submitted_to_printify_at, row?.shipped_at, 86400000);
+
+    const seenProviders = new Set<string>();
+    for (const item of Array.isArray(row?.line_items) ? row.line_items : []) {
+      const providerId = text(item?.fulfillment_route?.print_provider_id || item?.print_provider_id || "unknown");
+      const qty = Math.max(1, Math.round(Number(item?.qty || 1)));
+      const pr = providers.get(providerId) || { provider_id: providerId, units: 0, paid_units: 0, orders: 0, paid_orders: 0 };
+      pr.units += qty;
+      if (paid) pr.paid_units += qty;
+      providers.set(providerId, pr);
+      if (!seenProviders.has(providerId)) {
+        pr.orders += 1;
+        if (paid) pr.paid_orders += 1;
+        seenProviders.add(providerId);
+      }
+    }
+  }
+  const repeatCustomers = [...customers.values()].filter((count) => count > 1).length;
+  return {
+    unique_customers: customers.size,
+    repeat_customers: repeatCustomers,
+    repeat_customer_rate: customers.size ? repeatCustomers / customers.size : null,
+    avg_minutes_to_payment: average(paymentMinutes),
+    avg_hours_payment_to_production: average(productionHours),
+    avg_days_production_to_ship: average(shipDays),
+    known_shipping_orders: knownShippingOrders,
+    missing_shipping_cost_orders: missingShippingCostOrders,
+    known_shipping_revenue_cents: knownShippingRevenueCents,
+    known_shipping_cost_cents: knownShippingCostCents,
+    known_shipping_margin_cents: knownShippingRevenueCents - knownShippingCostCents,
+    overpayment_cents: overpaymentCents,
+    payment_providers: [...payments.values()].sort((a, b) => b.orders - a.orders),
+    shipping_methods: [...shippingMethods.values()].sort((a, b) => b.orders - a.orders),
+    fulfillment_providers: [...providers.values()].sort((a, b) => b.units - a.units),
+    statuses: [...statuses.entries()].map(([status, orders]) => ({ status, orders })).sort((a, b) => b.orders - a.orders),
+  };
+}
+
+
+function amsterdamParts(value: unknown) {
+  const date = new Date(text(value));
+  if (!Number.isFinite(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Amsterdam", weekday: "short", year: "numeric", month: "2-digit", hour: "2-digit", hour12: false,
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value || "";
+  return { weekday: get("weekday"), year: get("year"), month: get("month"), hour: get("hour").padStart(2, "0") };
+}
+function referrerHost(raw: unknown) {
+  const value = text(raw);
+  if (!value) return "";
+  try { return new URL(value).hostname.replace(/^www\./i, "").toLowerCase(); } catch { return ""; }
+}
+function severityRank(value: string) { return value === "high" ? 3 : value === "medium" ? 2 : 1; }
+
+async function auditAdminAction(sb: any, admin: any, action: string, options: any = {}) {
+  const row = {
+    admin_id: Number(admin?.admin_id) || null,
+    admin_username: text(admin?.username).slice(0,160) || null,
+    surface: text(options?.surface || "shop_admin_analytics").slice(0,80),
+    action: text(action).slice(0,120),
+    object_type: text(options?.object_type).slice(0,80) || null,
+    object_id: text(options?.object_id).slice(0,200) || null,
+    success: options?.success !== false,
+    metadata: options?.metadata && typeof options.metadata === "object" ? options.metadata : {},
+  };
+  const { error } = await sb.from("shop_admin_audit_v842").insert(row);
+  if (error) console.error("shop admin audit write failed", error.message || error);
+}
+async function recentAdminAudit(sb: any) {
+  const { data, error } = await sb.from("shop_admin_audit_v842")
+    .select("id,occurred_at,admin_id,admin_username,surface,action,object_type,object_id,success,metadata")
+    .order("occurred_at", { ascending: false }).limit(100);
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+function marginRisk(catalog: any) {
+  const rows: any[] = [];
+  for (const product of Array.isArray(catalog?.products) ? catalog.products : []) {
+    for (const variant of Array.isArray(product?.variants) ? product.variants : []) {
+      if (variant?.available === false) continue;
+      const retail = Number(variant?.retail_cents);
+      const cost = Number(variant?.production_cost_cents);
+      if (!Number.isFinite(retail) || retail <= 0 || !Number.isFinite(cost)) continue;
+      const margin = retail - cost;
+      const ratio = margin / retail;
+      if (margin <= 0 || ratio < 0.20) {
+        rows.push({
+          severity: margin <= 0 ? "high" : "medium",
+          product_id: text(product?.product_id),
+          product_name: text(product?.product_name),
+          collection: text(product?.collection),
+          variant_id: text(variant?.id),
+          size: text(variant?.size),
+          retail_cents: Math.round(retail),
+          production_cost_cents: Math.round(cost),
+          margin_cents: Math.round(margin),
+          margin_rate: ratio,
+        });
+      }
+    }
+  }
+  return rows.sort((a,b) => a.margin_rate - b.margin_rate).slice(0,100);
+}
+async function intelligenceBreakdown(sb: any, range: { from: string; to: string }) {
+  const [rangeResult, allResult, attributionResult, lastEventResult] = await Promise.all([
+    sb.from("shop_orders")
+      .select("id,status,created_at,payment_verified_at,paid_at,submitted_to_printify_at,shipped_at,total_cents,shipping_cents,customer_email,line_items,last_error,tracking,payment_reference")
+      .gte("created_at", range.from).lt("created_at", range.to)
+      .order("created_at", { ascending: false }).limit(10000),
+    sb.from("shop_orders")
+      .select("id,created_at,payment_verified_at,paid_at,total_cents,customer_email")
+      .order("created_at", { ascending: true }).limit(20000),
+    sb.from("site_visitor_events")
+      .select("created_at,session_id,referrer_url,extra")
+      .like("page_path", "/shop%").eq("event_name", "order_created")
+      .gte("created_at", range.from).lt("created_at", range.to)
+      .order("created_at", { ascending: false }).limit(10000),
+    sb.from("site_visitor_events")
+      .select("created_at,event_name")
+      .like("page_path", "/shop%")
+      .order("created_at", { ascending: false }).limit(1),
+  ]);
+  for (const result of [rangeResult, allResult, attributionResult, lastEventResult]) if (result.error) throw result.error;
+  const rangeRows = Array.isArray(rangeResult.data) ? rangeResult.data : [];
+  const allRows = Array.isArray(allResult.data) ? allResult.data : [];
+  const orderMap = new Map(rangeRows.map((r: any) => [text(r?.id), r]));
+  const now = Date.now();
+
+  const attention: any[] = [];
+  const pushAttention = (severity: string, kind: string, row: any, message: string, ageHours: number | null = null) => {
+    attention.push({
+      severity, kind, order_id: text(row?.id), payment_reference: text(row?.payment_reference),
+      status: text(row?.status), message, age_hours: ageHours,
+    });
+  };
+  for (const row of rangeRows) {
+    const created = Date.parse(text(row?.created_at));
+    const payment = Date.parse(text(row?.payment_verified_at || row?.paid_at));
+    const submitted = Date.parse(text(row?.submitted_to_printify_at));
+    const ageCreated = Number.isFinite(created) ? (now - created) / 3600000 : null;
+    const agePaid = Number.isFinite(payment) ? (now - payment) / 3600000 : null;
+    const ageProduction = Number.isFinite(submitted) ? (now - submitted) / 3600000 : null;
+    if (!row?.payment_verified_at && ageCreated != null && ageCreated >= 24) {
+      pushAttention(ageCreated >= 72 ? "high" : "medium", "unpaid_order", row, `Order has been unpaid for ${Math.floor(ageCreated)} hours.`, ageCreated);
+    }
+    if (row?.payment_verified_at && !row?.submitted_to_printify_at && agePaid != null && agePaid >= 4) {
+      pushAttention(agePaid >= 24 ? "high" : "medium", "paid_not_submitted", row, `Paid order has not been released to production for ${Math.floor(agePaid)} hours.`, agePaid);
+    }
+    if (row?.submitted_to_printify_at && !row?.shipped_at && ageProduction != null && ageProduction >= 5 * 24) {
+      pushAttention(ageProduction >= 10 * 24 ? "high" : "medium", "production_delay", row, `Order has been in production for ${(ageProduction/24).toFixed(1)} days without shipment.`, ageProduction);
+    }
+    if (text(row?.last_error)) {
+      pushAttention("high", "order_error", row, `Order has a recorded fulfillment/payment error: ${text(row.last_error).slice(0,180)}`);
+    }
+    const tracking = Array.isArray(row?.tracking) ? row.tracking : [];
+    if (row?.shipped_at && !tracking.some((t: any) => text(t?.number) || text(t?.url))) {
+      pushAttention("medium", "missing_tracking", row, "Order is marked shipped but no tracking number or URL is stored.");
+    }
+  }
+  attention.sort((a,b) => severityRank(b.severity)-severityRank(a.severity) || Number(b.age_hours||0)-Number(a.age_hours||0));
+
+  const customers = new Map<string, any>();
+  for (const row of allRows) {
+    const email = text(row?.customer_email).toLowerCase();
+    if (!email) continue;
+    const c = customers.get(email) || { first_at: text(row?.created_at), orders: 0, paid_orders: 0, sales_cents: 0, repeat_purchase_sales_cents: 0 };
+    c.orders += 1;
+    const paid = !!row?.payment_verified_at;
+    if (paid) {
+      c.paid_orders += 1;
+      c.sales_cents += Number(row?.total_cents || 0);
+      if (c.paid_orders > 1) c.repeat_purchase_sales_cents += Number(row?.total_cents || 0);
+    }
+    customers.set(email, c);
+  }
+  const cohorts = new Map<string, any>();
+  let repeatCustomerSales = 0, repeatPurchaseSales = 0, lifetimeSales = 0, paidCustomers = 0;
+  for (const c of customers.values()) {
+    const parts = amsterdamParts(c.first_at);
+    const cohort = parts ? `${parts.year}-${parts.month}` : "unknown";
+    const row = cohorts.get(cohort) || { cohort, customers: 0, repeat_customers: 0, orders: 0, paid_orders: 0, recognized_sales_cents: 0 };
+    row.customers += 1;
+    row.orders += c.orders;
+    row.paid_orders += c.paid_orders;
+    row.recognized_sales_cents += c.sales_cents;
+    if (c.orders > 1) { row.repeat_customers += 1; repeatCustomerSales += c.sales_cents; }
+    if (c.paid_orders > 0) paidCustomers += 1;
+    repeatPurchaseSales += c.repeat_purchase_sales_cents;
+    lifetimeSales += c.sales_cents;
+    cohorts.set(cohort, row);
+  }
+  const cohortRows = [...cohorts.values()].map((r: any) => ({
+    ...r,
+    repeat_rate: r.customers ? r.repeat_customers / r.customers : null,
+    avg_customer_revenue_cents: r.customers ? Math.round(r.recognized_sales_cents / r.customers) : 0,
+  })).sort((a:any,b:any) => String(b.cohort).localeCompare(String(a.cohort)));
+
+  const basketMap = new Map<string, any>();
+  const timingMap = new Map<string, any>();
+  for (const order of rangeRows) {
+    if (!order?.payment_verified_at) continue;
+    const names = [...new Set((Array.isArray(order?.line_items) ? order.line_items : []).map((i:any) => text(i?.name)).filter(Boolean))].sort();
+    for (let i=0;i<names.length;i++) for (let j=i+1;j<names.length;j++) {
+      const key = `${names[i]}|||${names[j]}`;
+      const pair = basketMap.get(key) || { product_a: names[i], product_b: names[j], paid_orders: 0, basket_sales_cents: 0 };
+      pair.paid_orders += 1;
+      pair.basket_sales_cents += Number(order?.total_cents || 0);
+      basketMap.set(key, pair);
+    }
+    const parts = amsterdamParts(order?.payment_verified_at || order?.paid_at || order?.created_at);
+    if (parts) {
+      const key = `${parts.weekday}|||${parts.hour}`;
+      const slot = timingMap.get(key) || { weekday: parts.weekday, hour: Number(parts.hour), paid_orders: 0, recognized_sales_cents: 0 };
+      slot.paid_orders += 1;
+      slot.recognized_sales_cents += Number(order?.total_cents || 0);
+      timingMap.set(key, slot);
+    }
+  }
+
+  const attribution = new Map<string, any>();
+  const attributedOrders = new Set<string>();
+  for (const ev of Array.isArray(attributionResult.data) ? attributionResult.data : []) {
+    const extra = ev?.extra && typeof ev.extra === "object" ? ev.extra : {};
+    const orderId = text(extra?.order_id);
+    if (!orderId || attributedOrders.has(orderId)) continue;
+    attributedOrders.add(orderId);
+    const order = orderMap.get(orderId);
+    const source = text(extra?.utm_source) || referrerHost(extra?.landing_referrer || ev?.referrer_url) || "direct";
+    const medium = text(extra?.utm_medium) || (source === "direct" ? "direct" : "referral");
+    const campaign = text(extra?.utm_campaign) || "(none)";
+    const key = `${source}|||${medium}|||${campaign}`;
+    const row = attribution.get(key) || { source, medium, campaign, created_orders: 0, verified_orders: 0, recognized_sales_cents: 0 };
+    row.created_orders += 1;
+    if (order?.payment_verified_at) {
+      row.verified_orders += 1;
+      row.recognized_sales_cents += Number(order?.total_cents || 0);
+    }
+    attribution.set(key, row);
+  }
+
+  return {
+    attention: attention.slice(0,100),
+    customer_value: {
+      lifetime_customers: customers.size,
+      paid_customers: paidCustomers,
+      lifetime_recognized_sales_cents: lifetimeSales,
+      avg_lifetime_value_cents: customers.size ? Math.round(lifetimeSales / customers.size) : 0,
+      repeat_customer_sales_cents: repeatCustomerSales,
+      repeat_purchase_sales_cents: repeatPurchaseSales,
+    },
+    cohorts: cohortRows.slice(0,60),
+    basket_pairs: [...basketMap.values()].sort((a:any,b:any) => b.paid_orders-a.paid_orders || b.basket_sales_cents-a.basket_sales_cents).slice(0,50),
+    sales_timing: [...timingMap.values()].sort((a:any,b:any) => b.recognized_sales_cents-a.recognized_sales_cents || b.paid_orders-a.paid_orders).slice(0,40),
+    attribution: [...attribution.values()].sort((a:any,b:any) => b.recognized_sales_cents-a.recognized_sales_cents || b.created_orders-a.created_orders).slice(0,100),
+    last_shop_event_at: Array.isArray(lastEventResult.data) && lastEventResult.data[0]?.created_at ? lastEventResult.data[0].created_at : null,
+  };
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors(req) });
+  if (req.method === "GET") return json(req, { ok: true, mode: "shop-admin-analytics-v842", custom_admin_auth: true });
+  if (req.method !== "POST") return json(req, { error: "method_not_allowed" }, 405);
+  let sb: any;
+  try { sb = serviceClient(); } catch { return json(req, { error: "server_not_configured" }, 503); }
+  try {
+    const body = await req.json().catch(() => ({}));
+    const admin = await requireAdmin(sb, text(body?.admin_session_token));
+    const action = text(body?.action || "dashboard");
+    if (action === "dashboard" || action === "refresh_costs") {
+      const range = safeRange(body);
+      const { data: snapshot, error } = await sb.rpc("shop_admin_analytics_snapshot_v841", { p_from: range.from, p_to: range.to });
+      if (error) throw error;
+      const [catalog_costs, operations, intelligence] = await Promise.all([
+        currentCostSnapshot(sb, action === "refresh_costs" || body?.force_cost_refresh === true),
+        operationalBreakdown(sb, range),
+        intelligenceBreakdown(sb, range),
+      ]);
+      const margin_risk = marginRisk(catalog_costs);
+      await auditAdminAction(sb, admin, action, { metadata: { from: range.from, to: range.to, margin_risk_count: margin_risk.length, attention_count: intelligence.attention.length } });
+      const admin_audit = await recentAdminAudit(sb);
+      return json(req, { ok: true, snapshot, catalog_costs, operations, intelligence: { ...intelligence, margin_risk }, admin_audit });
+    }
+    if (action === "ledger_add") {
+      const occurred = text(body?.occurred_on);
+      const direction = text(body?.direction);
+      const category = text(body?.category);
+      const amount = Number(body?.amount_cents);
+      const orderId = text(body?.order_id);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(occurred)) return json(req, { error: "invalid_ledger_date" }, 400);
+      if (!["cost","income"].includes(direction)) return json(req, { error: "invalid_ledger_direction" }, 400);
+      if (!CATEGORIES.has(category)) return json(req, { error: "invalid_ledger_category" }, 400);
+      if (!Number.isInteger(amount) || amount <= 0 || amount > 100000000) return json(req, { error: "invalid_ledger_amount" }, 400);
+      if (orderId && !/^[0-9a-f-]{36}$/i.test(orderId)) return json(req, { error: "invalid_order_id" }, 400);
+      const row = {
+        occurred_on: occurred, direction, category, amount_cents: amount, currency: "eur",
+        order_id: orderId || null, product_name: text(body?.product_name).slice(0,160) || null,
+        note: text(body?.note).slice(0,1000) || null, created_by_admin_id: admin.admin_id, updated_at: new Date().toISOString(),
+      };
+      const { data, error } = await sb.from("shop_finance_ledger_v841").insert(row).select().single();
+      if (error) throw error;
+      await auditAdminAction(sb, admin, "ledger_add", { object_type: "finance_ledger", object_id: String(data?.id || ""), metadata: { direction, category, amount_cents: amount, occurred_on: occurred, order_id: orderId || null } });
+      return json(req, { ok: true, entry: data });
+    }
+    if (action === "ledger_delete") {
+      const id = Number(body?.ledger_id);
+      if (!Number.isInteger(id) || id <= 0) return json(req, { error: "invalid_ledger_id" }, 400);
+      const { data, error } = await sb.from("shop_finance_ledger_v841").delete().eq("id",id).select("id").maybeSingle();
+      if (error) throw error;
+      await auditAdminAction(sb, admin, "ledger_delete", { object_type: "finance_ledger", object_id: String(id), metadata: { deleted: !!data } });
+      return json(req, { ok: true, deleted: !!data });
+    }
+    return json(req, { error: "unknown_action" }, 400);
+  } catch (error) {
+    const message = text(error instanceof Error ? error.message : error);
+    const invalid = /invalid_admin_session/i.test(message);
+    console.error("shop-admin-analytics-v842 failed", invalid ? "invalid_admin_session" : message.slice(0,300));
+    return json(req, { error: invalid ? "invalid_admin_session" : "shop_analytics_failed", detail: invalid ? undefined : message.slice(0,400) }, invalid ? 401 : 502);
+  }
+});
