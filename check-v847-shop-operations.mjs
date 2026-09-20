@@ -47,6 +47,13 @@ assert.match(ops,/security_revoke_others/);
 for(const marker of ['createBackup','generateBrief','notifyNewAlerts']) assert.ok(core.includes(marker));
 for(const marker of ['paid_not_submitted','production_stuck','shipped_no_tracking','telemetry_stale','catalogDiff','cost_change','low_margin','shop_issue_invoice_v847','shop_apply_payment_fee_v847']) assert.ok(checks.includes(marker),'checks missing '+marker);
 
+for(const marker of ['whole_euro_threshold_price_cents','threshold_gap_cents','diagnostic_basis','pricing_action:"none"']) assert.ok(checks.includes(marker),'low-margin diagnostic missing '+marker);
+assert.match(page,/function marginDetails\(x\)/);
+assert.match(page,/diagnostic only; no price is changed automatically/i);
+assert.match(page,/whole-euro shop price/i);
+assert.doesNotMatch(checks,/action\s*[:=]\s*["'](?:set|update|change)[_-]?price["']/i,'low-margin monitoring must not mutate prices');
+assert.doesNotMatch(page,/data-(?:set|update|change)-price/i,'operations page must not expose automatic repricing controls');
+
 assert.match(catalog,/const priced = available;/);
 assert.match(catalog,/variants: available/);
 assert.doesNotMatch(catalog,/available\.length \? available : variants/);
