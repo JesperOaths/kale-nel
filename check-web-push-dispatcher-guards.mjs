@@ -188,7 +188,10 @@ async function exercisePermanentClaimFailure() {
     webpush: { async sendNotification() { throw new Error('should not send'); } },
     sleep: async () => {},
   });
-  await assert.rejects(instance.run(), /bad request/);
+  let caught=null;
+  try { await instance.run(); } catch (error) { caught=error; }
+  assert(caught, 'non-transient claim failure must be surfaced');
+  assert.equal(caught.message, 'bad request', 'non-transient claim failure must preserve the original error');
   return claimAttempts;
 }
 
