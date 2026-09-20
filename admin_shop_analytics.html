@@ -82,8 +82,11 @@
   const pct=(num,den)=>den>0?(100*num/den).toFixed(1)+'%':'—';
   const int=v=>new Intl.NumberFormat('nl-NL',{maximumFractionDigits:0}).format(n(v));
   const dt=v=>{if(!v)return '—';try{return new Intl.DateTimeFormat('nl-NL',{dateStyle:'short',timeStyle:'short'}).format(new Date(v));}catch{return String(v)}};
+  const mins=v=>v==null?'—':n(v)<60?Math.round(n(v))+' min':(n(v)/60).toFixed(1)+' h';
+  const hours=v=>v==null?'—':n(v)<24?n(v).toFixed(1)+' h':(n(v)/24).toFixed(1)+' d';
+  const days=v=>v==null?'—':n(v).toFixed(1)+' d';
   const token=()=>window.GEJAST_ADMIN_SESSION?.getToken?.()||'';
-  let data=null,catalog=null,productFilter='';
+  let data=null,catalog=null,operations={},productFilter='';
 
   function setStatus(message='',tone=''){$('status').textContent=message;$('status').className='status '+tone;}
   function dateOnly(d){return d.toISOString().slice(0,10);}
@@ -130,7 +133,13 @@
       metric('Paid units',int(o.units_paid),int(o.units_created)+' units ordered'),
       metric('Product COGS',eur(o.paid_known_product_cost_cents),missing?'known portion only':'verified sales'),
       metric('Supplier shipping',eur(o.paid_known_shipping_cost_cents),n(o.paid_missing_shipping_cost_orders)?'some unknown':'known verified-order cost'),
-      metric('Ledger net',eur(n(l.income_cents)-n(l.costs_cents)),eur(l.costs_cents)+' costs / '+eur(l.income_cents)+' income')
+      metric('Ledger net',eur(n(l.income_cents)-n(l.costs_cents)),eur(l.costs_cents)+' costs / '+eur(l.income_cents)+' income'),
+      metric('Unique customers',int(operations.unique_customers),int(operations.repeat_customers)+' repeat · '+(operations.repeat_customer_rate==null?'—':(100*n(operations.repeat_customer_rate)).toFixed(1)+'%')),
+      metric('Shipping margin',eur(operations.known_shipping_margin_cents),int(operations.known_shipping_orders)+' orders with known supplier shipping'),
+      metric('Avg. time to payment',mins(operations.avg_minutes_to_payment),'order created → verified payment'),
+      metric('Avg. payment → production',hours(operations.avg_hours_payment_to_production),'verified payment → fulfillment release'),
+      metric('Avg. production → ship',days(operations.avg_days_production_to_ship),'fulfillment release → shipped'),
+      metric('Overpayment',eur(operations.overpayment_cents),'amount received above order totals')
     ].join('');
     const q=[];
     if(!e.sessions) q.push('Shop behavioral telemetry has no events in this period yet; v841 tracking only works forward from deployment.');
@@ -222,6 +231,10 @@
     const refs=Array.isArray(data.referrers)?data.referrers:[];
     const camps=Array.isArray(data.campaigns)?data.campaigns:[];
     const cats=Array.isArray(data.ledger?.by_category)?data.ledger.by_category:[];
+    const payments=Array.isArray(operations.payment_providers)?operations.payment_providers:[];
+    const shipMethods=Array.isArray(operations.shipping_methods)?operations.shipping_methods:[];
+    const fulfillment=Array.isArray(operations.fulfillment_providers)?operations.fulfillment_providers:[];
+    const statuses=Array.isArray(operations.statuses)?operations.statuses:[];
     $('breakdowns').innerHTML=[
       listBlock('Collections',collections,r=>r.collection,r=>int(r.ordered_units)+' units · '+eur(r.paid_revenue_cents)),
       listBlock('Sizes',sizes,r=>r.size,r=>int(r.ordered_units)+' ordered / '+int(r.paid_units)+' paid'),
@@ -230,6 +243,10 @@
       listBlock('Browsers',browsers,r=>r.browser,r=>int(r.sessions)+' sessions'),
       listBlock('Referrers',refs,r=>r.referrer,r=>int(r.sessions)+' sessions'),
       listBlock('Campaigns',camps,r=>r.utm_source+' / '+r.utm_campaign,r=>int(r.sessions)+' sessions'),
+      listBlock('Payment providers',payments,r=>r.provider,r=>int(r.orders)+' orders · '+eur(r.paid_sales_cents)),
+      listBlock('Shipping methods',shipMethods,r=>r.method,r=>int(r.orders)+' orders · '+eur(r.shipping_revenue_cents)),
+      listBlock('Fulfillment providers',fulfillment,r=>'Provider '+r.provider_id,r=>int(r.units)+' units · '+int(r.orders)+' orders'),
+      listBlock('Order status mix',statuses,r=>r.status,r=>int(r.orders)+' orders'),
       listBlock('Ledger categories',cats,r=>r.direction+' · '+r.category,r=>eur(r.amount_cents))
     ].join('');
   }
@@ -248,7 +265,7 @@
     setStatus(action==='refresh_costs'?'Refreshing current production costs…':'Loading shop analytics…');
     const session=await window.GEJAST_ADMIN_SESSION?.validate?.(); if(!session) throw new Error('Admin session validation failed.');
     const result=await call(action,rangePayload());
-    data=result.snapshot||{}; catalog=result.catalog_costs||{};
+    data=result.snapshot||{}; catalog=result.catalog_costs||{}; operations=result.operations||{};
     render();
     const stamp=catalog?.cache?.generated_at?dt(catalog.cache.generated_at):'not available';
     setStatus('Analytics loaded. Current product-cost snapshot: '+stamp+'.','ok');
