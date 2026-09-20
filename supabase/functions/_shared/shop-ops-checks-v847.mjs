@@ -84,11 +84,19 @@ export async function refreshCostsAndCheck(sb,settings,state,analyticsUrl,servic
   return {refresh:payload.refresh||{},new_alerts:created};
 }
 export async function checkOrdersAndTelemetry(sb,settings){
-  const {data:orders,error}=await sb.from("shop_orders").select("id,status,payment_reference,created_at,payment_verified_at,submitted_to_printify_at,shipped_at,tracking,last_error,total_cents").order("created_at",{ascending:false}).limit(2000);
+  const {data:orders,error}=await sb.from("shop_orders").select("id,status,payment_reference,created_at,payment_verified_at,submitted_to_printify_at,shipped_at,tracking,last_error,total_cents,payment_fee_cents,invoice_number").order("created_at",{ascending:false}).limit(2000);
   if(error)throw error;
   const active=new Map([["order_error",new Set()],["paid_not_submitted",new Set()],["production_stuck",new Set()],["shipped_no_tracking",new Set()]]),created=[];
   for(const o of orders||[]){
     const ref=text(o.payment_reference)||String(o.id).slice(0,8);
+    if(o.payment_verified_at&&o.payment_fee_cents==null){
+      const fee=await sb.rpc("shop_apply_payment_fee_v847",{order_id_input:o.id,admin_id_input:null});
+      if(fee.error)console.warn("historical payment fee backfill failed",fee.error.message||fee.error);
+    }
+    if(o.payment_verified_at&&!text(o.invoice_number)){
+      const invoice=await sb.rpc("shop_issue_invoice_v847",{order_id_input:o.id});
+      if(invoice.error)console.warn("invoice backfill failed",invoice.error.message||invoice.error);
+    }
     if(text(o.last_error)){
       const key="order_error:"+o.id;active.get("order_error").add(key);
       const a=await ensureAlert(sb,{kind:"order_error",severity:"high",title:"Order has an error",message:ref+": "+text(o.last_error).slice(0,500),entity_type:"order",entity_id:o.id,dedupe_key:key,metadata:{status:o.status}});if(a.created)created.push(a.row);
