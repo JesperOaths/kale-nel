@@ -22,6 +22,7 @@ assert.match(page,/timeout_ms:20000/);
 assert.match(page,/Refreshing costs…/);
 assert.match(page,/background analytics refresh failed/);
 assert.match(page,/button\.dataset\.busy='1'/);
+assert.match(page,/if\(data\)\{/, 'cost refresh must not fail when initial analytics data is absent');
 assert.match(page,/The previous cost snapshot has been kept/);
 assert.doesNotMatch(page,/load\('refresh_costs'\)/);
 
