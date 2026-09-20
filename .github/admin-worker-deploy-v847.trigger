@@ -1,2 +1,0 @@
-DEPLOY_ADMIN_WORKER
-v847-operations-console
