@@ -22,6 +22,7 @@ const CONNECTION_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/sh
 const STATUS_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-order-status-v825?health=1';
 const ADMIN_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-admin-orders-v825';
 const ADMIN_ANALYTICS_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-admin-analytics-v843';
+const ADMIN_AUTH_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/admin-auth-v845';
 const WEBHOOK_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-printify-webhook-v825';
 const TIMEOUT_MS = Number(process.env.GEJAST_SHOP_TIMEOUT_MS || 20000);
 const MIN_PRODUCTS = Number(process.env.GEJAST_SHOP_MIN_PRODUCTS || 20);
@@ -291,6 +292,7 @@ await health(CONNECTION_URL, 'shop-production-connection-v828', 'production-conn
 await health(STATUS_URL, 'shop-order-status-v825', 'order-status-v825');
 await health(ADMIN_URL, 'shop-admin-orders-v825', 'admin-orders-v825');
 await health(ADMIN_ANALYTICS_URL, 'shop-admin-analytics-v843', 'shop-admin-analytics-v843');
+await health(ADMIN_AUTH_URL, 'admin-auth-v845', 'admin-auth-v845');
 await health(WEBHOOK_URL, 'shop-printify-webhook-v825', 'printify-webhook-v825');
 
 console.log('RESULT=V839_BRUIS_SHOP_PASS');
