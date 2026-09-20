@@ -11,6 +11,7 @@ on:
       - 'supabase/functions/shop-manual-checkout-v832/**'
       - 'supabase/functions/shop-delivery-preview-v833/**'
       - 'supabase/functions/shop-admin-analytics-v841/**'
+      - 'supabase/functions/shop-admin-analytics-v842/**'
 
 permissions:
   contents: read
@@ -52,3 +53,4 @@ jobs:
           deploy_function shop-manual-checkout-v832
           deploy_function shop-delivery-preview-v833
           deploy_function shop-admin-analytics-v841
+          deploy_function shop-admin-analytics-v842
