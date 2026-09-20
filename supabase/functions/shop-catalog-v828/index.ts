@@ -188,7 +188,7 @@ function versionedMockupUrl(src: string, updatedAt: unknown) {
   if (!raw) return "";
   try {
     const url = new URL(raw);
-    if (url.hostname === "images.printify.com") {
+    if (url.hostname === "images.printify.com" || url.hostname.endsWith(".printify.com")) {
       const stamp = Date.parse(text(updatedAt));
       if (Number.isFinite(stamp)) url.searchParams.set("kv", String(stamp));
     }
