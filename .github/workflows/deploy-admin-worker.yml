@@ -116,7 +116,7 @@ jobs:
           const expected = new Map([
             ['admin_shop_orders.html', 'v826'],
             ['admin_shop_connection.html', 'v828'],
-            ['admin_shop_analytics.html', 'v841'],
+            ['admin_shop_analytics.html', 'v842'],
           ]);
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
           for (const [name, version] of expected) {
@@ -178,4 +178,4 @@ jobs:
           [[ "$login_status" == '302' ]] || { echo "Expected OAuth login start to return 302, got $login_status" >&2; cat "$login_headers" >&2; exit 1; }
           grep -qi '^location: https://github\.com/login/oauth/authorize' "$login_headers" || { echo 'GitHub OAuth entrypoint missing after deployment' >&2; cat "$login_headers" >&2; exit 1; }
 
-          echo 'Protected v826/v828/v841 admin routes, apex redirect, and OAuth entrypoint verified.'
+          echo 'Protected v826/v828/v842 admin routes, apex redirect, and OAuth entrypoint verified.'
