@@ -14,6 +14,11 @@ on:
       - 'supabase/functions/shop-admin-analytics-v842/**'
       - 'supabase/functions/shop-admin-analytics-v843/**'
       - 'supabase/functions/admin-auth-v845/**'
+      - 'supabase/functions/_shared/shop-ops-checks-v847.mjs'
+      - 'supabase/functions/_shared/shop-ops-core-v847.mjs'
+      - 'supabase/functions/shop-admin-export-v847/**'
+      - 'supabase/functions/shop-ops-v847/**'
+      - 'supabase/functions/shop-admin-orders-v825/**'
       - 'supabase/functions/_shared/shop-admin-growth-v843.mjs'
 
 permissions:
@@ -59,3 +64,6 @@ jobs:
           deploy_function shop-admin-analytics-v842
           deploy_function shop-admin-analytics-v843
           deploy_function admin-auth-v845
+          deploy_function shop-admin-export-v847
+          deploy_function shop-ops-v847
+          deploy_function shop-admin-orders-v825
