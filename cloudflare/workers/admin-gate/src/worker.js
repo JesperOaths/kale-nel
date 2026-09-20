@@ -16,7 +16,7 @@ const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
 const SECURITY_LOGIN_UPSTREAM_TIMEOUT_MS = 9000;
 const SECURITY_MEDIA_SESSION_TIMEOUT_MS = 12000;
-const ADMIN_BUILD = 'v782-security-drive-saved';
+const ADMIN_BUILD = 'v842-shop-admin-multi-allowlist';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -706,7 +706,25 @@ function getGithubClientSecret(env) {
 }
 function normalizeGithubId(value) { return String(value || '').trim(); }
 function normalizeGithubLogin(value) { return String(value || '').trim().toLowerCase(); }
-function isAllowedGithubAccount(env, github) { const id = normalizeGithubId(github?.id); const login = normalizeGithubLogin(github?.login); const allowedId = normalizeGithubId(env.APPROVED_GITHUB_ID); const allowedLogin = normalizeGithubLogin(env.APPROVED_GITHUB_LOGIN); return !!((allowedId && id && constantTimeEqual(id, allowedId)) || (allowedLogin && login && constantTimeEqual(login, allowedLogin))); }
+function allowlistValues(value, normalizer) {
+  return [...new Set(String(value || '').split(/[\s,;]+/).map(normalizer).filter(Boolean))].slice(0, 100);
+}
+function isAllowedGithubAccount(env, github) {
+  const id = normalizeGithubId(github?.id);
+  const login = normalizeGithubLogin(github?.login);
+  const allowedIds = [
+    ...allowlistValues(env.APPROVED_GITHUB_IDS, normalizeGithubId),
+    normalizeGithubId(env.APPROVED_GITHUB_ID)
+  ].filter(Boolean);
+  const allowedLogins = [
+    ...allowlistValues(env.APPROVED_GITHUB_LOGINS, normalizeGithubLogin),
+    normalizeGithubLogin(env.APPROVED_GITHUB_LOGIN)
+  ].filter(Boolean);
+  return !!(
+    (id && allowedIds.some(value => constantTimeEqual(id, value))) ||
+    (login && allowedLogins.some(value => constantTimeEqual(login, value)))
+  );
+}
 function constantTimeEqual(a, b) { a = String(a); b = String(b); if (a.length !== b.length) return false; let out = 0; for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i); return out === 0; }
 
 function parseCookies(request) { const raw = request.headers.get('Cookie') || ''; const out = {}; for (const part of raw.split(';')) { const idx = part.indexOf('='); if (idx > -1) out[part.slice(0, idx).trim()] = part.slice(idx + 1).trim(); } return out; }
