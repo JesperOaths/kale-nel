@@ -1,1 +1,1 @@
-configure kalenel.nl transactional email retry
+verify sender and test transactional email
