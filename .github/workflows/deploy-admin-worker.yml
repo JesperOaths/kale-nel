@@ -23,11 +23,45 @@ jobs:
       CONFIRMATION_INPUT: ${{ inputs.confirmation }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFARE_API_TOKEN_ONE || secrets.CLOUDFLARE_API_TOKEN_ONE || secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      ADMIN_SOURCE_REPOSITORY: ${{ vars.KALENEL_ADMIN_SOURCE_REPOSITORY }}
+      ADMIN_SOURCE_REF: ${{ vars.KALENEL_ADMIN_SOURCE_REF }}
+      REQUIRE_PRIVATE_ADMIN_SOURCE: ${{ vars.KALENEL_REQUIRE_PRIVATE_ADMIN_SOURCE }}
     steps:
       - name: Check out dispatched main commit
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Validate optional private admin source configuration
+        shell: bash
+        env:
+          ADMIN_SOURCE_TOKEN: ${{ secrets.KALENEL_ADMIN_SOURCE_TOKEN }}
+        run: |
+          set -euo pipefail
+          require_private="${REQUIRE_PRIVATE_ADMIN_SOURCE,,}"
+          if [[ "$require_private" =~ ^(1|true|yes)$ ]] && [[ -z "${ADMIN_SOURCE_REPOSITORY:-}" ]]; then
+            echo "Private admin source is required but KALENEL_ADMIN_SOURCE_REPOSITORY is not configured." >&2
+            exit 1
+          fi
+          if [[ -n "${ADMIN_SOURCE_REPOSITORY:-}" && -z "${ADMIN_SOURCE_TOKEN:-}" ]]; then
+            echo "KALENEL_ADMIN_SOURCE_REPOSITORY is configured but KALENEL_ADMIN_SOURCE_TOKEN is missing." >&2
+            exit 1
+          fi
+          if [[ -z "${ADMIN_SOURCE_REPOSITORY:-}" ]]; then
+            echo "Private admin source repository not configured yet; deployment will use the explicit public-source transition fallback."
+          else
+            echo "Private admin source repository configured; deployment will require its verified manifest."
+          fi
+
+      - name: Check out private admin source
+        if: env.ADMIN_SOURCE_REPOSITORY != ''
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          repository: ${{ env.ADMIN_SOURCE_REPOSITORY }}
+          ref: ${{ env.ADMIN_SOURCE_REF || 'main' }}
+          token: ${{ secrets.KALENEL_ADMIN_SOURCE_TOKEN }}
+          path: .private-admin-source
           persist-credentials: false
 
       - name: Set up Node.js
@@ -102,7 +136,16 @@ jobs:
           echo "Resolved the Cloudflare account ID from the scoped API token."
 
       - name: Build protected static asset bundle
-        run: node scripts/build-admin-worker-assets.mjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -d "$GITHUB_WORKSPACE/.private-admin-source" ]]; then
+            export KALENEL_PRIVATE_ADMIN_SOURCE_DIR="$GITHUB_WORKSPACE/.private-admin-source"
+          fi
+          if [[ "${REQUIRE_PRIVATE_ADMIN_SOURCE,,}" =~ ^(1|true|yes)$ ]]; then
+            export KALENEL_REQUIRE_PRIVATE_ADMIN_SOURCE=1
+          fi
+          node scripts/build-admin-worker-assets.mjs
 
       - name: Verify current Shop admin assets are in deployment bundle
         shell: bash
@@ -119,6 +162,13 @@ jobs:
             ['admin_shop_operations.html', 'v847'],
           ]);
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          const expectedMode = process.env.ADMIN_SOURCE_REPOSITORY ? 'external-private' : 'public-fallback';
+          if (manifest.admin_source_mode !== expectedMode) {
+            throw new Error(`Admin source mode mismatch: expected ${expectedMode}, got ${manifest.admin_source_mode}`);
+          }
+          if (expectedMode === 'external-private' && manifest.migration_ready !== true) {
+            throw new Error('Private admin source was configured but migration_ready is not true');
+          }
           for (const [name, version] of expected) {
             const page = `${base}/${name}`;
             if (!fs.existsSync(page)) throw new Error(`${name} missing from Worker asset bundle`);
