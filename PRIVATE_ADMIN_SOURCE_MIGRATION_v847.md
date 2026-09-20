@@ -77,6 +77,8 @@ The admin deployment workflow automatically checks out the private repository in
 
 The normal **GEJAST verification** workflow uses the same private checkout and overlays the verified private files into the ephemeral Actions workspace before running legacy regressions. This is intentionally a CI-only overlay; it does not commit the protected files back into the public repository.
 
+The private-source token is restricted to trusted `push` runs by `JesperOaths`; it is not exposed to ordinary `pull_request` runs. After `KALENEL_REQUIRE_PRIVATE_ADMIN_SOURCE=1`, the duplicate PR verification job skips and the trusted branch-push verification is authoritative.
+
 ## Required migration sequence
 
 1. Generate the extraction package from the current trusted public `main`.
