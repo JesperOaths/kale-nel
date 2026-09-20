@@ -91,10 +91,10 @@
 
   function deviceLabel(){
     const platform = String(navigator.platform || '').trim();
-    const browser = /Edg//.test(navigator.userAgent) ? 'Edge' :
-      /Chrome//.test(navigator.userAgent) ? 'Chrome' :
-      /Firefox//.test(navigator.userAgent) ? 'Firefox' :
-      /Safari//.test(navigator.userAgent) ? 'Safari' : 'Browser';
+    const browser = /Edg\//.test(navigator.userAgent) ? 'Edge' :
+      /Chrome\//.test(navigator.userAgent) ? 'Chrome' :
+      /Firefox\//.test(navigator.userAgent) ? 'Firefox' :
+      /Safari\//.test(navigator.userAgent) ? 'Safari' : 'Browser';
     return [browser, platform].filter(Boolean).join(' on ').slice(0, 120);
   }
 
