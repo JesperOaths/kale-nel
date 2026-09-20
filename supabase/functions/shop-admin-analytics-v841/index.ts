@@ -164,6 +164,117 @@ function safeRange(body: any) {
   return { from, to };
 }
 
+function average(values: number[]) {
+  const rows = values.filter((v) => Number.isFinite(v) && v >= 0);
+  return rows.length ? rows.reduce((sum, v) => sum + v, 0) / rows.length : null;
+}
+function supplierShippingEurCents(row: any) {
+  const shipping = Number(row?.shipping_cents || 0);
+  if (shipping === 0) return 0;
+  const source = Number(row?.shipping_source_cents);
+  const currency = text(row?.shipping_source_currency).toLowerCase();
+  if (!Number.isFinite(source) || source < 0) return null;
+  if (currency === "eur") return Math.round(source);
+  if (currency === "usd") {
+    const rate = Number(row?.fx_snapshot?.rate);
+    if (Number.isFinite(rate) && rate > 0) return Math.round(source * rate);
+  }
+  return null;
+}
+async function operationalBreakdown(sb: any, range: { from: string; to: string }) {
+  const { data, error } = await sb.from("shop_orders")
+    .select("id,status,created_at,payment_verified_at,submitted_to_printify_at,shipped_at,payment_provider,shipping_method,shipping_cents,shipping_source_currency,shipping_source_cents,fx_snapshot,paid_amount_cents,total_cents,customer_email,line_items")
+    .gte("created_at", range.from).lt("created_at", range.to)
+    .order("created_at", { ascending: false }).limit(5000);
+  if (error) throw error;
+  const rows = Array.isArray(data) ? data : [];
+  const customers = new Map<string, number>();
+  const payments = new Map<string, any>();
+  const statuses = new Map<string, number>();
+  const shippingMethods = new Map<string, any>();
+  const providers = new Map<string, any>();
+  const paymentMinutes: number[] = [], productionHours: number[] = [], shipDays: number[] = [];
+  let knownShippingRevenueCents = 0, knownShippingCostCents = 0, knownShippingOrders = 0, missingShippingCostOrders = 0, overpaymentCents = 0;
+
+  const addTime = (bucket: number[], from: unknown, to: unknown, divisor: number) => {
+    const a = Date.parse(text(from)), b = Date.parse(text(to));
+    if (Number.isFinite(a) && Number.isFinite(b) && b >= a) bucket.push((b - a) / divisor);
+  };
+
+  for (const row of rows) {
+    const paid = !!row?.payment_verified_at;
+    const email = text(row?.customer_email).toLowerCase();
+    if (email) customers.set(email, (customers.get(email) || 0) + 1);
+
+    const status = text(row?.status) || "unknown";
+    statuses.set(status, (statuses.get(status) || 0) + 1);
+
+    const provider = text(row?.payment_provider) || "manual";
+    const payment = payments.get(provider) || { provider, orders: 0, paid_orders: 0, paid_sales_cents: 0 };
+    payment.orders += 1;
+    if (paid) { payment.paid_orders += 1; payment.paid_sales_cents += Number(row?.total_cents || 0); }
+    payments.set(provider, payment);
+
+    const shipMethod = text(row?.shipping_method) || "unknown";
+    const sm = shippingMethods.get(shipMethod) || { method: shipMethod, orders: 0, paid_orders: 0, shipping_revenue_cents: 0 };
+    sm.orders += 1;
+    if (paid) { sm.paid_orders += 1; sm.shipping_revenue_cents += Number(row?.shipping_cents || 0); }
+    shippingMethods.set(shipMethod, sm);
+
+    if (paid) {
+      const paidAmount = Number(row?.paid_amount_cents);
+      const total = Number(row?.total_cents || 0);
+      if (Number.isFinite(paidAmount) && paidAmount > total) overpaymentCents += paidAmount - total;
+      const supplier = supplierShippingEurCents(row);
+      if (supplier == null && Number(row?.shipping_cents || 0) > 0) {
+        missingShippingCostOrders += 1;
+      } else if (supplier != null) {
+        knownShippingOrders += 1;
+        knownShippingRevenueCents += Number(row?.shipping_cents || 0);
+        knownShippingCostCents += supplier;
+      }
+    }
+
+    addTime(paymentMinutes, row?.created_at, row?.payment_verified_at, 60000);
+    addTime(productionHours, row?.payment_verified_at, row?.submitted_to_printify_at, 3600000);
+    addTime(shipDays, row?.submitted_to_printify_at, row?.shipped_at, 86400000);
+
+    const seenProviders = new Set<string>();
+    for (const item of Array.isArray(row?.line_items) ? row.line_items : []) {
+      const providerId = text(item?.fulfillment_route?.print_provider_id || item?.print_provider_id || "unknown");
+      const qty = Math.max(1, Math.round(Number(item?.qty || 1)));
+      const pr = providers.get(providerId) || { provider_id: providerId, units: 0, paid_units: 0, orders: 0, paid_orders: 0 };
+      pr.units += qty;
+      if (paid) pr.paid_units += qty;
+      providers.set(providerId, pr);
+      if (!seenProviders.has(providerId)) {
+        pr.orders += 1;
+        if (paid) pr.paid_orders += 1;
+        seenProviders.add(providerId);
+      }
+    }
+  }
+  const repeatCustomers = [...customers.values()].filter((count) => count > 1).length;
+  return {
+    unique_customers: customers.size,
+    repeat_customers: repeatCustomers,
+    repeat_customer_rate: customers.size ? repeatCustomers / customers.size : null,
+    avg_minutes_to_payment: average(paymentMinutes),
+    avg_hours_payment_to_production: average(productionHours),
+    avg_days_production_to_ship: average(shipDays),
+    known_shipping_orders: knownShippingOrders,
+    missing_shipping_cost_orders: missingShippingCostOrders,
+    known_shipping_revenue_cents: knownShippingRevenueCents,
+    known_shipping_cost_cents: knownShippingCostCents,
+    known_shipping_margin_cents: knownShippingRevenueCents - knownShippingCostCents,
+    overpayment_cents: overpaymentCents,
+    payment_providers: [...payments.values()].sort((a, b) => b.orders - a.orders),
+    shipping_methods: [...shippingMethods.values()].sort((a, b) => b.orders - a.orders),
+    fulfillment_providers: [...providers.values()].sort((a, b) => b.units - a.units),
+    statuses: [...statuses.entries()].map(([status, orders]) => ({ status, orders })).sort((a, b) => b.orders - a.orders),
+  };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(req) });
   if (req.method === "GET") return json(req, { ok: true, mode: "shop-admin-analytics-v841", custom_admin_auth: true });
@@ -178,8 +289,11 @@ Deno.serve(async (req: Request) => {
       const range = safeRange(body);
       const { data: snapshot, error } = await sb.rpc("shop_admin_analytics_snapshot_v841", { p_from: range.from, p_to: range.to });
       if (error) throw error;
-      const catalog_costs = await currentCostSnapshot(sb, action === "refresh_costs" || body?.force_cost_refresh === true);
-      return json(req, { ok: true, snapshot, catalog_costs });
+      const [catalog_costs, operations] = await Promise.all([
+        currentCostSnapshot(sb, action === "refresh_costs" || body?.force_cost_refresh === true),
+        operationalBreakdown(sb, range),
+      ]);
+      return json(req, { ok: true, snapshot, catalog_costs, operations });
     }
     if (action === "ledger_add") {
       const occurred = text(body?.occurred_on);
