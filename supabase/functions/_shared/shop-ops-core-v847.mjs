@@ -54,7 +54,7 @@ export async function resolveKindExcept(sb,kind,active){
     await sb.from("shop_alerts_v847").update({resolved_at:nowIso(),updated_at:nowIso()}).eq("id",row.id);
   }
 }
-export async function sendEmail(to,subject,html,plain){
+export export async function sendEmail(to,subject,html,plain){
   const key=text(Deno.env.get("RESEND_API_KEY")),configuredFrom=text(Deno.env.get("RESEND_FROM_EMAIL")),from=/@kalenel\.nl>?$/i.test(configuredFrom)?configuredFrom:"Bruis <orders@kalenel.nl>";
   if(!key||!to)return {ok:false,skipped:true,error:"email_not_configured"};
   const r=await fetch("https://api.resend.com/emails",{method:"POST",headers:{Authorization:"Bearer "+key,"Content-Type":"application/json"},body:JSON.stringify({from,to:[to],subject,html,text:plain})});
