@@ -115,7 +115,8 @@ jobs:
           const manifestPath = `${base}/admin-worker-manifest.json`;
           const expected = new Map([
             ['admin_shop_orders.html', 'v826'],
-            ['admin_shop_connection.html', 'v828'],\n            ['admin_shop_analytics.html', 'v841'],
+            ['admin_shop_connection.html', 'v828'],
+            ['admin_shop_analytics.html', 'v841'],
           ]);
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
           for (const [name, version] of expected) {
