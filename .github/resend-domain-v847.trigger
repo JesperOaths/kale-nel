@@ -1,1 +1,1 @@
-configure kalenel.nl transactional email
+configure kalenel.nl transactional email retry
