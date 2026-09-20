@@ -300,6 +300,17 @@
         saved_at: Date.now()
       };
       sessionStorage.setItem(SESSION_ORDER_KEY, JSON.stringify(sessionRecord));
+      try {
+        window.dispatchEvent(new CustomEvent('bruis:order-created', { detail: {
+          order_id: result.order_id,
+          subtotal_cents: Number(result.subtotal_cents || 0),
+          shipping_cents: Number(result.shipping_cents || 0),
+          total_cents: Number(result.total_cents || 0),
+          payment_provider: String(result.payment_provider || ''),
+          item_count: cart.length,
+          units: cart.reduce((sum, item) => sum + Number(item.qty || 0), 0)
+        }}));
+      } catch {}
       cart = [];
       saveCart();
       renderCart();
