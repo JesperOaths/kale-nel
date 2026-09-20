@@ -16,6 +16,7 @@ const page=read('admin_shop_operations.html');
 const nav=read('admin-topnav.js');
 const scheduler=read('.github/workflows/shop-operations-v847.yml');
 const schedulerRunner=read('scripts/run-shop-ops-v847.mjs');
+const marginDiagnosticSelfTest=read('scripts/verify-shop-margin-diagnostic-v847.mjs');
 const deploy=read('.github/workflows/deploy-shop-fixes-v829.yml');
 const adminDeploy=read('.github/workflows/deploy-admin-worker.yml');
 
@@ -75,6 +76,10 @@ assert.match(scheduler,/scripts\/run-shop-ops-v847\.mjs run_costs/);
 assert.match(scheduler,/scripts\/run-shop-ops-v847\.mjs run_catalog/);
 assert.match(scheduler,/scripts\/run-shop-ops-v847\.mjs run_orders/);
 assert.match(scheduler,/scripts\/run-shop-ops-v847\.mjs run_backup/);
+assert.match(scheduler,/scripts\/verify-shop-margin-diagnostic-v847\.mjs/);
+assert.match(marginDiagnosticSelfTest,/pricing_action!=='none'/);
+assert.match(marginDiagnosticSelfTest,/whole_euro_threshold_price_cents/);
+assert.match(marginDiagnosticSelfTest,/margin-diagnostic-self-test/);
 assert.match(schedulerRunner,/shop_ops_mint_scheduler_token_v847/);
 assert.match(schedulerRunner,/x-shop-ops-token/);
 assert.match(schedulerRunner,/170000/);
