@@ -1,2 +1,2 @@
 FORCE_RUN
-v847-initial-operations-rerun
+v847-initial-operations-one-time-token
