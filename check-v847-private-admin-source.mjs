@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import {
   ADMIN_SOURCE_SCHEMA,
   isPrivateAdminSourcePath,
@@ -70,6 +71,29 @@ assert.match(overlay, /readPrivateManifest/);
 assert.match(overlay, /private-admin-source-overlay/);
 assert.match(gitignore, /private-admin-source-export-v847\//);
 assert.match(gitignore, /\.private-admin-source\//);
+
+const exportParent = fs.mkdtempSync(path.join(os.tmpdir(), 'kalenel-admin-export-'));
+const exportDir = path.join(exportParent, 'private-admin-source-export-v847');
+try {
+  execFileSync(process.execPath, ['scripts/extract-private-admin-source.mjs', `--out=${exportDir}`], {
+    cwd: process.cwd(),
+    env: process.env,
+    stdio: 'pipe'
+  });
+  const exported = readPrivateManifest(exportDir);
+  assert.ok(exported.files.length > 10, 'real private admin export is unexpectedly small');
+  const exportedPaths = new Set(exported.files.map((x) => x.path));
+  for (const required of [
+    'admin.html',
+    'admin_shop_orders.html',
+    'admin_shop_analytics.html',
+    'admin_shop_operations.html',
+    'admin-session-sync.js',
+    'admin-topnav.js'
+  ]) assert.ok(exportedPaths.has(required), `real private admin export missing ${required}`);
+} finally {
+  fs.rmSync(exportParent, { recursive: true, force: true });
+}
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kalenel-admin-source-'));
 try {
