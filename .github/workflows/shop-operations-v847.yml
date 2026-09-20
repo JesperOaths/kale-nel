@@ -64,6 +64,23 @@ jobs:
         if: steps.plan.outputs.weekly_brief == 'true'
         run: node scripts/run-shop-ops-v847.mjs run_weekly_brief
 
+      - name: End-to-end XLSX bookkeeping self-test
+        if: env.FORCE_RUN == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          month="$(TZ=Europe/Amsterdam date +%Y-%m)"
+          response="$RUNNER_TEMP/xlsx-self-test.json"
+          curl --silent --show-error --fail --max-time 90             -X POST "${SUPABASE_URL}/functions/v1/shop-admin-export-v847"             -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}"             -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}"             -H 'Content-Type: application/json'             --data "{\"action\":\"self_test\",\"month\":\"${month}\"}" > "$response"
+          node --input-type=module - "$response" <<'NODE'
+          import fs from 'node:fs';
+          const body=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+          if(body?.ok!==true||body?.self_test!==true||body?.valid_xlsx_header!==true||!(Number(body?.byte_size)>1000)){
+            throw new Error('XLSX self-test failed: '+JSON.stringify(body).slice(0,400));
+          }
+          console.log('xlsx-self-test',JSON.stringify({byte_size:body.byte_size,counts:body.counts}));
+          NODE
+
       - name: Export and encrypt newly-created backup
         if: steps.backup.outputs.backup_id != ''
         shell: bash
