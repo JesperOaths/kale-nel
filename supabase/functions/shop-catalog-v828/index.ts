@@ -233,8 +233,8 @@ function publicProduct(product: any, fx: any) {
       options: resolvedOptions(product, variant).map((item) => ({ name: item.name, value: item.value })),
     }))
     .filter((variant: any) => variant.id && variant.size && variant.price > 0);
-  const available = variants.filter((variant: any) => variant.is_available !== false);
-  const priced = available.length ? available : variants;
+  const available = variants.filter((variant: any) => variant.is_available !== false && variant.is_enabled !== false);
+  const priced = available;
   const prices = priced.map((variant: any) => variant.price);
   const sizes: string[] = [];
   for (const variant of priced) if (variant.size && !sizes.includes(variant.size)) sizes.push(variant.size);
@@ -254,7 +254,7 @@ function publicProduct(product: any, fx: any) {
     collection, price: prices.length ? Math.min(...prices) : 0, priceMax: prices.length ? Math.max(...prices) : 0,
     sizes, colors, selectorType, mockups, image: mockups[0]?.image || "", baseKey: String(product?.blueprint_id || "shirt"),
     baseLabel: /\btote\b/i.test(text(product?.title)) ? "Tote Bag" : collection === "boxy" ? "Oversized Boxy T-Shirt" : "Classic T-Shirt",
-    variants, updatedAt: product?.updated_at || null,
+    variants: available, updatedAt: product?.updated_at || null,
   };
 }
 
