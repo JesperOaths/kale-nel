@@ -55,8 +55,8 @@ export async function resolveKindExcept(sb,kind,active){
   }
 }
 export async function sendEmail(to,subject,html,plain){
-  const key=text(Deno.env.get("RESEND_API_KEY")),from=text(Deno.env.get("RESEND_FROM_EMAIL"));
-  if(!key||!from||!to)return {ok:false,skipped:true,error:"email_not_configured"};
+  const key=text(Deno.env.get("RESEND_API_KEY")),configuredFrom=text(Deno.env.get("RESEND_FROM_EMAIL")),from=/@kalenel\.nl>?$/i.test(configuredFrom)?configuredFrom:"Bruis <orders@kalenel.nl>";
+  if(!key||!to)return {ok:false,skipped:true,error:"email_not_configured"};
   const r=await fetch("https://api.resend.com/emails",{method:"POST",headers:{Authorization:"Bearer "+key,"Content-Type":"application/json"},body:JSON.stringify({from,to:[to],subject,html,text:plain})});
   const raw=await r.text();
   return r.ok?{ok:true,skipped:false}:{ok:false,skipped:false,error:"Resend "+r.status+": "+raw.slice(0,300)};
