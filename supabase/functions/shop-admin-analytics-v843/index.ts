@@ -32,6 +32,14 @@ function serviceClient() {
   if (!url || !key) throw new Error("server_not_configured");
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
+function isServiceRoleRequest(req: Request) {
+  const key = text(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
+  const auth = text(req.headers.get("authorization")).replace(/^Bearer\s+/i, "");
+  if (!key || !auth || key.length !== auth.length) return false;
+  let diff = 0;
+  for (let i = 0; i < key.length; i += 1) diff |= key.charCodeAt(i) ^ auth.charCodeAt(i);
+  return diff === 0;
+}
 async function requireAdmin(sb: any, token: string) {
   const { data, error } = await sb.rpc("_require_valid_admin_session", { admin_session_token: token });
   if (error) throw new Error(error.message || String(error));
@@ -517,8 +525,14 @@ Deno.serve(async (req: Request) => {
   try { sb = serviceClient(); } catch { return json(req, { error: "server_not_configured" }, 503); }
   try {
     const body = await req.json().catch(() => ({}));
-    const admin = await requireAdmin(sb, text(body?.admin_session_token));
     const action = text(body?.action || "dashboard");
+    const serviceRole = isServiceRoleRequest(req);
+    const admin = serviceRole
+      ? { ok: true, admin_id: null, username: "shop-ops-v847", service_role: true }
+      : await requireAdmin(sb, text(body?.admin_session_token));
+    if (serviceRole && !["refresh_costs","refresh_costs_only"].includes(action)) {
+      return json(req, { error: "service_role_action_not_allowed" }, 403);
+    }
     if (action === "refresh_costs" || action === "refresh_costs_only") {
       const startedAt = Date.now();
       const catalog_costs = await currentCostSnapshot(sb, true);
