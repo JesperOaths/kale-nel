@@ -18,7 +18,7 @@ function curlJson(args,timeoutMs){
   return body;
 }
 
-function mint(){
+function mintOnce(){
   const body=curlJson([
     '--silent','--show-error','--fail-with-body','--max-time','45',
     '-X','POST',base+'/rest/v1/rpc/shop_ops_mint_scheduler_token_v847',
@@ -29,6 +29,22 @@ function mint(){
   ],50000);
   if(typeof body!=='string'||!/^[a-f0-9]{64}$/i.test(body)) throw new Error('Malformed scheduler token');
   return body;
+}
+function mint(){
+  let lastError=null;
+  for(let attempt=1;attempt<=3;attempt++){
+    try{return mintOnce();}
+    catch(error){
+      lastError=error;
+      const message=String(error?.message||error);
+      const transient=/curl failed \(28\)|\b(?:408|425|429|500|502|503|504|520|522|523|524)\b|timed? out|timeout|temporarily unavailable|connection reset|empty reply/i.test(message);
+      if(!transient||attempt===3)throw error;
+      const delaySeconds=attempt===1?2:5;
+      console.warn('Transient scheduler-token mint failure; retrying',JSON.stringify({attempt,next_attempt:attempt+1,delay_seconds:delaySeconds}));
+      spawnSync('sleep',[String(delaySeconds)],{encoding:'utf8',timeout:(delaySeconds+1)*1000});
+    }
+  }
+  throw lastError||new Error('Scheduler token mint failed');
 }
 
 function exportSelfTest(){

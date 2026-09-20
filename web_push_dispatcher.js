@@ -55,6 +55,13 @@ function classifyFailure(err) {
   return { stage: 'send', code: 'transient_send_failure', text: msg, disableSubscription: false };
 }
 
+function isTransientRpcError(err) {
+  const status = Number(err && (err.statusCode || err.status) || 0);
+  const text = sanitizeLogText((err && (err.body || err.message || err.details || err.hint)) || err || '');
+  return [408, 425, 429, 500, 502, 503, 504, 520, 522, 523, 524].includes(status) ||
+    /(?:^|\D)(408|425|429|500|502|503|504|520|522|523|524)(?:\D|$)|connection timed out|timed? out|timeout|temporarily unavailable|connection reset|empty reply/i.test(text);
+}
+
 function buildOptions(env = process.env) {
   const dryRun = envFlag('WEB_PUSH_DRY_RUN', false, env);
   const requireExplicitTarget = envFlag('WEB_PUSH_REQUIRE_EXPLICIT_TARGET', dryRun, env);
@@ -87,6 +94,7 @@ function createDispatcher(options, deps = {}) {
   const createClient = deps.createClient || loadSupabaseClient();
   const supabase = deps.supabase || createClient(options.url, options.key, { auth: { persistSession: false } });
   const push = deps.webpush || loadWebPush();
+  const sleep = deps.sleep || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   if (!deps.webpush) push.setVapidDetails(options.vapidSubject, options.vapidPublic, options.vapidPrivate);
 
   async function rpc(name, args) {
@@ -101,14 +109,24 @@ function createDispatcher(options, deps = {}) {
 
   async function claimCoreJobs() {
     const maxJobs = Number.isFinite(options.maxJobs) ? options.maxJobs : 25;
-    const data = options.targetSubscriptionId
-      ? await rpc('claim_web_push_jobs_targeted_v763', {
-          target_subscription_id_input: options.targetSubscriptionId,
-          max_jobs_input: maxJobs,
-          worker_id_input: options.workerId,
-        })
-      : await rpc('claim_web_push_jobs_v3', { max_jobs_input: maxJobs });
-    return Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : []);
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        const data = options.targetSubscriptionId
+          ? await rpc('claim_web_push_jobs_targeted_v763', {
+              target_subscription_id_input: options.targetSubscriptionId,
+              max_jobs_input: maxJobs,
+              worker_id_input: options.workerId,
+            })
+          : await rpc('claim_web_push_jobs_v3', { max_jobs_input: maxJobs });
+        return Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : []);
+      } catch (err) {
+        if (attempt >= 2 || !isTransientRpcError(err)) throw err;
+        const delayMs = 3000;
+        console.warn('transient-claim-retry', JSON.stringify({ attempt, nextAttempt: attempt + 1, delayMs }));
+        await sleep(delayMs);
+      }
+    }
+    return [];
   }
 
   async function recordProviderAccepted(item, providerMessageId = null) {
@@ -315,4 +333,4 @@ if (require.main === module) {
   main().catch((err) => { console.error(sanitizeLogText(err && err.message || err)); process.exit(1); });
 }
 
-module.exports = { buildOptions, createDispatcher, classifyFailure, sanitizeLogText, parsePositiveInt, envFlag, makeDisplayAckCapability };
+module.exports = { buildOptions, createDispatcher, classifyFailure, sanitizeLogText, parsePositiveInt, envFlag, makeDisplayAckCapability, isTransientRpcError };
