@@ -38,7 +38,7 @@
 
   <div class="grid2">
     <section class="panel"><div class="panel-head"><div><h2>Profit & cost anatomy</h2><p class="muted">Verified sales only. Contribution is pre-income-tax and subtracts known product costs, supplier shipping, import allowance, plus manual finance ledger costs/income.</p></div></div><div id="moneyStack" class="money-stack"></div></section>
-    <section class="panel"><h2>Shop funnel</h2><p class="muted">Forward-looking behavioral telemetry from v842 onward; historical orders remain included even when older clicks were never captured.</p><div id="funnel" class="funnel"></div></section>
+    <section class="panel"><h2>Shop funnel</h2><p class="muted">Forward-looking behavioral telemetry from v841 onward; historical orders remain included even when older clicks were never captured.</p><div id="funnel" class="funnel"></div></section>
   </div>
 
   <section class="panel"><div class="panel-head"><div><h2>Daily performance</h2><p class="muted">Business days run 06:00 → 06:00 Europe/Amsterdam.</p></div><div class="muted" id="rangeLabel"></div></div><div id="daily" class="daily"></div></section>
@@ -162,7 +162,7 @@
       metric('Last shop event',intelligence.last_shop_event_at?dt(intelligence.last_shop_event_at):'—','telemetry freshness')
     ].join('');
     const q=[];
-    if(!e.sessions) q.push('Shop behavioral telemetry has no events in this period yet; v842 tracking only works forward from deployment.');
+    if(!e.sessions) q.push('Shop behavioral telemetry has no events in this period yet; v841 tracking only works forward from deployment.');
     if(n(o.paid_missing_cost_units)) q.push(int(o.paid_missing_cost_units)+' paid unit(s) have no historical production-cost snapshot.');
     if(n(o.paid_missing_shipping_cost_orders)) q.push(int(o.paid_missing_shipping_cost_orders)+' paid order(s) have no supplier-shipping cost snapshot.');
     if(catalog?.cache?.stale) q.push('Current product-cost cache is stale: '+String(catalog.cache.error||'refresh failed')+'.');
