@@ -72,21 +72,28 @@ async function installRecords(domain){
 async function main(){
   let domain=await resendAction('ensure');
   console.log('Resend domain:',domain?.name,'status:',domain?.status,'records:',domain?.records?.length||0);
-  await installRecords(domain);
-  domain=await resendAction('verify');
-  console.log('Verification requested; status:',domain?.status);
-  for(let i=0;i<18;i++){
-    if(domain?.status==='verified')break;
-    await new Promise(r=>setTimeout(r,10000));
-    domain=await resendAction('status');
-    console.log('Resend verification state:',domain?.status||'missing');
-  }
-  fs.writeFileSync(process.env.GITHUB_OUTPUT||'/tmp/resend-output','status='+(domain?.status||'missing')+'\n');
   if(domain?.status!=='verified'){
+    await installRecords(domain);
+    domain=await resendAction('verify');
+    console.log('Verification requested; status:',domain?.status);
+    for(let i=0;i<18;i++){
+      if(domain?.status==='verified')break;
+      await new Promise(r=>setTimeout(r,10000));
+      domain=await resendAction('status');
+      console.log('Resend verification state:',domain?.status||'missing');
+    }
+  }else{
+    console.log('Resend already verifies kalenel.nl; Cloudflare DNS changes are unnecessary.');
+  }
+  if(domain?.status!=='verified'){
+    fs.writeFileSync(process.env.GITHUB_OUTPUT||'/tmp/resend-output','status='+(domain?.status||'missing')+'\n');
     console.log('DNS records are installed; verification is still propagating.');
     process.exitCode=2;
-  }else{
-    console.log('Resend domain verified.');
+    return;
   }
+  const test=await resendAction('test_send');
+  if(test===null)throw new Error('Verified-domain test send returned no result');
+  fs.writeFileSync(process.env.GITHUB_OUTPUT||'/tmp/resend-output','status=verified\n');
+  console.log('Resend domain verified and transactional sender test passed.');
 }
 await main();
