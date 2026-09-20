@@ -195,3 +195,21 @@ grant execute on function public.admin_resume_trusted_device_v844(text,text,text
 grant execute on function public.admin_forget_trusted_device_v844(text,text) to anon, authenticated;
 grant execute on function public.admin_login(text,text,text) to anon, authenticated;
 grant execute on function public.admin_check_session(text) to anon, authenticated;
+
+
+create or replace function public.admin_logout(admin_session_token text)
+returns json
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+begin
+  if admin_session_token is not null and admin_session_token <> '' then
+    delete from public.admin_sessions
+    where token_hash = public._hash_session_token(admin_session_token);
+  end if;
+  return json_build_object('ok', true);
+end;
+$function$;
+
+grant execute on function public.admin_logout(text) to anon, authenticated;
