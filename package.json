@@ -29,7 +29,8 @@
     "matrix:cleanup-sql": "node scripts/matrix-harness.mjs cleanup-sql",
     "matrix:snapshot-public": "node scripts/matrix-harness.mjs snapshot-public",
     "admin-source:extract": "node scripts/extract-private-admin-source.mjs",
-    "admin-source:check": "node check-v847-private-admin-source.mjs"
+    "admin-source:check": "node check-v847-private-admin-source.mjs",
+    "admin-source:overlay": "node scripts/overlay-private-admin-source.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.57.4",
