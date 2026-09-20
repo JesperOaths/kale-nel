@@ -440,6 +440,8 @@ for (const marker of [
   /hour_day_heatmap/,
   /product_lifecycle/,
   /campaign_performance/,
+  /country_funnel/,
+  /forecast_value/,
   /supplier_cost_alerts/,
   /fx_history/,
   /data_quality/,
@@ -455,6 +457,9 @@ assert.match(adminGrowthUiV843, /annotation_add/);
 assert.match(adminGrowthUiV843, /geoMap/);
 assert.match(adminGrowthUiV843, /heatmap/);
 assert.match(adminGrowthUiV843, /margin simulator|simProduct/i);
+assert.match(adminGrowthUiV843, /Payment fees/);
+assert.match(adminGrowthUiV843, /Refunds/);
+assert.match(adminGrowthUiV843, /VAT \/ tax reserve/);
 assert.match(adminEdge, /shop_admin_audit_v842/);
 assert.match(analyticsSchema, /shop_finance_ledger_v841/);
 assert.match(analyticsSchema, /shop_product_cost_cache_v841/);
