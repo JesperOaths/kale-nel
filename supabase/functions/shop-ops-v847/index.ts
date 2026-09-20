@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-import { text,nowIso,validEmail,hoursSince,getSettings,getState,saveState,notifyNewAlerts,createBackup,generateBrief,localDate,localWeekKey,localHour } from "../_shared/shop-ops-core-v847.mjs";
+import { text,nowIso,validEmail,hoursSince,sha256,getSettings,getState,saveState,notifyNewAlerts,createBackup,generateBrief,localDate,localWeekKey,localHour } from "../_shared/shop-ops-core-v847.mjs";
 import { refreshCatalogAndCheck,refreshCostsAndCheck,checkOrdersAndTelemetry } from "../_shared/shop-ops-checks-v847.mjs";
 
 const PROJECT_URL=text(Deno.env.get("SUPABASE_URL"));
@@ -24,26 +24,18 @@ function serviceClient(){
   if(!PROJECT_URL||!SERVICE_KEY)throw new Error("server_not_configured");
   return createClient(PROJECT_URL,SERVICE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
 }
-async function isServiceRole(req){
-  const apiKey=text(req.headers.get("apikey"));
-  const authorization=text(req.headers.get("authorization"));
-  if(!apiKey&&!authorization)return false;
-  try{
-    const r=await fetch(PROJECT_URL+"/rest/v1/rpc/shop_ops_service_role_probe_v847",{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        "apikey":apiKey||authorization.replace(/^Bearer\s+/i,""),
-        "Authorization":authorization||("Bearer "+apiKey)
-      },
-      body:"{}"
-    });
-    if(!r.ok)return false;
-    const payload=await r.json().catch(()=>false);
-    return payload===true;
-  }catch{
-    return false;
-  }
+async function consumeSchedulerToken(sb,req){
+  const token=text(req.headers.get("x-shop-ops-token"));
+  if(!/^[a-f0-9]{64}$/i.test(token))return false;
+  const tokenHash=await sha256(token),now=nowIso();
+  const {data,error}=await sb.from("shop_ops_scheduler_tokens_v847")
+    .update({consumed_at:now})
+    .eq("token_hash",tokenHash)
+    .is("consumed_at",null)
+    .gt("expires_at",now)
+    .select("token_hash")
+    .maybeSingle();
+  return !error&&!!data;
 }
 async function requireAdmin(sb,token){
   const {data,error}=await sb.rpc("_require_valid_admin_session",{admin_session_token:token});
@@ -115,16 +107,16 @@ Deno.serve(async req=>{
 
   const sb=serviceClient();
   let body={};try{body=await req.json();}catch{return json(req,{ok:false,error:"invalid_json"},400);}
-  const service=await isServiceRole(req);
+  const scheduler=await consumeSchedulerToken(sb,req);
   let admin=null;
-  if(!service){
+  if(!scheduler){
     try{admin=await requireAdmin(sb,text(body?.admin_session_token));}
     catch{return json(req,{ok:false,error:"invalid_admin_session"},401);}
   }
   const action=text(body?.action||"status");
 
   try{
-    if(service&&!["run","health"].includes(action))return json(req,{ok:false,error:"service_role_action_not_allowed"},403);
+    if(scheduler&&!["run","health"].includes(action))return json(req,{ok:false,error:"scheduler_action_not_allowed"},403);
     if(action==="health")return json(req,{ok:true,mode:"shop-ops-v847"});
     if(action==="run"||action==="run_now")return json(req,{ok:true,result:await runOperations(sb,action==="run_now"||body?.force===true)});
     if(action==="status")return json(req,{ok:true,...await statusPayload(sb,text(body.admin_session_token))});
