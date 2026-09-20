@@ -266,7 +266,7 @@ const hydrangea = liveCatalog.products.find(product => /^hydrangea$/i.test(Strin
 assert.ok(hydrangea, 'Hydrangea product must exist');
 console.log(`Hydrangea live price: €${hydrangea.price}`);
 
-const catalogHealth = await health(CATALOG_HEALTH_URL, 'shop-catalog-v828', 'bruis-direct-catalog-v836');
+const catalogHealth = await health(CATALOG_HEALTH_URL, 'shop-catalog-v828', 'bruis-direct-catalog-v838');
 assert.equal(catalogHealth?.usesShopifyApi, false, 'catalog health must report no Shopify API use');
 assert.equal(catalogHealth?.whiteVariantsOnly, false, 'catalog health must report the tote color exception');
 assert.deepEqual(catalogHealth?.toteHandleColors, ['Black', 'White'], 'catalog health must expose exactly Black and White tote handle colors');
