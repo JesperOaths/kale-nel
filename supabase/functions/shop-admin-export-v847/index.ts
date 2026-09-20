@@ -15,6 +15,23 @@ function client(){
   if(!url||!key)throw new Error("server_not_configured");
   return createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
 }
+async function sha256(value){
+  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+async function consumeSchedulerToken(sb,req){
+  const token=text(req.headers.get("x-shop-ops-token"));
+  if(!/^[a-f0-9]{64}$/i.test(token))return false;
+  const tokenHash=await sha256(token),now=new Date().toISOString();
+  const {data,error}=await sb.from("shop_ops_scheduler_tokens_v847")
+    .update({consumed_at:now})
+    .eq("token_hash",tokenHash)
+    .is("consumed_at",null)
+    .gt("expires_at",now)
+    .select("token_hash")
+    .maybeSingle();
+  return !error&&!!data;
+}
 function isServiceRole(req){
   const key=text(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
   const bearer=text(req.headers.get("authorization")).replace(/^Bearer\s+/i,"");
@@ -61,7 +78,7 @@ Deno.serve(async req=>{
   const sb=client();
   let body={};try{body=await req.json();}catch{return json(req,{ok:false,error:"invalid_json"},400);}
   try{
-    const serviceSelfTest=isServiceRole(req)&&text(body?.action)==="self_test";
+    const serviceSelfTest=text(body?.action)==="self_test"&&await consumeSchedulerToken(sb,req);
     if(!serviceSelfTest)await requireAdmin(sb,text(body?.admin_session_token));
     const month=text(body?.month),range=monthRange(month);
     const [orders,ledger,invoices,fees,tax]=await Promise.all([
