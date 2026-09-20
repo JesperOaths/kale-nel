@@ -86,6 +86,16 @@ Deno.serve(async req=>{
     if(action==="ensure")domain=await ensureDomain();
     else if(action==="verify")domain=await verifyDomain();
     else if(action==="status"){const d=await findDomain();domain=d?await getDomain(text(d.id)):null;}
+    else if(action==="test_send"){
+      const target="oathsreplays@gmail.com";
+      const result=await resend("/emails",{method:"POST",body:JSON.stringify({
+        from:"Bruis <orders@kalenel.nl>",to:[target],
+        subject:"Bruis transactional email test",
+        html:"<p>Bruis transactional email is configured correctly for <strong>kalenel.nl</strong>.</p>",
+        text:"Bruis transactional email is configured correctly for kalenel.nl."
+      })});
+      return new Response(JSON.stringify({ok:true,test_sent:true,email_id:text(result?.id||result?.data?.id)}),{headers:{"Content-Type":"application/json","Cache-Control":"no-store"}});
+    }
     else return new Response(JSON.stringify({ok:false,error:"unknown_action"}),{status:400,headers:{"Content-Type":"application/json"}});
     return new Response(JSON.stringify({ok:true,domain:domain?safeDomain(domain):null}),{headers:{"Content-Type":"application/json","Cache-Control":"no-store"}});
   }catch(error){
