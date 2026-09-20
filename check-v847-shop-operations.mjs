@@ -84,7 +84,7 @@ assert.match(schedulerRunner,/shop_ops_mint_scheduler_token_v847/);
 assert.match(schedulerRunner,/function mintOnce\(\)/);
 assert.match(schedulerRunner,/attempt<=3/);
 assert.match(schedulerRunner,/Transient scheduler-token mint failure; retrying/);
-assert.match(schedulerRunner,/curl failed \\(28\\)/);
+assert.ok(schedulerRunner.includes('curl failed \\(28\\)'), 'scheduler retry must recognize curl timeout exit 28');
 assert.match(schedulerRunner,/x-shop-ops-token/);
 assert.match(schedulerRunner,/170000/);
 assert.match(deploy,/deploy_function shop-ops-v847/);
