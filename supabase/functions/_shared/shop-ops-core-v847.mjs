@@ -11,6 +11,10 @@ export async function sha256(value){
 export function localDate(){
   return new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Amsterdam",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 }
+export function localHour(){
+  const raw=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Amsterdam",hour:"2-digit",hour12:false}).format(new Date());
+  return Number(raw);
+}
 export function localWeekKey(){
   const p=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Amsterdam",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
   const get=t=>p.find(x=>x.type===t)?.value||"";
