@@ -20,6 +20,7 @@
     .status.warn { color:var(--warn); }
     .hidden { display:none !important; }
     .login-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:22px; }
+    .remember-row{display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px 14px;border-radius:14px;background:#fff;border:1px solid var(--line);color:#403a31;font-size:14px}.remember-row input{width:auto;margin:0}.remember-row strong{display:block}.remember-row small{display:block;color:var(--muted);margin-top:2px}
     input { width:100%; padding:14px; border-radius:14px; border:1px solid #ddd; font:inherit; background:#fff; }
     .btn-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
     .btn { border:none; border-radius:14px; padding:14px 18px; font:inherit; font-weight:800; cursor:pointer; }
@@ -65,6 +66,10 @@
         <input id="passwordInput" name="current-password" type="password" placeholder="Wachtwoord" autocomplete="current-password">
         <input id="totpInput" name="one-time-code" type="text" placeholder="Google Authenticator-code" autocomplete="one-time-code" inputmode="numeric">
       </div>
+      <label class="remember-row" for="rememberDeviceInput">
+        <input id="rememberDeviceInput" type="checkbox" checked>
+        <span><strong>Dit geverifieerde apparaat 45 dagen onthouden</strong><small>Na deze eenmalige wachtwoord + Authenticator-controle kan deze browser automatisch een nieuwe adminsessie krijgen.</small></span>
+      </label>
       <div class="btn-row">
         <button id="loginBtn" class="btn primary" type="submit">Inloggen</button>
       </div>
@@ -302,31 +307,59 @@ const AdminBuckets = window.GEJAST_ADMIN_BUCKETS || {};
 
     async function boot() {
       const token = getAdminSessionToken();
-      if (!token) { showLoggedOut(); return; }
+      const remembered = !!window.GEJAST_ADMIN_SESSION?.hasDeviceRemember?.();
+      if (!token && !remembered) { showLoggedOut(); return; }
+
       try {
-        await checkSession();
+        const session = await checkSession();
         showLoggedIn();
+        if (maybeReturnAfterLogin()) return;
+        const resumed = !!session?.resumed_from_trusted_device;
+        setStatus(resumed ? 'Geverifieerd apparaat herkend. Je bent automatisch ingelogd.' : 'Adminsessie hergebruikt.', 'ok');
+      } catch (error) {
+        showLoggedOut();
+        setStatus(error?.message || 'Adminsessie verlopen. Log opnieuw in met Authenticator.', 'warn');
+        return;
+      }
+
+      try {
         await loadCounts();
-        if (maybeReturnAfterLogin()) return;
-        if (maybeReturnAfterLogin()) return;
         setStatus('Beheerhub geladen.', 'ok');
       } catch (error) {
-        clearAdminSessionToken();
-        showLoggedOut();
-        setStatus(error?.message || 'Adminsessie verlopen.', 'warn');
+        setStatus('Je bent ingelogd. Hub-tellers konden tijdelijk niet laden: '+(error?.message || 'timeout'), 'warn');
       }
     }
 
     document.getElementById('loginView').addEventListener('submit', async (event) => {
       event.preventDefault();
+      const remember = !!document.getElementById('rememberDeviceInput')?.checked;
       try {
-        setStatus('Inloggen...');
-        await adminLogin();
+        setStatus('Inloggen en Authenticator controleren...');
+        const login = await adminLogin();
+        document.getElementById('passwordInput').value = '';
+        document.getElementById('totpInput').value = '';
+
+        let remembered = false;
+        if (remember && window.GEJAST_ADMIN_SESSION?.issueTrustedDevice) {
+          try {
+            await window.GEJAST_ADMIN_SESSION.issueTrustedDevice(login?.admin_username || login?.username || document.getElementById('usernameInput').value.trim());
+            remembered = true;
+          } catch (deviceError) {
+            console.warn('trusted-device enrollment failed', deviceError);
+          }
+        }
+
         showLoggedIn();
-        await loadCounts();
-        setStatus('Inloggen gelukt.', 'ok');
+        setStatus(remembered ? 'Inloggen gelukt. Dit apparaat is 45 dagen geverifieerd.' : 'Inloggen gelukt.', 'ok');
         if (maybeReturnAfterLogin()) return;
+
+        try {
+          await loadCounts();
+        } catch (countError) {
+          setStatus('Je bent ingelogd. Hub-tellers konden tijdelijk niet laden: '+(countError?.message || 'timeout'), 'warn');
+        }
       } catch (error) {
+        showLoggedOut();
         setStatus(error?.message || 'Inloggen mislukt.', 'warn');
       }
     });
@@ -339,10 +372,21 @@ const AdminBuckets = window.GEJAST_ADMIN_BUCKETS || {};
         setStatus(error?.message || 'Verversen mislukt.', 'warn');
       }
     });
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-      clearAdminSessionToken();
-      showLoggedOut();
-      setStatus('Uitgelogd.', 'ok');
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      try {
+        const token = getAdminSessionToken();
+        if (token) {
+          fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_logout`, {
+            method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(),
+            body:JSON.stringify({admin_session_token:token})
+          }).catch(()=>{});
+        }
+        if (window.GEJAST_ADMIN_SESSION?.forgetCurrentDevice) await window.GEJAST_ADMIN_SESSION.forgetCurrentDevice();
+        else clearAdminSessionToken();
+      } finally {
+        showLoggedOut();
+        setStatus('Uitgelogd en dit apparaat niet langer als vertrouwd opgeslagen.', 'ok');
+      }
     });
     ['usernameInput','passwordInput','totpInput'].forEach((id) => {
       document.getElementById(id).addEventListener('keydown', (event) => {
@@ -353,7 +397,7 @@ const AdminBuckets = window.GEJAST_ADMIN_BUCKETS || {};
       if (event?.message) setStatus(event.message, 'warn');
     });
     boot();
-    setInterval(() => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); }, 15000);
+    setInterval(() => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); }, 60000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); });
   </script>
 
