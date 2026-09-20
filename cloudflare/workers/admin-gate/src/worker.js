@@ -369,7 +369,7 @@ async function securityInnerLogin(request, env, outer) {
         'Content-Type': 'application/json',
         Accept: 'application/json'
       },
-      body: JSON.stringify({ username, password, totp })
+      body: JSON.stringify({ input_username: username, input_password: password, input_totp_code: totp })
     }, SECURITY_LOGIN_UPSTREAM_TIMEOUT_MS);
   } catch {
     return securityJson({ ok:false, error:'authentication_service_unavailable' }, 503);
