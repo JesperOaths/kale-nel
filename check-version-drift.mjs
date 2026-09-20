@@ -48,7 +48,7 @@ function isAllowedVersionDrift(rel, found){
   // Shop operations are versioned independently from the v817 game/admin app.
   if (found === 'v826' && (rel === 'admin_shop_orders.html' || rel === 'check-shop-commerce-v817.mjs')) return true;
   if (found === 'v827' && rel === 'scripts/test-shop-production-connection-v827.mjs') return true;
-  if (found === 'v828' && rel === 'admin_shop_connection.html') return true;
+  if (found === 'v828' && rel === 'admin_shop_connection.html') return true;\n  if (found === 'v841' && rel === 'admin_shop_analytics.html') return true;
   if (found !== 'v762') return false;
   return rel === 'admin.html'
     || rel === 'cloudflare/workers/admin-gate/static/admin.html'
