@@ -13,11 +13,16 @@ async function jfetch(url,init={}){
   return {r,body,raw};
 }
 async function mint(){
-  const {r,body}=await jfetch(SUPABASE_URL+'/rest/v1/rpc/shop_ops_mint_scheduler_token_v847',{
-    method:'POST',headers:{Authorization:'Bearer '+SERVICE,apikey:SERVICE,'Content-Type':'application/json'},body:'{}'
-  });
-  if(!r.ok||typeof body!=='string'||!/^[a-f0-9]{64}$/i.test(body))throw new Error('Could not mint scheduler token: HTTP '+r.status);
-  return body;
+  let lastStatus=0,lastBody=null;
+  for(let attempt=1;attempt<=6;attempt++){
+    const {r,body}=await jfetch(SUPABASE_URL+'/rest/v1/rpc/shop_ops_mint_scheduler_token_v847',{
+      method:'POST',headers:{Authorization:'Bearer '+SERVICE,apikey:SERVICE,'Content-Type':'application/json'},body:'{}'
+    });
+    lastStatus=r.status;lastBody=body;
+    if(r.ok&&typeof body==='string'&&/^[a-f0-9]{64}$/i.test(body))return body;
+    if(attempt<6)await new Promise(resolve=>setTimeout(resolve,attempt*2500));
+  }
+  throw new Error('Could not mint scheduler token after retries: HTTP '+lastStatus+' '+String(lastBody?.message||lastBody?.error||'').slice(0,300));
 }
 async function resendAction(action){
   const token=await mint();
