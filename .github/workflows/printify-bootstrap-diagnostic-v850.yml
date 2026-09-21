@@ -1,4 +1,4 @@
-name: Refresh live Printify catalog
+name: Check Supabase REST and Printify path
 
 on:
   push:
@@ -9,31 +9,25 @@ permissions:
   contents: read
 
 jobs:
-  refresh:
+  probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 2
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: uiqntazgnrxwliaidkmy
     steps:
-      - name: Trigger and verify live Printify catalog
+      - name: Check Supabase services
         shell: bash
         run: |
           set -euo pipefail
-          URL='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828'
-          echo "Triggering live Printify catalog refresh..."
-          for attempt in {1..12}; do
-            tmp="$(mktemp)"
-            code="$(curl --silent --show-error --max-time 20 -o "$tmp" -w '%{http_code}' "$URL?refresh_probe=v850-$attempt" || true)"
-            echo "attempt=$attempt http=$code"
-            jq '{source,catalogSelection,warming,refreshScheduled,products:(.products|length // 0),shops:(.shops|length // 0),error}' "$tmp" 2>/dev/null || head -c 500 "$tmp" || true
-            echo
-            if [[ "$code" == "200" ]] && jq -e '
-              .source == "printify-live-v850"
-              and .catalogSelection == "all-readable-printify-shops-v850"
-              and ((.products // []) | length) > 0
-            ' "$tmp" >/dev/null 2>&1; then
-              echo "Live Printify catalog is ready."
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "::error::Live Printify catalog did not become ready."
-          exit 1
+          curl --silent --show-error --max-time 15 \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/health?services=db&services=pooler&services=rest"
+          echo
+      - name: Check Printify diagnostic path
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --max-time 15 \
+            'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828?diagnostic=1'
+          echo
