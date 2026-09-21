@@ -1,4 +1,4 @@
-name: Read raw Printify titles
+name: Force v851 catalog refresh
 
 on:
   push:
@@ -9,14 +9,25 @@ permissions:
   contents: read
 
 jobs:
-  probe:
+  refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 3
     steps:
-      - name: Read raw product titles
+      - name: Trigger v851 live catalog rebuild
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail-with-body --silent --show-error --max-time 25 \
-            'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828?raw_titles=1'
-          echo
+          URL='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828'
+          for attempt in {1..12}; do
+            body="$(curl --silent --show-error --max-time 20 "$URL?refresh=v851-$attempt" || true)"
+            printf '%s\n' "$body" | jq '{source,catalogSelection,warming,refreshScheduled,products:(.products|length // 0)}' || true
+            if printf '%s' "$body" | jq -e '
+              .source == "printify-live-v851"
+              and .catalogSelection == "all-readable-printify-shops-v851"
+              and ((.products // []) | length) > 0
+            ' >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 8
+          done
+          exit 1
