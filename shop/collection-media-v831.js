@@ -156,6 +156,15 @@
         const dw=cw*fit, dh=ch*fit;
         const dx=(out.width-dw)/2, dy=(out.height-dh)/2;
         ctx.drawImage(source,sx,sy,cw,ch,dx,dy,dw,dh);
+
+        // The historical Classic and Boxy source artwork contains an old title
+        // near its top edge. It is not part of the garment illustration.
+        // Erase that strip after fitting the garment so only the shirt remains.
+        if(/\/assets\/collection-(?:normal|boxy)\.(?:png|webp)(?:[?#]|$)/i.test(raw)){
+          ctx.fillStyle='#ded6ca';
+          ctx.fillRect(0,0,out.width,Math.round(out.height*.13));
+        }
+
         const output=await new Promise(resolve=>out.toBlob(resolve,'image/png'));
         return output ? URL.createObjectURL(output) : raw;
       } finally { bitmap.close?.(); }
@@ -193,5 +202,5 @@
   };
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
-  window.BRUIS_COLLECTION_MEDIA_V831=Object.freeze({backdrop:'#ded6ca',preservesWhiteGarment:true,cropsToLargestGarment:true});
+  window.BRUIS_COLLECTION_MEDIA_V831=Object.freeze({backdrop:'#ded6ca',preservesWhiteGarment:true,cropsToLargestGarment:true,removesLegacyTopLabels:true});
 })();

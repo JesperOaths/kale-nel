@@ -629,3 +629,40 @@ body.size-guide-open { overflow: hidden; }
     min-width: 170px;
   }
 }
+
+
+/* v857: hide legacy text baked into Classic/Boxy collection artwork */
+.collection-card[data-collection="normal"] .collection-image,
+.collection-card[data-collection="boxy"] .collection-image {
+  position: relative;
+  background: #ded6ca;
+}
+.collection-card[data-collection="normal"] .collection-image::before,
+.collection-card[data-collection="boxy"] .collection-image::before {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  inset: 0 0 auto 0;
+  height: 13%;
+  pointer-events: none;
+  background: #ded6ca;
+}
+.compact-shape-card[data-collection="normal"],
+.compact-shape-card[data-collection="boxy"] {
+  position: relative;
+  overflow: hidden;
+}
+.compact-shape-card[data-collection="normal"]::before,
+.compact-shape-card[data-collection="boxy"]::before {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  top: 5px;
+  left: 5px;
+  right: 5px;
+  height: 10%;
+  min-height: 7px;
+  pointer-events: none;
+  border-radius: 9px 9px 0 0;
+  background: #ded6ca;
+}

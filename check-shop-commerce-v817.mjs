@@ -63,7 +63,7 @@ assert.match(toteHandleColor, /variantBoundMockups:\s*true/);
 assert.match(toteHandleColor, /sharedArtworkFirst:\s*true/);
 assert.match(toteHandleColor, /artwork\|print file\|design png/i);
 assert.match(toteHandleColor, /exactVariantSelection:\s*true/);
-assert.match(index, /version-watermark[^>]*>v855</);
+assert.match(index, /version-watermark[^>]*>v857</);
 assert.match(index, /data-open-size-guide/);
 assert.match(index, /data-size-guide-panel/);
 assert.match(index, /data-size-guide-overlay/);
@@ -539,3 +539,6 @@ assert.doesNotMatch(catalogEdge, /MIN_RETAIL_CENTS/);
 assert.doesNotMatch(checkoutEdge, /MIN_RETAIL_CENTS/);
 
 console.log('Shop commerce v839 tote-handle-color + Bruis-copy + shipping-total + sticky-cart + cost-plus-5 contract passed.');
+
+assert.match(collectionMedia, /removesLegacyTopLabels:true/);
+assert.match(styles, /hide legacy text baked into Classic\/Boxy collection artwork/);
