@@ -1,4 +1,4 @@
-name: Verify live size modal v854
+name: Verify live size modal v855 clean artwork
 
 on:
   push:
@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - name: Verify plain shop URL serves v854 modal
+      - name: Verify plain shop URL serves v855 modal
         shell: bash
         run: |
           set -euo pipefail
@@ -24,13 +24,13 @@ jobs:
             cf_status="$(awk 'BEGIN{IGNORECASE=1} /^cf-cache-status:/ {gsub("\r",""); print $2}' "$headers" | tail -1)"
             age="$(awk 'BEGIN{IGNORECASE=1} /^age:/ {gsub("\r",""); print $2}' "$headers" | tail -1)"
             echo "attempt=$attempt http=$code cf-cache-status=${cf_status:-none} age=${age:-none}"
-            if [[ "$code" == "200" ]]               && grep -q 'version-watermark">v854<' "$body"               && grep -q 'data-open-size-guide' "$body"               && grep -q 'data-size-guide-overlay' "$body"               && grep -q 'data-size-guide-visual' "$body"               && grep -q 'store.js?v=20260921-storefront-v854-r1' "$body"; then
+            if [[ "$code" == "200" ]]               && grep -q 'version-watermark">v855<' "$body"               && grep -q 'data-open-size-guide' "$body"               && grep -q 'data-size-guide-overlay' "$body"               && grep -q 'data-size-guide-visual' "$body"               && grep -q 'store.js?v=20260921-storefront-v855-r1' "$body"; then
               curl --fail-with-body --silent --show-error --max-time 20                 'https://kalenel.nl/shop/assets/size-guide-classic.svg'                 | grep -q 'Classic T-Shirt measurement guide'
               curl --fail-with-body --silent --show-error --max-time 20                 'https://kalenel.nl/shop/assets/size-guide-boxy.svg'                 | grep -q 'Oversized Boxy T-Shirt measurement guide'
-              echo "Plain shop URL serves the v854 full-screen size chart with both measurement illustrations."
+              echo "Plain shop URL serves the v855 full-screen size chart with both measurement illustrations."
               exit 0
             fi
             sleep 3
           done
-          echo "::error::Plain /shop/ does not yet serve the v854 size-chart modal."
+          echo "::error::Plain /shop/ does not yet serve the v855 size-chart modal."
           exit 1
