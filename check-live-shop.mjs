@@ -83,7 +83,7 @@ async function catalog() {
 
   assert.equal(response?.status, 200, `shop-catalog-v828 must return HTTP 200, got ${response?.status}`);
   assert.equal(payload?.source, 'bruis-direct-v838', `catalog must identify the current Bruis direct catalog source, got ${payload?.source}`);
-  assert.equal(payload?.catalogSelection, 'account-wide-best-shop-v849', `catalog must discover the active Printify shop account-wide, got ${payload?.catalogSelection}`);
+  assert.equal(payload?.catalogSelection, 'account-wide-fast-probe-v850', `catalog must discover the active Printify shop account-wide, got ${payload?.catalogSelection}`);
   assert.ok(Array.isArray(payload?.products), 'catalog must return products[]');
   assert.ok(payload.products.length >= MIN_PRODUCTS, `catalog returned only ${payload.products.length} products`);
 
