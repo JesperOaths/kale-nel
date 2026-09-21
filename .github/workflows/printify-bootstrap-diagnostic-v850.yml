@@ -1,4 +1,4 @@
-name: Check Supabase REST and Printify path
+name: Read Printify blueprint metadata
 
 on:
   push:
@@ -12,22 +12,11 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     timeout-minutes: 2
-    env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      PROJECT_REF: uiqntazgnrxwliaidkmy
     steps:
-      - name: Check Supabase services
+      - name: Read public blueprint metadata through catalog bridge
         shell: bash
         run: |
           set -euo pipefail
-          curl --silent --show-error --max-time 15 \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/$PROJECT_REF/health?services=db&services=pooler&services=rest"
-          echo
-      - name: Check Printify diagnostic path
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl --silent --show-error --max-time 15 \
-            'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828?diagnostic=1'
+          curl --fail-with-body --silent --show-error --max-time 20 \
+            'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828?blueprint_meta=1'
           echo
