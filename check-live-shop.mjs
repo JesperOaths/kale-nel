@@ -82,8 +82,8 @@ async function catalog() {
   }
 
   assert.equal(response?.status, 200, `shop-catalog-v828 must return HTTP 200, got ${response?.status}`);
-  assert.equal(payload?.source, 'printify-live-v851', `catalog must identify the live Printify source, got ${payload?.source}`);
-  assert.equal(payload?.catalogSelection, 'all-readable-printify-shops-v851', `catalog must mirror all readable Printify shops, got ${payload?.catalogSelection}`);
+  assert.equal(payload?.source, 'printify-live-v852', `catalog must identify the live Printify source, got ${payload?.source}`);
+  assert.equal(payload?.catalogSelection, 'all-readable-printify-shops-v852', `catalog must mirror all readable Printify shops, got ${payload?.catalogSelection}`);
   assert.ok(Array.isArray(payload?.products), 'catalog must return products[]');
   assert.ok(payload.products.length >= MIN_PRODUCTS, `catalog returned only ${payload.products.length} products`);
 
@@ -156,9 +156,11 @@ async function textAsset(url, label) {
 const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(`${SHOP_URL}?v=${ASSET_VERSION}`);
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
-assert.match(html, /version-watermark[^>]*>v851</, 'Live shop must expose v851 watermark');
+assert.match(html, /version-watermark[^>]*>v852</, 'Live shop must expose v852 watermark');
 assert.match(html, /direct-commerce-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must retain the direct commerce bridge');
-assert.match(html, /store\.js\?v=20260921-storefront-v851-r1/, 'Live shop must load the live-only v851 storefront');
+assert.match(html, /store\.js\?v=20260921-storefront-v852-r1/, 'Live shop must load the live-only v852 storefront');
+assert.match(html, /data-open-size-guide/, 'Live shop must expose the cart-adjacent size chart control');
+assert.match(html, /data-size-guide-panel/, 'Live shop must include the contextual size chart popover');
 assert.doesNotMatch(html, /catalog-data\.js/, 'Live shop must not load the retired static catalog fallback');
 assert.match(html, /tote-handle-color-v839\.js\?v=20260916-storefront-v839-r1/, 'Live shop must load tote handle-color behavior');
 assert.match(html, /delivery-estimate-v833\.js\?v=20260916-delivery-v840-r1/, 'Live shop must load the current delivery estimate UI');
@@ -173,7 +175,7 @@ assert.match(html, /collection-media-v831\.js\?v=20260916-storefront-v837-r1/, '
 assert.match(html, /image-lightbox-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load full-view lightbox');
 assert.doesNotMatch(html, /direct-commerce-v828\.js|mockup-background-v830\.js|image-lightbox-v830\.js/, 'old active media/commerce handlers must not remain in the live page');
 assert.doesNotMatch(html, />[^<]*(?:Printify|factor(?:y|ies))[^<]*</i, 'Public shop shell must not expose supplier/factory wording');
-console.log(`shop page: HTTP 200, v851 present, ${pageElapsed}ms`);
+console.log(`shop page: HTTP 200, v852 present, ${pageElapsed}ms`);
 
 const toteUi = await textAsset('https://kalenel.nl/shop/tote-handle-color-v839.js?v=20260916-storefront-v839-r1', 'tote-handle-color-v839.js');
 assert.match(toteUi, /Handle color/, 'tote selector must be Handle color');
