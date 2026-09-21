@@ -624,6 +624,26 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(req) });
   if (req.method !== "GET") return json(req, { error: "method_not_allowed" }, 405);
   const url = new URL(req.url);
+  if (url.searchParams.get("raw_titles") === "1") {
+    let sb: any;
+    try { sb = serviceClient(); } catch { sb = null; }
+    try {
+      const token = await resolveToken(sb);
+      const account = await loadAccountProducts(token);
+      return json(req, {
+        ok: true,
+        products: account.entries.map((entry: any) => ({
+          id: text(entry.product?.id),
+          title: text(entry.product?.title),
+          blueprintId: Number(entry.product?.blueprint_id || 0),
+          visible: entry.product?.visible !== false,
+        })).filter((item: any) => item.id && item.title),
+      });
+    } catch (error) {
+      return json(req, { ok: false, error: error instanceof Error ? error.message : "lookup_failed" }, 503);
+    }
+  }
+
   if (url.searchParams.get("blueprint_meta") === "1") {
     let sb: any;
     try { sb = serviceClient(); } catch { sb = null; }
