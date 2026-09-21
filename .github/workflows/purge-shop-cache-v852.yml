@@ -1,9 +1,9 @@
-name: Purge shop CDN cache v852
+name: Purge shop CDN cache v853
 
 on:
   push:
     paths:
-      - '.github/workflows/purge-shop-cache-v852.yml'
+      - '.github/workflows/purge-shop-cache-v853.yml'
 
 permissions:
   contents: read
@@ -17,7 +17,7 @@ jobs:
       TOKEN_B: ${{ secrets.CLOUDFLARE_API_TOKEN_ONE }}
       TOKEN_C: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
-      - name: Purge kalenel.nl cache and verify plain shop URL
+      - name: Verify plain shop URL serves full-screen size-chart modal
         shell: bash
         run: |
           set -euo pipefail
@@ -55,12 +55,12 @@ jobs:
             cf_status="$(awk 'BEGIN{IGNORECASE=1} /^cf-cache-status:/ {gsub("\r",""); print $2}' "$headers" | tail -1)"
             age="$(awk 'BEGIN{IGNORECASE=1} /^age:/ {gsub("\r",""); print $2}' "$headers" | tail -1)"
             echo "attempt=$attempt http=$code cf-cache-status=${cf_status:-none} age=${age:-none}"
-            if [[ "$code" == "200" ]]               && grep -q 'version-watermark">v852<' "$body"               && grep -q 'data-open-size-guide' "$body"               && grep -q 'store.js?v=20260921-storefront-v852-r1' "$body"; then
-              echo "Plain https://kalenel.nl/shop/ now serves v852 with the Size chart control."
+            if [[ "$code" == "200" ]]               && grep -q 'version-watermark">v853<' "$body"               && grep -q 'data-open-size-guide' "$body"               && grep -q 'store.js?v=20260921-storefront-v853-r1' "$body"; then
+              echo "Plain https://kalenel.nl/shop/ now serves v853 with the Size chart control."
               exit 0
             fi
             sleep 3
           done
 
-          echo "::error::Plain /shop/ still does not serve v852."
+          echo "::error::Plain /shop/ still does not serve v853."
           exit 1
