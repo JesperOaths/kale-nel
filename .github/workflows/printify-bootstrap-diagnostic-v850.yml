@@ -21,7 +21,7 @@ jobs:
           set -euo pipefail
           curl --fail-with-body --silent --show-error --max-time 15 \
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            'https://api.supabase.com/v1/projects/uiqntazgnrxwliaidkmy/health?timeout_ms=5000'
+            'https://api.supabase.com/v1/projects/uiqntazgnrxwliaidkmy/health?services=db&services=pooler&services=rest'
           echo
       - name: Probe non-secret Printify live stages
         shell: bash
