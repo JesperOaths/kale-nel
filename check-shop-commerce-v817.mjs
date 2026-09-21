@@ -63,7 +63,7 @@ assert.match(toteHandleColor, /variantBoundMockups:\s*true/);
 assert.match(toteHandleColor, /sharedArtworkFirst:\s*true/);
 assert.match(toteHandleColor, /artwork\|print file\|design png/i);
 assert.match(toteHandleColor, /exactVariantSelection:\s*true/);
-assert.match(index, /version-watermark[^>]*>v854</);
+assert.match(index, /version-watermark[^>]*>v855</);
 assert.match(index, /data-open-size-guide/);
 assert.match(index, /data-size-guide-panel/);
 assert.match(index, /data-size-guide-overlay/);

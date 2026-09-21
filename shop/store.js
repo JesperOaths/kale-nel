@@ -9,7 +9,7 @@ const SIZE_ORDER = ['XS','S','M','L','XL','2XL','3XL','4XL','5XL'];
 const SIZE_GUIDES = {
   '6': {
     base: 'Classic T-Shirt',
-    illustration: './assets/size-guide-classic.svg',
+    illustration: './assets/size-guide-classic.svg?v=20260921-v855-r1',
     illustrationAlt: 'Classic T-Shirt measurement diagram showing width, length and sleeve from center back',
     sizes: ['S','M','L','XL','2XL','3XL','4XL','5XL'],
     metric: {
@@ -27,7 +27,7 @@ const SIZE_GUIDES = {
   },
   '1382': {
     base: 'Oversized Boxy T-Shirt',
-    illustration: './assets/size-guide-boxy.svg',
+    illustration: './assets/size-guide-boxy.svg?v=20260921-v855-r1',
     illustrationAlt: 'Oversized Boxy T-Shirt measurement diagram showing width and length',
     sizes: ['XS','S','M','L','XL','2XL','3XL'],
     metric: {

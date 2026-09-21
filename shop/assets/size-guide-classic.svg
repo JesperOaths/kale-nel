@@ -1,44 +1,54 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 620" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 650" role="img" aria-labelledby="title desc">
 <title id="title">Classic T-Shirt measurement guide</title>
 <desc id="desc">Diagram showing garment width, length and sleeve from center back measurement points on a laid-flat T-shirt.</desc>
 <defs>
-  <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#24351f"/></marker>
+  <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+    <path d="M0 0 L10 5 L0 10 z" fill="#24351f"/>
+  </marker>
   <style>
+    .panel{fill:#f8f5ee;stroke:#ded4c4;stroke-width:2}
     .shirt{fill:#f3eee5;stroke:#8c806e;stroke-width:4}
     .seam{fill:none;stroke:#b8ab99;stroke-width:3}
     .measure{fill:none;stroke:#24351f;stroke-width:5;stroke-dasharray:12 10;marker-start:url(#arrow);marker-end:url(#arrow)}
     .guide{fill:none;stroke:#87907f;stroke-width:3;stroke-dasharray:8 8}
-    .label{font:700 27px system-ui,sans-serif;fill:#182016}
-    .small{font:600 20px system-ui,sans-serif;fill:#697064}
+    .label{font:700 25px system-ui,sans-serif;fill:#182016}
+    .small{font:600 18px system-ui,sans-serif;fill:#697064}
     .title{font:800 34px Georgia,serif;fill:#182016}
   </style>
 </defs>
-<rect width="900" height="620" rx="28" fill="#fffdf8"/>
-<text x="42" y="58" class="title">How we measure</text>
-<text x="42" y="91" class="small">Measurements are taken on a flat, laid-out garment.</text>
-<g transform="translate(70,120)">
+
+<rect width="1000" height="650" rx="28" fill="#fffdf8"/>
+<text x="38" y="54" class="title">How we measure</text>
+<text x="38" y="86" class="small">Measurements are taken on a flat, laid-out garment.</text>
+
+<!-- Main garment panel -->
+<rect x="30" y="110" width="555" height="505" rx="24" class="panel"/>
+<g transform="translate(78,145) scale(.72)">
   <path class="shirt" d="M150 75 L235 20 Q280 55 350 55 Q420 55 465 20 L550 75 L650 175 L585 250 L520 205 L520 475 Q350 510 180 475 L180 205 L115 250 L50 175 Z"/>
   <path class="seam" d="M270 40 Q350 100 430 40"/>
   <path class="measure" d="M175 225 L525 225"/>
-  <text x="300" y="208" class="label">Width</text>
+  <text x="300" y="198" class="label">Width</text>
   <path class="measure" d="M240 65 L240 465"/>
-  <text x="252" y="360" class="label">Length</text>
+  <text x="260" y="365" class="label">Length</text>
 </g>
-<g transform="translate(600,118)">
-  <rect x="0" y="0" width="255" height="330" rx="22" fill="#f5f0e8" stroke="#ded4c4"/>
+
+<!-- Sleeve measurement panel -->
+<rect x="615" y="110" width="355" height="355" rx="24" class="panel"/>
+<text x="640" y="150" class="label">Sleeve from center back</text>
+<text x="640" y="181" class="small">Start at the center back neckline,</text>
+<text x="640" y="205" class="small">then measure over the shoulder</text>
+<text x="640" y="229" class="small">to the sleeve edge.</text>
+<g transform="translate(650,250) scale(.72)">
   <path class="shirt" d="M58 115 L90 86 Q126 109 164 86 L196 115 L232 160 L205 195 L177 175 L177 292 Q127 306 77 292 L77 175 L49 195 L22 160 Z"/>
   <circle cx="127" cy="97" r="7" fill="#24351f"/>
   <path class="guide" d="M127 97 L127 145"/>
-  <path class="measure" d="M127 97 C150 88 190 103 215 153"/>
-  <text x="16" y="32" class="label" font-size="23">Sleeve from</text>
-  <text x="16" y="61" class="label" font-size="23">center back</text>
-  <text x="87" y="170" class="small" font-size="17">center back</text>
-  <text x="96" y="192" class="small" font-size="17">neckline</text>
+  <path class="measure" d="M127 97 C155 82 198 105 224 158"/>
 </g>
-<g transform="translate(600,475)">
-  <rect x="0" y="0" width="255" height="98" rx="18" fill="#f5f0e8" stroke="#ded4c4"/>
-  <text x="18" y="35" class="label" font-size="22">Tolerance</text>
-  <text x="18" y="64" class="small" font-size="17">Small production variation</text>
-  <text x="18" y="86" class="small" font-size="17">is normal.</text>
-</g>
+<text x="665" y="429" class="small">Center back neckline → sleeve edge</text>
+
+<!-- Tolerance panel -->
+<rect x="615" y="490" width="355" height="125" rx="22" class="panel"/>
+<text x="640" y="531" class="label">Tolerance</text>
+<text x="640" y="560" class="small">Small production variation is normal.</text>
+<text x="640" y="588" class="small">Use the table below for the allowed range.</text>
 </svg>

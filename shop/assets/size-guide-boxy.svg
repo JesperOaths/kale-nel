@@ -1,41 +1,51 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 620" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 650" role="img" aria-labelledby="title desc">
 <title id="title">Oversized Boxy T-Shirt measurement guide</title>
 <desc id="desc">Diagram showing garment width and length measurement points on a laid-flat oversized boxy T-shirt.</desc>
 <defs>
-  <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#24351f"/></marker>
+  <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+    <path d="M0 0 L10 5 L0 10 z" fill="#24351f"/>
+  </marker>
   <style>
+    .panel{fill:#f8f5ee;stroke:#ded4c4;stroke-width:2}
     .shirt{fill:#f3eee5;stroke:#8c806e;stroke-width:4}
     .seam{fill:none;stroke:#b8ab99;stroke-width:3}
     .measure{fill:none;stroke:#24351f;stroke-width:5;stroke-dasharray:12 10;marker-start:url(#arrow);marker-end:url(#arrow)}
-    .label{font:700 30px system-ui,sans-serif;fill:#182016}
-    .small{font:600 20px system-ui,sans-serif;fill:#697064}
+    .label{font:700 26px system-ui,sans-serif;fill:#182016}
+    .small{font:600 18px system-ui,sans-serif;fill:#697064}
     .title{font:800 34px Georgia,serif;fill:#182016}
   </style>
 </defs>
-<rect width="900" height="620" rx="28" fill="#fffdf8"/>
-<text x="42" y="58" class="title">How we measure</text>
-<text x="42" y="91" class="small">Measurements are taken on a flat, laid-out garment.</text>
-<g transform="translate(105,120)">
+
+<rect width="1000" height="650" rx="28" fill="#fffdf8"/>
+<text x="38" y="54" class="title">How we measure</text>
+<text x="38" y="86" class="small">Measurements are taken on a flat, laid-out garment.</text>
+
+<!-- Main garment panel -->
+<rect x="30" y="110" width="575" height="505" rx="24" class="panel"/>
+<g transform="translate(78,155) scale(.73)">
   <path class="shirt" d="M150 95 L260 24 Q330 60 400 24 L510 95 L640 180 L575 275 L500 230 L500 450 Q330 480 160 450 L160 230 L85 275 L20 180 Z"/>
   <path class="seam" d="M270 46 Q330 94 390 46"/>
   <path class="measure" d="M155 238 L505 238"/>
-  <text x="292" y="220" class="label">Width</text>
+  <text x="292" y="208" class="label">Width</text>
   <path class="measure" d="M250 72 L250 442"/>
-  <text x="268" y="350" class="label">Length</text>
+  <text x="270" y="350" class="label">Length</text>
 </g>
-<g transform="translate(615,180)">
-  <rect x="0" y="0" width="220" height="210" rx="22" fill="#f5f0e8" stroke="#ded4c4"/>
-  <text x="20" y="44" class="label" font-size="24">Width</text>
-  <text x="20" y="76" class="small" font-size="18">Measured straight across</text>
-  <text x="20" y="100" class="small" font-size="18">the body while laid flat.</text>
-  <text x="20" y="148" class="label" font-size="24">Length</text>
-  <text x="20" y="180" class="small" font-size="18">Measured from shoulder</text>
-  <text x="20" y="204" class="small" font-size="18">to bottom hem.</text>
-</g>
-<g transform="translate(615,425)">
-  <rect x="0" y="0" width="220" height="105" rx="18" fill="#f5f0e8" stroke="#ded4c4"/>
-  <text x="18" y="38" class="label" font-size="22">Tolerance</text>
-  <text x="18" y="69" class="small" font-size="17">Small production variation</text>
-  <text x="18" y="92" class="small" font-size="17">is normal.</text>
-</g>
+
+<!-- Explanatory panel -->
+<rect x="635" y="110" width="335" height="335" rx="24" class="panel"/>
+<text x="660" y="158" class="label">Width</text>
+<text x="660" y="191" class="small">Measure straight across the body</text>
+<text x="660" y="216" class="small">while the shirt is laid flat.</text>
+
+<line x1="660" y1="250" x2="945" y2="250" stroke="#ded4c4" stroke-width="2"/>
+
+<text x="660" y="298" class="label">Length</text>
+<text x="660" y="331" class="small">Measure from the high shoulder</text>
+<text x="660" y="356" class="small">down to the bottom hem.</text>
+
+<!-- Tolerance panel -->
+<rect x="635" y="475" width="335" height="140" rx="22" class="panel"/>
+<text x="660" y="518" class="label">Tolerance</text>
+<text x="660" y="549" class="small">Small production variation is normal.</text>
+<text x="660" y="577" class="small">Use the table below for the allowed range.</text>
 </svg>
