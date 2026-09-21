@@ -1,4 +1,4 @@
-name: Printify live diagnostic
+name: Printify and Supabase health diagnostic
 
 on:
   push:
@@ -12,7 +12,17 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     timeout-minutes: 2
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
     steps:
+      - name: Check Supabase service health
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error --max-time 15 \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            'https://api.supabase.com/v1/projects/uiqntazgnrxwliaidkmy/health?timeout_ms=5000'
+          echo
       - name: Probe non-secret Printify live stages
         shell: bash
         run: |
