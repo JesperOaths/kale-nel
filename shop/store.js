@@ -191,20 +191,14 @@ function sizeGuideForProduct(product){
   return SIZE_GUIDES[String(product.baseKey || '')] || null;
 }
 
-function renderSizeGuide(product){
-  const tray = qs('[data-size-guide-tray]');
-  if(!tray) return;
-  const guide = sizeGuideForProduct(product);
-  if(!guide){
-    tray.hidden = true;
-    document.documentElement.classList.remove('size-guide-visible');
-    activeSizeGuideProductId = '';
-    return;
-  }
+function activeSizeGuideProduct(){
+  return products.find(item => item.id === activeSizeGuideProductId) || null;
+}
 
-  activeSizeGuideProductId = product.id;
-  tray.hidden = false;
-  document.documentElement.classList.add('size-guide-visible');
+function renderSizeGuideContents(product){
+  const guide = sizeGuideForProduct(product);
+  if(!guide) return false;
+
   qs('[data-size-guide-product]').textContent = product.name;
   qs('[data-size-guide-base]').textContent = guide.base;
   qsa('[data-size-guide-unit]').forEach(button => {
@@ -220,14 +214,53 @@ function renderSizeGuide(product){
     <tbody>${Object.entries(rows).map(([label, values]) => `
       <tr><th scope="row">${esc(label)}</th>${values.map(value => `<td>${esc(value)} <span>${unitLabel}</span></td>`).join('')}</tr>
     `).join('')}</tbody>`;
+  return true;
+}
+
+function setActiveSizeGuideProduct(product){
+  const button = qs('[data-open-size-guide]');
+  const guide = sizeGuideForProduct(product);
+  if(!guide){
+    activeSizeGuideProductId = '';
+    if(button) button.hidden = true;
+    closeSizeGuide();
+    return;
+  }
+
+  activeSizeGuideProductId = product.id;
+  if(button){
+    button.hidden = false;
+    button.setAttribute('aria-label', `Open size chart for ${product.name}`);
+    button.title = `${product.name} size chart`;
+  }
+
+  const panel = qs('[data-size-guide-panel]');
+  if(panel && !panel.hidden) renderSizeGuideContents(product);
+}
+
+function openSizeGuide(){
+  const product = activeSizeGuideProduct();
+  const panel = qs('[data-size-guide-panel]');
+  const button = qs('[data-open-size-guide]');
+  if(!panel || !button || !renderSizeGuideContents(product)) return;
+  panel.hidden = false;
+  button.setAttribute('aria-expanded','true');
+}
+
+function closeSizeGuide(){
+  const panel = qs('[data-size-guide-panel]');
+  const button = qs('[data-open-size-guide]');
+  if(panel) panel.hidden = true;
+  if(button) button.setAttribute('aria-expanded','false');
 }
 
 function syncSizeGuideToViewport(){
   const cards = qsa('.product-card[data-product-id]');
   if(!cards.length){
-    renderSizeGuide(null);
+    setActiveSizeGuideProduct(null);
     return;
   }
+
   const viewportCenter = window.innerHeight / 2;
   let best = null;
   let bestDistance = Number.POSITIVE_INFINITY;
@@ -242,20 +275,25 @@ function syncSizeGuideToViewport(){
       best = product;
     }
   });
-  if(best && best.id !== activeSizeGuideProductId) renderSizeGuide(best);
+
+  if(best) setActiveSizeGuideProduct(best);
+  else setActiveSizeGuideProduct(null);
 }
 
 function initializeSizeGuide(){
   qsa('.product-card[data-product-id]').forEach(card => {
     const activate = () => {
       const product = products.find(item => item.id === card.dataset.productId);
-      if(sizeGuideForProduct(product)) renderSizeGuide(product);
+      setActiveSizeGuideProduct(product);
     };
     card.addEventListener('pointerenter', activate);
     card.addEventListener('focusin', activate);
     card.addEventListener('click', activate);
   });
-  syncSizeGuideToViewport();
+
+  const firstShirt = productsForCollection().find(product => sizeGuideForProduct(product));
+  setActiveSizeGuideProduct(firstShirt || null);
+  window.requestAnimationFrame(syncSizeGuideToViewport);
 }
 
 function renderProducts(){
@@ -329,7 +367,7 @@ function openShoppingView({ scroll = true } = {}){
 
 function openShapeEntry({ scroll = true, updateUrl = true } = {}){
   qs('[data-shop-section]').hidden = true;
-  renderSizeGuide(null);
+  setActiveSizeGuideProduct(null);
   qs('[data-shape-entry]').hidden = false;
   updateShapeControls();
   if(updateUrl){
@@ -426,6 +464,7 @@ function addToCart(id){
 }
 
 function openCart(){
+  closeSizeGuide();
   qs('[data-cart-drawer]').classList.add('open');
   qs('[data-cart-drawer]').setAttribute('aria-hidden','false');
 }
@@ -480,13 +519,30 @@ loadCatalog().then(list => {
 });
 
 document.addEventListener('click', event => {
+  const open = event.target.closest('[data-open-size-guide]');
+  if(open){
+    const panel = qs('[data-size-guide-panel]');
+    if(panel?.hidden) openSizeGuide();
+    else closeSizeGuide();
+    return;
+  }
+
+  if(event.target.closest('[data-close-size-guide]')){
+    closeSizeGuide();
+    return;
+  }
+
   const unitButton = event.target.closest('[data-size-guide-unit]');
   if(unitButton){
     sizeGuideUnit = unitButton.dataset.sizeGuideUnit === 'imperial' ? 'imperial' : 'metric';
-    const product = products.find(item => item.id === activeSizeGuideProductId);
-    renderSizeGuide(product);
+    renderSizeGuideContents(activeSizeGuideProduct());
   }
 });
+
+document.addEventListener('keydown', event => {
+  if(event.key === 'Escape') closeSizeGuide();
+});
+
 let sizeGuideScrollFrame = 0;
 window.addEventListener('scroll', () => {
   if(sizeGuideScrollFrame) return;
