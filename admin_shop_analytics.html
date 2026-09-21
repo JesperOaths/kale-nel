@@ -8,7 +8,7 @@
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Shop analytics - Bruis admin</title>
-  <script>window.GEJAST_PAGE_VERSION='v843';</script>
+  <script>window.GEJAST_PAGE_VERSION='v843';window.BRUIS_ANALYTICS_BUILD='core-first-v856';</script>
   <script src="./gejast-config.js?v843"></script>
   <script src="./admin-session-sync.js?v843"></script>
   <script src="./admin-topnav.js?v843" defer></script>
@@ -149,6 +149,7 @@
 
 
   <section class="panel" id="products">
+    <div id="productEconomicsStatus" class="callout">Loading current product economics…</div>
     <div class="panel-head"><div><h2>Every product: traffic, sales, cost & margin</h2><p class="muted">Current catalog economics are refreshed from the production-cost source and shown separately from frozen historical order costs. *Paid product contribution is product revenue minus historical product COGS before shipping/import/ledger costs.</p></div><input class="table-search" id="productSearch" type="search" placeholder="Filter products…"></div>
     <div class="table-wrap"><table><thead><tr><th>Product</th><th>Collection</th><th class="num">Views</th><th class="num">Adds</th><th class="num">Paid units</th><th class="num">Paid revenue</th><th class="num">Paid product contribution*</th><th class="num">View→cart</th><th class="num">View→paid</th><th class="num">Current price</th><th class="num">Current cost</th><th class="num">Current margin</th><th class="num">Margin %</th></tr></thead><tbody id="productRows"></tbody></table></div>
   </section>
@@ -325,6 +326,15 @@
   }
   function renderProducts(){
     const rows=mergedProducts().sort((a,b)=>n(b.paid_revenue_cents)-n(a.paid_revenue_cents)||n(b.views)-n(a.views)||String(a.product_name).localeCompare(String(b.product_name)));
+    const currentRows=Array.isArray(catalog?.products)?catalog.products:[];
+    const knownCost=currentRows.filter(p=>p.production_cost_min_cents!=null).length;
+    const knownMargin=currentRows.filter(p=>p.gross_product_margin_min_cents!=null).length;
+    const economicsStatus=$('productEconomicsStatus');
+    if(economicsStatus){
+      const stamp=catalog?.cache?.generated_at?dt(catalog.cache.generated_at):'unknown';
+      economicsStatus.className='callout'+(catalog?.cache?.stale?' warn':'');
+      economicsStatus.innerHTML='<strong>'+int(currentRows.length)+' current products</strong> · '+int(knownCost)+' with production cost · '+int(knownMargin)+' with margin · snapshot '+esc(stamp)+(catalog?.cache?.stale?' · cached snapshot (live refresh available above)':'');
+    }
     $('productRows').innerHTML=rows.length?rows.map(p=>{
       const minMargin=p.gross_product_margin_min_cents,maxMargin=p.gross_product_margin_max_cents;
       const priceMin=n(p.retail_min_cents), marginPct=minMargin==null?'—':pct(n(minMargin),priceMin);
@@ -421,13 +431,19 @@
     const session=await window.GEJAST_ADMIN_SESSION?.validate?.(); if(!session) throw new Error('Admin session validation failed.');
     const result=await call(action,rangePayload());
     data=result.snapshot||{}; catalog=result.catalog_costs||{}; operations=result.operations||{}; intelligence=result.intelligence||{}; adminAudit=Array.isArray(result.admin_audit)?result.admin_audit:[];
+    const partialFailures=Array.isArray(result.partial_failures)?result.partial_failures:[];
     render();
     const growthState={data,catalog,operations,intelligence,adminAudit,growth:result.growth||{},previousSnapshot:result.previous_snapshot||{},previousOperations:result.previous_operations||{}};
     window.BRUIS_SHOP_ADMIN_STATE=growthState;
     window.dispatchEvent(new CustomEvent('bruis:shop-admin-loaded',{detail:growthState}));
     if(!silent){
       const stamp=catalog?.cache?.generated_at?dt(catalog.cache.generated_at):'not available';
-      setStatus('Analytics loaded. Current product-cost snapshot: '+stamp+'.','ok');
+      const productCount=Array.isArray(catalog?.products)?catalog.products.length:0;
+      if(partialFailures.length){
+        setStatus('Core analytics loaded · '+int(productCount)+' product economics rows · cost snapshot '+stamp+'. '+partialFailures.length+' advanced section(s) are temporarily unavailable: '+partialFailures.map(x=>x.section).join(', ')+'.','warn');
+      }else{
+        setStatus('Analytics loaded · '+int(productCount)+' product economics rows · current product-cost snapshot '+stamp+'.','ok');
+      }
     }
   }
 

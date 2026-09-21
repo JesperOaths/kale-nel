@@ -100,8 +100,17 @@ async function resolveShopId(token: string, catalogPayload: any) {
 async function currentCostSnapshot(sb: any, force = false) {
   const { data: cache } = await sb.from("shop_product_cost_cache_v841").select("payload,generated_at,last_error").eq("id",1).maybeSingle();
   const age = cache?.generated_at ? Date.now() - Date.parse(cache.generated_at) : Infinity;
-  if (!force && age < COST_CACHE_MS && Array.isArray(cache?.payload?.products) && cache.payload.products.length) {
-    return { ...cache.payload, cache: { generated_at: cache.generated_at, age_seconds: Math.round(age / 1000), stale: false } };
+  if (!force && Array.isArray(cache?.payload?.products) && cache.payload.products.length) {
+    const stale = !(age < COST_CACHE_MS);
+    return {
+      ...cache.payload,
+      cache: {
+        generated_at: cache.generated_at,
+        age_seconds: Number.isFinite(age) ? Math.round(age / 1000) : null,
+        stale,
+        error: stale ? (text(cache?.last_error) || null) : null,
+      },
+    };
   }
   try {
     const { data: catalogRow, error: catalogError } = await sb.from("shop_catalog_cache_v828").select("payload,generated_at").eq("id",1).maybeSingle();
@@ -519,7 +528,7 @@ async function intelligenceBreakdown(sb: any, range: { from: string; to: string 
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(req) });
-  if (req.method === "GET") return json(req, { ok: true, mode: "shop-admin-analytics-v843", custom_admin_auth: true });
+  if (req.method === "GET") return json(req, { ok: true, mode: "shop-admin-analytics-v843", dashboard_mode: "core-first-v856", custom_admin_auth: true });
   if (req.method !== "POST") return json(req, { error: "method_not_allowed" }, 405);
   let sb: any;
   try { sb = serviceClient(); } catch { return json(req, { error: "server_not_configured" }, 503); }
@@ -567,31 +576,87 @@ Deno.serve(async (req: Request) => {
       const range = safeRange(body);
       const span = Math.max(86400000, Date.parse(range.to) - Date.parse(range.from));
       const previousRange = { from: new Date(Date.parse(range.from) - span).toISOString(), to: range.from };
-      const [currentSnapshotResult, previousSnapshotResult, catalog_costs, operations, previousOperations, intelligence] = await Promise.all([
-        sb.rpc("shop_admin_analytics_snapshot_v841", { p_from: range.from, p_to: range.to }),
-        sb.rpc("shop_admin_analytics_snapshot_v841", { p_from: previousRange.from, p_to: previousRange.to }),
-        currentCostSnapshot(sb, body?.force_cost_refresh === true),
-        operationalBreakdown(sb, range),
-        operationalBreakdown(sb, previousRange),
-        intelligenceBreakdown(sb, range),
-      ]);
+      const partial_failures: Array<{ section: string; error: string }> = [];
+      const fail = (section: string, error: unknown) => {
+        const message = text(error instanceof Error ? error.message : error).slice(0, 300) || "unknown_error";
+        partial_failures.push({ section, error: message });
+        console.warn("shop analytics partial failure", section, message);
+      };
+
+      // Core snapshot + saved product economics are the primary dashboard payload.
+      // Do not let optional/advanced sections prevent these from rendering.
+      const currentSnapshotResult = await sb.rpc("shop_admin_analytics_snapshot_v841", { p_from: range.from, p_to: range.to });
       if (currentSnapshotResult.error) throw currentSnapshotResult.error;
-      if (previousSnapshotResult.error) throw previousSnapshotResult.error;
       const snapshot = currentSnapshotResult.data;
-      const previous_snapshot = previousSnapshotResult.data;
-      await recordPriceCostHistory(sb, catalog_costs);
+
+      let previous_snapshot: any = {};
+      try {
+        const previousSnapshotResult = await sb.rpc("shop_admin_analytics_snapshot_v841", { p_from: previousRange.from, p_to: previousRange.to });
+        if (previousSnapshotResult.error) throw previousSnapshotResult.error;
+        previous_snapshot = previousSnapshotResult.data || {};
+      } catch (error) { fail("previous_snapshot", error); }
+
+      let catalog_costs: any = { products: [], cache: { stale: true, error: "cost_snapshot_unavailable" } };
+      try {
+        // Normal dashboard reads the latest saved snapshot immediately.
+        // Live Printify refresh happens only through the explicit refresh action / ops scheduler.
+        catalog_costs = await currentCostSnapshot(sb, body?.force_cost_refresh === true);
+      } catch (error) { fail("catalog_costs", error); }
+
+      let operations: any = {};
+      try { operations = await operationalBreakdown(sb, range); }
+      catch (error) { fail("operations", error); }
+
+      let previousOperations: any = {};
+      try { previousOperations = await operationalBreakdown(sb, previousRange); }
+      catch (error) { fail("previous_operations", error); }
+
+      let intelligence: any = {
+        attention: [], customer_value: {}, cohorts: [], basket_pairs: [],
+        sales_timing: [], attribution: [], last_shop_event_at: null,
+      };
+      try { intelligence = await intelligenceBreakdown(sb, range); }
+      catch (error) { fail("intelligence", error); }
+
+      try {
+        if (Array.isArray(catalog_costs?.products) && catalog_costs.products.length) {
+          await recordPriceCostHistory(sb, catalog_costs);
+        }
+      } catch (error) { fail("price_cost_history", error); }
+
       const margin_risk = marginRisk(catalog_costs);
-      const growth = await buildGrowthIntelligence(sb, {
-        range, snapshot, previousSnapshot: previous_snapshot, operations, previousOperations, intelligence, catalogCosts: catalog_costs,
-      });
-      await auditAdminAction(sb, admin, action, { metadata: {
-        from: range.from, to: range.to, margin_risk_count: margin_risk.length,
-        attention_count: intelligence.attention.length, anomaly_count: growth.anomalies.length,
-      } });
-      const admin_audit = await recentAdminAudit(sb);
+      let growth: any = {};
+      try {
+        growth = await buildGrowthIntelligence(sb, {
+          range, snapshot, previousSnapshot: previous_snapshot, operations, previousOperations, intelligence, catalogCosts: catalog_costs,
+        });
+      } catch (error) { fail("growth", error); }
+
+      try {
+        await auditAdminAction(sb, admin, action, { metadata: {
+          from: range.from, to: range.to, margin_risk_count: margin_risk.length,
+          attention_count: Array.isArray(intelligence?.attention) ? intelligence.attention.length : 0,
+          anomaly_count: Array.isArray(growth?.anomalies) ? growth.anomalies.length : 0,
+          partial_failure_count: partial_failures.length,
+        } });
+      } catch (error) { fail("admin_audit_write", error); }
+
+      let admin_audit: any[] = [];
+      try { admin_audit = await recentAdminAudit(sb); }
+      catch (error) { fail("admin_audit_read", error); }
+
       return json(req, {
-        ok: true, snapshot, previous_snapshot, catalog_costs, operations, previous_operations: previousOperations,
-        intelligence: { ...intelligence, margin_risk }, growth, admin_audit
+        ok: true,
+        snapshot,
+        previous_snapshot,
+        catalog_costs,
+        operations,
+        previous_operations: previousOperations,
+        intelligence: { ...intelligence, margin_risk },
+        growth,
+        admin_audit,
+        partial_failures,
+        dashboard_mode: "core-first-v856",
       });
     }
     if (action === "ledger_add") {
