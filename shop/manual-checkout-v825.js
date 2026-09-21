@@ -90,7 +90,8 @@
         size: variantSize(variant) || requestedSize,
         qty: Math.max(1, Math.min(10, Number(item.qty || 1))),
         image: product.image || product.mockups?.[0]?.image || item.image || '',
-        collection: product.collection || item.collection || ''
+        collection: product.collection || item.collection || '',
+        shopId: String(product.shopId || item.shopId || '')
       });
     }
     cart = next;
@@ -269,6 +270,9 @@
       customer,
       website: String(data.get('website') || ''),
       items: cart.map(item => ({
+        product_id: item.productId || item.id || '',
+        variant_id: item.variantId || '',
+        shop_id: item.shopId || '',
         name: item.name,
         size: item.size,
         sku: item.sku || '',
@@ -478,7 +482,8 @@
         size: resolvedSize,
         qty,
         image: product.image || product.mockups?.[0]?.image || '',
-        collection: product.collection
+        collection: product.collection,
+        shopId: String(product.shopId || '')
       });
     }
     saveCart();

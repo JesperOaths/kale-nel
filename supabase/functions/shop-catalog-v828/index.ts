@@ -105,30 +105,14 @@ async function loadProducts(token: string, shopId: number) {
 }
 
 function sellableCatalogScore(products: any[]) {
-  let score = 0;
-  for (const product of products) {
-    if (product?.visible === false) continue;
-    if (text(product?.title).startsWith(ROUTE_PREFIX)) continue;
+  return products.filter((product: any) => {
+    if (product?.visible === false) return false;
+    if (text(product?.title).startsWith(ROUTE_PREFIX)) return false;
     const variants = Array.isArray(product?.variants) ? product.variants : [];
-    if (!variants.some((variant: any) => variant?.is_enabled !== false)) continue;
+    const hasEnabled = variants.some((variant: any) => variant?.is_enabled !== false && variant?.is_available !== false);
     const hasMedia = (Array.isArray(product?.images) && product.images.some((image: any) => text(image?.src)))
       || (Array.isArray(product?.print_areas) && product.print_areas.length > 0);
-    if (!hasMedia) continue;
-    score += 1;
-  }
-  return score;
-}
-
-function merchandiseScore(products: any[]) {
-  return products.filter((product: any) => {
-    const haystack = [
-      product?.title,
-      product?.description,
-      ...(Array.isArray(product?.tags) ? product.tags : []),
-    ].map(text).join(" ");
-    return /(?:despinoza|spinoza|dispuut|merch)/i.test(haystack)
-      && product?.visible !== false
-      && (Array.isArray(product?.variants) ? product.variants : []).some((variant: any) => variant?.is_enabled !== false);
+    return hasEnabled && hasMedia;
   }).length;
 }
 
@@ -150,46 +134,38 @@ async function completeProducts(token: string, shopId: number, first: { rows: an
   return [...first.rows, ...remaining.flat()];
 }
 
-async function selectShopAndProducts(token: string) {
+async function loadAccountProducts(token: string) {
   const shopsPayload = await printify(token, "/shops.json");
   const shops = Array.isArray(shopsPayload) ? shopsPayload : [];
   if (!shops.length) throw new Error("no_shop_available");
 
-  const configured = text(Deno.env.get("PRINTIFY_SHOP_ID"));
-  const probes = await Promise.allSettled(shops.map(async (shop: any) => {
+  const results = await Promise.allSettled(shops.map(async (shop: any) => {
     const shopId = Number(shop?.id);
     if (!Number.isFinite(shopId)) throw new Error("invalid_shop_id");
     const first = await firstProductPage(token, shopId);
-    return {
-      shop,
-      shopId,
-      first,
-      merchCount: merchandiseScore(first.rows),
-      sellableCount: sellableCatalogScore(first.rows),
-      configured: configured && String(shopId) === configured,
-      connected: text(shop?.sales_channel).toLowerCase() !== "disconnected",
-      shopify: /shopify/i.test(text(shop?.sales_channel)),
-    };
+    const products = await completeProducts(token, shopId, first);
+    return { shop, shopId, products };
   }));
 
-  const candidates = probes
+  const readable = results
     .filter((result): result is PromiseFulfilledResult<any> => result.status === "fulfilled")
     .map(result => result.value);
 
-  if (!candidates.length) throw new Error("no_readable_printify_shop");
+  if (!readable.length) throw new Error("no_readable_printify_shop");
 
-  candidates.sort((a, b) =>
-    b.merchCount - a.merchCount
-    || b.sellableCount - a.sellableCount
-    || Number(b.configured) - Number(a.configured)
-    || Number(b.connected) - Number(a.connected)
-    || Number(b.shopify) - Number(a.shopify)
-  );
-
-  const selected = candidates[0];
-  if (!selected || !selected.sellableCount) throw new Error("no_sellable_products_in_printify_account");
-  const products = await completeProducts(token, selected.shopId, selected.first);
-  return { shop: selected.shop, products };
+  return {
+    shops: readable.map(entry => ({
+      id: String(entry.shopId),
+      title: text(entry.shop?.title),
+      salesChannel: text(entry.shop?.sales_channel),
+      productCount: entry.products.length,
+    })),
+    entries: readable.flatMap(entry => entry.products.map((product: any) => ({
+      shop: entry.shop,
+      shopId: entry.shopId,
+      product,
+    }))),
+  };
 }
 
 type ResolvedOption = { name: string; type: string; value: string };
@@ -223,11 +199,16 @@ function colorFrom(product: any, variant: any) {
 function isToteProduct(product: any) {
   return /\btote\b/i.test(text(product?.title));
 }
-function isPublicVariant(product: any, variant: any) {
-  if (variant?.is_enabled === false) return false;
-  const color = colorFrom(product, variant);
-  if (isToteProduct(product)) return /^(?:black|white)$/i.test(color);
-  return !color || /^white$/i.test(color);
+function isPublicVariant(_product: any, variant: any) {
+  return variant?.is_enabled !== false && variant?.is_available !== false;
+}
+
+function variantDisplayLabel(product: any, variant: any) {
+  const options = resolvedOptions(product, variant)
+    .map((item) => text(item.value))
+    .filter(Boolean);
+  if (options.length) return options.join(" / ");
+  return text(variant?.title) || "Default";
 }
 function collectionFor(product: any) {
   const title = text(product?.title);
@@ -298,26 +279,30 @@ function mediaFor(product: any) {
     .sort((a: any, b: any) => a.index - b.index);
   return media.slice(0, 24).map(({ image, label, variantIds }: any) => ({ image, label, variantIds }));
 }
-function publicProduct(product: any, fx: any) {
+function publicProduct(product: any, fx: any, shopId: number, shop: any) {
   const variants = (Array.isArray(product?.variants) ? product.variants : [])
     .filter((variant: any) => isPublicVariant(product, variant))
     .map((variant: any) => ({
       id: String(variant?.id || ""),
       sku: text(variant?.sku),
       title: text(variant?.title),
-      size: sizeFrom(product, variant),
-      color: colorFrom(product, variant) || "White",
+      size: sizeFrom(product, variant) || variantDisplayLabel(product, variant),
+      label: variantDisplayLabel(product, variant),
+      color: colorFrom(product, variant),
       price: retailEurCentsFromUsdCost(variant?.cost, fx, MARGIN_CENTS) / 100,
       is_enabled: variant?.is_enabled !== false,
       is_available: variant?.is_available !== false,
       options: resolvedOptions(product, variant).map((item) => ({ name: item.name, value: item.value })),
     }))
-    .filter((variant: any) => variant.id && variant.size && variant.price > 0);
+    .filter((variant: any) => variant.id && variant.price > 0);
   const available = variants.filter((variant: any) => variant.is_available !== false && variant.is_enabled !== false);
   const priced = available;
   const prices = priced.map((variant: any) => variant.price);
   const sizes: string[] = [];
-  for (const variant of priced) if (variant.size && !sizes.includes(variant.size)) sizes.push(variant.size);
+  for (const variant of priced) {
+    const label = text(variant.label || variant.size || variant.title) || "Default";
+    if (!sizes.includes(label)) sizes.push(label);
+  }
   const artwork = artworkFor(product);
   const garment = mediaFor(product);
   const mediaSeen = new Set<string>();
@@ -330,7 +315,8 @@ function publicProduct(product: any, fx: any) {
   const colors = [...new Set(priced.map((variant: any) => text(variant?.color)).filter(Boolean))];
   const selectorType = isToteProduct(product) ? "handle-color" : "size";
   return {
-    id: text(product?.id), source: "bruis-direct-v838", name: publicTitle(product), description: text(product?.description),
+    id: text(product?.id), source: "printify-live-v850", shopId: String(shopId), shopTitle: text(shop?.title),
+    name: text(product?.title) || publicTitle(product), description: text(product?.description),
     collection, price: prices.length ? Math.min(...prices) : 0, priceMax: prices.length ? Math.max(...prices) : 0,
     sizes, colors, selectorType, mockups, image: mockups[0]?.image || "", baseKey: String(product?.blueprint_id || "shirt"),
     baseLabel: /\btote\b/i.test(text(product?.title)) ? "Tote Bag" : collection === "boxy" ? "Oversized Boxy T-Shirt" : "Classic T-Shirt",
@@ -341,14 +327,22 @@ function publicProduct(product: any, fx: any) {
 async function buildCatalog(supabase: any) {
   const token = await resolveToken(supabase);
   const fx = await resolveUsdEurRate(supabase);
-  const { shop, products } = await selectShopAndProducts(token);
-  const cleanProducts = products
-    .filter((product: any) => product?.visible !== false && !text(product?.title).startsWith(ROUTE_PREFIX))
-    .map((product: any) => publicProduct(product, fx))
+  const account = await loadAccountProducts(token);
+
+  const cleanProducts = account.entries
+    .filter((entry: any) => entry.product?.visible !== false && !text(entry.product?.title).startsWith(ROUTE_PREFIX))
+    .map((entry: any) => publicProduct(entry.product, fx, entry.shopId, entry.shop))
     .filter((product: any) => product.id && product.name && product.price > 0 && product.mockups.length > 0 && product.variants.length > 0);
+
+  if (!cleanProducts.length) throw new Error("no_sellable_products_in_printify_account");
+
   return {
-    generatedAt: new Date().toISOString(), source: "bruis-direct-v838", catalogSelection: "account-wide-fast-probe-v850", fx: fxAuditSnapshot(fx),
-    shop: { id: String(shop?.id || ""), salesChannel: text(shop?.sales_channel) }, products: cleanProducts,
+    generatedAt: new Date().toISOString(),
+    source: "printify-live-v850",
+    catalogSelection: "all-readable-printify-shops-v850",
+    fx: fxAuditSnapshot(fx),
+    shops: account.shops,
+    products: cleanProducts,
   };
 }
 
@@ -382,7 +376,7 @@ Deno.serve(async (req: Request) => {
 
   const payload = row?.payload && typeof row.payload === "object" ? row.payload : { products: [] };
   const products = Array.isArray(payload?.products) ? payload.products : [];
-  const selectionCurrent = payload?.catalogSelection === "account-wide-fast-probe-v850";
+  const selectionCurrent = payload?.catalogSelection === "all-readable-printify-shops-v850";
   const generatedMs = row?.generated_at ? Date.parse(row.generated_at) : 0;
   const refreshStartedMs = row?.refresh_started_at ? Date.parse(row.refresh_started_at) : 0;
   const ageMs = generatedMs ? Math.max(0, Date.now() - generatedMs) : Number.POSITIVE_INFINITY;

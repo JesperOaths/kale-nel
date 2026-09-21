@@ -62,6 +62,7 @@ function normalizeProduct(raw){
     image: mockups[0]?.image || raw.image || '',
     baseLabel: raw.baseLabel || 'Shirt base pending',
     variants: Array.isArray(raw.variants) ? raw.variants.map(variant => ({ ...variant, price: wholeEuro(variant.price) })) : [],
+    shopId: String(raw.shopId || raw.shop_id || ''),
     collection
   };
 }
