@@ -556,6 +556,26 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(req) });
   if (req.method !== "GET") return json(req, { error: "method_not_allowed" }, 405);
   const url = new URL(req.url);
+  if (url.searchParams.get("blueprint_meta") === "1") {
+    let sb: any;
+    try { sb = serviceClient(); } catch { sb = null; }
+    try {
+      const token = await resolveToken(sb);
+      const ids = [6, 1382, 1753, 1389];
+      const entries = await Promise.all(ids.map(async id => {
+        try {
+          const bp = await printify(token, `/catalog/blueprints/${id}.json`, 5000);
+          return { id, title: text(bp?.title), brand: text(bp?.brand), model: text(bp?.model) };
+        } catch (error) {
+          return { id, error: error instanceof Error ? error.message : "lookup_failed" };
+        }
+      }));
+      return json(req, { ok: true, blueprints: entries });
+    } catch (error) {
+      return json(req, { ok: false, error: error instanceof Error ? error.message : "lookup_failed" }, 503);
+    }
+  }
+
   if (url.searchParams.get("bootstrap") === "1") {
     return json(req, {
       ok: true,
