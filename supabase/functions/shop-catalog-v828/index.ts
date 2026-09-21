@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import postgres from "npm:postgres@3.4.7";
-import { fxAuditSnapshot, resolveUsdEurRate, retailEurCentsFromUsdCost } from "../_shared/shop-fx.mjs";
+import { fxAuditSnapshot, parseEcbUsdRate, retailEurCentsFromUsdCost } from "../_shared/shop-fx.mjs";
 
 const PRINTIFY_BASE = "https://api.printify.com/v1";
 const CACHE_FRESH_MS = 60_000;
@@ -61,6 +61,154 @@ function serviceClient() {
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !key) throw new Error("server_not_configured");
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+}
+
+function directDb() {
+  const dbUrl = text(Deno.env.get("SUPABASE_DB_URL"));
+  if (!dbUrl) throw new Error("database_url_missing");
+  return postgres(dbUrl, {
+    max: 1,
+    prepare: false,
+    connect_timeout: 6,
+    idle_timeout: 2,
+    max_lifetime: 30,
+  });
+}
+
+async function readCatalogCacheDirect() {
+  const sql = directDb();
+  try {
+    const rows = await sql`
+      select payload, generated_at, refresh_started_at
+      from public.shop_catalog_cache_v828
+      where id = 1
+      limit 1
+    `;
+    return rows?.[0] || null;
+  } finally {
+    try { await sql.end({ timeout: 1 }); } catch {}
+  }
+}
+
+async function updateCatalogCacheDirect(values: {
+  payload?: any;
+  generated_at?: string | null;
+  refresh_started_at?: string | null;
+  last_error?: string | null;
+}) {
+  const sql = directDb();
+  try {
+    const now = new Date().toISOString();
+    if (Object.prototype.hasOwnProperty.call(values, "payload")) {
+      await sql`
+        update public.shop_catalog_cache_v828
+        set payload = ${sql.json(values.payload)},
+            generated_at = ${values.generated_at || now},
+            refresh_started_at = ${values.refresh_started_at ?? null},
+            last_error = ${values.last_error ?? null},
+            updated_at = ${now}
+        where id = 1
+      `;
+    } else {
+      await sql`
+        update public.shop_catalog_cache_v828
+        set refresh_started_at = coalesce(${values.refresh_started_at ?? null}, refresh_started_at),
+            last_error = ${values.last_error ?? null},
+            updated_at = ${now}
+        where id = 1
+      `;
+    }
+  } finally {
+    try { await sql.end({ timeout: 1 }); } catch {}
+  }
+}
+
+function normalizeFxRow(row: any, stale = false) {
+  const rate = Number(row?.rate);
+  if (!Number.isFinite(rate) || rate <= 0 || rate >= 10) return null;
+  return {
+    pair: "USD_EUR",
+    base_currency: "USD",
+    quote_currency: "EUR",
+    rate,
+    source: text(row?.source) || "ecb_reference",
+    source_rate: Number.isFinite(Number(row?.source_rate)) ? Number(row.source_rate) : null,
+    observed_on: text(row?.observed_on),
+    fetched_at: text(row?.fetched_at),
+    stale,
+  };
+}
+
+async function resolveUsdEurRateDirect() {
+  let cached: any = null;
+  const sql = directDb();
+  try {
+    const rows = await sql`
+      select pair, base_currency, quote_currency, rate, source, source_rate, observed_on, fetched_at
+      from public.shop_fx_rates
+      where pair = 'USD_EUR'
+      limit 1
+    `;
+    cached = normalizeFxRow(rows?.[0]);
+  } catch {}
+  finally {
+    try { await sql.end({ timeout: 1 }); } catch {}
+  }
+
+  const now = Date.now();
+  const fetchedMs = cached?.fetched_at ? Date.parse(cached.fetched_at) : 0;
+  const observedMs = cached?.observed_on ? Date.parse(`${cached.observed_on}T00:00:00Z`) : 0;
+  if (cached && fetchedMs && observedMs && now - fetchedMs <= 6 * 60 * 60 * 1000 && now - observedMs <= 7 * 24 * 60 * 60 * 1000) {
+    return cached;
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
+  try {
+    const response = await fetch("https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml", {
+      signal: controller.signal,
+      headers: { Accept: "application/xml,text/xml;q=0.9,*/*;q=0.1", "User-Agent": "Kalenel-Shop-FX/8.50" },
+    });
+    if (!response.ok) throw new Error(`ecb_${response.status}`);
+    const parsed = parseEcbUsdRate(await response.text());
+    const live = {
+      pair: "USD_EUR",
+      base_currency: "USD",
+      quote_currency: "EUR",
+      rate: parsed.usd_eur,
+      source: "ecb_reference",
+      source_rate: parsed.eur_usd,
+      observed_on: parsed.observed_on,
+      fetched_at: new Date().toISOString(),
+      stale: false,
+    };
+    const write = directDb();
+    try {
+      await write`
+        insert into public.shop_fx_rates
+          (pair, base_currency, quote_currency, rate, source, source_rate, observed_on, fetched_at, updated_at)
+        values
+          ('USD_EUR','USD','EUR',${live.rate},${live.source},${live.source_rate},${live.observed_on},${live.fetched_at},now())
+        on conflict (pair) do update set
+          base_currency = excluded.base_currency,
+          quote_currency = excluded.quote_currency,
+          rate = excluded.rate,
+          source = excluded.source,
+          source_rate = excluded.source_rate,
+          observed_on = excluded.observed_on,
+          fetched_at = excluded.fetched_at,
+          updated_at = now()
+      `;
+    } finally {
+      try { await write.end({ timeout: 1 }); } catch {}
+    }
+    return live;
+  } catch (error) {
+    if (cached && observedMs && now - observedMs <= 7 * 24 * 60 * 60 * 1000) return { ...cached, stale: true };
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function printify(token: string, path: string, timeoutMs = 6500) {
@@ -354,7 +502,7 @@ function publicProduct(product: any, fx: any, shopId: number, shop: any) {
 
 async function buildCatalog(supabase: any) {
   const token = await resolveToken(supabase);
-  const fx = await resolveUsdEurRate(supabase);
+  const fx = await resolveUsdEurRateDirect();
   const account = await loadAccountProducts(token);
 
   const cleanProducts = account.entries
@@ -378,14 +526,28 @@ async function refreshCatalog(supabase: any) {
   try {
     const payload = await buildCatalog(supabase);
     const now = new Date().toISOString();
-    const { error } = await supabase.from("shop_catalog_cache_v828").update({
-      payload, generated_at: now, refresh_started_at: null, last_error: null, updated_at: now,
-    }).eq("id", 1);
-    if (error) throw error;
+    await updateCatalogCacheDirect({
+      payload,
+      generated_at: now,
+      refresh_started_at: null,
+      last_error: null,
+    });
   } catch (error) {
-    const now = new Date().toISOString();
     const message = text(error instanceof Error ? error.message : error).slice(0, 500);
-    await supabase.from("shop_catalog_cache_v828").update({ refresh_started_at: null, last_error: message, updated_at: now }).eq("id", 1);
+    try {
+      const sql = directDb();
+      try {
+        await sql`
+          update public.shop_catalog_cache_v828
+          set refresh_started_at = null,
+              last_error = ${message},
+              updated_at = now()
+          where id = 1
+        `;
+      } finally {
+        try { await sql.end({ timeout: 1 }); } catch {}
+      }
+    } catch {}
     console.error("shop-catalog-v828 refresh failed", error instanceof Error ? error.name : "unknown");
   }
 }
@@ -474,12 +636,11 @@ Deno.serve(async (req: Request) => {
     });
   }
   let supabase: any;
-  try { supabase = serviceClient(); } catch { return json(req, { error: "server_not_configured", products: [] }, 503); }
+  try { supabase = serviceClient(); } catch { supabase = null; }
 
-  const { data: row, error } = await supabase.from("shop_catalog_cache_v828")
-    .select("payload,generated_at,refresh_started_at")
-    .eq("id", 1).maybeSingle();
-  if (error) return json(req, { error: "cache_unavailable", products: [] }, 503);
+  let row: any = null;
+  try { row = await readCatalogCacheDirect(); }
+  catch { return json(req, { error: "cache_unavailable", products: [] }, 503); }
 
   const payload = row?.payload && typeof row.payload === "object" ? row.payload : { products: [] };
   const products = Array.isArray(payload?.products) ? payload.products : [];
@@ -497,14 +658,20 @@ Deno.serve(async (req: Request) => {
   if (!products.length || !selectionCurrent) {
     if (!refreshLeaseActive) {
       const now = new Date().toISOString();
-      const { error: leaseError } = await supabase.from("shop_catalog_cache_v828").update({
-        refresh_started_at: now,
-        updated_at: now,
-      }).eq("id", 1);
-      if (!leaseError) {
+      try {
+        const sql = directDb();
+        try {
+          await sql`
+            update public.shop_catalog_cache_v828
+            set refresh_started_at = ${now}, updated_at = ${now}
+            where id = 1
+          `;
+        } finally {
+          try { await sql.end({ timeout: 1 }); } catch {}
+        }
         refreshScheduled = true;
         EdgeRuntime.waitUntil(refreshCatalog(supabase));
-      }
+      } catch {}
     }
 
     if (url.searchParams.get("health") === "1") {
@@ -537,11 +704,20 @@ Deno.serve(async (req: Request) => {
 
   if (stale && !refreshLeaseActive) {
     const now = new Date().toISOString();
-    const { error: leaseError } = await supabase.from("shop_catalog_cache_v828").update({ refresh_started_at: now, updated_at: now }).eq("id", 1);
-    if (!leaseError) {
+    try {
+      const sql = directDb();
+      try {
+        await sql`
+          update public.shop_catalog_cache_v828
+          set refresh_started_at = ${now}, updated_at = ${now}
+          where id = 1
+        `;
+      } finally {
+        try { await sql.end({ timeout: 1 }); } catch {}
+      }
       refreshScheduled = true;
       EdgeRuntime.waitUntil(refreshCatalog(supabase));
-    }
+    } catch {}
   }
 
   if (url.searchParams.get("health") === "1") {
