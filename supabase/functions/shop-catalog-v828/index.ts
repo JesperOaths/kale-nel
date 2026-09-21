@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import postgres from "npm:postgres@3.4.7";
 import { fxAuditSnapshot, resolveUsdEurRate, retailEurCentsFromUsdCost } from "../_shared/shop-fx.mjs";
 
 const PRINTIFY_BASE = "https://api.printify.com/v1";
@@ -87,11 +88,38 @@ async function printify(token: string, path: string, timeoutMs = 6500) {
 async function resolveToken(supabase: any) {
   const envToken = text(Deno.env.get("PRINTIFY_API_TOKEN"));
   if (envToken) return envToken;
+
+  const dbUrl = text(Deno.env.get("SUPABASE_DB_URL"));
+  if (dbUrl) {
+    let sql: any = null;
+    try {
+      sql = postgres(dbUrl, {
+        max: 1,
+        prepare: false,
+        connect_timeout: 6,
+        idle_timeout: 2,
+        max_lifetime: 30,
+      });
+      const rows = await sql`
+        select decrypted_secret
+        from vault.decrypted_secrets
+        where name = 'kalenel_printify_api_token'
+        order by updated_at desc nulls last, created_at desc
+        limit 1
+      `;
+      const directToken = text(rows?.[0]?.decrypted_secret);
+      if (directToken) return directToken;
+    } catch (error) {
+      console.warn("Direct Vault token lookup failed", error instanceof Error ? error.name : "unknown");
+    } finally {
+      try { if (sql) await sql.end({ timeout: 1 }); } catch {}
+    }
+  }
+
   const { data, error } = await supabase.rpc("get_printify_api_token_v815a");
   if (error || !text(data)) throw new Error("production_connection_missing");
   return text(data);
 }
-
 async function loadProducts(token: string, shopId: number) {
   const rows: any[] = [];
   for (let page = 1; page <= MAX_PAGES; page += 1) {
