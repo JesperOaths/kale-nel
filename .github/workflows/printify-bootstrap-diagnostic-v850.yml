@@ -1,4 +1,4 @@
-name: Read Printify blueprint metadata
+name: Read raw Printify titles
 
 on:
   push:
@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Read public blueprint metadata through catalog bridge
+      - name: Read raw product titles
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail-with-body --silent --show-error --max-time 20 \
-            'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828?blueprint_meta=1'
+          curl --fail-with-body --silent --show-error --max-time 25 \
+            'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828?raw_titles=1'
           echo
