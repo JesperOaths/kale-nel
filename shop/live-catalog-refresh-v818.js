@@ -115,6 +115,7 @@
 
       if(!lastSignature){
         lastSignature = signature;
+        if(!Array.isArray(products) || !products.length) applyCatalog(live);
         return;
       }
 

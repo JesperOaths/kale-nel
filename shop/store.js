@@ -96,24 +96,20 @@ async function loadLiveCatalog(){
 }
 
 async function loadCatalog(){
-  const liveProducts = await loadLiveCatalog();
-  if(liveProducts.length) return sortByShirtBase(liveProducts);
-
-  if(window.BRUIS_CATALOG){
-    const rawProducts = Array.isArray(window.BRUIS_CATALOG) ? window.BRUIS_CATALOG : (window.BRUIS_CATALOG.products || []);
-    const imported = rawProducts.map(normalizeProduct).filter(p => p.name && p.mockups.length && p.price > 0);
-    if(imported.length) return sortByShirtBase(imported);
+  for(let attempt = 0; attempt < 3; attempt += 1){
+    const liveProducts = await loadLiveCatalog();
+    if(liveProducts.length) return sortByShirtBase(liveProducts);
+    if(attempt < 2) await new Promise(resolve => window.setTimeout(resolve, 1200 * (attempt + 1)));
   }
-  try {
-    const response = await fetch('catalog.json?v=20260902-shop-commerce-v817', { cache: 'no-store' });
-    if(response.ok){
-      const payload = await response.json();
-      const rawProducts = Array.isArray(payload) ? payload : (payload.products || []);
-      const imported = rawProducts.map(normalizeProduct).filter(p => p.name && p.mockups.length && p.price > 0);
-      if(imported.length) return sortByShirtBase(imported);
-    }
-  } catch {}
-  return FALLBACK_PRODUCTS;
+  return [];
+}
+
+function setCollectionCountsStatus(label){
+  Object.keys(COLLECTIONS).forEach(key => {
+    qsa(`[data-collection-count="${key}"]`).forEach(el => {
+      el.textContent = label;
+    });
+  });
 }
 
 function productsForCollection(collection = selectedCollection){
@@ -342,11 +338,12 @@ document.addEventListener('click', event => {
 
 loadCatalog().then(list => {
   products = list;
-  updateCollectionCounts();
+  if(products.length) updateCollectionCounts();
+  else setCollectionCountsStatus('Refreshing live catalog…');
   renderCart();
 
   const requested = new URLSearchParams(window.location.search).get('collection');
-  if(COLLECTIONS[requested]){
+  if(products.length && COLLECTIONS[requested]){
     selectedCollection = requested;
     renderProducts();
     openShoppingView({ scroll: false });
