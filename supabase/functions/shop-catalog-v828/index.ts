@@ -62,19 +62,26 @@ function serviceClient() {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
-async function printify(token: string, path: string) {
-  const response = await fetch(`${PRINTIFY_BASE}${path}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "User-Agent": "Kalenel-Direct-Catalog/8.38",
-    },
-  });
-  const raw = await response.text();
-  let payload: any = null;
-  try { payload = raw ? JSON.parse(raw) : null; } catch { payload = raw; }
-  if (!response.ok) throw new Error(`printify_${response.status}:${text(payload?.message || payload?.error || raw).slice(0, 180)}`);
-  return payload;
+async function printify(token: string, path: string, timeoutMs = 6500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(`${PRINTIFY_BASE}${path}`, {
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "User-Agent": "Kalenel-Direct-Catalog/8.50",
+      },
+    });
+    const raw = await response.text();
+    let payload: any = null;
+    try { payload = raw ? JSON.parse(raw) : null; } catch { payload = raw; }
+    if (!response.ok) throw new Error(`printify_${response.status}:${text(payload?.message || payload?.error || raw).slice(0, 180)}`);
+    return payload;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function resolveToken(supabase: any) {
@@ -112,45 +119,77 @@ function sellableCatalogScore(products: any[]) {
   return score;
 }
 
+function merchandiseScore(products: any[]) {
+  return products.filter((product: any) => {
+    const haystack = [
+      product?.title,
+      product?.description,
+      ...(Array.isArray(product?.tags) ? product.tags : []),
+    ].map(text).join(" ");
+    return /(?:despinoza|spinoza|dispuut|merch)/i.test(haystack)
+      && product?.visible !== false
+      && (Array.isArray(product?.variants) ? product.variants : []).some((variant: any) => variant?.is_enabled !== false);
+  }).length;
+}
+
+async function firstProductPage(token: string, shopId: number) {
+  const payload = await printify(token, `/shops/${shopId}/products.json?limit=50&page=1`);
+  return {
+    rows: Array.isArray(payload?.data) ? payload.data : [],
+    lastPage: Math.max(1, Number(payload?.last_page || 1)),
+  };
+}
+
+async function completeProducts(token: string, shopId: number, first: { rows: any[]; lastPage: number }) {
+  if (first.lastPage <= 1) return first.rows;
+  const pages = Array.from({ length: Math.min(MAX_PAGES, first.lastPage) - 1 }, (_, index) => index + 2);
+  const remaining = await Promise.all(pages.map(async page => {
+    const payload = await printify(token, `/shops/${shopId}/products.json?limit=50&page=${page}`);
+    return Array.isArray(payload?.data) ? payload.data : [];
+  }));
+  return [...first.rows, ...remaining.flat()];
+}
+
 async function selectShopAndProducts(token: string) {
   const shopsPayload = await printify(token, "/shops.json");
   const shops = Array.isArray(shopsPayload) ? shopsPayload : [];
   if (!shops.length) throw new Error("no_shop_available");
 
   const configured = text(Deno.env.get("PRINTIFY_SHOP_ID"));
-  const candidates: any[] = [];
-
-  for (const shop of shops) {
+  const probes = await Promise.allSettled(shops.map(async (shop: any) => {
     const shopId = Number(shop?.id);
-    if (!Number.isFinite(shopId)) continue;
-    try {
-      const products = await loadProducts(token, shopId);
-      candidates.push({
-        shop,
-        products,
-        sellableCount: sellableCatalogScore(products),
-        configured: configured && String(shopId) === configured,
-        connected: text(shop?.sales_channel).toLowerCase() !== "disconnected",
-        shopify: /shopify/i.test(text(shop?.sales_channel)),
-      });
-    } catch (error) {
-      console.warn("Printify shop catalog probe failed", String(shopId), error instanceof Error ? error.name : "unknown");
-    }
-  }
+    if (!Number.isFinite(shopId)) throw new Error("invalid_shop_id");
+    const first = await firstProductPage(token, shopId);
+    return {
+      shop,
+      shopId,
+      first,
+      merchCount: merchandiseScore(first.rows),
+      sellableCount: sellableCatalogScore(first.rows),
+      configured: configured && String(shopId) === configured,
+      connected: text(shop?.sales_channel).toLowerCase() !== "disconnected",
+      shopify: /shopify/i.test(text(shop?.sales_channel)),
+    };
+  }));
+
+  const candidates = probes
+    .filter((result): result is PromiseFulfilledResult<any> => result.status === "fulfilled")
+    .map(result => result.value);
 
   if (!candidates.length) throw new Error("no_readable_printify_shop");
 
   candidates.sort((a, b) =>
-    b.sellableCount - a.sellableCount
+    b.merchCount - a.merchCount
+    || b.sellableCount - a.sellableCount
     || Number(b.configured) - Number(a.configured)
     || Number(b.connected) - Number(a.connected)
     || Number(b.shopify) - Number(a.shopify)
-    || Number(b.products.length) - Number(a.products.length)
   );
 
   const selected = candidates[0];
   if (!selected || !selected.sellableCount) throw new Error("no_sellable_products_in_printify_account");
-  return { shop: selected.shop, products: selected.products };
+  const products = await completeProducts(token, selected.shopId, selected.first);
+  return { shop: selected.shop, products };
 }
 
 type ResolvedOption = { name: string; type: string; value: string };
@@ -308,7 +347,7 @@ async function buildCatalog(supabase: any) {
     .map((product: any) => publicProduct(product, fx))
     .filter((product: any) => product.id && product.name && product.price > 0 && product.mockups.length > 0 && product.variants.length > 0);
   return {
-    generatedAt: new Date().toISOString(), source: "bruis-direct-v838", catalogSelection: "account-wide-best-shop-v849", fx: fxAuditSnapshot(fx),
+    generatedAt: new Date().toISOString(), source: "bruis-direct-v838", catalogSelection: "account-wide-fast-probe-v850", fx: fxAuditSnapshot(fx),
     shop: { id: String(shop?.id || ""), salesChannel: text(shop?.sales_channel) }, products: cleanProducts,
   };
 }
@@ -343,7 +382,7 @@ Deno.serve(async (req: Request) => {
 
   const payload = row?.payload && typeof row.payload === "object" ? row.payload : { products: [] };
   const products = Array.isArray(payload?.products) ? payload.products : [];
-  const selectionCurrent = payload?.catalogSelection === "account-wide-best-shop-v849";
+  const selectionCurrent = payload?.catalogSelection === "account-wide-fast-probe-v850";
   const generatedMs = row?.generated_at ? Date.parse(row.generated_at) : 0;
   const refreshStartedMs = row?.refresh_started_at ? Date.parse(row.refresh_started_at) : 0;
   const ageMs = generatedMs ? Math.max(0, Date.now() - generatedMs) : Number.POSITIVE_INFINITY;
