@@ -36,15 +36,10 @@ jobs:
               -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
               "https://api.supabase.com/v1/projects/$PROJECT_REF/health?services=db&services=pooler&services=rest" || true)"
             echo "$body"
-            if printf '%s' "$body" | python3 -c '
-import json,sys
-try:
-  rows=json.load(sys.stdin)
-  by={x.get("name"):x.get("healthy") for x in rows if isinstance(x,dict)}
-  raise SystemExit(0 if by.get("db") is True and by.get("rest") is True and by.get("pooler") is True else 1)
-except Exception:
-  raise SystemExit(1)
-'; then
+            if printf '%s' "$body" | jq -e '
+              (map({key:.name,value:.healthy}) | from_entries) as $h
+              | ($h.db == true and $h.rest == true and $h.pooler == true)
+            ' >/dev/null; then
               echo "Supabase database, REST, and pooler are healthy."
               exit 0
             fi
