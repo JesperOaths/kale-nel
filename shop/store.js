@@ -6,6 +6,18 @@ const LIVE_CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/
 // only the sanitized catalog projection.
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpcW50YXpnbnJ4d2xpYWlka215Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MjkxNDUsImV4cCI6MjA4OTUwNTE0NX0.w21i9sYLybl0auVSJpc0OFwRoE3a-rRcJG8NtUF_xn8';
 const SIZE_ORDER = ['XS','S','M','L','XL','2XL','3XL','4XL','5XL'];
+
+function shirtSizes(raw, baseKey){
+  if(!SIZE_GUIDES[baseKey]) return Array.isArray(raw.sizes) ? raw.sizes : [];
+  const variants = Array.isArray(raw.variants) ? raw.variants : [];
+  const found = [...new Set(variants.map(variant => String(variant?.size || '').trim().toUpperCase()).filter(Boolean))];
+  return found.sort((a,b) => {
+    const ai = SIZE_ORDER.indexOf(a);
+    const bi = SIZE_ORDER.indexOf(b);
+    return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi) || a.localeCompare(b);
+  });
+}
+
 const SIZE_GUIDES = {
   '6': {
     label: 'Gildan 5000 Heavy Cotton T-Shirt',
@@ -70,11 +82,11 @@ function renderSizeGuide(product){
   const guide = product ? SIZE_GUIDES[String(product.baseKey || '')] : null;
   if(!guide){
     tray.hidden = true;
-    document.body.classList.remove('has-size-guide');
+    document.document.documentElement.classList.remove('size-guide-visible');
     return;
   }
   tray.hidden = false;
-  document.body.classList.add('has-size-guide');
+  document.document.documentElement.classList.add('size-guide-visible');
   qs('[data-size-guide-title]').textContent = `${product.name} · Size guide`;
   qs('[data-size-guide-subtitle]').textContent = `${guide.label} · garment measurements, not body measurements`;
   qs('[data-size-guide-note]').textContent = guide.tolerance;
@@ -419,7 +431,7 @@ function renderProducts(){
       </div>
     </article>`).join('');
   initializeGalleries();
-  initializeSizeGuideTracking();
+  initializeSizeGuide();
 }
 
 function openShoppingView({ scroll = true } = {}){
