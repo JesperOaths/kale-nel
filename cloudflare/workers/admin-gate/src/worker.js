@@ -77,23 +77,19 @@ async function handlePublicApex(request, env, url) {
   if (!isSafePath(url.pathname)) return notFound();
   if (isSecurityPath(url.pathname)) return await handlePublicSecurity(request, env, url);
   if (!isProtectedPublicPath(url.pathname)) {
-    const isShopDocument = request.method === 'GET' || request.method === 'HEAD'
-      ? (url.pathname === '/shop/' || url.pathname === '/shop/index.html')
-      : false;
+    const isShopDocument = (request.method === 'GET' || request.method === 'HEAD')
+      && (url.pathname === '/shop/' || url.pathname === '/shop/index.html');
 
-    let response;
-    if (isShopDocument) {
-      const originUrl = new URL(url.toString());
-      originUrl.searchParams.set('__kalenel_origin_build', PUBLIC_SHOP_ORIGIN_BUILD);
-      const originRequest = new Request(originUrl.toString(), request);
-      response = await fetch(originRequest, { cf: { cacheEverything: false, cacheTtl: 0 } });
-    } else {
-      response = await fetch(request);
+    if (!isShopDocument) {
+      const response = await fetch(request);
+      return withPublicSecurityHeaders(response);
     }
 
+    const originUrl = new URL(url.toString());
+    originUrl.searchParams.set('__kalenel_origin_build', PUBLIC_SHOP_ORIGIN_BUILD);
+    const originRequest = new Request(originUrl.toString(), request);
+    const response = await fetch(originRequest, { cf: { cacheEverything: false, cacheTtl: 0 } });
     const secured = withPublicSecurityHeaders(response);
-    if (!isShopDocument) return secured;
-
     const headers = new Headers(secured.headers);
     headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
     headers.set('Pragma', 'no-cache');

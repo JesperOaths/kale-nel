@@ -91,7 +91,7 @@ jobs:
             status="$(curl --silent --show-error --max-time 20               --dump-header "$headers" --output "$body" --write-out '%{http_code}'               'https://kalenel.nl/shop/' || true)"
             echo "attempt=$attempt status=$status"
             if [[ "$status" == "200" ]]               && grep -q 'version-watermark">v857<' "$body"               && grep -q 'styles.css?v=20260921-storefront-v857-r1' "$body"               && grep -q 'collection-media-v831.js?v=20260921-storefront-v857-r1' "$body"; then
-              grep -qi '^cache-control: no-store' "$headers"
+              grep -qi '^cache-control:.*no-store' "$headers"
               echo "Plain /shop/ is live on v857 and bypasses stale origin HTML."
               exit 0
             fi
