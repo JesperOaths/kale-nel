@@ -1,4 +1,4 @@
-name: Force v851 catalog refresh
+name: Force v851 catalog refresh (final)
 
 on:
   push:
