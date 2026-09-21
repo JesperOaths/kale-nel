@@ -9,7 +9,7 @@
   <meta property="og:description" content="Nature-inspired tees and Merch." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://kalenel.nl/shop/" />
-  <link rel="stylesheet" href="styles.css?v=20260921-storefront-v852-r1" />
+  <link rel="stylesheet" href="styles.css?v=20260921-storefront-v853-r1" />
   <link rel="stylesheet" href="storefront-polish-v832.css?v=20260916-storefront-v837-r1" />
 </head>
 <body>
@@ -104,30 +104,32 @@
     </div>
   </aside>
 
-  <aside class="size-guide-popover" id="shirt-size-guide" data-size-guide-panel hidden aria-label="Shirt size chart">
-    <div class="size-guide-head">
-      <div class="size-guide-ident">
-        <strong data-size-guide-product>Shirt size chart</strong>
-        <span data-size-guide-base></span>
+  <div class="size-guide-modal" data-size-guide-overlay hidden>
+    <aside class="size-guide-popover" id="shirt-size-guide" data-size-guide-panel role="dialog" aria-modal="true" aria-labelledby="shirt-size-guide-title">
+      <div class="size-guide-head">
+        <div class="size-guide-ident">
+          <strong id="shirt-size-guide-title" data-size-guide-product>Shirt size chart</strong>
+          <span data-size-guide-base></span>
+        </div>
+        <button class="size-guide-close" type="button" data-close-size-guide aria-label="Close size chart">×</button>
       </div>
-      <button class="size-guide-close" type="button" data-close-size-guide aria-label="Close size chart">×</button>
-    </div>
-    <div class="size-guide-toolbar">
-      <span>Garment measurements</span>
-      <div class="size-guide-unit-toggle" role="group" aria-label="Size chart units">
-        <button type="button" class="active" data-size-guide-unit="metric" aria-pressed="true">CM</button>
-        <button type="button" data-size-guide-unit="imperial" aria-pressed="false">IN</button>
+      <div class="size-guide-toolbar">
+        <span>Garment measurements</span>
+        <div class="size-guide-unit-toggle" role="group" aria-label="Size chart units">
+          <button type="button" class="active" data-size-guide-unit="metric" aria-pressed="true">CM</button>
+          <button type="button" data-size-guide-unit="imperial" aria-pressed="false">IN</button>
+        </div>
       </div>
-    </div>
-    <div class="size-guide-scroll" tabindex="0" aria-label="Scrollable shirt measurements">
-      <table class="size-guide-table" data-size-guide-table></table>
-    </div>
-  </aside>
+      <div class="size-guide-scroll" tabindex="0" aria-label="Scrollable shirt measurements">
+        <table class="size-guide-table" data-size-guide-table></table>
+      </div>
+    </aside>
+  </div>
 
-  <footer class="footer">Bruis - Nature-inspired clothing. <span class="version-watermark">v852</span></footer>
+  <footer class="footer">Bruis - Nature-inspired clothing. <span class="version-watermark">v853</span></footer>
   <script src="delivery-estimate-v833.js?v=20260916-delivery-v840-r1" data-delivery-estimate-v833 defer></script>
   <script src="direct-commerce-v832.js?v=20260916-storefront-v837-r1" defer></script>
-  <script src="store.js?v=20260921-storefront-v852-r1" defer></script>
+  <script src="store.js?v=20260921-storefront-v853-r1" defer></script>
   <script src="shop-analytics-v841.js?v=20260920-shop-analytics-v841-r1" defer></script>
   <script src="tote-handle-color-v839.js?v=20260916-storefront-v839-r1" defer></script>
   <script src="product-preview-overrides.js?v=20260916-storefront-v837-r1" defer></script>

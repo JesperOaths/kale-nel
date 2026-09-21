@@ -234,24 +234,32 @@ function setActiveSizeGuideProduct(product){
     button.title = `${product.name} size chart`;
   }
 
-  const panel = qs('[data-size-guide-panel]');
-  if(panel && !panel.hidden) renderSizeGuideContents(product);
+  const overlay = qs('[data-size-guide-overlay]');
+  if(overlay && !overlay.hidden) renderSizeGuideContents(product);
 }
 
 function openSizeGuide(){
   const product = activeSizeGuideProduct();
+  const overlay = qs('[data-size-guide-overlay]');
   const panel = qs('[data-size-guide-panel]');
   const button = qs('[data-open-size-guide]');
-  if(!panel || !button || !renderSizeGuideContents(product)) return;
-  panel.hidden = false;
+  if(!overlay || !panel || !button || !renderSizeGuideContents(product)) return;
+  overlay.hidden = false;
+  document.body.classList.add('size-guide-open');
   button.setAttribute('aria-expanded','true');
+  window.requestAnimationFrame(() => qs('[data-close-size-guide]')?.focus());
 }
 
 function closeSizeGuide(){
-  const panel = qs('[data-size-guide-panel]');
+  const overlay = qs('[data-size-guide-overlay]');
   const button = qs('[data-open-size-guide]');
-  if(panel) panel.hidden = true;
-  if(button) button.setAttribute('aria-expanded','false');
+  const wasOpen = overlay && !overlay.hidden;
+  if(overlay) overlay.hidden = true;
+  document.body.classList.remove('size-guide-open');
+  if(button){
+    button.setAttribute('aria-expanded','false');
+    if(wasOpen) button.focus({ preventScroll: true });
+  }
 }
 
 function syncSizeGuideToViewport(){
@@ -521,13 +529,19 @@ loadCatalog().then(list => {
 document.addEventListener('click', event => {
   const open = event.target.closest('[data-open-size-guide]');
   if(open){
-    const panel = qs('[data-size-guide-panel]');
-    if(panel?.hidden) openSizeGuide();
+    const overlay = qs('[data-size-guide-overlay]');
+    if(overlay?.hidden) openSizeGuide();
     else closeSizeGuide();
     return;
   }
 
   if(event.target.closest('[data-close-size-guide]')){
+    closeSizeGuide();
+    return;
+  }
+
+  const sizeGuideOverlay = qs('[data-size-guide-overlay]');
+  if(sizeGuideOverlay && event.target === sizeGuideOverlay){
     closeSizeGuide();
     return;
   }
