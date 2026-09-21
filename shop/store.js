@@ -9,6 +9,8 @@ const SIZE_ORDER = ['XS','S','M','L','XL','2XL','3XL','4XL','5XL'];
 const SIZE_GUIDES = {
   '6': {
     base: 'Classic T-Shirt',
+    illustration: './assets/size-guide-classic.svg',
+    illustrationAlt: 'Classic T-Shirt measurement diagram showing width, length and sleeve from center back',
     sizes: ['S','M','L','XL','2XL','3XL','4XL','5XL'],
     metric: {
       'Width': [45.7,50.8,55.9,61.0,66.0,71.1,76.2,81.3],
@@ -25,6 +27,8 @@ const SIZE_GUIDES = {
   },
   '1382': {
     base: 'Oversized Boxy T-Shirt',
+    illustration: './assets/size-guide-boxy.svg',
+    illustrationAlt: 'Oversized Boxy T-Shirt measurement diagram showing width and length',
     sizes: ['XS','S','M','L','XL','2XL','3XL'],
     metric: {
       'Width': [47.6,50.2,52.7,57.8,62.9,67.9,73.0],
@@ -201,6 +205,19 @@ function renderSizeGuideContents(product){
 
   qs('[data-size-guide-product]').textContent = product.name;
   qs('[data-size-guide-base]').textContent = guide.base;
+  const visual = qs('[data-size-guide-visual]');
+  const illustration = qs('[data-size-guide-illustration]');
+  if(visual && illustration){
+    if(guide.illustration){
+      illustration.src = guide.illustration;
+      illustration.alt = guide.illustrationAlt || `${guide.base} measurement guide`;
+      visual.hidden = false;
+    } else {
+      illustration.removeAttribute('src');
+      illustration.alt = '';
+      visual.hidden = true;
+    }
+  }
   qsa('[data-size-guide-unit]').forEach(button => {
     const active = button.dataset.sizeGuideUnit === sizeGuideUnit;
     button.classList.toggle('active', active);

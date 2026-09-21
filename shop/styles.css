@@ -483,6 +483,24 @@ body.size-guide-open { overflow: hidden; }
   line-height: 1;
   cursor: pointer;
 }
+.size-guide-visual {
+  flex: 0 0 auto;
+  margin: 0 18px 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fffdf8;
+}
+.size-guide-visual[hidden] { display: none !important; }
+.size-guide-visual img {
+  display: block;
+  width: 100%;
+  max-height: min(42vh, 390px);
+  object-fit: contain;
+  object-position: center;
+  background: #fffdf8;
+}
+
 .size-guide-toolbar {
   flex: 0 0 auto;
   display: flex;
@@ -592,6 +610,11 @@ body.size-guide-open { overflow: hidden; }
   }
   .size-guide-head { padding: 14px 14px 11px; }
   .size-guide-ident strong { max-width: 72vw; }
+  .size-guide-visual {
+    margin: 0 8px 8px;
+    border-radius: 12px;
+  }
+  .size-guide-visual img { max-height: 40vh; }
   .size-guide-toolbar { padding: 9px 12px; }
   .size-guide-table {
     min-width: 840px;
