@@ -374,6 +374,77 @@ Deno.serve(async (req: Request) => {
       mode: "printify-bootstrap-v850",
     });
   }
+
+  if (url.searchParams.get("diagnostic") === "1") {
+    const started = Date.now();
+    let sb: any;
+    try { sb = serviceClient(); }
+    catch { return json(req, { ok: false, stage: "service_client", elapsedMs: Date.now() - started }, 503); }
+
+    const timeout = <T>(promise: Promise<T>, ms: number, label: string) =>
+      Promise.race<T>([
+        promise,
+        new Promise<T>((_, reject) => setTimeout(() => reject(new Error(label)), ms)),
+      ]);
+
+    let token = "";
+    let tokenMs = 0;
+    try {
+      const t0 = Date.now();
+      token = await timeout(resolveToken(sb), 5000, "token_timeout");
+      tokenMs = Date.now() - t0;
+    } catch (error) {
+      return json(req, {
+        ok: false,
+        stage: error instanceof Error ? error.message : "token_error",
+        envTokenConfigured: !!text(Deno.env.get("PRINTIFY_API_TOKEN")),
+        tokenResolveMs: Date.now() - started,
+        elapsedMs: Date.now() - started,
+      }, 503);
+    }
+
+    let shops: any[] = [];
+    let shopsMs = 0;
+    try {
+      const t0 = Date.now();
+      const payload = await timeout(printify(token, "/shops.json", 5000), 5500, "shops_timeout");
+      shopsMs = Date.now() - t0;
+      shops = Array.isArray(payload) ? payload : [];
+    } catch (error) {
+      return json(req, {
+        ok: false,
+        stage: error instanceof Error ? error.message : "shops_error",
+        tokenResolveMs: tokenMs,
+        shopsMs: Date.now() - started - tokenMs,
+        elapsedMs: Date.now() - started,
+      }, 503);
+    }
+
+    const probes = await Promise.allSettled(shops.map(async (shop: any) => {
+      const shopId = Number(shop?.id);
+      const t0 = Date.now();
+      const first = await timeout(firstProductPage(token, shopId), 6000, "products_timeout");
+      return {
+        salesChannel: text(shop?.sales_channel),
+        firstPageProducts: first.rows.length,
+        lastPage: first.lastPage,
+        elapsedMs: Date.now() - t0,
+      };
+    }));
+
+    return json(req, {
+      ok: true,
+      mode: "printify-diagnostic-v850",
+      envTokenConfigured: !!text(Deno.env.get("PRINTIFY_API_TOKEN")),
+      tokenResolveMs: tokenMs,
+      shopsMs,
+      shopCount: shops.length,
+      probes: probes.map((result) => result.status === "fulfilled"
+        ? { ok: true, ...result.value }
+        : { ok: false, error: result.reason instanceof Error ? result.reason.message : "probe_error" }),
+      elapsedMs: Date.now() - started,
+    });
+  }
   let supabase: any;
   try { supabase = serviceClient(); } catch { return json(req, { error: "server_not_configured", products: [] }, 503); }
 
