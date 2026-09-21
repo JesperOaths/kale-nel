@@ -11,43 +11,58 @@ permissions:
 jobs:
   purge:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 4
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFARE_API_TOKEN_ONE || secrets.CLOUDFLARE_API_TOKEN_ONE || secrets.CLOUDFLARE_API_TOKEN }}
+      TOKEN_A: ${{ secrets.CLOUDFARE_API_TOKEN_ONE }}
+      TOKEN_B: ${{ secrets.CLOUDFLARE_API_TOKEN_ONE }}
+      TOKEN_C: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
-      - name: Purge kalenel.nl Cloudflare cache
+      - name: Purge kalenel.nl Cloudflare cache with valid configured token
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
-            echo "::error::Cloudflare API token is not configured"
-            exit 1
-          fi
-          zone_json="$(curl --fail-with-body --silent --show-error --max-time 20 \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            -H "Content-Type: application/json" \
-            'https://api.cloudflare.com/client/v4/zones?name=kalenel.nl&status=active&per_page=50')"
-          zone_id="$(printf '%s' "$zone_json" | jq -r '.result[0].id // empty')"
+          zone_id=""
+          selected=""
+
+          for label in A B C; do
+            var="TOKEN_$label"
+            token="${!var:-}"
+            [[ -n "$token" ]] || continue
+
+            http="$(curl --silent --show-error --max-time 20               -o /tmp/cf-zones.json -w '%{http_code}'               -H "Authorization: Bearer $token"               -H "Content-Type: application/json"               'https://api.cloudflare.com/client/v4/zones?name=kalenel.nl&status=active&per_page=50' || true)"
+
+            if [[ "$http" == "200" ]]; then
+              candidate="$(jq -r '.result[0].id // empty' /tmp/cf-zones.json)"
+              success="$(jq -r '.success // false' /tmp/cf-zones.json)"
+              if [[ "$success" == "true" && -n "$candidate" ]]; then
+                zone_id="$candidate"
+                selected="$label"
+                break
+              fi
+            fi
+            echo "Cloudflare token alias $label did not provide zone access (HTTP $http)."
+          done
+
           if [[ -z "$zone_id" ]]; then
-            echo "::error::Could not resolve active Cloudflare zone for kalenel.nl"
-            printf '%s\n' "$zone_json" | jq '{success,errors,result_count:(.result|length)}'
+            echo "::error::None of the configured Cloudflare token aliases can access the kalenel.nl zone."
             exit 1
           fi
+          echo "Using working Cloudflare token alias $selected."
 
-          purge_json="$(curl --fail-with-body --silent --show-error --max-time 20 \
-            -X POST \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data '{"purge_everything":true}' \
-            "https://api.cloudflare.com/client/v4/zones/$zone_id/purge_cache")"
-          printf '%s\n' "$purge_json" | jq '{success,errors}'
-          printf '%s' "$purge_json" | jq -e '.success == true' >/dev/null
+          var="TOKEN_$selected"
+          token="${!var}"
+          purge_http="$(curl --silent --show-error --max-time 20             -o /tmp/cf-purge.json -w '%{http_code}'             -X POST             -H "Authorization: Bearer $token"             -H "Content-Type: application/json"             --data '{"purge_everything":true}'             "https://api.cloudflare.com/client/v4/zones/$zone_id/purge_cache" || true)"
+          jq '{success,errors}' /tmp/cf-purge.json || true
+          [[ "$purge_http" == "200" ]] && jq -e '.success == true' /tmp/cf-purge.json >/dev/null
 
-          sleep 3
-          live="$(curl --fail-with-body --silent --show-error --max-time 20 \
-            -H 'Cache-Control: no-cache' \
-            'https://kalenel.nl/shop/?v=20260921-v852')"
-          printf '%s' "$live" | grep -q 'version-watermark">v852<'
-          printf '%s' "$live" | grep -q 'data-open-size-guide'
-          printf '%s' "$live" | grep -q 'store.js?v=20260921-storefront-v852-r1'
-          echo "Cloudflare purge complete and live v852 shop verified."
+          for attempt in {1..10}; do
+            live="$(curl --silent --show-error --max-time 20               -H 'Cache-Control: no-cache'               "https://kalenel.nl/shop/?v=20260921-v852-$attempt" || true)"
+            if printf '%s' "$live" | grep -q 'version-watermark">v852<'               && printf '%s' "$live" | grep -q 'data-open-size-guide'               && printf '%s' "$live" | grep -q 'store.js?v=20260921-storefront-v852-r1'; then
+              echo "Cloudflare purge complete and live v852 shop verified."
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "::error::Cache purge succeeded but the custom domain still does not serve v852."
+          exit 1
