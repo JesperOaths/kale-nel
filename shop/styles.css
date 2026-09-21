@@ -469,3 +469,117 @@ body.has-size-guide { padding-bottom: 190px; }
   .size-guide-scroll th:first-child { min-width: 165px; }
   .size-guide-scroll th, .size-guide-scroll td { min-width: 62px; padding: 6px 8px; }
 }
+
+/* v851: always-visible contextual shirt size guide */
+.size-guide-tray {
+  position: fixed;
+  left: 50%;
+  bottom: 10px;
+  z-index: 38;
+  width: min(1180px, calc(100% - 24px));
+  max-height: min(36vh, 280px);
+  transform: translateX(-50%);
+  overflow: hidden;
+  border: 1px solid rgba(45, 61, 43, .26);
+  border-radius: 20px;
+  background: rgba(255, 253, 248, .97);
+  box-shadow: 0 14px 44px rgba(31, 39, 29, .20);
+  backdrop-filter: blur(14px);
+}
+.size-guide-tray[hidden] { display: none !important; }
+.size-guide-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.size-guide-ident { min-width: 0; }
+.size-guide-ident strong,
+.size-guide-ident span { display: block; }
+.size-guide-ident strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .9rem;
+}
+.size-guide-ident span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: .72rem;
+}
+.size-guide-unit-toggle {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #ece7dc;
+}
+.size-guide-unit-toggle button {
+  min-width: 42px;
+  height: 30px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: .72rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+.size-guide-unit-toggle button.active {
+  background: var(--green);
+  color: white;
+}
+.size-guide-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 205px;
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+}
+.size-guide-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: .74rem;
+  white-space: nowrap;
+}
+.size-guide-table th,
+.size-guide-table td {
+  padding: 8px 12px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+}
+.size-guide-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f2eee5;
+  font-weight: 950;
+}
+.size-guide-table th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  min-width: 170px;
+  background: #f8f5ee;
+  text-align: left;
+}
+.size-guide-table thead th:first-child { z-index: 4; background: #ece7dc; }
+.size-guide-table td span { color: var(--muted); font-size: .66rem; }
+html.size-guide-visible body { padding-bottom: 195px; }
+
+@media (max-width: 620px) {
+  .size-guide-tray { bottom: 6px; width: calc(100% - 12px); border-radius: 16px; }
+  .size-guide-head { align-items: flex-start; padding: 9px 10px 7px; }
+  .size-guide-ident strong { max-width: 68vw; font-size: .82rem; }
+  .size-guide-ident span { max-width: 68vw; }
+  .size-guide-table th, .size-guide-table td { padding: 7px 10px; }
+  .size-guide-table th:first-child { min-width: 145px; }
+  html.size-guide-visible body { padding-bottom: 205px; }
+}

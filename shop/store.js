@@ -117,6 +117,42 @@ function initializeSizeGuideTracking(){
   activate(firstShirt || cards[0]);
 }
 
+
+const SIZE_GUIDES = {
+  '6': {
+    base: 'Gildan 5000 Heavy Cotton T-Shirt',
+    sizes: ['S','M','L','XL','2XL','3XL','4XL','5XL'],
+    metric: {
+      'Width': [45.7,50.8,55.9,61.0,66.0,71.1,76.2,81.3],
+      'Length': [71.1,73.7,76.2,78.7,81.3,83.8,86.4,88.9],
+      'Sleeve from center back': [38.4,41.9,45.7,49.5,53.3,56.9,60.2,63.5],
+      'Tolerance': [3.8,3.8,3.8,3.8,3.8,3.8,3.8,3.8]
+    },
+    imperial: {
+      'Width': [18,20,22,24,26,28,30,32],
+      'Length': [28,29,30,31,32,33,34,35],
+      'Sleeve from center back': [15.1,16.5,18,19.5,21,22.4,23.7,25],
+      'Tolerance': [1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5]
+    }
+  },
+  '1382': {
+    base: 'Bella+Canvas 3010 Oversized Boxy T-Shirt',
+    sizes: ['XS','S','M','L','XL','2XL','3XL'],
+    metric: {
+      'Width': [47.6,50.2,52.7,57.8,62.9,67.9,73.0],
+      'Length': [66.7,69.2,70.5,73.0,75.6,76.8,79.4],
+      'Tolerance': [2.5,2.5,2.5,2.5,2.5,2.5,2.5]
+    },
+    imperial: {
+      'Width': [18.75,19.75,20.75,22.75,24.75,26.75,28.75],
+      'Length': [26.25,27.25,27.75,28.75,29.75,30.25,31.25],
+      'Tolerance': [1,1,1,1,1,1,1]
+    }
+  }
+};
+let sizeGuideUnit = 'metric';
+let activeSizeGuideProductId = '';
+
 const COLLECTIONS = {
   normal: {
     label: 'Classic',
@@ -174,6 +210,7 @@ function normalizeProduct(raw){
     mockups,
     image: mockups[0]?.image || raw.image || '',
     baseLabel: raw.baseLabel || 'Shirt base pending',
+    baseKey: String(raw.baseKey || raw.blueprintId || raw.blueprint_id || ''),
     variants: Array.isArray(raw.variants) ? raw.variants.map(variant => ({ ...variant, price: wholeEuro(variant.price) })) : [],
     shopId: String(raw.shopId || raw.shop_id || ''),
     baseKey,
@@ -248,6 +285,78 @@ function updateShapeControls(){
     button.classList.toggle('active', active);
     button.setAttribute('aria-pressed', active ? 'true' : 'false');
   });
+}
+
+function sizeGuideForProduct(product){
+  if(!product) return null;
+  return SIZE_GUIDES[String(product.baseKey || '')] || null;
+}
+
+function renderSizeGuide(product){
+  const tray = qs('[data-size-guide-tray]');
+  if(!tray) return;
+  const guide = sizeGuideForProduct(product);
+  if(!guide){
+    tray.hidden = true;
+    document.documentElement.classList.remove('size-guide-visible');
+    activeSizeGuideProductId = '';
+    return;
+  }
+
+  activeSizeGuideProductId = product.id;
+  tray.hidden = false;
+  document.documentElement.classList.add('size-guide-visible');
+  qs('[data-size-guide-product]').textContent = product.name;
+  qs('[data-size-guide-base]').textContent = guide.base;
+  qsa('[data-size-guide-unit]').forEach(button => {
+    const active = button.dataset.sizeGuideUnit === sizeGuideUnit;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+
+  const unitLabel = sizeGuideUnit === 'metric' ? 'cm' : 'in';
+  const rows = guide[sizeGuideUnit];
+  qs('[data-size-guide-table]').innerHTML = `
+    <thead><tr><th scope="col">Measurement</th>${guide.sizes.map(size => `<th scope="col">${esc(size)}</th>`).join('')}</tr></thead>
+    <tbody>${Object.entries(rows).map(([label, values]) => `
+      <tr><th scope="row">${esc(label)}</th>${values.map(value => `<td>${esc(value)} <span>${unitLabel}</span></td>`).join('')}</tr>
+    `).join('')}</tbody>`;
+}
+
+function syncSizeGuideToViewport(){
+  const cards = qsa('.product-card[data-product-id]');
+  if(!cards.length){
+    renderSizeGuide(null);
+    return;
+  }
+  const viewportCenter = window.innerHeight / 2;
+  let best = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  cards.forEach(card => {
+    const product = products.find(item => item.id === card.dataset.productId);
+    if(!sizeGuideForProduct(product)) return;
+    const rect = card.getBoundingClientRect();
+    if(rect.bottom < 0 || rect.top > window.innerHeight) return;
+    const distance = Math.abs((rect.top + rect.bottom) / 2 - viewportCenter);
+    if(distance < bestDistance){
+      bestDistance = distance;
+      best = product;
+    }
+  });
+  if(best && best.id !== activeSizeGuideProductId) renderSizeGuide(best);
+}
+
+function initializeSizeGuide(){
+  qsa('.product-card[data-product-id]').forEach(card => {
+    const activate = () => {
+      const product = products.find(item => item.id === card.dataset.productId);
+      if(sizeGuideForProduct(product)) renderSizeGuide(product);
+    };
+    card.addEventListener('pointerenter', activate);
+    card.addEventListener('focusin', activate);
+    card.addEventListener('click', activate);
+  });
+  syncSizeGuideToViewport();
 }
 
 function renderProducts(){
@@ -470,3 +579,20 @@ loadCatalog().then(list => {
     openShapeEntry({ scroll: false, updateUrl: false });
   }
 });
+
+document.addEventListener('click', event => {
+  const unitButton = event.target.closest('[data-size-guide-unit]');
+  if(unitButton){
+    sizeGuideUnit = unitButton.dataset.sizeGuideUnit === 'imperial' ? 'imperial' : 'metric';
+    const product = products.find(item => item.id === activeSizeGuideProductId);
+    renderSizeGuide(product);
+  }
+});
+let sizeGuideScrollFrame = 0;
+window.addEventListener('scroll', () => {
+  if(sizeGuideScrollFrame) return;
+  sizeGuideScrollFrame = window.requestAnimationFrame(() => {
+    sizeGuideScrollFrame = 0;
+    syncSizeGuideToViewport();
+  });
+}, { passive: true });

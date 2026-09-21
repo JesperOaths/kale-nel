@@ -10,92 +10,75 @@ const MAX_PAGES = 100;
 const ROUTE_PREFIX = "__KALENEL_ROUTE_";
 const BOXY_TITLES = new Set(["coral", "daffodil", "dragonfly", "honeysuckle", "horseshoe crab", "seahorse", "seaweed"]);
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl", "https://jesperoaths.github.io"]);
-const PUBLIC_TITLE_RULES: ReadonlyArray<readonly [RegExp, string]> = [
-  [/\baye[- ]?aye\b/i, "Aye-Aye"],
-  [/\bocelot\b/i, "Banded Linsang"],
-  [/\bfennec fox\b/i, "Fennec Fox"],
-  [/\bhumpback whale\b/i, "Humpback Whale"],
-  [/(?:\bjapanese maple\b|\bautumn maple leaf\b)/i, "Japanese Maple"],
-  [/\bjerboa\b/i, "Jerboa"],
-  [/\bspider crab\b/i, "Japanese Spider Crab"],
-  [/\bshrimp\b/i, "Krill"],
-  [/(?:\bleaf[- ]tailed gecko\b|\bleaf camouflage gecko\b|\bleaf gecko\b)/i, "Leaf-Tailed Gecko"],
-  [/\bleaping seal\b|\bseal\b/i, "Leopard Seal"],
-  [/\bkudu\b/i, "Kudu"],
-  [/(?:\bgarden spider\b|\borb[- ]?weaver\b)/i, "Orb-Weaver"],
-  [/\bhermit crab\b/i, "Pom-Pom Crab"],
-  [/\bpuffer\s*fish\b/i, "Pufferfish"],
-  [/\bsecretary bird\b/i, "Secretary Bird"],
-  [/(?:\bmanta ray\b|\bocean stingray\b)/i, "Manta Ray"],
-  [/\bbearded dragon\b/i, "Thorny Devil"],
-];
-
 const text = (value: unknown) => String(value ?? "").trim();
 const MARGIN_CENTS = 500;
 
-function publicTitle(product: any) {
-  const raw = text(product?.title);
-  for (const [pattern, title] of PUBLIC_TITLE_RULES) if (pattern.test(raw)) return title;
-  return raw;
-}
-
-
+// Explicit customer-facing identities for the current Printify catalog.
+// These deliberately describe the artwork/product itself and replace the
+// retired legacy aliases that mislabeled several animals and plants.
 const PUBLIC_PRODUCT_NAMES: Record<string, string> = {
-  "6a97ea08b3fdf6e3e5006a3a": "Coral",
-  "6a97e970031028396b0e06ee": "Daffodil",
-  "6a871b6035cea7fe2c005ee6": "Dragonfly",
-  "6a97d1242487da888903a445": "Honeysuckle",
-  "6a97eac8031028396b0e07dc": "Horseshoe Crab",
-  "6a97d253a530b95d7707ffa4": "Seahorse",
-  "6a97ee4acef71a1df0017d52": "Kelp",
-  "6a9742c08816f2362104d5cc": "Despinoza Rose T-Shirt",
-  "6a975ec45d07cc05a702a491": "Despinoza Long-Stem Rose T-Shirt",
-  "6aaff223e0eef877800262df": "Despinoza Rose Snapback Cap",
-  "6aaa152378f50f3725033e18": "Despinoza DD Rose Tote Bag",
-  "6a877d2aeb76ae387b05cfae": "Axolotl",
-  "6aaa4536b6bab1f028069988": "Aye-Aye",
-  "6aaa566a7e9070db3f09bc0a": "Thorny Devil",
-  "6ab0fa9a0b770861f80da032": "Thorny Devil — Alternate Artwork",
-  "6ab119be793a18c49f0d2f9c": "Crown Imperial",
-  "6aaa4d00cf8017667a0586c6": "Japanese Spider Crab",
-  "6a97d552b3fdf6e3e5005804": "Dogwood",
-  "6aaa48e16b79c0257608010d": "Fennec Fox",
-  "6aaa52d4248ab968df08c422": "Pom-Pom Crab",
-  "6ab11a606c03da12620e7dce": "Himalayan Blue Poppy",
-  "6aaa49f8583c51460607a144": "Humpback Whale",
-  "6a98254d5c9d1f57390a1024": "Hydrangea",
-  "6a878552828b6188a0031a81": "Jellyfish",
-  "6aaa4c57583c51460607a270": "Jerboa",
-  "6aaa50bb0da2b4cf33062dbf": "Kudu",
-  "6ab11b242bc468efdf0ad5b8": "Lady's Slipper Orchid",
-  "6aaa4ed8a0fd67a9700b9bc8": "Leaf-Tailed Gecko",
-  "6aaa4fbae20a7d1fbb0fcf79": "Leopard Seal",
-  "6a97ecf8031028396b0e0945": "Water Lily",
-  "6a97f122cef71a1df0017f59": "Magnolia",
-  "6aaa55ea5e707d1ff9060c88": "Manta Ray",
-  "6a97e8d32487da888903ba9d": "Monstera",
-  "6aaa46a143c8057f5104a52e": "Banded Linsang",
-  "6a97d47e5100c415920da0ea": "Orchid",
-  "6a8781c676f52ce62f082d19": "Orchid Mantis",
-  "6ab11c1820563fc58009dec0": "Persian Buttercup",
-  "6ab11cd7f4f8f622b2089cf3": "Pink Dahlia",
-  "6aaa543d7e9070db3f09bb03": "Pufferfish",
+  "6ab1204d20563fc58009e1a9": "White Spider Lily",
+  "6ab11fcc793a18c49f0d3301": "Tiger Flower",
+  "6ab11f47937bf873f309905c": "Snake's Head Fritillary",
   "6ab11eb805d12e6234068af3": "Red & White Parrot Tulip",
   "6ab11ddab6d42b3fc108ac42": "Red Spider Lily",
+  "6ab11cd7f4f8f622b2089cf3": "Pink Dahlia",
+  "6ab11c1820563fc58009dec0": "Persian Buttercup",
+  "6ab11b242bc468efdf0ad5b8": "Lady's Slipper Orchid",
+  "6ab11a606c03da12620e7dce": "Himalayan Blue Poppy",
+  "6ab119be793a18c49f0d2f9c": "Crown Imperial",
+  "6ab0fa9a0b770861f80da032": "Bearded Dragon — Alternate Artwork",
+  "6aaff223e0eef877800262df": "Despinoza Rose Snapback Cap",
+  "6aaa566a7e9070db3f09bc0a": "Bearded Dragon",
+  "6aaa55ea5e707d1ff9060c88": "Manta Ray",
   "6aaa54ca248ab968df08c516": "Secretary Bird",
-  "6aaa4ddfb3c36c673e0dee1b": "Krill",
-  "6ab11f47937bf873f309905c": "Snake's Head Fritillary",
-  "6a97ed9c2487da888903bde8": "Snowdrop",
-  "6aaa520db1ff95a9e501202c": "Orb-Weaver",
+  "6aaa543d7e9070db3f09bb03": "Pufferfish",
+  "6aaa52d4248ab968df08c422": "Hermit Crab",
+  "6aaa520db1ff95a9e501202c": "Garden Spider",
+  "6aaa50bb0da2b4cf33062dbf": "Kudu",
+  "6aaa4fbae20a7d1fbb0fcf79": "Seal",
+  "6aaa4ed8a0fd67a9700b9bc8": "Leaf-Tailed Gecko",
+  "6aaa4ddfb3c36c673e0dee1b": "Shrimp",
+  "6aaa4d00cf8017667a0586c6": "Japanese Spider Crab",
+  "6aaa4c57583c51460607a270": "Jerboa",
   "6aaa4b12583c51460607a1f3": "Japanese Maple",
+  "6aaa49f8583c51460607a144": "Humpback Whale",
+  "6aaa48e16b79c0257608010d": "Fennec Fox",
+  "6aaa46a143c8057f5104a52e": "Ocelot",
+  "6aaa4536b6bab1f028069988": "Aye-Aye",
+  "6aaa152378f50f3725033e18": "Despinoza DD Rose Tote Bag",
+  "6a98254d5c9d1f57390a1024": "Hydrangea",
+  "6a97f122cef71a1df0017f59": "Magnolia",
+  "6a97ee4acef71a1df0017d52": "Seaweed",
+  "6a97ed9c2487da888903bde8": "Snowdrop",
+  "6a97ecf8031028396b0e0945": "Lily",
+  "6a97eac8031028396b0e07dc": "Horseshoe Crab",
+  "6a97ea08b3fdf6e3e5006a3a": "Coral",
+  "6a97e970031028396b0e06ee": "Daffodil",
+  "6a97e8d32487da888903ba9d": "Monstera",
+  "6a97d552b3fdf6e3e5005804": "Dogwood",
+  "6a97d47e5100c415920da0ea": "Orchid",
+  "6a97d253a530b95d7707ffa4": "Seahorse",
+  "6a97d1242487da888903a445": "Honeysuckle",
+  "6a975ec45d07cc05a702a491": "Despinoza Long-Stem Rose T-Shirt",
+  "6a9742c08816f2362104d5cc": "Despinoza Rose T-Shirt",
+  "6a878552828b6188a0031a81": "Jellyfish",
+  "6a8781c676f52ce62f082d19": "Orchid Mantis",
+  "6a877defbecced59b0037078": "Wild Carrot",
+  "6a877d2aeb76ae387b05cfae": "Axolotl",
   "6a8769e26a41fe0f530b538f": "Thistle",
-  "6ab11fcc793a18c49f0d3301": "Tiger Lily",
-  "6ab1204d20563fc58009e1a9": "White Fringed Orchid",
-  "6a877defbecced59b0037078": "Wild Carrot (Queen Anne's Lace)"
+  "6a871b6035cea7fe2c005ee6": "Dragonfly"
 };
 
+function cleanPrintifyTitle(rawValue: unknown) {
+  return text(rawValue)
+    .replace(/^copy of\s+/i, "")
+    .replace(/\s*[—–-]\s*(?:graphic tee|illustration t-?shirt|watercolor tee|wildlife graphic t-?shirt|cute .*? t-?shirt).*$/i, "")
+    .trim();
+}
+
 function publicProductName(product: any) {
-  return PUBLIC_PRODUCT_NAMES[text(product?.id)] || publicTitle(product);
+  return PUBLIC_PRODUCT_NAMES[text(product?.id)] || cleanPrintifyTitle(product?.title) || "Untitled product";
 }
 
 function publicBaseLabel(product: any) {
@@ -624,46 +607,6 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(req) });
   if (req.method !== "GET") return json(req, { error: "method_not_allowed" }, 405);
   const url = new URL(req.url);
-  if (url.searchParams.get("raw_titles") === "1") {
-    let sb: any;
-    try { sb = serviceClient(); } catch { sb = null; }
-    try {
-      const token = await resolveToken(sb);
-      const account = await loadAccountProducts(token);
-      return json(req, {
-        ok: true,
-        products: account.entries.map((entry: any) => ({
-          id: text(entry.product?.id),
-          title: text(entry.product?.title),
-          blueprintId: Number(entry.product?.blueprint_id || 0),
-          visible: entry.product?.visible !== false,
-        })).filter((item: any) => item.id && item.title),
-      });
-    } catch (error) {
-      return json(req, { ok: false, error: error instanceof Error ? error.message : "lookup_failed" }, 503);
-    }
-  }
-
-  if (url.searchParams.get("blueprint_meta") === "1") {
-    let sb: any;
-    try { sb = serviceClient(); } catch { sb = null; }
-    try {
-      const token = await resolveToken(sb);
-      const ids = [6, 1382, 1753, 1389];
-      const entries = await Promise.all(ids.map(async id => {
-        try {
-          const bp = await printify(token, `/catalog/blueprints/${id}.json`, 5000);
-          return { id, title: text(bp?.title), brand: text(bp?.brand), model: text(bp?.model) };
-        } catch (error) {
-          return { id, error: error instanceof Error ? error.message : "lookup_failed" };
-        }
-      }));
-      return json(req, { ok: true, blueprints: entries });
-    } catch (error) {
-      return json(req, { ok: false, error: error instanceof Error ? error.message : "lookup_failed" }, 503);
-    }
-  }
-
   if (url.searchParams.get("bootstrap") === "1") {
     return json(req, {
       ok: true,
