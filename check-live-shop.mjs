@@ -82,8 +82,8 @@ async function catalog() {
   }
 
   assert.equal(response?.status, 200, `shop-catalog-v828 must return HTTP 200, got ${response?.status}`);
-  assert.equal(payload?.source, 'printify-live-v852', `catalog must identify the live Printify source, got ${payload?.source}`);
-  assert.equal(payload?.catalogSelection, 'all-readable-printify-shops-v852', `catalog must mirror all readable Printify shops, got ${payload?.catalogSelection}`);
+  assert.equal(payload?.source, 'printify-live-v851', `catalog must identify the live Printify source, got ${payload?.source}`);
+  assert.equal(payload?.catalogSelection, 'all-readable-printify-shops-v851', `catalog must mirror all readable Printify shops, got ${payload?.catalogSelection}`);
   assert.ok(Array.isArray(payload?.products), 'catalog must return products[]');
   assert.ok(payload.products.length >= MIN_PRODUCTS, `catalog returned only ${payload.products.length} products`);
 

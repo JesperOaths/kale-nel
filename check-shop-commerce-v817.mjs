@@ -282,7 +282,7 @@ assert.match(catalogEdge, /function artworkFor/);
 assert.match(catalogEdge, /product\?\.print_areas/);
 assert.match(catalogEdge, /label:\s*"Artwork PNG"/);
 assert.match(catalogEdge, /const mockups = \[\.\.\.artwork, \.\.\.garment\]/);
-assert.match(catalogEdge, /source:\s*"printify-live-v852"/);
+assert.match(catalogEdge, /source:\s*"printify-live-v851"/);
 assert.match(catalogEdge, /mode:\s*"bruis-direct-catalog-v838"/);
 assert.match(catalogEdge, /pricing:\s*"production-cost-plus-5-rounded-up"/);
 assert.match(catalogEdge, /pricingBase:\s*"production-cost"/);
