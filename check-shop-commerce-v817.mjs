@@ -63,7 +63,7 @@ assert.match(toteHandleColor, /variantBoundMockups:\s*true/);
 assert.match(toteHandleColor, /sharedArtworkFirst:\s*true/);
 assert.match(toteHandleColor, /artwork\|print file\|design png/i);
 assert.match(toteHandleColor, /exactVariantSelection:\s*true/);
-assert.match(index, /version-watermark[^>]*>v841</);
+assert.match(index, /version-watermark[^>]*>v848</);
 assert.match(index, /20260916-storefront-v837-r1/);
 assert.match(index, /shop-analytics-v841\.js\?v=20260920-shop-analytics-v841-r1/);
 assert.match(index, /20260916-delivery-v840-r1/);
