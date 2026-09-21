@@ -1,0 +1,53 @@
+name: Purge shop CDN cache v852
+
+on:
+  push:
+    paths:
+      - '.github/workflows/purge-shop-cache-v852.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFARE_API_TOKEN_ONE || secrets.CLOUDFLARE_API_TOKEN_ONE || secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Purge kalenel.nl Cloudflare cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+            echo "::error::Cloudflare API token is not configured"
+            exit 1
+          fi
+          zone_json="$(curl --fail-with-body --silent --show-error --max-time 20 \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            'https://api.cloudflare.com/client/v4/zones?name=kalenel.nl&status=active&per_page=50')"
+          zone_id="$(printf '%s' "$zone_json" | jq -r '.result[0].id // empty')"
+          if [[ -z "$zone_id" ]]; then
+            echo "::error::Could not resolve active Cloudflare zone for kalenel.nl"
+            printf '%s\n' "$zone_json" | jq '{success,errors,result_count:(.result|length)}'
+            exit 1
+          fi
+
+          purge_json="$(curl --fail-with-body --silent --show-error --max-time 20 \
+            -X POST \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{"purge_everything":true}' \
+            "https://api.cloudflare.com/client/v4/zones/$zone_id/purge_cache")"
+          printf '%s\n' "$purge_json" | jq '{success,errors}'
+          printf '%s' "$purge_json" | jq -e '.success == true' >/dev/null
+
+          sleep 3
+          live="$(curl --fail-with-body --silent --show-error --max-time 20 \
+            -H 'Cache-Control: no-cache' \
+            'https://kalenel.nl/shop/?v=20260921-v852')"
+          printf '%s' "$live" | grep -q 'version-watermark">v852<'
+          printf '%s' "$live" | grep -q 'data-open-size-guide'
+          printf '%s' "$live" | grep -q 'store.js?v=20260921-storefront-v852-r1'
+          echo "Cloudflare purge complete and live v852 shop verified."
