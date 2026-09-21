@@ -1,0 +1,34 @@
+name: Verify live size modal v853
+
+on:
+  push:
+    paths:
+      - '.github/workflows/verify-live-size-modal-v853.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify plain shop URL serves v853 modal
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..20}; do
+            headers="$(mktemp)"
+            body="$(mktemp)"
+            code="$(curl --silent --show-error --max-time 20               -D "$headers" -o "$body" -w '%{http_code}'               -H 'Cache-Control: no-cache'               'https://kalenel.nl/shop/' || true)"
+            cf_status="$(awk 'BEGIN{IGNORECASE=1} /^cf-cache-status:/ {gsub("\r",""); print $2}' "$headers" | tail -1)"
+            age="$(awk 'BEGIN{IGNORECASE=1} /^age:/ {gsub("\r",""); print $2}' "$headers" | tail -1)"
+            echo "attempt=$attempt http=$code cf-cache-status=${cf_status:-none} age=${age:-none}"
+            if [[ "$code" == "200" ]]               && grep -q 'version-watermark">v853<' "$body"               && grep -q 'data-open-size-guide' "$body"               && grep -q 'data-size-guide-overlay' "$body"               && grep -q 'store.js?v=20260921-storefront-v853-r1' "$body"; then
+              echo "Plain shop URL serves the full-screen v853 size-chart modal."
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::Plain /shop/ does not yet serve the v853 size-chart modal."
+          exit 1
