@@ -1,0 +1,20 @@
+name: Printify bootstrap diagnostic
+
+on:
+  push:
+    paths:
+      - '.github/workflows/printify-bootstrap-diagnostic-v850.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Probe non-secret Printify bootstrap state
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error --max-time 12             'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828?bootstrap=1'
