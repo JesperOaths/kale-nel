@@ -68,7 +68,7 @@ assert.match(index, /20260916-storefront-v837-r1/);
 assert.match(index, /shop-analytics-v841\.js\?v=20260920-shop-analytics-v841-r1/);
 assert.match(index, /20260916-delivery-v840-r1/);
 assert.match(index, /20260916-storefront-v837-r2/);
-assert.match(index, /20260921-checkout-v851-r1/);
+assert.match(index, /20260921-checkout-v850-r1/);
 assert.match(index, /storefront-polish-v832\.css/);
 assert.match(index, /storefront-polish-v832\.js/);
 assert.match(index, /product-preview-overrides\.js/);

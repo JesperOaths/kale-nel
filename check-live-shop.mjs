@@ -5,7 +5,7 @@ const SHOP_URL = 'https://kalenel.nl/shop/';
 const ASSET_VERSION = '20260916-storefront-v837-r1';
 const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v832.js?v=${ASSET_VERSION}`;
 const DELIVERY_UI_URL = 'https://kalenel.nl/shop/delivery-estimate-v833.js?v=20260916-delivery-v840-r1';
-const MANUAL_CHECKOUT_UI_URL = 'https://kalenel.nl/shop/manual-checkout-v825.js?v=20260921-checkout-v851-r1';
+const MANUAL_CHECKOUT_UI_URL = 'https://kalenel.nl/shop/manual-checkout-v825.js?v=20260921-checkout-v850-r1';
 const SHOP_ANALYTICS_URL = 'https://kalenel.nl/shop/shop-analytics-v841.js?v=20260920-shop-analytics-v841-r1';
 const CUSTOMER_UI_URL = 'https://kalenel.nl/shop/customer-facing-checkout-v837.js?v=20260916-storefront-v837-r2';
 const POLISH_URL = `https://kalenel.nl/shop/storefront-polish-v832.js?v=${ASSET_VERSION}`;
@@ -162,7 +162,7 @@ assert.match(html, /store\.js\?v=20260921-storefront-v851-r1/, 'Live shop must l
 assert.doesNotMatch(html, /catalog-data\.js/, 'Live shop must not load the retired static catalog fallback');
 assert.match(html, /tote-handle-color-v839\.js\?v=20260916-storefront-v839-r1/, 'Live shop must load tote handle-color behavior');
 assert.match(html, /delivery-estimate-v833\.js\?v=20260916-delivery-v840-r1/, 'Live shop must load the current delivery estimate UI');
-assert.match(html, /manual-checkout-v825\.js\?v=20260921-checkout-v851-r1/, 'Live shop must retain hardened checkout UI shell');
+assert.match(html, /manual-checkout-v825\.js\?v=20260921-checkout-v850-r1/, 'Live shop must retain hardened checkout UI shell');
 assert.match(html, /customer-facing-checkout-v837\.js\?v=20260916-storefront-v837-r2/, 'Live shop must load v837 customer-facing checkout totals/copy layer');
 assert.match(html, /storefront-polish-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load artwork-primary storefront policy');
 assert.match(html, /storefront-polish-v832\.css\?v=20260916-storefront-v837-r1/, 'Live shop must load transparent media CSS');

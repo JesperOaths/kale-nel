@@ -559,7 +559,7 @@ function publicProduct(product: any, fx: any, shopId: number, shop: any) {
   const colors = [...new Set(priced.map((variant: any) => text(variant?.color)).filter(Boolean))];
   const selectorType = isToteProduct(product) ? "handle-color" : "size";
   return {
-    id: text(product?.id), source: "printify-live-v850", shopId: String(shopId), shopTitle: text(shop?.title),
+    id: text(product?.id), source: "printify-live-v851", shopId: String(shopId), shopTitle: text(shop?.title),
     name: publicProductName(product), description: text(product?.description),
     collection, price: prices.length ? Math.min(...prices) : 0, priceMax: prices.length ? Math.max(...prices) : 0,
     sizes, colors, selectorType, mockups, image: mockups[0]?.image || "", baseKey: String(product?.blueprint_id || "shirt"),
@@ -582,8 +582,8 @@ async function buildCatalog(supabase: any) {
 
   return {
     generatedAt: new Date().toISOString(),
-    source: "printify-live-v850",
-    catalogSelection: "all-readable-printify-shops-v850",
+    source: "printify-live-v851",
+    catalogSelection: "all-readable-printify-shops-v851",
     fx: fxAuditSnapshot(fx),
     shops: account.shops,
     products: cleanProducts,
@@ -732,7 +732,7 @@ Deno.serve(async (req: Request) => {
 
   const payload = row?.payload && typeof row.payload === "object" ? row.payload : { products: [] };
   const products = Array.isArray(payload?.products) ? payload.products : [];
-  const selectionCurrent = payload?.catalogSelection === "all-readable-printify-shops-v850";
+  const selectionCurrent = payload?.catalogSelection === "all-readable-printify-shops-v851";
   const generatedMs = row?.generated_at ? Date.parse(row.generated_at) : 0;
   const refreshStartedMs = row?.refresh_started_at ? Date.parse(row.refresh_started_at) : 0;
   const ageMs = generatedMs ? Math.max(0, Date.now() - generatedMs) : Number.POSITIVE_INFINITY;
