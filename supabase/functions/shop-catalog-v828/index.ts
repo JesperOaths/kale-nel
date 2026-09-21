@@ -97,19 +97,60 @@ async function loadProducts(token: string, shopId: number) {
   return rows;
 }
 
+function sellableCatalogScore(products: any[]) {
+  let score = 0;
+  for (const product of products) {
+    if (product?.visible === false) continue;
+    if (text(product?.title).startsWith(ROUTE_PREFIX)) continue;
+    const variants = Array.isArray(product?.variants) ? product.variants : [];
+    if (!variants.some((variant: any) => variant?.is_enabled !== false)) continue;
+    const hasMedia = (Array.isArray(product?.images) && product.images.some((image: any) => text(image?.src)))
+      || (Array.isArray(product?.print_areas) && product.print_areas.length > 0);
+    if (!hasMedia) continue;
+    score += 1;
+  }
+  return score;
+}
+
 async function selectShopAndProducts(token: string) {
   const shopsPayload = await printify(token, "/shops.json");
   const shops = Array.isArray(shopsPayload) ? shopsPayload : [];
   if (!shops.length) throw new Error("no_shop_available");
+
   const configured = text(Deno.env.get("PRINTIFY_SHOP_ID"));
-  let shop = configured ? shops.find((row: any) => String(row?.id) === configured) : null;
-  if (configured && !shop) throw new Error("configured_shop_unavailable");
-  shop ||= shops.find((row: any) => /shopify/i.test(text(row?.sales_channel)))
-    || shops.find((row: any) => text(row?.sales_channel).toLowerCase() !== "disconnected")
-    || shops[0];
-  const shopId = Number(shop?.id);
-  if (!Number.isFinite(shopId)) throw new Error("invalid_shop_id");
-  return { shop, products: await loadProducts(token, shopId) };
+  const candidates: any[] = [];
+
+  for (const shop of shops) {
+    const shopId = Number(shop?.id);
+    if (!Number.isFinite(shopId)) continue;
+    try {
+      const products = await loadProducts(token, shopId);
+      candidates.push({
+        shop,
+        products,
+        sellableCount: sellableCatalogScore(products),
+        configured: configured && String(shopId) === configured,
+        connected: text(shop?.sales_channel).toLowerCase() !== "disconnected",
+        shopify: /shopify/i.test(text(shop?.sales_channel)),
+      });
+    } catch (error) {
+      console.warn("Printify shop catalog probe failed", String(shopId), error instanceof Error ? error.name : "unknown");
+    }
+  }
+
+  if (!candidates.length) throw new Error("no_readable_printify_shop");
+
+  candidates.sort((a, b) =>
+    b.sellableCount - a.sellableCount
+    || Number(b.configured) - Number(a.configured)
+    || Number(b.connected) - Number(a.connected)
+    || Number(b.shopify) - Number(a.shopify)
+    || Number(b.products.length) - Number(a.products.length)
+  );
+
+  const selected = candidates[0];
+  if (!selected || !selected.sellableCount) throw new Error("no_sellable_products_in_printify_account");
+  return { shop: selected.shop, products: selected.products };
 }
 
 type ResolvedOption = { name: string; type: string; value: string };
@@ -267,7 +308,7 @@ async function buildCatalog(supabase: any) {
     .map((product: any) => publicProduct(product, fx))
     .filter((product: any) => product.id && product.name && product.price > 0 && product.mockups.length > 0 && product.variants.length > 0);
   return {
-    generatedAt: new Date().toISOString(), source: "bruis-direct-v838", fx: fxAuditSnapshot(fx),
+    generatedAt: new Date().toISOString(), source: "bruis-direct-v838", catalogSelection: "account-wide-best-shop-v849", fx: fxAuditSnapshot(fx),
     shop: { id: String(shop?.id || ""), salesChannel: text(shop?.sales_channel) }, products: cleanProducts,
   };
 }
@@ -302,6 +343,7 @@ Deno.serve(async (req: Request) => {
 
   const payload = row?.payload && typeof row.payload === "object" ? row.payload : { products: [] };
   const products = Array.isArray(payload?.products) ? payload.products : [];
+  const selectionCurrent = payload?.catalogSelection === "account-wide-best-shop-v849";
   const generatedMs = row?.generated_at ? Date.parse(row.generated_at) : 0;
   const refreshStartedMs = row?.refresh_started_at ? Date.parse(row.refresh_started_at) : 0;
   const ageMs = generatedMs ? Math.max(0, Date.now() - generatedMs) : Number.POSITIVE_INFINITY;
@@ -312,7 +354,7 @@ Deno.serve(async (req: Request) => {
   // Never send an empty response that causes the storefront to resurrect an old
   // static catalog. If the cache is empty, rebuild directly from the connected
   // Printify shop and return that fresh catalog in the same request.
-  if (!products.length) {
+  if (!products.length || !selectionCurrent) {
     try {
       const freshPayload = await buildCatalog(supabase);
       const freshProducts = Array.isArray(freshPayload?.products) ? freshPayload.products : [];
@@ -368,6 +410,7 @@ Deno.serve(async (req: Request) => {
       pricing: "production-cost-plus-5-rounded-up", pricingBase: "production-cost",
       marginEuros: MARGIN_CENTS / 100, rounding: "whole-euro-ceiling", sourceCurrency: "USD", displayCurrency: "EUR", fx: payload?.fx || null, artworkFirst: true,
       cachedProducts: products.length, cacheAgeSeconds: Number.isFinite(ageMs) ? Math.round(ageMs / 1000) : null,
+      catalogSelection: payload?.catalogSelection || null,
       refreshScheduled,
     });
   }
