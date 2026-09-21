@@ -366,6 +366,14 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors(req) });
   if (req.method !== "GET") return json(req, { error: "method_not_allowed" }, 405);
   const url = new URL(req.url);
+  if (url.searchParams.get("bootstrap") === "1") {
+    return json(req, {
+      ok: true,
+      envTokenConfigured: !!text(Deno.env.get("PRINTIFY_API_TOKEN")),
+      serviceRoleConfigured: !!text(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")),
+      mode: "printify-bootstrap-v850",
+    });
+  }
   let supabase: any;
   try { supabase = serviceClient(); } catch { return json(req, { error: "server_not_configured", products: [] }, 503); }
 
