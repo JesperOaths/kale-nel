@@ -390,48 +390,48 @@ Deno.serve(async (req: Request) => {
   const stale = ageMs > CACHE_FRESH_MS;
   let refreshScheduled = false;
 
-  // Never send an empty response that causes the storefront to resurrect an old
-  // static catalog. If the cache is empty, rebuild directly from the connected
-  // Printify shop and return that fresh catalog in the same request.
+  // The storefront never falls back to static catalog data. When the live Printify
+  // cache is empty or was built with an obsolete selector, schedule a bounded
+  // background refresh and return quickly so browsers can poll without timing out.
   if (!products.length || !selectionCurrent) {
-    try {
-      const freshPayload = await buildCatalog(supabase);
-      const freshProducts = Array.isArray(freshPayload?.products) ? freshPayload.products : [];
-      if (!freshProducts.length) throw new Error("printify_catalog_empty");
+    if (!refreshLeaseActive) {
       const now = new Date().toISOString();
-      const { error: saveError } = await supabase.from("shop_catalog_cache_v828").update({
-        payload: freshPayload,
-        generated_at: now,
-        refresh_started_at: null,
-        last_error: null,
+      const { error: leaseError } = await supabase.from("shop_catalog_cache_v828").update({
+        refresh_started_at: now,
         updated_at: now,
       }).eq("id", 1);
-      if (saveError) throw saveError;
-
-      if (url.searchParams.get("health") === "1") {
-        return json(req, {
-          ok: true, mode: "bruis-direct-catalog-v838", usesShopifyApi: false, whiteVariantsOnly: false, toteHandleColors: ["Black", "White"],
-          pricing: "production-cost-plus-5-rounded-up", pricingBase: "production-cost",
-          marginEuros: MARGIN_CENTS / 100, rounding: "whole-euro-ceiling", sourceCurrency: "USD", displayCurrency: "EUR", fx: freshPayload?.fx || null, artworkFirst: true,
-          cachedProducts: freshProducts.length, cacheAgeSeconds: 0, refreshScheduled: false,
-        });
+      if (!leaseError) {
+        refreshScheduled = true;
+        EdgeRuntime.waitUntil(refreshCatalog(supabase));
       }
-
-      return json(req, {
-        ...freshPayload,
-        cache: { generatedAt: now, ageSeconds: 0, stale: false, refreshScheduled: false },
-      });
-    } catch (error) {
-      const now = new Date().toISOString();
-      const message = text(error instanceof Error ? error.message : error).slice(0, 500);
-      await supabase.from("shop_catalog_cache_v828").update({
-        refresh_started_at: null,
-        last_error: message,
-        updated_at: now,
-      }).eq("id", 1);
-      console.error("shop-catalog-v828 synchronous recovery failed", error instanceof Error ? error.name : "unknown");
-      return json(req, { error: "catalog_unavailable", source: "bruis-direct-v838", products: [] }, 503);
     }
+
+    if (url.searchParams.get("health") === "1") {
+      return json(req, {
+        ok: true,
+        warming: true,
+        mode: "bruis-direct-catalog-v838",
+        usesShopifyApi: false,
+        pricing: "production-cost-plus-5-rounded-up",
+        pricingBase: "production-cost",
+        marginEuros: MARGIN_CENTS / 100,
+        rounding: "whole-euro-ceiling",
+        sourceCurrency: "USD",
+        displayCurrency: "EUR",
+        cachedProducts: products.length,
+        cacheAgeSeconds: Number.isFinite(ageMs) ? Math.round(ageMs / 1000) : null,
+        catalogSelection: payload?.catalogSelection || null,
+        refreshScheduled,
+      });
+    }
+
+    return json(req, {
+      ok: false,
+      warming: true,
+      source: "bruis-direct-v838",
+      products: [],
+      refreshScheduled,
+    }, 202);
   }
 
   if (stale && !refreshLeaseActive) {
