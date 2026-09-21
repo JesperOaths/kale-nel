@@ -155,7 +155,7 @@ async function textAsset(url, label) {
 const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(`${SHOP_URL}?v=${ASSET_VERSION}`);
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
-assert.match(html, /version-watermark[^>]*>v841</, 'Live shop must expose v841 watermark');
+assert.match(html, /version-watermark[^>]*>v848</, 'Live shop must expose v848 watermark');
 assert.match(html, /direct-commerce-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must retain the direct commerce bridge');
 assert.match(html, /tote-handle-color-v839\.js\?v=20260916-storefront-v839-r1/, 'Live shop must load tote handle-color behavior');
 assert.match(html, /delivery-estimate-v833\.js\?v=20260916-delivery-v840-r1/, 'Live shop must load the current delivery estimate UI');
