@@ -1,6 +1,6 @@
 const FALLBACK_PRODUCTS = [];
 const cartKey = 'bruisCartV3';
-const LIVE_CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog';
+const LIVE_CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828';
 // Supabase legacy anon key is intentionally publishable/browser-safe. RLS blocks
 // direct reads/writes to the private production catalog; the Edge Function returns
 // only the sanitized catalog projection.
@@ -287,7 +287,8 @@ function renderCart(){
       </article>`).join('');
   }
   const summary = cart.map(i => `${i.qty} x ${i.name} (${i.size})`).join('\n') || 'I would like to order Bruis tees.';
-  qs('[data-mail-order]').href = `mailto:hello@example.com?subject=Bruis%20order%20request&body=${encodeURIComponent(summary)}`;
+  const mailOrder = qs('[data-mail-order]');
+  if(mailOrder) mailOrder.href = `mailto:hello@example.com?subject=Bruis%20order%20request&body=${encodeURIComponent(summary)}`;
 }
 
 function addToCart(id){
