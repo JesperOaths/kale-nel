@@ -82,8 +82,8 @@ async function catalog() {
   }
 
   assert.equal(response?.status, 200, `shop-catalog-v828 must return HTTP 200, got ${response?.status}`);
-  assert.equal(payload?.source, 'bruis-direct-v838', `catalog must identify the current Bruis direct catalog source, got ${payload?.source}`);
-  assert.equal(payload?.catalogSelection, 'account-wide-fast-probe-v850', `catalog must discover the active Printify shop account-wide, got ${payload?.catalogSelection}`);
+  assert.equal(payload?.source, 'printify-live-v850', `catalog must identify the live Printify source, got ${payload?.source}`);
+  assert.equal(payload?.catalogSelection, 'all-readable-printify-shops-v850', `catalog must mirror all readable Printify shops, got ${payload?.catalogSelection}`);
   assert.ok(Array.isArray(payload?.products), 'catalog must return products[]');
   assert.ok(payload.products.length >= MIN_PRODUCTS, `catalog returned only ${payload.products.length} products`);
 
@@ -156,9 +156,9 @@ async function textAsset(url, label) {
 const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(`${SHOP_URL}?v=${ASSET_VERSION}`);
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
-assert.match(html, /version-watermark[^>]*>v849</, 'Live shop must expose v849 watermark');
+assert.match(html, /version-watermark[^>]*>v850</, 'Live shop must expose v850 watermark');
 assert.match(html, /direct-commerce-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must retain the direct commerce bridge');
-assert.match(html, /store\.js\?v=20260921-storefront-v849-r1/, 'Live shop must load the live-only v849 storefront');
+assert.match(html, /store\.js\?v=20260921-storefront-v850-r1/, 'Live shop must load the live-only v850 storefront');
 assert.doesNotMatch(html, /catalog-data\.js/, 'Live shop must not load the retired static catalog fallback');
 assert.match(html, /tote-handle-color-v839\.js\?v=20260916-storefront-v839-r1/, 'Live shop must load tote handle-color behavior');
 assert.match(html, /delivery-estimate-v833\.js\?v=20260916-delivery-v840-r1/, 'Live shop must load the current delivery estimate UI');
