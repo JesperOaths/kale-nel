@@ -108,20 +108,18 @@ const excludedTrackedFiles = tracked.filter((file) =>
   globallyExcludedExtensions.has(path.extname(file).toLowerCase())
 );
 
-// Bruis deliberately publishes public product data through shop/catalog-data.js so
-// the repository can keep JSON globally excluded from Pages. store.js retains the
-// two historical JSON fetch names only as a backwards-compatible fallback path.
-// Treat those exact source->artifact pairs as safe only while the published JS
-// adapter is tracked and store.js consumes window.BRUIS_CATALOG first.
-const shopCatalogAdapter = 'shop/catalog-data.js';
+// Bruis v849 uses the live Printify-backed Edge Function as the only storefront
+// catalog authority. Historical static catalog artifacts may remain tracked for
+// provenance/import tooling, but active runtime sources must never load or consume
+// them and must never reference excluded JSON fallbacks.
 const shopStore = 'shop/store.js';
+const shopIndex = 'shop/index.html';
 const shopStoreBody = tracked.includes(shopStore) ? fs.readFileSync(shopStore, 'utf8') : '';
-assert.ok(tracked.includes(shopCatalogAdapter), 'Bruis public catalog JS adapter must remain tracked');
-assert.match(shopStoreBody, /window\.BRUIS_CATALOG/, 'Bruis store must consume the published JS catalog adapter');
-const deliberateExcludedDependencyExceptions = new Set([
-  `${shopStore} -> shop/catalog.json`,
-  `${shopStore} -> shop/catalog.printify.json`
-]);
+const shopIndexBody = tracked.includes(shopIndex) ? fs.readFileSync(shopIndex, 'utf8') : '';
+assert.match(shopStoreBody, /shop-catalog-v828/, 'Bruis store must use the live Printify-backed catalog endpoint');
+assert.doesNotMatch(shopStoreBody, /window\.BRUIS_CATALOG|catalog\.json|catalog\.printify\.json/, 'Bruis store must not consume static catalog fallbacks');
+assert.doesNotMatch(shopIndexBody, /catalog-data\.js/, 'Bruis shop must not load the retired static catalog adapter');
+const deliberateExcludedDependencyExceptions = new Set();
 
 const sourceBodies = activeSources.map((file) => [file, fs.readFileSync(file, 'utf8')]);
 const dependencyViolations = [];
