@@ -3,7 +3,7 @@ name: Verify live size modal v854
 on:
   push:
     paths:
-      - '.github/workflows/verify-live-size-modal-v854.yml'
+      - '.github/workflows/verify-live-size-modal-v853.yml'
 
 permissions:
   contents: read
