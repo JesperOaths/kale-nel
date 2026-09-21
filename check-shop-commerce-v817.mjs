@@ -542,3 +542,13 @@ console.log('Shop commerce v839 tote-handle-color + Bruis-copy + shipping-total 
 
 assert.match(collectionMedia, /removesLegacyTopLabels:true/);
 assert.match(styles, /hide legacy text baked into Classic\/Boxy collection artwork/);
+
+assert.match(adminPage, /Reject \/ not paid/);
+assert.match(adminPage, /Delete order/);
+assert.match(adminPage, /reject_order/);
+assert.match(adminPage, /delete_order/);
+assert.match(adminPage, /reject-email-before-delete/);
+assert.match(adminEdge, /rejection_notified_at/);
+assert.match(adminEdge, /rejection_email_failed/);
+assert.match(adminEdge, /delete_not_allowed/);
+assert.match(adminEdge, /sendEmail\(working\.customer_email/);
