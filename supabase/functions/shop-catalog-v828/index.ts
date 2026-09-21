@@ -39,6 +39,74 @@ function publicTitle(product: any) {
   return raw;
 }
 
+
+const PUBLIC_PRODUCT_NAMES: Record<string, string> = {
+  "6a97ea08b3fdf6e3e5006a3a": "Coral",
+  "6a97e970031028396b0e06ee": "Daffodil",
+  "6a871b6035cea7fe2c005ee6": "Dragonfly",
+  "6a97d1242487da888903a445": "Honeysuckle",
+  "6a97eac8031028396b0e07dc": "Horseshoe Crab",
+  "6a97d253a530b95d7707ffa4": "Seahorse",
+  "6a97ee4acef71a1df0017d52": "Kelp",
+  "6a9742c08816f2362104d5cc": "Despinoza Rose T-Shirt",
+  "6a975ec45d07cc05a702a491": "Despinoza Long-Stem Rose T-Shirt",
+  "6aaff223e0eef877800262df": "Despinoza Rose Snapback Cap",
+  "6aaa152378f50f3725033e18": "Despinoza DD Rose Tote Bag",
+  "6a877d2aeb76ae387b05cfae": "Axolotl",
+  "6aaa4536b6bab1f028069988": "Aye-Aye",
+  "6aaa566a7e9070db3f09bc0a": "Thorny Devil",
+  "6ab0fa9a0b770861f80da032": "Thorny Devil — Alternate Artwork",
+  "6ab119be793a18c49f0d2f9c": "Crown Imperial",
+  "6aaa4d00cf8017667a0586c6": "Japanese Spider Crab",
+  "6a97d552b3fdf6e3e5005804": "Dogwood",
+  "6aaa48e16b79c0257608010d": "Fennec Fox",
+  "6aaa52d4248ab968df08c422": "Pom-Pom Crab",
+  "6ab11a606c03da12620e7dce": "Himalayan Blue Poppy",
+  "6aaa49f8583c51460607a144": "Humpback Whale",
+  "6a98254d5c9d1f57390a1024": "Hydrangea",
+  "6a878552828b6188a0031a81": "Jellyfish",
+  "6aaa4c57583c51460607a270": "Jerboa",
+  "6aaa50bb0da2b4cf33062dbf": "Kudu",
+  "6ab11b242bc468efdf0ad5b8": "Lady's Slipper Orchid",
+  "6aaa4ed8a0fd67a9700b9bc8": "Leaf-Tailed Gecko",
+  "6aaa4fbae20a7d1fbb0fcf79": "Leopard Seal",
+  "6a97ecf8031028396b0e0945": "Water Lily",
+  "6a97f122cef71a1df0017f59": "Magnolia",
+  "6aaa55ea5e707d1ff9060c88": "Manta Ray",
+  "6a97e8d32487da888903ba9d": "Monstera",
+  "6aaa46a143c8057f5104a52e": "Banded Linsang",
+  "6a97d47e5100c415920da0ea": "Orchid",
+  "6a8781c676f52ce62f082d19": "Orchid Mantis",
+  "6ab11c1820563fc58009dec0": "Persian Buttercup",
+  "6ab11cd7f4f8f622b2089cf3": "Pink Dahlia",
+  "6aaa543d7e9070db3f09bb03": "Pufferfish",
+  "6ab11eb805d12e6234068af3": "Red & White Parrot Tulip",
+  "6ab11ddab6d42b3fc108ac42": "Red Spider Lily",
+  "6aaa54ca248ab968df08c516": "Secretary Bird",
+  "6aaa4ddfb3c36c673e0dee1b": "Krill",
+  "6ab11f47937bf873f309905c": "Snake's Head Fritillary",
+  "6a97ed9c2487da888903bde8": "Snowdrop",
+  "6aaa520db1ff95a9e501202c": "Orb-Weaver",
+  "6aaa4b12583c51460607a1f3": "Japanese Maple",
+  "6a8769e26a41fe0f530b538f": "Thistle",
+  "6ab11fcc793a18c49f0d3301": "Tiger Lily",
+  "6ab1204d20563fc58009e1a9": "White Fringed Orchid",
+  "6a877defbecced59b0037078": "Wild Carrot (Queen Anne's Lace)"
+};
+
+function publicProductName(product: any) {
+  return PUBLIC_PRODUCT_NAMES[text(product?.id)] || publicTitle(product);
+}
+
+function publicBaseLabel(product: any) {
+  const blueprint = String(product?.blueprint_id || "");
+  if (blueprint === "6") return "Gildan 5000 Heavy Cotton T-Shirt";
+  if (blueprint === "1382") return "Bella+Canvas 3010 Oversized Boxy T-Shirt";
+  if (blueprint === "1753") return "Yupoong 6007 Flat Bill Cap";
+  if (blueprint === "1389") return "All-Over Print Tote Bag";
+  return /\btote\b/i.test(text(product?.title)) ? "Tote Bag" : "Product";
+}
+
 function cors(req: Request) {
   const origin = text(req.headers.get("origin"));
   const allow = ALLOWED_ORIGINS.has(origin) || /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(origin)
@@ -492,10 +560,10 @@ function publicProduct(product: any, fx: any, shopId: number, shop: any) {
   const selectorType = isToteProduct(product) ? "handle-color" : "size";
   return {
     id: text(product?.id), source: "printify-live-v850", shopId: String(shopId), shopTitle: text(shop?.title),
-    name: text(product?.title) || publicTitle(product), description: text(product?.description),
+    name: publicProductName(product), description: text(product?.description),
     collection, price: prices.length ? Math.min(...prices) : 0, priceMax: prices.length ? Math.max(...prices) : 0,
     sizes, colors, selectorType, mockups, image: mockups[0]?.image || "", baseKey: String(product?.blueprint_id || "shirt"),
-    baseLabel: /\btote\b/i.test(text(product?.title)) ? "Tote Bag" : collection === "boxy" ? "Oversized Boxy T-Shirt" : "Classic T-Shirt",
+    baseLabel: publicBaseLabel(product),
     variants: available, updatedAt: product?.updated_at || null,
   };
 }

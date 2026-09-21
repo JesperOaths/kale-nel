@@ -393,3 +393,79 @@ h3 { font-size: 1.08rem; }
   .view-shapes-large { width: 100%; }
   .mockup-rail { grid-auto-columns: 88%; }
 }
+
+
+/* v851: persistent, product-specific shirt size guide */
+body.has-size-guide { padding-bottom: 190px; }
+.size-guide-tray {
+  position: fixed;
+  z-index: 45;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: min(1120px, calc(100% - 24px));
+  max-height: 170px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255,253,248,.97);
+  box-shadow: 0 14px 42px rgba(24,32,22,.18);
+  backdrop-filter: blur(12px);
+}
+.size-guide-tray[hidden] { display: none !important; }
+.size-guide-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px 7px;
+}
+.size-guide-head strong,
+.size-guide-head span { display: block; }
+.size-guide-head strong { font-size: .92rem; }
+.size-guide-head [data-size-guide-subtitle] { margin-top: 2px; color: var(--muted); font-size: .72rem; }
+.size-guide-swipe { color: var(--green); font-size: .7rem; font-weight: 900; white-space: nowrap; }
+.size-guide-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.size-guide-scroll table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: .75rem;
+}
+.size-guide-scroll th,
+.size-guide-scroll td {
+  min-width: 68px;
+  padding: 6px 10px;
+  border-right: 1px solid var(--line);
+  white-space: nowrap;
+  text-align: center;
+}
+.size-guide-scroll th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 190px;
+  text-align: left;
+  background: var(--card);
+}
+.size-guide-scroll thead th { background: #f4f0e7; font-weight: 950; }
+.size-guide-tray > small {
+  display: block;
+  padding: 6px 14px 8px;
+  color: var(--muted);
+  font-size: .68rem;
+}
+@media (max-width: 620px) {
+  body.has-size-guide { padding-bottom: 180px; }
+  .size-guide-tray { bottom: 8px; width: calc(100% - 16px); max-height: 165px; border-radius: 15px; }
+  .size-guide-head { padding: 8px 10px 6px; }
+  .size-guide-head [data-size-guide-subtitle] { max-width: 255px; }
+  .size-guide-scroll th:first-child { min-width: 165px; }
+  .size-guide-scroll th, .size-guide-scroll td { min-width: 62px; padding: 6px 8px; }
+}

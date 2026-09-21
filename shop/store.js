@@ -5,6 +5,118 @@ const LIVE_CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/
 // direct reads/writes to the private production catalog; the Edge Function returns
 // only the sanitized catalog projection.
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpcW50YXpnbnJ4d2xpYWlka215Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5MjkxNDUsImV4cCI6MjA4OTUwNTE0NX0.w21i9sYLybl0auVSJpc0OFwRoE3a-rRcJG8NtUF_xn8';
+const SIZE_ORDER = ['XS','S','M','L','XL','2XL','3XL','4XL','5XL'];
+const SIZE_GUIDES = {
+  '6': {
+    label: 'Gildan 5000 Heavy Cotton T-Shirt',
+    sizes: ['S','M','L','XL','2XL','3XL','4XL','5XL'],
+    rows: [
+      ['Width (cm)', '45.7','50.8','55.9','61.0','66.0','71.1','76.2','81.3'],
+      ['Length (cm)', '71.1','73.7','76.2','78.7','81.3','83.8','86.4','88.9'],
+      ['Sleeve from centre back (cm)', '38.4','41.9','45.7','49.5','53.3','56.9','60.2','63.5']
+    ],
+    tolerance: 'Approx. ±3.8 cm production tolerance'
+  },
+  '1382': {
+    label: 'Bella+Canvas 3010 Oversized Boxy T-Shirt',
+    sizes: ['XS','S','M','L','XL','2XL','3XL'],
+    rows: [
+      ['Width (cm)', '47.6','50.2','52.7','57.8','62.9','68.0','73.0'],
+      ['Length (cm)', '66.7','69.2','70.5','73.0','75.6','76.8','79.4']
+    ],
+    tolerance: 'Approx. ±2.5 cm production tolerance'
+  }
+};
+let sizeGuideObserver = null;
+
+function shirtSizes(raw, baseKey){
+  if(!SIZE_GUIDES[baseKey]) return Array.isArray(raw.sizes) ? raw.sizes : [];
+  const variants = Array.isArray(raw.variants) ? raw.variants : [];
+  const found = [...new Set(variants.map(variant => String(variant?.size || '').trim().toUpperCase()).filter(Boolean))];
+  return found.sort((a,b) => {
+    const ai = SIZE_ORDER.indexOf(a);
+    const bi = SIZE_ORDER.indexOf(b);
+    return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi) || a.localeCompare(b);
+  });
+}
+
+function ensureSizeGuideTray(){
+  let tray = qs('[data-size-guide-tray]');
+  if(tray) return tray;
+  tray = document.createElement('aside');
+  tray.className = 'size-guide-tray';
+  tray.dataset.sizeGuideTray = '';
+  tray.hidden = true;
+  tray.setAttribute('aria-live','polite');
+  tray.innerHTML = `
+    <div class="size-guide-head">
+      <div>
+        <strong data-size-guide-title>Size guide</strong>
+        <span data-size-guide-subtitle>Garment measurements in cm</span>
+      </div>
+      <span class="size-guide-swipe">Scroll sideways →</span>
+    </div>
+    <div class="size-guide-scroll" tabindex="0" aria-label="Scrollable shirt size table">
+      <table data-size-guide-table></table>
+    </div>
+    <small data-size-guide-note></small>
+  `;
+  document.body.appendChild(tray);
+  return tray;
+}
+
+function renderSizeGuide(product){
+  const tray = ensureSizeGuideTray();
+  const guide = product ? SIZE_GUIDES[String(product.baseKey || '')] : null;
+  if(!guide){
+    tray.hidden = true;
+    document.body.classList.remove('has-size-guide');
+    return;
+  }
+  tray.hidden = false;
+  document.body.classList.add('has-size-guide');
+  qs('[data-size-guide-title]').textContent = `${product.name} · Size guide`;
+  qs('[data-size-guide-subtitle]').textContent = `${guide.label} · garment measurements, not body measurements`;
+  qs('[data-size-guide-note]').textContent = guide.tolerance;
+  const table = qs('[data-size-guide-table]');
+  table.innerHTML = `
+    <thead><tr><th>Measurement</th>${guide.sizes.map(size => `<th>${esc(size)}</th>`).join('')}</tr></thead>
+    <tbody>${guide.rows.map(row => `<tr><th>${esc(row[0])}</th>${row.slice(1).map(value => `<td>${esc(value)}</td>`).join('')}</tr>`).join('')}</tbody>
+  `;
+}
+
+function initializeSizeGuideTracking(){
+  if(sizeGuideObserver) sizeGuideObserver.disconnect();
+  const cards = qsa('.product-card[data-product-id]');
+  if(!cards.length){
+    renderSizeGuide(null);
+    return;
+  }
+  const activate = card => {
+    const product = products.find(item => item.id === card?.dataset.productId);
+    renderSizeGuide(product || null);
+  };
+  cards.forEach(card => {
+    card.addEventListener('pointerenter', () => activate(card));
+    card.addEventListener('focusin', () => activate(card));
+    card.addEventListener('click', () => activate(card));
+  });
+  if('IntersectionObserver' in window){
+    const ratios = new Map();
+    sizeGuideObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => ratios.set(entry.target, entry.isIntersecting ? entry.intersectionRatio : 0));
+      const best = [...ratios.entries()].sort((a,b) => b[1] - a[1])[0];
+      if(best && best[1] > 0.2) activate(best[0]);
+    }, { threshold: [0,.25,.5,.75,1] });
+    cards.forEach(card => sizeGuideObserver.observe(card));
+  }
+  const firstShirt = cards.find(card => {
+    const product = products.find(item => item.id === card.dataset.productId);
+    return product && SIZE_GUIDES[String(product.baseKey || '')];
+  });
+  activate(firstShirt || cards[0]);
+}
+
 const COLLECTIONS = {
   normal: {
     label: 'Classic',
@@ -42,7 +154,8 @@ function normalizeCollection(value){
 }
 
 function normalizeProduct(raw){
-  const name = raw.name || raw.title || 'Untitled tee';
+  const name = raw.name || raw.title || 'Untitled product';
+  const baseKey = String(raw.baseKey || raw.base_key || '');
   const mockups = (Array.isArray(raw.mockups) ? raw.mockups.filter(m => m && m.image) : [])
     .filter((mockup, index) => !(
       index === 0 &&
@@ -57,12 +170,13 @@ function normalizeProduct(raw){
     name,
     price: wholeEuro(raw.price),
     priceMax: wholeEuro(raw.priceMax || raw.price),
-    sizes: Array.isArray(raw.sizes) && raw.sizes.length ? raw.sizes : ['S','M','L','XL','2XL'],
+    sizes: shirtSizes(raw, baseKey),
     mockups,
     image: mockups[0]?.image || raw.image || '',
     baseLabel: raw.baseLabel || 'Shirt base pending',
     variants: Array.isArray(raw.variants) ? raw.variants.map(variant => ({ ...variant, price: wholeEuro(variant.price) })) : [],
     shopId: String(raw.shopId || raw.shop_id || ''),
+    baseKey,
     collection
   };
 }
@@ -160,7 +274,7 @@ function renderProducts(){
   empty.hidden = true;
   empty.textContent = '';
   wrap.innerHTML = list.map(product => `
-    <article class="product-card" data-product-collection="${esc(product.collection)}">
+    <article class="product-card" data-product-id="${esc(product.id)}" data-product-collection="${esc(product.collection)}">
       <div class="mockup-rail" aria-label="${esc(product.name)} images">
         ${product.mockups.map(m => `
           <figure class="mockup mock-${slug(m.label)}">
@@ -196,6 +310,7 @@ function renderProducts(){
       </div>
     </article>`).join('');
   initializeGalleries();
+  initializeSizeGuideTracking();
 }
 
 function openShoppingView({ scroll = true } = {}){
@@ -206,6 +321,7 @@ function openShoppingView({ scroll = true } = {}){
 
 function openShapeEntry({ scroll = true, updateUrl = true } = {}){
   qs('[data-shop-section]').hidden = true;
+  renderSizeGuide(null);
   qs('[data-shape-entry]').hidden = false;
   updateShapeControls();
   if(updateUrl){
