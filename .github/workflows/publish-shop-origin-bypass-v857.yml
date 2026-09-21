@@ -1,0 +1,101 @@
+name: Publish shop origin bypass v857
+
+on:
+  push:
+    paths:
+      - '.github/workflows/publish-shop-origin-bypass-v857.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kalenel-shop-origin-bypass-v857
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TOKEN_A: ${{ secrets.CLOUDFARE_API_TOKEN_ONE }}
+      TOKEN_B: ${{ secrets.CLOUDFLARE_API_TOKEN_ONE }}
+      TOKEN_C: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      ADMIN_SOURCE_REPOSITORY: ${{ vars.KALENEL_ADMIN_SOURCE_REPOSITORY }}
+      ADMIN_SOURCE_REF: ${{ vars.KALENEL_ADMIN_SOURCE_REF }}
+      REQUIRE_PRIVATE_ADMIN_SOURCE: ${{ vars.KALENEL_REQUIRE_PRIVATE_ADMIN_SOURCE }}
+    steps:
+      - name: Check out main
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Check out optional private admin source
+        if: env.ADMIN_SOURCE_REPOSITORY != ''
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          repository: ${{ env.ADMIN_SOURCE_REPOSITORY }}
+          ref: ${{ env.ADMIN_SOURCE_REF || 'main' }}
+          token: ${{ secrets.KALENEL_ADMIN_SOURCE_TOKEN }}
+          path: .private-admin-source
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: '24'
+
+      - name: Build protected admin assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -d "$GITHUB_WORKSPACE/.private-admin-source" ]]; then
+            export KALENEL_PRIVATE_ADMIN_SOURCE_DIR="$GITHUB_WORKSPACE/.private-admin-source"
+          fi
+          if [[ "${REQUIRE_PRIVATE_ADMIN_SOURCE,,}" =~ ^(1|true|yes)$ ]]; then
+            export KALENEL_REQUIRE_PRIVATE_ADMIN_SOURCE=1
+          fi
+          node scripts/build-admin-worker-assets.mjs
+          grep -q "PUBLIC_SHOP_ORIGIN_BUILD = 'v857-clean-collection-art'" cloudflare/workers/admin-gate/src/worker.js
+
+      - name: Run Worker security tests
+        run: node scripts/test-admin-worker-gate.mjs
+
+      - name: Deploy with an authorized Cloudflare token
+        shell: bash
+        run: |
+          set -euo pipefail
+          success=0
+          for label in A B C; do
+            var="TOKEN_$label"
+            token="${!var:-}"
+            [[ -n "$token" ]] || continue
+            account_json="$(curl --silent --show-error --max-time 20               -H "Authorization: Bearer $token"               'https://api.cloudflare.com/client/v4/accounts?per_page=50' || true)"
+            account_id="$(printf '%s' "$account_json" | jq -r 'if .success == true and (.result|length) == 1 then .result[0].id else empty end' 2>/dev/null || true)"
+            [[ -n "$account_id" ]] || continue
+            if CLOUDFLARE_API_TOKEN="$token" CLOUDFLARE_ACCOUNT_ID="$account_id"               npx --yes wrangler@4.118.0 deploy --config cloudflare/workers/admin-gate/wrangler.toml; then
+              echo "Worker deployed with token alias $label."
+              success=1
+              break
+            fi
+          done
+          [[ "$success" == "1" ]] || { echo "::error::No configured Cloudflare token could deploy the Worker."; exit 1; }
+
+      - name: Verify plain live shop is v857
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..20}; do
+            headers="$(mktemp)"
+            body="$(mktemp)"
+            status="$(curl --silent --show-error --max-time 20               --dump-header "$headers" --output "$body" --write-out '%{http_code}'               'https://kalenel.nl/shop/' || true)"
+            echo "attempt=$attempt status=$status"
+            if [[ "$status" == "200" ]]               && grep -q 'version-watermark">v857<' "$body"               && grep -q 'styles.css?v=20260921-storefront-v857-r1' "$body"               && grep -q 'collection-media-v831.js?v=20260921-storefront-v857-r1' "$body"; then
+              grep -qi '^cache-control: no-store' "$headers"
+              echo "Plain /shop/ is live on v857 and bypasses stale origin HTML."
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::Plain /shop/ did not switch to v857."
+          exit 1

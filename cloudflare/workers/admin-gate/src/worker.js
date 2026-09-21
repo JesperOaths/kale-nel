@@ -17,6 +17,7 @@ const MAX_LOGIN_ATTEMPTS = 8;
 const SECURITY_LOGIN_UPSTREAM_TIMEOUT_MS = 9000;
 const SECURITY_MEDIA_SESSION_TIMEOUT_MS = 12000;
 const ADMIN_BUILD = 'v844-trusted-admin-session';
+const PUBLIC_SHOP_ORIGIN_BUILD = 'v857-clean-collection-art';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -76,8 +77,32 @@ async function handlePublicApex(request, env, url) {
   if (!isSafePath(url.pathname)) return notFound();
   if (isSecurityPath(url.pathname)) return await handlePublicSecurity(request, env, url);
   if (!isProtectedPublicPath(url.pathname)) {
-    const response = await fetch(request);
-    return withPublicSecurityHeaders(response);
+    const isShopDocument = request.method === 'GET' || request.method === 'HEAD'
+      ? (url.pathname === '/shop/' || url.pathname === '/shop/index.html')
+      : false;
+
+    let response;
+    if (isShopDocument) {
+      const originUrl = new URL(url.toString());
+      originUrl.searchParams.set('__kalenel_origin_build', PUBLIC_SHOP_ORIGIN_BUILD);
+      const originRequest = new Request(originUrl.toString(), request);
+      response = await fetch(originRequest, { cf: { cacheEverything: false, cacheTtl: 0 } });
+    } else {
+      response = await fetch(request);
+    }
+
+    const secured = withPublicSecurityHeaders(response);
+    if (!isShopDocument) return secured;
+
+    const headers = new Headers(secured.headers);
+    headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+    headers.set('Pragma', 'no-cache');
+    headers.delete('Age');
+    return new Response(secured.body, {
+      status: secured.status,
+      statusText: secured.statusText,
+      headers
+    });
   }
   const target = new URL(url.pathname + url.search, `https://${ADMIN_HOST}`);
   return new Response(null, {
