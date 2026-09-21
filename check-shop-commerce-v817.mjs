@@ -552,3 +552,11 @@ assert.match(adminEdge, /rejection_notified_at/);
 assert.match(adminEdge, /rejection_email_failed/);
 assert.match(adminEdge, /delete_not_allowed/);
 assert.match(adminEdge, /sendEmail\(working\.customer_email/);
+
+assert.match(adminPage, /Production email:/);
+assert.match(adminPage, /printify-production-email-v1/);
+assert.match(adminEdge, /production_notified_at/);
+assert.match(adminEdge, /Your payment is confirmed/);
+assert.match(adminEdge, /is now in production/);
+assert.match(webhookEdge, /production_notified_at/);
+assert.match(webhookEdge, /printify-production-email-v1/);

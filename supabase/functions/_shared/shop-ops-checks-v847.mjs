@@ -114,7 +114,7 @@ export async function refreshCostsAndCheck(sb,settings,state,analyticsUrl,servic
   return {refresh:payload.refresh||{},new_alerts:created};
 }
 export async function checkOrdersAndTelemetry(sb,settings){
-  const {data:orders,error}=await sb.from("shop_orders").select("id,status,payment_reference,created_at,payment_verified_at,submitted_to_printify_at,shipped_at,tracking,last_error,total_cents,subtotal_cents,shipping_cents,payment_fee_cents,invoice_number,customer_name,customer_email,payment_provider,payment_request_url,order_confirmation_notified_at,shipment_notified_at,notification_error,notification_error_at").order("created_at",{ascending:false}).limit(2000);
+  const {data:orders,error}=await sb.from("shop_orders").select("id,status,payment_reference,created_at,payment_verified_at,submitted_to_printify_at,shipped_at,tracking,last_error,total_cents,subtotal_cents,shipping_cents,payment_fee_cents,invoice_number,customer_name,customer_email,payment_provider,payment_request_url,order_confirmation_notified_at,production_notified_at,shipment_notified_at,notification_error,notification_error_at").order("created_at",{ascending:false}).limit(2000);
   if(error)throw error;
   const active=new Map([["order_error",new Set()],["paid_not_submitted",new Set()],["production_stuck",new Set()],["shipped_no_tracking",new Set()]]),created=[],notificationFailures=[];
   for(const o of orders||[]){
@@ -131,6 +131,23 @@ export async function checkOrdersAndTelemetry(sb,settings){
       }else if(!mailed.skipped){
         await sb.from("shop_orders").update({notification_error:mailed.error,notification_error_at:nowIso()}).eq("id",o.id);
         o.notification_error=mailed.error;
+      }
+    }
+    if(o.status==="production"&&o.submitted_to_printify_at&&!o.production_notified_at&&text(o.customer_email)){
+      const claimAt=nowIso();
+      const {data:claimed}=await sb.from("shop_orders").update({production_notified_at:claimAt,updated_at:claimAt}).eq("id",o.id).is("production_notified_at",null).select("id").maybeSingle();
+      if(claimed){
+        const safeName=text(o.customer_name).replace(/[<>&]/g,""),safeRef=ref.replace(/[<>&]/g,"");
+        const html='<div style="font-family:Arial,sans-serif;line-height:1.55;color:#111"><h2>Your payment is confirmed</h2><p>Hi '+safeName+',</p><p>We have confirmed payment for order <strong>'+safeRef+'</strong> and Printify has accepted the order for production.</p><p>Your items are now being prepared and printed. No action is needed from you.</p><p>We will email you again as soon as the shipment is on the way.</p></div>';
+        const plain='Payment confirmed for Bruis order '+ref+'. Printify has accepted the order and it is now in production. No action is needed from you. We will email you again when it ships.';
+        const mailed=await sendEmail(text(o.customer_email),'Bruis order '+ref+' is now in production',html,plain);
+        if(mailed.ok){
+          await sb.from("shop_orders").update({notification_error:null,notification_error_at:null}).eq("id",o.id);
+          o.production_notified_at=claimAt;o.notification_error=null;
+        }else if(!mailed.skipped){
+          await sb.from("shop_orders").update({production_notified_at:null,notification_error:mailed.error,notification_error_at:nowIso()}).eq("id",o.id);
+          o.notification_error=mailed.error;
+        }
       }
     }
     if(text(o.notification_error))notificationFailures.push({order_id:o.id,reference:ref,status:o.status,error:text(o.notification_error).slice(0,500),at:o.notification_error_at||null});
