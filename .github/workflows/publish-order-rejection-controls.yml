@@ -1,4 +1,4 @@
-name: Publish order rejection controls
+name: Publish order lifecycle emails
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: kalenel-order-rejection-controls
+  group: kalenel-order-lifecycle-emails
   cancel-in-progress: false
 
 jobs:
@@ -60,7 +60,9 @@ jobs:
           grep -q 'reject-email-before-delete' cloudflare/workers/admin-gate/static/admin_shop_orders.html
           grep -q 'Reject / not paid' cloudflare/workers/admin-gate/static/admin_shop_orders.html
           grep -q 'Delete order' cloudflare/workers/admin-gate/static/admin_shop_orders.html
-          echo "Rejection/delete controls are present in the protected asset bundle."
+          grep -q 'printify-production-email-v1' cloudflare/workers/admin-gate/static/admin_shop_orders.html
+          grep -q 'Production email:' cloudflare/workers/admin-gate/static/admin_shop_orders.html
+          echo "Order rejection/delete and production-email controls are present in the protected asset bundle."
 
       - name: Run Worker security tests
         run: node scripts/test-admin-worker-gate.mjs
