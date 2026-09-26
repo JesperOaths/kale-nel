@@ -48,16 +48,43 @@ function splitName(full: string) { const parts = clean(full).split(" ").filter(B
 function validEmail(email: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254; }
 async function sha256(value: string) { const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)); return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, "0")).join(""); }
 
-async function printify(token: string, path: string, init: RequestInit = {}) {
-  const res = await fetch(`${PRINTIFY_BASE}${path}`, {
-    ...init,
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": "Kalenel-Manual-Shop/8.33", ...(init.headers || {}) },
-  });
-  const raw = await res.text();
-  let payload: any = null;
-  try { payload = raw ? JSON.parse(raw) : null; } catch { payload = raw; }
-  if (!res.ok) throw new Error(`Printify ${res.status}: ${text(payload?.message || payload?.error || raw).slice(0, 350)}`);
-  return payload;
+async function printify(token: string, path: string, init: RequestInit = {}, timeoutMs = 12000) {
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(`${PRINTIFY_BASE}${path}`, {
+        ...init,
+        signal: controller.signal,
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": "Kalenel-Manual-Shop/8.33", ...(init.headers || {}) },
+      });
+      const raw = await res.text();
+      let payload: any = null;
+      try { payload = raw ? JSON.parse(raw) : null; } catch { payload = raw; }
+      if (res.ok) return payload;
+
+      const message = `Printify ${res.status}: ${text(payload?.message || payload?.error || raw).slice(0, 350)}`;
+      if (attempt < 2 && (res.status === 429 || res.status >= 500)) {
+        lastError = new Error(message);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        continue;
+      }
+      throw new Error(message);
+    } catch (error) {
+      lastError = error;
+      const transient = error instanceof DOMException && error.name === "AbortError"
+        || error instanceof TypeError;
+      if (attempt < 2 && transient) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        continue;
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Printify request failed");
 }
 async function resolvePrintifyToken(sb: any) {
   const envToken = text(Deno.env.get("PRINTIFY_API_TOKEN"));
