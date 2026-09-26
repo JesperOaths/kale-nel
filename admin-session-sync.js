@@ -51,7 +51,24 @@
 
   function emitUpdate(){ try { window.dispatchEvent(new CustomEvent('gejast:admin-session-updated')); } catch (_) {} }
 
+  function resolveTrustedUntil(trustedUntil=''){
+    const raw = String(trustedUntil ?? '').trim();
+    const numeric = Number(raw);
+    if (Number.isFinite(numeric) && numeric > 1000000000000) return numeric;
+    const parsed = raw ? Date.parse(raw) : NaN;
+    if (Number.isFinite(parsed)) return parsed;
+    const existing = getDeadline();
+    if (Number.isFinite(existing) && existing > Date.now()) return existing;
+    return Date.now() + REMEMBER_MS;
+  }
+
   function setBundle(token, username='', persist=true, deviceToken='', trustedUntil=''){
+    const before = {
+      token: getToken(),
+      username: getUsername(),
+      device: getDevice(),
+      deadline: getDeadline()
+    };
     if (token) {
       sessionStorage.setItem(ADMIN_SESSION_KEY, token);
       if (persist) localStorage.setItem(ADMIN_SESSION_KEY, token);
@@ -61,19 +78,25 @@
       localStorage.setItem(ADMIN_USER_KEY, username);
     }
     if (deviceToken) localStorage.setItem(ADMIN_DEVICE_KEY, deviceToken);
-    const serverUntil = trustedUntil ? Date.parse(String(trustedUntil)) : NaN;
-    const until = Number.isFinite(serverUntil) ? serverUntil : (Date.now() + REMEMBER_MS);
+    const until = resolveTrustedUntil(trustedUntil);
     sessionStorage.setItem(ADMIN_DEADLINE_KEY, String(until));
     localStorage.setItem(ADMIN_DEADLINE_KEY, String(until));
-    emitUpdate();
+
+    const changed =
+      getToken() !== before.token ||
+      getUsername() !== before.username ||
+      getDevice() !== before.device ||
+      getDeadline() !== before.deadline;
+    if (changed) emitUpdate();
   }
 
   function clearBundle(){
+    const hadBundle = !!(getToken() || getDevice() || getUsername() || getDeadline());
     [ADMIN_SESSION_KEY, ADMIN_DEVICE_KEY, ADMIN_USER_KEY, ADMIN_DEADLINE_KEY].forEach((k)=>{
       sessionStorage.removeItem(k);
       localStorage.removeItem(k);
     });
-    emitUpdate();
+    if (hadBundle) emitUpdate();
   }
 
   function fingerprint(){
