@@ -199,12 +199,12 @@ assert.match(customerFacingCheckout, /replace\(\/\\bPrintify\\b\/gi, 'Bruis'\)/)
 assert.match(customerFacingCheckout, /replace\(\/\\bfactories\\b\/gi, 'production locations'\)/);
 assert.match(customerFacingCheckout, /replace\(\/\\bfactory\\b\/gi, 'production location'\)/);
 
-// Delivery authority now quotes the customer's canonical selected product and lets
-// the supplier's native routing own provider selection. The legacy regional mapping
-// parser remains tested in the shared routing helper, but preview mappings stay inert.
+// Delivery authority quotes the canonical product plus explicitly approved,
+ // destination-matching regional routes. Every mapped target is re-fetched and
+ // revalidated for identity, availability and artwork before it can be selected.
 assert.match(deliveryPreviewEdge, /CHOICE_PROVIDER_ID = 99/);
-assert.match(deliveryPreviewEdge, /const mappings:\s*any\[\]\s*=\s*\[\]/);
-assert.match(deliveryPreviewEdge, /native routing owns provider selection/);
+assert.match(deliveryPreviewEdge, /shop_fulfillment_mappings/);
+assert.match(deliveryPreviewEdge, /validateMappedCandidate/);
 assert.match(deliveryPreviewEdge, /chooseCheapestFulfillment/);
 assert.match(deliveryPreviewEdge, /catalog\/print_providers/);
 assert.match(deliveryPreviewEdge, /printifyV2/);
@@ -381,8 +381,8 @@ assert.match(checkoutEdge, /isToteProduct/);
 assert.match(checkoutEdge, /\$\{color\} handles/);
 assert.match(checkoutEdge, /status:\s*"pending"/);
 assert.match(checkoutEdge, /orders\/shipping\.json/);
-assert.match(checkoutEdge, /const mappings:\s*any\[\]\s*=\s*\[\]/);
-assert.match(checkoutEdge, /native order routing/);
+assert.match(checkoutEdge, /shop_fulfillment_mappings/);
+assert.match(checkoutEdge, /validateMappedCandidate/);
 assert.match(checkoutEdge, /buildFulfillmentPlans/);
 assert.match(checkoutEdge, /chooseCheapestFulfillment/);
 assert.match(checkoutEdge, /approved_regional_mapping/);
