@@ -16,7 +16,16 @@ const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
 const SECURITY_LOGIN_UPSTREAM_TIMEOUT_MS = 9000;
 const SECURITY_MEDIA_SESSION_TIMEOUT_MS = 12000;
-const ADMIN_BUILD = 'v844-trusted-admin-session';
+const ADMIN_AUTH_PROXY_PATH = '/api/admin-auth-v845';
+const ADMIN_SESSION_PROXY_PATH = '/api/admin-session';
+const ADMIN_PROXY_TIMEOUT_MS = 6500;
+const ADMIN_SESSION_RPC_ALLOWLIST = new Set([
+  'admin_check_session',
+  'admin_issue_trusted_device_v844',
+  'admin_resume_trusted_device_v844',
+  'admin_forget_trusted_device_v844'
+]);
+const ADMIN_BUILD = 'v860-fast-admin-auth';
 const PUBLIC_SHOP_ORIGIN_BUILD = 'v857-clean-collection-art';
 
 const PROTECTED_PUBLIC_PATTERNS = [
@@ -163,13 +172,12 @@ async function handlePublicSecurity(request, env, url) {
 }
 
 async function handleAdminHost(request, env, url) {
-  if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();
   if (!isSafePath(url.pathname)) return notFound();
 
   const canonical = canonicalAdminRedirectTarget(url);
-  if (canonical) return canonicalRedirect(canonical);
+  if (canonical && (request.method === 'GET' || request.method === 'HEAD')) return canonicalRedirect(canonical);
 
-  if (url.pathname === '/admin_security.html') {
+  if (url.pathname === '/admin_security.html' && (request.method === 'GET' || request.method === 'HEAD')) {
     return new Response(null, {
       status: 302,
       headers: secureHeaders({
@@ -179,17 +187,97 @@ async function handleAdminHost(request, env, url) {
     });
   }
 
-  if (url.pathname === '/logout') return logout(url);
-  if (url.pathname === '/oauth/callback') return await oauthCallback(request, env, url);
-  if (url.pathname === '/login' || url.pathname === '/login/') return await login(request, env, url);
+  if (url.pathname === '/logout' && (request.method === 'GET' || request.method === 'HEAD')) return logout(url);
+  if (url.pathname === '/oauth/callback' && (request.method === 'GET' || request.method === 'HEAD')) return await oauthCallback(request, env, url);
+  if ((url.pathname === '/login' || url.pathname === '/login/') && (request.method === 'GET' || request.method === 'HEAD')) return await login(request, env, url);
 
   const session = await readSignedCookie(request, env, SESSION_COOKIE);
-  if (!session || session.kind !== 'session' || session.exp <= now() || !isAllowedGithubAccount(env, session.github)) {
-    return loginPage(url, 'session_required', 401);
+  const validOuterSession = !!(session && session.kind === 'session' && session.exp > now() && isAllowedGithubAccount(env, session.github));
+
+  if (url.pathname === ADMIN_AUTH_PROXY_PATH || url.pathname === ADMIN_SESSION_PROXY_PATH) {
+    if (request.method !== 'POST') return adminApiJson({ ok:false, error:'method_not_allowed' }, 405, { Allow:'POST' });
+    if (!validOuterSession) return adminApiJson({ ok:false, error:'github_session_required' }, 401);
+    if (url.pathname === ADMIN_AUTH_PROXY_PATH) return await proxyAdminAuth(request);
+    return await proxyAdminSession(request);
   }
+
+  if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();
+  if (!validOuterSession) return loginPage(url, 'session_required', 401);
 
   const assetPath = adminAssetPath(url.pathname);
   return await serveProtectedAsset(request, env, assetPath);
+}
+
+function adminApiJson(body, status=200, extraHeaders={}) {
+  const headers = secureHeaders({
+    'Content-Type':'application/json; charset=utf-8',
+    'Cache-Control':'no-store',
+    ...extraHeaders
+  });
+  return new Response(JSON.stringify(body), { status, headers });
+}
+
+async function adminProxyFetch(url, init={}, timeoutMs=ADMIN_PROXY_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function proxyAdminAuth(request) {
+  let body = '';
+  try { body = await request.text(); } catch { return adminApiJson({ok:false,error:'invalid_request'},400); }
+  if (!body || body.length > 4096) return adminApiJson({ok:false,error:'invalid_request'},400);
+  try {
+    const upstream = await adminProxyFetch(`${SUPABASE_URL}/functions/v1/admin-auth-v845`, {
+      method:'POST',
+      headers:{
+        apikey:SUPABASE_PUBLISHABLE_KEY,
+        Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        'Content-Type':'application/json',
+        Accept:'application/json'
+      },
+      body
+    });
+    const text = await upstream.text();
+    const headers = secureHeaders({'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
+    return new Response(text || JSON.stringify({ok:false,error:'authentication_service_unavailable'}), {status:upstream.status,headers});
+  } catch {
+    return adminApiJson({ok:false,error:'authentication_service_unavailable',retryable:true},503);
+  }
+}
+
+async function proxyAdminSession(request) {
+  let data = null;
+  try {
+    const raw = await request.text();
+    if (!raw || raw.length > 8192) return adminApiJson({ok:false,error:'invalid_request'},400);
+    data = JSON.parse(raw);
+  } catch {
+    return adminApiJson({ok:false,error:'invalid_request'},400);
+  }
+  const rpcName = String(data?.rpc || '');
+  if (!ADMIN_SESSION_RPC_ALLOWLIST.has(rpcName)) return adminApiJson({ok:false,error:'rpc_not_allowed'},403);
+  try {
+    const upstream = await adminProxyFetch(`${SUPABASE_URL}/rest/v1/rpc/${rpcName}`, {
+      method:'POST',
+      headers:{
+        apikey:SUPABASE_PUBLISHABLE_KEY,
+        Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        'Content-Type':'application/json',
+        Accept:'application/json'
+      },
+      body:JSON.stringify(data?.payload || {})
+    });
+    const text = await upstream.text();
+    const headers = secureHeaders({'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
+    return new Response(text, {status:upstream.status,headers});
+  } catch {
+    return adminApiJson({ok:false,error:'admin_session_service_unavailable'},503);
+  }
 }
 
 function adminAssetPath(pathname) {
@@ -662,7 +750,9 @@ async function serveProtectedAsset(request, env, pathname) {
   if (!response || response.status === 404) return notFound();
   const headers = new Headers(response.headers);
   applySecurityHeaders(headers);
-  headers.set('Cache-Control', 'no-store');
+  const cacheableStatic = /\.(?:js|css|png|jpe?g|webp|svg|ico)$/i.test(pathname);
+  headers.set('Cache-Control', cacheableStatic ? 'private, max-age=300, stale-while-revalidate=60' : 'no-store');
+  if (cacheableStatic) headers.append('Vary', 'Cookie');
   headers.set('X-Kalenel-Admin-Gate', 'worker');
   headers.set('X-Kalenel-Admin-Build', ADMIN_BUILD);
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
