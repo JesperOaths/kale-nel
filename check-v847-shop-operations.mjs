@@ -47,7 +47,7 @@ assert.match(ops,/security_revoke_session/);
 assert.match(ops,/security_revoke_others/);
 
 for(const marker of ['createBackup','generateBrief','notifyNewAlerts']) assert.ok(core.includes(marker));
-for(const marker of ['paid_not_submitted','production_stuck','shipped_no_tracking','telemetry_stale','catalogDiff','cost_change','low_margin','shop_issue_invoice_v847','shop_apply_payment_fee_v847']) assert.ok(checks.includes(marker),'checks missing '+marker);
+for(const marker of ['pending_stale','paid_not_submitted','production_stuck','shipped_no_tracking','telemetry_stale','catalogDiff','cost_change','low_margin','shop_issue_invoice_v847','shop_apply_payment_fee_v847']) assert.ok(checks.includes(marker),'checks missing '+marker);
 
 for(const marker of ['whole_euro_threshold_price_cents','threshold_gap_cents','diagnostic_basis','pricing_action:"none"']) assert.ok(checks.includes(marker),'low-margin diagnostic missing '+marker);
 assert.match(page,/function marginDetails\(x\)/);
