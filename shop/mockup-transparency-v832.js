@@ -8,7 +8,7 @@
   const queued=new WeakSet();
   const pending=[];
   let active=0;
-  const isRaster=url=>/^https?:/i.test(url)&&/\.(?:jpe?g|png|webp)(?:[?#]|$)/i.test(url);
+  const isRaster=url=>/^https?:/i.test(url);
 
   function distanceSq(data,offset,mean){
     const dr=data[offset]-mean[0], dg=data[offset+1]-mean[1], db=data[offset+2]-mean[2];
@@ -190,6 +190,7 @@
       const response=await fetch(url,{mode:'cors',credentials:'omit',cache:'force-cache'});
       if(!response.ok) return url;
       const blob=await response.blob();
+      if(blob.type && !/^image\/(?:jpeg|png|webp)$/i.test(blob.type)) return url;
       const bitmap=await createImageBitmap(blob);
       try{
         const scale=Math.min(1,MAX_SIDE/Math.max(bitmap.width,bitmap.height));
