@@ -54,6 +54,19 @@ for idx,account in enumerate(accounts,1):
 if ok!=len(accounts):
     raise SystemExit(f"verified_token_migration_incomplete:{ok}/{len(accounts)}")
 
+# Eliminate the historical split permanently. Legacy code that omits TOKEN_DIR
+# now lands on the exact same canonical directory used by the systemd service.
+if SRC.is_symlink():
+    pass
+elif SRC.exists():
+    legacy_backup=APP/f"tokens.pre-v867-{stamp}"
+    SRC.rename(legacy_backup)
+    SRC.symlink_to(Path("data/tokens"), target_is_directory=True)
+    print("LEGACY_TOKEN_DIR_BACKUP="+str(legacy_backup))
+else:
+    SRC.symlink_to(Path("data/tokens"), target_is_directory=True)
+print("LEGACY_TOKEN_DIR_TARGET="+str(SRC.resolve()))
+
 DROP.parent.mkdir(parents=True,exist_ok=True)
 DROP.write_text("""[Service]
 Environment=TOKEN_DIR=/opt/inbox-triage-agent/data/tokens
