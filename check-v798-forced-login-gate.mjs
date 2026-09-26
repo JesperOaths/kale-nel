@@ -15,7 +15,7 @@ assert(target.includes("'./index.html?scope=family'"),'family login must land on
 assert(!target.includes('return_to'),'successful login must not deep-link around the main page');
 const ignoredDirs=new Set(['.git','node_modules','dist','build','.next','.vercel','coverage','tmp','temp','patch_bundles','repo','mnt','cloudflare']);
 const authPublic=new Set(['login.html','request.html','activate.html']);
-const intentionalPublic=new Set(['shop/index.html','c720p-drive-oauth/index.html','c720p-drive-oauth/privacy.html']);
+const intentionalPublic=new Set(['shop/index.html','c720p-drive-oauth/index.html','c720p-drive-oauth/privacy.html','oauth/inbox-triage/index.html','oauth/inbox-triage/privacy.html','oauth/inbox-triage/terms.html','oauth/inbox-triage/data-deletion.html','oauth/inbox-triage/support.html']);
 const redirectOnly=new Set(['score.html','pikken_spectator.html','klaverjas_live_v596.html','familie/index.html','familie/login.html','familie/scorer.html','familie/leaderboard.html','familie/player.html']);
 function walk(dir,out=[]){for(const ent of fs.readdirSync(dir,{withFileTypes:true})){if(ent.isDirectory()){if(!ignoredDirs.has(ent.name))walk(path.join(dir,ent.name),out);}else if(ent.name.toLowerCase().endsWith('.html'))out.push(path.join(dir,ent.name));}return out;}
 function rel(file){return path.relative(process.cwd(),file).replaceAll('\\','/');}
@@ -26,7 +26,8 @@ const securityBody=fs.readFileSync(securityIndex,'utf8');
 assert(!securityBody.includes('/gejast-auth-gate.js?'),'security perimeter must not depend on player-session gate');
 for(const required of ['Private security login','/security/auth/login','/security/auth/logout','/api/status']) assert(securityBody.includes(required),`security perimeter missing independent auth contract: ${required}`);
 assert(securityBody.includes("fetch(`/security/${camera}/api/status`"),'security perimeter must status-check the selected protected camera source');
-assert(securityBody.includes("api('new','/api/status')")&&securityBody.includes("api('s3','/api/status')"),'security live view must status-check both protected camera sources');
+assert(securityBody.includes("api('new','/api/status')"),'security live view must status-check the active S9+ protected camera source');
+assert(!securityBody.includes("api('s3','/api/status')"),'retired S3 must not be polled by the live security view');
 const perfumeIndex='parfum/index.html';
 assert.ok(fs.existsSync(perfumeIndex),'private perfume surface missing');
 const perfumeBody=fs.readFileSync(perfumeIndex,'utf8');
