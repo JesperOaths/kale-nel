@@ -80,7 +80,7 @@
   if(!document.querySelector('script[data-delivery-estimate-v833]')){
     const deliveryScript=document.createElement('script');
     deliveryScript.dataset.deliveryEstimateV833='true';
-    deliveryScript.src='delivery-estimate-v833.js?v=20260916-delivery-v833-r1';
+    deliveryScript.src='delivery-estimate-v833.js?v=20260926-delivery-v869-r1';
     deliveryScript.async=false;
     document.head.appendChild(deliveryScript);
   }
