@@ -1,15 +1,53 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="index,follow"><title>Privacy Policy · Inbox Triage Agent</title>
-<style>body{margin:0;background:#0d1117;color:#e6edf3;font:16px/1.65 system-ui,sans-serif}.wrap{max-width:760px;margin:auto;padding:56px 22px}h1{font-size:2.2rem;line-height:1.15}h2{margin-top:2rem}a{color:#7dd3fc}.muted{color:#9da7b3}</style></head>
-<body><main class="wrap"><p><a href="./">← Inbox Triage Agent</a></p><h1>Privacy Policy</h1><p class="muted">Effective 26 September 2026</p>
-<p>This policy describes how Inbox Triage Agent handles Google user data for the private account owners who authorize it.</p>
-<h2>Google data accessed</h2><p>The service uses the Google Gmail API with the configured Gmail modification scope. It may access message headers, sender and recipient information, subject lines, message bodies, thread state, and Gmail labels as needed to triage messages and mark completed processing.</p>
-<h2>How data is used</h2><p>Google user data is used only to provide inbox triage: detecting relevant new mail, creating concise summaries and reply suggestions, preventing duplicate processing, applying the configured processed state or label, and delivering selected digest output to the user's configured private destination.</p>
-<h2>AI processing</h2><p>When enabled by the account owner, relevant message content may be sent to configured AI processing providers, including OpenAI and a configured fallback provider, solely to generate the requested summaries or reply suggestions. If cloud processing is unavailable, work may be deferred or handled by a local deterministic fallback.</p>
-<h2>Storage and security</h2><p>OAuth credentials and service state are stored in the private service environment and are not exposed by this website. Operational state is retained only as needed to run the workflow, prevent duplicate processing, recover interrupted deliveries, and diagnose failures. Access is limited to the account owners and service components required to provide the workflow.</p>
-<h2>Sharing, sale, and advertising</h2><p>Google user data is not sold, rented, used for advertising, or shared for unrelated purposes. Data is disclosed only to processors required to provide the configured workflow, such as the selected AI-processing provider and the account owner's configured delivery destination.</p>
-<h2>Revocation and deletion</h2><p>Users may revoke the application's Google access from their Google Account security/connection settings. Revoking access prevents future Gmail API access. Account owners may also remove locally stored authorization credentials and service state from the private host.</p>
-<h2>Google API Services User Data Policy</h2><p>The application's use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.</p>
-<h2>Contact</h2><p>Questions about this policy may be sent to the developer/support email shown on the application's Google OAuth consent screen.</p>
-<p><a href="./terms.html">Terms of Service</a> · <a href="./">App home</a></p></main></body></html>
+<meta name="robots" content="index,follow"><meta name="description" content="Privacy Policy for the Kalenel Inbox Triage Agent Google OAuth application.">
+<link rel="canonical" href="https://kalenel.nl/oauth/inbox-triage/privacy.html"><title>Privacy Policy · Inbox Triage Agent · Kalenel</title><style>
+:root{color-scheme:dark;--bg:#0d1117;--panel:#161b22;--line:#30363d;--text:#e6edf3;--muted:#9da7b3;--link:#7dd3fc;--ok:#86efac}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.wrap{max-width:860px;margin:auto;padding:56px 22px 80px}h1{font-size:2.4rem;line-height:1.1;margin:.2em 0 .5em}h2{margin-top:2.1rem;line-height:1.25}h3{margin-top:1.5rem}
+a{color:var(--link)}.muted{color:var(--muted)}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin:22px 0}
+.notice{border-left:4px solid var(--ok);padding:12px 16px;background:#102018;border-radius:8px}.links{display:flex;gap:14px;flex-wrap:wrap;margin:24px 0}
+code{background:#0b1015;border:1px solid var(--line);padding:.12em .35em;border-radius:5px}.version{margin-top:52px;color:var(--muted);font-size:.82rem}
+ul{padding-left:1.35rem}li{margin:.45rem 0}
+</style></head>
+<body><main class="wrap"><p><a href="./">← Inbox Triage Agent</a></p>
+<h1>Privacy Policy</h1><p class="muted">Effective and last updated: 26 September 2026</p>
+<p>This Privacy Policy explains how the Kalenel <strong>Inbox Triage Agent</strong> accesses, uses, stores, transfers and deletes Google user data. The service is a private productivity utility for specifically authorized account owners.</p>
+
+<h2>Google user data accessed</h2>
+<p>The application uses the Gmail API with <code>https://www.googleapis.com/auth/gmail.modify</code>. Depending on the messages being processed, this can include message and thread identifiers, sender and recipient information, subject lines, headers, message bodies, timestamps, thread state, attachment metadata where present, and Gmail labels. The application may also modify labels or processing state after successful handling.</p>
+
+<h2>Purposes of use</h2>
+<p>Google user data is used only to provide the user-directed inbox-triage workflow: identifying new or relevant messages, preparing summaries and optional reply suggestions, determining whether a message still needs attention, applying the configured processed state or label, preventing duplicate processing, recovering interrupted deliveries and delivering selected digest output to the account owner's configured private destination.</p>
+
+<h2>AI-assisted processing</h2>
+<p>When enabled by the account owner, message content necessary for the requested summary or reply-suggestion feature may be transferred to configured AI processing providers, currently including OpenAI and a configured Google Gemini fallback, solely to provide that user-facing functionality. If cloud processing is unavailable, work may be deferred or handled by a local deterministic fallback.</p>
+<p><strong>Google Workspace API data is not used to create, train, develop or improve generalized or non-personalized artificial-intelligence or machine-learning models.</strong> It is not used for advertising, profiling for advertising, credit decisions, lending, data brokerage or surveillance.</p>
+
+<h2>Storage and retention</h2>
+<p>OAuth credentials are stored in the private service environment with restricted access. The service may retain operational information such as message identifiers, timestamps, processing status, generated digest/reply text, retry state and delivery status when needed to operate the workflow, avoid duplicate processing, recover interrupted work or diagnose failures. Google message content is not intentionally retained as a general-purpose archive by this application.</p>
+<p>Operational data is kept only for as long as reasonably necessary for those functions and is removed or aged out under the service's maintenance and retention processes. OAuth credentials are retained until they are revoked, replaced or deleted.</p>
+
+<h2>Sharing and transfers</h2>
+<p>Google user data is not sold, rented or shared for unrelated purposes. Transfers occur only when needed to provide the user-directed feature, such as to the configured AI-processing provider for generation of a requested summary/reply suggestion or to the account owner's configured private delivery destination. Service operators do not routinely read Gmail content; human access is limited to circumstances permitted by Google policy, such as explicit user request, security investigation or legal obligation.</p>
+
+<h2>Security</h2>
+<p>The service uses OAuth rather than storing Google account passwords. Credentials and service state are kept in a private host environment and are not exposed by this public website. Access to operational systems is restricted and the service is designed to avoid unnecessary duplication of Google user data.</p>
+
+<h2>User choices, revocation and deletion</h2>
+<p>Users may revoke Google authorization at any time from their Google Account's third-party connections or security settings. Revocation prevents new Gmail API access. Users may also request deletion of locally retained OAuth credentials and service state. Detailed instructions are available on the <a href="./data-deletion.html">data deletion and revocation page</a>.</p>
+
+<h2>Google API Services / Workspace Limited Use</h2>
+<div class="notice"><strong>Inbox Triage Agent's use and transfer of information received from Google Workspace APIs adheres to the Google User Data Policy, including the Limited Use requirements.</strong></div>
+
+<h2>Children</h2>
+<p>This private administrative/productivity utility is not directed to children and is not offered as a consumer service for minors.</p>
+
+<h2>Changes</h2>
+<p>If the service materially changes how it accesses, uses, stores or shares Google user data, this policy will be updated before the changed practice is used. Where required, affected users will be asked to consent again.</p>
+
+<h2>Contact</h2>
+<p>Privacy, access or deletion questions may be sent to <a href="mailto:prutsalberts@gmail.com">prutsalberts@gmail.com</a>.</p>
+<div class="links"><a href="./terms.html">Terms of Service</a><a href="./data-deletion.html">Data deletion</a><a href="./support.html">Support</a><a href="./">App home</a></div>
+<footer class="version">v817 · Kalenel · Inbox Triage Agent Privacy Policy</footer>
+</main></body></html>
