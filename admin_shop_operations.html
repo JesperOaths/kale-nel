@@ -47,6 +47,12 @@
   </section>
 
   <section class="panel">
+    <div class="panel-head"><div><h2>C720P security health</h2><p class="muted">Cloud-side read-only probes check both camera paths every 10 minutes and flag camera, tunnel, storage and archive-capacity problems.</p></div></div>
+    <div id="c720pHealth" class="grid3"></div>
+    <div id="c720pHealthAlerts" class="status" style="margin-top:12px"></div>
+  </section>
+
+  <section class="panel">
     <div class="panel-head"><div><h2>Alerts</h2><p class="muted">Automatically generated for stuck orders, stale telemetry, cost/margin problems and catalog drift.</p></div></div>
     <div class="table-wrap"><table><thead><tr><th>When</th><th>Severity</th><th>Type</th><th>Alert</th><th>State</th><th></th></tr></thead><tbody id="alertsRows"></tbody></table></div>
   </section>
@@ -153,6 +159,24 @@
       card("GitHub scheduler",gh.last_token_consumed?"Seen":"Awaiting tagged run",gh.last_token_consumed?("last consumed "+dt(gh.last_token_consumed)):"Next GitHub run will be source-tagged"),
       card("Latest backup",ops.last_backup_at?dt(ops.last_backup_at):"Never",ops.last_backup_at?"Daily snapshot is tracked by the operations engine":"No backup timestamp recorded")
     ].join("");
+    const ch=state.c720p_health||{},probes=Array.isArray(ch.probes)?ch.probes:[],cAlerts=Array.isArray(ch.alerts)?ch.alerts:[];
+    const probe=name=>probes.find(x=>x.camera===name)||{};
+    const s3p=probe("s3"),newp=probe("new");
+    const freeRaw=newp.disk_free_mb??s3p.disk_free_mb,freeMb=Number(freeRaw);
+    const archivePct=Number(newp.archive_usage_percent);
+    $("c720pHealth").innerHTML=[
+      card("S3 camera",s3p.source_online===true?"Online":s3p.source_online===false?"Offline":"Unknown",s3p.observed_at?("checked "+dt(s3p.observed_at)):"No current probe"),
+      card("New camera",newp.source_online===true?"Online":newp.source_online===false?"Offline":"Unknown",newp.observed_at?("checked "+dt(newp.observed_at)):"No current probe"),
+      card("C720P free disk",Number.isFinite(freeMb)?((freeMb/1024).toFixed(2)+" GB"):"Unknown",Number.isFinite(freeMb)&&freeMb<1800?"Storage pressure detected":"Camera-storage free space"),
+      card("New archive",Number.isFinite(archivePct)?archivePct.toFixed(1)+"%":"Unknown",Number.isFinite(Number(newp.archive_used_mb))&&Number.isFinite(Number(newp.archive_quota_mb))?(Number(newp.archive_used_mb).toFixed(1)+" / "+Number(newp.archive_quota_mb).toFixed(0)+" MB"):"Archive quota unavailable")
+    ].join("");
+    if(cAlerts.length){
+      $("c720pHealthAlerts").className="status warn";
+      $("c720pHealthAlerts").innerHTML="<strong>"+cAlerts.length+" active C720P health alert"+(cAlerts.length===1?"":"s")+"</strong><br>"+cAlerts.map(x=>"<span class='pill "+esc(x.severity)+"'>"+esc(x.severity)+"</span> "+esc(x.message)).join("<br>");
+    }else{
+      $("c720pHealthAlerts").className="status ok";
+      $("c720pHealthAlerts").textContent="No active C720P camera/tunnel/storage alerts.";
+    }
     $("alertsRows").innerHTML=a.length?a.map(x=>"<tr><td>"+dt(x.created_at)+"</td><td><span class='pill "+esc(x.severity)+"'>"+esc(x.severity)+"</span></td><td>"+esc(x.kind)+"</td><td><strong>"+esc(x.title)+"</strong><br>"+esc(x.message)+marginDetails(x)+"</td><td>"+(x.resolved_at?"resolved":x.acknowledged_at?"acknowledged":"open")+"</td><td>"+(!x.acknowledged_at&&!x.resolved_at?"<button class='alt' data-ack='"+x.id+"'>Acknowledge</button>":"")+"</td></tr>").join(""):"<tr><td colspan='6'>No alerts.</td></tr>";
 
     const s=state.settings||{};$("ownerEmail").value=s.owner_email||"";$("emailAlerts").checked=s.email_alerts_enabled===true;$("dailyBrief").checked=s.daily_brief_enabled!==false;$("weeklyBrief").checked=s.weekly_brief_enabled!==false;$("paidHours").value=s.paid_not_submitted_hours||2;$("prodDays").value=s.production_stuck_days||7;$("telemetryHours").value=s.telemetry_stale_hours||12;$("costChange").value=((s.cost_change_alert_cents||100)/100).toFixed(2);$("lowMargin").value=((s.low_margin_bps||2000)/100).toFixed(1);
