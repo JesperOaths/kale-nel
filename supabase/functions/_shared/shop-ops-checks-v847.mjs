@@ -133,7 +133,7 @@ export async function refreshCostsAndCheck(sb,settings,state,analyticsUrl,servic
 export async function checkOrdersAndTelemetry(sb,settings){
   const {data:orders,error}=await sb.from("shop_orders").select("id,status,payment_reference,created_at,payment_verified_at,submitted_to_printify_at,shipped_at,tracking,last_error,total_cents,subtotal_cents,shipping_cents,payment_fee_cents,invoice_number,customer_name,customer_email,payment_provider,payment_request_url,order_confirmation_notified_at,production_notified_at,shipment_notified_at,notification_error,notification_error_at").order("created_at",{ascending:false}).limit(2000);
   if(error)throw error;
-  const active=new Map([["order_error",new Set()],["paid_not_submitted",new Set()],["production_stuck",new Set()],["shipped_no_tracking",new Set()]]),created=[],notificationFailures=[];
+  const active=new Map([["order_error",new Set()],["pending_stale",new Set()],["paid_not_submitted",new Set()],["production_stuck",new Set()],["shipped_no_tracking",new Set()]]),created=[],notificationFailures=[];
   for(const o of orders||[]){
     const ref=text(o.payment_reference)||String(o.id).slice(0,8);
     if(o.status==="pending"&&!o.order_confirmation_notified_at&&text(o.notification_error)&&text(o.customer_email)){
@@ -168,6 +168,16 @@ export async function checkOrdersAndTelemetry(sb,settings){
       }
     }
     if(text(o.notification_error))notificationFailures.push({order_id:o.id,reference:ref,status:o.status,error:text(o.notification_error).slice(0,500),at:o.notification_error_at||null});
+    if(o.status==="pending"&&!o.payment_verified_at&&hoursSince(o.created_at)>=72){
+      const key="pending_stale:"+o.id,h=hoursSince(o.created_at),d=h/24;active.get("pending_stale").add(key);
+      const a=await ensureAlert(sb,{
+        kind:"pending_stale",severity:h>=168?"high":"medium",title:"Unpaid order still pending",
+        message:ref+" has been pending without verified payment for "+d.toFixed(1)+" days. Review it and either keep or reject it; no automatic rejection was performed.",
+        entity_type:"order",entity_id:o.id,dedupe_key:key,
+        metadata:{hours:h,days:d,total_cents:Number(o.total_cents||0),automatic_action:"none"}
+      });
+      if(a.created)created.push(a.row);
+    }
     if(o.payment_verified_at&&o.payment_fee_cents==null){
       const fee=await sb.rpc("shop_apply_payment_fee_v847",{order_id_input:o.id,admin_id_input:null});
       if(fee.error)console.warn("historical payment fee backfill failed",fee.error.message||fee.error);
