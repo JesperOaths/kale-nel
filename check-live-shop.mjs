@@ -267,8 +267,9 @@ assert.match(lightbox, /allGalleryImages:true/, 'lightbox must include artwork a
 assert.doesNotMatch(lightbox, /EXCLUDE_FROM_EXPANDED_RE/, 'lightbox must not silently omit artwork/detail views');
 
 const liveCatalog = await catalog();
-const dispuutShirts = liveCatalog.products.filter(product => /^Dispuut Despinoza(?: Lange Roos)?$/i.test(String(product?.name || '').trim()));
-assert.equal(dispuutShirts.length, 2, 'both Dispuut shirt products must exist');
+const dispuutShirtIds = new Set(['6a975ec45d07cc05a702a491','6a9742c08816f2362104d5cc']);
+const dispuutShirts = liveCatalog.products.filter(product => dispuutShirtIds.has(String(product?.id || '').trim()));
+assert.equal(dispuutShirts.length, 2, 'both approved Despinoza shirt products must exist');
 for (const product of dispuutShirts) {
   const back = (Array.isArray(product?.mockups) ? product.mockups : []).find(item => String(item?.label || '').toLowerCase() === 'back');
   assert.ok(back?.image, `${product.name} must expose a back mockup`);
