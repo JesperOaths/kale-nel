@@ -284,16 +284,16 @@ const catalogHealth = await health(CATALOG_HEALTH_URL, 'shop-catalog-v828', 'bru
 assert.equal(catalogHealth?.usesShopifyApi, false, 'catalog health must report no Shopify API use');
 assert.equal(catalogHealth?.whiteVariantsOnly, false, 'catalog health must report the tote color exception');
 assert.deepEqual(catalogHealth?.toteHandleColors, ['Black', 'White'], 'catalog health must expose exactly Black and White tote handle colors');
-assert.equal(catalogHealth?.pricing, 'production-cost-plus-5-rounded-up', 'catalog health must report cost+€5 pricing');
+assert.equal(catalogHealth?.pricing, 'production-cost-plus-size-margin-rounded-up', 'catalog health must report size-aware production-cost pricing');
 assert.equal(catalogHealth?.pricingBase, 'production-cost', 'catalog must price from converted production cost');
-assert.equal(catalogHealth?.marginEuros, 5, 'catalog margin must be exactly €5');
+assert.deepEqual(catalogHealth?.marginEuros, { standard: 5, threeXlPlus: 7 }, 'catalog margin must be €5 standard and €7 for 3XL+');
 assert.equal(catalogHealth?.rounding, 'whole-euro-ceiling', 'catalog must round upward to whole euros');
 assert.equal(catalogHealth?.artworkFirst, true, 'catalog health must report artwork-first media');
 
 const checkoutHealth = await health(CHECKOUT_URL, 'shop-manual-checkout-v832', 'manual-payment-v832');
-assert.equal(checkoutHealth?.pricing, 'production-cost-plus-5-rounded-up', 'checkout must use same cost+€5 pricing authority');
+assert.equal(checkoutHealth?.pricing, 'production-cost-plus-size-margin-rounded-up', 'checkout must use the same size-aware pricing authority');
 assert.equal(checkoutHealth?.pricingBase, 'production-cost', 'checkout must reprice from fresh production cost');
-assert.equal(checkoutHealth?.marginEuros, 5, 'checkout margin must be exactly €5');
+assert.deepEqual(checkoutHealth?.marginEuros, { standard: 5, threeXlPlus: 7 }, 'checkout margin must be €5 standard and €7 for 3XL+');
 assert.equal(checkoutHealth?.rounding, 'whole-euro-ceiling', 'checkout must round upward to whole euros');
 assert.equal(checkoutHealth?.sends_to_production, false, 'customer checkout must not send orders to production');
 assert.ok(Number(checkoutHealth?.cached_products || 0) >= MIN_PRODUCTS, 'checkout must see the cached catalog');
