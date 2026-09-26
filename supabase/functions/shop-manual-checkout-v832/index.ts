@@ -10,6 +10,7 @@ import {
 } from "./fulfillment-routing.mjs";
 import {
   fxAuditSnapshot,
+  marginEurCentsForSize,
   PRINTIFY_SOURCE_CURRENCY,
   resolveUsdEurRate,
   retailEurCentsFromUsdCost,
@@ -26,6 +27,7 @@ const text = (v: unknown) => String(v ?? "").trim();
 const clean = (v: unknown) => text(v).replace(/\s+/g, " ");
 const money = (cents: unknown) => `€${(Number(cents || 0) / 100).toFixed(2)}`;
 const MARGIN_CENTS = 500;
+const LARGE_SIZE_MARGIN_CENTS = 700;
 
 function cors(req: Request) {
   const origin = text(req.headers.get("origin"));
@@ -196,9 +198,9 @@ Deno.serve(async (req: Request) => {
     return json(req, {
       ok: true,
       mode: "manual-payment-v832",
-      pricing: "production-cost-plus-5-rounded-up",
+      pricing: "production-cost-plus-size-margin-rounded-up",
       pricingBase: "production-cost",
-      marginEuros: MARGIN_CENTS / 100,
+      marginEuros: { standard: MARGIN_CENTS / 100, threeXlPlus: LARGE_SIZE_MARGIN_CENTS / 100 },
       rounding: "whole-euro-ceiling",
       creates_pending_orders: true,
       sends_to_production: false,
@@ -285,12 +287,15 @@ Deno.serve(async (req: Request) => {
       const qty = Math.floor(qtyRaw);
       if (!Number.isFinite(qtyRaw) || qty < 1 || qty > MAX_QTY) throw new Error("Invalid quantity");
       if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isCustomerVariantAllowed(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
-      const unit = retailEurCentsFromUsdCost(freshVariant?.cost, fx, MARGIN_CENTS);
-      if (!unit) throw new Error(`Invalid authoritative production cost: ${clean(row.cached.product.name)}`);
       const color = colorFromVariant(freshProduct, freshVariant) || "White";
-      const size = isToteProduct(freshProduct)
-        ? `${color} handles`
-        : (sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase());
+      const variantSize = sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase();
+      const unit = retailEurCentsFromUsdCost(
+        freshVariant?.cost,
+        fx,
+        marginEurCentsForSize(variantSize, MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS),
+      );
+      if (!unit) throw new Error(`Invalid authoritative production cost: ${clean(row.cached.product.name)}`);
+      const size = isToteProduct(freshProduct) ? `${color} handles` : variantSize;
       subtotalCents += unit * qty;
       authoritative.push({
         name: clean(freshProduct?.title || row.cached.product.name), size, sku: text(freshVariant?.sku), qty,
