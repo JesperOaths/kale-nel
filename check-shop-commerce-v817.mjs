@@ -441,7 +441,7 @@ assert.match(connectionEdge, /_require_valid_admin_session/);
 assert.match(statusEdge, /confirmation_token_hash/);
 assert.doesNotMatch(statusEdge, /searchParams\.get\("token"\)/);
 assert.match(adminPage, /verify_payment/);
-assert.match(adminPage, /admin-session-sync\.js\?v872/, 'order admin must load the loop-safe session runtime');
+assert.match(adminPage, /admin-session-sync\\.js\\?20260926-payment-loopfix-r1/, 'order admin must load the loop-safe session runtime');
 assert.match(adminPage, /loadPromise/, 'order admin list refreshes must be deduplicated');
 assert.match(adminPage, /actionInFlight/, 'order admin must not rerender while verify/reject/submit actions are in flight');
 assert.match(adminPage, /Payment for \$\{row\.payment_reference\} verified/, 'successful verification must be visibly acknowledged');
