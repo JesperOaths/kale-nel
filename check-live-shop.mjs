@@ -4,10 +4,11 @@ import assert from 'node:assert/strict';
 const SHOP_URL = 'https://kalenel.nl/shop/';
 const ASSET_VERSION = '20260916-storefront-v837-r1';
 const SHOP_V869_VERSION = '20260926-storefront-v869-r2';
+const DIRECT_V869_VERSION = '20260926-storefront-v869-r3';
 const COLLECTION_MEDIA_VERSION = '20260921-storefront-v857-r1';
-const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v832.js?v=${SHOP_V869_VERSION}`;
-const DELIVERY_UI_URL = 'https://kalenel.nl/shop/delivery-estimate-v833.js?v=20260916-delivery-v840-r1';
-const MANUAL_CHECKOUT_UI_URL = 'https://kalenel.nl/shop/manual-checkout-v825.js?v=20260926-checkout-v869-r1';
+const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v832.js?v=${DIRECT_V869_VERSION}`;
+const DELIVERY_UI_URL = 'https://kalenel.nl/shop/delivery-estimate-v833.js?v=20260926-delivery-v869-r1';
+const MANUAL_CHECKOUT_UI_URL = 'https://kalenel.nl/shop/manual-checkout-v825.js?v=20260926-checkout-v869-r2';
 const SHOP_ANALYTICS_URL = 'https://kalenel.nl/shop/shop-analytics-v841.js?v=20260920-shop-analytics-v841-r1';
 const CUSTOMER_UI_URL = 'https://kalenel.nl/shop/customer-facing-checkout-v837.js?v=20260916-storefront-v837-r2';
 const POLISH_URL = `https://kalenel.nl/shop/storefront-polish-v832.js?v=${ASSET_VERSION}`;
@@ -162,7 +163,7 @@ const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
 assert.match(html, /version-watermark[^>]*>v869</, 'Live shop must expose v868 watermark');
-assert.match(html, /direct-commerce-v832\.js\?v=20260926-storefront-v869-r2/, 'Live shop must retain the direct commerce bridge');
+assert.match(html, /direct-commerce-v832\.js\?v=20260926-storefront-v869-r3/, 'Live shop must retain the direct commerce bridge');
 assert.match(html, /store\.js\?v=20260926-storefront-v869-r2/, 'Live shop must load the current default-on animal-filter storefront runtime');
 assert.match(html, /data-animal-filter checked/, 'Live shop must show animal designs by default');
 assert.match(html, /data-animal-section/, 'Live shop must keep animal designs in a separate trailing section');
@@ -176,8 +177,8 @@ assert.match(html, /data-size-guide-overlay/, 'Live shop must include the full-s
 assert.match(html, /data-size-guide-visual/, 'Live shop must include the measurement illustration region');
 assert.doesNotMatch(html, /catalog-data\.js/, 'Live shop must not load the retired static catalog fallback');
 assert.match(html, /tote-handle-color-v839\.js\?v=20260916-storefront-v839-r1/, 'Live shop must load tote handle-color behavior');
-assert.match(html, /delivery-estimate-v833\.js\?v=20260916-delivery-v840-r1/, 'Live shop must load the current delivery estimate UI');
-assert.match(html, /manual-checkout-v825\.js\?v=20260926-checkout-v869-r1/, 'Live shop must retain hardened checkout UI shell');
+assert.match(html, /delivery-estimate-v833\.js\?v=20260926-delivery-v869-r1/, 'Live shop must load the current delivery estimate UI');
+assert.match(html, /manual-checkout-v825\.js\?v=20260926-checkout-v869-r2/, 'Live shop must retain hardened checkout UI shell');
 assert.match(html, /customer-facing-checkout-v837\.js\?v=20260916-storefront-v837-r2/, 'Live shop must load v837 customer-facing checkout totals/copy layer');
 assert.match(html, /storefront-polish-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load artwork-primary storefront policy');
 assert.match(html, /storefront-polish-v832\.css\?v=20260926-storefront-v869-r2/, 'Live shop must load transparent media CSS');
@@ -217,6 +218,7 @@ assert.match(analyticsUi, /order_created/, 'shop analytics must track created or
 
 const manualCheckoutUi = await textAsset(MANUAL_CHECKOUT_UI_URL, 'manual-checkout-v825.js');
 assert.match(manualCheckoutUi, /bruis:order-created/, 'checkout must emit the v841 order-created analytics event');
+assert.match(manualCheckoutUi, /async function postCheckoutWithRetry\(payload\)/, 'live checkout UI must retry transient failures idempotently');
 assert.match(manualCheckoutUi, /syncPhoneRequirement/, 'checkout UI must dynamically require phone for US delivery');
 assert.match(manualCheckoutUi, /Phone \(required for US delivery\)/, 'checkout UI must explain why the US phone is required');
 assert.match(manualCheckoutUi, /A phone number is required for delivery to the United States/, 'checkout UI must stop a US order without a phone');
@@ -227,6 +229,7 @@ assert.match(deliveryUi, /Estimated arrival/, 'checkout delivery panel must show
 assert.match(deliveryUi, /business days after payment verification/, 'arrival estimate must start after payment verification');
 assert.match(deliveryUi, /may_arrive_separately/, 'checkout delivery panel must warn about split fulfillment');
 assert.match(deliveryUi, /Refresh estimate/, 'delivery estimate must be refreshable without blocking checkout');
+assert.match(deliveryUi, /async function fetchPreview\(payload\)/, 'live delivery UI must retry transient quote failures');
 assert.doesNotMatch(deliveryUi, /printify|factor(?:y|ies)/i, 'delivery UI must remain customer-facing and supplier-neutral');
 
 const customerUi = await textAsset(CUSTOMER_UI_URL, 'customer-facing-checkout-v837.js');
