@@ -135,7 +135,7 @@ async function runOperations(sb,force=false){
 }
 
 async function statusPayload(sb,adminToken){
-  const [settings,state,alerts,backups,briefs,feeRules,tax,invoices,security,schedulerHealth]=await Promise.all([
+  const [settings,state,alerts,backups,briefs,feeRules,tax,invoices,security,schedulerHealth,c720pHealth]=await Promise.all([
     sb.from("shop_ops_settings_v847").select("*").eq("id",1).single(),
     sb.from("shop_ops_state_v847").select("*").eq("id",1).single(),
     sb.from("shop_alerts_v847").select("*").order("created_at",{ascending:false}).limit(200),
@@ -145,10 +145,11 @@ async function statusPayload(sb,adminToken){
     sb.from("shop_tax_invoice_settings_v847").select("*").eq("id",1).single(),
     sb.from("shop_invoices_v847").select("id,invoice_number,order_id,issued_at,currency,gross_total_cents,net_total_cents,vat_total_cents,vat_rate_bps,tax_status").order("issued_at",{ascending:false}).limit(200),
     sb.rpc("admin_list_security_v847",{admin_session_token_input:adminToken}),
-    sb.rpc("shop_ops_scheduler_health_v858",{admin_session_token_input:adminToken})
+    sb.rpc("shop_ops_scheduler_health_v858",{admin_session_token_input:adminToken}),
+    sb.rpc("admin_health_v1",{admin_session_token_input:adminToken},{schema:"c720p_security"})
   ]);
-  for(const r of [settings,state,alerts,backups,briefs,feeRules,tax,invoices,security,schedulerHealth])if(r.error)throw r.error;
-  return {settings:settings.data,state:state.data,alerts:alerts.data||[],backups:backups.data||[],briefs:briefs.data||[],fee_rules:feeRules.data||[],tax_settings:tax.data,invoices:invoices.data||[],security:security.data,scheduler_health:schedulerHealth.data||null};
+  for(const r of [settings,state,alerts,backups,briefs,feeRules,tax,invoices,security,schedulerHealth,c720pHealth])if(r.error)throw r.error;
+  return {settings:settings.data,state:state.data,alerts:alerts.data||[],backups:backups.data||[],briefs:briefs.data||[],fee_rules:feeRules.data||[],tax_settings:tax.data,invoices:invoices.data||[],security:security.data,scheduler_health:schedulerHealth.data||null,c720p_health:c720pHealth.data||null};
 }
 
 Deno.serve(async req=>{
