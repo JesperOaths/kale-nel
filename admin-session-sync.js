@@ -131,13 +131,14 @@
     return Array.from(bytes, (b)=>b.toString(16).padStart(2,'0')).join('');
   }
 
-  async function rpc(name, payload){
+  async function rpc(name, payload, options={}){
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
         method:'POST', mode:'cors', cache:'no-store', headers:headers(),
-        body:JSON.stringify(payload || {}), signal:controller.signal
+        body:JSON.stringify(payload || {}), signal:controller.signal,
+        keepalive: options?.keepalive === true
       });
       return await parse(res);
     } catch (error) {
@@ -213,13 +214,16 @@
     if (!token) throw new Error('Log eerst in voordat dit apparaat kan worden onthouden.');
     let device = getDevice();
     if (!device) device = randomDeviceToken();
+    // Persist the device credential before the request so a successful login
+    // can navigate immediately while this keepalive request finishes.
+    setBundle(token, username || getUsername(), true, device, getDeadline() || '');
     const data = await rpc('admin_issue_trusted_device_v844', {
       admin_session_token_input: token,
       raw_device_token_input: device,
       device_label_input: deviceLabel(),
       device_fingerprint_input: fingerprint(),
       user_agent_hash_input: null
-    });
+    }, { keepalive:true });
     if (data?.ok !== true) throw new Error(data?.error || 'Dit apparaat kon niet worden onthouden.');
     const nextUser = data?.admin_username || username || getUsername();
     setBundle(token, nextUser, true, device, data?.trusted_until || '');
@@ -362,6 +366,18 @@
   };
 
   if (protectedAdminPage && typeof setTimeout === 'function') {
-    setTimeout(() => { requirePage(pageNameFromLocation()).catch(() => {}); }, 0);
+    setTimeout(() => {
+      const returnTo = pageNameFromLocation();
+      if (getToken() && hasUsableLocalSession()) {
+        // Fast first paint. Sensitive admin APIs still validate the session server-side.
+        revealProtectedPage();
+        validate().catch(() => {
+          clearBundle();
+          redirectToAdminLogin('session_invalid', returnTo);
+        });
+        return;
+      }
+      requirePage(returnTo).catch(() => {});
+    }, 0);
   }
 })();
