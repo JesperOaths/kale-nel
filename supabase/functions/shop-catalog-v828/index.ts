@@ -13,7 +13,10 @@ const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl",
 const text = (value: unknown) => String(value ?? "").trim();
 const MARGIN_CENTS = 500;
 const LARGE_SIZE_MARGIN_CENTS = 700;
-const PUBLIC_EXCLUDED_PRODUCT_IDS = new Set(["6ab0fa9a0b770861f80da032"]);
+const PUBLIC_EXCLUDED_PRODUCT_IDS = new Set([
+  "6ab0fa9a0b770861f80da032",
+  "6ab7eb21260d6d35e403a875", // internal EU Dogwood fulfillment clone; never customer-facing
+]);
 const PUBLIC_MERCH_PRODUCT_IDS = new Set([
   "6aaff223e0eef877800262df",
   "6aaa152378f50f3725033e18",
