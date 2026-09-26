@@ -49,7 +49,7 @@
   <script src="./gejast-home-gate.js?v817" defer></script><script src="./gejast-scope-context.js?v817"></script><script src="./gejast-family-rollout.js?v817" defer></script>
   <script src="./gejast-rpc-contract.js?v817" defer></script>
   <script src="./gejast-admin-rpc.js?v817" defer></script>
-  <script src="./admin-session-sync.js?v817"></script>
+  <script src="./admin-session-sync.js?20260926-fast-auth-r5"></script>
   <script src="./admin-topnav.js?v817" defer></script>
   <script src="./gejast-admin-claims-buckets.js?v817"></script>
   <script src="./gejast-admin-claims-source.js?v817"></script>
@@ -210,10 +210,19 @@
       if (!username) throw new Error('Vul een gebruikersnaam in');
       if (!password) throw new Error('Vul een wachtwoord in');
       if (!/^\d{6}$/.test(totp)) throw new Error('Vul je 6-cijferige Google Authenticator-code in');
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-auth-v845`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ username, password, totp })
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6500);
+      let res;
+      try {
+        res = await fetch('./api/admin-auth-v845', {
+          method:'POST', cache:'no-store', signal:controller.signal,
+          headers:{'Content-Type':'application/json',Accept:'application/json'},
+          body: JSON.stringify({ username, password, totp })
+        });
+      } catch (error) {
+        if (error?.name === 'AbortError') throw new Error('Loginservice reageerde niet snel genoeg. Probeer opnieuw.');
+        throw error;
+      } finally { clearTimeout(timeoutId); }
       if(res.status===503){
         const payload=await res.json().catch(()=>({}));
         if(payload?.error==='authentication_service_unavailable'){
