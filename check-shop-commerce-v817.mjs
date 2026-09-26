@@ -557,7 +557,8 @@ assert.match(liveShopCheck, /shop-catalog-v828/);
 assert.match(liveShopCheck, /shop-manual-checkout-v832/);
 assert.match(liveShopCheck, /RESULT=V839_BRUIS_SHOP_PASS/);
 assert.match(liveShopCheck, /Production-safe validation is allowed only through checkout's validation_only/);
-assert.doesNotMatch(liveShopCheck, /method:\s*['"]POST['"]/);
+assert.match(liveShopCheck, /validation_only:\s*true/, 'live checkout POSTs must be explicitly non-ordering validation smoke tests');
+assert.match(liveShopCheck, /Production-safe validation is allowed only through checkout's validation_only/, 'live health must document its non-ordering POST boundary');
 
 // Customer-facing shop sources must not expose supplier/factory wording. The v837
 // compatibility layer is excluded here because it intentionally contains the old
