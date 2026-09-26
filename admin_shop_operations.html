@@ -166,7 +166,7 @@
     $("c720pHealth").innerHTML=[
       card("S3 camera",s3p.source_online===true?"Online":s3p.source_online===false?"Offline":"Unknown",s3p.observed_at?("checked "+dt(s3p.observed_at)):"No current probe"),
       card("New camera",newp.source_online===true?"Online":newp.source_online===false?"Offline":"Unknown",newp.observed_at?("checked "+dt(newp.observed_at)):"No current probe"),
-      card("C720P free disk",Number.isFinite(freeMb)?((freeMb/1024).toFixed(2)+" GB"):"Unknown",Number.isFinite(freeMb)&&freeMb<1800?"Storage pressure detected":"Camera-storage free space"),
+      card("C720P free disk",Number.isFinite(freeMb)?((freeMb/1024).toFixed(2)+" GB"):"Unknown",Number.isFinite(freeMb)&&freeMb<1600?"Storage pressure detected":"Camera-storage free space"),
       card("New archive",Number.isFinite(archivePct)?archivePct.toFixed(1)+"%":"Unknown",Number.isFinite(Number(newp.archive_used_mb))&&Number.isFinite(Number(newp.archive_quota_mb))?(Number(newp.archive_used_mb).toFixed(1)+" / "+Number(newp.archive_quota_mb).toFixed(0)+" MB"):"Archive quota unavailable")
     ].join("");
     if(cAlerts.length){
