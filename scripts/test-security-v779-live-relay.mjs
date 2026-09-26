@@ -15,7 +15,8 @@ const RELAY_URL='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-sec
 const html=fs.readFileSync(new URL('../security/index.html',import.meta.url),'utf8');
 assert.match(html,/setTimeout\(\(\)=>stopLive\(camera\),120000\)/,'remote live must remain bounded to two minutes');
 assert.match(html,/state\.autoStarted\[camera\]=true;startLive\(camera,true\)/,'online cameras must auto-start once after unlock');
-assert.match(html,/Promise\.all\(\[api\('new','\/api\/status'\),api\('s3','\/api\/status'\)\]\)/,'live view must evaluate both camera sources independently');
+assert.match(html,/api\('new','\/api\/status'\)/,'live view must evaluate the active S9+ camera source');
+assert.doesNotMatch(html,/api\('s3','\/api\/status'\)/,'retired S3 must not be polled by the live view');
 assert.match(html,/source_online===true/,'UI must trust explicit source-online state rather than proxy reachability alone');
 assert.doesNotMatch(html,/trycloudflare\.com|camera_token|media_token|\b192\.168\.|\b10\.\d+\.\d+\.\d+/i,'browser source must not contain private camera or relay credentials');
 
