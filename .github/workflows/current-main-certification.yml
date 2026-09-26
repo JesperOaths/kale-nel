@@ -1,0 +1,72 @@
+name: Current main certification
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: current-main-certification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-certification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Canonical repository verification
+        run: npm run verify
+      - name: Version-drift guard
+        run: node check-version-drift.mjs
+      - name: Shop operations regression
+        run: node check-v847-shop-operations.mjs
+      - name: Record release version
+        run: |
+          echo "Repository version: $(tr -d '\r\n' < VERSION)"
+          git rev-parse HEAD
+
+  live-shop-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    needs: static-certification
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Live shop health with deploy-propagation retry
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            if node check-live-shop.mjs; then
+              exit 0
+            fi
+            if [[ "$attempt" -eq 6 ]]; then
+              echo "Live shop health did not converge after six attempts." >&2
+              exit 1
+            fi
+            sleep 30
+          done
