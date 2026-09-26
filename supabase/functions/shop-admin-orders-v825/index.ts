@@ -36,8 +36,8 @@ function productionEmail(order){
   const safeName=htmlEscape(order.customer_name||"there");
   return {
     subject:`Bruis order ${ref} is now in production`,
-    html:`<div style="font-family:Arial,sans-serif;line-height:1.55;color:#111"><h2>Your payment is confirmed</h2><p>Hi ${safeName},</p><p>We have confirmed payment for order <strong>${safeRef}</strong> and Printify has accepted the order for production.</p><p>Your items are now being prepared and printed. No action is needed from you.</p><p>We will email you again as soon as the shipment is on the way, including tracking details when available.</p><p>Thanks for your order.</p></div>`,
-    plain:`Payment confirmed for Bruis order ${ref}. Printify has accepted the order and it is now in production. No action is needed from you. We will email you again when it ships.`
+    html:`<div style="font-family:Arial,sans-serif;line-height:1.55;color:#111"><h2>Your payment is confirmed</h2><p>Hi ${safeName},</p><p>We have confirmed payment for order <strong>${safeRef}</strong>, and your order has entered our production process.</p><p>Your items are now being prepared and printed. No action is needed from you.</p><p>We will email you again as soon as the shipment is on the way, including tracking details when available.</p><p>Thanks for your order.</p></div>`,
+    plain:`Payment confirmed for Bruis order ${ref}. Your order has entered our production process and is now being prepared. No action is needed from you. We will email you again when it ships.`
   };
 }
 async function notifyProduction(sb,order){
