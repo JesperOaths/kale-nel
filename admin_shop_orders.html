@@ -10,7 +10,7 @@
   <title>Shop order approval - Bruis admin</title>
   <script>window.GEJAST_PAGE_VERSION='v858';window.BRUIS_ORDER_REJECTION='reject-email-before-delete';window.BRUIS_PRODUCTION_EMAIL='printify-production-email-v1';</script>
   <script src="./gejast-config.js?v858"></script>
-  <script src="./admin-session-sync.js?20260926-payment-loopfix-r1"></script>
+  <script src="./admin-session-sync.js?20260926-orders-loadfix-r2"></script>
   <script src="./admin-topnav.js?v858" defer></script>
   <style>
     :root{--gold:#9a8241;--paper:#fffaf2;--line:rgba(0,0,0,.09);--muted:#6b6257;--ok:#285b38;--warn:#8a3a30;--blue:#264e6d;--amber:#6e5000}
@@ -81,16 +81,25 @@
     if(loadPromise)return loadPromise;
     loadPromise=(async()=>{
       setStatus('Loading orders…');
-      const session=await window.GEJAST_ADMIN_SESSION?.validate?.();
+      const sessionApi=window.GEJAST_ADMIN_SESSION;
+      if(!sessionApi?.validate)throw new Error('Admin session helper did not load. Reload this page.');
+      const session=await sessionApi.validate();
       if(!session)throw new Error('Admin session validation failed.');
       const result=await callAdmin('list');
-      current={orders:result.orders||[],settings:result.settings||null};
+      current={orders:Array.isArray(result.orders)?result.orders:[],settings:result.settings||null};
       renderSettings(current.settings);
       renderOrders();
       setStatus(`Loaded ${current.orders.length} order${current.orders.length===1?'':'s'}.`,'ok');
       return current;
     })();
     try{return await loadPromise;}finally{loadPromise=null;}
+  }
+  function showLoadFailure(error){
+    const message=error?.message||'Could not load shop orders.';
+    setStatus(message,'warn');
+    const box=$('ordersBox');
+    if(box)box.innerHTML=`<div class="empty"><strong>Orders could not be loaded.</strong><br>${esc(message)}<br><br><button type="button" id="ordersRetryBtn">Retry</button></div>`;
+    $('ordersRetryBtn')?.addEventListener('click',()=>load().catch(showLoadFailure),{once:true});
   }
   function parseAmount(value){const normalized=String(value||'').trim().replace(/\s/g,'').replace(',','.');if(!/^\d+(?:\.\d{1,2})?$/.test(normalized))return null;const cents=Math.round(Number(normalized)*100);return Number.isInteger(cents)?cents:null;}
 
@@ -156,13 +165,15 @@
       actionInFlight=false;
     }
   });
-  $('refreshBtn').addEventListener('click',()=>load().catch(error=>setStatus(error?.message||'Refresh failed.','warn')));
+  $('refreshBtn').addEventListener('click',()=>load().catch(showLoadFailure));
   window.addEventListener('gejast:admin-session-updated',()=>{
     if(!token()||actionInFlight)return;
     clearTimeout(sessionReloadTimer);
     sessionReloadTimer=window.setTimeout(()=>load().catch(()=>{}),250);
   });
-  document.addEventListener('DOMContentLoaded',()=>{load().catch(error=>setStatus(error?.message||'Could not load shop orders.','warn'));},{once:true});
+  const startOrders=()=>load().catch(showLoadFailure);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startOrders,{once:true});
+  else startOrders();
 })();
 </script>
 </body>
