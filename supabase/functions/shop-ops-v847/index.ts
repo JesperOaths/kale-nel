@@ -20,6 +20,15 @@ function cors(req){
   };
 }
 const json=(req,body,status=200)=>new Response(JSON.stringify(body),{status,headers:cors(req)});
+function errorText(error){
+  if(error instanceof Error)return error.message||String(error);
+  if(error&&typeof error==="object"){
+    const code=text(error.code);
+    const message=text(error.message||error.details||error.hint);
+    try{return [code,message].filter(Boolean).join(": ")||JSON.stringify(error).slice(0,500)}catch{}
+  }
+  return text(error);
+}
 function serviceClient(){
   if(!PROJECT_URL||!SERVICE_KEY)throw new Error("server_not_configured");
   return createClient(PROJECT_URL,SERVICE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
@@ -128,7 +137,7 @@ async function runOperations(sb,force=false){
     await saveState(sb,{last_run_at:result.completed_at,last_error:null});
     return result;
   }catch(error){
-    const msg=text(error instanceof Error?error.message:error).slice(0,1000);
+    const msg=errorText(error).slice(0,1000);
     await saveState(sb,{last_run_at:nowIso(),last_error:msg});
     throw error;
   }
@@ -271,7 +280,8 @@ Deno.serve(async req=>{
     });
     return json(req,{ok:false,error:"unknown_action"},400);
   }catch(error){
-    console.error("shop-ops-v847 failed",error instanceof Error?error.message:error);
-    return json(req,{ok:false,error:"shop_ops_failed",detail:text(error instanceof Error?error.message:error).slice(0,500)},502);
+    const detail=errorText(error).slice(0,500);
+    console.error("shop-ops-v847 failed",detail);
+    return json(req,{ok:false,error:"shop_ops_failed",detail},502);
   }
 });
