@@ -47,7 +47,7 @@
   </section>
 
   <section class="panel">
-    <div class="panel-head"><div><h2>C720P security health</h2><p class="muted">Cloud-side read-only probes check both camera paths every 10 minutes and flag camera, tunnel, storage and archive-capacity problems.</p></div></div>
+    <div class="panel-head"><div><h2>C720P security health</h2><p class="muted">Cloud-side read-only probes check both camera paths every 10 minutes, while the hub pushes compact service, Drive, inbox, voice, disk and backup health.</p></div></div>
     <div id="c720pHealth" class="grid3"></div>
     <div id="c720pHealthAlerts" class="status" style="margin-top:12px"></div>
   </section>
@@ -158,16 +158,21 @@
       card("GitHub scheduler",gh.last_token_consumed?"Seen":"Awaiting tagged run",gh.last_token_consumed?("last consumed "+dt(gh.last_token_consumed)):"Next GitHub run will be source-tagged"),
       card("Latest backup",ops.last_backup_at?dt(ops.last_backup_at):"Never",ops.last_backup_at?"Daily snapshot is tracked by the operations engine":"No backup timestamp recorded")
     ].join("");
-    const ch=state.c720p_health||{},probes=Array.isArray(ch.probes)?ch.probes:[],cAlerts=Array.isArray(ch.alerts)?ch.alerts:[];
+    const ch=state.c720p_health||{},probes=Array.isArray(ch.probes)?ch.probes:[],cAlerts=Array.isArray(ch.alerts)?ch.alerts:[],dev=ch.device_health||{};
     const probe=name=>probes.find(x=>x.camera===name)||{};
-    const s3p=probe("s3"),newp=probe("new");
-    const freeRaw=newp.disk_free_mb??s3p.disk_free_mb,freeMb=Number(freeRaw);
+    const s3p=probe("s3"),newp=probe("new"),drive=dev.drive||{},mail=dev.mail||{};
+    const freeRaw=newp.disk_free_mb??s3p.disk_free_mb??dev.disk?.free_mb,freeMb=Number(freeRaw);
     const archivePct=Number(newp.archive_usage_percent);
+    const driveStatus=String(drive.status||"unknown").toLowerCase();
+    const mailStatus=String(mail.status||"unknown").toLowerCase();
     $("c720pHealth").innerHTML=[
       card("S3 camera",s3p.source_online===true?"Online":s3p.source_online===false?"Offline":"Unknown",s3p.observed_at?("checked "+dt(s3p.observed_at)):"No current probe"),
       card("New camera",newp.source_online===true?"Online":newp.source_online===false?"Offline":"Unknown",newp.observed_at?("checked "+dt(newp.observed_at)):"No current probe"),
       card("C720P free disk",Number.isFinite(freeMb)?((freeMb/1024).toFixed(2)+" GB"):"Unknown",Number.isFinite(freeMb)&&freeMb<1600?"Storage pressure detected":"Camera-storage free space"),
-      card("New archive",Number.isFinite(archivePct)?archivePct.toFixed(1)+"%":"Unknown",Number.isFinite(Number(newp.archive_used_mb))&&Number.isFinite(Number(newp.archive_quota_mb))?(Number(newp.archive_used_mb).toFixed(1)+" / "+Number(newp.archive_quota_mb).toFixed(0)+" MB"):"Archive quota unavailable")
+      card("New archive",Number.isFinite(archivePct)?archivePct.toFixed(1)+"%":"Unknown",Number.isFinite(Number(newp.archive_used_mb))&&Number.isFinite(Number(newp.archive_quota_mb))?(Number(newp.archive_used_mb).toFixed(1)+" / "+Number(newp.archive_quota_mb).toFixed(0)+" MB"):"Archive quota unavailable"),
+      card("Drive archive",driveStatus==="pass"?"Healthy":driveStatus.includes("quota")?"Quota blocked":driveStatus==="unknown"?"Awaiting telemetry":driveStatus.replaceAll("_"," "),drive.retry_after?("retry after "+dt(drive.retry_after)):"Camera archive upload state"),
+      card("Inbox triage",mailStatus==="pass"?"Healthy":mailStatus.includes("auth")?"Auth required":mailStatus==="unknown"?"Awaiting telemetry":mailStatus.replaceAll("_"," "),mail.updated_iso?("checked "+dt(mail.updated_iso)):"Daily Gmail summary state"),
+      card("Hub telemetry",ch.device_observed_at?dt(ch.device_observed_at):"Awaiting",ch.device_observed_at?"Automatic 10-minute health push":"No device health push received yet")
     ].join("");
     if(cAlerts.length){
       $("c720pHealthAlerts").className="status warn";
