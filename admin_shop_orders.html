@@ -10,7 +10,7 @@
   <title>Shop order approval - Bruis admin</title>
   <script>window.GEJAST_PAGE_VERSION='v858';window.BRUIS_ORDER_REJECTION='reject-email-before-delete';window.BRUIS_PRODUCTION_EMAIL='printify-production-email-v1';</script>
   <script src="./gejast-config.js?v858"></script>
-  <script src="./admin-session-sync.js?20260926-orders-loadfix-r2"></script>
+  <script src="./admin-session-sync.js?20260926-orders-productionfix-r3"></script>
   <script src="./admin-topnav.js?v858" defer></script>
   <style>
     :root{--gold:#9a8241;--paper:#fffaf2;--line:rgba(0,0,0,.09);--muted:#6b6257;--ok:#285b38;--warn:#8a3a30;--blue:#264e6d;--amber:#6e5000}
@@ -50,7 +50,27 @@
   const focusOrderId=String(query.get('order')||'').trim();
 
   function setStatus(message='',tone=''){$('statusBox').textContent=message;$('statusBox').className=`status ${tone}`.trim();}
-  async function callAdmin(action,extra={}){const adminToken=token();if(!adminToken)throw new Error('No valid admin session found.');const response=await fetch(ENDPOINT,{method:'POST',mode:'cors',cache:'no-store',headers:{apikey:API_KEY,Authorization:`Bearer ${API_KEY}`,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({action,admin_session_token:adminToken,...extra})});const payload=await response.json().catch(()=>({}));if(response.status===401){window.GEJAST_ADMIN_SESSION?.clearBundle?.();window.GEJAST_ADMIN_SESSION?.redirectToAdminLogin?.('session_invalid','admin_shop_orders.html');throw new Error('Admin session expired.');}if(!response.ok||!payload?.ok){if(payload?.error==='payment_amount_insufficient')throw new Error(`Amount received is too low. Required ${euros(payload.required_cents)}; received ${payload.received_cents==null?'—':euros(payload.received_cents)}.`);throw new Error(payload?.detail||payload?.error||`HTTP ${response.status}`);}return payload;}
+  async function callAdmin(action,extra={}){
+    const adminToken=token();
+    if(!adminToken)throw new Error('No valid admin session found.');
+    const controller=new AbortController();
+    const timeoutMs=action==='submit_printify'||action==='refresh'?45000:20000;
+    const timeoutId=setTimeout(()=>controller.abort(),timeoutMs);
+    try{
+      const response=await fetch(ENDPOINT,{method:'POST',mode:'cors',cache:'no-store',signal:controller.signal,headers:{apikey:API_KEY,Authorization:`Bearer ${API_KEY}`,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({action,admin_session_token:adminToken,...extra})});
+      const payload=await response.json().catch(()=>({}));
+      if(response.status===401){window.GEJAST_ADMIN_SESSION?.clearBundle?.();window.GEJAST_ADMIN_SESSION?.redirectToAdminLogin?.('session_invalid','admin_shop_orders.html');throw new Error('Admin session expired.');}
+      if(!response.ok||!payload?.ok){
+        if(payload?.error==='payment_amount_insufficient')throw new Error(`Amount received is too low. Required ${euros(payload.required_cents)}; received ${payload.received_cents==null?'—':euros(payload.received_cents)}.`);
+        if(payload?.error==='production_on_hold')throw new Error(payload?.detail||'Printify put this order on hold. The existing Printify order will be reused when you retry.');
+        throw new Error(payload?.detail||payload?.error||`HTTP ${response.status}`);
+      }
+      return payload;
+    }catch(error){
+      if(error?.name==='AbortError')throw new Error(action==='submit_printify'?'Production request timed out. The page will refresh the existing order state; retrying will reuse the same Printify order.':'Request timed out. Please retry.');
+      throw error;
+    }finally{clearTimeout(timeoutId);}
+  }
 
   function providerHelp(){const provider=$('provider').value;const url=$('paymentUrl');if(provider==='bunq_me'){url.disabled=false;url.placeholder='https://bunq.me/Bruis';$('providerHelp').innerHTML='<strong>bunq.me:</strong> reusable payment page. Customers must enter the exact amount and their unique BRUIS order reference.';}else if(provider==='tikkie'){url.disabled=false;url.placeholder='https://tikkie.me/pay/...';$('providerHelp').innerHTML='<strong>Tikkie:</strong> a static fallback link can be stored here; business API credentials can generate unique requests server-side.';}else{url.disabled=true;url.value='';url.placeholder='Not used';$('providerHelp').innerHTML='<strong>Manual transfer:</strong> no external payment button is shown.';}}
   function renderSettings(s){const d=s||{};$('provider').value=d.provider||'bunq_me';$('paymentUrl').value=d.payment_url||'';$('instructions').value=d.payment_instructions||'';$('paymentsEnabled').checked=d.enabled!==false;providerHelp();}
@@ -65,7 +85,8 @@
   function orderHtml(o){
     const status=String(o.status||'pending');
     const canVerify=status==='pending'&&!o.payment_verified_at;
-    const canRelease=!!o.payment_verified_at&&hasEnoughPayment(o)&&!o.printify_order_id&&['paid','pending'].includes(status);
+    const canRelease=!!o.payment_verified_at&&hasEnoughPayment(o)&&['paid','pending'].includes(status)&&!['production','shipped','canceled'].includes(String(o.printify_status||'').toLowerCase());
+    const releaseLabel=o.printify_order_id?'Retry production':'Send to production';
     const canRefresh=!!o.printify_order_id&&status!=='shipped';
     const canReject=!o.payment_verified_at&&!o.paid_at&&!o.printify_order_id&&!o.submitted_to_printify_at&&!o.invoice_number&&['pending','rejected'].includes(status)&&!o.rejection_notified_at;
     const canDelete=status==='rejected'&&!!o.rejection_notified_at&&!o.payment_verified_at&&!o.paid_at&&!o.printify_order_id&&!o.submitted_to_printify_at&&!o.invoice_number;
@@ -73,7 +94,7 @@
     const paymentLink=o.payment_request_url?`<p>Payment link: <a href="${esc(o.payment_request_url)}" target="_blank" rel="noopener">${esc(o.payment_provider||'payment')}</a></p>`:'';
     const approval=canVerify?`<div class="approval-box"><label>Amount actually received</label><input class="paid-input" data-paid-input type="text" inputmode="decimal" value="${(Number(o.total_cents||0)/100).toFixed(2)}" aria-label="Amount received"><div class="approval-help">Check your bank first. Minimum required: ${euros(o.total_cents)}.</div></div>`:`<p>Amount received: <span class="money">${o.paid_amount_cents==null?'—':euros(o.paid_amount_cents)}</span></p>`;
     const rejection=status==='rejected'?`<div class="approval-box"><p><strong>Rejected:</strong> ${dateTime(o.rejected_at)}</p><p><strong>Reason:</strong> ${esc(o.rejection_reason||'Payment not received / not verified.')}</p><p><strong>Rejection email:</strong> ${o.rejection_notified_at?'sent '+dateTime(o.rejection_notified_at):'not delivered yet'}</p></div>`:'';
-    return `<article class="order ${needsAction(o)?'needs-action':''}" data-order-id="${esc(o.id)}"><div class="order-head"><div><div class="order-ref">Order # ${esc(o.payment_reference||o.id)}</div><div class="order-meta">${dateTime(o.created_at)} · ${esc(o.customer_name||'')} · ${esc(o.customer_email||'')}</div><div class="order-id">Internal ID: ${esc(o.id)}</div></div><span><span class="pill ${esc(status)}">${esc(status)}</span>${stalePending(o)?`<span class="pill stale">unpaid ${Math.floor(pendingAgeDays(o))}d</span>`:''}</span></div><div class="order-grid"><div class="order-block"><h3>Buyer & delivery</h3><p>${esc(o.customer_name||'')}<br>${esc(o.customer_email||'')}${o.customer_phone?`<br>${esc(o.customer_phone)}`:''}</p><p>${addressHtml(o.shipping_address)}</p></div><div class="order-block"><h3>Items & totals</h3>${itemsHtml(o.line_items)}<p>Subtotal: <span class="money">${euros(o.subtotal_cents)}</span></p><p>Shipping: <span class="money">${euros(o.shipping_cents)}</span> (${esc(o.shipping_method||'')})</p><p>Total due: <span class="money">${euros(o.total_cents)}</span></p><p>Order confirmation email: ${o.order_confirmation_notified_at?`sent ${dateTime(o.order_confirmation_notified_at)}`:'not sent / not recorded'}</p>${rejection}</div><div class="order-block"><h3>Payment & production</h3><p>Provider: ${esc(o.payment_provider||'manual')}</p><p>Payment reference: <strong>${esc(o.payment_reference||'—')}</strong></p>${approval}<p>Verified: ${o.payment_verified_at?dateTime(o.payment_verified_at):'No'}</p><p>Payment fee: <span class="money">${o.payment_fee_cents==null?'not configured':euros(o.payment_fee_cents)}</span>${o.payment_fee_source?' · '+esc(o.payment_fee_source):''}</p><p>Invoice: <strong>${esc(o.invoice_number||'not issued yet')}</strong></p>${paymentLink}<p>Production order: ${esc(o.printify_order_id||'not submitted')}</p><p>Production status: ${esc(o.printify_status||'not submitted')}</p><p>Submitted: ${dateTime(o.submitted_to_printify_at)}</p><p>Production email: ${o.production_notified_at?`sent ${dateTime(o.production_notified_at)}`:'not sent yet'}</p><p>Tracking: ${trackingHtml(o.tracking)}</p><p>Shipment email: ${o.shipment_notified_at?`sent ${dateTime(o.shipment_notified_at)}`:'not sent yet'}</p></div></div>${o.last_error?`<div class="error"><strong>Order/fulfilment error:</strong> ${esc(o.last_error)}</div>`:''}${o.notification_error?`<div class="error"><strong>Email delivery error:</strong> ${esc(o.notification_error)}${o.notification_error_at?` <small>(${dateTime(o.notification_error_at)})</small>`:''}</div>`:''}<div class="order-actions"><button class="verify" type="button" data-action="verify_payment" ${canVerify?'':'disabled'}>Verify payment</button><button class="release" type="button" data-action="submit_printify" ${canRelease?'':'disabled'}>Send to production</button><button class="refresh" type="button" data-action="refresh" ${canRefresh?'':'disabled'}>Refresh shipment</button><button class="reject" type="button" data-action="reject_order" ${canReject?'':'disabled'}>${rejectLabel}</button><button class="delete" type="button" data-action="delete_order" ${canDelete?'':'disabled'}>Delete order</button></div><div class="danger-note">Rejecting an unpaid order automatically emails the registered customer address. Permanent deletion is enabled only after that email was delivered and is blocked for paid, invoiced, or submitted orders.</div></article>`;
+    return `<article class="order ${needsAction(o)?'needs-action':''}" data-order-id="${esc(o.id)}"><div class="order-head"><div><div class="order-ref">Order # ${esc(o.payment_reference||o.id)}</div><div class="order-meta">${dateTime(o.created_at)} · ${esc(o.customer_name||'')} · ${esc(o.customer_email||'')}</div><div class="order-id">Internal ID: ${esc(o.id)}</div></div><span><span class="pill ${esc(status)}">${esc(status)}</span>${stalePending(o)?`<span class="pill stale">unpaid ${Math.floor(pendingAgeDays(o))}d</span>`:''}</span></div><div class="order-grid"><div class="order-block"><h3>Buyer & delivery</h3><p>${esc(o.customer_name||'')}<br>${esc(o.customer_email||'')}${o.customer_phone?`<br>${esc(o.customer_phone)}`:''}</p><p>${addressHtml(o.shipping_address)}</p></div><div class="order-block"><h3>Items & totals</h3>${itemsHtml(o.line_items)}<p>Subtotal: <span class="money">${euros(o.subtotal_cents)}</span></p><p>Shipping: <span class="money">${euros(o.shipping_cents)}</span> (${esc(o.shipping_method||'')})</p><p>Total due: <span class="money">${euros(o.total_cents)}</span></p><p>Order confirmation email: ${o.order_confirmation_notified_at?`sent ${dateTime(o.order_confirmation_notified_at)}`:'not sent / not recorded'}</p>${rejection}</div><div class="order-block"><h3>Payment & production</h3><p>Provider: ${esc(o.payment_provider||'manual')}</p><p>Payment reference: <strong>${esc(o.payment_reference||'—')}</strong></p>${approval}<p>Verified: ${o.payment_verified_at?dateTime(o.payment_verified_at):'No'}</p><p>Payment fee: <span class="money">${o.payment_fee_cents==null?'not configured':euros(o.payment_fee_cents)}</span>${o.payment_fee_source?' · '+esc(o.payment_fee_source):''}</p><p>Invoice: <strong>${esc(o.invoice_number||'not issued yet')}</strong></p>${paymentLink}<p>Production order: ${esc(o.printify_order_id||'not submitted')}</p><p>Production status: ${esc(o.printify_status||'not submitted')}</p><p>Submitted: ${dateTime(o.submitted_to_printify_at)}</p><p>Production email: ${o.production_notified_at?`sent ${dateTime(o.production_notified_at)}`:'not sent yet'}</p><p>Tracking: ${trackingHtml(o.tracking)}</p><p>Shipment email: ${o.shipment_notified_at?`sent ${dateTime(o.shipment_notified_at)}`:'not sent yet'}</p></div></div>${o.last_error?`<div class="error"><strong>Order/fulfilment error:</strong> ${esc(o.last_error)}</div>`:''}${o.notification_error?`<div class="error"><strong>Email delivery error:</strong> ${esc(o.notification_error)}${o.notification_error_at?` <small>(${dateTime(o.notification_error_at)})</small>`:''}</div>`:''}<div class="order-actions"><button class="verify" type="button" data-action="verify_payment" ${canVerify?'':'disabled'}>Verify payment</button><button class="release" type="button" data-action="submit_printify" ${canRelease?'':'disabled'}>${releaseLabel}</button><button class="refresh" type="button" data-action="refresh" ${canRefresh?'':'disabled'}>Refresh shipment</button><button class="reject" type="button" data-action="reject_order" ${canReject?'':'disabled'}>${rejectLabel}</button><button class="delete" type="button" data-action="delete_order" ${canDelete?'':'disabled'}>Delete order</button></div><div class="danger-note">Rejecting an unpaid order automatically emails the registered customer address. Permanent deletion is enabled only after that email was delivered and is blocked for paid, invoiced, or submitted orders.</div></article>`;
   }
   function filteredOrders(){const all=current.orders||[];if(focusOrderId){const exact=all.filter(o=>String(o.id)===focusOrderId);if(exact.length)return exact;}if(activeFilter==='all')return all;if(activeFilter==='pending')return all.filter(o=>o.status==='pending');if(activeFilter==='stale')return all.filter(stalePending);if(activeFilter==='rejected')return all.filter(o=>o.status==='rejected');if(activeFilter==='production')return all.filter(o=>o.status==='production');if(activeFilter==='shipped')return all.filter(o=>o.status==='shipped');return all.filter(needsAction);}
   function renderOrders(){const rows=filteredOrders();setCounts(current.orders||[]);$('ordersBox').innerHTML=rows.length?rows.map(orderHtml).join(''):'<div class="empty">No orders in this view.</div>';document.querySelectorAll('#filters button').forEach(b=>b.classList.toggle('active',b.dataset.filter===activeFilter));}
@@ -126,7 +147,12 @@
     }
 
     if(action==='submit_printify'){
-      if(!window.confirm(`Send ${row.payment_reference} to production? This can incur fulfillment cost. Verified received amount: ${euros(row.paid_amount_cents)}.`))return;
+      const retrying=!!row.printify_order_id;
+      const prompt=retrying
+        ? `Retry sending ${row.payment_reference} to production? This reuses existing Printify order ${row.printify_order_id}; it will not create a duplicate.`
+        : `Send ${row.payment_reference} to production? This can incur fulfillment cost. Verified received amount: ${euros(row.paid_amount_cents)}.`;
+      if(!window.confirm(prompt))return;
+      setStatus(retrying?'Retrying existing Printify order…':'Sending order to production…');
     }
 
     if(action==='reject_order'){
@@ -151,6 +177,8 @@
       await load();
       if(action==='verify_payment'){
         setStatus(`Payment for ${row.payment_reference} verified at ${euros(extra.paid_amount_cents)}. The order is now ready for production approval.`,'ok');
+      }else if(action==='submit_printify'){
+        setStatus(`Order ${row.payment_reference} is now in production. Existing Printify order IDs are reused safely on retries.`,'ok');
       }else if(action==='reject_order'){
         if(result.email_sent)setStatus(`Order ${row.payment_reference} rejected. Rejection email sent automatically to ${row.customer_email}.`,'ok');
         else setStatus(`Order ${row.payment_reference} was rejected, but the email could not be delivered: ${result.email_error||'unknown mail error'}. Use “Resend rejection email”.`,'warn');
@@ -160,17 +188,16 @@
     }catch(error){
       setStatus(error?.message||'Order action failed.','warn');
       button.disabled=false;
-      if(action==='reject_order')load().catch(()=>{});
+      await load().catch(()=>{});
+      setStatus(error?.message||'Order action failed.','warn');
     }finally{
       actionInFlight=false;
     }
   });
   $('refreshBtn').addEventListener('click',()=>load().catch(showLoadFailure));
-  window.addEventListener('gejast:admin-session-updated',()=>{
-    if(!token()||actionInFlight)return;
-    clearTimeout(sessionReloadTimer);
-    sessionReloadTimer=window.setTimeout(()=>load().catch(()=>{}),250);
-  });
+  // Do not reload orders on session-update events. Some session validations can rotate
+  // a token near expiry; coupling that event to load() can create a reload loop.
+  // Every explicit load/action already validates the current admin session.
   const startOrders=()=>load().catch(showLoadFailure);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startOrders,{once:true});
   else startOrders();
