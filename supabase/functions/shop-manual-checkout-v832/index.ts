@@ -97,6 +97,31 @@ function isCustomerVariantAllowed(product: any, variant: any) {
   return !color || /^white$/i.test(color);
 }
 
+function cachedShopId(payload: any, resolvedProducts: any[] = []) {
+  const resolvedIds = [...new Set(
+    resolvedProducts
+      .map((product: any) => Number(product?.shopId ?? product?.shop_id))
+      .filter((value: number) => Number.isFinite(value))
+  )];
+  if (resolvedIds.length === 1) return resolvedIds[0];
+  if (resolvedIds.length > 1) throw new Error("Selected products span multiple Printify shops");
+
+  const legacy = Number(payload?.shop?.id ?? payload?.shopId ?? payload?.shop_id);
+  if (Number.isFinite(legacy)) return legacy;
+
+  const shops = Array.isArray(payload?.shops) ? payload.shops : [];
+  const shopIds = [...new Set(shops.map((shop: any) => Number(shop?.id)).filter((value: number) => Number.isFinite(value)))];
+  if (shopIds.length === 1) return shopIds[0];
+
+  const productIds = [...new Set(
+    (Array.isArray(payload?.products) ? payload.products : [])
+      .map((product: any) => Number(product?.shopId ?? product?.shop_id))
+      .filter((value: number) => Number.isFinite(value))
+  )];
+  if (productIds.length === 1) return productIds[0];
+  throw new Error("Printify shop id unavailable");
+}
+
 function cachedResolution(payload: any, item: any) {
   const products = Array.isArray(payload?.products) ? payload.products : [];
   const sku = text(item?.sku);
@@ -233,14 +258,15 @@ Deno.serve(async (req: Request) => {
     const items = Array.isArray(body?.items) ? body.items : [];
     const checkoutKey = text(body?.checkout_idempotency_key);
     const confirmationToken = text(body?.confirmation_token);
+    const validationOnly = body?.validation_only === true;
 
     if (fullName.length < 2 || fullName.length > 120 || !validEmail(email) || !address1 || !city || !zip || country.length !== 2) return json(req, { error: "invalid_customer_or_address" }, 400);
     if (country === "US" && phone.replace(/\D/g, "").length < 7) return json(req, { error: "phone_required_for_destination", country: "US" }, 400);
     if (!items.length || items.length > MAX_ITEMS) return json(req, { error: "invalid_cart" }, 400);
-    if (!/^[A-Za-z0-9_-]{20,100}$/.test(checkoutKey) || confirmationToken.length < 32 || confirmationToken.length > 200) return json(req, { error: "invalid_checkout_token" }, 400);
+    if (!validationOnly && (!/^[A-Za-z0-9_-]{20,100}$/.test(checkoutKey) || confirmationToken.length < 32 || confirmationToken.length > 200)) return json(req, { error: "invalid_checkout_token" }, 400);
 
-    const tokenHash = await sha256(confirmationToken);
-    const { data: existing } = await sb.from("shop_orders").select("id,status,subtotal_cents,shipping_cents,total_cents,shipping_method,payment_reference,payment_provider,payment_request_url,payment_request_expires_at,confirmation_token_hash,order_confirmation_notified_at").eq("checkout_idempotency_key", checkoutKey).maybeSingle();
+    const tokenHash = validationOnly ? "" : await sha256(confirmationToken);
+    const { data: existing } = validationOnly ? { data: null } : await sb.from("shop_orders").select("id,status,subtotal_cents,shipping_cents,total_cents,shipping_method,payment_reference,payment_provider,payment_request_url,payment_request_expires_at,confirmation_token_hash,order_confirmation_notified_at").eq("checkout_idempotency_key", checkoutKey).maybeSingle();
     if (existing) {
       if (text(existing.confirmation_token_hash) !== tokenHash) return json(req, { error: "idempotency_conflict" }, 409);
       return json(req, { ok: true, order_id: existing.id, status: existing.status, subtotal_cents: existing.subtotal_cents, shipping_cents: existing.shipping_cents, total_cents: existing.total_cents, shipping_method: existing.shipping_method, payment_reference: existing.payment_reference, payment_provider: existing.payment_provider, payment_url: existing.payment_request_url || "", payment_expires_at: existing.payment_request_expires_at || null, confirmation_token: confirmationToken, confirmation_email_sent: !!existing.order_confirmation_notified_at, replayed: true });
@@ -248,11 +274,9 @@ Deno.serve(async (req: Request) => {
 
     const { data: cache, error: cacheError } = await sb.from("shop_catalog_cache_v828").select("payload,generated_at,last_error").eq("id", 1).maybeSingle();
     if (cacheError || !Array.isArray(cache?.payload?.products) || !cache.payload.products.length) throw new Error("Live Printify catalog is not ready");
-    const shopId = Number(cache.payload?.shop?.id);
-    if (!Number.isFinite(shopId)) throw new Error("Printify shop id unavailable");
-
     const resolved = items.map((item: any) => ({ raw: item, cached: cachedResolution(cache.payload, item) }));
     if (resolved.some((row: any) => !row.cached)) throw new Error("One or more selected variants are no longer in the live catalog");
+    const shopId = cachedShopId(cache.payload, resolved.map((row: any) => row.cached?.product).filter(Boolean));
 
     // Keep checkout product identity simple: one customer-visible Printify product is
     // also the product submitted for fulfillment. Printify's own native order routing
@@ -408,6 +432,21 @@ Deno.serve(async (req: Request) => {
     });
 
     const totalCents = subtotalCents + shippingCents;
+    if (validationOnly) {
+      return json(req, {
+        ok: true,
+        validation_only: true,
+        shop_id: String(shopId),
+        subtotal_cents: subtotalCents,
+        shipping_cents: shippingCents,
+        total_cents: totalCents,
+        shipping_method: shippingMethod,
+        shipping_method_code: shippingMethodCode,
+        item_count: authoritative.length,
+        units: authoritative.reduce((sum: number, item: any) => sum + Number(item.qty || 0), 0),
+        pricing: "production-cost-plus-size-margin-rounded-up",
+      });
+    }
     const orderId = crypto.randomUUID();
     const reference = `BRUIS-${orderId.replaceAll("-", "").slice(0, 8).toUpperCase()}`;
     const { data: settings } = await sb.from("shop_payment_settings").select("provider,payment_url,enabled,payment_instructions").eq("id", 1).maybeSingle();
