@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const CHECKOUT_ENDPOINT = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-manual-checkout-v825';
+  const CHECKOUT_ENDPOINT = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-manual-checkout-v832';
   const STATUS_ENDPOINT = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-order-status-v825';
   const SESSION_ORDER_KEY = 'bruisPendingOrderV825';
   const escLocal = value => String(value ?? '').replace(/[&<>"']/g, char => ({
