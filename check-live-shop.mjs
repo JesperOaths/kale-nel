@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 const SHOP_URL = 'https://kalenel.nl/shop/';
 const ASSET_VERSION = '20260916-storefront-v837-r1';
-const SHOP_V869_VERSION = '20260926-storefront-v869-r1';
+const SHOP_V869_VERSION = '20260926-storefront-v869-r2';
 const COLLECTION_MEDIA_VERSION = '20260921-storefront-v857-r1';
 const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v832.js?v=${SHOP_V869_VERSION}`;
 const DELIVERY_UI_URL = 'https://kalenel.nl/shop/delivery-estimate-v833.js?v=20260916-delivery-v840-r1';
@@ -11,12 +11,13 @@ const MANUAL_CHECKOUT_UI_URL = 'https://kalenel.nl/shop/manual-checkout-v825.js?
 const SHOP_ANALYTICS_URL = 'https://kalenel.nl/shop/shop-analytics-v841.js?v=20260920-shop-analytics-v841-r1';
 const CUSTOMER_UI_URL = 'https://kalenel.nl/shop/customer-facing-checkout-v837.js?v=20260916-storefront-v837-r2';
 const POLISH_URL = `https://kalenel.nl/shop/storefront-polish-v832.js?v=${ASSET_VERSION}`;
-const POLISH_CSS_URL = `https://kalenel.nl/shop/storefront-polish-v832.css?v=${ASSET_VERSION}`;
+const POLISH_CSS_URL = `https://kalenel.nl/shop/storefront-polish-v832.css?v=${SHOP_V869_VERSION}`;
 const COLLECTION_MEDIA_URL = `https://kalenel.nl/shop/collection-media-v831.js?v=${COLLECTION_MEDIA_VERSION}`;
 const PREVIEWS_URL = `https://kalenel.nl/shop/product-preview-overrides.js?v=${ASSET_VERSION}`;
-const GALLERY_URL = `https://kalenel.nl/shop/gallery-fixes-v832.js?v=${ASSET_VERSION}`;
+const GALLERY_URL = `https://kalenel.nl/shop/gallery-fixes-v832.js?v=${SHOP_V869_VERSION}`;
 const TRANSPARENCY_URL = `https://kalenel.nl/shop/mockup-transparency-v832.js?v=${SHOP_V869_VERSION}`;
 const LIGHTBOX_URL = `https://kalenel.nl/shop/image-lightbox-v832.js?v=${ASSET_VERSION}`;
+const STYLES_URL = `https://kalenel.nl/shop/styles.css?v=${SHOP_V869_VERSION}`;
 const CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828';
 const CATALOG_HEALTH_URL = `${CATALOG_URL}?health=1`;
 const CHECKOUT_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-manual-checkout-v832';
@@ -161,10 +162,14 @@ const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
 assert.match(html, /version-watermark[^>]*>v869</, 'Live shop must expose v868 watermark');
-assert.match(html, /direct-commerce-v832\.js\?v=20260926-storefront-v869-r1/, 'Live shop must retain the direct commerce bridge');
-assert.match(html, /store\.js\?v=20260926-storefront-v869-r1/, 'Live shop must load the current default-on animal-filter storefront runtime');
+assert.match(html, /direct-commerce-v832\.js\?v=20260926-storefront-v869-r2/, 'Live shop must retain the direct commerce bridge');
+assert.match(html, /store\.js\?v=20260926-storefront-v869-r2/, 'Live shop must load the current default-on animal-filter storefront runtime');
 assert.match(html, /data-animal-filter checked/, 'Live shop must show animal designs by default');
 assert.match(html, /data-animal-section/, 'Live shop must keep animal designs in a separate trailing section');
+const liveRegularGridPos = html.indexOf('data-products');
+const liveAnimalFilterPos = html.indexOf('data-animal-filter-bar');
+const liveAnimalSectionPos = html.indexOf('data-animal-section');
+assert.ok(liveRegularGridPos >= 0 && liveAnimalFilterPos > liveRegularGridPos && liveAnimalSectionPos > liveAnimalFilterPos, 'live animal toggle must sit between the non-animal and animal sections');
 assert.match(html, /data-open-size-guide/, 'Live shop must expose the cart-adjacent size chart control');
 assert.match(html, /data-size-guide-panel/, 'Live shop must include the contextual size chart modal');
 assert.match(html, /data-size-guide-overlay/, 'Live shop must include the full-screen size chart backdrop');
@@ -175,10 +180,10 @@ assert.match(html, /delivery-estimate-v833\.js\?v=20260916-delivery-v840-r1/, 'L
 assert.match(html, /manual-checkout-v825\.js\?v=20260926-checkout-v869-r1/, 'Live shop must retain hardened checkout UI shell');
 assert.match(html, /customer-facing-checkout-v837\.js\?v=20260916-storefront-v837-r2/, 'Live shop must load v837 customer-facing checkout totals/copy layer');
 assert.match(html, /storefront-polish-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load artwork-primary storefront policy');
-assert.match(html, /storefront-polish-v832\.css\?v=20260916-storefront-v837-r1/, 'Live shop must load transparent media CSS');
+assert.match(html, /storefront-polish-v832\.css\?v=20260926-storefront-v869-r2/, 'Live shop must load transparent media CSS');
 assert.match(html, /product-preview-overrides\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load artwork-first compatibility layer');
-assert.match(html, /gallery-fixes-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load exact carousel repair');
-assert.match(html, /mockup-transparency-v832\.js\?v=20260926-storefront-v869-r1/, 'Live shop must load safe background transparency processor');
+assert.match(html, /gallery-fixes-v832\.js\?v=20260926-storefront-v869-r2/, 'Live shop must load exact carousel repair');
+assert.match(html, /mockup-transparency-v832\.js\?v=20260926-storefront-v869-r2/, 'Live shop must load safe background transparency processor');
 assert.match(html, /collection-media-v831\.js\?v=20260921-storefront-v857-r1/, 'Live shop must retain current collection media normalization');
 assert.match(html, /image-lightbox-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load full-view lightbox');
 assert.doesNotMatch(html, /direct-commerce-v828\.js|mockup-background-v830\.js|image-lightbox-v830\.js/, 'old active media/commerce handlers must not remain in the live page');
@@ -244,6 +249,12 @@ assert.doesNotMatch(polish, /printify|factor(?:y|ies)/i, 'storefront customer co
 
 const polishCss = await textAsset(POLISH_CSS_URL, 'storefront-polish-v832.css');
 assert.match(polishCss, /\.mockup img[\s\S]*background:\s*transparent !important/, 'product media pixels must display transparently');
+assert.match(polishCss, /--shop-image-backdrop:\s*transparent/, 'active media backdrop must be transparent');
+
+const baseStyles = await textAsset(STYLES_URL, 'styles.css');
+assert.match(baseStyles, /\.product-grid\s*\{[\s\S]*display:\s*flex[\s\S]*justify-content:\s*center/, 'live product rows must center incomplete final rows');
+assert.match(baseStyles, /\.mockup-rail\s*\{[\s\S]*background:\s*transparent/, 'live product rails must be transparent');
+assert.match(baseStyles, /\.cart-line img[^{]*\{[^}]*background:\s*transparent/, 'live cart product thumbnails must be transparent');
 
 const gallery = await textAsset(GALLERY_URL, 'gallery-fixes-v832.js');
 assert.match(gallery, /flex:0 0 100%!important/, 'each gallery slide must occupy exactly one viewport');
