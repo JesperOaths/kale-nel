@@ -1,8 +1,8 @@
 {
   "enabled": true,
-  "id": 990023,
-  "lease_token": "7d7f8b2e-54d1-4b44-9a07-990023000001",
+  "id": 990024,
+  "lease_token": "0a3cbfd4-97c6-4e39-b2a6-990024000001",
   "timeout_seconds": 180,
   "attempts": 1,
-  "command": "bash -lc 'LOCK=/tmp/c720p-job-990023.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; curl -fsSL --max-time 30 https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p/diagnose-tv-surround-20260926.py -o /tmp/diagnose-tv-surround-20260926.py && python3 /tmp/diagnose-tv-surround-20260926.py'"
+  "command": "bash -lc 'LOCK=/tmp/c720p-job-990024.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; curl -fsSL --max-time 30 https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p/diagnose-tv-surround-20260926.py -o /tmp/diagnose-tv-surround-20260926.py && python3 /tmp/diagnose-tv-surround-20260926.py'"
 }
