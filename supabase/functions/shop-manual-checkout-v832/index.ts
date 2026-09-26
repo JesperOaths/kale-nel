@@ -325,13 +325,19 @@ Deno.serve(async (req: Request) => {
     const printifyToken = await resolvePrintifyToken(sb);
     const fx = await resolveUsdEurRate(sb);
     const freshProducts = new Map<string, any>();
-    const productIds = [...new Set([
-      ...resolved.map((row: any) => text(row.cached.product.id)),
-      ...eligibleMappings.map((mapping: any) => text(mapping.target.product_id)),
-    ])];
-    for (const productId of productIds) {
+    for (const productId of sourceProductIds) {
       if (!/^[a-zA-Z0-9_-]{8,80}$/.test(productId)) throw new Error("Invalid Printify product id");
       freshProducts.set(productId, await printify(printifyToken, `/shops/${shopId}/products/${encodeURIComponent(productId)}.json`));
+    }
+    const regionalTargetProductIds = [...new Set(eligibleMappings.map((mapping: any) => text(mapping.target.product_id)).filter(Boolean))];
+    for (const productId of regionalTargetProductIds) {
+      if (freshProducts.has(productId)) continue;
+      if (!/^[a-zA-Z0-9_-]{8,80}$/.test(productId)) continue;
+      try {
+        freshProducts.set(productId, await printify(printifyToken, `/shops/${shopId}/products/${encodeURIComponent(productId)}.json`));
+      } catch (error) {
+        console.warn("Ignoring unavailable approved regional Printify target", productId, error instanceof Error ? error.message.slice(0, 180) : "unknown");
+      }
     }
 
     const authoritative: any[] = [];
