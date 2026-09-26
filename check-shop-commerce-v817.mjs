@@ -556,7 +556,7 @@ assert.match(liveShopCheck, /image-lightbox-v832/);
 assert.match(liveShopCheck, /shop-catalog-v828/);
 assert.match(liveShopCheck, /shop-manual-checkout-v832/);
 assert.match(liveShopCheck, /RESULT=V839_BRUIS_SHOP_PASS/);
-assert.match(liveShopCheck, /Deliberately read-only/);
+assert.match(liveShopCheck, /Production-safe validation is allowed only through checkout's validation_only/);
 assert.doesNotMatch(liveShopCheck, /method:\s*['"]POST['"]/);
 
 // Customer-facing shop sources must not expose supplier/factory wording. The v837
