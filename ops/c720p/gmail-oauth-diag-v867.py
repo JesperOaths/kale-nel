@@ -10,7 +10,9 @@ print("HOME="+str(pathlib.Path.home()))
 print("APP_EXISTS="+str(APP.exists()).lower())
 
 os.chdir(APP)
+os.environ["TOKEN_DIR"]="/opt/inbox-triage-agent/data/tokens"
 print("CWD="+str(pathlib.Path.cwd()))
+print("TOKEN_DIR="+os.environ["TOKEN_DIR"])
 sys.path.insert(0,str(APP))
 try:
     import triage_agent
