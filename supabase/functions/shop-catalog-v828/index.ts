@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import postgres from "npm:postgres@3.4.7";
-import { fxAuditSnapshot, parseEcbUsdRate, retailEurCentsFromUsdCost } from "../_shared/shop-fx.mjs";
+import { fxAuditSnapshot, marginEurCentsForSize, parseEcbUsdRate, retailEurCentsFromUsdCost } from "../_shared/shop-fx.mjs";
 
 const PRINTIFY_BASE = "https://api.printify.com/v1";
 const CACHE_FRESH_MS = 60_000;
@@ -12,6 +12,7 @@ const BOXY_TITLES = new Set(["coral", "daffodil", "dragonfly", "honeysuckle", "h
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl", "https://jesperoaths.github.io"]);
 const text = (value: unknown) => String(value ?? "").trim();
 const MARGIN_CENTS = 500;
+const LARGE_SIZE_MARGIN_CENTS = 700;
 const PUBLIC_EXCLUDED_PRODUCT_IDS = new Set(["6ab0fa9a0b770861f80da032"]);
 const PUBLIC_MERCH_PRODUCT_IDS = new Set([
   "6aaff223e0eef877800262df",
@@ -523,7 +524,7 @@ function publicProduct(product: any, fx: any, shopId: number, shop: any) {
       size: sizeFrom(product, variant) || variantDisplayLabel(product, variant),
       label: variantDisplayLabel(product, variant),
       color: colorFrom(product, variant),
-      price: retailEurCentsFromUsdCost(variant?.cost, fx, MARGIN_CENTS) / 100,
+      price: retailEurCentsFromUsdCost(variant?.cost, fx, marginEurCentsForSize(sizeFrom(product, variant) || variantDisplayLabel(product, variant), MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS)) / 100,
       is_enabled: variant?.is_enabled !== false,
       is_available: variant?.is_available !== false,
       options: resolvedOptions(product, variant).map((item) => ({ name: item.name, value: item.value })),
@@ -744,9 +745,9 @@ Deno.serve(async (req: Request) => {
         warming: true,
         mode: "bruis-direct-catalog-v838",
         usesShopifyApi: false,
-        pricing: "production-cost-plus-5-rounded-up",
+        pricing: "production-cost-plus-size-margin-rounded-up",
         pricingBase: "production-cost",
-        marginEuros: MARGIN_CENTS / 100,
+        marginEuros: { standard: MARGIN_CENTS / 100, threeXlPlus: LARGE_SIZE_MARGIN_CENTS / 100 },
         rounding: "whole-euro-ceiling",
         sourceCurrency: "USD",
         displayCurrency: "EUR",
@@ -787,8 +788,8 @@ Deno.serve(async (req: Request) => {
   if (url.searchParams.get("health") === "1") {
     return json(req, {
       ok: true, mode: "bruis-direct-catalog-v838", usesShopifyApi: false, whiteVariantsOnly: false, toteHandleColors: ["Black", "White"],
-      pricing: "production-cost-plus-5-rounded-up", pricingBase: "production-cost",
-      marginEuros: MARGIN_CENTS / 100, rounding: "whole-euro-ceiling", sourceCurrency: "USD", displayCurrency: "EUR", fx: payload?.fx || null, artworkFirst: true,
+      pricing: "production-cost-plus-size-margin-rounded-up", pricingBase: "production-cost",
+      marginEuros: { standard: MARGIN_CENTS / 100, threeXlPlus: LARGE_SIZE_MARGIN_CENTS / 100 }, rounding: "whole-euro-ceiling", sourceCurrency: "USD", displayCurrency: "EUR", fx: payload?.fx || null, artworkFirst: true,
       cachedProducts: products.length, cacheAgeSeconds: Number.isFinite(ageMs) ? Math.round(ageMs / 1000) : null,
       catalogSelection: payload?.catalogSelection || null,
       refreshScheduled,
