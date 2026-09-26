@@ -39,12 +39,29 @@ export async function refreshCatalogAndCheck(sb,state,catalogUrl){
   const changes=previous.length&&state?.catalog_hash!==hash?catalogDiff(previous,normalized):[],created=[];
   for(const change of changes){
     await sb.from("shop_catalog_drift_v847").insert({...change,observed_at:nowIso()});
+  }
+  if(changes.length){
+    const counts={};
+    const products=new Set();
+    let severity="info";
+    for(const change of changes){
+      counts[change.kind]=(counts[change.kind]||0)+1;
+      products.add(String(change.product_id||""));
+      if(change.severity==="high")severity="high";
+      else if(change.severity==="medium"&&severity!=="high")severity="medium";
+    }
+    const summary=Object.entries(counts).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))).map(([kind,count])=>count+" "+kind.replaceAll("_"," ")).join(", ");
+    const key="catalog_drift:aggregate:"+hash;
     const a=await ensureAlert(sb,{
-      kind:"catalog_drift",severity:change.severity,title:"Catalog "+change.kind.replaceAll("_"," "),
-      message:(change.product_name||change.product_id||"Product")+(change.variant_id?" / variant "+change.variant_id:"")+" changed in the live catalog.",
-      entity_type:change.variant_id?"variant":"product",entity_id:change.variant_id||change.product_id,dedupe_key:change.dedupe_key,metadata:change
+      kind:"catalog_drift",severity,title:"Catalog changes detected",
+      message:changes.length+" live catalog change"+(changes.length===1?"":"s")+" across "+products.size+" product"+(products.size===1?"":"s")+": "+summary+". Detailed changes are retained in the catalog drift log.",
+      entity_type:"shop",entity_id:"catalog",dedupe_key:key,
+      metadata:{change_count:changes.length,product_count:products.size,counts,changes:changes.slice(0,200),catalog_hash:hash,generated_at:row?.generated_at||null}
     });
     if(a.created)created.push(a.row);
+    await resolveKindExcept(sb,"catalog_drift",new Set([key]));
+  }else{
+    await resolveKindExcept(sb,"catalog_drift",new Set());
   }
   await saveState(sb,{catalog_baseline:normalized,catalog_hash:hash,last_catalog_check_at:nowIso()});
   return {generated_at:row?.generated_at||null,last_error:row?.last_error||null,products:normalized.length,changes:changes.length,new_alerts:created};
@@ -138,8 +155,8 @@ export async function checkOrdersAndTelemetry(sb,settings){
       const {data:claimed}=await sb.from("shop_orders").update({production_notified_at:claimAt,updated_at:claimAt}).eq("id",o.id).is("production_notified_at",null).select("id").maybeSingle();
       if(claimed){
         const safeName=text(o.customer_name).replace(/[<>&]/g,""),safeRef=ref.replace(/[<>&]/g,"");
-        const html='<div style="font-family:Arial,sans-serif;line-height:1.55;color:#111"><h2>Your payment is confirmed</h2><p>Hi '+safeName+',</p><p>We have confirmed payment for order <strong>'+safeRef+'</strong> and Printify has accepted the order for production.</p><p>Your items are now being prepared and printed. No action is needed from you.</p><p>We will email you again as soon as the shipment is on the way.</p></div>';
-        const plain='Payment confirmed for Bruis order '+ref+'. Printify has accepted the order and it is now in production. No action is needed from you. We will email you again when it ships.';
+        const html='<div style="font-family:Arial,sans-serif;line-height:1.55;color:#111"><h2>Your payment is confirmed</h2><p>Hi '+safeName+',</p><p>We have confirmed payment for order <strong>'+safeRef+'</strong>, and your order has entered our production process.</p><p>Your items are now being prepared and printed. No action is needed from you.</p><p>We will email you again as soon as the shipment is on the way.</p></div>';
+        const plain='Payment confirmed for Bruis order '+ref+'. Your order has entered our production process and is now being prepared. No action is needed from you. We will email you again when it ships.';
         const mailed=await sendEmail(text(o.customer_email),'Bruis order '+ref+' is now in production',html,plain);
         if(mailed.ok){
           await sb.from("shop_orders").update({notification_error:null,notification_error_at:null}).eq("id",o.id);
