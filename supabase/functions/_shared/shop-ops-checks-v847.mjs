@@ -203,10 +203,21 @@ export async function checkOrdersAndTelemetry(sb,settings){
     await resolveKindExcept(sb,"notification_delivery",new Set());
   }
   const {data:event}=await sb.from("site_visitor_events").select("created_at").like("page_path","/shop%").order("created_at",{ascending:false}).limit(1).maybeSingle();
-  const staleHours=event?.created_at?hoursSince(event.created_at):Infinity,key="telemetry_stale:shop";
-  if(staleHours>=Number(settings.telemetry_stale_hours||12)){
-    const a=await ensureAlert(sb,{kind:"telemetry_stale",severity:staleHours>=48?"high":"medium",title:"Shop telemetry is stale",message:event?.created_at?"No shop analytics event has arrived for "+staleHours.toFixed(1)+" hours.":"No shop analytics event has been recorded.",entity_type:"shop",entity_id:"telemetry",dedupe_key:key,metadata:{last_event_at:event?.created_at||null,stale_hours:staleHours}});if(a.created)created.push(a.row);
-  }else await resolveAlert(sb,key);
+  const key="telemetry_stale:shop";
+  const {data:telemetryTest,error:telemetryError}=await sb.rpc("shop_telemetry_selftest_v858");
+  const telemetryOk=!telemetryError&&telemetryTest?.ok===true&&telemetryTest?.cleanup_verified===true;
+  if(!telemetryOk){
+    const detail=telemetryError?.message||telemetryTest?.error||"Telemetry self-test failed.";
+    const a=await ensureAlert(sb,{
+      kind:"telemetry_stale",severity:"high",title:"Shop telemetry self-test failed",
+      message:"The shop analytics ingestion pipeline failed its disposable end-to-end database self-test.",
+      entity_type:"shop",entity_id:"telemetry",dedupe_key:key,
+      metadata:{last_real_event_at:event?.created_at||null,selftest:telemetryTest||null,error:String(detail).slice(0,300)}
+    });
+    if(a.created)created.push(a.row);
+  }else{
+    await resolveAlert(sb,key);
+  }
   await saveState(sb,{last_order_check_at:nowIso()});
-  return {orders_checked:(orders||[]).length,last_shop_event_at:event?.created_at||null,new_alerts:created};
+  return {orders_checked:(orders||[]).length,last_shop_event_at:event?.created_at||null,telemetry_selftest:telemetryTest||null,new_alerts:created};
 }
