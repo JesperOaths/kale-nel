@@ -14,6 +14,7 @@ const catalog=read('supabase/functions/shop-catalog-v828/index.ts');
 const orders=read('supabase/functions/shop-admin-orders-v825/index.ts');
 const exportFn=read('supabase/functions/shop-admin-export-v847/index.ts');
 const page=read('admin_shop_operations.html');
+const orderPage=read('admin_shop_orders.html');
 const nav=read('admin-topnav.js');
 const scheduler=read('.github/workflows/shop-operations-v847.yml');
 const schedulerRunner=read('scripts/run-shop-ops-v847.mjs');
@@ -98,6 +99,15 @@ assert.match(deploy,/deploy_function shop-ops-v847/);
 assert.match(deploy,/deploy_function shop-admin-export-v847/);
 assert.match(deploy,/deploy_function shop-admin-orders-v825/);
 assert.ok(adminDeploy.includes("['admin_shop_operations.html', 'v858']"));
+assert.match(page,/Review order/);
+assert.match(page,/admin_shop_orders\.html\?filter=stale&order=/);
+assert.match(orderPage,/data-filter="stale">Stale unpaid/);
+assert.match(orderPage,/function stalePending\(o\)/);
+assert.match(orderPage,/unpaid \$\{Math\.floor\(pendingAgeDays\(o\)\)\}d/);
+assert.match(orderPage,/const focusOrderId=String\(query\.get\('order'\)/);
+assert.match(orders,/production_notified_at/);
+assert.match(orders,/is now in production/);
+assert.match(orders,/notifyProduction/);
 
 for(const [name,source] of [['ops',ops],['checks',checks],['operations page',page],['order admin',orders]]){
   assert.doesNotMatch(source,/action\s*===\s*["'](?:refund|chargeback)["']/i,name+' must not add refund/chargeback actions');
