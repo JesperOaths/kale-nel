@@ -393,13 +393,21 @@ Deno.serve(async (req: Request) => {
 
     const printifyToken = await resolvePrintifyToken(sb);
     const fx = await resolveUsdEurRate(sb);
-    const productIds = [...new Set([
-      ...resolved.map((row: any) => text(row.cached.product.id)),
-      ...eligibleMappings.map((mapping: any) => text(mapping.target.product_id)),
-    ])];
-    if (productIds.some(id => !/^[a-zA-Z0-9_-]{8,80}$/.test(id))) throw new Error("Invalid Printify product id");
-    const freshEntries = await Promise.all(productIds.map(async productId => [productId, await printifyV1(printifyToken, `/shops/${shopId}/products/${encodeURIComponent(productId)}.json`)] as const));
-    const freshProducts = new Map<string, any>(freshEntries);
+    const freshProducts = new Map<string, any>();
+    const sourceEntries = await Promise.all(sourceProductIds.map(async productId => {
+      if (!/^[a-zA-Z0-9_-]{8,80}$/.test(productId)) throw new Error("Invalid Printify product id");
+      return [productId, await printifyV1(printifyToken, `/shops/${shopId}/products/${encodeURIComponent(productId)}.json`)] as const;
+    }));
+    sourceEntries.forEach(([productId, product]) => freshProducts.set(productId, product));
+    const regionalTargetProductIds = [...new Set(eligibleMappings.map((mapping: any) => text(mapping.target.product_id)).filter(Boolean))];
+    await Promise.all(regionalTargetProductIds.map(async productId => {
+      if (freshProducts.has(productId) || !/^[a-zA-Z0-9_-]{8,80}$/.test(productId)) return;
+      try {
+        freshProducts.set(productId, await printifyV1(printifyToken, `/shops/${shopId}/products/${encodeURIComponent(productId)}.json`));
+      } catch (error) {
+        console.warn("Ignoring unavailable approved regional Printify target", productId, error instanceof Error ? error.message.slice(0, 180) : "unknown");
+      }
+    }));
 
     const candidateGroups: any[][] = [];
     for (const row of resolved) {
