@@ -21,7 +21,7 @@
       document.documentElement.classList.add('admin-gate-pending');
       const style = document.createElement('style');
       style.setAttribute('data-admin-session-gate', 'true');
-      style.textContent = 'html.admin-gate-pending body{visibility:hidden!important}html.admin-gate-ready body{visibility:visible!important}';
+      style.textContent = 'html.admin-gate-pending body{visibility:visible!important}html.admin-gate-pending body>*{visibility:hidden!important}html.admin-gate-pending body::before{content:"Checking admin session…";visibility:visible!important;position:fixed;inset:0;display:grid;place-items:center;background:#eee9df;color:#17130f;font:700 16px/1.4 Inter,system-ui,sans-serif;z-index:2147483647}html.admin-gate-ready body{visibility:visible!important}html.admin-gate-ready body>*{visibility:visible!important}';
       (document.head || document.documentElement).appendChild(style);
     } catch (_) {}
   }
@@ -34,6 +34,7 @@
   const SUPABASE_KEY = cfg.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
   const REMEMBER_MS = Number(cfg.ADMIN_SESSION_REMEMBER_MS || (45 * 24 * 60 * 60 * 1000));
   const TRUST_DAYS = 45;
+  let validatePromise = null;
 
   function headers(){ return { apikey: SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }; }
   async function parse(res){
@@ -128,10 +129,20 @@
   }
 
   async function rpc(name, payload){
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
-      method:'POST', mode:'cors', cache:'no-store', headers:headers(), body:JSON.stringify(payload || {})
-    });
-    return await parse(res);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+        method:'POST', mode:'cors', cache:'no-store', headers:headers(),
+        body:JSON.stringify(payload || {}), signal:controller.signal
+      });
+      return await parse(res);
+    } catch (error) {
+      if (error?.name === 'AbortError') throw new Error('Admin session check timed out.');
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   function safeReturnTarget(raw){
@@ -252,25 +263,33 @@
   }
 
   async function validate(){
-    let token = getToken();
-    const device = getDevice();
-    const username = getUsername();
+    if (validatePromise) return validatePromise;
+    validatePromise = (async () => {
+      let token = getToken();
+      const device = getDevice();
+      const username = getUsername();
 
-    if (!token) {
-      if (device && username) return await resumeTrustedDevice();
-      throw new Error('Geen adminsessie gevonden.');
-    }
+      if (!token) {
+        if (device && username) return await resumeTrustedDevice();
+        throw new Error('Geen adminsessie gevonden.');
+      }
 
+      try {
+        const data = await rpc('admin_check_session', { admin_session_token: token });
+        if (data?.ok !== true) throw new Error('Adminsessie verlopen.');
+        const nextToken = data?.admin_session_token || data?.token || token;
+        const nextUser = data?.admin_username || data?.username || username;
+        setBundle(nextToken, nextUser, true, device, getDeadline() || '');
+        return Object.assign({ admin_session_token:nextToken, admin_username:nextUser }, data);
+      } catch (error) {
+        if (device && username) return await resumeTrustedDevice();
+        throw error;
+      }
+    })();
     try {
-      const data = await rpc('admin_check_session', { admin_session_token: token });
-      if (data?.ok !== true) throw new Error('Adminsessie verlopen.');
-      const nextToken = data?.admin_session_token || data?.token || token;
-      const nextUser = data?.admin_username || data?.username || username;
-      setBundle(nextToken, nextUser, true, device, getDeadline() || '');
-      return Object.assign({ admin_session_token:nextToken, admin_username:nextUser }, data);
-    } catch (error) {
-      if (device && username) return await resumeTrustedDevice();
-      throw error;
+      return await validatePromise;
+    } finally {
+      validatePromise = null;
     }
   }
 
