@@ -138,6 +138,14 @@ assert.match(checkoutEdge, /country === "US" && phone\.replace\(\/\\D\/g, ""\)\.
 assert.match(checkoutEdge, /function cachedShopId/, 'checkout must resolve current per-product Printify shop ids');
 assert.match(deliveryPreviewEdge, /function cachedShopId/, 'delivery preview must resolve current per-product Printify shop ids');
 assert.match(checkoutEdge, /validation_only/, 'checkout must expose a non-ordering production validation path');
+assert.match(checkoutEdge, /\.from\("shop_fulfillment_mappings"\)/, 'checkout must evaluate server-side approved regional fulfillment mappings');
+assert.match(deliveryPreviewEdge, /\.from\("shop_fulfillment_mappings"\)/, 'delivery preview must evaluate the same regional fulfillment mappings');
+assert.match(checkoutEdge, /\.eq\("approved", true\)/, 'checkout mappings must require explicit approval');
+assert.match(deliveryPreviewEdge, /\.eq\("approved", true\)/, 'preview mappings must require explicit approval');
+assert.match(checkoutEdge, /validateMappedCandidate\(/, 'checkout must revalidate mapped variant and artwork identity');
+assert.match(deliveryPreviewEdge, /validateMappedCandidate\(/, 'preview must revalidate mapped variant and artwork identity');
+assert.match(checkoutEdge, /Ignoring unavailable approved regional Printify target/, 'stale regional clones must fall back safely in checkout');
+assert.match(deliveryPreviewEdge, /Ignoring unavailable approved regional Printify target/, 'stale regional clones must fall back safely in preview');
 assert.match(deliveryPreviewEdge, /for \(let attempt = 1; attempt <= 2; attempt \+= 1\)/, 'server-side Printify quote calls must retry transient stream failures');
 assert.match(checkoutEdge, /for \(let attempt = 1; attempt <= 2; attempt \+= 1\)/, 'checkout Printify reads and quote calls must retry transient stream failures');
 assert.match(deliveryPreviewEdge, /fallback:\s*true/, 'nonessential shipping-breakdown failures must not discard a valid shipping total');
