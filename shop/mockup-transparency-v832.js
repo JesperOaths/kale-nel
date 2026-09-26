@@ -1,10 +1,14 @@
 (() => {
   'use strict';
 
-  const MAX_SIDE=1800;
+  const MAX_SIDE=1400;
+  const MAX_CONCURRENT=4;
   const cache=new Map();
   const seen=new WeakSet();
-  const isRaster=url=>/^https?:/i.test(url)&&/\.(?:jpe?g)(?:[?#]|$)/i.test(url);
+  const queued=new WeakSet();
+  const pending=[];
+  let active=0;
+  const isRaster=url=>/^https?:/i.test(url)&&/\.(?:jpe?g|png|webp)(?:[?#]|$)/i.test(url);
 
   function distanceSq(data,offset,mean){
     const dr=data[offset]-mean[0], dg=data[offset+1]-mean[1], db=data[offset+2]-mean[2];
@@ -120,6 +124,23 @@
     return {opaque,minX,minY,maxX,maxY,edgeOpaque,bottomOpaque,ratio:opaque/(width*height)};
   }
 
+  function cropBounds(imageData){
+    const {width,height}=imageData;
+    const b=alphaBounds(imageData);
+    if(!b.opaque||b.maxX<b.minX||b.maxY<b.minY) return null;
+    const pad=Math.max(6,Math.round(Math.max(width,height)*.025));
+    const x=Math.max(0,b.minX-pad);
+    const y=Math.max(0,b.minY-pad);
+    const right=Math.min(width-1,b.maxX+pad);
+    const bottom=Math.min(height-1,b.maxY+pad);
+    return {x,y,width:right-x+1,height:bottom-y+1};
+  }
+
+  function hasUsefulTransparency(imageData){
+    const b=alphaBounds(imageData);
+    return b.opaque>0 && b.ratio<.985 && b.edgeOpaque===0;
+  }
+
   function outputLooksSafe(imageData){
     const {width,height}=imageData;
     const b=alphaBounds(imageData);
@@ -133,7 +154,7 @@
   function applyTransparency(imageData){
     const {data,width,height}=imageData;
     const stats=cornerStats(data,width,height);
-    if(!stats||stats.lightness<185||stats.sigma>16) return false;
+    if(!stats||stats.sigma>18) return false;
 
     const initial=Math.max(5,Math.min(14,stats.sigma*2+5));
     const attempts=[initial,10,7,5,3].filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>b-a);
@@ -180,10 +201,28 @@
         if(!ctx) return url;
         ctx.drawImage(bitmap,0,0,width,height);
         const imageData=ctx.getImageData(0,0,width,height);
-        if(!applyTransparency(imageData)) return url;
+        const alreadyTransparent=hasUsefulTransparency(imageData);
+        const changed=alreadyTransparent ? false : applyTransparency(imageData);
+        if(!changed&&!alreadyTransparent) return url;
+
         ctx.clearRect(0,0,width,height);
         ctx.putImageData(imageData,0,0);
-        const output=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+
+        const bounds=cropBounds(imageData);
+        let outputCanvas=canvas;
+        if(bounds && (bounds.width<width*.97 || bounds.height<height*.97)){
+          const cropped=document.createElement('canvas');
+          cropped.width=bounds.width;
+          cropped.height=bounds.height;
+          const cropCtx=cropped.getContext('2d');
+          if(cropCtx){
+            cropCtx.clearRect(0,0,cropped.width,cropped.height);
+            cropCtx.drawImage(canvas,bounds.x,bounds.y,bounds.width,bounds.height,0,0,bounds.width,bounds.height);
+            outputCanvas=cropped;
+          }
+        }
+
+        const output=await new Promise(resolve=>outputCanvas.toBlob(resolve,'image/png'));
         return output?URL.createObjectURL(output):url;
       } finally { bitmap.close?.(); }
     })().catch(()=>url);
@@ -208,29 +247,40 @@
     }
   }
 
-  const intersection='IntersectionObserver' in window
-    ? new IntersectionObserver(entries=>entries.forEach(entry=>{
-        if(!entry.isIntersecting)return;
-        intersection.unobserve(entry.target); processImage(entry.target);
-      }),{rootMargin:'800px 0px'})
-    : null;
+  function pump(){
+    while(active<MAX_CONCURRENT&&pending.length){
+      const img=pending.shift();
+      if(!img||seen.has(img)) continue;
+      active++;
+      processImage(img).finally(()=>{
+        active--;
+        pump();
+      });
+    }
+  }
+
+  function enqueue(img){
+    if(!img||seen.has(img)||queued.has(img)) return;
+    queued.add(img);
+    img.dataset.mockupTransparency='queued-v869';
+    pending.push(img);
+    pump();
+  }
 
   function scan(root=document){
-    root.querySelectorAll?.('.mockup img').forEach(img=>{
-      if(seen.has(img))return;
-      if(intersection)intersection.observe(img);else processImage(img);
-    });
+    root.querySelectorAll?.('.mockup img').forEach(enqueue);
   }
 
   const boot=()=>{
+    // v869 deliberately starts every currently rendered product image immediately.
     scan(document);
     const observer=new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{
       if(node.nodeType!==1)return;
-      if(node.matches?.('.mockup img'))processImage(node);else scan(node);
+      if(node.matches?.('.mockup img'))enqueue(node);else scan(node);
     })));
     observer.observe(document.body,{childList:true,subtree:true});
   };
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-  window.BRUIS_TRANSPARENCY_V832=Object.freeze({allProductMockups:true,preservesWhiteGarments:true,tagViewIncluded:true,safeFallbackToOriginal:true,noOneSidedSpanBridge:true});
+  window.BRUIS_TRANSPARENCY_V832=Object.freeze({allProductMockups:true,eager:true,maxConcurrent:MAX_CONCURRENT,cropsTransparentWhitespace:true,preservesWhiteGarments:true,tagViewIncluded:true,safeFallbackToOriginal:true,noOneSidedSpanBridge:true});
 })();
