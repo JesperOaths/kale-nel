@@ -22,36 +22,66 @@ export function localWeekKey(){
   d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));
   return d.toISOString().slice(0,10);
 }
+function dbErrorMessage(error){
+  if(error instanceof Error)return error.message||String(error);
+  if(error&&typeof error==="object"){
+    const code=text(error.code);
+    const message=text(error.message||error.details||error.hint);
+    return [code,message].filter(Boolean).join(": ")||JSON.stringify(error);
+  }
+  return text(error);
+}
+function transientDbError(error){
+  const code=text(error?.code).toUpperCase();
+  const message=dbErrorMessage(error).toLowerCase();
+  return code==="PGRST002"
+    || /schema cache|could not query the database|connection.*(?:closed|reset)|temporar(?:y|ily)|service unavailable|timeout/.test(message);
+}
+async function withDbRetry(label,fn,attempts=4){
+  let last;
+  for(let attempt=1;attempt<=attempts;attempt++){
+    try{
+      const result=await fn();
+      if(result?.error)throw result.error;
+      return result;
+    }catch(error){
+      last=error;
+      if(attempt>=attempts||!transientDbError(error))throw error;
+      const delay=200*Math.pow(2,attempt-1);
+      console.warn("shop ops transient db retry",label,"attempt",attempt,"delay_ms",delay,dbErrorMessage(error).slice(0,240));
+      await new Promise(resolve=>setTimeout(resolve,delay));
+    }
+  }
+  throw last;
+}
 export async function getSettings(sb){
-  const {data,error}=await sb.from("shop_ops_settings_v847").select("*").eq("id",1).single();
-  if(error)throw error; return data;
+  const {data}=await withDbRetry("get_settings",()=>sb.from("shop_ops_settings_v847").select("*").eq("id",1).single());
+  return data;
 }
 export async function getState(sb){
-  const {data,error}=await sb.from("shop_ops_state_v847").select("*").eq("id",1).single();
-  if(error)throw error; return data;
+  const {data}=await withDbRetry("get_state",()=>sb.from("shop_ops_state_v847").select("*").eq("id",1).single());
+  return data;
 }
 export async function saveState(sb,patch){
-  const {error}=await sb.from("shop_ops_state_v847").update({...patch,updated_at:nowIso()}).eq("id",1);
-  if(error)throw error;
+  await withDbRetry("save_state",()=>sb.from("shop_ops_state_v847").update({...patch,updated_at:nowIso()}).eq("id",1));
 }
 export async function ensureAlert(sb,row){
-  const {data:existing,error:e}=await sb.from("shop_alerts_v847").select("id,notified_at").eq("dedupe_key",row.dedupe_key).is("resolved_at",null).maybeSingle();
-  if(e)throw e;
+  const {data:existing}=await withDbRetry("alert_lookup",()=>sb.from("shop_alerts_v847").select("id,notified_at").eq("dedupe_key",row.dedupe_key).is("resolved_at",null).maybeSingle());
   const patch={kind:row.kind,severity:row.severity,title:row.title,message:row.message,entity_type:row.entity_type||null,entity_id:row.entity_id||null,metadata:row.metadata||{},updated_at:nowIso()};
   if(existing){
-    const {data,error}=await sb.from("shop_alerts_v847").update(patch).eq("id",existing.id).select().single();
-    if(error)throw error; return {row:data,created:false};
+    const {data}=await withDbRetry("alert_update",()=>sb.from("shop_alerts_v847").update(patch).eq("id",existing.id).select().single());
+    return {row:data,created:false};
   }
-  const {data,error}=await sb.from("shop_alerts_v847").insert({...patch,dedupe_key:row.dedupe_key}).select().single();
-  if(error)throw error; return {row:data,created:true};
+  const {data}=await withDbRetry("alert_insert",()=>sb.from("shop_alerts_v847").insert({...patch,dedupe_key:row.dedupe_key}).select().single());
+  return {row:data,created:true};
 }
 export async function resolveAlert(sb,key){
-  await sb.from("shop_alerts_v847").update({resolved_at:nowIso(),updated_at:nowIso()}).eq("dedupe_key",key).is("resolved_at",null);
+  await withDbRetry("alert_resolve",()=>sb.from("shop_alerts_v847").update({resolved_at:nowIso(),updated_at:nowIso()}).eq("dedupe_key",key).is("resolved_at",null));
 }
 export async function resolveKindExcept(sb,kind,active){
-  const {data}=await sb.from("shop_alerts_v847").select("id,dedupe_key").eq("kind",kind).is("resolved_at",null).limit(1000);
+  const {data}=await withDbRetry("alert_kind_list",()=>sb.from("shop_alerts_v847").select("id,dedupe_key").eq("kind",kind).is("resolved_at",null).limit(1000));
   for(const row of data||[])if(!active.has(text(row.dedupe_key))){
-    await sb.from("shop_alerts_v847").update({resolved_at:nowIso(),updated_at:nowIso()}).eq("id",row.id);
+    await withDbRetry("alert_kind_resolve",()=>sb.from("shop_alerts_v847").update({resolved_at:nowIso(),updated_at:nowIso()}).eq("id",row.id));
   }
 }
 export async function sendEmail(to,subject,html,plain){
