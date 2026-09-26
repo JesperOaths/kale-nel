@@ -190,7 +190,8 @@
       const response=await fetch(url,{mode:'cors',credentials:'omit',cache:'force-cache'});
       if(!response.ok) return url;
       const blob=await response.blob();
-      if(blob.type && !/^image\/(?:jpeg|png|webp)$/i.test(blob.type)) return url;
+      // Catalog URLs are image sources even when Printify/S3 omits a filename
+      // extension or a useful Content-Type. createImageBitmap is the authority.
       const bitmap=await createImageBitmap(blob);
       try{
         const scale=Math.min(1,MAX_SIDE/Math.max(bitmap.width,bitmap.height));
