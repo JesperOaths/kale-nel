@@ -74,6 +74,20 @@ const COLLECTIONS = {
   }
 };
 
+// v867: zoological designs are opt-in on the public storefront.
+// Exact names avoid false positives such as Tiger Lily or Snake's Head Fritillary.
+const ANIMAL_DESIGN_NAMES = new Set([
+  'axolotl','aye-aye','banded linsang','coral','dragonfly','fennec fox',
+  'horseshoe crab','humpback whale','japanese spider crab','jellyfish','jerboa',
+  'krill','leaf-tailed gecko','leopard seal','manta ray','markhor','orb-weaver',
+  'orchid mantis','pom-pom crab','pufferfish','seahorse','secretary bird','thorny devil'
+]);
+let showAnimalDesigns = false;
+
+function isAnimalDesign(product){
+  return ANIMAL_DESIGN_NAMES.has(String(product?.name || '').trim().toLowerCase());
+}
+
 let products = [];
 let selectedCollection = null;
 let cart = JSON.parse(localStorage.getItem(cartKey) || '[]');
@@ -172,14 +186,37 @@ function productsForCollection(collection = selectedCollection){
   return products.filter(product => product.collection === collection);
 }
 
+function visibleProductsForCollection(collection = selectedCollection){
+  const list = productsForCollection(collection);
+  return showAnimalDesigns ? list : list.filter(product => !isAnimalDesign(product));
+}
+
+function animalProductsForCollection(collection = selectedCollection){
+  return productsForCollection(collection).filter(isAnimalDesign);
+}
+
 function updateCollectionCounts(){
   Object.keys(COLLECTIONS).forEach(key => {
-    const count = productsForCollection(key).length;
+    const count = visibleProductsForCollection(key).length;
     const noun = key === 'merch' ? (count === 1 ? 'product' : 'products') : (count === 1 ? 'shirt' : 'shirts');
     qsa(`[data-collection-count="${key}"]`).forEach(el => {
       el.textContent = `${count} ${noun}`;
     });
   });
+}
+
+function updateAnimalFilterUi(){
+  const bar = qs('[data-animal-filter-bar]');
+  const input = qs('[data-animal-filter]');
+  const status = qs('[data-animal-filter-status]');
+  const count = animalProductsForCollection().length;
+  if(bar) bar.hidden = !selectedCollection || count === 0;
+  if(input) input.checked = showAnimalDesigns;
+  if(status){
+    status.textContent = showAnimalDesigns
+      ? `${count} animal design${count === 1 ? '' : 's'} shown below the other designs.`
+      : `${count} animal design${count === 1 ? '' : 's'} hidden by default.`;
+  }
 }
 
 function updateShapeControls(){
@@ -316,36 +353,15 @@ function initializeSizeGuide(){
     card.addEventListener('click', activate);
   });
 
-  const firstShirt = productsForCollection().find(product => sizeGuideForProduct(product));
-  setActiveSizeGuideProduct(firstShirt || null);
+  const firstCard = qs('.product-card[data-product-id]');
+  const firstShirt = firstCard ? products.find(product => product.id === firstCard.dataset.productId) : null;
+  setActiveSizeGuideProduct(firstShirt && sizeGuideForProduct(firstShirt) ? firstShirt : null);
   window.requestAnimationFrame(syncSizeGuideToViewport);
 }
 
-function renderProducts(){
-  const wrap = qs('[data-products]');
-  const empty = qs('[data-collection-empty]');
-  if(!selectedCollection){
-    wrap.innerHTML = '';
-    empty.hidden = true;
-    return;
-  }
-
-  const collection = COLLECTIONS[selectedCollection] || COLLECTIONS.normal;
-  const list = productsForCollection();
-  qs('[data-collection-title]').textContent = collection.heading;
-  updateShapeControls();
-
-  if(!list.length){
-    wrap.innerHTML = '';
-    empty.hidden = false;
-    empty.textContent = collection.empty;
-    return;
-  }
-
-  empty.hidden = true;
-  empty.textContent = '';
-  wrap.innerHTML = list.map(product => `
-    <article class="product-card" data-product-id="${esc(product.id)}" data-product-collection="${esc(product.collection)}">
+function productCardHtml(product, collection){
+  return `
+    <article class="product-card" data-product-id="${esc(product.id)}" data-product-collection="${esc(product.collection)}" data-subject-kind="${isAnimalDesign(product) ? 'animal' : 'other'}">
       <div class="mockup-rail" aria-label="${esc(product.name)} images">
         ${product.mockups.map(m => `
           <figure class="mockup mock-${slug(m.label)}">
@@ -371,7 +387,7 @@ function renderProducts(){
         </div>
         <div class="buy-box">
           <label>Size
-            <select data-size="${esc(product.id)}">${product.sizes.map((s, index) => `<option${String(s).trim().toUpperCase() === 'M' || (!product.sizes.some(size => String(size).trim().toUpperCase() === 'M') && index === 0) ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select>
+            <select data-size="${esc(product.id)}">${product.sizes.map((size, index) => `<option${String(size).trim().toUpperCase() === 'M' || (!product.sizes.some(item => String(item).trim().toUpperCase() === 'M') && index === 0) ? ' selected' : ''}>${esc(size)}</option>`).join('')}</select>
           </label>
           <label>Qty
             <input data-qty="${esc(product.id)}" type="number" min="1" max="9" value="1" />
@@ -379,7 +395,55 @@ function renderProducts(){
           <button type="button" class="button primary" data-add="${esc(product.id)}">Add to cart</button>
         </div>
       </div>
-    </article>`).join('');
+    </article>`;
+}
+
+function renderProducts(){
+  const wrap = qs('[data-products]');
+  const animalSection = qs('[data-animal-section]');
+  const animalWrap = qs('[data-animal-products]');
+  const empty = qs('[data-collection-empty]');
+  if(!selectedCollection){
+    wrap.innerHTML = '';
+    if(animalWrap) animalWrap.innerHTML = '';
+    if(animalSection) animalSection.hidden = true;
+    if(qs('[data-animal-filter-bar]')) qs('[data-animal-filter-bar]').hidden = true;
+    empty.hidden = true;
+    return;
+  }
+
+  const collection = COLLECTIONS[selectedCollection] || COLLECTIONS.normal;
+  const fullList = productsForCollection();
+  const regularList = fullList.filter(product => !isAnimalDesign(product));
+  const animalList = fullList.filter(isAnimalDesign);
+  qs('[data-collection-title]').textContent = collection.heading;
+  updateShapeControls();
+  updateAnimalFilterUi();
+
+  const visibleCount = regularList.length + (showAnimalDesigns ? animalList.length : 0);
+  if(!visibleCount){
+    wrap.innerHTML = '';
+    if(animalWrap) animalWrap.innerHTML = '';
+    if(animalSection) animalSection.hidden = true;
+    empty.hidden = false;
+    empty.textContent = collection.empty;
+    return;
+  }
+
+  empty.hidden = true;
+  empty.textContent = '';
+  wrap.innerHTML = regularList.map(product => productCardHtml(product, collection)).join('');
+
+  if(animalSection && animalWrap){
+    if(showAnimalDesigns && animalList.length){
+      animalWrap.innerHTML = animalList.map(product => productCardHtml(product, collection)).join('');
+      animalSection.hidden = false;
+    } else {
+      animalWrap.innerHTML = '';
+      animalSection.hidden = true;
+    }
+  }
+
   initializeGalleries();
   initializeSizeGuide();
 }
@@ -498,6 +562,14 @@ function closeCart(){
   qs('[data-cart-drawer]').classList.remove('open');
   qs('[data-cart-drawer]').setAttribute('aria-hidden','true');
 }
+
+document.addEventListener('change', event => {
+  const animalFilter = event.target.closest('[data-animal-filter]');
+  if(!animalFilter) return;
+  showAnimalDesigns = !!animalFilter.checked;
+  updateCollectionCounts();
+  renderProducts();
+});
 
 document.addEventListener('click', event => {
   const collection = event.target.closest('[data-collection]');
