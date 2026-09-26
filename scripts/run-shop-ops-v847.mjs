@@ -21,11 +21,11 @@ function curlJson(args,timeoutMs){
 function mintOnce(){
   const body=curlJson([
     '--silent','--show-error','--fail-with-body','--max-time','45',
-    '-X','POST',base+'/rest/v1/rpc/shop_ops_mint_scheduler_token_v847',
+    '-X','POST',base+'/rest/v1/rpc/shop_ops_mint_scheduler_token_v858',
     '-H','Authorization: Bearer '+key,
     '-H','apikey: '+key,
     '-H','Content-Type: application/json',
-    '--data','{}'
+    '--data',JSON.stringify({source_input:'github_actions'})
   ],50000);
   if(typeof body!=='string'||!/^[a-f0-9]{64}$/i.test(body)) throw new Error('Malformed scheduler token');
   return body;
