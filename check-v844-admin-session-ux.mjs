@@ -28,7 +28,7 @@ assert.doesNotMatch(sync,/navigator\.userAgent \|\| ''[\s\S]{0,160}resolvedOptio
 assert.match(sync,/function resolveTrustedUntil\(/, 'session sync must preserve a stable trusted-device deadline');
 assert.match(sync,/if \(changed\) emitUpdate\(\)/, 'session update event must fire only when the stored bundle actually changes');
 assert.match(sync,/if \(hadBundle\) emitUpdate\(\)/, 'clearing an already-empty bundle must not emit a refresh event');
-assert.match(orders,/admin-session-sync\.js\?v872/, 'shop orders must force-load the loop-safe session sync');
+assert.match(orders,/admin-session-sync\\.js\\?20260926-payment-loopfix-r1/, 'shop orders must force-load the loop-safe session sync');
 assert.match(orders,/let loadPromise=null/, 'shop orders must deduplicate concurrent list reloads');
 assert.match(orders,/let actionInFlight=false/, 'shop orders must suppress session-triggered reloads while an admin action is running');
 assert.match(orders,/Payment for \$\{row\.payment_reference\} verified/, 'payment verification must show explicit success feedback');
