@@ -13,6 +13,12 @@ const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl",
 const text = (value: unknown) => String(value ?? "").trim();
 const MARGIN_CENTS = 500;
 const PUBLIC_EXCLUDED_PRODUCT_IDS = new Set(["6ab0fa9a0b770861f80da032"]);
+const PUBLIC_MERCH_PRODUCT_IDS = new Set([
+  "6aaff223e0eef877800262df",
+  "6aaa152378f50f3725033e18",
+  "6a975ec45d07cc05a702a491",
+  "6a9742c08816f2362104d5cc",
+]);
 
 // Explicit customer-facing identities for the current Printify catalog.
 // These deliberately describe the artwork/product itself and replace the
@@ -558,7 +564,13 @@ async function buildCatalog(supabase: any) {
   const account = await loadAccountProducts(token);
 
   const cleanProducts = account.entries
-    .filter((entry: any) => entry.product?.visible !== false && !text(entry.product?.title).startsWith(ROUTE_PREFIX) && !PUBLIC_EXCLUDED_PRODUCT_IDS.has(text(entry.product?.id)))
+    .filter((entry: any) => {
+      const id = text(entry.product?.id);
+      const explicitlyApprovedMerch = PUBLIC_MERCH_PRODUCT_IDS.has(id);
+      return (entry.product?.visible !== false || explicitlyApprovedMerch)
+        && !text(entry.product?.title).startsWith(ROUTE_PREFIX)
+        && !PUBLIC_EXCLUDED_PRODUCT_IDS.has(id);
+    })
     .map((entry: any) => publicProduct(entry.product, fx, entry.shopId, entry.shop))
     .filter((product: any) => product.id && product.name && product.price > 0 && product.mockups.length > 0 && product.variants.length > 0);
 
