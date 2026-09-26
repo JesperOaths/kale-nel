@@ -469,6 +469,7 @@ h3 { font-size: 1.08rem; }
 @media (max-width: 900px) {
   .collection-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .product-grid > .product-card { grid-column: auto; }
   .product-grid > .product-card:last-child:nth-child(2n + 1) {
     grid-column: 1 / -1;
     width: calc((100% - 22px) / 2);
@@ -486,6 +487,7 @@ h3 { font-size: 1.08rem; }
   .shape-entry-heading { text-align: left; }
   .collection-grid { grid-template-columns: 1fr; }
   .product-grid { grid-template-columns: 1fr; }
+  .product-grid > .product-card { grid-column: auto; }
   .product-grid > .product-card:last-child:nth-child(2n + 1) {
     grid-column: auto;
     width: auto;
