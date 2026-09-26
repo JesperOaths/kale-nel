@@ -1,8 +1,8 @@
 /* Bruis shop v832 — transparent product media, exact galleries, unified collection fields */
 
-:root { --shop-image-backdrop: #ded6ca; }
+:root { --shop-image-backdrop: transparent; }
 
-/* The card field stays beige, while the image itself stays transparent. */
+/* v869: every shirt/media surface is transparent; no baked white/beige image field. */
 .mockup-rail,
 .mockup {
   background: var(--shop-image-backdrop) !important;
@@ -23,8 +23,7 @@
   object-position: center !important;
 }
 
-/* Collection cards retain the beige field; the garment itself is kept white by
-   collection-media-v831.js. */
+/* Collection media uses the same transparent field. */
 .collection-image {
   position: relative;
   overflow: hidden;
