@@ -396,6 +396,53 @@ assert.equal(Number(checkoutSmoke.subtotal_cents), expectedSmokeSubtotal, 'check
 assert.ok(Number(checkoutSmoke.shipping_cents) > 0, 'checkout smoke must obtain shipping');
 assert.equal(Number(checkoutSmoke.total_cents), Number(checkoutSmoke.subtotal_cents) + Number(checkoutSmoke.shipping_cents), 'checkout total must equal products plus shipping');
 
+// v870 regression: Dogwood and Hydrangea both have a validated EU provider-30
+// route. A Netherlands order must remain one parcel instead of silently
+// stacking two base shipping charges.
+const dogwood = liveCatalog.products.find(product => /^dogwood$/i.test(String(product?.name || '').trim()));
+assert.ok(dogwood, 'Dogwood product must exist for EU consolidation smoke test');
+const dogwoodM = availableVariant(dogwood, 'M');
+assert.ok(dogwoodM, 'Dogwood must expose an available M variant');
+const hydrangeaM = availableVariant(hydrangea, 'M');
+assert.ok(hydrangeaM, 'Hydrangea must expose an available M variant');
+
+const euPairItems = [
+  {
+    product_id: String(dogwood.id),
+    variant_id: String(dogwoodM.id),
+    name: String(dogwood.name),
+    size: String(dogwoodM.size || 'M'),
+    sku: String(dogwoodM.sku || ''),
+    qty: 1
+  },
+  {
+    product_id: String(hydrangea.id),
+    variant_id: String(hydrangeaM.id),
+    name: String(hydrangea.name),
+    size: String(hydrangeaM.size || 'M'),
+    sku: String(hydrangeaM.sku || ''),
+    qty: 1
+  }
+];
+
+const euPairDelivery = await postValidation(
+  DELIVERY_PREVIEW_URL,
+  { customer: smokeCustomer, items: euPairItems },
+  'EU Dogwood + Hydrangea consolidation smoke'
+);
+assert.equal(Number(euPairDelivery.provider_groups), 1, 'Dogwood + Hydrangea NL/EU order must use one fulfillment provider');
+assert.equal(euPairDelivery.shipping_stacks, false, 'Dogwood + Hydrangea NL/EU order must not stack shipping');
+assert.equal(euPairDelivery.may_arrive_separately, false, 'Dogwood + Hydrangea NL/EU order must remain one parcel');
+assert.equal(Array.isArray(euPairDelivery.shipping_breakdown) ? euPairDelivery.shipping_breakdown.length : 0, 1, 'Dogwood + Hydrangea NL/EU shipping must have one breakdown group');
+
+const euPairCheckout = await postValidation(
+  CHECKOUT_URL,
+  { customer: smokeCustomer, items: euPairItems, validation_only: true },
+  'EU Dogwood + Hydrangea checkout consolidation smoke'
+);
+assert.equal(euPairCheckout.validation_only, true, 'EU pair checkout test must remain non-ordering');
+assert.equal(Number(euPairCheckout.shipping_cents), Number(euPairDelivery.shipping_cents), 'checkout and delivery preview must agree on consolidated EU shipping');
+
 const catalogHealth = await health(CATALOG_HEALTH_URL, 'shop-catalog-v828', 'bruis-direct-catalog-v838');
 assert.equal(catalogHealth?.usesShopifyApi, false, 'catalog health must report no Shopify API use');
 assert.equal(catalogHealth?.whiteVariantsOnly, false, 'catalog health must report the tote color exception');
@@ -412,6 +459,8 @@ assert.equal(checkoutHealth?.pricingBase, 'production-cost', 'checkout must repr
 assert.deepEqual(checkoutHealth?.marginEuros, { standard: 5, threeXlPlus: 7 }, 'checkout margin must be €5 standard and €7 for 3XL+');
 assert.equal(checkoutHealth?.rounding, 'whole-euro-ceiling', 'checkout must round upward to whole euros');
 assert.equal(checkoutHealth?.sends_to_production, false, 'customer checkout must not send orders to production');
+assert.equal(checkoutHealth?.fulfillment_routing, 'validated-approved-regional-plus-canonical', 'checkout must evaluate validated approved regional routes alongside canonical products');
+assert.ok(Number(checkoutHealth?.approved_regional_mappings || 0) > 0, 'checkout must report active approved regional fulfillment mappings');
 assert.ok(Number(checkoutHealth?.cached_products || 0) >= MIN_PRODUCTS, 'checkout must see the cached catalog');
 assert.equal(checkoutHealth?.payment_configured, true, 'manual payment must be configured');
 assert.equal(checkoutHealth?.email_configured, true, 'buyer confirmation email must be configured');
