@@ -55,6 +55,10 @@ const publicHttpPostRedirect = await req('http://kalenel.nl/request.html?probe=p
 assert.equal(publicHttpPostRedirect.status, 308);
 assert.equal(publicHttpPostRedirect.headers.get('Location'), 'https://kalenel.nl/request.html?probe=post');
 
+const anonymousApi = await req('https://admin.kalenel.nl/api/admin-auth-v845', { method:'POST', body:'{}' });
+assert.equal(anonymousApi.status, 401);
+assert.equal((await anonymousApi.json()).error, 'github_session_required');
+
 const anonymous = await req('https://admin.kalenel.nl/admin.html');
 assert.equal(anonymous.status, 401);
 assert.match(await anonymous.text(), /Admin login vereist/);
@@ -101,7 +105,7 @@ assert.equal(approvedAdminSlashAlias.finalUrl, 'https://admin.kalenel.nl/admin.h
 const asset = await req('https://admin.kalenel.nl/admin.js', { headers: { Cookie: validCookie } });
 assert.equal(asset.status, 200);
 assert.equal(asset.headers.get('X-Kalenel-Admin-Gate'), 'worker');
-assert.equal(asset.headers.get('Cache-Control'), 'no-store');
+assert.equal(asset.headers.get('Cache-Control'), 'private, max-age=300, stale-while-revalidate=60');
 assert.equal(asset.headers.get('X-Kalenel-Admin-Build'), ADMIN_BUILD);
 
 const loginStart = await req('https://admin.kalenel.nl/login?return_to=/admin.html', { redirect: 'manual' });
