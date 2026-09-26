@@ -9,7 +9,7 @@
   <meta property="og:description" content="Nature-inspired tees and Merch." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://kalenel.nl/shop/" />
-  <link rel="stylesheet" href="styles.css?v=20260921-storefront-v857-r1" />
+  <link rel="stylesheet" href="styles.css?v=20260926-storefront-v867-r1" />
   <link rel="stylesheet" href="storefront-polish-v832.css?v=20260916-storefront-v837-r1" />
 </head>
 <body>
@@ -84,8 +84,28 @@
         <button class="view-shapes-large" type="button" data-expand-shapes>View collections larger</button>
       </div>
 
+      <div class="subject-filter-bar" data-animal-filter-bar hidden>
+        <label class="animal-filter-toggle">
+          <input type="checkbox" data-animal-filter />
+          <span class="animal-filter-switch" aria-hidden="true"></span>
+          <span class="animal-filter-copy">
+            <strong>Show animal designs</strong>
+            <small data-animal-filter-status>Animal designs are hidden by default.</small>
+          </span>
+        </label>
+      </div>
+
       <p class="collection-empty" data-collection-empty hidden></p>
       <div class="product-grid" data-products aria-live="polite"></div>
+
+      <section class="animal-designs-section" data-animal-section hidden aria-labelledby="animal-designs-title">
+        <div class="animal-designs-heading">
+          <p class="section-kicker">Animals</p>
+          <h2 id="animal-designs-title">Animal designs</h2>
+          <p>Animal and zoological illustrations are kept in their own section after the botanical and other designs.</p>
+        </div>
+        <div class="product-grid" data-animal-products aria-live="polite"></div>
+      </section>
     </section>
   </main>
 
@@ -129,10 +149,10 @@
     </aside>
   </div>
 
-  <footer class="footer">Bruis - Nature-inspired clothing. <span class="version-watermark">v857</span></footer>
+  <footer class="footer">Bruis - Nature-inspired clothing. <span class="version-watermark">v867</span></footer>
   <script src="delivery-estimate-v833.js?v=20260916-delivery-v840-r1" data-delivery-estimate-v833 defer></script>
   <script src="direct-commerce-v832.js?v=20260916-storefront-v837-r1" defer></script>
-  <script src="store.js?v=20260921-storefront-v855-r1" defer></script>
+  <script src="store.js?v=20260926-storefront-v867-r1" defer></script>
   <script src="shop-analytics-v841.js?v=20260920-shop-analytics-v841-r1" defer></script>
   <script src="tote-handle-color-v839.js?v=20260916-storefront-v839-r1" defer></script>
   <script src="product-preview-overrides.js?v=20260916-storefront-v837-r1" defer></script>
