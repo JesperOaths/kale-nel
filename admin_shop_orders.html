@@ -8,10 +8,10 @@
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shop order approval - Bruis admin</title>
-  <script>window.GEJAST_PAGE_VERSION='v858';window.BRUIS_ORDER_REJECTION='reject-email-before-delete';window.BRUIS_PRODUCTION_EMAIL='printify-production-email-v1';</script>
-  <script src="./gejast-config.js?v858"></script>
-  <script src="./admin-session-sync.js?v858"></script>
-  <script src="./admin-topnav.js?v858" defer></script>
+  <script>window.GEJAST_PAGE_VERSION='v872';window.BRUIS_ORDER_REJECTION='reject-email-before-delete';window.BRUIS_PRODUCTION_EMAIL='printify-production-email-v1';</script>
+  <script src="./gejast-config.js?v872"></script>
+  <script src="./admin-session-sync.js?v872"></script>
+  <script src="./admin-topnav.js?v872" defer></script>
   <style>
     :root{--gold:#9a8241;--paper:#fffaf2;--line:rgba(0,0,0,.09);--muted:#6b6257;--ok:#285b38;--warn:#8a3a30;--blue:#264e6d;--amber:#6e5000}
     *{box-sizing:border-box}body{margin:0;padding:22px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(rgba(232,228,217,.93),rgba(232,228,217,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:#17130f;min-height:100vh}.wrap{max-width:1300px;margin:0 auto;background:rgba(255,250,242,.97);border:1px solid rgba(255,255,255,.72);border-radius:28px;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.08)}.top{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start}h1{margin:0;font-size:34px;letter-spacing:-.04em}.sub{color:var(--muted);max-width:800px;line-height:1.5}.actions,.filters{display:flex;gap:9px;flex-wrap:wrap}.btn,button{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:850;border:0;cursor:pointer;font:inherit}.btn.alt,button.alt,.filters button{background:#fff;color:#111;border:1px solid var(--line)}button:disabled{opacity:.45;cursor:not-allowed}.filters button.active{background:#111;color:#fff}.status{margin:14px 0 0;min-height:20px;font-size:14px}.status.ok{color:var(--ok)}.status.warn{color:var(--warn)}.metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px;margin-top:18px}.metric{background:#fff;border:1px solid var(--line);border-radius:18px;padding:15px}.metric span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#83765e}.metric strong{display:block;margin-top:5px;font-size:28px}.panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px;margin-top:16px}.panel h2{margin:0 0 6px;font-size:20px}.panel>p{margin:0;color:var(--muted);line-height:1.45}.settings{display:grid;grid-template-columns:180px minmax(220px,1fr) 1fr auto;gap:12px;align-items:end;margin-top:14px}.field{display:grid;gap:6px}.field label{font-size:12px;font-weight:800;color:#5f5548}.field input,.field select,.field textarea,.paid-input{width:100%;padding:10px 11px;border-radius:11px;border:1px solid #d8d3ca;background:#fff;font:inherit}.field textarea{min-height:42px;resize:vertical}.switch{display:flex;gap:8px;align-items:center;padding-bottom:10px;font-weight:800}.switch input{width:auto}.provider-help{margin-top:10px;padding:12px 14px;border-radius:14px;background:#f6f1e7;color:#51493e;font-size:13px;line-height:1.5}.filters{margin-top:14px}.orders{display:grid;gap:13px;margin-top:14px}.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed #d7d0c4;border-radius:16px}.order{border:1px solid var(--line);border-radius:18px;padding:16px;background:#fff}.order.needs-action{border-color:rgba(154,130,65,.45);box-shadow:0 8px 24px rgba(154,130,65,.08)}.order-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.order-ref{font:800 16px ui-monospace,SFMono-Regular,Menlo,monospace}.order-id{font:500 11px ui-monospace,SFMono-Regular,Menlo,monospace;color:#8a8175;margin-top:5px}.order-meta{color:var(--muted);font-size:13px;margin-top:4px}.pill{display:inline-flex;padding:6px 9px;border-radius:999px;font-size:12px;font-weight:850;background:#eee}.pill.pending{background:#fff0cc;color:#6e5000}.pill.paid{background:#dcefe2;color:#1e5b32}.pill.production{background:#dceaf4;color:#244d6a}.pill.shipped{background:#e7e2f4;color:#4a3971}.pill.rejected{background:#f4dddd;color:#7b2727}.pill.stale{background:#ffe2d5;color:#8a3418;margin-left:6px}.order-grid{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:16px;margin-top:14px}.order-block h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#83765e;margin:0 0 7px}.order-block p{margin:4px 0;font-size:13px;line-height:1.45;word-break:break-word}.items{margin:0;padding-left:18px;font-size:13px;line-height:1.55}.money{font-weight:850}.approval-box{margin-top:9px;padding:11px;border-radius:13px;background:#faf6ed;border:1px solid #eadfc9}.approval-box label{display:block;font-size:12px;font-weight:850;margin-bottom:6px}.approval-help{font-size:11px;color:var(--muted);margin-top:6px}.order-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:13px;border-top:1px solid #eee}.order-actions button.verify{background:#5b4710}.order-actions button.release{background:#285b38}.order-actions button.refresh{background:#264e6d}.order-actions button.reject{background:#9a4a24}.order-actions button.delete{background:#7b1f1f}.order-actions button.delete:not(:disabled){box-shadow:0 0 0 2px rgba(123,31,31,.12)}.danger-note{font-size:12px;color:var(--muted);margin-top:9px}.error{color:var(--warn);font-size:12px;margin-top:8px;white-space:pre-wrap}.watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;box-shadow:0 12px 24px rgba(0,0,0,.18)}
@@ -28,7 +28,7 @@
 
   <section class="panel"><h2>Orders</h2><p>“Verify payment” records the amount actually received. “Reject / not paid” marks an unpaid order rejected and emails the registered customer address automatically. “Delete order” is only available after that rejection email has been delivered and remains blocked for paid, invoiced, or production-submitted orders.</p><div class="filters" id="filters"><button type="button" data-filter="action" class="active">Needs action</button><button type="button" data-filter="pending">Pending payment</button><button type="button" data-filter="stale">Stale unpaid</button><button type="button" data-filter="all">All orders</button><button type="button" data-filter="rejected">Rejected</button><button type="button" data-filter="production">Production</button><button type="button" data-filter="shipped">Shipped</button></div><div id="ordersBox" class="orders"><div class="empty">Loading orders…</div></div></section>
 </main>
-<div class="watermark">v858 - Made by Bruis</div>
+<div class="watermark">v872 - Made by Bruis</div>
 <script>
 (() => {
   'use strict';
@@ -41,6 +41,9 @@
   const dateTime=v=>{if(!v)return '—';try{return new Intl.DateTimeFormat('en-NL',{dateStyle:'medium',timeStyle:'short'}).format(new Date(v));}catch{return String(v);}};
   const token=()=>window.GEJAST_ADMIN_SESSION?.getToken?.()||'';
   let current={orders:[],settings:null};
+  let loadPromise=null;
+  let actionInFlight=false;
+  let sessionReloadTimer=0;
   const query=new URLSearchParams(location.search);
   const requestedFilter=query.get('filter');
   let activeFilter=['action','pending','stale','all','rejected','production','shipped'].includes(requestedFilter)?requestedFilter:'action';
@@ -74,7 +77,21 @@
   }
   function filteredOrders(){const all=current.orders||[];if(focusOrderId){const exact=all.filter(o=>String(o.id)===focusOrderId);if(exact.length)return exact;}if(activeFilter==='all')return all;if(activeFilter==='pending')return all.filter(o=>o.status==='pending');if(activeFilter==='stale')return all.filter(stalePending);if(activeFilter==='rejected')return all.filter(o=>o.status==='rejected');if(activeFilter==='production')return all.filter(o=>o.status==='production');if(activeFilter==='shipped')return all.filter(o=>o.status==='shipped');return all.filter(needsAction);}
   function renderOrders(){const rows=filteredOrders();setCounts(current.orders||[]);$('ordersBox').innerHTML=rows.length?rows.map(orderHtml).join(''):'<div class="empty">No orders in this view.</div>';document.querySelectorAll('#filters button').forEach(b=>b.classList.toggle('active',b.dataset.filter===activeFilter));}
-  async function load(){setStatus('Loading orders…');const session=await window.GEJAST_ADMIN_SESSION?.validate?.();if(!session)throw new Error('Admin session validation failed.');const result=await callAdmin('list');current={orders:result.orders||[],settings:result.settings||null};renderSettings(current.settings);renderOrders();setStatus(`Loaded ${current.orders.length} order${current.orders.length===1?'':'s'}.`,'ok');}
+  async function load(){
+    if(loadPromise)return loadPromise;
+    loadPromise=(async()=>{
+      setStatus('Loading orders…');
+      const session=await window.GEJAST_ADMIN_SESSION?.validate?.();
+      if(!session)throw new Error('Admin session validation failed.');
+      const result=await callAdmin('list');
+      current={orders:result.orders||[],settings:result.settings||null};
+      renderSettings(current.settings);
+      renderOrders();
+      setStatus(`Loaded ${current.orders.length} order${current.orders.length===1?'':'s'}.`,'ok');
+      return current;
+    })();
+    try{return await loadPromise;}finally{loadPromise=null;}
+  }
   function parseAmount(value){const normalized=String(value||'').trim().replace(/\s/g,'').replace(',','.');if(!/^\d+(?:\.\d{1,2})?$/.test(normalized))return null;const cents=Math.round(Number(normalized)*100);return Number.isInteger(cents)?cents:null;}
 
   $('provider').addEventListener('change',providerHelp);
@@ -119,10 +136,13 @@
     }
 
     button.disabled=true;
+    actionInFlight=true;
     try{
       const result=await callAdmin(action,extra);
       await load();
-      if(action==='reject_order'){
+      if(action==='verify_payment'){
+        setStatus(`Payment for ${row.payment_reference} verified at ${euros(extra.paid_amount_cents)}. The order is now ready for production approval.`,'ok');
+      }else if(action==='reject_order'){
         if(result.email_sent)setStatus(`Order ${row.payment_reference} rejected. Rejection email sent automatically to ${row.customer_email}.`,'ok');
         else setStatus(`Order ${row.payment_reference} was rejected, but the email could not be delivered: ${result.email_error||'unknown mail error'}. Use “Resend rejection email”.`,'warn');
       }else if(action==='delete_order'){
@@ -132,10 +152,16 @@
       setStatus(error?.message||'Order action failed.','warn');
       button.disabled=false;
       if(action==='reject_order')load().catch(()=>{});
+    }finally{
+      actionInFlight=false;
     }
   });
   $('refreshBtn').addEventListener('click',()=>load().catch(error=>setStatus(error?.message||'Refresh failed.','warn')));
-  window.addEventListener('gejast:admin-session-updated',()=>{if(token())load().catch(()=>{});});
+  window.addEventListener('gejast:admin-session-updated',()=>{
+    if(!token()||actionInFlight)return;
+    clearTimeout(sessionReloadTimer);
+    sessionReloadTimer=window.setTimeout(()=>load().catch(()=>{}),250);
+  });
   document.addEventListener('DOMContentLoaded',()=>{load().catch(error=>setStatus(error?.message||'Could not load shop orders.','warn'));},{once:true});
 })();
 </script>
