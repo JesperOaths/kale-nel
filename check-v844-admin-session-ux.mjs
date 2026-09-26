@@ -28,10 +28,13 @@ assert.doesNotMatch(sync,/navigator\.userAgent \|\| ''[\s\S]{0,160}resolvedOptio
 assert.match(sync,/function resolveTrustedUntil\(/, 'session sync must preserve a stable trusted-device deadline');
 assert.match(sync,/if \(changed\) emitUpdate\(\)/, 'session update event must fire only when the stored bundle actually changes');
 assert.match(sync,/if \(hadBundle\) emitUpdate\(\)/, 'clearing an already-empty bundle must not emit a refresh event');
-assert.match(orders,/admin-session-sync\\.js\\?20260926-payment-loopfix-r1/, 'shop orders must force-load the loop-safe session sync');
+assert.match(orders,/admin-session-sync\\.js\\?20260926-orders-productionfix-r3/, 'shop orders must force-load the current loop-safe session sync');
 assert.match(orders,/let loadPromise=null/, 'shop orders must deduplicate concurrent list reloads');
 assert.match(orders,/let actionInFlight=false/, 'shop orders must suppress session-triggered reloads while an admin action is running');
 assert.match(orders,/Payment for \$\{row\.payment_reference\} verified/, 'payment verification must show explicit success feedback');
+assert.match(orders,/Retry production/, 'failed production submissions with an existing Printify order must remain retryable');
+assert.match(orders,/reuses existing Printify order/, 'production retry must explicitly preserve idempotency');
+assert.doesNotMatch(orders,/addEventListener\('gejast:admin-session-updated'/, 'orders page must not reload itself from session-update events');
 
 assert.match(admin,/rememberDeviceInput/);
 assert.match(admin,/45 dagen onthouden/);
