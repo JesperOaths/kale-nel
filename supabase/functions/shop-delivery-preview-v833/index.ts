@@ -79,6 +79,31 @@ async function resolvePrintifyToken(sb: any) {
   return text(data);
 }
 
+function cachedShopId(payload: any, resolvedProducts: any[] = []) {
+  const resolvedIds = [...new Set(
+    resolvedProducts
+      .map((product: any) => Number(product?.shopId ?? product?.shop_id))
+      .filter((value: number) => Number.isFinite(value))
+  )];
+  if (resolvedIds.length === 1) return resolvedIds[0];
+  if (resolvedIds.length > 1) throw new Error("Selected products span multiple Printify shops");
+
+  const legacy = Number(payload?.shop?.id ?? payload?.shopId ?? payload?.shop_id);
+  if (Number.isFinite(legacy)) return legacy;
+
+  const shops = Array.isArray(payload?.shops) ? payload.shops : [];
+  const shopIds = [...new Set(shops.map((shop: any) => Number(shop?.id)).filter((value: number) => Number.isFinite(value)))];
+  if (shopIds.length === 1) return shopIds[0];
+
+  const productIds = [...new Set(
+    (Array.isArray(payload?.products) ? payload.products : [])
+      .map((product: any) => Number(product?.shopId ?? product?.shop_id))
+      .filter((value: number) => Number.isFinite(value))
+  )];
+  if (productIds.length === 1) return productIds[0];
+  throw new Error("Printify shop id unavailable");
+}
+
 function cachedResolution(payload: any, item: any) {
   const products = Array.isArray(payload?.products) ? payload.products : [];
   const sku = text(item?.sku);
@@ -324,11 +349,9 @@ Deno.serve(async (req: Request) => {
 
     const { data: cache, error: cacheError } = await sb.from("shop_catalog_cache_v828").select("payload").eq("id", 1).maybeSingle();
     if (cacheError || !Array.isArray(cache?.payload?.products) || !cache.payload.products.length) throw new Error("Live Printify catalog is not ready");
-    const shopId = Number(cache.payload?.shop?.id);
-    if (!Number.isFinite(shopId)) throw new Error("Printify shop id unavailable");
-
     const resolved = items.map((item: any) => ({ raw: item, cached: cachedResolution(cache.payload, item) }));
     if (resolved.some((row: any) => !row.cached)) throw new Error("One or more selected variants are no longer in the live catalog");
+    const shopId = cachedShopId(cache.payload, resolved.map((row: any) => row.cached?.product).filter(Boolean));
 
     // Quote the same canonical product that the customer selected. Printify's
     // native routing owns provider selection; internal regional clones stay inert.
