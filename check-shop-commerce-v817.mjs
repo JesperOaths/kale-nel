@@ -138,6 +138,9 @@ assert.match(checkoutEdge, /country === "US" && phone\.replace\(\/\\D\/g, ""\)\.
 assert.match(checkoutEdge, /function cachedShopId/, 'checkout must resolve current per-product Printify shop ids');
 assert.match(deliveryPreviewEdge, /function cachedShopId/, 'delivery preview must resolve current per-product Printify shop ids');
 assert.match(checkoutEdge, /validation_only/, 'checkout must expose a non-ordering production validation path');
+assert.match(deliveryPreviewEdge, /for \(let attempt = 1; attempt <= 2; attempt \+= 1\)/, 'server-side Printify quote calls must retry transient stream failures');
+assert.match(checkoutEdge, /for \(let attempt = 1; attempt <= 2; attempt \+= 1\)/, 'checkout Printify reads and quote calls must retry transient stream failures');
+assert.match(deliveryPreviewEdge, /fallback:\s*true/, 'nonessential shipping-breakdown failures must not discard a valid shipping total');
 assert.match(manualCheckout, /data-manual-phone-label/);
 assert.match(manualCheckout, /Phone \(required for US delivery\)/);
 assert.match(manualCheckout, /bruis:order-created/);
