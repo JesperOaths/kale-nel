@@ -69,11 +69,26 @@ Deno.serve(async (req: Request) => {
       if (encoded.length > 48000) return json({ ok:false, error:"health_payload_too_large" }, 413, origin);
       const observedRaw = String(body.observed_at || "").trim();
       const observed = observedRaw && !Number.isNaN(Date.parse(observedRaw)) ? new Date(observedRaw) : new Date();
+      const existing = await sql`select payload from c720p_security.health_latest where singleton=true limit 1`;
+      const prev = (existing[0]?.payload && typeof existing[0].payload === "object") ? existing[0].payload : {};
+      const mergeObj = (a: any,b: any) => ({...((a&&typeof a==="object"&&!Array.isArray(a))?a:{}),...((b&&typeof b==="object"&&!Array.isArray(b))?b:{})});
+      const merged = {
+        ...prev,
+        ...body,
+        services: mergeObj(prev.services, body.services),
+        cameras: mergeObj(prev.cameras, body.cameras),
+        ports: mergeObj(prev.ports, body.ports),
+        disk: mergeObj(prev.disk, body.disk),
+        backups: mergeObj(prev.backups, body.backups),
+        drive_upload: mergeObj(prev.drive_upload, body.drive_upload),
+        phone_battery: mergeObj(prev.phone_battery, body.phone_battery),
+        camera_return_state: mergeObj(prev.camera_return_state, body.camera_return_state),
+      };
       await sql`
         insert into c720p_security.health_latest(singleton,observed_at,received_at,source,payload)
-        values(true,${observed.toISOString()}::timestamptz,now(),'c720p',${sql.json(body)})
+        values(true,${observed.toISOString()}::timestamptz,now(),'c720p',${sql.json(merged)})
         on conflict(singleton) do update set
-          observed_at=excluded.observed_at,
+          observed_at=greatest(c720p_security.health_latest.observed_at,excluded.observed_at),
           received_at=now(),
           source=excluded.source,
           payload=excluded.payload
