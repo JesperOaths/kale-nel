@@ -258,7 +258,8 @@ assert.match(mockupTransparency, /cropsTransparentWhitespace:true/, 'transparenc
 assert.match(mockupTransparency, /eager:true/, 'all rendered mockups must start processing without waiting for scroll');
 assert.match(mockupTransparency, /MAX_CONCURRENT=4/, 'eager processing must remain concurrency bounded');
 assert.doesNotMatch(mockupTransparency, /new IntersectionObserver/, 'mockup processing must not be gated on viewport visibility');
-assert.match(mockupTransparency, /image\\\/\(\?:jpeg\|png\|webp\)/, 'transparency processor must accept JPEG, PNG and WebP MIME types, including extensionless image URLs');
+assert.match(mockupTransparency, /const isRaster=url=>\/\^https\?:\/i\.test\(url\)/, 'transparency processor must accept trusted extensionless catalog image URLs');
+assert.match(mockupTransparency, /createImageBitmap\(blob\)/, 'browser image decoding must decide supported image formats instead of URL suffixes or MIME metadata');
 assert.match(mockupTransparency, /edgeOpaque>0/);
 assert.doesNotMatch(mockupTransparency, /shouldPreserve|preserved-detail/);
 
