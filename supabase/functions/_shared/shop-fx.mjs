@@ -139,6 +139,17 @@ export function usdCentsToEurCents(rawUsdCents, snapshotOrRate) {
   return Math.round(cents * rateValue(snapshotOrRate));
 }
 
+export function marginEurCentsForSize(rawSize, standardMarginEurCents = 500, largeSizeMarginEurCents = 700) {
+  const size = String(rawSize ?? "").trim().toUpperCase().replace(/\s+/g, "");
+  let xlCount = 0;
+  const numericXl = size.match(/^(\d+)XL$/);
+  const numericX = size.match(/^(\d+)X$/);
+  if (numericXl) xlCount = Number(numericXl[1]);
+  else if (numericX) xlCount = Number(numericX[1]);
+  else if (/^X{3,}L$/.test(size)) xlCount = size.length - 1;
+  return xlCount >= 3 ? Math.round(Number(largeSizeMarginEurCents)) : Math.round(Number(standardMarginEurCents));
+}
+
 export function retailEurCentsFromUsdCost(rawUsdCents, snapshotOrRate, marginEurCents = 500, minimumRetailEurCents = 0) {
   const margin = Math.round(Number(marginEurCents));
   const minimum = Math.round(Number(minimumRetailEurCents));
