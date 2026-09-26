@@ -26,23 +26,37 @@ def request(base,path,method="GET",timeout=8):
         return {"ok":False,"status":0,"data":{"error":type(e).__name__+":"+str(e)[:300]},"ms":round((time.perf_counter()-t)*1000)}
 
 def states():
-    with ThreadPoolExecutor(max_workers=3) as ex:
+    with ThreadPoolExecutor(max_workers=4) as ex:
         f_tv=ex.submit(request,HT,"/grundig-tv/power-state","GET",3)
+        f_tvs=ex.submit(request,HT,"/grundig-tv/status","GET",3)
         f_ht=ex.submit(request,HT,"/ht-e6500/power-state","GET",3)
         f_bt=ex.submit(request,BT,"/state","GET",3)
-        tv,ht,bt=f_tv.result(),f_ht.result(),f_bt.result()
-    tvs=str((tv.get("data") or {}).get("state","unknown")).lower() if tv.get("ok") else "unknown"
+        tv,tvs_raw,ht,bt=f_tv.result(),f_tvs.result(),f_ht.result(),f_bt.result()
+    primary=str((tv.get("data") or {}).get("state","unknown")).lower() if tv.get("ok") else "unknown"
+    status_data=tvs_raw.get("data") or {}
+    status_bool=status_data.get("is_on")
+    secondary=("on" if status_bool is True else "off" if status_bool is False else "unknown")
+    # Never trust a contradictory detector enough to issue a toggle.
+    if primary in ("on","off") and secondary in ("on","off") and primary != secondary:
+        tvs="unknown"
+    elif primary in ("on","off"):
+        tvs=primary
+    elif secondary in ("on","off"):
+        tvs=secondary
+    else:
+        tvs="unknown"
     hts=str((ht.get("data") or {}).get("state","unknown")).lower() if ht.get("ok") else "unknown"
     btd=bt.get("data") or {}
     return {
-        "ok":bool(tv.get("ok") or ht.get("ok") or bt.get("ok")),
-        "tv":tvs if tvs in ("on","off") else "unknown",
+        "ok":bool(tv.get("ok") or tvs_raw.get("ok") or ht.get("ok") or bt.get("ok")),
+        "tv":tvs,
         "hts":hts if hts in ("on","off") else "unknown",
         "bluetooth_connected":bool(btd.get("bluetooth_connected")),
         "bluetooth_paired":bool(btd.get("bluetooth_paired")),
         "audio_sink_present":bool(btd.get("audio_sink_present")),
         "audio_sink_default":bool(btd.get("audio_sink_default")),
-        "timings_ms":{"tv":tv.get("ms"),"hts":ht.get("ms"),"bt":bt.get("ms")},
+        "timings_ms":{"tv_power":tv.get("ms"),"tv_status":tvs_raw.get("ms"),"hts":ht.get("ms"),"bt":bt.get("ms")},
+        "tv_sources":{"power_state":primary,"status":secondary},
         "macro":dict(macro),
     }
 
