@@ -51,22 +51,42 @@ function strictCountry(v: unknown) {
 }
 
 async function printify(base: string, token: string, path: string, init: RequestInit = {}, timeoutMs = 10000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(`${base}${path}`, {
-      ...init,
-      signal: controller.signal,
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": "Kalenel-Delivery-Preview/8.33", ...(init.headers || {}) },
-    });
-    const raw = await res.text();
-    let payload: any = null;
-    try { payload = raw ? JSON.parse(raw) : null; } catch { payload = raw; }
-    if (!res.ok) throw new Error(`Printify ${res.status}: ${text(payload?.message || payload?.error || raw).slice(0, 250)}`);
-    return payload;
-  } finally {
-    clearTimeout(timer);
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(`${base}${path}`, {
+        ...init,
+        signal: controller.signal,
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", "User-Agent": "Kalenel-Delivery-Preview/8.33", ...(init.headers || {}) },
+      });
+      const raw = await res.text();
+      let payload: any = null;
+      try { payload = raw ? JSON.parse(raw) : null; } catch { payload = raw; }
+      if (res.ok) return payload;
+
+      const message = `Printify ${res.status}: ${text(payload?.message || payload?.error || raw).slice(0, 250)}`;
+      if (attempt < 2 && (res.status === 429 || res.status >= 500)) {
+        lastError = new Error(message);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        continue;
+      }
+      throw new Error(message);
+    } catch (error) {
+      lastError = error;
+      const transient = error instanceof DOMException && error.name === "AbortError"
+        || error instanceof TypeError;
+      if (attempt < 2 && transient) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        continue;
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
   }
+  throw lastError instanceof Error ? lastError : new Error("Printify request failed");
 }
 const printifyV1 = (token: string, path: string, init: RequestInit = {}, timeoutMs = 10000) => printify(PRINTIFY_V1, token, path, init, timeoutMs);
 const printifyV2 = (token: string, path: string, timeoutMs = 6500) => printify(PRINTIFY_V2, token, path, {}, timeoutMs);
@@ -453,7 +473,25 @@ Deno.serve(async (req: Request) => {
       Promise.all(uniqueProviders.map(providerId => providerOrigin(printifyToken, providerId, country))),
       Promise.all(selected.plan.candidates.map((candidate: any) => deliveryRange(printifyToken, candidate, selected.shipping.name, country))),
     ]);
-    const shipping_breakdown = await shippingBreakdown(printifyToken, shopId, selected, addressTo, fx, origins);
+    let shipping_breakdown: any[] = [];
+    try {
+      shipping_breakdown = await shippingBreakdown(printifyToken, shopId, selected, addressTo, fx, origins);
+    } catch {
+      shipping_breakdown = [{
+        provider_id: null,
+        provider: "Bruis production network",
+        origin: null,
+        country_code: null,
+        shipping_cents: Number(selected.shipping.cents || 0),
+        shipping_source_cents: Number(selected.shipping.source_cents || 0),
+        items: selected.plan.candidates.map((candidate: any) => ({
+          name: clean(candidate.item_name) || "Item",
+          size: clean(candidate.item_size) || null,
+          quantity: Math.max(1, Math.round(Number(candidate.quantity || 1))),
+        })),
+        fallback: true,
+      }];
+    }
     const customs_notice = customsNotice(country, origins);
     const ranges = rawRanges.filter(Boolean) as { from: number; to: number; source: string; choice?: boolean; fallback?: { from: number; to: number } | null }[];
     const complete = ranges.length === selected.plan.candidates.length;
