@@ -88,9 +88,19 @@ button.secondary{{background:#aebbc5;margin-top:10px}} textarea{{width:100%;min-
 code{{word-break:break-all}} .status{{margin-top:10px;color:#b7e0bc}} .bad{{color:#ffb5b5}} .msg{{padding:12px;background:#17351e;border-radius:10px}}
 small{{color:#aeb9c2}} h1{{margin-bottom:6px}} p{{line-height:1.5}}
 </style></head><body><h1>C720P Google OAuth Repair</h1><p>This repairs the Gmail authorization used by the local mail-to-Signal service. It requests only the scopes configured by that service.</p>{msg}
-<div class="card"><h2>First: remove the 7-day expiry</h2><p>Open Google Auth Platform → Audience for this OAuth project. If Publishing status is <b>Testing</b>, choose <b>Publish app</b> and confirm <b>In production</b>. Then return here and authorize each account once.</p>
+<div class="card"><h2>1. Google Auth Platform → Branding</h2>
+<p>Use these public Kalenel URLs for the production OAuth app:</p>
+<p><b>App homepage</b><br><code>https://kalenel.nl/oauth/inbox-triage/</code></p>
+<p><b>Privacy policy</b><br><code>https://kalenel.nl/oauth/inbox-triage/privacy.html</code></p>
+<p><b>Terms of Service</b><br><code>https://kalenel.nl/oauth/inbox-triage/terms.html</code></p>
+<p><b>Authorized domain</b><br><code>kalenel.nl</code></p>
+<p>Use the configured support email as User support email and Developer contact information. The public support and deletion pages are <code>https://kalenel.nl/oauth/inbox-triage/support.html</code> and <code>https://kalenel.nl/oauth/inbox-triage/data-deletion.html</code>.</p></div>
+<div class="card"><h2>2. Google Auth Platform → Data Access</h2>
+<p>Declare only <code>https://www.googleapis.com/auth/gmail.modify</code>. This is the scope used by the local inbox-triage service.</p></div>
+<div class="card"><h2>3. Google Auth Platform → Audience</h2><p>If Publishing status is <b>Testing</b>, choose <b>Publish app</b> and confirm <b>In production</b>. For this private personal-use app, an unverified-app warning can still be shown; the account owner can authorize it directly.</p>
 <a class="btn" href="{html.escape(audience)}" target="_blank" rel="noopener">Open Google Auth Platform → Audience</a>
 <p><small>Project: {html.escape(pid or "read from the OAuth client")}</small></p></div>
+<div class="card"><h2>4. Re-authorize Gmail</h2><p>After publication, authorize each configured Gmail account below so the service receives fresh offline credentials that are not subject to Testing mode's seven-day expiry.</p></div>
 {rows or '<div class="card bad">No Gmail accounts were found in the triage-agent configuration.</div>'}
 <div class="card"><button onclick="verifyAll()">Verify all Gmail accounts</button><pre id="verify"></pre></div>
 <script>
