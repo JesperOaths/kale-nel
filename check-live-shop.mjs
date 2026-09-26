@@ -55,7 +55,8 @@ async function fetchWithTimeout(url, options = {}) {
 }
 
 function catalogReady(payload) {
-  if (payload?.source !== 'bruis-direct-v838') return false;
+  if (payload?.source !== 'printify-live-v851') return false;
+  if (payload?.catalogSelection !== 'all-readable-printify-shops-v851') return false;
   if (!Array.isArray(payload?.products) || payload.products.length < MIN_PRODUCTS) return false;
   return payload.products.every(product =>
     Array.isArray(product?.mockups) &&
