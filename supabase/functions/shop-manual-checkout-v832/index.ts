@@ -86,6 +86,21 @@ async function printify(token: string, path: string, init: RequestInit = {}, tim
   }
   throw lastError instanceof Error ? lastError : new Error("Printify request failed");
 }
+async function mapWithConcurrency(items: any[], concurrency: number, worker: (item: any, index: number) => Promise<any>) {
+  if (!items.length) return [];
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const runners = Array.from({ length: Math.max(1, Math.min(Math.floor(concurrency) || 1, items.length)) }, async () => {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= items.length) return;
+      results[index] = await worker(items[index], index);
+    }
+  });
+  await Promise.all(runners);
+  return results;
+}
+
 async function resolvePrintifyToken(sb: any) {
   const envToken = text(Deno.env.get("PRINTIFY_API_TOKEN"));
   if (envToken) return envToken;
@@ -413,8 +428,7 @@ Deno.serve(async (req: Request) => {
     const nm = splitName(fullName);
     const addressTo = { ...nm, email, phone, country, region, address1, address2, city, zip };
     const plans = buildFulfillmentPlans(candidateGroups, MAX_FULFILLMENT_PLANS);
-    const quotedPlans: any[] = [];
-    for (const plan of plans) {
+    const quoteResults = await mapWithConcurrency(plans, 4, async (plan: any) => {
       const pfLineItems = plan.candidates.map((candidate: any, idx: number) => ({
         product_id: candidate.product_id,
         variant_id: candidate.variant_id,
@@ -424,19 +438,20 @@ Deno.serve(async (req: Request) => {
       try {
         const quote = await printify(printifyToken, `/shops/${shopId}/orders/shipping.json`, { method: "POST", body: JSON.stringify({ line_items: pfLineItems, address_to: addressTo }) });
         const sourceShipping = cheapestShippingQuote(quote);
-        if (sourceShipping) {
-          const shipping = {
-            ...sourceShipping,
-            cents: usdCentsToEurCents(sourceShipping.cents, fx),
-            source_cents: sourceShipping.cents,
-            source_currency: PRINTIFY_SOURCE_CURRENCY,
-          };
-          quotedPlans.push({ plan, shipping, route_key: pfLineItems.map((item: any) => `${item.product_id}:${item.variant_id}`).join("|") });
-        }
+        if (!sourceShipping) return null;
+        const shipping = {
+          ...sourceShipping,
+          cents: usdCentsToEurCents(sourceShipping.cents, fx),
+          source_cents: sourceShipping.cents,
+          source_currency: PRINTIFY_SOURCE_CURRENCY,
+        };
+        return { plan, shipping, route_key: pfLineItems.map((item: any) => `${item.product_id}:${item.variant_id}`).join("|") };
       } catch (error) {
         console.warn("Printify fulfillment route was not shippable", error instanceof Error ? error.message.slice(0, 180) : "unknown");
+        return null;
       }
-    }
+    });
+    const quotedPlans: any[] = quoteResults.filter(Boolean);
     const selected = chooseCheapestFulfillment(quotedPlans);
     if (!selected) throw new Error("No shipping method available for this address");
     const shippingMethod = selected.shipping.name;
