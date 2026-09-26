@@ -31,6 +31,7 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=/opt/inbox-triage-agent
 Environment=OAUTHLIB_INSECURE_TRANSPORT=1
+Environment=TOKEN_DIR=/opt/inbox-triage-agent/data/tokens
 ExecStart={py} {TARGET}
 Restart=on-failure
 RestartSec=5
