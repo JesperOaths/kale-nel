@@ -9,6 +9,8 @@ print("UID="+str(os.getuid()))
 print("HOME="+str(pathlib.Path.home()))
 print("APP_EXISTS="+str(APP.exists()).lower())
 
+os.chdir(APP)
+print("CWD="+str(pathlib.Path.cwd()))
 sys.path.insert(0,str(APP))
 try:
     import triage_agent
