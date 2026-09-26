@@ -88,6 +88,61 @@ async function notifyProduction(sb,order){
   return{sent:true,notified_at:claimAt};
 }
 async function ensureWebhooks(token,shopId){try{const hooks=await printify(token,`/shops/${shopId}/webhooks.json`);for(const topic of ["order:shipment:created","order:updated"]){if(!(Array.isArray(hooks)?hooks:[]).some(h=>h?.topic===topic&&text(h?.url)===WEBHOOK_URL)){await printify(token,`/shops/${shopId}/webhooks.json`,{method:"POST",body:JSON.stringify({topic,url:WEBHOOK_URL})});}}return true;}catch(e){console.error("Webhook ensure failed",e);return false;}}
+
+async function resolveCurrentProductionItems(sb,order){
+  const country=text(order?.shipping_address?.country).toUpperCase();
+  const original=Array.isArray(order?.line_items)?order.line_items:[];
+  let remappedCount=0;
+  const refreshed=[];
+  const items=[];
+  for(let idx=0;idx<original.length;idx++){
+    const source=original[idx]||{};
+    const route=source?.fulfillment_route||{};
+    let productId=text(source?.printify_product_id);
+    let variantId=Number(source?.printify_variant_id);
+    let next=source;
+
+    if(route?.type==="approved_regional_mapping"&&text(route?.source_product_id)&&Number.isFinite(Number(route?.source_variant_id))&&country){
+      const{data:mapping,error}=await sb.from("shop_fulfillment_mappings")
+        .select("target_product_id,target_variant_id,target_print_provider_id,updated_at")
+        .eq("approved",true)
+        .eq("source_product_id",text(route.source_product_id))
+        .eq("source_variant_id",Number(route.source_variant_id))
+        .contains("countries",[country])
+        .order("updated_at",{ascending:false})
+        .limit(1)
+        .maybeSingle();
+      if(error)throw error;
+      if(mapping?.target_product_id&&Number.isFinite(Number(mapping?.target_variant_id))){
+        const targetProductId=text(mapping.target_product_id);
+        const targetVariantId=Number(mapping.target_variant_id);
+        if(targetProductId!==productId||targetVariantId!==variantId){
+          productId=targetProductId;
+          variantId=targetVariantId;
+          remappedCount++;
+          next={
+            ...source,
+            printify_product_id:productId,
+            printify_variant_id:variantId,
+            fulfillment_route:{
+              ...route,
+              target_product_id:productId,
+              target_variant_id:variantId,
+              print_provider_id:Number(mapping?.target_print_provider_id)||Number(route?.print_provider_id)||null,
+              mapping_refreshed_at:mapping?.updated_at||new Date().toISOString()
+            }
+          };
+        }
+      }
+    }
+
+    if(!productId||!Number.isFinite(variantId)||variantId<=0)throw new Error(`Invalid production item mapping at line ${idx+1}`);
+    refreshed.push(next);
+    items.push({product_id:productId,variant_id:variantId,quantity:Number(source?.qty),external_id:`${order.id}-${idx+1}`});
+  }
+  if(!items.length)throw new Error("Order has no production items");
+  return{items,line_items:refreshed,remapped_count:remappedCount};
+}
 function trackingFrom(p){return(Array.isArray(p?.shipments)?p.shipments:[]).map(s=>({carrier:text(s?.carrier),number:text(s?.number),url:text(s?.url),delivered_at:s?.delivered_at||null})).filter(s=>s.number||s.url);}
 async function updateAndMaybeNotify(sb,order,pf){
   const canonicalStatus=text(pf?.status).toLowerCase();
@@ -176,7 +231,7 @@ if(action==="delete_order"){
   if(deleteError)throw deleteError;
   return json(req,{ok:true,deleted:true,order_id:orderId,payment_reference:ref});
 }
-if(action==="verify_payment"){if(order.payment_verified_at)return json(req,{ok:true,order,status:"already_verified"});if(order.status!=="pending")return json(req,{error:"order_not_pending"},409);const paidAmount=Number(body?.paid_amount_cents),required=Number(order.total_cents||0);if(!Number.isInteger(paidAmount)||paidAmount<required||paidAmount>100000000)return json(req,{error:"payment_amount_insufficient",required_cents:required,received_cents:Number.isFinite(paidAmount)?paidAmount:null},409);const now=new Date().toISOString();const{data,error}=await sb.from("shop_orders").update({status:"paid",paid_at:now,payment_verified_at:now,payment_verified_by_admin_id:admin.admin_id,paid_amount_cents:paidAmount,updated_at:now,last_error:null}).eq("id",orderId).eq("status","pending").select().single();if(error)throw error;const feeResult=await sb.rpc("shop_apply_payment_fee_v847",{order_id_input:orderId,admin_id_input:admin.admin_id});if(feeResult.error)console.error("payment fee automation failed",feeResult.error.message||feeResult.error);const invoiceResult=await sb.rpc("shop_issue_invoice_v847",{order_id_input:orderId});if(invoiceResult.error)console.error("invoice issue failed",invoiceResult.error.message||invoiceResult.error);const{data:fresh}=await sb.from("shop_orders").select("*").eq("id",orderId).single();return json(req,{ok:true,order:fresh||data,payment_fee:feeResult.data||null,invoice:invoiceResult.data||null});}if(action==="submit_printify"){if(!order.payment_verified_at)return json(req,{error:"payment_not_verified"},409);const paidAmount=Number(order.paid_amount_cents),required=Number(order.total_cents||0);if(!Number.isFinite(paidAmount)||paidAmount<required)return json(req,{error:"payment_amount_insufficient",required_cents:required,received_cents:Number.isFinite(paidAmount)?paidAmount:null},409);if(order.status==="shipped")return json(req,{ok:true,order,status:"already_shipped",already_submitted:true});const token=await resolveToken(sb),shopId=Number(order.printify_shop_id);if(!Number.isFinite(shopId))throw new Error("Missing production connection id");const hooksOk=await ensureWebhooks(token,shopId);let pfId=text(order.printify_order_id),pf=null;if(pfId){pf=await printify(token,`/shops/${shopId}/orders/${encodeURIComponent(pfId)}.json`);const canonicalStatus=text(pf?.status).toLowerCase();if(order.status==="production"||/production|fulfilled|shipped|delivered/.test(canonicalStatus)){const sync=await updateAndMaybeNotify(sb,order,pf);if(!/fulfilled|shipped|delivered/.test(canonicalStatus)&&order.status!=="shipped")await sb.from("shop_orders").update({status:"production",submitted_to_printify_at:order.submitted_to_printify_at||new Date().toISOString(),last_error:null,updated_at:new Date().toISOString()}).eq("id",orderId);const{data:fresh}=await sb.from("shop_orders").select("*").eq("id",orderId).single();return json(req,{ok:true,order:fresh,status:"already_submitted",already_submitted:true,webhooks_ensured:hooksOk,refresh:sync});}}else{const items=(Array.isArray(order.line_items)?order.line_items:[]).map((i,idx)=>({product_id:text(i.printify_product_id),variant_id:Number(i.printify_variant_id),quantity:Number(i.qty),external_id:`${order.id}-${idx+1}`}));pf=await printify(token,`/shops/${shopId}/orders.json`,{method:"POST",body:JSON.stringify({external_id:order.id,label:order.payment_reference,line_items:items,shipping_method:Number(order.shipping_method_code||1),is_printify_express:false,is_economy_shipping:Number(order.shipping_method_code)===4,send_shipping_notification:false,address_to:order.shipping_address})});pfId=text(pf?.id);if(!pfId)throw new Error("Production service returned no order id");await sb.from("shop_orders").update({printify_order_id:pfId,printify_status:text(pf?.status)||"created",submitted_to_printify_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",orderId);}try{await printify(token,`/shops/${shopId}/orders/${pfId}/send_to_production.json`,{method:"POST"});}catch(e){
+if(action==="verify_payment"){if(order.payment_verified_at)return json(req,{ok:true,order,status:"already_verified"});if(order.status!=="pending")return json(req,{error:"order_not_pending"},409);const paidAmount=Number(body?.paid_amount_cents),required=Number(order.total_cents||0);if(!Number.isInteger(paidAmount)||paidAmount<required||paidAmount>100000000)return json(req,{error:"payment_amount_insufficient",required_cents:required,received_cents:Number.isFinite(paidAmount)?paidAmount:null},409);const now=new Date().toISOString();const{data,error}=await sb.from("shop_orders").update({status:"paid",paid_at:now,payment_verified_at:now,payment_verified_by_admin_id:admin.admin_id,paid_amount_cents:paidAmount,updated_at:now,last_error:null}).eq("id",orderId).eq("status","pending").select().single();if(error)throw error;const feeResult=await sb.rpc("shop_apply_payment_fee_v847",{order_id_input:orderId,admin_id_input:admin.admin_id});if(feeResult.error)console.error("payment fee automation failed",feeResult.error.message||feeResult.error);const invoiceResult=await sb.rpc("shop_issue_invoice_v847",{order_id_input:orderId});if(invoiceResult.error)console.error("invoice issue failed",invoiceResult.error.message||invoiceResult.error);const{data:fresh}=await sb.from("shop_orders").select("*").eq("id",orderId).single();return json(req,{ok:true,order:fresh||data,payment_fee:feeResult.data||null,invoice:invoiceResult.data||null});}if(action==="submit_printify"){if(!order.payment_verified_at)return json(req,{error:"payment_not_verified"},409);const paidAmount=Number(order.paid_amount_cents),required=Number(order.total_cents||0);if(!Number.isFinite(paidAmount)||paidAmount<required)return json(req,{error:"payment_amount_insufficient",required_cents:required,received_cents:Number.isFinite(paidAmount)?paidAmount:null},409);if(order.status==="shipped")return json(req,{ok:true,order,status:"already_shipped",already_submitted:true});const token=await resolveToken(sb),shopId=Number(order.printify_shop_id);if(!Number.isFinite(shopId))throw new Error("Missing production connection id");const hooksOk=await ensureWebhooks(token,shopId);let pfId=text(order.printify_order_id),pf=null;if(pfId){pf=await printify(token,`/shops/${shopId}/orders/${encodeURIComponent(pfId)}.json`);const canonicalStatus=text(pf?.status).toLowerCase();if(order.status==="production"||/production|fulfilled|shipped|delivered/.test(canonicalStatus)){const sync=await updateAndMaybeNotify(sb,order,pf);if(!/fulfilled|shipped|delivered/.test(canonicalStatus)&&order.status!=="shipped")await sb.from("shop_orders").update({status:"production",submitted_to_printify_at:order.submitted_to_printify_at||new Date().toISOString(),last_error:null,updated_at:new Date().toISOString()}).eq("id",orderId);const{data:fresh}=await sb.from("shop_orders").select("*").eq("id",orderId).single();return json(req,{ok:true,order:fresh,status:"already_submitted",already_submitted:true,webhooks_ensured:hooksOk,refresh:sync});}}else{const resolved=await resolveCurrentProductionItems(sb,order);if(resolved.remapped_count>0){const remapAt=new Date().toISOString();const{error:remapError}=await sb.from("shop_orders").update({line_items:resolved.line_items,last_error:null,updated_at:remapAt}).eq("id",orderId);if(remapError)throw remapError;order.line_items=resolved.line_items;}pf=await printify(token,`/shops/${shopId}/orders.json`,{method:"POST",body:JSON.stringify({external_id:order.id,label:order.payment_reference,line_items:resolved.items,shipping_method:Number(order.shipping_method_code||1),is_printify_express:false,is_economy_shipping:Number(order.shipping_method_code)===4,send_shipping_notification:false,address_to:order.shipping_address})});pfId=text(pf?.id);if(!pfId)throw new Error("Production service returned no order id");await sb.from("shop_orders").update({printify_order_id:pfId,printify_status:text(pf?.status)||"created",submitted_to_printify_at:new Date().toISOString(),updated_at:new Date().toISOString(),last_error:null}).eq("id",orderId);}try{await printify(token,`/shops/${shopId}/orders/${pfId}/send_to_production.json`,{method:"POST"});}catch(e){
   let canonical=null;
   try{canonical=await printify(token,`/shops/${shopId}/orders/${encodeURIComponent(pfId)}.json`);}catch{}
   if(canonical&&/production|fulfilled|shipped|delivered/i.test(text(canonical?.status))){
