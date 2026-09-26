@@ -145,6 +145,31 @@
       <div class="manual-delivery-preview-note">${esc(result.note || 'Delivery dates are estimates and can change if we move production or a carrier is delayed.')}</div>`;
   }
 
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+  async function fetchPreview(payload){
+    let lastResponse = null;
+    let lastError = null;
+    for(let attempt=1; attempt<=2; attempt++){
+      try{
+        const response = await fetch(PREVIEW_ENDPOINT,{
+          method:'POST',
+          mode:'cors',
+          cache:'no-store',
+          headers:apiHeaders(),
+          body:JSON.stringify(payload)
+        });
+        lastResponse = response;
+        if(response.ok || (response.status < 500 && response.status !== 429)) return response;
+      }catch(error){
+        lastError = error;
+      }
+      if(attempt < 2) await sleep(650);
+    }
+    if(lastResponse) return lastResponse;
+    throw lastError || new Error('delivery_preview_network_error');
+  }
+
   async function calculate(form, force = false){
     const address = formAddress(form);
     const items = cartItems();
@@ -162,13 +187,7 @@
     if(output) output.innerHTML = '<div class="manual-delivery-preview-note">We are finding the best available shipping route and delivery window…</div>';
 
     try {
-      const response = await fetch(PREVIEW_ENDPOINT, {
-        method: 'POST',
-        mode: 'cors',
-        cache: 'no-store',
-        headers: apiHeaders(),
-        body: JSON.stringify({ customer: address, items })
-      });
+      const response = await fetchPreview({ customer: address, items });
       const result = await response.json().catch(() => ({}));
       if(serial !== requestSerial) return;
       if(!response.ok || !result?.ok) throw new Error(result?.detail || result?.error || `Delivery estimate failed (${response.status})`);
