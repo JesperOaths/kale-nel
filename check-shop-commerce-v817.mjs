@@ -91,9 +91,9 @@ assert.match(store, /function openSizeGuide\(\)/);
 assert.match(store, /function closeSizeGuide\(\)/);
 assert.match(index, /20260916-storefront-v837-r1/);
 assert.match(index, /shop-analytics-v841\.js\?v=20260920-shop-analytics-v841-r1/);
-assert.match(index, /20260916-delivery-v840-r1/);
+assert.match(index, /20260926-delivery-v869-r1/);
 assert.match(index, /20260916-storefront-v837-r2/);
-assert.match(index, /20260926-checkout-v869-r1/);
+assert.match(index, /20260926-checkout-v869-r2/);
 assert.match(index, /storefront-polish-v832\.css/);
 assert.match(index, /storefront-polish-v832\.js/);
 assert.match(index, /product-preview-overrides\.js/);
@@ -385,6 +385,8 @@ assert.doesNotMatch(checkoutEdge, /send_to_production\.json|STRIPE_SECRET|stripe
 
 // Buyer UI remains capability-token based and customer-facing.
 assert.match(manualCheckout, /shop-manual-checkout-v832/);
+assert.match(manualCheckout, /async function postCheckoutWithRetry\(payload\)/, 'checkout UI must retry transient failures using the same idempotency attempt');
+assert.match(deliveryEstimate, /async function fetchPreview\(payload\)/, 'delivery UI must retry transient quote failures');
 assert.match(manualCheckout, /shop-order-status-v825/);
 assert.match(manualCheckout, /method:\s*'POST'/);
 assert.match(manualCheckout, /confirmation_token/);
@@ -549,7 +551,7 @@ assert.match(deployWorkflow, /deploy_function shop-admin-analytics-v843/);
 assert.doesNotMatch(deployWorkflow, /functions deploy shop-manual-checkout-v828/);
 assert.doesNotMatch(catalogEdge, /jellyfish[\s\S]{0,120}media\.slice\(1\)/i);
 assert.match(liveShopCheck, /20260916-storefront-v837-r1/);
-assert.match(liveShopCheck, /20260916-delivery-v840-r1/);
+assert.match(liveShopCheck, /20260926-delivery-v869-r1/);
 assert.match(liveShopCheck, /customer-facing-checkout-v837/);
 assert.match(liveShopCheck, /Total incl\\\. shipping|Total incl\. shipping/);
 assert.match(liveShopCheck, /delivery-estimate-v833/);
