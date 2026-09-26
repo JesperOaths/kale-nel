@@ -273,12 +273,14 @@ assert.match(obsoletePriceRule, /shop-catalog-v828/);
 assert.doesNotMatch(obsoletePriceRule, /createClient|PRINTIFY_BASE|pricedVariants|method:\s*["']PUT["']/);
 
 // Catalog pricing is derived from fulfillment cost, not retail price:
-// retail = base cost + €5, rounded upward to the next whole euro. Original front
+// retail = base cost + €5 for standard sizes or +€7 for 3XL+, rounded upward to the next whole euro. Original front
 // artwork from print_areas is inserted before generated garment mockups.
 assert.match(catalogEdge, /const MARGIN_CENTS = 500/);
+assert.match(catalogEdge, /const LARGE_SIZE_MARGIN_CENTS = 700/);
+assert.match(catalogEdge, /marginEurCentsForSize/);
 assert.match(catalogEdge, /resolveUsdEurRate/);
 assert.match(catalogEdge, /retailEurCentsFromUsdCost/);
-assert.match(catalogEdge, /price:\s*retailEurCentsFromUsdCost\(variant\?\.cost, fx, MARGIN_CENTS\) \/ 100/);
+assert.match(catalogEdge, /price:\s*retailEurCentsFromUsdCost\(variant\?\.cost, fx, marginEurCentsForSize/);
 assert.match(catalogEdge, /sourceCurrency:\s*"USD"/);
 assert.match(catalogEdge, /displayCurrency:\s*"EUR"/);
 assert.doesNotMatch(catalogEdge, /priceEuros\(variant\?\.price\)/);
@@ -288,9 +290,9 @@ assert.match(catalogEdge, /label:\s*"Artwork PNG"/);
 assert.match(catalogEdge, /const mockups = \[\.\.\.artwork, \.\.\.garment\]/);
 assert.match(catalogEdge, /source:\s*"printify-live-v851"/);
 assert.match(catalogEdge, /mode:\s*"bruis-direct-catalog-v838"/);
-assert.match(catalogEdge, /pricing:\s*"production-cost-plus-5-rounded-up"/);
+assert.match(catalogEdge, /pricing:\s*"production-cost-plus-size-margin-rounded-up"/);
 assert.match(catalogEdge, /pricingBase:\s*"production-cost"/);
-assert.match(catalogEdge, /marginEuros:\s*MARGIN_CENTS \/ 100/);
+assert.match(catalogEdge, /threeXlPlus:\s*LARGE_SIZE_MARGIN_CENTS \/ 100/);
 assert.match(catalogEdge, /rounding:\s*"whole-euro-ceiling"/);
 assert.match(catalogEdge, /artworkFirst:\s*true/);
 assert.match(catalogEdge, /whiteVariantsOnly:\s*false/);
@@ -305,17 +307,19 @@ assert.match(catalogEdge, /get_printify_api_token_v815a/);
 assert.doesNotMatch(catalogEdge, /shop-price-v818|shop-catalog-v822|cdn\.shopify\.com/);
 
 // Checkout re-fetches the exact selected supplier product/variant and applies the
-// same cost+€5 rounded-up rule server-side, so the displayed and charged prices
+// same size-tiered cost+margin rounded-up rule server-side, so the displayed and charged prices
 // cannot diverge. Customer checkout still only creates a Pending local order.
 assert.match(checkoutEdge, /mode:\s*"manual-payment-v832"/);
-assert.match(checkoutEdge, /pricing:\s*"production-cost-plus-5-rounded-up"/);
+assert.match(checkoutEdge, /pricing:\s*"production-cost-plus-size-margin-rounded-up"/);
 assert.match(checkoutEdge, /pricingBase:\s*"production-cost"/);
-assert.match(checkoutEdge, /marginEuros:\s*MARGIN_CENTS \/ 100/);
+assert.match(checkoutEdge, /threeXlPlus:\s*LARGE_SIZE_MARGIN_CENTS \/ 100/);
 assert.match(checkoutEdge, /rounding:\s*"whole-euro-ceiling"/);
 assert.match(checkoutEdge, /const MARGIN_CENTS = 500/);
+assert.match(checkoutEdge, /const LARGE_SIZE_MARGIN_CENTS = 700/);
+assert.match(checkoutEdge, /marginEurCentsForSize/);
 assert.match(checkoutEdge, /resolveUsdEurRate/);
 assert.match(checkoutEdge, /retailEurCentsFromUsdCost/);
-assert.match(checkoutEdge, /retailEurCentsFromUsdCost\(freshVariant\?\.cost, fx, MARGIN_CENTS\)/);
+assert.match(checkoutEdge, /marginEurCentsForSize\(variantSize, MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS\)/);
 assert.match(checkoutEdge, /usdCentsToEurCents/);
 assert.match(checkoutEdge, /shipping_source_cents/);
 assert.match(checkoutEdge, /fx_snapshot:\s*fxAuditSnapshot\(fx\)/);
