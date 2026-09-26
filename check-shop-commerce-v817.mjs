@@ -237,8 +237,13 @@ assert.match(galleryFixes, /partialNextSlide:false/);
 // Product mockups are rendered on transparent pixels rather than a baked beige or
 // white rectangle. Edge-connected studio background is made transparent while a
 // row-wise subject span protects near-white garment fabric, including the tag view.
-assert.match(storefrontCss, /--shop-image-backdrop:\s*#ded6ca/);
+assert.match(storefrontCss, /--shop-image-backdrop:\s*transparent/, 'active media backdrop must itself be transparent');
 assert.match(storefrontCss, /\.mockup img[\s\S]*background:\s*transparent !important/);
+assert.match(galleryFixes, /\.mockup-rail\{[\s\S]*background:transparent!important/, 'gallery rail must not reintroduce a beige image field');
+assert.match(directCommerce, /\.mockup-rail\{background:transparent!important/, 'commerce bridge must preserve transparent media rails');
+assert.match(directCommerce, /\.cart-line img\{object-fit:contain!important;background:transparent!important/, 'cart shirt thumbnails must remain transparent');
+assert.match(styles, /\.mockup-rail\s*\{[\s\S]*background:\s*transparent/, 'base product rail must be transparent');
+assert.match(styles, /\.cart-line img[^{]*\{[^}]*background:\s*transparent/, 'base cart shirt thumbnail must be transparent');
 assert.match(mockupTransparency, /function subjectSpans/);
 assert.match(mockupTransparency, /function applyTransparency/);
 assert.match(mockupTransparency, /data\[index\*4\+3\]=0/);
