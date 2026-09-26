@@ -97,7 +97,7 @@ assert.match(schedulerRunner,/170000/);
 assert.match(deploy,/deploy_function shop-ops-v847/);
 assert.match(deploy,/deploy_function shop-admin-export-v847/);
 assert.match(deploy,/deploy_function shop-admin-orders-v825/);
-assert.ok(adminDeploy.includes("['admin_shop_operations.html', 'v847']"));
+assert.ok(adminDeploy.includes("['admin_shop_operations.html', 'v858']"));
 
 for(const [name,source] of [['ops',ops],['checks',checks],['operations page',page],['order admin',orders]]){
   assert.doesNotMatch(source,/action\s*===\s*["'](?:refund|chargeback)["']/i,name+' must not add refund/chargeback actions');
