@@ -249,7 +249,7 @@ if(action==="verify_payment"){if(order.payment_verified_at)return json(req,{ok:t
   const apiReason=text(e?.payload?.errors?.reason||e?.payload?.error||"");
   const baseError=text(e instanceof Error?e.message:e);
   const issueSummary=itemStatuses.length?itemStatuses.map(i=>[i.title||i.product_id,i.variant,i.status].filter(Boolean).join(" / ")).join("; "):"";
-  const savedError=[apiReason&&apiReason!==baseError?`Printify reason: ${apiReason}.`:"",baseError,canonicalStatus?`Printify status: ${canonicalStatus}.`:"",issueSummary?`Items: ${issueSummary}.`:""].filter(Boolean).join(" ").slice(0,1000);
+  const attemptAt=new Date().toISOString();const savedError=[`Production attempt ${attemptAt}:`,apiReason&&apiReason!==baseError?`Printify reason: ${apiReason}.`:"",baseError,canonicalStatus?`Printify status: ${canonicalStatus}.`:"",issueSummary?`Items: ${issueSummary}.`:""].filter(Boolean).join(" ").slice(0,1000);
   await sb.from("shop_orders").update({printify_status:canonicalStatus||order.printify_status||null,last_error:savedError,updated_at:new Date().toISOString()}).eq("id",orderId);
   if(["on-hold","has-issues","payment-not-received"].includes(canonicalStatus)){
     return json(req,{error:"production_on_hold",detail:savedError,printify_order_id:pfId,printify_status:canonicalStatus,line_items:itemStatuses,retry_safe:true},409);
