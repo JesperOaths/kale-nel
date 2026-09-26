@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="index,follow"><meta name="description" content="Instructions to revoke Google access and request deletion of Inbox Triage Agent data.">
+<link rel="canonical" href="https://kalenel.nl/oauth/inbox-triage/data-deletion.html"><title>Data deletion & revocation · Inbox Triage Agent · Kalenel</title><style>
+:root{color-scheme:dark;--bg:#0d1117;--panel:#161b22;--line:#30363d;--text:#e6edf3;--muted:#9da7b3;--link:#7dd3fc;--ok:#86efac}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.wrap{max-width:860px;margin:auto;padding:56px 22px 80px}h1{font-size:2.4rem;line-height:1.1;margin:.2em 0 .5em}h2{margin-top:2.1rem;line-height:1.25}h3{margin-top:1.5rem}
+a{color:var(--link)}.muted{color:var(--muted)}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin:22px 0}
+.notice{border-left:4px solid var(--ok);padding:12px 16px;background:#102018;border-radius:8px}.links{display:flex;gap:14px;flex-wrap:wrap;margin:24px 0}
+code{background:#0b1015;border:1px solid var(--line);padding:.12em .35em;border-radius:5px}.version{margin-top:52px;color:var(--muted);font-size:.82rem}
+ul{padding-left:1.35rem}li{margin:.45rem 0}
+</style></head>
+<body><main class="wrap"><p><a href="./">← Inbox Triage Agent</a></p>
+<h1>Data deletion &amp; revocation</h1>
+<p class="muted">Last updated: 26 September 2026</p>
+<h2>Revoke Google access</h2>
+<p>You can stop future Gmail API access at any time by opening your Google Account settings, going to your third-party connections/security permissions, selecting Inbox Triage Agent (or the name displayed on the Google consent screen), and removing its access. Once revoked, the service can no longer obtain new Gmail API access tokens for that account without a new authorization.</p>
+
+<h2>Request deletion from the private service</h2>
+<p>To request deletion of the locally retained authorization credentials and operational state associated with an authorized Gmail account, email <a href="mailto:prutsalberts@gmail.com?subject=Inbox%20Triage%20Agent%20data%20deletion">prutsalberts@gmail.com</a> with the subject <strong>Inbox Triage Agent data deletion</strong> and identify the Google account whose local service data should be removed.</p>
+<p>The deletion request covers locally stored OAuth credentials and service state associated with the account. Operational backups or diagnostic records, if present, may persist temporarily until their normal rotation/retention cycle completes, but they are not used to continue Gmail access after revocation.</p>
+
+<h2>What revocation does not do</h2>
+<p>Revoking OAuth does not delete email already stored in Gmail and does not retract a digest or message that was previously delivered to the account owner's configured private destination. Those systems have their own deletion controls.</p>
+
+<h2>Questions</h2>
+<p>For help with revocation or deletion, contact <a href="mailto:prutsalberts@gmail.com">prutsalberts@gmail.com</a>.</p>
+<div class="links"><a href="./privacy.html">Privacy Policy</a><a href="./terms.html">Terms of Service</a><a href="./support.html">Support</a><a href="./">App home</a></div>
+<footer class="version">v817 · Kalenel · Inbox Triage Agent Data Controls</footer>
+</main></body></html>
