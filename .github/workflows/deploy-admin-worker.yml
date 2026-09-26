@@ -159,7 +159,7 @@ jobs:
             ['admin_shop_orders.html', 'v826'],
             ['admin_shop_connection.html', 'v828'],
             ['admin_shop_analytics.html', 'v843'],
-            ['admin_shop_operations.html', 'v847'],
+            ['admin_shop_operations.html', 'v858'],
           ]);
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
           const expectedMode = process.env.ADMIN_SOURCE_REPOSITORY ? 'external-private' : 'public-fallback';
