@@ -150,7 +150,7 @@
   async function fetchPreview(payload){
     let lastResponse = null;
     let lastError = null;
-    for(let attempt=1; attempt<=2; attempt++){
+    for(let attempt=1; attempt<=3; attempt++){
       try{
         const response = await fetch(PREVIEW_ENDPOINT,{
           method:'POST',
@@ -164,7 +164,7 @@
       }catch(error){
         lastError = error;
       }
-      if(attempt < 2) await sleep(650);
+      if(attempt < 3) await sleep(500 * attempt);
     }
     if(lastResponse) return lastResponse;
     throw lastError || new Error('delivery_preview_network_error');
