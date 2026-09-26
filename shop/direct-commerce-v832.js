@@ -89,7 +89,7 @@
     catalogAuthority:'bruis-direct-v836',
     checkoutAuthority:'shop-manual-checkout-v832',
     deliveryPreview:'shop-delivery-preview-v833',
-    pricing:'production-cost-plus-5-rounded-up',
+    pricing:'production-cost-plus-size-margin-rounded-up',
     wholeEuroPricing:true,
     artworkFirstGallery:true,
     usesShopifyCatalogApi:false,
