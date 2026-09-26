@@ -33,6 +33,18 @@ function serviceClient(){
   if(!url||!key) throw new Error("server_not_configured");
   return createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
 }
+const sleep=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
+async function loginRpcWithTransientRetry(sb:ReturnType<typeof serviceClient>,payload:{input_username:string,input_password:string,input_totp_code:string}){
+  let lastError:any=null;
+  for(let attempt=1;attempt<=2;attempt++){
+    const result=await sb.rpc("admin_login",payload);
+    if(!result.error) return {...result,attempt};
+    lastError=result.error;
+    console.error("admin-auth-v845 login rpc failed",result.error.code||"rpc_error","attempt",attempt);
+    if(attempt<2) await sleep(350);
+  }
+  return {data:null,error:lastError,attempt:2};
+}
 
 Deno.serve(async req=>{
   if(req.method==="OPTIONS") return new Response("ok",{headers:cors(req)});
@@ -58,15 +70,15 @@ Deno.serve(async req=>{
 
   try{
     const sb=serviceClient();
-    const {data,error}=await sb.rpc("admin_login",{
+    const {data,error,attempt}=await loginRpcWithTransientRetry(sb,{
       input_username:username,
       input_password:password,
       input_totp_code:totp
     });
     if(error){
-      console.error("admin-auth-v845 login rpc failed",error.code||"rpc_error");
-      return json(req,{ok:false,error:"authentication_service_unavailable"},503);
+      return json(req,{ok:false,error:"authentication_service_unavailable",retryable:true},503);
     }
+    if(attempt>1) console.warn("admin-auth-v845 login recovered after transient backend failure");
     const row=Array.isArray(data)?data[0]:data;
     if(row?.ok!==true){
       if(row?.error==="too_many_attempts"){
