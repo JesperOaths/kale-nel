@@ -239,7 +239,7 @@
   async function postCheckoutWithRetry(payload){
     let lastResponse = null;
     let lastError = null;
-    for(let attempt=1; attempt<=2; attempt++){
+    for(let attempt=1; attempt<=3; attempt++){
       try{
         const response = await fetch(CHECKOUT_ENDPOINT,{
           method:'POST',
@@ -253,7 +253,7 @@
       }catch(error){
         lastError = error;
       }
-      if(attempt < 2) await checkoutSleep(700);
+      if(attempt < 3) await checkoutSleep(550 * attempt);
     }
     if(lastResponse) return lastResponse;
     throw lastError || new Error('checkout_network_error');
