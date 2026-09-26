@@ -9,6 +9,7 @@ const DESPINOZA_NATIVE_TEXT_ID = "7b14de2d-815d-a93b-cdd3-69d9c2cb3e2f";
 const DESPINOZA_INTERNAL_TEXT_ID = "5941187eb8e7e37b3f0e62e5";
 const DESPINOZA_STATIC_TEXT_ID = "6aa9f09621bcc1035c7dae61";
 const DESPINOZA_TEXT_MARKER = "__despinoza_text__";
+const GENERIC_IGNORED_ARTWORK_IDS = new Set(["5941187eb8e7e37b3f0e62e5"]); // generated text_layer.svg, not reusable Printify artwork
 const DESPINOZA_REGIONAL_PROVIDERS = new Set([27, 30, 331, 438]);
 
 // Routing estimate only: Canada's 2026 MFN customs tariff for cotton T-shirts
@@ -95,7 +96,7 @@ export function artworkSignature(product, variantId) {
       const position = text(placeholder?.position).toLowerCase();
       for (const image of Array.isArray(placeholder?.images) ? placeholder.images : []) {
         const id = text(image?.id);
-        if (position && id) entries.push(`${position}:${id}`);
+        if (position && id && !GENERIC_IGNORED_ARTWORK_IDS.has(id)) entries.push(`${position}:${id}`);
       }
     }
   }
