@@ -308,6 +308,9 @@ const availableVariant = (product, wantedSize) => (Array.isArray(product?.varian
 const standardVariant = availableVariant(hydrangea, 'M');
 assert.ok(standardVariant, 'Hydrangea must expose an available M variant for checkout smoke tests');
 const largeProduct = liveCatalog.products.find(product =>
+  /^crown imperial$/i.test(String(product?.name || '').trim()) &&
+  !!availableVariant(product, '3XL')
+) || liveCatalog.products.find(product =>
   String(product?.id || '') !== String(hydrangea?.id || '') &&
   !/\btote\b/i.test(String(product?.name || product?.baseLabel || '')) &&
   !!availableVariant(product, '3XL')
