@@ -53,7 +53,7 @@ assert.ok(adminDeploy.includes("$api/accounts?per_page=50"), 'admin Worker deplo
 assert.ok(adminDeploy.includes("$api/memberships?status=accepted&per_page=50"), 'admin Worker deploy must retain membership fallback for account discovery');
 assert.match(adminDeploy, /echo "CLOUDFLARE_ACCOUNT_ID=\$account_id" >> "\$GITHUB_ENV"/, 'resolved Cloudflare account ID must be passed through GitHub environment state');
 assert.match(adminDeploy, /npx --yes wrangler@4\.118\.0 deploy --config cloudflare\/workers\/admin-gate\/wrangler\.toml\s*$/m, 'admin Worker deploy must use the pinned known-good Wrangler version');
-assert.ok(adminDeploy.includes('admin_shop_orders.html'), 'admin Worker deploy must verify the v826 Shop orders asset before deployment');
+assert.ok(adminDeploy.includes('admin_shop_orders.html'), 'admin Worker deploy must verify the v858 Shop orders asset before deployment');
 assert.ok(adminDeploy.includes("[[ \"$admin_status\" == '401' ]]"), 'admin Worker deploy must verify the Shop orders page remains protected after deployment');
 assert.doesNotMatch(adminDeploy, /\bCLOUDFLARE_API_TOKEN\s*=\s*['\"][^$]/, 'Cloudflare API token must never be embedded in workflow source');
 
