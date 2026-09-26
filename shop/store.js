@@ -82,7 +82,7 @@ const ANIMAL_DESIGN_NAMES = new Set([
   'krill','leaf-tailed gecko','leopard seal','manta ray','markhor','orb-weaver',
   'orchid mantis','pom-pom crab','pufferfish','seahorse','secretary bird','thorny devil'
 ]);
-let showAnimalDesigns = false;
+let showAnimalDesigns = true;
 
 function isAnimalDesign(product){
   return ANIMAL_DESIGN_NAMES.has(String(product?.name || '').trim().toLowerCase());
