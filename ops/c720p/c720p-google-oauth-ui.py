@@ -90,11 +90,12 @@ small{{color:#aeb9c2}} h1{{margin-bottom:6px}} p{{line-height:1.5}}
 </style></head><body><h1>C720P Google OAuth Repair</h1><p>This repairs the Gmail authorization used by the local mail-to-Signal service. It requests only the scopes configured by that service.</p>{msg}
 <div class="card"><h2>1. Google Auth Platform → Branding</h2>
 <p>Use these public Kalenel URLs for the production OAuth app:</p>
-<p><b>App homepage</b><br><code>https://kalenel.nl/oauth/inbox-triage/</code></p>
-<p><b>Privacy policy</b><br><code>https://kalenel.nl/oauth/inbox-triage/privacy.html</code></p>
-<p><b>Terms of Service</b><br><code>https://kalenel.nl/oauth/inbox-triage/terms.html</code></p>
+<p><b>App homepage</b><br><a href="https://kalenel.nl/oauth/inbox-triage/" target="_blank" rel="noopener"><code>https://kalenel.nl/oauth/inbox-triage/</code></a></p>
+<p><b>Privacy policy</b><br><a href="https://kalenel.nl/oauth/inbox-triage/privacy.html" target="_blank" rel="noopener"><code>https://kalenel.nl/oauth/inbox-triage/privacy.html</code></a></p>
+<p><b>Terms of Service</b><br><a href="https://kalenel.nl/oauth/inbox-triage/terms.html" target="_blank" rel="noopener"><code>https://kalenel.nl/oauth/inbox-triage/terms.html</code></a></p>
 <p><b>Authorized domain</b><br><code>kalenel.nl</code></p>
-<p>Use the configured support email as User support email and Developer contact information. The public support and deletion pages are <code>https://kalenel.nl/oauth/inbox-triage/support.html</code> and <code>https://kalenel.nl/oauth/inbox-triage/data-deletion.html</code>.</p></div>
+<p>Use the configured support email as User support email and Developer contact information. Public <a href="https://kalenel.nl/oauth/inbox-triage/support.html" target="_blank" rel="noopener">support</a> and <a href="https://kalenel.nl/oauth/inbox-triage/data-deletion.html" target="_blank" rel="noopener">data deletion/revocation</a> pages are available as well.</p>
+<p><small>Privacy notice: Gmail data is used only for the authorized inbox-triage workflow. Google Workspace API data is not used to train or improve generalized/non-personalized AI or ML models. See the linked Privacy Policy for access, use, storage, transfer and deletion details.</small></p></div>
 <div class="card"><h2>2. Google Auth Platform → Data Access</h2>
 <p>Declare only <code>https://www.googleapis.com/auth/gmail.modify</code>. This is the scope used by the local inbox-triage service.</p></div>
 <div class="card"><h2>3. Google Auth Platform → Audience</h2><p>If Publishing status is <b>Testing</b>, choose <b>Publish app</b> and confirm <b>In production</b>. For this private personal-use app, an unverified-app warning can still be shown; the account owner can authorize it directly.</p>
