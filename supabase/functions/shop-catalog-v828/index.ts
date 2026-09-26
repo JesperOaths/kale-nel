@@ -43,7 +43,7 @@ const PUBLIC_PRODUCT_NAMES: Record<string, string> = {
   "6aaa543d7e9070db3f09bb03": "Pufferfish",
   "6aaa52d4248ab968df08c422": "Pom-Pom Crab",
   "6aaa520db1ff95a9e501202c": "Orb-Weaver",
-  "6aaa50bb0da2b4cf33062dbf": "Kudu",
+  "6aaa50bb0da2b4cf33062dbf": "Markhor",
   "6aaa4fbae20a7d1fbb0fcf79": "Leopard Seal",
   "6aaa4ed8a0fd67a9700b9bc8": "Leaf-Tailed Gecko",
   "6aaa4ddfb3c36c673e0dee1b": "Krill",
