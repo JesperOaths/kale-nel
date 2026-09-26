@@ -27,11 +27,21 @@ function cors(req:Request){
 }
 const json=(req:Request,body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:cors(req)});
 
+const AUTH_RPC_TIMEOUT_MS=2500;
+async function timedFetch(input:RequestInfo|URL,init:RequestInit={}){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),AUTH_RPC_TIMEOUT_MS);
+  try{
+    return await fetch(input,{...init,signal:controller.signal});
+  }finally{
+    clearTimeout(timer);
+  }
+}
 function serviceClient(){
   const url=Deno.env.get("SUPABASE_URL");
   const key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if(!url||!key) throw new Error("server_not_configured");
-  return createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+  return createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:timedFetch}});
 }
 const sleep=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
 async function loginRpcWithTransientRetry(sb:ReturnType<typeof serviceClient>,payload:{input_username:string,input_password:string,input_totp_code:string}){
@@ -41,7 +51,7 @@ async function loginRpcWithTransientRetry(sb:ReturnType<typeof serviceClient>,pa
     if(!result.error) return {...result,attempt};
     lastError=result.error;
     console.error("admin-auth-v845 login rpc failed",result.error.code||"rpc_error","attempt",attempt);
-    if(attempt<2) await sleep(350);
+    if(attempt<2) await sleep(200);
   }
   return {data:null,error:lastError,attempt:2};
 }
