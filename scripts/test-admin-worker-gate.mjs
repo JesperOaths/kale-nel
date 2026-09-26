@@ -172,7 +172,7 @@ try {
   assert.match(callbackSuccess.headers.get('Set-Cookie'), /__Host-kalenel_admin_oauth=; Max-Age=0/);
   const callbackBody = await callbackSuccess.text();
   assert.match(callbackBody, /GitHub-login voltooid/);
-  assert.match(callbackBody, /http-equiv="refresh" content="1;url=\/admin\.html"/);
+  assert.match(callbackBody, /http-equiv="refresh" content="0;url=\/admin\.html"/);
   assert.match(callbackBody, /href="\/admin\.html"/);
   const sessionCookie = extractCookie(callbackSuccess.headers.get('Set-Cookie'), '__Host-kalenel_admin_session');
   assert.ok(sessionCookie);
