@@ -46,14 +46,14 @@
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
   <script>window.GEJAST_PAGE_VERSION='v817';</script><script src="./gejast-config.js?v817"></script><script src="./gejast-mobile-route-fixes-v583.js?v817" defer></script><script src="./gejast-mobile-foundation-v583.js?v817" defer></script>
-  <script src="./gejast-home-gate.js?v817"></script><script src="./gejast-scope-context.js?v817"></script><script src="./gejast-family-rollout.js?v817"></script>
-  <script src="./gejast-rpc-contract.js?v817"></script>
-  <script src="./gejast-admin-rpc.js?v817"></script>
+  <script src="./gejast-home-gate.js?v817" defer></script><script src="./gejast-scope-context.js?v817"></script><script src="./gejast-family-rollout.js?v817" defer></script>
+  <script src="./gejast-rpc-contract.js?v817" defer></script>
+  <script src="./gejast-admin-rpc.js?v817" defer></script>
   <script src="./admin-session-sync.js?v817"></script>
-  <script src="./admin-topnav.js?v817"></script>
+  <script src="./admin-topnav.js?v817" defer></script>
   <script src="./gejast-admin-claims-buckets.js?v817"></script>
   <script src="./gejast-admin-claims-source.js?v817"></script>
-<script src="./gejast-scope.js?v817"></script></head>
+<script src="./gejast-scope.js?v817" defer></script></head>
 <body>
   <main class="main-card">
     <a href="./index.html" aria-label="Terug naar home"><img src="./logo-small.png" class="logo" alt="logo" /></a>
@@ -316,23 +316,33 @@ const AdminBuckets = window.GEJAST_ADMIN_BUCKETS || {};
       const remembered = !!window.GEJAST_ADMIN_SESSION?.hasDeviceRemember?.();
       if (!token && !remembered) { showLoggedOut(); return; }
 
+      if (token) {
+        // Fast path: render or continue immediately from the local session.
+        // Actual admin data/actions still validate the token server-side.
+        showLoggedIn();
+        setStatus('Adminsessie gevonden.', 'ok');
+        if (maybeReturnAfterLogin()) return;
+        checkSession().catch((error) => {
+          showLoggedOut();
+          setStatus(error?.message || 'Adminsessie verlopen. Log opnieuw in met Authenticator.', 'warn');
+        });
+        requestAnimationFrame(() => {
+          loadCounts().then(() => setStatus('Beheerhub geladen.', 'ok'))
+            .catch((error) => setStatus('Beheerhub is beschikbaar; tellers laden later opnieuw: '+(error?.message || 'timeout'), 'warn'));
+        });
+        return;
+      }
+
+      setStatus('Geverifieerd apparaat herstellen...');
       try {
         const session = await checkSession();
         showLoggedIn();
         if (maybeReturnAfterLogin()) return;
-        const resumed = !!session?.resumed_from_trusted_device;
-        setStatus(resumed ? 'Geverifieerd apparaat herkend. Je bent automatisch ingelogd.' : 'Adminsessie hergebruikt.', 'ok');
+        setStatus(session?.resumed_from_trusted_device ? 'Geverifieerd apparaat herkend.' : 'Adminsessie hergebruikt.', 'ok');
+        requestAnimationFrame(() => loadCounts().catch(() => {}));
       } catch (error) {
         showLoggedOut();
-        setStatus(error?.message || 'Adminsessie verlopen. Log opnieuw in met Authenticator.', 'warn');
-        return;
-      }
-
-      try {
-        await loadCounts();
-        setStatus('Beheerhub geladen.', 'ok');
-      } catch (error) {
-        setStatus('Je bent ingelogd. Hub-tellers konden tijdelijk niet laden: '+(error?.message || 'timeout'), 'warn');
+        setStatus(error?.message || 'Log in met Authenticator.', 'warn');
       }
     }
 
@@ -348,25 +358,18 @@ const AdminBuckets = window.GEJAST_ADMIN_BUCKETS || {};
         document.getElementById('passwordInput').value = '';
         document.getElementById('totpInput').value = '';
 
-        let remembered = false;
         if (remember && window.GEJAST_ADMIN_SESSION?.issueTrustedDevice) {
-          try {
-            await window.GEJAST_ADMIN_SESSION.issueTrustedDevice(login?.admin_username || login?.username || document.getElementById('usernameInput').value.trim());
-            remembered = true;
-          } catch (deviceError) {
-            console.warn('trusted-device enrollment failed', deviceError);
-          }
+          window.GEJAST_ADMIN_SESSION
+            .issueTrustedDevice(login?.admin_username || login?.username || document.getElementById('usernameInput').value.trim())
+            .catch((deviceError) => console.warn('trusted-device enrollment failed', deviceError));
         }
 
         showLoggedIn();
-        setStatus(remembered ? 'Inloggen gelukt. Dit apparaat is 45 dagen geverifieerd.' : 'Inloggen gelukt.', 'ok');
+        setStatus(remember ? 'Inloggen gelukt. Dit apparaat wordt op de achtergrond onthouden.' : 'Inloggen gelukt.', 'ok');
         if (maybeReturnAfterLogin()) return;
-
-        try {
-          await loadCounts();
-        } catch (countError) {
-          setStatus('Je bent ingelogd. Hub-tellers konden tijdelijk niet laden: '+(countError?.message || 'timeout'), 'warn');
-        }
+        requestAnimationFrame(() => loadCounts().catch((countError) => {
+          setStatus('Je bent ingelogd. Hub-tellers laden later opnieuw: '+(countError?.message || 'timeout'), 'warn');
+        }));
       } catch (error) {
         showLoggedOut();
         setStatus(error?.message || 'Inloggen mislukt.', 'warn');
