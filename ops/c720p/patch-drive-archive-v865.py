@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import datetime
 import shutil
+import subprocess
 
 TARGET=Path("/home/jespern/c720p-home-hub/bin/c720p-drive-security-archive.py")
 
@@ -150,6 +151,21 @@ def reconcile_remote(cam):
     tmp=TARGET.with_suffix(".py.v865.tmp")
     tmp.write_text(src)
     tmp.replace(TARGET)
+
+    # Reload the running archive server so Range streaming + Drive reconciliation
+    # become active immediately. Only restart a unit that is already active.
+    restarted=False
+    for unit in ("c720p-drive-security-archive.service","c720p-drive-archive.service"):
+        active=subprocess.run(
+            ["systemctl","--user","is-active","--quiet",unit],
+            stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
+        ).returncode==0
+        if active:
+            subprocess.run(["systemctl","--user","restart",unit],check=True)
+            restarted=True
+            break
+    print("patched="+str(TARGET))
+    print("service_restarted="+str(restarted).lower())
 
 if __name__=="__main__":
     main()
