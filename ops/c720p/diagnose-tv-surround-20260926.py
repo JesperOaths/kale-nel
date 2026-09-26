@@ -45,4 +45,14 @@ req=urllib.request.Request(
 try:
     with urllib.request.urlopen(req,timeout=15) as r: print("HEALTH_POST",r.status)
 except Exception as e: print("HEALTH_POST_ERR",type(e).__name__,str(e)[:240])
+
+try:
+    req2=urllib.request.Request(
+        "https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-diag-ingest-v1",
+        data=diag.encode(),
+        method="POST",
+        headers={"content-type":"text/plain; charset=utf-8","x-c720p-token":token},
+    )
+    with urllib.request.urlopen(req2,timeout=15) as r: print("DIAG_INGEST",r.status)
+except Exception as e: print("DIAG_INGEST_ERR",type(e).__name__,str(e)[:240])
 print(diag)
