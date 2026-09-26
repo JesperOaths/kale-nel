@@ -1,10 +1,47 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="index,follow"><title>Inbox Triage Agent · Kalenel</title>
-<style>body{margin:0;background:#0d1117;color:#e6edf3;font:16px/1.6 system-ui,sans-serif}.wrap{max-width:760px;margin:auto;padding:56px 22px}h1{font-size:2.4rem;line-height:1.1}h2{margin-top:2rem}a{color:#7dd3fc}.card{background:#161b22;border:1px solid #30363d;border-radius:16px;padding:22px;margin:22px 0}.muted{color:#9da7b3}</style></head>
-<body><main class="wrap"><p class="muted">Kalenel · OAuth application information</p><h1>Inbox Triage Agent</h1>
-<div class="card"><p>Inbox Triage Agent is a private email-assistance service used by its account owners. It reads configured Gmail inboxes, identifies messages that need attention, prepares concise digests and optional reply suggestions, and marks successfully processed messages so they are not handled twice.</p>
-<p>The service requests only the Gmail permission needed for that workflow. It does not provide public mailbox access and it does not sell user data.</p></div>
-<h2>How Gmail data is used</h2><p>Message metadata and content are accessed only to perform the requested inbox-triage workflow. Processing can use configured AI providers to produce summaries or reply suggestions; when those providers are unavailable, processing may be deferred or use a local deterministic fallback. Selected digest output can be delivered to the account owner's configured private Signal destination.</p>
-<h2>Data controls</h2><p>OAuth credentials are kept by the private service and are not published on this website. Users can revoke Google access at any time from their Google Account permissions.</p>
-<p><a href="./privacy.html">Privacy Policy</a> · <a href="./terms.html">Terms of Service</a></p></main></body></html>
+<meta name="robots" content="index,follow"><meta name="description" content="Kalenel Inbox Triage Agent: a private Gmail productivity utility that summarizes, triages and marks processed messages for authorized account owners.">
+<link rel="canonical" href="https://kalenel.nl/oauth/inbox-triage/"><title>Inbox Triage Agent · Kalenel</title><style>
+:root{color-scheme:dark;--bg:#0d1117;--panel:#161b22;--line:#30363d;--text:#e6edf3;--muted:#9da7b3;--link:#7dd3fc;--ok:#86efac}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.wrap{max-width:860px;margin:auto;padding:56px 22px 80px}h1{font-size:2.4rem;line-height:1.1;margin:.2em 0 .5em}h2{margin-top:2.1rem;line-height:1.25}h3{margin-top:1.5rem}
+a{color:var(--link)}.muted{color:var(--muted)}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin:22px 0}
+.notice{border-left:4px solid var(--ok);padding:12px 16px;background:#102018;border-radius:8px}.links{display:flex;gap:14px;flex-wrap:wrap;margin:24px 0}
+code{background:#0b1015;border:1px solid var(--line);padding:.12em .35em;border-radius:5px}.version{margin-top:52px;color:var(--muted);font-size:.82rem}
+ul{padding-left:1.35rem}li{margin:.45rem 0}
+</style></head>
+<body><main class="wrap">
+<p class="muted">Kalenel · Google OAuth application information</p>
+<h1>Inbox Triage Agent</h1>
+<div class="card">
+<p><strong>Inbox Triage Agent</strong> is a private Kalenel productivity utility for specifically authorized account owners. It monitors configured Gmail inboxes, identifies messages that need attention, prepares concise digests and optional reply suggestions, and marks successfully processed mail so the same item is not handled repeatedly.</p>
+<p>It is not a public mailbox service and it does not provide access to anyone else's Gmail account. Google access occurs only after the Google account owner completes Google's OAuth consent flow.</p>
+</div>
+
+<h2>Why Google access is requested</h2>
+<p>The application requests the restricted Gmail scope <code>https://www.googleapis.com/auth/gmail.modify</code>. The workflow needs to read message content and metadata in order to determine what requires attention and also needs to update Gmail labels or processing state after successful handling. A read-only Gmail scope would not allow that label/state update, while label-only or metadata-only scopes would not provide the message content needed for summaries.</p>
+
+<h2>How Gmail data is used</h2>
+<ul>
+<li>Read new or relevant messages, headers, thread state and labels for inbox triage.</li>
+<li>Create user-requested summaries and optional reply suggestions.</li>
+<li>Apply or update the configured processed label/state after successful processing.</li>
+<li>Prevent duplicate processing and recover safely from interrupted runs.</li>
+<li>Deliver selected digest output to the account owner's configured private destination.</li>
+</ul>
+<p>When AI-assisted summarization is enabled by the account owner, relevant message content may be sent to configured processing providers solely to provide that user-facing feature. Google Workspace data is <strong>not</strong> used to train, develop or improve generalized/non-personalized AI or machine-learning models.</p>
+
+<div class="notice"><strong>Google Limited Use disclosure.</strong> Inbox Triage Agent's use and transfer of information received from Google Workspace APIs adheres to the Google User Data Policy, including the Limited Use requirements.</div>
+
+<h2>User control</h2>
+<p>Users can revoke the application's Google access at any time from their Google Account connections/security settings. Revocation prevents future Gmail API access. Local authorization credentials and retained operational state can also be deleted on request.</p>
+
+<div class="links">
+<a href="./privacy.html">Privacy Policy</a>
+<a href="./terms.html">Terms of Service</a>
+<a href="./data-deletion.html">Data deletion &amp; revocation</a>
+<a href="./support.html">Support</a>
+</div>
+<p class="muted">Support: <a href="mailto:prutsalberts@gmail.com">prutsalberts@gmail.com</a></p>
+<footer class="version">v817 · Kalenel · Inbox Triage Agent · Updated 26 September 2026</footer>
+</main></body></html>
