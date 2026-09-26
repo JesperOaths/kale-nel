@@ -156,7 +156,7 @@ jobs:
           const base = 'cloudflare/workers/admin-gate/static';
           const manifestPath = `${base}/admin-worker-manifest.json`;
           const expected = new Map([
-            ['admin_shop_orders.html', 'v826'],
+            ['admin_shop_orders.html', 'v858'],
             ['admin_shop_connection.html', 'v828'],
             ['admin_shop_analytics.html', 'v843'],
             ['admin_shop_operations.html', 'v858'],
@@ -228,4 +228,4 @@ jobs:
           [[ "$login_status" == '302' ]] || { echo "Expected OAuth login start to return 302, got $login_status" >&2; cat "$login_headers" >&2; exit 1; }
           grep -qi '^location: https://github\.com/login/oauth/authorize' "$login_headers" || { echo 'GitHub OAuth entrypoint missing after deployment' >&2; cat "$login_headers" >&2; exit 1; }
 
-          echo 'Protected v826/v828/v843/v847 admin routes, apex redirect, and OAuth entrypoint verified.'
+          echo 'Protected v858/v828/v843/v858 admin routes, apex redirect, and OAuth entrypoint verified.'
