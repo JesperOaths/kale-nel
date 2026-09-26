@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 const SHOP_URL = 'https://kalenel.nl/shop/';
 const ASSET_VERSION = '20260916-storefront-v837-r1';
+const COLLECTION_MEDIA_VERSION = '20260921-storefront-v857-r1';
 const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v832.js?v=${ASSET_VERSION}`;
 const DELIVERY_UI_URL = 'https://kalenel.nl/shop/delivery-estimate-v833.js?v=20260916-delivery-v840-r1';
 const MANUAL_CHECKOUT_UI_URL = 'https://kalenel.nl/shop/manual-checkout-v825.js?v=20260921-checkout-v850-r1';
@@ -10,7 +11,7 @@ const SHOP_ANALYTICS_URL = 'https://kalenel.nl/shop/shop-analytics-v841.js?v=202
 const CUSTOMER_UI_URL = 'https://kalenel.nl/shop/customer-facing-checkout-v837.js?v=20260916-storefront-v837-r2';
 const POLISH_URL = `https://kalenel.nl/shop/storefront-polish-v832.js?v=${ASSET_VERSION}`;
 const POLISH_CSS_URL = `https://kalenel.nl/shop/storefront-polish-v832.css?v=${ASSET_VERSION}`;
-const COLLECTION_MEDIA_URL = `https://kalenel.nl/shop/collection-media-v831.js?v=${ASSET_VERSION}`;
+const COLLECTION_MEDIA_URL = `https://kalenel.nl/shop/collection-media-v831.js?v=${COLLECTION_MEDIA_VERSION}`;
 const PREVIEWS_URL = `https://kalenel.nl/shop/product-preview-overrides.js?v=${ASSET_VERSION}`;
 const GALLERY_URL = `https://kalenel.nl/shop/gallery-fixes-v832.js?v=${ASSET_VERSION}`;
 const TRANSPARENCY_URL = `https://kalenel.nl/shop/mockup-transparency-v832.js?v=${ASSET_VERSION}`;
@@ -174,7 +175,7 @@ assert.match(html, /storefront-polish-v832\.css\?v=20260916-storefront-v837-r1/,
 assert.match(html, /product-preview-overrides\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load artwork-first compatibility layer');
 assert.match(html, /gallery-fixes-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load exact carousel repair');
 assert.match(html, /mockup-transparency-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load safe background transparency processor');
-assert.match(html, /collection-media-v831\.js\?v=20260916-storefront-v837-r1/, 'Live shop must retain collection media normalization');
+assert.match(html, /collection-media-v831\.js\?v=20260921-storefront-v857-r1/, 'Live shop must retain current collection media normalization');
 assert.match(html, /image-lightbox-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load full-view lightbox');
 assert.doesNotMatch(html, /direct-commerce-v828\.js|mockup-background-v830\.js|image-lightbox-v830\.js/, 'old active media/commerce handlers must not remain in the live page');
 assert.doesNotMatch(html, />[^<]*(?:Printify|factor(?:y|ies))[^<]*</i, 'Public shop shell must not expose supplier/factory wording');
