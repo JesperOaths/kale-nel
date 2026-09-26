@@ -580,11 +580,15 @@ async function buildCatalog(supabase: any) {
 
   if (!cleanProducts.length) throw new Error("no_sellable_products_in_printify_account");
 
+  const singleShop = account.shops.length === 1 ? account.shops[0] : null;
   return {
     generatedAt: new Date().toISOString(),
     source: "printify-live-v851",
     catalogSelection: "all-readable-printify-shops-v851",
     fx: fxAuditSnapshot(fx),
+    // Compatibility projection for checkout/admin consumers that historically
+    // read payload.shop.id. Multi-shop catalogs still rely on per-product shopId.
+    shop: singleShop,
     shops: account.shops,
     products: cleanProducts,
   };
