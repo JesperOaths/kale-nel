@@ -129,7 +129,7 @@ h3 { font-size: 1.08rem; }
   display: block;
   aspect-ratio: 8 / 7;
   overflow: hidden;
-  background: white;
+  background: transparent;
   border-bottom: 1px solid var(--line);
 }
 .collection-image img {
@@ -142,7 +142,7 @@ h3 { font-size: 1.08rem; }
 .compact-shape-card .collection-merch-image {
   object-fit: contain;
   object-position: center;
-  background: #fff;
+  background: transparent;
 }
 .collection-copy {
   display: grid;
@@ -204,7 +204,7 @@ h3 { font-size: 1.08rem; }
   object-fit: cover;
   object-position: center bottom;
   border-radius: 9px;
-  background: #fff;
+  background: transparent;
 }
 .compact-shape-card span {
   display: block;
@@ -330,7 +330,7 @@ h3 { font-size: 1.08rem; }
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   padding: 14px;
-  background: #ded4c4;
+  background: transparent;
   scrollbar-width: thin;
 }
 .mockup {
@@ -444,7 +444,7 @@ h3 { font-size: 1.08rem; }
 .cart-items { margin: 22px 0; }
 .empty-cart, .cart-summary p { color: var(--muted); }
 .cart-line { display: grid; grid-template-columns: 76px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
-.cart-line img { width: 76px; height: 76px; object-fit: contain; border-radius: 14px; background: #d8cbb8; border: 1px solid var(--line); }
+.cart-line img { width: 76px; height: 76px; object-fit: contain; border-radius: 14px; background: transparent; border: 1px solid var(--line); }
 .cart-line strong, .cart-line span { display: block; }
 .cart-line span { color: var(--muted); font-size: 0.92rem; }
 .cart-line button { margin-top: 8px; border: 0; background: transparent; color: var(--green); font-weight: 900; padding: 0; cursor: pointer; }
