@@ -165,9 +165,9 @@ const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
 assert.match(html, /version-watermark[^>]*>v871</, 'Live shop must expose v871 watermark');
-assert.match(html, /direct-commerce-v832\\.js\\?v=20260926-storefront-v869-r3/, 'Live shop must retain the direct commerce bridge');
-assert.match(html, /store\\.js\\?v=20260926-storefront-v869-r2/, 'Live shop must load the current default-on animal-filter storefront runtime');
-assert.match(html, /styles\\.css\\?v=20260926-storefront-v869-r5/, 'Live shop must load the staggered incomplete-row layout stylesheet');
+assert.match(html, /direct-commerce-v832\.js\\?v=20260926-storefront-v869-r3/, 'Live shop must retain the direct commerce bridge');
+assert.match(html, /store\.js\\?v=20260926-storefront-v869-r2/, 'Live shop must load the current default-on animal-filter storefront runtime');
+assert.match(html, /styles\.css\\?v=20260926-storefront-v869-r5/, 'Live shop must load the staggered incomplete-row layout stylesheet');
 assert.match(html, /data-animal-filter checked/, 'Live shop must show animal designs by default');
 assert.match(html, /data-animal-section/, 'Live shop must keep animal designs in a separate trailing section');
 const liveRegularGridPos = html.indexOf('data-products');
@@ -184,10 +184,10 @@ assert.match(html, /delivery-estimate-v833\.js\?v=20260926-delivery-v871-r1/, 'L
 assert.match(html, /manual-checkout-v825\.js\?v=20260926-checkout-v871-r1/, 'Live shop must retain hardened checkout UI shell');
 assert.match(html, /customer-facing-checkout-v837\.js\?v=20260916-storefront-v837-r2/, 'Live shop must load v837 customer-facing checkout totals/copy layer');
 assert.match(html, /storefront-polish-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load artwork-primary storefront policy');
-assert.match(html, /storefront-polish-v832\\.css\\?v=20260926-storefront-v869-r2/, 'Live shop must load transparent media CSS');
+assert.match(html, /storefront-polish-v832\.css\\?v=20260926-storefront-v869-r2/, 'Live shop must load transparent media CSS');
 assert.match(html, /product-preview-overrides\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load artwork-first compatibility layer');
-assert.match(html, /gallery-fixes-v832\\.js\\?v=20260926-storefront-v869-r2/, 'Live shop must load exact carousel repair');
-assert.match(html, /mockup-transparency-v832\\.js\\?v=20260926-storefront-v869-r3/, 'Live shop must load safe background transparency processor');
+assert.match(html, /gallery-fixes-v832\.js\\?v=20260926-storefront-v869-r2/, 'Live shop must load exact carousel repair');
+assert.match(html, /mockup-transparency-v832\.js\\?v=20260926-storefront-v869-r3/, 'Live shop must load safe background transparency processor');
 assert.match(html, /collection-media-v831\.js\?v=20260921-storefront-v857-r1/, 'Live shop must retain current collection media normalization');
 assert.match(html, /image-lightbox-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load full-view lightbox');
 assert.doesNotMatch(html, /direct-commerce-v828\.js|mockup-background-v830\.js|image-lightbox-v830\.js/, 'old active media/commerce handlers must not remain in the live page');
