@@ -234,6 +234,31 @@
     syncPhoneRequirement(form);
   }
 
+  const checkoutSleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+  async function postCheckoutWithRetry(payload){
+    let lastResponse = null;
+    let lastError = null;
+    for(let attempt=1; attempt<=2; attempt++){
+      try{
+        const response = await fetch(CHECKOUT_ENDPOINT,{
+          method:'POST',
+          mode:'cors',
+          cache:'no-store',
+          headers:apiHeaders(),
+          body:JSON.stringify(payload)
+        });
+        lastResponse = response;
+        if(response.ok || (response.status < 500 && response.status !== 429)) return response;
+      }catch(error){
+        lastError = error;
+      }
+      if(attempt < 2) await checkoutSleep(700);
+    }
+    if(lastResponse) return lastResponse;
+    throw lastError || new Error('checkout_network_error');
+  }
+
   async function submitCheckout(event){
     event.preventDefault();
     if(!reconcileCart()){
@@ -283,13 +308,7 @@
       ...activeAttempt
     };
     try {
-      const response = await fetch(CHECKOUT_ENDPOINT, {
-        method: 'POST',
-        mode: 'cors',
-        cache: 'no-store',
-        headers: apiHeaders(),
-        body: JSON.stringify(payload)
-      });
+      const response = await postCheckoutWithRetry(payload);
       const result = await response.json().catch(() => ({}));
       if(!response.ok || !result?.ok){
         const detail = String(result?.detail || result?.error || '');
