@@ -8,6 +8,7 @@ const admin=read('admin.html');
 const worker=read('cloudflare/workers/admin-gate/src/worker.js');
 const migration=read('supabase/migrations/20260920161000_admin_trusted_device_ux_v844.sql');
 const analytics=read('admin_shop_analytics.html');
+const orders=read('admin_shop_orders.html');
 
 assert.match(migration,/interval '12 hours'/);
 assert.match(migration,/interval '45 days'/);
@@ -24,6 +25,13 @@ assert.match(sync,/resumed_from_trusted_device/);
 assert.match(sync,/data\?\.ok !== true/);
 assert.match(sync,/45 \* 24 \* 60 \* 60 \* 1000/);
 assert.doesNotMatch(sync,/navigator\.userAgent \|\| ''[\s\S]{0,160}resolvedOptions\(\)\.timeZone/, 'stable device fingerprint must not bind to a browser version string');
+assert.match(sync,/function resolveTrustedUntil\(/, 'session sync must preserve a stable trusted-device deadline');
+assert.match(sync,/if \(changed\) emitUpdate\(\)/, 'session update event must fire only when the stored bundle actually changes');
+assert.match(sync,/if \(hadBundle\) emitUpdate\(\)/, 'clearing an already-empty bundle must not emit a refresh event');
+assert.match(orders,/admin-session-sync\.js\?v872/, 'shop orders must force-load the loop-safe session sync');
+assert.match(orders,/let loadPromise=null/, 'shop orders must deduplicate concurrent list reloads');
+assert.match(orders,/let actionInFlight=false/, 'shop orders must suppress session-triggered reloads while an admin action is running');
+assert.match(orders,/Payment for \$\{row\.payment_reference\} verified/, 'payment verification must show explicit success feedback');
 
 assert.match(admin,/rememberDeviceInput/);
 assert.match(admin,/45 dagen onthouden/);
