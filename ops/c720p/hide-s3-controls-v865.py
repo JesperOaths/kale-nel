@@ -1,58 +1,54 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import datetime,shutil,subprocess
+import datetime,os,re,shutil,subprocess
 
-roots=[
- Path("/opt/homeassistant/config/www/c720p-scenes-compact.html"),
- Path("/opt/homeassistant/config/www/c720p-scenes-compact-v6.html"),
- Path("/opt/homeassistant/config/www/c720p-scenes-compact-v7.html"),
- Path("/opt/homeassistant/config/www/c720p-scenes-compact-v7b.html"),
- Path("/opt/homeassistant/config/www/c720p-scenes-s3-v1.html"),
- Path("/opt/homeassistant/config/www/c720p-release/home-scenes-s3-v1.html"),
-]
-stamp=datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-changed=[]
-
-# Hide only controls/cards that are actually about the retired S3 camera.
-# Do not hide generic "live" controls because those are also used by S9+.
-injection=r'''<!-- C720P_V865A_HIDE_S3_ONLY -->
+ROOT=Path("/opt/homeassistant/config/www")
+PAT=re.compile(r"(S3 camera|camera\\.s3|s3-clips|s3-saved|/security/s3)",re.I)
+MARKER="C720P_V865B_HIDE_S3_ONLY"
+INJECTION=r'''<!-- C720P_V865B_HIDE_S3_ONLY -->
 <style>
-[data-camera="s3"],[data-device="s3"],[data-source="s3"],
-a[href*="/security/s3"],a[href*="s3-clips"],a[href*="s3-saved"],
+iframe[src*="s3" i],a[href*="/security/s3" i],a[href*="s3-clips" i],a[href*="s3-saved" i],
+[data-camera="s3" i],[data-device="s3" i],[data-source="s3" i],
 #s3Card,.s3-card,.camera-s3{display:none!important}
 </style>
 <script>
 document.addEventListener("DOMContentLoaded",()=>{
-  const looksS3=(el)=>{
-    const blob=[
-      el.id,el.className,el.getAttribute?.("href"),el.getAttribute?.("onclick"),
-      el.getAttribute?.("data-action"),el.getAttribute?.("data-camera"),
-      el.getAttribute?.("data-device"),el.getAttribute?.("data-source"),
-      el.textContent
-    ].filter(Boolean).join(" ").toLowerCase();
-    return /(^|[^a-z0-9])s3([^a-z0-9]|$)|camera\.s3|\/security\/s3|s3-clips|s3-saved/.test(blob);
-  };
-  for(const el of document.querySelectorAll("a,button,.card,.tile,.scene,.camera-card,[role=button]")){
-    if(looksS3(el)) el.style.setProperty("display","none","important");
-  }
+ const rx=/(^|[^a-z0-9])s3([^a-z0-9]|$)|camera\.s3|\/security\/s3|s3-clips|s3-saved/i;
+ for(const el of document.querySelectorAll('a,button,iframe,.card,.tile,.scene,.camera-card,[role="button"],details,summary')){
+   const blob=[el.id,el.className,el.getAttribute?.('href'),el.getAttribute?.('src'),el.getAttribute?.('onclick'),el.getAttribute?.('data-action'),el.getAttribute?.('data-camera'),el.getAttribute?.('data-device'),el.getAttribute?.('data-source'),el.innerText].filter(Boolean).join(' ');
+   if(rx.test(blob))el.style.setProperty('display','none','important');
+ }
 });
 </script>'''
 
-for p in roots:
-    if not p.is_file():continue
-    s=p.read_text(errors="ignore")
-    if "C720P_V865A_HIDE_S3_ONLY" in s:continue
-    # Remove the earlier over-broad patch if present.
-    s=s.replace('/* C720P_V865_HIDE_S3_CONTROL */<style>button[data-action="live"],button[data-action="live-camera"],.c720p-live-v4b{display:none!important}</style>',"")
-    if "</head>" in s:s=s.replace("</head>",injection+"</head>",1)
-    else:s=injection+s
-    shutil.copy2(p,p.with_name(p.name+".before-v865a-hide-s3-"+stamp))
-    tmp=p.with_suffix(p.suffix+".tmp");tmp.write_text(s);tmp.replace(p)
+stamp=datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+changed=[]
+skipped=[]
+backup_root=Path("/home/jespern/c720p-home-hub/backups")
+backup_root.mkdir(parents=True,exist_ok=True)
+
+for p in ROOT.rglob("*.html"):
+    try:s=p.read_text(errors="ignore")
+    except Exception:continue
+    if not PAT.search(s) or MARKER in s:continue
+    if "c720p-release" in p.parts or not os.access(p,os.W_OK):
+        skipped.append(str(p));continue
+    try:
+        shutil.copy2(p,p.with_name(p.name+".before-v865b-hide-s3-"+stamp))
+    except Exception:
+        (backup_root/(p.name+".before-v865b-hide-s3-"+stamp)).write_text(s)
+    if "</head>" in s:s=s.replace("</head>",INJECTION+"</head>",1)
+    else:s=INJECTION+s
+    tmp=p.with_suffix(p.suffix+".v865b.tmp")
+    tmp.write_text(s)
+    tmp.replace(p)
     changed.append(str(p))
 
-# S3 is intentionally parked for now. Stop only S3-specific recurring work;
-# leave S9+, Home Assistant and the generic camera-return infrastructure alone.
+# The S3 is intentionally parked. Disable only recurring work dedicated to it.
 for unit in ("c720p-s3-profile-guard.timer","c720p-s3-battery-camera-gate.timer"):
     subprocess.run(["systemctl","--user","disable","--now",unit],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 
-print("\n".join(changed))
+print("changed",len(changed))
+for x in changed:print(x)
+print("skipped",len(skipped))
+for x in skipped:print(x)
