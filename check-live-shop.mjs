@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 
 const SHOP_URL = 'https://kalenel.nl/shop/';
 const ASSET_VERSION = '20260916-storefront-v837-r1';
+const SHOP_V869_VERSION = '20260926-storefront-v869-r1';
 const COLLECTION_MEDIA_VERSION = '20260921-storefront-v857-r1';
-const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v832.js?v=${ASSET_VERSION}`;
+const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v832.js?v=${SHOP_V869_VERSION}`;
 const DELIVERY_UI_URL = 'https://kalenel.nl/shop/delivery-estimate-v833.js?v=20260916-delivery-v840-r1';
 const MANUAL_CHECKOUT_UI_URL = 'https://kalenel.nl/shop/manual-checkout-v825.js?v=20260921-checkout-v850-r1';
 const SHOP_ANALYTICS_URL = 'https://kalenel.nl/shop/shop-analytics-v841.js?v=20260920-shop-analytics-v841-r1';
@@ -14,11 +15,12 @@ const POLISH_CSS_URL = `https://kalenel.nl/shop/storefront-polish-v832.css?v=${A
 const COLLECTION_MEDIA_URL = `https://kalenel.nl/shop/collection-media-v831.js?v=${COLLECTION_MEDIA_VERSION}`;
 const PREVIEWS_URL = `https://kalenel.nl/shop/product-preview-overrides.js?v=${ASSET_VERSION}`;
 const GALLERY_URL = `https://kalenel.nl/shop/gallery-fixes-v832.js?v=${ASSET_VERSION}`;
-const TRANSPARENCY_URL = `https://kalenel.nl/shop/mockup-transparency-v832.js?v=${ASSET_VERSION}`;
+const TRANSPARENCY_URL = `https://kalenel.nl/shop/mockup-transparency-v832.js?v=${SHOP_V869_VERSION}`;
 const LIGHTBOX_URL = `https://kalenel.nl/shop/image-lightbox-v832.js?v=${ASSET_VERSION}`;
 const CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828';
 const CATALOG_HEALTH_URL = `${CATALOG_URL}?health=1`;
 const CHECKOUT_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-manual-checkout-v832';
+const DELIVERY_PREVIEW_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-delivery-preview-v833';
 const CONNECTION_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-production-connection-v828';
 const STATUS_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-order-status-v825?health=1';
 const ADMIN_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-admin-orders-v825';
@@ -152,15 +154,15 @@ async function textAsset(url, label) {
 }
 
 
-// Deliberately read-only: never POST checkout, delivery preview, verify payment,
-// submit an order, mutate prices, or simulate a webhook. Delivery preview behavior
-// is covered separately by its route-level smoke tests; this check verifies wiring.
+// Production-safe validation is allowed only through checkout's validation_only
+// mode. It exercises fresh Printify pricing/shipping without creating an order,
+// sending email, requesting payment, or submitting anything to production.
 const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(`${SHOP_URL}?v=${ASSET_VERSION}`);
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
-assert.match(html, /version-watermark[^>]*>v868</, 'Live shop must expose v868 watermark');
-assert.match(html, /direct-commerce-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must retain the direct commerce bridge');
-assert.match(html, /store\.js\?v=20260926-storefront-v868-r1/, 'Live shop must load the current default-on animal-filter storefront runtime');
+assert.match(html, /version-watermark[^>]*>v869</, 'Live shop must expose v868 watermark');
+assert.match(html, /direct-commerce-v832\.js\?v=20260926-storefront-v869-r1/, 'Live shop must retain the direct commerce bridge');
+assert.match(html, /store\.js\?v=20260926-storefront-v869-r1/, 'Live shop must load the current default-on animal-filter storefront runtime');
 assert.match(html, /data-animal-filter checked/, 'Live shop must show animal designs by default');
 assert.match(html, /data-animal-section/, 'Live shop must keep animal designs in a separate trailing section');
 assert.match(html, /data-open-size-guide/, 'Live shop must expose the cart-adjacent size chart control');
@@ -176,12 +178,12 @@ assert.match(html, /storefront-polish-v832\.js\?v=20260916-storefront-v837-r1/, 
 assert.match(html, /storefront-polish-v832\.css\?v=20260916-storefront-v837-r1/, 'Live shop must load transparent media CSS');
 assert.match(html, /product-preview-overrides\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load artwork-first compatibility layer');
 assert.match(html, /gallery-fixes-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load exact carousel repair');
-assert.match(html, /mockup-transparency-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load safe background transparency processor');
+assert.match(html, /mockup-transparency-v832\.js\?v=20260926-storefront-v869-r1/, 'Live shop must load safe background transparency processor');
 assert.match(html, /collection-media-v831\.js\?v=20260921-storefront-v857-r1/, 'Live shop must retain current collection media normalization');
 assert.match(html, /image-lightbox-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load full-view lightbox');
 assert.doesNotMatch(html, /direct-commerce-v828\.js|mockup-background-v830\.js|image-lightbox-v830\.js/, 'old active media/commerce handlers must not remain in the live page');
 assert.doesNotMatch(html, />[^<]*(?:Printify|factor(?:y|ies))[^<]*</i, 'Public shop shell must not expose supplier/factory wording');
-console.log(`shop page: HTTP 200, v857 present, ${pageElapsed}ms`);
+console.log(`shop page: HTTP 200, v869 present, ${pageElapsed}ms`);
 
 const toteUi = await textAsset('https://kalenel.nl/shop/tote-handle-color-v839.js?v=20260916-storefront-v839-r1', 'tote-handle-color-v839.js');
 assert.match(toteUi, /Handle color/, 'tote selector must be Handle color');
@@ -195,7 +197,7 @@ assert.match(bridge, /shop-catalog-v828/, 'bridge must use direct catalog endpoi
 assert.match(bridge, /shop-manual-checkout-v832/, 'bridge must route checkout to v832 authority');
 assert.match(bridge, /delivery-estimate-v833\.js/, 'bridge must load the v833 delivery estimate UI');
 assert.match(bridge, /shop-delivery-preview-v833/, 'bridge must declare the v833 delivery preview authority');
-assert.match(bridge, /pricing:'production-cost-plus-5-rounded-up'/, 'bridge must declare cost+€5 pricing');
+assert.match(bridge, /pricing:'production-cost-plus-size-margin-rounded-up'/, 'bridge must declare size-aware production-cost pricing');
 assert.match(bridge, /artworkFirstGallery:true/, 'bridge must declare artwork-first gallery');
 assert.match(bridge, /usesShopifyCatalogApi:false/, 'bridge must declare Shopify catalog API disabled');
 assert.match(bridge, /usesShopifyPriceApi:false/, 'bridge must declare Shopify price API disabled');
@@ -255,6 +257,10 @@ assert.match(transparency, /preservesWhiteGarments:true/, 'white garments must b
 assert.match(transparency, /tagViewIncluded:true/, 'tag image must be included in transparency processing');
 assert.match(transparency, /safeFallbackToOriginal:true/, 'unsafe transparency output must fall back to the original image');
 assert.match(transparency, /noOneSidedSpanBridge:true/, 'foreground span bridging must not preserve bars beyond the garment');
+assert.match(transparency, /function cropBounds/, 'mockup transparency must crop empty transparent whitespace');
+assert.match(transparency, /cropsTransparentWhitespace:true/, 'mockup policy must declare transparent-whitespace cropping');
+assert.match(transparency, /eager:true/, 'mockups must be processed immediately rather than on scroll');
+assert.doesNotMatch(transparency, /new IntersectionObserver/, 'mockup cleanup must not wait for viewport visibility');
 
 const collectionMedia = await textAsset(COLLECTION_MEDIA_URL, 'collection-media-v831.js');
 assert.match(collectionMedia, /preservesWhiteGarment:\s*true/, 'collection media must preserve white shirt fill');
@@ -281,6 +287,90 @@ for (const product of dispuutShirts) {
 const hydrangea = liveCatalog.products.find(product => /^hydrangea$/i.test(String(product?.name || '').trim()));
 assert.ok(hydrangea, 'Hydrangea product must exist');
 console.log(`Hydrangea live price: €${hydrangea.price}`);
+
+const availableVariant = (product, wantedSize) => (Array.isArray(product?.variants) ? product.variants : [])
+  .find(variant => variant?.is_available !== false && variant?.is_enabled !== false && String(variant?.size || '').trim().toUpperCase() === wantedSize);
+const standardVariant = availableVariant(hydrangea, 'M');
+assert.ok(standardVariant, 'Hydrangea must expose an available M variant for checkout smoke tests');
+const largeProduct = liveCatalog.products.find(product =>
+  String(product?.id || '') !== String(hydrangea?.id || '') &&
+  !/\btote\b/i.test(String(product?.name || product?.baseLabel || '')) &&
+  !!availableVariant(product, '3XL')
+);
+assert.ok(largeProduct, 'catalog must expose an available 3XL clothing variant for large-size checkout validation');
+const largeVariant = availableVariant(largeProduct, '3XL');
+
+const smokeCustomer = {
+  name: 'Kalenel Checkout Test',
+  email: 'checkout-test@example.invalid',
+  phone: '',
+  address1: 'Museumstraat 1',
+  address2: '',
+  zip: '1071 XX',
+  city: 'Amsterdam',
+  region: 'Noord-Holland',
+  country: 'NL'
+};
+const smokeItems = [
+  {
+    product_id: String(hydrangea.id),
+    variant_id: String(standardVariant.id),
+    name: String(hydrangea.name),
+    size: String(standardVariant.size || 'M'),
+    sku: String(standardVariant.sku || ''),
+    qty: 1
+  },
+  {
+    product_id: String(largeProduct.id),
+    variant_id: String(largeVariant.id),
+    name: String(largeProduct.name),
+    size: String(largeVariant.size || '3XL'),
+    sku: String(largeVariant.sku || ''),
+    qty: 1
+  }
+];
+
+async function postValidation(url, payload, label) {
+  let last = '';
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const { response, elapsed } = await fetchWithTimeout(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Origin: 'https://kalenel.nl' },
+        body: JSON.stringify(payload)
+      });
+      const body = await response.json().catch(() => ({}));
+      if (response.ok && body?.ok) {
+        console.log(`${label}: HTTP ${response.status}, ${elapsed}ms`);
+        return body;
+      }
+      last = `HTTP ${response.status}: ${JSON.stringify(body).slice(0, 400)}`;
+    } catch (error) {
+      last = error instanceof Error ? error.message : String(error);
+    }
+    if (attempt < 2) await sleep(1200);
+  }
+  assert.fail(`${label} failed: ${last}`);
+}
+
+const deliverySmoke = await postValidation(
+  DELIVERY_PREVIEW_URL,
+  { customer: smokeCustomer, items: smokeItems },
+  'shop-delivery-preview-v833 production smoke'
+);
+assert.ok(Number(deliverySmoke.shipping_cents) > 0, 'delivery smoke must return a positive shipping quote');
+assert.ok(String(deliverySmoke.shipping_method || '').trim(), 'delivery smoke must return a shipping method');
+
+const checkoutSmoke = await postValidation(
+  CHECKOUT_URL,
+  { customer: smokeCustomer, items: smokeItems, validation_only: true },
+  'shop-manual-checkout-v832 validation-only smoke'
+);
+assert.equal(checkoutSmoke.validation_only, true, 'checkout smoke must remain non-ordering');
+const expectedSmokeSubtotal = Math.round((Number(standardVariant.price) + Number(largeVariant.price)) * 100);
+assert.equal(Number(checkoutSmoke.subtotal_cents), expectedSmokeSubtotal, 'checkout authority must match live catalog pricing for M + 3XL');
+assert.ok(Number(checkoutSmoke.shipping_cents) > 0, 'checkout smoke must obtain shipping');
+assert.equal(Number(checkoutSmoke.total_cents), Number(checkoutSmoke.subtotal_cents) + Number(checkoutSmoke.shipping_cents), 'checkout total must equal products plus shipping');
 
 const catalogHealth = await health(CATALOG_HEALTH_URL, 'shop-catalog-v828', 'bruis-direct-catalog-v838');
 assert.equal(catalogHealth?.usesShopifyApi, false, 'catalog health must report no Shopify API use');
