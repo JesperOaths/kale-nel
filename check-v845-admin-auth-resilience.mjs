@@ -18,6 +18,11 @@ for(const source of [admin,adminJs,claims,perfume]){
 }
 assert.match(edge,/SUPABASE_SERVICE_ROLE_KEY/);
 assert.match(edge,/sb\.rpc\("admin_login"/);
+assert.match(edge,/loginRpcWithTransientRetry/);
+assert.match(edge,/attempt<=2/);
+assert.match(edge,/authentication_service_unavailable",retryable:true/);
+assert.match(admin,/beheerdatabase is tijdelijk overbelast/);
+assert.match(admin,/loginButton\.disabled=true/);
 assert.match(edge,/mode:"admin-auth-v845"/);
 assert.match(edge,/too_many_attempts/);
 assert.match(edge,/invalid_credentials/);
