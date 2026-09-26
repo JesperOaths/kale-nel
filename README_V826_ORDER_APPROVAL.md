@@ -10,7 +10,9 @@ Payment verification requires entering the amount actually received. The server 
 
 Checkout always asks Printify for the available shipping methods and selects the cheapest valid quote. It also compares production plus shipping cost across the catalog product and any explicitly approved regional routes. Customer pricing remains based on the selected catalog variant's current Printify production cost plus exactly EUR 5, rounded up to a whole euro; a cheaper internal route never changes the displayed or charged product price.
 
-Regional routing is disabled by default. Configure it only as the server-side Edge Function secret `PRINTIFY_FULFILLMENT_MAPPINGS`; never put this JSON or the Printify token in browser assets. The schema is:
+Regional routing now uses only rows in the server-side `shop_fulfillment_mappings` table with `approved=true` and a matching destination country. The browser never receives these routes or the Printify token. Checkout and delivery preview re-fetch both source and target products from Printify and revalidate the exact variant, blueprint, provider, size, color and artwork before a mapped route can be quoted. A deleted/stale regional target is ignored and the canonical product remains available as the safe fallback.
+
+The logical mapping schema remains:
 
 ```json
 {
@@ -39,4 +41,4 @@ Regional routing is disabled by default. Configure it only as the server-side Ed
 
 Each entry is exact and variant-specific. At checkout the server re-fetches both products and accepts a mapped route only when country, product, variant, blueprint, provider, size, color, availability, and the set of artwork file IDs by print position still match the approval. Otherwise it safely ignores that mapping and retains the original catalog route. The chosen source and fulfillment IDs plus the approval ID are recorded in the pending order line item for audit. Checkout still does not create or release a Printify order.
 
-No database migration is required. Deployment requires setting the optional secret only after a mapping has been reviewed, then deploying `shop-manual-checkout-v832`. With the secret absent, current products continue to work and only benefit from cheapest-valid shipping selection.
+Approved mappings are maintained in `shop_fulfillment_mappings`. Changes to an approved target should be persisted by migration. Both `shop-manual-checkout-v832` and `shop-delivery-preview-v833` must use the same mapping table and validation logic so the amount shown before checkout is the amount checkout re-verifies.
