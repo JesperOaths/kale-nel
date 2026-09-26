@@ -53,7 +53,7 @@
   </section>
 
   <section class="panel">
-    <div class="panel-head"><div><h2>Alerts</h2><p class="muted">Automatically generated for stuck orders, stale telemetry, cost/margin problems and catalog drift.</p></div></div>
+    <div class="panel-head"><div><h2>Alerts</h2><p class="muted">Automatically generated for stuck orders, telemetry self-test failures, cost/margin problems and catalog drift.</p></div></div>
     <div class="table-wrap"><table><thead><tr><th>When</th><th>Severity</th><th>Type</th><th>Alert</th><th>State</th><th></th></tr></thead><tbody id="alertsRows"></tbody></table></div>
   </section>
 
@@ -67,7 +67,6 @@
         <label class="check"><input id="weeklyBrief" type="checkbox"> Weekly brief</label>
         <div class="field"><label>Paid → production alert (hours)</label><input id="paidHours" type="number" min="1" max="168"></div>
         <div class="field"><label>Production stuck (days)</label><input id="prodDays" type="number" min="1" max="60"></div>
-        <div class="field"><label>Telemetry stale (hours)</label><input id="telemetryHours" type="number" min="1" max="168"></div>
         <div class="field"><label>Cost-change alert (€)</label><input id="costChange" type="number" min=".01" step=".01"></div>
         <div class="field"><label>Low-margin threshold (%)</label><input id="lowMargin" type="number" min="0" max="100" step=".1"></div>
         <div><button type="submit">Save automation settings</button></div>
@@ -179,7 +178,7 @@
     }
     $("alertsRows").innerHTML=a.length?a.map(x=>"<tr><td>"+dt(x.created_at)+"</td><td><span class='pill "+esc(x.severity)+"'>"+esc(x.severity)+"</span></td><td>"+esc(x.kind)+"</td><td><strong>"+esc(x.title)+"</strong><br>"+esc(x.message)+marginDetails(x)+"</td><td>"+(x.resolved_at?"resolved":x.acknowledged_at?"acknowledged":"open")+"</td><td>"+(!x.acknowledged_at&&!x.resolved_at?"<button class='alt' data-ack='"+x.id+"'>Acknowledge</button>":"")+"</td></tr>").join(""):"<tr><td colspan='6'>No alerts.</td></tr>";
 
-    const s=state.settings||{};$("ownerEmail").value=s.owner_email||"";$("emailAlerts").checked=s.email_alerts_enabled===true;$("dailyBrief").checked=s.daily_brief_enabled!==false;$("weeklyBrief").checked=s.weekly_brief_enabled!==false;$("paidHours").value=s.paid_not_submitted_hours||2;$("prodDays").value=s.production_stuck_days||7;$("telemetryHours").value=s.telemetry_stale_hours||12;$("costChange").value=((s.cost_change_alert_cents||100)/100).toFixed(2);$("lowMargin").value=((s.low_margin_bps||2000)/100).toFixed(1);
+    const s=state.settings||{};$("ownerEmail").value=s.owner_email||"";$("emailAlerts").checked=s.email_alerts_enabled===true;$("dailyBrief").checked=s.daily_brief_enabled!==false;$("weeklyBrief").checked=s.weekly_brief_enabled!==false;$("paidHours").value=s.paid_not_submitted_hours||2;$("prodDays").value=s.production_stuck_days||7;$("costChange").value=((s.cost_change_alert_cents||100)/100).toFixed(2);$("lowMargin").value=((s.low_margin_bps||2000)/100).toFixed(1);
 
     $("feeRows").innerHTML=(state.fee_rules||[]).map(x=>"<tr data-fee='"+esc(x.provider)+"'><td><strong>"+esc(x.provider)+"</strong></td><td><input data-fee-enabled type='checkbox' "+(x.enabled?"checked":"")+"></td><td><input data-fee-rate type='number' min='0' max='100' step='.01' value='"+(Number(x.rate_bps||0)/100)+"'></td><td><input data-fee-fixed type='number' min='0' step='.01' value='"+(Number(x.fixed_fee_cents||0)/100).toFixed(2)+"'></td><td><input data-fee-note value='"+esc(x.note||"")+"'></td><td><button data-save-fee>Save</button></td></tr>").join("");
 
@@ -197,7 +196,7 @@
   async function mutate(action,payload,msg){status("Saving…");await api(action,payload);await load();status(msg,"ok")}
 
   $("runNow").onclick=async()=>{const b=$("runNow");b.disabled=true;const steps=[["run_costs","Refreshing costs…"],["run_catalog","Checking catalog drift…"],["run_orders","Checking orders and telemetry…"],["run_backup","Creating backup…"],["run_daily_brief","Generating daily brief…"],["run_weekly_brief","Generating weekly brief…"]];try{for(let i=0;i<steps.length;i++){status(steps[i][1]+" ("+(i+1)+"/"+steps.length+")");await api(steps[i][0],steps[i][0]==="run_backup"?{force:true}:{})}await load();status("All operational checks completed.","ok")}catch(e){status((e?.message||"Operational check failed.")+" Completed steps remain saved; you can run again safely.","warn")}finally{b.disabled=false}};
-  $("settingsForm").onsubmit=async e=>{e.preventDefault();try{await mutate("settings_save",{owner_email:$("ownerEmail").value,email_alerts_enabled:$("emailAlerts").checked,daily_brief_enabled:$("dailyBrief").checked,weekly_brief_enabled:$("weeklyBrief").checked,paid_not_submitted_hours:Number($("paidHours").value),production_stuck_days:Number($("prodDays").value),telemetry_stale_hours:Number($("telemetryHours").value),cost_change_alert_cents:Math.round(Number($("costChange").value)*100),low_margin_bps:Math.round(Number($("lowMargin").value)*100)},"Automation settings saved.")}catch(e){status(e.message,"warn")}};
+  $("settingsForm").onsubmit=async e=>{e.preventDefault();try{await mutate("settings_save",{owner_email:$("ownerEmail").value,email_alerts_enabled:$("emailAlerts").checked,daily_brief_enabled:$("dailyBrief").checked,weekly_brief_enabled:$("weeklyBrief").checked,paid_not_submitted_hours:Number($("paidHours").value),production_stuck_days:Number($("prodDays").value),cost_change_alert_cents:Math.round(Number($("costChange").value)*100),low_margin_bps:Math.round(Number($("lowMargin").value)*100)},"Automation settings saved.")}catch(e){status(e.message,"warn")}};
   $("taxForm").onsubmit=async e=>{e.preventDefault();try{await mutate("tax_settings_save",{invoicing_enabled:$("invoiceEnabled").checked,tax_calculation_enabled:$("taxCalcEnabled").checked,invoice_prefix:$("invoicePrefix").value,default_vat_rate_bps:$("vatRate").value===""?null:Math.round(Number($("vatRate").value)*100),seller_name:$("sellerName").value,seller_address:$("sellerAddress").value,seller_postal_city:$("sellerPostalCity").value,seller_country:$("sellerCountry").value,vat_number:$("vatNumber").value,kvk_number:$("kvkNumber").value,invoice_note:$("invoiceNote").value},"Invoice settings saved.")}catch(e){status(e.message,"warn")}};
 
   document.addEventListener("click",async e=>{
