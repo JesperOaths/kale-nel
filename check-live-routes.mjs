@@ -18,6 +18,8 @@ const publicRoutes = [
   '/drinks_history.html', '/drinks_speed.html', '/despimarkt.html', '/beurs.html', '/rad.html', '/profiles.html',
   '/my_profile.html', '/login.html', '/request.html', '/activate.html', '/familie.html', '/familie/index.html',
   '/familie/login.html', '/familie/scorer.html', '/familie/leaderboard.html',
+  '/oauth/inbox-triage/', '/oauth/inbox-triage/privacy.html', '/oauth/inbox-triage/terms.html',
+  '/oauth/inbox-triage/data-deletion.html', '/oauth/inbox-triage/support.html',
 ];
 
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
@@ -111,6 +113,42 @@ for (const route of publicRoutes) {
     failures.push(`${route} failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
+
+try {
+  const { response, text } = await readText('/oauth/inbox-triage/');
+  if (!response.ok) failures.push(`OAuth app homepage returned HTTP ${response.status}`);
+  requireText(text, '<h1>Inbox Triage Agent</h1>', 'OAuth app homepage identity', failures);
+  requireText(text, 'https://www.googleapis.com/auth/gmail.modify', 'OAuth app homepage scope disclosure', failures);
+  requireText(text, './privacy.html', 'OAuth app homepage privacy link', failures);
+  requireText(text, 'Limited Use', 'OAuth app homepage Limited Use disclosure', failures);
+} catch (error) { failures.push(`OAuth app homepage probe failed: ${error instanceof Error ? error.message : String(error)}`); }
+
+try {
+  const { response, text } = await readText('/oauth/inbox-triage/privacy.html');
+  if (!response.ok) failures.push(`OAuth privacy policy returned HTTP ${response.status}`);
+  requireText(text, 'Privacy Policy', 'OAuth privacy policy title', failures);
+  requireText(text, 'Google Workspace API data is not used to create, train, develop or improve generalized or non-personalized artificial-intelligence or machine-learning models.', 'OAuth privacy AI/ML disclosure', failures);
+  requireText(text, 'Limited Use requirements', 'OAuth privacy Limited Use disclosure', failures);
+  requireText(text, './data-deletion.html', 'OAuth privacy deletion link', failures);
+} catch (error) { failures.push(`OAuth privacy probe failed: ${error instanceof Error ? error.message : String(error)}`); }
+
+try {
+  const { response, text } = await readText('/oauth/inbox-triage/terms.html');
+  if (!response.ok) failures.push(`OAuth terms returned HTTP ${response.status}`);
+  requireText(text, '<h1>Terms of Service</h1>', 'OAuth terms title', failures);
+} catch (error) { failures.push(`OAuth terms probe failed: ${error instanceof Error ? error.message : String(error)}`); }
+
+try {
+  const { response, text } = await readText('/oauth/inbox-triage/data-deletion.html');
+  if (!response.ok) failures.push(`OAuth data deletion page returned HTTP ${response.status}`);
+  requireText(text, 'Data deletion &amp; revocation', 'OAuth deletion page title', failures);
+} catch (error) { failures.push(`OAuth deletion probe failed: ${error instanceof Error ? error.message : String(error)}`); }
+
+try {
+  const { response, text } = await readText('/oauth/inbox-triage/support.html');
+  if (!response.ok) failures.push(`OAuth support page returned HTTP ${response.status}`);
+  requireText(text, '<h1>Support</h1>', 'OAuth support title', failures);
+} catch (error) { failures.push(`OAuth support probe failed: ${error instanceof Error ? error.message : String(error)}`); }
 
 try {
   const { response, text } = await readText('/index.html');
