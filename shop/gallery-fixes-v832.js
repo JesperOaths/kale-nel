@@ -26,7 +26,7 @@
       scroll-snap-type:x mandatory!important;
       scroll-padding:0!important;
       scrollbar-width:none!important;
-      background:#ded6ca!important;
+      background:transparent!important;
     }
     .mockup-rail::-webkit-scrollbar{display:none!important}
     .mockup-rail>.mockup{
