@@ -4,13 +4,20 @@ on:
   push:
     branches:
       - main
+    paths:
+      - '.github/workflows/live-deployment-health.yml'
   workflow_dispatch:
+
+concurrency:
+  group: live-deployment-health-production
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
   live-health:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
