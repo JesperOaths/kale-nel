@@ -145,10 +145,14 @@ assert.equal(consolidated.route_key, 'single-provider', 'equal-cost routes shoul
 
 const checkoutSource = readFileSync(new URL('../supabase/functions/shop-manual-checkout-v832/index.ts', import.meta.url), 'utf8');
 const previewSource = readFileSync(new URL('../supabase/functions/shop-delivery-preview-v833/index.ts', import.meta.url), 'utf8');
-assert.match(checkoutSource, /fulfillment_routing:\s*"printify-native-canonical-products"/);
-assert.match(checkoutSource, /const mappings:\s*any\[\]\s*=\s*\[\]/, 'checkout must keep regional clone mappings inert');
-assert.match(previewSource, /const mappings:\s*any\[\]\s*=\s*\[\]/, 'delivery preview must quote canonical products only');
-assert.doesNotMatch(checkoutSource, /\.from\("shop_fulfillment_mappings"\)/, 'checkout must not read regional clone mappings');
-assert.doesNotMatch(previewSource, /\.from\("shop_fulfillment_mappings"\)/, 'delivery preview must not read regional clone mappings');
+assert.match(checkoutSource, /fulfillment_routing:\s*"validated-approved-regional-plus-canonical"/);
+assert.match(checkoutSource, /\.from\("shop_fulfillment_mappings"\)/, 'checkout must read only server-side approved regional mappings');
+assert.match(previewSource, /\.from\("shop_fulfillment_mappings"\)/, 'delivery preview must evaluate the same approved regional mappings');
+assert.match(checkoutSource, /\.eq\("approved", true\)/, 'checkout regional routes must require explicit approval');
+assert.match(previewSource, /\.eq\("approved", true\)/, 'preview regional routes must require explicit approval');
+assert.match(checkoutSource, /validateMappedCandidate\(/, 'checkout must revalidate mapped artwork and variant identity before quoting');
+assert.match(previewSource, /validateMappedCandidate\(/, 'preview must revalidate mapped artwork and variant identity before quoting');
+assert.match(checkoutSource, /Ignoring unavailable approved regional Printify target/, 'stale regional products must degrade safely to canonical fulfillment');
+assert.match(previewSource, /Ignoring unavailable approved regional Printify target/, 'preview must ignore stale regional products instead of failing checkout');
 
 console.log('Shop fulfillment routing v832 tests passed.');
