@@ -305,10 +305,20 @@ Deno.serve(async (req: Request) => {
     if (resolved.some((row: any) => !row.cached)) throw new Error("One or more selected variants are no longer in the live catalog");
     const shopId = cachedShopId(cache.payload, resolved.map((row: any) => row.cached?.product).filter(Boolean));
 
-    // Keep checkout product identity simple: one customer-visible Printify product is
-    // also the product submitted for fulfillment. Printify's own native order routing
-    // can choose the production location; internal regional clone mappings stay inert.
-    const mappings: any[] = [];
+    // v870: include only explicit, approved, destination-matching regional clones.
+    // Every candidate is re-fetched from Printify and then validated again for
+    // blueprint/provider/variant/artwork equivalence before it can be quoted.
+    const sourceProductIds = [...new Set(resolved.map((row: any) => text(row.cached.product.id)).filter(Boolean))];
+    const { data: mappingRows, error: mappingError } = await sb
+      .from("shop_fulfillment_mappings")
+      .select("approval_id,approved,countries,source_product_id,source_variant_id,source_blueprint_id,source_print_provider_id,target_product_id,target_variant_id,target_blueprint_id,target_print_provider_id,estimated_import_cents_per_unit")
+      .eq("approved", true)
+      .contains("countries", [country])
+      .in("source_product_id", sourceProductIds);
+    if (mappingError) console.warn("Approved regional fulfillment mappings unavailable", mappingError.message);
+    const mappings: any[] = mappingError
+      ? []
+      : parseFulfillmentMappings(JSON.stringify(dbMappingPayload(mappingRows || [])));
     const eligibleMappings = mappings.filter((mapping: any) => mapping.countries.includes(country) && resolved.some((row: any) =>
       mapping.source.product_id === text(row.cached.product.id) && mapping.source.variant_id === Number(row.cached.variant.id)
     ));
