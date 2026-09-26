@@ -93,7 +93,7 @@ assert.match(index, /20260916-storefront-v837-r1/);
 assert.match(index, /shop-analytics-v841\.js\?v=20260920-shop-analytics-v841-r1/);
 assert.match(index, /20260916-delivery-v840-r1/);
 assert.match(index, /20260916-storefront-v837-r2/);
-assert.match(index, /20260921-checkout-v850-r1/);
+assert.match(index, /20260926-checkout-v869-r1/);
 assert.match(index, /storefront-polish-v832\.css/);
 assert.match(index, /storefront-polish-v832\.js/);
 assert.match(index, /product-preview-overrides\.js/);
@@ -379,7 +379,7 @@ assert.match(checkoutEdge, /sends_to_production:\s*false/);
 assert.doesNotMatch(checkoutEdge, /send_to_production\.json|STRIPE_SECRET|stripe\.com/i);
 
 // Buyer UI remains capability-token based and customer-facing.
-assert.match(manualCheckout, /shop-manual-checkout-v825/);
+assert.match(manualCheckout, /shop-manual-checkout-v832/);
 assert.match(manualCheckout, /shop-order-status-v825/);
 assert.match(manualCheckout, /method:\s*'POST'/);
 assert.match(manualCheckout, /confirmation_token/);
