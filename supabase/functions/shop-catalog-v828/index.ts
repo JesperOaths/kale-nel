@@ -434,8 +434,11 @@ function colorFrom(product: any, variant: any) {
 function isToteProduct(product: any) {
   return /\btote\b/i.test(text(product?.title));
 }
-function isPublicVariant(_product: any, variant: any) {
-  return variant?.is_enabled !== false && variant?.is_available !== false;
+function isPublicVariant(product: any, variant: any) {
+  if (variant?.is_enabled === false || variant?.is_available === false) return false;
+  const color = colorFrom(product, variant);
+  if (isToteProduct(product)) return /^(?:black|white)$/i.test(color);
+  return !color || /^white$/i.test(color);
 }
 
 function variantDisplayLabel(product: any, variant: any) {
