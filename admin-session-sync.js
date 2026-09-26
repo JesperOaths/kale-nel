@@ -133,13 +133,21 @@
 
   async function rpc(name, payload, options={}){
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const sameOriginProxy = window.location.hostname === 'admin.kalenel.nl';
+    const timeoutId = setTimeout(() => controller.abort(), sameOriginProxy ? 6500 : 15000);
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+      const url = sameOriginProxy ? './api/admin-session' : `${SUPABASE_URL}/rest/v1/rpc/${name}`;
+      const init = sameOriginProxy ? {
+        method:'POST', cache:'no-store',
+        headers:{'Content-Type':'application/json',Accept:'application/json'},
+        body:JSON.stringify({rpc:name,payload:payload || {}}), signal:controller.signal,
+        keepalive: options?.keepalive === true
+      } : {
         method:'POST', mode:'cors', cache:'no-store', headers:headers(),
         body:JSON.stringify(payload || {}), signal:controller.signal,
         keepalive: options?.keepalive === true
-      });
+      };
+      const res = await fetch(url, init);
       return await parse(res);
     } catch (error) {
       if (error?.name === 'AbortError') throw new Error('Admin session check timed out.');
