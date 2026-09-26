@@ -6,7 +6,7 @@ const ASSET_VERSION = '20260916-storefront-v837-r1';
 const SHOP_V869_VERSION = '20260926-storefront-v869-r2';
 const DIRECT_V869_VERSION = '20260926-storefront-v869-r3';
 const TRANSPARENCY_V869_VERSION = '20260926-storefront-v869-r3';
-const STYLES_V869_VERSION = '20260926-storefront-v869-r4';
+const STYLES_V869_VERSION = '20260926-storefront-v869-r5';
 const COLLECTION_MEDIA_VERSION = '20260921-storefront-v857-r1';
 const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v832.js?v=${DIRECT_V869_VERSION}`;
 const DELIVERY_UI_URL = 'https://kalenel.nl/shop/delivery-estimate-v833.js?v=20260926-delivery-v869-r1';
@@ -167,7 +167,7 @@ const html = await pageResponse.text();
 assert.match(html, /version-watermark[^>]*>v869</, 'Live shop must expose v868 watermark');
 assert.match(html, /direct-commerce-v832\.js\?v=20260926-storefront-v869-r3/, 'Live shop must retain the direct commerce bridge');
 assert.match(html, /store\.js\?v=20260926-storefront-v869-r2/, 'Live shop must load the current default-on animal-filter storefront runtime');
-assert.match(html, /styles\.css\?v=20260926-storefront-v869-r4/, 'Live shop must load the exact incomplete-row layout stylesheet');
+assert.match(html, /styles\.css\?v=20260926-storefront-v869-r5/, 'Live shop must load the staggered incomplete-row layout stylesheet');
 assert.match(html, /data-animal-filter checked/, 'Live shop must show animal designs by default');
 assert.match(html, /data-animal-section/, 'Live shop must keep animal designs in a separate trailing section');
 const liveRegularGridPos = html.indexOf('data-products');
@@ -258,9 +258,11 @@ assert.match(polishCss, /\.mockup img[\s\S]*background:\s*transparent !important
 assert.match(polishCss, /--shop-image-backdrop:\s*transparent/, 'active media backdrop must be transparent');
 
 const baseStyles = await textAsset(STYLES_URL, 'styles.css');
-assert.match(baseStyles, /\.product-grid\s*\{[\s\S]*display:\s*grid[\s\S]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/, 'live desktop product sections must use three exact slots');
-assert.match(baseStyles, /last-child:nth-child\(3n \+ 1\)[\s\S]*grid-column:\s*2/, 'live one-item desktop last rows must be centered');
-assert.match(baseStyles, /last-child:nth-child\(3n \+ 2\)[\s\S]*grid-column:\s*3/, 'live two-item desktop last rows must leave the middle slot empty');
+assert.match(baseStyles, /\.product-grid\s*\{[\s\S]*display:\s*grid[\s\S]*grid-template-columns:\s*repeat\(6, minmax\(0, 1fr\)\)/, 'live desktop product sections must use six half-card tracks');
+assert.match(baseStyles, /\.product-grid > \.product-card[\s\S]*grid-column:\s*span 2/, 'live normal product cards must span two half-card tracks');
+assert.match(baseStyles, /last-child:nth-child\(3n \+ 1\)[\s\S]*grid-column:\s*3 \/ span 2/, 'live one-item desktop last rows must be centered');
+assert.match(baseStyles, /nth-last-child\(2\):nth-child\(3n \+ 1\)[\s\S]*grid-column:\s*2 \/ span 2/, 'live first of two remaining products must sit beneath the first preceding gap');
+assert.match(baseStyles, /last-child:nth-child\(3n \+ 2\)[\s\S]*grid-column:\s*4 \/ span 2/, 'live second of two remaining products must sit beneath the second preceding gap');
 assert.match(baseStyles, /\.mockup-rail\s*\{[\s\S]*background:\s*transparent/, 'live product rails must be transparent');
 assert.match(baseStyles, /\.cart-line img[^{]*\{[^}]*background:\s*transparent/, 'live cart product thumbnails must be transparent');
 
