@@ -106,7 +106,8 @@ class H(BaseHTTPRequestHandler):
     def authed(self):
         # The repair page is intended to be opened in Chromium on the C720P itself.
         # Loopback is trusted; non-loopback/LAN clients still need the random secret.
-        if self.client_address and self.client_address[0] in ("127.0.0.1","::1"):
+        peer=(self.client_address[0] if self.client_address else "")
+        if peer=="::1" or peer.startswith("127."):
             return True
         cookie=self.headers.get("Cookie","")
         return any(x.strip()==("oauthui="+ACCESS) for x in cookie.split(";"))
