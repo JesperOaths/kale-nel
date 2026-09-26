@@ -158,10 +158,10 @@ async function textAsset(url, label) {
 const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(`${SHOP_URL}?v=${ASSET_VERSION}`);
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
-assert.match(html, /version-watermark[^>]*>v867</, 'Live shop must expose v867 watermark');
+assert.match(html, /version-watermark[^>]*>v868</, 'Live shop must expose v868 watermark');
 assert.match(html, /direct-commerce-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must retain the direct commerce bridge');
-assert.match(html, /store\.js\?v=20260926-storefront-v867-r1/, 'Live shop must load the current animal-filter storefront runtime');
-assert.match(html, /data-animal-filter/, 'Live shop must expose the opt-in animal design filter');
+assert.match(html, /store\.js\?v=20260926-storefront-v868-r1/, 'Live shop must load the current default-on animal-filter storefront runtime');
+assert.match(html, /data-animal-filter checked/, 'Live shop must show animal designs by default');
 assert.match(html, /data-animal-section/, 'Live shop must keep animal designs in a separate trailing section');
 assert.match(html, /data-open-size-guide/, 'Live shop must expose the cart-adjacent size chart control');
 assert.match(html, /data-size-guide-panel/, 'Live shop must include the contextual size chart modal');
