@@ -35,6 +35,8 @@
   const REMEMBER_MS = Number(cfg.ADMIN_SESSION_REMEMBER_MS || (45 * 24 * 60 * 60 * 1000));
   const TRUST_DAYS = 45;
   let validatePromise = null;
+  let lastValidation = null;
+  const VALIDATION_CACHE_MS = 5000;
 
   function headers(){ return { apikey: SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }; }
   async function parse(res){
@@ -92,6 +94,7 @@
   }
 
   function clearBundle(){
+    lastValidation = null;
     const hadBundle = !!(getToken() || getDevice() || getUsername() || getDeadline());
     [ADMIN_SESSION_KEY, ADMIN_DEVICE_KEY, ADMIN_USER_KEY, ADMIN_DEADLINE_KEY].forEach((k)=>{
       sessionStorage.removeItem(k);
@@ -263,6 +266,10 @@
   }
 
   async function validate(){
+    const currentToken = getToken();
+    if (lastValidation && currentToken && lastValidation.token === currentToken && (Date.now() - lastValidation.at) < VALIDATION_CACHE_MS) {
+      return lastValidation.data;
+    }
     if (validatePromise) return validatePromise;
     validatePromise = (async () => {
       let token = getToken();
@@ -280,7 +287,9 @@
         const nextToken = data?.admin_session_token || data?.token || token;
         const nextUser = data?.admin_username || data?.username || username;
         setBundle(nextToken, nextUser, true, device, getDeadline() || '');
-        return Object.assign({ admin_session_token:nextToken, admin_username:nextUser }, data);
+        const result = Object.assign({ admin_session_token:nextToken, admin_username:nextUser }, data);
+        lastValidation = { token: nextToken, at: Date.now(), data: result };
+        return result;
       } catch (error) {
         if (device && username) return await resumeTrustedDevice();
         throw error;
