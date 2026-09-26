@@ -152,6 +152,26 @@ async function readCatalogCacheDirect() {
   }
 }
 
+async function claimCatalogRefreshLeaseDirect() {
+  const sql = directDb();
+  try {
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const staleBefore = new Date(now.getTime() - REFRESH_LEASE_MS).toISOString();
+    const rows = await sql`
+      update public.shop_catalog_cache_v828
+      set refresh_started_at = ${nowIso},
+          updated_at = ${nowIso}
+      where id = 1
+        and (refresh_started_at is null or refresh_started_at < ${staleBefore})
+      returning id
+    `;
+    return Array.isArray(rows) && rows.length === 1;
+  } finally {
+    try { await sql.end({ timeout: 1 }); } catch {}
+  }
+}
+
 async function updateCatalogCacheDirect(values: {
   payload?: any;
   generated_at?: string | null;
@@ -732,20 +752,11 @@ Deno.serve(async (req: Request) => {
   // background refresh and return quickly so browsers can poll without timing out.
   if (!products.length || !selectionCurrent) {
     if (!refreshLeaseActive) {
-      const now = new Date().toISOString();
       try {
-        const sql = directDb();
-        try {
-          await sql`
-            update public.shop_catalog_cache_v828
-            set refresh_started_at = ${now}, updated_at = ${now}
-            where id = 1
-          `;
-        } finally {
-          try { await sql.end({ timeout: 1 }); } catch {}
+        if (await claimCatalogRefreshLeaseDirect()) {
+          refreshScheduled = true;
+          EdgeRuntime.waitUntil(refreshCatalog(supabase));
         }
-        refreshScheduled = true;
-        EdgeRuntime.waitUntil(refreshCatalog(supabase));
       } catch {}
     }
 
@@ -778,20 +789,11 @@ Deno.serve(async (req: Request) => {
   }
 
   if (stale && !refreshLeaseActive) {
-    const now = new Date().toISOString();
     try {
-      const sql = directDb();
-      try {
-        await sql`
-          update public.shop_catalog_cache_v828
-          set refresh_started_at = ${now}, updated_at = ${now}
-          where id = 1
-        `;
-      } finally {
-        try { await sql.end({ timeout: 1 }); } catch {}
+      if (await claimCatalogRefreshLeaseDirect()) {
+        refreshScheduled = true;
+        EdgeRuntime.waitUntil(refreshCatalog(supabase));
       }
-      refreshScheduled = true;
-      EdgeRuntime.waitUntil(refreshCatalog(supabase));
     } catch {}
   }
 
