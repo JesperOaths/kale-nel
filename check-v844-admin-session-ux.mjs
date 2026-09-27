@@ -40,11 +40,11 @@ assert.match(admin,/rememberDeviceInput/);
 assert.match(admin,/45 dagen onthouden/);
 assert.match(admin,/issueTrustedDevice/);
 assert.match(admin,/Geverifieerd apparaat herkend/);
-assert.match(admin,/Hub-tellers konden tijdelijk niet laden/);
+assert.match(admin,/Hub-tellers laden later opnieuw|Beheerhub is beschikbaar; tellers laden later opnieuw/);
 assert.match(admin,/60000/);
 
 assert.match(worker,/SESSION_TTL_SECONDS = 30 \* 24 \* 60 \* 60/);
-assert.match(worker,/ADMIN_BUILD = 'v844-trusted-admin-session'/);
+assert.match(worker,/ADMIN_BUILD = 'v860-fast-admin-auth'/);
 
 assert.match(analytics,/analytics-commandbar/);
 assert.match(analytics,/cost-refresh/);
