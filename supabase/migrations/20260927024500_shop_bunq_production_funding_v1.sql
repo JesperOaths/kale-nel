@@ -120,4 +120,27 @@ $$;
 revoke all on function public.shop_bunq_set_secret_v1(text,text) from public, anon, authenticated;
 grant execute on function public.shop_bunq_set_secret_v1(text,text) to service_role;
 
+
+create index if not exists shop_bunq_production_events_v1_order_id_idx
+  on public.shop_bunq_production_events_v1(order_id);
+
+revoke all on sequence public.shop_bunq_production_events_v1_id_seq from public, anon, authenticated;
+grant usage, select on sequence public.shop_bunq_production_events_v1_id_seq to service_role;
+
+drop policy if exists shop_bunq_production_settings_service_only on public.shop_bunq_production_settings_v1;
+create policy shop_bunq_production_settings_service_only
+  on public.shop_bunq_production_settings_v1
+  for all
+  to service_role
+  using (true)
+  with check (true);
+
+drop policy if exists shop_bunq_production_events_service_only on public.shop_bunq_production_events_v1;
+create policy shop_bunq_production_events_service_only
+  on public.shop_bunq_production_events_v1
+  for all
+  to service_role
+  using (true)
+  with check (true);
+
 commit;
