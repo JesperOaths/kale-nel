@@ -86,7 +86,7 @@
     const status=String(o.status||'pending');
     const canVerify=status==='pending'&&!o.payment_verified_at;
     const canRelease=!!o.payment_verified_at&&hasEnoughPayment(o)&&['paid','pending'].includes(status)&&!['production','shipped','canceled'].includes(String(o.printify_status||'').toLowerCase());
-    const releaseLabel=o.printify_order_id?'Retry production':'Send to production';
+    const releaseLabel=o.printify_order_id?'Retry production — charge bunq via Printify':'Send to production — charge bunq via Printify';
     const canRefresh=!!o.printify_order_id&&status!=='shipped';
     const canReject=!o.payment_verified_at&&!o.paid_at&&!o.printify_order_id&&!o.submitted_to_printify_at&&!o.invoice_number&&['pending','rejected'].includes(status)&&!o.rejection_notified_at;
     const canCancel=!['canceled','shipped','rejected'].includes(status);
@@ -151,10 +151,10 @@
     if(action==='submit_printify'){
       const retrying=!!row.printify_order_id;
       const prompt=retrying
-        ? `Retry sending ${row.payment_reference} to production? This reuses existing Printify order ${row.printify_order_id}; it will not create a duplicate.`
-        : `Send ${row.payment_reference} to production? This can incur fulfillment cost. Verified received amount: ${euros(row.paid_amount_cents)}.`;
+        ? `Retry sending ${row.payment_reference} to production? This reuses existing Printify order ${row.printify_order_id}; it will not create a duplicate. Printify will attempt to charge its configured payment method, which should be your bunq-linked card.`
+        : `Send ${row.payment_reference} to production? Printify will attempt to charge its configured payment method, which should be your bunq-linked card. Verified customer payment received: ${euros(row.paid_amount_cents)}.`;
       if(!window.confirm(prompt))return;
-      setStatus(retrying?'Retrying existing Printify order…':'Sending order to production…');
+      setStatus(retrying?'Retrying production — Printify will attempt the bunq-linked charge…':'Sending to production — Printify will attempt the bunq-linked charge…');
     }
 
     if(action==='reject_order'){
