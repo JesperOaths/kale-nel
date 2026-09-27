@@ -52,6 +52,7 @@
         </div>
         <label class="switch wide-mobile"><input id="bunqPrintifyConfirmed" type="checkbox"> This exact bunq card is saved as Printify's default payment card</label>
         <label class="switch wide-mobile"><input id="bunqOnlyConfirmed" type="checkbox"> bunq-only charge: Printify Balance is not usable for this order and no other fallback card should be charged</label>
+        <label class="switch wide-mobile"><input id="bunqManualApprovalConfirmed" type="checkbox"> Manual bunq approval: Printify is not in bunq Auto Accepted → Card Payments, so bunq can ask me to approve the charge when 3D Secure is required</label>
         <div class="actions wide-mobile">
           <button id="bunqLoadBtn" type="button">Refresh bunq accounts & cards</button>
           <button id="bunqSaveBtn" type="button">Use for production</button>
@@ -100,8 +101,10 @@
       if(response.status===401){window.GEJAST_ADMIN_SESSION?.clearBundle?.();window.GEJAST_ADMIN_SESSION?.redirectToAdminLogin?.('session_invalid','admin_shop_orders.html');throw new Error('Admin session expired.');}
       if(!response.ok||!payload?.ok){
         if(payload?.error==='payment_amount_insufficient')throw new Error(`Amount received is too low. Required ${euros(payload.required_cents)}; received ${payload.received_cents==null?'—':euros(payload.received_cents)}.`);
-        if(payload?.error==='production_on_hold')throw new Error(payload?.detail||'Printify put this order on hold. The existing Printify order will be reused when you retry.');
-        throw new Error(payload?.detail||payload?.error||`HTTP ${response.status}`);
+        const err=new Error(payload?.detail||payload?.error||`HTTP ${response.status}`);
+        err.code=payload?.error||'request_failed';
+        err.payload=payload;
+        throw err;
       }
       return payload;
     }catch(error){
@@ -158,9 +161,10 @@
       if(s.selected_card_id&&[...cardSelect.options].some(o=>o.value===String(s.selected_card_id)))cardSelect.value=String(s.selected_card_id);
       $('bunqPrintifyConfirmed').checked=s.printify_default_card_confirmed===true;
       $('bunqOnlyConfirmed').checked=s.printify_bunq_only_confirmed===true;
+      $('bunqManualApprovalConfirmed').checked=s.bunq_manual_approval_confirmed===true;
       $('bunqSelectionHelp').innerHTML=bunqReady()
         ? `Funding guard active. Last verified: ${esc(dateTime(s.last_checked_at))}.`
-        : 'Production remains blocked until an account/card is selected and you confirm that same card is Printify’s default and that Printify will not use Balance or another fallback card.';
+        : 'Production remains blocked until an account/card is selected, that card is Printify’s default, Printify will not use Balance or another fallback card, and you confirm Printify is not Auto Accepted in bunq.';
     }
     renderOrders();
   }
@@ -191,12 +195,13 @@
   function hasEnoughPayment(o){return Number.isFinite(Number(o.paid_amount_cents))&&Number(o.paid_amount_cents)>=Number(o.total_cents||0);}
   function pendingAgeDays(o){const t=Date.parse(o.created_at||'');return Number.isFinite(t)?Math.max(0,(Date.now()-t)/86400000):0;}
   function stalePending(o){return o.status==='pending'&&!o.payment_verified_at&&!o.paid_at&&pendingAgeDays(o)>=7;}
-  function needsAction(o){return o.status==='pending'||(o.status==='paid'&&!o.printify_order_id)||!!o.last_error||!!o.notification_error;}
+  function needsAction(o){return o.status==='pending'||(o.status==='paid'&&!o.printify_order_id)||o.production_charge_state==='awaiting_bunq_approval'||!!o.last_error||!!o.notification_error;}
   function orderHtml(o){
     const status=String(o.status||'pending');
     const canVerify=status==='pending'&&!o.payment_verified_at;
     const canRelease=bunqReady()&&!!o.payment_verified_at&&hasEnoughPayment(o)&&['paid','pending'].includes(status)&&!['production','shipped','canceled'].includes(String(o.printify_status||'').toLowerCase());
-    const releaseLabel=o.printify_order_id?'Retry production — charge bunq via Printify':'Send to production — charge bunq via Printify';
+    const awaitingBunq=o.production_charge_state==='awaiting_bunq_approval';
+    const releaseLabel=awaitingBunq?'I approved in bunq — complete production':(o.printify_order_id?'Retry production charge — approve in bunq':'Request production charge — approve in bunq');
     const canRefresh=!!o.printify_order_id&&status!=='shipped';
     const canReject=!o.payment_verified_at&&!o.paid_at&&!o.printify_order_id&&!o.submitted_to_printify_at&&!o.invoice_number&&['pending','rejected'].includes(status)&&!o.rejection_notified_at;
     const canCancel=!['canceled','shipped','rejected'].includes(status);
@@ -206,7 +211,7 @@
     const approval=canVerify?`<div class="approval-box"><label>Amount actually received</label><input class="paid-input" data-paid-input type="text" inputmode="decimal" value="${(Number(o.total_cents||0)/100).toFixed(2)}" aria-label="Amount received"><div class="approval-help">Check your bank first. Minimum required: ${euros(o.total_cents)}.</div></div>`:`<p>Amount received: <span class="money">${o.paid_amount_cents==null?'—':euros(o.paid_amount_cents)}</span></p>`;
     const rejection=status==='rejected'?`<div class="approval-box"><p><strong>Rejected:</strong> ${dateTime(o.rejected_at)}</p><p><strong>Reason:</strong> ${esc(o.rejection_reason||'Payment not received / not verified.')}</p><p><strong>Rejection email:</strong> ${o.rejection_notified_at?'sent '+dateTime(o.rejection_notified_at):'not delivered yet'}</p></div>`:'';
     const cancellation=status==='canceled'?`<div class="approval-box"><p><strong>Canceled:</strong> ${dateTime(o.canceled_at)}</p><p><strong>Reason:</strong> ${esc(o.cancellation_reason||'Canceled by admin.')}</p><p><strong>Printify:</strong> ${esc(o.printify_status||'not submitted')}</p></div>`:'';
-    return `<article class="order ${needsAction(o)?'needs-action':''}" data-order-id="${esc(o.id)}"><div class="order-head"><div><div class="order-ref">Order # ${esc(o.payment_reference||o.id)}</div><div class="order-meta">${dateTime(o.created_at)} · ${esc(o.customer_name||'')} · ${esc(o.customer_email||'')}</div><div class="order-id">Internal ID: ${esc(o.id)}</div></div><span><span class="pill ${esc(status)}">${esc(status)}</span>${stalePending(o)?`<span class="pill stale">unpaid ${Math.floor(pendingAgeDays(o))}d</span>`:''}</span></div><div class="order-grid"><div class="order-block"><h3>Buyer & delivery</h3><p>${esc(o.customer_name||'')}<br>${esc(o.customer_email||'')}${o.customer_phone?`<br>${esc(o.customer_phone)}`:''}</p><p>${addressHtml(o.shipping_address)}</p></div><div class="order-block"><h3>Items & totals</h3>${itemsHtml(o.line_items)}<p>Subtotal: <span class="money">${euros(o.subtotal_cents)}</span></p><p>Shipping: <span class="money">${euros(o.shipping_cents)}</span> (${esc(o.shipping_method||'')})</p><p>Total due: <span class="money">${euros(o.total_cents)}</span></p><p>Order confirmation email: ${o.order_confirmation_notified_at?`sent ${dateTime(o.order_confirmation_notified_at)}`:'not sent / not recorded'}</p>${rejection}${cancellation}</div><div class="order-block"><h3>Payment & production</h3><p>Provider: ${esc(o.payment_provider||'manual')}</p><p>Payment reference: <strong>${esc(o.payment_reference||'—')}</strong></p>${approval}<p>Verified: ${o.payment_verified_at?dateTime(o.payment_verified_at):'No'}</p><p>Payment fee: <span class="money">${o.payment_fee_cents==null?'not configured':euros(o.payment_fee_cents)}</span>${o.payment_fee_source?' · '+esc(o.payment_fee_source):''}</p><p>Invoice: <strong>${esc(o.invoice_number||'not issued yet')}</strong></p>${paymentLink}<p>Production order: ${esc(o.printify_order_id||'not submitted')}</p><p>Production status: ${esc(o.printify_status||'not submitted')}</p><p>Submitted: ${dateTime(o.submitted_to_printify_at)}</p><p>Production email: ${o.production_notified_at?`sent ${dateTime(o.production_notified_at)}`:'not sent yet'}</p><p>Tracking: ${trackingHtml(o.tracking)}</p><p>Shipment email: ${o.shipment_notified_at?`sent ${dateTime(o.shipment_notified_at)}`:'not sent yet'}</p></div></div>${o.last_error?`<div class="error"><strong>Last production attempt error:</strong> ${esc(o.last_error)}</div>`:''}${o.notification_error?`<div class="error"><strong>Email delivery error:</strong> ${esc(o.notification_error)}${o.notification_error_at?` <small>(${dateTime(o.notification_error_at)})</small>`:''}</div>`:''}<div class="order-actions"><button class="verify" type="button" data-action="verify_payment" ${canVerify?'':'disabled'}>Verify payment</button><button class="release" type="button" data-action="submit_printify" ${canRelease?'':'disabled'} title="${bunqReady()?'bunq funding source will be verified before Printify is called':'Configure bunq production funding above first'}">${releaseLabel}</button><button class="refresh" type="button" data-action="refresh" ${canRefresh?'':'disabled'}>Refresh shipment</button><button class="reject" type="button" data-action="reject_order" ${canReject?'':'disabled'}>${rejectLabel}</button><button class="cancel" type="button" data-action="cancel_order" ${canCancel?'':'disabled'}>Cancel order</button><button class="delete" type="button" data-action="delete_order" ${canDelete?'':'disabled'}>Delete order</button></div><div class="danger-note">Cancel first before deleting paid/submitted orders. Printify cancellation is only possible while Printify still reports an eligible pre-production state. Deleting removes the order record from this hub after cancellation/rejection or completed fulfillment, but preserves invoice and finance-ledger history. No refund or chargeback is created automatically.</div></article>`;
+    return `<article class="order ${needsAction(o)?'needs-action':''}" data-order-id="${esc(o.id)}"><div class="order-head"><div><div class="order-ref">Order # ${esc(o.payment_reference||o.id)}</div><div class="order-meta">${dateTime(o.created_at)} · ${esc(o.customer_name||'')} · ${esc(o.customer_email||'')}</div><div class="order-id">Internal ID: ${esc(o.id)}</div></div><span><span class="pill ${esc(status)}">${esc(status)}</span>${stalePending(o)?`<span class="pill stale">unpaid ${Math.floor(pendingAgeDays(o))}d</span>`:''}</span></div><div class="order-grid"><div class="order-block"><h3>Buyer & delivery</h3><p>${esc(o.customer_name||'')}<br>${esc(o.customer_email||'')}${o.customer_phone?`<br>${esc(o.customer_phone)}`:''}</p><p>${addressHtml(o.shipping_address)}</p></div><div class="order-block"><h3>Items & totals</h3>${itemsHtml(o.line_items)}<p>Subtotal: <span class="money">${euros(o.subtotal_cents)}</span></p><p>Shipping: <span class="money">${euros(o.shipping_cents)}</span> (${esc(o.shipping_method||'')})</p><p>Total due: <span class="money">${euros(o.total_cents)}</span></p><p>Order confirmation email: ${o.order_confirmation_notified_at?`sent ${dateTime(o.order_confirmation_notified_at)}`:'not sent / not recorded'}</p>${rejection}${cancellation}</div><div class="order-block"><h3>Payment & production</h3><p>Provider: ${esc(o.payment_provider||'manual')}</p><p>Payment reference: <strong>${esc(o.payment_reference||'—')}</strong></p>${approval}<p>Verified: ${o.payment_verified_at?dateTime(o.payment_verified_at):'No'}</p><p>Payment fee: <span class="money">${o.payment_fee_cents==null?'not configured':euros(o.payment_fee_cents)}</span>${o.payment_fee_source?' · '+esc(o.payment_fee_source):''}</p><p>Invoice: <strong>${esc(o.invoice_number||'not issued yet')}</strong></p>${paymentLink}<p>Production order: ${esc(o.printify_order_id||'not submitted')}</p><p>Production status: ${esc(o.printify_status||'not submitted')}</p><p>Charge approval: <strong>${esc(o.production_charge_state||'not requested')}</strong>${o.production_charge_requested_at?` · requested ${dateTime(o.production_charge_requested_at)}`:''}${o.production_charge_approved_at?` · accepted ${dateTime(o.production_charge_approved_at)}`:''}</p><p>Submitted: ${dateTime(o.submitted_to_printify_at)}</p><p>Production email: ${o.production_notified_at?`sent ${dateTime(o.production_notified_at)}`:'not sent yet'}</p><p>Tracking: ${trackingHtml(o.tracking)}</p><p>Shipment email: ${o.shipment_notified_at?`sent ${dateTime(o.shipment_notified_at)}`:'not sent yet'}</p></div></div>${o.last_error?`<div class="error"><strong>Last production attempt error:</strong> ${esc(o.last_error)}</div>`:''}${o.notification_error?`<div class="error"><strong>Email delivery error:</strong> ${esc(o.notification_error)}${o.notification_error_at?` <small>(${dateTime(o.notification_error_at)})</small>`:''}</div>`:''}<div class="order-actions"><button class="verify" type="button" data-action="verify_payment" ${canVerify?'':'disabled'}>Verify payment</button><button class="release" type="button" data-action="submit_printify" ${canRelease?'':'disabled'} title="${bunqReady()?'bunq funding source will be verified before Printify is called':'Configure bunq production funding above first'}">${releaseLabel}</button><button class="refresh" type="button" data-action="refresh" ${canRefresh?'':'disabled'}>Refresh shipment</button><button class="reject" type="button" data-action="reject_order" ${canReject?'':'disabled'}>${rejectLabel}</button><button class="cancel" type="button" data-action="cancel_order" ${canCancel?'':'disabled'}>Cancel order</button><button class="delete" type="button" data-action="delete_order" ${canDelete?'':'disabled'}>Delete order</button></div><div class="danger-note">Cancel first before deleting paid/submitted orders. Printify cancellation is only possible while Printify still reports an eligible pre-production state. Deleting removes the order record from this hub after cancellation/rejection or completed fulfillment, but preserves invoice and finance-ledger history. No refund or chargeback is created automatically.</div></article>`;
   }
   function filteredOrders(){const all=current.orders||[];if(focusOrderId){const exact=all.filter(o=>String(o.id)===focusOrderId);if(exact.length)return exact;}if(activeFilter==='all')return all;if(activeFilter==='pending')return all.filter(o=>o.status==='pending');if(activeFilter==='stale')return all.filter(stalePending);if(activeFilter==='rejected')return all.filter(o=>o.status==='rejected');if(activeFilter==='canceled')return all.filter(o=>o.status==='canceled');if(activeFilter==='production')return all.filter(o=>o.status==='production');if(activeFilter==='shipped')return all.filter(o=>o.status==='shipped');return all.filter(needsAction);}
   function renderOrders(){const rows=filteredOrders();setCounts(current.orders||[]);$('ordersBox').innerHTML=rows.length?rows.map(orderHtml).join(''):'<div class="empty">No orders in this view.</div>';document.querySelectorAll('#filters button').forEach(b=>b.classList.toggle('active',b.dataset.filter===activeFilter));}
@@ -258,15 +263,16 @@
     finally{button.disabled=false;}
   });
   $('bunqSaveBtn').addEventListener('click',async()=>{
-    const button=$('bunqSaveBtn'),accountId=Number($('bunqAccount').value),cardId=Number($('bunqCard').value),confirmed=$('bunqPrintifyConfirmed').checked,bunqOnlyConfirmed=$('bunqOnlyConfirmed').checked;
+    const button=$('bunqSaveBtn'),accountId=Number($('bunqAccount').value),cardId=Number($('bunqCard').value),confirmed=$('bunqPrintifyConfirmed').checked,bunqOnlyConfirmed=$('bunqOnlyConfirmed').checked,manualApprovalConfirmed=$('bunqManualApprovalConfirmed').checked;
     if(!Number.isFinite(accountId)||!Number.isFinite(cardId)){setStatus('Choose both the bunq account and the bunq card.','warn');return;}
     if(!confirmed){setStatus('Confirm that this exact bunq card is saved as Printify\'s default payment card.','warn');return;}
     if(!bunqOnlyConfirmed){setStatus('Confirm bunq-only charging: no usable Printify Balance and no other fallback card should be charged.','warn');return;}
+    if(!manualApprovalConfirmed){setStatus('Confirm that Printify is not Auto Accepted in bunq, so bunq can ask you to approve 3D Secure charges manually.','warn');return;}
     if(!window.confirm('Use this bunq account/card for future production approvals? The card will be linked to this bunq account before each Printify production charge. You are also confirming Printify will not use Balance or another fallback card instead.'))return;
     button.disabled=true;
     try{
       setStatus('Linking the bunq card to the production account and verifying it…');
-      const result=await callBunq('save_selection',{account_id:accountId,card_id:cardId,printify_default_card_confirmed:true,printify_bunq_only_confirmed:true});
+      const result=await callBunq('save_selection',{account_id:accountId,card_id:cardId,printify_default_card_confirmed:true,printify_bunq_only_confirmed:true,bunq_manual_approval_confirmed:true});
       bunqState={...bunqState,settings:result.settings||bunqState.settings};
       renderBunq();
       setStatus('bunq production funding is ready.','ok');
@@ -306,13 +312,16 @@
     if(action==='submit_printify'){
       if(!bunqReady()){setStatus('Configure bunq production funding above before sending an order to production.','warn');return;}
       const retrying=!!row.printify_order_id;
+      const awaitingBunq=row.production_charge_state==='awaiting_bunq_approval';
       const funding=bunqState.settings||{};
       const fundingLine=`Funding source: ${funding.selected_account_description||'bunq account'} ${funding.selected_account_iban_masked||''} → card ${funding.selected_card_last4?'•••• '+funding.selected_card_last4:''}.`;
-      const prompt=retrying
-        ? `Retry sending ${row.payment_reference} to production? This reuses existing Printify order ${row.printify_order_id}; it will not create a duplicate.\n\n${fundingLine}\nThe backend will re-verify/link that bunq card to this account, then Printify will attempt the production charge.`
-        : `Send ${row.payment_reference} to production?\n\n${fundingLine}\nThe backend will re-verify/link that bunq card to this account, then Printify will attempt the production charge.\nCustomer payment already verified: ${euros(row.paid_amount_cents)}.`;
+      const prompt=awaitingBunq
+        ? `You approved the Printify charge in bunq for ${row.payment_reference}?\n\nThis retries the SAME Printify order ${row.printify_order_id}; no duplicate is created.\n\n${fundingLine}`
+        : retrying
+          ? `Request the production charge again for ${row.payment_reference}? This reuses Printify order ${row.printify_order_id}; no duplicate is created.\n\n${fundingLine}\nIf bunq presents a 3D Secure request, approve it in the bunq app, then use “I approved in bunq — complete production”.`
+          : `Request the Printify production charge for ${row.payment_reference}?\n\n${fundingLine}\nIf bunq presents a 3D Secure request, approve or decline it in the bunq app. The order is not treated as production until Printify confirms payment.\nCustomer payment already verified: ${euros(row.paid_amount_cents)}.`;
       if(!window.confirm(prompt))return;
-      setStatus(retrying?'Retrying production — Printify will attempt the bunq-linked charge…':'Sending to production — Printify will attempt the bunq-linked charge…');
+      setStatus(awaitingBunq?'Checking the approved bunq charge with Printify…':'Requesting the Printify charge — watch the bunq app for a 3D Secure approval request…');
     }
 
     if(action==='reject_order'){
@@ -357,10 +366,13 @@
         setStatus(`Order ${row.payment_reference} permanently deleted from the hub. Invoice and finance history were preserved.`,'ok');
       }
     }catch(error){
-      setStatus(error?.message||'Order action failed.','warn');
       button.disabled=false;
       await load().catch(()=>{});
-      setStatus(error?.message||'Order action failed.','warn');
+      if(action==='submit_printify'&&error?.code==='awaiting_bunq_approval'){
+        setStatus('Printify requested payment but has not entered production yet. Open bunq and approve the card payment if bunq presented a 3D Secure request. Then click “I approved in bunq — complete production”.','warn');
+      }else{
+        setStatus(error?.message||'Order action failed.','warn');
+      }
     }finally{
       actionInFlight=false;
     }
