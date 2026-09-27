@@ -195,13 +195,14 @@
   function hasEnoughPayment(o){return Number.isFinite(Number(o.paid_amount_cents))&&Number(o.paid_amount_cents)>=Number(o.total_cents||0);}
   function pendingAgeDays(o){const t=Date.parse(o.created_at||'');return Number.isFinite(t)?Math.max(0,(Date.now()-t)/86400000):0;}
   function stalePending(o){return o.status==='pending'&&!o.payment_verified_at&&!o.paid_at&&pendingAgeDays(o)>=7;}
-  function needsAction(o){return o.status==='pending'||(o.status==='paid'&&!o.printify_order_id)||o.production_charge_state==='awaiting_bunq_approval'||!!o.last_error||!!o.notification_error;}
+  function needsAction(o){return o.status==='pending'||(o.status==='paid'&&!o.printify_order_id)||['ready_for_bunq_charge','awaiting_bunq_approval'].includes(o.production_charge_state)||!!o.last_error||!!o.notification_error;}
   function orderHtml(o){
     const status=String(o.status||'pending');
     const canVerify=status==='pending'&&!o.payment_verified_at;
-    const canRelease=bunqReady()&&!!o.payment_verified_at&&hasEnoughPayment(o)&&['paid','pending'].includes(status)&&!['production','shipped','canceled'].includes(String(o.printify_status||'').toLowerCase());
     const awaitingBunq=o.production_charge_state==='awaiting_bunq_approval';
-    const releaseLabel=awaitingBunq?'I approved in bunq — complete production':(o.printify_order_id?'Retry production charge — approve in bunq':'Request production charge — approve in bunq');
+    const readyForBunqCharge=o.production_charge_state==='ready_for_bunq_charge';
+    const canRelease=(bunqReady()||awaitingBunq||readyForBunqCharge)&&!!o.payment_verified_at&&hasEnoughPayment(o)&&['paid','pending'].includes(status)&&!['production','shipped','canceled'].includes(String(o.printify_status||'').toLowerCase());
+    const releaseLabel=awaitingBunq?'I approved in bunq — complete production':(readyForBunqCharge?'Request bunq charge — approve in app':(o.printify_order_id?'Retry production charge — approve in bunq':'Request production charge — approve in bunq'));
     const canRefresh=!!o.printify_order_id&&status!=='shipped';
     const canReject=!o.payment_verified_at&&!o.paid_at&&!o.printify_order_id&&!o.submitted_to_printify_at&&!o.invoice_number&&['pending','rejected'].includes(status)&&!o.rejection_notified_at;
     const canCancel=!['canceled','shipped','rejected'].includes(status);
@@ -310,16 +311,19 @@
     }
 
     if(action==='submit_printify'){
-      if(!bunqReady()){setStatus('Configure bunq production funding above before sending an order to production.','warn');return;}
+      if(!bunqReady()&&!['ready_for_bunq_charge','awaiting_bunq_approval'].includes(row.production_charge_state)){setStatus('Configure bunq production funding above before sending a new order to production.','warn');return;}
       const retrying=!!row.printify_order_id;
       const awaitingBunq=row.production_charge_state==='awaiting_bunq_approval';
+      const readyForBunqCharge=row.production_charge_state==='ready_for_bunq_charge';
       const funding=bunqState.settings||{};
       const fundingLine=`Funding source: ${funding.selected_account_description||'bunq account'} ${funding.selected_account_iban_masked||''} → card ${funding.selected_card_last4?'•••• '+funding.selected_card_last4:''}.`;
       const prompt=awaitingBunq
-        ? `You approved the Printify charge in bunq for ${row.payment_reference}?\n\nThis retries the SAME Printify order ${row.printify_order_id}; no duplicate is created.\n\n${fundingLine}`
-        : retrying
-          ? `Request the production charge again for ${row.payment_reference}? This reuses Printify order ${row.printify_order_id}; no duplicate is created.\n\n${fundingLine}\nIf bunq presents a 3D Secure request, approve it in the bunq app, then use “I approved in bunq — complete production”.`
-          : `Request the Printify production charge for ${row.payment_reference}?\n\n${fundingLine}\nIf bunq presents a 3D Secure request, approve or decline it in the bunq app. The order is not treated as production until Printify confirms payment.\nCustomer payment already verified: ${euros(row.paid_amount_cents)}.`;
+        ? `You approved the Printify charge in bunq for ${row.payment_reference}?\n\nThis retries the SAME Printify order ${row.printify_order_id}; no duplicate is created.`
+        : readyForBunqCharge
+          ? `Request the Printify charge for ${row.payment_reference}? This reuses the SAME Printify order ${row.printify_order_id}; no duplicate is created.\n\nIf bunq presents a 3D Secure request, approve it in the bunq app. The order will remain pending until Printify confirms payment.`
+          : retrying
+            ? `Request the production charge again for ${row.payment_reference}? This reuses Printify order ${row.printify_order_id}; no duplicate is created.\n\n${fundingLine}\nIf bunq presents a 3D Secure request, approve it in the bunq app, then use “I approved in bunq — complete production”.`
+            : `Request the Printify production charge for ${row.payment_reference}?\n\n${fundingLine}\nIf bunq presents a 3D Secure request, approve or decline it in the bunq app. The order is not treated as production until Printify confirms payment.\nCustomer payment already verified: ${euros(row.paid_amount_cents)}.`;
       if(!window.confirm(prompt))return;
       setStatus(awaitingBunq?'Checking the approved bunq charge with Printify…':'Requesting the Printify charge — watch the bunq app for a 3D Secure approval request…');
     }
