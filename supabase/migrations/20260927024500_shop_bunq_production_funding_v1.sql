@@ -14,6 +14,7 @@ create table if not exists public.shop_bunq_production_settings_v1 (
   selected_card_type text,
   printify_default_card_confirmed boolean not null default false,
   printify_bunq_only_confirmed boolean not null default false,
+  bunq_manual_approval_confirmed boolean not null default false,
   connected_at timestamptz,
   last_checked_at timestamptz,
   last_error text,
@@ -47,7 +48,10 @@ grant select, insert, update, delete on table public.shop_bunq_production_events
 
 alter table public.shop_orders
   add column if not exists production_funding_preflight_at timestamptz,
-  add column if not exists production_funding_snapshot jsonb;
+  add column if not exists production_funding_snapshot jsonb,
+  add column if not exists production_charge_requested_at timestamptz,
+  add column if not exists production_charge_state text,
+  add column if not exists production_charge_approved_at timestamptz;
 
 create or replace function public.shop_bunq_get_secret_v1(secret_name_input text)
 returns text
