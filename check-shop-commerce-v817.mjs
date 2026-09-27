@@ -45,6 +45,7 @@ const idempotencyMigration = read('supabase/migrations/20260910070905_shop_check
 const paymentAmountMigration = read('supabase/migrations/20260910103800_shop_admin_payment_amount_v826.sql');
 const directMigration = read('supabase/migrations/20260910183000_shop_printify_direct_v828.sql');
 const fxMigration = read('supabase/migrations/20260916014900_shop_usd_eur_fx_v834.sql');
+const cancelDeleteMigration = read('supabase/migrations/20260927040500_shop_order_retroactive_cancel_delete.sql');
 const liveShopCheck = read('check-live-shop.mjs');
 const liveHealthWorkflow = read('.github/workflows/live-deployment-health.yml');
 const deployWorkflow = read('.github/workflows/deploy-shop-fixes-v829.yml');
@@ -614,8 +615,18 @@ assert.match(styles, /hide legacy text baked into Classic\/Boxy collection artwo
 
 assert.match(adminPage, /Reject \/ not paid/);
 assert.match(adminPage, /Delete order/);
+assert.match(adminPage, /Cancel order/);
 assert.match(adminPage, /reject_order/);
+assert.match(adminPage, /cancel_order/);
 assert.match(adminPage, /delete_order/);
+assert.match(adminPage, /data-filter="canceled"/);
+assert.match(adminEdge, /action==="cancel_order"/);
+assert.match(adminEdge, /\/cancel\.json/);
+assert.match(adminEdge, /\["on-hold","payment-not-received"\]/, 'Printify cancellation must be limited to documented pre-production statuses');
+assert.match(adminEdge, /financial_records_preserved:true/);
+assert.match(cancelDeleteMigration, /add column if not exists canceled_at timestamptz/);
+assert.match(cancelDeleteMigration, /alter column order_id drop not null/);
+assert.match(cancelDeleteMigration, /on delete set null/);
 assert.match(adminPage, /reject-email-before-delete/);
 assert.match(adminEdge, /rejection_notified_at/);
 assert.match(adminEdge, /rejection_email_failed/);
