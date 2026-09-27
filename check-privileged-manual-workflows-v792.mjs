@@ -41,7 +41,13 @@ guard(betaPath, beta);
 
 const adminDeployPath = '.github/workflows/deploy-admin-worker.yml';
 const adminDeploy = read(adminDeployPath);
-guard(adminDeployPath, adminDeploy);
+assert.match(adminDeploy, /workflow_dispatch:/, 'admin Worker deploy must retain explicit manual dispatch');
+assert.match(adminDeploy, /^\s{2}push:/m, 'admin Worker deploy may auto-run only for its scoped admin paths');
+for (const trigger of ['pull_request', 'schedule']) {
+  assert.doesNotMatch(adminDeploy, new RegExp(`^\\s{2}${trigger}:`, 'm'), `admin Worker deploy must not gain automatic ${trigger} execution`);
+}
+assert.ok(adminDeploy.includes(repoGuard), 'admin Worker deploy must stay bound to the canonical repository');
+assert.ok(adminDeploy.includes(mainGuard), 'admin Worker deploy must refuse non-main execution');
 assert.ok(adminDeploy.includes(`uses: ${checkoutV5}`), 'admin Worker deploy checkout must use the approved immutable checkout v5 commit');
 assert.ok(adminDeploy.includes(`uses: ${setupNodeV5}`), 'admin Worker deploy must use the approved immutable setup-node v5 commit');
 assert.match(adminDeploy, /ref:\s*\$\{\{\s*github\.sha\s*\}\}/, 'admin Worker deploy checkout must pin the dispatched main SHA');
