@@ -26,6 +26,41 @@
 
   <section class="panel"><h2>Payment settings</h2><p>Current customer payment destination. bunq.me remains manual: the customer is shown the exact server-calculated amount and unique BRUIS reference.</p><form id="settingsForm" class="settings"><div class="field"><label for="provider">Provider</label><select id="provider"><option value="bunq_me">bunq.me</option><option value="tikkie">Tikkie</option><option value="manual_transfer">Manual transfer</option></select></div><div class="field"><label for="paymentUrl">Payment link</label><input id="paymentUrl" type="url" autocomplete="off"></div><div class="field wide-mobile"><label for="instructions">Instructions</label><textarea id="instructions" maxlength="1000"></textarea></div><label class="switch"><input id="paymentsEnabled" type="checkbox" checked> Enabled</label><div class="actions wide-mobile"><button type="submit">Save settings</button></div></form><div id="providerHelp" class="provider-help"></div></section>
 
+  <section class="panel" id="bunqFundingPanel">
+    <h2>Production funding — bunq</h2>
+    <p>This is the account Printify should ultimately charge when you approve production. The admin hub verifies the selected bunq card is linked to the selected bunq account before it calls Printify.</p>
+    <div id="bunqFundingState" class="provider-help"><strong>Checking bunq funding setup…</strong></div>
+
+    <div id="bunqConnectBox" class="settings">
+      <div class="field wide-mobile">
+        <label for="bunqApiKey">bunq API key</label>
+        <input id="bunqApiKey" type="password" autocomplete="new-password" spellcheck="false" placeholder="Paste once; it is stored only in Supabase Vault">
+      </div>
+      <div class="actions wide-mobile"><button id="bunqConnectBtn" type="button">Connect bunq</button></div>
+    </div>
+    <div id="bunqConnectHelp" class="provider-help">Create an API key in the bunq app under Developers → API keys and enable <strong>Allow All IP Addresses</strong>. The key is sent directly to the protected backend and is never written to this page, browser storage, or GitHub.</div>
+
+    <div id="bunqSelectionBox" hidden>
+      <div class="settings">
+        <div class="field">
+          <label for="bunqAccount">Production bank account</label>
+          <select id="bunqAccount"><option value="">Load bunq accounts first</option></select>
+        </div>
+        <div class="field">
+          <label for="bunqCard">Printify payment card</label>
+          <select id="bunqCard"><option value="">Load bunq cards first</option></select>
+        </div>
+        <label class="switch wide-mobile"><input id="bunqPrintifyConfirmed" type="checkbox"> This exact bunq card is saved as Printify's default payment card</label>
+        <div class="actions wide-mobile">
+          <button id="bunqLoadBtn" type="button">Refresh bunq accounts & cards</button>
+          <button id="bunqSaveBtn" type="button">Use for production</button>
+          <button id="bunqDisableBtn" class="alt" type="button">Disable bunq production funding</button>
+        </div>
+      </div>
+      <div id="bunqSelectionHelp" class="provider-help"></div>
+    </div>
+  </section>
+
   <section class="panel"><h2>Orders</h2><p>“Verify payment” records the amount actually received. “Cancel order” can also be used retroactively: if the order exists in Printify, the hub first verifies that Printify still permits cancellation. “Delete order” is available after cancellation, after the existing unpaid rejection flow, or after completed shipment/fulfillment. Invoices and finance-ledger history are preserved.</p><div class="filters" id="filters"><button type="button" data-filter="action" class="active">Needs action</button><button type="button" data-filter="pending">Pending payment</button><button type="button" data-filter="stale">Stale unpaid</button><button type="button" data-filter="all">All orders</button><button type="button" data-filter="rejected">Rejected</button><button type="button" data-filter="canceled">Canceled</button><button type="button" data-filter="production">Production</button><button type="button" data-filter="shipped">Shipped</button></div><div id="ordersBox" class="orders"><div class="empty">Loading orders…</div></div></section>
 </main>
 <div class="watermark">v858 - Made by Bruis</div>
@@ -33,6 +68,7 @@
 (() => {
   'use strict';
   const ENDPOINT='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-admin-orders-v825';
+  const BUNQ_ENDPOINT='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-bunq-production-v1';
   const cfg=window.GEJAST_CONFIG||{};
   const API_KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
   const $=id=>document.getElementById(id);
@@ -41,6 +77,7 @@
   const dateTime=v=>{if(!v)return '—';try{return new Intl.DateTimeFormat('en-NL',{dateStyle:'medium',timeStyle:'short'}).format(new Date(v));}catch{return String(v);}};
   const token=()=>window.GEJAST_ADMIN_SESSION?.getToken?.()||'';
   let current={orders:[],settings:null};
+  let bunqState={loaded:false,settings:{ready_for_production:false},accounts:[],cards:[]};
   let loadPromise=null;
   let actionInFlight=false;
   let sessionReloadTimer=0;
@@ -72,6 +109,77 @@
     }finally{clearTimeout(timeoutId);}
   }
 
+  async function callBunq(action,extra={}){
+    const adminToken=token();
+    if(!adminToken)throw new Error('No valid admin session found.');
+    const controller=new AbortController();
+    const timeoutMs=action==='connect'?35000:25000;
+    const timeoutId=setTimeout(()=>controller.abort(),timeoutMs);
+    try{
+      const response=await fetch(BUNQ_ENDPOINT,{method:'POST',mode:'cors',cache:'no-store',signal:controller.signal,headers:{apikey:API_KEY,Authorization:`Bearer ${API_KEY}`,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({action,admin_session_token:adminToken,...extra})});
+      const payload=await response.json().catch(()=>({}));
+      if(response.status===401){window.GEJAST_ADMIN_SESSION?.clearBundle?.();window.GEJAST_ADMIN_SESSION?.redirectToAdminLogin?.('session_invalid','admin_shop_orders.html');throw new Error('Admin session expired.');}
+      if(!response.ok||!payload?.ok)throw new Error(payload?.detail||payload?.error||`HTTP ${response.status}`);
+      return payload;
+    }catch(error){
+      if(error?.name==='AbortError')throw new Error('bunq request timed out. Please retry.');
+      throw error;
+    }finally{clearTimeout(timeoutId);}
+  }
+
+  function bunqReady(){return bunqState?.settings?.ready_for_production===true;}
+  function renderBunq(){
+    const s=bunqState.settings||{};
+    const connected=s.connected===true;
+    $('bunqConnectBox').hidden=connected;
+    $('bunqConnectHelp').hidden=connected;
+    $('bunqSelectionBox').hidden=!connected;
+
+    if(!connected){
+      $('bunqFundingState').innerHTML=s.last_error
+        ? `<strong>bunq not connected.</strong> Last error: ${esc(s.last_error)}`
+        : '<strong>bunq not connected.</strong> Add the production API key once to enable bunq-funded Printify charges.';
+    }else if(bunqReady()){
+      $('bunqFundingState').innerHTML=`<strong>Ready for production.</strong> ${esc(s.selected_account_description||'bunq account')} ${esc(s.selected_account_iban_masked||'')} → ${esc(s.selected_card_label||s.selected_card_type||'bunq card')} ${s.selected_card_last4?`•••• ${esc(s.selected_card_last4)}`:''}. Every production click re-verifies this card/account link before Printify is called.`;
+    }else{
+      $('bunqFundingState').innerHTML='<strong>bunq connected, setup incomplete.</strong> Select the production account and the exact bunq card saved as Printify\'s default card.';
+    }
+
+    if(connected){
+      const accountSelect=$('bunqAccount'),cardSelect=$('bunqCard');
+      if(bunqState.accounts.length){
+        accountSelect.innerHTML='<option value="">Choose account…</option>'+bunqState.accounts.map(a=>`<option value="${a.id}">${esc(a.description||'bunq account')} · ${esc(a.iban_masked||'')} · ${a.balance==null?'balance unavailable':esc(String(a.currency||'EUR'))+' '+Number(a.balance).toFixed(2)}</option>`).join('');
+      }
+      if(bunqState.cards.length){
+        cardSelect.innerHTML='<option value="">Choose card…</option>'+bunqState.cards.map(card=>`<option value="${card.id}">${esc(card.label||card.type||'bunq card')} ${card.last4?`•••• ${esc(card.last4)}`:''} · ${esc(card.status||'')}</option>`).join('');
+      }
+      if(s.selected_account_id&&[...accountSelect.options].some(o=>o.value===String(s.selected_account_id)))accountSelect.value=String(s.selected_account_id);
+      if(s.selected_card_id&&[...cardSelect.options].some(o=>o.value===String(s.selected_card_id)))cardSelect.value=String(s.selected_card_id);
+      $('bunqPrintifyConfirmed').checked=s.printify_default_card_confirmed===true;
+      $('bunqSelectionHelp').innerHTML=bunqReady()
+        ? `Funding guard active. Last verified: ${esc(dateTime(s.last_checked_at))}.`
+        : 'Production remains blocked until an account/card is selected and you confirm that same card is the default payment card in Printify.';
+    }
+    renderOrders();
+  }
+
+  async function loadBunqStatus(){
+    try{
+      const result=await callBunq('status');
+      bunqState={...bunqState,loaded:true,settings:result.settings||{ready_for_production:false}};
+      renderBunq();
+    }catch(error){
+      bunqState={...bunqState,loaded:true,settings:{ready_for_production:false,last_error:error?.message||'Could not load bunq status.'}};
+      renderBunq();
+    }
+  }
+  async function loadBunqCatalog(){
+    const result=await callBunq('catalog');
+    bunqState={loaded:true,settings:result.settings||bunqState.settings,accounts:Array.isArray(result.accounts)?result.accounts:[],cards:Array.isArray(result.cards)?result.cards:[]};
+    renderBunq();
+    return result;
+  }
+
   function providerHelp(){const provider=$('provider').value;const url=$('paymentUrl');if(provider==='bunq_me'){url.disabled=false;url.placeholder='https://bunq.me/Bruis';$('providerHelp').innerHTML='<strong>bunq.me:</strong> reusable payment page. Customers must enter the exact amount and their unique BRUIS order reference.';}else if(provider==='tikkie'){url.disabled=false;url.placeholder='https://tikkie.me/pay/...';$('providerHelp').innerHTML='<strong>Tikkie:</strong> a static fallback link can be stored here; business API credentials can generate unique requests server-side.';}else{url.disabled=true;url.value='';url.placeholder='Not used';$('providerHelp').innerHTML='<strong>Manual transfer:</strong> no external payment button is shown.';}}
   function renderSettings(s){const d=s||{};$('provider').value=d.provider||'bunq_me';$('paymentUrl').value=d.payment_url||'';$('instructions').value=d.payment_instructions||'';$('paymentsEnabled').checked=d.enabled!==false;providerHelp();}
   function setCounts(orders){$('countPending').textContent=orders.filter(o=>o.status==='pending').length;$('countPaid').textContent=orders.filter(o=>o.status==='paid'&&!o.printify_order_id).length;$('countRejected').textContent=orders.filter(o=>o.status==='rejected').length;$('countCanceled').textContent=orders.filter(o=>o.status==='canceled').length;$('countProduction').textContent=orders.filter(o=>o.status==='production').length;$('countShipped').textContent=orders.filter(o=>o.status==='shipped').length;}
@@ -85,7 +193,7 @@
   function orderHtml(o){
     const status=String(o.status||'pending');
     const canVerify=status==='pending'&&!o.payment_verified_at;
-    const canRelease=!!o.payment_verified_at&&hasEnoughPayment(o)&&['paid','pending'].includes(status)&&!['production','shipped','canceled'].includes(String(o.printify_status||'').toLowerCase());
+    const canRelease=bunqReady()&&!!o.payment_verified_at&&hasEnoughPayment(o)&&['paid','pending'].includes(status)&&!['production','shipped','canceled'].includes(String(o.printify_status||'').toLowerCase());
     const releaseLabel=o.printify_order_id?'Retry production — charge bunq via Printify':'Send to production — charge bunq via Printify';
     const canRefresh=!!o.printify_order_id&&status!=='shipped';
     const canReject=!o.payment_verified_at&&!o.paid_at&&!o.printify_order_id&&!o.submitted_to_printify_at&&!o.invoice_number&&['pending','rejected'].includes(status)&&!o.rejection_notified_at;
@@ -96,7 +204,7 @@
     const approval=canVerify?`<div class="approval-box"><label>Amount actually received</label><input class="paid-input" data-paid-input type="text" inputmode="decimal" value="${(Number(o.total_cents||0)/100).toFixed(2)}" aria-label="Amount received"><div class="approval-help">Check your bank first. Minimum required: ${euros(o.total_cents)}.</div></div>`:`<p>Amount received: <span class="money">${o.paid_amount_cents==null?'—':euros(o.paid_amount_cents)}</span></p>`;
     const rejection=status==='rejected'?`<div class="approval-box"><p><strong>Rejected:</strong> ${dateTime(o.rejected_at)}</p><p><strong>Reason:</strong> ${esc(o.rejection_reason||'Payment not received / not verified.')}</p><p><strong>Rejection email:</strong> ${o.rejection_notified_at?'sent '+dateTime(o.rejection_notified_at):'not delivered yet'}</p></div>`:'';
     const cancellation=status==='canceled'?`<div class="approval-box"><p><strong>Canceled:</strong> ${dateTime(o.canceled_at)}</p><p><strong>Reason:</strong> ${esc(o.cancellation_reason||'Canceled by admin.')}</p><p><strong>Printify:</strong> ${esc(o.printify_status||'not submitted')}</p></div>`:'';
-    return `<article class="order ${needsAction(o)?'needs-action':''}" data-order-id="${esc(o.id)}"><div class="order-head"><div><div class="order-ref">Order # ${esc(o.payment_reference||o.id)}</div><div class="order-meta">${dateTime(o.created_at)} · ${esc(o.customer_name||'')} · ${esc(o.customer_email||'')}</div><div class="order-id">Internal ID: ${esc(o.id)}</div></div><span><span class="pill ${esc(status)}">${esc(status)}</span>${stalePending(o)?`<span class="pill stale">unpaid ${Math.floor(pendingAgeDays(o))}d</span>`:''}</span></div><div class="order-grid"><div class="order-block"><h3>Buyer & delivery</h3><p>${esc(o.customer_name||'')}<br>${esc(o.customer_email||'')}${o.customer_phone?`<br>${esc(o.customer_phone)}`:''}</p><p>${addressHtml(o.shipping_address)}</p></div><div class="order-block"><h3>Items & totals</h3>${itemsHtml(o.line_items)}<p>Subtotal: <span class="money">${euros(o.subtotal_cents)}</span></p><p>Shipping: <span class="money">${euros(o.shipping_cents)}</span> (${esc(o.shipping_method||'')})</p><p>Total due: <span class="money">${euros(o.total_cents)}</span></p><p>Order confirmation email: ${o.order_confirmation_notified_at?`sent ${dateTime(o.order_confirmation_notified_at)}`:'not sent / not recorded'}</p>${rejection}${cancellation}</div><div class="order-block"><h3>Payment & production</h3><p>Provider: ${esc(o.payment_provider||'manual')}</p><p>Payment reference: <strong>${esc(o.payment_reference||'—')}</strong></p>${approval}<p>Verified: ${o.payment_verified_at?dateTime(o.payment_verified_at):'No'}</p><p>Payment fee: <span class="money">${o.payment_fee_cents==null?'not configured':euros(o.payment_fee_cents)}</span>${o.payment_fee_source?' · '+esc(o.payment_fee_source):''}</p><p>Invoice: <strong>${esc(o.invoice_number||'not issued yet')}</strong></p>${paymentLink}<p>Production order: ${esc(o.printify_order_id||'not submitted')}</p><p>Production status: ${esc(o.printify_status||'not submitted')}</p><p>Submitted: ${dateTime(o.submitted_to_printify_at)}</p><p>Production email: ${o.production_notified_at?`sent ${dateTime(o.production_notified_at)}`:'not sent yet'}</p><p>Tracking: ${trackingHtml(o.tracking)}</p><p>Shipment email: ${o.shipment_notified_at?`sent ${dateTime(o.shipment_notified_at)}`:'not sent yet'}</p></div></div>${o.last_error?`<div class="error"><strong>Last production attempt error:</strong> ${esc(o.last_error)}</div>`:''}${o.notification_error?`<div class="error"><strong>Email delivery error:</strong> ${esc(o.notification_error)}${o.notification_error_at?` <small>(${dateTime(o.notification_error_at)})</small>`:''}</div>`:''}<div class="order-actions"><button class="verify" type="button" data-action="verify_payment" ${canVerify?'':'disabled'}>Verify payment</button><button class="release" type="button" data-action="submit_printify" ${canRelease?'':'disabled'}>${releaseLabel}</button><button class="refresh" type="button" data-action="refresh" ${canRefresh?'':'disabled'}>Refresh shipment</button><button class="reject" type="button" data-action="reject_order" ${canReject?'':'disabled'}>${rejectLabel}</button><button class="cancel" type="button" data-action="cancel_order" ${canCancel?'':'disabled'}>Cancel order</button><button class="delete" type="button" data-action="delete_order" ${canDelete?'':'disabled'}>Delete order</button></div><div class="danger-note">Cancel first before deleting paid/submitted orders. Printify cancellation is only possible while Printify still reports an eligible pre-production state. Deleting removes the order record from this hub after cancellation/rejection or completed fulfillment, but preserves invoice and finance-ledger history. No refund or chargeback is created automatically.</div></article>`;
+    return `<article class="order ${needsAction(o)?'needs-action':''}" data-order-id="${esc(o.id)}"><div class="order-head"><div><div class="order-ref">Order # ${esc(o.payment_reference||o.id)}</div><div class="order-meta">${dateTime(o.created_at)} · ${esc(o.customer_name||'')} · ${esc(o.customer_email||'')}</div><div class="order-id">Internal ID: ${esc(o.id)}</div></div><span><span class="pill ${esc(status)}">${esc(status)}</span>${stalePending(o)?`<span class="pill stale">unpaid ${Math.floor(pendingAgeDays(o))}d</span>`:''}</span></div><div class="order-grid"><div class="order-block"><h3>Buyer & delivery</h3><p>${esc(o.customer_name||'')}<br>${esc(o.customer_email||'')}${o.customer_phone?`<br>${esc(o.customer_phone)}`:''}</p><p>${addressHtml(o.shipping_address)}</p></div><div class="order-block"><h3>Items & totals</h3>${itemsHtml(o.line_items)}<p>Subtotal: <span class="money">${euros(o.subtotal_cents)}</span></p><p>Shipping: <span class="money">${euros(o.shipping_cents)}</span> (${esc(o.shipping_method||'')})</p><p>Total due: <span class="money">${euros(o.total_cents)}</span></p><p>Order confirmation email: ${o.order_confirmation_notified_at?`sent ${dateTime(o.order_confirmation_notified_at)}`:'not sent / not recorded'}</p>${rejection}${cancellation}</div><div class="order-block"><h3>Payment & production</h3><p>Provider: ${esc(o.payment_provider||'manual')}</p><p>Payment reference: <strong>${esc(o.payment_reference||'—')}</strong></p>${approval}<p>Verified: ${o.payment_verified_at?dateTime(o.payment_verified_at):'No'}</p><p>Payment fee: <span class="money">${o.payment_fee_cents==null?'not configured':euros(o.payment_fee_cents)}</span>${o.payment_fee_source?' · '+esc(o.payment_fee_source):''}</p><p>Invoice: <strong>${esc(o.invoice_number||'not issued yet')}</strong></p>${paymentLink}<p>Production order: ${esc(o.printify_order_id||'not submitted')}</p><p>Production status: ${esc(o.printify_status||'not submitted')}</p><p>Submitted: ${dateTime(o.submitted_to_printify_at)}</p><p>Production email: ${o.production_notified_at?`sent ${dateTime(o.production_notified_at)}`:'not sent yet'}</p><p>Tracking: ${trackingHtml(o.tracking)}</p><p>Shipment email: ${o.shipment_notified_at?`sent ${dateTime(o.shipment_notified_at)}`:'not sent yet'}</p></div></div>${o.last_error?`<div class="error"><strong>Last production attempt error:</strong> ${esc(o.last_error)}</div>`:''}${o.notification_error?`<div class="error"><strong>Email delivery error:</strong> ${esc(o.notification_error)}${o.notification_error_at?` <small>(${dateTime(o.notification_error_at)})</small>`:''}</div>`:''}<div class="order-actions"><button class="verify" type="button" data-action="verify_payment" ${canVerify?'':'disabled'}>Verify payment</button><button class="release" type="button" data-action="submit_printify" ${canRelease?'':'disabled'} title="${bunqReady()?'bunq funding source will be verified before Printify is called':'Configure bunq production funding above first'}">${releaseLabel}</button><button class="refresh" type="button" data-action="refresh" ${canRefresh?'':'disabled'}>Refresh shipment</button><button class="reject" type="button" data-action="reject_order" ${canReject?'':'disabled'}>${rejectLabel}</button><button class="cancel" type="button" data-action="cancel_order" ${canCancel?'':'disabled'}>Cancel order</button><button class="delete" type="button" data-action="delete_order" ${canDelete?'':'disabled'}>Delete order</button></div><div class="danger-note">Cancel first before deleting paid/submitted orders. Printify cancellation is only possible while Printify still reports an eligible pre-production state. Deleting removes the order record from this hub after cancellation/rejection or completed fulfillment, but preserves invoice and finance-ledger history. No refund or chargeback is created automatically.</div></article>`;
   }
   function filteredOrders(){const all=current.orders||[];if(focusOrderId){const exact=all.filter(o=>String(o.id)===focusOrderId);if(exact.length)return exact;}if(activeFilter==='all')return all;if(activeFilter==='pending')return all.filter(o=>o.status==='pending');if(activeFilter==='stale')return all.filter(stalePending);if(activeFilter==='rejected')return all.filter(o=>o.status==='rejected');if(activeFilter==='canceled')return all.filter(o=>o.status==='canceled');if(activeFilter==='production')return all.filter(o=>o.status==='production');if(activeFilter==='shipped')return all.filter(o=>o.status==='shipped');return all.filter(needsAction);}
   function renderOrders(){const rows=filteredOrders();setCounts(current.orders||[]);$('ordersBox').innerHTML=rows.length?rows.map(orderHtml).join(''):'<div class="empty">No orders in this view.</div>';document.querySelectorAll('#filters button').forEach(b=>b.classList.toggle('active',b.dataset.filter===activeFilter));}
@@ -126,6 +234,50 @@
   }
   function parseAmount(value){const normalized=String(value||'').trim().replace(/\s/g,'').replace(',','.');if(!/^\d+(?:\.\d{1,2})?$/.test(normalized))return null;const cents=Math.round(Number(normalized)*100);return Number.isInteger(cents)?cents:null;}
 
+  $('bunqConnectBtn').addEventListener('click',async()=>{
+    const button=$('bunqConnectBtn'),apiKey=$('bunqApiKey').value.trim();
+    if(!apiKey){setStatus('Paste the bunq API key first.','warn');return;}
+    if(!window.confirm('Connect this admin backend to your bunq account? The key will be stored encrypted in Supabase Vault and will not be shown again.'))return;
+    button.disabled=true;
+    try{
+      setStatus('Connecting bunq and registering the production server…');
+      const result=await callBunq('connect',{api_key:apiKey});
+      $('bunqApiKey').value='';
+      bunqState={loaded:true,settings:result.settings||{},accounts:Array.isArray(result.accounts)?result.accounts:[],cards:Array.isArray(result.cards)?result.cards:[]};
+      renderBunq();
+      setStatus('bunq connected. Choose the production account and Printify card.','ok');
+    }catch(error){setStatus(error?.message||'Could not connect bunq.','warn');}
+    finally{button.disabled=false;}
+  });
+  $('bunqLoadBtn').addEventListener('click',async()=>{
+    const button=$('bunqLoadBtn');button.disabled=true;
+    try{setStatus('Refreshing bunq accounts and cards…');await loadBunqCatalog();setStatus('bunq accounts and cards refreshed.','ok');}
+    catch(error){setStatus(error?.message||'Could not refresh bunq.','warn');}
+    finally{button.disabled=false;}
+  });
+  $('bunqSaveBtn').addEventListener('click',async()=>{
+    const button=$('bunqSaveBtn'),accountId=Number($('bunqAccount').value),cardId=Number($('bunqCard').value),confirmed=$('bunqPrintifyConfirmed').checked;
+    if(!Number.isFinite(accountId)||!Number.isFinite(cardId)){setStatus('Choose both the bunq account and the bunq card.','warn');return;}
+    if(!confirmed){setStatus('Confirm that this exact bunq card is saved as Printify\'s default payment card.','warn');return;}
+    if(!window.confirm('Use this bunq account/card for future production approvals? The card will be linked to this bunq account before each Printify production charge.'))return;
+    button.disabled=true;
+    try{
+      setStatus('Linking the bunq card to the production account and verifying it…');
+      const result=await callBunq('save_selection',{account_id:accountId,card_id:cardId,printify_default_card_confirmed:true});
+      bunqState={...bunqState,settings:result.settings||bunqState.settings};
+      renderBunq();
+      setStatus('bunq production funding is ready.','ok');
+    }catch(error){setStatus(error?.message||'Could not save bunq funding source.','warn');}
+    finally{button.disabled=false;}
+  });
+  $('bunqDisableBtn').addEventListener('click',async()=>{
+    if(!window.confirm('Disable bunq production funding? Production approvals will be blocked until it is enabled again.'))return;
+    const button=$('bunqDisableBtn');button.disabled=true;
+    try{const result=await callBunq('disable');bunqState={...bunqState,settings:result.settings||{ready_for_production:false}};renderBunq();setStatus('bunq production funding disabled.','ok');}
+    catch(error){setStatus(error?.message||'Could not disable bunq funding.','warn');}
+    finally{button.disabled=false;}
+  });
+
   $('provider').addEventListener('change',providerHelp);
   $('settingsForm').addEventListener('submit',async e=>{e.preventDefault();const button=e.submitter;if(button)button.disabled=true;try{setStatus('Saving payment settings…');const result=await callAdmin('save_settings',{provider:$('provider').value,payment_url:$('paymentUrl').disabled?'':$('paymentUrl').value.trim(),payment_instructions:$('instructions').value.trim(),enabled:$('paymentsEnabled').checked});current.settings=result.settings;renderSettings(result.settings);setStatus('Payment settings saved.','ok');}catch(error){setStatus(error?.message||'Could not save payment settings.','warn');}finally{if(button)button.disabled=false;}});
   $('filters').addEventListener('click',e=>{const b=e.target.closest('button[data-filter]');if(!b)return;activeFilter=b.dataset.filter||'action';renderOrders();});
@@ -149,10 +301,13 @@
     }
 
     if(action==='submit_printify'){
+      if(!bunqReady()){setStatus('Configure bunq production funding above before sending an order to production.','warn');return;}
       const retrying=!!row.printify_order_id;
+      const funding=bunqState.settings||{};
+      const fundingLine=`Funding source: ${funding.selected_account_description||'bunq account'} ${funding.selected_account_iban_masked||''} → card ${funding.selected_card_last4?'•••• '+funding.selected_card_last4:''}.`;
       const prompt=retrying
-        ? `Retry sending ${row.payment_reference} to production? This reuses existing Printify order ${row.printify_order_id}; it will not create a duplicate. Printify will attempt to charge its configured payment method, which should be your bunq-linked card.`
-        : `Send ${row.payment_reference} to production? Printify will attempt to charge its configured payment method, which should be your bunq-linked card. Verified customer payment received: ${euros(row.paid_amount_cents)}.`;
+        ? `Retry sending ${row.payment_reference} to production? This reuses existing Printify order ${row.printify_order_id}; it will not create a duplicate.\n\n${fundingLine}\nThe backend will re-verify/link that bunq card to this account, then Printify will attempt the production charge.`
+        : `Send ${row.payment_reference} to production?\n\n${fundingLine}\nThe backend will re-verify/link that bunq card to this account, then Printify will attempt the production charge.\nCustomer payment already verified: ${euros(row.paid_amount_cents)}.`;
       if(!window.confirm(prompt))return;
       setStatus(retrying?'Retrying production — Printify will attempt the bunq-linked charge…':'Sending to production — Printify will attempt the bunq-linked charge…');
     }
@@ -211,7 +366,7 @@
   // Do not reload orders on session-update events. Some session validations can rotate
   // a token near expiry; coupling that event to load() can create a reload loop.
   // Every explicit load/action already validates the current admin session.
-  const startOrders=()=>load().catch(showLoadFailure);
+  const startOrders=()=>{load().catch(showLoadFailure);setTimeout(()=>loadBunqStatus(),0);};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startOrders,{once:true});
   else startOrders();
 })();
