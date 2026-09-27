@@ -306,10 +306,11 @@ function publicSettings(row:any){
     selected_card_last4:row?.selected_card_last4||"",
     selected_card_type:row?.selected_card_type||"",
     printify_default_card_confirmed:row?.printify_default_card_confirmed===true,
+    printify_bunq_only_confirmed:row?.printify_bunq_only_confirmed===true,
     connected_at:row?.connected_at||null,
     last_checked_at:row?.last_checked_at||null,
     last_error:row?.last_error||null,
-    ready_for_production:row?.enabled===true&&row?.api_context_ready===true&&!!row?.selected_account_id&&!!row?.selected_card_id&&row?.printify_default_card_confirmed===true
+    ready_for_production:row?.enabled===true&&row?.api_context_ready===true&&!!row?.selected_account_id&&!!row?.selected_card_id&&row?.printify_default_card_confirmed===true&&row?.printify_bunq_only_confirmed===true
   };
 }
 
@@ -361,6 +362,7 @@ Deno.serve(async(req:Request)=>{
           selected_card_last4:null,
           selected_card_type:null,
           printify_default_card_confirmed:false,
+          printify_bunq_only_confirmed:false,
           connected_at:now,
           last_checked_at:now,
           last_error:null,
@@ -389,6 +391,7 @@ Deno.serve(async(req:Request)=>{
     if(action==="save_selection"){
       const accountId=Number(body?.account_id),cardId=Number(body?.card_id);
       const confirmed=body?.printify_default_card_confirmed===true;
+      const bunqOnlyConfirmed=body?.printify_bunq_only_confirmed===true;
       if(!Number.isFinite(accountId)||!Number.isFinite(cardId)) return json(req,{error:"bunq_selection_invalid"},400);
       const ctx=await openContext(sb);
       const catalog=await loadCatalog(ctx);
@@ -412,12 +415,13 @@ Deno.serve(async(req:Request)=>{
         selected_card_last4:cardLast4(linked),
         selected_card_type:text(linked.type||listedCard.type),
         printify_default_card_confirmed:confirmed,
+        printify_bunq_only_confirmed:bunqOnlyConfirmed,
         last_checked_at:now,
         last_error:null,
         updated_at:now
       }).eq("id",1);
       if(error) throw error;
-      await logEvent(sb,{action:"save_selection",ok:true,bunq_account_id:accountId,bunq_card_id:cardId,bunq_balance_eur:account.balance,detail:"bunq card linked to selected production account",metadata:{printify_default_card_confirmed:confirmed}});
+      await logEvent(sb,{action:"save_selection",ok:true,bunq_account_id:accountId,bunq_card_id:cardId,bunq_balance_eur:account.balance,detail:"bunq card linked to selected production account",metadata:{printify_default_card_confirmed:confirmed,printify_bunq_only_confirmed:bunqOnlyConfirmed}});
       return json(req,{ok:true,settings:publicSettings(await settings(sb)),account,card:{...listedCard,raw:undefined}});
     }
 
@@ -426,6 +430,7 @@ Deno.serve(async(req:Request)=>{
       if(!row?.enabled||!row?.api_context_ready) return json(req,{error:"bunq_funding_not_configured",detail:"Connect bunq and select a production account/card first."},409);
       if(!row?.selected_account_id||!row?.selected_card_id) return json(req,{error:"bunq_funding_selection_missing"},409);
       if(row?.printify_default_card_confirmed!==true) return json(req,{error:"printify_bunq_card_not_confirmed",detail:"Confirm that the selected bunq card is the default payment card in Printify before production."},409);
+      if(row?.printify_bunq_only_confirmed!==true) return json(req,{error:"printify_bunq_only_not_confirmed",detail:"Confirm that Printify will not use Printify Balance or another fallback card for this production charge."},409);
 
       const ctx=await openContext(sb);
       const catalog=await loadCatalog(ctx);
@@ -452,6 +457,7 @@ Deno.serve(async(req:Request)=>{
         card_last4:cardLast4(linked)||row.selected_card_last4,
         card_type:text(linked.type||row.selected_card_type),
         printify_default_card_confirmed:true,
+        printify_bunq_only_confirmed:true,
         verified_at:now
       };
       const orderId=text(body?.order_id);
@@ -465,7 +471,7 @@ Deno.serve(async(req:Request)=>{
 
     if(action==="disable"){
       const now=new Date().toISOString();
-      await sb.from("shop_bunq_production_settings_v1").update({enabled:false,printify_default_card_confirmed:false,updated_at:now}).eq("id",1);
+      await sb.from("shop_bunq_production_settings_v1").update({enabled:false,printify_default_card_confirmed:false,printify_bunq_only_confirmed:false,updated_at:now}).eq("id",1);
       await logEvent(sb,{action:"disable",ok:true,detail:"bunq production funding disabled"});
       return json(req,{ok:true,settings:publicSettings(await settings(sb))});
     }
