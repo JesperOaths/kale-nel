@@ -32,8 +32,8 @@ assert.match(orders,/admin-session-sync\.js/, 'shop orders must load the loop-sa
 assert.match(orders,/let loadPromise=null/, 'shop orders must deduplicate concurrent list reloads');
 assert.match(orders,/let actionInFlight=false/, 'shop orders must suppress session-triggered reloads while an admin action is running');
 assert.match(orders,/Payment for \$\{row\.payment_reference\} verified/, 'payment verification must show explicit success feedback');
-assert.match(orders,/Retry production/, 'failed production submissions with an existing Printify order must remain retryable');
-assert.match(orders,/reuses existing Printify order/, 'production retry must explicitly preserve idempotency');
+assert.match(orders,/Retry production charge|I approved in bunq — complete production/, 'existing Printify orders must remain retryable through the bunq approval pipeline');
+assert.match(orders,/no duplicate is created|no duplicate order is created/, 'production retry must explicitly preserve idempotency');
 assert.doesNotMatch(orders,/addEventListener\('gejast:admin-session-updated'/, 'orders page must not reload itself from session-update events');
 
 assert.match(admin,/rememberDeviceInput/);
