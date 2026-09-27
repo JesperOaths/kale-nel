@@ -13,6 +13,7 @@ create table if not exists public.shop_bunq_production_settings_v1 (
   selected_card_last4 text,
   selected_card_type text,
   printify_default_card_confirmed boolean not null default false,
+  printify_bunq_only_confirmed boolean not null default false,
   connected_at timestamptz,
   last_checked_at timestamptz,
   last_error text,
