@@ -7,6 +7,7 @@ on:
       - '.github/workflows/deploy-admin-worker.yml'
       - 'cloudflare/workers/admin-gate/**'
       - 'admin.html'
+      - 'admin_shop_orders.html'
       - 'admin-session-sync.js'
       - 'scripts/build-admin-worker-assets.mjs'
       - 'scripts/test-admin-worker-gate.mjs'
