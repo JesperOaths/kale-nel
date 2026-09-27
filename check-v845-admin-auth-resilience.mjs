@@ -11,11 +11,15 @@ const edge=read('supabase/functions/admin-auth-v845/index.ts');
 const sql=read('supabase/migrations/20260920165000_admin_login_resilience_v845.sql');
 const deploy=read('.github/workflows/deploy-shop-fixes-v829.yml');
 const live=read('check-live-shop.mjs');
+const adminWorker=read('cloudflare/workers/admin-gate/src/worker.js');
 
-for(const source of [admin,adminJs,claims,perfume]){
+assert.match(admin,/\.\/api\/admin-auth-v845/, 'main admin login must use the same-origin Worker proxy');
+assert.doesNotMatch(admin,/SUPABASE_URL}\/functions\/v1\/admin-auth-v845/, 'main admin login must not reintroduce the cross-origin auth preflight');
+for(const source of [adminJs,claims,perfume]){
   assert.match(source,/functions\/v1\/admin-auth-v845/);
   assert.doesNotMatch(source,/rest\/v1\/rpc\/admin_login/);
 }
+assert.match(adminWorker,/SUPABASE_URL}\/functions\/v1\/admin-auth-v845/, 'the protected Worker proxy must forward auth to the Supabase edge function');
 assert.match(edge,/SUPABASE_SERVICE_ROLE_KEY/);
 assert.match(edge,/sb\.rpc\("admin_login"/);
 assert.match(edge,/loginRpcWithTransientRetry/);
