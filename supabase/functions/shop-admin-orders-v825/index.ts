@@ -46,7 +46,7 @@ function rejectable(order){
 }
 function deletable(order){
   const status=text(order.status).toLowerCase();
-  return status==="canceled"||(status==="rejected"&&!!order.rejection_notified_at);
+  return status==="canceled"||status==="shipped"||(status==="rejected"&&!!order.rejection_notified_at);
 }
 function productionEmail(order){
   const ref=text(order.payment_reference||order.id);
@@ -279,8 +279,9 @@ if(action==="delete_order"){
     if(!Number.isFinite(shopId))return json(req,{error:"delete_not_allowed",detail:"Cannot verify the Printify cancellation state because the shop ID is missing."},409);
     const canonical=await printify(token,`/shops/${shopId}/orders/${encodeURIComponent(order.printify_order_id)}.json`);
     const canonicalStatus=text(canonical?.status).toLowerCase();
-    if(canonicalStatus!=="canceled"){
-      return json(req,{error:"delete_not_allowed",detail:`Printify order is still "${canonicalStatus||"unknown"}". Cancel it successfully before deleting the local order record.`,printify_status:canonicalStatus},409);
+    const terminalDeletionAllowed=canonicalStatus==="canceled"||canonicalStatus==="fulfilled";
+    if(!terminalDeletionAllowed){
+      return json(req,{error:"delete_not_allowed",detail:`Printify order is still "${canonicalStatus||"unknown"}". Delete is allowed only after cancellation or completed fulfillment.`,printify_status:canonicalStatus},409);
     }
   }
   const ref=text(order.payment_reference||order.id);
