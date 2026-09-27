@@ -51,6 +51,7 @@
           <select id="bunqCard"><option value="">Load bunq cards first</option></select>
         </div>
         <label class="switch wide-mobile"><input id="bunqPrintifyConfirmed" type="checkbox"> This exact bunq card is saved as Printify's default payment card</label>
+        <label class="switch wide-mobile"><input id="bunqOnlyConfirmed" type="checkbox"> bunq-only charge: Printify Balance is not usable for this order and no other fallback card should be charged</label>
         <div class="actions wide-mobile">
           <button id="bunqLoadBtn" type="button">Refresh bunq accounts & cards</button>
           <button id="bunqSaveBtn" type="button">Use for production</button>
@@ -156,9 +157,10 @@
       if(s.selected_account_id&&[...accountSelect.options].some(o=>o.value===String(s.selected_account_id)))accountSelect.value=String(s.selected_account_id);
       if(s.selected_card_id&&[...cardSelect.options].some(o=>o.value===String(s.selected_card_id)))cardSelect.value=String(s.selected_card_id);
       $('bunqPrintifyConfirmed').checked=s.printify_default_card_confirmed===true;
+      $('bunqOnlyConfirmed').checked=s.printify_bunq_only_confirmed===true;
       $('bunqSelectionHelp').innerHTML=bunqReady()
         ? `Funding guard active. Last verified: ${esc(dateTime(s.last_checked_at))}.`
-        : 'Production remains blocked until an account/card is selected and you confirm that same card is the default payment card in Printify.';
+        : 'Production remains blocked until an account/card is selected and you confirm that same card is Printify’s default and that Printify will not use Balance or another fallback card.';
     }
     renderOrders();
   }
@@ -256,14 +258,15 @@
     finally{button.disabled=false;}
   });
   $('bunqSaveBtn').addEventListener('click',async()=>{
-    const button=$('bunqSaveBtn'),accountId=Number($('bunqAccount').value),cardId=Number($('bunqCard').value),confirmed=$('bunqPrintifyConfirmed').checked;
+    const button=$('bunqSaveBtn'),accountId=Number($('bunqAccount').value),cardId=Number($('bunqCard').value),confirmed=$('bunqPrintifyConfirmed').checked,bunqOnlyConfirmed=$('bunqOnlyConfirmed').checked;
     if(!Number.isFinite(accountId)||!Number.isFinite(cardId)){setStatus('Choose both the bunq account and the bunq card.','warn');return;}
     if(!confirmed){setStatus('Confirm that this exact bunq card is saved as Printify\'s default payment card.','warn');return;}
-    if(!window.confirm('Use this bunq account/card for future production approvals? The card will be linked to this bunq account before each Printify production charge.'))return;
+    if(!bunqOnlyConfirmed){setStatus('Confirm bunq-only charging: no usable Printify Balance and no other fallback card should be charged.','warn');return;}
+    if(!window.confirm('Use this bunq account/card for future production approvals? The card will be linked to this bunq account before each Printify production charge. You are also confirming Printify will not use Balance or another fallback card instead.'))return;
     button.disabled=true;
     try{
       setStatus('Linking the bunq card to the production account and verifying it…');
-      const result=await callBunq('save_selection',{account_id:accountId,card_id:cardId,printify_default_card_confirmed:true});
+      const result=await callBunq('save_selection',{account_id:accountId,card_id:cardId,printify_default_card_confirmed:true,printify_bunq_only_confirmed:true});
       bunqState={...bunqState,settings:result.settings||bunqState.settings};
       renderBunq();
       setStatus('bunq production funding is ready.','ok');
