@@ -19,6 +19,7 @@ on:
       - 'supabase/functions/shop-admin-export-v847/**'
       - 'supabase/functions/shop-ops-v847/**'
       - 'supabase/functions/shop-admin-orders-v825/**'
+      - 'supabase/functions/shop-bunq-production-v1/**'
       - 'supabase/functions/_shared/shop-admin-growth-v843.mjs'
 
 permissions:
@@ -67,3 +68,4 @@ jobs:
           deploy_function shop-admin-export-v847
           deploy_function shop-ops-v847
           deploy_function shop-admin-orders-v825
+          deploy_function shop-bunq-production-v1
