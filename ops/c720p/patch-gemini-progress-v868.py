@@ -11,9 +11,9 @@ orig=s
 lines=s.splitlines()
 for i,line in enumerate(lines):
     if line.startswith('DEFAULT_GEMINI_MODEL = '):
-        lines[i]='DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"'
+        lines[i]='DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"'
     if line.startswith('FALLBACK_GEMINI_MODELS = '):
-        lines[i]='FALLBACK_GEMINI_MODELS = ["gemini-3.1-flash-lite"]'
+        lines[i]='FALLBACK_GEMINI_MODELS = ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.1-flash-lite"]'
 s='\n'.join(lines)+'\n'
 
 anchor='''    models = [requested_model] + [m for m in configured_fallbacks if m != requested_model]\n'''
