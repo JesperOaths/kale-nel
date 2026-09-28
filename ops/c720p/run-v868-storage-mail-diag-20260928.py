@@ -20,6 +20,10 @@ REPORT["large_files"]=run(["bash","-lc",
 ],120)
 REPORT["failed_units"]=run(["systemctl","--user","--failed","--no-pager"],20)
 REPORT["mail_timer_cat"]=run(["systemctl","--user","cat","inbox-triage-agent.timer"],20)
+REPORT["mail_retry_timer_cat"]=run(["systemctl","--user","cat","inbox-triage-retry.timer"],20)
+REPORT["mail_retry_timer_show"]=run(["systemctl","--user","show","inbox-triage-retry.timer","-p","ActiveState","-p","UnitFileState","-p","LastTriggerUSec","-p","NextElapseUSecRealtime"],20)
+REPORT["mail_retry_service_show"]=run(["systemctl","--user","show","inbox-triage-retry.service","-p","ActiveState","-p","Result","-p","ExecMainStatus","-p","ExecMainStartTimestamp","-p","ExecMainExitTimestamp"],20)
+REPORT["mail_retry_state"]=run(["bash","-lc","cat /home/jespern/c720p-home-hub/state/inbox-triage-cloud-retry.json 2>/dev/null || true"],20)
 REPORT["mail_service_show"]=run(["systemctl","--user","show","inbox-triage-agent.service",
     "-p","ActiveState","-p","Result","-p","ExecMainStatus","-p","ExecMainStartTimestamp","-p","ExecMainExitTimestamp"],20)
 REPORT["mail_journal"]=run(["journalctl","--user","-u","inbox-triage-agent.service","-n","120","--no-pager"],30)
