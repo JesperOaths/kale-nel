@@ -15,6 +15,8 @@ def run(cmd, timeout=30):
 
 REPORT["df_before"]=run(["df","-B1","/"])
 REPORT["du_home"]=run(["du","-x","-BM","--max-depth=2",str(HOME)],120)
+REPORT["du_major_roots"]=run(["bash","-lc","du -x -BM --max-depth=2 /home/jespern /opt /var 2>/dev/null | sort -n | tail -120"],180)
+REPORT["backup_inventory"]=run(["bash","-lc","du -sh /home/jespern/c720p-backups 2>/dev/null || true; find /home/jespern/c720p-backups -maxdepth 1 -type f -printf '%s %T@ %p\\n' 2>/dev/null | sort -nr | head -60"],90)
 REPORT["large_files"]=run(["bash","-lc",
     "find /home/jespern -xdev -type f -size +20M -printf '%s %p\\n' 2>/dev/null | sort -nr | head -80"
 ],120)
@@ -27,6 +29,7 @@ REPORT["mail_retry_state"]=run(["bash","-lc","cat /home/jespern/c720p-home-hub/s
 REPORT["mail_service_show"]=run(["systemctl","--user","show","inbox-triage-agent.service",
     "-p","ActiveState","-p","Result","-p","ExecMainStatus","-p","ExecMainStartTimestamp","-p","ExecMainExitTimestamp"],20)
 REPORT["mail_journal"]=run(["journalctl","--user","-u","inbox-triage-agent.service","-n","120","--no-pager"],30)
+REPORT["gemini_models_test"]=run(["bash","-lc","cd /opt/inbox-triage-agent && FORCE_IPV4=true timeout 45 ./.venv/bin/python scripts/test_gemini_models.py 2>&1 | sed -E 's/key=[^& ]+/key=<REDACTED>/g' | head -40"],60)
 REPORT["new_camera_unit"]=run(["systemctl","--user","cat","c720p-frontyard-security-new.service"],20)
 REPORT["archive_unit"]=run(["systemctl","--user","cat","c720p-drive-security-archive.service"],20)
 
