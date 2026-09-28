@@ -228,6 +228,49 @@ async function sendEmail(to: string, subject: string, html: string, plain: strin
   return res.ok ? { ok: true, skipped: false } : { ok: false, skipped: false, error: `Resend ${res.status}: ${raw.slice(0, 300)}` };
 }
 
+function merchantItemsText(items: any[]) {
+  return (Array.isArray(items) ? items : []).map((item: any) => {
+    const qty = Math.max(1, Number(item?.qty || item?.quantity || 1));
+    const name = clean(item?.name || item?.title || "Item");
+    const size = clean(item?.size);
+    return `${qty}× ${name}${size ? ` (${size})` : ""}`;
+  }).join(", ");
+}
+async function notifyMerchantNewOrder(sb: any, order: any) {
+  if (order?.merchant_order_notified_at) return { sent: false, already_sent: true, skipped: true };
+  const { data: ops } = await sb.from("shop_ops_settings_v847").select("owner_email").eq("id", 1).maybeSingle();
+  const to = text(ops?.owner_email).toLowerCase();
+  if (!validEmail(to)) return { sent: false, skipped: true, error: "merchant_email_not_configured" };
+
+  const ref = text(order?.payment_reference || order?.id);
+  const itemText = merchantItemsText(order?.line_items);
+  const safeName = htmlEscape(order?.customer_name || "Customer");
+  const safeEmail = htmlEscape(order?.customer_email || "");
+  const safeItems = htmlEscape(itemText || "Order items recorded in admin");
+  const subject = `New Kalenel shop order ${ref}`;
+  const html = `<div style="font-family:Arial,sans-serif;line-height:1.55;color:#111"><h2>New kalenel.nl/shop order</h2><p><strong>${htmlEscape(ref)}</strong> has just been created.</p><p>Customer: ${safeName}${safeEmail ? `<br>Email: ${safeEmail}` : ""}</p><p>Items: ${safeItems}</p><p><strong>Total: ${money(order?.total_cents)}</strong><br>Shipping: ${money(order?.shipping_cents)}<br>Status: Pending payment verification</p><p><a href="https://admin.kalenel.nl/admin_shop_orders.html?order=${encodeURIComponent(String(order?.id || ""))}">Open this order in Kalenel Admin</a></p></div>`;
+  const plain = `New kalenel.nl/shop order ${ref}.\nCustomer: ${order?.customer_name || "Customer"}${order?.customer_email ? ` <${order.customer_email}>` : ""}\nItems: ${itemText || "See admin"}\nTotal: ${money(order?.total_cents)}\nShipping: ${money(order?.shipping_cents)}\nStatus: Pending payment verification.\nhttps://admin.kalenel.nl/admin_shop_orders.html?order=${encodeURIComponent(String(order?.id || ""))}`;
+  const mailed = await sendEmail(to, subject, html, plain);
+  const now = new Date().toISOString();
+  if (mailed.ok) {
+    await sb.from("shop_orders").update({
+      merchant_order_notified_at: now,
+      merchant_order_notification_error: null,
+      merchant_order_notification_error_at: null,
+      updated_at: now,
+    }).eq("id", order.id);
+    return { sent: true, notified_at: now };
+  }
+  if (!mailed.skipped) {
+    await sb.from("shop_orders").update({
+      merchant_order_notification_error: mailed.error,
+      merchant_order_notification_error_at: now,
+      updated_at: now,
+    }).eq("id", order.id);
+  }
+  return { sent: false, skipped: !!mailed.skipped, error: mailed.error };
+}
+
 function dbMappingPayload(rows: any[]) {
   return {
     version: 1,
@@ -309,10 +352,11 @@ Deno.serve(async (req: Request) => {
     if (!validationOnly && (!/^[A-Za-z0-9_-]{20,100}$/.test(checkoutKey) || confirmationToken.length < 32 || confirmationToken.length > 200)) return json(req, { error: "invalid_checkout_token" }, 400);
 
     const tokenHash = validationOnly ? "" : await sha256(confirmationToken);
-    const { data: existing } = validationOnly ? { data: null } : await sb.from("shop_orders").select("id,status,subtotal_cents,shipping_cents,total_cents,shipping_method,payment_reference,payment_provider,payment_request_url,payment_request_expires_at,confirmation_token_hash,order_confirmation_notified_at").eq("checkout_idempotency_key", checkoutKey).maybeSingle();
+    const { data: existing } = validationOnly ? { data: null } : await sb.from("shop_orders").select("id,status,subtotal_cents,shipping_cents,total_cents,shipping_method,payment_reference,payment_provider,payment_request_url,payment_request_expires_at,confirmation_token_hash,order_confirmation_notified_at,merchant_order_notified_at,merchant_order_notification_error,customer_name,customer_email,line_items,created_at").eq("checkout_idempotency_key", checkoutKey).maybeSingle();
     if (existing) {
       if (text(existing.confirmation_token_hash) !== tokenHash) return json(req, { error: "idempotency_conflict" }, 409);
-      return json(req, { ok: true, order_id: existing.id, status: existing.status, subtotal_cents: existing.subtotal_cents, shipping_cents: existing.shipping_cents, total_cents: existing.total_cents, shipping_method: existing.shipping_method, payment_reference: existing.payment_reference, payment_provider: existing.payment_provider, payment_url: existing.payment_request_url || "", payment_expires_at: existing.payment_request_expires_at || null, confirmation_token: confirmationToken, confirmation_email_sent: !!existing.order_confirmation_notified_at, replayed: true });
+      const merchantNotice = existing.merchant_order_notified_at ? { sent: false, already_sent: true, skipped: true } : await notifyMerchantNewOrder(sb, existing);
+      return json(req, { ok: true, order_id: existing.id, status: existing.status, subtotal_cents: existing.subtotal_cents, shipping_cents: existing.shipping_cents, total_cents: existing.total_cents, shipping_method: existing.shipping_method, payment_reference: existing.payment_reference, payment_provider: existing.payment_provider, payment_url: existing.payment_request_url || "", payment_expires_at: existing.payment_request_expires_at || null, confirmation_token: confirmationToken, confirmation_email_sent: !!existing.order_confirmation_notified_at, merchant_order_email_sent: !!(existing.merchant_order_notified_at || merchantNotice.sent), replayed: true });
     }
 
     const { data: cache, error: cacheError } = await sb.from("shop_catalog_cache_v828").select("payload,generated_at,last_error").eq("id", 1).maybeSingle();
@@ -529,7 +573,8 @@ Deno.serve(async (req: Request) => {
     if (mailed.ok) await sb.from("shop_orders").update({ order_confirmation_notified_at: new Date().toISOString(), notification_error: null, notification_error_at: null }).eq("id", orderId);
     else if (!mailed.skipped) await sb.from("shop_orders").update({ notification_error: mailed.error, notification_error_at: new Date().toISOString() }).eq("id", orderId);
 
-    return json(req, { ok: true, order_id: orderId, status: "pending", subtotal_cents: subtotalCents, shipping_cents: shippingCents, total_cents: totalCents, shipping_method: shippingMethod, payment_reference: reference, payment_provider: payment.provider, payment_url: payment.url, payment_expires_at: payment.expires_at, confirmation_token: confirmationToken, confirmation_email_sent: !!mailed.ok });
+    const merchantNotice = await notifyMerchantNewOrder(sb, { ...orderRow, id: orderId, payment_reference: reference });
+    return json(req, { ok: true, order_id: orderId, status: "pending", subtotal_cents: subtotalCents, shipping_cents: shippingCents, total_cents: totalCents, shipping_method: shippingMethod, payment_reference: reference, payment_provider: payment.provider, payment_url: payment.url, payment_expires_at: payment.expires_at, confirmation_token: confirmationToken, confirmation_email_sent: !!mailed.ok, merchant_order_email_sent: !!merchantNotice.sent });
   } catch (error) {
     const detail = text(error instanceof Error ? error.message : error).slice(0, 400);
     console.error("shop-manual-checkout-v832 failed", error instanceof Error ? `${error.name}: ${detail}` : detail);
