@@ -1,8 +1,8 @@
 {
   "enabled": true,
-  "id": 990027,
-  "lease_token": "75b6dcbf-8ab6-4567-b089-990027000001",
-  "timeout_seconds": 180,
+  "id": 990032,
+  "lease_token": "f1e6a9f3-3c38-4dbd-8b4a-990032000001",
+  "timeout_seconds": 240,
   "attempts": 1,
-  "command": "bash -lc 'LOCK=/tmp/c720p-job-990027.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; curl -fsSL --max-time 30 https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p/install-tv-surround-isolated-v9-20260926.py -o /tmp/install-tv-surround-isolated-v9.py && python3 /tmp/install-tv-surround-isolated-v9.py'"
+  "command": "bash -lc 'LOCK=/tmp/c720p-job-990032.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; curl -fsSL --max-time 30 https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p/run-v868-storage-mail-diag-20260928.py -o /tmp/run-v868-storage-mail-diag-20260928.py && python3 /tmp/run-v868-storage-mail-diag-20260928.py'"
 }
