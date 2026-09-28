@@ -136,7 +136,8 @@ export async function checkOrdersAndTelemetry(sb,settings){
   const active=new Map([["order_error",new Set()],["pending_stale",new Set()],["paid_not_submitted",new Set()],["production_stuck",new Set()],["shipped_no_tracking",new Set()]]),created=[],notificationFailures=[];
   for(const o of orders||[]){
     const ref=text(o.payment_reference)||String(o.id).slice(0,8);
-    if(!o.merchant_order_notified_at&&text(settings?.owner_email)){
+    const merchantNotifyEligible=Date.parse(String(o.created_at||""))>=Date.parse("2026-09-28T23:25:00Z");
+    if(merchantNotifyEligible&&!o.merchant_order_notified_at&&text(settings?.owner_email)){
       const items=(Array.isArray(o.line_items)?o.line_items:[]).map(item=>{
         const qty=Math.max(1,Number(item?.qty||item?.quantity||1));
         const name=text(item?.name||item?.title||"Item");
