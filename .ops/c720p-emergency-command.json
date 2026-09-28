@@ -1,8 +1,8 @@
 {
   "enabled": true,
-  "id": 990031,
-  "lease_token": "f1e6a9f3-3c38-4dbd-8b4a-990031000001",
-  "timeout_seconds": 300,
+  "id": 990032,
+  "lease_token": "f1e6a9f3-3c38-4dbd-8b4a-990032000001",
+  "timeout_seconds": 240,
   "attempts": 1,
-  "command": "bash -lc 'LOCK=/tmp/c720p-job-990031.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; curl -fsSL --max-time 30 https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p/run-v865-recovery-20260928.py -o /tmp/run-v865-recovery-20260928.py && python3 /tmp/run-v865-recovery-20260928.py'"
+  "command": "bash -lc 'LOCK=/tmp/c720p-job-990032.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; curl -fsSL --max-time 30 https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p/run-v868-storage-mail-diag-20260928.py -o /tmp/run-v868-storage-mail-diag-20260928.py && python3 /tmp/run-v868-storage-mail-diag-20260928.py'"
 }
