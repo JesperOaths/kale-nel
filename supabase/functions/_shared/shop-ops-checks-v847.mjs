@@ -131,11 +131,34 @@ export async function refreshCostsAndCheck(sb,settings,state,analyticsUrl,servic
   return {refresh:payload.refresh||{},new_alerts:created};
 }
 export async function checkOrdersAndTelemetry(sb,settings){
-  const {data:orders,error}=await sb.from("shop_orders").select("id,status,payment_reference,created_at,payment_verified_at,submitted_to_printify_at,shipped_at,tracking,last_error,total_cents,subtotal_cents,shipping_cents,payment_fee_cents,invoice_number,customer_name,customer_email,payment_provider,payment_request_url,order_confirmation_notified_at,production_notified_at,shipment_notified_at,notification_error,notification_error_at").order("created_at",{ascending:false}).limit(2000);
+  const {data:orders,error}=await sb.from("shop_orders").select("id,status,payment_reference,created_at,payment_verified_at,submitted_to_printify_at,shipped_at,tracking,last_error,total_cents,subtotal_cents,shipping_cents,payment_fee_cents,invoice_number,customer_name,customer_email,payment_provider,payment_request_url,line_items,order_confirmation_notified_at,merchant_order_notified_at,merchant_order_notification_error,merchant_order_notification_error_at,production_notified_at,shipment_notified_at,notification_error,notification_error_at").order("created_at",{ascending:false}).limit(2000);
   if(error)throw error;
   const active=new Map([["order_error",new Set()],["pending_stale",new Set()],["paid_not_submitted",new Set()],["production_stuck",new Set()],["shipped_no_tracking",new Set()]]),created=[],notificationFailures=[];
   for(const o of orders||[]){
     const ref=text(o.payment_reference)||String(o.id).slice(0,8);
+    if(!o.merchant_order_notified_at&&text(settings?.owner_email)){
+      const items=(Array.isArray(o.line_items)?o.line_items:[]).map(item=>{
+        const qty=Math.max(1,Number(item?.qty||item?.quantity||1));
+        const name=text(item?.name||item?.title||"Item");
+        const size=text(item?.size);
+        return qty+"× "+name+(size?" ("+size+")":"");
+      }).join(", ");
+      const money=c=>"€"+(Number(c||0)/100).toFixed(2);
+      const safe=v=>text(v).replace(/[<>&]/g,"");
+      const subject="New Kalenel shop order "+ref;
+      const html='<div style="font-family:Arial,sans-serif;line-height:1.55;color:#111"><h2>New kalenel.nl/shop order</h2><p><strong>'+safe(ref)+'</strong> has been created.</p><p>Customer: '+safe(o.customer_name)+(o.customer_email?'<br>Email: '+safe(o.customer_email):'')+'</p><p>Items: '+safe(items||"See admin")+'</p><p><strong>Total: '+money(o.total_cents)+'</strong><br>Shipping: '+money(o.shipping_cents)+'<br>Status: '+safe(o.status||"pending")+'</p><p><a href="https://admin.kalenel.nl/admin_shop_orders.html?order='+encodeURIComponent(String(o.id))+'">Open this order in Kalenel Admin</a></p></div>';
+      const plain='New kalenel.nl/shop order '+ref+'.\nCustomer: '+text(o.customer_name)+(o.customer_email?' <'+text(o.customer_email)+'>':'')+'\nItems: '+(items||"See admin")+'\nTotal: '+money(o.total_cents)+'\nShipping: '+money(o.shipping_cents)+'\nStatus: '+text(o.status||"pending")+'\nhttps://admin.kalenel.nl/admin_shop_orders.html?order='+encodeURIComponent(String(o.id));
+      const merchantMail=await sendEmail(text(settings.owner_email),subject,html,plain);
+      if(merchantMail.ok){
+        const at=nowIso();
+        await sb.from("shop_orders").update({merchant_order_notified_at:at,merchant_order_notification_error:null,merchant_order_notification_error_at:null,updated_at:at}).eq("id",o.id);
+        o.merchant_order_notified_at=at;o.merchant_order_notification_error=null;
+      }else if(!merchantMail.skipped){
+        const at=nowIso();
+        await sb.from("shop_orders").update({merchant_order_notification_error:merchantMail.error,merchant_order_notification_error_at:at,updated_at:at}).eq("id",o.id);
+        o.merchant_order_notification_error=merchantMail.error;
+      }
+    }
     if(o.status==="pending"&&!o.order_confirmation_notified_at&&text(o.notification_error)&&text(o.customer_email)){
       const money=c=>"€"+(Number(c||0)/100).toFixed(2);
       const paymentLink=text(o.payment_request_url)?'<p><a href="'+text(o.payment_request_url).replace(/["<>]/g,"")+'">Pay order</a></p>':"";
