@@ -206,7 +206,7 @@ assert.match(bridge, /shop-catalog-v828/, 'bridge must use direct catalog endpoi
 assert.match(bridge, /shop-manual-checkout-v832/, 'bridge must route checkout to v832 authority');
 assert.match(bridge, /delivery-estimate-v833\.js/, 'bridge must load the v833 delivery estimate UI');
 assert.match(bridge, /shop-delivery-preview-v833/, 'bridge must declare the v833 delivery preview authority');
-assert.match(bridge, /pricing:'production-cost-plus-size-margin-rounded-up'/, 'bridge must declare size-aware production-cost pricing');
+assert.match(bridge, /pricing:'shirt-production-cost-plus-max-printify-vat-plus-5-rounded-up'/, 'bridge must declare size-aware production-cost pricing');
 assert.match(bridge, /artworkFirstGallery:true/, 'bridge must declare artwork-first gallery');
 assert.match(bridge, /usesShopifyCatalogApi:false/, 'bridge must declare Shopify catalog API disabled');
 assert.match(bridge, /usesShopifyPriceApi:false/, 'bridge must declare Shopify price API disabled');
@@ -447,16 +447,18 @@ const catalogHealth = await health(CATALOG_HEALTH_URL, 'shop-catalog-v828', 'bru
 assert.equal(catalogHealth?.usesShopifyApi, false, 'catalog health must report no Shopify API use');
 assert.equal(catalogHealth?.whiteVariantsOnly, false, 'catalog health must report the tote color exception');
 assert.deepEqual(catalogHealth?.toteHandleColors, ['Black', 'White'], 'catalog health must expose exactly Black and White tote handle colors');
-assert.equal(catalogHealth?.pricing, 'production-cost-plus-size-margin-rounded-up', 'catalog health must report size-aware production-cost pricing');
-assert.equal(catalogHealth?.pricingBase, 'production-cost', 'catalog must price from converted production cost');
-assert.deepEqual(catalogHealth?.marginEuros, { standard: 5, threeXlPlus: 7 }, 'catalog margin must be €5 standard and €7 for 3XL+');
+assert.equal(catalogHealth?.pricing, 'shirt-production-cost-plus-max-printify-vat-plus-5-rounded-up', 'catalog health must report VAT-reserved shirt pricing');
+assert.equal(catalogHealth?.pricingBase, 'production-cost-plus-printify-vat-reserve', 'catalog must reserve Printify VAT before margin');
+assert.deepEqual(catalogHealth?.marginEuros, { shirts: 5, standard: 5, threeXlPlus: 5 }, 'catalog shirt margin must be €5 for every size after VAT reserve');
+assert.equal(Number(catalogHealth?.vatReservePercent), 27, 'catalog must reserve the maximum current Printify VAT rate');
 assert.equal(catalogHealth?.rounding, 'whole-euro-ceiling', 'catalog must round upward to whole euros');
 assert.equal(catalogHealth?.artworkFirst, true, 'catalog health must report artwork-first media');
 
 const checkoutHealth = await health(CHECKOUT_URL, 'shop-manual-checkout-v832', 'manual-payment-v832');
-assert.equal(checkoutHealth?.pricing, 'production-cost-plus-size-margin-rounded-up', 'checkout must use the same size-aware pricing authority');
-assert.equal(checkoutHealth?.pricingBase, 'production-cost', 'checkout must reprice from fresh production cost');
-assert.deepEqual(checkoutHealth?.marginEuros, { standard: 5, threeXlPlus: 7 }, 'checkout margin must be €5 standard and €7 for 3XL+');
+assert.equal(checkoutHealth?.pricing, 'shirt-production-cost-plus-max-printify-vat-plus-5-rounded-up', 'checkout must use the same VAT-reserved shirt pricing authority');
+assert.equal(checkoutHealth?.pricingBase, 'production-cost-plus-printify-vat-reserve', 'checkout must reprice from fresh production cost plus VAT reserve');
+assert.deepEqual(checkoutHealth?.marginEuros, { shirts: 5, standard: 5, threeXlPlus: 5 }, 'checkout shirt margin must be €5 for every size after VAT reserve');
+assert.equal(Number(checkoutHealth?.vatReservePercent), 27, 'checkout must reserve the maximum current Printify VAT rate');
 assert.equal(checkoutHealth?.rounding, 'whole-euro-ceiling', 'checkout must round upward to whole euros');
 assert.equal(checkoutHealth?.sends_to_production, false, 'customer checkout must not send orders to production');
 assert.equal(checkoutHealth?.fulfillment_routing, 'validated-approved-regional-plus-canonical', 'checkout must evaluate validated approved regional routes alongside canonical products');
