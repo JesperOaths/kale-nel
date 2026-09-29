@@ -1,8 +1,9 @@
 {
-  "enabled": true,
-  "id": 990034,
-  "lease_token": "f42c78cc-6610-4f47-8f74-990034000001",
+  "enabled": false,
+  "id": 990033,
+  "lease_token": "0aa3c8f8-c831-4ad4-a869-990033000001",
   "timeout_seconds": 300,
   "attempts": 1,
-  "command": "bash -lc 'LOCK=/tmp/c720p-job-990033.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; curl -fsSL --max-time 30 https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p/run-tv-hts-v874.py -o /tmp/run-tv-hts-v874.py && python3 /tmp/run-tv-hts-v874.py'"
+  "command": "bash -lc 'LOCK=/tmp/c720p-job-990033.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; curl -fsSL --max-time 30 https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p/run-v869-cache-reclaim-20260929.py -o /tmp/run-v869-cache-reclaim-20260929.py && python3 /tmp/run-v869-cache-reclaim-20260929.py'",
+  "disabled_reason": "v869 live-agent maintenance completed; prevent redundant hourly execution"
 }
