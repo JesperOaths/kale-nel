@@ -278,7 +278,13 @@ async function shippingBreakdown(token: string, shopId: string, selected: any, a
   }
   const originMap = new Map(origins.map(origin => [Number(origin?.provider_id), origin]));
   const breakdown = await Promise.all([...groups.entries()].map(async ([providerId, candidates]) => {
-    const lineItems = candidates.map((candidate: any, index: number) => ({
+    const lineItems = candidates.map((candidate: any, index: number) => candidate?.direct_provider === true ? ({
+      print_provider_id: candidate.print_provider_id,
+      blueprint_id: candidate.blueprint_id,
+      variant_id: candidate.variant_id,
+      quantity: candidate.quantity,
+      external_id: `breakdown-${providerId}-${index + 1}`,
+    }) : ({
       product_id: candidate.product_id,
       variant_id: candidate.variant_id,
       quantity: candidate.quantity,
