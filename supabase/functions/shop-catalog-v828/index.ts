@@ -556,7 +556,11 @@ function publicProduct(product: any, fx: any, shopId: number, shop: any) {
       label: variantDisplayLabel(product, variant),
       color: colorFrom(product, variant),
       price: (isShirtProduct(product)
-        ? retailEurCentsFromUsdCostAfterVat(variant?.cost, fx, MARGIN_CENTS)
+        ? retailEurCentsFromUsdCostAfterVat(
+            variant?.cost,
+            fx,
+            marginEurCentsForSize(sizeFrom(product, variant) || variantDisplayLabel(product, variant), MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS),
+          )
         : retailEurCentsFromUsdCost(variant?.cost, fx, marginEurCentsForSize(sizeFrom(product, variant) || variantDisplayLabel(product, variant), MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS))) / 100,
       is_enabled: variant?.is_enabled !== false,
       is_available: variant?.is_available !== false,
@@ -773,9 +777,9 @@ Deno.serve(async (req: Request) => {
         warming: true,
         mode: "bruis-direct-catalog-v838",
         usesShopifyApi: false,
-        pricing: "shirt-production-cost-plus-max-printify-vat-plus-5-rounded-up",
+        pricing: "shirt-production-cost-plus-max-printify-vat-plus-size-margin-rounded-up",
         pricingBase: "production-cost-plus-printify-vat-reserve",
-        marginEuros: { shirts: MARGIN_CENTS / 100, standard: MARGIN_CENTS / 100, threeXlPlus: MARGIN_CENTS / 100 },
+        marginEuros: { shirtsStandard: MARGIN_CENTS / 100, shirtsThreeXlPlus: LARGE_SIZE_MARGIN_CENTS / 100, standard: MARGIN_CENTS / 100, threeXlPlus: LARGE_SIZE_MARGIN_CENTS / 100 },
         vatReservePercent: PRINTIFY_VAT_RESERVE_BPS / 100,
         rounding: "whole-euro-ceiling",
         sourceCurrency: "USD",
@@ -808,8 +812,8 @@ Deno.serve(async (req: Request) => {
   if (url.searchParams.get("health") === "1") {
     return json(req, {
       ok: true, mode: "bruis-direct-catalog-v838", usesShopifyApi: false, whiteVariantsOnly: false, toteHandleColors: ["Black", "White"],
-      pricing: "shirt-production-cost-plus-max-printify-vat-plus-5-rounded-up", pricingBase: "production-cost-plus-printify-vat-reserve",
-      marginEuros: { shirts: MARGIN_CENTS / 100, standard: MARGIN_CENTS / 100, threeXlPlus: MARGIN_CENTS / 100 },
+      pricing: "shirt-production-cost-plus-max-printify-vat-plus-size-margin-rounded-up", pricingBase: "production-cost-plus-printify-vat-reserve",
+      marginEuros: { shirtsStandard: MARGIN_CENTS / 100, shirtsThreeXlPlus: LARGE_SIZE_MARGIN_CENTS / 100, standard: MARGIN_CENTS / 100, threeXlPlus: LARGE_SIZE_MARGIN_CENTS / 100 },
         vatReservePercent: PRINTIFY_VAT_RESERVE_BPS / 100, rounding: "whole-euro-ceiling", sourceCurrency: "USD", displayCurrency: "EUR", fx: payload?.fx || null, artworkFirst: true,
       cachedProducts: products.length, cacheAgeSeconds: Number.isFinite(ageMs) ? Math.round(ageMs / 1000) : null,
       catalogSelection: payload?.catalogSelection || null,
