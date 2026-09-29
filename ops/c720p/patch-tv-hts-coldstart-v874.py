@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import re, shutil, time, subprocess
+import shutil, time, subprocess
 
 HOME=Path("/home/jespern")
 BASE=HOME/"c720p-home-hub"
@@ -29,9 +29,8 @@ new_prepare=r'''def prepare_hts_bluetooth(steps):
     power = get_json('/ht-e6500/power-state', timeout=8)
     steps.append({'stage':'hts_power','check':'initial_power_state','result':power})
 
-    # If power is not independently observable, first try to reveal BT without
-    # touching power. This protects an already-on-but-sleeping receiver from an
-    # accidental OFF toggle.
+    # State can legitimately be unknown while the receiver is awake. Try source
+    # navigation and a real BlueZ connection before touching power.
     if str(power.get('state') or '').lower() != 'on':
         anchor = post_json('/ht-e6500/dvd', timeout=5)
         steps.append({'stage':'hts_bluetooth','action':'probe_existing_power_anchor_dvd','result':anchor})
@@ -49,8 +48,8 @@ new_prepare=r'''def prepare_hts_bluetooth(steps):
                 break
             time.sleep(0.28)
 
-        # Still no live evidence: emit exactly ONE power toggle. Never retry it
-        # automatically during this run.
+        # No live evidence after a complete source pass: issue exactly ONE power
+        # toggle. No automatic retry is allowed during this run.
         toggle = post_json('/ht-e6500/power', timeout=10)
         steps.append({'stage':'hts_power','action':'single_guarded_power_toggle_from_unknown','result':toggle})
         if not toggle.get('ok'):
@@ -62,8 +61,8 @@ new_prepare=r'''def prepare_hts_bluetooth(steps):
             }
         time.sleep(1.4)
 
-    # Deterministically walk BD/DVD -> ... -> BT, checking live BlueZ after
-    # every source transition and stopping immediately once the receiver appears.
+    # Walk the known BD/DVD -> ... -> BT sequence and stop immediately when
+    # BlueZ proves the receiver is available.
     anchor = post_json('/ht-e6500/dvd', timeout=5)
     steps.append({'stage':'hts_bluetooth','action':'deterministic_bt_anchor_dvd','result':anchor})
     if _quick_bt_connect(steps,'connect_after_dvd_anchor',timeout=2.5):
@@ -85,8 +84,8 @@ new_prepare=r'''def prepare_hts_bluetooth(steps):
                 'evidence':power,
             }
 
-    # Power was commanded at most once; leave it on and let connect_audio's
-    # longer discovery loop perform one final source search. Do not power-toggle again.
+    # Power was commanded at most once. Leave it alone and let connect_audio()
+    # perform the longer discovery pass; never toggle power again automatically.
     return {
         'hts_power':'commanded_or_existing_on_unverified',
         'hts_input':'adaptive_source_search_required',
@@ -96,12 +95,12 @@ new_prepare=r'''def prepare_hts_bluetooth(steps):
 
 
 '''
-s,n=re.subn(r"def prepare_hts_bluetooth(steps):
-.*?
-(?=def _quick_bt_connect)",new_prepare,s,count=1,flags=re.S)
-if n!=1: raise SystemExit(f"prepare_hts_bluetooth replacement count={n}")
+a=s.index("def prepare_hts_bluetooth(steps):")
+b=s.index("def _quick_bt_connect",a)
+s=s[:a]+new_prepare+s[b:]
 
 safe_fn=r'''def hts_ensure_on_safe():
+    """HTS-only cold-start path used by the dashboard power control."""
     steps=[]
     ok,failure=preflight(steps)
     if not ok:
@@ -132,11 +131,9 @@ safe_fn=r'''def hts_ensure_on_safe():
 
 
 '''
-marker="def pipeline(open_music=False):
-"
 if "def hts_ensure_on_safe():" not in s:
-    if marker not in s: raise SystemExit("pipeline marker missing")
-    s=s.replace(marker,safe_fn+marker,1)
+    i=s.index("def pipeline(open_music=False):")
+    s=s[:i]+safe_fn+s[i:]
 
 new_pipeline=r'''def pipeline(open_music=False):
     LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -148,8 +145,8 @@ new_pipeline=r'''def pipeline(open_music=False):
         log_path.write_text(json.dumps(payload,indent=2,sort_keys=True)+'\n',encoding='utf-8')
         return 503, write_state(payload)
 
-    # Cold-start the receiver/audio side FIRST. Besides making HTS recovery
-    # independent of TV state, this gives HDMI-CEC a chance to wake the Grundig.
+    # Bring up the receiver/audio side FIRST. This makes HTS recovery independent
+    # of TV state and gives HDMI-CEC its best chance to wake the Grundig.
     hts = prepare_hts_bluetooth(steps)
     if hts.get('hts_input') == 'failed':
         payload={'ok':False,'state':hts.get('failure'),'failure':hts.get('failure'),
@@ -166,7 +163,6 @@ new_pipeline=r'''def pipeline(open_music=False):
         log_path.write_text(json.dumps(payload,indent=2,sort_keys=True)+'\n',encoding='utf-8')
         return 500, write_state(payload)
 
-    # Receiver/BT is now physically verified. Poll TV after that CEC opportunity.
     time.sleep(0.6)
     tv_power = ensure_tv_on(steps)
     if tv_power.get('state') != 'confirmed_on':
@@ -214,16 +210,14 @@ new_pipeline=r'''def pipeline(open_music=False):
     log_path.write_text(json.dumps(payload,indent=2,sort_keys=True)+'\n',encoding='utf-8')
     return 200, write_state(payload)
 
-'''
-s,n=re.subn(r"def pipeline(open_music=False):
-.*?
-(?=# C720P_TV_SURROUND_ASYNC_PIPELINE_V1)",new_pipeline+"
-",s,count=1,flags=re.S)
-if n!=1: raise SystemExit(f"pipeline replacement count={n}")
 
-# Add dedicated HTS-only route to POST handler.
-route_marker="        if path == '/pipeline/bluetooth-fast':
-"
+'''
+a=s.index("def pipeline(open_music=False):")
+b=s.index("# C720P_TV_SURROUND_ASYNC_PIPELINE_V1",a)
+s=s[:a]+new_pipeline+s[b:]
+
+route_marker="""        if path == '/pipeline/bluetooth-fast':
+"""
 route_code="""        if path == '/hts/ensure-on-safe':
             status,payload=hts_ensure_on_safe(); return respond(self,status,payload)
 """
