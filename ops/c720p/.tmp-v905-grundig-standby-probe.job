@@ -1,20 +1,57 @@
 set -e
-H=192.168.178.169
-echo ===PORTS===
-for p in 6466 6467 8008 8009 8443 9000; do timeout 1 bash -lc "</dev/tcp/$H/$p" >/dev/null 2>&1 && echo "OPEN $p" || echo "CLOSED $p"; done
-echo ===HTTP_8008===
-for u in /setup/eureka_info /setup/eureka_info?params=name,build_info,device_info,net /ssdp/device-desc.xml /apps /setup/configured_networks; do
-  echo "---$u"
-  curl -sS --max-time 3 -D - "http://$H:8008$u" -o /tmp/v905.out || true
-  head -c 1400 /tmp/v905.out 2>/dev/null || true; echo
+TV=192.168.178.169
+CAST=192.168.178.249
+V=/tmp/v906c-cast-venv
+rm -rf "$V"
+python3 -m venv "$V"
+"$V/bin/pip" -q install --disable-pip-version-check pychromecast
+echo ===CAST_IMPORT===
+"$V/bin/python" -c 'import pychromecast; print("PYCHROMECAST_OK")'
+echo ===CAST_REACHABILITY===
+ping -c 1 -W 2 "$CAST" || true
+timeout 2 bash -lc "</dev/tcp/$CAST/8009" >/dev/null 2>&1 && echo CAST_8009_OPEN=1 || echo CAST_8009_OPEN=0
+echo ===TV_BEFORE===
+for p in 6466 6467 8008 8009 8443; do timeout 1 bash -lc "</dev/tcp/$TV/$p" >/dev/null 2>&1 && echo OPEN:$p || echo CLOSED:$p; done
+echo ===CAST_WAKE===
+"$V/bin/python" - <<'PY'
+import time,pychromecast
+host='192.168.178.249'
+casts,browser=pychromecast.get_chromecasts(hosts=[host])
+try:
+    if not casts:
+        raise SystemExit('NO_CAST_FOUND')
+    cc=casts[0]
+    cc.wait(timeout=15)
+    print('CAST_NAME',cc.name,flush=True)
+    print('CAST_STATUS_BEFORE',cc.status,flush=True)
+    cc.start_app('CC1AD845')
+    time.sleep(10)
+    print('CAST_STATUS_AFTER',cc.status,flush=True)
+finally:
+    try: browser.stop_discovery()
+    except Exception: pass
+PY
+echo ===TV_WAKE_POLL===
+awake=0
+for i in $(seq 1 25); do
+  p6466=0; p8009=0
+  timeout 1 bash -lc "</dev/tcp/$TV/6466" >/dev/null 2>&1 && p6466=1 || true
+  timeout 1 bash -lc "</dev/tcp/$TV/8009" >/dev/null 2>&1 && p8009=1 || true
+  echo POLL_$i:6466=$p6466:8009=$p8009
+  if [ "$p6466" = 1 ] || [ "$p8009" = 1 ]; then awake=1; break; fi
+  sleep 1
 done
-echo ===HTTPS_8443===
-for u in /setup/eureka_info /setup/eureka_info?params=name,build_info,device_info,net /ssdp/device-desc.xml /apps; do
-  echo "---$u"
-  curl -k -sS --max-time 3 -D - "https://$H:8443$u" -o /tmp/v905.out || true
-  head -c 1400 /tmp/v905.out 2>/dev/null || true; echo
-done
-echo ===MDNS===
-timeout 6 avahi-browse -rt _androidtvremote2._tcp 2>/dev/null | head -100 || true
-timeout 6 avahi-browse -rt _googlecast._tcp 2>/dev/null | head -160 || true
-echo RESULT=V905_GRUNDIG_STANDBY_PROBE_DONE
+echo TV_FULL_AWAKE=$awake
+echo ===TV_STATE===
+curl -sS http://127.0.0.1:8789/grundig-tv/power-state || true; echo
+if [ "$awake" = 1 ]; then
+  echo ===HDMI3===
+  curl -sS --max-time 25 -X POST http://127.0.0.1:8789/grundig-tv/hdmi3-fast || true; echo
+  sleep 5
+fi
+echo ===HTS_AFTER===
+curl -sS http://127.0.0.1:8789/ht-e6500/power-state || true; echo
+bluetoothctl info 8C:C8:CD:8B:06:3B 2>&1 | head -35 || true
+ip neigh show | grep -i '30:14:4a:14:77:ac' || true
+rm -rf "$V"
+echo RESULT=V906C_CAST_CEC_TEMPVENV_DONE
