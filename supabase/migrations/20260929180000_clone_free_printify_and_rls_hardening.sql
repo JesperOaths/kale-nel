@@ -109,7 +109,7 @@ revoke all privileges on table public._scratch_paardenrace_history_work from ano
 
 -- Make the private-by-default intent explicit. SECURITY DEFINER/session-validated
 -- RPCs and service_role bypass RLS; browser roles never access these tables directly.
-do $
+do $$
 declare
   t text;
   tables text[] := array[
@@ -130,7 +130,7 @@ begin
       'private_service_only', t
     );
   end loop;
-end $;
+end $$;
 
 -- Disabled rows here were legacy clone-derived regional experiments with no
 -- reliable cost snapshot. Active routing is the approved direct-provider set.
