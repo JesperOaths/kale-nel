@@ -1,57 +1,26 @@
 set -e
 TV=192.168.178.169
-V=/home/jespern/c720p-home-hub/venvs/pychromecast
-WWW=/opt/homeassistant/config/www
-MP4=$WWW/c720p-cast-wake.mp4
-echo ===FFMPEG===
-command -v ffmpeg
-ffmpeg -hide_banner -loglevel error -y -f lavfi -i color=c=black:s=320x180:r=25:d=4 -an -c:v libx264 -pix_fmt yuv420p -movflags +faststart "$MP4"
-ls -l "$MP4"
-echo ===MEDIA_HTTP===
-curl -sS -I --max-time 4 http://192.168.178.141:8123/local/c720p-cast-wake.mp4 | head -30
-echo ===CAST_VIDEO_WAKE===
-"$V/bin/python" - <<'PY'
-import time,pychromecast
-casts,browser=pychromecast.get_listed_chromecasts(friendly_names=["Living Room TV"],discovery_timeout=12)
-try:
-    print("FOUND",[(c.name,c.cast_info.host,c.cast_info.port) for c in casts],flush=True)
-    if not casts: raise SystemExit(4)
-    cc=casts[0]; cc.wait(timeout=12)
-    mc=cc.media_controller
-    mc.play_media("http://192.168.178.141:8123/local/c720p-cast-wake.mp4","video/mp4")
-    deadline=time.time()+18
-    while time.time()<deadline:
-        time.sleep(1)
-        st=mc.status
-        print("MEDIA",st.player_state,st.current_time,st.idle_reason,flush=True)
-        if st.player_state=="PLAYING":
-            break
-    print("FINAL_MEDIA_STATUS",mc.status,flush=True)
-    time.sleep(4)
-finally:
-    try: pychromecast.discovery.stop_discovery(browser)
-    except Exception: pass
+echo ===TARGETED_PORTS===
+python3 - <<'PY'
+import socket
+h="192.168.178.169"
+ports=[8000,8001,8002,8008,8009,8080,8081,8082,8083,8084,8085,8086,8087,8088,8090,8443,9197]
+for p in ports:
+    s=socket.socket(); s.settimeout(.45)
+    try:
+        s.connect((h,p)); print("OPEN",p)
+    except Exception:
+        pass
+    finally:
+        s.close()
 PY
-echo ===TV_WAKE_POLL===
-awake=0
-for i in $(seq 1 30); do
-  p6466=0; p8009=0
-  timeout 1 bash -lc "</dev/tcp/$TV/6466" >/dev/null 2>&1 && p6466=1 || true
-  timeout 1 bash -lc "</dev/tcp/$TV/8009" >/dev/null 2>&1 && p8009=1 || true
-  echo "POLL_$i 6466=$p6466 8009=$p8009"
-  if [ "$p6466" = 1 ] || [ "$p8009" = 1 ]; then awake=1; break; fi
-  sleep 1
+echo ===8085_ROOT===
+curl -sS -i --max-time 5 "http://$TV:8085/" | head -120 || true
+echo ===8085_LIST===
+curl -sS -i --max-time 5 "http://$TV:8085/list" | head -260 || true
+echo ===8085_OTHER===
+for p in /device /status /remote /api /keylist; do
+  echo "---$p"
+  curl -sS -i --max-time 4 "http://$TV:8085$p" | head -100 || true
 done
-echo TV_NETWORK_AWAKE=$awake
-echo ===TV_STATUS===
-timeout 18 /home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh status || true
-if [ "$awake" = 1 ]; then
-  echo ===HDMI3===
-  timeout 24 /home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh key TV_INPUT_HDMI_3 || true
-  sleep 5
-fi
-echo ===HTS_AFTER===
-curl -sS --max-time 8 http://127.0.0.1:8789/ht-e6500/power-state || true; echo
-bluetoothctl info 8C:C8:CD:8B:06:3B 2>&1 | head -50 || true
-rm -f "$MP4"
-echo RESULT=V912_CAST_VIDEO_CEC_WAKE_DONE
+echo RESULT=V913_GRUNDIG_NATIVE_REMOTE_PROBE_DONE
