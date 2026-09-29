@@ -1,36 +1,37 @@
 set -e
-TV=192.168.178.169
-CAST_NAME="Living Room TV"
 V=/home/jespern/c720p-home-hub/venvs/pychromecast
-WWW=/opt/homeassistant/config/www
-WAV=$WWW/c720p-cast-wake.wav
-python3 - <<'PY'
-import wave,struct,pathlib
-p=pathlib.Path("/opt/homeassistant/config/www/c720p-cast-wake.wav")
-p.parent.mkdir(parents=True,exist_ok=True)
-rate=8000
-with wave.open(str(p),"wb") as w:
-    w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate)
-    w.writeframes(struct.pack("<h",0)*rate)
-print(p, p.stat().st_size)
-PY
-echo ===LOCAL_MEDIA_CHECK===
-curl -sS -I --max-time 4 http://192.168.178.141:8123/local/c720p-cast-wake.wav | head -30 || true
-echo ===CAST_MEDIA_WAKE===
+OUT=/opt/homeassistant/config/www/c720p-cast-wake.mp3
+if command -v ffmpeg >/dev/null 2>&1; then
+  ffmpeg -loglevel error -y -f lavfi -i anullsrc=r=44100:cl=stereo -t 12 -q:a 9 -acodec libmp3lame "$OUT"
+else
+  echo NO_FFMPEG
+  exit 6
+fi
+ls -l "$OUT"
+URL=http://192.168.178.141:8123/local/c720p-cast-wake.mp3
+curl -sS -I --max-time 4 "$URL" | head -20 || true
 "$V/bin/python" - <<'PY'
-import time,pychromecast
+import time, pychromecast
+url="http://192.168.178.141:8123/local/c720p-cast-wake.mp3"
 casts,browser=pychromecast.get_listed_chromecasts(friendly_names=["Living Room TV"],discovery_timeout=12)
 try:
     print("FOUND",[(c.name,c.cast_info.host,c.cast_info.port) for c in casts],flush=True)
     if not casts: raise SystemExit(4)
-    cc=casts[0]; cc.wait(timeout=12)
+    cc=casts[0]
+    cc.wait(timeout=12)
     mc=cc.media_controller
-    try: cc.set_volume_muted(True)
-    except Exception as e: print("MUTE_ERR",repr(e),flush=True)
-    mc.play_media("http://192.168.178.141:8123/local/c720p-cast-wake.wav","audio/wav")
-    mc.block_until_active(timeout=12)
-    print("MEDIA_STATUS",mc.status,flush=True)
-    time.sleep(6)
+    mc.play_media(url,"audio/mpeg",title="C720P CEC wake",stream_type="BUFFERED")
+    active=False
+    for i in range(1,16):
+        time.sleep(1)
+        mc.update_status()
+        st=str(mc.status.player_state or "")
+        print("MEDIA_POLL",i,st,mc.status.current_time,flush=True)
+        if st in ("PLAYING","BUFFERING","PAUSED"):
+            active=True
+            break
+    print("MEDIA_ACTIVE",active,flush=True)
+    time.sleep(7)
 finally:
     try: pychromecast.discovery.stop_discovery(browser)
     except Exception: pass
@@ -39,23 +40,21 @@ echo ===TV_WAKE_POLL===
 awake=0
 for i in $(seq 1 30); do
   p6466=0; p8009=0
-  timeout 1 bash -lc "</dev/tcp/$TV/6466" >/dev/null 2>&1 && p6466=1 || true
-  timeout 1 bash -lc "</dev/tcp/$TV/8009" >/dev/null 2>&1 && p8009=1 || true
+  timeout 1 bash -lc "</dev/tcp/192.168.178.169/6466" >/dev/null 2>&1 && p6466=1 || true
+  timeout 1 bash -lc "</dev/tcp/192.168.178.169/8009" >/dev/null 2>&1 && p8009=1 || true
   echo "POLL_$i 6466=$p6466 8009=$p8009"
   if [ "$p6466" = 1 ] || [ "$p8009" = 1 ]; then awake=1; break; fi
   sleep 1
 done
-echo TV_NETWORK_AWAKE=$awake
+echo "TV_NETWORK_AWAKE=$awake"
 echo ===TV_STATUS===
-timeout 18 /home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh status || true
+/home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh status || true
 if [ "$awake" = 1 ]; then
   echo ===HDMI3===
-  timeout 24 /home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh key TV_INPUT_HDMI_3 || true
-  sleep 5
+  /home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh key TV_INPUT_HDMI_3 || true
+  sleep 4
 fi
 echo ===HTS_AFTER===
-curl -sS --max-time 8 http://127.0.0.1:8789/ht-e6500/power-state || true; echo
-bluetoothctl info 8C:C8:CD:8B:06:3B 2>&1 | head -50 || true
-ip neigh show | grep -i '30:14:4a:14:77:ac' || true
-rm -f "$WAV"
-echo RESULT=V911_CAST_MEDIA_CEC_WAKE_DONE
+curl -sS --max-time 8 http://127.0.0.1:8789/ht-e6500/power-state || true
+bluetoothctl info 8C:C8:CD:8B:06:3B || true
+echo RESULT=V912_CAST_MP3_CEC_WAKE_DONE
