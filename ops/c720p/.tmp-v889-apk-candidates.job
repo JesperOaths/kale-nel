@@ -1,0 +1,8 @@
+set -e
+for apk in /tmp/s5irbridge-v875.apk /home/jespern/c720p-backups/s5-ir-before-grundig-restore-20260926_081834/current-before.apk /home/jespern/c720p-home-hub/tmp/s5-ir-parity/installed-current.apk; do
+  echo "===APK=$apk==="
+  [ -f "$apk" ] || continue
+  sha256sum "$apk"
+  unzip -p "$apk" classes.dex 2>/dev/null | strings | grep -Ei 'sam(ht|av|bl|soud)|source|function|input|bluetooth|aux|digital|hdmi|arc|dvd|usb|tuner|radio' | sort -u | head -320
+done
+echo RESULT=V889_APK_CANDIDATE_STRINGS_DONE
