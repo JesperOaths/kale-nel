@@ -1,0 +1,14 @@
+set -e
+echo ===CURRENT_QUICK_PAIR===
+grep -n -A 55 -B 10 '^quick_pair_connect' /home/jespern/c720p-home-hub/bin/c720p-samsung-bluetooth-connect.sh
+echo ===PRE_SCAN_PAIR_WINDOW===
+grep -n -A 80 -B 20 -E 'pair|scan|remove|source' /home/jespern/c720p-home-hub/bin/c720p-samsung-bluetooth-connect.sh.before-scan-pair-window-20260926-114501 | head -260
+echo ===DETERMINISTIC_BACKUP===
+grep -n -A 90 -B 20 -E 'pair|scan|remove|source' /home/jespern/c720p-home-hub/bin/c720p-samsung-bluetooth-connect.sh.backup-deterministic-bt-20260926-190544 | head -300
+echo ===SCAN_COMMAND_TEST===
+timeout 6 bluetoothctl scan bredr 2>&1 || true
+echo ===SCAN_ON_TEST===
+timeout 6 bluetoothctl scan on 2>&1 || true
+echo ===DEVICES_AFTER===
+bluetoothctl devices 2>&1 || true
+echo RESULT=V876_CONNECTOR_COMPARE_DONE
