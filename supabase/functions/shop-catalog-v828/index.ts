@@ -497,42 +497,49 @@ function isPublicVariant(product: any, variant: any) {
   return !color || /^white$/i.test(color);
 }
 
-function gildanRouteSafeCostCeilings(entries: any[]) {
-  const ceilings = new Map<string, number>();
+async function gildanRouteSafeCostCeilings(supabase: any, entries: any[]) {
+  const currentCosts = new Map<string, number>();
   for (const entry of Array.isArray(entries) ? entries : []) {
     const product = entry?.product;
     if (String(product?.blueprint_id || "") !== "6") continue;
-    const provider = Number(product?.print_provider_id);
-    if (provider !== 30 && provider !== 99) continue;
+    const productId = text(product?.id);
+    if (!productId) continue;
     for (const variant of Array.isArray(product?.variants) ? product.variants : []) {
       if (!isPublicVariant(product, variant)) continue;
-      const id = String(variant?.id || "");
+      const variantId = String(variant?.id || "");
       const cost = Math.round(Number(variant?.cost));
-      if (!id || !Number.isFinite(cost) || cost <= 0) continue;
-      const key = `6:${id}`;
-      const current = Number(ceilings.get(key) || 0);
-      if (cost > current) ceilings.set(key, cost);
+      if (!variantId || !Number.isFinite(cost) || cost <= 0) continue;
+      currentCosts.set(`${productId}:${variantId}`, cost);
     }
   }
-  return ceilings;
-}
 
-async function augmentGildanRouteCosts(token: string, ceilings: Map<string, number>) {
-  const providers = [27, 30, 99, 331, 438];
-  const results = await Promise.allSettled(providers.map(providerId =>
-    printify(token, "/catalog/blueprints/6/print_providers/" + providerId + "/variants.json", 9000)
-  ));
-  for (const result of results) {
-    if (result.status !== "fulfilled") continue;
-    const payload = result.value;
-    const variants = Array.isArray(payload?.variants) ? payload.variants : (Array.isArray(payload) ? payload : []);
-    for (const variant of variants) {
-      const id = String(variant?.id || "");
-      const cost = Math.round(Number(variant?.cost));
-      if (!id || !Number.isFinite(cost) || cost <= 0) continue;
-      const key = "6:" + id;
-      if (cost > Number(ceilings.get(key) || 0)) ceilings.set(key, cost);
-    }
+  const productIds = [...new Set([...currentCosts.keys()].map(key => key.split(":")[0]))];
+  const ceilings = new Map(currentCosts);
+  if (!productIds.length) return ceilings;
+
+  const { data: routes, error } = await supabase
+    .from("shop_provider_routes_v1")
+    .select("source_product_id,source_variant_id,target_cost_usd_cents,cost_delta_usd_cents")
+    .eq("approved", true)
+    .in("source_product_id", productIds);
+  if (error) {
+    console.warn("Route-safe catalog pricing could not load direct provider costs", error.message);
+    return ceilings;
+  }
+
+  for (const route of Array.isArray(routes) ? routes : []) {
+    const key = `${text(route?.source_product_id)}:${String(route?.source_variant_id || "")}`;
+    const current = Number(currentCosts.get(key) || 0);
+    if (!current) continue;
+    const snapshot = Math.round(Number(route?.target_cost_usd_cents));
+    const delta = Math.round(Number(route?.cost_delta_usd_cents));
+    const adjusted = Number.isFinite(delta) ? current + delta : Number.NaN;
+    const safe = Math.max(
+      current,
+      Number.isFinite(snapshot) ? snapshot : 0,
+      Number.isFinite(adjusted) ? adjusted : 0,
+    );
+    if (safe > Number(ceilings.get(key) || 0)) ceilings.set(key, safe);
   }
   return ceilings;
 }
@@ -620,7 +627,7 @@ function publicProduct(product: any, fx: any, shopId: number, shop: any, routeSa
       const routeSafeRawUsdCost = String(product?.blueprint_id || "") === "6"
         ? Math.max(
             Math.round(Number(variant?.cost) || 0),
-            Number(routeSafeCostCeilings.get(`6:${String(variant?.id || "")}`) || 0),
+            Number(routeSafeCostCeilings.get(`${text(product?.id)}:${String(variant?.id || "")}`) || 0),
           )
         : Number(variant?.cost);
       return ({
@@ -676,7 +683,7 @@ async function buildCatalog(supabase: any) {
   const token = await resolveToken(supabase);
   const fx = await resolveUsdEurRateDirect();
   const account = await loadAccountProducts(token);
-  const routeSafeCostCeilings = await augmentGildanRouteCosts(token, gildanRouteSafeCostCeilings(account.entries));
+  const routeSafeCostCeilings = await gildanRouteSafeCostCeilings(supabase, account.entries);
 
   const cleanProducts = account.entries
     .filter((entry: any) => {
