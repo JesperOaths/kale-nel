@@ -1,0 +1,17 @@
+name: C720P v876 invoke once
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/c720p-v876-invoke-once.yml"
+permissions:
+  contents: read
+jobs:
+  invoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: |
+          set -euo pipefail
+          curl -fsS --retry 2 --connect-timeout 10 --max-time 30 \
+            https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-v874-tv-hts-once
