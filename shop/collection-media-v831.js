@@ -3,7 +3,7 @@
 
   const TARGET = [222, 214, 202, 255];
   const SELECTOR = '.collection-image img, .compact-shape-card img';
-  const MATCH_ASSET = /\/assets\/collection-(?:normal|boxy|merch-despinoza)\.(?:png|webp)(?:[?#]|$)/i;
+  const MATCH_ASSET = /\/assets\/collection-(?:normal|merch-despinoza)\.(?:png|webp)(?:[?#]|$)/i;
   const cache = new Map();
   const seen = new WeakSet();
 
@@ -157,7 +157,7 @@
         const dx=(out.width-dw)/2, dy=(out.height-dh)/2;
         ctx.drawImage(source,sx,sy,cw,ch,dx,dy,dw,dh);
 
-        // The historical Classic and Boxy source artwork contains an old title
+        // The historical normal-shirt source artwork contains an old title
         // near its top edge. It is not part of the garment illustration.
         // Erase that strip after fitting the garment so only the shirt remains.
         if(/\/assets\/collection-(?:normal|boxy)\.(?:png|webp)(?:[?#]|$)/i.test(raw)){
