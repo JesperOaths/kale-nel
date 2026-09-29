@@ -1,0 +1,29 @@
+set -e
+req(){ curl -sS --max-time 20 "$@"; echo; }
+echo ===BEFORE===
+req http://127.0.0.1:8789/grundig-tv/power-state
+req http://127.0.0.1:8789/ht-e6500/power-state
+bluetoothctl info 8C:C8:CD:8B:06:3B 2>&1 || true
+ip neigh show | grep -i '30:14:4a:14:77:ac' || true
+
+echo ===TV_ON===
+req -X POST http://127.0.0.1:8789/grundig-tv/on
+for i in $(seq 1 12); do
+  sleep 1
+  echo TV_POLL_$i
+  req http://127.0.0.1:8789/grundig-tv/power-state
+  bluetoothctl info 8C:C8:CD:8B:06:3B 2>&1 | head -20 || true
+  ip neigh show | grep -i '30:14:4a:14:77:ac' || true
+done
+
+echo ===HDMI3===
+req -X POST http://127.0.0.1:8789/grundig-tv/hdmi3-fast
+for i in $(seq 1 12); do
+  sleep 1
+  echo HDMI3_POLL_$i
+  req http://127.0.0.1:8789/grundig-tv/power-state
+  req http://127.0.0.1:8789/ht-e6500/power-state
+  bluetoothctl info 8C:C8:CD:8B:06:3B 2>&1 | head -20 || true
+  ip neigh show | grep -i '30:14:4a:14:77:ac' || true
+done
+echo RESULT=V886_TV_FIRST_CEC_TEST_DONE
