@@ -20,7 +20,7 @@ if marker not in s:
     if pos < 0:
         raise SystemExit('pipeline missing')
     sub=s[pos:]
-    old2="    audio = connect_audio(steps)\n    if not audio.get('ok'):\n"
+    old2="    audio=connect_audio(steps)\n    if not audio.get('ok'):\n"
     new2="    if hts.get('hts_input') == 'adaptive_source_search_required':\n        failure='SAMSUNG_DEVICE_NOT_VISIBLE_AFTER_BOUNDED_SOURCE_SWEEP'\n        payload={'ok':False,'state':failure,'failure':failure,'hts_power':hts.get('hts_power'),'hts_input':hts.get('hts_input'),'single_power_toggle_limit':True,'steps':steps,'log':str(log_path)}\n        log_path.write_text(json.dumps(payload,indent=2,sort_keys=True)+'\\n',encoding='utf-8')\n        return 500, write_state(payload)\n\n    audio = connect_audio(steps)\n    if not audio.get('ok'):\n"
     if old2 not in sub:
         raise SystemExit('pipeline anchor missing')
