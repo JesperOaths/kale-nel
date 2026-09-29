@@ -57,7 +57,7 @@ function clean(v:string,ext=""){
 }
 function path(u:URL){
   const c=u.searchParams.get("camera"),k=u.searchParams.get("kind");
-  if(c!=="new"&&c!=="s3") return "";
+  if(c!=="new") return "";
   if(k==="status") return `/${c}/api/status`;
   if(k==="events") return `/${c}/api/events`;
   if(k==="saved") return `/${c}/api/saved`;
