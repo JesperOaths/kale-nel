@@ -1,0 +1,4 @@
+set -e
+rm -f /opt/homeassistant/config/www/c720p-cast-wake.wav
+test ! -e /opt/homeassistant/config/www/c720p-cast-wake.wav
+echo RESULT=V911_FINAL_CLEANUP_DONE
