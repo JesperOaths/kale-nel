@@ -86,7 +86,7 @@ function normalizeCollection(value){
 function publicBaseLabel(value, baseKey){
   const label = String(value || '').trim();
   if (/\bbruis\b/i.test(label)) return label;
-  if (baseKey === '6' || /gildan|comfort\s*colors/i.test(label)) return 'Classic cotton T-shirt';
+  if (baseKey === '6') return 'Classic cotton T-shirt';
   if (/t-?shirt|\btee\b|cotton|shirt/i.test(label)) return 'T-shirt';
   if (/tote|bag/i.test(label)) return 'Tote bag';
   return 'Product';
