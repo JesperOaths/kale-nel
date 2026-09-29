@@ -1,0 +1,1 @@
+set -e; echo ===BLUETOOTH_MODE_ROUTE===; sed -n '1345,1410p' /home/jespern/c720p-home-hub/bin/ht-e6500-surround-server.py; echo ===HTS_FAST_FUNCTIONS===; sed -n '800,930p' /home/jespern/c720p-home-hub/bin/ht-e6500-surround-server.py; echo RESULT=V876_ROUTE_INSPECTED
