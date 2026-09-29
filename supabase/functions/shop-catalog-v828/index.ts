@@ -7,17 +7,11 @@ const PRINTIFY_BASE = "https://api.printify.com/v1";
 const CACHE_FRESH_MS = 60_000;
 const REFRESH_LEASE_MS = 120_000;
 const MAX_PAGES = 100;
-const ROUTE_PREFIX = "__KALENEL_ROUTE_";
-const ROUTE_TITLE_PREFIX = "Kalenel Route ";
 const BOXY_TITLES = new Set(["coral", "daffodil", "dragonfly", "honeysuckle", "horseshoe crab", "seahorse", "seaweed"]);
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl", "https://jesperoaths.github.io"]);
 const text = (value: unknown) => String(value ?? "").trim();
 const MARGIN_CENTS = 500;
 const LARGE_SIZE_MARGIN_CENTS = 700;
-const PUBLIC_EXCLUDED_PRODUCT_IDS = new Set([
-  "6ab0fa9a0b770861f80da032",
-  "6ab7eb21260d6d35e403a875", // internal EU Dogwood fulfillment clone; never customer-facing
-]);
 const PUBLIC_MERCH_PRODUCT_IDS = new Set([
   "6aaff223e0eef877800262df",
   "6aaa152378f50f3725033e18",
@@ -689,10 +683,7 @@ async function buildCatalog(supabase: any) {
     .filter((entry: any) => {
       const id = text(entry.product?.id);
       const explicitlyApprovedMerch = PUBLIC_MERCH_PRODUCT_IDS.has(id);
-      return (entry.product?.visible !== false || explicitlyApprovedMerch)
-        && !text(entry.product?.title).startsWith(ROUTE_PREFIX)
-        && !text(entry.product?.title).startsWith(ROUTE_TITLE_PREFIX)
-        && !PUBLIC_EXCLUDED_PRODUCT_IDS.has(id);
+      return entry.product?.visible !== false || explicitlyApprovedMerch;
     })
     .map((entry: any) => publicProduct(entry.product, fx, entry.shopId, entry.shop, routeSafeCostCeilings))
     .filter((product: any) => product.id && product.name && product.price > 0 && product.mockups.length > 0 && product.variants.length > 0);
