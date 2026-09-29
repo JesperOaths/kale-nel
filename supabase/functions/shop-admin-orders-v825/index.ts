@@ -3,6 +3,10 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 const PRINTIFY_BASE="https://api.printify.com/v1";
 const WEBHOOK_URL="https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-printify-webhook-v825";
 const text=(v)=>String(v??"").trim();
+const DESPINOZA_SOURCE_PRODUCT_IDS=new Set(["6a975ec45d07cc05a702a491","6a9742c08816f2362104d5cc"]);
+const DESPINOZA_NATIVE_TEXT_ID="7b14de2d-815d-a93b-cdd3-69d9c2cb3e2f";
+const DESPINOZA_STATIC_TEXT_URL="https://pfy-prod-image-storage.s3.us-east-2.amazonaws.com/28211792/fbb5f9e7-fd95-41e0-bc93-c0ab427306d8";
+const DESPINOZA_STATIC_TEXT_WIDTH=4096;
 function cors(req){const o=text(req.headers.get("origin"));const a=["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"].includes(o)||/^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(o)?o:"https://kalenel.nl";return{"Access-Control-Allow-Origin":a,"Vary":"Origin","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type","Access-Control-Allow-Methods":"GET, POST, OPTIONS","Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store","Referrer-Policy":"no-referrer"};}
 const json=(req,b,s=200)=>new Response(JSON.stringify(b),{status:s,headers:cors(req)});
 async function printify(token,path,init={}){
@@ -120,14 +124,20 @@ function directOrderPrintAreas(product,variantId){
       if(!position)continue;
       const rendered=[];
       for(const image of Array.isArray(placeholder?.images)?placeholder.images:[]){
-        const id=text(image?.id),src=text(image?.src);
+        const id=text(image?.id);
         if(ignored.has(id))continue;
+        const x=Number(image?.x),y=Number(image?.y),rawScale=Number(image?.scale),angle=Number(image?.angle||0);
+        if(![x,y,rawScale,angle].every(Number.isFinite)||rawScale<=0)throw new Error("Selected artwork placement is invalid for direct provider fulfillment.");
+        if(id===DESPINOZA_NATIVE_TEXT_ID&&DESPINOZA_SOURCE_PRODUCT_IDS.has(text(product?.id))){
+          const nativeWidth=Number(image?.width);
+          const scale=(Number.isFinite(nativeWidth)&&nativeWidth>0?nativeWidth:953.80004)*rawScale/DESPINOZA_STATIC_TEXT_WIDTH;
+          rendered.push({src:DESPINOZA_STATIC_TEXT_URL,x,y,scale,angle});count++;continue;
+        }
+        const src=text(image?.src);
         if(id&&!src)throw new Error("Selected artwork cannot be reused safely for direct provider fulfillment.");
         if(!src)continue;
         try{const u=new URL(src);if(u.protocol!=="https:")throw new Error("invalid_artwork_url");}catch{throw new Error("Selected artwork URL is invalid for direct provider fulfillment.");}
-        const x=Number(image?.x),y=Number(image?.y),scale=Number(image?.scale),angle=Number(image?.angle||0);
-        if(![x,y,scale,angle].every(Number.isFinite)||scale<=0)throw new Error("Selected artwork placement is invalid for direct provider fulfillment.");
-        rendered.push({src,x,y,scale,angle});count++;
+        rendered.push({src,x,y,scale:rawScale,angle});count++;
       }
       if(rendered.length){
         if(!Array.isArray(out[position]))out[position]=[];
