@@ -1,0 +1,1 @@
+set -e; BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p; curl -fsSL "$BASE/probe-hts-old-subnet-v875.py" -o /tmp/probe-hts-old-subnet-v875.py; python3 /tmp/probe-hts-old-subnet-v875.py
