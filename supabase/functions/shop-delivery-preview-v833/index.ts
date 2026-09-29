@@ -455,22 +455,30 @@ Deno.serve(async (req: Request) => {
         item_name: clean(row.cached.product.name),
         item_size: itemLabel,
       }];
-      for (const mapping of eligibleMappings.filter((entry: any) => entry.source.product_id === productId && entry.source.variant_id === variantId)) {
-        const targetProduct = freshProducts.get(mapping.target.product_id);
-        const targetVariant = (Array.isArray(targetProduct?.variants) ? targetProduct.variants : []).find((variant: any) => Number(variant?.id) === mapping.target.variant_id);
-        const validation = validateMappedCandidate(mapping, country, freshProduct, freshVariant, targetProduct, targetVariant);
+      for (const route of providerRoutes.filter((entry: any) =>
+        text(entry?.source_product_id) === productId && Number(entry?.source_variant_id) === variantId
+      )) {
+        const key = `${Number(route?.source_blueprint_id)}:${Number(route?.target_print_provider_id)}`;
+        const providerVariant = catalogProviderVariant(providerCatalogs.get(key), variantId);
+        const validation = validateDirectProviderRoute(route, country, freshProduct, freshVariant, providerVariant);
         if (!validation.ok) continue;
+        const directCostCents = usdCentsToEurCents(validation.cost_cents, fx);
         candidates.push({
-          product_id: mapping.target.product_id,
-          variant_id: mapping.target.variant_id,
+          direct_provider: true,
+          product_id: "",
+          source_product_id: productId,
+          variant_id: variantId,
           quantity: qty,
-          cost_cents: usdCentsToEurCents(validation.cost_cents, fx),
+          cost_cents: directCostCents,
           source_cost_cents: validation.cost_cents,
           source_currency: PRINTIFY_SOURCE_CURRENCY,
-          mapping_approval_id: mapping.approval_id,
-          blueprint_id: mapping.target.blueprint_id,
-          print_provider_id: mapping.target.print_provider_id,
-          estimated_import_cents_per_unit: validation.estimated_import_cents_per_unit || 0,
+          mapping_approval_id: text(route?.approval_id),
+          blueprint_id: Number(route?.source_blueprint_id),
+          print_provider_id: Number(route?.target_print_provider_id),
+          estimated_import_cents_per_unit: Math.max(
+            validation.estimated_import_cents_per_unit || 0,
+            estimatedImportAllowanceCentsPerUnit(country, Number(route?.source_blueprint_id), Number(route?.target_print_provider_id), directCostCents),
+          ),
           item_name: clean(row.cached.product.name),
           item_size: itemLabel,
         });
