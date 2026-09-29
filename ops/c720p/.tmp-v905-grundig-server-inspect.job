@@ -1,0 +1,7 @@
+set -e
+S=/home/jespern/c720p-home-hub/bin/ht-e6500-surround-server.py
+echo ===FAST_STATE===
+sed -n '/def grundig_fast_power_state/,/def grundig_.*power/p' "$S" | head -300
+echo ===ENSURE_POWER===
+grep -n -A 220 -B 40 -E '^def (grundig_.*(power|on|off)|ensure_.*grundig)|/grundig-tv/(on|off|power-state|hdmi3-fast)' "$S" | head -900
+echo RESULT=V905_GRUNDIG_SERVER_INSPECT_DONE
