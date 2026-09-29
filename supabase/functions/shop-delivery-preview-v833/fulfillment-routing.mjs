@@ -8,6 +8,8 @@ const DESPINOZA_SOURCE_PRODUCT_IDS = new Set([
 const DESPINOZA_NATIVE_TEXT_ID = "7b14de2d-815d-a93b-cdd3-69d9c2cb3e2f";
 const DESPINOZA_INTERNAL_TEXT_ID = "5941187eb8e7e37b3f0e62e5";
 const DESPINOZA_STATIC_TEXT_ID = "6aa9f09621bcc1035c7dae61";
+const DESPINOZA_STATIC_TEXT_URL = "https://pfy-prod-image-storage.s3.us-east-2.amazonaws.com/28211792/fbb5f9e7-fd95-41e0-bc93-c0ab427306d8";
+const DESPINOZA_STATIC_TEXT_WIDTH = 4096;
 const DESPINOZA_TEXT_MARKER = "__despinoza_text__";
 const GENERIC_IGNORED_ARTWORK_IDS = new Set(["5941187eb8e7e37b3f0e62e5"]); // generated text_layer.svg, not reusable Printify artwork
 const DESPINOZA_REGIONAL_PROVIDERS = new Set([27, 30, 331, 438]);
@@ -122,6 +124,17 @@ export function directOrderPrintAreas(product, variantId) {
       for (const image of Array.isArray(placeholder?.images) ? placeholder.images : []) {
         const id = text(image?.id);
         if (GENERIC_IGNORED_ARTWORK_IDS.has(id)) continue;
+        const x = Number(image?.x), y = Number(image?.y), rawScale = Number(image?.scale), angle = Number(image?.angle || 0);
+        if (![x,y,rawScale,angle].every(Number.isFinite) || rawScale <= 0) return null;
+        if (id === DESPINOZA_NATIVE_TEXT_ID && DESPINOZA_SOURCE_PRODUCT_IDS.has(text(product?.id))) {
+          const nativeWidth = Number(image?.width);
+          const scale = Number.isFinite(nativeWidth) && nativeWidth > 0
+            ? rawScale * nativeWidth / DESPINOZA_STATIC_TEXT_WIDTH
+            : rawScale * 953.80004 / DESPINOZA_STATIC_TEXT_WIDTH;
+          rendered.push({ src: DESPINOZA_STATIC_TEXT_URL, x, y, scale, angle });
+          reusableImageCount += 1;
+          continue;
+        }
         const src = text(image?.src);
         if (id && !src) return null;
         if (!src) continue;
@@ -132,9 +145,7 @@ export function directOrderPrintAreas(product, variantId) {
         } catch {
           return null;
         }
-        const x = Number(image?.x), y = Number(image?.y), scale = Number(image?.scale), angle = Number(image?.angle || 0);
-        if (![x,y,scale,angle].every(Number.isFinite) || scale <= 0) return null;
-        rendered.push({ src, x, y, scale, angle });
+        rendered.push({ src, x, y, scale: rawScale, angle });
         reusableImageCount += 1;
       }
       if (rendered.length) {
