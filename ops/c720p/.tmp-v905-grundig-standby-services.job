@@ -1,0 +1,19 @@
+set -e
+HOST=192.168.178.169
+echo ===PORTS===
+for p in 6466 6467 8008 8009 8443; do
+  timeout 1 bash -lc "</dev/tcp/$HOST/$p" >/dev/null 2>&1 && echo "OPEN $p" || echo "CLOSED $p"
+done
+echo ===HTTP_8008_ROOT===
+curl -sS -i --max-time 4 "http://$HOST:8008/" | head -80 || true
+echo ===HTTP_8008_SSDP===
+curl -sS -i --max-time 4 "http://$HOST:8008/ssdp/device-desc.xml" | head -160 || true
+echo ===HTTP_8008_SETUP===
+curl -sS -i --max-time 4 "http://$HOST:8008/setup/eureka_info?options=detail" | head -180 || true
+echo ===HTTP_8008_APPS===
+curl -sS -i --max-time 4 "http://$HOST:8008/apps" | head -160 || true
+echo ===HTTPS_8443_ROOT===
+curl -ksS -i --max-time 4 "https://$HOST:8443/" | head -100 || true
+echo ===TLS_6467===
+timeout 5 openssl s_client -connect "$HOST:6467" -servername "$HOST" </dev/null 2>/dev/null | head -120 || true
+echo RESULT=V905_GRUNDIG_STANDBY_SERVICES_DONE
