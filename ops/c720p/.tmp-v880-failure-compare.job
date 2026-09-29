@@ -1,0 +1,11 @@
+set -e
+echo ===LATEST_CONNECTOR_LOGS===
+ls -1t /home/jespern/c720p-home-hub/logs/samsung-bluetooth-connect-*.log 2>/dev/null | head -3 | while read f; do echo "--- $f"; tail -260 "$f"; done
+echo ===BLUEZ_NOW===
+bluetoothctl devices || true
+bluetoothctl info 8C:C8:CD:8B:06:3B || true
+echo ===PROVEN_COMPARE===
+BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p
+curl -fsSL "$BASE/compare-proven-bt-v878.py" -o /tmp/compare-proven-bt-v878.py
+python3 /tmp/compare-proven-bt-v878.py
+echo RESULT=V880_FAILURE_COMPARE_DONE
