@@ -1,0 +1,33 @@
+set -e
+python3 - <<'PY'
+import json, pathlib, re
+er=pathlib.Path("/opt/homeassistant/config/.storage/core.entity_registry")
+dr=pathlib.Path("/opt/homeassistant/config/.storage/core.device_registry")
+devices={}
+if dr.exists():
+    d=json.loads(dr.read_text())
+    for x in d.get("data",{}).get("devices",[]):
+        devices[x.get("id")]=x
+rx=re.compile(r'(grundig|samsung|hts|e6500|surround|home.?theat|television|smart.?plug|socket|outlet|living.?room)',re.I)
+count=0
+if er.exists():
+    d=json.loads(er.read_text())
+    for e in d.get("data",{}).get("entities",[]):
+        dev=devices.get(e.get("device_id")) or {}
+        fields=[
+            e.get("entity_id"),e.get("name"),e.get("original_name"),e.get("platform"),
+            dev.get("name_by_user"),dev.get("name"),dev.get("manufacturer"),dev.get("model")
+        ]
+        s=" ".join(str(v or "") for v in fields)
+        if rx.search(s):
+            print("ENTITY|{}|{}|{}|{}|{}|{}".format(
+                e.get("entity_id") or "",
+                e.get("name") or e.get("original_name") or "",
+                e.get("platform") or "",
+                dev.get("name_by_user") or dev.get("name") or "",
+                dev.get("manufacturer") or "",
+                dev.get("model") or ""))
+            count+=1
+print("MATCH_COUNT="+str(count))
+PY
+echo RESULT=V913_HA_POWER_ENTITIES_SAFE_DONE
