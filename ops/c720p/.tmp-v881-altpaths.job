@@ -1,0 +1,1 @@
+set -e; curl -fsSL https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p/run-hts-v881-altpaths.py -o /tmp/run-hts-v881-altpaths.py; python3 /tmp/run-hts-v881-altpaths.py
