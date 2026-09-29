@@ -1,0 +1,7 @@
+set -e
+P=/home/jespern/s5-ir-bridge-manual/src/com/bruis/s5irbridge/IrReceiver.java
+echo ===SOURCE_HEAD===
+sed -n '1,240p' "$P"
+echo ===HELPERS===
+grep -n -A 120 -B 20 -E 'putNec|class Code|onReceive|transmit' "$P" | head -700
+echo RESULT=V896_SOURCE_STRUCTURE_DONE
