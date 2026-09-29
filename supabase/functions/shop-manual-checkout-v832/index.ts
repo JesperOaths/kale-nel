@@ -2,11 +2,11 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import {
   buildFulfillmentPlans,
+  catalogProviderVariant,
   cheapestShippingQuote,
   chooseCheapestFulfillment,
   estimatedImportAllowanceCentsPerUnit,
-  parseFulfillmentMappings,
-  validateMappedCandidate,
+  validateDirectProviderRoute,
 } from "./fulfillment-routing.mjs";
 import {
   applyPrintifyVatReserveEurCents,
@@ -312,7 +312,7 @@ Deno.serve(async (req: Request) => {
   if (req.method === "GET") {
     const { data: cache } = await sb.from("shop_catalog_cache_v828").select("payload,generated_at,last_error").eq("id", 1).maybeSingle();
     const { data: settings } = await sb.from("shop_payment_settings").select("provider,payment_url,enabled").eq("id", 1).maybeSingle();
-    const { count: approvedRegionalMappings } = await sb.from("shop_fulfillment_mappings").select("approval_id", { count: "exact", head: true }).eq("approved", true);
+    const { count: approvedProviderRoutes } = await sb.from("shop_provider_routes_v1").select("approval_id", { count: "exact", head: true }).eq("approved", true);
     return json(req, {
       ok: true,
       mode: "manual-payment-v832",
@@ -323,9 +323,9 @@ Deno.serve(async (req: Request) => {
       rounding: "whole-euro-ceiling",
       creates_pending_orders: true,
       sends_to_production: false,
-      fulfillment_routing: "validated-approved-regional-plus-canonical",
+      fulfillment_routing: "clone-free-direct-provider-plus-canonical",
       fulfillment_provider_consolidation: "eu-lowest-customer-shipping-first; non-eu-lowest-total-route-cost",
-      approved_regional_mappings: Number(approvedRegionalMappings || 0),
+      approved_provider_routes: Number(approvedProviderRoutes || 0),
       cached_products: Array.isArray(cache?.payload?.products) ? cache.payload.products.length : 0,
       catalog_generated_at: cache?.generated_at || null,
       catalog_error: cache?.last_error || null,
@@ -373,40 +373,40 @@ Deno.serve(async (req: Request) => {
     if (resolved.some((row: any) => !row.cached)) throw new Error("One or more selected variants are no longer in the live catalog");
     const shopId = cachedShopId(cache.payload, resolved.map((row: any) => row.cached?.product).filter(Boolean));
 
-    // v870: include only explicit, approved, destination-matching regional clones.
-    // Every candidate is re-fetched from Printify and then validated again for
-    // blueprint/provider/variant/artwork equivalence before it can be quoted.
+    // Clone-free routing: customer-facing products stay singular in Printify.
+    // Approved alternate providers are quoted directly by blueprint/provider/variant.
     const sourceProductIds = [...new Set(resolved.map((row: any) => text(row.cached.product.id)).filter(Boolean))];
-    const { data: mappingRows, error: mappingError } = await sb
-      .from("shop_fulfillment_mappings")
-      .select("approval_id,approved,countries,source_product_id,source_variant_id,source_blueprint_id,source_print_provider_id,target_product_id,target_variant_id,target_blueprint_id,target_print_provider_id,estimated_import_cents_per_unit")
+    const { data: routeRows, error: routeError } = await sb
+      .from("shop_provider_routes_v1")
+      .select("approval_id,approved,countries,source_product_id,source_variant_id,source_blueprint_id,source_print_provider_id,target_print_provider_id,estimated_import_cents_per_unit")
       .eq("approved", true)
       .contains("countries", [country])
       .in("source_product_id", sourceProductIds);
-    if (mappingError) console.warn("Approved regional fulfillment mappings unavailable", mappingError.message);
-    const mappings: any[] = mappingError
-      ? []
-      : parseFulfillmentMappings(JSON.stringify(dbMappingPayload(mappingRows || [])));
-    const eligibleMappings = mappings.filter((mapping: any) => mapping.countries.includes(country) && resolved.some((row: any) =>
-      mapping.source.product_id === text(row.cached.product.id) && mapping.source.variant_id === Number(row.cached.variant.id)
-    ));
+    if (routeError) console.warn("Approved direct provider routes unavailable", routeError.message);
+    const providerRoutes: any[] = routeError ? [] : (Array.isArray(routeRows) ? routeRows : []);
     const printifyToken = await resolvePrintifyToken(sb);
     const fx = await resolveUsdEurRate(sb);
+
     const freshProducts = new Map<string, any>();
-    for (const productId of sourceProductIds) {
+    const sourceEntries = await mapWithConcurrency(sourceProductIds, 4, async (productId: string) => {
       if (!/^[a-zA-Z0-9_-]{8,80}$/.test(productId)) throw new Error("Invalid Printify product id");
-      freshProducts.set(productId, await printify(printifyToken, `/shops/${shopId}/products/${encodeURIComponent(productId)}.json`));
-    }
-    const regionalTargetProductIds = [...new Set(eligibleMappings.map((mapping: any) => text(mapping.target.product_id)).filter(Boolean))];
-    for (const productId of regionalTargetProductIds) {
-      if (freshProducts.has(productId)) continue;
-      if (!/^[a-zA-Z0-9_-]{8,80}$/.test(productId)) continue;
+      return [productId, await printify(printifyToken, `/shops/${shopId}/products/${encodeURIComponent(productId)}.json`)] as const;
+    });
+    sourceEntries.forEach(([productId, product]) => freshProducts.set(productId, product));
+
+    const providerCatalogs = new Map<string, any>();
+    const providerKeys = [...new Set(providerRoutes.map((route: any) => `${Number(route?.source_blueprint_id)}:${Number(route?.target_print_provider_id)}`))];
+    const catalogEntries = await mapWithConcurrency(providerKeys, 4, async (key: string) => {
+      const [blueprintId, providerId] = key.split(":").map(Number);
+      if (!Number.isInteger(blueprintId) || blueprintId <= 0 || !Number.isInteger(providerId) || providerId <= 0) return [key, null] as const;
       try {
-        freshProducts.set(productId, await printify(printifyToken, `/shops/${shopId}/products/${encodeURIComponent(productId)}.json`));
+        return [key, await printify(printifyToken, `/catalog/blueprints/${blueprintId}/print_providers/${providerId}/variants.json`)] as const;
       } catch (error) {
-        console.warn("Ignoring unavailable approved regional Printify target", productId, error instanceof Error ? error.message.slice(0, 180) : "unknown");
+        console.warn("Ignoring unavailable direct provider catalog", key, error instanceof Error ? error.message.slice(0, 180) : "unknown");
+        return [key, null] as const;
       }
-    }
+    });
+    catalogEntries.forEach(([key, payload]) => providerCatalogs.set(key, payload));
 
     const authoritative: any[] = [];
     const candidateGroups: any[][] = [];
@@ -458,25 +458,31 @@ Deno.serve(async (req: Request) => {
           country, Number(freshProduct?.blueprint_id), Number(freshProduct?.print_provider_id), sourceFulfillmentCostCents,
         ),
       }];
-      for (const mapping of eligibleMappings.filter((entry: any) => entry.source.product_id === productId && entry.source.variant_id === variantId)) {
-        const targetProduct = freshProducts.get(mapping.target.product_id);
-        const targetVariant = (Array.isArray(targetProduct?.variants) ? targetProduct.variants : []).find((variant: any) => Number(variant?.id) === mapping.target.variant_id);
-        const validation = validateMappedCandidate(mapping, country, freshProduct, freshVariant, targetProduct, targetVariant);
+      for (const route of providerRoutes.filter((entry: any) => text(entry?.source_product_id) === productId && Number(entry?.source_variant_id) === variantId)) {
+        const key = `${Number(route?.source_blueprint_id)}:${Number(route?.target_print_provider_id)}`;
+        const providerVariant = catalogProviderVariant(providerCatalogs.get(key), variantId);
+        const validation = validateDirectProviderRoute(route, country, freshProduct, freshVariant, providerVariant);
         if (!validation.ok) {
-          console.warn("Ignoring unsafe Printify fulfillment mapping", mapping.approval_id, validation.reason);
+          console.warn("Ignoring unsafe direct Printify provider route", text(route?.approval_id), validation.reason);
           continue;
         }
+        const directCostCents = usdCentsToEurCents(validation.cost_cents, fx);
         candidates.push({
-          product_id: mapping.target.product_id,
-          variant_id: mapping.target.variant_id,
+          direct_provider: true,
+          product_id: "",
+          source_product_id: productId,
+          variant_id: variantId,
           quantity: qty,
-          cost_cents: usdCentsToEurCents(validation.cost_cents, fx),
+          cost_cents: directCostCents,
           source_cost_cents: validation.cost_cents,
           source_currency: PRINTIFY_SOURCE_CURRENCY,
-          mapping_approval_id: mapping.approval_id,
-          blueprint_id: mapping.target.blueprint_id,
-          print_provider_id: mapping.target.print_provider_id,
-          estimated_import_cents_per_unit: validation.estimated_import_cents_per_unit || 0,
+          mapping_approval_id: text(route?.approval_id),
+          blueprint_id: Number(route?.source_blueprint_id),
+          print_provider_id: Number(route?.target_print_provider_id),
+          estimated_import_cents_per_unit: Math.max(
+            validation.estimated_import_cents_per_unit || 0,
+            estimatedImportAllowanceCentsPerUnit(country, Number(route?.source_blueprint_id), Number(route?.target_print_provider_id), directCostCents),
+          ),
         });
       }
       if (String(freshProduct?.blueprint_id || "") === "6") {
@@ -499,7 +505,13 @@ Deno.serve(async (req: Request) => {
     const addressTo = { ...nm, email, phone, country, region, address1, address2, city, zip };
     const plans = buildFulfillmentPlans(candidateGroups, MAX_FULFILLMENT_PLANS);
     const quoteResults = await mapWithConcurrency(plans, 4, async (plan: any) => {
-      const pfLineItems = plan.candidates.map((candidate: any, idx: number) => ({
+      const pfLineItems = plan.candidates.map((candidate: any, idx: number) => candidate?.direct_provider === true ? ({
+        print_provider_id: candidate.print_provider_id,
+        blueprint_id: candidate.blueprint_id,
+        variant_id: candidate.variant_id,
+        quantity: candidate.quantity,
+        external_id: `${checkoutKey}-${idx + 1}`.slice(0, 100),
+      }) : ({
         product_id: candidate.product_id,
         variant_id: candidate.variant_id,
         quantity: candidate.quantity,
@@ -540,24 +552,24 @@ Deno.serve(async (req: Request) => {
       const sourceVariantId = item.printify_variant_id;
       item.catalog_printify_product_id = sourceProductId;
       item.catalog_printify_variant_id = sourceVariantId;
-      item.printify_product_id = route.product_id;
-      item.printify_variant_id = route.variant_id;
+      item.printify_product_id = sourceProductId;
+      item.printify_variant_id = sourceVariantId;
       item.fulfillment_cost_cents = route.cost_cents;
       item.fulfillment_source_cost_cents = route.source_cost_cents;
       item.fulfillment_source_currency = route.source_currency || PRINTIFY_SOURCE_CURRENCY;
       item.fulfillment_estimated_import_cents_per_unit = route.estimated_import_cents_per_unit || 0;
-      item.fulfillment_route = route.mapping_approval_id ? {
-        type: "approved_regional_mapping",
+      item.fulfillment_route = route?.direct_provider === true ? {
+        type: "direct_provider",
         approval_id: route.mapping_approval_id,
         source_product_id: sourceProductId,
         source_variant_id: sourceVariantId,
-        target_product_id: route.product_id,
-        target_variant_id: route.variant_id,
         blueprint_id: route.blueprint_id,
         print_provider_id: route.print_provider_id,
         estimated_import_cents_per_unit: route.estimated_import_cents_per_unit || 0,
       } : {
         type: "catalog_product",
+        source_product_id: sourceProductId,
+        source_variant_id: sourceVariantId,
         blueprint_id: route.blueprint_id,
         print_provider_id: route.print_provider_id,
       };
