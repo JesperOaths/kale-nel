@@ -1,0 +1,16 @@
+set -e
+SER=993e96d0
+echo ===ANDROID_VERSION===
+adb -s "$SER" shell 'getprop ro.build.version.release; getprop ro.build.version.sdk; getprop ro.build.fingerprint; getprop ro.product.model'
+echo ===SERVICES_IR===
+adb -s "$SER" shell 'service list 2>&1 | grep -iE "irda|consumer.?ir|infrared|remote" || true'
+echo ===DUMPSYS_LIST_IR===
+adb -s "$SER" shell 'dumpsys -l 2>&1 | grep -iE "irda|consumer.?ir|infrared|remote" || true'
+echo ===FRAMEWORK_IRDA_STRINGS===
+adb -s "$SER" shell 'for f in /system/framework/*.jar /system/framework/*.apk; do unzip -p "$f" classes.dex 2>/dev/null | strings | grep -qi "write_irsend\|IrdaManager" && echo "$f"; done' || true
+echo ===CARRIER_API_LOG===
+adb -s "$SER" logcat -c
+adb -s "$SER" shell am broadcast -n com.bruis.s5irbridge/.IrReceiver -a com.bruis.s5irbridge.SEND --es device ht_e6500 --es command mute >/dev/null
+sleep 1
+adb -s "$SER" logcat -d -v time | grep -iE 'ConsumerIr|S5IRBridge|ir_remocon|sec_ir|irda' | tail -100 || true
+echo RESULT=V904_S5_IR_SERVICE_MAP_DONE
