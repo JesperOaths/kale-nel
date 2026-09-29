@@ -160,7 +160,7 @@
         // The historical normal-shirt source artwork contains an old title
         // near its top edge. It is not part of the garment illustration.
         // Erase that strip after fitting the garment so only the shirt remains.
-        if(/\/assets\/collection-(?:normal|boxy)\.(?:png|webp)(?:[?#]|$)/i.test(raw)){
+        if(/\/assets\/collection-normal\.(?:png|webp)(?:[?#]|$)/i.test(raw)){
           ctx.fillStyle='#ded6ca';
           ctx.fillRect(0,0,out.width,Math.round(out.height*.13));
         }
