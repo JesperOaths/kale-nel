@@ -1,1 +1,1 @@
-set -e; BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p; curl -fsSL "$BASE/audit-s5-ir-v875.py" -o /tmp/audit-s5-ir-v875.py; python3 /tmp/audit-s5-ir-v875.py
+set -e; echo ===SCRIPT===; sed -n '1,320p' /tmp/compare-s5-ir-codes-v880.py 2>/dev/null || true; echo ===RUN===; python3 /tmp/compare-s5-ir-codes-v880.py 2>/dev/null || true; echo RESULT=V883_IR_CODE_COMPARE_DONE
