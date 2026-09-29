@@ -1,0 +1,7 @@
+set -e
+for f in /home/jespern/patch_s5_ir_bridge_c2ca_hunter.py /home/jespern/patch_s5_ir_bridge_c2ca_auto_cycler.py /home/jespern/patch_s5_ir_bridge_exact_source_candidates.py /home/jespern/patch_s5_ir_bridge_source_only_candidates.py /home/jespern/patch_s5_ir_bridge_final_verified_remote.py; do
+  echo "===FILE=$f==="
+  [ -f "$f" ] || continue
+  grep -n -A 8 -B 5 -Ei 'power|source|function|candidate|samht|c2ca|verified|code' "$f" | head -420
+done
+echo RESULT=V885_CANDIDATES_INSPECTED
