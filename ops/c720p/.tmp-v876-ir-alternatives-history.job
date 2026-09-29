@@ -1,5 +1,5 @@
 set -e
 BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p
-curl -fsSL "$BASE/patch-s5-hts-power-burst-v877.py" -o /tmp/patch-s5-hts-power-burst-v877.py
-python3 /tmp/patch-s5-hts-power-burst-v877.py
-echo RESULT=V877_POWER_BURST_JOB_DONE
+curl -fsSL "$BASE/patch-s5-hts-power-burst-v877b.py" -o /tmp/patch-s5-hts-power-burst-v877b.py
+python3 /tmp/patch-s5-hts-power-burst-v877b.py
+echo RESULT=V877B_POWER_BURST_JOB_DONE
