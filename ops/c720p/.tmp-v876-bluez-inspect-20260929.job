@@ -1,0 +1,14 @@
+set -e
+echo ===BLUEZ_CURRENT===
+sudo -n bash -lc 'find /var/lib/bluetooth -maxdepth 4 -printf "%y %TY-%Tm-%Td %TH:%TM:%TS %p\n" 2>/dev/null | sort | tail -220' || true
+echo ===BLUEZ_SAMSUNG_HITS===
+sudo -n grep -RIl -E 'SamsungHTS-8B063B|8C:C8:CD:8B:06:3B|8c:c8:cd:8b:06:3b' /var/lib/bluetooth 2>/dev/null | head -80 || true
+echo ===HOME_BLUEZ_BACKUPS===
+find /home/jespern -type f \( -name info -o -name '*.tar' -o -name '*.tar.gz' -o -name '*.tgz' -o -name '*.zip' \) -path '*bluetooth*' -printf '%TY-%Tm-%Td %TH:%TM:%TS %s %p\n' 2>/dev/null | sort | tail -160 || true
+echo ===HOME_SAMSUNG_HITS===
+grep -RIl --exclude='*.log' --exclude='*.jsonl' -E 'SamsungHTS-8B063B|8C:C8:CD:8B:06:3B' /home/jespern/c720p-backups /home/jespern/c720p-home-hub 2>/dev/null | head -160 || true
+echo ===CONNECTOR_CURRENT===
+sed -n '1,380p' /home/jespern/c720p-home-hub/bin/c720p-samsung-bluetooth-connect.sh
+echo ===CONNECTOR_TIMELINE===
+find /home/jespern/c720p-home-hub /home/jespern/c720p-backups -type f -name '*c720p-samsung-bluetooth-connect.sh*' -printf '%TY-%Tm-%Td %TH:%TM:%TS %s %p\n' 2>/dev/null | sort | tail -160
+echo RESULT=V876_BLUEZ_CONNECTOR_INSPECTED
