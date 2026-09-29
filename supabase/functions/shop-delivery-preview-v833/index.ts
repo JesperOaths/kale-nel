@@ -399,7 +399,7 @@ Deno.serve(async (req: Request) => {
     const sourceProductIds = [...new Set(resolved.map((row: any) => text(row.cached.product.id)).filter(Boolean))];
     const { data: routeRows, error: routeError } = await sb
       .from("shop_provider_routes_v1")
-      .select("approval_id,approved,countries,source_product_id,source_variant_id,source_blueprint_id,source_print_provider_id,target_print_provider_id,estimated_import_cents_per_unit")
+      .select("approval_id,approved,countries,source_product_id,source_variant_id,source_blueprint_id,source_print_provider_id,target_print_provider_id,estimated_import_cents_per_unit,source_cost_usd_cents,target_cost_usd_cents,cost_delta_usd_cents,cost_snapshot_at")
       .eq("approved", true)
       .contains("countries", [country])
       .in("source_product_id", sourceProductIds);
