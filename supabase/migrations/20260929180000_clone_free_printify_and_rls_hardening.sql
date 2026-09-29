@@ -73,6 +73,37 @@ revoke all privileges on table public.outbound_email_job_delivery_reports from a
 revoke all privileges on table public.gejast_player_sessions_v746 from anon, authenticated;
 revoke all privileges on table public._scratch_paardenrace_history_work from anon, authenticated;
 
+-- Make the private-by-default intent explicit. SECURITY DEFINER/session-validated
+-- RPCs and service_role bypass RLS; browser roles never access these tables directly.
+do $
+declare
+  t text;
+  tables text[] := array[
+    'admin_accounts','available_names','claimed_names','claim_request_history',
+    'admin_login_attempts','player_activation_links','allowed_usernames','invite_links',
+    'game_match_summaries','match_change_log','drink_sessions','admin_drinks_action_groups',
+    'admin_drinks_action_items','hidden_site_names','ballroom_sessions','web_push_delivery_queue',
+    'native_push_tokens','native_push_jobs','active_web_push_presence','admin_web_push_jobs',
+    'scope_quarantine_game_match_summaries','scope_quarantine_boerenbridge_matches',
+    'web_push_job_attempts','admin_write_audit_log','caute_coin_ledger',
+    'outbound_email_job_delivery_reports','gejast_player_sessions_v746','_scratch_paardenrace_history_work'
+  ];
+begin
+  foreach t in array tables loop
+    execute format('drop policy if exists %I on public.%I','private_service_only',t);
+    execute format(
+      'create policy %I on public.%I for all to anon, authenticated using (false) with check (false)',
+      'private_service_only', t
+    );
+  end loop;
+end $;
+
+-- Disabled rows here were legacy clone-derived regional experiments with no
+-- reliable cost snapshot. Active routing is the approved direct-provider set.
+delete from public.shop_provider_routes_v1
+where not approved
+  and notes ilike '%Disabled for clone-free routing%';
+
 create or replace function public.rls_auto_enable()
 returns event_trigger
 language plpgsql
