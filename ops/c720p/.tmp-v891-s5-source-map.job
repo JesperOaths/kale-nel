@@ -1,0 +1,10 @@
+set -e
+echo ===IRRECEIVER_COMMANDS===
+grep -n -E 'CODES.put\("(function|source_input|grundig_source|grundig_source_alt|power)"' /home/jespern/s5-ir-bridge-manual/src/com/bruis/s5irbridge/IrReceiver.java || true
+echo ===BUILD_COMMANDS===
+grep -n -E 'CODES.put\("(function|source_input|grundig_source|grundig_source_alt|power)"' /home/jespern/build_install_s5_ir_bridge.sh || true
+echo ===GENERATOR_COMMANDS===
+grep -n -E 'CODES.put\("(function|source_input|grundig_source|grundig_source_alt|power)"' /home/jespern/patch_s5_ir_bridge_final_verified_remote.py || true
+echo ===APK_INSTALLED_STRINGS===
+adb -s 993e96d0 shell pm path com.bruis.s5irbridge
+echo RESULT=V891_S5_SOURCE_MAP_DONE
