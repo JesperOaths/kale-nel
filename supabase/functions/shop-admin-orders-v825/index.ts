@@ -108,7 +108,37 @@ async function notifyProduction(sb,order){
 }
 async function ensureWebhooks(token,shopId){try{const hooks=await printify(token,`/shops/${shopId}/webhooks.json`);for(const topic of ["order:shipment:created","order:updated"]){if(!(Array.isArray(hooks)?hooks:[]).some(h=>h?.topic===topic&&text(h?.url)===WEBHOOK_URL)){await printify(token,`/shops/${shopId}/webhooks.json`,{method:"POST",body:JSON.stringify({topic,url:WEBHOOK_URL})});}}return true;}catch(e){console.error("Webhook ensure failed",e);return false;}}
 
-async function resolveCurrentProductionItems(sb,order){
+function directOrderPrintAreas(product,variantId){
+  const wanted=Number(variantId),out={};
+  let count=0;
+  const ignored=new Set(["5941187eb8e7e37b3f0e62e5"]);
+  for(const area of Array.isArray(product?.print_areas)?product.print_areas:[]){
+    const ids=Array.isArray(area?.variant_ids)?area.variant_ids.map(Number):[];
+    if(ids.length&&!ids.includes(wanted))continue;
+    for(const placeholder of Array.isArray(area?.placeholders)?area.placeholders:[]){
+      const position=text(placeholder?.position).toLowerCase();
+      if(!position)continue;
+      const rendered=[];
+      for(const image of Array.isArray(placeholder?.images)?placeholder.images:[]){
+        const id=text(image?.id),src=text(image?.src);
+        if(ignored.has(id))continue;
+        if(id&&!src)throw new Error("Selected artwork cannot be reused safely for direct provider fulfillment.");
+        if(!src)continue;
+        try{const u=new URL(src);if(u.protocol!=="https:")throw new Error("invalid_artwork_url");}catch{throw new Error("Selected artwork URL is invalid for direct provider fulfillment.");}
+        const x=Number(image?.x),y=Number(image?.y),scale=Number(image?.scale),angle=Number(image?.angle||0);
+        if(![x,y,scale,angle].every(Number.isFinite)||scale<=0)throw new Error("Selected artwork placement is invalid for direct provider fulfillment.");
+        rendered.push({src,x,y,scale,angle});count++;
+      }
+      if(rendered.length){
+        if(!Array.isArray(out[position]))out[position]=[];
+        out[position].push(...rendered);
+      }
+    }
+  }
+  if(!count)throw new Error("Selected product has no reusable artwork for direct provider fulfillment.");
+  return out;
+}
+async function resolveCurrentProductionItems(sb,order,token,shopId){
   const country=text(order?.shipping_address?.country).toUpperCase();
   const original=Array.isArray(order?.line_items)?order.line_items:[];
   let remappedCount=0;
@@ -120,6 +150,50 @@ async function resolveCurrentProductionItems(sb,order){
     let productId=text(source?.printify_product_id);
     let variantId=Number(source?.printify_variant_id);
     let next=source;
+
+    if(route?.type==="direct_provider"&&text(route?.source_product_id)&&Number.isFinite(Number(route?.source_variant_id))&&country){
+      const approvalId=text(route?.approval_id);
+      if(!approvalId)throw new Error("Selected direct provider route is missing its approval id.");
+      const{data:providerRoute,error:routeError}=await sb.from("shop_provider_routes_v1")
+        .select("approval_id,approved,countries,source_product_id,source_variant_id,source_blueprint_id,source_print_provider_id,target_print_provider_id,updated_at")
+        .eq("approval_id",approvalId)
+        .eq("approved",true)
+        .contains("countries",[country])
+        .maybeSingle();
+      if(routeError)throw routeError;
+      if(!providerRoute)throw new Error(`Selected fulfillment route ${approvalId} is no longer approved for this destination. Revalidate the order before production.`);
+      if(text(providerRoute.source_product_id)!==text(route.source_product_id)
+        ||Number(providerRoute.source_variant_id)!==Number(route.source_variant_id)
+        ||Number(providerRoute.source_blueprint_id)!==Number(route.blueprint_id)
+        ||Number(providerRoute.target_print_provider_id)!==Number(route.print_provider_id)){
+        throw new Error(`Selected fulfillment route ${approvalId} changed after checkout. Revalidate shipping before production.`);
+      }
+      const sourceProductId=text(route.source_product_id);
+      const sourceVariantId=Number(route.source_variant_id);
+      const sourceProduct=await printify(token,`/shops/${shopId}/products/${encodeURIComponent(sourceProductId)}.json`);
+      if(Number(sourceProduct?.blueprint_id)!==Number(providerRoute.source_blueprint_id)
+        ||Number(sourceProduct?.print_provider_id)!==Number(providerRoute.source_print_provider_id)){
+        throw new Error("Canonical Printify product changed after checkout. Revalidate the order before production.");
+      }
+      const sourceVariant=(Array.isArray(sourceProduct?.variants)?sourceProduct.variants:[]).find(v=>Number(v?.id)===sourceVariantId);
+      if(!sourceVariant||sourceVariant?.is_enabled===false||sourceVariant?.is_available===false)throw new Error("Selected variant is no longer available for production.");
+      const targetCatalog=await printify(token,`/catalog/blueprints/${Number(providerRoute.source_blueprint_id)}/print_providers/${Number(providerRoute.target_print_provider_id)}/variants.json`);
+      const targetVariants=Array.isArray(targetCatalog?.variants)?targetCatalog.variants:(Array.isArray(targetCatalog)?targetCatalog:[]);
+      if(!targetVariants.some(v=>Number(v?.id)===sourceVariantId))throw new Error("Selected direct provider no longer offers this variant. Revalidate the order before production.");
+      const printAreas=directOrderPrintAreas(sourceProduct,sourceVariantId);
+      const quantity=Number(source?.qty);
+      if(!Number.isFinite(quantity)||quantity<=0)throw new Error(`Invalid production quantity at line ${idx+1}`);
+      refreshed.push(source);
+      items.push({
+        print_provider_id:Number(providerRoute.target_print_provider_id),
+        blueprint_id:Number(providerRoute.source_blueprint_id),
+        variant_id:sourceVariantId,
+        print_areas:printAreas,
+        quantity,
+        external_id:`${order.id}-${idx+1}`
+      });
+      continue;
+    }
 
     if(route?.type==="approved_regional_mapping"&&text(route?.source_product_id)&&Number.isFinite(Number(route?.source_variant_id))&&country){
       const approvalId=text(route?.approval_id);
@@ -325,7 +399,7 @@ if(action==="delete_order"){
   if(deleteError)throw deleteError;
   return json(req,{ok:true,deleted:true,order_id:orderId,payment_reference:ref,financial_records_preserved:true});
 }
-if(action==="verify_payment"){if(order.payment_verified_at)return json(req,{ok:true,order,status:"already_verified"});if(order.status!=="pending")return json(req,{error:"order_not_pending"},409);const paidAmount=Number(body?.paid_amount_cents),required=Number(order.total_cents||0);if(!Number.isInteger(paidAmount)||paidAmount<required||paidAmount>100000000)return json(req,{error:"payment_amount_insufficient",required_cents:required,received_cents:Number.isFinite(paidAmount)?paidAmount:null},409);const now=new Date().toISOString();const{data,error}=await sb.from("shop_orders").update({status:"paid",paid_at:now,payment_verified_at:now,payment_verified_by_admin_id:admin.admin_id,paid_amount_cents:paidAmount,updated_at:now,last_error:null}).eq("id",orderId).eq("status","pending").select().single();if(error)throw error;const feeResult=await sb.rpc("shop_apply_payment_fee_v847",{order_id_input:orderId,admin_id_input:admin.admin_id});if(feeResult.error)console.error("payment fee automation failed",feeResult.error.message||feeResult.error);const invoiceResult=await sb.rpc("shop_issue_invoice_v847",{order_id_input:orderId});if(invoiceResult.error)console.error("invoice issue failed",invoiceResult.error.message||invoiceResult.error);const{data:fresh}=await sb.from("shop_orders").select("*").eq("id",orderId).single();return json(req,{ok:true,order:fresh||data,payment_fee:feeResult.data||null,invoice:invoiceResult.data||null});}if(action==="submit_printify"){if(text(order.status).toLowerCase()==="canceled")return json(req,{error:"order_canceled",detail:"Canceled orders cannot be sent to production."},409);if(!order.payment_verified_at)return json(req,{error:"payment_not_verified"},409);const paidAmount=Number(order.paid_amount_cents),required=Number(order.total_cents||0);if(!Number.isFinite(paidAmount)||paidAmount<required)return json(req,{error:"payment_amount_insufficient",required_cents:required,received_cents:Number.isFinite(paidAmount)?paidAmount:null},409);if(order.status==="shipped")return json(req,{ok:true,order,status:"already_shipped",already_submitted:true});const token=await resolveToken(sb),shopId=Number(order.printify_shop_id);if(!Number.isFinite(shopId))throw new Error("Missing production connection id");const hooksOk=await ensureWebhooks(token,shopId);let pfId=text(order.printify_order_id),pf=null;if(pfId){pf=await printify(token,`/shops/${shopId}/orders/${encodeURIComponent(pfId)}.json`);const canonicalStatus=text(pf?.status).toLowerCase();if(/production|fulfilled|shipped|delivered/.test(canonicalStatus)){const sync=await updateAndMaybeNotify(sb,order,pf);const{data:fresh}=await sb.from("shop_orders").select("*").eq("id",orderId).single();return json(req,{ok:true,order:fresh,status:"already_submitted",already_submitted:true,webhooks_ensured:hooksOk,refresh:sync});}if(order.status==="production"&&["pending","on-hold","payment-not-received","has-issues"].includes(canonicalStatus)){const rollbackAt=new Date().toISOString();await sb.from("shop_orders").update({status:"paid",printify_status:canonicalStatus,production_notified_at:null,production_charge_state:["on-hold","payment-not-received"].includes(canonicalStatus)?"awaiting_bunq_approval":"printify_issue",last_error:`Printify has not accepted this order into production (status: ${canonicalStatus}).`,updated_at:rollbackAt}).eq("id",orderId);order.status="paid";order.production_notified_at=null;}}let bunqFunding={ok:true,status:200,payload:{snapshot:null,mode:"manual_bunq_approval"}};const existingApprovalFlow=!!pfId&&["ready_for_bunq_charge","awaiting_bunq_approval"].includes(text(order.production_charge_state));if(!existingApprovalFlow){bunqFunding=await prepareBunqFunding(text(body?.admin_session_token),orderId);if(!bunqFunding.ok){const code=text(bunqFunding.payload?.error)||"bunq_funding_not_ready";const detail=text(bunqFunding.payload?.detail)||"bunq production funding is not ready.";return json(req,{error:code,detail,bunq:bunqFunding.payload},bunqFunding.status>=400&&bunqFunding.status<600?bunqFunding.status:409);}}if(!pfId){const resolved=await resolveCurrentProductionItems(sb,order);if(resolved.remapped_count>0){const remapAt=new Date().toISOString();const{error:remapError}=await sb.from("shop_orders").update({line_items:resolved.line_items,last_error:null,updated_at:remapAt}).eq("id",orderId);if(remapError)throw remapError;order.line_items=resolved.line_items;}pf=await printify(token,`/shops/${shopId}/orders.json`,{method:"POST",body:JSON.stringify({external_id:order.id,label:order.payment_reference,line_items:resolved.items,shipping_method:Number(order.shipping_method_code||1),is_printify_express:false,is_economy_shipping:Number(order.shipping_method_code)===4,send_shipping_notification:false,address_to:order.shipping_address})});pfId=text(pf?.id);if(!pfId)throw new Error("Production service returned no order id");await sb.from("shop_orders").update({printify_order_id:pfId,printify_status:text(pf?.status)||"created",submitted_to_printify_at:new Date().toISOString(),updated_at:new Date().toISOString(),last_error:null}).eq("id",orderId);}const chargeRequestedAt=new Date().toISOString();await sb.from("shop_orders").update({production_charge_requested_at:chargeRequestedAt,production_charge_state:"charge_requested",updated_at:chargeRequestedAt,last_error:null}).eq("id",orderId);try{await printify(token,`/shops/${shopId}/orders/${pfId}/send_to_production.json`,{method:"POST"});}catch(e){
+if(action==="verify_payment"){if(order.payment_verified_at)return json(req,{ok:true,order,status:"already_verified"});if(order.status!=="pending")return json(req,{error:"order_not_pending"},409);const paidAmount=Number(body?.paid_amount_cents),required=Number(order.total_cents||0);if(!Number.isInteger(paidAmount)||paidAmount<required||paidAmount>100000000)return json(req,{error:"payment_amount_insufficient",required_cents:required,received_cents:Number.isFinite(paidAmount)?paidAmount:null},409);const now=new Date().toISOString();const{data,error}=await sb.from("shop_orders").update({status:"paid",paid_at:now,payment_verified_at:now,payment_verified_by_admin_id:admin.admin_id,paid_amount_cents:paidAmount,updated_at:now,last_error:null}).eq("id",orderId).eq("status","pending").select().single();if(error)throw error;const feeResult=await sb.rpc("shop_apply_payment_fee_v847",{order_id_input:orderId,admin_id_input:admin.admin_id});if(feeResult.error)console.error("payment fee automation failed",feeResult.error.message||feeResult.error);const invoiceResult=await sb.rpc("shop_issue_invoice_v847",{order_id_input:orderId});if(invoiceResult.error)console.error("invoice issue failed",invoiceResult.error.message||invoiceResult.error);const{data:fresh}=await sb.from("shop_orders").select("*").eq("id",orderId).single();return json(req,{ok:true,order:fresh||data,payment_fee:feeResult.data||null,invoice:invoiceResult.data||null});}if(action==="submit_printify"){if(text(order.status).toLowerCase()==="canceled")return json(req,{error:"order_canceled",detail:"Canceled orders cannot be sent to production."},409);if(!order.payment_verified_at)return json(req,{error:"payment_not_verified"},409);const paidAmount=Number(order.paid_amount_cents),required=Number(order.total_cents||0);if(!Number.isFinite(paidAmount)||paidAmount<required)return json(req,{error:"payment_amount_insufficient",required_cents:required,received_cents:Number.isFinite(paidAmount)?paidAmount:null},409);if(order.status==="shipped")return json(req,{ok:true,order,status:"already_shipped",already_submitted:true});const token=await resolveToken(sb),shopId=Number(order.printify_shop_id);if(!Number.isFinite(shopId))throw new Error("Missing production connection id");const hooksOk=await ensureWebhooks(token,shopId);let pfId=text(order.printify_order_id),pf=null;if(pfId){pf=await printify(token,`/shops/${shopId}/orders/${encodeURIComponent(pfId)}.json`);const canonicalStatus=text(pf?.status).toLowerCase();if(/production|fulfilled|shipped|delivered/.test(canonicalStatus)){const sync=await updateAndMaybeNotify(sb,order,pf);const{data:fresh}=await sb.from("shop_orders").select("*").eq("id",orderId).single();return json(req,{ok:true,order:fresh,status:"already_submitted",already_submitted:true,webhooks_ensured:hooksOk,refresh:sync});}if(order.status==="production"&&["pending","on-hold","payment-not-received","has-issues"].includes(canonicalStatus)){const rollbackAt=new Date().toISOString();await sb.from("shop_orders").update({status:"paid",printify_status:canonicalStatus,production_notified_at:null,production_charge_state:["on-hold","payment-not-received"].includes(canonicalStatus)?"awaiting_bunq_approval":"printify_issue",last_error:`Printify has not accepted this order into production (status: ${canonicalStatus}).`,updated_at:rollbackAt}).eq("id",orderId);order.status="paid";order.production_notified_at=null;}}let bunqFunding={ok:true,status:200,payload:{snapshot:null,mode:"manual_bunq_approval"}};const existingApprovalFlow=!!pfId&&["ready_for_bunq_charge","awaiting_bunq_approval"].includes(text(order.production_charge_state));if(!existingApprovalFlow){bunqFunding=await prepareBunqFunding(text(body?.admin_session_token),orderId);if(!bunqFunding.ok){const code=text(bunqFunding.payload?.error)||"bunq_funding_not_ready";const detail=text(bunqFunding.payload?.detail)||"bunq production funding is not ready.";return json(req,{error:code,detail,bunq:bunqFunding.payload},bunqFunding.status>=400&&bunqFunding.status<600?bunqFunding.status:409);}}if(!pfId){const resolved=await resolveCurrentProductionItems(sb,order,token,shopId);if(resolved.remapped_count>0){const remapAt=new Date().toISOString();const{error:remapError}=await sb.from("shop_orders").update({line_items:resolved.line_items,last_error:null,updated_at:remapAt}).eq("id",orderId);if(remapError)throw remapError;order.line_items=resolved.line_items;}pf=await printify(token,`/shops/${shopId}/orders.json`,{method:"POST",body:JSON.stringify({external_id:order.id,label:order.payment_reference,line_items:resolved.items,shipping_method:Number(order.shipping_method_code||1),is_printify_express:false,is_economy_shipping:Number(order.shipping_method_code)===4,send_shipping_notification:false,address_to:order.shipping_address})});pfId=text(pf?.id);if(!pfId)throw new Error("Production service returned no order id");await sb.from("shop_orders").update({printify_order_id:pfId,printify_status:text(pf?.status)||"created",submitted_to_printify_at:new Date().toISOString(),updated_at:new Date().toISOString(),last_error:null}).eq("id",orderId);}const chargeRequestedAt=new Date().toISOString();await sb.from("shop_orders").update({production_charge_requested_at:chargeRequestedAt,production_charge_state:"charge_requested",updated_at:chargeRequestedAt,last_error:null}).eq("id",orderId);try{await printify(token,`/shops/${shopId}/orders/${pfId}/send_to_production.json`,{method:"POST"});}catch(e){
   let canonical=null;
   try{canonical=await printify(token,`/shops/${shopId}/orders/${encodeURIComponent(pfId)}.json`);}catch{}
   if(canonical&&/production|fulfilled|shipped|delivered/i.test(text(canonical?.status))){
