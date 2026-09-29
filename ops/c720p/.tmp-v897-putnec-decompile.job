@@ -1,0 +1,5 @@
+set -e
+APK=/home/jespern/c720p-home-hub/tmp/s5-ir-parity/installed-current.apk
+unzip -p "$APK" classes.dex >/tmp/v897-classes.dex
+dexdump -d /tmp/v897-classes.dex 2>/dev/null | grep -n -A 180 -B 30 'IrReceiver.putNec' | head -700
+echo RESULT=V897_PUTNEC_DECOMPILED
