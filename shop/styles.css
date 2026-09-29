@@ -742,8 +742,7 @@ body.size-guide-open { overflow: hidden; }
   position: relative;
   background: #ded6ca;
 }
-.collection-card[data-collection="normal"] .collection-image::before,
-.collection-card[data-collection="boxy"] .collection-image::before {
+.collection-card[data-collection="normal"] .collection-image::before {
   content: "";
   position: absolute;
   z-index: 3;
@@ -752,13 +751,11 @@ body.size-guide-open { overflow: hidden; }
   pointer-events: none;
   background: #ded6ca;
 }
-.compact-shape-card[data-collection="normal"],
-.compact-shape-card[data-collection="boxy"] {
+.compact-shape-card[data-collection="normal"] {
   position: relative;
   overflow: hidden;
 }
-.compact-shape-card[data-collection="normal"]::before,
-.compact-shape-card[data-collection="boxy"]::before {
+.compact-shape-card[data-collection="normal"]::before {
   content: "";
   position: absolute;
   z-index: 3;
