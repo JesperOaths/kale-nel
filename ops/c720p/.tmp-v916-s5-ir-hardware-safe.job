@@ -1,0 +1,20 @@
+set -e
+SER=993e96d0
+echo ===IDENTITY===
+adb -s "$SER" shell id || true
+adb -s "$SER" shell 'command -v su >/dev/null 2>&1 && su -c id || true' || true
+echo ===IR_SYSFS===
+adb -s "$SER" shell 'for d in /sys/class/sec/sec_ir /sys/devices/virtual/sec/sec_ir; do [ -d "$d" ] || continue; echo DIR=$d; ls -la "$d"; for f in "$d"/*; do [ -f "$f" ] || continue; case "$(basename "$f")" in ir_send|send|control) echo "WRITE_NODE $f";; *) echo "---$f"; cat "$f" 2>/dev/null | head -c 800; echo;; esac; done; done' || true
+echo ===CONSUMER_IR===
+adb -s "$SER" shell dumpsys consumer_ir 2>&1 | head -220 || true
+echo ===KERNEL_IR===
+adb -s "$SER" shell dmesg 2>/dev/null | grep -Ei 'sec_ir|ir_send|remocon|infrared' | tail -160 || true
+echo ===APP_PACKAGE===
+adb -s "$SER" shell dumpsys package com.bruis.s5irbridge 2>/dev/null | grep -E 'firstInstallTime|lastUpdateTime|versionName|versionCode|granted=true|TRANSMIT_IR' | head -100 || true
+echo ===BENIGN_MUTE_TX===
+adb -s "$SER" logcat -c
+adb -s "$SER" shell am broadcast -n com.bruis.s5irbridge/.IrReceiver -a com.bruis.s5irbridge.SEND --es device ht_e6500 --es command mute >/dev/null
+sleep 1
+adb -s "$SER" logcat -d -v time | grep -F S5IRBridge | tail -30 || true
+adb -s "$SER" shell dmesg 2>/dev/null | grep -Ei 'sec_ir|ir_send|remocon|Sending IR|Checksum' | tail -50 || true
+echo RESULT=V916_S5_IR_HARDWARE_SAFE_DONE
