@@ -68,3 +68,28 @@ p=Path("/home/jespern/c720p-home-hub/logs")/f"tv-hts-v874-test-{time.strftime('%
 p.write_text(json.dumps(out,indent=2,sort_keys=True)+"\n")
 print(json.dumps(summary,indent=2,sort_keys=True))
 print("LOG="+str(p))
+
+# TV_HTS_CLOUD_REPORT_V1
+# Independent compact result path: useful if the normal agent completes the
+# hardware test but its polling loop/tunnel becomes unstable immediately after.
+try:
+    token_path=Path("/home/jespern/.config/c720p-agent/security-token")
+    token=token_path.read_text().strip()
+    cloud_body={
+        "observed_at":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),
+        "tv_hts_recovery":{
+            "version":"v918-v919",
+            "summary":summary,
+            "log":str(p),
+        },
+    }
+    cloud_req=urllib.request.Request(
+        "https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-control?action=health",
+        data=json.dumps(cloud_body,separators=(",",":")).encode(),
+        method="POST",
+        headers={"content-type":"application/json","x-c720p-token":token},
+    )
+    with urllib.request.urlopen(cloud_req,timeout=12) as cloud_res:
+        print("CLOUD_REPORT_HTTP="+str(cloud_res.status))
+except Exception as e:
+    print("CLOUD_REPORT=DEGRADED "+repr(e))
