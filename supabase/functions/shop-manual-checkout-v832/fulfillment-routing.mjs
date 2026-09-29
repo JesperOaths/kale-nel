@@ -220,11 +220,17 @@ export function validateMappedCandidate(mapping, country, sourceProduct, sourceV
   if (!sourceChecks || !targetChecks) return { ok: false, reason: "approved_identity_mismatch" };
   if (targetVariant?.is_enabled === false || targetVariant?.is_available === false) return { ok: false, reason: "target_unavailable" };
 
-  const sourceSize = normalizedOption(sourceProduct, sourceVariant, "size");
-  const targetSize = normalizedOption(targetProduct, targetVariant, "size");
-  const sourceColor = normalizedOption(sourceProduct, sourceVariant, "color");
-  const targetColor = normalizedOption(targetProduct, targetVariant, "color");
-  if (!sourceSize || sourceSize !== targetSize || !sourceColor || sourceColor !== targetColor) {
+  const sourceOptions = optionValues(sourceProduct, sourceVariant)
+    .map(option => `${text(option?.type).toLowerCase()}:${text(option?.value).toLowerCase()}`)
+    .filter(Boolean)
+    .sort()
+    .join("|");
+  const targetOptions = optionValues(targetProduct, targetVariant)
+    .map(option => `${text(option?.type).toLowerCase()}:${text(option?.value).toLowerCase()}`)
+    .filter(Boolean)
+    .sort()
+    .join("|");
+  if (!sourceOptions || sourceOptions !== targetOptions) {
     return { ok: false, reason: "variant_options_mismatch" };
   }
   const sourceArtwork = artworkSignature(sourceProduct, sourceVariant?.id);
