@@ -335,15 +335,33 @@ export function buildFulfillmentPlans(candidateGroups, maxPlans = 64) {
   return plans;
 }
 
-export function chooseCheapestFulfillment(results) {
+const EU_DESTINATIONS = new Set(["AT","BE","BG","HR","CY","CZ","DK","EE","FI","FR","DE","GR","HU","IE","IT","LV","LT","LU","MT","NL","PL","PT","RO","SK","SI","ES","SE"]);
+
+function preVatShippingCents(result) {
+  const explicit = Number(result?.shipping?.pre_vat_cents);
+  if (Number.isFinite(explicit) && explicit >= 0) return explicit;
+  const fallback = Number(result?.shipping?.cents);
+  return Number.isFinite(fallback) && fallback >= 0 ? fallback : Number.POSITIVE_INFINITY;
+}
+
+function preVatRouteTotal(result) {
+  return Number(result?.plan?.production_cents || 0)
+    + preVatShippingCents(result)
+    + Number(result?.plan?.estimated_import_cents || 0);
+}
+
+export function chooseCheapestFulfillment(results, destinationCountry = "") {
   const valid = (Array.isArray(results) ? results : []).filter(result => result?.shipping && Number.isFinite(result?.plan?.production_cents));
+  const euDestination = EU_DESTINATIONS.has(text(destinationCountry).toUpperCase());
   valid.sort((a, b) => {
-    const aTotal = a.plan.production_cents + a.shipping.cents + Number(a.plan.estimated_import_cents || 0);
-    const bTotal = b.plan.production_cents + b.shipping.cents + Number(b.plan.estimated_import_cents || 0);
-    return aTotal - bTotal
+    const aShipping = preVatShippingCents(a);
+    const bShipping = preVatShippingCents(b);
+    const aTotal = preVatRouteTotal(a);
+    const bTotal = preVatRouteTotal(b);
+    return (euDestination ? aShipping - bShipping : aTotal - bTotal)
+      || (euDestination ? aTotal - bTotal : aShipping - bShipping)
       || Number(a.plan.provider_groups || 0) - Number(b.plan.provider_groups || 0)
       || a.plan.mapped_count - b.plan.mapped_count
-      || a.shipping.cents - b.shipping.cents
       || String(a.route_key || "").localeCompare(String(b.route_key || ""));
   });
   return valid[0] || null;
