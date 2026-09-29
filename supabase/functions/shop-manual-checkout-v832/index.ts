@@ -316,9 +316,9 @@ Deno.serve(async (req: Request) => {
     return json(req, {
       ok: true,
       mode: "manual-payment-v832",
-      pricing: "shirt-production-cost-plus-max-printify-vat-plus-5-rounded-up",
+      pricing: "shirt-production-cost-plus-max-printify-vat-plus-size-margin-rounded-up",
       pricingBase: "production-cost-plus-printify-vat-reserve",
-      marginEuros: { shirts: MARGIN_CENTS / 100, standard: MARGIN_CENTS / 100, threeXlPlus: MARGIN_CENTS / 100 },
+      marginEuros: { shirtsStandard: MARGIN_CENTS / 100, shirtsThreeXlPlus: LARGE_SIZE_MARGIN_CENTS / 100, standard: MARGIN_CENTS / 100, threeXlPlus: LARGE_SIZE_MARGIN_CENTS / 100 },
       vatReservePercent: PRINTIFY_VAT_RESERVE_BPS / 100,
       rounding: "whole-euro-ceiling",
       creates_pending_orders: true,
@@ -425,7 +425,11 @@ Deno.serve(async (req: Request) => {
       const color = colorFromVariant(freshProduct, freshVariant) || "White";
       const variantSize = sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase();
       const unit = isShirtProduct(freshProduct)
-        ? retailEurCentsFromUsdCostAfterVat(freshVariant?.cost, fx, MARGIN_CENTS)
+        ? retailEurCentsFromUsdCostAfterVat(
+            freshVariant?.cost,
+            fx,
+            marginEurCentsForSize(variantSize, MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS),
+          )
         : retailEurCentsFromUsdCost(
             freshVariant?.cost,
             fx,
@@ -560,7 +564,7 @@ Deno.serve(async (req: Request) => {
         shipping_method_code: shippingMethodCode,
         item_count: authoritative.length,
         units: authoritative.reduce((sum: number, item: any) => sum + Number(item.qty || 0), 0),
-        pricing: "shirt-production-cost-plus-max-printify-vat-plus-5-rounded-up",
+        pricing: "shirt-production-cost-plus-max-printify-vat-plus-size-margin-rounded-up",
       });
     }
     const orderId = crypto.randomUUID();
