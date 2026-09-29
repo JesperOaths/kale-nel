@@ -1,1 +1,1 @@
-set -e; BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p; curl -fsSL "$BASE/diagnose-tv-hts-v875.py" -o /tmp/diagnose-tv-hts-v875.py; python3 /tmp/diagnose-tv-hts-v875.py
+set -e; BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p; curl -fsSL "$BASE/inspect-v874-steps-v875.py" -o /tmp/inspect-v874-steps-v875.py; python3 /tmp/inspect-v874-steps-v875.py
