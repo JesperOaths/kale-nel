@@ -118,6 +118,10 @@ assert.match(index, /live-catalog-refresh-v818\.js/);
 assert.doesNotMatch(index, /catalog-data\.js/, 'retired static catalog fallback must not load');
 assert.match(store, /shop-catalog-v828/, 'storefront must call the current Printify-backed catalog directly');
 assert.doesNotMatch(store, /BRUIS_CATALOG|catalog\.json/, 'storefront must not fall back to stale static catalog data');
+assert.match(store, /baseLabel:\s*publicBaseLabel\(raw\.baseLabel, baseKey\)/, 'storefront must sanitize supplier base labels before display');
+assert.match(store, /function publicBaseLabel\(value, baseKey\)/, 'storefront must retain customer-facing base-label sanitizer');
+assert.doesNotMatch(index, /Gildan|Comfort Colors/i, 'public shop HTML must not expose third-party T-shirt branding');
+assert.doesNotMatch(store, /Gildan|Comfort Colors/i, 'public storefront runtime must not contain third-party T-shirt branding');
 assert.doesNotMatch(index, /direct-commerce-v828\.js|mockup-background-v830\.js|image-lightbox-v830\.js/);
 assert.doesNotMatch(index, /shop-runtime-v819\.js|catalog-recovery-v822\.js|payment-readiness-v824\.js|shopify-checkout-v817\.js/);
 
