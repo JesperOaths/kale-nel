@@ -1,0 +1,20 @@
+set -e
+PY=/home/jespern/c720p-home-hub/venvs/androidtvremote2/bin/python
+CUR=/home/jespern/c720p-home-hub/bin/c720p-grundig-wifi.py
+OLD=/home/jespern/c720p-backups/tv-hts-dynamic-20260926_075434/c720p-grundig-wifi.py
+HOST=192.168.178.169
+echo ===PORTS===
+for p in 6466 6467 8008 8009 8443; do timeout 1 bash -lc "</dev/tcp/$HOST/$p" >/dev/null 2>&1 && echo "OPEN $p" || echo "CLOSED $p"; done
+echo ===CURRENT_STATUS===
+timeout 18 "$PY" "$CUR" status "$HOST" || true
+echo ===OLD_STATUS===
+timeout 24 "$PY" "$OLD" status "$HOST" || true
+echo ===CURRENT_POWER===
+timeout 18 "$PY" "$CUR" power "$HOST" || true
+sleep 2
+echo ===OLD_POWER===
+timeout 24 "$PY" "$OLD" power "$HOST" || true
+sleep 3
+echo ===FINAL_PORTS===
+for p in 6466 6467 8008 8009 8443; do timeout 1 bash -lc "</dev/tcp/$HOST/$p" >/dev/null 2>&1 && echo "OPEN $p" || echo "CLOSED $p"; done
+echo RESULT=V906_GRUNDIG_OLDHELPER_AB_DONE
