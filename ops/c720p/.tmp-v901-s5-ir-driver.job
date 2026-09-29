@@ -1,0 +1,22 @@
+set -e
+SER=993e96d0
+echo ===ADB===
+adb -s "$SER" get-state || true
+adb -s "$SER" shell id || true
+echo ===FEATURES===
+adb -s "$SER" shell 'pm list features | grep -i -E "consumer|infrared|ir" || true' || true
+echo ===SEC_IR_TREE===
+adb -s "$SER" shell 'ls -la /sys/class/sec/sec_ir 2>&1 || true; readlink -f /sys/class/sec/sec_ir 2>&1 || true' || true
+echo ===SEC_IR_NODES===
+adb -s "$SER" shell 'for f in /sys/class/sec/sec_ir/*; do echo ---$f---; ls -l "$f" 2>&1; case "$(basename "$f")" in uevent|name|modalias|check_ir|ir_send_result|irda_test|remocon*) cat "$f" 2>&1 | head -30;; esac; done' || true
+echo ===ROOT_CHECK===
+adb -s "$SER" shell 'command -v su || which su || true; su -c id 2>&1 || true' || true
+echo ===SELINUX===
+adb -s "$SER" shell 'getenforce 2>&1 || true; ls -Z /sys/class/sec/sec_ir/* 2>&1 || true' || true
+echo ===DRIVER_LOGS===
+adb -s "$SER" shell 'dmesg 2>/dev/null | grep -iE "sec_ir|irda|ice40|ir_send|remocon" | tail -220 || true' || true
+echo ===CONSUMER_IR===
+adb -s "$SER" shell 'dumpsys consumer_ir 2>&1 || true' || true
+echo ===SYSTEM_PROPERTIES===
+adb -s "$SER" shell 'getprop | grep -iE "irda|infrared|consumerir|sec_ir" || true' || true
+echo RESULT=V901_S5_IR_DRIVER_AUDIT_DONE
