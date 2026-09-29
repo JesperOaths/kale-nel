@@ -84,7 +84,20 @@ elif fs==8:
     s["nm_connectivity"]=out.strip()
     # Try non-destructive radio reconnect first.
     sh(["nmcli","radio","wifi","on"],6)
-    sh(["nmcli","device","connect","wlan0"],15)
+    # This Acer C720P uses wlp1s0; discover a Wi-Fi interface dynamically
+    # so a future predictable-name change cannot strand the watchdog.
+    rc_dev,out_dev=sh(["nmcli","-t","-f","DEVICE,TYPE","device","status"],6)
+    wifi_if=""
+    if rc_dev==0:
+        for line in out_dev.splitlines():
+            parts=line.split(":",1)
+            if len(parts)==2 and parts[1]=="wifi":
+                wifi_if=parts[0]
+                break
+    if not wifi_if:
+        wifi_if="wlp1s0"
+    sh(["nmcli","device","connect",wifi_if],15)
+    s["wifi_interface"]=wifi_if
     s["last_action"]="wifi_reconnect_attempt"
 elif fs>=20 and fs%10==0:
     # Keep services fresh while preserving HA and all local functions.
