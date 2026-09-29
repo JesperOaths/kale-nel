@@ -1,0 +1,11 @@
+set -e
+echo ===CANDIDATE_BUILD_BACKUPS===
+grep -RIl --exclude='*.log' --exclude='*.jsonl' --exclude='*.mp4' --exclude='*.jpg' -E 'SOURCE / FUNCTION ONLY|source-only|Candidate buttons|samht.*function|CODES.put.*source' /home/jespern/c720p-backups /home/jespern 2>/dev/null | head -120
+echo ===BUILD_SCRIPT_HISTORY===
+find /home/jespern/c720p-backups /home/jespern -maxdepth 5 -type f \( -name 'build_install_s5_ir_bridge.sh*' -o -name 'IrReceiver.java*' \) -printf '%TY-%Tm-%Td %TH:%TM:%TS %s %p\n' 2>/dev/null | sort | tail -160
+echo ===MATCHED_CODE_LINES===
+for f in $(grep -RIl --exclude='*.log' --exclude='*.jsonl' -E 'SOURCE / FUNCTION ONLY|source-only' /home/jespern/c720p-backups /home/jespern 2>/dev/null | head -30); do
+  echo "---FILE=$f"
+  grep -n -E 'CODES.put|source|function|input|bluetooth|BT|HDMI|AUX|Digital' "$f" | head -260
+done
+echo RESULT=V888_CANDIDATES_RECOVERED
