@@ -1,0 +1,31 @@
+set -e
+HA=/opt/homeassistant/config
+echo ===ENTITY_REGISTRY_MATCHES===
+python3 - <<'PY'
+import json, pathlib, re
+p=pathlib.Path("/opt/homeassistant/config/.storage/core.entity_registry")
+if p.exists():
+    d=json.loads(p.read_text())
+    ents=d.get("data",{}).get("entities",[])
+    rx=re.compile(r'(tv|television|grundig|samsung|hts|e6500|surround|home.?theatre|home.?theater|smart.?plug|socket|outlet|living.?room)',re.I)
+    for e in ents:
+        s=" ".join(str(e.get(k,"")) for k in ("entity_id","name","original_name","platform","device_id","unique_id"))
+        if rx.search(s):
+            print(json.dumps({k:e.get(k) for k in ("entity_id","name","original_name","platform","device_id","unique_id","disabled_by")},sort_keys=True))
+PY
+echo ===DEVICE_REGISTRY_MATCHES===
+python3 - <<'PY'
+import json, pathlib, re
+p=pathlib.Path("/opt/homeassistant/config/.storage/core.device_registry")
+if p.exists():
+    d=json.loads(p.read_text())
+    devs=d.get("data",{}).get("devices",[])
+    rx=re.compile(r'(tv|television|grundig|samsung|hts|e6500|surround|home.?theatre|home.?theater|plug|socket|outlet|living.?room)',re.I)
+    for e in devs:
+        s=" ".join(str(e.get(k,"")) for k in ("name_by_user","name","manufacturer","model","sw_version"))
+        if rx.search(s):
+            print(json.dumps({k:e.get(k) for k in ("id","name_by_user","name","manufacturer","model","area_id")},sort_keys=True))
+PY
+echo ===CONFIG_MATCHES===
+grep -RniE 'grundig|ht-e6500|e6500|surround|home.?theat|smart.?plug|socket|outlet|tuya|smartlife' "$HA"/configuration.yaml "$HA"/automations.yaml "$HA"/scripts.yaml "$HA"/scenes.yaml "$HA"/packages 2>/dev/null | head -500 || true
+echo RESULT=V912_HA_POWER_ENTITY_AUDIT_DONE
