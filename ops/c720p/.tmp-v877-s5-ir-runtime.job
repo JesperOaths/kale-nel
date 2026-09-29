@@ -1,0 +1,1 @@
+set -e; BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p; curl -fsSL "$BASE/inspect-s5-ir-runtime-v877.py" -o /tmp/inspect-s5-ir-runtime-v877.py; python3 /tmp/inspect-s5-ir-runtime-v877.py
