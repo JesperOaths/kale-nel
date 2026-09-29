@@ -512,7 +512,7 @@ Deno.serve(async (req: Request) => {
       }
     });
     const quotedPlans: any[] = quoteResults.filter(Boolean);
-    const selected = chooseCheapestFulfillment(quotedPlans);
+    const selected = chooseCheapestFulfillment(quotedPlans, country);
     if (!selected) throw new Error("No shipping method available for this address");
     const shippingMethod = selected.shipping.name;
     const shippingMethodCode = selected.shipping.code;
