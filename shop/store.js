@@ -8,9 +8,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const SIZE_ORDER = ['XS','S','M','L','XL','2XL','3XL','4XL','5XL'];
 const SIZE_GUIDES = {
   '6': {
-    base: 'Classic T-Shirt',
+    base: 'Gildan 5000 T-Shirt',
     illustration: './assets/size-guide-classic.svg?v=20260921-v855-r1',
-    illustrationAlt: 'Classic T-Shirt measurement diagram showing width, length and sleeve from center back',
+    illustrationAlt: 'Gildan 5000 T-Shirt measurement diagram showing width, length and sleeve from center back',
     sizes: ['S','M','L','XL','2XL','3XL','4XL','5XL'],
     metric: {
       'Width': [45.7,50.8,55.9,61.0,66.0,71.1,76.2,81.3],
@@ -25,22 +25,6 @@ const SIZE_GUIDES = {
       'Tolerance': [1.5,1.5,1.5,1.5,1.5,1.5,1.5,1.5]
     }
   },
-  '1382': {
-    base: 'Oversized Boxy T-Shirt',
-    illustration: './assets/size-guide-boxy.svg?v=20260921-v855-r1',
-    illustrationAlt: 'Oversized Boxy T-Shirt measurement diagram showing width and length',
-    sizes: ['XS','S','M','L','XL','2XL','3XL'],
-    metric: {
-      'Width': [47.6,50.2,52.7,57.8,62.9,67.9,73.0],
-      'Length': [66.7,69.2,70.5,73.0,75.6,76.8,79.4],
-      'Tolerance': [2.5,2.5,2.5,2.5,2.5,2.5,2.5]
-    },
-    imperial: {
-      'Width': [18.75,19.75,20.75,22.75,24.75,26.75,28.75],
-      'Length': [26.25,27.25,27.75,28.75,29.75,30.25,31.25],
-      'Tolerance': [1,1,1,1,1,1,1]
-    }
-  }
 };
 let sizeGuideUnit = 'metric';
 let activeSizeGuideProductId = '';
@@ -58,21 +42,16 @@ function shirtSizes(raw, baseKey){
 
 const COLLECTIONS = {
   normal: {
-    label: 'Classic',
-    heading: 'Classic shirts',
-    empty: 'No Classic shirts are available yet.'
-  },
-  boxy: {
-    label: 'Oversized Boxy',
-    heading: 'Oversized Boxy shirts',
-    empty: 'No Oversized Boxy shirts are available yet.'
+    label: 'Normal',
+    heading: 'Normal T-shirts',
+    empty: 'No normal T-shirts are available yet.'
   },
   merch: {
     label: 'Merch',
     heading: 'Merch',
     empty: 'No Merch products are available yet.'
   }
-};
+}
 
 // v867: zoological designs are opt-in on the public storefront.
 // Exact names avoid false positives such as Tiger Lily or Snake's Head Fritillary.
@@ -101,9 +80,7 @@ const slug = text => String(text || 'product').toLowerCase().replace(/[^a-z0-9]+
 
 function normalizeCollection(value){
   const raw = String(value || '').trim().toLowerCase().replace(/_/g, '-');
-  if(raw === 'merch') return 'merch';
-  if(raw === 'boxy' || raw === 'oversized' || raw === 'oversized-boxy' || raw === 'oversized boxy') return 'boxy';
-  return 'normal';
+  return raw === 'merch' ? 'merch' : 'normal';
 }
 
 function normalizeProduct(raw){
@@ -126,7 +103,7 @@ function normalizeProduct(raw){
     sizes: shirtSizes(raw, baseKey),
     mockups,
     image: mockups[0]?.image || raw.image || '',
-    baseLabel: baseKey === '6' ? 'Classic T-Shirt' : (baseKey === '1382' ? 'Oversized Boxy T-Shirt' : (raw.baseLabel || 'Product')),
+    baseLabel: baseKey === '6' ? 'Gildan 5000 T-Shirt' : (raw.baseLabel || 'Product'),
     baseKey: String(raw.baseKey || raw.blueprintId || raw.blueprint_id || ''),
     variants: Array.isArray(raw.variants) ? raw.variants.map(variant => ({ ...variant, price: wholeEuro(variant.price) })) : [],
     shopId: String(raw.shopId || raw.shop_id || ''),
@@ -156,7 +133,9 @@ async function loadLiveCatalog(){
     if(!response.ok) return [];
     const payload = await response.json();
     const rawProducts = Array.isArray(payload) ? payload : (payload.products || []);
-    return rawProducts.map(normalizeProduct).filter(p => p.name && p.mockups.length && p.price > 0);
+    return rawProducts
+      .map(normalizeProduct)
+      .filter(p => p.baseKey !== '1382' && p.name && p.mockups.length && p.price > 0);
   } catch {
     return [];
   } finally {
