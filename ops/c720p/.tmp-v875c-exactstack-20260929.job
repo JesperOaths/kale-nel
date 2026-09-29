@@ -1,0 +1,1 @@
+set -e; BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p; curl -fsSL "$BASE/test-exact-1708-stack-v875c.py" -o /tmp/test-exact-1708-stack-v875c.py; python3 /tmp/test-exact-1708-stack-v875c.py
