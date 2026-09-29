@@ -2,11 +2,11 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import {
   buildFulfillmentPlans,
+  catalogProviderVariant,
   cheapestShippingQuote,
   chooseCheapestFulfillment,
   estimatedImportAllowanceCentsPerUnit,
-  parseFulfillmentMappings,
-  validateMappedCandidate,
+  validateDirectProviderRoute,
 } from "./fulfillment-routing.mjs";
 import { applyPrintifyVatReserveEurCents, fxAuditSnapshot, PRINTIFY_SOURCE_CURRENCY, PRINTIFY_VAT_RESERVE_BPS, resolveUsdEurRate, usdCentsToEurCents } from "../_shared/shop-fx.mjs";
 
