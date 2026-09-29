@@ -1,0 +1,10 @@
+set -e
+adb -s 993e96d0 logcat -c
+curl -sS --max-time 10 -X POST http://127.0.0.1:8789/ht-e6500/function-fast >/tmp/v894-function-response.json
+sleep 1
+echo ===FUNCTION_RESPONSE===
+cat /tmp/v894-function-response.json
+echo
+echo ===S5IR_LOG===
+adb -s 993e96d0 logcat -d -v time | grep -F 'S5IRBridge' | tail -80 || true
+echo RESULT=V894_FUNCTION_LOGCAT_DONE
