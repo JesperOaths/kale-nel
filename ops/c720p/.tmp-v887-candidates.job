@@ -1,0 +1,1 @@
+set -e; curl -fsSL https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p/list-hts-source-candidates-v887.py -o /tmp/list-hts-source-candidates-v887.py; python3 /tmp/list-hts-source-candidates-v887.py
