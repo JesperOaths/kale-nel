@@ -8,9 +8,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const SIZE_ORDER = ['XS','S','M','L','XL','2XL','3XL','4XL','5XL'];
 const SIZE_GUIDES = {
   '6': {
-    base: 'Gildan 5000 T-Shirt',
+    base: 'Classic cotton T-shirt',
     illustration: './assets/size-guide-classic.svg?v=20260921-v855-r1',
-    illustrationAlt: 'Gildan 5000 T-Shirt measurement diagram showing width, length and sleeve from center back',
+    illustrationAlt: 'Classic cotton T-shirt measurement diagram showing width, length and sleeve from center back',
     sizes: ['S','M','L','XL','2XL','3XL','4XL','5XL'],
     metric: {
       'Width': [45.7,50.8,55.9,61.0,66.0,71.1,76.2,81.3],
@@ -83,6 +83,15 @@ function normalizeCollection(value){
   return raw === 'merch' ? 'merch' : 'normal';
 }
 
+function publicBaseLabel(value, baseKey){
+  const label = String(value || '').trim();
+  if (/\bbruis\b/i.test(label)) return label;
+  if (baseKey === '6' || /gildan|comfort\s*colors/i.test(label)) return 'Classic cotton T-shirt';
+  if (/t-?shirt|\btee\b|cotton|shirt/i.test(label)) return 'T-shirt';
+  if (/tote|bag/i.test(label)) return 'Tote bag';
+  return 'Product';
+}
+
 function normalizeProduct(raw){
   const name = raw.name || raw.title || 'Untitled product';
   const baseKey = String(raw.baseKey || raw.base_key || '');
@@ -103,7 +112,7 @@ function normalizeProduct(raw){
     sizes: shirtSizes(raw, baseKey),
     mockups,
     image: mockups[0]?.image || raw.image || '',
-    baseLabel: baseKey === '6' ? 'Gildan 5000 T-Shirt' : (raw.baseLabel || 'Product'),
+    baseLabel: publicBaseLabel(raw.baseLabel, baseKey),
     baseKey: String(raw.baseKey || raw.blueprintId || raw.blueprint_id || ''),
     variants: Array.isArray(raw.variants) ? raw.variants.map(variant => ({ ...variant, price: wholeEuro(variant.price) })) : [],
     shopId: String(raw.shopId || raw.shop_id || ''),
