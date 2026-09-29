@@ -1,0 +1,18 @@
+set -e
+BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p
+curl -fsSL "$BASE/patch-tv-hts-faststart-v911.py" -o /tmp/patch-tv-hts-faststart-v911.py
+python3 /tmp/patch-tv-hts-faststart-v911.py
+echo ===SERVICE===
+systemctl --user is-active c720p-bluetooth-helper.service
+echo ===UI_VERSION===
+grep -o 'C720P_TV_SURROUND_ACTIONS_V12_FASTSTART_TRUTHFUL' /opt/homeassistant/config/www/c720p-tv-surround.html
+echo ===FAST_POST===
+START=$(date +%s)
+curl -sS --max-time 6 -w '\nHTTP=%{http_code}\n' -X POST http://127.0.0.1:8790/pipeline/bluetooth-fast || true
+END=$(date +%s)
+echo "FAST_SECONDS=$((END-START))"
+echo ===STATE_NOW===
+curl -sS --max-time 4 http://127.0.0.1:8790/state || true
+echo ===PORTS===
+for p in 8123 8789 8790; do timeout 1 bash -lc "</dev/tcp/127.0.0.1/$p" >/dev/null 2>&1 && echo "OPEN $p" || echo "CLOSED $p"; done
+echo RESULT=V911_FASTSTART_TEST_DONE
