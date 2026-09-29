@@ -1,0 +1,67 @@
+set -e
+TV=192.168.178.169
+CAST=192.168.178.249
+poll_tv(){
+  for i in $(seq 1 20); do
+    p6466=0; p8009=0
+    timeout 1 bash -lc "</dev/tcp/$TV/6466" >/dev/null 2>&1 && p6466=1 || true
+    timeout 1 bash -lc "</dev/tcp/$TV/8009" >/dev/null 2>&1 && p8009=1 || true
+    echo "POLL_$i 6466=$p6466 8009=$p8009"
+    if [ "$p6466" = 1 ] || [ "$p8009" = 1 ]; then return 0; fi
+    sleep 1
+  done
+  return 1
+}
+echo ===CAST_DESC===
+curl -sS -i --max-time 4 "http://$CAST:8008/ssdp/device-desc.xml" | head -120 || true
+echo ===DIAL_YOUTUBE_BEFORE===
+curl -sS -i --max-time 4 "http://$CAST:8008/apps/YouTube" | head -120 || true
+echo ===DIAL_WAKE===
+curl -sS -i --max-time 8 -X POST -H 'Content-Type: text/plain; charset=utf-8' --data '' "http://$CAST:8008/apps/YouTube" | head -120 || true
+echo ===POLL_AFTER_DIAL===
+awake=0
+if poll_tv; then awake=1; fi
+if [ "$awake" = 0 ]; then
+  echo ===HA_CONTAINER_PYCHROMECAST===
+  if sudo -n docker exec homeassistant python3 - <<'PY'
+import pychromecast
+print("HA_PYCHROMECAST_OK", getattr(pychromecast,"__version__","unknown"))
+PY
+  then
+    sudo -n docker exec homeassistant python3 - <<'PY'
+import time,pychromecast
+host="192.168.178.249"
+casts,browser=pychromecast.get_chromecasts(hosts=[host])
+try:
+    print("FOUND",[(c.name,c.host,c.port) for c in casts])
+    if not casts:
+        raise SystemExit("NO_CAST")
+    cc=casts[0]
+    cc.wait(timeout=12)
+    print("CONNECTED",cc.name,cc.host,cc.port)
+    cc.start_app("CC1AD845")
+    print("START_APP_SENT")
+    time.sleep(5)
+finally:
+    try: pychromecast.discovery.stop_discovery(browser)
+    except Exception: pass
+PY
+    echo ===POLL_AFTER_HA_CAST===
+    if poll_tv; then awake=1; fi
+  else
+    echo HA_PYCHROMECAST_MISSING
+  fi
+fi
+echo TV_AWAKE=$awake
+echo ===TV_STATUS===
+timeout 18 /home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh status || true
+if [ "$awake" = 1 ]; then
+  echo ===SET_HDMI3===
+  timeout 25 /home/jespern/c720p-home-hub/venvs/androidtvremote2/bin/python /home/jespern/c720p-home-hub/bin/c720p-grundig-wifi.py sequence KEYCODE_TV_INPUT DPAD_DOWN DPAD_DOWN DPAD_DOWN DPAD_CENTER --delay 0.45 --host "$TV" || true
+  sleep 3
+fi
+echo ===HTS_STATE===
+curl -sS --max-time 8 http://127.0.0.1:8789/ht-e6500/power-state || true; echo
+bluetoothctl info 8C:C8:CD:8B:06:3B 2>&1 | head -40 || true
+ip neigh show | grep -i '30:14:4a:14:77:ac' || true
+echo RESULT=V909_CAST_WAKE_REAL_DONE
