@@ -62,7 +62,12 @@ def patch_file(p: Path):
     return True
 
 changed_build=patch_file(BUILD)
-changed_gen=patch_file(GEN) if GEN.exists() else False
+changed_gen=False
+if GEN.exists():
+    try:
+        changed_gen=patch_file(GEN)
+    except SystemExit as exc:
+        print("GENERATOR_PATCH_DEFERRED="+str(exc))
 
 # Build/install over the stable USB serial, not a stale Wi-Fi address.
 env=dict(__import__("os").environ)
