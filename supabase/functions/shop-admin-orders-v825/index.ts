@@ -122,19 +122,30 @@ async function resolveCurrentProductionItems(sb,order){
     let next=source;
 
     if(route?.type==="approved_regional_mapping"&&text(route?.source_product_id)&&Number.isFinite(Number(route?.source_variant_id))&&country){
-      const{data:mapping,error}=await sb.from("shop_fulfillment_mappings")
-        .select("target_product_id,target_variant_id,target_print_provider_id,updated_at")
+      const approvalId=text(route?.approval_id);
+      let mappingQuery=sb.from("shop_fulfillment_mappings")
+        .select("approval_id,target_product_id,target_variant_id,target_print_provider_id,updated_at")
         .eq("approved",true)
         .eq("source_product_id",text(route.source_product_id))
         .eq("source_variant_id",Number(route.source_variant_id))
-        .contains("countries",[country])
-        .order("updated_at",{ascending:false})
-        .limit(1)
-        .maybeSingle();
+        .contains("countries",[country]);
+      mappingQuery=approvalId
+        ? mappingQuery.eq("approval_id",approvalId)
+        : mappingQuery.order("updated_at",{ascending:false}).limit(1);
+      const{data:mapping,error}=await mappingQuery.maybeSingle();
       if(error)throw error;
+      if(approvalId&&!mapping){
+        throw new Error(`Selected fulfillment route ${approvalId} is no longer approved for this destination. Revalidate the order before production.`);
+      }
       if(mapping?.target_product_id&&Number.isFinite(Number(mapping?.target_variant_id))){
         const targetProductId=text(mapping.target_product_id);
         const targetVariantId=Number(mapping.target_variant_id);
+        if(approvalId&&(
+          (text(route?.target_product_id)&&text(route.target_product_id)!==targetProductId)
+          || (Number.isFinite(Number(route?.target_variant_id))&&Number(route.target_variant_id)!==targetVariantId)
+        )){
+          throw new Error(`Selected fulfillment route ${approvalId} changed after checkout. Revalidate shipping before production.`);
+        }
         if(targetProductId!==productId||targetVariantId!==variantId){
           productId=targetProductId;
           variantId=targetVariantId;
@@ -145,6 +156,7 @@ async function resolveCurrentProductionItems(sb,order){
             printify_variant_id:variantId,
             fulfillment_route:{
               ...route,
+              approval_id:text(mapping?.approval_id)||approvalId||null,
               target_product_id:productId,
               target_variant_id:variantId,
               print_provider_id:Number(mapping?.target_print_provider_id)||Number(route?.print_provider_id)||null,
