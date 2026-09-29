@@ -1,0 +1,36 @@
+set -e
+SER=993e96d0
+echo ===PREBOOT===
+adb -s "$SER" shell getprop ro.product.model || true
+adb -s "$SER" shell getprop sys.boot_completed || true
+adb -s "$SER" shell 'dumpsys consumer_ir 2>&1 || true' || true
+echo ===REBOOT_S5===
+adb -s "$SER" reboot
+sleep 4
+ok=0
+for i in $(seq 1 90); do
+  if adb -s "$SER" get-state >/dev/null 2>&1; then
+    boot=$(adb -s "$SER" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+    echo "BOOT_POLL_$i=$boot"
+    if [ "$boot" = 1 ]; then ok=1; break; fi
+  else
+    echo "BOOT_POLL_$i=offline"
+  fi
+  sleep 2
+done
+echo S5_BOOTED=$ok
+[ "$ok" = 1 ] || exit 4
+sleep 4
+echo ===POSTBOOT_IR===
+adb -s "$SER" shell 'pm list features | grep -i consumerir || true; dumpsys consumer_ir 2>&1 || true' || true
+adb -s "$SER" logcat -c
+echo ===TV_BEFORE===
+curl -sS http://127.0.0.1:8789/grundig-tv/power-state; echo
+echo ===SEND_GRUNDIG_POWER_AFTER_REBOOT===
+adb -s "$SER" shell am broadcast -n com.bruis.s5irbridge/.IrReceiver -a com.bruis.s5irbridge.SEND --es device grundig_tv --es command grundig_power
+hit=0
+for i in $(seq 1 20); do sleep 1; st=$(curl -sS http://127.0.0.1:8789/grundig-tv/power-state || true); echo "TV_POLL_$i=$st"; echo "$st" | grep -q '"state": "on"' && { hit=1; break; } || true; done
+echo TV_ON_AFTER_S5_REBOOT=$hit
+echo ===IR_LOG===
+adb -s "$SER" logcat -d -v time | grep -iE 'S5IRBridge|consumer.?ir|sec_ir|irda|remocon|ir_send' | tail -180 || true
+echo RESULT=V903_S5_IR_DRIVER_RESET_DONE
