@@ -608,6 +608,7 @@ async function buildCatalog(supabase: any) {
       const explicitlyApprovedMerch = PUBLIC_MERCH_PRODUCT_IDS.has(id);
       return (entry.product?.visible !== false || explicitlyApprovedMerch)
         && !text(entry.product?.title).startsWith(ROUTE_PREFIX)
+        && !text(entry.product?.title).startsWith(ROUTE_TITLE_PREFIX)
         && !PUBLIC_EXCLUDED_PRODUCT_IDS.has(id);
     })
     .map((entry: any) => publicProduct(entry.product, fx, entry.shopId, entry.shop))
