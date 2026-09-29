@@ -347,7 +347,10 @@ function planFromCandidates(candidates) {
 }
 
 function candidateKey(candidate) {
-  return `${text(candidate?.product_id)}:${Number(candidate?.variant_id)}:${text(candidate?.mapping_approval_id)}`;
+  if (candidate?.direct_provider === true) {
+    return `direct:${Number(candidate?.blueprint_id)}:${Number(candidate?.print_provider_id)}:${Number(candidate?.variant_id)}:${text(candidate?.mapping_approval_id)}`;
+  }
+  return `product:${text(candidate?.product_id)}:${Number(candidate?.variant_id)}:${text(candidate?.mapping_approval_id)}`;
 }
 
 function cheapestCandidate(candidates) {
