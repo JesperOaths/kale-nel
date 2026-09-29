@@ -1,0 +1,8 @@
+set -e
+echo ===BACKUPS===
+ls -1t /home/jespern/c720p-home-hub/bin/c720p-samsung-bluetooth-connect.sh.backup-* 2>/dev/null | head -20
+echo ===PRE_DETERMINISTIC_CONNECTOR===
+P=$(ls -1t /home/jespern/c720p-home-hub/bin/c720p-samsung-bluetooth-connect.sh.backup-deterministic-bt-* 2>/dev/null | head -1)
+echo FILE=$P
+if [ -n "$P" ]; then grep -n -A 120 -B 30 -E 'SOURCE_CYCLES|cycle_source|try_pair_connect|quick_pair_connect|for .*SOURCE|seq 1' "$P" | head -520; fi
+echo RESULT=V876_OLD_CONNECTOR_INSPECTED
