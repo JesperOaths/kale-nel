@@ -470,6 +470,26 @@ function isPublicVariant(product: any, variant: any) {
   return !color || /^white$/i.test(color);
 }
 
+function gildanRouteSafeCostCeilings(entries: any[]) {
+  const ceilings = new Map<string, number>();
+  for (const entry of Array.isArray(entries) ? entries : []) {
+    const product = entry?.product;
+    if (String(product?.blueprint_id || "") !== "6") continue;
+    const provider = Number(product?.print_provider_id);
+    if (provider !== 30 && provider !== 99) continue;
+    for (const variant of Array.isArray(product?.variants) ? product.variants : []) {
+      if (!isPublicVariant(product, variant)) continue;
+      const id = String(variant?.id || "");
+      const cost = Math.round(Number(variant?.cost));
+      if (!id || !Number.isFinite(cost) || cost <= 0) continue;
+      const key = `6:${id}`;
+      const current = Number(ceilings.get(key) || 0);
+      if (cost > current) ceilings.set(key, cost);
+    }
+  }
+  return ceilings;
+}
+
 function variantDisplayLabel(product: any, variant: any) {
   const options = resolvedOptions(product, variant)
     .map((item) => text(item.value))
@@ -546,10 +566,17 @@ function mediaFor(product: any) {
     .sort((a: any, b: any) => a.index - b.index);
   return media.slice(0, 24).map(({ image, label, variantIds }: any) => ({ image, label, variantIds }));
 }
-function publicProduct(product: any, fx: any, shopId: number, shop: any) {
+function publicProduct(product: any, fx: any, shopId: number, shop: any, routeSafeCostCeilings: Map<string, number>) {
   const variants = (Array.isArray(product?.variants) ? product.variants : [])
     .filter((variant: any) => isPublicVariant(product, variant))
-    .map((variant: any) => ({
+    .map((variant: any) => {
+      const routeSafeRawUsdCost = String(product?.blueprint_id || "") === "6"
+        ? Math.max(
+            Math.round(Number(variant?.cost) || 0),
+            Number(routeSafeCostCeilings.get(`6:${String(variant?.id || "")}`) || 0),
+          )
+        : Number(variant?.cost);
+      return ({
       id: String(variant?.id || ""),
       sku: text(variant?.sku),
       title: text(variant?.title),
@@ -558,15 +585,16 @@ function publicProduct(product: any, fx: any, shopId: number, shop: any) {
       color: colorFrom(product, variant),
       price: (isShirtProduct(product)
         ? retailEurCentsFromUsdCostAfterVat(
-            variant?.cost,
+            routeSafeRawUsdCost,
             fx,
             marginEurCentsForSize(sizeFrom(product, variant) || variantDisplayLabel(product, variant), MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS),
           )
-        : retailEurCentsFromUsdCost(variant?.cost, fx, marginEurCentsForSize(sizeFrom(product, variant) || variantDisplayLabel(product, variant), MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS))) / 100,
+        : retailEurCentsFromUsdCost(routeSafeRawUsdCost, fx, marginEurCentsForSize(sizeFrom(product, variant) || variantDisplayLabel(product, variant), MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS))) / 100,
       is_enabled: variant?.is_enabled !== false,
       is_available: variant?.is_available !== false,
       options: resolvedOptions(product, variant).map((item) => ({ name: item.name, value: item.value })),
-    }))
+    });
+    })
     .filter((variant: any) => variant.id && variant.price > 0);
   const available = variants.filter((variant: any) => variant.is_available !== false && variant.is_enabled !== false);
   const priced = available;
@@ -601,6 +629,7 @@ async function buildCatalog(supabase: any) {
   const token = await resolveToken(supabase);
   const fx = await resolveUsdEurRateDirect();
   const account = await loadAccountProducts(token);
+  const routeSafeCostCeilings = gildanRouteSafeCostCeilings(account.entries);
 
   const cleanProducts = account.entries
     .filter((entry: any) => {
@@ -611,7 +640,7 @@ async function buildCatalog(supabase: any) {
         && !text(entry.product?.title).startsWith(ROUTE_TITLE_PREFIX)
         && !PUBLIC_EXCLUDED_PRODUCT_IDS.has(id);
     })
-    .map((entry: any) => publicProduct(entry.product, fx, entry.shopId, entry.shop))
+    .map((entry: any) => publicProduct(entry.product, fx, entry.shopId, entry.shop, routeSafeCostCeilings))
     .filter((product: any) => product.id && product.name && product.price > 0 && product.mockups.length > 0 && product.variants.length > 0);
 
   if (!cleanProducts.length) throw new Error("no_sellable_products_in_printify_account");
