@@ -1,0 +1,1 @@
+set -e; F=/home/jespern/s5-ir-bridge-manual/src/com/bruis/s5irbridge/IrReceiver.java; echo ===TRANSMIT_BLOCK===; grep -n -A 34 -B 8 -E 'ir\.transmit|frameLen|calls =|repeats=1_call' "$F" | head -180; echo RESULT=V884_POWER_BURST_CHECKED
