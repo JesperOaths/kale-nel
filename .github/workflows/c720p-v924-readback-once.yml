@@ -1,0 +1,21 @@
+name: C720P v924 readback once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/c720p-v924-readback-once.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Trigger bounded v924 readback
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 20 https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-v924-readback-once
