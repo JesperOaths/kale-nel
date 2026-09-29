@@ -1,0 +1,1 @@
+set -e; BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p; curl -fsSL "$BASE/compare-hts-success-v875.py" -o /tmp/compare-hts-success-v875.py; python3 /tmp/compare-hts-success-v875.py
