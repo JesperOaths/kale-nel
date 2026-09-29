@@ -8,7 +8,7 @@ import {
   parseFulfillmentMappings,
   validateMappedCandidate,
 } from "./fulfillment-routing.mjs";
-import { fxAuditSnapshot, PRINTIFY_SOURCE_CURRENCY, resolveUsdEurRate, usdCentsToEurCents } from "../_shared/shop-fx.mjs";
+import { applyPrintifyVatReserveEurCents, fxAuditSnapshot, PRINTIFY_SOURCE_CURRENCY, PRINTIFY_VAT_RESERVE_BPS, resolveUsdEurRate, usdCentsToEurCents } from "../_shared/shop-fx.mjs";
 
 const PRINTIFY_V1 = "https://api.printify.com/v1";
 const PRINTIFY_V2 = "https://api.printify.com/v2";
@@ -296,7 +296,7 @@ async function shippingBreakdown(token: string, shopId: string, selected: any, a
       provider: origin.provider || "Bruis production partner",
       origin: origin.label || null,
       country_code: origin.country_code || null,
-      shipping_cents: usdCentsToEurCents(Number(sourceCents), fx),
+      shipping_cents: applyPrintifyVatReserveEurCents(usdCentsToEurCents(Number(sourceCents), fx)),
       shipping_source_cents: Number(sourceCents),
       items: candidates.map((candidate: any) => ({
         name: clean(candidate.item_name) || "Shirt",
@@ -489,9 +489,11 @@ Deno.serve(async (req: Request) => {
         const quote = await printifyV1(printifyToken, `/shops/${shopId}/orders/shipping.json`, { method: "POST", body: JSON.stringify({ line_items: lineItems, address_to: addressTo }) }, 8500);
         const sourceShipping = cheapestShippingQuote(quote);
         if (!sourceShipping) return null;
+        const preVatShippingCents = usdCentsToEurCents(sourceShipping.cents, fx);
         const shipping = {
           ...sourceShipping,
-          cents: usdCentsToEurCents(sourceShipping.cents, fx),
+          cents: applyPrintifyVatReserveEurCents(preVatShippingCents),
+          pre_vat_cents: preVatShippingCents,
           source_cents: sourceShipping.cents,
           source_currency: PRINTIFY_SOURCE_CURRENCY,
         };
@@ -562,6 +564,7 @@ Deno.serve(async (req: Request) => {
       shipping_cents: selected.shipping.cents,
       shipping_source_cents: Math.max(0, Math.round(Number(selected.shipping.source_cents || 0))),
       shipping_source_currency: PRINTIFY_SOURCE_CURRENCY,
+      vat_reserve_percent: PRINTIFY_VAT_RESERVE_BPS / 100,
       estimated_import_cents: Math.max(0, Math.round(Number(selected.plan.estimated_import_cents || 0))),
       fx: fxAuditSnapshot(fx),
       shipping_method: selected.shipping.name,
