@@ -1,0 +1,19 @@
+set -e
+HOST=192.168.178.169
+echo ===PORTS===
+for p in 6466 6467 8008 8009 8443 55000 7676 9197; do timeout 1 bash -lc "</dev/tcp/$HOST/$p" >/dev/null 2>&1 && echo OPEN:$p || echo CLOSED:$p; done
+echo ===HTTP_8008_ROOT===
+curl -sS --max-time 4 -i http://$HOST:8008/ | head -80 || true
+echo ===EUREKA_INFO===
+curl -sS --max-time 5 http://$HOST:8008/setup/eureka_info?params=name,device_info,build_info,setup_state,version | head -c 12000; echo
+echo ===DEVICE_DESC===
+curl -sS --max-time 5 http://$HOST:8008/ssdp/device-desc.xml | head -c 12000; echo
+echo ===TLS_8443===
+timeout 5 openssl s_client -connect $HOST:8443 -servername $HOST </dev/null 2>&1 | head -80 || true
+echo ===PAIR_PORT_TLS===
+timeout 5 openssl s_client -connect $HOST:6467 -servername $HOST </dev/null 2>&1 | head -80 || true
+echo ===MDNS_CACHE===
+avahi-browse -art 2>/dev/null | grep -i -A4 -B2 -E 'grundig|googlecast|androidtvremote' | head -180 || true
+echo ===ARP===
+ip neigh show $HOST || true
+echo RESULT=V905_GRUNDIG_STANDBY_PROBE_DONE
