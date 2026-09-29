@@ -3,15 +3,15 @@ on:
   push:
     branches: [main]
     paths:
-      - "ops/c720p/.tmp-v875-diagnose-20260929.trigger"
+      - "ops/c720p/.tmp-v875-diagnose.trigger"
 permissions:
   contents: read
 jobs:
-  enqueue:
+  diagnose:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Invoke C720P v875 diagnostic enqueue
+      - name: Invoke diagnostic enqueue endpoint
         run: |
           set -euo pipefail
           curl -fsS --retry 2 --connect-timeout 10 --max-time 30 \
