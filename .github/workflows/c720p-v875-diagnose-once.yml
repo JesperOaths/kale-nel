@@ -15,4 +15,4 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsS --retry 2 --connect-timeout 10 --max-time 30 \
-            https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-v886-tv-first-once
+            https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-v887-candidates-once
