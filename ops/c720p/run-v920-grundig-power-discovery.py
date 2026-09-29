@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, subprocess, time, urllib.request, urllib.error
+import json, subprocess, time, urllib.request, urllib.error\nfrom pathlib import Path
 
 SER="993e96d0"
 COMP="com.bruis.s5irbridge/.IrReceiver"
