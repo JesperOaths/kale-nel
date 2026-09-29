@@ -489,7 +489,18 @@ Deno.serve(async (req: Request) => {
     const addressTo = { first_name: "Checkout", last_name: "Estimate", email: "checkout@kalenel.nl", phone: country === "US" ? US_QUOTE_ONLY_PHONE : "", country, region, address1, address2, city, zip };
     const plans = buildFulfillmentPlans(candidateGroups, MAX_FULFILLMENT_PLANS);
     const quoteResults = await mapWithConcurrency(plans, 4, async (plan: any) => {
-      const lineItems = plan.candidates.map((candidate: any, idx: number) => ({ product_id: candidate.product_id, variant_id: candidate.variant_id, quantity: candidate.quantity, external_id: `estimate-${idx + 1}` }));
+      const lineItems = plan.candidates.map((candidate: any, idx: number) => candidate?.direct_provider === true ? ({
+        print_provider_id: candidate.print_provider_id,
+        blueprint_id: candidate.blueprint_id,
+        variant_id: candidate.variant_id,
+        quantity: candidate.quantity,
+        external_id: `estimate-${idx + 1}`,
+      }) : ({
+        product_id: candidate.product_id,
+        variant_id: candidate.variant_id,
+        quantity: candidate.quantity,
+        external_id: `estimate-${idx + 1}`,
+      }));
       try {
         const quote = await printifyV1(printifyToken, `/shops/${shopId}/orders/shipping.json`, { method: "POST", body: JSON.stringify({ line_items: lineItems, address_to: addressTo }) }, 8500);
         const sourceShipping = cheapestShippingQuote(quote);
