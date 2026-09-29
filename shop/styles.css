@@ -105,7 +105,7 @@ h3 { font-size: 1.08rem; }
 }
 .collection-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
 .collection-card {
@@ -163,7 +163,7 @@ h3 { font-size: 1.08rem; }
   .collection-card:hover { transform: translateY(-3px); border-color: #a99d8d; }
 }
 
-/* Shopping state: compact three-shape switcher remains visible. */
+/* Shopping state: compact two-collection switcher remains visible. */
 .shop-section {
   max-width: 1160px;
   margin: 0 auto;
@@ -185,7 +185,7 @@ h3 { font-size: 1.08rem; }
 .compact-shape-copy .section-kicker { margin-bottom: 4px; }
 .compact-shape-grid {
   display: grid;
-  grid-template-columns: repeat(3, 76px);
+  grid-template-columns: repeat(2, 76px);
   gap: 8px;
 }
 .compact-shape-card {
@@ -737,9 +737,8 @@ body.size-guide-open { overflow: hidden; }
 }
 
 
-/* v857: hide legacy text baked into Classic/Boxy collection artwork */
-.collection-card[data-collection="normal"] .collection-image,
-.collection-card[data-collection="boxy"] .collection-image {
+/* v872: hide legacy text baked into the normal collection artwork */
+.collection-card[data-collection="normal"] .collection-image {
   position: relative;
   background: #ded6ca;
 }
