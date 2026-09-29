@@ -1,0 +1,13 @@
+set -e
+BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p
+curl -fsSL "$BASE/patch-s5-hts-function-burst-v895.py" -o /tmp/patch-s5-hts-function-burst-v895.py
+python3 /tmp/patch-s5-hts-function-burst-v895.py
+systemctl --user restart ht-e6500-surround.service c720p-bluetooth-helper.service
+sleep 2
+adb -s 993e96d0 logcat -c
+curl -sS --max-time 10 -X POST http://127.0.0.1:8789/ht-e6500/function-fast >/dev/null
+sleep 1
+echo ===FUNCTION_TRANSMIT_VERIFY===
+adb -s 993e96d0 logcat -d -v time | grep -F 'S5IRBridge' | tail -40 || true
+curl -fsSL "$BASE/test-tv-hts-v874.py" -o /tmp/test-tv-hts-v874.py
+python3 /tmp/test-tv-hts-v874.py
