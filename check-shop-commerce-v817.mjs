@@ -143,14 +143,15 @@ assert.match(deliveryPreviewEdge, /function cachedShopId/, 'delivery preview mus
 assert.match(checkoutEdge, /validation_only/, 'checkout must expose a non-ordering production validation path');
 assert.match(catalogEdge, /gildanRouteSafeCostCeilings/, 'catalog must price Gildan variants against the most expensive approved hybrid provider');
 assert.match(checkoutEdge, /routeSafeRawUsdCost/, 'checkout must preserve the advertised shirt margin across hybrid provider changes');
-assert.match(checkoutEdge, /\.from\("shop_fulfillment_mappings"\)/, 'checkout must evaluate server-side approved regional fulfillment mappings');
-assert.match(deliveryPreviewEdge, /\.from\("shop_fulfillment_mappings"\)/, 'delivery preview must evaluate the same regional fulfillment mappings');
-assert.match(checkoutEdge, /\.eq\("approved", true\)/, 'checkout mappings must require explicit approval');
-assert.match(deliveryPreviewEdge, /\.eq\("approved", true\)/, 'preview mappings must require explicit approval');
-assert.match(checkoutEdge, /validateMappedCandidate\(/, 'checkout must revalidate mapped variant and artwork identity');
-assert.match(deliveryPreviewEdge, /validateMappedCandidate\(/, 'preview must revalidate mapped variant and artwork identity');
-assert.match(checkoutEdge, /Ignoring unavailable approved regional Printify target/, 'stale regional clones must fall back safely in checkout');
-assert.match(deliveryPreviewEdge, /Ignoring unavailable approved regional Printify target/, 'stale regional clones must fall back safely in preview');
+assert.match(checkoutEdge, /\.from\("shop_provider_routes_v1"\)/, 'checkout must evaluate approved direct-provider routes');
+assert.match(deliveryPreviewEdge, /\.from\("shop_provider_routes_v1"\)/, 'delivery preview must evaluate the same direct-provider routes');
+assert.match(checkoutEdge, /\.eq\("approved", true\)/, 'checkout direct-provider routes must require explicit approval');
+assert.match(deliveryPreviewEdge, /\.eq\("approved", true\)/, 'preview direct-provider routes must require explicit approval');
+assert.match(checkoutEdge, /validateDirectProviderRoute\(/, 'checkout must validate direct provider identity, variant and reusable artwork');
+assert.match(deliveryPreviewEdge, /validateDirectProviderRoute\(/, 'preview must validate the same direct provider route');
+assert.match(checkoutEdge, /clone-free-direct-provider-plus-canonical/, 'checkout must advertise clone-free routing');
+assert.doesNotMatch(checkoutEdge, /shop_fulfillment_mappings/, 'checkout must not depend on hidden Printify product mappings');
+assert.doesNotMatch(deliveryPreviewEdge, /shop_fulfillment_mappings/, 'preview must not depend on hidden Printify product mappings');
 assert.match(deliveryPreviewEdge, /for \(let attempt = 1; attempt <= 2; attempt \+= 1\)/, 'server-side Printify quote calls must retry transient stream failures');
 assert.match(checkoutEdge, /for \(let attempt = 1; attempt <= 2; attempt \+= 1\)/, 'checkout Printify reads and quote calls must retry transient stream failures');
 assert.match(deliveryPreviewEdge, /fallback:\s*true/, 'nonessential shipping-breakdown failures must not discard a valid shipping total');
@@ -204,12 +205,12 @@ assert.match(customerFacingCheckout, /replace\(\/\\bPrintify\\b\/gi, 'Bruis'\)/)
 assert.match(customerFacingCheckout, /replace\(\/\\bfactories\\b\/gi, 'production locations'\)/);
 assert.match(customerFacingCheckout, /replace\(\/\\bfactory\\b\/gi, 'production location'\)/);
 
-// Delivery authority quotes the canonical product plus explicitly approved,
- // destination-matching regional routes. Every mapped target is re-fetched and
- // revalidated for identity, availability and artwork before it can be selected.
+// Delivery authority keeps one canonical product per design and quotes
+// approved alternate providers directly by blueprint/provider/variant.
 assert.match(deliveryPreviewEdge, /CHOICE_PROVIDER_ID = 99/);
-assert.match(deliveryPreviewEdge, /shop_fulfillment_mappings/);
-assert.match(deliveryPreviewEdge, /validateMappedCandidate/);
+assert.match(deliveryPreviewEdge, /shop_provider_routes_v1/);
+assert.match(deliveryPreviewEdge, /validateDirectProviderRoute/);
+assert.match(deliveryPreviewEdge, /direct_provider/);
 assert.match(deliveryPreviewEdge, /chooseCheapestFulfillment/);
 assert.match(deliveryPreviewEdge, /catalog\/print_providers/);
 assert.match(deliveryPreviewEdge, /printifyV2/);
@@ -217,10 +218,11 @@ assert.match(deliveryPreviewEdge, /Bruis production network/);
 assert.match(deliveryPreviewEdge, /fallback_min_business_days/);
 assert.match(deliveryPreviewEdge, /exact_for_selected_route/);
 assert.match(deliveryPreviewEdge, /strictCountry/);
-assert.match(deliveryPreviewRouting, /function validateMappedCandidate/);
-assert.match(deliveryPreviewRouting, /variant_options_mismatch/);
-assert.match(deliveryPreviewRouting, /artwork_mismatch/);
+assert.match(deliveryPreviewRouting, /function validateDirectProviderRoute/);
+assert.match(deliveryPreviewRouting, /source_artwork_not_order_reusable/);
+assert.match(deliveryPreviewRouting, /target_cost_snapshot_unavailable/);
 assert.match(deliveryPreviewRouting, /function chooseCheapestFulfillment/);
+assert.doesNotMatch(deliveryPreviewEdge, /shop_fulfillment_mappings/);
 
 // Artwork is now the actual first/primary image. Original supplier artwork PNGs win;
 // local v5 previews are only a temporary fallback while an older cache is refreshing.
@@ -584,6 +586,9 @@ assert.match(adminGrowthUiV843, /Payment fees/);
 assert.match(adminGrowthUiV843, /Refunds/);
 assert.match(adminGrowthUiV843, /VAT \/ tax reserve/);
 assert.match(adminEdge, /shop_admin_audit_v842/);
+assert.match(adminEdge, /route\?\.type==="direct_provider"/, 'production must support direct provider orders without product clones');
+assert.match(adminEdge, /DESPINOZA_STATIC_TEXT_URL/, 'Despinoza direct orders must replace non-portable native text with static artwork');
+assert.doesNotMatch(adminEdge, /\.from\("shop_fulfillment_mappings"\)/, 'production must not depend on clone mappings');
 assert.match(analyticsSchema, /shop_finance_ledger_v841/);
 assert.match(analyticsSchema, /shop_product_cost_cache_v841/);
 assert.match(analyticsSchema, /revoke all on function public\.shop_admin_analytics_snapshot_v841/);
