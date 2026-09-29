@@ -1,0 +1,28 @@
+set -e; BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p; curl -fsSL "$BASE/patch-tv-hts-v875b-source-input.py" -o /tmp/patch-tv-hts-v875b-source-input.py; python3 /tmp/patch-tv-hts-v875b-source-input.py; sleep 2; python3 - <<'PY'
+import json,urllib.request,urllib.error,time
+def req(port,path,method="GET",timeout=150):
+    r=urllib.request.Request(f"http://127.0.0.1:{port}{path}",method=method)
+    try:
+        with urllib.request.urlopen(r,timeout=timeout) as x:
+            raw=x.read().decode("utf-8","replace")
+            try:d=json.loads(raw)
+            except:d={"raw":raw[:4000]}
+            return {"ok":200<=x.status<300,"status":x.status,"data":d}
+    except urllib.error.HTTPError as e:
+        raw=e.read().decode("utf-8","replace")
+        try:d=json.loads(raw)
+        except:d={"raw":raw[:4000]}
+        return {"ok":False,"status":e.code,"data":d}
+    except Exception as e:return {"ok":False,"status":0,"error":repr(e)}
+before=req(8790,"/state",timeout=8)
+ensure=req(8790,"/hts/ensure-on-safe","POST",timeout=150)
+after=req(8790,"/state",timeout=8)
+power=req(8789,"/ht-e6500/power-state",timeout=12)
+print("BEFORE="+json.dumps(before,separators=(",",":")))
+print("ENSURE="+json.dumps(ensure,separators=(",",":")))
+print("AFTER="+json.dumps(after,separators=(",",":")))
+print("POWER="+json.dumps(power,separators=(",",":")))
+d=after.get("data") or {}
+ok=bool(d.get("bluetooth_connected") and d.get("audio_sink_present") and d.get("audio_sink_default"))
+print("RESULT=V875B_HTS_SAFE_PASS" if ok else "RESULT=V875B_HTS_SAFE_FAIL")
+PY
