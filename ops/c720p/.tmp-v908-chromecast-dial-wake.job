@@ -1,0 +1,32 @@
+set -e
+TV=192.168.178.169
+CAST=192.168.178.249
+echo ===CAST_DESC===
+curl -sS -i --max-time 4 "http://$CAST:8008/ssdp/device-desc.xml" | head -120 || true
+echo ===YOUTUBE_BEFORE===
+curl -sS -i --max-time 4 "http://$CAST:8008/apps/YouTube" | head -120 || true
+echo ===DIAL_WAKE===
+curl -sS -i --max-time 8 -X POST -H 'Content-Type: text/plain; charset=utf-8' --data '' "http://$CAST:8008/apps/YouTube" | head -120 || true
+echo ===TV_WAKE_POLL===
+awake=0
+for i in $(seq 1 24); do
+  p6466=0; p8009=0
+  timeout 1 bash -lc "</dev/tcp/$TV/6466" >/dev/null 2>&1 && p6466=1 || true
+  timeout 1 bash -lc "</dev/tcp/$TV/8009" >/dev/null 2>&1 && p8009=1 || true
+  echo "POLL_$i 6466=$p6466 8009=$p8009"
+  if [ "$p6466" = 1 ] || [ "$p8009" = 1 ]; then awake=1; break; fi
+  sleep 1
+done
+echo TV_AWAKE=$awake
+echo ===TV_STATUS===
+timeout 18 /home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh status || true
+if [ "$awake" = 1 ]; then
+  echo ===SET_HDMI3===
+  timeout 22 /home/jespern/c720p-home-hub/venvs/androidtvremote2/bin/python /home/jespern/c720p-home-hub/bin/c720p-grundig-wifi.py sequence KEYCODE_TV_INPUT DPAD_DOWN DPAD_DOWN DPAD_DOWN DPAD_CENTER --delay 0.45 --host "$TV" || true
+  sleep 3
+fi
+echo ===HTS_STATE===
+curl -sS --max-time 8 http://127.0.0.1:8789/ht-e6500/power-state || true; echo
+bluetoothctl info 8C:C8:CD:8B:06:3B 2>&1 | head -40 || true
+ip neigh show | grep -i '30:14:4a:14:77:ac' || true
+echo RESULT=V908_CHROMECAST_DIAL_WAKE_DONE
