@@ -1,8 +1,8 @@
 {
   "enabled": true,
-  "id": 990037,
-  "lease_token": "d7f1a2b3-9037-4f18-a918-990037000001",
-  "timeout_seconds": 60,
+  "id": 990038,
+  "lease_token": "f918a2b3-9038-4f18-a919-990038000001",
+  "timeout_seconds": 300,
   "attempts": 1,
-  "command": "bash -lc 'LOCK=/tmp/c720p-job-990037.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; UNIT=$(systemctl --user list-unit-files --no-legend 2>/dev/null | awk '\''$1 ~ /c720p.*agent/ {print $1; exit}'\''); if [ -n \"$UNIT\" ]; then systemctl --user restart \"$UNIT\"; sleep 2; systemctl --user is-active \"$UNIT\"; else echo NO_C720P_AGENT_UNIT; fi'"
+  "command": "bash -lc 'LOCK=/tmp/c720p-job-990038.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; curl -fsSL --max-time 30 https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p/patch-tv-hts-ir-coldstart-v918.py -o /tmp/patch-tv-hts-ir-coldstart-v918.py && python3 /tmp/patch-tv-hts-ir-coldstart-v918.py'"
 }
