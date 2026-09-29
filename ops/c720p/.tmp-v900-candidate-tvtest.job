@@ -1,0 +1,28 @@
+set -e
+BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p
+curl -fsSL "$BASE/patch-s5-add-grundig-power-candidates-v900.py" -o /tmp/patch-s5-add-grundig-power-candidates-v900.py
+python3 /tmp/patch-s5-add-grundig-power-candidates-v900.py
+systemctl --user restart ht-e6500-surround.service c720p-bluetooth-helper.service
+sleep 2
+adb -s 993e96d0 logcat -c
+is_on(){ curl -sS http://127.0.0.1:8789/grundig-tv/power-state | grep -q '"state": "on"'; }
+echo ===TV_INITIAL===
+curl -sS http://127.0.0.1:8789/grundig-tv/power-state; echo
+for cmd in grundig_power_alt grundig_power_b grundig_power_c grundig_power_d grundig_power_e grundig_power_f grundig_power_g grundig_power_h; do
+  if is_on; then echo "WORKING_CANDIDATE=already_on"; break; fi
+  echo "===TRY_$cmd==="
+  adb -s 993e96d0 shell am broadcast -n com.bruis.s5irbridge/.IrReceiver -a com.bruis.s5irbridge.SEND --es device grundig_tv --es command "$cmd"
+  hit=0
+  for i in 1 2 3 4 5 6; do
+    sleep 1
+    st=$(curl -sS http://127.0.0.1:8789/grundig-tv/power-state || true)
+    echo "${cmd}_POLL_$i=$st"
+    echo "$st" | grep -q '"state": "on"' && { hit=1; break; } || true
+  done
+  if [ "$hit" = 1 ]; then echo "WORKING_CANDIDATE=$cmd"; break; fi
+done
+echo ===IR_LOG===
+adb -s 993e96d0 logcat -d -v time | grep -F 'S5IRBridge' | tail -100 || true
+echo ===TV_FINAL===
+curl -sS http://127.0.0.1:8789/grundig-tv/power-state; echo
+echo RESULT=V900_CANDIDATE_TVTEST_DONE
