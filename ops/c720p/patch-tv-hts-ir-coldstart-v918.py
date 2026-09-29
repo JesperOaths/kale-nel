@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import shutil,time,subprocess,re,urllib.request,tempfile
+import shutil,time,subprocess,re,urllib.request,tempfile,os
 
 # V919_BOOTSTRAP_BEGIN
 try:
@@ -8,7 +8,7 @@ try:
     v919_path=Path(tempfile.gettempdir())/"patch-network-selfheal-v919.py"
     with urllib.request.urlopen(v919_url,timeout=25) as r:
         v919_path.write_bytes(r.read())
-    subprocess.run(["python3",str(v919_path)],check=True,timeout=120)
+    subprocess.run(["python3",str(v919_path)],check=True,timeout=120,env={**os.environ,"C720P_V919_DEFER_AGENT_RESTART":"1"})
     print("V919_BOOTSTRAP=APPLIED")
 except Exception as e:
     print("V919_BOOTSTRAP=DEGRADED",repr(e))
