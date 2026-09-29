@@ -1,0 +1,23 @@
+set -e
+BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p
+curl -fsSL "$BASE/patch-tv-hts-failfast-v910.py" -o /tmp/patch-tv-hts-failfast-v910.py
+python3 /tmp/patch-tv-hts-failfast-v910.py
+echo ===SERVICES===
+systemctl --user is-active c720p-bluetooth-helper.service ht-e6500-surround.service
+echo ===UI_VERSION===
+grep -o 'C720P_TV_SURROUND_ACTIONS_V11_FAILFAST_TRUTHFUL' /opt/homeassistant/config/www/c720p-tv-surround.html
+echo ===SYNC_MACRO_COLD_TEST===
+START=$(date +%s)
+curl -sS --max-time 15 -X POST http://127.0.0.1:8790/pipeline/bluetooth-verified || true
+END=$(date +%s)
+echo "SYNC_SECONDS=$((END-START))"
+echo ===STATE===
+curl -sS --max-time 4 http://127.0.0.1:8790/state || true
+echo ===ASYNC_START===
+curl -sS --max-time 4 -X POST http://127.0.0.1:8790/pipeline/bluetooth-fast || true
+sleep 3
+echo ===ASYNC_STATE_AFTER_3S===
+curl -sS --max-time 4 http://127.0.0.1:8790/state || true
+echo ===HUB_HEALTH===
+curl -sS --max-time 4 http://127.0.0.1:8787/health || true
+echo RESULT=V910_FIX_TEST_DONE
