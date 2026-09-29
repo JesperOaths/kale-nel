@@ -1,0 +1,11 @@
+set -e
+S=/home/jespern/c720p-home-hub/bin/c720p-bluetooth-helper-server.py
+T=/home/jespern/c720p-home-hub/bin/ht-e6500-surround-server.py
+U=/opt/homeassistant/config/www/c720p-tv-surround.html
+echo ===PIPELINE===
+grep -n -A 260 -B 30 -E '^def pipeline\(|pipeline_running|bluetooth-fast|ensure-on-safe|tv_wake_transport_unavailable' "$S" | head -900
+echo ===TV_SERVER===
+grep -n -A 220 -B 20 -E 'grundig_hdmi3_fast|grundig-tv/on|wake_transport_unavailable|power-state|ensure_hts_power' "$T" | head -900
+echo ===UI===
+grep -n -A 120 -B 20 -E 'pipeline/bluetooth-fast|TV.*HDMI|busy|pipeline_running|turn TV|Turn TV|HTS' "$U" | head -900
+echo RESULT=V908_PIPELINE_AUDIT_DONE
