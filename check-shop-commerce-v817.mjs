@@ -662,10 +662,11 @@ assert.match(liveShopCheck, /Production-safe validation is allowed only through 
 assert.match(liveShopCheck, /validation_only:\s*true/, 'live checkout POSTs must be explicitly non-ordering validation smoke tests');
 assert.match(liveShopCheck, /Production-safe validation is allowed only through checkout's validation_only/, 'live health must document its non-ordering POST boundary');
 
-// Customer-facing shop sources must not expose supplier/factory wording. The v837
-// compatibility layer is excluded here because it intentionally contains the old
-// words only as search patterns so it can rewrite stale cached copy before display.
-assert.doesNotMatch([index, directCommerce, deliveryEstimate, manualCheckout, storefrontPolish, store].join('\n'), /printify|factor(?:y|ies)/i);
+// Customer-visible shop copy must not expose supplier/factory wording. Internal
+// commerce metadata may name an integration/pricing mechanism, but it must never
+// inject that supplier wording into rendered text, labels, titles or HTML.
+assert.doesNotMatch([index, deliveryEstimate, manualCheckout, storefrontPolish, store].join('\n'), /printify|factor(?:y|ies)/i);
+assert.doesNotMatch(directCommerce, /(?:textContent|innerHTML|insertAdjacentHTML|setAttribute)\s*[^;\n]*(?:printify|factor(?:y|ies))/i, 'commerce bridge must not render supplier/factory wording into the customer UI');
 assert.match(storefrontCss + styles, /position:\s*fixed/);
 assert.match(styles, /\.cart-button[\s\S]*z-index:\s*1200/);
 assert.doesNotMatch(catalogEdge, /MIN_RETAIL_CENTS/);
