@@ -1,0 +1,1 @@
+set -e; BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p; curl -fsSL "$BASE/patch-tv-hts-v875b-source-input.py" -o /tmp/patch-tv-hts-v875b-source-input.py; python3 /tmp/patch-tv-hts-v875b-source-input.py; curl -fsSL "$BASE/test-hts-v875.py" -o /tmp/test-hts-v875.py; python3 /tmp/test-hts-v875.py
