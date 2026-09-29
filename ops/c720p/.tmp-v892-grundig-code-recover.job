@@ -1,21 +1,9 @@
 set -e
-APK=/home/jespern/c720p-home-hub/tmp/s5-ir-parity/installed-current.apk
-echo ===TOOLS===
-for t in jadx apktool baksmali dexdump apkanalyzer; do command -v "$t" || true; done
-echo ===APK===
-sha256sum "$APK"
-if command -v jadx >/dev/null 2>&1; then
-  rm -rf /tmp/v893-jadx
-  timeout 45 jadx -d /tmp/v893-jadx "$APK" >/tmp/v893-jadx.log 2>&1 || true
-  grep -Rni -A 8 -B 5 -E 'grundig_(power|source|volume|mute|up|down|left|right|ok|exit|back)' /tmp/v893-jadx 2>/dev/null | head -900
-elif command -v apktool >/dev/null 2>&1; then
-  rm -rf /tmp/v893-apktool
-  timeout 45 apktool d -f -o /tmp/v893-apktool "$APK" >/tmp/v893-apktool.log 2>&1 || true
-  grep -Rni -A 12 -B 8 -E 'grundig_(power|source|volume|mute|up|down|left|right|ok|exit|back)' /tmp/v893-apktool 2>/dev/null | head -1000
-elif command -v dexdump >/dev/null 2>&1; then
-  unzip -p "$APK" classes.dex >/tmp/v893-classes.dex
-  timeout 45 dexdump -d /tmp/v893-classes.dex 2>/dev/null | grep -n -A 90 -B 30 -E 'grundig_(power|source)' | head -1200
-else
-  echo NO_DECOMPILER
-fi
-echo RESULT=V893_GRUNDIG_DECOMPILE_DONE
+P=/home/jespern/s5-ir-bridge-manual/src/com/bruis/s5irbridge/IrReceiver.java
+echo ===SOURCE_HEAD===
+sed -n '1,220p' "$P"
+echo ===PUTNEC_SEARCH===
+grep -n -A 80 -B 20 -E 'putNec|class Code|onReceive|transmit' "$P" | head -520
+echo ===BUILD_IRRECEIVER===
+grep -n -A 220 -B 20 'IrReceiver.java' /home/jespern/build_install_s5_ir_bridge.sh | head -520
+echo RESULT=V894_S5_SOURCE_STRUCTURE_DONE
