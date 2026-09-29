@@ -5,6 +5,7 @@ const QUOTE_CURRENCY = "EUR";
 const CACHE_FRESH_MS = 6 * 60 * 60 * 1000;
 const MAX_OBSERVED_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 6000;
+export const PRINTIFY_VAT_RESERVE_BPS = 2700;
 
 const text = value => String(value ?? "").trim();
 const roundedRate = value => Math.round(Number(value) * 1e10) / 1e10;
@@ -157,6 +158,30 @@ export function retailEurCentsFromUsdCost(rawUsdCents, snapshotOrRate, marginEur
   if (!Number.isFinite(minimum) || minimum < 0) throw new Error("Invalid minimum EUR retail price");
   const converted = usdCentsToEurCents(rawUsdCents, snapshotOrRate);
   return Math.max(minimum, Math.ceil((converted + margin) / 100) * 100);
+}
+
+export function applyPrintifyVatReserveEurCents(rawEurCents, vatBps = PRINTIFY_VAT_RESERVE_BPS) {
+  const cents = Math.round(Number(rawEurCents));
+  const vat = Math.round(Number(vatBps));
+  if (!Number.isFinite(cents) || cents < 0) throw new Error("Invalid EUR-cent amount");
+  if (!Number.isFinite(vat) || vat < 0 || vat > 10000) throw new Error("Invalid VAT reserve");
+  return Math.ceil(cents * (10000 + vat) / 10000);
+}
+
+export function retailEurCentsFromUsdCostAfterVat(
+  rawUsdCents,
+  snapshotOrRate,
+  marginEurCents = 500,
+  vatBps = PRINTIFY_VAT_RESERVE_BPS,
+  minimumRetailEurCents = 0,
+) {
+  const margin = Math.round(Number(marginEurCents));
+  const minimum = Math.round(Number(minimumRetailEurCents));
+  if (!Number.isFinite(margin) || margin < 0) throw new Error("Invalid EUR margin");
+  if (!Number.isFinite(minimum) || minimum < 0) throw new Error("Invalid minimum EUR retail price");
+  const converted = usdCentsToEurCents(rawUsdCents, snapshotOrRate);
+  const vatInclusiveCost = applyPrintifyVatReserveEurCents(converted, vatBps);
+  return Math.max(minimum, Math.ceil((vatInclusiveCost + margin) / 100) * 100);
 }
 
 export function eurCentsToUsdCents(rawEurCents, snapshotOrRate) {
