@@ -1,0 +1,1 @@
+set -e; C=/home/jespern/c720p-home-hub/bin/c720p-samsung-bluetooth-connect.sh; echo ===MARKERS===; grep -nE 'SOURCE_CYCLES=|seen=0|bluetoothctl info|scan bredr|--es command (source_input|function)|quick_pair_connect' "$C" | head -220; echo ===QUICK_PAIR===; sed -n '/quick_pair_connect(){/,/^}/p' "$C" | head -180; echo RESULT=V879_LIVECHECK_DONE
