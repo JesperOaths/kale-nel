@@ -1,0 +1,8 @@
+set -e
+echo ===S5_IR_LOGCAT===
+adb -s 993e96d0 logcat -d -v time 2>&1 | grep -i -E 'S5IRBridge|IR send failed|No usable IR|Unknown final remote command' | tail -220 || true
+echo ===CURRENT_APP_SHA===
+P=$(adb -s 993e96d0 shell pm path com.bruis.s5irbridge 2>/dev/null | sed -n 's/^package://p' | head -1)
+echo REMOTE=$P
+if [ -n "$P" ]; then adb -s 993e96d0 pull "$P" /tmp/current-s5ir.apk >/dev/null 2>&1 || true; sha256sum /tmp/current-s5ir.apk 2>/dev/null || true; fi
+echo RESULT=V876_S5_LOGCAT_INSPECTED
