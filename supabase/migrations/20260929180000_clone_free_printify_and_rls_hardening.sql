@@ -31,6 +31,14 @@ alter table public.shop_provider_routes_v1 enable row level security;
 revoke all privileges on table public.shop_provider_routes_v1 from anon, authenticated;
 grant select, insert, update, delete on table public.shop_provider_routes_v1 to service_role;
 
+drop policy if exists private_service_only on public.shop_provider_routes_v1;
+create policy private_service_only
+on public.shop_provider_routes_v1
+for all
+to anon, authenticated
+using (false)
+with check (false);
+
 create index if not exists shop_provider_routes_v1_source_idx
   on public.shop_provider_routes_v1 (source_product_id, source_variant_id)
   where approved = true;
