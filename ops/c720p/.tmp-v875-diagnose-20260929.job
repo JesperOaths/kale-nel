@@ -1,14 +1,1 @@
-set -e; python3 - <<'PY'
-import json,glob,pathlib,subprocess
-base=pathlib.Path('/home/jespern/c720p-home-hub')
-logs=sorted(glob.glob(str(base/'logs/tv-hts-v874-test-*.json')))
-plogs=sorted(glob.glob(str(base/'logs/tv-hts-bluetooth-pipeline-*.json')))
-for label,arr in [('TEST',logs),('PIPELINE',plogs)]:
-    if arr:
-        p=pathlib.Path(arr[-1]); print('===',label,p,'==='); print(p.read_text(errors='ignore')[-50000:])
-for p in [base/'samsung-bluetooth-state.json',base/'state/c720p-samsung-bluetooth.json',base/'state/tv-hts-bluetooth-state.json']:
-    if p.exists():
-        print('=== STATE',p,'==='); print(p.read_text(errors='ignore')[-12000:])
-print('=== BTCTL ===')
-subprocess.run(['bash','-lc',"bluetoothctl devices; echo ---; bluetoothctl info 8C:C8:CD:8B:06:3B || true; echo ---; pactl list short sinks 2>/dev/null || true"],check=False)
-PY
+set -e; BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p; curl -fsSL "$BASE/reconstruct-170850-v875.py" -o /tmp/reconstruct-170850-v875.py; python3 /tmp/reconstruct-170850-v875.py
