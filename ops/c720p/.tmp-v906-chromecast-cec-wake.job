@@ -1,0 +1,51 @@
+set -e
+TV=192.168.178.169
+CAST=192.168.178.249
+echo ===PYCHROMECAST===
+python3 - <<'PY'
+try:
+ import pychromecast; print('PYCHROMECAST_OK', getattr(pychromecast,'__version__','unknown'))
+except Exception as e: print('PYCHROMECAST_ERR',repr(e)); raise SystemExit(3)
+PY
+echo ===TV_BEFORE===
+for p in 6466 6467 8008 8009 8443; do timeout 1 bash -lc "</dev/tcp/$TV/$p" >/dev/null 2>&1 && echo OPEN:$p || echo CLOSED:$p; done
+curl -sS http://127.0.0.1:8789/grundig-tv/power-state; echo
+echo ===CAST_WAKE===
+python3 - <<'PY'
+import pychromecast,time,json
+host='192.168.178.249'
+casts,browser=pychromecast.get_chromecasts(hosts=[host])
+try:
+ if not casts: raise SystemExit('NO_CAST_FOUND')
+ cc=casts[0]; cc.wait(timeout=12)
+ print('CAST_NAME',cc.name); print('CAST_STATUS_BEFORE',cc.status)
+ cc.start_app('CC1AD845')
+ time.sleep(8)
+ print('CAST_STATUS_AFTER',cc.status)
+finally:
+ try: browser.stop_discovery()
+ except Exception: pass
+PY
+echo ===TV_WAKE_POLL===
+awake=0
+for i in $(seq 1 20); do
+  p6466=0; p8009=0
+  timeout 1 bash -lc "</dev/tcp/$TV/6466" >/dev/null 2>&1 && p6466=1 || true
+  timeout 1 bash -lc "</dev/tcp/$TV/8009" >/dev/null 2>&1 && p8009=1 || true
+  echo POLL_$i:6466=$p6466:8009=$p8009
+  if [ "$p6466" = 1 ] || [ "$p8009" = 1 ]; then awake=1; break; fi
+  sleep 1
+done
+echo TV_FULL_AWAKE=$awake
+echo ===TV_STATE_AFTER_WAKE===
+curl -sS http://127.0.0.1:8789/grundig-tv/power-state; echo
+if [ "$awake" = 1 ]; then
+ echo ===SET_HDMI3===
+ curl -sS --max-time 20 -X POST http://127.0.0.1:8789/grundig-tv/hdmi3-fast || true; echo
+ sleep 4
+fi
+echo ===HTS_AFTER_HDMI3===
+curl -sS http://127.0.0.1:8789/ht-e6500/power-state; echo
+bluetoothctl info 8C:C8:CD:8B:06:3B 2>&1 | head -30 || true
+ip neigh show | grep -i '30:14:4a:14:77:ac' || true
+echo RESULT=V906_CHROMECAST_CEC_WAKE_DONE
