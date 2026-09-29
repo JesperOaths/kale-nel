@@ -121,7 +121,7 @@ AGENT.chmod(0o755)
 (UNITDIR/'c720p-agent-self-watchdog.timer').write_text('''[Unit]\nDescription=Check C720P outbound agent liveness every 30 seconds\n[Timer]\nOnBootSec=25s\nOnUnitActiveSec=30s\nAccuracySec=2s\nPersistent=true\n[Install]\nWantedBy=timers.target\n''')
 
 # C720P_NO_SUSPEND_V919
-(UNITDIR/'c720p-no-suspend.service').write_text('''[Unit]\nDescription=Keep dedicated C720P hub awake\nAfter=graphical-session.target\n\n[Service]\nType=simple\nExecStart=/usr/bin/systemd-inhibit --what=sleep:idle:handle-lid-switch --who=C720P-Hub --why=Dedicated Home Assistant hub must remain online --mode=block /usr/bin/sleep infinity\nRestart=always\nRestartSec=3\n\n[Install]\nWantedBy=default.target\n''')
+(UNITDIR/'c720p-no-suspend.service').write_text('''[Unit]\nDescription=Keep dedicated C720P hub awake\nAfter=graphical-session.target\n\n[Service]\nType=simple\nExecStart=/usr/bin/systemd-inhibit --what=sleep:idle:handle-lid-switch --who=C720P-Hub --why=AlwaysOnHomeAssistantHub --mode=block /usr/bin/sleep infinity\nRestart=always\nRestartSec=3\n\n[Install]\nWantedBy=default.target\n''')
 
 subprocess.run(['bash','-n',str(DNS)],check=True)
 subprocess.run(['bash','-n',str(AGENT)],check=True)
