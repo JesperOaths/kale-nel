@@ -324,7 +324,7 @@ Deno.serve(async (req: Request) => {
       creates_pending_orders: true,
       sends_to_production: false,
       fulfillment_routing: "validated-approved-regional-plus-canonical",
-      fulfillment_provider_consolidation: "cheapest-production-plus-shipping-valid-plan",
+      fulfillment_provider_consolidation: "eu-lowest-customer-shipping-first; non-eu-lowest-total-route-cost",
       approved_regional_mappings: Number(approvedRegionalMappings || 0),
       cached_products: Array.isArray(cache?.payload?.products) ? cache.payload.products.length : 0,
       catalog_generated_at: cache?.generated_at || null,
