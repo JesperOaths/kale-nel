@@ -512,14 +512,14 @@ Deno.serve(async (req: Request) => {
       Promise.all(selected.plan.candidates.map((candidate: any) => deliveryRange(printifyToken, candidate, selected.shipping.name, country))),
     ]);
     let shipping_breakdown: any[] = [];
-    try {
-      shipping_breakdown = await shippingBreakdown(printifyToken, shopId, selected, addressTo, fx, origins);
-    } catch {
+    if (uniqueProviders.length === 1) {
+      const providerId = Number(uniqueProviders[0]);
+      const origin = origins.find((entry: any) => Number(entry?.provider_id) === providerId) || {};
       shipping_breakdown = [{
-        provider_id: null,
-        provider: "Bruis production network",
-        origin: null,
-        country_code: null,
+        provider_id: providerId,
+        provider: origin.provider || "Bruis production partner",
+        origin: origin.label || null,
+        country_code: origin.country_code || null,
         shipping_cents: Number(selected.shipping.cents || 0),
         shipping_source_cents: Number(selected.shipping.source_cents || 0),
         items: selected.plan.candidates.map((candidate: any) => ({
@@ -527,8 +527,26 @@ Deno.serve(async (req: Request) => {
           size: clean(candidate.item_size) || null,
           quantity: Math.max(1, Math.round(Number(candidate.quantity || 1))),
         })),
-        fallback: true,
       }];
+    } else {
+      try {
+        shipping_breakdown = await shippingBreakdown(printifyToken, shopId, selected, addressTo, fx, origins);
+      } catch {
+        shipping_breakdown = [{
+          provider_id: null,
+          provider: "Bruis production network",
+          origin: null,
+          country_code: null,
+          shipping_cents: Number(selected.shipping.cents || 0),
+          shipping_source_cents: Number(selected.shipping.source_cents || 0),
+          items: selected.plan.candidates.map((candidate: any) => ({
+            name: clean(candidate.item_name) || "Item",
+            size: clean(candidate.item_size) || null,
+            quantity: Math.max(1, Math.round(Number(candidate.quantity || 1))),
+          })),
+          fallback: true,
+        }];
+      }
     }
     const customs_notice = customsNotice(country, origins);
     const ranges = rawRanges.filter(Boolean) as { from: number; to: number; source: string; choice?: boolean; fallback?: { from: number; to: number } | null }[];
