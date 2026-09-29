@@ -7,7 +7,7 @@ const PRINTIFY_BASE = "https://api.printify.com/v1";
 const CACHE_FRESH_MS = 60_000;
 const REFRESH_LEASE_MS = 120_000;
 const MAX_PAGES = 100;
-const BOXY_TITLES = new Set(["coral", "daffodil", "dragonfly", "honeysuckle", "horseshoe crab", "seahorse", "seaweed"]);
+const HIDDEN_PUBLIC_BLUEPRINT_IDS = new Set(["1382"]);
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl", "https://jesperoaths.github.io"]);
 const text = (value: unknown) => String(value ?? "").trim();
 const MARGIN_CENTS = 500;
@@ -547,7 +547,6 @@ function variantDisplayLabel(product: any, variant: any) {
 }
 function collectionFor(product: any) {
   const title = text(product?.title);
-  const key = title.toLowerCase();
   const haystack = [
     title,
     product?.description,
@@ -555,9 +554,7 @@ function collectionFor(product: any) {
     product?.productType,
     ...(Array.isArray(product?.tags) ? product.tags : []),
   ].map(text).join(" ");
-  if (/(?:dispuut|spinoza)/i.test(haystack)) return "merch";
-  if (/\b(?:oversized|boxy)\b/i.test(title) || BOXY_TITLES.has(key)) return "boxy";
-  return "normal";
+  return /(?:dispuut|spinoza)/i.test(haystack) ? "merch" : "normal";
 }
 function artworkFor(product: any) {
   const seen = new Set<string>();
@@ -683,7 +680,8 @@ async function buildCatalog(supabase: any) {
     .filter((entry: any) => {
       const id = text(entry.product?.id);
       const explicitlyApprovedMerch = PUBLIC_MERCH_PRODUCT_IDS.has(id);
-      return entry.product?.visible !== false || explicitlyApprovedMerch;
+      return !HIDDEN_PUBLIC_BLUEPRINT_IDS.has(String(entry.product?.blueprint_id || ""))
+        && (entry.product?.visible !== false || explicitlyApprovedMerch);
     })
     .map((entry: any) => publicProduct(entry.product, fx, entry.shopId, entry.shop, routeSafeCostCeilings))
     .filter((product: any) => product.id && product.name && product.price > 0 && product.mockups.length > 0 && product.variants.length > 0);
