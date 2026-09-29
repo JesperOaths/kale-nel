@@ -9,11 +9,14 @@ import {
   validateMappedCandidate,
 } from "./fulfillment-routing.mjs";
 import {
+  applyPrintifyVatReserveEurCents,
   fxAuditSnapshot,
   marginEurCentsForSize,
   PRINTIFY_SOURCE_CURRENCY,
+  PRINTIFY_VAT_RESERVE_BPS,
   resolveUsdEurRate,
   retailEurCentsFromUsdCost,
+  retailEurCentsFromUsdCostAfterVat,
   usdCentsToEurCents,
 } from "../_shared/shop-fx.mjs";
 
@@ -132,6 +135,10 @@ function colorFromVariant(product: any, variant: any) {
 }
 function isToteProduct(product: any) {
   return /\btote\b/i.test(text(product?.title));
+}
+function isShirtProduct(product: any) {
+  const blueprint = String(product?.blueprint_id || "");
+  return blueprint === "6" || blueprint === "1382";
 }
 function isCustomerVariantAllowed(product: any, variant: any) {
   const color = colorFromVariant(product, variant);
@@ -309,9 +316,10 @@ Deno.serve(async (req: Request) => {
     return json(req, {
       ok: true,
       mode: "manual-payment-v832",
-      pricing: "production-cost-plus-size-margin-rounded-up",
-      pricingBase: "production-cost",
-      marginEuros: { standard: MARGIN_CENTS / 100, threeXlPlus: LARGE_SIZE_MARGIN_CENTS / 100 },
+      pricing: "shirt-production-cost-plus-max-printify-vat-plus-5-rounded-up",
+      pricingBase: "production-cost-plus-printify-vat-reserve",
+      marginEuros: { shirts: MARGIN_CENTS / 100, standard: MARGIN_CENTS / 100, threeXlPlus: MARGIN_CENTS / 100 },
+      vatReservePercent: PRINTIFY_VAT_RESERVE_BPS / 100,
       rounding: "whole-euro-ceiling",
       creates_pending_orders: true,
       sends_to_production: false,
@@ -416,11 +424,13 @@ Deno.serve(async (req: Request) => {
       if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isCustomerVariantAllowed(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
       const color = colorFromVariant(freshProduct, freshVariant) || "White";
       const variantSize = sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase();
-      const unit = retailEurCentsFromUsdCost(
-        freshVariant?.cost,
-        fx,
-        marginEurCentsForSize(variantSize, MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS),
-      );
+      const unit = isShirtProduct(freshProduct)
+        ? retailEurCentsFromUsdCostAfterVat(freshVariant?.cost, fx, MARGIN_CENTS)
+        : retailEurCentsFromUsdCost(
+            freshVariant?.cost,
+            fx,
+            marginEurCentsForSize(variantSize, MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS),
+          );
       if (!unit) throw new Error(`Invalid authoritative production cost: ${clean(row.cached.product.name)}`);
       const size = isToteProduct(freshProduct) ? `${color} handles` : variantSize;
       subtotalCents += unit * qty;
@@ -483,9 +493,11 @@ Deno.serve(async (req: Request) => {
         const quote = await printify(printifyToken, `/shops/${shopId}/orders/shipping.json`, { method: "POST", body: JSON.stringify({ line_items: pfLineItems, address_to: addressTo }) });
         const sourceShipping = cheapestShippingQuote(quote);
         if (!sourceShipping) return null;
+        const preVatShippingCents = usdCentsToEurCents(sourceShipping.cents, fx);
         const shipping = {
           ...sourceShipping,
-          cents: usdCentsToEurCents(sourceShipping.cents, fx),
+          cents: applyPrintifyVatReserveEurCents(preVatShippingCents),
+          pre_vat_cents: preVatShippingCents,
           source_cents: sourceShipping.cents,
           source_currency: PRINTIFY_SOURCE_CURRENCY,
         };
@@ -504,7 +516,8 @@ Deno.serve(async (req: Request) => {
     const shippingSourceCents = Math.max(0, Math.round(Number(selected.shipping.source_cents || 0)));
     const fulfillmentEstimatedImportCents = Math.max(0, Math.round(Number(selected.plan.estimated_import_cents || 0)));
     const fulfillmentProviderGroups = Math.max(1, Math.round(Number(selected.plan.provider_groups || 1)));
-    const fulfillmentScoreCents = Math.round(Number(selected.plan.production_cents) + shippingCents + fulfillmentEstimatedImportCents);
+    const preVatShippingCents = Math.max(0, Math.round(Number(selected.shipping.pre_vat_cents ?? shippingCents)));
+    const fulfillmentScoreCents = Math.round(Number(selected.plan.production_cents) + preVatShippingCents + fulfillmentEstimatedImportCents);
     authoritative.forEach((item, index) => {
       const route = selected.plan.candidates[index];
       const sourceProductId = item.printify_product_id;
@@ -547,7 +560,7 @@ Deno.serve(async (req: Request) => {
         shipping_method_code: shippingMethodCode,
         item_count: authoritative.length,
         units: authoritative.reduce((sum: number, item: any) => sum + Number(item.qty || 0), 0),
-        pricing: "production-cost-plus-size-margin-rounded-up",
+        pricing: "shirt-production-cost-plus-max-printify-vat-plus-5-rounded-up",
       });
     }
     const orderId = crypto.randomUUID();
