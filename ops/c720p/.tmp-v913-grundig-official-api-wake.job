@@ -1,0 +1,49 @@
+set -e
+HOST=192.168.178.169
+echo ===PORT_SCAN===
+FOUND=""
+for p in 8000 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010 8080 8081 8082 8083 8084 8085 8086 8087 8088 8089 8090 8443; do
+  if timeout 1 bash -lc "</dev/tcp/$HOST/$p" >/dev/null 2>&1; then
+    echo "OPEN $p"
+    code=$(curl -sS --max-time 2 -o /tmp/v913-$p.out -w '%{http_code}' "http://$HOST:$p/getchannel" || true)
+    body=$(head -c 260 /tmp/v913-$p.out 2>/dev/null || true)
+    echo "HTTP_$p code=$code body=$body"
+    if [ "$code" != "000" ] && [ "$code" != "404" ] && [ -z "$FOUND" ]; then FOUND="$p"; fi
+  fi
+done
+echo "FOUND_API_PORT=$FOUND"
+if [ -z "$FOUND" ]; then
+  for p in 8085 8008; do
+    code=$(curl -sS --max-time 3 -o /tmp/v913-force-$p.out -w '%{http_code}' "http://$HOST:$p/sendrcpackage?keyid=-2544&keysymbol=-4081" || true)
+    body=$(cat /tmp/v913-force-$p.out 2>/dev/null | head -c 320 || true)
+    echo "FORCE_$p code=$code body=$body"
+    if [ "$code" != "000" ] && [ "$code" != "404" ]; then FOUND="$p"; break; fi
+  done
+else
+  code=$(curl -sS --max-time 4 -o /tmp/v913-power.out -w '%{http_code}' "http://$HOST:$FOUND/sendrcpackage?keyid=-2544&keysymbol=-4081" || true)
+  body=$(cat /tmp/v913-power.out 2>/dev/null | head -c 320 || true)
+  echo "POWER_SEND port=$FOUND code=$code body=$body"
+fi
+echo ===WAKE_POLL===
+awake=0
+for i in $(seq 1 30); do
+  p6466=0; p8009=0
+  timeout 1 bash -lc "</dev/tcp/$HOST/6466" >/dev/null 2>&1 && p6466=1 || true
+  timeout 1 bash -lc "</dev/tcp/$HOST/8009" >/dev/null 2>&1 && p8009=1 || true
+  echo "POLL_$i 6466=$p6466 8009=$p8009"
+  if [ "$p6466" = 1 ] || [ "$p8009" = 1 ]; then awake=1; break; fi
+  sleep 1
+done
+echo "TV_NETWORK_AWAKE=$awake"
+echo ===TV_STATUS===
+/home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh status || true
+if [ "$awake" = 1 ]; then
+  echo ===HDMI3===
+  /home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh key TV_INPUT_HDMI_3 || true
+  sleep 4
+fi
+echo ===HTS_AFTER===
+curl -sS --max-time 8 http://127.0.0.1:8789/ht-e6500/power-state || true
+echo
+bluetoothctl info 8C:C8:CD:8B:06:3B 2>&1 | head -60 || true
+echo RESULT=V913_GRUNDIG_OFFICIAL_API_WAKE_DONE
