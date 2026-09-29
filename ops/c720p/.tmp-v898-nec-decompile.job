@@ -1,0 +1,5 @@
+set -e
+APK=/home/jespern/c720p-home-hub/tmp/s5-ir-parity/installed-current.apk
+unzip -p "$APK" classes.dex >/tmp/v898-classes.dex
+dexdump -d /tmp/v898-classes.dex 2>/dev/null | grep -n -A 260 -B 30 "name          : 'nec'" | head -900
+echo RESULT=V898_NEC_DECOMPILED
