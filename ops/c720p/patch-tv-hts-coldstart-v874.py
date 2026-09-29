@@ -247,8 +247,10 @@ new='''  if(S.hts==="unknown"){
     setTimeout(()=>{refreshHTS().then(render).catch(()=>{})},900);
     return
   }'''
-if old not in u: raise SystemExit("HTS unknown UI block missing")
-u=u.replace(old,new,1)
+if old in u:
+    u=u.replace(old,new,1)
+elif new not in u:
+    raise SystemExit("HTS unknown UI block missing")
 UI.write_text(u)
 
 subprocess.run(["python3","-m","py_compile",str(HELPER)],check=True)
