@@ -1,0 +1,8 @@
+set -e
+BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p
+curl -fsSL "$BASE/reconstruct-170850-v875.py" -o /tmp/reconstruct-170850-v875.py
+python3 /tmp/reconstruct-170850-v875.py
+echo ===CODE_HISTORY===
+curl -fsSL "$BASE/inspect-s5-code-history-v875.py" -o /tmp/inspect-s5-code-history-v875.py
+python3 /tmp/inspect-s5-code-history-v875.py
+echo RESULT=V876_RECONSTRUCT_HISTORY_DONE
