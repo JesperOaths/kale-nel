@@ -73,11 +73,13 @@ if ok:
 
 fs=int(s.get("fail_streak",0))+1
 s.update(fail_streak=fs,last_error=err,last_fail=now)
-# First failures: only restart user-space control services.
+# First failures: refresh the tunnel, but never kill an active job runner.
 if fs in (2,4):
-    sh(["systemctl","--user","restart",AGENT],10)
+    rc_a,out_a=sh(["systemctl","--user","is-active",AGENT],5)
+    if rc_a!=0 or out_a.strip()!="active":
+        sh(["systemctl","--user","restart",AGENT],10)
     sh(["systemctl","--user","restart",TUNNEL],10)
-    s["last_action"]="restart_agent_and_tunnel"
+    s["last_action"]="refresh_tunnel_agent_only_if_inactive"
 # Sustained failure: ask NetworkManager for a reconnect, but never reboot the hub.
 elif fs==8:
     rc,out=sh(["nmcli","networking","connectivity","check"],10)
@@ -100,10 +102,12 @@ elif fs==8:
     s["wifi_interface"]=wifi_if
     s["last_action"]="wifi_reconnect_attempt"
 elif fs>=20 and fs%10==0:
-    # Keep services fresh while preserving HA and all local functions.
-    sh(["systemctl","--user","restart",AGENT],10)
+    # Preserve any active agent job; only recover it if systemd says it is down.
+    rc_a,out_a=sh(["systemctl","--user","is-active",AGENT],5)
+    if rc_a!=0 or out_a.strip()!="active":
+        sh(["systemctl","--user","restart",AGENT],10)
     sh(["systemctl","--user","restart",TUNNEL],10)
-    s["last_action"]="periodic_controlplane_refresh"
+    s["last_action"]="periodic_tunnel_refresh_agent_only_if_inactive"
 write_state(s)
 ''').lstrip())
 watch.chmod(0o755)
@@ -150,8 +154,11 @@ WantedBy=default.target
 subprocess.run(["python3","-m","py_compile",str(watch)],check=True)
 subprocess.run(["systemctl","--user","daemon-reload"],check=True)
 subprocess.run(["systemctl","--user","enable","--now","c720p-controlplane-watchdog.timer","c720p-no-suspend.service"],check=True)
-# Refresh the control services once when installing.
-subprocess.run(["systemctl","--user","restart","c720p-agent-runner.service"],check=False)
-subprocess.run(["systemctl","--user","restart","c720p-security-tunnel.service"],check=False)
+# Never restart the agent from inside an agent-executed installation job.
+# The watchdog may recover it later only when systemd reports it inactive.
+if subprocess.run(["systemctl","--user","is-active","c720p-security-tunnel.service"],
+                  stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode != 0:
+    subprocess.run(["systemctl","--user","start","c720p-security-tunnel.service"],check=False)
+print("V919_AGENT_RESTART=SKIPPED_ACTIVE_JOB_SAFE")
 print("BACKUP="+str(BACK))
 print("RESULT=V919_CONTROLPLANE_WATCHDOG_INSTALLED")
