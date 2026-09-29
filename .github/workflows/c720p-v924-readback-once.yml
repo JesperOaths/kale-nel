@@ -1,4 +1,4 @@
-name: C720P v924 readback once
+name: C720P v924 readback once # activity
 
 on:
   push:
