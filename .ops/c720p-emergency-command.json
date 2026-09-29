@@ -1,8 +1,8 @@
 {
   "enabled": true,
-  "id": 990040,
-  "lease_token": "f920a2b3-9040-4f18-a920-990040000001",
-  "timeout_seconds": 120,
+  "id": 990042,
+  "lease_token": "f923a2b3-9042-4f18-a923-990042000001",
+  "timeout_seconds": 420,
   "attempts": 1,
-  "command": "bash -lc 'LOCK=/tmp/c720p-job-990040.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p; curl -fsSL --max-time 30 \"$BASE/run-v920-grundig-power-discovery.py\" -o /tmp/run-v920-grundig-power-discovery.py && python3 /tmp/run-v920-grundig-power-discovery.py; systemctl --user restart c720p-agent-runner.service || true'"
+  "command": "bash -lc 'LOCK=/tmp/c720p-job-990042.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p; curl -fsSL --max-time 30 \"$BASE/run-v923-lean-grundig-power-test.py\" -o /tmp/run-v923-lean-grundig-power-test.py && python3 /tmp/run-v923-lean-grundig-power-test.py; curl -fsSL --max-time 30 \"$BASE/test-tv-hts-v874.py\" -o /tmp/test-tv-hts-v874.py && python3 /tmp/test-tv-hts-v874.py; systemctl --user restart c720p-agent-runner.service || true'"
 }
