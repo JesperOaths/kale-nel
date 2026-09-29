@@ -1,0 +1,18 @@
+set -e
+SER=993e96d0
+echo ===REMOTE_PACKAGES===
+adb -s "$SER" shell pm list packages -f 2>/dev/null | grep -Ei 'watchon|peel|remote|smart.*remote|tv|irblaster|irremote' | head -220 || true
+echo ===SAMSUNG_PACKAGES===
+adb -s "$SER" shell pm list packages 2>/dev/null | grep -Ei '^package:com\.(sec|samsung)' | grep -Ei 'watch|remote|tv|ir|smart' | head -220 || true
+echo ===ACTIVITIES===
+for p in com.sec.android.app.watchon com.peel.app com.peel.smartremote com.samsung.android.app.watchon; do
+  echo "---$p"
+  adb -s "$SER" shell dumpsys package "$p" 2>/dev/null | grep -E 'Activity|MAIN|LAUNCHER|versionName|firstInstallTime|lastUpdateTime|enabled=' | head -180 || true
+done
+echo ===PROCESS===
+adb -s "$SER" shell ps 2>/dev/null | grep -Ei 'watchon|peel|remote' | head -80 || true
+echo ===CURRENT_UI===
+adb -s "$SER" shell uiautomator dump /sdcard/v917-ui.xml >/dev/null 2>&1 || true
+adb -s "$SER" shell cat /sdcard/v917-ui.xml 2>/dev/null | sed -E 's/(text|content-desc)="[^"]*"/\1="<redacted>"/g' | head -c 12000 || true
+echo
+echo RESULT=V917_S5_NATIVE_REMOTE_AUDIT_DONE
