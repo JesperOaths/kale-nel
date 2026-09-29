@@ -1,9 +1,8 @@
 set -e
 BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p
-curl -fsSL "$BASE/patch-tv-hts-v875.py" -o /tmp/patch-tv-hts-v875.py
-python3 /tmp/patch-tv-hts-v875.py
-curl -fsSL "$BASE/patch-tv-hts-v875b-source-input.py" -o /tmp/patch-tv-hts-v875b-source-input.py
-python3 /tmp/patch-tv-hts-v875b-source-input.py
+curl -fsSL "$BASE/test-known-good-s5-v875.py" -o /tmp/test-known-good-s5-v875.py
+python3 /tmp/test-known-good-s5-v875.py | tee /tmp/v875-known-good-s5.out
+grep -q 'RESULT_KNOWN_GOOD_S5 PASS' /tmp/v875-known-good-s5.out
 systemctl --user restart ht-e6500-surround.service c720p-bluetooth-helper.service
 sleep 2
 curl -fsSL "$BASE/test-tv-hts-v874.py" -o /tmp/test-tv-hts-v874.py
