@@ -1,0 +1,18 @@
+set -e
+TV=192.168.178.169
+echo ===TCP_8085===
+python3 - <<'PY'
+import socket
+s=socket.socket(); s.settimeout(2)
+try:
+    s.connect(("192.168.178.169",8085)); print("OPEN")
+except Exception as e:
+    print("CLOSED",type(e).__name__,str(e))
+finally:
+    s.close()
+PY
+echo ===ROOT===
+curl -sS -i --max-time 5 "http://$TV:8085/" | head -120 || true
+echo ===LIST===
+curl -sS -i --max-time 5 "http://$TV:8085/list" | head -300 || true
+echo RESULT=V915_GRUNDIG_8085_SAFE_DONE
