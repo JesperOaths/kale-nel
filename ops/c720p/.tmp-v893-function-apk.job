@@ -1,1 +1,9 @@
-set -e; BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p; curl -fsSL "$BASE/test-s5-v893-function-apk.py" -o /tmp/test-s5-v893-function-apk.py; python3 /tmp/test-s5-v893-function-apk.py
+set -e
+P=/home/jespern/s5-ir-bridge-manual/src/com/bruis/s5irbridge/IrReceiver.java
+echo ===SOURCE_HEAD===
+sed -n '1,240p' "$P"
+echo ===PUTNEC_SEARCH===
+grep -n -A 100 -B 30 -E 'putNec|class Code|onReceive|transmit' "$P" | head -620
+echo ===BUILD_IRRECEIVER===
+grep -n -A 260 -B 20 'IrReceiver.java' /home/jespern/build_install_s5_ir_bridge.sh | head -620
+echo RESULT=V894_S5_SOURCE_STRUCTURE_DONE
