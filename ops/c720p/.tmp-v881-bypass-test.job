@@ -1,0 +1,18 @@
+set -e
+BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p
+echo ===CEC_CAPABILITY===
+command -v cec-client || true
+ls -l /dev/cec* 2>/dev/null || true
+find /sys/class/drm -maxdepth 3 -iname '*cec*' -o -name 'edid' 2>/dev/null | head -80 || true
+dmesg 2>/dev/null | grep -iE 'cec|hdmi' | tail -80 || true
+echo ===WOL_PROBE===
+curl -fsSL "$BASE/probe-hts-wol-v876.py" -o /tmp/probe-hts-wol-v876.py
+python3 /tmp/probe-hts-wol-v876.py
+echo ===MENU_BT_TEST===
+curl -fsSL "$BASE/test-hts-menu-bt-v877.py" -o /tmp/test-hts-menu-bt-v877.py
+python3 /tmp/test-hts-menu-bt-v877.py
+echo ===FINAL===
+bluetoothctl devices || true
+bluetoothctl info 8C:C8:CD:8B:06:3B || true
+ip neigh show | grep -i '30:14:4a:14:77:ac' || true
+echo RESULT=V881_BYPASS_TEST_DONE
