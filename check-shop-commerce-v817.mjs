@@ -340,14 +340,17 @@ assert.match(obsoletePriceRule, /shop-catalog-v828/);
 assert.doesNotMatch(obsoletePriceRule, /createClient|PRINTIFY_BASE|pricedVariants|method:\s*["']PUT["']/);
 
 // Catalog pricing is derived from fulfillment cost, not retail price:
-// retail = base cost + €5 for standard sizes or +€7 for 3XL+, rounded upward to the next whole euro. Original front
-// artwork from print_areas is inserted before generated garment mockups.
+// shirts use the route-safe production-cost ceiling + Printify VAT reserve + €5 standard / €7 3XL+ margin,
+// rounded upward to the next whole euro. Non-shirt products keep the non-VAT-reserved cost+margin path.
+// Original front artwork from print_areas is inserted before generated garment mockups.
 assert.match(catalogEdge, /const MARGIN_CENTS = 500/);
 assert.match(catalogEdge, /const LARGE_SIZE_MARGIN_CENTS = 700/);
 assert.match(catalogEdge, /marginEurCentsForSize/);
 assert.match(catalogEdge, /resolveUsdEurRate/);
-assert.match(catalogEdge, /retailEurCentsFromUsdCost/);
-assert.match(catalogEdge, /price:\s*retailEurCentsFromUsdCost\(variant\?\.cost, fx, marginEurCentsForSize/);
+assert.match(catalogEdge, /retailEurCentsFromUsdCostAfterVat/);
+assert.match(catalogEdge, /const routeSafeRawUsdCost =/);
+assert.match(catalogEdge, /price:\s*\(isShirtProduct\(product\)[\s\S]*?retailEurCentsFromUsdCostAfterVat\([\s\S]*?routeSafeRawUsdCost,[\s\S]*?fx,[\s\S]*?marginEurCentsForSize/);
+assert.match(catalogEdge, /:\s*retailEurCentsFromUsdCost\(routeSafeRawUsdCost, fx, marginEurCentsForSize/);
 assert.match(catalogEdge, /sourceCurrency:\s*"USD"/);
 assert.match(catalogEdge, /displayCurrency:\s*"EUR"/);
 assert.doesNotMatch(catalogEdge, /priceEuros\(variant\?\.price\)/);
