@@ -141,6 +141,8 @@ assert.match(checkoutEdge, /country === "US" && phone\.replace\(\/\\D\/g, ""\)\.
 assert.match(checkoutEdge, /function cachedShopId/, 'checkout must resolve current per-product Printify shop ids');
 assert.match(deliveryPreviewEdge, /function cachedShopId/, 'delivery preview must resolve current per-product Printify shop ids');
 assert.match(checkoutEdge, /validation_only/, 'checkout must expose a non-ordering production validation path');
+assert.match(catalogEdge, /gildanRouteSafeCostCeilings/, 'catalog must price Gildan variants against the most expensive approved hybrid provider');
+assert.match(checkoutEdge, /routeSafeRawUsdCost/, 'checkout must preserve the advertised shirt margin across hybrid provider changes');
 assert.match(checkoutEdge, /\.from\("shop_fulfillment_mappings"\)/, 'checkout must evaluate server-side approved regional fulfillment mappings');
 assert.match(deliveryPreviewEdge, /\.from\("shop_fulfillment_mappings"\)/, 'delivery preview must evaluate the same regional fulfillment mappings');
 assert.match(checkoutEdge, /\.eq\("approved", true\)/, 'checkout mappings must require explicit approval');
@@ -454,6 +456,8 @@ assert.match(adminPage, /Payment for \$\{row\.payment_reference\} verified/, 'su
 assert.match(adminPage, /submit_printify/);
 assert.match(adminEdge, /resolveCurrentProductionItems/, 'production submit must refresh approved regional mappings at send time');
 assert.match(adminEdge, /shop_fulfillment_mappings/, 'production remap must use the approved fulfillment mapping table');
+assert.match(adminEdge, /\.eq\("approval_id",approvalId\)/, 'production must pin the exact fulfillment mapping chosen and quoted at checkout');
+assert.match(adminEdge, /changed after checkout\. Revalidate shipping before production/, 'production must fail closed instead of silently switching to an unquoted route');
 assert.match(adminEdge, /remapped_count/, 'production remap must persist stale-line corrections before creating the Printify order');
 assert.match(adminEdge, /p\?\.errors\?\.reason\|\|p\?\.error\|\|p\?\.message/, 'Printify hold reason must win over generic Operation failed text');
 assert.match(adminEdge, /\["pending","on-hold","payment-not-received","has-issues"\]/, 'pre-production Printify statuses must remain paid, not production');
