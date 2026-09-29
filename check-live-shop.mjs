@@ -6,8 +6,8 @@ const ASSET_VERSION = '20260916-storefront-v837-r1';
 const SHOP_V869_VERSION = '20260926-storefront-v869-r2';
 const DIRECT_V869_VERSION = '20260926-storefront-v869-r3';
 const TRANSPARENCY_V869_VERSION = '20260926-storefront-v869-r3';
-const STYLES_V869_VERSION = '20260929-storefront-v872-r1';
-const COLLECTION_MEDIA_VERSION = '20260929-storefront-v872-r1';
+const STYLES_V869_VERSION = '20260930-storefront-v873-r1';
+const COLLECTION_MEDIA_VERSION = '20260930-storefront-v873-r1';
 const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v832.js?v=${DIRECT_V869_VERSION}`;
 const DELIVERY_UI_URL = 'https://kalenel.nl/shop/delivery-estimate-v833.js?v=20260926-delivery-v871-r1';
 const MANUAL_CHECKOUT_UI_URL = 'https://kalenel.nl/shop/manual-checkout-v825.js?v=20260926-checkout-v871-r1';
@@ -141,8 +141,8 @@ async function catalog() {
   for (const copiedDesign of ['coral','daffodil','dragonfly','honeysuckle','horseshoe crab','kelp','seahorse']) {
     const matches = payload.products.filter(product => String(product?.name || '').trim().toLowerCase() === copiedDesign);
     assert.equal(matches.length, 1, `normal collection must expose exactly one ${copiedDesign} design`);
-    assert.equal(String(matches[0]?.baseKey || ''), '6', `${copiedDesign} must use Gildan 5000 blueprint 6`);
-    assert.equal(String(matches[0]?.collection || ''), 'normal', `${copiedDesign} Gildan copy must be in the normal collection`);
+    assert.equal(String(matches[0]?.baseKey || ''), '6', `${copiedDesign} must use classic T-shirt blueprint 6`);
+    assert.equal(String(matches[0]?.collection || ''), 'normal', `${copiedDesign} T-shirt copy must be in the normal collection`);
   }
   console.log(`shop-catalog-v828: HTTP 200, products=${payload.products.length}, variants=${skus.size}, normal=${counts.normal}, merch=${counts.merch}, ${elapsed}ms`);
   return payload;
@@ -171,10 +171,10 @@ async function textAsset(url, label) {
 const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(`${SHOP_URL}?v=${ASSET_VERSION}`);
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
-assert.match(html, /version-watermark[^>]*>v872</, 'Live shop must expose v872 watermark');
+assert.match(html, /version-watermark[^>]*>v873</, 'Live shop must expose v873 watermark');
 assert.match(html, /direct-commerce-v832\.js\?v=20260926-storefront-v869-r3/, 'Live shop must retain the direct commerce bridge');
-assert.match(html, /store\.js\?v=20260929-storefront-v872-r1/, 'Live shop must load the two-collection storefront runtime');
-assert.match(html, /styles\.css\?v=20260929-storefront-v872-r1/, 'Live shop must load the two-collection layout stylesheet');
+assert.match(html, /store\.js\?v=20260930-storefront-v873-r1/, 'Live shop must load the two-collection storefront runtime');
+assert.match(html, /styles\.css\?v=20260930-storefront-v873-r1/, 'Live shop must load the two-collection layout stylesheet');
 assert.match(html, /data-animal-filter checked/, 'Live shop must show animal designs by default');
 assert.equal((html.match(/data-collection="normal"/g) || []).length, 2, 'Live shop must expose Normal in large and compact collection switchers');
 assert.equal((html.match(/data-collection="merch"/g) || []).length, 2, 'Live shop must expose Merch in large and compact collection switchers');
@@ -198,11 +198,11 @@ assert.match(html, /storefront-polish-v832\.css\?v=20260926-storefront-v869-r2/,
 assert.match(html, /product-preview-overrides\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load artwork-first compatibility layer');
 assert.match(html, /gallery-fixes-v832\.js\?v=20260926-storefront-v869-r2/, 'Live shop must load exact carousel repair');
 assert.match(html, /mockup-transparency-v832\.js\?v=20260926-storefront-v869-r3/, 'Live shop must load safe background transparency processor');
-assert.match(html, /collection-media-v831\.js\?v=20260929-storefront-v872-r1/, 'Live shop must retain current collection media normalization');
+assert.match(html, /collection-media-v831\.js\?v=20260930-storefront-v873-r1/, 'Live shop must retain current collection media normalization');
 assert.match(html, /image-lightbox-v832\.js\?v=20260916-storefront-v837-r1/, 'Live shop must load full-view lightbox');
 assert.doesNotMatch(html, /direct-commerce-v828\.js|mockup-background-v830\.js|image-lightbox-v830\.js/, 'old active media/commerce handlers must not remain in the live page');
 assert.doesNotMatch(html, />[^<]*(?:Printify|factor(?:y|ies))[^<]*</i, 'Public shop shell must not expose supplier/factory wording');
-console.log(`shop page: HTTP 200, v872 present, ${pageElapsed}ms`);
+console.log(`shop page: HTTP 200, v873 present, ${pageElapsed}ms`);
 
 const toteUi = await textAsset('https://kalenel.nl/shop/tote-handle-color-v839.js?v=20260916-storefront-v839-r1', 'tote-handle-color-v839.js');
 assert.match(toteUi, /Handle color/, 'tote selector must be Handle color');
