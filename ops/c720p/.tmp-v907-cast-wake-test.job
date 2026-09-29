@@ -1,0 +1,71 @@
+set -e
+echo ===PYCHROMECAST===
+python3 - <<'PY'
+try:
+ import pychromecast
+ print("SYSTEM_PYCHROMECAST",pychromecast.__version__)
+except Exception as e:
+ print("SYSTEM_PYCHROMECAST_MISSING",repr(e))
+PY
+for py in /home/jespern/c720p-home-hub/venvs/*/bin/python; do
+  [ -x "$py" ] || continue
+  "$py" - <<'PY' 2>/dev/null && break || true
+try:
+ import pychromecast
+ print("VENV_PYCHROMECAST_OK")
+except Exception:
+ raise SystemExit(1)
+PY
+done
+echo ===TV_BEFORE_PORTS===
+for p in 6466 6467 8008 8009 8443; do timeout 1 bash -lc "</dev/tcp/192.168.178.169/$p" >/dev/null 2>&1 && echo "OPEN $p" || echo "CLOSED $p"; done
+echo ===CAST_WAKE===
+PYBIN=""
+for py in python3 /home/jespern/c720p-home-hub/venvs/*/bin/python; do
+  command -v "$py" >/dev/null 2>&1 || [ -x "$py" ] || continue
+  "$py" - <<'PY' >/dev/null 2>&1 && { PYBIN="$py"; break; } || true
+import pychromecast
+PY
+done
+if [ -n "$PYBIN" ]; then
+  "$PYBIN" - <<'PY'
+import time, pychromecast
+casts, browser = pychromecast.get_listed_chromecasts(friendly_names=["Living Room TV"])
+try:
+    print("FOUND",[(c.name,c.host,c.port) for c in casts])
+    if not casts:
+        raise SystemExit("NO_CAST")
+    cc=casts[0]
+    cc.wait(timeout=10)
+    print("CONNECTED",cc.name,cc.host,cc.port)
+    try:
+        cc.start_app("CC1AD845")
+        print("APP_STARTED")
+    except Exception as e:
+        print("START_APP_ERR",repr(e))
+    time.sleep(3)
+finally:
+    try: pychromecast.discovery.stop_discovery(browser)
+    except Exception: pass
+PY
+else
+  echo NO_PYCHROMECAST
+fi
+echo ===TV_WAKE_POLL===
+for i in $(seq 1 20); do
+  s6466=0; s8009=0
+  timeout 1 bash -lc "</dev/tcp/192.168.178.169/6466" >/dev/null 2>&1 && s6466=1 || true
+  timeout 1 bash -lc "</dev/tcp/192.168.178.169/8009" >/dev/null 2>&1 && s8009=1 || true
+  echo "POLL_$i 6466=$s6466 8009=$s8009"
+  if [ "$s6466" = 1 ] || [ "$s8009" = 1 ]; then break; fi
+  sleep 1
+done
+echo ===TV_STATUS===
+/home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh status || true
+echo ===HDMI3_IF_AWAKE===
+/home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh key TV_INPUT_HDMI_3 || true
+sleep 2
+echo ===HTS_AFTER_HDMI3===
+curl -sS --max-time 8 http://127.0.0.1:8789/ht-e6500/power-state || true
+bluetoothctl info 8C:C8:CD:8B:06:3B || true
+echo RESULT=V907_CAST_WAKE_TEST_DONE
