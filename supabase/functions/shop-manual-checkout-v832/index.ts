@@ -479,6 +479,18 @@ Deno.serve(async (req: Request) => {
           estimated_import_cents_per_unit: validation.estimated_import_cents_per_unit || 0,
         });
       }
+      if (String(freshProduct?.blueprint_id || "") === "6") {
+        const routeSafeRawUsdCost = Math.max(...candidates.map((candidate: any) => Number(candidate?.source_cost_cents || 0)));
+        const routeSafeUnit = retailEurCentsFromUsdCostAfterVat(
+          routeSafeRawUsdCost,
+          fx,
+          marginEurCentsForSize(variantSize, MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS),
+        );
+        if (routeSafeUnit > unit) {
+          subtotalCents += (routeSafeUnit - unit) * qty;
+          authoritative[authoritative.length - 1].unit_price_cents = routeSafeUnit;
+        }
+      }
       candidateGroups.push(candidates);
     }
     if (subtotalCents <= 0 || subtotalCents > 1000000) throw new Error("Order total outside allowed range");
