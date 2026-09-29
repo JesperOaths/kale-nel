@@ -1,18 +1,13 @@
 const text = value => String(value ?? "").trim();
-const clean = value => text(value).replace(/\s+/g, " ");
 
 const DESPINOZA_SOURCE_PRODUCT_IDS = new Set([
   "6a975ec45d07cc05a702a491",
   "6a9742c08816f2362104d5cc",
 ]);
 const DESPINOZA_NATIVE_TEXT_ID = "7b14de2d-815d-a93b-cdd3-69d9c2cb3e2f";
-const DESPINOZA_INTERNAL_TEXT_ID = "5941187eb8e7e37b3f0e62e5";
-const DESPINOZA_STATIC_TEXT_ID = "6aa9f09621bcc1035c7dae61";
 const DESPINOZA_STATIC_TEXT_URL = "https://pfy-prod-image-storage.s3.us-east-2.amazonaws.com/28211792/fbb5f9e7-fd95-41e0-bc93-c0ab427306d8";
 const DESPINOZA_STATIC_TEXT_WIDTH = 4096;
-const DESPINOZA_TEXT_MARKER = "__despinoza_text__";
 const GENERIC_IGNORED_ARTWORK_IDS = new Set(["5941187eb8e7e37b3f0e62e5"]); // generated text_layer.svg, not reusable Printify artwork
-const DESPINOZA_REGIONAL_PROVIDERS = new Set([27, 30, 331, 438]);
 
 // Routing estimate only: Canada's 2026 MFN customs tariff for cotton T-shirts
 // (HS 6109.10) is 18%. Apply it only to the known fixed Prague Gildan 5000
@@ -64,45 +59,6 @@ export function cheapestShippingQuote(quote) {
 
   valid.sort((a, b) => a.cents - b.cents || a.code - b.code);
   return valid[0] || null;
-}
-
-function optionMap(product) {
-  const map = new Map();
-  for (const option of Array.isArray(product?.options) ? product.options : []) {
-    const type = text(option?.type).toLowerCase();
-    for (const value of Array.isArray(option?.values) ? option.values : []) {
-      map.set(String(value?.id), { type, value: clean(value?.title) });
-    }
-  }
-  return map;
-}
-
-function optionValues(product, variant) {
-  const map = optionMap(product);
-  return (Array.isArray(variant?.options) ? variant.options : [])
-    .map(id => map.get(String(id)))
-    .filter(Boolean);
-}
-
-function normalizedOption(product, variant, type) {
-  return text(optionValues(product, variant).find(option => option.type === type)?.value).toLowerCase();
-}
-
-export function artworkSignature(product, variantId) {
-  const wanted = Number(variantId);
-  const entries = [];
-  for (const area of Array.isArray(product?.print_areas) ? product.print_areas : []) {
-    const variantIds = Array.isArray(area?.variant_ids) ? area.variant_ids.map(Number) : [];
-    if (variantIds.length && !variantIds.includes(wanted)) continue;
-    for (const placeholder of Array.isArray(area?.placeholders) ? area.placeholders : []) {
-      const position = text(placeholder?.position).toLowerCase();
-      for (const image of Array.isArray(placeholder?.images) ? placeholder.images : []) {
-        const id = text(image?.id);
-        if (position && id && !GENERIC_IGNORED_ARTWORK_IDS.has(id)) entries.push(`${position}:${id}`);
-      }
-    }
-  }
-  return [...new Set(entries)].sort().join("|");
 }
 
 export function catalogProviderVariant(payload, variantId) {
@@ -193,137 +149,6 @@ export function validateDirectProviderRoute(route, country, sourceProduct, sourc
   };
 }
 
-
-function despinozaCanonicalArtworkSignature(product, variantId, role) {
-  const wanted = Number(variantId);
-  const entries = [];
-  for (const area of Array.isArray(product?.print_areas) ? product.print_areas : []) {
-    const variantIds = Array.isArray(area?.variant_ids) ? area.variant_ids.map(Number) : [];
-    if (variantIds.length && !variantIds.includes(wanted)) continue;
-    for (const placeholder of Array.isArray(area?.placeholders) ? area.placeholders : []) {
-      const position = text(placeholder?.position).toLowerCase();
-      for (const image of Array.isArray(placeholder?.images) ? placeholder.images : []) {
-        let id = text(image?.id);
-        if (!position || !id) continue;
-        if (id === DESPINOZA_INTERNAL_TEXT_ID) continue;
-        if (role === "source" && id === DESPINOZA_NATIVE_TEXT_ID) id = DESPINOZA_TEXT_MARKER;
-        if (role === "target" && id === DESPINOZA_STATIC_TEXT_ID) id = DESPINOZA_TEXT_MARKER;
-        entries.push(`${position}:${id}`);
-      }
-    }
-  }
-  return [...new Set(entries)].sort().join("|");
-}
-
-function despinozaStaticArtworkEquivalent(mapping, sourceProduct, sourceVariant, targetProduct, targetVariant) {
-  const sourceId = text(sourceProduct?.id);
-  if (!DESPINOZA_SOURCE_PRODUCT_IDS.has(sourceId)) return false;
-  if (sourceId !== text(mapping?.source?.product_id)) return false;
-  if (Number(sourceVariant?.id) !== Number(mapping?.source?.variant_id)) return false;
-  if (Number(targetVariant?.id) !== Number(mapping?.target?.variant_id)) return false;
-  if (!DESPINOZA_REGIONAL_PROVIDERS.has(Number(targetProduct?.print_provider_id))) return false;
-  if (targetProduct?.visible !== false) return false;
-  const approval = text(mapping?.approval_id);
-  const expectedTail = `_${sourceId}_${Number(sourceVariant?.id)}`;
-  if (!/^g5000_(?:eu|uk|ca|au)_/.test(approval) || !approval.endsWith(expectedTail)) return false;
-  const sourceArtwork = despinozaCanonicalArtworkSignature(sourceProduct, sourceVariant?.id, "source");
-  const targetArtwork = despinozaCanonicalArtworkSignature(targetProduct, targetVariant?.id, "target");
-  return sourceArtwork.includes(`neck:${DESPINOZA_TEXT_MARKER}`)
-    && targetArtwork.includes(`neck:${DESPINOZA_TEXT_MARKER}`)
-    && sourceArtwork === targetArtwork;
-}
-
-function validId(value, min = 1, max = 100) {
-  const id = text(value);
-  return id.length >= min && id.length <= max && /^[A-Za-z0-9_-]+$/.test(id) ? id : "";
-}
-
-export function parseFulfillmentMappings(raw) {
-  if (!text(raw)) return [];
-  let payload;
-  try {
-    payload = JSON.parse(text(raw));
-  } catch {
-    throw new Error("PRINTIFY_FULFILLMENT_MAPPINGS is not valid JSON");
-  }
-  if (Number(payload?.version) !== 1 || !Array.isArray(payload?.mappings)) {
-    throw new Error("PRINTIFY_FULFILLMENT_MAPPINGS must use version 1 with a mappings array");
-  }
-  if (payload.mappings.length > 1000) throw new Error("Too many Printify fulfillment mappings");
-
-  return payload.mappings.map((mapping, index) => {
-    const source = mapping?.source || {};
-    const target = mapping?.target || {};
-    const approvalId = validId(mapping?.approval_id, 3, 100);
-    const countries = [...new Set((Array.isArray(mapping?.countries) ? mapping.countries : [])
-      .map(country => text(country).toUpperCase())
-      .filter(country => /^[A-Z]{2}$/.test(country)))];
-    const importCents = Number(mapping?.estimated_import_cents_per_unit ?? 0);
-    const normalized = {
-      approval_id: approvalId,
-      approved: mapping?.approved === true,
-      countries,
-      estimated_import_cents_per_unit: Number.isFinite(importCents) ? Math.round(importCents) : Number.NaN,
-      source: {
-        product_id: validId(source?.product_id, 8, 80),
-        variant_id: Number(source?.variant_id),
-        blueprint_id: Number(source?.blueprint_id),
-        print_provider_id: Number(source?.print_provider_id),
-      },
-      target: {
-        product_id: validId(target?.product_id, 8, 80),
-        variant_id: Number(target?.variant_id),
-        blueprint_id: Number(target?.blueprint_id),
-        print_provider_id: Number(target?.print_provider_id),
-      },
-    };
-    const ids = [normalized.source.variant_id, normalized.source.blueprint_id, normalized.source.print_provider_id,
-      normalized.target.variant_id, normalized.target.blueprint_id, normalized.target.print_provider_id];
-    if (!normalized.approved || !approvalId || !countries.length || !normalized.source.product_id || !normalized.target.product_id || ids.some(id => !Number.isInteger(id) || id <= 0)
-      || !Number.isInteger(normalized.estimated_import_cents_per_unit) || normalized.estimated_import_cents_per_unit < 0) {
-      throw new Error(`Invalid approved Printify fulfillment mapping at index ${index}`);
-    }
-    if (normalized.source.product_id === normalized.target.product_id && normalized.source.variant_id === normalized.target.variant_id) {
-      throw new Error(`Printify fulfillment mapping ${approvalId} does not change the fulfillment route`);
-    }
-    return Object.freeze(normalized);
-  });
-}
-
-export function validateMappedCandidate(mapping, country, sourceProduct, sourceVariant, targetProduct, targetVariant) {
-  if (!mapping?.countries?.includes(text(country).toUpperCase())) return { ok: false, reason: "country_not_approved" };
-  const sourceChecks = mapping.source.product_id === text(sourceProduct?.id)
-    && mapping.source.variant_id === Number(sourceVariant?.id)
-    && mapping.source.blueprint_id === Number(sourceProduct?.blueprint_id)
-    && mapping.source.print_provider_id === Number(sourceProduct?.print_provider_id);
-  const targetChecks = mapping.target.product_id === text(targetProduct?.id)
-    && mapping.target.variant_id === Number(targetVariant?.id)
-    && mapping.target.blueprint_id === Number(targetProduct?.blueprint_id)
-    && mapping.target.print_provider_id === Number(targetProduct?.print_provider_id);
-  if (!sourceChecks || !targetChecks) return { ok: false, reason: "approved_identity_mismatch" };
-  if (targetVariant?.is_enabled === false || targetVariant?.is_available === false) return { ok: false, reason: "target_unavailable" };
-
-  const sourceOptions = optionValues(sourceProduct, sourceVariant)
-    .map(option => `${text(option?.type).toLowerCase()}:${text(option?.value).toLowerCase()}`)
-    .filter(Boolean)
-    .sort()
-    .join("|");
-  const targetOptions = optionValues(targetProduct, targetVariant)
-    .map(option => `${text(option?.type).toLowerCase()}:${text(option?.value).toLowerCase()}`)
-    .filter(Boolean)
-    .sort()
-    .join("|");
-  if (!sourceOptions || sourceOptions !== targetOptions) {
-    return { ok: false, reason: "variant_options_mismatch" };
-  }
-  const sourceArtwork = artworkSignature(sourceProduct, sourceVariant?.id);
-  const targetArtwork = artworkSignature(targetProduct, targetVariant?.id);
-  const approvedStaticTextEquivalent = despinozaStaticArtworkEquivalent(mapping, sourceProduct, sourceVariant, targetProduct, targetVariant);
-  if (!sourceArtwork || (sourceArtwork !== targetArtwork && !approvedStaticTextEquivalent)) return { ok: false, reason: "artwork_mismatch" };
-  const cost = Math.round(Number(targetVariant?.cost));
-  if (!Number.isFinite(cost) || cost <= 0) return { ok: false, reason: "target_cost_invalid" };
-  return { ok: true, cost_cents: cost, estimated_import_cents_per_unit: mapping.estimated_import_cents_per_unit || 0 };
-}
 
 function candidateUnitScore(candidate) {
   return Number(candidate?.cost_cents || 0) + Math.max(0, Number(candidate?.estimated_import_cents_per_unit || 0));
