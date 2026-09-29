@@ -1,0 +1,27 @@
+set -e
+echo ===FUNCTION_CODES_SOURCE===
+grep -n -E 'CODES.put\("(function|source_input|dvd)"' /home/jespern/s5-ir-bridge-manual/src/com/bruis/s5irbridge/IrReceiver.java || true
+echo ===CURRENT_HELPER===
+grep -n -A 180 -B 10 -E '^def (prepare_hts_bluetooth|connect_audio)' /home/jespern/c720p-home-hub/bin/c720p-bluetooth-helper-server.py | head -420
+echo ===LAST_SUCCESSFUL_PIPELINES===
+python3 - <<'PY'
+from pathlib import Path
+import json
+base=Path('/home/jespern/c720p-home-hub/logs')
+hits=[]
+for p in sorted(base.glob('tv-hts-bluetooth-pipeline-*.json')):
+    try:d=json.loads(p.read_text(errors='ignore'))
+    except:continue
+    if d.get('ok') is True or d.get('state') in ('connected_verified','connected'):
+        hits.append((p,d))
+for p,d in hits[-5:]:
+    print('FILE='+str(p))
+    print(json.dumps({
+      'ok':d.get('ok'),'state':d.get('state'),'tv_power':d.get('tv_power'),
+      'tv_input':d.get('tv_input'),'hts_power':d.get('hts_power'),
+      'hts_input':d.get('hts_input'),'bluetooth_connected':d.get('bluetooth_connected'),
+      'audio_sink_present':d.get('audio_sink_present'),'audio_sink_default':d.get('audio_sink_default'),
+      'steps':d.get('steps')
+    },separators=(',',':'))[-24000:])
+PY
+echo RESULT=V876_LAST_SUCCESS_INSPECTED
