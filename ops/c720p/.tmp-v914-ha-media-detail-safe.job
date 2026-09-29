@@ -1,0 +1,50 @@
+set -e
+python3 - <<'PY'
+import json, pathlib, re, sqlite3
+base=pathlib.Path("/opt/homeassistant/config")
+ids={"media_player.grundig_android_tv","media_player.living_room_tv","media_player.hts_e6500","script.open_home_theatre"}
+print("===ENTITY_REGISTRY===")
+er=base/".storage/core.entity_registry"
+cfg_ids=set()
+if er.exists():
+ d=json.loads(er.read_text())
+ for e in d.get("data",{}).get("entities",[]):
+  if e.get("entity_id") in ids:
+   cfg_ids.add(e.get("config_entry_id"))
+   print({k:e.get(k) for k in ("entity_id","platform","unique_id","config_entry_id","name","original_name","disabled_by")})
+print("===CONFIG_ENTRIES_META===")
+ce=base/".storage/core.config_entries"
+if ce.exists():
+ d=json.loads(ce.read_text())
+ for x in d.get("data",{}).get("entries",[]):
+  if x.get("entry_id") in cfg_ids:
+   print({k:x.get(k) for k in ("entry_id","domain","title","source","disabled_by","state")})
+print("===RESTORE_STATE===")
+rs=base/".storage/core.restore_state"
+if rs.exists():
+ d=json.loads(rs.read_text())
+ for x in d.get("data",[]):
+  st=x.get("state") or {}
+  if st.get("entity_id") in ids:
+   a=st.get("attributes") or {}
+   print({"entity_id":st.get("entity_id"),"state":st.get("state"),"last_seen":x.get("last_seen"),"supported_features":a.get("supported_features"),"friendly_name":a.get("friendly_name"),"source":a.get("source"),"media_content_type":a.get("media_content_type")})
+print("===LATEST_DB_STATES===")
+db=base/"home-assistant_v2.db"
+if db.exists():
+ con=sqlite3.connect(str(db)); con.row_factory=sqlite3.Row
+ try:
+  for eid in ids:
+   rows=con.execute("""select s.state,s.last_updated_ts,sa.shared_attrs from states s join states_meta sm on sm.metadata_id=s.metadata_id left join state_attributes sa on sa.attributes_id=s.attributes_id where sm.entity_id=? order by s.state_id desc limit 3""",(eid,)).fetchall()
+   print("ENTITY",eid)
+   for r in rows:
+    attrs={}
+    try: attrs=json.loads(r["shared_attrs"] or "{}")
+    except Exception: pass
+    print({"state":r["state"],"last_updated_ts":r["last_updated_ts"],"supported_features":attrs.get("supported_features"),"friendly_name":attrs.get("friendly_name"),"source":attrs.get("source")})
+ finally: con.close()
+PY
+echo ===OPEN_HOME_THEATRE_SCRIPT===
+grep -n -A 100 -B 20 -E '^open_home_theatre:|open_home_theatre' /opt/homeassistant/config/scripts.yaml /opt/homeassistant/config/automations.yaml 2>/dev/null | head -360 || true
+echo ===HTS_REFERENCES===
+grep -Rni -A 30 -B 10 -E 'media_player\.hts_e6500|\[HTS\]E6500|open_home_theatre' /opt/homeassistant/config --exclude='*.db*' --exclude='*.log*' 2>/dev/null | head -520 || true
+echo RESULT=V914_HA_MEDIA_DETAIL_SAFE_DONE
