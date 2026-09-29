@@ -47,8 +47,24 @@ create index if not exists shop_provider_routes_v1_approved_idx
 alter table public.shop_provider_routes_v1
   drop constraint if exists shop_provider_routes_v1_approval_id_format_check,
   add constraint shop_provider_routes_v1_approval_id_format_check
-    check (approval_id ~ '^[A-Za-z0-9_-]{3,120}drop table if exists public.shop_fulfillment_mappings;
+    check (approval_id ~ '^[A-Za-z0-9_-]{3,120}$'),
+  drop constraint if exists shop_provider_routes_v1_countries_nonempty_check,
+  add constraint shop_provider_routes_v1_countries_nonempty_check
+    check (cardinality(countries) > 0),
+  drop constraint if exists shop_provider_routes_v1_source_product_format_check,
+  add constraint shop_provider_routes_v1_source_product_format_check
+    check (source_product_id ~ '^[A-Za-z0-9_-]{8,80}$'),
+  drop constraint if exists shop_provider_routes_v1_changes_provider_check,
+  add constraint shop_provider_routes_v1_changes_provider_check
+    check (source_print_provider_id <> target_print_provider_id);
 
+-- Remove the eight narrower Hydrangea US-only rows superseded by the approved
+-- all-destination Choice route for the same variants.
+delete from public.shop_provider_routes_v1
+where approval_id like 'g5000_us_6a98254d5c9d1f57390a1024_%';
+
+drop table if exists public.shop_provider_route_artwork_v1;
+drop table if exists public.shop_fulfillment_mappings;
 alter table public.admin_accounts enable row level security;
 alter table public.available_names enable row level security;
 alter table public.claimed_names enable row level security;
