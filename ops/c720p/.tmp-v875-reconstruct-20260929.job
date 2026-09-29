@@ -1,0 +1,1 @@
+set -e; BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p; curl -fsSL "$BASE/reconstruct-170850-v875.py" -o /tmp/reconstruct-170850-v875.py; python3 /tmp/reconstruct-170850-v875.py
