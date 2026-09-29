@@ -1,0 +1,49 @@
+set -e
+V=/home/jespern/c720p-home-hub/venvs/pychromecast
+if [ ! -x "$V/bin/python" ]; then python3 -m venv "$V"; fi
+"$V/bin/python" -m pip install --quiet --disable-pip-version-check --upgrade pip pychromecast
+echo ===PYCHROMECAST_VERSION===
+"$V/bin/python" - <<'PY'
+import pychromecast
+print(getattr(pychromecast,"__version__","unknown"))
+PY
+echo ===CAST_DISCOVERY===
+"$V/bin/python" - <<'PY'
+import time, pychromecast
+casts,browser=pychromecast.get_listed_chromecasts(friendly_names=["Living Room TV"], discovery_timeout=12)
+try:
+    print("FOUND",[(c.name,c.host,c.port) for c in casts], flush=True)
+    if not casts:
+        raise SystemExit(4)
+    cc=casts[0]
+    cc.wait(timeout=12)
+    print("CONNECTED",cc.name,cc.host,cc.port, flush=True)
+    cc.start_app("CC1AD845")
+    print("DEFAULT_MEDIA_RECEIVER_STARTED", flush=True)
+    time.sleep(5)
+finally:
+    try: pychromecast.discovery.stop_discovery(browser)
+    except Exception: pass
+PY
+echo ===TV_WAKE_POLL===
+awake=0
+for i in $(seq 1 25); do
+  p6466=0; p8009=0
+  timeout 1 bash -lc "</dev/tcp/192.168.178.169/6466" >/dev/null 2>&1 && p6466=1 || true
+  timeout 1 bash -lc "</dev/tcp/192.168.178.169/8009" >/dev/null 2>&1 && p8009=1 || true
+  echo "POLL_$i 6466=$p6466 8009=$p8009"
+  if [ "$p6466" = 1 ] || [ "$p8009" = 1 ]; then awake=1; break; fi
+  sleep 1
+done
+echo "TV_NETWORK_AWAKE=$awake"
+echo ===TV_STATUS===
+/home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh status || true
+if [ "$awake" = 1 ]; then
+  echo ===HDMI3===
+  /home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh key TV_INPUT_HDMI_3 || true
+  sleep 4
+fi
+echo ===HTS_STATE_AFTER_TV_WAKE===
+curl -sS --max-time 8 http://127.0.0.1:8789/ht-e6500/power-state || true
+bluetoothctl info 8C:C8:CD:8B:06:3B || true
+echo RESULT=V908_CAST_CEC_WAKE_REAL_DONE
