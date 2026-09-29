@@ -165,11 +165,18 @@ export function validateDirectProviderRoute(route, country, sourceProduct, sourc
   }
   const printAreas = directOrderPrintAreas(sourceProduct, sourceVariant?.id);
   if (!printAreas) return { ok: false, reason: "source_artwork_not_order_reusable" };
-  const cost = Math.round(Number(providerVariant?.cost));
-  if (!Number.isFinite(cost) || cost <= 0) return { ok: false, reason: "target_cost_invalid" };
+  const snapshotCost = Math.round(Number(route?.target_cost_usd_cents));
+  const delta = Math.round(Number(route?.cost_delta_usd_cents));
+  const currentSourceCost = Math.round(Number(sourceVariant?.cost));
+  const deltaAdjusted = Number.isFinite(delta) && Number.isFinite(currentSourceCost) ? currentSourceCost + delta : Number.NaN;
+  const cost = Math.max(
+    Number.isFinite(snapshotCost) ? snapshotCost : 0,
+    Number.isFinite(deltaAdjusted) ? deltaAdjusted : 0,
+  );
+  if (!Number.isFinite(cost) || cost <= 0) return { ok: false, reason: "target_cost_snapshot_unavailable" };
   return {
     ok: true,
-    cost_cents: cost,
+    cost_cents: Math.round(cost),
     print_areas: printAreas,
     estimated_import_cents_per_unit: Math.max(0, Math.round(Number(route?.estimated_import_cents_per_unit || 0))),
   };
