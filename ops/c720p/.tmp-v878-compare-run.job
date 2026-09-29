@@ -1,0 +1,1 @@
+set -e; BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p; curl -fsSL "$BASE/compare-proven-bt-v878.py" -o /tmp/compare-proven-bt-v878.py; python3 /tmp/compare-proven-bt-v878.py
