@@ -1,0 +1,36 @@
+set -e
+echo ===ALTERNATE_IR_IN_HOME_ASSISTANT===
+python3 - <<'PY'
+import json,pathlib,re
+s=pathlib.Path('/opt/homeassistant/config/.storage')
+for name in ('core.config_entries','core.entity_registry','core.device_registry'):
+    p=s/name
+    if not p.exists(): continue
+    d=json.loads(p.read_text(errors='ignore')).get('data',{})
+    rows=[]
+    if name=='core.config_entries':
+        rows=d.get('entries',[])
+        for x in rows:
+            txt=json.dumps(x,default=str)
+            if re.search(r'broadlink|smartir|remote|ir|switchbot|esphome|tuya',txt,re.I):
+                print('ENTRY',x.get('domain'),x.get('title'),x.get('entry_id'),x.get('state'))
+    elif name=='core.entity_registry':
+        rows=d.get('entities',[])
+        for x in rows:
+            eid=str(x.get('entity_id',''))
+            txt=json.dumps(x,default=str)
+            if eid.startswith('remote.') or re.search(r'broadlink|smartir|infrared|ir_blaster|switchbot',txt,re.I):
+                print('ENTITY',eid,'platform='+str(x.get('platform')),'name='+str(x.get('name')))
+PY
+echo ===USB_IR_CANDIDATES===
+lsusb 2>/dev/null || true
+find /dev -maxdepth 2 \( -iname '*lirc*' -o -iname '*ir*' -o -iname '*cec*' \) -ls 2>/dev/null | head -80 || true
+echo ===BUILD_SCRIPT===
+sed -n '1,260p' /home/jespern/build_install_s5_ir_bridge.sh 2>/dev/null || true
+echo ===PATCH_VERIFIED_REMOTE===
+sed -n '1,340p' /home/jespern/patch_s5_ir_bridge_final_verified_remote.py 2>/dev/null || true
+echo ===FUNCTION_FIX_DIR===
+find /home/jespern/c720p-backups/s5-ir-function-fix-20260926-210547 -maxdepth 3 -type f -printf '%TY-%Tm-%Td %TH:%TM:%TS %s %p\n' 2>/dev/null | sort || true
+echo ===KERNEL_IR_HISTORY===
+adb -s 993e96d0 shell dmesg 2>/dev/null | grep -E 'ir_send|Sending IR|emission_time|buf_size' | tail -160 || true
+echo RESULT=V876_IR_ALTERNATIVES_HISTORY_DONE
