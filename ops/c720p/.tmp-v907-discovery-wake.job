@@ -1,0 +1,54 @@
+set -e
+cat >/tmp/v907_wake.py <<'PY'
+import socket, struct, time, json
+H="192.168.178.169"
+def tcp(p):
+    s=socket.socket(); s.settimeout(.7)
+    try: s.connect((H,p)); return True
+    except Exception: return False
+    finally: s.close()
+def ssdp():
+    msg=("M-SEARCH * HTTP/1.1\r\n"
+         "HOST:239.255.255.250:1900\r\n"
+         "MAN:\"ssdp:discover\"\r\n"
+         "MX:1\r\n"
+         "ST:ssdp:all\r\n\r\n").encode()
+    s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM,socket.IPPROTO_UDP)
+    s.setsockopt(socket.IPPROTO_IP,socket.IP_MULTICAST_TTL,2)
+    s.settimeout(.35)
+    try:
+        for _ in range(3):
+            s.sendto(msg,("239.255.255.250",1900))
+            time.sleep(.15)
+    finally: s.close()
+def mdns():
+    # Minimal PTR query for _googlecast._tcp.local
+    labels=["_googlecast","_tcp","local"]
+    q=b"".join(bytes([len(x)])+x.encode() for x in labels)+b"\x00"
+    pkt=b"\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00"+q+b"\x00\x0c\x00\x01"
+    s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM,socket.IPPROTO_UDP)
+    s.setsockopt(socket.IPPROTO_IP,socket.IP_MULTICAST_TTL,2)
+    try:
+        for _ in range(3):
+            s.sendto(pkt,("224.0.0.251",5353)); time.sleep(.15)
+    finally: s.close()
+out={"initial":{str(p):tcp(p) for p in (6466,6467,8008,8009,8443)}}
+for i in range(1,13):
+    ssdp(); mdns()
+    # Touch low-power listeners without waiting long.
+    for p in (8008,8443,6467):
+        s=socket.socket(); s.settimeout(.5)
+        try: s.connect((H,p))
+        except Exception: pass
+        try: s.close()
+        except Exception: pass
+    time.sleep(1)
+    out[f"poll_{i}"]={str(p):tcp(p) for p in (6466,6467,8008,8009,8443)}
+    if out[f"poll_{i}"]["6466"] or out[f"poll_{i}"]["8009"]:
+        break
+print(json.dumps(out,indent=2,sort_keys=True))
+PY
+python3 /tmp/v907_wake.py
+echo ===STATUS_AFTER_DISCOVERY===
+timeout 8 /home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh status || true
+echo RESULT=V907_DISCOVERY_WAKE_DONE
