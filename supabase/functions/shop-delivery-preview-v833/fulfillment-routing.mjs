@@ -103,6 +103,78 @@ export function artworkSignature(product, variantId) {
   return [...new Set(entries)].sort().join("|");
 }
 
+export function catalogProviderVariant(payload, variantId) {
+  const rows = Array.isArray(payload?.variants) ? payload.variants : (Array.isArray(payload) ? payload : []);
+  return rows.find(variant => Number(variant?.id) === Number(variantId)) || null;
+}
+
+export function directOrderPrintAreas(product, variantId) {
+  const wanted = Number(variantId);
+  const output = {};
+  let reusableImageCount = 0;
+  for (const area of Array.isArray(product?.print_areas) ? product.print_areas : []) {
+    const variantIds = Array.isArray(area?.variant_ids) ? area.variant_ids.map(Number) : [];
+    if (variantIds.length && !variantIds.includes(wanted)) continue;
+    for (const placeholder of Array.isArray(area?.placeholders) ? area.placeholders : []) {
+      const position = text(placeholder?.position).toLowerCase();
+      if (!position) continue;
+      const rendered = [];
+      for (const image of Array.isArray(placeholder?.images) ? placeholder.images : []) {
+        const id = text(image?.id);
+        if (GENERIC_IGNORED_ARTWORK_IDS.has(id)) continue;
+        const src = text(image?.src);
+        if (id && !src) return null;
+        if (!src) continue;
+        let parsed;
+        try {
+          parsed = new URL(src);
+          if (parsed.protocol !== "https:") return null;
+        } catch {
+          return null;
+        }
+        const x = Number(image?.x), y = Number(image?.y), scale = Number(image?.scale), angle = Number(image?.angle || 0);
+        if (![x,y,scale,angle].every(Number.isFinite) || scale <= 0) return null;
+        rendered.push({ src, x, y, scale, angle });
+        reusableImageCount += 1;
+      }
+      if (rendered.length) {
+        if (!Array.isArray(output[position])) output[position] = [];
+        output[position].push(...rendered);
+      }
+    }
+  }
+  return reusableImageCount > 0 ? output : null;
+}
+
+export function validateDirectProviderRoute(route, country, sourceProduct, sourceVariant, providerVariant) {
+  const destination = text(country).toUpperCase();
+  if (!route?.approved || !Array.isArray(route?.countries) || !route.countries.includes(destination)) {
+    return { ok: false, reason: "country_not_approved" };
+  }
+  const sourceChecks = text(route?.source_product_id) === text(sourceProduct?.id)
+    && Number(route?.source_variant_id) === Number(sourceVariant?.id)
+    && Number(route?.source_blueprint_id) === Number(sourceProduct?.blueprint_id)
+    && Number(route?.source_print_provider_id) === Number(sourceProduct?.print_provider_id);
+  if (!sourceChecks) return { ok: false, reason: "approved_identity_mismatch" };
+  const targetProviderId = Number(route?.target_print_provider_id);
+  if (!Number.isInteger(targetProviderId) || targetProviderId <= 0 || targetProviderId === Number(sourceProduct?.print_provider_id)) {
+    return { ok: false, reason: "target_provider_invalid" };
+  }
+  if (!providerVariant || Number(providerVariant?.id) !== Number(sourceVariant?.id)) {
+    return { ok: false, reason: "target_variant_unavailable" };
+  }
+  const printAreas = directOrderPrintAreas(sourceProduct, sourceVariant?.id);
+  if (!printAreas) return { ok: false, reason: "source_artwork_not_order_reusable" };
+  const cost = Math.round(Number(providerVariant?.cost));
+  if (!Number.isFinite(cost) || cost <= 0) return { ok: false, reason: "target_cost_invalid" };
+  return {
+    ok: true,
+    cost_cents: cost,
+    print_areas: printAreas,
+    estimated_import_cents_per_unit: Math.max(0, Math.round(Number(route?.estimated_import_cents_per_unit || 0))),
+  };
+}
+
 
 function despinozaCanonicalArtworkSignature(product, variantId, role) {
   const wanted = Number(variantId);
