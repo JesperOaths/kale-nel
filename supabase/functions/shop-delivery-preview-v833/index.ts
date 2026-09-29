@@ -389,41 +389,38 @@ Deno.serve(async (req: Request) => {
     if (resolved.some((row: any) => !row.cached)) throw new Error("One or more selected variants are no longer in the live catalog");
     const shopId = cachedShopId(cache.payload, resolved.map((row: any) => row.cached?.product).filter(Boolean));
 
-    // v870: include only explicit, approved, destination-matching regional clones.
-    // Every candidate is re-fetched from Printify and then validated again for
-    // blueprint/provider/variant/artwork equivalence before it can be quoted.
+    // Clone-free routing: alternate providers are quoted directly.
     const sourceProductIds = [...new Set(resolved.map((row: any) => text(row.cached.product.id)).filter(Boolean))];
-    const { data: mappingRows, error: mappingError } = await sb
-      .from("shop_fulfillment_mappings")
-      .select("approval_id,approved,countries,source_product_id,source_variant_id,source_blueprint_id,source_print_provider_id,target_product_id,target_variant_id,target_blueprint_id,target_print_provider_id,estimated_import_cents_per_unit")
+    const { data: routeRows, error: routeError } = await sb
+      .from("shop_provider_routes_v1")
+      .select("approval_id,approved,countries,source_product_id,source_variant_id,source_blueprint_id,source_print_provider_id,target_print_provider_id,estimated_import_cents_per_unit")
       .eq("approved", true)
       .contains("countries", [country])
       .in("source_product_id", sourceProductIds);
-    if (mappingError) console.warn("Approved regional fulfillment mappings unavailable", mappingError.message);
-    const mappings: any[] = mappingError
-      ? []
-      : parseFulfillmentMappings(JSON.stringify(dbMappingPayload(mappingRows || [])));
-    const eligibleMappings = mappings.filter((mapping: any) => mapping.countries.includes(country) && resolved.some((row: any) =>
-      mapping.source.product_id === text(row.cached.product.id) && mapping.source.variant_id === Number(row.cached.variant.id)
-    ));
+    if (routeError) console.warn("Approved direct provider routes unavailable", routeError.message);
+    const providerRoutes: any[] = routeError ? [] : (Array.isArray(routeRows) ? routeRows : []);
 
     const printifyToken = await resolvePrintifyToken(sb);
     const fx = await resolveUsdEurRate(sb);
     const freshProducts = new Map<string, any>();
-    const sourceEntries = await Promise.all(sourceProductIds.map(async productId => {
+    const sourceEntries = await mapWithConcurrency(sourceProductIds, 4, async (productId: string) => {
       if (!/^[a-zA-Z0-9_-]{8,80}$/.test(productId)) throw new Error("Invalid Printify product id");
       return [productId, await printifyV1(printifyToken, `/shops/${shopId}/products/${encodeURIComponent(productId)}.json`)] as const;
-    }));
+    });
     sourceEntries.forEach(([productId, product]) => freshProducts.set(productId, product));
-    const regionalTargetProductIds = [...new Set(eligibleMappings.map((mapping: any) => text(mapping.target.product_id)).filter(Boolean))];
-    await Promise.all(regionalTargetProductIds.map(async productId => {
-      if (freshProducts.has(productId) || !/^[a-zA-Z0-9_-]{8,80}$/.test(productId)) return;
+
+    const providerCatalogs = new Map<string, any>();
+    const providerKeys = [...new Set(providerRoutes.map((route: any) => `${Number(route?.source_blueprint_id)}:${Number(route?.target_print_provider_id)}`))];
+    const catalogEntries = await mapWithConcurrency(providerKeys, 4, async (key: string) => {
+      const [blueprintId, providerId] = key.split(":").map(Number);
+      if (!Number.isInteger(blueprintId) || !Number.isInteger(providerId)) return [key, null] as const;
       try {
-        freshProducts.set(productId, await printifyV1(printifyToken, `/shops/${shopId}/products/${encodeURIComponent(productId)}.json`));
-      } catch (error) {
-        console.warn("Ignoring unavailable approved regional Printify target", productId, error instanceof Error ? error.message.slice(0, 180) : "unknown");
+        return [key, await printifyV1(printifyToken, `/catalog/blueprints/${blueprintId}/print_providers/${providerId}/variants.json`)] as const;
+      } catch {
+        return [key, null] as const;
       }
-    }));
+    });
+    catalogEntries.forEach(([key, payload]) => providerCatalogs.set(key, payload));
 
     const candidateGroups: any[][] = [];
     for (const row of resolved) {
