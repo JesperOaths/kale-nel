@@ -517,6 +517,26 @@ function gildanRouteSafeCostCeilings(entries: any[]) {
   return ceilings;
 }
 
+async function augmentGildanRouteCosts(token: string, ceilings: Map<string, number>) {
+  const providers = [27, 30, 99, 331, 438];
+  const results = await Promise.allSettled(providers.map(providerId =>
+    printify(token, "/catalog/blueprints/6/print_providers/" + providerId + "/variants.json", 9000)
+  ));
+  for (const result of results) {
+    if (result.status !== "fulfilled") continue;
+    const payload = result.value;
+    const variants = Array.isArray(payload?.variants) ? payload.variants : (Array.isArray(payload) ? payload : []);
+    for (const variant of variants) {
+      const id = String(variant?.id || "");
+      const cost = Math.round(Number(variant?.cost));
+      if (!id || !Number.isFinite(cost) || cost <= 0) continue;
+      const key = "6:" + id;
+      if (cost > Number(ceilings.get(key) || 0)) ceilings.set(key, cost);
+    }
+  }
+  return ceilings;
+}
+
 function variantDisplayLabel(product: any, variant: any) {
   const options = resolvedOptions(product, variant)
     .map((item) => text(item.value))
@@ -656,7 +676,7 @@ async function buildCatalog(supabase: any) {
   const token = await resolveToken(supabase);
   const fx = await resolveUsdEurRateDirect();
   const account = await loadAccountProducts(token);
-  const routeSafeCostCeilings = gildanRouteSafeCostCeilings(account.entries);
+  const routeSafeCostCeilings = await augmentGildanRouteCosts(token, gildanRouteSafeCostCeilings(account.entries));
 
   const cleanProducts = account.entries
     .filter((entry: any) => {
