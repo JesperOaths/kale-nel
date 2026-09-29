@@ -1,0 +1,26 @@
+set -e
+TV=192.168.178.169
+echo ===TARGETED_PORTS===
+python3 - <<'PY'
+import socket
+h="192.168.178.169"
+ports=[8000,8001,8002,8008,8009,8080,8081,8082,8083,8084,8085,8086,8087,8088,8090,8443,9197]
+for p in ports:
+    s=socket.socket(); s.settimeout(.45)
+    try:
+        s.connect((h,p)); print("OPEN",p)
+    except Exception:
+        pass
+    finally:
+        s.close()
+PY
+echo ===8085_ROOT===
+curl -sS -i --max-time 5 "http://$TV:8085/" | head -120 || true
+echo ===8085_LIST===
+curl -sS -i --max-time 5 "http://$TV:8085/list" | head -260 || true
+echo ===8085_OTHER===
+for p in /device /status /remote /api /keylist; do
+  echo "---$p"
+  curl -sS -i --max-time 4 "http://$TV:8085$p" | head -100 || true
+done
+echo RESULT=V913_GRUNDIG_NATIVE_REMOTE_PROBE_DONE
