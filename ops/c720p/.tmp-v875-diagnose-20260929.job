@@ -1,26 +1,12 @@
 set -e
-python3 - <<'PY'
-from pathlib import Path
-import json
-p=Path('/home/jespern/c720p-home-hub/logs/tv-hts-bluetooth-pipeline-20260926-170850.json')
-d=json.loads(p.read_text())
-print('PIPELINE',d.get('ok'),d.get('state'))
-for i,s in enumerate(d.get('steps') or []):
-    if i < 9: continue
-    r=s.get('result')
-    print('STEP',i,'stage=',s.get('stage'),'action=',s.get('action'),'check=',s.get('check'),'cycle=',s.get('cycle'))
-    if isinstance(r,dict):
-        slim={}
-        for k in ['ok','state','connected','visible','visible_cycle','returncode','adaptive_function_cycles','source_cycles','bluetooth_connected','audio_sink_present','audio_sink_default','action','confirmed','wanted']:
-            if k in r: slim[k]=r.get(k)
-        if 'stdout' in r: slim['stdout_tail']=str(r.get('stdout'))[-2500:]
-        if 'after' in r and isinstance(r['after'],dict):
-            slim['after']={k:r['after'].get(k) for k in ['connected','state','mac'] if k in r['after']}
-            info=r['after'].get('info')
-            if isinstance(info,dict): slim['after_info_tail']=str(info.get('stdout'))[-1500:]
-        sj=r.get('state_json')
-        if isinstance(sj,dict): slim['state_json']={k:sj.get(k) for k in ['ok','state','bluetooth_connected','audio_sink_present','audio_sink_default','source_cycles','bluetooth_info']}
-        print(json.dumps(slim,separators=(',',':'))[:9000])
-    else:
-        print(repr(r)[:4000])
-PY
+echo ===BLUEZ_CURRENT===
+sudo -n bash -lc 'echo controller_dirs; find /var/lib/bluetooth -maxdepth 3 -printf "%y %TY-%Tm-%Td %TH:%TM:%TS %p\n" 2>/dev/null | sort | tail -160' || true
+echo ===BLUEZ_SAMSUNG_HITS===
+sudo -n grep -RIl -E 'SamsungHTS-8B063B|8C:C8:CD:8B:06:3B|8c:c8:cd:8b:06:3b' /var/lib/bluetooth 2>/dev/null | head -80 || true
+echo ===HOME_SAMSUNG_HITS===
+grep -RIl --exclude='*.log' --exclude='*.jsonl' -E 'SamsungHTS-8B063B|8C:C8:CD:8B:06:3B' /home/jespern/c720p-backups /home/jespern/c720p-home-hub 2>/dev/null | head -120 || true
+echo ===CONNECTOR_CURRENT===
+sed -n '1,360p' /home/jespern/c720p-home-hub/bin/c720p-samsung-bluetooth-connect.sh
+echo ===CONNECTOR_TIMELINE===
+find /home/jespern/c720p-home-hub /home/jespern/c720p-backups -type f -name '*c720p-samsung-bluetooth-connect.sh*' -printf '%TY-%Tm-%Td %TH:%TM:%TS %s %p\n' 2>/dev/null | sort | tail -120
+echo RESULT=V876_BLUEZ_CONNECTOR_INSPECTED
