@@ -1,0 +1,13 @@
+set -e
+rm -rf /home/jespern/c720p-home-hub/venvs/pychromecast
+rm -f /opt/homeassistant/config/www/c720p-cast-wake.wav /opt/homeassistant/config/www/c720p-cast-wake.mp3 /opt/homeassistant/config/www/c720p-cast-wake.mp4
+echo ===FINAL_UI===
+grep -o 'C720P_TV_SURROUND_ACTIONS_V12_FASTSTART_TRUTHFUL' /opt/homeassistant/config/www/c720p-tv-surround.html
+echo ===FINAL_SERVICES===
+systemctl --user is-active c720p-bluetooth-helper.service ht-e6500-surround.service
+echo ===FINAL_PORTS===
+for p in 8123 8789 8790; do timeout 1 bash -lc "</dev/tcp/127.0.0.1/$p" >/dev/null 2>&1 && echo "OPEN $p" || echo "CLOSED $p"; done
+echo ===FAST_COLD_RESULT===
+curl -sS --max-time 6 -X POST http://127.0.0.1:8790/pipeline/bluetooth-fast || true
+echo
+echo RESULT=V914_TV_HTS_CLEANUP_DONE
