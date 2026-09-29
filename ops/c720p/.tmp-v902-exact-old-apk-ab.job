@@ -1,0 +1,34 @@
+set -e
+SER=993e96d0
+PKG=com.bruis.s5irbridge
+OLD=/home/jespern/c720p-home-hub/tmp/s5-ir-parity/installed-current.apk
+CUR=/home/jespern/s5-ir-bridge-manual/build/s5-ir-bridge.apk
+TMP=/tmp/v902-current-before.apk
+echo ===HASHES===
+sha256sum "$OLD" "$CUR" || true
+remote=$(adb -s "$SER" shell pm path "$PKG" | sed -n 's/^package://p' | head -1 | tr -d '\r')
+adb -s "$SER" pull "$remote" "$TMP" >/dev/null
+sha256sum "$TMP"
+restore(){ adb -s "$SER" install -r "$TMP" >/tmp/v902-restore.log 2>&1 || true; cat /tmp/v902-restore.log; }
+trap restore EXIT
+echo ===INSTALL_EXACT_OLD===
+adb -s "$SER" install -r "$OLD"
+sleep 2
+adb -s "$SER" logcat -c
+echo ===TV_BEFORE===
+curl -sS http://127.0.0.1:8789/grundig-tv/power-state; echo
+echo ===SEND_OLD_APK_GRUNDIG_POWER===
+adb -s "$SER" shell am broadcast -n com.bruis.s5irbridge/.IrReceiver -a com.bruis.s5irbridge.SEND --es device grundig_tv --es command grundig_power
+hit=0
+for i in $(seq 1 18); do sleep 1; st=$(curl -sS http://127.0.0.1:8789/grundig-tv/power-state || true); echo "POLL_$i=$st"; echo "$st" | grep -q '"state": "on"' && { hit=1; break; } || true; done
+echo OLD_APK_TV_ON=$hit
+echo ===OLD_APK_LOG===
+adb -s "$SER" logcat -d -v time | grep -F S5IRBridge | tail -80 || true
+echo ===RESTORE_CURRENT===
+restore
+trap - EXIT
+echo ===RESTORED_HASH===
+remote=$(adb -s "$SER" shell pm path "$PKG" | sed -n 's/^package://p' | head -1 | tr -d '\r')
+adb -s "$SER" pull "$remote" /tmp/v902-restored.apk >/dev/null
+sha256sum /tmp/v902-restored.apk
+echo RESULT=V902_EXACT_OLD_APK_AB_DONE
