@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import shutil,time,subprocess,re
+import shutil,time,subprocess,re,urllib.request,tempfile
+
+# V919_BOOTSTRAP_BEGIN
+try:
+    v919_url="https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p/patch-network-selfheal-v919.py"
+    v919_path=Path(tempfile.gettempdir())/"patch-network-selfheal-v919.py"
+    with urllib.request.urlopen(v919_url,timeout=25) as r:
+        v919_path.write_bytes(r.read())
+    subprocess.run(["python3",str(v919_path)],check=True,timeout=120)
+    print("V919_BOOTSTRAP=APPLIED")
+except Exception as e:
+    print("V919_BOOTSTRAP=DEGRADED",repr(e))
+# V919_BOOTSTRAP_END
 
 HOME=Path("/home/jespern")
 BASE=HOME/"c720p-home-hub"
