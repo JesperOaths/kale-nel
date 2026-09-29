@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import shutil,time,subprocess
+import shutil,time,subprocess,os
 
 HOME=Path('/home/jespern')
 BASE=HOME/'c720p-home-hub'
@@ -126,10 +126,13 @@ subprocess.run(['systemctl','--user','daemon-reload'],check=True)
 subprocess.run(['systemctl','--user','enable','--now','c720p-dns-watchdog.timer','c720p-agent-self-watchdog.timer'],check=False)
 subprocess.run([str(DNS)],timeout=80,check=False)
 subprocess.run(['systemctl','--user','start','c720p-security-tunnel-watchdog.service'],check=False)
-subprocess.run([
-    'systemd-run','--user','--unit',f'c720p-agent-refresh-v919-{STAMP}',
-    '--on-active=20s','/usr/bin/systemctl','--user','restart','c720p-agent-runner.service'
-],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=False)
+if os.environ.get('C720P_V919_DEFER_AGENT_RESTART') != '1':
+    subprocess.run([
+        'systemd-run','--user','--unit',f'c720p-agent-refresh-v919-{STAMP}',
+        '--on-active=20s','/usr/bin/systemctl','--user','restart','c720p-agent-runner.service'
+    ],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=False)
+else:
+    print('V919_AGENT_RESTART=DEFERRED_TO_ACTIVE_JOB')
 
 print('BACKUP='+str(BACK))
 print('RESULT=V919_NETWORK_SELFHEAL_PATCHED')
