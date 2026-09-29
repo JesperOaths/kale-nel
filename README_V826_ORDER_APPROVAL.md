@@ -6,39 +6,20 @@ Default view shows orders that still need action: pending payment or paid but no
 
 Payment verification requires entering the amount actually received. The server refuses verification when the received amount is below the authoritative order total. `Send to Printify` remains a separate explicit action and the server checks the verified amount again before creating/releasing the Printify order.
 
-## v832 fulfillment routing
+## Clone-free fulfillment routing
 
-Checkout always asks Printify for the available shipping methods and selects the cheapest valid quote. It also compares production plus shipping cost across the catalog product and any explicitly approved regional routes. Customer pricing remains based on the selected catalog variant's current Printify production cost plus exactly EUR 5, rounded up to a whole euro; a cheaper internal route never changes the displayed or charged product price.
+The Printify catalog keeps **one real product per design**. Alternate fulfillment providers are never represented by hidden or duplicate Printify products.
 
-Regional routing now uses only rows in the server-side `shop_fulfillment_mappings` table with `approved=true` and a matching destination country. The browser never receives these routes or the Printify token. Checkout and delivery preview re-fetch both source and target products from Printify and revalidate the exact variant, blueprint, provider, size, color and artwork before a mapped route can be quoted. A deleted/stale regional target is ignored and the canonical product remains available as the safe fallback.
+Checkout and delivery preview use `shop_provider_routes_v1` as a private allow-list of provider alternatives. For each cart line they:
 
-The logical mapping schema remains:
+1. Re-fetch the one canonical Printify product and selected variant.
+2. Revalidate the approved blueprint, current source provider, target provider, destination, variant availability, reusable artwork, and stored production-cost snapshot.
+3. Quote Printify directly with `blueprint_id + print_provider_id + variant_id` for an alternate provider, while the canonical route continues to use the canonical `product_id`.
+4. Select the route according to the shipping/cost policy. EU destinations prioritize the customer's shipping charge first, then total fulfillment cost and consolidation.
+5. Persist the selected direct-provider approval ID in the pending order so production cannot silently switch to another route later.
 
-```json
-{
-  "version": 1,
-  "mappings": [
-    {
-      "approved": true,
-      "approval_id": "change-record-id",
-      "countries": ["NL", "BE"],
-      "source": {
-        "product_id": "catalog-product-id",
-        "variant_id": 1001,
-        "blueprint_id": 10,
-        "print_provider_id": 20
-      },
-      "target": {
-        "product_id": "approved-regional-product-id",
-        "variant_id": 2001,
-        "blueprint_id": 10,
-        "print_provider_id": 30
-      }
-    }
-  ]
-}
-```
+When a direct-provider route is released to production, `shop-admin-orders-v825` sends the blueprint, provider, variant, quantity, and reusable print-area artwork directly in the Printify order line item. It does **not** create or depend on a second Printify product.
 
-Each entry is exact and variant-specific. At checkout the server re-fetches both products and accepts a mapped route only when country, product, variant, blueprint, provider, size, color, availability, and the set of artwork file IDs by print position still match the approval. Otherwise it safely ignores that mapping and retains the original catalog route. The chosen source and fulfillment IDs plus the approval ID are recorded in the pending order line item for audit. Checkout still does not create or release a Printify order.
+The two Despinoza shirts have a native Printify text layer that is not portable in a direct order. Their production path replaces that layer at order time with the already-uploaded static `Despinoza` artwork while preserving its geometry. This keeps those shirts clone-free too.
 
-Approved mappings are maintained in `shop_fulfillment_mappings`. Changes to an approved target should be persisted by migration. Both `shop-manual-checkout-v832` and `shop-delivery-preview-v833` must use the same mapping table and validation logic so the amount shown before checkout is the amount checkout re-verifies.
+The legacy `shop_fulfillment_mappings` product-to-product route model is retired. Historical shipped/canceled orders retain their embedded route audit data, but new checkout, delivery preview, and production all use direct provider routing.
