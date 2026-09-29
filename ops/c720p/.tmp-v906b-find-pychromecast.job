@@ -1,0 +1,10 @@
+set -e
+echo ===PYTHON_CANDIDATES===
+for py in /opt/homeassistant/bin/python /home/jespern/homeassistant/bin/python /home/jespern/.homeassistant/bin/python /home/jespern/c720p-home-hub/venvs/*/bin/python /home/jespern/*/.venv/bin/python /usr/bin/python3; do
+  [ -x "$py" ] || continue
+  echo ---$py---
+  "$py" -c 'import sys; print(sys.version.split()[0]); import importlib.util; print("pychromecast", bool(importlib.util.find_spec("pychromecast"))); print("casttube", bool(importlib.util.find_spec("casttube")))' 2>&1 || true
+done
+echo ===SITE_PACKAGES_HITS===
+find /opt /home/jespern -path '*/site-packages/pychromecast*' -o -path '*/dist-packages/pychromecast*' 2>/dev/null | head -80
+echo RESULT=V906B_PYCHROMECAST_SEARCH_DONE
