@@ -1,0 +1,9 @@
+set -e
+echo ===GRUNDIG_FILES===
+grep -RIl --exclude='*.log' --exclude='*.jsonl' -E 'CODES.put\("grundig_(source|power|volume_up|volume_down|mute)' /home/jespern/c720p-backups /home/jespern 2>/dev/null | head -80
+echo ===GRUNDIG_CODE_LINES===
+for f in $(grep -RIl --exclude='*.log' --exclude='*.jsonl' -E 'CODES.put\("grundig_(source|power|volume_up|volume_down|mute)' /home/jespern/c720p-backups /home/jespern 2>/dev/null | head -20); do
+  echo "---FILE=$f"
+  grep -n -E 'CODES.put\("grundig_(source|power|volume_up|volume_down|mute)' "$f" | head -120
+done
+echo RESULT=V892_GRUNDIG_CODE_RECOVERY_DONE
