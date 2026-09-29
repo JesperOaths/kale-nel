@@ -1,0 +1,19 @@
+set -e
+HOST=192.168.178.169
+echo ===AVAHI===
+timeout 8 avahi-browse -art 2>/dev/null | grep -Ei -A4 -B2 'grundig|googlecast|androidtv|192\.168\.178\.169' | head -320 || true
+echo ===HTTP_8008_ROOT===
+curl -sS -i --max-time 4 "http://$HOST:8008/" | head -80 || true
+echo ===HTTP_8008_DESC===
+curl -sS -i --max-time 4 "http://$HOST:8008/ssdp/device-desc.xml" | head -160 || true
+echo ===HTTP_8008_EUREKA===
+curl -sS -i --max-time 4 "http://$HOST:8008/setup/eureka_info?options=detail" | head -180 || true
+echo ===HTTP_8008_APPS===
+for p in /apps /apps/YouTube /setup/eureka_info /setup/assistant; do echo "---$p"; curl -sS -i --max-time 4 "http://$HOST:8008$p" | head -120 || true; done
+echo ===HTTPS_8443===
+curl -k -sS -i --max-time 4 "https://$HOST:8443/" | head -120 || true
+echo ===TLS_8443===
+timeout 5 openssl s_client -connect "$HOST:8443" -servername "$HOST" </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer -dates -fingerprint -sha256 2>/dev/null || true
+echo ===NMAP===
+if command -v nmap >/dev/null 2>&1; then timeout 20 nmap -Pn -sV -p 8008,8443 "$HOST" || true; fi
+echo RESULT=V907_GRUNDIG_STANDBY_SERVICES_DONE
