@@ -1,0 +1,1 @@
+set -e; echo ===SCRIPT===; sed -n '1,360p' /tmp/compare-s5-ir-codes-v880.py 2>/dev/null || true; echo ===RUN===; python3 /tmp/compare-s5-ir-codes-v880.py 2>/dev/null || true; echo RESULT=V883_CODE_CHECK_DONE
