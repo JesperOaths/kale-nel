@@ -12,12 +12,12 @@ echo ===CAST_DISCOVERY===
 import time, pychromecast
 casts,browser=pychromecast.get_listed_chromecasts(friendly_names=["Living Room TV"], discovery_timeout=12)
 try:
-    print("FOUND",[(c.name,c.host,c.port) for c in casts], flush=True)
+    print("FOUND",[(c.name,c.cast_info.host,c.cast_info.port) for c in casts], flush=True)
     if not casts:
         raise SystemExit(4)
     cc=casts[0]
     cc.wait(timeout=12)
-    print("CONNECTED",cc.name,cc.host,cc.port, flush=True)
+    print("CONNECTED",cc.name,cc.cast_info.host,cc.cast_info.port, flush=True)
     cc.start_app("CC1AD845")
     print("DEFAULT_MEDIA_RECEIVER_STARTED", flush=True)
     time.sleep(5)
