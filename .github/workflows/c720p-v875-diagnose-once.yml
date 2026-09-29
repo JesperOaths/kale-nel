@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "ops/c720p/.tmp-v875-diagnose.trigger"
+      - "ops/c720p/.tmp-v875-diagnose-20260929.trigger"
 permissions:
   contents: read
 jobs:
@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - run: |
+      - name: Invoke C720P v875 diagnostic enqueue
+        run: |
           set -euo pipefail
-          curl -fsS --retry 2 --connect-timeout 10 --max-time 30 https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-v874-tv-hts-once
+          curl -fsS --retry 2 --connect-timeout 10 --max-time 30 \
+            https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-v874-tv-hts-once
