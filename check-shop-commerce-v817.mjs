@@ -124,7 +124,7 @@ assert.match(directCommerce, /delivery-estimate-v833\.js/);
 assert.match(directCommerce, /shop-delivery-preview-v833/);
 assert.match(directCommerce, /X-Kalenel-Catalog-Authority/);
 assert.match(directCommerce, /bruis-direct-v836/);
-assert.match(directCommerce, /pricing:'shirt-production-cost-plus-max-printify-vat-plus-5-rounded-up'/);
+assert.match(directCommerce, /pricing:'shirt-production-cost-plus-max-printify-vat-plus-size-margin-rounded-up'/);
 assert.match(directCommerce, /artworkFirstGallery:true/);
 assert.match(directCommerce, /wholeEuroPricing:true/);
 assert.match(directCommerce, /usesShopifyCatalogApi:false/);
@@ -344,7 +344,7 @@ assert.match(catalogEdge, /label:\s*"Artwork PNG"/);
 assert.match(catalogEdge, /const mockups = \[\.\.\.artwork, \.\.\.garment\]/);
 assert.match(catalogEdge, /source:\s*"printify-live-v851"/);
 assert.match(catalogEdge, /mode:\s*"bruis-direct-catalog-v838"/);
-assert.match(catalogEdge, /pricing:\s*"shirt-production-cost-plus-max-printify-vat-plus-5-rounded-up"/);
+assert.match(catalogEdge, /pricing:\s*"shirt-production-cost-plus-max-printify-vat-plus-size-margin-rounded-up"/);
 assert.match(catalogEdge, /pricingBase:\s*"production-cost-plus-printify-vat-reserve"/);
 assert.match(catalogEdge, /threeXlPlus:\s*LARGE_SIZE_MARGIN_CENTS \/ 100/);
 assert.match(catalogEdge, /rounding:\s*"whole-euro-ceiling"/);
@@ -364,7 +364,7 @@ assert.doesNotMatch(catalogEdge, /shop-price-v818|shop-catalog-v822|cdn\.shopify
 // same size-tiered cost+margin rounded-up rule server-side, so the displayed and charged prices
 // cannot diverge. Customer checkout still only creates a Pending local order.
 assert.match(checkoutEdge, /mode:\s*"manual-payment-v832"/);
-assert.match(checkoutEdge, /pricing:\s*"shirt-production-cost-plus-max-printify-vat-plus-5-rounded-up"/);
+assert.match(checkoutEdge, /pricing:\s*"shirt-production-cost-plus-max-printify-vat-plus-size-margin-rounded-up"/);
 assert.match(checkoutEdge, /pricingBase:\s*"production-cost-plus-printify-vat-reserve"/);
 assert.match(checkoutEdge, /threeXlPlus:\s*LARGE_SIZE_MARGIN_CENTS \/ 100/);
 assert.match(checkoutEdge, /rounding:\s*"whole-euro-ceiling"/);
