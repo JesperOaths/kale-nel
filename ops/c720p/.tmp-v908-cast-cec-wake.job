@@ -1,0 +1,64 @@
+set -e
+V=/home/jespern/c720p-home-hub/venvs/castwake
+if [ ! -x "$V/bin/python" ]; then
+  python3 -m venv "$V"
+fi
+"$V/bin/python" -m pip install --disable-pip-version-check --quiet --upgrade pip
+"$V/bin/python" -m pip install --disable-pip-version-check --quiet pychromecast
+echo ===PYCHROMECAST_VERSION===
+"$V/bin/python" - <<'PY'
+import pychromecast
+print(getattr(pychromecast,"__version__","unknown"))
+PY
+echo ===TV_BEFORE===
+for p in 6466 6467 8008 8009 8443; do timeout 1 bash -lc "</dev/tcp/192.168.178.169/$p" >/dev/null 2>&1 && echo "OPEN $p" || echo "CLOSED $p"; done
+echo ===CAST_DISCOVERY===
+"$V/bin/python" - <<'PY'
+import time, pychromecast
+casts,browser=pychromecast.get_chromecasts(timeout=8)
+try:
+    print([(getattr(c.cast_info,'friendly_name',None), c.host, c.port, getattr(c.cast_info,'model_name',None)) for c in casts])
+finally:
+    pychromecast.discovery.stop_discovery(browser)
+PY
+echo ===CAST_WAKE===
+"$V/bin/python" - <<'PY'
+import time, pychromecast
+casts,browser=pychromecast.get_listed_chromecasts(friendly_names=["Living Room TV"], discovery_timeout=8)
+try:
+    if not casts:
+        # fall back to direct IP if discovery name changed
+        cc=pychromecast.Chromecast("192.168.178.249")
+    else:
+        cc=casts[0]
+    cc.wait(timeout=10)
+    print("CAST_CONNECTED",cc.name,cc.host,cc.port)
+    cc.start_app("CC1AD845")
+    print("DEFAULT_MEDIA_APP_STARTED")
+    time.sleep(5)
+finally:
+    try: pychromecast.discovery.stop_discovery(browser)
+    except Exception: pass
+PY
+echo ===TV_WAKE_POLL===
+awake=0
+for i in $(seq 1 25); do
+  s6466=0; s8009=0
+  timeout 1 bash -lc "</dev/tcp/192.168.178.169/6466" >/dev/null 2>&1 && s6466=1 || true
+  timeout 1 bash -lc "</dev/tcp/192.168.178.169/8009" >/dev/null 2>&1 && s8009=1 || true
+  echo "POLL_$i 6466=$s6466 8009=$s8009"
+  if [ "$s6466" = 1 ] || [ "$s8009" = 1 ]; then awake=1; break; fi
+  sleep 1
+done
+echo "TV_WAKE_PORT_EVIDENCE=$awake"
+echo ===TV_STATUS===
+/home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh status || true
+echo ===HDMI3===
+/home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh key TV_INPUT_HDMI_3 || true
+sleep 3
+echo ===TV_STATUS_FINAL===
+/home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh status || true
+echo ===HTS_PRESENCE===
+curl -sS --max-time 8 http://127.0.0.1:8789/ht-e6500/power-state || true
+bluetoothctl info 8C:C8:CD:8B:06:3B || true
+echo RESULT=V908_CAST_CEC_WAKE_DONE
