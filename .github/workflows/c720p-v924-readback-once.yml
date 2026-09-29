@@ -12,10 +12,10 @@ permissions:
 jobs:
   trigger:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 3
     steps:
-      - name: Trigger bounded v924 readback
+      - name: Trigger bounded Tuya Smart session probe
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsS --max-time 20 https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-v924-readback-once
+          curl -fsS --max-time 110 https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-tuya-smart-session-probe-v1
