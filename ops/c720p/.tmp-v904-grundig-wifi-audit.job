@@ -1,0 +1,27 @@
+set -e
+echo ===CURRENT_CONTROL_SH===
+sed -n '1,360p' /home/jespern/c720p-home-hub/bin/c720p-grundig-wifi-control.sh 2>/dev/null || true
+echo ===CURRENT_PY===
+sed -n '1,460p' /home/jespern/c720p-home-hub/bin/c720p-grundig-wifi.py 2>/dev/null || true
+echo ===CONFIG_METADATA===
+for f in /home/jespern/.config/c720p-grundig-wifi.env /home/jespern/.config/c720p-home-hub/*grundig* /home/jespern/c720p-home-hub/state/*grundig*; do
+  [ -e "$f" ] || continue
+  stat -c '%y %s %a %n' "$f"
+  sha256sum "$f"
+  grep -E '^(GRUNDIG_TV_IP|HOST|PORT|CERT|KEY|PAIR|CLIENT|DEVICE)=' "$f" 2>/dev/null | sed -E 's#=(.*)#=<redacted>#' || true
+done
+echo ===BACKUP_CANDIDATES===
+find /home/jespern/c720p-backups /home/jespern -maxdepth 6 -type f \( -name 'c720p-grundig-wifi-control.sh*' -o -name 'c720p-grundig-wifi.py*' -o -iname '*grundig*cert*' -o -iname '*grundig*key*' \) -printf '%TY-%Tm-%Td %TH:%TM:%TS %s %p\n' 2>/dev/null | sort | tail -180
+echo ===HELPER_DIFF_CANDIDATES===
+for f in $(find /home/jespern/c720p-backups -type f -name 'c720p-grundig-wifi-control.sh*' 2>/dev/null | tail -8); do
+  echo "---FILE=$f"
+  grep -nE 'ensure-on|POWER|status|pair|cert|key|6466|8009|androidtv|wake|standby|TV_INPUT_HDMI_3' "$f" | head -220
+done
+for f in $(find /home/jespern/c720p-backups -type f -name 'c720p-grundig-wifi.py*' 2>/dev/null | tail -8); do
+  echo "---PYFILE=$f"
+  grep -nE 'ensure|POWER|status|pair|cert|key|6466|8009|androidtv|wake|standby|TV_INPUT_HDMI_3|connect' "$f" | head -260
+done
+echo ===NETWORK_NOW===
+ip neigh show | grep -i '70:61:be:69:c2:d0' || true
+for p in 6466 6467 8009 5555 7000 8008 8443; do timeout 1 bash -lc "</dev/tcp/192.168.178.169/$p" >/dev/null 2>&1 && echo "OPEN $p" || true; done
+echo RESULT=V904_GRUNDIG_WIFI_AUDIT_DONE
