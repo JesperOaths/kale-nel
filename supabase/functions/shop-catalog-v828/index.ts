@@ -8,6 +8,7 @@ const CACHE_FRESH_MS = 60_000;
 const REFRESH_LEASE_MS = 120_000;
 const MAX_PAGES = 100;
 const ROUTE_PREFIX = "__KALENEL_ROUTE_";
+const ROUTE_TITLE_PREFIX = "Kalenel Route ";
 const BOXY_TITLES = new Set(["coral", "daffodil", "dragonfly", "honeysuckle", "horseshoe crab", "seahorse", "seaweed"]);
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl", "https://jesperoaths.github.io"]);
 const text = (value: unknown) => String(value ?? "").trim();
@@ -370,7 +371,7 @@ async function loadProducts(token: string, shopId: number) {
 function sellableCatalogScore(products: any[]) {
   return products.filter((product: any) => {
     if (product?.visible === false) return false;
-    if (text(product?.title).startsWith(ROUTE_PREFIX)) return false;
+    if (text(product?.title).startsWith(ROUTE_PREFIX) || text(product?.title).startsWith(ROUTE_TITLE_PREFIX)) return false;
     const variants = Array.isArray(product?.variants) ? product.variants : [];
     const hasEnabled = variants.some((variant: any) => variant?.is_enabled !== false && variant?.is_available !== false);
     const hasMedia = (Array.isArray(product?.images) && product.images.some((image: any) => text(image?.src)))
