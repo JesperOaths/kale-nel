@@ -1,0 +1,37 @@
+set -e
+BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p
+curl -fsSL "$BASE/patch-tv-hts-ir-coldstart-v918.py" -o /tmp/patch-tv-hts-ir-coldstart-v918.py
+python3 /tmp/patch-tv-hts-ir-coldstart-v918.py
+echo ===SERVICES===
+systemctl --user is-active ht-e6500-surround.service c720p-bluetooth-helper.service
+echo ===UI_VERSION===
+grep -o 'C720P_TV_SURROUND_ACTIONS_V13_IR_COLDSTART_RESTORED' /opt/homeassistant/config/www/c720p-tv-surround.html
+echo ===INITIAL_TV===
+curl -sS --max-time 6 http://127.0.0.1:8789/grundig-tv/power-state || true
+echo
+echo ===INITIAL_HTS===
+curl -sS --max-time 6 http://127.0.0.1:8789/ht-e6500/power-state || true
+echo
+echo ===START_PIPELINE===
+curl -sS --max-time 6 -X POST http://127.0.0.1:8790/pipeline/bluetooth-fast || true
+echo
+echo ===POLL===
+for i in $(seq 1 45); do
+  j=$(curl -sS --max-time 4 http://127.0.0.1:8790/state || true)
+  echo "POLL_$i $j"
+  echo "$j" | grep -q '"state": "connected_verified"' && break
+  echo "$j" | grep -Eq '"failure":|"state": "(TV_POWER_NOT_CONFIRMED|HDMI3_NAVIGATION_FAILED|HTS_POWER_NOT_CONFIRMED|SAMSUNG_DEVICE_NOT_CONNECTED|S5_)' && break
+  sleep 2
+done
+echo ===FINAL_TV===
+curl -sS --max-time 6 http://127.0.0.1:8789/grundig-tv/power-state || true
+echo
+echo ===FINAL_HTS===
+curl -sS --max-time 6 http://127.0.0.1:8789/ht-e6500/power-state || true
+echo
+echo ===BLUEZ===
+bluetoothctl info 8C:C8:CD:8B:06:3B || true
+echo ===AUDIO===
+pactl get-default-sink || true
+pactl list short sinks || true
+echo RESULT=V918_IR_COLDSTART_FIX_TEST_DONE
