@@ -101,7 +101,7 @@ async function catalog() {
   }
   assert.ok([...names].some(name => name.includes('despinoza')), 'catalog missing Despinoza merch');
 
-  const counts = { normal: 0, boxy: 0, merch: 0 };
+  const counts = { normal: 0, merch: 0 };
   const skus = new Set();
   const missingArtwork = [];
   for (const product of payload.products) {
@@ -134,10 +134,17 @@ async function catalog() {
   }
 
   assert.deepEqual(missingArtwork, [], `every clothing article must have artwork first; missing: ${missingArtwork.join(', ')}`);
-  assert.ok(counts.normal > 0, 'catalog has no Classic products');
-  assert.ok(counts.boxy > 0, 'catalog has no Oversized Boxy products');
+  assert.ok(counts.normal > 0, 'catalog has no Normal products');
   assert.ok(counts.merch > 0, 'catalog has no Merch products');
-  console.log(`shop-catalog-v828: HTTP 200, products=${payload.products.length}, variants=${skus.size}, classic=${counts.normal}, boxy=${counts.boxy}, merch=${counts.merch}, ${elapsed}ms`);
+  assert.equal(payload.products.some(product => String(product?.collection || '') === 'boxy'), false, 'boxy collection must not be exposed');
+  assert.equal(payload.products.some(product => String(product?.baseKey || '') === '1382'), false, 'oversized boxy blueprint 1382 must not be exposed');
+  for (const copiedDesign of ['coral','daffodil','dragonfly','honeysuckle','horseshoe crab','kelp','seahorse']) {
+    const matches = payload.products.filter(product => String(product?.name || '').trim().toLowerCase() === copiedDesign);
+    assert.equal(matches.length, 1, `normal collection must expose exactly one ${copiedDesign} design`);
+    assert.equal(String(matches[0]?.baseKey || ''), '6', `${copiedDesign} must use Gildan 5000 blueprint 6`);
+    assert.equal(String(matches[0]?.collection || ''), 'normal', `${copiedDesign} Gildan copy must be in the normal collection`);
+  }
+  console.log(`shop-catalog-v828: HTTP 200, products=${payload.products.length}, variants=${skus.size}, normal=${counts.normal}, merch=${counts.merch}, ${elapsed}ms`);
   return payload;
 }
 
