@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
-import { parseEcbUsdRate, retailEurCentsFromUsdCost, usdCentsToEurCents } from './supabase/functions/_shared/shop-fx.mjs';
+import { applyPrintifyVatReserveEurCents, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_BPS, retailEurCentsFromUsdCost, retailEurCentsFromUsdCostAfterVat, usdCentsToEurCents } from './supabase/functions/_shared/shop-fx.mjs';
 import fs from 'node:fs';
 
 const read = path => fs.readFileSync(path, 'utf8');
@@ -55,7 +55,7 @@ const store = read('shop/store.js');
 const refresh = read('shop/live-catalog-refresh-v818.js');
 
 // v839 keeps the Bruis checkout behavior and adds exact tote handle-color selection,
-// restores pure converted production cost + €5 pricing, and exposes a final total
+// uses a VAT-reserved production cost + €5 shirt margin, and exposes a final total
 // that includes the address-specific shipping quote.
 assert.match(index, /direct-commerce-v832\.js/);
 assert.match(index, /manual-checkout-v825\.js/);
@@ -124,7 +124,7 @@ assert.match(directCommerce, /delivery-estimate-v833\.js/);
 assert.match(directCommerce, /shop-delivery-preview-v833/);
 assert.match(directCommerce, /X-Kalenel-Catalog-Authority/);
 assert.match(directCommerce, /bruis-direct-v836/);
-assert.match(directCommerce, /pricing:'production-cost-plus-size-margin-rounded-up'/);
+assert.match(directCommerce, /pricing:'shirt-production-cost-plus-max-printify-vat-plus-5-rounded-up'/);
 assert.match(directCommerce, /artworkFirstGallery:true/);
 assert.match(directCommerce, /wholeEuroPricing:true/);
 assert.match(directCommerce, /usesShopifyCatalogApi:false/);
@@ -306,6 +306,9 @@ assert.equal(ecbSample.usd_eur, 0.8666262241);
 assert.equal(usdCentsToEurCents(1661, ecbSample.usd_eur), 1439);
 assert.equal(retailEurCentsFromUsdCost(1661, ecbSample.usd_eur, 500), 2000);
 assert.equal(retailEurCentsFromUsdCost(1661, ecbSample.usd_eur, 500, 2300), 2300);
+assert.equal(PRINTIFY_VAT_RESERVE_BPS, 2700);
+assert.equal(applyPrintifyVatReserveEurCents(1439), 1828);
+assert.equal(retailEurCentsFromUsdCostAfterVat(1661, ecbSample.usd_eur, 500), 2400);
 assert.equal(usdCentsToEurCents(1039, ecbSample.usd_eur), 900);
 assert.match(fxShared, /shop_fx_rates/);
 assert.match(fxShared, /eurofxref-daily\.xml/);
@@ -341,8 +344,8 @@ assert.match(catalogEdge, /label:\s*"Artwork PNG"/);
 assert.match(catalogEdge, /const mockups = \[\.\.\.artwork, \.\.\.garment\]/);
 assert.match(catalogEdge, /source:\s*"printify-live-v851"/);
 assert.match(catalogEdge, /mode:\s*"bruis-direct-catalog-v838"/);
-assert.match(catalogEdge, /pricing:\s*"production-cost-plus-size-margin-rounded-up"/);
-assert.match(catalogEdge, /pricingBase:\s*"production-cost"/);
+assert.match(catalogEdge, /pricing:\s*"shirt-production-cost-plus-max-printify-vat-plus-5-rounded-up"/);
+assert.match(catalogEdge, /pricingBase:\s*"production-cost-plus-printify-vat-reserve"/);
 assert.match(catalogEdge, /threeXlPlus:\s*LARGE_SIZE_MARGIN_CENTS \/ 100/);
 assert.match(catalogEdge, /rounding:\s*"whole-euro-ceiling"/);
 assert.match(catalogEdge, /artworkFirst:\s*true/);
@@ -361,8 +364,8 @@ assert.doesNotMatch(catalogEdge, /shop-price-v818|shop-catalog-v822|cdn\.shopify
 // same size-tiered cost+margin rounded-up rule server-side, so the displayed and charged prices
 // cannot diverge. Customer checkout still only creates a Pending local order.
 assert.match(checkoutEdge, /mode:\s*"manual-payment-v832"/);
-assert.match(checkoutEdge, /pricing:\s*"production-cost-plus-size-margin-rounded-up"/);
-assert.match(checkoutEdge, /pricingBase:\s*"production-cost"/);
+assert.match(checkoutEdge, /pricing:\s*"shirt-production-cost-plus-max-printify-vat-plus-5-rounded-up"/);
+assert.match(checkoutEdge, /pricingBase:\s*"production-cost-plus-printify-vat-reserve"/);
 assert.match(checkoutEdge, /threeXlPlus:\s*LARGE_SIZE_MARGIN_CENTS \/ 100/);
 assert.match(checkoutEdge, /rounding:\s*"whole-euro-ceiling"/);
 assert.match(checkoutEdge, /const MARGIN_CENTS = 500/);
