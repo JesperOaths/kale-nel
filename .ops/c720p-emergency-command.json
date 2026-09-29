@@ -1,8 +1,8 @@
 {
   "enabled": true,
-  "id": 990038,
-  "lease_token": "f918a2b3-9038-4f18-a919-990038000001",
+  "id": 990039,
+  "lease_token": "f918a2b3-9039-4f18-a919-990039000001",
   "timeout_seconds": 300,
   "attempts": 1,
-  "command": "bash -lc 'LOCK=/tmp/c720p-job-990038.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; curl -fsSL --max-time 30 https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p/patch-tv-hts-ir-coldstart-v918.py -o /tmp/patch-tv-hts-ir-coldstart-v918.py && python3 /tmp/patch-tv-hts-ir-coldstart-v918.py'"
+  "command": "bash -lc 'LOCK=/tmp/c720p-job-990039.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; BASE=https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p; curl -fsSL --max-time 30 \"$BASE/patch-tv-hts-ir-coldstart-v918.py\" -o /tmp/patch-tv-hts-ir-coldstart-v918.py && python3 /tmp/patch-tv-hts-ir-coldstart-v918.py && curl -fsSL --max-time 30 \"$BASE/test-tv-hts-v874.py\" -o /tmp/test-tv-hts-v874.py && python3 /tmp/test-tv-hts-v874.py'"
 }
