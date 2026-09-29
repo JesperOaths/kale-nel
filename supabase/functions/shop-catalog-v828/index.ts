@@ -299,26 +299,45 @@ async function resolveUsdEurRateDirect() {
   }
 }
 
-async function printify(token: string, path: string, timeoutMs = 6500) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(`${PRINTIFY_BASE}${path}`, {
-      signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "User-Agent": "Kalenel-Direct-Catalog/8.50",
-      },
-    });
-    const raw = await response.text();
-    let payload: any = null;
-    try { payload = raw ? JSON.parse(raw) : null; } catch { payload = raw; }
-    if (!response.ok) throw new Error(`printify_${response.status}:${text(payload?.message || payload?.error || raw).slice(0, 180)}`);
-    return payload;
-  } finally {
-    clearTimeout(timer);
+async function printify(token: string, path: string, timeoutMs = 9000) {
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(`${PRINTIFY_BASE}${path}`, {
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "User-Agent": "Kalenel-Direct-Catalog/8.51",
+        },
+      });
+      const raw = await response.text();
+      let payload: any = null;
+      try { payload = raw ? JSON.parse(raw) : null; } catch { payload = raw; }
+      if (response.ok) return payload;
+      const error = new Error(`printify_${response.status}:${text(payload?.message || payload?.error || raw).slice(0, 180)}`);
+      lastError = error;
+      if (attempt < 3 && (response.status === 429 || response.status >= 500)) {
+        await new Promise(resolve => setTimeout(resolve, 350 * attempt));
+        continue;
+      }
+      throw error;
+    } catch (error) {
+      lastError = error;
+      const transient = error instanceof DOMException && error.name === "AbortError"
+        || error instanceof TypeError;
+      if (attempt < 3 && transient) {
+        await new Promise(resolve => setTimeout(resolve, 350 * attempt));
+        continue;
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
   }
+  throw lastError instanceof Error ? lastError : new Error("printify_request_failed");
 }
 
 async function resolveToken(supabase: any) {
@@ -415,7 +434,15 @@ async function loadAccountProducts(token: string) {
     .filter((result): result is PromiseFulfilledResult<any> => result.status === "fulfilled")
     .map(result => result.value);
 
-  if (!readable.length) throw new Error("no_readable_printify_shop");
+  if (!readable.length) {
+    const reasons = results
+      .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+      .map(result => text(result.reason instanceof Error ? result.reason.message : result.reason))
+      .filter(Boolean)
+      .slice(0, 3)
+      .join(" | ");
+    throw new Error(`no_readable_printify_shop${reasons ? `:${reasons}` : ""}`);
+  }
 
   return {
     shops: readable.map(entry => ({
