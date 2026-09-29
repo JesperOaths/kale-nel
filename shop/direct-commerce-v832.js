@@ -89,7 +89,7 @@
     catalogAuthority:'bruis-direct-v836',
     checkoutAuthority:'shop-manual-checkout-v832',
     deliveryPreview:'shop-delivery-preview-v833',
-    pricing:'shirt-production-cost-plus-max-printify-vat-plus-5-rounded-up',
+    pricing:'shirt-production-cost-plus-max-printify-vat-plus-size-margin-rounded-up',
     wholeEuroPricing:true,
     artworkFirstGallery:true,
     usesShopifyCatalogApi:false,
