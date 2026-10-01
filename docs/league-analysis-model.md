@@ -860,7 +860,16 @@ Aggregate event-presence rates use pooled numerators and denominators rather tha
 For example, Last-20 neutral-objective presence is:
 `sum(joined team objective encounters) / sum(team objective encounters)`.
 
-A game with one objective encounter therefore does not receive the same weight as a game with six. The analyzer keeps the mean of per-game percentages only as a separately labelled descriptive field. Mid-routing objective presence and win/loss objective-presence splits follow the same pooled-denominator principle.
+The same rule applies to other event percentages:
+- **Early KP** = pooled early player kill/assist involvements / pooled early team champion kills.
+- **Objective-context death %** = pooled objective-context deaths / pooled deaths actually classified from Riot timeline events.
+- **Death before enemy objective %** = pooled deaths followed by an enemy neutral objective inside the configured evidence window / pooled classified timeline deaths.
+
+A game with one relevant event therefore does not receive the same weight as a game with six. The analyzer keeps means of per-game percentages only as separately labelled descriptive diagnostics.
+
+For timeline-derived death classifications, the denominator is the number of deaths actually represented/classified in the timeline evidence, not blindly the match-summary death total. The full reported death total remains available for coverage checks. This keeps missing or incomplete timeline evidence from silently entering the denominator as if it had been classified.
+
+Mid-routing objective presence and win/loss objective-presence splits follow the same pooled-denominator principle. Temporal labels such as "death before enemy objective" describe sequence only; they do not claim the death caused the objective loss.
 
 ## Objective-family evidence
 
