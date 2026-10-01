@@ -41,6 +41,18 @@ Do not replace a direct match-level comparison with a generic population average
 - DQI, if restored, is a 0–10 metric. Do not substitute another formula.
 - AGOR remains undefined until its historical formula is recovered.
 
+## Mixed-role samples
+
+The page may show an overall Last-20 summary across all eligible Summoner's Rift games, but **behavioral coaching is role-specific**.
+
+Choose the most common normalized role in the Last 20 as the primary coaching role. Then:
+- role-sensitive peer comparisons use only games in that role,
+- lane, item timing, roaming, first impact, resource-conversion and win/loss coaching use only that role,
+- the broader personal coaching baseline is filtered to that same role,
+- champion-specific judgments compare champion+role samples with the player's own primary-role baseline.
+
+Do not mix ADC and SUPPORT behavior into one coaching average merely because both occurred in the Last 20.
+
 ## Role normalization
 
 - `UTILITY`, `SUPPORT` → **SUPPORT**
