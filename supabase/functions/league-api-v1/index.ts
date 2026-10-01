@@ -96,11 +96,14 @@ async function trimAnonymousRows(sb:any,table:string,profileId:string,ownerId:nu
   return ids.length;
 }
 async function trimAnonymousMatchCache(sb:any,profileId:string,ownerId:number){
-  const {data,error}=await sb.from("league_match_cache_v1").select("id").eq("profile_id",profileId).eq("owner_player_id",ownerId).order("game_start_at",{ascending:false}).range(PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE,PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE+199);
+  const {data,error}=await sb.from("league_match_cache_v1").select("match_id").eq("profile_id",profileId).eq("owner_player_id",ownerId).order("game_start_at",{ascending:false}).order("updated_at",{ascending:false}).range(PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE,PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE+199);
   if(error)throw error;
-  const ids=(data||[]).map((x:any)=>x.id).filter(Boolean);
-  if(ids.length){const{error:delError}=await sb.from("league_match_cache_v1").delete().in("id",ids);if(delError)throw delError;}
-  return ids.length;
+  const matchIds=(data||[]).map((x:any)=>text(x.match_id)).filter(Boolean);
+  if(matchIds.length){
+    const{error:delError}=await sb.from("league_match_cache_v1").delete().eq("profile_id",profileId).eq("owner_player_id",ownerId).in("match_id",matchIds);
+    if(delError)throw delError;
+  }
+  return matchIds.length;
 }
 async function riot(url:string, requestKey="", allowServerKey=true){
   const key=(allowServerKey?RIOT_KEY:"")||text(requestKey);
