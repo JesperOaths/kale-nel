@@ -15,6 +15,10 @@ assert.match(workflow, /'check-live-data-plane\.mjs'/, 'changes to the shared da
 assert.match(workflow, /node --check check-live-data-plane\.mjs/, 'visual audit must syntax-check its shared data-plane preflight');
 assert.match(workflow, /node scripts\/full-live-visual-fixtures-v801\.mjs provision/, 'visual audit must provision disposable identities through the REST fixture manager when the data plane is healthy');
 assert.match(workflow, /node scripts\/full-live-visual-fixtures-v801\.mjs cleanup/, 'visual audit must retain REST fixture cleanup for attempted provisioning');
+assert.match(fixtures, /async function cleanupStaleVisualFixtures\(\)/, 'visual cleanup must sweep stale dummy/hidden fixtures left by interrupted historical runs');
+assert.match(fixtures, /is_dummy:\s*'eq\.true'/, 'stale fixture sweep must be restricted to dummy accounts');
+assert.match(fixtures, /hidden_from_public:\s*'eq\.true'/, 'stale fixture sweep must be restricted to hidden accounts');
+assert.match(fixtures, /\^Visual\(\?:A\|B\|Family\)_\\d\+\$/i, 'stale fixture sweep must require the reserved visual-fixture name shape');
 assert.match(workflow, /node --check scripts\/full-live-visual-fixtures-v801\.mjs/, 'visual audit must syntax-check the REST fixture manager before use');
 assert.doesNotMatch(workflow, /\bpsql\b|SUPABASE_DB_URL|\.pooler\.supabase\.com/, 'visual audit must not depend on direct Postgres or Supavisor connectivity');
 assert.match(workflow, /if-no-files-found:\s*warn/, 'pre-screenshot infrastructure failures must not add a second artifact-upload failure');
