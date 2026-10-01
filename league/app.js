@@ -1151,6 +1151,15 @@ function niceCeil(value,step){
   const x=Math.max(step,Math.abs(Number(value)||0));
   return Math.ceil(x/step)*step;
 }
+function formatChartValue(value,unit){
+  if(!hasNum(value))return'n/a';
+  const v=Number(value);
+  if(unit==='%')return fmtPct(v);
+  if(unit==='int')return fmtInt(v);
+  if(unit==='signed')return signed(v,0);
+  if(unit==='signed1')return signed(v,1);
+  return fmt(v,2);
+}
 function chartSvg(points,spec){
   const vals=points.map(p=>Number(p.value)).filter(Number.isFinite);if(vals.length<3)return null;
   const valid=points.map((p,i)=>({i,v:Number(p.value)})).filter(x=>Number.isFinite(x.v));
