@@ -30,6 +30,10 @@ assert.ok(api.includes('ANALYSIS_CACHE_METADATA_LIMIT=100'),'League must retain 
 assert.ok(api.includes('ANALYSIS_DEEP_TARGET_GAMES=20')&&api.includes('ANALYSIS_DEEP_BATCH_SIZE=20'),'League must load timeline JSON only in bounded batches until the final Last-20 is satisfied');
 assert.ok(api.includes('metadata_then_bounded_timelines_v1')&&api.includes('avoidsHistoricalTimelinePayload:true'),'Data Quality must expose the reduced-pressure staged cache-read strategy');
 assert.ok(api.includes('rankNeedIds.length')&&api.includes('select("match_id,match_json")'),'Peer-rank backfill must fetch match JSON only for unresolved targets');
+assert.ok(api.includes('.not("timeline_json","is",null)')&&api.includes('select("match_id,peer_rank_json,peer_rank_fetched_at")'),'Fetch-start cache detection must use null filters instead of transferring timeline blobs');
+assert.ok(api.includes('metadata_then_selected_reports_v1'),'Latest-report retrieval must select metadata first and hydrate only current/previous report payloads');
+assert.ok(api.includes('select("id,source_kind,analyzer_version,sample_match_ids,created_at")'),'Report-history scan must exclude report_data/data_quality blobs');
+assert.ok(api.includes('select("id,report_data,data_quality")')&&api.includes('detailIds=[currentMeta?.id,previousMeta?.id]'),'Only selected current/previous analyses may load full report payloads');
 assert.ok(!api.includes('select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,match_json,timeline_json,peer_rank_json,peer_rank_fetched_at,fetch_error").eq("profile_id",p.id).not("match_json","is",null).order("game_start_at",{ascending:false}).limit(100)'),'Analyzer must never return to one-shot 100 match+timeline JSON reads');
 assert.ok(api.includes('allowServerRiotKey=viewer.anonymous!==true'),'Anonymous League workspaces must never inherit the private server Riot key');
 assert.ok(api.includes('const key=(allowServerKey?RIOT_KEY:"")||text(requestKey)'),'Riot client must enforce the anonymous/server-key boundary');
