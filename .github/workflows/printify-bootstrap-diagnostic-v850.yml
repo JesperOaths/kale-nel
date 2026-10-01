@@ -18,7 +18,11 @@ jobs:
         run: |
           set -euo pipefail
           URL='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828'
-          body="$(curl --silent --show-error --fail --max-time 30 "$URL?diagnostic=1&catalog_audit=1")"
+          response="$(mktemp)"
+          status="$(curl --silent --show-error --max-time 30 --output "$response" --write-out '%{http_code}' "$URL?diagnostic=1&catalog_audit=1" || true)"
+          body="$(cat "$response")"
+          echo "HTTP $status"
+          printf '%s\n' "$body"
           printf '%s\n' "$body" | jq '{
             ok,
             mode,
