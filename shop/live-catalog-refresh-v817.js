@@ -1,8 +1,8 @@
 (() => {
   'use strict';
 
-  const POLL_MS = 30 * 1000;
-  const FIRST_POLL_MS = 5 * 1000;
+  const POLL_MS = 30 * 60 * 1000;
+  const FIRST_POLL_MS = 15 * 60 * 1000;
   let lastSignature = '';
   let pendingReload = false;
   let checking = false;
@@ -44,7 +44,7 @@
   };
 
   async function checkCatalog(){
-    if(checking || typeof loadLiveCatalog !== 'function') return;
+    if(checking || typeof loadLiveCatalog !== 'function' || document.visibilityState === 'hidden' || navigator.onLine === false) return;
     checking = true;
     try {
       const live = await loadLiveCatalog();
@@ -71,7 +71,6 @@
   document.addEventListener('visibilitychange', () => {
     if(document.visibilityState === 'visible'){
       if(pendingReload) maybeReload();
-      else checkCatalog();
     }
   });
 })();
