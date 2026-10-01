@@ -29,6 +29,9 @@ ok(backend.includes('goldSwingTo15'), 'clean solo-kill conversion must preserve 
 ok(backend.includes('csSwingTo15'), 'clean solo-kill conversion must preserve CS swing to 15');
 ok(backend.includes('Number(x.goldSwingTo15)>=200'), 'clean solo-kill conversion threshold must remain +200g by 15');
 ok(backend.includes('soloKillConversionRate'), 'aggregate clean solo-kill conversion rate must remain exported');
+ok(backend.includes('diedBeforeNextShop'), 'post-solo-kill banking model must preserve death-before-shop ordering');
+ok(backend.includes('nextShopDelaySec'), 'post-solo-kill banking model must preserve time to next detected shop');
+ok(backend.includes('soloKillDeathsBeforeShopRate'), 'aggregate post-solo-kill death-before-shop rate must remain exported');
 ok(backend.includes('visionMission'), 'vision-action safety model must remain in analyzer');
 ok(backend.includes('Number(d.tMs)-Number(v.tMs)<=20000'), 'vision-action death window must remain 20 seconds');
 ok(backend.includes('dist2(pos,v)<=2500*2500'), 'vision-action death spatial radius must remain 2500 units');
