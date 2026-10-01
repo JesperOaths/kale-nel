@@ -5,12 +5,7 @@
    independently versioned shop/admin pages follow their own declared page version. */
 import fs from 'node:fs';
 import path from 'node:path';
-import {
-  expectedPageVersion,
-  isIndependentPageVersion,
-  listTrackedFiles,
-  readRootVersion,
-} from './scripts/published-page-inventory.mjs';
+import { listTrackedFiles, readRootVersion } from './scripts/published-page-inventory.mjs';
 
 const root=process.cwd();
 const rootVersion=readRootVersion(root);
@@ -29,10 +24,7 @@ function isArchivedFile(rel){
   if(/^README_v\d+/i.test(base)||/^PATCH_NOTES_v\d+/i.test(base)||/^GEJAST_v\d+/i.test(base)) return true;
   return false;
 }
-function expectedOwnerVersion(rel,text){
-  if(isIndependentPageVersion(rel)) return expectedPageVersion(rel,rootVersion,text);
-  return rootVersion;
-}
+function expectedOwnerVersion(){ return rootVersion; }
 function isAllowedLegacyReference(rel,found){
   // These are compatibility/test references, not the runtime version owner.
   if(found==='v827'&&rel==='scripts/test-shop-production-connection-v827.mjs') return true;
@@ -54,7 +46,7 @@ for(const rel of listTrackedFiles(root)){
   const file=path.join(root,rel);
   if(!fs.existsSync(file)) continue;
   const text=fs.readFileSync(file,'utf8');
-  const expected=expectedOwnerVersion(rel,text);
+  const expected=expectedOwnerVersion();
   scannedFiles++;
   for(const match of text.matchAll(versionPattern)){
     const found=normalizeVersion(match[0]);
@@ -69,5 +61,5 @@ if(offenders.length){
   for(const item of offenders) console.error(`- ${item.file}: ${item.text} -> ${item.found}; expected ${item.expected}`);
   process.exit(1);
 }
-console.log(`No version drift found across ${scannedFiles} tracked runtime source files. Root VERSION is ${rootVersion}; independent page owners were validated against their own declarations.`);
-console.log('RESULT=VERSION_DRIFT_OWNER_AWARE_PASS');
+console.log(`No site-wide page version drift found across ${scannedFiles} tracked runtime source files. Every page-version owner follows root VERSION ${rootVersion}.`);
+console.log('RESULT=VERSION_DRIFT_SITE_WIDE_PASS');
