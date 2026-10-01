@@ -17,6 +17,7 @@ import {
   resolveUsdEurRate,
   retailEurCentsFromUsdCost,
   retailEurCentsFromUsdCostAfterVat,
+  stableClassicShirtRetailEurCents,
   usdCentsToEurCents,
 } from "../_shared/shop-fx.mjs";
 
@@ -424,17 +425,25 @@ Deno.serve(async (req: Request) => {
       if (!freshVariant || freshVariant?.is_enabled === false || freshVariant?.is_available === false || !isCustomerVariantAllowed(freshProduct, freshVariant)) throw new Error(`Selected variant is unavailable: ${clean(row.cached.product.name)}`);
       const color = colorFromVariant(freshProduct, freshVariant) || "White";
       const variantSize = sizeFromVariant(freshProduct, freshVariant) || text(cachedVariant.size).toUpperCase();
-      const unit = isShirtProduct(freshProduct)
-        ? retailEurCentsFromUsdCostAfterVat(
+      const unit = String(freshProduct?.blueprint_id || "") === "6"
+        ? stableClassicShirtRetailEurCents(
             freshVariant?.cost,
             fx,
-            marginEurCentsForSize(variantSize, MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS),
+            variantSize,
+            MARGIN_CENTS,
+            LARGE_SIZE_MARGIN_CENTS,
           )
-        : retailEurCentsFromUsdCost(
-            freshVariant?.cost,
-            fx,
-            marginEurCentsForSize(variantSize, MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS),
-          );
+        : isShirtProduct(freshProduct)
+          ? retailEurCentsFromUsdCostAfterVat(
+              freshVariant?.cost,
+              fx,
+              marginEurCentsForSize(variantSize, MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS),
+            )
+          : retailEurCentsFromUsdCost(
+              freshVariant?.cost,
+              fx,
+              marginEurCentsForSize(variantSize, MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS),
+            );
       if (!unit) throw new Error(`Invalid authoritative production cost: ${clean(row.cached.product.name)}`);
       const size = isToteProduct(freshProduct) ? `${color} handles` : variantSize;
       subtotalCents += unit * qty;
@@ -500,10 +509,12 @@ Deno.serve(async (req: Request) => {
         const routeSafeRawUsdCost = routeSnapshotCosts.length
           ? Math.max(...routeSnapshotCosts)
           : Math.max(...candidates.map((candidate: any) => Number(candidate?.source_cost_cents || 0)));
-        const routeSafeUnit = retailEurCentsFromUsdCostAfterVat(
+        const routeSafeUnit = stableClassicShirtRetailEurCents(
           routeSafeRawUsdCost,
           fx,
-          marginEurCentsForSize(variantSize, MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS),
+          variantSize,
+          MARGIN_CENTS,
+          LARGE_SIZE_MARGIN_CENTS,
         );
         if (routeSafeUnit > unit) {
           subtotalCents += (routeSafeUnit - unit) * qty;
