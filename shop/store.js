@@ -1,4 +1,6 @@
 const FALLBACK_PRODUCTS = [];
+const catalogCacheKey = 'bruisCatalogLastGoodV1';
+const catalogCacheMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
 const cartKey = 'bruisCartV3';
 const LIVE_CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828';
 // Supabase legacy anon key is intentionally publishable/browser-safe. RLS blocks
@@ -152,13 +154,41 @@ async function loadLiveCatalog(){
   }
 }
 
+function readLastGoodCatalog(){
+  try {
+    const cached = JSON.parse(localStorage.getItem(catalogCacheKey) || 'null');
+    if(!cached || !Array.isArray(cached.products) || !cached.products.length) return [];
+    const savedAt = Number(cached.savedAt || 0);
+    if(!savedAt || Date.now() - savedAt > catalogCacheMaxAgeMs) return [];
+    return cached.products.map(normalizeProduct)
+      .filter(p => p.baseKey !== '1382' && p.name && p.mockups.length && p.price > 0);
+  } catch {
+    return [];
+  }
+}
+
+function saveLastGoodCatalog(list){
+  if(!Array.isArray(list) || !list.length) return;
+  try {
+    localStorage.setItem(catalogCacheKey, JSON.stringify({
+      savedAt: Date.now(),
+      products: list
+    }));
+  } catch {}
+}
+
 async function loadCatalog(){
   for(let attempt = 0; attempt < 3; attempt += 1){
     const liveProducts = await loadLiveCatalog();
-    if(liveProducts.length) return sortByShirtBase(liveProducts);
+    if(liveProducts.length){
+      const sorted = sortByShirtBase(liveProducts);
+      saveLastGoodCatalog(sorted);
+      return sorted;
+    }
     if(attempt < 2) await new Promise(resolve => window.setTimeout(resolve, 1200 * (attempt + 1)));
   }
-  return [];
+  const cachedProducts = readLastGoodCatalog();
+  return cachedProducts.length ? sortByShirtBase(cachedProducts) : [];
 }
 
 function setCollectionCountsStatus(label){
