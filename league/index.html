@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends playstyle analysis with evidence-backed Last-20 coaching and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261002-league-web-v127">
+  <link rel="stylesheet" href="/league/styles.css?v=20261002-league-web-v128">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261001-public-bootstrap-r2"></script>
 </head>
@@ -172,6 +172,7 @@
           <a href="#rank-comparison">Rank comparison</a>
           <a href="#lane-economy">Lane & economy</a>
           <a href="#decisions">Fights & objectives</a>
+          <a href="#game-arcs">Game arcs</a>
           <a href="#match-history">Match story</a>
           <a href="#last20">Evidence table</a>
           <a href="#spatialReview">Map</a>
@@ -316,6 +317,16 @@
           <div class="review-queue" id="replayReviewQueue"></div>
         </section>
 
+        <section class="panel game-arcs-panel" id="game-arcs">
+          <div class="section-head">
+            <div><p class="eyebrow">How games unfold</p><h2>Repeated game arcs & turning points</h2></div>
+            <span class="section-hint">Role-relative state transitions and repeated evidence from the current coaching cohort. Patterns describe what happened; they do not prove why the result happened.</span>
+          </div>
+          <div class="game-arc-patterns" id="gameArcPatterns"></div>
+          <div class="game-arc-turning-points" id="gameArcTurningPoints"></div>
+          <p class="source-note" id="gameArcNote"></p>
+        </section>
+
         <section class="panel match-history-panel" id="match-history">
           <div class="section-head">
             <div><p class="eyebrow">Recent match story</p><h2>What happened game by game?</h2></div>
@@ -426,6 +437,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261002-league-web-v127" defer></script>
+  <script src="/league/app.js?v=20261002-league-web-v128" defer></script>
 </body>
 </html>
