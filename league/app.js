@@ -209,9 +209,15 @@ function worldToMapPoint(x,y){
   const py=(bx.maxY-yy)/(bx.maxY-bx.minY)*bx.size;
   return{x:Math.max(0,Math.min(bx.size,px)),y:Math.max(0,Math.min(bx.size,py))};
 }
+const VERIFIED_DDRAGON_FALLBACK='16.19.1';
+function map11ImageForVersion(version){
+  return 'https://ddragon.leagueoflegends.com/cdn/'+encodeURIComponent(version||VERIFIED_DDRAGON_FALLBACK)+'/img/map/map11.png';
+}
 function map11Image(){
-  const version=state.ddVersion||'6.8.1';
-  return 'https://ddragon.leagueoflegends.com/cdn/'+encodeURIComponent(version)+'/img/map/map11.png';
+  return map11ImageForVersion(state.ddVersion||VERIFIED_DDRAGON_FALLBACK);
+}
+function map11FallbackImage(){
+  return map11ImageForVersion(VERIFIED_DDRAGON_FALLBACK);
 }
 function mapPointSvg(point,kind,index=null){
   const p=worldToMapPoint(point.x,point.y);if(!p)return'';
@@ -271,7 +277,7 @@ function perGameSpatialHtml(g){
     return '<div class="detail-map-grid"><div class="detail-note map-unavailable"><strong>Map renderer unavailable for mapId '+esc(String(mapId||'unknown'))+'.</strong><br>Raw Riot coordinates remain preserved, but this match is not forced onto the Summoner’s Rift projection.</div></div>';
   }
   const deaths=perGameDeathPoints(g),wards=(Array.isArray(g.wards)?g.wards:[]).filter(x=>hasNum(x.x)&&hasNum(x.y)).slice().sort((a,b)=>Number(a.time||0)-Number(b.time||0)),roams=perGameRoamPaths(g);
-  const image=map11Image(),fallback='https://ddragon.leagueoflegends.com/cdn/6.8.1/img/map/map11.png';
+  const image=map11Image(),fallback=map11FallbackImage();
   const map=(points,kind,empty,numbered)=>points.length
     ?'<div class="map-stage"><img src="'+esc(image)+'" data-map-fallback="'+esc(fallback)+'" alt="Summoner’s Rift '+esc(kind==='death'?'death':'ward')+' map for this match"><svg viewBox="0 0 512 512" preserveAspectRatio="none" aria-label="'+esc(kind==='death'?'Chronological death positions':'Ward positions')+'">'+points.map((p,i)=>mapPointSvg(p,kind,numbered?i:null)).join('')+'</svg></div>'
     :'<div class="spatial-empty">'+esc(empty)+'</div>';
@@ -291,9 +297,9 @@ function perGameSpatialHtml(g){
 }
 
 const DEATH_PATTERN_DEFS={
-  objective_side_lane:{label:'Side lane while objective is forming',why:'You died isolated in a side lane shortly before a team-contested neutral objective.',action:'Collect the side wave earlier, then leave enough time to reset and reconnect before the objective setup window.'},
+  objective_side_lane:{label:'Side-lane death before team-contested objective',why:'You died isolated in a side lane within 90 seconds before a neutral objective with supported team-contest evidence.',action:'Collect the side wave earlier, then leave enough time to reset and reconnect before the likely contest window.'},
   vision_facecheck:{label:'Vision action without cover',why:'A ward placement/clear was followed quickly by a high-risk death without nearby allied cover.',action:'Keep the vision goal, but take the route with a teammate or use safer information before entering contested fog.'},
-  post_play_giveback:{label:'Give-back after your own play',why:'You died soon after your own kill/assist impact and the death was high-risk or untraded.',action:'After winning a play, pause the chase: bank gold, reset threat ranges, and convert the advantage before re-entering danger.'},
+  post_play_giveback:{label:'Give-back after your own play',why:'You died soon after your own kill/assist impact and the death was both high-risk and untraded.',action:'After winning a play, pause the chase: bank gold, reset threat ranges, and convert the advantage before re-entering danger.'},
   outnumbered_catch:{label:'Caught while locally outnumbered',why:'The death occurred with at least two more nearby enemies than allies.',action:'Count who can actually arrive in the next few seconds; leave before the map collapses rather than when enemies are already on screen.'},
   deep_isolation:{label:'Deep + isolated overextension',why:'You were both on the enemy side of the map and separated from nearby allies.',action:'Push only to the last point where you still have an exit route; when information disappears, rotate back through controlled space.'},
   pre_objective_death:{label:'Death before enemy objective conversion',why:'The death was followed shortly by an enemy contested neutral objective.',action:'Treat the minute before a likely objective as protected time: reset earlier, move with information, and avoid low-value fights.'},
@@ -333,7 +339,7 @@ function deathPatternEntries(r){
   return out;
 }
 function deathPatternMap(entries){
-  const image=map11Image(),fallback='https://ddragon.leagueoflegends.com/cdn/6.8.1/img/map/map11.png',points=entries.filter(x=>hasNum(x.x)&&hasNum(x.y));
+  const image=map11Image(),fallback=map11FallbackImage(),points=entries.filter(x=>hasNum(x.x)&&hasNum(x.y));
   return points.length?'<div class="map-stage"><img src="'+esc(image)+'" data-map-fallback="'+esc(fallback)+'" alt="Summoner’s Rift map for '+esc(entries[0]?.patternLabel||'death pattern')+'"><svg viewBox="0 0 512 512" preserveAspectRatio="none" aria-label="'+esc(entries[0]?.patternLabel||'death pattern')+' positions">'+points.map((p,i)=>mapPointSvg({...p,tags:[p.patternLabel,p.detail].filter(Boolean)},'death',i)).join('')+'</svg></div>':'<div class="spatial-empty">No coordinate evidence is available for this pattern.</div>';
 }
 function renderSpatial(r){
@@ -344,7 +350,7 @@ function renderSpatial(r){
     const def=DEATH_PATTERN_DEFS[key]||DEATH_PATTERN_DEFS.multi_signal,examples=entries.slice().sort((a,b)=>Number(b.gameStartTimestamp||0)-Number(a.gameStartTimestamp||0));
     return '<article class="death-pattern-card"><div class="death-pattern-head"><div><span>'+esc(def.label)+'</span><strong>'+entries.length+' death'+(entries.length===1?'':'s')+'</strong></div><p>'+esc(def.why)+'</p></div>'+deathPatternMap(examples)+'<div class="death-pattern-action"><b>Do differently:</b> '+esc(def.action)+'</div><details><summary>Explain these deaths · map numbers match this list</summary><div class="death-pattern-events">'+examples.map((x,i)=>'<div><b>#'+(i+1)+' · '+esc(x.champion||'Unknown')+' · '+esc(fmt(x.time,1))+'m</b><span>'+esc(x.detail||((x.tags||[]).join(', '))||'Multi-signal high-risk death')+'</span><small>'+esc(shortGameDate(x.gameStartTimestamp)+(x.opponentChampion?' · vs '+x.opponentChampion:''))+'</small></div>').join('')+'</div></details></article>';
   }).join('')+'</div>':'<div class="spatial-empty">No repeated high-risk death pattern has coordinate evidence in this role-selected sample.</div>';
-  const image=map11Image(),fallback='https://ddragon.leagueoflegends.com/cdn/6.8.1/img/map/map11.png';
+  const image=map11Image(),fallback=map11FallbackImage();
   $('wardMap').innerHTML=wardPoints.length?'<div class="map-stage"><img src="'+esc(image)+'" data-map-fallback="'+esc(fallback)+'" alt="Summoner’s Rift ward placement map"><svg viewBox="0 0 512 512" preserveAspectRatio="none" aria-label="Ward positions">'+wardPoints.map(p=>mapPointSvg(p,'ward')).join('')+'</svg></div>':'<div class="spatial-empty">Ward events were counted, but none have event or ≤35s frame coordinates to project.</div>';
   bindMapFallbacks($('spatialReview')||document);
   const classified=patterns.length,repeatGroups=groups.filter(([,xs])=>xs.length>=2).length,leadDeaths=patterns.filter(x=>hasNum(x.goldDiffAtDeath)&&Number(x.goldDiffAtDeath)>=500).length;
@@ -1412,7 +1418,7 @@ function detailContent(g,tab){
       detailList((g.leadDeaths||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+signed(x.goldDiffAtDeath,0)+'g vs role at death'+(hasNum(x.goldSwingAfter)?' · '+signed(x.goldSwingAfter,0)+'g role-diff swing after':'')+(x.highRisk?' · high-risk':'')+(x.enemyObjectiveAfter?' · enemy objective followed':'')),'No materially-ahead death was recorded.')+
       detailList((risk.events||[]).filter(x=>x.state==='behind').map(x=>(Number(x.time)||0).toFixed(1)+'m · '+signed(x.goldDiffAtDeath,0)+'g vs role · '+(x.highRisk?'high-risk':'not high-risk')+(x.traded?' · traded':' · untraded')+(x.enemyObjectiveAfter?' · enemy objective followed':'')+(hasNum(x.goldSwingAfter)?' · '+signed(x.goldSwingAfter,0)+'g role-diff swing after':'')),'No death was recorded while ≥500g behind the direct role opponent.')+
       detailList((g.postImpactRisk?.events||[]).map(x=>(Number(x.deathTime)||0).toFixed(1)+'m death · '+String(x.secondsAfterImpact??'?')+'s after own kill/assist'+(x.highRisk?' · high-risk':'')+(x.traded?' · traded':' · untraded')+(x.enemyObjectiveAfter?' · enemy objective followed':'')),'No death occurred within 30 seconds after your own kill/assist contribution.')+
-      detailList((g.sideLaneRisk?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+String(x.zone||'side lane')+(x.isolated?' · isolated':'')+(x.neutralObjectiveSoon?' · neutral objective '+String(x.secondsBeforeNeutralObjective??'?')+'s later':'')+(x.highRisk?' · high-risk':'')+(x.traded?' · traded':' · untraded')),'No post-early-phase side-lane death detected.')+
+      detailList((g.sideLaneRisk?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+String(x.zone||'side lane')+(x.isolated?' · isolated':'')+(x.neutralObjectiveSoon?' · neutral objective '+String(x.secondsBeforeNeutralObjective??'?')+'s later':'')+(x.highRisk?' · high-risk':'')+(x.traded?' · traded':' · untraded')),'No post-macro-transition side-lane death detected.')+
       detailList((g.deathConsequences?.events||[]).filter(x=>x.costly).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+(x.severe?'severe':'costly')+(hasNum(x.goldSwingAfter)?' · role gold '+signed(x.goldSwingAfter,0)+'g':'')+(hasNum(x.csSwingAfter)?' · role CS '+signed(x.csSwingAfter,0):'')+(x.enemyObjectiveAfter?' · enemy objective followed':'')+(x.traded?' · traded':' · untraded')),'No measured death crossed the consequence threshold.')+
       detailList((g.deathRecovery?.events||[]).map(x=>Number(x.firstMin).toFixed(1)+'→'+Number(x.secondMin).toFixed(1)+'m · '+String(x.gapSec)+'s'+(x.phase?' · '+x.phase:'')+(x.highRisk?' · high-risk':'')+(x.costly?' · costly':'')+(x.severe?' · severe':'')+(x.traded?' · traded':' · untraded')),'No second death occurred within four minutes of the previous death.')+
       detailList(pre.map(x=>(Number(x.time)||0).toFixed(1)+'m death → contested '+String(x.objectiveType||'objective')+' '+String(x.secondsBeforeObjective||'?')+'s later'),'No death was followed by an enemy-secured, team-contested objective within 75 seconds.')+
