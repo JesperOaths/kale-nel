@@ -379,6 +379,7 @@ function normalizeReport(r){
   out.practiceTargets=Array.isArray(out.practiceTargets)?out.practiceTargets:[];
   out.advanced=out.advanced||{};
   out.benchmarks=out.benchmarks||{};
+  out.externalBenchmarks=out.externalBenchmarks||{};
   out.dataQuality=out.dataQuality||{};
   out.sourceStatus=out.sourceStatus||{};
   out.charts=out.charts||{};
@@ -525,16 +526,19 @@ function renderVisualSummary(r){
     return '<article class="game-visual-card">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="'+esc(x.name)+' item icon">':'')+'<div><strong>'+esc(x.name)+'</strong><span>'+x.games+' first-major game'+(x.games===1?'':'s')+' · avg '+esc(fmt(x.totalTime/x.games,1))+'m</span></div></article>';
   }).join(''):'<p class="muted">No measurable first-major item sample available.</p>';
 }
-function rankRadarScore(stat,key){
-  const value=stat?.[key];
+function radarNormalize(metric,value){
   if(!hasNum(value))return null;
-  const n=Number(value);
-  if(key==='avgGoldDiff15')return clamp(50+n/20,0,100);
-  if(key==='avgCsMinDelta')return clamp(50+n*25,0,100);
-  if(key==='avgDpmDelta')return clamp(50+n/12,0,100);
-  if(key==='avgVpmDelta')return clamp(50+n*83.333,0,100);
-  if(key==='avgMajorItemDeltaMin')return clamp(50-n*20,0,100);
-  return null;
+  const v=Number(value);
+  const domains={
+    csMin:[3,11],
+    kp:[25,70],
+    dpm:[300,1400],
+    kda:[1,6],
+    survival:[10,3]
+  };
+  const d=domains[metric];if(!d)return null;
+  if(metric==='survival')return clamp((d[0]-v)/(d[0]-d[1])*100,0,100);
+  return clamp((v-d[0])/(d[1]-d[0])*100,0,100);
 }
 function radarPolygon(values,cx,cy,radius){
   return values.map((v,i)=>{
@@ -543,41 +547,57 @@ function radarPolygon(values,cx,cy,radius){
   }).join(' ');
 }
 function renderRankRadar(r){
-  const bands=r.peerComparison?.rankStepBands||{},role=String(r.summary?.primaryRole||'role').toUpperCase();
+  const ext=r.externalBenchmarks||{},summary=r.summary||{};
   const axes=[
-    {key:'avgGoldDiff15',label:'Gold @15'},
-    {key:'avgCsMinDelta',label:'CS pace'},
-    {key:'avgDpmDelta',label:'Damage'},
-    {key:'avgVpmDelta',label:'Vision'},
-    {key:'avgMajorItemDeltaMin',label:'Item timing'}
+    {key:'csMin',label:'CS/min',format:v=>fmt(v,2)},
+    {key:'kp',label:'KP',format:v=>fmtPct(v)},
+    {key:'dpm',label:'DPM',format:v=>fmtInt(v)},
+    {key:'kda',label:'KDA',format:v=>fmt(v,2)},
+    {key:'survival',sourceKey:'deaths',label:'Survival',format:v=>fmt(v,1)+' deaths/g'}
   ];
+  const userRaw={csMin:summary.csMin,kp:summary.kp,dpm:summary.dpm,kda:summary.kda,deaths:summary.avgDeaths};
   const defs=[
-    {key:'same',label:'Same rank',cls:'same'},
-    {key:'plus1',label:'+1 rank step',cls:'plus1'},
-    {key:'plus2',label:'+2 rank steps',cls:'plus2'}
+    {key:'you',label:'You · Last 20',cls:'you',raw:userRaw},
+    {key:'same',label:ext.same?.tier||'Same rank',cls:'same',raw:ext.same||null},
+    {key:'plus1',label:ext.plus1?.tier||'+1 rank',cls:'plus1',raw:ext.plus1||null},
+    {key:'plus2',label:ext.plus2?.tier||'+2 ranks',cls:'plus2',raw:ext.plus2||null}
   ];
-  const usable=defs.map(d=>{
-    const stat=bands[d.key]||{},values=axes.map(a=>rankRadarScore(stat,a.key)),known=values.filter(hasNum).length;
-    return{...d,stat,values:values.map(v=>hasNum(v)?v:50),known,usable:Number(stat.games||0)>0&&known>=3};
+  const series=defs.map(d=>{
+    const values=axes.map(a=>radarNormalize(a.key,a.key==='survival'?d.raw?.deaths:d.raw?.[a.key]));
+    return{...d,values:values.map(v=>hasNum(v)?Number(v):0),known:values.filter(hasNum).length,usable:!!d.raw&&values.filter(hasNum).length===axes.length};
   });
-  const cx=250,cy=245,radius=170;
-  const ringLevels=[25,50,75,100];
+  const cx=260,cy=250,radius=176,ringLevels=[25,50,75,100];
   const rings=ringLevels.map(level=>{
     const pts=axes.map((_,i)=>{
       const angle=-Math.PI/2+Math.PI*2*i/axes.length,rr=radius*level/100;
       return (cx+Math.cos(angle)*rr).toFixed(1)+','+(cy+Math.sin(angle)*rr).toFixed(1);
     }).join(' ');
-    return '<polygon class="radar-ring '+(level===50?'neutral-ring':'')+'" points="'+pts+'"/>';
+    return '<polygon class="radar-ring" points="'+pts+'"/>';
   }).join('');
   const spokes=axes.map((a,i)=>{
-    const angle=-Math.PI/2+Math.PI*2*i/axes.length,x=cx+Math.cos(angle)*radius,y=cy+Math.sin(angle)*radius,lx=cx+Math.cos(angle)*(radius+34),ly=cy+Math.sin(angle)*(radius+34);
+    const angle=-Math.PI/2+Math.PI*2*i/axes.length,x=cx+Math.cos(angle)*radius,y=cy+Math.sin(angle)*radius,lx=cx+Math.cos(angle)*(radius+42),ly=cy+Math.sin(angle)*(radius+42);
     return '<line class="radar-spoke" x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'"/><text class="radar-axis-label" x="'+lx.toFixed(1)+'" y="'+(ly+4).toFixed(1)+'" text-anchor="middle">'+esc(a.label)+'</text>';
   }).join('');
-  const polygons=usable.filter(x=>x.usable).map(x=>'<polygon class="radar-series '+x.cls+'" points="'+radarPolygon(x.values,cx,cy,radius)+'"><title>'+esc(x.label)+' · '+String(x.stat.games||0)+' games</title></polygon>').join('');
-  $('radarChart').innerHTML=polygons?'<svg viewBox="0 0 500 490" role="img" aria-label="Radar comparison against same-rank and higher-rank same-role opponents">'+rings+spokes+polygons+'<text class="radar-neutral-label" x="'+cx+'" y="'+(cy-radius*.5-8)+'" text-anchor="middle">50 = EVEN</text></svg>':'<div class="radar-empty">Not enough ranked direct-opponent evidence yet.</div>';
-  $('radarLegend').innerHTML=usable.map(x=>'<div class="radar-legend-row '+x.cls+' '+(x.usable?'':'unavailable')+'"><i></i><div><strong>'+esc(x.label)+'</strong><span>'+String(x.stat.games||0)+' '+esc(role==='BOTTOM'?'ADC':'same-role')+' matchup'+(Number(x.stat.games||0)===1?'':'s')+(x.usable?'':' · too thin for polygon')+'</span></div></div>').join('');
-  $('radarNote').textContent=(bands.definition||'Actual direct-role opponent rank snapshots.')+' Radar values are normalized matchup deltas: 50 is even, not a population percentile.';
+  const polygons=series.filter(x=>x.usable).map(x=>'<polygon class="radar-series '+x.cls+'" points="'+radarPolygon(x.values,cx,cy,radius)+'"><title>'+esc(x.label)+'</title></polygon>').join('');
+  $('radarChart').innerHTML=polygons?'<svg viewBox="0 0 520 505" role="img" aria-label="Your ADC statistics compared with externally sourced rank averages">'+rings+spokes+polygons+'</svg>':'<div class="radar-empty">A ranked ADC benchmark cannot be built until Riot returns your ranked tier and the report has the five required metrics.</div>';
+
+  $('radarLegend').innerHTML=series.map(x=>'<div class="radar-legend-row '+x.cls+' '+(x.usable?'':'unavailable')+'"><i></i><div><strong>'+esc(x.label)+'</strong><span>'+(
+    x.usable
+      ?axes.map(a=>esc(a.label)+' '+esc(a.format(a.key==='survival'?x.raw?.deaths:x.raw?.[a.key]))).join(' · ')
+      :'Benchmark unavailable'
+  )+'</span></div></div>').join('');
+
+  const tableSeries=series.filter(x=>x.usable);
+  const table=tableSeries.length?'<div class="radar-values"><table><thead><tr><th>Metric</th>'+tableSeries.map(x=>'<th>'+esc(x.label)+'</th>').join('')+'</tr></thead><tbody>'+
+    axes.map(a=>'<tr><th>'+esc(a.label)+(a.key==='survival'?'<small>lower deaths is better</small>':'')+'</th>'+tableSeries.map(x=>'<td>'+esc(a.format(a.key==='survival'?x.raw?.deaths:x.raw?.[a.key]))+'</td>').join('')+'</tr>').join('')+
+    '</tbody></table></div>':'';
+  $('radarLegend').insertAdjacentHTML('beforeend',table);
+  const source=ext.source||'External rank benchmark';
+  const captured=ext.sourceCapturedAt?' · corpus captured '+ext.sourceCapturedAt:'';
+  const corpus=ext.sourceCorpus?' · '+ext.sourceCorpus:'';
+  $('radarNote').innerHTML='<strong>Population benchmark, not your opponents.</strong> '+esc(ext.methodology||'')+' <a href="'+esc(ext.sourceUrl||'https://legendstracker.fr/methodologie')+'" target="_blank" rel="noopener noreferrer">'+esc(source)+'</a>'+esc(captured+corpus)+'. The spider uses fixed display ranges only to put different units on one shape; the adjacent table shows the real values.';
 }
+
 function decisionCard(title,value,tone,explanation,sub,percent=null){
   return '<article class="decision-card tone-'+tone+'"><div><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong></div>'+
     (hasNum(percent)?'<div class="decision-meter"><span style="width:'+clamp(Number(percent),0,100)+'%"></span></div>':'')+
@@ -826,19 +846,22 @@ function renderGames(r){
     if(typeof av==='string'||typeof bv==='string')return String(av).localeCompare(String(bv))*dir;
     return (Number(av)-Number(bv))*dir||a.i-b.i;
   });
-  $('gamesBody').innerHTML=order.map(({g,i})=>{
+  $('gamesBody').innerHTML=order.map(({g,i},displayIndex)=>{
     const kda=[g.kills,g.deaths,g.assists].map(x=>hasNum(x)?Number(x):'?').join('/');
-    const icon=championIcon(g.champion);
+    const icon=championIcon(g.champion),goldTone=deltaTone(g.goldDiff15,0,100,false);
+    const firstItem=g.firstMajorItem,itemSrc=firstItem?itemIcon(firstItem.itemId):'';
+    const goldLabel=!hasNum(g.goldDiff15)?'n/a':Number(g.goldDiff15)>100?'ahead':Number(g.goldDiff15)<-100?'behind':'even';
     return '<tr class="game-row" data-match="'+esc(g.matchId||String(i))+'" data-index="'+i+'">'+
-      '<td class="caret">▸</td>'+
-      '<td><div class="champion-cell">'+(icon?'<img class="champion-icon" src="'+esc(icon)+'" alt="">':'')+'<span>'+esc(g.champion||'Unknown')+'</span></div></td>'+
-      '<td>'+esc(g.role||'GENERIC')+'</td>'+
-      '<td class="result '+(g.win?'win':'loss')+'">'+(g.win?'WIN':'LOSS')+'</td>'+
+      '<td class="caret">▸ <small>'+(displayIndex+1)+'</small></td>'+
+      '<td><div class="champion-cell">'+(icon?'<img class="champion-icon" loading="lazy" src="'+esc(icon)+'" alt="">':'')+
+        '<span><b>'+esc(g.champion||'Unknown')+'</b>'+(firstItem?'<small class="table-item">'+(itemSrc?'<img loading="lazy" src="'+esc(itemSrc)+'" alt="">':'')+esc(firstItem.name||'First major')+' · '+esc(fmt(firstItem.time,1))+'m</small>':'')+'</span></div></td>'+
+      '<td>'+esc(g.role==='BOTTOM'?'ADC':(g.role||'GENERIC'))+'</td>'+
+      '<td class="result '+(g.win?'win':'loss')+'"><b>'+(g.win?'WIN':'LOSS')+'</b></td>'+
       '<td><strong>'+esc(kda)+'</strong></td>'+
       '<td>'+esc(fmtPct(g.kp))+'</td>'+
       '<td>'+esc(fmt(g.csMin,2))+'</td>'+
       '<td>'+esc(fmtInt(g.dpm))+'</td>'+
-      '<td>'+esc(signed(g.goldDiff15,0))+'</td></tr>';
+      '<td><div class="table-delta tone-'+goldTone+'"><strong>'+esc(hasNum(g.goldDiff15)?signed(g.goldDiff15,0)+'g':'n/a')+'</strong><small>'+esc(goldLabel)+'</small>'+contextBar(g.goldDiff15,1200)+'</div></td></tr>';
   }).join('');
   $('gamesBody').querySelectorAll('.game-row').forEach(row=>row.addEventListener('click',()=>toggleGame(Number(row.dataset.index))));
   document.querySelectorAll('[data-game-sort]').forEach(btn=>{
@@ -847,6 +870,7 @@ function renderGames(r){
     btn.setAttribute('aria-sort',active?(state.gameSort.dir==='asc'?'ascending':'descending'):'none');
   });
 }
+
 function toggleGame(index){
   const body=$('gamesBody'),rows=[...body.querySelectorAll('.game-row')];
   body.querySelectorAll('.details-row').forEach(n=>n.remove());
@@ -1029,13 +1053,13 @@ function detailContent(g,tab){
       detailCard('Post-reset role-gold swing',firstReset&&hasNum(firstReset.goldSwingAfter)?signed(firstReset.goldSwingAfter,0)+'g':'n/a')+
       detailCard('Post-reset role-CS swing',firstReset&&hasNum(firstReset.csSwingAfter)?signed(firstReset.csSwingAfter,1)+' CS':'n/a')+
       detailCard('First-reset outcome',!firstReset?'n/a':firstReset.deathInWindow?'measurement contaminated by death':firstReset.economyLoss?'economy loss':firstReset.economyGain?'economy gain':firstReset.measured?'neutral / mixed':'unmeasured')+
-      detailCard('First major item',mine?(mine.name+' · '+fmt(mine.time,1)+'m'):'n/a')+
+      itemDetailCard('First major item',mine)+
       detailCard('Recipe components ready',ready&&hasNum(ready.ingredientsReadyMin)?fmt(ready.ingredientsReadyMin,1)+'m':'n/a')+
       detailCard('First major affordable',ready&&ready.eligible?(fmt(ready.affordableMin,1)+'m · '+fmtInt(ready.combineCost)+'g combine'):(ready?.reason?'not measurable · '+readinessReason(ready.reason):'n/a'))+
       detailCard('Affordable → purchased',ready&&ready.eligible?(fmt(ready.delayMin,1)+' min · '+(ready.delayed?'delayed':'prompt')):'n/a')+
-      detailCard('Opponent major item',opp?(opp.name+' · '+fmt(opp.time,1)+'m'):'n/a')+
-      detailCard('Second major item',second?(second.name+' · '+fmt(second.time,1)+'m'):'n/a')+
-      detailCard('Opponent second major',oppSecond?(oppSecond.name+' · '+fmt(oppSecond.time,1)+'m'):'n/a')+
+      itemDetailCard('Opponent major item',opp)+
+      itemDetailCard('Second major item',second)+
+      itemDetailCard('Opponent second major',oppSecond)+
       detailCard('Second-major timing vs peer',hasNum(g.secondMajorItemDeltaVsOpponent)?signed(g.secondMajorItemDeltaVsOpponent,1)+' min':'n/a')+
       detailCard('Opponent affordability delay',oppReady&&oppReady.eligible?fmt(oppReady.delayMin,1)+' min':'n/a')+
       detailCard('Readiness delay vs peer',ready&&hasNum(ready.delayDeltaVsOpponent)?signed(ready.delayDeltaVsOpponent,1)+' min':'n/a')+
@@ -1044,7 +1068,7 @@ function detailContent(g,tab){
       detailCard('Spike-window impact',spike.eligible?(String(spike.totalImpacts||0)+' impact(s) · '+(spike.used?'used':'unused')):'n/a')+
       detailCard('Died before spike impact',spike.eligible?(spike.diedBeforeImpact?'yes':'no'):'n/a')+
       detailCard('Detected shop visits',String(shops.length))+detailCard('Greedy-stay windows',String(greedy.length))+detailCard('Overstay deaths',String(g.overstayCount??0))+
-      detailList(firstReset?[('First shop '+fmt(firstReset.time,1)+'m · committed spend est. '+fmtInt(firstReset.spent)+'g · '+String(firstReset.committedPurchases??firstReset.items?.length??0)+' committed purchase(s)'+(firstReset.items?.length?' · '+firstReset.items.map(x=>x.name||x.id||'item').join(', '):'')+
+      purchaseItemStrip(firstReset?.items)+detailList(firstReset?[('First shop '+fmt(firstReset.time,1)+'m · committed spend est. '+fmtInt(firstReset.spent)+'g · '+String(firstReset.committedPurchases??firstReset.items?.length??0)+' committed purchase(s)'+(firstReset.items?.length?' · '+firstReset.items.map(x=>x.name||x.id||'item').join(', '):'')+
         (hasNum(firstReset.goldDiffBefore)?' · role gold '+signed(firstReset.goldDiffBefore,0)+'g before':'')+(hasNum(firstReset.goldDiffAfter)?' → '+signed(firstReset.goldDiffAfter,0)+'g after':'')+
         (hasNum(firstReset.csDiffBefore)?' · role CS '+signed(firstReset.csDiffBefore,0)+' before':'')+(hasNum(firstReset.csDiffAfter)?' → '+signed(firstReset.csDiffAfter,0)+' after':'')+
         (firstReset.deathInWindow?' · death in measurement window':firstReset.economyLoss?' · economy loss':firstReset.economyGain?' · economy gain':''))]:[],'No measurable first-reset sequence was available.')+
