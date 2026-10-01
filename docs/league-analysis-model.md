@@ -919,12 +919,14 @@ The current major-item comparison:
 
 The historical report tried to expose `item2TimeMin` while also retaining the now-obsolete `mythicTimeMin` label. The web analyzer keeps the useful timing question and retires the obsolete item class:
 
-- detect major completed-item purchases from patch-appropriate Data Dragon item metadata,
+- identify major items from patch-appropriate Data Dragon item metadata,
+- reconstruct the owned item ledger across purchase, sale, destruction and undo events,
+- record the first and second milestones only when the player actually owns at least one, then at least two major items simultaneously,
 - preserve the first and second major completion separately,
 - compare second-major completion time with the actual same-role opponent when both are measurable,
 - aggregate sample size, average second-major completion minute, and average timing delta versus the direct role peer.
 
-This is descriptive purchase timing. It does not assume that every champion wants the same two-item curve or that faster is always better.
+This is descriptive purchase timing. It does not assume that every champion wants the same two-item curve or that faster is always better. A sold-and-rebought first item or a one-for-one upgrade must not create a false "second item" timestamp.
 
 ### Recipe-aware first-major completion readiness
 
