@@ -472,6 +472,142 @@ function renderKpis(r){
   $('kpiGrid').innerHTML=rows.map(x=>'<article class="kpi-card tone-'+x.tone+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong>'+(x.bar||'')+'<small>'+esc(x.sub)+'</small></article>').join('');
 }
 
+
+function comparisonCard(title,delta,unit,scale,inverse,explanation,sample){
+  const d=plainDelta(delta,unit,1,inverse);
+  return '<article class="quick-read-card tone-'+d.tone+'"><div class="quick-read-head"><span>'+esc(title)+'</span><strong>'+esc(d.value)+'</strong></div>'+
+    contextBar(delta,scale,inverse)+
+    '<p><b>'+esc(d.word)+'.</b> '+esc(explanation)+'</p>'+
+    (sample?'<small>'+esc(sample)+'</small>':'')+'</article>';
+}
+function renderQuickRead(r){
+  const p=r.peerComparison||{},a=r.advanced||{},s=r.summary||{},bench=r.externalBenchmarks?.same||null;
+  const goldExplanation=hasNum(p.avgGoldDiff15)
+    ?(Number(p.avgGoldDiff15)>150?'Your average 15-minute economy is ahead of the direct opposing ADC.':Number(p.avgGoldDiff15)<-150?'Your average 15-minute economy is behind the direct opposing ADC.':'Your average 15-minute economy is close to even with the direct opposing ADC.')
+    :'Not enough comparable @15 games to interpret lane economy.';
+  const csDelta=bench&&hasNum(s.csMin)&&hasNum(bench.csMin)?Number(s.csMin)-Number(bench.csMin):null;
+  const kpDelta=bench&&hasNum(s.kp)&&hasNum(bench.kp)?Number(s.kp)-Number(bench.kp):null;
+  const dpmDelta=bench&&hasNum(s.dpm)&&hasNum(bench.dpm)?Number(s.dpm)-Number(bench.dpm):null;
+  const deathDelta=bench&&hasNum(s.avgDeaths)&&hasNum(bench.deaths)?Number(s.avgDeaths)-Number(bench.deaths):null;
+  const rankLabel=bench?.tier||'same-rank';
+  const objective=hasNum(a.objectivePresence)?Number(a.objectivePresence):null;
+  const objTone=objective==null?'neutral':objective>=70?'good':objective<45?'bad':'neutral';
+  const objText=objective==null?'Not enough contested-objective evidence.':objective>=70?'You are present for most neutral objectives your team actually contests.':objective<45?'You are absent from many real contest windows; reset timing and pathing deserve review.':'Objective presence is mixed rather than clearly strong or weak.';
+  $('quickRead').innerHTML=[
+    comparisonCard('Lane economy @15',p.avgGoldDiff15,'gold',1000,false,goldExplanation,String(p.laneGames15||0)+' direct-role checkpoints'),
+    comparisonCard('CS/min vs '+rankLabel+' ADC',csDelta,'csmin',2,false,csDelta==null?'External benchmark unavailable.':csDelta>.15?'You farm faster than the sourced '+rankLabel+' ADC average.':csDelta<-.15?'You farm slower than the sourced '+rankLabel+' ADC average.':'Your farming rate is very close to the sourced '+rankLabel+' ADC average.',bench?'You '+fmt(s.csMin,2)+' · benchmark '+fmt(bench.csMin,2):''),
+    comparisonCard('KP vs '+rankLabel+' ADC',kpDelta,'pp',15,false,kpDelta==null?'External benchmark unavailable.':kpDelta>2?'You participate in a larger share of team kills than the sourced rank average.':kpDelta<-2?'Your kill participation trails the sourced rank average.':'Your kill participation is close to the sourced rank average.',bench?'You '+fmtPct(s.kp)+' · benchmark '+fmtPct(bench.kp):''),
+    comparisonCard('DPM vs '+rankLabel+' ADC',dpmDelta,'dpm',500,false,dpmDelta==null?'External benchmark unavailable.':dpmDelta>50?'Your damage/minute is above the sourced rank average.':dpmDelta<-50?'Your damage/minute is below the sourced rank average.':'Your damage/minute is close to the sourced rank average.',bench?'You '+fmtInt(s.dpm)+' · benchmark '+fmtInt(bench.dpm):''),
+    comparisonCard('Deaths vs '+rankLabel+' ADC',deathDelta,'num',3,true,deathDelta==null?'External benchmark unavailable.':deathDelta<-.25?'You die less often than the sourced rank average.':deathDelta>.25?'You die more often than the sourced rank average.':'Your death rate is close to the sourced rank average.',bench?'You '+fmt(s.avgDeaths,1)+'/g · benchmark '+fmt(bench.deaths,1)+'/g':''),
+    '<article class="quick-read-card tone-'+objTone+'"><div class="quick-read-head"><span>Contested objective presence</span><strong>'+esc(fmtPct(objective))+'</strong></div><div class="percent-track"><span style="width:'+clamp(objective||0,0,100)+'%"></span></div><p>'+esc(objText)+'</p><small>Only team-contested windows count; fully conceded cross-map objectives are excluded.</small></article>'
+  ].join('');
+}
+function renderVisualSummary(r){
+  const games=Array.isArray(r.games)?r.games:[],champs=new Map(),items=new Map();
+  for(const g of games){
+    const champ=String(g.champion||'').trim();
+    if(champ){
+      const row=champs.get(champ)||{name:champ,games:0,wins:0};row.games++;if(g.win)row.wins++;champs.set(champ,row);
+    }
+    const first=g.firstMajorItem;
+    if(first?.itemId){
+      const key=String(first.itemId),row=items.get(key)||{itemId:first.itemId,name:first.name||('Item '+key),games:0,totalTime:0};row.games++;row.totalTime+=Number(first.time||0);items.set(key,row);
+    }
+  }
+  const topChamps=[...champs.values()].sort((a,b)=>b.games-a.games||b.wins-a.wins||a.name.localeCompare(b.name)).slice(0,6);
+  const topItems=[...items.values()].sort((a,b)=>b.games-a.games||a.name.localeCompare(b.name)).slice(0,6);
+  $('championVisuals').innerHTML=topChamps.length?topChamps.map(x=>{
+    const src=championIcon(x.name);
+    return '<article class="game-visual-card">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="'+esc(x.name)+' portrait">':'')+'<div><strong>'+esc(x.name)+'</strong><span>'+x.games+' game'+(x.games===1?'':'s')+' · '+esc(fmtPct(x.games?x.wins/x.games*100:null))+' WR</span></div></article>';
+  }).join(''):'<p class="muted">No champion sample available.</p>';
+  $('itemVisuals').innerHTML=topItems.length?topItems.map(x=>{
+    const src=itemIcon(x.itemId);
+    return '<article class="game-visual-card">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="'+esc(x.name)+' item icon">':'')+'<div><strong>'+esc(x.name)+'</strong><span>'+x.games+' first-major game'+(x.games===1?'':'s')+' · avg '+esc(fmt(x.totalTime/x.games,1))+'m</span></div></article>';
+  }).join(''):'<p class="muted">No measurable first-major item sample available.</p>';
+}
+function radarNormalize(metric,value){
+  if(!hasNum(value))return null;
+  const v=Number(value),domains={csMin:[3,11],kp:[25,70],dpm:[300,1400],kda:[1,6],survival:[10,3]},d=domains[metric];
+  if(!d)return null;
+  if(metric==='survival')return clamp((d[0]-v)/(d[0]-d[1])*100,0,100);
+  return clamp((v-d[0])/(d[1]-d[0])*100,0,100);
+}
+function radarPolygon(values,cx,cy,radius){
+  return values.map((v,i)=>{
+    const angle=-Math.PI/2+(Math.PI*2*i/values.length),rr=radius*(Number(v)/100);
+    return (cx+Math.cos(angle)*rr).toFixed(1)+','+(cy+Math.sin(angle)*rr).toFixed(1);
+  }).join(' ');
+}
+function renderRankRadar(r){
+  const ext=r.externalBenchmarks||{},summary=r.summary||{};
+  const axes=[
+    {key:'csMin',label:'CS/min',format:v=>fmt(v,2)},
+    {key:'kp',label:'KP',format:v=>fmtPct(v)},
+    {key:'dpm',label:'DPM',format:v=>fmtInt(v)},
+    {key:'kda',label:'KDA',format:v=>fmt(v,2)},
+    {key:'survival',sourceKey:'deaths',label:'Survival',format:v=>fmt(v,1)+' deaths/g'}
+  ];
+  const userRaw={csMin:summary.csMin,kp:summary.kp,dpm:summary.dpm,kda:summary.kda,deaths:summary.avgDeaths};
+  const defs=[
+    {key:'you',label:'You · Last 20',cls:'you',raw:userRaw},
+    {key:'same',label:ext.same?.tier||'Same rank',cls:'same',raw:ext.same||null},
+    {key:'plus1',label:ext.plus1?.tier||'+1 rank',cls:'plus1',raw:ext.plus1||null},
+    {key:'plus2',label:ext.plus2?.tier||'+2 ranks',cls:'plus2',raw:ext.plus2||null}
+  ];
+  const series=defs.map(d=>{
+    const values=axes.map(a=>radarNormalize(a.key,a.key==='survival'?d.raw?.deaths:d.raw?.[a.key]));
+    return{...d,values:values.map(v=>hasNum(v)?Number(v):0),known:values.filter(hasNum).length,usable:!!d.raw&&values.filter(hasNum).length===axes.length};
+  });
+  const cx=260,cy=250,radius=176,ringLevels=[25,50,75,100];
+  const rings=ringLevels.map(level=>{
+    const pts=axes.map((_,i)=>{
+      const angle=-Math.PI/2+Math.PI*2*i/axes.length,rr=radius*level/100;
+      return (cx+Math.cos(angle)*rr).toFixed(1)+','+(cy+Math.sin(angle)*rr).toFixed(1);
+    }).join(' ');
+    return '<polygon class="radar-ring" points="'+pts+'"/>';
+  }).join('');
+  const spokes=axes.map((a,i)=>{
+    const angle=-Math.PI/2+Math.PI*2*i/axes.length,x=cx+Math.cos(angle)*radius,y=cy+Math.sin(angle)*radius,lx=cx+Math.cos(angle)*(radius+42),ly=cy+Math.sin(angle)*(radius+42);
+    return '<line class="radar-spoke" x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'"/><text class="radar-axis-label" x="'+lx.toFixed(1)+'" y="'+(ly+4).toFixed(1)+'" text-anchor="middle">'+esc(a.label)+'</text>';
+  }).join('');
+  const polygons=series.filter(x=>x.usable).map(x=>'<polygon class="radar-series '+x.cls+'" points="'+radarPolygon(x.values,cx,cy,radius)+'"><title>'+esc(x.label)+'</title></polygon>').join('');
+  $('radarChart').innerHTML=polygons?'<svg viewBox="0 0 520 505" role="img" aria-label="Your ADC statistics compared with externally sourced rank averages">'+rings+spokes+polygons+'</svg>':'<div class="radar-empty">A ranked ADC benchmark cannot be built until Riot returns your ranked tier and the report has the five required metrics.</div>';
+  $('radarLegend').innerHTML=series.map(x=>'<div class="radar-legend-row '+x.cls+' '+(x.usable?'':'unavailable')+'"><i></i><div><strong>'+esc(x.label)+'</strong><span>'+(
+    x.usable?axes.map(a=>esc(a.label)+' '+esc(a.format(a.key==='survival'?x.raw?.deaths:x.raw?.[a.key]))).join(' · '):'Benchmark unavailable'
+  )+'</span></div></div>').join('');
+  const tableSeries=series.filter(x=>x.usable);
+  const table=tableSeries.length?'<div class="radar-values"><table><thead><tr><th>Metric</th>'+tableSeries.map(x=>'<th>'+esc(x.label)+'</th>').join('')+'</tr></thead><tbody>'+
+    axes.map(a=>'<tr><th>'+esc(a.label)+(a.key==='survival'?'<small>lower deaths is better</small>':'')+'</th>'+tableSeries.map(x=>'<td>'+esc(a.format(a.key==='survival'?x.raw?.deaths:x.raw?.[a.key]))+'</td>').join('')+'</tr>').join('')+
+    '</tbody></table></div>':'';
+  $('radarLegend').insertAdjacentHTML('beforeend',table);
+  const source=ext.source||'External rank benchmark',captured=ext.sourceCapturedAt?' · corpus captured '+ext.sourceCapturedAt:'',corpus=ext.sourceCorpus?' · '+ext.sourceCorpus:'';
+  $('radarNote').innerHTML='<strong>Population benchmark, not your opponents.</strong> '+esc(ext.methodology||'')+' <a href="'+esc(ext.sourceUrl||'https://legendstracker.fr/methodologie')+'" target="_blank" rel="noopener noreferrer">'+esc(source)+'</a>'+esc(captured+corpus)+'. The spider uses fixed display ranges only to put different units on one shape; the adjacent table shows the real values.';
+}
+function decisionCard(title,value,tone,explanation,sub,percent=null){
+  return '<article class="decision-card tone-'+tone+'"><div><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong></div>'+
+    (hasNum(percent)?'<div class="decision-meter"><span style="width:'+clamp(Number(percent),0,100)+'%"></span></div>':'')+
+    '<p>'+esc(explanation)+'</p><small>'+esc(sub||'')+'</small></article>';
+}
+function renderDecisionMetrics(r){
+  const b=r.behaviorSummary||{},p=r.peerComparison||{};
+  const objective=hasNum(b.objectiveContestPresenceRate)?Number(b.objectiveContestPresenceRate):null;
+  const fight=hasNum(b.fightSurvivalRate)?Number(b.fightSurvivalRate):null;
+  const reset=hasNum(b.firstResetLossRate)?Number(b.firstResetLossRate):null;
+  const spike=hasNum(p.itemSpikeUtilizationRate)?Number(p.itemSpikeUtilizationRate):null;
+  const giveback=hasNum(b.earlyLeadGivebackRate)?Number(b.earlyLeadGivebackRate):null;
+  const deaths=hasNum(b.badDeathsPerTimelineGame)?Number(b.badDeathsPerTimelineGame):null;
+  const tonePct=(v,good,bad,inverse=false)=>v==null?'neutral':inverse?(v<=good?'good':v>=bad?'bad':'neutral'):(v>=good?'good':v<=bad?'bad':'neutral');
+  $('decisionMetrics').innerHTML=[
+    decisionCard('Contested objective presence',fmtPct(objective),tonePct(objective,70,45,false),objective==null?'Not enough contested-objective events.':objective>=70?'You usually arrive for fights your team actually contests.':objective<45?'You miss many real contest windows; inspect reset timing and pathing.':'Presence is mixed; the details below can separate reset, death and setup causes.',String(b.objectiveContestJoinedEncounters??0)+' / '+String(b.objectiveContestEncounters??0)+' contested encounters',objective),
+    decisionCard('Fight survival',fmtPct(fight),tonePct(fight,70,50,false),fight==null?'Not enough attended fight clusters.':fight>=70?'You usually stay alive through attended fight clusters.':fight<50?'You die in more than half of measured attended fight clusters.':'Survival is mixed; review whether deaths happen before or after meaningful contribution.',String(b.fightSamples??0)+' measured fight clusters',fight),
+    decisionCard('High-risk deaths / game',deaths==null?'n/a':fmt(deaths,2),deaths==null?'neutral':deaths<=.75?'good':deaths>=1.5?'bad':'neutral',deaths==null?'Not enough timeline-complete games.':deaths<=.75?'Risky deaths are contained.':deaths>=1.5?'This is frequent enough to materially distort otherwise good games.':'Risky deaths exist but are not the dominant signal.','Lower is better; consequence-aware, not every death.'),
+    decisionCard('First-reset economy loss',fmtPct(reset),tonePct(reset,25,50,true),reset==null?'Not enough clean first-reset measurements.':reset<=25?'Most measured first resets preserve or improve lane economy.':reset>=50?'At least half of clean measured first resets lose economy afterwards.':'Reset outcomes are mixed.','Measured only when death does not contaminate the post-shop window.',reset),
+    decisionCard('Earlier-item windows used',fmtPct(spike),tonePct(spike,60,35,false),spike==null?'No reliable first-major advantage windows.':spike>=60?'You usually turn an earlier major item into tracked impact.':spike<35?'Earlier item completions often expire without a tracked kill/assist/objective impact.':'Item-spike conversion is mixed.',String(p.itemSpikeUtilizedWindows??0)+' / '+String(p.itemSpikeEligibleWindows??0)+' eligible windows',spike),
+    decisionCard('Early leads given back',fmtPct(giveback),tonePct(giveback,30,50,true),giveback==null?'No meaningful ≥500g pre-15 lead sample.':giveback<=30?'Most measured early leads are preserved into the 15-minute checkpoint.':giveback>=50?'At least half of measured early leads erode substantially before 15.':'Lead preservation is inconsistent.',String(b.earlyLeadGivebackGames??0)+' / '+String(b.earlyLeadGames??0)+' lead games',giveback)
+  ].join('');
+  $('objectiveDiagnosisSummary').innerHTML=objectiveDiagnosisHtml(r);
+}
+
 function renderBullets(id,items,empty){
   const list=(items||[]).filter(Boolean);
   $(id).innerHTML=list.length?list.map(x=>{
