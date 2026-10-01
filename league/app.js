@@ -337,6 +337,8 @@ function renderProgressComparison(current,previous,previousAt){
     {label:'Game 3+ gold delta',path:'sessionBehavior.game3PlusGoldDelta',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
     {label:'Post-loss requeue gold delta',path:'sessionBehavior.postLossGoldDelta',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
     {label:'Prior-frame objective setup rate',path:'behaviorSummary.earlySetupObjectiveJoinRate',threshold:10,direction:1,format:v=>fmtPct(v)},
+    {label:'Vision-action death rate',path:'behaviorSummary.visionActionDeathRate',threshold:5,direction:-1,format:v=>fmtPct(v)},
+    {label:'High-risk vision deaths / game',path:'behaviorSummary.highRiskVisionActionDeathsPerGame',threshold:.15,direction:-1,format:v=>fmt(v,2)},
     {label:'Late-reset objective miss rate',path:'behaviorSummary.lateResetObjectiveMissRate',threshold:10,direction:-1,format:v=>fmtPct(v)}
   ];
   if(['ADC','MID','TOP'].includes(role))specs.splice(1,0,{label:'CS / min',path:'summary.csMin',threshold:.3,direction:1,format:v=>fmt(v,2)});
@@ -439,9 +441,14 @@ function detailList(items,empty){
 function detailContent(g,tab){
   if(tab==='vision'){
     const v=g.vision||{};
+    const vm=g.visionMission||{};
     return detailCard('Vision / min',fmt(g.vpm,2))+detailCard('Wards placed',String(v.wardCount??g.wards?.length??0))+detailCard('Wards / 30 min',fmt(v.wardsPer30,1))+
+      detailCard('Vision actions',String(vm.actions??0))+detailCard('Vision-action deaths',String(vm.deaths??0)+' · '+fmtPct(vm.deathRate))+
+      detailCard('High-risk vision deaths',String(vm.highRiskDeaths??0)+' · '+fmtPct(vm.highRiskDeathRate))+detailCard('Unsupported vision deaths',String(vm.unsupportedDeaths??0))+
+      detailCard('Untraded vision deaths',String(vm.untradedDeaths??0))+detailCard('Objective-setup vision deaths',String(vm.objectiveSetupDeaths??0))+
       detailCard('Offensive / defensive',String(v.offensive??0)+' / '+String(v.defensive??0))+detailCard('River wards',String(v.river??0))+detailCard('Objective setup wards',String(v.objectiveSetup??0))+detailCard('Objective setup share',fmtPct(v.objectiveSetupRate))+
       detailCard('Peer setup wards',String(g.opponentVision?.objectiveSetup??0))+detailCard('Peer setup share',fmtPct(g.opponentVision?.objectiveSetupRate))+detailCard('Setup count Δ vs peer',hasNum(v.objectiveSetupDeltaVsOpponent)?signed(v.objectiveSetupDeltaVsOpponent,0):'n/a')+detailCard('Setup share Δ vs peer',hasNum(v.objectiveSetupRateDeltaVsOpponent)?signed(v.objectiveSetupRateDeltaVsOpponent,0)+' pp':'n/a')+
+      detailList((vm.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m death · '+String(x.action||'vision action')+' '+String(x.secondsAfterAction??'?')+'s earlier · '+String(x.wardType||'ward')+(x.territory?' · '+x.territory:'')+(x.objectiveSetup?' · objective setup':'')+(x.unsupported?' · no ally within 3k':'')+(x.highRisk?' · high-risk':'')+(x.traded?' · traded':' · untraded')),'No death occurred within the defined vision-action window.')+
       detailList((g.wards||[]).slice(0,8).map(w=>(Number(w.time)||0).toFixed(1)+'m · '+(w.territory||'unknown')+' · '+(w.wardType||'ward')),'No player ward positions were available.');
   }
   if(tab==='roams'){
@@ -613,6 +620,12 @@ function renderAdvanced(r){
     ['Loss rate when locally outnumbered',fmtPct(r.behaviorSummary?.outnumberedFightLossRate)],
     ['Shared fights with role peer nearby',String(r.behaviorSummary?.rolePeerFightSamples??0)],
     ['Level-down shared-role fights',String(r.behaviorSummary?.roleLevelDisadvantageFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.roleLevelDisadvantageFightRate)],
+    ['Tracked vision actions',String(r.behaviorSummary?.visionActions??0)],
+    ['Vision-action deaths',String(r.behaviorSummary?.visionActionDeaths??0)+' · '+fmtPct(r.behaviorSummary?.visionActionDeathRate)],
+    ['High-risk vision-action deaths',String(r.behaviorSummary?.highRiskVisionActionDeaths??0)+' · '+fmt(r.behaviorSummary?.highRiskVisionActionDeathsPerGame,2)+'/game'],
+    ['Unsupported vision-action deaths',String(r.behaviorSummary?.unsupportedVisionActionDeaths??0)],
+    ['Untraded vision-action deaths',String(r.behaviorSummary?.untradedVisionActionDeaths??0)],
+    ['Objective-setup vision deaths',String(r.behaviorSummary?.objectiveSetupVisionActionDeaths??0)],
     ['Objective-setup vision Δ',hasNum(a.visionSetup?.avgDeltaVsOpponent)?signed(a.visionSetup.avgDeltaVsOpponent,1)+' wards vs peer':'n/a'],
     ['Post-kill conversion',String(r.behaviorSummary?.killConversions??0)+' / '+String(r.behaviorSummary?.killConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.killConversionRate)],
     ['Opposing-role post-kill conversion',String(r.behaviorSummary?.opponentKillConversions??0)+' / '+String(r.behaviorSummary?.opponentKillConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.opponentKillConversionRate)],
