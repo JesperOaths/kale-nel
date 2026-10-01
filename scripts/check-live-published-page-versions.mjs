@@ -89,7 +89,7 @@ async function requestRoute(startUrl,signal){
       };
     }
     if(nextUrl&&isAdminOAuthTarget(nextUrl)){
-      return {kind:'protected',status,finalUrl:nextUrl,text:'',trace};
+      return {kind:'protected-oauth',status,finalUrl:nextUrl,text:'',trace};
     }
     if(status>=300&&status<400&&nextUrl){
       current=nextUrl;
@@ -109,6 +109,9 @@ async function fetchPage(entry,index){
   try{
     const outcome=await requestRoute(cacheBustedUrl(route,index),controller.signal);
     const traceText=outcome.trace.map(x=>`${x.status}:${x.url}`).join(' -> ');
+    if(outcome.kind==='protected-oauth'){
+      return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'protected',protection:'oauth',redirect_trace:traceText};
+    }
     if(outcome.kind==='protected'){
       const workerWatermark=literalWatermark(outcome.text,adminWorker.pageVersion);
       if(outcome.adminBuild!==adminWorker.build){
@@ -117,7 +120,7 @@ async function fetchPage(entry,index){
       if(!workerWatermark){
         return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:'admin Worker watermark missing/wrong; expected '+adminWorker.pageVersion,redirect_trace:traceText};
       }
-      return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'protected',admin_build:outcome.adminBuild,admin_page_version:adminWorker.pageVersion,redirect_trace:traceText};
+      return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'protected',protection:'worker-login',admin_build:outcome.adminBuild,admin_page_version:adminWorker.pageVersion,redirect_trace:traceText};
     }
     if(outcome.kind==='error'){
       return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:outcome.reason,redirect_trace:traceText};
@@ -151,8 +154,8 @@ await Promise.all(Array.from({length:Math.min(concurrency,routes.length)},()=>wo
 
 const failures=results.filter(r=>r.state==='fail');
 const protectedRows=results.filter(r=>r.state==='protected');
-const oauthProtectedRows=protectedRows.filter(r=>hostOf(r.final_url)==='github.com');
-const workerProtectedRows=protectedRows.filter(r=>hostOf(r.final_url)==='admin.kalenel.nl');
+const oauthProtectedRows=protectedRows.filter(r=>r.protection==='oauth');
+const workerProtectedRows=protectedRows.filter(r=>r.protection==='worker-login');
 for(const row of results){
   console.log(`LIVE_PAGE_VERSION ${row.state.toUpperCase()} route=${row.route} source=${row.rel} expected=${row.expected} http=${row.status} final=${row.final_url}${row.reason?' reason='+row.reason:''}`);
 }
