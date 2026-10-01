@@ -1223,8 +1223,14 @@ The web renderer now uses Riot's Summoner's Rift minimap asset with one shared m
 Only `mapId = 11` is plotted. Coordinates outside a small tolerance around those world bounds are rejected rather than forced onto the image.
 
 The report currently plots:
-- multi-signal high-risk deaths, with materially-ahead deaths visually distinguished,
-- player ward placements, classified as offensive / river / defensive.
+- a Last-20 aggregate map of multi-signal high-risk deaths, with materially-ahead deaths visually distinguished,
+- a Last-20 aggregate map of player ward placements, classified as offensive / river / defensive,
+- a per-game **Map** tab inside every expanded match on mapId 11,
+- every player death in that match, numbered chronologically so the visual points correspond to the event order,
+- high-risk deaths and deaths while materially ahead as distinct visual states,
+- every supported ward placement in that match with offensive / river / defensive and objective-setup distinctions.
+
+The aggregate and per-game views use the exact same shared projection. A game whose `mapId` is not 11 is never silently projected onto Summoner's Rift: its raw coordinates stay in the analysis payload and the Map tab explicitly reports that the renderer is unavailable for that map.
 
 The source of the map asset is Riot Data Dragon. The explicit world bounds follow the established Summoner's Rift transform used by Cassiopeia/Meraki Analytics rather than the old generic square approximation.
 

@@ -1,11 +1,14 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 
 const api=fs.readFileSync('supabase/functions/league-api-v1/index.ts','utf8');
 const app=fs.readFileSync('league/app.js','utf8');
 const html=fs.readFileSync('league/index.html','utf8');
 const css=fs.readFileSync('league/styles.css','utf8');
 const migration=fs.readFileSync('supabase/migrations/20261001043000_league_web_foundation_v1.sql','utf8');
+
+assert.doesNotThrow(()=>new vm.Script(app,{filename:'league/app.js'}),'league/app.js must remain valid browser JavaScript');
 
 assert.ok(api.includes('x-gejast-session'));
 assert.ok(api.includes('x-riot-api-key'));
@@ -166,6 +169,13 @@ assert.ok(app.includes('maxX:14870'));
 assert.ok(app.includes('minY:-120'));
 assert.ok(app.includes('maxY:14980'));
 assert.ok(app.includes('renderSpatial'));
+assert.ok(app.includes('function perGameSpatialHtml'),'Expanded matches must retain their per-game spatial renderer');
+assert.ok(app.includes("['map','macro'"),'Expanded match tabs must retain the native Map tab');
+assert.ok(app.includes('g.deathPositions'),'Per-game map must use preserved raw player death positions');
+assert.ok(app.includes('Map renderer unavailable for mapId'),'Non-Summoner’s Rift games must not be forced onto map11');
+assert.ok(app.includes('numbered chronologically'),'Per-game death map must preserve chronological marker correspondence');
+assert.ok(css.includes('.detail-map-grid'),'Per-game map layout styling must remain present');
+assert.ok(css.includes('.map-marker-label'),'Numbered death marker styling must remain present');
 assert.ok(!app.includes("['DQI'"));
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
