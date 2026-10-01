@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends playstyle analysis with evidence-backed Last-20 coaching and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261001-league-web-v106">
+  <link rel="stylesheet" href="/league/styles.css?v=20261001-league-web-v107">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817"></script>
 </head>
@@ -158,6 +158,10 @@
             <span class="section-hint">Every comparison below is directional: green is favorable, red is unfavorable, grey is too close or too thin to call.</span>
           </div>
           <div class="quick-read-grid" id="quickRead"></div>
+          <div class="recent-pulse">
+            <div class="recent-pulse-head"><div><span>Recent pulse</span><strong>Latest 5 vs previous 15</strong></div><small>Descriptive split only. It is not treated as a trend unless the underlying evidence is strong enough elsewhere in the report.</small></div>
+            <div class="pulse-grid" id="recentPulse"></div>
+          </div>
         </section>
 
         <section class="kpi-grid" id="kpiGrid" aria-label="Role-aware key performance indicators"></section>
@@ -165,8 +169,8 @@
         <section class="visual-benchmark-grid" id="rank-comparison">
           <article class="panel radar-panel">
             <div class="section-head">
-              <div><p class="eyebrow">ADC rank comparison</p><h2>Your shape vs ADC rank averages</h2></div>
-              <span class="section-hint">Population averages come from an external ranked-data corpus; the real values are shown beside the spider.</span>
+              <div><p class="eyebrow">ADC rank comparison</p><h2>Your shape vs ADC-adjusted rank benchmarks</h2></div>
+              <span class="section-hint">Rank averages come from an external corpus; CS/min, KP and DPM are adjusted with its published Bot/ADC multiplier. Real values stay visible beside the spider.</span>
             </div>
             <div class="radar-layout">
               <div id="radarChart" class="radar-chart" aria-live="polite"></div>
@@ -175,6 +179,7 @@
                 <p class="radar-note" id="radarNote"></p>
               </div>
             </div>
+            <div class="rank-bridge" id="rankBridge"></div>
           </article>
 
           <article class="panel visual-summary-panel">
@@ -345,6 +350,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261001-league-web-v106" defer></script>
+  <script src="/league/app.js?v=20261001-league-web-v107" defer></script>
 </body>
 </html>
