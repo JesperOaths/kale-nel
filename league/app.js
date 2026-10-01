@@ -435,7 +435,7 @@ function renderProgressComparison(current,previous,previousAt){
   }
   const role=String(current?.summary?.primaryRole||'GENERIC').toUpperCase();
   const specs=[
-    {label:'Gold @15 vs role opponent',path:'summary.goldDiff15',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
+    {label:'Gold @15 vs role opponent',path:'peerComparison.avgGoldDiff15',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
     {label:'Early-lead give-back rate',path:'behaviorSummary.earlyLeadGivebackRate',threshold:15,direction:-1,format:v=>fmtPct(v)},
     {label:'Clean solo-kill conversion rate',path:'behaviorSummary.soloKillConversionRate',threshold:15,direction:1,format:v=>fmtPct(v)},
     {label:'Solo-kill structure conversion',path:'behaviorSummary.soloKillStructureConversionRate',threshold:15,direction:1,format:v=>fmtPct(v)},
@@ -500,8 +500,10 @@ function renderProgressComparison(current,previous,previousAt){
 
 function sessionCard(title,sample){
   if(!sample||!Number(sample.games))return '';
+  const lane15=Number(sample.lane15Games??0)>0&&hasNum(sample.goldDiff15)?'Gold @15 '+signed(sample.goldDiff15,0)+'g · ':'';
+  const laneNote=Number(sample.games)>0&&Number(sample.lane15Games??0)===0?' · @15 lane checkpoint not comparable':'';
   return '<div class="quality-card"><span>'+esc(title)+'</span><strong>'+esc(String(sample.games))+' games</strong>'+
-    '<small>Gold @15 '+esc(signed(sample.goldDiff15,0))+'g · risky deaths '+esc(fmt(sample.badDeaths,1))+'/game · DPM '+esc(fmtInt(sample.dpm))+' · CS/min '+esc(fmt(sample.csMin,2))+'</small></div>';
+    '<small>'+esc(lane15)+'risky deaths '+esc(fmt(sample.badDeaths,1))+'/game · DPM '+esc(fmtInt(sample.dpm))+' · CS/min '+esc(fmt(sample.csMin,2))+esc(laneNote)+'</small></div>';
 }
 function renderSessionHabits(r){
   const s=r.sessionBehavior||r.sessionModel||{};
@@ -780,7 +782,7 @@ function detailContent(g,tab){
   const checkpointNote=(!rules.lane15Comparable||!rules.fixed15to25Comparable||!rules.closing25Comparable)
     ?'<div class="detail-note"><strong>Checkpoint interpretation:</strong> Raw @15/@25 role-relative frames are shown for traceability, but this rules profile does not treat them as standard lane / 15→25 routing / closing checkpoints. Coaching that depends on those meanings is suppressed.</div>'
     :'';
-  return checkpointNote+detailCard('Gold diff @10',signed(g.goldDiff10,0))+detailCard('Gold diff @15',signed(g.goldDiff15,0))+detailCard('Gold diff @25',signed(g.goldDiff25,0))+
+  return checkpointNote+detailCard('Patch',g.publicPatchKey?(String(g.publicPatchKey)+(g.patchKey&&String(g.patchKey)!==String(g.publicPatchKey)?' · build '+String(g.patchKey):'')):(g.patchKey||'n/a'))+detailCard('Gold diff @10',signed(g.goldDiff10,0))+detailCard('Gold diff @15',signed(g.goldDiff15,0))+detailCard('Gold diff @25',signed(g.goldDiff25,0))+
     detailCard('Peak pre-15 role lead',earlyLead.eligible?(signed(earlyLead.peakGoldDiff,0)+'g @ '+fmt(earlyLead.peakMin,1)+'m'):'No ≥500g measured peak')+
     detailCard('Peak → 15 gold swing',earlyLead.eligible?(signed(earlyLead.goldSwingTo15,0)+'g · '+(earlyLead.giveback?'give-back':earlyLead.preserved?'preserved':'partial erosion')):'n/a')+
     detailCard('Deaths after early peak',earlyLead.eligible?(String(earlyLead.deathsAfterPeak??0)+' · '+String(earlyLead.highRiskDeathsAfterPeak??0)+' high-risk'):'n/a')+
@@ -1076,7 +1078,7 @@ function renderBreakdowns(r){
   $('roleBreakdown').innerHTML=roleRows.length?roleRows.map(([name,v])=>'<div class="break-row"><span>'+esc(name)+'</span><small>'+esc(String(v.games||0))+' games</small><strong>'+esc(fmtPct((v.games||0)?Number(v.wins||0)/Number(v.games)*100:null))+'</strong></div>').join(''):'<div class="bullet empty">No role sample available.</div>';
   const behaviorRows=Array.isArray(r.championBehavior)?r.championBehavior:[];
   if(behaviorRows.length){
-    $('championBreakdown').innerHTML=behaviorRows.slice(0,8).map(v=>'<div class="break-row champion-behavior-row"><span>'+esc(v.champion)+' <small>'+esc(v.role)+'</small></span><small>'+esc(String(v.games||0))+' games · WR '+esc(fmtPct(v.winRate))+' · @15 '+esc(signed(v.goldDiff15,0))+'g · risk deaths '+esc(fmt(v.badDeaths,1))+'</small><strong>'+esc(fmtInt(v.dpm))+' DPM</strong></div>').join('');
+    $('championBreakdown').innerHTML=behaviorRows.slice(0,8).map(v=>'<div class="break-row champion-behavior-row"><span>'+esc(v.champion)+' <small>'+esc(v.role)+'</small></span><small>'+esc(String(v.games||0))+' games · WR '+esc(fmtPct(v.winRate))+' · @15 '+esc(hasNum(v.goldDiff15)?signed(v.goldDiff15,0)+'g':'not comparable')+' · risk deaths '+esc(fmt(v.badDeaths,1))+'</small><strong>'+esc(fmtInt(v.dpm))+' DPM</strong></div>').join('');
   }else{
     const champRows=Object.entries(r.byChampion||{}).sort((a,b)=>Number(b[1]?.games||0)-Number(a[1]?.games||0)).slice(0,8);
     $('championBreakdown').innerHTML=champRows.length?champRows.map(([name,v])=>'<div class="break-row"><span>'+esc(name)+'</span><small>'+esc(String(v.games||0))+' games</small><strong>'+esc(fmtPct((v.games||0)?Number(v.wins||0)/Number(v.games)*100:null))+'</strong></div>').join(''):'<div class="bullet empty">No champion sample available.</div>';
@@ -1087,9 +1089,9 @@ function renderBreakdowns(r){
     target.innerHTML=matchupRows.length?matchupRows.slice(0,10).map(v=>{
       const own=(v.ownChampions||[]).slice(0,3).map(x=>x.champion+' '+x.games+'g').join(', ');
       return '<div class="break-row matchup-behavior-row"><span>vs '+esc(v.opponentChampion)+' <small>'+esc(v.role)+'</small></span>'+
-        '<small>'+esc(String(v.games||0))+' games · WR '+esc(fmtPct(v.winRate))+' · @15 '+esc(signed(v.goldDiff15,0))+'g · early clean duel '+esc(String(v.earlySoloKills??v.pre14SoloKills??0))+'-'+esc(String(v.earlySoloDeaths??v.pre14SoloDeaths??0))+
+        '<small>'+esc(String(v.games||0))+' games · WR '+esc(fmtPct(v.winRate))+' · @15 '+esc(hasNum(v.goldDiff15)?signed(v.goldDiff15,0)+'g':'not comparable')+' · early clean duel '+esc(String(v.earlySoloKills??v.pre14SoloKills??0))+'-'+esc(String(v.earlySoloDeaths??v.pre14SoloDeaths??0))+
         (hasNum(v.outsidePressureShare)?' · outside pressure '+esc(fmtPct(v.outsidePressureShare)):'')+
-        (own?' · own picks '+esc(own):'')+'</small><strong>'+esc(signed(v.csDiff15,1))+' CS @15</strong></div>';
+        (own?' · own picks '+esc(own):'')+'</small><strong>'+esc(hasNum(v.csDiff15)?signed(v.csDiff15,1)+' CS @15':'@15 CS not comparable')+'</strong></div>';
     }).join(''):'<div class="bullet empty">No opposing champion appears at least three times in the primary-role coaching sample.</div>';
   }
 }
@@ -1108,7 +1110,7 @@ function renderQuality(r){
     qualityCard('Analyzed games',String(analyzed),String(coaching)+' primary-role coaching games',evidenceLevel(coaching)),
     qualityCard('Queue context',hasNum(q.dominantQueueId)?'Queue '+String(q.dominantQueueId):'n/a',String(q.dominantQueueGames??0)+' analyzed-context games · '+String(q.excludedOtherQueues??0)+' other queue-context games excluded',evidenceLevel(q.dominantQueueGames??0)),
     qualityCard('Fixed checkpoint eligibility',String(b.checkpointEligibility?.lane15Games??0)+' @15 lane','15→25 '+String(b.checkpointEligibility?.fixed15to25Games??0)+' · @25 closing '+String(b.checkpointEligibility?.closing25Games??0),'neutral'),
-    qualityCard('Patch context',q.currentPatchKey?('Patch '+String(q.currentPatchKey)):'n/a',String(q.currentPatchRoleGames??0)+' current-patch role games · '+String(q.olderSamePatchRoleGames??0)+' older same-patch baseline · '+String(q.crossPatchBaselineRoleGames??0)+' cross-patch older games excluded from trend',q.patchBaselineReady?'good':'neutral'),
+    qualityCard('Patch context',(q.currentPublicPatchKey||q.currentPatchKey)?('Patch '+String(q.currentPublicPatchKey||q.currentPatchKey)):'n/a',String(q.currentPatchRoleGames??0)+' current-patch role games · '+String(q.olderSamePatchRoleGames??0)+' older same-patch baseline · '+String(q.crossPatchBaselineRoleGames??0)+' cross-patch older games excluded from trend'+(q.currentPublicPatchKey&&q.currentPatchKey&&String(q.currentPublicPatchKey)!==String(q.currentPatchKey)?' · Riot/Data Dragon build '+String(q.currentPatchKey):''),q.patchBaselineReady?'good':'neutral'),
     qualityCard('Item catalog provenance',String(q.itemCatalogExactPatches??0)+' exact patch catalog(s)',String(q.itemCatalogFallbackPatches??0)+' patch fallback(s) · '+String(q.itemCatalogUnknownPatchGames??0)+' game(s) without a parsed patch',Number(q.itemCatalogFallbackPatches||0)===0?'good':'neutral'),
     qualityCard('Sample exclusions',String(Number(q.excludedShortGames||0)+Number(q.excludedOtherMaps||0)+Number(q.excludedOtherQueues||0)+Number(q.excludedMissingRole||0))+' games',String(q.excludedShortGames??0)+' under 10m · '+String(q.excludedOtherMaps??0)+' other maps · '+String(q.excludedOtherQueues??0)+' other queues · '+String(q.excludedMissingRole??0)+' missing role','neutral'),
     qualityCard('Timeline coverage',hasNum(timelinePct)?fmtPct(timelinePct):'n/a',String(timelines)+' / '+String(analyzed)+' games',evidenceLevel(timelines)),
@@ -1117,7 +1119,7 @@ function renderQuality(r){
     qualityCard('Fight evidence',String(fightN)+' clusters','Attended multi-kill fight clusters',evidenceLevel(fightN,12,6)),
     qualityCard('Objective evidence',String(objectiveN)+' encounters','Grouped team neutral-objective encounters',evidenceLevel(objectiveN,10,5)),
     qualityCard('Ward evidence',String(wardN)+' wards','Used for spatial/setup analysis',evidenceLevel(wardN,30,12)),
-    qualityCard('Same-patch self baseline',String(q.coachingBaselineRoleGames??0)+' games',q.currentPatchKey?('Older primary-role games on patch '+String(q.currentPatchKey)):'No usable patch cohort',evidenceLevel(q.coachingBaselineRoleGames??0))
+    qualityCard('Same-patch self baseline',String(q.coachingBaselineRoleGames??0)+' games',(q.currentPublicPatchKey||q.currentPatchKey)?('Older primary-role games on patch '+String(q.currentPublicPatchKey||q.currentPatchKey)):'No usable patch cohort',evidenceLevel(q.coachingBaselineRoleGames??0))
   ];
   $('qualityGrid').innerHTML=cards.join('');
   const low=[];
