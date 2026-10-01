@@ -37,8 +37,19 @@ export async function refreshCatalogAndCheck(sb,state,catalogUrl){
   const normalized=normalizeCatalog(row?.payload||{}),hash=await sha256(JSON.stringify(normalized));
   const previous=Array.isArray(state?.catalog_baseline)?state.catalog_baseline:[];
   const changes=previous.length&&state?.catalog_hash!==hash?catalogDiff(previous,normalized):[],created=[];
+
+  // v874: drift rows are transition evidence, not permanent unresolved incidents.
+  // Resolve the previous transition before recording the newest one. A stable
+  // subsequent catalog check therefore closes the latest transition as well.
+  const reconciliationAt=nowIso();
+  const {error:driftResolveError}=await sb.from("shop_catalog_drift_v847")
+    .update({resolved_at:reconciliationAt})
+    .is("resolved_at",null);
+  if(driftResolveError)throw driftResolveError;
+
   for(const change of changes){
-    await sb.from("shop_catalog_drift_v847").insert({...change,observed_at:nowIso()});
+    const {error:driftInsertError}=await sb.from("shop_catalog_drift_v847").insert({...change,observed_at:nowIso()});
+    if(driftInsertError)throw driftInsertError;
   }
   if(changes.length){
     const counts={};
