@@ -675,9 +675,12 @@ loadCatalog().then(result => {
     openShapeEntry({ scroll: false, updateUrl: false });
   }
 
-  if(result?.source === 'cache' || result?.source === 'stale-cache' || result?.source === 'static-fallback'){
+  if(result?.source === 'cache' || result?.source === 'stale-cache'){
     refreshLiveCatalog(1).then(replaceCatalogFromLive).catch(()=>{});
   }
+  // The generated static snapshot is intentionally a complete first-paint source.
+  // Do not hit Supabase again during initial render; the bounded background watcher
+  // performs the live reconciliation later.
 });
 
 document.addEventListener('click', event => {
