@@ -451,7 +451,13 @@ ok(backend.includes('supportingTitles'), 'priority themes must preserve supporti
 
 ok(backend.includes('High-risk post-play give-backs / game'), 'post-play root cause must receive a direct practice target');
 ok(backend.includes('Pre-objective side-lane deaths / game'), 'side-lane timing must receive a direct practice target');
-ok(backend.includes('cause==="late_reset"'), 'late-reset objective diagnosis must select a late-reset target');
+ok(backend.includes('cause==="recent_shop_absence"'), 'objective timing diagnosis must select the non-causal recent-shop absence target');
+ok(backend.includes('leadMs<45000||leadMs>105000'), 'objective prior-setup evidence must remain bounded to 45–105 seconds before the encounter');
+ok(backend.includes('setupEvidence:earlySetup?"prior_position_frame_45_105s":null'), 'objective setup evidence provenance must remain explicit');
+ok(backend.includes('interpretation:"association_not_proven_cause"'), 'recent-shop objective association must never be promoted to causal proof');
+ok(app.includes('Primary supported explanation'), 'objective diagnosis UI must use explanation rather than causal cause wording');
+ok(app.includes('Recent-shop objective absences'), 'current objective UI must expose recent-shop absence terminology');
+ok(!app.includes('Late-reset objective misses')&&!app.includes('Late-reset neutral-objective misses'), 'current objective UI must not regress to causal late-reset miss labels');
 ok(backend.includes('cause==="pre_objective_death"'), 'pre-objective-death diagnosis must select a death-rate target');
 ok(backend.includes('cause==="setup_vision"'), 'setup-vision diagnosis must select a setup-ward target');
 
