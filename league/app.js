@@ -1006,6 +1006,8 @@ function renderAdvanced(r){
     ['Second major timing vs peer',hasNum(r.behaviorSummary?.avgSecondMajorDeltaVsOpponent)?signed(r.behaviorSummary.avgSecondMajorDeltaVsOpponent,1)+' min · '+String(r.behaviorSummary?.secondMajorPeerGames??0)+' games':'n/a'],
     ['Longest win / loss streak',String(r.outcomeStreaks?.longestWin??0)+' / '+String(r.outcomeStreaks?.longestLoss??0)],
     ['Current result streak',r.outcomeStreaks?.currentResult?(String(r.outcomeStreaks.currentResult).toUpperCase()+' × '+String(r.outcomeStreaks?.currentLength??0)):'n/a'],
+    ['Objective presence · pooled',fmtPct(r.behaviorSummary?.objectiveJoinRate)+' · '+String(r.behaviorSummary?.objectiveJoinedEncounters??0)+' / '+String(r.behaviorSummary?.objectiveTeamEncounters??0)+' team encounters'],
+    ['Objective presence · mean game rate',fmtPct(r.behaviorSummary?.meanGameObjectiveJoinRate)],
     ['Objective-context death %',fmtPct(a.objectiveDeathPct)],
     ['Bruisienator V21 DQI · effective pipeline',hasNum(r.behaviorSummary?.avgLegacyBruisienatorDqi)?fmt(r.behaviorSummary.avgLegacyBruisienatorDqi,2)+'/10':'n/a'],
     ['Death-consequence evidence coverage',fmtPct(r.behaviorSummary?.deathConsequenceCoveragePct)],
@@ -1018,7 +1020,8 @@ function renderAdvanced(r){
     ['Early / transition / late costly deaths',String(r.behaviorSummary?.phaseRisk?.early?.costlyDeaths??0)+' / '+String(r.behaviorSummary?.phaseRisk?.mid?.costlyDeaths??0)+' / '+String(r.behaviorSummary?.phaseRisk?.late?.costlyDeaths??0)],
     ['Mid-routing comparable games',String(r.behaviorSummary?.midRouting?.games??0)],
     ['Mid-routing CS swing 15→25',hasNum(r.behaviorSummary?.midRouting?.avgCsSwing15to25)?signed(r.behaviorSummary.midRouting.avgCsSwing15to25,1)+' CS':'n/a'],
-    ['Mid-routing objective presence',fmtPct(r.behaviorSummary?.midRouting?.avgObjectiveJoinRate)],
+    ['Mid-routing objective presence · pooled',fmtPct(r.behaviorSummary?.midRouting?.avgObjectiveJoinRate)+' · '+String(r.behaviorSummary?.midRouting?.joinedObjectiveEvents??0)+' / '+String(r.behaviorSummary?.midRouting?.teamObjectiveEvents??0)+' encounters'],
+    ['Mid-routing objective presence · mean game rate',fmtPct(r.behaviorSummary?.midRouting?.meanGameObjectiveJoinRate)],
     ['Mid-routing inefficient games',String(r.behaviorSummary?.midRouting?.inefficientGames??0)],
     ['Mid-routing balanced games',String(r.behaviorSummary?.midRouting?.balancedGames??0)],
     ['Side-farm / low-presence games',String(r.behaviorSummary?.midRouting?.sideFarmLowPresenceGames??0)],
@@ -1229,13 +1232,13 @@ function renderQuality(r){
   const fightN=Number(b.fightSamples??0),objectiveN=Number(b.neutralObjectiveEvents??0),wardN=Number(p.visionWardTotal??0);
   const cards=[
     qualityCard('Analyzed games',String(analyzed),String(coaching)+' primary-role coaching games',evidenceLevel(coaching)),
-    qualityCard('Queue context',hasNum(q.dominantQueueId)?'Queue '+String(q.dominantQueueId):'n/a',String(q.dominantQueueGames??0)+' analyzed-context games · '+String(q.excludedOtherQueues??0)+' other queue-context games excluded',evidenceLevel(q.dominantQueueGames??0)),
+    qualityCard('Queue context',hasNum(q.dominantQueueId)?('Queue '+String(q.dominantQueueId)+(q.dominantQueueFamily?' · '+String(q.dominantQueueFamily).replaceAll('_',' '):'')):'n/a',String(q.dominantQueueGames??0)+' analyzed-context games · '+String(q.unsupportedQueueRowsExcluded??0)+' unsupported special/bot queue game(s) excluded · '+String(Math.max(0,Number(q.excludedOtherQueues||0)-Number(q.unsupportedQueueRowsExcluded||0)))+' other supported queue-context game(s) excluded',evidenceLevel(q.dominantQueueGames??0)),
     qualityCard('Fixed checkpoint eligibility',String(b.checkpointEligibility?.lane15Games??0)+' @15 lane','15→25 '+String(b.checkpointEligibility?.fixed15to25Games??0)+' · @25 closing '+String(b.checkpointEligibility?.closing25Games??0),'neutral'),
     qualityCard('Patch context',(q.currentPublicPatchKey||q.currentPatchKey)?('Patch '+String(q.currentPublicPatchKey||q.currentPatchKey)):'n/a',String(q.currentPatchRoleGames??0)+' current-patch role games · '+String(q.olderSamePatchRoleGames??0)+' older same-patch baseline · '+String(q.crossPatchBaselineRoleGames??0)+' cross-patch older games excluded from trend'+(q.currentPublicPatchKey&&q.currentPatchKey&&String(q.currentPublicPatchKey)!==String(q.currentPatchKey)?' · Riot/Data Dragon build '+String(q.currentPatchKey):''),q.patchBaselineReady?'good':'neutral'),
     qualityCard('Role-quest mechanics',Object.keys(q.roleQuestRevisionCounts||{}).length?Object.entries(q.roleQuestRevisionCounts||{}).map(([k,v])=>String(k)+' '+String(v)+'g').join(' · '):'n/a',q.roleQuestCheckpointNote||'Quest effects are treated as patch context, not inferred completion timestamps.','neutral'),
     qualityCard('Mechanics coaching cohort',q.currentMechanicsKey||'n/a',String(q.mechanicsCohortGames??0)+' current-mechanics role games · '+String(q.primaryRoleGamesInLast20??coaching)+' primary-role games in Last-20'+(q.mechanicsCohortApplied?' · verified current cohort applied':q.mechanicsCohortReason==='current_mechanics_unverified'?' · mixed fallback: newest mechanics revision is unverified':q.mixedMechanicsFallback?' · mixed fallback: current cohort below 5 games':' · single compatible cohort'),q.mechanicsCohortApplied?'good':q.mixedMechanicsFallback||q.currentMechanicsKnown===false?'neutral':'good'),
     qualityCard('Item catalog provenance',String(q.itemCatalogExactPatches??0)+' exact patch catalog(s)',String(q.itemCatalogFallbackPatches??0)+' patch fallback(s) · '+String(q.itemCatalogUnknownPatchGames??0)+' game(s) without a parsed patch',Number(q.itemCatalogFallbackPatches||0)===0?'good':'neutral'),
-    qualityCard('Sample exclusions',String(Number(q.excludedShortGames||0)+Number(q.excludedOtherMaps||0)+Number(q.excludedOtherQueues||0)+Number(q.excludedMissingRole||0))+' games',String(q.excludedShortGames??0)+' under 10m · '+String(q.excludedOtherMaps??0)+' other maps · '+String(q.excludedOtherQueues??0)+' other queues · '+String(q.excludedMissingRole??0)+' missing role','neutral'),
+    qualityCard('Sample exclusions',String(Number(q.excludedShortGames||0)+Number(q.excludedOtherMaps||0)+Number(q.excludedOtherQueues||0)+Number(q.excludedMissingRole||0))+' games',String(q.excludedShortGames??0)+' under 10m · '+String(q.excludedOtherMaps??0)+' other maps · '+String(q.unsupportedQueueRowsExcluded??0)+' unsupported special/bot queues'+(Array.isArray(q.unsupportedQueueIds)&&q.unsupportedQueueIds.length?' ['+q.unsupportedQueueIds.join(', ')+']':'')+' · '+String(Math.max(0,Number(q.excludedOtherQueues||0)-Number(q.unsupportedQueueRowsExcluded||0)))+' other supported queue contexts · '+String(q.excludedMissingRole??0)+' missing role','neutral'),
     qualityCard('Timeline coverage',hasNum(timelinePct)?fmtPct(timelinePct):'n/a',String(timelines)+' / '+String(analyzed)+' games',evidenceLevel(timelines)),
     qualityCard('Direct peer evidence',String(peerN)+' games','Actual same-role opponents',evidenceLevel(peerN)),
     qualityCard('Ranked peer evidence',String(rankedN)+' games',String(q.higherRankPeerGames??p.higherRankPeerGames??0)+' higher-rank peers',evidenceLevel(rankedN)),
@@ -1251,7 +1254,8 @@ function renderQuality(r){
   if(rankedN<3)low.push('rank-band comparisons');
   if(fightN<6)low.push('fight-order/readiness');
   if(Number(q.excludedShortGames||0)>0)low.push('short games excluded from coaching');
-  if(Number(q.excludedOtherQueues||0)>0)low.push('mixed queue contexts excluded');
+  if(Number(q.unsupportedQueueRowsExcluded||0)>0)low.push('unsupported special/bot Summoner’s Rift queues excluded');
+  if(Math.max(0,Number(q.excludedOtherQueues||0)-Number(q.unsupportedQueueRowsExcluded||0))>0)low.push('mixed supported queue contexts excluded');
   if(q.currentPatchKey&&!q.patchBaselineReady)low.push('same-patch historical trend baseline');
   if(Number(q.itemCatalogFallbackPatches||0)>0)low.push('item-catalog patch fallback');
   if(Object.keys(q.roleQuestRevisionCounts||{}).length>1)low.push(q.mechanicsCohortApplied?'older mechanics excluded from coaching cohort':'mixed role-quest mechanics revisions');
