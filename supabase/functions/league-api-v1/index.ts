@@ -148,12 +148,41 @@ function game(row:any,puuid:string){
   return{matchId:text(m?.metadata?.matchId||row.match_id),gameStartTimestamp:Number(m?.info?.gameStartTimestamp||0),champion:text(p.championName||"Unknown"),championId:num(p.championId),role:role(p.teamPosition||p.individualPosition||p.role),rawRole:text(p.teamPosition||p.individualPosition||p.role),win:!!p.win,kills:Number(p.kills||0),deaths:Number(p.deaths||0),assists:Number(p.assists||0),kda:Number(p.deaths||0)>0?(Number(p.kills||0)+Number(p.assists||0))/Number(p.deaths):Number(p.kills||0)+Number(p.assists||0),kp:pct(Number(p.kills||0)+Number(p.assists||0),teamKills),csMin:(Number(p.totalMinionsKilled||0)+Number(p.neutralMinionsKilled||0))/mins,gpm:Number(p.goldEarned||0)/mins,dpm:Number(p.totalDamageDealtToChampions||0)/mins,vpm:Number(p.visionScore||0)/mins,durationMinutes:mins,mapId:Number(m?.info?.mapId||row.map_id||0)||null,queueId:Number(m?.info?.queueId||row.queue_id||0)||null,timelineAvailable:!!row.timeline_json,...timelineFacts(m,row.timeline_json,p)};
 }
 function report(profile:any,rows:any[]){
-  const games=(rows||[]).map(r=>game(r,text(profile.puuid))).filter(Boolean).slice(0,20),byRole:any={},byChampion:any={};
-  for(const g of games){byRole[g.role]=byRole[g.role]||{games:0,wins:0};byRole[g.role].games++;if(g.win)byRole[g.role].wins++;byChampion[g.champion]=byChampion[g.champion]||{games:0,wins:0};byChampion[g.champion].games++;if(g.win)byChampion[g.champion].wins++;}
-  let primaryRole="GENERIC",primaryGames=0;for(const[k,v]of Object.entries(byRole)as any){if(Number(v.games)>primaryGames){primaryGames=Number(v.games);primaryRole=k;}}
-  const validTimeline=games.filter((g:any)=>g.timelineAvailable).length,coordinateGames=games.filter((g:any)=>(g.deathPositions?.length||0)+(g.wards?.length||0)+(g.objectives?.length||0)>0).length;
-  const summary={games:games.length,wins:games.filter((g:any)=>g.win).length,winRate:pct(games.filter((g:any)=>g.win).length,games.length),primaryRole,primaryRoleGames:primaryGames,csMin:avg(games.map((g:any)=>g.csMin)),kp:avg(games.map((g:any)=>g.kp)),dpm:avg(games.map((g:any)=>g.dpm)),gpm:avg(games.map((g:any)=>g.gpm)),vpm:avg(games.map((g:any)=>g.vpm)),goldDiff10:avg(games.map((g:any)=>g.goldDiff10)),goldDiff15:avg(games.map((g:any)=>g.goldDiff15)),csDiff10:avg(games.map((g:any)=>g.csDiff10)),csDiff15:avg(games.map((g:any)=>g.csDiff15))};
-  return{schemaVersion:"league-report-v1",analyzerVersion:"league-web-basic-v1",generatedAt:now(),profile:{id:profile.id,displayName:profile.display_name,gameName:profile.game_name,tagLine:profile.tag_line,platformRegion:profile.platform_region,routingRegion:profile.routing_region},summary,byRole,byChampion,recentFocus:[],overallHighlights:[],coaching:[],games,charts:{csMin:games.map((g:any)=>({matchId:g.matchId,value:g.csMin})),kp:games.map((g:any)=>({matchId:g.matchId,value:g.kp})),dpm:games.map((g:any)=>({matchId:g.matchId,value:g.dpm})),goldDiff15:games.map((g:any)=>({matchId:g.matchId,value:g.goldDiff15}))},hiddenCharts:[],benchmarks:{rankAbove:null,itemSpike:null},aggregateMaps:{wards:[],deaths:[]},advanced:{dqi:null,agor:null,objectivePresence:null,earlyKP:null,objectiveDeathPct:null,roams:null,recalls:null,itemSpike:null,wardClassification:null,currentSourcePortRequired:true},dataQuality:{cachedGames:rows.length,analyzedGames:games.length,validTimelineGames:validTimeline,validCoordinateGames:coordinateGames,missingTimelineGames:games.length-validTimeline},sourceStatus:{currentBruisienatorSourceAvailable:false,note:"Basic deterministic web metrics are active. Advanced Bruisienator formulas remain intentionally unported until the current source package is supplied."}};
+  const allGames=(rows||[]).map(r=>game(r,text(profile.puuid))).filter(Boolean);
+  const games=allGames.slice(0,20),byRole:any={},byChampion:any={};
+  for(const g of games){
+    byRole[g.role]=byRole[g.role]||{games:0,wins:0};byRole[g.role].games++;if(g.win)byRole[g.role].wins++;
+    byChampion[g.champion]=byChampion[g.champion]||{games:0,wins:0};byChampion[g.champion].games++;if(g.win)byChampion[g.champion].wins++;
+  }
+  let primaryRole="GENERIC",primaryGames=0;
+  for(const[k,v]of Object.entries(byRole)as any){if(Number(v.games)>primaryGames){primaryGames=Number(v.games);primaryRole=k;}}
+  const validTimeline=games.filter((g:any)=>g.timelineAvailable).length;
+  const coordinateGames=games.filter((g:any)=>(g.deathPositions?.length||0)+(g.wards?.length||0)+(g.objectives?.length||0)>0).length;
+  const makeSummary=(sample:any[])=>({
+    games:sample.length,wins:sample.filter((g:any)=>g.win).length,
+    winRate:pct(sample.filter((g:any)=>g.win).length,sample.length),
+    csMin:avg(sample.map((g:any)=>g.csMin)),kp:avg(sample.map((g:any)=>g.kp)),
+    dpm:avg(sample.map((g:any)=>g.dpm)),gpm:avg(sample.map((g:any)=>g.gpm)),vpm:avg(sample.map((g:any)=>g.vpm)),
+    goldDiff10:avg(sample.map((g:any)=>g.goldDiff10)),goldDiff15:avg(sample.map((g:any)=>g.goldDiff15)),
+    csDiff10:avg(sample.map((g:any)=>g.csDiff10)),csDiff15:avg(sample.map((g:any)=>g.csDiff15))
+  });
+  const summary={...makeSummary(games),primaryRole,primaryRoleGames:primaryGames};
+  const lifetime=allGames.length>20?makeSummary(allGames):null;
+  return{
+    schemaVersion:"league-report-v1",analyzerVersion:"league-web-basic-v2",generatedAt:now(),
+    profile:{id:profile.id,displayName:profile.display_name,gameName:profile.game_name,tagLine:profile.tag_line,platformRegion:profile.platform_region,routingRegion:profile.routing_region},
+    summary,lifetime,byRole,byChampion,recentFocus:[],overallHighlights:[],coaching:[],games,
+    charts:{
+      csMin:games.map((g:any)=>({matchId:g.matchId,value:g.csMin})),
+      kp:games.map((g:any)=>({matchId:g.matchId,value:g.kp})),
+      dpm:games.map((g:any)=>({matchId:g.matchId,value:g.dpm})),
+      goldDiff15:games.map((g:any)=>({matchId:g.matchId,value:g.goldDiff15}))
+    },
+    hiddenCharts:[],benchmarks:{rankAbove:null,itemSpike:null},aggregateMaps:{wards:[],deaths:[]},
+    advanced:{dqi:null,agor:null,objectivePresence:null,earlyKP:null,objectiveDeathPct:null,roams:null,recalls:null,itemSpike:null,wardClassification:null,currentSourcePortRequired:true},
+    dataQuality:{cachedGames:allGames.length,analyzedGames:games.length,validTimelineGames:validTimeline,validCoordinateGames:coordinateGames,missingTimelineGames:games.length-validTimeline,baselineGames:lifetime?allGames.length:0},
+    sourceStatus:{currentBruisienatorSourceAvailable:false,note:"Basic deterministic web metrics are active. Advanced Bruisienator formulas remain intentionally unported until the current source package is supplied."}
+  };
 }
 
 Deno.serve(async(req:Request)=>{
@@ -164,6 +193,11 @@ Deno.serve(async(req:Request)=>{
   try{
     const{sb,viewer}=await session(req,body),action=text(body.action||"health"),requestRiotKey=text(req.headers.get("x-riot-api-key")||body?.riot_api_key);
     if(action==="health")return json(req,{ok:true,riot_configured:!!(RIOT_KEY||requestRiotKey),server_riot_key:!!RIOT_KEY,player:viewer.display_name,site_scope:viewer.site_scope});
+    if(action==="riot_test"){
+      const p=await getProfile(sb,viewer.player_id,body.profile_id);
+      const resolved=await resolveProfile(sb,{...p,puuid:null},requestRiotKey);
+      return json(req,{ok:true,profile_id:resolved.id,game_name:resolved.game_name,tag_line:resolved.tag_line,platform_region:resolved.platform_region,puuid_resolved:!!text(resolved.puuid)});
+    }
     if(action==="profiles_list"){
       const{data,error}=await sb.from("league_profiles_v1").select("id,profile_key,display_name,game_name,tag_line,platform_region,routing_region,notes,puuid,last_resolved_at,rank_snapshot,updated_at").eq("owner_player_id",viewer.player_id).eq("site_scope",viewer.site_scope).order("updated_at",{ascending:false});
       if(error)throw error;return json(req,{ok:true,profiles:data||[]});
@@ -180,7 +214,7 @@ Deno.serve(async(req:Request)=>{
     }
     if(action==="fetch_prepare"){
       let p=await getProfile(sb,viewer.player_id,body.profile_id);p=await resolveProfile(sb,p,requestRiotKey);
-      const count=Math.max(1,Math.min(20,Number(body.count||20))),rr=text(p.routing_region)||routeFor(p.platform_region);
+      const count=Math.max(1,Math.min(100,Number(body.count||20))),rr=text(p.routing_region)||routeFor(p.platform_region);
       const ids=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/by-puuid/"+encodeURIComponent(p.puuid)+"/ids?start=0&count="+count,requestRiotKey),matchIds=Array.isArray(ids)?ids.map(text).filter(Boolean):[];
       const{data:cached}=matchIds.length?await sb.from("league_match_cache_v1").select("match_id").eq("profile_id",p.id).in("match_id",matchIds).not("match_json","is",null):{data:[]};
       const set=new Set((cached||[]).map((x:any)=>x.match_id));
@@ -208,7 +242,7 @@ Deno.serve(async(req:Request)=>{
     }
     if(action==="analyze_basic"){
       const p=await getProfile(sb,viewer.player_id,body.profile_id);if(!text(p.puuid))return json(req,{ok:false,error:"profile_not_resolved"},400);
-      const{data:rows,error}=await sb.from("league_match_cache_v1").select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,match_json,timeline_json,fetch_error").eq("profile_id",p.id).not("match_json","is",null).order("game_start_at",{ascending:false}).limit(20);if(error)throw error;
+      const{data:rows,error}=await sb.from("league_match_cache_v1").select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,match_json,timeline_json,fetch_error").eq("profile_id",p.id).not("match_json","is",null).order("game_start_at",{ascending:false}).limit(200);if(error)throw error;
       const rep=report(p,rows||[]),{data:run,error:se}=await sb.from("league_analysis_runs_v1").insert({profile_id:p.id,owner_player_id:viewer.player_id,source_kind:"web_basic",analyzer_version:rep.analyzerVersion,sample_match_ids:rep.games.map((g:any)=>g.matchId),report_data:rep,data_quality:rep.dataQuality}).select("id,created_at").single();if(se)throw se;
       return json(req,{ok:true,analysis_id:run.id,created_at:run.created_at,report:rep});
     }
