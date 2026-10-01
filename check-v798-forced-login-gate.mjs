@@ -47,6 +47,12 @@ assert.ok(fs.existsSync(leagueIndex),'public League surface missing');
 const leagueBody=fs.readFileSync(leagueIndex,'utf8');
 assert(!leagueBody.includes('/gejast-auth-gate.js?')&&!leagueBody.includes('/gejast-home-gate.js?')&&!leagueBody.includes('requireMatchEntrySession'),'public League surface must not inherit Kalenel player-session gating');
 assert(leagueBody.includes('index,follow'),'public League surface must remain indexable/followable');
+const worker=fs.readFileSync('cloudflare/workers/admin-gate/src/worker.js','utf8');
+assert(worker.includes("function isLeaguePublicPath(pathname)"),'Cloudflare perimeter must explicitly recognize League as public');
+assert(worker.includes("if (isLeaguePublicPath(url.pathname))"),'League public bypass must execute before generic protected/public routing');
+assert(worker.indexOf("if (isLeaguePublicPath(url.pathname))") < worker.indexOf("if (!isProtectedPublicPath(url.pathname))"),'League public bypass must precede generic protected/public routing');
+assert(worker.includes("PUBLIC_AUTH_ENTRY_DOCUMENTS"),'login/home/request/activate documents must have explicit fresh public bootstrap handling');
+assert(worker.includes("'Cache-Control', 'no-store, max-age=0, must-revalidate'"),'fresh public bootstrap documents must bypass stale edge/browser HTML caches');
 const missing=[]; const leaked=[]; const publicGateLeaks=[]; let protectedCount=0;
 for(const file of walk(process.cwd())){
   const r=rel(file);const body=fs.readFileSync(file,'utf8');
