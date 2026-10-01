@@ -380,9 +380,9 @@ function renderKpis(r){
   const item=(label,value,sub='')=>({label,value,sub});
   let rows;
   if(role==='SUPPORT'){
-    rows=[item('Recent WR',fmtPct(s.winRate)),item('Primary role',role,(s.primaryRoleGames||0)+' games'),item('Vision / min',fmt(s.vpm,2)),item('Objective presence',fmtPct(r.advanced?.objectivePresence)),item('Early skirmish KP',fmtPct(r.advanced?.earlyKP))];
+    rows=[item('Recent WR',fmtPct(s.winRate)),item('Primary role',role,(s.primaryRoleGames||0)+' games'),item('Vision / min',fmt(s.vpm,2)),item('Neutral objective presence',fmtPct(r.advanced?.objectivePresence)),item('Early skirmish KP',fmtPct(r.advanced?.earlyKP))];
   }else if(role==='JUNGLE'){
-    rows=[item('Recent WR',fmtPct(s.winRate)),item('Primary role',role,(s.primaryRoleGames||0)+' games'),item('Gold / min',fmtInt(s.gpm)),item('Objective presence',fmtPct(r.advanced?.objectivePresence)),item('Early KP',fmtPct(r.advanced?.earlyKP))];
+    rows=[item('Recent WR',fmtPct(s.winRate)),item('Primary role',role,(s.primaryRoleGames||0)+' games'),item('Gold / min',fmtInt(s.gpm)),item('Neutral objective presence',fmtPct(r.advanced?.objectivePresence)),item('Early KP',fmtPct(r.advanced?.earlyKP))];
   }else{
     rows=[item('Recent WR',fmtPct(s.winRate)),item('Primary role',role,(s.primaryRoleGames||0)+' games'),item('CS / min',fmt(s.csMin,2)),item('KP',fmtPct(s.kp)),item('DPM',fmtInt(s.dpm))];
   }
@@ -633,6 +633,14 @@ function objectiveDiagnosisHtml(r){
     '<p>No reset/death/vision cause crossed its evidence threshold. Arrival/pathing remains a hypothesis rather than a proven cause.</p>')+
     '<small class="diagnosis-caveat">This ranks supported evidence; it does not prove a single cause.</small></div>';
 }
+function reportPhaseRules(g){
+  const r=g?.phaseRules||{};
+  return{key:r.key||'legacy',earlyEndMin:hasNum(r.earlyEndMin)?Number(r.earlyEndMin):15,lateStartMin:hasNum(r.lateStartMin)?Number(r.lateStartMin):20};
+}
+function modernOrLegacy(obj,modernKey,legacyKey,fallback=0){
+  const m=obj?.[modernKey];if(m!==null&&m!==undefined)return m;
+  const l=obj?.[legacyKey];return l!==null&&l!==undefined?l:fallback;
+}
 function detailCard(label,value){return'<div class="detail-card"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>';}
 function detailList(items,empty){
   const xs=(items||[]).filter(Boolean);
@@ -668,16 +676,16 @@ function detailContent(g,tab){
         (hasNum(x.currentGoldAtStart)?' · '+fmtInt(x.currentGoldAtStart)+'g unspent':'')+(hasNum(x.goldDiffAtStart)?' · role gold '+signed(x.goldDiffAtStart,0)+'g':'')+(x.itemDisadvantage?' · opponent major item first':'')),'No attended multi-kill fight clusters were detected.');
   }
   if(tab==='phases'){
-    const p=g.phaseBehavior||{},phase=(key,label)=>{
+    const p=g.phaseBehavior||{},rules=reportPhaseRules(g),phase=(key,label)=>{
       const x=p[key]||{};
       return '<div class="detail-note"><strong>'+esc(label)+'</strong><ul>'+
         '<li>'+esc(String(x.deaths??0))+' deaths · '+esc(String(x.highRiskDeaths??0))+' high-risk · '+esc(String(x.costlyDeaths??0))+' costly · '+esc(String(x.severeDeaths??0))+' severe</li>'+
-        '<li>'+esc(String(x.killAssistImpacts??0))+' kill/assist impacts · '+esc(String(x.objectiveJoins??0))+' / '+esc(String(x.teamObjectives??0))+' objective joins'+(Number(x.teamObjectives||0)>0?' · '+esc(fmtPct(100*Number(x.objectiveJoins||0)/Number(x.teamObjectives)))+' presence':'')+'</li>'+
+        '<li>'+esc(String(x.killAssistImpacts??0))+' kill/assist impacts · '+esc(String(x.objectiveJoins??0))+' / '+esc(String(x.teamObjectives??0))+' neutral-objective encounters joined'+(Number(x.teamObjectives||0)>0?' · '+esc(fmtPct(100*Number(x.objectiveJoins||0)/Number(x.teamObjectives)))+' presence':'')+'</li>'+
         '<li>'+esc(String(x.fightClusters??0))+' attended fight clusters · '+esc(String(x.firstAllyFightDeaths??0))+' first-allied-death events</li>'+
       '</ul></div>';
     };
-    return phase('early','Early · <14:00')+phase('mid','Mid · 14:00–24:59')+phase('late','Late · ≥25:00')+
-      '<div class="detail-note">Phase counts are raw evidence for this match. Aggregate rates are normalized by how many analyzed games actually reach each phase.</div>';
+    return phase('early','Early · <'+rules.earlyEndMin+':00')+phase('mid','Transition · '+rules.earlyEndMin+':00–<'+rules.lateStartMin+':00')+phase('late','Late / major-objective era · ≥'+rules.lateStartMin+':00')+
+      '<div class="detail-note">Phase boundaries follow the stored queue/rules profile for this match. Aggregate phase-risk rates are normalized per 10 minutes of actual phase exposure, so a five-minute transition phase is not compared directly with a much longer late phase.</div>';
   }
   if(tab==='deaths'){
     const bad=g.badDeaths||[];
@@ -709,15 +717,15 @@ function detailContent(g,tab){
   }
   if(tab==='objectives'){
     const kc=g.killConversion||{},okc=g.opponentKillConversion||{};
-    return detailCard('Objective presence',fmtPct(g.objectiveJoinRate))+detailCard('Joined / team objectives',String(g.objectiveJoined??0)+' / '+String(g.objectiveTeamTotal??0))+detailCard('Early KP',fmtPct(g.earlyKp))+
+    return detailCard('Neutral-objective presence',fmtPct(g.objectiveJoinRate))+detailCard('Joined / neutral encounters',String(g.objectiveJoined??0)+' / '+String(g.objectiveTeamTotal??0))+detailCard('Early KP',fmtPct(g.earlyKp))+
       detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+' min · '+String(g.impactType||'event'):'n/a')+detailCard('Objective-context death %',fmtPct(g.objectiveDeathPct))+detailCard('Pre-objective conversion deaths',String(g.preObjectiveDeathCount??0))+
       detailCard('Kill-window conversion',String(kc.converted??0)+' / '+String(kc.windows??0)+' · '+fmtPct(kc.rate))+detailCard('Opposing-role conversion',String(okc.converted??0)+' / '+String(okc.windows??0)+' · '+fmtPct(okc.rate))+
-      detailCard('Neutral objectives joined',String(g.objectiveReadiness?.joined??0)+' / '+String(g.objectiveReadiness?.neutralTeamObjectives??0))+
+      detailCard('Neutral encounters joined',String(g.objectiveReadiness?.joined??0)+' / '+String(g.objectiveReadiness?.neutralTeamObjectives??0))+
       detailCard('Prior-frame setup joins',String(g.objectiveReadiness?.earlySetupJoins??0)+' · '+fmtPct(g.objectiveReadiness?.earlySetupJoinRate))+
       detailCard('Event-frame-only joins',String(g.objectiveReadiness?.eventFrameOnlyJoins??0))+detailCard('Objective absences',String(g.objectiveReadiness?.absent??0))+
-      detailCard('Late-reset objective misses',String(g.objectiveReadiness?.lateResetMisses??0))+detailCard('Fresh-purchase objective joins',String(g.objectiveReadiness?.freshPurchaseJoins??0))+detailCard('Tracked objective events',String(g.objectives?.length||0))+
+      detailCard('Late-reset objective misses',String(g.objectiveReadiness?.lateResetMisses??0))+detailCard('Fresh-purchase objective joins',String(g.objectiveReadiness?.freshPurchaseJoins??0))+detailCard('Raw objective/structure events',String(g.objectives?.length||0))+
       detailList((kc.events||[]).map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+String(x.kills||0)+' involved kill(s) · '+(x.converted?('converted to '+String(x.objectiveType||'objective')+' in '+String(x.secondsAfter??'?')+'s'):'no objective/structure within 75s')),'No player-involved kill-conversion windows were available.')+
-      detailList((g.objectiveReadiness?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+String(x.objectiveType||'neutral objective')+' · '+(x.earlySetup?('prior-frame setup'+(hasNum(x.setupLeadSec)?' ~'+fmtInt(x.setupLeadSec)+'s lead':'')):x.eventFrameOnlyJoin?'event-frame-only join':x.present?'present':'absent')+(hasNum(x.secondsSinceShop)?' · shopped '+String(x.secondsSinceShop)+'s before':'')+(x.recentDeath?' · recent death':x.lateResetMiss?' · late reset miss':x.freshPurchaseJoin?' · fresh purchase + joined':'')),'No neutral-objective readiness events were available.')+
+      detailList((g.objectiveReadiness?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+String(x.objectiveType||'neutral objective')+(Number(x.rawEventCount||1)>1?' · '+String(x.rawEventCount)+' raw kills grouped':'')+' · '+(x.earlySetup?('prior-frame setup'+(hasNum(x.setupLeadSec)?' ~'+fmtInt(x.setupLeadSec)+'s lead':'')):x.eventFrameOnlyJoin?'event-frame-only join':x.present?'present':'absent')+(hasNum(x.secondsSinceShop)?' · shopped '+String(x.secondsSinceShop)+'s before':'')+(x.recentDeath?' · recent death':x.lateResetMiss?' · late reset miss':x.freshPurchaseJoin?' · fresh purchase + joined':'')),'No neutral-objective readiness events were available.')+
       '<div class="detail-note">Conversion is team context: it asks whether player-involved kills are followed by tracked objectives/structures within 75 seconds. It does not claim the player alone caused or prevented the conversion.</div>';
   }
   if(tab==='resets'){
@@ -755,23 +763,23 @@ function detailContent(g,tab){
     detailCard('CS diff @10',signed(g.csDiff10,0))+detailCard('CS diff @15',signed(g.csDiff15,0))+detailCard('CS diff @25',signed(g.csDiff25,0))+
     detailCard('XP diff @10',signed(g.xpDiff10,0))+detailCard('XP diff @15',signed(g.xpDiff15,0))+detailCard('XP diff @25',signed(g.xpDiff25,0))+
     detailCard('Opponent',peer?(peer.champion||'Same-role peer'):'n/a')+detailCard('Opponent rank',peer?rankText(peer.rank):'n/a')+
-    detailCard('Pre-14 clean duel',String(g.laneDuel?.pre14SoloKillsVsRole??0)+' solo kills / '+String(g.laneDuel?.pre14SoloDeathsToRole??0)+' solo deaths')+
-    detailCard('Plate credits ≤20m',String(g.structurePressure?.first20PlayerPlateCredits??g.structurePressure?.pre14PlayerPlates??0)+' vs '+String(g.structurePressure?.first20OpponentPlateCredits??g.structurePressure?.pre14OpponentPlates??0)+' peer')+
-    detailCard('Plate credits · full match',String(g.structurePressure?.allGamePlayerPlateCredits??g.structurePressure?.pre14PlayerPlates??0)+' vs '+String(g.structurePressure?.allGameOpponentPlateCredits??g.structurePressure?.pre14OpponentPlates??0)+' peer')+
+    detailCard('Early clean duel',String(modernOrLegacy(g.laneDuel,'earlySoloKillsVsRole','pre14SoloKillsVsRole'))+' solo kills / '+String(modernOrLegacy(g.laneDuel,'earlySoloDeathsToRole','pre14SoloDeathsToRole'))+' solo deaths')+
+    detailCard('Plate involvement ≤20m',String(modernOrLegacy(g.structurePressure,'first20PlayerPlateInvolvement','first20PlayerPlateCredits'))+' vs '+String(modernOrLegacy(g.structurePressure,'first20OpponentPlateInvolvement','first20OpponentPlateCredits'))+' peer')+
+    detailCard('Plate involvement · full match',String(modernOrLegacy(g.structurePressure,'allGamePlayerPlateInvolvement','allGamePlayerPlateCredits'))+' vs '+String(modernOrLegacy(g.structurePressure,'allGameOpponentPlateInvolvement','allGameOpponentPlateCredits'))+' peer')+
     detailCard('Solo-kill structure conversion',String(g.structurePressure?.soloKillStructureConversions??0)+' / '+String(g.structurePressure?.soloKillWindows??0)+' · '+fmtPct(g.structurePressure?.soloKillStructureConversionRate))+
     detailCard('All-game clean duel',String(g.laneDuel?.soloKillsVsRole??0)+' / '+String(g.laneDuel?.soloDeathsToRole??0))+
-    detailCard('Pre-14 home-lane deaths',String(g.lanePressure?.pre14HomeLaneDeaths??0))+
-    detailCard('Outside-pressure lane deaths',String(g.lanePressure?.pre14OutsidePressureDeaths??0)+' · '+fmtPct(g.lanePressure?.outsidePressureShare))+
+    detailCard('Early home-lane deaths',String(modernOrLegacy(g.lanePressure,'earlyHomeLaneDeaths','pre14HomeLaneDeaths')))+
+    detailCard('Outside-pressure early deaths',String(modernOrLegacy(g.lanePressure,'earlyOutsidePressureDeaths','pre14OutsidePressureDeaths'))+' · '+fmtPct(g.lanePressure?.earlyOutsidePressureShare??g.lanePressure?.outsidePressureShare))+
     detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+'m':'n/a')+detailCard('Opponent first impact',hasNum(g.opponentImpactTimeMin)?fmt(g.opponentImpactTimeMin,1)+'m':'n/a')+detailCard('Impact timing vs peer',hasNum(g.impactDeltaVsOpponent)?signed(g.impactDeltaVsOpponent,1)+' min':'n/a')+
     detailCard('DPM vs same-role opponent',peer?signed(peer.dpmDelta,0):'n/a')+detailCard('CS/min vs opponent',peer?signed(peer.csMinDelta,2):'n/a')+detailCard('Team damage rank',hasNum(g.damageRank)?'#'+g.damageRank+' of 5':'n/a')+
     detailCard('Damage share',fmtPct(g.damageShare))+detailCard('Gold share',fmtPct(g.goldShare))+detailCard('Damage − gold share',hasNum(g.damageShare)&&hasNum(g.goldShare)?signed(Number(g.damageShare)-Number(g.goldShare),1)+' pp':'n/a')+
     detailCard('Session game #',g.sessionContext?.sessionGameNumber?String(g.sessionContext.sessionGameNumber):'n/a')+
     detailCard('Gap after previous game',hasNum(g.sessionContext?.gapAfterPreviousMin)?fmt(g.sessionContext.gapAfterPreviousMin,0)+' min':'n/a')+
     detailCard('Previous result',g.sessionContext?.previousWin===true?'WIN':g.sessionContext?.previousWin===false?'LOSS':'n/a')+
-    detailList((g.structurePressure?.events||[]).map(x=>(Number(x.killTime)||0).toFixed(1)+'m solo kill · '+(x.converted?('structure converted'+(hasNum(x.secondsAfter)?' '+fmtInt(x.secondsAfter)+'s later':'')):'no credited plate/turret within 90s')),'No pre-14 clean solo-kill structure window detected.')+
-    '<div class="detail-note">2026 turret plates are permanent on every non-Nexus turret. The ≤20m plate row is a fixed coaching slice, not a plate-expiry rule; full-match credits are shown separately.</div>'+
-    detailList((g.laneDuel?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+(x.result==='solo_kill'?'solo kill on role opponent':'solo death to role opponent')+(x.pre14?' · pre-14':'')+(hasNum(x.goldDiffAtEvent)?' · role gold '+signed(x.goldDiffAtEvent,0)+'g at event':'')+(hasNum(x.goldSwingTo15)?' · '+signed(x.goldSwingTo15,0)+'g swing to 15':'')+(hasNum(x.csSwingTo15)?' · '+signed(x.csSwingTo15,0)+' CS swing to 15':'')+(x.result==='solo_kill'&&x.pre14&&hasNum(x.convertedBy15)?(x.convertedBy15?' · converted':' · not converted'):'')+(x.result==='solo_kill'&&x.pre14&&hasNum(x.nextShopDelaySec)?' · next shop '+fmtInt(x.nextShopDelaySec)+'s':'')+(x.result==='solo_kill'&&x.pre14&&x.diedBeforeNextShop?' · died before shop':'')),'No clean direct-role solo duel event detected.')+
-    detailList((g.lanePressure?.events||[]).filter(x=>x.outsidePressure).map(x=>(Number(x.time)||0).toFixed(1)+'m · outside pressure'+((x.outsideRoles||[]).length?' from '+x.outsideRoles.join(', '):'')+' · '+String(x.attackerCount||'?')+' attacker(s)'),'No pre-14 outside-pressure lane death detected.')+
+    detailList((g.structurePressure?.events||[]).map(x=>(Number(x.killTime)||0).toFixed(1)+'m solo kill · '+(x.converted?('supported structure involvement'+(x.towerType?' · '+x.towerType:'')+(x.laneType?' · '+x.laneType:'')+(x.attribution?' · '+x.attribution.replaceAll('_',' '):'')+(hasNum(x.secondsAfter)?' · '+fmtInt(x.secondsAfter)+'s later':'')):'no supported plate/turret involvement within 90s')),'No early clean solo-kill structure window detected.')+
+    '<div class="detail-note">2026 turret plates no longer use the old 14:00 expiry assumption and can persist on deeper turrets. The ≤20m row is only a fixed coaching slice; full-match involvement is shown separately. Direct event credit is treated as provenance, while supported proximity is used when Riot does not attribute a plate event to a participant.</div>'+
+    detailList((g.laneDuel?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+(x.result==='solo_kill'?'solo kill on role opponent':'solo death to role opponent')+(x.early?' · early phase':x.pre14?' · legacy pre-14':'')+(hasNum(x.goldDiffAtEvent)?' · role gold '+signed(x.goldDiffAtEvent,0)+'g at event':'')+(hasNum(x.goldSwingTo15)?' · '+signed(x.goldSwingTo15,0)+'g swing to 15':'')+(hasNum(x.csSwingTo15)?' · '+signed(x.csSwingTo15,0)+' CS swing to 15':'')+(x.result==='solo_kill'&&x.conversionEligibleTo15&&hasNum(x.convertedBy15)?(x.convertedBy15?' · converted by 15':' · not converted by 15'):'')+(x.result==='solo_kill'&&(x.early||x.pre14)&&hasNum(x.nextShopDelaySec)?' · next shop '+fmtInt(x.nextShopDelaySec)+'s':'')+(x.result==='solo_kill'&&(x.early||x.pre14)&&x.diedBeforeNextShop?' · died before shop':'')),'No clean direct-role solo duel event detected.')+
+    detailList((g.lanePressure?.events||[]).filter(x=>x.outsidePressure).map(x=>(Number(x.time)||0).toFixed(1)+'m · outside pressure'+((x.outsideRoles||[]).length?' from '+x.outsideRoles.join(', '):'')+' · '+String(x.attackerCount||'?')+' attacker(s)'),'No early-phase outside-pressure lane death detected.')+
     '<div class="detail-note">Clean direct-role duel events require the player and actual same-role opponent to be killer/victim with no assisting participants. This separates direct matchup outcomes from outside intervention.</div>';
 }
 function bindDetailTabs(container,g,index){
