@@ -24,6 +24,7 @@ const adminWorker=readAdminWorkerVersion(root);
 const adminBuild=adminWorker.build;
 const adminPageVersion=adminWorker.pageVersion;
 const dynamicWorkerWatermarks=adminWorker.watermarkOwners;
+const versionWorkflow=fs.readFileSync(path.join(root,'.github/workflows/page-version-integrity.yml'),'utf8');
 
 function versionTokensFromVisibleOwners(body){
   const tokens=[];
@@ -91,6 +92,9 @@ assert.deepEqual(orphanIndependentOwners,[],`independent page version owners are
 assert.match(adminBuild,/^v\d+-[a-z0-9-]+$/i,'admin Worker build must expose a versioned page owner');
 assert.match(adminPageVersion,/^v\d+$/i,'admin Worker dynamic HTML page version must derive from ADMIN_BUILD');
 assert.ok(dynamicWorkerWatermarks>=2,`admin Worker must watermark both generated HTML pages; found ${dynamicWorkerWatermarks}`);
+assert.doesNotMatch(versionWorkflow,/['"]\*\*\/\*\.mjs['"]/, 'page-version integrity must not be restarted by unrelated repository-wide .mjs checker churn');
+assert.match(versionWorkflow,/scripts\/wait-for-exact-pages-deployment\.mjs/, 'page-version integrity must retain active Pages surface verification');
+assert.match(versionWorkflow,/scripts\/check-live-published-page-versions\.mjs/, 'page-version integrity must retain exhaustive deployed route verification');
 assert.deepEqual(missing,[],`published pages missing a visible version watermark/footer:\n${missing.join('\n')}`);
 assert.deepEqual(ambiguous,[],`published pages expose multiple conflicting visible page versions:\n${ambiguous.join('\n')}`);
 assert.deepEqual(declarationDrift,[],`published pages have source declaration drift:\n${declarationDrift.join('\n')}`);
