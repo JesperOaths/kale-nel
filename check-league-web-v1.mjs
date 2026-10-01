@@ -33,12 +33,15 @@ for(const field of [
 assert.ok(api.includes('sessionBehaviorModel'));
 assert.ok(api.includes('highRiskLeadDeathsPerGame'));
 assert.ok(api.includes('itemDisadvantageFightRate'));
+assert.ok(api.includes('outnumberedFightLossRate'));
 assert.ok(api.includes('killConversionRate'));
 assert.ok(api.includes('games=deepCandidates.slice(0,20)'));
 assert.ok(app.includes('function hasNum(v)'));
 assert.ok(app.includes('renderPracticePlan'));
 assert.ok(app.includes('renderProgressComparison'));
 assert.ok(app.includes("if(tab==='fights')"));
+assert.ok(app.includes('Locally outnumbered'));
+assert.ok(app.includes('Loss rate while outnumbered'));
 assert.ok(app.includes('Post-kill conversion'));
 assert.ok(app.includes('Late-reset neutral-objective misses'));
 assert.ok(app.includes('r.sessionBehavior||r.sessionModel'),'Session panel must read the report contract name');
