@@ -386,7 +386,7 @@ assert.ok(app.includes('sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-
 assert.ok(app.includes('chart-reference-line')&&app.includes("reference:bench?.dpm")&&app.includes("reference:bench?.kp"),'ADC DPM/KP charts must retain same-tier external reference lines');
 assert.ok(!html.includes('ADC rank averages'),'UI must not overstate role-adjusted rank benchmarks as direct ADC rank averages');
 assert.ok(!app.includes('Rank avg ')&&!app.includes('ADC average')&&!app.includes('sourced rank average'),'Prominent KPI/Quick Read copy must not overstate adjusted references as observed ADC averages');
-assert.ok(html.includes('Your ADC sample vs rank-reference profiles')&&app.includes('External ref '),'Prominent rank-comparison surfaces must consistently use reference language');
+assert.ok(html.includes('Your ADC sample vs rank-reference profiles')&&app.includes('Population benchmark, not your opponents.'),'Dedicated ADC rank-comparison surfaces must remain explicitly population-reference based');
 assert.ok(app.includes('raw rank reference')&&app.includes('not ADC-adjusted'),'Deaths comparison must disclose that the source does not publish an ADC-specific deaths multiplier');
 assert.ok(app.includes('chart-zero-line')&&app.includes('fixedMin:-2000')&&app.includes('fixedMax:2000'),'Signed lane-economy charts must retain a prominent zero line and stable gold scale');
 assert.ok(app.includes('fixedMin:-35')&&app.includes('fixedMax:35'),'CS-difference charts must retain a stable symmetric scale');
@@ -398,6 +398,10 @@ assert.ok(css.includes('.games-table th{position:static!important}')&&css.includ
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))')&&css.includes('html{font-size:18px'),'League report must retain a spacious 1760px desktop shell with larger base typography');
 assert.ok(css.includes('--good:#126a45')&&css.includes('--bad:#b23a2f'),'Positive and negative data must retain high-contrast visual tokens');
 assert.ok(html.includes('id="quickRead"')&&html.includes('id="radarChart"')&&html.includes('id="decisionMetrics"'),'Logical overview, population radar and decision sections must remain present');
+assert.ok(html.indexOf('id="report-driver"')<html.indexOf('id="quickRead"'),'Action-first report drivers must appear before diagnostic comparison layers');
+assert.ok(app.includes("comparisonCard('CS/min vs role opponent'")&&app.includes("comparisonCard('DPM vs role opponent'")&&app.includes("comparisonCard('First major timing vs role'"),'Direct-role comparison must use actual same-role opponents rather than external population references');
+assert.ok(html.includes('Raw selected-role output')&&app.includes('Raw selected-role sample')&&app.includes("tone-neutral"),'Raw KPI layer must remain neutral and self-descriptive rather than duplicate benchmark judgment');
+assert.ok(modelDoc.includes('## Report information hierarchy')&&modelDoc.includes('Do not duplicate external ADC benchmark claims'),'Report layer responsibilities must remain documented');
 assert.ok(app.includes('analyzer coaching threshold 8')&&app.includes('analyzer coaching threshold 4')&&app.includes('timeline-complete games · analyzer coaching threshold 5'),'Prominent decision cards must disclose analyzer-aligned evidence floors');
 assert.ok(app.includes('thin sample — descriptive only')&&css.includes('.decision-card.thin-evidence'),'Below-threshold decision metrics must remain visually neutral and explicitly descriptive');
 assert.ok(modelDoc.includes('## Decision-card evidence thresholds')&&modelDoc.includes('A small denominator must not visually impersonate high-confidence evidence'),'Decision-card denominator policy must remain documented');
@@ -584,7 +588,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v135'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v136'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
