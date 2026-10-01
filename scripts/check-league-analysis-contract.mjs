@@ -138,3 +138,9 @@ console.log(JSON.stringify({
 ok(backend.includes('"post-play discipline"'), 'post-play discipline must consolidate into a stable coaching theme');
 ok(backend.includes('"side-lane timing"'), 'side-lane timing must consolidate into a stable coaching theme');
 ok(backend.includes('supportingTitles'), 'priority themes must preserve supporting finding titles');
+
+ok(backend.includes('High-risk post-play give-backs / game'), 'post-play root cause must receive a direct practice target');
+ok(backend.includes('Pre-objective side-lane deaths / game'), 'side-lane timing must receive a direct practice target');
+ok(backend.includes('cause==="late_reset"'), 'late-reset objective diagnosis must select a late-reset target');
+ok(backend.includes('cause==="pre_objective_death"'), 'pre-objective-death diagnosis must select a death-rate target');
+ok(backend.includes('cause==="setup_vision"'), 'setup-vision diagnosis must select a setup-ward target');
