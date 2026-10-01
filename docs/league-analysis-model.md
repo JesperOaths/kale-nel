@@ -608,11 +608,18 @@ The report currently plots:
 
 The source of the map asset is Riot Data Dragon. The explicit world bounds follow the established Summoner's Rift transform used by Cassiopeia/Meraki Analytics rather than the old generic square approximation.
 
-## Not yet restored
+## Historical metrics not present in the recovered working package
+
+The recovered November 2025 Bruisienator project was inspected directly:
+- `Analyze-Playstyle.ps1`
+- `Analyze-AllMatches.ps1`
+- the Last-20 / Phase-2 report templates
+
+None of those working files defines or references a DQI or AGOR formula. They therefore remain compatibility fields only and are not shown as active metrics in the web report.
 
 Do not invent:
-- DQI formula,
-- AGOR formula,
+- DQI,
+- AGOR,
 - a fake static rank-above item benchmark,
 - exact recall channel start/end when Riot timeline evidence does not supply it,
 - causality from simple win/loss correlations.
