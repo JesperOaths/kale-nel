@@ -305,6 +305,8 @@ assert.ok(app.includes("String(p.profile_key||'')==='recent-request'")&&app.incl
 assert.ok(api.includes('identityMatch=(candidates||[]).find')&&api.includes('reuseExistingId'),'Profile save must reuse an existing matching Riot identity instead of creating another alias');
 assert.ok(identityMigration.includes('league_profiles_owner_riot_identity_uidx')&&identityMigration.includes("legacy.profile_key='recent-request'"),'Database migration must merge empty legacy duplicates and enforce one Riot identity per workspace');
 assert.ok(app.includes("oldHistory=await api('report_latest'")&&app.includes("api('analyze_basic',{profile_id:migrated.profile.id,target_role:inferredRole})"),'Legacy mixed reports must be used only to infer role, then rebuilt from cached Riot data into a role-pure saved report');
+assert.ok(app.includes("cache=await api('cache_status',{profile_id:profile.id,target_role:selectedRole})")&&app.includes("api('analyze_basic',{profile_id:profile.id,target_role:selectedRole})"),'A saved profile with only pre-role mixed reports must auto-rebuild a role-pure report from existing cached Riot data without requiring a refetch');
+assert.ok(app.includes('Role-selection safety check failed during saved-report rebuild'),'Automatic cached report rebuild must fail closed on any cross-role contamination');
 assert.ok(app.includes("api('report_latest',{profile_id:profile.id,target_role:selectedRole})")&&api.includes('role(x?.data_quality?.selectedRole)===targetRole'),'Saved report history must be role-specific');
 assert.ok(app.includes('LEAGUE_SLOT_SELECTION_KEY')&&!app.includes('LEAGUE_PROFILE_SELECTION_KEY'),'Browser storage may remember only the selected profile slot pointer; Riot profile/report data stays server-side');
 assert.ok(api.includes('positionEvidence:pxy?"event_position":inferred?"nearest_player_frame_35s":"unavailable"')&&api.includes('wardFrameProjectedPositions'),'Ward events without native coordinates must remain counted and transparently projectable from a ≤35s player frame');
@@ -521,7 +523,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v118'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v119'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
