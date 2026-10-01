@@ -30,6 +30,12 @@ const configText = fs.readFileSync('gejast-config.js', 'utf8');
 const supabaseUrl = configText.match(/SUPABASE_URL:\s*'([^']+)'/)?.[1];
 const publishableKey = configText.match(/SUPABASE_PUBLISHABLE_KEY:\s*'([^']+)'/)?.[1];
 if (!supabaseUrl || !publishableKey) throw new Error('Could not resolve checked-in Supabase public config');
+const publicApiHeaders = () => {
+  const headers = { 'Content-Type': 'application/json', Accept: 'application/json', apikey: publishableKey };
+  const legacyPublicJwt = /^[^.]+\.[^.]+\.[^.]+$/.test(publishableKey);
+  if (legacyPublicJwt) headers.Authorization = `Bearer ${publishableKey}`;
+  return headers;
+};
 
 const rootVersion = readRootVersion(process.cwd());
 const trackedHtml = listPublishedHtml(process.cwd());
@@ -54,7 +60,7 @@ async function rpc(name, payload = {}) {
   try {
     const res = await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json', apikey: publishableKey, Authorization: `Bearer ${publishableKey}` },
+      headers: publicApiHeaders(),
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
