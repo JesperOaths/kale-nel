@@ -73,7 +73,7 @@ async function api(action,payload={}){
 
 function setBusy(on,label){
   state.busy=!!on;
-  ['fetchBtn','analyzeBtn','batchFetchBtn','batchAnalyzeBtn','newProfileBtn','saveProfileBtn','importBtn','testRiotKeyBtn'].forEach(id=>{const n=$(id);if(n)n.disabled=!!on||((id==='fetchBtn'||id==='analyzeBtn')&&!state.profile)||((id==='batchFetchBtn'||id==='batchAnalyzeBtn')&&batchSelectedIds().length===0)||((id==='importBtn')&&(!state.profile||!$('reportFile')?.files?.length))||((id==='testRiotKeyBtn')&&(!state.profile||(!state.serverRiotKey&&!state.riotApiKey)));});
+  ['fetchBtn','analyzeBtn','batchFetchBtn','batchAnalyzeBtn','newProfileBtn','saveProfileBtn','deleteProfileBtn','importBtn','testRiotKeyBtn'].forEach(id=>{const n=$(id);if(n)n.disabled=!!on||((id==='fetchBtn'||id==='analyzeBtn')&&!state.profile)||((id==='batchFetchBtn'||id==='batchAnalyzeBtn')&&batchSelectedIds().length===0)||((id==='importBtn')&&(!state.profile||!$('reportFile')?.files?.length))||((id==='testRiotKeyBtn')&&(!state.profile||(!state.serverRiotKey&&!state.riotApiKey)));});
   if(label)$('progressState').textContent=label;
 }
 function setProgress(current,total){
@@ -284,6 +284,7 @@ function openProfileEditor(profile){
   $('platformRegion').value=p.platform_region||'euw1';
   $('profileNotes').value=p.notes||'';
   $('profileEditor').dataset.profileId=p.id||'';
+  $('deleteProfileBtn').hidden=!p.id;
   $('profileLabel').focus();
 }
 async function saveProfile(){
@@ -304,6 +305,21 @@ async function saveProfile(){
     $('profileEditor').hidden=true;
     await loadProfiles(d.profile.id);
   }catch(e){log('Save profile failed: '+e.message,'bad');}
+  finally{setBusy(false,'Idle');syncButtons();}
+}
+async function deleteProfile(){
+  const profileId=$('profileEditor').dataset.profileId||'';
+  const profile=state.profiles.find(p=>String(p.id)===String(profileId));
+  if(!profileId||!profile)return;
+  if(!globalThis.confirm('Delete League profile “'+String(profile.display_name||profile.profile_key||'profile')+'” and its cached matches/reports from this workspace?'))return;
+  setBusy(true,'Deleting');
+  try{
+    const d=await api('profile_delete',{profile_id:profileId});
+    log('Deleted profile '+String(d.deleted_profile_name||profile.display_name||'')+' and its cached League data.','ok');
+    $('profileEditor').hidden=true;
+    state.profile=null;state.report=null;
+    await loadProfiles();
+  }catch(e){log('Delete profile failed: '+e.message,'bad');}
   finally{setBusy(false,'Idle');syncButtons();}
 }
 
@@ -1309,6 +1325,7 @@ $('profileSelect').addEventListener('change',()=>selectProfile($('profileSelect'
 $('newProfileBtn').addEventListener('click',()=>openProfileEditor(null));
 $('cancelProfileBtn').addEventListener('click',()=>$('profileEditor').hidden=true);
 $('saveProfileBtn').addEventListener('click',saveProfile);
+$('deleteProfileBtn').addEventListener('click',deleteProfile);
 $('testRiotKeyBtn').addEventListener('click',testRiotKey);
 $('fetchBtn').addEventListener('click',fetchMatches);
 $('analyzeBtn').addEventListener('click',analyze);
