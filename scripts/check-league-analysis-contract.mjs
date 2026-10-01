@@ -25,6 +25,9 @@ ok(backend.includes('d.tMs+75000'), 'pre-objective conversion window must remain
 ok(backend.includes('impactDeltaVsOpponent'), 'direct-peer first-impact comparison must remain in analyzer');
 ok(backend.includes('roam.laneCostCs='), 'roam lane-cost comparison must remain in analyzer');
 ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
+ok(backend.includes('visionMission'), 'vision-action safety model must remain in analyzer');
+ok(backend.includes('Number(d.tMs)-Number(v.tMs)<=20000'), 'vision-action death window must remain 20 seconds');
+ok(backend.includes('dist2(pos,v)<=2500*2500'), 'vision-action death spatial radius must remain 2500 units');
 ok(backend.includes('function deathArea('), 'spatial death-context classification must remain in analyzer');
 ok(backend.includes('peer_rank_json'), 'same-role peer rank cache must remain available');
 ok(backend.includes('x-riot-api-key'), 'session Riot-key header must remain supported by backend/CORS');
