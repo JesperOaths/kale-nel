@@ -185,6 +185,9 @@ assert.ok(api.includes('w.objectiveSetup=neutralObjectives.some'),'Per-ward obje
 assert.ok(!api.includes('w.objectiveSetup=allObjectives.some'),'Turret/plate events must not be counted as neutral-objective ward setup');
 assert.ok(api.includes('STANDARD_SR_2026_RULES'),'Standard 2026 Summoner Rift pacing rules must remain explicit');
 assert.ok(api.includes('earlyEndMin:14')&&api.includes('lateStartMin:20'),'Standard phase boundaries must track the 2026 14m macro transition and 20m Baron era');
+assert.ok(api.includes('baronSpawnMin:20')&&api.includes('platesPermanent:true'),'Standard 2026 SR must preserve 20-minute Baron and permanent plate rules');
+assert.ok(api.includes('atakhanEnabled:false')&&api.includes('featsOfStrengthEnabled:false'),'Removed 2025 Atakhan/Feats mechanics must stay disabled in 2026');
+assert.ok(api.includes('firstBloodBonusGold:100')&&api.includes('firstTurretBonusGold:300'),'2026 First Blood and first-turret bonus gold must remain encoded');
 assert.ok(api.includes('SWIFTPLAY_2026_RULES')&&api.includes('queueId===480'),'Swiftplay must keep a separate accelerated pacing profile');
 assert.ok(api.includes('earlyEndMin:12,lateStartMin:12'),'2026 Swiftplay must collapse directly into its 12-minute Baron era instead of fabricating a standard-SR transition');
 assert.ok(api.includes('baronSpawnMin:12')&&api.includes('elderSpawnMin:15')&&api.includes('suddenDeathMin:25'),'Swiftplay major objective anchors must remain explicit');
@@ -195,7 +198,9 @@ assert.ok(api.includes('major===16'),'2026 Riot internal game-version major must
 assert.ok(api.includes('function roleQuestRevisionFor2026('),'2026 role-quest revisions must be patch-aware');
 assert.ok(api.includes('2026_revision_unknown'),'Missing internal minor versions must fail closed for patch-specific role-quest rewards');
 assert.ok(api.includes('Exact 2026 minor patch is unavailable'),'Unknown 2026 revisions must be described without inventing a reward revision');
-assert.ok(api.includes('26.9_role_quest_rework')&&api.includes('26.11_mid_8pct')&&api.includes('26.19_top_teleport'),'Material 2026 role-quest revisions must remain encoded');
+assert.ok(api.includes('26.9_role_quest_rework')&&api.includes('26.11_mid_8pct')&&api.includes('26.16_support_roam_penalty')&&api.includes('26.19_top_teleport'),'Material 2026 system-level role-quest revisions must remain encoded');
+assert.ok(api.includes('function roleQuestRevisionForRole2026('),'Mechanics cohorts must use role-specific revisions instead of splitting every role on unrelated patch changes');
+assert.ok(api.includes('support_26.16_roam_penalty')&&api.includes('top_26.19_teleport')&&api.includes('adc_26.9_40g_takedown'),'Role-specific mechanics boundaries must remain explicit');
 assert.ok(api.includes('laneRoleQuestsEnabled:!isSwift'),'Standard lane-role quests must remain disabled for Swiftplay');
 assert.ok(api.includes('function roleQuestContext('),'Per-game role-quest context must remain explicit');
 assert.ok(api.includes('support_quest_control_ward_discount_unobserved'),'Support Control Ward discount must remain an explicit shop-cost caveat instead of a fabricated exact spend');
@@ -209,6 +214,7 @@ assert.ok(app.includes('Mechanics coaching cohort'),'Frontend must explain which
 assert.ok(app.includes('Role-quest rules'),'Per-game UI must expose the active role-quest rules context');
 assert.ok(app.includes('Role-quest mechanics'),'Data-quality UI must expose role-quest mechanics cohorts');
 assert.ok(app.includes('mixed role-quest mechanics revisions'),'Mixed mechanics cohorts must be visible as a quality caveat');
+assert.ok(!app.includes('pre14PlayerPlates'),'Modern plate UI must not fall back to obsolete pre-14 plate counters');
 assert.ok(api.includes('phaseExposureMinutes'),'Phase-risk comparisons must normalize by actual time exposure');
 assert.ok(api.includes('postLaneStartMin:14')&&api.includes('roamEndMin:20'),'Standard post-lane and roam windows must be rules-driven');
 assert.ok(api.includes('postLaneStartMin:12')&&api.includes('roamEndMin:12'),'Swiftplay post-lane/roam windows must respect its accelerated Baron timing');
@@ -314,7 +320,7 @@ assert.ok(api.includes('higherRankMajorItemGames'),'Higher-ranked peer item samp
 assert.ok(api.includes('higherRankAvgMajorItemDeltaMin'),'Higher-ranked peer first-major timing delta must remain exported');
 assert.ok(api.includes('higherRankMajorItemFasterPct'),'Higher-ranked peer first-major faster rate must remain exported');
 assert.ok(api.includes('First-major timing slips against higher-ranked direct opponents'),'Higher-rank item timing must remain actionable coaching evidence');
-assert.ok(api.includes('league-web-behavior-v4.30'),'Analyzer version must include season-aware rules and turret-tier involvement');
+assert.ok(api.includes('league-web-behavior-v4.31'),'Analyzer version must include season-aware rules and turret-tier involvement');
 assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
 assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
 assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
