@@ -728,47 +728,64 @@ function benchmarkKpi(label,value,benchmark,unit,inverse=false,extra=''){
 }
 
 function reportInsightParts(x,fallback){
-  if(typeof x==='string')return {title:x,copy:'',action:''};
-  const v=x&&typeof x==='object'?x:{};
-  return {title:String(v.title||v.label||v.category||fallback),copy:String(v.evidence||v.text||v.comparison||''),action:String(v.action||'')};
+  if(typeof x==='string')return {present:true,title:fallback,copy:x,action:''};
+  if(!x||typeof x!=='object')return {present:false,title:'Not enough evidence',copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:''};
+  const title=String(x.title||x.label||x.category||fallback),copy=String(x.evidence||x.text||x.comparison||''),action=String(x.action||'');
+  return {present:Boolean(title||copy||action),title,copy,action};
 }
 function recentDirectionSummary(r){
   const t=r.recentTrend||{},defs=[
     ['CS / min',t.csMin,false,.15],['Gold @15',t.goldDiff15,false,150],['Damage / min',t.dpm,false,50],
     ['Kill participation',t.kp,false,2],['High-risk deaths',t.badDeaths,true,.2]
   ];
-  let good=0,bad=0,usable=0;
+  let good=0,bad=0,stable=0,supported=0;
   defs.forEach(([,o,inverse,threshold])=>{
     if(!o||!hasNum(o.recent)||!hasNum(o.prior)||Number(o.recentN||0)<3||Number(o.priorN||0)<5)return;
-    const d=Number(o.recent)-Number(o.prior);if(Math.abs(d)<threshold)return;
-    usable++;const signal=inverse?-d:d;if(signal>0)good++;else bad++;
+    supported++;
+    const d=Number(o.recent)-Number(o.prior);
+    if(Math.abs(d)<threshold){stable++;return;}
+    const signal=inverse?-d:d;if(signal>0)good++;else bad++;
   });
-  if(!usable)return {tone:'neutral',value:'Still forming',copy:'The latest-five window does not yet contain enough strong directional changes to call a useful recent pattern.'};
-  if(good>=bad+2)return {tone:'good',value:'Moving favorably',copy:good+' meaningful recent signals improved while '+bad+' moved unfavorably. Treat this as a short-window direction, not proof of a lasting trend.'};
-  if(bad>=good+2)return {tone:'bad',value:'Needs stabilizing',copy:bad+' meaningful recent signals worsened while '+good+' improved. The next games should emphasize the primary practice target rather than adding new goals.'};
-  return {tone:'neutral',value:'Mixed direction',copy:'Recent movement is split: '+good+' favorable and '+bad+' unfavorable meaningful shifts. Keep the practice plan narrow until the signal separates.'};
+  if(!supported)return {tone:'neutral',value:'Not enough evidence',copy:'The latest-five window does not yet have enough valid recent-versus-prior observations for a directional read.'};
+  if(!good&&!bad)return {tone:'neutral',value:'Broadly stable',copy:stable+' supported recent signal'+(stable===1?' is':'s are')+' inside the report’s practical change bands; there is no strong short-window movement to chase.'};
+  if(good>=bad+2)return {tone:'good',value:'Moving favorably',copy:good+' meaningful recent signals improved, '+bad+' moved unfavorably and '+stable+' stayed inside the practical change bands. Treat this as short-window direction, not proof of a lasting trend.'};
+  if(bad>=good+2)return {tone:'bad',value:'Needs stabilizing',copy:bad+' meaningful recent signals worsened, '+good+' improved and '+stable+' stayed inside the practical change bands. Emphasize the primary practice target rather than adding new goals.'};
+  return {tone:'neutral',value:'Mixed direction',copy:'Recent movement is split: '+good+' favorable, '+bad+' unfavorable and '+stable+' stable supported signals. Keep the practice plan narrow until the signal separates.'};
 }
 function renderReportDrivers(r){
   const box=$('reportDrivers');if(!box)return;
   const priorities=(r.priorityThemes?.length?r.priorityThemes:r.recentFocus)||[],strengths=r.overallHighlights||[];
-  const weak=reportInsightParts(priorities[0],'Primary limiter'),strong=reportInsightParts(strengths[0],'Most repeatable strength'),direction=recentDirectionSummary(r);
-  const card=(kind,title,value,copy,action,tone)=>'<article class="report-driver-card '+kind+' tone-'+tone+'"><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong><p>'+esc(copy||'No high-confidence supporting sentence is available yet.')+'</p>'+(action?'<div><b>Next:</b> '+esc(action)+'</div>':'')+'</article>';
+  const weak=reportInsightParts(priorities[0],'Primary limiter'),strong=reportInsightParts(strengths[0],'Bankable strength'),direction=recentDirectionSummary(r);
+  const card=(kind,title,value,copy,action,tone,actionLabel='Next')=>'<article class="report-driver-card '+kind+' tone-'+tone+'"><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong><p>'+esc(copy||'No high-confidence supporting sentence is available yet.')+'</p>'+(action?'<div><b>'+esc(actionLabel)+':</b> '+esc(action)+'</div>':'')+'</article>';
   box.innerHTML=[
-    card('driver-priority','Primary limiter',weak.title,weak.copy,weak.action,'bad'),
-    card('driver-strength','Bankable strength',strong.title,strong.copy,strong.action,'good'),
-    card('driver-direction','Recent direction',direction.value,direction.copy,'','neutral'===direction.tone?'neutral':direction.tone)
+    card('driver-priority','Primary limiter',weak.title,weak.copy,weak.action,weak.present?'bad':'neutral','Next'),
+    card('driver-strength','Bankable strength',strong.title,strong.copy,strong.action,strong.present?'good':'neutral','Preserve'),
+    card('driver-direction','Recent direction',direction.value,direction.copy,'',direction.tone)
   ].join('');
 }
 
 
-function gameAverage(games,getter){
-  const xs=games.map(getter).filter(hasNum).map(Number);return xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null;
+function gameMetricSummary(games,getter){
+  const xs=games.map(getter).filter(hasNum).map(Number),n=xs.length;
+  if(!n)return {mean:null,n:0,sd:null};
+  const mean=xs.reduce((a,b)=>a+b,0)/n;
+  const variance=n>1?xs.reduce((sum,x)=>sum+(x-mean)*(x-mean),0)/(n-1):null;
+  return {mean,n,sd:variance==null?null:Math.sqrt(Math.max(0,variance))};
+}
+function standardizedMeanGap(a,b){
+  if(!a||!b||a.n<2||b.n<2||!hasNum(a.mean)||!hasNum(b.mean)||!hasNum(a.sd)||!hasNum(b.sd))return null;
+  const df=a.n+b.n-2;if(df<=0)return null;
+  const pooledVar=((a.n-1)*a.sd*a.sd+(b.n-1)*b.sd*b.sd)/df;
+  if(!(pooledVar>0))return Number(a.mean)===Number(b.mean)?0:null;
+  return Math.abs(Number(a.mean)-Number(b.mean))/Math.sqrt(pooledVar);
 }
 function outcomeFingerprintCard(label,wins,losses,unit,inverse=false){
-  const delta=hasNum(wins)&&hasNum(losses)?Number(wins)-Number(losses):null;
-  const abs=delta==null?0:Math.abs(delta),tone=delta==null?'neutral':(inverse?(delta<0?'good':'bad'):(delta>0?'good':'bad'));
+  const valid=wins?.n>=2&&losses?.n>=2&&hasNum(wins?.mean)&&hasNum(losses?.mean);
+  const delta=valid?Number(wins.mean)-Number(losses.mean):null,effect=valid?standardizedMeanGap(wins,losses):null;
+  const tone=delta==null?'neutral':(inverse?(delta<0?'good':'bad'):(delta>0?'good':'bad'));
   const fmtValue=v=>unit==='percent'?fmtPct(v):unit==='gold'?(hasNum(v)?signed(v,0)+'g':'n/a'):unit==='dpm'?fmtInt(v):unit==='num'?fmt(v,2):fmt(v,2);
-  return {label,wins,losses,delta,abs,tone,html:'<article class="outcome-fingerprint-card tone-'+tone+'"><span>'+esc(label)+'</span><div><strong>'+esc(fmtValue(wins))+'</strong><small>in wins</small></div><div><strong>'+esc(fmtValue(losses))+'</strong><small>in losses</small></div><p>'+esc(delta==null?'Not enough valid observations.':('Observed separation: '+(unit==='percent'?signed(delta,1)+' pp':unit==='gold'?signed(delta,0)+'g':signed(delta,unit==='num'?2:0)+(unit==='dpm'?' DPM':''))))+'</p></article>'};
+  const deltaText=delta==null?'Not enough valid observations.':('Observed mean gap: '+(unit==='percent'?signed(delta,1)+' pp':unit==='gold'?signed(delta,0)+'g':signed(delta,unit==='num'?2:0)+(unit==='dpm'?' DPM':'')));
+  return {label,wins,losses,delta,effect,tone,html:'<article class="outcome-fingerprint-card tone-'+tone+'"><span>'+esc(label)+'</span><div><strong>'+esc(fmtValue(wins?.mean))+'</strong><small>in wins · n='+Number(wins?.n||0)+'</small></div><div><strong>'+esc(fmtValue(losses?.mean))+'</strong><small>in losses · n='+Number(losses?.n||0)+'</small></div><p>'+esc(deltaText)+(hasNum(effect)?' · standardized gap '+fmt(effect,2):'')+'</p></article>'};
 }
 function renderOutcomeFingerprint(r){
   const box=$('outcomeFingerprint'),note=$('outcomeFingerprintNote');if(!box)return;
@@ -779,14 +796,14 @@ function renderOutcomeFingerprint(r){
     return;
   }
   const cards=[
-    outcomeFingerprintCard('Role gold @15',gameAverage(wins,g=>g.goldDiff15),gameAverage(losses,g=>g.goldDiff15),'gold',false),
-    outcomeFingerprintCard('High-risk deaths / game',gameAverage(wins,g=>g.badDeathCount),gameAverage(losses,g=>g.badDeathCount),'num',true),
-    outcomeFingerprintCard('Damage / min',gameAverage(wins,g=>g.dpm),gameAverage(losses,g=>g.dpm),'dpm',false),
-    outcomeFingerprintCard('Kill participation',gameAverage(wins,g=>g.kp),gameAverage(losses,g=>g.kp),'percent',false)
+    outcomeFingerprintCard('Role gold @15',gameMetricSummary(wins,g=>g?.phaseRules?.lane15Comparable===false?null:g.goldDiff15),gameMetricSummary(losses,g=>g?.phaseRules?.lane15Comparable===false?null:g.goldDiff15),'gold',false),
+    outcomeFingerprintCard('High-risk deaths / game',gameMetricSummary(wins,g=>g.timelineAvailable===true?g.badDeathCount:null),gameMetricSummary(losses,g=>g.timelineAvailable===true?g.badDeathCount:null),'num',true),
+    outcomeFingerprintCard('Damage / min',gameMetricSummary(wins,g=>g.dpm),gameMetricSummary(losses,g=>g.dpm),'dpm',false),
+    outcomeFingerprintCard('Kill participation',gameMetricSummary(wins,g=>g.kp),gameMetricSummary(losses,g=>g.kp),'percent',false)
   ];
   box.innerHTML=cards.map(x=>x.html).join('');
-  const usable=cards.filter(x=>x.delta!=null).sort((a,b)=>b.abs-a.abs),lead=usable[0];
-  if(note)note.innerHTML=lead?'<b>Largest raw separation:</b> '+esc(lead.label)+'. Use it as a replay-review clue alongside context, not as a causal claim. Sample: '+wins.length+' wins / '+losses.length+' losses.':'Not enough valid metric overlap to identify a useful separation.';
+  const usable=cards.filter(x=>hasNum(x.effect)).sort((a,b)=>Number(b.effect)-Number(a.effect)),lead=usable[0];
+  if(note)note.innerHTML=lead?'<b>Largest standardized separation:</b> '+esc(lead.label)+' (gap '+esc(fmt(lead.effect,2))+' pooled within-metric SD). This makes unlike units comparable, but it remains descriptive and is not a causal or significance claim.':'No metric has at least two valid observations in both wins and losses with enough variation for a standardized comparison.';
 }
 
 function renderKpis(r){
@@ -1284,19 +1301,24 @@ function gamePassesFilter(g){
 }
 
 function matchHistoryLaneState(g){
-  if(!hasNum(g.goldDiff15))return {tone:'neutral',label:'@15 unknown',copy:'No direct-role gold checkpoint was available at 15 minutes.'};
+  if(g?.phaseRules?.lane15Comparable===false||!hasNum(g.goldDiff15))return {tone:'neutral',label:'@15 unavailable',copy:'No role-comparable 15-minute gold checkpoint is available for this game.'};
   const d=Number(g.goldDiff15);
-  if(d>250)return {tone:'good',label:signed(d,0)+'g @15',copy:'You reached 15 minutes with a meaningful direct-role gold lead.'};
-  if(d<-250)return {tone:'bad',label:signed(d,0)+'g @15',copy:'You reached 15 minutes with a meaningful direct-role gold deficit.'};
-  return {tone:'neutral',label:signed(d,0)+'g @15',copy:'The direct-role economy was still broadly playable around 15 minutes.'};
+  if(gameMatchesNamedFilter(g,'ahead15'))return {tone:'good',label:signed(d,0)+'g @15',copy:'This game is in the same ahead-at-15 band used by the evidence-table filter.'};
+  if(gameMatchesNamedFilter(g,'behind15'))return {tone:'bad',label:signed(d,0)+'g @15',copy:'This game is in the same behind-at-15 band used by the evidence-table filter.'};
+  return {tone:'neutral',label:signed(d,0)+'g @15',copy:'This game is in the same close-at-15 band used by the evidence-table filter.'};
 }
 function matchHistorySignals(g){
   const out=[],lane=matchHistoryLaneState(g),fight=g.fightProfile||{},death=g.deathConsequences||{},recovery=g.deathRecovery||{};
   out.push({label:'Lane state',value:lane.label,tone:lane.tone,copy:lane.copy});
-  if(Number(g.badDeathCount||0)>0||Number(death.costly||0)>0){
-    const n=Number(g.badDeathCount||0),cost=Number(death.costly||0);
-    out.push({label:'Risk cost',value:n+' high-risk · '+cost+' costly',tone:(n>=2||cost>=2)?'bad':'neutral',copy:'Deaths are separated by risk classification and measured aftermath rather than judged from death count alone.'});
-  }else out.push({label:'Risk cost',value:'No flagged pattern',tone:'good',copy:'No high-risk or measured costly-death pattern was flagged in this game.'});
+  if(g.timelineAvailable!==true){
+    out.push({label:'Risk cost',value:'Not measurable',tone:'neutral',copy:'Timeline evidence is unavailable, so this game cannot be treated as having zero high-risk deaths.'});
+  }else if(Number(g.badDeathCount||0)>0||Number(death.costly||0)>0){
+    const n=Number(g.badDeathCount||0),cost=Number(death.costly||0),measured=Number(death.measured||0);
+    out.push({label:'Risk cost',value:n+' high-risk · '+cost+' costly',tone:(n>=2||cost>=2)?'bad':'neutral',copy:'High-risk classification uses timeline context; costly aftermath is measured for '+measured+' death'+(measured===1?'':'s')+' in this game.'});
+  }else{
+    const measured=Number(death.measured||0),deaths=Number(g.deaths||0),coverage=deaths?measured+'/'+deaths+' consequences measured':'no deaths';
+    out.push({label:'Risk cost',value:'No flagged high-risk death',tone:deaths===0||measured>=deaths?'good':'neutral',copy:'Timeline review found no high-risk death flags; '+coverage+'. Missing consequence coverage is not treated as proof of no cost.'});
+  }
   if(Number(fight.attended||0)>0){
     const pre=Number(fight.diedBeforeContribution||0),surv=hasNum(fight.survivalRate)?fmtPct(fight.survivalRate):'n/a';
     out.push({label:'Fight uptime',value:pre+' pre-impact deaths · '+surv+' survival',tone:pre>0?'bad':'good',copy:'Tracked multi-player fight clusters separate dying before contribution from surviving or dying after impact.'});
@@ -1339,9 +1361,9 @@ function renderMatchHistory(r){
   const list=$('matchHistoryList'),summary=$('matchHistorySummary');if(!list||!summary)return;
   const games=(r.games||[]).slice(0,10);
   if(!games.length){summary.innerHTML='';list.innerHTML='<div class="bullet empty">No recent comparable matches are available.</div>';return;}
-  const wins=games.filter(g=>g.win).length,ahead=games.filter(g=>hasNum(g.goldDiff15)&&Number(g.goldDiff15)>250).length,behind=games.filter(g=>hasNum(g.goldDiff15)&&Number(g.goldDiff15)<-250).length;
-  const risky=games.reduce((n,g)=>n+Number(g.badDeathCount||0),0);
-  summary.innerHTML='<span><b>'+wins+'–'+(games.length-wins)+'</b> recent result</span><span><b>'+ahead+'</b> ahead @15</span><span><b>'+behind+'</b> behind @15</span><span><b>'+risky+'</b> flagged high-risk deaths</span><small>Newest '+games.length+' comparable '+esc(roleLabel(canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole||state.selectedRole)))+' games</small>';
+  const wins=games.filter(g=>g.win).length,ahead=games.filter(g=>gameMatchesNamedFilter(g,'ahead15')).length,behind=games.filter(g=>gameMatchesNamedFilter(g,'behind15')).length;
+  const timelineGames=games.filter(g=>g.timelineAvailable===true),risky=timelineGames.reduce((n,g)=>n+Number(g.badDeathCount||0),0);
+  summary.innerHTML='<span><b>'+wins+'–'+(games.length-wins)+'</b> recent result</span><span><b>'+ahead+'</b> ahead @15</span><span><b>'+behind+'</b> behind @15</span><span><b>'+risky+'</b> flagged high-risk deaths</span><small>Newest '+games.length+' comparable '+esc(roleLabel(canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole||state.selectedRole)))+' games · risk evidence '+timelineGames.length+'/'+games.length+' timelines</small>';
   list.innerHTML=games.map((g,i)=>matchHistoryRow(g,i,i)).join('');
   list.querySelectorAll('.match-history-toggle').forEach(btn=>btn.addEventListener('click',()=>{
     const row=btn.closest('.match-history-row'),detail=row?.querySelector('.match-history-detail');if(!detail)return;
