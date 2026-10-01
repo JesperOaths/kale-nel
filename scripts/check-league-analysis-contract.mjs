@@ -167,7 +167,7 @@ ok(html.includes('id="deleteProfileBtn"')&&app.includes("api('profile_delete'"),
 ok(migration.includes('references public.league_profiles_v1(id) on delete cascade'), 'profile deletion must cascade child League data');
 ok(backend.includes('allowServerRiotKey=viewer.anonymous!==true'), 'anonymous League users must not inherit the server Riot key');
 ok(app.includes("'x-league-workspace':workspaceId()"), 'League frontend must use browser workspace identity');
-ok(!html.includes('gejast-auth-gate.js')&&!html.includes('requireMatchEntrySession'), 'League page must remain public and outside Kalenel login gating');
+ok(![html,app,css].some(source=>source.includes('gejast-auth-gate.js')||source.includes('gejast-home-gate.js')||source.includes('requireMatchEntrySession')||source.includes('/login.html')), 'Every League frontend artifact must remain public and outside Kalenel login/session gating');
 ok(backend.includes('objectiveDiagnosis:{presenceLow:objectivePresenceLow,primaryCause:objectivePrimaryCause?.key||null,causes:objectiveRootCauses}'), 'objective diagnosis must remain exported');
 ok(backend.includes('goldSwingTo15'), 'clean solo-kill conversion must preserve gold swing to 15');
 ok(backend.includes('csSwingTo15'), 'clean solo-kill conversion must preserve CS swing to 15');
