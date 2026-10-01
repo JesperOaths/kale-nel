@@ -9,7 +9,7 @@
   <title>Bruisienator · League playstyle analysis</title>
   <meta name="description" content="Private League of Legends Last-20 playstyle analysis on Kalenel.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261001-league-web-v23">
+  <link rel="stylesheet" href="/league/styles.css?v=20261001-league-web-v24">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817"></script>
   <script src="/gejast-home-gate.js?v817"></script>
@@ -185,6 +185,26 @@
         <div class="hidden-charts" id="hiddenCharts" hidden></div>
       </section>
 
+      <section class="panel" id="spatialReview">
+        <div class="section-head">
+          <div><p class="eyebrow">Spatial review</p><h2>Where the behavior happens</h2></div>
+          <span class="muted">Hover points for event context.</span>
+        </div>
+        <div class="spatial-grid">
+          <article class="spatial-card">
+            <div class="spatial-card-head"><div><strong>High-risk deaths</strong><small>Lead-protection deaths are ringed.</small></div><span id="deathMapMeta">—</span></div>
+            <div id="deathMap"></div>
+            <div class="map-legend"><span><i class="legend-dot death"></i>High-risk death</span><span><i class="legend-dot death lead"></i>While ≥500g ahead</span></div>
+          </article>
+          <article class="spatial-card">
+            <div class="spatial-card-head"><div><strong>Ward placement</strong><small>Offensive, river and defensive territory.</small></div><span id="wardMapMeta">—</span></div>
+            <div id="wardMap"></div>
+            <div class="map-legend"><span><i class="legend-dot ward offensive"></i>Offensive</span><span><i class="legend-dot ward river"></i>River</span><span><i class="legend-dot ward defensive"></i>Defensive</span></div>
+          </article>
+        </div>
+        <p class="muted tiny spatial-note" id="spatialProjectionNote"></p>
+      </section>
+
       <section class="two-col">
         <article class="panel">
           <div class="section-head"><div><p class="eyebrow">Advanced analysis</p><h2>Behavioral dimensions</h2></div></div>
@@ -232,6 +252,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261001-league-web-v23" defer></script>
+  <script src="/league/app.js?v=20261001-league-web-v24" defer></script>
 </body>
 </html>
