@@ -43,6 +43,9 @@ ok(backend.includes('durationEligibleRows=summonersRiftRows.filter'), 'duration 
 ok(backend.includes('dominantQueueId'), 'queue-context isolation must select a dominant raw Riot queue id');
 ok(backend.includes('durationEligibleRows.filter')&&backend.includes('===Number(dominantQueueId)'), 'coaching sample must stay homogeneous by dominant queue id');
 ok(backend.includes('excludedOtherQueues'), 'data quality must expose cross-queue exclusions');
+ok(backend.includes('peerRankTargetCount'), 'fetch finish must compute peer-rank targets for the comparable sample');
+ok(backend.includes('slice(0,20)'), 'peer-rank backfill must remain bounded to the final Last-20 target');
+ok(backend.includes('peer_rank_backfilled'), 'fetch finish must report peer-rank backfill results');
 ok(backend.includes('x-riot-api-key'), 'session Riot-key header must remain supported by backend/CORS');
 ok(!/localStorage|sessionStorage|indexedDB/.test(app), 'Riot key or League state must not be persisted in browser storage');
 
