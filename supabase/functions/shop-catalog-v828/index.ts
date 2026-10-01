@@ -4,9 +4,10 @@ import postgres from "npm:postgres@3.4.7";
 import { fxAuditSnapshot, marginEurCentsForSize, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_BPS, retailEurCentsFromUsdCost, retailEurCentsFromUsdCostAfterVat, stableClassicShirtRetailEurCents } from "../_shared/shop-fx.mjs";
 
 const PRINTIFY_BASE = "https://api.printify.com/v1";
-const CACHE_FRESH_MS = 15 * 60_000;
-const REFRESH_LEASE_MS = 120_000;
-const MEMORY_ROW_TTL_MS = 15 * 60_000;
+const CACHE_FRESH_MS = 60 * 60_000;
+const REFRESH_LEASE_MS = 10 * 60_000;
+const REFRESH_FAILURE_COOLDOWN_MS = 30 * 60_000;
+const MEMORY_ROW_TTL_MS = 30 * 60_000;
 let memoryCatalogRow: any = null;
 let memoryCatalogLoadedAt = 0;
 const MAX_PAGES = 100;
@@ -157,7 +158,7 @@ async function readCatalogCacheDirect() {
     try {
       const endpoint = new URL("/rest/v1/shop_catalog_cache_v828", url);
       endpoint.searchParams.set("id", "eq.1");
-      endpoint.searchParams.set("select", "payload,generated_at,refresh_started_at");
+      endpoint.searchParams.set("select", "payload,generated_at,refresh_started_at,last_error,updated_at");
       endpoint.searchParams.set("limit", "1");
       const response = await fetch(endpoint, {
         signal: controller.signal,
@@ -182,7 +183,7 @@ async function readCatalogCacheDirect() {
   try {
     sql = directDb();
     const rows = await sql`
-      select payload, generated_at, refresh_started_at
+      select payload, generated_at, refresh_started_at, last_error, updated_at
       from public.shop_catalog_cache_v828
       where id = 1
       limit 1
@@ -251,6 +252,8 @@ async function updateCatalogCacheDirect(values: {
         payload:values.payload,
         generated_at:values.generated_at||now,
         refresh_started_at:values.refresh_started_at??null,
+        last_error:values.last_error??null,
+        updated_at:now,
       };
       memoryCatalogLoadedAt=Date.now();
     } else {
@@ -995,8 +998,10 @@ Deno.serve(async (req: Request) => {
   const selectionCurrent = payload?.catalogSelection === "all-readable-printify-shops-v851";
   const generatedMs = row?.generated_at ? Date.parse(row.generated_at) : 0;
   const refreshStartedMs = row?.refresh_started_at ? Date.parse(row.refresh_started_at) : 0;
+  const updatedMs = row?.updated_at ? Date.parse(row.updated_at) : 0;
   const ageMs = generatedMs ? Math.max(0, Date.now() - generatedMs) : Number.POSITIVE_INFINITY;
   const refreshLeaseActive = refreshStartedMs > 0 && Date.now() - refreshStartedMs < REFRESH_LEASE_MS;
+  const refreshFailureCooldown = !!text(row?.last_error) && updatedMs > 0 && Date.now() - updatedMs < REFRESH_FAILURE_COOLDOWN_MS;
   const stale = ageMs > CACHE_FRESH_MS;
   let refreshScheduled = false;
 
@@ -1004,7 +1009,7 @@ Deno.serve(async (req: Request) => {
   // cache is empty or was built with an obsolete selector, schedule a bounded
   // background refresh and return quickly so browsers can poll without timing out.
   if (!products.length || !selectionCurrent) {
-    if (!refreshLeaseActive) refreshScheduled = scheduleCatalogRefreshNonBlocking(supabase);
+    if (!refreshLeaseActive && !refreshFailureCooldown) refreshScheduled = scheduleCatalogRefreshNonBlocking(supabase);
 
     if (url.searchParams.get("health") === "1") {
       return json(req, {
@@ -1023,6 +1028,7 @@ Deno.serve(async (req: Request) => {
         cacheAgeSeconds: Number.isFinite(ageMs) ? Math.round(ageMs / 1000) : null,
         catalogSelection: payload?.catalogSelection || null,
         refreshScheduled,
+        refreshFailureCooldown,
       });
     }
 
@@ -1032,10 +1038,11 @@ Deno.serve(async (req: Request) => {
       source: "bruis-direct-v838",
       products: [],
       refreshScheduled,
+        refreshFailureCooldown,
     }, 202);
   }
 
-  if (stale && !refreshLeaseActive) refreshScheduled = scheduleCatalogRefreshNonBlocking(supabase);
+  if (stale && !refreshLeaseActive && !refreshFailureCooldown) refreshScheduled = scheduleCatalogRefreshNonBlocking(supabase);
 
   if (url.searchParams.get("health") === "1") {
     return json(req, {
@@ -1046,6 +1053,7 @@ Deno.serve(async (req: Request) => {
       cachedProducts: products.length, cacheAgeSeconds: Number.isFinite(ageMs) ? Math.round(ageMs / 1000) : null,
       catalogSelection: payload?.catalogSelection || null,
       refreshScheduled,
+        refreshFailureCooldown,
     });
   }
 
@@ -1056,6 +1064,7 @@ Deno.serve(async (req: Request) => {
       ageSeconds: Math.round(ageMs / 1000),
       stale,
       refreshScheduled,
+        refreshFailureCooldown,
     },
   });
 });
