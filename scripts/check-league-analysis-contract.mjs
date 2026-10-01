@@ -32,6 +32,13 @@ ok(backend.includes('startsLevel:3')&&backend.includes('startingGold:1400'), 'Sw
 ok(backend.includes('LEGACY_SR_RULES')&&backend.includes('phaseComparable:false'), 'historical rules must fail closed for current phase coaching');
 ok(backend.includes('FUTURE_UNVERIFIED_RULES'), 'future unverified mechanics must not silently inherit current coaching logic');
 ok(backend.includes('major===16'), 'Riot internal game-version major 16 must select 2026 mechanics');
+ok(backend.includes('function roleQuestRevisionFor2026('), '2026 role-quest rules must be patch-revision aware');
+ok(backend.includes('26.9_role_quest_rework')&&backend.includes('26.11_mid_8pct')&&backend.includes('26.19_top_teleport'), 'material 2026 role-quest revisions must remain encoded');
+ok(backend.includes('laneRoleQuestsEnabled:!isSwift'), 'standard lane-role quest rules must remain disabled for Swiftplay');
+ok(backend.includes('function roleQuestContext('), 'role-specific quest context must remain part of timeline analysis');
+ok(backend.includes('support_quest_control_ward_discount_unobserved'), 'support ward-price uncertainty must remain explicit instead of silently rewriting static prices');
+ok(backend.includes('roleQuestRevisionCounts'), 'mixed mechanics revision counts must remain exported');
+ok(backend.includes('roleQuestCompletionTimingObserved:false'), 'analyzer must fail closed on universal role-quest completion timing');
 ok(backend.includes('phaseExposureMinutes'), 'phase risk must normalize by actual phase exposure');
 ok(backend.includes('postLaneStartMin:14')&&backend.includes('roamEndMin:20'), 'standard post-lane and roam timing must remain rules-driven');
 ok(backend.includes('postLaneStartMin:12')&&backend.includes('roamEndMin:12'), 'Swiftplay post-lane and roam timing must respect its accelerated major-objective era');
