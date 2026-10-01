@@ -26,6 +26,11 @@ assert.ok(matchCachePruner.includes('select("match_id")')&&matchCachePruner.incl
 assert.ok(!matchCachePruner.includes('select("id")')&&!matchCachePruner.includes('.in("id",'),'Match-cache pruning must never assume league_match_cache_v1 has an id column');
 assert.ok(html.includes('scans up to 50 recent matches')&&html.includes('Latest eligible 20'),'Public UI must describe the automatic bounded Last-20 scan instead of exposing cache-depth controls');
 assert.ok(api.includes('requires_session:false')&&api.includes('public_workspace:true'),'League health contract must remain public');
+assert.ok(api.includes('ANALYSIS_CACHE_METADATA_LIMIT=100'),'League must retain broad cache discovery as lightweight metadata');
+assert.ok(api.includes('ANALYSIS_DEEP_TARGET_GAMES=20')&&api.includes('ANALYSIS_DEEP_BATCH_SIZE=20'),'League must load timeline JSON only in bounded batches until the final Last-20 is satisfied');
+assert.ok(api.includes('metadata_then_bounded_timelines_v1')&&api.includes('avoidsHistoricalTimelinePayload:true'),'Data Quality must expose the reduced-pressure staged cache-read strategy');
+assert.ok(api.includes('rankNeedIds.length')&&api.includes('select("match_id,match_json")'),'Peer-rank backfill must fetch match JSON only for unresolved targets');
+assert.ok(!api.includes('select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,match_json,timeline_json,peer_rank_json,peer_rank_fetched_at,fetch_error").eq("profile_id",p.id).not("match_json","is",null).order("game_start_at",{ascending:false}).limit(100)'),'Analyzer must never return to one-shot 100 match+timeline JSON reads');
 assert.ok(api.includes('allowServerRiotKey=viewer.anonymous!==true'),'Anonymous League workspaces must never inherit the private server Riot key');
 assert.ok(api.includes('const key=(allowServerKey?RIOT_KEY:"")||text(requestKey)'),'Riot client must enforce the anonymous/server-key boundary');
 assert.ok(app.includes("'x-league-workspace':workspaceId()"),'League browser must use public workspace isolation rather than Kalenel login');
