@@ -14,6 +14,10 @@ The purpose of the web analyzer is not to produce a decorative stat page. It sho
 
 Missing timeline data is unknown, not zero.
 
+### JavaScript numeric safety
+
+JavaScript converts `null` to numeric zero through `Number(null)`. The analyzer and report formatter therefore explicitly reject `null`, `undefined`, and empty strings before numeric conversion. Do not replace those guards with a bare `Number.isFinite(Number(value))`, because that silently turns missing data into a valid zero and can generate false coaching.
+
 ## Comparison hierarchy
 
 Use comparisons in this order:
@@ -73,6 +77,18 @@ Rank ordering is used only to classify whether that direct opponent is above the
 This is preferable to inventing a static "rank above" benchmark table.
 
 Rank is a snapshot and can change after the match; present this comparison as the opponent rank observed at fetch time.
+
+## Lead preservation from 15 to 25
+
+Where a real timeline frame exists near 25 minutes, preserve the same-role opponent comparison at 25 as well as 10/15.
+
+Use the change in direct-role gold differential from 15→25 to answer a different question from lane performance:
+
+**Did the player preserve/extend the advantage after lane, or surrender it during the first rotations?**
+
+Current aggregate coaching requires multiple comparable games. A repeated drop of roughly 500g or more from a positive 15-minute state is treated as a lead-preservation concern; a repeated positive swing can be highlighted as strong mid-game conversion/recovery.
+
+Do not manufacture a 25-minute value for games that ended before an appropriate 25-minute timeline frame. Missing remains unknown.
 
 ## Lane-lead conversion and recovery
 
