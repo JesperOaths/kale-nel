@@ -193,6 +193,26 @@ The analyzer can compare:
 
 This is descriptive. Do not claim the gold state alone caused the win or loss.
 
+## Death aftermath / consequence analysis
+
+Death quality and death consequence are separate questions.
+
+For each death where the timeline supports a later comparison, preserve the direct-role economy state at death and at the next supported timeline state roughly one frame later.
+
+Current consequence signals are:
+
+- direct-role gold differential worsens by at least ~300g,
+- direct-role CS differential worsens by at least ~6 CS,
+- an enemy objective is converted within the existing post-death objective window.
+
+A death is **costly** when at least one consequence signal is present and **severe** when at least two are present.
+
+Also preserve whether the death is traded, because a traded death that still loses a wave/objective is different from a completely free death.
+
+The post-death gold/CS swing is observational. It describes what follows the death; it must not be worded as if the death alone caused every subsequent resource change. The coaching use is prioritization: deaths with large measurable aftermath deserve more attention than deaths with little supported follow-on cost.
+
+Aggregate fields include measured death count, costly/severe counts and rates, untraded costly deaths, and average direct-role gold/CS swing after measured deaths.
+
 ## Risk discipline by direct-role economy state
 
 At each death, compare the player's total gold with the **actual same-role opponent** at that timeline moment:
