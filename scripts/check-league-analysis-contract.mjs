@@ -285,6 +285,10 @@ ok(backend.includes('pre14SoloDeathsToRole'), 'matchup model must preserve clean
 ok(backend.includes('pre14OutsidePressureDeaths'), 'matchup model must preserve outside-pressure evidence');
 ok(backend.includes('durationEligibleRows=summonersRiftRows.filter'), 'duration eligibility must be computed before queue isolation');
 ok(backend.includes('dominantQueueId'), 'queue-context isolation must select a dominant raw Riot queue id');
+ok(backend.includes('function selectRecentQueueCohort('), 'queue-context selector must remain explicit and reusable');
+ok(backend.includes('queueSelection=selectRecentQueueCohort(supportedQueueRows,20)'), 'analysis queue must be selected from the 20 newest supported candidates');
+ok(backend.includes('queueSelection=selectRecentQueueCohort(supportedEligible,20)'), 'fetch-finish rank backfill must share the recent queue selector');
+ok(backend.includes('dominant_within_recent_supported_window_tie_newest'), 'queue selection must retain recency-aware tie-break semantics');
 ok(backend.includes('durationEligibleRows.filter')&&backend.includes('===Number(dominantQueueId)'), 'coaching sample must stay homogeneous by dominant queue id');
 ok(backend.includes('excludedOtherQueues'), 'data quality must expose cross-queue exclusions');
 ok(backend.includes('function patchKey('), 'patch cohort parser must remain in analyzer');
