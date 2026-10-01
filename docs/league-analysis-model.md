@@ -298,7 +298,9 @@ A large positive CS swing is not automatically good if it makes the player late 
 
 ## 25-minute role-lead closing
 
-A direct-role advantage at 25 minutes is a useful conversion checkpoint, but it is **not the same thing as the whole team being ahead**.
+A direct-role advantage at 25 minutes is a useful conversion checkpoint **only for rules profiles where @25 is still a comparable ordinary-game checkpoint**. It is not the same thing as the whole team being ahead.
+
+For 2026 standard Summoner's Rift, @25 closing remains enabled. For 2026 Swiftplay it is disabled as a closing model because 25:00 is the Sudden Death transition; the raw @25 frame can still be displayed for traceability but must not be interpreted as normal closing performance.
 
 Current role-relative classifications:
 
@@ -340,7 +342,9 @@ The side-farm case is a tradeoff, not automatically a mistake. Conceding a low-v
 
 ## Early-lead preservation before 15
 
-The 10-minute and 15-minute checkpoints can hide volatility inside the lane. Preserve direct-role gold differential on supported timeline frames from roughly 3:00 until just before 15:00.
+The 10-minute and 15-minute checkpoints can hide volatility inside the lane, but only when the active rules profile marks @15 as a comparable lane checkpoint. Preserve direct-role gold differential on supported timeline frames from roughly 3:00 until just before 15:00 for those compatible profiles.
+
+For 2026 Swiftplay, @15 is already the Elder era. The analyzer therefore keeps the raw @15 frame available for traceability but does **not** use it for lane-lead, early-lead-giveback, repeated-matchup lane-economy, or champion-lane coaching.
 
 For each game:
 - find the largest positive direct-role gold differential before 15,
@@ -356,7 +360,7 @@ Deaths inside the window are supporting context, not proof that a death caused t
 
 ## Lead preservation from 15 to 25
 
-Where a real timeline frame exists near 25 minutes, preserve the same-role opponent comparison at 25 as well as 10/15.
+Where a real timeline frame exists near 25 minutes **and the rules profile marks fixed 15→25 checkpoints comparable**, preserve the same-role opponent comparison at 25 as well as 10/15.
 
 Use the change in direct-role gold differential from 15→25 to answer a different question from lane performance:
 
@@ -367,6 +371,8 @@ Current aggregate coaching requires multiple comparable games. A repeated drop o
 Do not manufacture a 25-minute value for games that ended before an appropriate 25-minute timeline frame. Missing remains unknown.
 
 ## Lane-lead conversion and recovery
+
+This model only runs on rules profiles with `lane15Comparable=true`. A raw @15 state in an accelerated queue is not automatically a lane state.
 
 A working sample classification is:
 - lane/economy lead: at least **+250 gold at 15** versus the same-role opponent,
@@ -396,6 +402,13 @@ For 2026 Swiftplay:
 Do not fabricate a standard-SR-style transition bucket for Swiftplay. Its rules profile also retains the 15:00 Elder and 25:00 Sudden Death anchors for context.
 
 Historical pre-2026 games and future rules that have not been verified are preserved for raw reporting but excluded from current cross-game phase coaching. This prevents today's logic from silently rewriting old matches or guessing future mechanics.
+
+Fixed checkpoint interpretations are separately gated:
+- `lane15Comparable` controls @15 lane-economy / early-lead interpretation,
+- `fixed15to25Comparable` controls 15→25 preservation and routing interpretation,
+- `closing25Comparable` controls ordinary @25 closing interpretation.
+
+Raw checkpoint values may still be shown when a flag is false, but they are descriptive only and do not trigger those coaching models.
 
 Per phase, preserve:
 - deaths,
