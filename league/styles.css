@@ -1159,3 +1159,44 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 .tone-good{color:#0d6a42}
 .tone-bad{color:#a83229}
 .tone-neutral{color:#554d44}
+
+
+/* v103 finishing pass — circular radar, on-demand match visuals, cheaper table scrolling */
+.radar-ring{fill:none;stroke:#d7d0c5;stroke-width:1.5}
+.match-visual-header{
+  display:grid;
+  grid-template-columns:minmax(200px,.7fr) minmax(300px,1.3fr) minmax(200px,.7fr);
+  gap:18px;
+  align-items:center;
+  margin:0 0 18px;
+  padding:16px 18px;
+  border-radius:16px;
+  background:linear-gradient(100deg,#eef5fa,#f8f3e8 48%,#f7ece9);
+  border:1px solid var(--line);
+}
+.match-champion{display:flex;align-items:center;gap:12px;min-width:0}
+.match-champion.opponent{justify-content:flex-end;text-align:right}
+.match-champion img{width:58px;height:58px;border-radius:12px;object-fit:cover;flex:0 0 58px}
+.match-champion span,.final-build>span{display:block;font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:var(--muted)}
+.match-champion strong{display:block;margin-top:2px;font-size:1rem}
+.final-build{text-align:center;min-width:0}
+.final-build>div{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin-top:8px}
+.final-build img{width:43px;height:43px;border-radius:8px;border:1px solid rgba(32,27,22,.16);object-fit:cover}
+.final-build small{font-size:.72rem;color:var(--muted)}
+/* Sticky table headers and the fixed version badge both forced compositing/repaint on long scrolls. */
+.games-table th{position:static!important}
+.site-credit-watermark{
+  position:static!important;
+  left:auto!important;
+  bottom:auto!important;
+  transform:none!important;
+  width:max-content;
+  max-width:calc(100% - 32px);
+  margin:20px auto 0;
+}
+@media(max-width:800px){
+  .match-visual-header{grid-template-columns:1fr}
+  .match-champion.opponent{justify-content:flex-start;text-align:left}
+  .final-build{text-align:left}
+  .final-build>div{justify-content:flex-start}
+}
