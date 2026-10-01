@@ -269,6 +269,9 @@ assert.ok(app.includes('r.sessionBehavior||r.sessionModel'),'Session panel must 
 assert.ok(app.includes('function renderSpatial'),'Spatial review renderer must remain present');
 assert.ok(app.includes('SR_MAP_BOUNDS'),'Spatial review must use the shared Summoner\'s Rift transform');
 assert.ok(app.includes('map11.png'),'Spatial review must use the Riot/Data Dragon minimap asset');
+assert.ok(app.includes("const VERIFIED_DDRAGON_FALLBACK='16.19.1'"),'Spatial fallback must stay on the verified current Data Dragon patch');
+assert.ok(app.includes('function map11FallbackImage('),'Spatial maps must share one verified fallback helper');
+assert.ok(!app.includes('6.8.1/img/map/map11.png'),'Do not silently render the decade-old 6.8.1 Summoner\'s Rift map');
 assert.ok(html.includes('id="sessionHabitsPanel"'),'Session habits panel must remain in the League page');
 assert.ok(html.includes('id="spatialReview"'),'Spatial review panel must remain in the League page');
 assert.ok(api.includes('body.count||50'),'backend fetch fallback must remain bounded at 50 raw matches');
@@ -414,6 +417,9 @@ assert.ok(app.includes('Team-secured objective presence'),'Frontend must keep te
 assert.ok(app.includes('Early high-risk deaths / 10m'),'Frontend must expose phase-risk normalization by time');
 assert.ok(app.includes('function reportPhaseRules('),'Per-game phase labels must read the stored queue/rules profile');
 assert.ok(app.includes('Post-macro-transition side-lane deaths'),'Frontend must describe the 14m/12m anchor as a macro transition rather than a literal lane ending');
+assert.ok(app.includes('Side-lane death before team-contested objective'),'Death-pattern language must describe supported contest evidence rather than imply an unseen objective setup process');
+assert.ok(app.includes('both high-risk and untraded'),'Post-play give-back pattern must match its actual AND classification rule');
+assert.ok(!app.includes('No post-early-phase side-lane death detected.'),'Legacy post-early-phase side-lane wording must stay retired');
 assert.ok(app.includes('Checkpoint interpretation:'),'Per-game UI must explain raw-but-noncomparable @15/@25 checkpoints');
 assert.ok(app.includes('@15 lane-checkpoint comparable games'),'Advanced metrics must expose @15 semantic eligibility');
 assert.ok(app.includes('15→25 fixed-checkpoint comparable games'),'Advanced metrics must expose transition checkpoint eligibility');
@@ -504,7 +510,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v116'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v117'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
