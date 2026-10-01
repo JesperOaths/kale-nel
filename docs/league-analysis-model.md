@@ -964,6 +964,25 @@ These are **practice checkpoints**, not claims about the player's true skill lev
 
 The frontend should render the current baseline and target together, e.g. `0.72/game → aim ≤ 0.47/game`, and state how many relevant observations support the target.
 
+### Scoring a previous practice target
+
+When a later **distinct** analysis exists, the frontend may evaluate the targets saved in the previous report against the current report.
+
+A previous target is scored only when these contexts still match:
+- primary role,
+- dominant Riot queue ID when both reports have one,
+- major.minor patch cohort when both reports have one.
+
+If any of those contexts changed, the target remains unscored and the UI explains why.
+
+For a comparable target:
+- **met** — current value reaches/passes the saved goal in the required direction,
+- **moving closer** — at least 20% of the saved baseline→goal distance has been recovered,
+- **moved away** — at least 20% of that distance moved in the wrong direction,
+- **unchanged** — movement is smaller than that descriptive threshold.
+
+This is a descriptive coaching checkpoint, not a statistical significance test. Always show the current value, the saved baseline, and the saved target together.
+
 ## Replay Review Queue
 
 The report should turn aggregate findings into a small, ranked set of **specific replay moments**.
