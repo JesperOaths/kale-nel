@@ -1,0 +1,23 @@
+name: Shop catalog audit once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/shop-catalog-audit-once.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit-catalog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Compare upstream catalog to public projection
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828?diagnostic=1&catalog_audit=1'
+          body="$(curl --silent --show-error --fail --max-time 30 "$url")"
+          printf '%s\n' "$body" | jq '{ok,mode,shopCount,catalogAudit,elapsedMs}'
