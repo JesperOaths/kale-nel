@@ -730,11 +730,12 @@ function benchmarkKpi(label,value,benchmark,unit,inverse=false,extra=''){
 
 function reportInsightParts(x,fallback){
   if(typeof x==='string'){
-    const copy=x.trim();return copy?{present:true,title:fallback,copy,action:''}:{present:false,title:'Not enough evidence',copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:''};
+    const copy=x.trim();return copy?{present:true,title:fallback,copy,action:'',meta:''}:{present:false,title:'Not enough evidence',copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:'',meta:''};
   }
-  if(!x||typeof x!=='object')return {present:false,title:'Not enough evidence',copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:''};
+  if(!x||typeof x!=='object')return {present:false,title:'Not enough evidence',copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:'',meta:''};
   const sourceTitle=String(x.title||x.label||x.category||'').trim(),copy=String(x.evidence||x.text||x.comparison||'').trim(),action=String(x.action||'').trim(),present=Boolean(sourceTitle||copy||action);
-  return {present,title:present?(sourceTitle||fallback):'Not enough evidence',copy:present?copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:present?action:''};
+  const meta=[x.confidence?String(x.confidence)+' confidence':'',Number(x.supportCount||0)>0?String(Number(x.supportCount))+' supporting finding'+(Number(x.supportCount)===1?'':'s'):'',x.comparison?'vs '+String(x.comparison):''].filter(Boolean).join(' · ');
+  return {present,title:present?(sourceTitle||fallback):'Not enough evidence',copy:present?copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:present?action:'',meta:present?meta:''};
 }
 function recentDirectionSummary(r){
   const t=r.recentTrend||{},defs=[
@@ -759,10 +760,10 @@ function renderReportDrivers(r){
   const box=$('reportDrivers');if(!box)return;
   const priorities=(r.priorityThemes?.length?r.priorityThemes:r.recentFocus)||[],strengths=r.overallHighlights||[];
   const weak=reportInsightParts(priorities[0],'Primary limiter'),strong=reportInsightParts(strengths[0],'Bankable strength'),direction=recentDirectionSummary(r);
-  const card=(kind,title,value,copy,action,tone,actionLabel='Next')=>'<article class="report-driver-card '+kind+' tone-'+tone+'"><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong><p>'+esc(copy||'No high-confidence supporting sentence is available yet.')+'</p>'+(action?'<div><b>'+esc(actionLabel)+':</b> '+esc(action)+'</div>':'')+'</article>';
+  const card=(kind,title,value,copy,action,tone,actionLabel='Next',meta='')=>'<article class="report-driver-card '+kind+' tone-'+tone+'"><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong><p>'+esc(copy||'No high-confidence supporting sentence is available yet.')+'</p>'+(meta?'<small class="driver-evidence-meta">'+esc(meta)+'</small>':'')+(action?'<div><b>'+esc(actionLabel)+':</b> '+esc(action)+'</div>':'')+'</article>';
   box.innerHTML=[
-    card('driver-priority','Primary limiter',weak.title,weak.copy,weak.action,weak.present?'bad':'neutral','Next'),
-    card('driver-strength','Bankable strength',strong.title,strong.copy,strong.action,strong.present?'good':'neutral','Preserve'),
+    card('driver-priority','Primary limiter',weak.title,weak.copy,weak.action,weak.present?'bad':'neutral','Next',weak.meta),
+    card('driver-strength','Bankable strength',strong.title,strong.copy,strong.action,strong.present?'good':'neutral','Preserve',strong.meta),
     card('driver-direction','Recent direction',direction.value,direction.copy,'',direction.tone)
   ].join('');
 }
@@ -780,7 +781,8 @@ function standardizedMeanGap(a,b){
   const df=a.n+b.n-2;if(df<=0)return null;
   const pooledVar=((a.n-1)*a.sd*a.sd+(b.n-1)*b.sd*b.sd)/df;
   if(!(pooledVar>0))return Number(a.mean)===Number(b.mean)?0:null;
-  return Math.abs(Number(a.mean)-Number(b.mean))/Math.sqrt(pooledVar);
+  const cohenD=Math.abs(Number(a.mean)-Number(b.mean))/Math.sqrt(pooledVar),hedgesCorrection=Math.max(0,1-3/(4*df-1));
+  return cohenD*hedgesCorrection;
 }
 function outcomeFingerprintCard(label,wins,losses,unit,inverse=false){
   const valid=wins?.n>=2&&losses?.n>=2&&hasNum(wins?.mean)&&hasNum(losses?.mean);
@@ -788,7 +790,7 @@ function outcomeFingerprintCard(label,wins,losses,unit,inverse=false){
   const tone=delta==null?'neutral':(inverse?(delta<0?'good':'bad'):(delta>0?'good':'bad'));
   const fmtValue=v=>unit==='percent'?fmtPct(v):unit==='gold'?(hasNum(v)?signed(v,0)+'g':'n/a'):unit==='dpm'?fmtInt(v):unit==='num'?fmt(v,2):fmt(v,2);
   const deltaText=delta==null?'Not enough valid observations.':('Observed mean gap: '+(unit==='percent'?signed(delta,1)+' pp':unit==='gold'?signed(delta,0)+'g':signed(delta,unit==='num'?2:0)+(unit==='dpm'?' DPM':'')));
-  return {label,wins,losses,delta,effect,tone,html:'<article class="outcome-fingerprint-card tone-'+tone+'"><span>'+esc(label)+'</span><div><strong>'+esc(fmtValue(wins?.mean))+'</strong><small>in wins · n='+Number(wins?.n||0)+'</small></div><div><strong>'+esc(fmtValue(losses?.mean))+'</strong><small>in losses · n='+Number(losses?.n||0)+'</small></div><p>'+esc(deltaText)+(hasNum(effect)?' · standardized gap '+fmt(effect,2):'')+'</p></article>'};
+  return {label,wins,losses,delta,effect,tone,html:'<article class="outcome-fingerprint-card tone-'+tone+'"><span>'+esc(label)+'</span><div><strong>'+esc(fmtValue(wins?.mean))+'</strong><small>in wins · n='+Number(wins?.n||0)+'</small></div><div><strong>'+esc(fmtValue(losses?.mean))+'</strong><small>in losses · n='+Number(losses?.n||0)+'</small></div><p>'+esc(deltaText)+(hasNum(effect)?' · Hedges-corrected gap '+fmt(effect,2):'')+'</p></article>'};
 }
 function renderOutcomeFingerprint(r){
   const box=$('outcomeFingerprint'),note=$('outcomeFingerprintNote');if(!box)return;
@@ -806,7 +808,7 @@ function renderOutcomeFingerprint(r){
   ];
   box.innerHTML=cards.map(x=>x.html).join('');
   const usable=cards.filter(x=>hasNum(x.effect)).sort((a,b)=>Number(b.effect)-Number(a.effect)),lead=usable[0];
-  if(note)note.innerHTML=lead?'<b>Largest standardized separation:</b> '+esc(lead.label)+' (gap '+esc(fmt(lead.effect,2))+' pooled within-metric SD). This makes unlike units comparable, but it remains descriptive and is not a causal or significance claim. Coaching cohort: '+wins.length+' wins / '+losses.length+' losses.':'No metric has at least two valid observations in both wins and losses with enough variation for a standardized comparison in the coaching cohort.';
+  if(note)note.innerHTML=lead?'<b>Largest standardized separation:</b> '+esc(lead.label)+' (Hedges g '+esc(fmt(lead.effect,2))+'). The small-sample correction makes unlike units more comparable, but this remains descriptive and is not a causal or significance claim. Coaching cohort: '+wins.length+' wins / '+losses.length+' losses.':'No metric has at least two valid observations in both wins and losses with enough variation for a standardized comparison in the coaching cohort.';
 }
 
 function renderKpis(r){
