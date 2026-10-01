@@ -129,9 +129,9 @@ function sortByShirtBase(list){
   );
 }
 
-async function loadLiveCatalog(){
+async function loadLiveCatalog(timeoutMs = 5000){
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 8000);
+  const timeout = window.setTimeout(() => controller.abort(), Math.max(1500, Number(timeoutMs || 5000)));
   try {
     const response = await fetch(LIVE_CATALOG_URL, {
       cache: 'no-store',
@@ -177,18 +177,34 @@ function saveLastGoodCatalog(list){
   } catch {}
 }
 
-async function loadCatalog(){
-  for(let attempt = 0; attempt < 3; attempt += 1){
-    const liveProducts = await loadLiveCatalog();
+async function refreshLiveCatalog(attempts = 2){
+  const tries = Math.max(1, Math.min(2, Number(attempts || 1)));
+  for(let attempt = 0; attempt < tries; attempt += 1){
+    const liveProducts = await loadLiveCatalog(attempt === 0 ? 5000 : 3500);
     if(liveProducts.length){
       const sorted = sortByShirtBase(liveProducts);
       saveLastGoodCatalog(sorted);
       return sorted;
     }
-    if(attempt < 2) await new Promise(resolve => window.setTimeout(resolve, 1200 * (attempt + 1)));
+    if(attempt + 1 < tries) await new Promise(resolve => window.setTimeout(resolve, 700));
   }
+  return [];
+}
+
+async function loadCatalog(){
   const cachedProducts = readLastGoodCatalog();
-  return cachedProducts.length ? sortByShirtBase(cachedProducts) : [];
+  if(cachedProducts.length){
+    return { products: sortByShirtBase(cachedProducts), source: 'cache' };
+  }
+  const liveProducts = await refreshLiveCatalog(2);
+  return { products: liveProducts, source: liveProducts.length ? 'live' : 'unavailable' };
+}
+
+function replaceCatalogFromLive(list){
+  if(!Array.isArray(list) || !list.length) return;
+  products = sortByShirtBase(list);
+  updateCollectionCounts();
+  if(selectedCollection) renderProducts();
 }
 
 function setCollectionCountsStatus(label){
@@ -615,10 +631,10 @@ document.addEventListener('click', event => {
   if(event.target.closest('[data-close-cart]') || event.target === qs('[data-cart-drawer]')) closeCart();
 });
 
-loadCatalog().then(list => {
-  products = list;
+loadCatalog().then(result => {
+  products = Array.isArray(result?.products) ? result.products : [];
   if(products.length) updateCollectionCounts();
-  else setCollectionCountsStatus('Refreshing live catalog…');
+  else setCollectionCountsStatus('Catalog temporarily unavailable');
   renderCart();
 
   const requested = new URLSearchParams(window.location.search).get('collection');
@@ -630,6 +646,10 @@ loadCatalog().then(list => {
     selectedCollection = null;
     updateShapeControls();
     openShapeEntry({ scroll: false, updateUrl: false });
+  }
+
+  if(result?.source === 'cache'){
+    refreshLiveCatalog(2).then(replaceCatalogFromLive).catch(()=>{});
   }
 });
 
