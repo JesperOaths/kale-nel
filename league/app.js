@@ -32,7 +32,7 @@ async function api(action,payload={}){
 
 function setBusy(on,label){
   state.busy=!!on;
-  ['fetchBtn','analyzeBtn','newProfileBtn','saveProfileBtn','importBtn'].forEach(id=>{const n=$(id);if(n)n.disabled=!!on||((id==='fetchBtn'||id==='analyzeBtn')&&!state.profile)||((id==='importBtn')&&!state.profile||!$('reportFile')?.files?.length);});
+  ['fetchBtn','analyzeBtn','newProfileBtn','saveProfileBtn','importBtn','testRiotKeyBtn'].forEach(id=>{const n=$(id);if(n)n.disabled=!!on||((id==='fetchBtn'||id==='analyzeBtn')&&!state.profile)||((id==='importBtn')&&(!state.profile||!$('reportFile')?.files?.length))||((id==='testRiotKeyBtn')&&(!state.profile||(!state.serverRiotKey&&!state.riotApiKey)));});
   if(label)$('progressState').textContent=label;
 }
 function setProgress(current,total){
@@ -94,6 +94,7 @@ function syncButtons(){
   $('fetchBtn').disabled=state.busy||!state.profile;
   $('analyzeBtn').disabled=state.busy||!state.profile;
   $('importBtn').disabled=state.busy||!state.profile||!$('reportFile')?.files?.length;
+  $('testRiotKeyBtn').disabled=state.busy||!state.profile||(!state.serverRiotKey&&!state.riotApiKey);
 }
 async function selectProfile(id){
   state.profile=state.profiles.find(p=>p.id===id)||null;
@@ -157,12 +158,30 @@ async function saveProfile(){
   finally{setBusy(false,'Idle');syncButtons();}
 }
 
+async function testRiotKey(){
+  if(!state.profile||state.busy||(!state.serverRiotKey&&!state.riotApiKey))return;
+  setBusy(true,'Testing key');statusPill('Testing Riot key','warn');
+  try{
+    log('Testing Riot access for '+state.profile.display_name+'…');
+    const d=await api('riot_test',{profile_id:state.profile.id});
+    log('Riot key works; Riot ID resolved'+(d.puuid_resolved?' to a PUUID.':'.'),'ok');
+    $('riotKeyStatus').textContent='Riot key verified for this session';
+    statusPill('Riot key verified');
+    await loadProfiles(state.profile.id);
+  }catch(e){
+    log('Riot key test failed: '+e.message,'bad');
+    $('riotKeyStatus').textContent='Riot key test failed';
+    statusPill('Key test failed','error');
+  }finally{setBusy(false);syncButtons();}
+}
+
 async function fetchMatches(){
   if(!state.profile||state.busy)return;
   clearLog();setBusy(true,'Fetching');statusPill('Fetching','warn');
   try{
     log('Preparing recent match list for '+state.profile.display_name+'.');
-    const prep=await api('fetch_prepare',{profile_id:state.profile.id,count:20});
+    const requestedCount=Math.max(20,Math.min(100,Number($('fetchCount').value||20)));
+    const prep=await api('fetch_prepare',{profile_id:state.profile.id,count:requestedCount});
     const ids=prep.match_ids||[],cached=new Set(prep.cached_match_ids||[]);
     if(!ids.length)throw new Error('Riot returned no recent match IDs.');
     log(ids.length+' recent matches found; '+cached.size+' already cached.');
@@ -354,11 +373,18 @@ function renderAdvanced(r){
     ['Ward depth classification',a.wardClassification==null?'Pending current analyzer':String(a.wardClassification)]
   ];
   $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('Pending')||v==='n/a')).join('');
-  const b=r.benchmarks||{};
+  const b=r.benchmarks||{},base=r.lifetime||null,s=r.summary||{};
+  const baselineRows=base?[
+    metric('Cached baseline sample',String(base.games||0)+' games',false),
+    metric('WR · recent / baseline',fmtPct(s.winRate)+' / '+fmtPct(base.winRate),false),
+    metric('CS/min · recent / baseline',fmt(s.csMin,2)+' / '+fmt(base.csMin,2),false),
+    metric('KP · recent / baseline',fmtPct(s.kp)+' / '+fmtPct(base.kp),false),
+    metric('DPM · recent / baseline',fmtInt(s.dpm)+' / '+fmtInt(base.dpm),false)
+  ]:[metric('Recent vs broader baseline','Cache more than 20 games to enable',true)];
   $('benchmarkMetrics').innerHTML=[
     metric('Rank-above benchmark',b.rankAbove?String(b.rankAbove):'Pending current analyzer',!b.rankAbove),
     metric('Item-spike timing',b.itemSpike?String(b.itemSpike):'Pending current analyzer',!b.itemSpike),
-    metric('Recent vs lifetime',r.lifetime?'Available':'Not available in web-basic source',!r.lifetime)
+    ...baselineRows
   ].join('');
 }
 function renderBreakdowns(r){
@@ -396,11 +422,13 @@ $('riotApiKey').addEventListener('input',(ev)=>{
   $('riotKeyStatus').textContent=state.riotApiKey?'Session key ready':'No server Riot key configured';
   $('backendState').textContent=state.serverRiotKey||state.riotApiKey?'Backend + Riot ready':'Backend ready · add Riot key';
   $('backendState').className='pill '+(state.serverRiotKey||state.riotApiKey?'':'warn');
+  syncButtons();
 });
 $('profileSelect').addEventListener('change',()=>selectProfile($('profileSelect').value));
 $('newProfileBtn').addEventListener('click',()=>openProfileEditor(null));
 $('cancelProfileBtn').addEventListener('click',()=>$('profileEditor').hidden=true);
 $('saveProfileBtn').addEventListener('click',saveProfile);
+$('testRiotKeyBtn').addEventListener('click',testRiotKey);
 $('fetchBtn').addEventListener('click',fetchMatches);
 $('analyzeBtn').addEventListener('click',analyze);
 $('reportFile').addEventListener('change',syncButtons);
