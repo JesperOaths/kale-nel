@@ -460,6 +460,12 @@ assert.ok(api.includes('objectivePresent')&&api.includes('teamObjectivesWithoutP
 assert.ok(api.includes('playerKillAssists')&&api.includes('playerDeaths'),'Per-roam K/A and death evidence must remain explicit');
 assert.ok(api.includes('e.eventLane===homeLane'),'Roam plate/turret losses must be scoped to the player home lane instead of map-wide structure losses');
 assert.ok(api.includes('homeLaneStructuresLost'),'Roam windows must preserve home-lane turret loss separately from plate loss');
+assert.ok(api.includes('roam.coachingLaneCostCs=rr==="SUPPORT"&&hasNum(roam.adcLaneCostCs)'),'Support coaching lane cost must use allied ADC-vs-enemy ADC CS when available');
+assert.ok(api.includes('laneCostBasis=rr==="SUPPORT"'),'Roam evidence must state which lane-cost denominator was used');
+assert.ok(api.includes('Number(r.structureInvolvements||0)===0'),'A structure-producing roam must not be mislabeled as an empty costly roam');
+assert.ok(!api.includes('if(Number(g.objectiveTeamTotal)>=2&&hasNum(g.objectiveJoinRate))'),'Per-game objective judgments must not grade secured-only attendance');
+assert.ok(api.includes('contestedObjectives>=3&&contestedJoins===0'),'Per-game objective criticism must use direct contested-window absence evidence');
+assert.ok(app.includes('ADC-vs-ADC lane cost')&&app.includes('direct-role lane cost'),'Frontend must disclose the role-correct roam lane-cost basis');
 assert.ok(app.includes('Roam paths · this match'),'Per-game map must expose roam paths');
 assert.ok(app.includes('roamEvidenceText('),'Roam tab must expose per-window evidence');
 assert.ok(css.includes('.map-roam-path'),'Roam paths must retain dedicated map styling');
@@ -526,7 +532,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v119'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v120'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
