@@ -1546,3 +1546,30 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 @media(max-width:850px){
   .section-head-actions{width:100%;max-width:none;align-items:flex-start;justify-content:flex-start;flex-wrap:wrap}
 }
+
+
+.diagnostic-break-row{
+  padding:14px;border:1px solid var(--line);border-radius:15px;background:#fff;box-shadow:0 4px 14px rgba(48,37,24,.035)
+}
+.diagnostic-break-row+.diagnostic-break-row{margin-top:9px}
+.diagnostic-break-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.diagnostic-break-head .break-visual span{display:flex;flex-direction:column;gap:2px}
+.diagnostic-break-head .break-visual span b{font-size:.78rem}
+.diagnostic-break-head .break-visual span small{color:var(--muted);font-size:.61rem}
+.diagnostic-result{text-align:right}
+.diagnostic-result strong{display:block;font-size:.9rem}
+.diagnostic-result small{display:block;color:var(--muted);font-size:.58rem;text-transform:uppercase;letter-spacing:.06em}
+.diagnostic-chip-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:11px}
+.diagnostic-chip{min-width:0;padding:8px;border:1px solid var(--line);border-radius:10px;background:#faf8f3}
+.diagnostic-chip small{display:block;color:var(--muted);font-size:.54rem;text-transform:uppercase;letter-spacing:.055em;font-weight:900}
+.diagnostic-chip b{display:block;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.67rem}
+.diagnostic-break-row>p{margin:10px 0 0;color:var(--muted);font-size:.62rem;line-height:1.45}
+.matchup-read{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fbf9f4}
+.matchup-read span{color:var(--muted);font-size:.56rem;text-transform:uppercase;letter-spacing:.06em;font-weight:900}
+.matchup-read strong{font-size:.68rem;text-align:right}
+@media(max-width:1200px){.diagnostic-chip-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){
+  .diagnostic-chip-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .diagnostic-break-head,.matchup-read{align-items:flex-start;flex-direction:column}
+  .diagnostic-result,.matchup-read strong{text-align:left}
+}
