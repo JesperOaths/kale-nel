@@ -39,6 +39,9 @@ ok(backend.includes('itemSpikeWindow'), 'first-major-item spike utilization mode
 ok(backend.includes('leadSec>=45'), 'measurable first-major-item advantage must remain at least 45 seconds');
 ok(backend.includes('itemSpikeUtilizationRate'), 'aggregate first-major-item spike utilization rate must remain exported');
 ok(backend.includes('diedBeforeImpact'), 'item-spike model must preserve death-before-impact evidence');
+ok(backend.includes('function repeatDeathSummary('), 'rapid repeat-death model must remain explicit');
+ok(backend.includes('windowMs=240000'), 'rapid repeat-death window must remain four minutes');
+ok(backend.includes('repeatDeathRateDelta'), 'repeat-death comparison versus direct role opponents must remain exported');
 ok(backend.includes('visionMission'), 'vision-action safety model must remain in analyzer');
 ok(backend.includes('Number(d.tMs)-Number(v.tMs)<=20000'), 'vision-action death window must remain 20 seconds');
 ok(backend.includes('dist2(pos,v)<=2500*2500'), 'vision-action death spatial radius must remain 2500 units');
