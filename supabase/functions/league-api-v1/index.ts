@@ -940,25 +940,27 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
             return{time:e.tMin,tMs:e.tMs,type:neutralObjectiveFamily(e),monsterType:e.monsterType,monsterSubType:e.monsterSubType,ownerTeam:e.ownerTeam,winner:won?"own":"enemy",present,...(hasNum(e.x)&&hasNum(e.y)?{x:e.x,y:e.y}:{})};
           });
           const structureEvidence=roamStructureEvents.map((e:any)=>{
-            const won=Number(e.ownerTeam)===teamId,attribution=won?structureInvolvementEvidence(e,frames,pid,teamId,mapId):null;
-            return{time:e.tMin,tMs:e.tMs,type:e.type,towerType:e.towerType,laneType:e.laneType,turretTier:turretTier(e),ownerTeam:e.ownerTeam,winner:won?"own":"enemy",playerInvolved:!!attribution,attribution,...(hasNum(e.x)&&hasNum(e.y)?{x:e.x,y:e.y}:{})};
+            const won=Number(e.ownerTeam)===teamId,attribution=won?structureInvolvementEvidence(e,frames,pid,teamId,mapId):null,eventLane=structureEventLane(e);
+            return{time:e.tMin,tMs:e.tMs,type:e.type,towerType:e.towerType,laneType:e.laneType,eventLane,turretTier:turretTier(e),ownerTeam:e.ownerTeam,winner:won?"own":"enemy",playerInvolved:!!attribution,attribution,...(hasNum(e.x)&&hasNum(e.y)?{x:e.x,y:e.y}:{})};
           });
           const objectivePresent=objectiveEvents.filter((e:any)=>e.winner==="own"&&e.present).length;
           const objectiveAway=objectiveEvents.filter((e:any)=>e.winner==="own"&&!e.present).length;
           const objectiveLost=objectiveEvents.filter((e:any)=>e.winner==="enemy").length;
           const structureInvolvements=structureEvidence.filter((e:any)=>e.winner==="own"&&e.playerInvolved).length;
           const platesGained=structureEvidence.filter((e:any)=>e.type==="TURRET_PLATE_DESTROYED"&&e.winner==="own"&&e.playerInvolved).length;
-          const platesLost=structureEvidence.filter((e:any)=>e.type==="TURRET_PLATE_DESTROYED"&&e.winner==="enemy").length;
-          const pathPoints=outside.map((x:any)=>({time:Number(x.time),tMs:Math.round(Number(x.time)*60000),x:x.position?.x,y:x.position?.y,zone:x.zone})).filter((x:any)=>hasNum(x.x)&&hasNum(x.y));
+          const platesLost=structureEvidence.filter((e:any)=>e.type==="TURRET_PLATE_DESTROYED"&&e.winner==="enemy"&&e.eventLane===homeLane).length;
+          const homeLaneStructuresLost=structureEvidence.filter((e:any)=>e.type==="BUILDING_KILL"&&e.winner==="enemy"&&e.eventLane===homeLane).length;
+          const pathSamples=[samples[i-1],...outside,endSample].filter(Boolean),seenPathTimes=new Set<number>();
+          const pathPoints=pathSamples.map((x:any)=>({time:Number(x.time),tMs:Math.round(Number(x.time)*60000),x:x.position?.x,y:x.position?.y,zone:x.zone})).filter((x:any)=>hasNum(x.x)&&hasNum(x.y)&&!seenPathTimes.has(x.tMs)&&!!seenPathTimes.add(x.tMs));
           const zoneCounts:any={};outside.forEach(x=>zoneCounts[x.zone]=(zoneCounts[x.zone]||0)+1);const target=Object.entries(zoneCounts).sort((a:any,b:any)=>Number(b[1])-Number(a[1]))[0]?.[0]||"map";
           const kill=playerImpacts[0]||null,death=playerDeaths[0]||null,obj=objectiveEvents.find((e:any)=>e.winner==="own"&&e.present)||null;
           let outcome="neutral";if(playerImpacts.length||objectivePresent||structureInvolvements)outcome="success";else if(playerDeaths.length)outcome="failure";
           const roam:any={
             startMin:st,endMin:endSample.time,durationMin:Math.max(0,endSample.time-st),targetZone:target,outcome,
             killOrAssist:playerImpacts.length>0,playerKillAssists:playerImpacts.length,teamKills:teamKills.length,
-            objective:objectivePresent>0,objectivePresent,objectiveAway,objectiveLost,objectives:objectiveEvents,
+            objective:objectivePresent>0,objectivePresent,objectiveAway,teamObjectivesWithoutPlayer:objectiveAway,objectiveLost,enemyObjectivesDuringRoam:objectiveLost,objectives:objectiveEvents,
             death:playerDeaths.length>0,playerDeaths:playerDeaths.length,structureInvolvements,structureEvents:structureEvidence,
-            platesGained,platesLost,pathPoints,evidenceVersion:"roam_window_v2"
+            platesGained,platesLost,homeLaneStructuresLost,pathPoints,evidenceVersion:"roam_window_v3"
           };
           if(oppId){
             const sf=frameAtMs(frames,startSample.time*60000),ef=frameAtMs(frames,endSample.time*60000),m0=frameStats(sf,pid),o0=frameStats(sf,oppId),m1=frameStats(ef,pid),o1=frameStats(ef,oppId);
