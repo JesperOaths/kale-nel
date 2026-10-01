@@ -78,7 +78,9 @@ assert.match(accountRuntime,/gejast:login-names-refreshed[\s\S]*?merged=normaliz
 assert.match(accountRuntime,/else if\(seed\.length\)/,'an empty or slow live refresh must preserve the synchronous seed');
 assert.ok(loginHtml.includes(`gejast-login-names-static.js?${siteVersion}&rev=20261001-login-resilience-r12`),'login must load the static name snapshot with site version + resilience revision');
 assert.ok(loginHtml.includes(`gejast-login-names-fallback.js?${siteVersion}&rev=20261001-login-resilience-r12`),'login must load the single-RPC fallback with site version + resilience revision');
-assert.ok(loginHtml.includes(`gejast-account-runtime.js?${siteVersion}&rev=20261001-login-resilience-r12`),'login must load the account runtime with site version + resilience revision');
+assert.ok(loginHtml.includes(`gejast-account-runtime.js?${siteVersion}&rev=20261002-login-resilience-r13`),'login must load the hardened account runtime with site version + current resilience revision');
+assert.match(accountRuntime,/name\.toLowerCase\(\)!=='kies je naam'/,'placeholder text must never enter the login-name seed');
+assert.match(accountRuntime,/const immediate=normalizeNames\(\[\.\.\.snapshot,\.\.\.cached\]\)/,'deployment snapshot/cache must satisfy login-name loading before live Supabase work');
 assert.match(loginHtml,/window\.GEJAST_LOGIN_NAMES_STATIC=Object\.freeze\(/,'login HTML must contain an inline last-known-good name seed so the selector works even when Supabase or a deferred asset stalls');
 assert.match(loginHtml,/data-login-scope="friends"/,'login HTML must contain literal friends options before JS runs');
 assert.match(loginHtml,/data-login-scope="family"/,'login HTML must contain literal family options before JS runs');
