@@ -4,6 +4,20 @@ This file is the behavioral-analysis contract for `kalenel.nl/league`.
 
 The purpose of the web analyzer is not to produce a decorative stat page. It should identify repeatable player decisions, show the evidence behind a judgment, compare the player with relevant peers and with their own broader history, and turn those findings into specific actions to practise.
 
+## Multi-profile browser workflow
+
+The historical desktop tool used a profile manifest plus PowerShell wrappers to run several accounts in sequence. The browser workspace preserves that useful workflow without recreating the local wrapper stack.
+
+The League page exposes a **Batch profiles · sequential** control built from the same saved web profiles used by the normal single-profile selector. Users can select any subset and run either:
+- **Fetch / update selected** — performs Riot/cache updates for each selected profile in order,
+- **Analyze selected** — analyzes the already-cached data for each selected profile in order.
+
+Batch execution intentionally remains sequential. This limits Riot/API pressure, reuses the same per-profile fetch and analysis code paths as the ordinary buttons, and makes failures easier to attribute. A failure for one profile is logged and does not stop the remaining selected profiles. When the batch finishes, the workspace restores the profile that was active before the batch began.
+
+Fetch and analysis remain separate operations in batch mode for the same reason they are separate for one profile: cached reports can be regenerated without making new Riot requests, and a user can refresh several accounts without automatically starting analysis work they did not request.
+
+The session-only Riot key model also applies to batch fetches. The key is sent only as the request header used by the current tab and is not written into a profile, report, cache, repository, or batch manifest.
+
 ## Patch-aware historical self baseline
 
 Riot Match-V5 includes a game-version string for each match. The analyzer stores that raw value on each analyzed/baseline game and derives a defensive **major.minor patch key** from the first two numeric components.
