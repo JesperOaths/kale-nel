@@ -56,6 +56,10 @@ ok(backend.includes('function deathArea('), 'spatial death-context classificatio
 ok(backend.includes('peer_rank_json'), 'same-role peer rank cache must remain available');
 ok(backend.includes('gameDuration||r?.game_duration_seconds||0)>=600'), 'coaching sample must exclude sub-10-minute games');
 ok(backend.includes('shortGameThresholdSeconds:600'), 'short-game threshold must remain explicit in data quality');
+ok(backend.includes('opponentMatchupBehaviorModel'), 'repeated opposing-champion matchup model must remain in analyzer');
+ok(backend.includes('if(list.length<3)continue'), 'opponent matchup coaching must require at least three repeated games');
+ok(backend.includes('pre14SoloDeathsToRole'), 'matchup model must preserve clean direct-role duel evidence');
+ok(backend.includes('pre14OutsidePressureDeaths'), 'matchup model must preserve outside-pressure evidence');
 ok(backend.includes('durationEligibleRows=summonersRiftRows.filter'), 'duration eligibility must be computed before queue isolation');
 ok(backend.includes('dominantQueueId'), 'queue-context isolation must select a dominant raw Riot queue id');
 ok(backend.includes('durationEligibleRows.filter')&&backend.includes('===Number(dominantQueueId)'), 'coaching sample must stay homogeneous by dominant queue id');
