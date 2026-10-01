@@ -5,10 +5,23 @@ const cfg=window.GEJAST_CONFIG||{};
 const API=(cfg.SUPABASE_URL||'')+'/functions/v1/printify-gildan-diff-diag-v1';
 const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
 const $=(id)=>document.getElementById(id);
-const state={profiles:[],profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,gameSort:{key:'recent',dir:'desc'}};
+const state={profiles:[],profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,publicWorkspace:true,gameSort:{key:'recent',dir:'desc'}};
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function token(){try{return (cfg.getPlayerSessionToken&&cfg.getPlayerSessionToken())||'';}catch(_){return'';}}
+const LEAGUE_WORKSPACE_KEY='bruisienator_public_workspace_v1';
+function workspaceId(){
+  try{
+    let value=String(localStorage.getItem(LEAGUE_WORKSPACE_KEY)||'').trim();
+    if(!/^[a-z0-9][a-z0-9._:-]{15,159}$/i.test(value)){
+      value=(globalThis.crypto&&typeof globalThis.crypto.randomUUID==='function')?globalThis.crypto.randomUUID():('league-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2));
+      localStorage.setItem(LEAGUE_WORKSPACE_KEY,value);
+    }
+    return value;
+  }catch(_){
+    if(!state._ephemeralWorkspace)state._ephemeralWorkspace='league-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+    return state._ephemeralWorkspace;
+  }
+}
 function hasNum(v){return v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));}
 function fmt(v,d=1){return hasNum(v)?Number(v).toFixed(d):'n/a';}
 function fmtInt(v){return hasNum(v)?Math.round(Number(v)).toLocaleString():'n/a';}
@@ -33,7 +46,7 @@ async function api(action,payload={}){
   if(!API||!KEY)throw new Error('League backend configuration is missing.');
   const res=await fetch(API,{
     method:'POST',mode:'cors',cache:'no-store',
-    headers:Object.assign({'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY,'x-gejast-session':token()},state.riotApiKey?{'x-riot-api-key':state.riotApiKey}:{}),
+    headers:Object.assign({'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY,'x-league-workspace':workspaceId()},state.riotApiKey?{'x-riot-api-key':state.riotApiKey}:{}),
     body:JSON.stringify(Object.assign({action},payload))
   });
   const raw=await res.text();let data=null;
@@ -167,16 +180,17 @@ function perGameSpatialHtml(g){
 
 async function boot(){
   bindGameSortControls();
-  clearLog();log('Opening League web workspace.');
+  clearLog();log('Opening public League workspace. Profiles and reports are isolated to this browser unless you export them.');
   await getDdragonVersion();
   try{
     const health=await api('health');
     state.serverRiotKey=!!health.server_riot_key;
+    state.publicWorkspace=health.public_workspace!==false;
     $('backendState').textContent=health.riot_configured?'Backend + Riot ready':'Backend ready · add Riot key';
     $('backendState').className='pill '+(health.riot_configured?'':'warn');
     $('riotKeyRow').hidden=state.serverRiotKey;
-    $('riotKeyStatus').textContent=state.serverRiotKey?'Server Riot key configured':'No server Riot key configured';
-    log('Authenticated as '+(health.player||'Kalenel player')+'.','ok');
+    $('riotKeyStatus').textContent=state.serverRiotKey?'Server Riot key configured':'Public workspace · add your Riot key for fetch/update';
+    log(state.publicWorkspace?'Public browser workspace ready. No Kalenel login is required.':('Workspace ready as '+(health.player||'Kalenel player')+'.'),'ok');
     if(!health.riot_configured)log('Add a Riot development/personal key in the session-only field before Fetch / update. Saved/imported reports still work without it.');
   }catch(e){
     $('backendState').textContent='Backend unavailable';$('backendState').className='pill error';log(e.message,'bad');
