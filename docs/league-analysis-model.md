@@ -22,6 +22,12 @@ The session-only Riot key model also applies to batch fetches. The key is sent o
 
 Riot Match-V5 includes a game-version string for each match. The analyzer stores that raw value on each analyzed/baseline game and derives a defensive **major.minor patch key** from the first two numeric components.
 
+Keep two patch identities separate:
+- **raw build/Data Dragon key** for exact item-catalog lookup and same-patch cohort matching,
+- **public Riot patch label** for user-facing text.
+
+Riot's verified year-prefixed public naming does not always match the raw Data Dragon major. In the verified mappings used here, raw 15.x maps to public Patch 25.x and raw 16.x maps to public Patch 26.x. Do not extrapolate that offset to unverified future majors. The frontend should therefore show e.g. **Patch 26.19** while optionally retaining **Riot/Data Dragon build 16.19** as provenance.
+
 The normal Last-20 coaching sample is **not** restricted to one patch. Recent behavior remains visible even across a patch boundary.
 
 Only the broader historical self-trend comparison is patch-aware:
@@ -1005,7 +1011,7 @@ A frequent #1 damage rank can be highlighted as a strength, while also explainin
 Only produce strong win/loss contrasts when both groups have enough games.
 
 Useful comparisons include:
-- gold differential at 15,
+- gold differential at 15 when the rules profile marks that checkpoint comparable,
 - high-risk death count,
 - objective presence,
 - early KP,
@@ -1033,12 +1039,12 @@ The aggregate comparison contrasts:
 - game 3+ within the same session.
 
 Current useful dimensions include:
-- gold differential at 15,
+- gold differential at 15 **only on rules profiles where @15 is a comparable lane checkpoint**,
 - flagged high-risk deaths,
 - DPM,
 - CS/min.
 
-A coaching warning requires multiple games on both sides and a material difference, such as about 300g worse gold@15, +0.5 high-risk deaths/game, or ~120 lower DPM in game 3+.
+The session model preserves a separate count of @15-compatible games in each session bucket. A coaching warning requires multiple games on both sides and a material difference, such as about 300g worse gold@15 when that comparison is eligible, +0.5 high-risk deaths/game, or ~120 lower DPM in game 3+.
 
 ### Quick requeue comparison
 
@@ -1060,7 +1066,7 @@ Useful descriptive comparisons include:
 - session-opening game versus game 3+,
 - quick requeue after a loss versus quick requeue after a win.
 
-Compare concrete fields such as gold differential at 15, high-risk deaths/game, DPM and CS/min.
+Compare concrete fields such as eligible gold differential at 15, high-risk deaths/game, DPM and CS/min. If a queue's rules profile marks @15 non-comparable, omit the gold@15 session signal instead of treating that raw frame as lane performance.
 
 Do **not** diagnose tilt, fatigue, mood or motivation from these patterns. The report can say later-session or quick-post-loss performance is weaker when the sample supports it, then recommend an intentional break/checkpoint as a practical experiment.
 
@@ -1072,7 +1078,7 @@ When the sample is large enough, compare the newest five games with the precedin
 
 Current trend dimensions include:
 - CS/min,
-- gold differential at 15,
+- gold differential at 15 only for @15-compatible rules profiles,
 - flagged high-risk deaths,
 - DPM.
 
