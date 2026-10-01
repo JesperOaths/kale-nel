@@ -16,6 +16,7 @@ const root=process.cwd();
 const rootVersion=readRootVersion(root);
 const activeExt=new Set(['.html','.js','.mjs','.css']);
 const ignoredFiles=new Set(['check-version-drift.mjs','fix-version-drift.mjs']);
+const ignoredPrefixes=['node_modules/','dist/','build/','.next/','.vercel/','coverage/','tmp/','temp/','patch_bundles/','repo/','mnt/'];
 const versionPattern=/(?:\?v\d+|GEJAST_(?:PAGE|SITE)_VERSION\s*=\s*['"]v\d+['"]|VERSION\s*:\s*['"]v\d+['"]|v\d+\s*[^\w\r\n<>]{0,12}\s*Made by Bruis)/gi;
 
 function normalizeVersion(value){
@@ -45,6 +46,7 @@ function isAllowedLegacyReference(rel,found){
 const offenders=[];
 let scannedFiles=0;
 for(const rel of listTrackedFiles(root)){
+  if(ignoredPrefixes.some(prefix=>rel.startsWith(prefix))) continue;
   if(isArchivedFile(rel)) continue;
   if(rel.startsWith('check-')) continue;
   if(ignoredFiles.has(path.basename(rel))) continue;
