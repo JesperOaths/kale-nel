@@ -953,7 +953,7 @@ Each detected roam now preserves a **per-window evidence bundle** rather than on
 - neutral objectives during the window with player **present vs away** evidence,
 - structure/turret-plate events with supported player involvement and attribution quality,
 - plates gained through supported player involvement and **home-lane** plates/turrets lost while the player is away, rather than every structure loss elsewhere on the map,
-- direct-role CS differential change from departure to return.
+- lane-cost differential from departure to return, using **player vs direct role peer** for TOP/MID/ADC and **allied ADC vs enemy ADC** for SUPPORT when that evidence is available.
 
 Outcomes:
 - player kill/assist, a team neutral objective with supported player presence, or supported structure involvement during the departure → success,
@@ -968,13 +968,17 @@ The cutoff is a behavior-analysis window, not a claim that rotations stop when B
 
 ### Roam lane cost
 
-For lane roles with a valid same-role opponent, measure direct-role CS differential at roam departure and return:
+For TOP, MID and ADC with a valid same-role opponent, measure direct-role CS differential at roam departure and return:
 
 `(player CS - peer CS at return) - (player CS - peer CS at departure)`
 
-Negative means the direct opponent gained CS advantage while the player was away.
+For SUPPORT, support-vs-support CS is not a meaningful lane-cost proxy. When both bot carries are identifiable, use the allied ADC versus enemy ADC CS differential instead:
 
-Current coaching treats a loss of roughly 6 or more CS as materially costly. A roam with no kill/assist/objective return plus that lane loss is a strong improvement signal. A roam can still be described as economically expensive even if it produced a kill; do not equate "successful event" with "good roam."
+`(allied ADC CS - enemy ADC CS at return) - (same differential at departure)`
+
+Every roam stores the basis used as provenance. Negative means the relevant lane state moved against the player's team while the player was away.
+
+Current coaching treats a loss of roughly 6 or more CS as materially costly. A roam is considered **empty costly** only when that lane loss has no tracked player kill/assist, no supported neutral-objective return, and no supported structure contribution. A roam can still be economically expensive even if it produced value; do not equate "successful event" with "good roam."
 
 The action should focus on wave preparation and abort timing, not simply "roam less."
 
@@ -1009,7 +1013,10 @@ A window shorter than 45 seconds is not considered meaningfully actionable and i
 The first meaningful purchase sequence is analyzed separately from later recalls and item spikes.
 
 Current detection:
-- find the first purchase group by 12 minutes with at least 250g detected spend,
+- reconstruct committed Riot item transactions and exclude resolved `ITEM_UNDO` reversals,
+- group committed purchases into shop visits,
+- estimate cash spend from patch item recipes and components actually owned before each purchase,
+- find the first purchase group by 12 minutes whose **conservative spend lower bound** reaches at least 250g,
 - require timeline evidence that the player had **already left base** before that purchase group,
 - do not impose an arbitrary 2.5-minute lower bound,
 - compare direct-role gold/CS differential before the shop with the next supported post-shop frame,
