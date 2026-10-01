@@ -643,7 +643,10 @@ assert.match(paymentAmountMigration, /paid_amount_cents/i);
 assert.match(directMigration, /shop_catalog_cache_v828/i);
 assert.match(directMigration, /security definer/i);
 
-assert.match(refresh, /POLL_MS\s*=\s*15\s*\*\s*1000/);
+assert.match(refresh, /POLL_MS\s*=\s*5\s*\*\s*60\s*\*\s*1000/, 'shop live-catalog polling must stay at five minutes rather than hammering Supabase every 15 seconds');
+assert.match(refresh, /FIRST_POLL_MS\s*=\s*45\s*\*\s*1000/, 'first background catalog poll must wait until the initial storefront has settled');
+assert.match(refresh, /MIN_FOREGROUND_REFRESH_MS\s*=\s*60\s*\*\s*1000/, 'focus/visibility refreshes must be rate-limited');
+assert.doesNotMatch(refresh, /POLL_MS\s*=\s*15\s*\*\s*1000/, 'retired 15-second production catalog polling must not return');
 assert.doesNotMatch(refresh, /window\.location\.reload/);
 assert.match(store, /const wholeEuro/);
 assert.match(store, /price:\s*wholeEuro/);
