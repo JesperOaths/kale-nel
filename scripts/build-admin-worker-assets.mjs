@@ -12,6 +12,9 @@ const out = path.join(root, 'cloudflare', 'workers', 'admin-gate', 'static');
 const excludedDirs = new Set(['.git', 'node_modules', 'cloudflare', 'deployment_forensics_v761', 'mnt', 'sql']);
 const excludedFiles = [/\.md$/i, /\.txt$/i, /\.sql$/i, /\.patch$/i, /_orig\.html$/i];
 
+const siteVersion = fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim();
+if (!/^v\d+$/i.test(siteVersion)) throw new Error(`Invalid root VERSION: ${siteVersion}`);
+
 const privateSourceRaw = String(process.env.KALENEL_PRIVATE_ADMIN_SOURCE_DIR || '').trim();
 const requirePrivate = /^(?:1|true|yes)$/i.test(String(process.env.KALENEL_REQUIRE_PRIVATE_ADMIN_SOURCE || ''));
 const privateSourceRoot = privateSourceRaw ? path.resolve(root, privateSourceRaw) : '';
@@ -52,11 +55,27 @@ for (const rel of publicFiles) copyFile(root, rel);
 for (const rel of privateFiles) copyFile(privateSourceRoot, rel);
 
 const files = [...new Set([...publicFiles, ...privateFiles])].sort();
+let normalizedHtmlVersions = 0;
+for (const rel of files) {
+  if (!/\.html$/i.test(rel)) continue;
+  const file = path.join(out, rel);
+  let html = fs.readFileSync(file, 'utf8');
+  const before = html;
+  html = html
+    .replace(/(GEJAST_(?:PAGE|SITE)_VERSION\s*=\s*['"])v\d+(['"])/gi, `$1${siteVersion}$2`)
+    .replace(/\?v\d+/gi, `?${siteVersion}`)
+    .replace(/v\d+\s*[^\w\r\n<>]{0,12}\s*Made by Bruis/gi, `${siteVersion} - Made by Bruis`);
+  if (html !== before) {
+    fs.writeFileSync(file, html);
+    normalizedHtmlVersions++;
+  }
+}
 const protectedEntrypointPattern = /(^|\/)(admin[^/]*\.html|drinks_admin\.html|familie_admin\.html|match_control\.html|match_swap\.html|[^/]*_vault\.html|vault\.html)$/i;
 
 const manifest = {
   built_at: new Date().toISOString(),
   release: 'v762-admin-worker-gate',
+  site_version: siteVersion,
   file_count: files.length,
   admin_source_mode: sourceMode,
   private_admin_source: privateManifest ? {
@@ -88,5 +107,7 @@ console.log(JSON.stringify({
   copied: files.length,
   admin_source_mode: sourceMode,
   private_source_files: privateFiles.length,
+  site_version: siteVersion,
+  normalized_html_versions: normalizedHtmlVersions,
   manifest: 'admin-worker-manifest.json'
 }, null, 2));
