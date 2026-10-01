@@ -123,6 +123,9 @@ assert.ok(app.includes('Early-lead give-back rate'));
 assert.ok(app.includes('Peak pre-15 role lead'));
 assert.ok(app.includes('≥500g pre-15 lead opportunities'));
 assert.ok(app.includes('Major-item spike utilization'));
+assert.ok(app.includes('Higher-rank major-item games'),'Frontend must expose the higher-ranked direct-peer item sample');
+assert.ok(app.includes('Major-item timing vs higher-rank peer'),'Frontend must expose higher-ranked direct-peer first-major timing');
+assert.ok(app.includes('Faster major item vs higher-rank peer'),'Frontend must expose higher-ranked direct-peer first-major win rate');
 assert.ok(app.includes('Major affordability sample'),'Frontend must surface recipe-aware first-major affordability evidence');
 assert.ok(app.includes('Avg affordable → purchase delay'),'Frontend must expose affordability-to-purchase delay');
 assert.ok(app.includes('Readiness delay vs peer'),'Frontend must expose recipe-aware delay versus the direct role opponent');
@@ -228,3 +231,9 @@ assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold m
 assert.ok(api.includes('preserved:swing>=-250'),'early lead preservation tolerance must remain 250g');
 assert.ok(api.includes('behaviorSummary.earlyLeadGivebackRate'),'Next-5 target path must remain tied to the exported early-lead rate');
 assert.ok(api.includes('Review where this early lead started to unwind'),'replay queue must keep early-lead review moments');
+
+assert.ok(api.includes('higherRankMajorItemGames'),'Higher-ranked peer item sample must remain exported');
+assert.ok(api.includes('higherRankAvgMajorItemDeltaMin'),'Higher-ranked peer first-major timing delta must remain exported');
+assert.ok(api.includes('higherRankMajorItemFasterPct'),'Higher-ranked peer first-major faster rate must remain exported');
+assert.ok(api.includes('First-major timing slips against higher-ranked direct opponents'),'Higher-rank item timing must remain actionable coaching evidence');
+assert.ok(api.includes('league-web-behavior-v4.19'),'Analyzer version must include higher-rank first-major benchmark');
