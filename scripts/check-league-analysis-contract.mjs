@@ -214,6 +214,10 @@ ok(backend.includes('STANDARD_PVP_SR_QUEUE_IDS=new Set([400,420,430,440,490,700]
 ok(backend.includes('SWIFTPLAY_SR_QUEUE_IDS=new Set([480])'), 'Swiftplay must remain a separate queue family');
 ok(backend.includes('r==="DUO_SUPPORT"')&&backend.includes('r==="DUO_CARRY"'), 'legacy Riot bot-lane role aliases must normalize');
 ok(backend.includes('function participantRoleEvidence('), 'role normalization must expose source/conflict evidence');
+ok(backend.includes('chosen.source==="teamPosition"||chosen.source==="individualPosition"'), 'modern Riot position fields must own high-confidence role evidence');
+ok(backend.includes('?"high":"fallback"'), 'legacy role/lane metadata must remain lower-confidence fallback evidence');
+ok(backend.includes('fallbackPlayerRoleGames')&&backend.includes('fallbackDirectPeerRoleGames'), 'fallback role evidence must remain visible in data quality');
+ok(app.includes('peer role(s) from legacy fallback metadata'), 'frontend must expose fallback peer-role evidence');
 ok(backend.includes('team!=="GENERIC"&&individual!=="GENERIC"&&team!==individual'), 'conflicting Riot role fields must fail closed');
 ok(backend.includes('function opponentResolution(')&&backend.includes('candidates.length!==1'), 'direct role peer comparison must require exactly one enemy candidate');
 ok(backend.includes('excludedAmbiguousRole')&&backend.includes('ambiguousDirectPeerGames'), 'role/peer ambiguity must remain visible in data quality');
