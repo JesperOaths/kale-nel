@@ -108,7 +108,12 @@ assert.match(runner, /auth gate did not settle within/, 'a genuinely stuck auth 
 assert.match(runner, /for \(let attempt = 0; attempt < 2; attempt\+\+\)/, 'authenticated page capture must retry one transient auth-gate failure before failing closed');
 assert.match(runner, /authRetryCount \+= 1/, 'visual report must retain evidence that an auth retry was actually consumed');
 assert.match(runner, /document\.documentElement\.hasAttribute\('data-gejast-auth-state'\)/, 'redirect aliases must detect a canonical auth gate that appears after the source document loads');
-assert.match(workflow, /GEJAST_VISUAL_PAGE_CONCURRENCY:\s*'4'/, 'full-site audit concurrency must remain bounded below the transient auth overload point');
+assert.match(workflow, /GEJAST_VISUAL_PAGE_CONCURRENCY:\s*'2'/, 'full-site audit concurrency must remain conservatively bounded below the production data-plane overload point');
+assert.match(fallbackStep, /GEJAST_VISUAL_PAGE_CONCURRENCY=1/, 'degraded visual coverage must serialize page loads so an unhealthy production data plane is not amplified');
+assert.doesNotMatch(workflow, /'league\/\*\*\/\*\.js'/, 'high-frequency League JS commits must not launch a full 137-page production visual campaign');
+assert.match(workflow, /cron:\s*'17 3 \* \* \*'/, 'a quiet daily full-site visual campaign must cover dynamic regressions without coupling them to every League JS commit');
+assert.match(workflow, /deployments:\s*read/, 'full visual certification must be able to prove the exact GitHub Pages deployment SHA');
+assert.match(workflow, /exact_sha_match/, 'full visual certification must require exact deployed revision parity, not VERSION parity alone');
 assert.match(runner, /if \(!protectedOnArrival\) \{\s*authGate = await waitForAuthGateToSettle/s, 'Cloudflare-protected admin responses must bypass player-auth settlement waiting');
 assert.match(runner, /seriousConsole\.length && judgement !== 'broken' && judgement !== 'protected'/, 'expected Cloudflare protection must not be downgraded to warning by perimeter console noise');
 

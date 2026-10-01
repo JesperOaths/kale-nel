@@ -2,6 +2,8 @@ name: Full live visual audit
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'
   pull_request:
     branches:
       - main
@@ -20,7 +22,6 @@ on:
       - '**/*.html'
       - '*.js'
       - 'familie/**/*.js'
-      - 'league/**/*.js'
       - 'shop/**/*.js'
       - 'parfum/**/*.js'
       - 'security/**/*.js'
@@ -45,7 +46,6 @@ on:
       - '**/*.html'
       - '*.js'
       - 'familie/**/*.js'
-      - 'league/**/*.js'
       - 'shop/**/*.js'
       - 'parfum/**/*.js'
       - 'security/**/*.js'
@@ -55,6 +55,7 @@ on:
 
 permissions:
   contents: read
+  deployments: read
 
 concurrency:
   group: full-live-visual-audit-production
@@ -73,7 +74,7 @@ jobs:
       GEJAST_SITE_SCOPE: friends
       GEJAST_VISUAL_TIMEOUT_MS: '25000'
       GEJAST_VISUAL_SETTLE_MS: '5000'
-      GEJAST_VISUAL_PAGE_CONCURRENCY: '4'
+      GEJAST_VISUAL_PAGE_CONCURRENCY: '2'
 
     steps:
       - name: Check out exact tested revision
@@ -116,36 +117,75 @@ jobs:
           fi
           echo 'RESULT=VISUAL_SYSTEM_CHROME_RUNTIME_PASS'
 
-      - name: Resolve deployed version parity
+      - name: Resolve exact deployed revision and version parity
         id: live_version
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           source_version="$(tr -d '\r\n ' < VERSION)"
           live_version=''
+          deployment_state=''
+          exact_sha_match=0
           attempts=1
           delay=0
           if [ "${GITHUB_REF:-}" = 'refs/heads/main' ]; then
             attempts=60
             delay=10
           fi
+
           for i in $(seq 1 "$attempts"); do
-            live_version="$(curl -fsS --max-time 10 "https://kalenel.nl/VERSION?ts=$(date +%s)" 2>/dev/null | tr -d '\r\n ' || true)"
-            if [ "$live_version" = "$source_version" ]; then
-              break
+            if [ "${GITHUB_REF:-}" = 'refs/heads/main' ]; then
+              deployments="$(curl -fsS --max-time 15                 -H "Authorization: Bearer ${GH_TOKEN}"                 -H 'Accept: application/vnd.github+json'                 -H 'X-GitHub-Api-Version: 2022-11-28'                 "https://api.github.com/repos/${GITHUB_REPOSITORY}/deployments?environment=github-pages&per_page=30" || true)"
+              deployment_id="$(printf '%s' "$deployments" | node --input-type=module -e '
+                let raw="";
+                process.stdin.setEncoding("utf8");
+                process.stdin.on("data",c=>raw+=c);
+                process.stdin.on("end",()=>{
+                  try {
+                    const rows=JSON.parse(raw||"[]");
+                    const hit=Array.isArray(rows)?rows.find(x=>String(x?.sha||"")===process.env.GITHUB_SHA&&String(x?.environment||"")==="github-pages"):null;
+                    if(hit?.id) process.stdout.write(String(hit.id));
+                  } catch {}
+                });
+              ')"
+              if [ -n "$deployment_id" ]; then
+                statuses="$(curl -fsS --max-time 15                   -H "Authorization: Bearer ${GH_TOKEN}"                   -H 'Accept: application/vnd.github+json'                   -H 'X-GitHub-Api-Version: 2022-11-28'                   "https://api.github.com/repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses?per_page=20" || true)"
+                deployment_state="$(printf '%s' "$statuses" | node --input-type=module -e '
+                  let raw="";
+                  process.stdin.setEncoding("utf8");
+                  process.stdin.on("data",c=>raw+=c);
+                  process.stdin.on("end",()=>{
+                    try {
+                      const rows=JSON.parse(raw||"[]");
+                      if(Array.isArray(rows)&&rows[0]?.state) process.stdout.write(String(rows[0].state));
+                    } catch {}
+                  });
+                ')"
+                if [ "$deployment_state" = 'success' ]; then exact_sha_match=1; fi
+              fi
+            else
+              exact_sha_match=1
+              deployment_state='non-main-observation'
             fi
+
+            live_version="$(curl -fsS --max-time 10 "https://kalenel.nl/VERSION?visual_run=${GITHUB_RUN_ID}&attempt=${i}&sha=${GITHUB_SHA}" 2>/dev/null | tr -d '\r\n ' || true)"
+            if [ "$live_version" = "$source_version" ] && [ "$exact_sha_match" = '1' ]; then break; fi
             if [ "$i" -lt "$attempts" ]; then sleep "$delay"; fi
           done
+
           match=0
-          if [ "$live_version" = "$source_version" ]; then match=1; fi
+          if [ "$live_version" = "$source_version" ] && [ "$exact_sha_match" = '1' ]; then match=1; fi
           {
             echo "GEJAST_SOURCE_VERSION=$source_version"
             echo "GEJAST_LIVE_VERSION=$live_version"
             echo "GEJAST_LIVE_VERSION_MATCH=$match"
+            echo "GEJAST_LIVE_SHA_MATCH=$exact_sha_match"
           } >> "$GITHUB_ENV"
-          echo "source_version=$source_version live_version=${live_version:-unavailable} parity=$match ref=${GITHUB_REF:-unknown}"
+          echo "source_sha=$GITHUB_SHA deployment_state=${deployment_state:-absent} exact_sha=$exact_sha_match source_version=$source_version live_version=${live_version:-unavailable} parity=$match ref=${GITHUB_REF:-unknown}"
           if [ "${GITHUB_REF:-}" = 'refs/heads/main' ] && [ "$match" != '1' ]; then
-            echo 'Main visual certification requires the deployed VERSION to match the tested source revision.'
+            echo 'Main visual certification requires the exact tested SHA and VERSION to be deployed.'
             exit 1
           fi
 
@@ -189,6 +229,7 @@ jobs:
             echo "GEJAST_FAMILY_NAME=${GEJAST_FAMILY_NAME:-VisualFamily_${suffix}}"
             echo 'GEJAST_VISUAL_TIMEOUT_MS=5000'
             echo 'GEJAST_VISUAL_SETTLE_MS=1200'
+            echo 'GEJAST_VISUAL_PAGE_CONCURRENCY=1'
             echo 'GEJAST_VISUAL_DEGRADED_FIXTURES=1'
           } >> "$GITHUB_ENV"
 
