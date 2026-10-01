@@ -325,6 +325,8 @@ Revision identity is **role-specific**, not merely patch-specific. A patch that 
 
 This prevents two opposite errors: mixing genuinely incompatible same-role games, and discarding valid same-role games merely because another role changed on that patch.
 
+An **unknown** mechanics revision is never treated as a verified cohort identity. Even if five or more recent games share `2026_revision_unknown`, that only means the version evidence is missing; it does not prove those games share the same mechanics. In that case the analyzer keeps the broader role sample and marks the mechanics fallback as unverified rather than filtering on an unknown label.
+
 For mechanics-sensitive coaching, the report builds a **current mechanics cohort** from the newest primary-role game's rules profile plus that role's own mechanics revision. If that cohort contains at least five primary-role games, coaching models use it instead of blending older incompatible mechanics into the same conclusions. The Last-20 overview remains visible separately. If fewer than five current-mechanics games exist, the analyzer keeps the broader primary-role sample rather than manufacturing certainty and explicitly marks the mixed-mechanics fallback as a data-quality limitation.
 
 ## Mid-game farm routing
