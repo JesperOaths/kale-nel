@@ -218,9 +218,9 @@ async function analyze(){
     setProgress(100,100);
     log('Deterministic web analysis generated for '+(d.report?.dataQuality?.analyzedGames||0)+' games.','ok');
     if(d.report?.advanced?.currentSourcePortRequired)log('Advanced Bruisienator formulas are intentionally marked unavailable until the current source package is supplied.');
-    renderReport(d.report,'web_basic');
+    renderReport(d.report,'web_behavior');
     $('analysisState').textContent=fmtDate(d.created_at);
-    $('sourceState').textContent='Web analyzer';
+    $('sourceState').textContent='Behavioral analyzer';
     statusPill('Analysis complete');
   }catch(e){log('Analysis failed: '+e.message,'bad');statusPill('Analysis failed','error');}
   finally{setBusy(false);syncButtons();}
@@ -272,8 +272,8 @@ function renderBullets(id,items,empty){
   $(id).innerHTML=list.length?list.map(x=>{
     if(typeof x==='string')return '<div class="bullet">'+esc(x)+'</div>';
     const title=x.title||x.label||x.category||'Insight',evidence=x.evidence||x.text||'',action=x.action||'',confidence=x.confidence||'';
-    return '<div class="bullet coaching-bullet">'+
-      '<div class="coaching-head"><strong>'+esc(title)+'</strong>'+(x.category?'<span>'+esc(x.category)+'</span>':'')+(confidence?'<small>'+esc(confidence)+' confidence</small>':'')+'</div>'+
+    return '<div class="bullet coaching-bullet priority-'+esc(String(x.priority||3))+'">'+
+      '<div class="coaching-head"><strong>'+esc(title)+'</strong>'+(x.category?'<span>'+esc(x.category)+'</span>':'')+(x.priority?'<em>Priority '+esc(String(x.priority))+'</em>':'')+(confidence?'<small>'+esc(confidence)+' confidence</small>':'')+'</div>'+
       (evidence?'<p>'+esc(evidence)+'</p>':'')+
       (action?'<p class="coaching-action"><b>Improve:</b> '+esc(action)+'</p>':'')+
       '</div>';
@@ -309,8 +309,15 @@ function toggleGame(index){
   const tr=document.createElement('tr');tr.className='details-row';const td=document.createElement('td');td.colSpan=9;td.innerHTML=detailsHtml(game,index);tr.appendChild(td);row.insertAdjacentElement('afterend',tr);
   bindDetailTabs(tr,game,index);
 }
+function judgmentHtml(g){
+  const xs=Array.isArray(g.judgments)?g.judgments:[];
+  if(!xs.length)return '<div class="game-judgments empty-judgment">No high-confidence action judgment for this game.</div>';
+  return '<div class="game-judgments">'+xs.map(x=>'<article class="game-judgment '+(x.tone==='strength'?'strength':'improve')+'">'+
+    '<div class="game-judgment-head"><span>'+esc(x.category||'analysis')+'</span><strong>'+esc(x.title||'Insight')+'</strong></div>'+
+    '<p>'+esc(x.evidence||'')+'</p>'+(x.action?'<p class="game-action"><b>Next time:</b> '+esc(x.action)+'</p>':'')+'</article>').join('')+'</div>';
+}
 function detailsHtml(g,index){
-  return '<div class="details-shell"><div class="details-tabs">'+['macro','resets','vision','roams','deaths','objectives'].map(t=>'<button class="tab-btn '+(state.activeDetailTab===t?'active':'')+'" data-tab="'+t+'" type="button">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div><div class="details-content" data-detail-content>'+detailContent(g,state.activeDetailTab)+'</div></div>';
+  return '<div class="details-shell">'+judgmentHtml(g)+'<div class="details-tabs">'+['macro','resets','vision','roams','deaths','objectives'].map(t=>'<button class="tab-btn '+(state.activeDetailTab===t?'active':'')+'" data-tab="'+t+'" type="button">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div><div class="details-content" data-detail-content>'+detailContent(g,state.activeDetailTab)+'</div></div>';
 }
 function detailCard(label,value){return'<div class="detail-card"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>';}
 function detailList(items,empty){
@@ -403,16 +410,32 @@ function renderAdvanced(r){
     ['Major-item Δ vs opponent',Number.isFinite(Number(itemSpike.avgDeltaVsOpponentMin))?signed(itemSpike.avgDeltaVsOpponentMin,1)+' min':'n/a']
   ];
   $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('not recovered')||v==='n/a')).join('');
-  const p=r.peerComparison||{},base=r.lifetime||null,s=r.summary||{},rank=r.profile?.rank||null;
+  const p=r.peerComparison||{},conv=r.conversion||{},wl=r.winLoss||{},base=r.lifetime||null,s=r.summary||{},rank=r.profile?.rank||null;
   const peerRows=[
     metric('Peer definition',p.definition||'Same-role opponent in each match',false),
     metric('Comparable peer games',String(p.sameRoleGames??0),false),
     metric('Gold @15 vs peer',Number.isFinite(Number(p.avgGoldDiff15))?signed(p.avgGoldDiff15,0)+'g':'n/a',!Number.isFinite(Number(p.avgGoldDiff15))),
-    metric('Ahead in gold @15',fmtPct(p.laneAheadPct),!Number.isFinite(Number(p.laneAheadPct))),
+    metric('Beat peer on gold @15',fmtPct(p.gold15OutperformPct),!Number.isFinite(Number(p.gold15OutperformPct))),
     metric('CS/min vs peer',Number.isFinite(Number(p.avgCsMinDelta))?signed(p.avgCsMinDelta,2):'n/a',!Number.isFinite(Number(p.avgCsMinDelta))),
+    metric('Beat peer on CS/min',fmtPct(p.csMinOutperformPct),!Number.isFinite(Number(p.csMinOutperformPct))),
     metric('DPM vs peer',Number.isFinite(Number(p.avgDpmDelta))?signed(p.avgDpmDelta,0):'n/a',!Number.isFinite(Number(p.avgDpmDelta))),
+    metric('Beat peer on DPM',fmtPct(p.dpmOutperformPct),!Number.isFinite(Number(p.dpmOutperformPct))),
     metric('Vision/min vs peer',Number.isFinite(Number(p.avgVpmDelta))?signed(p.avgVpmDelta,2):'n/a',!Number.isFinite(Number(p.avgVpmDelta))),
-    metric('Major-item timing vs peer',Number.isFinite(Number(p.avgMajorItemDeltaMin))?signed(p.avgMajorItemDeltaMin,1)+' min':'n/a',!Number.isFinite(Number(p.avgMajorItemDeltaMin)))
+    metric('Beat peer on vision/min',fmtPct(p.vpmOutperformPct),!Number.isFinite(Number(p.vpmOutperformPct))),
+    metric('Major-item timing vs peer',Number.isFinite(Number(p.avgMajorItemDeltaMin))?signed(p.avgMajorItemDeltaMin,1)+' min':'n/a',!Number.isFinite(Number(p.avgMajorItemDeltaMin))),
+    metric('Faster major item than peer',fmtPct(p.majorItemFasterPct),!Number.isFinite(Number(p.majorItemFasterPct)))
+  ];
+  const conversionRows=[
+    metric('Wins when ≥250g ahead @15',Number.isFinite(Number(conv.laneLeadWinRate))?fmtPct(conv.laneLeadWinRate)+' · '+String(conv.laneLeadGames||0)+' games':'n/a',!Number.isFinite(Number(conv.laneLeadWinRate))),
+    metric('Wins when ≥250g behind @15',Number.isFinite(Number(conv.laneDeficitWinRate))?fmtPct(conv.laneDeficitWinRate)+' · '+String(conv.laneDeficitGames||0)+' games':'n/a',!Number.isFinite(Number(conv.laneDeficitWinRate)))
+  ];
+  const wlRow=(label,obj,formatter)=>metric(label,obj&&Number.isFinite(Number(obj.wins))&&Number.isFinite(Number(obj.losses))?formatter(obj.wins)+' / '+formatter(obj.losses):'n/a',!(obj&&Number.isFinite(Number(obj.wins))&&Number.isFinite(Number(obj.losses))));
+  const winLossRows=[
+    wlRow('Gold @15 · wins / losses',wl.goldDiff15,v=>signed(v,0)+'g'),
+    wlRow('High-risk deaths · wins / losses',wl.badDeaths,v=>fmt(v,1)),
+    wlRow('Early KP · wins / losses',wl.earlyKp,v=>fmtPct(v)),
+    wlRow('Objective presence · wins / losses',wl.objectiveJoin,v=>fmtPct(v)),
+    wlRow('Greedy stays · wins / losses',wl.greedyStays,v=>fmt(v,1))
   ];
   const baselineRows=base?[
     metric('Broader cached sample',String(base.games||0)+' games',false),
@@ -423,7 +446,7 @@ function renderAdvanced(r){
   ]:[metric('Recent vs broader baseline','Cache more than 20 games to enable',true)];
   $('benchmarkMetrics').innerHTML=[
     metric('Current Riot rank',rank&&rank.tier?[rank.tier,rank.rank,rank.leaguePoints!=null?rank.leaguePoints+' LP':''].filter(Boolean).join(' '):'Not available',!(rank&&rank.tier)),
-    ...peerRows,...baselineRows
+    ...peerRows,...conversionRows,...winLossRows,...baselineRows
   ].join('');
 }
 function renderBreakdowns(r){
