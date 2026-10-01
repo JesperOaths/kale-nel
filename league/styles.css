@@ -1596,3 +1596,6 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 .compact-head{margin-bottom:12px}
 .quick-read-card.thin-evidence{border-style:dashed;box-shadow:none}
 .quick-read-card.thin-evidence .context-bar{opacity:.45}
+
+.intelligence-card.thin-evidence{border-style:dashed;box-shadow:none}
+.intelligence-card.thin-evidence>small{color:var(--muted)}
