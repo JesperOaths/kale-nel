@@ -41,7 +41,7 @@ vm.createContext(context);
 new vm.Script(staticSource,{filename:'gejast-login-names-static.js'}).runInContext(context);
 new vm.Script(source,{filename:'gejast-login-names-fallback.js'}).runInContext(context);
 
-assert.equal(context.GEJAST_LOGIN_NAMES_FALLBACK?.source,'v817-html-static-first-delayed-active-name-rpc');
+assert.equal(context.GEJAST_LOGIN_NAMES_FALLBACK?.source,'v817-snapshot-authoritative-first-delayed-active-name-rpc');
 assert.equal(context.GEJAST_LOGIN_NAMES_FALLBACK?.staticSource,'gejast-login-names-static.js');
 assert.match(source,/get_login_active_names_v687/);
 assert.match(source,/2500/,'authoritative refresh must stay tightly bounded so login does not hang behind Supabase latency');
