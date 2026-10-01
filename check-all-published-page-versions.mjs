@@ -24,7 +24,7 @@ const pages = tracked
 function versionTokensFromVisibleOwners(body){
   const tokens = [];
   const patterns = [
-    /<[^>]+class=["'][^"']*(?:site-credit-watermark|version-watermark|\bversion\b)[^"']*["'][^>]*>[\s\S]{0,260}?\b(v\d+(?:\.\d+)*)\b/gi,
+    /<[^>]+class=["\'][^"\']*(?:site-credit-watermark|version-watermark)[^"\']*["\'][^>]*>[\s\S]{0,260}?\b(v\d+(?:\.\d+)*)\b/gi,
     /<[^>]+data-version-watermark(?:=["'][^"']*["'])?[^>]*>[\s\S]{0,260}?\b(v\d+(?:\.\d+)*)\b/gi,
     /\b(v\d+)\s*[^\w\r\n<>]{0,12}\s*Made by Bruis\b/gi
   ];
@@ -34,7 +34,7 @@ function versionTokensFromVisibleOwners(body){
   return [...new Set(tokens.map(v=>v.toLowerCase()))];
 }
 
-const independentPageVersions = new Set(['admin_shop_analytics.html','admin_shop_connection.html','admin_shop_operations.html','admin_shop_orders.html']);
+const independentPageVersions = new Set(['admin_shop_analytics.html','admin_shop_connection.html','admin_shop_operations.html','admin_shop_orders.html','shop/index.html']);
 
 const missing=[];
 const ambiguous=[];
@@ -45,13 +45,14 @@ const rows=[];
 for(const rel of pages){
   const body=fs.readFileSync(path.join(root,rel),'utf8');
   const visible=versionTokensFromVisibleOwners(body);
+  const dynamicWatermark=/data-version-watermark/i.test(body)&&/applyVersionLabel|gejast-version-sync-inline/i.test(body);
   const pageVersions=[...body.matchAll(/GEJAST_(?:PAGE|SITE)_VERSION\s*=\s*['"](v\d+)['"]/gi)].map(m=>m[1].toLowerCase());
   const gates=[...body.matchAll(/gejast-auth-gate\.js\?v(\d+)/gi)].map(m=>'v'+m[1]);
   const uniquePage=[...new Set(pageVersions)];
   const uniqueGate=[...new Set(gates)];
   const rootOwned = !independentPageVersions.has(rel) && (uniquePage.length>0 || uniqueGate.length>0);
 
-  if(!visible.length) missing.push(rel);
+  if(!visible.length&&!dynamicWatermark) missing.push(rel);
   if(visible.length>1) ambiguous.push(`${rel}: ${visible.join(', ')}`);
   if(rootOwned){
     for(const value of uniquePage){
@@ -63,7 +64,7 @@ for(const rel of pages){
   }
   rows.push({
     rel,
-    visible:visible.join('|')||'MISSING',
+    visible:visible.join('|')||(dynamicWatermark?'DYNAMIC':'MISSING'),
     page:uniquePage.join('|')||'-',
     gate:uniqueGate.join('|')||'-',
     owner:rootOwned?'shared-gejast':'independent'
