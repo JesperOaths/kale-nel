@@ -25,6 +25,9 @@ ok(backend.includes('d.tMs+75000'), 'pre-objective conversion window must remain
 ok(backend.includes('function gamePhaseKey('), 'game-phase classifier must remain explicit');
 ok(backend.includes('STANDARD_SR_2026_RULES'), 'standard 2026 Summoner Rift rules profile must remain explicit');
 ok(backend.includes('earlyEndMin:14')&&backend.includes('lateStartMin:20'), 'standard 2026 phases must use <14 early, 14–20 transition, ≥20 late/Baron era');
+ok(backend.includes('baronSpawnMin:20')&&backend.includes('platesPermanent:true'), 'standard 2026 SR must preserve 20-minute Baron and permanent plates');
+ok(backend.includes('atakhanEnabled:false')&&backend.includes('featsOfStrengthEnabled:false'), 'removed 2025 Atakhan/Feats mechanics must stay disabled in 2026');
+ok(backend.includes('firstBloodBonusGold:100')&&backend.includes('firstTurretBonusGold:300'), '2026 First Blood and first-turret bonus gold must remain encoded');
 ok(backend.includes('SWIFTPLAY_2026_RULES')&&backend.includes('queueId===480'), 'Swiftplay must use an explicit accelerated rules profile');
 ok(backend.includes('earlyEndMin:12,lateStartMin:12'), 'Swiftplay must transition directly into its 12-minute Baron era');
 ok(backend.includes('baronSpawnMin:12')&&backend.includes('elderSpawnMin:15')&&backend.includes('suddenDeathMin:25'), 'Swiftplay objective timing anchors must remain explicit');
@@ -35,7 +38,9 @@ ok(backend.includes('major===16'), 'Riot internal game-version major 16 must sel
 ok(backend.includes('function roleQuestRevisionFor2026('), '2026 role-quest rules must be patch-revision aware');
 ok(backend.includes('2026_revision_unknown'), 'missing internal minor versions must fail closed for patch-specific role-quest details');
 ok(backend.includes('Exact 2026 minor patch is unavailable'), 'unknown 2026 revisions must remain explicit rather than being guessed');
-ok(backend.includes('26.9_role_quest_rework')&&backend.includes('26.11_mid_8pct')&&backend.includes('26.19_top_teleport'), 'material 2026 role-quest revisions must remain encoded');
+ok(backend.includes('26.9_role_quest_rework')&&backend.includes('26.11_mid_8pct')&&backend.includes('26.16_support_roam_penalty')&&backend.includes('26.19_top_teleport'), 'material 2026 system-level role-quest revisions must remain encoded');
+ok(backend.includes('function roleQuestRevisionForRole2026('), 'role-specific mechanics revisions must prevent unrelated patch changes from fragmenting coaching cohorts');
+ok(backend.includes('support_26.16_roam_penalty')&&backend.includes('top_26.19_teleport')&&backend.includes('adc_26.9_40g_takedown'), 'role-specific mechanics boundaries must remain explicit');
 ok(backend.includes('laneRoleQuestsEnabled:!isSwift'), 'standard lane-role quest rules must remain disabled for Swiftplay');
 ok(backend.includes('function roleQuestContext('), 'role-specific quest context must remain part of timeline analysis');
 ok(backend.includes('support_quest_control_ward_discount_unobserved'), 'support ward-price uncertainty must remain explicit instead of silently rewriting static prices');
