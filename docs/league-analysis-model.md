@@ -137,6 +137,26 @@ A death is labelled **high-risk / likely avoidable** only when the combined scor
 
 The report should expose the contributing tags and nearby ally/enemy counts so the player can inspect the judgment.
 
+### Spatial clustering of high-risk deaths
+
+Preserve a coarse map context for flagged high-risk deaths. Current labels include:
+- top lane,
+- mid lane,
+- bot lane,
+- river,
+- own jungle,
+- neutral jungle,
+- enemy jungle.
+
+If at least three high-risk deaths exist and one area contains roughly half or more of them, surface that location as a repeated behavior pattern.
+
+The coaching action should depend on the location. For example:
+- enemy jungle → information, lane priority and teammate proximity before invading,
+- river → establish vision before entering contested fog,
+- lane → respect side-lane depth and missing opponents.
+
+This is intentionally coarse. It is not a substitute for the future real-map renderer.
+
 A death occurring near an objective is contextual information; it is not automatically a bad death.
 
 ## Deaths before enemy objective conversion
