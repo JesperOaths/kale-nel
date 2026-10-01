@@ -496,9 +496,15 @@ assert.ok(!api.includes('function modernDeathQualityIndex('),'Do not reintroduce
 assert.ok(!api.includes('avgDeathQualityIndex'),'Do not aggregate the retired synthetic replacement DQI');
 assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend must expose source-accurate DQI provenance');
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
+assert.ok(api.includes('function persistedReportProjection('),'Saved League reports must use an explicit compact storage projection');
+assert.ok(api.includes('schema:"league_saved_report_compact_v1"'),'Compact saved-report schema must remain versioned');
+assert.ok(api.includes('report_data:persistedRep'),'Only the compact projection may be written to league_analysis_runs_v1');
+assert.ok(api.includes('objectiveEventCount')&&api.includes('shopVisitCount')&&api.includes('opponentShopVisitCount'),'Dropped raw intermediates must retain compact evidence counts');
+assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g.objectiveEventCount||0)'),'Saved reports must render objective counts after raw objective intermediates are omitted');
+assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v115'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v116'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
