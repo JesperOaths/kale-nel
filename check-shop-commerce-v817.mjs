@@ -92,7 +92,7 @@ assert.match(refresh, /const POLL_MS = 15 \* 60 \* 1000;/, 'live catalog reconci
 assert.match(refresh, /const FIRST_POLL_MS = 5 \* 60 \* 1000;/, 'live catalog reconciliation must stay off initial render');
 assert.match(refresh, /const SHARED_MIN_REFRESH_MS = 10 \* 60 \* 1000;/, 'multiple shop tabs must share a long refresh floor');
 assert.match(catalogEdge, /const MEMORY_ROW_TTL_MS = 15 \* 60_000;/, 'catalog edge function must keep the large catalog row hot in-isolate');
-assert.match(catalogEdge, /max-age=300, stale-while-revalidate=1800/, 'catalog responses must be browser-cacheable to absorb stale-tab polling');
+assert.match(catalogEdge, /max-age=300, s-maxage=300, stale-while-revalidate=1800/, 'catalog responses must use browser + shared-cache freshness with stale-while-revalidate to absorb stale-tab polling');
 assert.match(store, /ANIMAL_DESIGN_NAMES/);
 assert.match(store, /let showAnimalDesigns = true/);
 assert.match(store, /function isAnimalDesign\(product\)/);
