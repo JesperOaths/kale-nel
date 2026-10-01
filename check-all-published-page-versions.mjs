@@ -9,6 +9,7 @@ import {
   listPublishedHtml,
   listPublishedRoutes,
   pageVersionDeclarations,
+  readAdminWorkerVersion,
   readRootVersion,
 } from './scripts/published-page-inventory.mjs';
 
@@ -19,10 +20,10 @@ const routes=listPublishedRoutes(root);
 const routeNames=routes.map(x=>x.route);
 const duplicateRoutes=routeNames.filter((route,index)=>routeNames.indexOf(route)!==index);
 const orphanIndependentOwners=[...INDEPENDENT_PAGE_VERSIONS.keys()].filter(rel=>!pages.includes(rel));
-const adminWorkerSource=fs.readFileSync(path.join(root,'cloudflare/workers/admin-gate/src/worker.js'),'utf8');
-const adminBuild=(adminWorkerSource.match(/const\s+ADMIN_BUILD\s*=\s*['"]([^'"]+)['"]/)||[])[1]||'';
-const adminPageVersion=(adminBuild.match(/^v\d+/i)||[])[0]?.toLowerCase()||'';
-const dynamicWorkerWatermarks=(adminWorkerSource.match(/\$\{ADMIN_PAGE_VERSION\}\s*-\s*Made by Bruis/g)||[]).length;
+const adminWorker=readAdminWorkerVersion(root);
+const adminBuild=adminWorker.build;
+const adminPageVersion=adminWorker.pageVersion;
+const dynamicWorkerWatermarks=adminWorker.watermarkOwners;
 
 function versionTokensFromVisibleOwners(body){
   const tokens=[];

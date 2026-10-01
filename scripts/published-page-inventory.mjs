@@ -23,6 +23,15 @@ export const INDEPENDENT_PAGE_VERSIONS = new Map([
 ]);
 
 export const INDEPENDENT_PAGE_PATHS = new Set(INDEPENDENT_PAGE_VERSIONS.keys());
+export const ADMIN_WORKER_SOURCE_PATH = 'cloudflare/workers/admin-gate/src/worker.js';
+
+export function readAdminWorkerVersion(root=process.cwd()){
+  const source=fs.readFileSync(path.join(root,ADMIN_WORKER_SOURCE_PATH),'utf8');
+  const build=(source.match(/const\s+ADMIN_BUILD\s*=\s*['"]([^'"]+)['"]/)||[])[1]||'';
+  const pageVersion=(build.match(/^v\d+/i)||[])[0]?.toLowerCase()||'';
+  const watermarkOwners=(source.match(/\$\{ADMIN_PAGE_VERSION\}\s*-\s*Made by Bruis/g)||[]).length;
+  return {build,pageVersion,watermarkOwners,source};
+}
 
 export function normalizeRepoPath(value){
   return String(value || '').replaceAll('\\','/').replace(/^\.\//,'').replace(/^\/+/, '');

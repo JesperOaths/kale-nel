@@ -5,12 +5,17 @@ import {
   expectedPageVersion,
   listPublishedRoutes,
   pageVersionDeclarations,
+  readAdminWorkerVersion,
   readRootVersion,
 } from './published-page-inventory.mjs';
 
 const root=process.cwd();
 const base=String(process.env.GEJAST_BASE_URL||'https://kalenel.nl/').replace(/\/+$/,'')+'/';
 const rootVersion=readRootVersion(root);
+const adminWorker=readAdminWorkerVersion(root);
+if(!/^v\d+$/i.test(adminWorker.pageVersion)||!adminWorker.build){
+  throw new Error('Could not resolve versioned admin Worker page owner');
+}
 const routes=listPublishedRoutes(root);
 const concurrency=Math.max(1,Math.min(24,Number(process.env.GEJAST_LIVE_VERSION_CONCURRENCY||12)));
 const timeoutMs=Math.max(3000,Number(process.env.GEJAST_LIVE_VERSION_TIMEOUT_MS||15000));
@@ -73,7 +78,15 @@ async function requestRoute(startUrl,signal){
     trace.push({url:currentUrl,status,location:nextUrl});
 
     if((status===401||status===403)&&currentHost==='admin.kalenel.nl'){
-      return {kind:'protected',status,finalUrl:currentUrl,text:'',trace};
+      const text=await res.text();
+      return {
+        kind:'protected',
+        status,
+        finalUrl:currentUrl,
+        text,
+        adminBuild:String(res.headers.get('x-kalenel-admin-build')||''),
+        trace,
+      };
     }
     if(nextUrl&&isAdminOAuthTarget(nextUrl)){
       return {kind:'protected',status,finalUrl:nextUrl,text:'',trace};
@@ -97,7 +110,14 @@ async function fetchPage(entry,index){
     const outcome=await requestRoute(cacheBustedUrl(route,index),controller.signal);
     const traceText=outcome.trace.map(x=>`${x.status}:${x.url}`).join(' -> ');
     if(outcome.kind==='protected'){
-      return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'protected',redirect_trace:traceText};
+      const workerWatermark=literalWatermark(outcome.text,adminWorker.pageVersion);
+      if(outcome.adminBuild!==adminWorker.build){
+        return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:'admin Worker build '+(outcome.adminBuild||'missing')+' expected '+adminWorker.build,redirect_trace:traceText};
+      }
+      if(!workerWatermark){
+        return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:'admin Worker watermark missing/wrong; expected '+adminWorker.pageVersion,redirect_trace:traceText};
+      }
+      return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'protected',admin_build:outcome.adminBuild,admin_page_version:adminWorker.pageVersion,redirect_trace:traceText};
     }
     if(outcome.kind==='error'){
       return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:outcome.reason,redirect_trace:traceText};
@@ -131,10 +151,12 @@ await Promise.all(Array.from({length:Math.min(concurrency,routes.length)},()=>wo
 
 const failures=results.filter(r=>r.state==='fail');
 const protectedRows=results.filter(r=>r.state==='protected');
+const oauthProtectedRows=protectedRows.filter(r=>hostOf(r.final_url)==='github.com');
+const workerProtectedRows=protectedRows.filter(r=>hostOf(r.final_url)==='admin.kalenel.nl');
 for(const row of results){
   console.log(`LIVE_PAGE_VERSION ${row.state.toUpperCase()} route=${row.route} source=${row.rel} expected=${row.expected} http=${row.status} final=${row.final_url}${row.reason?' reason='+row.reason:''}`);
 }
-console.log(`LIVE_PAGE_VERSION_SUMMARY source_pages=${new Set(routes.map(x=>x.sourcePath)).size} routes=${routes.length} pass=${results.filter(r=>r.state==='pass').length} protected=${protectedRows.length} fail=${failures.length} root=${rootVersion}`);
+console.log(`LIVE_PAGE_VERSION_SUMMARY source_pages=${new Set(routes.map(x=>x.sourcePath)).size} routes=${routes.length} pass=${results.filter(r=>r.state==='pass').length} protected=${protectedRows.length} protected_worker_verified=${workerProtectedRows.length} protected_oauth_boundary=${oauthProtectedRows.length} fail=${failures.length} root=${rootVersion} worker_page=${adminWorker.pageVersion}`);
 if(failures.length){
   console.error('LIVE_PAGE_VERSION_FAILURES');
   for(const row of failures) console.error(`${row.route} [${row.rel}]: ${row.reason||'unknown'} (HTTP ${row.status}, ${row.final_url||'no final URL'}) trace=${row.redirect_trace||'n/a'}`);
