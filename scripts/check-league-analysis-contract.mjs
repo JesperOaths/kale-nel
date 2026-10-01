@@ -146,6 +146,10 @@ ok(backend.includes('playerSupported:isNeutralObjectiveEvent(o)?participantNearE
 ok(backend.includes('structureInvolvement(o,frames,whoId,whoTeam,mapId)'), 'structure conversion credit must require supported involvement');
 ok(app.includes('Player-supported kill conversion')&&app.includes('Team conversion after your kill windows'), 'supported and team-only conversion must remain visibly distinct');
 ok(backend.includes('VERIFIED_2026_RULES_THROUGH_MINOR=19')&&backend.includes('minor>VERIFIED_2026_RULES_THROUGH_MINOR'), 'newer 2026 patches must fail closed beyond the audited mechanics boundary');
+ok(backend.includes('objectiveTeamEncounters=validTimeline.reduce')&&backend.includes('objectiveJoinedEncounters=validTimeline.reduce'), 'aggregate objective presence must pool event denominators');
+ok(backend.includes('objJoin=objectiveTeamEncounters?100*objectiveJoinedEncounters/objectiveTeamEncounters:null'), 'primary objective-presence rate must not average per-game percentages');
+ok(backend.includes('pooledMidRoutingObjectiveJoinRate=midRoutingTeamObjectives?100*midRoutingObjectiveJoins/midRoutingTeamObjectives:null'), 'mid-routing objective presence must pool event denominators');
+ok(backend.includes('meanGameObjectiveJoinRate'), 'descriptive per-game objective mean must remain separate from the coaching rate');
 ok(backend.includes('x-league-workspace')&&backend.includes('publicWorkspaceOwnerId('), 'public League must use isolated browser-workspace ownership');
 ok(backend.includes('allowServerRiotKey=viewer.anonymous!==true'), 'anonymous League users must not inherit the server Riot key');
 ok(app.includes("'x-league-workspace':workspaceId()"), 'League frontend must use browser workspace identity');
