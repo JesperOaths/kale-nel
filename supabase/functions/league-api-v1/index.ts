@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.73";
+const ANALYZER_VERSION="league-web-behavior-v4.74";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1599,10 +1599,12 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,p
     else if(Number(earlySetupObjectiveJoinRate)>=70)push(highlights,"objective setup","You are often established before neutral objectives",earlySetupObjectiveJoins+" of "+neutralObjectiveJoins+" joined neutral-objective encounters ("+Number(earlySetupObjectiveJoinRate).toFixed(0)+"%) show prior-frame setup presence.","Preserve the early arrival pattern and use the extra time for vision, angles and safer contest positioning.","medium",4,"supported player position 45–105 seconds before team-contested neutral-objective encounters plus event presence");
   }
   if(objectivePresenceLow){
-    if(neutralObjectiveEvents>=5&&recentShopObjectiveAbsences>=2)objectiveRootCauses.push({key:"recent_shop_absence",label:"recent-shop absence pattern",evidence:recentShopObjectiveAbsences+" objective absence(s) within 60s of a detected shop visit",severity:recentShopObjectiveAbsenceRate||0,interpretation:"association_not_proven_cause"});
-    if(preObjDeaths>=2)objectiveRootCauses.push({key:"pre_objective_death",label:"death before the contest",evidence:preObjDeaths+" deaths followed by an enemy-secured, team-contested neutral objective inside the evidence window",severity:Math.min(100,preObjDeaths*20)});
-    if(visionWardTotal>=20&&opponentVisionWardTotal>=20&&hasNum(objectiveSetupWardRateDelta)&&Number(objectiveSetupWardRateDelta)<=-10)objectiveRootCauses.push({key:"setup_vision",label:"setup-vision share",evidence:signedText(objectiveSetupWardRateDelta,0)+" pp setup-ward-rate delta vs role peers",severity:Math.abs(Number(objectiveSetupWardRateDelta))});
-    objectiveRootCauses.sort((a:any,b:any)=>Number(b.severity||0)-Number(a.severity||0));
+    // Objective clues do not share a common numeric unit. Rank by evidence specificity first,
+    // then by within-clue magnitude, rather than comparing percentages, counts and pp gaps as one "severity" scale.
+    if(neutralObjectiveEvents>=5&&recentShopObjectiveAbsences>=2)objectiveRootCauses.push({key:"recent_shop_absence",label:"recent-shop absence pattern",evidence:recentShopObjectiveAbsences+" objective absence(s) within 60s of a detected shop visit",evidenceClass:"timing_association",evidencePriority:1,magnitude:recentShopObjectiveAbsenceRate||0,interpretation:"association_not_proven_cause"});
+    if(preObjDeaths>=2)objectiveRootCauses.push({key:"pre_objective_death",label:"death before the contest",evidence:preObjDeaths+" deaths followed by an enemy-secured, team-contested neutral objective inside the evidence window",evidenceClass:"direct_event_sequence",evidencePriority:3,magnitude:preObjDeathPct||0});
+    if(visionWardTotal>=20&&opponentVisionWardTotal>=20&&hasNum(objectiveSetupWardRateDelta)&&Number(objectiveSetupWardRateDelta)<=-10)objectiveRootCauses.push({key:"setup_vision",label:"setup-vision share",evidence:signedText(objectiveSetupWardRateDelta,0)+" pp setup-ward-rate delta vs role peers",evidenceClass:"peer_relative_gap",evidencePriority:2,magnitude:Math.abs(Number(objectiveSetupWardRateDelta))});
+    objectiveRootCauses.sort((a:any,b:any)=>Number(b.evidencePriority||0)-Number(a.evidencePriority||0)||Number(b.magnitude||0)-Number(a.magnitude||0)||String(a.key).localeCompare(String(b.key)));
   }
   const objectivePrimaryCause=objectiveRootCauses[0]||null;
 
