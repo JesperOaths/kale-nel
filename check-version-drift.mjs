@@ -28,13 +28,8 @@ function isArchivedFile(rel){
   return false;
 }
 function isAllowedLegacyReference(rel,found){
-  // These are compatibility/test references, not the runtime version owner.
-  if(found==='v827'&&rel==='scripts/test-shop-production-connection-v827.mjs') return true;
-  if(found!=='v762') return false;
-  return rel==='admin.html'
-    || rel==='cloudflare/workers/admin-gate/static/admin.html'
-    || rel==='scripts/test-admin-static-assets-html-handling.mjs'
-    || rel==='scripts/test-admin-worker-gate.mjs';
+  // Narrow compatibility/test exception; never applies to a page watermark/declaration.
+  return found==='v827'&&rel==='scripts/test-shop-production-connection-v827.mjs';
 }
 
 const offenders=[];
