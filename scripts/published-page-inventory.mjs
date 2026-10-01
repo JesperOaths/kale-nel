@@ -69,8 +69,13 @@ export function isIndependentPageVersion(rel){
 export function pageRoutesForHtml(rel){
   const normalized=normalizeRepoPath(rel);
   const routes=[normalized];
-  if(normalized==='index.html') routes.push('/');
-  else if(normalized.endsWith('/index.html')) routes.push('/'+normalized.slice(0,-'index.html'.length));
+  if(normalized==='index.html') {
+    routes.push('/');
+  } else if(normalized.endsWith('/index.html')) {
+    const directory='/'+normalized.slice(0,-'index.html'.length);
+    routes.push(directory);
+    routes.push(directory.replace(/\/$/,''));
+  }
   return [...new Set(routes)];
 }
 
