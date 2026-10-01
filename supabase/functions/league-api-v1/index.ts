@@ -544,9 +544,8 @@ function committedItemPurchaseCount(events:any[],itemId:number){
   return committedPurchaseEvents(events).filter((e:any)=>Number(e.itemId)===Number(itemId)).length;
 }
 function majorOwnershipMilestones(events:any[],catalog:any,limit=2){
-  const sorted=[...(events||[])].sort((a:any,b:any)=>Number(a.tMs)-Number(b.tMs)),committed=committedPurchaseEvents(sorted),committedKeys=new Set(committed.map((e:any)=>String(e.tMs)+"|"+String(e.itemId))),milestones:any[]=[];
-  for(const e of sorted){
-    if(e.type!=="ITEM_PURCHASED"||!committedKeys.has(String(e.tMs)+"|"+String(e.itemId)))continue;
+  const sorted=[...(events||[])].sort((a:any,b:any)=>Number(a.tMs)-Number(b.tMs)),committed=committedPurchaseEvents(sorted),milestones:any[]=[];
+  for(const e of committed){
     const info=itemInfo(catalog,e.itemId);if(!isMajorItem(info))continue;
     const inv=inventoryCountsAt(sorted,Number(e.tMs));
     let ownedMajorCount=0;
@@ -754,7 +753,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
     const goldSwing=hasNum(goldBefore)&&hasNum(goldAfter)?Number(goldAfter)-Number(goldBefore):null,csSwing=hasNum(csBefore)&&hasNum(csAfter)?Number(csAfter)-Number(csBefore):null;
     const afterMs=Number(afterFrame?.timestamp||0)||null,deathInWindow=deathEvents.some((d:any)=>Number(d.tMs)>=Number(firstReturnShop.startMs)-60000&&(!afterMs||Number(d.tMs)<=afterMs));
     const measured=hasNum(goldSwing)||hasNum(csSwing),economyLoss=!deathInWindow&&((hasNum(csSwing)&&Number(csSwing)<=-6)||(hasNum(goldSwing)&&Number(goldSwing)<=-350)),economyGain=!deathInWindow&&hasNum(csSwing)&&hasNum(goldSwing)&&Number(csSwing)>=4&&Number(goldSwing)>=150;
-    out.firstResetSequence={time:Number(firstReturnShop.startMin),spent:Number(firstReturnShop.spent||0),items:(firstReturnShop.items||[]).slice(0,6),opponentTime:opponentFirstReturnShop?Number(opponentFirstReturnShop.startMin):null,timingDeltaVsOpponent:opponentFirstReturnShop?Number(firstReturnShop.startMin)-Number(opponentFirstReturnShop.startMin):null,goldDiffBefore:goldBefore,goldDiffAfter:goldAfter,goldSwingAfter:goldSwing,csDiffBefore:csBefore,csDiffAfter:csAfter,csSwingAfter:csSwing,measured,deathInWindow,economyLoss,economyGain,evidenceWindowEndMin:afterMs?afterMs/60000:null,definition:"first ≥250g purchase group by 12m after the player has demonstrably left base; economy swing measured to next supported post-shop frame"};
+    out.firstResetSequence={time:Number(firstReturnShop.startMin),spent:Number(firstReturnShop.spent||0),spendMethod:firstReturnShop.spendMethod||"recipe_owned_component_credit",committedPurchases:Number(firstReturnShop.committedPurchases||0),spendApproximate:!!firstReturnShop.spendApproximate,items:(firstReturnShop.items||[]).slice(0,6),opponentTime:opponentFirstReturnShop?Number(opponentFirstReturnShop.startMin):null,timingDeltaVsOpponent:opponentFirstReturnShop?Number(firstReturnShop.startMin)-Number(opponentFirstReturnShop.startMin):null,goldDiffBefore:goldBefore,goldDiffAfter:goldAfter,goldSwingAfter:goldSwing,csDiffBefore:csBefore,csDiffAfter:csAfter,csSwingAfter:csSwing,measured,deathInWindow,economyLoss,economyGain,evidenceWindowEndMin:afterMs?afterMs/60000:null,definition:"first committed ≥250g recipe-aware purchase group by 12m after the player has demonstrably left base; ITEM_UNDO transactions are excluded and economy swing is measured to the next supported post-shop frame"};
   }
   const myMajorSequence=majorOwnershipMilestones(itemEventsByPid,catalog,2),oppMajorSequence=majorOwnershipMilestones(itemEventsByOpp,catalog,2);
   out.firstMajorItem=myMajorSequence[0]||null;out.secondMajorItem=myMajorSequence[1]||null;out.opponentFirstMajorItem=oppMajorSequence[0]||null;out.opponentSecondMajorItem=oppMajorSequence[1]||null;
