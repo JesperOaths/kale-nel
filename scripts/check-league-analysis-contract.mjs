@@ -123,7 +123,9 @@ ok(backend.includes('objectiveFamilyStats:{}')&&backend.includes('objectiveFamil
 ok(backend.includes('familyRaw==="DRAGON"&&memberSubtypes.some((x:any)=>x.includes("ELDER"))?"ELDER_DRAGON"'), 'Elder Dragon must remain distinguishable when Riot subtype supports it');
 ok(backend.includes('objectiveSetupClears'), 'objective-setup ward clears must remain measurable');
 ok(backend.includes('controlWardPurchases'), 'Control Ward purchases must remain separate from placement counts');
-ok(backend.includes('Number(e.itemId)===2055||text(info?.name).toLowerCase()==="control ward"'), 'Control Ward purchase detection must retain catalog-name and item-id evidence');
+ok(backend.includes('function committedItemPurchaseCount('), 'Control Ward purchase counts must account for undo events');
+ok(backend.includes('e.type==="ITEM_UNDO"&&Number(e.beforeId)===Number(itemId)'), 'undone Control Ward purchases must not survive as committed purchases');
+ok(backend.includes('controlWardIds=new Set<number>([2055])')&&backend.includes('text(info?.name).toLowerCase()==="control ward"'), 'Control Ward detection must retain item-id and catalog-name evidence');
 ok(backend.includes('function majorOwnershipMilestones(')&&backend.includes('secondMajorItemDeltaVsOpponent'), 'second major-item completion must remain measurable from owned inventory against the direct role opponent');
 ok(backend.includes('ownedMajorCount<=milestones.length'), 'sale/rebuy or one-for-one upgrades must not create a false second-major milestone');
 ok(backend.includes('inventoryCountsAt(sorted,Number(e.tMs))'), 'major-item milestones must use the reconstructed item ledger');
