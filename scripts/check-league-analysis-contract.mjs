@@ -16,7 +16,7 @@ ok(backendUnsafe.every(x=>x==='Number.isFinite(Number(v))'), 'backend contains u
 const appUnsafe=[...app.matchAll(/Number\.isFinite\(Number\(([^)]+)\)\)/g)].map(m=>m[0]);
 ok(appUnsafe.every(x=>x==='Number.isFinite(Number(v))'), 'frontend contains unguarded Number.isFinite(Number(...)) that can turn null into zero: '+appUnsafe.join(', '));
 
-ok(backend.includes('coachingGames=games.filter((g:any)=>g.role===primaryRole)'), 'behavioral coaching must be filtered to the primary role');
+ok(backend.includes('coachingRoleGamesAll=games.filter((g:any)=>g.role===primaryRole)'), 'behavioral coaching must start from the primary-role Last-20 sample before mechanics-cohort filtering');
 ok(backend.includes('coachingAllGames=allGames.filter((g:any)=>g.role===primaryRole)'), 'historical coaching baseline must use the same role');
 ok(backend.includes('summonersRiftRows=cachedRows.filter')&&backend.includes('===11')&&backend.includes('durationEligibleRows=summonersRiftRows.filter'), 'deep analyzer must filter to Summoner\'s Rift before duration and queue coaching eligibility');
 ok(backend.includes('gameDurationSec=Number(match?.info?.gameDuration||0)')&&backend.includes('reaches25=gameDurationSec>=25*60'), '@25 metrics must require a game that actually reaches 25 minutes');
