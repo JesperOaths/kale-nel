@@ -299,6 +299,24 @@ For SUPPORT/JUNGLE, aggregate this across enough games and report:
 
 This is a better coaching signal than raw vision score alone because it rewards **timely, contest-relevant setup**. It still does not measure whether a ward survived, was redundant, or was placed in the strategically perfect brush, so do not call it complete vision quality.
 
+## Fight readiness and purchase state
+
+For each attended multi-kill fight cluster, preserve the player's approximate state at fight start:
+- current/unspent gold,
+- gold differential versus the direct same-role opponent,
+- level differential versus the direct same-role opponent,
+- whether the player has completed the first major item,
+- whether the opponent has completed the first major item.
+
+Useful readiness flags include:
+- **high-unspent start:** at least 1000 current gold at fight start,
+- **role-gold deficit start:** at least 600g behind the direct role opponent,
+- **major-item disadvantage start:** the direct role opponent has completed the first major item and the player has not.
+
+These flags do not prove the player chose the fight; some contests are forced. Coaching should therefore say the fight **began under a resource disadvantage** and recommend earlier reset/purchase planning, rather than claiming the player mechanically misplayed merely because the fight happened.
+
+Aggregate coaching requires multiple attended fight samples.
+
 ## Fight order and carry survival
 
 The timeline analyzer groups nearby champion-kill events into approximate **multi-kill fight clusters** using time and map proximity.
