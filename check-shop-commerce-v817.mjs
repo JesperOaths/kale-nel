@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
-import { applyPrintifyVatReserveEurCents, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_BPS, retailEurCentsFromUsdCost, retailEurCentsFromUsdCostAfterVat, usdCentsToEurCents } from './supabase/functions/_shared/shop-fx.mjs';
+import { applyPrintifyVatReserveEurCents, CLASSIC_SHIRT_RETAIL_CENTS, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_BPS, retailEurCentsFromUsdCost, retailEurCentsFromUsdCostAfterVat, stableClassicShirtRetailEurCents, usdCentsToEurCents } from './supabase/functions/_shared/shop-fx.mjs';
 import fs from 'node:fs';
 
 const read = path => fs.readFileSync(path, 'utf8');
@@ -77,6 +77,10 @@ const regularGridPos = index.indexOf('data-products');
 const animalFilterPos = index.indexOf('data-animal-filter-bar');
 const animalSectionPos = index.indexOf('data-animal-section');
 assert.ok(regularGridPos >= 0 && animalFilterPos > regularGridPos && animalSectionPos > animalFilterPos, 'animal toggle must sit after the non-animal grid and immediately before the animal section');
+assert.match(store, /bruisCatalogLastGoodV2/, 'pricing-policy changes must invalidate stale browser catalog caches');
+assert.doesNotMatch(store, /bruisCatalogLastGoodV1/, 'old browser catalog cache key must not remain active');
+assert.match(index, /catalog-last-good\.js\?v=20261001-stable-pricing-r1/, 'fallback catalog asset must be cache-busted after canonical pricing repair');
+assert.match(index, /store\.js\?v=20261001-stable-pricing-r1/, 'store runtime must be cache-busted after canonical pricing repair');
 assert.match(store, /ANIMAL_DESIGN_NAMES/);
 assert.match(store, /let showAnimalDesigns = true/);
 assert.match(store, /function isAnimalDesign\(product\)/);
@@ -166,6 +170,12 @@ assert.match(checkoutEdge, /function cachedShopId/, 'checkout must resolve curre
 assert.match(deliveryPreviewEdge, /function cachedShopId/, 'delivery preview must resolve current per-product Printify shop ids');
 assert.match(checkoutEdge, /validation_only/, 'checkout must expose a non-ordering production validation path');
 assert.match(catalogEdge, /gildanRouteSafeCostCeilings/, 'catalog must price Gildan variants against the most expensive approved hybrid provider');
+assert.match(catalogEdge, /stableClassicShirtRetailEurCents/, 'classic-shirt catalog prices must use the FX-stable canonical schedule');
+assert.match(checkoutEdge, /stableClassicShirtRetailEurCents/, 'checkout must use the same FX-stable classic-shirt schedule');
+assert.deepEqual(CLASSIC_SHIRT_RETAIL_CENTS, { S:2400, M:2400, L:2400, XL:2400, '2XL':2600, '3XL':3000, '4XL':3000, '5XL':3000 });
+assert.equal(stableClassicShirtRetailEurCents(1693, 0.8851124093, 'M', 500, 700), 2400, 'minor FX movement must not push standard classic shirts from €24 to €25');
+assert.equal(stableClassicShirtRetailEurCents(1864, 0.8851124093, '2XL', 500, 700), 2600, '2XL classic shirts must remain €26 at current provider-pair cost');
+assert.equal(stableClassicShirtRetailEurCents(2050, 0.8851124093, '4XL', 500, 700), 3000, '4XL classic shirts must remain €30 within the configured tolerance');
 assert.match(catalogEdge, /source_variant_id,source_cost_usd_cents,target_cost_usd_cents/, 'classic-shirt catalog pricing must use the canonical provider-pair snapshots');
 assert.match(catalogEdge, /routeSafeCostCeilings\.get\(String\(variant\?\.id/, 'classic-shirt price lookup must be variant-based rather than product-id-based');
 assert.match(catalogEdge, /canonicalRouteCost > 0 \? canonicalRouteCost : Math\.round\(Number\(variant\?\.cost\)/, 'canonical classic-shirt provider-pair cost must override product-specific source-provider cost when available');
