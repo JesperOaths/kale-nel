@@ -1510,3 +1510,36 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
   .game-arc-arrow{transform:rotate(90deg);height:13px}
   .section-subhead{align-items:flex-start;flex-direction:column}
 }
+
+
+.game-arc-funnels{margin-bottom:15px}
+.game-arc-funnel-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.game-arc-funnel{
+  min-width:0;padding:14px 15px;border:1px solid var(--line);border-radius:15px;background:#fff
+}
+.game-arc-funnel>span{display:block;color:var(--muted);font-size:.61rem;text-transform:uppercase;letter-spacing:.075em;font-weight:950}
+.game-arc-funnel>strong{display:block;margin-top:6px;font-size:.88rem;line-height:1.3}
+.game-arc-funnel>div{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.game-arc-funnel>div b{padding:5px 7px;border:1px solid var(--line);border-radius:9px;background:#f8f5ef;font-size:.61rem}
+.game-arc-funnel>p{margin:9px 0 0;color:var(--muted);font-size:.64rem;line-height:1.45}
+.game-arc-funnel.tone-good{border-top:4px solid var(--good)}
+.game-arc-funnel.tone-bad{border-top:4px solid var(--bad)}
+.game-arc-funnel.tone-neutral{border-top:4px solid #aaa193}
+.arc-repeat-head{margin-top:17px}
+.history-review-cues{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.history-review-cues>.section-subhead{margin-bottom:8px}
+.history-review-cue{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;align-items:start;
+  padding:12px 13px;border:1px solid rgba(111,90,36,.18);border-radius:13px;background:#fffaf0
+}
+.history-review-cue+.history-review-cue{margin-top:8px}
+.history-review-cue>span{grid-column:1/-1;color:var(--gold-dark);font-size:.59rem;text-transform:uppercase;letter-spacing:.065em;font-weight:950}
+.history-review-cue>strong{grid-column:1;font-size:.77rem;line-height:1.35}
+.history-review-cue>p{grid-column:1;margin:1px 0 0;color:var(--ink-soft);font-size:.66rem;line-height:1.45}
+.history-review-cue>div{grid-column:1;margin-top:4px;font-size:.65rem;line-height:1.45}
+.history-review-cue>.button{grid-column:2;grid-row:2/5;align-self:center;white-space:nowrap}
+@media(max-width:1000px){
+  .game-arc-funnel-grid{grid-template-columns:1fr}
+  .history-review-cue{grid-template-columns:1fr}
+  .history-review-cue>.button{grid-column:1;grid-row:auto;justify-self:start}
+}
