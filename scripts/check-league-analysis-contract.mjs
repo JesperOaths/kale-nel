@@ -67,8 +67,8 @@ ok(backend.includes('midRouting:{teamObjectives:0,objectiveJoins:0,objectiveJoin
 ok(backend.includes('closing25:{highRiskDeaths:0,costlyDeaths:0,severeDeaths:0}'), '@25 closing risk must remain independent from the ≥20m strategic late phase');
 ok(backend.includes('x.csSwing<=-8&&x.objectiveJoinRate<50'), 'inefficient mid-routing threshold must remain CS loss + low objective presence');
 ok(backend.includes('x.csSwing>=8&&x.objectiveJoinRate>=60'), 'balanced mid-routing strength threshold must remain CS gain + objective presence');
-ok(backend.includes('lead25Games=games.filter(g=>hasNum(g.goldDiff25)&&Number(g.goldDiff25)>=500)'), '25-minute closing model must keep +500g direct-role lead threshold');
-ok(backend.includes('deficit25Games=games.filter(g=>hasNum(g.goldDiff25)&&Number(g.goldDiff25)<=-500)'), '25-minute recovery model must keep -500g direct-role deficit threshold');
+ok(backend.includes('lead25Games=closing25ComparableGames.filter(g=>hasNum(g.goldDiff25)&&Number(g.goldDiff25)>=500)'), '25-minute closing model must keep +500g direct-role lead threshold inside the eligible rules cohort');
+ok(backend.includes('deficit25Games=closing25ComparableGames.filter(g=>hasNum(g.goldDiff25)&&Number(g.goldDiff25)<=-500)'), '25-minute recovery model must keep -500g direct-role deficit threshold inside the eligible rules cohort');
 ok(backend.includes('lead25LossesWithLateRisk'), 'lead@25 losses must preserve late-risk evidence');
 ok(backend.includes('closing25:{'), '25-minute closing summary must remain exported');
 ok(backend.includes('earlyRoleGoldSamples'), 'pre-15 direct-role gold samples must remain explicit');
