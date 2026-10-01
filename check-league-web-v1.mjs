@@ -200,7 +200,7 @@ assert.ok(api.includes('2026_revision_unknown'),'Missing internal minor versions
 assert.ok(api.includes('Exact 2026 minor patch is unavailable'),'Unknown 2026 revisions must be described without inventing a reward revision');
 assert.ok(api.includes('26.9_role_quest_rework')&&api.includes('26.11_mid_8pct')&&api.includes('26.16_support_roam_penalty')&&api.includes('26.19_top_teleport'),'Material 2026 system-level role-quest revisions must remain encoded');
 assert.ok(api.includes('function roleQuestRevisionForRole2026('),'Mechanics cohorts must use role-specific revisions instead of splitting every role on unrelated patch changes');
-assert.ok(api.includes('support_26.16_roam_penalty')&&api.includes('top_26.19_teleport')&&api.includes('adc_26.9_40g_takedown'),'Role-specific mechanics boundaries must remain explicit');
+assert.ok(api.includes('support_26.7_farm_penalty_removed')&&api.includes('support_26.16_roam_penalty')&&api.includes('top_26.19_teleport')&&api.includes('adc_26.9_40g_takedown'),'Role-specific mechanics boundaries must remain explicit');
 assert.ok(api.includes('laneRoleQuestsEnabled:!isSwift'),'Standard lane-role quests must remain disabled for Swiftplay');
 assert.ok(api.includes('function roleQuestContext('),'Per-game role-quest context must remain explicit');
 assert.ok(api.includes('support_quest_control_ward_discount_unobserved'),'Support Control Ward discount must remain an explicit shop-cost caveat instead of a fabricated exact spend');
@@ -320,7 +320,7 @@ assert.ok(api.includes('higherRankMajorItemGames'),'Higher-ranked peer item samp
 assert.ok(api.includes('higherRankAvgMajorItemDeltaMin'),'Higher-ranked peer first-major timing delta must remain exported');
 assert.ok(api.includes('higherRankMajorItemFasterPct'),'Higher-ranked peer first-major faster rate must remain exported');
 assert.ok(api.includes('First-major timing slips against higher-ranked direct opponents'),'Higher-rank item timing must remain actionable coaching evidence');
-assert.ok(api.includes('league-web-behavior-v4.31'),'Analyzer version must include season-aware rules and turret-tier involvement');
+assert.ok(api.includes('league-web-behavior-v4.32'),'Analyzer version must include season-aware rules and turret-tier involvement');
 assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
 assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
 assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
