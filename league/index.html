@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends playstyle analysis with evidence-backed Last-20 coaching and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261001-league-web-v111">
+  <link rel="stylesheet" href="/league/styles.css?v=20261001-league-web-v112">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817"></script>
 </head>
@@ -36,14 +36,15 @@
           <p class="lede">Enter a Riot ID and API key once, then load and analyze recent matches in one step. The page automatically builds the latest eligible Last 20.</p>
           <div class="intro-chips" aria-label="Workspace properties">
             <span>Public workspace</span>
-            <span>No profile setup</span>
-            <span>Evidence-backed coaching</span>
+            <span>Saved League profiles</span>
+            <span>Role-selected coaching</span>
+            <span>Evidence-backed analysis</span>
           </div>
         </div>
         <aside class="intro-note">
           <strong>No Kalenel login required</strong>
-          <p>Your Riot API key is session-only and is never stored in the report or browser identity fields. Recent-match data is isolated to this browser workspace.</p>
-          <small>The analyzer scans up to 50 recent matches when needed so queue/map filtering can still produce a useful Last-20 sample.</small>
+          <p>Your Riot API key is session-only and is never stored. Riot ID profiles, cached Riot match data and analysis history can be saved in this isolated Kalenel League workspace so you can reopen them later.</p>
+          <small>The analyzer scans up to 50 recent matches when needed to build the selected role’s latest eligible Last-20 sample.</small>
         </aside>
       </section>
 
@@ -53,7 +54,21 @@
             <p class="eyebrow">Recent match request</p>
             <h2 id="workspace-title">Load & analyze recent matches</h2>
           </div>
-          <span class="section-hint">One action resolves the Riot ID, fetches missing match/timeline data, and analyzes the latest eligible 20.</span>
+          <span class="section-hint">Choose the role you want judged. Only that role enters the report, coaching, champion context, replay queue and maps.</span>
+        </div>
+
+        <div class="saved-profile-bar">
+          <div class="saved-profile-copy">
+            <span class="status-label">League profile</span>
+            <strong id="savedProfileTitle">New Riot profile</strong>
+            <small id="savedProfileMeta">Enter a Riot ID below. The site will save the Riot profile and analysis history automatically; the Riot API key is never saved.</small>
+          </div>
+          <label class="field saved-profile-select">
+            <span>Saved profiles</span>
+            <select id="savedProfileSelect" aria-label="Saved League profiles"><option value="">New Riot profile</option></select>
+          </label>
+          <button class="button secondary small" id="newSavedProfileBtn" type="button">New profile</button>
+          <button class="button secondary small" id="forgetSavedProfileBtn" type="button" disabled>Delete profile</button>
         </div>
 
         <div class="direct-request-grid">
@@ -78,6 +93,16 @@
               <option value="tr1">Türkiye</option>
             </select>
           </label>
+          <label class="field role-field">
+            <span>Analyze role</span>
+            <select id="requestRole" aria-label="Role to analyze">
+              <option value="ADC" selected>ADC</option>
+              <option value="SUPPORT">Support</option>
+              <option value="MID">Mid</option>
+              <option value="JUNGLE">Jungle</option>
+              <option value="TOP">Top</option>
+            </select>
+          </label>
           <label class="field key-field">
             <span>Riot API key · session only</span>
             <input id="riotApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="RGAPI-…">
@@ -95,7 +120,7 @@
           </div>
           <div class="request-help-item auto-note">
             <strong>Automatic depth</strong>
-            <span>Starts with 30 recent matches and scans up to 50 only if filtering leaves fewer than 20 comparable games.</span>
+            <span>Starts with 30 recent matches and scans up to 50 when the selected role still has fewer than 20 queue/map/duration-eligible games.</span>
           </div>
         </div>
 
@@ -167,7 +192,7 @@
         <section class="kpi-grid" id="kpiGrid" aria-label="Role-aware key performance indicators"></section>
 
         <section class="visual-benchmark-grid" id="rank-comparison">
-          <article class="panel radar-panel">
+          <article class="panel radar-panel" id="rankRadarPanel">
             <div class="section-head">
               <div><p class="eyebrow">ADC rank comparison</p><h2>Your ADC sample vs rank-reference profiles</h2></div>
               <span class="section-hint">External rank references come from a published ranked corpus. CS/min, KP and DPM use its Bot/ADC adjustment; KDA and deaths remain raw rank references.</span>
@@ -239,6 +264,14 @@
           <div id="objectiveDiagnosisSummary" class="decision-explanation"></div>
         </section>
 
+        <section class="panel intelligence-panel" id="compoundIntelligencePanel" hidden>
+          <div class="section-head">
+            <div><p class="eyebrow">Combined evidence</p><h2>How separate stats interact</h2></div>
+            <span class="section-hint">These cards combine related signals so a strong number is not interpreted in isolation from what happens next.</span>
+          </div>
+          <div class="intelligence-grid" id="compoundSignals"></div>
+        </section>
+
         <section class="panel" id="sessionHabitsPanel" hidden>
           <div class="section-head">
             <div><p class="eyebrow">Session patterns</p><h2>Does performance change later in a session?</h2></div>
@@ -267,7 +300,7 @@
 
         <section class="panel" id="last20">
           <div class="section-head">
-            <div><p class="eyebrow">Game evidence</p><h2>Your latest eligible games</h2></div>
+            <div><p class="eyebrow">Game evidence</p><h2>Your latest selected-role games</h2></div>
             <span class="muted" id="gameCountLabel">—</span>
           </div>
           <p class="section-intro">Start with the colored lane/economy cells, then open a match only when something looks unusual. Filters change only the visible rows; they never change the report calculations.</p>
@@ -279,7 +312,6 @@
               <button type="button" class="game-filter-chip" data-game-filter="ahead15">Ahead @15</button>
               <button type="button" class="game-filter-chip" data-game-filter="even15">Close @15</button>
               <button type="button" class="game-filter-chip" data-game-filter="behind15">Behind @15</button>
-              <button type="button" class="game-filter-chip" data-game-filter="adc">ADC only</button>
             </div>
             <label class="game-champion-filter">Champion
               <select id="gameChampionFilter"><option value="all">All champions</option></select>
@@ -316,23 +348,20 @@
           </div>
         </section>
 
-        <section class="panel" id="spatialReview">
+        <section class="panel death-intelligence-panel" id="spatialReview">
           <div class="section-head">
-            <div><p class="eyebrow">Map review</p><h2>Where risky deaths and vision happen</h2></div>
-            <span class="section-hint">The map loads only when you scroll near this section.</span>
+            <div><p class="eyebrow">Death-pattern intelligence</p><h2>Which risky deaths keep repeating — and why?</h2></div>
+            <span class="section-hint">Instead of one crowded death cloud, similar deaths are classified into separate maps with an explanation and a concrete alternative.</span>
           </div>
-          <div class="spatial-grid">
-            <article class="spatial-card">
-              <div class="spatial-card-head"><div><strong>High-risk deaths</strong><small>Lead-protection deaths are ringed.</small></div><span id="deathMapMeta">—</span></div>
-              <div id="deathMap"></div>
-              <div class="map-legend"><span><i class="legend-dot death"></i>High-risk death</span><span><i class="legend-dot death lead"></i>While ≥500g ahead vs role</span></div>
-            </article>
-            <article class="spatial-card">
-              <div class="spatial-card-head"><div><strong>Ward placement</strong><small>Offensive, river, defensive and objective setup.</small></div><span id="wardMapMeta">—</span></div>
-              <div id="wardMap"></div>
-              <div class="map-legend"><span><i class="legend-dot ward offensive"></i>Offensive</span><span><i class="legend-dot ward river"></i>River</span><span><i class="legend-dot ward defensive"></i>Defensive</span><span><i class="legend-dot ward setup"></i>Objective setup</span></div>
-            </article>
-          </div>
+          <article class="spatial-card death-pattern-shell">
+            <div class="spatial-card-head"><div><strong>Repeated high-risk death patterns</strong><small>Each death is assigned to its strongest supported pattern so the maps stay interpretable.</small></div><span id="deathMapMeta">—</span></div>
+            <div id="deathMap"></div>
+          </article>
+          <article class="spatial-card ward-intelligence-card">
+            <div class="spatial-card-head"><div><strong>Ward placement & setup</strong><small>Ward events are counted even when Riot omits coordinates; ≤35s player-frame projection is disclosed separately.</small></div><span id="wardMapMeta">—</span></div>
+            <div id="wardMap"></div>
+            <div class="map-legend"><span><i class="legend-dot ward offensive"></i>Offensive</span><span><i class="legend-dot ward river"></i>River</span><span><i class="legend-dot ward defensive"></i>Defensive</span><span><i class="legend-dot ward setup"></i>Objective setup</span></div>
+          </article>
           <p class="muted spatial-note" id="spatialProjectionNote"></p>
         </section>
 
@@ -370,6 +399,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261001-league-web-v111" defer></script>
+  <script src="/league/app.js?v=20261001-league-web-v112" defer></script>
 </body>
 </html>
