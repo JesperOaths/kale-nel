@@ -135,8 +135,10 @@ Do not replace a direct match-level comparison with a generic population average
 - `csDiff10`, `csDiff15`: player minus same-role opponent CS.
 - `xpDiff10`, `xpDiff15`: player minus same-role opponent XP.
 - Major-item timing delta: player completion minute minus same-role opponent completion minute. Positive = player is later/slower.
-- The recovered Bruisienator **DQI** is a 0–10 compatibility metric. The supplied V21 source defines it as a weighted penalty from bad deaths, isolated deaths, greedy deaths, facechecks and objective-timed deaths. Because the current Riot-derived web model cannot defensibly reconstruct every legacy category (notably the old facecheck classifier), this exact compatibility score is marked **partial** rather than filling missing categories with invented values.
-- The primary web **Death Quality Index** is separately exported as `consequence_aware_v1`: a 0–10 score built from current high-risk deaths, measured costly/severe consequences, untraded high-risk deaths, pre-objective deaths, high-unspent-gold deaths and high-risk deaths while materially ahead. Keep the recovered legacy value visible for provenance; use the modern score for current coaching.
+- The uploaded Bruisienator V21 HTML defines **DQI** on a 0–10 scale as `10 - badDeaths×1.4 - soloDeaths×0.8 - greedyDeaths×0.8 - facecheckDeaths×1.0 - deathsNearObjective×1.2`, clamped to 0–10.
+- The supplied V21 PowerShell pipeline, however, only emits `badDeaths`; it never populates the other four DQI fields. The exact **effective generated-report behavior** is therefore `clamp(10 - badDeaths×1.4, 0, 10)`. Preserve that value for compatibility/provenance instead of pretending the missing fields existed.
+- The web analyzer may also expose a clearly labelled **partial intent reconstruction** using defensible modern proxies for isolated, greedy/overstay and objective-context deaths, but it must never fill the unavailable facecheck input with a fabricated value or present that reconstruction as the historical DQI.
+- Current death coaching does **not** use a replacement composite DQI. It exposes the underlying evidence directly: high-risk deaths, isolation, trades, measured costly/severe consequences, pre-objective deaths, high-unspent-gold deaths, deaths while ahead/behind, and consequence-coverage rate.
 - AGOR remains undefined until its historical formula is recovered.
 
 ## Mixed-role samples
@@ -781,6 +783,28 @@ When wins and losses have enough valid samples, the analyzer may report an assoc
 
 Use **associated with**, not causal wording.
 
+## Objective-family evidence
+
+The old Bruisienator report exposed separate Dragon/Herald/Baron-style presence concepts, but several of those fields were not reliably produced by the supplied PowerShell pipeline. The web analyzer reconstructs the underlying information directly from grouped Riot neutral-objective events.
+
+For each supported family, preserve:
+- total grouped encounters,
+- encounters won by the player's team and by the enemy team,
+- units secured by each team (important for multi-unit Void Grub encounters),
+- player presence in team-won encounters,
+- family-specific team-encounter join rate.
+
+Normalize Riot families conservatively:
+- `RIFTHERALD` → **HERALD**,
+- `HORDE` → **VOID_GRUBS**,
+- `BARON_NASHOR` → **BARON**,
+- ordinary dragons → **DRAGON**,
+- a Dragon group whose event subtype identifies Elder → **ELDER_DRAGON**.
+
+These are descriptive control/presence facts, not proof that the player caused the objective result.
+
+Objective-setup vision also counts supported ward **clears** in the setup window, in addition to placements. A clear is not treated as equivalent to a placement; both remain separately visible.
+
 ## Roaming
 
 Roaming is not "a kill outside lane."
@@ -795,13 +819,13 @@ For non-jungle lane roles on Summoner's Rift:
 - ignore base movement and ordinary home-lane activity.
 
 Each detected roam now preserves a **per-window evidence bundle** rather than only an aggregate count:
-- sampled Riot timeline path points (`time`, `x`, `y`, zone) for map rendering,
+- sampled Riot timeline path points (`time`, `x`, `y`, zone) for map rendering, including the last supported home-lane sample before departure and the supported return/end sample when available,
 - player kill/assist contributions during the window,
 - player deaths during the window,
 - team champion kills as context,
 - neutral objectives during the window with player **present vs away** evidence,
 - structure/turret-plate events with supported player involvement and attribution quality,
-- plates gained/lost during the window,
+- plates gained through supported player involvement and **home-lane** plates/turrets lost while the player is away, rather than every structure loss elsewhere on the map,
 - direct-role CS differential change from departure to return.
 
 Outcomes:
@@ -1415,9 +1439,12 @@ These should remain visibly unavailable until supported by recovered code or str
 
 The supplied archive includes `Bruisienator_ROAMS_V21_PHASE2_SAFE_STATS_ENRICH`, whose functional changes are concentrated in `template_playstyle_report_last20_phase2b.html`; the launcher/PowerShell analysis files are otherwise byte-identical across the bundled V18/V20/V21 snapshots.
 
+A second-pass producer/consumer audit is required before declaring a legacy UI feature "implemented." The V21 HTML reads several fields that its supplied PowerShell producer does not emit. In particular, `soloDeaths`, `greedyDeaths`, `facecheckDeaths` and `deathsNearObjective` are referenced by DQI but absent from the generated per-game rows. The same audit found several intended objective/vision fields that were incompletely wired in the desktop pipeline.
+
 Parity decisions:
-- **implemented / upgraded:** per-roam path rendering, per-window kill/death/objective/structure evidence, support ADC lane-cost context, recovered DQI provenance, sortable per-game evidence table;
+- **implemented / upgraded:** departure→path→return roam rendering; per-window kill/death/objective/structure evidence; home-lane-specific plate/turret cost while roaming; support ADC lane-cost context; source-accurate V21 DQI provenance; sortable per-game evidence table; objective-family control/presence (Dragon, Elder, Herald, Void Grubs, Baron when exposed by Riot); and objective-setup ward clears;
 - **already superseded:** old win/loss profile, per-game narrative, objective/death/macro/vision/laning/teamfight/tempo text analyzers, static role thresholds, crude support-roam share, and square heatmaps are covered by richer same-role peer comparisons, evidence-backed judgments, objective root-cause analysis, replay review, session/trend models and real-map spatial rendering;
+- **intentionally retired:** the first-pass invented `consequence_aware_v1` DQI score. Its evidence inputs remain useful, but arbitrary overlapping weights are not a trustworthy replacement metric;
 - **not fabricated:** AGOR stays unavailable because no defensible formula is present in the supplied source.
 
-When a legacy feature is superseded, preserve its underlying information need rather than duplicating a weaker heuristic under a second label.
+When a legacy feature is superseded, preserve its underlying information need rather than duplicating a weaker heuristic under a second label. When a legacy consumer references data its producer never emitted, record that as an incomplete historical feature rather than silently inventing the missing data.
