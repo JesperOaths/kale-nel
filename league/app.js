@@ -492,7 +492,7 @@ function renderProgressComparison(current,previous,previousAt){
     {label:'Late-reset objective miss rate',path:'behaviorSummary.lateResetObjectiveMissRate',threshold:10,direction:-1,format:v=>fmtPct(v)}
   ];
   if(['ADC','MID','TOP'].includes(role))specs.splice(1,0,{label:'CS / min',path:'summary.csMin',threshold:.3,direction:1,format:v=>fmt(v,2)});
-  if(['SUPPORT','JUNGLE'].includes(role))specs.push({label:'Objective presence',path:'advanced.objectivePresence',threshold:10,direction:1,format:v=>fmtPct(v)});
+  if(['SUPPORT','JUNGLE'].includes(role))specs.push({label:'Team-contested objective presence',path:'advanced.objectivePresence',threshold:10,direction:1,format:v=>fmtPct(v)});
   const rows=specs.map(s=>{
     const cur=pathValue(current,s.path),prev=pathValue(previous,s.path);
     if(!hasNum(cur)||!hasNum(prev))return null;
@@ -807,18 +807,20 @@ function detailContent(g,tab){
   }
   if(tab==='objectives'){
     const kc=g.killConversion||{},okc=g.opponentKillConversion||{},families=g.objectiveFamilyStats||{};
-    const familyRows=Object.entries(families).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))).map(([name,x])=>String(name).replaceAll('_',' ')+' · joined '+String(x.joinedTeamEncounters??0)+' / '+String(x.teamEncounters??0)+' team encounters · '+fmtPct(x.teamJoinRate)+' · secured '+String(x.teamUnitsSecured??0)+' vs '+String(x.enemyUnitsSecured??0));
-    return detailCard('Neutral-objective presence',fmtPct(g.objectiveJoinRate))+detailCard('Joined / neutral encounters',String(g.objectiveJoined??0)+' / '+String(g.objectiveTeamTotal??0))+detailCard('Early KP',fmtPct(g.earlyKp))+
+    const familyRows=Object.entries(families).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))).map(([name,x])=>String(name).replaceAll('_',' ')+' · contested '+String(x.joinedContestedEncounters??0)+' / '+String(x.contestedEncounters??0)+' joined · '+fmtPct(x.contestPresenceRate)+' · secured-presence '+String(x.joinedTeamEncounters??0)+' / '+String(x.teamEncounters??0)+' · secured units '+String(x.teamUnitsSecured??0)+' vs '+String(x.enemyUnitsSecured??0));
+    return detailCard('Team-contested objective presence',fmtPct(g.objectiveContestPresenceRate))+detailCard('Joined / contested encounters',String(g.objectiveContestJoined??0)+' / '+String(g.objectiveContestTotal??0))+
+      detailCard('Team-secured objective presence',fmtPct(g.objectiveJoinRate))+detailCard('Joined / secured encounters',String(g.objectiveJoined??0)+' / '+String(g.objectiveTeamTotal??0))+detailCard('Early KP',fmtPct(g.earlyKp))+
       detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+' min · '+String(g.impactType||'event'):'n/a')+detailCard('Objective-context death %',fmtPct(g.objectiveDeathPct))+detailCard('Deaths before enemy objective',String(g.preObjectiveDeathCount??0))+
       detailCard('Player-supported kill conversion',String(kc.playerSupportedConverted??kc.converted??0)+' / '+String(kc.windows??0)+' · '+fmtPct(kc.rate))+detailCard('Team conversion after your kill windows',String(kc.teamConverted??kc.converted??0)+' / '+String(kc.windows??0)+' · '+fmtPct(kc.teamRate??kc.rate))+
       detailCard('Peer-supported kill conversion',String(okc.playerSupportedConverted??okc.converted??0)+' / '+String(okc.windows??0)+' · '+fmtPct(okc.rate))+detailCard('Peer team conversion context',String(okc.teamConverted??okc.converted??0)+' / '+String(okc.windows??0)+' · '+fmtPct(okc.teamRate??okc.rate))+
-      detailCard('Neutral encounters joined',String(g.objectiveReadiness?.joined??0)+' / '+String(g.objectiveReadiness?.neutralTeamObjectives??0))+
+      detailCard('Contested encounters joined',String(g.objectiveReadiness?.contestedJoined??0)+' / '+String(g.objectiveReadiness?.contestedObjectives??0))+
       detailCard('Prior-frame setup joins',String(g.objectiveReadiness?.earlySetupJoins??0)+' · '+fmtPct(g.objectiveReadiness?.earlySetupJoinRate))+
-      detailCard('Event-frame-only joins',String(g.objectiveReadiness?.eventFrameOnlyJoins??0))+detailCard('Objective absences',String(g.objectiveReadiness?.absent??0))+
+      detailCard('Event-frame-only joins',String(g.objectiveReadiness?.eventFrameOnlyJoins??0))+detailCard('Contested-objective absences',String(g.objectiveReadiness?.contestedAbsent??0))+
       detailCard('Late-reset objective misses',String(g.objectiveReadiness?.lateResetMisses??0))+detailCard('Fresh-purchase objective joins',String(g.objectiveReadiness?.freshPurchaseJoins??0))+detailCard('Raw objective/structure events',String(g.objectives?.length||0))+
       detailList((kc.events||[]).map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+String(x.kills||0)+' involved kill(s) · '+(x.playerSupportedConverted??x.converted?('supported conversion to '+String(x.objectiveType||'objective')+' in '+String(x.secondsAfter??'?')+'s'):x.teamConverted?('team-only conversion to '+String(x.teamObjectiveType||'objective')+' in '+String(x.teamSecondsAfter??'?')+'s'):'no tracked conversion within 75s')),'No player-involved kill-conversion windows were available.')+
       detailList(familyRows,'No objective-family encounter data were available.')+
-      detailList((g.objectiveReadiness?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+String(x.objectiveType||'neutral objective')+(Number(x.rawEventCount||1)>1?' · '+String(x.rawEventCount)+' raw kills grouped':'')+' · '+(x.earlySetup?('prior-frame setup'+(hasNum(x.setupLeadSec)?' ~'+fmtInt(x.setupLeadSec)+'s lead':'')):x.eventFrameOnlyJoin?'event-frame-only join':x.present?'present':'absent')+(hasNum(x.secondsSinceShop)?' · shopped '+String(x.secondsSinceShop)+'s before':'')+(x.recentDeath?' · recent death':x.lateResetMiss?' · late reset miss':x.freshPurchaseJoin?' · fresh purchase + joined':'')),'No neutral-objective readiness events were available.')+
+      detailList((g.objectiveReadiness?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+String(x.objectiveType||'neutral objective')+(Number(x.rawEventCount||1)>1?' · '+String(x.rawEventCount)+' raw kills grouped':'')+' · '+(x.teamSecured?'team secured':x.enemySecured?'enemy secured':'result unknown')+' · '+String(x.alliedPresentCount??'?')+' ally presence · '+(x.earlySetup?('prior-frame setup'+(hasNum(x.setupLeadSec)?' ~'+fmtInt(x.setupLeadSec)+'s lead':'')):x.eventFrameOnlyJoin?'event-frame-only join':x.present?'present':'absent')+(hasNum(x.secondsSinceShop)?' · shopped '+String(x.secondsSinceShop)+'s before':'')+(x.recentDeath?' · recent death':x.lateResetMiss?' · late reset miss':x.freshPurchaseJoin?' · fresh purchase + joined':'')),'No team-contested neutral-objective readiness events were available.')+
+      '<div class="detail-note"><strong>Objective-presence basis:</strong> coaching uses team-contested windows. A team-secured objective is always included; an objective your team loses enters the denominator only when Riot timeline positions support at least one allied champion near the encounter. Fully conceded cross-map objectives are not treated as personal absences. Team-secured presence remains visible separately as outcome context.</div>'+
       '<div class="detail-note">Supported conversion is the coaching metric: a tracked objective/structure must follow the player-involved kill window within 75 seconds <em>and</em> Riot timeline evidence must place/credit the player at that conversion. Team conversion is shown separately as context so an objective taken elsewhere on the map does not become individual credit.</div>';
   }
   if(tab==='resets'){
@@ -949,7 +951,8 @@ function renderAdvanced(r){
     ['@15 lane-checkpoint comparable games',String(r.behaviorSummary?.checkpointEligibility?.lane15Games??'n/a')],
     ['15→25 fixed-checkpoint comparable games',String(r.behaviorSummary?.checkpointEligibility?.fixed15to25Games??'n/a')],
     ['@25 closing-checkpoint comparable games',String(r.behaviorSummary?.checkpointEligibility?.closing25Games??'n/a')],
-    ['Neutral-objective presence',fmtPct(a.objectivePresence)],
+    ['Team-contested objective presence',fmtPct(a.objectivePresence)],
+    ['Team-secured objective presence',fmtPct(a.teamSecuredObjectivePresence??r.behaviorSummary?.teamSecuredObjectiveJoinRate)],
     ['Objective diagnosis',objectiveDiagnosisLabel(r.behaviorSummary?.objectiveDiagnosis?.primaryCause)],
     ['Early KP · pooled',fmtPct(a.earlyKP)+' · '+String(r.behaviorSummary?.earlyPlayerKillInvolvements??0)+' / '+String(r.behaviorSummary?.earlyTeamKills??0)+' team kills'],
     ['Early KP · mean game rate',fmtPct(r.behaviorSummary?.meanGameEarlyKp)],
@@ -1069,7 +1072,7 @@ function renderAdvanced(r){
   ];
   const familySummary=r.behaviorSummary?.objectiveFamilySummary||{};
   for(const [family,x] of Object.entries(familySummary).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))){
-    rows.push(['Objective · '+String(family).replaceAll('_',' '),String(x.joinedTeamEncounters??0)+' / '+String(x.teamEncounters??0)+' joined · '+fmtPct(x.teamJoinRate)+' · secured '+String(x.teamUnitsSecured??0)+' vs '+String(x.enemyUnitsSecured??0)]);
+    rows.push(['Objective · '+String(family).replaceAll('_',' '),String(x.joinedContestedEncounters??0)+' / '+String(x.contestedEncounters??0)+' contested joined · '+fmtPct(x.contestPresenceRate)+' · secured-presence '+fmtPct(x.teamJoinRate)+' · secured units '+String(x.teamUnitsSecured??0)+' vs '+String(x.enemyUnitsSecured??0)]);
   }
   $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('not recovered')||v==='n/a')).join('')+
     '<div class="source-note">Result streaks are descriptive contiguous outcomes within the eligible Last-20 sample; they are not treated as evidence of tilt, momentum, or player psychology.</div>';
@@ -1221,7 +1224,7 @@ function renderQuality(r){
     qualityCard('Direct peer evidence',String(peerN)+' games','Actual same-role opponents · '+String(q.ambiguousDirectPeerGames??0)+' ambiguous enemy-role game(s) withheld · '+String(q.missingDirectPeerGames??0)+' missing enemy-role game(s)',evidenceLevel(peerN)),
     qualityCard('Ranked peer evidence',String(rankedN)+' games',String(q.higherRankPeerGames??p.higherRankPeerGames??0)+' higher-rank peers',evidenceLevel(rankedN)),
     qualityCard('Fight evidence',String(fightN)+' clusters','Attended multi-kill fight clusters',evidenceLevel(fightN,12,6)),
-    qualityCard('Objective evidence',String(objectiveN)+' encounters','Grouped team neutral-objective encounters',evidenceLevel(objectiveN,10,5)),
+    qualityCard('Objective evidence',String(objectiveN)+' contested encounters','Team-secured objectives plus lost objectives with supported allied presence; full concessions excluded',evidenceLevel(objectiveN,10,5)),
     qualityCard('Ward evidence',String(wardN)+' wards','Used for spatial/setup analysis',evidenceLevel(wardN,30,12)),
     qualityCard('Same-patch self baseline',String(q.coachingBaselineRoleGames??0)+' games',(q.currentPublicPatchKey||q.currentPatchKey)?('Older primary-role games on patch '+String(q.currentPublicPatchKey||q.currentPatchKey)):'No usable patch cohort',evidenceLevel(q.coachingBaselineRoleGames??0))
   ];
