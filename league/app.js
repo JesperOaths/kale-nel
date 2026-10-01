@@ -530,7 +530,7 @@ function benchmarkKpi(label,value,benchmark,unit,inverse=false,extra=''){
 }
 function renderKpis(r){
   const adc=adcBenchmarkSummary(r),s=adc||r.summary||{},bench=adc?r.externalBenchmarks?.same:null,rank=bench?.tier||'rank';
-  const raw=(label,value,unit)=>({label,value:unit==='percent'?fmtPct(value):unit==='csmin'?fmt(value,2):unit==='dpm'?fmtInt(value):unit==='deaths'?fmt(value,1):fmt(value,2),tone:'neutral',sub:adc?'ADC coaching sample':'No ADC population benchmark applied to this primary role',bar:''});
+  const raw=(label,value,unit)=>({label,value:unit==='percent'?fmtPct(value):unit==='csmin'?fmt(value,2):unit==='dpm'?fmtInt(value):unit==='deaths'?fmt(value,1):fmt(value,2),tone:'neutral',sub:adc?'ADC coaching sample':(String(r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||'')==='BOTTOM'?adcBenchmarkUnavailableReason(r):'No ADC population benchmark applied to this primary role'),bar:''});
   const rows=[
     {label:adc?'ADC sample win rate':'Recent win rate',value:fmtPct(s.winRate),tone:'neutral',sub:String(s.games||0)+(adc?' primary-role ADC':' analyzed')+' games',bar:''},
     bench?benchmarkKpi('CS / min · '+rank,s.csMin,bench.csMin,'csmin'):raw('CS / min',s.csMin,'csmin'),
