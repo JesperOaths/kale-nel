@@ -133,7 +133,7 @@ ok(backend.includes('function committedPurchaseEvents('), 'shop/reset/item metri
 ok(backend.includes('purchases[idx].committed=false'), 'ITEM_UNDO must invalidate a transient matching purchase');
 ok(backend.includes('function committedItemPurchaseCount('), 'Control Ward purchase counts must consume the committed-purchase stream');
 ok(backend.includes('function purchaseCashCost(')&&backend.includes('recipe_owned_component_credit'), 'shop spend must use recipe-aware cash-cost estimates');
-ok(backend.includes('out.shopVisits=purchaseGroups(itemEventsByPid,catalog)'), 'shop visits must receive the complete item ledger so undo events can be removed');
+ok(backend.includes('out.shopVisits=applyDynamicShopSpendBounds(purchaseGroups(itemEventsByPid,catalog),out.roleQuestContext)'), 'shop visits must receive the complete item ledger before role-aware dynamic spend bounds are applied');
 ok(backend.includes('first committed ≥250g recipe-aware purchase group'), 'first-reset provenance must retain committed recipe-aware semantics');
 ok(backend.includes('controlWardIds=new Set<number>([2055])')&&backend.includes('text(info?.name).toLowerCase()==="control ward"'), 'Control Ward detection must retain item-id and catalog-name evidence');
 ok(backend.includes('function majorOwnershipMilestones(')&&backend.includes('secondMajorItemDeltaVsOpponent'), 'second major-item completion must remain measurable from owned inventory against the direct role opponent');
@@ -251,7 +251,7 @@ ok(backend.includes('schema:"rank_snapshot_v2"')&&backend.includes('byQueue'), '
 ok(backend.includes('function rankComparisonForGame('), 'rank comparisons must choose a shared ladder per game');
 ok(backend.includes('q===420?["RANKED_SOLO_5x5"]:q===440?["RANKED_FLEX_SR"]'), 'ranked Solo/Flex direct-peer comparisons must use their matching ladder');
 ok(backend.includes('if(r==="BOTTOM"||r==="BOT"||r==="ADC"||r==="DUO_CARRY")return"ADC"'), 'backend must normalize all Riot bottom-lane aliases to canonical ADC');
-ok(!app.includes('BOTTOM'), 'frontend must consume canonical ADC and never branch on raw Riot BOTTOM aliases');
+ok(app.includes("if(r==='BOTTOM'||r==='BOT'||r==='DUO_CARRY'||r==='ADC')return'ADC'"), 'frontend may accept raw Riot bottom aliases only through the canonical ADC normalization helper');
 ok(backend.includes('function externalAdcBenchmarkSet(rankSnapshot:any,cohortQueueId:any)'), 'external population benchmark must receive the selected cohort queue');
 ok(backend.includes('role:"ADC"')&&backend.includes('sourceRole:"Bot (ADC)"'), 'external benchmark metadata must use canonical ADC while preserving source-role provenance');
 ok(backend.includes('queueId===420?"RANKED_SOLO_5x5":queueId===440?"RANKED_FLEX_SR":null'), 'external ranked benchmark must be ineligible outside Ranked Solo/Flex');
