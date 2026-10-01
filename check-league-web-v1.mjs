@@ -398,6 +398,8 @@ assert.ok(css.includes('.games-table th{position:static!important}')&&css.includ
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))')&&css.includes('html{font-size:18px'),'League report must retain a spacious 1760px desktop shell with larger base typography');
 assert.ok(css.includes('--good:#126a45')&&css.includes('--bad:#b23a2f'),'Positive and negative data must retain high-contrast visual tokens');
 assert.ok(html.includes('id="quickRead"')&&html.includes('id="radarChart"')&&html.includes('id="decisionMetrics"'),'Logical overview, population radar and decision sections must remain present');
+assert.ok(app.includes('lead games · analyzer threshold 4')&&app.includes('recovery opportunities · analyzer threshold 8')&&css.includes('.intelligence-card.thin-evidence'),'Combined-intelligence cards must disclose their denominator floors and stay neutral below them');
+assert.ok(modelDoc.includes('## Combined-intelligence evidence floors')&&modelDoc.includes('Combining metrics must never make a thin input look more certain'),'Compound evidence denominator policy must remain documented');
 assert.ok(html.indexOf('id="report-driver"')<html.indexOf('id="quickRead"'),'Action-first report drivers must appear before diagnostic comparison layers');
 assert.ok(app.includes("comparisonCard('CS/min vs role opponent'")&&app.includes("comparisonCard('DPM vs role opponent'")&&app.includes("comparisonCard('First major timing vs role'"),'Direct-role comparison must use actual same-role opponents rather than external population references');
 assert.ok(html.includes('Raw selected-role output')&&app.includes('Raw selected-role sample')&&app.includes("tone-neutral"),'Raw KPI layer must remain neutral and self-descriptive rather than duplicate benchmark judgment');
@@ -588,7 +590,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v137'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v138'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
