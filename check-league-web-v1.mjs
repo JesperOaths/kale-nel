@@ -25,6 +25,7 @@ const behaviorExport=api.slice(behaviorStart,behaviorEnd);
 for(const field of [
   'phaseRisk','deathTradeRate','highRiskUntradedDeaths','highRiskUntradedPerGame',
   'measuredDeathConsequences','costlyDeathEvents','severeDeathEvents','costlyDeathRate','costlyDeathsPerTimelineGame','severeDeathsPerTimelineGame','avgGoldSwingAfterDeath','avgCsSwingAfterDeath',
+  'repeatDeathOpportunities','repeatDeaths','repeatDeathRate','highRiskRepeatDeaths','costlyRepeatDeaths','opponentRepeatDeathRate','repeatDeathRateDelta',
   'itemSpikeEligibleWindows','itemSpikeUtilizedWindows','itemSpikeUtilizationRate','itemSpikeDeathsBeforeImpact','avgItemSpikeLeadSec',
   'fightSamples','firstAllyFightDeathRate','preContributionFightDeathRate','fightSurvivalRate',
   'highUnspentFightRate','itemDisadvantageFightRate','goldDeficitFightRate',
@@ -122,6 +123,9 @@ assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
 assert.ok(app.includes('Costly measured deaths'));
+assert.ok(app.includes('Rapid repeat deaths'));
+assert.ok(app.includes('Rapid repeat-death rate'));
+assert.ok(app.includes('Repeat-death rate delta'));
 assert.ok(app.includes('Costly deaths / game'));
 assert.ok(app.includes('prior-frame setup'));
 
