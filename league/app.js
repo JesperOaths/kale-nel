@@ -1197,19 +1197,23 @@ function renderAdvanced(r){
     metric('Wins when ≥500g behind @25',hasNum(conv.deficit25WinRate)?fmtPct(conv.deficit25WinRate)+' · '+String(conv.deficit25Games||0)+' games':'n/a',!hasNum(conv.deficit25WinRate))
   ];
   const wlRow=(label,obj,formatter)=>metric(label,obj&&hasNum(obj.wins)&&hasNum(obj.losses)?formatter(obj.wins)+' / '+formatter(obj.losses):'n/a',!(obj&&hasNum(obj.wins)&&hasNum(obj.losses)));
+  const pooledWlRow=(label,obj)=>metric(label,obj&&hasNum(obj.wins)&&hasNum(obj.losses)?fmtPct(obj.wins)+' / '+fmtPct(obj.losses)+' · events '+String(obj.winsEvidence?.denominator??0)+' / '+String(obj.lossesEvidence?.denominator??0):'n/a',!(obj&&hasNum(obj.wins)&&hasNum(obj.losses)));
   const winLossRows=[
     wlRow('Gold @15 · wins / losses',wl.goldDiff15,v=>signed(v,0)+'g'),
     wlRow('High-risk deaths · wins / losses',wl.badDeaths,v=>fmt(v,1)),
-    wlRow('Early KP · wins / losses',wl.earlyKp,v=>fmtPct(v)),
-    wlRow('Objective presence · wins / losses',wl.objectiveJoin,v=>fmtPct(v)),
+    pooledWlRow('Early KP · wins / losses · pooled',wl.earlyKp),
+    pooledWlRow('Objective presence · wins / losses · pooled',wl.objectiveJoin),
     wlRow('Greedy stays · wins / losses',wl.greedyStays,v=>fmt(v,1))
   ];
   const trendRow=(label,obj,formatter)=>metric(label,obj&&hasNum(obj.recent)&&hasNum(obj.prior)?formatter(obj.recent)+' / '+formatter(obj.prior):'n/a',!(obj&&hasNum(obj.recent)&&hasNum(obj.prior)));
+  const pooledTrendRow=(label,obj)=>metric(label,obj&&hasNum(obj.recent)&&hasNum(obj.prior)?fmtPct(obj.recent)+' / '+fmtPct(obj.prior)+' · events '+String(obj.recentEvents??0)+' / '+String(obj.priorEvents??0):'n/a',!(obj&&hasNum(obj.recent)&&hasNum(obj.prior)));
   const trendRows=[
     trendRow('Latest 5 CS/min / previous',trend.csMin,v=>fmt(v,2)),
     trendRow('Latest 5 gold @15 / previous',trend.goldDiff15,v=>signed(v,0)+'g'),
     trendRow('Latest 5 high-risk deaths / previous',trend.badDeaths,v=>fmt(v,1)),
-    trendRow('Latest 5 DPM / previous',trend.dpm,v=>fmtInt(v))
+    trendRow('Latest 5 DPM / previous',trend.dpm,v=>fmtInt(v)),
+    pooledTrendRow('Latest 5 objective presence / previous · pooled',trend.objectiveJoin),
+    pooledTrendRow('Latest 5 early KP / previous · pooled',trend.earlyKp)
   ];
   const sessionRows=[
     metric('Session model',session.definition||'Not enough data',!session.definition),
