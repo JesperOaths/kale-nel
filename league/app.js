@@ -751,7 +751,8 @@ function renderQuality(r){
   const fightN=Number(b.fightSamples??0),objectiveN=Number(b.neutralObjectiveEvents??0),wardN=Number(p.visionWardTotal??0);
   const cards=[
     qualityCard('Analyzed games',String(analyzed),String(coaching)+' primary-role coaching games',evidenceLevel(coaching)),
-    qualityCard('Sample exclusions',String(Number(q.excludedShortGames||0)+Number(q.excludedOtherMaps||0)+Number(q.excludedMissingRole||0))+' games',String(q.excludedShortGames??0)+' under 10m · '+String(q.excludedOtherMaps??0)+' other maps · '+String(q.excludedMissingRole??0)+' missing role','neutral'),
+    qualityCard('Queue context',hasNum(q.dominantQueueId)?'Queue '+String(q.dominantQueueId):'n/a',String(q.dominantQueueGames??0)+' analyzed-context games · '+String(q.excludedOtherQueues??0)+' other queue-context games excluded',evidenceLevel(q.dominantQueueGames??0)),
+    qualityCard('Sample exclusions',String(Number(q.excludedShortGames||0)+Number(q.excludedOtherMaps||0)+Number(q.excludedOtherQueues||0)+Number(q.excludedMissingRole||0))+' games',String(q.excludedShortGames??0)+' under 10m · '+String(q.excludedOtherMaps??0)+' other maps · '+String(q.excludedOtherQueues??0)+' other queues · '+String(q.excludedMissingRole??0)+' missing role','neutral'),
     qualityCard('Timeline coverage',hasNum(timelinePct)?fmtPct(timelinePct):'n/a',String(timelines)+' / '+String(analyzed)+' games',evidenceLevel(timelines)),
     qualityCard('Direct peer evidence',String(peerN)+' games','Actual same-role opponents',evidenceLevel(peerN)),
     qualityCard('Ranked peer evidence',String(rankedN)+' games',String(q.higherRankPeerGames??p.higherRankPeerGames??0)+' higher-rank peers',evidenceLevel(rankedN)),
@@ -767,6 +768,7 @@ function renderQuality(r){
   if(rankedN<3)low.push('rank-band comparisons');
   if(fightN<6)low.push('fight-order/readiness');
   if(Number(q.excludedShortGames||0)>0)low.push('short games excluded from coaching');
+  if(Number(q.excludedOtherQueues||0)>0)low.push('mixed queue contexts excluded');
   const base=r.sourceStatus?.note||'Report data remains traceable through the report contract. Missing data remains unknown rather than zero.';
   $('sourceNote').textContent=base+(low.length?' Thin-evidence areas right now: '+low.join(', ')+'.':' Core evidence coverage is sufficient for the main coaching dimensions.');
 }
