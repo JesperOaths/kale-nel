@@ -1,6 +1,6 @@
 (function(){
   function cfg(){ return window.GEJAST_CONFIG || {}; }
-  function headers(){ const c=cfg(); return { apikey:c.SUPABASE_PUBLISHABLE_KEY||'', Authorization:`Bearer ${c.SUPABASE_PUBLISHABLE_KEY||''}`, 'Content-Type':'application/json', Accept:'application/json' }; }
+  function headers(){ const c=cfg(); if(typeof c.publicApiHeaders==='function') return c.publicApiHeaders({'Content-Type':'application/json',Accept:'application/json'}); const key=String(c.SUPABASE_PUBLISHABLE_KEY||'').trim(),h={apikey:key,'Content-Type':'application/json',Accept:'application/json'}; if(/^[^.]+\.[^.]+\.[^.]+$/.test(key)) h.Authorization=`Bearer ${key}`; return h; }
   async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`); } if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d; }
   function currentScope(){ try{ return (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }catch(_){ return 'friends'; } }
   function normalizeName(value){ return String(value||'').trim().toLowerCase(); }
