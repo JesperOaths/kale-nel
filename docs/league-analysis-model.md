@@ -206,6 +206,8 @@ Since Patch 26.1, the analyzer treats plate rewards as a persistent turret-syste
 
 The 20-minute slice is a coaching comparison window, **not** an expiry rule. Full-match and tier breakdowns are required because later/deeper turret pressure now matters.
 
+The 2026 rules profile also records the related system reset explicitly: Atakhan and Feats of Strength are disabled, First Blood again carries its +100g bonus, and the first turret again carries its +300g bonus. These values are rule context only; the analyzer must not synthesize timeline gold that Riot did not expose.
+
 This metric complements, rather than replaces, solo-kill → @15 economy conversion and post-kill reset/banking metrics. Resetting can be the correct conversion after a kill, so low structure conversion is not automatically a mistake. Coaching should ask whether the player deliberately chose wave denial, safe structure value, reset, or another higher-value map action.
 
 ## Direct-role solo duels
@@ -314,7 +316,16 @@ Riot timeline data used here does not provide a reliable universal role-quest-co
 
 The report exports revision counts so a Last-20 sample spanning multiple role-quest revisions is visible as a data-quality caveat. If Riot's internal game-version minor is missing, the game is marked `2026_revision_unknown`; the analyzer keeps generic 2026 quest context but does not guess which patch-specific reward revision applied.
 
-For mechanics-sensitive coaching, the report also builds a **current mechanics cohort** from the newest primary-role game's rules profile plus role-quest revision. If that cohort contains at least five primary-role games, coaching models use it instead of blending older incompatible mechanics into the same conclusions. The Last-20 overview remains visible separately. If fewer than five current-mechanics games exist, the analyzer keeps the broader primary-role sample rather than manufacturing certainty and explicitly marks the mixed-mechanics fallback as a data-quality limitation.
+Revision identity is **role-specific**, not merely patch-specific. A patch that changes TOP must not fragment an ADC mechanics cohort when ADC mechanics did not change. Current explicit role boundaries include:
+- TOP: 26.1 initial package → 26.9 XP revision → 26.19 Teleport-cooldown revision,
+- MID: 26.1 empowered-Recall package → 26.9 +6% bonus AD/AP → 26.11 +8% bonus AD/AP,
+- ADC/BOT: 26.1 initial income package → 26.9 40g post-quest takedown bonus,
+- SUPPORT: 26.1 core support quest → 26.16 stronger early-roaming penalty / normalized quest progress,
+- JUNGLE: no later 2026 role-quest boundary is currently asserted unless Riot documents one.
+
+This prevents two opposite errors: mixing genuinely incompatible same-role games, and discarding valid same-role games merely because another role changed on that patch.
+
+For mechanics-sensitive coaching, the report builds a **current mechanics cohort** from the newest primary-role game's rules profile plus that role's own mechanics revision. If that cohort contains at least five primary-role games, coaching models use it instead of blending older incompatible mechanics into the same conclusions. The Last-20 overview remains visible separately. If fewer than five current-mechanics games exist, the analyzer keeps the broader primary-role sample rather than manufacturing certainty and explicitly marks the mixed-mechanics fallback as a data-quality limitation.
 
 ## Mid-game farm routing
 
