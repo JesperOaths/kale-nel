@@ -274,7 +274,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
   const frames=Array.isArray(timeline?.info?.frames)?timeline.info.frames:[],pid=Number(p.participantId),opp=opponent(match,p),oppId=opp?Number(opp.participantId):null;
   const ps=Array.isArray(match?.info?.participants)?match.info.participants:[],byId=new Map<number,any>();for(const q of ps)byId.set(Number(q.participantId),q);
   const mapId=Number(match?.info?.mapId||0),teamId=Number(p.teamId),rr=participantRole(p),homeLane=homeLaneForRole(rr);
-  const out:any={goldDiff10:null,goldDiff15:null,goldDiff25:null,csDiff10:null,csDiff15:null,csDiff25:null,xpDiff10:null,xpDiff15:null,xpDiff25:null,levelDiff10:null,levelDiff15:null,levelDiff25:null,deathPositions:[],wards:[],wardKills:[],objectives:[],involvedKills:[],goldSeries:[],frameSamples:[],objectiveJoinRate:null,objectiveJoined:0,objectiveTeamTotal:0,earlyKp:null,impactTimeMin:null,impactType:null,opponentImpactTimeMin:null,opponentImpactType:null,impactDeltaVsOpponent:null,badDeaths:[],badDeathCount:0,objectiveDeathCount:0,objectiveDeathPct:null,preObjectiveDeaths:[],preObjectiveDeathCount:0,preObjectiveDeathPct:null,highUnspentGoldDeaths:0,overstays:[],overstayCount:0,greedyStayWindows:[],shopVisits:[],firstMajorItem:null,opponentFirstMajorItem:null,itemSpikeDeltaVsOpponent:null,roams:{attempts:0,successes:0,failures:0,neutral:0,events:[]},vision:{wardCount:0,wardKillCount:0,controlWardCount:0,offensive:0,defensive:0,river:0,objectiveSetup:0,objectiveSetupDeltaVsOpponent:null,wardsPer30:null},opponentVision:{wardCount:0,objectiveSetup:0},timelineAvailable:!!frames.length};
+  const out:any={goldDiff10:null,goldDiff15:null,goldDiff25:null,csDiff10:null,csDiff15:null,csDiff25:null,xpDiff10:null,xpDiff15:null,xpDiff25:null,levelDiff10:null,levelDiff15:null,levelDiff25:null,deathPositions:[],wards:[],wardKills:[],objectives:[],involvedKills:[],goldSeries:[],frameSamples:[],objectiveJoinRate:null,objectiveJoined:0,objectiveTeamTotal:0,earlyKp:null,impactTimeMin:null,impactType:null,opponentImpactTimeMin:null,opponentImpactType:null,impactDeltaVsOpponent:null,badDeaths:[],badDeathCount:0,objectiveDeathCount:0,objectiveDeathPct:null,preObjectiveDeaths:[],preObjectiveDeathCount:0,preObjectiveDeathPct:null,highUnspentGoldDeaths:0,overstays:[],overstayCount:0,greedyStayWindows:[],shopVisits:[],firstMajorItem:null,opponentFirstMajorItem:null,itemSpikeDeltaVsOpponent:null,roams:{attempts:0,successes:0,failures:0,neutral:0,events:[]},vision:{wardCount:0,wardKillCount:0,controlWardCount:0,offensive:0,defensive:0,river:0,objectiveSetup:0,objectiveSetupDeltaVsOpponent:null,wardsPer30:null},opponentVision:{wardCount:0,objectiveSetup:0},fightProfile:{attended:0,firstAllyDeaths:0,diedBeforeContribution:0,survived:0,firstAllyDeathRate:null,diedBeforeContributionRate:null,survivalRate:null,events:[]},timelineAvailable:!!frames.length};
   for(const minute of[10,15]){
     const fr=nearestFrame(frames,minute),a=frameStats(fr,pid),b=oppId?frameStats(fr,oppId):null;
     if(a&&b){out["goldDiff"+minute]=(a.gold!=null&&b.gold!=null)?a.gold-b.gold:null;out["csDiff"+minute]=a.cs-b.cs;out["xpDiff"+minute]=(a.xp!=null&&b.xp!=null)?a.xp-b.xp:null;out["levelDiff"+minute]=(a.level!=null&&b.level!=null)?a.level-b.level:null;}
@@ -282,17 +282,19 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
   const reaches25=Number(match?.info?.gameDuration||0)>=25*60,fr25=reaches25?frameNearMinute(frames,25,45000):null,a25=frameStats(fr25,pid),b25=oppId?frameStats(fr25,oppId):null;
   if(a25&&b25){out.goldDiff25=(a25.gold!=null&&b25.gold!=null)?a25.gold-b25.gold:null;out.csDiff25=a25.cs-b25.cs;out.xpDiff25=(a25.xp!=null&&b25.xp!=null)?a25.xp-b25.xp:null;out.levelDiff25=(a25.level!=null&&b25.level!=null)?a25.level-b25.level:null;}
 
-  const purchaseByPid:any[]=[],purchaseByOpp:any[]=[],allObjectives:any[]=[],ownObjectiveEvents:any[]=[],oppObjectiveEvents:any[]=[],deathEvents:any[]=[],involved:any[]=[],oppInvolved:any[]=[],oppWards:any[]=[];
+  const purchaseByPid:any[]=[],purchaseByOpp:any[]=[],allObjectives:any[]=[],ownObjectiveEvents:any[]=[],oppObjectiveEvents:any[]=[],deathEvents:any[]=[],involved:any[]=[],oppInvolved:any[]=[],oppWards:any[]=[],allChampionKills:any[]=[];
   for(const fr of frames){
     const mine=frameStats(fr,pid);
     if(mine){const sample={time:Number(fr?.timestamp||0)/60000,totalGold:mine.gold,currentGold:mine.currentGold,cs:mine.cs,xp:mine.xp,level:mine.level,position:mine.position,zone:zoneFor(mapId,mine.position,teamId)};out.frameSamples.push(sample);if(mine.gold!=null)out.goldSeries.push({minute:sample.time,totalGold:mine.gold,currentGold:mine.currentGold});}
     for(const e of(Array.isArray(fr?.events)?fr.events:[])){
       const pxy=xy(e.position),tMs=Number(e.timestamp||0),tMin=tMs/60000;
       if(e.type==="CHAMPION_KILL"){
-        const ev={tMs,tMin,...(pxy||{}),killerId:Number(e.killerId||0),victimId:Number(e.victimId||0),assistingIds:Array.isArray(e.assistingParticipantIds)?e.assistingParticipantIds.map(Number):[]};
+        const killer=byId.get(Number(e.killerId||0)),victim=byId.get(Number(e.victimId||0));
+        const ev={tMs,tMin,...(pxy||{}),killerId:Number(e.killerId||0),victimId:Number(e.victimId||0),killerTeam:Number(killer?.teamId||0)||null,victimTeam:Number(victim?.teamId||0)||null,assistingIds:Array.isArray(e.assistingParticipantIds)?e.assistingParticipantIds.map(Number):[],playerContribution:playerInKill(e,pid),opponentContribution:oppId?playerInKill(e,oppId):false};
+        allChampionKills.push(ev);
         if(Number(e.victimId)===pid){deathEvents.push(ev);out.deathPositions.push({time:tMin,...(pxy||{}),zone:deathArea(mapId,pxy,teamId)});}
-        if(playerInKill(e,pid)){involved.push(ev);out.involvedKills.push({time:tMin,...(pxy||{}),killerId:e.killerId,victimId:e.victimId});}
-        if(oppId&&playerInKill(e,oppId))oppInvolved.push(ev);
+        if(ev.playerContribution){involved.push(ev);out.involvedKills.push({time:tMin,...(pxy||{}),killerId:e.killerId,victimId:e.victimId});}
+        if(ev.opponentContribution)oppInvolved.push(ev);
       }else if(["ELITE_MONSTER_KILL","BUILDING_KILL","TURRET_PLATE_DESTROYED"].includes(String(e.type))){
         const owner=objectiveOwnerTeam(e,byId),obj={tMs,tMin,type:text(e.type),monsterType:text(e.monsterType),monsterSubType:text(e.monsterSubType),buildingType:text(e.buildingType),ownerTeam:owner,...(pxy||{})};
         allObjectives.push(obj);out.objectives.push(obj);if(owner===teamId)ownObjectiveEvents.push(obj);if(opp&&owner===Number(opp.teamId))oppObjectiveEvents.push(obj);
@@ -303,6 +305,35 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
       }else if(e.type==="WARD_KILL"&&Number(e.killerId)===pid&&pxy){out.wardKills.push({time:tMin,tMs,...pxy,wardType:text(e.wardType)});out.vision.wardKillCount++;}
       else if(e.type==="ITEM_PURCHASED"){const ev={tMs,tMin,itemId:Number(e.itemId||0)};if(Number(e.participantId)===pid)purchaseByPid.push(ev);if(oppId&&Number(e.participantId)===oppId)purchaseByOpp.push(ev);}
     }
+  }
+  const fightClusters:any[]=[];
+  for(const ev of allChampionKills){
+    let cluster=fightClusters[fightClusters.length-1];
+    const prev=cluster?.events?.[cluster.events.length-1];
+    const separatedByTime=!prev||ev.tMs-prev.tMs>25000;
+    const separatedBySpace=prev&&hasNum(prev.x)&&hasNum(prev.y)&&hasNum(ev.x)&&hasNum(ev.y)&&dist2(prev,ev)>5000*5000;
+    if(!cluster||separatedByTime||separatedBySpace){cluster={events:[]};fightClusters.push(cluster);}
+    cluster.events.push(ev);
+  }
+  for(const cluster of fightClusters.filter((x:any)=>x.events.length>=2)){
+    const events=cluster.events,first=events[0],fr=frameAtMs(frames,first.tMs),me=frameStats(fr,pid);
+    const nearby=me?.position&&events.some((e:any)=>hasNum(e.x)&&hasNum(e.y)&&dist2(me.position,e)<=5000*5000);
+    const playerDeath=events.find((e:any)=>Number(e.victimId)===pid),contributed=events.some((e:any)=>e.playerContribution),attended=!!playerDeath||contributed||!!nearby;
+    if(!attended)continue;
+    const alliedDeaths=events.filter((e:any)=>Number(e.victimTeam)===teamId).sort((a:any,b:any)=>a.tMs-b.tMs);
+    const firstAllyDeath=!!playerDeath&&alliedDeaths.length>0&&Number(alliedDeaths[0].victimId)===pid;
+    const contributionBeforeDeath=contributed&&(!playerDeath||events.some((e:any)=>e.playerContribution&&e.tMs<=playerDeath.tMs));
+    const diedBeforeContribution=!!playerDeath&&!contributionBeforeDeath;
+    out.fightProfile.attended++;
+    if(firstAllyDeath)out.fightProfile.firstAllyDeaths++;
+    if(diedBeforeContribution)out.fightProfile.diedBeforeContribution++;
+    if(!playerDeath)out.fightProfile.survived++;
+    out.fightProfile.events.push({startMin:first.tMin,endMin:events[events.length-1].tMin,kills:events.length,playerDied:!!playerDeath,firstAllyDeath,diedBeforeContribution,contributed,survived:!playerDeath});
+  }
+  if(out.fightProfile.attended>0){
+    out.fightProfile.firstAllyDeathRate=100*out.fightProfile.firstAllyDeaths/out.fightProfile.attended;
+    out.fightProfile.diedBeforeContributionRate=100*out.fightProfile.diedBeforeContribution/out.fightProfile.attended;
+    out.fightProfile.survivalRate=100*out.fightProfile.survived/out.fightProfile.attended;
   }
   out.shopVisits=purchaseGroups(purchaseByPid,catalog);out.firstMajorItem=firstMajorPurchase(purchaseByPid,catalog);out.opponentFirstMajorItem=firstMajorPurchase(purchaseByOpp,catalog);if(out.firstMajorItem&&out.opponentFirstMajorItem)out.itemSpikeDeltaVsOpponent=out.firstMajorItem.time-out.opponentFirstMajorItem.time;
   const duration=Math.max(1,Number(match?.info?.gameDuration||0)/60);out.vision.wardsPer30=out.vision.wardCount/duration*30;
@@ -369,6 +400,10 @@ function gameJudgments(g:any){
     const swing=Number(g.goldDiff25)-Number(g.goldDiff15);
     if(Number(g.goldDiff15)>=300&&swing<=-700)add(1,"mid game","A lane lead eroded sharply between 15 and 25","You were "+signedText(g.goldDiff15,0)+"g at 15 and "+signedText(g.goldDiff25,0)+"g at 25 versus the same-role opponent. The advantage fell by "+Math.abs(Math.round(swing))+"g.","Review the first rotations after lane: side-lane waves, reset timing and fights taken before the next item/objective window.");
     else if(Number(g.goldDiff15)<=-300&&swing>=700)add(4,"mid game","You recovered a substantial early deficit","You moved from "+signedText(g.goldDiff15,0)+"g at 15 to "+signedText(g.goldDiff25,0)+"g at 25 versus the same-role opponent.","Identify the safe farm, picks or objective sequence that created the recovery and repeat that low-variance pattern.","strength");
+  }
+  if(["ADC","MID","TOP"].includes(String(g.role))&&Number(g.fightProfile?.attended)>=2){
+    if(Number(g.fightProfile?.firstAllyDeaths)>=2)add(1,"teamfights","You are dying first in repeated multi-kill fights","You were the first allied death in "+String(g.fightProfile.firstAllyDeaths)+" of "+String(g.fightProfile.attended)+" attended multi-kill fight clusters.","Delay entry until key enemy threat/CC is committed, preserve your escape route, and prioritize uninterrupted damage time over being the first body in range.");
+    else if(Number(g.fightProfile?.diedBeforeContribution)>=2)add(1,"teamfights","You are being removed before contributing in fights","You died before a tracked kill/assist contribution in "+String(g.fightProfile.diedBeforeContribution)+" of "+String(g.fightProfile.attended)+" attended multi-kill fights.","Review fight approach and initial positioning; entering one screen later can be worth more than arriving first.");
   }
   if(Number(g.preObjectiveDeathCount)>=1){
     const examples=(g.preObjectiveDeaths||[]).slice(0,2).map((x:any)=>Number(x.time).toFixed(1)+"m → "+String(x.objectiveType||"objective")+" "+String(x.secondsBeforeObjective)+"s later").join("; ");
@@ -443,6 +478,8 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,p
   const itemDelta=meanField(itemGames,g=>g.itemSpikeDeltaVsOpponent),greedy=validTimeline.reduce((n,g)=>n+Number(g.greedyStayWindows?.length||0),0),peerCs=meanField(peerGames,g=>g.peer.csMinDelta),peerDpm=meanField(peerGames,g=>g.peer.dpmDelta),peerVpm=meanField(peerGames,g=>g.peer.vpmDelta),topDamage=games.filter(g=>Number(g.damageRank)===1).length;
   const impactGames=finiteGames(validTimeline,g=>g.impactDeltaVsOpponent),avgImpactDelta=meanField(impactGames,g=>g.impactDeltaVsOpponent),impactEarlierPct=impactGames.length?100*impactGames.filter(g=>Number(g.impactDeltaVsOpponent)<0).length/impactGames.length:null;
   const resourceGames=games.filter(g=>hasNum(g.damageShare)&&hasNum(g.goldShare)),damageGoldEfficiency=meanField(resourceGames,g=>Number(g.damageShare)-Number(g.goldShare)),avgDamageShare=meanField(resourceGames,g=>g.damageShare),avgGoldShare=meanField(resourceGames,g=>g.goldShare);
+  const fightSamples=validTimeline.reduce((n,g)=>n+Number(g.fightProfile?.attended||0),0),firstAllyFightDeaths=validTimeline.reduce((n,g)=>n+Number(g.fightProfile?.firstAllyDeaths||0),0),preContributionFightDeaths=validTimeline.reduce((n,g)=>n+Number(g.fightProfile?.diedBeforeContribution||0),0),survivedFightSamples=validTimeline.reduce((n,g)=>n+Number(g.fightProfile?.survived||0),0);
+  const firstAllyFightDeathRate=fightSamples?100*firstAllyFightDeaths/fightSamples:null,preContributionFightDeathRate=fightSamples?100*preContributionFightDeaths/fightSamples:null,fightSurvivalRate=fightSamples?100*survivedFightSamples/fightSamples:null;
   const visionSetupGames=finiteGames(validTimeline,g=>g.vision?.objectiveSetupDeltaVsOpponent),avgObjectiveSetupDelta=meanField(visionSetupGames,g=>g.vision.objectiveSetupDeltaVsOpponent),objectiveSetupOutperformPct=visionSetupGames.length?100*visionSetupGames.filter(g=>Number(g.vision.objectiveSetupDeltaVsOpponent)>0).length/visionSetupGames.length:null;
   const outperform=(list:any[],fn:(g:any)=>any,invert=false)=>{const xs=list.filter(g=>hasNum(fn(g)));return xs.length?100*xs.filter(g=>invert?Number(fn(g))<0:Number(fn(g))>0).length/xs.length:null;};
   const peerGoldWin=outperform(lane15,g=>g.goldDiff15),peerCsWin=outperform(peerGames,g=>g.peer.csMinDelta),peerDpmWin=outperform(peerGames,g=>g.peer.dpmDelta),peerVpmWin=outperform(peerGames,g=>g.peer.vpmDelta),peerItemFaster=outperform(itemGames,g=>g.itemSpikeDeltaVsOpponent,true);
@@ -505,6 +542,11 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,p
     if(Number(peerDpm)<=-100&&["ADC","MID","TOP"].includes(primaryRole))push(recentFocus,"fighting","Damage conversion trails your direct counterpart","You average "+Math.round(Math.abs(Number(peerDpm)))+" less champion damage per minute than the same-role opponent and beat them on DPM in "+Math.round(Number(peerDpmWin||0))+"% of "+peerGames.length+" games.","Check whether farm leads are being converted into timely fights and whether deaths are removing you before damage windows.",conf(peerGames.length),2,"same-role opponents");
     if(Number(peerDpm)>=120)push(highlights,"fighting","You outperform the direct counterpart in damage","You average +"+Math.round(Number(peerDpm))+" champion damage per minute versus the same-role opponent and beat them on DPM in "+Math.round(Number(peerDpmWin||0))+"% of "+peerGames.length+" games.","Protect this strength by reducing deaths that occur before objectives.",conf(peerGames.length),4,"same-role opponents");
     if(Number(peerCs)<=-0.5&&["ADC","MID","TOP"].includes(primaryRole))push(recentFocus,"farming","Farm pace trails the actual lane peer","You average "+Math.abs(Number(peerCs)).toFixed(2)+" CS/min less than the same-role opponent and finish ahead on CS/min in only "+Math.round(Number(peerCsWin||0))+"% of comparable games.","Track the waves lost around recalls, roams and unnecessary mid-game grouping.",conf(peerGames.length),2,"same-role opponents");
+  }
+  if(["ADC","MID","TOP"].includes(primaryRole)&&fightSamples>=8){
+    if(Number(firstAllyFightDeathRate)>=35)push(recentFocus,"teamfights","You are too often the first allied death in fights","Across "+fightSamples+" attended multi-kill fight clusters, you are the first allied death "+Number(firstAllyFightDeathRate).toFixed(0)+"% of the time.","Prioritize second-wave entry: wait for the first key enemy engage/CC to be committed, then use your resources on sustained damage rather than absorbing the opening burst.",conf(fightSamples),1,"order of allied deaths in attended multi-kill fights");
+    else if(Number(preContributionFightDeathRate)>=25)push(recentFocus,"teamfights","Too many fights end before you contribute","You die before a tracked kill/assist contribution in "+Number(preContributionFightDeathRate).toFixed(0)+"% of "+fightSamples+" attended multi-kill fights.","Review approach angles and threat range before the fight begins; being present is not enough if the first enemy action removes you.",conf(fightSamples),1,"contribution timing inside attended multi-kill fights");
+    else if(Number(fightSurvivalRate)>=70&&Number(firstAllyFightDeathRate)<=15)push(highlights,"teamfights","Your fight survival/order is disciplined","You survive "+Number(fightSurvivalRate).toFixed(0)+"% of "+fightSamples+" attended multi-kill fights and are first allied death only "+Number(firstAllyFightDeathRate).toFixed(0)+"% of the time.","Keep protecting uptime; this is especially valuable when your damage/resource share is high.",conf(fightSamples),4,"attended multi-kill fight clusters");
   }
   if(["ADC","MID","TOP"].includes(primaryRole)&&resourceGames.length>=5&&hasNum(damageGoldEfficiency)){
     if(Number(damageGoldEfficiency)<=-4)push(recentFocus,"resource conversion","Resource conversion is below your team investment","Across "+resourceGames.length+" games you average "+Number(avgGoldShare).toFixed(1)+"% of team gold but "+Number(avgDamageShare).toFixed(1)+"% of team champion damage ("+signedText(damageGoldEfficiency,1)+" percentage points).","Focus on turning farm/item advantages into fight uptime: arrive on time, preserve positioning, and avoid deaths before the damage window.",conf(resourceGames.length),2,"own-team damage share versus gold share");
