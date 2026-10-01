@@ -85,6 +85,9 @@ assert.ok(app.includes('SR_MAP_BOUNDS'),'Spatial review must use the shared Summ
 assert.ok(app.includes('map11.png'),'Spatial review must use the Riot/Data Dragon minimap asset');
 assert.ok(html.includes('id="sessionHabitsPanel"'),'Session habits panel must remain in the League page');
 assert.ok(html.includes('id="spatialReview"'),'Spatial review panel must remain in the League page');
+assert.ok(html.includes('value="50" selected'),'50 raw matches must remain the recommended default fetch depth');
+assert.ok(app.includes("value||50"),'frontend fetch fallback must remain 50 raw matches');
+assert.ok(api.includes('body.count||50'),'backend fetch fallback must remain 50 raw matches');
 assert.ok(api.includes('w.objectiveSetup=allObjectives.some'),'Per-ward objective-setup evidence must be preserved');
 assert.ok(app.includes('function worldToMapPoint'));
 assert.ok(app.includes('minX:-120'));
