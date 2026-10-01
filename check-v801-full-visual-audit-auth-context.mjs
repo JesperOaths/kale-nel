@@ -128,4 +128,11 @@ assert.match(runner, /if \(!degradedFixtures\)[\s\S]*?contextualFamilyRoutes\(\)
 assert.match(runner, /FULL_LIVE_VISUAL_AUDIT_DEGRADED fixture provisioning unavailable; artifact is not certification eligible/, 'degraded runner must emit an explicit fail-closed marker');
 assert.match(runner, /if \(degradedFixtures\) \{[\s\S]*?process\.exitCode = 1;/, 'degraded evidence must keep the workflow red even when no individual screenshot is broken');
 
+const degradedRefiner = fs.readFileSync('scripts/refine-degraded-visual-report-v807.mjs', 'utf8');
+assert.match(degradedRefiner, /function routeEventuallyUsesAuthGate/, 'degraded refinement must follow compatibility redirects to the canonical auth-gated route');
+assert.match(degradedRefiner, /declaredRedirectTarget/, 'degraded refinement must inspect declared alias destinations instead of misclassifying Family compatibility pages');
+assert.match(degradedRefiner, /get_player_selector_source_v1\|get_login_active_names_v687\|account_public_state_v687/, 'degraded refinement may suppress only the known login-boundary RPC failures');
+assert.match(degradedRefiner, /record\?\.judgement === 'protected'/, 'Cloudflare-protected routes must remain a distinct protected result');
+assert.match(degradedRefiner, /raw auth\/data-plane failures remain preserved in report\.json/, 'degraded refinement must retain raw failure evidence while normalizing the route judgement');
+
 console.log('PASS v801 full visual audit data-plane-preflight + REST-fixture/auth-context + bounded-retry true-anonymous degraded-mode contract');

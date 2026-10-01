@@ -24,30 +24,69 @@ function trackedRouteUsesAuthGate(route) {
   catch { return false; }
 }
 
+function declaredRedirectTarget(route) {
+  const repoPath = repoPathForRoute(route);
+  if (!repoPath || !fs.existsSync(repoPath)) return '';
+  try {
+    const html = fs.readFileSync(repoPath, 'utf8');
+    const jsTarget = html.match(/(?:window\.)?location\.replace\(\s*(['"])([^'"]+)\1\s*\)/i)?.[2] || '';
+    const metaTarget = html.match(/<meta[^>]+http-equiv=["']refresh["'][^>]+content=["'][^"']*?url\s*=\s*([^"'\s>]+)[^"']*["']/i)?.[1] || '';
+    const raw = jsTarget || metaTarget;
+    if (!raw) return '';
+    const base = new URL(String(route || '').replace(/^\/+/, ''), 'https://kalenel.nl/');
+    const target = new URL(raw, base);
+    if (target.hostname !== 'kalenel.nl') return '';
+    return target.pathname.replace(/^\/+/, '');
+  } catch { return ''; }
+}
+
+function routeEventuallyUsesAuthGate(route, seen = new Set()) {
+  const repoPath = repoPathForRoute(route);
+  if (!repoPath || seen.has(repoPath)) return false;
+  seen.add(repoPath);
+  if (trackedRouteUsesAuthGate(route)) return true;
+  const target = declaredRedirectTarget(route);
+  if (!target) return false;
+  return routeEventuallyUsesAuthGate(target, seen);
+}
+
 function finalPathname(finalUrl) {
   try { return new URL(String(finalUrl || '')).pathname; }
   catch { return ''; }
 }
 
-function onlyRedirectNoise(record) {
+function onlyExpectedDegradedLoginNoise(record) {
   const reasons = Array.isArray(record?.reasons) ? record.reasons : [];
-  if (!reasons.every((reason) => /^\d+ failed request\(s\)$/.test(String(reason || '').trim()))) return false;
+  const allowedReason = (reason) => {
+    const text = String(reason || '').trim();
+    return /^\d+ failed request\(s\)$/.test(text)
+      || /^auth gate did not settle within \d+ms \(last state (?:missing|checking)\)$/.test(text);
+  };
+  if (!reasons.every(allowedReason)) return false;
 
-  const failedRequests = Array.isArray(record?.failed_requests) ? record.failed_requests : [];
-  return failedRequests.every((request) => /:: net::ERR_ABORTED$/.test(String(request || '').trim()));
+  const expectedEndpoint = /\/rest\/v1\/rpc\/(?:get_player_selector_source_v1|get_login_active_names_v687|account_public_state_v687)(?:\?|$)/i;
+  const requestNoise = [
+    ...(Array.isArray(record?.failed_requests) ? record.failed_requests : []),
+    ...(Array.isArray(record?.http_errors) ? record.http_errors : []),
+  ];
+  if (!requestNoise.every((entry) => /:: net::ERR_ABORTED$/.test(String(entry || '').trim()) || expectedEndpoint.test(String(entry || '')))) return false;
+
+  const consoleErrors = Array.isArray(record?.console_errors) ? record.console_errors : [];
+  const pageErrors = Array.isArray(record?.page_errors) ? record.page_errors : [];
+  return consoleErrors.length === 0 && pageErrors.length === 0;
 }
 
 let refined = 0;
 for (const record of report.records) {
   if (record?.kind !== 'tracked') continue;
-  if (!trackedRouteUsesAuthGate(record?.route)) continue;
+  if (!routeEventuallyUsesAuthGate(record?.route)) continue;
   if (finalPathname(record?.final_url) !== '/login.html') continue;
-  if (record?.judgement === 'broken' || record?.judgement === 'protected') continue;
-  if (!onlyRedirectNoise(record)) continue;
+  if (record?.judgement === 'protected') continue;
+  if (!onlyExpectedDegradedLoginNoise(record)) continue;
 
   record.judgement = 'login-gated';
   record.anonymous_login_gate = true;
-  record.reasons = ['degraded anonymous route correctly redirected to login; raw failures are redirect-aborted only'];
+  record.reasons = ['degraded anonymous route correctly reached the login boundary; raw auth/data-plane failures remain preserved in report.json'];
   refined += 1;
 }
 
