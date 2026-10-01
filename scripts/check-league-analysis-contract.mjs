@@ -122,6 +122,8 @@ ok(backend.includes('playerKillAssists')&&backend.includes('playerDeaths'), 'roa
 ok(backend.includes('e.eventLane===homeLane')&&backend.includes('homeLaneStructuresLost'), 'roam structural cost must be scoped to the player home lane');
 ok(backend.includes('supportRoamsHurtingAdc'), 'support roams must aggregate allied-ADC lane-cost evidence');
 ok(backend.includes('objectiveFamilyStats:{}')&&backend.includes('objectiveFamilySummary'), 'objective-family control/presence must remain exported');
+ok(backend.includes('enemyTeamId=Number(teamId)===100?200:Number(teamId)===200?100:null'), 'enemy objective control must derive from Riot team identity');
+ok(!backend.includes('enemyUnits=Number(opp?window.ownerCounts'), 'objective-family enemy control must not depend on direct-role matching');
 ok(backend.includes('familyRaw==="DRAGON"&&memberSubtypes.some((x:any)=>x.includes("ELDER"))?"ELDER_DRAGON"'), 'Elder Dragon must remain distinguishable when Riot subtype supports it');
 ok(backend.includes('objectiveSetupClears'), 'objective-setup ward clears must remain measurable');
 ok(backend.includes('controlWardPurchases'), 'Control Ward purchases must remain separate from placement counts');
