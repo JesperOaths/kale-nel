@@ -38,7 +38,12 @@
   let lastValidation = null;
   const VALIDATION_CACHE_MS = 5000;
 
-  function headers(){ return { apikey: SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }; }
+  function headers(){
+    if (typeof cfg.publicApiHeaders === 'function') return cfg.publicApiHeaders({ 'Content-Type':'application/json', Accept:'application/json' });
+    const out={apikey:SUPABASE_KEY,'Content-Type':'application/json',Accept:'application/json'};
+    if(/^[^.]+\.[^.]+\.[^.]+$/.test(SUPABASE_KEY)) out.Authorization=`Bearer ${SUPABASE_KEY}`;
+    return out;
+  }
   async function parse(res){
     const txt = await res.text();
     let data = null;
