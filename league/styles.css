@@ -32,7 +32,7 @@ body{
   color:var(--ink);
   background:
     linear-gradient(rgba(244,240,232,.82),rgba(244,240,232,.92)),
-    url('/site-bg-desktop.webp') 50% -100px/cover fixed no-repeat,
+    url('/site-bg-desktop.webp') 50% 0/100% auto no-repeat,
     var(--paper);
 }
 button,input,select{font:inherit}
@@ -50,7 +50,6 @@ a{color:inherit}
   border-radius:30px;
   background:rgba(255,251,245,.94);
   box-shadow:var(--shadow);
-  backdrop-filter:blur(6px);
 }
 .site-header{
   display:flex;
