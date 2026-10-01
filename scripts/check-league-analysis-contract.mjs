@@ -57,6 +57,8 @@ ok(backend.includes('Number(d.tMs)-Number(v.tMs)<=20000'), 'vision-action death 
 ok(backend.includes('dist2(pos,v)<=2500*2500'), 'vision-action death spatial radius must remain 2500 units');
 ok(backend.includes('function deathArea('), 'spatial death-context classification must remain in analyzer');
 ok(backend.includes('sideLaneRisk'), 'post-lane side-lane timing model must remain in analyzer');
+ok(backend.includes('postImpactRisk'), 'post-play give-back model must remain in analyzer');
+ok(backend.includes('Number(d.tMs)-Number(x.tMs)<=30000'), 'post-play give-back window must remain 30 seconds');
 ok(backend.includes('alliesNear===0'), 'isolated side-lane deaths must require no nearby ally');
 ok(backend.includes('d.tMs+90000'), 'pre-objective side-lane window must remain 90 seconds');
 ok(backend.includes('peer_rank_json'), 'same-role peer rank cache must remain available');
