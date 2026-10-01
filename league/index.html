@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends playstyle analysis with evidence-backed Last-20 coaching and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261001-league-web-v100">
+  <link rel="stylesheet" href="/league/styles.css?v=20261001-league-web-v101">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817"></script>
 </head>
@@ -130,8 +130,8 @@
       </section>
 
       <div id="report" hidden>
-        <section class="panel report-hero">
-          <div>
+        <section class="panel report-hero" id="overview">
+          <div class="report-identity">
             <p class="eyebrow">Player overview</p>
             <h2 id="reportTitle">—</h2>
             <p class="report-sub" id="reportSubtitle">—</p>
@@ -142,127 +142,196 @@
           </div>
         </section>
 
+        <nav class="report-jump-nav" aria-label="Report sections">
+          <a href="#overview">Overview</a>
+          <a href="#rank-comparison">Rank comparison</a>
+          <a href="#lane-economy">Lane & economy</a>
+          <a href="#decisions">Fights & objectives</a>
+          <a href="#last20">Games</a>
+          <a href="#spatialReview">Map</a>
+          <a href="#technical-analysis">Technical detail</a>
+        </nav>
+
+        <section class="panel quick-read-panel">
+          <div class="section-head">
+            <div><p class="eyebrow">Read this first</p><h2>What the Last 20 actually says</h2></div>
+            <span class="section-hint">Every comparison below is directional: green is favorable, red is unfavorable, grey is too close or too thin to call.</span>
+          </div>
+          <div class="quick-read-grid" id="quickRead"></div>
+        </section>
+
         <section class="kpi-grid" id="kpiGrid" aria-label="Role-aware key performance indicators"></section>
 
-        <section class="two-col">
-          <article class="panel">
-            <div class="section-head"><div><p class="eyebrow">Coaching</p><h2>Top improvement priorities</h2></div></div>
+        <section class="visual-benchmark-grid" id="rank-comparison">
+          <article class="panel radar-panel">
+            <div class="section-head">
+              <div><p class="eyebrow">ADC rank comparison</p><h2>Your matchup shape by opponent rank</h2></div>
+              <span class="section-hint">50 = even with the opposing ADC. Above 50 means you outperformed that rank band on that axis.</span>
+            </div>
+            <div class="radar-layout">
+              <div id="radarChart" class="radar-chart" aria-live="polite"></div>
+              <div>
+                <div id="radarLegend" class="radar-legend"></div>
+                <p class="radar-note" id="radarNote"></p>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel visual-summary-panel">
+            <div class="section-head">
+              <div><p class="eyebrow">What you played</p><h2>Champion & item snapshot</h2></div>
+              <span class="section-hint">Pulled from the actual analyzed games.</span>
+            </div>
+            <div class="visual-summary-block">
+              <h3>Most played champions</h3>
+              <div id="championVisuals" class="game-visual-strip"></div>
+            </div>
+            <div class="visual-summary-block">
+              <h3>Most common first major items</h3>
+              <div id="itemVisuals" class="game-visual-strip"></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="coaching-layout">
+          <article class="panel coaching-panel">
+            <div class="section-head"><div><p class="eyebrow">Most important next</p><h2>Improvement priorities</h2></div></div>
             <div id="recentFocus" class="bullet-list"></div>
           </article>
-          <article class="panel">
-            <div class="section-head"><div><p class="eyebrow">What is working</p><h2>Strengths to preserve</h2></div></div>
+          <article class="panel strength-panel">
+            <div class="section-head"><div><p class="eyebrow">Keep doing this</p><h2>Strengths worth preserving</h2></div></div>
             <div id="overallHighlights" class="bullet-list"></div>
           </article>
         </section>
 
+        <section class="panel practice-panel">
+          <div class="section-head">
+            <div><p class="eyebrow">Turn insight into play</p><h2>Next 5 games</h2></div>
+            <span class="section-hint">A short practice plan based on the strongest repeatable evidence.</span>
+          </div>
+          <div class="practice-grid" id="practicePlan"></div>
+        </section>
+
+        <section class="panel economy-panel" id="lane-economy">
+          <div class="section-head">
+            <div><p class="eyebrow">Lane & economy</p><h2>Are you leaving lane ahead or behind?</h2></div>
+            <span class="section-hint">Signed charts use a fixed neutral line at zero. Positive space is green; negative space is red.</span>
+          </div>
+          <div class="chart-grid" id="chartGrid"></div>
+          <div class="hidden-charts" id="hiddenCharts" hidden></div>
+        </section>
+
+        <section class="panel decisions-panel" id="decisions">
+          <div class="section-head">
+            <div><p class="eyebrow">Fights, objectives & risk</p><h2>How your decisions convert into game impact</h2></div>
+            <span class="section-hint">These are outcome-linked behavior signals, not isolated scoreboard totals.</span>
+          </div>
+          <div class="decision-metric-grid" id="decisionMetrics"></div>
+          <div id="objectiveDiagnosisSummary" class="decision-explanation"></div>
+        </section>
+
         <section class="panel" id="sessionHabitsPanel" hidden>
           <div class="section-head">
-            <div><p class="eyebrow">Session patterns</p><h2>Performance across a play session</h2></div>
-            <span class="muted">Descriptive patterns only — not a psychological diagnosis</span>
+            <div><p class="eyebrow">Session patterns</p><h2>Does performance change later in a session?</h2></div>
+            <span class="section-hint">Descriptive pattern only — never treated as a diagnosis.</span>
           </div>
           <div class="quality-grid" id="sessionHabits"></div>
           <div class="source-note" id="sessionHabitsNote"></div>
         </section>
 
-        <section class="panel practice-panel">
-          <div class="section-head">
-            <div><p class="eyebrow">Practice plan</p><h2>Next 5 games</h2></div>
-            <span class="muted">Measurable targets appear only when the evidence supports them.</span>
-          </div>
-          <div class="practice-grid" id="practicePlan"></div>
-        </section>
-
-        <section class="panel" id="replayReviewPanel" hidden>
-          <div class="section-head">
-            <div><p class="eyebrow">Replay review</p><h2>Highest-value moments to review</h2></div>
-            <span class="muted">Ranked by supported consequence and decision value · max 2 moments per match</span>
-          </div>
-          <div class="review-queue" id="replayReviewQueue"></div>
-        </section>
-
         <section class="panel progress-comparison-panel" id="progressComparisonPanel" hidden>
           <div class="section-head">
-            <div><p class="eyebrow">Development</p><h2>Since the previous distinct analysis</h2></div>
+            <div><p class="eyebrow">Development</p><h2>What changed since the previous analysis?</h2></div>
             <span class="muted" id="previousAnalysisDate">—</span>
           </div>
           <div class="progress-comparison-grid" id="progressComparison"></div>
           <div class="target-outcomes" id="practiceOutcome"></div>
         </section>
 
-        <section class="panel">
+        <section class="panel" id="replayReviewPanel" hidden>
           <div class="section-head">
-            <div><p class="eyebrow">Last 20</p><h2>Per-game evidence</h2></div>
+            <div><p class="eyebrow">Replay review</p><h2>Highest-value moments to rewatch</h2></div>
+            <span class="section-hint">At most two moments per game, ranked by supported consequence.</span>
+          </div>
+          <div class="review-queue" id="replayReviewQueue"></div>
+        </section>
+
+        <section class="panel" id="last20">
+          <div class="section-head">
+            <div><p class="eyebrow">Game evidence</p><h2>Your latest eligible games</h2></div>
             <span class="muted" id="gameCountLabel">—</span>
           </div>
+          <p class="section-intro">Start with the colored lane/economy cells, then open a match only when something looks unusual. This keeps the table useful instead of turning it into a wall of numbers.</p>
           <div class="table-wrap">
             <table class="games-table">
-              <thead><tr><th><button class="table-sort" type="button" data-game-sort="recent" aria-label="Sort by recency">#</button></th><th><button class="table-sort" type="button" data-game-sort="champion">Champion</button></th><th><button class="table-sort" type="button" data-game-sort="role">Role</button></th><th><button class="table-sort" type="button" data-game-sort="result">Result</button></th><th><button class="table-sort" type="button" data-game-sort="kda">K / D / A</button></th><th><button class="table-sort" type="button" data-game-sort="kp">KP</button></th><th><button class="table-sort" type="button" data-game-sort="cs">CS/min</button></th><th><button class="table-sort" type="button" data-game-sort="dpm">DPM</button></th><th><button class="table-sort" type="button" data-game-sort="gold15">Δ Gold @15</button></th></tr></thead>
+              <thead><tr><th><button class="table-sort" type="button" data-game-sort="recent" aria-label="Sort by recency">#</button></th><th><button class="table-sort" type="button" data-game-sort="champion">Champion</button></th><th><button class="table-sort" type="button" data-game-sort="role">Role</button></th><th><button class="table-sort" type="button" data-game-sort="result">Result</button></th><th><button class="table-sort" type="button" data-game-sort="kda">K / D / A</button></th><th><button class="table-sort" type="button" data-game-sort="kp">KP</button></th><th><button class="table-sort" type="button" data-game-sort="cs">CS/min</button></th><th><button class="table-sort" type="button" data-game-sort="dpm">DPM</button></th><th><button class="table-sort" type="button" data-game-sort="gold15">Gold @15 vs ADC</button></th></tr></thead>
               <tbody id="gamesBody"></tbody>
             </table>
           </div>
         </section>
 
-        <section class="panel">
+        <section class="panel champion-context-panel">
           <div class="section-head">
-            <div><p class="eyebrow">Trends</p><h2>Last-20 charts</h2></div>
-            <span class="muted">Charts hide cleanly when fewer than 3 valid points exist.</span>
+            <div><p class="eyebrow">Champion context</p><h2>What changes with pick and matchup?</h2></div>
+            <span class="section-hint">Small samples are shown as context, not treated as proof.</span>
           </div>
-          <div class="chart-grid" id="chartGrid"></div>
-          <div class="hidden-charts" id="hiddenCharts" hidden></div>
+          <div class="champion-context-grid">
+            <article>
+              <h3>Role sample</h3>
+              <div id="roleBreakdown" class="breakdown-grid"></div>
+            </article>
+            <article>
+              <h3>Champion sample</h3>
+              <div id="championBreakdown" class="breakdown-grid"></div>
+            </article>
+          </div>
+          <div class="matchup-context">
+            <h3>Repeated opposing champions</h3>
+            <div id="matchupBreakdown" class="breakdown-grid"></div>
+          </div>
         </section>
 
         <section class="panel" id="spatialReview">
           <div class="section-head">
-            <div><p class="eyebrow">Spatial review</p><h2>Where the behavior happens</h2></div>
-            <span class="muted">Hover points for event context.</span>
+            <div><p class="eyebrow">Map review</p><h2>Where risky deaths and vision happen</h2></div>
+            <span class="section-hint">The map loads only when you scroll near this section.</span>
           </div>
           <div class="spatial-grid">
             <article class="spatial-card">
               <div class="spatial-card-head"><div><strong>High-risk deaths</strong><small>Lead-protection deaths are ringed.</small></div><span id="deathMapMeta">—</span></div>
               <div id="deathMap"></div>
-              <div class="map-legend"><span><i class="legend-dot death"></i>High-risk death</span><span><i class="legend-dot death lead"></i>While ≥500g ahead</span></div>
+              <div class="map-legend"><span><i class="legend-dot death"></i>High-risk death</span><span><i class="legend-dot death lead"></i>While ≥500g ahead vs role</span></div>
             </article>
             <article class="spatial-card">
-              <div class="spatial-card-head"><div><strong>Ward placement</strong><small>Offensive, river and defensive territory.</small></div><span id="wardMapMeta">—</span></div>
+              <div class="spatial-card-head"><div><strong>Ward placement</strong><small>Offensive, river, defensive and objective setup.</small></div><span id="wardMapMeta">—</span></div>
               <div id="wardMap"></div>
               <div class="map-legend"><span><i class="legend-dot ward offensive"></i>Offensive</span><span><i class="legend-dot ward river"></i>River</span><span><i class="legend-dot ward defensive"></i>Defensive</span><span><i class="legend-dot ward setup"></i>Objective setup</span></div>
             </article>
           </div>
-          <p class="muted tiny spatial-note" id="spatialProjectionNote"></p>
+          <p class="muted spatial-note" id="spatialProjectionNote"></p>
         </section>
 
-        <section class="two-col">
-          <article class="panel">
-            <div class="section-head"><div><p class="eyebrow">Advanced analysis</p><h2>Behavioral dimensions</h2></div></div>
-            <div class="metric-list" id="advancedMetrics"></div>
-          </article>
-          <article class="panel">
-            <div class="section-head"><div><p class="eyebrow">Comparative evidence</p><h2>Peers, conversion & win/loss patterns</h2></div></div>
-            <div class="metric-list" id="benchmarkMetrics"></div>
-          </article>
+        <section class="panel technical-shell" id="technical-analysis">
+          <details id="technicalMetricsDetails">
+            <summary>
+              <span><b>Full technical analysis</b><small>Open the exhaustive metric dictionary, peer evidence and model diagnostics</small></span>
+              <strong>Advanced</strong>
+            </summary>
+            <div class="technical-grid">
+              <article>
+                <div class="section-head"><div><p class="eyebrow">Behavioral dimensions</p><h2>Detailed metrics</h2></div></div>
+                <div class="metric-list" id="advancedMetrics"><div class="technical-placeholder">Open this section to render the full metric set.</div></div>
+              </article>
+              <article>
+                <div class="section-head"><div><p class="eyebrow">Comparative evidence</p><h2>Peers, conversion & trends</h2></div></div>
+                <div class="metric-list" id="benchmarkMetrics"><div class="technical-placeholder">Open this section to render the full benchmark set.</div></div>
+              </article>
+            </div>
+          </details>
         </section>
 
-        <section class="two-col">
-          <article class="panel">
-            <div class="section-head"><div><p class="eyebrow">Roles</p><h2>Role-specific sample</h2></div></div>
-            <div id="roleBreakdown" class="breakdown-grid"></div>
-          </article>
-          <article class="panel">
-            <div class="section-head"><div><p class="eyebrow">Champions</p><h2>Champion-specific sample</h2></div></div>
-            <div id="championBreakdown" class="breakdown-grid"></div>
-          </article>
-        </section>
-
-        <section class="panel">
-          <div class="section-head">
-            <div><p class="eyebrow">Matchups</p><h2>Repeated opponent matchups</h2></div>
-            <span class="muted">Shown only with at least 3 primary-role games against the same opposing champion</span>
-          </div>
-          <div id="matchupBreakdown" class="breakdown-grid"></div>
-        </section>
-
-        <section class="panel">
-          <div class="section-head"><div><p class="eyebrow">Trust</p><h2>Data quality & lineage</h2></div></div>
+        <section class="panel trust-panel">
+          <div class="section-head"><div><p class="eyebrow">Trust & coverage</p><h2>How much evidence supports this report?</h2></div></div>
           <div class="quality-grid" id="qualityGrid"></div>
           <div class="source-note" id="sourceNote"></div>
         </section>
@@ -276,6 +345,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261001-league-web-v100" defer></script>
+  <script src="/league/app.js?v=20261001-league-web-v101" defer></script>
 </body>
 </html>
