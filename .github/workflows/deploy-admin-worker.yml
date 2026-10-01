@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/deploy-admin-worker.yml'
       - 'cloudflare/workers/admin-gate/**'
+      - 'VERSION'
       - 'admin*.html'
       - '*_vault.html'
       - 'vault.html'
@@ -175,12 +176,13 @@ jobs:
           import fs from 'node:fs';
           const base = 'cloudflare/workers/admin-gate/static';
           const manifestPath = `${base}/admin-worker-manifest.json`;
-          const expected = new Map([
-            ['admin_shop_orders.html', 'v874'],
-            ['admin_shop_connection.html', 'v828'],
-            ['admin_shop_analytics.html', 'v843'],
-            ['admin_shop_operations.html', 'v858'],
-          ]);
+          const siteVersion = fs.readFileSync('VERSION', 'utf8').trim();
+          const expected = [
+            'admin_shop_orders.html',
+            'admin_shop_connection.html',
+            'admin_shop_analytics.html',
+            'admin_shop_operations.html',
+          ];
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
           const expectedMode = process.env.ADMIN_SOURCE_REPOSITORY ? 'external-private' : 'public-fallback';
           if (manifest.admin_source_mode !== expectedMode) {
@@ -189,15 +191,18 @@ jobs:
           if (expectedMode === 'external-private' && manifest.migration_ready !== true) {
             throw new Error('Private admin source was configured but migration_ready is not true');
           }
-          for (const [name, version] of expected) {
+          for (const name of expected) {
             const page = `${base}/${name}`;
             if (!fs.existsSync(page)) throw new Error(`${name} missing from Worker asset bundle`);
             const html = fs.readFileSync(page, 'utf8');
-            if (!html.includes(version)) throw new Error(`${name} asset is not ${version}`);
+            const declaration = `GEJAST_PAGE_VERSION='${siteVersion}'`;
+            const watermark = `${siteVersion} - Made by Bruis`;
+            if (!html.includes(declaration)) throw new Error(`${name} does not declare site version ${siteVersion}`);
+            if (!html.includes(watermark)) throw new Error(`${name} does not show site version watermark ${siteVersion}`);
             if (!manifest.protected_entrypoints.includes(name)) {
               throw new Error(`${name} missing from protected entrypoint manifest`);
             }
-            console.log(`Verified ${page} at ${version} and protected manifest entry.`);
+            console.log(`Verified ${page} at site-wide ${siteVersion} and protected manifest entry.`);
           }
           NODE
 
@@ -225,7 +230,8 @@ jobs:
           [[ "$admin_status" == '401' ]] || { echo "Expected protected admin page to return 401 anonymously, got $admin_status" >&2; cat "$admin_headers" >&2; exit 1; }
           grep -qi '^cache-control: no-store' "$admin_headers" || { echo 'Missing no-store on protected admin response' >&2; exit 1; }
           grep -qi 'Admin login vereist' "$admin_body" || { echo 'Protected admin login body missing' >&2; exit 1; }
-          grep -Eqi 'v861[[:space:]]*-[[:space:]]*Made by Bruis' "$admin_body" || { echo 'Protected admin login page version watermark missing or stale' >&2; cat "$admin_body" >&2; exit 1; }
+          site_version="$(tr -d '\r\n' < VERSION)"
+          grep -Eqi "${site_version}[[:space:]]*-[[:space:]]*Made by Bruis" "$admin_body" || { echo "Protected admin login page site-version watermark missing or stale; expected ${site_version}" >&2; cat "$admin_body" >&2; exit 1; }
           grep -qi '^x-kalenel-admin-build: v861-page-version-watermark' "$admin_headers" || { echo 'Live admin Worker build header is stale' >&2; cat "$admin_headers" >&2; exit 1; }
 
           connection_headers="$(mktemp)"
@@ -250,4 +256,4 @@ jobs:
           [[ "$login_status" == '302' ]] || { echo "Expected OAuth login start to return 302, got $login_status" >&2; cat "$login_headers" >&2; exit 1; }
           grep -qi '^location: https://github\.com/login/oauth/authorize' "$login_headers" || { echo 'GitHub OAuth entrypoint missing after deployment' >&2; cat "$login_headers" >&2; exit 1; }
 
-          echo 'Protected v858/v828/v843/v858 admin routes, apex redirect, and OAuth entrypoint verified.'
+          echo "Protected admin routes, site-wide ${site_version} watermark, apex redirect, and OAuth entrypoint verified."
