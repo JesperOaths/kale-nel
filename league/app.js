@@ -1647,7 +1647,7 @@ function detailsHtml(g,index){
   return '<div class="details-shell">'+matchVisualHeader(g)+judgmentHtml(g)+'<div class="details-tabs">'+['map','macro','resets','vision','roams','fights','phases','deaths','objectives'].map(t=>'<button class="tab-btn '+(state.activeDetailTab===t?'active':'')+'" data-tab="'+t+'" type="button">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div><div class="details-content" data-detail-content>'+detailContent(g,state.activeDetailTab)+'</div></div>';
 }
 function objectiveDiagnosisLabel(key){
-  return ({recent_shop_absence:'Recent-shop absence pattern',late_reset:'Recent-shop absence pattern (legacy report)',pre_objective_death:'Death before the contest',setup_vision:'Setup-vision deficit',arrival_pathing:'Arrival / pathing'})[String(key||'')]||'No supported primary cause';
+  return ({recent_shop_absence:'Recent-shop absence pattern',late_reset:'Recent-shop absence pattern (legacy report)',pre_objective_death:'Death before the contest',setup_vision:'Setup-vision deficit',arrival_pathing:'Arrival / pathing'})[String(key||'')]||'No supported primary explanation';
 }
 function objectiveEvidenceClassLabel(x){
   const key=String(x?.evidenceClass||'');
@@ -1658,8 +1658,9 @@ function objectiveEvidenceClassLabel(x){
 }
 function objectiveDiagnosisHtml(r){
   const d=r?.behaviorSummary?.objectiveDiagnosis||{},causes=Array.isArray(d.causes)?d.causes:[];
-  if(!d.presenceLow&&!causes.length)return '<div class="detail-note">Objective presence is not currently flagged low enough for a root-cause diagnosis.</div>';
-  const primary=d.primaryCause?objectiveDiagnosisLabel(d.primaryCause):'Arrival / pathing remains the unresolved hypothesis';
+  if(!d.presenceLow&&!causes.length)return '<div class="detail-note">Objective presence is not currently flagged low enough for an evidence-based explanation.</div>';
+  const primaryKey=d.primaryExplanation??d.primaryCause;
+  const primary=primaryKey?objectiveDiagnosisLabel(primaryKey):'Arrival / pathing remains the unresolved hypothesis';
   return '<div class="objective-diagnosis"><div class="diagnosis-primary"><span>Highest-confidence supported clue</span><strong>'+esc(primary)+'</strong></div>'+
     (causes.length?'<ol>'+causes.map(x=>'<li><strong>'+esc(x.label||objectiveDiagnosisLabel(x.key))+'</strong><span>'+esc(x.evidence||'')+'</span><small>'+esc(objectiveEvidenceClassLabel(x))+'</small></li>').join('')+'</ol>':
     '<p>No shop/death/vision signal crossed its evidence threshold. Arrival/pathing remains a hypothesis rather than a proven cause.</p>')+
@@ -2025,7 +2026,7 @@ function renderAdvanced(r){
     ['@25 closing-checkpoint comparable games',String(r.behaviorSummary?.checkpointEligibility?.closing25Games??'n/a')],
     ['Team-contested objective presence',fmtPct(a.objectivePresence)],
     ['Team-secured objective presence',fmtPct(a.teamSecuredObjectivePresence??r.behaviorSummary?.teamSecuredObjectiveJoinRate)],
-    ['Objective diagnosis',objectiveDiagnosisLabel(r.behaviorSummary?.objectiveDiagnosis?.primaryCause)],
+    ['Objective explanation',objectiveDiagnosisLabel(r.behaviorSummary?.objectiveDiagnosis?.primaryExplanation??r.behaviorSummary?.objectiveDiagnosis?.primaryCause)],
     ['Early KP · pooled',fmtPct(a.earlyKP)+' · '+String(r.behaviorSummary?.earlyPlayerKillInvolvements??0)+' / '+String(r.behaviorSummary?.earlyTeamKills??0)+' team kills'],
     ['Early KP · mean game rate',fmtPct(r.behaviorSummary?.meanGameEarlyKp)],
     ['Early role solo kills / deaths',String(r.behaviorSummary?.earlyRoleSoloKills??r.behaviorSummary?.pre14RoleSoloKills??0)+' / '+String(r.behaviorSummary?.earlyRoleSoloDeaths??r.behaviorSummary?.pre14RoleSoloDeaths??0)],
