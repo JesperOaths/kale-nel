@@ -34,7 +34,7 @@ async function api(action,payload={}){
 
 function setBusy(on,label){
   state.busy=!!on;
-  ['fetchBtn','analyzeBtn','newProfileBtn','saveProfileBtn','importBtn','testRiotKeyBtn'].forEach(id=>{const n=$(id);if(n)n.disabled=!!on||((id==='fetchBtn'||id==='analyzeBtn')&&!state.profile)||((id==='importBtn')&&(!state.profile||!$('reportFile')?.files?.length))||((id==='testRiotKeyBtn')&&(!state.profile||(!state.serverRiotKey&&!state.riotApiKey)));});
+  ['fetchBtn','analyzeBtn','batchFetchBtn','batchAnalyzeBtn','newProfileBtn','saveProfileBtn','importBtn','testRiotKeyBtn'].forEach(id=>{const n=$(id);if(n)n.disabled=!!on||((id==='fetchBtn'||id==='analyzeBtn')&&!state.profile)||((id==='batchFetchBtn'||id==='batchAnalyzeBtn')&&batchSelectedIds().length===0)||((id==='importBtn')&&(!state.profile||!$('reportFile')?.files?.length))||((id==='testRiotKeyBtn')&&(!state.profile||(!state.serverRiotKey&&!state.riotApiKey)));});
   if(label)$('progressState').textContent=label;
 }
 function setProgress(current,total){
@@ -140,6 +140,18 @@ async function boot(){
   await loadProfiles();
 }
 
+function batchSelectedIds(){
+  return [...($('batchProfiles')?.querySelectorAll('input[data-profile-id]:checked')||[])].map(n=>String(n.dataset.profileId||'')).filter(Boolean);
+}
+function renderBatchProfiles(){
+  const box=$('batchProfiles');if(!box)return;
+  const previous=new Set(batchSelectedIds());
+  box.innerHTML=state.profiles.length?state.profiles.map((p,i)=>{
+    const checked=previous.has(String(p.id))||(!previous.size&&String(p.id)===String(state.profile?.id||state.profiles[0]?.id||''));
+    return '<label class="batch-profile-option"><input type="checkbox" data-profile-id="'+esc(p.id)+'" '+(checked?'checked':'')+'><span>'+esc(p.display_name)+(p.game_name?' · '+esc(p.game_name)+'#'+esc(p.tag_line||''):'')+'</span></label>';
+  }).join(''):'<div class="muted tiny">No saved profiles yet.</div>';
+  box.querySelectorAll('input[data-profile-id]').forEach(n=>n.addEventListener('change',syncButtons));
+}
 async function loadProfiles(selectId){
   const data=await api('profiles_list');
   state.profiles=data.profiles||[];
@@ -147,10 +159,14 @@ async function loadProfiles(selectId){
   sel.innerHTML='<option value="">Choose a profile…</option>'+state.profiles.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.display_name)+(p.game_name?' · '+esc(p.game_name)+'#'+esc(p.tag_line||''):'')+'</option>').join('');
   const id=selectId||(state.profile&&state.profile.id)||state.profiles[0]?.id||'';
   if(id){sel.value=id;await selectProfile(id);}else{state.profile=null;syncButtons();$('cacheState').textContent='No profile';}
+  renderBatchProfiles();syncButtons();
 }
 function syncButtons(){
+  const batchCount=batchSelectedIds().length;
   $('fetchBtn').disabled=state.busy||!state.profile;
   $('analyzeBtn').disabled=state.busy||!state.profile;
+  if($('batchFetchBtn'))$('batchFetchBtn').disabled=state.busy||batchCount===0;
+  if($('batchAnalyzeBtn'))$('batchAnalyzeBtn').disabled=state.busy||batchCount===0;
   $('importBtn').disabled=state.busy||!state.profile||!$('reportFile')?.files?.length;
   $('testRiotKeyBtn').disabled=state.busy||!state.profile||(!state.serverRiotKey&&!state.riotApiKey);
 }
@@ -234,58 +250,88 @@ async function testRiotKey(){
   }finally{setBusy(false);syncButtons();}
 }
 
+async function fetchProfileData(profile,requestedCount){
+  log('Preparing recent match list for '+profile.display_name+'. Queue/duration quality filters are applied later; '+requestedCount+' raw matches requested.');
+  const prep=await api('fetch_prepare',{profile_id:profile.id,count:requestedCount});
+  const ids=prep.match_ids||[],cached=new Set(prep.cached_match_ids||[]);
+  if(!ids.length)throw new Error('Riot returned no recent match IDs.');
+  log(ids.length+' recent matches found for '+profile.display_name+'; '+cached.size+' already cached.');
+  let done=0;
+  for(const id of ids){
+    done++;
+    if(cached.has(id)){
+      log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · cache hit','ok');setProgress(done,ids.length);continue;
+    }
+    log('['+done+'/'+ids.length+'] '+profile.display_name+' · fetching match + timeline '+id+'…');
+    try{
+      const one=await api('fetch_one',{run_id:prep.run_id,match_id:id});
+      if(one.timeline_available)log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · match + timeline cached','ok');
+      else log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · match cached, timeline unavailable: '+(one.timeline_error||'unknown'),'bad');
+    }catch(e){log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · '+e.message,'bad');}
+    setProgress(done,ids.length);
+    await sleep(100);
+  }
+  const finish=await api('fetch_finish',{run_id:prep.run_id});
+  if(hasNum(finish?.dominant_queue_id))log(profile.display_name+' · comparable queue '+String(finish.dominant_queue_id)+' · '+String(finish.comparable_cached_games??finish.peer_rank_target_count??0)+' comparable cached games · '+String(finish.peer_rank_target_count??0)+' final-sample peer-rank targets · '+String(finish.peer_rank_backfilled??0)+' rank snapshots backfilled.','ok');
+  if(finish?.recommend_deeper_cache)log(profile.display_name+' · only '+String(finish.comparable_cached_games??0)+' comparable cached games are currently available after map/duration/queue filtering. Use the 100-match depth on the next update.','bad');
+  return{prep,finish};
+}
+async function analyzeProfileData(profile){
+  log(profile.display_name+' · loading cached matches only — no new match fetch is requested.');
+  const d=await api('analyze_basic',{profile_id:profile.id});
+  log(profile.display_name+' · deterministic web analysis generated for '+(d.report?.dataQuality?.analyzedGames||0)+' games.','ok');
+  return d;
+}
 async function fetchMatches(){
   if(!state.profile||state.busy)return;
   clearLog();setBusy(true,'Fetching');statusPill('Fetching','warn');
   try{
-    log('Preparing recent match list for '+state.profile.display_name+'. Queue/duration quality filters are applied later; 50 raw matches is the recommended default for a full comparable Last 20.');
     const requestedCount=Math.max(20,Math.min(100,Number($('fetchCount').value||50)));
-    const prep=await api('fetch_prepare',{profile_id:state.profile.id,count:requestedCount});
+    const {prep}=await fetchProfileData(state.profile,requestedCount);
     if(prep.profile){state.profile=Object.assign({},state.profile,prep.profile);const rs=state.profile.rank_snapshot;$('sourceState').textContent=rs&&rs.tier?'Riot · '+rs.tier+' '+(rs.rank||''):'Resolved Riot ID';}
-    const ids=prep.match_ids||[],cached=new Set(prep.cached_match_ids||[]);
-    if(!ids.length)throw new Error('Riot returned no recent match IDs.');
-    log(ids.length+' recent matches found; '+cached.size+' already cached.');
-    let done=0;
-    for(const id of ids){
-      done++;
-      if(cached.has(id)){
-        log('['+done+'/'+ids.length+'] '+id+' · cache hit','ok');setProgress(done,ids.length);continue;
-      }
-      log('['+done+'/'+ids.length+'] Fetching match + timeline '+id+'…');
-      try{
-        const one=await api('fetch_one',{run_id:prep.run_id,match_id:id});
-        if(one.timeline_available)log('['+done+'/'+ids.length+'] '+id+' · match + timeline cached','ok');
-        else log('['+done+'/'+ids.length+'] '+id+' · match cached, timeline unavailable: '+(one.timeline_error||'unknown'),'bad');
-      }catch(e){log('['+done+'/'+ids.length+'] '+id+' · '+e.message,'bad');}
-      setProgress(done,ids.length);
-      await sleep(100);
-    }
-    const finish=await api('fetch_finish',{run_id:prep.run_id});
-    if(hasNum(finish?.dominant_queue_id))log('Comparable queue context: '+String(finish.dominant_queue_id)+' · '+String(finish.comparable_cached_games??finish.peer_rank_target_count??0)+' comparable cached games · '+String(finish.peer_rank_target_count??0)+' final-sample peer-rank targets · '+String(finish.peer_rank_backfilled??0)+' rank snapshots backfilled.','ok');
-    if(finish?.recommend_deeper_cache)log('Only '+String(finish.comparable_cached_games??0)+' comparable cached games are currently available after map/duration/queue filtering. Use the 100-match cache depth on the next update to give the Last 20 a better chance to fill completely.','bad');
     log('Fetch/update complete. Analyze remains a separate cached-data operation.','ok');
-    statusPill('Fetch complete');
-    await loadCacheStatus();
+    statusPill('Fetch complete');await loadCacheStatus();
   }catch(e){log('Fetch failed: '+e.message,'bad');statusPill('Fetch failed','error');}
   finally{setBusy(false);syncButtons();}
 }
-
 async function analyze(){
   if(!state.profile||state.busy)return;
   clearLog();setBusy(true,'Analyzing');statusPill('Analyzing','warn');setProgress(20,100);
   try{
-    log('Loading cached matches only — no new match fetch is requested.');
-    const d=await api('analyze_basic',{profile_id:state.profile.id});
+    const d=await analyzeProfileData(state.profile);
     setProgress(100,100);
-    log('Deterministic web analysis generated for '+(d.report?.dataQuality?.analyzedGames||0)+' games.','ok');
     if(d.report?.advanced?.currentSourcePortRequired)log('Advanced Bruisienator formulas are intentionally marked unavailable until the current source package is supplied.');
     renderReport(d.report,'web_behavior');
     try{const history=await api('report_latest',{profile_id:state.profile.id});renderProgressComparison(d.report,history.previous?.report_data||null,history.previous?.created_at||null);}catch(_){$('progressComparisonPanel').hidden=true;}
-    $('analysisState').textContent=fmtDate(d.created_at);
-    $('sourceState').textContent='Behavioral analyzer';
-    statusPill('Analysis complete');
+    $('analysisState').textContent=fmtDate(d.created_at);$('sourceState').textContent='Behavioral analyzer';statusPill('Analysis complete');
   }catch(e){log('Analysis failed: '+e.message,'bad');statusPill('Analysis failed','error');}
   finally{setBusy(false);syncButtons();}
+}
+async function runBatch(kind){
+  if(state.busy)return;
+  const ids=batchSelectedIds(),profiles=ids.map(id=>state.profiles.find(p=>String(p.id)===String(id))).filter(Boolean);
+  if(!profiles.length)return;
+  const originalId=state.profile?.id||'',requestedCount=Math.max(20,Math.min(100,Number($('fetchCount').value||50)));
+  clearLog();setBusy(true,kind==='fetch'?'Batch fetching':'Batch analyzing');statusPill(kind==='fetch'?'Batch fetching':'Batch analyzing','warn');
+  let ok=0,failed=0;
+  try{
+    log('Starting sequential '+(kind==='fetch'?'fetch/update':'analysis')+' for '+profiles.length+' selected profile'+(profiles.length===1?'':'s')+'.');
+    for(let i=0;i<profiles.length;i++){
+      const p=profiles[i];log('=== ['+(i+1)+'/'+profiles.length+'] '+p.display_name+' ===');
+      try{
+        if(kind==='fetch')await fetchProfileData(p,requestedCount);
+        else await analyzeProfileData(p);
+        ok++;
+      }catch(e){failed++;log(p.display_name+' failed: '+e.message,'bad');}
+      setProgress(i+1,profiles.length);
+    }
+    log('Batch complete · '+ok+' succeeded · '+failed+' failed.',failed?'bad':'ok');
+    statusPill(failed?(ok?'Batch partially complete':'Batch failed'):'Batch complete',failed?'warn':'neutral');
+  }finally{
+    setBusy(false);
+    if(originalId){await loadProfiles(originalId);}else{await loadProfiles();}
+    syncButtons();
+  }
 }
 
 function normalizeReport(r){
@@ -1064,6 +1110,8 @@ $('saveProfileBtn').addEventListener('click',saveProfile);
 $('testRiotKeyBtn').addEventListener('click',testRiotKey);
 $('fetchBtn').addEventListener('click',fetchMatches);
 $('analyzeBtn').addEventListener('click',analyze);
+$('batchFetchBtn').addEventListener('click',()=>runBatch('fetch'));
+$('batchAnalyzeBtn').addEventListener('click',()=>runBatch('analyze'));
 $('reportFile').addEventListener('change',syncButtons);
 $('importBtn').addEventListener('click',importReport);
 $('exportBtn').addEventListener('click',exportReport);
