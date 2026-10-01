@@ -159,7 +159,7 @@
           </div>
           <div class="quick-read-grid" id="quickRead"></div>
           <div class="recent-pulse">
-            <div class="recent-pulse-head"><div><span>Recent pulse</span><strong>Latest 5 vs previous 15</strong></div><small>Descriptive split only. It is not treated as a trend unless the underlying evidence is strong enough elsewhere in the report.</small></div>
+            <div class="recent-pulse-head"><div><span>Recent pulse</span><strong>Latest 5 vs earlier games</strong></div><small>Actual valid-game counts are shown on each card. This is descriptive only, not proof of a trend.</small></div>
             <div class="pulse-grid" id="recentPulse"></div>
           </div>
         </section>
@@ -223,6 +223,10 @@
             <span class="section-hint">Signed charts use a fixed neutral line at zero. Positive space is green; negative space is red.</span>
           </div>
           <div class="chart-grid" id="chartGrid"></div>
+          <div class="consistency-summary-wrap">
+            <div class="section-subhead"><div><span>Consistency snapshot</span><strong>What does a typical game look like?</strong></div><small>Medians and the middle 50% reduce the influence of one extreme match. Favorable / close / unfavorable counts use the explicit bands shown on each card.</small></div>
+            <div class="quality-grid consistency-grid" id="consistencySummary"></div>
+          </div>
           <div class="hidden-charts" id="hiddenCharts" hidden></div>
         </section>
 
@@ -266,10 +270,26 @@
             <div><p class="eyebrow">Game evidence</p><h2>Your latest eligible games</h2></div>
             <span class="muted" id="gameCountLabel">—</span>
           </div>
-          <p class="section-intro">Start with the colored lane/economy cells, then open a match only when something looks unusual. This keeps the table useful instead of turning it into a wall of numbers.</p>
+          <p class="section-intro">Start with the colored lane/economy cells, then open a match only when something looks unusual. Filters change only the visible rows; they never change the report calculations.</p>
+          <div class="game-filter-bar">
+            <div class="game-filter-chips" role="group" aria-label="Filter game evidence">
+              <button type="button" class="game-filter-chip active-filter" data-game-filter="all">All</button>
+              <button type="button" class="game-filter-chip" data-game-filter="win">Wins</button>
+              <button type="button" class="game-filter-chip" data-game-filter="loss">Losses</button>
+              <button type="button" class="game-filter-chip" data-game-filter="ahead15">Ahead @15</button>
+              <button type="button" class="game-filter-chip" data-game-filter="even15">Close @15</button>
+              <button type="button" class="game-filter-chip" data-game-filter="behind15">Behind @15</button>
+              <button type="button" class="game-filter-chip" data-game-filter="adc">ADC only</button>
+            </div>
+            <label class="game-champion-filter">Champion
+              <select id="gameChampionFilter"><option value="all">All champions</option></select>
+            </label>
+            <button type="button" class="button secondary small" id="clearGameFilters" disabled>Reset filters</button>
+            <span class="game-filter-summary" id="gameFilterSummary">Showing the full sample.</span>
+          </div>
           <div class="table-wrap">
             <table class="games-table">
-              <thead><tr><th><button class="table-sort" type="button" data-game-sort="recent" aria-label="Sort by recency">#</button></th><th><button class="table-sort" type="button" data-game-sort="champion">Champion</button></th><th><button class="table-sort" type="button" data-game-sort="role">Role</button></th><th><button class="table-sort" type="button" data-game-sort="result">Result</button></th><th><button class="table-sort" type="button" data-game-sort="kda">K / D / A</button></th><th><button class="table-sort" type="button" data-game-sort="kp">KP</button></th><th><button class="table-sort" type="button" data-game-sort="cs">CS/min</button></th><th><button class="table-sort" type="button" data-game-sort="dpm">DPM</button></th><th><button class="table-sort" type="button" data-game-sort="gold15">Gold @15 vs ADC</button></th></tr></thead>
+              <thead><tr><th><button class="table-sort" type="button" data-game-sort="recent" aria-label="Sort by recency">#</button></th><th><button class="table-sort" type="button" data-game-sort="champion">Champion</button></th><th><button class="table-sort" type="button" data-game-sort="role">Role</button></th><th><button class="table-sort" type="button" data-game-sort="result">Result</button></th><th><button class="table-sort" type="button" data-game-sort="kda">K / D / A</button></th><th><button class="table-sort" type="button" data-game-sort="kp">KP</button></th><th><button class="table-sort" type="button" data-game-sort="cs">CS/min</button></th><th><button class="table-sort" type="button" data-game-sort="dpm">DPM</button></th><th><button class="table-sort" type="button" data-game-sort="gold15">Gold @15 vs role</button></th></tr></thead>
               <tbody id="gamesBody"></tbody>
             </table>
           </div>
