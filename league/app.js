@@ -482,6 +482,7 @@ function renderReport(raw,sourceKind){
   $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(rank?rank+' · ':'')+(s.games??r.games.length)+' analyzed games · '+(s.primaryRole==='BOTTOM'?'ADC':(s.primaryRole||'GENERIC'))+' · '+coachingN+' role-comparable coaching games';
   $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':(r.analyzerVersion||'Web analysis');
   renderQuickRead(r);
+  renderRecentPulse(r);
   renderKpis(r);
   renderRankRadar(r);
   renderVisualSummary(r);
@@ -503,6 +504,10 @@ function renderReport(raw,sourceKind){
   scheduleHeavyReportRender(r);
 }
 
+function adcBenchmarkSummary(r){
+  const role=String(r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||'');
+  return role==='BOTTOM'?(r.coachingSummary||r.summary||null):null;
+}
 function benchmarkKpi(label,value,benchmark,unit,inverse=false,extra=''){
   const delta=hasNum(value)&&hasNum(benchmark)?Number(value)-Number(benchmark):null;
   const tone=delta==null?'neutral':deltaTone(delta,0,unit==='csmin'?.15:unit==='percent'?2:unit==='dpm'?50:unit==='kda'?.2:unit==='deaths'?.25:.01,inverse);
@@ -512,14 +517,15 @@ function benchmarkKpi(label,value,benchmark,unit,inverse=false,extra=''){
   return{label,value:formatted,tone,sub:'Rank avg '+benchmarkText+' · '+deltaText+(extra?' · '+extra:''),bar:delta==null?'':contextBar(delta,unit==='dpm'?500:unit==='csmin'?2:unit==='percent'?15:unit==='deaths'?3:2,inverse)};
 }
 function renderKpis(r){
-  const s=r.summary||{},bench=r.externalBenchmarks?.same||null,rank=bench?.tier||'rank';
+  const adc=adcBenchmarkSummary(r),s=adc||r.summary||{},bench=adc?r.externalBenchmarks?.same:null,rank=bench?.tier||'rank';
+  const raw=(label,value,unit)=>({label,value:unit==='percent'?fmtPct(value):unit==='csmin'?fmt(value,2):unit==='dpm'?fmtInt(value):unit==='deaths'?fmt(value,1):fmt(value,2),tone:'neutral',sub:adc?'ADC coaching sample':'No ADC population benchmark applied to this primary role',bar:''});
   const rows=[
-    {label:'Recent win rate',value:fmtPct(s.winRate),tone:'neutral',sub:String(s.games||0)+' analyzed games',bar:''},
-    benchmarkKpi('CS / min · '+rank,s.csMin,bench?.csMin,'csmin'),
-    benchmarkKpi('Kill participation · '+rank,s.kp,bench?.kp,'percent'),
-    benchmarkKpi('Damage / min · '+rank,s.dpm,bench?.dpm,'dpm'),
-    benchmarkKpi('KDA · '+rank,s.kda,bench?.kda,'kda'),
-    benchmarkKpi('Deaths / game · '+rank,s.avgDeaths,bench?.deaths,'deaths',true,'lower is better')
+    {label:adc?'ADC sample win rate':'Recent win rate',value:fmtPct(s.winRate),tone:'neutral',sub:String(s.games||0)+(adc?' primary-role ADC':' analyzed')+' games',bar:''},
+    bench?benchmarkKpi('CS / min · '+rank,s.csMin,bench.csMin,'csmin'):raw('CS / min',s.csMin,'csmin'),
+    bench?benchmarkKpi('Kill participation · '+rank,s.kp,bench.kp,'percent'):raw('Kill participation',s.kp,'percent'),
+    bench?benchmarkKpi('Damage / min · '+rank,s.dpm,bench.dpm,'dpm'):raw('Damage / min',s.dpm,'dpm'),
+    bench?benchmarkKpi('KDA · '+rank,s.kda,bench.kda,'kda'):raw('KDA',s.kda,'kda'),
+    bench?benchmarkKpi('Deaths / game · '+rank,s.avgDeaths,bench.deaths,'deaths',true,'lower is better'):raw('Deaths / game',s.avgDeaths,'deaths')
   ];
   $('kpiGrid').innerHTML=rows.map(x=>'<article class="kpi-card tone-'+x.tone+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong>'+(x.bar||'')+'<small>'+esc(x.sub)+'</small></article>').join('');
 }
@@ -533,7 +539,7 @@ function comparisonCard(title,delta,unit,scale,inverse,explanation,sample){
     (sample?'<small>'+esc(sample)+'</small>':'')+'</article>';
 }
 function renderQuickRead(r){
-  const p=r.peerComparison||{},a=r.advanced||{},s=r.summary||{},bench=r.externalBenchmarks?.same||null;
+  const p=r.peerComparison||{},a=r.advanced||{},adc=adcBenchmarkSummary(r),s=adc||r.summary||{},bench=adc?r.externalBenchmarks?.same:null;
   const goldExplanation=hasNum(p.avgGoldDiff15)
     ?(Number(p.avgGoldDiff15)>150?'Your average 15-minute economy is ahead of the direct opposing ADC.':Number(p.avgGoldDiff15)<-150?'Your average 15-minute economy is behind the direct opposing ADC.':'Your average 15-minute economy is close to even with the direct opposing ADC.')
     :'Not enough comparable @15 games to interpret lane economy.';
@@ -552,6 +558,43 @@ function renderQuickRead(r){
     comparisonCard('DPM vs '+rankLabel+' ADC',dpmDelta,'dpm',500,false,dpmDelta==null?'External benchmark unavailable.':dpmDelta>50?'Your damage/minute is above the sourced rank average.':dpmDelta<-50?'Your damage/minute is below the sourced rank average.':'Your damage/minute is close to the sourced rank average.',bench?'You '+fmtInt(s.dpm)+' · benchmark '+fmtInt(bench.dpm):''),
     comparisonCard('Deaths vs '+rankLabel+' ADC',deathDelta,'num',3,true,deathDelta==null?'External benchmark unavailable.':deathDelta<-.25?'You die less often than the sourced rank average.':deathDelta>.25?'You die more often than the sourced rank average.':'Your death rate is close to the sourced rank average.',bench?'You '+fmt(s.avgDeaths,1)+'/g · benchmark '+fmt(bench.deaths,1)+'/g':''),
     '<article class="quick-read-card tone-'+objTone+'"><div class="quick-read-head"><span>Contested objective presence</span><strong>'+esc(fmtPct(objective))+'</strong></div><div class="percent-track"><span style="width:'+clamp(objective||0,0,100)+'%"></span></div><p>'+esc(objText)+'</p><small>Only team-contested windows count; fully conceded cross-map objectives are excluded.</small></article>'
+  ].join('');
+}
+function pulseFormat(v,unit){
+  if(!hasNum(v))return'n/a';
+  if(unit==='gold')return signed(v,0)+'g';
+  if(unit==='csmin')return fmt(v,2);
+  if(unit==='dpm')return fmtInt(v);
+  if(unit==='percent')return fmtPct(v);
+  return fmt(v,2);
+}
+function pulseDeltaFormat(v,unit){
+  if(!hasNum(v))return'n/a';
+  if(unit==='gold')return signed(v,0)+'g';
+  if(unit==='csmin')return signed(v,2);
+  if(unit==='dpm')return signed(v,0)+' DPM';
+  if(unit==='percent')return signed(v,1)+' pp';
+  return signed(v,2);
+}
+function pulseCard(label,obj,unit,inverse=false,threshold=0){
+  const recent=obj&&hasNum(obj.recent)?Number(obj.recent):null,prior=obj&&hasNum(obj.prior)?Number(obj.prior):null;
+  const recentN=Number(obj?.recentN||0),priorN=Number(obj?.priorN||0);
+  if(recent==null||prior==null||recentN<3||priorN<5){
+    return '<article class="pulse-card tone-neutral"><span>'+esc(label)+'</span><strong>Not enough evidence</strong><small>'+recentN+' recent / '+priorN+' prior valid games</small></article>';
+  }
+  const delta=recent-prior,signal=inverse?-delta:delta;
+  const tone=Math.abs(delta)<threshold?'neutral':signal>0?'good':'bad';
+  const word=tone==='neutral'?'stable':tone==='good'?'favorable shift':'unfavorable shift';
+  return '<article class="pulse-card tone-'+tone+'"><span>'+esc(label)+'</span><strong>'+esc(pulseFormat(recent,unit))+'</strong><p>Previous '+esc(pulseFormat(prior,unit))+' · Δ '+esc(pulseDeltaFormat(delta,unit))+'</p><small>'+esc(word)+' · latest '+recentN+' vs previous '+priorN+' valid games</small></article>';
+}
+function renderRecentPulse(r){
+  const t=r.recentTrend||{},target=$('recentPulse');if(!target)return;
+  target.innerHTML=[
+    pulseCard('CS / min',t.csMin,'csmin',false,.15),
+    pulseCard('Gold @15 vs role',t.goldDiff15,'gold',false,150),
+    pulseCard('Damage / min',t.dpm,'dpm',false,50),
+    pulseCard('Kill participation',t.kp,'percent',false,2),
+    pulseCard('High-risk deaths',t.badDeaths,'num',true,.2)
   ].join('');
 }
 function renderVisualSummary(r){
@@ -591,7 +634,14 @@ function radarPolygon(values,cx,cy,radius){
   }).join(' ');
 }
 function renderRankRadar(r){
-  const ext=r.externalBenchmarks||{},summary=r.summary||{};
+  const ext=r.externalBenchmarks||{},summary=adcBenchmarkSummary(r);
+  if(!summary){
+    $('radarChart').innerHTML='<div class="radar-empty">The external benchmark is ADC-specific. This report’s primary coaching role is '+esc(r.coachingSummary?.primaryRole||r.summary?.primaryRole||'unknown')+', so no ADC comparison is applied.</div>';
+    $('radarLegend').innerHTML='';
+    $('radarNote').innerHTML='<strong>Role-safe comparison.</strong> ADC-adjusted rank benchmarks are withheld when ADC is not the report’s primary coaching role.';
+    renderRankBridge(r);
+    return;
+  }
   const axes=[
     {key:'csMin',label:'CS/min',format:v=>fmt(v,2)},
     {key:'kp',label:'KP',format:v=>fmtPct(v)},
@@ -601,7 +651,7 @@ function renderRankRadar(r){
   ];
   const userRaw={csMin:summary.csMin,kp:summary.kp,dpm:summary.dpm,kda:summary.kda,deaths:summary.avgDeaths};
   const defs=[
-    {key:'you',label:'You · Last 20',cls:'you',raw:userRaw},
+    {key:'you',label:'You · '+String(summary.games||0)+' ADC games',cls:'you',raw:userRaw},
     {key:'same',label:ext.same?.tier?('Same tier · '+ext.same.tier):'Same tier',cls:'same',raw:ext.same||null},
     {key:'plus1',label:ext.plus1?.tier?('+1 tier · '+ext.plus1.tier):'+1 tier',cls:'plus1',raw:ext.plus1||null},
     {key:'plus2',label:ext.plus2?.tier?('+2 tiers · '+ext.plus2.tier):'+2 tiers',cls:'plus2',raw:ext.plus2||null}
@@ -627,7 +677,42 @@ function renderRankRadar(r){
     '</tbody></table></div>':'';
   $('radarLegend').insertAdjacentHTML('beforeend',table);
   const source=ext.source||'External rank benchmark',captured=ext.sourceCapturedAt?' · corpus captured '+ext.sourceCapturedAt:'',corpus=ext.sourceCorpus?' · '+ext.sourceCorpus:'';
-  $('radarNote').innerHTML='<strong>Population benchmark, not your opponents.</strong> '+esc(ext.methodology||'')+' '+(ext.currentTier?'<b>Tier mapping:</b> '+esc(ext.currentTier)+' → '+esc(ext.plus1?.tier||'n/a')+' → '+esc(ext.plus2?.tier||'n/a')+'. ':'')+'<a href="'+esc(ext.sourceUrl||'https://legendstracker.fr/methodologie')+'" target="_blank" rel="noopener noreferrer">'+esc(source)+'</a>'+esc(captured+corpus)+'. The source publishes tier-level, not division-level, averages. The spider uses fixed display ranges only to put different units on one shape; the adjacent table shows the real values.';
+  $('radarNote').innerHTML='<strong>Population benchmark, not your opponents.</strong> '+esc(ext.methodology||'')+' '+(ext.currentTier?'<b>Tier mapping:</b> '+esc(ext.currentTier)+' → '+esc(ext.plus1?.tier||'n/a')+' → '+esc(ext.plus2?.tier||'n/a')+'. ':'')+'<a href="'+esc(ext.sourceUrl||'https://legendstracker.fr/methodologie')+'" target="_blank" rel="noopener noreferrer">'+esc(source)+'</a>'+esc(captured+corpus)+'. The source publishes tier-level rank averages; CS/min, KP and DPM are then Bot/ADC-adjusted with the published ×1.1 multipliers, so these are role-adjusted benchmarks rather than directly measured rank×ADC population means. KDA and deaths/game remain the published rank averages. Because the corpus was captured on '+esc(ext.sourceCapturedAt||'an earlier patch')+', treat it as cross-patch reference context rather than a current-patch expected value. The spider uses fixed display ranges only to put different units on one shape; the adjacent table shows the real values.';
+  renderRankBridge(r);
+}
+function bridgeFormat(v,unit){
+  if(!hasNum(v))return'n/a';
+  if(unit==='percent')return fmtPct(v);
+  if(unit==='dpm')return fmtInt(v);
+  if(unit==='deaths')return fmt(v,1)+'/g';
+  return fmt(v,2);
+}
+function bridgeGap(value,target,unit,inverse=false){
+  if(!hasNum(value)||!hasNum(target))return{tone:'neutral',text:'n/a'};
+  const you=Number(value),ref=Number(target),raw=you-ref,meets=inverse?raw<=0:raw>=0;
+  if(meets){
+    const margin=Math.abs(raw),suffix=unit==='percent'?' pp':unit==='dpm'?' DPM':unit==='deaths'?' deaths/g':'';
+    return{tone:'good',text:'already at reference'+(margin>0?' · margin '+fmt(margin,unit==='dpm'?0:unit==='percent'?1:2)+suffix:'')};
+  }
+  const need=inverse?raw:-raw,suffix=unit==='percent'?' pp':unit==='dpm'?' DPM':unit==='deaths'?' deaths/g':'';
+  return{tone:'bad',text:'gap '+fmt(Math.abs(need),unit==='dpm'?0:unit==='percent'?1:2)+suffix};
+}
+function renderRankBridge(r){
+  const target=$('rankBridge');if(!target)return;
+  const ext=r.externalBenchmarks||{},s=adcBenchmarkSummary(r),plus1=ext.plus1||null,plus2=ext.plus2||null;
+  if(!s){target.innerHTML='<div class="rank-bridge-empty">ADC benchmark bridge withheld because ADC is not the primary coaching role.</div>';return;}
+  if(!plus1&&!plus2){target.innerHTML='<div class="rank-bridge-empty">No higher-tier benchmark is available above the current rank.</div>';return;}
+  const metrics=[
+    {key:'csMin',label:'CS / min',unit:'num'},
+    {key:'kp',label:'Kill participation',unit:'percent'},
+    {key:'dpm',label:'Damage / min',unit:'dpm'},
+    {key:'kda',label:'KDA',unit:'num'},
+    {key:'deaths',sourceKey:'avgDeaths',label:'Deaths / game',unit:'deaths',inverse:true}
+  ];
+  target.innerHTML='<div class="rank-bridge-head"><div><span>Benchmark bridge</span><strong>What separates this ADC sample from the next reference tiers?</strong></div><small>Directional cross-patch context only — these statistics do not determine rank or predict promotion.</small></div><div class="rank-bridge-grid">'+metrics.map(m=>{
+    const value=s[m.sourceKey||m.key],g1=bridgeGap(value,plus1?.[m.key],m.unit,m.inverse),g2=bridgeGap(value,plus2?.[m.key],m.unit,m.inverse);
+    return '<article class="rank-bridge-card"><span>'+esc(m.label)+'</span><strong>'+esc(bridgeFormat(value,m.unit))+'</strong><div><b>'+(plus1?.tier?esc(plus1.tier):'+1 tier')+'</b><em>'+esc(bridgeFormat(plus1?.[m.key],m.unit))+'</em><small class="tone-'+g1.tone+'">'+esc(g1.text)+'</small></div><div><b>'+(plus2?.tier?esc(plus2.tier):'+2 tiers')+'</b><em>'+esc(bridgeFormat(plus2?.[m.key],m.unit))+'</em><small class="tone-'+g2.tone+'">'+esc(g2.text)+'</small></div></article>';
+  }).join('')+'</div>';
 }
 function decisionCard(title,value,tone,explanation,sub,percent=null){
   return '<article class="decision-card tone-'+tone+'"><div><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong></div>'+
@@ -1162,7 +1247,7 @@ function formatChartValue(value,unit){
 }
 function chartSvg(points,spec){
   const vals=points.map(p=>Number(p.value)).filter(Number.isFinite);if(vals.length<3)return null;
-  const valid=points.map((p,i)=>({i,v:Number(p.value)})).filter(x=>Number.isFinite(x.v));
+  const valid=points.map((p,i)=>({i,v:Number(p.value),p})).filter(x=>Number.isFinite(x.v));
   const w=820,h=300,padL=64,padR=24,padT=26,padB=42,unit=spec.unit||'num',signedAxis=!!spec.signedAxis;
   let min,max;
   if(hasNum(spec.fixedMin)&&hasNum(spec.fixedMax)){min=Number(spec.fixedMin);max=Number(spec.fixedMax);}
@@ -1177,7 +1262,7 @@ function chartSvg(points,spec){
   const span=Math.max(1,max-min),plotW=w-padL-padR,plotH=h-padT-padB;
   const xAt=n=>padL+(n/Math.max(1,valid.length-1))*plotW;
   const yAt=v=>padT+(max-clamp(v,min,max))/span*plotH;
-  const coords=valid.map((x,n)=>({x:xAt(n),y:yAt(x.v),v:x.v}));
+  const coords=valid.map((x,n)=>({x:xAt(n),y:yAt(x.v),v:x.v,p:x.p}));
   const path=coords.map((c,i)=>(i?'L':'M')+c.x.toFixed(1)+' '+c.y.toFixed(1)).join(' ');
   const ticks=5,grid=[];
   for(let i=0;i<ticks;i++){
@@ -1187,9 +1272,12 @@ function chartSvg(points,spec){
   const zeroY=signedAxis?yAt(0):null;
   const bands=signedAxis?'<rect class="chart-positive-band" x="'+padL+'" y="'+padT+'" width="'+plotW+'" height="'+Math.max(0,zeroY-padT)+'"/><rect class="chart-negative-band" x="'+padL+'" y="'+zeroY+'" width="'+plotW+'" height="'+Math.max(0,padT+plotH-zeroY)+'"/>':'';
   const zero=signedAxis?'<line class="chart-zero-line" x1="'+padL+'" y1="'+zeroY+'" x2="'+(w-padR)+'" y2="'+zeroY+'"/><text class="chart-zero-label" x="'+(w-padR-4)+'" y="'+(zeroY-7)+'" text-anchor="end">EVEN WITH ROLE OPPONENT</text>':'';
-  const dots=coords.map((c,i)=>'<circle class="chart-dot '+(signedAxis?(c.v>0?'positive':c.v<0?'negative':'even'):'')+'" cx="'+c.x.toFixed(1)+'" cy="'+c.y.toFixed(1)+'" r="5"><title>Game '+String(i+1)+': '+esc(formatChartValue(c.v,spec.formatUnit||spec.unit))+'</title></circle>').join('');
-  const xLabels=valid.length?'<text class="chart-axis-label x" x="'+padL+'" y="'+(h-12)+'">older</text><text class="chart-axis-label x" x="'+(w-padR)+'" y="'+(h-12)+'" text-anchor="end">newer</text>':'';
-  return '<svg class="chart-svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(spec.title||'Trend chart')+'">'+bands+grid.join('')+zero+'<path class="chart-line" d="'+path+'"/>'+dots+xLabels+'</svg>';
+  const refValue=hasNum(spec.reference)?Number(spec.reference):null,refY=refValue!=null&&refValue>=min&&refValue<=max?yAt(refValue):null;
+  const reference=refY==null?'':'<line class="chart-reference-line" x1="'+padL+'" y1="'+refY+'" x2="'+(w-padR)+'" y2="'+refY+'"/><text class="chart-reference-label" x="'+(w-padR-4)+'" y="'+(refY-7)+'" text-anchor="end">'+esc(spec.referenceLabel||'REFERENCE')+' · '+esc(formatChartValue(refValue,spec.formatUnit||spec.unit))+'</text>';
+  const dots=coords.map((c,i)=>{const when=c.p?.gameStartTimestamp?new Date(Number(c.p.gameStartTimestamp)).toLocaleDateString(undefined,{day:'numeric',month:'short'}):('Game '+String(i+1)),champ=c.p?.champion?String(c.p.champion)+' · ':'';return '<circle class="chart-dot '+(signedAxis?(c.v>0?'positive':c.v<0?'negative':'even'):'')+'" cx="'+c.x.toFixed(1)+'" cy="'+c.y.toFixed(1)+'" r="5"><title>'+esc(champ+when+': '+formatChartValue(c.v,spec.formatUnit||spec.unit))+'</title></circle>';}).join('');
+  const firstTime=valid[0]?.p?.gameStartTimestamp,lastTime=valid[valid.length-1]?.p?.gameStartTimestamp,shortDate=v=>v?new Date(Number(v)).toLocaleDateString(undefined,{day:'numeric',month:'short'}):'';
+  const xLabels=valid.length?'<text class="chart-axis-label x" x="'+padL+'" y="'+(h-12)+'">'+esc(shortDate(firstTime)||'older')+'</text><text class="chart-axis-label x" x="'+(w-padR)+'" y="'+(h-12)+'" text-anchor="end">'+esc(shortDate(lastTime)||'newer')+'</text>':'';
+  return '<svg class="chart-svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(spec.title||'Trend chart')+'">'+bands+grid.join('')+zero+reference+'<path class="chart-line" d="'+path+'"/>'+dots+xLabels+'</svg>';
 }
 function chartSummary(points,spec){
   const vals=points.map(p=>Number(p.value)).filter(Number.isFinite);if(!vals.length)return'No valid values.';
@@ -1203,16 +1291,19 @@ function chartSummary(points,spec){
 }
 
 function renderCharts(r){
-  const lane15Comparable=Number(r.behaviorSummary?.checkpointEligibility?.lane15Games??0)>0;
+  const lane15Comparable=Number(r.behaviorSummary?.checkpointEligibility?.lane15Games??0)>0,adc=adcBenchmarkSummary(r),bench=adc?r.externalBenchmarks?.same:null;
+  const sourceGames=[...(r.games||[])],hasTimestamps=sourceGames.some(g=>Number(g?.gameStartTimestamp||0)>0);
+  const chronological=hasTimestamps?sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-Number(b.gameStartTimestamp||0)):sourceGames.reverse();
   const specs=[
     {key:'goldDiff15',title:lane15Comparable?'Gold @15 vs opposing ADC':'Gold @15 vs role opponent · raw checkpoint',q:'Positive means you had more gold than the direct role opponent at 15. Fixed −2000 to +2000 scale makes games directly comparable.',unit:'signedGold',formatUnit:'signed',signedAxis:true,relevance:150,fixedMin:-2000,fixedMax:2000},
     {key:'csDiff15',title:lane15Comparable?'CS @15 vs opposing ADC':'CS @15 vs role opponent · raw checkpoint',q:'Positive means you had more farm than the direct role opponent at 15. Fixed −35 to +35 scale.',unit:'signedCs',formatUnit:'signed',signedAxis:true,relevance:5,fixedMin:-35,fixedMax:35},
-    {key:'dpm',title:'Damage per minute',q:'Raw champion damage output on a fixed 0–1500 DPM scale. Values above the display ceiling remain visible in the tooltip.',unit:'dpm',formatUnit:'int',fixedMin:0,fixedMax:1500},
-    {key:'kp',title:'Kill participation',q:'Share of team champion kills you participated in, always shown on a 0–100% scale.',unit:'percent',formatUnit:'%',fixedMin:0,fixedMax:100}
+    {key:'dpm',title:'Damage per minute · ADC sample',q:'Primary-role ADC games on a fixed 0–1500 DPM scale. The dashed reference is the same-tier ADC-adjusted external benchmark.',unit:'dpm',formatUnit:'int',fixedMin:0,fixedMax:1500,adcOnly:true,reference:bench?.dpm,referenceLabel:(bench?.tier||'same tier')+' benchmark'},
+    {key:'kp',title:'Kill participation · ADC sample',q:'Primary-role ADC games on a fixed 0–100% scale. The dashed reference is the same-tier ADC-adjusted external benchmark.',unit:'percent',formatUnit:'%',fixedMin:0,fixedMax:100,adcOnly:true,reference:bench?.kp,referenceLabel:(bench?.tier||'same tier')+' benchmark'}
   ];
   const hidden=[];
   $('chartGrid').innerHTML=specs.map(spec=>{
-    const points=spec.key==='csDiff15'?(r.games||[]).map(g=>({matchId:g.matchId,value:g.csDiff15})):(Array.isArray(r.charts?.[spec.key])?r.charts[spec.key]:(r.games||[]).map(g=>({matchId:g.matchId,value:g[spec.key]})));
+    const scoped=spec.adcOnly?chronological.filter(g=>g.role==='BOTTOM'):chronological;
+    const points=scoped.map(g=>({matchId:g.matchId,gameStartTimestamp:g.gameStartTimestamp,champion:g.champion,value:g[spec.key]}));
     const svg=chartSvg(points,spec);
     if(!svg)hidden.push(spec.title);
     return '<article class="chart-card '+(spec.signedAxis?'signed-chart':'')+'"><div class="chart-card-head"><div><h3>'+esc(spec.title)+'</h3><p>'+esc(spec.q)+'</p></div><span class="chart-kind">'+(spec.signedAxis?'0 = even':'trend')+'</span></div>'+(svg||'<div class="chart-empty">Insufficient valid data</div>')+(svg?'<p class="chart-reading">'+esc(chartSummary(points,spec))+'</p>':'')+'</article>';
@@ -1493,12 +1584,13 @@ function qualityCard(label,value,detail='',level=''){
   return '<div class="quality-card '+(level?'evidence-'+esc(level):'')+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong>'+(detail?'<small>'+esc(detail)+'</small>':'')+'</div>';
 }
 function renderQuality(r){
-  const q=r.dataQuality||{},b=r.behaviorSummary||{},p=r.peerComparison||{};
+  const q=r.dataQuality||{},b=r.behaviorSummary||{},p=r.peerComparison||{},ext=r.externalBenchmarks||{};
   const analyzed=Number(q.analyzedGames??r.games?.length??0),coaching=Number(q.coachingRoleGames??r.coachingSummary?.games??0),timelines=Number(q.validTimelineGames??0);
   const timelinePct=analyzed>0?timelines/analyzed*100:null,peerN=Number(q.peerComparableGames??p.sameRoleGames??0),rankedN=Number(q.rankedPeerGames??p.rankedPeerGames??0);
   const fightN=Number(b.fightSamples??0),objectiveN=Number(b.neutralObjectiveEvents??0),wardN=Number(p.visionWardTotal??0);
   const cards=[
     qualityCard('Analyzed games',String(analyzed),String(coaching)+' primary-role coaching games',evidenceLevel(coaching)),
+    qualityCard('External rank reference',ext.currentTier?String(ext.currentTier)+' · '+String(ext.roleLabel||'ADC'):'n/a',(ext.source||'External benchmark')+(ext.sourceCapturedAt?' · captured '+String(ext.sourceCapturedAt):'')+(ext.sourceCorpus?' · '+String(ext.sourceCorpus):'')+' · role-adjusted, cross-patch reference; not a direct rank×role population mean','neutral'),
     qualityCard('Queue context',hasNum(q.dominantQueueId)?('Queue '+String(q.dominantQueueId)+(q.dominantQueueFamily?' · '+String(q.dominantQueueFamily).replaceAll('_',' '):'')):'n/a',String(q.dominantQueueGames??0)+' matching cached games · selected from '+String(q.queueSelection?.considered??0)+' newest supported game(s)'+(q.queueSelection?.windowSize?' (window '+String(q.queueSelection.windowSize)+')':'')+' · '+String(q.unsupportedQueueRowsExcluded??0)+' unsupported special/bot queue game(s) excluded · '+String(Math.max(0,Number(q.excludedOtherQueues||0)-Number(q.unsupportedQueueRowsExcluded||0)))+' other supported queue-context game(s) excluded',evidenceLevel(q.dominantQueueGames??0)),
     qualityCard('Fixed checkpoint eligibility',String(b.checkpointEligibility?.lane15Games??0)+' @15 lane','15→25 '+String(b.checkpointEligibility?.fixed15to25Games??0)+' · @25 closing '+String(b.checkpointEligibility?.closing25Games??0),'neutral'),
     qualityCard('Patch context',(q.currentPublicPatchKey||q.currentPatchKey)?('Patch '+String(q.currentPublicPatchKey||q.currentPatchKey)):'n/a',String(q.currentPatchRoleGames??0)+' current-patch role games · '+String(q.olderSamePatchRoleGames??0)+' older same-patch baseline · '+String(q.crossPatchBaselineRoleGames??0)+' cross-patch older games excluded from trend'+(q.currentPublicPatchKey&&q.currentPatchKey&&String(q.currentPublicPatchKey)!==String(q.currentPatchKey)?' · Riot/Data Dragon build '+String(q.currentPatchKey):''),q.patchBaselineReady?'good':'neutral'),
