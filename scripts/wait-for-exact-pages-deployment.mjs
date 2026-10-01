@@ -23,6 +23,14 @@ const headers={
 };
 
 const sleep=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
+const nonSurfacePrefixes=['.github/','cloudflare/','scripts/','docs/','sql/','repo/','mnt/','deployment_forensics_v761/','RELEASES/','supabase/','ops/'];
+
+function isPublishedSurfacePath(value){
+  const rel=String(value||'').replaceAll('\\','/').replace(/^\.\//,'');
+  if(rel==='VERSION') return true;
+  if(nonSurfacePrefixes.some(prefix=>rel.startsWith(prefix))) return false;
+  return /\.(?:html|js|css)$/i.test(rel);
+}
 
 async function githubJson(pathname){
   const controller=new AbortController();
@@ -38,6 +46,18 @@ async function deploymentState(deployment){
   const path=new URL(deployment.statuses_url).pathname+'?per_page=20';
   const rows=await githubJson(path);
   return String(Array.isArray(rows)&&rows[0]?.state||'').toLowerCase();
+}
+
+async function surfaceComparison(baseSha,headSha){
+  if(!baseSha||!headSha) return {compatible:false,status:'missing',changed:[]};
+  if(baseSha===headSha) return {compatible:true,status:'identical',changed:[]};
+  const result=await githubJson(`/repos/${repo}/compare/${encodeURIComponent(baseSha)}...${encodeURIComponent(headSha)}`);
+  const status=String(result?.status||'');
+  const changed=(Array.isArray(result?.files)?result.files:[])
+    .map(file=>String(file?.filename||''))
+    .filter(isPublishedSurfacePath);
+  const lineageOk=status==='ahead'||status==='behind'||status==='identical';
+  return {compatible:lineageOk&&changed.length===0,status,changed};
 }
 
 async function liveVersion(attempt){
@@ -61,11 +81,16 @@ function appendGithubEnv(values){
 }
 
 for(let attempt=1;attempt<=attempts;attempt++){
+  let mainSha=expectedSha;
   if(requireCurrentMain){
     const ref=await githubJson(`/repos/${repo}/git/ref/heads/main`);
-    const mainSha=String(ref?.object?.sha||'');
-    if(mainSha && mainSha!==expectedSha){
-      throw new Error(`EXACT_PAGES_DEPLOYMENT_FAIL tested SHA ${expectedSha} is no longer main; current main is ${mainSha}`);
+    mainSha=String(ref?.object?.sha||'');
+    if(mainSha&&mainSha!==expectedSha){
+      const mainSurface=await surfaceComparison(expectedSha,mainSha);
+      if(!mainSurface.compatible){
+        throw new Error(`EXACT_PAGES_DEPLOYMENT_FAIL tested revision was superseded by main with published-surface changes: ${mainSurface.changed.slice(0,12).join(',')||mainSurface.status}`);
+      }
+      console.log(`PAGES_SURFACE_EQUIVALENT_MAIN expected_sha=${expectedSha} main_sha=${mainSha} compare=${mainSurface.status}`);
     }
   }
 
@@ -83,31 +108,38 @@ for(let attempt=1;attempt<=attempts;attempt++){
     throw new Error(`EXACT_PAGES_DEPLOYMENT_FAIL tested SHA reached terminal deployment state ${expected.state}`);
   }
 
-  if(active && String(active.deployment?.sha||'')===expectedSha){
+  const activeSha=String(active?.deployment?.sha||'');
+  let surfaceEquivalent=false;
+  if(activeSha){
+    const activeSurface=await surfaceComparison(expectedSha,activeSha);
+    surfaceEquivalent=activeSurface.compatible;
+    if(!surfaceEquivalent && activeSurface.status==='ahead'){
+      throw new Error(`EXACT_PAGES_DEPLOYMENT_FAIL active Pages SHA ${activeSha} contains newer published-surface changes: ${activeSurface.changed.slice(0,12).join(',')||'unknown'}`);
+    }
+  }
+
+  if(active && surfaceEquivalent){
     const actualVersion=await liveVersion(attempt);
     if(actualVersion===expectedVersion){
+      const exact=activeSha===expectedSha;
       appendGithubEnv({
         GEJAST_SOURCE_VERSION:expectedVersion,
         GEJAST_LIVE_VERSION:actualVersion,
         GEJAST_LIVE_VERSION_MATCH:'1',
-        GEJAST_LIVE_SHA_MATCH:'1',
+        GEJAST_LIVE_SHA_MATCH:exact?'1':'0',
+        GEJAST_LIVE_SURFACE_MATCH:'1',
+        GEJAST_ACTIVE_PAGES_SHA:activeSha,
         GEJAST_ACTIVE_PAGES_DEPLOYMENT_ID:String(active.deployment?.id||''),
       });
-      console.log(`RESULT=EXACT_ACTIVE_PAGES_DEPLOYMENT_PASS sha=${expectedSha} deployment=${active.deployment?.id||'unknown'} version=${actualVersion} attempt=${attempt}`);
+      console.log(`RESULT=ACTIVE_PAGES_SURFACE_PASS tested_sha=${expectedSha} active_sha=${activeSha} exact_sha=${exact?1:0} deployment=${active.deployment?.id||'unknown'} version=${actualVersion} attempt=${attempt}`);
       process.exit(0);
     }
-    console.log(`EXACT_PAGES_WAIT active_sha=${expectedSha} version=${actualVersion||'unavailable'} expected_version=${expectedVersion} attempt=${attempt}`);
+    console.log(`PAGES_SURFACE_WAIT tested_sha=${expectedSha} active_sha=${activeSha} version=${actualVersion||'unavailable'} expected_version=${expectedVersion} attempt=${attempt}`);
   } else {
-    const activeSha=String(active?.deployment?.sha||'');
-    const activeCreated=Date.parse(String(active?.deployment?.created_at||''))||0;
-    const expectedCreated=Date.parse(String(expected?.deployment?.created_at||''))||0;
-    if(activeSha && activeSha!==expectedSha && expectedCreated && activeCreated>expectedCreated){
-      throw new Error(`EXACT_PAGES_DEPLOYMENT_FAIL tested SHA ${expectedSha} was superseded by active SHA ${activeSha}`);
-    }
-    console.log(`EXACT_PAGES_WAIT active_sha=${activeSha||'none'} expected_sha=${expectedSha} expected_state=${expected?.state||'absent'} attempt=${attempt}`);
+    console.log(`PAGES_SURFACE_WAIT tested_sha=${expectedSha} active_sha=${activeSha||'none'} expected_state=${expected?.state||'absent'} attempt=${attempt}`);
   }
 
   if(attempt<attempts) await sleep(delayMs);
 }
 
-throw new Error(`EXACT_PAGES_DEPLOYMENT_FAIL timed out waiting for tested SHA ${expectedSha} to become the active successful GitHub Pages deployment with VERSION ${expectedVersion}`);
+throw new Error(`EXACT_PAGES_DEPLOYMENT_FAIL timed out waiting for an active GitHub Pages deployment with the same published surface as ${expectedSha} and VERSION ${expectedVersion}`);

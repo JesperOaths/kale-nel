@@ -69,7 +69,7 @@ jobs:
           node check-all-page-version-identity-v875.mjs
           node check-all-published-page-versions.mjs
 
-      - name: Wait for exact active main deployment
+      - name: Wait for active matching Pages surface
         if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}

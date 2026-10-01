@@ -120,7 +120,7 @@ jobs:
           fi
           echo 'RESULT=VISUAL_SYSTEM_CHROME_RUNTIME_PASS'
 
-      - name: Resolve exact active deployed revision and version parity
+      - name: Resolve active deployed page surface and version parity
         id: live_version
         shell: bash
         env:
