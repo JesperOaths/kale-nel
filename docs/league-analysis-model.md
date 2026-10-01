@@ -4,6 +4,20 @@ This file is the behavioral-analysis contract for `kalenel.nl/league`.
 
 The purpose of the web analyzer is not to produce a decorative stat page. It should identify repeatable player decisions, show the evidence behind a judgment, compare the player with relevant peers and with their own broader history, and turn those findings into specific actions to practise.
 
+## Queue-context isolation
+
+Summoner's Rift alone is not a sufficient comparability filter because Riot's match payload also includes a `queueId` identifying the match queue/context.
+
+The analyzer therefore keeps all fetched matches cached, but after the map and minimum-duration filters it:
+1. counts the raw Riot `queueId` values,
+2. selects the most represented queue ID in the eligible sample,
+3. uses only that queue ID for the Last-20 deep coaching sample and broader cached baseline,
+4. reports how many otherwise-eligible games were excluded because they belonged to another queue ID.
+
+This deliberately uses the **raw queue ID** instead of hard-coded queue names. The isolation remains correct even if Riot changes a human-readable queue description later.
+
+The Data Quality block exposes the dominant queue ID, queue counts, analyzed-context game count, and excluded-other-queue count. A smaller homogeneous sample is preferred over a larger sample that mixes materially different play contexts.
+
 ## Coaching-sample eligibility
 
 The cache and the coaching sample are deliberately different.
