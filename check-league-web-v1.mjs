@@ -184,3 +184,7 @@ for(const table of ['league_profiles_v1','league_match_cache_v1','league_fetch_r
 console.log('league-web-contract=PASS');
 
 assert.ok(css.includes('.objective-diagnosis'),'Objective diagnosis must have dedicated styling');
+
+assert.ok(app.includes('practice-supporting'),'Practice plan must expose supporting evidence');
+assert.ok(app.includes('Why this is a priority'),'Practice plan must explain why a theme ranked highly');
+assert.ok(css.includes('.practice-supporting'),'Practice supporting evidence must be styled');
