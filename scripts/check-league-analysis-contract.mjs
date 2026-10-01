@@ -70,6 +70,11 @@ ok(backend.includes('base.delayMin>=1.5'), 'first-major delayed-completion thres
 ok(backend.includes('out.majorItemReadiness=majorItemReadiness('), 'per-game first-major readiness evidence must remain explicit');
 ok(backend.includes('avgMajorCompletionDelayMin'), 'aggregate affordability-to-purchase delay must remain exported');
 ok(backend.includes('avgMajorCompletionDelayVsPeerMin'), 'recipe-aware delay comparison versus the direct role opponent must remain exported');
+ok(backend.includes('higherRankMajorItemGames'), 'higher-ranked direct-peer first-major sample must remain exported');
+ok(backend.includes('higherRankAvgMajorItemDeltaMin'), 'higher-ranked direct-peer first-major timing delta must remain exported');
+ok(backend.includes('higherRankMajorItemFasterPct'), 'higher-ranked direct-peer faster-first-major rate must remain exported');
+ok(backend.includes('actual higher-ranked same-role opponents with measurable first-major completions'), 'higher-rank item coaching must use actual encountered role peers');
+ok(backend.includes('higherRankDefinition:"actual higher-ranked same-role opponents encountered"'), 'item-spike benchmark must identify the higher-rank comparison population');
 ok(app.includes('Avg affordable → purchase delay'), 'frontend must surface recipe-aware first-major delay');
 ok(app.includes('Readiness delay vs peer'), 'frontend must surface recipe-aware direct-peer delay');
 ok(backend.includes('itemSpikeWindow'), 'first-major-item spike utilization model must remain in analyzer');
