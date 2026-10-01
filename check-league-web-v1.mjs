@@ -218,6 +218,9 @@ assert.ok(api.includes('High-risk post-play give-backs / game'),'Align diagnosed
 assert.ok(api.includes('Late-reset objective miss rate'),'Objective reset diagnosis must have a direct measurable target');
 assert.ok(api.includes('Pre-objective side-lane deaths / game'),'Side-lane diagnosis must have a direct measurable target');
 
+assert.ok(api.includes('function inventoryCountsAt('),'first-major readiness must reconstruct item inventory rather than assume every historical component is still owned');
+assert.ok(api.includes('ITEM_SOLD')&&api.includes('ITEM_DESTROYED')&&api.includes('ITEM_UNDO'),'item-ledger readiness must account for removals and undo events');
+assert.ok(api.includes('direct_components_not_simultaneously_observed'),'readiness must fail closed unless recipe components coexist in the reconstructed inventory');
 assert.ok(api.includes('function majorItemReadiness('),'recipe-aware first-major readiness helper must remain explicit');
 assert.ok(api.includes('Number(me.currentGold)>=combineCost'),'first-major readiness must require current gold to cover the remaining combine cost');
 assert.ok(api.includes('base.delayMin>=1.5'),'delayed first-major completion threshold must remain explicit');
