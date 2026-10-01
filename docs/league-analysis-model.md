@@ -209,6 +209,26 @@ Useful comparisons include:
 
 These are correlations inside the player's sample. Wording must not imply causation.
 
+## Short-term direction inside the Last 20
+
+When the sample is large enough, compare the newest five games with the preceding games in the Last-20 sample.
+
+Current trend dimensions include:
+- CS/min,
+- gold differential at 15,
+- flagged high-risk deaths,
+- DPM.
+
+Trend conclusions need at least four valid observations in the latest five and at least five valid observations in the preceding sample. The comparison is intended to identify a recent change, not to declare that five games define the player's new true level.
+
+Current material-change triggers are deliberately conservative:
+- CS/min: about 0.6 or more,
+- gold @15: about 300g or more,
+- high-risk deaths: about 0.6 deaths/game or more,
+- DPM: about 120 or more.
+
+The output must show both recent and preceding values so the user can inspect the conclusion.
+
 ## Recent versus broader self
 
 When more than 20 matches are cached, compare the Last 20 with the broader cached sample for compatible full-game metrics such as:
