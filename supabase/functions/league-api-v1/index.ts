@@ -2016,19 +2016,41 @@ Deno.serve(async(req:Request)=>{
       if(error)throw error;return json(req,{ok:true,profiles:data||[]});
     }
     if(action==="profile_save"){
-      const input=body.profile||{},profileKey=safeKey(input.profile_key||input.display_name||input.game_name),displayName=text(input.display_name||input.game_name||profileKey);
+      const input=body.profile||{},directRequest=body.direct_request===true;
+      const profileKey=directRequest?"recent-request":safeKey(input.profile_key||input.display_name||input.game_name),displayName=text(input.display_name||input.game_name||profileKey);
       if(!profileKey||!displayName)return json(req,{ok:false,error:"profile_name_required"},400);
-      if(viewer.anonymous===true&&!text(input.id)){
+      const plat=platform(input.platform_region);
+      let existing:any=null;
+      if(directRequest){
+        const{data,error}=await sb.from("league_profiles_v1").select("*").eq("owner_player_id",viewer.player_id).eq("site_scope",viewer.site_scope).eq("profile_key","recent-request").maybeSingle();
+        if(error)throw error;existing=data||null;
+      }
+      if(viewer.anonymous===true&&!text(input.id)&&!directRequest){
         const{count,error:countError}=await sb.from("league_profiles_v1").select("*",{count:"exact",head:true}).eq("owner_player_id",viewer.player_id).eq("site_scope",viewer.site_scope);
         if(countError)throw countError;
         if(Number(count||0)>=PUBLIC_MAX_PROFILES)return json(req,{ok:false,error:"public_workspace_profile_limit",limit:PUBLIC_MAX_PROFILES},429);
       }
-      const plat=platform(input.platform_region),patch:any={owner_player_id:viewer.player_id,owner_display_name:viewer.display_name,site_scope:viewer.site_scope,profile_key:profileKey,display_name:displayName.slice(0,120),game_name:text(input.game_name).slice(0,80)||null,tag_line:text(input.tag_line).slice(0,32)||null,platform_region:plat,routing_region:routeFor(plat),notes:text(input.notes).slice(0,500)||null,updated_at:now()};
+      const identityChanged=!!(directRequest&&existing&&(
+        text(existing.game_name).toLowerCase()!==text(input.game_name).toLowerCase()||
+        text(existing.tag_line).toLowerCase()!==text(input.tag_line).toLowerCase()||
+        platform(existing.platform_region)!==plat
+      ));
+      const patch:any={owner_player_id:viewer.player_id,owner_display_name:viewer.display_name,site_scope:viewer.site_scope,profile_key:profileKey,display_name:displayName.slice(0,120),game_name:text(input.game_name).slice(0,80)||null,tag_line:text(input.tag_line).slice(0,32)||null,platform_region:plat,routing_region:routeFor(plat),notes:text(input.notes).slice(0,500)||null,updated_at:now()};
+      if(identityChanged)Object.assign(patch,{puuid:null,riot_account:null,last_resolved_at:null,rank_snapshot:null,ranked_fetched_at:null});
       let saved:any;
       if(text(input.id)){const{data,error}=await sb.from("league_profiles_v1").update(patch).eq("id",text(input.id)).eq("owner_player_id",viewer.player_id).select("*").maybeSingle();if(error||!data)throw error||Object.assign(new Error("profile_not_found"),{status:404});saved=data;}
       else{const{data,error}=await sb.from("league_profiles_v1").upsert(patch,{onConflict:"owner_player_id,site_scope,profile_key"}).select("*").single();if(error)throw error;saved=data;}
+      if(identityChanged&&saved?.id){
+        const profileId=text(saved.id);
+        const deletes=await Promise.all([
+          sb.from("league_analysis_runs_v1").delete().eq("profile_id",profileId).eq("owner_player_id",viewer.player_id),
+          sb.from("league_fetch_runs_v1").delete().eq("profile_id",profileId).eq("owner_player_id",viewer.player_id),
+          sb.from("league_match_cache_v1").delete().eq("profile_id",profileId).eq("owner_player_id",viewer.player_id)
+        ]);
+        const deleteError=deletes.find((x:any)=>x?.error)?.error;if(deleteError)throw deleteError;
+      }
       if(((allowServerRiotKey&&RIOT_KEY)||requestRiotKey)&&saved.game_name&&saved.tag_line){try{saved=await resolveProfile(sb,saved,requestRiotKey,allowServerRiotKey);}catch(e:any){return json(req,{ok:true,profile:saved,resolve_warning:text(e?.message||e)});}}
-      return json(req,{ok:true,profile:saved});
+      return json(req,{ok:true,profile:saved,direct_request:directRequest,identity_reset:identityChanged});
     }
     if(action==="profile_delete"){
       const profileId=text(body.profile_id);if(!profileId)return json(req,{ok:false,error:"profile_id_required"},400);
