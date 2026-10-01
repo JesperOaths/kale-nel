@@ -398,8 +398,16 @@ async function applySavedProfile(id,{loadReport=true}={}){
 }
 async function refreshSavedProfiles({restore=false}={}){
   try{
-    const d=await api('profiles_list');
-    state.savedProfiles=(d.profiles||[]).filter(p=>String(p.profile_key||'')!=='recent-request');
+    const d=await api('profiles_list');let profiles=Array.isArray(d.profiles)?d.profiles:[];
+    const legacy=profiles.find(p=>String(p.profile_key||'')==='recent-request'&&p.game_name&&p.tag_line)||null;
+    const duplicate=legacy?profiles.find(p=>String(p.id)!==String(legacy.id)&&sameRiotIdentity(p,legacy.game_name,legacy.tag_line,legacy.platform_region)):null;
+    if(legacy&&!duplicate){
+      try{
+        const migrated=await api('profile_save',{profile:{id:legacy.id,profile_key:generatedProfileKey(legacy.game_name,legacy.tag_line,legacy.platform_region),display_name:legacy.display_name||legacy.game_name+'#'+legacy.tag_line,game_name:legacy.game_name,tag_line:legacy.tag_line,platform_region:legacy.platform_region||'euw1',notes:profileNotes(profileRole(legacy))}});
+        if(migrated.profile){profiles=profiles.map(p=>String(p.id)===String(legacy.id)?migrated.profile:p);log('Your previous recent-request Riot identity was upgraded into a saved League profile without moving its cached match data.','ok');}
+      }catch(e){log('Legacy Riot profile migration was skipped: '+e.message,'bad');}
+    }
+    state.savedProfiles=profiles.filter(p=>String(p.profile_key||'')!=='recent-request');
     let wanted=state.selectedProfileId;
     if(restore&&!wanted){try{wanted=String(localStorage.getItem(LEAGUE_SLOT_SELECTION_KEY)||'');}catch(_){}}
     if(restore&&!state.savedProfiles.some(p=>String(p.id)===String(wanted))&&state.savedProfiles.length)wanted=String(state.savedProfiles[0].id);
