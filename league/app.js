@@ -387,9 +387,35 @@ async function loadSavedReport(profile){
       $('sourceState').textContent='Saved Kalenel analysis';
       statusPill('Saved '+roleLabel(selectedRole)+' report loaded');
     }else{
+      // Older stored reports predate role tagging. Never reuse a mixed-role
+      // payload for a selected-role view; rebuild deterministically from the
+      // already cached Riot match/timeline data instead. This needs no Riot key.
+      let cache=null;
+      try{cache=await api('cache_status',{profile_id:profile.id,target_role:selectedRole});}catch(_){}
+      const cachedRoleGames=Number(cache?.selected_role_cached_games??cache?.role_counts?.[selectedRole]??0);
+      if(cachedRoleGames>0){
+        $('analysisState').textContent='Rebuilding saved '+roleLabel(selectedRole)+' report';
+        $('sourceState').textContent='Using cached Riot data';
+        statusPill('Rebuilding '+roleLabel(selectedRole)+' report','warn');
+        try{
+          const rebuilt=await api('analyze_basic',{profile_id:profile.id,target_role:selectedRole});
+          const report=rebuilt?.report||null;
+          const wrongRole=(report?.games||[]).find(g=>canonicalRole(g.role)!==selectedRole);
+          if(wrongRole)throw new Error('Role-selection safety check failed during saved-report rebuild.');
+          if(report?.games?.length){
+            renderReport(report,'saved_server');
+            renderProgressComparison(report,null,null);
+            $('analysisState').textContent=report.games.length+' saved '+roleLabel(selectedRole)+' games';
+            $('sourceState').textContent='Saved Kalenel analysis · rebuilt from cache';
+            statusPill('Saved '+roleLabel(selectedRole)+' report rebuilt');
+            log('Rebuilt a role-pure '+roleLabel(selectedRole)+' report from '+cachedRoleGames+' cached '+roleLabel(selectedRole)+' game(s); no Riot refetch was needed.','ok');
+            return;
+          }
+        }catch(rebuildError){log('Cached '+roleLabel(selectedRole)+' report rebuild: '+rebuildError.message,'bad');}
+      }
       $('report').hidden=true;$('reportEmpty').hidden=false;
       $('analysisState').textContent='No saved '+roleLabel(selectedRole)+' report yet';
-      $('sourceState').textContent='Profile saved · analyze this role';
+      $('sourceState').textContent=cachedRoleGames?'Cached games available · retry analysis':'Profile saved · analyze this role';
     }
   }catch(e){log('Saved report: '+e.message,'bad');}
 }
