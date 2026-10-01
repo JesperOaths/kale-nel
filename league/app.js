@@ -5,7 +5,7 @@ const cfg=window.GEJAST_CONFIG||{};
 const API=(cfg.SUPABASE_URL||'')+'/functions/v1/printify-gildan-diff-diag-v1';
 const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
 const $=(id)=>document.getElementById(id);
-const state={profiles:[],profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false};
+const state={profiles:[],profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,gameSort:{key:'recent',dir:'desc'}};
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function token(){try{return (cfg.getPlayerSessionToken&&cfg.getPlayerSessionToken())||'';}catch(_){return'';}}
@@ -163,6 +163,7 @@ function perGameSpatialHtml(g){
 }
 
 async function boot(){
+  bindGameSortControls();
   clearLog();log('Opening League web workspace.');
   await getDdragonVersion();
   try{
@@ -614,10 +615,34 @@ function renderReplayReviewQueue(r){
   box.querySelectorAll('.review-open').forEach(btn=>btn.addEventListener('click',()=>openReplayReviewMatch(btn.dataset.reviewMatch,btn.dataset.reviewTab)));
 }
 
+function gameSortValue(g,key,index){
+  if(key==='champion')return String(g.champion||'').toLowerCase();
+  if(key==='role')return String(g.role||'').toLowerCase();
+  if(key==='result')return g.win?1:0;
+  if(key==='kda')return (Number(g.kills||0)+Number(g.assists||0))/Math.max(1,Number(g.deaths||0));
+  if(key==='kp')return Number(g.kp??-Infinity);
+  if(key==='cs')return Number(g.csMin??-Infinity);
+  if(key==='dpm')return Number(g.dpm??-Infinity);
+  if(key==='gold15')return hasNum(g.goldDiff15)?Number(g.goldDiff15):-Infinity;
+  return -Number(index);
+}
+function bindGameSortControls(){
+  document.querySelectorAll('[data-game-sort]').forEach(btn=>btn.onclick=()=>{
+    const key=String(btn.dataset.gameSort||'recent');
+    if(state.gameSort.key===key)state.gameSort.dir=state.gameSort.dir==='desc'?'asc':'desc';
+    else state.gameSort={key,dir:key==='champion'||key==='role'?'asc':'desc'};
+    if(state.report)renderGames(state.report);
+  });
+}
 function renderGames(r){
   const games=r.games||[];$('gameCountLabel').textContent=games.length+' games';
   state.openMatch=null;
-  $('gamesBody').innerHTML=games.map((g,i)=>{
+  const order=games.map((g,i)=>({g,i})).sort((a,b)=>{
+    const av=gameSortValue(a.g,state.gameSort.key,a.i),bv=gameSortValue(b.g,state.gameSort.key,b.i),dir=state.gameSort.dir==='asc'?1:-1;
+    if(typeof av==='string'||typeof bv==='string')return String(av).localeCompare(String(bv))*dir;
+    return (Number(av)-Number(bv))*dir||a.i-b.i;
+  });
+  $('gamesBody').innerHTML=order.map(({g,i})=>{
     const kda=[g.kills,g.deaths,g.assists].map(x=>hasNum(x)?Number(x):'?').join('/');
     const icon=championIcon(g.champion);
     return '<tr class="game-row" data-match="'+esc(g.matchId||String(i))+'" data-index="'+i+'">'+
@@ -632,6 +657,11 @@ function renderGames(r){
       '<td>'+esc(signed(g.goldDiff15,0))+'</td></tr>';
   }).join('');
   $('gamesBody').querySelectorAll('.game-row').forEach(row=>row.addEventListener('click',()=>toggleGame(Number(row.dataset.index))));
+  document.querySelectorAll('[data-game-sort]').forEach(btn=>{
+    const active=String(btn.dataset.gameSort||'')===state.gameSort.key;
+    btn.classList.toggle('active-sort',active);
+    btn.setAttribute('aria-sort',active?(state.gameSort.dir==='asc'?'ascending':'descending'):'none');
+  });
 }
 function toggleGame(index){
   const body=$('gamesBody'),rows=[...body.querySelectorAll('.game-row')];
