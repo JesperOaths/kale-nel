@@ -404,6 +404,7 @@ ok(backend.includes('function persistedReportProjection(rep:any)')&&backend.incl
 ok(!backend.includes('omittedPerGame:["badDeaths"')&&!backend.includes('omittedPerGame:["wards"'), 'compact saved reports must preserve death/ward evidence used by reloaded intelligence views');
 ok(html.includes('id="compoundSignals"')&&app.includes('function renderCompoundSignals('), 'compound evidence analysis must combine related metrics into interpretable intelligence');
 ok(html.includes('id="reportDrivers"')&&app.includes('function renderReportDrivers('), 'report must compress the strongest supported weakness, strength and recent direction into an action-first layer');
+ok(app.includes('driver-evidence-meta')&&app.includes('supporting finding')&&app.includes('confidence'), 'action-first report drivers must retain visible evidence-strength metadata when supplied by the backend');
 ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('matchHistorySignals('), 'recent selected-role games must have collapsible coaching-readable history rows with derived evidence signals');
 ok(html.includes('id="gameArcPatterns"')&&app.includes('function renderGameArcs(')&&app.includes('function gameArcStages('), 'League report must reconstruct supported per-game arcs and aggregate repeated state transitions');
 ok(html.includes('id="gameArcFunnels"')&&app.includes('function arcFunnelCard('), 'League report must summarize how ahead / close / behind @15 role states convert by @25 and result');
@@ -415,7 +416,7 @@ ok(app.includes("filter(x=>x.games.length>=2)")&&app.includes("filter(x=>x.count
 ok(app.includes('reportCoachingGames(r)')&&app.includes('gameArcTransition(g)'), 'game-arc aggregation must inherit the backend mechanics-cohort boundary');
 ok(app.includes('not a proven reset cause'), 'game-arc objective timing language must remain association-only');
 ok(html.includes('id="outcomeFingerprint"')&&app.includes('function renderOutcomeFingerprint('), 'selected-role games must expose descriptive win/loss fingerprint analysis without requiring another backend fetch');
-ok(app.includes('function standardizedMeanGap(')&&app.includes('Largest standardized separation:'), 'win/loss fingerprint must compare cross-unit metrics by standardized within-metric separation rather than raw numeric magnitude');
+ok(app.includes('function standardizedMeanGap(')&&app.includes('hedgesCorrection')&&app.includes('Largest standardized separation:'), 'win/loss fingerprint must use a small-sample-corrected standardized separation rather than raw numeric magnitude');
 ok(app.includes('function reportCoachingGames(')&&app.includes('mechanicsCohortApplied===true')&&app.includes('currentMechanicsKey'), 'frontend-derived coaching analysis must follow the backend mechanics cohort when one is applied');
 ok(app.includes("gameMatchesNamedFilter(g,'ahead15')")&&app.includes("gameMatchesNamedFilter(g,'behind15')"), 'match-history lane classifications must stay synchronized with the evidence-table bands');
 ok(app.includes('Timeline evidence is unavailable, so this game cannot be treated as having zero high-risk deaths.'), 'missing timelines must remain an explicit evidence gap in match-history risk summaries');
