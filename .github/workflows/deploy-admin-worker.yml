@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy-admin-worker.yml'
+      - 'VERSION'
       - 'cloudflare/workers/admin-gate/**'
       - 'admin*.html'
       - '*_vault.html'
@@ -184,6 +185,9 @@ jobs:
             ['admin_shop_operations.html', siteVersion],
           ]);
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          if (manifest.site_version !== siteVersion) {
+            throw new Error(`Admin bundle site_version mismatch: expected ${siteVersion}, got ${manifest.site_version || '<missing>'}`);
+          }
           const expectedMode = process.env.ADMIN_SOURCE_REPOSITORY ? 'external-private' : 'public-fallback';
           if (manifest.admin_source_mode !== expectedMode) {
             throw new Error(`Admin source mode mismatch: expected ${expectedMode}, got ${manifest.admin_source_mode}`);
@@ -195,7 +199,10 @@ jobs:
             const page = `${base}/${name}`;
             if (!fs.existsSync(page)) throw new Error(`${name} missing from Worker asset bundle`);
             const html = fs.readFileSync(page, 'utf8');
-            if (!html.includes(version)) throw new Error(`${name} asset is not ${version}`);
+            const declaration = new RegExp(`GEJAST_(?:PAGE|SITE)_VERSION\\s*=\\s*['\"]${version}['\"]`, 'i');
+            const watermark = new RegExp(`${version}\\s*[^\\w\\r\\n<>]{0,12}\\s*Made by Bruis`, 'i');
+            if (!declaration.test(html)) throw new Error(`${name} declaration is not ${version}`);
+            if (!watermark.test(html)) throw new Error(`${name} visible watermark is not ${version}`);
             if (!manifest.protected_entrypoints.includes(name)) {
               throw new Error(`${name} missing from protected entrypoint manifest`);
             }
