@@ -61,6 +61,14 @@ ok(backend.includes('economyLoss=!deathInWindow'), 'first-reset economy loss mus
 ok(backend.includes('firstResetLossRate'), 'aggregate first-reset loss rate must remain exported');
 ok(backend.includes('avgFirstResetGoldSwing'), 'first-reset gold-swing aggregate must remain exported');
 ok(backend.includes('avgFirstResetCsSwing'), 'first-reset CS-swing aggregate must remain exported');
+ok(backend.includes('function majorItemReadiness('), 'recipe-aware first-major readiness helper must remain explicit');
+ok(backend.includes('Number(me.currentGold)>=combineCost'), 'first-major readiness must require current gold to cover the remaining combine cost');
+ok(backend.includes('base.delayMin>=1.5'), 'first-major delayed-completion threshold must remain 1.5 minutes');
+ok(backend.includes('out.majorItemReadiness=majorItemReadiness('), 'per-game first-major readiness evidence must remain explicit');
+ok(backend.includes('avgMajorCompletionDelayMin'), 'aggregate affordability-to-purchase delay must remain exported');
+ok(backend.includes('avgMajorCompletionDelayVsPeerMin'), 'recipe-aware delay comparison versus the direct role opponent must remain exported');
+ok(app.includes('Avg affordable → purchase delay'), 'frontend must surface recipe-aware first-major delay');
+ok(app.includes('Readiness delay vs peer'), 'frontend must surface recipe-aware direct-peer delay');
 ok(backend.includes('itemSpikeWindow'), 'first-major-item spike utilization model must remain in analyzer');
 ok(backend.includes('leadSec>=45'), 'measurable first-major-item advantage must remain at least 45 seconds');
 ok(backend.includes('itemSpikeUtilizationRate'), 'aggregate first-major-item spike utilization rate must remain exported');
