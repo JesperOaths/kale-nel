@@ -296,6 +296,28 @@ Phase coaching should only fire when:
 
 The purpose is to localize review: lane decisions before 14, rotations/resets/objective approach from 14–25, or late objective/teamfight discipline after 25.
 
+## Rapid repeat-death recovery
+
+A **rapid repeat death** is a second player death occurring within **4 minutes** of the previous player death.
+
+The same calculation is performed for the actual same-role opponent in each analyzed match.
+
+For the player, preserve whether the repeat death is:
+- high-risk under the normal multi-signal death model,
+- costly/severe under the death-consequence model,
+- traded or untraded,
+- early/mid/late phase.
+
+The aggregate repeat-death rate uses:
+
+`repeat deaths / death-to-next-death opportunities`
+
+A game with zero or one death therefore does not invent a denominator.
+
+Coaching should not treat every repeat death as a mistake. Strong negative advice requires enough opportunities plus repeated high-risk or costly second deaths. The direct-role opponent rate is useful context: it distinguishes a player-specific recovery pattern from a match environment where both roles are repeatedly dying.
+
+The recommended intervention is a **post-death recovery protocol**: spend, identify the safest guaranteed resource, restore information, and avoid immediately re-entering the same contested area unless the state has changed.
+
 ## Death aftermath / consequence analysis
 
 Death quality and death consequence are separate questions.
