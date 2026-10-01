@@ -14,13 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Inspect currently served public catalog
+      - name: Compare upstream catalog to public projection
         shell: bash
         run: |
           set -euo pipefail
-          base='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828'
-          status="$(curl --silent --show-error --max-time 20 --output /tmp/public.json --write-out '%{http_code}' "$base?inventory_probe=1" || true)"
+          url='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828?diagnostic=1&catalog_audit=1'
+          status="$(curl --silent --show-error --max-time 35 --output /tmp/catalog-audit.json --write-out '%{http_code}' "$url" || true)"
           echo "HTTP=$status"
-          cat /tmp/public.json
-          echo
-          jq '{source,catalogSelection,generatedAt,stale,refreshScheduled,lastError,error,productCount:(.products|length),names:(.products|map(.name)|sort)}' /tmp/public.json || true
+          jq '{ok,mode,stage,envTokenConfigured,shopCount,catalogAudit,elapsedMs}' /tmp/catalog-audit.json || cat /tmp/catalog-audit.json
