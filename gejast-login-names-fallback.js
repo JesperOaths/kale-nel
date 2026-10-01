@@ -44,21 +44,40 @@
 
   async function load(requestedScope){
     var resolvedScope = requestedScope === 'family' ? 'family' : (requestedScope === 'friends' ? 'friends' : scope());
-    var attempts = [
-      ['get_login_active_names_v687',{site_scope_input:resolvedScope}],
-      ['get_player_selector_source_v1',{site_scope_input:resolvedScope}],
-      ['get_player_selector_source_v1',{session_token:null,site_scope_input:resolvedScope}]
-    ];
-    for (var attempt of attempts) {
-      try {
-        var names = normalize(rows(await rpc(attempt[0], attempt[1], 1800)));
-        if (names.length) {
-          try { cfg.writeCachedLoginNames && cfg.writeCachedLoginNames(names, resolvedScope); } catch(_) {}
-          return names;
+    var cached = [];
+    try { if (cfg.readCachedLoginNames) cached = normalize(cfg.readCachedLoginNames(resolvedScope)); } catch(_) {}
+    try {
+      var authoritative = normalize(rows(await rpc('get_login_active_names_v687',{site_scope_input:resolvedScope},1500)));
+      if (authoritative.length) {
+        try { cfg.writeCachedLoginNames && cfg.writeCachedLoginNames(authoritative, resolvedScope); } catch(_) {}
+        return authoritative;
+      }
+    } catch(_) {}
+    if(cached.length){
+      Promise.allSettled([
+        rpc('get_player_selector_source_v1',{site_scope_input:resolvedScope},1800),
+        rpc('get_player_selector_source_v1',{session_token:null,site_scope_input:resolvedScope},1800)
+      ]).then(function(results){
+        for(var result of results){
+          if(result.status!=='fulfilled') continue;
+          var names=normalize(rows(result.value));
+          if(names.length){ try { cfg.writeCachedLoginNames && cfg.writeCachedLoginNames(names,resolvedScope); } catch(_) {} break; }
         }
-      } catch(_) {}
+      }).catch(function(){});
+      return cached;
     }
-    try { if (cfg.readCachedLoginNames) return normalize(cfg.readCachedLoginNames(resolvedScope)); } catch(_) {}
+    var settled = await Promise.allSettled([
+      rpc('get_player_selector_source_v1',{site_scope_input:resolvedScope},1800),
+      rpc('get_player_selector_source_v1',{session_token:null,site_scope_input:resolvedScope},1800)
+    ]);
+    for(var result of settled){
+      if(result.status!=='fulfilled') continue;
+      var names=normalize(rows(result.value));
+      if(names.length){
+        try { cfg.writeCachedLoginNames && cfg.writeCachedLoginNames(names,resolvedScope); } catch(_) {}
+        return names;
+      }
+    }
     return [];
   }
   // v812f intentionally removed client SELECT from allowed_usernames. Override the
@@ -66,5 +85,5 @@
   // fall back to that private relation while preserving the same public RPC contract.
   cfg.fetchScopedActivePlayerNames = load;
   cfg.getActivatedPlayerNamesForScope = load;
-  window.GEJAST_LOGIN_NAMES_FALLBACK = { load: load, source:'v817-bounded-active-name-rpc' };
+  window.GEJAST_LOGIN_NAMES_FALLBACK = { load: load, source:'v817-cache-first-parallel-active-name-rpc' };
 })();
