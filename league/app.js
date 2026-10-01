@@ -327,6 +327,7 @@ function renderProgressComparison(current,previous,previousAt){
     {label:'First allied death rate',path:'behaviorSummary.firstAllyFightDeathRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
     {label:'Unspent-gold fight starts',path:'behaviorSummary.highUnspentFightRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
     {label:'Major-item disadvantage fights',path:'behaviorSummary.itemDisadvantageFightRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
+    {label:'Locally outnumbered fight rate',path:'behaviorSummary.outnumberedFightStartRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
     {label:'Game 3+ gold delta',path:'sessionBehavior.game3PlusGoldDelta',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
     {label:'Post-loss requeue gold delta',path:'sessionBehavior.postLossGoldDelta',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
     {label:'Late-reset objective miss rate',path:'behaviorSummary.lateResetObjectiveMissRate',threshold:10,direction:-1,format:v=>fmtPct(v)}
@@ -447,6 +448,7 @@ function detailContent(g,tab){
       detailCard('Died before contribution',String(f.diedBeforeContribution??0)+' · '+fmtPct(f.diedBeforeContributionRate))+detailCard('Fight survival',fmtPct(f.survivalRate))+
       detailCard('≥1000g unspent starts',String(f.highUnspentStarts??0)+' · '+fmtPct(f.highUnspentStartRate))+detailCard('Major-item disadvantage starts',String(f.itemDisadvantageStarts??0)+' · '+fmtPct(f.itemDisadvantageStartRate))+
       detailCard('≥600g role deficit starts',String(f.goldDeficitStarts??0)+' · '+fmtPct(f.goldDeficitStartRate))+
+      detailCard('Locally outnumbered',String(f.outnumberedStarts??0)+' · '+fmtPct(f.outnumberedStartRate))+detailCard('Loss rate while outnumbered',fmtPct(f.outnumberedLossRate))+
       detailList(events.slice(0,10).map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+String(x.kills||0)+' kills · '+(x.survived?'survived':x.firstAllyDeath?'first ally death':x.diedBeforeContribution?'died before contribution':'died after contribution')+
         (hasNum(x.currentGoldAtStart)?' · '+fmtInt(x.currentGoldAtStart)+'g unspent':'')+(hasNum(x.goldDiffAtStart)?' · role gold '+signed(x.goldDiffAtStart,0)+'g':'')+(x.itemDisadvantage?' · opponent major item first':'')),'No attended multi-kill fight clusters were detected.');
   }
@@ -571,6 +573,8 @@ function renderAdvanced(r){
     ['Fight starts with ≥1000g unspent',String(r.behaviorSummary?.highUnspentFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.highUnspentFightRate)],
     ['Fight starts down major item',String(r.behaviorSummary?.itemDisadvantageFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.itemDisadvantageFightRate)],
     ['Fight starts ≥600g down vs role',String(r.behaviorSummary?.goldDeficitFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.goldDeficitFightRate)],
+    ['Locally outnumbered fight starts',String(r.behaviorSummary?.outnumberedFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.outnumberedFightStartRate)],
+    ['Loss rate when locally outnumbered',fmtPct(r.behaviorSummary?.outnumberedFightLossRate)],
     ['Objective-setup vision Δ',hasNum(a.visionSetup?.avgDeltaVsOpponent)?signed(a.visionSetup.avgDeltaVsOpponent,1)+' wards vs peer':'n/a'],
     ['Post-kill conversion',String(r.behaviorSummary?.killConversions??0)+' / '+String(r.behaviorSummary?.killConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.killConversionRate)],
     ['Opposing-role post-kill conversion',String(r.behaviorSummary?.opponentKillConversions??0)+' / '+String(r.behaviorSummary?.opponentKillConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.opponentKillConversionRate)],
