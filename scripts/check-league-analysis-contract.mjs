@@ -208,7 +208,7 @@ ok(backend.includes('team!=="GENERIC"&&individual!=="GENERIC"&&team!==individual
 ok(backend.includes('function opponentResolution(')&&backend.includes('candidates.length!==1'), 'direct role peer comparison must require exactly one enemy candidate');
 ok(backend.includes('excludedAmbiguousRole')&&backend.includes('ambiguousDirectPeerGames'), 'role/peer ambiguity must remain visible in data quality');
 ok(app.includes('conflicting Riot role metadata')&&app.includes('ambiguous enemy-role game(s) withheld'), 'frontend must explain role/peer exclusions');
-ok(backend.includes('supportedQueueRows=durationEligibleRows.filter')&&backend.includes('supportedEligible=durationEligible.filter'), 'report and fetch-finish paths must share supported-queue filtering');
+ok(backend.includes('supportedQueueRows=roleDurationRows.filter')&&backend.includes('supportedEligible=durationEligible.filter'), 'report and fetch-finish paths must share supported-queue filtering after report-level selected-role filtering');
 ok(backend.includes('unsupportedQueueRowsExcluded'), 'unsupported special/bot queue exclusions must remain observable');
 ok(app.includes('unsupported special/bot queue'), 'Data Quality must explain unsupported queue exclusions');
 ok(backend.includes('x-league-workspace')&&backend.includes('publicWorkspaceOwnerId('), 'public League must use isolated browser-workspace ownership');
