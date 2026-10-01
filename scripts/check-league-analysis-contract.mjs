@@ -310,6 +310,10 @@ ok(backend.includes('metadata_then_bounded_timelines_v1'), 'analysis data qualit
 ok(backend.includes('avoidsHistoricalTimelinePayload:true'), 'analysis must explicitly record that baseline timelines were not transferred');
 ok(backend.includes('select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,peer_rank_json,peer_rank_fetched_at")'), 'fetch-finish queue selection must remain metadata-only');
 ok(backend.includes('rankNeedIds.length')&&backend.includes('select("match_id,match_json")'), 'fetch-finish must load match JSON only for peer-rank rows that still need it');
+ok(backend.includes('.not("timeline_json","is",null)')&&backend.includes('select("match_id,peer_rank_json,peer_rank_fetched_at")'), 'fetch-start cache detection must not transfer timeline JSON');
+ok(backend.includes('metadata_then_selected_reports_v1'), 'report_latest must expose metadata-first selected-payload retrieval');
+ok(backend.includes('select("id,source_kind,analyzer_version,sample_match_ids,created_at")'), 'report history must scan metadata without report blobs');
+ok(backend.includes('detailIds=[currentMeta?.id,previousMeta?.id]')&&backend.includes('select("id,report_data,data_quality")'), 'report_latest must hydrate at most current and previous full reports');
 ok(!backend.includes('select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,match_json,peer_rank_json,peer_rank_fetched_at").eq("profile_id",p.id).not("match_json","is",null).order("game_start_at",{ascending:false}).limit(100)'), 'fetch-finish must never reintroduce the 100 full-match hot-path read');
 ok(backend.includes('recommend_deeper_cache'), 'fetch finish must flag a comparable sample smaller than Last 20');
 ok(backend.includes('const rows=[...deepRows,...baselineRows]'), 'analysis must compose recent full-timeline rows with timeline-free baseline rows');
