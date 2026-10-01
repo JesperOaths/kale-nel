@@ -809,7 +809,7 @@ Current supported explanations include:
 - **death before the contest** — deaths followed by enemy objective conversion,
 - **setup-vision deficit** — materially lower objective-setup ward share than the actual same-role peer sample.
 
-Rank supported explanations by their evidence severity and expose the highest-ranked item as the **primary supported explanation**.
+Do not compare these clues on one mixed-unit "severity" scale. Order them by **evidence specificity** first: direct death→objective event sequences, then peer-relative setup-vision gaps, then recent-shop timing associations. Within the same evidence class, magnitude may break ties. Expose the first item as the **highest-confidence supported clue**, not as a proven cause.
 
 If no shop/death/vision signal crosses its threshold, do not manufacture certainty. Report **arrival/pathing as the remaining hypothesis**, explicitly marked as unresolved.
 
