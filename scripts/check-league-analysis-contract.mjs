@@ -48,6 +48,11 @@ ok(backend.includes('Number(o.killerId)===pid'), 'solo-kill structure conversion
 ok(backend.includes('diedBeforeNextShop'), 'post-solo-kill banking model must preserve death-before-shop ordering');
 ok(backend.includes('nextShopDelaySec'), 'post-solo-kill banking model must preserve time to next detected shop');
 ok(backend.includes('soloKillDeathsBeforeShopRate'), 'aggregate post-solo-kill death-before-shop rate must remain exported');
+ok(backend.includes('firstResetSequence'), 'first-reset sequence model must remain in analyzer');
+ok(backend.includes('economyLoss=!deathInWindow'), 'first-reset economy loss must exclude death-contaminated windows');
+ok(backend.includes('firstResetLossRate'), 'aggregate first-reset loss rate must remain exported');
+ok(backend.includes('avgFirstResetGoldSwing'), 'first-reset gold-swing aggregate must remain exported');
+ok(backend.includes('avgFirstResetCsSwing'), 'first-reset CS-swing aggregate must remain exported');
 ok(backend.includes('itemSpikeWindow'), 'first-major-item spike utilization model must remain in analyzer');
 ok(backend.includes('leadSec>=45'), 'measurable first-major-item advantage must remain at least 45 seconds');
 ok(backend.includes('itemSpikeUtilizationRate'), 'aggregate first-major-item spike utilization rate must remain exported');
