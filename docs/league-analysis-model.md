@@ -314,6 +314,8 @@ Riot timeline data used here does not provide a reliable universal role-quest-co
 
 The report exports revision counts so a Last-20 sample spanning multiple role-quest revisions is visible as a data-quality caveat.
 
+For mechanics-sensitive coaching, the report also builds a **current mechanics cohort** from the newest primary-role game's rules profile plus role-quest revision. If that cohort contains at least five primary-role games, coaching models use it instead of blending older incompatible mechanics into the same conclusions. The Last-20 overview remains visible separately. If fewer than five current-mechanics games exist, the analyzer keeps the broader primary-role sample rather than manufacturing certainty and explicitly marks the mixed-mechanics fallback as a data-quality limitation.
+
 ## Mid-game farm routing
 
 For TOP, MID and ADC, the analyzer separately tracks the change in **same-role CS differential from 15→25 minutes**.
