@@ -471,6 +471,28 @@ During roughly 6–22 minutes, a timeline state can be flagged when:
 
 This is a **candidate high-gold stay window**, not proof the player should have recalled immediately. Coaching should combine it with objective/death context rather than overstate it.
 
+## Vision-action safety
+
+For SUPPORT/JUNGLE especially, total vision is not enough; the route used to create that vision matters.
+
+A **vision-action death** requires all of the following:
+
+- the player placed a ward or cleared a ward,
+- the player died within 20 seconds of that action,
+- the death location is within 2,500 map units of the vision-action location.
+
+The event also preserves:
+- placement versus clear,
+- ward type / territory when known,
+- whether the action was part of objective setup,
+- whether any ally was within 3,000 units at death,
+- whether the death crossed the normal high-risk threshold,
+- whether the death was traded.
+
+The vision action itself does not increase the bad-death score. It is contextual evidence explaining *what the player was doing* immediately before the death.
+
+Aggregate coaching is primarily for SUPPORT/JUNGLE and should require a meaningful number of vision actions. The recommended change is to improve route/team timing, not to ward less: establish teammate proximity, use safe information first, and then enter the ward location.
+
 ## Vision quality versus vision volume
 
 For SUPPORT/JUNGLE especially, ward count and VPM are not enough. Preserve the share of tracked wards that qualify as objective-setup wards.
