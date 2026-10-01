@@ -30,6 +30,8 @@ ok(backend.includes('Number(d.tMs)-Number(v.tMs)<=20000'), 'vision-action death 
 ok(backend.includes('dist2(pos,v)<=2500*2500'), 'vision-action death spatial radius must remain 2500 units');
 ok(backend.includes('function deathArea('), 'spatial death-context classification must remain in analyzer');
 ok(backend.includes('peer_rank_json'), 'same-role peer rank cache must remain available');
+ok(backend.includes('gameDuration||r?.game_duration_seconds||0)>=600'), 'coaching sample must exclude sub-10-minute games');
+ok(backend.includes('shortGameThresholdSeconds:600'), 'short-game threshold must remain explicit in data quality');
 ok(backend.includes('x-riot-api-key'), 'session Riot-key header must remain supported by backend/CORS');
 ok(!/localStorage|sessionStorage|indexedDB/.test(app), 'Riot key or League state must not be persisted in browser storage');
 
