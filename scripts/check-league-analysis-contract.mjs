@@ -88,6 +88,12 @@ ok(backend.includes('.order("game_start_at",{ascending:false}).limit(100)'), 'pe
 ok(backend.includes('recommend_deeper_cache'), 'fetch finish must flag a comparable sample smaller than Last 20');
 ok(backend.includes('x-riot-api-key'), 'session Riot-key header must remain supported by backend/CORS');
 ok(app.includes('practiceTargetHtml'), 'frontend must render measurable practice checkpoints');
+ok(app.includes('previousPracticeTargetOutcomes'), 'frontend must score prior practice targets against later distinct analyses');
+ok(app.includes('curRole!==prevRole'), 'practice-target follow-up must fail closed when primary role changes');
+ok(app.includes('Number(curQueue)!==Number(prevQueue)'), 'practice-target follow-up must fail closed when queue context changes');
+ok(app.includes('curPatch!==prevPatch'), 'practice-target follow-up must fail closed when patch cohort changes');
+ok(app.includes("'moving closer'")&&app.includes("'moved away'")&&app.includes("'unchanged'"), 'practice-target follow-up statuses must remain explicit');
+ok(html.includes('id="practiceOutcome"'), 'practice target outcome container must remain in page');
 ok(app.includes('Next 5 comparable games'), 'practice cards must identify the short practice horizon');
 ok(!/localStorage|sessionStorage|indexedDB/.test(app), 'Riot key or League state must not be persisted in browser storage');
 
