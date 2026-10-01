@@ -161,6 +161,27 @@ If outside-pressure deaths dominate a sufficiently large early-lane death sample
 
 This distinction prevents the report from misdiagnosing a map-awareness problem as a pure matchup-mechanics problem.
 
+## Solo-kill structure conversion
+
+A clean solo kill is useful only if the player converts the temporary advantage intelligently.
+
+For each **pre-14 clean solo kill on the actual same-role opponent**, inspect Riot timeline structure events for the next 90 seconds.
+
+A structure conversion is counted only when:
+- the event is a turret plate destruction or turret building kill,
+- Riot directly credits the event's `killerId` to the player,
+- the event occurs within 90 seconds after the clean solo kill.
+
+Do **not** count generic team structure events as personal conversion.
+
+Also preserve:
+- player's directly credited pre-14 turret plates,
+- same-role opponent's directly credited pre-14 turret plates,
+- plate delta,
+- early directly credited turret kills where available.
+
+This metric complements, rather than replaces, the existing solo-kill → gold/CS-at-15 conversion and post-kill reset/banking metrics. A player can make the correct decision by resetting instead of taking a plate, so low structure conversion must not be treated as automatically wrong. Coaching should specifically recommend deliberate wave/reset/plate conversion, not greed for every plate.
+
 ## Direct-role solo duels
 
 Timeline champion-kill events are also used to isolate **clean 1v1 outcomes against the actual same-role opponent**.
