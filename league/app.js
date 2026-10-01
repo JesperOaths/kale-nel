@@ -332,6 +332,7 @@ function renderProgressComparison(current,previous,previousAt){
     {label:'High-risk deaths while behind / game',path:'behaviorSummary.highRiskBehindDeathsPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
     {label:'Pre-14 solo deaths to role / game',path:'behaviorSummary.pre14RoleSoloDeathPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
     {label:'First major item vs peer',path:'peerComparison.avgMajorItemDeltaMin',threshold:.4,direction:-1,format:v=>signed(v,1)+' min'},
+    {label:'Major-item spike utilization',path:'behaviorSummary.itemSpikeUtilizationRate',threshold:15,direction:1,format:v=>fmtPct(v)},
     {label:'Damage share − gold share',path:'behaviorSummary.damageGoldEfficiency',threshold:2,direction:1,format:v=>signed(v,1)+' pp'},
     {label:'First allied death rate',path:'behaviorSummary.firstAllyFightDeathRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
     {label:'Unspent-gold fight starts',path:'behaviorSummary.highUnspentFightRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
@@ -501,11 +502,15 @@ function detailContent(g,tab){
       '<div class="detail-note">Conversion is team context: it asks whether player-involved kills are followed by tracked objectives/structures within 75 seconds. It does not claim the player alone caused or prevented the conversion.</div>';
   }
   if(tab==='resets'){
-    const mine=g.firstMajorItem,opp=g.opponentFirstMajorItem,shops=g.shopVisits||[],greedy=g.greedyStayWindows||[];
+    const mine=g.firstMajorItem,opp=g.opponentFirstMajorItem,shops=g.shopVisits||[],greedy=g.greedyStayWindows||[],spike=g.itemSpikeWindow||{};
     return detailCard('First major item',mine?(mine.name+' · '+fmt(mine.time,1)+'m'):'n/a')+
       detailCard('Opponent major item',opp?(opp.name+' · '+fmt(opp.time,1)+'m'):'n/a')+
       detailCard('Timing vs opponent',hasNum(g.itemSpikeDeltaVsOpponent)?signed(g.itemSpikeDeltaVsOpponent,1)+' min':'n/a')+
+      detailCard('Item-spike window',spike.eligible?(fmtInt(spike.leadSec)+'s advantage'):'No ≥45s item window')+
+      detailCard('Spike-window impact',spike.eligible?(String(spike.totalImpacts||0)+' impact(s) · '+(spike.used?'used':'unused')):'n/a')+
+      detailCard('Died before spike impact',spike.eligible?(spike.diedBeforeImpact?'yes':'no'):'n/a')+
       detailCard('Detected shop visits',String(shops.length))+detailCard('Greedy-stay windows',String(greedy.length))+detailCard('Overstay deaths',String(g.overstayCount??0))+
+      detailList((spike.events||[]).map(x=>fmt(x.time,1)+'m · '+(x.type==='kill_or_assist'?'kill/assist impact':'objective impact'+(x.objectiveType?' · '+x.objectiveType:''))),'No tracked impact occurred inside the measurable first-major-item advantage window.')+
       detailList(greedy.map(x=>(Number(x.startMin)||0).toFixed(1)+'m · '+fmtInt(x.currentGold)+'g held · next shop '+(Number(x.nextShopMin)||0).toFixed(1)+'m ('+fmt(x.delayMin,1)+'m delay)'),'No repeated high-gold stay window detected.');
   }
   const peer=g.peer||null;
@@ -617,6 +622,9 @@ function renderAdvanced(r){
     ['Roam lane cost',hasNum(roam.avgLaneCostCs)?signed(roam.avgLaneCostCs,1)+' CS avg · '+String(roam.emptyCostlyRoams??0)+' empty costly':'n/a'],
     ['High-gold stay windows',String(recall.greedyStayWindows??0)],
     ['Major-item Δ vs opponent',hasNum(itemSpike.avgDeltaVsOpponentMin)?signed(itemSpike.avgDeltaVsOpponentMin,1)+' min':'n/a'],
+    ['Earlier-item windows used',String(itemSpike.utilizedWindows??0)+' / '+String(itemSpike.eligibleWindows??0)+' · '+fmtPct(itemSpike.utilizationRate)],
+    ['Deaths before spike impact',String(itemSpike.deathsBeforeImpact??0)],
+    ['Avg earlier-item lead',hasNum(itemSpike.avgLeadSec)?fmtInt(itemSpike.avgLeadSec)+'s':'n/a'],
     ['Damage share − gold share',hasNum(r.behaviorSummary?.damageGoldEfficiency)?signed(r.behaviorSummary.damageGoldEfficiency,1)+' pp':'n/a'],
     ['Fight samples',String(r.behaviorSummary?.fightSamples??0)],
     ['First allied death in fights',fmtPct(r.behaviorSummary?.firstAllyFightDeathRate)],
@@ -673,6 +681,10 @@ function renderAdvanced(r){
     metric('Objective-setup share Δ',hasNum(p.objectiveSetupWardRateDelta)?signed(p.objectiveSetupWardRateDelta,0)+' pp':'n/a',!hasNum(p.objectiveSetupWardRateDelta)),
     metric('Major-item timing vs peer',hasNum(p.avgMajorItemDeltaMin)?signed(p.avgMajorItemDeltaMin,1)+' min':'n/a',!hasNum(p.avgMajorItemDeltaMin)),
     metric('Faster major item than peer',fmtPct(p.majorItemFasterPct),!hasNum(p.majorItemFasterPct)),
+    metric('Measurable earlier-item windows',String(p.itemSpikeEligibleWindows??0),false),
+    metric('Earlier-item windows used',fmtPct(p.itemSpikeUtilizationRate),!hasNum(p.itemSpikeUtilizationRate)),
+    metric('Deaths before spike impact',String(p.itemSpikeDeathsBeforeImpact??0),false),
+    metric('Avg earlier-item lead',hasNum(p.avgItemSpikeLeadSec)?fmtInt(p.avgItemSpikeLeadSec)+'s':'n/a',!hasNum(p.avgItemSpikeLeadSec)),
     metric('First-impact comparable games',String(p.impactGames??0),false),
     metric('First impact vs peer',hasNum(p.avgImpactDeltaMin)?signed(p.avgImpactDeltaMin,1)+' min':'n/a',!hasNum(p.avgImpactDeltaMin)),
     metric('You impact first',fmtPct(p.impactEarlierPct),!hasNum(p.impactEarlierPct)),
