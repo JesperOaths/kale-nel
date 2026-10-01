@@ -118,7 +118,7 @@ assert.ok(api.includes('team!=="GENERIC"&&individual!=="GENERIC"&&team!==individ
 assert.ok(api.includes('function opponentResolution(')&&api.includes('candidates.length!==1'),'Direct same-role peer must require exactly one enemy candidate');
 assert.ok(api.includes('excludedAmbiguousRole')&&api.includes('ambiguousDirectPeerGames'),'Role and peer ambiguity must remain observable');
 assert.ok(app.includes('conflicting Riot role metadata')&&app.includes('ambiguous enemy-role game(s) withheld'),'Frontend must expose withheld ambiguous role/peer evidence');
-assert.ok(api.includes('supportedQueueRows=durationEligibleRows.filter'),'Report eligibility must exclude unsupported special/bot Summoner’s Rift queues');
+assert.ok(api.includes('supportedQueueRows=roleDurationRows.filter'),'Report eligibility must exclude unsupported special/bot Summoner’s Rift queues after selected-role filtering');
 assert.ok(api.includes('supportedEligible=durationEligible.filter'),'Fetch-finish peer backfill must use the same supported-queue eligibility');
 assert.ok(api.includes('unsupportedQueueRowsExcluded'),'Data quality must expose unsupported queue exclusions');
 assert.ok(app.includes('unsupported special/bot queue'),'Frontend must explain unsupported queue exclusions');
