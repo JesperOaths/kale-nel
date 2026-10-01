@@ -942,6 +942,37 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
 }
 function gamePhaseKey(minute:any,rules:any=STANDARD_SR_2026_RULES){const m=Number(minute);return m<Number(rules?.earlyEndMin||14)?"early":m<Number(rules?.lateStartMin||20)?"mid":"late";}
 function signedText(v:any,d=0){if(!hasNum(v))return"n/a";const n=Number(v);return(n>0?"+":"")+n.toFixed(d);}
+function clampNumber(v:any,min:number,max:number){const n=Number(v);return Number.isFinite(n)?Math.max(min,Math.min(max,n)):min;}
+function legacyBruisienatorDqiCompatibility(out:any,totalDeaths:number){
+  // Recovered from the uploaded Bruisienator V21 source. Some legacy categories are not directly observable
+  // from Riot timeline data, so this compatibility score is deliberately marked partial instead of inventing them.
+  const bad=Number(out?.badDeathCount||0);
+  const isolatedFlagged=(out?.badDeaths||[]).filter((d:any)=>Array.isArray(d?.tags)&&d.tags.includes("isolated")).length;
+  const greed=Number(out?.highUnspentGoldDeaths||0);
+  const nearObjective=Number(out?.objectiveDeathCount||0);
+  const facecheck=0; // legacy source expected a separate facecheck classifier; current model does not fabricate it.
+  const score=clampNumber(10-bad*1.4-isolatedFlagged*0.8-greed*0.8-facecheck*1.0-nearObjective*1.2,0,10);
+  return{score,scale:"0-10",formula:"recovered_bruisienator_v21_partial",partial:true,totalDeaths,bad,isolatedFlagged,greedHighUnspent:greed,facecheckUnavailable:true,nearObjective};
+}
+function modernDeathQualityIndex(out:any,totalDeaths:number){
+  if(totalDeaths<=0)return{score:10,scale:"0-10",model:"consequence_aware_v1",deaths:0,components:{},confidence:"high"};
+  const measured=Number(out?.deathConsequences?.measured||0);
+  const ratio=(a:any,b:any)=>Number(b)>0?Math.max(0,Math.min(1,Number(a||0)/Number(b))):0;
+  const components={
+    highRiskRate:ratio(out?.badDeathCount,totalDeaths),
+    costlyRate:ratio(out?.deathConsequences?.costly,measured),
+    severeRate:ratio(out?.deathConsequences?.severe,measured),
+    highRiskUntradedRate:ratio(out?.highRiskUntradedDeathCount,totalDeaths),
+    preObjectiveRate:ratio(out?.preObjectiveDeathCount,totalDeaths),
+    highUnspentRate:ratio(out?.highUnspentGoldDeaths,totalDeaths),
+    highRiskLeadRate:ratio(out?.highRiskLeadDeathCount,totalDeaths)
+  };
+  const penalty=4.0*components.highRiskRate+1.8*components.costlyRate+0.9*components.severeRate+1.2*components.highRiskUntradedRate+0.8*components.preObjectiveRate+0.7*components.highUnspentRate+0.6*components.highRiskLeadRate;
+  const score=clampNumber(10-penalty,0,10);
+  const evidenceParts=[measured,totalDeaths,Number(out?.badDeathCount||0)];
+  const confidence=measured>=Math.max(2,Math.ceil(totalDeaths*0.6))?"high":measured>=1?"medium":"low";
+  return{score,scale:"0-10",model:"consequence_aware_v1",deaths:totalDeaths,measuredConsequences:measured,components,confidence,evidenceParts};
+}
 function gameJudgments(g:any){
   const items:any[]=[];
   const lane15Comparable=g?.phaseRules?.lane15Comparable!==false,fixed15to25Comparable=g?.phaseRules?.fixed15to25Comparable!==false,closing25Comparable=g?.phaseRules?.closing25Comparable!==false;
