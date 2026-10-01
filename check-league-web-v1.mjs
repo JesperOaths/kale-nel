@@ -291,6 +291,7 @@ assert.ok(api.includes('LEGENDSTRACKER_RANK_BASELINES_20260323')&&api.includes('
 assert.ok(api.includes('sourceUrl:"https://legendstracker.fr/methodologie"')&&api.includes('sourceCorpus:"830k+ ranked EUW1 games"'),'External benchmark provenance must remain visible in the report contract');
 assert.ok(api.includes('externalBenchmarks')&&app.includes('Population benchmark, not your opponents.'),'Frontend rank radar must use population benchmarks rather than encountered opponents');
 assert.ok(api.includes('function externalAdcBenchmarkSet(rankSnapshot:any,cohortQueueId:any)'),'External ADC benchmark must receive the selected queue context');
+assert.ok(api.includes('role:"ADC"')&&api.includes('sourceRole:"Bot (ADC)"'),'External benchmark metadata must use canonical ADC while preserving source-role provenance');
 assert.ok(api.includes('queueId===420?"RANKED_SOLO_5x5":queueId===440?"RANKED_FLEX_SR":null'),'Population rank benchmark must only use Ranked Solo/Flex cohorts and their matching ladder');
 assert.ok(api.includes('eligibilityReason:!rankedQueueType?"selected_cohort_not_ranked"'),'Non-ranked cohorts must fail closed for ranked population benchmarking');
 assert.ok(app.includes("ext.eligible!==false"),'Frontend ADC benchmark summary must respect backend comparability eligibility');
@@ -469,7 +470,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v109'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v110'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
