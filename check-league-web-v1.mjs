@@ -424,7 +424,7 @@ assert.ok(api.includes('current_mechanics_unverified'),'Unverified mechanics fal
 assert.ok(api.includes('mechanicsCohortApplied=currentMechanicsKnown&&'),'Mechanics filtering must require a verified current rules revision');
 assert.ok(api.includes('mixedMechanicsFallback'),'Small current-mechanics cohorts must remain explicit rather than silently discarding or mixing evidence');
 assert.ok(api.includes('championBehaviorModel(coachingGames'),'Champion behavior coaching must use the same mechanics-aware cohort');
-assert.ok(app.includes('function diagnosticChip(')&&app.includes('Vs your usual @15')&&app.includes('DPM vs your usual')&&app.includes('Risk deaths vs usual'),'Champion section must compare pick-specific behavior against the player's own current role baseline rather than show only absolutes');
+assert.ok(app.includes('function diagnosticChip(')&&app.includes('Vs your usual @15')&&app.includes('DPM vs your usual')&&app.includes('Risk deaths vs usual'),"Champion section must compare pick-specific behavior against the player's own current role baseline rather than show only absolutes");
 assert.ok(app.includes('Repeated-matchup read')&&app.includes('Clean 1v1 K / D')&&app.includes('Outside-pressure share')&&app.includes('DPM vs role peer'),'Repeated-opponent cards must expose duel, outside-pressure and direct-peer output context');
 assert.ok(app.includes('Mechanics coaching cohort'),'Frontend must explain which mechanics cohort drives coaching');
 assert.ok(app.includes('Role-quest rules'),'Per-game UI must expose the active role-quest rules context');
