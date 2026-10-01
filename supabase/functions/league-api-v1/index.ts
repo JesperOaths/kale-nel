@@ -2320,8 +2320,12 @@ Deno.serve(async(req:Request)=>{
       return json(req,{ok:true,run:data,dominant_queue_id:dominantQueueId,queue_selection_basis:"dominant_within_recent_selected_role_supported_window_tie_newest",queue_selection_window:20,target_role:targetRole==="GENERIC"?null:targetRole,selected_role_total_cached_games:targetRole==="GENERIC"?null:roleEligible.length,queue_comparable_cached_games:queueComparableCachedGames,selected_role_cached_games:targetRole==="GENERIC"?null:comparableCachedGames,comparable_cached_games:comparableCachedGames,peer_rank_target_count:peerRankTargetCount,peer_rank_backfilled:peerRankBackfilled,public_cache_pruned:prunedMatches,public_fetch_runs_pruned:prunedFetchRuns,public_prune_warning:pruneWarning,recommend_deeper_cache:comparableCachedGames<20&&Number(run.total_count||0)<(viewer.anonymous===true?PUBLIC_MAX_FETCH_MATCHES:100)});
     }
     if(action==="cache_status"){
-      const p=await getProfile(sb,viewer.player_id,body.profile_id),{count,error}=await sb.from("league_match_cache_v1").select("*",{count:"exact",head:true}).eq("profile_id",p.id);if(error)throw error;
-      const{data:last}=await sb.from("league_match_cache_v1").select("updated_at,game_start_at").eq("profile_id",p.id).order("updated_at",{ascending:false}).limit(1).maybeSingle();return json(req,{ok:true,cached_games:count||0,last_updated_at:last?.updated_at||null,last_game_at:last?.game_start_at||null});
+      const p=await getProfile(sb,viewer.player_id,body.profile_id),targetRole=role(body.target_role),{data:rows,error}=await sb.from("league_match_cache_v1").select("player_role,updated_at,game_start_at").eq("profile_id",p.id).order("updated_at",{ascending:false}).limit(PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE);
+      if(error)throw error;
+      const cacheRows=Array.isArray(rows)?rows:[],roleCounts:any={ADC:0,SUPPORT:0,MID:0,JUNGLE:0,TOP:0,GENERIC:0};
+      for(const row of cacheRows){const rr=role(row?.player_role);roleCounts[rr]=(roleCounts[rr]||0)+1;}
+      const last=cacheRows[0]||null;
+      return json(req,{ok:true,cached_games:cacheRows.length,role_counts:roleCounts,target_role:targetRole==="GENERIC"?null:targetRole,selected_role_cached_games:targetRole==="GENERIC"?null:Number(roleCounts[targetRole]||0),last_updated_at:last?.updated_at||null,last_game_at:last?.game_start_at||null});
     }
     if(action==="analyze_basic"){
       const p=await getProfile(sb,viewer.player_id,body.profile_id),targetRole=role(body.target_role);if(!text(p.puuid))return json(req,{ok:false,error:"profile_not_resolved"},400);
