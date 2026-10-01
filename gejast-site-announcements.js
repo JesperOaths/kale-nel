@@ -1,4 +1,19 @@
 (function(global){
+  const POLL_MS = 90 * 1000;
+  const FIRST_POLL_MS = 5000;
+  const SHARED_MIN_POLL_MS = 60 * 1000;
+  const SHARED_POLL_KEY = 'gejastAnnouncementsLastPollV2';
+  let lastLocalPollAt = 0;
+  function sharedLastPollAt(){
+    try { return Number(global.localStorage.getItem(SHARED_POLL_KEY) || 0) || 0; } catch(_) { return 0; }
+  }
+  function claimSharedPoll(){
+    const now=Date.now(), shared=sharedLastPollAt();
+    if((shared && now-shared<SHARED_MIN_POLL_MS) || (lastLocalPollAt && now-lastLocalPollAt<SHARED_MIN_POLL_MS)) return false;
+    lastLocalPollAt=now;
+    try { global.localStorage.setItem(SHARED_POLL_KEY,String(now)); } catch(_) {}
+    return true;
+  }
   const STATE = { timer:null, showing:false, disabled:false };
   function cfg(){ return global.GEJAST_CONFIG || {}; }
   function hasPlayer(){ try { return !!(cfg().getPlayerSessionToken && cfg().getPlayerSessionToken()); } catch(_) { return false; } }
@@ -121,7 +136,7 @@
     global.setTimeout(done, 7000);
   }
   async function poll(){
-    if (STATE.disabled || !hasPlayer() || STATE.showing) return;
+    if (STATE.disabled || !hasPlayer() || STATE.showing || global.document.hidden || !claimSharedPoll()) return;
     try {
       const data = await rpc('get_player_site_announcements_scoped', { site_scope_input: scope() });
       const rows = normalizeRows(data?.rows || data);
@@ -142,13 +157,23 @@
     }
   }
   function shouldRun(){
-    try { const path = (global.location.pathname || '').toLowerCase(); return !/\/admin/.test(path); } catch(_) { return true; }
+    try {
+      const path = (global.location.pathname || '').toLowerCase();
+      if (/\/admin/.test(path)) return false;
+      // These public utility/commerce surfaces do not need Despimarkt notices.
+      // Keeping them quiet also prevents Supabase background traffic from
+      // competing with login, League analysis or storefront catalog reads.
+      if (path === '/league' || path.startsWith('/league/') || path === '/shop' || path.startsWith('/shop/')) return false;
+      if (/\/(?:login|request|activate|invite)\.html$/.test(path)) return false;
+      return true;
+    } catch(_) { return true; }
   }
   function start(){
     if (!shouldRun()) return;
-    poll();
+    global.setTimeout(poll, FIRST_POLL_MS);
     if (STATE.timer) global.clearInterval(STATE.timer);
-    STATE.timer = global.setInterval(poll, 20000);
+    STATE.timer = global.setInterval(poll, POLL_MS);
+    global.document.addEventListener('visibilitychange',()=>{ if(!global.document.hidden) poll(); });
   }
   if (global.document.readyState === 'loading') global.document.addEventListener('DOMContentLoaded', start, { once:true });
   else start();
