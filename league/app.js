@@ -758,7 +758,7 @@ function detailContent(g,tab){
   }
   if(tab==='roams'){
     const r=g.roams||{},events=r.events||[];
-    const kills=events.reduce((n,x)=>n+Number(x.playerKillAssists??(x.killOrAssist?1:0)||0),0),deaths=events.reduce((n,x)=>n+Number(x.playerDeaths??(x.death?1:0)||0),0),obj=events.reduce((n,x)=>n+Number(x.objectivePresent??(x.objective?1:0)||0),0),away=events.reduce((n,x)=>n+Number(x.objectiveAway||0),0);
+    const kills=events.reduce((n,x)=>n+Number((x.playerKillAssists??(x.killOrAssist?1:0))||0),0),deaths=events.reduce((n,x)=>n+Number((x.playerDeaths??(x.death?1:0))||0),0),obj=events.reduce((n,x)=>n+Number((x.objectivePresent??(x.objective?1:0))||0),0),away=events.reduce((n,x)=>n+Number(x.objectiveAway||0),0);
     return detailCard('Attempts',String(r.attempts??0))+detailCard('Successful',String(r.successes??0))+detailCard('Failed',String(r.failures??0))+
       detailCard('Roam K/A / deaths',String(kills)+' / '+String(deaths))+detailCard('Objectives joined / while away',String(obj)+' / '+String(away))+
       detailList(events.map((x,i)=>'Roam '+String(i+1)+' · '+(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+(x.targetZone||'map')+' · '+(x.outcome||'neutral')+(roamEvidenceText(x)?' · '+roamEvidenceText(x):'')),'No qualifying pre-major-objective-era roam departures detected.')+
