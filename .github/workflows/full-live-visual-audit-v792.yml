@@ -32,7 +32,7 @@ permissions:
 
 concurrency:
   group: full-live-visual-audit-production
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   screenshot-every-page:
