@@ -6,7 +6,7 @@
     return (Array.isArray(list)?list:[]).map(function(v){
       if (typeof v === 'string') return v;
       return v && (v.display_name || v.public_display_name || v.chosen_username || v.nickname || v.player_name || v.name || v.label || v.desired_name || '') || '';
-    }).map(function(v){ return String(v||'').replace(/\s+/g,' ').trim(); }).filter(function(v){ var k=v.toLowerCase(); if(!v||seen.has(k)) return false; seen.add(k); return true; }).sort(function(a,b){ return a.localeCompare(b,'nl'); });
+    }).map(function(v){ return String(v||'').replace(/\s+/g,' ').trim(); }).filter(function(v){ var k=v.toLowerCase(); if(!v||/^Visual(?:A|B|Family)_\d+$/i.test(v)||seen.has(k)) return false; seen.add(k); return true; }).sort(function(a,b){ return a.localeCompare(b,'nl'); });
   }
   function rows(raw){
     if (Array.isArray(raw)) return raw;
