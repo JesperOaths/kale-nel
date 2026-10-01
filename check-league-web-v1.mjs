@@ -283,6 +283,10 @@ assert.ok(!app.includes('rankStepBands'),'Frontend must not regress to opponent-
 assert.ok(app.includes('chart-zero-line')&&app.includes('fixedMin:-2000')&&app.includes('fixedMax:2000'),'Signed lane-economy charts must retain a prominent zero line and stable gold scale');
 assert.ok(app.includes('fixedMin:-35')&&app.includes('fixedMax:35'),'CS-difference charts must retain a stable symmetric scale');
 assert.ok(app.includes('itemIcon')&&app.includes('purchaseItemStrip')&&app.includes('championIcon'),'League report must use Riot champion/item imagery for visual context');
+assert.ok(api.includes('finalItems=[p.item0,p.item1,p.item2,p.item3,p.item4,p.item5,p.item6]'),'Per-game report must expose the final item build without extra Riot requests');
+assert.ok(app.includes('matchVisualHeader')&&app.includes('finalItems'),'Expanded matches must render champion/opponent/build imagery on demand');
+assert.ok(app.includes("'<circle class=\"radar-ring\""),'Rank comparison must use a circular spider-grid rather than a polygon-grid scaffold');
+assert.ok(css.includes('.games-table th{position:static!important}')&&css.includes('.site-credit-watermark{'),'Long-scroll surfaces must avoid sticky/fixed compositing where it is not necessary');
 assert.ok(css.includes('width:min(1960px')&&css.includes('html{font-size:18px'),'League report must remain substantially wider with larger base typography');
 assert.ok(css.includes('--good:#126a45')&&css.includes('--bad:#b23a2f'),'Positive and negative data must retain high-contrast visual tokens');
 assert.ok(html.includes('id="quickRead"')&&html.includes('id="radarChart"')&&html.includes('id="decisionMetrics"'),'Logical overview, population radar and decision sections must remain present');
