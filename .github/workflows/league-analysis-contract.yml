@@ -1,0 +1,33 @@
+name: League analysis contract
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'league/**'
+      - 'supabase/functions/league-api-v1/**'
+      - 'docs/league-analysis-model.md'
+      - 'scripts/check-league-analysis-contract.mjs'
+      - '.github/workflows/league-analysis-contract.yml'
+  pull_request:
+    paths:
+      - 'league/**'
+      - 'supabase/functions/league-api-v1/**'
+      - 'docs/league-analysis-model.md'
+      - 'scripts/check-league-analysis-contract.mjs'
+      - '.github/workflows/league-analysis-contract.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check League analyzer invariants
+        run: node scripts/check-league-analysis-contract.mjs
