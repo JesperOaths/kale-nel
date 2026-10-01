@@ -134,3 +134,7 @@ console.log(JSON.stringify({
   domIds:ids.length,
   invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison']
 },null,2));
+
+ok(backend.includes('"post-play discipline"'), 'post-play discipline must consolidate into a stable coaching theme');
+ok(backend.includes('"side-lane timing"'), 'side-lane timing must consolidate into a stable coaching theme');
+ok(backend.includes('supportingTitles'), 'priority themes must preserve supporting finding titles');
