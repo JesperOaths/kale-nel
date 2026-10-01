@@ -2283,7 +2283,7 @@ Deno.serve(async(req:Request)=>{
       const [fallbackCatalog,...patchCatalogs]=await Promise.all([itemCatalogForPatch(null),...patchKeys.map((pk:string)=>itemCatalogForPatch(pk))]);
       const catalog:any={fallback:fallbackCatalog.data,fallbackMeta:fallbackCatalog,byPatch:{},resolution:{}};
       patchKeys.forEach((pk:string,i:number)=>{const resolved=patchCatalogs[i];catalog.byPatch[pk]=resolved?.data||fallbackCatalog.data;catalog.resolution[pk]={version:resolved?.version||fallbackCatalog.version||null,exact:!!resolved?.exact,fallback:!!resolved?.fallback};});
-      const rep=report(p,rows,catalog);
+      const rep:any=report(p,rows,catalog);
       rep.dataQuality=rep.dataQuality||{};
       rep.dataQuality.cacheReadStrategy={kind:"metadata_then_bounded_timelines_v1",metadataRows:metaOrdered.length,cohortRows:cohortMeta.length,timelineRows:deepRows.length,timelineRoleUsable:deepRoleUsable,baselineRows:baselineRows.length,timelineTarget:ANALYSIS_DEEP_TARGET_GAMES,avoidsHistoricalTimelinePayload:true};
       const{data:run,error:se}=await sb.from("league_analysis_runs_v1").insert({profile_id:p.id,owner_player_id:viewer.player_id,source_kind:"web_behavior",analyzer_version:rep.analyzerVersion,sample_match_ids:rep.games.map((g:any)=>g.matchId),report_data:rep,data_quality:rep.dataQuality}).select("id,created_at").single();if(se)throw se;
