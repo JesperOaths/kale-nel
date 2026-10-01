@@ -5,280 +5,313 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <meta http-equiv="Cache-Control" content="no-store, max-age=0">
-  <title>Bruisienator · League playstyle analysis</title>
+  <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends playstyle analysis with evidence-backed Last-20 coaching and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261001-league-web-v88">
+  <link rel="stylesheet" href="/league/styles.css?v=20261001-league-web-v89">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817"></script>
 </head>
 <body>
-  <header class="league-header">
-    <a class="brand" href="/league/" aria-label="Bruisienator home">
-      <span class="brand-mark">B</span>
-      <span><strong>Bruisienator</strong><small>League playstyle analysis</small></span>
-    </a>
-    <div class="header-meta">
-      <span class="pill" id="backendState">Connecting…</span>
-      <a class="quiet-link" href="/">Kalenel home</a>
-    </div>
-  </header>
+  <a class="skip-link" href="#league-main">Skip to League analysis</a>
 
-  <main class="shell">
-    <section class="hero panel">
-      <div class="hero-copy">
-        <p class="eyebrow">Last-20 · evidence-backed</p>
-        <h1>Your League GUI now lives in the browser.</h1>
-        <p class="lede">Select a profile, update Riot data when needed, then analyze the cached Last 20 without downloading a separate Windows GUI.</p>
-        <p class="muted tiny"><strong>Public workspace:</strong> no Kalenel login is required. Profiles and reports are isolated to this browser workspace. Fetch/update uses your session-only Riot key; the site's private Riot key is never exposed to public workspaces. Public storage is bounded (up to 8 profiles, 50-match fetches, retained recent cache/history) so the shared service stays responsive.</p>
-      </div>
+  <main class="page-wrap" id="league-main">
+    <section class="site-shell">
+      <header class="site-header">
+        <a class="site-brand" href="/" aria-label="Kalenel home">
+          <img src="/logo-small.png" alt="" class="site-logo">
+          <span class="site-brand-copy"><strong>Kalenel</strong><small>Bruisienator · League analysis</small></span>
+        </a>
+        <nav class="site-nav" aria-label="League page navigation">
+          <a href="/" class="nav-chip">Home</a>
+          <a href="/league/" class="nav-chip current" aria-current="page">League</a>
+          <span class="pill backend-pill" id="backendState">Connecting…</span>
+        </nav>
+      </header>
 
-      <div class="profile-toolbar">
-        <label class="field grow">
-          <span>League profile</span>
-          <select id="profileSelect" aria-label="League profile">
-            <option value="">Loading profiles…</option>
-          </select>
-        </label>
-        <button class="button secondary" id="newProfileBtn" type="button">New profile</button>
-        <label class="field fetch-depth">
-          <span>Cache depth</span>
-          <select id="fetchCount" aria-label="Number of recent matches to cache">
-            <option value="20">20 matches · lighter fetch</option>
-            <option value="50" selected>50 matches · public maximum</option>
-          </select>
-        </label>
-        <button class="button" id="fetchBtn" type="button" disabled>Fetch / update</button>
-        <button class="button primary" id="analyzeBtn" type="button" disabled>Analyze cached Last 20</button>
-      </div>
-
-      <details class="batch-tools" id="batchTools">
-        <summary>Batch profiles · sequential</summary>
-        <div class="batch-tools-body">
-          <div class="batch-profile-list" id="batchProfiles" aria-label="Profiles for batch processing"></div>
-          <div class="batch-actions">
-            <button class="button secondary small" id="batchFetchBtn" type="button" disabled>Fetch / update selected</button>
-            <button class="button secondary small" id="batchAnalyzeBtn" type="button" disabled>Analyze selected</button>
+      <section class="league-intro">
+        <div class="intro-copy">
+          <p class="eyebrow">Bruisienator · Last-20 evidence</p>
+          <h1>League analysis, in the Kalenel site.</h1>
+          <p class="lede">Fetch your recent Riot data, analyze the cached Last 20, and review practical coaching evidence without a separate desktop GUI.</p>
+          <div class="intro-chips" aria-label="Workspace properties">
+            <span>Public workspace</span>
+            <span>Browser-isolated profiles</span>
+            <span>Evidence-backed coaching</span>
           </div>
-          <p class="muted tiny">Selected profiles run one at a time to keep Riot/API load controlled. A failure on one profile is logged and the remaining selected profiles continue.</p>
         </div>
-      </details>
+        <aside class="intro-note">
+          <strong>No Kalenel login required</strong>
+          <p>Profiles and reports are isolated to this browser workspace. A Riot API key, when needed, is session-only and is never written into your profile or report.</p>
+          <small>Public storage stays bounded: up to 8 profiles, 50-match fetches and retained recent cache/history.</small>
+        </aside>
+      </section>
 
-      <div class="profile-editor" id="profileEditor" hidden>
-        <div class="editor-grid">
-          <label class="field"><span>Profile label</span><input id="profileLabel" autocomplete="off" placeholder="Main EUW"></label>
-          <label class="field"><span>Riot game name</span><input id="gameName" autocomplete="off" placeholder="GameName"></label>
-          <label class="field"><span>Tag line</span><input id="tagLine" autocomplete="off" placeholder="EUW"></label>
-          <label class="field"><span>Platform</span>
-            <select id="platformRegion">
-              <option value="euw1">EUW1</option><option value="eun1">EUN1</option><option value="na1">NA1</option>
-              <option value="kr">KR</option><option value="jp1">JP1</option><option value="br1">BR1</option>
-              <option value="oc1">OC1</option><option value="tr1">TR1</option>
+      <section class="workspace-card" aria-labelledby="workspace-title">
+        <div class="section-heading workspace-heading">
+          <div>
+            <p class="eyebrow">Workspace</p>
+            <h2 id="workspace-title">Profile & analysis controls</h2>
+          </div>
+          <span class="section-hint">Fetch and analysis remain separate so you control Riot/API work.</span>
+        </div>
+
+        <div class="profile-toolbar">
+          <label class="field grow">
+            <span>League profile</span>
+            <select id="profileSelect" aria-label="League profile">
+              <option value="">Loading profiles…</option>
             </select>
           </label>
+          <button class="button secondary" id="newProfileBtn" type="button">New profile</button>
+          <label class="field fetch-depth">
+            <span>Cache depth</span>
+            <select id="fetchCount" aria-label="Number of recent matches to cache">
+              <option value="20">20 matches · lighter fetch</option>
+              <option value="50" selected>50 matches · public maximum</option>
+            </select>
+          </label>
+          <button class="button secondary" id="fetchBtn" type="button" disabled>Fetch / update</button>
+          <button class="button primary" id="analyzeBtn" type="button" disabled>Analyze cached Last 20</button>
         </div>
-        <label class="field"><span>Notes</span><input id="profileNotes" autocomplete="off" placeholder="Optional"></label>
-        <div class="editor-actions">
-          <button class="button primary" id="saveProfileBtn" type="button">Save profile</button>
-          <button class="button ghost danger-button" id="deleteProfileBtn" type="button" hidden>Delete profile</button>
-          <button class="button ghost" id="cancelProfileBtn" type="button">Close</button>
+
+        <div class="workspace-secondary">
+          <details class="batch-tools" id="batchTools">
+            <summary>Batch profiles · sequential</summary>
+            <div class="batch-tools-body">
+              <div class="batch-profile-list" id="batchProfiles" aria-label="Profiles for batch processing"></div>
+              <div class="batch-actions">
+                <button class="button secondary small" id="batchFetchBtn" type="button" disabled>Fetch / update selected</button>
+                <button class="button secondary small" id="batchAnalyzeBtn" type="button" disabled>Analyze selected</button>
+              </div>
+              <p class="muted tiny">Selected profiles run one at a time to keep Riot/API load controlled. A failure on one profile is logged and the remaining selected profiles continue.</p>
+            </div>
+          </details>
+
+          <div class="riot-key-row" id="riotKeyRow">
+            <label class="field grow">
+              <span>Riot API key · session only</span>
+              <input id="riotApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="RGAPI-…">
+            </label>
+            <button class="button secondary" id="testRiotKeyBtn" type="button" disabled>Test Riot key</button>
+            <div class="riot-key-copy">
+              <strong id="riotKeyStatus">No server Riot key configured</strong>
+              <small>The key stays in this browser tab only. It is not saved to your profile, report, cache, or repository.</small>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div class="riot-key-row" id="riotKeyRow">
-        <label class="field grow">
-          <span>Riot API key · session only</span>
-          <input id="riotApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="RGAPI-…">
-        </label>
-        <button class="button secondary" id="testRiotKeyBtn" type="button" disabled>Test Riot key</button>
-        <div class="riot-key-copy">
-          <strong id="riotKeyStatus">No server Riot key configured</strong>
-          <small>The key stays in this browser tab only. It is not saved to your profile, report, cache, or repository.</small>
+        <div class="profile-editor" id="profileEditor" hidden>
+          <div class="editor-title">
+            <div><p class="eyebrow">Profile details</p><h3>Create or edit a League profile</h3></div>
+            <button class="button ghost small" id="cancelProfileBtn" type="button">Close</button>
+          </div>
+          <div class="editor-grid">
+            <label class="field"><span>Profile label</span><input id="profileLabel" autocomplete="off" placeholder="Main EUW"></label>
+            <label class="field"><span>Riot game name</span><input id="gameName" autocomplete="off" placeholder="GameName"></label>
+            <label class="field"><span>Tag line</span><input id="tagLine" autocomplete="off" placeholder="EUW"></label>
+            <label class="field"><span>Platform</span>
+              <select id="platformRegion">
+                <option value="euw1">EUW1</option><option value="eun1">EUN1</option><option value="na1">NA1</option>
+                <option value="kr">KR</option><option value="jp1">JP1</option><option value="br1">BR1</option>
+                <option value="oc1">OC1</option><option value="tr1">TR1</option>
+              </select>
+            </label>
+          </div>
+          <label class="field"><span>Notes</span><input id="profileNotes" autocomplete="off" placeholder="Optional"></label>
+          <div class="editor-actions">
+            <button class="button primary" id="saveProfileBtn" type="button">Save profile</button>
+            <button class="button ghost danger-button" id="deleteProfileBtn" type="button" hidden>Delete profile</button>
+          </div>
         </div>
-      </div>
 
-      <div class="status-strip">
-        <div><span class="status-label">Cache</span><strong id="cacheState">—</strong></div>
-        <div><span class="status-label">Latest game</span><strong id="latestGameState">—</strong></div>
-        <div><span class="status-label">Latest analysis</span><strong id="analysisState">—</strong></div>
-        <div><span class="status-label">Data source</span><strong id="sourceState">—</strong></div>
-      </div>
-    </section>
+        <div class="status-strip" aria-label="League workspace status">
+          <div><span class="status-label">Cache</span><strong id="cacheState">—</strong></div>
+          <div><span class="status-label">Latest game</span><strong id="latestGameState">—</strong></div>
+          <div><span class="status-label">Latest analysis</span><strong id="analysisState">—</strong></div>
+          <div><span class="status-label">Data source</span><strong id="sourceState">—</strong></div>
+        </div>
+      </section>
 
-    <section class="panel progress-panel" id="progressPanel">
-      <div class="section-head compact">
-        <div><p class="eyebrow">Execution progress</p><h2>Fetch / analysis log</h2></div>
-        <span class="pill neutral" id="progressState">Idle</span>
-      </div>
-      <div class="progress-track" aria-hidden="true"><span id="progressBar"></span></div>
-      <div class="progress-log" id="progressLog" aria-live="polite">
-        <div class="log-line muted">Ready. Fetch and Analyze are intentionally separate operations.</div>
-      </div>
-    </section>
+      <section class="panel progress-panel" id="progressPanel">
+        <div class="section-head compact">
+          <div><p class="eyebrow">Execution progress</p><h2>Fetch / analysis log</h2></div>
+          <span class="pill neutral" id="progressState">Idle</span>
+        </div>
+        <div class="progress-track" aria-hidden="true"><span id="progressBar"></span></div>
+        <div class="progress-log" id="progressLog" aria-live="polite">
+          <div class="log-line muted">Ready. Fetch and Analyze are intentionally separate operations.</div>
+        </div>
+      </section>
 
-    <section id="reportEmpty" class="panel empty-state">
-      <div class="empty-icon">20</div>
-      <h2>No Last-20 report loaded yet</h2>
-      <p>Choose or create a profile. Fetch match data when needed, then analyze the cached data. Existing report JSON can also be imported below.</p>
-    </section>
-
-    <div id="report" hidden>
-      <section class="panel report-hero">
+      <section id="reportEmpty" class="panel empty-state">
+        <div class="empty-icon">20</div>
         <div>
-          <p class="eyebrow">Player overview</p>
-          <h2 id="reportTitle">—</h2>
-          <p class="report-sub" id="reportSubtitle">—</p>
-        </div>
-        <div class="report-actions">
-          <span class="pill" id="reportSourceBadge">—</span>
-          <button class="button secondary small" id="exportBtn" type="button">Export report JSON</button>
+          <p class="eyebrow">Last-20 report</p>
+          <h2>No analysis loaded yet</h2>
+          <p>Choose or create a profile, fetch match data when needed, then analyze the cached data. Existing Bruisienator report JSON can also be imported below.</p>
         </div>
       </section>
 
-      <section class="kpi-grid" id="kpiGrid" aria-label="Role-aware key performance indicators"></section>
+      <div id="report" hidden>
+        <section class="panel report-hero">
+          <div>
+            <p class="eyebrow">Player overview</p>
+            <h2 id="reportTitle">—</h2>
+            <p class="report-sub" id="reportSubtitle">—</p>
+          </div>
+          <div class="report-actions">
+            <span class="pill" id="reportSourceBadge">—</span>
+            <button class="button secondary small" id="exportBtn" type="button">Export report JSON</button>
+          </div>
+        </section>
 
-      <section class="two-col">
-        <article class="panel">
-          <div class="section-head"><div><p class="eyebrow">Coaching</p><h2>Top improvement priorities</h2></div></div>
-          <div id="recentFocus" class="bullet-list"></div>
-        </article>
-        <article class="panel">
-          <div class="section-head"><div><p class="eyebrow">What is working</p><h2>Strengths to preserve</h2></div></div>
-          <div id="overallHighlights" class="bullet-list"></div>
-        </article>
-      </section>
+        <section class="kpi-grid" id="kpiGrid" aria-label="Role-aware key performance indicators"></section>
 
-      <section class="panel" id="sessionHabitsPanel" hidden>
-        <div class="section-head">
-          <div><p class="eyebrow">Session patterns</p><h2>Performance across a play session</h2></div>
-          <span class="muted">Descriptive patterns only — not a psychological diagnosis</span>
-        </div>
-        <div class="quality-grid" id="sessionHabits"></div>
-        <div class="source-note" id="sessionHabitsNote"></div>
-      </section>
-
-      <section class="panel practice-panel">
-        <div class="section-head">
-          <div><p class="eyebrow">Practice plan</p><h2>Next 5 games</h2></div>
-          <span class="muted">Built from the highest-priority findings · measurable targets appear only with enough evidence</span>
-        </div>
-        <div class="practice-grid" id="practicePlan"></div>
-      </section>
-
-      <section class="panel" id="replayReviewPanel" hidden>
-        <div class="section-head">
-          <div><p class="eyebrow">Replay review</p><h2>Highest-value moments to review</h2></div>
-          <span class="muted">Ranked by supported consequence and decision value · max 2 moments per match</span>
-        </div>
-        <div class="review-queue" id="replayReviewQueue"></div>
-      </section>
-
-      <section class="panel progress-comparison-panel" id="progressComparisonPanel" hidden>
-        <div class="section-head">
-          <div><p class="eyebrow">Development</p><h2>Since the previous distinct analysis</h2></div>
-          <span class="muted" id="previousAnalysisDate">—</span>
-        </div>
-        <div class="progress-comparison-grid" id="progressComparison"></div>
-        <div class="target-outcomes" id="practiceOutcome"></div>
-      </section>
-
-      <section class="panel">
-        <div class="section-head">
-          <div><p class="eyebrow">Last 20</p><h2>Per-game evidence</h2></div>
-          <span class="muted" id="gameCountLabel">—</span>
-        </div>
-        <div class="table-wrap">
-          <table class="games-table">
-            <thead><tr><th><button class="table-sort" type="button" data-game-sort="recent" aria-label="Sort by recency">#</button></th><th><button class="table-sort" type="button" data-game-sort="champion">Champion</button></th><th><button class="table-sort" type="button" data-game-sort="role">Role</button></th><th><button class="table-sort" type="button" data-game-sort="result">Result</button></th><th><button class="table-sort" type="button" data-game-sort="kda">K / D / A</button></th><th><button class="table-sort" type="button" data-game-sort="kp">KP</button></th><th><button class="table-sort" type="button" data-game-sort="cs">CS/min</button></th><th><button class="table-sort" type="button" data-game-sort="dpm">DPM</button></th><th><button class="table-sort" type="button" data-game-sort="gold15">Δ Gold @15</button></th></tr></thead>
-            <tbody id="gamesBody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="section-head">
-          <div><p class="eyebrow">Trends</p><h2>Last-20 charts</h2></div>
-          <span class="muted">Charts hide cleanly when fewer than 3 valid points exist.</span>
-        </div>
-        <div class="chart-grid" id="chartGrid"></div>
-        <div class="hidden-charts" id="hiddenCharts" hidden></div>
-      </section>
-
-      <section class="panel" id="spatialReview">
-        <div class="section-head">
-          <div><p class="eyebrow">Spatial review</p><h2>Where the behavior happens</h2></div>
-          <span class="muted">Hover points for event context.</span>
-        </div>
-        <div class="spatial-grid">
-          <article class="spatial-card">
-            <div class="spatial-card-head"><div><strong>High-risk deaths</strong><small>Lead-protection deaths are ringed.</small></div><span id="deathMapMeta">—</span></div>
-            <div id="deathMap"></div>
-            <div class="map-legend"><span><i class="legend-dot death"></i>High-risk death</span><span><i class="legend-dot death lead"></i>While ≥500g ahead</span></div>
+        <section class="two-col">
+          <article class="panel">
+            <div class="section-head"><div><p class="eyebrow">Coaching</p><h2>Top improvement priorities</h2></div></div>
+            <div id="recentFocus" class="bullet-list"></div>
           </article>
-          <article class="spatial-card">
-            <div class="spatial-card-head"><div><strong>Ward placement</strong><small>Offensive, river and defensive territory.</small></div><span id="wardMapMeta">—</span></div>
-            <div id="wardMap"></div>
-            <div class="map-legend"><span><i class="legend-dot ward offensive"></i>Offensive</span><span><i class="legend-dot ward river"></i>River</span><span><i class="legend-dot ward defensive"></i>Defensive</span><span><i class="legend-dot ward setup"></i>Objective setup</span></div>
+          <article class="panel">
+            <div class="section-head"><div><p class="eyebrow">What is working</p><h2>Strengths to preserve</h2></div></div>
+            <div id="overallHighlights" class="bullet-list"></div>
           </article>
-        </div>
-        <p class="muted tiny spatial-note" id="spatialProjectionNote"></p>
+        </section>
+
+        <section class="panel" id="sessionHabitsPanel" hidden>
+          <div class="section-head">
+            <div><p class="eyebrow">Session patterns</p><h2>Performance across a play session</h2></div>
+            <span class="muted">Descriptive patterns only — not a psychological diagnosis</span>
+          </div>
+          <div class="quality-grid" id="sessionHabits"></div>
+          <div class="source-note" id="sessionHabitsNote"></div>
+        </section>
+
+        <section class="panel practice-panel">
+          <div class="section-head">
+            <div><p class="eyebrow">Practice plan</p><h2>Next 5 games</h2></div>
+            <span class="muted">Measurable targets appear only when the evidence supports them.</span>
+          </div>
+          <div class="practice-grid" id="practicePlan"></div>
+        </section>
+
+        <section class="panel" id="replayReviewPanel" hidden>
+          <div class="section-head">
+            <div><p class="eyebrow">Replay review</p><h2>Highest-value moments to review</h2></div>
+            <span class="muted">Ranked by supported consequence and decision value · max 2 moments per match</span>
+          </div>
+          <div class="review-queue" id="replayReviewQueue"></div>
+        </section>
+
+        <section class="panel progress-comparison-panel" id="progressComparisonPanel" hidden>
+          <div class="section-head">
+            <div><p class="eyebrow">Development</p><h2>Since the previous distinct analysis</h2></div>
+            <span class="muted" id="previousAnalysisDate">—</span>
+          </div>
+          <div class="progress-comparison-grid" id="progressComparison"></div>
+          <div class="target-outcomes" id="practiceOutcome"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-head">
+            <div><p class="eyebrow">Last 20</p><h2>Per-game evidence</h2></div>
+            <span class="muted" id="gameCountLabel">—</span>
+          </div>
+          <div class="table-wrap">
+            <table class="games-table">
+              <thead><tr><th><button class="table-sort" type="button" data-game-sort="recent" aria-label="Sort by recency">#</button></th><th><button class="table-sort" type="button" data-game-sort="champion">Champion</button></th><th><button class="table-sort" type="button" data-game-sort="role">Role</button></th><th><button class="table-sort" type="button" data-game-sort="result">Result</button></th><th><button class="table-sort" type="button" data-game-sort="kda">K / D / A</button></th><th><button class="table-sort" type="button" data-game-sort="kp">KP</button></th><th><button class="table-sort" type="button" data-game-sort="cs">CS/min</button></th><th><button class="table-sort" type="button" data-game-sort="dpm">DPM</button></th><th><button class="table-sort" type="button" data-game-sort="gold15">Δ Gold @15</button></th></tr></thead>
+              <tbody id="gamesBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="section-head">
+            <div><p class="eyebrow">Trends</p><h2>Last-20 charts</h2></div>
+            <span class="muted">Charts hide cleanly when fewer than 3 valid points exist.</span>
+          </div>
+          <div class="chart-grid" id="chartGrid"></div>
+          <div class="hidden-charts" id="hiddenCharts" hidden></div>
+        </section>
+
+        <section class="panel" id="spatialReview">
+          <div class="section-head">
+            <div><p class="eyebrow">Spatial review</p><h2>Where the behavior happens</h2></div>
+            <span class="muted">Hover points for event context.</span>
+          </div>
+          <div class="spatial-grid">
+            <article class="spatial-card">
+              <div class="spatial-card-head"><div><strong>High-risk deaths</strong><small>Lead-protection deaths are ringed.</small></div><span id="deathMapMeta">—</span></div>
+              <div id="deathMap"></div>
+              <div class="map-legend"><span><i class="legend-dot death"></i>High-risk death</span><span><i class="legend-dot death lead"></i>While ≥500g ahead</span></div>
+            </article>
+            <article class="spatial-card">
+              <div class="spatial-card-head"><div><strong>Ward placement</strong><small>Offensive, river and defensive territory.</small></div><span id="wardMapMeta">—</span></div>
+              <div id="wardMap"></div>
+              <div class="map-legend"><span><i class="legend-dot ward offensive"></i>Offensive</span><span><i class="legend-dot ward river"></i>River</span><span><i class="legend-dot ward defensive"></i>Defensive</span><span><i class="legend-dot ward setup"></i>Objective setup</span></div>
+            </article>
+          </div>
+          <p class="muted tiny spatial-note" id="spatialProjectionNote"></p>
+        </section>
+
+        <section class="two-col">
+          <article class="panel">
+            <div class="section-head"><div><p class="eyebrow">Advanced analysis</p><h2>Behavioral dimensions</h2></div></div>
+            <div class="metric-list" id="advancedMetrics"></div>
+          </article>
+          <article class="panel">
+            <div class="section-head"><div><p class="eyebrow">Comparative evidence</p><h2>Peers, conversion & win/loss patterns</h2></div></div>
+            <div class="metric-list" id="benchmarkMetrics"></div>
+          </article>
+        </section>
+
+        <section class="two-col">
+          <article class="panel">
+            <div class="section-head"><div><p class="eyebrow">Roles</p><h2>Role-specific sample</h2></div></div>
+            <div id="roleBreakdown" class="breakdown-grid"></div>
+          </article>
+          <article class="panel">
+            <div class="section-head"><div><p class="eyebrow">Champions</p><h2>Champion-specific sample</h2></div></div>
+            <div id="championBreakdown" class="breakdown-grid"></div>
+          </article>
+        </section>
+
+        <section class="panel">
+          <div class="section-head">
+            <div><p class="eyebrow">Matchups</p><h2>Repeated opponent matchups</h2></div>
+            <span class="muted">Shown only with at least 3 primary-role games against the same opposing champion</span>
+          </div>
+          <div id="matchupBreakdown" class="breakdown-grid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-head"><div><p class="eyebrow">Trust</p><h2>Data quality & lineage</h2></div></div>
+          <div class="quality-grid" id="qualityGrid"></div>
+          <div class="source-note" id="sourceNote"></div>
+        </section>
+      </div>
+
+      <section class="panel migration-panel">
+        <details>
+          <summary>Migration tools · import a Bruisienator report JSON</summary>
+          <p>This is the bridge for current/local Bruisienator output while the current analyzer source is being ported into the web backend. It does not upload Riot API keys.</p>
+          <div class="import-row">
+            <input id="reportFile" type="file" accept=".json,application/json">
+            <button class="button secondary" id="importBtn" type="button" disabled>Import into selected profile</button>
+          </div>
+          <p class="muted tiny">Historical generated HTML is intentionally not patched or treated as source code. The current analyzer/source package remains the authority for the advanced formulas.</p>
+        </details>
       </section>
 
-      <section class="two-col">
-        <article class="panel">
-          <div class="section-head"><div><p class="eyebrow">Advanced analysis</p><h2>Behavioral dimensions</h2></div></div>
-          <div class="metric-list" id="advancedMetrics"></div>
-        </article>
-        <article class="panel">
-          <div class="section-head"><div><p class="eyebrow">Comparative evidence</p><h2>Peers, conversion & win/loss patterns</h2></div></div>
-          <div class="metric-list" id="benchmarkMetrics"></div>
-        </article>
-      </section>
-
-      <section class="two-col">
-        <article class="panel">
-          <div class="section-head"><div><p class="eyebrow">Roles</p><h2>Role-specific sample</h2></div></div>
-          <div id="roleBreakdown" class="breakdown-grid"></div>
-        </article>
-        <article class="panel">
-          <div class="section-head"><div><p class="eyebrow">Champions</p><h2>Champion-specific sample</h2></div></div>
-          <div id="championBreakdown" class="breakdown-grid"></div>
-        </article>
-      </section>
-
-      <section class="panel">
-        <div class="section-head">
-          <div><p class="eyebrow">Matchups</p><h2>Repeated opponent matchups</h2></div>
-          <span class="muted">Shown only with at least 3 primary-role games against the same opposing champion</span>
-        </div>
-        <div id="matchupBreakdown" class="breakdown-grid"></div>
-      </section>
-
-      <section class="panel">
-        <div class="section-head"><div><p class="eyebrow">Trust</p><h2>Data quality & lineage</h2></div></div>
-        <div class="quality-grid" id="qualityGrid"></div>
-        <div class="source-note" id="sourceNote"></div>
-      </section>
-    </div>
-
-    <section class="panel migration-panel">
-      <details>
-        <summary>Migration tools · import a Bruisienator report JSON</summary>
-        <p>This is the bridge for current/local Bruisienator output while the current analyzer source is being ported into the web backend. It does not upload Riot API keys.</p>
-        <div class="import-row">
-          <input id="reportFile" type="file" accept=".json,application/json">
-          <button class="button secondary" id="importBtn" type="button" disabled>Import into selected profile</button>
-        </div>
-        <p class="muted tiny">Historical generated HTML is intentionally not patched or treated as source code. The current analyzer/source package remains the authority for the advanced formulas.</p>
-      </details>
-    </section>
-
-    <section class="legal">
-      <p>Bruisienator is an independent analytics project and is not endorsed or sponsored by Riot Games. League of Legends and Riot Games are trademarks of Riot Games, Inc.</p>
+      <footer class="league-footer">
+        <p>Bruisienator is an independent analytics project and is not endorsed or sponsored by Riot Games. League of Legends and Riot Games are trademarks of Riot Games, Inc.</p>
+        <a href="/">Back to Kalenel</a>
+      </footer>
     </section>
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261001-league-web-v88" defer></script>
+  <script src="/league/app.js?v=20261001-league-web-v89" defer></script>
 </body>
 </html>
