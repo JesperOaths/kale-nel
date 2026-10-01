@@ -215,6 +215,8 @@ jobs:
           [[ "$admin_status" == '401' ]] || { echo "Expected protected admin page to return 401 anonymously, got $admin_status" >&2; cat "$admin_headers" >&2; exit 1; }
           grep -qi '^cache-control: no-store' "$admin_headers" || { echo 'Missing no-store on protected admin response' >&2; exit 1; }
           grep -qi 'Admin login vereist' "$admin_body" || { echo 'Protected admin login body missing' >&2; exit 1; }
+          grep -Eqi 'v861[[:space:]]*-[[:space:]]*Made by Bruis' "$admin_body" || { echo 'Protected admin login page version watermark missing or stale' >&2; cat "$admin_body" >&2; exit 1; }
+          grep -qi '^x-kalenel-admin-build: v861-page-version-watermark' "$admin_headers" || { echo 'Live admin Worker build header is stale' >&2; cat "$admin_headers" >&2; exit 1; }
 
           connection_headers="$(mktemp)"
           connection_body="$(mktemp)"

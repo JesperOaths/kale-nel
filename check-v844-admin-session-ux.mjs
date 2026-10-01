@@ -44,7 +44,7 @@ assert.match(admin,/Hub-tellers laden later opnieuw|Beheerhub is beschikbaar; te
 assert.match(admin,/60000/);
 
 assert.match(worker,/SESSION_TTL_SECONDS = 30 \* 24 \* 60 \* 60/);
-assert.match(worker,/ADMIN_BUILD = 'v860-fast-admin-auth'/);
+assert.match(worker,/ADMIN_BUILD = 'v861-page-version-watermark'/);
 
 assert.match(analytics,/analytics-commandbar/);
 assert.match(analytics,/cost-refresh/);

@@ -19,6 +19,10 @@ const routes=listPublishedRoutes(root);
 const routeNames=routes.map(x=>x.route);
 const duplicateRoutes=routeNames.filter((route,index)=>routeNames.indexOf(route)!==index);
 const orphanIndependentOwners=[...INDEPENDENT_PAGE_VERSIONS.keys()].filter(rel=>!pages.includes(rel));
+const adminWorkerSource=fs.readFileSync(path.join(root,'cloudflare/workers/admin-gate/src/worker.js'),'utf8');
+const adminBuild=(adminWorkerSource.match(/const\s+ADMIN_BUILD\s*=\s*['"]([^'"]+)['"]/)||[])[1]||'';
+const adminPageVersion=(adminBuild.match(/^v\d+/i)||[])[0]?.toLowerCase()||'';
+const dynamicWorkerWatermarks=(adminWorkerSource.match(/\$\{ADMIN_PAGE_VERSION\}\s*-\s*Made by Bruis/g)||[]).length;
 
 function versionTokensFromVisibleOwners(body){
   const tokens=[];
@@ -77,12 +81,15 @@ for(const rel of pages){
 for(const row of rows){
   console.log(`PAGE_VERSION_AUDIT ${row.rel} visible=${row.visible} page=${row.page} gate=${row.gate} owner=${row.owner} expected=${row.expected}`);
 }
-console.log(`PAGE_VERSION_AUDIT_SUMMARY pages=${pages.length} routes=${routes.length} independent_owners=${INDEPENDENT_PAGE_VERSIONS.size} missing=${missing.length} ambiguous=${ambiguous.length} declaration_drift=${declarationDrift.length} watermark_drift=${watermarkDrift.length} gate_drift=${gateDrift.length} root=${rootVersion}`);
+console.log(`PAGE_VERSION_AUDIT_SUMMARY pages=${pages.length} routes=${routes.length} independent_owners=${INDEPENDENT_PAGE_VERSIONS.size} dynamic_worker_pages=2 worker_page=${adminPageVersion||'missing'} missing=${missing.length} ambiguous=${ambiguous.length} declaration_drift=${declarationDrift.length} watermark_drift=${watermarkDrift.length} gate_drift=${gateDrift.length} root=${rootVersion}`);
 
 assert.ok(pages.length>=100,`published HTML inventory unexpectedly small: ${pages.length}`);
 assert.ok(routes.length>pages.length,`published route inventory must include index aliases: pages=${pages.length} routes=${routes.length}`);
 assert.deepEqual(duplicateRoutes,[],`duplicate published routes detected:\n${duplicateRoutes.join('\n')}`);
 assert.deepEqual(orphanIndependentOwners,[],`independent page version owners are not published HTML pages:\n${orphanIndependentOwners.join('\n')}`);
+assert.match(adminBuild,/^v\d+-[a-z0-9-]+$/i,'admin Worker build must expose a versioned page owner');
+assert.match(adminPageVersion,/^v\d+$/i,'admin Worker dynamic HTML page version must derive from ADMIN_BUILD');
+assert.ok(dynamicWorkerWatermarks>=2,`admin Worker must watermark both generated HTML pages; found ${dynamicWorkerWatermarks}`);
 assert.deepEqual(missing,[],`published pages missing a visible version watermark/footer:\n${missing.join('\n')}`);
 assert.deepEqual(ambiguous,[],`published pages expose multiple conflicting visible page versions:\n${ambiguous.join('\n')}`);
 assert.deepEqual(declarationDrift,[],`published pages have source declaration drift:\n${declarationDrift.join('\n')}`);

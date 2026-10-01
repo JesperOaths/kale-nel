@@ -25,7 +25,8 @@ const ADMIN_SESSION_RPC_ALLOWLIST = new Set([
   'admin_resume_trusted_device_v844',
   'admin_forget_trusted_device_v844'
 ]);
-const ADMIN_BUILD = 'v860-fast-admin-auth';
+const ADMIN_BUILD = 'v861-page-version-watermark';
+const ADMIN_PAGE_VERSION = ADMIN_BUILD.match(/^v\d+/i)?.[0] || ADMIN_BUILD;
 const PUBLIC_SHOP_ORIGIN_BUILD = 'v857-clean-collection-art';
 
 const PROTECTED_PUBLIC_PATTERNS = [
@@ -760,7 +761,7 @@ async function serveProtectedAsset(request, env, pathname) {
 
 function loginPage(url, reason, status = 401) {
   const returnTo = canonicalizeAdminReturnTo(url.pathname + url.search);
-  const body = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kalenel admin login</title><style>body{font-family:system-ui,sans-serif;background:#0f1115;color:#f7f3e8;display:grid;place-items:center;min-height:100vh;margin:0}.card{max-width:520px;padding:28px;border:1px solid #d4af3744;border-radius:18px;background:#171a22}a{display:inline-block;margin-top:16px;color:#111;background:#d4af37;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800}</style></head><body><main class="card"><h1>Admin login vereist</h1><p>Deze beheeromgeving staat achter een Cloudflare Worker GitHub-login en daarna de bestaande Supabase admin/TOTP-controle.</p><p>Reden: ${escapeHtml(reason)}</p><a href="/login?return_to=${encodeURIComponent(returnTo)}">Login met GitHub</a></main></body></html>`;
+  const body = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kalenel admin login</title><style>body{font-family:system-ui,sans-serif;background:#0f1115;color:#f7f3e8;display:grid;place-items:center;min-height:100vh;margin:0}.card{max-width:520px;padding:28px;border:1px solid #d4af3744;border-radius:18px;background:#171a22}a{display:inline-block;margin-top:16px;color:#111;background:#d4af37;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800}.site-credit-watermark{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);padding:6px 10px;border-radius:999px;background:#0b0e12e8;color:#d7dbe2;font:700 11px/1.2 system-ui,sans-serif;letter-spacing:.04em;pointer-events:none}</style></head><body><main class="card"><h1>Admin login vereist</h1><p>Deze beheeromgeving staat achter een Cloudflare Worker GitHub-login en daarna de bestaande Supabase admin/TOTP-controle.</p><p>Reden: ${escapeHtml(reason)}</p><a href="/login?return_to=${encodeURIComponent(returnTo)}">Login met GitHub</a></main><div class="site-credit-watermark" data-version-watermark>${ADMIN_PAGE_VERSION} - Made by Bruis</div></body></html>`;
   return new Response(body, { status, headers: secureHeaders({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Kalenel-Admin-Build': ADMIN_BUILD }) });
 }
 
@@ -768,7 +769,7 @@ function oauthCompletePage(returnTo) {
   const safeReturnTo = canonicalizeAdminReturnTo(returnTo);
   const destination = isSecurityReturnTo(safeReturnTo) ? `https://${PUBLIC_HOST}${securityPageReturnTo(safeReturnTo)}` : safeReturnTo;
   const href = escapeHtml(destination);
-  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0;url=${href}"><title>Kalenel admin login voltooid</title><style>body{font-family:system-ui,sans-serif;background:#0f1115;color:#f7f3e8;display:grid;place-items:center;min-height:100vh;margin:0}.card{max-width:520px;padding:28px;border:1px solid #d4af3744;border-radius:18px;background:#171a22}a{display:inline-block;margin-top:16px;color:#111;background:#d4af37;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800}</style></head><body><main class="card"><h1>GitHub-login voltooid</h1><p>Je beveiligde sessie is gezet. Ga verder naar de adminomgeving via een same-origin navigatie.</p><a href="${href}">Verder naar admin</a></main></body></html>`;
+  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="0;url=${href}"><title>Kalenel admin login voltooid</title><style>body{font-family:system-ui,sans-serif;background:#0f1115;color:#f7f3e8;display:grid;place-items:center;min-height:100vh;margin:0}.card{max-width:520px;padding:28px;border:1px solid #d4af3744;border-radius:18px;background:#171a22}a{display:inline-block;margin-top:16px;color:#111;background:#d4af37;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800}.site-credit-watermark{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);padding:6px 10px;border-radius:999px;background:#0b0e12e8;color:#d7dbe2;font:700 11px/1.2 system-ui,sans-serif;letter-spacing:.04em;pointer-events:none}</style></head><body><main class="card"><h1>GitHub-login voltooid</h1><p>Je beveiligde sessie is gezet. Ga verder naar de adminomgeving via een same-origin navigatie.</p><a href="${href}">Verder naar admin</a></main><div class="site-credit-watermark" data-version-watermark>${ADMIN_PAGE_VERSION} - Made by Bruis</div></body></html>`;
 }
 
 function clearOauthAndDeny(message) {

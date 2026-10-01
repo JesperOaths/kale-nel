@@ -61,7 +61,10 @@ assert.equal((await anonymousApi.json()).error, 'github_session_required');
 
 const anonymous = await req('https://admin.kalenel.nl/admin.html');
 assert.equal(anonymous.status, 401);
-assert.match(await anonymous.text(), /Admin login vereist/);
+const anonymousBody = await anonymous.text();
+assert.match(anonymousBody, /Admin login vereist/);
+assert.match(anonymousBody, /v861\s*-\s*Made by Bruis/);
+assert.match(anonymousBody, /data-version-watermark/);
 assert.equal(anonymous.headers.get('Cache-Control'), 'no-store');
 assert.equal(anonymous.headers.get('X-Kalenel-Admin-Build'), ADMIN_BUILD);
 assert.equal(anonymous.headers.get('X-Frame-Options'), 'DENY');
@@ -172,6 +175,8 @@ try {
   assert.match(callbackSuccess.headers.get('Set-Cookie'), /__Host-kalenel_admin_oauth=; Max-Age=0/);
   const callbackBody = await callbackSuccess.text();
   assert.match(callbackBody, /GitHub-login voltooid/);
+  assert.match(callbackBody, /v861\s*-\s*Made by Bruis/);
+  assert.match(callbackBody, /data-version-watermark/);
   assert.match(callbackBody, /http-equiv="refresh" content="0;url=\/admin\.html"/);
   assert.match(callbackBody, /href="\/admin\.html"/);
   const sessionCookie = extractCookie(callbackSuccess.headers.get('Set-Cookie'), '__Host-kalenel_admin_session');
