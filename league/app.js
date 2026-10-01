@@ -750,7 +750,7 @@ function detailContent(g,tab){
   if(tab==='vision'){
     const v=g.vision||{};
     const vm=g.visionMission||{};
-    return detailCard('Vision / min',fmt(g.vpm,2))+detailCard('Wards placed',String(v.wardCount??g.wards?.length??0))+detailCard('Wards / 30 min',fmt(v.wardsPer30,1))+
+    return detailCard('Vision / min',fmt(g.vpm,2))+detailCard('Wards placed',String(v.wardCount??g.wards?.length??0))+detailCard('Control Wards bought',String(v.controlWardPurchases??0))+detailCard('Control Wards placed',String(v.controlWardCount??0))+detailCard('Wards / 30 min',fmt(v.wardsPer30,1))+
       detailCard('Vision actions',String(vm.actions??0))+detailCard('Vision-action deaths',String(vm.deaths??0)+' · '+fmtPct(vm.deathRate))+
       detailCard('High-risk vision deaths',String(vm.highRiskDeaths??0)+' · '+fmtPct(vm.highRiskDeathRate))+detailCard('Unsupported vision deaths',String(vm.unsupportedDeaths??0))+
       detailCard('Untraded vision deaths',String(vm.untradedDeaths??0))+detailCard('Objective-setup vision deaths',String(vm.objectiveSetupDeaths??0))+
@@ -839,7 +839,7 @@ function detailContent(g,tab){
       '<div class="detail-note">Conversion is team context: it asks whether player-involved kills are followed by tracked objectives/structures within 75 seconds. It does not claim the player alone caused or prevented the conversion.</div>';
   }
   if(tab==='resets'){
-    const mine=g.firstMajorItem,opp=g.opponentFirstMajorItem,shops=g.shopVisits||[],greedy=g.greedyStayWindows||[],spike=g.itemSpikeWindow||{},firstReset=g.firstResetSequence||null,ready=g.majorItemReadiness||null,oppReady=g.opponentMajorItemReadiness||null;
+    const mine=g.firstMajorItem,opp=g.opponentFirstMajorItem,second=g.secondMajorItem,oppSecond=g.opponentSecondMajorItem,shops=g.shopVisits||[],greedy=g.greedyStayWindows||[],spike=g.itemSpikeWindow||{},firstReset=g.firstResetSequence||null,ready=g.majorItemReadiness||null,oppReady=g.opponentMajorItemReadiness||null;
     return roleQuestNote(g)+detailCard('First reset / shop',firstReset?(fmt(firstReset.time,1)+'m · spent '+fmtInt(firstReset.spent)+'g'):'n/a')+
       detailCard('First reset vs peer',firstReset&&hasNum(firstReset.timingDeltaVsOpponent)?signed(firstReset.timingDeltaVsOpponent,1)+' min':'n/a')+
       detailCard('Post-reset role-gold swing',firstReset&&hasNum(firstReset.goldSwingAfter)?signed(firstReset.goldSwingAfter,0)+'g':'n/a')+
@@ -850,6 +850,9 @@ function detailContent(g,tab){
       detailCard('First major affordable',ready&&ready.eligible?(fmt(ready.affordableMin,1)+'m · '+fmtInt(ready.combineCost)+'g combine'):(ready?.reason?'not measurable · '+readinessReason(ready.reason):'n/a'))+
       detailCard('Affordable → purchased',ready&&ready.eligible?(fmt(ready.delayMin,1)+' min · '+(ready.delayed?'delayed':'prompt')):'n/a')+
       detailCard('Opponent major item',opp?(opp.name+' · '+fmt(opp.time,1)+'m'):'n/a')+
+      detailCard('Second major item',second?(second.name+' · '+fmt(second.time,1)+'m'):'n/a')+
+      detailCard('Opponent second major',oppSecond?(oppSecond.name+' · '+fmt(oppSecond.time,1)+'m'):'n/a')+
+      detailCard('Second-major timing vs peer',hasNum(g.secondMajorItemDeltaVsOpponent)?signed(g.secondMajorItemDeltaVsOpponent,1)+' min':'n/a')+
       detailCard('Opponent affordability delay',oppReady&&oppReady.eligible?fmt(oppReady.delayMin,1)+' min':'n/a')+
       detailCard('Readiness delay vs peer',ready&&hasNum(ready.delayDeltaVsOpponent)?signed(ready.delayDeltaVsOpponent,1)+' min':'n/a')+
       detailCard('Timing vs opponent',hasNum(g.itemSpikeDeltaVsOpponent)?signed(g.itemSpikeDeltaVsOpponent,1)+' min':'n/a')+
@@ -984,6 +987,8 @@ function renderAdvanced(r){
     ['Avg peak → 15 role-gold swing',hasNum(r.behaviorSummary?.avgEarlyLeadGoldSwingTo15)?signed(r.behaviorSummary.avgEarlyLeadGoldSwingTo15,0)+'g':'n/a'],
     ['Deaths during early-lead give-backs',String(r.behaviorSummary?.earlyLeadGivebackDeaths??0)+' · '+String(r.behaviorSummary?.earlyLeadGivebackHighRiskDeaths??0)+' high-risk'],
     ['First impact timing',hasNum(a.firstImpact?.avgDeltaVsOpponentMin)?signed(a.firstImpact.avgDeltaVsOpponentMin,1)+' min vs peer':'n/a'],
+    ['Second major item timing',hasNum(r.behaviorSummary?.avgSecondMajorTime)?fmt(r.behaviorSummary.avgSecondMajorTime,1)+' min · '+String(r.behaviorSummary?.secondMajorGames??0)+' games':'n/a'],
+    ['Second major timing vs peer',hasNum(r.behaviorSummary?.avgSecondMajorDeltaVsOpponent)?signed(r.behaviorSummary.avgSecondMajorDeltaVsOpponent,1)+' min · '+String(r.behaviorSummary?.secondMajorPeerGames??0)+' games':'n/a'],
     ['Objective-context death %',fmtPct(a.objectiveDeathPct)],
     ['Bruisienator V21 DQI · effective pipeline',hasNum(r.behaviorSummary?.avgLegacyBruisienatorDqi)?fmt(r.behaviorSummary.avgLegacyBruisienatorDqi,2)+'/10':'n/a'],
     ['Death-consequence evidence coverage',fmtPct(r.behaviorSummary?.deathConsequenceCoveragePct)],
@@ -1065,7 +1070,8 @@ function renderAdvanced(r){
     ['Neutral-objective setup coverage',fmtPct(r.behaviorSummary?.earlySetupObjectiveCoverageRate)],
     ['Late-reset neutral-objective misses',String(r.behaviorSummary?.lateResetObjectiveMisses??0)+' / '+String(r.behaviorSummary?.neutralObjectiveEvents??0)+' · '+fmtPct(r.behaviorSummary?.lateResetObjectiveMissRate)],
     ['Fresh-purchase neutral-objective joins',String(r.behaviorSummary?.freshPurchaseObjectiveJoins??0)+' · '+fmtPct(r.behaviorSummary?.freshPurchaseObjectiveJoinRate)],
-    ['Objective-setup ward clears',String(r.behaviorSummary?.visionSetupClears??0)]
+    ['Objective-setup ward clears',String(r.behaviorSummary?.visionSetupClears??0)],
+    ['Control Wards bought',String(r.behaviorSummary?.visionControlWardPurchases??0)]
   ];
   const familySummary=r.behaviorSummary?.objectiveFamilySummary||{};
   for(const [family,x] of Object.entries(familySummary).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))){
