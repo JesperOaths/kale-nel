@@ -38,7 +38,7 @@ ok(backend.includes('laneRoleQuestsEnabled:!isSwift'), 'standard lane-role quest
 ok(backend.includes('function roleQuestContext('), 'role-specific quest context must remain part of timeline analysis');
 ok(backend.includes('support_quest_control_ward_discount_unobserved'), 'support ward-price uncertainty must remain explicit instead of silently rewriting static prices');
 ok(backend.includes('roleQuestRevisionCounts'), 'mixed mechanics revision counts must remain exported');
-ok(backend.includes('roleQuestCompletionTimingObserved:false'), 'analyzer must fail closed on universal role-quest completion timing');
+ok(backend.includes('roleQuestCompletionTimingObserved:false'), 'analyzer must fail closed on universal role-quest completion timing');\nok(backend.includes('mechanicsCohortGames.length>=5'), 'current mechanics filtering keeps a minimum evidence threshold');\nok(backend.includes('mechanicsCohortApplied'), 'mechanics cohort selection state remains exported');\nok(backend.includes('mixedMechanicsFallback'), 'small current mechanics samples remain explicit');\nok(backend.includes('championBehaviorModel(coachingGames'), 'champion behavior uses the same selected mechanics sample');
 ok(backend.includes('phaseExposureMinutes'), 'phase risk must normalize by actual phase exposure');
 ok(backend.includes('postLaneStartMin:14')&&backend.includes('roamEndMin:20'), 'standard post-lane and roam timing must remain rules-driven');
 ok(backend.includes('postLaneStartMin:12')&&backend.includes('roamEndMin:12'), 'Swiftplay post-lane and roam timing must respect its accelerated major-objective era');
