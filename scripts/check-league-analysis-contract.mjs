@@ -36,6 +36,12 @@ ok(backend.includes('phaseExposureMinutes'), 'phase risk must normalize by actua
 ok(backend.includes('postLaneStartMin:14')&&backend.includes('roamEndMin:20'), 'standard post-lane and roam timing must remain rules-driven');
 ok(backend.includes('postLaneStartMin:12')&&backend.includes('roamEndMin:12'), 'Swiftplay post-lane and roam timing must respect its accelerated major-objective era');
 ok(backend.includes('postLaneSideLaneDeaths'), 'side-lane risk must use queue-aware post-lane timing');
+ok(backend.includes('lane15Comparable:true')&&backend.includes('fixed15to25Comparable:true')&&backend.includes('closing25Comparable:true'), 'standard SR must explicitly allow its fixed checkpoints');
+ok(backend.includes('lane15Comparable:false')&&backend.includes('fixed15to25Comparable:false')&&backend.includes('closing25Comparable:false'), 'accelerated/unverified profiles must be able to suppress incompatible fixed checkpoints');
+ok(backend.includes('lane15ComparableGames'), '@15 lane coaching must use an eligibility-filtered cohort');
+ok(backend.includes('fixed15to25ComparableGames'), '15→25 coaching must use an eligibility-filtered cohort');
+ok(backend.includes('closing25ComparableGames'), '@25 closing coaching must use an eligibility-filtered cohort');
+ok(backend.includes('checkpointEligibility:{lane15Games:'), 'report must export checkpoint eligibility counts');
 ok(backend.includes('frameNearestMs'), 'event-local spatial evidence must use the nearest supported timeline frame');
 ok(backend.includes('startPadMs=45000,endPadMs=45000'), 'neutral-objective presence must tolerate Riot participant-frame cadence');
 ok(backend.includes('phaseComparable!==false'), 'cross-game phase risk must exclude historical/future-unverified rule profiles');
