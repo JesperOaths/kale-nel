@@ -342,6 +342,22 @@ Preserve:
 
 A nearby return kill should soften the interpretation of the death, not erase the original risk evidence. An **untraded high-risk death** is a stronger improvement signal because the opposing team receives tempo/value without an immediate exchange.
 
+## Neutral-objective setup timing
+
+Attendance and setup are separate behaviors.
+
+For neutral objectives taken by the player's team, the analyzer checks whether the player is near the objective at the objective event and whether a prior Riot timeline frame within roughly two minutes already places them near the area.
+
+Current evidence labels:
+
+- **prior-frame setup:** player is present at the objective event and a prior timeline frame at least ~45 seconds earlier places them within the setup radius,
+- **event-frame-only join:** player is present at the event but has no supported prior-frame setup evidence,
+- **absent:** player is not supported as nearby at the event frame.
+
+Because Riot timeline position frames are coarse, these labels must not be presented as second-perfect arrival timestamps. `setupLeadSec` is the distance between observed timeline frames and the objective event, not an exact pathing arrival time.
+
+Aggregate coaching can distinguish a player who attends objectives but usually arrives reactively from one who is already established early enough to contribute to vision/positioning. The aggregate setup-rate denominator is joined neutral objectives; setup coverage uses all tracked team neutral objectives.
+
 ## Objective context
 
 Tracked objective events include supported elite-monster/building events from the Riot timeline.
