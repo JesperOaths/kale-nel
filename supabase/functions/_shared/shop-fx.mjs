@@ -184,6 +184,46 @@ export function retailEurCentsFromUsdCostAfterVat(
   return Math.max(minimum, Math.ceil((vatInclusiveCost + margin) / 100) * 100);
 }
 
+export const CLASSIC_SHIRT_RETAIL_CENTS = Object.freeze({
+  S: 2400,
+  M: 2400,
+  L: 2400,
+  XL: 2400,
+  "2XL": 2600,
+  "3XL": 3000,
+  "4XL": 3000,
+  "5XL": 3000,
+});
+
+export const CLASSIC_SHIRT_PRICE_TOLERANCE_CENTS = 50;
+
+export function stableClassicShirtRetailEurCents(
+  rawUsdCents,
+  snapshotOrRate,
+  rawSize,
+  standardMarginEurCents = 500,
+  largeSizeMarginEurCents = 700,
+  vatBps = PRINTIFY_VAT_RESERVE_BPS,
+  toleranceCents = CLASSIC_SHIRT_PRICE_TOLERANCE_CENTS,
+) {
+  const size = String(rawSize ?? "").trim().toUpperCase().replace(/\s+/g, "");
+  const preferred = Number(CLASSIC_SHIRT_RETAIL_CENTS[size] || 0);
+  const margin = marginEurCentsForSize(size, standardMarginEurCents, largeSizeMarginEurCents);
+  const converted = usdCentsToEurCents(rawUsdCents, snapshotOrRate);
+  const vatInclusiveCost = applyPrintifyVatReserveEurCents(converted, vatBps);
+  const minimumForTargetMargin = vatInclusiveCost + margin;
+  const tolerance = Math.max(0, Math.round(Number(toleranceCents) || 0));
+
+  if (preferred > 0 && preferred + tolerance >= minimumForTargetMargin) {
+    return preferred;
+  }
+
+  return Math.max(
+    preferred,
+    Math.ceil(minimumForTargetMargin / 100) * 100,
+  );
+}
+
 export function eurCentsToUsdCents(rawEurCents, snapshotOrRate) {
   const cents = Number(rawEurCents);
   if (!Number.isFinite(cents) || cents < 0) throw new Error("Invalid EUR-cent amount");
