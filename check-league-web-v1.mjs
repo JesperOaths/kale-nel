@@ -400,7 +400,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v95'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v96'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
