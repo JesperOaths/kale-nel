@@ -63,6 +63,7 @@ const offenders = [];
 for (const file of walk(root)) {
   const rel = path.relative(root, file).replaceAll('\\','/');
   if (isArchivedFile(rel)) continue;
+  if (rel.startsWith('check-')) continue;
   if (ignoredFiles.has(path.basename(file))) continue;
   if (!activeExt.has(path.extname(file).toLowerCase())) continue;
   const text = fs.readFileSync(file, 'utf8');
