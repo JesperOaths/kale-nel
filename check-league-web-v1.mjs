@@ -241,7 +241,7 @@ assert.ok(app.includes('Primary supported cause'));
 assert.ok(app.includes('Vision-action deaths'));
 assert.ok(app.includes('Vision-action death rate'));
 assert.ok(app.includes('Sample exclusions'));
-assert.ok(html.includes('id="rank-comparison"')&&html.includes('Your matchup shape by opponent rank'),'Rank/matchup visual section must remain present');
+assert.ok(html.includes('id="rank-comparison"')&&html.includes('Your shape vs ADC rank averages'),'Rank/matchup visual section must remain present');
 assert.ok(html.includes('id="replayReviewPanel"')&&html.includes('Highest-value moments to rewatch'),'Replay review queue must remain present');
 assert.ok(app.includes('renderReplayReviewQueue'));
 assert.ok(app.includes('openReplayReviewMatch'));
@@ -427,7 +427,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v102'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v103'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
