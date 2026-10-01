@@ -802,7 +802,7 @@ function detailContent(g,tab){
       detailList((g.sideLaneRisk?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+String(x.zone||'side lane')+(x.isolated?' · isolated':'')+(x.neutralObjectiveSoon?' · neutral objective '+String(x.secondsBeforeNeutralObjective??'?')+'s later':'')+(x.highRisk?' · high-risk':'')+(x.traded?' · traded':' · untraded')),'No post-early-phase side-lane death detected.')+
       detailList((g.deathConsequences?.events||[]).filter(x=>x.costly).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+(x.severe?'severe':'costly')+(hasNum(x.goldSwingAfter)?' · role gold '+signed(x.goldSwingAfter,0)+'g':'')+(hasNum(x.csSwingAfter)?' · role CS '+signed(x.csSwingAfter,0):'')+(x.enemyObjectiveAfter?' · enemy objective followed':'')+(x.traded?' · traded':' · untraded')),'No measured death crossed the consequence threshold.')+
       detailList((g.deathRecovery?.events||[]).map(x=>Number(x.firstMin).toFixed(1)+'→'+Number(x.secondMin).toFixed(1)+'m · '+String(x.gapSec)+'s'+(x.phase?' · '+x.phase:'')+(x.highRisk?' · high-risk':'')+(x.costly?' · costly':'')+(x.severe?' · severe':'')+(x.traded?' · traded':' · untraded')),'No second death occurred within four minutes of the previous death.')+
-      detailList(pre.map(x=>(Number(x.time)||0).toFixed(1)+'m death → '+String(x.objectiveType||'objective')+' '+String(x.secondsBeforeObjective||'?')+'s later'),'No death was followed by an enemy objective within 75 seconds.')+
+      detailList(pre.map(x=>(Number(x.time)||0).toFixed(1)+'m death → contested '+String(x.objectiveType||'objective')+' '+String(x.secondsBeforeObjective||'?')+'s later'),'No death was followed by an enemy-secured, team-contested objective within 75 seconds.')+
       '<div class="detail-note"><strong>DQI provenance:</strong> the uploaded V21 HTML defines a five-input DQI, but its supplied PowerShell pipeline emits only <code>badDeaths</code>. This compatibility value reproduces the effective generated V21 behavior instead of inventing four missing inputs. Current coaching uses the individual risk and consequence evidence above, not a replacement composite score.</div>';
   }
   if(tab==='objectives'){
@@ -978,8 +978,10 @@ function renderAdvanced(r){
     ['Second major timing vs peer',hasNum(r.behaviorSummary?.avgSecondMajorDeltaVsOpponent)?signed(r.behaviorSummary.avgSecondMajorDeltaVsOpponent,1)+' min · '+String(r.behaviorSummary?.secondMajorPeerGames??0)+' games':'n/a'],
     ['Longest win / loss streak',String(r.outcomeStreaks?.longestWin??0)+' / '+String(r.outcomeStreaks?.longestLoss??0)],
     ['Current result streak',r.outcomeStreaks?.currentResult?(String(r.outcomeStreaks.currentResult).toUpperCase()+' × '+String(r.outcomeStreaks?.currentLength??0)):'n/a'],
-    ['Objective presence · pooled',fmtPct(r.behaviorSummary?.objectiveJoinRate)+' · '+String(r.behaviorSummary?.objectiveJoinedEncounters??0)+' / '+String(r.behaviorSummary?.objectiveTeamEncounters??0)+' team encounters'],
-    ['Objective presence · mean game rate',fmtPct(r.behaviorSummary?.meanGameObjectiveJoinRate)],
+    ['Team-contested objective presence · pooled',fmtPct(r.behaviorSummary?.objectiveContestPresenceRate??r.behaviorSummary?.objectiveJoinRate)+' · '+String(r.behaviorSummary?.objectiveContestJoinedEncounters??0)+' / '+String(r.behaviorSummary?.objectiveContestEncounters??0)+' contested encounters'],
+    ['Team-contested presence · mean game rate',fmtPct(r.behaviorSummary?.meanGameObjectiveContestPresenceRate)],
+    ['Team-secured objective presence · pooled',fmtPct(r.behaviorSummary?.teamSecuredObjectiveJoinRate)+' · '+String(r.behaviorSummary?.objectiveJoinedEncounters??0)+' / '+String(r.behaviorSummary?.objectiveTeamEncounters??0)+' secured encounters'],
+    ['Team-secured presence · mean game rate',fmtPct(r.behaviorSummary?.meanGameObjectiveJoinRate)],
     ['Objective-context death % · pooled',fmtPct(a.objectiveDeathPct)+' · '+String(r.behaviorSummary?.objectiveContextDeaths??0)+' / '+String(r.behaviorSummary?.classifiedTimelineDeaths??0)+' classified deaths'],
     ['Objective-context death % · mean game rate',fmtPct(r.behaviorSummary?.meanGameObjectiveDeathPct)],
     ['Death before enemy objective % · pooled',fmtPct(r.behaviorSummary?.preObjectiveDeathPct)+' · '+String(r.behaviorSummary?.preObjectiveDeaths??0)+' / '+String(r.behaviorSummary?.classifiedTimelineDeaths??0)+' classified deaths'],
@@ -1141,7 +1143,8 @@ function renderAdvanced(r){
     wlRow('Gold @15 · wins / losses',wl.goldDiff15,v=>signed(v,0)+'g'),
     wlRow('High-risk deaths · wins / losses',wl.badDeaths,v=>fmt(v,1)),
     pooledWlRow('Early KP · wins / losses · pooled',wl.earlyKp),
-    pooledWlRow('Objective presence · wins / losses · pooled',wl.objectiveJoin),
+    pooledWlRow('Team-contested objective presence · wins / losses · pooled',wl.objectiveJoin),
+    pooledWlRow('Team-secured objective presence · wins / losses · pooled',wl.securedObjectiveJoin),
     wlRow('Greedy stays · wins / losses',wl.greedyStays,v=>fmt(v,1))
   ];
   const trendRow=(label,obj,formatter)=>metric(label,obj&&hasNum(obj.recent)&&hasNum(obj.prior)?formatter(obj.recent)+' / '+formatter(obj.prior):'n/a',!(obj&&hasNum(obj.recent)&&hasNum(obj.prior)));
@@ -1151,7 +1154,8 @@ function renderAdvanced(r){
     trendRow('Latest 5 gold @15 / previous',trend.goldDiff15,v=>signed(v,0)+'g'),
     trendRow('Latest 5 high-risk deaths / previous',trend.badDeaths,v=>fmt(v,1)),
     trendRow('Latest 5 DPM / previous',trend.dpm,v=>fmtInt(v)),
-    pooledTrendRow('Latest 5 objective presence / previous · pooled',trend.objectiveJoin),
+    pooledTrendRow('Latest 5 team-contested presence / previous · pooled',trend.objectiveJoin),
+    pooledTrendRow('Latest 5 team-secured presence / previous · pooled',trend.securedObjectiveJoin),
     pooledTrendRow('Latest 5 early KP / previous · pooled',trend.earlyKp)
   ];
   const sessionRows=[
