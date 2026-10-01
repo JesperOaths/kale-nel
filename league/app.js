@@ -64,8 +64,11 @@ async function api(action,payload={}){
   try{data=raw?JSON.parse(raw):{};}catch(_){throw new Error(raw||('HTTP '+res.status));}
   if(!res.ok||data?.ok===false){
     const code=String(data?.error||'');
-    if(code==='public_workspace_profile_limit')throw new Error('This public browser workspace already has the maximum '+String(data?.limit||8)+' League profiles. Edit an existing profile instead of creating another.');
+    if(code==='public_workspace_profile_limit')throw new Error('The internal League cache is full for this browser workspace.');
     if(code==='league_workspace_invalid'||code==='league_workspace_required')throw new Error('The public League workspace identity is invalid. Reload the page to create a fresh isolated workspace.');
+    if(/^riot_http_(401|403)/.test(code))throw new Error('Riot rejected the API key. Development keys expire regularly; paste a fresh RGAPI key and try again.');
+    if(/^riot_http_404/.test(code))throw new Error('Riot could not find that account or match. Check the game name, tag and region.');
+    if(/^riot_http_429/.test(code))throw new Error('Riot rate-limited the request. Wait briefly and try again; already fetched matches remain cached.');
     throw new Error(code||('HTTP '+res.status));
   }
   return data;
@@ -346,11 +349,22 @@ function normalizeReport(r){
   out.charts=out.charts||{};
   return out;
 }
+let heavyRenderTicket=0;
+function scheduleHeavyReportRender(r){
+  const ticket=++heavyRenderTicket;
+  const run=()=>{
+    if(ticket!==heavyRenderTicket||state.report!==r)return;
+    renderCharts(r);
+    renderSpatial(r);
+  };
+  if(typeof globalThis.requestIdleCallback==='function')globalThis.requestIdleCallback(run,{timeout:900});
+  else setTimeout(run,60);
+}
 function renderReport(raw,sourceKind){
   const r=normalizeReport(raw);state.report=r;
   $('reportEmpty').hidden=true;$('report').hidden=false;
   const p=r.profile||{},s=r.summary||{};
-  $('reportTitle').textContent=p.displayName||p.display_name||state.profile?.display_name||'League profile';
+  $('reportTitle').textContent=p.displayName||p.display_name||state.profile?.display_name||'League account';
   const riotId=[p.gameName||p.game_name,p.tagLine||p.tag_line].filter(Boolean).join('#');
   const rank=p.rank&&p.rank.tier?[p.rank.tier,p.rank.rank,p.rank.leaguePoints!=null?String(p.rank.leaguePoints)+' LP':''].filter(Boolean).join(' '):'';
   const coachingN=r.coachingSummary?.games??s.primaryRoleGames??0;
@@ -358,7 +372,11 @@ function renderReport(raw,sourceKind){
   $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':(r.analyzerVersion||'Web analysis');
   renderKpis(r);renderBullets('recentFocus',r.priorityThemes?.length?r.priorityThemes:r.recentFocus,'No grounded recent-focus tips are available from the active analyzer yet.');
   renderBullets('overallHighlights',r.overallHighlights,'No broader highlights are available from the active analyzer yet.');
-  renderSessionHabits(r);renderPracticePlan(r);renderGames(r);renderReplayReviewQueue(r);renderCharts(r);renderSpatial(r);renderAdvanced(r);renderBreakdowns(r);renderQuality(r);
+  renderSessionHabits(r);renderPracticePlan(r);renderGames(r);renderReplayReviewQueue(r);renderAdvanced(r);renderBreakdowns(r);renderQuality(r);
+  $('chartGrid').innerHTML='<div class="chart-empty">Charts will render when the browser is idle.</div>';
+  $('deathMap').innerHTML='<div class="spatial-empty">Preparing death map…</div>';
+  $('wardMap').innerHTML='<div class="spatial-empty">Preparing ward map…</div>';
+  scheduleHeavyReportRender(r);
 }
 function renderKpis(r){
   const s=r.summary||{},role=String(s.primaryRole||'GENERIC').toUpperCase();
