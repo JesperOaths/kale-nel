@@ -770,7 +770,7 @@ function detailContent(g,tab){
   }
   if(tab==='resets'){
     const mine=g.firstMajorItem,opp=g.opponentFirstMajorItem,shops=g.shopVisits||[],greedy=g.greedyStayWindows||[],spike=g.itemSpikeWindow||{},firstReset=g.firstResetSequence||null,ready=g.majorItemReadiness||null,oppReady=g.opponentMajorItemReadiness||null;
-    return detailCard('First reset / shop',firstReset?(fmt(firstReset.time,1)+'m · spent '+fmtInt(firstReset.spent)+'g'):'n/a')+
+    return roleQuestNote(g)+detailCard('First reset / shop',firstReset?(fmt(firstReset.time,1)+'m · spent '+fmtInt(firstReset.spent)+'g'):'n/a')+
       detailCard('First reset vs peer',firstReset&&hasNum(firstReset.timingDeltaVsOpponent)?signed(firstReset.timingDeltaVsOpponent,1)+' min':'n/a')+
       detailCard('Post-reset role-gold swing',firstReset&&hasNum(firstReset.goldSwingAfter)?signed(firstReset.goldSwingAfter,0)+'g':'n/a')+
       detailCard('Post-reset role-CS swing',firstReset&&hasNum(firstReset.csSwingAfter)?signed(firstReset.csSwingAfter,1)+' CS':'n/a')+
@@ -1129,6 +1129,7 @@ function renderQuality(r){
     qualityCard('Fixed checkpoint eligibility',String(b.checkpointEligibility?.lane15Games??0)+' @15 lane','15→25 '+String(b.checkpointEligibility?.fixed15to25Games??0)+' · @25 closing '+String(b.checkpointEligibility?.closing25Games??0),'neutral'),
     qualityCard('Patch context',(q.currentPublicPatchKey||q.currentPatchKey)?('Patch '+String(q.currentPublicPatchKey||q.currentPatchKey)):'n/a',String(q.currentPatchRoleGames??0)+' current-patch role games · '+String(q.olderSamePatchRoleGames??0)+' older same-patch baseline · '+String(q.crossPatchBaselineRoleGames??0)+' cross-patch older games excluded from trend'+(q.currentPublicPatchKey&&q.currentPatchKey&&String(q.currentPublicPatchKey)!==String(q.currentPatchKey)?' · Riot/Data Dragon build '+String(q.currentPatchKey):''),q.patchBaselineReady?'good':'neutral'),
     qualityCard('Role-quest mechanics',Object.keys(q.roleQuestRevisionCounts||{}).length?Object.entries(q.roleQuestRevisionCounts||{}).map(([k,v])=>String(k)+' '+String(v)+'g').join(' · '):'n/a',q.roleQuestCheckpointNote||'Quest effects are treated as patch context, not inferred completion timestamps.','neutral'),
+    qualityCard('Mechanics coaching cohort',q.currentMechanicsKey||'n/a',String(q.mechanicsCohortGames??0)+' current-mechanics role games · '+String(q.primaryRoleGamesInLast20??coaching)+' primary-role games in Last-20'+(q.mechanicsCohortApplied?' · current cohort applied':q.mixedMechanicsFallback?' · mixed fallback: current cohort below 5 games':' · single compatible cohort'),q.mechanicsCohortApplied?'good':q.mixedMechanicsFallback?'neutral':'good'),
     qualityCard('Item catalog provenance',String(q.itemCatalogExactPatches??0)+' exact patch catalog(s)',String(q.itemCatalogFallbackPatches??0)+' patch fallback(s) · '+String(q.itemCatalogUnknownPatchGames??0)+' game(s) without a parsed patch',Number(q.itemCatalogFallbackPatches||0)===0?'good':'neutral'),
     qualityCard('Sample exclusions',String(Number(q.excludedShortGames||0)+Number(q.excludedOtherMaps||0)+Number(q.excludedOtherQueues||0)+Number(q.excludedMissingRole||0))+' games',String(q.excludedShortGames??0)+' under 10m · '+String(q.excludedOtherMaps??0)+' other maps · '+String(q.excludedOtherQueues??0)+' other queues · '+String(q.excludedMissingRole??0)+' missing role','neutral'),
     qualityCard('Timeline coverage',hasNum(timelinePct)?fmtPct(timelinePct):'n/a',String(timelines)+' / '+String(analyzed)+' games',evidenceLevel(timelines)),
@@ -1149,7 +1150,8 @@ function renderQuality(r){
   if(Number(q.excludedOtherQueues||0)>0)low.push('mixed queue contexts excluded');
   if(q.currentPatchKey&&!q.patchBaselineReady)low.push('same-patch historical trend baseline');
   if(Number(q.itemCatalogFallbackPatches||0)>0)low.push('item-catalog patch fallback');
-  if(Object.keys(q.roleQuestRevisionCounts||{}).length>1)low.push('mixed role-quest mechanics revisions');
+  if(Object.keys(q.roleQuestRevisionCounts||{}).length>1)low.push(q.mechanicsCohortApplied?'older mechanics excluded from coaching cohort':'mixed role-quest mechanics revisions');
+  if(q.mixedMechanicsFallback)low.push('current mechanics cohort below 5 games; broader role sample used');
   const base=r.sourceStatus?.note||'Report data remains traceable through the report contract. Missing data remains unknown rather than zero.';
   $('sourceNote').textContent=base+(low.length?' Thin-evidence areas right now: '+low.join(', ')+'.':' Core evidence coverage is sufficient for the main coaching dimensions.');
 }
