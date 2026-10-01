@@ -1590,3 +1590,9 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 .decision-card.thin-evidence{border-style:dashed;box-shadow:none}
 .decision-card.thin-evidence .decision-meter{opacity:.45}
 .decision-card.thin-evidence>small{color:var(--muted)}
+
+.sample-kpi-panel{border-top:4px solid #8d867b;background:#fcfaf6}
+.sample-kpi-panel .kpi-grid{margin-top:0}
+.compact-head{margin-bottom:12px}
+.quick-read-card.thin-evidence{border-style:dashed;box-shadow:none}
+.quick-read-card.thin-evidence .context-bar{opacity:.45}
