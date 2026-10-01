@@ -24,7 +24,12 @@
   function currentScope(){ try{ if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function') return window.GEJAST_SCOPE_UTILS.getScope(); }catch(_){} try{ return new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'; }catch(_){ return 'friends'; } }
   function currentTarget(){ try{ return cfg.currentReturnTarget ? cfg.currentReturnTarget((location.pathname||'').split('/').pop() || 'index.html') : ((location.pathname||'').split('/').pop() || 'index.html') + (location.search||'') + (location.hash||''); }catch(_){ return 'index.html'; } }
   function loginUrl(){ try{ return cfg.buildLoginUrl ? cfg.buildLoginUrl(currentTarget(), currentScope()) : './login.html?return_to=' + encodeURIComponent(currentTarget()) + (currentScope()==='family'?'&scope=family':''); }catch(_){ return './login.html'; } }
-  function headers(){ return { 'Content-Type':'application/json', apikey:(cfg.SUPABASE_PUBLISHABLE_KEY||''), Authorization:'Bearer ' + (cfg.SUPABASE_PUBLISHABLE_KEY||'') }; }
+  function headers(){
+    if(typeof cfg.publicApiHeaders==='function') return cfg.publicApiHeaders({'Content-Type':'application/json'});
+    var key=String(cfg.SUPABASE_PUBLISHABLE_KEY||''),h={'Content-Type':'application/json',apikey:key};
+    if(/^[^.]+\.[^.]+\.[^.]+$/.test(key)) h.Authorization='Bearer '+key;
+    return h;
+  }
   function showPage(){ try{ document.documentElement.classList.remove('gejast-auth-pending'); document.documentElement.classList.add('gejast-auth-ready'); if(document.body){ document.body.classList.remove('boot-pending'); document.body.classList.remove('page-loading'); }}catch(_){} }
   async function parse(res){ var txt=await res.text(); var data=null; try{ data=txt?JSON.parse(txt):null; }catch(_){ throw new Error(txt||('HTTP '+res.status)); } if(!res.ok) throw new Error(data&& (data.message||data.error) || ('HTTP '+res.status)); return data; }
   async function rpc(name,payload,ms){
