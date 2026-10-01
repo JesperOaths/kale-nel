@@ -129,9 +129,12 @@ function roamEvidenceText(r){
     String(r.playerDeaths??(r.death?1:0))+' deaths',
     hasNum(r.teamKills)?String(r.teamKills)+' team kills':null,
     hasNum(r.objectivePresent)?String(r.objectivePresent)+' objectives joined':(r.objective?'objective joined':null),
-    hasNum(r.objectiveAway)&&Number(r.objectiveAway)>0?String(r.objectiveAway)+' team objectives while away':null,
+    hasNum(r.teamObjectivesWithoutPlayer??r.objectiveAway)&&Number(r.teamObjectivesWithoutPlayer??r.objectiveAway)>0?String(r.teamObjectivesWithoutPlayer??r.objectiveAway)+' team objectives while away':null,
+    hasNum(r.enemyObjectivesDuringRoam??r.objectiveLost)&&Number(r.enemyObjectivesDuringRoam??r.objectiveLost)>0?String(r.enemyObjectivesDuringRoam??r.objectiveLost)+' enemy objectives during roam':null,
     hasNum(r.structureInvolvements)&&Number(r.structureInvolvements)>0?String(r.structureInvolvements)+' structure involvements':null,
-    hasNum(r.platesGained)&&Number(r.platesGained)>0?String(r.platesGained)+' plates':null,
+    hasNum(r.platesGained)&&Number(r.platesGained)>0?String(r.platesGained)+' plates gained':null,
+    hasNum(r.platesLost)&&Number(r.platesLost)>0?String(r.platesLost)+' home-lane plates lost while away':null,
+    hasNum(r.homeLaneStructuresLost)&&Number(r.homeLaneStructuresLost)>0?String(r.homeLaneStructuresLost)+' home-lane turrets lost while away':null,
     hasNum(r.laneCostCs)?'own lane Δ '+signed(r.laneCostCs,0)+' CS':null,
     hasNum(r.adcLaneCostCs)?'ADC lane Δ '+signed(r.adcLaneCostCs,0)+' CS':null
   ].filter(Boolean);
@@ -751,7 +754,7 @@ function detailContent(g,tab){
       detailCard('Vision actions',String(vm.actions??0))+detailCard('Vision-action deaths',String(vm.deaths??0)+' · '+fmtPct(vm.deathRate))+
       detailCard('High-risk vision deaths',String(vm.highRiskDeaths??0)+' · '+fmtPct(vm.highRiskDeathRate))+detailCard('Unsupported vision deaths',String(vm.unsupportedDeaths??0))+
       detailCard('Untraded vision deaths',String(vm.untradedDeaths??0))+detailCard('Objective-setup vision deaths',String(vm.objectiveSetupDeaths??0))+
-      detailCard('Offensive / defensive',String(v.offensive??0)+' / '+String(v.defensive??0))+detailCard('River wards',String(v.river??0))+detailCard('Objective setup wards',String(v.objectiveSetup??0))+detailCard('Objective setup share',fmtPct(v.objectiveSetupRate))+
+      detailCard('Offensive / defensive',String(v.offensive??0)+' / '+String(v.defensive??0))+detailCard('River wards',String(v.river??0))+detailCard('Objective setup wards',String(v.objectiveSetup??0))+detailCard('Objective setup ward clears',String(v.objectiveSetupClears??0))+detailCard('Objective setup share',fmtPct(v.objectiveSetupRate))+
       detailCard('Peer setup wards',String(g.opponentVision?.objectiveSetup??0))+detailCard('Peer setup share',fmtPct(g.opponentVision?.objectiveSetupRate))+detailCard('Setup count Δ vs peer',hasNum(v.objectiveSetupDeltaVsOpponent)?signed(v.objectiveSetupDeltaVsOpponent,0):'n/a')+detailCard('Setup share Δ vs peer',hasNum(v.objectiveSetupRateDeltaVsOpponent)?signed(v.objectiveSetupRateDeltaVsOpponent,0)+' pp':'n/a')+
       detailList((vm.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m death · '+String(x.action||'vision action')+' '+String(x.secondsAfterAction??'?')+'s earlier · '+String(x.wardType||'ward')+(x.territory?' · '+x.territory:'')+(x.objectiveSetup?' · objective setup':'')+(x.unsupported?' · no ally within 3k':'')+(x.highRisk?' · high-risk':'')+(x.traded?' · traded':' · untraded')),'No death occurred within the defined vision-action window.')+
       detailList((g.wards||[]).slice(0,8).map(w=>(Number(w.time)||0).toFixed(1)+'m · '+(w.territory||'unknown')+' · '+(w.wardType||'ward')),'No player ward positions were available.');
@@ -762,7 +765,7 @@ function detailContent(g,tab){
     return detailCard('Attempts',String(r.attempts??0))+detailCard('Successful',String(r.successes??0))+detailCard('Failed',String(r.failures??0))+
       detailCard('Roam K/A / deaths',String(kills)+' / '+String(deaths))+detailCard('Objectives joined / while away',String(obj)+' / '+String(away))+
       detailList(events.map((x,i)=>'Roam '+String(i+1)+' · '+(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+(x.targetZone||'map')+' · '+(x.outcome||'neutral')+(roamEvidenceText(x)?' · '+roamEvidenceText(x):'')),'No qualifying pre-major-objective-era roam departures detected.')+
-      '<div class="detail-note">V21 parity upgrade: each roam now keeps its Riot-frame path plus kill/assist, death, neutral-objective, structure/plate and lane-cost evidence. Objective success requires supported player presence instead of crediting an unrelated team objective elsewhere on the map.</div>';
+      '<div class="detail-note">V21 parity upgrade: each roam keeps its Riot-frame departure/path/return plus kill/assist, death, neutral-objective, structure/plate and lane-cost evidence. Objective success requires supported player presence. Plate/turret losses count as roam cost only when they occur in the player’s home lane, avoiding unrelated map-wide structure losses.</div>';
   }
   if(tab==='fights'){
     const f=g.fightProfile||{},events=f.events||[];
@@ -794,7 +797,8 @@ function detailContent(g,tab){
     const bad=g.badDeaths||[];
     const pre=g.preObjectiveDeaths||[];
     const risk=g.riskStateDeaths||{};
-    return detailCard('Deaths',String(g.deaths??'n/a'))+detailCard('Death quality · modern',hasNum(g.deathQuality?.modern?.score)?fmt(g.deathQuality.modern.score,1)+'/10 · '+String(g.deathQuality.modern.confidence||''):'n/a')+detailCard('Legacy Bruisienator DQI',hasNum(g.deathQuality?.legacyBruisienator?.score)?fmt(g.deathQuality.legacyBruisienator.score,1)+'/10 · partial':'n/a')+detailCard('Flagged high-risk',String(g.badDeathCount??0))+detailCard('Deaths while ≥500g ahead',String(g.leadDeathCount??0))+detailCard('High-risk deaths while ahead',String(g.highRiskLeadDeathCount??0))+
+    const dq=g.deathQuality||{},legacy=dq.legacyBruisienator||{},evidence=dq.evidence||{};
+    return detailCard('Deaths',String(g.deaths??'n/a'))+detailCard('Bruisienator V21 DQI · effective pipeline',hasNum(legacy.effectivePipelineScore??legacy.score)?fmt(legacy.effectivePipelineScore??legacy.score,1)+'/10':'n/a')+detailCard('Death-consequence coverage',hasNum(evidence.consequenceCoveragePct)?String(evidence.measuredConsequences??0)+' / '+String(evidence.deaths??g.deaths??0)+' · '+fmtPct(evidence.consequenceCoveragePct):'n/a')+detailCard('All isolated deaths',String(g.isolatedDeathCount??evidence.isolatedDeaths??0))+detailCard('Flagged high-risk',String(g.badDeathCount??0))+detailCard('Deaths while ≥500g ahead',String(g.leadDeathCount??0))+detailCard('High-risk deaths while ahead',String(g.highRiskLeadDeathCount??0))+
       detailCard('Deaths while ≥500g behind',String(risk.behind??0))+detailCard('High-risk deaths while behind',String(risk.highRiskBehind??0)+' · '+(Number(risk.behind||0)>0?fmtPct(100*Number(risk.highRiskBehind||0)/Number(risk.behind)):'n/a'))+
       detailCard('Post-macro-transition side-lane deaths',String(g.sideLaneRisk?.macroTransitionSideLaneDeaths??g.sideLaneRisk?.postLaneSideLaneDeaths??g.sideLaneRisk?.post15SideLaneDeaths??0))+
       detailCard('Isolated side-lane deaths',String(g.sideLaneRisk?.isolatedSideLaneDeaths??0))+
@@ -816,10 +820,12 @@ function detailContent(g,tab){
       detailList((g.sideLaneRisk?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+String(x.zone||'side lane')+(x.isolated?' · isolated':'')+(x.neutralObjectiveSoon?' · neutral objective '+String(x.secondsBeforeNeutralObjective??'?')+'s later':'')+(x.highRisk?' · high-risk':'')+(x.traded?' · traded':' · untraded')),'No post-early-phase side-lane death detected.')+
       detailList((g.deathConsequences?.events||[]).filter(x=>x.costly).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+(x.severe?'severe':'costly')+(hasNum(x.goldSwingAfter)?' · role gold '+signed(x.goldSwingAfter,0)+'g':'')+(hasNum(x.csSwingAfter)?' · role CS '+signed(x.csSwingAfter,0):'')+(x.enemyObjectiveAfter?' · enemy objective followed':'')+(x.traded?' · traded':' · untraded')),'No measured death crossed the consequence threshold.')+
       detailList((g.deathRecovery?.events||[]).map(x=>Number(x.firstMin).toFixed(1)+'→'+Number(x.secondMin).toFixed(1)+'m · '+String(x.gapSec)+'s'+(x.phase?' · '+x.phase:'')+(x.highRisk?' · high-risk':'')+(x.costly?' · costly':'')+(x.severe?' · severe':'')+(x.traded?' · traded':' · untraded')),'No second death occurred within four minutes of the previous death.')+
-      detailList(pre.map(x=>(Number(x.time)||0).toFixed(1)+'m death → '+String(x.objectiveType||'objective')+' '+String(x.secondsBeforeObjective||'?')+'s later'),'No death was followed by an enemy objective within 75 seconds.');
+      detailList(pre.map(x=>(Number(x.time)||0).toFixed(1)+'m death → '+String(x.objectiveType||'objective')+' '+String(x.secondsBeforeObjective||'?')+'s later'),'No death was followed by an enemy objective within 75 seconds.')+
+      '<div class="detail-note"><strong>DQI provenance:</strong> the uploaded V21 HTML defines a five-input DQI, but its supplied PowerShell pipeline emits only <code>badDeaths</code>. This compatibility value reproduces the effective generated V21 behavior instead of inventing four missing inputs. Current coaching uses the individual risk and consequence evidence above, not a replacement composite score.</div>';
   }
   if(tab==='objectives'){
-    const kc=g.killConversion||{},okc=g.opponentKillConversion||{};
+    const kc=g.killConversion||{},okc=g.opponentKillConversion||{},families=g.objectiveFamilyStats||{};
+    const familyRows=Object.entries(families).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))).map(([name,x])=>String(name).replaceAll('_',' ')+' · joined '+String(x.joinedTeamEncounters??0)+' / '+String(x.teamEncounters??0)+' team encounters · '+fmtPct(x.teamJoinRate)+' · secured '+String(x.teamUnitsSecured??0)+' vs '+String(x.enemyUnitsSecured??0));
     return detailCard('Neutral-objective presence',fmtPct(g.objectiveJoinRate))+detailCard('Joined / neutral encounters',String(g.objectiveJoined??0)+' / '+String(g.objectiveTeamTotal??0))+detailCard('Early KP',fmtPct(g.earlyKp))+
       detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+' min · '+String(g.impactType||'event'):'n/a')+detailCard('Objective-context death %',fmtPct(g.objectiveDeathPct))+detailCard('Pre-objective conversion deaths',String(g.preObjectiveDeathCount??0))+
       detailCard('Kill-window conversion',String(kc.converted??0)+' / '+String(kc.windows??0)+' · '+fmtPct(kc.rate))+detailCard('Opposing-role conversion',String(okc.converted??0)+' / '+String(okc.windows??0)+' · '+fmtPct(okc.rate))+
@@ -828,6 +834,7 @@ function detailContent(g,tab){
       detailCard('Event-frame-only joins',String(g.objectiveReadiness?.eventFrameOnlyJoins??0))+detailCard('Objective absences',String(g.objectiveReadiness?.absent??0))+
       detailCard('Late-reset objective misses',String(g.objectiveReadiness?.lateResetMisses??0))+detailCard('Fresh-purchase objective joins',String(g.objectiveReadiness?.freshPurchaseJoins??0))+detailCard('Raw objective/structure events',String(g.objectives?.length||0))+
       detailList((kc.events||[]).map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+String(x.kills||0)+' involved kill(s) · '+(x.converted?('converted to '+String(x.objectiveType||'objective')+' in '+String(x.secondsAfter??'?')+'s'):'no objective/structure within 75s')),'No player-involved kill-conversion windows were available.')+
+      detailList(familyRows,'No objective-family encounter data were available.')+
       detailList((g.objectiveReadiness?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+String(x.objectiveType||'neutral objective')+(Number(x.rawEventCount||1)>1?' · '+String(x.rawEventCount)+' raw kills grouped':'')+' · '+(x.earlySetup?('prior-frame setup'+(hasNum(x.setupLeadSec)?' ~'+fmtInt(x.setupLeadSec)+'s lead':'')):x.eventFrameOnlyJoin?'event-frame-only join':x.present?'present':'absent')+(hasNum(x.secondsSinceShop)?' · shopped '+String(x.secondsSinceShop)+'s before':'')+(x.recentDeath?' · recent death':x.lateResetMiss?' · late reset miss':x.freshPurchaseJoin?' · fresh purchase + joined':'')),'No neutral-objective readiness events were available.')+
       '<div class="detail-note">Conversion is team context: it asks whether player-involved kills are followed by tracked objectives/structures within 75 seconds. It does not claim the player alone caused or prevented the conversion.</div>';
   }
@@ -978,8 +985,9 @@ function renderAdvanced(r){
     ['Deaths during early-lead give-backs',String(r.behaviorSummary?.earlyLeadGivebackDeaths??0)+' · '+String(r.behaviorSummary?.earlyLeadGivebackHighRiskDeaths??0)+' high-risk'],
     ['First impact timing',hasNum(a.firstImpact?.avgDeltaVsOpponentMin)?signed(a.firstImpact.avgDeltaVsOpponentMin,1)+' min vs peer':'n/a'],
     ['Objective-context death %',fmtPct(a.objectiveDeathPct)],
-    ['Death quality index · consequence-aware',hasNum(r.behaviorSummary?.avgDeathQualityIndex)?fmt(r.behaviorSummary.avgDeathQualityIndex,2)+'/10':'n/a'],
-    ['Legacy Bruisienator DQI · partial compatibility',hasNum(r.behaviorSummary?.avgLegacyBruisienatorDqi)?fmt(r.behaviorSummary.avgLegacyBruisienatorDqi,2)+'/10':'n/a'],
+    ['Bruisienator V21 DQI · effective pipeline',hasNum(r.behaviorSummary?.avgLegacyBruisienatorDqi)?fmt(r.behaviorSummary.avgLegacyBruisienatorDqi,2)+'/10':'n/a'],
+    ['Death-consequence evidence coverage',fmtPct(r.behaviorSummary?.deathConsequenceCoveragePct)],
+    ['Isolated deaths · all',String(r.behaviorSummary?.isolatedDeaths??0)],
     ['Death trade rate',fmtPct(r.behaviorSummary?.deathTradeRate)],
     ['High-risk untraded deaths',String(r.behaviorSummary?.highRiskUntradedDeaths??0)+' · '+fmt(r.behaviorSummary?.highRiskUntradedPerGame,1)+'/game'],
     ['Early-phase high-risk deaths',String(r.behaviorSummary?.phaseRisk?.early?.highRiskDeaths??0)+' · '+(hasNum(r.behaviorSummary?.phaseRisk?.early?.highRiskDeathsPer10Min)?fmt(r.behaviorSummary.phaseRisk.early.highRiskDeathsPer10Min,2)+'/10m':fmt(r.behaviorSummary?.phaseRisk?.early?.highRiskDeathsPerGame,2)+'/game legacy')],
@@ -1056,8 +1064,13 @@ function renderAdvanced(r){
     ['Event-frame-only neutral-objective joins',String(r.behaviorSummary?.eventFrameOnlyObjectiveJoins??0)],
     ['Neutral-objective setup coverage',fmtPct(r.behaviorSummary?.earlySetupObjectiveCoverageRate)],
     ['Late-reset neutral-objective misses',String(r.behaviorSummary?.lateResetObjectiveMisses??0)+' / '+String(r.behaviorSummary?.neutralObjectiveEvents??0)+' · '+fmtPct(r.behaviorSummary?.lateResetObjectiveMissRate)],
-    ['Fresh-purchase neutral-objective joins',String(r.behaviorSummary?.freshPurchaseObjectiveJoins??0)+' · '+fmtPct(r.behaviorSummary?.freshPurchaseObjectiveJoinRate)]
+    ['Fresh-purchase neutral-objective joins',String(r.behaviorSummary?.freshPurchaseObjectiveJoins??0)+' · '+fmtPct(r.behaviorSummary?.freshPurchaseObjectiveJoinRate)],
+    ['Objective-setup ward clears',String(r.behaviorSummary?.visionSetupClears??0)]
   ];
+  const familySummary=r.behaviorSummary?.objectiveFamilySummary||{};
+  for(const [family,x] of Object.entries(familySummary).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))){
+    rows.push(['Objective · '+String(family).replaceAll('_',' '),String(x.joinedTeamEncounters??0)+' / '+String(x.teamEncounters??0)+' joined · '+fmtPct(x.teamJoinRate)+' · secured '+String(x.teamUnitsSecured??0)+' vs '+String(x.enemyUnitsSecured??0)]);
+  }
   $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('not recovered')||v==='n/a')).join('');
   const p=r.peerComparison||{},conv=r.conversion||{},wl=r.winLoss||{},trend=r.recentTrend||{},session=r.sessionBehavior||{},base=r.coachingLifetime||null,s=r.coachingSummary||r.summary||{},rank=r.profile?.rank||null,rankBands=p.rankBands||{};
   const rankBandLine=(x)=>x&&Number(x.games)?String(x.games)+' games · @15 '+signed(x.avgGoldDiff15,0)+'g · DPM '+signed(x.avgDpmDelta,0):'n/a';
