@@ -1,69 +1,9 @@
 (() => {
   'use strict';
 
-  const DIRECT_CATALOG_URL='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828';
-  const CHECKOUT_V832_URL='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-manual-checkout-v832';
-  const previousFetch=window.fetch.bind(window);
-  const wholeEuro=value=>Math.ceil(Math.max(0,Number(value||0))-1e-9);
-
-  const inputUrl=input=>{
-    try{
-      const raw=typeof input==='string'?input:input?.url;
-      return raw?new URL(raw,window.location.href):null;
-    }catch{return null;}
-  };
-
-  function decorateCatalog(payload){
-    if(!payload||!Array.isArray(payload.products))return payload;
-    return {
-      ...payload,
-      source:'bruis-direct-v836',
-      products:payload.products.map(product=>{
-        const seen=new Set();
-        const mockups=(Array.isArray(product?.mockups)?product.mockups:[]).filter(item=>{
-          const image=String(item?.image||'');
-          if(!image||seen.has(image))return false;
-          seen.add(image);return true;
-        });
-        const variants=(Array.isArray(product?.variants)?product.variants:[]).map(variant=>({...variant,price:wholeEuro(variant?.price)}));
-        const availablePrices=variants.filter(v=>v?.is_available!==false&&v?.is_enabled!==false).map(v=>Number(v.price||0)).filter(p=>Number.isFinite(p)&&p>0);
-        const allPrices=variants.map(v=>Number(v.price||0)).filter(p=>Number.isFinite(p)&&p>0);
-        const prices=availablePrices.length?availablePrices:allPrices;
-        return {
-          ...product,
-          source:'bruis-direct-v836',
-          price:prices.length?Math.min(...prices):wholeEuro(product?.price),
-          priceMax:prices.length?Math.max(...prices):wholeEuro(product?.priceMax||product?.price),
-          variants,
-          mockups,
-          image:mockups[0]?.image||product?.image||''
-        };
-      })
-    };
-  }
-
-  const isLegacyCatalog=url=>!!url&&/\/functions\/v1\/shop-catalog\/?$/.test(url.pathname);
-  const isLegacyCheckout=url=>!!url&&/\/functions\/v1\/shop-manual-checkout-v825\/?$/.test(url.pathname);
-
-  window.fetch=async(input,init)=>{
-    const url=inputUrl(input);
-    if(isLegacyCatalog(url)){
-      const response=await previousFetch(DIRECT_CATALOG_URL,{...(init||{}),cache:'no-store'});
-      if(!response.ok)return response;
-      try{
-        const payload=await response.clone().json();
-        const headers=new Headers(response.headers);
-        headers.set('Content-Type','application/json; charset=utf-8');
-        headers.set('X-Kalenel-Catalog-Authority','bruis-direct-v836');
-        return new Response(JSON.stringify(decorateCatalog(payload)),{status:response.status,statusText:response.statusText,headers});
-      }catch{return response;}
-    }
-    if(isLegacyCheckout(url)){
-      return previousFetch(CHECKOUT_V832_URL,{...(init||{}),cache:'no-store'});
-    }
-    return previousFetch(input,init);
-  };
-
+  // v874: catalog and checkout are now called directly by store.js and
+  // manual-checkout-v825.js. This file intentionally contains no fetch
+  // interception or legacy endpoint rewriting.
   const style=document.createElement('style');
   style.dataset.directCommerceV832='true';
   style.textContent=`
@@ -80,19 +20,20 @@
   if(!document.querySelector('script[data-delivery-estimate-v833]')){
     const deliveryScript=document.createElement('script');
     deliveryScript.dataset.deliveryEstimateV833='true';
-    deliveryScript.src='delivery-estimate-v833.js?v=20260926-delivery-v869-r1';
+    deliveryScript.src='delivery-estimate-v833.js?v=20260926-delivery-v871-r1';
     deliveryScript.async=false;
     document.head.appendChild(deliveryScript);
   }
 
   window.BRUIS_DIRECT_COMMERCE_V832=Object.freeze({
-    catalogAuthority:'bruis-direct-v836',
+    catalogAuthority:'shop-catalog-v828',
     checkoutAuthority:'shop-manual-checkout-v832',
     deliveryPreview:'shop-delivery-preview-v833',
     pricing:'shirt-production-cost-plus-max-printify-vat-plus-size-margin-rounded-up',
     wholeEuroPricing:true,
     artworkFirstGallery:true,
     usesShopifyCatalogApi:false,
-    usesShopifyPriceApi:false
+    usesShopifyPriceApi:false,
+    legacyFetchBridge:false
   });
 })();
