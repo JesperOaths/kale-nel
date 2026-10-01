@@ -639,6 +639,9 @@ function reportPhaseRules(g){
     key:r.key||'legacy',
     season:r.season||'unknown',
     phaseComparable:r.phaseComparable!==false,
+    lane15Comparable:r.lane15Comparable!==false,
+    fixed15to25Comparable:r.fixed15to25Comparable!==false,
+    closing25Comparable:r.closing25Comparable!==false,
     earlyEndMin:hasNum(r.earlyEndMin)?Number(r.earlyEndMin):14,
     lateStartMin:hasNum(r.lateStartMin)?Number(r.lateStartMin):20,
     baronSpawnMin:hasNum(r.baronSpawnMin)?Number(r.baronSpawnMin):null,
@@ -773,8 +776,11 @@ function detailContent(g,tab){
       detailList(greedy.map(x=>(Number(x.startMin)||0).toFixed(1)+'m · '+fmtInt(x.currentGold)+'g held · next shop '+(Number(x.nextShopMin)||0).toFixed(1)+'m ('+fmt(x.delayMin,1)+'m delay)'),'No repeated high-gold stay window detected.')+
       '<div class="detail-note">First-major affordability is recipe-aware: it requires the completed item’s direct components to be observed and a supported timeline frame with enough current gold for the remaining combine cost. The purchase event confirms the shop completion; it is not an exact recall-channel timestamp.</div>';
   }
-  const peer=g.peer||null,earlyLead=g.earlyLeadWindow||{};
-  return detailCard('Gold diff @10',signed(g.goldDiff10,0))+detailCard('Gold diff @15',signed(g.goldDiff15,0))+detailCard('Gold diff @25',signed(g.goldDiff25,0))+
+  const peer=g.peer||null,earlyLead=g.earlyLeadWindow||{},rules=reportPhaseRules(g);
+  const checkpointNote=(!rules.lane15Comparable||!rules.fixed15to25Comparable||!rules.closing25Comparable)
+    ?'<div class="detail-note"><strong>Checkpoint interpretation:</strong> Raw @15/@25 role-relative frames are shown for traceability, but this rules profile does not treat them as standard lane / 15→25 routing / closing checkpoints. Coaching that depends on those meanings is suppressed.</div>'
+    :'';
+  return checkpointNote+detailCard('Gold diff @10',signed(g.goldDiff10,0))+detailCard('Gold diff @15',signed(g.goldDiff15,0))+detailCard('Gold diff @25',signed(g.goldDiff25,0))+
     detailCard('Peak pre-15 role lead',earlyLead.eligible?(signed(earlyLead.peakGoldDiff,0)+'g @ '+fmt(earlyLead.peakMin,1)+'m'):'No ≥500g measured peak')+
     detailCard('Peak → 15 gold swing',earlyLead.eligible?(signed(earlyLead.goldSwingTo15,0)+'g · '+(earlyLead.giveback?'give-back':earlyLead.preserved?'preserved':'partial erosion')):'n/a')+
     detailCard('Deaths after early peak',earlyLead.eligible?(String(earlyLead.deathsAfterPeak??0)+' · '+String(earlyLead.highRiskDeathsAfterPeak??0)+' high-risk'):'n/a')+
@@ -821,11 +827,12 @@ function chartSvg(points,unit){
 }
 function formatChartValue(v,unit){if(unit==='%')return Math.round(v)+'%';if(unit==='int')return Math.round(v).toLocaleString();if(unit==='signed')return signed(v,0);return Number(v).toFixed(2);}
 function renderCharts(r){
+  const lane15Comparable=Number(r.behaviorSummary?.checkpointEligibility?.lane15Games??0)>0;
   const specs=[
     {key:'csMin',title:'CS/min across the sample',q:'How has farming rate changed?',unit:'num'},
     {key:'kp',title:'Kill participation',q:'How has fight involvement changed?',unit:'%'},
     {key:'dpm',title:'Damage per minute',q:'How has champion damage output varied?',unit:'int'},
-    {key:'goldDiff15',title:'Gold difference @15',q:'How has lane/economy position changed?',unit:'signed'}
+    {key:'goldDiff15',title:lane15Comparable?'Gold difference @15':'Gold difference @15 · raw checkpoint',q:lane15Comparable?'How has lane/economy position changed?':'Descriptive role-relative frame only; this queue is not interpreted with standard @15 lane coaching.',unit:'signed'}
   ];
   const hidden=[];
   $('chartGrid').innerHTML=specs.map(s=>{
@@ -864,6 +871,9 @@ function renderSpatial(r){
 function renderAdvanced(r){
   const a=r.advanced||{},roam=a.roams||{},recall=a.recalls||{},itemSpike=a.itemSpike||{};
   const rows=[
+    ['@15 lane-checkpoint comparable games',String(r.behaviorSummary?.checkpointEligibility?.lane15Games??'n/a')],
+    ['15→25 fixed-checkpoint comparable games',String(r.behaviorSummary?.checkpointEligibility?.fixed15to25Games??'n/a')],
+    ['@25 closing-checkpoint comparable games',String(r.behaviorSummary?.checkpointEligibility?.closing25Games??'n/a')],
     ['Neutral-objective presence',fmtPct(a.objectivePresence)],
     ['Objective diagnosis',objectiveDiagnosisLabel(r.behaviorSummary?.objectiveDiagnosis?.primaryCause)],
     ['Early KP · queue-aware',fmtPct(a.earlyKP)],
@@ -1097,6 +1107,7 @@ function renderQuality(r){
   const cards=[
     qualityCard('Analyzed games',String(analyzed),String(coaching)+' primary-role coaching games',evidenceLevel(coaching)),
     qualityCard('Queue context',hasNum(q.dominantQueueId)?'Queue '+String(q.dominantQueueId):'n/a',String(q.dominantQueueGames??0)+' analyzed-context games · '+String(q.excludedOtherQueues??0)+' other queue-context games excluded',evidenceLevel(q.dominantQueueGames??0)),
+    qualityCard('Fixed checkpoint eligibility',String(b.checkpointEligibility?.lane15Games??0)+' @15 lane','15→25 '+String(b.checkpointEligibility?.fixed15to25Games??0)+' · @25 closing '+String(b.checkpointEligibility?.closing25Games??0),'neutral'),
     qualityCard('Patch context',q.currentPatchKey?('Patch '+String(q.currentPatchKey)):'n/a',String(q.currentPatchRoleGames??0)+' current-patch role games · '+String(q.olderSamePatchRoleGames??0)+' older same-patch baseline · '+String(q.crossPatchBaselineRoleGames??0)+' cross-patch older games excluded from trend',q.patchBaselineReady?'good':'neutral'),
     qualityCard('Item catalog provenance',String(q.itemCatalogExactPatches??0)+' exact patch catalog(s)',String(q.itemCatalogFallbackPatches??0)+' patch fallback(s) · '+String(q.itemCatalogUnknownPatchGames??0)+' game(s) without a parsed patch',Number(q.itemCatalogFallbackPatches||0)===0?'good':'neutral'),
     qualityCard('Sample exclusions',String(Number(q.excludedShortGames||0)+Number(q.excludedOtherMaps||0)+Number(q.excludedOtherQueues||0)+Number(q.excludedMissingRole||0))+' games',String(q.excludedShortGames??0)+' under 10m · '+String(q.excludedOtherMaps??0)+' other maps · '+String(q.excludedOtherQueues??0)+' other queues · '+String(q.excludedMissingRole??0)+' missing role','neutral'),
