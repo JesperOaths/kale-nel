@@ -15,7 +15,9 @@ To keep rank-band comparisons aligned with the actual coaching sample without ra
 4. takes the first 20 matches from that comparable queue context,
 5. fetches an opponent rank snapshot only when one of those target matches is missing it.
 
-The response exposes `dominant_queue_id`, `peer_rank_target_count`, and `peer_rank_backfilled` so the frontend can report what happened.
+The response exposes `dominant_queue_id`, `comparable_cached_games`, `peer_rank_target_count`, and `peer_rank_backfilled` so the frontend can report what happened.
+
+The backfill is computed against the same last-100 cached match universe used by `analyze_basic`, not only the IDs in the most recent fetch run. If fewer than 20 comparable cached games remain after map, duration and queue filtering, `recommend_deeper_cache` is returned so the frontend can recommend a 100-match refresh instead of presenting a thin sample as a complete Last 20.
 
 This keeps Riot rank lookups bounded to the final comparable sample instead of blindly ranking all 50 cached raw matches.
 
