@@ -1293,7 +1293,9 @@ Current useful dimensions include:
 - DPM,
 - CS/min.
 
-The session model preserves a separate count of @15-compatible games in each session bucket. A coaching warning requires multiple games on both sides and a material difference, such as about 300g worse gold@15 when that comparison is eligible, +0.5 high-risk deaths/game, or ~120 lower DPM in game 3+.
+The session model preserves separate coverage counts for @15-compatible games, timeline-complete games, DPM observations and CS/min observations in every session bucket. A displayed subgroup with fewer than three games is explicitly marked **thin sample** and remains traceability/context only.
+
+A cross-bucket delta requires at least **two valid observations in both compared groups for that specific metric**. Gold@15 therefore needs two @15-compatible games per side; risky-death deltas need two timeline-complete games per side; DPM needs two valid DPM observations per side. One-game subgroup differences must never be promoted to an observed session/requeue pattern.
 
 ### Quick requeue comparison
 
