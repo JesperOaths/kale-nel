@@ -123,8 +123,12 @@ ok(backend.includes('objectiveFamilyStats:{}')&&backend.includes('objectiveFamil
 ok(backend.includes('familyRaw==="DRAGON"&&memberSubtypes.some((x:any)=>x.includes("ELDER"))?"ELDER_DRAGON"'), 'Elder Dragon must remain distinguishable when Riot subtype supports it');
 ok(backend.includes('objectiveSetupClears'), 'objective-setup ward clears must remain measurable');
 ok(backend.includes('controlWardPurchases'), 'Control Ward purchases must remain separate from placement counts');
-ok(backend.includes('function committedItemPurchaseCount('), 'Control Ward purchase counts must account for undo events');
-ok(backend.includes('e.type==="ITEM_UNDO"&&Number(e.beforeId)===Number(itemId)'), 'undone Control Ward purchases must not survive as committed purchases');
+ok(backend.includes('function committedPurchaseEvents('), 'shop/reset/item metrics must share a canonical committed-purchase stream');
+ok(backend.includes('purchases[idx].committed=false'), 'ITEM_UNDO must invalidate a transient matching purchase');
+ok(backend.includes('function committedItemPurchaseCount('), 'Control Ward purchase counts must consume the committed-purchase stream');
+ok(backend.includes('function purchaseCashCost(')&&backend.includes('recipe_owned_component_credit'), 'shop spend must use recipe-aware cash-cost estimates');
+ok(backend.includes('out.shopVisits=purchaseGroups(itemEventsByPid,catalog)'), 'shop visits must receive the complete item ledger so undo events can be removed');
+ok(backend.includes('first committed ≥250g recipe-aware purchase group'), 'first-reset provenance must retain committed recipe-aware semantics');
 ok(backend.includes('controlWardIds=new Set<number>([2055])')&&backend.includes('text(info?.name).toLowerCase()==="control ward"'), 'Control Ward detection must retain item-id and catalog-name evidence');
 ok(backend.includes('function majorOwnershipMilestones(')&&backend.includes('secondMajorItemDeltaVsOpponent'), 'second major-item completion must remain measurable from owned inventory against the direct role opponent');
 ok(backend.includes('ownedMajorCount<=milestones.length'), 'sale/rebuy or one-for-one upgrades must not create a false second-major milestone');
@@ -137,6 +141,15 @@ ok(app.includes('not treated as evidence of tilt, momentum, or player psychology
 ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
 ok(backend.includes('objectiveRootCauses'), 'objective root-cause evidence ranking must remain in analyzer');
 ok(backend.includes('objectiveRootCauses.sort'), 'objective root causes must remain severity-ranked');
+ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
+ok(backend.includes('playerSupported:isNeutralObjectiveEvent(o)?participantNearEvent'), 'neutral-objective conversion credit must require supported presence');
+ok(backend.includes('structureInvolvement(o,frames,whoId,whoTeam,mapId)'), 'structure conversion credit must require supported involvement');
+ok(app.includes('Player-supported kill conversion')&&app.includes('Team conversion after your kill windows'), 'supported and team-only conversion must remain visibly distinct');
+ok(backend.includes('VERIFIED_2026_RULES_THROUGH_MINOR=19')&&backend.includes('minor>VERIFIED_2026_RULES_THROUGH_MINOR'), 'newer 2026 patches must fail closed beyond the audited mechanics boundary');
+ok(backend.includes('x-league-workspace')&&backend.includes('publicWorkspaceOwnerId('), 'public League must use isolated browser-workspace ownership');
+ok(backend.includes('allowServerRiotKey=viewer.anonymous!==true'), 'anonymous League users must not inherit the server Riot key');
+ok(app.includes("'x-league-workspace':workspaceId()"), 'League frontend must use browser workspace identity');
+ok(!html.includes('gejast-auth-gate.js')&&!html.includes('requireMatchEntrySession'), 'League page must remain public and outside Kalenel login gating');
 ok(backend.includes('objectiveDiagnosis:{presenceLow:objectivePresenceLow,primaryCause:objectivePrimaryCause?.key||null,causes:objectiveRootCauses}'), 'objective diagnosis must remain exported');
 ok(backend.includes('goldSwingTo15'), 'clean solo-kill conversion must preserve gold swing to 15');
 ok(backend.includes('csSwingTo15'), 'clean solo-kill conversion must preserve CS swing to 15');
@@ -277,5 +290,5 @@ console.log(JSON.stringify({
   appVersion,
   domRefs:refs.length,
   domIds:ids.length,
-  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence','control-ward-purchases','second-major-timing','last20-result-streaks']
+  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence','control-ward-purchases','second-major-timing','last20-result-streaks','committed-shop-ledger','supported-kill-conversion','public-league-workspace','verified-patch-boundary']
 },null,2));
