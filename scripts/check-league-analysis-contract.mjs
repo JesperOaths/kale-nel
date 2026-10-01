@@ -40,7 +40,7 @@ ok(backend.includes('2026_revision_unknown'), 'missing internal minor versions m
 ok(backend.includes('Exact 2026 minor patch is unavailable'), 'unknown 2026 revisions must remain explicit rather than being guessed');
 ok(backend.includes('26.9_role_quest_rework')&&backend.includes('26.11_mid_8pct')&&backend.includes('26.16_support_roam_penalty')&&backend.includes('26.19_top_teleport'), 'material 2026 system-level role-quest revisions must remain encoded');
 ok(backend.includes('function roleQuestRevisionForRole2026('), 'role-specific mechanics revisions must prevent unrelated patch changes from fragmenting coaching cohorts');
-ok(backend.includes('support_26.16_roam_penalty')&&backend.includes('top_26.19_teleport')&&backend.includes('adc_26.9_40g_takedown'), 'role-specific mechanics boundaries must remain explicit');
+ok(backend.includes('support_26.7_farm_penalty_removed')&&backend.includes('support_26.16_roam_penalty')&&backend.includes('top_26.19_teleport')&&backend.includes('adc_26.9_40g_takedown'), 'role-specific mechanics boundaries must remain explicit');
 ok(backend.includes('laneRoleQuestsEnabled:!isSwift'), 'standard lane-role quest rules must remain disabled for Swiftplay');
 ok(backend.includes('function roleQuestContext('), 'role-specific quest context must remain part of timeline analysis');
 ok(backend.includes('support_quest_control_ward_discount_unobserved'), 'support ward-price uncertainty must remain explicit instead of silently rewriting static prices');
