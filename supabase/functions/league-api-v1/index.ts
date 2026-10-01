@@ -10,6 +10,11 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 const SUPABASE_URL = String(Deno.env.get("SUPABASE_URL") || "");
 const SERVICE_KEY = String(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "");
 const RIOT_KEY = String(Deno.env.get("RIOT_API_KEY") || Deno.env.get("RIOT_API_TOKEN") || "");
+const PUBLIC_MAX_PROFILES=8;
+const PUBLIC_MAX_FETCH_MATCHES=50;
+const PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE=80;
+const PUBLIC_MAX_ANALYSES_PER_PROFILE=25;
+const PUBLIC_MAX_FETCH_RUNS_PER_PROFILE=20;
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -65,7 +70,8 @@ function xy(v:any){const x=num(v?.x),y=num(v?.y);return x!=null&&y!=null?{x,y}:n
 
 async function publicWorkspaceOwnerId(raw:any){
   const workspace=text(raw).slice(0,160);
-  if(!/^[a-z0-9][a-z0-9._:-]{15,159}$/i.test(workspace))throw Object.assign(new Error("league_workspace_required"),{status:400});
+  const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(workspace),hex=/^lw1_[0-9a-f]{48,64}$/i.test(workspace);
+  if(!uuid&&!hex)throw Object.assign(new Error("league_workspace_invalid"),{status:400});
   const bytes=new TextEncoder().encode(workspace),digest=new Uint8Array(await crypto.subtle.digest("SHA-256",bytes));
   let value=0;for(let i=0;i<6;i++)value=value*256+digest[i];
   return 900000000000000+(value%90000000000000);
@@ -81,6 +87,20 @@ async function accessContext(req:Request,body:any){
   const {data,error}=await sb.from("gejast_player_sessions_v746").select("player_id,display_name,site_scope,expires_at").eq("session_token",token).gt("expires_at",now()).maybeSingle();
   if(error||!data)throw Object.assign(new Error("invalid_session"),{status:401});
   return{sb,viewer:{...data,anonymous:false}};
+}
+async function trimAnonymousRows(sb:any,table:string,profileId:string,ownerId:number,keep:number,orderColumn="created_at"){
+  const {data,error}=await sb.from(table).select("id").eq("profile_id",profileId).eq("owner_player_id",ownerId).order(orderColumn,{ascending:false}).range(keep,keep+199);
+  if(error)throw error;
+  const ids=(data||[]).map((x:any)=>x.id).filter(Boolean);
+  if(ids.length){const{error:delError}=await sb.from(table).delete().in("id",ids);if(delError)throw delError;}
+  return ids.length;
+}
+async function trimAnonymousMatchCache(sb:any,profileId:string,ownerId:number){
+  const {data,error}=await sb.from("league_match_cache_v1").select("id").eq("profile_id",profileId).eq("owner_player_id",ownerId).order("game_start_at",{ascending:false}).range(PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE,PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE+199);
+  if(error)throw error;
+  const ids=(data||[]).map((x:any)=>x.id).filter(Boolean);
+  if(ids.length){const{error:delError}=await sb.from("league_match_cache_v1").delete().in("id",ids);if(delError)throw delError;}
+  return ids.length;
 }
 async function riot(url:string, requestKey="", allowServerKey=true){
   const key=(allowServerKey?RIOT_KEY:"")||text(requestKey);
