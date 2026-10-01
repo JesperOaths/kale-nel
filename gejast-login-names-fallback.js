@@ -16,21 +16,32 @@
     }
     return [];
   }
-  async function rpc(name, body){
+  async function rpc(name, body, timeoutMs){
     var base = String(cfg.SUPABASE_URL || '').replace(/\/+$/, '');
     var key = String(cfg.SUPABASE_PUBLISHABLE_KEY || '').trim();
     if (!base || !key) throw new Error('login_names_config_unavailable');
-    var res = await fetch(base + '/rest/v1/rpc/' + name, {
-      method:'POST', mode:'cors', cache:'no-store',
-      headers:(cfg.publicApiHeaders?cfg.publicApiHeaders({'Content-Type':'application/json',Accept:'application/json'}):(function(){var h={'Content-Type':'application/json',Accept:'application/json',apikey:key};if(/^[^.]+\.[^.]+\.[^.]+$/.test(key))h.Authorization='Bearer '+key;return h;})()),
-      body:JSON.stringify(body || {})
-    });
-    var text = await res.text();
-    var data = null;
-    try { data = text ? JSON.parse(text) : null; } catch(_) { throw new Error(text || ('HTTP '+res.status)); }
-    if (!res.ok) throw new Error(data && (data.message || data.error || data.hint) || ('HTTP '+res.status));
-    return data && data[name] !== undefined ? data[name] : data;
+    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = controller ? setTimeout(function(){ try { controller.abort(); } catch(_) {} }, Math.max(500, Number(timeoutMs || 1800))) : null;
+    try {
+      var res = await fetch(base + '/rest/v1/rpc/' + name, {
+        method:'POST', mode:'cors', cache:'no-store',
+        headers:(cfg.publicApiHeaders?cfg.publicApiHeaders({'Content-Type':'application/json',Accept:'application/json'}):(function(){var h={'Content-Type':'application/json',Accept:'application/json',apikey:key};if(/^[^.]+\.[^.]+\.[^.]+$/.test(key))h.Authorization='Bearer '+key;return h;})()),
+        body:JSON.stringify(body || {}),
+        signal:controller ? controller.signal : undefined
+      });
+      var text = await res.text();
+      var data = null;
+      try { data = text ? JSON.parse(text) : null; } catch(_) { throw new Error(text || ('HTTP '+res.status)); }
+      if (!res.ok) throw new Error(data && (data.message || data.error || data.hint) || ('HTTP '+res.status));
+      return data && data[name] !== undefined ? data[name] : data;
+    } catch(err) {
+      if (err && err.name === 'AbortError') throw new Error('login_names_timeout');
+      throw err;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
+
   async function load(requestedScope){
     var resolvedScope = requestedScope === 'family' ? 'family' : (requestedScope === 'friends' ? 'friends' : scope());
     var attempts = [
@@ -40,7 +51,7 @@
     ];
     for (var attempt of attempts) {
       try {
-        var names = normalize(rows(await rpc(attempt[0], attempt[1])));
+        var names = normalize(rows(await rpc(attempt[0], attempt[1], 1800)));
         if (names.length) {
           try { cfg.writeCachedLoginNames && cfg.writeCachedLoginNames(names, resolvedScope); } catch(_) {}
           return names;
@@ -55,5 +66,5 @@
   // fall back to that private relation while preserving the same public RPC contract.
   cfg.fetchScopedActivePlayerNames = load;
   cfg.getActivatedPlayerNamesForScope = load;
-  window.GEJAST_LOGIN_NAMES_FALLBACK = { load: load, source:'v813-safe-active-name-rpc' };
+  window.GEJAST_LOGIN_NAMES_FALLBACK = { load: load, source:'v817-bounded-active-name-rpc' };
 })();
