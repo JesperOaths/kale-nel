@@ -4,11 +4,11 @@ import assert from 'node:assert/strict';
 const SHOP_URL = 'https://kalenel.nl/shop/';
 const ASSET_VERSION = '20260916-storefront-v837-r1';
 const SHOP_V869_VERSION = '20260926-storefront-v869-r2';
-const DIRECT_V869_VERSION = '20260926-storefront-v869-r3';
+const DIRECT_V874_VERSION = '20261001-storefront-v874-r1';
 const TRANSPARENCY_V869_VERSION = '20260926-storefront-v869-r3';
 const STYLES_V869_VERSION = '20260930-storefront-v873-r1';
 const COLLECTION_MEDIA_VERSION = '20260930-storefront-v873-r1';
-const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v832.js?v=${DIRECT_V869_VERSION}`;
+const DIRECT_BRIDGE_URL = `https://kalenel.nl/shop/direct-commerce-v832.js?v=${DIRECT_V874_VERSION}`;
 const DELIVERY_UI_URL = 'https://kalenel.nl/shop/delivery-estimate-v833.js?v=20260926-delivery-v871-r1';
 const MANUAL_CHECKOUT_UI_URL = 'https://kalenel.nl/shop/manual-checkout-v825.js?v=20260926-checkout-v871-r1';
 const SHOP_ANALYTICS_URL = 'https://kalenel.nl/shop/shop-analytics-v841.js?v=20260920-shop-analytics-v841-r1';
@@ -172,7 +172,7 @@ const { response: pageResponse, elapsed: pageElapsed } = await fetchWithTimeout(
 assert.equal(pageResponse.status, 200, `Live shop page must return HTTP 200, got ${pageResponse.status}`);
 const html = await pageResponse.text();
 assert.match(html, /version-watermark[^>]*>v873</, 'Live shop must expose v873 watermark');
-assert.match(html, /direct-commerce-v832\.js\?v=20260926-storefront-v869-r3/, 'Live shop must retain the direct commerce bridge');
+assert.match(html, /direct-commerce-v832\.js\?v=20261001-storefront-v874-r1/, 'Live shop must retain the direct commerce helper');
 assert.match(html, /store\.js\?v=20260930-storefront-v873-r1/, 'Live shop must load the two-collection storefront runtime');
 assert.match(html, /styles\.css\?v=20260930-storefront-v873-r1/, 'Live shop must load the two-collection layout stylesheet');
 assert.match(html, /data-animal-filter checked/, 'Live shop must show animal designs by default');
@@ -212,8 +212,9 @@ assert.match(toteUi, /sharedArtworkFirst:\s*true/, 'tote gallery must keep the a
 assert.match(toteUi, /exactVariantSelection:\s*true/, 'tote cart must use the exact selected variant');
 
 const bridge = await textAsset(DIRECT_BRIDGE_URL, 'direct-commerce-v832.js');
-assert.match(bridge, /shop-catalog-v828/, 'bridge must use direct catalog endpoint');
-assert.match(bridge, /shop-manual-checkout-v832/, 'bridge must route checkout to v832 authority');
+assert.match(bridge, /shop-catalog-v828/, 'commerce helper must declare the direct catalog authority');
+assert.match(bridge, /shop-manual-checkout-v832/, 'commerce helper must declare the v832 checkout authority');
+assert.match(bridge, /legacyFetchBridge:false/, 'commerce helper must not retain the retired fetch-rewrite bridge');
 assert.match(bridge, /delivery-estimate-v833\.js/, 'bridge must load the v833 delivery estimate UI');
 assert.match(bridge, /shop-delivery-preview-v833/, 'bridge must declare the v833 delivery preview authority');
 assert.match(bridge, /pricing:'shirt-production-cost-plus-max-printify-vat-plus-size-margin-rounded-up'/, 'bridge must declare size-aware production-cost pricing');
