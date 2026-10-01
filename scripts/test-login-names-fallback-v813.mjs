@@ -69,6 +69,8 @@ assert.ok(loginHtml.includes(`gejast-login-names-static.js?${siteVersion}&rev=20
 assert.ok(loginHtml.includes(`gejast-login-names-fallback.js?${siteVersion}&rev=20261001-login-resilience-r6`),'login must load the single-RPC fallback with site version + resilience revision');
 assert.ok(loginHtml.includes(`gejast-account-runtime.js?${siteVersion}&rev=20261001-login-resilience-r6`),'login must load the account runtime with site version + resilience revision');
 assert.match(loginHtml,/window\.GEJAST_LOGIN_NAMES_STATIC=Object\.freeze\(/,'login HTML must contain an inline last-known-good name seed so the selector works even when Supabase or a deferred asset stalls');
+assert.match(loginHtml,/id="gejast-login-inline-seed"/,'login must synchronously populate the selector during HTML parsing rather than waiting for DOMContentLoaded');
+assert.match(loginHtml,/sel\.dataset\.seedSource='inline-last-known-good'/,'synchronous selector seed must be observable for diagnostics');
 for(const name of ['Bruis','Jesper','Sierk']) assert.ok(loginHtml.includes(`"${name}"`),`inline login seed missing representative name ${name}`);
 
 console.log('RESULT=V817_LOGIN_NAMES_STATIC_FIRST_SINGLE_RPC_PASS');
