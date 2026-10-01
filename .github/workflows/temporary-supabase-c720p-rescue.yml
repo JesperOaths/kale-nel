@@ -35,4 +35,4 @@ jobs:
       - name: Wait for database restart
         run: sleep 75
 
-# rescue-trigger-20260926-tvfix
+# rescue-trigger-20261001-login-shop-outage
