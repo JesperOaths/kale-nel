@@ -62,7 +62,8 @@
     var resolvedScope=requestedScope==='family'?'family':(requestedScope==='friends'?'friends':scope());
     var cached=[]; try { if(cfg.readCachedLoginNames) cached=normalize(cfg.readCachedLoginNames(resolvedScope)); } catch(_) {}
     var snapshot=staticNames(resolvedScope);
-    var immediate=cached.length?cached:snapshot;
+    // The embedded deployment snapshot is newer and deterministic; a stale browser cache must never overwrite it.
+    var immediate=snapshot.length?snapshot:cached;
     if(immediate.length){
       setTimeout(function(){ authoritative(resolvedScope).catch(function(){}); },3000);
       return immediate;
@@ -71,5 +72,5 @@
   }
   cfg.fetchScopedActivePlayerNames=load;
   cfg.getActivatedPlayerNamesForScope=load;
-  window.GEJAST_LOGIN_NAMES_FALLBACK={load:load,source:'v817-html-static-first-delayed-active-name-rpc',staticSource:'gejast-login-names-static.js'};
+  window.GEJAST_LOGIN_NAMES_FALLBACK={load:load,source:'v817-snapshot-authoritative-first-delayed-active-name-rpc',staticSource:'gejast-login-names-static.js'};
 })();
