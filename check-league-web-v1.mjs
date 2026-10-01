@@ -169,6 +169,15 @@ assert.ok(api.includes('recommend_deeper_cache'),'fetch finish must signal a thi
 assert.ok(api.includes('peerRankTargetCount'),'fetch finish must target only the comparable final sample');
 assert.ok(app.includes('rank snapshots backfilled'),'frontend must report peer-rank backfill results');
 assert.ok(app.includes('100-match cache depth'),'frontend must warn when the comparable cache cannot fill Last 20');
+assert.ok(html.includes('id="batchProfiles"'),'League page must expose a multi-profile batch selector');
+assert.ok(html.includes('id="batchFetchBtn"')&&html.includes('id="batchAnalyzeBtn"'),'League page must expose separate batch fetch and batch analyze actions');
+assert.ok(html.includes('Batch profiles · sequential'),'Batch UI must communicate the safe sequential execution model');
+assert.ok(app.includes('async function fetchProfileData(profile,requestedCount)'),'Single-profile fetch logic must remain reusable by batch execution');
+assert.ok(app.includes('async function analyzeProfileData(profile)'),'Single-profile analysis logic must remain reusable by batch execution');
+assert.ok(app.includes('async function runBatch(kind)'),'Sequential multi-profile batch runner must remain present');
+assert.ok(app.includes('for(let i=0;i<profiles.length;i++)'),'Batch execution must remain explicitly sequential');
+assert.ok(app.includes("catch(e){failed++;log(p.display_name+' failed: '+e.message,'bad');}"),'A profile failure must be isolated so remaining batch profiles continue');
+assert.ok(css.includes('.batch-profile-list'),'Batch profile selector must retain dedicated responsive styling');
 assert.ok(api.includes('w.objectiveSetup=allObjectives.some'),'Per-ward objective-setup evidence must be preserved');
 assert.ok(app.includes('function worldToMapPoint'));
 assert.ok(app.includes('minX:-120'));
