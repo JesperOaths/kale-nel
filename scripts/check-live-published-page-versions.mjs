@@ -14,6 +14,7 @@ const rootVersion=readRootVersion(root);
 const pages=listPublishedHtml(root);
 const concurrency=Math.max(1,Math.min(24,Number(process.env.GEJAST_LIVE_VERSION_CONCURRENCY||12)));
 const timeoutMs=Math.max(3000,Number(process.env.GEJAST_LIVE_VERSION_TIMEOUT_MS||15000));
+const maxRedirects=8;
 const results=new Array(pages.length);
 let next=0;
 
@@ -28,40 +29,87 @@ function cacheBustedUrl(rel,index){
   u.searchParams.set('__version_audit',String(Date.now())+'_'+String(index));
   return u.toString();
 }
+function hostOf(value){
+  try{return new URL(value).hostname.toLowerCase();}catch{return '';}
+}
+function deeplyDecoded(value){
+  let text=String(value||'');
+  for(let i=0;i<4;i++){
+    try{
+      const next=decodeURIComponent(text);
+      if(next===text) break;
+      text=next;
+    }catch{break;}
+  }
+  return text;
+}
+function isAdminOAuthTarget(value){
+  if(hostOf(value)!=='github.com') return false;
+  const decoded=deeplyDecoded(value).toLowerCase();
+  return decoded.includes('admin.kalenel.nl/oauth/callback')
+    && (decoded.includes('/login/oauth/authorize')||decoded.includes('github.com/login'));
+}
+async function requestRoute(startUrl,signal){
+  let current=startUrl;
+  const trace=[];
+  for(let hop=0;hop<=maxRedirects;hop++){
+    const res=await fetch(current,{
+      redirect:'manual',
+      cache:'no-store',
+      signal,
+      headers:{
+        'accept':'text/html,application/xhtml+xml',
+        'cache-control':'no-cache',
+        'pragma':'no-cache',
+        'user-agent':'Kalenel-Published-Version-Audit/1.1',
+      },
+    });
+    const status=res.status;
+    const currentUrl=res.url||current;
+    const currentHost=hostOf(currentUrl);
+    const location=res.headers.get('location')||'';
+    const nextUrl=location?new URL(location,currentUrl).toString():'';
+    trace.push({url:currentUrl,status,location:nextUrl});
+
+    if((status===401||status===403)&&currentHost==='admin.kalenel.nl'){
+      return {kind:'protected',status,finalUrl:currentUrl,text:'',trace};
+    }
+    if(nextUrl&&isAdminOAuthTarget(nextUrl)){
+      return {kind:'protected',status,finalUrl:nextUrl,text:'',trace};
+    }
+    if(status>=300&&status<400&&nextUrl){
+      current=nextUrl;
+      continue;
+    }
+    return {kind:'response',status,finalUrl:currentUrl,text:await res.text(),trace};
+  }
+  return {kind:'error',status:0,finalUrl:current,text:'',trace,reason:`more than ${maxRedirects} redirects`};
+}
 async function fetchPage(rel,index){
   const source=fs.readFileSync(path.join(root,rel),'utf8');
   const expected=expectedPageVersion(rel,rootVersion,source);
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),timeoutMs);
   try{
-    const res=await fetch(cacheBustedUrl(rel,index),{
-      redirect:'follow',
-      cache:'no-store',
-      signal:controller.signal,
-      headers:{
-        'accept':'text/html,application/xhtml+xml',
-        'cache-control':'no-cache',
-        'pragma':'no-cache',
-        'user-agent':'Kalenel-Published-Version-Audit/1.0',
-      },
-    });
-    const text=await res.text();
-    let finalHost='';
-    try{ finalHost=new URL(res.url).hostname.toLowerCase(); }catch{}
-    if((res.status===401||res.status===403)&&finalHost==='admin.kalenel.nl'){
-      return {rel,expected,status:res.status,final_url:res.url,state:'protected'};
+    const outcome=await requestRoute(cacheBustedUrl(rel,index),controller.signal);
+    const traceText=outcome.trace.map(x=>`${x.status}:${x.url}`).join(' -> ');
+    if(outcome.kind==='protected'){
+      return {rel,expected,status:outcome.status,final_url:outcome.finalUrl,state:'protected',redirect_trace:traceText};
     }
-    if(!res.ok){
-      return {rel,expected,status:res.status,final_url:res.url,state:'fail',reason:'HTTP '+res.status};
+    if(outcome.kind==='error'){
+      return {rel,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:outcome.reason,redirect_trace:traceText};
     }
-    const declarations=[...new Set(pageVersionDeclarations(text))];
+    if(outcome.status<200||outcome.status>=300){
+      return {rel,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:'HTTP '+outcome.status,redirect_trace:traceText};
+    }
+    const declarations=[...new Set(pageVersionDeclarations(outcome.text))];
     if(declarations.length!==1||declarations[0]!==expected){
-      return {rel,expected,status:res.status,final_url:res.url,state:'fail',reason:'declaration '+(declarations.join('|')||'missing')};
+      return {rel,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:'declaration '+(declarations.join('|')||'missing'),redirect_trace:traceText};
     }
-    if(!literalWatermark(text,expected)&&!dynamicWatermark(text)){
-      return {rel,expected,status:res.status,final_url:res.url,state:'fail',reason:'watermark owner missing/wrong'};
+    if(!literalWatermark(outcome.text,expected)&&!dynamicWatermark(outcome.text)){
+      return {rel,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:'watermark owner missing/wrong',redirect_trace:traceText};
     }
-    return {rel,expected,status:res.status,final_url:res.url,state:'pass'};
+    return {rel,expected,status:outcome.status,final_url:outcome.finalUrl,state:'pass',redirect_trace:traceText};
   }catch(error){
     return {rel,expected,status:0,final_url:'',state:'fail',reason:String(error?.name||error)+': '+String(error?.message||'')};
   }finally{
@@ -86,7 +134,7 @@ for(const row of results){
 console.log(`LIVE_PAGE_VERSION_SUMMARY pages=${pages.length} pass=${results.filter(r=>r.state==='pass').length} protected=${protectedRows.length} fail=${failures.length} root=${rootVersion}`);
 if(failures.length){
   console.error('LIVE_PAGE_VERSION_FAILURES');
-  for(const row of failures) console.error(`${row.rel}: ${row.reason||'unknown'} (HTTP ${row.status}, ${row.final_url||'no final URL'})`);
+  for(const row of failures) console.error(`${row.rel}: ${row.reason||'unknown'} (HTTP ${row.status}, ${row.final_url||'no final URL'}) trace=${row.redirect_trace||'n/a'}`);
   process.exit(1);
 }
 console.log('RESULT=ALL_LIVE_PUBLISHED_PAGE_VERSION_INTEGRITY_PASS');

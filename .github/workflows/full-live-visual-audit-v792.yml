@@ -149,7 +149,9 @@ jobs:
           fi
 
       - name: Verify every published live page version identity
+        id: live_page_versions
         if: env.GEJAST_LIVE_VERSION_MATCH == '1'
+        continue-on-error: true
         env:
           GEJAST_LIVE_VERSION_CONCURRENCY: '12'
           GEJAST_LIVE_VERSION_TIMEOUT_MS: '15000'
@@ -248,6 +250,7 @@ jobs:
             echo 'Authenticated visual certification unavailable: data-plane/provisioning did not succeed.'
             exit 1
           fi
+          test "${{ steps.live_page_versions.outcome }}" = 'success'
           test "${{ steps.alias_refinement.outcome }}" = 'success'
           test -f visual-audit/report.json
           if [ "${GEJAST_LIVE_VERSION_MATCH:-0}" != '1' ]; then

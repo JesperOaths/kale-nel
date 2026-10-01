@@ -123,10 +123,27 @@ function issueSignals(text) {
   return patterns.filter((rx) => rx.test(text)).map((rx) => rx.source);
 }
 
+function deeplyDecodedUrl(value) {
+  let text = String(value || '');
+  for (let i = 0; i < 4; i++) {
+    try {
+      const next = decodeURIComponent(text);
+      if (next === text) break;
+      text = next;
+    } catch { break; }
+  }
+  return text;
+}
+
 function expectedProtected(route, status, finalUrl) {
   try {
     const u = new URL(finalUrl);
-    return status === 401 && u.hostname === 'admin.kalenel.nl';
+    const host = u.hostname.toLowerCase();
+    if ((status === 401 || status === 403) && host === 'admin.kalenel.nl') return true;
+    if (host !== 'github.com') return false;
+    const decoded = deeplyDecodedUrl(finalUrl).toLowerCase();
+    return decoded.includes('admin.kalenel.nl/oauth/callback')
+      && (decoded.includes('/login/oauth/authorize') || decoded.includes('github.com/login'));
   } catch { return false; }
 }
 
