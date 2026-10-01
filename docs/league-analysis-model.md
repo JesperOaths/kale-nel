@@ -218,6 +218,18 @@ Outcomes:
 
 For SUPPORT, also inspect the change in allied ADC versus enemy ADC CS differential during the roam. A roam that gives no kill/assist/objective return and costs the ADC substantial lane CS can be highlighted as expensive.
 
+### Roam lane cost
+
+For lane roles with a valid same-role opponent, measure direct-role CS differential at roam departure and return:
+
+`(player CS - peer CS at return) - (player CS - peer CS at departure)`
+
+Negative means the direct opponent gained CS advantage while the player was away.
+
+Current coaching treats a loss of roughly 6 or more CS as materially costly. A roam with no kill/assist/objective return plus that lane loss is a strong improvement signal. A roam can still be described as economically expensive even if it produced a kill; do not equate "successful event" with "good roam."
+
+The action should focus on wave preparation and abort timing, not simply "roam less."
+
 These are movement-based heuristics, not perfect ground truth. Use medium confidence unless supported by a larger sample.
 
 ## Resets, shop visits and item timing
