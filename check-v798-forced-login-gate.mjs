@@ -16,6 +16,7 @@ assert(!target.includes('return_to'),'successful login must not deep-link around
 const ignoredDirs=new Set(['.git','node_modules','dist','build','.next','.vercel','coverage','tmp','temp','patch_bundles','repo','mnt','cloudflare']);
 const authPublic=new Set(['login.html','request.html','activate.html']);
 const intentionalPublic=new Set(['shop/index.html','c720p-drive-oauth/index.html','c720p-drive-oauth/privacy.html','oauth/inbox-triage/index.html','oauth/inbox-triage/privacy.html','oauth/inbox-triage/terms.html','oauth/inbox-triage/data-deletion.html','oauth/inbox-triage/support.html','inbox-triage/index.html','inbox-triage/privacy.html']);
+function isIntentionalPublic(r){return intentionalPublic.has(r)||r.startsWith('league/');}
 const redirectOnly=new Set(['score.html','pikken_spectator.html','klaverjas_live_v596.html','familie/index.html','familie/login.html','familie/scorer.html','familie/leaderboard.html','familie/player.html']);
 function walk(dir,out=[]){for(const ent of fs.readdirSync(dir,{withFileTypes:true})){if(ent.isDirectory()){if(!ignoredDirs.has(ent.name))walk(path.join(dir,ent.name),out);}else if(ent.name.toLowerCase().endsWith('.html'))out.push(path.join(dir,ent.name));}return out;}
 function rel(file){return path.relative(process.cwd(),file).replaceAll('\\','/');}
@@ -41,11 +42,16 @@ const shopBody=fs.readFileSync(shopIndex,'utf8');
 assert(!shopBody.includes('/gejast-auth-gate.js?'),'public Bruis shop must not inherit the private player-session gate');
 assert(!/service[_-]?role/i.test(shopBody),'public Bruis shop must never contain a service-role credential');
 assert(!/admin_session_token/i.test(shopBody),'public Bruis shop must never contain an admin-session credential');
+const leagueIndex='league/index.html';
+assert.ok(fs.existsSync(leagueIndex),'public League surface missing');
+const leagueBody=fs.readFileSync(leagueIndex,'utf8');
+assert(!leagueBody.includes('/gejast-auth-gate.js?')&&!leagueBody.includes('/gejast-home-gate.js?')&&!leagueBody.includes('requireMatchEntrySession'),'public League surface must not inherit Kalenel player-session gating');
+assert(leagueBody.includes('index,follow'),'public League surface must remain indexable/followable');
 const missing=[]; const leaked=[]; const publicGateLeaks=[]; let protectedCount=0;
 for(const file of walk(process.cwd())){
   const r=rel(file);const body=fs.readFileSync(file,'utf8');
   if(authPublic.has(r)){if(body.includes('/gejast-auth-gate.js?'))leaked.push(r);continue;}
-  if(intentionalPublic.has(r)){if(body.includes('/gejast-auth-gate.js?'))publicGateLeaks.push(r);continue;}
+  if(isIntentionalPublic(r)){if(body.includes('/gejast-auth-gate.js?'))publicGateLeaks.push(r);continue;}
   if(redirectOnly.has(r)){
     if(body.includes('/gejast-auth-gate.js?')) leaked.push(r);
     assert(/location\.replace\(/.test(body),`runtime-light alias must immediately hand off to a canonical protected/auth page: ${r}`);
