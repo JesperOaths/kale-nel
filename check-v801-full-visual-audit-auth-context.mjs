@@ -29,6 +29,9 @@ assert.match(dataPlaneStep, /GEJAST_DATA_PLANE_RETRY_DELAY_MS:\s*'750'/, 'visual
 assert.match(dataPlaneStep, /run:\s*node check-live-data-plane\.mjs/, 'visual preflight must reuse the pinned read-only auth RPC probe');
 assert.match(dataPlaneProbe, /const rpcName = 'account_public_state_v687'/, 'visual preflight must remain grounded in the shipped read-only auth RPC');
 assert.doesNotMatch(dataPlaneProbe, /SERVICE_ROLE|service[_-]?role|SUPABASE_DB_URL|DATABASE_URL|\bpsql\b|execute_sql/i, 'visual preflight must remain public and non-privileged');
+assert.match(dataPlaneProbe, /publicApiHeaders/, 'visual preflight must use the shared opaque-key-safe public header builder');
+assert.match(runner, /publicApiHeaders/, 'visual browser RPCs must use opaque-key-safe public headers');
+assert.doesNotMatch(runner, /apikey:\s*publishableKey,[\s\S]{0,120}Authorization:\s*`Bearer \$\{publishableKey\}`/, 'visual browser RPCs must not force an opaque publishable key into Authorization');
 
 const provisionStep = workflow.match(/- name: Provision disposable visual-audit identities through current login contract([\s\S]*?)(?=\n\s*- name:)/)?.[1] || '';
 assert.ok(provisionStep, 'visual audit provisioning step must remain inspectable');
@@ -63,6 +66,8 @@ assert.match(fixtures, /RETRY_ATTEMPTS\s*=\s*4/, 'fixture REST access must retai
 assert.match(fixtures, /\/rest\/v1\//, 'fixture manager must use the Supabase REST surface');
 assert.match(fixtures, /account_login_v687/, 'fixture manager must create sessions through the current public login RPC');
 assert.match(fixtures, /key:\s*PUBLIC_KEY/, 'session creation must exercise the public publishable-key boundary rather than service-role RPC authentication');
+assert.match(fixtures, /const legacyJwtKey = \/\^\[\^\.\]\+\\\.\[\^\.\]\+\\\.\[\^\.\]\+\$\/.test\(key\)/, 'fixture REST helper must distinguish opaque API keys from legacy JWT keys');
+assert.match(fixtures, /if \(legacyJwtKey\) headers\.Authorization = `Bearer \$\{key\}`/, 'fixture helper may use bearer only for legacy JWT-shaped keys');
 assert.match(fixtures, /\{ desired_name: displayName, entered_pin: pin, site_scope_input: scope, client_meta: \{\} \}/, 'session creation must use the deployed four-argument named login contract');
 assert.doesNotMatch(fixtures, /display_name_input:\s*displayName/, 'obsolete display_name_input login argument must not return');
 assert.match(fixtures, /\^\[0-9a-f\]\{48\}\$/, 'fixture manager must reject non-canonical session-token shapes');
