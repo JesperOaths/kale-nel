@@ -28,6 +28,10 @@ ok(backend.includes('phaseRisk'), 'phase-normalized behavioral risk summary must
 ok(backend.includes('midRoutingGames'), 'mid-game routing efficiency model must remain explicit');
 ok(backend.includes('x.csSwing<=-8&&x.objectiveJoinRate<50'), 'inefficient mid-routing threshold must remain CS loss + low objective presence');
 ok(backend.includes('x.csSwing>=8&&x.objectiveJoinRate>=60'), 'balanced mid-routing strength threshold must remain CS gain + objective presence');
+ok(backend.includes('lead25Games=games.filter(g=>hasNum(g.goldDiff25)&&Number(g.goldDiff25)>=500)'), '25-minute closing model must keep +500g direct-role lead threshold');
+ok(backend.includes('deficit25Games=games.filter(g=>hasNum(g.goldDiff25)&&Number(g.goldDiff25)<=-500)'), '25-minute recovery model must keep -500g direct-role deficit threshold');
+ok(backend.includes('lead25LossesWithLateRisk'), 'lead@25 losses must preserve late-risk evidence');
+ok(backend.includes('closing25:{'), '25-minute closing summary must remain exported');
 ok(backend.includes('impactDeltaVsOpponent'), 'direct-peer first-impact comparison must remain in analyzer');
 ok(backend.includes('roam.laneCostCs='), 'roam lane-cost comparison must remain in analyzer');
 ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
