@@ -101,11 +101,18 @@ The analyzer therefore keeps fetched matches cached but filters the coaching can
 3. an **explicitly supported current PvP queue**,
 4. then the dominant raw `queueId` among those supported candidates.
 
-Current supported queue IDs are Draft Pick 400, Ranked Solo 420, Blind Pick 430, Ranked Flex 440, Swiftplay 480, Quickplay 490 and Summoner's Rift Clash 700. Swiftplay remains a separate rules family. Any other map-11 queue fails closed out of coaching until reviewed.
+Current supported queue IDs are Draft Pick 400, Ranked Solo 420, Blind Pick 430, Ranked Flex 440, Swiftplay 480, Quickplay 490 and Summoner's Rift Clash 700. Swiftplay remains a separate rules family. Its 2026 profile explicitly records the major divergences documented by Riot: no Void Grubs, no Rift Herald, Baron at 12:00, at most two Elemental Drakes with Soul after both, Elder at 15:00, and Swiftplay-only Minion Frenzy. These are rules context rather than inferred behavior. Any other map-11 queue fails closed out of coaching until reviewed.
 
 Only after unsupported queues are removed does the analyzer choose the dominant raw queue ID for the deep coaching sample. Queue selection is **recency-aware**: count queue IDs only inside the 20 newest supported candidates, choose the largest count, and break a count tie in favor of the queue whose newest match is more recent. Older cached matches from that selected queue can still extend the same-queue baseline.
 
 This prevents two opposite errors: a frequently played old queue cannot override the player’s current queue simply because it dominates a 100-game cache, while one accidental off-queue game also cannot replace an otherwise consistent recent context.
+
+External **rank-population** benchmarking has a stricter eligibility rule than ordinary same-role coaching. The LegendsTracker reference corpus is ranked EUW data, so:
+- queue 420 uses the player's `RANKED_SOLO_5x5` tier,
+- queue 440 uses the player's `RANKED_FLEX_SR` tier,
+- Draft, Blind, Quickplay, Clash and Swiftplay cohorts do **not** receive the ranked-population spider/bridge even if the account has a ranked tier.
+
+Those non-ranked reports keep their own sample metrics and direct same-role evidence; they simply fail closed on the ranked population comparison instead of presenting unlike populations as peers.
 
 Data Quality exposes the supported-candidate count, unsupported queue IDs excluded, selected queue family/ID, the recent selection window/counts, full-cache queue counts and the remaining excluded-other-queue count. A smaller mechanically coherent, current-context sample is preferred over a larger mixed or historically stale sample.
 
