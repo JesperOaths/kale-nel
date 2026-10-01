@@ -14,7 +14,10 @@ const base=String(process.env.GEJAST_BASE_URL||'https://kalenel.nl/').replace(/\
 const rootVersion=readRootVersion(root);
 const adminWorker=readAdminWorkerVersion(root);
 if(!/^v\d+$/i.test(adminWorker.pageVersion)||!adminWorker.build){
-  throw new Error('Could not resolve versioned admin Worker page owner');
+  throw new Error('Could not resolve admin Worker site-version marker');
+}
+if(adminWorker.pageVersion!==rootVersion){
+  throw new Error(`Admin Worker visible page version ${adminWorker.pageVersion} must equal root site VERSION ${rootVersion}`);
 }
 const routes=listPublishedRoutes(root);
 const concurrency=Math.max(1,Math.min(24,Number(process.env.GEJAST_LIVE_VERSION_CONCURRENCY||12)));
@@ -113,14 +116,14 @@ async function fetchPage(entry,index){
       return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'protected',protection:'oauth',redirect_trace:traceText};
     }
     if(outcome.kind==='protected'){
-      const workerWatermark=literalWatermark(outcome.text,adminWorker.pageVersion);
+      const workerWatermark=literalWatermark(outcome.text,rootVersion);
       if(outcome.adminBuild!==adminWorker.build){
         return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:'admin Worker build '+(outcome.adminBuild||'missing')+' expected '+adminWorker.build,redirect_trace:traceText};
       }
       if(!workerWatermark){
-        return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:'admin Worker watermark missing/wrong; expected '+adminWorker.pageVersion,redirect_trace:traceText};
+        return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:'admin Worker watermark missing/wrong; expected site version '+rootVersion,redirect_trace:traceText};
       }
-      return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'protected',protection:'worker-login',admin_build:outcome.adminBuild,admin_page_version:adminWorker.pageVersion,redirect_trace:traceText};
+      return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'protected',protection:'worker-login',admin_build:outcome.adminBuild,admin_page_version:rootVersion,redirect_trace:traceText};
     }
     if(outcome.kind==='error'){
       return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:outcome.reason,redirect_trace:traceText};
