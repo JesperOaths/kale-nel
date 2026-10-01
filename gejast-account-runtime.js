@@ -39,6 +39,12 @@
   function emailOk(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim()); }
   function setBusy(form,busy){ if(!form) return; form.querySelectorAll('input,select,textarea,button').forEach((el)=>el.disabled=!!busy); }
   function cacheKey(){ return LOGIN_CACHE_PREFIX + scope(); }
+  function staticLoginNames(){
+    try{
+      const snapshot=window.GEJAST_LOGIN_NAMES_STATIC||{};
+      return normalizeNames(snapshot[scope()]||[]);
+    }catch(_){ return []; }
+  }
   function readLoginCache(){
     const merged=[];
     try{
@@ -256,10 +262,24 @@
 
   async function bootLoginPage(){
     const form=$('loginForm'), sel=$('playerNameInput'), pin=$('pinInput'); if(!form) return;
-    const cached = readLoginCache();
-    if (cached.length) { fillSelect(sel, cached); setStatus('statusBox',`Namen direct uit snelle cache geladen; live controle op achtergrond...`,''); }
-    else setStatus('statusBox','Actieve loginnamen laden...','');
-    getLoginNames().then((names)=>{ fillSelect(sel,names); if(names.length) setStatus('statusBox',String(names.length)+' actieve loginspeler(s) geladen.','ok'); else setStatus('statusBox','Geen actieve loginnamen ontvangen. Controleer of de login-SQL is uitgerold of open Naam aanvragen als je nog geen pincode hebt.','warn'); }).catch((err)=>{ setStatus('statusBox', cached.length ? 'Kon namen niet live verversen; cache blijft zichtbaar.' : friendly(err), cached.length ? '' : 'warn'); });
+    const cached = readLoginCache(), snapshot = staticLoginNames(), seed = normalizeNames([...cached,...snapshot]);
+    if(seed.length){
+      fillSelect(sel, seed);
+      setStatus('statusBox',String(seed.length)+' actieve loginspeler(s) direct geladen; live controle op achtergrond...','ok');
+    } else {
+      setStatus('statusBox','Actieve loginnamen laden...','');
+    }
+    getLoginNames().then((names)=>{
+      const clean=normalizeNames(names);
+      if(clean.length){
+        fillSelect(sel,clean);
+        setStatus('statusBox',String(clean.length)+' actieve loginspeler(s) live bevestigd.','ok');
+      } else if(seed.length){
+        setStatus('statusBox',String(seed.length)+' actieve loginspeler(s) lokaal beschikbaar; live controle reageerde niet.','');
+      } else {
+        setStatus('statusBox','Geen actieve loginnamen ontvangen. Controleer of de login-SQL is uitgerold of open Naam aanvragen als je nog geen pincode hebt.','warn');
+      }
+    }).catch((err)=>{ setStatus('statusBox', seed.length ? 'Live naamcontrole reageerde niet; de lokale actieve namen blijven beschikbaar.' : friendly(err), seed.length ? '' : 'warn'); });
     window.addEventListener('gejast:login-names-refreshed',(event)=>{ const names=normalizeNames(event?.detail?.names||[]); if(!names.length) return; fillSelect(sel,names); setStatus('statusBox',String(names.length)+' actieve loginspeler(s) bijgewerkt.','ok'); });
     getPublicState().then((st)=>{ if(st?.my_name||st?.display_name||st?.player_name) setStatus('statusBox',`Deze browser heeft al een sessie voor ${st.my_name||st.display_name||st.player_name}.`,'ok'); }).catch(()=>{});
     form.addEventListener('submit', async(ev)=>{ ev.preventDefault(); const name=String(sel.value||'').trim(); const p=String(pin.value||'').replace(/\D/g,'').slice(0,4); if(!name) return setStatus('statusBox','Kies eerst je naam.','warn'); if(!/^\d{4}$/.test(p)) return setStatus('statusBox','Voer je 4-cijferige pincode in.','warn'); try{ setBusy(form,true); setStatus('statusBox','Inloggen...'); const out=await login({name,pin:p}); setStatus('statusBox',`Ingelogd als ${out.display_name||out.player_name||name}.`,'ok'); setTimeout(()=>location.href=loginReturnTarget(),350); }catch(err){ setStatus('statusBox',friendly(err),'warn'); }finally{ setBusy(form,false); } });
