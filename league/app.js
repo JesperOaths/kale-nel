@@ -17,6 +17,16 @@ function fmtDate(v){if(!v)return'—';const d=new Date(v);return Number.isFinite
 function fmtDuration(v){const n=Number(v);if(!Number.isFinite(n))return'n/a';const m=Math.floor(n),s=Math.round((n-m)*60);return m+':'+String(s).padStart(2,'0');}
 function signed(v,d=0){if(!hasNum(v))return'n/a';const n=Number(v);return(n>0?'+':'')+n.toFixed(d);}
 function rankText(r){return r&&r.tier?[String(r.tier).toUpperCase(),String(r.rank||'').toUpperCase(),hasNum(r.leaguePoints)?String(r.leaguePoints)+' LP':''].filter(Boolean).join(' '):'Unranked / unknown';}
+function readinessReason(v){
+  const key=String(v||'');
+  const labels={
+    recipe_or_combine_cost_unavailable:'recipe / combine-cost data unavailable',
+    direct_components_not_observed:'recipe components not observed',
+    direct_components_not_simultaneously_observed:'recipe components were not simultaneously owned',
+    no_supported_affordability_frame:'no supported pre-purchase affordability frame'
+  };
+  return labels[key]||key.replaceAll('_',' ');
+}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
 async function api(action,payload={}){
@@ -718,7 +728,8 @@ function detailContent(g,tab){
       detailCard('Post-reset role-CS swing',firstReset&&hasNum(firstReset.csSwingAfter)?signed(firstReset.csSwingAfter,1)+' CS':'n/a')+
       detailCard('First-reset outcome',!firstReset?'n/a':firstReset.deathInWindow?'measurement contaminated by death':firstReset.economyLoss?'economy loss':firstReset.economyGain?'economy gain':firstReset.measured?'neutral / mixed':'unmeasured')+
       detailCard('First major item',mine?(mine.name+' · '+fmt(mine.time,1)+'m'):'n/a')+
-      detailCard('First major affordable',ready&&ready.eligible?(fmt(ready.affordableMin,1)+'m · '+fmtInt(ready.combineCost)+'g combine'):(ready?.reason?'not measurable · '+ready.reason:'n/a'))+
+      detailCard('Recipe components ready',ready&&hasNum(ready.ingredientsReadyMin)?fmt(ready.ingredientsReadyMin,1)+'m':'n/a')+
+      detailCard('First major affordable',ready&&ready.eligible?(fmt(ready.affordableMin,1)+'m · '+fmtInt(ready.combineCost)+'g combine'):(ready?.reason?'not measurable · '+readinessReason(ready.reason):'n/a'))+
       detailCard('Affordable → purchased',ready&&ready.eligible?(fmt(ready.delayMin,1)+' min · '+(ready.delayed?'delayed':'prompt')):'n/a')+
       detailCard('Opponent major item',opp?(opp.name+' · '+fmt(opp.time,1)+'m'):'n/a')+
       detailCard('Opponent affordability delay',oppReady&&oppReady.eligible?fmt(oppReady.delayMin,1)+' min':'n/a')+
@@ -815,9 +826,9 @@ function renderSpatial(r){
   $('wardMap').innerHTML=mapHtml(wardPoints,'ward','No ward coordinates are available in this sample.');
   bindMapFallbacks($('spatialReview')||document);
   const leadDeaths=deathPoints.filter(x=>hasNum(x.goldDiffAtDeath)&&Number(x.goldDiffAtDeath)>=500).length;
-  const offensive=wardPoints.filter(x=>x.territory==='offensive').length,river=wardPoints.filter(x=>x.territory==='river').length,defensive=wardPoints.filter(x=>x.territory==='defensive').length;
+  const offensive=wardPoints.filter(x=>x.territory==='offensive').length,river=wardPoints.filter(x=>x.territory==='river').length,defensive=wardPoints.filter(x=>x.territory==='defensive').length,setup=wardPoints.filter(x=>x.objectiveSetup).length,offPct=wardPoints.length?Math.round(offensive/wardPoints.length*100):0;
   $('deathMapMeta').textContent=deathPoints.length+' high-risk deaths mapped'+(leadDeaths?' · '+leadDeaths+' while ≥500g ahead vs role':'');
-  $('wardMapMeta').textContent=wardPoints.length+' wards mapped · '+offensive+' offensive · '+river+' river · '+defensive+' defensive';
+  $('wardMapMeta').textContent=wardPoints.length+' wards across '+games.length+' games · '+offPct+'% offensive · '+river+' river · '+defensive+' defensive · '+setup+' objective setup';
   $('spatialProjectionNote').textContent='Summoner’s Rift world projection: x −120→14870, y −120→14980, with Y inverted. Only mapId 11 coordinates are plotted.';
 }
 function renderAdvanced(r){
