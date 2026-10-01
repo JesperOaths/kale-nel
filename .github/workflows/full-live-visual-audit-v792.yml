@@ -7,8 +7,24 @@ on:
       - main
     paths:
       - '.github/workflows/full-live-visual-audit-v792.yml'
+      - 'scripts/full-live-visual-audit-v792.mjs'
+      - 'scripts/prepare-visual-audit-runtime-v812.mjs'
+      - 'scripts/full-live-visual-fixtures-v801.mjs'
+      - 'scripts/refine-degraded-visual-report-v807.mjs'
       - 'scripts/refine-expected-visual-aliases-v809.mjs'
       - 'scripts/check-v813-visual-warning-cleanup.mjs'
+      - 'scripts/summarize-visual-warning-evidence-v813.mjs'
+      - 'check-live-data-plane.mjs'
+      - '**/*.html'
+      - '*.js'
+      - 'familie/**/*.js'
+      - 'league/**/*.js'
+      - 'shop/**/*.js'
+      - 'parfum/**/*.js'
+      - 'security/**/*.js'
+      - 'inbox-triage/**/*.js'
+      - '**/*.css'
+      - 'VERSION'
   push:
     branches:
       - main
@@ -22,9 +38,15 @@ on:
       - 'scripts/check-v813-visual-warning-cleanup.mjs'
       - 'scripts/summarize-visual-warning-evidence-v813.mjs'
       - 'check-live-data-plane.mjs'
-      - '*.html'
-      - 'familie/**.html'
-      - 'gejast-*.js'
+      - '**/*.html'
+      - '*.js'
+      - 'familie/**/*.js'
+      - 'league/**/*.js'
+      - 'shop/**/*.js'
+      - 'parfum/**/*.js'
+      - 'security/**/*.js'
+      - 'inbox-triage/**/*.js'
+      - '**/*.css'
       - 'VERSION'
 
 permissions:
