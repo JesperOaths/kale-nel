@@ -179,46 +179,48 @@ This distinction prevents the report from misdiagnosing a map-awareness problem 
 
 A clean solo kill is useful only if the player converts the temporary advantage intelligently.
 
-For each **pre-14 clean solo kill on the actual same-role opponent**, inspect Riot timeline structure events for the next 90 seconds.
+The primary window is the **queue-aware early phase**, not an obsolete turret-plate timer. For 2026 standard Summoner's Rift that early phase ends at 14:00 because the map's macro cadence changes there; turret plates themselves do **not** expire at 14:00. For 2026 Swiftplay the early window follows its accelerated rules profile.
 
-A structure conversion is counted only when:
-- the event is a turret plate destruction or turret building kill,
-- Riot directly credits the event's `killerId` to the player,
-- the event occurs within 90 seconds after the clean solo kill.
+For each clean early-phase solo kill on the actual same-role opponent, inspect supported structure evidence for the next 90 seconds.
 
-Do **not** count generic team structure events as personal conversion.
+A structure conversion can be supported by:
+- direct Riot participant credit on a turret plate or turret building event,
+- event-position proximity when the timeline event has usable coordinates,
+- same-lane timeline presence when a plate event exposes lane/tower metadata but omits participant credit and usable coordinates.
 
-Since Patch 26.1, turret plates are permanent and exist on every non-Nexus turret. The analyzer must therefore **not** use 14:00 as a mechanical plate-expiry boundary.
+The evidence source must be retained. A weaker lane-presence fallback is not equivalent to direct event credit and must not be presented as such.
 
-Also preserve:
-- player's directly credited plate events through 20 minutes,
-- same-role opponent's directly credited plate events through 20 minutes,
-- the first-20-minute plate-credit delta,
-- player's and same-role opponent's full-match directly credited plate events,
-- the full-match plate-credit delta,
-- early directly credited turret kills where available.
+Since Patch 26.1, the analyzer treats plate rewards as a persistent turret-system mechanic rather than a pre-14 mechanic. Preserve:
+- player and direct-role-opponent plate involvement through the fixed 20-minute coaching slice,
+- full-match plate involvement,
+- direct-credit counts as provenance diagnostics,
+- the number of unattributed plate events,
+- plate involvement split by turret tier: outer, inner, inhibitor, Nexus, and unknown,
+- supported turret-kill involvement.
 
-The 20-minute slice is an explicit coaching window, not a claim that plates disappear then. The full-match counters retain later structure pressure created by the permanent-plate system.
+The 20-minute slice is a coaching comparison window, **not** an expiry rule. Full-match and tier breakdowns are required because later/deeper turret pressure now matters.
 
-This metric complements, rather than replaces, the existing solo-kill → gold/CS-at-15 conversion and post-kill reset/banking metrics. A player can make the correct decision by resetting instead of taking a plate, so low structure conversion must not be treated as automatically wrong. Coaching should specifically recommend deliberate wave/reset/plate conversion, not greed for every plate. A pre-14 solo kill may legitimately convert into a plate after 14:00 if that event still falls inside the 90-second conversion window.
+This metric complements, rather than replaces, solo-kill → @15 economy conversion and post-kill reset/banking metrics. Resetting can be the correct conversion after a kill, so low structure conversion is not automatically a mistake. Coaching should ask whether the player deliberately chose wave denial, safe structure value, reset, or another higher-value map action.
 
 ## Direct-role solo duels
 
-Timeline champion-kill events are also used to isolate **clean 1v1 outcomes against the actual same-role opponent**.
+Timeline champion-kill events isolate **clean 1v1 outcomes against the actual same-role opponent**.
 
 A direct-role solo duel event requires:
 - the player and same-role opponent to be killer/victim,
 - **zero assisting participants** on the kill event.
 
 The report preserves:
-- solo kills on the role opponent,
-- solo deaths to the role opponent,
-- the same counts restricted to the first 14 minutes,
-- event timestamps.
+- all-game solo kills/deaths against the direct role opponent,
+- queue-aware early-phase solo kills/deaths,
+- event timestamps and supported direct-role economy state,
+- a legacy `≤14m` compatibility flag only where a fixed @15 conversion calculation needs enough time before the checkpoint.
 
-This intentionally excludes ganks and other assisted kills. The goal is to separate **matchup execution** from broader map pressure.
+The old pre-14 subset is therefore **not** the primary laning definition and is never a plate-expiry proxy.
 
-Repeated pre-14 solo deaths can support a matchup-specific improvement finding; repeated pre-14 solo kills can be a strength. Small samples remain low confidence and the metric should not be used to claim the player won or lost the entire lane by itself.
+For bot lane, outside-pressure classification must treat both ordinary enemy bot-lane counterparts as lane opposition. The enemy support should not be mislabeled as "outside pressure" on an ADC simply because the direct-role peer is the enemy ADC, and vice versa.
+
+This intentionally separates matchup execution from ganks/roams and other assisted pressure. Repeated queue-aware early solo deaths can support matchup review; repeated early solo kills can be a sampled strength. Small samples remain low confidence.
 
 ## Lane and peer comparisons
 
@@ -318,22 +320,23 @@ Do not describe these metrics as whole-team lead conversion or infer that the pl
 
 ## Mid-game routing efficiency
 
-For ADC/MID/TOP, raw CS swing and objective attendance should be interpreted together.
+For ADC/MID/TOP, raw CS swing and neutral-objective attendance should be interpreted together.
 
-For each comparable game from 15→25:
-- compute direct-role CS differential change,
-- count tracked team objective events in the 14–25 phase,
-- compute the player's supported nearby objective presence in that same phase.
+For **2026 standard Summoner's Rift**, the dedicated routing comparison remains a fixed **15→25** checkpoint model:
+- compute the direct-role CS differential change from @15 to @25,
+- count grouped neutral-objective encounters whose start falls in the dedicated routing window,
+- compute supported nearby presence for those encounters.
+
+This routing model is deliberately independent from the strategic phase buckets. The strategic late/Baron-era phase starts at 20:00 in 2026 standard SR, while the routing checkpoint still asks what happened to role-relative farm from 15→25.
+
+Swiftplay is excluded from this fixed 15→25 routing comparison because its pacing is accelerated enough that the standard checkpoints are not comparable.
 
 Current coaching cases:
+- **inefficient routing:** CS differential worsens by at least ~8 CS and objective presence is below 50%,
+- **balanced routing strength:** CS differential improves by at least ~8 CS and objective presence is at least 60%,
+- **side-farm / low-presence tradeoff:** CS differential improves by at least ~8 CS, at least two grouped neutral-objective encounters occur, and presence is below 35%.
 
-- **inefficient routing:** CS differential worsens by at least ~8 CS **and** objective presence is below 50%,
-- **balanced routing strength:** CS differential improves by at least ~8 CS **and** objective presence is at least 60%,
-- **side-farm / low-presence tradeoff:** CS differential improves by at least ~8 CS, at least two team objectives occur, and objective presence is below 35%.
-
-The first case is the strongest improvement signal because the player is losing role-relative farm without compensating with map attendance.
-
-The side-farm case must be worded as a tradeoff, not automatically a mistake: sometimes conceding an objective and taking guaranteed side resources is correct. The coaching goal is to make that choice intentional.
+The side-farm case is a tradeoff, not automatically a mistake. Conceding a low-value or uncontestable objective for guaranteed resources can be correct; the coaching goal is intentional timing rather than universal attendance.
 
 ## Early-lead preservation before 15
 
@@ -377,29 +380,35 @@ This is descriptive. Do not claim the gold state alone caused the win or loss.
 
 ## Game-phase behavioral risk
 
-The analyzer groups selected timeline evidence into three explicit phases:
+The analyzer uses **rules profiles** rather than one timeless set of minute cutoffs.
 
+For 2026 standard Summoner's Rift:
 - **early:** before 14:00,
-- **mid:** 14:00 through 24:59,
-- **late:** 25:00 and later.
+- **transition:** 14:00 through 19:59,
+- **late / major-objective era:** 20:00 and later.
+
+The 14:00 boundary is a macro-cadence marker in the current season, including the minion-wave cadence change. It is explicitly **not** a turret-plate expiry boundary. The 20:00 boundary aligns the late phase with Baron's return.
+
+For 2026 Swiftplay:
+- **pre-Baron:** before 12:00,
+- **Baron era:** 12:00 and later.
+
+Do not fabricate a standard-SR-style transition bucket for Swiftplay. Its rules profile also retains the 15:00 Elder and 25:00 Sudden Death anchors for context.
+
+Historical pre-2026 games and future rules that have not been verified are preserved for raw reporting but excluded from current cross-game phase coaching. This prevents today's logic from silently rewriting old matches or guessing future mechanics.
 
 Per phase, preserve:
 - deaths,
 - high-risk deaths,
 - costly and severe death-consequence events,
 - kill/assist impact events,
-- joined team-objective events,
+- joined grouped neutral-objective encounters,
 - attended multi-kill fight clusters,
 - first-allied-death fight events.
 
-Aggregate rates use **phase-eligible game counts** as denominators. For example, late high-risk deaths/game is divided only by analyzed games that reach 25 minutes. This prevents a small set of long games from being compared unfairly with all early-game samples.
+Aggregate risk rates are normalized by **actual minutes of phase exposure**, reported per 10 minutes. This avoids comparing a short transition phase with a much longer late phase using raw per-game counts.
 
-Phase coaching should only fire when:
-- at least five games support the phase,
-- the rate is materially high,
-- and it is meaningfully above the next-highest phase.
-
-The purpose is to localize review: lane decisions before 14, rotations/resets/objective approach from 14–25, or late objective/teamfight discipline after 25.
+Phase coaching requires enough games and enough exposure time, plus a material separation from the next-highest phase. The purpose is localization: identify whether decision risk is concentrated in the current early lane period, the transition, or the major-objective era.
 
 ## Rapid repeat-death recovery
 
@@ -429,19 +438,17 @@ Death quality and death consequence are separate questions.
 
 For each death where the timeline supports a later comparison, preserve the direct-role economy state at death and at the next supported timeline state roughly one frame later.
 
-Current consequence signals are:
-
+Current consequence signals include:
 - direct-role gold differential worsens by at least ~300g,
 - direct-role CS differential worsens by at least ~6 CS,
-- an enemy objective is converted within the existing post-death objective window.
+- an enemy **neutral objective** is converted inside the post-death neutral-objective window,
+- an enemy **structure** is converted inside the post-death structure window.
 
-A death is **costly** when at least one consequence signal is present and **severe** when at least two are present.
+Neutral objectives and structures are retained as distinct signals. A nearby turret/plate event must not be relabeled as a dragon/Baron-style objective consequence.
 
-Also preserve whether the death is traded, because a traded death that still loses a wave/objective is different from a completely free death.
+A death is **costly** when at least one supported consequence signal is present and **severe** when at least two are present. Also preserve whether the death was traded.
 
-The post-death gold/CS swing is observational. It describes what follows the death; it must not be worded as if the death alone caused every subsequent resource change. The coaching use is prioritization: deaths with large measurable aftermath deserve more attention than deaths with little supported follow-on cost.
-
-Aggregate fields include measured death count, costly/severe counts and rates, untraded costly deaths, and average direct-role gold/CS swing after measured deaths.
+The post-death gold/CS swing is observational. It describes what follows the death; it does not prove the death alone caused every subsequent resource change. Coaching uses this model to prioritize replay review of deaths with the strongest supported aftermath.
 
 ## Risk discipline by direct-role economy state
 
@@ -656,16 +663,24 @@ Aggregate coaching can distinguish a player who attends objectives but usually a
 
 ## Objective context
 
-Tracked objective events include supported elite-monster/building events from the Riot timeline.
+Neutral-objective context and structure context are modeled separately.
 
-For team objective presence:
-- count each tracked team objective event once,
-- inspect the player's timeline position at the event,
-- consider them present when within the configured action radius.
+For neutral-objective presence:
+- use Riot `ELITE_MONSTER_KILL` timeline evidence,
+- group multi-kill objective sequences into one encounter when they belong to the same objective family and occur in the same short contest window,
+- retain the raw event count inside the grouped encounter,
+- preserve split ownership in contested multi-kill encounters instead of forcing a single owner,
+- inspect supported player position across the encounter window rather than only one exact event frame.
 
-Do not invent a gold value for dragons, Baron, Herald, towers or plates.
+This grouping matters for objectives such as multi-kill Void Grub camps: three monster-kill events should not automatically become three separate attendance opportunities.
 
-Objective-death percentage describes how often player deaths occur in objective context; it does not mean those deaths were necessarily wrong.
+Building kills and turret-plate events remain available for structure conversion and death-consequence context, but they do **not** inflate neutral-objective attendance or objective-setup ward denominators.
+
+Objective-death percentage therefore refers to neutral-objective contest context. Post-death consequences separately preserve:
+- enemy neutral-objective conversion,
+- enemy structure conversion.
+
+Do not invent gold values for dragons, Baron, Herald, towers, plates, or grouped objective encounters when the timeline does not support that value.
 
 ## First meaningful map impact
 
@@ -673,7 +688,7 @@ For each timeline-complete match, track the earliest supported meaningful impact
 
 Supported first-impact events are:
 - champion kill or assist,
-- proximity to a tracked team objective event.
+- proximity to a grouped neutral-objective encounter.
 
 The comparison is stored as:
 
@@ -689,7 +704,7 @@ This is not a mechanical instruction to roam earlier. The coaching should point 
 
 ## Early involvement
 
-Early KP uses the player's kill/assist participation in the team's champion kills through approximately 14 minutes.
+Early KP uses the player's kill/assist participation through the active rules profile's early boundary. In 2026 standard SR that is 14:00; in 2026 Swiftplay it is 12:00.
 
 When wins and losses have enough valid samples, the analyzer may report an association such as:
 "early involvement is higher in wins."
@@ -739,7 +754,7 @@ The window runs from:
 
 Within that temporary advantage window, count supported player impact:
 - kill/assist involvement,
-- nearby participation in a tracked team objective event.
+- nearby participation in a grouped neutral-objective encounter.
 
 Also preserve whether the player dies inside the window **before any tracked impact**.
 
@@ -756,17 +771,18 @@ A window shorter than 45 seconds is not considered meaningfully actionable and i
 The first meaningful purchase sequence is analyzed separately from later recalls and item spikes.
 
 Current detection:
-- first purchase group from roughly 2.5–12 minutes,
-- at least 250g detected spend,
+- find the first purchase group by 12 minutes with at least 250g detected spend,
+- require timeline evidence that the player had **already left base** before that purchase group,
+- do not impose an arbitrary 2.5-minute lower bound,
 - compare direct-role gold/CS differential before the shop with the next supported post-shop frame,
-- preserve timing versus the direct same-role opponent's first comparable shop.
+- preserve timing versus the direct same-role opponent's first comparable return purchase.
 
 The sequence is marked:
 - **economy loss** when no death contaminates the measurement and direct-role differential worsens by at least ~6 CS or ~350g,
 - **economy gain** when no death contaminates the measurement and the player gains at least ~4 CS and ~150g of direct-role differential,
 - otherwise neutral/mixed/unmeasured.
 
-A death in the evidence window makes the first-reset economy classification unsuitable for clean aggregate coaching; those games remain visible but are excluded from the clean loss-rate sample.
+A death in the evidence window makes the clean economy classification unsuitable for aggregate reset coaching. The game remains visible but is excluded from the clean loss-rate denominator.
 
 Aggregate coaching uses:
 - measured and clean game counts,
@@ -775,7 +791,7 @@ Aggregate coaching uses:
 - average post-reset direct-role gold/CS swing,
 - average reset timing delta versus the same-role opponent.
 
-The coaching instruction is not “recall earlier.” The goal is to prepare the wave and return path so the purchase is made without surrendering the next lane-economy window.
+The instruction is not simply "recall earlier." The useful question is whether the player prepared the wave and return path so the first purchase improved or at least protected the next lane-economy window.
 
 ## Resets, shop visits and item timing
 
@@ -1067,8 +1083,8 @@ Preserve:
 - games and win rate,
 - gold and CS differential at 15,
 - high-risk deaths,
-- clean pre-14 solo kills/deaths versus that actual role opponent,
-- pre-14 home-lane deaths involving outside pressure,
+- clean queue-aware early-phase solo kills/deaths versus that actual role opponent,
+- queue-aware early home-lane deaths involving outside pressure,
 - the player's own champion mix across those games.
 
 This distinction is important. If the player used multiple champions, the result is **performance against that opposing champion**, not a claim about one exact champion-vs-champion matchup.
@@ -1190,7 +1206,7 @@ The queue is built only from event evidence already present in the analyzer. Cur
 - high-risk deaths while materially ahead,
 - late-reset neutral-objective misses,
 - first-allied-death / pre-contribution / outnumbered fight entries,
-- clean pre-14 direct-role solo deaths,
+- clean queue-aware early direct-role solo deaths,
 - expensive failed roams,
 - high-risk vision-action deaths,
 - first-major-item windows that are wasted or end in death before impact.
