@@ -453,7 +453,7 @@ function renderReport(raw,sourceKind){
 
 function benchmarkKpi(label,value,benchmark,unit,inverse=false,extra=''){
   const delta=hasNum(value)&&hasNum(benchmark)?Number(value)-Number(benchmark):null;
-  const tone=delta==null?'neutral':deltaTone(delta,0,unit==='csmin'?.15:unit==='pp'?2:unit==='dpm'?50:unit==='kda'?.2:unit==='deaths'?.25:.01,inverse);
+  const tone=delta==null?'neutral':deltaTone(delta,0,unit==='csmin'?.15:unit==='percent'?2:unit==='dpm'?50:unit==='kda'?.2:unit==='deaths'?.25:.01,inverse);
   const formatted=unit==='percent'?fmtPct(value):unit==='csmin'?fmt(value,2):unit==='dpm'?fmtInt(value):unit==='deaths'?fmt(value,1):fmt(value,2);
   const benchmarkText=unit==='percent'?fmtPct(benchmark):unit==='csmin'?fmt(benchmark,2):unit==='dpm'?fmtInt(benchmark):unit==='deaths'?fmt(benchmark,1):fmt(benchmark,2);
   const deltaText=delta==null?'benchmark unavailable':unit==='percent'?signed(delta,1)+' pp':unit==='csmin'?signed(delta,2):unit==='dpm'?signed(delta,0):unit==='deaths'?signed(delta,1):signed(delta,2);
