@@ -15,6 +15,7 @@ function fmtPct(v){const n=Number(v);return Number.isFinite(n)?Math.round(n)+'%'
 function fmtDate(v){if(!v)return'—';const d=new Date(v);return Number.isFinite(d.getTime())?d.toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'}):'—';}
 function fmtDuration(v){const n=Number(v);if(!Number.isFinite(n))return'n/a';const m=Math.floor(n),s=Math.round((n-m)*60);return m+':'+String(s).padStart(2,'0');}
 function signed(v,d=0){const n=Number(v);return Number.isFinite(n)?(n>0?'+':'')+n.toFixed(d):'n/a';}
+function rankText(r){return r&&r.tier?[String(r.tier).toUpperCase(),String(r.rank||'').toUpperCase(),Number.isFinite(Number(r.leaguePoints))?String(r.leaguePoints)+' LP':''].filter(Boolean).join(' '):'Unranked / unknown';}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
 async function api(action,payload={}){
@@ -356,8 +357,9 @@ function detailContent(g,tab){
   }
   const peer=g.peer||null;
   return detailCard('Gold diff @10',signed(g.goldDiff10,0))+detailCard('Gold diff @15',signed(g.goldDiff15,0))+detailCard('CS diff @10',signed(g.csDiff10,0))+detailCard('CS diff @15',signed(g.csDiff15,0))+detailCard('XP diff @10',signed(g.xpDiff10,0))+detailCard('XP diff @15',signed(g.xpDiff15,0))+
+    detailCard('Opponent',peer?(peer.champion||'Same-role peer'):'n/a')+detailCard('Opponent rank',peer?rankText(peer.rank):'n/a')+
     detailCard('DPM vs same-role opponent',peer?signed(peer.dpmDelta,0):'n/a')+detailCard('CS/min vs opponent',peer?signed(peer.csMinDelta,2):'n/a')+detailCard('Team damage rank',Number.isFinite(Number(g.damageRank))?'#'+g.damageRank+' of 5':'n/a')+
-    '<div class="detail-note">Peer comparisons use the actual same-role opponent in this match. Positive values mean you finished ahead on that metric.</div>';
+    '<div class="detail-note">Peer comparisons use the actual same-role opponent in this match. Positive values mean you finished ahead on that metric; opponent rank is fetched during the Fetch step and cached with the match.</div>';
 }
 function bindDetailTabs(container,g,index){
   container.querySelectorAll('.tab-btn').forEach(btn=>btn.addEventListener('click',(ev)=>{
@@ -414,6 +416,8 @@ function renderAdvanced(r){
   const peerRows=[
     metric('Peer definition',p.definition||'Same-role opponent in each match',false),
     metric('Comparable peer games',String(p.sameRoleGames??0),false),
+    metric('Ranked peer games',String(p.rankedPeerGames??0),false),
+    metric('Higher-ranked peer games',String(p.higherRankPeerGames??0),false),
     metric('Gold @15 vs peer',Number.isFinite(Number(p.avgGoldDiff15))?signed(p.avgGoldDiff15,0)+'g':'n/a',!Number.isFinite(Number(p.avgGoldDiff15))),
     metric('Beat peer on gold @15',fmtPct(p.gold15OutperformPct),!Number.isFinite(Number(p.gold15OutperformPct))),
     metric('CS/min vs peer',Number.isFinite(Number(p.avgCsMinDelta))?signed(p.avgCsMinDelta,2):'n/a',!Number.isFinite(Number(p.avgCsMinDelta))),
@@ -423,7 +427,10 @@ function renderAdvanced(r){
     metric('Vision/min vs peer',Number.isFinite(Number(p.avgVpmDelta))?signed(p.avgVpmDelta,2):'n/a',!Number.isFinite(Number(p.avgVpmDelta))),
     metric('Beat peer on vision/min',fmtPct(p.vpmOutperformPct),!Number.isFinite(Number(p.vpmOutperformPct))),
     metric('Major-item timing vs peer',Number.isFinite(Number(p.avgMajorItemDeltaMin))?signed(p.avgMajorItemDeltaMin,1)+' min':'n/a',!Number.isFinite(Number(p.avgMajorItemDeltaMin))),
-    metric('Faster major item than peer',fmtPct(p.majorItemFasterPct),!Number.isFinite(Number(p.majorItemFasterPct)))
+    metric('Faster major item than peer',fmtPct(p.majorItemFasterPct),!Number.isFinite(Number(p.majorItemFasterPct))),
+    metric('Higher-rank gold @15',Number.isFinite(Number(p.higherRankAvgGoldDiff15))?signed(p.higherRankAvgGoldDiff15,0)+'g':'n/a',!Number.isFinite(Number(p.higherRankAvgGoldDiff15))),
+    metric('Beat higher-rank peer on gold @15',fmtPct(p.higherRankGoldOutperformPct),!Number.isFinite(Number(p.higherRankGoldOutperformPct))),
+    metric('DPM vs higher-rank peer',Number.isFinite(Number(p.higherRankAvgDpmDelta))?signed(p.higherRankAvgDpmDelta,0):'n/a',!Number.isFinite(Number(p.higherRankAvgDpmDelta)))
   ];
   const conversionRows=[
     metric('Wins when ≥250g ahead @15',Number.isFinite(Number(conv.laneLeadWinRate))?fmtPct(conv.laneLeadWinRate)+' · '+String(conv.laneLeadGames||0)+' games':'n/a',!Number.isFinite(Number(conv.laneLeadWinRate))),
@@ -457,7 +464,7 @@ function renderBreakdowns(r){
 }
 function renderQuality(r){
   const q=r.dataQuality||{};
-  const cards=[['Analyzed games',q.analyzedGames??r.games?.length??0],['Timeline games',q.validTimelineGames??'n/a'],['Peer-comparable games',q.peerComparableGames??'n/a'],['Coordinate games',q.validCoordinateGames??'n/a'],['Missing timelines',q.missingTimelineGames??'n/a'],['Broader baseline',q.baselineGames??0]];
+  const cards=[['Analyzed games',q.analyzedGames??r.games?.length??0],['Timeline games',q.validTimelineGames??'n/a'],['Peer-comparable games',q.peerComparableGames??'n/a'],['Ranked peer games',q.rankedPeerGames??'n/a'],['Higher-rank peers',q.higherRankPeerGames??'n/a'],['Coordinate games',q.validCoordinateGames??'n/a'],['Missing timelines',q.missingTimelineGames??'n/a'],['Broader baseline',q.baselineGames??0]];
   $('qualityGrid').innerHTML=cards.map(([l,v])=>'<div class="quality-card"><span>'+esc(l)+'</span><strong>'+esc(v)+'</strong></div>').join('');
   $('sourceNote').textContent=r.sourceStatus?.note||'Report data remains traceable through the report contract. Missing advanced data is shown as unavailable rather than zero.';
 }
