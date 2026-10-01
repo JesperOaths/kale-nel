@@ -834,7 +834,6 @@ function renderQuickRead(r){
   const p=r.peerComparison||{},b=r.behaviorSummary||{};
   const laneN=Number(p.laneGames15||0),peerN=Number(p.sameRoleGames||0),itemN=Number(p.majorItemGames||0),impactN=Number(p.impactGames||0),repeatN=Number(b.repeatDeathOpportunities??p.repeatDeathOpportunities??0);
   const lane=p.avgGoldDiff15,cs=p.avgCsMinDelta,dpm=p.avgDpmDelta,item=p.avgMajorItemDeltaMin,impact=p.avgImpactDeltaMin,repeat=p.repeatDeathRateDelta;
-  const describe=(v,positive,negative,close)=>!hasNum(v)?'Not enough comparable evidence.':Number(v)>positive?negative.positive:Number(v)<negative?negative.negative:close;
   $('quickRead').innerHTML=[
     comparisonCard('Role gold @15',lane,'gold',1000,false,
       !hasNum(lane)?'No comparable @15 direct-role checkpoint is available.':Number(lane)>150?'You average a meaningful gold lead over the actual same-role opponent at 15.':Number(lane)<-150?'You average a meaningful gold deficit versus the actual same-role opponent at 15.':'Your average direct-role economy is close around 15 minutes.',
