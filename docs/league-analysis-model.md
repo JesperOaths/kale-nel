@@ -459,7 +459,21 @@ A death is labelled **high-risk / likely avoidable** only when the combined scor
 
 The report should expose the contributing tags and nearby ally/enemy counts so the player can inspect the judgment.
 
-### Side-lane timing risk
+### Post-play give-back risk
+
+A successful kill/assist does not end the decision sequence. The analyzer separately tracks deaths that occur **within 30 seconds after the player's own kill/assist contribution**.
+
+Preserve whether the follow-up death:
+- crosses the normal high-risk threshold,
+- is traded,
+- is followed by an enemy objective,
+- occurs with a known role-economy state.
+
+The strongest negative signal is a **high-risk, untraded death within 30 seconds after a player-involved kill/assist**. This is coached as post-play discipline: after the first successful action, reassess health, cooldowns, reinforcements, spendable gold and the value of continuing the chase.
+
+Do not imply that every post-impact death is bad. Some are correct trades or necessary fight continuations.
+
+## Side-lane timing risk
 
 Post-lane side pressure is useful, so the analyzer must not label every side-lane death as bad.
 
