@@ -1124,6 +1124,21 @@ function modernOrLegacy(obj,modernKey,legacyKey,fallback=0){
   const l=obj?.[legacyKey];return l!==null&&l!==undefined?l:fallback;
 }
 function detailCard(label,value){return'<div class="detail-card"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>';}
+function resetSpendText(r){
+  if(!r)return'n/a';
+  const lo=r.spentLowerBound,hi=r.spentUpperBound,raw=r.spent;
+  if(r.spendApproximate&&hasNum(lo)&&hasNum(hi)&&Math.abs(Number(hi)-Number(lo))>.01)return fmtInt(lo)+'–'+fmtInt(hi)+'g est.';
+  if(r.spendApproximate)return'~'+fmtInt(hasNum(hi)?hi:raw)+'g est.';
+  return fmtInt(raw)+'g';
+}
+function resetSpendEvidenceText(r){
+  if(!r)return'n/a';
+  const caveats=String(r.spendEstimateCaveat||'').split('|').filter(Boolean),parts=[];
+  if(caveats.includes('support_quest_control_ward_discount_unobserved'))parts.push('Support ward quest-discount timing is not exposed');
+  if(caveats.includes('riot_zero_id_item_undo_unresolvable'))parts.push('Riot supplied an undo event without resolvable item IDs');
+  if(Number(r.unresolvedUndoCount||0)>0&&!parts.some(x=>x.includes('undo')))parts.push(String(r.unresolvedUndoCount)+' unresolved undo event(s)');
+  return parts.length?parts.join(' · '):'Committed purchases + recipe-owned component credit';
+}
 function detailList(items,empty){
   const xs=(items||[]).filter(Boolean);
   return '<div class="detail-note">'+(xs.length?'<ul>'+xs.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':esc(empty||'No events detected.'))+'</div>';
@@ -1226,7 +1241,8 @@ function detailContent(g,tab){
   }
   if(tab==='resets'){
     const mine=g.firstMajorItem,opp=g.opponentFirstMajorItem,second=g.secondMajorItem,oppSecond=g.opponentSecondMajorItem,shops=g.shopVisits||[],greedy=g.greedyStayWindows||[],spike=g.itemSpikeWindow||{},firstReset=g.firstResetSequence||null,ready=g.majorItemReadiness||null,oppReady=g.opponentMajorItemReadiness||null;
-    return roleQuestNote(g)+detailCard('First reset / shop',firstReset?(fmt(firstReset.time,1)+'m · committed spend est. '+fmtInt(firstReset.spent)+'g'):'n/a')+
+    return roleQuestNote(g)+detailCard('First reset / shop',firstReset?(fmt(firstReset.time,1)+'m · '+resetSpendText(firstReset)):'n/a')+
+      detailCard('First-reset spend evidence',firstReset?resetSpendEvidenceText(firstReset):'n/a')+
       detailCard('First reset vs peer',firstReset&&hasNum(firstReset.timingDeltaVsOpponent)?signed(firstReset.timingDeltaVsOpponent,1)+' min':'n/a')+
       detailCard('Post-reset role-gold swing',firstReset&&hasNum(firstReset.goldSwingAfter)?signed(firstReset.goldSwingAfter,0)+'g':'n/a')+
       detailCard('Post-reset role-CS swing',firstReset&&hasNum(firstReset.csSwingAfter)?signed(firstReset.csSwingAfter,1)+' CS':'n/a')+
@@ -1246,13 +1262,13 @@ function detailContent(g,tab){
       detailCard('Spike-window impact',spike.eligible?(String(spike.totalImpacts||0)+' impact(s) · '+(spike.used?'used':'unused')):'n/a')+
       detailCard('Died before spike impact',spike.eligible?(spike.diedBeforeImpact?'yes':'no'):'n/a')+
       detailCard('Detected shop visits',String(shops.length))+detailCard('Greedy-stay windows',String(greedy.length))+detailCard('Overstay deaths',String(g.overstayCount??0))+
-      purchaseItemStrip(firstReset?.items)+detailList(firstReset?[('First shop '+fmt(firstReset.time,1)+'m · committed spend est. '+fmtInt(firstReset.spent)+'g · '+String(firstReset.committedPurchases??firstReset.items?.length??0)+' committed purchase(s)'+(firstReset.items?.length?' · '+firstReset.items.map(x=>x.name||x.id||'item').join(', '):'')+
+      purchaseItemStrip(firstReset?.items)+detailList(firstReset?[('First shop '+fmt(firstReset.time,1)+'m · '+resetSpendText(firstReset)+' · '+String(firstReset.committedPurchases??firstReset.items?.length??0)+' committed purchase(s)'+(firstReset.items?.length?' · '+firstReset.items.map(x=>x.name||x.id||'item').join(', '):'')+
         (hasNum(firstReset.goldDiffBefore)?' · role gold '+signed(firstReset.goldDiffBefore,0)+'g before':'')+(hasNum(firstReset.goldDiffAfter)?' → '+signed(firstReset.goldDiffAfter,0)+'g after':'')+
         (hasNum(firstReset.csDiffBefore)?' · role CS '+signed(firstReset.csDiffBefore,0)+' before':'')+(hasNum(firstReset.csDiffAfter)?' → '+signed(firstReset.csDiffAfter,0)+' after':'')+
         (firstReset.deathInWindow?' · death in measurement window':firstReset.economyLoss?' · economy loss':firstReset.economyGain?' · economy gain':''))]:[],'No measurable first-reset sequence was available.')+
       detailList((spike.events||[]).map(x=>fmt(x.time,1)+'m · '+(x.type==='kill_or_assist'?'kill/assist impact':'objective impact'+(x.objectiveType?' · '+x.objectiveType:''))),'No tracked impact occurred inside the measurable first-major-item advantage window.')+
       detailList(greedy.map(x=>(Number(x.startMin)||0).toFixed(1)+'m · '+fmtInt(x.currentGold)+'g held · next shop '+(Number(x.nextShopMin)||0).toFixed(1)+'m ('+fmt(x.delayMin,1)+'m delay)'),'No repeated high-gold stay window detected.')+
-      '<div class="detail-note">Shop/reset spend uses committed Riot purchase events: ITEM_UNDO reversals are removed, and cash cost is estimated from the patch item recipe minus owned build components. Dynamic discounts such as the post-support-quest Control Ward price remain explicitly approximate. First-major affordability separately requires observed recipe components plus a supported current-gold frame; purchase events confirm shop completion, not an exact recall-channel timestamp.</div>';
+      '<div class="detail-note">Shop/reset spend uses committed Riot purchase events: ITEM_UNDO reversals are removed, and cash cost is estimated from the patch item recipe minus owned build components. The first meaningful reset threshold uses the <strong>minimum plausible spend</strong>, not the optimistic estimate. Dynamic discounts such as the post-support-quest Control Ward price are shown as a range; an unresolvable zero-ID undo makes that shop ineligible for the spend threshold instead of being guessed through. First-major affordability separately requires observed recipe components plus a supported current-gold frame; purchase events confirm shop completion, not an exact recall-channel timestamp.</div>';
   }
   const peer=g.peer||null,earlyLead=g.earlyLeadWindow||{},rules=reportPhaseRules(g);
   const checkpointNote=(!rules.lane15Comparable||!rules.fixed15to25Comparable||!rules.closing25Comparable)
@@ -1501,6 +1517,7 @@ function renderAdvanced(r){
     ['First-reset measured / clean games',String(r.behaviorSummary?.firstResetMeasuredGames??0)+' / '+String(r.behaviorSummary?.firstResetCleanGames??0)],
     ['First-reset loss / gain games',String(r.behaviorSummary?.firstResetLossGames??0)+' / '+String(r.behaviorSummary?.firstResetGainGames??0)],
     ['First-reset loss rate',fmtPct(r.behaviorSummary?.firstResetLossRate)],
+    ['First-reset approximate spend samples',String(r.behaviorSummary?.firstResetApproximateSpendGames??0)+' / '+String(r.behaviorSummary?.firstResetMeasuredGames??0)],
     ['Avg first-reset role-gold swing',hasNum(r.behaviorSummary?.avgFirstResetGoldSwing)?signed(r.behaviorSummary.avgFirstResetGoldSwing,0)+'g':'n/a'],
     ['Avg first-reset role-CS swing',hasNum(r.behaviorSummary?.avgFirstResetCsSwing)?signed(r.behaviorSummary.avgFirstResetCsSwing,1)+' CS':'n/a'],
     ['Avg first-reset timing vs peer',hasNum(r.behaviorSummary?.avgFirstResetTimingDelta)?signed(r.behaviorSummary.avgFirstResetTimingDelta,1)+' min':'n/a'],
