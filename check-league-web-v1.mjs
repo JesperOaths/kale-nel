@@ -37,6 +37,7 @@ for(const field of [
   'phaseRisk','midRouting','closing25','deathTradeRate','highRiskUntradedDeaths','highRiskUntradedPerGame',
   'measuredDeathConsequences','costlyDeathEvents','severeDeathEvents','costlyDeathRate','costlyDeathsPerTimelineGame','severeDeathsPerTimelineGame','avgGoldSwingAfterDeath','avgCsSwingAfterDeath',
   'repeatDeathOpportunities','repeatDeaths','repeatDeathRate','highRiskRepeatDeaths','costlyRepeatDeaths','opponentRepeatDeathRate','repeatDeathRateDelta',
+  'earlyLeadGames','earlyLeadGivebackGames','earlyLeadGivebackRate','avgEarlyLeadPeakGold','avgEarlyLeadGoldSwingTo15','earlyLeadGivebackDeaths','earlyLeadGivebackHighRiskDeaths',
   'itemSpikeEligibleWindows','itemSpikeUtilizedWindows','itemSpikeUtilizationRate','itemSpikeDeathsBeforeImpact','avgItemSpikeLeadSec',
   'fightSamples','firstAllyFightDeathRate','preContributionFightDeathRate','fightSurvivalRate',
   'highUnspentFightRate','itemDisadvantageFightRate','goldDeficitFightRate',
@@ -114,6 +115,9 @@ assert.ok(app.includes('Solo-kill structure conversion'));
 assert.ok(app.includes('Item-spike window'));
 assert.ok(app.includes('First-reset loss rate'));
 assert.ok(app.includes('Post-reset role-CS swing'));
+assert.ok(app.includes('Early-lead give-back rate'));
+assert.ok(app.includes('Peak pre-15 role lead'));
+assert.ok(app.includes('≥500g pre-15 lead opportunities'));
 assert.ok(app.includes('Major-item spike utilization'));
 assert.ok(app.includes('Earlier-item windows used'));
 assert.ok(app.includes('Solo-kill deaths before next shop'));
@@ -199,3 +203,10 @@ assert.ok(css.includes('.practice-supporting'),'Practice supporting evidence mus
 assert.ok(api.includes('High-risk post-play give-backs / game'),'Align diagnosed root causes with measurable practice targets');
 assert.ok(api.includes('Late-reset objective miss rate'),'Objective reset diagnosis must have a direct measurable target');
 assert.ok(api.includes('Pre-objective side-lane deaths / game'),'Side-lane diagnosis must have a direct measurable target');
+
+assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
+assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
+assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
+assert.ok(api.includes('preserved:swing>=-250'),'early lead preservation tolerance must remain 250g');
+assert.ok(api.includes('behaviorSummary.earlyLeadGivebackRate'),'Next-5 target path must remain tied to the exported early-lead rate');
+assert.ok(api.includes('Review where this early lead started to unwind'),'replay queue must keep early-lead review moments');
