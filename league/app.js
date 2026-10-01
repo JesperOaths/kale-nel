@@ -366,6 +366,7 @@ function renderProgressComparison(current,previous,previousAt){
     {label:'High-risk deaths while ahead / game',path:'behaviorSummary.highRiskLeadDeathsPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
     {label:'High-risk deaths while behind / game',path:'behaviorSummary.highRiskBehindDeathsPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
     {label:'Pre-objective side-lane deaths / game',path:'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame',threshold:.15,direction:-1,format:v=>fmt(v,2)},
+    {label:'High-risk post-play give-backs / game',path:'behaviorSummary.highRiskUntradedPostImpactPerGame',threshold:.15,direction:-1,format:v=>fmt(v,2)},
     {label:'Pre-14 solo deaths to role / game',path:'behaviorSummary.pre14RoleSoloDeathPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
     {label:'First major item vs peer',path:'peerComparison.avgMajorItemDeltaMin',threshold:.4,direction:-1,format:v=>signed(v,1)+' min'},
     {label:'Major-item spike utilization',path:'behaviorSummary.itemSpikeUtilizationRate',threshold:15,direction:1,format:v=>fmtPct(v)},
@@ -580,6 +581,8 @@ function detailContent(g,tab){
       detailCard('Post-15 side-lane deaths',String(g.sideLaneRisk?.post15SideLaneDeaths??0))+
       detailCard('Isolated side-lane deaths',String(g.sideLaneRisk?.isolatedSideLaneDeaths??0))+
       detailCard('Pre-objective side-lane deaths',String(g.sideLaneRisk?.preNeutralObjectiveSideLaneDeaths??0))+
+      detailCard('Post-impact deaths',String(g.postImpactRisk?.deathsWithin30s??0)+' · '+fmtPct(g.postImpactRisk?.ratePerImpact))+
+      detailCard('High-risk untraded post-impact',String(g.postImpactRisk?.highRiskUntradedDeathsWithin30s??0))+
       detailCard('Objective-context deaths',fmtPct(g.objectiveDeathPct))+detailCard('Pre-objective conversions',String(g.preObjectiveDeathCount??0))+detailCard('≥1000 unspent gold deaths',String(g.highUnspentGoldDeaths??0))+
       detailCard('Costly measured deaths',String(g.deathConsequences?.costly??0)+' / '+String(g.deathConsequences?.measured??0)+' · '+fmtPct(g.deathConsequences?.costlyRate))+
       detailCard('Rapid repeat deaths',String(g.deathRecovery?.repeatDeaths??0)+' / '+String(g.deathRecovery?.opportunities??0)+' · '+fmtPct(g.deathRecovery?.rate))+
@@ -591,6 +594,7 @@ function detailContent(g,tab){
       detailList(bad.map(x=>(Number(x.time)||0).toFixed(1)+'m · '+String(x.zone||'unknown')+' · '+(x.tags||[]).join(', ')+' · '+fmtInt(x.currentGold)+'g unspent · nearby '+String(x.alliesNear??0)+' ally / '+String(x.enemiesNear??0)+' enemy · '+(x.traded?('traded in '+String(x.tradeDelaySec??'?')+'s'):'untraded')),'No death crossed the multi-signal bad-death threshold.')+
       detailList((g.leadDeaths||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+signed(x.goldDiffAtDeath,0)+'g vs role at death'+(hasNum(x.goldSwingAfter)?' · '+signed(x.goldSwingAfter,0)+'g role-diff swing after':'')+(x.highRisk?' · high-risk':'')+(x.enemyObjectiveAfter?' · enemy objective followed':'')),'No materially-ahead death was recorded.')+
       detailList((risk.events||[]).filter(x=>x.state==='behind').map(x=>(Number(x.time)||0).toFixed(1)+'m · '+signed(x.goldDiffAtDeath,0)+'g vs role · '+(x.highRisk?'high-risk':'not high-risk')+(x.traded?' · traded':' · untraded')+(x.enemyObjectiveAfter?' · enemy objective followed':'')+(hasNum(x.goldSwingAfter)?' · '+signed(x.goldSwingAfter,0)+'g role-diff swing after':'')),'No death was recorded while ≥500g behind the direct role opponent.')+
+      detailList((g.postImpactRisk?.events||[]).map(x=>(Number(x.deathTime)||0).toFixed(1)+'m death · '+String(x.secondsAfterImpact??'?')+'s after own kill/assist'+(x.highRisk?' · high-risk':'')+(x.traded?' · traded':' · untraded')+(x.enemyObjectiveAfter?' · enemy objective followed':'')),'No death occurred within 30 seconds after your own kill/assist contribution.')+
       detailList((g.sideLaneRisk?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+String(x.zone||'side lane')+(x.isolated?' · isolated':'')+(x.neutralObjectiveSoon?' · neutral objective '+String(x.secondsBeforeNeutralObjective??'?')+'s later':'')+(x.highRisk?' · high-risk':'')+(x.traded?' · traded':' · untraded')),'No post-15 side-lane death detected.')+
       detailList((g.deathConsequences?.events||[]).filter(x=>x.costly).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+(x.severe?'severe':'costly')+(hasNum(x.goldSwingAfter)?' · role gold '+signed(x.goldSwingAfter,0)+'g':'')+(hasNum(x.csSwingAfter)?' · role CS '+signed(x.csSwingAfter,0):'')+(x.enemyObjectiveAfter?' · enemy objective followed':'')+(x.traded?' · traded':' · untraded')),'No measured death crossed the consequence threshold.')+
       detailList((g.deathRecovery?.events||[]).map(x=>Number(x.firstMin).toFixed(1)+'→'+Number(x.secondMin).toFixed(1)+'m · '+String(x.gapSec)+'s'+(x.phase?' · '+x.phase:'')+(x.highRisk?' · high-risk':'')+(x.costly?' · costly':'')+(x.severe?' · severe':'')+(x.traded?' · traded':' · untraded')),'No second death occurred within four minutes of the previous death.')+
@@ -750,6 +754,8 @@ function renderAdvanced(r){
     ['Post-15 side-lane deaths',String(r.behaviorSummary?.post15SideLaneDeaths??0)],
     ['Isolated side-lane deaths',String(r.behaviorSummary?.isolatedSideLaneDeaths??0)+' · '+fmtPct(r.behaviorSummary?.isolatedSideLaneDeathRate)],
     ['Pre-objective side-lane deaths',String(r.behaviorSummary?.preNeutralObjectiveSideLaneDeaths??0)+' · '+fmt(r.behaviorSummary?.preNeutralObjectiveSideLaneDeathsPerGame,2)+'/game'],
+    ['Post-impact deaths',String(r.behaviorSummary?.postImpactDeaths??0)+' / '+String(r.behaviorSummary?.playerImpactEvents??0)+' · '+fmtPct(r.behaviorSummary?.postImpactDeathRate)],
+    ['High-risk untraded post-impact',String(r.behaviorSummary?.highRiskUntradedPostImpactDeaths??0)+' · '+fmt(r.behaviorSummary?.highRiskUntradedPostImpactPerGame,2)+'/game'],
     ['Top risky-death area',r.behaviorSummary?.topBadDeathZone?String(r.behaviorSummary.topBadDeathZone)+' · '+fmtPct(r.behaviorSummary.topBadDeathZonePct):'n/a'],
     ['Roam attempts / success',String(roam.attempts??0)+' / '+fmtPct(roam.successRate)],
     ['Roam lane cost',hasNum(roam.avgLaneCostCs)?signed(roam.avgLaneCostCs,1)+' CS avg · '+String(roam.emptyCostlyRoams??0)+' empty costly':'n/a'],
