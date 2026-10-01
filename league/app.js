@@ -484,7 +484,7 @@ function renderReport(raw,sourceKind){
   const coachingN=r.coachingSummary?.games??s.primaryRoleGames??0;
   const reportTimes=(r.games||[]).map(g=>gameTimestampMs(g.gameStartTimestamp)).filter(Boolean).sort((a,b)=>a-b);
   const reportRange=reportTimes.length?(new Date(reportTimes[0]).toLocaleDateString(undefined,{day:'numeric',month:'short'})+' → '+new Date(reportTimes[reportTimes.length-1]).toLocaleDateString(undefined,{day:'numeric',month:'short'})):'';
-  $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(rank?rank+' · ':'')+(s.games??r.games.length)+' analyzed games · '+(s.primaryRole==='BOTTOM'?'ADC':(s.primaryRole||'GENERIC'))+' · '+coachingN+' role-comparable coaching games'+(reportRange?' · '+reportRange:'');
+  $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(rank?rank+' · ':'')+(s.games??r.games.length)+' analyzed games · '+(s.primaryRole==='ADC'?'ADC':(s.primaryRole||'GENERIC'))+' · '+coachingN+' role-comparable coaching games'+(reportRange?' · '+reportRange:'');
   $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':(r.analyzerVersion||'Web analysis');
   renderQuickRead(r);
   renderRecentPulse(r);
@@ -511,11 +511,11 @@ function renderReport(raw,sourceKind){
 
 function adcBenchmarkSummary(r){
   const role=String(r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||''),ext=r?.externalBenchmarks||{};
-  return role==='BOTTOM'&&ext.eligible!==false?(r.coachingSummary||r.summary||null):null;
+  return role==='ADC'&&ext.eligible!==false?(r.coachingSummary||r.summary||null):null;
 }
 function adcBenchmarkUnavailableReason(r){
   const role=String(r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||''),ext=r?.externalBenchmarks||{};
-  if(role!=='BOTTOM')return 'The external benchmark is ADC-specific and is withheld because ADC is not this report’s primary coaching role.';
+  if(role!=='ADC')return 'The external benchmark is ADC-specific and is withheld because ADC is not this report’s primary coaching role.';
   if(ext.eligibilityReason==='selected_cohort_not_ranked')return 'The selected Last-20 cohort is not Ranked Solo/Flex, while the external reference corpus is ranked games. The population spider is withheld to avoid an apples-to-oranges comparison.';
   if(ext.eligibilityReason==='matching_rank_queue_tier_unavailable')return 'Riot did not return a ranked tier for the same ranked queue as this report cohort, so the population benchmark is withheld.';
   return 'The ranked ADC population benchmark is unavailable for this report.';
@@ -530,7 +530,7 @@ function benchmarkKpi(label,value,benchmark,unit,inverse=false,extra=''){
 }
 function renderKpis(r){
   const adc=adcBenchmarkSummary(r),s=adc||r.summary||{},bench=adc?r.externalBenchmarks?.same:null,rank=bench?.tier||'rank';
-  const raw=(label,value,unit)=>({label,value:unit==='percent'?fmtPct(value):unit==='csmin'?fmt(value,2):unit==='dpm'?fmtInt(value):unit==='deaths'?fmt(value,1):fmt(value,2),tone:'neutral',sub:adc?'ADC coaching sample':(String(r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||'')==='BOTTOM'?adcBenchmarkUnavailableReason(r):'No ADC population benchmark applied to this primary role'),bar:''});
+  const raw=(label,value,unit)=>({label,value:unit==='percent'?fmtPct(value):unit==='csmin'?fmt(value,2):unit==='dpm'?fmtInt(value):unit==='deaths'?fmt(value,1):fmt(value,2),tone:'neutral',sub:adc?'ADC coaching sample':(String(r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||'')==='ADC'?adcBenchmarkUnavailableReason(r):'No ADC population benchmark applied to this primary role'),bar:''});
   const rows=[
     {label:adc?'ADC sample win rate':'Recent win rate',value:fmtPct(s.winRate),tone:'neutral',sub:String(s.games||0)+(adc?' primary-role ADC':' analyzed')+' games',bar:''},
     bench?benchmarkKpi('CS / min · '+rank+' ref',s.csMin,bench.csMin,'csmin'):raw('CS / min',s.csMin,'csmin'),
@@ -982,7 +982,7 @@ function gamePassesFilter(g){
   if(state.gameFilter==='ahead15')return hasNum(g.goldDiff15)&&Number(g.goldDiff15)>100;
   if(state.gameFilter==='even15')return hasNum(g.goldDiff15)&&Math.abs(Number(g.goldDiff15))<=100;
   if(state.gameFilter==='behind15')return hasNum(g.goldDiff15)&&Number(g.goldDiff15)<-100;
-  if(state.gameFilter==='adc')return g.role==='BOTTOM';
+  if(state.gameFilter==='adc')return g.role==='ADC';
   return true;
 }
 function renderGames(r){
@@ -1012,7 +1012,7 @@ function renderGames(r){
       '<td class="caret">▸ <small>'+(displayIndex+1)+'</small></td>'+
       '<td><div class="champion-cell">'+(icon?'<img class="champion-icon" loading="lazy" src="'+esc(icon)+'" alt="">':'')+
         '<span><b>'+esc(g.champion||'Unknown')+'</b>'+(firstItem?'<small class="table-item">'+(itemSrc?'<img loading="lazy" src="'+esc(itemSrc)+'" alt="">':'')+esc(firstItem.name||'First major')+' · '+esc(fmt(firstItem.time,1))+'m</small>':'')+'</span></div></td>'+
-      '<td>'+esc(g.role==='BOTTOM'?'ADC':(g.role||'GENERIC'))+'</td>'+
+      '<td>'+esc(g.role==='ADC'?'ADC':(g.role||'GENERIC'))+'</td>'+
       '<td class="result '+(g.win?'win':'loss')+'"><b>'+(g.win?'WIN':'LOSS')+'</b></td>'+
       '<td><strong>'+esc(kda)+'</strong></td>'+
       '<td>'+esc(fmtPct(g.kp))+'</td>'+
@@ -1365,7 +1365,7 @@ function consistencyCard(label,stats,unit,split,detail){
 }
 function renderConsistencySummary(r){
   const target=$('consistencySummary');if(!target)return;
-  const games=Array.isArray(r.games)?r.games:[],adcGames=games.filter(g=>g.role==='BOTTOM'),bench=adcBenchmarkSummary(r)?r.externalBenchmarks?.same:null;
+  const games=Array.isArray(r.games)?r.games:[],adcGames=games.filter(g=>g.role==='ADC'),bench=adcBenchmarkSummary(r)?r.externalBenchmarks?.same:null;
   const gold=games.filter(g=>g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)).map(g=>Number(g.goldDiff15));
   const cs=games.filter(g=>g?.phaseRules?.lane15Comparable!==false&&hasNum(g.csDiff15)).map(g=>Number(g.csDiff15));
   const dpm=adcGames.filter(g=>hasNum(g.dpm)).map(g=>Number(g.dpm)),kp=adcGames.filter(g=>hasNum(g.kp)).map(g=>Number(g.kp));
@@ -1388,7 +1388,7 @@ function renderCharts(r){
   ];
   const hidden=[];
   $('chartGrid').innerHTML=specs.map(spec=>{
-    const scoped=spec.adcOnly?chronological.filter(g=>g.role==='BOTTOM'):chronological;
+    const scoped=spec.adcOnly?chronological.filter(g=>g.role==='ADC'):chronological;
     const points=scoped.map(g=>({matchId:g.matchId,gameStartTimestamp:g.gameStartTimestamp,champion:g.champion,value:g[spec.key]}));
     const svg=chartSvg(points,spec);
     if(!svg)hidden.push(spec.title);
@@ -1638,12 +1638,12 @@ function renderAdvanced(r){
 }
 function renderBreakdowns(r){
   const roleRows=Object.entries(r.byRole||{}).sort((a,b)=>Number(b[1]?.games||0)-Number(a[1]?.games||0));
-  $('roleBreakdown').innerHTML=roleRows.length?roleRows.map(([name,v])=>'<div class="break-row"><span>'+esc(name==='BOTTOM'?'ADC':name)+'</span><small>'+esc(String(v.games||0))+' games</small><strong>'+esc(fmtPct((v.games||0)?Number(v.wins||0)/Number(v.games)*100:null))+' WR</strong></div>').join(''):'<div class="bullet empty">No role sample available.</div>';
+  $('roleBreakdown').innerHTML=roleRows.length?roleRows.map(([name,v])=>'<div class="break-row"><span>'+esc(name==='ADC'?'ADC':name)+'</span><small>'+esc(String(v.games||0))+' games</small><strong>'+esc(fmtPct((v.games||0)?Number(v.wins||0)/Number(v.games)*100:null))+' WR</strong></div>').join(''):'<div class="bullet empty">No role sample available.</div>';
   const behaviorRows=Array.isArray(r.championBehavior)?r.championBehavior:[];
   if(behaviorRows.length){
     $('championBreakdown').innerHTML=behaviorRows.slice(0,8).map(v=>{
       const src=championIcon(v.champion),goldTone=deltaTone(v.goldDiff15,0,100);
-      return '<div class="break-row champion-behavior-row"><div class="break-visual">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<span>'+esc(v.champion)+' <small>'+esc(v.role==='BOTTOM'?'ADC':v.role)+'</small></span></div>'+
+      return '<div class="break-row champion-behavior-row"><div class="break-visual">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<span>'+esc(v.champion)+' <small>'+esc(v.role==='ADC'?'ADC':v.role)+'</small></span></div>'+
         '<small>'+esc(String(v.games||0))+' games · WR '+esc(fmtPct(v.winRate))+' · risk deaths '+esc(fmt(v.badDeaths,1))+'</small>'+
         '<strong class="tone-'+goldTone+'">'+esc(hasNum(v.goldDiff15)?signed(v.goldDiff15,0)+'g @15':'@15 n/a')+'</strong></div>';
     }).join('');
@@ -1658,7 +1658,7 @@ function renderBreakdowns(r){
   if(target){
     target.innerHTML=matchupRows.length?matchupRows.slice(0,10).map(v=>{
       const own=(v.ownChampions||[]).slice(0,3).map(x=>x.champion+' '+x.games+'g').join(', '),src=championIcon(v.opponentChampion),tone=deltaTone(v.goldDiff15,0,100);
-      return '<div class="break-row matchup-behavior-row"><div class="break-visual">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<span>vs '+esc(v.opponentChampion)+' <small>'+esc(v.role==='BOTTOM'?'ADC':v.role)+'</small></span></div>'+
+      return '<div class="break-row matchup-behavior-row"><div class="break-visual">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<span>vs '+esc(v.opponentChampion)+' <small>'+esc(v.role==='ADC'?'ADC':v.role)+'</small></span></div>'+
         '<small>'+esc(String(v.games||0))+' games · WR '+esc(fmtPct(v.winRate))+(own?' · own picks '+esc(own):'')+'</small><strong class="tone-'+tone+'">'+esc(hasNum(v.goldDiff15)?signed(v.goldDiff15,0)+'g @15':'@15 n/a')+'</strong></div>';
     }).join(''):'<div class="bullet empty">No opposing champion appears at least three times in the primary-role coaching sample.</div>';
   }
