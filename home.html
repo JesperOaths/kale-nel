@@ -52,7 +52,12 @@
       req.href = family ? `./request.html?scope=family&return_to=${encodeURIComponent(returnTo)}` : `./request.html?return_to=${encodeURIComponent(returnTo)}`;
       log.href = family ? `./login.html?scope=family&return_to=${encodeURIComponent(returnTo)}` : `./login.html?return_to=${encodeURIComponent(returnTo)}`;
       const note = document.getElementById('sessionStateNote');
-      const rpcHeaders = () => ({ 'Content-Type':'application/json', apikey:(cfg.SUPABASE_PUBLISHABLE_KEY||''), Authorization:`Bearer ${(cfg.SUPABASE_PUBLISHABLE_KEY||'')}` });
+      const rpcHeaders = () => {
+        if(typeof cfg.publicApiHeaders==='function') return cfg.publicApiHeaders({'Content-Type':'application/json'});
+        const key=String(cfg.SUPABASE_PUBLISHABLE_KEY||''),h={'Content-Type':'application/json',apikey:key};
+        if(/^[^.]+\.[^.]+\.[^.]+$/.test(key)) h.Authorization=`Bearer ${key}`;
+        return h;
+      };
       const normalizeName = (v) => String(v || '').replace(/\s+/g,' ').trim();
       async function parseResponse(res){
         const txt = await res.text();
