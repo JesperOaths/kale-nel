@@ -56,6 +56,9 @@ ok(backend.includes('visionMission'), 'vision-action safety model must remain in
 ok(backend.includes('Number(d.tMs)-Number(v.tMs)<=20000'), 'vision-action death window must remain 20 seconds');
 ok(backend.includes('dist2(pos,v)<=2500*2500'), 'vision-action death spatial radius must remain 2500 units');
 ok(backend.includes('function deathArea('), 'spatial death-context classification must remain in analyzer');
+ok(backend.includes('sideLaneRisk'), 'post-lane side-lane timing model must remain in analyzer');
+ok(backend.includes('alliesNear===0'), 'isolated side-lane deaths must require no nearby ally');
+ok(backend.includes('d.tMs+90000'), 'pre-objective side-lane window must remain 90 seconds');
 ok(backend.includes('peer_rank_json'), 'same-role peer rank cache must remain available');
 ok(backend.includes('gameDuration||r?.game_duration_seconds||0)>=600'), 'coaching sample must exclude sub-10-minute games');
 ok(backend.includes('shortGameThresholdSeconds:600'), 'short-game threshold must remain explicit in data quality');
