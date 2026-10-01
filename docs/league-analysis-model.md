@@ -29,7 +29,7 @@ This file is the behavioral-analysis contract for `kalenel.nl/league`.
 
 The purpose of the web analyzer is not to produce a decorative stat page. It should identify repeatable player decisions, show the evidence behind a judgment, compare the player with relevant peers and with their own broader history, and turn those findings into specific actions to practise.
 
-## Multi-profile browser workflow
+## Saved Riot profile workflow
 
 The historical desktop wrapper is not exposed as a second browser control plane. The public page keeps Riot identity and analysis history inside the ordinary one-click request flow.
 
@@ -173,7 +173,7 @@ Do not replace a direct match-level comparison with a generic population average
 - Current death coaching does **not** use a replacement composite DQI. It exposes the underlying evidence directly: high-risk deaths, isolation, trades, measured costly/severe consequences, pre-objective deaths, high-unspent-gold deaths, deaths while ahead/behind, and consequence-coverage rate.
 - AGOR remains undefined until its historical formula is recovered.
 
-## Mixed-role samples
+## Role-selected samples
 
 The report is **role-pure by construction**, not merely role-aware after aggregation.
 
