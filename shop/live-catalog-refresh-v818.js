@@ -1,9 +1,14 @@
 (() => {
   'use strict';
 
-  const POLL_MS = 15 * 60 * 1000;
-  const FIRST_POLL_MS = 5 * 60 * 1000;
-  const SHARED_MIN_REFRESH_MS = 10 * 60 * 1000;
+  // The storefront is static-first. Live reconciliation is a low-priority
+  // enhancement and must never become a high-frequency Supabase poller.
+  if(window.__BRUIS_LIVE_CATALOG_REFRESH_V818_R5__) return;
+  window.__BRUIS_LIVE_CATALOG_REFRESH_V818_R5__ = true;
+
+  const POLL_MS = 30 * 60 * 1000;
+  const FIRST_POLL_MS = 15 * 60 * 1000;
+  const SHARED_MIN_REFRESH_MS = 20 * 60 * 1000;
   const SHARED_CHECK_KEY = 'bruisCatalogLiveCheckAtV4';
   const SHARED_OWNER_KEY = 'bruisCatalogLiveCheckOwnerV4';
   const TAB_ID = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
@@ -122,7 +127,7 @@
   }
 
   async function checkCatalog(){
-    if(checking || typeof loadLiveCatalog !== 'function' || document.visibilityState === 'hidden') return;
+    if(checking || typeof loadLiveCatalog !== 'function' || document.visibilityState === 'hidden' || navigator.onLine === false) return;
     const now = Date.now();
     if(lastCheckedAt && now - lastCheckedAt < SHARED_MIN_REFRESH_MS) return;
     if(!claimSharedRefresh(now)) return;
@@ -156,10 +161,14 @@
 
   window.setTimeout(checkCatalog, FIRST_POLL_MS);
   window.setInterval(checkCatalog, POLL_MS);
+  // Focus/visibility only attempt a refresh when the shared 20-minute lease has
+  // expired. This keeps multiple tabs/windows from multiplying catalog traffic.
   document.addEventListener('visibilitychange', () => {
-    if(document.visibilityState === 'visible') checkCatalog();
+    if(document.visibilityState === 'visible' && Date.now() - sharedLastCheckedAt() >= SHARED_MIN_REFRESH_MS) checkCatalog();
   });
-  window.addEventListener('focus', checkCatalog);
+  window.addEventListener('focus', () => {
+    if(Date.now() - sharedLastCheckedAt() >= SHARED_MIN_REFRESH_MS) checkCatalog();
+  });
   window.addEventListener('storage', event => {
     if(event.key !== catalogCacheKey || !event.newValue) return;
     try {
