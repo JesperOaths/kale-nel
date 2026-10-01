@@ -89,8 +89,11 @@ assert.ok(html.includes('value="50" selected'),'50 raw matches must remain the r
 assert.ok(app.includes("value||50"),'frontend fetch fallback must remain 50 raw matches');
 assert.ok(api.includes('body.count||50'),'backend fetch fallback must remain 50 raw matches');
 assert.ok(api.includes('peer_rank_backfilled'),'fetch finish must expose final-sample peer-rank backfill count');
+assert.ok(api.includes('comparable_cached_games'),'fetch finish must expose comparable cached sample size');
+assert.ok(api.includes('recommend_deeper_cache'),'fetch finish must signal a thin comparable cache');
 assert.ok(api.includes('peerRankTargetCount'),'fetch finish must target only the comparable final sample');
 assert.ok(app.includes('rank snapshots backfilled'),'frontend must report peer-rank backfill results');
+assert.ok(app.includes('100-match cache depth'),'frontend must warn when the comparable cache cannot fill Last 20');
 assert.ok(api.includes('w.objectiveSetup=allObjectives.some'),'Per-ward objective-setup evidence must be preserved');
 assert.ok(app.includes('function worldToMapPoint'));
 assert.ok(app.includes('minX:-120'));
