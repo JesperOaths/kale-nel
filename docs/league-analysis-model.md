@@ -1677,3 +1677,17 @@ The prominent report layers have deliberately different jobs and should not dupl
 4. **ADC rank comparison** — the external population/rank reference, kept separate from actual per-match opponents.
 
 Do not duplicate external ADC benchmark claims in the raw KPI strip or direct-role comparison. Do not present direct same-role opponents as population rank averages.
+
+
+## Combined-intelligence evidence floors
+
+Compound cards join multiple metrics into one interpretation, so their tone must be at least as conservative as the underlying coaching rules. A compound card may remain visible below threshold for traceability, but it stays neutral and is marked **thin sample — descriptive only**.
+
+Current minimums:
+- lead → preservation: 4 measured early-lead games,
+- farm ↔ map trade-off: 4 comparable mid-routing games,
+- item timing → impact: 4 comparable first-major timing games / 4 eligible earlier-item windows when utilization is interpreted,
+- resources → fight uptime: 8 attended fight clusters and at least 5 coaching games,
+- death → recovery stability: 8 measured repeat-death opportunities.
+
+Combining metrics must never make a thin input look more certain than it was individually.
