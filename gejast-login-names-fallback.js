@@ -55,7 +55,7 @@
     return clean;
   }
   async function authoritative(resolvedScope){
-    var live=normalize(rows(await rpc('get_login_active_names_v687',{site_scope_input:resolvedScope},4500)));
+    var live=normalize(rows(await rpc('get_login_active_names_v687',{site_scope_input:resolvedScope},2500)));
     return publish(live,resolvedScope);
   }
   async function load(requestedScope){
@@ -64,12 +64,12 @@
     var snapshot=staticNames(resolvedScope);
     var immediate=cached.length?cached:snapshot;
     if(immediate.length){
-      Promise.resolve().then(function(){ return authoritative(resolvedScope); }).catch(function(){});
+      setTimeout(function(){ authoritative(resolvedScope).catch(function(){}); },3000);
       return immediate;
     }
     try { return await authoritative(resolvedScope); } catch(_) { return []; }
   }
   cfg.fetchScopedActivePlayerNames=load;
   cfg.getActivatedPlayerNamesForScope=load;
-  window.GEJAST_LOGIN_NAMES_FALLBACK={load:load,source:'v817-static-first-single-active-name-rpc',staticSource:'gejast-login-names-static.js'};
+  window.GEJAST_LOGIN_NAMES_FALLBACK={load:load,source:'v817-html-static-first-delayed-active-name-rpc',staticSource:'gejast-login-names-static.js'};
 })();
