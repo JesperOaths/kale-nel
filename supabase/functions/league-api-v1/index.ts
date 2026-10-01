@@ -1098,7 +1098,7 @@ Deno.serve(async(req:Request)=>{
         const {data:ranked}=await sb.from("league_profiles_v1").update({rank_snapshot:rank,ranked_fetched_at:now(),updated_at:now()}).eq("id",p.id).select("*").maybeSingle();
         if(ranked)p=ranked;
       }
-      const count=Math.max(1,Math.min(100,Number(body.count||20))),rr=text(p.routing_region)||routeFor(p.platform_region);
+      const count=Math.max(1,Math.min(100,Number(body.count||50))),rr=text(p.routing_region)||routeFor(p.platform_region);
       const ids=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/by-puuid/"+encodeURIComponent(p.puuid)+"/ids?start=0&count="+count,requestRiotKey),matchIds=Array.isArray(ids)?ids.map(text).filter(Boolean):[];
       const recentRankIds=new Set(matchIds.slice(0,20));
       const{data:cached}=matchIds.length?await sb.from("league_match_cache_v1").select("match_id,timeline_json,peer_rank_fetched_at").eq("profile_id",p.id).in("match_id",matchIds).not("match_json","is",null):{data:[]};
