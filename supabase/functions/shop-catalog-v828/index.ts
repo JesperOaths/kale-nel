@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import postgres from "npm:postgres@3.4.7";
-import { fxAuditSnapshot, marginEurCentsForSize, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_BPS, retailEurCentsFromUsdCost, retailEurCentsFromUsdCostAfterVat } from "../_shared/shop-fx.mjs";
+import { fxAuditSnapshot, marginEurCentsForSize, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_BPS, retailEurCentsFromUsdCost, retailEurCentsFromUsdCostAfterVat, stableClassicShirtRetailEurCents } from "../_shared/shop-fx.mjs";
 
 const PRINTIFY_BASE = "https://api.printify.com/v1";
 const CACHE_FRESH_MS = 60_000;
@@ -687,13 +687,25 @@ function publicProduct(product: any, fx: any, shopId: number, shop: any, routeSa
       size: sizeFrom(product, variant) || variantDisplayLabel(product, variant),
       label: variantDisplayLabel(product, variant),
       color: colorFrom(product, variant),
-      price: (isShirtProduct(product)
-        ? retailEurCentsFromUsdCostAfterVat(
+      price: (String(product?.blueprint_id || "") === "6"
+        ? stableClassicShirtRetailEurCents(
             routeSafeRawUsdCost,
             fx,
-            marginEurCentsForSize(sizeFrom(product, variant) || variantDisplayLabel(product, variant), MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS),
+            sizeFrom(product, variant) || variantDisplayLabel(product, variant),
+            MARGIN_CENTS,
+            LARGE_SIZE_MARGIN_CENTS,
           )
-        : retailEurCentsFromUsdCost(routeSafeRawUsdCost, fx, marginEurCentsForSize(sizeFrom(product, variant) || variantDisplayLabel(product, variant), MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS))) / 100,
+        : isShirtProduct(product)
+          ? retailEurCentsFromUsdCostAfterVat(
+              routeSafeRawUsdCost,
+              fx,
+              marginEurCentsForSize(sizeFrom(product, variant) || variantDisplayLabel(product, variant), MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS),
+            )
+          : retailEurCentsFromUsdCost(
+              routeSafeRawUsdCost,
+              fx,
+              marginEurCentsForSize(sizeFrom(product, variant) || variantDisplayLabel(product, variant), MARGIN_CENTS, LARGE_SIZE_MARGIN_CENTS),
+            )) / 100,
       is_enabled: variant?.is_enabled !== false,
       is_available: variant?.is_available !== false,
       options: resolvedOptions(product, variant).map((item) => ({ name: item.name, value: item.value })),
