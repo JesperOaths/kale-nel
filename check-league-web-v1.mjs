@@ -23,7 +23,7 @@ const behaviorEnd=api.indexOf('\n  };',behaviorStart);
 assert.ok(behaviorStart>=0&&behaviorEnd>behaviorStart,'Behavior summary export block must exist');
 const behaviorExport=api.slice(behaviorStart,behaviorEnd);
 for(const field of [
-  'phaseRisk','midRouting','deathTradeRate','highRiskUntradedDeaths','highRiskUntradedPerGame',
+  'phaseRisk','midRouting','closing25','deathTradeRate','highRiskUntradedDeaths','highRiskUntradedPerGame',
   'measuredDeathConsequences','costlyDeathEvents','severeDeathEvents','costlyDeathRate','costlyDeathsPerTimelineGame','severeDeathsPerTimelineGame','avgGoldSwingAfterDeath','avgCsSwingAfterDeath',
   'repeatDeathOpportunities','repeatDeaths','repeatDeathRate','highRiskRepeatDeaths','costlyRepeatDeaths','opponentRepeatDeathRate','repeatDeathRateDelta',
   'itemSpikeEligibleWindows','itemSpikeUtilizedWindows','itemSpikeUtilizationRate','itemSpikeDeathsBeforeImpact','avgItemSpikeLeadSec',
@@ -70,6 +70,9 @@ assert.ok(app.includes("if(tab==='fights')"));
 assert.ok(app.includes("if(tab==='phases')"));
 assert.ok(app.includes('Early-phase high-risk deaths'));
 assert.ok(app.includes('Mid-routing comparable games'));
+assert.ok(app.includes('Win rate from role lead @25'));
+assert.ok(app.includes('Lead@25 losses with late risk'));
+assert.ok(app.includes('Wins when ≥500g ahead @25'));
 assert.ok(app.includes('Mid routing objective presence'));
 assert.ok(app.includes('Late high-risk deaths / game'));
 assert.ok(app.includes('Locally outnumbered'));
