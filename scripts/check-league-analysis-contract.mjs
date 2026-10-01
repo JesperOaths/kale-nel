@@ -197,12 +197,12 @@ ok(!app.includes('Math.random()'), 'public League workspace identity must not us
 ok(backend.includes('PUBLIC_MAX_PROFILES=8')&&backend.includes('PUBLIC_MAX_FETCH_MATCHES=50')&&backend.includes('PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE=80')&&backend.includes('PUBLIC_MAX_ANALYSES_PER_PROFILE=25'), 'anonymous public workspace resource limits must remain explicit');
 ok(backend.includes('trimAnonymousMatchCache(')&&backend.includes('trimAnonymousRows('), 'anonymous League storage histories must be bounded');
 ok(backend.includes('if(action==="profile_delete")')&&backend.includes('.delete().eq("id",profileId).eq("owner_player_id",viewer.player_id)'), 'profile deletion must be owner-scoped');
-ok(html.includes('id="deleteProfileBtn"')&&app.includes("api('profile_delete'"), 'bounded public workspaces must expose profile deletion');
+ok(backend.includes('directRequest=body.direct_request===true')&&backend.includes('profileKey=directRequest?"recent-request"'), 'direct public requests must reuse one bounded internal scratch identity instead of exposing profile management');
 ok(migration.includes('references public.league_profiles_v1(id) on delete cascade'), 'profile deletion must cascade child League data');
 ok(backend.includes('allowServerRiotKey=viewer.anonymous!==true'), 'anonymous League users must not inherit the server Riot key');
 ok(app.includes("'x-league-workspace':workspaceId()"), 'League frontend must use browser workspace identity');
 ok(![html,app,css].some(source=>source.includes('gejast-auth-gate.js')||source.includes('gejast-home-gate.js')||source.includes('requireMatchEntrySession')||source.includes('/login.html')), 'Every League frontend artifact must remain public and outside Kalenel login/session gating');
-ok(backend.includes('objectiveDiagnosis:{presenceLow:objectivePresenceLow,primaryCause:objectivePrimaryCause?.key||null,causes:objectiveRootCauses}'), 'objective diagnosis must remain exported');
+ok(backend.includes('objectiveDiagnosis:{presenceLow:objectivePresenceLow,presenceBasis:"team_contested",primaryCause:objectivePrimaryCause?.key||null,causes:objectiveRootCauses}'), 'objective diagnosis must remain exported with its contested-presence basis');
 ok(backend.includes('goldSwingTo15'), 'clean solo-kill conversion must preserve gold swing to 15');
 ok(backend.includes('csSwingTo15'), 'clean solo-kill conversion must preserve CS swing to 15');
 ok(backend.includes('Number(x.goldSwingTo15)>=200'), 'clean solo-kill conversion threshold must remain +200g by 15');
