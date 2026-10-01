@@ -14,7 +14,10 @@ const base=String(process.env.GEJAST_BASE_URL||'https://kalenel.nl/').replace(/\
 const rootVersion=readRootVersion(root);
 const adminWorker=readAdminWorkerVersion(root);
 if(!/^v\d+$/i.test(adminWorker.pageVersion)||!adminWorker.build){
-  throw new Error('Could not resolve versioned admin Worker page owner');
+  throw new Error('Could not resolve admin Worker visible page version/build');
+}
+if(adminWorker.pageVersion!==rootVersion){
+  throw new Error(`Admin Worker visible page version ${adminWorker.pageVersion} must equal root VERSION ${rootVersion}`);
 }
 const routes=listPublishedRoutes(root);
 const concurrency=Math.max(1,Math.min(24,Number(process.env.GEJAST_LIVE_VERSION_CONCURRENCY||12)));

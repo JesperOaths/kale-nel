@@ -90,7 +90,8 @@ assert.ok(routes.length>pages.length,`published route inventory must include ind
 assert.deepEqual(duplicateRoutes,[],`duplicate published routes detected:\n${duplicateRoutes.join('\n')}`);
 assert.deepEqual(orphanIndependentOwners,[],`independent page version owners are not published HTML pages:\n${orphanIndependentOwners.join('\n')}`);
 assert.match(adminBuild,/^v\d+-[a-z0-9-]+$/i,'admin Worker build must expose a versioned page owner');
-assert.match(adminPageVersion,/^v\d+$/i,'admin Worker dynamic HTML page version must derive from ADMIN_BUILD');
+assert.match(adminPageVersion,/^v\d+$/i,'admin Worker dynamic HTML page version must be explicit');
+assert.equal(adminPageVersion,rootVersion,'admin Worker dynamic HTML must display the root site VERSION');
 assert.ok(dynamicWorkerWatermarks>=2,`admin Worker must watermark both generated HTML pages; found ${dynamicWorkerWatermarks}`);
 assert.doesNotMatch(versionWorkflow,/['"]\*\*\/\*\.mjs['"]/, 'page-version integrity must not be restarted by unrelated repository-wide .mjs checker churn');
 assert.match(versionWorkflow,/scripts\/wait-for-exact-pages-deployment\.mjs/, 'page-version integrity must retain active Pages surface verification');
@@ -99,6 +100,7 @@ assert.deepEqual(missing,[],`published pages missing a visible version watermark
 assert.deepEqual(ambiguous,[],`published pages expose multiple conflicting visible page versions:\n${ambiguous.join('\n')}`);
 assert.deepEqual(declarationDrift,[],`published pages have source declaration drift:\n${declarationDrift.join('\n')}`);
 assert.deepEqual(watermarkDrift,[],`published pages have visible watermark drift:\n${watermarkDrift.join('\n')}`);
-assert.deepEqual(gateDrift,[],`shared GEJAST pages have auth-gate version drift:\n${gateDrift.join('\n')}`);
+assert.deepEqual(gateDrift,[],`published pages have auth-gate version drift from root VERSION:\n${gateDrift.join('\n')}`);
 
+assert.equal(INDEPENDENT_PAGE_VERSIONS.size,0,'independent visible page versions are forbidden');
 console.log('RESULT=ALL_PUBLISHED_PAGE_VERSION_INTEGRITY_PASS');

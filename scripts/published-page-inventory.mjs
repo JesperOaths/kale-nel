@@ -14,21 +14,16 @@ export const NON_RUNTIME_HTML_PREFIXES = Object.freeze([
   'docs/',
 ]);
 
-export const INDEPENDENT_PAGE_VERSIONS = new Map([
-  ['admin_shop_analytics.html','v843'],
-  ['admin_shop_connection.html','v828'],
-  ['admin_shop_operations.html','v858'],
-  ['admin_shop_orders.html','v874'],
-  ['shop/index.html','v874'],
-]);
-
-export const INDEPENDENT_PAGE_PATHS = new Set(INDEPENDENT_PAGE_VERSIONS.keys());
+// Visible page versions are site-wide. Internal component/build revisions may differ,
+// but no published page owns an independent visible v#.
+export const INDEPENDENT_PAGE_VERSIONS = new Map();
+export const INDEPENDENT_PAGE_PATHS = new Set();
 export const ADMIN_WORKER_SOURCE_PATH = 'cloudflare/workers/admin-gate/src/worker.js';
 
 export function readAdminWorkerVersion(root=process.cwd()){
   const source=fs.readFileSync(path.join(root,ADMIN_WORKER_SOURCE_PATH),'utf8');
   const build=(source.match(/const\s+ADMIN_BUILD\s*=\s*['"]([^'"]+)['"]/)||[])[1]||'';
-  const pageVersion=(build.match(/^v\d+/i)||[])[0]?.toLowerCase()||'';
+  const pageVersion=(source.match(/const\s+ADMIN_PAGE_VERSION\s*=\s*['"](v\d+)['"]/i)||[])[1]?.toLowerCase()||'';
   const watermarkOwners=(source.match(/\$\{ADMIN_PAGE_VERSION\}\s*-\s*Made by Bruis/g)||[]).length;
   return {build,pageVersion,watermarkOwners,source};
 }
@@ -66,13 +61,13 @@ export function pageVersionDeclarations(body){
 }
 
 export function expectedPageVersion(rel, rootVersion){
-  const normalized=normalizeRepoPath(rel);
-  const root=String(rootVersion || '').trim().toLowerCase();
-  return INDEPENDENT_PAGE_VERSIONS.get(normalized) || root;
+  void rel;
+  return String(rootVersion || '').trim().toLowerCase();
 }
 
 export function isIndependentPageVersion(rel){
-  return INDEPENDENT_PAGE_PATHS.has(normalizeRepoPath(rel));
+  void rel;
+  return false;
 }
 
 export function pageRoutesForHtml(rel){

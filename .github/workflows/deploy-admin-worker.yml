@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy-admin-worker.yml'
+      - 'VERSION'
       - 'cloudflare/workers/admin-gate/**'
       - 'admin*.html'
       - '*_vault.html'
@@ -175,13 +176,18 @@ jobs:
           import fs from 'node:fs';
           const base = 'cloudflare/workers/admin-gate/static';
           const manifestPath = `${base}/admin-worker-manifest.json`;
+          const siteVersion = fs.readFileSync('VERSION', 'utf8').trim();
+          if (!/^v\d+$/.test(siteVersion)) throw new Error(`Invalid root VERSION: ${siteVersion}`);
           const expected = new Map([
-            ['admin_shop_orders.html', 'v874'],
-            ['admin_shop_connection.html', 'v828'],
-            ['admin_shop_analytics.html', 'v843'],
-            ['admin_shop_operations.html', 'v858'],
+            ['admin_shop_orders.html', siteVersion],
+            ['admin_shop_connection.html', siteVersion],
+            ['admin_shop_analytics.html', siteVersion],
+            ['admin_shop_operations.html', siteVersion],
           ]);
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          if (manifest.site_version !== siteVersion) {
+            throw new Error(`Admin bundle site_version mismatch: expected ${siteVersion}, got ${manifest.site_version || '<missing>'}`);
+          }
           const expectedMode = process.env.ADMIN_SOURCE_REPOSITORY ? 'external-private' : 'public-fallback';
           if (manifest.admin_source_mode !== expectedMode) {
             throw new Error(`Admin source mode mismatch: expected ${expectedMode}, got ${manifest.admin_source_mode}`);
@@ -193,7 +199,10 @@ jobs:
             const page = `${base}/${name}`;
             if (!fs.existsSync(page)) throw new Error(`${name} missing from Worker asset bundle`);
             const html = fs.readFileSync(page, 'utf8');
-            if (!html.includes(version)) throw new Error(`${name} asset is not ${version}`);
+            const declaration = new RegExp(`GEJAST_(?:PAGE|SITE)_VERSION\\s*=\\s*['\"]${version}['\"]`, 'i');
+            const watermark = new RegExp(`${version}\\s*[^\\w\\r\\n<>]{0,12}\\s*Made by Bruis`, 'i');
+            if (!declaration.test(html)) throw new Error(`${name} declaration is not ${version}`);
+            if (!watermark.test(html)) throw new Error(`${name} visible watermark is not ${version}`);
             if (!manifest.protected_entrypoints.includes(name)) {
               throw new Error(`${name} missing from protected entrypoint manifest`);
             }
@@ -225,7 +234,9 @@ jobs:
           [[ "$admin_status" == '401' ]] || { echo "Expected protected admin page to return 401 anonymously, got $admin_status" >&2; cat "$admin_headers" >&2; exit 1; }
           grep -qi '^cache-control: no-store' "$admin_headers" || { echo 'Missing no-store on protected admin response' >&2; exit 1; }
           grep -qi 'Admin login vereist' "$admin_body" || { echo 'Protected admin login body missing' >&2; exit 1; }
-          grep -Eqi 'v861[[:space:]]*-[[:space:]]*Made by Bruis' "$admin_body" || { echo 'Protected admin login page version watermark missing or stale' >&2; cat "$admin_body" >&2; exit 1; }
+          site_version="$(tr -d '\r\n[:space:]' < VERSION)"
+          [[ "$site_version" =~ ^v[0-9]+$ ]] || { echo "Invalid root VERSION: $site_version" >&2; exit 1; }
+          grep -Eqi "$site_version[[:space:]]*-[[:space:]]*Made by Bruis" "$admin_body" || { echo "Protected admin login page version watermark missing or stale; expected $site_version" >&2; cat "$admin_body" >&2; exit 1; }
           grep -qi '^x-kalenel-admin-build: v861-page-version-watermark' "$admin_headers" || { echo 'Live admin Worker build header is stale' >&2; cat "$admin_headers" >&2; exit 1; }
 
           connection_headers="$(mktemp)"

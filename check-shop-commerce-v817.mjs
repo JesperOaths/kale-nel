@@ -5,6 +5,7 @@ import { applyPrintifyVatReserveEurCents, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_
 import fs from 'node:fs';
 
 const read = path => fs.readFileSync(path, 'utf8');
+const siteVersion = read('VERSION').trim();
 const index = read('shop/index.html');
 const directCommerce = read('shop/direct-commerce-v832.js');
 const deliveryEstimate = read('shop/delivery-estimate-v833.js');
@@ -66,8 +67,8 @@ assert.match(toteHandleColor, /variantBoundMockups:\s*true/);
 assert.match(toteHandleColor, /sharedArtworkFirst:\s*true/);
 assert.match(toteHandleColor, /artwork\|print file\|design png/i);
 assert.match(toteHandleColor, /exactVariantSelection:\s*true/);
-assert.match(index, /GEJAST_PAGE_VERSION='v874'/);
-assert.match(index, /version-watermark[^>]*data-version-watermark[^>]*>v874 - Made by Bruis</);
+assert.ok(index.includes(`GEJAST_PAGE_VERSION='${siteVersion}'`));
+assert.match(index, new RegExp(`version-watermark[^>]*data-version-watermark[^>]*>${siteVersion} - Made by Bruis`));
 assert.match(index, /data-animal-filter/);
 assert.match(index, /data-animal-section/);
 const regularGridPos = index.indexOf('data-products');
