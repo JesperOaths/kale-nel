@@ -63,6 +63,27 @@ Do not mix ADC and SUPPORT behavior into one coaching average merely because bot
 
 Role-aware conclusions must use the normalized role.
 
+## Early lane outside pressure
+
+For **TOP and MID only**, the analyzer separates clean direct-role duel deaths from early home-lane deaths involving other enemy roles.
+
+A death enters this comparison when:
+- it occurs by 14 minutes,
+- the player's mapped position is in their normalized home lane,
+- the role is TOP or MID.
+
+An **outside-pressure death** means at least one enemy participant in the kill event is not the actual same-role opponent. The report preserves the attacker-role set where Riot participant data supports it.
+
+This is deliberately not applied to ADC/SUPPORT, because bot lane is structurally a multi-player lane and the same interpretation would be misleading.
+
+If outside-pressure deaths dominate a sufficiently large early-lane death sample, coaching should focus on:
+- wave depth while enemy positions are unknown,
+- ward timing before vulnerable waves,
+- jungle/support tracking,
+- whether a trade is still safe when outside pressure is missing from the map.
+
+This distinction prevents the report from misdiagnosing a map-awareness problem as a pure matchup-mechanics problem.
+
 ## Direct-role solo duels
 
 Timeline champion-kill events are also used to isolate **clean 1v1 outcomes against the actual same-role opponent**.
