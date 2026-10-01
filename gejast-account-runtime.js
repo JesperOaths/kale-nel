@@ -273,7 +273,7 @@
       const clean=normalizeNames(names);
       if(clean.length){
         fillSelect(sel,clean);
-        setStatus('statusBox',String(clean.length)+' actieve loginspeler(s) live bevestigd.','ok');
+        setStatus('statusBox',String(clean.length)+' actieve loginspeler(s) geladen. Live controle loopt op de achtergrond.','ok');
       } else if(seed.length){
         setStatus('statusBox',String(seed.length)+' actieve loginspeler(s) lokaal beschikbaar; live controle reageerde niet.','');
       } else {
