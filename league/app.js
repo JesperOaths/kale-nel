@@ -989,6 +989,8 @@ function renderAdvanced(r){
     ['First impact timing',hasNum(a.firstImpact?.avgDeltaVsOpponentMin)?signed(a.firstImpact.avgDeltaVsOpponentMin,1)+' min vs peer':'n/a'],
     ['Second major item timing',hasNum(r.behaviorSummary?.avgSecondMajorTime)?fmt(r.behaviorSummary.avgSecondMajorTime,1)+' min · '+String(r.behaviorSummary?.secondMajorGames??0)+' games':'n/a'],
     ['Second major timing vs peer',hasNum(r.behaviorSummary?.avgSecondMajorDeltaVsOpponent)?signed(r.behaviorSummary.avgSecondMajorDeltaVsOpponent,1)+' min · '+String(r.behaviorSummary?.secondMajorPeerGames??0)+' games':'n/a'],
+    ['Longest win / loss streak',String(r.outcomeStreaks?.longestWin??0)+' / '+String(r.outcomeStreaks?.longestLoss??0)],
+    ['Current result streak',r.outcomeStreaks?.currentResult?(String(r.outcomeStreaks.currentResult).toUpperCase()+' × '+String(r.outcomeStreaks?.currentLength??0)):'n/a'],
     ['Objective-context death %',fmtPct(a.objectiveDeathPct)],
     ['Bruisienator V21 DQI · effective pipeline',hasNum(r.behaviorSummary?.avgLegacyBruisienatorDqi)?fmt(r.behaviorSummary.avgLegacyBruisienatorDqi,2)+'/10':'n/a'],
     ['Death-consequence evidence coverage',fmtPct(r.behaviorSummary?.deathConsequenceCoveragePct)],
@@ -1077,7 +1079,8 @@ function renderAdvanced(r){
   for(const [family,x] of Object.entries(familySummary).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))){
     rows.push(['Objective · '+String(family).replaceAll('_',' '),String(x.joinedTeamEncounters??0)+' / '+String(x.teamEncounters??0)+' joined · '+fmtPct(x.teamJoinRate)+' · secured '+String(x.teamUnitsSecured??0)+' vs '+String(x.enemyUnitsSecured??0)]);
   }
-  $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('not recovered')||v==='n/a')).join('');
+  $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('not recovered')||v==='n/a')).join('')+
+    '<div class="source-note">Result streaks are descriptive contiguous outcomes within the eligible Last-20 sample; they are not treated as evidence of tilt, momentum, or player psychology.</div>';
   const p=r.peerComparison||{},conv=r.conversion||{},wl=r.winLoss||{},trend=r.recentTrend||{},session=r.sessionBehavior||{},base=r.coachingLifetime||null,s=r.coachingSummary||r.summary||{},rank=r.profile?.rank||null,rankBands=p.rankBands||{};
   const rankBandLine=(x)=>x&&Number(x.games)?String(x.games)+' games · @15 '+signed(x.avgGoldDiff15,0)+'g · DPM '+signed(x.avgDpmDelta,0):'n/a';
   const peerRows=[
