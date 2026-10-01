@@ -31,6 +31,10 @@ assert.ok(api.includes('structureInvolvement(o,frames,whoId,whoTeam,mapId)'),'St
 assert.ok(app.includes('Player-supported kill conversion')&&app.includes('Team conversion after your kill windows'),'Frontend must expose supported conversion and team context separately');
 assert.ok(api.includes('VERIFIED_2026_RULES_THROUGH_MINOR=19'),'2026 mechanics must have an explicit audited-through patch boundary');
 assert.ok(api.includes('minor>VERIFIED_2026_RULES_THROUGH_MINOR'),'Newer 2026 minors must fail closed rather than inherit stale mechanics');
+assert.ok(api.includes('objectiveTeamEncounters=validTimeline.reduce')&&api.includes('objectiveJoinedEncounters=validTimeline.reduce'),'Aggregate objective presence must pool event denominators across games');
+assert.ok(api.includes('objJoin=objectiveTeamEncounters?100*objectiveJoinedEncounters/objectiveTeamEncounters:null'),'Primary objective presence must be pooled rather than a mean of per-game percentages');
+assert.ok(api.includes('pooledMidRoutingObjectiveJoinRate=midRoutingTeamObjectives?100*midRoutingObjectiveJoins/midRoutingTeamObjectives:null'),'Mid-routing presence must pool objective-event denominators');
+assert.ok(api.includes('meanGameObjectiveJoinRate'),'Per-game objective-rate mean may remain only as a separate descriptive field');
 assert.ok(api.includes('championBehaviorModel'));
 assert.ok(api.includes('opponentMatchupBehaviorModel'));
 assert.ok(api.includes('buildReplayReviewQueue'));
@@ -377,7 +381,7 @@ assert.ok(api.includes('higherRankMajorItemGames'),'Higher-ranked peer item samp
 assert.ok(api.includes('higherRankAvgMajorItemDeltaMin'),'Higher-ranked peer first-major timing delta must remain exported');
 assert.ok(api.includes('higherRankMajorItemFasterPct'),'Higher-ranked peer first-major faster rate must remain exported');
 assert.ok(api.includes('First-major timing slips against higher-ranked direct opponents'),'Higher-rank item timing must remain actionable coaching evidence');
-assert.ok(api.includes('league-web-behavior-v4.43'),'Analyzer version must include the public-workspace and metric-hygiene refinements');
+assert.ok(api.includes('league-web-behavior-v4.44'),'Analyzer version must include the public-workspace, pooled-denominator and metric-hygiene refinements');
 assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
 assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
 assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
