@@ -114,6 +114,25 @@ The analyzer can compare:
 
 This is descriptive. Do not claim the gold state alone caused the win or loss.
 
+## Lead-protection deaths
+
+A separate lead-protection signal identifies deaths taken while the player is **materially ahead of the actual same-role opponent**.
+
+Current working threshold:
+- at least **+500 total gold** versus the direct role opponent at the death timestamp.
+
+For those deaths preserve:
+- role gold differential at death,
+- whether the death also crosses the multi-signal high-risk threshold,
+- current/unspent gold,
+- map zone,
+- whether an enemy objective follows,
+- where supported, the change in direct-role gold differential roughly one timeline frame later.
+
+A death while ahead is not automatically bad. The strongest coaching signal is a **high-risk death while ahead**, because it combines an earned resource advantage with avoidability evidence.
+
+Repeated high-risk lead deaths should be coached as **lead protection / comeback prevention**, not merely as a generic KDA problem.
+
 ## Death-quality heuristic
 
 Do **not** call every death bad.
