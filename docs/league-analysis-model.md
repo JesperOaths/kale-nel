@@ -232,7 +232,10 @@ For each band preserve at least:
 - percentage of games ahead on gold at 15,
 - average CS/min delta,
 - average DPM delta,
-- average VPM delta.
+- average VPM delta,
+- measurable first-major completion games,
+- average first-major timing delta versus the direct role opponent,
+- percentage of those games where the player's first major completes earlier.
 
 This lets the report distinguish "performance drops against stronger peers" from "inconsistency even against lower-ranked peers."
 
@@ -245,7 +248,11 @@ During Fetch / update, the newest 20 games may cache the current rank of the act
 Rank ordering is used only to classify whether that direct opponent is above the player's current rank. The report can then summarize the subset of actual higher-ranked peers:
 - average gold differential at 15,
 - percentage of those games where the player is ahead on gold at 15,
-- average DPM delta.
+- average DPM delta,
+- first-major completion timing versus that actual higher-ranked same-role opponent,
+- percentage of measurable games where the player's first major completes first.
+
+This directly restores the useful intent of historical "item spike vs rank above" analysis without inventing a static timing table. A first-major timing value exists only when both players have supported completion events in the same match.
 
 This is preferable to inventing a static "rank above" benchmark table.
 
