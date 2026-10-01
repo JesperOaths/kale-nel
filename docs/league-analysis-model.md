@@ -140,6 +140,26 @@ Do not invent a gold value for dragons, Baron, Herald, towers or plates.
 
 Objective-death percentage describes how often player deaths occur in objective context; it does not mean those deaths were necessarily wrong.
 
+## First meaningful map impact
+
+For each timeline-complete match, track the earliest supported meaningful impact for both the player and the actual same-role opponent.
+
+Supported first-impact events are:
+- champion kill or assist,
+- proximity to a tracked team objective event.
+
+The comparison is stored as:
+
+`player first impact minute - same-role opponent first impact minute`
+
+So:
+- negative = player impacts first,
+- positive = opponent impacts first.
+
+Aggregate coaching is currently restricted to roles where early map influence is a particularly useful decision signal (JUNGLE, SUPPORT, MID) and requires multiple comparable games.
+
+This is not a mechanical instruction to roam earlier. The coaching should point back to the decision window—lane priority, pathing, recall timing, or river setup—because sacrificing a high-value wave for an earlier timestamp can still be a bad play.
+
 ## Early involvement
 
 Early KP uses the player's kill/assist participation in the team's champion kills through approximately 14 minutes.
