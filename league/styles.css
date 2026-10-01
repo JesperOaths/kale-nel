@@ -32,7 +32,6 @@ body{
   color:var(--ink);
   background:
     linear-gradient(rgba(244,240,232,.82),rgba(244,240,232,.92)),
-    url('/site-bg-desktop.webp') 50% 0/100% auto no-repeat,
     var(--paper);
 }
 button,input,select{font:inherit}
@@ -491,7 +490,6 @@ body{
   padding:10px 10px 92px;
   background:
     linear-gradient(rgba(244,240,232,.82),rgba(244,240,232,.92)),
-    url('/site-bg-desktop.webp') 50% 0/100% auto no-repeat,
     var(--paper);
   background-attachment:scroll;
 }
