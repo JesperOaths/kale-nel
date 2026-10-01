@@ -83,7 +83,16 @@ assert.match(store, /S:24, M:24, L:24, XL:24, '2XL':26, '3XL':30, '4XL':30, '5XL
 assert.match(store, /price: baseKey === '6' && variantPrices\.length \? Math\.min/, 'classic-shirt card price must derive from normalized canonical variant prices');
 assert.doesNotMatch(store, /bruisCatalogLastGoodV1/, 'old browser catalog cache key must not remain active');
 assert.match(index, /catalog-last-good\.js\?v=20261001-stable-pricing-r3/, 'fallback catalog asset must be cache-busted after canonical pricing repair');
-assert.match(index, /store\.js\?v=20261001-static-first-r5/, 'store runtime must publish the deterministic static-first revision');
+assert.match(index, /store\.js\?v=20261001-static-first-r6/, 'store runtime must publish the resilient deterministic static-first revision');
+assert.match(index, /live-catalog-refresh-v818\.js\?v=20261001-cross-tab-r4/, 'shop must publish the reduced-pressure cross-tab refresh revision');
+assert.match(store, /function readCartSafe\(\)/, 'corrupt browser cart state must not abort the storefront before the static catalog renders');
+assert.match(store, /localStorage\.removeItem\(cartKey\)/, 'invalid saved cart JSON must be discarded safely');
+assert.match(store, /cache: 'default'/, 'background catalog reconciliation must allow browser HTTP caching instead of forcing no-store');
+assert.match(refresh, /const POLL_MS = 15 \* 60 \* 1000;/, 'live catalog reconciliation must not poll more often than every 15 minutes');
+assert.match(refresh, /const FIRST_POLL_MS = 5 \* 60 \* 1000;/, 'live catalog reconciliation must stay off initial render');
+assert.match(refresh, /const SHARED_MIN_REFRESH_MS = 10 \* 60 \* 1000;/, 'multiple shop tabs must share a long refresh floor');
+assert.match(catalogEdge, /const MEMORY_ROW_TTL_MS = 15 \* 60_000;/, 'catalog edge function must keep the large catalog row hot in-isolate');
+assert.match(catalogEdge, /max-age=300, stale-while-revalidate=1800/, 'catalog responses must be browser-cacheable to absorb stale-tab polling');
 assert.match(store, /ANIMAL_DESIGN_NAMES/);
 assert.match(store, /let showAnimalDesigns = true/);
 assert.match(store, /function isAnimalDesign\(product\)/);
