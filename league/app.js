@@ -582,12 +582,18 @@ function renderAdvanced(r){
     ['Fresh-purchase objective joins',String(r.behaviorSummary?.freshPurchaseObjectiveJoins??0)+' · '+fmtPct(r.behaviorSummary?.freshPurchaseObjectiveJoinRate)]
   ];
   $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('not recovered')||v==='n/a')).join('');
-  const p=r.peerComparison||{},conv=r.conversion||{},wl=r.winLoss||{},trend=r.recentTrend||{},session=r.sessionBehavior||{},base=r.coachingLifetime||null,s=r.coachingSummary||r.summary||{},rank=r.profile?.rank||null;
+  const p=r.peerComparison||{},conv=r.conversion||{},wl=r.winLoss||{},trend=r.recentTrend||{},session=r.sessionBehavior||{},base=r.coachingLifetime||null,s=r.coachingSummary||r.summary||{},rank=r.profile?.rank||null,rankBands=p.rankBands||{};
+  const rankBandLine=(x)=>x&&Number(x.games)?String(x.games)+' games · @15 '+signed(x.avgGoldDiff15,0)+'g · DPM '+signed(x.avgDpmDelta,0):'n/a';
   const peerRows=[
     metric('Peer definition',p.definition||'Same-role opponent in each match',false),
     metric('Comparable peer games',String(p.sameRoleGames??0),false),
     metric('Ranked peer games',String(p.rankedPeerGames??0),false),
     metric('Higher-ranked peer games',String(p.higherRankPeerGames??0),false),
+    metric('Same-rank peer games',String(p.sameRankPeerGames??0),false),
+    metric('Lower-ranked peer games',String(p.lowerRankPeerGames??0),false),
+    metric('Higher-rank band',rankBandLine(rankBands.higher),!(rankBands.higher&&Number(rankBands.higher.games))),
+    metric('Same-rank band',rankBandLine(rankBands.same),!(rankBands.same&&Number(rankBands.same.games))),
+    metric('Lower-rank band',rankBandLine(rankBands.lower),!(rankBands.lower&&Number(rankBands.lower.games))),
     metric('Gold @15 vs peer',hasNum(p.avgGoldDiff15)?signed(p.avgGoldDiff15,0)+'g':'n/a',!hasNum(p.avgGoldDiff15)),
     metric('Beat peer on gold @15',fmtPct(p.gold15OutperformPct),!hasNum(p.gold15OutperformPct)),
     metric('CS/min vs peer',hasNum(p.avgCsMinDelta)?signed(p.avgCsMinDelta,2):'n/a',!hasNum(p.avgCsMinDelta)),
