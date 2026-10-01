@@ -12,6 +12,15 @@ Security boundary:
 
 This keeps the analysis page publicly usable without turning the site's private Riot credential into a public API proxy.
 
+Public resource bounds:
+- workspace identifiers must be cryptographically random UUIDv4 or `lw1_` random-hex capability tokens,
+- up to 8 profiles per anonymous workspace,
+- up to 50 matches requested per public fetch,
+- retain at most 80 recent cached matches per profile,
+- retain at most 25 analysis runs and 20 fetch-run records per profile.
+
+These limits are storage/service hygiene rather than coaching rules. They do not apply to legacy authenticated internal workspaces.
+
 # Bruisienator web analysis model
 
 This file is the behavioral-analysis contract for `kalenel.nl/league`.
@@ -166,6 +175,23 @@ Choose the most common normalized role in the Last 20 as the primary coaching ro
 - champion-specific judgments compare champion+role samples with the player's own primary-role baseline.
 
 Do not mix ADC and SUPPORT behavior into one coaching average merely because both occurred in the Last 20.
+
+## Supported Summoner's Rift queues
+
+Map ID 11 alone is not enough to make a match mechanically comparable. Riot's queue registry also includes special modes, bots and legacy modes on Summoner's Rift.
+
+The coaching sample therefore admits only explicit supported current PvP queue families:
+- standard Draft Pick (400),
+- Ranked Solo (420),
+- Blind Pick (430),
+- Ranked Flex (440),
+- Quickplay (490),
+- Summoner's Rift Clash (700),
+- Swiftplay (480), kept as its own rules family.
+
+Other map-11 queues are cached only as raw history if fetched; they are excluded from the coaching/report cohort and their queue IDs are surfaced in Data Quality. An unknown future queue fails closed until reviewed.
+
+When multiple supported queues are present, the report still isolates the dominant queue instead of blending queue contexts. This prevents special-mode mechanics or different pacing assumptions from contaminating standard coaching.
 
 ## Verified mechanics boundary
 
@@ -811,6 +837,15 @@ When wins and losses have enough valid samples, the analyzer may report an assoc
 "early involvement is higher in wins."
 
 Use **associated with**, not causal wording.
+
+## Pooled event denominators
+
+Aggregate event-presence rates use pooled numerators and denominators rather than averaging per-game percentages.
+
+For example, Last-20 neutral-objective presence is:
+`sum(joined team objective encounters) / sum(team objective encounters)`.
+
+A game with one objective encounter therefore does not receive the same weight as a game with six. The analyzer keeps the mean of per-game percentages only as a separately labelled descriptive field. Mid-routing objective presence and win/loss objective-presence splits follow the same pooled-denominator principle.
 
 ## Objective-family evidence
 
