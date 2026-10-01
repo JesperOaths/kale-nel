@@ -253,7 +253,7 @@ assert.ok(app.includes('Primary supported cause'));
 assert.ok(app.includes('Vision-action deaths'));
 assert.ok(app.includes('Vision-action death rate'));
 assert.ok(app.includes('Sample exclusions'));
-assert.ok(html.includes('id="rank-comparison"')&&html.includes('Your shape vs ADC-adjusted rank benchmarks'),'Rank/matchup visual section must remain present');
+assert.ok(html.includes('id="rank-comparison"')&&html.includes('id="radarChart"')&&html.includes('id="rankBridge"')&&app.includes('function renderRankRadar(')&&app.includes('function renderRankBridge('),'Rank benchmark visual section and its renderers must remain present regardless of heading-copy refinements');
 assert.ok(html.includes('id="replayReviewPanel"')&&html.includes('Highest-value moments to rewatch'),'Replay review queue must remain present');
 assert.ok(app.includes('renderReplayReviewQueue'));
 assert.ok(app.includes('openReplayReviewMatch'));
