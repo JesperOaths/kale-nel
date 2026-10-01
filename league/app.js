@@ -647,7 +647,7 @@ function openReplayReviewMatch(matchId,tab){
   if(state.openMatch===index)state.openMatch=null;
   toggleGame(index);
   const row=$('gamesBody')?.querySelector('.game-row[data-match="'+CSS.escape(String(matchId))+'"]');
-  if(row)row.scrollIntoView({behavior:'smooth',block:'center'});
+  if(row)row.scrollIntoView({behavior:'auto',block:'center'});
 }
 function renderReplayReviewQueue(r){
   const box=$('replayReviewQueue'),panel=$('replayReviewPanel');if(!box||!panel)return;
