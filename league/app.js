@@ -229,7 +229,8 @@ async function fetchMatches(){
       await sleep(100);
     }
     const finish=await api('fetch_finish',{run_id:prep.run_id});
-    if(hasNum(finish?.dominant_queue_id))log('Comparable queue context: '+String(finish.dominant_queue_id)+' · '+String(finish.peer_rank_target_count??0)+' final-sample peer-rank targets · '+String(finish.peer_rank_backfilled??0)+' rank snapshots backfilled.','ok');
+    if(hasNum(finish?.dominant_queue_id))log('Comparable queue context: '+String(finish.dominant_queue_id)+' · '+String(finish.comparable_cached_games??finish.peer_rank_target_count??0)+' comparable cached games · '+String(finish.peer_rank_target_count??0)+' final-sample peer-rank targets · '+String(finish.peer_rank_backfilled??0)+' rank snapshots backfilled.','ok');
+    if(finish?.recommend_deeper_cache)log('Only '+String(finish.comparable_cached_games??0)+' comparable cached games are currently available after map/duration/queue filtering. Use the 100-match cache depth on the next update to give the Last 20 a better chance to fill completely.','bad');
     log('Fetch/update complete. Analyze remains a separate cached-data operation.','ok');
     statusPill('Fetch complete');
     await loadCacheStatus();
