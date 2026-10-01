@@ -58,7 +58,8 @@ permissions:
 
 concurrency:
   group: full-live-visual-audit-production
-  cancel-in-progress: true
+  # Finish one exhaustive campaign even when rapid frontend commits arrive; GitHub keeps only the newest pending run.
+  cancel-in-progress: false
 
 jobs:
   screenshot-every-page:
