@@ -400,6 +400,9 @@ assert.ok(api.includes('phaseExposureMinutes'),'Phase-risk comparisons must norm
 assert.ok(api.includes('macroTransitionMin:14')&&api.includes('roamEndMin:20'),'Standard macro-transition and roam windows must be rules-driven');
 assert.ok(api.includes('macroTransitionMin:12')&&api.includes('roamEndMin:12'),'Swiftplay side-lane timing must respect its accelerated macro transition');
 assert.ok(api.includes('macroTransitionSideLaneDeaths'),'Primary side-lane risk must be tied to a macro transition rather than falsely asserting lane phase ended');
+assert.ok(app.includes('Post-macro-transition side-lane deaths'),'Aggregate UI must use macro-transition terminology');
+assert.ok(!app.includes('Post-early-phase side-lane deaths'),'Retired post-early-phase side-lane wording must not return');
+assert.ok(api.includes('behavior?.macroTransitionSideLaneDeaths??behavior?.postLaneSideLaneDeaths'),'Coaching targets must consume the macro-transition counter before legacy aliases');
 assert.ok(api.includes('lane15Comparable:true')&&api.includes('fixed15to25Comparable:true')&&api.includes('closing25Comparable:true'),'Standard SR fixed checkpoint semantics must remain explicitly enabled');
 assert.ok(api.includes('lane15Comparable:false')&&api.includes('fixed15to25Comparable:false')&&api.includes('closing25Comparable:false'),'Accelerated/unverified rules must be able to suppress incompatible fixed-checkpoint coaching');
 assert.ok(api.includes('lane15ComparableGames'),'@15 lane aggregates must use an eligibility-filtered cohort');
@@ -532,7 +535,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v121'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v122'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1960px,calc(100% - 10px))'),'Retired near-edge-to-edge League shell must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
