@@ -1462,4 +1462,6 @@ Parity decisions:
 - **intentionally retired:** the first-pass invented `consequence_aware_v1` DQI score. Its evidence inputs remain useful, but arbitrary overlapping weights are not a trustworthy replacement metric;
 - **not fabricated:** AGOR stays unavailable because no defensible formula is present in the supplied source.
 
+The V21 report also computed longest/current win and loss streaks. The web analyzer restores these as descriptive Last-20 facts only: contiguous results are measured inside the eligible displayed sample, but they are never used as evidence of tilt, momentum, confidence, fatigue, or any other psychological state.
+
 When a legacy feature is superseded, preserve its underlying information need rather than duplicating a weaker heuristic under a second label. When a legacy consumer references data its producer never emitted, record that as an incomplete historical feature rather than silently inventing the missing data.
