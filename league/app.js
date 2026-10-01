@@ -635,7 +635,21 @@ function objectiveDiagnosisHtml(r){
 }
 function reportPhaseRules(g){
   const r=g?.phaseRules||{};
-  return{key:r.key||'legacy',earlyEndMin:hasNum(r.earlyEndMin)?Number(r.earlyEndMin):15,lateStartMin:hasNum(r.lateStartMin)?Number(r.lateStartMin):20};
+  return{
+    key:r.key||'legacy',
+    season:r.season||'unknown',
+    phaseComparable:r.phaseComparable!==false,
+    earlyEndMin:hasNum(r.earlyEndMin)?Number(r.earlyEndMin):14,
+    lateStartMin:hasNum(r.lateStartMin)?Number(r.lateStartMin):20,
+    baronSpawnMin:hasNum(r.baronSpawnMin)?Number(r.baronSpawnMin):null,
+    elderSpawnMin:hasNum(r.elderSpawnMin)?Number(r.elderSpawnMin):null,
+    suddenDeathMin:hasNum(r.suddenDeathMin)?Number(r.suddenDeathMin):null,
+    sourceBasis:r.sourceBasis||''
+  };
+}
+function plateTierText(x){
+  const p=x||{};
+  return 'outer '+String(p.outer??0)+' · inner '+String(p.inner??0)+' · inhibitor '+String(p.inhibitor??0)+' · nexus '+String(p.nexus??0)+(Number(p.unknown||0)?' · unknown '+String(p.unknown):'');
 }
 function modernOrLegacy(obj,modernKey,legacyKey,fallback=0){
   const m=obj?.[modernKey];if(m!==null&&m!==undefined)return m;
@@ -684,8 +698,12 @@ function detailContent(g,tab){
         '<li>'+esc(String(x.fightClusters??0))+' attended fight clusters · '+esc(String(x.firstAllyFightDeaths??0))+' first-allied-death events</li>'+
       '</ul></div>';
     };
-    return phase('early','Early · <'+rules.earlyEndMin+':00')+phase('mid','Transition · '+rules.earlyEndMin+':00–<'+rules.lateStartMin+':00')+phase('late','Late / major-objective era · ≥'+rules.lateStartMin+':00')+
-      '<div class="detail-note">Phase boundaries follow the stored queue/rules profile for this match. Aggregate phase-risk rates are normalized per 10 minutes of actual phase exposure, so a five-minute transition phase is not compared directly with a much longer late phase.</div>';
+    const collapsed=rules.earlyEndMin>=rules.lateStartMin;
+    const body=phase('early',(collapsed?'Pre-major-objective':'Early')+' · <'+rules.earlyEndMin+':00')+
+      (collapsed?'':phase('mid','Transition · '+rules.earlyEndMin+':00–<'+rules.lateStartMin+':00'))+
+      phase('late','Late / major-objective era · ≥'+rules.lateStartMin+':00');
+    const anchors=[hasNum(rules.baronSpawnMin)?'Baron '+rules.baronSpawnMin+':00':null,hasNum(rules.elderSpawnMin)?'Elder '+rules.elderSpawnMin+':00':null,hasNum(rules.suddenDeathMin)?'Sudden Death '+rules.suddenDeathMin+':00':null].filter(Boolean).join(' · ');
+    return body+'<div class="detail-note">Rules profile: '+esc(rules.key)+(anchors?' · '+esc(anchors):'')+'. '+(rules.phaseComparable?'Aggregate phase-risk rates are normalized per 10 minutes of actual phase exposure.':'This historical/future rules profile is kept visible but excluded from current phase-to-phase coaching comparisons.')+'</div>';
   }
   if(tab==='deaths'){
     const bad=g.badDeaths||[];
@@ -766,6 +784,8 @@ function detailContent(g,tab){
     detailCard('Early clean duel',String(modernOrLegacy(g.laneDuel,'earlySoloKillsVsRole','pre14SoloKillsVsRole'))+' solo kills / '+String(modernOrLegacy(g.laneDuel,'earlySoloDeathsToRole','pre14SoloDeathsToRole'))+' solo deaths')+
     detailCard('Plate involvement ≤20m',String(modernOrLegacy(g.structurePressure,'first20PlayerPlateInvolvement','first20PlayerPlateCredits'))+' vs '+String(modernOrLegacy(g.structurePressure,'first20OpponentPlateInvolvement','first20OpponentPlateCredits'))+' peer')+
     detailCard('Plate involvement · full match',String(modernOrLegacy(g.structurePressure,'allGamePlayerPlateInvolvement','allGamePlayerPlateCredits'))+' vs '+String(modernOrLegacy(g.structurePressure,'allGameOpponentPlateInvolvement','allGameOpponentPlateCredits'))+' peer')+
+    detailCard('Your plate tiers',g.structurePressure?.playerPlateByTier?plateTierText(g.structurePressure.playerPlateByTier):'legacy report')+
+    detailCard('Peer plate tiers',g.structurePressure?.opponentPlateByTier?plateTierText(g.structurePressure.opponentPlateByTier):'legacy report')+
     detailCard('Solo-kill structure conversion',String(g.structurePressure?.soloKillStructureConversions??0)+' / '+String(g.structurePressure?.soloKillWindows??0)+' · '+fmtPct(g.structurePressure?.soloKillStructureConversionRate))+
     detailCard('All-game clean duel',String(g.laneDuel?.soloKillsVsRole??0)+' / '+String(g.laneDuel?.soloDeathsToRole??0))+
     detailCard('Early home-lane deaths',String(modernOrLegacy(g.lanePressure,'earlyHomeLaneDeaths','pre14HomeLaneDeaths')))+
@@ -776,8 +796,8 @@ function detailContent(g,tab){
     detailCard('Session game #',g.sessionContext?.sessionGameNumber?String(g.sessionContext.sessionGameNumber):'n/a')+
     detailCard('Gap after previous game',hasNum(g.sessionContext?.gapAfterPreviousMin)?fmt(g.sessionContext.gapAfterPreviousMin,0)+' min':'n/a')+
     detailCard('Previous result',g.sessionContext?.previousWin===true?'WIN':g.sessionContext?.previousWin===false?'LOSS':'n/a')+
-    detailList((g.structurePressure?.events||[]).map(x=>(Number(x.killTime)||0).toFixed(1)+'m solo kill · '+(x.converted?('supported structure involvement'+(x.towerType?' · '+x.towerType:'')+(x.laneType?' · '+x.laneType:'')+(x.attribution?' · '+x.attribution.replaceAll('_',' '):'')+(hasNum(x.secondsAfter)?' · '+fmtInt(x.secondsAfter)+'s later':'')):'no supported plate/turret involvement within 90s')),'No early clean solo-kill structure window detected.')+
-    '<div class="detail-note">2026 turret plates no longer use the old 14:00 expiry assumption and can persist on deeper turrets. The ≤20m row is only a fixed coaching slice; full-match involvement is shown separately. Direct event credit is treated as provenance, while supported proximity is used when Riot does not attribute a plate event to a participant.</div>'+
+    detailList((g.structurePressure?.events||[]).map(x=>(Number(x.killTime)||0).toFixed(1)+'m solo kill · '+(x.converted?('supported structure involvement'+(x.towerType?' · '+x.towerType:'')+(x.laneType?' · '+x.laneType:'')+(x.attribution?' · '+String(x.attribution).replaceAll('_',' '):'')+(hasNum(x.secondsAfter)?' · '+fmtInt(x.secondsAfter)+'s later':'')):'no supported plate/turret involvement within 90s')),'No early clean solo-kill structure window detected.')+
+    '<div class="detail-note">2026 turret plates no longer use the old 14:00 expiry assumption and plate-style rewards extend through deeper turret tiers. The ≤20m row is only a fixed coaching slice; full-match involvement and the outer/inner/inhibitor/Nexus breakdown are shown separately. Direct event credit is preferred; when Riot omits participant credit, event-position proximity or same-lane timeline presence is retained as weaker supported evidence.</div>'+
     detailList((g.laneDuel?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+(x.result==='solo_kill'?'solo kill on role opponent':'solo death to role opponent')+(x.early?' · early phase':x.pre14?' · legacy pre-14':'')+(hasNum(x.goldDiffAtEvent)?' · role gold '+signed(x.goldDiffAtEvent,0)+'g at event':'')+(hasNum(x.goldSwingTo15)?' · '+signed(x.goldSwingTo15,0)+'g swing to 15':'')+(hasNum(x.csSwingTo15)?' · '+signed(x.csSwingTo15,0)+' CS swing to 15':'')+(x.result==='solo_kill'&&x.conversionEligibleTo15&&hasNum(x.convertedBy15)?(x.convertedBy15?' · converted by 15':' · not converted by 15'):'')+(x.result==='solo_kill'&&(x.early||x.pre14)&&hasNum(x.nextShopDelaySec)?' · next shop '+fmtInt(x.nextShopDelaySec)+'s':'')+(x.result==='solo_kill'&&(x.early||x.pre14)&&x.diedBeforeNextShop?' · died before shop':'')),'No clean direct-role solo duel event detected.')+
     detailList((g.lanePressure?.events||[]).filter(x=>x.outsidePressure).map(x=>(Number(x.time)||0).toFixed(1)+'m · outside pressure'+((x.outsideRoles||[]).length?' from '+x.outsideRoles.join(', '):'')+' · '+String(x.attackerCount||'?')+' attacker(s)'),'No early-phase outside-pressure lane death detected.')+
     '<div class="detail-note">Clean direct-role duel events require the player and actual same-role opponent to be killer/victim with no assisting participants. This separates direct matchup outcomes from outside intervention.</div>';
