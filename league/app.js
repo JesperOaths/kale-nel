@@ -348,6 +348,7 @@ function renderProgressComparison(current,previous,previousAt){
   const role=String(current?.summary?.primaryRole||'GENERIC').toUpperCase();
   const specs=[
     {label:'Gold @15 vs role opponent',path:'summary.goldDiff15',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
+    {label:'Early-lead give-back rate',path:'behaviorSummary.earlyLeadGivebackRate',threshold:15,direction:-1,format:v=>fmtPct(v)},
     {label:'Clean solo-kill conversion rate',path:'behaviorSummary.soloKillConversionRate',threshold:15,direction:1,format:v=>fmtPct(v)},
     {label:'Solo-kill structure conversion',path:'behaviorSummary.soloKillStructureConversionRate',threshold:15,direction:1,format:v=>fmtPct(v)},
     {label:'Deaths before shop after solo kill',path:'behaviorSummary.soloKillDeathsBeforeShopRate',threshold:15,direction:-1,format:v=>fmtPct(v)},
@@ -650,8 +651,11 @@ function detailContent(g,tab){
       detailList((spike.events||[]).map(x=>fmt(x.time,1)+'m · '+(x.type==='kill_or_assist'?'kill/assist impact':'objective impact'+(x.objectiveType?' · '+x.objectiveType:''))),'No tracked impact occurred inside the measurable first-major-item advantage window.')+
       detailList(greedy.map(x=>(Number(x.startMin)||0).toFixed(1)+'m · '+fmtInt(x.currentGold)+'g held · next shop '+(Number(x.nextShopMin)||0).toFixed(1)+'m ('+fmt(x.delayMin,1)+'m delay)'),'No repeated high-gold stay window detected.');
   }
-  const peer=g.peer||null;
+  const peer=g.peer||null,earlyLead=g.earlyLeadWindow||{};
   return detailCard('Gold diff @10',signed(g.goldDiff10,0))+detailCard('Gold diff @15',signed(g.goldDiff15,0))+detailCard('Gold diff @25',signed(g.goldDiff25,0))+
+    detailCard('Peak pre-15 role lead',earlyLead.eligible?(signed(earlyLead.peakGoldDiff,0)+'g @ '+fmt(earlyLead.peakMin,1)+'m'):'No ≥500g measured peak')+
+    detailCard('Peak → 15 gold swing',earlyLead.eligible?(signed(earlyLead.goldSwingTo15,0)+'g · '+(earlyLead.giveback?'give-back':earlyLead.preserved?'preserved':'partial erosion')):'n/a')+
+    detailCard('Deaths after early peak',earlyLead.eligible?(String(earlyLead.deathsAfterPeak??0)+' · '+String(earlyLead.highRiskDeathsAfterPeak??0)+' high-risk'):'n/a')+
     detailCard('CS diff @10',signed(g.csDiff10,0))+detailCard('CS diff @15',signed(g.csDiff15,0))+detailCard('CS diff @25',signed(g.csDiff25,0))+
     detailCard('XP diff @10',signed(g.xpDiff10,0))+detailCard('XP diff @15',signed(g.xpDiff15,0))+detailCard('XP diff @25',signed(g.xpDiff25,0))+
     detailCard('Opponent',peer?(peer.champion||'Same-role peer'):'n/a')+detailCard('Opponent rank',peer?rankText(peer.rank):'n/a')+
@@ -747,6 +751,11 @@ function renderAdvanced(r){
     ['Outside-pressure early lane deaths',String(r.behaviorSummary?.pre14OutsidePressureDeaths??0)],
     ['Outside-pressure share of early lane deaths',fmtPct(r.behaviorSummary?.pre14OutsidePressureShare)],
     ['All-game role solo kills / deaths',String(r.behaviorSummary?.roleSoloKills??0)+' / '+String(r.behaviorSummary?.roleSoloDeaths??0)],
+    ['≥500g pre-15 lead opportunities',String(r.behaviorSummary?.earlyLeadGames??0)],
+    ['Early-lead give-backs',String(r.behaviorSummary?.earlyLeadGivebackGames??0)+' / '+String(r.behaviorSummary?.earlyLeadGames??0)+' · '+fmtPct(r.behaviorSummary?.earlyLeadGivebackRate)],
+    ['Avg peak pre-15 role lead',hasNum(r.behaviorSummary?.avgEarlyLeadPeakGold)?signed(r.behaviorSummary.avgEarlyLeadPeakGold,0)+'g':'n/a'],
+    ['Avg peak → 15 role-gold swing',hasNum(r.behaviorSummary?.avgEarlyLeadGoldSwingTo15)?signed(r.behaviorSummary.avgEarlyLeadGoldSwingTo15,0)+'g':'n/a'],
+    ['Deaths during early-lead give-backs',String(r.behaviorSummary?.earlyLeadGivebackDeaths??0)+' · '+String(r.behaviorSummary?.earlyLeadGivebackHighRiskDeaths??0)+' high-risk'],
     ['First impact timing',hasNum(a.firstImpact?.avgDeltaVsOpponentMin)?signed(a.firstImpact.avgDeltaVsOpponentMin,1)+' min vs peer':'n/a'],
     ['Objective-context death %',fmtPct(a.objectiveDeathPct)],
     ['Death trade rate',fmtPct(r.behaviorSummary?.deathTradeRate)],
