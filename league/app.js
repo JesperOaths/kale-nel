@@ -1048,36 +1048,36 @@ function renderDecisionMetrics(r){
   ].join('');
   $('objectiveDiagnosisSummary').innerHTML=objectiveDiagnosisHtml(r);
 }
-function intelligenceCard(title,value,tone,body,evidence){
-  return '<article class="intelligence-card tone-'+tone+'"><div><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong></div><p>'+esc(body)+'</p><small>'+esc(evidence||'')+'</small></article>';
+function intelligenceCard(title,value,tone,body,evidence,evidenceReady=true){
+  return '<article class="intelligence-card tone-'+(evidenceReady?tone:'neutral')+(evidenceReady?'':' thin-evidence')+'"><div><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong></div><p>'+esc(body)+'</p><small>'+esc(evidence||'')+(evidenceReady?'':' · thin sample — descriptive only')+'</small></article>';
 }
 function renderCompoundSignals(r){
   const target=$('compoundSignals'),panel=$('compoundIntelligencePanel');if(!target||!panel)return;
-  const b=r.behaviorSummary||{},p=r.peerComparison||{},rows=[];
+  const b=r.behaviorSummary||{},p=r.peerComparison||{},rows=[],sampleGames=Number(r.coachingSummary?.games??r.summary?.games??0);
   if(hasNum(p.avgGoldDiff15)||hasNum(b.earlyLeadGivebackRate)){
-    const lead=Number(p.avgGoldDiff15||0),give=hasNum(b.earlyLeadGivebackRate)?Number(b.earlyLeadGivebackRate):null,leadDeaths=Number(b.highRiskLeadDeaths||0);
+    const lead=Number(p.avgGoldDiff15||0),give=hasNum(b.earlyLeadGivebackRate)?Number(b.earlyLeadGivebackRate):null,leadDeaths=Number(b.highRiskLeadDeaths||0),n=Number(b.earlyLeadGames||0),ready=n>=4;
     const tone=give==null?'neutral':give<=30?'good':give>=50?'bad':'neutral';
-    rows.push(intelligenceCard('Lead → preservation',hasNum(p.avgGoldDiff15)?signed(p.avgGoldDiff15,0)+'g @15':'Lead sample',tone,(lead>150?'You usually create a role lead. ':'')+(give==null?'There is not yet enough lead-preservation evidence.':give.toFixed(0)+'% of measured ≥500g early leads were given back by 15.')+(leadDeaths?' '+leadDeaths+' high-risk death(s) occurred while materially ahead.':''),String(b.earlyLeadGames??0)+' lead games · combines lane state + subsequent risk'));
+    rows.push(intelligenceCard('Lead → preservation',hasNum(p.avgGoldDiff15)?signed(p.avgGoldDiff15,0)+'g @15':'Lead sample',tone,(lead>150?'You usually create a role lead. ':'')+(give==null?'There is not yet enough lead-preservation evidence.':give.toFixed(0)+'% of measured ≥500g early leads were given back by 15.')+(leadDeaths?' '+leadDeaths+' high-risk death(s) occurred while materially ahead.':''),n+' lead games · analyzer threshold 4 · combines lane state + subsequent risk',ready));
   }
   const mid=b.midRouting||{};
   if(hasNum(mid.avgCsSwing15to25)||hasNum(mid.avgObjectiveJoinRate)){
-    const cs=hasNum(mid.avgCsSwing15to25)?Number(mid.avgCsSwing15to25):null,obj=hasNum(mid.avgObjectiveJoinRate)?Number(mid.avgObjectiveJoinRate):null,side=Number(b.preNeutralObjectiveSideLaneDeaths||0);
+    const cs=hasNum(mid.avgCsSwing15to25)?Number(mid.avgCsSwing15to25):null,obj=hasNum(mid.avgObjectiveJoinRate)?Number(mid.avgObjectiveJoinRate):null,side=Number(b.preNeutralObjectiveSideLaneDeaths||0),n=Number(mid.games||0),ready=n>=4;
     const tone=side>=3?'bad':cs!=null&&cs>=0&&obj!=null&&obj>=50?'good':'neutral';
-    rows.push(intelligenceCard('Farm ↔ map trade-off',(cs!=null?signed(cs,1)+' CS 15→25':'Routing sample'),tone,(cs!=null?'Your direct-role CS differential changes '+signed(cs,1)+' between 15 and 25. ':'')+(obj!=null?'Supported objective presence in comparable routing games is '+fmtPct(obj)+'. ':'')+(side?side+' isolated side-lane death(s) happened shortly before a neutral objective.':'No repeated pre-objective side-lane death pattern is currently measured.'),String(mid.games??0)+' comparable routing games · combines farm gain + objective reconnect timing'));
+    rows.push(intelligenceCard('Farm ↔ map trade-off',(cs!=null?signed(cs,1)+' CS 15→25':'Routing sample'),tone,(cs!=null?'Your direct-role CS differential changes '+signed(cs,1)+' between 15 and 25. ':'')+(obj!=null?'Supported objective presence in comparable routing games is '+fmtPct(obj)+'. ':'')+(side?side+' isolated side-lane death(s) happened shortly before a neutral objective.':'No repeated pre-objective side-lane death pattern is currently measured.'),n+' comparable routing games · analyzer threshold 4 · combines farm gain + objective reconnect timing',ready));
   }
   if(hasNum(p.avgMajorItemDeltaMin)||hasNum(p.itemSpikeUtilizationRate)){
-    const delta=hasNum(p.avgMajorItemDeltaMin)?Number(p.avgMajorItemDeltaMin):null,use=hasNum(p.itemSpikeUtilizationRate)?Number(p.itemSpikeUtilizationRate):null,died=Number(p.itemSpikeDeathsBeforeImpact||0);
+    const delta=hasNum(p.avgMajorItemDeltaMin)?Number(p.avgMajorItemDeltaMin):null,use=hasNum(p.itemSpikeUtilizationRate)?Number(p.itemSpikeUtilizationRate):null,died=Number(p.itemSpikeDeathsBeforeImpact||0),timingN=Number(p.majorItemGames||0),windowN=Number(p.itemSpikeEligibleWindows||0),ready=use==null?timingN>=4:windowN>=4;
     const tone=use==null?'neutral':use>=60?'good':use<35?'bad':'neutral';
-    rows.push(intelligenceCard('Item timing → impact',(delta!=null?signed(delta,1)+' min vs role':'Power window'),tone,(delta!=null?(delta<0?'Your first major usually arrives earlier. ':'Your first major usually arrives later. '):'')+(use!=null?fmtPct(use)+' of measurable earlier-item windows produced tracked impact before role-opponent parity. ':'')+(died?died+' window(s) ended in death before tracked impact.':''),String(p.majorItemGames??0)+' timing games · '+String(p.itemSpikeEligibleWindows??0)+' usable power windows'));
+    rows.push(intelligenceCard('Item timing → impact',(delta!=null?signed(delta,1)+' min vs role':'Power window'),tone,(delta!=null?(delta<0?'Your first major usually arrives earlier. ':'Your first major usually arrives later. '):'')+(use!=null?fmtPct(use)+' of measurable earlier-item windows produced tracked impact before role-opponent parity. ':'')+(died?died+' window(s) ended in death before tracked impact.':''),timingN+' timing games · '+windowN+' usable power windows · analyzer threshold 4',ready));
   }
   if(hasNum(b.damageGoldEfficiency)||hasNum(b.preContributionFightDeathRate)){
-    const eff=hasNum(b.damageGoldEfficiency)?Number(b.damageGoldEfficiency):null,pre=hasNum(b.preContributionFightDeathRate)?Number(b.preContributionFightDeathRate):null,surv=hasNum(b.fightSurvivalRate)?Number(b.fightSurvivalRate):null;
+    const eff=hasNum(b.damageGoldEfficiency)?Number(b.damageGoldEfficiency):null,pre=hasNum(b.preContributionFightDeathRate)?Number(b.preContributionFightDeathRate):null,surv=hasNum(b.fightSurvivalRate)?Number(b.fightSurvivalRate):null,fights=Number(b.fightSamples||0),ready=fights>=8&&sampleGames>=5;
     const tone=pre!=null&&pre>=30?'bad':eff!=null&&eff>=2&&surv!=null&&surv>=60?'good':'neutral';
-    rows.push(intelligenceCard('Resources → fight uptime',eff!=null?signed(eff,1)+' pp damage−gold':'Fight conversion',tone,(eff!=null?'Damage share minus gold share is '+signed(eff,1)+' percentage points. ':'')+(pre!=null?'You die before tracked contribution in '+fmtPct(pre)+' of attended fight clusters. ':'')+(surv!=null?'Fight survival is '+fmtPct(surv)+'.':''),String(b.fightSamples??0)+' fight clusters · combines resource share + survival + contribution timing'));
+    rows.push(intelligenceCard('Resources → fight uptime',eff!=null?signed(eff,1)+' pp damage−gold':'Fight conversion',tone,(eff!=null?'Damage share minus gold share is '+signed(eff,1)+' percentage points. ':'')+(pre!=null?'You die before tracked contribution in '+fmtPct(pre)+' of attended fight clusters. ':'')+(surv!=null?'Fight survival is '+fmtPct(surv)+'.':''),fights+' fight clusters · '+sampleGames+' coaching games · thresholds 8 fights / 5 games',ready));
   }
   if(hasNum(b.repeatDeathRate)){
-    const mine=Number(b.repeatDeathRate),peer=hasNum(b.opponentRepeatDeathRate)?Number(b.opponentRepeatDeathRate):null,costly=Number(b.costlyRepeatDeaths||0),tone=mine>=60?'bad':mine<=30?'good':'neutral';
-    rows.push(intelligenceCard('Death → recovery stability',fmtPct(mine)+' repeat-death rate',tone,'After a death, '+fmtPct(mine)+' of measured opportunities become another death within four minutes.'+(peer!=null?' Direct-role opponents are at '+fmtPct(peer)+'.':'')+(costly?' '+costly+' repeat death(s) also had measurable costly aftermath.':''),String(b.repeatDeathOpportunities??0)+' recovery opportunities · combines recurrence + consequence'));
+    const mine=Number(b.repeatDeathRate),peer=hasNum(b.opponentRepeatDeathRate)?Number(b.opponentRepeatDeathRate):null,costly=Number(b.costlyRepeatDeaths||0),n=Number(b.repeatDeathOpportunities||0),ready=n>=8,tone=mine>=60?'bad':mine<=30?'good':'neutral';
+    rows.push(intelligenceCard('Death → recovery stability',fmtPct(mine)+' repeat-death rate',tone,'After a death, '+fmtPct(mine)+' of measured opportunities become another death within four minutes.'+(peer!=null?' Direct-role opponents are at '+fmtPct(peer)+'.':'')+(costly?' '+costly+' repeat death(s) also had measurable costly aftermath.':''),n+' recovery opportunities · analyzer threshold 8 · combines recurrence + consequence',ready));
   }
   panel.hidden=!rows.length;target.innerHTML=rows.join('');
 }
