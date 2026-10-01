@@ -8,7 +8,6 @@ on:
     paths:
       - '**/*.html'
       - '**/*.js'
-      - '**/*.mjs'
       - '**/*.css'
       - 'VERSION'
       - 'check-version-drift.mjs'
@@ -24,7 +23,6 @@ on:
     paths:
       - '**/*.html'
       - '**/*.js'
-      - '**/*.mjs'
       - '**/*.css'
       - 'VERSION'
       - 'check-version-drift.mjs'
