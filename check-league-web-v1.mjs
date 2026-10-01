@@ -296,6 +296,7 @@ assert.ok(app.includes('LEAGUE_SLOT_SELECTION_KEY')&&!app.includes('LEAGUE_PROFI
 assert.ok(api.includes('positionEvidence:pxy?"event_position":inferred?"nearest_player_frame_35s":"unavailable"')&&api.includes('wardFrameProjectedPositions'),'Ward events without native coordinates must remain counted and transparently projectable from a ≤35s player frame');
 assert.ok(html.includes('Death-pattern intelligence')&&app.includes('function deathPatternEntries(')&&app.includes('objective_side_lane')&&app.includes('vision_facecheck')&&app.includes('post_play_giveback'),'Aggregate risky-death cloud must remain replaced by evidence-based repeated death-pattern maps');
 assert.ok(app.includes('<b>Do differently:</b>')&&app.includes('Explain these deaths'),'Each death-pattern map must explain the pattern, list its deaths and give a concrete alternative');
+assert.ok(app.includes('deathPatternMap(examples)')&&app.includes('map numbers match this list'),'Death-pattern marker numbering must use the exact same ordering as its explanation list');
 assert.ok(html.includes('id="compoundSignals"')&&app.includes('function renderCompoundSignals('),'Combined-evidence intelligence must remain visible');
 assert.ok(app.includes("objDiagnosed?tonePct(objective,70,45,false):'neutral'"),'Objective attendance must not be generically red-scored for roles without a supported diagnosis');
 assert.ok(html.includes('id="rankRadarPanel"')&&app.includes("reportRole!=='ADC'"),'ADC population benchmark panel must be hidden for non-ADC selected roles');
@@ -497,7 +498,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v114'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v115'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
