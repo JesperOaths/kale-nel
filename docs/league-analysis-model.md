@@ -229,6 +229,23 @@ Also preserve **fresh-purchase joins** where the player attends the objective wi
 
 The shop event is an approximation based on Riot item-purchase events, not an exact recall-channel timestamp.
 
+## Death trade context
+
+A death can still be high-risk even when teammates trade it back, but the immediate strategic cost is different from an untraded death.
+
+A death counts as **traded** only when:
+- an ally kills an enemy after the player's death,
+- the return kill occurs within 15 seconds,
+- the return kill is spatially near the death (within roughly 3500 world units).
+
+Preserve:
+- traded death count,
+- overall death trade rate,
+- high-risk untraded death count,
+- per-game high-risk untraded deaths.
+
+A nearby return kill should soften the interpretation of the death, not erase the original risk evidence. An **untraded high-risk death** is a stronger improvement signal because the opposing team receives tempo/value without an immediate exchange.
+
 ## Objective context
 
 Tracked objective events include supported elite-monster/building events from the Riot timeline.
