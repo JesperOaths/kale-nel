@@ -23,6 +23,9 @@ ok(backend.includes('reaches25=Number(match?.info?.gameDuration||0)>=25*60'), '@
 ok(backend.includes('frameNearMinute(frames,25,45000)'), '@25 metrics must use a frame close to 25 minutes');
 ok(backend.includes('d.tMs+75000'), 'pre-objective conversion window must remain explicit');
 ok(backend.includes('impactDeltaVsOpponent'), 'direct-peer first-impact comparison must remain in analyzer');
+ok(backend.includes('roam.laneCostCs='), 'roam lane-cost comparison must remain in analyzer');
+ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
+ok(backend.includes('function deathArea('), 'spatial death-context classification must remain in analyzer');
 ok(backend.includes('peer_rank_json'), 'same-role peer rank cache must remain available');
 ok(backend.includes('x-riot-api-key'), 'session Riot-key header must remain supported by backend/CORS');
 ok(!/localStorage|sessionStorage|indexedDB/.test(app), 'Riot key or League state must not be persisted in browser storage');
