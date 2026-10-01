@@ -109,9 +109,17 @@ async function exercise({ scope = 'friends', activeResponse, selectorResponse })
   );
   for (const { url, init } of safeReaderCalls) {
     assert.equal(init.method, 'POST', `${url} must use POST`);
+    const headers = new Headers(init.headers || {});
+    assert.equal(headers.get('apikey'), 'publishable-test-key', `${url} must retain the public API key`);
+    assert.equal(headers.get('Authorization'), null, `${url} must not pretend an opaque publishable key is a JWT`);
     const payload = JSON.parse(init.body || '{}');
     assert.equal(payload.site_scope_input, scope, `${url} must preserve site scope`);
   }
+  const authCall = nativeCalls.find(({ url }) => url.includes('/rest/v1/rpc/account_public_state_v687'));
+  assert.ok(authCall, 'auth validation RPC must reach the public data API');
+  const authHeaders = new Headers(authCall.init.headers || {});
+  assert.equal(authHeaders.get('apikey'), 'publishable-test-key');
+  assert.equal(authHeaders.get('Authorization'), null, 'auth validation must not force opaque public API keys into Authorization');
 
   for (const rpcName of ['get_game_player_names_fast_v687', 'get_profiles_fast_v687']) {
     const callerController = new AbortController();
