@@ -97,7 +97,7 @@ assert.ok(app.includes('Prior-frame objective setup'));
 assert.ok(app.includes('Vision-action deaths'));
 assert.ok(app.includes('Vision-action death rate'));
 assert.ok(app.includes('Sample exclusions'));
-assert.ok(app.includes('Repeated opponent matchups'));
+assert.ok(html.includes('Repeated opponent matchups'));
 assert.ok(app.includes('Queue context'));
 assert.ok(app.includes('Patch context'));
 assert.ok(app.includes('Same-patch self baseline'));
