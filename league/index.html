@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends playstyle analysis with evidence-backed Last-20 coaching and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261002-league-web-v135">
+  <link rel="stylesheet" href="/league/styles.css?v=20261002-league-web-v136">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261001-public-bootstrap-r2"></script>
 </head>
@@ -179,10 +179,18 @@
           <a href="#technical-analysis">Technical detail</a>
         </nav>
 
+        <section class="panel report-driver-panel" id="report-driver">
+          <div class="section-head">
+            <div><p class="eyebrow">Read this first</p><h2>What should drive the next games?</h2></div>
+            <span class="section-hint">The strongest supported limiter, strength and short-window direction come first. Everything below exists to explain or challenge these conclusions.</span>
+          </div>
+          <div class="report-driver-grid" id="reportDrivers"></div>
+        </section>
+
         <section class="panel quick-read-panel">
           <div class="section-head">
-            <div><p class="eyebrow">Read this first</p><h2>What the Last 20 actually says</h2></div>
-            <span class="section-hint">Every comparison below is directional: green is favorable, red is unfavorable, grey is too close or too thin to call.</span>
+            <div><p class="eyebrow">Direct-role comparison</p><h2>How do you compare with the actual role opponent?</h2></div>
+            <span class="section-hint">Per-game same-role opponents only. This is separate from the population-rank reference farther down the page.</span>
           </div>
           <div class="quick-read-grid" id="quickRead"></div>
           <div class="recent-pulse">
@@ -191,15 +199,13 @@
           </div>
         </section>
 
-        <section class="panel report-driver-panel" id="report-driver">
-          <div class="section-head">
-            <div><p class="eyebrow">What should drive the next games?</p><h2>Three things to act on first</h2></div>
-            <span class="section-hint">The report compresses its strongest supported weakness, strength and recent direction here before the deeper evidence.</span>
+        <section class="panel sample-kpi-panel">
+          <div class="section-head compact-head">
+            <div><p class="eyebrow">Your sample</p><h2>Raw selected-role output</h2></div>
+            <span class="section-hint">These are your own coaching-cohort averages. No external benchmark or opponent adjustment is applied here.</span>
           </div>
-          <div class="report-driver-grid" id="reportDrivers"></div>
+          <div class="kpi-grid" id="kpiGrid" aria-label="Raw selected-role key performance indicators"></div>
         </section>
-
-        <section class="kpi-grid" id="kpiGrid" aria-label="Role-aware key performance indicators"></section>
 
         <section class="panel outcome-fingerprint-panel" id="outcome-fingerprint">
           <div class="section-head">
@@ -441,6 +447,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261002-league-web-v135" defer></script>
+  <script src="/league/app.js?v=20261002-league-web-v136" defer></script>
 </body>
 </html>
