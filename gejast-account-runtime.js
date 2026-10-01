@@ -278,17 +278,17 @@
       setStatus('statusBox','Actieve loginnamen laden...','');
     }
     getLoginNames().then((names)=>{
-      const clean=normalizeNames(names);
-      if(clean.length){
-        fillSelect(sel,clean);
-        setStatus('statusBox',String(clean.length)+' actieve loginspeler(s) geladen. Live controle loopt op de achtergrond.','ok');
+      const clean=normalizeNames(names),merged=normalizeNames([...seed,...clean,...domSeedNames(sel)]);
+      if(merged.length){
+        fillSelect(sel,merged);
+        setStatus('statusBox',String(merged.length)+' actieve loginspeler(s) beschikbaar. Live controle loopt op de achtergrond.','ok');
       } else if(seed.length){
         setStatus('statusBox',String(seed.length)+' actieve loginspeler(s) lokaal beschikbaar; live controle reageerde niet.','');
       } else {
         setStatus('statusBox','Geen actieve loginnamen ontvangen. Controleer of de login-SQL is uitgerold of open Naam aanvragen als je nog geen pincode hebt.','warn');
       }
     }).catch((err)=>{ setStatus('statusBox', seed.length ? 'Live naamcontrole reageerde niet; de lokale actieve namen blijven beschikbaar.' : friendly(err), seed.length ? '' : 'warn'); });
-    window.addEventListener('gejast:login-names-refreshed',(event)=>{ const names=normalizeNames(event?.detail?.names||[]); if(!names.length) return; fillSelect(sel,names); setStatus('statusBox',String(names.length)+' actieve loginspeler(s) bijgewerkt.','ok'); });
+    window.addEventListener('gejast:login-names-refreshed',(event)=>{ const names=normalizeNames(event?.detail?.names||[]); if(!names.length) return; const merged=normalizeNames([...seed,...domSeedNames(sel),...names]); fillSelect(sel,merged); setStatus('statusBox',String(merged.length)+' actieve loginspeler(s) beschikbaar; live lijst samengevoegd zonder lokale namen te wissen.','ok'); });
     const checkExistingSession=()=>getPublicState().then((st)=>{ if(st?.my_name||st?.display_name||st?.player_name) setStatus('statusBox',`Deze browser heeft al een sessie voor ${st.my_name||st.display_name||st.player_name}.`,'ok'); }).catch(()=>{});
     if('requestIdleCallback' in window) window.requestIdleCallback(checkExistingSession,{timeout:6000}); else setTimeout(checkExistingSession,4000);
     form.addEventListener('submit', async(ev)=>{ ev.preventDefault(); const name=String(sel.value||'').trim(); const p=String(pin.value||'').replace(/\D/g,'').slice(0,4); if(!name) return setStatus('statusBox','Kies eerst je naam.','warn'); if(!/^\d{4}$/.test(p)) return setStatus('statusBox','Voer je 4-cijferige pincode in.','warn'); try{ setBusy(form,true); setStatus('statusBox','Inloggen...'); const out=await login({name,pin:p}); setStatus('statusBox',`Ingelogd als ${out.display_name||out.player_name||name}.`,'ok'); setTimeout(()=>location.href=loginReturnTarget(),350); }catch(err){ setStatus('statusBox',friendly(err),'warn'); }finally{ setBusy(form,false); } });
