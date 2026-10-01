@@ -298,7 +298,9 @@ function renderProgressComparison(current,previous,previousAt){
     {label:'High-risk deaths / game',path:'behaviorSummary.badDeathsPerTimelineGame',threshold:.3,direction:-1,format:v=>fmt(v,1)},
     {label:'First major item vs peer',path:'peerComparison.avgMajorItemDeltaMin',threshold:.4,direction:-1,format:v=>signed(v,1)+' min'},
     {label:'Damage share − gold share',path:'behaviorSummary.damageGoldEfficiency',threshold:2,direction:1,format:v=>signed(v,1)+' pp'},
-    {label:'First allied death rate',path:'behaviorSummary.firstAllyFightDeathRate',threshold:10,direction:-1,format:v=>fmtPct(v)}
+    {label:'First allied death rate',path:'behaviorSummary.firstAllyFightDeathRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
+    {label:'Unspent-gold fight starts',path:'behaviorSummary.highUnspentFightRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
+    {label:'Major-item disadvantage fights',path:'behaviorSummary.itemDisadvantageFightRate',threshold:10,direction:-1,format:v=>fmtPct(v)}
   ];
   if(['ADC','MID','TOP'].includes(role))specs.splice(1,0,{label:'CS / min',path:'summary.csMin',threshold:.3,direction:1,format:v=>fmt(v,2)});
   if(['SUPPORT','JUNGLE'].includes(role))specs.push({label:'Objective presence',path:'advanced.objectivePresence',threshold:10,direction:1,format:v=>fmtPct(v)});
@@ -387,7 +389,10 @@ function detailContent(g,tab){
     const f=g.fightProfile||{},events=f.events||[];
     return detailCard('Attended fight clusters',String(f.attended??0))+detailCard('First allied death',String(f.firstAllyDeaths??0)+' · '+fmtPct(f.firstAllyDeathRate))+
       detailCard('Died before contribution',String(f.diedBeforeContribution??0)+' · '+fmtPct(f.diedBeforeContributionRate))+detailCard('Fight survival',fmtPct(f.survivalRate))+
-      detailList(events.slice(0,10).map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+String(x.kills||0)+' kills · '+(x.survived?'survived':x.firstAllyDeath?'first ally death':x.diedBeforeContribution?'died before contribution':'died after contribution')),'No attended multi-kill fight clusters were detected.');
+      detailCard('≥1000g unspent starts',String(f.highUnspentStarts??0)+' · '+fmtPct(f.highUnspentStartRate))+detailCard('Major-item disadvantage starts',String(f.itemDisadvantageStarts??0)+' · '+fmtPct(f.itemDisadvantageStartRate))+
+      detailCard('≥600g role deficit starts',String(f.goldDeficitStarts??0)+' · '+fmtPct(f.goldDeficitStartRate))+
+      detailList(events.slice(0,10).map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+String(x.kills||0)+' kills · '+(x.survived?'survived':x.firstAllyDeath?'first ally death':x.diedBeforeContribution?'died before contribution':'died after contribution')+
+        (hasNum(x.currentGoldAtStart)?' · '+fmtInt(x.currentGoldAtStart)+'g unspent':'')+(hasNum(x.goldDiffAtStart)?' · role gold '+signed(x.goldDiffAtStart,0)+'g':'')+(x.itemDisadvantage?' · opponent major item first':'')),'No attended multi-kill fight clusters were detected.');
   }
   if(tab==='deaths'){
     const bad=g.badDeaths||[];
@@ -477,6 +482,9 @@ function renderAdvanced(r){
     ['First allied death in fights',fmtPct(r.behaviorSummary?.firstAllyFightDeathRate)],
     ['Died before contribution',fmtPct(r.behaviorSummary?.preContributionFightDeathRate)],
     ['Fight survival',fmtPct(r.behaviorSummary?.fightSurvivalRate)],
+    ['Fight starts with ≥1000g unspent',String(r.behaviorSummary?.highUnspentFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.highUnspentFightRate)],
+    ['Fight starts down major item',String(r.behaviorSummary?.itemDisadvantageFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.itemDisadvantageFightRate)],
+    ['Fight starts ≥600g down vs role',String(r.behaviorSummary?.goldDeficitFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.goldDeficitFightRate)],
     ['Objective-setup vision Δ',hasNum(a.visionSetup?.avgDeltaVsOpponent)?signed(a.visionSetup.avgDeltaVsOpponent,1)+' wards vs peer':'n/a']
   ];
   $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('not recovered')||v==='n/a')).join('');
