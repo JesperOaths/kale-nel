@@ -74,7 +74,6 @@ async function api(action,payload={}){
 function setBusy(on,label){
   state.busy=!!on;
   const run=$('loadRecentBtn');if(run)run.disabled=!!on||!directRequestComplete();
-  const imp=$('importBtn');if(imp)imp.disabled=!!on||!state.profile||!$('reportFile')?.files?.length;
   if(label)$('progressState').textContent=label;
 }
 function setProgress(current,total){
@@ -273,37 +272,8 @@ async function boot(){
   }
   await loadRequestDefaults();
 }
-function batchSelectedIds(){
-  return [...($('batchProfiles')?.querySelectorAll('input[data-profile-id]:checked')||[])].map(n=>String(n.dataset.profileId||'')).filter(Boolean);
-}
-function renderBatchProfiles(){
-  const box=$('batchProfiles');if(!box)return;
-  const previous=new Set(batchSelectedIds());
-  box.innerHTML=state.profiles.length?state.profiles.map((p,i)=>{
-    const checked=previous.has(String(p.id))||(!previous.size&&String(p.id)===String(state.profile?.id||state.profiles[0]?.id||''));
-    return '<label class="batch-profile-option"><input type="checkbox" data-profile-id="'+esc(p.id)+'" '+(checked?'checked':'')+'><span>'+esc(p.display_name)+(p.game_name?' · '+esc(p.game_name)+'#'+esc(p.tag_line||''):'')+'</span></label>';
-  }).join(''):'<div class="muted tiny">No saved profiles yet.</div>';
-  box.querySelectorAll('input[data-profile-id]').forEach(n=>n.addEventListener('change',syncButtons));
-}
-async function loadProfiles(selectId){
-  const data=await api('profiles_list');
-  state.profiles=data.profiles||[];
-  const sel=$('profileSelect');
-  sel.innerHTML='<option value="">Choose a profile…</option>'+state.profiles.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.display_name)+(p.game_name?' · '+esc(p.game_name)+'#'+esc(p.tag_line||''):'')+'</option>').join('');
-  const id=selectId||(state.profile&&state.profile.id)||state.profiles[0]?.id||'';
-  if(id){sel.value=id;await selectProfile(id);}else{state.profile=null;syncButtons();$('cacheState').textContent='No profile';}
-  renderBatchProfiles();syncButtons();
-}
 function syncButtons(){
   const run=$('loadRecentBtn');if(run)run.disabled=state.busy||!directRequestComplete();
-  const imp=$('importBtn');if(imp)imp.disabled=state.busy||!state.profile||!$('reportFile')?.files?.length;
-}
-async function selectProfile(id){
-  state.profile=state.profiles.find(p=>p.id===id)||null;
-  syncButtons();
-  if(!state.profile){return;}
-  $('sourceState').textContent=state.profile.puuid?'Resolved Riot ID':'Riot ID not resolved';
-  await Promise.all([loadCacheStatus(),loadLatestReport()]);
 }
 async function loadCacheStatus(){
   if(!state.profile)return;
@@ -311,87 +281,10 @@ async function loadCacheStatus(){
     const d=await api('cache_status',{profile_id:state.profile.id});
     $('cacheState').textContent=(d.cached_games||0)+' cached games';
     $('latestGameState').textContent=d.last_game_at?fmtDate(d.last_game_at):'None yet';
-  }catch(e){$('cacheState').textContent='Unavailable';log('Cache status: '+e.message,'bad');}
-}
-async function loadLatestReport(){
-  if(!state.profile)return;
-  try{
-    const d=await api('report_latest',{profile_id:state.profile.id});
-    if(d.analysis?.report_data){
-      $('analysisState').textContent=fmtDate(d.analysis.created_at);
-      $('sourceState').textContent=d.analysis.source_kind==='legacy_import'?'Imported Bruisienator':'Web analyzer';
-      renderReport(d.analysis.report_data,d.analysis.source_kind);
-      renderProgressComparison(d.analysis.report_data,d.previous?.report_data||null,d.previous?.created_at||null);
-    }else{
-      $('analysisState').textContent='No report';
-      state.report=null;$('report').hidden=true;$('reportEmpty').hidden=false;$('progressComparisonPanel').hidden=true;
-    }
-  }catch(e){log('Latest report: '+e.message,'bad');}
-}
-
-function openProfileEditor(profile){
-  const p=profile||{};
-  $('profileEditor').hidden=false;
-  $('profileLabel').value=p.display_name||'';
-  $('gameName').value=p.game_name||'';
-  $('tagLine').value=p.tag_line||'';
-  $('platformRegion').value=p.platform_region||'euw1';
-  $('profileNotes').value=p.notes||'';
-  $('profileEditor').dataset.profileId=p.id||'';
-  $('deleteProfileBtn').hidden=!p.id;
-  $('profileLabel').focus();
-}
-async function saveProfile(){
-  const profile={
-    id:$('profileEditor').dataset.profileId||undefined,
-    display_name:$('profileLabel').value.trim(),
-    game_name:$('gameName').value.trim(),
-    tag_line:$('tagLine').value.trim(),
-    platform_region:$('platformRegion').value,
-    notes:$('profileNotes').value.trim()
-  };
-  if(!profile.display_name||!profile.game_name||!profile.tag_line){log('Profile label, Riot game name and tag are required.','bad');return;}
-  setBusy(true,'Saving');
-  try{
-    const d=await api('profile_save',{profile});
-    log('Saved profile '+d.profile.display_name+'.','ok');
-    if(d.resolve_warning)log('Saved, but Riot resolution is pending: '+d.resolve_warning,'bad');
-    $('profileEditor').hidden=true;
-    await loadProfiles(d.profile.id);
-  }catch(e){log('Save profile failed: '+e.message,'bad');}
-  finally{setBusy(false,'Idle');syncButtons();}
-}
-async function deleteProfile(){
-  const profileId=$('profileEditor').dataset.profileId||'';
-  const profile=state.profiles.find(p=>String(p.id)===String(profileId));
-  if(!profileId||!profile)return;
-  if(!globalThis.confirm('Delete League profile “'+String(profile.display_name||profile.profile_key||'profile')+'” and its cached matches/reports from this workspace?'))return;
-  setBusy(true,'Deleting');
-  try{
-    const d=await api('profile_delete',{profile_id:profileId});
-    log('Deleted profile '+String(d.deleted_profile_name||profile.display_name||'')+' and its cached League data.','ok');
-    $('profileEditor').hidden=true;
-    state.profile=null;state.report=null;
-    await loadProfiles();
-  }catch(e){log('Delete profile failed: '+e.message,'bad');}
-  finally{setBusy(false,'Idle');syncButtons();}
-}
-
-async function testRiotKey(){
-  if(!state.profile||state.busy||(!state.serverRiotKey&&!state.riotApiKey))return;
-  setBusy(true,'Testing key');statusPill('Testing Riot key','warn');
-  try{
-    log('Testing Riot access for '+state.profile.display_name+'…');
-    const d=await api('riot_test',{profile_id:state.profile.id});
-    log('Riot key works; Riot ID resolved'+(d.puuid_resolved?' to a PUUID.':'.'),'ok');
-    $('riotKeyStatus').textContent='Riot key verified for this session';
-    statusPill('Riot key verified');
-    await loadProfiles(state.profile.id);
   }catch(e){
-    log('Riot key test failed: '+e.message,'bad');
-    $('riotKeyStatus').textContent='Riot key test failed';
-    statusPill('Key test failed','error');
-  }finally{setBusy(false);syncButtons();}
+    $('cacheState').textContent='Unavailable';
+    log('Cache status: '+e.message,'bad');
+  }
 }
 
 async function fetchProfileData(profile,requestedCount){
@@ -465,58 +358,6 @@ async function runRecentAnalysis(){
     statusPill('Request failed','error');
     log('Request failed: '+e.message,'bad');
   }finally{setBusy(false);syncButtons();}
-}
-
-async function fetchMatches(){
-  if(!state.profile||state.busy)return;
-  clearLog();setBusy(true,'Fetching');statusPill('Fetching','warn');
-  try{
-    const requestedCount=Math.max(20,Math.min(100,Number($('fetchCount').value||50)));
-    const {prep}=await fetchProfileData(state.profile,requestedCount);
-    if(prep.profile){state.profile=Object.assign({},state.profile,prep.profile);const rs=state.profile.rank_snapshot;$('sourceState').textContent=rs&&rs.tier?'Riot · '+rs.tier+' '+(rs.rank||''):'Resolved Riot ID';}
-    log('Fetch/update complete. Analyze remains a separate cached-data operation.','ok');
-    statusPill('Fetch complete');await loadCacheStatus();
-  }catch(e){log('Fetch failed: '+e.message,'bad');statusPill('Fetch failed','error');}
-  finally{setBusy(false);syncButtons();}
-}
-async function analyze(){
-  if(!state.profile||state.busy)return;
-  clearLog();setBusy(true,'Analyzing');statusPill('Analyzing','warn');setProgress(20,100);
-  try{
-    const d=await analyzeProfileData(state.profile);
-    setProgress(100,100);
-    if(d.report?.advanced?.currentSourcePortRequired)log('Advanced Bruisienator formulas are intentionally marked unavailable until the current source package is supplied.');
-    renderReport(d.report,'web_behavior');
-    try{const history=await api('report_latest',{profile_id:state.profile.id});renderProgressComparison(d.report,history.previous?.report_data||null,history.previous?.created_at||null);}catch(_){$('progressComparisonPanel').hidden=true;}
-    $('analysisState').textContent=fmtDate(d.created_at);$('sourceState').textContent='Behavioral analyzer';statusPill('Analysis complete');
-  }catch(e){log('Analysis failed: '+e.message,'bad');statusPill('Analysis failed','error');}
-  finally{setBusy(false);syncButtons();}
-}
-async function runBatch(kind){
-  if(state.busy)return;
-  const ids=batchSelectedIds(),profiles=ids.map(id=>state.profiles.find(p=>String(p.id)===String(id))).filter(Boolean);
-  if(!profiles.length)return;
-  const originalId=state.profile?.id||'',requestedCount=Math.max(20,Math.min(100,Number($('fetchCount').value||50)));
-  clearLog();setBusy(true,kind==='fetch'?'Batch fetching':'Batch analyzing');statusPill(kind==='fetch'?'Batch fetching':'Batch analyzing','warn');
-  let ok=0,failed=0;
-  try{
-    log('Starting sequential '+(kind==='fetch'?'fetch/update':'analysis')+' for '+profiles.length+' selected profile'+(profiles.length===1?'':'s')+'.');
-    for(let i=0;i<profiles.length;i++){
-      const p=profiles[i];log('=== ['+(i+1)+'/'+profiles.length+'] '+p.display_name+' ===');
-      try{
-        if(kind==='fetch')await fetchProfileData(p,requestedCount);
-        else await analyzeProfileData(p);
-        ok++;
-      }catch(e){failed++;log(p.display_name+' failed: '+e.message,'bad');}
-      setProgress(i+1,profiles.length);
-    }
-    log('Batch complete · '+ok+' succeeded · '+failed+' failed.',failed?'bad':'ok');
-    statusPill(failed?(ok?'Batch partially complete':'Batch failed'):'Batch complete',failed?'warn':'neutral');
-  }finally{
-    setBusy(false);
-    if(originalId){await loadProfiles(originalId);}else{await loadProfiles();}
-    syncButtons();
-  }
 }
 
 function normalizeReport(r){
@@ -1404,21 +1245,10 @@ function renderQuality(r){
   $('sourceNote').textContent=base+(low.length?' Thin-evidence areas right now: '+low.join(', ')+'.':' Core evidence coverage is sufficient for the main coaching dimensions.');
 }
 
-async function importReport(){
-  const file=$('reportFile')?.files?.[0];if(!file||!state.profile)return;
-  setBusy(true,'Importing');clearLog();
-  try{
-    const txt=await file.text();const parsed=JSON.parse(txt),r=normalizeReport(parsed);
-    await api('report_import',{profile_id:state.profile.id,report:r});
-    log('Imported report JSON into '+state.profile.display_name+'.','ok');renderReport(r,'legacy_import');$('analysisState').textContent='Imported now';$('sourceState').textContent='Imported Bruisienator';
-    statusPill('Import complete');
-  }catch(e){log('Import failed: '+e.message,'bad');statusPill('Import failed','error');}
-  finally{setBusy(false);syncButtons();}
-}
 function exportReport(){
   if(!state.report)return;
   const blob=new Blob([JSON.stringify(state.report,null,2)],{type:'application/json'}),a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);a.download='bruisienator_'+(state.profile?.profile_key||'profile')+'_last20.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  a.href=URL.createObjectURL(blob);a.download='bruisienator_'+String(state.profile?.game_name||'recent').replace(/[^a-z0-9_-]+/gi,'_')+'_'+String(state.profile?.tag_line||'tag').replace(/[^a-z0-9_-]+/gi,'_')+'_last20.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 
 const requestInputs=['requestGameName','requestTagLine','requestRegion','riotApiKey'];
@@ -1437,8 +1267,6 @@ requestInputs.forEach(id=>{
   });
 });
 $('loadRecentBtn').addEventListener('click',runRecentAnalysis);
-if($('reportFile'))$('reportFile').addEventListener('change',syncButtons);
-if($('importBtn'))$('importBtn').addEventListener('click',importReport);
 $('exportBtn').addEventListener('click',exportReport);
 
 boot().catch(e=>{log('Startup failed: '+e.message,'bad');$('backendState').textContent='Startup failed';$('backendState').className='pill error';});
