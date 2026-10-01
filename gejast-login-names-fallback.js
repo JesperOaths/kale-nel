@@ -65,7 +65,13 @@
     // The embedded deployment snapshot is newer and deterministic; a stale browser cache must never overwrite it.
     var immediate=snapshot.length?snapshot:cached;
     if(immediate.length){
-      setTimeout(function(){ authoritative(resolvedScope).catch(function(){}); },3000);
+      // Login already has a deployment snapshot and server-rendered names. Do
+      // not compete with page boot or a degraded Supabase data plane. Refresh
+      // only later, while visible/online, and never block the selector.
+      setTimeout(function(){
+        if(document.hidden || navigator.onLine===false) return;
+        authoritative(resolvedScope).catch(function(){});
+      },15000);
       return immediate;
     }
     try { return await authoritative(resolvedScope); } catch(_) { return []; }
