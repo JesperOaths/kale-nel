@@ -432,8 +432,14 @@ assert.ok(api.includes('function committedPurchaseEvents('),'All shop/reset/item
 assert.ok(api.includes('purchases[idx].committed=false'),'ITEM_UNDO must invalidate the matching transient purchase');
 assert.ok(api.includes('function committedItemPurchaseCount('),'Control Ward purchases must consume the canonical committed-purchase stream');
 assert.ok(api.includes('function purchaseCashCost(')&&api.includes('recipe_owned_component_credit'),'Shop spend must be recipe-aware instead of using raw Data Dragon base gold');
-assert.ok(api.includes('out.shopVisits=purchaseGroups(itemEventsByPid,catalog)'),'Reset/shop visits must consume the full item ledger so undo events can be removed');
-assert.ok(api.includes('first committed ≥250g recipe-aware purchase group'),'First-reset definition must state committed recipe-aware spend semantics');
+assert.ok(api.includes('out.shopVisits=applyDynamicShopSpendBounds(purchaseGroups(itemEventsByPid,catalog),out.roleQuestContext)'),'Reset/shop visits must consume the full item ledger and role-aware dynamic-price bounds');
+assert.ok(api.includes('controlWardPriceAfterQuest:40'),'Support post-quest Control Ward floor must remain machine-readable');
+assert.ok(api.includes('spentLowerBound:null')||api.includes('g.spentLowerBound=null'),'Unresolvable zero-ID undo evidence must invalidate the spend lower bound rather than be guessed');
+assert.ok(api.includes('hasNum(v.spentLowerBound)&&Number(v.spentLowerBound)>=250'),'First meaningful reset must qualify on the conservative spend lower bound');
+assert.ok(api.includes('first committed ≥250g recipe-aware purchase group'),'First-reset definition must retain committed recipe-aware provenance');
+assert.ok(api.includes('firstResetApproximateSpendGames'),'Aggregate reset evidence must expose how many measured resets have approximate spend');
+assert.ok(app.includes('function resetSpendText(')&&app.includes('First-reset spend evidence'),'Frontend must render exact/ranged reset spend and its evidence');
+assert.ok(app.includes('minimum plausible spend'),'Frontend must explain the conservative first-reset threshold');
 assert.ok(api.includes('controlWardIds=new Set<number>([2055])')&&api.includes('text(info?.name).toLowerCase()==="control ward"'),'Control Ward detection must retain stable item-id plus catalog-name evidence');
 assert.ok(api.includes('function majorOwnershipMilestones(')&&api.includes('secondMajorItemDeltaVsOpponent'),'Second major-item timing must remain derived from reconstructed owned inventory and compared with the direct role opponent');
 assert.ok(api.includes('ownedMajorCount<=milestones.length'),'Second-major timing must not count a sale/rebuy or one-for-one major upgrade as a new owned-item milestone');
@@ -473,7 +479,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v110'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v111'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
