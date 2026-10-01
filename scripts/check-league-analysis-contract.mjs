@@ -51,9 +51,10 @@ ok(backend.includes('mechanicsCohortApplied'), 'mechanics cohort selection state
 ok(backend.includes('mixedMechanicsFallback'), 'small current mechanics samples remain explicit');
 ok(backend.includes('championBehaviorModel(coachingGames'), 'champion behavior uses the same selected mechanics sample');
 ok(backend.includes('phaseExposureMinutes'), 'phase risk must normalize by actual phase exposure');
-ok(backend.includes('postLaneStartMin:14')&&backend.includes('roamEndMin:20'), 'standard post-lane and roam timing must remain rules-driven');
-ok(backend.includes('postLaneStartMin:12')&&backend.includes('roamEndMin:12'), 'Swiftplay post-lane and roam timing must respect its accelerated major-objective era');
-ok(backend.includes('postLaneSideLaneDeaths'), 'side-lane risk must use queue-aware post-lane timing');
+ok(backend.includes('macroTransitionMin:14')&&backend.includes('roamEndMin:20'), 'standard side-lane risk must use the 14-minute macro transition without asserting a literal lane ending');
+ok(backend.includes('macroTransitionMin:12')&&backend.includes('roamEndMin:12'), 'Swiftplay side-lane risk must use its accelerated macro transition');
+ok(backend.includes('macroTransitionSideLaneDeaths'), 'primary side-lane risk must use explicit macro-transition semantics');
+ok(backend.includes('postLaneSideLaneDeaths++; // compatibility alias only'), 'legacy postLane counter must remain explicitly compatibility-only');
 ok(backend.includes('lane15Comparable:true')&&backend.includes('fixed15to25Comparable:true')&&backend.includes('closing25Comparable:true'), 'standard SR must explicitly allow its fixed checkpoints');
 ok(backend.includes('lane15Comparable:false')&&backend.includes('fixed15to25Comparable:false')&&backend.includes('closing25Comparable:false'), 'accelerated/unverified profiles must be able to suppress incompatible fixed checkpoints');
 ok(backend.includes('lane15ComparableGames'), '@15 lane coaching must use an eligibility-filtered cohort');
