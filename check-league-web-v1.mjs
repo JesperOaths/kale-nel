@@ -319,6 +319,8 @@ assert.ok(app.includes('Roam paths · this match'),'Per-game map must expose roa
 assert.ok(app.includes('roamEvidenceText('),'Roam tab must expose per-window evidence');
 assert.ok(css.includes('.map-roam-path'),'Roam paths must retain dedicated map styling');
 assert.ok(api.includes('objectiveFamilyStats:{}')&&api.includes('objectiveFamilySummary'),'Objective-family presence/control must remain explicit');
+assert.ok(api.includes('enemyTeamId=Number(teamId)===100?200:Number(teamId)===200?100:null'),'Enemy objective ownership must derive from Riot team IDs, not availability of a direct role opponent');
+assert.ok(!api.includes('enemyUnits=Number(opp?window.ownerCounts'),'Objective-family enemy control must not depend on role matching');
 assert.ok(api.includes('familyRaw==="DRAGON"&&memberSubtypes.some((x:any)=>x.includes("ELDER"))?"ELDER_DRAGON"'),'Elder Dragon must remain distinguishable from ordinary dragons when Riot subtype supports it');
 assert.ok(api.includes('objectiveSetupClears'),'Objective-setup ward clears must remain measurable');
 assert.ok(api.includes('controlWardPurchases'),'Control Ward purchases must remain distinct from placements');
@@ -403,7 +405,7 @@ assert.ok(api.includes('higherRankMajorItemGames'),'Higher-ranked peer item samp
 assert.ok(api.includes('higherRankAvgMajorItemDeltaMin'),'Higher-ranked peer first-major timing delta must remain exported');
 assert.ok(api.includes('higherRankMajorItemFasterPct'),'Higher-ranked peer first-major faster rate must remain exported');
 assert.ok(api.includes('First-major timing slips against higher-ranked direct opponents'),'Higher-rank item timing must remain actionable coaching evidence');
-assert.ok(api.includes('league-web-behavior-v4.48'),'Analyzer version must include owner-scoped public profile lifecycle');
+assert.ok(api.includes('league-web-behavior-v4.49'),'Analyzer version must include owner-scoped public profile lifecycle');
 assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
 assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
 assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
