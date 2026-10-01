@@ -5,6 +5,8 @@ import vm from 'node:vm';
 
 const source=fs.readFileSync('gejast-login-names-fallback.js','utf8');
 const staticSource=fs.readFileSync('gejast-login-names-static.js','utf8');
+const accountRuntime=fs.readFileSync('gejast-account-runtime.js','utf8');
+const loginHtml=fs.readFileSync('login.html','utf8');
 const calls=[],cacheWrites=[];
 
 function response(body,status=200){return new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});}
@@ -58,5 +60,12 @@ assert.match(staticSource,/friends:/);
 assert.match(staticSource,/family:/);
 assert.match(staticSource,/"Bruis"/);
 assert.match(staticSource,/"Sierk"/);
+assert.match(accountRuntime,/function staticLoginNames\(\)/,'login page runtime must read the verified static snapshot directly');
+assert.match(accountRuntime,/seed = normalizeNames\(\[\.\.\.cached,\.\.\.snapshot\]\)/,'login bootstrap must merge cache plus static snapshot synchronously');
+assert.match(accountRuntime,/if\(clean\.length\)\{[\s\S]*?fillSelect\(sel,clean\)/,'live refresh may replace the dropdown only when it returns real names');
+assert.match(accountRuntime,/else if\(seed\.length\)/,'an empty or slow live refresh must preserve the synchronous seed');
+assert.match(loginHtml,/gejast-login-names-static\.js\?v=20261001-login-resilience-r5/);
+assert.match(loginHtml,/gejast-login-names-fallback\.js\?v=20261001-login-resilience-r5/);
+assert.match(loginHtml,/gejast-account-runtime\.js\?v=20261001-login-resilience-r5/);
 
 console.log('RESULT=V817_LOGIN_NAMES_STATIC_FIRST_SINGLE_RPC_PASS');
