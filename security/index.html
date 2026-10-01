@@ -137,5 +137,6 @@
   async function boot(){const camera=clipCamera||'new';const {res}=await readJson(await fetch(`/security/${camera}/api/status`,{credentials:'same-origin',cache:'no-store'}));if(res.status===401){showInnerLogin();return}if(!res.ok){showInnerLogin('Security service is temporarily unavailable.');return}showApp();await refresh()}boot();
 })();
 </script>
+<div class="site-credit-watermark" data-version-watermark style="position:fixed;left:50%;transform:translateX(-50%);bottom:10px;z-index:2147483646;padding:6px 10px;border-radius:999px;background:rgba(17,17,17,.78);color:#f3e0ad;font:700 12px/1.2 system-ui,sans-serif;letter-spacing:.03em;pointer-events:none">v817  -  Made by Bruis</div>
 </body>
 </html>

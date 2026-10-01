@@ -47,7 +47,7 @@ for(const rel of pages){
   const gates=[...body.matchAll(/gejast-auth-gate\.js\?v(\d+)/gi)].map(m=>'v'+m[1]);
   const uniquePage=[...new Set(pageVersions)];
   const uniqueGate=[...new Set(gates)];
-  const rootOwned = uniquePage.length>0 || uniqueGate.length>0;
+  const rootOwned = !independentPageVersions.has(rel) && (uniquePage.length>0 || uniqueGate.length>0);
 
   if(!visible.length) missing.push(rel);
   if(visible.length>1) ambiguous.push(`${rel}: ${visible.join(', ')}`);

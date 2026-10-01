@@ -56,5 +56,6 @@ function render(){const a=filtered(),box=$('rows');box.replaceChildren(...a.map(
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();error();const b=e.submitter;b.disabled=true;b.textContent='Unlocking…';try{await adminLogin();const d=await api('list');items=d.perfumes||[];$('loginPanel').classList.add('hidden');$('app').classList.remove('hidden');$('sessionPill').textContent=`Private · ${d.username||'admin'}`;render()}catch(err){error(err.message);token=''}finally{b.disabled=false;b.textContent='Unlock collection'}});$('search').addEventListener('input',render);$('filter').addEventListener('change',render);$('sort').addEventListener('change',render);$('lock').addEventListener('click',lock);
 })();
 </script>
+<div class="site-credit-watermark" data-version-watermark style="position:fixed;left:50%;transform:translateX(-50%);bottom:10px;z-index:2147483646;padding:6px 10px;border-radius:999px;background:rgba(17,17,17,.78);color:#f3e0ad;font:700 12px/1.2 system-ui,sans-serif;letter-spacing:.03em;pointer-events:none">v817  -  Made by Bruis</div>
 </body>
 </html>

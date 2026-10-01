@@ -43,4 +43,5 @@ $('form').onsubmit=async e=>{e.preventDefault();fail();note();const b=e.submitte
 $('q').oninput=render;$('filter').onchange=render;$('sort').onchange=render;$('lock').onclick=()=>doLock(false);
 (async()=>{const saved=readTrusted();if(saved){$('user').value=saved.username;$('pill').textContent='Checking trusted browser…';if(await resumeTrusted()){try{await openApp('Trusted browser resumed without password or authenticator.');return}catch{token=''}}$('pill').textContent='Locked'}})();
 })();</script>
+<div class="site-credit-watermark" data-version-watermark style="position:fixed;left:50%;transform:translateX(-50%);bottom:10px;z-index:2147483646;padding:6px 10px;border-radius:999px;background:rgba(17,17,17,.78);color:#f3e0ad;font:700 12px/1.2 system-ui,sans-serif;letter-spacing:.03em;pointer-events:none">v817  -  Made by Bruis</div>
 </body></html>
