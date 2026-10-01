@@ -85,10 +85,10 @@ assert.doesNotMatch(store, /bruisCatalogLastGoodV1/, 'old browser catalog cache 
 assert.match(index, /catalog-last-good\.js\?v=20261001-stable-pricing-r5/, 'fallback catalog asset must be cache-busted after canonical pricing repair');
 assert.match(index, /store\.js\?v=20261001-static-first-r9/, 'store runtime must publish the resilient deterministic static-first revision');
 assert.match(index, /live-catalog-refresh-v818\.js\?v=20261001-cross-tab-r5/, 'shop must publish the hard-throttled cross-tab refresh revision');
-assert.match(liveRefresh, /__BRUIS_LIVE_CATALOG_REFRESH_V818_R5__/, 'live catalog reconciliation must be singleton-guarded inside a tab');
-assert.match(liveRefresh, /POLL_MS = 30 \* 60 \* 1000/, 'live catalog reconciliation must remain low-frequency');
-assert.match(liveRefresh, /SHARED_MIN_REFRESH_MS = 20 \* 60 \* 1000/, 'multiple tabs must share a long refresh lease');
-assert.match(liveRefresh, /navigator\.onLine === false/, 'offline storefronts must not generate live catalog traffic');
+assert.match(refresh, /__BRUIS_LIVE_CATALOG_REFRESH_V818_R5__/, 'live catalog reconciliation must be singleton-guarded inside a tab');
+assert.match(refresh, /POLL_MS = 30 \* 60 \* 1000/, 'live catalog reconciliation must remain low-frequency');
+assert.match(refresh, /SHARED_MIN_REFRESH_MS = 20 \* 60 \* 1000/, 'multiple tabs must share a long refresh lease');
+assert.match(refresh, /navigator\.onLine === false/, 'offline storefronts must not generate live catalog traffic');
 assert.match(store, /function staticCatalogSnapshot\(\)/, 'storefront must expose a deterministic local snapshot normalizer');
 assert.match(store, /const synchronousStaticCatalog = staticCatalogSnapshot\(\)/, 'storefront must materialize the static catalog synchronously before any live request');
 assert.match(store, /applyInitialCatalog\(\{ products:synchronousStaticCatalog, source:'static-snapshot-sync' \}\)/, 'static catalog must render synchronously without waiting for Supabase');
