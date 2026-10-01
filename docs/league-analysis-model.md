@@ -585,25 +585,25 @@ Do not imply that every post-impact death is bad. Some are correct trades or nec
 
 ## Side-lane timing risk
 
-Post-lane side pressure is useful, so the analyzer must not label every side-lane death as bad.
+Side pressure after the first major macro transition is useful, so the analyzer must not label every side-lane death as bad.
 
-The start of the side-lane-risk window is **rules-driven**, not hard-coded to 15:00:
-- 2026 standard Summoner's Rift: 14:00,
-- 2026 Swiftplay: 12:00,
+The start of this risk window is **rules-driven**, but it is deliberately called a **macro-transition** rather than a literal "lane phase ends" timestamp:
+- 2026 standard Summoner's Rift: 14:00, anchored to the documented faster minion-wave cadence,
+- 2026 Swiftplay: 12:00, aligned with its accelerated major-objective era,
 - historical/future rules use their stored compatibility profile.
 
-A **post-early-phase side-lane death** requires:
-- game time at or after that rules profile's post-lane start,
+A **post-macro-transition side-lane death** requires:
+- game time at or after that rules profile's macro-transition anchor,
 - death in the coarse top-lane or bot-lane zone.
 
 A death is additionally **isolated** when no allied participant is within 3,000 map units at the supported timeline frame.
 
 A **pre-neutral-objective side-lane death** requires:
-- a post-early-phase side-lane death,
+- a post-macro-transition side-lane death,
 - isolated/no ally within 3,000 units,
 - a tracked neutral-objective event within 90 seconds afterward.
 
-The old `post15SideLaneDeaths` field is retained only as a compatibility counter. New coaching and rates use `postLaneSideLaneDeaths`.
+The old `post15SideLaneDeaths` field and `postLaneSideLaneDeaths` name are retained only for compatibility. New coaching and rates use `macroTransitionSideLaneDeaths`; this avoids presenting the timing anchor as proof that laning has literally ended.
 
 This is a timing/macro signal, not a blanket criticism of split pushing. Coaching should emphasize reconnect timing when the next neutral-objective window matters. If an objective is intentionally conceded, dying on the cross-map trade can still erase the value of the side pressure.
 
