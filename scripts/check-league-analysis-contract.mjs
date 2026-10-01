@@ -18,7 +18,7 @@ ok(appUnsafe.every(x=>x==='Number.isFinite(Number(v))'), 'frontend contains ungu
 
 ok(backend.includes('coachingGames=games.filter((g:any)=>g.role===primaryRole)'), 'behavioral coaching must be filtered to the primary role');
 ok(backend.includes('coachingAllGames=allGames.filter((g:any)=>g.role===primaryRole)'), 'historical coaching baseline must use the same role');
-ok(backend.includes('summonersRiftRows=cachedRows.filter')&&backend.includes('===11')&&backend.includes('eligibleRows=summonersRiftRows.filter'), 'deep analyzer must filter to Summoner\'s Rift before coaching eligibility');
+ok(backend.includes('summonersRiftRows=cachedRows.filter')&&backend.includes('===11')&&backend.includes('durationEligibleRows=summonersRiftRows.filter'), 'deep analyzer must filter to Summoner\'s Rift before duration and queue coaching eligibility');
 ok(backend.includes('gameDurationSec=Number(match?.info?.gameDuration||0)')&&backend.includes('reaches25=gameDurationSec>=25*60'), '@25 metrics must require a game that actually reaches 25 minutes');
 ok(backend.includes('frameNearMinute(frames,25,45000)'), '@25 metrics must use a frame close to 25 minutes');
 ok(backend.includes('d.tMs+75000'), 'pre-objective conversion window must remain explicit');
