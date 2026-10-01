@@ -356,6 +356,7 @@ ok(app.includes("oldHistory=await api('report_latest'")&&app.includes("target_ro
 ok(backend.includes('role(x?.data_quality?.selectedRole)===targetRole'), 'saved analysis history must be filtered by role before previous-analysis comparison');
 ok(backend.includes('nearest_player_frame_35s')&&backend.includes('wardFrameProjectedPositions'), 'ward events with omitted coordinates must be counted and boundedly projected rather than disappearing');
 ok(app.includes('function deathPatternEntries(')&&app.includes('objective_side_lane')&&app.includes('vision_facecheck')&&app.includes('post_play_giveback'), 'death review must classify recurring supported patterns instead of showing only one undifferentiated map');
+ok(app.includes('deathPatternMap(examples)')&&app.includes('map numbers match this list'), 'death-pattern map markers and explanation rows must retain one shared ordering');
 ok(html.includes('id="compoundSignals"')&&app.includes('function renderCompoundSignals('), 'compound evidence analysis must combine related metrics into interpretable intelligence');
 ok(app.includes("objDiagnosed?tonePct(objective,70,45,false):'neutral'"), 'objective attendance judgment must require role-appropriate supported diagnosis');
 ok(html.includes('id="rankRadarPanel"')&&app.includes("reportRole!=='ADC'"), 'ADC benchmark UI must be withheld for non-ADC role reports');
