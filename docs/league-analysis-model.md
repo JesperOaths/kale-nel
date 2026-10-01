@@ -79,6 +79,30 @@ The UI should always make clear that these are **same-role direct opponents**, n
 
 ## Higher-ranked direct peers
 
+### Rank-band context
+
+Where both player and direct same-role opponent have a fetched Solo/Duo rank snapshot, also classify the opponent by **tier/division band**:
+
+- higher tier/division,
+- same tier/division,
+- lower tier/division.
+
+LP differences inside the same division are deliberately ignored for this classification.
+
+For each band preserve at least:
+- number of comparable opponents,
+- average gold differential at 15,
+- percentage of games ahead on gold at 15,
+- average CS/min delta,
+- average DPM delta,
+- average VPM delta.
+
+This lets the report distinguish "performance drops against stronger peers" from "inconsistency even against lower-ranked peers."
+
+Rank is a **fetch-time snapshot**, not the opponent's historical rank at the exact match date. Phrase conclusions accordingly and do not overstate small samples.
+
+
+
 During Fetch / update, the newest 20 games may cache the current rank of the actual same-role opponent.
 
 Rank ordering is used only to classify whether that direct opponent is above the player's current rank. The report can then summarize the subset of actual higher-ranked peers:
