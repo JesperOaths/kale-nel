@@ -602,9 +602,9 @@ function renderRankRadar(r){
   const userRaw={csMin:summary.csMin,kp:summary.kp,dpm:summary.dpm,kda:summary.kda,deaths:summary.avgDeaths};
   const defs=[
     {key:'you',label:'You · Last 20',cls:'you',raw:userRaw},
-    {key:'same',label:ext.same?.tier||'Same rank',cls:'same',raw:ext.same||null},
-    {key:'plus1',label:ext.plus1?.tier||'+1 rank',cls:'plus1',raw:ext.plus1||null},
-    {key:'plus2',label:ext.plus2?.tier||'+2 ranks',cls:'plus2',raw:ext.plus2||null}
+    {key:'same',label:ext.same?.tier?('Same tier · '+ext.same.tier):'Same tier',cls:'same',raw:ext.same||null},
+    {key:'plus1',label:ext.plus1?.tier?('+1 tier · '+ext.plus1.tier):'+1 tier',cls:'plus1',raw:ext.plus1||null},
+    {key:'plus2',label:ext.plus2?.tier?('+2 tiers · '+ext.plus2.tier):'+2 tiers',cls:'plus2',raw:ext.plus2||null}
   ];
   const series=defs.map(d=>{
     const values=axes.map(a=>radarNormalize(a.key,a.key==='survival'?d.raw?.deaths:d.raw?.[a.key]));
@@ -627,7 +627,7 @@ function renderRankRadar(r){
     '</tbody></table></div>':'';
   $('radarLegend').insertAdjacentHTML('beforeend',table);
   const source=ext.source||'External rank benchmark',captured=ext.sourceCapturedAt?' · corpus captured '+ext.sourceCapturedAt:'',corpus=ext.sourceCorpus?' · '+ext.sourceCorpus:'';
-  $('radarNote').innerHTML='<strong>Population benchmark, not your opponents.</strong> '+esc(ext.methodology||'')+' <a href="'+esc(ext.sourceUrl||'https://legendstracker.fr/methodologie')+'" target="_blank" rel="noopener noreferrer">'+esc(source)+'</a>'+esc(captured+corpus)+'. The spider uses fixed display ranges only to put different units on one shape; the adjacent table shows the real values.';
+  $('radarNote').innerHTML='<strong>Population benchmark, not your opponents.</strong> '+esc(ext.methodology||'')+' '+(ext.currentTier?'<b>Tier mapping:</b> '+esc(ext.currentTier)+' → '+esc(ext.plus1?.tier||'n/a')+' → '+esc(ext.plus2?.tier||'n/a')+'. ':'')+'<a href="'+esc(ext.sourceUrl||'https://legendstracker.fr/methodologie')+'" target="_blank" rel="noopener noreferrer">'+esc(source)+'</a>'+esc(captured+corpus)+'. The source publishes tier-level, not division-level, averages. The spider uses fixed display ranges only to put different units on one shape; the adjacent table shows the real values.';
 }
 function decisionCard(title,value,tone,explanation,sub,percent=null){
   return '<article class="decision-card tone-'+tone+'"><div><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong></div>'+
