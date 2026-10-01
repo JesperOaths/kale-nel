@@ -71,7 +71,16 @@ function isAnimalDesign(product){
 
 let products = [];
 let selectedCollection = null;
-let cart = JSON.parse(localStorage.getItem(cartKey) || '[]');
+function readCartSafe(){
+  try {
+    const parsed=JSON.parse(localStorage.getItem(cartKey) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    try { localStorage.removeItem(cartKey); } catch {}
+    return [];
+  }
+}
+let cart = readCartSafe();
 
 const qs = sel => document.querySelector(sel);
 const qsa = sel => [...document.querySelectorAll(sel)];
@@ -149,7 +158,7 @@ async function loadLiveCatalog(timeoutMs = 5000){
   const timeout = window.setTimeout(() => controller.abort(), Math.max(1500, Number(timeoutMs || 5000)));
   try {
     const response = await fetch(LIVE_CATALOG_URL, {
-      cache: 'no-store',
+      cache: 'default',
       signal: controller.signal,
       headers: {
         apikey: SUPABASE_ANON_KEY,
