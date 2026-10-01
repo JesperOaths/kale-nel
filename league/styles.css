@@ -1451,3 +1451,10 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 .outcome-fingerprint-card>p{margin:10px 0 0;color:var(--ink-soft);font-size:.68rem;line-height:1.4}
 @media(max-width:1200px){.outcome-fingerprint-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.outcome-fingerprint-grid{grid-template-columns:1fr}}
+
+.match-history-row.context-only{border-left-color:#a79d8e}
+.match-history-row.context-only>.match-history-toggle{background:#faf8f4}
+.history-context-badge{
+  display:inline-flex;margin-left:6px;padding:2px 6px;border:1px solid var(--line-strong);border-radius:999px;
+  background:#f1eee8;color:var(--muted);font-size:.54rem;line-height:1.2;text-transform:uppercase;letter-spacing:.06em;font-style:normal;vertical-align:middle
+}
