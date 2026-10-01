@@ -88,6 +88,9 @@ assert.ok(html.includes('id="spatialReview"'),'Spatial review panel must remain 
 assert.ok(html.includes('value="50" selected'),'50 raw matches must remain the recommended default fetch depth');
 assert.ok(app.includes("value||50"),'frontend fetch fallback must remain 50 raw matches');
 assert.ok(api.includes('body.count||50'),'backend fetch fallback must remain 50 raw matches');
+assert.ok(api.includes('peer_rank_backfilled'),'fetch finish must expose final-sample peer-rank backfill count');
+assert.ok(api.includes('peerRankTargetCount'),'fetch finish must target only the comparable final sample');
+assert.ok(app.includes('rank snapshots backfilled'),'frontend must report peer-rank backfill results');
 assert.ok(api.includes('w.objectiveSetup=allObjectives.some'),'Per-ward objective-setup evidence must be preserved');
 assert.ok(app.includes('function worldToMapPoint'));
 assert.ok(app.includes('minX:-120'));
