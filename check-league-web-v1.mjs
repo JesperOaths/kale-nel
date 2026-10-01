@@ -192,6 +192,16 @@ assert.ok(api.includes('startsLevel:3')&&api.includes('startingGold:1400'),'Swif
 assert.ok(api.includes('LEGACY_SR_RULES')&&api.includes('phaseComparable:false'),'Historical rules must remain visible but excluded from current phase coaching');
 assert.ok(api.includes('FUTURE_UNVERIFIED_RULES'),'Future unknown mechanics must fail closed instead of silently inheriting current coaching rules');
 assert.ok(api.includes('major===16'),'2026 Riot internal game-version major must select the 2026 rules profile');
+assert.ok(api.includes('function roleQuestRevisionFor2026('),'2026 role-quest revisions must be patch-aware');
+assert.ok(api.includes('26.9_role_quest_rework')&&api.includes('26.11_mid_8pct')&&api.includes('26.19_top_teleport'),'Material 2026 role-quest revisions must remain encoded');
+assert.ok(api.includes('laneRoleQuestsEnabled:!isSwift'),'Standard lane-role quests must remain disabled for Swiftplay');
+assert.ok(api.includes('function roleQuestContext('),'Per-game role-quest context must remain explicit');
+assert.ok(api.includes('support_quest_control_ward_discount_unobserved'),'Support Control Ward discount must remain an explicit shop-cost caveat instead of a fabricated exact spend');
+assert.ok(api.includes('roleQuestRevisionCounts'),'Report quality must expose mixed mechanics revisions');
+assert.ok(api.includes('roleQuestCompletionTimingObserved:false'),'Analyzer must not claim an exact universal quest-completion timestamp');
+assert.ok(app.includes('Role-quest rules'),'Per-game UI must expose the active role-quest rules context');
+assert.ok(app.includes('Role-quest mechanics'),'Data-quality UI must expose role-quest mechanics cohorts');
+assert.ok(app.includes('mixed role-quest mechanics revisions'),'Mixed mechanics cohorts must be visible as a quality caveat');
 assert.ok(api.includes('phaseExposureMinutes'),'Phase-risk comparisons must normalize by actual time exposure');
 assert.ok(api.includes('postLaneStartMin:14')&&api.includes('roamEndMin:20'),'Standard post-lane and roam windows must be rules-driven');
 assert.ok(api.includes('postLaneStartMin:12')&&api.includes('roamEndMin:12'),'Swiftplay post-lane/roam windows must respect its accelerated Baron timing');
@@ -250,7 +260,7 @@ assert.ok(css.includes('.map-marker-label'),'Numbered death marker styling must 
 assert.ok(!app.includes("['DQI'"));
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v70'),'League assets must cache-bust the v4.24 frontend');
+assert.ok(html.includes('20261001-league-web-v72'),'League assets must cache-bust the v4.28 frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
@@ -297,7 +307,7 @@ assert.ok(api.includes('higherRankMajorItemGames'),'Higher-ranked peer item samp
 assert.ok(api.includes('higherRankAvgMajorItemDeltaMin'),'Higher-ranked peer first-major timing delta must remain exported');
 assert.ok(api.includes('higherRankMajorItemFasterPct'),'Higher-ranked peer first-major faster rate must remain exported');
 assert.ok(api.includes('First-major timing slips against higher-ranked direct opponents'),'Higher-rank item timing must remain actionable coaching evidence');
-assert.ok(api.includes('league-web-behavior-v4.26'),'Analyzer version must include season-aware rules and turret-tier involvement');
+assert.ok(api.includes('league-web-behavior-v4.28'),'Analyzer version must include season-aware rules and turret-tier involvement');
 assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
 assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
 assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
