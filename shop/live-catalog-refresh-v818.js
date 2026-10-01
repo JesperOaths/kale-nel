@@ -2,11 +2,29 @@
   'use strict';
 
   const POLL_MS = 10 * 60 * 1000;
-  const FIRST_POLL_MS = 60 * 1000;
-  const MIN_FOREGROUND_REFRESH_MS = 2 * 60 * 1000;
+  const FIRST_POLL_MS = 2 * 60 * 1000;
+  const SHARED_MIN_REFRESH_MS = 5 * 60 * 1000;
+  const SHARED_CHECK_KEY = 'bruisCatalogLiveCheckAtV4';
+  const SHARED_OWNER_KEY = 'bruisCatalogLiveCheckOwnerV4';
+  const TAB_ID = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
   let lastSignature = '';
   let checking = false;
   let lastCheckedAt = 0;
+
+  function sharedLastCheckedAt(){
+    try { return Number(localStorage.getItem(SHARED_CHECK_KEY) || 0) || 0; } catch { return 0; }
+  }
+  function claimSharedRefresh(now){
+    try {
+      const shared = sharedLastCheckedAt();
+      if(shared && now - shared < SHARED_MIN_REFRESH_MS) return false;
+      localStorage.setItem(SHARED_CHECK_KEY, String(now));
+      localStorage.setItem(SHARED_OWNER_KEY, TAB_ID);
+      return true;
+    } catch {
+      return !lastCheckedAt || now - lastCheckedAt >= SHARED_MIN_REFRESH_MS;
+    }
+  }
 
   const stableSignature = list => JSON.stringify(
     [...(Array.isArray(list) ? list : [])]
@@ -103,10 +121,11 @@
     renderCart();
   }
 
-  async function checkCatalog(force = false){
-    if(checking || typeof loadLiveCatalog !== 'function') return;
+  async function checkCatalog(){
+    if(checking || typeof loadLiveCatalog !== 'function' || document.visibilityState === 'hidden') return;
     const now = Date.now();
-    if(!force && lastCheckedAt && now - lastCheckedAt < MIN_FOREGROUND_REFRESH_MS) return;
+    if(lastCheckedAt && now - lastCheckedAt < SHARED_MIN_REFRESH_MS) return;
+    if(!claimSharedRefresh(now)) return;
     checking = true;
     lastCheckedAt = now;
     try {
@@ -136,9 +155,20 @@
   }
 
   window.setTimeout(checkCatalog, FIRST_POLL_MS);
-  window.setInterval(() => checkCatalog(true), POLL_MS);
+  window.setInterval(checkCatalog, POLL_MS);
   document.addEventListener('visibilitychange', () => {
-    if(document.visibilityState === 'visible') checkCatalog(false);
+    if(document.visibilityState === 'visible') checkCatalog();
   });
-  window.addEventListener('focus', () => checkCatalog(false));
+  window.addEventListener('focus', checkCatalog);
+  window.addEventListener('storage', event => {
+    if(event.key !== catalogCacheKey || !event.newValue) return;
+    try {
+      const fresh = readLastGoodCatalog({ allowExpired: true });
+      if(!fresh.length) return;
+      const signature = stableSignature(fresh);
+      if(signature === lastSignature) return;
+      lastSignature = signature;
+      applyCatalog(fresh);
+    } catch {}
+  });
 })();
