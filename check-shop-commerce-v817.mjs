@@ -56,6 +56,7 @@ const deployWorkflow = read('.github/workflows/deploy-shop-fixes-v829.yml');
 const store = read('shop/store.js');
 const catalogLastGood = read('shop/catalog-last-good.js');
 const refresh = read('shop/live-catalog-refresh-v818.js');
+const legacyRefresh = read('shop/live-catalog-refresh-v817.js');
 
 // v839 keeps the Bruis checkout behavior and adds exact tote handle-color selection,
 // uses a VAT-reserved production cost + €5 shirt margin, and exposes a final total
@@ -84,7 +85,7 @@ assert.match(store, /price: baseKey === '6' && variantPrices\.length \? Math\.mi
 assert.doesNotMatch(store, /bruisCatalogLastGoodV1/, 'old browser catalog cache key must not remain active');
 assert.match(index, /catalog-last-good\.js\?v=20261001-stable-pricing-r5/, 'fallback catalog asset must be cache-busted after canonical pricing repair');
 assert.match(index, /store\.js\?v=20261001-static-first-r9/, 'store runtime must publish the resilient deterministic static-first revision');
-assert.match(index, /live-catalog-refresh-v818\.js\?v=20261001-cross-tab-r5/, 'shop must publish the hard-throttled cross-tab refresh revision');
+assert.match(index, /live-catalog-refresh-v818\.js\?v=20261002-cross-tab-r6/, 'shop must publish the current hard-throttled cross-tab refresh revision');
 assert.match(refresh, /__BRUIS_LIVE_CATALOG_REFRESH_V818_R5__/, 'live catalog reconciliation must be singleton-guarded inside a tab');
 assert.match(refresh, /POLL_MS = 30 \* 60 \* 1000/, 'live catalog reconciliation must remain low-frequency');
 assert.match(refresh, /SHARED_MIN_REFRESH_MS = 20 \* 60 \* 1000/, 'multiple tabs must share a long refresh lease');
@@ -98,7 +99,10 @@ assert.match(store, /cache: 'default'/, 'background catalog reconciliation must 
 assert.match(refresh, /const POLL_MS = 30 \* 60 \* 1000;/, 'live catalog reconciliation must not poll more often than every 30 minutes');
 assert.match(refresh, /const FIRST_POLL_MS = 15 \* 60 \* 1000;/, 'live catalog reconciliation must stay well off initial render');
 assert.match(refresh, /const SHARED_MIN_REFRESH_MS = 20 \* 60 \* 1000;/, 'multiple shop tabs must share a long refresh floor');
-assert.match(catalogEdge, /const MEMORY_ROW_TTL_MS = 15 \* 60_000;/, 'catalog edge function must keep the large catalog row hot in-isolate');
+assert.doesNotMatch(legacyRefresh, /POLL_MS = 30 \* 1000/, 'legacy v817 refresher must never retain the old 30-second Supabase poll');
+assert.match(legacyRefresh, /POLL_MS = 30 \* 60 \* 1000/, 'legacy v817 refresher must be harmless even when stale HTML still loads it');
+assert.match(legacyRefresh, /FIRST_POLL_MS = 15 \* 60 \* 1000/, 'legacy v817 refresher must stay off first paint');
+assert.match(catalogEdge, /const MEMORY_ROW_TTL_MS = 30 \* 60_000;/, 'catalog edge function must keep the large catalog row hot in-isolate for thirty minutes');
 assert.match(catalogEdge, /max-age=300, s-maxage=300, stale-while-revalidate=1800/, 'catalog responses must use browser + shared-cache freshness with stale-while-revalidate to absorb stale-tab polling');
 assert.match(store, /ANIMAL_DESIGN_NAMES/);
 assert.match(store, /let showAnimalDesigns = true/);
@@ -693,8 +697,10 @@ assert.match(refresh, /FIRST_POLL_MS\s*=\s*15\s*\*\s*60\s*\*\s*1000/, 'first liv
 assert.match(refresh, /SHARED_MIN_REFRESH_MS\s*=\s*20\s*\*\s*60\s*\*\s*1000/, 'focus/visibility refreshes must share a twenty-minute cross-tab floor');
 assert.match(refresh, /SHARED_CHECK_KEY/, 'catalog refreshes must coordinate across tabs rather than multiplying with each open storefront');
 assert.doesNotMatch(refresh, /checkCatalog\(true\)/, 'no timer/focus path may bypass the shared refresh floor');
-assert.match(catalogEdge, /CACHE_FRESH_MS\s*=\s*15\s*\*\s*60_000/, 'server catalog freshness window must not force expensive full-cache refreshes every minute');
-assert.match(catalogEdge, /MEMORY_ROW_TTL_MS\s*=\s*15\s*\*\s*60_000/, 'catalog Edge Function must keep the large JSONB row in-isolate for fifteen minutes');
+assert.match(catalogEdge, /CACHE_FRESH_MS\s*=\s*60\s*\*\s*60_000/, 'server catalog freshness window must keep a valid catalog off the critical refresh path for one hour');
+assert.match(catalogEdge, /REFRESH_FAILURE_COOLDOWN_MS\s*=\s*30\s*\*\s*60_000/, 'failed upstream refreshes must back off for thirty minutes instead of retrying on every stale request');
+assert.match(catalogEdge, /refreshFailureCooldown/, 'catalog scheduling must expose and honor failed-refresh cooldown state');
+assert.match(catalogEdge, /MEMORY_ROW_TTL_MS\s*=\s*30\s*\*\s*60_000/, 'catalog Edge Function must keep the large JSONB row in-isolate for thirty minutes');
 assert.match(catalogEdge, /if\(memoryCatalogRow && Date\.now\(\)-memoryCatalogLoadedAt < MEMORY_ROW_TTL_MS\) return memoryCatalogRow/, 'warm Edge isolates must avoid repeatedly reading the same large catalog row');
 assert.match(catalogEdge, /if\(memoryCatalogRow\) return memoryCatalogRow/, 'a previously loaded catalog must remain an availability fallback when PostgREST\/direct DB is under pressure');
 assert.match(catalogEdge, /max-age=300, s-maxage=300, stale-while-revalidate=1800/, 'public catalog responses must permit browser/shared-cache reuse and stale-while-revalidate');
