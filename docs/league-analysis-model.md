@@ -932,6 +932,36 @@ Champion-specific coaching compares that champion-role sample primarily with the
 
 A three-game champion sample is low confidence; five or more can reach medium confidence. Do not make strong mastery claims from win rate alone.
 
+## Replay Review Queue
+
+The report should turn aggregate findings into a small, ranked set of **specific replay moments**.
+
+The queue is built only from event evidence already present in the analyzer. Current candidate sources include:
+- severe/costly death aftermath,
+- high-risk deaths while materially ahead,
+- late-reset neutral-objective misses,
+- first-allied-death / pre-contribution / outnumbered fight entries,
+- clean pre-14 direct-role solo deaths,
+- expensive failed roams,
+- high-risk vision-action deaths,
+- first-major-item windows that are wasted or end in death before impact.
+
+Each item preserves:
+- match ID,
+- game timestamp,
+- champion/role and direct opponent champion,
+- event minute,
+- category,
+- evidence,
+- a concrete replay question,
+- the most relevant detail tab.
+
+Ranking prioritizes supported consequence and decision value. Duplicate findings at roughly the same moment are collapsed and the queue is capped at **two moments per match** and **ten moments total**, so one chaotic game cannot dominate the review plan.
+
+The frontend's **Open match** action should jump to the correct Last-20 row and open the evidence tab associated with the recommendation.
+
+This queue is a review aid, not a claim that the highest-scored event is objectively the player's single worst play.
+
 ## Coaching output contract
 
 A coaching insight should carry:
