@@ -4,6 +4,27 @@ This file is the behavioral-analysis contract for `kalenel.nl/league`.
 
 The purpose of the web analyzer is not to produce a decorative stat page. It should identify repeatable player decisions, show the evidence behind a judgment, compare the player with relevant peers and with their own broader history, and turn those findings into specific actions to practise.
 
+## Coaching-sample eligibility
+
+The cache and the coaching sample are deliberately different.
+
+All fetched matches can remain cached, but deep behavioral coaching currently requires:
+- Summoner's Rift (`mapId = 11`),
+- at least 600 seconds / 10 minutes of game duration,
+- a usable normalized role for the player.
+
+A game below 10 minutes is excluded as a **short / non-representative sample**. This is an analysis-quality threshold, not a claim that Riot officially classifies every sub-10-minute game as a remake.
+
+The report's Data Quality block must expose:
+- cached games,
+- Summoner's Rift games,
+- eligible Summoner's Rift games,
+- excluded other maps,
+- excluded short games,
+- excluded missing-role games.
+
+Excluded matches remain cached and can still be inspected later; they simply do not influence the Last-20 behavioral coaching or broader self baseline.
+
 ## Data flow
 
 1. **Fetch / update** obtains Riot Match-V5 match data, timelines, player rank, and (for the latest 20 cached matches) the actual same-role opponent's rank.
