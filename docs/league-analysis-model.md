@@ -308,6 +308,22 @@ The first case is the strongest improvement signal because the player is losing 
 
 The side-farm case must be worded as a tradeoff, not automatically a mistake: sometimes conceding an objective and taking guaranteed side resources is correct. The coaching goal is to make that choice intentional.
 
+## Early-lead preservation before 15
+
+The 10-minute and 15-minute checkpoints can hide volatility inside the lane. Preserve direct-role gold differential on supported timeline frames from roughly 3:00 until just before 15:00.
+
+For each game:
+- find the largest positive direct-role gold differential before 15,
+- treat a peak of at least **+500g** as a meaningful early-lead opportunity,
+- compare that peak with the true 15-minute direct-role gold differential,
+- classify a **give-back** when at least **500g** of that peak has disappeared by 15,
+- classify the lead as **preserved** when no more than **250g** of the peak has disappeared,
+- preserve deaths and high-risk deaths that occur after the peak and before 15 as context.
+
+The aggregate coaching signal is the share of meaningful early-lead opportunities that become give-backs. This is intentionally per-game rather than an average 10→15 comparison: a player can build and lose a large lead between the two fixed checkpoints while the sample averages hide it.
+
+Deaths inside the window are supporting context, not proof that a death caused the full economy swing. Replay review should examine the complete peak→15 sequence: wave state, reset timing, movement, fight selection and deaths.
+
 ## Lead preservation from 15 to 25
 
 Where a real timeline frame exists near 25 minutes, preserve the same-role opponent comparison at 25 as well as 10/15.
@@ -508,7 +524,7 @@ The coaching action should depend on the location. For example:
 - river → establish vision before entering contested fog,
 - lane → respect side-lane depth and missing opponents.
 
-This is intentionally coarse. It is not a substitute for the future real-map renderer.
+These zone labels are intentionally coarse for behavioral clustering. The separate real-map renderer provides point-level review on Riot's Summoner's Rift minimap; zone clustering remains useful because it summarizes repeated location patterns across games.
 
 A death occurring near an objective is contextual information; it is not automatically a bad death.
 
