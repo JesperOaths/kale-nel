@@ -580,6 +580,21 @@ Preserve:
 
 A nearby return kill should soften the interpretation of the death, not erase the original risk evidence. An **untraded high-risk death** is a stronger improvement signal because the opposing team receives tempo/value without an immediate exchange.
 
+## Objective root-cause diagnosis
+
+When primary-role objective presence is low enough to trigger coaching, rank the supported setup explanations rather than showing disconnected metrics.
+
+Current supported causes include:
+- **late reset timing** — repeated neutral-objective misses after a late shop/reset window,
+- **death before the contest** — deaths followed by enemy objective conversion,
+- **setup-vision deficit** — materially lower objective-setup ward share than the actual same-role peer sample.
+
+Rank supported causes by their evidence severity and expose the highest-ranked cause as the **primary supported cause**.
+
+If no reset/death/vision cause crosses its threshold, do not manufacture certainty. Report **arrival/pathing as the remaining hypothesis**, explicitly marked as unresolved.
+
+This is an evidence-ranking model, not causal proof. The UI must show the concrete evidence for each ranked cause.
+
 ## Neutral-objective setup timing
 
 Attendance and setup are separate behaviors.
