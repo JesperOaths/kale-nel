@@ -628,7 +628,8 @@ function renderReport(raw,sourceKind){
   const reportTimes=(r.games||[]).map(g=>gameTimestampMs(g.gameStartTimestamp)).filter(Boolean).sort((a,b)=>a-b);
   const reportRange=reportTimes.length?(new Date(reportTimes[0]).toLocaleDateString(undefined,{day:'numeric',month:'short'})+' → '+new Date(reportTimes[reportTimes.length-1]).toLocaleDateString(undefined,{day:'numeric',month:'short'})):'';
   $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(rank?rank+' · ':'')+(s.games??r.games.length)+' '+roleLabel(reportRole)+' games · '+coachingN+' coaching-comparable'+(reportRange?' · '+reportRange:'');
-  $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':(r.analyzerVersion||'Web analysis');
+  if($('rankRadarPanel'))$('rankRadarPanel').hidden=reportRole!=='ADC';
+  $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':sourceKind==='saved_server'?'Saved Kalenel report':(r.analyzerVersion||'Web analysis');
   renderQuickRead(r);
   renderRecentPulse(r);
   renderKpis(r);
@@ -1576,31 +1577,30 @@ function consistencyCard(label,stats,unit,split,detail){
 }
 function renderConsistencySummary(r){
   const target=$('consistencySummary');if(!target)return;
-  const games=Array.isArray(r.games)?r.games:[],adcGames=games.filter(g=>g.role==='ADC'),bench=adcBenchmarkSummary(r)?r.externalBenchmarks?.same:null;
-  const gold=games.filter(g=>g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)).map(g=>Number(g.goldDiff15));
-  const cs=games.filter(g=>g?.phaseRules?.lane15Comparable!==false&&hasNum(g.csDiff15)).map(g=>Number(g.csDiff15));
-  const dpm=adcGames.filter(g=>hasNum(g.dpm)).map(g=>Number(g.dpm)),kp=adcGames.filter(g=>hasNum(g.kp)).map(g=>Number(g.kp));
+  const games=Array.isArray(r.games)?r.games:[],reportRole=canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole),roleGames=games.filter(g=>canonicalRole(g.role)===reportRole),bench=reportRole==='ADC'&&adcBenchmarkSummary(r)?r.externalBenchmarks?.same:null;
+  const gold=roleGames.filter(g=>g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)).map(g=>Number(g.goldDiff15));
+  const cs=roleGames.filter(g=>g?.phaseRules?.lane15Comparable!==false&&hasNum(g.csDiff15)).map(g=>Number(g.csDiff15));
+  const dpm=roleGames.filter(g=>hasNum(g.dpm)).map(g=>Number(g.dpm)),kp=roleGames.filter(g=>hasNum(g.kp)).map(g=>Number(g.kp));
   target.innerHTML=[
     consistencyCard('Gold @15 vs role',robustStats(gold),'gold',consistencySplit(gold,0,150,false),'close band ±150g · '+gold.length+' valid checkpoints'),
     consistencyCard('CS @15 vs role',robustStats(cs),'cs',consistencySplit(cs,0,5,false),'close band ±5 CS · '+cs.length+' valid checkpoints'),
-    consistencyCard('ADC damage / min',robustStats(dpm),'dpm',bench&&hasNum(bench.dpm)?consistencySplit(dpm,Number(bench.dpm),50,false):null,bench&&hasNum(bench.dpm)?'vs '+String(bench.tier||'same-tier')+' reference ±50 DPM':'no external ADC reference applied'),
-    consistencyCard('ADC kill participation',robustStats(kp),'percent',bench&&hasNum(bench.kp)?consistencySplit(kp,Number(bench.kp),2,false):null,bench&&hasNum(bench.kp)?'vs '+String(bench.tier||'same-tier')+' reference ±2 pp':'no external ADC reference applied')
+    consistencyCard(roleLabel(reportRole)+' damage / min',robustStats(dpm),'dpm',bench&&hasNum(bench.dpm)?consistencySplit(dpm,Number(bench.dpm),50,false):null,bench&&hasNum(bench.dpm)?'vs '+String(bench.tier||'same-tier')+' external reference ±50 DPM':dpm.length+' valid '+roleLabel(reportRole)+' games'),
+    consistencyCard(roleLabel(reportRole)+' kill participation',robustStats(kp),'percent',bench&&hasNum(bench.kp)?consistencySplit(kp,Number(bench.kp),2,false):null,bench&&hasNum(bench.kp)?'vs '+String(bench.tier||'same-tier')+' external reference ±2 pp':kp.length+' valid '+roleLabel(reportRole)+' games')
   ].join('');
 }
 function renderCharts(r){
-  const lane15Comparable=Number(r.behaviorSummary?.checkpointEligibility?.lane15Games??0)>0,adc=adcBenchmarkSummary(r),bench=adc?r.externalBenchmarks?.same:null;
-  const sourceGames=[...(r.games||[])],hasTimestamps=sourceGames.some(g=>Number(g?.gameStartTimestamp||0)>0);
-  const chronological=hasTimestamps?sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-Number(b.gameStartTimestamp||0)):sourceGames.reverse();
+  const lane15Comparable=Number(r.behaviorSummary?.checkpointEligibility?.lane15Games??0)>0,reportRole=canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole),adc=reportRole==='ADC'?adcBenchmarkSummary(r):null,bench=adc?r.externalBenchmarks?.same:null;
+  const sourceGames=[...(r.games||[])].filter(g=>canonicalRole(g.role)===reportRole),hasTimestamps=sourceGames.some(g=>Number(g?.gameStartTimestamp||0)>0);
+  const chronological=hasTimestamps?sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-Number(b.gameStartTimestamp||0)):sourceGames.reverse(),roleName=roleLabel(reportRole);
   const specs=[
-    {key:'goldDiff15',title:lane15Comparable?'Gold @15 vs opposing ADC':'Gold @15 vs role opponent · raw checkpoint',q:'Positive means you had more gold than the direct role opponent at 15. Fixed −2000 to +2000 scale makes games directly comparable.',unit:'signedGold',formatUnit:'signed',signedAxis:true,relevance:150,fixedMin:-2000,fixedMax:2000},
-    {key:'csDiff15',title:lane15Comparable?'CS @15 vs opposing ADC':'CS @15 vs role opponent · raw checkpoint',q:'Positive means you had more farm than the direct role opponent at 15. Fixed −35 to +35 scale.',unit:'signedCs',formatUnit:'signed',signedAxis:true,relevance:5,fixedMin:-35,fixedMax:35},
-    {key:'dpm',title:'Damage per minute · ADC sample',q:'Primary-role ADC games on a fixed 0–1500 DPM scale. The dashed reference is the same-tier ADC-adjusted external benchmark.',unit:'dpm',formatUnit:'int',fixedMin:0,fixedMax:1500,adcOnly:true,reference:bench?.dpm,referenceLabel:(bench?.tier||'same tier')+' benchmark'},
-    {key:'kp',title:'Kill participation · ADC sample',q:'Primary-role ADC games on a fixed 0–100% scale. The dashed reference is the same-tier ADC-adjusted external benchmark.',unit:'percent',formatUnit:'%',fixedMin:0,fixedMax:100,adcOnly:true,reference:bench?.kp,referenceLabel:(bench?.tier||'same tier')+' benchmark'}
+    {key:'goldDiff15',title:lane15Comparable?'Gold @15 vs direct role opponent':'Gold @15 vs role opponent · raw checkpoint',q:'Positive means you had more gold than the direct role opponent at 15. Fixed −2000 to +2000 scale makes games directly comparable.',unit:'signedGold',formatUnit:'signed',signedAxis:true,relevance:150,fixedMin:-2000,fixedMax:2000},
+    {key:'csDiff15',title:lane15Comparable?'CS @15 vs direct role opponent':'CS @15 vs role opponent · raw checkpoint',q:'Positive means you had more farm than the direct role opponent at 15. Fixed −35 to +35 scale.',unit:'signedCs',formatUnit:'signed',signedAxis:true,relevance:5,fixedMin:-35,fixedMax:35},
+    {key:'dpm',title:'Damage per minute · '+roleName+' sample',q:bench?'Selected-role games on a fixed 0–1500 DPM scale. The dashed line is the same-tier ADC-adjusted external reference.':'Selected '+roleName+' games on a fixed 0–1500 DPM scale.',unit:'dpm',formatUnit:'int',fixedMin:0,fixedMax:1500,reference:bench?.dpm,referenceLabel:(bench?.tier||'same tier')+' reference'},
+    {key:'kp',title:'Kill participation · '+roleName+' sample',q:bench?'Selected-role games on a fixed 0–100% scale. The dashed line is the same-tier ADC-adjusted external reference.':'Selected '+roleName+' games on a fixed 0–100% scale.',unit:'percent',formatUnit:'%',fixedMin:0,fixedMax:100,reference:bench?.kp,referenceLabel:(bench?.tier||'same tier')+' reference'}
   ];
   const hidden=[];
   $('chartGrid').innerHTML=specs.map(spec=>{
-    const scoped=spec.adcOnly?chronological.filter(g=>g.role==='ADC'):chronological;
-    const points=scoped.map(g=>({matchId:g.matchId,gameStartTimestamp:g.gameStartTimestamp,champion:g.champion,value:g[spec.key]}));
+    const points=chronological.map(g=>({matchId:g.matchId,gameStartTimestamp:g.gameStartTimestamp,champion:g.champion,value:g[spec.key]}));
     const svg=chartSvg(points,spec);
     if(!svg)hidden.push(spec.title);
     return '<article class="chart-card '+(spec.signedAxis?'signed-chart':'')+'"><div class="chart-card-head"><div><h3>'+esc(spec.title)+'</h3><p>'+esc(spec.q)+'</p></div><span class="chart-kind">'+(spec.signedAxis?'0 = even':'trend')+'</span></div>'+(svg||'<div class="chart-empty">Insufficient valid data</div>')+(svg?'<p class="chart-reading">'+esc(chartSummary(points,spec))+'</p>':'')+'</article>';
