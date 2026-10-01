@@ -57,6 +57,12 @@ ok(backend.includes('peer_rank_json'), 'same-role peer rank cache must remain av
 ok(backend.includes('gameDuration||r?.game_duration_seconds||0)>=600'), 'coaching sample must exclude sub-10-minute games');
 ok(backend.includes('shortGameThresholdSeconds:600'), 'short-game threshold must remain explicit in data quality');
 ok(backend.includes('opponentMatchupBehaviorModel'), 'repeated opposing-champion matchup model must remain in analyzer');
+ok(backend.includes('buildReplayReviewQueue'), 'replay review queue must remain explicit in analyzer');
+ok(backend.includes('if(n>=2)continue'), 'replay review queue must cap repeated moments to two per match');
+ok(backend.includes('if(selected.length>=10)break'), 'replay review queue must cap output at ten moments');
+ok(backend.includes('deathConsequences?.events'), 'replay queue must preserve death-consequence evidence');
+ok(backend.includes('objectiveReadiness?.events'), 'replay queue must preserve objective-readiness evidence');
+ok(backend.includes('fightProfile?.events'), 'replay queue must preserve fight-entry evidence');
 ok(backend.includes('if(list.length<3)continue'), 'opponent matchup coaching must require at least three repeated games');
 ok(backend.includes('pre14SoloDeathsToRole'), 'matchup model must preserve clean direct-role duel evidence');
 ok(backend.includes('pre14OutsidePressureDeaths'), 'matchup model must preserve outside-pressure evidence');
