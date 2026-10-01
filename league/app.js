@@ -304,6 +304,7 @@ function renderBullets(id,items,empty){
     return '<div class="bullet coaching-bullet priority-'+esc(String(x.priority||3))+'">'+
       '<div class="coaching-head"><strong>'+esc(title)+'</strong>'+(x.category?'<span>'+esc(x.category)+'</span>':'')+(x.priority?'<em>Priority '+esc(String(x.priority))+'</em>':'')+(confidence?'<small>'+esc(confidence)+' confidence</small>':'')+'</div>'+
       (evidence?'<p>'+esc(evidence)+'</p>':'')+
+      (x.comparison?'<p class="coaching-source"><b>Compared with:</b> '+esc(x.comparison)+'</p>':'')+
       (action?'<p class="coaching-action"><b>Improve:</b> '+esc(action)+'</p>':'')+
       '</div>';
   }).join(''):'<div class="bullet empty">'+esc(empty)+'</div>';
@@ -689,11 +690,35 @@ function renderBreakdowns(r){
     $('championBreakdown').innerHTML=champRows.length?champRows.map(([name,v])=>'<div class="break-row"><span>'+esc(name)+'</span><small>'+esc(String(v.games||0))+' games</small><strong>'+esc(fmtPct((v.games||0)?Number(v.wins||0)/Number(v.games)*100:null))+'</strong></div>').join(''):'<div class="bullet empty">No champion sample available.</div>';
   }
 }
+function evidenceLevel(n,good=10,moderate=5){
+  const x=Number(n);return Number.isFinite(x)?(x>=good?'strong':x>=moderate?'moderate':'thin'):'unknown';
+}
+function qualityCard(label,value,detail='',level=''){
+  return '<div class="quality-card '+(level?'evidence-'+esc(level):'')+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong>'+(detail?'<small>'+esc(detail)+'</small>':'')+'</div>';
+}
 function renderQuality(r){
-  const q=r.dataQuality||{};
-  const cards=[['Analyzed games',q.analyzedGames??r.games?.length??0],['Primary-role coaching games',q.coachingRoleGames??r.coachingSummary?.games??'n/a'],['Primary-role baseline',q.coachingBaselineRoleGames??0],['Timeline games',q.validTimelineGames??'n/a'],['Peer-comparable games',q.peerComparableGames??'n/a'],['Ranked peer games',q.rankedPeerGames??'n/a'],['Higher-rank peers',q.higherRankPeerGames??'n/a'],['Coordinate games',q.validCoordinateGames??'n/a'],['Missing timelines',q.missingTimelineGames??'n/a'],['Overall broader baseline',q.baselineGames??0]];
-  $('qualityGrid').innerHTML=cards.map(([l,v])=>'<div class="quality-card"><span>'+esc(l)+'</span><strong>'+esc(v)+'</strong></div>').join('');
-  $('sourceNote').textContent=r.sourceStatus?.note||'Report data remains traceable through the report contract. Missing advanced data is shown as unavailable rather than zero.';
+  const q=r.dataQuality||{},b=r.behaviorSummary||{},p=r.peerComparison||{};
+  const analyzed=Number(q.analyzedGames??r.games?.length??0),coaching=Number(q.coachingRoleGames??r.coachingSummary?.games??0),timelines=Number(q.validTimelineGames??0);
+  const timelinePct=analyzed>0?timelines/analyzed*100:null,peerN=Number(q.peerComparableGames??p.sameRoleGames??0),rankedN=Number(q.rankedPeerGames??p.rankedPeerGames??0);
+  const fightN=Number(b.fightSamples??0),objectiveN=Number(b.neutralObjectiveEvents??0),wardN=Number(p.visionWardTotal??0);
+  const cards=[
+    qualityCard('Analyzed games',String(analyzed),String(coaching)+' primary-role coaching games',evidenceLevel(coaching)),
+    qualityCard('Timeline coverage',hasNum(timelinePct)?fmtPct(timelinePct):'n/a',String(timelines)+' / '+String(analyzed)+' games',evidenceLevel(timelines)),
+    qualityCard('Direct peer evidence',String(peerN)+' games','Actual same-role opponents',evidenceLevel(peerN)),
+    qualityCard('Ranked peer evidence',String(rankedN)+' games',String(q.higherRankPeerGames??p.higherRankPeerGames??0)+' higher-rank peers',evidenceLevel(rankedN)),
+    qualityCard('Fight evidence',String(fightN)+' clusters','Attended multi-kill fight clusters',evidenceLevel(fightN,12,6)),
+    qualityCard('Objective evidence',String(objectiveN)+' events','Tracked team neutral objectives',evidenceLevel(objectiveN,10,5)),
+    qualityCard('Ward evidence',String(wardN)+' wards','Used for spatial/setup analysis',evidenceLevel(wardN,30,12)),
+    qualityCard('Broader self baseline',String(q.coachingBaselineRoleGames??q.baselineGames??0)+' games','Older cached primary-role games',evidenceLevel(q.coachingBaselineRoleGames??q.baselineGames??0))
+  ];
+  $('qualityGrid').innerHTML=cards.join('');
+  const low=[];
+  if(timelines<5)low.push('timeline behavior');
+  if(peerN<5)low.push('direct-peer comparisons');
+  if(rankedN<3)low.push('rank-band comparisons');
+  if(fightN<6)low.push('fight-order/readiness');
+  const base=r.sourceStatus?.note||'Report data remains traceable through the report contract. Missing data remains unknown rather than zero.';
+  $('sourceNote').textContent=base+(low.length?' Thin-evidence areas right now: '+low.join(', ')+'.':' Core evidence coverage is sufficient for the main coaching dimensions.');
 }
 
 async function importReport(){
