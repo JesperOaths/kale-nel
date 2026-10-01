@@ -1476,18 +1476,25 @@ function sessionBehaviorModel(games:any[]){
   const quickAfterLoss=games.filter((g:any)=>g.sessionContext?.previousWin===false&&hasNum(g.sessionContext?.gapAfterPreviousMin)&&Number(g.sessionContext.gapAfterPreviousMin)<=45);
   const quickAfterWin=games.filter((g:any)=>g.sessionContext?.previousWin===true&&hasNum(g.sessionContext?.gapAfterPreviousMin)&&Number(g.sessionContext.gapAfterPreviousMin)<=45);
   const pack=(xs:any[])=>{
-    const lane15=finiteGames(xs.filter((g:any)=>g?.phaseRules?.lane15Comparable!==false),g=>g.goldDiff15);
-    return{games:xs.length,lane15Games:lane15.length,goldDiff15:meanField(lane15,g=>g.goldDiff15),badDeaths:meanField(xs.filter(g=>g.timelineAvailable),g=>g.badDeathCount),dpm:meanField(xs,g=>g.dpm),csMin:meanField(xs,g=>g.csMin)};
+    const lane15=finiteGames(xs.filter((g:any)=>g?.phaseRules?.lane15Comparable!==false),g=>g.goldDiff15),timeline=xs.filter((g:any)=>g.timelineAvailable===true),dpmGames=finiteGames(xs,g=>g.dpm),csGames=finiteGames(xs,g=>g.csMin);
+    return{
+      games:xs.length,lane15Games:lane15.length,timelineGames:timeline.length,dpmGames:dpmGames.length,csMinGames:csGames.length,
+      goldDiff15:meanField(lane15,g=>g.goldDiff15),badDeaths:meanField(timeline,g=>g.badDeathCount),dpm:meanField(dpmGames,g=>g.dpm),csMin:meanField(csGames,g=>g.csMin)
+    };
   };
-  const firstP=pack(first),lateP=pack(late),lossP=pack(quickAfterLoss),winP=pack(quickAfterWin);
+  const firstP=pack(first),lateP=pack(late),lossP=pack(quickAfterLoss),winP=pack(quickAfterWin),pairReady=(a:any,b:any)=>Number(a?.games||0)>=2&&Number(b?.games||0)>=2;
+  const laneReady=(a:any,b:any)=>pairReady(a,b)&&Number(a?.lane15Games||0)>=2&&Number(b?.lane15Games||0)>=2;
+  const timelineReady=(a:any,b:any)=>pairReady(a,b)&&Number(a?.timelineGames||0)>=2&&Number(b?.timelineGames||0)>=2;
+  const metricReady=(a:any,b:any,field:string)=>pairReady(a,b)&&Number(a?.[field]||0)>=2&&Number(b?.[field]||0)>=2;
   return{
     firstGame:firstP,game3Plus:lateP,quickAfterLoss:lossP,quickAfterWin:winP,
-    game3PlusGoldDelta:hasNum(lateP.goldDiff15)&&hasNum(firstP.goldDiff15)?Number(lateP.goldDiff15)-Number(firstP.goldDiff15):null,
-    game3PlusBadDeathDelta:hasNum(lateP.badDeaths)&&hasNum(firstP.badDeaths)?Number(lateP.badDeaths)-Number(firstP.badDeaths):null,
-    game3PlusDpmDelta:hasNum(lateP.dpm)&&hasNum(firstP.dpm)?Number(lateP.dpm)-Number(firstP.dpm):null,
-    postLossGoldDelta:hasNum(lossP.goldDiff15)&&hasNum(winP.goldDiff15)?Number(lossP.goldDiff15)-Number(winP.goldDiff15):null,
-    postLossBadDeathDelta:hasNum(lossP.badDeaths)&&hasNum(winP.badDeaths)?Number(lossP.badDeaths)-Number(winP.badDeaths):null,
-    definition:"Session continues while the gap after the previous game end is ≤90 minutes. Quick requeue comparison uses ≤45 minutes."
+    game3PlusGoldDelta:laneReady(lateP,firstP)&&hasNum(lateP.goldDiff15)&&hasNum(firstP.goldDiff15)?Number(lateP.goldDiff15)-Number(firstP.goldDiff15):null,
+    game3PlusBadDeathDelta:timelineReady(lateP,firstP)&&hasNum(lateP.badDeaths)&&hasNum(firstP.badDeaths)?Number(lateP.badDeaths)-Number(firstP.badDeaths):null,
+    game3PlusDpmDelta:metricReady(lateP,firstP,"dpmGames")&&hasNum(lateP.dpm)&&hasNum(firstP.dpm)?Number(lateP.dpm)-Number(firstP.dpm):null,
+    postLossGoldDelta:laneReady(lossP,winP)&&hasNum(lossP.goldDiff15)&&hasNum(winP.goldDiff15)?Number(lossP.goldDiff15)-Number(winP.goldDiff15):null,
+    postLossBadDeathDelta:timelineReady(lossP,winP)&&hasNum(lossP.badDeaths)&&hasNum(winP.badDeaths)?Number(lossP.badDeaths)-Number(winP.badDeaths):null,
+    samplePolicy:{minGamesPerComparedGroup:2,minTimelineGamesPerRiskGroup:2,minLane15GamesPerGoldGroup:2,thinGroupGames:3},
+    definition:"Session continues while the gap after the previous game end is ≤90 minutes. Quick requeue comparison uses ≤45 minutes. Deltas are withheld until both compared groups contain at least two valid observations for that metric."
   };
 }
 function meanField(games:any[],fn:(g:any)=>any){return avg(games.map(fn));}
