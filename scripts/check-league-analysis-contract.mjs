@@ -201,6 +201,12 @@ ok(backend.includes('out.majorItemReadiness=majorItemReadiness('), 'per-game fir
 ok(backend.includes('avgMajorCompletionDelayMin'), 'aggregate affordability-to-purchase delay must remain exported');
 ok(backend.includes('avgMajorCompletionDelayVsPeerMin'), 'recipe-aware delay comparison versus the direct role opponent must remain exported');
 ok(backend.includes('higherRankMajorItemGames'), 'higher-ranked direct-peer first-major sample must remain exported');
+ok(backend.includes('schema:"rank_snapshot_v2"')&&backend.includes('byQueue'), 'rank snapshots must preserve both Solo/Duo and Flex ladders when Riot returns them');
+ok(backend.includes('function rankComparisonForGame('), 'rank comparisons must choose a shared ladder per game');
+ok(backend.includes('q===420?["RANKED_SOLO_5x5"]:q===440?["RANKED_FLEX_SR"]'), 'ranked Solo/Flex matches must use their matching ladder');
+ok(backend.includes('rankContextExcludedGames')&&backend.includes('rankComparisonQueueCounts'), 'rank-context exclusions and ladder use must stay exported');
+ok(backend.includes('peer_rank_json?.schema!=="rank_snapshot_v2"'), 'recent stale single-ladder peer snapshots must be refreshed');
+ok(app.includes('Rank context excluded')&&app.includes('Rank ladders used'), 'rank-ladder comparability must remain visible');
 ok(backend.includes('higherRankAvgMajorItemDeltaMin'), 'higher-ranked direct-peer first-major timing delta must remain exported');
 ok(backend.includes('higherRankMajorItemFasterPct'), 'higher-ranked direct-peer faster-first-major rate must remain exported');
 ok(backend.includes('actual higher-ranked same-role opponents with measurable first-major completions'), 'higher-rank item coaching must use actual encountered role peers');
