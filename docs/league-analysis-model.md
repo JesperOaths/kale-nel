@@ -81,8 +81,8 @@ Queue isolation means the final Last-20 coaching sample may contain matches deep
 To keep rank-band comparisons aligned with the actual coaching sample without ranking every raw match, `fetch_finish` now:
 1. reads the cached matches from the completed fetch run in original recency order,
 2. applies the same Summoner's Rift + ≥10-minute eligibility,
-3. computes the same dominant raw queue ID,
-4. takes the first 20 matches from that comparable queue context,
+3. runs the same recency-aware queue selector across the 20 newest supported candidates,
+4. takes the first 20 matches from that selected comparable queue context,
 5. fetches an opponent rank snapshot only when one of those target matches is missing it.
 
 The response exposes `dominant_queue_id`, `comparable_cached_games`, `peer_rank_target_count`, and `peer_rank_backfilled` so the frontend can report what happened.
@@ -103,9 +103,11 @@ The analyzer therefore keeps fetched matches cached but filters the coaching can
 
 Current supported queue IDs are Draft Pick 400, Ranked Solo 420, Blind Pick 430, Ranked Flex 440, Swiftplay 480, Quickplay 490 and Summoner's Rift Clash 700. Swiftplay remains a separate rules family. Any other map-11 queue fails closed out of coaching until reviewed.
 
-Only after unsupported queues are removed does the analyzer choose the dominant raw queue ID for the Last-20 deep coaching sample and broader cached baseline. This prevents a frequently played bot/special queue from becoming the "dominant" context merely because it appears often.
+Only after unsupported queues are removed does the analyzer choose the dominant raw queue ID for the deep coaching sample. Queue selection is **recency-aware**: count queue IDs only inside the 20 newest supported candidates, choose the largest count, and break a count tie in favor of the queue whose newest match is more recent. Older cached matches from that selected queue can still extend the same-queue baseline.
 
-Data Quality exposes the supported-candidate count, unsupported queue IDs excluded, dominant queue family/ID, queue counts and the remaining excluded-other-queue count. A smaller mechanically coherent sample is preferred over a larger mixed sample.
+This prevents two opposite errors: a frequently played old queue cannot override the player’s current queue simply because it dominates a 100-game cache, while one accidental off-queue game also cannot replace an otherwise consistent recent context.
+
+Data Quality exposes the supported-candidate count, unsupported queue IDs excluded, selected queue family/ID, the recent selection window/counts, full-cache queue counts and the remaining excluded-other-queue count. A smaller mechanically coherent, current-context sample is preferred over a larger mixed or historically stale sample.
 
 ## Coaching-sample eligibility
 
