@@ -193,6 +193,23 @@ The analyzer can compare:
 
 This is descriptive. Do not claim the gold state alone caused the win or loss.
 
+## Risk discipline by direct-role economy state
+
+At each death, compare the player's total gold with the **actual same-role opponent** at that timeline moment:
+
+- **ahead:** at least +500g,
+- **roughly even:** between -500g and +500g,
+- **behind:** at most -500g.
+
+This is a **role-matchup economy state**, not a claim about the whole team's game state.
+
+Preserve both total deaths and high-risk deaths in each bucket. The most actionable contrast is often:
+
+- high-risk deaths while ahead → lead-protection / comeback-prevention problem,
+- high-risk deaths while behind → deficit-compounding / excessive-variance problem.
+
+A behind-state death is not automatically wrong. Strong negative coaching requires repeated deaths that also cross the multi-signal high-risk threshold. Conversely, if a player has enough behind-state deaths but very few high-risk ones, that can be highlighted as recovery discipline.
+
 ## Lead-protection deaths
 
 A separate lead-protection signal identifies deaths taken while the player is **materially ahead of the actual same-role opponent**.
