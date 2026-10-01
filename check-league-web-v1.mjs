@@ -29,6 +29,11 @@ assert.ok(app.includes("'x-league-workspace':workspaceId()"),'League browser mus
 assert.ok(!app.includes("'x-gejast-session':token()"),'League browser must not depend on a Kalenel player session');
 assert.ok(![html,app,css].some(source=>source.includes('gejast-auth-gate.js')||source.includes('gejast-home-gate.js')||source.includes('requireMatchEntrySession')||source.includes('/login.html')),'Every League frontend artifact must stay outside the Kalenel login/session gate');
 assert.ok(html.includes('name="robots" content="index,follow'),'Public League page must remain indexable/followable');
+assert.ok(html.includes('class="site-shell"')&&html.includes('/logo-small.png'),'League must use the shared Kalenel shell and real site logo');
+assert.ok(html.includes('League analysis, in the Kalenel site.'),'League hero must present the tool as part of Kalenel rather than a detached desktop GUI');
+assert.ok(css.includes("--paper:#f7f2e9")&&css.includes("site-bg-desktop.webp"),'League must retain the warm paper/background visual language used by Kalenel pages');
+assert.ok(css.includes('.site-credit-watermark')&&html.includes('v817 - Made by Bruis'),'League must keep the shared Kalenel version watermark treatment');
+assert.ok(!html.includes('brand-mark')&&!css.includes('--bg:#071018'),'League must not regress to the detached dark League-client shell');
 assert.ok(api.includes('x-riot-api-key'));
 assert.ok(api.includes('Access-Control-Allow-Headers'));
 assert.ok(api.includes('const hasNum='));
