@@ -302,6 +302,8 @@ function renderProgressComparison(current,previous,previousAt){
     {label:'First allied death rate',path:'behaviorSummary.firstAllyFightDeathRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
     {label:'Unspent-gold fight starts',path:'behaviorSummary.highUnspentFightRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
     {label:'Major-item disadvantage fights',path:'behaviorSummary.itemDisadvantageFightRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
+    {label:'Game 3+ gold delta',path:'sessionBehavior.game3PlusGoldDelta',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
+    {label:'Post-loss requeue gold delta',path:'sessionBehavior.postLossGoldDelta',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
     {label:'Late-reset objective miss rate',path:'behaviorSummary.lateResetObjectiveMissRate',threshold:10,direction:-1,format:v=>fmtPct(v)}
   ];
   if(['ADC','MID','TOP'].includes(role))specs.splice(1,0,{label:'CS / min',path:'summary.csMin',threshold:.3,direction:1,format:v=>fmt(v,2)});
@@ -431,6 +433,9 @@ function detailContent(g,tab){
     detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+'m':'n/a')+detailCard('Opponent first impact',hasNum(g.opponentImpactTimeMin)?fmt(g.opponentImpactTimeMin,1)+'m':'n/a')+detailCard('Impact timing vs peer',hasNum(g.impactDeltaVsOpponent)?signed(g.impactDeltaVsOpponent,1)+' min':'n/a')+
     detailCard('DPM vs same-role opponent',peer?signed(peer.dpmDelta,0):'n/a')+detailCard('CS/min vs opponent',peer?signed(peer.csMinDelta,2):'n/a')+detailCard('Team damage rank',hasNum(g.damageRank)?'#'+g.damageRank+' of 5':'n/a')+
     detailCard('Damage share',fmtPct(g.damageShare))+detailCard('Gold share',fmtPct(g.goldShare))+detailCard('Damage − gold share',hasNum(g.damageShare)&&hasNum(g.goldShare)?signed(Number(g.damageShare)-Number(g.goldShare),1)+' pp':'n/a')+
+    detailCard('Session game #',g.sessionContext?.sessionGameNumber?String(g.sessionContext.sessionGameNumber):'n/a')+
+    detailCard('Gap after previous game',hasNum(g.sessionContext?.gapAfterPreviousMin)?fmt(g.sessionContext.gapAfterPreviousMin,0)+' min':'n/a')+
+    detailCard('Previous result',g.sessionContext?.previousWin===true?'WIN':g.sessionContext?.previousWin===false?'LOSS':'n/a')+
     '<div class="detail-note">Peer comparisons use the actual same-role opponent in this match. Positive values mean you finished ahead on that metric; opponent rank is fetched during the Fetch step and cached with the match.</div>';
 }
 function bindDetailTabs(container,g,index){
@@ -501,7 +506,7 @@ function renderAdvanced(r){
     ['Fresh-purchase objective joins',String(r.behaviorSummary?.freshPurchaseObjectiveJoins??0)+' · '+fmtPct(r.behaviorSummary?.freshPurchaseObjectiveJoinRate)]
   ];
   $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('not recovered')||v==='n/a')).join('');
-  const p=r.peerComparison||{},conv=r.conversion||{},wl=r.winLoss||{},trend=r.recentTrend||{},base=r.coachingLifetime||null,s=r.coachingSummary||r.summary||{},rank=r.profile?.rank||null;
+  const p=r.peerComparison||{},conv=r.conversion||{},wl=r.winLoss||{},trend=r.recentTrend||{},session=r.sessionBehavior||{},base=r.coachingLifetime||null,s=r.coachingSummary||r.summary||{},rank=r.profile?.rank||null;
   const peerRows=[
     metric('Peer definition',p.definition||'Same-role opponent in each match',false),
     metric('Comparable peer games',String(p.sameRoleGames??0),false),
@@ -554,6 +559,18 @@ function renderAdvanced(r){
     trendRow('Latest 5 high-risk deaths / previous',trend.badDeaths,v=>fmt(v,1)),
     trendRow('Latest 5 DPM / previous',trend.dpm,v=>fmtInt(v))
   ];
+  const sessionRows=[
+    metric('Session model',session.definition||'Not enough data',!session.definition),
+    metric('Session-opening games',String(session.firstGame?.games??0),false),
+    metric('Game 3+ sample',String(session.game3Plus?.games??0),false),
+    metric('Game 3+ gold @15 delta',hasNum(session.game3PlusGoldDelta)?signed(session.game3PlusGoldDelta,0)+'g':'n/a',!hasNum(session.game3PlusGoldDelta)),
+    metric('Game 3+ high-risk death delta',hasNum(session.game3PlusBadDeathDelta)?signed(session.game3PlusBadDeathDelta,2)+' / game':'n/a',!hasNum(session.game3PlusBadDeathDelta)),
+    metric('Game 3+ DPM delta',hasNum(session.game3PlusDpmDelta)?signed(session.game3PlusDpmDelta,0):'n/a',!hasNum(session.game3PlusDpmDelta)),
+    metric('Quick post-loss sample',String(session.quickAfterLoss?.games??0),false),
+    metric('Quick post-win sample',String(session.quickAfterWin?.games??0),false),
+    metric('Post-loss requeue gold @15 delta',hasNum(session.postLossGoldDelta)?signed(session.postLossGoldDelta,0)+'g':'n/a',!hasNum(session.postLossGoldDelta)),
+    metric('Post-loss high-risk death delta',hasNum(session.postLossBadDeathDelta)?signed(session.postLossBadDeathDelta,2)+' / game':'n/a',!hasNum(session.postLossBadDeathDelta))
+  ];
   const baselineRows=base?[
     metric('Broader cached sample',String(base.games||0)+' games',false),
     metric('WR · recent / baseline',fmtPct(s.winRate)+' / '+fmtPct(base.winRate),false),
@@ -563,7 +580,7 @@ function renderAdvanced(r){
   ]:[metric('Recent vs broader baseline','Cache more than 20 games to enable',true)];
   $('benchmarkMetrics').innerHTML=[
     metric('Current Riot rank',rank&&rank.tier?[rank.tier,rank.rank,rank.leaguePoints!=null?rank.leaguePoints+' LP':''].filter(Boolean).join(' '):'Not available',!(rank&&rank.tier)),
-    ...peerRows,...conversionRows,...winLossRows,...trendRows,...baselineRows
+    ...peerRows,...conversionRows,...winLossRows,...trendRows,...sessionRows,...baselineRows
   ].join('');
 }
 function renderBreakdowns(r){
