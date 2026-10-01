@@ -114,8 +114,9 @@ function cors(req: Request) {
     "Vary": "Origin",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Max-Age": "86400",
     "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "public, max-age=300, stale-while-revalidate=1800",
+    "Cache-Control": "public, max-age=300, s-maxage=300, stale-while-revalidate=1800",
   };
 }
 
