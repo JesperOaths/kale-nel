@@ -8,7 +8,13 @@
   function $(id){ return document.getElementById(id); }
   function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
   function scope(){ try{ if(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope) return window.GEJAST_SCOPE_UTILS.getScope(); }catch(_){} try{ const q=new URLSearchParams(location.search).get('scope'); return q==='family'?'family':'friends'; }catch(_){ return 'friends'; } }
-  function headers(){ return {'Content-Type':'application/json',apikey:cfg.SUPABASE_PUBLISHABLE_KEY||'',Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY||''}`,Accept:'application/json'}; }
+  function headers(){
+    const c=cfg;
+    if(c&&typeof c.publicApiHeaders==='function') return c.publicApiHeaders({'Content-Type':'application/json',Accept:'application/json'});
+    const key=String(cfg.SUPABASE_PUBLISHABLE_KEY||'').trim(),h={apikey:key,'Content-Type':'application/json',Accept:'application/json'};
+    if(/^[^.]+\.[^.]+\.[^.]+$/.test(key)) h.Authorization=`Bearer ${key}`;
+    return h;
+  }
   async function parse(res){ const txt=await res.text(); let data=null; try{ data=txt?JSON.parse(txt):null; }catch(_){ throw new Error(txt||`HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message||data?.error||data?.details||data?.hint||`HTTP ${res.status}`); return data; }
   async function rpc(name, payload, options){
     if(!cfg.SUPABASE_URL) throw new Error('Supabase URL ontbreekt.');
