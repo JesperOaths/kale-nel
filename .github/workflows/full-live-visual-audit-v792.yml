@@ -73,7 +73,7 @@ jobs:
       GEJAST_SITE_SCOPE: friends
       GEJAST_VISUAL_TIMEOUT_MS: '25000'
       GEJAST_VISUAL_SETTLE_MS: '5000'
-      GEJAST_VISUAL_PAGE_CONCURRENCY: '6'
+      GEJAST_VISUAL_PAGE_CONCURRENCY: '4'
 
     steps:
       - name: Check out exact tested revision

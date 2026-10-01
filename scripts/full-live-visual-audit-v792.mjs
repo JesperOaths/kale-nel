@@ -173,7 +173,20 @@ function trackedRouteUsesAuthGate(route) {
 }
 
 async function waitForAuthGateToSettle(page, route, kind) {
-  const expected = kind === 'context' || trackedRouteUsesAuthGate(route);
+  let expected = kind === 'context' || trackedRouteUsesAuthGate(route);
+
+  // Redirect/compatibility pages can hand off to a gated canonical page after the
+  // initial document has already loaded. Give that handoff a brief chance to occur,
+  // then inspect both the final repository route and the live DOM auth marker.
+  if (!expected) {
+    await page.waitForTimeout(250);
+    let currentPath = '';
+    try { currentPath = new URL(page.url()).pathname; } catch (_) {}
+    let liveMarker = false;
+    try { liveMarker = await page.evaluate(() => document.documentElement.hasAttribute('data-gejast-auth-state')); }
+    catch (_) {}
+    expected = trackedRouteUsesAuthGate(currentPath) || liveMarker;
+  }
   if (!expected) return { expected: false, settled: true, state: '', waited_ms: 0 };
 
   const started = Date.now();
@@ -221,14 +234,33 @@ async function capture(context, route, label, index, kind = 'tracked') {
   let response = null;
   let navigationError = '';
   let authGate = { expected: false, settled: true, state: '', waited_ms: 0 };
+  let authRetryCount = 0;
   const started = Date.now();
   try {
-    response = await page.goto(routeUrl(route), { waitUntil: 'domcontentloaded', timeout });
-    const protectedOnArrival = expectedProtected(route, response?.status() || 0, page.url());
-    if (!protectedOnArrival) {
-      authGate = await waitForAuthGateToSettle(page, route, kind);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) {
+        authRetryCount += 1;
+        consoleErrors.length = 0;
+        pageErrors.length = 0;
+        failedRequests.length = 0;
+        httpErrors.length = 0;
+        await page.waitForTimeout(700);
+      }
+
+      response = await page.goto(routeUrl(route), { waitUntil: 'domcontentloaded', timeout });
+      const protectedOnArrival = expectedProtected(route, response?.status() || 0, page.url());
+      authGate = protectedOnArrival
+        ? { expected: false, settled: true, state: 'protected', waited_ms: 0 }
+        : await waitForAuthGateToSettle(page, route, kind);
+      await page.waitForTimeout(settleMs);
+
+      let currentPath = '';
+      try { currentPath = new URL(page.url()).pathname; } catch (_) {}
+      const currentAuthState = await page.evaluate(() => document.documentElement.getAttribute('data-gejast-auth-state') || '').catch(() => '');
+      const transientAuthFailure = !protectedOnArrival && authGate.expected && !authGate.settled;
+      const contextualLoginFallback = kind === 'context' && currentPath === '/login.html' && currentAuthState !== 'authenticated';
+      if ((!transientAuthFailure && !contextualLoginFallback) || attempt === 1) break;
     }
-    await page.waitForTimeout(settleMs);
   } catch (error) {
     navigationError = safe(error);
   }
@@ -330,6 +362,7 @@ async function capture(context, route, label, index, kind = 'tracked') {
     auth_gate_expected: authGate.expected,
     auth_gate_settled: authGate.settled,
     auth_gate_wait_ms: authGate.waited_ms,
+    auth_retry_count: authRetryCount,
     elapsed_ms: Date.now() - started,
     body_chars: bodyText.trim().length,
     body_preview: bodyText.replace(/\s+/g, ' ').trim().slice(0, 700),
