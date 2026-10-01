@@ -378,7 +378,8 @@ function detailContent(g,tab){
   if(tab==='vision'){
     const v=g.vision||{};
     return detailCard('Vision / min',fmt(g.vpm,2))+detailCard('Wards placed',String(v.wardCount??g.wards?.length??0))+detailCard('Wards / 30 min',fmt(v.wardsPer30,1))+
-      detailCard('Offensive / defensive',String(v.offensive??0)+' / '+String(v.defensive??0))+detailCard('River wards',String(v.river??0))+detailCard('Objective setup wards',String(v.objectiveSetup??0))+detailCard('Peer setup wards',String(g.opponentVision?.objectiveSetup??0))+detailCard('Setup Δ vs peer',hasNum(v.objectiveSetupDeltaVsOpponent)?signed(v.objectiveSetupDeltaVsOpponent,0):'n/a')+
+      detailCard('Offensive / defensive',String(v.offensive??0)+' / '+String(v.defensive??0))+detailCard('River wards',String(v.river??0))+detailCard('Objective setup wards',String(v.objectiveSetup??0))+detailCard('Objective setup share',fmtPct(v.objectiveSetupRate))+
+      detailCard('Peer setup wards',String(g.opponentVision?.objectiveSetup??0))+detailCard('Peer setup share',fmtPct(g.opponentVision?.objectiveSetupRate))+detailCard('Setup count Δ vs peer',hasNum(v.objectiveSetupDeltaVsOpponent)?signed(v.objectiveSetupDeltaVsOpponent,0):'n/a')+detailCard('Setup share Δ vs peer',hasNum(v.objectiveSetupRateDeltaVsOpponent)?signed(v.objectiveSetupRateDeltaVsOpponent,0)+' pp':'n/a')+
       detailList((g.wards||[]).slice(0,8).map(w=>(Number(w.time)||0).toFixed(1)+'m · '+(w.territory||'unknown')+' · '+(w.wardType||'ward')),'No player ward positions were available.');
   }
   if(tab==='roams'){
@@ -515,6 +516,9 @@ function renderAdvanced(r){
     metric('Objective-setup ward games',String(p.visionSetupGames??0),false),
     metric('Objective-setup wards vs peer',hasNum(p.avgObjectiveSetupDelta)?signed(p.avgObjectiveSetupDelta,1):'n/a',!hasNum(p.avgObjectiveSetupDelta)),
     metric('Beat peer on setup wards',fmtPct(p.objectiveSetupOutperformPct),!hasNum(p.objectiveSetupOutperformPct)),
+    metric('Objective-setup ward share',hasNum(p.objectiveSetupWardRate)?fmtPct(p.objectiveSetupWardRate):'n/a',!hasNum(p.objectiveSetupWardRate)),
+    metric('Peer objective-setup share',hasNum(p.opponentObjectiveSetupWardRate)?fmtPct(p.opponentObjectiveSetupWardRate):'n/a',!hasNum(p.opponentObjectiveSetupWardRate)),
+    metric('Objective-setup share Δ',hasNum(p.objectiveSetupWardRateDelta)?signed(p.objectiveSetupWardRateDelta,0)+' pp':'n/a',!hasNum(p.objectiveSetupWardRateDelta)),
     metric('Major-item timing vs peer',hasNum(p.avgMajorItemDeltaMin)?signed(p.avgMajorItemDeltaMin,1)+' min':'n/a',!hasNum(p.avgMajorItemDeltaMin)),
     metric('Faster major item than peer',fmtPct(p.majorItemFasterPct),!hasNum(p.majorItemFasterPct)),
     metric('First-impact comparable games',String(p.impactGames??0),false),
