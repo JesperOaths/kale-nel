@@ -47,7 +47,7 @@ function isArchivedFile(rel){
 function isAllowedVersionDrift(rel, found){
   // Shop operations are versioned independently from the v817 game/admin app.
   if (found === 'v826' && rel === 'check-shop-commerce-v817.mjs') return true;
-  if (found === 'v874' && (rel === 'admin_shop_orders.html' || rel === 'check-shop-admin-cleanup-v874.mjs')) return true;
+  if (found === 'v874' && ['admin_shop_orders.html','shop/index.html','check-shop-admin-cleanup-v874.mjs','check-shop-commerce-v817.mjs'].includes(rel)) return true;
   if (found === 'v858' && rel === 'admin_shop_operations.html') return true;
   if (found === 'v827' && rel === 'scripts/test-shop-production-connection-v827.mjs') return true;
   if (found === 'v828' && rel === 'admin_shop_connection.html') return true;
