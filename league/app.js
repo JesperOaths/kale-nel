@@ -684,6 +684,7 @@ function renderReport(raw,sourceKind){
   renderRecentPulse(r);
   renderReportDrivers(r);
   renderKpis(r);
+  renderOutcomeFingerprint(r);
   renderRankRadar(r);
   renderVisualSummary(r);
   renderBullets('recentFocus',r.priorityThemes?.length?r.priorityThemes:r.recentFocus,'No grounded improvement priority has enough evidence yet.');
@@ -757,6 +758,35 @@ function renderReportDrivers(r){
     card('driver-strength','Bankable strength',strong.title,strong.copy,strong.action,'good'),
     card('driver-direction','Recent direction',direction.value,direction.copy,'','neutral'===direction.tone?'neutral':direction.tone)
   ].join('');
+}
+
+
+function gameAverage(games,getter){
+  const xs=games.map(getter).filter(hasNum).map(Number);return xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null;
+}
+function outcomeFingerprintCard(label,wins,losses,unit,inverse=false){
+  const delta=hasNum(wins)&&hasNum(losses)?Number(wins)-Number(losses):null;
+  const abs=delta==null?0:Math.abs(delta),tone=delta==null?'neutral':(inverse?(delta<0?'good':'bad'):(delta>0?'good':'bad'));
+  const fmtValue=v=>unit==='percent'?fmtPct(v):unit==='gold'?(hasNum(v)?signed(v,0)+'g':'n/a'):unit==='dpm'?fmtInt(v):unit==='num'?fmt(v,2):fmt(v,2);
+  return {label,wins,losses,delta,abs,tone,html:'<article class="outcome-fingerprint-card tone-'+tone+'"><span>'+esc(label)+'</span><div><strong>'+esc(fmtValue(wins))+'</strong><small>in wins</small></div><div><strong>'+esc(fmtValue(losses))+'</strong><small>in losses</small></div><p>'+esc(delta==null?'Not enough valid observations.':('Observed separation: '+(unit==='percent'?signed(delta,1)+' pp':unit==='gold'?signed(delta,0)+'g':signed(delta,unit==='num'?2:0)+(unit==='dpm'?' DPM':''))))+'</p></article>'};
+}
+function renderOutcomeFingerprint(r){
+  const box=$('outcomeFingerprint'),note=$('outcomeFingerprintNote');if(!box)return;
+  const games=r.games||[],wins=games.filter(g=>g.win),losses=games.filter(g=>!g.win);
+  if(wins.length<2||losses.length<2){
+    box.innerHTML='<div class="bullet empty">At least two wins and two losses are needed for a useful within-sample outcome comparison.</div>';
+    if(note)note.textContent='The report does not force an outcome story from a one-sided sample.';
+    return;
+  }
+  const cards=[
+    outcomeFingerprintCard('Role gold @15',gameAverage(wins,g=>g.goldDiff15),gameAverage(losses,g=>g.goldDiff15),'gold',false),
+    outcomeFingerprintCard('High-risk deaths / game',gameAverage(wins,g=>g.badDeathCount),gameAverage(losses,g=>g.badDeathCount),'num',true),
+    outcomeFingerprintCard('Damage / min',gameAverage(wins,g=>g.dpm),gameAverage(losses,g=>g.dpm),'dpm',false),
+    outcomeFingerprintCard('Kill participation',gameAverage(wins,g=>g.kp),gameAverage(losses,g=>g.kp),'percent',false)
+  ];
+  box.innerHTML=cards.map(x=>x.html).join('');
+  const usable=cards.filter(x=>x.delta!=null).sort((a,b)=>b.abs-a.abs),lead=usable[0];
+  if(note)note.innerHTML=lead?'<b>Largest raw separation:</b> '+esc(lead.label)+'. Use it as a replay-review clue alongside context, not as a causal claim. Sample: '+wins.length+' wins / '+losses.length+' losses.':'Not enough valid metric overlap to identify a useful separation.';
 }
 
 function renderKpis(r){
