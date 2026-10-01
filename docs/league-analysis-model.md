@@ -299,6 +299,23 @@ For SUPPORT/JUNGLE, aggregate this across enough games and report:
 
 This is a better coaching signal than raw vision score alone because it rewards **timely, contest-relevant setup**. It still does not measure whether a ward survived, was redundant, or was placed in the strategically perfect brush, so do not call it complete vision quality.
 
+## Fight order and carry survival
+
+The timeline analyzer groups nearby champion-kill events into approximate **multi-kill fight clusters** using time and map proximity.
+
+A player's fight is counted only when there is evidence they attended: they contributed to a kill/assist, died in the cluster, or their timeline position is near the fight.
+
+For attended clusters preserve:
+- whether the player survived,
+- whether they were the first allied death,
+- whether they died before a tracked kill/assist contribution.
+
+For ADC/MID/TOP, repeated first-allied-death or pre-contribution-death patterns can be treated as a positioning/entry-timing improvement signal. This is more actionable than total deaths because it asks whether the team's damage source is being removed at the start of a fight.
+
+Do not apply the same negative interpretation mechanically to engage/support roles, where dying first can be role-contextual.
+
+Fight clustering is heuristic rather than ground-truth teamfight labeling. Aggregate coaching therefore requires multiple attended fight samples and should expose the sample count.
+
 ## Team-context comparisons
 
 Per match, preserve:
