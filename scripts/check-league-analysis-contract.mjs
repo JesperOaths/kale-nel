@@ -33,6 +33,11 @@ ok(backend.includes('LEGACY_SR_RULES')&&backend.includes('phaseComparable:false'
 ok(backend.includes('FUTURE_UNVERIFIED_RULES'), 'future unverified mechanics must not silently inherit current coaching logic');
 ok(backend.includes('major===16'), 'Riot internal game-version major 16 must select 2026 mechanics');
 ok(backend.includes('phaseExposureMinutes'), 'phase risk must normalize by actual phase exposure');
+ok(backend.includes('postLaneStartMin:14')&&backend.includes('roamEndMin:20'), 'standard post-lane and roam timing must remain rules-driven');
+ok(backend.includes('postLaneStartMin:12')&&backend.includes('roamEndMin:12'), 'Swiftplay post-lane and roam timing must respect its accelerated major-objective era');
+ok(backend.includes('postLaneSideLaneDeaths'), 'side-lane risk must use queue-aware post-lane timing');
+ok(backend.includes('frameNearestMs'), 'event-local spatial evidence must use the nearest supported timeline frame');
+ok(backend.includes('startPadMs=45000,endPadMs=45000'), 'neutral-objective presence must tolerate Riot participant-frame cadence');
 ok(backend.includes('phaseComparable!==false'), 'cross-game phase risk must exclude historical/future-unverified rule profiles');
 ok(backend.includes('midRoutingComparable!==false'), 'fixed 15→25 routing must be disabled for accelerated/incompatible rules profiles');
 ok(backend.includes('highRiskDeathsPer10Min'), 'phase-risk comparison must use per-10-minute rates');
