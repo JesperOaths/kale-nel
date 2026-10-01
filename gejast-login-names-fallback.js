@@ -22,7 +22,7 @@
     if (!base || !key) throw new Error('login_names_config_unavailable');
     var res = await fetch(base + '/rest/v1/rpc/' + name, {
       method:'POST', mode:'cors', cache:'no-store',
-      headers:{'Content-Type':'application/json',Accept:'application/json',apikey:key,Authorization:'Bearer '+key},
+      headers:(cfg.publicApiHeaders?cfg.publicApiHeaders({'Content-Type':'application/json',Accept:'application/json'}):(function(){var h={'Content-Type':'application/json',Accept:'application/json',apikey:key};if(/^[^.]+\.[^.]+\.[^.]+$/.test(key))h.Authorization='Bearer '+key;return h;})()),
       body:JSON.stringify(body || {})
     });
     var text = await res.text();
