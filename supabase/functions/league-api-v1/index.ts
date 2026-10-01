@@ -119,6 +119,20 @@ async function rankSnapshotFor(p:any,requestKey=""){
   }catch(_){return null;}
 }
 
+
+const RANK_TIERS=["IRON","BRONZE","SILVER","GOLD","PLATINUM","EMERALD","DIAMOND","MASTER","GRANDMASTER","CHALLENGER"];
+const RANK_DIVISIONS:any={IV:0,III:1,II:2,I:3};
+function rankScore(r:any){
+  if(!r||!text(r.tier))return null;
+  const ti=RANK_TIERS.indexOf(text(r.tier).toUpperCase());if(ti<0)return null;
+  const div=RANK_DIVISIONS[text(r.rank).toUpperCase()]??0;
+  return ti*4+div+(Number(r.leaguePoints||0)/1000);
+}
+function rankLabel(r:any){
+  if(!r||!text(r.tier))return"Unranked / unknown";
+  return [text(r.tier).toUpperCase(),text(r.rank).toUpperCase(),Number.isFinite(Number(r.leaguePoints))?String(r.leaguePoints)+" LP":""].filter(Boolean).join(" ");
+}
+
 let itemCatalogCache:any=null;
 let itemCatalogFetchedAt=0;
 async function itemCatalog(){
@@ -343,7 +357,7 @@ function gameJudgments(g:any){
 function game(row:any,puuid:string,catalog:any){
   const m=row?.match_json||{},ps=Array.isArray(m?.info?.participants)?m.info.participants:[],p=ps.find((x:any)=>text(x?.puuid)===puuid);if(!p)return null;
   const full=participantFullGameMetrics(m,p),opp=opponent(m,p),oppFull=participantFullGameMetrics(m,opp),facts=timelineFacts(m,row?.timeline_json,p,catalog);
-  const peer=oppFull?{champion:text(opp?.championName||"Unknown"),role:participantRole(opp),csMinDelta:full.csMin-oppFull.csMin,dpmDelta:full.dpm-oppFull.dpm,gpmDelta:full.gpm-oppFull.gpm,vpmDelta:full.vpm-oppFull.vpm,kdaDelta:full.kda-oppFull.kda,opponent:{kda:oppFull.kda,csMin:oppFull.csMin,dpm:oppFull.dpm,gpm:oppFull.gpm,vpm:oppFull.vpm,kp:oppFull.kp}}:null;
+  const peer=oppFull?{champion:text(opp?.championName||"Unknown"),role:participantRole(opp),rank:row?.peer_rank_json||null,csMinDelta:full.csMin-oppFull.csMin,dpmDelta:full.dpm-oppFull.dpm,gpmDelta:full.gpm-oppFull.gpm,vpmDelta:full.vpm-oppFull.vpm,kdaDelta:full.kda-oppFull.kda,opponent:{kda:oppFull.kda,csMin:oppFull.csMin,dpm:oppFull.dpm,gpm:oppFull.gpm,vpm:oppFull.vpm,kp:oppFull.kp}}:null;
   const out:any={matchId:text(m?.metadata?.matchId||row.match_id),gameStartTimestamp:Number(m?.info?.gameStartTimestamp||0),champion:text(p.championName||"Unknown"),championId:num(p.championId),role:participantRole(p),rawRole:text(p.teamPosition||p.individualPosition||p.role),win:!!p.win,...full,durationMinutes:Math.max(1,Number(m?.info?.gameDuration||row?.game_duration_seconds||0)/60),mapId:Number(m?.info?.mapId||row.map_id||0)||null,queueId:Number(m?.info?.queueId||row.queue_id||0)||null,timelineAvailable:!!row.timeline_json,peer,...facts};
   out.judgments=gameJudgments(out);return out;
 }
@@ -354,7 +368,7 @@ function baselineGame(row:any,puuid:string){
 }
 function meanField(games:any[],fn:(g:any)=>any){return avg(games.map(fn));}
 function finiteGames(games:any[],fn:(g:any)=>any){return games.filter(g=>Number.isFinite(Number(fn(g))));}
-function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string){
+function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,playerRank:any=null){
   const recentFocus:any[]=[],highlights:any[]=[],coaching:any[]=[];
   const conf=(n:number)=>n>=10?"high":n>=5?"medium":"low";
   const push=(arr:any[],category:string,title:string,evidence:string,action:string,confidence:string="medium",priority:number=2,comparison:string="")=>arr.push({category,title,evidence,action,confidence,priority,comparison,text:title+" — "+evidence+(action?" "+action:"")});
@@ -404,6 +418,12 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string){
     if(Number(peerCs)<=-0.5&&["ADC","MID","TOP"].includes(primaryRole))push(recentFocus,"farming","Farm pace trails the actual lane peer","You average "+Math.abs(Number(peerCs)).toFixed(2)+" CS/min less than the same-role opponent and finish ahead on CS/min in only "+Math.round(Number(peerCsWin||0))+"% of comparable games.","Track the waves lost around recalls, roams and unnecessary mid-game grouping.",conf(peerGames.length),2,"same-role opponents");
   }
   if(wins.length>=4&&losses.length>=4&&Number.isFinite(Number(winLoss.earlyKp.wins))&&Number.isFinite(Number(winLoss.earlyKp.losses))&&Number(winLoss.earlyKp.wins)-Number(winLoss.earlyKp.losses)>=15)push(recentFocus,"early impact","Early involvement is much higher in your wins","14-minute KP averages "+Number(winLoss.earlyKp.wins).toFixed(0)+"% in wins versus "+Number(winLoss.earlyKp.losses).toFixed(0)+"% in losses.","Look for repeatable early windows—rather than random aggression—that let you influence the map before the game state hardens.",conf(Math.min(wins.length,losses.length)),2,"wins vs losses; association, not causation");
+  const playerRankValue=rankScore(playerRank),rankedPeerGames=peerGames.filter(g=>rankScore(g.peer?.rank)!=null),higherRankGames=playerRankValue==null?[]:rankedPeerGames.filter(g=>Number(rankScore(g.peer?.rank))>Number(playerRankValue));
+  const higherLane=finiteGames(higherRankGames,g=>g.goldDiff15),higherGold=meanField(higherLane,g=>g.goldDiff15),higherDpm=meanField(higherRankGames,g=>g.peer?.dpmDelta),higherGoldWin=outperform(higherLane,g=>g.goldDiff15);
+  if(higherRankGames.length>=3&&higherLane.length>=3){
+    if(Number(higherGold)<=-300)push(recentFocus,"rank pressure","Laning drops against higher-ranked direct opponents","Against "+higherLane.length+" same-role opponents ranked above "+rankLabel(playerRank)+", you average "+Math.round(Number(higherGold))+"g at 15 and finish ahead on gold in "+Math.round(Number(higherGoldWin||0))+"% of them.","Use these games as the clearest practice set: review the first recall, wave loss and trade timing before 15 rather than treating all opponents as equivalent.",conf(higherLane.length),1,"actual higher-ranked same-role opponents");
+    else if(Number(higherGold)>=100)push(highlights,"rank pressure","Your lane fundamentals hold up against higher-ranked peers","Against "+higherLane.length+" same-role opponents ranked above "+rankLabel(playerRank)+", you average "+signedText(higherGold,0)+"g at 15.","The evidence suggests the next improvement is conversion/macro rather than simply surviving stronger lanes.",conf(higherLane.length),4,"actual higher-ranked same-role opponents");
+  }
   if(lifetime&&Number.isFinite(Number(lifetime.csMin))&&Number.isFinite(Number(summary.csMin))){
     const delta=Number(summary.csMin)-Number(lifetime.csMin);
     if(delta<=-0.45)push(recentFocus,"trend","Recent farming has slipped below your broader baseline","Last-20 CS/min is "+Number(summary.csMin).toFixed(2)+" versus "+Number(lifetime.csMin).toFixed(2)+" across the broader cached sample.","Inspect what changed in recalls, roaming or grouping rather than treating the recent value as your normal level.","high",2,"recent 20 vs broader cached self");
@@ -415,7 +435,7 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string){
   recentFocus.sort((a,b)=>a.priority-b.priority);highlights.sort((a,b)=>a.priority-b.priority);coaching.push(...recentFocus,...highlights);
   return{
     recentFocus,highlights,coaching,
-    peerComparison:{sameRoleGames:peerGames.length,laneGames15:lane15.length,avgGoldDiff15:avgG15,avgCsDiff15:avgC15,laneAheadPct:laneAhead,gold15OutperformPct:peerGoldWin,avgCsMinDelta:peerCs,csMinOutperformPct:peerCsWin,avgDpmDelta:peerDpm,dpmOutperformPct:peerDpmWin,avgVpmDelta:peerVpm,vpmOutperformPct:peerVpmWin,majorItemGames:itemGames.length,avgMajorItemDeltaMin:itemDelta,majorItemFasterPct:peerItemFaster,definition:"Same-role opponent from each analyzed match"},
+    peerComparison:{sameRoleGames:peerGames.length,rankedPeerGames:rankedPeerGames.length,higherRankPeerGames:higherRankGames.length,laneGames15:lane15.length,avgGoldDiff15:avgG15,avgCsDiff15:avgC15,laneAheadPct:laneAhead,gold15OutperformPct:peerGoldWin,avgCsMinDelta:peerCs,csMinOutperformPct:peerCsWin,avgDpmDelta:peerDpm,dpmOutperformPct:peerDpmWin,avgVpmDelta:peerVpm,vpmOutperformPct:peerVpmWin,majorItemGames:itemGames.length,avgMajorItemDeltaMin:itemDelta,majorItemFasterPct:peerItemFaster,higherRankAvgGoldDiff15:higherGold,higherRankGoldOutperformPct:higherGoldWin,higherRankAvgDpmDelta:higherDpm,definition:"Same-role opponent from each analyzed match"},
     conversion:{laneLeadGames:laneLeads.length,laneLeadWinRate:laneLeadWr,laneDeficitGames:laneDeficits.length,laneDeficitWinRate:laneDeficitWr},
     winLoss,
     behaviorSummary:{badDeathsPerTimelineGame:badPer,objectiveDeathPct:objDeathPct,objectiveJoinRate:objJoin,earlyKp,roamAttempts,roamSuccessRate:roamRate,greedyStayWindows:greedy,highUnspentGoldDeaths:unspent}
@@ -427,8 +447,8 @@ function report(profile:any,rows:any[],catalog:any){
   let primaryRole="GENERIC",primaryGames=0;for(const[k,v]of Object.entries(byRole)as any){if(Number(v.games)>primaryGames){primaryGames=Number(v.games);primaryRole=k;}}
   const validTimeline=games.filter((g:any)=>g.timelineAvailable).length,coordinateGames=games.filter((g:any)=>(g.deathPositions?.length||0)+(g.wards?.length||0)+(g.objectives?.length||0)>0).length;
   const makeSummary=(sample:any[])=>({games:sample.length,wins:sample.filter((g:any)=>g.win).length,winRate:pct(sample.filter((g:any)=>g.win).length,sample.length),csMin:avg(sample.map((g:any)=>g.csMin)),kp:avg(sample.map((g:any)=>g.kp)),dpm:avg(sample.map((g:any)=>g.dpm)),gpm:avg(sample.map((g:any)=>g.gpm)),vpm:avg(sample.map((g:any)=>g.vpm)),goldDiff10:avg(sample.map((g:any)=>g.goldDiff10)),goldDiff15:avg(sample.map((g:any)=>g.goldDiff15)),csDiff10:avg(sample.map((g:any)=>g.csDiff10)),csDiff15:avg(sample.map((g:any)=>g.csDiff15)),xpDiff10:avg(sample.map((g:any)=>g.xpDiff10)),xpDiff15:avg(sample.map((g:any)=>g.xpDiff15))});
-  const summary={...makeSummary(games),primaryRole,primaryRoleGames:primaryGames},lifetime=allGames.length>20?makeSummary(allGames):null,cm=coachingModel(games,summary,lifetime,primaryRole);
-  return{schemaVersion:"league-report-v2",analyzerVersion:"league-web-behavior-v2.1",generatedAt:now(),profile:{id:profile.id,displayName:profile.display_name,gameName:profile.game_name,tagLine:profile.tag_line,platformRegion:profile.platform_region,routingRegion:profile.routing_region,rank:profile.rank_snapshot||null},summary,lifetime,byRole,byChampion,recentFocus:cm.recentFocus,overallHighlights:cm.highlights,coaching:cm.coaching,peerComparison:cm.peerComparison,conversion:cm.conversion,winLoss:cm.winLoss,games,charts:{csMin:games.map((g:any)=>({matchId:g.matchId,value:g.csMin})),kp:games.map((g:any)=>({matchId:g.matchId,value:g.kp})),dpm:games.map((g:any)=>({matchId:g.matchId,value:g.dpm})),goldDiff15:games.map((g:any)=>({matchId:g.matchId,value:g.goldDiff15}))},hiddenCharts:[],benchmarks:{rankAbove:null,itemSpike:{peerDefinition:"same-role opponent",avgDeltaMin:cm.peerComparison.avgMajorItemDeltaMin,sample:cm.peerComparison.majorItemGames}},aggregateMaps:{wards:games.flatMap((g:any)=>g.wards||[]),deaths:games.flatMap((g:any)=>g.deathPositions||[])},advanced:{dqi:null,agor:null,objectivePresence:cm.behaviorSummary.objectiveJoinRate,earlyKP:cm.behaviorSummary.earlyKp,objectiveDeathPct:cm.behaviorSummary.objectiveDeathPct,roams:{attempts:cm.behaviorSummary.roamAttempts,successRate:cm.behaviorSummary.roamSuccessRate},recalls:{greedyStayWindows:cm.behaviorSummary.greedyStayWindows},itemSpike:{avgDeltaVsOpponentMin:cm.peerComparison.avgMajorItemDeltaMin},wardClassification:true,currentSourcePortRequired:false,judgmentModel:"evidence+peer+self-baseline-v2"},behaviorSummary:cm.behaviorSummary,dataQuality:{cachedGames:allGames.length,analyzedGames:games.length,validTimelineGames:validTimeline,validCoordinateGames:coordinateGames,missingTimelineGames:games.length-validTimeline,baselineGames:lifetime?allGames.length:0,peerComparableGames:cm.peerComparison.sameRoleGames},sourceStatus:{currentBruisienatorSourceAvailable:false,historicalAnalyzerRecovered:true,note:"Behavioral analysis ports the historical Bruisienator timeline heuristics where defensible, upgrades weak formulas, and compares the player primarily with actual same-role opponents plus their broader cached baseline. DQI and AGOR remain unavailable because their formulas were not recovered."}};
+  const summary={...makeSummary(games),primaryRole,primaryRoleGames:primaryGames},lifetime=allGames.length>20?makeSummary(allGames):null,cm=coachingModel(games,summary,lifetime,primaryRole,profile.rank_snapshot||null);
+  return{schemaVersion:"league-report-v2",analyzerVersion:"league-web-behavior-v2.2",generatedAt:now(),profile:{id:profile.id,displayName:profile.display_name,gameName:profile.game_name,tagLine:profile.tag_line,platformRegion:profile.platform_region,routingRegion:profile.routing_region,rank:profile.rank_snapshot||null},summary,lifetime,byRole,byChampion,recentFocus:cm.recentFocus,overallHighlights:cm.highlights,coaching:cm.coaching,peerComparison:cm.peerComparison,conversion:cm.conversion,winLoss:cm.winLoss,games,charts:{csMin:games.map((g:any)=>({matchId:g.matchId,value:g.csMin})),kp:games.map((g:any)=>({matchId:g.matchId,value:g.kp})),dpm:games.map((g:any)=>({matchId:g.matchId,value:g.dpm})),goldDiff15:games.map((g:any)=>({matchId:g.matchId,value:g.goldDiff15}))},hiddenCharts:[],benchmarks:{rankAbove:{definition:"Actual higher-ranked same-role opponents encountered",sample:cm.peerComparison.higherRankPeerGames,avgGoldDiff15:cm.peerComparison.higherRankAvgGoldDiff15,goldOutperformPct:cm.peerComparison.higherRankGoldOutperformPct,avgDpmDelta:cm.peerComparison.higherRankAvgDpmDelta},itemSpike:{peerDefinition:"same-role opponent",avgDeltaMin:cm.peerComparison.avgMajorItemDeltaMin,sample:cm.peerComparison.majorItemGames}},aggregateMaps:{wards:games.flatMap((g:any)=>g.wards||[]),deaths:games.flatMap((g:any)=>g.deathPositions||[])},advanced:{dqi:null,agor:null,objectivePresence:cm.behaviorSummary.objectiveJoinRate,earlyKP:cm.behaviorSummary.earlyKp,objectiveDeathPct:cm.behaviorSummary.objectiveDeathPct,roams:{attempts:cm.behaviorSummary.roamAttempts,successRate:cm.behaviorSummary.roamSuccessRate},recalls:{greedyStayWindows:cm.behaviorSummary.greedyStayWindows},itemSpike:{avgDeltaVsOpponentMin:cm.peerComparison.avgMajorItemDeltaMin},wardClassification:true,currentSourcePortRequired:false,judgmentModel:"evidence+peer+self-baseline-v2"},behaviorSummary:cm.behaviorSummary,dataQuality:{cachedGames:allGames.length,analyzedGames:games.length,validTimelineGames:validTimeline,validCoordinateGames:coordinateGames,missingTimelineGames:games.length-validTimeline,baselineGames:lifetime?allGames.length:0,peerComparableGames:cm.peerComparison.sameRoleGames,rankedPeerGames:cm.peerComparison.rankedPeerGames,higherRankPeerGames:cm.peerComparison.higherRankPeerGames},sourceStatus:{currentBruisienatorSourceAvailable:false,historicalAnalyzerRecovered:true,note:"Behavioral analysis ports the historical Bruisienator timeline heuristics where defensible, upgrades weak formulas, and compares the player primarily with actual same-role opponents plus their broader cached baseline. DQI and AGOR remain unavailable because their formulas were not recovered."}};
 }
 
 Deno.serve(async(req:Request)=>{
@@ -467,22 +487,32 @@ Deno.serve(async(req:Request)=>{
       }
       const count=Math.max(1,Math.min(100,Number(body.count||20))),rr=text(p.routing_region)||routeFor(p.platform_region);
       const ids=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/by-puuid/"+encodeURIComponent(p.puuid)+"/ids?start=0&count="+count,requestRiotKey),matchIds=Array.isArray(ids)?ids.map(text).filter(Boolean):[];
-      const{data:cached}=matchIds.length?await sb.from("league_match_cache_v1").select("match_id").eq("profile_id",p.id).in("match_id",matchIds).not("match_json","is",null):{data:[]};
-      const set=new Set((cached||[]).map((x:any)=>x.match_id));
+      const recentRankIds=new Set(matchIds.slice(0,20));
+      const{data:cached}=matchIds.length?await sb.from("league_match_cache_v1").select("match_id,timeline_json,peer_rank_fetched_at").eq("profile_id",p.id).in("match_id",matchIds).not("match_json","is",null):{data:[]};
+      const set=new Set((cached||[]).filter((x:any)=>!!x.timeline_json&&(!recentRankIds.has(x.match_id)||!!x.peer_rank_fetched_at)).map((x:any)=>x.match_id));
       const{data:run,error}=await sb.from("league_fetch_runs_v1").insert({profile_id:p.id,owner_player_id:viewer.player_id,status:"running",match_ids:matchIds,completed_count:set.size,total_count:matchIds.length,cache_hits:set.size,updated_at:now()}).select("*").single();
       if(error)throw error;return json(req,{ok:true,run_id:run.id,match_ids:matchIds,cached_match_ids:[...set],profile:p});
     }
     if(action==="fetch_one"){
       const{data:run,error:re}=await sb.from("league_fetch_runs_v1").select("*").eq("id",text(body.run_id)).eq("owner_player_id",viewer.player_id).maybeSingle();if(re||!run)throw re||Object.assign(new Error("fetch_run_not_found"),{status:404});
-      const id=text(body.match_id),allowed=new Set(Array.isArray(run.match_ids)?run.match_ids:[]);if(!allowed.has(id))return json(req,{ok:false,error:"match_not_in_run"},400);
-      const p=await getProfile(sb,viewer.player_id,run.profile_id),{data:old}=await sb.from("league_match_cache_v1").select("match_json,timeline_json").eq("profile_id",p.id).eq("match_id",id).maybeSingle();
-      if(old?.match_json&&old?.timeline_json&&body.force!==true)return json(req,{ok:true,match_id:id,cache_hit:true,timeline_available:true});
-      const rr=text(p.routing_region)||routeFor(p.platform_region),m=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/"+encodeURIComponent(id),requestRiotKey);
-      let tl:any=null,tlError:string|null=null;try{tl=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/"+encodeURIComponent(id)+"/timeline",requestRiotKey);}catch(e:any){tlError=text(e?.message||e).slice(0,500);}
-      const gs=Number(m?.info?.gameStartTimestamp||0),row={profile_id:p.id,match_id:id,owner_player_id:viewer.player_id,game_start_at:gs?new Date(gs).toISOString():null,map_id:num(m?.info?.mapId),queue_id:num(m?.info?.queueId),game_duration_seconds:num(m?.info?.gameDuration),match_json:m,timeline_json:tl,match_fetched_at:now(),timeline_fetched_at:tl?now():null,fetch_error:tlError,updated_at:now()};
+      const id=text(body.match_id),runIds=Array.isArray(run.match_ids)?run.match_ids:[],idx=runIds.indexOf(id);if(idx<0)return json(req,{ok:false,error:"match_not_in_run"},400);
+      const p=await getProfile(sb,viewer.player_id,run.profile_id),{data:old}=await sb.from("league_match_cache_v1").select("match_json,timeline_json,peer_rank_json,peer_rank_fetched_at").eq("profile_id",p.id).eq("match_id",id).maybeSingle();
+      const needsPeerRank=idx<20&&(!old?.peer_rank_fetched_at||body.force===true);
+      if(old?.match_json&&old?.timeline_json&&!needsPeerRank&&body.force!==true)return json(req,{ok:true,match_id:id,cache_hit:true,timeline_available:true,peer_rank_checked:idx>=20||!!old?.peer_rank_fetched_at});
+      const rr=text(p.routing_region)||routeFor(p.platform_region);
+      let m=old?.match_json||null,tl=old?.timeline_json||null,tlError:string|null=null;
+      if(!m||body.force===true)m=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/"+encodeURIComponent(id),requestRiotKey);
+      if(!tl||body.force===true){try{tl=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/"+encodeURIComponent(id)+"/timeline",requestRiotKey);}catch(e:any){tlError=text(e?.message||e).slice(0,500);}}
+      let peerRank=old?.peer_rank_json||null,peerRankFetchedAt=old?.peer_rank_fetched_at||null;
+      if(idx<20&&(!peerRankFetchedAt||body.force===true)){
+        const participants=Array.isArray(m?.info?.participants)?m.info.participants:[],me=participants.find((x:any)=>text(x?.puuid)===text(p.puuid)),opp=me?opponent(m,me):null;
+        peerRank=opp?.puuid?await rankSnapshotFor({puuid:opp.puuid,platform_region:p.platform_region},requestRiotKey):null;
+        peerRankFetchedAt=now();
+      }
+      const gs=Number(m?.info?.gameStartTimestamp||0),row={profile_id:p.id,match_id:id,owner_player_id:viewer.player_id,game_start_at:gs?new Date(gs).toISOString():null,map_id:num(m?.info?.mapId),queue_id:num(m?.info?.queueId),game_duration_seconds:num(m?.info?.gameDuration),match_json:m,timeline_json:tl,peer_rank_json:peerRank,peer_rank_fetched_at:peerRankFetchedAt,match_fetched_at:now(),timeline_fetched_at:tl?now():null,fetch_error:tlError,updated_at:now()};
       const{error}=await sb.from("league_match_cache_v1").upsert(row,{onConflict:"profile_id,match_id"});if(error)throw error;
       await sb.from("league_fetch_runs_v1").update({completed_count:Math.min(Number(run.total_count||0),Number(run.completed_count||0)+1),updated_at:now(),last_error:tlError}).eq("id",run.id);
-      return json(req,{ok:true,match_id:id,cache_hit:false,timeline_available:!!tl,timeline_error:tlError});
+      return json(req,{ok:true,match_id:id,cache_hit:!!old?.match_json&&!!old?.timeline_json,timeline_available:!!tl,timeline_error:tlError,peer_rank_checked:idx>=20||!!peerRankFetchedAt,peer_rank:peerRank});
     }
     if(action==="fetch_finish"){
       const{data,error}=await sb.from("league_fetch_runs_v1").update({status:"done",completed_at:now(),updated_at:now()}).eq("id",text(body.run_id)).eq("owner_player_id",viewer.player_id).select("*").maybeSingle();if(error||!data)throw error||Object.assign(new Error("fetch_run_not_found"),{status:404});return json(req,{ok:true,run:data});
@@ -493,7 +523,7 @@ Deno.serve(async(req:Request)=>{
     }
     if(action==="analyze_basic"){
       const p=await getProfile(sb,viewer.player_id,body.profile_id);if(!text(p.puuid))return json(req,{ok:false,error:"profile_not_resolved"},400);
-      const{data:rows,error}=await sb.from("league_match_cache_v1").select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,match_json,timeline_json,fetch_error").eq("profile_id",p.id).not("match_json","is",null).order("game_start_at",{ascending:false}).limit(100);if(error)throw error;
+      const{data:rows,error}=await sb.from("league_match_cache_v1").select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,match_json,timeline_json,peer_rank_json,peer_rank_fetched_at,fetch_error").eq("profile_id",p.id).not("match_json","is",null).order("game_start_at",{ascending:false}).limit(100);if(error)throw error;
       const catalog=await itemCatalog();
       const rep=report(p,rows||[],catalog),{data:run,error:se}=await sb.from("league_analysis_runs_v1").insert({profile_id:p.id,owner_player_id:viewer.player_id,source_kind:"web_behavior",analyzer_version:rep.analyzerVersion,sample_match_ids:rep.games.map((g:any)=>g.matchId),report_data:rep,data_quality:rep.dataQuality}).select("id,created_at").single();if(se)throw se;
       return json(req,{ok:true,analysis_id:run.id,created_at:run.created_at,report:rep});
