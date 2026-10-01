@@ -312,7 +312,7 @@ Riot timeline data used here does not provide a reliable universal role-quest-co
 - cross-patch interpretation must acknowledge material reward changes,
 - support Control Ward purchases after quest completion can make static Data Dragon shop-cost estimates too high; these visits are marked **approximate** rather than silently repriced.
 
-The report exports revision counts so a Last-20 sample spanning multiple role-quest revisions is visible as a data-quality caveat.
+The report exports revision counts so a Last-20 sample spanning multiple role-quest revisions is visible as a data-quality caveat. If Riot's internal game-version minor is missing, the game is marked `2026_revision_unknown`; the analyzer keeps generic 2026 quest context but does not guess which patch-specific reward revision applied.
 
 For mechanics-sensitive coaching, the report also builds a **current mechanics cohort** from the newest primary-role game's rules profile plus role-quest revision. If that cohort contains at least five primary-role games, coaching models use it instead of blending older incompatible mechanics into the same conclusions. The Last-20 overview remains visible separately. If fewer than five current-mechanics games exist, the analyzer keeps the broader primary-role sample rather than manufacturing certainty and explicitly marks the mixed-mechanics fallback as a data-quality limitation.
 
