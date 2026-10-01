@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(p,'utf8');
+const sitePageVersion=read('VERSION').trim();
+assert.match(sitePageVersion,/^v\d+$/,'root VERSION must remain a simple v### page identity');
 const index=read('shop/index.html');
 const store=read('shop/store.js');
 const checkout=read('shop/manual-checkout-v825.js');
@@ -13,8 +15,8 @@ const catalog=read('supabase/functions/shop-catalog-v828/index.ts');
 const cleanupMigration=read('supabase/migrations/20261001081000_shop_catalog_cleanup_v874.sql');
 const retireMigration=read('supabase/migrations/20261001082000_retire_legacy_shop_catalog_scheduler_v874.sql');
 
-assert.match(admin,/GEJAST_PAGE_VERSION='v874'/);
-assert.match(admin,/v874 - Made by Bruis/);
+assert.ok(admin.includes(`GEJAST_PAGE_VERSION='${sitePageVersion}'`),'admin page declaration must follow root VERSION; v874 remains feature provenance only');
+assert.ok(admin.includes(`${sitePageVersion} - Made by Bruis`),'admin visible watermark must follow root VERSION; v874 remains feature provenance only');
 assert.doesNotMatch(admin.replaceAll('bunqPrintifyConfirmed',''),/Printify/,'protected order UI must use generic production-partner wording');
 
 assert.match(store,/shop-catalog-v828/,'storefront must call v828 directly');
