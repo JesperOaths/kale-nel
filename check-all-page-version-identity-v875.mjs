@@ -30,7 +30,7 @@ for(const file of pages){
   const html=fs.readFileSync(file,'utf8');
   const expected=independent.get(rel)||rootVersion;
   const decl=(html.match(/GEJAST_PAGE_VERSION\s*=\s*['"](v\d+)['"]/i)||[])[1]||'';
-  const wmMatch=html.match(/(?:data-version-watermark[^>]*>|class=["'][^"']*version-watermark[^"']*["'][^>]*>)([^<]*)</i);
+  const wmMatch=html.match(/<(?:div|span)[^>]*(?:data-version-watermark|class=["'][^"']*version-watermark[^"']*["'])[^>]*>([^<]*)</i);
   const watermark=wmMatch?wmMatch[1]:'';
   if(decl!==expected) failures.push(rel+': declaration '+(decl||'missing')+' expected '+expected);
   if(!watermark.toLowerCase().includes(expected.toLowerCase()) || !/Made by Bruis/i.test(watermark)){
