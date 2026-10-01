@@ -329,6 +329,8 @@ function renderProgressComparison(current,previous,previousAt){
     {label:'Mid high-risk deaths / game',path:'behaviorSummary.phaseRisk.mid.highRiskDeathsPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
     {label:'Mid routing CS swing 15→25',path:'behaviorSummary.midRouting.avgCsSwing15to25',threshold:4,direction:1,format:v=>signed(v,1)+' CS'},
     {label:'Mid routing objective presence',path:'behaviorSummary.midRouting.avgObjectiveJoinRate',threshold:10,direction:1,format:v=>fmtPct(v)},
+    {label:'Win rate from role lead @25',path:'behaviorSummary.closing25.leadWinRate',threshold:10,direction:1,format:v=>fmtPct(v)},
+    {label:'Lead@25 losses with late risk',path:'behaviorSummary.closing25.leadLateRiskLossRate',threshold:15,direction:-1,format:v=>fmtPct(v)},
     {label:'Late high-risk deaths / game',path:'behaviorSummary.phaseRisk.late.highRiskDeathsPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
     {label:'High-risk untraded / game',path:'behaviorSummary.highRiskUntradedPerGame',threshold:.25,direction:-1,format:v=>fmt(v,1)},
     {label:'Costly deaths / game',path:'behaviorSummary.costlyDeathsPerTimelineGame',threshold:.25,direction:-1,format:v=>fmt(v,2)},
@@ -642,6 +644,12 @@ function renderAdvanced(r){
     ['Mid-routing inefficient games',String(r.behaviorSummary?.midRouting?.inefficientGames??0)],
     ['Mid-routing balanced games',String(r.behaviorSummary?.midRouting?.balancedGames??0)],
     ['Side-farm / low-presence games',String(r.behaviorSummary?.midRouting?.sideFarmLowPresenceGames??0)],
+    ['≥500g role lead @25 games',String(r.behaviorSummary?.closing25?.leadGames??0)],
+    ['Win rate from role lead @25',fmtPct(r.behaviorSummary?.closing25?.leadWinRate)],
+    ['Lead@25 losses with late risk',String(r.behaviorSummary?.closing25?.leadLossesWithLateRisk??0)+' / '+String(r.behaviorSummary?.closing25?.leadLosses??0)+' · '+fmtPct(r.behaviorSummary?.closing25?.leadLateRiskLossRate)],
+    ['Late high-risk / costly deaths in lead@25 losses',String(r.behaviorSummary?.closing25?.lateHighRiskDeathsInLeadLosses??0)+' / '+String(r.behaviorSummary?.closing25?.lateCostlyDeathsInLeadLosses??0)],
+    ['≤-500g role deficit @25 games',String(r.behaviorSummary?.closing25?.deficitGames??0)],
+    ['Win rate from role deficit @25',fmtPct(r.behaviorSummary?.closing25?.deficitWinRate)],
     ['Measured costly deaths',String(r.behaviorSummary?.costlyDeathEvents??0)+' / '+String(r.behaviorSummary?.measuredDeathConsequences??0)+' · '+fmtPct(r.behaviorSummary?.costlyDeathRate)],
     ['Severe death consequences',String(r.behaviorSummary?.severeDeathEvents??0)+' · '+fmt(r.behaviorSummary?.severeDeathsPerTimelineGame,2)+'/game'],
     ['Rapid repeat deaths',String(r.behaviorSummary?.repeatDeaths??0)+' / '+String(r.behaviorSummary?.repeatDeathOpportunities??0)+' · '+fmtPct(r.behaviorSummary?.repeatDeathRate)],
@@ -738,7 +746,9 @@ function renderAdvanced(r){
   ];
   const conversionRows=[
     metric('Wins when ≥250g ahead @15',hasNum(conv.laneLeadWinRate)?fmtPct(conv.laneLeadWinRate)+' · '+String(conv.laneLeadGames||0)+' games':'n/a',!hasNum(conv.laneLeadWinRate)),
-    metric('Wins when ≥250g behind @15',hasNum(conv.laneDeficitWinRate)?fmtPct(conv.laneDeficitWinRate)+' · '+String(conv.laneDeficitGames||0)+' games':'n/a',!hasNum(conv.laneDeficitWinRate))
+    metric('Wins when ≥250g behind @15',hasNum(conv.laneDeficitWinRate)?fmtPct(conv.laneDeficitWinRate)+' · '+String(conv.laneDeficitGames||0)+' games':'n/a',!hasNum(conv.laneDeficitWinRate)),
+    metric('Wins when ≥500g ahead @25',hasNum(conv.lead25WinRate)?fmtPct(conv.lead25WinRate)+' · '+String(conv.lead25Games||0)+' games':'n/a',!hasNum(conv.lead25WinRate)),
+    metric('Wins when ≥500g behind @25',hasNum(conv.deficit25WinRate)?fmtPct(conv.deficit25WinRate)+' · '+String(conv.deficit25Games||0)+' games':'n/a',!hasNum(conv.deficit25WinRate))
   ];
   const wlRow=(label,obj,formatter)=>metric(label,obj&&hasNum(obj.wins)&&hasNum(obj.losses)?formatter(obj.wins)+' / '+formatter(obj.losses):'n/a',!(obj&&hasNum(obj.wins)&&hasNum(obj.losses)));
   const winLossRows=[
