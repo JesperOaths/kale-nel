@@ -58,6 +58,11 @@ ok(backend.includes('gameDuration||r?.game_duration_seconds||0)>=600'), 'coachin
 ok(backend.includes('shortGameThresholdSeconds:600'), 'short-game threshold must remain explicit in data quality');
 ok(backend.includes('opponentMatchupBehaviorModel'), 'repeated opposing-champion matchup model must remain in analyzer');
 ok(backend.includes('buildReplayReviewQueue'), 'replay review queue must remain explicit in analyzer');
+ok(backend.includes('buildPracticeTargets'), 'measurable practice-target builder must remain explicit');
+ok(backend.includes('source:"self_relative_short_term"'), 'practice targets must remain explicitly self-relative');
+ok(backend.includes('Number(sampleSize||0)<minSample'), 'practice targets must fail closed on thin evidence');
+ok(backend.includes('windowGames:5'), 'practice targets must remain scoped to a five-game practice horizon');
+ok(backend.includes('if(out.length>=3)break'), 'practice targets must remain capped at three');
 ok(backend.includes('if(n>=2)continue'), 'replay review queue must cap repeated moments to two per match');
 ok(backend.includes('if(selected.length>=10)break'), 'replay review queue must cap output at ten moments');
 ok(backend.includes('deathConsequences?.events'), 'replay queue must preserve death-consequence evidence');
@@ -82,6 +87,8 @@ ok(backend.includes('comparableCachedGames'), 'fetch finish must measure compara
 ok(backend.includes('.order("game_start_at",{ascending:false}).limit(100)'), 'peer-rank backfill must use the same last-100 cache horizon as analysis');
 ok(backend.includes('recommend_deeper_cache'), 'fetch finish must flag a comparable sample smaller than Last 20');
 ok(backend.includes('x-riot-api-key'), 'session Riot-key header must remain supported by backend/CORS');
+ok(app.includes('practiceTargetHtml'), 'frontend must render measurable practice checkpoints');
+ok(app.includes('Next 5 comparable games'), 'practice cards must identify the short practice horizon');
 ok(!/localStorage|sessionStorage|indexedDB/.test(app), 'Riot key or League state must not be persisted in browser storage');
 
 let parseError=null;
