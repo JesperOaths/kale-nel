@@ -205,6 +205,27 @@ async function updateCatalogCacheDirect(values: {
   }
 }
 
+async function updateLegacyCatalogProjectionDirect(payload: any, generatedAt: string, lastError: string | null = null) {
+  const sql = directDb();
+  try {
+    const products = Array.isArray(payload?.products) ? payload.products.length : 0;
+    const shops = Array.isArray(payload?.shops) ? payload.shops.length : (payload?.shop ? 1 : 0);
+    await sql`
+      update public.shop_catalog_sync_state
+      set last_sync_started_at = null,
+          last_synced_at = ${generatedAt},
+          next_refresh_at = null,
+          last_error = ${lastError},
+          product_count = ${products},
+          shop_count = ${shops},
+          last_source = 'printify'
+      where id = 1
+    `;
+  } finally {
+    try { await sql.end({ timeout: 1 }); } catch {}
+  }
+}
+
 function normalizeFxRow(row: any, stale = false) {
   const rate = Number(row?.rate);
   if (!Number.isFinite(rate) || rate <= 0 || rate >= 10) return null;
@@ -712,6 +733,9 @@ async function refreshCatalog(supabase: any) {
       refresh_started_at: null,
       last_error: null,
     });
+    // v874: keep the retired Shopify-era sync row as a truthful compatibility
+    // projection of the authoritative v828 Printify catalog instead of a second scheduler.
+    await updateLegacyCatalogProjectionDirect(payload, now, null);
   } catch (error) {
     const message = text(error instanceof Error ? error.message : error).slice(0, 500);
     try {
@@ -722,6 +746,14 @@ async function refreshCatalog(supabase: any) {
           set refresh_started_at = null,
               last_error = ${message},
               updated_at = now()
+          where id = 1
+        `;
+        await sql`
+          update public.shop_catalog_sync_state
+          set last_sync_started_at = null,
+              next_refresh_at = null,
+              last_error = ${message},
+              last_source = 'printify'
           where id = 1
         `;
       } finally {
