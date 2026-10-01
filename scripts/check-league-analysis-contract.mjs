@@ -33,6 +33,9 @@ ok(backend.includes('firstBloodBonusGold:100')&&backend.includes('firstTurretBon
 ok(backend.includes('SWIFTPLAY_2026_RULES')&&backend.includes('SWIFTPLAY_SR_QUEUE_IDS=new Set([480])')&&backend.includes('queueProfile.rulesFamily==="swiftplay"'), 'Swiftplay must use an explicit accelerated queue/rules profile');
 ok(backend.includes('earlyEndMin:12,lateStartMin:12'), 'Swiftplay must transition directly into its 12-minute Baron era');
 ok(backend.includes('baronSpawnMin:12')&&backend.includes('elderSpawnMin:15')&&backend.includes('suddenDeathMin:25'), 'Swiftplay objective timing anchors must remain explicit');
+ok(backend.includes('voidGrubsEnabled:false')&&backend.includes('riftHeraldEnabled:false'), 'Swiftplay removed Grubs/Herald objectives must remain explicit');
+ok(backend.includes('elementalDrakeCap:2')&&backend.includes('dragonSoulRequirement:2'), 'Swiftplay two-drake Soul rules must remain explicit');
+ok(backend.includes('minionFrenzyEnabled:true'), 'Swiftplay Minion Frenzy divergence must remain explicit');
 ok(backend.includes('startsLevel:3')&&backend.includes('startingGold:1400'), 'Swiftplay accelerated starting state must remain explicit');
 ok(backend.includes('LEGACY_SR_RULES')&&backend.includes('phaseComparable:false'), 'historical rules must fail closed for current phase coaching');
 ok(backend.includes('FUTURE_UNVERIFIED_RULES'), 'future unverified mechanics must not silently inherit current coaching logic');
@@ -246,7 +249,11 @@ ok(backend.includes('avgMajorCompletionDelayVsPeerMin'), 'recipe-aware delay com
 ok(backend.includes('higherRankMajorItemGames'), 'higher-ranked direct-peer first-major sample must remain exported');
 ok(backend.includes('schema:"rank_snapshot_v2"')&&backend.includes('byQueue'), 'rank snapshots must preserve both Solo/Duo and Flex ladders when Riot returns them');
 ok(backend.includes('function rankComparisonForGame('), 'rank comparisons must choose a shared ladder per game');
-ok(backend.includes('q===420?["RANKED_SOLO_5x5"]:q===440?["RANKED_FLEX_SR"]'), 'ranked Solo/Flex matches must use their matching ladder');
+ok(backend.includes('q===420?["RANKED_SOLO_5x5"]:q===440?["RANKED_FLEX_SR"]'), 'ranked Solo/Flex direct-peer comparisons must use their matching ladder');
+ok(backend.includes('function externalAdcBenchmarkSet(rankSnapshot:any,cohortQueueId:any)'), 'external population benchmark must receive the selected cohort queue');
+ok(backend.includes('queueId===420?"RANKED_SOLO_5x5":queueId===440?"RANKED_FLEX_SR":null'), 'external ranked benchmark must be ineligible outside Ranked Solo/Flex');
+ok(backend.includes('eligibilityReason:!rankedQueueType?"selected_cohort_not_ranked"'), 'non-ranked benchmark exclusion reason must remain explicit');
+ok(app.includes("ext.eligible!==false")&&app.includes('selected Last-20 cohort is not Ranked Solo/Flex'), 'frontend must fail closed and explain non-ranked population-benchmark exclusion');
 ok(backend.includes('rankContextExcludedGames')&&backend.includes('rankComparisonQueueCounts'), 'rank-context exclusions and ladder use must stay exported');
 ok(backend.includes('peer_rank_json?.schema!=="rank_snapshot_v2"'), 'recent stale single-ladder peer snapshots must be refreshed');
 ok(app.includes('Rank context excluded')&&app.includes('Rank ladders used'), 'rank-ladder comparability must remain visible');
