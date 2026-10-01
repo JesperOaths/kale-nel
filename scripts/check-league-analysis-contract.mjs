@@ -435,6 +435,10 @@ ok(app.includes("gameMatchesNamedFilter(g,'ahead15')")&&app.includes("gameMatche
 ok(app.includes('Timeline evidence is unavailable, so this game cannot be treated as having zero high-risk deaths.'), 'missing timelines must remain an explicit evidence gap in match-history risk summaries');
 ok(app.includes("objDiagnosed?tonePct(objective,70,45,false):'neutral'"), 'objective attendance judgment must require role-appropriate supported diagnosis');
 ok(html.includes('id="rankRadarPanel"')&&app.includes("reportRole!=='ADC'"), 'ADC benchmark UI must be withheld for non-ADC role reports');
+ok(html.indexOf('id="report-driver"')<html.indexOf('id="quickRead"'), 'action-first conclusions must precede comparison diagnostics');
+ok(app.includes("comparisonCard('CS/min vs role opponent'")&&app.includes("comparisonCard('DPM vs role opponent'"), 'quick-read comparison must use actual direct-role opponents rather than population rank references');
+ok(html.includes('Raw selected-role output')&&app.includes('Raw selected-role sample'), 'Raw KPI layer must remain neutral self-sample context, separate from benchmark inference');
+ok(modelDoc.includes('## Report information hierarchy')&&modelDoc.includes('Do not present direct same-role opponents as population rank averages'), 'report hierarchy and population-vs-opponent distinction must stay documented');
 ok(app.includes('Next 5 comparable games'), 'practice cards must identify the short practice horizon');
 const browserStorageLines=app.split(/\r?\n/).filter(line=>/localStorage|sessionStorage|indexedDB/.test(line));
 ok(!/sessionStorage|indexedDB/.test(app), 'League must not persist Riot keys/reports in sessionStorage or IndexedDB');
