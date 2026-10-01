@@ -412,7 +412,7 @@ function renderAdvanced(r){
     ['Major-item Δ vs opponent',Number.isFinite(Number(itemSpike.avgDeltaVsOpponentMin))?signed(itemSpike.avgDeltaVsOpponentMin,1)+' min':'n/a']
   ];
   $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('not recovered')||v==='n/a')).join('');
-  const p=r.peerComparison||{},conv=r.conversion||{},wl=r.winLoss||{},base=r.lifetime||null,s=r.summary||{},rank=r.profile?.rank||null;
+  const p=r.peerComparison||{},conv=r.conversion||{},wl=r.winLoss||{},trend=r.recentTrend||{},base=r.lifetime||null,s=r.summary||{},rank=r.profile?.rank||null;
   const peerRows=[
     metric('Peer definition',p.definition||'Same-role opponent in each match',false),
     metric('Comparable peer games',String(p.sameRoleGames??0),false),
@@ -444,6 +444,13 @@ function renderAdvanced(r){
     wlRow('Objective presence · wins / losses',wl.objectiveJoin,v=>fmtPct(v)),
     wlRow('Greedy stays · wins / losses',wl.greedyStays,v=>fmt(v,1))
   ];
+  const trendRow=(label,obj,formatter)=>metric(label,obj&&Number.isFinite(Number(obj.recent))&&Number.isFinite(Number(obj.prior))?formatter(obj.recent)+' / '+formatter(obj.prior):'n/a',!(obj&&Number.isFinite(Number(obj.recent))&&Number.isFinite(Number(obj.prior))));
+  const trendRows=[
+    trendRow('Latest 5 CS/min / previous',trend.csMin,v=>fmt(v,2)),
+    trendRow('Latest 5 gold @15 / previous',trend.goldDiff15,v=>signed(v,0)+'g'),
+    trendRow('Latest 5 high-risk deaths / previous',trend.badDeaths,v=>fmt(v,1)),
+    trendRow('Latest 5 DPM / previous',trend.dpm,v=>fmtInt(v))
+  ];
   const baselineRows=base?[
     metric('Broader cached sample',String(base.games||0)+' games',false),
     metric('WR · recent / baseline',fmtPct(s.winRate)+' / '+fmtPct(base.winRate),false),
@@ -453,7 +460,7 @@ function renderAdvanced(r){
   ]:[metric('Recent vs broader baseline','Cache more than 20 games to enable',true)];
   $('benchmarkMetrics').innerHTML=[
     metric('Current Riot rank',rank&&rank.tier?[rank.tier,rank.rank,rank.leaguePoints!=null?rank.leaguePoints+' LP':''].filter(Boolean).join(' '):'Not available',!(rank&&rank.tier)),
-    ...peerRows,...conversionRows,...winLossRows,...baselineRows
+    ...peerRows,...conversionRows,...winLossRows,...trendRows,...baselineRows
   ].join('');
 }
 function renderBreakdowns(r){
