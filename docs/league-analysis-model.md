@@ -31,17 +31,15 @@ The purpose of the web analyzer is not to produce a decorative stat page. It sho
 
 ## Multi-profile browser workflow
 
-The historical desktop tool used a profile manifest plus PowerShell wrappers to run several accounts in sequence. The browser workspace preserves that useful workflow without recreating the local wrapper stack.
+The historical desktop wrapper is not exposed as a second browser control plane. The public page keeps Riot identity and analysis history inside the ordinary one-click request flow.
 
-The League page exposes a **Batch profiles · sequential** control built from the same saved web profiles used by the normal single-profile selector. Users can select any subset and run either:
-- **Fetch / update selected** — performs Riot/cache updates for each selected profile in order,
-- **Analyze selected** — analyzes the already-cached data for each selected profile in order.
+The request card contains Riot game name, tag, region, selected analysis role and the session-only Riot API key. A run reuses an existing saved profile for the same Riot identity or creates one server-backed League profile, fetches only the missing bounded Riot data, then stores a report for the selected role.
 
-Batch execution intentionally remains sequential. This limits Riot/API pressure, reuses the same per-profile fetch and analysis code paths as the ordinary buttons, and makes failures easier to attribute. A failure for one profile is logged and does not stop the remaining selected profiles. When the batch finishes, the workspace restores the profile that was active before the batch began.
+A saved-profile selector reopens that Riot identity later. Browser persistence is limited to the anonymous workspace capability and selected profile-slot pointer; Riot identity, match cache and reports remain server-side. The Riot API key is never persisted.
 
-Fetch and analysis remain separate operations in batch mode for the same reason they are separate for one profile: cached reports can be regenerated without making new Riot requests, and a user can refresh several accounts without automatically starting analysis work they did not request.
+Legacy recent-request scratch identities are migrated in place when possible so cached matches are not cloned or discarded. A database uniqueness guard prevents duplicate saved rows for the same Riot game name + tag + platform inside one workspace.
 
-The session-only Riot key model also applies to batch fetches. The key is sent only as the request header used by the current tab and is not written into a profile, report, cache, repository, or batch manifest.
+Old reports created before role tagging are never relabeled as clean. If cached selected-role games exist but no role-specific saved report exists, the page rebuilds a fresh role-pure report from the cache without a Riot refetch.
 
 ## Patch-aware historical self baseline
 
@@ -78,18 +76,19 @@ This avoids silently attributing patch-driven systemic changes to the player's b
 
 Queue isolation means the final Last-20 coaching sample may contain matches deeper than raw positions 1–20 in the fetched history.
 
-To keep rank-band comparisons aligned with the actual coaching sample without ranking every raw match, `fetch_finish` now:
-1. reads the cached matches from the completed fetch run in original recency order,
-2. applies the same Summoner's Rift + ≥10-minute eligibility,
-3. runs the same recency-aware queue selector across the 20 newest supported candidates,
-4. takes the first 20 matches from that selected comparable queue context,
-5. fetches an opponent rank snapshot only when one of those target matches is missing it.
+To keep rank-band comparisons aligned with the actual coaching sample without ranking every raw match, fetch_finish now:
+1. reads lightweight cached metadata in recency order,
+2. applies Summoner's Rift + at least 10-minute + supported-queue eligibility,
+3. filters to the selected role using cached canonical player_role,
+4. runs the recency-aware queue selector inside that selected-role pool,
+5. takes the first 20 matches from that role+queue comparable context,
+6. fetches match JSON only for final-sample rows that still need an opponent rank snapshot.
 
-The response exposes `dominant_queue_id`, `comparable_cached_games`, `peer_rank_target_count`, and `peer_rank_backfilled` so the frontend can report what happened.
+The response separates selected_role_total_cached_games from comparable_cached_games and also exposes dominant_queue_id, peer_rank_target_count and peer_rank_backfilled. This prevents total selected-role cache depth from being confused with the final same-role, same-queue cohort.
 
-The backfill is computed against the same last-100 cached match universe used by `analyze_basic`, not only the IDs in the most recent fetch run. If fewer than 20 comparable cached games remain after map, duration and queue filtering, `recommend_deeper_cache` is returned so the frontend can recommend a 100-match refresh instead of presenting a thin sample as a complete Last 20.
+The public request starts at 30 recent match IDs and automatically deepens to 50 only when the final role+queue comparable cohort is still smaller than 20. Cached history can remain deeper than a single fetch; role and queue discovery are metadata-first so timeline blobs are not transferred simply to decide eligibility.
 
-This keeps Riot rank lookups bounded to the final comparable sample instead of blindly ranking all 50 cached raw matches.
+This keeps Riot rank lookups bounded to the final comparable sample instead of blindly ranking every fetched raw match.
 
 ## Queue-context isolation
 
@@ -98,14 +97,15 @@ Summoner's Rift alone is not a sufficient comparability filter because map 11 al
 The analyzer therefore keeps fetched matches cached but filters the coaching candidate pool in this order:
 1. Summoner's Rift (`mapId = 11`),
 2. at least 600 seconds of game duration,
-3. an **explicitly supported current PvP queue**,
-4. then the dominant raw `queueId` among those supported candidates.
+3. the user-selected normalized role,
+4. an **explicitly supported current PvP queue**,
+5. then the dominant raw `queueId` among the supported candidates for that role.
 
 Current supported queue IDs are Draft Pick 400, Ranked Solo 420, Blind Pick 430, Ranked Flex 440, Swiftplay 480, Quickplay 490 and Summoner's Rift Clash 700. Swiftplay remains a separate rules family. Its 2026 profile explicitly records the major divergences documented by Riot: no Void Grubs, no Rift Herald, Baron at 12:00, at most two Elemental Drakes with Soul after both, Elder at 15:00, and Swiftplay-only Minion Frenzy. These are rules context rather than inferred behavior. Any other map-11 queue fails closed out of coaching until reviewed.
 
-Only after unsupported queues are removed does the analyzer choose the dominant raw queue ID for the deep coaching sample. Queue selection is **recency-aware**: count queue IDs only inside the 20 newest supported candidates, choose the largest count, and break a count tie in favor of the queue whose newest match is more recent. Older cached matches from that selected queue can still extend the same-queue baseline.
+Only after the selected role is isolated and unsupported queues are removed does the analyzer choose the dominant raw queue ID for the deep coaching sample. Queue selection is **recency-aware**: count queue IDs only inside the 20 newest supported candidates for that role, choose the largest count, and break a count tie in favor of the queue whose newest match is more recent. Older cached matches from that role and selected queue can still extend the same-context baseline.
 
-This prevents two opposite errors: a frequently played old queue cannot override the player’s current queue simply because it dominates a 100-game cache, while one accidental off-queue game also cannot replace an otherwise consistent recent context.
+This prevents three contamination modes at once: an old queue cannot override the current context, one accidental off-queue game cannot replace an otherwise consistent recent context, and matches from another role cannot decide which queue the selected-role report uses.
 
 External **rank-population** benchmarking has a stricter eligibility rule than ordinary same-role coaching. The LegendsTracker reference corpus is ranked EUW data, so:
 - queue 420 uses the player's `RANKED_SOLO_5x5` tier,
@@ -123,27 +123,23 @@ The cache and the coaching sample are deliberately different.
 All fetched matches can remain cached, but deep behavioral coaching currently requires:
 - Summoner's Rift (`mapId = 11`),
 - at least 600 seconds / 10 minutes of game duration,
-- a usable normalized role for the player.
+- a usable normalized role for the player,
+- that role to match the role explicitly selected in the request,
+- one supported mechanically comparable queue context.
 
 A game below 10 minutes is excluded as a **short / non-representative sample**. This is an analysis-quality threshold, not a claim that Riot officially classifies every sub-10-minute game as a remake.
 
-The report's Data Quality block must expose:
-- cached games,
-- Summoner's Rift games,
-- eligible Summoner's Rift games,
-- excluded other maps,
-- excluded short games,
-- excluded missing-role games.
-
-Excluded matches remain cached and can still be inspected later; they simply do not influence the Last-20 behavioral coaching or broader self baseline.
+The report's Data Quality block must expose cached games, selected-role eligible games, selected role, dominant queue context, excluded other roles/maps/queues, short games and missing/ambiguous role evidence. Excluded matches remain cached and can be used later when that role is selected.
 
 ## Data flow
 
-1. **Fetch / update** obtains Riot Match-V5 match data, timelines, player rank, and (for the latest 20 cached matches) the actual same-role opponent's rank.
-2. Match/timeline data is cached per Kalenel League profile.
-3. **Analyze cached Last 20** makes no Riot match/timeline calls.
-4. Deep timeline behavioral analysis is limited to the newest 20 games.
-5. Up to 80 older cached matches are used as a lightweight personal baseline.
+1. **Load & analyze** resolves the saved Riot identity and requests 30 recent match IDs first.
+2. Missing Match-V5 match/timeline rows are cached per Kalenel League profile, with the player's canonical role persisted as lightweight metadata.
+3. Fetch completion filters map/duration/support, then selected role, then queue context; only final-sample peer-rank gaps need additional match JSON/rank work.
+4. If fewer than 20 role+queue comparable games exist, the same action automatically scans up to 50 recent IDs.
+5. **Analyze** can be rerun from cached data without Riot match/timeline calls; this is also how pre-role mixed saved reports are rebuilt safely.
+6. Deep timeline behavioral analysis is limited to the newest 20 selected-role, selected-queue games.
+7. Older cached selected-role/same-context rows remain available as lightweight personal-baseline evidence subject to patch/mechanics safeguards.
 
 Missing timeline data is unknown, not zero.
 
@@ -179,15 +175,18 @@ Do not replace a direct match-level comparison with a generic population average
 
 ## Mixed-role samples
 
-The page may show an overall Last-20 summary across all eligible Summoner's Rift games, but **behavioral coaching is role-specific**.
+The report is **role-pure by construction**, not merely role-aware after aggregation.
 
-Choose the most common normalized role in the Last 20 as the primary coaching role. Then:
-- role-sensitive peer comparisons use only games in that role,
-- lane, item timing, roaming, first impact, resource-conversion and win/loss coaching use only that role,
-- the broader personal coaching baseline is filtered to that same role,
-- champion-specific judgments compare champion+role samples with the player's own primary-role baseline.
+The user selects ADC, SUPPORT, MID, JUNGLE or TOP before analysis. That choice is applied before dominant-queue selection, before the Last-20 slice, before timeline loading, before peer-rank targeting, before champion/matchup aggregation, before replay review and before saved-history comparison.
 
-Do not mix ADC and SUPPORT behavior into one coaching average merely because both occurred in the Last 20.
+Consequences:
+- an ADC report contains only ADC matches,
+- a TOP match cannot decide the queue context of an ADC report,
+- replay-review and champion summaries cannot reintroduce another role,
+- historical progress comparisons are matched to the same selected role,
+- the frontend performs a final fail-closed contamination check before rendering.
+
+Games from other roles stay cached for future role-specific reports; they are not deleted or silently averaged into the currently selected report.
 
 ## Supported Summoner's Rift queues
 
