@@ -591,12 +591,22 @@ Examples currently supported:
 
 Raw Riot `{x,y}` coordinates and `mapId` are preserved.
 
-Do not reuse the old historical 0–15000 square heatmap as the final map implementation. The final renderer needs:
-- real map background,
-- map-specific world bounds,
-- one shared world→image transform,
-- correct `mapId` at every call site,
-- explicit unavailable state when coordinates/background metadata are missing.
+The historical 0–15000 square heatmap is retired.
+
+The web renderer now uses Riot's Summoner's Rift minimap asset with one shared map-11 world→image transform:
+- min X = -120
+- min Y = -120
+- max X = 14870
+- max Y = 14980
+- Y axis inverted for image coordinates.
+
+Only `mapId = 11` is plotted. Coordinates outside a small tolerance around those world bounds are rejected rather than forced onto the image.
+
+The report currently plots:
+- multi-signal high-risk deaths, with materially-ahead deaths visually distinguished,
+- player ward placements, classified as offensive / river / defensive.
+
+The source of the map asset is Riot Data Dragon. The explicit world bounds follow the established Summoner's Rift transform used by Cassiopeia/Meraki Analytics rather than the old generic square approximation.
 
 ## Not yet restored
 
