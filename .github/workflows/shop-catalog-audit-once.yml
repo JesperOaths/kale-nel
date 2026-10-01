@@ -19,5 +19,8 @@ jobs:
         run: |
           set -euo pipefail
           url='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828?diagnostic=1&catalog_audit=1'
-          body="$(curl --silent --show-error --fail --max-time 30 "$url")"
-          printf '%s\n' "$body" | jq '{ok,mode,shopCount,catalogAudit,elapsedMs}'
+          status="$(curl --silent --show-error --max-time 30 --output /tmp/catalog-audit.json --write-out '%{http_code}' "$url" || true)"
+          echo "HTTP=$status"
+          cat /tmp/catalog-audit.json
+          echo
+          jq '{ok,mode,stage,envTokenConfigured,tokenResolveMs,shopsMs,shopCount,catalogAudit,elapsedMs}' /tmp/catalog-audit.json || true
