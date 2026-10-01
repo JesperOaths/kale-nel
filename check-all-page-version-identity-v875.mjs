@@ -44,4 +44,4 @@ for(const rel of pages){
 assert.ok(pages.length>=100,'HTML inventory unexpectedly small: '+pages.length);
 assert.deepEqual(failures,[], 'page version identity failures:\n'+failures.join('\n'));
 console.log('All-page version identity PASS:',pages.length,'published HTML pages checked.');
-console.log('RESULT=ALL_PAGE_VERSION_IDENTITY_V875_PASS');
+console.log('RESULT=ALL_PAGE_VERSION_IDENTITY_SITE_WIDE_PASS');
