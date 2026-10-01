@@ -13,12 +13,11 @@
 
   function rpcHeaders() {
     const c = cfg();
-    return {
-      apikey: c.SUPABASE_PUBLISHABLE_KEY || '',
-      Authorization: `Bearer ${c.SUPABASE_PUBLISHABLE_KEY || ''}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    };
+    if (typeof c.publicApiHeaders === 'function') return c.publicApiHeaders({ 'Content-Type':'application/json', Accept:'application/json' });
+    const key = String(c.SUPABASE_PUBLISHABLE_KEY || '').trim();
+    const headers = { apikey:key, 'Content-Type':'application/json', Accept:'application/json' };
+    if (/^[^.]+\.[^.]+\.[^.]+$/.test(key)) headers.Authorization = `Bearer ${key}`;
+    return headers;
   }
 
   async function parseResponse(res) {
