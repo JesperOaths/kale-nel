@@ -834,6 +834,47 @@ Deno.serve(async (req: Request) => {
       };
     }));
 
+    let catalogAudit: any = null;
+    if (url.searchParams.get("catalog_audit") === "1") {
+      try {
+        const account = await timeout(loadAccountProducts(token), 15000, "catalog_audit_timeout");
+        const excluded = account.entries.map((entry: any) => {
+          const product = entry.product;
+          const id = text(product?.id);
+          const blueprint = String(product?.blueprint_id || "");
+          const explicitlyApprovedMerch = PUBLIC_MERCH_PRODUCT_IDS.has(id);
+          const reasons: string[] = [];
+          if (HIDDEN_PUBLIC_BLUEPRINT_IDS.has(blueprint)) reasons.push("hidden_blueprint");
+          if (product?.visible === false && !explicitlyApprovedMerch) reasons.push("not_visible");
+          const variants = Array.isArray(product?.variants) ? product.variants : [];
+          const publicVariants = variants.filter((variant: any) => isPublicVariant(product, variant));
+          if (!publicVariants.length) reasons.push("no_public_variants");
+          const artworkCount = artworkFor(product).length;
+          const mockupCount = mediaFor(product).length;
+          if (artworkCount + mockupCount === 0) reasons.push("no_public_media");
+          return {
+            id,
+            title: text(product?.title),
+            publicName: publicProductName(product),
+            blueprint,
+            visible: product?.visible !== false,
+            variants: variants.length,
+            publicVariants: publicVariants.length,
+            artworkCount,
+            mockupCount,
+            reasons,
+          };
+        }).filter((item: any) => item.reasons.length);
+        catalogAudit = {
+          upstreamProducts: account.entries.length,
+          shopCounts: account.shops.map((shop: any) => ({ id: shop.id, title: shop.title, productCount: shop.productCount })),
+          excluded,
+        };
+      } catch (error) {
+        catalogAudit = { error: error instanceof Error ? error.message : "catalog_audit_failed" };
+      }
+    }
+
     return json(req, {
       ok: true,
       mode: "printify-diagnostic-v850",
@@ -844,6 +885,7 @@ Deno.serve(async (req: Request) => {
       probes: probes.map((result) => result.status === "fulfilled"
         ? { ok: true, ...result.value }
         : { ok: false, error: result.reason instanceof Error ? result.reason.message : "probe_error" }),
+      catalogAudit,
       elapsedMs: Date.now() - started,
     });
   }
