@@ -406,6 +406,8 @@ ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHis
 ok(html.includes('id="gameArcPatterns"')&&app.includes('function renderGameArcs(')&&app.includes('function gameArcStages('), 'League report must reconstruct supported per-game arcs and aggregate repeated state transitions');
 ok(html.includes('id="gameArcFunnels"')&&app.includes('function arcFunnelCard('), 'League report must summarize how ahead / close / behind @15 role states convert by @25 and result');
 ok(app.includes('function matchReplayReviewHtml(')&&app.includes('data-open-review-match'), 'match history must surface the backend replay-priority queue inside the relevant expandable game');
+ok(html.includes('id="matchHistoryToggle"')&&app.includes('matchHistoryLimit:10'), 'match history must stay scannable at 10 by default while allowing the full eligible Last-20');
+ok(modelDoc.includes('## Game-arc reconstruction')&&modelDoc.includes('direct-role gold differential > +100g')&&modelDoc.includes('at least two coaching-cohort games'), 'analysis documentation must lock the game-arc bands, mechanics cohort and recurrence floor');
 ok(app.includes("openReplayReviewMatch(matchId,tab)"), 'match-level replay cues must retain their evidence-tab routing');
 ok(app.includes("filter(x=>x.games.length>=2)")&&app.includes("filter(x=>x.count>=2)"), 'game-arc recurrence must require evidence in at least two coaching-cohort games');
 ok(app.includes('reportCoachingGames(r)')&&app.includes('gameArcTransition(g)'), 'game-arc aggregation must inherit the backend mechanics-cohort boundary');
