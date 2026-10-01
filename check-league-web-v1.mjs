@@ -288,6 +288,9 @@ assert.ok(api.includes('ownedMajorCount<=milestones.length'),'Second-major timin
 assert.ok(api.includes('inventoryCountsAt(sorted,Number(e.tMs))'),'Major-item milestones must use the reconstructed inventory ledger');
 assert.ok(app.includes('Control Wards bought')&&app.includes('Control Wards placed'),'Frontend must distinguish Control Ward purchases from placements');
 assert.ok(app.includes('Second-major timing vs peer'),'Frontend must expose second major-item timing against the direct peer');
+assert.ok(api.includes('function outcomeStreakSummary(')&&api.includes('outcomeStreaks=outcomeStreakSummary(games)'),'Last-20 result streaks must remain computed from the eligible displayed sample');
+assert.ok(app.includes('Longest win / loss streak')&&app.includes('Current result streak'),'Frontend must expose descriptive result streaks');
+assert.ok(app.includes('not treated as evidence of tilt, momentum, or player psychology'),'Result streaks must retain non-causal/non-psychological framing');
 assert.ok(app.includes('Objective setup ward clears'),'Frontend must expose objective-setup ward clears');
 assert.ok(app.includes('objectiveFamilyStats'),'Per-game objective tab must expose objective-family evidence');
 assert.ok(html.includes('data-game-sort="gold15"')&&app.includes('bindGameSortControls'),'Per-game evidence table must retain Bruisienator-style sortable columns');
@@ -307,7 +310,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v81'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v82'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
@@ -354,7 +357,7 @@ assert.ok(api.includes('higherRankMajorItemGames'),'Higher-ranked peer item samp
 assert.ok(api.includes('higherRankAvgMajorItemDeltaMin'),'Higher-ranked peer first-major timing delta must remain exported');
 assert.ok(api.includes('higherRankMajorItemFasterPct'),'Higher-ranked peer first-major faster rate must remain exported');
 assert.ok(api.includes('First-major timing slips against higher-ranked direct opponents'),'Higher-rank item timing must remain actionable coaching evidence');
-assert.ok(api.includes('league-web-behavior-v4.37'),'Analyzer version must include season-aware rules and turret-tier involvement');
+assert.ok(api.includes('league-web-behavior-v4.38'),'Analyzer version must include season-aware rules and turret-tier involvement');
 assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
 assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
 assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
