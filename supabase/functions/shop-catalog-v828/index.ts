@@ -138,6 +138,35 @@ function directDb() {
 }
 
 async function readCatalogCacheDirect() {
+  // Prefer the Data API so storefront reads do not depend on opening a new
+  // Supavisor/direct Postgres socket. Fall back to the direct connection for
+  // compatibility if the Data API is temporarily unavailable.
+  const url = text(Deno.env.get("SUPABASE_URL"));
+  const key = text(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
+  if (url && key) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2500);
+    try {
+      const endpoint = new URL("/rest/v1/shop_catalog_cache_v828", url);
+      endpoint.searchParams.set("id", "eq.1");
+      endpoint.searchParams.set("select", "payload,generated_at,refresh_started_at");
+      endpoint.searchParams.set("limit", "1");
+      const response = await fetch(endpoint, {
+        signal: controller.signal,
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          Accept: "application/json",
+        },
+      });
+      if (response.ok) {
+        const rows = await response.json().catch(() => []);
+        if (Array.isArray(rows) && rows[0]) return rows[0];
+      }
+    } catch {}
+    finally { clearTimeout(timer); }
+  }
+
   const sql = directDb();
   try {
     const rows = await sql`
@@ -151,7 +180,6 @@ async function readCatalogCacheDirect() {
     try { await sql.end({ timeout: 1 }); } catch {}
   }
 }
-
 async function claimCatalogRefreshLeaseDirect() {
   const sql = directDb();
   try {
