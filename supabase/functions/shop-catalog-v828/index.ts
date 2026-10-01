@@ -676,11 +676,9 @@ function publicProduct(product: any, fx: any, shopId: number, shop: any, routeSa
   const variants = (Array.isArray(product?.variants) ? product.variants : [])
     .filter((variant: any) => isPublicVariant(product, variant))
     .map((variant: any) => {
+      const canonicalRouteCost = Number(routeSafeCostCeilings.get(String(variant?.id || "")) || 0);
       const routeSafeRawUsdCost = String(product?.blueprint_id || "") === "6"
-        ? Math.max(
-            Math.round(Number(variant?.cost) || 0),
-            Number(routeSafeCostCeilings.get(String(variant?.id || "")) || 0),
-          )
+        ? (canonicalRouteCost > 0 ? canonicalRouteCost : Math.round(Number(variant?.cost) || 0))
         : Number(variant?.cost);
       return ({
       id: String(variant?.id || ""),
