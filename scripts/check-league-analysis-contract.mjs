@@ -32,6 +32,14 @@ ok(backend.includes('lead25Games=games.filter(g=>hasNum(g.goldDiff25)&&Number(g.
 ok(backend.includes('deficit25Games=games.filter(g=>hasNum(g.goldDiff25)&&Number(g.goldDiff25)<=-500)'), '25-minute recovery model must keep -500g direct-role deficit threshold');
 ok(backend.includes('lead25LossesWithLateRisk'), 'lead@25 losses must preserve late-risk evidence');
 ok(backend.includes('closing25:{'), '25-minute closing summary must remain exported');
+ok(backend.includes('earlyRoleGoldSamples'), 'pre-15 direct-role gold samples must remain explicit');
+ok(backend.includes('frameMinute>=3&&frameMinute<15'), 'early-lead search window must stay between 3m and 15m');
+ok(backend.includes('Number(peak.goldDiff)>=500'), 'early-lead opportunity threshold must remain +500g');
+ok(backend.includes('giveback:swing<=-500'), 'early-lead give-back threshold must remain a 500g peak-to-15 loss');
+ok(backend.includes('preserved:swing>=-250'), 'early-lead preservation tolerance must remain 250g');
+ok(backend.includes('earlyLeadGivebackRate'), 'aggregate early-lead give-back rate must remain exported');
+ok(backend.includes('behaviorSummary.earlyLeadGivebackRate'), 'self-relative practice target must use the exact early-lead metric path');
+ok(backend.includes('Review where this early lead started to unwind'), 'replay queue must retain early-lead review moments');
 ok(backend.includes('impactDeltaVsOpponent'), 'direct-peer first-impact comparison must remain in analyzer');
 ok(backend.includes('roam.laneCostCs='), 'roam lane-cost comparison must remain in analyzer');
 ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
