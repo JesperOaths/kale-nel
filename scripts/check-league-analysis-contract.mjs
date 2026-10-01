@@ -216,18 +216,6 @@ const appVersion=(html.match(/\/league\/app\.js\?v=([^"]+)/)||[])[1]||'';
 const cssVersion=(html.match(/\/league\/styles\.css\?v=([^"]+)/)||[])[1]||'';
 ok(appVersion&&cssVersion&&appVersion===cssVersion, 'League app/css cache-bust versions must match');
 
-if(failures.length){
-  console.error('\nLeague analysis contract FAILED:\n- '+failures.join('\n- '));
-  process.exit(1);
-}
-console.log('League analysis contract OK');
-console.log(JSON.stringify({
-  appVersion,
-  domRefs:refs.length,
-  domIds:ids.length,
-  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison']
-},null,2));
-
 ok(backend.includes('"post-play discipline"'), 'post-play discipline must consolidate into a stable coaching theme');
 ok(backend.includes('"side-lane timing"'), 'side-lane timing must consolidate into a stable coaching theme');
 ok(backend.includes('supportingTitles'), 'priority themes must preserve supporting finding titles');
@@ -237,3 +225,15 @@ ok(backend.includes('Pre-objective side-lane deaths / game'), 'side-lane timing 
 ok(backend.includes('cause==="late_reset"'), 'late-reset objective diagnosis must select a late-reset target');
 ok(backend.includes('cause==="pre_objective_death"'), 'pre-objective-death diagnosis must select a death-rate target');
 ok(backend.includes('cause==="setup_vision"'), 'setup-vision diagnosis must select a setup-ward target');
+
+if(failures.length){
+  console.error('\nLeague analysis contract FAILED:\n- '+failures.join('\n- '));
+  process.exit(1);
+}
+console.log('League analysis contract OK');
+console.log(JSON.stringify({
+  appVersion,
+  domRefs:refs.length,
+  domIds:ids.length,
+  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','role-specific-mechanics','macro-transition-semantics']
+},null,2));
