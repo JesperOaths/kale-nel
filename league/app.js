@@ -789,10 +789,10 @@ function outcomeFingerprintCard(label,wins,losses,unit,inverse=false){
 }
 function renderOutcomeFingerprint(r){
   const box=$('outcomeFingerprint'),note=$('outcomeFingerprintNote');if(!box)return;
-  const games=r.games||[],wins=games.filter(g=>g.win),losses=games.filter(g=>!g.win);
+  const games=reportCoachingGames(r),wins=games.filter(g=>g.win),losses=games.filter(g=>!g.win);
   if(wins.length<2||losses.length<2){
     box.innerHTML='<div class="bullet empty">At least two wins and two losses are needed for a useful within-sample outcome comparison.</div>';
-    if(note)note.textContent='The report does not force an outcome story from a one-sided sample.';
+    if(note)note.textContent='The report does not force an outcome story from a one-sided coaching cohort. Current comparison sample: '+wins.length+' wins / '+losses.length+' losses.';
     return;
   }
   const cards=[
@@ -803,7 +803,7 @@ function renderOutcomeFingerprint(r){
   ];
   box.innerHTML=cards.map(x=>x.html).join('');
   const usable=cards.filter(x=>hasNum(x.effect)).sort((a,b)=>Number(b.effect)-Number(a.effect)),lead=usable[0];
-  if(note)note.innerHTML=lead?'<b>Largest standardized separation:</b> '+esc(lead.label)+' (gap '+esc(fmt(lead.effect,2))+' pooled within-metric SD). This makes unlike units comparable, but it remains descriptive and is not a causal or significance claim.':'No metric has at least two valid observations in both wins and losses with enough variation for a standardized comparison.';
+  if(note)note.innerHTML=lead?'<b>Largest standardized separation:</b> '+esc(lead.label)+' (gap '+esc(fmt(lead.effect,2))+' pooled within-metric SD). This makes unlike units comparable, but it remains descriptive and is not a causal or significance claim. Coaching cohort: '+wins.length+' wins / '+losses.length+' losses.':'No metric has at least two valid observations in both wins and losses with enough variation for a standardized comparison in the coaching cohort.';
 }
 
 function renderKpis(r){
@@ -1300,6 +1300,20 @@ function gamePassesFilter(g){
   return gameMatchesNamedFilter(g,state.gameFilter);
 }
 
+function gameMechanicsKey(g){
+  return [String(g?.phaseRules?.key||'unknown'),String(g?.roleQuestContext?.revision||'unknown')].join('|');
+}
+function reportCoachingGames(r){
+  const games=Array.isArray(r?.games)?r.games:[],dq=r?.dataQuality||{};
+  if(dq.mechanicsCohortApplied===true&&dq.currentMechanicsKey){
+    return games.filter(g=>gameMechanicsKey(g)===String(dq.currentMechanicsKey));
+  }
+  return games;
+}
+function gameIsCoachingContext(r,g){
+  const dq=r?.dataQuality||{};
+  return !(dq.mechanicsCohortApplied===true&&dq.currentMechanicsKey&&gameMechanicsKey(g)!==String(dq.currentMechanicsKey));
+}
 function matchHistoryLaneState(g){
   if(g?.phaseRules?.lane15Comparable===false||!hasNum(g.goldDiff15))return {tone:'neutral',label:'@15 unavailable',copy:'No role-comparable 15-minute gold checkpoint is available for this game.'};
   const d=Number(g.goldDiff15);
@@ -1337,20 +1351,20 @@ function matchHistoryJudgment(g){
   if(!x)return {tone:'neutral',title:'No high-confidence game judgment',evidence:'The game remains visible, but the analyzer did not have enough supported evidence for a specific action judgment.',action:''};
   return {tone:x.tone==='strength'?'good':'bad',title:String(x.title||x.category||'Game insight'),evidence:String(x.evidence||''),action:String(x.action||'')};
 }
-function matchHistoryRow(g,index,displayIndex){
-  const icon=championIcon(g.champion),opp=championIcon(g.peer?.champion),lane=matchHistoryLaneState(g),judge=matchHistoryJudgment(g),signals=matchHistorySignals(g);
+function matchHistoryRow(g,index,displayIndex,r){
+  const icon=championIcon(g.champion),opp=championIcon(g.peer?.champion),lane=matchHistoryLaneState(g),judge=matchHistoryJudgment(g),signals=matchHistorySignals(g),coachingContext=gameIsCoachingContext(r,g),detailId='match-history-detail-'+index;
   const kda=[g.kills,g.deaths,g.assists].map(x=>hasNum(x)?Number(x):'?').join('/');
   const title=(g.win?'Win':'Loss')+' · '+String(g.champion||'Unknown');
-  return '<article class="match-history-row tone-'+(g.win?'good':'bad')+'" data-history-index="'+index+'">'+
-    '<button class="match-history-toggle" type="button" aria-expanded="false">'+
+  return '<article class="match-history-row tone-'+(g.win?'good':'bad')+(coachingContext?'':' context-only')+'" data-history-index="'+index+'">'+
+    '<button class="match-history-toggle" type="button" aria-expanded="false" aria-controls="'+detailId+'">'+
       '<span class="history-rank">#'+(displayIndex+1)+'</span>'+
-      '<span class="history-champions">'+(icon?'<img loading="lazy" src="'+esc(icon)+'" alt="">':'')+'<span><b>'+esc(title)+'</b><small>'+esc(shortGameDate(g.gameStartTimestamp))+' · '+esc(g.role||'')+(g.peer?.champion?' · vs '+esc(g.peer.champion):'')+'</small></span>'+(opp?'<img class="history-opponent" loading="lazy" src="'+esc(opp)+'" alt="">':'')+'</span>'+
+      '<span class="history-champions">'+(icon?'<img loading="lazy" src="'+esc(icon)+'" alt="">':'')+'<span><b>'+esc(title)+(coachingContext?'':' <em class="history-context-badge">context only</em>')+'</b><small>'+esc(shortGameDate(g.gameStartTimestamp))+' · '+esc(g.role||'')+(g.peer?.champion?' · vs '+esc(g.peer.champion):'')+(coachingContext?'':' · older mechanics excluded from coaching aggregates')+'</small></span>'+(opp?'<img class="history-opponent" loading="lazy" src="'+esc(opp)+'" alt="">':'')+'</span>'+
       '<span class="history-stat"><small>K/D/A</small><b>'+esc(kda)+'</b></span>'+
       '<span class="history-stat tone-'+lane.tone+'"><small>Role gold @15</small><b>'+esc(lane.label)+'</b></span>'+
       '<span class="history-judgment tone-'+judge.tone+'"><small>Strongest read</small><b>'+esc(judge.title)+'</b></span>'+
       '<span class="history-chevron" aria-hidden="true">▾</span>'+
     '</button>'+
-    '<div class="match-history-detail" hidden>'+
+    '<div class="match-history-detail" id="'+detailId+'" hidden>'+
       '<div class="history-signal-grid">'+signals.map(x=>'<div class="history-signal tone-'+x.tone+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><p>'+esc(x.copy)+'</p></div>').join('')+'</div>'+
       '<div class="history-coaching-read tone-'+judge.tone+'"><span>Game-level coaching read</span><strong>'+esc(judge.title)+'</strong><p>'+esc(judge.evidence||'No additional evidence sentence was generated.')+'</p>'+(judge.action?'<div><b>Next time:</b> '+esc(judge.action)+'</div>':'')+'</div>'+
       '<div class="history-actions"><button class="button secondary small" type="button" data-open-full-match="'+esc(g.matchId||'')+'">Open full match evidence</button><small>Full evidence includes macro, resets, vision, fights, phases, deaths, objectives and map context.</small></div>'+
@@ -1362,9 +1376,10 @@ function renderMatchHistory(r){
   const games=(r.games||[]).slice(0,10);
   if(!games.length){summary.innerHTML='';list.innerHTML='<div class="bullet empty">No recent comparable matches are available.</div>';return;}
   const wins=games.filter(g=>g.win).length,ahead=games.filter(g=>gameMatchesNamedFilter(g,'ahead15')).length,behind=games.filter(g=>gameMatchesNamedFilter(g,'behind15')).length;
-  const timelineGames=games.filter(g=>g.timelineAvailable===true),risky=timelineGames.reduce((n,g)=>n+Number(g.badDeathCount||0),0);
-  summary.innerHTML='<span><b>'+wins+'–'+(games.length-wins)+'</b> recent result</span><span><b>'+ahead+'</b> ahead @15</span><span><b>'+behind+'</b> behind @15</span><span><b>'+risky+'</b> flagged high-risk deaths</span><small>Newest '+games.length+' comparable '+esc(roleLabel(canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole||state.selectedRole)))+' games · risk evidence '+timelineGames.length+'/'+games.length+' timelines</small>';
-  list.innerHTML=games.map((g,i)=>matchHistoryRow(g,i,i)).join('');
+  const timelineGames=games.filter(g=>g.timelineAvailable===true),risky=timelineGames.reduce((n,g)=>n+Number(g.badDeathCount||0),0),coachingGames=reportCoachingGames(r);
+  const mechanicsNote=r.dataQuality?.mechanicsCohortApplied===true?' · coaching aggregates use '+coachingGames.length+'/'+String((r.games||[]).length)+' current-mechanics games':'';
+  summary.innerHTML='<span><b>'+wins+'–'+(games.length-wins)+'</b> recent result</span><span><b>'+ahead+'</b> ahead @15</span><span><b>'+behind+'</b> behind @15</span><span><b>'+risky+'</b> flagged high-risk deaths</span><small>Newest '+games.length+' comparable '+esc(roleLabel(canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole||state.selectedRole)))+' games · risk evidence '+timelineGames.length+'/'+games.length+' timelines'+esc(mechanicsNote)+'</small>';
+  list.innerHTML=games.map((g,i)=>matchHistoryRow(g,i,i,r)).join('');
   list.querySelectorAll('.match-history-toggle').forEach(btn=>btn.addEventListener('click',()=>{
     const row=btn.closest('.match-history-row'),detail=row?.querySelector('.match-history-detail');if(!detail)return;
     const open=detail.hidden;detail.hidden=!open;btn.setAttribute('aria-expanded',open?'true':'false');row.classList.toggle('open',open);
