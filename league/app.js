@@ -427,6 +427,145 @@ function renderKpis(r){
   $('kpiGrid').innerHTML=rows.map(x=>'<article class="kpi-card tone-'+x.tone+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong>'+(x.bar||'')+'<small>'+esc(x.sub)+'</small></article>').join('');
 }
 
+
+function comparisonCard(title,delta,unit,scale,inverse,explanation,sample){
+  const d=plainDelta(delta,unit,1,inverse);
+  return '<article class="quick-read-card tone-'+d.tone+'"><div class="quick-read-head"><span>'+esc(title)+'</span><strong>'+esc(d.value)+'</strong></div>'+
+    contextBar(delta,scale,inverse)+
+    '<p><b>'+esc(d.word)+'.</b> '+esc(explanation)+'</p>'+
+    (sample?'<small>'+esc(sample)+'</small>':'')+'</article>';
+}
+function renderQuickRead(r){
+  const p=r.peerComparison||{},b=r.behaviorSummary||{},a=r.advanced||{};
+  const goldExplanation=hasNum(p.avgGoldDiff15)
+    ?(Number(p.avgGoldDiff15)>150?'You typically reach the 15-minute checkpoint with an economy lead over the opposing role.':Number(p.avgGoldDiff15)<-150?'You typically reach the 15-minute checkpoint behind the opposing role.':'Your average 15-minute economy is close to even with the opposing role.')
+    :'Not enough comparable @15 games to interpret lane economy.';
+  const farmExplanation=hasNum(p.avgCsMinDelta)
+    ?(Number(p.avgCsMinDelta)>.15?'Your farming pace is higher than the direct role opponent on average.':Number(p.avgCsMinDelta)<-.15?'Your farming pace trails the direct role opponent on average.':'Your farming pace is effectively even with the direct role opponent.')
+    :'Not enough direct-role farming comparisons.';
+  const damageExplanation=hasNum(p.avgDpmDelta)
+    ?(Number(p.avgDpmDelta)>50?'You deal more champion damage per minute than the direct role opponent on average.':Number(p.avgDpmDelta)<-50?'You deal less champion damage per minute than the direct role opponent on average.':'Damage output is close to the direct role opponent.')
+    :'Not enough direct-role damage comparisons.';
+  const itemExplanation=hasNum(p.avgMajorItemDeltaMin)
+    ?(Number(p.avgMajorItemDeltaMin)<-.2?'Your first major item usually completes earlier than the opposing role.':Number(p.avgMajorItemDeltaMin)>.2?'Your first major item usually completes later than the opposing role.':'First-major timing is effectively even.')
+    :'Not enough measurable first-major completions.';
+  const objective=hasNum(a.objectivePresence)?Number(a.objectivePresence):null;
+  const objTone=objective==null?'neutral':objective>=70?'good':objective<45?'bad':'neutral';
+  const objText=objective==null?'Not enough contested-objective evidence.':objective>=70?'You are present for most team-contested neutral objectives.':objective<45?'You are absent from many team-contested neutral objectives; review resets and pathing before spawn windows.':'Objective presence is mixed rather than clearly strong or weak.';
+  const risk=hasNum(b.badDeathsPerTimelineGame)?Number(b.badDeathsPerTimelineGame):null;
+  const riskTone=risk==null?'neutral':risk<=.75?'good':risk>=1.5?'bad':'neutral';
+  const riskText=risk==null?'Not enough timeline-complete death evidence.':risk<=.75?'High-risk deaths are relatively contained in this sample.':risk>=1.5?'High-risk deaths are frequent enough to be a major review target.':'High-risk deaths are present but not dominant.';
+  $('quickRead').innerHTML=[
+    comparisonCard('Lane economy @15',p.avgGoldDiff15,'gold',1000,false,goldExplanation,String(p.laneGames15||0)+' comparable games'),
+    comparisonCard('Farm pace',p.avgCsMinDelta,'csmin',2,false,farmExplanation,String(p.sameRoleGames||0)+' role-peer games'),
+    comparisonCard('Damage output',p.avgDpmDelta,'dpm',600,false,damageExplanation,String(p.sameRoleGames||0)+' role-peer games'),
+    comparisonCard('First major timing',p.avgMajorItemDeltaMin,'minutes',2.5,true,itemExplanation,String(p.majorItemGames||0)+' measurable games'),
+    '<article class="quick-read-card tone-'+objTone+'"><div class="quick-read-head"><span>Contested objective presence</span><strong>'+esc(fmtPct(objective))+'</strong></div><div class="percent-track"><span style="width:'+clamp(objective||0,0,100)+'%"></span></div><p>'+esc(objText)+'</p><small>Presence only counts team-contested windows, not fully conceded cross-map objectives.</small></article>',
+    '<article class="quick-read-card tone-'+riskTone+'"><div class="quick-read-head"><span>High-risk deaths</span><strong>'+esc(hasNum(risk)?fmt(risk,2)+'/game':'n/a')+'</strong></div><p>'+esc(riskText)+'</p><small>Uses timeline position, trade, economy and follow-on consequence evidence.</small></article>'
+  ].join('');
+}
+function renderVisualSummary(r){
+  const games=Array.isArray(r.games)?r.games:[];
+  const champs=new Map(),items=new Map();
+  for(const g of games){
+    const champ=String(g.champion||'').trim();
+    if(champ){
+      const row=champs.get(champ)||{name:champ,games:0,wins:0};row.games++;if(g.win)row.wins++;champs.set(champ,row);
+    }
+    const first=g.firstMajorItem;
+    if(first?.itemId){
+      const key=String(first.itemId),row=items.get(key)||{itemId:first.itemId,name:first.name||('Item '+key),games:0,totalTime:0};row.games++;row.totalTime+=Number(first.time||0);items.set(key,row);
+    }
+  }
+  const topChamps=[...champs.values()].sort((a,b)=>b.games-a.games||b.wins-a.wins||a.name.localeCompare(b.name)).slice(0,6);
+  const topItems=[...items.values()].sort((a,b)=>b.games-a.games||a.name.localeCompare(b.name)).slice(0,6);
+  $('championVisuals').innerHTML=topChamps.length?topChamps.map(x=>{
+    const src=championIcon(x.name);
+    return '<article class="game-visual-card">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="'+esc(x.name)+' portrait">':'')+'<div><strong>'+esc(x.name)+'</strong><span>'+x.games+' game'+(x.games===1?'':'s')+' · '+esc(fmtPct(x.games?x.wins/x.games*100:null))+' WR</span></div></article>';
+  }).join(''):'<p class="muted">No champion sample available.</p>';
+  $('itemVisuals').innerHTML=topItems.length?topItems.map(x=>{
+    const src=itemIcon(x.itemId);
+    return '<article class="game-visual-card">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="'+esc(x.name)+' item icon">':'')+'<div><strong>'+esc(x.name)+'</strong><span>'+x.games+' first-major game'+(x.games===1?'':'s')+' · avg '+esc(fmt(x.totalTime/x.games,1))+'m</span></div></article>';
+  }).join(''):'<p class="muted">No measurable first-major item sample available.</p>';
+}
+function rankRadarScore(stat,key){
+  const value=stat?.[key];
+  if(!hasNum(value))return null;
+  const n=Number(value);
+  if(key==='avgGoldDiff15')return clamp(50+n/20,0,100);
+  if(key==='avgCsMinDelta')return clamp(50+n*25,0,100);
+  if(key==='avgDpmDelta')return clamp(50+n/12,0,100);
+  if(key==='avgVpmDelta')return clamp(50+n*83.333,0,100);
+  if(key==='avgMajorItemDeltaMin')return clamp(50-n*20,0,100);
+  return null;
+}
+function radarPolygon(values,cx,cy,radius){
+  return values.map((v,i)=>{
+    const angle=-Math.PI/2+(Math.PI*2*i/values.length),rr=radius*(Number(v)/100);
+    return (cx+Math.cos(angle)*rr).toFixed(1)+','+(cy+Math.sin(angle)*rr).toFixed(1);
+  }).join(' ');
+}
+function renderRankRadar(r){
+  const bands=r.peerComparison?.rankStepBands||{},role=String(r.summary?.primaryRole||'role').toUpperCase();
+  const axes=[
+    {key:'avgGoldDiff15',label:'Gold @15'},
+    {key:'avgCsMinDelta',label:'CS pace'},
+    {key:'avgDpmDelta',label:'Damage'},
+    {key:'avgVpmDelta',label:'Vision'},
+    {key:'avgMajorItemDeltaMin',label:'Item timing'}
+  ];
+  const defs=[
+    {key:'same',label:'Same rank',cls:'same'},
+    {key:'plus1',label:'+1 rank step',cls:'plus1'},
+    {key:'plus2',label:'+2 rank steps',cls:'plus2'}
+  ];
+  const usable=defs.map(d=>{
+    const stat=bands[d.key]||{},values=axes.map(a=>rankRadarScore(stat,a.key)),known=values.filter(hasNum).length;
+    return{...d,stat,values:values.map(v=>hasNum(v)?v:50),known,usable:Number(stat.games||0)>0&&known>=3};
+  });
+  const cx=250,cy=245,radius=170;
+  const ringLevels=[25,50,75,100];
+  const rings=ringLevels.map(level=>{
+    const pts=axes.map((_,i)=>{
+      const angle=-Math.PI/2+Math.PI*2*i/axes.length,rr=radius*level/100;
+      return (cx+Math.cos(angle)*rr).toFixed(1)+','+(cy+Math.sin(angle)*rr).toFixed(1);
+    }).join(' ');
+    return '<polygon class="radar-ring '+(level===50?'neutral-ring':'')+'" points="'+pts+'"/>';
+  }).join('');
+  const spokes=axes.map((a,i)=>{
+    const angle=-Math.PI/2+Math.PI*2*i/axes.length,x=cx+Math.cos(angle)*radius,y=cy+Math.sin(angle)*radius,lx=cx+Math.cos(angle)*(radius+34),ly=cy+Math.sin(angle)*(radius+34);
+    return '<line class="radar-spoke" x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'"/><text class="radar-axis-label" x="'+lx.toFixed(1)+'" y="'+(ly+4).toFixed(1)+'" text-anchor="middle">'+esc(a.label)+'</text>';
+  }).join('');
+  const polygons=usable.filter(x=>x.usable).map(x=>'<polygon class="radar-series '+x.cls+'" points="'+radarPolygon(x.values,cx,cy,radius)+'"><title>'+esc(x.label)+' · '+String(x.stat.games||0)+' games</title></polygon>').join('');
+  $('radarChart').innerHTML=polygons?'<svg viewBox="0 0 500 490" role="img" aria-label="Radar comparison against same-rank and higher-rank same-role opponents">'+rings+spokes+polygons+'<text class="radar-neutral-label" x="'+cx+'" y="'+(cy-radius*.5-8)+'" text-anchor="middle">50 = EVEN</text></svg>':'<div class="radar-empty">Not enough ranked direct-opponent evidence yet.</div>';
+  $('radarLegend').innerHTML=usable.map(x=>'<div class="radar-legend-row '+x.cls+' '+(x.usable?'':'unavailable')+'"><i></i><div><strong>'+esc(x.label)+'</strong><span>'+String(x.stat.games||0)+' '+esc(role==='BOTTOM'?'ADC':'same-role')+' matchup'+(Number(x.stat.games||0)===1?'':'s')+(x.usable?'':' · too thin for polygon')+'</span></div></div>').join('');
+  $('radarNote').textContent=(bands.definition||'Actual direct-role opponent rank snapshots.')+' Radar values are normalized matchup deltas: 50 is even, not a population percentile.';
+}
+function decisionCard(title,value,tone,explanation,sub,percent=null){
+  return '<article class="decision-card tone-'+tone+'"><div><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong></div>'+
+    (hasNum(percent)?'<div class="decision-meter"><span style="width:'+clamp(Number(percent),0,100)+'%"></span></div>':'')+
+    '<p>'+esc(explanation)+'</p><small>'+esc(sub||'')+'</small></article>';
+}
+function renderDecisionMetrics(r){
+  const b=r.behaviorSummary||{},p=r.peerComparison||{};
+  const objective=hasNum(b.objectiveContestPresenceRate)?Number(b.objectiveContestPresenceRate):null;
+  const fight=hasNum(b.fightSurvivalRate)?Number(b.fightSurvivalRate):null;
+  const reset=hasNum(b.firstResetLossRate)?Number(b.firstResetLossRate):null;
+  const spike=hasNum(p.itemSpikeUtilizationRate)?Number(p.itemSpikeUtilizationRate):null;
+  const giveback=hasNum(b.earlyLeadGivebackRate)?Number(b.earlyLeadGivebackRate):null;
+  const deaths=hasNum(b.badDeathsPerTimelineGame)?Number(b.badDeathsPerTimelineGame):null;
+  const tonePct=(v,good,bad,inverse=false)=>v==null?'neutral':inverse?(v<=good?'good':v>=bad?'bad':'neutral'):(v>=good?'good':v<=bad?'bad':'neutral');
+  $('decisionMetrics').innerHTML=[
+    decisionCard('Contested objective presence',fmtPct(objective),tonePct(objective,70,45,false),objective==null?'Not enough contested-objective events.':objective>=70?'You usually arrive for fights your team actually contests.':objective<45?'You miss many real contest windows; inspect reset timing and pathing.':'Presence is mixed; the details below can separate reset, death and setup causes.',String(b.objectiveContestJoinedEncounters??0)+' / '+String(b.objectiveContestEncounters??0)+' contested encounters',objective),
+    decisionCard('Fight survival',fmtPct(fight),tonePct(fight,70,50,false),fight==null?'Not enough attended fight clusters.':fight>=70?'You usually stay alive through attended fight clusters.':fight<50?'You die in more than half of measured attended fight clusters.':'Survival is mixed; review whether deaths happen before or after meaningful contribution.',String(b.fightSamples??0)+' measured fight clusters',fight),
+    decisionCard('High-risk deaths / game',deaths==null?'n/a':fmt(deaths,2),deaths==null?'neutral':deaths<=.75?'good':deaths>=1.5?'bad':'neutral',deaths==null?'Not enough timeline-complete games.':deaths<=.75?'Risky deaths are contained.':deaths>=1.5?'This is frequent enough to materially distort otherwise good games.':'Risky deaths exist but are not the dominant signal.','Lower is better; consequence-aware, not every death.'),
+    decisionCard('First-reset economy loss',fmtPct(reset),tonePct(reset,25,50,true),reset==null?'Not enough clean first-reset measurements.':reset<=25?'Most measured first resets preserve or improve lane economy.':reset>=50?'At least half of clean measured first resets lose economy afterwards.':'Reset outcomes are mixed.','Measured only when death does not contaminate the post-shop window.',reset),
+    decisionCard('Earlier-item windows used',fmtPct(spike),tonePct(spike,60,35,false),spike==null?'No reliable first-major advantage windows.':spike>=60?'You usually turn an earlier major item into tracked impact.':spike<35?'Earlier item completions often expire without a tracked kill/assist/objective impact.':'Item-spike conversion is mixed.',String(p.itemSpikeUtilizedWindows??0)+' / '+String(p.itemSpikeEligibleWindows??0)+' eligible windows',spike),
+    decisionCard('Early leads given back',fmtPct(giveback),tonePct(giveback,30,50,true),giveback==null?'No meaningful ≥500g pre-15 lead sample.':giveback<=30?'Most measured early leads are preserved into the 15-minute checkpoint.':giveback>=50?'At least half of measured early leads erode substantially before 15.':'Lead preservation is inconsistent.',String(b.earlyLeadGivebackGames??0)+' / '+String(b.earlyLeadGames??0)+' lead games',giveback)
+  ].join('');
+  $('objectiveDiagnosisSummary').innerHTML=objectiveDiagnosisHtml(r);
+}
+
 function renderBullets(id,items,empty){
   const list=(items||[]).filter(Boolean);
   $(id).innerHTML=list.length?list.map(x=>{
