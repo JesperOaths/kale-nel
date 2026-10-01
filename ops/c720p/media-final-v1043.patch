@@ -1,0 +1,67 @@
+--- a/bin/ht-e6500-surround-server.py
++++ b/bin/ht-e6500-surround-server.py
+@@
+-    # A command shadow is never independent evidence.  It is retained only as
+-    # UI/debug context.  Live network/BlueZ presence may prove ON; absence does
+-    # not prove OFF because this receiver can have networking/Bluetooth asleep.
+-    power_state="on" if live_present else "unknown"
++    # C720P_HTS_OFF_FAST_FINAL_V1043
++    # Only a post-verification OFF shadow may override a stale BlueZ
++    # Connected: yes flag. A raw command shadow remains non-authoritative.
++    verified_off_shadow = bool(
++        shadow_fresh
++        and shadow_state == "off"
++        and str(shadow.get("source") or "") in {
++            "verified_absence_after_single_power_toggle",
++            "reconciled_absence_after_off_toggle",
++        }
++        and not bool(net.get("present"))
++    )
++    if verified_off_shadow:
++        power_state="off"
++    elif live_present:
++        power_state="on"
++    else:
++        power_state="unknown"
+     present=live_present
+@@
+-    deadline = time.monotonic() + 8.0
++    deadline = time.monotonic() + (8.0 if want_on else 5.0)
+     time.sleep(0.55)
+     while True:
+         final = receiver_present(fast=True)
+         checks.append(final)
+-        if bool(final.get("present")) == bool(want_on):
+-            confirmed = True
+-            break
++        if want_on:
++            if bool(final.get("present")):
++                confirmed = True
++                break
++        else:
++            # BlueZ can retain Connected: yes after the HTS has dropped A2DP.
++            # The POWER action cannot change source, so disappearance of both
++            # the Samsung A2DP sink and the HTS network MAC is strong OFF
++            # evidence without sending a second toggle.
++            net_final = final.get("network") if isinstance(final.get("network"), dict) else {}
++            sink_probe = run(["pactl", "list", "short", "sinks"], timeout=2)
++            sink_text = ((sink_probe.get("stdout") or "") + "\n" + (sink_probe.get("stderr") or "")).lower()
++            mac_us = HT_E6500_BT_MAC.upper().replace(":", "_").lower()
++            samsung_sink_present = bool(mac_us in sink_text or "samsunghts-8b063b" in sink_text)
++            final["audio_sink_present"] = samsung_sink_present
++            if not bool(net_final.get("present")) and not samsung_sink_present:
++                confirmed = True
++                break
+         if time.monotonic() >= deadline:
+             break
+         time.sleep(0.35)
+--- a/bin/c720p-samsung-bluetooth-connect.sh
++++ b/bin/c720p-samsung-bluetooth-connect.sh
+@@
+ if ! transport_ready; then
++  # C720P_HTS_MENU_EXIT_GUARD_V1043
++  # Source/Input is context-sensitive while an HTS menu is open. Normalize
++  # the OSD through the existing surround service; no power command is sent.
++  timeout 10 curl -sS -X POST "$SURROUND_BASE/ht-e6500/exit" >/dev/null 2>&1 || true
++  sleep 0.6
+   echo "Starting one continuous BR/EDR discovery session for the source ring"
