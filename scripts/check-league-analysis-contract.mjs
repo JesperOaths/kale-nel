@@ -171,7 +171,9 @@ ok(app.includes('Longest win / loss streak')&&app.includes('Current result strea
 ok(app.includes('not treated as evidence of tilt, momentum, or player psychology'), 'result streaks must remain explicitly non-causal and non-psychological');
 ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
 ok(backend.includes('objectiveRootCauses'), 'objective root-cause evidence ranking must remain in analyzer');
-ok(backend.includes('objectiveRootCauses.sort'), 'objective root causes must remain severity-ranked');
+ok(app.includes('Highest-confidence supported clue')&&app.includes('Different evidence types are not forced onto one numeric severity scale'), 'objective UI must preserve evidence-type caveats and avoid mixed-unit severity claims');
+ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
+ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
 ok(backend.includes('playerSupported:isNeutralObjectiveEvent(o)?participantNearEvent'), 'neutral-objective conversion credit must require supported presence');
 ok(backend.includes('maxFrameDeltaMs=35000'), 'event proximity must remain bounded to a nearby sampled timeline frame');
