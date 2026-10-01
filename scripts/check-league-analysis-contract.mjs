@@ -22,6 +22,9 @@ ok(backend.includes('summonersRiftRows=cachedRows.filter')&&backend.includes('==
 ok(backend.includes('gameDurationSec=Number(match?.info?.gameDuration||0)')&&backend.includes('reaches25=gameDurationSec>=25*60'), '@25 metrics must require a game that actually reaches 25 minutes');
 ok(backend.includes('frameNearMinute(frames,25,45000)'), '@25 metrics must use a frame close to 25 minutes');
 ok(backend.includes('d.tMs+75000'), 'pre-objective conversion window must remain explicit');
+ok(backend.includes('function gamePhaseKey('), 'game-phase classifier must remain explicit');
+ok(backend.includes('m<14?"early":m<25?"mid":"late"'), 'game-phase boundaries must remain early <14, mid <25, late ≥25');
+ok(backend.includes('phaseRisk'), 'phase-normalized behavioral risk summary must remain exported');
 ok(backend.includes('impactDeltaVsOpponent'), 'direct-peer first-impact comparison must remain in analyzer');
 ok(backend.includes('roam.laneCostCs='), 'roam lane-cost comparison must remain in analyzer');
 ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
