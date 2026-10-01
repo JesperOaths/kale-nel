@@ -6,7 +6,7 @@ import { fxAuditSnapshot, marginEurCentsForSize, parseEcbUsdRate, PRINTIFY_VAT_R
 const PRINTIFY_BASE = "https://api.printify.com/v1";
 const CACHE_FRESH_MS = 15 * 60_000;
 const REFRESH_LEASE_MS = 120_000;
-const MEMORY_ROW_TTL_MS = 5 * 60_000;
+const MEMORY_ROW_TTL_MS = 15 * 60_000;
 let memoryCatalogRow: any = null;
 let memoryCatalogLoadedAt = 0;
 const MAX_PAGES = 100;
@@ -115,7 +115,7 @@ function cors(req: Request) {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+    "Cache-Control": "public, max-age=300, stale-while-revalidate=1800",
   };
 }
 
