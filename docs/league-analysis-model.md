@@ -800,7 +800,7 @@ Preserve:
 
 A nearby return kill should soften the interpretation of the death, not erase the original risk evidence. An **untraded high-risk death** is a stronger improvement signal because the opposing team receives tempo/value without an immediate exchange.
 
-## Objective root-cause diagnosis
+## Objective evidence explanation
 
 When primary-role objective presence is low enough to trigger coaching, rank the supported setup explanations rather than showing disconnected metrics.
 
@@ -814,6 +814,8 @@ Do not compare these clues on one mixed-unit "severity" scale. Order them by **e
 If no shop/death/vision signal crosses its threshold, do not manufacture certainty. Report **arrival/pathing as the remaining hypothesis**, explicitly marked as unresolved.
 
 This is an evidence-ranking model, not causal proof. The UI must show the concrete evidence and interpretation limits for each ranked explanation.
+
+The report contract uses `primaryExplanation` as the canonical field. `primaryCause` and `causes` remain compatibility aliases only so saved reports from older revisions continue to render; new analysis and practice routing must prefer `primaryExplanation` and `clues`.
 
 ## Neutral-objective setup timing
 
@@ -1393,7 +1395,7 @@ Champion-specific coaching compares that champion-role sample primarily with the
 
 A three-game champion sample is low confidence; five or more can reach medium confidence. Do not make strong mastery claims from win rate alone.
 
-## Root-cause practice-theme synthesis
+## Evidence-led practice-theme synthesis
 
 The report should not present every triggered heuristic as a separate practice objective.
 
@@ -1414,19 +1416,19 @@ The browser should expose the supporting finding titles beneath a selected pract
 
 ## Measurable Next-5 practice targets
 
-### Root-cause-specific practice targets
+### Evidence-specific practice targets
 
-When a priority theme has a more specific diagnosed cause, the five-game target should measure that cause rather than a looser neighboring statistic.
+When a priority theme has a stronger supported explanation, the five-game target should measure the corresponding observable signal rather than a looser neighboring statistic.
 
 Current mappings include:
 - post-play give-back theme → high-risk untraded post-impact deaths/game,
 - side-lane timing theme → pre-objective side-lane deaths/game,
-- objective diagnosis **late reset** → late-reset objective miss rate,
+- objective explanation **recent-shop absence** → recent-shop objective absence rate,
 - objective diagnosis **death before contest** → pre-objective death rate,
 - objective diagnosis **setup vision** → objective-setup ward share,
 - unresolved objective arrival/pathing → prior-frame objective setup rate.
 
-Targets remain self-relative, short-term and sample-gated. The diagnosis selects the measurement; it does not convert an association into causal proof.
+Targets remain self-relative, short-term and sample-gated. The evidence explanation selects the measurement; it does not convert an association into causal proof.
 
 
 
@@ -1614,7 +1616,7 @@ A second-pass producer/consumer audit is required before declaring a legacy UI f
 
 Parity decisions:
 - **implemented / upgraded:** departure→path→return roam rendering; per-window kill/death/objective/structure evidence; home-lane-specific plate/turret cost while roaming; support ADC lane-cost context; source-accurate V21 DQI provenance; sortable per-game evidence table; objective-family control/presence (Dragon, Elder, Herald, Void Grubs, Baron when exposed by Riot); objective-setup ward clears; Control Ward purchases distinct from placements; and second major-item completion timing versus the direct role opponent;
-- **already superseded:** old win/loss profile, per-game narrative, objective/death/macro/vision/laning/teamfight/tempo text analyzers, static role thresholds, crude support-roam share, and square heatmaps are covered by richer same-role peer comparisons, evidence-backed judgments, objective root-cause analysis, replay review, session/trend models and real-map spatial rendering;
+- **already superseded:** old win/loss profile, per-game narrative, objective/death/macro/vision/laning/teamfight/tempo text analyzers, static role thresholds, crude support-roam share, and square heatmaps are covered by richer same-role peer comparisons, evidence-backed judgments, objective evidence explanations, replay review, session/trend models and real-map spatial rendering;
 - **intentionally retired:** the first-pass invented `consequence_aware_v1` DQI score. Its evidence inputs remain useful, but arbitrary overlapping weights are not a trustworthy replacement metric;
 - **not fabricated:** AGOR stays unavailable because no defensible formula is present in the supplied source.
 
