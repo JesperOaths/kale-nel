@@ -113,6 +113,37 @@ function itemIcon(itemId){
   const id=Number(itemId||0);if(!id||!state.ddVersion)return'';
   return 'https://ddragon.leagueoflegends.com/cdn/'+encodeURIComponent(state.ddVersion)+'/img/item/'+encodeURIComponent(String(id))+'.png';
 }
+function itemDetailCard(label,item){
+  if(!item)return detailCard(label,'n/a');
+  const src=itemIcon(item.itemId);
+  return '<div class="detail-card visual-detail-card"><span>'+esc(label)+'</span><div class="visual-detail-value">'+
+    (src?'<img loading="lazy" src="'+esc(src)+'" alt="'+esc(item.name||'Item')+'">':'')+
+    '<strong>'+esc(item.name||('Item '+String(item.itemId||'')))+'</strong></div>'+
+    (hasNum(item.time)?'<small>'+esc(fmt(item.time,1))+' min</small>':'')+'</div>';
+}
+function purchaseItemStrip(items){
+  const xs=(Array.isArray(items)?items:[]).filter(x=>x?.itemId);
+  if(!xs.length)return'';
+  return '<div class="purchase-item-strip">'+xs.slice(0,6).map(x=>{
+    const src=itemIcon(x.itemId);
+    return '<span title="'+esc((x.name||'Item')+(hasNum(x.cost)?' · '+fmtInt(x.cost)+'g cash estimate':''))+'">'+
+      (src?'<img loading="lazy" src="'+esc(src)+'" alt="'+esc(x.name||'Item')+'">':'')+
+      '<b>'+esc(x.name||String(x.itemId))+'</b></span>';
+  }).join('')+'</div>';
+}
+function matchVisualHeader(g){
+  const mine=championIcon(g.champion),opp=championIcon(g.peer?.champion),items=Array.isArray(g.finalItems)?g.finalItems:[];
+  return '<div class="match-visual-header"><div class="match-champion">'+
+    (mine?'<img loading="lazy" src="'+esc(mine)+'" alt="'+esc(g.champion||'Champion')+'">':'')+
+    '<div><span>Your champion</span><strong>'+esc(g.champion||'Unknown')+'</strong></div></div>'+
+    '<div class="final-build"><span>Final build</span><div>'+(
+      items.length?items.slice(0,7).map(x=>{const src=itemIcon(x.itemId);return src?'<img loading="lazy" src="'+esc(src)+'" alt="'+esc(x.name||'Item')+'" title="'+esc(x.name||'Item')+'">':'';}).join(''):'<small>No final build data</small>'
+    )+'</div></div>'+
+    '<div class="match-champion opponent">'+
+    (opp?'<img loading="lazy" src="'+esc(opp)+'" alt="'+esc(g.peer?.champion||'Opponent')+'">':'')+
+    '<div><span>Role opponent</span><strong>'+esc(g.peer?.champion||'Unknown')+'</strong></div></div></div>';
+}
+
 function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
 function deltaTone(value,neutral=0,goodThreshold=0,inverse=false){
   if(!hasNum(value))return'neutral';
@@ -580,13 +611,7 @@ function renderRankRadar(r){
     return{...d,values:values.map(v=>hasNum(v)?Number(v):0),known:values.filter(hasNum).length,usable:!!d.raw&&values.filter(hasNum).length===axes.length};
   });
   const cx=260,cy=250,radius=176,ringLevels=[25,50,75,100];
-  const rings=ringLevels.map(level=>{
-    const pts=axes.map((_,i)=>{
-      const angle=-Math.PI/2+Math.PI*2*i/axes.length,rr=radius*level/100;
-      return (cx+Math.cos(angle)*rr).toFixed(1)+','+(cy+Math.sin(angle)*rr).toFixed(1);
-    }).join(' ');
-    return '<polygon class="radar-ring" points="'+pts+'"/>';
-  }).join('');
+  const rings=ringLevels.map(level=>'<circle class="radar-ring" cx="'+cx+'" cy="'+cy+'" r="'+(radius*level/100).toFixed(1)+'"/>').join('');
   const spokes=axes.map((a,i)=>{
     const angle=-Math.PI/2+Math.PI*2*i/axes.length,x=cx+Math.cos(angle)*radius,y=cy+Math.sin(angle)*radius,lx=cx+Math.cos(angle)*(radius+42),ly=cy+Math.sin(angle)*(radius+42);
     return '<line class="radar-spoke" x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'"/><text class="radar-axis-label" x="'+lx.toFixed(1)+'" y="'+(ly+4).toFixed(1)+'" text-anchor="middle">'+esc(a.label)+'</text>';
@@ -895,7 +920,7 @@ function judgmentHtml(g){
     '<p>'+esc(x.evidence||'')+'</p>'+(x.action?'<p class="game-action"><b>Next time:</b> '+esc(x.action)+'</p>':'')+'</article>').join('')+'</div>';
 }
 function detailsHtml(g,index){
-  return '<div class="details-shell">'+judgmentHtml(g)+'<div class="details-tabs">'+['map','macro','resets','vision','roams','fights','phases','deaths','objectives'].map(t=>'<button class="tab-btn '+(state.activeDetailTab===t?'active':'')+'" data-tab="'+t+'" type="button">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div><div class="details-content" data-detail-content>'+detailContent(g,state.activeDetailTab)+'</div></div>';
+  return '<div class="details-shell">'+matchVisualHeader(g)+judgmentHtml(g)+'<div class="details-tabs">'+['map','macro','resets','vision','roams','fights','phases','deaths','objectives'].map(t=>'<button class="tab-btn '+(state.activeDetailTab===t?'active':'')+'" data-tab="'+t+'" type="button">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div><div class="details-content" data-detail-content>'+detailContent(g,state.activeDetailTab)+'</div></div>';
 }
 function objectiveDiagnosisLabel(key){
   return ({late_reset:'Late reset timing',pre_objective_death:'Death before the contest',setup_vision:'Setup-vision deficit',arrival_pathing:'Arrival / pathing'})[String(key||'')]||'No supported primary cause';
