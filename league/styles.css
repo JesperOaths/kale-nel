@@ -1573,3 +1573,8 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
   .diagnostic-break-head,.matchup-read{align-items:flex-start;flex-direction:column}
   .diagnostic-result,.matchup-read strong{text-align:left}
 }
+
+.driver-evidence-meta{
+  display:block;margin-top:9px;padding-top:8px;border-top:1px dashed var(--line-strong);
+  color:var(--muted);font-size:.61rem;line-height:1.4
+}
