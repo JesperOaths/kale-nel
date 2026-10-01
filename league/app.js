@@ -385,15 +385,38 @@ function normalizeReport(r){
   return out;
 }
 let heavyRenderTicket=0;
+let heavyObservers=[];
+function clearHeavyObservers(){
+  for(const observer of heavyObservers)try{observer.disconnect();}catch(_){}
+  heavyObservers=[];
+}
+function renderWhenNear(elementId,callback,rootMargin='700px'){
+  const node=$(elementId);if(!node)return;
+  if(typeof IntersectionObserver!=='function'){setTimeout(callback,40);return;}
+  const observer=new IntersectionObserver(entries=>{
+    if(entries.some(entry=>entry.isIntersecting)){
+      observer.disconnect();
+      callback();
+    }
+  },{root:null,rootMargin,threshold:0});
+  observer.observe(node);heavyObservers.push(observer);
+}
 function scheduleHeavyReportRender(r){
-  const ticket=++heavyRenderTicket;
-  const run=()=>{
-    if(ticket!==heavyRenderTicket||state.report!==r)return;
-    renderCharts(r);
-    renderSpatial(r);
+  const ticket=++heavyRenderTicket;clearHeavyObservers();
+  const safe=fn=>()=>{if(ticket===heavyRenderTicket&&state.report===r)fn();};
+  renderWhenNear('lane-economy',safe(()=>renderCharts(r)),'900px');
+  renderWhenNear('spatialReview',safe(()=>renderSpatial(r)),'650px');
+}
+function bindTechnicalMetrics(r){
+  const details=$('technicalMetricsDetails');if(!details)return;
+  details.dataset.rendered='0';
+  const render=()=>{
+    if(details.dataset.rendered==='1'||state.report!==r)return;
+    details.dataset.rendered='1';
+    renderAdvanced(r);
   };
-  if(typeof globalThis.requestIdleCallback==='function')globalThis.requestIdleCallback(run,{timeout:900});
-  else setTimeout(run,60);
+  details.onToggle=null;
+  details.addEventListener('toggle',()=>{if(details.open)render();},{once:true});
 }
 function renderReport(raw,sourceKind){
   const r=normalizeReport(raw);state.report=r;
@@ -403,16 +426,30 @@ function renderReport(raw,sourceKind){
   const riotId=[p.gameName||p.game_name,p.tagLine||p.tag_line].filter(Boolean).join('#');
   const rank=p.rank&&p.rank.tier?[p.rank.tier,p.rank.rank,p.rank.leaguePoints!=null?String(p.rank.leaguePoints)+' LP':''].filter(Boolean).join(' '):'';
   const coachingN=r.coachingSummary?.games??s.primaryRoleGames??0;
-  $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(rank?rank+' · ':'')+(s.games??r.games.length)+' analyzed games · Primary role '+(s.primaryRole||'GENERIC')+' · Coaching sample '+coachingN+' '+(s.primaryRole||'GENERIC')+' games';
+  $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(rank?rank+' · ':'')+(s.games??r.games.length)+' analyzed games · '+(s.primaryRole==='BOTTOM'?'ADC':(s.primaryRole||'GENERIC'))+' · '+coachingN+' role-comparable coaching games';
   $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':(r.analyzerVersion||'Web analysis');
-  renderKpis(r);renderBullets('recentFocus',r.priorityThemes?.length?r.priorityThemes:r.recentFocus,'No grounded recent-focus tips are available from the active analyzer yet.');
-  renderBullets('overallHighlights',r.overallHighlights,'No broader highlights are available from the active analyzer yet.');
-  renderSessionHabits(r);renderPracticePlan(r);renderGames(r);renderReplayReviewQueue(r);renderAdvanced(r);renderBreakdowns(r);renderQuality(r);
-  $('chartGrid').innerHTML='<div class="chart-empty">Charts will render when the browser is idle.</div>';
-  $('deathMap').innerHTML='<div class="spatial-empty">Preparing death map…</div>';
-  $('wardMap').innerHTML='<div class="spatial-empty">Preparing ward map…</div>';
+  renderQuickRead(r);
+  renderKpis(r);
+  renderRankRadar(r);
+  renderVisualSummary(r);
+  renderBullets('recentFocus',r.priorityThemes?.length?r.priorityThemes:r.recentFocus,'No grounded improvement priority has enough evidence yet.');
+  renderBullets('overallHighlights',r.overallHighlights,'No broader strength has enough evidence yet.');
+  renderPracticePlan(r);
+  renderDecisionMetrics(r);
+  renderSessionHabits(r);
+  renderGames(r);
+  renderReplayReviewQueue(r);
+  renderBreakdowns(r);
+  renderQuality(r);
+  $('advancedMetrics').innerHTML='<div class="technical-placeholder">Open this section to render the full metric set.</div>';
+  $('benchmarkMetrics').innerHTML='<div class="technical-placeholder">Open this section to render the full benchmark set.</div>';
+  bindTechnicalMetrics(r);
+  $('chartGrid').innerHTML='<div class="chart-empty">Charts load when this section approaches the viewport.</div>';
+  $('deathMap').innerHTML='<div class="spatial-empty">Map loads when this section approaches the viewport.</div>';
+  $('wardMap').innerHTML='<div class="spatial-empty">Map loads when this section approaches the viewport.</div>';
   scheduleHeavyReportRender(r);
 }
+
 function renderKpis(r){
   const s=r.summary||{},p=r.peerComparison||{},role=String(s.primaryRole||'GENERIC').toUpperCase();
   const metric=(label,value,sub,tone='neutral',bar='')=>({label,value,sub,tone,bar});
