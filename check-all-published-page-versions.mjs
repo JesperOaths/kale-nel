@@ -4,8 +4,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   expectedPageVersion,
+  INDEPENDENT_PAGE_VERSIONS,
   isIndependentPageVersion,
   listPublishedHtml,
+  listPublishedRoutes,
   pageVersionDeclarations,
   readRootVersion,
 } from './scripts/published-page-inventory.mjs';
@@ -13,6 +15,10 @@ import {
 const root=process.cwd();
 const rootVersion=readRootVersion(root);
 const pages=listPublishedHtml(root);
+const routes=listPublishedRoutes(root);
+const routeNames=routes.map(x=>x.route);
+const duplicateRoutes=routeNames.filter((route,index)=>routeNames.indexOf(route)!==index);
+const orphanIndependentOwners=[...INDEPENDENT_PAGE_VERSIONS.keys()].filter(rel=>!pages.includes(rel));
 
 function versionTokensFromVisibleOwners(body){
   const tokens=[];
@@ -71,9 +77,12 @@ for(const rel of pages){
 for(const row of rows){
   console.log(`PAGE_VERSION_AUDIT ${row.rel} visible=${row.visible} page=${row.page} gate=${row.gate} owner=${row.owner} expected=${row.expected}`);
 }
-console.log(`PAGE_VERSION_AUDIT_SUMMARY pages=${pages.length} missing=${missing.length} ambiguous=${ambiguous.length} declaration_drift=${declarationDrift.length} watermark_drift=${watermarkDrift.length} gate_drift=${gateDrift.length} root=${rootVersion}`);
+console.log(`PAGE_VERSION_AUDIT_SUMMARY pages=${pages.length} routes=${routes.length} independent_owners=${INDEPENDENT_PAGE_VERSIONS.size} missing=${missing.length} ambiguous=${ambiguous.length} declaration_drift=${declarationDrift.length} watermark_drift=${watermarkDrift.length} gate_drift=${gateDrift.length} root=${rootVersion}`);
 
 assert.ok(pages.length>=100,`published HTML inventory unexpectedly small: ${pages.length}`);
+assert.ok(routes.length>pages.length,`published route inventory must include index aliases: pages=${pages.length} routes=${routes.length}`);
+assert.deepEqual(duplicateRoutes,[],`duplicate published routes detected:\n${duplicateRoutes.join('\n')}`);
+assert.deepEqual(orphanIndependentOwners,[],`independent page version owners are not published HTML pages:\n${orphanIndependentOwners.join('\n')}`);
 assert.deepEqual(missing,[],`published pages missing a visible version watermark/footer:\n${missing.join('\n')}`);
 assert.deepEqual(ambiguous,[],`published pages expose multiple conflicting visible page versions:\n${ambiguous.join('\n')}`);
 assert.deepEqual(declarationDrift,[],`published pages have source declaration drift:\n${declarationDrift.join('\n')}`);
