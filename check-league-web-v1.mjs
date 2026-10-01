@@ -41,6 +41,7 @@ for(const field of [
   'measuredDeathConsequences','costlyDeathEvents','severeDeathEvents','costlyDeathRate','costlyDeathsPerTimelineGame','severeDeathsPerTimelineGame','avgGoldSwingAfterDeath','avgCsSwingAfterDeath',
   'repeatDeathOpportunities','repeatDeaths','repeatDeathRate','highRiskRepeatDeaths','costlyRepeatDeaths','opponentRepeatDeathRate','repeatDeathRateDelta',
   'earlyLeadGames','earlyLeadGivebackGames','earlyLeadGivebackRate','avgEarlyLeadPeakGold','avgEarlyLeadGoldSwingTo15','earlyLeadGivebackDeaths','earlyLeadGivebackHighRiskDeaths',
+  'majorReadinessGames','delayedMajorCompletionGames','avgMajorCompletionDelayMin','majorReadinessPeerGames','avgMajorCompletionDelayVsPeerMin',
   'itemSpikeEligibleWindows','itemSpikeUtilizedWindows','itemSpikeUtilizationRate','itemSpikeDeathsBeforeImpact','avgItemSpikeLeadSec',
   'fightSamples','firstAllyFightDeathRate','preContributionFightDeathRate','fightSurvivalRate',
   'highUnspentFightRate','itemDisadvantageFightRate','goldDeficitFightRate',
@@ -122,6 +123,9 @@ assert.ok(app.includes('Early-lead give-back rate'));
 assert.ok(app.includes('Peak pre-15 role lead'));
 assert.ok(app.includes('≥500g pre-15 lead opportunities'));
 assert.ok(app.includes('Major-item spike utilization'));
+assert.ok(app.includes('Major affordability sample'),'Frontend must surface recipe-aware first-major affordability evidence');
+assert.ok(app.includes('Avg affordable → purchase delay'),'Frontend must expose affordability-to-purchase delay');
+assert.ok(app.includes('Readiness delay vs peer'),'Frontend must expose recipe-aware delay versus the direct role opponent');
 assert.ok(app.includes('Earlier-item windows used'));
 assert.ok(app.includes('Solo-kill deaths before next shop'));
 assert.ok(app.includes('Deaths before shop after solo kill'));
@@ -214,6 +218,10 @@ assert.ok(api.includes('High-risk post-play give-backs / game'),'Align diagnosed
 assert.ok(api.includes('Late-reset objective miss rate'),'Objective reset diagnosis must have a direct measurable target');
 assert.ok(api.includes('Pre-objective side-lane deaths / game'),'Side-lane diagnosis must have a direct measurable target');
 
+assert.ok(api.includes('function majorItemReadiness('),'recipe-aware first-major readiness helper must remain explicit');
+assert.ok(api.includes('Number(me.currentGold)>=combineCost'),'first-major readiness must require current gold to cover the remaining combine cost');
+assert.ok(api.includes('base.delayMin>=1.5'),'delayed first-major completion threshold must remain explicit');
+assert.ok(api.includes('out.majorItemReadiness=majorItemReadiness('),'per-game first-major readiness evidence must remain exported');
 assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
 assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
 assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
