@@ -805,7 +805,7 @@ These are descriptive control/presence facts, not proof that the player caused t
 
 Objective-setup vision also counts supported ward **clears** in the setup window, in addition to placements. A clear is not treated as equivalent to a placement; both remain separately visible.
 
-The old report also referenced `controlWardsBought` without reliably producing it. The web analyzer counts Control Ward **purchase events** from Riot item timelines (catalog name, with item ID 2055 as a compatibility fallback) and keeps that separate from Control Wards actually **placed**. This matters because purchase discipline and placement/use are different questions.
+The old report also referenced `controlWardsBought` without reliably producing it. The web analyzer counts **committed** Control Ward purchases from Riot item timelines (catalog name, with item ID 2055 as a compatibility fallback) and subtracts an `ITEM_UNDO` that reverses the purchase. It keeps committed purchases separate from Control Wards actually **placed**. This matters because purchase discipline and placement/use are different questions, and an immediately undone shop click should not be presented as a real purchase.
 
 ## Roaming
 
