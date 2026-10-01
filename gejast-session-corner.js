@@ -6,7 +6,12 @@
   const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
   function getToken(){ for (const key of SESSION_KEYS){ const v=localStorage.getItem(key)||sessionStorage.getItem(key); if(v) return v; } return ''; }
   function clearTokens(){ for (const key of SESSION_KEYS){ localStorage.removeItem(key); sessionStorage.removeItem(key); } }
-  function rpcHeaders(){ return { 'Content-Type':'application/json', apikey: SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}` }; }
+  function rpcHeaders(){
+    if(CONFIG&&typeof CONFIG.publicApiHeaders==='function') return CONFIG.publicApiHeaders({'Content-Type':'application/json'});
+    const h={'Content-Type':'application/json',apikey:SUPABASE_KEY};
+    if(/^[^.]+\.[^.]+\.[^.]+$/.test(SUPABASE_KEY)) h.Authorization=`Bearer ${SUPABASE_KEY}`;
+    return h;
+  }
   function scope(){ try { if(window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope) return window.GEJAST_SCOPE_UTILS.getScope(); } catch(_){} try { return new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'; } catch(_){} return 'friends'; }
   async function fetchViewer(token){
     if (!token || !SUPABASE_URL || !SUPABASE_KEY) return { name:'', coins:0 };
