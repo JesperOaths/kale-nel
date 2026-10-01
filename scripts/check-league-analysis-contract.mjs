@@ -74,6 +74,9 @@ ok(backend.includes('phaseExposureMinutes'), 'phase risk must normalize by actua
 ok(backend.includes('macroTransitionMin:14')&&backend.includes('roamEndMin:20'), 'standard side-lane risk must use the 14-minute macro transition without asserting a literal lane ending');
 ok(backend.includes('macroTransitionMin:12')&&backend.includes('roamEndMin:12'), 'Swiftplay side-lane risk must use its accelerated macro transition');
 ok(backend.includes('macroTransitionSideLaneDeaths'), 'primary side-lane risk must use explicit macro-transition semantics');
+ok(app.includes('Post-macro-transition side-lane deaths'), 'aggregate UI must use macro-transition terminology');
+ok(!app.includes('Post-early-phase side-lane deaths'), 'retired post-early-phase side-lane label must not return');
+ok(backend.includes('behavior?.macroTransitionSideLaneDeaths??behavior?.postLaneSideLaneDeaths'), 'coaching targets must consume the macro-transition counter before compatibility aliases');
 ok(!backend.includes('post-early-phase top/bot-lane death'), 'side-lane coaching evidence must not regress to obsolete post-early-phase wording');
 ok(backend.includes('team-contested neutral objective within 90s'), 'side-lane objective evidence text must identify the supported team-contested denominator');
 ok(!app.includes('6.8.1/img/map/map11.png'), 'frontend must never fall back to the obsolete 6.8.1 Summoner\'s Rift asset');
