@@ -62,6 +62,11 @@ assert.ok(api.includes('playerSupported:isNeutralObjectiveEvent(o)?participantNe
 assert.ok(api.includes('maxFrameDeltaMs=35000'),'Event proximity must reject participant-position frames that are too far from the actual event time');
 assert.ok(api.includes('members.some((event:any)=>participantNearEvent(frames,participantId,event,radius,35000))'),'Multi-event neutral-objective presence must be anchored to each actual event rather than a padded window scan');
 assert.ok(!api.includes('startPadMs=45000,endPadMs=45000'),'Broad padded objective-presence windows must not return');
+assert.ok(api.includes('function unresolvedItemUndoEvents('),'Riot zero-ID item undos must be detected explicitly');
+assert.ok(api.includes('zeroIdUndoPolicy:"flag_approximate_do_not_guess"'),'Unknown undo identity must remain a flagged uncertainty rather than a guessed purchase reversal');
+assert.ok(api.includes('itemUndoQualityPolicy:"zero_id_undo_flagged_approximate_not_guessed"'),'Report Data Quality must export the item-undo uncertainty policy');
+assert.ok(api.includes('positionEvidenceModel:"nearest_timeline_frame_within_35s"'),'Report Data Quality must expose the event-position evidence model');
+assert.ok(app.includes('Timeline position evidence')&&app.includes('Item undo quality'),'Frontend Data Quality must expose position timing and unresolved undo evidence');
 assert.ok(api.includes('structureInvolvement(o,frames,whoId,whoTeam,mapId)'),'Structure conversion credit must require supported player involvement');
 assert.ok(app.includes('Player-supported kill conversion')&&app.includes('Team conversion after your kill windows'),'Frontend must expose supported conversion and team context separately');
 assert.ok(api.includes('VERIFIED_2026_RULES_THROUGH_MINOR=19'),'2026 mechanics must have an explicit audited-through patch boundary');
@@ -438,7 +443,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v104'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v105'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
