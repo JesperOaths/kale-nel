@@ -510,8 +510,15 @@ function renderReport(raw,sourceKind){
 }
 
 function adcBenchmarkSummary(r){
-  const role=String(r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||'');
-  return role==='BOTTOM'?(r.coachingSummary||r.summary||null):null;
+  const role=String(r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||''),ext=r?.externalBenchmarks||{};
+  return role==='BOTTOM'&&ext.eligible!==false?(r.coachingSummary||r.summary||null):null;
+}
+function adcBenchmarkUnavailableReason(r){
+  const role=String(r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||''),ext=r?.externalBenchmarks||{};
+  if(role!=='BOTTOM')return 'The external benchmark is ADC-specific and is withheld because ADC is not this report’s primary coaching role.';
+  if(ext.eligibilityReason==='selected_cohort_not_ranked')return 'The selected Last-20 cohort is not Ranked Solo/Flex, while the external reference corpus is ranked games. The population spider is withheld to avoid an apples-to-oranges comparison.';
+  if(ext.eligibilityReason==='matching_rank_queue_tier_unavailable')return 'Riot did not return a ranked tier for the same ranked queue as this report cohort, so the population benchmark is withheld.';
+  return 'The ranked ADC population benchmark is unavailable for this report.';
 }
 function benchmarkKpi(label,value,benchmark,unit,inverse=false,extra=''){
   const delta=hasNum(value)&&hasNum(benchmark)?Number(value)-Number(benchmark):null;
@@ -641,9 +648,10 @@ function radarPolygon(values,cx,cy,radius){
 function renderRankRadar(r){
   const ext=r.externalBenchmarks||{},summary=adcBenchmarkSummary(r);
   if(!summary){
-    $('radarChart').innerHTML='<div class="radar-empty">The external benchmark is ADC-specific. This report’s primary coaching role is '+esc(r.coachingSummary?.primaryRole||r.summary?.primaryRole||'unknown')+', so no ADC comparison is applied.</div>';
+    const reason=adcBenchmarkUnavailableReason(r);
+    $('radarChart').innerHTML='<div class="radar-empty">'+esc(reason)+'</div>';
     $('radarLegend').innerHTML='';
-    $('radarNote').innerHTML='<strong>Role-safe comparison.</strong> ADC-adjusted rank benchmarks are withheld when ADC is not the report’s primary coaching role.';
+    $('radarNote').innerHTML='<strong>Comparison withheld.</strong> '+esc(reason);
     renderRankBridge(r);
     return;
   }
@@ -703,7 +711,7 @@ function bridgeDifference(value,target,unit,inverse=false){
 function renderRankBridge(r){
   const target=$('rankBridge');if(!target)return;
   const ext=r.externalBenchmarks||{},s=adcBenchmarkSummary(r),plus1=ext.plus1||null,plus2=ext.plus2||null;
-  if(!s){target.innerHTML='<div class="rank-bridge-empty">ADC benchmark bridge withheld because ADC is not the primary coaching role.</div>';return;}
+  if(!s){target.innerHTML='<div class="rank-bridge-empty">'+esc(adcBenchmarkUnavailableReason(r))+'</div>';return;}
   if(!plus1&&!plus2){target.innerHTML='<div class="rank-bridge-empty">No higher-tier benchmark is available above the current rank.</div>';return;}
   const metrics=[
     {key:'csMin',label:'CS / min',unit:'num'},
