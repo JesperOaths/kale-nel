@@ -272,7 +272,7 @@ assert.ok(app.includes('solo death to role opponent'));
 assert.ok(app.includes('Loss rate while outnumbered'));
 assert.ok(app.includes('Level-down shared-role fights'));
 assert.ok(app.includes('Post-kill conversion'));
-assert.ok(app.includes('Prior-frame objective setup'));
+assert.ok(app.includes('Prior setup presence (45–105s)')&&app.includes('behaviorSummary.earlySetupObjectiveJoinRate'),'Frontend must expose the bounded prior-position objective setup metric without reverting to the older ambiguous label');
 assert.ok(app.includes('Objective diagnosis'));
 assert.ok(app.includes('Primary supported explanation'));
 assert.ok(app.includes('Vision-action deaths'));
