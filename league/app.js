@@ -551,8 +551,6 @@ function renderSpatial(r){
 function renderAdvanced(r){
   const a=r.advanced||{},roam=a.roams||{},recall=a.recalls||{},itemSpike=a.itemSpike||{};
   const rows=[
-    ['DQI',hasNum(a.dqi)?fmt(a.dqi,1)+' / 10':'Formula not recovered'],
-    ['AGOR',hasNum(a.agor)?fmt(a.agor,2):'Formula not recovered'],
     ['Objective presence',fmtPct(a.objectivePresence)],
     ['Early KP',fmtPct(a.earlyKP)],
     ['First impact timing',hasNum(a.firstImpact?.avgDeltaVsOpponentMin)?signed(a.firstImpact.avgDeltaVsOpponentMin,1)+' min vs peer':'n/a'],
