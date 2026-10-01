@@ -46,7 +46,9 @@ if(!text('gejast-account-runtime.js').includes('function domSeedNames(sel)')) fa
 if(!text('gejast-account-runtime.js').includes('seed = normalizeNames([...domSeed,...cached,...snapshot])')) failures.push('login bootstrap must merge DOM, cache and static snapshot names before live RPC work');
 if(!text('gejast-login-names-fallback.js').includes('v817-snapshot-authoritative-first-delayed-active-name-rpc')) failures.push('standalone login-name fallback must remain static-first with one bounded authoritative refresh');
 if(!text('gejast-login-names-fallback.js').includes("get_login_active_names_v687',{site_scope_input:resolvedScope},2500")) failures.push('background authoritative login-name confirmation must remain bounded');
-if(!text('login.html').includes('20261001-login-resilience-r12')) failures.push('login page must cache-bust the network-independent synchronous selector runtime');
+if(!text('login.html').includes('gejast-account-runtime.js?v817&rev=20261002-login-resilience-r13')) failures.push('login page must cache-bust the hardened static-first account runtime');
+if(!text('gejast-account-runtime.js').includes("name.toLowerCase()!=='kies je naam'")) failures.push('login DOM seed must never treat the placeholder as a player');
+if(!text('gejast-account-runtime.js').includes('const immediate=normalizeNames([...snapshot,...cached])')) failures.push('login names must resolve from deployment snapshot/cache before any live Supabase request');
 if(!text('login.html').includes('gejast-login-inline-seed')) failures.push('login page must render its last-known-good selector options before deferred/runtime network work');
 if(!text('login.html').includes('data-login-scope="friends"')||!text('login.html').includes('data-login-scope="family"')) failures.push('login HTML itself must carry both active-name scope lists so the selector survives JS/Supabase failure');
 if(!text('gejast-login-names-fallback.js').includes('},15000)')) failures.push('authoritative login-name refresh must stay well behind first paint');
