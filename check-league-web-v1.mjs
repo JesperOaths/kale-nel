@@ -398,6 +398,9 @@ assert.ok(css.includes('.games-table th{position:static!important}')&&css.includ
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))')&&css.includes('html{font-size:18px'),'League report must retain a spacious 1760px desktop shell with larger base typography');
 assert.ok(css.includes('--good:#126a45')&&css.includes('--bad:#b23a2f'),'Positive and negative data must retain high-contrast visual tokens');
 assert.ok(html.includes('id="quickRead"')&&html.includes('id="radarChart"')&&html.includes('id="decisionMetrics"'),'Logical overview, population radar and decision sections must remain present');
+assert.ok(app.includes('analyzer coaching threshold 8')&&app.includes('analyzer coaching threshold 4')&&app.includes('timeline-complete games · analyzer coaching threshold 5'),'Prominent decision cards must disclose analyzer-aligned evidence floors');
+assert.ok(app.includes('thin sample — descriptive only')&&css.includes('.decision-card.thin-evidence'),'Below-threshold decision metrics must remain visually neutral and explicitly descriptive');
+assert.ok(modelDoc.includes('## Decision-card evidence thresholds')&&modelDoc.includes('A small denominator must not visually impersonate high-confidence evidence'),'Decision-card denominator policy must remain documented');
 assert.ok(html.includes('id="technicalMetricsDetails"'),'The exhaustive analysis must remain collapsed into an on-demand appendix');
 assert.ok(css.includes('.direct-request-grid')&&css.includes('.request-button'),'Direct request controls must retain their spacious colored layout');
 assert.ok(api.includes('identityChanged')&&api.includes('league_match_cache_v1')&&api.includes('league_analysis_runs_v1'),'Changing the direct Riot identity must clear stale cached matches/analyses before resolving the new summoner');
@@ -581,7 +584,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v134'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v135'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
