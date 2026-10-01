@@ -297,7 +297,8 @@ assert.ok(app.includes("ext.eligible!==false"),'Frontend ADC benchmark summary m
 assert.ok(app.includes('selected Last-20 cohort is not Ranked Solo/Flex'),'Frontend must explain why ranked population comparison is withheld for normal/Clash/Swiftplay cohorts');
 assert.ok(!app.includes('rankStepBands'),'Frontend must not regress to opponent-derived rank-step radar bands');
 assert.ok(app.includes('role-adjusted benchmarks rather than directly measured rank×ADC population means'),'Frontend must state the external benchmark derivation without overstating it as a direct ADC population mean');
-assert.ok(app.includes("return role==='BOTTOM'&&ext.eligible!==false?(r.coachingSummary||r.summary||null):null"),'ADC population benchmark must fail closed outside both the primary-role ADC sample and an eligible ranked cohort');
+assert.ok(app.includes("return role==='ADC'&&ext.eligible!==false?(r.coachingSummary||r.summary||null):null"),'ADC population benchmark must use the backend canonical ADC role and fail closed outside an eligible ranked cohort');
+assert.ok(!app.includes('BOTTOM'),'League frontend must consume the backend canonical ADC role instead of stale Riot BOTTOM aliases');
 assert.ok(html.includes('id="rankBridge"')&&app.includes('function renderRankBridge('),'Next-tier benchmark bridge must remain visible and role-safe');
 assert.ok(html.includes('id="recentPulse"')&&app.includes('function renderRecentPulse('),'Recent-vs-prior pulse must remain visible without adding backend work');
 assert.ok(app.includes('sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-Number(b.gameStartTimestamp||0))')&&app.includes('sourceGames.reverse()'),'Trend charts must render oldest-to-newest even though the report contract is newest-first');
