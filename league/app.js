@@ -812,47 +812,48 @@ function renderOutcomeFingerprint(r){
 }
 
 function renderKpis(r){
-  const adc=adcBenchmarkSummary(r),s=adc||r.summary||{},bench=adc?r.externalBenchmarks?.same:null,rank=bench?.tier||'rank';
-  const raw=(label,value,unit)=>({label,value:unit==='percent'?fmtPct(value):unit==='csmin'?fmt(value,2):unit==='dpm'?fmtInt(value):unit==='deaths'?fmt(value,1):fmt(value,2),tone:'neutral',sub:adc?'ADC coaching sample':(String(r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||'')==='ADC'?adcBenchmarkUnavailableReason(r):'No ADC population benchmark applied to this primary role'),bar:''});
+  const s=r.coachingSummary||r.summary||{},role=roleLabel(s.primaryRole||r.summary?.primaryRole||state.selectedRole),games=Number(s.games||0);
   const rows=[
-    {label:adc?'ADC sample win rate':'Recent win rate',value:fmtPct(s.winRate),tone:'neutral',sub:String(s.games||0)+(adc?' primary-role ADC':' analyzed')+' games',bar:''},
-    bench?benchmarkKpi('CS / min · '+rank+' ref',s.csMin,bench.csMin,'csmin'):raw('CS / min',s.csMin,'csmin'),
-    bench?benchmarkKpi('Kill participation · '+rank+' ref',s.kp,bench.kp,'percent'):raw('Kill participation',s.kp,'percent'),
-    bench?benchmarkKpi('Damage / min · '+rank+' ref',s.dpm,bench.dpm,'dpm'):raw('Damage / min',s.dpm,'dpm'),
-    bench?benchmarkKpi('KDA · '+rank+' ref',s.kda,bench.kda,'kda'):raw('KDA',s.kda,'kda'),
-    bench?benchmarkKpi('Deaths / game · '+rank+' ref',s.avgDeaths,bench.deaths,'deaths',true,'lower is better · raw rank reference, not ADC-adjusted'):raw('Deaths / game',s.avgDeaths,'deaths')
+    {label:'Win rate',value:fmtPct(s.winRate),sub:games+' '+role+' coaching games'},
+    {label:'KDA',value:fmt(s.kda,2),sub:'Raw selected-role sample'},
+    {label:'CS / min',value:fmt(s.csMin,2),sub:'Raw selected-role sample'},
+    {label:'Kill participation',value:fmtPct(s.kp),sub:'Raw selected-role sample'},
+    {label:'Damage / min',value:fmtInt(s.dpm),sub:'Raw selected-role sample'},
+    {label:'Deaths / game',value:fmt(s.avgDeaths,1),sub:'Raw selected-role sample · lower is not automatically better'}
   ];
-  $('kpiGrid').innerHTML=rows.map(x=>'<article class="kpi-card tone-'+x.tone+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong>'+(x.bar||'')+'<small>'+esc(x.sub)+'</small></article>').join('');
+  $('kpiGrid').innerHTML=rows.map(x=>'<article class="kpi-card tone-neutral"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><small>'+esc(x.sub)+'</small></article>').join('');
 }
-
-
-function comparisonCard(title,delta,unit,scale,inverse,explanation,sample){
-  const d=plainDelta(delta,unit,1,inverse);
-  return '<article class="quick-read-card tone-'+d.tone+'"><div class="quick-read-head"><span>'+esc(title)+'</span><strong>'+esc(d.value)+'</strong></div>'+
+function comparisonCard(title,delta,unit,scale,inverse,explanation,sample,evidenceReady=true){
+  const d=plainDelta(delta,unit,1,inverse),tone=evidenceReady?d.tone:'neutral',word=evidenceReady?d.word:'Thin sample';
+  return '<article class="quick-read-card tone-'+tone+(evidenceReady?'':' thin-evidence')+'"><div class="quick-read-head"><span>'+esc(title)+'</span><strong>'+esc(d.value)+'</strong></div>'+
     contextBar(delta,scale,inverse)+
-    '<p><b>'+esc(d.word)+'.</b> '+esc(explanation)+'</p>'+
-    (sample?'<small>'+esc(sample)+'</small>':'')+'</article>';
+    '<p><b>'+esc(word)+'.</b> '+esc(explanation)+'</p>'+
+    (sample?'<small>'+esc(sample)+(evidenceReady?'':' · descriptive only')+'</small>':'')+'</article>';
 }
 function renderQuickRead(r){
-  const p=r.peerComparison||{},a=r.advanced||{},adc=adcBenchmarkSummary(r),s=adc||r.summary||{},bench=adc?r.externalBenchmarks?.same:null;
-  const goldExplanation=hasNum(p.avgGoldDiff15)
-    ?(Number(p.avgGoldDiff15)>150?'Your average 15-minute economy is ahead of the direct opposing ADC.':Number(p.avgGoldDiff15)<-150?'Your average 15-minute economy is behind the direct opposing ADC.':'Your average 15-minute economy is close to even with the direct opposing ADC.')
-    :'Not enough comparable @15 games to interpret lane economy.';
-  const csDelta=bench&&hasNum(s.csMin)&&hasNum(bench.csMin)?Number(s.csMin)-Number(bench.csMin):null;
-  const kpDelta=bench&&hasNum(s.kp)&&hasNum(bench.kp)?Number(s.kp)-Number(bench.kp):null;
-  const dpmDelta=bench&&hasNum(s.dpm)&&hasNum(bench.dpm)?Number(s.dpm)-Number(bench.dpm):null;
-  const deathDelta=bench&&hasNum(s.avgDeaths)&&hasNum(bench.deaths)?Number(s.avgDeaths)-Number(bench.deaths):null;
-  const rankLabel=bench?.tier||'same-rank';
-  const objective=hasNum(a.objectivePresence)?Number(a.objectivePresence):null;
-  const objTone=objective==null?'neutral':objective>=70?'good':objective<45?'bad':'neutral';
-  const objText=objective==null?'Not enough contested-objective evidence.':objective>=70?'You are present for most neutral objectives your team actually contests.':objective<45?'You are absent from many real contest windows; reset timing and pathing deserve review.':'Objective presence is mixed rather than clearly strong or weak.';
+  const p=r.peerComparison||{},b=r.behaviorSummary||{};
+  const laneN=Number(p.laneGames15||0),peerN=Number(p.sameRoleGames||0),itemN=Number(p.majorItemGames||0),impactN=Number(p.impactGames||0),repeatN=Number(b.repeatDeathOpportunities??p.repeatDeathOpportunities??0);
+  const lane=p.avgGoldDiff15,cs=p.avgCsMinDelta,dpm=p.avgDpmDelta,item=p.avgMajorItemDeltaMin,impact=p.avgImpactDeltaMin,repeat=p.repeatDeathRateDelta;
+  const describe=(v,positive,negative,close)=>!hasNum(v)?'Not enough comparable evidence.':Number(v)>positive?negative.positive:Number(v)<negative?negative.negative:close;
   $('quickRead').innerHTML=[
-    comparisonCard('Lane economy @15',p.avgGoldDiff15,'gold',1000,false,goldExplanation,String(p.laneGames15||0)+' direct-role checkpoints'),
-    comparisonCard('CS/min vs '+rankLabel+' ref',csDelta,'csmin',2,false,csDelta==null?'External reference unavailable.':csDelta>.15?'You are above the sourced, ADC-adjusted '+rankLabel+' reference.':csDelta<-.15?'You are below the sourced, ADC-adjusted '+rankLabel+' reference.':'You are very close to the sourced, ADC-adjusted '+rankLabel+' reference.',bench?'You '+fmt(s.csMin,2)+' · reference '+fmt(bench.csMin,2):''),
-    comparisonCard('KP vs '+rankLabel+' ref',kpDelta,'pp',15,false,kpDelta==null?'External reference unavailable.':kpDelta>2?'You are above the sourced, ADC-adjusted '+rankLabel+' reference.':kpDelta<-2?'You are below the sourced, ADC-adjusted '+rankLabel+' reference.':'You are close to the sourced, ADC-adjusted '+rankLabel+' reference.',bench?'You '+fmtPct(s.kp)+' · reference '+fmtPct(bench.kp):''),
-    comparisonCard('DPM vs '+rankLabel+' ref',dpmDelta,'dpm',500,false,dpmDelta==null?'External reference unavailable.':dpmDelta>50?'You are above the sourced, ADC-adjusted '+rankLabel+' reference.':dpmDelta<-50?'You are below the sourced, ADC-adjusted '+rankLabel+' reference.':'You are close to the sourced, ADC-adjusted '+rankLabel+' reference.',bench?'You '+fmtInt(s.dpm)+' · reference '+fmtInt(bench.dpm):''),
-    comparisonCard('Deaths vs '+rankLabel+' ref',deathDelta,'num',3,true,deathDelta==null?'External reference unavailable.':deathDelta<-.25?'You die less often than the sourced '+rankLabel+' rank reference.':deathDelta>.25?'You die more often than the sourced '+rankLabel+' rank reference.':'Your death rate is close to the sourced '+rankLabel+' rank reference.',bench?'You '+fmt(s.avgDeaths,1)+'/g · raw rank reference '+fmt(bench.deaths,1)+'/g · not ADC-adjusted':''),
-    '<article class="quick-read-card tone-'+objTone+'"><div class="quick-read-head"><span>Contested objective presence</span><strong>'+esc(fmtPct(objective))+'</strong></div><div class="percent-track"><span style="width:'+clamp(objective||0,0,100)+'%"></span></div><p>'+esc(objText)+'</p><small>Only team-contested windows count; fully conceded cross-map objectives are excluded.</small></article>'
+    comparisonCard('Role gold @15',lane,'gold',1000,false,
+      !hasNum(lane)?'No comparable @15 direct-role checkpoint is available.':Number(lane)>150?'You average a meaningful gold lead over the actual same-role opponent at 15.':Number(lane)<-150?'You average a meaningful gold deficit versus the actual same-role opponent at 15.':'Your average direct-role economy is close around 15 minutes.',
+      laneN+' comparable @15 games · threshold 5',laneN>=5),
+    comparisonCard('CS/min vs role opponent',cs,'csmin',2,false,
+      !hasNum(cs)?'No same-role CS/min comparison is available.':Number(cs)>.15?'You farm faster than the direct role opponent on average.':Number(cs)<-.15?'You farm slower than the direct role opponent on average.':'Your CS/min is close to the direct role opponent.',
+      peerN+' direct-role peer games · threshold 5',peerN>=5),
+    comparisonCard('DPM vs role opponent',dpm,'dpm',500,false,
+      !hasNum(dpm)?'No same-role damage comparison is available.':Number(dpm)>100?'Your champion damage output is materially above the direct role opponent.':Number(dpm)<-100?'Your champion damage output trails the direct role opponent.':'Damage output is close to the direct role opponent.',
+      peerN+' direct-role peer games · threshold 5',peerN>=5),
+    comparisonCard('First major timing vs role',item,'minutes',3,true,
+      !hasNum(item)?'No comparable first-major timing sample is available.':Number(item)<-.75?'Your first major item completes earlier than the direct role opponent on average.':Number(item)>.75?'Your first major item completes later than the direct role opponent on average.':'First-major timing is close to the direct role opponent.',
+      itemN+' comparable item games · threshold 4',itemN>=4),
+    comparisonCard('First tracked impact vs role',impact,'minutes',4,true,
+      !hasNum(impact)?'No comparable first-impact timing sample is available.':Number(impact)<-1.5?'Your first tracked kill/assist/objective impact arrives earlier.':Number(impact)>1.5?'The direct role opponent reaches tracked map impact earlier.':'First tracked impact timing is close.',
+      impactN+' comparable impact games · threshold 5',impactN>=5),
+    comparisonCard('Repeat-death rate vs role',repeat,'pp',35,true,
+      !hasNum(repeat)?'No comparable death-recovery rate is available.':Number(repeat)<-10?'You are less likely than direct role opponents to die again within four minutes.':Number(repeat)>10?'Rapid repeat deaths occur more often for you than for direct role opponents.':'Death-recovery recurrence is close to the direct role opponents.',
+      repeatN+' recovery opportunities · threshold 8',repeatN>=8)
   ].join('');
 }
 function pulseFormat(v,unit){
