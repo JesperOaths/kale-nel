@@ -257,6 +257,21 @@ When more than 20 matches are cached, compare the Last 20 with the broader cache
 
 Do not compare a timeline-only Last-20 field with an unavailable baseline field.
 
+## Champion-specific behavior
+
+Do not assume an overall weakness applies equally to every champion.
+
+Where at least three games exist for the same champion **and role**, calculate a small champion-role behavior profile. Useful dimensions include:
+- gold differential at 15 versus same-role opponent,
+- CS/min,
+- DPM,
+- high-risk deaths per timeline game,
+- first-major-item timing versus direct peer.
+
+Champion-specific coaching compares that champion-role sample primarily with the player's own Last-20 primary-role baseline. This avoids confusing champion differences with role differences.
+
+A three-game champion sample is low confidence; five or more can reach medium confidence. Do not make strong mastery claims from win rate alone.
+
 ## Coaching output contract
 
 A coaching insight should carry:
