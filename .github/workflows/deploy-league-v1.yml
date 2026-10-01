@@ -6,6 +6,9 @@ on:
     paths:
       - '.github/workflows/deploy-league-v1.yml'
       - 'supabase/functions/league-api-v1/**'
+      - 'league/**'
+      - 'supabase/migrations/*league*'
+      - 'check-league-web-v1.mjs'
 
 permissions:
   contents: read
@@ -19,6 +22,8 @@ jobs:
       PROJECT_REF: uiqntazgnrxwliaidkmy
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify League web contract
+        run: node check-league-web-v1.mjs
       - name: Deploy League backend into retired production slot
         shell: bash
         run: |
