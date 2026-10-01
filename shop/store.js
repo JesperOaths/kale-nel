@@ -449,7 +449,12 @@ function renderProducts(){
   const collection = COLLECTIONS[selectedCollection] || COLLECTIONS.normal;
   const fullList = productsForCollection();
   const regularList = fullList.filter(product => !isAnimalDesign(product));
-  const animalList = fullList.filter(isAnimalDesign);
+  // Animal designs are a browsable subject collection, so order them by name
+  // rather than by price. This keeps Axolotl at A instead of burying it behind
+  // every €24 animal article just because its current price is €25.
+  const animalList = fullList
+    .filter(isAnimalDesign)
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
   qs('[data-collection-title]').textContent = collection.heading;
   updateShapeControls();
   updateAnimalFilterUi();
