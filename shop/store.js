@@ -1,4 +1,4 @@
-const FALLBACK_PRODUCTS = [];
+const FALLBACK_PRODUCTS = Array.isArray(window.BRUIS_CATALOG_LAST_GOOD?.products) ? window.BRUIS_CATALOG_LAST_GOOD.products : [];
 const catalogCacheKey = 'bruisCatalogLastGoodV1';
 const catalogCacheMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
 const cartKey = 'bruisCartV3';
@@ -195,6 +195,11 @@ async function loadCatalog(){
   const cachedProducts = readLastGoodCatalog();
   if(cachedProducts.length){
     return { products: sortByShirtBase(cachedProducts), source: 'cache' };
+  }
+  const staticProducts = FALLBACK_PRODUCTS.map(normalizeProduct)
+    .filter(p => p.baseKey !== '1382' && p.name && p.mockups.length && p.price > 0);
+  if(staticProducts.length){
+    return { products: sortByShirtBase(staticProducts), source: 'static-fallback' };
   }
   const liveProducts = await refreshLiveCatalog(1);
   if(liveProducts.length) return { products: liveProducts, source: 'live' };
@@ -655,7 +660,7 @@ loadCatalog().then(result => {
     openShapeEntry({ scroll: false, updateUrl: false });
   }
 
-  if(result?.source === 'cache' || result?.source === 'stale-cache'){
+  if(result?.source === 'cache' || result?.source === 'stale-cache' || result?.source === 'static-fallback'){
     refreshLiveCatalog(1).then(replaceCatalogFromLive).catch(()=>{});
   }
 });
