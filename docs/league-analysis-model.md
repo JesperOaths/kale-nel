@@ -188,13 +188,19 @@ A structure conversion is counted only when:
 
 Do **not** count generic team structure events as personal conversion.
 
+Since Patch 26.1, turret plates are permanent and exist on every non-Nexus turret. The analyzer must therefore **not** use 14:00 as a mechanical plate-expiry boundary.
+
 Also preserve:
-- player's directly credited pre-14 turret plates,
-- same-role opponent's directly credited pre-14 turret plates,
-- plate delta,
+- player's directly credited plate events through 20 minutes,
+- same-role opponent's directly credited plate events through 20 minutes,
+- the first-20-minute plate-credit delta,
+- player's and same-role opponent's full-match directly credited plate events,
+- the full-match plate-credit delta,
 - early directly credited turret kills where available.
 
-This metric complements, rather than replaces, the existing solo-kill → gold/CS-at-15 conversion and post-kill reset/banking metrics. A player can make the correct decision by resetting instead of taking a plate, so low structure conversion must not be treated as automatically wrong. Coaching should specifically recommend deliberate wave/reset/plate conversion, not greed for every plate.
+The 20-minute slice is an explicit coaching window, not a claim that plates disappear then. The full-match counters retain later structure pressure created by the permanent-plate system.
+
+This metric complements, rather than replaces, the existing solo-kill → gold/CS-at-15 conversion and post-kill reset/banking metrics. A player can make the correct decision by resetting instead of taking a plate, so low structure conversion must not be treated as automatically wrong. Coaching should specifically recommend deliberate wave/reset/plate conversion, not greed for every plate. A pre-14 solo kill may legitimately convert into a plate after 14:00 if that event still falls inside the 90-second conversion window.
 
 ## Direct-role solo duels
 
