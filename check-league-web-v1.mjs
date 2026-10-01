@@ -445,7 +445,7 @@ assert.ok(app.includes('Objective setup ward clears'),'Frontend must expose obje
 assert.ok(app.includes('objectiveFamilyStats'),'Per-game objective tab must expose objective-family evidence');
 assert.ok(html.includes('data-game-sort="gold15"')&&app.includes('bindGameSortControls'),'Per-game evidence table must retain Bruisienator-style sortable columns');
 assert.ok(html.includes('id="consistencySummary"')&&app.includes('function renderConsistencySummary(')&&app.includes('function robustStats('),'Lane/economy must retain median + middle-50 consistency context so averages are not the only summary');
-assert.ok(app.includes("'Middle 50%: '")&&app.includes("consistencySplit(gold,0,150,false)")&&app.includes("consistencySplit(cs,0,5,false)"),'Consistency cards must retain explicit robust ranges and neutral bands');
+assert.ok(app.includes("stats.q1")&&app.includes("stats.q3")&&app.includes("consistencySplit(gold,0,150,false)")&&app.includes("consistencySplit(cs,0,5,false)"),'Consistency cards must retain explicit robust ranges and neutral bands');
 assert.ok(html.includes('data-game-filter="ahead15"')&&html.includes('data-game-filter="behind15"')&&html.includes('id="gameChampionFilter"')&&app.includes('function bindGameFilterControls(')&&app.includes('function gamePassesFilter('),'Game evidence must retain lightweight result/lane/champion filters');
 assert.ok(app.includes("state.gameFilter='all';state.gameChampion='all';")&&app.includes('renderGames(state.report);'),'Replay-review deep links must clear table filters before opening a referenced match');
 assert.ok(html.includes('Gold @15 vs role'),'Game table must remain role-correct instead of labeling all public reports as ADC');
