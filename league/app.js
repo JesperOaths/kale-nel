@@ -257,7 +257,7 @@ function renderReport(raw,sourceKind){
   $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':(r.analyzerVersion||'Web analysis');
   renderKpis(r);renderBullets('recentFocus',r.recentFocus,'No grounded recent-focus tips are available from the active analyzer yet.');
   renderBullets('overallHighlights',r.overallHighlights,'No broader highlights are available from the active analyzer yet.');
-  renderPracticePlan(r);renderGames(r);renderCharts(r);renderAdvanced(r);renderBreakdowns(r);renderQuality(r);
+  renderSessionHabits(r);renderPracticePlan(r);renderGames(r);renderCharts(r);renderAdvanced(r);renderBreakdowns(r);renderQuality(r);
 }
 function renderKpis(r){
   const s=r.summary||{},role=String(s.primaryRole||'GENERIC').toUpperCase();
@@ -322,6 +322,32 @@ function renderProgressComparison(current,previous,previousAt){
     '<span>'+esc(x.label)+'</span><strong>'+esc(x.status)+'</strong>'+
     '<p>Now '+esc(x.current)+' · previous '+esc(x.previous)+'</p></article>').join('');
   $('progressComparisonPanel').hidden=false;
+}
+
+function sessionCard(title,sample){
+  if(!sample||!Number(sample.games))return '';
+  return '<div class="quality-card"><span>'+esc(title)+'</span><strong>'+esc(String(sample.games))+' games</strong>'+
+    '<small>Gold @15 '+esc(signed(sample.goldDiff15,0))+'g · risky deaths '+esc(fmt(sample.badDeaths,1))+'/game · DPM '+esc(fmtInt(sample.dpm))+' · CS/min '+esc(fmt(sample.csMin,2))+'</small></div>';
+}
+function renderSessionHabits(r){
+  const s=r.sessionModel||{};
+  const cards=[
+    sessionCard('Session-opening game',s.firstGame),
+    sessionCard('Game 3+ in session',s.game3Plus),
+    sessionCard('Quick requeue after loss',s.quickAfterLoss),
+    sessionCard('Quick requeue after win',s.quickAfterWin)
+  ].filter(Boolean);
+  if(!cards.length){
+    $('sessionHabitsPanel').hidden=true;return;
+  }
+  $('sessionHabits').innerHTML=cards.join('');
+  const deltas=[];
+  if(hasNum(s.game3PlusGoldDelta))deltas.push('game 3+ gold@15 '+signed(s.game3PlusGoldDelta,0)+'g vs opener');
+  if(hasNum(s.game3PlusBadDeathDelta))deltas.push('game 3+ risky deaths '+signed(s.game3PlusBadDeathDelta,1)+'/game');
+  if(hasNum(s.postLossGoldDelta))deltas.push('quick post-loss gold@15 '+signed(s.postLossGoldDelta,0)+'g vs quick post-win');
+  if(hasNum(s.postLossBadDeathDelta))deltas.push('quick post-loss risky deaths '+signed(s.postLossBadDeathDelta,1)+'/game');
+  $('sessionHabitsNote').textContent=(s.definition||'Session grouping uses game timing.')+(deltas.length?' Observed deltas: '+deltas.join(' · ')+'.':'');
+  $('sessionHabitsPanel').hidden=false;
 }
 
 function renderPracticePlan(r){
