@@ -16,12 +16,18 @@
     }
     return [];
   }
+  function staticNames(resolvedScope){
+    try {
+      var snapshot=window.GEJAST_LOGIN_NAMES_STATIC||{};
+      return normalize(snapshot[resolvedScope]||[]);
+    } catch(_) { return []; }
+  }
   async function rpc(name, body, timeoutMs){
     var base = String(cfg.SUPABASE_URL || '').replace(/\/+$/, '');
     var key = String(cfg.SUPABASE_PUBLISHABLE_KEY || '').trim();
     if (!base || !key) throw new Error('login_names_config_unavailable');
     var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    var timer = controller ? setTimeout(function(){ try { controller.abort(); } catch(_) {} }, Math.max(500, Number(timeoutMs || 1800))) : null;
+    var timer = controller ? setTimeout(function(){ try { controller.abort(); } catch(_) {} }, Math.max(800, Number(timeoutMs || 4500))) : null;
     try {
       var res = await fetch(base + '/rest/v1/rpc/' + name, {
         method:'POST', mode:'cors', cache:'no-store',
@@ -41,49 +47,29 @@
       if (timer) clearTimeout(timer);
     }
   }
-
-  async function load(requestedScope){
-    var resolvedScope = requestedScope === 'family' ? 'family' : (requestedScope === 'friends' ? 'friends' : scope());
-    var cached = [];
-    try { if (cfg.readCachedLoginNames) cached = normalize(cfg.readCachedLoginNames(resolvedScope)); } catch(_) {}
-    try {
-      var authoritative = normalize(rows(await rpc('get_login_active_names_v687',{site_scope_input:resolvedScope},1500)));
-      if (authoritative.length) {
-        try { cfg.writeCachedLoginNames && cfg.writeCachedLoginNames(authoritative, resolvedScope); } catch(_) {}
-        return authoritative;
-      }
-    } catch(_) {}
-    if(cached.length){
-      Promise.allSettled([
-        rpc('get_player_selector_source_v1',{site_scope_input:resolvedScope},1800),
-        rpc('get_player_selector_source_v1',{session_token:null,site_scope_input:resolvedScope},1800)
-      ]).then(function(results){
-        for(var result of results){
-          if(result.status!=='fulfilled') continue;
-          var names=normalize(rows(result.value));
-          if(names.length){ try { cfg.writeCachedLoginNames && cfg.writeCachedLoginNames(names,resolvedScope); } catch(_) {} break; }
-        }
-      }).catch(function(){});
-      return cached;
-    }
-    var settled = await Promise.allSettled([
-      rpc('get_player_selector_source_v1',{site_scope_input:resolvedScope},1800),
-      rpc('get_player_selector_source_v1',{session_token:null,site_scope_input:resolvedScope},1800)
-    ]);
-    for(var result of settled){
-      if(result.status!=='fulfilled') continue;
-      var names=normalize(rows(result.value));
-      if(names.length){
-        try { cfg.writeCachedLoginNames && cfg.writeCachedLoginNames(names,resolvedScope); } catch(_) {}
-        return names;
-      }
-    }
-    return [];
+  function publish(names,resolvedScope){
+    var clean=normalize(names);
+    if(!clean.length) return clean;
+    try { cfg.writeCachedLoginNames && cfg.writeCachedLoginNames(clean,resolvedScope); } catch(_) {}
+    try { if(typeof window.dispatchEvent==='function'&&typeof CustomEvent!=='undefined') window.dispatchEvent(new CustomEvent('gejast:login-names-refreshed',{detail:{names:clean,scope:resolvedScope}})); } catch(_) {}
+    return clean;
   }
-  // v812f intentionally removed client SELECT from allowed_usernames. Override the
-  // legacy config loaders on the unauthenticated login surface so no code path can
-  // fall back to that private relation while preserving the same public RPC contract.
-  cfg.fetchScopedActivePlayerNames = load;
-  cfg.getActivatedPlayerNamesForScope = load;
-  window.GEJAST_LOGIN_NAMES_FALLBACK = { load: load, source:'v817-cache-first-parallel-active-name-rpc' };
+  async function authoritative(resolvedScope){
+    var live=normalize(rows(await rpc('get_login_active_names_v687',{site_scope_input:resolvedScope},4500)));
+    return publish(live,resolvedScope);
+  }
+  async function load(requestedScope){
+    var resolvedScope=requestedScope==='family'?'family':(requestedScope==='friends'?'friends':scope());
+    var cached=[]; try { if(cfg.readCachedLoginNames) cached=normalize(cfg.readCachedLoginNames(resolvedScope)); } catch(_) {}
+    var snapshot=staticNames(resolvedScope);
+    var immediate=cached.length?cached:snapshot;
+    if(immediate.length){
+      Promise.resolve().then(function(){ return authoritative(resolvedScope); }).catch(function(){});
+      return immediate;
+    }
+    try { return await authoritative(resolvedScope); } catch(_) { return []; }
+  }
+  cfg.fetchScopedActivePlayerNames=load;
+  cfg.getActivatedPlayerNamesForScope=load;
+  window.GEJAST_LOGIN_NAMES_FALLBACK={load:load,source:'v817-static-first-single-active-name-rpc',staticSource:'gejast-login-names-static.js'};
 })();
