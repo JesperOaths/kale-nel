@@ -1,5 +1,5 @@
 const FALLBACK_PRODUCTS = Array.isArray(window.BRUIS_CATALOG_LAST_GOOD?.products) ? window.BRUIS_CATALOG_LAST_GOOD.products : [];
-const catalogCacheKey = 'bruisCatalogLastGoodV1';
+const catalogCacheKey = 'bruisCatalogLastGoodV2';
 const catalogCacheMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
 const cartKey = 'bruisCartV3';
 const LIVE_CATALOG_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828';
