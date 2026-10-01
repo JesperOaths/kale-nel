@@ -153,6 +153,22 @@ This is preferable to inventing a static "rank above" benchmark table.
 
 Rank is a snapshot and can change after the match; present this comparison as the opponent rank observed at fetch time.
 
+## Mid-game farm routing
+
+For TOP, MID and ADC, the analyzer separately tracks the change in **same-role CS differential from 15→25 minutes**.
+
+This is intentionally separate from gold-differential swing:
+- gold can change through kills, objectives and shutdowns,
+- CS swing more directly describes who is collecting farm after lane.
+
+The per-game report compares `csDiff15` with `csDiff25`. Aggregate coaching requires multiple comparable games.
+
+Current interpretation:
+- repeated negative swing of roughly **8 CS or more on average** → review post-lane wave assignments/routing,
+- repeated positive swing of roughly **8 CS or more** → potential post-lane farming strength.
+
+A large positive CS swing is not automatically good if it makes the player late to objectives or fights. Coaching must therefore frame this as **routing efficiency**, not “maximize CS at all costs.”
+
 ## Lead preservation from 15 to 25
 
 Where a real timeline frame exists near 25 minutes, preserve the same-role opponent comparison at 25 as well as 10/15.
