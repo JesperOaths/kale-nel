@@ -1023,7 +1023,7 @@ function renderDecisionMetrics(r){
   const deaths=hasNum(b.badDeathsPerTimelineGame)?Number(b.badDeathsPerTimelineGame):null;
   const tonePct=(v,good,bad,inverse=false)=>v==null?'neutral':inverse?(v<=good?'good':v>=bad?'bad':'neutral'):(v>=good?'good':v<=bad?'bad':'neutral');
   $('decisionMetrics').innerHTML=[
-    decisionCard('Contested objective presence',fmtPct(objective),objective==null?'neutral':objDiagnosed?tonePct(objective,70,45,false):'neutral',objective==null?'Not enough contested-objective events.':objDiagnosed?(objective>=70?'Supported presence is high in the diagnosed objective sample.':objective<45?'A supported reset/death/setup cause is contributing to missed contest windows.':'Presence is mixed; use the supported cause below rather than the raw percentage alone.'):(roleLabel(reportRole)+' is not graded against a generic objective-attendance threshold here. Treat '+String(b.objectiveContestJoinedEncounters??0)+' / '+String(b.objectiveContestEncounters??0)+' supported contest presences as context and inspect only the event-level reasons.'),String(b.objectiveContestJoinedEncounters??0)+' / '+String(b.objectiveContestEncounters??0)+' contested encounters',objective),
+    decisionCard('Contested objective presence',fmtPct(objective),objective==null?'neutral':objDiagnosed?tonePct(objective,70,45,false):'neutral',objective==null?'Not enough contested-objective events.':objDiagnosed?(objective>=70?'Supported presence is high in the diagnosed objective sample.':objective<45?'Supported death/setup evidence or a shop-timing association accompanies missed contest windows.':'Presence is mixed; use the supported clues below rather than the raw percentage alone.'):(roleLabel(reportRole)+' is not graded against a generic objective-attendance threshold here. Treat '+String(b.objectiveContestJoinedEncounters??0)+' / '+String(b.objectiveContestEncounters??0)+' supported contest presences as context and inspect only the event-level reasons.'),String(b.objectiveContestJoinedEncounters??0)+' / '+String(b.objectiveContestEncounters??0)+' contested encounters',objective),
     decisionCard('Fight survival',fmtPct(fight),tonePct(fight,70,50,false),fight==null?'Not enough attended fight clusters.':fight>=70?'You usually stay alive through attended fight clusters.':fight<50?'You die in more than half of measured attended fight clusters.':'Survival is mixed; review whether deaths happen before or after meaningful contribution.',String(b.fightSamples??0)+' measured fight clusters',fight),
     decisionCard('High-risk deaths / game',deaths==null?'n/a':fmt(deaths,2),deaths==null?'neutral':deaths<=.75?'good':deaths>=1.5?'bad':'neutral',deaths==null?'Not enough timeline-complete games.':deaths<=.75?'Risky deaths are contained.':deaths>=1.5?'This is frequent enough to materially distort otherwise good games.':'Risky deaths exist but are not the dominant signal.','Lower is better; consequence-aware, not every death.'),
     decisionCard('First-reset economy loss',fmtPct(reset),tonePct(reset,25,50,true),reset==null?'Not enough clean first-reset measurements.':reset<=25?'Most measured first resets preserve or improve lane economy.':reset>=50?'At least half of clean measured first resets lose economy afterwards.':'Reset outcomes are mixed.','Measured only when death does not contaminate the post-shop window.',reset),
@@ -1649,14 +1649,21 @@ function detailsHtml(g,index){
 function objectiveDiagnosisLabel(key){
   return ({recent_shop_absence:'Recent-shop absence pattern',late_reset:'Recent-shop absence pattern (legacy report)',pre_objective_death:'Death before the contest',setup_vision:'Setup-vision deficit',arrival_pathing:'Arrival / pathing'})[String(key||'')]||'No supported primary cause';
 }
+function objectiveEvidenceClassLabel(x){
+  const key=String(x?.evidenceClass||'');
+  if(key==='direct_event_sequence')return'Direct event sequence';
+  if(key==='peer_relative_gap')return'Peer-relative comparison';
+  if(key==='timing_association')return'Timing association only';
+  return x&&hasNum(x.severity)?'Legacy evidence ranking':'Supported clue';
+}
 function objectiveDiagnosisHtml(r){
   const d=r?.behaviorSummary?.objectiveDiagnosis||{},causes=Array.isArray(d.causes)?d.causes:[];
   if(!d.presenceLow&&!causes.length)return '<div class="detail-note">Objective presence is not currently flagged low enough for a root-cause diagnosis.</div>';
   const primary=d.primaryCause?objectiveDiagnosisLabel(d.primaryCause):'Arrival / pathing remains the unresolved hypothesis';
-  return '<div class="objective-diagnosis"><div class="diagnosis-primary"><span>Primary supported explanation</span><strong>'+esc(primary)+'</strong></div>'+
-    (causes.length?'<ol>'+causes.map(x=>'<li><strong>'+esc(x.label||objectiveDiagnosisLabel(x.key))+'</strong><span>'+esc(x.evidence||'')+'</span><small>Evidence severity '+esc(fmt(x.severity,0))+'</small></li>').join('')+'</ol>':
-    '<p>No shop/death/vision association crossed its evidence threshold. Arrival/pathing remains a hypothesis rather than a proven cause.</p>')+
-    '<small class="diagnosis-caveat">This ranks supported evidence and associations; it does not prove a single cause.</small></div>';
+  return '<div class="objective-diagnosis"><div class="diagnosis-primary"><span>Highest-confidence supported clue</span><strong>'+esc(primary)+'</strong></div>'+
+    (causes.length?'<ol>'+causes.map(x=>'<li><strong>'+esc(x.label||objectiveDiagnosisLabel(x.key))+'</strong><span>'+esc(x.evidence||'')+'</span><small>'+esc(objectiveEvidenceClassLabel(x))+'</small></li>').join('')+'</ol>':
+    '<p>No shop/death/vision signal crossed its evidence threshold. Arrival/pathing remains a hypothesis rather than a proven cause.</p>')+
+    '<small class="diagnosis-caveat">Clues are ordered by evidence specificity first, then by magnitude within the same evidence class. Different evidence types are not forced onto one numeric severity scale, and none proves a single cause.</small></div>';
 }
 function reportPhaseRules(g){
   const r=g?.phaseRules||{};
