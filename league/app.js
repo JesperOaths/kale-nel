@@ -297,7 +297,8 @@ function renderProgressComparison(current,previous,previousAt){
     {label:'Gold @15 vs role opponent',path:'summary.goldDiff15',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
     {label:'High-risk deaths / game',path:'behaviorSummary.badDeathsPerTimelineGame',threshold:.3,direction:-1,format:v=>fmt(v,1)},
     {label:'First major item vs peer',path:'peerComparison.avgMajorItemDeltaMin',threshold:.4,direction:-1,format:v=>signed(v,1)+' min'},
-    {label:'Damage share − gold share',path:'behaviorSummary.damageGoldEfficiency',threshold:2,direction:1,format:v=>signed(v,1)+' pp'}
+    {label:'Damage share − gold share',path:'behaviorSummary.damageGoldEfficiency',threshold:2,direction:1,format:v=>signed(v,1)+' pp'},
+    {label:'First allied death rate',path:'behaviorSummary.firstAllyFightDeathRate',threshold:10,direction:-1,format:v=>fmtPct(v)}
   ];
   if(['ADC','MID','TOP'].includes(role))specs.splice(1,0,{label:'CS / min',path:'summary.csMin',threshold:.3,direction:1,format:v=>fmt(v,2)});
   if(['SUPPORT','JUNGLE'].includes(role))specs.push({label:'Objective presence',path:'advanced.objectivePresence',threshold:10,direction:1,format:v=>fmtPct(v)});
@@ -363,7 +364,7 @@ function judgmentHtml(g){
     '<p>'+esc(x.evidence||'')+'</p>'+(x.action?'<p class="game-action"><b>Next time:</b> '+esc(x.action)+'</p>':'')+'</article>').join('')+'</div>';
 }
 function detailsHtml(g,index){
-  return '<div class="details-shell">'+judgmentHtml(g)+'<div class="details-tabs">'+['macro','resets','vision','roams','deaths','objectives'].map(t=>'<button class="tab-btn '+(state.activeDetailTab===t?'active':'')+'" data-tab="'+t+'" type="button">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div><div class="details-content" data-detail-content>'+detailContent(g,state.activeDetailTab)+'</div></div>';
+  return '<div class="details-shell">'+judgmentHtml(g)+'<div class="details-tabs">'+['macro','resets','vision','roams','fights','deaths','objectives'].map(t=>'<button class="tab-btn '+(state.activeDetailTab===t?'active':'')+'" data-tab="'+t+'" type="button">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div><div class="details-content" data-detail-content>'+detailContent(g,state.activeDetailTab)+'</div></div>';
 }
 function detailCard(label,value){return'<div class="detail-card"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>';}
 function detailList(items,empty){
@@ -381,6 +382,12 @@ function detailContent(g,tab){
     const r=g.roams||{},events=r.events||[];
     return detailCard('Attempts',String(r.attempts??0))+detailCard('Successful',String(r.successes??0))+detailCard('Failed',String(r.failures??0))+
       detailList(events.map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+(x.targetZone||'map')+' · '+(x.outcome||'neutral')+(hasNum(x.laneCostCs)?' · own lane Δ '+signed(x.laneCostCs,0)+' CS':'')+(hasNum(x.adcLaneCostCs)?' · ADC lane Δ '+signed(x.adcLaneCostCs,0)+' CS':'')),'No qualifying pre-20-minute roam departures detected.');
+  }
+  if(tab==='fights'){
+    const f=g.fightProfile||{},events=f.events||[];
+    return detailCard('Attended fight clusters',String(f.attended??0))+detailCard('First allied death',String(f.firstAllyDeaths??0)+' · '+fmtPct(f.firstAllyDeathRate))+
+      detailCard('Died before contribution',String(f.diedBeforeContribution??0)+' · '+fmtPct(f.diedBeforeContributionRate))+detailCard('Fight survival',fmtPct(f.survivalRate))+
+      detailList(events.slice(0,10).map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+String(x.kills||0)+' kills · '+(x.survived?'survived':x.firstAllyDeath?'first ally death':x.diedBeforeContribution?'died before contribution':'died after contribution')),'No attended multi-kill fight clusters were detected.');
   }
   if(tab==='deaths'){
     const bad=g.badDeaths||[];
@@ -466,6 +473,10 @@ function renderAdvanced(r){
     ['High-gold stay windows',String(recall.greedyStayWindows??0)],
     ['Major-item Δ vs opponent',hasNum(itemSpike.avgDeltaVsOpponentMin)?signed(itemSpike.avgDeltaVsOpponentMin,1)+' min':'n/a'],
     ['Damage share − gold share',hasNum(r.behaviorSummary?.damageGoldEfficiency)?signed(r.behaviorSummary.damageGoldEfficiency,1)+' pp':'n/a'],
+    ['Fight samples',String(r.behaviorSummary?.fightSamples??0)],
+    ['First allied death in fights',fmtPct(r.behaviorSummary?.firstAllyFightDeathRate)],
+    ['Died before contribution',fmtPct(r.behaviorSummary?.preContributionFightDeathRate)],
+    ['Fight survival',fmtPct(r.behaviorSummary?.fightSurvivalRate)],
     ['Objective-setup vision Δ',hasNum(a.visionSetup?.avgDeltaVsOpponent)?signed(a.visionSetup.avgDeltaVsOpponent,1)+' wards vs peer':'n/a']
   ];
   $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('not recovered')||v==='n/a')).join('');
