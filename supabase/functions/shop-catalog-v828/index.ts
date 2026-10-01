@@ -359,6 +359,13 @@ async function resolveToken(supabase: any) {
   const envToken = text(Deno.env.get("PRINTIFY_API_TOKEN"));
   if (envToken) return envToken;
 
+  // Prefer the existing server-side RPC. A direct database connection is a
+  // fallback only, so Supavisor transport issues cannot block the live catalog.
+  try {
+    const { data, error } = await supabase.rpc("get_printify_api_token_v815a");
+    if (!error && text(data)) return text(data);
+  } catch {}
+
   const dbUrl = text(Deno.env.get("SUPABASE_DB_URL"));
   if (dbUrl) {
     let sql: any = null;
@@ -386,9 +393,7 @@ async function resolveToken(supabase: any) {
     }
   }
 
-  const { data, error } = await supabase.rpc("get_printify_api_token_v815a");
-  if (error || !text(data)) throw new Error("production_connection_missing");
-  return text(data);
+  throw new Error("production_connection_missing");
 }
 async function loadProducts(token: string, shopId: number) {
   const rows: any[] = [];
@@ -793,7 +798,7 @@ Deno.serve(async (req: Request) => {
     let tokenMs = 0;
     try {
       const t0 = Date.now();
-      token = await timeout(resolveToken(sb), 5000, "token_timeout");
+      token = await timeout(resolveToken(sb), 12000, "token_timeout");
       tokenMs = Date.now() - t0;
     } catch (error) {
       return json(req, {
