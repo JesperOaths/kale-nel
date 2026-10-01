@@ -755,6 +755,7 @@ function renderQuality(r){
     qualityCard('Analyzed games',String(analyzed),String(coaching)+' primary-role coaching games',evidenceLevel(coaching)),
     qualityCard('Queue context',hasNum(q.dominantQueueId)?'Queue '+String(q.dominantQueueId):'n/a',String(q.dominantQueueGames??0)+' analyzed-context games · '+String(q.excludedOtherQueues??0)+' other queue-context games excluded',evidenceLevel(q.dominantQueueGames??0)),
     qualityCard('Patch context',q.currentPatchKey?('Patch '+String(q.currentPatchKey)):'n/a',String(q.currentPatchRoleGames??0)+' current-patch role games · '+String(q.olderSamePatchRoleGames??0)+' older same-patch baseline · '+String(q.crossPatchBaselineRoleGames??0)+' cross-patch older games excluded from trend',q.patchBaselineReady?'good':'neutral'),
+    qualityCard('Item catalog provenance',String(q.itemCatalogExactPatches??0)+' exact patch catalog(s)',String(q.itemCatalogFallbackPatches??0)+' patch fallback(s) · '+String(q.itemCatalogUnknownPatchGames??0)+' game(s) without a parsed patch',Number(q.itemCatalogFallbackPatches||0)===0?'good':'neutral'),
     qualityCard('Sample exclusions',String(Number(q.excludedShortGames||0)+Number(q.excludedOtherMaps||0)+Number(q.excludedOtherQueues||0)+Number(q.excludedMissingRole||0))+' games',String(q.excludedShortGames??0)+' under 10m · '+String(q.excludedOtherMaps??0)+' other maps · '+String(q.excludedOtherQueues??0)+' other queues · '+String(q.excludedMissingRole??0)+' missing role','neutral'),
     qualityCard('Timeline coverage',hasNum(timelinePct)?fmtPct(timelinePct):'n/a',String(timelines)+' / '+String(analyzed)+' games',evidenceLevel(timelines)),
     qualityCard('Direct peer evidence',String(peerN)+' games','Actual same-role opponents',evidenceLevel(peerN)),
@@ -773,6 +774,7 @@ function renderQuality(r){
   if(Number(q.excludedShortGames||0)>0)low.push('short games excluded from coaching');
   if(Number(q.excludedOtherQueues||0)>0)low.push('mixed queue contexts excluded');
   if(q.currentPatchKey&&!q.patchBaselineReady)low.push('same-patch historical trend baseline');
+  if(Number(q.itemCatalogFallbackPatches||0)>0)low.push('item-catalog patch fallback');
   const base=r.sourceStatus?.note||'Report data remains traceable through the report contract. Missing data remains unknown rather than zero.';
   $('sourceNote').textContent=base+(low.length?' Thin-evidence areas right now: '+low.join(', ')+'.':' Core evidence coverage is sufficient for the main coaching dimensions.');
 }
