@@ -208,6 +208,9 @@ assert.ok(api.includes('roleQuestRevisionCounts'),'Report quality must expose mi
 assert.ok(api.includes('roleQuestCompletionTimingObserved:false'),'Analyzer must not claim an exact universal quest-completion timestamp');
 assert.ok(api.includes('mechanicsCohortGames.length>=5'),'Mechanics-sensitive coaching must require a usable current mechanics cohort before filtering');
 assert.ok(api.includes('mechanicsCohortApplied'),'Report quality must expose whether current-mechanics cohort filtering was applied');
+assert.ok(api.includes('currentMechanicsKnown'),'Unknown mechanics revisions must not be treated as verified cohort identities');
+assert.ok(api.includes('current_mechanics_unverified'),'Unverified mechanics fallback reason must remain explicit');
+assert.ok(api.includes('mechanicsCohortApplied=currentMechanicsKnown&&'),'Mechanics filtering must require a verified current rules revision');
 assert.ok(api.includes('mixedMechanicsFallback'),'Small current-mechanics cohorts must remain explicit rather than silently discarding or mixing evidence');
 assert.ok(api.includes('championBehaviorModel(coachingGames'),'Champion behavior coaching must use the same mechanics-aware cohort');
 assert.ok(app.includes('Mechanics coaching cohort'),'Frontend must explain which mechanics cohort drives coaching');
@@ -273,7 +276,7 @@ assert.ok(css.includes('.map-marker-label'),'Numbered death marker styling must 
 assert.ok(!app.includes("['DQI'"));
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v76'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v77'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
@@ -320,7 +323,7 @@ assert.ok(api.includes('higherRankMajorItemGames'),'Higher-ranked peer item samp
 assert.ok(api.includes('higherRankAvgMajorItemDeltaMin'),'Higher-ranked peer first-major timing delta must remain exported');
 assert.ok(api.includes('higherRankMajorItemFasterPct'),'Higher-ranked peer first-major faster rate must remain exported');
 assert.ok(api.includes('First-major timing slips against higher-ranked direct opponents'),'Higher-rank item timing must remain actionable coaching evidence');
-assert.ok(api.includes('league-web-behavior-v4.33'),'Analyzer version must include season-aware rules and turret-tier involvement');
+assert.ok(api.includes('league-web-behavior-v4.34'),'Analyzer version must include season-aware rules and turret-tier involvement');
 assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
 assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
 assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
