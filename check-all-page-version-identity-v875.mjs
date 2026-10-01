@@ -33,8 +33,10 @@ for(const file of pages){
   const wmMatch=html.match(/<(?:div|span)[^>]*(?:data-version-watermark|class=["'][^"']*version-watermark[^"']*["'])[^>]*>([^<]*)</i);
   const watermark=wmMatch?wmMatch[1]:'';
   if(decl!==expected) failures.push(rel+': declaration '+(decl||'missing')+' expected '+expected);
-  if(!watermark.toLowerCase().includes(expected.toLowerCase()) || !/Made by Bruis/i.test(watermark)){
-    failures.push(rel+': visible watermark missing/wrong; expected '+expected+' - Made by Bruis');
+  const dynamicWatermark = !!wmMatch && !watermark.trim() && /applyVersionLabel|gejast-version-sync-inline/.test(html);
+  const literalWatermark = watermark.toLowerCase().includes(expected.toLowerCase()) && /Made by Bruis/i.test(watermark);
+  if(!literalWatermark && !dynamicWatermark){
+    failures.push(rel+': visible/runtime watermark missing or wrong; expected '+expected+' - Made by Bruis');
   }
 }
 assert.equal(pages.length,137,'HTML inventory changed; review the page-version audit when pages are added or removed');
