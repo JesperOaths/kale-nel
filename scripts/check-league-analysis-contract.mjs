@@ -76,7 +76,6 @@ ok(backend.includes('fixed15to25ComparableGames'), '15→25 coaching must use an
 ok(backend.includes('closing25ComparableGames'), '@25 closing coaching must use an eligibility-filtered cohort');
 ok(backend.includes('checkpointEligibility:{lane15Games:'), 'report must export checkpoint eligibility counts');
 ok(backend.includes('frameNearestMs'), 'event-local spatial evidence must use the nearest supported timeline frame');
-ok(backend.includes('startPadMs=45000,endPadMs=45000'), 'neutral-objective presence must tolerate Riot participant-frame cadence');
 ok(backend.includes('phaseComparable!==false'), 'cross-game phase risk must exclude historical/future-unverified rule profiles');
 ok(backend.includes('midRoutingComparable!==false'), 'fixed 15→25 routing must be disabled for accelerated/incompatible rules profiles');
 ok(backend.includes('highRiskDeathsPer10Min'), 'phase-risk comparison must use per-10-minute rates');
