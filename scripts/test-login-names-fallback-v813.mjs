@@ -8,7 +8,9 @@ const staticSource=fs.readFileSync('gejast-login-names-static.js','utf8');
 const accountRuntime=fs.readFileSync('gejast-account-runtime.js','utf8');
 const loginHtml=fs.readFileSync('login.html','utf8');
 const siteVersion=fs.readFileSync('VERSION','utf8').trim();
-const calls=[],cacheWrites=[];
+const calls=[],cacheWrites=[],delayedTimers=[];
+const fakeSetTimeout=(fn,ms)=>{delayedTimers.push({fn,ms:Number(ms)});return delayedTimers.length;};
+const fakeClearTimeout=()=>{};
 
 function response(body,status=200){return new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});}
 const cfg={
@@ -20,7 +22,7 @@ const cfg={
   readCachedLoginNames(){return [];}
 };
 const context={
-  console,URL,URLSearchParams,Response,AbortController,setTimeout,clearTimeout,CustomEvent:class CustomEvent{constructor(type,init){this.type=type;this.detail=init?.detail;}},
+  console,URL,URLSearchParams,Response,AbortController,setTimeout:fakeSetTimeout,clearTimeout:fakeClearTimeout,CustomEvent:class CustomEvent{constructor(type,init){this.type=type;this.detail=init?.detail;}},
   dispatchEvent(){return true;},
   GEJAST_CONFIG:cfg,
   location:{search:'?scope=family'},
@@ -39,10 +41,10 @@ vm.createContext(context);
 new vm.Script(staticSource,{filename:'gejast-login-names-static.js'}).runInContext(context);
 new vm.Script(source,{filename:'gejast-login-names-fallback.js'}).runInContext(context);
 
-assert.equal(context.GEJAST_LOGIN_NAMES_FALLBACK?.source,'v817-static-first-single-active-name-rpc');
+assert.equal(context.GEJAST_LOGIN_NAMES_FALLBACK?.source,'v817-html-static-first-delayed-active-name-rpc');
 assert.equal(context.GEJAST_LOGIN_NAMES_FALLBACK?.staticSource,'gejast-login-names-static.js');
 assert.match(source,/get_login_active_names_v687/);
-assert.match(source,/4500/,'authoritative refresh must tolerate short production pressure instead of aborting at 1.5s');
+assert.match(source,/2500/,'authoritative refresh must stay tightly bounded so login does not hang behind Supabase latency');
 assert.doesNotMatch(source,/get_player_selector_source_v1/,'expensive selector scan must never be part of login name loading');
 assert.match(source,/login_names_timeout/);
 assert.equal(cfg.fetchScopedActivePlayerNames,context.GEJAST_LOGIN_NAMES_FALLBACK.load);
@@ -50,12 +52,16 @@ assert.equal(cfg.getActivatedPlayerNamesForScope,context.GEJAST_LOGIN_NAMES_FALL
 
 const names=await context.GEJAST_LOGIN_NAMES_FALLBACK.load();
 assert.deepEqual(Array.from(names),['Anouk','Emil','Gunnar','Lilian','Sierk'],'fresh browser must render the static last-known-good family names immediately');
-await new Promise(resolve=>setTimeout(resolve,0));
-assert.equal(calls.length,1,'static-first load must schedule exactly one authoritative refresh');
+assert.equal(calls.length,0,'static-first load must not hit Supabase during the critical selector render');
+const refreshTimer=delayedTimers.find(x=>x.ms===3000);
+assert.ok(refreshTimer,'static-first load must schedule one delayed authoritative refresh');
+refreshTimer.fn();
+await Promise.resolve();await Promise.resolve();
+assert.equal(calls.length,1,'delayed verification must make exactly one authoritative name request');
 assert.equal(calls[0].init.method,'POST');
 assert.equal(calls[0].init.headers.apikey,'publishable-test-key');
-await new Promise(resolve=>setTimeout(resolve,0));
-assert.ok(cacheWrites.some(x=>x.scope==='family'&&x.names.join('|')==='Familie A|Familie B'),'successful live refresh must replace the last-known-good cache');
+await Promise.resolve();await Promise.resolve();
+assert.ok(cacheWrites.some(x=>x.scope==='family'&&x.names.join('|')==='Familie A|Familie B'),'successful delayed live refresh must replace the last-known-good cache');
 
 assert.match(staticSource,/friends:/);
 assert.match(staticSource,/family:/);
@@ -71,10 +77,10 @@ assert.ok(loginHtml.includes(`gejast-account-runtime.js?${siteVersion}&rev=20261
 assert.match(loginHtml,/window\.GEJAST_LOGIN_NAMES_STATIC=Object\.freeze\(/,'login HTML must contain an inline last-known-good name seed so the selector works even when Supabase or a deferred asset stalls');
 assert.match(loginHtml,/data-login-scope="friends"/,'login HTML must contain literal friends options before JS runs');
 assert.match(loginHtml,/data-login-scope="family"/,'login HTML must contain literal family options before JS runs');
-assert.match(fallback,/get_login_active_names_v687'?,?\{site_scope_input:resolvedScope\},2500/,'live login-name verification must stay tightly bounded');
-assert.match(fallback,/setTimeout\(function\(\)\{ authoritative\(resolvedScope\)\.catch\(function\(\)\{\}\); \},3000\)/,'live name verification must be delayed off first paint');
+assert.match(source,/get_login_active_names_v687'?,?\{site_scope_input:resolvedScope\},2500/,'live login-name verification must stay tightly bounded');
+assert.match(source,/setTimeout\(function\(\)\{ authoritative\(resolvedScope\)\.catch\(function\(\)\{\}\); \},3000\)/,'live name verification must be delayed off first paint');
 assert.match(loginHtml,/id="gejast-login-inline-seed"/,'login must synchronously populate the selector during HTML parsing rather than waiting for DOMContentLoaded');
-assert.match(loginHtml,/sel\.dataset\.seedSource='inline-last-known-good'/,'synchronous selector seed must be observable for diagnostics');
+assert.match(loginHtml,/sel\.dataset\.seedSource='html-static-active-names'/,'synchronous HTML selector seed must be observable for diagnostics');
 for(const name of ['Bruis','Jesper','Sierk']) assert.ok(loginHtml.includes(`"${name}"`),`inline login seed missing representative name ${name}`);
 
-console.log('RESULT=V817_LOGIN_NAMES_STATIC_FIRST_SINGLE_RPC_PASS');
+console.log('RESULT=V817_LOGIN_NAMES_HTML_STATIC_FIRST_DELAYED_RPC_PASS');
