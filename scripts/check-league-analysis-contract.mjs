@@ -39,6 +39,10 @@ ok(backend.includes('function deathArea('), 'spatial death-context classificatio
 ok(backend.includes('peer_rank_json'), 'same-role peer rank cache must remain available');
 ok(backend.includes('gameDuration||r?.game_duration_seconds||0)>=600'), 'coaching sample must exclude sub-10-minute games');
 ok(backend.includes('shortGameThresholdSeconds:600'), 'short-game threshold must remain explicit in data quality');
+ok(backend.includes('durationEligibleRows=summonersRiftRows.filter'), 'duration eligibility must be computed before queue isolation');
+ok(backend.includes('dominantQueueId'), 'queue-context isolation must select a dominant raw Riot queue id');
+ok(backend.includes('durationEligibleRows.filter')&&backend.includes('===Number(dominantQueueId)'), 'coaching sample must stay homogeneous by dominant queue id');
+ok(backend.includes('excludedOtherQueues'), 'data quality must expose cross-queue exclusions');
 ok(backend.includes('x-riot-api-key'), 'session Riot-key header must remain supported by backend/CORS');
 ok(!/localStorage|sessionStorage|indexedDB/.test(app), 'Riot key or League state must not be persisted in browser storage');
 
