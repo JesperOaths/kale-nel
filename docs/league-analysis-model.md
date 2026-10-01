@@ -474,6 +474,22 @@ The report must describe this as an **observed requeue pattern**. Do not label t
 
 If the post-loss pattern is materially weaker, the recommended intervention can be behavioral and concrete: brief review, stand up, then make an intentional decision about whether to queue again.
 
+## Session-length and requeue patterns
+
+The analyzer may group primary-role games into play sessions using timing only:
+- a session continues when the next game starts within roughly 90 minutes of the previous game ending,
+- a quick requeue comparison uses a gap of roughly 45 minutes or less.
+
+Useful descriptive comparisons include:
+- session-opening game versus game 3+,
+- quick requeue after a loss versus quick requeue after a win.
+
+Compare concrete fields such as gold differential at 15, high-risk deaths/game, DPM and CS/min.
+
+Do **not** diagnose tilt, fatigue, mood or motivation from these patterns. The report can say later-session or quick-post-loss performance is weaker when the sample supports it, then recommend an intentional break/checkpoint as a practical experiment.
+
+Require multiple games in both comparison groups before producing a strong coaching statement.
+
 ## Short-term direction inside the Last 20
 
 When the sample is large enough, compare the newest five games with the preceding games in the Last-20 sample.
