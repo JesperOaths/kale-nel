@@ -61,6 +61,9 @@ ok(backend.includes('economyLoss=!deathInWindow'), 'first-reset economy loss mus
 ok(backend.includes('firstResetLossRate'), 'aggregate first-reset loss rate must remain exported');
 ok(backend.includes('avgFirstResetGoldSwing'), 'first-reset gold-swing aggregate must remain exported');
 ok(backend.includes('avgFirstResetCsSwing'), 'first-reset CS-swing aggregate must remain exported');
+ok(backend.includes('function inventoryCountsAt('), 'first-major readiness must reconstruct inventory state');
+ok(backend.includes('ITEM_SOLD')&&backend.includes('ITEM_DESTROYED')&&backend.includes('ITEM_UNDO'), 'item readiness must process removal and undo events');
+ok(backend.includes('direct_components_not_simultaneously_observed'), 'recipe readiness must fail closed when direct components do not coexist');
 ok(backend.includes('function majorItemReadiness('), 'recipe-aware first-major readiness helper must remain explicit');
 ok(backend.includes('Number(me.currentGold)>=combineCost'), 'first-major readiness must require current gold to cover the remaining combine cost');
 ok(backend.includes('base.delayMin>=1.5'), 'first-major delayed-completion threshold must remain 1.5 minutes');
