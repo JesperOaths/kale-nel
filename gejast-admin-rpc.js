@@ -16,15 +16,12 @@
 
   function headers() {
     const value = cfg();
-    return {
-      apikey: value.SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${value.SUPABASE_PUBLISHABLE_KEY}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    };
+    if (typeof value.publicApiHeaders === 'function') return value.publicApiHeaders({ 'Content-Type':'application/json', Accept:'application/json' });
+    const key = String(value.SUPABASE_PUBLISHABLE_KEY || '').trim();
+    const out = { apikey:key, 'Content-Type':'application/json', Accept:'application/json' };
+    if (/^[^.]+\.[^.]+\.[^.]+$/.test(key)) out.Authorization = `Bearer ${key}`;
+    return out;
   }
-
-
 
   async function fetchWithTimeout(url, init, timeoutMs = RPC_TIMEOUT_MS) {
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
