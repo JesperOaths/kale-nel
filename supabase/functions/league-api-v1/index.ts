@@ -1128,7 +1128,30 @@ Deno.serve(async(req:Request)=>{
       return json(req,{ok:true,match_id:id,cache_hit:!!old?.match_json&&!!old?.timeline_json,timeline_available:!!tl,timeline_error:tlError,peer_rank_checked:idx>=20||!!peerRankFetchedAt,peer_rank:peerRank});
     }
     if(action==="fetch_finish"){
-      const{data,error}=await sb.from("league_fetch_runs_v1").update({status:"done",completed_at:now(),updated_at:now()}).eq("id",text(body.run_id)).eq("owner_player_id",viewer.player_id).select("*").maybeSingle();if(error||!data)throw error||Object.assign(new Error("fetch_run_not_found"),{status:404});return json(req,{ok:true,run:data});
+      const runId=text(body.run_id),{data:run,error:runError}=await sb.from("league_fetch_runs_v1").select("*").eq("id",runId).eq("owner_player_id",viewer.player_id).maybeSingle();
+      if(runError||!run)throw runError||Object.assign(new Error("fetch_run_not_found"),{status:404});
+      const p=await getProfile(sb,viewer.player_id,run.profile_id),runIds=Array.isArray(run.match_ids)?run.match_ids.map(text).filter(Boolean):[];
+      let peerRankBackfilled=0,peerRankTargetCount=0,dominantQueueId:any=null;
+      if(runIds.length){
+        const{data:cached,error:cacheError}=await sb.from("league_match_cache_v1").select("match_id,map_id,queue_id,game_duration_seconds,match_json,peer_rank_fetched_at").eq("profile_id",p.id).in("match_id",runIds).not("match_json","is",null);
+        if(cacheError)throw cacheError;
+        const byMatch=new Map((cached||[]).map((r:any)=>[text(r.match_id),r])),ordered=runIds.map((id:string)=>byMatch.get(id)).filter(Boolean);
+        const durationEligible=ordered.filter((r:any)=>Number(r?.match_json?.info?.mapId||r?.map_id||0)===11&&Number(r?.match_json?.info?.gameDuration||r?.game_duration_seconds||0)>=600);
+        const queueCounts=new Map<number,number>();for(const r of durationEligible){const q=Number(r?.match_json?.info?.queueId||r?.queue_id||0);queueCounts.set(q,(queueCounts.get(q)||0)+1);}
+        dominantQueueId=[...queueCounts.entries()].sort((a,b)=>Number(b[1])-Number(a[1]))[0]?.[0]??null;
+        const targets=(dominantQueueId==null?durationEligible:durationEligible.filter((r:any)=>Number(r?.match_json?.info?.queueId||r?.queue_id||0)===Number(dominantQueueId))).slice(0,20);
+        peerRankTargetCount=targets.length;
+        for(const row of targets){
+          if(row?.peer_rank_fetched_at)continue;
+          const participants=Array.isArray(row?.match_json?.info?.participants)?row.match_json.info.participants:[],me=participants.find((x:any)=>text(x?.puuid)===text(p.puuid)),opp=me?opponent(row.match_json,me):null;
+          const peerRank=opp?.puuid?await rankSnapshotFor({puuid:opp.puuid,platform_region:p.platform_region},requestRiotKey):null,stamp=now();
+          const{error:updateError}=await sb.from("league_match_cache_v1").update({peer_rank_json:peerRank,peer_rank_fetched_at:stamp,updated_at:stamp}).eq("profile_id",p.id).eq("match_id",row.match_id);
+          if(updateError)throw updateError;peerRankBackfilled++;
+        }
+      }
+      const{data,error}=await sb.from("league_fetch_runs_v1").update({status:"done",completed_at:now(),updated_at:now()}).eq("id",runId).eq("owner_player_id",viewer.player_id).select("*").maybeSingle();
+      if(error||!data)throw error||Object.assign(new Error("fetch_run_not_found"),{status:404});
+      return json(req,{ok:true,run:data,dominant_queue_id:dominantQueueId,peer_rank_target_count:peerRankTargetCount,peer_rank_backfilled:peerRankBackfilled});
     }
     if(action==="cache_status"){
       const p=await getProfile(sb,viewer.player_id,body.profile_id),{count,error}=await sb.from("league_match_cache_v1").select("*",{count:"exact",head:true}).eq("profile_id",p.id);if(error)throw error;
