@@ -5,7 +5,7 @@ const cfg=window.GEJAST_CONFIG||{};
 const API=(cfg.SUPABASE_URL||'')+'/functions/v1/printify-gildan-diff-diag-v1';
 const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
 const $=(id)=>document.getElementById(id);
-const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',savedProfiles:[],selectedProfileId:'',selectedRole:'ADC'};
+const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,savedProfiles:[],selectedProfileId:'',selectedRole:'ADC'};
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const LEAGUE_WORKSPACE_KEY='bruisienator_public_workspace_v1';
@@ -1515,6 +1515,7 @@ function matchHistoryJudgment(g){
 }
 function matchHistoryRow(g,index,displayIndex,r){
   const icon=championIcon(g.champion),opp=championIcon(g.peer?.champion),lane=matchHistoryLaneState(g),judge=matchHistoryJudgment(g),signals=matchHistorySignals(g),coachingContext=gameIsCoachingContext(r,g),detailId='match-history-detail-'+index;
+  const reviewItems=(Array.isArray(r?.replayReviewQueue)?r.replayReviewQueue:[]).filter(x=>String(x.matchId||'')===String(g.matchId||'')),reviewRank=reviewItems.length?Math.min(...reviewItems.map(x=>Number(x.rank||999)).filter(Number.isFinite)):null;
   const kda=[g.kills,g.deaths,g.assists].map(x=>hasNum(x)?Number(x):'?').join('/');
   const title=(g.win?'Win':'Loss')+' · '+String(g.champion||'Unknown');
   return '<article class="match-history-row tone-'+(g.win?'good':'bad')+(coachingContext?'':' context-only')+'" data-history-index="'+index+'">'+
@@ -1523,7 +1524,7 @@ function matchHistoryRow(g,index,displayIndex,r){
       '<span class="history-champions">'+(icon?'<img loading="lazy" src="'+esc(icon)+'" alt="">':'')+'<span><b>'+esc(title)+(coachingContext?'':' <em class="history-context-badge">context only</em>')+'</b><small>'+esc(shortGameDate(g.gameStartTimestamp))+' · '+esc(g.role||'')+(g.peer?.champion?' · vs '+esc(g.peer.champion):'')+(coachingContext?'':' · older mechanics excluded from coaching aggregates')+'</small></span>'+(opp?'<img class="history-opponent" loading="lazy" src="'+esc(opp)+'" alt="">':'')+'</span>'+
       '<span class="history-stat"><small>K/D/A</small><b>'+esc(kda)+'</b></span>'+
       '<span class="history-stat tone-'+lane.tone+'"><small>Role gold @15</small><b>'+esc(lane.label)+'</b></span>'+
-      '<span class="history-judgment tone-'+judge.tone+'"><small>Strongest read</small><b>'+esc(judge.title)+'</b></span>'+
+      '<span class="history-judgment tone-'+judge.tone+'"><small>Strongest read'+(reviewRank!=null?' · review #'+esc(String(reviewRank)):'')+'</small><b>'+esc(judge.title)+'</b></span>'+
       '<span class="history-chevron" aria-hidden="true">▾</span>'+
     '</button>'+
     '<div class="match-history-detail" id="'+detailId+'" hidden>'+
@@ -1536,13 +1537,19 @@ function matchHistoryRow(g,index,displayIndex,r){
   '</article>';
 }
 function renderMatchHistory(r){
-  const list=$('matchHistoryList'),summary=$('matchHistorySummary');if(!list||!summary)return;
-  const games=(r.games||[]).slice(0,10);
+  const list=$('matchHistoryList'),summary=$('matchHistorySummary'),toggle=$('matchHistoryToggle');if(!list||!summary)return;
+  const allGames=r.games||[],limit=Math.min(Math.max(1,Number(state.matchHistoryLimit||10)),Math.max(1,allGames.length)),games=allGames.slice(0,limit);
+  if(toggle){
+    const canExpand=allGames.length>10;
+    toggle.hidden=!canExpand;
+    toggle.textContent=limit>=allGames.length?'Show newest 10':'Show all '+Math.min(20,allGames.length);
+    toggle.onclick=()=>{state.matchHistoryLimit=limit>=allGames.length?10:Math.min(20,allGames.length);renderMatchHistory(r);};
+  }
   if(!games.length){summary.innerHTML='';list.innerHTML='<div class="bullet empty">No recent comparable matches are available.</div>';return;}
   const wins=games.filter(g=>g.win).length,ahead=games.filter(g=>gameMatchesNamedFilter(g,'ahead15')).length,behind=games.filter(g=>gameMatchesNamedFilter(g,'behind15')).length;
   const timelineGames=games.filter(g=>g.timelineAvailable===true),risky=timelineGames.reduce((n,g)=>n+Number(g.badDeathCount||0),0),coachingGames=reportCoachingGames(r);
   const mechanicsNote=r.dataQuality?.mechanicsCohortApplied===true?' · coaching aggregates use '+coachingGames.length+'/'+String((r.games||[]).length)+' current-mechanics games':'';
-  summary.innerHTML='<span><b>'+wins+'–'+(games.length-wins)+'</b> recent result</span><span><b>'+ahead+'</b> ahead @15</span><span><b>'+behind+'</b> behind @15</span><span><b>'+risky+'</b> flagged high-risk deaths</span><small>Newest '+games.length+' comparable '+esc(roleLabel(canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole||state.selectedRole)))+' games · risk evidence '+timelineGames.length+'/'+games.length+' timelines'+esc(mechanicsNote)+'</small>';
+  summary.innerHTML='<span><b>'+wins+'–'+(games.length-wins)+'</b> visible result</span><span><b>'+ahead+'</b> ahead @15</span><span><b>'+behind+'</b> behind @15</span><span><b>'+risky+'</b> flagged high-risk deaths</span><small>Showing newest '+games.length+' of '+allGames.length+' comparable '+esc(roleLabel(canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole||state.selectedRole)))+' games · risk evidence '+timelineGames.length+'/'+games.length+' visible timelines'+esc(mechanicsNote)+'</small>';
   list.innerHTML=games.map((g,i)=>matchHistoryRow(g,i,i,r)).join('');
   list.querySelectorAll('.match-history-toggle').forEach(btn=>btn.addEventListener('click',()=>{
     const row=btn.closest('.match-history-row'),detail=row?.querySelector('.match-history-detail');if(!detail)return;
