@@ -424,6 +424,8 @@ assert.ok(api.includes('current_mechanics_unverified'),'Unverified mechanics fal
 assert.ok(api.includes('mechanicsCohortApplied=currentMechanicsKnown&&'),'Mechanics filtering must require a verified current rules revision');
 assert.ok(api.includes('mixedMechanicsFallback'),'Small current-mechanics cohorts must remain explicit rather than silently discarding or mixing evidence');
 assert.ok(api.includes('championBehaviorModel(coachingGames'),'Champion behavior coaching must use the same mechanics-aware cohort');
+assert.ok(app.includes('function diagnosticChip(')&&app.includes('Vs your usual @15')&&app.includes('DPM vs your usual')&&app.includes('Risk deaths vs usual'),'Champion section must compare pick-specific behavior against the player's own current role baseline rather than show only absolutes');
+assert.ok(app.includes('Repeated-matchup read')&&app.includes('Clean 1v1 K / D')&&app.includes('Outside-pressure share')&&app.includes('DPM vs role peer'),'Repeated-opponent cards must expose duel, outside-pressure and direct-peer output context');
 assert.ok(app.includes('Mechanics coaching cohort'),'Frontend must explain which mechanics cohort drives coaching');
 assert.ok(app.includes('Role-quest rules'),'Per-game UI must expose the active role-quest rules context');
 assert.ok(app.includes('Role-quest mechanics'),'Data-quality UI must expose role-quest mechanics cohorts');
@@ -568,7 +570,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v130'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v131'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
