@@ -528,6 +528,30 @@ The action should focus on wave preparation and abort timing, not simply "roam l
 
 These are movement-based heuristics, not perfect ground truth. Use medium confidence unless supported by a larger sample.
 
+## First-major-item spike utilization
+
+Item timing and item utilization are different questions.
+
+When both the player and the actual same-role opponent have a detected first major completed item, define a measurable **earlier-item window** only if the player's completion is at least 45 seconds earlier.
+
+The window runs from:
+- the player's first major completion,
+- until the direct role opponent completes their first major item.
+
+Within that temporary advantage window, count supported player impact:
+- kill/assist involvement,
+- nearby participation in a tracked team objective event.
+
+Also preserve whether the player dies inside the window **before any tracked impact**.
+
+The aggregate utilization rate is:
+
+`utilized earlier-item windows / measurable earlier-item windows`
+
+This metric does not require the player to force a fight just because an item was purchased. Coaching should ask whether the temporary breakpoint was used to create pressure or map value before parity, while still respecting wave state and objective availability.
+
+A window shorter than 45 seconds is not considered meaningfully actionable and is excluded rather than counted as a failure.
+
 ## Resets, shop visits and item timing
 
 Riot timeline item purchases are grouped into approximate shop visits.
