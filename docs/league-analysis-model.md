@@ -379,6 +379,20 @@ For SUPPORT/JUNGLE, aggregate this across enough games and report:
 
 This is a better coaching signal than raw vision score alone because it rewards **timely, contest-relevant setup**. It still does not measure whether a ward survived, was redundant, or was placed in the strategically perfect brush, so do not call it complete vision quality.
 
+## Local numbers and fight selection
+
+For each attended multi-kill fight cluster, inspect the local participant count around the first kill event.
+
+Current implementation:
+- anchor on the first kill-event position, falling back to the player's timeline position,
+- count allied and enemy champions within roughly **4500 world units**,
+- classify the fight as locally outnumbered when there are at least **two fewer nearby allies than enemies**,
+- preserve the kill score of the resulting cluster and whether the outnumbered cluster ended with more enemy kills.
+
+This is a **fight-context** signal, not proof that the player initiated the fight. The coaching language must therefore focus on the controllable follow/re-enter decision: count who is actually in fight distance and who can arrive next, rather than treating distant allies on the minimap as present.
+
+Aggregate coaching requires repeated samples. A local-numbers concern currently needs at least three outnumbered attended clusters and a high loss rate among them before it becomes a priority finding.
+
 ## Fight readiness and purchase state
 
 For each attended multi-kill fight cluster, preserve the player's approximate state at fight start:
