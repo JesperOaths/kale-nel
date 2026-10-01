@@ -122,6 +122,10 @@ ok(backend.includes('supportRoamsHurtingAdc'), 'support roams must aggregate all
 ok(backend.includes('objectiveFamilyStats:{}')&&backend.includes('objectiveFamilySummary'), 'objective-family control/presence must remain exported');
 ok(backend.includes('familyRaw==="DRAGON"&&memberSubtypes.some((x:any)=>x.includes("ELDER"))?"ELDER_DRAGON"'), 'Elder Dragon must remain distinguishable when Riot subtype supports it');
 ok(backend.includes('objectiveSetupClears'), 'objective-setup ward clears must remain measurable');
+ok(backend.includes('controlWardPurchases'), 'Control Ward purchases must remain separate from placement counts');
+ok(backend.includes('Number(e.itemId)===2055||text(info?.name).toLowerCase()==="control ward"'), 'Control Ward purchase detection must retain catalog-name and item-id evidence');
+ok(backend.includes('function majorPurchaseSequence(')&&backend.includes('secondMajorItemDeltaVsOpponent'), 'second major-item completion must remain measurable against the direct role opponent');
+ok(backend.includes('secondMajorGames')&&backend.includes('avgSecondMajorTime')&&backend.includes('avgSecondMajorDeltaVsOpponent'), 'second major-item timing must remain aggregated');
 ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
 ok(backend.includes('objectiveRootCauses'), 'objective root-cause evidence ranking must remain in analyzer');
 ok(backend.includes('objectiveRootCauses.sort'), 'objective root causes must remain severity-ranked');
@@ -242,6 +246,8 @@ ok(app.includes('Roam paths · this match')&&app.includes('roamPathSvg'), 'per-g
 ok(app.includes('Bruisienator V21 DQI · effective pipeline'), 'source-accurate DQI provenance must remain visible');
 ok(app.includes('Death-consequence coverage'), 'transparent death-evidence coverage must remain visible');
 ok(app.includes('Objective setup ward clears'), 'objective-setup ward clears must remain visible');
+ok(app.includes('Control Wards bought')&&app.includes('Control Wards placed'), 'Control Ward purchase and placement counts must remain visibly distinct');
+ok(app.includes('Second-major timing vs peer'), 'second major-item peer timing must remain visible');
 ok(app.includes('objectiveFamilyStats'), 'per-game objective-family evidence must remain visible');
 
 ok(backend.includes('"post-play discipline"'), 'post-play discipline must consolidate into a stable coaching theme');
@@ -263,5 +269,5 @@ console.log(JSON.stringify({
   appVersion,
   domRefs:refs.length,
   domIds:ids.length,
-  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence']
+  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence','control-ward-purchases','second-major-timing']
 },null,2));
