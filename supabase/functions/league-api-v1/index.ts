@@ -1119,7 +1119,7 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,p
     behaviorSummary:{
       phaseRisk,
       midRouting:{games:midRoutingGames.length,avgCsSwing15to25:avgMidRoutingCsSwing,avgObjectiveJoinRate:avgMidRoutingObjectiveJoinRate,inefficientGames:inefficientMidRoutingGames,balancedGames:balancedMidRoutingGames,sideFarmLowPresenceGames},
-      closing25:{leadGames:lead25Games.length,leadWins:lead25Wins,leadLosses,leadWinRate,leadLossesWithLateRisk,leadLateRiskLossRate,lateHighRiskDeathsInLeadLosses:lateHighRiskDeathsInLead25Losses,lateCostlyDeathsInLeadLosses:lateCostlyDeathsInLead25Losses,deficitGames:deficit25Games.length,deficitWins:deficit25Wins,deficitWinRate},
+      closing25:{leadGames:lead25Games.length,leadWins:lead25Wins,leadLosses:lead25Losses,leadWinRate:lead25WinRate,leadLossesWithLateRisk:lead25LossesWithLateRisk,leadLateRiskLossRate:lead25LateRiskLossRate,lateHighRiskDeathsInLeadLosses:lateHighRiskDeathsInLead25Losses,lateCostlyDeathsInLeadLosses:lateCostlyDeathsInLead25Losses,deficitGames:deficit25Games.length,deficitWins:deficit25Wins,deficitWinRate:deficit25WinRate},
       pre14RoleSoloKills,pre14RoleSoloDeaths,pre14RoleSoloDeathPerGame,soloKillConversionEvents:soloKillConversionEvents.length,soloKillConvertedEvents:soloKillConvertedEvents.length,soloKillConversionRate,avgSoloKillGoldSwingTo15,avgSoloKillCsSwingTo15,
       soloKillResetEvents:soloKillResetEvents.length,soloKillDeathsBeforeShop,soloKillDeathsBeforeShopRate,avgSoloKillNextShopDelaySec,
       itemSpikeEligibleWindows,itemSpikeUtilizedWindows,itemSpikeUtilizationRate,itemSpikeDeathsBeforeImpact,avgItemSpikeLeadSec,
