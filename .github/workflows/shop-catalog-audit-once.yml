@@ -19,5 +19,8 @@ jobs:
         run: |
           set -euo pipefail
           base='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828'
-          curl --silent --show-error --max-time 20 "$base?inventory_probe=1" -o /tmp/public.json
-          jq '{source,catalogSelection,generatedAt,stale,refreshScheduled,lastError,productCount:(.products|length),names:(.products|map(.name)|sort)}' /tmp/public.json
+          status="$(curl --silent --show-error --max-time 20 --output /tmp/public.json --write-out '%{http_code}' "$base?inventory_probe=1" || true)"
+          echo "HTTP=$status"
+          cat /tmp/public.json
+          echo
+          jq '{source,catalogSelection,generatedAt,stale,refreshScheduled,lastError,error,productCount:(.products|length),names:(.products|map(.name)|sort)}' /tmp/public.json || true
