@@ -20,15 +20,6 @@ on:
       - 'scripts/check-v813-visual-warning-cleanup.mjs'
       - 'scripts/summarize-visual-warning-evidence-v813.mjs'
       - 'check-live-data-plane.mjs'
-      - '**/*.html'
-      - '*.js'
-      - 'familie/**/*.js'
-      - 'shop/**/*.js'
-      - 'parfum/**/*.js'
-      - 'security/**/*.js'
-      - 'inbox-triage/**/*.js'
-      - '**/*.css'
-      - 'VERSION'
   push:
     branches:
       - main
@@ -45,15 +36,6 @@ on:
       - 'scripts/check-v813-visual-warning-cleanup.mjs'
       - 'scripts/summarize-visual-warning-evidence-v813.mjs'
       - 'check-live-data-plane.mjs'
-      - '**/*.html'
-      - '*.js'
-      - 'familie/**/*.js'
-      - 'shop/**/*.js'
-      - 'parfum/**/*.js'
-      - 'security/**/*.js'
-      - 'inbox-triage/**/*.js'
-      - '**/*.css'
-      - 'VERSION'
 
 permissions:
   contents: read
@@ -61,8 +43,8 @@ permissions:
 
 concurrency:
   group: full-live-visual-audit-production
-  # Finish one exhaustive campaign even when rapid frontend commits arrive; GitHub keeps only the newest pending run.
-  cancel-in-progress: false
+  # Production screenshots are expensive. Keep only the newest audit run and rely on the quiet daily campaign/manual dispatch for full coverage.
+  cancel-in-progress: true
 
 jobs:
   screenshot-every-page:
@@ -76,7 +58,7 @@ jobs:
       GEJAST_SITE_SCOPE: friends
       GEJAST_VISUAL_TIMEOUT_MS: '25000'
       GEJAST_VISUAL_SETTLE_MS: '5000'
-      GEJAST_VISUAL_PAGE_CONCURRENCY: '2'
+      GEJAST_VISUAL_PAGE_CONCURRENCY: '1'
 
     steps:
       - name: Check out exact tested revision
