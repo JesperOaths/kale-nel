@@ -1365,9 +1365,10 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 .report-driver-card>strong{display:block;margin-top:8px;font-size:1.12rem;line-height:1.18}
 .report-driver-card>p{margin:10px 0 0;color:var(--ink-soft);font-size:.74rem;line-height:1.55}
 .report-driver-card>div{margin-top:11px;padding-top:10px;border-top:1px solid var(--line);font-size:.71rem;line-height:1.5}
-.report-driver-card.driver-priority{border-left:5px solid var(--bad)}
-.report-driver-card.driver-strength{border-left:5px solid var(--good)}
-.report-driver-card.driver-direction{border-left:5px solid #6b4aa0}
+.report-driver-card{border-left:5px solid #a79d8e}
+.report-driver-card.driver-priority.tone-bad{border-left-color:var(--bad)}
+.report-driver-card.driver-strength.tone-good{border-left-color:var(--good)}
+.report-driver-card.driver-direction{border-left-color:#6b4aa0}
 
 .match-history-panel{border-top:6px solid #6b4aa0}
 .match-history-summary{
