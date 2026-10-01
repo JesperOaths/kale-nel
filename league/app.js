@@ -649,8 +649,25 @@ function reportPhaseRules(g){
     baronSpawnMin:hasNum(r.baronSpawnMin)?Number(r.baronSpawnMin):null,
     elderSpawnMin:hasNum(r.elderSpawnMin)?Number(r.elderSpawnMin):null,
     suddenDeathMin:hasNum(r.suddenDeathMin)?Number(r.suddenDeathMin):null,
+    patchMinor:hasNum(r.patchMinor)?Number(r.patchMinor):null,
+    publicPatchKey:r.publicPatchKey||null,
+    laneRoleQuestsEnabled:r.laneRoleQuestsEnabled,
+    roleQuestRevision:r.roleQuestRevision||null,
     sourceBasis:r.sourceBasis||''
   };
+}
+function roleQuestText(g){
+  const q=g?.roleQuestContext||{};
+  if(q.enabled===null)return'Unverified future mechanics';
+  if(q.enabled===false)return q.known===true?'Not standard lane-role quests in this queue':'Historical / not back-applied';
+  return [q.reward||'2026 role quest',q.detail||''].filter(Boolean).join(' · ');
+}
+function roleQuestNote(g){
+  const q=g?.roleQuestContext||{};
+  if(!q||(!q.note&&!q.checkpointEffect&&!q.spendEstimateCaveat))return'';
+  const parts=[q.note,q.checkpointEffect];
+  if(q.spendEstimateCaveat)parts.push('Support Control Ward spend can be approximate after quest completion because the timeline does not expose a universal completion timestamp; static catalog price is not silently rewritten.');
+  return '<div class="detail-note"><strong>Role-quest context:</strong> '+esc(parts.filter(Boolean).join(' '))+'</div>';
 }
 function plateTierText(x){
   const p=x||{};
@@ -782,7 +799,7 @@ function detailContent(g,tab){
   const checkpointNote=(!rules.lane15Comparable||!rules.fixed15to25Comparable||!rules.closing25Comparable)
     ?'<div class="detail-note"><strong>Checkpoint interpretation:</strong> Raw @15/@25 role-relative frames are shown for traceability, but this rules profile does not treat them as standard lane / 15→25 routing / closing checkpoints. Coaching that depends on those meanings is suppressed.</div>'
     :'';
-  return checkpointNote+detailCard('Patch',g.publicPatchKey?(String(g.publicPatchKey)+(g.patchKey&&String(g.patchKey)!==String(g.publicPatchKey)?' · build '+String(g.patchKey):'')):(g.patchKey||'n/a'))+detailCard('Gold diff @10',signed(g.goldDiff10,0))+detailCard('Gold diff @15',signed(g.goldDiff15,0))+detailCard('Gold diff @25',signed(g.goldDiff25,0))+
+  return checkpointNote+roleQuestNote(g)+detailCard('Patch',g.publicPatchKey?(String(g.publicPatchKey)+(g.patchKey&&String(g.patchKey)!==String(g.publicPatchKey)?' · build '+String(g.patchKey):'')):(g.patchKey||'n/a'))+detailCard('Role-quest rules',roleQuestText(g))+detailCard('Gold diff @10',signed(g.goldDiff10,0))+detailCard('Gold diff @15',signed(g.goldDiff15,0))+detailCard('Gold diff @25',signed(g.goldDiff25,0))+
     detailCard('Peak pre-15 role lead',earlyLead.eligible?(signed(earlyLead.peakGoldDiff,0)+'g @ '+fmt(earlyLead.peakMin,1)+'m'):'No ≥500g measured peak')+
     detailCard('Peak → 15 gold swing',earlyLead.eligible?(signed(earlyLead.goldSwingTo15,0)+'g · '+(earlyLead.giveback?'give-back':earlyLead.preserved?'preserved':'partial erosion')):'n/a')+
     detailCard('Deaths after early peak',earlyLead.eligible?(String(earlyLead.deathsAfterPeak??0)+' · '+String(earlyLead.highRiskDeathsAfterPeak??0)+' high-risk'):'n/a')+
@@ -1111,6 +1128,7 @@ function renderQuality(r){
     qualityCard('Queue context',hasNum(q.dominantQueueId)?'Queue '+String(q.dominantQueueId):'n/a',String(q.dominantQueueGames??0)+' analyzed-context games · '+String(q.excludedOtherQueues??0)+' other queue-context games excluded',evidenceLevel(q.dominantQueueGames??0)),
     qualityCard('Fixed checkpoint eligibility',String(b.checkpointEligibility?.lane15Games??0)+' @15 lane','15→25 '+String(b.checkpointEligibility?.fixed15to25Games??0)+' · @25 closing '+String(b.checkpointEligibility?.closing25Games??0),'neutral'),
     qualityCard('Patch context',(q.currentPublicPatchKey||q.currentPatchKey)?('Patch '+String(q.currentPublicPatchKey||q.currentPatchKey)):'n/a',String(q.currentPatchRoleGames??0)+' current-patch role games · '+String(q.olderSamePatchRoleGames??0)+' older same-patch baseline · '+String(q.crossPatchBaselineRoleGames??0)+' cross-patch older games excluded from trend'+(q.currentPublicPatchKey&&q.currentPatchKey&&String(q.currentPublicPatchKey)!==String(q.currentPatchKey)?' · Riot/Data Dragon build '+String(q.currentPatchKey):''),q.patchBaselineReady?'good':'neutral'),
+    qualityCard('Role-quest mechanics',Object.keys(q.roleQuestRevisionCounts||{}).length?Object.entries(q.roleQuestRevisionCounts||{}).map(([k,v])=>String(k)+' '+String(v)+'g').join(' · '):'n/a',q.roleQuestCheckpointNote||'Quest effects are treated as patch context, not inferred completion timestamps.','neutral'),
     qualityCard('Item catalog provenance',String(q.itemCatalogExactPatches??0)+' exact patch catalog(s)',String(q.itemCatalogFallbackPatches??0)+' patch fallback(s) · '+String(q.itemCatalogUnknownPatchGames??0)+' game(s) without a parsed patch',Number(q.itemCatalogFallbackPatches||0)===0?'good':'neutral'),
     qualityCard('Sample exclusions',String(Number(q.excludedShortGames||0)+Number(q.excludedOtherMaps||0)+Number(q.excludedOtherQueues||0)+Number(q.excludedMissingRole||0))+' games',String(q.excludedShortGames??0)+' under 10m · '+String(q.excludedOtherMaps??0)+' other maps · '+String(q.excludedOtherQueues??0)+' other queues · '+String(q.excludedMissingRole??0)+' missing role','neutral'),
     qualityCard('Timeline coverage',hasNum(timelinePct)?fmtPct(timelinePct):'n/a',String(timelines)+' / '+String(analyzed)+' games',evidenceLevel(timelines)),
@@ -1131,6 +1149,7 @@ function renderQuality(r){
   if(Number(q.excludedOtherQueues||0)>0)low.push('mixed queue contexts excluded');
   if(q.currentPatchKey&&!q.patchBaselineReady)low.push('same-patch historical trend baseline');
   if(Number(q.itemCatalogFallbackPatches||0)>0)low.push('item-catalog patch fallback');
+  if(Object.keys(q.roleQuestRevisionCounts||{}).length>1)low.push('mixed role-quest mechanics revisions');
   const base=r.sourceStatus?.note||'Report data remains traceable through the report contract. Missing data remains unknown rather than zero.';
   $('sourceNote').textContent=base+(low.length?' Thin-evidence areas right now: '+low.join(', ')+'.':' Core evidence coverage is sufficient for the main coaching dimensions.');
 }
