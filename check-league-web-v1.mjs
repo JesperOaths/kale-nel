@@ -43,6 +43,7 @@ for(const field of [
   'neutralObjectiveEvents','earlySetupObjectiveJoinRate','earlySetupObjectiveCoverageRate','lateResetObjectiveMissRate','freshPurchaseObjectiveJoinRate',
   'objectiveSetupWardRate','objectiveSetupWardRateDelta','visionActions','visionActionDeaths','visionActionDeathRate','highRiskVisionActionDeaths','highRiskVisionActionDeathsPerGame','unsupportedVisionActionDeaths','damageGoldEfficiency'
 ])assert.ok(behaviorExport.includes(field),'Behavior summary must export '+field);
+assert.ok(api.includes('objectiveDiagnosis'));
 assert.ok(api.includes('sessionBehaviorModel'));
 assert.ok(api.includes('highRiskLeadDeathsPerGame'));
 assert.ok(api.includes('riskStateDeaths'));
