@@ -34,6 +34,9 @@ assert.ok(app.includes('maxX:14870'));
 assert.ok(app.includes('minY:-120'));
 assert.ok(app.includes('maxY:14980'));
 assert.ok(app.includes('renderSpatial'));
+assert.ok(!app.includes("['DQI'"));
+assert.ok(!app.includes("['AGOR'"));
+assert.ok(html.includes('id="spatialReview"'));
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 
