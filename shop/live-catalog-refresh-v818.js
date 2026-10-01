@@ -1,9 +1,9 @@
 (() => {
   'use strict';
 
-  const POLL_MS = 5 * 60 * 1000;
-  const FIRST_POLL_MS = 45 * 1000;
-  const MIN_FOREGROUND_REFRESH_MS = 60 * 1000;
+  const POLL_MS = 10 * 60 * 1000;
+  const FIRST_POLL_MS = 60 * 1000;
+  const MIN_FOREGROUND_REFRESH_MS = 2 * 60 * 1000;
   let lastSignature = '';
   let checking = false;
   let lastCheckedAt = 0;
