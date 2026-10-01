@@ -45,7 +45,10 @@ assert.doesNotMatch(probe, /rpcName\s*=\s*process\.env|GEJAST_DATA_PLANE_RPC/, '
 assert.match(probe, /const invalidSession = '0{48}'/, 'probe must use a canonical-shaped deterministic invalid 48-hex session');
 assert.match(probe, /session_token: invalidSession,[\s\S]*session_token_input: invalidSession,[\s\S]*site_scope_input: 'friends'/, 'probe payload must match the shipped auth contract and remain Friends-scoped');
 assert.match(probe, /method: 'POST'/, 'RPC liveness must use the shipped POST contract');
-assert.match(probe, /Authorization: `Bearer \$\{publishableKey\}`/, 'probe must authenticate only as the public publishable client');
+assert.match(probe, /apikey: publishableKey/, 'probe must send the public publishable key on the apikey header');
+assert.match(probe, /const legacyPublicJwt = \/\^\[\^\.\]\+\\\.\[\^\.\]\+\\\.\[\^\.\]\+\$\/.test\(publishableKey\)/, 'probe must distinguish legacy JWT anon keys from opaque sb_publishable keys');
+assert.match(probe, /if \(legacyPublicJwt\) headers\.Authorization = `Bearer \$\{publishableKey\}`/, 'legacy JWT anon keys may retain bearer compatibility');
+assert.doesNotMatch(probe, /apikey:\s*publishableKey,[\s\S]{0,120}Authorization:\s*`Bearer \$\{publishableKey\}`/, 'opaque publishable keys must never be unconditionally duplicated into Authorization');
 assert.match(probe, /typeof data\.ok !== 'boolean'/, 'probe must validate the auth RPC response contract');
 assert.match(probe, /if \(data\.ok === true\) throw new Error\('invalid_session_authenticated'\)/, 'health probe must fail closed if its invalid session is unexpectedly authenticated');
 assert.match(probe, /timeoutMs > 15000/, 'per-attempt timeout must have a hard upper bound');
