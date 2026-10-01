@@ -207,14 +207,18 @@ async function refreshLiveCatalog(attempts = 2){
 }
 
 async function loadCatalog(){
-  const cachedProducts = readLastGoodCatalog();
-  if(cachedProducts.length){
-    return { products: sortByShirtBase(cachedProducts), source: 'cache' };
-  }
+  // The deployment-generated snapshot is the deterministic first-paint source.
+  // It must win over an older browser cache and it never depends on Supabase.
   const staticProducts = FALLBACK_PRODUCTS.map(normalizeProduct)
     .filter(p => p.baseKey !== '1382' && p.name && p.mockups.length && p.price > 0);
   if(staticProducts.length){
-    return { products: sortByShirtBase(staticProducts), source: 'static-fallback' };
+    const sorted = sortByShirtBase(staticProducts);
+    saveLastGoodCatalog(sorted);
+    return { products: sorted, source: 'static-snapshot' };
+  }
+  const cachedProducts = readLastGoodCatalog();
+  if(cachedProducts.length){
+    return { products: sortByShirtBase(cachedProducts), source: 'cache' };
   }
   const liveProducts = await refreshLiveCatalog(1);
   if(liveProducts.length) return { products: liveProducts, source: 'live' };
@@ -675,12 +679,9 @@ loadCatalog().then(result => {
     openShapeEntry({ scroll: false, updateUrl: false });
   }
 
-  if(result?.source === 'cache' || result?.source === 'stale-cache'){
-    refreshLiveCatalog(1).then(replaceCatalogFromLive).catch(()=>{});
-  }
   // The generated static snapshot is intentionally a complete first-paint source.
-  // Do not hit Supabase again during initial render; the bounded background watcher
-  // performs the live reconciliation later.
+  // Never hit Supabase during initial render. The cross-tab-coordinated background
+  // watcher performs live reconciliation later, while checkout remains authoritative.
 });
 
 document.addEventListener('click', event => {
