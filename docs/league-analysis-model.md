@@ -894,6 +894,29 @@ When more than 20 matches are cached, compare the Last 20 with the broader cache
 
 Do not compare a timeline-only Last-20 field with an unavailable baseline field.
 
+## Repeated opponent-champion matchups
+
+The analyzer can aggregate repeated games against the **same opposing champion in the player's primary role**.
+
+A matchup profile is emitted only when the opposing champion appears at least **three times** in the current primary-role coaching sample.
+
+Preserve:
+- games and win rate,
+- gold and CS differential at 15,
+- high-risk deaths,
+- clean pre-14 solo kills/deaths versus that actual role opponent,
+- pre-14 home-lane deaths involving outside pressure,
+- the player's own champion mix across those games.
+
+This distinction is important. If the player used multiple champions, the result is **performance against that opposing champion**, not a claim about one exact champion-vs-champion matchup.
+
+Coaching can distinguish:
+- repeated direct 1v1 trouble → matchup execution review,
+- repeated assisted/outside-pressure deaths → wave depth, tracking and vision review,
+- repeated economy advantage → a sampled matchup strength.
+
+Do not emit matchup coaching from one or two games. Three games remain low-confidence; five or more can reach medium confidence.
+
 ## Champion-specific behavior
 
 Do not assume an overall weakness applies equally to every champion.
