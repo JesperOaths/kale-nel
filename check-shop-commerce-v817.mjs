@@ -81,6 +81,7 @@ assert.match(store, /let showAnimalDesigns = true/);
 assert.match(store, /function isAnimalDesign\(product\)/);
 assert.match(store, /data-subject-kind/);
 assert.match(store, /animalList\.map\(product => productCardHtml/);
+assert.match(store, /const animalList = fullList[\s\S]*?\.filter\(isAnimalDesign\)[\s\S]*?localeCompare/, 'animal designs must sort alphabetically by name instead of by price');
 assert.match(styles, /\.animal-designs-section/);
 assert.match(styles, /\.animal-filter-switch/);
 assert.match(styles, /\.product-grid\s*\{[\s\S]*display:\s*grid[\s\S]*grid-template-columns:\s*repeat\(6, minmax\(0, 1fr\)\)/, 'desktop product sections must use six half-card tracks so incomplete rows can stagger beneath the gaps above');
