@@ -191,6 +191,28 @@ export async function checkOrdersAndTelemetry(sb,settings){
         }
       }
     }
+    const shipmentRetryEligible=o.status==="shipped"&&o.shipped_at&&Date.parse(String(o.shipped_at))>=Date.parse("2026-10-01T00:00:00Z");
+    if(shipmentRetryEligible&&!o.shipment_notified_at&&text(o.customer_email)&&Array.isArray(o.tracking)&&o.tracking.length){
+      const claimAt=nowIso();
+      const {data:claimed}=await sb.from("shop_orders").update({shipment_notified_at:claimAt,updated_at:claimAt}).eq("id",o.id).is("shipment_notified_at",null).select("id").maybeSingle();
+      if(claimed){
+        const first=o.tracking[0]||{};
+        const esc=v=>text(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]||c));
+        const link=first.url?'<p><a href="'+esc(first.url)+'">Track your shipment</a></p>':"";
+        const html='<div style="font-family:Arial,sans-serif;line-height:1.55;color:#111"><h2>Your Bruis order is on the way</h2><p>Hi '+esc(o.customer_name)+',</p><p>Your order <strong>'+esc(ref)+'</strong> has shipped.</p>'+(first.number?'<p>Tracking number: <strong>'+esc(first.number)+'</strong>'+(first.carrier?'<br>Carrier: '+esc(first.carrier):'')+'</p>':'')+link+'<p>Thanks for your order.</p></div>';
+        const plain='Your Bruis order '+ref+' is on the way.'+(first.number?'\nTracking: '+text(first.number):'')+(first.url?'\n'+text(first.url):'');
+        const mailed=await sendEmail(text(o.customer_email),'Bruis order '+ref+' is on the way',html,plain);
+        if(mailed.ok){
+          const at=nowIso();
+          await sb.from("shop_orders").update({notification_error:null,notification_error_at:null,updated_at:at}).eq("id",o.id);
+          o.shipment_notified_at=claimAt;o.notification_error=null;o.notification_error_at=null;
+        }else{
+          const failedAt=nowIso(),mailError=text(mailed.error)||"Shipment email delivery unavailable";
+          await sb.from("shop_orders").update({shipment_notified_at:null,notification_error:mailError,notification_error_at:failedAt,updated_at:failedAt}).eq("id",o.id);
+          o.shipment_notified_at=null;o.notification_error=mailError;o.notification_error_at=failedAt;
+        }
+      }
+    }
     if(text(o.notification_error))notificationFailures.push({order_id:o.id,reference:ref,status:o.status,error:text(o.notification_error).slice(0,500),at:o.notification_error_at||null});
     if(o.status==="pending"&&!o.payment_verified_at&&hoursSince(o.created_at)>=72){
       const key="pending_stale:"+o.id,h=hoursSince(o.created_at),d=h/24;active.get("pending_stale").add(key);
