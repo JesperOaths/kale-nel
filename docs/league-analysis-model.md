@@ -421,6 +421,42 @@ Useful comparisons include:
 
 These are correlations inside the player's sample. Wording must not imply causation.
 
+## Session and requeue behavior
+
+The analyzer may test whether performance changes within a play session or immediately after a previous result.
+
+### Session definition
+
+A session continues while the gap between the **end of the previous game** and the **start of the next game** is at most 90 minutes.
+
+Each game keeps:
+- session ID,
+- game number within the session,
+- minutes since the previous game ended,
+- previous game result.
+
+The aggregate comparison contrasts:
+- session-opening games,
+- game 3+ within the same session.
+
+Current useful dimensions include:
+- gold differential at 15,
+- flagged high-risk deaths,
+- DPM,
+- CS/min.
+
+A coaching warning requires multiple games on both sides and a material difference, such as about 300g worse gold@15, +0.5 high-risk deaths/game, or ~120 lower DPM in game 3+.
+
+### Quick requeue comparison
+
+A quick requeue is defined as the next analyzed game starting within 45 minutes after the previous game ended.
+
+When enough examples exist, compare quick requeues after a loss with quick requeues after a win using the same behavior metrics.
+
+The report must describe this as an **observed requeue pattern**. Do not label the player as tilted, fatigued, angry, unfocused, or otherwise infer a mental state from the data.
+
+If the post-loss pattern is materially weaker, the recommended intervention can be behavioral and concrete: brief review, stand up, then make an intentional decision about whether to queue again.
+
 ## Short-term direction inside the Last 20
 
 When the sample is large enough, compare the newest five games with the preceding games in the Last-20 sample.
