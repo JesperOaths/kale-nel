@@ -154,6 +154,15 @@ ok(backend.includes('objectiveTeamEncounters=validTimeline.reduce')&&backend.inc
 ok(backend.includes('objJoin=objectiveTeamEncounters?100*objectiveJoinedEncounters/objectiveTeamEncounters:null'), 'primary objective-presence rate must not average per-game percentages');
 ok(backend.includes('pooledMidRoutingObjectiveJoinRate=midRoutingTeamObjectives?100*midRoutingObjectiveJoins/midRoutingTeamObjectives:null'), 'mid-routing objective presence must pool event denominators');
 ok(backend.includes('meanGameObjectiveJoinRate'), 'descriptive per-game objective mean must remain separate from the coaching rate');
+ok(backend.includes('classifiedTimelineDeaths=validTimeline.reduce'), 'timeline-derived death-context rates must expose a classified-event denominator');
+ok(backend.includes('objDeathPct=classifiedTimelineDeaths?100*objectiveContextDeaths/classifiedTimelineDeaths:null'), 'objective-context death rate must pool classified death events');
+ok(backend.includes('preObjDeathPct=classifiedTimelineDeaths?100*preObjDeaths/classifiedTimelineDeaths:null'), 'pre-objective death rate must pool classified death events');
+ok(backend.includes('meanGameObjectiveDeathPct')&&backend.includes('meanGamePreObjectiveDeathPct'), 'per-game death-context means must stay separate diagnostics');
+ok(backend.includes('earlyTeamKills=validTimeline.reduce')&&backend.includes('earlyPlayerKillInvolvements=validTimeline.reduce'), 'early KP numerator/denominator must be explicit');
+ok(backend.includes('earlyKp=earlyTeamKills?100*earlyPlayerKillInvolvements/earlyTeamKills:null'), 'primary early KP must use pooled event denominators');
+ok(backend.includes('meanGameEarlyKp'), 'mean per-game early KP must remain separately observable');
+ok(app.includes('Early KP · pooled')&&app.includes('Objective-context death % · pooled'), 'frontend must label pooled rates explicitly');
+ok(!app.includes('Pre-objective conversion deaths'), 'temporal death-before-objective evidence must not imply conversion causality');
 ok(backend.includes('STANDARD_PVP_SR_QUEUE_IDS=new Set([400,420,430,440,490,700])'), 'standard PvP Summoner’s Rift queue eligibility must remain explicit');
 ok(backend.includes('SWIFTPLAY_SR_QUEUE_IDS=new Set([480])'), 'Swiftplay must remain a separate queue family');
 ok(backend.includes('supportedQueueRows=durationEligibleRows.filter')&&backend.includes('supportedEligible=durationEligible.filter'), 'report and fetch-finish paths must share supported-queue filtering');
