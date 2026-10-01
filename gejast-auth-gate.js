@@ -181,7 +181,7 @@
     try{
       const response=await fetch(url,{
         method:'POST',
-        headers:{'Content-Type':'application/json',Accept:'application/json',apikey:key,Authorization:'Bearer '+key},
+        headers:(cfg.publicApiHeaders?cfg.publicApiHeaders({'Content-Type':'application/json',Accept:'application/json'}):(function(){const publicKey=String(key||'').trim(),h={'Content-Type':'application/json',Accept:'application/json',apikey:publicKey};if(/^[^.]+\.[^.]+\.[^.]+$/.test(publicKey))h.Authorization='Bearer '+publicKey;return h;})()),
         body:JSON.stringify({session_token:token,session_token_input:token,site_scope_input:requestedScope()}),
         signal:controller.signal,
         cache:'no-store'
