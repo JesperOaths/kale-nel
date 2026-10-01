@@ -155,6 +155,13 @@ assert.match(checkoutEdge, /function cachedShopId/, 'checkout must resolve curre
 assert.match(deliveryPreviewEdge, /function cachedShopId/, 'delivery preview must resolve current per-product Printify shop ids');
 assert.match(checkoutEdge, /validation_only/, 'checkout must expose a non-ordering production validation path');
 assert.match(catalogEdge, /gildanRouteSafeCostCeilings/, 'catalog must price Gildan variants against the most expensive approved hybrid provider');
+assert.match(catalogEdge, /source_variant_id,source_cost_usd_cents,target_cost_usd_cents/, 'classic-shirt catalog pricing must use the canonical provider-pair snapshots');
+assert.match(catalogEdge, /routeSafeCostCeilings\.get\(String\(variant\?\.id/, 'classic-shirt price lookup must be variant-based rather than product-id-based');
+assert.doesNotMatch(catalogEdge, /deltaAdjusted|current\s*\+\s*delta/, 'catalog pricing must never add a historical provider delta to a current product cost');
+assert.match(checkoutEdge, /const itemProviderRoutes = providerRoutes\.filter/, 'checkout must resolve the same provider pair for each classic-shirt variant');
+assert.match(checkoutEdge, /routeSnapshotCosts[\s\S]*?source_cost_usd_cents[\s\S]*?target_cost_usd_cents/, 'checkout must price classic shirts from the canonical provider-pair snapshots');
+assert.doesNotMatch(fulfillmentRouting, /deltaAdjusted/, 'checkout routing must not double-count historical provider deltas');
+assert.doesNotMatch(deliveryPreviewRouting, /deltaAdjusted/, 'delivery preview routing must not double-count historical provider deltas');
 assert.match(checkoutEdge, /routeSafeRawUsdCost/, 'checkout must preserve the advertised shirt margin across hybrid provider changes');
 assert.match(checkoutEdge, /\.from\("shop_provider_routes_v1"\)/, 'checkout must evaluate approved direct-provider routes');
 assert.match(deliveryPreviewEdge, /\.from\("shop_provider_routes_v1"\)/, 'delivery preview must evaluate the same direct-provider routes');
