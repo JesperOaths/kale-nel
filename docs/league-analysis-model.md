@@ -399,6 +399,10 @@ An **unknown** mechanics revision is never treated as a verified cohort identity
 
 For mechanics-sensitive coaching, the report builds a **current mechanics cohort** from the newest primary-role game's rules profile plus that role's own mechanics revision. If that cohort contains at least five primary-role games, coaching models use it instead of blending older incompatible mechanics into the same conclusions. The Last-20 overview remains visible separately. If fewer than five current-mechanics games exist, the analyzer keeps the broader primary-role sample rather than manufacturing certainty and explicitly marks the mixed-mechanics fallback as a data-quality limitation.
 
+### Verified rules boundary
+
+The 2026 rules profile is intentionally **audited-through**, not open-ended. The current verified mechanics boundary is public patch **26.19**. If Riot Match-V5 reports a 2026 internal minor newer than the verified boundary, the analyzer fails closed into `2026_minor_unverified` rather than silently treating the game as if 26.19 mechanics still applied. Mechanics-sensitive coaching/checkpoint interpretation is suppressed until that newer patch is explicitly audited. This prevents future patch drift from becoming invisible analysis error.
+
 ## Mid-game farm routing
 
 For TOP, MID and ADC, the analyzer separately tracks the change in **same-role CS differential from 15→25 minutes**.
