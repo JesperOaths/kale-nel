@@ -7,6 +7,8 @@ const app=fs.readFileSync('league/app.js','utf8');
 const html=fs.readFileSync('league/index.html','utf8');
 const css=fs.readFileSync('league/styles.css','utf8');
 const migration=fs.readFileSync('supabase/migrations/20261001043000_league_web_foundation_v1.sql','utf8');
+const roleCacheMigration=fs.readFileSync('supabase/migrations/20261001180422_league_cache_player_role_v1.sql','utf8');
+const identityMigration=fs.readFileSync('supabase/migrations/20261001182300_league_merge_duplicate_riot_profiles_v1.sql','utf8');
 
 assert.doesNotThrow(()=>new vm.Script(app,{filename:'league/app.js'}),'league/app.js must remain valid browser JavaScript');
 
@@ -28,8 +30,15 @@ assert.ok(html.includes('scans up to 50 recent matches')&&html.includes('Latest 
 assert.ok(api.includes('requires_session:false')&&api.includes('public_workspace:true'),'League health contract must remain public');
 assert.ok(api.includes('ANALYSIS_CACHE_METADATA_LIMIT=100'),'League must retain broad cache discovery as lightweight metadata');
 assert.ok(api.includes('ANALYSIS_DEEP_TARGET_GAMES=20')&&api.includes('ANALYSIS_DEEP_BATCH_SIZE=20'),'League must load timeline JSON only in bounded batches until the final Last-20 is satisfied');
-assert.ok(api.includes('metadata_then_bounded_timelines_v2_role_selected')&&api.includes('avoidsHistoricalTimelinePayload:true'),'Data Quality must expose the role-selected staged cache-read strategy');
+assert.ok(api.includes('metadata_role_then_queue_then_bounded_timelines_v3')&&api.includes('queueSelectionScope:"selected_role"')&&api.includes('avoidsHistoricalTimelinePayload:true'),'Data Quality must expose role-first metadata cohorting before queue selection and bounded timeline reads');
 assert.ok(api.includes('rankNeedIds.length')&&api.includes('select("match_id,match_json")'),'Peer-rank backfill must fetch match JSON only for unresolved targets');
+assert.ok(roleCacheMigration.includes('add column if not exists player_role text')&&roleCacheMigration.includes('league_match_cache_profile_role_queue_time_idx'),'Role cache migration must persist canonical role and index role+queue recency');
+assert.ok(api.includes('player_role:playerRole')&&api.includes('const stored=role(row?.player_role)'),'New cache rows must persist canonical role and role reads must prefer lightweight metadata');
+assert.ok(api.includes('queueSelection=selectRecentQueueCohort(roleEligible,20)')&&api.includes('dominant_within_recent_selected_role_supported_window_tie_newest'),'Dominant queue selection must be computed inside the selected role, never from other-role matches');
+assert.ok(api.includes('select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,player_role,peer_rank_json,peer_rank_fetched_at")'),'Fetch-finish role/queue cohorting must remain metadata-only');
+assert.ok(api.includes('select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,player_role,peer_rank_json,peer_rank_fetched_at,fetch_error")'),'Analyze stage-one role selection must remain metadata-only');
+assert.ok(app.includes("Number(result.finish?.comparable_cached_games??0)<20"),'Automatic deepening must be driven by the final role+queue comparable sample rather than all games in the role');
+assert.ok(app.includes("roleCount=Number(d.selected_role_cached_games"),'Cache status must expose selected-role depth to the user');
 assert.ok(api.includes('.not("timeline_json","is",null)')&&api.includes('select("match_id,peer_rank_json,peer_rank_fetched_at")'),'Fetch-start cache detection must use null filters instead of transferring timeline blobs');
 assert.ok(api.includes('metadata_then_selected_reports_v1'),'Latest-report retrieval must select metadata first and hydrate only current/previous report payloads');
 assert.ok(api.includes('select("id,source_kind,analyzer_version,sample_match_ids,created_at,data_quality")'),'Report-history scan may include lightweight data_quality role metadata but must exclude report_data blobs');
@@ -289,10 +298,12 @@ assert.ok(html.includes('id="requestRole"')&&html.includes('<option value="ADC" 
 assert.ok(app.includes('target_role:targetRole')&&api.includes('targetRole=role(body.target_role)'),'Selected role must be transmitted to fetch/analyze/history backend actions');
 assert.ok(api.includes('deepCandidates=selectedRole==="GENERIC"?allDeepCandidates:allDeepCandidates.filter((x:any)=>x.g.role===selectedRole)')&&api.includes('games=deepCandidates.slice(0,20)'),'Selected-role filtering must happen before the Last-20 sample is cut');
 assert.ok(api.includes('rr!=="GENERIC"&&(targetRole==="GENERIC"||rr===targetRole)'),'Timeline batching must count only the requested role toward the 20-game target');
-assert.ok(api.includes('selected_role_cached_games')&&api.includes('queue_comparable_cached_games'),'Fetch completion must distinguish selected-role availability from queue-only availability');
+assert.ok(api.includes('selected_role_total_cached_games')&&api.includes('selected_role_cached_games')&&api.includes('queue_comparable_cached_games'),'Fetch completion must distinguish all selected-role cache from the role+queue comparable cohort');
 assert.ok(app.includes('Role-selection safety check failed'),'Frontend must fail closed if another role ever leaks into a selected-role report');
 assert.ok(html.includes('id="savedProfileSelect"')&&html.includes('id="newSavedProfileBtn"')&&app.includes("api('profiles_list')")&&app.includes("api('profile_save'"),'League must expose intuitive server-backed Riot profiles');
 assert.ok(app.includes("String(p.profile_key||'')==='recent-request'")&&app.includes('id:legacy.id')&&app.includes('generatedProfileKey(legacy.game_name'),'Legacy scratch Riot identity must be upgraded in place to a named saved profile so existing cached matches are preserved');
+assert.ok(api.includes('identityMatch=(candidates||[]).find')&&api.includes('reuseExistingId'),'Profile save must reuse an existing matching Riot identity instead of creating another alias');
+assert.ok(identityMigration.includes('league_profiles_owner_riot_identity_uidx')&&identityMigration.includes("legacy.profile_key='recent-request'"),'Database migration must merge empty legacy duplicates and enforce one Riot identity per workspace');
 assert.ok(app.includes("oldHistory=await api('report_latest'")&&app.includes("api('analyze_basic',{profile_id:migrated.profile.id,target_role:inferredRole})"),'Legacy mixed reports must be used only to infer role, then rebuilt from cached Riot data into a role-pure saved report');
 assert.ok(app.includes("api('report_latest',{profile_id:profile.id,target_role:selectedRole})")&&api.includes('role(x?.data_quality?.selectedRole)===targetRole'),'Saved report history must be role-specific');
 assert.ok(app.includes('LEAGUE_SLOT_SELECTION_KEY')&&!app.includes('LEAGUE_PROFILE_SELECTION_KEY'),'Browser storage may remember only the selected profile slot pointer; Riot profile/report data stays server-side');
@@ -510,7 +521,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v117'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v118'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
