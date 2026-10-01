@@ -128,6 +128,10 @@ ok(backend.includes('function majorOwnershipMilestones(')&&backend.includes('sec
 ok(backend.includes('ownedMajorCount<=milestones.length'), 'sale/rebuy or one-for-one upgrades must not create a false second-major milestone');
 ok(backend.includes('inventoryCountsAt(sorted,Number(e.tMs))'), 'major-item milestones must use the reconstructed item ledger');
 ok(backend.includes('secondMajorGames')&&backend.includes('avgSecondMajorTime')&&backend.includes('avgSecondMajorDeltaVsOpponent'), 'second major-item timing must remain aggregated');
+ok(backend.includes('function outcomeStreakSummary('), 'Last-20 result streak helper must remain explicit');
+ok(backend.includes('outcomeStreaks=outcomeStreakSummary(games)'), 'result streaks must use the eligible displayed Last-20 sample');
+ok(app.includes('Longest win / loss streak')&&app.includes('Current result streak'), 'descriptive result streaks must remain visible');
+ok(app.includes('not treated as evidence of tilt, momentum, or player psychology'), 'result streaks must remain explicitly non-causal and non-psychological');
 ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
 ok(backend.includes('objectiveRootCauses'), 'objective root-cause evidence ranking must remain in analyzer');
 ok(backend.includes('objectiveRootCauses.sort'), 'objective root causes must remain severity-ranked');
@@ -271,5 +275,5 @@ console.log(JSON.stringify({
   appVersion,
   domRefs:refs.length,
   domIds:ids.length,
-  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence','control-ward-purchases','second-major-timing']
+  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence','control-ward-purchases','second-major-timing','last20-result-streaks']
 },null,2));
