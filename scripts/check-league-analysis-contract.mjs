@@ -134,6 +134,11 @@ ok(backend.includes('purchases[idx].committed=false'), 'ITEM_UNDO must invalidat
 ok(backend.includes('function committedItemPurchaseCount('), 'Control Ward purchase counts must consume the committed-purchase stream');
 ok(backend.includes('function purchaseCashCost(')&&backend.includes('recipe_owned_component_credit'), 'shop spend must use recipe-aware cash-cost estimates');
 ok(backend.includes('out.shopVisits=applyDynamicShopSpendBounds(purchaseGroups(itemEventsByPid,catalog),out.roleQuestContext)'), 'shop visits must receive the complete item ledger before role-aware dynamic spend bounds are applied');
+ok(backend.includes('function persistedReportProjection('), 'saved reports must use an explicit compact storage projection');
+ok(backend.includes('schema:"league_saved_report_compact_v1"'), 'saved-report compact schema must remain versioned');
+ok(backend.includes('report_data:persistedRep'), 'analysis persistence must write the compact projection rather than the full live report');
+ok(backend.includes('omittedPerGame:["objectives","frameSamples","goldSeries","involvedKills","shopVisits","opponentShopVisits"]'), 'only known UI-unused calculation intermediates may be omitted from persisted games');
+ok(app.includes('objectiveEventCount||0')&&app.includes('shopVisitCount||0'), 'frontend must render compact saved-report count fallbacks');
 ok(backend.includes('first committed ≥250g recipe-aware purchase group'), 'first-reset provenance must retain committed recipe-aware semantics');
 ok(backend.includes('controlWardIds=new Set<number>([2055])')&&backend.includes('text(info?.name).toLowerCase()==="control ward"'), 'Control Ward detection must retain item-id and catalog-name evidence');
 ok(backend.includes('function majorOwnershipMilestones(')&&backend.includes('secondMajorItemDeltaVsOpponent'), 'second major-item completion must remain measurable from owned inventory against the direct role opponent');
