@@ -35,6 +35,9 @@ ok(backend.includes('closing25:{'), '25-minute closing summary must remain expor
 ok(backend.includes('impactDeltaVsOpponent'), 'direct-peer first-impact comparison must remain in analyzer');
 ok(backend.includes('roam.laneCostCs='), 'roam lane-cost comparison must remain in analyzer');
 ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
+ok(backend.includes('objectiveRootCauses'), 'objective root-cause evidence ranking must remain in analyzer');
+ok(backend.includes('objectiveRootCauses.sort'), 'objective root causes must remain severity-ranked');
+ok(backend.includes('objectiveDiagnosis:{presenceLow:objectivePresenceLow,primaryCause:objectivePrimaryCause?.key||null,causes:objectiveRootCauses}'), 'objective diagnosis must remain exported');
 ok(backend.includes('goldSwingTo15'), 'clean solo-kill conversion must preserve gold swing to 15');
 ok(backend.includes('csSwingTo15'), 'clean solo-kill conversion must preserve CS swing to 15');
 ok(backend.includes('Number(x.goldSwingTo15)>=200'), 'clean solo-kill conversion threshold must remain +200g by 15');
