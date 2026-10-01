@@ -352,6 +352,7 @@ ok(backend.includes('selected_role_cached_games')&&app.includes('selected_role_c
 ok(app.includes('Role-selection safety check failed'), 'frontend must reject any selected-role contamination');
 ok(html.includes('id="savedProfileSelect"')&&app.includes("api('profiles_list')")&&app.includes("api('profile_save'"), 'Riot identity and analysis history must be reusable through saved Kalenel League profiles');
 ok(app.includes("String(p.profile_key||'')==='recent-request'")&&app.includes('id:legacy.id'), 'legacy direct-request profile must migrate in place rather than cloning or discarding its cache');
+ok(app.includes("oldHistory=await api('report_latest'")&&app.includes("target_role:inferredRole"), 'legacy mixed analysis may infer a preferred role but must be rebuilt role-pure from cached data');
 ok(backend.includes('role(x?.data_quality?.selectedRole)===targetRole'), 'saved analysis history must be filtered by role before previous-analysis comparison');
 ok(backend.includes('nearest_player_frame_35s')&&backend.includes('wardFrameProjectedPositions'), 'ward events with omitted coordinates must be counted and boundedly projected rather than disappearing');
 ok(app.includes('function deathPatternEntries(')&&app.includes('objective_side_lane')&&app.includes('vision_facecheck')&&app.includes('post_play_giveback'), 'death review must classify recurring supported patterns instead of showing only one undifferentiated map');
