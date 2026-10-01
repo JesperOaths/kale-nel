@@ -922,6 +922,9 @@ function renderAdvanced(r){
     metric('Higher-rank gold @15',hasNum(p.higherRankAvgGoldDiff15)?signed(p.higherRankAvgGoldDiff15,0)+'g':'n/a',!hasNum(p.higherRankAvgGoldDiff15)),
     metric('Beat higher-rank peer on gold @15',fmtPct(p.higherRankGoldOutperformPct),!hasNum(p.higherRankGoldOutperformPct)),
     metric('DPM vs higher-rank peer',hasNum(p.higherRankAvgDpmDelta)?signed(p.higherRankAvgDpmDelta,0):'n/a',!hasNum(p.higherRankAvgDpmDelta)),
+    metric('Higher-rank major-item games',String(p.higherRankMajorItemGames??0),false),
+    metric('Major-item timing vs higher-rank peer',hasNum(p.higherRankAvgMajorItemDeltaMin)?signed(p.higherRankAvgMajorItemDeltaMin,1)+' min':'n/a',!hasNum(p.higherRankAvgMajorItemDeltaMin)),
+    metric('Faster major item vs higher-rank peer',fmtPct(p.higherRankMajorItemFasterPct),!hasNum(p.higherRankMajorItemFasterPct)),
     metric('Post-kill conversion Δ',hasNum(r.behaviorSummary?.killConversionDelta)?signed(r.behaviorSummary.killConversionDelta,0)+' pp':'n/a',!hasNum(r.behaviorSummary?.killConversionDelta))
   ];
   const conversionRows=[
