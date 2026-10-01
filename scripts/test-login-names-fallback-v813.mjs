@@ -56,11 +56,11 @@ assert.equal(calls.length,0,'static-first load must not hit Supabase during the 
 const refreshTimer=delayedTimers.find(x=>x.ms===3000);
 assert.ok(refreshTimer,'static-first load must schedule one delayed authoritative refresh');
 refreshTimer.fn();
-await Promise.resolve();await Promise.resolve();
+for(let i=0;i<20&&calls.length<1;i++) await new Promise(resolve=>setImmediate(resolve));
 assert.equal(calls.length,1,'delayed verification must make exactly one authoritative name request');
 assert.equal(calls[0].init.method,'POST');
 assert.equal(calls[0].init.headers.apikey,'publishable-test-key');
-await Promise.resolve();await Promise.resolve();
+for(let i=0;i<20&&!cacheWrites.some(x=>x.scope==='family'&&x.names.join('|')==='Familie A|Familie B');i++) await new Promise(resolve=>setImmediate(resolve));
 assert.ok(cacheWrites.some(x=>x.scope==='family'&&x.names.join('|')==='Familie A|Familie B'),'successful delayed live refresh must replace the last-known-good cache');
 
 assert.match(staticSource,/friends:/);
