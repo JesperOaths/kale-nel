@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 
 const workflow = fs.readFileSync('.github/workflows/live-deployment-health.yml', 'utf8');
 const probe = fs.readFileSync('check-live-data-plane.mjs', 'utf8');
+const runtimeConfig = fs.readFileSync('gejast-config.js', 'utf8');
+const authGateRuntime = fs.readFileSync('gejast-auth-gate.js', 'utf8');
 const authGate = fs.readFileSync('gejast-auth-gate.js', 'utf8');
 const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 
@@ -55,6 +57,11 @@ assert.match(probe, /timeoutMs > 15000/, 'per-attempt timeout must have a hard u
 assert.match(probe, /attempts > 3/, 'probe retry count must have a hard upper bound of three attempts');
 assert.match(probe, /DATA_PLANE_PASS rpc=\$\{rpcName\} invalid_session_rejected=true/, 'healthy data plane must emit a precise positive marker');
 assert.match(probe, /DATA_PLANE_FAIL rpc=\$\{rpcName\}/, 'unhealthy data plane must emit a precise negative marker');
+assert.match(runtimeConfig, /function publicApiHeaders\(extra=\{\}\)/, 'shared runtime must expose one public API header policy');
+assert.match(runtimeConfig, /key\.startsWith\('sb_publishable_'\)/, 'shared fetch guard must specifically recognize opaque publishable keys');
+assert.match(runtimeConfig, /authorization === \`Bearer \$\{key\}\`\) headers\.delete\('Authorization'\)/, 'shared fetch guard must strip only the duplicated opaque publishable-key bearer');
+assert.match(runtimeConfig, /window\.__GEJAST_PUBLIC_KEY_FETCH_GUARD_V1 = true/, 'shared fetch guard must be idempotent');
+assert.doesNotMatch(authGateRuntime, /apikey:key,Authorization:'Bearer '\+key/, 'auth gate must not unconditionally duplicate the opaque public key into Authorization');
 
 const mutatingSignals = [
   /create_/i, /join_/i, /save_/i, /insert/i, /update/i, /delete/i, /cleanup/i, /finish/i, /start_/i,
