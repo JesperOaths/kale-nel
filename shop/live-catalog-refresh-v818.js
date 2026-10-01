@@ -1,9 +1,9 @@
 (() => {
   'use strict';
 
-  const POLL_MS = 10 * 60 * 1000;
-  const FIRST_POLL_MS = 2 * 60 * 1000;
-  const SHARED_MIN_REFRESH_MS = 5 * 60 * 1000;
+  const POLL_MS = 15 * 60 * 1000;
+  const FIRST_POLL_MS = 5 * 60 * 1000;
+  const SHARED_MIN_REFRESH_MS = 10 * 60 * 1000;
   const SHARED_CHECK_KEY = 'bruisCatalogLiveCheckAtV4';
   const SHARED_OWNER_KEY = 'bruisCatalogLiveCheckOwnerV4';
   const TAB_ID = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
