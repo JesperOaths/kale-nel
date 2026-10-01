@@ -53,7 +53,7 @@ for(const file of walk(process.cwd())){
   }
   if(separatelyProtected(r))continue;
   protectedCount++;
-  if(!/<head(?:\s[^>]*)?><script src="\/gejast-auth-gate\.js\?v\d+"><\/script>/i.test(body))missing.push(r);
+  if(!/<head(?:\s[^>]*)?>\s*<script src="\/gejast-auth-gate\.js\?v\d+"><\/script>/i.test(body))missing.push(r);
 }
 assert(protectedCount>=40,`protected publication inventory unexpectedly small: ${protectedCount}`);
 assert.deepEqual(missing,[],`published pages missing forced-login gate:\n${missing.join('\n')}`);
