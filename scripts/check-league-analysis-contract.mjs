@@ -324,19 +324,19 @@ ok(backend.includes('comparableCachedGames'), 'fetch finish must measure compara
 ok(backend.includes('ANALYSIS_CACHE_METADATA_LIMIT=100'), 'League must keep the historical cache horizon as lightweight metadata rather than a 100-timeline payload');
 ok(backend.includes('ANALYSIS_DEEP_TARGET_GAMES=20')&&backend.includes('ANALYSIS_DEEP_BATCH_SIZE=20'), 'deep timeline loading must target the final Last-20 in bounded batches');
 ok(backend.includes('ANALYSIS_BASELINE_MAX_ROWS=80'), 'historical baseline depth must remain available without timeline payloads');
-ok(backend.includes('metadata_then_bounded_timelines_v1'), 'analysis data quality must expose the staged cache-read strategy');
+ok(backend.includes('metadata_then_bounded_timelines_v2_role_selected'), 'analysis data quality must expose the role-selected staged cache-read strategy');
 ok(backend.includes('avoidsHistoricalTimelinePayload:true'), 'analysis must explicitly record that baseline timelines were not transferred');
 ok(backend.includes('select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,peer_rank_json,peer_rank_fetched_at")'), 'fetch-finish queue selection must remain metadata-only');
 ok(backend.includes('rankNeedIds.length')&&backend.includes('select("match_id,match_json")'), 'fetch-finish must load match JSON only for peer-rank rows that still need it');
 ok(backend.includes('.not("timeline_json","is",null)')&&backend.includes('select("match_id,peer_rank_json,peer_rank_fetched_at")'), 'fetch-start cache detection must not transfer timeline JSON');
 ok(backend.includes('metadata_then_selected_reports_v1'), 'report_latest must expose metadata-first selected-payload retrieval');
-ok(backend.includes('select("id,source_kind,analyzer_version,sample_match_ids,created_at")'), 'report history must scan metadata without report blobs');
+ok(backend.includes('select("id,source_kind,analyzer_version,sample_match_ids,created_at,data_quality")'), 'report history must scan lightweight metadata plus role-selection quality without report blobs');
 ok(backend.includes('detailIds=[currentMeta?.id,previousMeta?.id]')&&backend.includes('select("id,report_data,data_quality")'), 'report_latest must hydrate at most current and previous full reports');
 ok(!backend.includes('select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,match_json,peer_rank_json,peer_rank_fetched_at").eq("profile_id",p.id).not("match_json","is",null).order("game_start_at",{ascending:false}).limit(100)'), 'fetch-finish must never reintroduce the 100 full-match hot-path read');
 ok(backend.includes('recommend_deeper_cache'), 'fetch finish must flag a comparable sample smaller than Last 20');
 ok(backend.includes('const rows=[...deepRows,...baselineRows]'), 'analysis must compose recent full-timeline rows with timeline-free baseline rows');
 ok(backend.includes('deepRoleUsable<ANALYSIS_DEEP_TARGET_GAMES'), 'timeline batches must continue only until enough role-usable games exist');
-ok(backend.includes('cachedRowRole(row,p.puuid)!=="GENERIC"'), 'timeline batching must count actual role-usable cached matches rather than raw rows');
+ok(backend.includes('rr!=="GENERIC"&&(targetRole==="GENERIC"||rr===targetRole)'), 'timeline batching must count only actual selected-role usable cached matches rather than raw rows');
 ok(backend.includes('x-riot-api-key'), 'session Riot-key header must remain supported by backend/CORS');
 ok(app.includes('practiceTargetHtml'), 'frontend must render measurable practice checkpoints');
 ok(app.includes('previousPracticeTargetOutcomes'), 'frontend must score prior practice targets against later distinct analyses');
@@ -345,11 +345,23 @@ ok(app.includes('Number(curQueue)!==Number(prevQueue)'), 'practice-target follow
 ok(app.includes('curPatch!==prevPatch'), 'practice-target follow-up must fail closed when patch cohort changes');
 ok(app.includes("'moving closer'")&&app.includes("'moved away'")&&app.includes("'unchanged'"), 'practice-target follow-up statuses must remain explicit');
 ok(html.includes('id="practiceOutcome"'), 'practice target outcome container must remain in page');
+ok(html.includes('id="requestRole"')&&app.includes('selectedAnalysisRole()'), 'frontend must expose and consume a selected analysis role');
+ok(backend.includes('function report(profile:any,rows:any[],catalog:any,requestedRole:any=null)')&&backend.includes('allDeepCandidates.filter((x:any)=>x.g.role===selectedRole)'), 'backend report construction must filter by selected role before Last-20 slicing');
+ok(backend.includes('selectedRole:primaryRole')&&backend.includes('excludedOtherRoles'), 'report data quality must disclose selected role and excluded other-role games');
+ok(backend.includes('selected_role_cached_games')&&app.includes('selected_role_cached_games'), 'fetch depth must be driven by selected-role sample size');
+ok(app.includes('Role-selection safety check failed'), 'frontend must reject any selected-role contamination');
+ok(html.includes('id="savedProfileSelect"')&&app.includes("api('profiles_list')")&&app.includes("api('profile_save'"), 'Riot identity and analysis history must be reusable through saved Kalenel League profiles');
+ok(backend.includes('role(x?.data_quality?.selectedRole)===targetRole'), 'saved analysis history must be filtered by role before previous-analysis comparison');
+ok(backend.includes('nearest_player_frame_35s')&&backend.includes('wardFrameProjectedPositions'), 'ward events with omitted coordinates must be counted and boundedly projected rather than disappearing');
+ok(app.includes('function deathPatternEntries(')&&app.includes('objective_side_lane')&&app.includes('vision_facecheck')&&app.includes('post_play_giveback'), 'death review must classify recurring supported patterns instead of showing only one undifferentiated map');
+ok(html.includes('id="compoundSignals"')&&app.includes('function renderCompoundSignals('), 'compound evidence analysis must combine related metrics into interpretable intelligence');
+ok(app.includes("objDiagnosed?tonePct(objective,70,45,false):'neutral'"), 'objective attendance judgment must require role-appropriate supported diagnosis');
+ok(html.includes('id="rankRadarPanel"')&&app.includes("reportRole!=='ADC'"), 'ADC benchmark UI must be withheld for non-ADC role reports');
 ok(app.includes('Next 5 comparable games'), 'practice cards must identify the short practice horizon');
 const browserStorageLines=app.split(/\r?\n/).filter(line=>/localStorage|sessionStorage|indexedDB/.test(line));
 ok(!/sessionStorage|indexedDB/.test(app), 'League must not persist Riot keys/reports in sessionStorage or IndexedDB');
-ok(browserStorageLines.every(line=>line.includes('LEAGUE_WORKSPACE_KEY')||line.includes('localStorage.getItem(LEAGUE_WORKSPACE_KEY)')||line.includes('localStorage.setItem(LEAGUE_WORKSPACE_KEY')),'Persistent League browser storage must be limited to the anonymous workspace identifier');
-ok(!/localStorage\.(?:setItem|getItem)\([^\n]*(?:riot|api.?key|report|profile|match|puuid)/i.test(app),'Riot keys, reports, profiles and match state must not be persisted in localStorage');
+ok(browserStorageLines.every(line=>line.includes('LEAGUE_WORKSPACE_KEY')||line.includes('LEAGUE_SLOT_SELECTION_KEY')||line.includes('localStorage.getItem(LEAGUE_WORKSPACE_KEY)')||line.includes('localStorage.setItem(LEAGUE_WORKSPACE_KEY')),'Persistent League browser storage must be limited to the anonymous workspace identifier plus the selected saved-profile slot pointer');
+ok(!/localStorage\.(?:setItem|getItem)\([^\n]*(?:riotApiKey|api.?key|report_data|match_json|timeline_json|puuid)/i.test(app),'Riot keys, reports, match payloads and PUUIDs must not be persisted in localStorage');
 
 let parseError=null;
 try{new Function(app);}catch(e){parseError=e;}
