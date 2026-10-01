@@ -4,6 +4,7 @@ const read=(p)=>fs.readFileSync(p,'utf8');
 const backend=read('supabase/functions/league-api-v1/index.ts');
 const app=read('league/app.js');
 const html=read('league/index.html');
+const migration=read('supabase/migrations/20261001043000_league_web_foundation_v1.sql');
 
 const failures=[];
 const ok=(cond,msg)=>{if(!cond)failures.push(msg);};
