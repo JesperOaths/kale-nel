@@ -10,13 +10,27 @@ const migration=fs.readFileSync('supabase/migrations/20261001043000_league_web_f
 
 assert.doesNotThrow(()=>new vm.Script(app,{filename:'league/app.js'}),'league/app.js must remain valid browser JavaScript');
 
-assert.ok(api.includes('x-gejast-session'));
+assert.ok(api.includes('x-league-workspace'),'Public League API must accept an isolated browser-workspace identifier');
+assert.ok(api.includes('publicWorkspaceOwnerId('),'Public League workspaces must map to isolated non-session owners');
+assert.ok(api.includes('requires_session:false')&&api.includes('public_workspace:true'),'League health contract must remain public');
+assert.ok(api.includes('allowServerRiotKey=viewer.anonymous!==true'),'Anonymous League workspaces must never inherit the private server Riot key');
+assert.ok(api.includes('const key=(allowServerKey?RIOT_KEY:"")||text(requestKey)'),'Riot client must enforce the anonymous/server-key boundary');
+assert.ok(app.includes("'x-league-workspace':workspaceId()"),'League browser must use public workspace isolation rather than Kalenel login');
+assert.ok(!app.includes("'x-gejast-session':token()"),'League browser must not depend on a Kalenel player session');
+assert.ok(!html.includes('gejast-auth-gate.js')&&!html.includes('gejast-home-gate.js')&&!html.includes('requireMatchEntrySession'),'League page and subsidiaries must stay outside the site login gate');
+assert.ok(html.includes('name="robots" content="index,follow'),'Public League page must remain indexable/followable');
 assert.ok(api.includes('x-riot-api-key'));
 assert.ok(api.includes('Access-Control-Allow-Headers'));
 assert.ok(api.includes('const hasNum='));
 assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('lateResetObjectiveMissRate'));
+assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
+assert.ok(api.includes('playerSupported:isNeutralObjectiveEvent(o)?participantNearEvent'),'Neutral-objective conversion credit must require supported player presence');
+assert.ok(api.includes('structureInvolvement(o,frames,whoId,whoTeam,mapId)'),'Structure conversion credit must require supported player involvement');
+assert.ok(app.includes('Player-supported kill conversion')&&app.includes('Team conversion after your kill windows'),'Frontend must expose supported conversion and team context separately');
+assert.ok(api.includes('VERIFIED_2026_RULES_THROUGH_MINOR=19'),'2026 mechanics must have an explicit audited-through patch boundary');
+assert.ok(api.includes('minor>VERIFIED_2026_RULES_THROUGH_MINOR'),'Newer 2026 minors must fail closed rather than inherit stale mechanics');
 assert.ok(api.includes('championBehaviorModel'));
 assert.ok(api.includes('opponentMatchupBehaviorModel'));
 assert.ok(api.includes('buildReplayReviewQueue'));
@@ -282,8 +296,12 @@ assert.ok(api.includes('objectiveFamilyStats:{}')&&api.includes('objectiveFamily
 assert.ok(api.includes('familyRaw==="DRAGON"&&memberSubtypes.some((x:any)=>x.includes("ELDER"))?"ELDER_DRAGON"'),'Elder Dragon must remain distinguishable from ordinary dragons when Riot subtype supports it');
 assert.ok(api.includes('objectiveSetupClears'),'Objective-setup ward clears must remain measurable');
 assert.ok(api.includes('controlWardPurchases'),'Control Ward purchases must remain distinct from placements');
-assert.ok(api.includes('function committedItemPurchaseCount('),'Control Ward purchases must account for ITEM_UNDO instead of counting transient shop clicks');
-assert.ok(api.includes('e.type==="ITEM_UNDO"&&Number(e.beforeId)===Number(itemId)'),'Undone purchases must be removed from committed purchase counts');
+assert.ok(api.includes('function committedPurchaseEvents('),'All shop/reset/item metrics must share one committed-purchase stream');
+assert.ok(api.includes('purchases[idx].committed=false'),'ITEM_UNDO must invalidate the matching transient purchase');
+assert.ok(api.includes('function committedItemPurchaseCount('),'Control Ward purchases must consume the canonical committed-purchase stream');
+assert.ok(api.includes('function purchaseCashCost(')&&api.includes('recipe_owned_component_credit'),'Shop spend must be recipe-aware instead of using raw Data Dragon base gold');
+assert.ok(api.includes('out.shopVisits=purchaseGroups(itemEventsByPid,catalog)'),'Reset/shop visits must consume the full item ledger so undo events can be removed');
+assert.ok(api.includes('first committed ≥250g recipe-aware purchase group'),'First-reset definition must state committed recipe-aware spend semantics');
 assert.ok(api.includes('controlWardIds=new Set<number>([2055])')&&api.includes('text(info?.name).toLowerCase()==="control ward"'),'Control Ward detection must retain stable item-id plus catalog-name evidence');
 assert.ok(api.includes('function majorOwnershipMilestones(')&&api.includes('secondMajorItemDeltaVsOpponent'),'Second major-item timing must remain derived from reconstructed owned inventory and compared with the direct role opponent');
 assert.ok(api.includes('ownedMajorCount<=milestones.length'),'Second-major timing must not count a sale/rebuy or one-for-one major upgrade as a new owned-item milestone');
@@ -312,7 +330,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v84'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v85'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
@@ -359,7 +377,7 @@ assert.ok(api.includes('higherRankMajorItemGames'),'Higher-ranked peer item samp
 assert.ok(api.includes('higherRankAvgMajorItemDeltaMin'),'Higher-ranked peer first-major timing delta must remain exported');
 assert.ok(api.includes('higherRankMajorItemFasterPct'),'Higher-ranked peer first-major faster rate must remain exported');
 assert.ok(api.includes('First-major timing slips against higher-ranked direct opponents'),'Higher-rank item timing must remain actionable coaching evidence');
-assert.ok(api.includes('league-web-behavior-v4.39'),'Analyzer version must include season-aware rules and turret-tier involvement');
+assert.ok(api.includes('league-web-behavior-v4.43'),'Analyzer version must include the public-workspace and metric-hygiene refinements');
 assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
 assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
 assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
