@@ -135,7 +135,7 @@ assert.ok(app.includes('Readiness delay vs peer'),'Frontend must expose recipe-a
 assert.ok(app.includes('Earlier-item windows used'));
 assert.ok(app.includes('Solo-kill deaths before next shop'));
 assert.ok(app.includes('Deaths before shop after solo kill'));
-assert.ok(app.includes('Outside-pressure lane deaths'));
+assert.ok(app.includes('Outside-pressure early deaths'));
 assert.ok(app.includes('CS swing 15→25'));
 assert.ok(app.includes('Outside-pressure share of early lane deaths'));
 assert.ok(app.includes('solo death to role opponent'));
