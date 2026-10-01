@@ -1665,3 +1665,15 @@ Use the analyzer's own coaching floors:
 - early-lead give-back rate: at least 4 measured ≥500g pre-15 lead opportunities.
 
 Below those floors, show the value and sample count for traceability, label it **thin sample — descriptive only**, and keep the card neutral. A small denominator must not visually impersonate high-confidence evidence.
+
+
+## Report information hierarchy
+
+The prominent report layers have deliberately different jobs and should not duplicate one another:
+
+1. **What should drive the next games?** — strongest supported limiter, bankable strength and recent direction.
+2. **Direct-role comparison** — actual same-role opponents from analyzed matches: role gold @15, CS/min, DPM, first-major timing, first tracked impact and repeat-death recurrence. Directional coloring requires the same minimum samples used by the analyzer (5 lane/peer/impact games, 4 first-major games, 8 recovery opportunities).
+3. **Raw selected-role output** — the player's own win rate, KDA, CS/min, KP, DPM and deaths/game. These cards remain neutral and contain no benchmark inference.
+4. **ADC rank comparison** — the external population/rank reference, kept separate from actual per-match opponents.
+
+Do not duplicate external ADC benchmark claims in the raw KPI strip or direct-role comparison. Do not present direct same-role opponents as population rank averages.
