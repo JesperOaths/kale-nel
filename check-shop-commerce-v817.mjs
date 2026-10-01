@@ -133,8 +133,9 @@ assert.match(store, /shop-catalog-v828/, 'storefront must retain the live Printi
 assert.match(store, /source: 'static-snapshot'/, 'generated catalog snapshot must be the deterministic first-paint source');
 assert.doesNotMatch(store, /result\?\.source === 'cache'[\s\S]*?refreshLiveCatalog/, 'initial render must not immediately hit Supabase for a valid browser cache');
 assert.match(store, /BRUIS_CATALOG_LAST_GOOD/, 'storefront must have a generated read-only last-good rendering fallback');
-assert.match(store, /source: 'static-fallback'/, 'static snapshot must be labelled separately from live/cache authority');
-assert.match(store, /refreshLiveCatalog\(1\)\.then\(replaceCatalogFromLive\)/, 'static/cache rendering must reconcile with live catalog in the background');
+assert.match(store, /source: 'static-snapshot'/, 'deployment snapshot must be labelled separately from live/cache authority');
+assert.doesNotMatch(store, /refreshLiveCatalog\(1\)\.then\(replaceCatalogFromLive\)/, 'initial storefront bootstrap must not duplicate the dedicated background live-catalog watcher');
+assert.match(refresh, /window\.setTimeout\(checkCatalog, FIRST_POLL_MS\)/, 'live reconciliation must be owned by the bounded background watcher');
 assert.doesNotMatch(store, /catalog\.json/, 'storefront must not revive legacy JSON catalog fallbacks');
 assert.match(catalogLastGood, /window\.BRUIS_CATALOG_LAST_GOOD=/, 'generated last-good snapshot must expose the dedicated immutable browser object');
 const snapshotMatch=catalogLastGood.match(/window\.BRUIS_CATALOG_LAST_GOOD=(\{.*\});\}\)\(\);/s);
