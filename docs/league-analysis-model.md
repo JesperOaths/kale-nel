@@ -127,6 +127,26 @@ The report should expose the contributing tags and nearby ally/enemy counts so t
 
 A death occurring near an objective is contextual information; it is not automatically a bad death.
 
+## Deaths before enemy objective conversion
+
+In addition to broad objective context, track whether an enemy objective is actually taken within **75 seconds after the player's death**.
+
+For each qualifying sequence preserve:
+- death minute,
+- seconds until the objective,
+- objective type,
+- current/unspent gold when available.
+
+This is a stronger coaching signal than simply dying near an objective, because it describes a concrete loss-of-availability sequence. It is still not proof that the death caused the objective loss.
+
+Use wording such as:
+
+"Your death was followed by an enemy dragon 42 seconds later."
+
+Do not write:
+
+"Your death lost the dragon."
+
 ## Objective context
 
 Tracked objective events include supported elite-monster/building events from the Riot timeline.
