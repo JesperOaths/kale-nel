@@ -76,6 +76,14 @@ let cart = JSON.parse(localStorage.getItem(cartKey) || '[]');
 const qs = sel => document.querySelector(sel);
 const qsa = sel => [...document.querySelectorAll(sel)];
 const wholeEuro = value => Math.ceil(Math.max(0, Number(value || 0)) - 1e-9);
+const CLASSIC_SHIRT_PRICE_BY_SIZE = Object.freeze({
+  S:24, M:24, L:24, XL:24, '2XL':26, '3XL':30, '4XL':30, '5XL':30
+});
+const classicShirtPrice = (baseKey, size, fallback) => {
+  if(String(baseKey || '') !== '6') return wholeEuro(fallback);
+  const key = String(size || '').trim().toUpperCase().replace(/\s+/g, '');
+  return CLASSIC_SHIRT_PRICE_BY_SIZE[key] ?? wholeEuro(fallback);
+};
 const money = value => `€${wholeEuro(value)}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const slug = text => String(text || 'product').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,80) || 'product';
@@ -106,17 +114,24 @@ function normalizeProduct(raw){
   const collection = /despinoza/i.test(name)
     ? 'merch'
     : normalizeCollection(raw.collection || raw.shirtCollection || raw.fit);
+  const variants = Array.isArray(raw.variants)
+    ? raw.variants.map(variant => ({
+        ...variant,
+        price: classicShirtPrice(baseKey, variant?.size, variant?.price)
+      }))
+    : [];
+  const variantPrices = variants.map(variant => Number(variant?.price || 0)).filter(price => price > 0);
   return {
     id: String(raw.id || slug(name)),
     name,
-    price: wholeEuro(raw.price),
-    priceMax: wholeEuro(raw.priceMax || raw.price),
+    price: baseKey === '6' && variantPrices.length ? Math.min(...variantPrices) : wholeEuro(raw.price),
+    priceMax: baseKey === '6' && variantPrices.length ? Math.max(...variantPrices) : wholeEuro(raw.priceMax || raw.price),
     sizes: shirtSizes(raw, baseKey),
     mockups,
     image: mockups[0]?.image || raw.image || '',
     baseLabel: publicBaseLabel(raw.baseLabel, baseKey),
     baseKey: String(raw.baseKey || raw.blueprintId || raw.blueprint_id || ''),
-    variants: Array.isArray(raw.variants) ? raw.variants.map(variant => ({ ...variant, price: wholeEuro(variant.price) })) : [],
+    variants,
     shopId: String(raw.shopId || raw.shop_id || ''),
     baseKey,
     collection
