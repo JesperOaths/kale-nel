@@ -317,9 +317,33 @@ function renderBullets(id,items,empty){
 function pathValue(obj,path){
   return String(path||'').split('.').reduce((v,k)=>v==null?null:v[k],obj);
 }
+function previousPracticeTargetOutcomes(current,previous){
+  const targets=Array.isArray(previous?.practiceTargets)?previous.practiceTargets:[];
+  if(!targets.length)return{rows:[],reason:''};
+  const curRole=String(current?.summary?.primaryRole||''),prevRole=String(previous?.summary?.primaryRole||'');
+  const curQueue=current?.dataQuality?.dominantQueueId,prevQueue=previous?.dataQuality?.dominantQueueId;
+  const curPatch=String(current?.dataQuality?.currentPatchKey||''),prevPatch=String(previous?.dataQuality?.currentPatchKey||'');
+  if(curRole!==prevRole)return{rows:[],reason:'Previous practice targets are not scored because the primary role changed.'};
+  if(hasNum(curQueue)&&hasNum(prevQueue)&&Number(curQueue)!==Number(prevQueue))return{rows:[],reason:'Previous practice targets are not scored because the comparable queue context changed.'};
+  if(curPatch&&prevPatch&&curPatch!==prevPatch)return{rows:[],reason:'Previous practice targets are not scored because the patch cohort changed.'};
+  const rows=targets.map(t=>{
+    const currentValue=pathValue(current,t.metricPath);
+    if(!hasNum(currentValue)||!hasNum(t.baseline)||!hasNum(t.goal))return null;
+    const cur=Number(currentValue),base=Number(t.baseline),goal=Number(t.goal),higher=t.direction!=='lower';
+    const met=higher?cur>=goal:cur<=goal,needed=Math.abs(goal-base),toward=(higher?cur-base:base-cur);
+    const material=Math.max(needed*.2,1e-9);
+    const status=met?'met':toward>=material?'moving closer':toward<=-material?'moved away':'unchanged';
+    const cls=met||status==='moving closer'?'improved':status==='moved away'?'worsened':'stable';
+    return{label:t.label||t.metricPath,current:practiceTargetValue(cur,t.unit),baseline:practiceTargetValue(base,t.unit),goal:practiceTargetValue(goal,t.unit),status,cls,sampleSize:Number(t.sampleSize||0)};
+  }).filter(Boolean);
+  return{rows,reason:''};
+}
+
 function renderProgressComparison(current,previous,previousAt){
   if(!previous){
-    $('progressComparisonPanel').hidden=true;return;
+    $('progressComparisonPanel').hidden=true;
+    if($('practiceOutcome'))$('practiceOutcome').innerHTML='';
+    return;
   }
   const role=String(current?.summary?.primaryRole||'GENERIC').toUpperCase();
   const specs=[
@@ -365,11 +389,17 @@ function renderProgressComparison(current,previous,previousAt){
     const status=effect>=s.threshold?'improved':effect<=-s.threshold?'worsened':'stable';
     return {label:s.label,current:s.format(cur),previous:s.format(prev),delta:raw,status};
   }).filter(Boolean);
-  if(!rows.length){$('progressComparisonPanel').hidden=true;return;}
-  $('previousAnalysisDate').textContent='Compared with '+fmtDate(previousAt);
+  const targetOutcome=previousPracticeTargetOutcomes(current,previous),targetRows=targetOutcome.rows||[];
   $('progressComparison').innerHTML=rows.map(x=>'<article class="progress-comparison-card '+x.status+'">'+
     '<span>'+esc(x.label)+'</span><strong>'+esc(x.status)+'</strong>'+
     '<p>Now '+esc(x.current)+' · previous '+esc(x.previous)+'</p></article>').join('');
+  if($('practiceOutcome')){
+    $('practiceOutcome').innerHTML=targetRows.length?'<div class="target-outcome-head"><strong>Previous Next-5 targets</strong><small>Descriptive check against the exact saved metric path and goal.</small></div><div class="progress-comparison-grid">'+
+      targetRows.map(x=>'<article class="progress-comparison-card '+x.cls+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.status)+'</strong><p>Now '+esc(x.current)+' · baseline '+esc(x.baseline)+' · target '+esc(x.goal)+'</p></article>').join('')+'</div>':
+      (targetOutcome.reason?'<div class="target-outcome-note">'+esc(targetOutcome.reason)+'</div>':'');
+  }
+  if(!rows.length&&!targetRows.length&&!targetOutcome.reason){$('progressComparisonPanel').hidden=true;return;}
+  $('previousAnalysisDate').textContent='Compared with '+fmtDate(previousAt);
   $('progressComparisonPanel').hidden=false;
 }
 
