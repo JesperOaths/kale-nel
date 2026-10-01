@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends playstyle analysis with evidence-backed Last-20 coaching and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261002-league-web-v129">
+  <link rel="stylesheet" href="/league/styles.css?v=20261002-league-web-v130">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261001-public-bootstrap-r2"></script>
 </head>
@@ -331,7 +331,10 @@
         <section class="panel match-history-panel" id="match-history">
           <div class="section-head">
             <div><p class="eyebrow">Recent match story</p><h2>What happened game by game?</h2></div>
-            <span class="section-hint">Expand a row for a coaching-readable summary. Use the full evidence button only when you want the technical tabs, maps and event detail.</span>
+            <div class="section-head-actions">
+              <button class="button secondary small" type="button" id="matchHistoryToggle">Show all 20</button>
+              <span class="section-hint">Expand a row for the game arc, coaching read and highest-value replay moments.</span>
+            </div>
           </div>
           <div class="match-history-summary" id="matchHistorySummary"></div>
           <div class="match-history-list" id="matchHistoryList"></div>
@@ -438,6 +441,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261002-league-web-v129" defer></script>
+  <script src="/league/app.js?v=20261002-league-web-v130" defer></script>
 </body>
 </html>
