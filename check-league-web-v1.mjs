@@ -12,6 +12,13 @@ assert.doesNotThrow(()=>new vm.Script(app,{filename:'league/app.js'}),'league/ap
 
 assert.ok(api.includes('x-league-workspace'),'Public League API must accept an isolated browser-workspace identifier');
 assert.ok(api.includes('publicWorkspaceOwnerId('),'Public League workspaces must map to isolated non-session owners');
+assert.ok(api.includes('const uuid=/^[0-9a-f]{8}-')&&api.includes('hex=/^lw1_[0-9a-f]{48,64}$/i'),'Backend must reject weak/arbitrary public workspace identifiers');
+assert.ok(app.includes('function secureWorkspaceToken()')&&app.includes('crypto.randomUUID')&&app.includes('crypto.getRandomValues'),'Frontend public workspace identity must use cryptographic randomness');
+assert.ok(!app.includes('Math.random()'),'League workspace identity must never fall back to weak Math.random entropy');
+assert.ok(api.includes('PUBLIC_MAX_PROFILES=8')&&api.includes('PUBLIC_MAX_FETCH_MATCHES=50')&&api.includes('PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE=80')&&api.includes('PUBLIC_MAX_ANALYSES_PER_PROFILE=25'),'Anonymous public workspace storage/fetch limits must remain explicit');
+assert.ok(api.includes('public_workspace_profile_limit'),'Anonymous profile creation must be bounded');
+assert.ok(api.includes('trimAnonymousMatchCache(')&&api.includes('trimAnonymousRows('),'Anonymous cache/history must be pruned after use');
+assert.ok(html.includes('50 matches · public maximum'),'Public UI must not advertise a fetch depth above the backend limit');
 assert.ok(api.includes('requires_session:false')&&api.includes('public_workspace:true'),'League health contract must remain public');
 assert.ok(api.includes('allowServerRiotKey=viewer.anonymous!==true'),'Anonymous League workspaces must never inherit the private server Riot key');
 assert.ok(api.includes('const key=(allowServerKey?RIOT_KEY:"")||text(requestKey)'),'Riot client must enforce the anonymous/server-key boundary');
@@ -35,6 +42,12 @@ assert.ok(api.includes('objectiveTeamEncounters=validTimeline.reduce')&&api.incl
 assert.ok(api.includes('objJoin=objectiveTeamEncounters?100*objectiveJoinedEncounters/objectiveTeamEncounters:null'),'Primary objective presence must be pooled rather than a mean of per-game percentages');
 assert.ok(api.includes('pooledMidRoutingObjectiveJoinRate=midRoutingTeamObjectives?100*midRoutingObjectiveJoins/midRoutingTeamObjectives:null'),'Mid-routing presence must pool objective-event denominators');
 assert.ok(api.includes('meanGameObjectiveJoinRate'),'Per-game objective-rate mean may remain only as a separate descriptive field');
+assert.ok(api.includes('STANDARD_PVP_SR_QUEUE_IDS=new Set([400,420,430,440,490,700])'),'Supported standard Summoner’s Rift PvP queues must remain explicit');
+assert.ok(api.includes('SWIFTPLAY_SR_QUEUE_IDS=new Set([480])'),'Swiftplay queue must remain explicitly separate');
+assert.ok(api.includes('supportedQueueRows=durationEligibleRows.filter'),'Report eligibility must exclude unsupported special/bot Summoner’s Rift queues');
+assert.ok(api.includes('supportedEligible=durationEligible.filter'),'Fetch-finish peer backfill must use the same supported-queue eligibility');
+assert.ok(api.includes('unsupportedQueueRowsExcluded'),'Data quality must expose unsupported queue exclusions');
+assert.ok(app.includes('unsupported special/bot queue'),'Frontend must explain unsupported queue exclusions');
 assert.ok(api.includes('championBehaviorModel'));
 assert.ok(api.includes('opponentMatchupBehaviorModel'));
 assert.ok(api.includes('buildReplayReviewQueue'));
@@ -334,7 +347,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v85'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v86'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
@@ -381,7 +394,7 @@ assert.ok(api.includes('higherRankMajorItemGames'),'Higher-ranked peer item samp
 assert.ok(api.includes('higherRankAvgMajorItemDeltaMin'),'Higher-ranked peer first-major timing delta must remain exported');
 assert.ok(api.includes('higherRankMajorItemFasterPct'),'Higher-ranked peer first-major faster rate must remain exported');
 assert.ok(api.includes('First-major timing slips against higher-ranked direct opponents'),'Higher-rank item timing must remain actionable coaching evidence');
-assert.ok(api.includes('league-web-behavior-v4.44'),'Analyzer version must include the public-workspace, pooled-denominator and metric-hygiene refinements');
+assert.ok(api.includes('league-web-behavior-v4.46'),'Analyzer version must include supported-queue filtering and bounded public-workspace refinements');
 assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
 assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
 assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
