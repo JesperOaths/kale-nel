@@ -755,11 +755,38 @@ The coaching instruction is not “recall earlier.” The goal is to prepare the
 Riot timeline item purchases are grouped into approximate shop visits.
 
 The current major-item comparison:
-- identifies a meaningful completed item from current Data Dragon item data,
+- identifies a meaningful completed item from patch-appropriate Data Dragon item data,
 - excludes boots, consumables and trinkets,
 - compares the first major completion with the actual same-role opponent.
 
-This is a practical replacement for the old "Mythic timing" idea until a more exact gold-threshold + recall reconstruction is restored.
+### Recipe-aware first-major completion readiness
+
+The historical desktop specification described this as "Mythic gold threshold + the first recall after the threshold." Modern League no longer has a stable Mythic-item class, so the web analyzer implements the underlying decision question against the **actual first major completed item** instead of hard-coding obsolete role costs.
+
+For the first major completion:
+1. resolve the completed item's current Data Dragon recipe,
+2. require its direct recipe components to have been observed in the player's purchase timeline,
+3. use the item's remaining combine cost (`gold.base`) as the supported completion threshold,
+4. after those direct ingredients are present, find the first pre-purchase timeline frame where **current spendable gold** covers that remaining combine cost,
+5. compare that supported affordability time with the actual completed-item purchase event.
+
+The result preserves:
+- ingredient-ready minute,
+- first supported affordable minute,
+- actual completion-purchase minute,
+- affordability-to-purchase delay,
+- whether the delay is at least 1.5 minutes,
+- the same measurement for the actual same-role opponent when supported,
+- the player's delay minus the opponent's delay.
+
+This is deliberately stricter than comparing total earned gold with a fixed item cost. Total gold includes gold already converted into components, while current gold alone is insufficient until the relevant recipe pieces are owned. Requiring both the observed direct ingredients and enough current gold for the remaining combine cost better reconstructs when the completed breakpoint was actually fundable.
+
+The purchase event is the supported shop-completion marker; it is **not** treated as an exact recall-channel timestamp. Timeline frames are coarse, so the affordability minute is an estimate. If the item recipe, direct components, purchase events or a qualifying frame are missing, the measurement fails closed rather than manufacturing a timing.
+
+The existing direct-role completed-item comparison and earlier-item utilization window remain separate:
+- **readiness delay** asks whether a fundable completion sat unbought,
+- **completion delta** asks who completed the first major item earlier,
+- **spike utilization** asks whether an earlier completion produced supported map impact before role-opponent parity.
 
 ### Greedy-stay candidate
 
