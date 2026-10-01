@@ -1939,10 +1939,10 @@ function renderAdvanced(r){
     ['Team conversion after your kill windows',String(r.behaviorSummary?.teamKillConversions??0)+' / '+String(r.behaviorSummary?.killConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.teamKillConversionRate)],
     ['Peer-supported post-kill conversion',String(r.behaviorSummary?.opponentKillConversions??0)+' / '+String(r.behaviorSummary?.opponentKillConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.opponentKillConversionRate)],
     ['Peer team conversion context',String(r.behaviorSummary?.oppTeamKillConversions??r.behaviorSummary?.opponentTeamKillConversions??0)+' / '+String(r.behaviorSummary?.opponentKillConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.opponentTeamKillConversionRate)],
-    ['Prior-frame neutral-objective setup',String(r.behaviorSummary?.earlySetupObjectiveJoins??0)+' / '+String(r.behaviorSummary?.neutralObjectiveJoins??0)+' joins · '+fmtPct(r.behaviorSummary?.earlySetupObjectiveJoinRate)],
+    ['Prior setup presence (45–105s)',String(r.behaviorSummary?.earlySetupObjectiveJoins??0)+' / '+String(r.behaviorSummary?.neutralObjectiveJoins??0)+' joins · '+fmtPct(r.behaviorSummary?.earlySetupObjectiveJoinRate)],
     ['Event-frame-only neutral-objective joins',String(r.behaviorSummary?.eventFrameOnlyObjectiveJoins??0)],
     ['Neutral-objective setup coverage',fmtPct(r.behaviorSummary?.earlySetupObjectiveCoverageRate)],
-    ['Late-reset neutral-objective misses',String(r.behaviorSummary?.lateResetObjectiveMisses??0)+' / '+String(r.behaviorSummary?.neutralObjectiveEvents??0)+' · '+fmtPct(r.behaviorSummary?.lateResetObjectiveMissRate)],
+    ['Recent-shop objective absences',String(r.behaviorSummary?.recentShopObjectiveAbsences??r.behaviorSummary?.lateResetObjectiveMisses??0)+' / '+String(r.behaviorSummary?.neutralObjectiveEvents??0)+' · '+fmtPct(r.behaviorSummary?.recentShopObjectiveAbsenceRate??r.behaviorSummary?.lateResetObjectiveMissRate)],
     ['Fresh-purchase neutral-objective joins',String(r.behaviorSummary?.freshPurchaseObjectiveJoins??0)+' · '+fmtPct(r.behaviorSummary?.freshPurchaseObjectiveJoinRate)],
     ['Objective-setup ward clears',String(r.behaviorSummary?.visionSetupClears??0)],
     ['Control Wards bought',String(r.behaviorSummary?.visionControlWardPurchases??0)]
