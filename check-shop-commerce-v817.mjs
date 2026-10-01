@@ -690,7 +690,7 @@ assert.match(catalogEdge, /CACHE_FRESH_MS\s*=\s*15\s*\*\s*60_000/, 'server catal
 assert.match(catalogEdge, /MEMORY_ROW_TTL_MS\s*=\s*15\s*\*\s*60_000/, 'catalog Edge Function must keep the large JSONB row in-isolate for fifteen minutes');
 assert.match(catalogEdge, /if\(memoryCatalogRow && Date\.now\(\)-memoryCatalogLoadedAt < MEMORY_ROW_TTL_MS\) return memoryCatalogRow/, 'warm Edge isolates must avoid repeatedly reading the same large catalog row');
 assert.match(catalogEdge, /if\(memoryCatalogRow\) return memoryCatalogRow/, 'a previously loaded catalog must remain an availability fallback when PostgREST\/direct DB is under pressure');
-assert.match(catalogEdge, /max-age=300, stale-while-revalidate=1800/, 'public catalog responses must permit useful browser reuse and stale-while-revalidate');
+assert.match(catalogEdge, /max-age=300, s-maxage=300, stale-while-revalidate=1800/, 'public catalog responses must permit browser/shared-cache reuse and stale-while-revalidate');
 assert.match(store, /source: 'static-snapshot'/, 'generated static catalog must be the deterministic first-paint source');
 assert.doesNotMatch(store, /result\?\.source === 'cache'[\s\S]*?refreshLiveCatalog/, 'initial render must never immediately call Supabase merely because browser cache exists');
 assert.doesNotMatch(refresh, /window\.location\.reload/);
