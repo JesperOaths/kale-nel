@@ -1020,6 +1020,22 @@ The browser should expose the supporting finding titles beneath a selected pract
 
 ## Measurable Next-5 practice targets
 
+### Root-cause-specific practice targets
+
+When a priority theme has a more specific diagnosed cause, the five-game target should measure that cause rather than a looser neighboring statistic.
+
+Current mappings include:
+- post-play give-back theme → high-risk untraded post-impact deaths/game,
+- side-lane timing theme → pre-objective side-lane deaths/game,
+- objective diagnosis **late reset** → late-reset objective miss rate,
+- objective diagnosis **death before contest** → pre-objective death rate,
+- objective diagnosis **setup vision** → objective-setup ward share,
+- unresolved objective arrival/pathing → prior-frame objective setup rate.
+
+Targets remain self-relative, short-term and sample-gated. The diagnosis selects the measurement; it does not convert an association into causal proof.
+
+
+
 The **Next 5 games** plan may attach a measurable short-term success target to a high-priority coaching theme.
 
 Targets are **self-relative**, not population benchmarks. Each target must carry:
