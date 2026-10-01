@@ -179,6 +179,21 @@ Do not write:
 
 "Your death lost the dragon."
 
+## Post-kill map conversion
+
+Group player-involved champion kills/assists into short skirmish windows rather than counting every kill separately.
+
+A kill window is treated as converted when the player's team secures a tracked neutral objective or structure within roughly 75 seconds after the window ends. The same calculation is performed for the actual same-role opponent's kill-involvement windows.
+
+Useful aggregate comparison:
+- player's team post-kill conversion rate,
+- opposing role's team post-kill conversion rate,
+- percentage-point delta between them.
+
+This is explicitly **team-context evidence**. The player can influence the decision after a won skirmish, but they do not unilaterally control four teammates. Coaching should say "your team converts player-involved kill windows at X%" rather than attributing every conversion/failure solely to the player.
+
+The action recommendation is decision-oriented: after winning a skirmish, scan immediately for objective, structure and wave value before chasing or resetting.
+
 ## Objective context
 
 Tracked objective events include supported elite-monster/building events from the Riot timeline.
