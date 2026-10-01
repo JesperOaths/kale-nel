@@ -1,4 +1,4 @@
-name: Audit v851 catalog selection
+name: Probe v851 catalog cache
 
 on:
   push:
@@ -13,27 +13,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - name: Audit live catalog exclusions
+      - name: Probe live catalog cache
         shell: bash
         run: |
           set -euo pipefail
           URL='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828'
           response="$(mktemp)"
-          status="$(curl --silent --show-error --max-time 30 --output "$response" --write-out '%{http_code}' "$URL?diagnostic=1&catalog_audit=1" || true)"
+          status="$(curl --silent --show-error --max-time 30 --output "$response" --write-out '%{http_code}' "$URL?health=1" || true)"
           body="$(cat "$response")"
           echo "HTTP $status"
           printf '%s\n' "$body"
-          printf '%s\n' "$body" | jq '{
-            ok,
-            mode,
-            shopCount,
-            probes,
-            catalogAudit: {
-              upstreamProducts: .catalogAudit.upstreamProducts,
-              shopCounts: .catalogAudit.shopCounts,
-              excluded: .catalogAudit.excluded
-            }
-          }'
-          printf '%s' "$body" | jq -e '.ok == true and (.catalogAudit.upstreamProducts // 0) > 0' >/dev/null
+          printf '%s\n' "$body" | jq '{ok,mode,cachedProducts,cacheAgeSeconds,catalogSelection,refreshScheduled}'
+          printf '%s' "$body" | jq -e '.ok == true and (.cachedProducts // 0) >= 53' >/dev/null
 
 # catalog-audit-rerun-rpc-first
