@@ -126,6 +126,10 @@ assert.ok(app.includes('conflicting Riot role metadata')&&app.includes('ambiguou
 assert.ok(api.includes('supportedQueueRows=roleDurationRows.filter'),'Report eligibility must exclude unsupported special/bot Summoner’s Rift queues after selected-role filtering');
 assert.ok(api.includes('supportedEligible=durationEligible.filter'),'Fetch-finish peer backfill must use the same supported-queue eligibility');
 assert.ok(api.includes('unsupportedQueueRowsExcluded'),'Data quality must expose unsupported queue exclusions');
+assert.ok(api.includes('excludedUnsupportedQueues:unsupportedQueueRows.length')&&api.includes('excludedOtherSupportedQueues:excludedOtherSupportedQueueRows'),'Queue exclusions must remain disjoint between unsupported and other supported contexts');
+assert.ok(api.includes('excludedOtherRoleRows')&&api.includes('excludedBeyondLast20'),'Role filtering and Last-20 capping must remain separately observable');
+assert.ok(api.includes('exclusionModel:"disjoint_metadata_stages_plus_hydrated_role_quality"'),'Data Quality must document the exclusion accounting model');
+assert.ok(app.includes('valid older games outside the Last-20 cap'),'Frontend must distinguish the Last-20 cap from quality/eligibility exclusions');
 assert.ok(app.includes('unsupported special/bot queue'),'Frontend must explain unsupported queue exclusions');
 assert.ok(api.includes('championBehaviorModel'));
 assert.ok(api.includes('opponentMatchupBehaviorModel'));
@@ -539,7 +543,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v123'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v124'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
