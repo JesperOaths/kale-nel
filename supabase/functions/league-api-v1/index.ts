@@ -59,13 +59,14 @@ async function session(req:Request,body:any){
   if(error||!data)throw Object.assign(new Error("invalid_session"),{status:401});
   return{sb,viewer:data};
 }
-async function riot(url:string){
-  if(!RIOT_KEY)throw Object.assign(new Error("riot_api_key_not_configured"),{status:503});
+async function riot(url:string, requestKey=""){
+  const key=RIOT_KEY||text(requestKey);
+  if(!key)throw Object.assign(new Error("riot_api_key_not_configured"),{status:503});
   let last="riot_request_failed";
   for(let i=0;i<4;i++){
     const c=new AbortController(),timer=setTimeout(()=>c.abort(),15000);
     try{
-      const r=await fetch(url,{headers:{"X-Riot-Token":RIOT_KEY,Accept:"application/json"},signal:c.signal});
+      const r=await fetch(url,{headers:{"X-Riot-Token":key,Accept:"application/json"},signal:c.signal});
       const raw=await r.text();
       if(r.ok){try{return raw?JSON.parse(raw):null}catch{throw new Error("riot_invalid_json");}}
       last="riot_http_"+r.status+":"+raw.slice(0,240);
@@ -88,12 +89,12 @@ async function getProfile(sb:any,owner:any,id:any){
   if(error||!data)throw Object.assign(new Error("profile_not_found"),{status:404});
   return data;
 }
-async function resolveProfile(sb:any,p:any){
+async function resolveProfile(sb:any,p:any,requestKey=""){
   if(text(p.puuid))return p;
   const gn=text(p.game_name),tag=text(p.tag_line);
   if(!gn||!tag)throw Object.assign(new Error("riot_id_required"),{status:400});
   const rr=text(p.routing_region)||routeFor(p.platform_region);
-  const account=await riot("https://"+rr+".api.riotgames.com/riot/account/v1/accounts/by-riot-id/"+encodeURIComponent(gn)+"/"+encodeURIComponent(tag));
+  const account=await riot("https://"+rr+".api.riotgames.com/riot/account/v1/accounts/by-riot-id/"+encodeURIComponent(gn)+"/"+encodeURIComponent(tag),requestKey);
   const patch={puuid:text(account?.puuid),riot_account:account,last_resolved_at:now(),routing_region:rr,updated_at:now()};
   if(!patch.puuid)throw new Error("riot_account_missing_puuid");
   const {data,error}=await sb.from("league_profiles_v1").update(patch).eq("id",p.id).select("*").single();
@@ -161,8 +162,8 @@ Deno.serve(async(req:Request)=>{
   if(req.method!=="POST")return json(req,{ok:false,error:"method_not_allowed"},405);
   let body:any={};try{body=await req.json();}catch{return json(req,{ok:false,error:"invalid_json"},400);}
   try{
-    const{sb,viewer}=await session(req,body),action=text(body.action||"health");
-    if(action==="health")return json(req,{ok:true,riot_configured:!!RIOT_KEY,player:viewer.display_name,site_scope:viewer.site_scope});
+    const{sb,viewer}=await session(req,body),action=text(body.action||"health"),requestRiotKey=text(req.headers.get("x-riot-api-key")||body?.riot_api_key);
+    if(action==="health")return json(req,{ok:true,riot_configured:!!(RIOT_KEY||requestRiotKey),server_riot_key:!!RIOT_KEY,player:viewer.display_name,site_scope:viewer.site_scope});
     if(action==="profiles_list"){
       const{data,error}=await sb.from("league_profiles_v1").select("id,profile_key,display_name,game_name,tag_line,platform_region,routing_region,notes,puuid,last_resolved_at,rank_snapshot,updated_at").eq("owner_player_id",viewer.player_id).eq("site_scope",viewer.site_scope).order("updated_at",{ascending:false});
       if(error)throw error;return json(req,{ok:true,profiles:data||[]});
@@ -174,13 +175,13 @@ Deno.serve(async(req:Request)=>{
       let saved:any;
       if(text(input.id)){const{data,error}=await sb.from("league_profiles_v1").update(patch).eq("id",text(input.id)).eq("owner_player_id",viewer.player_id).select("*").maybeSingle();if(error||!data)throw error||Object.assign(new Error("profile_not_found"),{status:404});saved=data;}
       else{const{data,error}=await sb.from("league_profiles_v1").upsert(patch,{onConflict:"owner_player_id,site_scope,profile_key"}).select("*").single();if(error)throw error;saved=data;}
-      if(RIOT_KEY&&saved.game_name&&saved.tag_line){try{saved=await resolveProfile(sb,saved);}catch(e:any){return json(req,{ok:true,profile:saved,resolve_warning:text(e?.message||e)});}}
+      if((RIOT_KEY||requestRiotKey)&&saved.game_name&&saved.tag_line){try{saved=await resolveProfile(sb,saved,requestRiotKey);}catch(e:any){return json(req,{ok:true,profile:saved,resolve_warning:text(e?.message||e)});}}
       return json(req,{ok:true,profile:saved});
     }
     if(action==="fetch_prepare"){
-      let p=await getProfile(sb,viewer.player_id,body.profile_id);p=await resolveProfile(sb,p);
+      let p=await getProfile(sb,viewer.player_id,body.profile_id);p=await resolveProfile(sb,p,requestRiotKey);
       const count=Math.max(1,Math.min(20,Number(body.count||20))),rr=text(p.routing_region)||routeFor(p.platform_region);
-      const ids=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/by-puuid/"+encodeURIComponent(p.puuid)+"/ids?start=0&count="+count),matchIds=Array.isArray(ids)?ids.map(text).filter(Boolean):[];
+      const ids=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/by-puuid/"+encodeURIComponent(p.puuid)+"/ids?start=0&count="+count,requestRiotKey),matchIds=Array.isArray(ids)?ids.map(text).filter(Boolean):[];
       const{data:cached}=matchIds.length?await sb.from("league_match_cache_v1").select("match_id").eq("profile_id",p.id).in("match_id",matchIds).not("match_json","is",null):{data:[]};
       const set=new Set((cached||[]).map((x:any)=>x.match_id));
       const{data:run,error}=await sb.from("league_fetch_runs_v1").insert({profile_id:p.id,owner_player_id:viewer.player_id,status:"running",match_ids:matchIds,completed_count:set.size,total_count:matchIds.length,cache_hits:set.size,updated_at:now()}).select("*").single();
@@ -191,8 +192,8 @@ Deno.serve(async(req:Request)=>{
       const id=text(body.match_id),allowed=new Set(Array.isArray(run.match_ids)?run.match_ids:[]);if(!allowed.has(id))return json(req,{ok:false,error:"match_not_in_run"},400);
       const p=await getProfile(sb,viewer.player_id,run.profile_id),{data:old}=await sb.from("league_match_cache_v1").select("match_json,timeline_json").eq("profile_id",p.id).eq("match_id",id).maybeSingle();
       if(old?.match_json&&old?.timeline_json&&body.force!==true)return json(req,{ok:true,match_id:id,cache_hit:true,timeline_available:true});
-      const rr=text(p.routing_region)||routeFor(p.platform_region),m=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/"+encodeURIComponent(id));
-      let tl:any=null,tlError:string|null=null;try{tl=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/"+encodeURIComponent(id)+"/timeline");}catch(e:any){tlError=text(e?.message||e).slice(0,500);}
+      const rr=text(p.routing_region)||routeFor(p.platform_region),m=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/"+encodeURIComponent(id),requestRiotKey);
+      let tl:any=null,tlError:string|null=null;try{tl=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/"+encodeURIComponent(id)+"/timeline",requestRiotKey);}catch(e:any){tlError=text(e?.message||e).slice(0,500);}
       const gs=Number(m?.info?.gameStartTimestamp||0),row={profile_id:p.id,match_id:id,owner_player_id:viewer.player_id,game_start_at:gs?new Date(gs).toISOString():null,map_id:num(m?.info?.mapId),queue_id:num(m?.info?.queueId),game_duration_seconds:num(m?.info?.gameDuration),match_json:m,timeline_json:tl,match_fetched_at:now(),timeline_fetched_at:tl?now():null,fetch_error:tlError,updated_at:now()};
       const{error}=await sb.from("league_match_cache_v1").upsert(row,{onConflict:"profile_id,match_id"});if(error)throw error;
       await sb.from("league_fetch_runs_v1").update({completed_count:Math.min(Number(run.total_count||0),Number(run.completed_count||0)+1),updated_at:now(),last_error:tlError}).eq("id",run.id);
