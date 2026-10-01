@@ -441,6 +441,14 @@ assert.ok(app.includes('not treated as evidence of tilt, momentum, or player psy
 assert.ok(app.includes('Objective setup ward clears'),'Frontend must expose objective-setup ward clears');
 assert.ok(app.includes('objectiveFamilyStats'),'Per-game objective tab must expose objective-family evidence');
 assert.ok(html.includes('data-game-sort="gold15"')&&app.includes('bindGameSortControls'),'Per-game evidence table must retain Bruisienator-style sortable columns');
+assert.ok(html.includes('id="consistencySummary"')&&app.includes('function renderConsistencySummary(')&&app.includes('function robustStats('),'Lane/economy must retain median + middle-50 consistency context so averages are not the only summary');
+assert.ok(app.includes("'Middle 50%: '")&&app.includes("consistencySplit(gold,0,150,false)")&&app.includes("consistencySplit(cs,0,5,false)"),'Consistency cards must retain explicit robust ranges and neutral bands');
+assert.ok(html.includes('data-game-filter="ahead15"')&&html.includes('data-game-filter="behind15"')&&html.includes('id="gameChampionFilter"')&&app.includes('function bindGameFilterControls(')&&app.includes('function gamePassesFilter('),'Game evidence must retain lightweight result/lane/champion filters');
+assert.ok(app.includes("state.gameFilter='all';state.gameChampion='all';")&&app.includes('renderGames(state.report);'),'Replay-review deep links must clear table filters before opening a referenced match');
+assert.ok(html.includes('Gold @15 vs role'),'Game table must remain role-correct instead of labeling all public reports as ADC');
+assert.ok(app.includes("label:'Fewer deaths'"),'Radar inverted deaths axis must be described literally rather than implying an independent survival metric');
+assert.ok(app.includes('const reportRange=reportTimes.length?'),'Report identity must expose the actual analyzed-game date span');
+assert.ok(html.includes('Latest 5 vs earlier games'),'Recent pulse heading must not assume exactly 15 valid earlier games');
 assert.ok(app.includes('g.deathPositions'),'Per-game map must use preserved raw player death positions');
 assert.ok(app.includes('Map renderer unavailable for mapId'),'Non-Summoner’s Rift games must not be forced onto map11');
 assert.ok(app.includes('numbered chronologically'),'Per-game death map must preserve chronological marker correspondence');
