@@ -250,7 +250,10 @@ ok(backend.includes('higherRankMajorItemGames'), 'higher-ranked direct-peer firs
 ok(backend.includes('schema:"rank_snapshot_v2"')&&backend.includes('byQueue'), 'rank snapshots must preserve both Solo/Duo and Flex ladders when Riot returns them');
 ok(backend.includes('function rankComparisonForGame('), 'rank comparisons must choose a shared ladder per game');
 ok(backend.includes('q===420?["RANKED_SOLO_5x5"]:q===440?["RANKED_FLEX_SR"]'), 'ranked Solo/Flex direct-peer comparisons must use their matching ladder');
+ok(backend.includes('if(r==="BOTTOM"||r==="BOT"||r==="ADC"||r==="DUO_CARRY")return"ADC"'), 'backend must normalize all Riot bottom-lane aliases to canonical ADC');
+ok(!app.includes('BOTTOM'), 'frontend must consume canonical ADC and never branch on raw Riot BOTTOM aliases');
 ok(backend.includes('function externalAdcBenchmarkSet(rankSnapshot:any,cohortQueueId:any)'), 'external population benchmark must receive the selected cohort queue');
+ok(backend.includes('role:"ADC"')&&backend.includes('sourceRole:"Bot (ADC)"'), 'external benchmark metadata must use canonical ADC while preserving source-role provenance');
 ok(backend.includes('queueId===420?"RANKED_SOLO_5x5":queueId===440?"RANKED_FLEX_SR":null'), 'external ranked benchmark must be ineligible outside Ranked Solo/Flex');
 ok(backend.includes('eligibilityReason:!rankedQueueType?"selected_cohort_not_ranked"'), 'non-ranked benchmark exclusion reason must remain explicit');
 ok(app.includes("ext.eligible!==false")&&app.includes('selected Last-20 cohort is not Ranked Solo/Flex'), 'frontend must fail closed and explain non-ranked population-benchmark exclusion');
