@@ -330,6 +330,7 @@ function renderProgressComparison(current,previous,previousAt){
     {label:'Unspent-gold fight starts',path:'behaviorSummary.highUnspentFightRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
     {label:'Major-item disadvantage fights',path:'behaviorSummary.itemDisadvantageFightRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
     {label:'Locally outnumbered fight rate',path:'behaviorSummary.outnumberedFightStartRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
+    {label:'Level-down shared-role fight rate',path:'behaviorSummary.roleLevelDisadvantageFightRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
     {label:'Game 3+ gold delta',path:'sessionBehavior.game3PlusGoldDelta',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
     {label:'Post-loss requeue gold delta',path:'sessionBehavior.postLossGoldDelta',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
     {label:'Late-reset objective miss rate',path:'behaviorSummary.lateResetObjectiveMissRate',threshold:10,direction:-1,format:v=>fmtPct(v)}
@@ -588,6 +589,8 @@ function renderAdvanced(r){
     ['Fight starts ≥600g down vs role',String(r.behaviorSummary?.goldDeficitFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.goldDeficitFightRate)],
     ['Locally outnumbered fight starts',String(r.behaviorSummary?.outnumberedFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.outnumberedFightStartRate)],
     ['Loss rate when locally outnumbered',fmtPct(r.behaviorSummary?.outnumberedFightLossRate)],
+    ['Shared fights with role peer nearby',String(r.behaviorSummary?.rolePeerFightSamples??0)],
+    ['Level-down shared-role fights',String(r.behaviorSummary?.roleLevelDisadvantageFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.roleLevelDisadvantageFightRate)],
     ['Objective-setup vision Δ',hasNum(a.visionSetup?.avgDeltaVsOpponent)?signed(a.visionSetup.avgDeltaVsOpponent,1)+' wards vs peer':'n/a'],
     ['Post-kill conversion',String(r.behaviorSummary?.killConversions??0)+' / '+String(r.behaviorSummary?.killConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.killConversionRate)],
     ['Opposing-role post-kill conversion',String(r.behaviorSummary?.opponentKillConversions??0)+' / '+String(r.behaviorSummary?.opponentKillConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.opponentKillConversionRate)],
