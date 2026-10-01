@@ -48,6 +48,9 @@ ok(backend.includes('roleQuestRevisionCounts'), 'mixed mechanics revision counts
 ok(backend.includes('roleQuestCompletionTimingObserved:false'), 'analyzer must fail closed on universal role-quest completion timing');
 ok(backend.includes('mechanicsCohortGames.length>=5'), 'current mechanics filtering keeps a minimum evidence threshold');
 ok(backend.includes('mechanicsCohortApplied'), 'mechanics cohort selection state remains exported');
+ok(backend.includes('currentMechanicsKnown'), 'unknown mechanics revisions must remain distinct from verified cohort identities');
+ok(backend.includes('mechanicsCohortApplied=currentMechanicsKnown&&'), 'mechanics cohort filtering must require verified current mechanics');
+ok(backend.includes('current_mechanics_unverified'), 'unknown mechanics fallback reason must remain explicit');
 ok(backend.includes('mixedMechanicsFallback'), 'small current mechanics samples remain explicit');
 ok(backend.includes('championBehaviorModel(coachingGames'), 'champion behavior uses the same selected mechanics sample');
 ok(backend.includes('phaseExposureMinutes'), 'phase risk must normalize by actual phase exposure');
