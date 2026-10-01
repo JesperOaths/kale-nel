@@ -757,21 +757,21 @@ This is explicitly **team-context evidence**. The player can influence the decis
 
 The action recommendation is decision-oriented: after winning a skirmish, scan immediately for objective, structure and wave value before chasing or resetting.
 
-## Neutral-objective reset timing
+## Neutral-objective recent-shop timing
 
-For tracked team neutral objectives (dragon/Baron/Herald-family events), preserve whether the player was present and the timing of their most recent detected shop visit.
+For tracked **team-contested** neutral-objective encounters, preserve whether the player was present and the timing of their most recent detected shop visit.
 
-A **late-reset miss** requires all of the following:
-- the team secures a tracked neutral objective,
-- the player is not within the objective action radius,
+A **recent-shop objective absence** requires all of the following:
+- the encounter is in the team-contested objective denominator,
+- the player is not within the supported objective action radius,
 - the player was not recently dead,
-- the last detected shop visit ended within 60 seconds before the objective.
+- the last detected shop visit ended within 60 seconds before the objective encounter.
 
-This is intended to separate a timing/planning error from an absence caused by death.
+This is an **association signal**, not a causal diagnosis. Riot item-purchase events support that shopping ended recently; they do not prove that the reset/shop timing caused the absence. Coaching may suggest testing an earlier purchase deadline, but must judge that hypothesis by whether the pattern subsequently changes.
 
-Also preserve **fresh-purchase joins** where the player attends the objective within roughly two minutes of a detected shop visit. These can support a positive reset-timing judgment.
+Also preserve **fresh-purchase joins** where the player attends the objective within roughly two minutes of a detected shop visit. These show that recent shopping and objective attendance can coexist; they do not prove the reset itself was optimal.
 
-The shop event is an approximation based on Riot item-purchase events, not an exact recall-channel timestamp.
+The shop event is an approximation based on Riot item-purchase events, not an exact recall-channel timestamp. The legacy `lateResetMisses` / `lateResetObjectiveMissRate` fields remain compatibility aliases only; new coaching and UI use `recentShopAbsences` / `recentShopObjectiveAbsenceRate`.
 
 ## Death trade context
 
@@ -794,32 +794,32 @@ A nearby return kill should soften the interpretation of the death, not erase th
 
 When primary-role objective presence is low enough to trigger coaching, rank the supported setup explanations rather than showing disconnected metrics.
 
-Current supported causes include:
-- **late reset timing** — repeated neutral-objective misses after a late shop/reset window,
+Current supported explanations include:
+- **recent-shop absence pattern** — repeated objective absences within 60 seconds of a detected shop visit; this is explicitly an association, not proof that reset timing caused the miss,
 - **death before the contest** — deaths followed by enemy objective conversion,
 - **setup-vision deficit** — materially lower objective-setup ward share than the actual same-role peer sample.
 
-Rank supported causes by their evidence severity and expose the highest-ranked cause as the **primary supported cause**.
+Rank supported explanations by their evidence severity and expose the highest-ranked item as the **primary supported explanation**.
 
-If no reset/death/vision cause crosses its threshold, do not manufacture certainty. Report **arrival/pathing as the remaining hypothesis**, explicitly marked as unresolved.
+If no shop/death/vision signal crosses its threshold, do not manufacture certainty. Report **arrival/pathing as the remaining hypothesis**, explicitly marked as unresolved.
 
-This is an evidence-ranking model, not causal proof. The UI must show the concrete evidence for each ranked cause.
+This is an evidence-ranking model, not causal proof. The UI must show the concrete evidence and interpretation limits for each ranked explanation.
 
 ## Neutral-objective setup timing
 
 Attendance and setup are separate behaviors.
 
-For neutral objectives taken by the player's team, the analyzer checks whether the player is near the objective at the objective event and whether a prior Riot timeline frame within roughly two minutes already places them near the area.
+For team-contested neutral-objective encounters, the analyzer checks event presence and a deliberately conservative pre-objective position band. A setup sample is eligible only when a Riot timeline frame places the player within the setup radius **45–105 seconds before** the encounter. If multiple eligible frames exist, use the latest one.
 
 Current evidence labels:
 
-- **prior-frame setup:** player is present at the objective event and a prior timeline frame at least ~45 seconds earlier places them within the setup radius,
-- **event-frame-only join:** player is present at the event but has no supported prior-frame setup evidence,
-- **absent:** player is not supported as nearby at the event frame.
+- **prior setup presence:** player is supported as present at the encounter and a supported position frame 45–105 seconds earlier places them within the setup radius,
+- **event-frame-only join:** player is present at the encounter but has no supported position frame in that 45–105 second band,
+- **absent:** player is not supported as nearby at the encounter.
 
-Because Riot timeline position frames are coarse, these labels must not be presented as second-perfect arrival timestamps. `setupLeadSec` is the distance between observed timeline frames and the objective event, not an exact pathing arrival time.
+The upper bound avoids rewarding an incidental pass nearly two minutes earlier. The lower bound distinguishes genuine prior setup evidence from simply being near the objective at the event frame. Because Riot timeline positions are coarse, these labels must not be presented as second-perfect arrival timestamps. `setupLeadSec` is the distance between the selected sampled frame and the encounter, not an exact pathing arrival time.
 
-Aggregate coaching can distinguish a player who attends objectives but usually arrives reactively from one who is already established early enough to contribute to vision/positioning. The aggregate setup-rate denominator is joined neutral objectives; setup coverage uses all tracked team neutral objectives.
+Aggregate coaching can distinguish a player who attends objectives but often appears only at the event from one with supported pre-contest positioning. The setup-rate denominator is joined **team-contested** neutral objectives; setup coverage uses all team-contested encounters.
 
 ## Objective context
 
