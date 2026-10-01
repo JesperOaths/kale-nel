@@ -284,7 +284,7 @@ function renderReport(raw,sourceKind){
   $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':(r.analyzerVersion||'Web analysis');
   renderKpis(r);renderBullets('recentFocus',r.priorityThemes?.length?r.priorityThemes:r.recentFocus,'No grounded recent-focus tips are available from the active analyzer yet.');
   renderBullets('overallHighlights',r.overallHighlights,'No broader highlights are available from the active analyzer yet.');
-  renderSessionHabits(r);renderPracticePlan(r);renderGames(r);renderCharts(r);renderSpatial(r);renderAdvanced(r);renderBreakdowns(r);renderQuality(r);
+  renderSessionHabits(r);renderPracticePlan(r);renderGames(r);renderReplayReviewQueue(r);renderCharts(r);renderSpatial(r);renderAdvanced(r);renderBreakdowns(r);renderQuality(r);
 }
 function renderKpis(r){
   const s=r.summary||{},role=String(s.primaryRole||'GENERIC').toUpperCase();
@@ -409,6 +409,30 @@ function renderPracticePlan(r){
     '<div class="practice-number">'+(i+1)+'</div><div><span>'+esc(x.category||'focus')+'</span><strong>'+esc(x.title||'Practice focus')+'</strong>'+
     '<p>'+esc(x.action)+'</p><small>'+esc(x.comparison||'Last-20 evidence')+' · '+esc(x.confidence||'medium')+' confidence'+(Number(x.supportCount||0)?' · '+esc(String(x.supportCount))+' supporting finding'+(Number(x.supportCount)===1?'':'s'):'')+'</small></div></article>').join('');
 }
+function openReplayReviewMatch(matchId,tab){
+  const games=state.report?.games||[],index=games.findIndex(g=>String(g.matchId)===String(matchId));
+  if(index<0)return;
+  state.activeDetailTab=tab||'macro';
+  if(state.openMatch===index)state.openMatch=null;
+  toggleGame(index);
+  const row=$('gamesBody')?.querySelector('.game-row[data-match="'+CSS.escape(String(matchId))+'"]');
+  if(row)row.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function renderReplayReviewQueue(r){
+  const box=$('replayReviewQueue'),panel=$('replayReviewPanel');if(!box||!panel)return;
+  const items=Array.isArray(r.replayReviewQueue)?r.replayReviewQueue:[];
+  panel.hidden=!items.length;
+  if(!items.length){box.innerHTML='';return;}
+  box.innerHTML=items.map(x=>'<article class="review-card">'+
+    '<div class="review-rank">#'+esc(String(x.rank||''))+'</div>'+
+    '<div class="review-copy"><div class="review-head"><span>'+esc(x.category||'review')+'</span><strong>'+esc(x.title||'Replay review')+'</strong></div>'+
+    '<p>'+esc(x.evidence||'')+'</p><p class="review-prompt"><b>Look for:</b> '+esc(x.prompt||'')+'</p>'+
+    '<small>'+esc(x.champion||'Unknown')+' · '+esc(x.role||'GENERIC')+(x.opponentChampion?' · vs '+esc(x.opponentChampion):'')+' · '+esc(fmt(x.minute,1))+'m</small></div>'+
+    '<button class="button secondary small review-open" type="button" data-review-match="'+esc(x.matchId||'')+'" data-review-tab="'+esc(x.tab||'macro')+'">Open match</button>'+
+    '</article>').join('');
+  box.querySelectorAll('.review-open').forEach(btn=>btn.addEventListener('click',()=>openReplayReviewMatch(btn.dataset.reviewMatch,btn.dataset.reviewTab)));
+}
+
 function renderGames(r){
   const games=r.games||[];$('gameCountLabel').textContent=games.length+' games';
   state.openMatch=null;
