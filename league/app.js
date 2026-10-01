@@ -5,7 +5,7 @@ const cfg=window.GEJAST_CONFIG||{};
 const API=(cfg.SUPABASE_URL||'')+'/functions/v1/printify-gildan-diff-diag-v1';
 const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
 const $=(id)=>document.getElementById(id);
-const state={profiles:[],profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},requestReady:false};
+const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,publicWorkspace:true,gameSort:{key:'recent',dir:'desc'}};
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const LEAGUE_WORKSPACE_KEY='bruisienator_public_workspace_v1';
@@ -196,49 +196,20 @@ function perGameSpatialHtml(g){
   '</div>';
 }
 
-const DIRECT_REQUEST_IDENTITY_KEY='bruisienator_recent_request_identity_v1';
 function directRequestComplete(){
   const game=String($('requestGameName')?.value||'').trim();
   const tag=String($('requestTagLine')?.value||'').trim();
   const region=String($('requestRegion')?.value||'').trim();
   return !!game&&!!tag&&!!region&&(state.serverRiotKey||!!state.riotApiKey);
 }
-function persistRequestIdentity(){
-  try{
-    localStorage.setItem(DIRECT_REQUEST_IDENTITY_KEY,JSON.stringify({
-      game_name:String($('requestGameName')?.value||'').trim(),
-      tag_line:String($('requestTagLine')?.value||'').trim(),
-      platform_region:String($('requestRegion')?.value||'euw1')
-    }));
-  }catch(_){}
-}
-async function loadRequestDefaults(){
-  let saved=null;
-  try{saved=JSON.parse(localStorage.getItem(DIRECT_REQUEST_IDENTITY_KEY)||'null');}catch(_){}
-  try{
-    const data=await api('profiles_list');
-    state.profiles=data.profiles||[];
-    const prior=state.profiles.find(p=>p.profile_key==='recent-request')||state.profiles[0]||null;
-    if(!saved&&prior)saved={game_name:prior.game_name||'',tag_line:prior.tag_line||'',platform_region:prior.platform_region||'euw1'};
-  }catch(e){log('Could not restore previous summoner fields: '+e.message,'bad');}
-  if(saved){
-    if($('requestGameName'))$('requestGameName').value=String(saved.game_name||'');
-    if($('requestTagLine'))$('requestTagLine').value=String(saved.tag_line||'');
-    if($('requestRegion'))$('requestRegion').value=String(saved.platform_region||'euw1');
-  }
-  syncButtons();
-}
 async function ensureDirectRequestProfile(){
   const gameName=String($('requestGameName')?.value||'').trim();
   const tagLine=String($('requestTagLine')?.value||'').trim();
   const platformRegion=String($('requestRegion')?.value||'euw1');
   if(!gameName||!tagLine)throw new Error('Enter a Riot game name and tag.');
-  persistRequestIdentity();
-  let existing=state.profiles.find(p=>p.profile_key==='recent-request')||null;
   const d=await api('profile_save',{
     direct_request:true,
     profile:{
-      id:existing?.id||undefined,
       profile_key:'recent-request',
       display_name:gameName+'#'+tagLine,
       game_name:gameName,
@@ -250,8 +221,6 @@ async function ensureDirectRequestProfile(){
   if(d.resolve_warning)throw new Error('Riot account lookup failed: '+d.resolve_warning);
   if(!d.profile?.puuid)throw new Error('Riot account lookup did not return a PUUID.');
   state.profile=d.profile;
-  const ix=state.profiles.findIndex(p=>p.id===d.profile.id);
-  if(ix>=0)state.profiles[ix]=d.profile;else state.profiles.unshift(d.profile);
   $('sourceState').textContent='Riot account resolved';
   return d.profile;
 }
@@ -270,7 +239,7 @@ async function boot(){
   }catch(e){
     $('backendState').textContent='Backend unavailable';$('backendState').className='pill error';log(e.message,'bad');
   }
-  await loadRequestDefaults();
+  syncButtons();
 }
 function syncButtons(){
   const run=$('loadRecentBtn');if(run)run.disabled=state.busy||!directRequestComplete();
@@ -1267,8 +1236,6 @@ requestInputs.forEach(id=>{
       $('riotKeyStatus').textContent=state.riotApiKey?'Session key ready — it will not be saved.':(state.serverRiotKey?'Server Riot key available':'Add a Riot API key to load matches.');
       $('backendState').textContent=state.serverRiotKey||state.riotApiKey?'Backend + Riot ready':'Backend ready · add Riot key';
       $('backendState').className='pill '+(state.serverRiotKey||state.riotApiKey?'':'warn');
-    }else{
-      persistRequestIdentity();
     }
     syncButtons();
   });
