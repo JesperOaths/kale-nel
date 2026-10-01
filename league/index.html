@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <script src="/gejast-auth-gate.js?v817"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none">
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0">
+  <title>Bruisienator · League playstyle analysis</title>
+  <meta name="description" content="Private League of Legends Last-20 playstyle analysis on Kalenel.">
+  <link rel="canonical" href="https://kalenel.nl/league/">
+  <link rel="stylesheet" href="/league/styles.css?v=20261001-league-web-v1">
+  <script>window.GEJAST_PAGE_VERSION='v817';</script>
+  <script src="/gejast-config.js?v817"></script>
+  <script src="/gejast-home-gate.js?v817"></script>
+  <script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('league/');</script>
+</head>
+<body>
+  <header class="league-header">
+    <a class="brand" href="/league/" aria-label="Bruisienator home">
+      <span class="brand-mark">B</span>
+      <span><strong>Bruisienator</strong><small>League playstyle analysis</small></span>
+    </a>
+    <div class="header-meta">
+      <span class="pill" id="backendState">Connecting…</span>
+      <a class="quiet-link" href="/">Kalenel home</a>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero panel">
+      <div class="hero-copy">
+        <p class="eyebrow">Last-20 · evidence-backed</p>
+        <h1>Your League GUI now lives in the browser.</h1>
+        <p class="lede">Select a profile, update Riot data when needed, then analyze the cached Last 20 without downloading a separate Windows GUI.</p>
+      </div>
+
+      <div class="profile-toolbar">
+        <label class="field grow">
+          <span>League profile</span>
+          <select id="profileSelect" aria-label="League profile">
+            <option value="">Loading profiles…</option>
+          </select>
+        </label>
+        <button class="button secondary" id="newProfileBtn" type="button">New profile</button>
+        <button class="button" id="fetchBtn" type="button" disabled>Fetch / update</button>
+        <button class="button primary" id="analyzeBtn" type="button" disabled>Analyze cached Last 20</button>
+      </div>
+
+      <div class="profile-editor" id="profileEditor" hidden>
+        <div class="editor-grid">
+          <label class="field"><span>Profile label</span><input id="profileLabel" autocomplete="off" placeholder="Main EUW"></label>
+          <label class="field"><span>Riot game name</span><input id="gameName" autocomplete="off" placeholder="GameName"></label>
+          <label class="field"><span>Tag line</span><input id="tagLine" autocomplete="off" placeholder="EUW"></label>
+          <label class="field"><span>Platform</span>
+            <select id="platformRegion">
+              <option value="euw1">EUW1</option><option value="eun1">EUN1</option><option value="na1">NA1</option>
+              <option value="kr">KR</option><option value="jp1">JP1</option><option value="br1">BR1</option>
+              <option value="oc1">OC1</option><option value="tr1">TR1</option>
+            </select>
+          </label>
+        </div>
+        <label class="field"><span>Notes</span><input id="profileNotes" autocomplete="off" placeholder="Optional"></label>
+        <div class="editor-actions">
+          <button class="button primary" id="saveProfileBtn" type="button">Save profile</button>
+          <button class="button ghost" id="cancelProfileBtn" type="button">Close</button>
+        </div>
+      </div>
+
+      <div class="status-strip">
+        <div><span class="status-label">Cache</span><strong id="cacheState">—</strong></div>
+        <div><span class="status-label">Latest game</span><strong id="latestGameState">—</strong></div>
+        <div><span class="status-label">Latest analysis</span><strong id="analysisState">—</strong></div>
+        <div><span class="status-label">Data source</span><strong id="sourceState">—</strong></div>
+      </div>
+    </section>
+
+    <section class="panel progress-panel" id="progressPanel">
+      <div class="section-head compact">
+        <div><p class="eyebrow">Execution progress</p><h2>Fetch / analysis log</h2></div>
+        <span class="pill neutral" id="progressState">Idle</span>
+      </div>
+      <div class="progress-track" aria-hidden="true"><span id="progressBar"></span></div>
+      <div class="progress-log" id="progressLog" aria-live="polite">
+        <div class="log-line muted">Ready. Fetch and Analyze are intentionally separate operations.</div>
+      </div>
+    </section>
+
+    <section id="reportEmpty" class="panel empty-state">
+      <div class="empty-icon">20</div>
+      <h2>No Last-20 report loaded yet</h2>
+      <p>Choose or create a profile. Fetch match data when needed, then analyze the cached data. Existing report JSON can also be imported below.</p>
+    </section>
+
+    <div id="report" hidden>
+      <section class="panel report-hero">
+        <div>
+          <p class="eyebrow">Player overview</p>
+          <h2 id="reportTitle">—</h2>
+          <p class="report-sub" id="reportSubtitle">—</p>
+        </div>
+        <div class="report-actions">
+          <span class="pill" id="reportSourceBadge">—</span>
+          <button class="button secondary small" id="exportBtn" type="button">Export report JSON</button>
+        </div>
+      </section>
+
+      <section class="kpi-grid" id="kpiGrid" aria-label="Role-aware key performance indicators"></section>
+
+      <section class="two-col">
+        <article class="panel">
+          <div class="section-head"><div><p class="eyebrow">Recent sample</p><h2>Recent focus</h2></div></div>
+          <div id="recentFocus" class="bullet-list"></div>
+        </article>
+        <article class="panel">
+          <div class="section-head"><div><p class="eyebrow">Broader pattern</p><h2>Overall highlights</h2></div></div>
+          <div id="overallHighlights" class="bullet-list"></div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div><p class="eyebrow">Last 20</p><h2>Per-game evidence</h2></div>
+          <span class="muted" id="gameCountLabel">—</span>
+        </div>
+        <div class="table-wrap">
+          <table class="games-table">
+            <thead><tr><th></th><th>Champion</th><th>Role</th><th>Result</th><th>K / D / A</th><th>KP</th><th>CS/min</th><th>DPM</th><th>Δ Gold @15</th></tr></thead>
+            <tbody id="gamesBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div><p class="eyebrow">Trends</p><h2>Last-20 charts</h2></div>
+          <span class="muted">Charts hide cleanly when fewer than 3 valid points exist.</span>
+        </div>
+        <div class="chart-grid" id="chartGrid"></div>
+        <div class="hidden-charts" id="hiddenCharts" hidden></div>
+      </section>
+
+      <section class="two-col">
+        <article class="panel">
+          <div class="section-head"><div><p class="eyebrow">Advanced analysis</p><h2>Behavioral dimensions</h2></div></div>
+          <div class="metric-list" id="advancedMetrics"></div>
+        </article>
+        <article class="panel">
+          <div class="section-head"><div><p class="eyebrow">Benchmarks</p><h2>Rank / item timing</h2></div></div>
+          <div class="metric-list" id="benchmarkMetrics"></div>
+        </article>
+      </section>
+
+      <section class="two-col">
+        <article class="panel">
+          <div class="section-head"><div><p class="eyebrow">Roles</p><h2>Role-specific sample</h2></div></div>
+          <div id="roleBreakdown" class="breakdown-grid"></div>
+        </article>
+        <article class="panel">
+          <div class="section-head"><div><p class="eyebrow">Champions</p><h2>Champion-specific sample</h2></div></div>
+          <div id="championBreakdown" class="breakdown-grid"></div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="section-head"><div><p class="eyebrow">Trust</p><h2>Data quality & lineage</h2></div></div>
+        <div class="quality-grid" id="qualityGrid"></div>
+        <div class="source-note" id="sourceNote"></div>
+      </section>
+    </div>
+
+    <section class="panel migration-panel">
+      <details>
+        <summary>Migration tools · import a Bruisienator report JSON</summary>
+        <p>This is the bridge for current/local Bruisienator output while the current analyzer source is being ported into the web backend. It does not upload Riot API keys.</p>
+        <div class="import-row">
+          <input id="reportFile" type="file" accept=".json,application/json">
+          <button class="button secondary" id="importBtn" type="button" disabled>Import into selected profile</button>
+        </div>
+        <p class="muted tiny">Historical generated HTML is intentionally not patched or treated as source code. The current analyzer/source package remains the authority for the advanced formulas.</p>
+      </details>
+    </section>
+
+    <section class="legal">
+      <p>Bruisienator is an independent analytics project and is not endorsed or sponsored by Riot Games. League of Legends and Riot Games are trademarks of Riot Games, Inc.</p>
+    </section>
+  </main>
+
+  <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
+  <script src="/league/app.js?v=20261001-league-web-v1" defer></script>
+</body>
+</html>
