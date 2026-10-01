@@ -320,7 +320,7 @@ Revision identity is **role-specific**, not merely patch-specific. A patch that 
 - TOP: 26.1 initial package → 26.9 XP revision → 26.19 Teleport-cooldown revision,
 - MID: 26.1 empowered-Recall package → 26.9 +6% bonus AD/AP → 26.11 +8% bonus AD/AP,
 - ADC/BOT: 26.1 initial income package → 26.9 40g post-quest takedown bonus,
-- SUPPORT: 26.1 core support quest → 26.16 stronger early-roaming penalty / normalized quest progress,
+- SUPPORT: 26.1 core support economy → 26.7 rapid-minion-farming gold penalty removed → 26.16 stronger early-roaming penalty / normalized quest progress,
 - JUNGLE: no later 2026 role-quest boundary is currently asserted unless Riot documents one.
 
 This prevents two opposite errors: mixing genuinely incompatible same-role games, and discarding valid same-role games merely because another role changed on that patch.
