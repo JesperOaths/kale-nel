@@ -1,4 +1,4 @@
-name: Probe Printify Edge bootstrap
+name: Force v851 catalog refresh (final)
 
 on:
   push:
@@ -13,17 +13,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - name: Probe Printify Edge bootstrap
+      - name: Trigger v851 live catalog rebuild
         shell: bash
         run: |
           set -euo pipefail
           URL='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828'
-          response="$(mktemp)"
-          status="$(curl --silent --show-error --max-time 30 --output "$response" --write-out '%{http_code}' "$URL?bootstrap=1" || true)"
-          body="$(cat "$response")"
-          echo "HTTP $status"
-          printf '%s\n' "$body"
-          printf '%s\n' "$body" | jq '{ok,envTokenConfigured,serviceRoleConfigured,mode}'
-          printf '%s' "$body" | jq -e '.ok == true and .envTokenConfigured == true' >/dev/null
-
-# catalog-audit-rerun-rpc-first
+          for attempt in {1..12}; do
+            body="$(curl --silent --show-error --max-time 20 "$URL?refresh=v851-$attempt" || true)"
+            printf '%s\n' "$body" | jq '{source,catalogSelection,warming,refreshScheduled,products:(.products|length // 0)}' || true
+            if printf '%s' "$body" | jq -e '
+              .source == "printify-live-v851"
+              and .catalogSelection == "all-readable-printify-shops-v851"
+              and ((.products // []) | length) > 0
+            ' >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 8
+          done
+          exit 1
