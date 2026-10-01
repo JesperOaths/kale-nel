@@ -17,6 +17,19 @@ assert.ok(api.includes('championBehaviorModel'));
 assert.ok(api.includes('higherRankPeerGames'));
 assert.ok(api.includes('recentTrend'));
 assert.ok(api.includes('damageGoldEfficiency'));
+assert.ok(api.includes('totalTimelineDeaths=validTimeline.reduce'),'Death-trade aggregates must be declared before coaching uses them');
+const behaviorStart=api.lastIndexOf('behaviorSummary:{');
+const behaviorEnd=api.indexOf('\n  };',behaviorStart);
+assert.ok(behaviorStart>=0&&behaviorEnd>behaviorStart,'Behavior summary export block must exist');
+const behaviorExport=api.slice(behaviorStart,behaviorEnd);
+for(const field of [
+  'deathTradeRate','highRiskUntradedDeaths','highRiskUntradedPerGame',
+  'fightSamples','firstAllyFightDeathRate','preContributionFightDeathRate','fightSurvivalRate',
+  'highUnspentFightRate','itemDisadvantageFightRate','goldDeficitFightRate',
+  'killConversionRate','opponentKillConversionRate','killConversionDelta',
+  'neutralObjectiveEvents','lateResetObjectiveMissRate','freshPurchaseObjectiveJoinRate',
+  'objectiveSetupWardRate','objectiveSetupWardRateDelta','damageGoldEfficiency'
+])assert.ok(behaviorExport.includes(field),'Behavior summary must export '+field);
 assert.ok(api.includes('sessionBehaviorModel'));
 assert.ok(api.includes('highRiskLeadDeathsPerGame'));
 assert.ok(api.includes('itemDisadvantageFightRate'));
