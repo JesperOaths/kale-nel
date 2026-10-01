@@ -70,6 +70,8 @@ ok(backend.includes('deathConsequenceCoveragePct'), 'death evidence coverage mus
 ok(backend.includes('uploadedBruisienatorRevision:"V21_PHASE2_SAFE_STATS_ENRICH"'), 'report provenance must record the supplied Bruisienator revision');
 ok(backend.includes('mixedMechanicsFallback'), 'small current mechanics samples remain explicit');
 ok(backend.includes('championBehaviorModel(coachingGames'), 'champion behavior uses the same selected mechanics sample');
+ok(app.includes('function diagnosticChip(')&&app.includes('Vs your usual @15')&&app.includes('Risk deaths vs usual'), 'champion UI must interpret pick-specific metrics against the same role coaching baseline');
+ok(app.includes('Repeated-matchup read')&&app.includes('Outside-pressure share')&&app.includes('DPM vs role peer'), 'repeated-matchup UI must preserve duel, pressure-source and direct-peer evidence');
 ok(backend.includes('phaseExposureMinutes'), 'phase risk must normalize by actual phase exposure');
 ok(backend.includes('macroTransitionMin:14')&&backend.includes('roamEndMin:20'), 'standard side-lane risk must use the 14-minute macro transition without asserting a literal lane ending');
 ok(backend.includes('macroTransitionMin:12')&&backend.includes('roamEndMin:12'), 'Swiftplay side-lane risk must use its accelerated macro transition');
