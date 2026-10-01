@@ -43,6 +43,14 @@
           </select>
         </label>
         <button class="button secondary" id="newProfileBtn" type="button">New profile</button>
+        <label class="field fetch-depth">
+          <span>Cache depth</span>
+          <select id="fetchCount" aria-label="Number of recent matches to cache">
+            <option value="20" selected>20 matches</option>
+            <option value="50">50 matches</option>
+            <option value="100">100 matches</option>
+          </select>
+        </label>
         <button class="button" id="fetchBtn" type="button" disabled>Fetch / update</button>
         <button class="button primary" id="analyzeBtn" type="button" disabled>Analyze cached Last 20</button>
       </div>
@@ -72,6 +80,7 @@
           <span>Riot API key · session only</span>
           <input id="riotApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="RGAPI-…">
         </label>
+        <button class="button secondary" id="testRiotKeyBtn" type="button" disabled>Test Riot key</button>
         <div class="riot-key-copy">
           <strong id="riotKeyStatus">No server Riot key configured</strong>
           <small>The key stays in this browser tab only. It is not saved to your profile, report, cache, or repository.</small>
