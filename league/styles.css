@@ -1234,3 +1234,28 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 @media(max-width:1450px){.pulse-grid,.rank-bridge-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:900px){.recent-pulse-head,.rank-bridge-head{align-items:flex-start;flex-direction:column}.pulse-grid,.rank-bridge-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){.pulse-grid,.rank-bridge-grid{grid-template-columns:1fr}}
+
+
+/* v108 — consistency summaries and game evidence filters */
+.consistency-summary-wrap{margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
+.section-subhead{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:13px}
+.section-subhead>div{display:grid;gap:3px}
+.section-subhead span{font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.section-subhead strong{font-size:1rem}
+.section-subhead small{max-width:760px;color:var(--muted);font-size:.7rem;line-height:1.45}
+.consistency-card strong{font-size:1.15rem}
+.consistency-card small{line-height:1.45}
+.game-filter-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px}
+.game-filter-chips{display:flex;gap:7px;flex-wrap:wrap}
+.game-filter-chip{appearance:none;border:1px solid var(--line-strong);background:#fff;color:#4c473f;border-radius:999px;padding:8px 11px;font:inherit;font-size:.7rem;font-weight:850;cursor:pointer}
+.game-filter-chip:hover,.game-filter-chip:focus-visible{border-color:var(--gold);color:var(--gold-dark);outline:none}
+.game-filter-chip.active-filter{background:#1e1d1b;color:#fff;border-color:#1e1d1b}
+.game-champion-filter{display:flex;align-items:center;gap:7px;margin-left:auto;font-size:.7rem;font-weight:850;color:var(--muted)}
+.game-champion-filter select{min-width:155px;border:1px solid var(--line-strong);border-radius:10px;background:#fff;padding:8px 30px 8px 10px;font:inherit;color:var(--ink)}
+.game-filter-summary{flex-basis:100%;font-size:.66rem;color:var(--muted)}
+.games-empty-row td{text-align:center;padding:24px!important;color:var(--muted)}
+.table-sort.active-sort::after{content:"";display:none}
+.table-sort[data-sort-dir="asc"]::after{content:" ↑";display:inline;font-size:.65rem;color:var(--gold-dark)}
+.table-sort[data-sort-dir="desc"]::after{content:" ↓";display:inline;font-size:.65rem;color:var(--gold-dark)}
+@media(max-width:900px){.section-subhead{align-items:flex-start;flex-direction:column}.game-champion-filter{margin-left:0}.game-filter-bar{align-items:flex-start}}
+@media(max-width:620px){.game-filter-chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}.game-filter-chip{width:100%}.game-champion-filter{width:100%;justify-content:space-between}.game-champion-filter select{flex:1;min-width:0}}
