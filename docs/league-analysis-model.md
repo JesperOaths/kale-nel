@@ -805,6 +805,8 @@ These are descriptive control/presence facts, not proof that the player caused t
 
 Objective-setup vision also counts supported ward **clears** in the setup window, in addition to placements. A clear is not treated as equivalent to a placement; both remain separately visible.
 
+The old report also referenced `controlWardsBought` without reliably producing it. The web analyzer counts Control Ward **purchase events** from Riot item timelines (catalog name, with item ID 2055 as a compatibility fallback) and keeps that separate from Control Wards actually **placed**. This matters because purchase discipline and placement/use are different questions.
+
 ## Roaming
 
 Roaming is not "a kill outside lane."
@@ -912,6 +914,17 @@ The current major-item comparison:
 - identifies a meaningful completed item from patch-appropriate Data Dragon item data,
 - excludes boots, consumables and trinkets,
 - compares the first major completion with the actual same-role opponent.
+
+### Second major-item completion
+
+The historical report tried to expose `item2TimeMin` while also retaining the now-obsolete `mythicTimeMin` label. The web analyzer keeps the useful timing question and retires the obsolete item class:
+
+- detect major completed-item purchases from patch-appropriate Data Dragon item metadata,
+- preserve the first and second major completion separately,
+- compare second-major completion time with the actual same-role opponent when both are measurable,
+- aggregate sample size, average second-major completion minute, and average timing delta versus the direct role peer.
+
+This is descriptive purchase timing. It does not assume that every champion wants the same two-item curve or that faster is always better.
 
 ### Recipe-aware first-major completion readiness
 
@@ -1442,7 +1455,7 @@ The supplied archive includes `Bruisienator_ROAMS_V21_PHASE2_SAFE_STATS_ENRICH`,
 A second-pass producer/consumer audit is required before declaring a legacy UI feature "implemented." The V21 HTML reads several fields that its supplied PowerShell producer does not emit. In particular, `soloDeaths`, `greedyDeaths`, `facecheckDeaths` and `deathsNearObjective` are referenced by DQI but absent from the generated per-game rows. The same audit found several intended objective/vision fields that were incompletely wired in the desktop pipeline.
 
 Parity decisions:
-- **implemented / upgraded:** departure→path→return roam rendering; per-window kill/death/objective/structure evidence; home-lane-specific plate/turret cost while roaming; support ADC lane-cost context; source-accurate V21 DQI provenance; sortable per-game evidence table; objective-family control/presence (Dragon, Elder, Herald, Void Grubs, Baron when exposed by Riot); and objective-setup ward clears;
+- **implemented / upgraded:** departure→path→return roam rendering; per-window kill/death/objective/structure evidence; home-lane-specific plate/turret cost while roaming; support ADC lane-cost context; source-accurate V21 DQI provenance; sortable per-game evidence table; objective-family control/presence (Dragon, Elder, Herald, Void Grubs, Baron when exposed by Riot); objective-setup ward clears; Control Ward purchases distinct from placements; and second major-item completion timing versus the direct role opponent;
 - **already superseded:** old win/loss profile, per-game narrative, objective/death/macro/vision/laning/teamfight/tempo text analyzers, static role thresholds, crude support-roam share, and square heatmaps are covered by richer same-role peer comparisons, evidence-backed judgments, objective root-cause analysis, replay review, session/trend models and real-map spatial rendering;
 - **intentionally retired:** the first-pass invented `consequence_aware_v1` DQI score. Its evidence inputs remain useful, but arbitrary overlapping weights are not a trustworthy replacement metric;
 - **not fabricated:** AGOR stays unavailable because no defensible formula is present in the supplied source.
