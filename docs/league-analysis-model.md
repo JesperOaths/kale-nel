@@ -422,8 +422,8 @@ This is intentionally separate from gold-differential swing:
 The per-game report compares `csDiff15` with `csDiff25`. Aggregate coaching requires multiple comparable games.
 
 Current interpretation:
-- repeated negative swing of roughly **8 CS or more on average** → review post-lane wave assignments/routing,
-- repeated positive swing of roughly **8 CS or more** → potential post-lane farming strength.
+- repeated negative swing of roughly **8 CS or more on average** → review post-macro-transition wave assignments/routing,
+- repeated positive swing of roughly **8 CS or more** → potential post-macro-transition farming strength.
 
 A large positive CS swing is not automatically good if it makes the player late to objectives or fights. Coaching must therefore frame this as **routing efficiency**, not “maximize CS at all costs.”
 
