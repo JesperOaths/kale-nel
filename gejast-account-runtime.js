@@ -113,17 +113,12 @@
       if(clean.length) return clean;
     } catch (_) {}
     const selectorRefresh = async()=>{
-      const calls=[
-        rpc('get_player_selector_source_v1',{site_scope_input:currentScope},{timeoutMs:1800}),
-        rpc('get_player_selector_source_v1',{session_token:null,site_scope_input:currentScope},{timeoutMs:1800})
-      ];
-      const settled=await Promise.allSettled(calls);
-      for(const result of settled){
-        if(result.status!=='fulfilled') continue;
-        const clean=writeLoginCache(namesFromPayload(result.value));
-        if(clean.length) return clean;
+      try {
+        const raw=await rpc('get_player_selector_source_v1',{session_token:null,site_scope_input:currentScope},{timeoutMs:1800});
+        return writeLoginCache(namesFromPayload(raw));
+      } catch (_) {
+        return [];
       }
-      return [];
     };
     if(cached.length){
       // Keep a known-good selector usable immediately while the degraded backend heals.
