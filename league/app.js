@@ -265,6 +265,7 @@ function normalizeReport(r){
   out.recentFocus=Array.isArray(out.recentFocus)?out.recentFocus:Array.isArray(out.tips20)?out.tips20:[];
   out.overallHighlights=Array.isArray(out.overallHighlights)?out.overallHighlights:Array.isArray(out.tips)?out.tips:[];
   out.priorityThemes=Array.isArray(out.priorityThemes)?out.priorityThemes:[];
+  out.practiceTargets=Array.isArray(out.practiceTargets)?out.practiceTargets:[];
   out.advanced=out.advanced||{};
   out.benchmarks=out.benchmarks||{};
   out.dataQuality=out.dataQuality||{};
@@ -398,16 +399,37 @@ function renderSessionHabits(r){
   $('sessionHabitsPanel').hidden=false;
 }
 
+function practiceTargetValue(v,unit){
+  if(!hasNum(v))return'n/a';
+  const n=Number(v);
+  if(unit==='percent')return Math.round(n)+'%';
+  if(unit==='gold')return signed(n,0)+'g';
+  if(unit==='per_game')return n.toFixed(2)+'/game';
+  if(unit==='cs_per_min')return n.toFixed(2)+' CS/min';
+  if(unit==='cs')return signed(n,1)+' CS';
+  if(unit==='percentage_points')return signed(n,1)+' pp';
+  return n.toFixed(2);
+}
+function practiceTargetHtml(target){
+  if(!target||!hasNum(target.baseline)||!hasNum(target.goal))return'';
+  const relation=target.direction==='lower'?'≤':'≥';
+  return '<div class="practice-target"><span>Next 5 comparable games</span><strong>'+esc(practiceTargetValue(target.baseline,target.unit))+' → aim '+esc(relation+' '+practiceTargetValue(target.goal,target.unit))+'</strong>'+
+    '<small>'+esc(target.rationale||'Self-relative short-term target')+' · based on '+esc(String(target.sampleSize||0))+' relevant observation'+(Number(target.sampleSize||0)===1?'':'s')+'</small></div>';
+}
+
 function renderPracticePlan(r){
-  const source=(r.priorityThemes?.length?r.priorityThemes:r.recentFocus)||[];
+  const source=(r.priorityThemes?.length?r.priorityThemes:r.recentFocus)||[],targets=Array.isArray(r.practiceTargets)?r.practiceTargets:[];
   const focus=source.filter(x=>x&&typeof x==='object'&&x.action).sort((a,b)=>Number(a.priority||9)-Number(b.priority||9)||Number(b.score||0)-Number(a.score||0)).slice(0,3);
   if(!focus.length){
     $('practicePlan').innerHTML='<div class="practice-empty">No strong improvement priority has enough evidence yet. Fetch/analyze more timeline-complete games rather than forcing a conclusion.</div>';
     return;
   }
-  $('practicePlan').innerHTML=focus.map((x,i)=>'<article class="practice-card">'+
-    '<div class="practice-number">'+(i+1)+'</div><div><span>'+esc(x.category||'focus')+'</span><strong>'+esc(x.title||'Practice focus')+'</strong>'+
-    '<p>'+esc(x.action)+'</p><small>'+esc(x.comparison||'Last-20 evidence')+' · '+esc(x.confidence||'medium')+' confidence'+(Number(x.supportCount||0)?' · '+esc(String(x.supportCount))+' supporting finding'+(Number(x.supportCount)===1?'':'s'):'')+'</small></div></article>').join('');
+  $('practicePlan').innerHTML=focus.map((x,i)=>{
+    const target=targets.find(t=>String(t.themeKey||'')===String(x.key||''))||targets[i]||null;
+    return '<article class="practice-card">'+
+      '<div class="practice-number">'+(i+1)+'</div><div><span>'+esc(x.category||'focus')+'</span><strong>'+esc(x.title||'Practice focus')+'</strong>'+
+      '<p>'+esc(x.action)+'</p>'+practiceTargetHtml(target)+'<small>'+esc(x.comparison||'Last-20 evidence')+' · '+esc(x.confidence||'medium')+' confidence'+(Number(x.supportCount||0)?' · '+esc(String(x.supportCount))+' supporting finding'+(Number(x.supportCount)===1?'':'s'):'')+'</small></div></article>';
+  }).join('');
 }
 function openReplayReviewMatch(matchId,tab){
   const games=state.report?.games||[],index=games.findIndex(g=>String(g.matchId)===String(matchId));
