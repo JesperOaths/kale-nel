@@ -130,6 +130,12 @@ ok(backend.includes('objectivePresent')&&backend.includes('teamObjectivesWithout
 ok(backend.includes('playerKillAssists')&&backend.includes('playerDeaths'), 'roam K/A and death evidence must remain explicit');
 ok(backend.includes('e.eventLane===homeLane')&&backend.includes('homeLaneStructuresLost'), 'roam structural cost must be scoped to the player home lane');
 ok(backend.includes('supportRoamsHurtingAdc'), 'support roams must aggregate allied-ADC lane-cost evidence');
+ok(backend.includes('roam.coachingLaneCostCs=rr==="SUPPORT"&&hasNum(roam.adcLaneCostCs)'), 'support roam coaching cost must use allied ADC lane differential when measurable');
+ok(backend.includes('laneCostBasis=rr==="SUPPORT"'), 'roam lane-cost evidence must preserve its role-specific basis');
+ok(backend.includes('Number(r.structureInvolvements||0)===0'), 'structure-producing roams must not be classified as empty costly roams');
+ok(!backend.includes('if(Number(g.objectiveTeamTotal)>=2&&hasNum(g.objectiveJoinRate))'), 'per-game objective judgments must not use secured-only attendance thresholds');
+ok(backend.includes('contestedObjectives>=3&&contestedJoins===0'), 'per-game objective criticism must require direct contested-window absence evidence');
+ok(app.includes('ADC-vs-ADC lane cost')&&app.includes('direct-role lane cost'), 'frontend must disclose the role-correct roam lane-cost basis');
 ok(backend.includes('objectiveFamilyStats:{}')&&backend.includes('objectiveFamilySummary'), 'objective-family control/presence must remain exported');
 ok(backend.includes('enemyTeamId=Number(teamId)===100?200:Number(teamId)===200?100:null'), 'enemy objective control must derive from Riot team identity');
 ok(!backend.includes('enemyUnits=Number(opp?window.ownerCounts'), 'objective-family enemy control must not depend on direct-role matching');
