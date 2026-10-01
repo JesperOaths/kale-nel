@@ -479,17 +479,6 @@ function isMajorItem(info:any){
   if(!info)return false;const total=Number(info?.gold?.total||0),tags=Array.isArray(info?.tags)?info.tags:[];
   return total>=2200&&!tags.includes("Boots")&&!tags.includes("Consumable")&&!tags.includes("Trinket");
 }
-function purchaseGroups(events:any[],catalog:any){
-  const sorted=[...(events||[])].sort((a,b)=>a.tMs-b.tMs),groups:any[]=[];
-  for(const e of sorted){
-    let g=groups[groups.length-1];
-    if(!g||e.tMs-g.lastMs>60000){g={startMs:e.tMs,lastMs:e.tMs,startMin:e.tMin,lastMin:e.tMin,items:[],spent:0};groups.push(g);}
-    g.lastMs=e.tMs;g.lastMin=e.tMin;
-    const info=itemInfo(catalog,e.itemId);g.items.push({itemId:e.itemId,name:text(info?.name)||String(e.itemId),cost:Number(info?.gold?.base||0),totalCost:Number(info?.gold?.total||0),major:isMajorItem(info)});
-    g.spent+=Number(info?.gold?.base||0);
-  }
-  return groups;
-}
 function inventoryCountsAt(events:any[],atMs:number){
   const counts=new Map<number,number>(),add=(id:any,delta:number)=>{const n=Number(id||0);if(!n)return;const next=Math.max(0,(counts.get(n)||0)+delta);if(next)counts.set(n,next);else counts.delete(n);};
   for(const e of [...(events||[])].sort((a:any,b:any)=>Number(a.tMs)-Number(b.tMs))){
@@ -500,24 +489,67 @@ function inventoryCountsAt(events:any[],atMs:number){
   }
   return counts;
 }
-function committedItemPurchaseCount(events:any[],itemId:number){
-  let count=0;
-  for(const e of [...(events||[])].sort((a:any,b:any)=>Number(a.tMs)-Number(b.tMs))){
-    if(e.type==="ITEM_PURCHASED"&&Number(e.itemId)===Number(itemId))count++;
-    else if(e.type==="ITEM_UNDO"&&Number(e.beforeId)===Number(itemId))count=Math.max(0,count-1);
+function committedPurchaseEvents(events:any[]){
+  const sorted=[...(events||[])].sort((a:any,b:any)=>Number(a.tMs)-Number(b.tMs)),purchases:any[]=[],openByItem=new Map<number,number[]>();
+  for(const e of sorted){
+    if(e.type==="ITEM_PURCHASED"){
+      const copy={...e,committed:true},idx=purchases.length,id=Number(e.itemId||0);purchases.push(copy);
+      if(id){const stack=openByItem.get(id)||[];stack.push(idx);openByItem.set(id,stack);}
+    }else if(e.type==="ITEM_UNDO"){
+      const id=Number(e.beforeId||0),stack=id?(openByItem.get(id)||[]):[];
+      while(stack.length&&purchases[stack[stack.length-1]]?.committed===false)stack.pop();
+      const idx=stack.pop();if(idx!=null)purchases[idx].committed=false;
+    }
   }
-  return count;
+  return purchases.filter((x:any)=>x.committed!==false).map(({committed,...x}:any)=>x);
+}
+function recipeOwnedCredit(itemId:number,inventory:Map<number,number>,catalog:any){
+  const info=itemInfo(catalog,itemId),children=(Array.isArray(info?.from)?info.from:[]).map((x:any)=>Number(x)).filter(Boolean);
+  if(!children.length)return 0;
+  let credit=0;
+  for(const childId of children){
+    const have=Number(inventory.get(childId)||0);
+    if(have>0){
+      inventory.set(childId,have-1);
+      if(have-1<=0)inventory.delete(childId);
+      credit+=Number(itemInfo(catalog,childId)?.gold?.total||0);
+    }else{
+      credit+=recipeOwnedCredit(childId,inventory,catalog);
+    }
+  }
+  return credit;
+}
+function purchaseCashCost(event:any,itemEvents:any[],catalog:any){
+  const info=itemInfo(catalog,event?.itemId),total=Number(info?.gold?.total||0);
+  if(!(total>0))return{cashCost:0,totalCost:0,componentCredit:0,method:"catalog_unavailable"};
+  const inventory=inventoryCountsAt(itemEvents,Math.max(0,Number(event?.tMs||0)-1)),componentCredit=Math.max(0,recipeOwnedCredit(Number(event.itemId),new Map(inventory),catalog));
+  return{cashCost:Math.max(0,total-componentCredit),totalCost:total,componentCredit,method:"recipe_owned_component_credit"};
+}
+function purchaseGroups(itemEvents:any[],catalog:any){
+  const sorted=committedPurchaseEvents(itemEvents),groups:any[]=[];
+  for(const e of sorted){
+    let g=groups[groups.length-1];
+    if(!g||Number(e.tMs)-Number(g.lastMs)>60000){g={startMs:e.tMs,lastMs:e.tMs,startMin:e.tMin,lastMin:e.tMin,items:[],spent:0,spendMethod:"recipe_owned_component_credit",committedPurchases:0};groups.push(g);}
+    g.lastMs=e.tMs;g.lastMin=e.tMin;g.committedPurchases++;
+    const info=itemInfo(catalog,e.itemId),cost=purchaseCashCost(e,itemEvents,catalog);
+    g.items.push({itemId:e.itemId,name:text(info?.name)||String(e.itemId),cost:cost.cashCost,totalCost:cost.totalCost,componentCredit:cost.componentCredit,major:isMajorItem(info)});
+    g.spent+=Number(cost.cashCost||0);
+  }
+  return groups;
+}
+function committedItemPurchaseCount(events:any[],itemId:number){
+  return committedPurchaseEvents(events).filter((e:any)=>Number(e.itemId)===Number(itemId)).length;
 }
 function majorOwnershipMilestones(events:any[],catalog:any,limit=2){
-  const sorted=[...(events||[])].sort((a:any,b:any)=>Number(a.tMs)-Number(b.tMs)),milestones:any[]=[];
+  const sorted=[...(events||[])].sort((a:any,b:any)=>Number(a.tMs)-Number(b.tMs)),committed=committedPurchaseEvents(sorted),committedKeys=new Set(committed.map((e:any)=>String(e.tMs)+"|"+String(e.itemId))),milestones:any[]=[];
   for(const e of sorted){
-    if(e.type!=="ITEM_PURCHASED")continue;
+    if(e.type!=="ITEM_PURCHASED"||!committedKeys.has(String(e.tMs)+"|"+String(e.itemId)))continue;
     const info=itemInfo(catalog,e.itemId);if(!isMajorItem(info))continue;
     const inv=inventoryCountsAt(sorted,Number(e.tMs));
     let ownedMajorCount=0;
     for(const [id,count] of inv.entries())if(isMajorItem(itemInfo(catalog,id)))ownedMajorCount+=Number(count||0);
     if(ownedMajorCount<=milestones.length)continue;
-    milestones.push({slot:milestones.length+1,time:e.tMin,tMs:e.tMs,itemId:e.itemId,name:text(info?.name)||String(e.itemId),cost:Number(info?.gold?.total||0),combineCost:Number(info?.gold?.base||0),components:Array.isArray(info?.from)?info.from.map((x:any)=>Number(x)).filter(Boolean):[],ownedMajorCount});
+    milestones.push({slot:milestones.length+1,time:e.tMin,tMs:e.tMs,itemId:e.itemId,name:text(info?.name)||String(e.itemId),cost:Number(info?.gold?.total||0),combineCost:Number(info?.gold?.base||0),components:Array.isArray(info?.from)?info.from.map((x:any)=>Number(x)).filter(Boolean):[],ownedMajorCount,committedPurchase:true});
     if(milestones.length>=limit)break;
   }
   return milestones;
@@ -706,7 +738,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
     out.fightProfile.roleLevelDisadvantageRate=out.fightProfile.rolePeerFightStarts?100*out.fightProfile.roleLevelDisadvantageStarts/out.fightProfile.rolePeerFightStarts:null;
   }
   for(const ev of out.fightProfile.events){const ph=out.phaseBehavior[gamePhaseKey(ev.startMin,rules)];ph.fightClusters++;if(ev.firstAllyDeath)ph.firstAllyFightDeaths++;}
-  out.shopVisits=purchaseGroups(purchaseByPid,catalog);out.opponentShopVisits=purchaseGroups(purchaseByOpp,catalog);
+  out.shopVisits=purchaseGroups(itemEventsByPid,catalog);out.opponentShopVisits=purchaseGroups(itemEventsByOpp,catalog);
   if(out.roleQuestContext?.spendEstimateCaveat){
     for(const visit of out.shopVisits){if((visit.items||[]).some((it:any)=>Number(it.itemId)===2055)){visit.spendApproximate=true;visit.spendEstimateCaveat=out.roleQuestContext.spendEstimateCaveat;}}
   }
@@ -1874,7 +1906,7 @@ function report(profile:any,rows:any[],catalog:any){
   const priorityThemes=synthesizePriorityThemes(cm.recentFocus);
   const replayReviewQueue=buildReplayReviewQueue(games);
   const practiceTargets=buildPracticeTargets(priorityThemes,coachingSummary,cm.behaviorSummary,cm.peerComparison,cm.sessionModel);
-  return{schemaVersion:"league-report-v2",analyzerVersion:"league-web-behavior-v4.39",generatedAt:now(),profile:{id:profile.id,displayName:profile.display_name,gameName:profile.game_name,tagLine:profile.tag_line,platformRegion:profile.platform_region,routingRegion:profile.routing_region,rank:profile.rank_snapshot||null},summary,lifetime,outcomeStreaks,coachingSummary,coachingLifetime,baselineContext,byRole,byChampion,championBehavior:championModel.profiles,matchupBehavior:matchupModel.profiles,recentFocus:cm.recentFocus,priorityThemes,practiceTargets,replayReviewQueue,overallHighlights:cm.highlights,coaching:cm.coaching,peerComparison:cm.peerComparison,conversion:cm.conversion,winLoss:cm.winLoss,recentTrend:cm.recentTrend,sessionBehavior:cm.sessionModel,games,charts:{csMin:games.map((g:any)=>({matchId:g.matchId,value:g.csMin})),kp:games.map((g:any)=>({matchId:g.matchId,value:g.kp})),dpm:games.map((g:any)=>({matchId:g.matchId,value:g.dpm})),goldDiff15:games.map((g:any)=>({matchId:g.matchId,value:g.goldDiff15}))},hiddenCharts:[],benchmarks:{rankAbove:{definition:"Actual higher-ranked same-role opponents encountered",sample:cm.peerComparison.higherRankPeerGames,avgGoldDiff15:cm.peerComparison.higherRankAvgGoldDiff15,goldOutperformPct:cm.peerComparison.higherRankGoldOutperformPct,avgDpmDelta:cm.peerComparison.higherRankAvgDpmDelta,majorItemSample:cm.peerComparison.higherRankMajorItemGames,avgMajorItemDeltaMin:cm.peerComparison.higherRankAvgMajorItemDeltaMin,majorItemFasterPct:cm.peerComparison.higherRankMajorItemFasterPct},itemSpike:{peerDefinition:"same-role opponent",avgDeltaMin:cm.peerComparison.avgMajorItemDeltaMin,sample:cm.peerComparison.majorItemGames,higherRankDefinition:"actual higher-ranked same-role opponents encountered",higherRankSample:cm.peerComparison.higherRankMajorItemGames,higherRankAvgDeltaMin:cm.peerComparison.higherRankAvgMajorItemDeltaMin,higherRankFasterPct:cm.peerComparison.higherRankMajorItemFasterPct}},aggregateMaps:{wards:games.flatMap((g:any)=>g.wards||[]),deaths:games.flatMap((g:any)=>g.deathPositions||[])},advanced:{dqi:null,agor:null,objectivePresence:cm.behaviorSummary.objectiveJoinRate,earlyKP:cm.behaviorSummary.earlyKp,firstImpact:{games:cm.peerComparison.impactGames,avgDeltaVsOpponentMin:cm.peerComparison.avgImpactDeltaMin,earlierPct:cm.peerComparison.impactEarlierPct},objectiveDeathPct:cm.behaviorSummary.objectiveDeathPct,preObjectiveDeaths:cm.behaviorSummary.preObjectiveDeaths,preObjectiveDeathPct:cm.behaviorSummary.preObjectiveDeathPct,roams:{attempts:cm.behaviorSummary.roamAttempts,successRate:cm.behaviorSummary.roamSuccessRate,measuredLaneCost:cm.behaviorSummary.roamLaneCostGames,avgLaneCostCs:cm.behaviorSummary.avgRoamLaneCostCs,costlyRoams:cm.behaviorSummary.costlyRoams,emptyCostlyRoams:cm.behaviorSummary.emptyCostlyRoams},recalls:{greedyStayWindows:cm.behaviorSummary.greedyStayWindows,majorReadinessGames:cm.behaviorSummary.majorReadinessGames,delayedMajorCompletionGames:cm.behaviorSummary.delayedMajorCompletionGames,avgMajorCompletionDelayMin:cm.behaviorSummary.avgMajorCompletionDelayMin,majorReadinessPeerGames:cm.behaviorSummary.majorReadinessPeerGames,avgMajorCompletionDelayVsPeerMin:cm.behaviorSummary.avgMajorCompletionDelayVsPeerMin},itemSpike:{avgDeltaVsOpponentMin:cm.peerComparison.avgMajorItemDeltaMin,higherRankGames:cm.peerComparison.higherRankMajorItemGames,higherRankAvgDeltaMin:cm.peerComparison.higherRankAvgMajorItemDeltaMin,higherRankFasterPct:cm.peerComparison.higherRankMajorItemFasterPct,eligibleWindows:cm.peerComparison.itemSpikeEligibleWindows,utilizedWindows:cm.peerComparison.itemSpikeUtilizedWindows,utilizationRate:cm.peerComparison.itemSpikeUtilizationRate,deathsBeforeImpact:cm.peerComparison.itemSpikeDeathsBeforeImpact,avgLeadSec:cm.peerComparison.avgItemSpikeLeadSec},visionSetup:{games:cm.peerComparison.visionSetupGames,avgDeltaVsOpponent:cm.peerComparison.avgObjectiveSetupDelta,outperformPct:cm.peerComparison.objectiveSetupOutperformPct},wardClassification:true,currentSourcePortRequired:false,judgmentModel:"evidence+peer+self-baseline-v2"},behaviorSummary:cm.behaviorSummary,dataQuality:{cachedGames:cachedRows.length,summonersRiftGames:summonersRiftRows.length,durationEligibleSummonersRiftGames:durationEligibleRows.length,eligibleSummonersRiftGames:eligibleRows.length,dominantQueueId,dominantQueueGames:eligibleRows.length,queueCounts:Object.fromEntries([...queueCounts.entries()].map(([k,v])=>[String(k),v])),rulesProfileCounts,roleQuestRevisionCounts,roleQuestCompletionTimingObserved:false,roleQuestCheckpointNote:"Riot timeline state includes quest rewards after completion, but this analyzer does not infer an exact universal quest-completion timestamp; role-quest-sensitive checkpoint effects remain contextual.",lane15ComparableGames:Number(cm.behaviorSummary?.checkpointEligibility?.lane15Games||0),fixed15to25ComparableGames:Number(cm.behaviorSummary?.checkpointEligibility?.fixed15to25Games||0),closing25ComparableGames:Number(cm.behaviorSummary?.checkpointEligibility?.closing25Games||0),excludedOtherMaps:cachedRows.length-summonersRiftRows.length,excludedShortGames:summonersRiftRows.length-durationEligibleRows.length,excludedOtherQueues:durationEligibleRows.length-eligibleRows.length,shortGameThresholdSeconds:600,excludedMissingRole:eligibleRows.length-deepCandidates.length,analyzedGames:games.length,validTimelineGames:validTimeline,validCoordinateGames:coordinateGames,missingTimelineGames:games.length-validTimeline,baselineGames:lifetime?allGames.length:0,coachingRoleGames:coachingGames.length,primaryRoleGamesInLast20:coachingRoleGamesAll.length,currentMechanicsKey,currentMechanicsKnown,mechanicsCohortGames:mechanicsCohortGames.length,mechanicsCohortApplied,mixedMechanicsFallback,mechanicsCohortReason,currentPatchKey,currentPublicPatchKey,currentPatchRoleGames:currentPatchRoleGames.length,olderSamePatchRoleGames:olderSamePatchRoleGames.length,crossPatchBaselineRoleGames:crossPatchBaselineRoleGames.length,patchCounts,patchBaselineReady,itemCatalogResolution:catalog?.resolution||{},itemCatalogExactPatches:Object.values(catalog?.resolution||{}).filter((x:any)=>x?.exact).length,itemCatalogFallbackPatches:Object.values(catalog?.resolution||{}).filter((x:any)=>x?.fallback).length,itemCatalogUnknownPatchGames:allGames.filter((g:any)=>!g.patchKey).length,coachingBaselineRoleGames:coachingLifetime?olderSamePatchRoleGames.length:0,peerComparableGames:cm.peerComparison.sameRoleGames,rankedPeerGames:cm.peerComparison.rankedPeerGames,higherRankPeerGames:cm.peerComparison.higherRankPeerGames},sourceStatus:{currentBruisienatorSourceAvailable:true,historicalAnalyzerRecovered:true,uploadedBruisienatorRevision:"V21_PHASE2_SAFE_STATS_ENRICH",note:"The uploaded Bruisienator source is available for parity auditing. V21 HTML defines a five-input DQI, but the supplied PowerShell pipeline emits only badDeaths; the compatibility score therefore reproduces that effective pipeline behavior and keeps the unpopulated source inputs explicit. Current death coaching uses transparent risk/consequence evidence rather than an invented replacement score. AGOR remains unavailable because no defensible recovered formula was found in the supplied files."}};
+  return{schemaVersion:"league-report-v2",analyzerVersion:"league-web-behavior-v4.40",generatedAt:now(),profile:{id:profile.id,displayName:profile.display_name,gameName:profile.game_name,tagLine:profile.tag_line,platformRegion:profile.platform_region,routingRegion:profile.routing_region,rank:profile.rank_snapshot||null},summary,lifetime,outcomeStreaks,coachingSummary,coachingLifetime,baselineContext,byRole,byChampion,championBehavior:championModel.profiles,matchupBehavior:matchupModel.profiles,recentFocus:cm.recentFocus,priorityThemes,practiceTargets,replayReviewQueue,overallHighlights:cm.highlights,coaching:cm.coaching,peerComparison:cm.peerComparison,conversion:cm.conversion,winLoss:cm.winLoss,recentTrend:cm.recentTrend,sessionBehavior:cm.sessionModel,games,charts:{csMin:games.map((g:any)=>({matchId:g.matchId,value:g.csMin})),kp:games.map((g:any)=>({matchId:g.matchId,value:g.kp})),dpm:games.map((g:any)=>({matchId:g.matchId,value:g.dpm})),goldDiff15:games.map((g:any)=>({matchId:g.matchId,value:g.goldDiff15}))},hiddenCharts:[],benchmarks:{rankAbove:{definition:"Actual higher-ranked same-role opponents encountered",sample:cm.peerComparison.higherRankPeerGames,avgGoldDiff15:cm.peerComparison.higherRankAvgGoldDiff15,goldOutperformPct:cm.peerComparison.higherRankGoldOutperformPct,avgDpmDelta:cm.peerComparison.higherRankAvgDpmDelta,majorItemSample:cm.peerComparison.higherRankMajorItemGames,avgMajorItemDeltaMin:cm.peerComparison.higherRankAvgMajorItemDeltaMin,majorItemFasterPct:cm.peerComparison.higherRankMajorItemFasterPct},itemSpike:{peerDefinition:"same-role opponent",avgDeltaMin:cm.peerComparison.avgMajorItemDeltaMin,sample:cm.peerComparison.majorItemGames,higherRankDefinition:"actual higher-ranked same-role opponents encountered",higherRankSample:cm.peerComparison.higherRankMajorItemGames,higherRankAvgDeltaMin:cm.peerComparison.higherRankAvgMajorItemDeltaMin,higherRankFasterPct:cm.peerComparison.higherRankMajorItemFasterPct}},aggregateMaps:{wards:games.flatMap((g:any)=>g.wards||[]),deaths:games.flatMap((g:any)=>g.deathPositions||[])},advanced:{dqi:null,agor:null,objectivePresence:cm.behaviorSummary.objectiveJoinRate,earlyKP:cm.behaviorSummary.earlyKp,firstImpact:{games:cm.peerComparison.impactGames,avgDeltaVsOpponentMin:cm.peerComparison.avgImpactDeltaMin,earlierPct:cm.peerComparison.impactEarlierPct},objectiveDeathPct:cm.behaviorSummary.objectiveDeathPct,preObjectiveDeaths:cm.behaviorSummary.preObjectiveDeaths,preObjectiveDeathPct:cm.behaviorSummary.preObjectiveDeathPct,roams:{attempts:cm.behaviorSummary.roamAttempts,successRate:cm.behaviorSummary.roamSuccessRate,measuredLaneCost:cm.behaviorSummary.roamLaneCostGames,avgLaneCostCs:cm.behaviorSummary.avgRoamLaneCostCs,costlyRoams:cm.behaviorSummary.costlyRoams,emptyCostlyRoams:cm.behaviorSummary.emptyCostlyRoams},recalls:{greedyStayWindows:cm.behaviorSummary.greedyStayWindows,majorReadinessGames:cm.behaviorSummary.majorReadinessGames,delayedMajorCompletionGames:cm.behaviorSummary.delayedMajorCompletionGames,avgMajorCompletionDelayMin:cm.behaviorSummary.avgMajorCompletionDelayMin,majorReadinessPeerGames:cm.behaviorSummary.majorReadinessPeerGames,avgMajorCompletionDelayVsPeerMin:cm.behaviorSummary.avgMajorCompletionDelayVsPeerMin},itemSpike:{avgDeltaVsOpponentMin:cm.peerComparison.avgMajorItemDeltaMin,higherRankGames:cm.peerComparison.higherRankMajorItemGames,higherRankAvgDeltaMin:cm.peerComparison.higherRankAvgMajorItemDeltaMin,higherRankFasterPct:cm.peerComparison.higherRankMajorItemFasterPct,eligibleWindows:cm.peerComparison.itemSpikeEligibleWindows,utilizedWindows:cm.peerComparison.itemSpikeUtilizedWindows,utilizationRate:cm.peerComparison.itemSpikeUtilizationRate,deathsBeforeImpact:cm.peerComparison.itemSpikeDeathsBeforeImpact,avgLeadSec:cm.peerComparison.avgItemSpikeLeadSec},visionSetup:{games:cm.peerComparison.visionSetupGames,avgDeltaVsOpponent:cm.peerComparison.avgObjectiveSetupDelta,outperformPct:cm.peerComparison.objectiveSetupOutperformPct},wardClassification:true,currentSourcePortRequired:false,judgmentModel:"evidence+peer+self-baseline-v2"},behaviorSummary:cm.behaviorSummary,dataQuality:{cachedGames:cachedRows.length,summonersRiftGames:summonersRiftRows.length,durationEligibleSummonersRiftGames:durationEligibleRows.length,eligibleSummonersRiftGames:eligibleRows.length,dominantQueueId,dominantQueueGames:eligibleRows.length,queueCounts:Object.fromEntries([...queueCounts.entries()].map(([k,v])=>[String(k),v])),rulesProfileCounts,roleQuestRevisionCounts,roleQuestCompletionTimingObserved:false,roleQuestCheckpointNote:"Riot timeline state includes quest rewards after completion, but this analyzer does not infer an exact universal quest-completion timestamp; role-quest-sensitive checkpoint effects remain contextual.",lane15ComparableGames:Number(cm.behaviorSummary?.checkpointEligibility?.lane15Games||0),fixed15to25ComparableGames:Number(cm.behaviorSummary?.checkpointEligibility?.fixed15to25Games||0),closing25ComparableGames:Number(cm.behaviorSummary?.checkpointEligibility?.closing25Games||0),excludedOtherMaps:cachedRows.length-summonersRiftRows.length,excludedShortGames:summonersRiftRows.length-durationEligibleRows.length,excludedOtherQueues:durationEligibleRows.length-eligibleRows.length,shortGameThresholdSeconds:600,excludedMissingRole:eligibleRows.length-deepCandidates.length,analyzedGames:games.length,validTimelineGames:validTimeline,validCoordinateGames:coordinateGames,missingTimelineGames:games.length-validTimeline,baselineGames:lifetime?allGames.length:0,coachingRoleGames:coachingGames.length,primaryRoleGamesInLast20:coachingRoleGamesAll.length,currentMechanicsKey,currentMechanicsKnown,mechanicsCohortGames:mechanicsCohortGames.length,mechanicsCohortApplied,mixedMechanicsFallback,mechanicsCohortReason,currentPatchKey,currentPublicPatchKey,currentPatchRoleGames:currentPatchRoleGames.length,olderSamePatchRoleGames:olderSamePatchRoleGames.length,crossPatchBaselineRoleGames:crossPatchBaselineRoleGames.length,patchCounts,patchBaselineReady,itemCatalogResolution:catalog?.resolution||{},itemCatalogExactPatches:Object.values(catalog?.resolution||{}).filter((x:any)=>x?.exact).length,itemCatalogFallbackPatches:Object.values(catalog?.resolution||{}).filter((x:any)=>x?.fallback).length,itemCatalogUnknownPatchGames:allGames.filter((g:any)=>!g.patchKey).length,coachingBaselineRoleGames:coachingLifetime?olderSamePatchRoleGames.length:0,peerComparableGames:cm.peerComparison.sameRoleGames,rankedPeerGames:cm.peerComparison.rankedPeerGames,higherRankPeerGames:cm.peerComparison.higherRankPeerGames},sourceStatus:{currentBruisienatorSourceAvailable:true,historicalAnalyzerRecovered:true,uploadedBruisienatorRevision:"V21_PHASE2_SAFE_STATS_ENRICH",note:"The uploaded Bruisienator source is available for parity auditing. V21 HTML defines a five-input DQI, but the supplied PowerShell pipeline emits only badDeaths; the compatibility score therefore reproduces that effective pipeline behavior and keeps the unpopulated source inputs explicit. Current death coaching uses transparent risk/consequence evidence rather than an invented replacement score. AGOR remains unavailable because no defensible recovered formula was found in the supplied files."}};
 }
 
 Deno.serve(async(req:Request)=>{
