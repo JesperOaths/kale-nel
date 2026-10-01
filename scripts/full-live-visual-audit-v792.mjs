@@ -16,6 +16,7 @@ const profileTarget = String(process.env.GEJAST_VISUAL_PROFILE_TARGET || 'Antoni
 const timeout = Number(process.env.GEJAST_VISUAL_TIMEOUT_MS || 25000);
 const settleMs = Number(process.env.GEJAST_VISUAL_SETTLE_MS || 1800);
 const degradedFixtures = String(process.env.GEJAST_VISUAL_DEGRADED_FIXTURES || '') === '1';
+const trackedConcurrency = Math.max(1, Math.min(10, Number(process.env.GEJAST_VISUAL_PAGE_CONCURRENCY || 6)));
 const authSettleTimeout = degradedFixtures ? Math.min(timeout, 1500) : Math.min(timeout, 12000);
 const outDir = path.resolve('visual-audit');
 const screenshotsDir = path.join(outDir, 'screenshots');
@@ -428,15 +429,27 @@ function writeReports() {
 await setupContextRooms();
 const browser = await chromium.launch({ headless: true });
 try {
-  let index = 0;
-  for (const htmlPath of trackedHtml) {
-    const familyRoute = htmlPath === 'familie.html' || htmlPath.startsWith('familie/');
-    const sessionToken = degradedFixtures ? '' : (familyRoute ? familyToken : token1);
-    const paardCode = (degradedFixtures || familyRoute) ? '' : state.paardenCode;
-    const context = await newContext(browser, sessionToken, paardCode);
-    try { await capture(context, htmlPath, htmlPath, index++, 'tracked'); }
-    finally { await context.close(); }
+  const indexedTracked = trackedHtml.map((htmlPath, index) => ({ htmlPath, index }));
+  let nextTracked = 0;
+  async function trackedWorker() {
+    for (;;) {
+      const cursor = nextTracked++;
+      if (cursor >= indexedTracked.length) return;
+      const { htmlPath, index } = indexedTracked[cursor];
+      const familyRoute = htmlPath === 'familie.html' || htmlPath.startsWith('familie/');
+      const sessionToken = degradedFixtures ? '' : (familyRoute ? familyToken : token1);
+      const paardCode = (degradedFixtures || familyRoute) ? '' : state.paardenCode;
+      const context = await newContext(browser, sessionToken, paardCode);
+      try { await capture(context, htmlPath, htmlPath, index, 'tracked'); }
+      finally { await context.close(); }
+    }
   }
+
+  const workers = Math.min(trackedConcurrency, indexedTracked.length || 1);
+  console.log(`VISUAL_AUDIT_TRACKED_CONCURRENCY workers=${workers} pages=${indexedTracked.length}`);
+  await Promise.all(Array.from({ length: workers }, () => trackedWorker()));
+
+  let index = trackedHtml.length;
   if (!degradedFixtures) {
     for (const [route, label] of contextualRoutes()) {
       const context = await newContext(browser, token1, state.paardenCode);
@@ -451,5 +464,6 @@ try {
   }
 } finally {
   await browser.close();
+  records.sort((a, b) => Number(a.index || 0) - Number(b.index || 0));
   writeReports();
 }
