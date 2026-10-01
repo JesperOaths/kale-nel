@@ -249,9 +249,10 @@ async function capture(context, route, label, index, kind = 'tracked') {
 
       response = await page.goto(routeUrl(route), { waitUntil: 'domcontentloaded', timeout });
       const protectedOnArrival = expectedProtected(route, response?.status() || 0, page.url());
-      authGate = protectedOnArrival
-        ? { expected: false, settled: true, state: 'protected', waited_ms: 0 }
-        : await waitForAuthGateToSettle(page, route, kind);
+      authGate = { expected: false, settled: true, state: protectedOnArrival ? 'protected' : '', waited_ms: 0 };
+      if (!protectedOnArrival) {
+        authGate = await waitForAuthGateToSettle(page, route, kind);
+      }
       await page.waitForTimeout(settleMs);
 
       let currentPath = '';
