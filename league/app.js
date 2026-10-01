@@ -9,7 +9,7 @@ const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTa
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const LEAGUE_WORKSPACE_KEY='bruisienator_public_workspace_v1';
-const LEAGUE_PROFILE_SELECTION_KEY='bruisienator_saved_profile_selection_v1';
+const LEAGUE_SLOT_SELECTION_KEY='bruisienator_saved_profile_selection_v1';
 const LEAGUE_PROFILE_NOTE_PREFIX='kalenel_league_profile_v2';
 function canonicalRole(v){
   const r=String(v||'').trim().toUpperCase();
@@ -365,7 +365,7 @@ function renderSavedProfiles(){
 }
 function rememberProfileSelection(id){
   state.selectedProfileId=String(id||'');
-  try{if(state.selectedProfileId)localStorage.setItem(LEAGUE_PROFILE_SELECTION_KEY,state.selectedProfileId);else localStorage.removeItem(LEAGUE_PROFILE_SELECTION_KEY);}catch(_){}
+  try{if(state.selectedProfileId)localStorage.setItem(LEAGUE_SLOT_SELECTION_KEY,state.selectedProfileId);else localStorage.removeItem(LEAGUE_SLOT_SELECTION_KEY);}catch(_){}
   renderSavedProfiles();
 }
 async function loadSavedReport(profile){
@@ -401,7 +401,7 @@ async function refreshSavedProfiles({restore=false}={}){
     const d=await api('profiles_list');
     state.savedProfiles=(d.profiles||[]).filter(p=>String(p.profile_key||'')!=='recent-request');
     let wanted=state.selectedProfileId;
-    if(restore&&!wanted){try{wanted=String(localStorage.getItem(LEAGUE_PROFILE_SELECTION_KEY)||'');}catch(_){}}
+    if(restore&&!wanted){try{wanted=String(localStorage.getItem(LEAGUE_SLOT_SELECTION_KEY)||'');}catch(_){}}
     if(restore&&!state.savedProfiles.some(p=>String(p.id)===String(wanted))&&state.savedProfiles.length)wanted=String(state.savedProfiles[0].id);
     state.selectedProfileId=state.savedProfiles.some(p=>String(p.id)===String(wanted))?String(wanted||''):'';
     renderSavedProfiles();
