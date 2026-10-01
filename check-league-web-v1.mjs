@@ -189,3 +189,7 @@ assert.ok(css.includes('.objective-diagnosis'),'Objective diagnosis must have de
 assert.ok(app.includes('practice-supporting'),'Practice plan must expose supporting evidence');
 assert.ok(app.includes('Why this is a priority'),'Practice plan must explain why a theme ranked highly');
 assert.ok(css.includes('.practice-supporting'),'Practice supporting evidence must be styled');
+
+assert.ok(api.includes('High-risk post-play give-backs / game'),'Align diagnosed root causes with measurable practice targets');
+assert.ok(api.includes('Late-reset objective miss rate'),'Objective reset diagnosis must have a direct measurable target');
+assert.ok(api.includes('Pre-objective side-lane deaths / game'),'Side-lane diagnosis must have a direct measurable target');
