@@ -812,9 +812,14 @@ function buildRequestUrl(returnTo, scope){
     try {
       const path = String((location && location.pathname) || '').toLowerCase();
       if (/\/admin/.test(path)) return;
+      // Announcements are useful on the social/game home surfaces, not on
+      // public utility/commerce pages. Do not create background Supabase work
+      // while somebody is logging in, shopping, or using League analytics.
+      if (path === '/league' || path.startsWith('/league/') || path === '/shop' || path.startsWith('/shop/')) return;
+      if (/\/(?:login|request|activate|invite)\.html$/.test(path)) return;
       if (document.querySelector('script[data-despimarkt-announcements]')) return;
       const script = document.createElement('script');
-      script.src = `/gejast-site-announcements.js?${effectiveVersion}`;
+      script.src = `/gejast-site-announcements.js?${effectiveVersion}&rev=20261001-supabase-relief-r2`;
       script.async = false;
       script.setAttribute('data-despimarkt-announcements','1');
       document.head.appendChild(script);
