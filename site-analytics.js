@@ -71,12 +71,11 @@
     return 'Onbekend';
   }
   function rpcHeaders(){
-    return {
-      apikey: SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    };
+    const cfg=window.GEJAST_CONFIG||{};
+    if(typeof cfg.publicApiHeaders==='function') return cfg.publicApiHeaders({'Content-Type':'application/json',Accept:'application/json'});
+    const key=String(SUPABASE_PUBLISHABLE_KEY||'').trim(),headers={apikey:key,'Content-Type':'application/json',Accept:'application/json'};
+    if(/^[^.]+\.[^.]+\.[^.]+$/.test(key)) headers.Authorization=`Bearer ${key}`;
+    return headers;
   }
   async function parseResponse(res){
     const text = await res.text();
