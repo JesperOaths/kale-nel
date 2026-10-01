@@ -458,6 +458,20 @@ For SUPPORT/JUNGLE, aggregate this across enough games and report:
 
 This is a better coaching signal than raw vision score alone because it rewards **timely, contest-relevant setup**. It still does not measure whether a ward survived, was redundant, or was placed in the strategically perfect brush, so do not call it complete vision quality.
 
+## Same-role level readiness in shared fights
+
+Fight-start level differential is only treated as a readiness signal when the **actual same-role opponent is also locally present in the same attended fight cluster**.
+
+Current implementation:
+- use the first kill-event position as the fight anchor,
+- require the role opponent's timeline position to be within roughly **5000 world units**,
+- compare player level with that same-role opponent,
+- classify a readiness disadvantage when the player is at least **one level lower**.
+
+This is stricter than simply comparing global role levels while the opponent may be elsewhere on the map.
+
+Repeated shared fights entered a level down can support coaching to include **level** in the pre-fight readiness check alongside items, gold and local numbers. The recommendation should be to take a nearby XP breakpoint or trade the play when the contest is optional—not to imply every level-down fight must be abandoned.
+
 ## Local numbers and fight selection
 
 For each attended multi-kill fight cluster, inspect the local participant count around the first kill event.
