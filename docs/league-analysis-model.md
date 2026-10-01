@@ -1,3 +1,17 @@
+## Public browser workspace
+
+`/league/` is a public application surface and must not depend on the Kalenel player-login gate.
+
+Each browser receives a random local Bruisienator workspace identifier. The backend hashes that identifier into an isolated internal owner ID, so saved League profiles, match cache rows and reports remain separated between browsers without requiring a Kalenel account.
+
+Security boundary:
+- anonymous/public workspaces never inherit the private server-side Riot API key,
+- Fetch / update requires the visitor to supply a Riot key in the existing session-only field,
+- that Riot key is sent only in the request header and is not written to the profile, report, browser workspace ID or repository,
+- legacy authenticated access can remain backend-compatible, but the public `/league/` frontend must not load `gejast-auth-gate.js`, `gejast-home-gate.js` or call `requireMatchEntrySession`.
+
+This keeps the analysis page publicly usable without turning the site's private Riot credential into a public API proxy.
+
 # Bruisienator web analysis model
 
 This file is the behavioral-analysis contract for `kalenel.nl/league`.
@@ -152,6 +166,14 @@ Choose the most common normalized role in the Last 20 as the primary coaching ro
 - champion-specific judgments compare champion+role samples with the player's own primary-role baseline.
 
 Do not mix ADC and SUPPORT behavior into one coaching average merely because both occurred in the Last 20.
+
+## Verified mechanics boundary
+
+The rules engine has an explicit audited-through boundary: **26.19**.
+
+An internal 2026 game version whose minor is greater than 19 is treated as `2026_minor_unverified` until its patch mechanics are audited. Mechanics-sensitive phase/role-quest assumptions are suppressed rather than inheriting 26.19 behavior merely because the major version is still 16.x.
+
+This boundary is intentionally conservative. Updating it requires both rule review and regression coverage for the newly audited patch.
 
 ## Role normalization
 
@@ -658,12 +680,19 @@ Do not write:
 
 Group player-involved champion kills/assists into short skirmish windows rather than counting every kill separately.
 
-A kill window is treated as converted when the player's team secures a tracked neutral objective or structure within roughly 75 seconds after the window ends. The same calculation is performed for the actual same-role opponent's kill-involvement windows.
+A kill window has two deliberately separate conversion readings within roughly 75 seconds:
+
+- **player-supported conversion** — a neutral objective requires supported player proximity, while a structure requires supported involvement/attribution;
+- **team conversion context** — the team secured a tracked objective or structure in the window even if the player was not supported as present/involved.
+
+Only the player-supported rate is suitable for individual coaching. Team conversion stays visible as context. This prevents an objective taken elsewhere on the map from being silently credited to the player's kill window. The same split is calculated for the actual same-role opponent.
 
 Useful aggregate comparison:
-- player's team post-kill conversion rate,
-- opposing role's team post-kill conversion rate,
-- percentage-point delta between them.
+- player-supported post-kill conversion rate,
+- team conversion after the player's kill windows,
+- opposing-role supported conversion rate,
+- opposing team conversion context,
+- supported percentage-point delta between the player and role opponent.
 
 This is explicitly **team-context evidence**. The player can influence the decision after a won skirmish, but they do not unilaterally control four teammates. Coaching should say "your team converts player-involved kill windows at X%" rather than attributing every conversion/failure solely to the player.
 
@@ -914,6 +943,18 @@ The current major-item comparison:
 - identifies a meaningful completed item from patch-appropriate Data Dragon item data,
 - excludes boots, consumables and trinkets,
 - compares the first major completion with the actual same-role opponent.
+
+## Committed shop ledger
+
+Reset, shop-spend, Control-Ward purchase and major-item timing logic share one item-event ledger.
+
+- `ITEM_PURCHASED` enters the provisional purchase stream.
+- `ITEM_UNDO` invalidates the matching transient purchase rather than leaving it counted as spend.
+- sold/destroyed/undone items are handled by the reconstructed inventory ledger.
+- shop-group cash spend is a **recipe-aware estimate**: current Data Dragon total cost minus supported owned build-component credit immediately before the purchase.
+- dynamic discounts that Data Dragon cannot infer from timeline state remain explicitly approximate rather than silently rewritten.
+
+The first-reset sequence therefore means the first **committed** ≥250g recipe-aware purchase group after supported base departure, not the first cluster of raw purchase clicks.
 
 ### Second major-item completion
 
