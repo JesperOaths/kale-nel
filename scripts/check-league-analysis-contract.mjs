@@ -150,7 +150,17 @@ ok(backend.includes('objectiveTeamEncounters=validTimeline.reduce')&&backend.inc
 ok(backend.includes('objJoin=objectiveTeamEncounters?100*objectiveJoinedEncounters/objectiveTeamEncounters:null'), 'primary objective-presence rate must not average per-game percentages');
 ok(backend.includes('pooledMidRoutingObjectiveJoinRate=midRoutingTeamObjectives?100*midRoutingObjectiveJoins/midRoutingTeamObjectives:null'), 'mid-routing objective presence must pool event denominators');
 ok(backend.includes('meanGameObjectiveJoinRate'), 'descriptive per-game objective mean must remain separate from the coaching rate');
+ok(backend.includes('STANDARD_PVP_SR_QUEUE_IDS=new Set([400,420,430,440,490,700])'), 'standard PvP Summoner’s Rift queue eligibility must remain explicit');
+ok(backend.includes('SWIFTPLAY_SR_QUEUE_IDS=new Set([480])'), 'Swiftplay must remain a separate queue family');
+ok(backend.includes('supportedQueueRows=durationEligibleRows.filter')&&backend.includes('supportedEligible=durationEligible.filter'), 'report and fetch-finish paths must share supported-queue filtering');
+ok(backend.includes('unsupportedQueueRowsExcluded'), 'unsupported special/bot queue exclusions must remain observable');
+ok(app.includes('unsupported special/bot queue'), 'Data Quality must explain unsupported queue exclusions');
 ok(backend.includes('x-league-workspace')&&backend.includes('publicWorkspaceOwnerId('), 'public League must use isolated browser-workspace ownership');
+ok(backend.includes('const uuid=/^[0-9a-f]{8}-')&&backend.includes('hex=/^lw1_[0-9a-f]{48,64}$/i'), 'public workspace identifiers must use a strong accepted token format');
+ok(app.includes('function secureWorkspaceToken()')&&app.includes('crypto.randomUUID')&&app.includes('crypto.getRandomValues'), 'browser workspace identity must use cryptographic randomness');
+ok(!app.includes('Math.random()'), 'public League workspace identity must not use weak Math.random entropy');
+ok(backend.includes('PUBLIC_MAX_PROFILES=8')&&backend.includes('PUBLIC_MAX_FETCH_MATCHES=50')&&backend.includes('PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE=80')&&backend.includes('PUBLIC_MAX_ANALYSES_PER_PROFILE=25'), 'anonymous public workspace resource limits must remain explicit');
+ok(backend.includes('trimAnonymousMatchCache(')&&backend.includes('trimAnonymousRows('), 'anonymous League storage histories must be bounded');
 ok(backend.includes('allowServerRiotKey=viewer.anonymous!==true'), 'anonymous League users must not inherit the server Riot key');
 ok(app.includes("'x-league-workspace':workspaceId()"), 'League frontend must use browser workspace identity');
 ok(!html.includes('gejast-auth-gate.js')&&!html.includes('requireMatchEntrySession'), 'League page must remain public and outside Kalenel login gating');
@@ -297,5 +307,5 @@ console.log(JSON.stringify({
   appVersion,
   domRefs:refs.length,
   domIds:ids.length,
-  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence','control-ward-purchases','second-major-timing','last20-result-streaks','committed-shop-ledger','supported-kill-conversion','public-league-workspace','verified-patch-boundary']
+  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence','control-ward-purchases','second-major-timing','last20-result-streaks','committed-shop-ledger','supported-kill-conversion','public-league-workspace','verified-patch-boundary','supported-sr-queues','bounded-public-workspace']
 },null,2));
