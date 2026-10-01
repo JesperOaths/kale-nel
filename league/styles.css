@@ -493,7 +493,7 @@ body{
     var(--paper);
   background-attachment:scroll;
 }
-.page-wrap{width:min(1820px,calc(100vw - 12px))}
+.page-wrap{width:min(1760px,calc(100% - 32px))}
 .site-shell{
   padding:24px;
   backdrop-filter:none;
