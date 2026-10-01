@@ -7,6 +7,9 @@ on:
       - main
     paths:
       - '**/*.html'
+      - '**/*.js'
+      - '**/*.mjs'
+      - '**/*.css'
       - 'VERSION'
       - 'check-version-drift.mjs'
       - 'check-all-page-version-identity-v875.mjs'
@@ -19,6 +22,9 @@ on:
       - main
     paths:
       - '**/*.html'
+      - '**/*.js'
+      - '**/*.mjs'
+      - '**/*.css'
       - 'VERSION'
       - 'check-version-drift.mjs'
       - 'check-all-page-version-identity-v875.mjs'
