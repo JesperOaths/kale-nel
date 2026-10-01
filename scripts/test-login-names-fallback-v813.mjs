@@ -48,7 +48,9 @@ context.globalThis = context;
 vm.createContext(context);
 new vm.Script(source, { filename: 'gejast-login-names-fallback.js' }).runInContext(context);
 
-assert.equal(context.GEJAST_LOGIN_NAMES_FALLBACK?.source, 'v813-safe-active-name-rpc');
+assert.equal(context.GEJAST_LOGIN_NAMES_FALLBACK?.source, 'v817-bounded-active-name-rpc');
+assert.match(source,/rows\(await rpc\(attempt\[0\], attempt\[1\], 1800\)\)/,'active-name RPC must remain bounded to 1.8 seconds');
+assert.match(source,/login_names_timeout/,'bounded loader must expose a timeout-specific failure for cache fallback');
 assert.equal(cfg.fetchScopedActivePlayerNames, context.GEJAST_LOGIN_NAMES_FALLBACK.load);
 assert.equal(cfg.getActivatedPlayerNamesForScope, context.GEJAST_LOGIN_NAMES_FALLBACK.load);
 
@@ -60,4 +62,4 @@ assert.equal(calls[0].init.headers.apikey, 'publishable-test-key');
 assert.equal(cacheWrites.length, 1);
 assert.deepEqual(cacheWrites[0], { names: ['Familie A', 'Familie B'], scope: 'family' });
 
-console.log('RESULT=V813_LOGIN_NAMES_PUBLIC_RPC_ONLY_PASS');
+console.log('RESULT=V817_LOGIN_NAMES_BOUNDED_PUBLIC_RPC_PASS');
