@@ -169,6 +169,9 @@ ok(backend.includes('function outcomeStreakSummary('), 'Last-20 result streak he
 ok(backend.includes('outcomeStreaks=outcomeStreakSummary(games)'), 'result streaks must use the eligible displayed Last-20 sample');
 ok(app.includes('Longest win / loss streak')&&app.includes('Current result streak'), 'descriptive result streaks must remain visible');
 ok(app.includes('not treated as evidence of tilt, momentum, or player psychology'), 'result streaks must remain explicitly non-causal and non-psychological');
+ok(backend.includes('timelineGames:timeline.length')&&backend.includes('minGamesPerComparedGroup:2')&&backend.includes('laneReady(')&&backend.includes('timelineReady('), 'session deltas must require metric-specific paired coverage instead of one-game subgroup comparisons');
+ok(app.includes('function sessionPairReady(')&&app.includes('Thin subgroups shown for traceability only'), 'session UI must independently gate stale saved-report deltas and label thin subgroups');
+ok(modelDoc.includes('One-game subgroup differences must never be promoted to an observed session/requeue pattern'), 'session sample minimum must remain explicit in the analysis model');
 ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
 ok(backend.includes('objectiveRootCauses'), 'objective evidence-clue ranking must remain in analyzer');
 ok(app.includes('Highest-confidence supported clue')&&app.includes('Different evidence types are not forced onto one numeric severity scale'), 'objective UI must preserve evidence-type caveats and avoid mixed-unit severity claims');
