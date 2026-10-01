@@ -1507,12 +1507,12 @@ function opponentMatchupBehaviorModel(games:any[],summary:any,behaviorSummary:an
   const confidence=(n:number)=>n>=5?"medium":"low";
   for(const [key,list] of groups.entries()){
     if(list.length<3)continue;
-    const [roleName,opponentChampion]=key.split("|"),lane=finiteGames(list.filter(g=>g?.phaseRules?.lane15Comparable!==false),g=>g.goldDiff15),tl=list.filter(g=>g.timelineAvailable);
+    const [roleName,opponentChampion]=key.split("|"),laneComparable=list.filter((g:any)=>g?.phaseRules?.lane15Comparable!==false),lane=finiteGames(laneComparable,g=>g.goldDiff15),tl=list.filter(g=>g.timelineAvailable);
     const ownChampionCounts:any={};for(const g of list){const name=text(g.champion)||"Unknown";ownChampionCounts[name]=(ownChampionCounts[name]||0)+1;}
     const ownChampions=Object.entries(ownChampionCounts).sort((a:any,b:any)=>Number(b[1])-Number(a[1])).map(([champion,games])=>({champion,games:Number(games)}));
     const soloKills=list.reduce((n,g)=>n+Number(g.laneDuel?.earlySoloKillsVsRole||0),0),soloDeaths=list.reduce((n,g)=>n+Number(g.laneDuel?.earlySoloDeathsToRole||0),0);
     const homeLaneDeaths=list.reduce((n,g)=>n+Number(g.lanePressure?.earlyHomeLaneDeaths||0),0),outsidePressureDeaths=list.reduce((n,g)=>n+Number(g.lanePressure?.earlyOutsidePressureDeaths||0),0),outsidePressureShare=homeLaneDeaths?100*outsidePressureDeaths/homeLaneDeaths:null;
-    const p:any={opponentChampion,role:roleName,games:list.length,wins:list.filter(g=>g.win).length,winRate:pct(list.filter(g=>g.win).length,list.length),laneGames:lane.length,goldDiff15:meanField(lane,g=>g.goldDiff15),csDiff15:meanField(finiteGames(list,g=>g.csDiff15),g=>g.csDiff15),badDeaths:meanField(tl,g=>g.badDeathCount),timelineGames:tl.length,earlySoloKills:soloKills,earlySoloDeaths:soloDeaths,earlyHomeLaneDeaths:homeLaneDeaths,earlyOutsidePressureDeaths:outsidePressureDeaths,outsidePressureShare,avgDpmDelta:meanField(list.filter(g=>hasNum(g.peer?.dpmDelta)),g=>g.peer.dpmDelta),ownChampions};
+    const p:any={opponentChampion,role:roleName,games:list.length,wins:list.filter(g=>g.win).length,winRate:pct(list.filter(g=>g.win).length,list.length),laneGames:lane.length,goldDiff15:meanField(lane,g=>g.goldDiff15),csDiff15:meanField(finiteGames(laneComparable,g=>g.csDiff15),g=>g.csDiff15),badDeaths:meanField(tl,g=>g.badDeathCount),timelineGames:tl.length,earlySoloKills:soloKills,earlySoloDeaths:soloDeaths,earlyHomeLaneDeaths:homeLaneDeaths,earlyOutsidePressureDeaths:outsidePressureDeaths,outsidePressureShare,avgDpmDelta:meanField(list.filter(g=>hasNum(g.peer?.dpmDelta)),g=>g.peer.dpmDelta),ownChampions};
     profiles.push(p);
     const ownMix=ownChampions.slice(0,3).map((x:any)=>x.champion+" "+x.games+"g").join(", ");
     if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(summary?.goldDiff15)&&Number(p.goldDiff15)-Number(summary.goldDiff15)<=-300){
