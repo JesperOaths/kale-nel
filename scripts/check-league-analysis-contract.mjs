@@ -71,6 +71,10 @@ ok(backend.includes('phaseExposureMinutes'), 'phase risk must normalize by actua
 ok(backend.includes('macroTransitionMin:14')&&backend.includes('roamEndMin:20'), 'standard side-lane risk must use the 14-minute macro transition without asserting a literal lane ending');
 ok(backend.includes('macroTransitionMin:12')&&backend.includes('roamEndMin:12'), 'Swiftplay side-lane risk must use its accelerated macro transition');
 ok(backend.includes('macroTransitionSideLaneDeaths'), 'primary side-lane risk must use explicit macro-transition semantics');
+ok(!backend.includes('post-early-phase top/bot-lane death'), 'side-lane coaching evidence must not regress to obsolete post-early-phase wording');
+ok(backend.includes('team-contested neutral objective within 90s'), 'side-lane objective evidence text must identify the supported team-contested denominator');
+ok(!app.includes('6.8.1/img/map/map11.png'), 'frontend must never fall back to the obsolete 6.8.1 Summoner\'s Rift asset');
+ok(app.includes("VERIFIED_DDRAGON_FALLBACK='16.19.1'"), 'frontend map fallback must match the current verified Data Dragon version');
 ok(backend.includes('postLaneSideLaneDeaths++; // compatibility alias only'), 'legacy postLane counter must remain explicitly compatibility-only');
 ok(backend.includes('lane15Comparable:true')&&backend.includes('fixed15to25Comparable:true')&&backend.includes('closing25Comparable:true'), 'standard SR must explicitly allow its fixed checkpoints');
 ok(backend.includes('lane15Comparable:false')&&backend.includes('fixed15to25Comparable:false')&&backend.includes('closing25Comparable:false'), 'accelerated/unverified profiles must be able to suppress incompatible fixed checkpoints');
