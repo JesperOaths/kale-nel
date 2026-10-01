@@ -121,9 +121,10 @@ async function loadLatestReport(){
       $('analysisState').textContent=fmtDate(d.analysis.created_at);
       $('sourceState').textContent=d.analysis.source_kind==='legacy_import'?'Imported Bruisienator':'Web analyzer';
       renderReport(d.analysis.report_data,d.analysis.source_kind);
+      renderProgressComparison(d.analysis.report_data,d.previous?.report_data||null,d.previous?.created_at||null);
     }else{
       $('analysisState').textContent='No report';
-      state.report=null;$('report').hidden=true;$('reportEmpty').hidden=false;
+      state.report=null;$('report').hidden=true;$('reportEmpty').hidden=false;$('progressComparisonPanel').hidden=true;
     }
   }catch(e){log('Latest report: '+e.message,'bad');}
 }
@@ -221,6 +222,7 @@ async function analyze(){
     log('Deterministic web analysis generated for '+(d.report?.dataQuality?.analyzedGames||0)+' games.','ok');
     if(d.report?.advanced?.currentSourcePortRequired)log('Advanced Bruisienator formulas are intentionally marked unavailable until the current source package is supplied.');
     renderReport(d.report,'web_behavior');
+    try{const history=await api('report_latest',{profile_id:state.profile.id});renderProgressComparison(d.report,history.previous?.report_data||null,history.previous?.created_at||null);}catch(_){$('progressComparisonPanel').hidden=true;}
     $('analysisState').textContent=fmtDate(d.created_at);
     $('sourceState').textContent='Behavioral analyzer';
     statusPill('Analysis complete');
@@ -280,6 +282,37 @@ function renderBullets(id,items,empty){
       (action?'<p class="coaching-action"><b>Improve:</b> '+esc(action)+'</p>':'')+
       '</div>';
   }).join(''):'<div class="bullet empty">'+esc(empty)+'</div>';
+}
+
+function pathValue(obj,path){
+  return String(path||'').split('.').reduce((v,k)=>v==null?null:v[k],obj);
+}
+function renderProgressComparison(current,previous,previousAt){
+  if(!previous){
+    $('progressComparisonPanel').hidden=true;return;
+  }
+  const role=String(current?.summary?.primaryRole||'GENERIC').toUpperCase();
+  const specs=[
+    {label:'Gold @15 vs role opponent',path:'summary.goldDiff15',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
+    {label:'High-risk deaths / game',path:'behaviorSummary.badDeathsPerTimelineGame',threshold:.3,direction:-1,format:v=>fmt(v,1)},
+    {label:'First major item vs peer',path:'peerComparison.avgMajorItemDeltaMin',threshold:.4,direction:-1,format:v=>signed(v,1)+' min'},
+    {label:'Damage share − gold share',path:'behaviorSummary.damageGoldEfficiency',threshold:2,direction:1,format:v=>signed(v,1)+' pp'}
+  ];
+  if(['ADC','MID','TOP'].includes(role))specs.splice(1,0,{label:'CS / min',path:'summary.csMin',threshold:.3,direction:1,format:v=>fmt(v,2)});
+  if(['SUPPORT','JUNGLE'].includes(role))specs.push({label:'Objective presence',path:'advanced.objectivePresence',threshold:10,direction:1,format:v=>fmtPct(v)});
+  const rows=specs.map(s=>{
+    const cur=pathValue(current,s.path),prev=pathValue(previous,s.path);
+    if(!hasNum(cur)||!hasNum(prev))return null;
+    const raw=Number(cur)-Number(prev),effect=raw*s.direction;
+    const status=effect>=s.threshold?'improved':effect<=-s.threshold?'worsened':'stable';
+    return {label:s.label,current:s.format(cur),previous:s.format(prev),delta:raw,status};
+  }).filter(Boolean);
+  if(!rows.length){$('progressComparisonPanel').hidden=true;return;}
+  $('previousAnalysisDate').textContent='Compared with '+fmtDate(previousAt);
+  $('progressComparison').innerHTML=rows.map(x=>'<article class="progress-comparison-card '+x.status+'">'+
+    '<span>'+esc(x.label)+'</span><strong>'+esc(x.status)+'</strong>'+
+    '<p>Now '+esc(x.current)+' · previous '+esc(x.previous)+'</p></article>').join('');
+  $('progressComparisonPanel').hidden=false;
 }
 
 function renderPracticePlan(r){
