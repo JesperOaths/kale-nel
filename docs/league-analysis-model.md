@@ -286,6 +286,34 @@ This is preferable to inventing a static "rank above" benchmark table.
 
 Rank is a snapshot and can change after the match; present this comparison as the opponent rank observed at fetch time.
 
+## Patch-aware 2026 role-quest context
+
+The 2026 role-quest system is a mechanics dependency for interpretation, not a hidden source of invented events. The analyzer therefore derives a **role-quest rules revision from the match patch** and attaches it to each game.
+
+Standard Summoner's Rift revisions currently distinguished are:
+- **26.1–26.8:** initial 2026 role-quest package,
+- **26.9–26.10:** role-quest reward rework,
+- **26.11–26.18:** mid-lane reward revision with the later +8% bonus AD/AP value,
+- **26.19+:** current cohort including the shorter top-lane Teleport cooldown revision.
+
+The role-specific context records the mechanics that can affect interpretation:
+- **TOP:** quest XP/level-cap and Teleport package; XP/level checkpoints can include quest reward effects after completion,
+- **JUNGLE:** 35-stack quest and post-completion large-monster gold/XP plus jungle/river movement reward,
+- **MID:** free tier-3 boots plus the patch-specific post-quest reward, which changed during 2026,
+- **ADC/BOT:** quest-completion and post-completion gold package plus boots-slot handling; the takedown bonus changed in 26.9,
+- **SUPPORT:** the support quest remains; after completion Control Wards are discounted and can be stored through the quest system.
+
+Swiftplay is deliberately separate: do **not** apply the standard lane-role quest package to Swiftplay games.
+
+Riot timeline data used here does not provide a reliable universal role-quest-completion event that can be assigned to every role and patch. Therefore:
+- the report does **not** invent an exact quest completion minute,
+- real @10/@15/@25 gold, XP and level states remain valid observed states but may already include quest rewards,
+- patch/revision context is shown beside those checkpoints,
+- cross-patch interpretation must acknowledge material reward changes,
+- support Control Ward purchases after quest completion can make static Data Dragon shop-cost estimates too high; these visits are marked **approximate** rather than silently repriced.
+
+The report exports revision counts so a Last-20 sample spanning multiple role-quest revisions is visible as a data-quality caveat.
+
 ## Mid-game farm routing
 
 For TOP, MID and ADC, the analyzer separately tracks the change in **same-role CS differential from 15→25 minutes**.
