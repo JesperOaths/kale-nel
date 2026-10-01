@@ -254,6 +254,9 @@ assert.ok(app.includes('async function runRecentAnalysis()'),'One-click recent-m
 assert.ok(app.includes('fetchProfileData(profile,30)')&&app.includes('fetchProfileData(profile,50)'),'Direct request must scan 30 first and automatically deepen to 50 only when needed');
 assert.ok(app.includes('await fetchProfileData')&&app.includes('await analyzeProfileData'),'Direct request must fetch before analyzing rather than analyzing an empty cache');
 assert.ok(app.includes('if(analyzed<=0)throw new Error'),'A zero-game analysis must be treated as a failed request rather than a successful report');
+assert.ok(app.includes('scheduleHeavyReportRender')&&app.includes('requestIdleCallback'),'Charts/maps must defer heavy rendering until browser idle time');
+assert.ok(!app.includes('bruisienator_recent_request_identity'),'Riot ID request fields must not become another persistent browser profile');
+assert.ok(css.includes('.direct-request-grid')&&css.includes('.request-button'),'Direct request controls must retain their spacious colored layout');
 assert.ok(api.includes('identityChanged')&&api.includes('league_match_cache_v1')&&api.includes('league_analysis_runs_v1'),'Changing the direct Riot identity must clear stale cached matches/analyses before resolving the new summoner');
 assert.ok(api.includes('w.objectiveSetup=neutralObjectives.some'),'Per-ward objective setup must use neutral objectives only');
 assert.ok(!api.includes('w.objectiveSetup=allObjectives.some'),'Turret/plate events must not be counted as neutral-objective ward setup');
@@ -397,7 +400,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v94'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v95'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
