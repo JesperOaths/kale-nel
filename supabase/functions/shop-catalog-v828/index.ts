@@ -198,6 +198,16 @@ async function readCatalogCacheDirect() {
     try { if(sql) await sql.end({ timeout: 1 }); } catch {}
   }
 }
+function scheduleCatalogRefreshNonBlocking(supabase:any){
+  EdgeRuntime.waitUntil((async()=>{
+    try{
+      if(await claimCatalogRefreshLeaseDirect()) await refreshCatalog(supabase);
+    }catch(error){
+      console.warn("shop-catalog-v828 background refresh scheduling failed", error instanceof Error ? error.name : "unknown");
+    }
+  })());
+  return true;
+}
 async function claimCatalogRefreshLeaseDirect() {
   const sql = directDb();
   try {
@@ -994,14 +1004,7 @@ Deno.serve(async (req: Request) => {
   // cache is empty or was built with an obsolete selector, schedule a bounded
   // background refresh and return quickly so browsers can poll without timing out.
   if (!products.length || !selectionCurrent) {
-    if (!refreshLeaseActive) {
-      try {
-        if (await claimCatalogRefreshLeaseDirect()) {
-          refreshScheduled = true;
-          EdgeRuntime.waitUntil(refreshCatalog(supabase));
-        }
-      } catch {}
-    }
+    if (!refreshLeaseActive) refreshScheduled = scheduleCatalogRefreshNonBlocking(supabase);
 
     if (url.searchParams.get("health") === "1") {
       return json(req, {
@@ -1032,14 +1035,7 @@ Deno.serve(async (req: Request) => {
     }, 202);
   }
 
-  if (stale && !refreshLeaseActive) {
-    try {
-      if (await claimCatalogRefreshLeaseDirect()) {
-        refreshScheduled = true;
-        EdgeRuntime.waitUntil(refreshCatalog(supabase));
-      }
-    } catch {}
-  }
+  if (stale && !refreshLeaseActive) refreshScheduled = scheduleCatalogRefreshNonBlocking(supabase);
 
   if (url.searchParams.get("health") === "1") {
     return json(req, {
