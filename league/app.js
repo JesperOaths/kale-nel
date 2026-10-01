@@ -1178,29 +1178,37 @@ function renderProgressComparison(current,previous,previousAt){
 
 function sessionCard(title,sample){
   if(!sample||!Number(sample.games))return '';
-  const lane15=Number(sample.lane15Games??0)>0&&hasNum(sample.goldDiff15)?'Gold @15 '+signed(sample.goldDiff15,0)+'g · ':'';
-  const laneNote=Number(sample.games)>0&&Number(sample.lane15Games??0)===0?' · @15 lane checkpoint not comparable':'';
-  return '<div class="quality-card"><span>'+esc(title)+'</span><strong>'+esc(String(sample.games))+' games</strong>'+
-    '<small>'+esc(lane15)+'risky deaths '+esc(fmt(sample.badDeaths,1))+'/game · DPM '+esc(fmtInt(sample.dpm))+' · CS/min '+esc(fmt(sample.csMin,2))+esc(laneNote)+'</small></div>';
+  const games=Number(sample.games||0),laneN=Number(sample.lane15Games||0),timelineN=Number(sample.timelineGames??(hasNum(sample.badDeaths)?games:0)),dpmN=Number(sample.dpmGames??(hasNum(sample.dpm)?games:0)),csN=Number(sample.csMinGames??(hasNum(sample.csMin)?games:0)),thin=games<3;
+  const lane=laneN>0&&hasNum(sample.goldDiff15)?'Gold @15 '+signed(sample.goldDiff15,0)+'g · '+laneN+'/'+games+' comparable':'Gold @15 n/a · '+laneN+'/'+games+' comparable';
+  const risk=timelineN>0&&hasNum(sample.badDeaths)?'Risky deaths '+fmt(sample.badDeaths,1)+'/game · '+timelineN+'/'+games+' timelines':'Risky deaths n/a · 0/'+games+' timelines';
+  const output='DPM '+fmtInt(sample.dpm)+' · n='+dpmN+' · CS/min '+fmt(sample.csMin,2)+' · n='+csN;
+  return '<div class="quality-card session-sample-card '+(thin?'thin-sample':'')+'"><span>'+esc(title)+(thin?' <em>thin sample</em>':'')+'</span><strong>'+esc(String(games))+' games</strong>'+
+    '<small>'+esc(lane)+'<br>'+esc(risk)+'<br>'+esc(output)+'</small></div>';
+}
+function sessionPairReady(a,b,countField='games'){
+  return Number(a?.games||0)>=2&&Number(b?.games||0)>=2&&Number(a?.[countField]??a?.games??0)>=2&&Number(b?.[countField]??b?.games??0)>=2;
 }
 function renderSessionHabits(r){
-  const s=r.sessionBehavior||r.sessionModel||{};
+  const s=r.sessionBehavior||r.sessionModel||{},first=s.firstGame||{},late=s.game3Plus||{},afterLoss=s.quickAfterLoss||{},afterWin=s.quickAfterWin||{};
   const cards=[
-    sessionCard('Session-opening game',s.firstGame),
-    sessionCard('Game 3+ in session',s.game3Plus),
-    sessionCard('Quick requeue after loss',s.quickAfterLoss),
-    sessionCard('Quick requeue after win',s.quickAfterWin)
+    sessionCard('Session-opening game',first),
+    sessionCard('Game 3+ in session',late),
+    sessionCard('Quick requeue after loss',afterLoss),
+    sessionCard('Quick requeue after win',afterWin)
   ].filter(Boolean);
   if(!cards.length){
     $('sessionHabitsPanel').hidden=true;return;
   }
   $('sessionHabits').innerHTML=cards.join('');
   const deltas=[];
-  if(hasNum(s.game3PlusGoldDelta))deltas.push('game 3+ gold@15 '+signed(s.game3PlusGoldDelta,0)+'g vs opener');
-  if(hasNum(s.game3PlusBadDeathDelta))deltas.push('game 3+ risky deaths '+signed(s.game3PlusBadDeathDelta,1)+'/game');
-  if(hasNum(s.postLossGoldDelta))deltas.push('quick post-loss gold@15 '+signed(s.postLossGoldDelta,0)+'g vs quick post-win');
-  if(hasNum(s.postLossBadDeathDelta))deltas.push('quick post-loss risky deaths '+signed(s.postLossBadDeathDelta,1)+'/game');
-  $('sessionHabitsNote').textContent=(s.definition||'Session grouping uses game timing.')+(deltas.length?' Observed deltas: '+deltas.join(' · ')+'.':'');
+  if(sessionPairReady(late,first,'lane15Games')&&hasNum(s.game3PlusGoldDelta))deltas.push('game 3+ gold@15 '+signed(s.game3PlusGoldDelta,0)+'g vs opener');
+  if(sessionPairReady(late,first,'timelineGames')&&hasNum(s.game3PlusBadDeathDelta))deltas.push('game 3+ risky deaths '+signed(s.game3PlusBadDeathDelta,1)+'/game');
+  if(sessionPairReady(late,first,'dpmGames')&&hasNum(s.game3PlusDpmDelta))deltas.push('game 3+ DPM '+signed(s.game3PlusDpmDelta,0)+' vs opener');
+  if(sessionPairReady(afterLoss,afterWin,'lane15Games')&&hasNum(s.postLossGoldDelta))deltas.push('quick post-loss gold@15 '+signed(s.postLossGoldDelta,0)+'g vs quick post-win');
+  if(sessionPairReady(afterLoss,afterWin,'timelineGames')&&hasNum(s.postLossBadDeathDelta))deltas.push('quick post-loss risky deaths '+signed(s.postLossBadDeathDelta,1)+'/game');
+  const thin=[['opener',first],['game 3+',late],['post-loss',afterLoss],['post-win',afterWin]].filter(([,x])=>Number(x?.games||0)>0&&Number(x.games)<3).map(([label,x])=>label+' n='+Number(x.games));
+  const base=s.definition||'Session grouping uses game timing. Deltas require at least two valid observations in both compared groups.';
+  $('sessionHabitsNote').textContent=base+(deltas.length?' Supported observed deltas: '+deltas.join(' · ')+'.':' No comparison currently has enough paired evidence for a supported delta.')+(thin.length?' Thin subgroups shown for traceability only: '+thin.join(', ')+'.':'');
   $('sessionHabitsPanel').hidden=false;
 }
 
