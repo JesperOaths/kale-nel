@@ -28,8 +28,9 @@ jobs:
           import os, urllib.parse
           u=urllib.parse.urlsplit(os.environ['SUPABASE_DB_URL'])
           pw=urllib.parse.quote(urllib.parse.unquote(u.password or ''), safe='')
-          user='postgres.uiqntazgnrxwliaidkmy'
-          host='aws-0-eu-west-1.pooler.supabase.com'
+          user=urllib.parse.quote(urllib.parse.unquote(u.username or 'postgres.uiqntazgnrxwliaidkmy'), safe='')
+          configured_host=(u.hostname or '').strip()
+          host=configured_host if 'pooler.supabase.com' in configured_host else 'aws-1-eu-west-1.pooler.supabase.com'
           for name,port in [('POOLER_TX_URL',6543),('POOLER_SESSION_URL',5432)]:
               url=f'postgresql://{user}:{pw}@{host}:{port}/postgres?sslmode=require'
               print(f'::add-mask::{url}')
