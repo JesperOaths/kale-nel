@@ -246,7 +246,10 @@ ok(app.includes('curPatch!==prevPatch'), 'practice-target follow-up must fail cl
 ok(app.includes("'moving closer'")&&app.includes("'moved away'")&&app.includes("'unchanged'"), 'practice-target follow-up statuses must remain explicit');
 ok(html.includes('id="practiceOutcome"'), 'practice target outcome container must remain in page');
 ok(app.includes('Next 5 comparable games'), 'practice cards must identify the short practice horizon');
-ok(!/localStorage|sessionStorage|indexedDB/.test(app), 'Riot key or League state must not be persisted in browser storage');
+const browserStorageLines=app.split(/\r?\n/).filter(line=>/localStorage|sessionStorage|indexedDB/.test(line));
+ok(!/sessionStorage|indexedDB/.test(app), 'League must not persist Riot keys/reports in sessionStorage or IndexedDB');
+ok(browserStorageLines.every(line=>line.includes('LEAGUE_WORKSPACE_KEY')||line.includes('localStorage.getItem(LEAGUE_WORKSPACE_KEY)')||line.includes('localStorage.setItem(LEAGUE_WORKSPACE_KEY')),'Persistent League browser storage must be limited to the anonymous workspace identifier');
+ok(!/localStorage\.(?:setItem|getItem)\([^\n]*(?:riot|api.?key|report|profile|match|puuid)/i.test(app),'Riot keys, reports, profiles and match state must not be persisted in localStorage');
 
 let parseError=null;
 try{new Function(app);}catch(e){parseError=e;}
