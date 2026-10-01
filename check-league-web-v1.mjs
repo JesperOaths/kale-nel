@@ -353,7 +353,7 @@ assert.ok(api.includes('finalItems=[p.item0,p.item1,p.item2,p.item3,p.item4,p.it
 assert.ok(app.includes('matchVisualHeader')&&app.includes('finalItems'),'Expanded matches must render champion/opponent/build imagery on demand');
 assert.ok(app.includes("'<circle class=\"radar-ring\""),'Rank comparison must use a circular spider-grid rather than a polygon-grid scaffold');
 assert.ok(css.includes('.games-table th{position:static!important}')&&css.includes('.site-credit-watermark{'),'Long-scroll surfaces must avoid sticky/fixed compositing where it is not necessary');
-assert.ok(css.includes('width:min(1960px')&&css.includes('html{font-size:18px'),'League report must remain substantially wider with larger base typography');
+assert.ok(css.includes('width:min(1760px,calc(100% - 32px))')&&css.includes('html{font-size:18px'),'League report must retain a spacious 1760px desktop shell with larger base typography');
 assert.ok(css.includes('--good:#126a45')&&css.includes('--bad:#b23a2f'),'Positive and negative data must retain high-contrast visual tokens');
 assert.ok(html.includes('id="quickRead"')&&html.includes('id="radarChart"')&&html.includes('id="decisionMetrics"'),'Logical overview, population radar and decision sections must remain present');
 assert.ok(html.includes('id="technicalMetricsDetails"'),'The exhaustive analysis must remain collapsed into an on-demand appendix');
