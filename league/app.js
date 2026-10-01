@@ -728,10 +728,12 @@ function benchmarkKpi(label,value,benchmark,unit,inverse=false,extra=''){
 }
 
 function reportInsightParts(x,fallback){
-  if(typeof x==='string')return {present:true,title:fallback,copy:x,action:''};
+  if(typeof x==='string'){
+    const copy=x.trim();return copy?{present:true,title:fallback,copy,action:''}:{present:false,title:'Not enough evidence',copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:''};
+  }
   if(!x||typeof x!=='object')return {present:false,title:'Not enough evidence',copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:''};
-  const title=String(x.title||x.label||x.category||fallback),copy=String(x.evidence||x.text||x.comparison||''),action=String(x.action||'');
-  return {present:Boolean(title||copy||action),title,copy,action};
+  const sourceTitle=String(x.title||x.label||x.category||'').trim(),copy=String(x.evidence||x.text||x.comparison||'').trim(),action=String(x.action||'').trim(),present=Boolean(sourceTitle||copy||action);
+  return {present,title:present?(sourceTitle||fallback):'Not enough evidence',copy:present?copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:present?action:''};
 }
 function recentDirectionSummary(r){
   const t=r.recentTrend||{},defs=[
@@ -1301,7 +1303,8 @@ function gamePassesFilter(g){
 }
 
 function gameMechanicsKey(g){
-  return [String(g?.phaseRules?.key||'unknown'),String(g?.roleQuestContext?.revision||'unknown')].join('|');
+  const rules=String(g?.phaseRules?.key||'').trim()||'unknown',revision=String(g?.roleQuestContext?.revision||'').trim()||'unknown';
+  return [rules,revision].join('|');
 }
 function reportCoachingGames(r){
   const games=Array.isArray(r?.games)?r.games:[],dq=r?.dataQuality||{};
