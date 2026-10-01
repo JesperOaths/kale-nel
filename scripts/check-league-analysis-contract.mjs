@@ -196,6 +196,9 @@ ok(app.includes('function secureWorkspaceToken()')&&app.includes('crypto.randomU
 ok(!app.includes('Math.random()'), 'public League workspace identity must not use weak Math.random entropy');
 ok(backend.includes('PUBLIC_MAX_PROFILES=8')&&backend.includes('PUBLIC_MAX_FETCH_MATCHES=50')&&backend.includes('PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE=80')&&backend.includes('PUBLIC_MAX_ANALYSES_PER_PROFILE=25'), 'anonymous public workspace resource limits must remain explicit');
 ok(backend.includes('trimAnonymousMatchCache(')&&backend.includes('trimAnonymousRows('), 'anonymous League storage histories must be bounded');
+const matchCachePruner=backend.slice(backend.indexOf('async function trimAnonymousMatchCache'),backend.indexOf('async function riot('));
+ok(matchCachePruner.includes('select("match_id")')&&matchCachePruner.includes('.in("match_id",matchIds)'), 'match-cache pruning must use match_id from the real composite primary key');
+ok(!matchCachePruner.includes('select("id")')&&!matchCachePruner.includes('.in("id",'), 'match-cache pruning must never assume an id column exists');
 ok(backend.includes('if(action==="profile_delete")')&&backend.includes('.delete().eq("id",profileId).eq("owner_player_id",viewer.player_id)'), 'profile deletion must be owner-scoped');
 ok(backend.includes('directRequest=body.direct_request===true')&&backend.includes('profileKey=directRequest?"recent-request"'), 'direct public requests must reuse one bounded internal scratch identity instead of exposing profile management');
 ok(migration.includes('references public.league_profiles_v1(id) on delete cascade'), 'profile deletion must cascade child League data');
