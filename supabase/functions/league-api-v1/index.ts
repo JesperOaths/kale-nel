@@ -602,32 +602,22 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
     duel.diedBeforeNextShop=!!deathBeforeShop;
     duel.deathBeforeNextShopSec=deathBeforeShop?Math.max(0,Math.round((Number(deathBeforeShop.tMs)-killMs)/1000)):null;
   }
-  for(const obj of neutralOwnObjectives){
+  for(const window of neutralOwnWindows){
     out.objectiveReadiness.neutralTeamObjectives++;
-    const fr=frameAtMs(frames,obj.tMs),me=frameStats(fr,pid),present=!!(me?.position&&obj.x!=null&&obj.y!=null&&dist2(me.position,obj)<=2500*2500);
+    const present=objectiveWindowNear(frames,pid,window,2500),firstPriorSetupFrame=objectiveWindowSetupFrame(frames,pid,window);
     if(present)out.objectiveReadiness.joined++;else out.objectiveReadiness.absent++;
-    let firstPriorSetupFrame:any=null;
-    if(obj.x!=null&&obj.y!=null){
-      for(const candidate of frames){
-        const t=Number(candidate?.timestamp||0);
-        if(t<Number(obj.tMs)-120000||t>=Number(obj.tMs))continue;
-        const fs=frameStats(candidate,pid);
-        if(fs?.position&&dist2(fs.position,obj)<=3000*3000){firstPriorSetupFrame=candidate;break;}
-      }
-    }
-    const setupLeadSec=firstPriorSetupFrame?Math.max(0,Math.round((Number(obj.tMs)-Number(firstPriorSetupFrame.timestamp||0))/1000)):null;
-    const earlySetup=present&&setupLeadSec!=null&&setupLeadSec>=45;
-    const eventFrameOnlyJoin=present&&!earlySetup;
+    const setupLeadSec=firstPriorSetupFrame?Math.max(0,Math.round((Number(window.startMs)-Number(firstPriorSetupFrame.timestamp||0))/1000)):null;
+    const earlySetup=present&&setupLeadSec!=null&&setupLeadSec>=45,eventFrameOnlyJoin=present&&!earlySetup;
     if(earlySetup)out.objectiveReadiness.earlySetupJoins++;
     if(eventFrameOnlyJoin)out.objectiveReadiness.eventFrameOnlyJoins++;
-    const priorVisits=out.shopVisits.filter((v:any)=>Number(v.lastMs)<=Number(obj.tMs)),lastVisit=priorVisits[priorVisits.length-1]||null;
-    const secondsSinceShop=lastVisit?Math.round((Number(obj.tMs)-Number(lastVisit.lastMs))/1000):null;
-    const recentDeath=deathEvents.some((d:any)=>d.tMs<=obj.tMs&&d.tMs>=obj.tMs-75000);
-    const lateResetMiss=!present&&!recentDeath&&secondsSinceShop!=null&&secondsSinceShop>=0&&secondsSinceShop<=60;
-    const freshPurchaseJoin=present&&secondsSinceShop!=null&&secondsSinceShop>=0&&secondsSinceShop<=120;
+    const priorVisits=out.shopVisits.filter((v:any)=>Number(v.lastMs)<=Number(window.startMs)),lastVisit=priorVisits[priorVisits.length-1]||null;
+    const secondsSinceShop=lastVisit?Math.round((Number(window.startMs)-Number(lastVisit.lastMs))/1000):null;
+    const recentDeath=deathEvents.some((d:any)=>Number(d.tMs)<=Number(window.startMs)&&Number(d.tMs)>=Number(window.startMs)-75000);
+    const lateResetMiss=!present&&!recentDeath&&secondsSinceShop!=null&&secondsSinceShop>=0&&secondsSinceShop<=60,freshPurchaseJoin=present&&secondsSinceShop!=null&&secondsSinceShop>=0&&secondsSinceShop<=120;
     if(lateResetMiss)out.objectiveReadiness.lateResetMisses++;
     if(freshPurchaseJoin)out.objectiveReadiness.freshPurchaseJoins++;
-    out.objectiveReadiness.events.push({time:obj.tMin,objectiveType:text(obj.monsterType||obj.monsterSubType||"neutral objective"),present,earlySetup,eventFrameOnlyJoin,setupLeadSec,setupEvidence:"timeline_frame",secondsSinceShop,currentGold:me?.currentGold??null,recentDeath,lateResetMiss,freshPurchaseJoin});
+    const atStart=frameStats(frameAtMs(frames,Number(window.startMs)),pid);
+    out.objectiveReadiness.events.push({time:Number(window.startMin),endTime:Number(window.endMin),objectiveType:text(window.objectiveType||window.family||"neutral objective"),rawEventCount:Number(window.count||1),present,earlySetup,eventFrameOnlyJoin,setupLeadSec,setupEvidence:"timeline_window",secondsSinceShop,currentGold:atStart?.currentGold??null,recentDeath,lateResetMiss,freshPurchaseJoin});
   }
   if(out.objectiveReadiness.joined>0)out.objectiveReadiness.earlySetupJoinRate=100*out.objectiveReadiness.earlySetupJoins/out.objectiveReadiness.joined;
   if(out.objectiveReadiness.neutralTeamObjectives>0)out.objectiveReadiness.earlySetupCoverageRate=100*out.objectiveReadiness.earlySetupJoins/out.objectiveReadiness.neutralTeamObjectives;
@@ -649,17 +639,17 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
     out.fightProfile.goldDeficitStartRate=100*out.fightProfile.goldDeficitStarts/out.fightProfile.attended;
   }
   const duration=Math.max(1,Number(match?.info?.gameDuration||0)/60);out.vision.wardsPer30=out.vision.wardCount/duration*30;
-  for(const obj of neutralOwnObjectives){
-    out.objectiveTeamTotal++;out.phaseBehavior[gamePhaseKey(obj.tMin,rules)].teamObjectives++;
-    const fs=frameAtMs(frames,obj.tMs),me=frameStats(fs,pid),near=me?.position&&obj.x!=null&&obj.y!=null&&dist2(me.position,obj)<=2500*2500;
-    if(Number(obj.tMin)>=Number(rules.midRoutingStartMin)&&Number(obj.tMin)<Number(rules.midRoutingEndMin)){out.midRouting.teamObjectives++;if(near)out.midRouting.objectiveJoins++;}
-    if(near){out.objectiveJoined++;out.phaseBehavior[gamePhaseKey(obj.tMin,rules)].objectiveJoins++;if(out.impactTimeMin==null||obj.tMin<out.impactTimeMin){out.impactTimeMin=obj.tMin;out.impactType="neutral_objective";}}
+  for(const window of neutralOwnWindows){
+    out.objectiveTeamTotal++;out.phaseBehavior[gamePhaseKey(window.startMin,rules)].teamObjectives++;
+    const near=objectiveWindowNear(frames,pid,window,2500);
+    if(Number(window.startMin)>=Number(rules.midRoutingStartMin)&&Number(window.startMin)<Number(rules.midRoutingEndMin)){out.midRouting.teamObjectives++;if(near)out.midRouting.objectiveJoins++;}
+    if(near){out.objectiveJoined++;out.phaseBehavior[gamePhaseKey(window.startMin,rules)].objectiveJoins++;if(out.impactTimeMin==null||Number(window.startMin)<out.impactTimeMin){out.impactTimeMin=Number(window.startMin);out.impactType="neutral_objective";}}
   }
   if(out.objectiveTeamTotal>0)out.objectiveJoinRate=100*out.objectiveJoined/out.objectiveTeamTotal;
   if(out.midRouting.teamObjectives>0)out.midRouting.objectiveJoinRate=100*out.midRouting.objectiveJoins/out.midRouting.teamObjectives;
-  for(const obj of neutralOppObjectives){
-    const fs=frameAtMs(frames,obj.tMs),them=oppId?frameStats(fs,oppId):null,near=them?.position&&obj.x!=null&&obj.y!=null&&dist2(them.position,obj)<=2500*2500;
-    if(near&&(out.opponentImpactTimeMin==null||obj.tMin<out.opponentImpactTimeMin)){out.opponentImpactTimeMin=obj.tMin;out.opponentImpactType="neutral_objective";}
+  for(const window of neutralOppWindows){
+    const near=oppId?objectiveWindowNear(frames,oppId,window,2500):false;
+    if(near&&(out.opponentImpactTimeMin==null||Number(window.startMin)<out.opponentImpactTimeMin)){out.opponentImpactTimeMin=Number(window.startMin);out.opponentImpactType="neutral_objective";}
   }
   let teamEarly=0,playerEarly=0;
   for(const fr of frames){for(const e of(Array.isArray(fr?.events)?fr.events:[])){if(e.type!=="CHAMPION_KILL"||Number(e.timestamp||0)>Number(rules.earlyKpEndMin)*60*1000)continue;const killer=byId.get(Number(e.killerId));if(!killer||Number(killer.teamId)!==teamId)continue;teamEarly++;if(playerInKill(e,pid))playerEarly++;}}
