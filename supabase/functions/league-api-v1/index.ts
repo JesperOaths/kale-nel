@@ -2149,12 +2149,17 @@ Deno.serve(async(req:Request)=>{
       }
       const{data,error}=await sb.from("league_fetch_runs_v1").update({status:"done",completed_at:now(),updated_at:now()}).eq("id",runId).eq("owner_player_id",viewer.player_id).select("*").maybeSingle();
       if(error||!data)throw error||Object.assign(new Error("fetch_run_not_found"),{status:404});
-      let prunedMatches=0,prunedFetchRuns=0;
+      let prunedMatches=0,prunedFetchRuns=0,pruneWarning:string|null=null;
       if(viewer.anonymous===true){
-        prunedMatches=await trimAnonymousMatchCache(sb,p.id,viewer.player_id);
-        prunedFetchRuns=await trimAnonymousRows(sb,"league_fetch_runs_v1",p.id,viewer.player_id,PUBLIC_MAX_FETCH_RUNS_PER_PROFILE,"created_at");
+        try{
+          prunedMatches=await trimAnonymousMatchCache(sb,p.id,viewer.player_id);
+          prunedFetchRuns=await trimAnonymousRows(sb,"league_fetch_runs_v1",p.id,viewer.player_id,PUBLIC_MAX_FETCH_RUNS_PER_PROFILE,"created_at");
+        }catch(e:any){
+          pruneWarning=text(e?.message||e).slice(0,240);
+          console.error("league-api-v1 anonymous fetch cleanup",pruneWarning);
+        }
       }
-      return json(req,{ok:true,run:data,dominant_queue_id:dominantQueueId,comparable_cached_games:comparableCachedGames,peer_rank_target_count:peerRankTargetCount,peer_rank_backfilled:peerRankBackfilled,public_cache_pruned:prunedMatches,public_fetch_runs_pruned:prunedFetchRuns,recommend_deeper_cache:comparableCachedGames<20&&Number(run.total_count||0)<(viewer.anonymous===true?PUBLIC_MAX_FETCH_MATCHES:100)});
+      return json(req,{ok:true,run:data,dominant_queue_id:dominantQueueId,comparable_cached_games:comparableCachedGames,peer_rank_target_count:peerRankTargetCount,peer_rank_backfilled:peerRankBackfilled,public_cache_pruned:prunedMatches,public_fetch_runs_pruned:prunedFetchRuns,public_prune_warning:pruneWarning,recommend_deeper_cache:comparableCachedGames<20&&Number(run.total_count||0)<(viewer.anonymous===true?PUBLIC_MAX_FETCH_MATCHES:100)});
     }
     if(action==="cache_status"){
       const p=await getProfile(sb,viewer.player_id,body.profile_id),{count,error}=await sb.from("league_match_cache_v1").select("*",{count:"exact",head:true}).eq("profile_id",p.id);if(error)throw error;
@@ -2168,8 +2173,12 @@ Deno.serve(async(req:Request)=>{
       const catalog:any={fallback:fallbackCatalog.data,fallbackMeta:fallbackCatalog,byPatch:{},resolution:{}};
       patchKeys.forEach((pk:string,i:number)=>{const resolved=patchCatalogs[i];catalog.byPatch[pk]=resolved?.data||fallbackCatalog.data;catalog.resolution[pk]={version:resolved?.version||fallbackCatalog.version||null,exact:!!resolved?.exact,fallback:!!resolved?.fallback};});
       const rep=report(p,rows||[],catalog),{data:run,error:se}=await sb.from("league_analysis_runs_v1").insert({profile_id:p.id,owner_player_id:viewer.player_id,source_kind:"web_behavior",analyzer_version:rep.analyzerVersion,sample_match_ids:rep.games.map((g:any)=>g.matchId),report_data:rep,data_quality:rep.dataQuality}).select("id,created_at").single();if(se)throw se;
-      const prunedAnalyses=viewer.anonymous===true?await trimAnonymousRows(sb,"league_analysis_runs_v1",p.id,viewer.player_id,PUBLIC_MAX_ANALYSES_PER_PROFILE,"created_at"):0;
-      return json(req,{ok:true,analysis_id:run.id,created_at:run.created_at,report:rep,public_analyses_pruned:prunedAnalyses});
+      let prunedAnalyses=0,pruneWarning:string|null=null;
+      if(viewer.anonymous===true){
+        try{prunedAnalyses=await trimAnonymousRows(sb,"league_analysis_runs_v1",p.id,viewer.player_id,PUBLIC_MAX_ANALYSES_PER_PROFILE,"created_at");}
+        catch(e:any){pruneWarning=text(e?.message||e).slice(0,240);console.error("league-api-v1 anonymous analysis cleanup",pruneWarning);}
+      }
+      return json(req,{ok:true,analysis_id:run.id,created_at:run.created_at,report:rep,public_analyses_pruned:prunedAnalyses,public_prune_warning:pruneWarning});
     }
     if(action==="report_latest"){
       const p=await getProfile(sb,viewer.player_id,body.profile_id),{data,error}=await sb.from("league_analysis_runs_v1").select("id,source_kind,analyzer_version,sample_match_ids,report_data,data_quality,created_at").eq("profile_id",p.id).eq("owner_player_id",viewer.player_id).order("created_at",{ascending:false}).limit(10);
