@@ -93,17 +93,19 @@ This keeps Riot rank lookups bounded to the final comparable sample instead of b
 
 ## Queue-context isolation
 
-Summoner's Rift alone is not a sufficient comparability filter because Riot's match payload also includes a `queueId` identifying the match queue/context.
+Summoner's Rift alone is not a sufficient comparability filter because map 11 also hosts special, bot and legacy queues whose pacing/mechanics are not valid coaching peers.
 
-The analyzer therefore keeps all fetched matches cached, but after the map and minimum-duration filters it:
-1. counts the raw Riot `queueId` values,
-2. selects the most represented queue ID in the eligible sample,
-3. uses only that queue ID for the Last-20 deep coaching sample and broader cached baseline,
-4. reports how many otherwise-eligible games were excluded because they belonged to another queue ID.
+The analyzer therefore keeps fetched matches cached but filters the coaching candidate pool in this order:
+1. Summoner's Rift (`mapId = 11`),
+2. at least 600 seconds of game duration,
+3. an **explicitly supported current PvP queue**,
+4. then the dominant raw `queueId` among those supported candidates.
 
-This deliberately uses the **raw queue ID** instead of hard-coded queue names. The isolation remains correct even if Riot changes a human-readable queue description later.
+Current supported queue IDs are Draft Pick 400, Ranked Solo 420, Blind Pick 430, Ranked Flex 440, Swiftplay 480, Quickplay 490 and Summoner's Rift Clash 700. Swiftplay remains a separate rules family. Any other map-11 queue fails closed out of coaching until reviewed.
 
-The Data Quality block exposes the dominant queue ID, queue counts, analyzed-context game count, and excluded-other-queue count. A smaller homogeneous sample is preferred over a larger sample that mixes materially different play contexts.
+Only after unsupported queues are removed does the analyzer choose the dominant raw queue ID for the Last-20 deep coaching sample and broader cached baseline. This prevents a frequently played bot/special queue from becoming the "dominant" context merely because it appears often.
+
+Data Quality exposes the supported-candidate count, unsupported queue IDs excluded, dominant queue family/ID, queue counts and the remaining excluded-other-queue count. A smaller mechanically coherent sample is preferred over a larger mixed sample.
 
 ## Coaching-sample eligibility
 
@@ -301,7 +303,17 @@ The UI should always make clear that these are **same-role direct opponents**, n
 
 ### Rank-band context
 
-Where both player and direct same-role opponent have a fetched Solo/Duo rank snapshot, also classify the opponent by **tier/division band**:
+Rank-pressure coaching is valid only when the player and direct same-role opponent have snapshots on the **same Riot ranked ladder**.
+
+Rank snapshots retain both Solo/Duo and Flex entries when Riot provides them. Comparison selection is queue-aware:
+- Ranked Solo matches require `RANKED_SOLO_5x5`,
+- Ranked Flex matches require `RANKED_FLEX_SR`,
+- other supported PvP queues use the first ranked ladder both players actually share (Solo/Duo first, then Flex),
+- if no shared ladder exists, that game is excluded from rank-band coaching rather than comparing unlike ladders.
+
+Old single-ladder peer snapshots are refreshed for the recent comparable sample so missing `byQueue` evidence does not silently persist.
+
+Where a shared ladder exists, classify the opponent by **tier/division band**:
 
 - higher tier/division,
 - same tier/division,
@@ -322,7 +334,7 @@ For each band preserve at least:
 
 This lets the report distinguish "performance drops against stronger peers" from "inconsistency even against lower-ranked peers."
 
-Rank is a **fetch-time snapshot**, not the opponent's historical rank at the exact match date. Phrase conclusions accordingly and do not overstate small samples.
+Rank is a **fetch-time snapshot**, not the opponent's historical rank at the exact match date. The report exposes which ranked ladders supplied comparisons and how many peer games were excluded for rank-context mismatch. Phrase conclusions accordingly and do not overstate small samples.
 
 
 
@@ -349,7 +361,8 @@ Standard Summoner's Rift revisions currently distinguished are:
 - **26.1–26.8:** initial 2026 role-quest package,
 - **26.9–26.10:** role-quest reward rework,
 - **26.11–26.18:** mid-lane reward revision with the later +8% bonus AD/AP value,
-- **26.19+:** current cohort including the shorter top-lane Teleport cooldown revision.
+- **26.19:** verified cohort including the shorter top-lane Teleport cooldown revision.
+- **26.20+ (until audited):** fail closed as a newer unverified 2026 minor; do not inherit 26.19 mechanics merely because the internal major is still 16.x.
 
 The role-specific context records the mechanics that can affect interpretation:
 - **TOP:** quest XP/level-cap and Teleport package; XP/level checkpoints can include quest reward effects after completion,
