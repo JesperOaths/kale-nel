@@ -39,6 +39,11 @@ if(!text('gejast-account-runtime.js').includes("const VERSION = 'v691'")) failur
 if(!text('gejast-account-runtime.js').includes('30*24*60*60*1000')) failures.push('login-name last-good cache must remain durable through transient Supabase outages');
 if(!text('gejast-account-runtime.js').includes('...new Set([')) failures.push('login-name fallback loaders must remain deduplicated');
 if(!text('gejast-login-names-fallback.js').includes("throw new Error('login_names_timeout')")) failures.push('login-name fallback RPC must remain bounded instead of hanging with the database');
+if(!text('gejast-account-runtime.js').includes('isVisualAuditFixtureName')) failures.push('login selector must filter stale visual-audit fixture names from browser caches');
+if(!text('gejast-account-runtime.js').includes("get_login_active_names_v687',{site_scope_input:currentScope},{timeoutMs:1500}")) failures.push('login selector must keep one bounded authoritative active-name call before fallbacks');
+if(!text('gejast-account-runtime.js').includes('Promise.allSettled(calls)')) failures.push('login selector fallbacks must run in parallel rather than stacking sequential timeout windows');
+if(!text('gejast-login-names-fallback.js').includes('cache-first-parallel-active-name-rpc')) failures.push('standalone login-name fallback must remain cache-first and parallel');
+if(!text('login.html').includes('20261001-login-resilience-r3')) failures.push('login page must cache-bust the fixture-safe resilient selector runtime');
 if(!text('gejast-home-profile-runtime.js').includes("const VERSION = 'v687'")) failures.push('home/profile runtime v687 module contract was changed unexpectedly');
 if(failures.length){console.error('Diagnostic self-consistency v773 FAILED');failures.forEach(f=>console.error('- '+f));process.exit(1);}
 console.log('Diagnostic self-consistency v773 PASS: v773+ releases preserve dynamic current-release diagnostics and distinct historical module/RPC versions.');
