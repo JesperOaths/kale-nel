@@ -24,6 +24,7 @@ assert.ok(behaviorStart>=0&&behaviorEnd>behaviorStart,'Behavior summary export b
 const behaviorExport=api.slice(behaviorStart,behaviorEnd);
 for(const field of [
   'deathTradeRate','highRiskUntradedDeaths','highRiskUntradedPerGame',
+  'measuredDeathConsequences','costlyDeathEvents','severeDeathEvents','costlyDeathRate','costlyDeathsPerTimelineGame','severeDeathsPerTimelineGame','avgGoldSwingAfterDeath','avgCsSwingAfterDeath',
   'fightSamples','firstAllyFightDeathRate','preContributionFightDeathRate','fightSurvivalRate',
   'highUnspentFightRate','itemDisadvantageFightRate','goldDeficitFightRate',
   'killConversionRate','opponentKillConversionRate','killConversionDelta',
@@ -79,6 +80,9 @@ assert.ok(html.includes('id="spatialReview"'));
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
+assert.ok(app.includes('Costly measured deaths'));
+assert.ok(app.includes('Costly deaths / game'));
+assert.ok(app.includes('prior-frame setup'));
 
 const refs=[...app.matchAll(/\$\('([^']+)'\)/g)].map(m=>m[1]);
 const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
