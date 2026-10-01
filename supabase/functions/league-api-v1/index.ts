@@ -284,6 +284,40 @@ function phaseExposureMinutes(durationMin:any,phase:string,rules:any){
   return Math.max(0,d-late);
 }
 
+function neutralObjectiveFamily(o:any){
+  const mt=text(o?.monsterType).toUpperCase(),st=text(o?.monsterSubType).toUpperCase();
+  return mt||st||"NEUTRAL_OBJECTIVE";
+}
+function neutralObjectiveWindows(events:any[]){
+  const sorted=[...(events||[])].filter(isNeutralObjectiveEvent).sort((a:any,b:any)=>Number(a.tMs)-Number(b.tMs)),windows:any[]=[];
+  for(const ev of sorted){
+    const family=neutralObjectiveFamily(ev),team=Number(ev.ownerTeam||0);
+    let w=windows[windows.length-1];
+    const merge=!!w&&w.family===family&&Number(w.ownerTeam||0)===team&&Number(ev.tMs)-Number(w.endMs)<=90000;
+    if(!merge){
+      w={family,objectiveType:text(ev.monsterType||ev.monsterSubType||"neutral objective"),ownerTeam:team||null,startMs:Number(ev.tMs),endMs:Number(ev.tMs),startMin:Number(ev.tMin),endMin:Number(ev.tMin),count:0,members:[]};
+      windows.push(w);
+    }
+    w.endMs=Number(ev.tMs);w.endMin=Number(ev.tMin);w.count++;w.members.push(ev);
+  }
+  return windows;
+}
+function objectiveWindowNear(frames:any[],participantId:number,w:any,radius=2500,startPadMs=15000,endPadMs=30000){
+  const points=(w?.members||[]).filter((x:any)=>hasNum(x.x)&&hasNum(x.y));if(!points.length)return false;
+  for(const fr of frames||[]){
+    const t=Number(fr?.timestamp||0);if(t<Number(w.startMs)-startPadMs||t>Number(w.endMs)+endPadMs)continue;
+    const fs=frameStats(fr,participantId);if(fs?.position&&points.some((p:any)=>dist2(fs.position,p)<=radius*radius))return true;
+  }
+  return false;
+}
+function objectiveWindowSetupFrame(frames:any[],participantId:number,w:any){
+  const points=(w?.members||[]).filter((x:any)=>hasNum(x.x)&&hasNum(x.y));if(!points.length)return null;
+  for(const fr of frames||[]){
+    const t=Number(fr?.timestamp||0);if(t<Number(w.startMs)-120000||t>=Number(w.startMs))continue;
+    const fs=frameStats(fr,participantId);if(fs?.position&&points.some((p:any)=>dist2(fs.position,p)<=3000*3000))return fr;
+  }
+  return null;
+}
 function objectiveOwnerTeam(e:any,byId:Map<number,any>){
   if(e?.type==="ELITE_MONSTER_KILL"){
     const killerTeamId=Number(e?.killerTeamId||0);if(killerTeamId===100||killerTeamId===200)return killerTeamId;
@@ -403,7 +437,9 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
   const frames=Array.isArray(timeline?.info?.frames)?timeline.info.frames:[],pid=Number(p.participantId),opp=opponent(match,p),oppId=opp?Number(opp.participantId):null;
   const ps=Array.isArray(match?.info?.participants)?match.info.participants:[],byId=new Map<number,any>();for(const q of ps)byId.set(Number(q.participantId),q);
   const mapId=Number(match?.info?.mapId||0),teamId=Number(p.teamId),rr=participantRole(p),homeLane=homeLaneForRole(rr),rules=gameRules(match);
-  const out:any={goldDiff10:null,goldDiff15:null,goldDiff25:null,csDiff10:null,csDiff15:null,csDiff25:null,xpDiff10:null,xpDiff15:null,xpDiff25:null,levelDiff10:null,levelDiff15:null,levelDiff25:null,deathPositions:[],wards:[],wardKills:[],objectives:[],involvedKills:[],goldSeries:[],frameSamples:[],objectiveJoinRate:null,objectiveJoined:0,objectiveTeamTotal:0,earlyKp:null,impactTimeMin:null,impactType:null,opponentImpactTimeMin:null,opponentImpactType:null,impactDeltaVsOpponent:null,badDeaths:[],badDeathCount:0,tradedDeathCount:0,untradedDeathCount:0,highRiskUntradedDeathCount:0,deathTrades:[],deathConsequences:{measured:0,costly:0,severe:0,untradedCostly:0,costlyRate:null,avgGoldSwing:null,avgCsSwing:null,events:[]},deathRecovery:{deaths:0,opportunities:0,repeatDeaths:0,rate:null,highRiskRepeatDeaths:0,costlyRepeatDeaths:0,untradedRepeatDeaths:0,events:[]},opponentDeathRecovery:{deaths:0,opportunities:0,repeatDeaths:0,rate:null,events:[]},leadDeaths:[],leadDeathCount:0,highRiskLeadDeathCount:0,riskStateDeaths:{ahead:0,even:0,behind:0,highRiskAhead:0,highRiskEven:0,highRiskBehind:0,events:[]},objectiveDeathCount:0,objectiveDeathPct:null,preObjectiveDeaths:[],preObjectiveDeathCount:0,preObjectiveDeathPct:null,highUnspentGoldDeaths:0,overstays:[],overstayCount:0,greedyStayWindows:[],shopVisits:[],opponentShopVisits:[],firstResetSequence:null,earlyLeadWindow:{eligible:false,peakMin:null,peakGoldDiff:null,goldDiff15:null,goldSwingTo15:null,giveback:false,preserved:false,deathsAfterPeak:0,highRiskDeathsAfterPeak:0,deathTimes:[]},firstMajorItem:null,opponentFirstMajorItem:null,majorItemReadiness:null,opponentMajorItemReadiness:null,itemSpikeDeltaVsOpponent:null,itemSpikeWindow:{eligible:false,startMin:null,endMin:null,leadSec:null,killAssistImpacts:0,objectiveImpacts:0,totalImpacts:0,used:false,diedBeforeImpact:false,events:[]},phaseBehavior:{early:{deaths:0,highRiskDeaths:0,costlyDeaths:0,severeDeaths:0,killAssistImpacts:0,teamObjectives:0,objectiveJoins:0,fightClusters:0,firstAllyFightDeaths:0},mid:{deaths:0,highRiskDeaths:0,costlyDeaths:0,severeDeaths:0,killAssistImpacts:0,teamObjectives:0,objectiveJoins:0,fightClusters:0,firstAllyFightDeaths:0},late:{deaths:0,highRiskDeaths:0,costlyDeaths:0,severeDeaths:0,killAssistImpacts:0,teamObjectives:0,objectiveJoins:0,fightClusters:0,firstAllyFightDeaths:0}},roams:{attempts:0,successes:0,failures:0,neutral:0,events:[]},vision:{wardCount:0,wardKillCount:0,controlWardCount:0,offensive:0,defensive:0,river:0,objectiveSetup:0,objectiveSetupRate:null,objectiveSetupDeltaVsOpponent:null,objectiveSetupRateDeltaVsOpponent:null,wardsPer30:null},visionMission:{actions:0,deaths:0,highRiskDeaths:0,untradedDeaths:0,unsupportedDeaths:0,objectiveSetupDeaths:0,deathRate:null,highRiskDeathRate:null,events:[]},opponentVision:{wardCount:0,controlWardCount:0,objectiveSetup:0,objectiveSetupRate:null},killConversion:{windows:0,converted:0,rate:null,events:[]},opponentKillConversion:{windows:0,converted:0,rate:null,events:[]},objectiveReadiness:{neutralTeamObjectives:0,joined:0,earlySetupJoins:0,eventFrameOnlyJoins:0,absent:0,earlySetupJoinRate:null,earlySetupCoverageRate:null,lateResetMisses:0,freshPurchaseJoins:0,events:[]},laneDuel:{soloKillsVsRole:0,soloDeathsToRole:0,pre14SoloKillsVsRole:0,pre14SoloDeathsToRole:0,events:[]},structurePressure:{first20PlayerPlateInvolvement:0,first20OpponentPlateInvolvement:0,first20PlateInvolvementDelta:0,allGamePlayerPlateInvolvement:0,allGameOpponentPlateInvolvement:0,allGamePlateInvolvementDelta:0,directPlayerPlateCredits:0,directOpponentPlateCredits:0,unattributedPlateEvents:0,earlyPlayerTurretInvolvement:0,earlyOpponentTurretInvolvement:0,soloKillWindows:0,soloKillStructureConversions:0,soloKillStructureConversionRate:null,events:[]},midRouting:{teamObjectives:0,objectiveJoins:0,objectiveJoinRate:null},closing25:{highRiskDeaths:0,costlyDeaths:0,severeDeaths:0},lanePressure:{pre14HomeLaneDeaths:0,pre14OutsidePressureDeaths:0,outsidePressureShare:null,events:[]},sideLaneRisk:{post15SideLaneDeaths:0,isolatedSideLaneDeaths:0,preNeutralObjectiveSideLaneDeaths:0,highRiskSideLaneDeaths:0,events:[]},postImpactRisk:{deathsWithin30s:0,highRiskDeathsWithin30s:0,untradedDeathsWithin30s:0,highRiskUntradedDeathsWithin30s:0,ratePerImpact:null,events:[]},fightProfile:{attended:0,firstAllyDeaths:0,diedBeforeContribution:0,survived:0,highUnspentStarts:0,itemDisadvantageStarts:0,goldDeficitStarts:0,unspentAndBehindStarts:0,outnumberedStarts:0,lostOutnumberedStarts:0,rolePeerFightStarts:0,roleLevelDisadvantageStarts:0,firstAllyDeathRate:null,diedBeforeContributionRate:null,survivalRate:null,highUnspentStartRate:null,itemDisadvantageStartRate:null,goldDeficitStartRate:null,outnumberedStartRate:null,outnumberedLossRate:null,roleLevelDisadvantageRate:null,events:[]},phaseRules:rules,timelineAvailable:!!frames.length};
+  const laneOpponentIds=new Set<number>();if(oppId)laneOpponentIds.add(oppId);
+  if(rr==="ADC"||rr==="SUPPORT"){const partnerRole=rr==="ADC"?"SUPPORT":"ADC",lanePartnerOpp=ps.find((x:any)=>Number(x.teamId)!==teamId&&participantRole(x)===partnerRole);if(lanePartnerOpp)laneOpponentIds.add(Number(lanePartnerOpp.participantId));}
+  const out:any={goldDiff10:null,goldDiff15:null,goldDiff25:null,csDiff10:null,csDiff15:null,csDiff25:null,xpDiff10:null,xpDiff15:null,xpDiff25:null,levelDiff10:null,levelDiff15:null,levelDiff25:null,deathPositions:[],wards:[],wardKills:[],objectives:[],involvedKills:[],goldSeries:[],frameSamples:[],objectiveJoinRate:null,objectiveJoined:0,objectiveTeamTotal:0,earlyKp:null,impactTimeMin:null,impactType:null,opponentImpactTimeMin:null,opponentImpactType:null,impactDeltaVsOpponent:null,badDeaths:[],badDeathCount:0,tradedDeathCount:0,untradedDeathCount:0,highRiskUntradedDeathCount:0,deathTrades:[],deathConsequences:{measured:0,costly:0,severe:0,untradedCostly:0,costlyRate:null,avgGoldSwing:null,avgCsSwing:null,events:[]},deathRecovery:{deaths:0,opportunities:0,repeatDeaths:0,rate:null,highRiskRepeatDeaths:0,costlyRepeatDeaths:0,untradedRepeatDeaths:0,events:[]},opponentDeathRecovery:{deaths:0,opportunities:0,repeatDeaths:0,rate:null,events:[]},leadDeaths:[],leadDeathCount:0,highRiskLeadDeathCount:0,riskStateDeaths:{ahead:0,even:0,behind:0,highRiskAhead:0,highRiskEven:0,highRiskBehind:0,events:[]},objectiveDeathCount:0,objectiveDeathPct:null,preObjectiveDeaths:[],preObjectiveDeathCount:0,preObjectiveDeathPct:null,highUnspentGoldDeaths:0,overstays:[],overstayCount:0,greedyStayWindows:[],shopVisits:[],opponentShopVisits:[],firstResetSequence:null,earlyLeadWindow:{eligible:false,peakMin:null,peakGoldDiff:null,goldDiff15:null,goldSwingTo15:null,giveback:false,preserved:false,deathsAfterPeak:0,highRiskDeathsAfterPeak:0,deathTimes:[]},firstMajorItem:null,opponentFirstMajorItem:null,majorItemReadiness:null,opponentMajorItemReadiness:null,itemSpikeDeltaVsOpponent:null,itemSpikeWindow:{eligible:false,startMin:null,endMin:null,leadSec:null,killAssistImpacts:0,objectiveImpacts:0,totalImpacts:0,used:false,diedBeforeImpact:false,events:[]},phaseBehavior:{early:{deaths:0,highRiskDeaths:0,costlyDeaths:0,severeDeaths:0,killAssistImpacts:0,teamObjectives:0,objectiveJoins:0,fightClusters:0,firstAllyFightDeaths:0},mid:{deaths:0,highRiskDeaths:0,costlyDeaths:0,severeDeaths:0,killAssistImpacts:0,teamObjectives:0,objectiveJoins:0,fightClusters:0,firstAllyFightDeaths:0},late:{deaths:0,highRiskDeaths:0,costlyDeaths:0,severeDeaths:0,killAssistImpacts:0,teamObjectives:0,objectiveJoins:0,fightClusters:0,firstAllyFightDeaths:0}},roams:{attempts:0,successes:0,failures:0,neutral:0,events:[]},vision:{wardCount:0,wardKillCount:0,controlWardCount:0,offensive:0,defensive:0,river:0,objectiveSetup:0,objectiveSetupRate:null,objectiveSetupDeltaVsOpponent:null,objectiveSetupRateDeltaVsOpponent:null,wardsPer30:null},visionMission:{actions:0,deaths:0,highRiskDeaths:0,untradedDeaths:0,unsupportedDeaths:0,objectiveSetupDeaths:0,deathRate:null,highRiskDeathRate:null,events:[]},opponentVision:{wardCount:0,controlWardCount:0,objectiveSetup:0,objectiveSetupRate:null},killConversion:{windows:0,converted:0,rate:null,events:[]},opponentKillConversion:{windows:0,converted:0,rate:null,events:[]},objectiveReadiness:{neutralTeamObjectives:0,joined:0,earlySetupJoins:0,eventFrameOnlyJoins:0,absent:0,earlySetupJoinRate:null,earlySetupCoverageRate:null,lateResetMisses:0,freshPurchaseJoins:0,events:[]},laneDuel:{soloKillsVsRole:0,soloDeathsToRole:0,earlySoloKillsVsRole:0,earlySoloDeathsToRole:0,pre14SoloKillsVsRole:0,pre14SoloDeathsToRole:0,events:[]},structurePressure:{first20PlayerPlateInvolvement:0,first20OpponentPlateInvolvement:0,first20PlateInvolvementDelta:0,allGamePlayerPlateInvolvement:0,allGameOpponentPlateInvolvement:0,allGamePlateInvolvementDelta:0,directPlayerPlateCredits:0,directOpponentPlateCredits:0,unattributedPlateEvents:0,earlyPlayerTurretInvolvement:0,earlyOpponentTurretInvolvement:0,soloKillWindows:0,soloKillStructureConversions:0,soloKillStructureConversionRate:null,events:[]},midRouting:{teamObjectives:0,objectiveJoins:0,objectiveJoinRate:null},closing25:{highRiskDeaths:0,costlyDeaths:0,severeDeaths:0},lanePressure:{earlyHomeLaneDeaths:0,earlyOutsidePressureDeaths:0,earlyOutsidePressureShare:null,pre14HomeLaneDeaths:0,pre14OutsidePressureDeaths:0,outsidePressureShare:null,events:[]},sideLaneRisk:{post15SideLaneDeaths:0,isolatedSideLaneDeaths:0,preNeutralObjectiveSideLaneDeaths:0,highRiskSideLaneDeaths:0,events:[]},postImpactRisk:{deathsWithin30s:0,highRiskDeathsWithin30s:0,untradedDeathsWithin30s:0,highRiskUntradedDeathsWithin30s:0,ratePerImpact:null,events:[]},fightProfile:{attended:0,firstAllyDeaths:0,diedBeforeContribution:0,survived:0,highUnspentStarts:0,itemDisadvantageStarts:0,goldDeficitStarts:0,unspentAndBehindStarts:0,outnumberedStarts:0,lostOutnumberedStarts:0,rolePeerFightStarts:0,roleLevelDisadvantageStarts:0,firstAllyDeathRate:null,diedBeforeContributionRate:null,survivalRate:null,highUnspentStartRate:null,itemDisadvantageStartRate:null,goldDeficitStartRate:null,outnumberedStartRate:null,outnumberedLossRate:null,roleLevelDisadvantageRate:null,events:[]},phaseRules:rules,timelineAvailable:!!frames.length};
   const gameDurationSec=Number(match?.info?.gameDuration||0);
   for(const minute of[10,15]){
     if(gameDurationSec<minute*60)continue;
@@ -427,27 +463,28 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
         if(oppId&&ev.assistingIds.length===0){
           const duelFrame=frameAtMs(frames,tMs),duelMe=frameStats(duelFrame,pid),duelOpp=frameStats(duelFrame,oppId);
           const duelGoldDiff=duelMe&&duelOpp&&hasNum(duelMe.gold)&&hasNum(duelOpp.gold)?Number(duelMe.gold)-Number(duelOpp.gold):null,duelCsDiff=duelMe&&duelOpp?Number(duelMe.cs)-Number(duelOpp.cs):null;
-          const goldSwingTo15=tMin<=14&&hasNum(out.goldDiff15)&&hasNum(duelGoldDiff)?Number(out.goldDiff15)-Number(duelGoldDiff):null,csSwingTo15=tMin<=14&&hasNum(out.csDiff15)&&hasNum(duelCsDiff)?Number(out.csDiff15)-Number(duelCsDiff):null;
+          const early=tMin<Number(rules.earlyEndMin),pre14=tMin<=14,conversionEligibleTo15=rules.key==="standard_sr_2026"&&tMin<=14;
+          const goldSwingTo15=conversionEligibleTo15&&hasNum(out.goldDiff15)&&hasNum(duelGoldDiff)?Number(out.goldDiff15)-Number(duelGoldDiff):null,csSwingTo15=conversionEligibleTo15&&hasNum(out.csDiff15)&&hasNum(duelCsDiff)?Number(out.csDiff15)-Number(duelCsDiff):null;
           if(ev.killerId===pid&&ev.victimId===oppId){
-            out.laneDuel.soloKillsVsRole++;if(tMin<=14)out.laneDuel.pre14SoloKillsVsRole++;
-            out.laneDuel.events.push({time:tMin,result:"solo_kill",pre14:tMin<=14,goldDiffAtEvent:duelGoldDiff,csDiffAtEvent:duelCsDiff,goldSwingTo15,csSwingTo15,convertedBy15:hasNum(goldSwingTo15)?Number(goldSwingTo15)>=200:null,...(pxy||{})});
+            out.laneDuel.soloKillsVsRole++;if(early)out.laneDuel.earlySoloKillsVsRole++;if(pre14)out.laneDuel.pre14SoloKillsVsRole++;
+            out.laneDuel.events.push({time:tMin,result:"solo_kill",early,pre14,conversionEligibleTo15,goldDiffAtEvent:duelGoldDiff,csDiffAtEvent:duelCsDiff,goldSwingTo15,csSwingTo15,convertedBy15:hasNum(goldSwingTo15)?Number(goldSwingTo15)>=200:null,...(pxy||{})});
           }else if(ev.killerId===oppId&&ev.victimId===pid){
-            out.laneDuel.soloDeathsToRole++;if(tMin<=14)out.laneDuel.pre14SoloDeathsToRole++;
-            out.laneDuel.events.push({time:tMin,result:"solo_death",pre14:tMin<=14,goldDiffAtEvent:duelGoldDiff,csDiffAtEvent:duelCsDiff,goldSwingTo15,csSwingTo15,...(pxy||{})});
+            out.laneDuel.soloDeathsToRole++;if(early)out.laneDuel.earlySoloDeathsToRole++;if(pre14)out.laneDuel.pre14SoloDeathsToRole++;
+            out.laneDuel.events.push({time:tMin,result:"solo_death",early,pre14,conversionEligibleTo15,goldDiffAtEvent:duelGoldDiff,csDiffAtEvent:duelCsDiff,goldSwingTo15,csSwingTo15,...(pxy||{})});
           }
         }
         if(Number(e.victimId)===pid){
           deathEvents.push(ev);out.deathPositions.push({time:tMin,...(pxy||{}),zone:deathArea(mapId,pxy,teamId)});
-          if(tMin<=14&&["TOP","MID"].includes(rr)){
+          if(tMin<Number(rules.earlyEndMin)&&["TOP","MID","ADC","SUPPORT"].includes(rr)){
             const deathFrame=frameAtMs(frames,tMs),deathState=frameStats(deathFrame,pid),deathPos=pxy||deathState?.position,deathZone=zoneFor(mapId,deathPos,teamId);
             if(deathZone===homeLane){
-              out.lanePressure.pre14HomeLaneDeaths++;
+              out.lanePressure.earlyHomeLaneDeaths++;if(tMin<=14)out.lanePressure.pre14HomeLaneDeaths++;
               const attackers=[ev.killerId,...ev.assistingIds].filter((id:any)=>Number(id)>0);
-              const outsideIds=attackers.filter((id:any)=>Number(id)!==Number(oppId));
+              const outsideIds=attackers.filter((id:any)=>!laneOpponentIds.has(Number(id)));
               const outsideRoles=[...new Set(outsideIds.map((id:any)=>participantRole(byId.get(Number(id)))).filter((x:any)=>x&&x!=="GENERIC"))];
               const outsidePressure=outsideIds.length>0;
-              if(outsidePressure)out.lanePressure.pre14OutsidePressureDeaths++;
-              out.lanePressure.events.push({time:tMin,outsidePressure,attackerCount:attackers.length,outsideRoles,killerRole:participantRole(killer),assisted:ev.assistingIds.length>0,...(pxy||{})});
+              if(outsidePressure){out.lanePressure.earlyOutsidePressureDeaths++;if(tMin<=14)out.lanePressure.pre14OutsidePressureDeaths++;}
+              out.lanePressure.events.push({time:tMin,early:true,pre14:tMin<=14,outsidePressure,attackerCount:attackers.length,outsideRoles,killerRole:participantRole(killer),assisted:ev.assistingIds.length>0,...(pxy||{})});
             }
           }
         }
@@ -468,7 +505,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
       }
     }
   }
-  const neutralObjectives=allObjectives.filter((o:any)=>isNeutralObjectiveEvent(o)),neutralOwnObjectives=neutralObjectives.filter((o:any)=>Number(o.ownerTeam)===teamId),neutralOppObjectives=opp?neutralObjectives.filter((o:any)=>Number(o.ownerTeam)===Number(opp.teamId)):[],structureEvents=allObjectives.filter((o:any)=>isStructureEvent(o)),plateEvents=structureEvents.filter((o:any)=>o.type==="TURRET_PLATE_DESTROYED");
+  const neutralObjectives=allObjectives.filter((o:any)=>isNeutralObjectiveEvent(o)),neutralOwnObjectives=neutralObjectives.filter((o:any)=>Number(o.ownerTeam)===teamId),neutralOppObjectives=opp?neutralObjectives.filter((o:any)=>Number(o.ownerTeam)===Number(opp.teamId)):[],neutralWindows=neutralObjectiveWindows(neutralObjectives),neutralOwnWindows=neutralWindows.filter((w:any)=>Number(w.ownerTeam)===teamId),neutralOppWindows=opp?neutralWindows.filter((w:any)=>Number(w.ownerTeam)===Number(opp.teamId)):[],structureEvents=allObjectives.filter((o:any)=>isStructureEvent(o)),plateEvents=structureEvents.filter((o:any)=>o.type==="TURRET_PLATE_DESTROYED");
   const playerPlateInvolved=(o:any)=>structureInvolvement(o,frames,pid,teamId),oppPlateInvolved=(o:any)=>!!oppId&&structureInvolvement(o,frames,oppId,Number(opp?.teamId||0));
   out.structurePressure.first20PlayerPlateInvolvement=plateEvents.filter((o:any)=>Number(o.tMin)<=20&&playerPlateInvolved(o)).length;
   out.structurePressure.first20OpponentPlateInvolvement=oppId?plateEvents.filter((o:any)=>Number(o.tMin)<=20&&oppPlateInvolved(o)).length:0;
@@ -481,10 +518,9 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
   out.structurePressure.unattributedPlateEvents=plateEvents.filter((o:any)=>!Number(o.killerId||0)).length;
   out.structurePressure.earlyPlayerTurretInvolvement=structureEvents.filter((o:any)=>o.type==="BUILDING_KILL"&&Number(o.tMin)<=20&&structureInvolvement(o,frames,pid,teamId)).length;
   out.structurePressure.earlyOpponentTurretInvolvement=oppId?structureEvents.filter((o:any)=>o.type==="BUILDING_KILL"&&Number(o.tMin)<=20&&structureInvolvement(o,frames,oppId,Number(opp?.teamId||0))).length:0;
-  // ≤14m is retained only to leave at least one minute before the fixed @15 conversion snapshot.
-  // It is not a turret-plate expiry rule; 2026 plate events remain eligible after 14:00 and on deeper turrets.
-  const pre14SoloKills=(out.laneDuel.events||[]).filter((x:any)=>x.result==="solo_kill"&&x.pre14);
-  for(const duel of pre14SoloKills){
+  // Structure conversion follows the queue-aware early phase. The narrower ≤14m flag is reserved only for economy-to-@15 measurements.
+  const earlySoloKills=(out.laneDuel.events||[]).filter((x:any)=>x.result==="solo_kill"&&x.early);
+  for(const duel of earlySoloKills){
     const startMs=Number(duel.time)*60000,endMs=startMs+90000;
     const hit=structureEvents.find((o:any)=>Number(o.tMs)>=startMs&&Number(o.tMs)<=endMs&&structureInvolvement(o,frames,pid,teamId));
     const ev={killTime:Number(duel.time),converted:!!hit,structureType:hit?text(hit.type):null,buildingType:hit?text(hit.buildingType):null,towerType:hit?text(hit.towerType):null,laneType:hit?text(hit.laneType):null,attribution:hit?(Number(hit.killerId)===pid?"direct_event_credit":"nearby_timeline_presence"):null,secondsAfter:hit?Math.round((Number(hit.tMs)-startMs)/1000):null,goldSwingTo15:duel.goldSwingTo15,csSwingTo15:duel.csSwingTo15};
@@ -558,7 +594,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
   out.opponentMajorItemReadiness=oppId?majorItemReadiness(out.opponentFirstMajorItem,itemEventsByOpp,frames,oppId,catalog):null;
   if(out.firstMajorItem&&out.opponentFirstMajorItem)out.itemSpikeDeltaVsOpponent=out.firstMajorItem.time-out.opponentFirstMajorItem.time;
   if(out.majorItemReadiness?.eligible&&out.opponentMajorItemReadiness?.eligible&&hasNum(out.majorItemReadiness.delayMin)&&hasNum(out.opponentMajorItemReadiness.delayMin))out.majorItemReadiness.delayDeltaVsOpponent=Number(out.majorItemReadiness.delayMin)-Number(out.opponentMajorItemReadiness.delayMin);
-  for(const duel of (out.laneDuel?.events||[]).filter((x:any)=>x.result==="solo_kill"&&x.pre14)){
+  for(const duel of (out.laneDuel?.events||[]).filter((x:any)=>x.result==="solo_kill"&&x.early)){
     const killMs=Number(duel.time||0)*60000,nextShop=out.shopVisits.find((v:any)=>Number(v.startMs)>killMs)||null;
     const deathBeforeShop=deathEvents.find((d:any)=>Number(d.tMs)>killMs&&(!nextShop||Number(d.tMs)<Number(nextShop.startMs)))||null;
     duel.nextShopDelaySec=nextShop?Math.max(0,Math.round((Number(nextShop.startMs)-killMs)/1000)):null;
@@ -792,6 +828,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
       }else i++;
     }
   }
+  if(out.lanePressure.earlyHomeLaneDeaths>0)out.lanePressure.earlyOutsidePressureShare=100*out.lanePressure.earlyOutsidePressureDeaths/out.lanePressure.earlyHomeLaneDeaths;
   if(out.lanePressure.pre14HomeLaneDeaths>0)out.lanePressure.outsidePressureShare=100*out.lanePressure.pre14OutsidePressureDeaths/out.lanePressure.pre14HomeLaneDeaths;
   return out;
 }
