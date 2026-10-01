@@ -165,3 +165,9 @@ ok(backend.includes('Pre-objective side-lane deaths / game'), 'side-lane timing 
 ok(backend.includes('cause==="late_reset"'), 'late-reset objective diagnosis must select a late-reset target');
 ok(backend.includes('cause==="pre_objective_death"'), 'pre-objective-death diagnosis must select a death-rate target');
 ok(backend.includes('cause==="setup_vision"'), 'setup-vision diagnosis must select a setup-ward target');
+
+ok(backend.includes('higherRankMajorItemGames'), 'higher-ranked direct-peer first-major sample must remain exported');
+ok(backend.includes('higherRankAvgMajorItemDeltaMin'), 'higher-ranked direct-peer first-major timing delta must remain exported');
+ok(backend.includes('higherRankMajorItemFasterPct'), 'higher-ranked direct-peer faster-first-major rate must remain exported');
+ok(backend.includes('actual higher-ranked same-role opponents with measurable first-major completions'), 'higher-rank item coaching must use actual encountered role peers');
+ok(backend.includes('higherRankDefinition:"actual higher-ranked same-role opponents encountered"'), 'item-spike benchmark must identify the higher-rank comparison population');
