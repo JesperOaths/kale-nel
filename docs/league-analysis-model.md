@@ -686,11 +686,13 @@ A death is additionally **isolated** when no allied participant is within 3,000 
 A **pre-neutral-objective side-lane death** requires:
 - a post-macro-transition side-lane death,
 - isolated/no ally within 3,000 units,
-- a tracked neutral-objective event within 90 seconds afterward.
+- a neutral-objective event within 90 seconds afterward whose grouped objective window has supported team-contest evidence (the team secured it or at least one allied participant was present in the supported objective radius).
 
 The old `post15SideLaneDeaths` field and `postLaneSideLaneDeaths` name are retained only for compatibility. New coaching and rates use `macroTransitionSideLaneDeaths`; this avoids presenting the timing anchor as proof that laning has literally ended.
 
 This is a timing/macro signal, not a blanket criticism of split pushing. Coaching should emphasize reconnect timing when the next neutral-objective window matters. If an objective is intentionally conceded, dying on the cross-map trade can still erase the value of the side pressure.
+
+The Summoner's Rift renderer uses Riot/Data Dragon map assets. The live page first requests the current Data Dragon version and carries an explicit verified fallback matching the analyzer's audited public patch boundary (currently 16.19.1 / Patch 26.19). Never fall back to a historical map image such as 6.8.1, because that can make modern death/ward/roam coordinates visually misleading even when the coordinate transform itself is unchanged.
 
 ## Spatial clustering of high-risk deaths
 
