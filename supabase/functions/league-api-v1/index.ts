@@ -615,7 +615,8 @@ function gameJudgments(g:any){
 }
 function game(row:any,puuid:string,catalog:any){
   const m=row?.match_json||{},ps=Array.isArray(m?.info?.participants)?m.info.participants:[],p=ps.find((x:any)=>text(x?.puuid)===puuid);if(!p)return null;
-  const full=participantFullGameMetrics(m,p),opp=opponent(m,p),oppFull=participantFullGameMetrics(m,opp),facts=timelineFacts(m,row?.timeline_json,p,catalog);
+  const full=participantFullGameMetrics(m,p);if(!full)return null;
+  const opp=opponent(m,p),oppFull=participantFullGameMetrics(m,opp),facts=timelineFacts(m,row?.timeline_json,p,catalog);
   const peer=oppFull?{champion:text(opp?.championName||"Unknown"),role:participantRole(opp),rank:row?.peer_rank_json||null,csMinDelta:full.csMin-oppFull.csMin,dpmDelta:full.dpm-oppFull.dpm,gpmDelta:full.gpm-oppFull.gpm,vpmDelta:full.vpm-oppFull.vpm,kdaDelta:full.kda-oppFull.kda,opponent:{kda:oppFull.kda,csMin:oppFull.csMin,dpm:oppFull.dpm,gpm:oppFull.gpm,vpm:oppFull.vpm,kp:oppFull.kp}}:null;
   const out:any={matchId:text(m?.metadata?.matchId||row.match_id),gameStartTimestamp:Number(m?.info?.gameStartTimestamp||0),champion:text(p.championName||"Unknown"),championId:num(p.championId),role:participantRole(p),rawRole:text(p.teamPosition||p.individualPosition||p.role),win:!!p.win,...full,durationMinutes:Math.max(1,Number(m?.info?.gameDuration||row?.game_duration_seconds||0)/60),mapId:Number(m?.info?.mapId||row.map_id||0)||null,queueId:Number(m?.info?.queueId||row.queue_id||0)||null,timelineAvailable:!!row.timeline_json,peer,...facts};
   out.judgments=gameJudgments(out);return out;
@@ -877,7 +878,7 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,p
       leadDeaths,highRiskLeadDeaths,highRiskLeadDeathsPerGame,
       aheadStateDeaths,evenStateDeaths,behindStateDeaths,highRiskAheadStateDeaths,highRiskEvenStateDeaths,highRiskBehindDeaths,highRiskBehindDeathRate,highRiskBehindDeathsPerGame,
       badDeathZones:badDeathZoneCounts,topBadDeathZone,topBadDeathZonePct,
-      objectiveDeathPct:objDeathPct,preObjectiveDeaths:preObjDeaths,preObjectiveDeathPct,objectiveJoinRate:objJoin,earlyKp,
+      objectiveDeathPct:objDeathPct,preObjectiveDeaths:preObjDeaths,preObjectiveDeathPct:preObjDeathPct,objectiveJoinRate:objJoin,earlyKp,
       roamAttempts,roamSuccessRate:roamRate,roamFailures:roamFail,roamLaneCostGames:roamLaneCostEvents.length,avgRoamLaneCostCs,costlyRoams:costlyRoams.length,emptyCostlyRoams:emptyCostlyRoams.length,
       greedyStayWindows:greedy,highUnspentGoldDeaths:unspent,
       avgDamageShare,avgGoldShare,damageGoldEfficiency,
