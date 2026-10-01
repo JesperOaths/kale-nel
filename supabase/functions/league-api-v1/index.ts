@@ -490,16 +490,6 @@ function purchaseGroups(events:any[],catalog:any){
   }
   return groups;
 }
-function majorPurchaseSequence(events:any[],catalog:any,limit=2){
-  const out:any[]=[];
-  for(const e of [...(events||[])].sort((a,b)=>a.tMs-b.tMs)){
-    const info=itemInfo(catalog,e.itemId);if(!isMajorItem(info))continue;
-    out.push({time:e.tMin,tMs:e.tMs,itemId:e.itemId,name:text(info?.name)||String(e.itemId),cost:Number(info?.gold?.total||0),combineCost:Number(info?.gold?.base||0),components:Array.isArray(info?.from)?info.from.map((x:any)=>Number(x)).filter(Boolean):[]});
-    if(out.length>=limit)break;
-  }
-  return out;
-}
-function firstMajorPurchase(events:any[],catalog:any){return majorPurchaseSequence(events,catalog,1)[0]||null;}
 function inventoryCountsAt(events:any[],atMs:number){
   const counts=new Map<number,number>(),add=(id:any,delta:number)=>{const n=Number(id||0);if(!n)return;const next=Math.max(0,(counts.get(n)||0)+delta);if(next)counts.set(n,next);else counts.delete(n);};
   for(const e of [...(events||[])].sort((a:any,b:any)=>Number(a.tMs)-Number(b.tMs))){
@@ -509,6 +499,20 @@ function inventoryCountsAt(events:any[],atMs:number){
     else if(e.type==="ITEM_UNDO"){add(e.beforeId,-1);add(e.afterId,1);}
   }
   return counts;
+}
+function majorOwnershipMilestones(events:any[],catalog:any,limit=2){
+  const sorted=[...(events||[])].sort((a:any,b:any)=>Number(a.tMs)-Number(b.tMs)),milestones:any[]=[];
+  for(const e of sorted){
+    if(e.type!=="ITEM_PURCHASED")continue;
+    const info=itemInfo(catalog,e.itemId);if(!isMajorItem(info))continue;
+    const inv=inventoryCountsAt(sorted,Number(e.tMs));
+    let ownedMajorCount=0;
+    for(const [id,count] of inv.entries())if(isMajorItem(itemInfo(catalog,id)))ownedMajorCount+=Number(count||0);
+    if(ownedMajorCount<=milestones.length)continue;
+    milestones.push({slot:milestones.length+1,time:e.tMin,tMs:e.tMs,itemId:e.itemId,name:text(info?.name)||String(e.itemId),cost:Number(info?.gold?.total||0),combineCost:Number(info?.gold?.base||0),components:Array.isArray(info?.from)?info.from.map((x:any)=>Number(x)).filter(Boolean):[],ownedMajorCount});
+    if(milestones.length>=limit)break;
+  }
+  return milestones;
 }
 function majorItemReadiness(major:any,itemEvents:any[],frames:any[],participantId:number,catalog:any){
   if(!major)return null;
@@ -709,7 +713,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
     const measured=hasNum(goldSwing)||hasNum(csSwing),economyLoss=!deathInWindow&&((hasNum(csSwing)&&Number(csSwing)<=-6)||(hasNum(goldSwing)&&Number(goldSwing)<=-350)),economyGain=!deathInWindow&&hasNum(csSwing)&&hasNum(goldSwing)&&Number(csSwing)>=4&&Number(goldSwing)>=150;
     out.firstResetSequence={time:Number(firstReturnShop.startMin),spent:Number(firstReturnShop.spent||0),items:(firstReturnShop.items||[]).slice(0,6),opponentTime:opponentFirstReturnShop?Number(opponentFirstReturnShop.startMin):null,timingDeltaVsOpponent:opponentFirstReturnShop?Number(firstReturnShop.startMin)-Number(opponentFirstReturnShop.startMin):null,goldDiffBefore:goldBefore,goldDiffAfter:goldAfter,goldSwingAfter:goldSwing,csDiffBefore:csBefore,csDiffAfter:csAfter,csSwingAfter:csSwing,measured,deathInWindow,economyLoss,economyGain,evidenceWindowEndMin:afterMs?afterMs/60000:null,definition:"first ≥250g purchase group by 12m after the player has demonstrably left base; economy swing measured to next supported post-shop frame"};
   }
-  const myMajorSequence=majorPurchaseSequence(purchaseByPid,catalog,2),oppMajorSequence=majorPurchaseSequence(purchaseByOpp,catalog,2);
+  const myMajorSequence=majorOwnershipMilestones(itemEventsByPid,catalog,2),oppMajorSequence=majorOwnershipMilestones(itemEventsByOpp,catalog,2);
   out.firstMajorItem=myMajorSequence[0]||null;out.secondMajorItem=myMajorSequence[1]||null;out.opponentFirstMajorItem=oppMajorSequence[0]||null;out.opponentSecondMajorItem=oppMajorSequence[1]||null;
   if(out.secondMajorItem&&out.opponentSecondMajorItem)out.secondMajorItemDeltaVsOpponent=Number(out.secondMajorItem.time)-Number(out.opponentSecondMajorItem.time);
   out.vision.controlWardPurchases=purchaseByPid.filter((e:any)=>{const info=itemInfo(catalog,e.itemId);return Number(e.itemId)===2055||text(info?.name).toLowerCase()==="control ward";}).length;
