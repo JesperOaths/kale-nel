@@ -251,7 +251,7 @@ assert.ok(html.includes('id="requestGameName"')&&html.includes('id="requestTagLi
 assert.ok(html.includes('id="loadRecentBtn"')&&html.includes('Load & analyze'),'League must expose one primary recent-match action');
 assert.ok(!html.includes('id="profileSelect"')&&!html.includes('id="batchProfiles"')&&!html.includes('id="fetchBtn"')&&!html.includes('id="analyzeBtn"'),'Profile/batch/separate fetch-analyze controls must not return');
 assert.ok(app.includes('async function runRecentAnalysis()'),'One-click recent-match orchestration must remain explicit');
-assert.ok(app.includes('fetchProfileData(profile,30)')&&app.includes('fetchProfileData(profile,50)'),'Direct request must scan 30 first and automatically deepen to 50 only when needed');
+assert.ok(/fetchProfileData\(profile,30(?:,|\))/.test(app)&&/fetchProfileData\(profile,50(?:,|\))/.test(app),'Direct request must scan 30 first and automatically deepen to 50 only when needed');
 assert.ok(app.includes('await fetchProfileData')&&app.includes('await analyzeProfileData'),'Direct request must fetch before analyzing rather than analyzing an empty cache');
 assert.ok(app.includes('if(analyzed<=0)throw new Error'),'A zero-game analysis must be treated as a failed request rather than a successful report');
 assert.ok(app.includes('scheduleHeavyReportRender')&&app.includes('requestIdleCallback'),'Charts/maps must defer heavy rendering until browser idle time');
@@ -401,7 +401,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v97'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v98'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
