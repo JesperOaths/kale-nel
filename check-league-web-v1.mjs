@@ -32,6 +32,8 @@ for(const field of [
 ])assert.ok(behaviorExport.includes(field),'Behavior summary must export '+field);
 assert.ok(api.includes('sessionBehaviorModel'));
 assert.ok(api.includes('highRiskLeadDeathsPerGame'));
+assert.ok(api.includes('riskStateDeaths'));
+assert.ok(api.includes('highRiskBehindDeathsPerGame'));
 assert.ok(api.includes('itemDisadvantageFightRate'));
 assert.ok(api.includes('outnumberedFightLossRate'));
 assert.ok(api.includes('roleLevelDisadvantageFightRate'));
@@ -76,6 +78,7 @@ assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
+assert.ok(app.includes('High-risk deaths while behind'));
 
 const refs=[...app.matchAll(/\$\('([^']+)'\)/g)].map(m=>m[1]);
 const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
