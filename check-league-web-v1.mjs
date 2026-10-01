@@ -115,6 +115,10 @@ assert.ok(api.includes('elementalDrakeCap:2')&&api.includes('dragonSoulRequireme
 assert.ok(api.includes('minionFrenzyEnabled:true'),'Swiftplay-only Minion Frenzy must remain explicit');
 assert.ok(api.includes('r==="DUO_SUPPORT"')&&api.includes('r==="DUO_CARRY"'),'Legacy Riot bot-lane role aliases must normalize correctly');
 assert.ok(api.includes('function participantRoleEvidence('),'Role selection must retain source/conflict evidence');
+assert.ok(api.includes('chosen.source==="teamPosition"||chosen.source==="individualPosition"'),'Modern Riot position fields must own high-confidence role evidence');
+assert.ok(api.includes('?"high":"fallback"'),'Legacy role/lane metadata must remain lower-confidence fallback evidence');
+assert.ok(api.includes('fallbackPlayerRoleGames')&&api.includes('fallbackDirectPeerRoleGames'),'Data Quality must expose fallback role evidence');
+assert.ok(app.includes('peer role(s) from legacy fallback metadata'),'Frontend must surface fallback peer-role evidence instead of hiding it');
 assert.ok(api.includes('team!=="GENERIC"&&individual!=="GENERIC"&&team!==individual'),'Conflicting teamPosition/individualPosition must fail closed');
 assert.ok(api.includes('function opponentResolution(')&&api.includes('candidates.length!==1'),'Direct same-role peer must require exactly one enemy candidate');
 assert.ok(api.includes('excludedAmbiguousRole')&&api.includes('ambiguousDirectPeerGames'),'Role and peer ambiguity must remain observable');
