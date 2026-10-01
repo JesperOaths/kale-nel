@@ -9,13 +9,14 @@ const state={profiles:[],profile:null,report:null,ddVersion:'',openMatch:null,ac
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function token(){try{return (cfg.getPlayerSessionToken&&cfg.getPlayerSessionToken())||'';}catch(_){return'';}}
-function fmt(v,d=1){const n=Number(v);return Number.isFinite(n)?n.toFixed(d):'n/a';}
-function fmtInt(v){const n=Number(v);return Number.isFinite(n)?Math.round(n).toLocaleString():'n/a';}
-function fmtPct(v){const n=Number(v);return Number.isFinite(n)?Math.round(n)+'%':'n/a';}
+function hasNum(v){return v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));}
+function fmt(v,d=1){return hasNum(v)?Number(v).toFixed(d):'n/a';}
+function fmtInt(v){return hasNum(v)?Math.round(Number(v)).toLocaleString():'n/a';}
+function fmtPct(v){return hasNum(v)?Math.round(Number(v))+'%':'n/a';}
 function fmtDate(v){if(!v)return'—';const d=new Date(v);return Number.isFinite(d.getTime())?d.toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'}):'—';}
 function fmtDuration(v){const n=Number(v);if(!Number.isFinite(n))return'n/a';const m=Math.floor(n),s=Math.round((n-m)*60);return m+':'+String(s).padStart(2,'0');}
-function signed(v,d=0){const n=Number(v);return Number.isFinite(n)?(n>0?'+':'')+n.toFixed(d):'n/a';}
-function rankText(r){return r&&r.tier?[String(r.tier).toUpperCase(),String(r.rank||'').toUpperCase(),Number.isFinite(Number(r.leaguePoints))?String(r.leaguePoints)+' LP':''].filter(Boolean).join(' '):'Unranked / unknown';}
+function signed(v,d=0){if(!hasNum(v))return'n/a';const n=Number(v);return(n>0?'+':'')+n.toFixed(d);}
+function rankText(r){return r&&r.tier?[String(r.tier).toUpperCase(),String(r.rank||'').toUpperCase(),hasNum(r.leaguePoints)?String(r.leaguePoints)+' LP':''].filter(Boolean).join(' '):'Unranked / unknown';}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
 async function api(action,payload={}){
@@ -285,7 +286,7 @@ function renderGames(r){
   const games=r.games||[];$('gameCountLabel').textContent=games.length+' games';
   state.openMatch=null;
   $('gamesBody').innerHTML=games.map((g,i)=>{
-    const kda=[g.kills,g.deaths,g.assists].map(x=>Number.isFinite(Number(x))?Number(x):'?').join('/');
+    const kda=[g.kills,g.deaths,g.assists].map(x=>hasNum(x)?Number(x):'?').join('/');
     const icon=championIcon(g.champion);
     return '<tr class="game-row" data-match="'+esc(g.matchId||String(i))+'" data-index="'+i+'">'+
       '<td class="caret">▸</td>'+
@@ -335,7 +336,7 @@ function detailContent(g,tab){
   if(tab==='roams'){
     const r=g.roams||{},events=r.events||[];
     return detailCard('Attempts',String(r.attempts??0))+detailCard('Successful',String(r.successes??0))+detailCard('Failed',String(r.failures??0))+
-      detailList(events.map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+(x.targetZone||'map')+' · '+(x.outcome||'neutral')+(Number.isFinite(Number(x.adcLaneCostCs))?' · ADC lane Δ '+signed(x.adcLaneCostCs,0)+' CS':'')),'No qualifying pre-20-minute roam departures detected.');
+      detailList(events.map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+(x.targetZone||'map')+' · '+(x.outcome||'neutral')+(hasNum(x.adcLaneCostCs)?' · ADC lane Δ '+signed(x.adcLaneCostCs,0)+' CS':'')),'No qualifying pre-20-minute roam departures detected.');
   }
   if(tab==='deaths'){
     const bad=g.badDeaths||[];
@@ -344,22 +345,22 @@ function detailContent(g,tab){
   }
   if(tab==='objectives'){
     return detailCard('Objective presence',fmtPct(g.objectiveJoinRate))+detailCard('Joined / team objectives',String(g.objectiveJoined??0)+' / '+String(g.objectiveTeamTotal??0))+detailCard('Early KP',fmtPct(g.earlyKp))+
-      detailCard('First impact',Number.isFinite(Number(g.impactTimeMin))?fmt(g.impactTimeMin,1)+' min · '+String(g.impactType||'event'):'n/a')+detailCard('Objective-context death %',fmtPct(g.objectiveDeathPct))+detailCard('Tracked events',String(g.objectives?.length||0))+
+      detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+' min · '+String(g.impactType||'event'):'n/a')+detailCard('Objective-context death %',fmtPct(g.objectiveDeathPct))+detailCard('Tracked events',String(g.objectives?.length||0))+
       '<div class="detail-note">Objective presence counts a team objective once and checks whether your timeline position is within the action radius; it does not convert objectives into fake gold values.</div>';
   }
   if(tab==='resets'){
     const mine=g.firstMajorItem,opp=g.opponentFirstMajorItem,shops=g.shopVisits||[],greedy=g.greedyStayWindows||[];
     return detailCard('First major item',mine?(mine.name+' · '+fmt(mine.time,1)+'m'):'n/a')+
       detailCard('Opponent major item',opp?(opp.name+' · '+fmt(opp.time,1)+'m'):'n/a')+
-      detailCard('Timing vs opponent',Number.isFinite(Number(g.itemSpikeDeltaVsOpponent))?signed(g.itemSpikeDeltaVsOpponent,1)+' min':'n/a')+
+      detailCard('Timing vs opponent',hasNum(g.itemSpikeDeltaVsOpponent)?signed(g.itemSpikeDeltaVsOpponent,1)+' min':'n/a')+
       detailCard('Detected shop visits',String(shops.length))+detailCard('Greedy-stay windows',String(greedy.length))+detailCard('Overstay deaths',String(g.overstayCount??0))+
       detailList(greedy.map(x=>(Number(x.startMin)||0).toFixed(1)+'m · '+fmtInt(x.currentGold)+'g held · next shop '+(Number(x.nextShopMin)||0).toFixed(1)+'m ('+fmt(x.delayMin,1)+'m delay)'),'No repeated high-gold stay window detected.');
   }
   const peer=g.peer||null;
   return detailCard('Gold diff @10',signed(g.goldDiff10,0))+detailCard('Gold diff @15',signed(g.goldDiff15,0))+detailCard('CS diff @10',signed(g.csDiff10,0))+detailCard('CS diff @15',signed(g.csDiff15,0))+detailCard('XP diff @10',signed(g.xpDiff10,0))+detailCard('XP diff @15',signed(g.xpDiff15,0))+
     detailCard('Opponent',peer?(peer.champion||'Same-role peer'):'n/a')+detailCard('Opponent rank',peer?rankText(peer.rank):'n/a')+
-    detailCard('DPM vs same-role opponent',peer?signed(peer.dpmDelta,0):'n/a')+detailCard('CS/min vs opponent',peer?signed(peer.csMinDelta,2):'n/a')+detailCard('Team damage rank',Number.isFinite(Number(g.damageRank))?'#'+g.damageRank+' of 5':'n/a')+
-    detailCard('Damage share',fmtPct(g.damageShare))+detailCard('Gold share',fmtPct(g.goldShare))+detailCard('Damage − gold share',Number.isFinite(Number(g.damageShare))&&Number.isFinite(Number(g.goldShare))?signed(Number(g.damageShare)-Number(g.goldShare),1)+' pp':'n/a')+
+    detailCard('DPM vs same-role opponent',peer?signed(peer.dpmDelta,0):'n/a')+detailCard('CS/min vs opponent',peer?signed(peer.csMinDelta,2):'n/a')+detailCard('Team damage rank',hasNum(g.damageRank)?'#'+g.damageRank+' of 5':'n/a')+
+    detailCard('Damage share',fmtPct(g.damageShare))+detailCard('Gold share',fmtPct(g.goldShare))+detailCard('Damage − gold share',hasNum(g.damageShare)&&hasNum(g.goldShare)?signed(Number(g.damageShare)-Number(g.goldShare),1)+' pp':'n/a')+
     '<div class="detail-note">Peer comparisons use the actual same-role opponent in this match. Positive values mean you finished ahead on that metric; opponent rank is fetched during the Fetch step and cached with the match.</div>';
 }
 function bindDetailTabs(container,g,index){
@@ -403,15 +404,15 @@ function metric(label,value,pending){
 function renderAdvanced(r){
   const a=r.advanced||{},roam=a.roams||{},recall=a.recalls||{},itemSpike=a.itemSpike||{};
   const rows=[
-    ['DQI',Number.isFinite(Number(a.dqi))?fmt(a.dqi,1)+' / 10':'Formula not recovered'],
-    ['AGOR',Number.isFinite(Number(a.agor))?fmt(a.agor,2):'Formula not recovered'],
+    ['DQI',hasNum(a.dqi)?fmt(a.dqi,1)+' / 10':'Formula not recovered'],
+    ['AGOR',hasNum(a.agor)?fmt(a.agor,2):'Formula not recovered'],
     ['Objective presence',fmtPct(a.objectivePresence)],
     ['Early KP',fmtPct(a.earlyKP)],
     ['Objective-context death %',fmtPct(a.objectiveDeathPct)],
     ['Roam attempts / success',String(roam.attempts??0)+' / '+fmtPct(roam.successRate)],
     ['High-gold stay windows',String(recall.greedyStayWindows??0)],
-    ['Major-item Δ vs opponent',Number.isFinite(Number(itemSpike.avgDeltaVsOpponentMin))?signed(itemSpike.avgDeltaVsOpponentMin,1)+' min':'n/a'],
-    ['Damage share − gold share',Number.isFinite(Number(r.behaviorSummary?.damageGoldEfficiency))?signed(r.behaviorSummary.damageGoldEfficiency,1)+' pp':'n/a']
+    ['Major-item Δ vs opponent',hasNum(itemSpike.avgDeltaVsOpponentMin)?signed(itemSpike.avgDeltaVsOpponentMin,1)+' min':'n/a'],
+    ['Damage share − gold share',hasNum(r.behaviorSummary?.damageGoldEfficiency)?signed(r.behaviorSummary.damageGoldEfficiency,1)+' pp':'n/a']
   ];
   $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('not recovered')||v==='n/a')).join('');
   const p=r.peerComparison||{},conv=r.conversion||{},wl=r.winLoss||{},trend=r.recentTrend||{},base=r.lifetime||null,s=r.summary||{},rank=r.profile?.rank||null;
@@ -420,25 +421,25 @@ function renderAdvanced(r){
     metric('Comparable peer games',String(p.sameRoleGames??0),false),
     metric('Ranked peer games',String(p.rankedPeerGames??0),false),
     metric('Higher-ranked peer games',String(p.higherRankPeerGames??0),false),
-    metric('Gold @15 vs peer',Number.isFinite(Number(p.avgGoldDiff15))?signed(p.avgGoldDiff15,0)+'g':'n/a',!Number.isFinite(Number(p.avgGoldDiff15))),
-    metric('Beat peer on gold @15',fmtPct(p.gold15OutperformPct),!Number.isFinite(Number(p.gold15OutperformPct))),
-    metric('CS/min vs peer',Number.isFinite(Number(p.avgCsMinDelta))?signed(p.avgCsMinDelta,2):'n/a',!Number.isFinite(Number(p.avgCsMinDelta))),
-    metric('Beat peer on CS/min',fmtPct(p.csMinOutperformPct),!Number.isFinite(Number(p.csMinOutperformPct))),
-    metric('DPM vs peer',Number.isFinite(Number(p.avgDpmDelta))?signed(p.avgDpmDelta,0):'n/a',!Number.isFinite(Number(p.avgDpmDelta))),
-    metric('Beat peer on DPM',fmtPct(p.dpmOutperformPct),!Number.isFinite(Number(p.dpmOutperformPct))),
-    metric('Vision/min vs peer',Number.isFinite(Number(p.avgVpmDelta))?signed(p.avgVpmDelta,2):'n/a',!Number.isFinite(Number(p.avgVpmDelta))),
-    metric('Beat peer on vision/min',fmtPct(p.vpmOutperformPct),!Number.isFinite(Number(p.vpmOutperformPct))),
-    metric('Major-item timing vs peer',Number.isFinite(Number(p.avgMajorItemDeltaMin))?signed(p.avgMajorItemDeltaMin,1)+' min':'n/a',!Number.isFinite(Number(p.avgMajorItemDeltaMin))),
-    metric('Faster major item than peer',fmtPct(p.majorItemFasterPct),!Number.isFinite(Number(p.majorItemFasterPct))),
-    metric('Higher-rank gold @15',Number.isFinite(Number(p.higherRankAvgGoldDiff15))?signed(p.higherRankAvgGoldDiff15,0)+'g':'n/a',!Number.isFinite(Number(p.higherRankAvgGoldDiff15))),
-    metric('Beat higher-rank peer on gold @15',fmtPct(p.higherRankGoldOutperformPct),!Number.isFinite(Number(p.higherRankGoldOutperformPct))),
-    metric('DPM vs higher-rank peer',Number.isFinite(Number(p.higherRankAvgDpmDelta))?signed(p.higherRankAvgDpmDelta,0):'n/a',!Number.isFinite(Number(p.higherRankAvgDpmDelta)))
+    metric('Gold @15 vs peer',hasNum(p.avgGoldDiff15)?signed(p.avgGoldDiff15,0)+'g':'n/a',!hasNum(p.avgGoldDiff15)),
+    metric('Beat peer on gold @15',fmtPct(p.gold15OutperformPct),!hasNum(p.gold15OutperformPct)),
+    metric('CS/min vs peer',hasNum(p.avgCsMinDelta)?signed(p.avgCsMinDelta,2):'n/a',!hasNum(p.avgCsMinDelta)),
+    metric('Beat peer on CS/min',fmtPct(p.csMinOutperformPct),!hasNum(p.csMinOutperformPct)),
+    metric('DPM vs peer',hasNum(p.avgDpmDelta)?signed(p.avgDpmDelta,0):'n/a',!hasNum(p.avgDpmDelta)),
+    metric('Beat peer on DPM',fmtPct(p.dpmOutperformPct),!hasNum(p.dpmOutperformPct)),
+    metric('Vision/min vs peer',hasNum(p.avgVpmDelta)?signed(p.avgVpmDelta,2):'n/a',!hasNum(p.avgVpmDelta)),
+    metric('Beat peer on vision/min',fmtPct(p.vpmOutperformPct),!hasNum(p.vpmOutperformPct)),
+    metric('Major-item timing vs peer',hasNum(p.avgMajorItemDeltaMin)?signed(p.avgMajorItemDeltaMin,1)+' min':'n/a',!hasNum(p.avgMajorItemDeltaMin)),
+    metric('Faster major item than peer',fmtPct(p.majorItemFasterPct),!hasNum(p.majorItemFasterPct)),
+    metric('Higher-rank gold @15',hasNum(p.higherRankAvgGoldDiff15)?signed(p.higherRankAvgGoldDiff15,0)+'g':'n/a',!hasNum(p.higherRankAvgGoldDiff15)),
+    metric('Beat higher-rank peer on gold @15',fmtPct(p.higherRankGoldOutperformPct),!hasNum(p.higherRankGoldOutperformPct)),
+    metric('DPM vs higher-rank peer',hasNum(p.higherRankAvgDpmDelta)?signed(p.higherRankAvgDpmDelta,0):'n/a',!hasNum(p.higherRankAvgDpmDelta))
   ];
   const conversionRows=[
-    metric('Wins when ≥250g ahead @15',Number.isFinite(Number(conv.laneLeadWinRate))?fmtPct(conv.laneLeadWinRate)+' · '+String(conv.laneLeadGames||0)+' games':'n/a',!Number.isFinite(Number(conv.laneLeadWinRate))),
-    metric('Wins when ≥250g behind @15',Number.isFinite(Number(conv.laneDeficitWinRate))?fmtPct(conv.laneDeficitWinRate)+' · '+String(conv.laneDeficitGames||0)+' games':'n/a',!Number.isFinite(Number(conv.laneDeficitWinRate)))
+    metric('Wins when ≥250g ahead @15',hasNum(conv.laneLeadWinRate)?fmtPct(conv.laneLeadWinRate)+' · '+String(conv.laneLeadGames||0)+' games':'n/a',!hasNum(conv.laneLeadWinRate)),
+    metric('Wins when ≥250g behind @15',hasNum(conv.laneDeficitWinRate)?fmtPct(conv.laneDeficitWinRate)+' · '+String(conv.laneDeficitGames||0)+' games':'n/a',!hasNum(conv.laneDeficitWinRate))
   ];
-  const wlRow=(label,obj,formatter)=>metric(label,obj&&Number.isFinite(Number(obj.wins))&&Number.isFinite(Number(obj.losses))?formatter(obj.wins)+' / '+formatter(obj.losses):'n/a',!(obj&&Number.isFinite(Number(obj.wins))&&Number.isFinite(Number(obj.losses))));
+  const wlRow=(label,obj,formatter)=>metric(label,obj&&hasNum(obj.wins)&&hasNum(obj.losses)?formatter(obj.wins)+' / '+formatter(obj.losses):'n/a',!(obj&&hasNum(obj.wins)&&hasNum(obj.losses)));
   const winLossRows=[
     wlRow('Gold @15 · wins / losses',wl.goldDiff15,v=>signed(v,0)+'g'),
     wlRow('High-risk deaths · wins / losses',wl.badDeaths,v=>fmt(v,1)),
@@ -446,7 +447,7 @@ function renderAdvanced(r){
     wlRow('Objective presence · wins / losses',wl.objectiveJoin,v=>fmtPct(v)),
     wlRow('Greedy stays · wins / losses',wl.greedyStays,v=>fmt(v,1))
   ];
-  const trendRow=(label,obj,formatter)=>metric(label,obj&&Number.isFinite(Number(obj.recent))&&Number.isFinite(Number(obj.prior))?formatter(obj.recent)+' / '+formatter(obj.prior):'n/a',!(obj&&Number.isFinite(Number(obj.recent))&&Number.isFinite(Number(obj.prior))));
+  const trendRow=(label,obj,formatter)=>metric(label,obj&&hasNum(obj.recent)&&hasNum(obj.prior)?formatter(obj.recent)+' / '+formatter(obj.prior):'n/a',!(obj&&hasNum(obj.recent)&&hasNum(obj.prior)));
   const trendRows=[
     trendRow('Latest 5 CS/min / previous',trend.csMin,v=>fmt(v,2)),
     trendRow('Latest 5 gold @15 / previous',trend.goldDiff15,v=>signed(v,0)+'g'),
