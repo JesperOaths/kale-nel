@@ -11,6 +11,12 @@ const rpcName = 'account_public_state_v687';
 const invalidSession = '000000000000000000000000000000000000000000000000';
 
 if (!supabaseUrl || !publishableKey) throw new Error('DATA_PLANE_FAIL checked-in Supabase public config unavailable');
+const publicApiHeaders = () => {
+  const headers = { 'Content-Type': 'application/json', Accept: 'application/json', apikey: publishableKey };
+  const legacyPublicJwt = /^[^.]+\.[^.]+\.[^.]+$/.test(publishableKey);
+  if (legacyPublicJwt) headers.Authorization = `Bearer ${publishableKey}`;
+  return headers;
+};
 if (!Number.isFinite(timeoutMs) || timeoutMs < 1000 || timeoutMs > 15000) throw new Error(`DATA_PLANE_FAIL timeout out of bounds: ${timeoutMs}`);
 if (!Number.isInteger(attempts) || attempts < 1 || attempts > 3) throw new Error(`DATA_PLANE_FAIL attempts out of bounds: ${attempts}`);
 if (!Number.isFinite(retryDelayMs) || retryDelayMs < 0 || retryDelayMs > 2000) throw new Error(`DATA_PLANE_FAIL retry delay out of bounds: ${retryDelayMs}`);
@@ -24,12 +30,7 @@ async function probe(attempt) {
   try {
     const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${rpcName}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        apikey: publishableKey,
-        Authorization: `Bearer ${publishableKey}`,
-      },
+      headers: publicApiHeaders(),
       body: JSON.stringify({
         session_token: invalidSession,
         session_token_input: invalidSession,
