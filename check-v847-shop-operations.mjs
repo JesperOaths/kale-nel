@@ -98,7 +98,7 @@ assert.match(schedulerRunner,/170000/);
 assert.match(deploy,/deploy_function shop-ops-v847/);
 assert.match(deploy,/deploy_function shop-admin-export-v847/);
 assert.match(deploy,/deploy_function shop-admin-orders-v825/);
-assert.ok(adminDeploy.includes("['admin_shop_operations.html', 'v858']"));
+assert.ok(adminDeploy.includes("['admin_shop_operations.html', siteVersion]"));
 assert.match(page,/Review order/);
 assert.match(page,/admin_shop_orders\.html\?filter=stale&order=/);
 assert.match(orderPage,/data-filter="stale">Stale unpaid/);
