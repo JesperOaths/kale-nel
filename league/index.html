@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends playstyle analysis with evidence-backed Last-20 coaching and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261001-league-web-v93">
+  <link rel="stylesheet" href="/league/styles.css?v=20261001-league-web-v94">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817"></script>
 </head>
@@ -33,115 +33,91 @@
         <div class="intro-copy">
           <p class="eyebrow">Bruisienator · Last-20 evidence</p>
           <h1>League analysis, in the Kalenel site.</h1>
-          <p class="lede">Fetch your recent Riot data, analyze the cached Last 20, and review practical coaching evidence without a separate desktop GUI.</p>
+          <p class="lede">Enter a Riot ID and API key once, then load and analyze recent matches in one step. The page automatically builds the latest eligible Last 20.</p>
           <div class="intro-chips" aria-label="Workspace properties">
             <span>Public workspace</span>
-            <span>Browser-isolated profiles</span>
+            <span>No profile setup</span>
             <span>Evidence-backed coaching</span>
           </div>
         </div>
         <aside class="intro-note">
           <strong>No Kalenel login required</strong>
-          <p>Profiles and reports are isolated to this browser workspace. A Riot API key, when needed, is session-only and is never written into your profile or report.</p>
-          <small>Public storage stays bounded: up to 8 profiles, 50-match fetches and retained recent cache/history.</small>
+          <p>Your Riot API key is session-only and is never stored in the report or browser identity fields. Recent-match data is isolated to this browser workspace.</p>
+          <small>The analyzer scans up to 50 recent matches when needed so queue/map filtering can still produce a useful Last-20 sample.</small>
         </aside>
       </section>
 
-      <section class="workspace-card" aria-labelledby="workspace-title">
+      <section class="workspace-card request-workspace" aria-labelledby="workspace-title">
         <div class="section-heading workspace-heading">
           <div>
-            <p class="eyebrow">Workspace</p>
-            <h2 id="workspace-title">Profile & analysis controls</h2>
+            <p class="eyebrow">Recent match request</p>
+            <h2 id="workspace-title">Load & analyze recent matches</h2>
           </div>
-          <span class="section-hint">Fetch and analysis remain separate so you control Riot/API work.</span>
+          <span class="section-hint">One action resolves the Riot ID, fetches missing match/timeline data, and analyzes the latest eligible 20.</span>
         </div>
 
-        <div class="profile-toolbar">
-          <label class="field grow">
-            <span>League profile</span>
-            <select id="profileSelect" aria-label="League profile">
-              <option value="">Loading profiles…</option>
+        <div class="direct-request-grid">
+          <label class="field summoner-field">
+            <span>Riot game name</span>
+            <input id="requestGameName" autocomplete="off" spellcheck="false" placeholder="Oaths">
+          </label>
+          <label class="field tag-field">
+            <span>Tag</span>
+            <input id="requestTagLine" autocomplete="off" spellcheck="false" placeholder="Wijf">
+          </label>
+          <label class="field region-field">
+            <span>Region</span>
+            <select id="requestRegion" aria-label="Riot platform region">
+              <option value="euw1" selected>EU West</option>
+              <option value="eun1">EU Nordic & East</option>
+              <option value="na1">North America</option>
+              <option value="kr">Korea</option>
+              <option value="jp1">Japan</option>
+              <option value="br1">Brazil</option>
+              <option value="oc1">Oceania</option>
+              <option value="tr1">Türkiye</option>
             </select>
           </label>
-          <button class="button secondary" id="newProfileBtn" type="button">New profile</button>
-          <label class="field fetch-depth">
-            <span>Cache depth</span>
-            <select id="fetchCount" aria-label="Number of recent matches to cache">
-              <option value="20">20 matches · lighter fetch</option>
-              <option value="50" selected>50 matches · public maximum</option>
-            </select>
+          <label class="field key-field">
+            <span>Riot API key · session only</span>
+            <input id="riotApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="RGAPI-…">
           </label>
-          <button class="button secondary" id="fetchBtn" type="button" disabled>Fetch / update</button>
-          <button class="button primary" id="analyzeBtn" type="button" disabled>Analyze cached Last 20</button>
+          <button class="button primary request-button" id="loadRecentBtn" type="button" disabled>
+            <span>Load & analyze</span>
+            <small>Latest eligible 20</small>
+          </button>
         </div>
 
-        <div class="workspace-secondary">
-          <details class="batch-tools" id="batchTools">
-            <summary>Batch profiles · sequential</summary>
-            <div class="batch-tools-body">
-              <div class="batch-profile-list" id="batchProfiles" aria-label="Profiles for batch processing"></div>
-              <div class="batch-actions">
-                <button class="button secondary small" id="batchFetchBtn" type="button" disabled>Fetch / update selected</button>
-                <button class="button secondary small" id="batchAnalyzeBtn" type="button" disabled>Analyze selected</button>
-              </div>
-              <p class="muted tiny">Selected profiles run one at a time to keep Riot/API load controlled. A failure on one profile is logged and the remaining selected profiles continue.</p>
-            </div>
-          </details>
-
-          <div class="riot-key-row" id="riotKeyRow">
-            <label class="field grow">
-              <span>Riot API key · session only</span>
-              <input id="riotApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="RGAPI-…">
-            </label>
-            <button class="button secondary" id="testRiotKeyBtn" type="button" disabled>Test Riot key</button>
-            <div class="riot-key-copy">
-              <strong id="riotKeyStatus">No server Riot key configured</strong>
-              <small>The key stays in this browser tab only. It is not saved to your profile, report, cache, or repository.</small>
-            </div>
+        <div class="request-help">
+          <div class="request-help-item key-note">
+            <strong id="riotKeyStatus">Add a Riot API key to load matches.</strong>
+            <span>The key stays in this browser tab and is not saved.</span>
+          </div>
+          <div class="request-help-item auto-note">
+            <strong>Automatic depth</strong>
+            <span>Starts with 30 recent matches and scans up to 50 only if filtering leaves fewer than 20 comparable games.</span>
           </div>
         </div>
 
-        <div class="profile-editor" id="profileEditor" hidden>
-          <div class="editor-title">
-            <div><p class="eyebrow">Profile details</p><h3>Create or edit a League profile</h3></div>
-            <button class="button ghost small" id="cancelProfileBtn" type="button">Close</button>
-          </div>
-          <div class="editor-grid">
-            <label class="field"><span>Profile label</span><input id="profileLabel" autocomplete="off" placeholder="Main EUW"></label>
-            <label class="field"><span>Riot game name</span><input id="gameName" autocomplete="off" placeholder="GameName"></label>
-            <label class="field"><span>Tag line</span><input id="tagLine" autocomplete="off" placeholder="EUW"></label>
-            <label class="field"><span>Platform</span>
-              <select id="platformRegion">
-                <option value="euw1">EUW1</option><option value="eun1">EUN1</option><option value="na1">NA1</option>
-                <option value="kr">KR</option><option value="jp1">JP1</option><option value="br1">BR1</option>
-                <option value="oc1">OC1</option><option value="tr1">TR1</option>
-              </select>
-            </label>
-          </div>
-          <label class="field"><span>Notes</span><input id="profileNotes" autocomplete="off" placeholder="Optional"></label>
-          <div class="editor-actions">
-            <button class="button primary" id="saveProfileBtn" type="button">Save profile</button>
-            <button class="button ghost danger-button" id="deleteProfileBtn" type="button" hidden>Delete profile</button>
-          </div>
-        </div>
-
-        <div class="status-strip" aria-label="League workspace status">
-          <div><span class="status-label">Cache</span><strong id="cacheState">—</strong></div>
-          <div><span class="status-label">Latest game</span><strong id="latestGameState">—</strong></div>
-          <div><span class="status-label">Latest analysis</span><strong id="analysisState">—</strong></div>
-          <div><span class="status-label">Data source</span><strong id="sourceState">—</strong></div>
+        <div class="status-strip request-status" aria-label="League request status">
+          <div class="status-card cache-status"><span class="status-label">Fetched cache</span><strong id="cacheState">0 games</strong></div>
+          <div class="status-card latest-status"><span class="status-label">Latest game</span><strong id="latestGameState">—</strong></div>
+          <div class="status-card analysis-status"><span class="status-label">Analysis</span><strong id="analysisState">Not run yet</strong></div>
+          <div class="status-card source-status"><span class="status-label">Source</span><strong id="sourceState">Waiting for request</strong></div>
         </div>
       </section>
 
-      <section class="panel progress-panel" id="progressPanel">
+      <section class="panel progress-panel compact-progress" id="progressPanel">
         <div class="section-head compact">
-          <div><p class="eyebrow">Execution progress</p><h2>Fetch / analysis log</h2></div>
+          <div><p class="eyebrow">Request progress</p><h2>Recent-match analysis</h2></div>
           <span class="pill neutral" id="progressState">Idle</span>
         </div>
         <div class="progress-track" aria-hidden="true"><span id="progressBar"></span></div>
-        <div class="progress-log" id="progressLog" aria-live="polite">
-          <div class="log-line muted">Ready. Fetch and Analyze are intentionally separate operations.</div>
-        </div>
+        <p class="progress-summary" id="progressSummary">Ready to request recent matches.</p>
+        <details class="technical-log">
+          <summary>Technical progress details</summary>
+          <div class="progress-log" id="progressLog" aria-live="polite"></div>
+        </details>
       </section>
 
       <section id="reportEmpty" class="panel empty-state">
@@ -149,7 +125,7 @@
         <div>
           <p class="eyebrow">Last-20 report</p>
           <h2>No analysis loaded yet</h2>
-          <p>Choose or create a profile, fetch match data when needed, then analyze the cached data. Existing Bruisienator report JSON can also be imported below.</p>
+          <p>Enter your Riot ID, region and API key above, then press “Load & analyze”. Recent matches are fetched first and the eligible Last 20 are analyzed automatically.</p>
         </div>
       </section>
 
@@ -292,18 +268,6 @@
         </section>
       </div>
 
-      <section class="panel migration-panel">
-        <details>
-          <summary>Migration tools · import a Bruisienator report JSON</summary>
-          <p>This is the bridge for current/local Bruisienator output while the current analyzer source is being ported into the web backend. It does not upload Riot API keys.</p>
-          <div class="import-row">
-            <input id="reportFile" type="file" accept=".json,application/json">
-            <button class="button secondary" id="importBtn" type="button" disabled>Import into selected profile</button>
-          </div>
-          <p class="muted tiny">Historical generated HTML is intentionally not patched or treated as source code. The current analyzer/source package remains the authority for the advanced formulas.</p>
-        </details>
-      </section>
-
       <footer class="league-footer">
         <p>Bruisienator is an independent analytics project and is not endorsed or sponsored by Riot Games. League of Legends and Riot Games are trademarks of Riot Games, Inc.</p>
         <a href="/">Back to Kalenel</a>
@@ -312,6 +276,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261001-league-web-v93" defer></script>
+  <script src="/league/app.js?v=20261001-league-web-v94" defer></script>
 </body>
 </html>
