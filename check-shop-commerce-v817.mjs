@@ -5,6 +5,8 @@ import { applyPrintifyVatReserveEurCents, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_
 import fs from 'node:fs';
 
 const read = path => fs.readFileSync(path, 'utf8');
+const sitePageVersion = read('VERSION').trim();
+assert.match(sitePageVersion,/^v\d+$/,'root VERSION must remain a simple v### page identity');
 const index = read('shop/index.html');
 const directCommerce = read('shop/direct-commerce-v832.js');
 const deliveryEstimate = read('shop/delivery-estimate-v833.js');
@@ -66,8 +68,8 @@ assert.match(toteHandleColor, /variantBoundMockups:\s*true/);
 assert.match(toteHandleColor, /sharedArtworkFirst:\s*true/);
 assert.match(toteHandleColor, /artwork\|print file\|design png/i);
 assert.match(toteHandleColor, /exactVariantSelection:\s*true/);
-assert.match(index, /GEJAST_PAGE_VERSION='v874'/);
-assert.match(index, /version-watermark[^>]*data-version-watermark[^>]*>v874 - Made by Bruis</);
+assert.ok(index.includes(`GEJAST_PAGE_VERSION='${sitePageVersion}'`),'shop page declaration must follow root VERSION rather than feature-release provenance');
+assert.ok(index.includes(`>${sitePageVersion} - Made by Bruis</span>`),'shop visible watermark must follow root VERSION rather than feature-release provenance');
 assert.match(index, /data-animal-filter/);
 assert.match(index, /data-animal-section/);
 const regularGridPos = index.indexOf('data-products');
