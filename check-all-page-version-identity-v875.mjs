@@ -23,12 +23,19 @@ for(const rel of pages){
   const literalVisible=new RegExp('>\\s*'+expected+'\\s*[^<]{0,20}Made by Bruis\\s*<','i').test(html);
   const hasEmptyWatermark=watermarkTags.some(m=>!(m[1]||'').trim());
   const dynamicWatermark=hasEmptyWatermark && /applyVersionLabel|gejast-version-sync-inline/.test(html);
+  const watermarkVersions=[...new Set(watermarkTags.flatMap(m =>
+    [...String(m[1]||'').matchAll(/\\bv\\d+(?:\\.\\d+)*(?:[a-z]+\\d*)?\\b/gi)].map(x=>x[0].toLowerCase())
+  ))];
+  const staleVisibleVersions=watermarkVersions.filter(v=>v!==expected.toLowerCase());
 
   if(declarations.length!==1 || declarations[0]!==expected){
     failures.push(rel+': declaration '+(declarations.join('|')||'missing')+' expected '+expected);
   }
   if(!literalVisible && !dynamicWatermark){
     failures.push(rel+': visible/runtime watermark missing or wrong; expected '+expected+' - Made by Bruis');
+  }
+  if(staleVisibleVersions.length){
+    failures.push(rel+': stale/conflicting visible watermark version(s) '+staleVisibleVersions.join('|')+' expected '+expected);
   }
 }
 
