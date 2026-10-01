@@ -4,6 +4,21 @@ This file is the behavioral-analysis contract for `kalenel.nl/league`.
 
 The purpose of the web analyzer is not to produce a decorative stat page. It should identify repeatable player decisions, show the evidence behind a judgment, compare the player with relevant peers and with their own broader history, and turn those findings into specific actions to practise.
 
+## Peer-rank backfill for the comparable sample
+
+Queue isolation means the final Last-20 coaching sample may contain matches deeper than raw positions 1–20 in the fetched history.
+
+To keep rank-band comparisons aligned with the actual coaching sample without ranking every raw match, `fetch_finish` now:
+1. reads the cached matches from the completed fetch run in original recency order,
+2. applies the same Summoner's Rift + ≥10-minute eligibility,
+3. computes the same dominant raw queue ID,
+4. takes the first 20 matches from that comparable queue context,
+5. fetches an opponent rank snapshot only when one of those target matches is missing it.
+
+The response exposes `dominant_queue_id`, `peer_rank_target_count`, and `peer_rank_backfilled` so the frontend can report what happened.
+
+This keeps Riot rank lookups bounded to the final comparable sample instead of blindly ranking all 50 cached raw matches.
+
 ## Queue-context isolation
 
 Summoner's Rift alone is not a sufficient comparability filter because Riot's match payload also includes a `queueId` identifying the match queue/context.
