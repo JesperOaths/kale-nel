@@ -404,6 +404,9 @@ ok(html.includes('id="compoundSignals"')&&app.includes('function renderCompoundS
 ok(html.includes('id="reportDrivers"')&&app.includes('function renderReportDrivers('), 'report must compress the strongest supported weakness, strength and recent direction into an action-first layer');
 ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('matchHistorySignals('), 'recent selected-role games must have collapsible coaching-readable history rows with derived evidence signals');
 ok(html.includes('id="gameArcPatterns"')&&app.includes('function renderGameArcs(')&&app.includes('function gameArcStages('), 'League report must reconstruct supported per-game arcs and aggregate repeated state transitions');
+ok(html.includes('id="gameArcFunnels"')&&app.includes('function arcFunnelCard('), 'League report must summarize how ahead / close / behind @15 role states convert by @25 and result');
+ok(app.includes('function matchReplayReviewHtml(')&&app.includes('data-open-review-match'), 'match history must surface the backend replay-priority queue inside the relevant expandable game');
+ok(app.includes("openReplayReviewMatch(matchId,tab)"), 'match-level replay cues must retain their evidence-tab routing');
 ok(app.includes("filter(x=>x.games.length>=2)")&&app.includes("filter(x=>x.count>=2)"), 'game-arc recurrence must require evidence in at least two coaching-cohort games');
 ok(app.includes('reportCoachingGames(r)')&&app.includes('gameArcTransition(g)'), 'game-arc aggregation must inherit the backend mechanics-cohort boundary');
 ok(app.includes('not a proven reset cause'), 'game-arc objective timing language must remain association-only');
