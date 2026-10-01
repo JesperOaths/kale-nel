@@ -29,7 +29,7 @@ for(const field of [
   'highUnspentFightRate','itemDisadvantageFightRate','goldDeficitFightRate',
   'killConversionRate','opponentKillConversionRate','killConversionDelta',
   'neutralObjectiveEvents','earlySetupObjectiveJoinRate','earlySetupObjectiveCoverageRate','lateResetObjectiveMissRate','freshPurchaseObjectiveJoinRate',
-  'objectiveSetupWardRate','objectiveSetupWardRateDelta','damageGoldEfficiency'
+  'objectiveSetupWardRate','objectiveSetupWardRateDelta','visionActions','visionActionDeaths','visionActionDeathRate','highRiskVisionActionDeaths','highRiskVisionActionDeathsPerGame','unsupportedVisionActionDeaths','damageGoldEfficiency'
 ])assert.ok(behaviorExport.includes(field),'Behavior summary must export '+field);
 assert.ok(api.includes('sessionBehaviorModel'));
 assert.ok(api.includes('highRiskLeadDeathsPerGame'));
@@ -60,6 +60,8 @@ assert.ok(app.includes('Loss rate while outnumbered'));
 assert.ok(app.includes('Level-down shared-role fights'));
 assert.ok(app.includes('Post-kill conversion'));
 assert.ok(app.includes('Prior-frame objective setup'));
+assert.ok(app.includes('Vision-action deaths'));
+assert.ok(app.includes('Vision-action death rate'));
 assert.ok(app.includes('Late-reset neutral-objective misses'));
 assert.ok(app.includes('r.sessionBehavior||r.sessionModel'),'Session panel must read the report contract name');
 assert.ok(app.includes('function renderSpatial'),'Spatial review renderer must remain present');
