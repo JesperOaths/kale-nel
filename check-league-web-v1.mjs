@@ -348,6 +348,11 @@ assert.ok(app.includes("return role==='ADC'&&ext.eligible!==false?(r.coachingSum
 assert.ok(app.includes("if(r==='BOTTOM'||r==='BOT'||r==='DUO_CARRY'||r==='ADC')return'ADC'"),'Frontend may normalize raw Riot bottom aliases but must canonicalize them to ADC before report logic');
 assert.ok(html.includes('id="rankBridge"')&&app.includes('function renderRankBridge('),'Next-tier benchmark bridge must remain visible and role-safe');
 assert.ok(html.includes('id="recentPulse"')&&app.includes('function renderRecentPulse('),'Recent-vs-prior pulse must remain visible without adding backend work');
+assert.ok(html.includes('id="reportDrivers"')&&app.includes('function renderReportDrivers('),'League overview must retain the decision-driven primary limiter / strength / direction layer');
+assert.ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('data-open-full-match'),'League must retain the expandable coaching-readable recent match history with a path into full evidence');
+assert.ok(css.includes('.match-history-toggle')&&css.includes('.history-signal-grid'),'Recent match history must remain readable as expandable rows rather than another dense technical table');
+assert.ok(html.includes('id="outcomeFingerprint"')&&app.includes('function renderOutcomeFingerprint('),'League report must retain the within-sample wins-versus-losses diagnostic fingerprint');
+assert.ok(app.includes('Largest raw separation:')&&app.includes('not as a causal claim'),'Outcome fingerprint must describe separation without overstating causality');
 assert.ok(app.includes('sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-Number(b.gameStartTimestamp||0))')&&app.includes('sourceGames.reverse()'),'Trend charts must render oldest-to-newest even though the report contract is newest-first');
 assert.ok(app.includes('chart-reference-line')&&app.includes("reference:bench?.dpm")&&app.includes("reference:bench?.kp"),'ADC DPM/KP charts must retain same-tier external reference lines');
 assert.ok(!html.includes('ADC rank averages'),'UI must not overstate role-adjusted rank benchmarks as direct ADC rank averages');
