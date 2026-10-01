@@ -4,6 +4,31 @@ This file is the behavioral-analysis contract for `kalenel.nl/league`.
 
 The purpose of the web analyzer is not to produce a decorative stat page. It should identify repeatable player decisions, show the evidence behind a judgment, compare the player with relevant peers and with their own broader history, and turn those findings into specific actions to practise.
 
+## Patch-aware historical self baseline
+
+Riot Match-V5 includes a game-version string for each match. The analyzer stores that raw value on each analyzed/baseline game and derives a defensive **major.minor patch key** from the first two numeric components.
+
+The normal Last-20 coaching sample is **not** restricted to one patch. Recent behavior remains visible even across a patch boundary.
+
+Only the broader historical self-trend comparison is patch-aware:
+
+1. determine the patch key of the most recent primary-role game in the Last-20 sample,
+2. collect current Last-20 primary-role games from that same patch,
+3. collect **older** cached primary-role games from that same patch, excluding the current Last-20 match IDs,
+4. permit broader historical trend coaching only when there are at least **3 current-patch games and 5 older same-patch games**.
+
+Cross-patch older games remain cached and available for descriptive reporting, but they do not drive claims such as “your farming is improving/slipping versus your broader baseline.”
+
+Data Quality exposes:
+- current patch key,
+- current-patch primary-role games,
+- older same-patch baseline games,
+- cross-patch older primary-role games excluded from trend coaching,
+- patch distribution,
+- whether the patch-aware historical baseline is ready.
+
+This avoids silently attributing patch-driven systemic changes to the player's behavior.
+
 ## Peer-rank backfill for the comparable sample
 
 Queue isolation means the final Last-20 coaching sample may contain matches deeper than raw positions 1–20 in the fetched history.
