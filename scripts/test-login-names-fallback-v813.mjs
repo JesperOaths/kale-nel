@@ -65,10 +65,14 @@ assert.match(accountRuntime,/function staticLoginNames\(\)/,'login page runtime 
 assert.match(accountRuntime,/seed = normalizeNames\(\[\.\.\.cached,\.\.\.snapshot\]\)/,'login bootstrap must merge cache plus static snapshot synchronously');
 assert.match(accountRuntime,/if\(clean\.length\)\{[\s\S]*?fillSelect\(sel,clean\)/,'live refresh may replace the dropdown only when it returns real names');
 assert.match(accountRuntime,/else if\(seed\.length\)/,'an empty or slow live refresh must preserve the synchronous seed');
-assert.ok(loginHtml.includes(`gejast-login-names-static.js?${siteVersion}&rev=20261001-login-resilience-r6`),'login must load the static name snapshot with site version + resilience revision');
-assert.ok(loginHtml.includes(`gejast-login-names-fallback.js?${siteVersion}&rev=20261001-login-resilience-r6`),'login must load the single-RPC fallback with site version + resilience revision');
-assert.ok(loginHtml.includes(`gejast-account-runtime.js?${siteVersion}&rev=20261001-login-resilience-r6`),'login must load the account runtime with site version + resilience revision');
+assert.ok(loginHtml.includes(`gejast-login-names-static.js?${siteVersion}&rev=20261001-login-resilience-r7`),'login must load the static name snapshot with site version + resilience revision');
+assert.ok(loginHtml.includes(`gejast-login-names-fallback.js?${siteVersion}&rev=20261001-login-resilience-r7`),'login must load the single-RPC fallback with site version + resilience revision');
+assert.ok(loginHtml.includes(`gejast-account-runtime.js?${siteVersion}&rev=20261001-login-resilience-r7`),'login must load the account runtime with site version + resilience revision');
 assert.match(loginHtml,/window\.GEJAST_LOGIN_NAMES_STATIC=Object\.freeze\(/,'login HTML must contain an inline last-known-good name seed so the selector works even when Supabase or a deferred asset stalls');
+assert.match(loginHtml,/data-login-scope="friends"/,'login HTML must contain literal friends options before JS runs');
+assert.match(loginHtml,/data-login-scope="family"/,'login HTML must contain literal family options before JS runs');
+assert.match(fallback,/get_login_active_names_v687'?,?\{site_scope_input:resolvedScope\},2500/,'live login-name verification must stay tightly bounded');
+assert.match(fallback,/setTimeout\(function\(\)\{ authoritative\(resolvedScope\)\.catch\(function\(\)\{\}\); \},3000\)/,'live name verification must be delayed off first paint');
 assert.match(loginHtml,/id="gejast-login-inline-seed"/,'login must synchronously populate the selector during HTML parsing rather than waiting for DOMContentLoaded');
 assert.match(loginHtml,/sel\.dataset\.seedSource='inline-last-known-good'/,'synchronous selector seed must be observable for diagnostics');
 for(const name of ['Bruis','Jesper','Sierk']) assert.ok(loginHtml.includes(`"${name}"`),`inline login seed missing representative name ${name}`);
