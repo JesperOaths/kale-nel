@@ -1,11 +1,14 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 
 const api=fs.readFileSync('supabase/functions/league-api-v1/index.ts','utf8');
 const app=fs.readFileSync('league/app.js','utf8');
 const html=fs.readFileSync('league/index.html','utf8');
 const css=fs.readFileSync('league/styles.css','utf8');
 const migration=fs.readFileSync('supabase/migrations/20261001043000_league_web_foundation_v1.sql','utf8');
+
+assert.doesNotThrow(()=>new vm.Script(app,{filename:'league/app.js'}),'league/app.js must remain valid browser JavaScript');
 
 assert.ok(api.includes('x-gejast-session'));
 assert.ok(api.includes('x-riot-api-key'));
