@@ -135,7 +135,8 @@ Do not replace a direct match-level comparison with a generic population average
 - `csDiff10`, `csDiff15`: player minus same-role opponent CS.
 - `xpDiff10`, `xpDiff15`: player minus same-role opponent XP.
 - Major-item timing delta: player completion minute minus same-role opponent completion minute. Positive = player is later/slower.
-- DQI, if restored, is a 0–10 metric. Do not substitute another formula.
+- The recovered Bruisienator **DQI** is a 0–10 compatibility metric. The supplied V21 source defines it as a weighted penalty from bad deaths, isolated deaths, greedy deaths, facechecks and objective-timed deaths. Because the current Riot-derived web model cannot defensibly reconstruct every legacy category (notably the old facecheck classifier), this exact compatibility score is marked **partial** rather than filling missing categories with invented values.
+- The primary web **Death Quality Index** is separately exported as `consequence_aware_v1`: a 0–10 score built from current high-risk deaths, measured costly/severe consequences, untraded high-risk deaths, pre-objective deaths, high-unspent-gold deaths and high-risk deaths while materially ahead. Keep the recovered legacy value visible for provenance; use the modern score for current coaching.
 - AGOR remains undefined until its historical formula is recovered.
 
 ## Mixed-role samples
@@ -793,12 +794,24 @@ For non-jungle lane roles on Summoner's Rift:
 - use timeline movement samples to detect a sustained departure from home lane into another meaningful zone,
 - ignore base movement and ordinary home-lane activity.
 
+Each detected roam now preserves a **per-window evidence bundle** rather than only an aggregate count:
+- sampled Riot timeline path points (`time`, `x`, `y`, zone) for map rendering,
+- player kill/assist contributions during the window,
+- player deaths during the window,
+- team champion kills as context,
+- neutral objectives during the window with player **present vs away** evidence,
+- structure/turret-plate events with supported player involvement and attribution quality,
+- plates gained/lost during the window,
+- direct-role CS differential change from departure to return.
+
 Outcomes:
-- kill/assist or neutral-objective conversion during the detected departure → success,
-- player death during the departure with no successful event → failure,
+- player kill/assist, a team neutral objective with supported player presence, or supported structure involvement during the departure → success,
+- player death during the departure with no supported successful event → failure,
 - otherwise neutral.
 
-For SUPPORT, also inspect the change in allied ADC versus enemy ADC CS differential during the roam. A roam that gives no kill/assist/objective return and costs the ADC substantial lane CS can be highlighted as expensive.
+This intentionally improves on the supplied V21 browser-side enrichment: an unrelated dragon or turret taken elsewhere on the map must not make a roam "successful" merely because its timestamp falls inside the roam window.
+
+For SUPPORT, also inspect the change in allied ADC versus enemy ADC CS differential during the roam. A roam that gives no supported return and costs the ADC substantial lane CS can be highlighted as expensive.
 
 The cutoff is a behavior-analysis window, not a claim that rotations stop when Baron becomes available. After the major-objective-era boundary, movement is better interpreted as broader macro/side-lane/objective routing rather than an early roam.
 
@@ -1357,6 +1370,8 @@ Raw Riot `{x,y}` coordinates and `mapId` are preserved.
 
 The historical 0–15000 square heatmap is retired.
 
+The supplied V21 still contains heatmap and roam-path canvas renderers. Heatmap parity is intentionally satisfied by the newer real Summoner's Rift map renderer rather than reintroducing a coarse synthetic square. V21's useful **roam path** capability is preserved separately: each per-game map can draw the server-derived roam paths on the same Riot map projection used for deaths and wards.
+
 The web renderer now uses Riot's Summoner's Rift minimap asset with one shared map-11 world→image transform:
 - min X = -120
 - min Y = -120
@@ -1395,3 +1410,14 @@ Do not invent:
 - causality from simple win/loss correlations.
 
 These should remain visibly unavailable until supported by recovered code or stronger data.
+
+## Uploaded Bruisienator V21 parity audit
+
+The supplied archive includes `Bruisienator_ROAMS_V21_PHASE2_SAFE_STATS_ENRICH`, whose functional changes are concentrated in `template_playstyle_report_last20_phase2b.html`; the launcher/PowerShell analysis files are otherwise byte-identical across the bundled V18/V20/V21 snapshots.
+
+Parity decisions:
+- **implemented / upgraded:** per-roam path rendering, per-window kill/death/objective/structure evidence, support ADC lane-cost context, recovered DQI provenance, sortable per-game evidence table;
+- **already superseded:** old win/loss profile, per-game narrative, objective/death/macro/vision/laning/teamfight/tempo text analyzers, static role thresholds, crude support-roam share, and square heatmaps are covered by richer same-role peer comparisons, evidence-backed judgments, objective root-cause analysis, replay review, session/trend models and real-map spatial rendering;
+- **not fabricated:** AGOR stays unavailable because no defensible formula is present in the supplied source.
+
+When a legacy feature is superseded, preserve its underlying information need rather than duplicating a weaker heuristic under a second label.
