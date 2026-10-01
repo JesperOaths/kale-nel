@@ -108,16 +108,18 @@ const excludedTrackedFiles = tracked.filter((file) =>
   globallyExcludedExtensions.has(path.extname(file).toLowerCase())
 );
 
-// Bruis v849 uses the live Printify-backed Edge Function as the only storefront
-// catalog authority. Historical static catalog artifacts may remain tracked for
-// provenance/import tooling, but active runtime sources must never load or consume
-// them and must never reference excluded JSON fallbacks.
+// Bruis uses the live Printify-backed Edge Function as the catalog authority.
+// A generated immutable last-known-good browser snapshot is allowed only as a
+// resilience fallback while the live endpoint is unavailable. The retired
+// hand-maintained BRUIS_CATALOG/catalog.json adapters must remain disconnected.
 const shopStore = 'shop/store.js';
 const shopIndex = 'shop/index.html';
 const shopStoreBody = tracked.includes(shopStore) ? fs.readFileSync(shopStore, 'utf8') : '';
 const shopIndexBody = tracked.includes(shopIndex) ? fs.readFileSync(shopIndex, 'utf8') : '';
 assert.match(shopStoreBody, /shop-catalog-v828/, 'Bruis store must use the live Printify-backed catalog endpoint');
-assert.doesNotMatch(shopStoreBody, /window\.BRUIS_CATALOG|catalog\.json|catalog\.printify\.json/, 'Bruis store must not consume static catalog fallbacks');
+assert.match(shopStoreBody, /BRUIS_CATALOG_LAST_GOOD/, 'Bruis store may consume only the generated last-known-good resilience snapshot');
+assert.doesNotMatch(shopStoreBody, /window\.BRUIS_CATALOG(?!_LAST_GOOD)|catalog\.json|catalog\.printify\.json/, 'Bruis store must not consume retired hand-maintained catalog fallbacks');
+assert.match(shopIndexBody, /catalog-last-good\.js/, 'Bruis shop must preload the generated last-known-good resilience snapshot');
 assert.doesNotMatch(shopIndexBody, /catalog-data\.js/, 'Bruis shop must not load the retired static catalog adapter');
 const deliberateExcludedDependencyExceptions = new Set();
 
