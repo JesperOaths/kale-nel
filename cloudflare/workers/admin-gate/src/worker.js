@@ -71,12 +71,16 @@ async function publicOriginResponse(request, url, { noStore = false, cacheBustKe
   if (cacheBustKey) originUrl.searchParams.set(cacheBustKey, ADMIN_BUILD);
   const originRequest = new Request(originUrl.toString(), request);
   const response = await fetch(originRequest, { cf: { cacheEverything: false, cacheTtl: 0 } });
-  const secured = withPublicSecurityHeaders(response);
-  const headers = new Headers(secured.headers);
+  // Do not wrap/transfer the origin ReadableStream twice. Some browsers surface a
+  // disturbed/locked body as an "input stream" error when a public no-store
+  // document is re-wrapped repeatedly. Copy headers once and forward the one
+  // untouched origin stream into the final response.
+  const headers = new Headers(response.headers);
+  applyPublicSecurityHeaders(headers);
   headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
   headers.set('Pragma', 'no-cache');
   headers.delete('Age');
-  return new Response(secured.body, { status: secured.status, statusText: secured.statusText, headers });
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
 export default {
