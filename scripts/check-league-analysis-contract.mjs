@@ -25,6 +25,10 @@ ok(backend.includes('d.tMs+75000'), 'pre-objective conversion window must remain
 ok(backend.includes('impactDeltaVsOpponent'), 'direct-peer first-impact comparison must remain in analyzer');
 ok(backend.includes('roam.laneCostCs='), 'roam lane-cost comparison must remain in analyzer');
 ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
+ok(backend.includes('goldSwingTo15'), 'clean solo-kill conversion must preserve gold swing to 15');
+ok(backend.includes('csSwingTo15'), 'clean solo-kill conversion must preserve CS swing to 15');
+ok(backend.includes('Number(x.goldSwingTo15)>=200'), 'clean solo-kill conversion threshold must remain +200g by 15');
+ok(backend.includes('soloKillConversionRate'), 'aggregate clean solo-kill conversion rate must remain exported');
 ok(backend.includes('visionMission'), 'vision-action safety model must remain in analyzer');
 ok(backend.includes('Number(d.tMs)-Number(v.tMs)<=20000'), 'vision-action death window must remain 20 seconds');
 ok(backend.includes('dist2(pos,v)<=2500*2500'), 'vision-action death spatial radius must remain 2500 units');
