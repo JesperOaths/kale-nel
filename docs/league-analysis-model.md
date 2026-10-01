@@ -246,6 +246,25 @@ Current interpretation:
 
 A large positive CS swing is not automatically good if it makes the player late to objectives or fights. Coaching must therefore frame this as **routing efficiency**, not “maximize CS at all costs.”
 
+## Mid-game routing efficiency
+
+For ADC/MID/TOP, raw CS swing and objective attendance should be interpreted together.
+
+For each comparable game from 15→25:
+- compute direct-role CS differential change,
+- count tracked team objective events in the 14–25 phase,
+- compute the player's supported nearby objective presence in that same phase.
+
+Current coaching cases:
+
+- **inefficient routing:** CS differential worsens by at least ~8 CS **and** objective presence is below 50%,
+- **balanced routing strength:** CS differential improves by at least ~8 CS **and** objective presence is at least 60%,
+- **side-farm / low-presence tradeoff:** CS differential improves by at least ~8 CS, at least two team objectives occur, and objective presence is below 35%.
+
+The first case is the strongest improvement signal because the player is losing role-relative farm without compensating with map attendance.
+
+The side-farm case must be worded as a tradeoff, not automatically a mistake: sometimes conceding an objective and taking guaranteed side resources is correct. The coaching goal is to make that choice intentional.
+
 ## Lead preservation from 15 to 25
 
 Where a real timeline frame exists near 25 minutes, preserve the same-role opponent comparison at 25 as well as 10/15.
