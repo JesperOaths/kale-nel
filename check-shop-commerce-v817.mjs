@@ -67,7 +67,7 @@ assert.match(toteHandleColor, /variantBoundMockups:\s*true/);
 assert.match(toteHandleColor, /sharedArtworkFirst:\s*true/);
 assert.match(toteHandleColor, /artwork\|print file\|design png/i);
 assert.match(toteHandleColor, /exactVariantSelection:\s*true/);
-assert.match(index, /GEJAST_PAGE_VERSION='v874'/);
+assert.ok(index.includes(`GEJAST_PAGE_VERSION='${siteVersion}'`));
 assert.match(index, /version-watermark[^>]*data-version-watermark[^>]*>v874 - Made by Bruis</);
 assert.match(index, /data-animal-filter/);
 assert.match(index, /data-animal-section/);
