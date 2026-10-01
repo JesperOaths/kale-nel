@@ -224,6 +224,10 @@ ok(backend.includes('excludedAmbiguousRole')&&backend.includes('ambiguousDirectP
 ok(app.includes('conflicting Riot role metadata')&&app.includes('ambiguous enemy-role game(s) withheld'), 'frontend must explain role/peer exclusions');
 ok(backend.includes('supportedQueueRows=roleDurationRows.filter')&&backend.includes('supportedEligible=durationEligible.filter'), 'report and fetch-finish paths must share supported-queue filtering after report-level selected-role filtering');
 ok(backend.includes('unsupportedQueueRowsExcluded'), 'unsupported special/bot queue exclusions must remain observable');
+ok(backend.includes('excludedUnsupportedQueues:unsupportedQueueRows.length')&&backend.includes('excludedOtherSupportedQueues:excludedOtherSupportedQueueRows'), 'unsupported and non-dominant supported queue exclusions must remain disjoint');
+ok(backend.includes('excludedOtherRoleRows')&&backend.includes('excludedBeyondLast20'), 'role filtering and Last-20 cap must remain separately observable');
+ok(backend.includes('exclusionModel:"disjoint_metadata_stages_plus_hydrated_role_quality"'), 'sample exclusion accounting model must remain explicit');
+ok(app.includes('valid older games outside the Last-20 cap'), 'frontend must not count Last-20 truncation as an eligibility failure');
 ok(app.includes('unsupported special/bot queue'), 'Data Quality must explain unsupported queue exclusions');
 ok(backend.includes('x-league-workspace')&&backend.includes('publicWorkspaceOwnerId('), 'public League must use isolated browser-workspace ownership');
 ok(backend.includes('const uuid=/^[0-9a-f]{8}-')&&backend.includes('hex=/^lw1_[0-9a-f]{48,64}$/i'), 'public workspace identifiers must use a strong accepted token format');
