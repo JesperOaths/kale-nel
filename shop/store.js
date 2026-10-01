@@ -1,4 +1,4 @@
-const FALLBACK_PRODUCTS = [];
+const FALLBACK_PRODUCTS = Array.isArray(window.BRUIS_CATALOG?.products) ? window.BRUIS_CATALOG.products : [];
 const catalogCacheKey = 'bruisCatalogLastGoodV1';
 const catalogCacheMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
 const cartKey = 'bruisCartV3';
@@ -196,7 +196,15 @@ async function loadCatalog(){
   if(cachedProducts.length){
     return { products: sortByShirtBase(cachedProducts), source: 'cache' };
   }
-  const liveProducts = await refreshLiveCatalog(2);
+  const staticProducts = FALLBACK_PRODUCTS
+    .map(normalizeProduct)
+    .filter(p => p.baseKey !== '1382' && p.name && p.mockups.length && p.price > 0);
+  if(staticProducts.length){
+    // First visits must render something immediately even when Supabase is under load.
+    // This snapshot is explicitly non-authoritative and is replaced by the live catalog in background.
+    return { products: sortByShirtBase(staticProducts), source: 'static-fallback' };
+  }
+  const liveProducts = await refreshLiveCatalog(1);
   return { products: liveProducts, source: liveProducts.length ? 'live' : 'unavailable' };
 }
 
@@ -653,8 +661,8 @@ loadCatalog().then(result => {
     openShapeEntry({ scroll: false, updateUrl: false });
   }
 
-  if(result?.source === 'cache'){
-    refreshLiveCatalog(2).then(replaceCatalogFromLive).catch(()=>{});
+  if(result?.source === 'cache' || result?.source === 'static-fallback'){
+    refreshLiveCatalog(1).then(replaceCatalogFromLive).catch(()=>{});
   }
 });
 
