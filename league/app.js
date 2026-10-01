@@ -110,12 +110,39 @@ function perGameDeathPoints(g){
   const byTime=(xs,t)=>xs.find(x=>hasNum(x.time)&&hasNum(t)&&Math.abs(Number(x.time)-Number(t))<=0.03)||null;
   return deaths.map(d=>{const b=byTime(bad,d.time),l=byTime(lead,d.time);return{...d,highRisk:!!b,lead:!!l,goldDiffAtDeath:l?.goldDiffAtDeath??b?.goldDiffAtDeath??null,tags:b?.tags||[]};});
 }
+function perGameRoamPaths(g){
+  return (Array.isArray(g?.roams?.events)?g.roams.events:[]).map((r,i)=>{
+    const points=(Array.isArray(r.pathPoints)?r.pathPoints:[]).filter(p=>hasNum(p.x)&&hasNum(p.y)).map(p=>({...p,projected:worldToMapPoint(p.x,p.y)})).filter(p=>p.projected);
+    return{...r,index:i,points};
+  }).filter(r=>r.points.length>=2);
+}
+function roamPathSvg(roam){
+  const pts=roam.points||[];if(pts.length<2)return'';
+  const d=pts.map((p,i)=>(i?'L':'M')+p.projected.x.toFixed(2)+' '+p.projected.y.toFixed(2)).join(' ');
+  const a=pts[0].projected,b=pts[pts.length-1].projected;
+  const title='Roam '+String(Number(roam.index)+1)+' · '+fmt(roam.startMin,1)+'–'+fmt(roam.endMin,1)+'m · '+String(roam.targetZone||'map')+' · '+String(roam.outcome||'neutral');
+  return '<g class="map-roam-path"><path d="'+d+'"><title>'+esc(title)+'</title></path><circle class="roam-start" cx="'+a.x.toFixed(2)+'" cy="'+a.y.toFixed(2)+'" r="4"><title>'+esc(title+' · start')+'</title></circle><circle class="roam-end" cx="'+b.x.toFixed(2)+'" cy="'+b.y.toFixed(2)+'" r="5"><title>'+esc(title+' · end')+'</title></circle><text class="map-marker-label roam-label" x="'+b.x.toFixed(2)+'" y="'+b.y.toFixed(2)+'">'+esc(String(Number(roam.index)+1))+'</text></g>';
+}
+function roamEvidenceText(r){
+  const bits=[
+    String(r.playerKillAssists??(r.killOrAssist?1:0))+' K/A',
+    String(r.playerDeaths??(r.death?1:0))+' deaths',
+    hasNum(r.teamKills)?String(r.teamKills)+' team kills':null,
+    hasNum(r.objectivePresent)?String(r.objectivePresent)+' objectives joined':(r.objective?'objective joined':null),
+    hasNum(r.objectiveAway)&&Number(r.objectiveAway)>0?String(r.objectiveAway)+' team objectives while away':null,
+    hasNum(r.structureInvolvements)&&Number(r.structureInvolvements)>0?String(r.structureInvolvements)+' structure involvements':null,
+    hasNum(r.platesGained)&&Number(r.platesGained)>0?String(r.platesGained)+' plates':null,
+    hasNum(r.laneCostCs)?'own lane Δ '+signed(r.laneCostCs,0)+' CS':null,
+    hasNum(r.adcLaneCostCs)?'ADC lane Δ '+signed(r.adcLaneCostCs,0)+' CS':null
+  ].filter(Boolean);
+  return bits.join(' · ');
+}
 function perGameSpatialHtml(g){
   const mapId=Number(g.mapId||0);
   if(mapId!==11){
     return '<div class="detail-map-grid"><div class="detail-note map-unavailable"><strong>Map renderer unavailable for mapId '+esc(String(mapId||'unknown'))+'.</strong><br>Raw Riot coordinates remain preserved, but this match is not forced onto the Summoner’s Rift projection.</div></div>';
   }
-  const deaths=perGameDeathPoints(g),wards=(Array.isArray(g.wards)?g.wards:[]).filter(x=>hasNum(x.x)&&hasNum(x.y)).slice().sort((a,b)=>Number(a.time||0)-Number(b.time||0));
+  const deaths=perGameDeathPoints(g),wards=(Array.isArray(g.wards)?g.wards:[]).filter(x=>hasNum(x.x)&&hasNum(x.y)).slice().sort((a,b)=>Number(a.time||0)-Number(b.time||0)),roams=perGameRoamPaths(g);
   const image=map11Image(),fallback='https://ddragon.leagueoflegends.com/cdn/6.8.1/img/map/map11.png';
   const map=(points,kind,empty,numbered)=>points.length
     ?'<div class="map-stage"><img src="'+esc(image)+'" data-map-fallback="'+esc(fallback)+'" alt="Summoner’s Rift '+esc(kind==='death'?'death':'ward')+' map for this match"><svg viewBox="0 0 512 512" preserveAspectRatio="none" aria-label="'+esc(kind==='death'?'Chronological death positions':'Ward positions')+'">'+points.map((p,i)=>mapPointSvg(p,kind,numbered?i:null)).join('')+'</svg></div>'
@@ -128,7 +155,10 @@ function perGameSpatialHtml(g){
     '<article class="spatial-card"><div class="spatial-card-head"><div><strong>Wards · this match</strong><small>Placement territory from the same shared projection</small></div><span>'+esc(String(wards.length))+' total · '+esc(String(setup))+' objective setup</span></div>'+
       map(wards,'ward','No ward coordinates are available for this match.',false)+
       '<div class="map-legend"><span><i class="legend-dot ward offensive"></i>'+esc(String(offensive))+' offensive</span><span><i class="legend-dot ward river"></i>'+esc(String(river))+' river</span><span><i class="legend-dot ward defensive"></i>'+esc(String(defensive))+' defensive</span><span><i class="legend-dot ward setup"></i>'+esc(String(setup))+' objective setup</span></div></article>'+
-    '<div class="detail-map-note">Summoner’s Rift mapId 11 · x −120→14870 · y −120→14980 · Y inverted. The per-game maps use the same projection as the Last-20 spatial review.</div>'+
+    '<article class="spatial-card roam-spatial-card"><div class="spatial-card-head"><div><strong>Roam paths · this match</strong><small>Server-derived departures from the home-lane corridor</small></div><span>'+esc(String(roams.length))+' mapped</span></div>'+
+      (roams.length?'<div class="map-stage"><img src="'+esc(image)+'" data-map-fallback="'+esc(fallback)+'" alt="Summoner’s Rift roam paths for this match"><svg viewBox="0 0 512 512" preserveAspectRatio="none" aria-label="Roam paths">'+roams.map(roamPathSvg).join('')+'</svg></div>':'<div class="spatial-empty">No qualifying roam path has enough Riot frame coordinates to draw.</div>')+
+      '<div class="map-legend"><span>Number = roam endpoint · line = sampled movement path</span></div></article>'+
+    '<div class="detail-map-note">Summoner’s Rift mapId 11 · x −120→14870 · y −120→14980 · Y inverted. Deaths, wards and roam paths use the same projection.</div>'+
   '</div>';
 }
 
@@ -698,8 +728,11 @@ function detailContent(g,tab){
   }
   if(tab==='roams'){
     const r=g.roams||{},events=r.events||[];
+    const kills=events.reduce((n,x)=>n+Number(x.playerKillAssists??(x.killOrAssist?1:0)||0),0),deaths=events.reduce((n,x)=>n+Number(x.playerDeaths??(x.death?1:0)||0),0),obj=events.reduce((n,x)=>n+Number(x.objectivePresent??(x.objective?1:0)||0),0),away=events.reduce((n,x)=>n+Number(x.objectiveAway||0),0);
     return detailCard('Attempts',String(r.attempts??0))+detailCard('Successful',String(r.successes??0))+detailCard('Failed',String(r.failures??0))+
-      detailList(events.map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+(x.targetZone||'map')+' · '+(x.outcome||'neutral')+(hasNum(x.laneCostCs)?' · own lane Δ '+signed(x.laneCostCs,0)+' CS':'')+(hasNum(x.adcLaneCostCs)?' · ADC lane Δ '+signed(x.adcLaneCostCs,0)+' CS':'')),'No qualifying pre-major-objective-era roam departures detected.');
+      detailCard('Roam K/A / deaths',String(kills)+' / '+String(deaths))+detailCard('Objectives joined / while away',String(obj)+' / '+String(away))+
+      detailList(events.map((x,i)=>'Roam '+String(i+1)+' · '+(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+(x.targetZone||'map')+' · '+(x.outcome||'neutral')+(roamEvidenceText(x)?' · '+roamEvidenceText(x):'')),'No qualifying pre-major-objective-era roam departures detected.')+
+      '<div class="detail-note">V21 parity upgrade: each roam now keeps its Riot-frame path plus kill/assist, death, neutral-objective, structure/plate and lane-cost evidence. Objective success requires supported player presence instead of crediting an unrelated team objective elsewhere on the map.</div>';
   }
   if(tab==='fights'){
     const f=g.fightProfile||{},events=f.events||[];
@@ -731,7 +764,7 @@ function detailContent(g,tab){
     const bad=g.badDeaths||[];
     const pre=g.preObjectiveDeaths||[];
     const risk=g.riskStateDeaths||{};
-    return detailCard('Deaths',String(g.deaths??'n/a'))+detailCard('Flagged high-risk',String(g.badDeathCount??0))+detailCard('Deaths while ≥500g ahead',String(g.leadDeathCount??0))+detailCard('High-risk deaths while ahead',String(g.highRiskLeadDeathCount??0))+
+    return detailCard('Deaths',String(g.deaths??'n/a'))+detailCard('Death quality · modern',hasNum(g.deathQuality?.modern?.score)?fmt(g.deathQuality.modern.score,1)+'/10 · '+String(g.deathQuality.modern.confidence||''):'n/a')+detailCard('Legacy Bruisienator DQI',hasNum(g.deathQuality?.legacyBruisienator?.score)?fmt(g.deathQuality.legacyBruisienator.score,1)+'/10 · partial':'n/a')+detailCard('Flagged high-risk',String(g.badDeathCount??0))+detailCard('Deaths while ≥500g ahead',String(g.leadDeathCount??0))+detailCard('High-risk deaths while ahead',String(g.highRiskLeadDeathCount??0))+
       detailCard('Deaths while ≥500g behind',String(risk.behind??0))+detailCard('High-risk deaths while behind',String(risk.highRiskBehind??0)+' · '+(Number(risk.behind||0)>0?fmtPct(100*Number(risk.highRiskBehind||0)/Number(risk.behind)):'n/a'))+
       detailCard('Post-macro-transition side-lane deaths',String(g.sideLaneRisk?.macroTransitionSideLaneDeaths??g.sideLaneRisk?.postLaneSideLaneDeaths??g.sideLaneRisk?.post15SideLaneDeaths??0))+
       detailCard('Isolated side-lane deaths',String(g.sideLaneRisk?.isolatedSideLaneDeaths??0))+
@@ -915,6 +948,8 @@ function renderAdvanced(r){
     ['Deaths during early-lead give-backs',String(r.behaviorSummary?.earlyLeadGivebackDeaths??0)+' · '+String(r.behaviorSummary?.earlyLeadGivebackHighRiskDeaths??0)+' high-risk'],
     ['First impact timing',hasNum(a.firstImpact?.avgDeltaVsOpponentMin)?signed(a.firstImpact.avgDeltaVsOpponentMin,1)+' min vs peer':'n/a'],
     ['Objective-context death %',fmtPct(a.objectiveDeathPct)],
+    ['Death quality index · consequence-aware',hasNum(r.behaviorSummary?.avgDeathQualityIndex)?fmt(r.behaviorSummary.avgDeathQualityIndex,2)+'/10':'n/a'],
+    ['Legacy Bruisienator DQI · partial compatibility',hasNum(r.behaviorSummary?.avgLegacyBruisienatorDqi)?fmt(r.behaviorSummary.avgLegacyBruisienatorDqi,2)+'/10':'n/a'],
     ['Death trade rate',fmtPct(r.behaviorSummary?.deathTradeRate)],
     ['High-risk untraded deaths',String(r.behaviorSummary?.highRiskUntradedDeaths??0)+' · '+fmt(r.behaviorSummary?.highRiskUntradedPerGame,1)+'/game'],
     ['Early-phase high-risk deaths',String(r.behaviorSummary?.phaseRisk?.early?.highRiskDeaths??0)+' · '+(hasNum(r.behaviorSummary?.phaseRisk?.early?.highRiskDeathsPer10Min)?fmt(r.behaviorSummary.phaseRisk.early.highRiskDeathsPer10Min,2)+'/10m':fmt(r.behaviorSummary?.phaseRisk?.early?.highRiskDeathsPerGame,2)+'/game legacy')],
