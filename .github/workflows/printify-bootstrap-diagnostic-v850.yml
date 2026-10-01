@@ -1,4 +1,4 @@
-name: Force v851 catalog refresh (final)
+name: Audit v851 catalog selection
 
 on:
   push:
@@ -13,21 +13,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - name: Trigger v851 live catalog rebuild
+      - name: Audit live catalog exclusions
         shell: bash
         run: |
           set -euo pipefail
           URL='https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/shop-catalog-v828'
-          for attempt in {1..12}; do
-            body="$(curl --silent --show-error --max-time 20 "$URL?refresh=v851-$attempt" || true)"
-            printf '%s\n' "$body" | jq '{source,catalogSelection,warming,refreshScheduled,products:(.products|length // 0)}' || true
-            if printf '%s' "$body" | jq -e '
-              .source == "printify-live-v851"
-              and .catalogSelection == "all-readable-printify-shops-v851"
-              and ((.products // []) | length) > 0
-            ' >/dev/null 2>&1; then
-              exit 0
-            fi
-            sleep 8
-          done
-          exit 1
+          body="$(curl --silent --show-error --fail --max-time 30 "$URL?diagnostic=1&catalog_audit=1")"
+          printf '%s\n' "$body" | jq '{
+            ok,
+            mode,
+            shopCount,
+            probes,
+            catalogAudit: {
+              upstreamProducts: .catalogAudit.upstreamProducts,
+              shopCounts: .catalogAudit.shopCounts,
+              excluded: .catalogAudit.excluded
+            }
+          }'
+          printf '%s' "$body" | jq -e '.ok == true and (.catalogAudit.upstreamProducts // 0) > 0' >/dev/null
