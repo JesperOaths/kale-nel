@@ -1968,7 +1968,7 @@ function renderQuality(r){
   if(Number(q.ambiguousDirectPeerGames||0)>0)low.push('ambiguous same-role opponent matches withheld from peer comparison');
   if(Number(q.fallbackPlayerRoleGames||0)>0)low.push('player role inferred from legacy role/lane fallback metadata');
   if(Number(q.fallbackDirectPeerRoleGames||0)>0)low.push('some direct-peer roles inferred from legacy role/lane fallback metadata');
-  if(Number(q.excludedUnsupportedQueues??q.unsupportedQueueRowsExcluded||0)>0)low.push('unsupported special/bot Summoner’s Rift queues excluded');
+  if(Number((q.excludedUnsupportedQueues??q.unsupportedQueueRowsExcluded)??0)>0)low.push('unsupported special/bot Summoner’s Rift queues excluded');
   if(Number(q.excludedOtherSupportedQueues??Math.max(0,Number(q.excludedOtherQueues||0)-Number(q.unsupportedQueueRowsExcluded||0)))>0)low.push('mixed supported queue contexts excluded');
   if(q.currentPatchKey&&!q.patchBaselineReady)low.push('same-patch historical trend baseline');
   if(Number(q.itemCatalogFallbackPatches||0)>0)low.push('item-catalog patch fallback');
