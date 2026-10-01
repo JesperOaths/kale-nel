@@ -461,7 +461,9 @@ function renderPracticePlan(r){
     const target=targets.find(t=>String(t.themeKey||'')===String(x.key||''))||targets[i]||null;
     return '<article class="practice-card">'+
       '<div class="practice-number">'+(i+1)+'</div><div><span>'+esc(x.category||'focus')+'</span><strong>'+esc(x.title||'Practice focus')+'</strong>'+
-      '<p>'+esc(x.action)+'</p>'+practiceTargetHtml(target)+'<small>'+esc(x.comparison||'Last-20 evidence')+' · '+esc(x.confidence||'medium')+' confidence'+(Number(x.supportCount||0)?' · '+esc(String(x.supportCount))+' supporting finding'+(Number(x.supportCount)===1?'':'s'):'')+'</small></div></article>';
+      '<p>'+esc(x.action)+'</p>'+
+      (Array.isArray(x.supportingTitles)&&x.supportingTitles.length>1?'<div class="practice-supporting"><b>Why this is a priority</b>'+x.supportingTitles.slice(0,4).map(t=>'<span>• '+esc(t)+'</span>').join('')+'</div>':'')+
+      practiceTargetHtml(target)+'<small>'+esc(x.comparison||'Last-20 evidence')+' · '+esc(x.confidence||'medium')+' confidence'+(Number(x.supportCount||0)?' · '+esc(String(x.supportCount))+' supporting finding'+(Number(x.supportCount)===1?'':'s'):'')+'</small></div></article>';
   }).join('');
 }
 function openReplayReviewMatch(matchId,tab){
