@@ -682,6 +682,7 @@ function renderReport(raw,sourceKind){
   $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':sourceKind==='saved_server'?'Saved Kalenel report':(r.analyzerVersion||'Web analysis');
   renderQuickRead(r);
   renderRecentPulse(r);
+  renderReportDrivers(r);
   renderKpis(r);
   renderRankRadar(r);
   renderVisualSummary(r);
@@ -691,6 +692,7 @@ function renderReport(raw,sourceKind){
   renderDecisionMetrics(r);
   renderCompoundSignals(r);
   renderSessionHabits(r);
+  renderMatchHistory(r);
   renderGames(r);
   renderReplayReviewQueue(r);
   renderBreakdowns(r);
@@ -723,6 +725,40 @@ function benchmarkKpi(label,value,benchmark,unit,inverse=false,extra=''){
   const deltaText=delta==null?'benchmark unavailable':unit==='percent'?signed(delta,1)+' pp':unit==='csmin'?signed(delta,2):unit==='dpm'?signed(delta,0):unit==='deaths'?signed(delta,1):signed(delta,2);
   return{label,value:formatted,tone,sub:'External ref '+benchmarkText+' · '+deltaText+(extra?' · '+extra:''),bar:delta==null?'':contextBar(delta,unit==='dpm'?500:unit==='csmin'?2:unit==='percent'?15:unit==='deaths'?3:2,inverse)};
 }
+
+function reportInsightParts(x,fallback){
+  if(typeof x==='string')return {title:x,copy:'',action:''};
+  const v=x&&typeof x==='object'?x:{};
+  return {title:String(v.title||v.label||v.category||fallback),copy:String(v.evidence||v.text||v.comparison||''),action:String(v.action||'')};
+}
+function recentDirectionSummary(r){
+  const t=r.recentTrend||{},defs=[
+    ['CS / min',t.csMin,false,.15],['Gold @15',t.goldDiff15,false,150],['Damage / min',t.dpm,false,50],
+    ['Kill participation',t.kp,false,2],['High-risk deaths',t.badDeaths,true,.2]
+  ];
+  let good=0,bad=0,usable=0;
+  defs.forEach(([,o,inverse,threshold])=>{
+    if(!o||!hasNum(o.recent)||!hasNum(o.prior)||Number(o.recentN||0)<3||Number(o.priorN||0)<5)return;
+    const d=Number(o.recent)-Number(o.prior);if(Math.abs(d)<threshold)return;
+    usable++;const signal=inverse?-d:d;if(signal>0)good++;else bad++;
+  });
+  if(!usable)return {tone:'neutral',value:'Still forming',copy:'The latest-five window does not yet contain enough strong directional changes to call a useful recent pattern.'};
+  if(good>=bad+2)return {tone:'good',value:'Moving favorably',copy:good+' meaningful recent signals improved while '+bad+' moved unfavorably. Treat this as a short-window direction, not proof of a lasting trend.'};
+  if(bad>=good+2)return {tone:'bad',value:'Needs stabilizing',copy:bad+' meaningful recent signals worsened while '+good+' improved. The next games should emphasize the primary practice target rather than adding new goals.'};
+  return {tone:'neutral',value:'Mixed direction',copy:'Recent movement is split: '+good+' favorable and '+bad+' unfavorable meaningful shifts. Keep the practice plan narrow until the signal separates.'};
+}
+function renderReportDrivers(r){
+  const box=$('reportDrivers');if(!box)return;
+  const priorities=(r.priorityThemes?.length?r.priorityThemes:r.recentFocus)||[],strengths=r.overallHighlights||[];
+  const weak=reportInsightParts(priorities[0],'Primary limiter'),strong=reportInsightParts(strengths[0],'Most repeatable strength'),direction=recentDirectionSummary(r);
+  const card=(kind,title,value,copy,action,tone)=>'<article class="report-driver-card '+kind+' tone-'+tone+'"><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong><p>'+esc(copy||'No high-confidence supporting sentence is available yet.')+'</p>'+(action?'<div><b>Next:</b> '+esc(action)+'</div>':'')+'</article>';
+  box.innerHTML=[
+    card('driver-priority','Primary limiter',weak.title,weak.copy,weak.action,'bad'),
+    card('driver-strength','Bankable strength',strong.title,strong.copy,strong.action,'good'),
+    card('driver-direction','Recent direction',direction.value,direction.copy,'','neutral'===direction.tone?'neutral':direction.tone)
+  ].join('');
+}
+
 function renderKpis(r){
   const adc=adcBenchmarkSummary(r),s=adc||r.summary||{},bench=adc?r.externalBenchmarks?.same:null,rank=bench?.tier||'rank';
   const raw=(label,value,unit)=>({label,value:unit==='percent'?fmtPct(value):unit==='csmin'?fmt(value,2):unit==='dpm'?fmtInt(value):unit==='deaths'?fmt(value,1):fmt(value,2),tone:'neutral',sub:adc?'ADC coaching sample':(String(r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||'')==='ADC'?adcBenchmarkUnavailableReason(r):'No ADC population benchmark applied to this primary role'),bar:''});
@@ -1216,6 +1252,76 @@ function gamePassesFilter(g){
   if(state.gameChampion!=='all'&&String(g.champion||'')!==state.gameChampion)return false;
   return gameMatchesNamedFilter(g,state.gameFilter);
 }
+
+function matchHistoryLaneState(g){
+  if(!hasNum(g.goldDiff15))return {tone:'neutral',label:'@15 unknown',copy:'No direct-role gold checkpoint was available at 15 minutes.'};
+  const d=Number(g.goldDiff15);
+  if(d>250)return {tone:'good',label:signed(d,0)+'g @15',copy:'You reached 15 minutes with a meaningful direct-role gold lead.'};
+  if(d<-250)return {tone:'bad',label:signed(d,0)+'g @15',copy:'You reached 15 minutes with a meaningful direct-role gold deficit.'};
+  return {tone:'neutral',label:signed(d,0)+'g @15',copy:'The direct-role economy was still broadly playable around 15 minutes.'};
+}
+function matchHistorySignals(g){
+  const out=[],lane=matchHistoryLaneState(g),fight=g.fightProfile||{},death=g.deathConsequences||{},recovery=g.deathRecovery||{};
+  out.push({label:'Lane state',value:lane.label,tone:lane.tone,copy:lane.copy});
+  if(Number(g.badDeathCount||0)>0||Number(death.costly||0)>0){
+    const n=Number(g.badDeathCount||0),cost=Number(death.costly||0);
+    out.push({label:'Risk cost',value:n+' high-risk · '+cost+' costly',tone:(n>=2||cost>=2)?'bad':'neutral',copy:'Deaths are separated by risk classification and measured aftermath rather than judged from death count alone.'});
+  }else out.push({label:'Risk cost',value:'No flagged pattern',tone:'good',copy:'No high-risk or measured costly-death pattern was flagged in this game.'});
+  if(Number(fight.attended||0)>0){
+    const pre=Number(fight.diedBeforeContribution||0),surv=hasNum(fight.survivalRate)?fmtPct(fight.survivalRate):'n/a';
+    out.push({label:'Fight uptime',value:pre+' pre-impact deaths · '+surv+' survival',tone:pre>0?'bad':'good',copy:'Tracked multi-player fight clusters separate dying before contribution from surviving or dying after impact.'});
+  }
+  if(g.firstMajorItem){
+    out.push({label:'First major',value:String(g.firstMajorItem.name||'Item')+' · '+fmt(g.firstMajorItem.time,1)+'m',tone:'neutral',copy:'Item timing is shown as a power-window checkpoint, not treated as good or bad without opponent/context evidence.'});
+  }
+  if(Number(recovery.opportunities||0)>0){
+    out.push({label:'Death recovery',value:String(recovery.repeatDeaths||0)+' / '+String(recovery.opportunities||0)+' rapid repeats',tone:Number(recovery.repeatDeaths||0)>0?'bad':'good',copy:'A repeat death means another death inside the measured recovery window after a prior death.'});
+  }
+  return out.slice(0,5);
+}
+function matchHistoryJudgment(g){
+  const xs=Array.isArray(g.judgments)?g.judgments:[];
+  const improve=xs.find(x=>x&&x.tone!=='strength'),strength=xs.find(x=>x&&x.tone==='strength'),x=improve||strength||xs[0];
+  if(!x)return {tone:'neutral',title:'No high-confidence game judgment',evidence:'The game remains visible, but the analyzer did not have enough supported evidence for a specific action judgment.',action:''};
+  return {tone:x.tone==='strength'?'good':'bad',title:String(x.title||x.category||'Game insight'),evidence:String(x.evidence||''),action:String(x.action||'')};
+}
+function matchHistoryRow(g,index,displayIndex){
+  const icon=championIcon(g.champion),opp=championIcon(g.peer?.champion),lane=matchHistoryLaneState(g),judge=matchHistoryJudgment(g),signals=matchHistorySignals(g);
+  const kda=[g.kills,g.deaths,g.assists].map(x=>hasNum(x)?Number(x):'?').join('/');
+  const title=(g.win?'Win':'Loss')+' · '+String(g.champion||'Unknown');
+  return '<article class="match-history-row tone-'+(g.win?'good':'bad')+'" data-history-index="'+index+'">'+
+    '<button class="match-history-toggle" type="button" aria-expanded="false">'+
+      '<span class="history-rank">#'+(displayIndex+1)+'</span>'+
+      '<span class="history-champions">'+(icon?'<img loading="lazy" src="'+esc(icon)+'" alt="">':'')+'<span><b>'+esc(title)+'</b><small>'+esc(shortGameDate(g.gameStartTimestamp))+' · '+esc(g.role||'')+(g.peer?.champion?' · vs '+esc(g.peer.champion):'')+'</small></span>'+(opp?'<img class="history-opponent" loading="lazy" src="'+esc(opp)+'" alt="">':'')+'</span>'+
+      '<span class="history-stat"><small>K/D/A</small><b>'+esc(kda)+'</b></span>'+
+      '<span class="history-stat tone-'+lane.tone+'"><small>Role gold @15</small><b>'+esc(lane.label)+'</b></span>'+
+      '<span class="history-judgment tone-'+judge.tone+'"><small>Strongest read</small><b>'+esc(judge.title)+'</b></span>'+
+      '<span class="history-chevron" aria-hidden="true">▾</span>'+
+    '</button>'+
+    '<div class="match-history-detail" hidden>'+
+      '<div class="history-signal-grid">'+signals.map(x=>'<div class="history-signal tone-'+x.tone+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><p>'+esc(x.copy)+'</p></div>').join('')+'</div>'+
+      '<div class="history-coaching-read tone-'+judge.tone+'"><span>Game-level coaching read</span><strong>'+esc(judge.title)+'</strong><p>'+esc(judge.evidence||'No additional evidence sentence was generated.')+'</p>'+(judge.action?'<div><b>Next time:</b> '+esc(judge.action)+'</div>':'')+'</div>'+
+      '<div class="history-actions"><button class="button secondary small" type="button" data-open-full-match="'+esc(g.matchId||'')+'">Open full match evidence</button><small>Full evidence includes macro, resets, vision, fights, phases, deaths, objectives and map context.</small></div>'+
+    '</div>'+
+  '</article>';
+}
+function renderMatchHistory(r){
+  const list=$('matchHistoryList'),summary=$('matchHistorySummary');if(!list||!summary)return;
+  const games=(r.games||[]).slice(0,10);
+  if(!games.length){summary.innerHTML='';list.innerHTML='<div class="bullet empty">No recent comparable matches are available.</div>';return;}
+  const wins=games.filter(g=>g.win).length,ahead=games.filter(g=>hasNum(g.goldDiff15)&&Number(g.goldDiff15)>250).length,behind=games.filter(g=>hasNum(g.goldDiff15)&&Number(g.goldDiff15)<-250).length;
+  const risky=games.reduce((n,g)=>n+Number(g.badDeathCount||0),0);
+  summary.innerHTML='<span><b>'+wins+'–'+(games.length-wins)+'</b> recent result</span><span><b>'+ahead+'</b> ahead @15</span><span><b>'+behind+'</b> behind @15</span><span><b>'+risky+'</b> flagged high-risk deaths</span><small>Newest '+games.length+' comparable '+esc(roleLabel(canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole||state.selectedRole)))+' games</small>';
+  list.innerHTML=games.map((g,i)=>matchHistoryRow(g,i,i)).join('');
+  list.querySelectorAll('.match-history-toggle').forEach(btn=>btn.addEventListener('click',()=>{
+    const row=btn.closest('.match-history-row'),detail=row?.querySelector('.match-history-detail');if(!detail)return;
+    const open=detail.hidden;detail.hidden=!open;btn.setAttribute('aria-expanded',open?'true':'false');row.classList.toggle('open',open);
+  }));
+  list.querySelectorAll('[data-open-full-match]').forEach(btn=>btn.addEventListener('click',ev=>{
+    ev.stopPropagation();const matchId=btn.dataset.openFullMatch;if(matchId)openReplayReviewMatch(matchId,'macro');
+  }));
+}
+
 function renderGames(r){
   const games=r.games||[];
   state.openMatch=null;
