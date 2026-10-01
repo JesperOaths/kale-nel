@@ -51,6 +51,10 @@ ok(backend.includes('mechanicsCohortApplied'), 'mechanics cohort selection state
 ok(backend.includes('currentMechanicsKnown'), 'unknown mechanics revisions must remain distinct from verified cohort identities');
 ok(backend.includes('mechanicsCohortApplied=currentMechanicsKnown&&'), 'mechanics cohort filtering must require verified current mechanics');
 ok(backend.includes('current_mechanics_unverified'), 'unknown mechanics fallback reason must remain explicit');
+ok(backend.includes('function legacyBruisienatorDqiCompatibility('), 'recovered Bruisienator DQI compatibility formula must remain explicit');
+ok(backend.includes('function modernDeathQualityIndex('), 'modern consequence-aware death quality must remain explicit');
+ok(backend.includes('avgDeathQualityIndex'), 'aggregate death-quality score must remain exported');
+ok(backend.includes('uploadedBruisienatorRevision:"V21_PHASE2_SAFE_STATS_ENRICH"'), 'report provenance must record the supplied Bruisienator revision');
 ok(backend.includes('mixedMechanicsFallback'), 'small current mechanics samples remain explicit');
 ok(backend.includes('championBehaviorModel(coachingGames'), 'champion behavior uses the same selected mechanics sample');
 ok(backend.includes('phaseExposureMinutes'), 'phase risk must normalize by actual phase exposure');
@@ -103,6 +107,11 @@ ok(backend.includes('behaviorSummary.earlyLeadGivebackRate'), 'self-relative pra
 ok(backend.includes('Review where this early lead started to unwind'), 'replay queue must retain early-lead review moments');
 ok(backend.includes('impactDeltaVsOpponent'), 'direct-peer first-impact comparison must remain in analyzer');
 ok(backend.includes('roam.laneCostCs='), 'roam lane-cost comparison must remain in analyzer');
+ok(backend.includes('evidenceVersion:"roam_window_v2"'), 'roam windows must preserve the enriched V21 evidence contract');
+ok(backend.includes('pathPoints'), 'roam windows must retain sampled Riot-frame paths');
+ok(backend.includes('objectivePresent')&&backend.includes('objectiveAway'), 'roam objective presence and away evidence must remain distinct');
+ok(backend.includes('playerKillAssists')&&backend.includes('playerDeaths'), 'roam K/A and death evidence must remain explicit');
+ok(backend.includes('supportRoamsHurtingAdc'), 'support roams must aggregate allied-ADC lane-cost evidence');
 ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
 ok(backend.includes('objectiveRootCauses'), 'objective root-cause evidence ranking must remain in analyzer');
 ok(backend.includes('objectiveRootCauses.sort'), 'objective root causes must remain severity-ranked');
@@ -218,6 +227,9 @@ ok(dupes.length===0, 'HTML contains duplicate DOM ids: '+dupes.join(', '));
 const appVersion=(html.match(/\/league\/app\.js\?v=([^"]+)/)||[])[1]||'';
 const cssVersion=(html.match(/\/league\/styles\.css\?v=([^"]+)/)||[])[1]||'';
 ok(appVersion&&cssVersion&&appVersion===cssVersion, 'League app/css cache-bust versions must match');
+ok(html.includes('data-game-sort="gold15"')&&app.includes('bindGameSortControls'), 'per-game evidence table must remain sortable');
+ok(app.includes('Roam paths · this match')&&app.includes('roamPathSvg'), 'per-game real map must retain roam paths');
+ok(app.includes('Legacy Bruisienator DQI'), 'recovered DQI provenance must remain visible');
 
 ok(backend.includes('"post-play discipline"'), 'post-play discipline must consolidate into a stable coaching theme');
 ok(backend.includes('"side-lane timing"'), 'side-lane timing must consolidate into a stable coaching theme');
