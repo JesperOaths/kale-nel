@@ -27,7 +27,7 @@ for(const field of [
   'fightSamples','firstAllyFightDeathRate','preContributionFightDeathRate','fightSurvivalRate',
   'highUnspentFightRate','itemDisadvantageFightRate','goldDeficitFightRate',
   'killConversionRate','opponentKillConversionRate','killConversionDelta',
-  'neutralObjectiveEvents','lateResetObjectiveMissRate','freshPurchaseObjectiveJoinRate',
+  'neutralObjectiveEvents','earlySetupObjectiveJoinRate','earlySetupObjectiveCoverageRate','lateResetObjectiveMissRate','freshPurchaseObjectiveJoinRate',
   'objectiveSetupWardRate','objectiveSetupWardRateDelta','damageGoldEfficiency'
 ])assert.ok(behaviorExport.includes(field),'Behavior summary must export '+field);
 assert.ok(api.includes('sessionBehaviorModel'));
@@ -58,6 +58,7 @@ assert.ok(app.includes('solo death to role opponent'));
 assert.ok(app.includes('Loss rate while outnumbered'));
 assert.ok(app.includes('Level-down shared-role fights'));
 assert.ok(app.includes('Post-kill conversion'));
+assert.ok(app.includes('Prior-frame objective setup'));
 assert.ok(app.includes('Late-reset neutral-objective misses'));
 assert.ok(app.includes('r.sessionBehavior||r.sessionModel'),'Session panel must read the report contract name');
 assert.ok(app.includes('function renderSpatial'),'Spatial review renderer must remain present');
