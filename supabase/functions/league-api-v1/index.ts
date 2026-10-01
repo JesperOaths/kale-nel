@@ -101,88 +101,276 @@ async function resolveProfile(sb:any,p:any,requestKey=""){
   if(error)throw error;
   return data;
 }
+
+async function rankSnapshotFor(p:any,requestKey=""){
+  if(!p||!text(p.puuid))return null;
+  try{
+    const plat=platform(p.platform_region);
+    const rows=await riot("https://"+plat+".api.riotgames.com/lol/league/v4/entries/by-puuid/"+encodeURIComponent(p.puuid),requestKey);
+    if(!Array.isArray(rows))return null;
+    const pick=rows.find((x:any)=>text(x?.queueType)==="RANKED_SOLO_5x5")||rows.find((x:any)=>text(x?.queueType)==="RANKED_FLEX_SR")||rows[0]||null;
+    if(!pick)return null;
+    return {
+      queueType:text(pick.queueType),tier:text(pick.tier).toUpperCase(),rank:text(pick.rank).toUpperCase(),
+      leaguePoints:num(pick.leaguePoints),wins:num(pick.wins),losses:num(pick.losses),
+      veteran:!!pick.veteran,hotStreak:!!pick.hotStreak,freshBlood:!!pick.freshBlood,inactive:!!pick.inactive,
+      fetchedAt:now()
+    };
+  }catch(_){return null;}
+}
+
+let itemCatalogCache:any=null;
+let itemCatalogFetchedAt=0;
+async function itemCatalog(){
+  if(itemCatalogCache&&(Date.now()-itemCatalogFetchedAt)<6*60*60*1000)return itemCatalogCache;
+  try{
+    const versions=await fetch("https://ddragon.leagueoflegends.com/api/versions.json",{headers:{Accept:"application/json"}}).then(r=>r.ok?r.json():[]);
+    const version=Array.isArray(versions)&&versions[0]?String(versions[0]):"";
+    if(!version)return {};
+    const payload=await fetch("https://ddragon.leagueoflegends.com/cdn/"+encodeURIComponent(version)+"/data/en_US/item.json",{headers:{Accept:"application/json"}}).then(r=>r.ok?r.json():null);
+    itemCatalogCache=payload?.data||{};itemCatalogFetchedAt=Date.now();
+    return itemCatalogCache;
+  }catch(_){return itemCatalogCache||{};}
+}
+
 function nearestFrame(frames:any[],minute:number){
   if(!frames?.length)return null;
   const target=minute*60000;let best=null,d=Infinity;
   for(const f of frames){const x=Math.abs(Number(f?.timestamp||0)-target);if(x<d){best=f;d=x;}}
   return best;
 }
+function frameAtMs(frames:any[],ms:number){
+  if(!frames?.length)return null;
+  let chosen=frames[0]||null;
+  for(const f of frames){if(Number(f?.timestamp||0)<=ms)chosen=f;else break;}
+  return chosen;
+}
 function frameStats(frame:any,pid:any){
   const p=frame?.participantFrames?.[String(pid)]||frame?.participantFrames?.[pid];
   if(!p)return null;
-  return{gold:num(p.totalGold),cs:Number(p.minionsKilled||0)+Number(p.jungleMinionsKilled||0),xp:num(p.xp),position:xy(p.position)};
+  return{gold:num(p.totalGold),currentGold:num(p.currentGold),cs:Number(p.minionsKilled||0)+Number(p.jungleMinionsKilled||0),xp:num(p.xp),level:num(p.level),position:xy(p.position)};
 }
+function participantRole(p:any){return role(p?.teamPosition||p?.individualPosition||p?.role||p?.lane);}
 function opponent(match:any,p:any){
-  const rr=role(p?.teamPosition||p?.individualPosition||p?.role);
-  return(match?.info?.participants||[]).find((x:any)=>x.teamId!==p.teamId&&role(x.teamPosition||x.individualPosition||x.role)===rr)||null;
+  const rr=participantRole(p),ps=Array.isArray(match?.info?.participants)?match.info.participants:[];
+  return ps.find((x:any)=>x.teamId!==p.teamId&&participantRole(x)===rr)||null;
 }
-function timelineFacts(match:any,timeline:any,p:any){
-  const frames=Array.isArray(timeline?.info?.frames)?timeline.info.frames:[], pid=p.participantId,opp=opponent(match,p);
-  const out:any={goldDiff10:null,goldDiff15:null,csDiff10:null,csDiff15:null,xpDiff10:null,xpDiff15:null,deathPositions:[],wards:[],objectives:[],involvedKills:[],goldSeries:[],recalls:null,roams:null,itemSpike:null};
-  for(const m of[10,15]){
-    const f=nearestFrame(frames,m),a=frameStats(f,pid),b=opp?frameStats(f,opp.participantId):null;
-    if(a&&b){out["goldDiff"+m]=(a.gold!=null&&b.gold!=null)?a.gold-b.gold:null;out["csDiff"+m]=a.cs-b.cs;out["xpDiff"+m]=(a.xp!=null&&b.xp!=null)?a.xp-b.xp:null;}
+function dist2(a:any,b:any){
+  if(!a||!b||a.x==null||a.y==null||b.x==null||b.y==null)return Infinity;
+  const dx=Number(a.x)-Number(b.x),dy=Number(a.y)-Number(b.y);return dx*dx+dy*dy;
+}
+function pointSegDist2(p:any,a:any,b:any){
+  const px=Number(p?.x),py=Number(p?.y),ax=Number(a.x),ay=Number(a.y),bx=Number(b.x),by=Number(b.y);
+  if(![px,py,ax,ay,bx,by].every(Number.isFinite))return Infinity;
+  const vx=bx-ax,vy=by-ay,wx=px-ax,wy=py-ay,den=vx*vx+vy*vy;
+  const t=den?Math.max(0,Math.min(1,(wx*vx+wy*vy)/den)):0;
+  const dx=px-(ax+t*vx),dy=py-(ay+t*vy);return dx*dx+dy*dy;
+}
+function laneDistance2(pos:any,lane:string){
+  const paths:any={
+    TOP:[[{x:1800,y:1800},{x:1500,y:12800}],[{x:1500,y:12800},{x:13200,y:13200}]],
+    MID:[[{x:2200,y:2200},{x:12800,y:12800}]],
+    BOT:[[{x:1800,y:1800},{x:12800,y:1500}],[{x:12800,y:1500},{x:13200,y:13200}]]
+  };
+  return Math.min(...(paths[lane]||[]).map((seg:any)=>pointSegDist2(pos,seg[0],seg[1])));
+}
+function zoneFor(mapId:any,pos:any,teamId:any){
+  if(Number(mapId)!==11||!pos)return"unknown";
+  const x=Number(pos.x),y=Number(pos.y);if(!Number.isFinite(x)||!Number.isFinite(y))return"unknown";
+  if((Number(teamId)===100&&x<3000&&y<3000)||(Number(teamId)===200&&x>12000&&y>12000))return"base";
+  const laneRadius2=1500*1500;
+  const ds=[["top lane",laneDistance2(pos,"TOP")],["mid lane",laneDistance2(pos,"MID")],["bot lane",laneDistance2(pos,"BOT")]].sort((a:any,b:any)=>a[1]-b[1]);
+  if(Number(ds[0][1])<=laneRadius2)return String(ds[0][0]);
+  if(Math.abs((x+y)-15000)<=1500&&x>2500&&x<12500&&y>2500&&y<12500)return"river";
+  return"jungle";
+}
+function homeLaneForRole(rr:string){
+  if(rr==="TOP")return"top lane";if(rr==="MID")return"mid lane";if(rr==="ADC"||rr==="SUPPORT")return"bot lane";if(rr==="JUNGLE")return"jungle";return null;
+}
+function wardTerritory(teamId:any,pos:any){
+  if(!pos)return"unknown";const sum=Number(pos.x)+Number(pos.y);if(!Number.isFinite(sum))return"unknown";
+  if(sum>=13500&&sum<=16500)return"river";
+  if(Number(teamId)===100)return sum>16500?"offensive":"defensive";
+  if(Number(teamId)===200)return sum<13500?"offensive":"defensive";
+  return"unknown";
+}
+function objectiveOwnerTeam(e:any,byId:Map<number,any>){
+  if(e?.type==="ELITE_MONSTER_KILL"&&byId.has(Number(e.killerId)))return Number(byId.get(Number(e.killerId))?.teamId)||null;
+  if(e?.type==="BUILDING_KILL"||e?.type==="TURRET_PLATE_DESTROYED"){
+    if(byId.has(Number(e.killerId)))return Number(byId.get(Number(e.killerId))?.teamId)||null;
+    const victimTeam=Number(e?.teamId);if(victimTeam===100)return 200;if(victimTeam===200)return 100;
   }
-  for(const f of frames){
-    const mine=frameStats(f,pid);if(mine?.gold!=null)out.goldSeries.push({minute:Number(f.timestamp||0)/60000,totalGold:mine.gold});
-    for(const e of(Array.isArray(f?.events)?f.events:[])){
-      const pxy=xy(e.position);
+  return null;
+}
+function playerInKill(e:any,pid:any){
+  return Number(e?.killerId)===Number(pid)||(Array.isArray(e?.assistingParticipantIds)&&e.assistingParticipantIds.map(Number).includes(Number(pid)));
+}
+function itemInfo(catalog:any,itemId:any){return catalog?.[String(itemId)]||null;}
+function isMajorItem(info:any){
+  if(!info)return false;const total=Number(info?.gold?.total||0),tags=Array.isArray(info?.tags)?info.tags:[];
+  return total>=2200&&!tags.includes("Boots")&&!tags.includes("Consumable")&&!tags.includes("Trinket");
+}
+function purchaseGroups(events:any[],catalog:any){
+  const sorted=[...(events||[])].sort((a,b)=>a.tMs-b.tMs),groups:any[]=[];
+  for(const e of sorted){
+    let g=groups[groups.length-1];
+    if(!g||e.tMs-g.lastMs>60000){g={startMs:e.tMs,lastMs:e.tMs,startMin:e.tMin,lastMin:e.tMin,items:[],spent:0};groups.push(g);}
+    g.lastMs=e.tMs;g.lastMin=e.tMin;
+    const info=itemInfo(catalog,e.itemId);g.items.push({itemId:e.itemId,name:text(info?.name)||String(e.itemId),cost:Number(info?.gold?.base||0),totalCost:Number(info?.gold?.total||0),major:isMajorItem(info)});
+    g.spent+=Number(info?.gold?.base||0);
+  }
+  return groups;
+}
+function firstMajorPurchase(events:any[],catalog:any){
+  for(const e of [...(events||[])].sort((a,b)=>a.tMs-b.tMs)){
+    const info=itemInfo(catalog,e.itemId);if(isMajorItem(info))return{time:e.tMin,itemId:e.itemId,name:text(info?.name)||String(e.itemId),cost:Number(info?.gold?.total||0)};
+  }
+  return null;
+}
+function participantFullGameMetrics(match:any,p:any){
+  if(!p)return null;const ps=Array.isArray(match?.info?.participants)?match.info.participants:[],mins=Math.max(1,Number(match?.info?.gameDuration||0)/60);
+  const team=ps.filter((x:any)=>x.teamId===p.teamId),teamKills=team.reduce((sum:number,x:any)=>sum+Number(x.kills||0),0);
+  const teamDamage=team.reduce((sum:number,x:any)=>sum+Number(x.totalDamageDealtToChampions||0),0),teamGold=team.reduce((sum:number,x:any)=>sum+Number(x.goldEarned||0),0),teamVision=team.reduce((sum:number,x:any)=>sum+Number(x.visionScore||0),0);
+  const rankIn=(key:string)=>1+[...team].sort((a:any,b:any)=>Number(b[key]||0)-Number(a[key]||0)).findIndex((x:any)=>Number(x.participantId)===Number(p.participantId));
+  return{
+    kills:Number(p.kills||0),deaths:Number(p.deaths||0),assists:Number(p.assists||0),kda:Number(p.deaths||0)>0?(Number(p.kills||0)+Number(p.assists||0))/Number(p.deaths):Number(p.kills||0)+Number(p.assists||0),
+    csMin:(Number(p.totalMinionsKilled||0)+Number(p.neutralMinionsKilled||0))/mins,dpm:Number(p.totalDamageDealtToChampions||0)/mins,gpm:Number(p.goldEarned||0)/mins,vpm:Number(p.visionScore||0)/mins,
+    kp:pct(Number(p.kills||0)+Number(p.assists||0),teamKills),damageShare:pct(Number(p.totalDamageDealtToChampions||0),teamDamage),goldShare:pct(Number(p.goldEarned||0),teamGold),visionShare:pct(Number(p.visionScore||0),teamVision),
+    damageRank:rankIn("totalDamageDealtToChampions"),goldRank:rankIn("goldEarned"),visionRank:rankIn("visionScore")
+  };
+}
+function timelineFacts(match:any,timeline:any,p:any,catalog:any){
+  const frames=Array.isArray(timeline?.info?.frames)?timeline.info.frames:[],pid=Number(p.participantId),opp=opponent(match,p),oppId=opp?Number(opp.participantId):null;
+  const ps=Array.isArray(match?.info?.participants)?match.info.participants:[],byId=new Map<number,any>();for(const q of ps)byId.set(Number(q.participantId),q);
+  const mapId=Number(match?.info?.mapId||0),teamId=Number(p.teamId),rr=participantRole(p),homeLane=homeLaneForRole(rr);
+  const out:any={goldDiff10:null,goldDiff15:null,csDiff10:null,csDiff15:null,xpDiff10:null,xpDiff15:null,levelDiff10:null,levelDiff15:null,deathPositions:[],wards:[],wardKills:[],objectives:[],involvedKills:[],goldSeries:[],frameSamples:[],objectiveJoinRate:null,objectiveJoined:0,objectiveTeamTotal:0,earlyKp:null,impactTimeMin:null,impactType:null,badDeaths:[],badDeathCount:0,objectiveDeathCount:0,objectiveDeathPct:null,highUnspentGoldDeaths:0,overstays:[],overstayCount:0,greedyStayWindows:[],shopVisits:[],firstMajorItem:null,opponentFirstMajorItem:null,itemSpikeDeltaVsOpponent:null,roams:{attempts:0,successes:0,failures:0,neutral:0,events:[]},vision:{wardCount:0,wardKillCount:0,controlWardCount:0,offensive:0,defensive:0,river:0,objectiveSetup:0,wardsPer30:null},timelineAvailable:!!frames.length};
+  for(const minute of[10,15]){
+    const fr=nearestFrame(frames,minute),a=frameStats(fr,pid),b=oppId?frameStats(fr,oppId):null;
+    if(a&&b){out["goldDiff"+minute]=(a.gold!=null&&b.gold!=null)?a.gold-b.gold:null;out["csDiff"+minute]=a.cs-b.cs;out["xpDiff"+minute]=(a.xp!=null&&b.xp!=null)?a.xp-b.xp:null;out["levelDiff"+minute]=(a.level!=null&&b.level!=null)?a.level-b.level:null;}
+  }
+  const purchaseByPid:any[]=[],purchaseByOpp:any[]=[],allObjectives:any[]=[],ownObjectiveEvents:any[]=[],deathEvents:any[]=[],involved:any[]=[];
+  for(const fr of frames){
+    const mine=frameStats(fr,pid);
+    if(mine){const sample={time:Number(fr?.timestamp||0)/60000,totalGold:mine.gold,currentGold:mine.currentGold,cs:mine.cs,xp:mine.xp,level:mine.level,position:mine.position,zone:zoneFor(mapId,mine.position,teamId)};out.frameSamples.push(sample);if(mine.gold!=null)out.goldSeries.push({minute:sample.time,totalGold:mine.gold,currentGold:mine.currentGold});}
+    for(const e of(Array.isArray(fr?.events)?fr.events:[])){
+      const pxy=xy(e.position),tMs=Number(e.timestamp||0),tMin=tMs/60000;
       if(e.type==="CHAMPION_KILL"){
-        if(Number(e.victimId)===Number(pid)&&pxy)out.deathPositions.push({time:Number(e.timestamp||0)/60000,...pxy});
-        const involved=Number(e.killerId)===Number(pid)||(Array.isArray(e.assistingParticipantIds)&&e.assistingParticipantIds.map(Number).includes(Number(pid)));
-        if(involved&&pxy)out.involvedKills.push({time:Number(e.timestamp||0)/60000,...pxy,killerId:e.killerId,victimId:e.victimId});
-      }
-      if(e.type==="WARD_PLACED"&&Number(e.creatorId)===Number(pid)&&pxy)out.wards.push({time:Number(e.timestamp||0)/60000,...pxy,wardType:text(e.wardType),offensive:null});
-      if(e.type==="ELITE_MONSTER_KILL"){
-        const involved=Number(e.killerId)===Number(pid)||(Array.isArray(e.assistingParticipantIds)&&e.assistingParticipantIds.map(Number).includes(Number(pid)));
-        if(involved&&pxy)out.objectives.push({time:Number(e.timestamp||0)/60000,...pxy,monsterType:text(e.monsterType),monsterSubType:text(e.monsterSubType)});
-      }
+        const ev={tMs,tMin,...(pxy||{}),killerId:Number(e.killerId||0),victimId:Number(e.victimId||0),assistingIds:Array.isArray(e.assistingParticipantIds)?e.assistingParticipantIds.map(Number):[]};
+        if(Number(e.victimId)===pid){deathEvents.push(ev);out.deathPositions.push({time:tMin,...(pxy||{})});}
+        if(playerInKill(e,pid)){involved.push(ev);out.involvedKills.push({time:tMin,...(pxy||{}),killerId:e.killerId,victimId:e.victimId});}
+      }else if(["ELITE_MONSTER_KILL","BUILDING_KILL","TURRET_PLATE_DESTROYED"].includes(String(e.type))){
+        const owner=objectiveOwnerTeam(e,byId),obj={tMs,tMin,type:text(e.type),monsterType:text(e.monsterType),monsterSubType:text(e.monsterSubType),buildingType:text(e.buildingType),ownerTeam:owner,...(pxy||{})};
+        allObjectives.push(obj);out.objectives.push(obj);if(owner===teamId)ownObjectiveEvents.push(obj);
+      }else if(e.type==="WARD_PLACED"&&Number(e.creatorId)===pid&&pxy){
+        const territory=wardTerritory(teamId,pxy),w={time:tMin,tMs,...pxy,wardType:text(e.wardType),territory};out.wards.push(w);out.vision.wardCount++;if(text(e.wardType).toUpperCase().includes("CONTROL"))out.vision.controlWardCount++;if(territory==="offensive")out.vision.offensive++;else if(territory==="defensive")out.vision.defensive++;else if(territory==="river")out.vision.river++;
+      }else if(e.type==="WARD_KILL"&&Number(e.killerId)===pid&&pxy){out.wardKills.push({time:tMin,tMs,...pxy,wardType:text(e.wardType)});out.vision.wardKillCount++;}
+      else if(e.type==="ITEM_PURCHASED"){const ev={tMs,tMin,itemId:Number(e.itemId||0)};if(Number(e.participantId)===pid)purchaseByPid.push(ev);if(oppId&&Number(e.participantId)===oppId)purchaseByOpp.push(ev);}
+    }
+  }
+  out.shopVisits=purchaseGroups(purchaseByPid,catalog);out.firstMajorItem=firstMajorPurchase(purchaseByPid,catalog);out.opponentFirstMajorItem=firstMajorPurchase(purchaseByOpp,catalog);if(out.firstMajorItem&&out.opponentFirstMajorItem)out.itemSpikeDeltaVsOpponent=out.firstMajorItem.time-out.opponentFirstMajorItem.time;
+  const duration=Math.max(1,Number(match?.info?.gameDuration||0)/60);out.vision.wardsPer30=out.vision.wardCount/duration*30;
+  for(const obj of ownObjectiveEvents){out.objectiveTeamTotal++;const fs=frameAtMs(frames,obj.tMs),me=frameStats(fs,pid),near=me?.position&&obj.x!=null&&obj.y!=null&&dist2(me.position,obj)<=2500*2500;if(near){out.objectiveJoined++;if(out.impactTimeMin==null||obj.tMin<out.impactTimeMin){out.impactTimeMin=obj.tMin;out.impactType="objective";}}}
+  if(out.objectiveTeamTotal>0)out.objectiveJoinRate=100*out.objectiveJoined/out.objectiveTeamTotal;
+  let teamEarly=0,playerEarly=0;
+  for(const fr of frames){for(const e of(Array.isArray(fr?.events)?fr.events:[])){if(e.type!=="CHAMPION_KILL"||Number(e.timestamp||0)>14*60*1000)continue;const killer=byId.get(Number(e.killerId));if(!killer||Number(killer.teamId)!==teamId)continue;teamEarly++;if(playerInKill(e,pid))playerEarly++;}}
+  if(teamEarly>0)out.earlyKp=100*playerEarly/teamEarly;
+  for(const ev of involved){if(out.impactTimeMin==null||ev.tMin<out.impactTimeMin){out.impactTimeMin=ev.tMin;out.impactType="kill_or_assist";}}
+  for(const d of deathEvents){
+    const fr=frameAtMs(frames,d.tMs),me=frameStats(fr,pid),pos=(d.x!=null&&d.y!=null)?{x:d.x,y:d.y}:me?.position;let alliesNear=0,enemiesNear=0,nearestAlly=Infinity;
+    if(pos&&fr?.participantFrames){for(const [id,q] of byId.entries()){if(id===pid)continue;const fs=frameStats(fr,id);if(!fs?.position)continue;const dd=dist2(pos,fs.position);if(Number(q.teamId)===teamId){nearestAlly=Math.min(nearestAlly,dd);if(dd<=3000*3000)alliesNear++;}else if(dd<=3000*3000)enemiesNear++;}}
+    const isolated=!Number.isFinite(nearestAlly)||nearestAlly>3000*3000,sum=pos?Number(pos.x)+Number(pos.y):null,deep=sum==null?false:(teamId===100?sum>19000:sum<11000),outnumbered=enemiesNear>=alliesNear+2;
+    const enemyObjSoon=allObjectives.some(o=>o.ownerTeam&&o.ownerTeam!==teamId&&o.tMs>d.tMs&&o.tMs<=d.tMs+45000),objectiveContext=allObjectives.some(o=>Math.abs(o.tMs-d.tMs)<=45000&&(o.x==null||pos==null||dist2(pos,o)<=3500*3500));
+    const currentGold=Number(me?.currentGold||0),highUnspent=currentGold>=1000;let score=0;const tags:string[]=[];
+    if(isolated){score++;tags.push("isolated");}if(deep){score++;tags.push("deep_enemy_side");}if(outnumbered){score++;tags.push("outnumbered");}if(enemyObjSoon){score+=2;tags.push("enemy_objective_after");}if(highUnspent){score++;tags.push("high_unspent_gold");}if(objectiveContext){out.objectiveDeathCount++;tags.push("objective_context");}
+    const bad=score>=2;if(highUnspent)out.highUnspentGoldDeaths++;if(bad){out.badDeathCount++;out.badDeaths.push({time:d.tMin,x:d.x??null,y:d.y??null,score,tags,alliesNear,enemiesNear,currentGold});}if(bad&&(highUnspent||(deep&&isolated))){out.overstayCount++;out.overstays.push({time:d.tMin,currentGold,tags});}
+  }
+  if(deathEvents.length)out.objectiveDeathPct=100*out.objectiveDeathCount/deathEvents.length;
+  const visits=out.shopVisits;
+  for(let i=0;i<out.frameSamples.length;i++){const sm=out.frameSamples[i];if(sm.time<6||sm.time>22||Number(sm.currentGold||0)<1200||sm.zone==="base")continue;const next=visits.find((v:any)=>v.startMin>sm.time);if(!next||next.startMin-sm.time<=2)continue;const prev=out.greedyStayWindows[out.greedyStayWindows.length-1];if(prev&&sm.time-prev.startMin<2.5)continue;out.greedyStayWindows.push({startMin:sm.time,currentGold:sm.currentGold,nextShopMin:next.startMin,delayMin:next.startMin-sm.time});}
+  for(const w of out.wards){if(allObjectives.some(o=>o.x!=null&&Math.abs(o.tMin-w.time)<=1.5&&o.tMin>=w.time&&dist2(w,o)<=3500*3500))out.vision.objectiveSetup++;}
+  if(homeLane&&rr!=="JUNGLE"&&mapId===11){
+    const samples=out.frameSamples.filter((x:any)=>x.time>=3&&x.time<=20&&x.zone!=="unknown");let i=1;
+    while(i<samples.length){
+      if(samples[i-1].zone===homeLane&&samples[i].zone!==homeLane&&samples[i].zone!=="base"){
+        const startSample=samples[i],outside:any[]=[startSample];let j=i+1;while(j<samples.length&&samples[j].zone!==homeLane&&samples[j].zone!=="base"){outside.push(samples[j]);j++;}
+        const endSample=samples[Math.min(j,samples.length-1)]||outside[outside.length-1];
+        if(outside.length>=1&&(endSample.time-startSample.time)>=0.7){
+          const st=startSample.time,et=endSample.time+0.5,kill=involved.find(e=>e.tMin>=st-0.3&&e.tMin<=et),death=deathEvents.find(e=>e.tMin>=st-0.3&&e.tMin<=et),obj=ownObjectiveEvents.find(e=>e.tMin>=st-0.3&&e.tMin<=et);
+          const zoneCounts:any={};outside.forEach(x=>zoneCounts[x.zone]=(zoneCounts[x.zone]||0)+1);const target=Object.entries(zoneCounts).sort((a:any,b:any)=>Number(b[1])-Number(a[1]))[0]?.[0]||"map";
+          let outcome="neutral";if(kill||obj)outcome="success";else if(death)outcome="failure";
+          const roam:any={startMin:st,endMin:endSample.time,targetZone:target,outcome,killOrAssist:!!kill,objective:!!obj,death:!!death};
+          if(rr==="SUPPORT"){const adc=ps.find((x:any)=>Number(x.teamId)===teamId&&participantRole(x)==="ADC"),enemyAdc=adc?ps.find((x:any)=>Number(x.teamId)!==teamId&&participantRole(x)==="ADC"):null;if(adc&&enemyAdc){const sf=frameAtMs(frames,startSample.time*60000),ef=frameAtMs(frames,endSample.time*60000),a0=frameStats(sf,adc.participantId),b0=frameStats(sf,enemyAdc.participantId),a1=frameStats(ef,adc.participantId),b1=frameStats(ef,enemyAdc.participantId);if(a0&&b0&&a1&&b1)roam.adcLaneCostCs=(a1.cs-b1.cs)-(a0.cs-b0.cs);}}
+          out.roams.events.push(roam);out.roams.attempts++;if(outcome==="success")out.roams.successes++;else if(outcome==="failure")out.roams.failures++;else out.roams.neutral++;
+        }
+        i=Math.max(j,i+1);
+      }else i++;
     }
   }
   return out;
 }
-function game(row:any,puuid:string){
-  const m=row?.match_json||{},ps=Array.isArray(m?.info?.participants)?m.info.participants:[],p=ps.find((x:any)=>text(x?.puuid)===puuid);
-  if(!p)return null;
-  const mins=Math.max(1,Number(m?.info?.gameDuration||row?.game_duration_seconds||0)/60),teamKills=ps.filter((x:any)=>x.teamId===p.teamId).reduce((s:number,x:any)=>s+Number(x.kills||0),0);
-  return{matchId:text(m?.metadata?.matchId||row.match_id),gameStartTimestamp:Number(m?.info?.gameStartTimestamp||0),champion:text(p.championName||"Unknown"),championId:num(p.championId),role:role(p.teamPosition||p.individualPosition||p.role),rawRole:text(p.teamPosition||p.individualPosition||p.role),win:!!p.win,kills:Number(p.kills||0),deaths:Number(p.deaths||0),assists:Number(p.assists||0),kda:Number(p.deaths||0)>0?(Number(p.kills||0)+Number(p.assists||0))/Number(p.deaths):Number(p.kills||0)+Number(p.assists||0),kp:pct(Number(p.kills||0)+Number(p.assists||0),teamKills),csMin:(Number(p.totalMinionsKilled||0)+Number(p.neutralMinionsKilled||0))/mins,gpm:Number(p.goldEarned||0)/mins,dpm:Number(p.totalDamageDealtToChampions||0)/mins,vpm:Number(p.visionScore||0)/mins,durationMinutes:mins,mapId:Number(m?.info?.mapId||row.map_id||0)||null,queueId:Number(m?.info?.queueId||row.queue_id||0)||null,timelineAvailable:!!row.timeline_json,...timelineFacts(m,row.timeline_json,p)};
+function game(row:any,puuid:string,catalog:any){
+  const m=row?.match_json||{},ps=Array.isArray(m?.info?.participants)?m.info.participants:[],p=ps.find((x:any)=>text(x?.puuid)===puuid);if(!p)return null;
+  const full=participantFullGameMetrics(m,p),opp=opponent(m,p),oppFull=participantFullGameMetrics(m,opp),facts=timelineFacts(m,row?.timeline_json,p,catalog);
+  const peer=oppFull?{champion:text(opp?.championName||"Unknown"),role:participantRole(opp),csMinDelta:full.csMin-oppFull.csMin,dpmDelta:full.dpm-oppFull.dpm,gpmDelta:full.gpm-oppFull.gpm,vpmDelta:full.vpm-oppFull.vpm,kdaDelta:full.kda-oppFull.kda,opponent:{kda:oppFull.kda,csMin:oppFull.csMin,dpm:oppFull.dpm,gpm:oppFull.gpm,vpm:oppFull.vpm,kp:oppFull.kp}}:null;
+  return{matchId:text(m?.metadata?.matchId||row.match_id),gameStartTimestamp:Number(m?.info?.gameStartTimestamp||0),champion:text(p.championName||"Unknown"),championId:num(p.championId),role:participantRole(p),rawRole:text(p.teamPosition||p.individualPosition||p.role),win:!!p.win,...full,durationMinutes:Math.max(1,Number(m?.info?.gameDuration||row?.game_duration_seconds||0)/60),mapId:Number(m?.info?.mapId||row.map_id||0)||null,queueId:Number(m?.info?.queueId||row.queue_id||0)||null,timelineAvailable:!!row.timeline_json,peer,...facts};
 }
-function report(profile:any,rows:any[]){
-  const allGames=(rows||[]).map(r=>game(r,text(profile.puuid))).filter(Boolean);
-  const games=allGames.slice(0,20),byRole:any={},byChampion:any={};
-  for(const g of games){
-    byRole[g.role]=byRole[g.role]||{games:0,wins:0};byRole[g.role].games++;if(g.win)byRole[g.role].wins++;
-    byChampion[g.champion]=byChampion[g.champion]||{games:0,wins:0};byChampion[g.champion].games++;if(g.win)byChampion[g.champion].wins++;
+function meanField(games:any[],fn:(g:any)=>any){return avg(games.map(fn));}
+function finiteGames(games:any[],fn:(g:any)=>any){return games.filter(g=>Number.isFinite(Number(fn(g))));}
+function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string){
+  const recentFocus:any[]=[],highlights:any[]=[],coaching:any[]=[];
+  const push=(arr:any[],category:string,title:string,evidence:string,action:string,confidence:string="medium")=>arr.push({category,title,evidence,action,confidence,text:title+" — "+evidence+(action?" "+action:"")});
+  const validTimeline=games.filter(g=>g.timelineAvailable),lane15=finiteGames(games,g=>g.goldDiff15),itemGames=finiteGames(games,g=>g.itemSpikeDeltaVsOpponent),peerGames=games.filter(g=>g.peer);
+  const avgG15=meanField(lane15,g=>g.goldDiff15),avgC15=meanField(finiteGames(games,g=>g.csDiff15),g=>g.csDiff15),laneAhead=lane15.length?100*lane15.filter(g=>Number(g.goldDiff15)>0).length/lane15.length:null;
+  const badPer=meanField(validTimeline,g=>g.badDeathCount),objDeathPct=meanField(finiteGames(validTimeline,g=>g.objectiveDeathPct),g=>g.objectiveDeathPct),unspent=validTimeline.reduce((n,g)=>n+Number(g.highUnspentGoldDeaths||0),0);
+  const objJoin=meanField(finiteGames(validTimeline,g=>g.objectiveJoinRate),g=>g.objectiveJoinRate),earlyKp=meanField(finiteGames(validTimeline,g=>g.earlyKp),g=>g.earlyKp);
+  const roamAttempts=validTimeline.reduce((n,g)=>n+Number(g.roams?.attempts||0),0),roamSuccess=validTimeline.reduce((n,g)=>n+Number(g.roams?.successes||0),0),roamFail=validTimeline.reduce((n,g)=>n+Number(g.roams?.failures||0),0),roamRate=roamAttempts?100*roamSuccess/roamAttempts:null;
+  const itemDelta=meanField(itemGames,g=>g.itemSpikeDeltaVsOpponent),greedy=validTimeline.reduce((n,g)=>n+Number(g.greedyStayWindows?.length||0),0),peerCs=meanField(peerGames,g=>g.peer.csMinDelta),peerDpm=meanField(peerGames,g=>g.peer.dpmDelta),peerVpm=meanField(peerGames,g=>g.peer.vpmDelta),topDamage=games.filter(g=>Number(g.damageRank)===1).length;
+  if(lane15.length>=5){
+    if(Number(avgG15)<=-250)push(recentFocus,"laning","Early-lane economy is the clearest leak","Across "+lane15.length+" comparable games you average "+Math.round(Number(avgG15))+" gold and "+Math.round(Number(avgC15||0))+" CS versus the same-role opponent at 15; you are ahead in only "+Math.round(Number(laneAhead||0))+"% of them.","Prioritize wave access and lower-cost trades before 15 minutes; this is a direct opponent comparison, not a generic benchmark.","high");
+    else if(Number(avgG15)>=250)push(highlights,"laning","You are consistently creating lane economy","You average +"+Math.round(Number(avgG15))+" gold versus the same-role opponent at 15 across "+lane15.length+" games.","The next improvement lever is converting that lead into earlier objectives and cleaner resets.","high");
+    const lane10=meanField(finiteGames(games,g=>g.goldDiff10),g=>g.goldDiff10);
+    if(Number(lane10)>=100&&Number(avgG15)<=-50)push(recentFocus,"laning","Early leads are leaking before 15","Average gold differential moves from "+Math.round(Number(lane10))+" at 10 minutes to "+Math.round(Number(avgG15))+" at 15.","Review the first reset and the 10–15 minute wave/fight decisions; you are creating a lead and then giving it back.","high");
   }
-  let primaryRole="GENERIC",primaryGames=0;
-  for(const[k,v]of Object.entries(byRole)as any){if(Number(v.games)>primaryGames){primaryGames=Number(v.games);primaryRole=k;}}
-  const validTimeline=games.filter((g:any)=>g.timelineAvailable).length;
-  const coordinateGames=games.filter((g:any)=>(g.deathPositions?.length||0)+(g.wards?.length||0)+(g.objectives?.length||0)>0).length;
-  const makeSummary=(sample:any[])=>({
-    games:sample.length,wins:sample.filter((g:any)=>g.win).length,
-    winRate:pct(sample.filter((g:any)=>g.win).length,sample.length),
-    csMin:avg(sample.map((g:any)=>g.csMin)),kp:avg(sample.map((g:any)=>g.kp)),
-    dpm:avg(sample.map((g:any)=>g.dpm)),gpm:avg(sample.map((g:any)=>g.gpm)),vpm:avg(sample.map((g:any)=>g.vpm)),
-    goldDiff10:avg(sample.map((g:any)=>g.goldDiff10)),goldDiff15:avg(sample.map((g:any)=>g.goldDiff15)),
-    csDiff10:avg(sample.map((g:any)=>g.csDiff10)),csDiff15:avg(sample.map((g:any)=>g.csDiff15))
-  });
-  const summary={...makeSummary(games),primaryRole,primaryRoleGames:primaryGames};
-  const lifetime=allGames.length>20?makeSummary(allGames):null;
-  return{
-    schemaVersion:"league-report-v1",analyzerVersion:"league-web-basic-v2",generatedAt:now(),
-    profile:{id:profile.id,displayName:profile.display_name,gameName:profile.game_name,tagLine:profile.tag_line,platformRegion:profile.platform_region,routingRegion:profile.routing_region},
-    summary,lifetime,byRole,byChampion,recentFocus:[],overallHighlights:[],coaching:[],games,
-    charts:{
-      csMin:games.map((g:any)=>({matchId:g.matchId,value:g.csMin})),
-      kp:games.map((g:any)=>({matchId:g.matchId,value:g.kp})),
-      dpm:games.map((g:any)=>({matchId:g.matchId,value:g.dpm})),
-      goldDiff15:games.map((g:any)=>({matchId:g.matchId,value:g.goldDiff15}))
-    },
-    hiddenCharts:[],benchmarks:{rankAbove:null,itemSpike:null},aggregateMaps:{wards:[],deaths:[]},
-    advanced:{dqi:null,agor:null,objectivePresence:null,earlyKP:null,objectiveDeathPct:null,roams:null,recalls:null,itemSpike:null,wardClassification:null,currentSourcePortRequired:true},
-    dataQuality:{cachedGames:allGames.length,analyzedGames:games.length,validTimelineGames:validTimeline,validCoordinateGames:coordinateGames,missingTimelineGames:games.length-validTimeline,baselineGames:lifetime?allGames.length:0},
-    sourceStatus:{currentBruisienatorSourceAvailable:false,note:"Basic deterministic web metrics are active. Advanced Bruisienator formulas remain intentionally unported until the current source package is supplied."}
-  };
+  if(itemGames.length>=4){
+    if(Number(itemDelta)>=0.75)push(recentFocus,"resets","Major item timing is slower than your direct opponent","Your first major completed item lands "+Number(itemDelta).toFixed(1)+" minutes later on average across "+itemGames.length+" games.","Look for earlier high-value recalls after accumulating gold; avoid staying for one extra wave when it delays a completed item.","high");
+    else if(Number(itemDelta)<=-0.75)push(highlights,"resets","You usually hit the first major item before your counterpart","Your first major completed item arrives "+Math.abs(Number(itemDelta)).toFixed(1)+" minutes earlier on average across "+itemGames.length+" games.","Use that purchase window deliberately: contest the next wave, objective or fight while the opponent is still down a completion.","high");
+  }
+  if(validTimeline.length>=5&&(Number(badPer)>=0.8||Number(objDeathPct)>=25||unspent>=3))push(recentFocus,"deaths","Death quality is costing map tempo","The analyzer flags "+Number(badPer||0).toFixed(1)+" high-risk deaths per timeline game; "+Number(objDeathPct||0).toFixed(0)+"% of deaths occur in objective context, and "+unspent+" deaths happened with at least 1000 unspent gold.","Before major objectives, reset earlier and avoid entering deep/outnumbered positions without nearby teammates.","high");
+  else if(validTimeline.length>=5&&Number(badPer)<0.35)push(highlights,"deaths","Your risk discipline is strong","Only "+Number(badPer||0).toFixed(1)+" deaths per timeline game meet the multi-signal bad-death heuristic.","Keep the same discipline while increasing pressure from your strongest windows.","medium");
+  if(["JUNGLE","SUPPORT"].includes(primaryRole)&&validTimeline.length>=5&&Number(objJoin)<50)push(recentFocus,"objectives","Objective presence is low for your primary role","You are within the objective-action radius for "+Number(objJoin||0).toFixed(0)+"% of your team's tracked major objective events.","Plan resets and pathing around the next objective timer rather than arriving after the action starts.","high");
+  else if(["JUNGLE","SUPPORT"].includes(primaryRole)&&Number(objJoin)>=70)push(highlights,"objectives","Objective presence is a strength","You are present for "+Number(objJoin).toFixed(0)+"% of your team's tracked major objective events.","Preserve this while improving the quality of the setup vision and pre-objective deaths.","medium");
+  if(["MID","SUPPORT","TOP"].includes(primaryRole)&&roamAttempts>=4){
+    if(Number(roamRate)<45)push(recentFocus,"roaming","Roams are not converting often enough",roamSuccess+"/"+roamAttempts+" detected pre-20-minute departures produced a kill/assist or objective, while "+roamFail+" ended in your death.","Roam on pushed waves and visible windows; cancel the move sooner when the target lane cannot follow.","medium");
+    else if(Number(roamRate)>=65)push(highlights,"roaming","Your roams convert well",roamSuccess+"/"+roamAttempts+" detected pre-20-minute departures produced a kill/assist or objective.","Keep choosing these windows; the next check is whether the lane cost stays acceptable.","medium");
+  }
+  if(primaryRole==="SUPPORT"){
+    const costly=validTimeline.flatMap(g=>g.roams?.events||[]).filter((r:any)=>Number.isFinite(Number(r.adcLaneCostCs))&&Number(r.adcLaneCostCs)<=-6&&!r.killOrAssist&&!r.objective).length;
+    if(costly>=2)push(recentFocus,"roaming","Some support roams are expensive for your ADC",costly+" detected roams lost at least 6 CS of ADC-vs-ADC lane differential without a kill/assist or objective return.","Prefer roam windows after your ADC can safely crash, reset or collect under tower.","high");
+  }
+  if(["SUPPORT","JUNGLE"].includes(primaryRole)&&peerGames.length>=5&&Number(peerVpm)<=-0.15)push(recentFocus,"vision","You are giving up vision volume to the opposing role","Vision score is "+Math.abs(Number(peerVpm)).toFixed(2)+" per minute lower than the same-role opponent on average across "+peerGames.length+" games.","Shift more wards into river/objective setup before the contest, not after contact starts.","medium");
+  if(peerGames.length>=5){
+    if(Number(peerDpm)<=-100&&["ADC","MID","TOP"].includes(primaryRole))push(recentFocus,"fighting","Damage conversion trails your direct counterpart","You average "+Math.round(Math.abs(Number(peerDpm)))+" less champion damage per minute than the same-role opponent across "+peerGames.length+" games.","Check whether farm leads are being converted into timely fights and whether deaths are removing you before damage windows.","medium");
+    if(Number(peerDpm)>=120)push(highlights,"fighting","You outperform the direct counterpart in damage","You average +"+Math.round(Number(peerDpm))+" champion damage per minute versus the same-role opponent across "+peerGames.length+" games.","Protect this strength by reducing deaths that occur before objectives.","medium");
+    if(Number(peerCs)<=-0.5&&["ADC","MID","TOP"].includes(primaryRole))push(recentFocus,"farming","Farm pace trails the actual lane peer","You average "+Math.abs(Number(peerCs)).toFixed(2)+" CS/min less than the same-role opponent.","Track the waves lost around recalls, roams and unnecessary mid-game grouping.","medium");
+  }
+  if(lifetime&&Number.isFinite(Number(lifetime.csMin))&&Number.isFinite(Number(summary.csMin))){
+    const delta=Number(summary.csMin)-Number(lifetime.csMin);
+    if(delta<=-0.45)push(recentFocus,"trend","Recent farming has slipped below your broader baseline","Last-20 CS/min is "+Number(summary.csMin).toFixed(2)+" versus "+Number(lifetime.csMin).toFixed(2)+" across the broader cached sample.","Inspect what changed in recalls, roaming or grouping rather than treating the recent value as your normal level.","high");
+    else if(delta>=0.45)push(highlights,"trend","Recent farming is improving","Last-20 CS/min is "+Number(summary.csMin).toFixed(2)+" versus "+Number(lifetime.csMin).toFixed(2)+" across the broader cached sample.","Keep the underlying wave/recall habits that created the gain.","medium");
+  }
+  if(greedy>=4)push(recentFocus,"resets","High-gold stays appear repeatedly",greedy+" timeline windows show at least 1200 current gold followed by more than two minutes before the next detected shop visit.","When the map is quiet, cash the spike instead of carrying unspent power through another risky sequence.","medium");
+  if(topDamage>=Math.max(5,Math.ceil(games.length*0.4)))push(highlights,"team impact","You frequently lead your team in champion damage","You are #1 on your team in champion damage in "+topDamage+"/"+games.length+" games.","Make survival around your damage windows a priority because your team loses substantial output when you die first.","high");
+  coaching.push(...recentFocus,...highlights);
+  return{recentFocus,highlights,coaching,peerComparison:{sameRoleGames:peerGames.length,laneGames15:lane15.length,avgGoldDiff15:avgG15,avgCsDiff15:avgC15,laneAheadPct:laneAhead,avgCsMinDelta:peerCs,avgDpmDelta:peerDpm,avgVpmDelta:peerVpm,majorItemGames:itemGames.length,avgMajorItemDeltaMin:itemDelta,definition:"Same-role opponent from each analyzed match"},behaviorSummary:{badDeathsPerTimelineGame:badPer,objectiveDeathPct:objDeathPct,objectiveJoinRate:objJoin,earlyKp,roamAttempts,roamSuccessRate:roamRate,greedyStayWindows:greedy,highUnspentGoldDeaths:unspent}};
+}
+function report(profile:any,rows:any[],catalog:any){
+  const allGames=(rows||[]).map(r=>game(r,text(profile.puuid),catalog)).filter(Boolean),games=allGames.slice(0,20),byRole:any={},byChampion:any={};
+  for(const g of games){byRole[g.role]=byRole[g.role]||{games:0,wins:0};byRole[g.role].games++;if(g.win)byRole[g.role].wins++;byChampion[g.champion]=byChampion[g.champion]||{games:0,wins:0};byChampion[g.champion].games++;if(g.win)byChampion[g.champion].wins++;}
+  let primaryRole="GENERIC",primaryGames=0;for(const[k,v]of Object.entries(byRole)as any){if(Number(v.games)>primaryGames){primaryGames=Number(v.games);primaryRole=k;}}
+  const validTimeline=games.filter((g:any)=>g.timelineAvailable).length,coordinateGames=games.filter((g:any)=>(g.deathPositions?.length||0)+(g.wards?.length||0)+(g.objectives?.length||0)>0).length;
+  const makeSummary=(sample:any[])=>({games:sample.length,wins:sample.filter((g:any)=>g.win).length,winRate:pct(sample.filter((g:any)=>g.win).length,sample.length),csMin:avg(sample.map((g:any)=>g.csMin)),kp:avg(sample.map((g:any)=>g.kp)),dpm:avg(sample.map((g:any)=>g.dpm)),gpm:avg(sample.map((g:any)=>g.gpm)),vpm:avg(sample.map((g:any)=>g.vpm)),goldDiff10:avg(sample.map((g:any)=>g.goldDiff10)),goldDiff15:avg(sample.map((g:any)=>g.goldDiff15)),csDiff10:avg(sample.map((g:any)=>g.csDiff10)),csDiff15:avg(sample.map((g:any)=>g.csDiff15)),xpDiff10:avg(sample.map((g:any)=>g.xpDiff10)),xpDiff15:avg(sample.map((g:any)=>g.xpDiff15))});
+  const summary={...makeSummary(games),primaryRole,primaryRoleGames:primaryGames},lifetime=allGames.length>20?makeSummary(allGames):null,cm=coachingModel(games,summary,lifetime,primaryRole);
+  return{schemaVersion:"league-report-v2",analyzerVersion:"league-web-behavior-v1",generatedAt:now(),profile:{id:profile.id,displayName:profile.display_name,gameName:profile.game_name,tagLine:profile.tag_line,platformRegion:profile.platform_region,routingRegion:profile.routing_region,rank:profile.rank_snapshot||null},summary,lifetime,byRole,byChampion,recentFocus:cm.recentFocus,overallHighlights:cm.highlights,coaching:cm.coaching,peerComparison:cm.peerComparison,games,charts:{csMin:games.map((g:any)=>({matchId:g.matchId,value:g.csMin})),kp:games.map((g:any)=>({matchId:g.matchId,value:g.kp})),dpm:games.map((g:any)=>({matchId:g.matchId,value:g.dpm})),goldDiff15:games.map((g:any)=>({matchId:g.matchId,value:g.goldDiff15}))},hiddenCharts:[],benchmarks:{rankAbove:null,itemSpike:{peerDefinition:"same-role opponent",avgDeltaMin:cm.peerComparison.avgMajorItemDeltaMin,sample:cm.peerComparison.majorItemGames}},aggregateMaps:{wards:games.flatMap((g:any)=>g.wards||[]),deaths:games.flatMap((g:any)=>g.deathPositions||[])},advanced:{dqi:null,agor:null,objectivePresence:cm.behaviorSummary.objectiveJoinRate,earlyKP:cm.behaviorSummary.earlyKp,objectiveDeathPct:cm.behaviorSummary.objectiveDeathPct,roams:{attempts:cm.behaviorSummary.roamAttempts,successRate:cm.behaviorSummary.roamSuccessRate},recalls:{greedyStayWindows:cm.behaviorSummary.greedyStayWindows},itemSpike:{avgDeltaVsOpponentMin:cm.peerComparison.avgMajorItemDeltaMin},wardClassification:true,currentSourcePortRequired:false},behaviorSummary:cm.behaviorSummary,dataQuality:{cachedGames:allGames.length,analyzedGames:games.length,validTimelineGames:validTimeline,validCoordinateGames:coordinateGames,missingTimelineGames:games.length-validTimeline,baselineGames:lifetime?allGames.length:0,peerComparableGames:cm.peerComparison.sameRoleGames},sourceStatus:{currentBruisienatorSourceAvailable:false,historicalAnalyzerRecovered:true,note:"Behavioral analysis ports the historical Bruisienator timeline heuristics where defensible, upgrades weak formulas, and compares the player primarily with actual same-role opponents plus their broader cached baseline. DQI and AGOR remain unavailable because their formulas were not recovered."}};
 }
 
 Deno.serve(async(req:Request)=>{
@@ -214,6 +402,11 @@ Deno.serve(async(req:Request)=>{
     }
     if(action==="fetch_prepare"){
       let p=await getProfile(sb,viewer.player_id,body.profile_id);p=await resolveProfile(sb,p,requestRiotKey);
+      const rank=await rankSnapshotFor(p,requestRiotKey);
+      if(rank){
+        const {data:ranked}=await sb.from("league_profiles_v1").update({rank_snapshot:rank,ranked_fetched_at:now(),updated_at:now()}).eq("id",p.id).select("*").maybeSingle();
+        if(ranked)p=ranked;
+      }
       const count=Math.max(1,Math.min(100,Number(body.count||20))),rr=text(p.routing_region)||routeFor(p.platform_region);
       const ids=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/by-puuid/"+encodeURIComponent(p.puuid)+"/ids?start=0&count="+count,requestRiotKey),matchIds=Array.isArray(ids)?ids.map(text).filter(Boolean):[];
       const{data:cached}=matchIds.length?await sb.from("league_match_cache_v1").select("match_id").eq("profile_id",p.id).in("match_id",matchIds).not("match_json","is",null):{data:[]};
@@ -243,7 +436,8 @@ Deno.serve(async(req:Request)=>{
     if(action==="analyze_basic"){
       const p=await getProfile(sb,viewer.player_id,body.profile_id);if(!text(p.puuid))return json(req,{ok:false,error:"profile_not_resolved"},400);
       const{data:rows,error}=await sb.from("league_match_cache_v1").select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,match_json,timeline_json,fetch_error").eq("profile_id",p.id).not("match_json","is",null).order("game_start_at",{ascending:false}).limit(200);if(error)throw error;
-      const rep=report(p,rows||[]),{data:run,error:se}=await sb.from("league_analysis_runs_v1").insert({profile_id:p.id,owner_player_id:viewer.player_id,source_kind:"web_basic",analyzer_version:rep.analyzerVersion,sample_match_ids:rep.games.map((g:any)=>g.matchId),report_data:rep,data_quality:rep.dataQuality}).select("id,created_at").single();if(se)throw se;
+      const catalog=await itemCatalog();
+      const rep=report(p,rows||[],catalog),{data:run,error:se}=await sb.from("league_analysis_runs_v1").insert({profile_id:p.id,owner_player_id:viewer.player_id,source_kind:"web_behavior",analyzer_version:rep.analyzerVersion,sample_match_ids:rep.games.map((g:any)=>g.matchId),report_data:rep,data_quality:rep.dataQuality}).select("id,created_at").single();if(se)throw se;
       return json(req,{ok:true,analysis_id:run.id,created_at:run.created_at,report:rep});
     }
     if(action==="report_latest"){
