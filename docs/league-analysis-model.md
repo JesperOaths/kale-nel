@@ -246,6 +246,28 @@ Current interpretation:
 
 A large positive CS swing is not automatically good if it makes the player late to objectives or fights. Coaching must therefore frame this as **routing efficiency**, not “maximize CS at all costs.”
 
+## 25-minute role-lead closing
+
+A direct-role advantage at 25 minutes is a useful conversion checkpoint, but it is **not the same thing as the whole team being ahead**.
+
+Current role-relative classifications:
+
+- **role lead @25:** at least +500 total gold versus the actual same-role opponent,
+- **role deficit @25:** at most -500 total gold versus the actual same-role opponent.
+
+For role-lead games preserve:
+- lead-game count,
+- wins/losses,
+- win rate,
+- how many losses contain at least one late (25+) high-risk or costly-death event,
+- total late high-risk and costly-death events in those losses.
+
+Strong negative coaching requires multiple role-lead games and a low closing rate. A specific late-risk explanation is only used when repeated late high-risk/costly-death evidence exists. Otherwise the report must say the cause is unresolved and direct review toward objective setup, side-wave timing and reset/fight conversion.
+
+For role-deficit games, a meaningful win rate can be highlighted as recovery strength.
+
+Do not describe these metrics as whole-team lead conversion or infer that the player's role-relative state alone caused the final result.
+
 ## Mid-game routing efficiency
 
 For ADC/MID/TOP, raw CS swing and objective attendance should be interpreted together.
