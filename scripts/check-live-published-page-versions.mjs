@@ -25,7 +25,8 @@ function dynamicWatermark(body){
   return /data-version-watermark/i.test(body)&&/applyVersionLabel|gejast-version-sync-inline/i.test(body);
 }
 function cacheBustedUrl(route,index){
-  const u=new URL(rel.replace(/^\/+/,''),base);
+  const normalized=String(route||'/');
+  const u=normalized==='/' ? new URL(base) : new URL(normalized.replace(/^\/+/,''),base);
   u.searchParams.set('__version_audit',String(Date.now())+'_'+String(index));
   return u.toString();
 }
