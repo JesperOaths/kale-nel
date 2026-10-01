@@ -675,7 +675,7 @@ assert.match(refresh, /MIN_FOREGROUND_REFRESH_MS\s*=\s*60\s*\*\s*1000/, 'focus/v
 assert.doesNotMatch(refresh, /POLL_MS\s*=\s*15\s*\*\s*1000/, 'retired 15-second production catalog polling must not return');
 assert.doesNotMatch(refresh, /window\.location\.reload/);
 assert.match(store, /const wholeEuro/);
-assert.match(store, /price:\s*wholeEuro/);
+assert.match(store, /price:\s*baseKey === '6' && variantPrices\.length \? Math\.min\(\.\.\.variantPrices\) : wholeEuro\(raw\.price\)/, 'classic-shirt cards must use normalized canonical variant prices while other products keep whole-euro normalization');
 
 // Main deployment check validates the v839 customer shell and all authoritative
 // shop functions while remaining read-only: it never creates an order in CI.
