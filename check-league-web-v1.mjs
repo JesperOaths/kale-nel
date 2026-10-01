@@ -353,6 +353,7 @@ assert.ok(app.includes("if(r==='BOTTOM'||r==='BOT'||r==='DUO_CARRY'||r==='ADC')r
 assert.ok(html.includes('id="rankBridge"')&&app.includes('function renderRankBridge('),'Next-tier benchmark bridge must remain visible and role-safe');
 assert.ok(html.includes('id="recentPulse"')&&app.includes('function renderRecentPulse('),'Recent-vs-prior pulse must remain visible without adding backend work');
 assert.ok(html.includes('id="reportDrivers"')&&app.includes('function renderReportDrivers('),'League overview must retain the decision-driven primary limiter / strength / direction layer');
+assert.ok(app.includes('driver-evidence-meta')&&app.includes('supporting finding')&&app.includes('confidence'),'Top report drivers must expose the confidence/support metadata behind their selected evidence when available');
 assert.ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('data-open-full-match'),'League must retain the expandable coaching-readable recent match history with a path into full evidence');
 assert.ok(html.includes('id="gameArcPatterns"')&&html.includes('id="gameArcTurningPoints"')&&app.includes('function renderGameArcs('),'League must retain repeated @15→@25 game-arc analysis and recurring turning-point evidence');
 assert.ok(html.includes('id="gameArcFunnels"')&&app.includes('function arcFunnelCard('),'League must expose advantage-conversion funnels for ahead / close / behind @15 states');
@@ -372,7 +373,7 @@ assert.ok(app.includes('function reportCoachingGames(')&&app.includes('mechanics
 assert.ok(app.includes('aria-controls=')&&app.includes('match-history-detail-'),'Expandable match-story controls must expose their controlled detail region');
 assert.ok(css.includes('.match-history-toggle')&&css.includes('.history-signal-grid'),'Recent match history must remain readable as expandable rows rather than another dense technical table');
 assert.ok(html.includes('id="outcomeFingerprint"')&&app.includes('function renderOutcomeFingerprint('),'League report must retain the within-sample wins-versus-losses diagnostic fingerprint');
-assert.ok(app.includes('Largest standardized separation:')&&app.includes('standardizedMeanGap(')&&app.includes('not a causal or significance claim'),'Outcome fingerprint must compare unlike units with a standardized within-metric gap and avoid causal/significance claims');
+assert.ok(app.includes('Largest standardized separation:')&&app.includes('standardizedMeanGap(')&&app.includes('Hedges-corrected gap')&&app.includes('not a causal or significance claim'),'Outcome fingerprint must use a small-sample-corrected standardized within-metric gap and avoid causal/significance claims');
 assert.ok(app.includes('sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-Number(b.gameStartTimestamp||0))')&&app.includes('sourceGames.reverse()'),'Trend charts must render oldest-to-newest even though the report contract is newest-first');
 assert.ok(app.includes('chart-reference-line')&&app.includes("reference:bench?.dpm")&&app.includes("reference:bench?.kp"),'ADC DPM/KP charts must retain same-tier external reference lines');
 assert.ok(!html.includes('ADC rank averages'),'UI must not overstate role-adjusted rank benchmarks as direct ADC rank averages');
@@ -570,7 +571,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v131'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v132'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
