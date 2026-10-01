@@ -1650,3 +1650,18 @@ A transition is called **repeated** only when the same @15→@25 state transitio
 Advantage-conversion funnels report what happened after ahead / close / behind @15 states: comparable @25 state, result and late-risk context. They are descriptive state-conversion summaries, not causal models or significance tests.
 
 Missing timeline or checkpoint evidence must remain explicit. It must never be converted into a clean-risk claim, a preserved lead, successful setup, or any other positive coaching conclusion.
+
+
+## Decision-card evidence thresholds
+
+The prominent fight/reset/risk/power-window cards may display a measured value before it is mature enough for a directional coaching judgment, but thin samples must remain visually neutral.
+
+Use the analyzer's own coaching floors:
+- contested-objective context: at least 5 supported contested encounters before directional coloring,
+- fight survival: at least 8 attended fight clusters,
+- high-risk deaths/game: at least 5 timeline-complete games,
+- first-reset economy-loss rate: at least 4 clean measured reset sequences,
+- earlier-item-window utilization: at least 4 eligible first-major advantage windows,
+- early-lead give-back rate: at least 4 measured ≥500g pre-15 lead opportunities.
+
+Below those floors, show the value and sample count for traceability, label it **thin sample — descriptive only**, and keep the card neutral. A small denominator must not visually impersonate high-confidence evidence.
