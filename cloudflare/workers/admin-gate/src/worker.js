@@ -57,6 +57,27 @@ const PROTECTED_PUBLIC_PATTERNS = [
 const PUBLIC_ALLOWED = new Set([
   '/', '/index.html', '/home.html', '/login.html', '/request.html', '/activate.html', '/invite.html'
 ]);
+const PUBLIC_AUTH_ENTRY_DOCUMENTS = new Set(['/home.html','/login.html','/request.html','/activate.html','/invite.html']);
+function isLeaguePublicPath(pathname) {
+  const p = String(pathname || '');
+  return p === '/league' || p === '/league/' || p.startsWith('/league/');
+}
+function isLeagueDocument(pathname) {
+  return pathname === '/league' || pathname === '/league/' || pathname === '/league/index.html';
+}
+async function publicOriginResponse(request, url, { noStore = false, cacheBustKey = '' } = {}) {
+  if (!noStore) return withPublicSecurityHeaders(await fetch(request));
+  const originUrl = new URL(url.toString());
+  if (cacheBustKey) originUrl.searchParams.set(cacheBustKey, ADMIN_BUILD);
+  const originRequest = new Request(originUrl.toString(), request);
+  const response = await fetch(originRequest, { cf: { cacheEverything: false, cacheTtl: 0 } });
+  const secured = withPublicSecurityHeaders(response);
+  const headers = new Headers(secured.headers);
+  headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+  headers.set('Pragma', 'no-cache');
+  headers.delete('Age');
+  return new Response(secured.body, { status: secured.status, statusText: secured.statusText, headers });
+}
 
 export default {
   async fetch(request, env, ctx) {
@@ -88,28 +109,28 @@ export default {
 async function handlePublicApex(request, env, url) {
   if (!isSafePath(url.pathname)) return notFound();
   if (isSecurityPath(url.pathname)) return await handlePublicSecurity(request, env, url);
+
+  // League/Bruisienator is intentionally public. Keep this explicit and ahead
+  // of the protected-pattern redirect so future admin-gate broadening cannot
+  // accidentally put /league or its assets behind player/admin login.
+  if (isLeaguePublicPath(url.pathname)) {
+    const freshDocument = (request.method === 'GET' || request.method === 'HEAD') && isLeagueDocument(url.pathname);
+    return await publicOriginResponse(request, url, { noStore: freshDocument, cacheBustKey: freshDocument ? '__kalenel_league_public' : '' });
+  }
+
   if (!isProtectedPublicPath(url.pathname)) {
     const isShopDocument = (request.method === 'GET' || request.method === 'HEAD')
       && (url.pathname === '/shop/' || url.pathname === '/shop/index.html');
+    const isAuthEntryDocument = (request.method === 'GET' || request.method === 'HEAD')
+      && PUBLIC_AUTH_ENTRY_DOCUMENTS.has(url.pathname);
 
-    if (!isShopDocument) {
-      const response = await fetch(request);
-      return withPublicSecurityHeaders(response);
+    if (!isShopDocument && !isAuthEntryDocument) {
+      return await publicOriginResponse(request, url);
     }
 
-    const originUrl = new URL(url.toString());
-    originUrl.searchParams.set('__kalenel_origin_build', PUBLIC_SHOP_ORIGIN_BUILD);
-    const originRequest = new Request(originUrl.toString(), request);
-    const response = await fetch(originRequest, { cf: { cacheEverything: false, cacheTtl: 0 } });
-    const secured = withPublicSecurityHeaders(response);
-    const headers = new Headers(secured.headers);
-    headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
-    headers.set('Pragma', 'no-cache');
-    headers.delete('Age');
-    return new Response(secured.body, {
-      status: secured.status,
-      statusText: secured.statusText,
-      headers
+    return await publicOriginResponse(request, url, {
+      noStore: true,
+      cacheBustKey: isShopDocument ? '__kalenel_origin_build' : '__kalenel_public_boot'
     });
   }
   const target = new URL(url.pathname + url.search, `https://${ADMIN_HOST}`);
