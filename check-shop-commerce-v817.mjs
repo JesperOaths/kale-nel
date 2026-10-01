@@ -157,6 +157,7 @@ assert.match(checkoutEdge, /validation_only/, 'checkout must expose a non-orderi
 assert.match(catalogEdge, /gildanRouteSafeCostCeilings/, 'catalog must price Gildan variants against the most expensive approved hybrid provider');
 assert.match(catalogEdge, /source_variant_id,source_cost_usd_cents,target_cost_usd_cents/, 'classic-shirt catalog pricing must use the canonical provider-pair snapshots');
 assert.match(catalogEdge, /routeSafeCostCeilings\.get\(String\(variant\?\.id/, 'classic-shirt price lookup must be variant-based rather than product-id-based');
+assert.match(catalogEdge, /canonicalRouteCost > 0 \? canonicalRouteCost : Math\.round\(Number\(variant\?\.cost\)/, 'canonical classic-shirt provider-pair cost must override product-specific source-provider cost when available');
 assert.doesNotMatch(catalogEdge, /deltaAdjusted|current\s*\+\s*delta/, 'catalog pricing must never add a historical provider delta to a current product cost');
 assert.match(checkoutEdge, /const itemProviderRoutes = providerRoutes\.filter/, 'checkout must resolve the same provider pair for each classic-shirt variant');
 assert.match(checkoutEdge, /routeSnapshotCosts[\s\S]*?source_cost_usd_cents[\s\S]*?target_cost_usd_cents/, 'checkout must price classic shirts from the canonical provider-pair snapshots');
