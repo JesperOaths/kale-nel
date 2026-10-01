@@ -250,6 +250,9 @@ ok(backend.includes('higherRankDefinition:"actual higher-ranked same-role oppone
 ok(app.includes('Avg affordable → purchase delay'), 'frontend must surface recipe-aware first-major delay');
 ok(app.includes('Readiness delay vs peer'), 'frontend must surface recipe-aware direct-peer delay');
 ok(backend.includes('itemSpikeWindow'), 'first-major-item spike utilization model must remain in analyzer');
+ok(backend.includes('LEGENDSTRACKER_RANK_BASELINES_20260323')&&backend.includes('LEGENDSTRACKER_ADC_MULTIPLIERS_20260323'), 'ADC rank comparison must use an explicit external population benchmark corpus');
+ok(backend.includes('sourceUrl:"https://legendstracker.fr/methodologie"')&&backend.includes('sourceCorpus:"830k+ ranked EUW1 games"'), 'external ADC benchmark provenance must remain embedded in the report');
+ok(backend.includes('externalBenchmarks'), 'reports must expose external rank benchmarks to the frontend');
 ok(backend.includes('leadSec>=45'), 'measurable first-major-item advantage must remain at least 45 seconds');
 ok(backend.includes('itemSpikeUtilizationRate'), 'aggregate first-major-item spike utilization rate must remain exported');
 ok(backend.includes('diedBeforeImpact'), 'item-spike model must preserve death-before-impact evidence');
@@ -368,5 +371,5 @@ console.log(JSON.stringify({
   appVersion,
   domRefs:refs.length,
   domIds:ids.length,
-  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence','control-ward-purchases','second-major-timing','last20-result-streaks','committed-shop-ledger','supported-kill-conversion','public-league-workspace','verified-patch-boundary','supported-sr-queues','bounded-public-workspace','owner-scoped-profile-delete']
+  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','external-adc-rank-benchmarks','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence','control-ward-purchases','second-major-timing','last20-result-streaks','committed-shop-ledger','supported-kill-conversion','public-league-workspace','verified-patch-boundary','supported-sr-queues','bounded-public-workspace','owner-scoped-profile-delete']
 },null,2));
