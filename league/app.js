@@ -81,11 +81,11 @@ function map11Image(){
 function mapPointSvg(point,kind){
   const p=worldToMapPoint(point.x,point.y);if(!p)return'';
   const lead=kind==='death'&&hasNum(point.goldDiffAtDeath)&&Number(point.goldDiffAtDeath)>=500;
-  const cls=kind==='death'?('map-point death'+(lead?' lead':'')):('map-point ward '+String(point.territory||'unknown').replace(/[^a-z0-9_-]/gi,''));
+  const cls=kind==='death'?('map-point death'+(lead?' lead':'')):('map-point ward '+String(point.territory||'unknown').replace(/[^a-z0-9_-]/gi,'')+(point.objectiveSetup?' setup':''));
   const radius=kind==='death'?(lead?7:5):3.6;
   const title=kind==='death'
     ?[(hasNum(point.time)?fmt(point.time,1)+'m':''),point.zone||'',Array.isArray(point.tags)?point.tags.join(', '):'',lead?'ahead '+signed(point.goldDiffAtDeath,0)+'g vs role':''].filter(Boolean).join(' · ')
-    :[(hasNum(point.time)?fmt(point.time,1)+'m':''),point.territory||'unknown',point.wardType||'ward'].filter(Boolean).join(' · ');
+    :[(hasNum(point.time)?fmt(point.time,1)+'m':''),point.territory||'unknown',point.wardType||'ward',point.objectiveSetup?'objective setup':''].filter(Boolean).join(' · ');
   return '<circle class="'+esc(cls)+'" cx="'+p.x.toFixed(2)+'" cy="'+p.y.toFixed(2)+'" r="'+radius+'"><title>'+esc(title)+'</title></circle>';
 }
 
@@ -354,7 +354,7 @@ function sessionCard(title,sample){
     '<small>Gold @15 '+esc(signed(sample.goldDiff15,0))+'g · risky deaths '+esc(fmt(sample.badDeaths,1))+'/game · DPM '+esc(fmtInt(sample.dpm))+' · CS/min '+esc(fmt(sample.csMin,2))+'</small></div>';
 }
 function renderSessionHabits(r){
-  const s=r.sessionModel||{};
+  const s=r.sessionBehavior||r.sessionModel||{};
   const cards=[
     sessionCard('Session-opening game',s.firstGame),
     sessionCard('Game 3+ in session',s.game3Plus),
