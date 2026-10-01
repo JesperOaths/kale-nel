@@ -627,6 +627,7 @@ function renderAdvanced(r){
     metric('You impact first',fmtPct(p.impactEarlierPct),!hasNum(p.impactEarlierPct)),
     metric('Mid-game comparable games',String(p.midgameComparableGames??0),false),
     metric('Gold swing 15→25',hasNum(p.avgGoldSwing15to25)?signed(p.avgGoldSwing15to25,0)+'g':'n/a',!hasNum(p.avgGoldSwing15to25)),
+    metric('CS swing 15→25',hasNum(p.avgCsSwing15to25)?signed(p.avgCsSwing15to25,1)+' CS · '+String(p.midgameCsGames??0)+' games':'n/a',!hasNum(p.avgCsSwing15to25)),
     metric('Lead swing 15→25',hasNum(p.avgLeadSwing15to25)?signed(p.avgLeadSwing15to25,0)+'g · '+String(p.leadGames15to25??0)+' games':'n/a',!hasNum(p.avgLeadSwing15to25)),
     metric('Deficit recovery 15→25',hasNum(p.avgDeficitSwing15to25)?signed(p.avgDeficitSwing15to25,0)+'g · '+String(p.deficitGames15to25??0)+' games':'n/a',!hasNum(p.avgDeficitSwing15to25)),
     metric('Higher-rank gold @15',hasNum(p.higherRankAvgGoldDiff15)?signed(p.higherRankAvgGoldDiff15,0)+'g':'n/a',!hasNum(p.higherRankAvgGoldDiff15)),
