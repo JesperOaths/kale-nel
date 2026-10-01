@@ -27,7 +27,7 @@ assert.ok(api.includes('allowServerRiotKey=viewer.anonymous!==true'),'Anonymous 
 assert.ok(api.includes('const key=(allowServerKey?RIOT_KEY:"")||text(requestKey)'),'Riot client must enforce the anonymous/server-key boundary');
 assert.ok(app.includes("'x-league-workspace':workspaceId()"),'League browser must use public workspace isolation rather than Kalenel login');
 assert.ok(!app.includes("'x-gejast-session':token()"),'League browser must not depend on a Kalenel player session');
-assert.ok(!html.includes('gejast-auth-gate.js')&&!html.includes('gejast-home-gate.js')&&!html.includes('requireMatchEntrySession'),'League page and subsidiaries must stay outside the site login gate');
+assert.ok(![html,app,css].some(source=>source.includes('gejast-auth-gate.js')||source.includes('gejast-home-gate.js')||source.includes('requireMatchEntrySession')||source.includes('/login.html')),'Every League frontend artifact must stay outside the Kalenel login/session gate');
 assert.ok(html.includes('name="robots" content="index,follow'),'Public League page must remain indexable/followable');
 assert.ok(api.includes('x-riot-api-key'));
 assert.ok(api.includes('Access-Control-Allow-Headers'));
