@@ -43,6 +43,11 @@ ok(backend.includes('durationEligibleRows=summonersRiftRows.filter'), 'duration 
 ok(backend.includes('dominantQueueId'), 'queue-context isolation must select a dominant raw Riot queue id');
 ok(backend.includes('durationEligibleRows.filter')&&backend.includes('===Number(dominantQueueId)'), 'coaching sample must stay homogeneous by dominant queue id');
 ok(backend.includes('excludedOtherQueues'), 'data quality must expose cross-queue exclusions');
+ok(backend.includes('function patchKey('), 'patch cohort parser must remain in analyzer');
+ok(backend.includes('gameVersion:gv||null')&&backend.includes('patchKey:pk'), 'deep/baseline games must preserve Riot game version and patch key');
+ok(backend.includes('currentPatchRoleGames.length>=3&&olderSamePatchRoleGames.length>=5'), 'same-patch historical trend must keep 3 recent / 5 older minimum evidence');
+ok(backend.includes('crossPatchBaselineRoleGames'), 'cross-patch older games must remain explicitly excluded from trend coaching');
+ok(backend.includes('baselineKind:"older_same_patch"'), 'historical coaching baseline must remain same-patch and older-only');
 ok(backend.includes('peerRankTargetCount'), 'fetch finish must compute peer-rank targets for the comparable sample');
 ok(backend.includes('slice(0,20)'), 'peer-rank backfill must remain bounded to the final Last-20 target');
 ok(backend.includes('peer_rank_backfilled'), 'fetch finish must report peer-rank backfill results');
