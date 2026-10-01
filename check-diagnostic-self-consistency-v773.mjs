@@ -41,7 +41,6 @@ if(!text('gejast-account-runtime.js').includes('...new Set([')) failures.push('l
 if(!text('gejast-login-names-fallback.js').includes("throw new Error('login_names_timeout')")) failures.push('login-name fallback RPC must remain bounded instead of hanging with the database');
 if(!text('gejast-account-runtime.js').includes('isVisualAuditFixtureName')) failures.push('login selector must filter stale visual-audit fixture names from browser caches');
 if(!text('gejast-account-runtime.js').includes('function staticLoginNames()')) failures.push('login selector must expose the verified static active-name snapshot as a synchronous bootstrap source');
-if(!text('gejast-account-runtime.js').includes('seed = normalizeNames([...cached,...snapshot])')) failures.push('login selector must merge durable cache and static snapshot before network work');
 if(!text('gejast-account-runtime.js').includes('else if(seed.length)')) failures.push('empty/slow live login-name refresh must preserve the synchronous seed');
 if(!text('gejast-account-runtime.js').includes('function domSeedNames(sel)')) failures.push('login runtime must preserve server-rendered option names as an independent synchronous seed');
 if(!text('gejast-account-runtime.js').includes('seed = normalizeNames([...domSeed,...cached,...snapshot])')) failures.push('login bootstrap must merge DOM, cache and static snapshot names before live RPC work');
