@@ -9,6 +9,7 @@ const css=fs.readFileSync('league/styles.css','utf8');
 const migration=fs.readFileSync('supabase/migrations/20261001043000_league_web_foundation_v1.sql','utf8');
 const roleCacheMigration=fs.readFileSync('supabase/migrations/20261001180422_league_cache_player_role_v1.sql','utf8');
 const identityMigration=fs.readFileSync('supabase/migrations/20261001182300_league_merge_duplicate_riot_profiles_v1.sql','utf8');
+const modelDoc=fs.readFileSync('docs/league-analysis-model.md','utf8');
 
 assert.doesNotThrow(()=>new vm.Script(app,{filename:'league/app.js'}),'league/app.js must remain valid browser JavaScript');
 
@@ -20,7 +21,7 @@ assert.ok(!app.includes('Math.random()'),'League workspace identity must never f
 assert.ok(api.includes('PUBLIC_MAX_PROFILES=8')&&api.includes('PUBLIC_MAX_FETCH_MATCHES=50')&&api.includes('PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE=80')&&api.includes('PUBLIC_MAX_ANALYSES_PER_PROFILE=25'),'Anonymous public workspace storage/fetch limits must remain explicit');
 assert.ok(api.includes('public_workspace_profile_limit'),'Anonymous profile creation must be bounded');
 assert.ok(api.includes('if(action==="profile_delete")')&&api.includes('.delete().eq("id",profileId).eq("owner_player_id",viewer.player_id)'),'Profile deletion must remain owner-scoped');
-assert.ok(api.includes('directRequest=body.direct_request===true')&&api.includes('profileKey=directRequest?"recent-request"'),'Direct recent-match requests must reuse one internal scratch identity instead of exposing profile management');
+assert.ok(api.includes('directRequest=body.direct_request===true')&&api.includes('profileKey=directRequest?"recent-request"'),'Legacy direct-request compatibility must remain bounded to one scratch identity');
 assert.ok(migration.includes('references public.league_profiles_v1(id) on delete cascade'),'League child tables must retain cascade deletion from profiles');
 assert.ok(api.includes('trimAnonymousMatchCache(')&&api.includes('trimAnonymousRows('),'Anonymous cache/history must be pruned after use');
 const matchCachePruner=api.slice(api.indexOf('async function trimAnonymousMatchCache'),api.indexOf('async function riot('));
@@ -304,6 +305,8 @@ assert.ok(html.includes('id="savedProfileSelect"')&&html.includes('id="newSavedP
 assert.ok(app.includes("String(p.profile_key||'')==='recent-request'")&&app.includes('id:legacy.id')&&app.includes('generatedProfileKey(legacy.game_name'),'Legacy scratch Riot identity must be upgraded in place to a named saved profile so existing cached matches are preserved');
 assert.ok(api.includes('identityMatch=(candidates||[]).find')&&api.includes('reuseExistingId'),'Profile save must reuse an existing matching Riot identity instead of creating another alias');
 assert.ok(identityMigration.includes('league_profiles_owner_riot_identity_uidx')&&identityMigration.includes("legacy.profile_key='recent-request'"),'Database migration must merge empty legacy duplicates and enforce one Riot identity per workspace');
+assert.ok(modelDoc.includes('## Saved Riot profile workflow')&&modelDoc.includes('role-pure by construction'),'Analysis documentation must describe the current saved-profile and explicitly selected-role workflow');
+assert.ok(!modelDoc.includes('Batch profiles · sequential')&&!modelDoc.includes('Choose the most common normalized role in the Last 20'),'Retired batch/automatic-primary-role browser semantics must not return to the analysis contract');
 assert.ok(app.includes("oldHistory=await api('report_latest'")&&app.includes("api('analyze_basic',{profile_id:migrated.profile.id,target_role:inferredRole})"),'Legacy mixed reports must be used only to infer role, then rebuilt from cached Riot data into a role-pure saved report');
 assert.ok(app.includes("cache=await api('cache_status',{profile_id:profile.id,target_role:selectedRole})")&&app.includes("api('analyze_basic',{profile_id:profile.id,target_role:selectedRole})"),'A saved profile with only pre-role mixed reports must auto-rebuild a role-pure report from existing cached Riot data without requiring a refetch');
 assert.ok(app.includes('Role-selection safety check failed during saved-report rebuild'),'Automatic cached report rebuild must fail closed on any cross-role contamination');
