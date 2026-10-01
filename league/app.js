@@ -518,8 +518,13 @@ function renderAdvanced(r){
 function renderBreakdowns(r){
   const roleRows=Object.entries(r.byRole||{}).sort((a,b)=>Number(b[1]?.games||0)-Number(a[1]?.games||0));
   $('roleBreakdown').innerHTML=roleRows.length?roleRows.map(([name,v])=>'<div class="break-row"><span>'+esc(name)+'</span><small>'+esc(String(v.games||0))+' games</small><strong>'+esc(fmtPct((v.games||0)?Number(v.wins||0)/Number(v.games)*100:null))+'</strong></div>').join(''):'<div class="bullet empty">No role sample available.</div>';
-  const champRows=Object.entries(r.byChampion||{}).sort((a,b)=>Number(b[1]?.games||0)-Number(a[1]?.games||0)).slice(0,8);
-  $('championBreakdown').innerHTML=champRows.length?champRows.map(([name,v])=>'<div class="break-row"><span>'+esc(name)+'</span><small>'+esc(String(v.games||0))+' games</small><strong>'+esc(fmtPct((v.games||0)?Number(v.wins||0)/Number(v.games)*100:null))+'</strong></div>').join(''):'<div class="bullet empty">No champion sample available.</div>';
+  const behaviorRows=Array.isArray(r.championBehavior)?r.championBehavior:[];
+  if(behaviorRows.length){
+    $('championBreakdown').innerHTML=behaviorRows.slice(0,8).map(v=>'<div class="break-row champion-behavior-row"><span>'+esc(v.champion)+' <small>'+esc(v.role)+'</small></span><small>'+esc(String(v.games||0))+' games · WR '+esc(fmtPct(v.winRate))+' · @15 '+esc(signed(v.goldDiff15,0))+'g · risk deaths '+esc(fmt(v.badDeaths,1))+'</small><strong>'+esc(fmtInt(v.dpm))+' DPM</strong></div>').join('');
+  }else{
+    const champRows=Object.entries(r.byChampion||{}).sort((a,b)=>Number(b[1]?.games||0)-Number(a[1]?.games||0)).slice(0,8);
+    $('championBreakdown').innerHTML=champRows.length?champRows.map(([name,v])=>'<div class="break-row"><span>'+esc(name)+'</span><small>'+esc(String(v.games||0))+' games</small><strong>'+esc(fmtPct((v.games||0)?Number(v.wins||0)/Number(v.games)*100:null))+'</strong></div>').join(''):'<div class="bullet empty">No champion sample available.</div>';
+  }
 }
 function renderQuality(r){
   const q=r.dataQuality||{};
