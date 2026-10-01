@@ -1057,7 +1057,7 @@ function renderBreakdowns(r){
     target.innerHTML=matchupRows.length?matchupRows.slice(0,10).map(v=>{
       const own=(v.ownChampions||[]).slice(0,3).map(x=>x.champion+' '+x.games+'g').join(', ');
       return '<div class="break-row matchup-behavior-row"><span>vs '+esc(v.opponentChampion)+' <small>'+esc(v.role)+'</small></span>'+
-        '<small>'+esc(String(v.games||0))+' games · WR '+esc(fmtPct(v.winRate))+' · @15 '+esc(signed(v.goldDiff15,0))+'g · clean duel '+esc(String(v.pre14SoloKills||0))+'-'+esc(String(v.pre14SoloDeaths||0))+
+        '<small>'+esc(String(v.games||0))+' games · WR '+esc(fmtPct(v.winRate))+' · @15 '+esc(signed(v.goldDiff15,0))+'g · early clean duel '+esc(String(v.earlySoloKills??v.pre14SoloKills??0))+'-'+esc(String(v.earlySoloDeaths??v.pre14SoloDeaths??0))+
         (hasNum(v.outsidePressureShare)?' · outside pressure '+esc(fmtPct(v.outsidePressureShare)):'')+
         (own?' · own picks '+esc(own):'')+'</small><strong>'+esc(signed(v.csDiff15,1))+' CS @15</strong></div>';
     }).join(''):'<div class="bullet empty">No opposing champion appears at least three times in the primary-role coaching sample.</div>';
