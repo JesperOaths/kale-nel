@@ -45,6 +45,15 @@ assert.ok(api.includes('objectiveTeamEncounters=validTimeline.reduce')&&api.incl
 assert.ok(api.includes('objJoin=objectiveTeamEncounters?100*objectiveJoinedEncounters/objectiveTeamEncounters:null'),'Primary objective presence must be pooled rather than a mean of per-game percentages');
 assert.ok(api.includes('pooledMidRoutingObjectiveJoinRate=midRoutingTeamObjectives?100*midRoutingObjectiveJoins/midRoutingTeamObjectives:null'),'Mid-routing presence must pool objective-event denominators');
 assert.ok(api.includes('meanGameObjectiveJoinRate'),'Per-game objective-rate mean may remain only as a separate descriptive field');
+assert.ok(api.includes('classifiedTimelineDeaths=validTimeline.reduce'),'Timeline-derived death-context rates must expose their classified-event denominator');
+assert.ok(api.includes('objDeathPct=classifiedTimelineDeaths?100*objectiveContextDeaths/classifiedTimelineDeaths:null'),'Objective-context death rate must pool classified death events');
+assert.ok(api.includes('preObjDeathPct=classifiedTimelineDeaths?100*preObjDeaths/classifiedTimelineDeaths:null'),'Pre-objective death rate must pool classified death events');
+assert.ok(api.includes('meanGameObjectiveDeathPct')&&api.includes('meanGamePreObjectiveDeathPct'),'Per-game death-context means may remain only as labelled diagnostics');
+assert.ok(api.includes('earlyTeamKills=validTimeline.reduce')&&api.includes('earlyPlayerKillInvolvements=validTimeline.reduce'),'Early KP must export pooled numerator and denominator');
+assert.ok(api.includes('earlyKp=earlyTeamKills?100*earlyPlayerKillInvolvements/earlyTeamKills:null'),'Primary early KP must pool kill-event denominators');
+assert.ok(api.includes('meanGameEarlyKp'),'Mean per-game early KP must remain separate from the pooled coaching rate');
+assert.ok(app.includes('Early KP · pooled')&&app.includes('Objective-context death % · pooled'),'Frontend must label pooled event rates explicitly');
+assert.ok(!app.includes('Pre-objective conversion deaths'),'Temporal death-before-objective evidence must not be mislabeled as conversion causality');
 assert.ok(api.includes('STANDARD_PVP_SR_QUEUE_IDS=new Set([400,420,430,440,490,700])'),'Supported standard Summoner’s Rift PvP queues must remain explicit');
 assert.ok(api.includes('SWIFTPLAY_SR_QUEUE_IDS=new Set([480])'),'Swiftplay queue must remain explicitly separate');
 assert.ok(api.includes('supportedQueueRows=durationEligibleRows.filter'),'Report eligibility must exclude unsupported special/bot Summoner’s Rift queues');
@@ -358,7 +367,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v88'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v89'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
@@ -405,7 +414,7 @@ assert.ok(api.includes('higherRankMajorItemGames'),'Higher-ranked peer item samp
 assert.ok(api.includes('higherRankAvgMajorItemDeltaMin'),'Higher-ranked peer first-major timing delta must remain exported');
 assert.ok(api.includes('higherRankMajorItemFasterPct'),'Higher-ranked peer first-major faster rate must remain exported');
 assert.ok(api.includes('First-major timing slips against higher-ranked direct opponents'),'Higher-rank item timing must remain actionable coaching evidence');
-assert.ok(api.includes('league-web-behavior-v4.49'),'Analyzer version must include owner-scoped public profile lifecycle');
+assert.ok(api.includes('league-web-behavior-v4.50'),'Analyzer version must include owner-scoped public profile lifecycle');
 assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
 assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
 assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
