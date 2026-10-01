@@ -30,6 +30,11 @@ assert.ok(!app.includes("'x-gejast-session':token()"),'League browser must not d
 assert.ok(![html,app,css].some(source=>source.includes('gejast-auth-gate.js')||source.includes('gejast-home-gate.js')||source.includes('requireMatchEntrySession')||source.includes('/login.html')),'Every League frontend artifact must stay outside the Kalenel login/session gate');
 assert.ok(html.includes('name="robots" content="index,follow'),'Public League page must remain indexable/followable');
 assert.ok(html.includes('class="site-shell"')&&html.includes('/logo-small.png'),'League must use the shared Kalenel shell and real site logo');
+assert.ok(css.includes('content-visibility:auto')&&css.includes('contain-intrinsic-size:auto 620px'),'Long League report sections must skip off-screen rendering work');
+assert.ok(css.includes('background-attachment:scroll')&&!css.includes("cover fixed no-repeat"),'League must not use a fixed full-page background that repaints during scroll');
+assert.ok(css.includes('backdrop-filter:none'),'League shell must avoid full-page backdrop blur while scrolling');
+assert.ok(css.includes('width:min(1820px,calc(100vw - 12px))'),'Wide desktop League layout must use the available viewport instead of cramming content into 1450px');
+assert.ok(app.includes("scrollIntoView({behavior:'auto'"),'League replay navigation must avoid costly smooth scrolling through the long report');
 assert.ok(html.includes('League analysis, in the Kalenel site.'),'League hero must present the tool as part of Kalenel rather than a detached desktop GUI');
 assert.ok(css.includes("--paper:#f7f2e9")&&css.includes("site-bg-desktop.webp"),'League must retain the warm paper/background visual language used by Kalenel pages');
 assert.ok(css.includes('.site-credit-watermark')&&html.includes('v817 - Made by Bruis'),'League must keep the shared Kalenel version watermark treatment');
@@ -378,7 +383,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v90'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v91'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
