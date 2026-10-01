@@ -932,6 +932,38 @@ Champion-specific coaching compares that champion-role sample primarily with the
 
 A three-game champion sample is low confidence; five or more can reach medium confidence. Do not make strong mastery claims from win rate alone.
 
+## Measurable Next-5 practice targets
+
+The **Next 5 games** plan may attach a measurable short-term success target to a high-priority coaching theme.
+
+Targets are **self-relative**, not population benchmarks. Each target must carry:
+- coaching theme key/label,
+- report metric path,
+- current baseline,
+- short-term goal,
+- direction (higher/lower),
+- unit,
+- relevant sample size and minimum sample,
+- five-game practice horizon,
+- rationale,
+- source marker `self_relative_short_term`.
+
+The target builder may emit at most one target per selected coaching theme and at most three targets total.
+
+Targets are only emitted when the relevant evidence count meets a metric-specific minimum. If the sample is thin or the baseline is missing, omit the target rather than fabricating a goal.
+
+Current target magnitudes are deliberately modest and directional, for example:
+- about 150g improvement in direct-role gold differential @15,
+- about +0.3 CS/min,
+- about -0.25 costly/high-risk deaths per game,
+- about ±10 percentage points for objective/fight/repeat-death rates,
+- about +15 percentage points for item-spike utilization,
+- about -5 percentage points for vision-action death rate.
+
+These are **practice checkpoints**, not claims about the player's true skill level or a universal optimal value.
+
+The frontend should render the current baseline and target together, e.g. `0.72/game → aim ≤ 0.47/game`, and state how many relevant observations support the target.
+
 ## Replay Review Queue
 
 The report should turn aggregate findings into a small, ranked set of **specific replay moments**.
