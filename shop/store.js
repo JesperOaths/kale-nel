@@ -1,4 +1,4 @@
-const FALLBACK_PRODUCTS = Array.isArray(window.BRUIS_CATALOG?.products) ? window.BRUIS_CATALOG.products : [];
+const FALLBACK_PRODUCTS = [];
 const catalogCacheKey = 'bruisCatalogLastGoodV1';
 const catalogCacheMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
 const cartKey = 'bruisCartV3';
@@ -154,12 +154,12 @@ async function loadLiveCatalog(timeoutMs = 5000){
   }
 }
 
-function readLastGoodCatalog(){
+function readLastGoodCatalog({ allowExpired = false } = {}){
   try {
     const cached = JSON.parse(localStorage.getItem(catalogCacheKey) || 'null');
     if(!cached || !Array.isArray(cached.products) || !cached.products.length) return [];
     const savedAt = Number(cached.savedAt || 0);
-    if(!savedAt || Date.now() - savedAt > catalogCacheMaxAgeMs) return [];
+    if(!allowExpired && (!savedAt || Date.now() - savedAt > catalogCacheMaxAgeMs)) return [];
     return cached.products.map(normalizeProduct)
       .filter(p => p.baseKey !== '1382' && p.name && p.mockups.length && p.price > 0);
   } catch {
@@ -196,16 +196,10 @@ async function loadCatalog(){
   if(cachedProducts.length){
     return { products: sortByShirtBase(cachedProducts), source: 'cache' };
   }
-  const staticProducts = FALLBACK_PRODUCTS
-    .map(normalizeProduct)
-    .filter(p => p.baseKey !== '1382' && p.name && p.mockups.length && p.price > 0);
-  if(staticProducts.length){
-    // First visits must render something immediately even when Supabase is under load.
-    // This snapshot is explicitly non-authoritative and is replaced by the live catalog in background.
-    return { products: sortByShirtBase(staticProducts), source: 'static-fallback' };
-  }
   const liveProducts = await refreshLiveCatalog(1);
-  return { products: liveProducts, source: liveProducts.length ? 'live' : 'unavailable' };
+  if(liveProducts.length) return { products: liveProducts, source: 'live' };
+  const staleProducts = readLastGoodCatalog({ allowExpired: true });
+  return { products: sortByShirtBase(staleProducts), source: staleProducts.length ? 'stale-cache' : 'unavailable' };
 }
 
 function replaceCatalogFromLive(list){
@@ -661,7 +655,7 @@ loadCatalog().then(result => {
     openShapeEntry({ scroll: false, updateUrl: false });
   }
 
-  if(result?.source === 'cache' || result?.source === 'static-fallback'){
+  if(result?.source === 'cache' || result?.source === 'stale-cache'){
     refreshLiveCatalog(1).then(replaceCatalogFromLive).catch(()=>{});
   }
 });
