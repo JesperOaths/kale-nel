@@ -247,6 +247,11 @@
     }
   }
   function fillSelect(sel,names){ if(!sel) return; const current=sel.value; const clean=normalizeNames(names); sel.innerHTML='<option value="">Kies je naam</option>'+clean.map((n)=>`<option value="${esc(n)}">${esc(n)}</option>`).join(''); if(clean.includes(current)) sel.value=current; }
+  function domSeedNames(sel){
+    if(!sel) return [];
+    try { return normalizeNames([...sel.querySelectorAll('option')].map((opt)=>String(opt.value||opt.textContent||'').trim()).filter(Boolean)); }
+    catch(_) { return []; }
+  }
 
   function safeReturnTarget(raw){
     const value = String(raw || '').trim();
@@ -262,7 +267,10 @@
 
   async function bootLoginPage(){
     const form=$('loginForm'), sel=$('playerNameInput'), pin=$('pinInput'); if(!form) return;
-    const cached = readLoginCache(), snapshot = staticLoginNames(), seed = normalizeNames([...cached,...snapshot]);
+    // Read the server-rendered <option> list before any runtime rewrites it.
+    // This gives login a third independent synchronous source: even if both
+    // Supabase and deferred static JS are slow/broken, the HTML names survive.
+    const domSeed = domSeedNames(sel), cached = readLoginCache(), snapshot = staticLoginNames(), seed = normalizeNames([...domSeed,...cached,...snapshot]);
     if(seed.length){
       fillSelect(sel, seed);
       setStatus('statusBox',String(seed.length)+' actieve loginspeler(s) direct geladen; live controle op achtergrond...','ok');
