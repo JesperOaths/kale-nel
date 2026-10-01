@@ -266,8 +266,7 @@ function roamEvidenceText(r){
     hasNum(r.platesGained)&&Number(r.platesGained)>0?String(r.platesGained)+' plates gained':null,
     hasNum(r.platesLost)&&Number(r.platesLost)>0?String(r.platesLost)+' home-lane plates lost while away':null,
     hasNum(r.homeLaneStructuresLost)&&Number(r.homeLaneStructuresLost)>0?String(r.homeLaneStructuresLost)+' home-lane turrets lost while away':null,
-    hasNum(r.laneCostCs)?'own lane Δ '+signed(r.laneCostCs,0)+' CS':null,
-    hasNum(r.adcLaneCostCs)?'ADC lane Δ '+signed(r.adcLaneCostCs,0)+' CS':null
+    hasNum(r.coachingLaneCostCs??r.laneCostCs)?((r.laneCostBasis==='allied_adc_vs_enemy_adc'?'ADC-vs-ADC lane cost':'direct-role lane cost')+' '+signed(r.coachingLaneCostCs??r.laneCostCs,0)+' CS'):null
   ].filter(Boolean);
   return bits.join(' · ');
 }
@@ -1741,7 +1740,7 @@ function renderAdvanced(r){
     ['High-risk untraded post-impact',String(r.behaviorSummary?.highRiskUntradedPostImpactDeaths??0)+' · '+fmt(r.behaviorSummary?.highRiskUntradedPostImpactPerGame,2)+'/game'],
     ['Top risky-death area',r.behaviorSummary?.topBadDeathZone?String(r.behaviorSummary.topBadDeathZone)+' · '+fmtPct(r.behaviorSummary.topBadDeathZonePct):'n/a'],
     ['Roam attempts / success',String(roam.attempts??0)+' / '+fmtPct(roam.successRate)],
-    ['Roam lane cost',hasNum(roam.avgLaneCostCs)?signed(roam.avgLaneCostCs,1)+' CS avg · '+String(roam.emptyCostlyRoams??0)+' empty costly':'n/a'],
+    ['Coaching roam lane cost',hasNum(roam.avgLaneCostCs)?signed(roam.avgLaneCostCs,1)+' CS avg · '+String(roam.emptyCostlyRoams??0)+' empty costly':'n/a'],
     ['First-reset measured / clean games',String(r.behaviorSummary?.firstResetMeasuredGames??0)+' / '+String(r.behaviorSummary?.firstResetCleanGames??0)],
     ['First-reset loss / gain games',String(r.behaviorSummary?.firstResetLossGames??0)+' / '+String(r.behaviorSummary?.firstResetGainGames??0)],
     ['First-reset loss rate',fmtPct(r.behaviorSummary?.firstResetLossRate)],
