@@ -161,6 +161,9 @@ ok(app.includes('function secureWorkspaceToken()')&&app.includes('crypto.randomU
 ok(!app.includes('Math.random()'), 'public League workspace identity must not use weak Math.random entropy');
 ok(backend.includes('PUBLIC_MAX_PROFILES=8')&&backend.includes('PUBLIC_MAX_FETCH_MATCHES=50')&&backend.includes('PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE=80')&&backend.includes('PUBLIC_MAX_ANALYSES_PER_PROFILE=25'), 'anonymous public workspace resource limits must remain explicit');
 ok(backend.includes('trimAnonymousMatchCache(')&&backend.includes('trimAnonymousRows('), 'anonymous League storage histories must be bounded');
+ok(backend.includes('if(action==="profile_delete")')&&backend.includes('.delete().eq("id",profileId).eq("owner_player_id",viewer.player_id)'), 'profile deletion must be owner-scoped');
+ok(html.includes('id="deleteProfileBtn"')&&app.includes("api('profile_delete'"), 'bounded public workspaces must expose profile deletion');
+ok(migration.includes('references public.league_profiles_v1(id) on delete cascade'), 'profile deletion must cascade child League data');
 ok(backend.includes('allowServerRiotKey=viewer.anonymous!==true'), 'anonymous League users must not inherit the server Riot key');
 ok(app.includes("'x-league-workspace':workspaceId()"), 'League frontend must use browser workspace identity');
 ok(!html.includes('gejast-auth-gate.js')&&!html.includes('requireMatchEntrySession'), 'League page must remain public and outside Kalenel login gating');
@@ -307,5 +310,5 @@ console.log(JSON.stringify({
   appVersion,
   domRefs:refs.length,
   domIds:ids.length,
-  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence','control-ward-purchases','second-major-timing','last20-result-streaks','committed-shop-ledger','supported-kill-conversion','public-league-workspace','verified-patch-boundary','supported-sr-queues','bounded-public-workspace']
+  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence','control-ward-purchases','second-major-timing','last20-result-streaks','committed-shop-ledger','supported-kill-conversion','public-league-workspace','verified-patch-boundary','supported-sr-queues','bounded-public-workspace','owner-scoped-profile-delete']
 },null,2));
