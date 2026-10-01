@@ -61,6 +61,12 @@ assert.ok(app.includes('Early KP · pooled')&&app.includes('Objective-context de
 assert.ok(!app.includes('Pre-objective conversion deaths'),'Temporal death-before-objective evidence must not be mislabeled as conversion causality');
 assert.ok(api.includes('STANDARD_PVP_SR_QUEUE_IDS=new Set([400,420,430,440,490,700])'),'Supported standard Summoner’s Rift PvP queues must remain explicit');
 assert.ok(api.includes('SWIFTPLAY_SR_QUEUE_IDS=new Set([480])'),'Swiftplay queue must remain explicitly separate');
+assert.ok(api.includes('r==="DUO_SUPPORT"')&&api.includes('r==="DUO_CARRY"'),'Legacy Riot bot-lane role aliases must normalize correctly');
+assert.ok(api.includes('function participantRoleEvidence('),'Role selection must retain source/conflict evidence');
+assert.ok(api.includes('team!=="GENERIC"&&individual!=="GENERIC"&&team!==individual'),'Conflicting teamPosition/individualPosition must fail closed');
+assert.ok(api.includes('function opponentResolution(')&&api.includes('candidates.length!==1'),'Direct same-role peer must require exactly one enemy candidate');
+assert.ok(api.includes('excludedAmbiguousRole')&&api.includes('ambiguousDirectPeerGames'),'Role and peer ambiguity must remain observable');
+assert.ok(app.includes('conflicting Riot role metadata')&&app.includes('ambiguous enemy-role game(s) withheld'),'Frontend must expose withheld ambiguous role/peer evidence');
 assert.ok(api.includes('supportedQueueRows=durationEligibleRows.filter'),'Report eligibility must exclude unsupported special/bot Summoner’s Rift queues');
 assert.ok(api.includes('supportedEligible=durationEligible.filter'),'Fetch-finish peer backfill must use the same supported-queue eligibility');
 assert.ok(api.includes('unsupportedQueueRowsExcluded'),'Data quality must expose unsupported queue exclusions');
@@ -372,7 +378,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v89'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v90'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
@@ -419,7 +425,7 @@ assert.ok(api.includes('higherRankMajorItemGames'),'Higher-ranked peer item samp
 assert.ok(api.includes('higherRankAvgMajorItemDeltaMin'),'Higher-ranked peer first-major timing delta must remain exported');
 assert.ok(api.includes('higherRankMajorItemFasterPct'),'Higher-ranked peer first-major faster rate must remain exported');
 assert.ok(api.includes('First-major timing slips against higher-ranked direct opponents'),'Higher-rank item timing must remain actionable coaching evidence');
-assert.ok(api.includes('league-web-behavior-v4.50'),'Analyzer version must include owner-scoped public profile lifecycle');
+assert.ok(api.includes('league-web-behavior-v4.51'),'Analyzer version must include owner-scoped public profile lifecycle');
 assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
 assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
 assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
