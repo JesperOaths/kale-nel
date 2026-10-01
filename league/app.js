@@ -325,6 +325,9 @@ function renderProgressComparison(current,previous,previousAt){
     {label:'Clean solo-kill conversion rate',path:'behaviorSummary.soloKillConversionRate',threshold:15,direction:1,format:v=>fmtPct(v)},
     {label:'Deaths before shop after solo kill',path:'behaviorSummary.soloKillDeathsBeforeShopRate',threshold:15,direction:-1,format:v=>fmtPct(v)},
     {label:'High-risk deaths / game',path:'behaviorSummary.badDeathsPerTimelineGame',threshold:.3,direction:-1,format:v=>fmt(v,1)},
+    {label:'Early high-risk deaths / game',path:'behaviorSummary.phaseRisk.early.highRiskDeathsPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
+    {label:'Mid high-risk deaths / game',path:'behaviorSummary.phaseRisk.mid.highRiskDeathsPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
+    {label:'Late high-risk deaths / game',path:'behaviorSummary.phaseRisk.late.highRiskDeathsPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
     {label:'High-risk untraded / game',path:'behaviorSummary.highRiskUntradedPerGame',threshold:.25,direction:-1,format:v=>fmt(v,1)},
     {label:'Costly deaths / game',path:'behaviorSummary.costlyDeathsPerTimelineGame',threshold:.25,direction:-1,format:v=>fmt(v,2)},
     {label:'Severe death consequences / game',path:'behaviorSummary.severeDeathsPerTimelineGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
@@ -436,7 +439,7 @@ function judgmentHtml(g){
     '<p>'+esc(x.evidence||'')+'</p>'+(x.action?'<p class="game-action"><b>Next time:</b> '+esc(x.action)+'</p>':'')+'</article>').join('')+'</div>';
 }
 function detailsHtml(g,index){
-  return '<div class="details-shell">'+judgmentHtml(g)+'<div class="details-tabs">'+['macro','resets','vision','roams','fights','deaths','objectives'].map(t=>'<button class="tab-btn '+(state.activeDetailTab===t?'active':'')+'" data-tab="'+t+'" type="button">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div><div class="details-content" data-detail-content>'+detailContent(g,state.activeDetailTab)+'</div></div>';
+  return '<div class="details-shell">'+judgmentHtml(g)+'<div class="details-tabs">'+['macro','resets','vision','roams','fights','phases','deaths','objectives'].map(t=>'<button class="tab-btn '+(state.activeDetailTab===t?'active':'')+'" data-tab="'+t+'" type="button">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div><div class="details-content" data-detail-content>'+detailContent(g,state.activeDetailTab)+'</div></div>';
 }
 function detailCard(label,value){return'<div class="detail-card"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>';}
 function detailList(items,empty){
@@ -470,6 +473,18 @@ function detailContent(g,tab){
       detailCard('Locally outnumbered',String(f.outnumberedStarts??0)+' · '+fmtPct(f.outnumberedStartRate))+detailCard('Loss rate while outnumbered',fmtPct(f.outnumberedLossRate))+
       detailList(events.slice(0,10).map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+String(x.kills||0)+' kills · '+(x.survived?'survived':x.firstAllyDeath?'first ally death':x.diedBeforeContribution?'died before contribution':'died after contribution')+
         (hasNum(x.currentGoldAtStart)?' · '+fmtInt(x.currentGoldAtStart)+'g unspent':'')+(hasNum(x.goldDiffAtStart)?' · role gold '+signed(x.goldDiffAtStart,0)+'g':'')+(x.itemDisadvantage?' · opponent major item first':'')),'No attended multi-kill fight clusters were detected.');
+  }
+  if(tab==='phases'){
+    const p=g.phaseBehavior||{},phase=(key,label)=>{
+      const x=p[key]||{};
+      return '<div class="detail-note"><strong>'+esc(label)+'</strong><ul>'+
+        '<li>'+esc(String(x.deaths??0))+' deaths · '+esc(String(x.highRiskDeaths??0))+' high-risk · '+esc(String(x.costlyDeaths??0))+' costly · '+esc(String(x.severeDeaths??0))+' severe</li>'+
+        '<li>'+esc(String(x.killAssistImpacts??0))+' kill/assist impacts · '+esc(String(x.objectiveJoins??0))+' objective joins</li>'+
+        '<li>'+esc(String(x.fightClusters??0))+' attended fight clusters · '+esc(String(x.firstAllyFightDeaths??0))+' first-allied-death events</li>'+
+      '</ul></div>';
+    };
+    return phase('early','Early · <14:00')+phase('mid','Mid · 14:00–24:59')+phase('late','Late · ≥25:00')+
+      '<div class="detail-note">Phase counts are raw evidence for this match. Aggregate rates are normalized by how many analyzed games actually reach each phase.</div>';
   }
   if(tab==='deaths'){
     const bad=g.badDeaths||[];
@@ -610,6 +625,10 @@ function renderAdvanced(r){
     ['Objective-context death %',fmtPct(a.objectiveDeathPct)],
     ['Death trade rate',fmtPct(r.behaviorSummary?.deathTradeRate)],
     ['High-risk untraded deaths',String(r.behaviorSummary?.highRiskUntradedDeaths??0)+' · '+fmt(r.behaviorSummary?.highRiskUntradedPerGame,1)+'/game'],
+    ['Early-phase high-risk deaths',String(r.behaviorSummary?.phaseRisk?.early?.highRiskDeaths??0)+' · '+fmt(r.behaviorSummary?.phaseRisk?.early?.highRiskDeathsPerGame,2)+'/game'],
+    ['Mid-phase high-risk deaths',String(r.behaviorSummary?.phaseRisk?.mid?.highRiskDeaths??0)+' · '+fmt(r.behaviorSummary?.phaseRisk?.mid?.highRiskDeathsPerGame,2)+'/game'],
+    ['Late-phase high-risk deaths',String(r.behaviorSummary?.phaseRisk?.late?.highRiskDeaths??0)+' · '+fmt(r.behaviorSummary?.phaseRisk?.late?.highRiskDeathsPerGame,2)+'/game'],
+    ['Early / mid / late costly deaths',String(r.behaviorSummary?.phaseRisk?.early?.costlyDeaths??0)+' / '+String(r.behaviorSummary?.phaseRisk?.mid?.costlyDeaths??0)+' / '+String(r.behaviorSummary?.phaseRisk?.late?.costlyDeaths??0)],
     ['Measured costly deaths',String(r.behaviorSummary?.costlyDeathEvents??0)+' / '+String(r.behaviorSummary?.measuredDeathConsequences??0)+' · '+fmtPct(r.behaviorSummary?.costlyDeathRate)],
     ['Severe death consequences',String(r.behaviorSummary?.severeDeathEvents??0)+' · '+fmt(r.behaviorSummary?.severeDeathsPerTimelineGame,2)+'/game'],
     ['Avg post-death role-gold swing',hasNum(r.behaviorSummary?.avgGoldSwingAfterDeath)?signed(r.behaviorSummary.avgGoldSwingAfterDeath,0)+'g':'n/a'],
