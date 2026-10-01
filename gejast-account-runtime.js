@@ -1,7 +1,7 @@
 (function(){
-  if (window.GEJAST_ACCOUNT_RUNTIME && window.GEJAST_ACCOUNT_RUNTIME.VERSION === 'v690') return;
+  if (window.GEJAST_ACCOUNT_RUNTIME && window.GEJAST_ACCOUNT_RUNTIME.VERSION === 'v691') return;
   const cfg = window.GEJAST_CONFIG || {};
-  const VERSION = 'v690';
+  const VERSION = 'v691';
   const SESSION_KEYS = (Array.isArray(cfg.PLAYER_SESSION_KEYS) && cfg.PLAYER_SESSION_KEYS.length) ? cfg.PLAYER_SESSION_KEYS : ['jas_session_token_v11','jas_session_token_v10'];
   const ADMIN_KEYS = ['jas_admin_session_v8','gejast_admin_session_token','jas_admin_session_token'];
   const LOGIN_CACHE_PREFIX = 'gejast_login_active_names_v687_';
@@ -38,7 +38,7 @@
   function emailOk(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim()); }
   function setBusy(form,busy){ if(!form) return; form.querySelectorAll('input,select,textarea,button').forEach((el)=>el.disabled=!!busy); }
   function cacheKey(){ return LOGIN_CACHE_PREFIX + scope(); }
-  function readLoginCache(){ try{ const raw=localStorage.getItem(cacheKey())||sessionStorage.getItem(cacheKey())||''; if(!raw) return []; const parsed=JSON.parse(raw); const age=Date.now()-Number(parsed.at||0); if(age > 24*60*60*1000) return []; return normalizeNames(parsed.names||[]); }catch(_){ return []; } }
+  function readLoginCache(){ try{ const raw=localStorage.getItem(cacheKey())||sessionStorage.getItem(cacheKey())||''; if(!raw) return []; const parsed=JSON.parse(raw); const age=Date.now()-Number(parsed.at||0); if(age > 30*24*60*60*1000) return []; return normalizeNames(parsed.names||[]); }catch(_){ return []; } }
   function writeLoginCache(names){ const clean=normalizeNames(names); if(!clean.length) return clean; const payload=JSON.stringify({at:Date.now(),names:clean,version:VERSION}); try{ localStorage.setItem(cacheKey(),payload); }catch(_){} try{ sessionStorage.setItem(cacheKey(),payload); }catch(_){} try{ if(cfg.writeCachedLoginNames) cfg.writeCachedLoginNames(clean, scope()); }catch(_){} return clean; }
 
   function extractNameRows(raw){
@@ -69,10 +69,10 @@
   function namesFromPayload(raw){ return normalizeNames(extractNameRows(raw).filter((row)=>rowScopeMatches(row) && activeNameSignal(row))); }
 
   async function fetchLoginNamesFromConfig(){
-    const loaders = [
+    const loaders = [...new Set([
       cfg.getActivatedPlayerNamesForScope,
       cfg.fetchScopedActivePlayerNames
-    ].filter((fn)=>typeof fn === 'function');
+    ].filter((fn)=>typeof fn === 'function'))];
     for (const loader of loaders) {
       try {
         const names = normalizeNames(await loader(scope()));
@@ -81,8 +81,11 @@
     }
     try {
       if (window.GEJAST_LOGIN_NAMES_FALLBACK && typeof window.GEJAST_LOGIN_NAMES_FALLBACK.load === 'function') {
-        const names = normalizeNames(await window.GEJAST_LOGIN_NAMES_FALLBACK.load());
-        if (names.length) return names;
+        const fallbackLoader=window.GEJAST_LOGIN_NAMES_FALLBACK.load;
+        if (!loaders.includes(fallbackLoader)) {
+          const names = normalizeNames(await fallbackLoader());
+          if (names.length) return names;
+        }
       }
     } catch (_) {}
     return [];
