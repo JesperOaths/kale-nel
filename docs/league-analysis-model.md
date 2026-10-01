@@ -999,6 +999,25 @@ Champion-specific coaching compares that champion-role sample primarily with the
 
 A three-game champion sample is low confidence; five or more can reach medium confidence. Do not make strong mastery claims from win rate alone.
 
+## Root-cause practice-theme synthesis
+
+The report should not present every triggered heuristic as a separate practice objective.
+
+Related findings are consolidated into broader coaching themes before the **Next 5 games** plan is built. Examples include:
+- post-play give-backs → **Risk & death discipline**,
+- side-lane timing → **Mid-game routing**,
+- late resets / item windows / fight readiness → **Resets & power windows**,
+- objective attendance / setup / conversion / closing → **Objectives & closing**.
+
+A priority theme preserves:
+- representative highest-priority finding,
+- number of supporting findings,
+- up to several supporting finding titles,
+- comparison sources,
+- confidence and priority.
+
+The browser should expose the supporting finding titles beneath a selected practice theme so the player can see why it outranked the other themes.
+
 ## Measurable Next-5 practice targets
 
 The **Next 5 games** plan may attach a measurable short-term success target to a high-priority coaching theme.
