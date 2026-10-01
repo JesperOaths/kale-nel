@@ -281,6 +281,11 @@ assert.ok(css.includes('.map-roam-path'),'Roam paths must retain dedicated map s
 assert.ok(api.includes('objectiveFamilyStats:{}')&&api.includes('objectiveFamilySummary'),'Objective-family presence/control must remain explicit');
 assert.ok(api.includes('familyRaw==="DRAGON"&&memberSubtypes.some((x:any)=>x.includes("ELDER"))?"ELDER_DRAGON"'),'Elder Dragon must remain distinguishable from ordinary dragons when Riot subtype supports it');
 assert.ok(api.includes('objectiveSetupClears'),'Objective-setup ward clears must remain measurable');
+assert.ok(api.includes('controlWardPurchases'),'Control Ward purchases must remain distinct from placements');
+assert.ok(api.includes('Number(e.itemId)===2055||text(info?.name).toLowerCase()==="control ward"'),'Control Ward purchase detection must retain catalog-name plus stable item-id fallback');
+assert.ok(api.includes('function majorPurchaseSequence(')&&api.includes('secondMajorItemDeltaVsOpponent'),'Second major-item timing must remain derived from actual purchase events and compared with the direct role opponent');
+assert.ok(app.includes('Control Wards bought')&&app.includes('Control Wards placed'),'Frontend must distinguish Control Ward purchases from placements');
+assert.ok(app.includes('Second-major timing vs peer'),'Frontend must expose second major-item timing against the direct peer');
 assert.ok(app.includes('Objective setup ward clears'),'Frontend must expose objective-setup ward clears');
 assert.ok(app.includes('objectiveFamilyStats'),'Per-game objective tab must expose objective-family evidence');
 assert.ok(html.includes('data-game-sort="gold15"')&&app.includes('bindGameSortControls'),'Per-game evidence table must retain Bruisienator-style sortable columns');
@@ -300,7 +305,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v80'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v81'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
