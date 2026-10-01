@@ -216,9 +216,9 @@ assert.ok(app.includes('Role-quest mechanics'),'Data-quality UI must expose role
 assert.ok(app.includes('mixed role-quest mechanics revisions'),'Mixed mechanics cohorts must be visible as a quality caveat');
 assert.ok(!app.includes('pre14PlayerPlates'),'Modern plate UI must not fall back to obsolete pre-14 plate counters');
 assert.ok(api.includes('phaseExposureMinutes'),'Phase-risk comparisons must normalize by actual time exposure');
-assert.ok(api.includes('postLaneStartMin:14')&&api.includes('roamEndMin:20'),'Standard post-lane and roam windows must be rules-driven');
-assert.ok(api.includes('postLaneStartMin:12')&&api.includes('roamEndMin:12'),'Swiftplay post-lane/roam windows must respect its accelerated Baron timing');
-assert.ok(api.includes('postLaneSideLaneDeaths'),'Primary side-lane risk must be queue-aware rather than hard-coded post-15');
+assert.ok(api.includes('macroTransitionMin:14')&&api.includes('roamEndMin:20'),'Standard macro-transition and roam windows must be rules-driven');
+assert.ok(api.includes('macroTransitionMin:12')&&api.includes('roamEndMin:12'),'Swiftplay side-lane timing must respect its accelerated macro transition');
+assert.ok(api.includes('macroTransitionSideLaneDeaths'),'Primary side-lane risk must be tied to a macro transition rather than falsely asserting lane phase ended');
 assert.ok(api.includes('lane15Comparable:true')&&api.includes('fixed15to25Comparable:true')&&api.includes('closing25Comparable:true'),'Standard SR fixed checkpoint semantics must remain explicitly enabled');
 assert.ok(api.includes('lane15Comparable:false')&&api.includes('fixed15to25Comparable:false')&&api.includes('closing25Comparable:false'),'Accelerated/unverified rules must be able to suppress incompatible fixed-checkpoint coaching');
 assert.ok(api.includes('lane15ComparableGames'),'@15 lane aggregates must use an eligibility-filtered cohort');
@@ -247,7 +247,7 @@ assert.ok(app.includes('Plate involvement ≤20m'),'Frontend must describe plate
 assert.ok(app.includes('Neutral-objective presence'),'Frontend must distinguish neutral objectives from structures');
 assert.ok(app.includes('Early high-risk deaths / 10m'),'Frontend must expose phase-risk normalization by time');
 assert.ok(app.includes('function reportPhaseRules('),'Per-game phase labels must read the stored queue/rules profile');
-assert.ok(app.includes('Post-early-phase side-lane deaths'),'Frontend must not hard-code post-lane side-lane risk to 15 minutes');
+assert.ok(app.includes('Post-macro-transition side-lane deaths'),'Frontend must describe the 14m/12m anchor as a macro transition rather than a literal lane ending');
 assert.ok(app.includes('Checkpoint interpretation:'),'Per-game UI must explain raw-but-noncomparable @15/@25 checkpoints');
 assert.ok(app.includes('@15 lane-checkpoint comparable games'),'Advanced metrics must expose @15 semantic eligibility');
 assert.ok(app.includes('15→25 fixed-checkpoint comparable games'),'Advanced metrics must expose transition checkpoint eligibility');
@@ -273,7 +273,7 @@ assert.ok(css.includes('.map-marker-label'),'Numbered death marker styling must 
 assert.ok(!app.includes("['DQI'"));
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v74'),'League assets must cache-bust the v4.30 frontend');
+assert.ok(html.includes('20261001-league-web-v76'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
@@ -320,7 +320,7 @@ assert.ok(api.includes('higherRankMajorItemGames'),'Higher-ranked peer item samp
 assert.ok(api.includes('higherRankAvgMajorItemDeltaMin'),'Higher-ranked peer first-major timing delta must remain exported');
 assert.ok(api.includes('higherRankMajorItemFasterPct'),'Higher-ranked peer first-major faster rate must remain exported');
 assert.ok(api.includes('First-major timing slips against higher-ranked direct opponents'),'Higher-rank item timing must remain actionable coaching evidence');
-assert.ok(api.includes('league-web-behavior-v4.32'),'Analyzer version must include season-aware rules and turret-tier involvement');
+assert.ok(api.includes('league-web-behavior-v4.33'),'Analyzer version must include season-aware rules and turret-tier involvement');
 assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
 assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
 assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
