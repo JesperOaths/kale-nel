@@ -1540,3 +1540,9 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
   .history-review-cue{grid-template-columns:1fr}
   .history-review-cue>.button{grid-column:1;grid-row:auto;justify-self:start}
 }
+
+.section-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;max-width:700px}
+.section-head-actions .section-hint{max-width:500px}
+@media(max-width:850px){
+  .section-head-actions{width:100%;max-width:none;align-items:flex-start;justify-content:flex-start;flex-wrap:wrap}
+}
