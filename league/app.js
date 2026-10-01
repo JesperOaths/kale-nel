@@ -359,6 +359,7 @@ function detailContent(g,tab){
   return detailCard('Gold diff @10',signed(g.goldDiff10,0))+detailCard('Gold diff @15',signed(g.goldDiff15,0))+detailCard('CS diff @10',signed(g.csDiff10,0))+detailCard('CS diff @15',signed(g.csDiff15,0))+detailCard('XP diff @10',signed(g.xpDiff10,0))+detailCard('XP diff @15',signed(g.xpDiff15,0))+
     detailCard('Opponent',peer?(peer.champion||'Same-role peer'):'n/a')+detailCard('Opponent rank',peer?rankText(peer.rank):'n/a')+
     detailCard('DPM vs same-role opponent',peer?signed(peer.dpmDelta,0):'n/a')+detailCard('CS/min vs opponent',peer?signed(peer.csMinDelta,2):'n/a')+detailCard('Team damage rank',Number.isFinite(Number(g.damageRank))?'#'+g.damageRank+' of 5':'n/a')+
+    detailCard('Damage share',fmtPct(g.damageShare))+detailCard('Gold share',fmtPct(g.goldShare))+detailCard('Damage − gold share',Number.isFinite(Number(g.damageShare))&&Number.isFinite(Number(g.goldShare))?signed(Number(g.damageShare)-Number(g.goldShare),1)+' pp':'n/a')+
     '<div class="detail-note">Peer comparisons use the actual same-role opponent in this match. Positive values mean you finished ahead on that metric; opponent rank is fetched during the Fetch step and cached with the match.</div>';
 }
 function bindDetailTabs(container,g,index){
@@ -409,7 +410,8 @@ function renderAdvanced(r){
     ['Objective-context death %',fmtPct(a.objectiveDeathPct)],
     ['Roam attempts / success',String(roam.attempts??0)+' / '+fmtPct(roam.successRate)],
     ['High-gold stay windows',String(recall.greedyStayWindows??0)],
-    ['Major-item Δ vs opponent',Number.isFinite(Number(itemSpike.avgDeltaVsOpponentMin))?signed(itemSpike.avgDeltaVsOpponentMin,1)+' min':'n/a']
+    ['Major-item Δ vs opponent',Number.isFinite(Number(itemSpike.avgDeltaVsOpponentMin))?signed(itemSpike.avgDeltaVsOpponentMin,1)+' min':'n/a'],
+    ['Damage share − gold share',Number.isFinite(Number(r.behaviorSummary?.damageGoldEfficiency))?signed(r.behaviorSummary.damageGoldEfficiency,1)+' pp':'n/a']
   ];
   $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('not recovered')||v==='n/a')).join('');
   const p=r.peerComparison||{},conv=r.conversion||{},wl=r.winLoss||{},trend=r.recentTrend||{},base=r.lifetime||null,s=r.summary||{},rank=r.profile?.rank||null;
