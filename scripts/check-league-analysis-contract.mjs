@@ -170,8 +170,12 @@ ok(backend.includes('outcomeStreaks=outcomeStreakSummary(games)'), 'result strea
 ok(app.includes('Longest win / loss streak')&&app.includes('Current result streak'), 'descriptive result streaks must remain visible');
 ok(app.includes('not treated as evidence of tilt, momentum, or player psychology'), 'result streaks must remain explicitly non-causal and non-psychological');
 ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
-ok(backend.includes('objectiveRootCauses'), 'objective root-cause evidence ranking must remain in analyzer');
+ok(backend.includes('objectiveRootCauses'), 'objective evidence-clue ranking must remain in analyzer');
 ok(app.includes('Highest-confidence supported clue')&&app.includes('Different evidence types are not forced onto one numeric severity scale'), 'objective UI must preserve evidence-type caveats and avoid mixed-unit severity claims');
+ok(app.includes('primaryExplanation??d.primaryCause'), 'frontend must prefer primaryExplanation while preserving old-report compatibility');
+ok(app.includes('No supported primary explanation')&&!app.includes('No supported primary cause'), 'objective UI must not use causal fallback wording');
+ok(app.includes('evidence-based explanation')&&!app.includes('root-cause diagnosis'), 'objective UI must frame the model as an evidence explanation, not causal proof');
+ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primaryCause)'), 'practice-plan routing must prefer the canonical non-causal explanation field');
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
@@ -250,7 +254,7 @@ ok(migration.includes('references public.league_profiles_v1(id) on delete cascad
 ok(backend.includes('allowServerRiotKey=viewer.anonymous!==true'), 'anonymous League users must not inherit the server Riot key');
 ok(app.includes("'x-league-workspace':workspaceId()"), 'League frontend must use browser workspace identity');
 ok(![html,app,css].some(source=>source.includes('gejast-auth-gate.js')||source.includes('gejast-home-gate.js')||source.includes('requireMatchEntrySession')||source.includes('/login.html')), 'Every League frontend artifact must remain public and outside Kalenel login/session gating');
-ok(backend.includes('objectiveDiagnosis:{presenceLow:objectivePresenceLow,presenceBasis:"team_contested",primaryCause:objectivePrimaryCause?.key||null,causes:objectiveRootCauses}'), 'objective diagnosis must remain exported with its contested-presence basis');
+ok(backend.includes('objectiveDiagnosis:{presenceLow:objectivePresenceLow,presenceBasis:"team_contested",primaryExplanation:objectivePrimaryCause?.key||null,primaryCause:objectivePrimaryCause?.key||null,primaryCauseCompatibilityAlias:true,clues:objectiveRootCauses,causes:objectiveRootCauses}'), 'objective explanation must remain exported canonically while preserving the old primaryCause/causes fields only for saved-report compatibility');
 ok(backend.includes('goldSwingTo15'), 'clean solo-kill conversion must preserve gold swing to 15');
 ok(backend.includes('csSwingTo15'), 'clean solo-kill conversion must preserve CS swing to 15');
 ok(backend.includes('Number(x.goldSwingTo15)>=200'), 'clean solo-kill conversion threshold must remain +200g by 15');
