@@ -459,7 +459,24 @@ A death is labelled **high-risk / likely avoidable** only when the combined scor
 
 The report should expose the contributing tags and nearby ally/enemy counts so the player can inspect the judgment.
 
-### Spatial clustering of high-risk deaths
+### Side-lane timing risk
+
+Post-lane side pressure is useful, so the analyzer must not label every side-lane death as bad.
+
+A **post-15 side-lane death** requires:
+- game time at least 15 minutes,
+- death in the coarse top-lane or bot-lane zone.
+
+A death is additionally **isolated** when no allied participant is within 3,000 map units at the supported timeline frame.
+
+A **pre-neutral-objective side-lane death** requires:
+- post-15 side-lane death,
+- isolated/no ally within 3,000 units,
+- a tracked neutral-objective event within 90 seconds afterward.
+
+This is a timing/macro signal, not a blanket criticism of split pushing. Coaching should emphasize leaving the side wave earlier when the next neutral-objective window matters. If the objective is intentionally conceded, the death can still destroy the value of the cross-map trade.
+
+## Spatial clustering of high-risk deaths
 
 Preserve a coarse map context for flagged high-risk deaths. Current labels include:
 - top lane,
