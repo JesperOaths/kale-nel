@@ -9,6 +9,7 @@ const liveVersionUrl=String(process.env.GEJAST_LIVE_VERSION_URL||'https://kalene
 const attempts=Math.max(1,Number(process.env.GEJAST_DEPLOYMENT_ATTEMPTS||60));
 const delayMs=Math.max(0,Number(process.env.GEJAST_DEPLOYMENT_DELAY_MS||10000));
 const scanLimit=Math.max(3,Math.min(20,Number(process.env.GEJAST_DEPLOYMENT_SCAN_LIMIT||10)));
+const requireCurrentMain=String(process.env.GEJAST_REQUIRE_CURRENT_MAIN||'1')!=='0';
 
 if(!repo||!expectedSha||!token) throw new Error('EXACT_PAGES_DEPLOYMENT_FAIL missing GITHUB_REPOSITORY, GITHUB_SHA or GH_TOKEN');
 const expectedVersion=fs.readFileSync(versionFile,'utf8').trim();
@@ -60,6 +61,14 @@ function appendGithubEnv(values){
 }
 
 for(let attempt=1;attempt<=attempts;attempt++){
+  if(requireCurrentMain){
+    const ref=await githubJson(`/repos/${repo}/git/ref/heads/main`);
+    const mainSha=String(ref?.object?.sha||'');
+    if(mainSha && mainSha!==expectedSha){
+      throw new Error(`EXACT_PAGES_DEPLOYMENT_FAIL tested SHA ${expectedSha} is no longer main; current main is ${mainSha}`);
+    }
+  }
+
   const deployments=await githubJson(`/repos/${repo}/deployments?environment=github-pages&per_page=${scanLimit}`);
   const rows=Array.isArray(deployments)?deployments:[];
   const enriched=await Promise.all(rows.map(async deployment=>({

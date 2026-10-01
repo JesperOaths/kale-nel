@@ -38,7 +38,7 @@ permissions:
   deployments: read
 
 concurrency:
-  group: page-version-integrity-${{ github.ref }}
+  group: page-version-integrity-v2-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
