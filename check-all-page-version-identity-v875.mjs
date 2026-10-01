@@ -20,11 +20,13 @@ for(const rel of pages){
   const expected=expectedPageVersion(rel,rootVersion,html);
   const declarations=[...new Set(pageVersionDeclarations(html))];
   const watermarkTags=[...html.matchAll(/<(?:div|span)[^>]*(?:data-version-watermark|class=["'][^"']*(?:version-watermark|watermark)[^"']*["'])[^>]*>([^<]*)</gi)];
+  const versionFooters=[...html.matchAll(/<footer[^>]*class=["'][^"']*\\bversion\\b[^"']*["'][^>]*>([^<]*)</gi)];
+  const visibleVersionOwners=[...watermarkTags,...versionFooters];
   const literalVisible=new RegExp('>\\s*'+expected+'\\s*[^<]{0,20}Made by Bruis\\s*<','i').test(html);
   const hasEmptyWatermark=watermarkTags.some(m=>!(m[1]||'').trim());
   const dynamicWatermark=hasEmptyWatermark && /applyVersionLabel|gejast-version-sync-inline/.test(html);
-  const watermarkVersions=[...new Set(watermarkTags.flatMap(m =>
-    [...String(m[1]||'').matchAll(/\\bv\\d+(?:\\.\\d+)*(?:[a-z]+\\d*)?\\b/gi)].map(x=>x[0].toLowerCase())
+  const watermarkVersions=[...new Set(visibleVersionOwners.flatMap(m =>
+    [...String(m[1]||'').matchAll(/\bv\d+(?:\.\d+)*(?:[a-z]+\d*)?\b/gi)].map(x=>x[0].toLowerCase())
   ))];
   const staleVisibleVersions=watermarkVersions.filter(v=>v!==expected.toLowerCase());
 
