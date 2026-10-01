@@ -1103,9 +1103,10 @@ function previousPracticeTargetOutcomes(current,previous){
   if(!targets.length)return{rows:[],reason:''};
   const curRole=String(current?.summary?.primaryRole||''),prevRole=String(previous?.summary?.primaryRole||'');
   const curQueue=current?.dataQuality?.dominantQueueId,prevQueue=previous?.dataQuality?.dominantQueueId;
-  const curPatch=String(current?.dataQuality?.currentPatchKey||''),prevPatch=String(previous?.dataQuality?.currentPatchKey||'');
+  const curPatch=String(current?.dataQuality?.currentPatchKey||''),prevPatch=String(previous?.dataQuality?.currentPatchKey||''),curMechanics=String(current?.dataQuality?.currentMechanicsKey||''),prevMechanics=String(previous?.dataQuality?.currentMechanicsKey||'');
   if(curRole!==prevRole)return{rows:[],reason:'Previous practice targets are not scored because the primary role changed.'};
   if(hasNum(curQueue)&&hasNum(prevQueue)&&Number(curQueue)!==Number(prevQueue))return{rows:[],reason:'Previous practice targets are not scored because the comparable queue context changed.'};
+  if(curMechanics&&prevMechanics&&curMechanics!==prevMechanics)return{rows:[],reason:'Previous practice targets are not scored because the verified mechanics cohort changed.'};
   if(curPatch&&prevPatch&&curPatch!==prevPatch)return{rows:[],reason:'Previous practice targets are not scored because the patch cohort changed.'};
   const rows=targets.map(t=>{
     const currentValue=pathValue(current,t.metricPath);
@@ -1120,77 +1121,83 @@ function previousPracticeTargetOutcomes(current,previous){
   return{rows,reason:''};
 }
 
+function progressComparisonContext(current,previous){
+  const curRole=canonicalRole(current?.coachingSummary?.primaryRole||current?.summary?.primaryRole),prevRole=canonicalRole(previous?.coachingSummary?.primaryRole||previous?.summary?.primaryRole);
+  const curQueue=current?.dataQuality?.dominantQueueId,prevQueue=previous?.dataQuality?.dominantQueueId;
+  const curMechanics=String(current?.dataQuality?.currentMechanicsKey||''),prevMechanics=String(previous?.dataQuality?.currentMechanicsKey||'');
+  const curPatch=String(current?.dataQuality?.currentPatchKey||''),prevPatch=String(previous?.dataQuality?.currentPatchKey||'');
+  const curIds=[...new Set((current?.games||[]).map(g=>String(g.matchId||'')).filter(Boolean))],prevIds=[...new Set((previous?.games||[]).map(g=>String(g.matchId||'')).filter(Boolean))],prevSet=new Set(prevIds),curSet=new Set(curIds);
+  const overlap=curIds.filter(id=>prevSet.has(id)).length,newGames=curIds.filter(id=>!prevSet.has(id)).length,dropped=prevIds.filter(id=>!curSet.has(id)).length,base=Math.max(1,Math.min(curIds.length||1,prevIds.length||1));
+  let reason='';
+  if(curRole!==prevRole)reason='Primary role changed from '+roleLabel(prevRole)+' to '+roleLabel(curRole)+'.';
+  else if(hasNum(curQueue)&&hasNum(prevQueue)&&Number(curQueue)!==Number(prevQueue))reason='Comparable queue context changed.';
+  else if(curMechanics&&prevMechanics&&curMechanics!==prevMechanics)reason='Verified mechanics cohort changed.';
+  return{comparable:!reason,reason,curRole,prevRole,curQueue,prevQueue,curMechanics,prevMechanics,curPatch,prevPatch,patchChanged:!!curPatch&&!!prevPatch&&curPatch!==prevPatch,analyzerChanged:String(current?.analyzerVersion||'')!==String(previous?.analyzerVersion||''),overlap,newGames,dropped,overlapPct:100*overlap/base,currentGames:curIds.length,previousGames:prevIds.length};
+}
+function progressSampleCount(report,spec){
+  const v=pathValue(report,spec.samplePath||'summary.games');return hasNum(v)?Number(v):0;
+}
 function renderProgressComparison(current,previous,previousAt){
+  const note=$('progressComparisonNote');
   if(!previous){
     $('progressComparisonPanel').hidden=true;
     if($('practiceOutcome'))$('practiceOutcome').innerHTML='';
+    if(note)note.textContent='';
     return;
   }
-  const role=String(current?.summary?.primaryRole||'GENERIC').toUpperCase();
+  const context=progressComparisonContext(current,previous),role=String(current?.summary?.primaryRole||'GENERIC').toUpperCase();
   const specs=[
-    {label:'Gold @15 vs role opponent',path:'peerComparison.avgGoldDiff15',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
-    {label:'Early-lead give-back rate',path:'behaviorSummary.earlyLeadGivebackRate',threshold:15,direction:-1,format:v=>fmtPct(v)},
-    {label:'Clean solo-kill conversion rate',path:'behaviorSummary.soloKillConversionRate',threshold:15,direction:1,format:v=>fmtPct(v)},
-    {label:'Solo-kill structure conversion',path:'behaviorSummary.soloKillStructureConversionRate',threshold:15,direction:1,format:v=>fmtPct(v)},
-    {label:'Deaths before shop after solo kill',path:'behaviorSummary.soloKillDeathsBeforeShopRate',threshold:15,direction:-1,format:v=>fmtPct(v)},
-    {label:'High-risk deaths / game',path:'behaviorSummary.badDeathsPerTimelineGame',threshold:.3,direction:-1,format:v=>fmt(v,1)},
-    {label:'Early high-risk deaths / 10m',path:'behaviorSummary.phaseRisk.early.highRiskDeathsPer10Min',threshold:.15,direction:-1,format:v=>fmt(v,2)+'/10m'},
-    {label:'Transition high-risk deaths / 10m',path:'behaviorSummary.phaseRisk.mid.highRiskDeathsPer10Min',threshold:.15,direction:-1,format:v=>fmt(v,2)+'/10m'},
-    {label:'Mid routing CS swing 15→25',path:'behaviorSummary.midRouting.avgCsSwing15to25',threshold:4,direction:1,format:v=>signed(v,1)+' CS'},
-    {label:'Mid routing objective presence',path:'behaviorSummary.midRouting.avgObjectiveJoinRate',threshold:10,direction:1,format:v=>fmtPct(v)},
-    {label:'Win rate from role lead @25',path:'behaviorSummary.closing25.leadWinRate',threshold:10,direction:1,format:v=>fmtPct(v)},
-    {label:'Lead@25 losses with late risk',path:'behaviorSummary.closing25.leadLateRiskLossRate',threshold:15,direction:-1,format:v=>fmtPct(v)},
-    {label:'Late high-risk deaths / 10m',path:'behaviorSummary.phaseRisk.late.highRiskDeathsPer10Min',threshold:.15,direction:-1,format:v=>fmt(v,2)+'/10m'},
-    {label:'High-risk untraded / game',path:'behaviorSummary.highRiskUntradedPerGame',threshold:.25,direction:-1,format:v=>fmt(v,1)},
-    {label:'Costly deaths / game',path:'behaviorSummary.costlyDeathsPerTimelineGame',threshold:.25,direction:-1,format:v=>fmt(v,2)},
-    {label:'Rapid repeat-death rate',path:'behaviorSummary.repeatDeathRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
-    {label:'Severe death consequences / game',path:'behaviorSummary.severeDeathsPerTimelineGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
-    {label:'High-risk deaths while ahead / game',path:'behaviorSummary.highRiskLeadDeathsPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
-    {label:'High-risk deaths while behind / game',path:'behaviorSummary.highRiskBehindDeathsPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
-    {label:'Pre-objective side-lane deaths / game',path:'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame',threshold:.15,direction:-1,format:v=>fmt(v,2)},
-    {label:'High-risk post-play give-backs / game',path:'behaviorSummary.highRiskUntradedPostImpactPerGame',threshold:.15,direction:-1,format:v=>fmt(v,2)},
-    {label:'Early solo deaths to role / game',path:'behaviorSummary.earlyRoleSoloDeathPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
-    {label:'First-reset loss rate',path:'behaviorSummary.firstResetLossRate',threshold:15,direction:-1,format:v=>fmtPct(v)},
-    {label:'First-reset role-CS swing',path:'behaviorSummary.avgFirstResetCsSwing',threshold:2,direction:1,format:v=>signed(v,1)+' CS'},
-    {label:'First major item vs peer',path:'peerComparison.avgMajorItemDeltaMin',threshold:.4,direction:-1,format:v=>signed(v,1)+' min'},
-    {label:'Affordable → first-major delay',path:'behaviorSummary.avgMajorCompletionDelayMin',threshold:.4,direction:-1,format:v=>fmt(v,1)+' min'},
-    {label:'Major-item spike utilization',path:'behaviorSummary.itemSpikeUtilizationRate',threshold:15,direction:1,format:v=>fmtPct(v)},
-    {label:'Damage share − gold share',path:'behaviorSummary.damageGoldEfficiency',threshold:2,direction:1,format:v=>signed(v,1)+' pp'},
-    {label:'First allied death rate',path:'behaviorSummary.firstAllyFightDeathRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
-    {label:'Unspent-gold fight starts',path:'behaviorSummary.highUnspentFightRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
-    {label:'Major-item disadvantage fights',path:'behaviorSummary.itemDisadvantageFightRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
-    {label:'Locally outnumbered fight rate',path:'behaviorSummary.outnumberedFightStartRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
-    {label:'Level-down shared-role fight rate',path:'behaviorSummary.roleLevelDisadvantageFightRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
-    {label:'Game 3+ gold delta',path:'sessionBehavior.game3PlusGoldDelta',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
-    {label:'Post-loss requeue gold delta',path:'sessionBehavior.postLossGoldDelta',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
-    {label:'Prior setup presence (45–105s)',path:'behaviorSummary.earlySetupObjectiveJoinRate',threshold:10,direction:1,format:v=>fmtPct(v)},
-    {label:'Vision-action death rate',path:'behaviorSummary.visionActionDeathRate',threshold:5,direction:-1,format:v=>fmtPct(v)},
-    {label:'High-risk vision deaths / game',path:'behaviorSummary.highRiskVisionActionDeathsPerGame',threshold:.15,direction:-1,format:v=>fmt(v,2)},
-    {label:'Recent-shop objective absence rate',path:'behaviorSummary.recentShopObjectiveAbsenceRate',threshold:10,direction:-1,format:v=>fmtPct(v)}
+    {label:'Gold @15 vs role opponent',path:'peerComparison.avgGoldDiff15',samplePath:'peerComparison.laneGames15',min:5,threshold:150,direction:1,format:v=>signed(v,0)+'g'},
+    {label:'Early-lead give-back rate',path:'behaviorSummary.earlyLeadGivebackRate',samplePath:'behaviorSummary.earlyLeadGames',min:4,threshold:15,direction:-1,format:v=>fmtPct(v)},
+    {label:'High-risk deaths / game',path:'behaviorSummary.badDeathsPerTimelineGame',samplePath:'dataQuality.validTimelineGames',min:5,threshold:.3,direction:-1,format:v=>fmt(v,1)},
+    {label:'Mid routing CS swing 15→25',path:'behaviorSummary.midRouting.avgCsSwing15to25',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:4,direction:1,format:v=>signed(v,1)+' CS'},
+    {label:'Mid routing objective presence',path:'behaviorSummary.midRouting.avgObjectiveJoinRate',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
+    {label:'Win rate from role lead @25',path:'behaviorSummary.closing25.leadWinRate',samplePath:'behaviorSummary.closing25.leadGames',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
+    {label:'First-reset loss rate',path:'behaviorSummary.firstResetLossRate',samplePath:'behaviorSummary.firstResetCleanGames',min:4,threshold:15,direction:-1,format:v=>fmtPct(v)},
+    {label:'First major item vs peer',path:'peerComparison.avgMajorItemDeltaMin',samplePath:'peerComparison.majorItemGames',min:4,threshold:.4,direction:-1,format:v=>signed(v,1)+' min'},
+    {label:'Major-item spike utilization',path:'behaviorSummary.itemSpikeUtilizationRate',samplePath:'behaviorSummary.itemSpikeEligibleWindows',min:4,threshold:15,direction:1,format:v=>fmtPct(v)},
+    {label:'Damage share − gold share',path:'behaviorSummary.damageGoldEfficiency',samplePath:'summary.games',min:5,threshold:2,direction:1,format:v=>signed(v,1)+' pp'},
+    {label:'Died before contribution',path:'behaviorSummary.preContributionFightDeathRate',samplePath:'behaviorSummary.fightSamples',min:8,threshold:10,direction:-1,format:v=>fmtPct(v)},
+    {label:'Rapid repeat-death rate',path:'behaviorSummary.repeatDeathRate',samplePath:'behaviorSummary.repeatDeathOpportunities',min:8,threshold:10,direction:-1,format:v=>fmtPct(v)},
+    {label:'Prior setup presence (45–105s)',path:'behaviorSummary.earlySetupObjectiveJoinRate',samplePath:'behaviorSummary.neutralObjectiveJoins',min:5,threshold:10,direction:1,format:v=>fmtPct(v)},
+    {label:'Recent-shop objective absence rate',path:'behaviorSummary.recentShopObjectiveAbsenceRate',samplePath:'behaviorSummary.neutralObjectiveEvents',min:5,threshold:10,direction:-1,format:v=>fmtPct(v)}
   ];
-  if(['ADC','MID','TOP'].includes(role))specs.splice(1,0,{label:'CS / min',path:'summary.csMin',threshold:.3,direction:1,format:v=>fmt(v,2)});
-  if(['SUPPORT','JUNGLE'].includes(role))specs.push({label:'Team-contested objective presence',path:'advanced.objectivePresence',threshold:10,direction:1,format:v=>fmtPct(v)});
-  const rows=specs.map(s=>{
-    const cur=pathValue(current,s.path),prev=pathValue(previous,s.path);
-    if(!hasNum(cur)||!hasNum(prev))return null;
-    const raw=Number(cur)-Number(prev),effect=raw*s.direction;
-    const status=effect>=s.threshold?'improved':effect<=-s.threshold?'worsened':'stable';
-    return {label:s.label,current:s.format(cur),previous:s.format(prev),delta:raw,status};
+  if(['ADC','MID','TOP'].includes(role))specs.splice(1,0,{label:'CS / min',path:'summary.csMin',samplePath:'summary.games',min:5,threshold:.3,direction:1,format:v=>fmt(v,2)});
+  if(['SUPPORT','JUNGLE'].includes(role))specs.push({label:'Team-contested objective presence',path:'advanced.objectivePresence',samplePath:'behaviorSummary.objectiveContestEncounters',min:5,threshold:10,direction:1,format:v=>fmtPct(v)});
+  const allRows=specs.map(spec=>{
+    const cur=pathValue(current,spec.path),prev=pathValue(previous,spec.path),curN=progressSampleCount(current,spec),prevN=progressSampleCount(previous,spec);
+    if(!hasNum(cur)||!hasNum(prev)||curN<spec.min||prevN<spec.min)return null;
+    const raw=Number(cur)-Number(prev),effect=raw*spec.direction,score=Math.abs(effect)/spec.threshold,status=effect>=spec.threshold?'improved':effect<=-spec.threshold?'worsened':'stable';
+    return{label:spec.label,current:spec.format(cur),previous:spec.format(prev),delta:raw,effect,status,score,curN,prevN,min:spec.min};
   }).filter(Boolean);
-  const targetOutcome=previousPracticeTargetOutcomes(current,previous),targetRows=targetOutcome.rows||[];
-  $('progressComparison').innerHTML=rows.map(x=>'<article class="progress-comparison-card '+x.status+'">'+
-    '<span>'+esc(x.label)+'</span><strong>'+esc(x.status)+'</strong>'+
-    '<p>Now '+esc(x.current)+' · previous '+esc(x.previous)+'</p></article>').join('');
+  const withheld=specs.length-allRows.length,material=allRows.filter(x=>x.status!=='stable').sort((a,b)=>b.score-a.score),stable=allRows.filter(x=>x.status==='stable').sort((a,b)=>b.score-a.score);
+  const visible=material.slice(0,8),statusText=x=>x.status==='improved'?'favorable shift':x.status==='worsened'?'unfavorable shift':'within change band';
+  const card=x=>'<article class="progress-comparison-card '+x.status+'"><span>'+esc(x.label)+'</span><strong>'+esc(statusText(x))+'</strong><p>Now '+esc(x.current)+' · previous '+esc(x.previous)+'</p><small>valid n '+x.curN+' now / '+x.prevN+' previous · materiality '+esc(fmt(x.score,1))+'× change band</small></article>';
+  if(!context.comparable){
+    $('progressComparison').innerHTML='<div class="target-outcome-note"><strong>General progress comparison withheld.</strong> '+esc(context.reason)+' Cross-context metric deltas are not treated as development evidence.</div>';
+  }else{
+    $('progressComparison').innerHTML=visible.length?visible.map(card).join(''):'<div class="target-outcome-note">No denominator-safe metric moved outside its practical change band.</div>';
+    if(stable.length)$('progressComparison').insertAdjacentHTML('beforeend','<details class="progress-stable-details"><summary>Stable / smaller shifts · '+stable.length+' metrics</summary><div class="progress-comparison-grid">'+stable.map(card).join('')+'</div></details>');
+  }
+  if(note){
+    const parts=['Rolling Last-20 comparison: '+context.overlap+' overlapping game'+(context.overlap===1?'':'s')+' ('+fmtPct(context.overlapPct)+') · '+context.newGames+' new · '+context.dropped+' dropped'];
+    if(withheld)parts.push(withheld+' headline metric'+(withheld===1?'':'s')+' withheld for missing/thin evidence');
+    if(context.patchChanged)parts.push('patch cohort changed '+context.prevPatch+' → '+context.curPatch+'; treat surviving comparisons as context');
+    if(context.analyzerChanged)parts.push('analyzer '+String(previous?.analyzerVersion||'unknown')+' → '+String(current?.analyzerVersion||'unknown'));
+    parts.push('Favorable/unfavorable means the rolling sample moved beyond a predefined practical change band; it is not an independent before/after experiment.');
+    note.textContent=parts.join(' · ')+'.';
+  }
+  const targetOutcome=context.comparable?previousPracticeTargetOutcomes(current,previous):{rows:[],reason:'Previous Next-5 targets are not scored because '+context.reason.toLowerCase()};
+  const targetRows=targetOutcome.rows||[];
   if($('practiceOutcome')){
     $('practiceOutcome').innerHTML=targetRows.length?'<div class="target-outcome-head"><strong>Previous Next-5 targets</strong><small>Descriptive check against the exact saved metric path and goal.</small></div><div class="progress-comparison-grid">'+
       targetRows.map(x=>'<article class="progress-comparison-card '+x.cls+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.status)+'</strong><p>Now '+esc(x.current)+' · baseline '+esc(x.baseline)+' · target '+esc(x.goal)+'</p></article>').join('')+'</div>':
       (targetOutcome.reason?'<div class="target-outcome-note">'+esc(targetOutcome.reason)+'</div>':'');
   }
-  if(!rows.length&&!targetRows.length&&!targetOutcome.reason){$('progressComparisonPanel').hidden=true;return;}
-  $('previousAnalysisDate').textContent='Compared with '+fmtDate(previousAt);
+  if(!allRows.length&&!targetRows.length&&!targetOutcome.reason&&!context.reason){$('progressComparisonPanel').hidden=true;return;}
+  $('previousAnalysisDate').textContent='Rolling comparison with '+fmtDate(previousAt);
   $('progressComparisonPanel').hidden=false;
 }
-
 function sessionCard(title,sample){
   if(!sample||!Number(sample.games))return '';
   const games=Number(sample.games||0),laneN=Number(sample.lane15Games||0),timelineN=Number(sample.timelineGames??(hasNum(sample.badDeaths)?games:0)),dpmN=Number(sample.dpmGames??(hasNum(sample.dpm)?games:0)),csN=Number(sample.csMinGames??(hasNum(sample.csMin)?games:0)),thin=games<3;
