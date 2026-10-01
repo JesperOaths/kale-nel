@@ -124,7 +124,9 @@ ok(backend.includes('familyRaw==="DRAGON"&&memberSubtypes.some((x:any)=>x.includ
 ok(backend.includes('objectiveSetupClears'), 'objective-setup ward clears must remain measurable');
 ok(backend.includes('controlWardPurchases'), 'Control Ward purchases must remain separate from placement counts');
 ok(backend.includes('Number(e.itemId)===2055||text(info?.name).toLowerCase()==="control ward"'), 'Control Ward purchase detection must retain catalog-name and item-id evidence');
-ok(backend.includes('function majorPurchaseSequence(')&&backend.includes('secondMajorItemDeltaVsOpponent'), 'second major-item completion must remain measurable against the direct role opponent');
+ok(backend.includes('function majorOwnershipMilestones(')&&backend.includes('secondMajorItemDeltaVsOpponent'), 'second major-item completion must remain measurable from owned inventory against the direct role opponent');
+ok(backend.includes('ownedMajorCount<=milestones.length'), 'sale/rebuy or one-for-one upgrades must not create a false second-major milestone');
+ok(backend.includes('inventoryCountsAt(sorted,Number(e.tMs))'), 'major-item milestones must use the reconstructed item ledger');
 ok(backend.includes('secondMajorGames')&&backend.includes('avgSecondMajorTime')&&backend.includes('avgSecondMajorDeltaVsOpponent'), 'second major-item timing must remain aggregated');
 ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
 ok(backend.includes('objectiveRootCauses'), 'objective root-cause evidence ranking must remain in analyzer');
