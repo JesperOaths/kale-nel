@@ -677,7 +677,7 @@ function detailContent(g,tab){
   if(tab==='roams'){
     const r=g.roams||{},events=r.events||[];
     return detailCard('Attempts',String(r.attempts??0))+detailCard('Successful',String(r.successes??0))+detailCard('Failed',String(r.failures??0))+
-      detailList(events.map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+(x.targetZone||'map')+' · '+(x.outcome||'neutral')+(hasNum(x.laneCostCs)?' · own lane Δ '+signed(x.laneCostCs,0)+' CS':'')+(hasNum(x.adcLaneCostCs)?' · ADC lane Δ '+signed(x.adcLaneCostCs,0)+' CS':'')),'No qualifying pre-20-minute roam departures detected.');
+      detailList(events.map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+(x.targetZone||'map')+' · '+(x.outcome||'neutral')+(hasNum(x.laneCostCs)?' · own lane Δ '+signed(x.laneCostCs,0)+' CS':'')+(hasNum(x.adcLaneCostCs)?' · ADC lane Δ '+signed(x.adcLaneCostCs,0)+' CS':'')),'No qualifying pre-major-objective-era roam departures detected.');
   }
   if(tab==='fights'){
     const f=g.fightProfile||{},events=f.events||[];
@@ -711,7 +711,7 @@ function detailContent(g,tab){
     const risk=g.riskStateDeaths||{};
     return detailCard('Deaths',String(g.deaths??'n/a'))+detailCard('Flagged high-risk',String(g.badDeathCount??0))+detailCard('Deaths while ≥500g ahead',String(g.leadDeathCount??0))+detailCard('High-risk deaths while ahead',String(g.highRiskLeadDeathCount??0))+
       detailCard('Deaths while ≥500g behind',String(risk.behind??0))+detailCard('High-risk deaths while behind',String(risk.highRiskBehind??0)+' · '+(Number(risk.behind||0)>0?fmtPct(100*Number(risk.highRiskBehind||0)/Number(risk.behind)):'n/a'))+
-      detailCard('Post-15 side-lane deaths',String(g.sideLaneRisk?.post15SideLaneDeaths??0))+
+      detailCard('Post-early-phase side-lane deaths',String(g.sideLaneRisk?.postLaneSideLaneDeaths??g.sideLaneRisk?.post15SideLaneDeaths??0))+
       detailCard('Isolated side-lane deaths',String(g.sideLaneRisk?.isolatedSideLaneDeaths??0))+
       detailCard('Pre-objective side-lane deaths',String(g.sideLaneRisk?.preNeutralObjectiveSideLaneDeaths??0))+
       detailCard('Post-impact deaths',String(g.postImpactRisk?.deathsWithin30s??0)+' · '+fmtPct(g.postImpactRisk?.ratePerImpact))+
@@ -728,7 +728,7 @@ function detailContent(g,tab){
       detailList((g.leadDeaths||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+signed(x.goldDiffAtDeath,0)+'g vs role at death'+(hasNum(x.goldSwingAfter)?' · '+signed(x.goldSwingAfter,0)+'g role-diff swing after':'')+(x.highRisk?' · high-risk':'')+(x.enemyObjectiveAfter?' · enemy objective followed':'')),'No materially-ahead death was recorded.')+
       detailList((risk.events||[]).filter(x=>x.state==='behind').map(x=>(Number(x.time)||0).toFixed(1)+'m · '+signed(x.goldDiffAtDeath,0)+'g vs role · '+(x.highRisk?'high-risk':'not high-risk')+(x.traded?' · traded':' · untraded')+(x.enemyObjectiveAfter?' · enemy objective followed':'')+(hasNum(x.goldSwingAfter)?' · '+signed(x.goldSwingAfter,0)+'g role-diff swing after':'')),'No death was recorded while ≥500g behind the direct role opponent.')+
       detailList((g.postImpactRisk?.events||[]).map(x=>(Number(x.deathTime)||0).toFixed(1)+'m death · '+String(x.secondsAfterImpact??'?')+'s after own kill/assist'+(x.highRisk?' · high-risk':'')+(x.traded?' · traded':' · untraded')+(x.enemyObjectiveAfter?' · enemy objective followed':'')),'No death occurred within 30 seconds after your own kill/assist contribution.')+
-      detailList((g.sideLaneRisk?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+String(x.zone||'side lane')+(x.isolated?' · isolated':'')+(x.neutralObjectiveSoon?' · neutral objective '+String(x.secondsBeforeNeutralObjective??'?')+'s later':'')+(x.highRisk?' · high-risk':'')+(x.traded?' · traded':' · untraded')),'No post-15 side-lane death detected.')+
+      detailList((g.sideLaneRisk?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+String(x.zone||'side lane')+(x.isolated?' · isolated':'')+(x.neutralObjectiveSoon?' · neutral objective '+String(x.secondsBeforeNeutralObjective??'?')+'s later':'')+(x.highRisk?' · high-risk':'')+(x.traded?' · traded':' · untraded')),'No post-early-phase side-lane death detected.')+
       detailList((g.deathConsequences?.events||[]).filter(x=>x.costly).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+(x.severe?'severe':'costly')+(hasNum(x.goldSwingAfter)?' · role gold '+signed(x.goldSwingAfter,0)+'g':'')+(hasNum(x.csSwingAfter)?' · role CS '+signed(x.csSwingAfter,0):'')+(x.enemyObjectiveAfter?' · enemy objective followed':'')+(x.traded?' · traded':' · untraded')),'No measured death crossed the consequence threshold.')+
       detailList((g.deathRecovery?.events||[]).map(x=>Number(x.firstMin).toFixed(1)+'→'+Number(x.secondMin).toFixed(1)+'m · '+String(x.gapSec)+'s'+(x.phase?' · '+x.phase:'')+(x.highRisk?' · high-risk':'')+(x.costly?' · costly':'')+(x.severe?' · severe':'')+(x.traded?' · traded':' · untraded')),'No second death occurred within four minutes of the previous death.')+
       detailList(pre.map(x=>(Number(x.time)||0).toFixed(1)+'m death → '+String(x.objectiveType||'objective')+' '+String(x.secondsBeforeObjective||'?')+'s later'),'No death was followed by an enemy objective within 75 seconds.');
@@ -914,7 +914,7 @@ function renderAdvanced(r){
     ['Deaths while ≥500g behind',String(r.behaviorSummary?.behindStateDeaths??0)],
     ['High-risk while behind',String(r.behaviorSummary?.highRiskBehindDeaths??0)+' · '+fmtPct(r.behaviorSummary?.highRiskBehindDeathRate)],
     ['Enemy objective after death',String(a.preObjectiveDeaths??0)+' deaths · '+fmtPct(a.preObjectiveDeathPct)],
-    ['Post-15 side-lane deaths',String(r.behaviorSummary?.post15SideLaneDeaths??0)],
+    ['Post-early-phase side-lane deaths',String(r.behaviorSummary?.postLaneSideLaneDeaths??r.behaviorSummary?.post15SideLaneDeaths??0)],
     ['Isolated side-lane deaths',String(r.behaviorSummary?.isolatedSideLaneDeaths??0)+' · '+fmtPct(r.behaviorSummary?.isolatedSideLaneDeathRate)],
     ['Pre-objective side-lane deaths',String(r.behaviorSummary?.preNeutralObjectiveSideLaneDeaths??0)+' · '+fmt(r.behaviorSummary?.preNeutralObjectiveSideLaneDeathsPerGame,2)+'/game'],
     ['Post-impact deaths',String(r.behaviorSummary?.postImpactDeaths??0)+' / '+String(r.behaviorSummary?.playerImpactEvents??0)+' · '+fmtPct(r.behaviorSummary?.postImpactDeathRate)],
