@@ -372,6 +372,8 @@ ok(app.includes("String(p.profile_key||'')==='recent-request'")&&app.includes('i
 ok(backend.includes('identityMatch=(candidates||[]).find')&&backend.includes('reuseExistingId'), 'profile save must reuse an already-saved matching Riot identity');
 ok(identityMigration.includes('league_profiles_owner_riot_identity_uidx')&&identityMigration.includes("legacy.profile_key='recent-request'"), 'migration must merge empty aliases and enforce one Riot identity per workspace');
 ok(app.includes("oldHistory=await api('report_latest'")&&app.includes("target_role:inferredRole"), 'legacy mixed analysis may infer a preferred role but must be rebuilt role-pure from cached data');
+ok(app.includes("cache=await api('cache_status',{profile_id:profile.id,target_role:selectedRole})")&&app.includes("api('analyze_basic',{profile_id:profile.id,target_role:selectedRole})"), 'saved profiles with only old mixed reports must rebuild role-pure reports from cached Riot data without refetching');
+ok(app.includes('Role-selection safety check failed during saved-report rebuild'), 'cached report rebuild must reject cross-role contamination');
 ok(backend.includes('role(x?.data_quality?.selectedRole)===targetRole'), 'saved analysis history must be filtered by role before previous-analysis comparison');
 ok(backend.includes('nearest_player_frame_35s')&&backend.includes('wardFrameProjectedPositions'), 'ward events with omitted coordinates must be counted and boundedly projected rather than disappearing');
 ok(app.includes('function deathPatternEntries(')&&app.includes('objective_side_lane')&&app.includes('vision_facecheck')&&app.includes('post_play_giveback'), 'death review must classify recurring supported patterns instead of showing only one undifferentiated map');
