@@ -368,6 +368,8 @@ function renderProgressComparison(current,previous,previousAt){
     {label:'Pre-objective side-lane deaths / game',path:'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame',threshold:.15,direction:-1,format:v=>fmt(v,2)},
     {label:'High-risk post-play give-backs / game',path:'behaviorSummary.highRiskUntradedPostImpactPerGame',threshold:.15,direction:-1,format:v=>fmt(v,2)},
     {label:'Pre-14 solo deaths to role / game',path:'behaviorSummary.pre14RoleSoloDeathPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
+    {label:'First-reset loss rate',path:'behaviorSummary.firstResetLossRate',threshold:15,direction:-1,format:v=>fmtPct(v)},
+    {label:'First-reset role-CS swing',path:'behaviorSummary.avgFirstResetCsSwing',threshold:2,direction:1,format:v=>signed(v,1)+' CS'},
     {label:'First major item vs peer',path:'peerComparison.avgMajorItemDeltaMin',threshold:.4,direction:-1,format:v=>signed(v,1)+' min'},
     {label:'Major-item spike utilization',path:'behaviorSummary.itemSpikeUtilizationRate',threshold:15,direction:1,format:v=>fmtPct(v)},
     {label:'Damage share − gold share',path:'behaviorSummary.damageGoldEfficiency',threshold:2,direction:1,format:v=>signed(v,1)+' pp'},
@@ -628,14 +630,23 @@ function detailContent(g,tab){
       '<div class="detail-note">Conversion is team context: it asks whether player-involved kills are followed by tracked objectives/structures within 75 seconds. It does not claim the player alone caused or prevented the conversion.</div>';
   }
   if(tab==='resets'){
-    const mine=g.firstMajorItem,opp=g.opponentFirstMajorItem,shops=g.shopVisits||[],greedy=g.greedyStayWindows||[],spike=g.itemSpikeWindow||{};
-    return detailCard('First major item',mine?(mine.name+' · '+fmt(mine.time,1)+'m'):'n/a')+
+    const mine=g.firstMajorItem,opp=g.opponentFirstMajorItem,shops=g.shopVisits||[],greedy=g.greedyStayWindows||[],spike=g.itemSpikeWindow||{},firstReset=g.firstResetSequence||null;
+    return detailCard('First reset / shop',firstReset?(fmt(firstReset.time,1)+'m · spent '+fmtInt(firstReset.spent)+'g'):'n/a')+
+      detailCard('First reset vs peer',firstReset&&hasNum(firstReset.timingDeltaVsOpponent)?signed(firstReset.timingDeltaVsOpponent,1)+' min':'n/a')+
+      detailCard('Post-reset role-gold swing',firstReset&&hasNum(firstReset.goldSwingAfter)?signed(firstReset.goldSwingAfter,0)+'g':'n/a')+
+      detailCard('Post-reset role-CS swing',firstReset&&hasNum(firstReset.csSwingAfter)?signed(firstReset.csSwingAfter,1)+' CS':'n/a')+
+      detailCard('First-reset outcome',!firstReset?'n/a':firstReset.deathInWindow?'measurement contaminated by death':firstReset.economyLoss?'economy loss':firstReset.economyGain?'economy gain':firstReset.measured?'neutral / mixed':'unmeasured')+
+      detailCard('First major item',mine?(mine.name+' · '+fmt(mine.time,1)+'m'):'n/a')+
       detailCard('Opponent major item',opp?(opp.name+' · '+fmt(opp.time,1)+'m'):'n/a')+
       detailCard('Timing vs opponent',hasNum(g.itemSpikeDeltaVsOpponent)?signed(g.itemSpikeDeltaVsOpponent,1)+' min':'n/a')+
       detailCard('Item-spike window',spike.eligible?(fmtInt(spike.leadSec)+'s advantage'):'No ≥45s item window')+
       detailCard('Spike-window impact',spike.eligible?(String(spike.totalImpacts||0)+' impact(s) · '+(spike.used?'used':'unused')):'n/a')+
       detailCard('Died before spike impact',spike.eligible?(spike.diedBeforeImpact?'yes':'no'):'n/a')+
       detailCard('Detected shop visits',String(shops.length))+detailCard('Greedy-stay windows',String(greedy.length))+detailCard('Overstay deaths',String(g.overstayCount??0))+
+      detailList(firstReset?[('First shop '+fmt(firstReset.time,1)+'m · spent '+fmtInt(firstReset.spent)+'g'+(firstReset.items?.length?' · '+firstReset.items.map(x=>x.name||x.id||'item').join(', '):'')+
+        (hasNum(firstReset.goldDiffBefore)?' · role gold '+signed(firstReset.goldDiffBefore,0)+'g before':'')+(hasNum(firstReset.goldDiffAfter)?' → '+signed(firstReset.goldDiffAfter,0)+'g after':'')+
+        (hasNum(firstReset.csDiffBefore)?' · role CS '+signed(firstReset.csDiffBefore,0)+' before':'')+(hasNum(firstReset.csDiffAfter)?' → '+signed(firstReset.csDiffAfter,0)+' after':'')+
+        (firstReset.deathInWindow?' · death in measurement window':firstReset.economyLoss?' · economy loss':firstReset.economyGain?' · economy gain':''))]:[],'No measurable first-reset sequence was available.')+
       detailList((spike.events||[]).map(x=>fmt(x.time,1)+'m · '+(x.type==='kill_or_assist'?'kill/assist impact':'objective impact'+(x.objectiveType?' · '+x.objectiveType:''))),'No tracked impact occurred inside the measurable first-major-item advantage window.')+
       detailList(greedy.map(x=>(Number(x.startMin)||0).toFixed(1)+'m · '+fmtInt(x.currentGold)+'g held · next shop '+(Number(x.nextShopMin)||0).toFixed(1)+'m ('+fmt(x.delayMin,1)+'m delay)'),'No repeated high-gold stay window detected.');
   }
@@ -774,6 +785,12 @@ function renderAdvanced(r){
     ['Top risky-death area',r.behaviorSummary?.topBadDeathZone?String(r.behaviorSummary.topBadDeathZone)+' · '+fmtPct(r.behaviorSummary.topBadDeathZonePct):'n/a'],
     ['Roam attempts / success',String(roam.attempts??0)+' / '+fmtPct(roam.successRate)],
     ['Roam lane cost',hasNum(roam.avgLaneCostCs)?signed(roam.avgLaneCostCs,1)+' CS avg · '+String(roam.emptyCostlyRoams??0)+' empty costly':'n/a'],
+    ['First-reset measured / clean games',String(r.behaviorSummary?.firstResetMeasuredGames??0)+' / '+String(r.behaviorSummary?.firstResetCleanGames??0)],
+    ['First-reset loss / gain games',String(r.behaviorSummary?.firstResetLossGames??0)+' / '+String(r.behaviorSummary?.firstResetGainGames??0)],
+    ['First-reset loss rate',fmtPct(r.behaviorSummary?.firstResetLossRate)],
+    ['Avg first-reset role-gold swing',hasNum(r.behaviorSummary?.avgFirstResetGoldSwing)?signed(r.behaviorSummary.avgFirstResetGoldSwing,0)+'g':'n/a'],
+    ['Avg first-reset role-CS swing',hasNum(r.behaviorSummary?.avgFirstResetCsSwing)?signed(r.behaviorSummary.avgFirstResetCsSwing,1)+' CS':'n/a'],
+    ['Avg first-reset timing vs peer',hasNum(r.behaviorSummary?.avgFirstResetTimingDelta)?signed(r.behaviorSummary.avgFirstResetTimingDelta,1)+' min':'n/a'],
     ['High-gold stay windows',String(recall.greedyStayWindows??0)],
     ['Major-item Δ vs opponent',hasNum(itemSpike.avgDeltaVsOpponentMin)?signed(itemSpike.avgDeltaVsOpponentMin,1)+' min':'n/a'],
     ['Earlier-item windows used',String(itemSpike.utilizedWindows??0)+' / '+String(itemSpike.eligibleWindows??0)+' · '+fmtPct(itemSpike.utilizationRate)],
