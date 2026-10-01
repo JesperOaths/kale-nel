@@ -32,6 +32,10 @@ ok(backend.includes('soloKillConversionRate'), 'aggregate clean solo-kill conver
 ok(backend.includes('diedBeforeNextShop'), 'post-solo-kill banking model must preserve death-before-shop ordering');
 ok(backend.includes('nextShopDelaySec'), 'post-solo-kill banking model must preserve time to next detected shop');
 ok(backend.includes('soloKillDeathsBeforeShopRate'), 'aggregate post-solo-kill death-before-shop rate must remain exported');
+ok(backend.includes('itemSpikeWindow'), 'first-major-item spike utilization model must remain in analyzer');
+ok(backend.includes('leadSec>=45'), 'measurable first-major-item advantage must remain at least 45 seconds');
+ok(backend.includes('itemSpikeUtilizationRate'), 'aggregate first-major-item spike utilization rate must remain exported');
+ok(backend.includes('diedBeforeImpact'), 'item-spike model must preserve death-before-impact evidence');
 ok(backend.includes('visionMission'), 'vision-action safety model must remain in analyzer');
 ok(backend.includes('Number(d.tMs)-Number(v.tMs)<=20000'), 'vision-action death window must remain 20 seconds');
 ok(backend.includes('dist2(pos,v)<=2500*2500'), 'vision-action death spatial radius must remain 2500 units');
