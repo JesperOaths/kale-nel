@@ -259,7 +259,7 @@ async function loadCacheStatus(){
   }
 }
 
-async function fetchProfileData(profile,requestedCount){
+async function fetchProfileData(profile,requestedCount,progressStart=8,progressEnd=82){
   log('Preparing recent match list for '+profile.display_name+'. Queue/duration quality filters are applied later; '+requestedCount+' raw matches requested.');
   const prep=await api('fetch_prepare',{profile_id:profile.id,count:requestedCount});
   const ids=prep.match_ids||[],cached=new Set(prep.cached_match_ids||[]);
@@ -269,7 +269,7 @@ async function fetchProfileData(profile,requestedCount){
   for(const id of ids){
     done++;
     if(cached.has(id)){
-      log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · cache hit','ok');setProgress(done,ids.length);continue;
+      log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · cache hit','ok');setProgress(progressStart+(progressEnd-progressStart)*(done/Math.max(1,ids.length)),100);continue;
     }
     log('['+done+'/'+ids.length+'] '+profile.display_name+' · fetching match + timeline '+id+'…');
     try{
@@ -277,7 +277,7 @@ async function fetchProfileData(profile,requestedCount){
       if(one.timeline_available){usable++;log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · match + timeline cached','ok');}
       else{usable++;log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · match cached, timeline unavailable: '+(one.timeline_error||'unknown'),'bad');}
     }catch(e){failed++;log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · '+e.message,'bad');}
-    setProgress(done,ids.length);
+    setProgress(progressStart+(progressEnd-progressStart)*(done/Math.max(1,ids.length)),100);
     await sleep(100);
   }
   const finish=await api('fetch_finish',{run_id:prep.run_id});
@@ -307,14 +307,15 @@ async function runRecentAnalysis(){
     log('Resolved '+profile.display_name+'. Fetching recent Riot matches now.','ok');
     statusPill('Fetching recent matches','warn');
     setProgress(4,100);
-    let result=await fetchProfileData(profile,30);
+    let result=await fetchProfileData(profile,30,8,64);
     if(Number(result.finish?.comparable_cached_games||0)<20){
       log('Fewer than 20 comparable games found in the first 30. Extending the scan to 50 recent matches automatically.','ok');
-      result=await fetchProfileData(profile,50);
+      result=await fetchProfileData(profile,50,64,84);
     }
+    if(Number(result.finish?.comparable_cached_games||0)>=20)setProgress(84,100);
     await loadCacheStatus();
     statusPill('Analyzing Last 20','warn');
-    setProgress(88,100);
+    setProgress(90,100);
     const d=await analyzeProfileData(profile);
     const analyzed=Number(d.report?.dataQuality?.analyzedGames??d.report?.games?.length??0);
     if(analyzed<=0)throw new Error('Recent matches were fetched, but none were eligible for the Last-20 analysis. Check the progress details for queue/map/duration exclusions.');
