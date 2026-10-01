@@ -401,6 +401,9 @@ ok(app.includes('deathPatternMap(examples)')&&app.includes('map numbers match th
 ok(backend.includes('function persistedReportProjection(rep:any)')&&backend.includes('league_saved_report_compact_v1'), 'saved reports must use a versioned compact storage projection');
 ok(!backend.includes('omittedPerGame:["badDeaths"')&&!backend.includes('omittedPerGame:["wards"'), 'compact saved reports must preserve death/ward evidence used by reloaded intelligence views');
 ok(html.includes('id="compoundSignals"')&&app.includes('function renderCompoundSignals('), 'compound evidence analysis must combine related metrics into interpretable intelligence');
+ok(html.includes('id="reportDrivers"')&&app.includes('function renderReportDrivers('), 'report must compress the strongest supported weakness, strength and recent direction into an action-first layer');
+ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('matchHistorySignals('), 'recent selected-role games must have collapsible coaching-readable history rows with derived evidence signals');
+ok(html.includes('id="outcomeFingerprint"')&&app.includes('function renderOutcomeFingerprint('), 'selected-role games must expose descriptive win/loss fingerprint analysis without requiring another backend fetch');
 ok(app.includes("objDiagnosed?tonePct(objective,70,45,false):'neutral'"), 'objective attendance judgment must require role-appropriate supported diagnosis');
 ok(html.includes('id="rankRadarPanel"')&&app.includes("reportRole!=='ADC'"), 'ADC benchmark UI must be withheld for non-ADC role reports');
 ok(app.includes('Next 5 comparable games'), 'practice cards must identify the short practice horizon');
