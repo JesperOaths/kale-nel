@@ -765,9 +765,9 @@ The historical desktop specification described this as "Mythic gold threshold + 
 
 For the first major completion:
 1. resolve the completed item's current Data Dragon recipe,
-2. require its direct recipe components to have been observed in the player's purchase timeline,
+2. reconstruct item ownership from purchase, sale, destruction and undo events, and require the direct recipe components to be **simultaneously present** rather than merely purchased at some point earlier,
 3. use the item's remaining combine cost (`gold.base`) as the supported completion threshold,
-4. after those direct ingredients are present, find the first pre-purchase timeline frame where **current spendable gold** covers that remaining combine cost,
+4. while those direct ingredients are actually present, find the first pre-purchase timeline frame where **current spendable gold** covers that remaining combine cost,
 5. compare that supported affordability time with the actual completed-item purchase event.
 
 The result preserves:
@@ -781,7 +781,7 @@ The result preserves:
 
 This is deliberately stricter than comparing total earned gold with a fixed item cost. Total gold includes gold already converted into components, while current gold alone is insufficient until the relevant recipe pieces are owned. Requiring both the observed direct ingredients and enough current gold for the remaining combine cost better reconstructs when the completed breakpoint was actually fundable.
 
-The purchase event is the supported shop-completion marker; it is **not** treated as an exact recall-channel timestamp. Timeline frames are coarse, so the affordability minute is an estimate. If the item recipe, direct components, purchase events or a qualifying frame are missing, the measurement fails closed rather than manufacturing a timing.
+The purchase event is the supported shop-completion marker; it is **not** treated as an exact recall-channel timestamp. Timeline frames are coarse, so the affordability minute is an estimate. If the item recipe, a coherent component inventory state, item transaction events or a qualifying frame are missing, the measurement fails closed rather than manufacturing a timing. This also avoids treating a component that was sold, destroyed into another recipe, or undone as if it were still available for the final completion.
 
 The existing direct-role completed-item comparison and earlier-item utilization window remain separate:
 - **readiness delay** asks whether a fundable completion sat unbought,
