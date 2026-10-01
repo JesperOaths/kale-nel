@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.75";
+const ANALYZER_VERSION="league-web-behavior-v4.76";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -226,12 +226,16 @@ function externalAdcTierBenchmark(tier:any){
 function externalAdcBenchmarkSet(rankSnapshot:any,cohortQueueId:any){
   const queueId=Number(cohortQueueId||0),rankedQueueType=queueId===420?"RANKED_SOLO_5x5":queueId===440?"RANKED_FLEX_SR":null;
   const rankedEntry=rankedQueueType?rankEntryFor(rankSnapshot,rankedQueueType):null,tier=text(rankedEntry?.tier).toUpperCase(),idx=RANK_TIERS.indexOf(tier);
-  const eligible=!!rankedQueueType&&idx>=0;
+  const eligible=!!rankedQueueType&&idx>=0,sourceCapturedAt="2026-03-23",capturedMs=Date.parse(sourceCapturedAt+"T00:00:00Z"),calibrationAgeDays=Number.isFinite(capturedMs)?Math.max(0,Math.floor((Date.now()-capturedMs)/86400000)):null;
   const at=(offset:number)=>eligible&&idx+offset<RANK_TIERS.length?externalAdcTierBenchmark(RANK_TIERS[idx+offset]):null;
   return{
     source:"LegendsTracker methodology",
     sourceUrl:"https://legendstracker.fr/methodologie",
-    sourceCapturedAt:"2026-03-23",
+    sourceCapturedAt,
+    calibrationAgeDays,
+    freshnessStatus:hasNum(calibrationAgeDays)&&Number(calibrationAgeDays)>90?"historical_reference":"recent_reference",
+    referenceOnly:true,
+    coachingEligible:false,
     sourceCorpus:"830k+ ranked EUW1 games",
     sourcePopulation:"ranked_euw1",
     role:"ADC",
@@ -241,7 +245,7 @@ function externalAdcBenchmarkSet(rankSnapshot:any,cohortQueueId:any){
     cohortQueueType:rankedQueueType,
     eligible,
     eligibilityReason:!rankedQueueType?"selected_cohort_not_ranked":idx<0?"matching_rank_queue_tier_unavailable":"ranked_queue_and_tier_available",
-    methodology:"Rank-level averages from the published ranked corpus. CS/min, KP and DPM are adjusted using the source's Bot (ADC) role multipliers ×1.1; KDA, deaths/game and GPM use the published rank averages directly. Ranked population comparisons are withheld for non-ranked report cohorts.",
+    methodology:"Rank-level averages from the published ranked corpus. CS/min, KP and DPM are adjusted using the source's Bot (ADC) role multipliers ×1.1; KDA, deaths/game and GPM use the published rank averages directly. These values are visual/reference context only and are never inputs to coaching priority, practice targets, or rank predictions.",
     currentTier:tier||null,
     same:at(0),
     plus1:at(1),
