@@ -754,6 +754,7 @@ function renderQuality(r){
   const cards=[
     qualityCard('Analyzed games',String(analyzed),String(coaching)+' primary-role coaching games',evidenceLevel(coaching)),
     qualityCard('Queue context',hasNum(q.dominantQueueId)?'Queue '+String(q.dominantQueueId):'n/a',String(q.dominantQueueGames??0)+' analyzed-context games · '+String(q.excludedOtherQueues??0)+' other queue-context games excluded',evidenceLevel(q.dominantQueueGames??0)),
+    qualityCard('Patch context',q.currentPatchKey?('Patch '+String(q.currentPatchKey)):'n/a',String(q.currentPatchRoleGames??0)+' current-patch role games · '+String(q.olderSamePatchRoleGames??0)+' older same-patch baseline · '+String(q.crossPatchBaselineRoleGames??0)+' cross-patch older games excluded from trend',q.patchBaselineReady?'good':'neutral'),
     qualityCard('Sample exclusions',String(Number(q.excludedShortGames||0)+Number(q.excludedOtherMaps||0)+Number(q.excludedOtherQueues||0)+Number(q.excludedMissingRole||0))+' games',String(q.excludedShortGames??0)+' under 10m · '+String(q.excludedOtherMaps??0)+' other maps · '+String(q.excludedOtherQueues??0)+' other queues · '+String(q.excludedMissingRole??0)+' missing role','neutral'),
     qualityCard('Timeline coverage',hasNum(timelinePct)?fmtPct(timelinePct):'n/a',String(timelines)+' / '+String(analyzed)+' games',evidenceLevel(timelines)),
     qualityCard('Direct peer evidence',String(peerN)+' games','Actual same-role opponents',evidenceLevel(peerN)),
@@ -761,7 +762,7 @@ function renderQuality(r){
     qualityCard('Fight evidence',String(fightN)+' clusters','Attended multi-kill fight clusters',evidenceLevel(fightN,12,6)),
     qualityCard('Objective evidence',String(objectiveN)+' events','Tracked team neutral objectives',evidenceLevel(objectiveN,10,5)),
     qualityCard('Ward evidence',String(wardN)+' wards','Used for spatial/setup analysis',evidenceLevel(wardN,30,12)),
-    qualityCard('Broader self baseline',String(q.coachingBaselineRoleGames??q.baselineGames??0)+' games','Older cached primary-role games',evidenceLevel(q.coachingBaselineRoleGames??q.baselineGames??0))
+    qualityCard('Same-patch self baseline',String(q.coachingBaselineRoleGames??0)+' games',q.currentPatchKey?('Older primary-role games on patch '+String(q.currentPatchKey)):'No usable patch cohort',evidenceLevel(q.coachingBaselineRoleGames??0))
   ];
   $('qualityGrid').innerHTML=cards.join('');
   const low=[];
@@ -771,6 +772,7 @@ function renderQuality(r){
   if(fightN<6)low.push('fight-order/readiness');
   if(Number(q.excludedShortGames||0)>0)low.push('short games excluded from coaching');
   if(Number(q.excludedOtherQueues||0)>0)low.push('mixed queue contexts excluded');
+  if(q.currentPatchKey&&!q.patchBaselineReady)low.push('same-patch historical trend baseline');
   const base=r.sourceStatus?.note||'Report data remains traceable through the report contract. Missing data remains unknown rather than zero.';
   $('sourceNote').textContent=base+(low.length?' Thin-evidence areas right now: '+low.join(', ')+'.':' Core evidence coverage is sufficient for the main coaching dimensions.');
 }
