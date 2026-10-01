@@ -255,6 +255,7 @@ assert.ok(app.includes('fetchProfileData(profile,30)')&&app.includes('fetchProfi
 assert.ok(app.includes('await fetchProfileData')&&app.includes('await analyzeProfileData'),'Direct request must fetch before analyzing rather than analyzing an empty cache');
 assert.ok(app.includes('if(analyzed<=0)throw new Error'),'A zero-game analysis must be treated as a failed request rather than a successful report');
 assert.ok(app.includes('scheduleHeavyReportRender')&&app.includes('requestIdleCallback'),'Charts/maps must defer heavy rendering until browser idle time');
+assert.ok(app.includes('progressStart+(progressEnd-progressStart)'),'One-click progress must remain monotonic across fetch and analysis phases');
 assert.ok(!app.includes('bruisienator_recent_request_identity'),'Riot ID request fields must not become another persistent browser profile');
 assert.ok(css.includes('.direct-request-grid')&&css.includes('.request-button'),'Direct request controls must retain their spacious colored layout');
 assert.ok(api.includes('identityChanged')&&api.includes('league_match_cache_v1')&&api.includes('league_analysis_runs_v1'),'Changing the direct Riot identity must clear stale cached matches/analyses before resolving the new summoner');
@@ -400,7 +401,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v96'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v97'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
