@@ -131,7 +131,7 @@ function rankScore(r:any){
 }
 function rankLabel(r:any){
   if(!r||!text(r.tier))return"Unranked / unknown";
-  return [text(r.tier).toUpperCase(),text(r.rank).toUpperCase(),Number.isFinite(Number(r.leaguePoints))?String(r.leaguePoints)+" LP":""].filter(Boolean).join(" ");
+  return [text(r.tier).toUpperCase(),text(r.rank).toUpperCase(),hasNum(r.leaguePoints)?String(r.leaguePoints)+" LP":""].filter(Boolean).join(" ");
 }
 
 let itemCatalogCache:any=null;
@@ -361,7 +361,7 @@ function gameJudgments(g:any){
     if(rate<40)add(2,"roaming","Roam conversion was weak in this game",String(g.roams.successes||0)+" of "+String(g.roams.attempts||0)+" detected departures produced a kill/assist or objective.","Leave lane on pushed/covered waves and abort earlier when the target lane cannot follow.");
     else if(rate>=67)add(4,"roaming","Your roam windows converted well",String(g.roams.successes||0)+" of "+String(g.roams.attempts||0)+" detected departures produced a kill/assist or objective.","Keep the timing, then check the lane cost so the roam is not merely shifting resources.","strength");
   }
-  if(Number(g.objectiveTeamTotal)>=2&&Number.isFinite(Number(g.objectiveJoinRate))){
+  if(Number(g.objectiveTeamTotal)>=2&&hasNum(g.objectiveJoinRate)){
     if(Number(g.objectiveJoinRate)<40)add(2,"objectives","You missed much of your team's objective action","Presence was "+Math.round(Number(g.objectiveJoinRate))+"% across "+String(g.objectiveTeamTotal)+" tracked team objective events.","Plan the preceding recall/path one minute earlier rather than reacting after the objective starts.");
     else if(Number(g.objectiveJoinRate)>=75)add(4,"objectives","You were consistently present for objective action","Presence was "+Math.round(Number(g.objectiveJoinRate))+"% across "+String(g.objectiveTeamTotal)+" tracked team objective events.","Preserve the timing and improve setup quality through vision and safer pre-objective positioning.","strength");
   }
@@ -447,7 +447,7 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,p
     if(Number(peerDpm)>=120)push(highlights,"fighting","You outperform the direct counterpart in damage","You average +"+Math.round(Number(peerDpm))+" champion damage per minute versus the same-role opponent and beat them on DPM in "+Math.round(Number(peerDpmWin||0))+"% of "+peerGames.length+" games.","Protect this strength by reducing deaths that occur before objectives.",conf(peerGames.length),4,"same-role opponents");
     if(Number(peerCs)<=-0.5&&["ADC","MID","TOP"].includes(primaryRole))push(recentFocus,"farming","Farm pace trails the actual lane peer","You average "+Math.abs(Number(peerCs)).toFixed(2)+" CS/min less than the same-role opponent and finish ahead on CS/min in only "+Math.round(Number(peerCsWin||0))+"% of comparable games.","Track the waves lost around recalls, roams and unnecessary mid-game grouping.",conf(peerGames.length),2,"same-role opponents");
   }
-  if(["ADC","MID","TOP"].includes(primaryRole)&&resourceGames.length>=5&&Number.isFinite(Number(damageGoldEfficiency))){
+  if(["ADC","MID","TOP"].includes(primaryRole)&&resourceGames.length>=5&&hasNum(damageGoldEfficiency)){
     if(Number(damageGoldEfficiency)<=-4)push(recentFocus,"resource conversion","Resource conversion is below your team investment","Across "+resourceGames.length+" games you average "+Number(avgGoldShare).toFixed(1)+"% of team gold but "+Number(avgDamageShare).toFixed(1)+"% of team champion damage ("+signedText(damageGoldEfficiency,1)+" percentage points).","Focus on turning farm/item advantages into fight uptime: arrive on time, preserve positioning, and avoid deaths before the damage window.",conf(resourceGames.length),2,"own-team damage share versus gold share");
     else if(Number(damageGoldEfficiency)>=4)push(highlights,"resource conversion","You create strong damage output for your share of resources","Across "+resourceGames.length+" games you average "+Number(avgDamageShare).toFixed(1)+"% of team champion damage from "+Number(avgGoldShare).toFixed(1)+"% of team gold ("+signedText(damageGoldEfficiency,1)+" percentage points).","Protect this efficiency; do not give away uptime through avoidable deaths when your team is getting high output from your resources.",conf(resourceGames.length),4,"own-team damage share versus gold share");
   }
