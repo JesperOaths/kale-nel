@@ -4,8 +4,11 @@ import postgres from "npm:postgres@3.4.7";
 import { fxAuditSnapshot, marginEurCentsForSize, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_BPS, retailEurCentsFromUsdCost, retailEurCentsFromUsdCostAfterVat, stableClassicShirtRetailEurCents } from "../_shared/shop-fx.mjs";
 
 const PRINTIFY_BASE = "https://api.printify.com/v1";
-const CACHE_FRESH_MS = 60_000;
+const CACHE_FRESH_MS = 15 * 60_000;
 const REFRESH_LEASE_MS = 120_000;
+const MEMORY_ROW_TTL_MS = 60_000;
+let memoryCatalogRow: any = null;
+let memoryCatalogLoadedAt = 0;
 const MAX_PAGES = 100;
 const HIDDEN_PUBLIC_BLUEPRINT_IDS = new Set(["1382"]);
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl", "https://jesperoaths.github.io"]);
@@ -138,6 +141,10 @@ function directDb() {
 }
 
 async function readCatalogCacheDirect() {
+  // Keep a short-lived in-isolate copy of the large catalog row. The underlying
+  // JSONB payload is expensive to repeatedly decompress/serialize, while checkout
+  // remains the final authority for current price/availability.
+  if(memoryCatalogRow && Date.now()-memoryCatalogLoadedAt < MEMORY_ROW_TTL_MS) return memoryCatalogRow;
   // Prefer the Data API so storefront reads do not depend on opening a new
   // Supavisor/direct Postgres socket. Fall back to the direct connection for
   // compatibility if the Data API is temporarily unavailable.
@@ -161,7 +168,10 @@ async function readCatalogCacheDirect() {
       });
       if (response.ok) {
         const rows = await response.json().catch(() => []);
-        if (Array.isArray(rows) && rows[0]) return rows[0];
+        if (Array.isArray(rows) && rows[0]) {
+          memoryCatalogRow=rows[0];memoryCatalogLoadedAt=Date.now();
+          return memoryCatalogRow;
+        }
       }
     } catch {}
     finally { clearTimeout(timer); }
@@ -175,7 +185,8 @@ async function readCatalogCacheDirect() {
       where id = 1
       limit 1
     `;
-    return rows?.[0] || null;
+    memoryCatalogRow=rows?.[0]||null;memoryCatalogLoadedAt=Date.now();
+    return memoryCatalogRow;
   } finally {
     try { await sql.end({ timeout: 1 }); } catch {}
   }
@@ -219,6 +230,12 @@ async function updateCatalogCacheDirect(values: {
             updated_at = ${now}
         where id = 1
       `;
+      memoryCatalogRow={
+        payload:values.payload,
+        generated_at:values.generated_at||now,
+        refresh_started_at:values.refresh_started_at??null,
+      };
+      memoryCatalogLoadedAt=Date.now();
     } else {
       await sql`
         update public.shop_catalog_cache_v828
