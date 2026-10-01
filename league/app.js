@@ -327,6 +327,8 @@ function renderProgressComparison(current,previous,previousAt){
     {label:'High-risk deaths / game',path:'behaviorSummary.badDeathsPerTimelineGame',threshold:.3,direction:-1,format:v=>fmt(v,1)},
     {label:'Early high-risk deaths / game',path:'behaviorSummary.phaseRisk.early.highRiskDeathsPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
     {label:'Mid high-risk deaths / game',path:'behaviorSummary.phaseRisk.mid.highRiskDeathsPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
+    {label:'Mid routing CS swing 15→25',path:'behaviorSummary.midRouting.avgCsSwing15to25',threshold:4,direction:1,format:v=>signed(v,1)+' CS'},
+    {label:'Mid routing objective presence',path:'behaviorSummary.midRouting.avgObjectiveJoinRate',threshold:10,direction:1,format:v=>fmtPct(v)},
     {label:'Late high-risk deaths / game',path:'behaviorSummary.phaseRisk.late.highRiskDeathsPerGame',threshold:.2,direction:-1,format:v=>fmt(v,2)},
     {label:'High-risk untraded / game',path:'behaviorSummary.highRiskUntradedPerGame',threshold:.25,direction:-1,format:v=>fmt(v,1)},
     {label:'Costly deaths / game',path:'behaviorSummary.costlyDeathsPerTimelineGame',threshold:.25,direction:-1,format:v=>fmt(v,2)},
@@ -480,7 +482,7 @@ function detailContent(g,tab){
       const x=p[key]||{};
       return '<div class="detail-note"><strong>'+esc(label)+'</strong><ul>'+
         '<li>'+esc(String(x.deaths??0))+' deaths · '+esc(String(x.highRiskDeaths??0))+' high-risk · '+esc(String(x.costlyDeaths??0))+' costly · '+esc(String(x.severeDeaths??0))+' severe</li>'+
-        '<li>'+esc(String(x.killAssistImpacts??0))+' kill/assist impacts · '+esc(String(x.objectiveJoins??0))+' objective joins</li>'+
+        '<li>'+esc(String(x.killAssistImpacts??0))+' kill/assist impacts · '+esc(String(x.objectiveJoins??0))+' / '+esc(String(x.teamObjectives??0))+' objective joins'+(Number(x.teamObjectives||0)>0?' · '+esc(fmtPct(100*Number(x.objectiveJoins||0)/Number(x.teamObjectives)))+' presence':'')+'</li>'+
         '<li>'+esc(String(x.fightClusters??0))+' attended fight clusters · '+esc(String(x.firstAllyFightDeaths??0))+' first-allied-death events</li>'+
       '</ul></div>';
     };
@@ -634,6 +636,12 @@ function renderAdvanced(r){
     ['Mid-phase high-risk deaths',String(r.behaviorSummary?.phaseRisk?.mid?.highRiskDeaths??0)+' · '+fmt(r.behaviorSummary?.phaseRisk?.mid?.highRiskDeathsPerGame,2)+'/game'],
     ['Late-phase high-risk deaths',String(r.behaviorSummary?.phaseRisk?.late?.highRiskDeaths??0)+' · '+fmt(r.behaviorSummary?.phaseRisk?.late?.highRiskDeathsPerGame,2)+'/game'],
     ['Early / mid / late costly deaths',String(r.behaviorSummary?.phaseRisk?.early?.costlyDeaths??0)+' / '+String(r.behaviorSummary?.phaseRisk?.mid?.costlyDeaths??0)+' / '+String(r.behaviorSummary?.phaseRisk?.late?.costlyDeaths??0)],
+    ['Mid-routing comparable games',String(r.behaviorSummary?.midRouting?.games??0)],
+    ['Mid-routing CS swing 15→25',hasNum(r.behaviorSummary?.midRouting?.avgCsSwing15to25)?signed(r.behaviorSummary.midRouting.avgCsSwing15to25,1)+' CS':'n/a'],
+    ['Mid-routing objective presence',fmtPct(r.behaviorSummary?.midRouting?.avgObjectiveJoinRate)],
+    ['Mid-routing inefficient games',String(r.behaviorSummary?.midRouting?.inefficientGames??0)],
+    ['Mid-routing balanced games',String(r.behaviorSummary?.midRouting?.balancedGames??0)],
+    ['Side-farm / low-presence games',String(r.behaviorSummary?.midRouting?.sideFarmLowPresenceGames??0)],
     ['Measured costly deaths',String(r.behaviorSummary?.costlyDeathEvents??0)+' / '+String(r.behaviorSummary?.measuredDeathConsequences??0)+' · '+fmtPct(r.behaviorSummary?.costlyDeathRate)],
     ['Severe death consequences',String(r.behaviorSummary?.severeDeathEvents??0)+' · '+fmt(r.behaviorSummary?.severeDeathsPerTimelineGame,2)+'/game'],
     ['Rapid repeat deaths',String(r.behaviorSummary?.repeatDeaths??0)+' / '+String(r.behaviorSummary?.repeatDeathOpportunities??0)+' · '+fmtPct(r.behaviorSummary?.repeatDeathRate)],
