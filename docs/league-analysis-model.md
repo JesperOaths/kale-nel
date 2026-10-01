@@ -194,6 +194,22 @@ This is explicitly **team-context evidence**. The player can influence the decis
 
 The action recommendation is decision-oriented: after winning a skirmish, scan immediately for objective, structure and wave value before chasing or resetting.
 
+## Neutral-objective reset timing
+
+For tracked team neutral objectives (dragon/Baron/Herald-family events), preserve whether the player was present and the timing of their most recent detected shop visit.
+
+A **late-reset miss** requires all of the following:
+- the team secures a tracked neutral objective,
+- the player is not within the objective action radius,
+- the player was not recently dead,
+- the last detected shop visit ended within 60 seconds before the objective.
+
+This is intended to separate a timing/planning error from an absence caused by death.
+
+Also preserve **fresh-purchase joins** where the player attends the objective within roughly two minutes of a detected shop visit. These can support a positive reset-timing judgment.
+
+The shop event is an approximation based on Riot item-purchase events, not an exact recall-channel timestamp.
+
 ## Objective context
 
 Tracked objective events include supported elite-monster/building events from the Riot timeline.
