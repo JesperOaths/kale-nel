@@ -172,7 +172,8 @@
           <a href="#rank-comparison">Rank comparison</a>
           <a href="#lane-economy">Lane & economy</a>
           <a href="#decisions">Fights & objectives</a>
-          <a href="#last20">Games</a>
+          <a href="#match-history">Match story</a>
+          <a href="#last20">Evidence table</a>
           <a href="#spatialReview">Map</a>
           <a href="#technical-analysis">Technical detail</a>
         </nav>
@@ -187,6 +188,14 @@
             <div class="recent-pulse-head"><div><span>Recent pulse</span><strong>Latest 5 vs earlier games</strong></div><small>Actual valid-game counts are shown on each card. This is descriptive only, not proof of a trend.</small></div>
             <div class="pulse-grid" id="recentPulse"></div>
           </div>
+        </section>
+
+        <section class="panel report-driver-panel" id="report-driver">
+          <div class="section-head">
+            <div><p class="eyebrow">What should drive the next games?</p><h2>Three things to act on first</h2></div>
+            <span class="section-hint">The report compresses its strongest supported weakness, strength and recent direction here before the deeper evidence.</span>
+          </div>
+          <div class="report-driver-grid" id="reportDrivers"></div>
         </section>
 
         <section class="kpi-grid" id="kpiGrid" aria-label="Role-aware key performance indicators"></section>
@@ -296,6 +305,15 @@
             <span class="section-hint">At most two moments per game, ranked by supported consequence.</span>
           </div>
           <div class="review-queue" id="replayReviewQueue"></div>
+        </section>
+
+        <section class="panel match-history-panel" id="match-history">
+          <div class="section-head">
+            <div><p class="eyebrow">Recent match story</p><h2>What happened game by game?</h2></div>
+            <span class="section-hint">Expand a row for a coaching-readable summary. Use the full evidence button only when you want the technical tabs, maps and event detail.</span>
+          </div>
+          <div class="match-history-summary" id="matchHistorySummary"></div>
+          <div class="match-history-list" id="matchHistoryList"></div>
         </section>
 
         <section class="panel" id="last20">
