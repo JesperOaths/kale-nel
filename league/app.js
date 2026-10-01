@@ -527,6 +527,18 @@ function judgmentHtml(g){
 function detailsHtml(g,index){
   return '<div class="details-shell">'+judgmentHtml(g)+'<div class="details-tabs">'+['macro','resets','vision','roams','fights','phases','deaths','objectives'].map(t=>'<button class="tab-btn '+(state.activeDetailTab===t?'active':'')+'" data-tab="'+t+'" type="button">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div><div class="details-content" data-detail-content>'+detailContent(g,state.activeDetailTab)+'</div></div>';
 }
+function objectiveDiagnosisLabel(key){
+  return ({late_reset:'Late reset timing',pre_objective_death:'Death before the contest',setup_vision:'Setup-vision deficit',arrival_pathing:'Arrival / pathing'})[String(key||'')]||'No supported primary cause';
+}
+function objectiveDiagnosisHtml(r){
+  const d=r?.behaviorSummary?.objectiveDiagnosis||{},causes=Array.isArray(d.causes)?d.causes:[];
+  if(!d.presenceLow&&!causes.length)return '<div class="detail-note">Objective presence is not currently flagged low enough for a root-cause diagnosis.</div>';
+  const primary=d.primaryCause?objectiveDiagnosisLabel(d.primaryCause):'Arrival / pathing remains the unresolved hypothesis';
+  return '<div class="objective-diagnosis"><div class="diagnosis-primary"><span>Primary supported cause</span><strong>'+esc(primary)+'</strong></div>'+
+    (causes.length?'<ol>'+causes.map(x=>'<li><strong>'+esc(x.label||objectiveDiagnosisLabel(x.key))+'</strong><span>'+esc(x.evidence||'')+'</span><small>Evidence severity '+esc(fmt(x.severity,0))+'</small></li>').join('')+'</ol>':
+    '<p>No reset/death/vision cause crossed its evidence threshold. Arrival/pathing remains a hypothesis rather than a proven cause.</p>')+
+    '<small class="diagnosis-caveat">This ranks supported evidence; it does not prove a single cause.</small></div>';
+}
 function detailCard(label,value){return'<div class="detail-card"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>';}
 function detailList(items,empty){
   const xs=(items||[]).filter(Boolean);
@@ -602,7 +614,7 @@ function detailContent(g,tab){
   }
   if(tab==='objectives'){
     const kc=g.killConversion||{},okc=g.opponentKillConversion||{};
-    return detailCard('Objective presence',fmtPct(g.objectiveJoinRate))+detailCard('Joined / team objectives',String(g.objectiveJoined??0)+' / '+String(g.objectiveTeamTotal??0))+detailCard('Early KP',fmtPct(g.earlyKp))+
+    return objectiveDiagnosisHtml({behaviorSummary:{objectiveDiagnosis:g.objectiveDiagnosis||null}})+detailCard('Objective presence',fmtPct(g.objectiveJoinRate))+detailCard('Joined / team objectives',String(g.objectiveJoined??0)+' / '+String(g.objectiveTeamTotal??0))+detailCard('Early KP',fmtPct(g.earlyKp))+
       detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+' min · '+String(g.impactType||'event'):'n/a')+detailCard('Objective-context death %',fmtPct(g.objectiveDeathPct))+detailCard('Pre-objective conversion deaths',String(g.preObjectiveDeathCount??0))+
       detailCard('Kill-window conversion',String(kc.converted??0)+' / '+String(kc.windows??0)+' · '+fmtPct(kc.rate))+detailCard('Opposing-role conversion',String(okc.converted??0)+' / '+String(okc.windows??0)+' · '+fmtPct(okc.rate))+
       detailCard('Neutral objectives joined',String(g.objectiveReadiness?.joined??0)+' / '+String(g.objectiveReadiness?.neutralTeamObjectives??0))+
@@ -710,6 +722,7 @@ function renderAdvanced(r){
   const a=r.advanced||{},roam=a.roams||{},recall=a.recalls||{},itemSpike=a.itemSpike||{};
   const rows=[
     ['Objective presence',fmtPct(a.objectivePresence)],
+    ['Objective diagnosis',objectiveDiagnosisLabel(r.behaviorSummary?.objectiveDiagnosis?.primaryCause)],
     ['Early KP',fmtPct(a.earlyKP)],
     ['Pre-14 role solo kills / deaths',String(r.behaviorSummary?.pre14RoleSoloKills??0)+' / '+String(r.behaviorSummary?.pre14RoleSoloDeaths??0)],
     ['Clean solo-kill lane conversion',String(r.behaviorSummary?.soloKillConvertedEvents??0)+' / '+String(r.behaviorSummary?.soloKillConversionEvents??0)+' · '+fmtPct(r.behaviorSummary?.soloKillConversionRate)],
