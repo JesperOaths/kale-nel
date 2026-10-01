@@ -458,7 +458,10 @@ Deno.serve(async (req: Request) => {
           country, Number(freshProduct?.blueprint_id), Number(freshProduct?.print_provider_id), sourceFulfillmentCostCents,
         ),
       }];
-      for (const route of providerRoutes.filter((entry: any) => text(entry?.source_product_id) === productId && Number(entry?.source_variant_id) === variantId)) {
+      const itemProviderRoutes = providerRoutes.filter((entry: any) =>
+        text(entry?.source_product_id) === productId && Number(entry?.source_variant_id) === variantId
+      );
+      for (const route of itemProviderRoutes) {
         const key = `${Number(route?.source_blueprint_id)}:${Number(route?.target_print_provider_id)}`;
         const providerVariant = catalogProviderVariant(providerCatalogs.get(key), variantId);
         const validation = validateDirectProviderRoute(route, country, freshProduct, freshVariant, providerVariant);
@@ -486,7 +489,17 @@ Deno.serve(async (req: Request) => {
         });
       }
       if (String(freshProduct?.blueprint_id || "") === "6") {
-        const routeSafeRawUsdCost = Math.max(...candidates.map((candidate: any) => Number(candidate?.source_cost_cents || 0)));
+        // Keep checkout on the same canonical provider-pair basis as the public
+        // catalog. Route rows store both sides of the provider pair; using those
+        // snapshots prevents identical shirts from repricing based on which
+        // provider happened to be the source product.
+        const routeSnapshotCosts = itemProviderRoutes.flatMap((route: any) => [
+          Number(route?.source_cost_usd_cents || 0),
+          Number(route?.target_cost_usd_cents || 0),
+        ]).filter((value: number) => Number.isFinite(value) && value > 0);
+        const routeSafeRawUsdCost = routeSnapshotCosts.length
+          ? Math.max(...routeSnapshotCosts)
+          : Math.max(...candidates.map((candidate: any) => Number(candidate?.source_cost_cents || 0)));
         const routeSafeUnit = retailEurCentsFromUsdCostAfterVat(
           routeSafeRawUsdCost,
           fx,
