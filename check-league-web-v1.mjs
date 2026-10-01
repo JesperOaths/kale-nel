@@ -182,3 +182,5 @@ for(const table of ['league_profiles_v1','league_match_cache_v1','league_fetch_r
   assert.ok(migration.includes('revoke all on public.'+table+' from anon, authenticated'));
 }
 console.log('league-web-contract=PASS');
+
+assert.ok(css.includes('.objective-diagnosis'),'Objective diagnosis must have dedicated styling');
