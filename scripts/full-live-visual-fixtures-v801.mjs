@@ -137,6 +137,35 @@ async function cleanupState(names, { verify = true } = {}) {
   console.log('Visual-audit cleanup PASS with zero residue.');
 }
 
+async function staleVisualFixtureNames() {
+  const prefixes = ['VisualA_','VisualB_','VisualFamily_'];
+  const names = [];
+  for (const prefix of prefixes) {
+    const rows = await selectRows('players', {
+      select: 'display_name',
+      is_dummy: 'eq.true',
+      hidden_from_public: 'eq.true',
+      display_name: `like.${prefix}*`,
+      limit: '500',
+    });
+    for (const row of rows) {
+      const name = String(row?.display_name || '').trim();
+      if (name && /^Visual(?:A|B|Family)_\d+$/i.test(name)) names.push(name);
+    }
+  }
+  return [...new Set(names)];
+}
+
+async function cleanupStaleVisualFixtures() {
+  const stale = await staleVisualFixtureNames();
+  if (!stale.length) {
+    console.log('Visual-audit stale fixture sweep PASS with zero residue.');
+    return;
+  }
+  console.log(`Removing ${stale.length} stale dummy/hidden visual-audit fixture account(s).`);
+  await cleanupState(stale, { verify: true });
+}
+
 function pinHash(pin) {
   return `md5:${crypto.createHash('md5').update(`${pin}:${DATABASE_NAME}`, 'utf8').digest('hex')}`;
 }
@@ -191,4 +220,7 @@ async function provision() {
 
 const names = fixtureNames();
 if (command === 'provision') await provision();
-else await cleanupState([names.friend1, names.friend2, names.family], { verify: true });
+else {
+  await cleanupState([names.friend1, names.friend2, names.family], { verify: true });
+  await cleanupStaleVisualFixtures();
+}
