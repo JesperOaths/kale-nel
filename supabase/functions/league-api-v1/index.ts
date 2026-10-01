@@ -583,7 +583,11 @@ Deno.serve(async(req:Request)=>{
       return json(req,{ok:true,analysis_id:run.id,created_at:run.created_at,report:rep});
     }
     if(action==="report_latest"){
-      const p=await getProfile(sb,viewer.player_id,body.profile_id),{data,error}=await sb.from("league_analysis_runs_v1").select("id,source_kind,analyzer_version,report_data,data_quality,created_at").eq("profile_id",p.id).eq("owner_player_id",viewer.player_id).order("created_at",{ascending:false}).limit(1).maybeSingle();if(error)throw error;return json(req,{ok:true,analysis:data||null});
+      const p=await getProfile(sb,viewer.player_id,body.profile_id),{data,error}=await sb.from("league_analysis_runs_v1").select("id,source_kind,analyzer_version,sample_match_ids,report_data,data_quality,created_at").eq("profile_id",p.id).eq("owner_player_id",viewer.player_id).order("created_at",{ascending:false}).limit(10);
+      if(error)throw error;
+      const rows=Array.isArray(data)?data:[],current=rows[0]||null,currentSig=current?JSON.stringify(current.sample_match_ids||[]):"";
+      const previous=current?rows.slice(1).find((x:any)=>JSON.stringify(x.sample_match_ids||[])!==currentSig)||null:null;
+      return json(req,{ok:true,analysis:current,previous});
     }
     if(action==="report_import"){
       const p=await getProfile(sb,viewer.player_id,body.profile_id),rep=body.report;if(!rep||typeof rep!=="object")return json(req,{ok:false,error:"report_object_required"},400);
