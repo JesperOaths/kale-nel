@@ -14,13 +14,15 @@ export const NON_RUNTIME_HTML_PREFIXES = Object.freeze([
   'docs/',
 ]);
 
-export const INDEPENDENT_PAGE_PATHS = new Set([
-  'admin_shop_analytics.html',
-  'admin_shop_connection.html',
-  'admin_shop_operations.html',
-  'admin_shop_orders.html',
-  'shop/index.html',
+export const INDEPENDENT_PAGE_VERSIONS = new Map([
+  ['admin_shop_analytics.html','v843'],
+  ['admin_shop_connection.html','v828'],
+  ['admin_shop_operations.html','v858'],
+  ['admin_shop_orders.html','v874'],
+  ['shop/index.html','v874'],
 ]);
+
+export const INDEPENDENT_PAGE_PATHS = new Set(INDEPENDENT_PAGE_VERSIONS.keys());
 
 export function normalizeRepoPath(value){
   return String(value || '').replaceAll('\\','/').replace(/^\.\//,'').replace(/^\/+/, '');
@@ -54,17 +56,26 @@ export function pageVersionDeclarations(body){
     .map(m=>m[1].toLowerCase());
 }
 
-export function expectedPageVersion(rel, rootVersion, body=''){
+export function expectedPageVersion(rel, rootVersion){
   const normalized=normalizeRepoPath(rel);
   const root=String(rootVersion || '').trim().toLowerCase();
-  if(!INDEPENDENT_PAGE_PATHS.has(normalized)) return root;
-  const values=[...new Set(pageVersionDeclarations(body))];
-  if(values.length!==1){
-    throw new Error(`${normalized}: independent page must declare exactly one GEJAST page/site version; found ${values.join(', ') || 'none'}`);
-  }
-  return values[0];
+  return INDEPENDENT_PAGE_VERSIONS.get(normalized) || root;
 }
 
 export function isIndependentPageVersion(rel){
   return INDEPENDENT_PAGE_PATHS.has(normalizeRepoPath(rel));
+}
+
+export function pageRoutesForHtml(rel){
+  const normalized=normalizeRepoPath(rel);
+  const routes=[normalized];
+  if(normalized==='index.html') routes.push('/');
+  else if(normalized.endsWith('/index.html')) routes.push('/'+normalized.slice(0,-'index.html'.length));
+  return [...new Set(routes)];
+}
+
+export function listPublishedRoutes(root=process.cwd()){
+  return listPublishedHtml(root).flatMap(sourcePath =>
+    pageRoutesForHtml(sourcePath).map(route => ({sourcePath,route}))
+  );
 }
