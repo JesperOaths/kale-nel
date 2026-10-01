@@ -974,7 +974,8 @@ function chartSvg(points,spec){
   const valid=points.map((p,i)=>({i,v:Number(p.value)})).filter(x=>Number.isFinite(x.v));
   const w=820,h=300,padL=64,padR=24,padT=26,padB=42,unit=spec.unit||'num',signedAxis=!!spec.signedAxis;
   let min,max;
-  if(signedAxis){
+  if(hasNum(spec.fixedMin)&&hasNum(spec.fixedMax)){min=Number(spec.fixedMin);max=Number(spec.fixedMax);}
+  else if(signedAxis){
     const step=unit==='signedGold'?500:unit==='signedCs'?5:1;
     const bound=niceCeil(Math.max(...vals.map(v=>Math.abs(v))),step);
     min=-bound;max=bound;
@@ -984,7 +985,7 @@ function chartSvg(points,spec){
   else{min=Math.min(0,Math.floor(Math.min(...vals)));max=niceCeil(Math.max(...vals),Math.max(1,(Math.max(...vals)-Math.min(...vals))/4));}
   const span=Math.max(1,max-min),plotW=w-padL-padR,plotH=h-padT-padB;
   const xAt=n=>padL+(n/Math.max(1,valid.length-1))*plotW;
-  const yAt=v=>padT+(max-v)/span*plotH;
+  const yAt=v=>padT+(max-clamp(v,min,max))/span*plotH;
   const coords=valid.map((x,n)=>({x:xAt(n),y:yAt(x.v),v:x.v}));
   const path=coords.map((c,i)=>(i?'L':'M')+c.x.toFixed(1)+' '+c.y.toFixed(1)).join(' ');
   const ticks=5,grid=[];
@@ -1013,10 +1014,10 @@ function chartSummary(points,spec){
 function renderCharts(r){
   const lane15Comparable=Number(r.behaviorSummary?.checkpointEligibility?.lane15Games??0)>0;
   const specs=[
-    {key:'goldDiff15',title:lane15Comparable?'Gold @15 vs opposing ADC':'Gold @15 vs role opponent · raw checkpoint',q:'Positive means you had more gold than the direct role opponent at 15.',unit:'signedGold',formatUnit:'signed',signedAxis:true,relevance:150},
-    {key:'csDiff15',title:lane15Comparable?'CS @15 vs opposing ADC':'CS @15 vs role opponent · raw checkpoint',q:'Positive means you had more farm than the direct role opponent at 15.',unit:'signedCs',formatUnit:'signed',signedAxis:true,relevance:5},
-    {key:'dpm',title:'Damage per minute',q:'Raw champion damage output. Use this beside gold and survival, not alone.',unit:'dpm',formatUnit:'int'},
-    {key:'kp',title:'Kill participation',q:'Share of team champion kills you participated in.',unit:'percent',formatUnit:'%'}
+    {key:'goldDiff15',title:lane15Comparable?'Gold @15 vs opposing ADC':'Gold @15 vs role opponent · raw checkpoint',q:'Positive means you had more gold than the direct role opponent at 15. Fixed −2000 to +2000 scale makes games directly comparable.',unit:'signedGold',formatUnit:'signed',signedAxis:true,relevance:150,fixedMin:-2000,fixedMax:2000},
+    {key:'csDiff15',title:lane15Comparable?'CS @15 vs opposing ADC':'CS @15 vs role opponent · raw checkpoint',q:'Positive means you had more farm than the direct role opponent at 15. Fixed −35 to +35 scale.',unit:'signedCs',formatUnit:'signed',signedAxis:true,relevance:5,fixedMin:-35,fixedMax:35},
+    {key:'dpm',title:'Damage per minute',q:'Raw champion damage output on a fixed 0–1500 DPM scale. Values above the display ceiling remain visible in the tooltip.',unit:'dpm',formatUnit:'int',fixedMin:0,fixedMax:1500},
+    {key:'kp',title:'Kill participation',q:'Share of team champion kills you participated in, always shown on a 0–100% scale.',unit:'percent',formatUnit:'%',fixedMin:0,fixedMax:100}
   ];
   const hidden=[];
   $('chartGrid').innerHTML=specs.map(spec=>{
@@ -1268,26 +1269,32 @@ function renderAdvanced(r){
 }
 function renderBreakdowns(r){
   const roleRows=Object.entries(r.byRole||{}).sort((a,b)=>Number(b[1]?.games||0)-Number(a[1]?.games||0));
-  $('roleBreakdown').innerHTML=roleRows.length?roleRows.map(([name,v])=>'<div class="break-row"><span>'+esc(name)+'</span><small>'+esc(String(v.games||0))+' games</small><strong>'+esc(fmtPct((v.games||0)?Number(v.wins||0)/Number(v.games)*100:null))+'</strong></div>').join(''):'<div class="bullet empty">No role sample available.</div>';
+  $('roleBreakdown').innerHTML=roleRows.length?roleRows.map(([name,v])=>'<div class="break-row"><span>'+esc(name==='BOTTOM'?'ADC':name)+'</span><small>'+esc(String(v.games||0))+' games</small><strong>'+esc(fmtPct((v.games||0)?Number(v.wins||0)/Number(v.games)*100:null))+' WR</strong></div>').join(''):'<div class="bullet empty">No role sample available.</div>';
   const behaviorRows=Array.isArray(r.championBehavior)?r.championBehavior:[];
   if(behaviorRows.length){
-    $('championBreakdown').innerHTML=behaviorRows.slice(0,8).map(v=>'<div class="break-row champion-behavior-row"><span>'+esc(v.champion)+' <small>'+esc(v.role)+'</small></span><small>'+esc(String(v.games||0))+' games · WR '+esc(fmtPct(v.winRate))+' · @15 '+esc(hasNum(v.goldDiff15)?signed(v.goldDiff15,0)+'g':'not comparable')+' · risk deaths '+esc(fmt(v.badDeaths,1))+'</small><strong>'+esc(fmtInt(v.dpm))+' DPM</strong></div>').join('');
+    $('championBreakdown').innerHTML=behaviorRows.slice(0,8).map(v=>{
+      const src=championIcon(v.champion),goldTone=deltaTone(v.goldDiff15,0,100);
+      return '<div class="break-row champion-behavior-row"><div class="break-visual">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<span>'+esc(v.champion)+' <small>'+esc(v.role==='BOTTOM'?'ADC':v.role)+'</small></span></div>'+
+        '<small>'+esc(String(v.games||0))+' games · WR '+esc(fmtPct(v.winRate))+' · risk deaths '+esc(fmt(v.badDeaths,1))+'</small>'+
+        '<strong class="tone-'+goldTone+'">'+esc(hasNum(v.goldDiff15)?signed(v.goldDiff15,0)+'g @15':'@15 n/a')+'</strong></div>';
+    }).join('');
   }else{
     const champRows=Object.entries(r.byChampion||{}).sort((a,b)=>Number(b[1]?.games||0)-Number(a[1]?.games||0)).slice(0,8);
-    $('championBreakdown').innerHTML=champRows.length?champRows.map(([name,v])=>'<div class="break-row"><span>'+esc(name)+'</span><small>'+esc(String(v.games||0))+' games</small><strong>'+esc(fmtPct((v.games||0)?Number(v.wins||0)/Number(v.games)*100:null))+'</strong></div>').join(''):'<div class="bullet empty">No champion sample available.</div>';
+    $('championBreakdown').innerHTML=champRows.length?champRows.map(([name,v])=>{
+      const src=championIcon(name);
+      return '<div class="break-row"><div class="break-visual">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<span>'+esc(name)+'</span></div><small>'+esc(String(v.games||0))+' games</small><strong>'+esc(fmtPct((v.games||0)?Number(v.wins||0)/Number(v.games)*100:null))+' WR</strong></div>';
+    }).join(''):'<div class="bullet empty">No champion sample available.</div>';
   }
-  const matchupRows=Array.isArray(r.matchupBehavior)?r.matchupBehavior:[];
-  const target=$('matchupBreakdown');
+  const matchupRows=Array.isArray(r.matchupBehavior)?r.matchupBehavior:[],target=$('matchupBreakdown');
   if(target){
     target.innerHTML=matchupRows.length?matchupRows.slice(0,10).map(v=>{
-      const own=(v.ownChampions||[]).slice(0,3).map(x=>x.champion+' '+x.games+'g').join(', ');
-      return '<div class="break-row matchup-behavior-row"><span>vs '+esc(v.opponentChampion)+' <small>'+esc(v.role)+'</small></span>'+
-        '<small>'+esc(String(v.games||0))+' games · WR '+esc(fmtPct(v.winRate))+' · @15 '+esc(hasNum(v.goldDiff15)?signed(v.goldDiff15,0)+'g':'not comparable')+' · early clean duel '+esc(String(v.earlySoloKills??v.pre14SoloKills??0))+'-'+esc(String(v.earlySoloDeaths??v.pre14SoloDeaths??0))+
-        (hasNum(v.outsidePressureShare)?' · outside pressure '+esc(fmtPct(v.outsidePressureShare)):'')+
-        (own?' · own picks '+esc(own):'')+'</small><strong>'+esc(hasNum(v.csDiff15)?signed(v.csDiff15,1)+' CS @15':'@15 CS not comparable')+'</strong></div>';
+      const own=(v.ownChampions||[]).slice(0,3).map(x=>x.champion+' '+x.games+'g').join(', '),src=championIcon(v.opponentChampion),tone=deltaTone(v.goldDiff15,0,100);
+      return '<div class="break-row matchup-behavior-row"><div class="break-visual">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<span>vs '+esc(v.opponentChampion)+' <small>'+esc(v.role==='BOTTOM'?'ADC':v.role)+'</small></span></div>'+
+        '<small>'+esc(String(v.games||0))+' games · WR '+esc(fmtPct(v.winRate))+(own?' · own picks '+esc(own):'')+'</small><strong class="tone-'+tone+'">'+esc(hasNum(v.goldDiff15)?signed(v.goldDiff15,0)+'g @15':'@15 n/a')+'</strong></div>';
     }).join(''):'<div class="bullet empty">No opposing champion appears at least three times in the primary-role coaching sample.</div>';
   }
 }
+
 function evidenceLevel(n,good=10,moderate=5){
   const x=Number(n);return Number.isFinite(x)?(x>=good?'strong':x>=moderate?'moderate':'thin'):'unknown';
 }
