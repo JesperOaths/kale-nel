@@ -206,8 +206,8 @@ async function fetchMatches(){
   if(!state.profile||state.busy)return;
   clearLog();setBusy(true,'Fetching');statusPill('Fetching','warn');
   try{
-    log('Preparing recent match list for '+state.profile.display_name+'.');
-    const requestedCount=Math.max(20,Math.min(100,Number($('fetchCount').value||20)));
+    log('Preparing recent match list for '+state.profile.display_name+'. Queue/duration quality filters are applied later; 50 raw matches is the recommended default for a full comparable Last 20.');
+    const requestedCount=Math.max(20,Math.min(100,Number($('fetchCount').value||50)));
     const prep=await api('fetch_prepare',{profile_id:state.profile.id,count:requestedCount});
     if(prep.profile){state.profile=Object.assign({},state.profile,prep.profile);const rs=state.profile.rank_snapshot;$('sourceState').textContent=rs&&rs.tier?'Riot · '+rs.tier+' '+(rs.rank||''):'Resolved Riot ID';}
     const ids=prep.match_ids||[],cached=new Set(prep.cached_match_ids||[]);
