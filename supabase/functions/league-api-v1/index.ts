@@ -269,7 +269,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
     const fr=nearestFrame(frames,minute),a=frameStats(fr,pid),b=oppId?frameStats(fr,oppId):null;
     if(a&&b){out["goldDiff"+minute]=(a.gold!=null&&b.gold!=null)?a.gold-b.gold:null;out["csDiff"+minute]=a.cs-b.cs;out["xpDiff"+minute]=(a.xp!=null&&b.xp!=null)?a.xp-b.xp:null;out["levelDiff"+minute]=(a.level!=null&&b.level!=null)?a.level-b.level:null;}
   }
-  const fr25=frameNearMinute(frames,25),a25=frameStats(fr25,pid),b25=oppId?frameStats(fr25,oppId):null;
+  const reaches25=Number(match?.info?.gameDuration||0)>=25*60,fr25=reaches25?frameNearMinute(frames,25,45000):null,a25=frameStats(fr25,pid),b25=oppId?frameStats(fr25,oppId):null;
   if(a25&&b25){out.goldDiff25=(a25.gold!=null&&b25.gold!=null)?a25.gold-b25.gold:null;out.csDiff25=a25.cs-b25.cs;out.xpDiff25=(a25.xp!=null&&b25.xp!=null)?a25.xp-b25.xp:null;out.levelDiff25=(a25.level!=null&&b25.level!=null)?a25.level-b25.level:null;}
 
   const purchaseByPid:any[]=[],purchaseByOpp:any[]=[],allObjectives:any[]=[],ownObjectiveEvents:any[]=[],deathEvents:any[]=[],involved:any[]=[];
