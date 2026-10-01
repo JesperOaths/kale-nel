@@ -1138,7 +1138,9 @@ function renderAdvanced(r){
   const peerRows=[
     metric('Peer definition',p.definition||'Same-role opponent in each match',false),
     metric('Comparable peer games',String(p.sameRoleGames??0),false),
-    metric('Ranked peer games',String(p.rankedPeerGames??0),false),
+    metric('Rank-comparable peer games',String(p.rankedPeerGames??0),false),
+    metric('Rank context excluded',String(p.rankContextExcludedGames??0),Number(p.rankContextExcludedGames||0)>0),
+    metric('Rank ladders used',Object.entries(p.rankComparisonQueueCounts||{}).map(([k,v])=>String(k).replace('RANKED_','')+' '+String(v)).join(' · ')||'n/a',!Object.keys(p.rankComparisonQueueCounts||{}).length),
     metric('Higher-ranked peer games',String(p.higherRankPeerGames??0),false),
     metric('Same-rank peer games',String(p.sameRankPeerGames??0),false),
     metric('Lower-ranked peer games',String(p.lowerRankPeerGames??0),false),
