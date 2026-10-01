@@ -146,7 +146,7 @@ assert.match(index, /data-collection="merch"/);
 assert.doesNotMatch(store, /label:\s*'Oversized Boxy'/);
 assert.match(store, /label:\s*'Normal'/);
 assert.match(index, /image-lightbox-v832\.js/);
-assert.match(index, /live-catalog-refresh-v818\.js\?v=20261001-cross-tab-r5/, 'storefront must publish the hard-throttled cross-tab live-catalog watcher');
+assert.match(index, /live-catalog-refresh-v818\.js\?v=20261002-cross-tab-r6/, 'storefront must publish the hard-throttled cross-tab live-catalog watcher');
 assert.doesNotMatch(index, /catalog-data\.js/, 'retired hand-maintained catalog-data fallback must not load');
 assert.match(index, /catalog-last-good\.js\?v=20261001-stable-pricing-r5/, 'storefront must preload the current generated last-known-good catalog before store.js');
 assert.match(store, /shop-catalog-v828/, 'storefront must retain the live Printify-backed catalog authority');
