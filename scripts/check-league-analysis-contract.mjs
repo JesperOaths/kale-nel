@@ -8,6 +8,7 @@ const css=read('league/styles.css');
 const migration=read('supabase/migrations/20261001043000_league_web_foundation_v1.sql');
 const roleCacheMigration=read('supabase/migrations/20261001180422_league_cache_player_role_v1.sql');
 const identityMigration=read('supabase/migrations/20261001182300_league_merge_duplicate_riot_profiles_v1.sql');
+const modelDoc=read('docs/league-analysis-model.md');
 
 const failures=[];
 const ok=(cond,msg)=>{if(!cond)failures.push(msg);};
@@ -221,7 +222,7 @@ const matchCachePruner=backend.slice(backend.indexOf('async function trimAnonymo
 ok(matchCachePruner.includes('select("match_id")')&&matchCachePruner.includes('.in("match_id",matchIds)'), 'match-cache pruning must use match_id from the real composite primary key');
 ok(!matchCachePruner.includes('select("id")')&&!matchCachePruner.includes('.in("id",'), 'match-cache pruning must never assume an id column exists');
 ok(backend.includes('if(action==="profile_delete")')&&backend.includes('.delete().eq("id",profileId).eq("owner_player_id",viewer.player_id)'), 'profile deletion must be owner-scoped');
-ok(backend.includes('directRequest=body.direct_request===true')&&backend.includes('profileKey=directRequest?"recent-request"'), 'direct public requests must reuse one bounded internal scratch identity instead of exposing profile management');
+ok(backend.includes('directRequest=body.direct_request===true')&&backend.includes('profileKey=directRequest?"recent-request"'), 'legacy direct-request compatibility must remain bounded to one scratch identity');
 ok(migration.includes('references public.league_profiles_v1(id) on delete cascade'), 'profile deletion must cascade child League data');
 ok(backend.includes('allowServerRiotKey=viewer.anonymous!==true'), 'anonymous League users must not inherit the server Riot key');
 ok(app.includes("'x-league-workspace':workspaceId()"), 'League frontend must use browser workspace identity');
@@ -371,6 +372,8 @@ ok(html.includes('id="savedProfileSelect"')&&app.includes("api('profiles_list')"
 ok(app.includes("String(p.profile_key||'')==='recent-request'")&&app.includes('id:legacy.id'), 'legacy direct-request profile must migrate in place rather than cloning or discarding its cache');
 ok(backend.includes('identityMatch=(candidates||[]).find')&&backend.includes('reuseExistingId'), 'profile save must reuse an already-saved matching Riot identity');
 ok(identityMigration.includes('league_profiles_owner_riot_identity_uidx')&&identityMigration.includes("legacy.profile_key='recent-request'"), 'migration must merge empty aliases and enforce one Riot identity per workspace');
+ok(modelDoc.includes('## Saved Riot profile workflow')&&modelDoc.includes('role-pure by construction'), 'analysis model must document saved Riot profiles and selected-role purity');
+ok(!modelDoc.includes('Batch profiles · sequential')&&!modelDoc.includes('Choose the most common normalized role in the Last 20'), 'analysis model must not preserve retired mixed-role or batch-browser semantics');
 ok(app.includes("oldHistory=await api('report_latest'")&&app.includes("target_role:inferredRole"), 'legacy mixed analysis may infer a preferred role but must be rebuilt role-pure from cached data');
 ok(app.includes("cache=await api('cache_status',{profile_id:profile.id,target_role:selectedRole})")&&app.includes("api('analyze_basic',{profile_id:profile.id,target_role:selectedRole})"), 'saved profiles with only old mixed reports must rebuild role-pure reports from cached Riot data without refetching');
 ok(app.includes('Role-selection safety check failed during saved-report rebuild'), 'cached report rebuild must reject cross-role contamination');
