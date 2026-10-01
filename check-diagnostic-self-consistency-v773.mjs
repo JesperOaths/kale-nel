@@ -45,7 +45,8 @@ if(!text('gejast-account-runtime.js').includes('seed = normalizeNames([...cached
 if(!text('gejast-account-runtime.js').includes('else if(seed.length)')) failures.push('empty/slow live login-name refresh must preserve the synchronous seed');
 if(!text('gejast-login-names-fallback.js').includes('v817-static-first-single-active-name-rpc')) failures.push('standalone login-name fallback must remain static-first with one bounded authoritative refresh');
 if(!text('gejast-login-names-fallback.js').includes("get_login_active_names_v687',{site_scope_input:resolvedScope},4500")) failures.push('background authoritative login-name confirmation must remain bounded');
-if(!text('login.html').includes('20261001-login-resilience-r5')) failures.push('login page must cache-bust the synchronous static-first selector runtime');
+if(!text('login.html').includes('20261001-login-resilience-r6')) failures.push('login page must cache-bust the network-independent synchronous selector runtime');
+if(!text('login.html').includes('gejast-login-inline-seed')) failures.push('login page must render its last-known-good selector options before deferred/runtime network work');
 if(!text('gejast-home-profile-runtime.js').includes("const VERSION = 'v687'")) failures.push('home/profile runtime v687 module contract was changed unexpectedly');
 if(failures.length){console.error('Diagnostic self-consistency v773 FAILED');failures.forEach(f=>console.error('- '+f));process.exit(1);}
 console.log('Diagnostic self-consistency v773 PASS: v773+ releases preserve dynamic current-release diagnostics and distinct historical module/RPC versions.');
