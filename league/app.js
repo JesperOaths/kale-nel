@@ -182,6 +182,7 @@ async function fetchMatches(){
     log('Preparing recent match list for '+state.profile.display_name+'.');
     const requestedCount=Math.max(20,Math.min(100,Number($('fetchCount').value||20)));
     const prep=await api('fetch_prepare',{profile_id:state.profile.id,count:requestedCount});
+    if(prep.profile){state.profile=Object.assign({},state.profile,prep.profile);const rs=state.profile.rank_snapshot;$('sourceState').textContent=rs&&rs.tier?'Riot · '+rs.tier+' '+(rs.rank||''):'Resolved Riot ID';}
     const ids=prep.match_ids||[],cached=new Set(prep.cached_match_ids||[]);
     if(!ids.length)throw new Error('Riot returned no recent match IDs.');
     log(ids.length+' recent matches found; '+cached.size+' already cached.');
@@ -246,7 +247,8 @@ function renderReport(raw,sourceKind){
   const p=r.profile||{},s=r.summary||{};
   $('reportTitle').textContent=p.displayName||p.display_name||state.profile?.display_name||'League profile';
   const riotId=[p.gameName||p.game_name,p.tagLine||p.tag_line].filter(Boolean).join('#');
-  $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(s.games??r.games.length)+' analyzed games · Primary role '+(s.primaryRole||'GENERIC');
+  const rank=p.rank&&p.rank.tier?[p.rank.tier,p.rank.rank,p.rank.leaguePoints!=null?String(p.rank.leaguePoints)+' LP':''].filter(Boolean).join(' '):'';
+  $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(rank?rank+' · ':'')+(s.games??r.games.length)+' analyzed games · Primary role '+(s.primaryRole||'GENERIC');
   $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':(r.analyzerVersion||'Web analysis');
   renderKpis(r);renderBullets('recentFocus',r.recentFocus,'No grounded recent-focus tips are available from the active analyzer yet.');
   renderBullets('overallHighlights',r.overallHighlights,'No broader highlights are available from the active analyzer yet.');
@@ -267,7 +269,15 @@ function renderKpis(r){
 }
 function renderBullets(id,items,empty){
   const list=(items||[]).filter(Boolean);
-  $(id).innerHTML=list.length?list.map(x=>'<div class="bullet">'+esc(typeof x==='string'?x:(x.text||x.label||JSON.stringify(x)))+'</div>').join(''):'<div class="bullet empty">'+esc(empty)+'</div>';
+  $(id).innerHTML=list.length?list.map(x=>{
+    if(typeof x==='string')return '<div class="bullet">'+esc(x)+'</div>';
+    const title=x.title||x.label||x.category||'Insight',evidence=x.evidence||x.text||'',action=x.action||'',confidence=x.confidence||'';
+    return '<div class="bullet coaching-bullet">'+
+      '<div class="coaching-head"><strong>'+esc(title)+'</strong>'+(x.category?'<span>'+esc(x.category)+'</span>':'')+(confidence?'<small>'+esc(confidence)+' confidence</small>':'')+'</div>'+
+      (evidence?'<p>'+esc(evidence)+'</p>':'')+
+      (action?'<p class="coaching-action"><b>Improve:</b> '+esc(action)+'</p>':'')+
+      '</div>';
+  }).join(''):'<div class="bullet empty">'+esc(empty)+'</div>';
 }
 
 function renderGames(r){
@@ -300,28 +310,47 @@ function toggleGame(index){
   bindDetailTabs(tr,game,index);
 }
 function detailsHtml(g,index){
-  return '<div class="details-shell"><div class="details-tabs">'+['macro','vision','roams','deaths','objectives'].map(t=>'<button class="tab-btn '+(state.activeDetailTab===t?'active':'')+'" data-tab="'+t+'" type="button">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div><div class="details-content" data-detail-content>'+detailContent(g,state.activeDetailTab)+'</div></div>';
+  return '<div class="details-shell"><div class="details-tabs">'+['macro','resets','vision','roams','deaths','objectives'].map(t=>'<button class="tab-btn '+(state.activeDetailTab===t?'active':'')+'" data-tab="'+t+'" type="button">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div><div class="details-content" data-detail-content>'+detailContent(g,state.activeDetailTab)+'</div></div>';
 }
 function detailCard(label,value){return'<div class="detail-card"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>';}
+function detailList(items,empty){
+  const xs=(items||[]).filter(Boolean);
+  return '<div class="detail-note">'+(xs.length?'<ul>'+xs.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':esc(empty||'No events detected.'))+'</div>';
+}
 function detailContent(g,tab){
   if(tab==='vision'){
-    return detailCard('Vision / min',fmt(g.vpm,2))+detailCard('Ward coordinates',String(g.wards?.length||0))+detailCard('Timeline',g.timelineAvailable?'Available':'Missing')+
-      '<div class="detail-note">Offensive vs defensive ward classification is not guessed in the web-basic analyzer. Raw timeline coordinates are preserved for the current-source port.</div>';
+    const v=g.vision||{};
+    return detailCard('Vision / min',fmt(g.vpm,2))+detailCard('Wards placed',String(v.wardCount??g.wards?.length??0))+detailCard('Wards / 30 min',fmt(v.wardsPer30,1))+
+      detailCard('Offensive / defensive',String(v.offensive??0)+' / '+String(v.defensive??0))+detailCard('River wards',String(v.river??0))+detailCard('Objective setup wards',String(v.objectiveSetup??0))+
+      detailList((g.wards||[]).slice(0,8).map(w=>(Number(w.time)||0).toFixed(1)+'m · '+(w.territory||'unknown')+' · '+(w.wardType||'ward')),'No player ward positions were available.');
   }
   if(tab==='roams'){
-    return detailCard('Roams',g.roams==null?'Pending current analyzer':String(g.roams))+detailCard('Role',g.role||'GENERIC')+detailCard('Duration',fmtDuration(g.durationMinutes))+
-      '<div class="detail-note">True roam detection must use the current Bruisienator lane/path semantics; ordinary out-of-lane events are not automatically labelled as roams.</div>';
+    const r=g.roams||{},events=r.events||[];
+    return detailCard('Attempts',String(r.attempts??0))+detailCard('Successful',String(r.successes??0))+detailCard('Failed',String(r.failures??0))+
+      detailList(events.map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+(x.targetZone||'map')+' · '+(x.outcome||'neutral')+(Number.isFinite(Number(x.adcLaneCostCs))?' · ADC lane Δ '+signed(x.adcLaneCostCs,0)+' CS':'')),'No qualifying pre-20-minute roam departures detected.');
   }
   if(tab==='deaths'){
-    return detailCard('Deaths',String(g.deaths??'n/a'))+detailCard('Death coordinates',String(g.deathPositions?.length||0))+detailCard('Objective-death %',fmtPct(state.report.advanced?.objectiveDeathPct))+
-      '<div class="detail-note">Bad-death classification is intentionally withheld until the established current heuristic is ported.</div>';
+    const bad=g.badDeaths||[];
+    return detailCard('Deaths',String(g.deaths??'n/a'))+detailCard('Flagged high-risk',String(g.badDeathCount??0))+detailCard('Objective-context deaths',fmtPct(g.objectiveDeathPct))+detailCard('≥1000 unspent gold deaths',String(g.highUnspentGoldDeaths??0))+
+      detailList(bad.map(x=>(Number(x.time)||0).toFixed(1)+'m · '+(x.tags||[]).join(', ')+' · '+fmtInt(x.currentGold)+'g unspent · nearby '+String(x.alliesNear??0)+' ally / '+String(x.enemiesNear??0)+' enemy'),'No death crossed the multi-signal bad-death threshold.');
   }
   if(tab==='objectives'){
-    return detailCard('Objective events',String(g.objectives?.length||0))+detailCard('Objective presence',fmtPct(state.report.advanced?.objectivePresence))+detailCard('Map ID',String(g.mapId??'n/a'))+
-      '<div class="detail-note">No arbitrary gold conversion is applied to objective events.</div>';
+    return detailCard('Objective presence',fmtPct(g.objectiveJoinRate))+detailCard('Joined / team objectives',String(g.objectiveJoined??0)+' / '+String(g.objectiveTeamTotal??0))+detailCard('Early KP',fmtPct(g.earlyKp))+
+      detailCard('First impact',Number.isFinite(Number(g.impactTimeMin))?fmt(g.impactTimeMin,1)+' min · '+String(g.impactType||'event'):'n/a')+detailCard('Objective-context death %',fmtPct(g.objectiveDeathPct))+detailCard('Tracked events',String(g.objectives?.length||0))+
+      '<div class="detail-note">Objective presence counts a team objective once and checks whether your timeline position is within the action radius; it does not convert objectives into fake gold values.</div>';
   }
+  if(tab==='resets'){
+    const mine=g.firstMajorItem,opp=g.opponentFirstMajorItem,shops=g.shopVisits||[],greedy=g.greedyStayWindows||[];
+    return detailCard('First major item',mine?(mine.name+' · '+fmt(mine.time,1)+'m'):'n/a')+
+      detailCard('Opponent major item',opp?(opp.name+' · '+fmt(opp.time,1)+'m'):'n/a')+
+      detailCard('Timing vs opponent',Number.isFinite(Number(g.itemSpikeDeltaVsOpponent))?signed(g.itemSpikeDeltaVsOpponent,1)+' min':'n/a')+
+      detailCard('Detected shop visits',String(shops.length))+detailCard('Greedy-stay windows',String(greedy.length))+detailCard('Overstay deaths',String(g.overstayCount??0))+
+      detailList(greedy.map(x=>(Number(x.startMin)||0).toFixed(1)+'m · '+fmtInt(x.currentGold)+'g held · next shop '+(Number(x.nextShopMin)||0).toFixed(1)+'m ('+fmt(x.delayMin,1)+'m delay)'),'No repeated high-gold stay window detected.');
+  }
+  const peer=g.peer||null;
   return detailCard('Gold diff @10',signed(g.goldDiff10,0))+detailCard('Gold diff @15',signed(g.goldDiff15,0))+detailCard('CS diff @10',signed(g.csDiff10,0))+detailCard('CS diff @15',signed(g.csDiff15,0))+detailCard('XP diff @10',signed(g.xpDiff10,0))+detailCard('XP diff @15',signed(g.xpDiff15,0))+
-    '<div class="detail-note">Recall/item-spike, overstay and map-path analysis are slots in the report contract but remain pending the current Bruisienator analyzer source.</div>';
+    detailCard('DPM vs same-role opponent',peer?signed(peer.dpmDelta,0):'n/a')+detailCard('CS/min vs opponent',peer?signed(peer.csMinDelta,2):'n/a')+detailCard('Team damage rank',Number.isFinite(Number(g.damageRank))?'#'+g.damageRank+' of 5':'n/a')+
+    '<div class="detail-note">Peer comparisons use the actual same-role opponent in this match. Positive values mean you finished ahead on that metric.</div>';
 }
 function bindDetailTabs(container,g,index){
   container.querySelectorAll('.tab-btn').forEach(btn=>btn.addEventListener('click',(ev)=>{
@@ -362,29 +391,39 @@ function metric(label,value,pending){
   return '<div class="metric-row"><span>'+esc(label)+'</span><strong class="'+(pending?'pending':'')+'">'+esc(value)+'</strong></div>';
 }
 function renderAdvanced(r){
-  const a=r.advanced||{},rows=[
-    ['DQI',Number.isFinite(Number(a.dqi))?fmt(a.dqi,1)+' / 10':'Pending current analyzer'],
-    ['AGOR',Number.isFinite(Number(a.agor))?fmt(a.agor,2):'Pending current analyzer'],
+  const a=r.advanced||{},roam=a.roams||{},recall=a.recalls||{},itemSpike=a.itemSpike||{};
+  const rows=[
+    ['DQI',Number.isFinite(Number(a.dqi))?fmt(a.dqi,1)+' / 10':'Formula not recovered'],
+    ['AGOR',Number.isFinite(Number(a.agor))?fmt(a.agor,2):'Formula not recovered'],
     ['Objective presence',fmtPct(a.objectivePresence)],
     ['Early KP',fmtPct(a.earlyKP)],
-    ['Objective-death %',fmtPct(a.objectiveDeathPct)],
-    ['Roaming',a.roams==null?'Pending current analyzer':String(a.roams)],
-    ['Recalls / overstay',a.recalls==null?'Pending current analyzer':String(a.recalls)],
-    ['Ward depth classification',a.wardClassification==null?'Pending current analyzer':String(a.wardClassification)]
+    ['Objective-context death %',fmtPct(a.objectiveDeathPct)],
+    ['Roam attempts / success',String(roam.attempts??0)+' / '+fmtPct(roam.successRate)],
+    ['High-gold stay windows',String(recall.greedyStayWindows??0)],
+    ['Major-item Δ vs opponent',Number.isFinite(Number(itemSpike.avgDeltaVsOpponentMin))?signed(itemSpike.avgDeltaVsOpponentMin,1)+' min':'n/a']
   ];
-  $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('Pending')||v==='n/a')).join('');
-  const b=r.benchmarks||{},base=r.lifetime||null,s=r.summary||{};
+  $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('not recovered')||v==='n/a')).join('');
+  const p=r.peerComparison||{},base=r.lifetime||null,s=r.summary||{},rank=r.profile?.rank||null;
+  const peerRows=[
+    metric('Peer definition',p.definition||'Same-role opponent in each match',false),
+    metric('Comparable peer games',String(p.sameRoleGames??0),false),
+    metric('Gold @15 vs peer',Number.isFinite(Number(p.avgGoldDiff15))?signed(p.avgGoldDiff15,0)+'g':'n/a',!Number.isFinite(Number(p.avgGoldDiff15))),
+    metric('Ahead in gold @15',fmtPct(p.laneAheadPct),!Number.isFinite(Number(p.laneAheadPct))),
+    metric('CS/min vs peer',Number.isFinite(Number(p.avgCsMinDelta))?signed(p.avgCsMinDelta,2):'n/a',!Number.isFinite(Number(p.avgCsMinDelta))),
+    metric('DPM vs peer',Number.isFinite(Number(p.avgDpmDelta))?signed(p.avgDpmDelta,0):'n/a',!Number.isFinite(Number(p.avgDpmDelta))),
+    metric('Vision/min vs peer',Number.isFinite(Number(p.avgVpmDelta))?signed(p.avgVpmDelta,2):'n/a',!Number.isFinite(Number(p.avgVpmDelta))),
+    metric('Major-item timing vs peer',Number.isFinite(Number(p.avgMajorItemDeltaMin))?signed(p.avgMajorItemDeltaMin,1)+' min':'n/a',!Number.isFinite(Number(p.avgMajorItemDeltaMin)))
+  ];
   const baselineRows=base?[
-    metric('Cached baseline sample',String(base.games||0)+' games',false),
+    metric('Broader cached sample',String(base.games||0)+' games',false),
     metric('WR · recent / baseline',fmtPct(s.winRate)+' / '+fmtPct(base.winRate),false),
     metric('CS/min · recent / baseline',fmt(s.csMin,2)+' / '+fmt(base.csMin,2),false),
     metric('KP · recent / baseline',fmtPct(s.kp)+' / '+fmtPct(base.kp),false),
     metric('DPM · recent / baseline',fmtInt(s.dpm)+' / '+fmtInt(base.dpm),false)
   ]:[metric('Recent vs broader baseline','Cache more than 20 games to enable',true)];
   $('benchmarkMetrics').innerHTML=[
-    metric('Rank-above benchmark',b.rankAbove?String(b.rankAbove):'Pending current analyzer',!b.rankAbove),
-    metric('Item-spike timing',b.itemSpike?String(b.itemSpike):'Pending current analyzer',!b.itemSpike),
-    ...baselineRows
+    metric('Current Riot rank',rank&&rank.tier?[rank.tier,rank.rank,rank.leaguePoints!=null?rank.leaguePoints+' LP':''].filter(Boolean).join(' '):'Not available',!(rank&&rank.tier)),
+    ...peerRows,...baselineRows
   ].join('');
 }
 function renderBreakdowns(r){
@@ -395,7 +434,7 @@ function renderBreakdowns(r){
 }
 function renderQuality(r){
   const q=r.dataQuality||{};
-  const cards=[['Analyzed games',q.analyzedGames??r.games?.length??0],['Timeline games',q.validTimelineGames??'n/a'],['Coordinate games',q.validCoordinateGames??'n/a'],['Missing timelines',q.missingTimelineGames??'n/a']];
+  const cards=[['Analyzed games',q.analyzedGames??r.games?.length??0],['Timeline games',q.validTimelineGames??'n/a'],['Peer-comparable games',q.peerComparableGames??'n/a'],['Coordinate games',q.validCoordinateGames??'n/a'],['Missing timelines',q.missingTimelineGames??'n/a'],['Broader baseline',q.baselineGames??0]];
   $('qualityGrid').innerHTML=cards.map(([l,v])=>'<div class="quality-card"><span>'+esc(l)+'</span><strong>'+esc(v)+'</strong></div>').join('');
   $('sourceNote').textContent=r.sourceStatus?.note||'Report data remains traceable through the report contract. Missing advanced data is shown as unavailable rather than zero.';
 }
