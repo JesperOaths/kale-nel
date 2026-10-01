@@ -21,6 +21,9 @@ assert.ok(api.includes('if(action==="profile_delete")')&&api.includes('.delete()
 assert.ok(api.includes('directRequest=body.direct_request===true')&&api.includes('profileKey=directRequest?"recent-request"'),'Direct recent-match requests must reuse one internal scratch identity instead of exposing profile management');
 assert.ok(migration.includes('references public.league_profiles_v1(id) on delete cascade'),'League child tables must retain cascade deletion from profiles');
 assert.ok(api.includes('trimAnonymousMatchCache(')&&api.includes('trimAnonymousRows('),'Anonymous cache/history must be pruned after use');
+const matchCachePruner=api.slice(api.indexOf('async function trimAnonymousMatchCache'),api.indexOf('async function riot('));
+assert.ok(matchCachePruner.includes('select("match_id")')&&matchCachePruner.includes('.in("match_id",matchIds)'),'Match-cache pruning must use the real composite key rather than a nonexistent id column');
+assert.ok(!matchCachePruner.includes('select("id")')&&!matchCachePruner.includes('.in("id",'),'Match-cache pruning must never assume league_match_cache_v1 has an id column');
 assert.ok(html.includes('scans up to 50 recent matches')&&html.includes('Latest eligible 20'),'Public UI must describe the automatic bounded Last-20 scan instead of exposing cache-depth controls');
 assert.ok(api.includes('requires_session:false')&&api.includes('public_workspace:true'),'League health contract must remain public');
 assert.ok(api.includes('allowServerRiotKey=viewer.anonymous!==true'),'Anonymous League workspaces must never inherit the private server Riot key');
