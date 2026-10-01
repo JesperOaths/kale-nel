@@ -5,7 +5,7 @@ const cfg=window.GEJAST_CONFIG||{};
 const API=(cfg.SUPABASE_URL||'')+'/functions/v1/printify-gildan-diff-diag-v1';
 const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
 const $=(id)=>document.getElementById(id);
-const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,publicWorkspace:true,gameSort:{key:'recent',dir:'desc'}};
+const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all'};
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const LEAGUE_WORKSPACE_KEY='bruisienator_public_workspace_v1';
@@ -38,6 +38,8 @@ function fmt(v,d=1){return hasNum(v)?Number(v).toFixed(d):'n/a';}
 function fmtInt(v){return hasNum(v)?Math.round(Number(v)).toLocaleString():'n/a';}
 function fmtPct(v){return hasNum(v)?Math.round(Number(v))+'%':'n/a';}
 function fmtDate(v){if(!v)return'—';const d=new Date(v);return Number.isFinite(d.getTime())?d.toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'}):'—';}
+function gameTimestampMs(v){const n=Number(v);return Number.isFinite(n)&&n>0?(n<1e12?n*1000:n):null;}
+function shortGameDate(v){const ms=gameTimestampMs(v);return ms?new Date(ms).toLocaleDateString(undefined,{day:'numeric',month:'short'}):'';}
 function fmtDuration(v){const n=Number(v);if(!Number.isFinite(n))return'n/a';const m=Math.floor(n),s=Math.round((n-m)*60);return m+':'+String(s).padStart(2,'0');}
 function signed(v,d=0){if(!hasNum(v))return'n/a';const n=Number(v);return(n>0?'+':'')+n.toFixed(d);}
 function rankText(r){return r&&r.tier?[String(r.tier).toUpperCase(),String(r.rank||'').toUpperCase(),hasNum(r.leaguePoints)?String(r.leaguePoints)+' LP':''].filter(Boolean).join(' '):'Unranked / unknown';}
@@ -315,6 +317,7 @@ async function ensureDirectRequestProfile(){
 }
 async function boot(){
   bindGameSortControls();
+  bindGameFilterControls();
   clearLog();log('Ready. Enter a Riot ID, region and Riot API key, then load recent matches.');
   await getDdragonVersion();
   try{
@@ -479,7 +482,9 @@ function renderReport(raw,sourceKind){
   const riotId=[p.gameName||p.game_name,p.tagLine||p.tag_line].filter(Boolean).join('#');
   const rank=p.rank&&p.rank.tier?[p.rank.tier,p.rank.rank,p.rank.leaguePoints!=null?String(p.rank.leaguePoints)+' LP':''].filter(Boolean).join(' '):'';
   const coachingN=r.coachingSummary?.games??s.primaryRoleGames??0;
-  $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(rank?rank+' · ':'')+(s.games??r.games.length)+' analyzed games · '+(s.primaryRole==='BOTTOM'?'ADC':(s.primaryRole||'GENERIC'))+' · '+coachingN+' role-comparable coaching games';
+  const reportTimes=(r.games||[]).map(g=>gameTimestampMs(g.gameStartTimestamp)).filter(Boolean).sort((a,b)=>a-b);
+  const reportRange=reportTimes.length?(new Date(reportTimes[0]).toLocaleDateString(undefined,{day:'numeric',month:'short'})+' → '+new Date(reportTimes[reportTimes.length-1]).toLocaleDateString(undefined,{day:'numeric',month:'short'})):'';
+  $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(rank?rank+' · ':'')+(s.games??r.games.length)+' analyzed games · '+(s.primaryRole==='BOTTOM'?'ADC':(s.primaryRole||'GENERIC'))+' · '+coachingN+' role-comparable coaching games'+(reportRange?' · '+reportRange:'');
   $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':(r.analyzerVersion||'Web analysis');
   renderQuickRead(r);
   renderRecentPulse(r);
@@ -647,7 +652,7 @@ function renderRankRadar(r){
     {key:'kp',label:'KP',format:v=>fmtPct(v)},
     {key:'dpm',label:'DPM',format:v=>fmtInt(v)},
     {key:'kda',label:'KDA',format:v=>fmt(v,2)},
-    {key:'survival',sourceKey:'deaths',label:'Survival',format:v=>fmt(v,1)+' deaths/g'}
+    {key:'survival',sourceKey:'deaths',label:'Fewer deaths',format:v=>fmt(v,1)+' deaths/g'}
   ];
   const userRaw={csMin:summary.csMin,kp:summary.kp,dpm:summary.dpm,kda:summary.kda,deaths:summary.avgDeaths};
   const defs=[
@@ -687,15 +692,13 @@ function bridgeFormat(v,unit){
   if(unit==='deaths')return fmt(v,1)+'/g';
   return fmt(v,2);
 }
-function bridgeGap(value,target,unit,inverse=false){
+function bridgeDifference(value,target,unit,inverse=false){
   if(!hasNum(value)||!hasNum(target))return{tone:'neutral',text:'n/a'};
-  const you=Number(value),ref=Number(target),raw=you-ref,meets=inverse?raw<=0:raw>=0;
-  if(meets){
-    const margin=Math.abs(raw),suffix=unit==='percent'?' pp':unit==='dpm'?' DPM':unit==='deaths'?' deaths/g':'';
-    return{tone:'good',text:'already at reference'+(margin>0?' · margin '+fmt(margin,unit==='dpm'?0:unit==='percent'?1:2)+suffix:'')};
-  }
-  const need=inverse?raw:-raw,suffix=unit==='percent'?' pp':unit==='dpm'?' DPM':unit==='deaths'?' deaths/g':'';
-  return{tone:'bad',text:'gap '+fmt(Math.abs(need),unit==='dpm'?0:unit==='percent'?1:2)+suffix};
+  const you=Number(value),ref=Number(target),raw=you-ref,abs=Math.abs(raw),digits=unit==='dpm'?0:unit==='percent'?1:2;
+  const suffix=unit==='percent'?' pp':unit==='dpm'?' DPM':unit==='deaths'?' deaths/g':'';
+  if(abs<1e-9)return{tone:'neutral',text:'matches reference'};
+  if(inverse)return{tone:raw<0?'good':'bad',text:fmt(abs,digits)+(raw<0?' fewer':' more')+suffix+' than reference'};
+  return{tone:raw>0?'good':'bad',text:fmt(abs,digits)+(raw>0?' above':' below')+suffix+' reference'};
 }
 function renderRankBridge(r){
   const target=$('rankBridge');if(!target)return;
@@ -709,8 +712,8 @@ function renderRankBridge(r){
     {key:'kda',label:'KDA',unit:'num'},
     {key:'deaths',sourceKey:'avgDeaths',label:'Deaths / game',unit:'deaths',inverse:true}
   ];
-  target.innerHTML='<div class="rank-bridge-head"><div><span>Benchmark bridge</span><strong>What separates this ADC sample from the next reference tiers?</strong></div><small>Directional cross-patch context only — these statistics do not determine rank or predict promotion.</small></div><div class="rank-bridge-grid">'+metrics.map(m=>{
-    const value=s[m.sourceKey||m.key],g1=bridgeGap(value,plus1?.[m.key],m.unit,m.inverse),g2=bridgeGap(value,plus2?.[m.key],m.unit,m.inverse);
+  target.innerHTML='<div class="rank-bridge-head"><div><span>Benchmark bridge</span><strong>How does this ADC sample differ from higher-tier reference values?</strong></div><small>Descriptive cross-patch context only — higher-tier averages are not targets, causes, or promotion predictors.</small></div><div class="rank-bridge-grid">'+metrics.map(m=>{
+    const value=s[m.sourceKey||m.key],g1=bridgeDifference(value,plus1?.[m.key],m.unit,m.inverse),g2=bridgeDifference(value,plus2?.[m.key],m.unit,m.inverse);
     return '<article class="rank-bridge-card"><span>'+esc(m.label)+'</span><strong>'+esc(bridgeFormat(value,m.unit))+'</strong><div><b>'+(plus1?.tier?esc(plus1.tier):'+1 tier')+'</b><em>'+esc(bridgeFormat(plus1?.[m.key],m.unit))+'</em><small class="tone-'+g1.tone+'">'+esc(g1.text)+'</small></div><div><b>'+(plus2?.tier?esc(plus2.tier):'+2 tiers')+'</b><em>'+esc(bridgeFormat(plus2?.[m.key],m.unit))+'</em><small class="tone-'+g2.tone+'">'+esc(g2.text)+'</small></div></article>';
   }).join('')+'</div>';
 }
@@ -915,6 +918,8 @@ function openReplayReviewMatch(matchId,tab){
   const games=state.report?.games||[],index=games.findIndex(g=>String(g.matchId)===String(matchId));
   if(index<0)return;
   state.activeDetailTab=tab||'macro';
+  state.gameFilter='all';state.gameChampion='all';
+  renderGames(state.report);
   if(state.openMatch===index)state.openMatch=null;
   toggleGame(index);
   const row=$('gamesBody')?.querySelector('.game-row[data-match="'+CSS.escape(String(matchId))+'"]');
@@ -954,15 +959,43 @@ function bindGameSortControls(){
     if(state.report)renderGames(state.report);
   });
 }
+function bindGameFilterControls(){
+  document.querySelectorAll('[data-game-filter]').forEach(btn=>btn.onclick=()=>{
+    state.gameFilter=String(btn.dataset.gameFilter||'all');state.openMatch=null;
+    if(state.report)renderGames(state.report);
+  });
+  const champion=$('gameChampionFilter');if(champion)champion.onchange=()=>{state.gameChampion=String(champion.value||'all');state.openMatch=null;if(state.report)renderGames(state.report);};
+  const clear=$('clearGameFilters');if(clear)clear.onclick=()=>{state.gameFilter='all';state.gameChampion='all';state.openMatch=null;if(state.report)renderGames(state.report);};
+}
+function gamePassesFilter(g){
+  if(state.gameChampion!=='all'&&String(g.champion||'')!==state.gameChampion)return false;
+  if(state.gameFilter==='win')return!!g.win;
+  if(state.gameFilter==='loss')return!g.win;
+  if(state.gameFilter==='ahead15')return hasNum(g.goldDiff15)&&Number(g.goldDiff15)>100;
+  if(state.gameFilter==='even15')return hasNum(g.goldDiff15)&&Math.abs(Number(g.goldDiff15))<=100;
+  if(state.gameFilter==='behind15')return hasNum(g.goldDiff15)&&Number(g.goldDiff15)<-100;
+  if(state.gameFilter==='adc')return g.role==='BOTTOM';
+  return true;
+}
 function renderGames(r){
-  const games=r.games||[];$('gameCountLabel').textContent=games.length+' games';
+  const games=r.games||[];
   state.openMatch=null;
-  const order=games.map((g,i)=>({g,i})).sort((a,b)=>{
+  const championSelect=$('gameChampionFilter');
+  if(championSelect){
+    const champions=[...new Set(games.map(g=>String(g.champion||'')).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+    championSelect.innerHTML='<option value="all">All champions</option>'+champions.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('');
+    if(!champions.includes(state.gameChampion))state.gameChampion='all';
+    championSelect.value=state.gameChampion;
+  }
+  const filtered=games.map((g,i)=>({g,i})).filter(x=>gamePassesFilter(x.g));
+  $('gameCountLabel').textContent=(filtered.length===games.length?games.length+' games':filtered.length+' shown · '+games.length+' eligible');
+  const filterSummary=$('gameFilterSummary');if(filterSummary)filterSummary.textContent=filtered.length===games.length?'Showing the full sample.':'Filters narrow the table only; report metrics still use the full eligible sample.';
+  const order=filtered.sort((a,b)=>{
     const av=gameSortValue(a.g,state.gameSort.key,a.i),bv=gameSortValue(b.g,state.gameSort.key,b.i),dir=state.gameSort.dir==='asc'?1:-1;
     if(typeof av==='string'||typeof bv==='string')return String(av).localeCompare(String(bv))*dir;
     return (Number(av)-Number(bv))*dir||a.i-b.i;
   });
-  $('gamesBody').innerHTML=order.map(({g,i},displayIndex)=>{
+  $('gamesBody').innerHTML=order.length?order.map(({g,i},displayIndex)=>{
     const kda=[g.kills,g.deaths,g.assists].map(x=>hasNum(x)?Number(x):'?').join('/');
     const icon=championIcon(g.champion),goldTone=deltaTone(g.goldDiff15,0,100,false);
     const firstItem=g.firstMajorItem,itemSrc=firstItem?itemIcon(firstItem.itemId):'';
@@ -978,11 +1011,14 @@ function renderGames(r){
       '<td>'+esc(fmt(g.csMin,2))+'</td>'+
       '<td>'+esc(fmtInt(g.dpm))+'</td>'+
       '<td><div class="table-delta tone-'+goldTone+'"><strong>'+esc(hasNum(g.goldDiff15)?signed(g.goldDiff15,0)+'g':'n/a')+'</strong><small>'+esc(goldLabel)+'</small>'+contextBar(g.goldDiff15,1200)+'</div></td></tr>';
-  }).join('');
+  }).join(''):'<tr class="games-empty-row"><td colspan="9">No games match the current filters.</td></tr>';
   $('gamesBody').querySelectorAll('.game-row').forEach(row=>row.addEventListener('click',()=>toggleGame(Number(row.dataset.index))));
+  document.querySelectorAll('[data-game-filter]').forEach(btn=>btn.classList.toggle('active-filter',String(btn.dataset.gameFilter||'all')===state.gameFilter));
+  if($('clearGameFilters'))$('clearGameFilters').disabled=state.gameFilter==='all'&&state.gameChampion==='all';
   document.querySelectorAll('[data-game-sort]').forEach(btn=>{
     const active=String(btn.dataset.gameSort||'')===state.gameSort.key;
     btn.classList.toggle('active-sort',active);
+    btn.dataset.sortDir=active?state.gameSort.dir:'';
     btn.setAttribute('aria-sort',active?(state.gameSort.dir==='asc'?'ascending':'descending'):'none');
   });
 }
@@ -1220,7 +1256,7 @@ function detailContent(g,tab){
     detailCard('Previous result',g.sessionContext?.previousWin===true?'WIN':g.sessionContext?.previousWin===false?'LOSS':'n/a')+
     detailList((g.structurePressure?.events||[]).map(x=>(Number(x.killTime)||0).toFixed(1)+'m solo kill · '+(x.converted?('supported structure involvement'+(x.towerType?' · '+x.towerType:'')+(x.laneType?' · '+x.laneType:'')+(x.attribution?' · '+String(x.attribution).replaceAll('_',' '):'')+(hasNum(x.secondsAfter)?' · '+fmtInt(x.secondsAfter)+'s later':'')):'no supported plate/turret involvement within 90s')),'No early clean solo-kill structure window detected.')+
     '<div class="detail-note">2026 turret plates no longer use the old 14:00 expiry assumption and plate-style rewards extend through deeper turret tiers. The ≤20m row is only a fixed coaching slice; full-match involvement and the outer/inner/inhibitor/Nexus breakdown are shown separately. Direct event credit is preferred; when Riot omits participant credit, event-position proximity or same-lane timeline presence is retained as weaker supported evidence.</div>'+
-    detailList((g.laneDuel?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+(x.result==='solo_kill'?'solo kill on role opponent':'solo death to role opponent')+(x.early?' · early phase':x.pre14?' · legacy pre-14':'')+(hasNum(x.goldDiffAtEvent)?' · role gold '+signed(x.goldDiffAtEvent,0)+'g at event':'')+(hasNum(x.goldSwingTo15)?' · '+signed(x.goldSwingTo15,0)+'g swing to 15':'')+(hasNum(x.csSwingTo15)?' · '+signed(x.csSwingTo15,0)+' CS swing to 15':'')+(x.result==='solo_kill'&&x.conversionEligibleTo15&&hasNum(x.convertedBy15)?(x.convertedBy15?' · converted by 15':' · not converted by 15'):'')+(x.result==='solo_kill'&&(x.early||x.pre14)&&hasNum(x.nextShopDelaySec)?' · next shop '+fmtInt(x.nextShopDelaySec)+'s':'')+(x.result==='solo_kill'&&(x.early||x.pre14)&&x.diedBeforeNextShop?' · died before shop':'')),'No clean direct-role solo duel event detected.')+
+    detailList((g.laneDuel?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+(x.result==='solo_kill'?'solo kill on role opponent':'solo death to role opponent')+(x.early?' · early phase':'')+(hasNum(x.goldDiffAtEvent)?' · role gold '+signed(x.goldDiffAtEvent,0)+'g at event':'')+(hasNum(x.goldSwingTo15)?' · '+signed(x.goldSwingTo15,0)+'g swing to 15':'')+(hasNum(x.csSwingTo15)?' · '+signed(x.csSwingTo15,0)+' CS swing to 15':'')+(x.result==='solo_kill'&&x.conversionEligibleTo15&&hasNum(x.convertedBy15)?(x.convertedBy15?' · converted by 15':' · not converted by 15'):'')+(x.result==='solo_kill'&&(x.early||x.pre14)&&hasNum(x.nextShopDelaySec)?' · next shop '+fmtInt(x.nextShopDelaySec)+'s':'')+(x.result==='solo_kill'&&(x.early||x.pre14)&&x.diedBeforeNextShop?' · died before shop':'')),'No clean direct-role solo duel event detected.')+
     detailList((g.lanePressure?.events||[]).filter(x=>x.outsidePressure).map(x=>(Number(x.time)||0).toFixed(1)+'m · outside pressure'+((x.outsideRoles||[]).length?' from '+x.outsideRoles.join(', '):'')+' · '+String(x.attackerCount||'?')+' attacker(s)'),'No early-phase outside-pressure lane death detected.')+
     '<div class="detail-note">Clean direct-role duel events require the player and actual same-role opponent to be killer/victim with no assisting participants. This separates direct matchup outcomes from outside intervention.</div>';
 }
@@ -1274,9 +1310,9 @@ function chartSvg(points,spec){
   const zero=signedAxis?'<line class="chart-zero-line" x1="'+padL+'" y1="'+zeroY+'" x2="'+(w-padR)+'" y2="'+zeroY+'"/><text class="chart-zero-label" x="'+(w-padR-4)+'" y="'+(zeroY-7)+'" text-anchor="end">EVEN WITH ROLE OPPONENT</text>':'';
   const refValue=hasNum(spec.reference)?Number(spec.reference):null,refY=refValue!=null&&refValue>=min&&refValue<=max?yAt(refValue):null;
   const reference=refY==null?'':'<line class="chart-reference-line" x1="'+padL+'" y1="'+refY+'" x2="'+(w-padR)+'" y2="'+refY+'"/><text class="chart-reference-label" x="'+(w-padR-4)+'" y="'+(refY-7)+'" text-anchor="end">'+esc(spec.referenceLabel||'REFERENCE')+' · '+esc(formatChartValue(refValue,spec.formatUnit||spec.unit))+'</text>';
-  const dots=coords.map((c,i)=>{const when=c.p?.gameStartTimestamp?new Date(Number(c.p.gameStartTimestamp)).toLocaleDateString(undefined,{day:'numeric',month:'short'}):('Game '+String(i+1)),champ=c.p?.champion?String(c.p.champion)+' · ':'';return '<circle class="chart-dot '+(signedAxis?(c.v>0?'positive':c.v<0?'negative':'even'):'')+'" cx="'+c.x.toFixed(1)+'" cy="'+c.y.toFixed(1)+'" r="5"><title>'+esc(champ+when+': '+formatChartValue(c.v,spec.formatUnit||spec.unit))+'</title></circle>';}).join('');
-  const firstTime=valid[0]?.p?.gameStartTimestamp,lastTime=valid[valid.length-1]?.p?.gameStartTimestamp,shortDate=v=>v?new Date(Number(v)).toLocaleDateString(undefined,{day:'numeric',month:'short'}):'';
-  const xLabels=valid.length?'<text class="chart-axis-label x" x="'+padL+'" y="'+(h-12)+'">'+esc(shortDate(firstTime)||'older')+'</text><text class="chart-axis-label x" x="'+(w-padR)+'" y="'+(h-12)+'" text-anchor="end">'+esc(shortDate(lastTime)||'newer')+'</text>':'';
+  const dots=coords.map((c,i)=>{const when=shortGameDate(c.p?.gameStartTimestamp)||('Game '+String(i+1)),champ=c.p?.champion?String(c.p.champion)+' · ':'';return '<circle class="chart-dot '+(signedAxis?(c.v>0?'positive':c.v<0?'negative':'even'):'')+'" cx="'+c.x.toFixed(1)+'" cy="'+c.y.toFixed(1)+'" r="5"><title>'+esc(champ+when+': '+formatChartValue(c.v,spec.formatUnit||spec.unit))+'</title></circle>';}).join('');
+  const firstTime=valid[0]?.p?.gameStartTimestamp,lastTime=valid[valid.length-1]?.p?.gameStartTimestamp;
+  const xLabels=valid.length?'<text class="chart-axis-label x" x="'+padL+'" y="'+(h-12)+'">'+esc(shortGameDate(firstTime)||'older')+'</text><text class="chart-axis-label x" x="'+(w-padR)+'" y="'+(h-12)+'" text-anchor="end">'+esc(shortGameDate(lastTime)||'newer')+'</text>':'';
   return '<svg class="chart-svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(spec.title||'Trend chart')+'">'+bands+grid.join('')+zero+reference+'<path class="chart-line" d="'+path+'"/>'+dots+xLabels+'</svg>';
 }
 function chartSummary(points,spec){
@@ -1290,6 +1326,48 @@ function chartSummary(points,spec){
   return 'Sample average '+formatChartValue(avgV,unit)+' · latest '+recent.length+' average '+formatChartValue(recentAvg,unit)+'.';
 }
 
+function quantile(values,q){
+  const xs=values.filter(Number.isFinite).slice().sort((a,b)=>a-b);if(!xs.length)return null;
+  const pos=(xs.length-1)*q,lo=Math.floor(pos),hi=Math.ceil(pos),mix=pos-lo;
+  return xs[lo]+(xs[hi]-xs[lo])*mix;
+}
+function robustStats(values){
+  const xs=values.map(Number).filter(Number.isFinite);if(!xs.length)return null;
+  return{n:xs.length,median:quantile(xs,.5),q1:quantile(xs,.25),q3:quantile(xs,.75),min:Math.min(...xs),max:Math.max(...xs)};
+}
+function consistencyFmt(v,unit){
+  if(!hasNum(v))return'n/a';
+  if(unit==='gold')return signed(v,0)+'g';
+  if(unit==='cs')return signed(v,1)+' CS';
+  if(unit==='dpm')return fmtInt(v);
+  if(unit==='percent')return fmtPct(v);
+  return fmt(v,2);
+}
+function consistencySplit(values,center,threshold,inverse=false){
+  const xs=values.map(Number).filter(Number.isFinite),ref=Number(center||0),t=Math.max(0,Number(threshold||0));
+  let favorable=0,close=0,unfavorable=0;
+  xs.forEach(v=>{const d=(v-ref)*(inverse?-1:1);if(d>t)favorable++;else if(d<-t)unfavorable++;else close++;});
+  return{favorable,close,unfavorable,n:xs.length};
+}
+function consistencyCard(label,stats,unit,split,detail){
+  if(!stats)return'<article class="quality-card consistency-card evidence-unknown"><span>'+esc(label)+'</span><strong>Not enough data</strong><small>No valid values in this sample.</small></article>';
+  const middle=consistencyFmt(stats.q1,unit)+' to '+consistencyFmt(stats.q3,unit);
+  const splitText=split&&split.n?(split.favorable+' favorable · '+split.close+' close · '+split.unfavorable+' unfavorable'):'';
+  return'<article class="quality-card consistency-card"><span>'+esc(label)+'</span><strong>Median '+esc(consistencyFmt(stats.median,unit))+'</strong><small>Middle 50%: '+esc(middle)+(splitText?' · '+esc(splitText):'')+(detail?' · '+esc(detail):'')+'</small></article>';
+}
+function renderConsistencySummary(r){
+  const target=$('consistencySummary');if(!target)return;
+  const games=Array.isArray(r.games)?r.games:[],adcGames=games.filter(g=>g.role==='BOTTOM'),bench=adcBenchmarkSummary(r)?r.externalBenchmarks?.same:null;
+  const gold=games.filter(g=>g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)).map(g=>Number(g.goldDiff15));
+  const cs=games.filter(g=>g?.phaseRules?.lane15Comparable!==false&&hasNum(g.csDiff15)).map(g=>Number(g.csDiff15));
+  const dpm=adcGames.filter(g=>hasNum(g.dpm)).map(g=>Number(g.dpm)),kp=adcGames.filter(g=>hasNum(g.kp)).map(g=>Number(g.kp));
+  target.innerHTML=[
+    consistencyCard('Gold @15 vs role',robustStats(gold),'gold',consistencySplit(gold,0,150,false),'close band ±150g · '+gold.length+' valid checkpoints'),
+    consistencyCard('CS @15 vs role',robustStats(cs),'cs',consistencySplit(cs,0,5,false),'close band ±5 CS · '+cs.length+' valid checkpoints'),
+    consistencyCard('ADC damage / min',robustStats(dpm),'dpm',bench&&hasNum(bench.dpm)?consistencySplit(dpm,Number(bench.dpm),50,false):null,bench&&hasNum(bench.dpm)?'vs '+String(bench.tier||'same-tier')+' reference ±50 DPM':'no external ADC reference applied'),
+    consistencyCard('ADC kill participation',robustStats(kp),'percent',bench&&hasNum(bench.kp)?consistencySplit(kp,Number(bench.kp),2,false):null,bench&&hasNum(bench.kp)?'vs '+String(bench.tier||'same-tier')+' reference ±2 pp':'no external ADC reference applied')
+  ].join('');
+}
 function renderCharts(r){
   const lane15Comparable=Number(r.behaviorSummary?.checkpointEligibility?.lane15Games??0)>0,adc=adcBenchmarkSummary(r),bench=adc?r.externalBenchmarks?.same:null;
   const sourceGames=[...(r.games||[])],hasTimestamps=sourceGames.some(g=>Number(g?.gameStartTimestamp||0)>0);
@@ -1310,6 +1388,7 @@ function renderCharts(r){
   }).join('');
   const all=[...(r.hiddenCharts||[]),...hidden];
   $('hiddenCharts').hidden=!all.length;$('hiddenCharts').textContent=all.length?'Unavailable / low-sample charts: '+[...new Set(all)].join(', '):'';
+  renderConsistencySummary(r);
 }
 
 function renderAdvanced(r){
