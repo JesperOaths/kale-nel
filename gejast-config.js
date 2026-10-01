@@ -33,6 +33,37 @@
     return headers;
   }
 
+  function installPublicApiKeyFetchGuard() {
+    try {
+      if (window.__GEJAST_PUBLIC_KEY_FETCH_GUARD_V1 || typeof window.fetch !== 'function') return;
+      const key = String(CONFIG.SUPABASE_PUBLISHABLE_KEY || '').trim();
+      if (!key.startsWith('sb_publishable_')) return;
+      const nativeFetch = window.fetch.bind(window);
+      const cleanHeaders = (value) => {
+        const headers = new Headers(value || {});
+        const apiKey = String(headers.get('apikey') || '').trim();
+        const authorization = String(headers.get('Authorization') || '').trim();
+        if (apiKey === key && authorization === `Bearer ${key}`) headers.delete('Authorization');
+        return headers;
+      };
+      window.fetch = function(input, init) {
+        if (init && init.headers) {
+          const next = Object.assign({}, init, { headers: cleanHeaders(init.headers) });
+          return nativeFetch(input, next);
+        }
+        if (typeof Request !== 'undefined' && input instanceof Request) {
+          const cleaned = cleanHeaders(input.headers);
+          if (cleaned.get('Authorization') !== input.headers.get('Authorization')) {
+            return nativeFetch(new Request(input, { headers: cleaned }), init);
+          }
+        }
+        return nativeFetch(input, init);
+      };
+      window.__GEJAST_PUBLIC_KEY_FETCH_GUARD_V1 = true;
+    } catch (_) {}
+  }
+  installPublicApiKeyFetchGuard();
+
   function detectScriptVersion(){
     try {
       const scripts = Array.from(document.scripts || []);
@@ -750,6 +781,7 @@ function buildRequestUrl(returnTo, scope){
     refreshVersionFromFile,
     normalizeProfileImageUrl,
     publicApiHeaders,
+    installPublicApiKeyFetchGuard,
     fetchScopedActivePlayerNames,
     getActivatedPlayerNamesForScope,
     readCachedLoginNames,
