@@ -290,6 +290,7 @@ assert.ok(api.includes('selected_role_cached_games')&&api.includes('queue_compar
 assert.ok(app.includes('Role-selection safety check failed'),'Frontend must fail closed if another role ever leaks into a selected-role report');
 assert.ok(html.includes('id="savedProfileSelect"')&&html.includes('id="newSavedProfileBtn"')&&app.includes("api('profiles_list')")&&app.includes("api('profile_save'"),'League must expose intuitive server-backed Riot profiles');
 assert.ok(app.includes("String(p.profile_key||'')==='recent-request'")&&app.includes('id:legacy.id')&&app.includes('generatedProfileKey(legacy.game_name'),'Legacy scratch Riot identity must be upgraded in place to a named saved profile so existing cached matches are preserved');
+assert.ok(app.includes("oldHistory=await api('report_latest'")&&app.includes("api('analyze_basic',{profile_id:migrated.profile.id,target_role:inferredRole})"),'Legacy mixed reports must be used only to infer role, then rebuilt from cached Riot data into a role-pure saved report');
 assert.ok(app.includes("api('report_latest',{profile_id:profile.id,target_role:selectedRole})")&&api.includes('role(x?.data_quality?.selectedRole)===targetRole'),'Saved report history must be role-specific');
 assert.ok(app.includes('LEAGUE_SLOT_SELECTION_KEY')&&!app.includes('LEAGUE_PROFILE_SELECTION_KEY'),'Browser storage may remember only the selected profile slot pointer; Riot profile/report data stays server-side');
 assert.ok(api.includes('positionEvidence:pxy?"event_position":inferred?"nearest_player_frame_35s":"unavailable"')&&api.includes('wardFrameProjectedPositions'),'Ward events without native coordinates must remain counted and transparently projectable from a ≤35s player frame');
@@ -496,7 +497,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v113'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v114'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
