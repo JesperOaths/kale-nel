@@ -1,0 +1,34 @@
+name: Check League backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/league-api-v1/**'
+      - 'league/**'
+      - 'check-league-web-v1.mjs'
+      - '.github/workflows/check-league-backend-v1.yml'
+  pull_request:
+    paths:
+      - 'supabase/functions/league-api-v1/**'
+      - 'league/**'
+      - 'check-league-web-v1.mjs'
+      - '.github/workflows/check-league-backend-v1.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check-league:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify League web contract
+        run: node check-league-web-v1.mjs
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check League Edge Function
+        run: deno check supabase/functions/league-api-v1/index.ts
