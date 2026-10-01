@@ -1259,3 +1259,11 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 .table-sort[data-sort-dir="desc"]::after{content:" ↓";display:inline;font-size:.65rem;color:var(--gold-dark)}
 @media(max-width:900px){.section-subhead{align-items:flex-start;flex-direction:column}.game-champion-filter{margin-left:0}.game-filter-bar{align-items:flex-start}}
 @media(max-width:620px){.game-filter-chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}.game-filter-chip{width:100%}.game-champion-filter{width:100%;justify-content:space-between}.game-champion-filter select{flex:1;min-width:0}}
+
+
+/* v110 — keyboard-safe evidence rows */
+.filter-count{display:inline-grid;place-items:center;min-width:1.35rem;height:1.35rem;margin-left:4px;padding:0 4px;border-radius:999px;background:rgba(0,0,0,.07);font-size:.61rem;font-weight:950;line-height:1}
+.game-filter-chip.active-filter .filter-count{background:rgba(255,255,255,.18)}
+.games-table tr.game-row:focus-visible{outline:3px solid rgba(174,126,41,.45);outline-offset:-3px;background:#fff9ec}
+.games-table tr.game-row[aria-expanded="true"]{background:#fffaf0}
+.caret-arrow{display:inline-block;min-width:.8em}
