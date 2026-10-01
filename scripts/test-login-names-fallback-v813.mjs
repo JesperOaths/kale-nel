@@ -7,6 +7,7 @@ const source=fs.readFileSync('gejast-login-names-fallback.js','utf8');
 const staticSource=fs.readFileSync('gejast-login-names-static.js','utf8');
 const accountRuntime=fs.readFileSync('gejast-account-runtime.js','utf8');
 const loginHtml=fs.readFileSync('login.html','utf8');
+const siteVersion=fs.readFileSync('VERSION','utf8').trim();
 const calls=[],cacheWrites=[];
 
 function response(body,status=200){return new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});}
@@ -64,8 +65,10 @@ assert.match(accountRuntime,/function staticLoginNames\(\)/,'login page runtime 
 assert.match(accountRuntime,/seed = normalizeNames\(\[\.\.\.cached,\.\.\.snapshot\]\)/,'login bootstrap must merge cache plus static snapshot synchronously');
 assert.match(accountRuntime,/if\(clean\.length\)\{[\s\S]*?fillSelect\(sel,clean\)/,'live refresh may replace the dropdown only when it returns real names');
 assert.match(accountRuntime,/else if\(seed\.length\)/,'an empty or slow live refresh must preserve the synchronous seed');
-assert.match(loginHtml,/gejast-login-names-static\.js\?v=20261001-login-resilience-r5/);
-assert.match(loginHtml,/gejast-login-names-fallback\.js\?v=20261001-login-resilience-r5/);
-assert.match(loginHtml,/gejast-account-runtime\.js\?v=20261001-login-resilience-r5/);
+assert.ok(loginHtml.includes(`gejast-login-names-static.js?${siteVersion}&rev=20261001-login-resilience-r6`),'login must load the static name snapshot with site version + resilience revision');
+assert.ok(loginHtml.includes(`gejast-login-names-fallback.js?${siteVersion}&rev=20261001-login-resilience-r6`),'login must load the single-RPC fallback with site version + resilience revision');
+assert.ok(loginHtml.includes(`gejast-account-runtime.js?${siteVersion}&rev=20261001-login-resilience-r6`),'login must load the account runtime with site version + resilience revision');
+assert.match(loginHtml,/window\.GEJAST_LOGIN_NAMES_STATIC=Object\.freeze\(/,'login HTML must contain an inline last-known-good name seed so the selector works even when Supabase or a deferred asset stalls');
+for(const name of ['Bruis','Jesper','Sierk']) assert.ok(loginHtml.includes(`"${name}"`),`inline login seed missing representative name ${name}`);
 
 console.log('RESULT=V817_LOGIN_NAMES_STATIC_FIRST_SINGLE_RPC_PASS');
