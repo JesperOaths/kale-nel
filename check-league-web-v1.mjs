@@ -184,8 +184,14 @@ assert.ok(css.includes('.batch-profile-list'),'Batch profile selector must retai
 assert.ok(api.includes('w.objectiveSetup=neutralObjectives.some'),'Per-ward objective setup must use neutral objectives only');
 assert.ok(!api.includes('w.objectiveSetup=allObjectives.some'),'Turret/plate events must not be counted as neutral-objective ward setup');
 assert.ok(api.includes('STANDARD_SR_2026_RULES'),'Standard 2026 Summoner Rift pacing rules must remain explicit');
-assert.ok(api.includes('earlyEndMin:15')&&api.includes('lateStartMin:20'),'Standard phase boundaries must track the 2026 15m transition and 20m Baron era');
+assert.ok(api.includes('earlyEndMin:14')&&api.includes('lateStartMin:20'),'Standard phase boundaries must track the 2026 14m macro transition and 20m Baron era');
 assert.ok(api.includes('SWIFTPLAY_2026_RULES')&&api.includes('queueId===480'),'Swiftplay must keep a separate accelerated pacing profile');
+assert.ok(api.includes('earlyEndMin:12,lateStartMin:12'),'2026 Swiftplay must collapse directly into its 12-minute Baron era instead of fabricating a standard-SR transition');
+assert.ok(api.includes('baronSpawnMin:12')&&api.includes('elderSpawnMin:15')&&api.includes('suddenDeathMin:25'),'Swiftplay major objective anchors must remain explicit');
+assert.ok(api.includes('startsLevel:3')&&api.includes('startingGold:1400'),'Swiftplay starting acceleration must remain explicit');
+assert.ok(api.includes('LEGACY_SR_RULES')&&api.includes('phaseComparable:false'),'Historical rules must remain visible but excluded from current phase coaching');
+assert.ok(api.includes('FUTURE_UNVERIFIED_RULES'),'Future unknown mechanics must fail closed instead of silently inheriting current coaching rules');
+assert.ok(api.includes('major===16'),'2026 Riot internal game-version major must select the 2026 rules profile');
 assert.ok(api.includes('phaseExposureMinutes'),'Phase-risk comparisons must normalize by actual time exposure');
 assert.ok(api.includes('highRiskDeathsPer10Min'),'Phase-risk export must include per-10-minute exposure-normalized rates');
 assert.ok(api.includes('midRouting:{teamObjectives:0,objectiveJoins:0,objectiveJoinRate:null}'),'15→25 routing must remain independent of strategic phase buckets');
@@ -197,7 +203,9 @@ assert.ok(api.includes('neutralOwnWindows'),'Objective-presence denominators mus
 assert.ok(api.includes('enemyStructureAfter'),'Structure consequences must remain distinct from neutral-objective consequences');
 assert.ok(api.includes('firstMeaningfulReturnShop'),'First reset must be inferred from leaving base, not a hard-coded 2.5-minute floor');
 assert.ok(api.includes('hasLeftBaseBefore'),'First meaningful return must require prior departure from base');
-assert.ok(api.includes('structureInvolvement'),'Plate/turret conversion must support proximity-based involvement when Riot omits direct participant credit');
+assert.ok(api.includes('structureInvolvementEvidence'),'Plate/turret conversion must preserve evidence quality when Riot omits direct participant credit');
+assert.ok(api.includes('timeline_lane_presence'),'Coordinate-less plate events must support weaker same-lane timeline evidence rather than being silently dropped');
+assert.ok(api.includes('playerPlateByTier')&&api.includes('opponentPlateByTier'),'Plate pressure must remain split across outer/inner/inhibitor/Nexus tiers');
 assert.ok(api.includes('unattributedPlateEvents'),'Plate attribution uncertainty must remain measurable');
 assert.ok(api.includes('earlySoloKillsVsRole')&&api.includes('earlyOutsidePressureDeaths'),'Primary early-lane coaching must use queue-aware early-phase fields');
 assert.ok(api.includes('conversionEligibleTo15'),'The narrower ≤14m window must be explicitly tied to the fixed @15 conversion checkpoint');
@@ -205,6 +213,9 @@ assert.ok(app.includes('Plate involvement ≤20m'),'Frontend must describe plate
 assert.ok(app.includes('Neutral-objective presence'),'Frontend must distinguish neutral objectives from structures');
 assert.ok(app.includes('Early high-risk deaths / 10m'),'Frontend must expose phase-risk normalization by time');
 assert.ok(app.includes('function reportPhaseRules('),'Per-game phase labels must read the stored queue/rules profile');
+assert.ok(app.includes('const collapsed=rules.earlyEndMin>=rules.lateStartMin'),'Swiftplay phase UI must not invent an empty transition bucket');
+assert.ok(app.includes('function plateTierText('),'Frontend must expose turret-tier plate pressure');
+assert.ok(app.includes('Your plate tiers')&&app.includes('Peer plate tiers'),'Per-game macro view must show deeper-turret pressure explicitly');
 assert.ok(app.includes('function worldToMapPoint'));
 assert.ok(app.includes('minX:-120'));
 assert.ok(app.includes('maxX:14870'));
@@ -221,6 +232,7 @@ assert.ok(css.includes('.map-marker-label'),'Numbered death marker styling must 
 assert.ok(!app.includes("['DQI'"));
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
+assert.ok(html.includes('20261001-league-web-v68'),'League assets must cache-bust the v4.24 frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
@@ -267,7 +279,7 @@ assert.ok(api.includes('higherRankMajorItemGames'),'Higher-ranked peer item samp
 assert.ok(api.includes('higherRankAvgMajorItemDeltaMin'),'Higher-ranked peer first-major timing delta must remain exported');
 assert.ok(api.includes('higherRankMajorItemFasterPct'),'Higher-ranked peer first-major faster rate must remain exported');
 assert.ok(api.includes('First-major timing slips against higher-ranked direct opponents'),'Higher-rank item timing must remain actionable coaching evidence');
-assert.ok(api.includes('league-web-behavior-v4.23'),'Analyzer version must include queue-aware phases, encounter grouping, and modern structure involvement');
+assert.ok(api.includes('league-web-behavior-v4.24'),'Analyzer version must include season-aware rules and turret-tier involvement');
 assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
 assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
 assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
