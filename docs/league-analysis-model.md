@@ -1691,3 +1691,16 @@ Current minimums:
 - death → recovery stability: 8 measured repeat-death opportunities.
 
 Combining metrics must never make a thin input look more certain than it was individually.
+
+
+## Rolling progress comparison
+
+Saved-report development comparisons are **rolling Last-20 comparisons**, not independent before/after experiments. The UI must show how many match IDs overlap, how many new games entered and how many older games dropped.
+
+General metric comparison is withheld when the selected primary role, selected queue context or verified mechanics cohort changes. A patch change does not automatically erase every descriptive comparison, but it is disclosed prominently; saved Next-5 target scoring remains stricter and is withheld across patch changes.
+
+Headline progress uses denominator-safe metrics only. Each metric must meet its own analyzer-aligned minimum in **both** reports before a delta is eligible. Materiality is expressed as the observed directional change divided by that metric's predefined practical change band. The UI calls material movement **favorable shift** or **unfavorable shift**, not proof of improvement/decline.
+
+Only the strongest material shifts are kept prominent. Metrics that remain inside their practical change bands are placed in a collapsible stable/smaller-shifts section. Missing or thin metrics are counted as withheld rather than silently converted to zero.
+
+Heavy Last-20 overlap, analyzer-version changes and patch changes must remain visible context. No rolling comparison should be described as an independent experiment or causal development estimate.
