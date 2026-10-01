@@ -28,7 +28,7 @@ ok(backend.includes('earlyEndMin:14')&&backend.includes('lateStartMin:20'), 'sta
 ok(backend.includes('baronSpawnMin:20')&&backend.includes('platesPermanent:true'), 'standard 2026 SR must preserve 20-minute Baron and permanent plates');
 ok(backend.includes('atakhanEnabled:false')&&backend.includes('featsOfStrengthEnabled:false'), 'removed 2025 Atakhan/Feats mechanics must stay disabled in 2026');
 ok(backend.includes('firstBloodBonusGold:100')&&backend.includes('firstTurretBonusGold:300'), '2026 First Blood and first-turret bonus gold must remain encoded');
-ok(backend.includes('SWIFTPLAY_2026_RULES')&&backend.includes('queueId===480'), 'Swiftplay must use an explicit accelerated rules profile');
+ok(backend.includes('SWIFTPLAY_2026_RULES')&&backend.includes('SWIFTPLAY_SR_QUEUE_IDS=new Set([480])')&&backend.includes('queueProfile.rulesFamily==="swiftplay"'), 'Swiftplay must use an explicit accelerated queue/rules profile');
 ok(backend.includes('earlyEndMin:12,lateStartMin:12'), 'Swiftplay must transition directly into its 12-minute Baron era');
 ok(backend.includes('baronSpawnMin:12')&&backend.includes('elderSpawnMin:15')&&backend.includes('suddenDeathMin:25'), 'Swiftplay objective timing anchors must remain explicit');
 ok(backend.includes('startsLevel:3')&&backend.includes('startingGold:1400'), 'Swiftplay accelerated starting state must remain explicit');
