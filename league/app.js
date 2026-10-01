@@ -1008,31 +1008,46 @@ function renderRankBridge(r){
     return '<article class="rank-bridge-card"><span>'+esc(m.label)+'</span><strong>'+esc(bridgeFormat(value,m.unit))+'</strong><div><b>'+(plus1?.tier?esc(plus1.tier):'+1 tier')+'</b><em>'+esc(bridgeFormat(plus1?.[m.key],m.unit))+'</em><small class="tone-'+g1.tone+'">'+esc(g1.text)+'</small></div><div><b>'+(plus2?.tier?esc(plus2.tier):'+2 tiers')+'</b><em>'+esc(bridgeFormat(plus2?.[m.key],m.unit))+'</em><small class="tone-'+g2.tone+'">'+esc(g2.text)+'</small></div></article>';
   }).join('')+'</div>';
 }
-function decisionCard(title,value,tone,explanation,sub,percent=null){
-  return '<article class="decision-card tone-'+tone+'"><div><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong></div>'+
+function decisionCard(title,value,tone,explanation,sub,percent=null,evidenceReady=true){
+  const effectiveTone=evidenceReady?tone:'neutral';
+  return '<article class="decision-card tone-'+effectiveTone+(evidenceReady?'':' thin-evidence')+'"><div><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong></div>'+
     (hasNum(percent)?'<div class="decision-meter"><span style="width:'+clamp(Number(percent),0,100)+'%"></span></div>':'')+
-    '<p>'+esc(explanation)+'</p><small>'+esc(sub||'')+'</small></article>';
+    '<p>'+esc(explanation)+'</p><small>'+esc(sub||'')+(evidenceReady?'':' · thin sample — descriptive only')+'</small></article>';
 }
 function renderDecisionMetrics(r){
-  const b=r.behaviorSummary||{},p=r.peerComparison||{};
-  const objective=hasNum(b.objectiveContestPresenceRate)?Number(b.objectiveContestPresenceRate):null,reportRole=canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole),objDiagnosis=b.objectiveDiagnosis||{},objDiagnosed=!!objDiagnosis.presenceLow||(Array.isArray(objDiagnosis.causes)&&objDiagnosis.causes.length>0);
+  const b=r.behaviorSummary||{},p=r.peerComparison||{},q=r.dataQuality||{};
+  const objective=hasNum(b.objectiveContestPresenceRate)?Number(b.objectiveContestPresenceRate):null,reportRole=canonicalRole(q.selectedRole||r.summary?.primaryRole),objDiagnosis=b.objectiveDiagnosis||{},objDiagnosed=!!objDiagnosis.presenceLow||(Array.isArray(objDiagnosis.causes)&&objDiagnosis.causes.length>0);
   const fight=hasNum(b.fightSurvivalRate)?Number(b.fightSurvivalRate):null;
   const reset=hasNum(b.firstResetLossRate)?Number(b.firstResetLossRate):null;
   const spike=hasNum(p.itemSpikeUtilizationRate)?Number(p.itemSpikeUtilizationRate):null;
   const giveback=hasNum(b.earlyLeadGivebackRate)?Number(b.earlyLeadGivebackRate):null;
   const deaths=hasNum(b.badDeathsPerTimelineGame)?Number(b.badDeathsPerTimelineGame):null;
+  const objectiveN=Number(b.objectiveContestEncounters??b.neutralObjectiveEvents??0),fightN=Number(b.fightSamples||0),timelineN=Number(q.validTimelineGames||0),resetN=Number(b.firstResetCleanGames||0),spikeN=Number(p.itemSpikeEligibleWindows||0),leadN=Number(b.earlyLeadGames||0);
+  const ready={objective:objectiveN>=5,fight:fightN>=8,deaths:timelineN>=5,reset:resetN>=4,spike:spikeN>=4,giveback:leadN>=4};
   const tonePct=(v,good,bad,inverse=false)=>v==null?'neutral':inverse?(v<=good?'good':v>=bad?'bad':'neutral'):(v>=good?'good':v<=bad?'bad':'neutral');
+  const thin=(isReady,normal)=>isReady?normal:'Current value is shown for context, but the sample is below the analyzer threshold for a directional judgment.';
   $('decisionMetrics').innerHTML=[
-    decisionCard('Contested objective presence',fmtPct(objective),objective==null?'neutral':objDiagnosed?tonePct(objective,70,45,false):'neutral',objective==null?'Not enough contested-objective events.':objDiagnosed?(objective>=70?'Supported presence is high in the diagnosed objective sample.':objective<45?'Supported death/setup evidence or a shop-timing association accompanies missed contest windows.':'Presence is mixed; use the supported clues below rather than the raw percentage alone.'):(roleLabel(reportRole)+' is not graded against a generic objective-attendance threshold here. Treat '+String(b.objectiveContestJoinedEncounters??0)+' / '+String(b.objectiveContestEncounters??0)+' supported contest presences as context and inspect only the event-level reasons.'),String(b.objectiveContestJoinedEncounters??0)+' / '+String(b.objectiveContestEncounters??0)+' contested encounters',objective),
-    decisionCard('Fight survival',fmtPct(fight),tonePct(fight,70,50,false),fight==null?'Not enough attended fight clusters.':fight>=70?'You usually stay alive through attended fight clusters.':fight<50?'You die in more than half of measured attended fight clusters.':'Survival is mixed; review whether deaths happen before or after meaningful contribution.',String(b.fightSamples??0)+' measured fight clusters',fight),
-    decisionCard('High-risk deaths / game',deaths==null?'n/a':fmt(deaths,2),deaths==null?'neutral':deaths<=.75?'good':deaths>=1.5?'bad':'neutral',deaths==null?'Not enough timeline-complete games.':deaths<=.75?'Risky deaths are contained.':deaths>=1.5?'This is frequent enough to materially distort otherwise good games.':'Risky deaths exist but are not the dominant signal.','Lower is better; consequence-aware, not every death.'),
-    decisionCard('First-reset economy loss',fmtPct(reset),tonePct(reset,25,50,true),reset==null?'Not enough clean first-reset measurements.':reset<=25?'Most measured first resets preserve or improve lane economy.':reset>=50?'At least half of clean measured first resets lose economy afterwards.':'Reset outcomes are mixed.','Measured only when death does not contaminate the post-shop window.',reset),
-    decisionCard('Earlier-item windows used',fmtPct(spike),tonePct(spike,60,35,false),spike==null?'No reliable first-major advantage windows.':spike>=60?'You usually turn an earlier major item into tracked impact.':spike<35?'Earlier item completions often expire without a tracked kill/assist/objective impact.':'Item-spike conversion is mixed.',String(p.itemSpikeUtilizedWindows??0)+' / '+String(p.itemSpikeEligibleWindows??0)+' eligible windows',spike),
-    decisionCard('Early leads given back',fmtPct(giveback),tonePct(giveback,30,50,true),giveback==null?'No meaningful ≥500g pre-15 lead sample.':giveback<=30?'Most measured early leads are preserved into the 15-minute checkpoint.':giveback>=50?'At least half of measured early leads erode substantially before 15.':'Lead preservation is inconsistent.',String(b.earlyLeadGivebackGames??0)+' / '+String(b.earlyLeadGames??0)+' lead games',giveback)
+    decisionCard('Contested objective presence',fmtPct(objective),objective==null?'neutral':objDiagnosed?tonePct(objective,70,45,false):'neutral',
+      objective==null?'Not enough contested-objective events.':thin(ready.objective,objDiagnosed?(objective>=70?'Supported presence is high in the diagnosed objective sample.':objective<45?'Supported death/setup evidence or a shop-timing association accompanies missed contest windows.':'Presence is mixed; use the supported clues below rather than the raw percentage alone.'):(roleLabel(reportRole)+' is not graded against a generic objective-attendance threshold here. Treat supported contest presence as context and inspect only event-level reasons.')),
+      String(b.objectiveContestJoinedEncounters??0)+' / '+String(objectiveN)+' contested encounters',objective,ready.objective),
+    decisionCard('Fight survival',fmtPct(fight),tonePct(fight,70,50,false),
+      fight==null?'Not enough attended fight clusters.':thin(ready.fight,fight>=70?'You usually stay alive through attended fight clusters.':fight<50?'You die in more than half of measured attended fight clusters.':'Survival is mixed; review whether deaths happen before or after meaningful contribution.'),
+      String(fightN)+' measured fight clusters · analyzer coaching threshold 8',fight,ready.fight),
+    decisionCard('High-risk deaths / game',deaths==null?'n/a':fmt(deaths,2),deaths==null?'neutral':deaths<=.75?'good':deaths>=1.5?'bad':'neutral',
+      deaths==null?'Not enough timeline-complete games.':thin(ready.deaths,deaths<=.75?'Risky deaths are contained.':deaths>=1.5?'This is frequent enough to materially distort otherwise good games.':'Risky deaths exist but are not the dominant signal.'),
+      String(timelineN)+' timeline-complete games · analyzer coaching threshold 5',null,ready.deaths),
+    decisionCard('First-reset economy loss',fmtPct(reset),tonePct(reset,25,50,true),
+      reset==null?'Not enough clean first-reset measurements.':thin(ready.reset,reset<=25?'Most measured first resets preserve or improve lane economy.':reset>=50?'At least half of clean measured first resets lose economy afterwards.':'Reset outcomes are mixed.'),
+      String(resetN)+' clean first-reset measurements · analyzer coaching threshold 4',reset,ready.reset),
+    decisionCard('Earlier-item windows used',fmtPct(spike),tonePct(spike,60,35,false),
+      spike==null?'No reliable first-major advantage windows.':thin(ready.spike,spike>=60?'You usually turn an earlier major item into tracked impact.':spike<35?'Earlier item completions often expire without a tracked kill/assist/objective impact.':'Item-spike conversion is mixed.'),
+      String(p.itemSpikeUtilizedWindows??0)+' / '+String(spikeN)+' eligible windows · analyzer coaching threshold 4',spike,ready.spike),
+    decisionCard('Early leads given back',fmtPct(giveback),tonePct(giveback,30,50,true),
+      giveback==null?'No meaningful ≥500g pre-15 lead sample.':thin(ready.giveback,giveback<=30?'Most measured early leads are preserved into the 15-minute checkpoint.':giveback>=50?'At least half of measured early leads erode substantially before 15.':'Lead preservation is inconsistent.'),
+      String(b.earlyLeadGivebackGames??0)+' / '+String(leadN)+' lead games · analyzer coaching threshold 4',giveback,ready.giveback)
   ].join('');
   $('objectiveDiagnosisSummary').innerHTML=objectiveDiagnosisHtml(r);
 }
-
 function intelligenceCard(title,value,tone,body,evidence){
   return '<article class="intelligence-card tone-'+tone+'"><div><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong></div><p>'+esc(body)+'</p><small>'+esc(evidence||'')+'</small></article>';
 }
