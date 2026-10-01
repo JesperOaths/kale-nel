@@ -253,6 +253,7 @@ ok(backend.includes('itemSpikeWindow'), 'first-major-item spike utilization mode
 ok(backend.includes('LEGENDSTRACKER_RANK_BASELINES_20260323')&&backend.includes('LEGENDSTRACKER_ADC_MULTIPLIERS_20260323'), 'ADC rank comparison must use an explicit external population benchmark corpus');
 ok(backend.includes('sourceUrl:"https://legendstracker.fr/methodologie"')&&backend.includes('sourceCorpus:"830k+ ranked EUW1 games"'), 'external ADC benchmark provenance must remain embedded in the report');
 ok(backend.includes('externalBenchmarks'), 'reports must expose external rank benchmarks to the frontend');
+ok(backend.includes('finalItems=[p.item0,p.item1,p.item2,p.item3,p.item4,p.item5,p.item6]'), 'per-game reports must preserve the player final item build for visual review');
 ok(backend.includes('leadSec>=45'), 'measurable first-major-item advantage must remain at least 45 seconds');
 ok(backend.includes('itemSpikeUtilizationRate'), 'aggregate first-major-item spike utilization rate must remain exported');
 ok(backend.includes('diedBeforeImpact'), 'item-spike model must preserve death-before-impact evidence');
