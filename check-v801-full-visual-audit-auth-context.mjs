@@ -105,6 +105,10 @@ assert.match(runner, /FULL_LIVE_VISUAL_AUDIT_FAIL broken=/, 'visual audit must e
 assert.match(runner, /trackedRouteUsesAuthGate/, 'tracked routes that load the auth gate must be identified from checked-in HTML');
 assert.match(runner, /waitForAuthGateToSettle/, 'visual audit must explicitly wait for gated pages to leave transient checking state');
 assert.match(runner, /auth gate did not settle within/, 'a genuinely stuck auth gate must remain a fail-closed broken result');
+assert.match(runner, /for \(let attempt = 0; attempt < 2; attempt\+\+\)/, 'authenticated page capture must retry one transient auth-gate failure before failing closed');
+assert.match(runner, /authRetryCount \+= 1/, 'visual report must retain evidence that an auth retry was actually consumed');
+assert.match(runner, /document\.documentElement\.hasAttribute\('data-gejast-auth-state'\)/, 'redirect aliases must detect a canonical auth gate that appears after the source document loads');
+assert.match(workflow, /GEJAST_VISUAL_PAGE_CONCURRENCY:\s*'4'/, 'full-site audit concurrency must remain bounded below the transient auth overload point');
 assert.match(runner, /if \(!protectedOnArrival\) \{\s*authGate = await waitForAuthGateToSettle/s, 'Cloudflare-protected admin responses must bypass player-auth settlement waiting');
 assert.match(runner, /seriousConsole\.length && judgement !== 'broken' && judgement !== 'protected'/, 'expected Cloudflare protection must not be downgraded to warning by perimeter console noise');
 
