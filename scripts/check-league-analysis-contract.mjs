@@ -471,7 +471,7 @@ ok(backend.includes('cause==="recent_shop_absence"'), 'objective timing diagnosi
 ok(backend.includes('leadMs<45000||leadMs>105000'), 'objective prior-setup evidence must remain bounded to 45–105 seconds before the encounter');
 ok(backend.includes('setupEvidence:earlySetup?"prior_position_frame_45_105s":null'), 'objective setup evidence provenance must remain explicit');
 ok(backend.includes('interpretation:"association_not_proven_cause"'), 'recent-shop objective association must never be promoted to causal proof');
-ok(app.includes('Primary supported explanation'), 'objective diagnosis UI must use explanation rather than causal cause wording');
+ok(app.includes('Highest-confidence supported clue'), 'objective diagnosis UI must use clue/evidence wording rather than causal cause wording');
 ok(app.includes('Recent-shop objective absences'), 'current objective UI must expose recent-shop absence terminology');
 ok(!app.includes('Late-reset objective misses')&&!app.includes('Late-reset neutral-objective misses'), 'current objective UI must not regress to causal late-reset miss labels');
 ok(backend.includes('cause==="pre_objective_death"'), 'pre-objective-death diagnosis must select a death-rate target');
