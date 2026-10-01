@@ -23,7 +23,7 @@ const behaviorEnd=api.indexOf('\n  };',behaviorStart);
 assert.ok(behaviorStart>=0&&behaviorEnd>behaviorStart,'Behavior summary export block must exist');
 const behaviorExport=api.slice(behaviorStart,behaviorEnd);
 for(const field of [
-  'deathTradeRate','highRiskUntradedDeaths','highRiskUntradedPerGame',
+  'phaseRisk','deathTradeRate','highRiskUntradedDeaths','highRiskUntradedPerGame',
   'measuredDeathConsequences','costlyDeathEvents','severeDeathEvents','costlyDeathRate','costlyDeathsPerTimelineGame','severeDeathsPerTimelineGame','avgGoldSwingAfterDeath','avgCsSwingAfterDeath',
   'itemSpikeEligibleWindows','itemSpikeUtilizedWindows','itemSpikeUtilizationRate','itemSpikeDeathsBeforeImpact','avgItemSpikeLeadSec',
   'fightSamples','firstAllyFightDeathRate','preContributionFightDeathRate','fightSurvivalRate',
@@ -66,6 +66,9 @@ assert.ok(app.includes('function hasNum(v)'));
 assert.ok(app.includes('renderPracticePlan'));
 assert.ok(app.includes('renderProgressComparison'));
 assert.ok(app.includes("if(tab==='fights')"));
+assert.ok(app.includes("if(tab==='phases')"));
+assert.ok(app.includes('Early-phase high-risk deaths'));
+assert.ok(app.includes('Late high-risk deaths / game'));
 assert.ok(app.includes('Locally outnumbered'));
 assert.ok(app.includes('Pre-14 clean duel'));
 assert.ok(app.includes('Clean solo-kill lane conversion'));
