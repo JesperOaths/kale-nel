@@ -252,7 +252,8 @@ function renderReport(raw,sourceKind){
   $('reportTitle').textContent=p.displayName||p.display_name||state.profile?.display_name||'League profile';
   const riotId=[p.gameName||p.game_name,p.tagLine||p.tag_line].filter(Boolean).join('#');
   const rank=p.rank&&p.rank.tier?[p.rank.tier,p.rank.rank,p.rank.leaguePoints!=null?String(p.rank.leaguePoints)+' LP':''].filter(Boolean).join(' '):'';
-  $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(rank?rank+' · ':'')+(s.games??r.games.length)+' analyzed games · Primary role '+(s.primaryRole||'GENERIC');
+  const coachingN=r.coachingSummary?.games??s.primaryRoleGames??0;
+  $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(rank?rank+' · ':'')+(s.games??r.games.length)+' analyzed games · Primary role '+(s.primaryRole||'GENERIC')+' · Coaching sample '+coachingN+' '+(s.primaryRole||'GENERIC')+' games';
   $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':(r.analyzerVersion||'Web analysis');
   renderKpis(r);renderBullets('recentFocus',r.recentFocus,'No grounded recent-focus tips are available from the active analyzer yet.');
   renderBullets('overallHighlights',r.overallHighlights,'No broader highlights are available from the active analyzer yet.');
@@ -465,7 +466,7 @@ function renderAdvanced(r){
     ['Damage share − gold share',hasNum(r.behaviorSummary?.damageGoldEfficiency)?signed(r.behaviorSummary.damageGoldEfficiency,1)+' pp':'n/a']
   ];
   $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('not recovered')||v==='n/a')).join('');
-  const p=r.peerComparison||{},conv=r.conversion||{},wl=r.winLoss||{},trend=r.recentTrend||{},base=r.lifetime||null,s=r.summary||{},rank=r.profile?.rank||null;
+  const p=r.peerComparison||{},conv=r.conversion||{},wl=r.winLoss||{},trend=r.recentTrend||{},base=r.coachingLifetime||null,s=r.coachingSummary||r.summary||{},rank=r.profile?.rank||null;
   const peerRows=[
     metric('Peer definition',p.definition||'Same-role opponent in each match',false),
     metric('Comparable peer games',String(p.sameRoleGames??0),false),
@@ -536,7 +537,7 @@ function renderBreakdowns(r){
 }
 function renderQuality(r){
   const q=r.dataQuality||{};
-  const cards=[['Analyzed games',q.analyzedGames??r.games?.length??0],['Timeline games',q.validTimelineGames??'n/a'],['Peer-comparable games',q.peerComparableGames??'n/a'],['Ranked peer games',q.rankedPeerGames??'n/a'],['Higher-rank peers',q.higherRankPeerGames??'n/a'],['Coordinate games',q.validCoordinateGames??'n/a'],['Missing timelines',q.missingTimelineGames??'n/a'],['Broader baseline',q.baselineGames??0]];
+  const cards=[['Analyzed games',q.analyzedGames??r.games?.length??0],['Primary-role coaching games',q.coachingRoleGames??r.coachingSummary?.games??'n/a'],['Primary-role baseline',q.coachingBaselineRoleGames??0],['Timeline games',q.validTimelineGames??'n/a'],['Peer-comparable games',q.peerComparableGames??'n/a'],['Ranked peer games',q.rankedPeerGames??'n/a'],['Higher-rank peers',q.higherRankPeerGames??'n/a'],['Coordinate games',q.validCoordinateGames??'n/a'],['Missing timelines',q.missingTimelineGames??'n/a'],['Overall broader baseline',q.baselineGames??0]];
   $('qualityGrid').innerHTML=cards.map(([l,v])=>'<div class="quality-card"><span>'+esc(l)+'</span><strong>'+esc(v)+'</strong></div>').join('');
   $('sourceNote').textContent=r.sourceStatus?.note||'Report data remains traceable through the report contract. Missing advanced data is shown as unavailable rather than zero.';
 }
