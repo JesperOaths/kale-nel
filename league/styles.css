@@ -920,8 +920,8 @@ h3{font-size:1.13rem}
 }
 .percent-track span,.decision-meter span{display:block;height:100%;background:#1d5f91}
 
-.kpi-grid{
-  grid-template-columns:repeat(5,minmax(0,1fr));
+ .kpi-grid{
+  grid-template-columns:repeat(6,minmax(0,1fr));
   gap:18px;
 }
 .kpi-card{
@@ -1152,3 +1152,10 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
   .practice-grid{grid-template-columns:1fr}
   .game-visual-strip{grid-template-columns:1fr}
 }
+
+.break-visual{display:flex;align-items:center;gap:11px;min-width:0}
+.break-visual img{width:46px;height:46px;border-radius:10px;object-fit:cover;flex:0 0 46px}
+.break-visual span{min-width:0}
+.tone-good{color:#0d6a42}
+.tone-bad{color:#a83229}
+.tone-neutral{color:#554d44}
