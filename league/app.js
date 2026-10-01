@@ -283,7 +283,7 @@ async function fetchProfileData(profile,requestedCount){
   }
   const finish=await api('fetch_finish',{run_id:prep.run_id});
   if(hasNum(finish?.dominant_queue_id))log(profile.display_name+' · comparable queue '+String(finish.dominant_queue_id)+' · '+String(finish.comparable_cached_games??finish.peer_rank_target_count??0)+' comparable cached games · '+String(finish.peer_rank_target_count??0)+' final-sample peer-rank targets · '+String(finish.peer_rank_backfilled??0)+' rank snapshots backfilled.','ok');
-  if(finish?.recommend_deeper_cache)log(profile.display_name+' · only '+String(finish.comparable_cached_games??0)+' comparable cached games are currently available after map/duration/queue filtering. Use the 100-match depth on the next update.','bad');
+  if(finish?.recommend_deeper_cache)log(profile.display_name+' · only '+String(finish.comparable_cached_games??0)+' comparable cached games are currently available after map/duration/queue filtering. Use the 100-match cache depth on the next update.','bad');
   return{prep,finish};
 }
 async function analyzeProfileData(profile){
