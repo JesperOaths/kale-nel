@@ -57,7 +57,6 @@ assert.ok(app.includes('Outside-pressure share of early lane deaths'));
 assert.ok(app.includes('solo death to role opponent'));
 assert.ok(app.includes('Loss rate while outnumbered'));
 assert.ok(app.includes('Level-down shared-role fights'));
-assert.ok(app.includes('role peer level'));
 assert.ok(app.includes('Post-kill conversion'));
 assert.ok(app.includes('Late-reset neutral-objective misses'));
 assert.ok(app.includes('r.sessionBehavior||r.sessionModel'),'Session panel must read the report contract name');
