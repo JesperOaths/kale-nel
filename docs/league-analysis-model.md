@@ -63,6 +63,24 @@ Do not mix ADC and SUPPORT behavior into one coaching average merely because bot
 
 Role-aware conclusions must use the normalized role.
 
+## Direct-role solo duels
+
+Timeline champion-kill events are also used to isolate **clean 1v1 outcomes against the actual same-role opponent**.
+
+A direct-role solo duel event requires:
+- the player and same-role opponent to be killer/victim,
+- **zero assisting participants** on the kill event.
+
+The report preserves:
+- solo kills on the role opponent,
+- solo deaths to the role opponent,
+- the same counts restricted to the first 14 minutes,
+- event timestamps.
+
+This intentionally excludes ganks and other assisted kills. The goal is to separate **matchup execution** from broader map pressure.
+
+Repeated pre-14 solo deaths can support a matchup-specific improvement finding; repeated pre-14 solo kills can be a strength. Small samples remain low confidence and the metric should not be used to claim the player won or lost the entire lane by itself.
+
 ## Lane and peer comparisons
 
 For each match, identify the opposing participant with the same normalized role.
