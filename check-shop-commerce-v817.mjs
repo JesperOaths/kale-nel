@@ -125,7 +125,7 @@ assert.match(store, /label:\s*'Normal'/);
 assert.match(index, /image-lightbox-v832\.js/);
 assert.match(index, /live-catalog-refresh-v818\.js/);
 assert.doesNotMatch(index, /catalog-data\.js/, 'retired hand-maintained catalog-data fallback must not load');
-assert.match(index, /catalog-last-good\.js\?v=20261001-supabase-resilience-r3/, 'storefront must preload the generated last-known-good catalog before store.js');
+assert.match(index, /catalog-last-good\.js\?v=20261001-stable-pricing-r1/, 'storefront must preload the current generated last-known-good catalog before store.js');
 assert.match(store, /shop-catalog-v828/, 'storefront must retain the live Printify-backed catalog authority');
 assert.match(store, /BRUIS_CATALOG_LAST_GOOD/, 'storefront must have a generated read-only last-good rendering fallback');
 assert.match(store, /source: 'static-fallback'/, 'static snapshot must be labelled separately from live/cache authority');
