@@ -367,6 +367,16 @@ Rank is a snapshot and can change after the match; present this comparison as th
 
 ## Patch-aware 2026 role-quest context
 
+### Queue-level quest certainty
+
+Standard Summoner's Rift **map mechanics** and Role Quest **assignment certainty** are separate facts.
+
+Riot's queue registry identifies Draft (400), Ranked Solo (420), Blind Pick (430), Ranked Flex (440), Quickplay (490), Swiftplay (480), and Clash (700) as Summoner's Rift queues. The analyzer accepts the ordinary PvP SR queues for timeline analysis, but only treats Draft, Ranked Solo, Ranked Flex, and Quickplay as queues with verified assigned-position semantics for the 2026 lane Role Quest package. Swiftplay is explicitly excluded from standard Role Quests. Blind Pick and Clash keep standard SR macro/mechanics analysis but quest-specific economy/reward interpretation fails closed unless stronger evidence is added later.
+
+This prevents an ambiguous queue from contaminating quest-sensitive economy comparisons while preserving useful map/timeline evidence.
+
+
+
 The 2026 role-quest system is a mechanics dependency for interpretation, not a hidden source of invented events. The analyzer therefore derives a **role-quest rules revision from the match patch** and attaches it to each game.
 
 Standard Summoner's Rift revisions currently distinguished are:
