@@ -165,6 +165,12 @@ ok(app.includes('Early KP · pooled')&&app.includes('Objective-context death % �
 ok(!app.includes('Pre-objective conversion deaths'), 'temporal death-before-objective evidence must not imply conversion causality');
 ok(backend.includes('STANDARD_PVP_SR_QUEUE_IDS=new Set([400,420,430,440,490,700])'), 'standard PvP Summoner’s Rift queue eligibility must remain explicit');
 ok(backend.includes('SWIFTPLAY_SR_QUEUE_IDS=new Set([480])'), 'Swiftplay must remain a separate queue family');
+ok(backend.includes('r==="DUO_SUPPORT"')&&backend.includes('r==="DUO_CARRY"'), 'legacy Riot bot-lane role aliases must normalize');
+ok(backend.includes('function participantRoleEvidence('), 'role normalization must expose source/conflict evidence');
+ok(backend.includes('team!=="GENERIC"&&individual!=="GENERIC"&&team!==individual'), 'conflicting Riot role fields must fail closed');
+ok(backend.includes('function opponentResolution(')&&backend.includes('candidates.length!==1'), 'direct role peer comparison must require exactly one enemy candidate');
+ok(backend.includes('excludedAmbiguousRole')&&backend.includes('ambiguousDirectPeerGames'), 'role/peer ambiguity must remain visible in data quality');
+ok(app.includes('conflicting Riot role metadata')&&app.includes('ambiguous enemy-role game(s) withheld'), 'frontend must explain role/peer exclusions');
 ok(backend.includes('supportedQueueRows=durationEligibleRows.filter')&&backend.includes('supportedEligible=durationEligible.filter'), 'report and fetch-finish paths must share supported-queue filtering');
 ok(backend.includes('unsupportedQueueRowsExcluded'), 'unsupported special/bot queue exclusions must remain observable');
 ok(app.includes('unsupported special/bot queue'), 'Data Quality must explain unsupported queue exclusions');
