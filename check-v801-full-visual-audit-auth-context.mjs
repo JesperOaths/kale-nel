@@ -114,9 +114,11 @@ assert.match(runner, /auth gate did not settle within/, 'a genuinely stuck auth 
 assert.match(runner, /for \(let attempt = 0; attempt < 2; attempt\+\+\)/, 'authenticated page capture must retry one transient auth-gate failure before failing closed');
 assert.match(runner, /authRetryCount \+= 1/, 'visual report must retain evidence that an auth retry was actually consumed');
 assert.match(runner, /document\.documentElement\.hasAttribute\('data-gejast-auth-state'\)/, 'redirect aliases must detect a canonical auth gate that appears after the source document loads');
-assert.match(workflow, /GEJAST_VISUAL_PAGE_CONCURRENCY:\s*'2'/, 'full-site audit concurrency must remain conservatively bounded below the production data-plane overload point');
+assert.match(workflow, /GEJAST_VISUAL_PAGE_CONCURRENCY:\s*'1'/, 'full-site audit must serialize production page loads to protect the shared data plane');
 assert.match(fallbackStep, /GEJAST_VISUAL_PAGE_CONCURRENCY=1/, 'degraded visual coverage must serialize page loads so an unhealthy production data plane is not amplified');
 assert.doesNotMatch(workflow, /'league\/\*\*\/\*\.js'/, 'high-frequency League JS commits must not launch a full 137-page production visual campaign');
+assert.doesNotMatch(workflow, /'\*\*\/\*\.html'|'\*\.js'|'\*\*\/\*\.css'|'shop\/\*\*\/\*\.js'/, 'ordinary frontend commits must not trigger the exhaustive production visual campaign; daily/manual coverage owns that load');
+assert.match(workflow, /cancel-in-progress:\s*true/, 'a newer production visual audit must cancel the older campaign instead of stacking production browser load');
 assert.match(workflow, /cron:\s*'17 3 \* \* \*'/, 'a quiet daily full-site visual campaign must cover dynamic regressions without coupling them to every League JS commit');
 assert.match(workflow, /deployments:\s*read/, 'full visual certification must be able to prove the exact GitHub Pages deployment SHA');
 assert.match(workflow, /node scripts\/wait-for-exact-pages-deployment\.mjs/, 'full visual certification must delegate exact Pages activation proof to the shared deployment helper');
