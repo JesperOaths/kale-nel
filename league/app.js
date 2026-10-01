@@ -975,15 +975,18 @@ function bindGameFilterControls(){
   const champion=$('gameChampionFilter');if(champion)champion.onchange=()=>{state.gameChampion=String(champion.value||'all');state.openMatch=null;if(state.report)renderGames(state.report);};
   const clear=$('clearGameFilters');if(clear)clear.onclick=()=>{state.gameFilter='all';state.gameChampion='all';state.openMatch=null;if(state.report)renderGames(state.report);};
 }
+function gameMatchesNamedFilter(g,key){
+  if(key==='win')return!!g.win;
+  if(key==='loss')return!g.win;
+  if(key==='ahead15')return hasNum(g.goldDiff15)&&Number(g.goldDiff15)>100;
+  if(key==='even15')return hasNum(g.goldDiff15)&&Math.abs(Number(g.goldDiff15))<=100;
+  if(key==='behind15')return hasNum(g.goldDiff15)&&Number(g.goldDiff15)<-100;
+  if(key==='adc')return g.role==='ADC';
+  return true;
+}
 function gamePassesFilter(g){
   if(state.gameChampion!=='all'&&String(g.champion||'')!==state.gameChampion)return false;
-  if(state.gameFilter==='win')return!!g.win;
-  if(state.gameFilter==='loss')return!g.win;
-  if(state.gameFilter==='ahead15')return hasNum(g.goldDiff15)&&Number(g.goldDiff15)>100;
-  if(state.gameFilter==='even15')return hasNum(g.goldDiff15)&&Math.abs(Number(g.goldDiff15))<=100;
-  if(state.gameFilter==='behind15')return hasNum(g.goldDiff15)&&Number(g.goldDiff15)<-100;
-  if(state.gameFilter==='adc')return g.role==='ADC';
-  return true;
+  return gameMatchesNamedFilter(g,state.gameFilter);
 }
 function renderGames(r){
   const games=r.games||[];
@@ -995,6 +998,12 @@ function renderGames(r){
     if(!champions.includes(state.gameChampion))state.gameChampion='all';
     championSelect.value=state.gameChampion;
   }
+  const championScoped=state.gameChampion==='all'?games:games.filter(g=>String(g.champion||'')===state.gameChampion);
+  const filterLabels={all:'All',win:'Wins',loss:'Losses',ahead15:'Ahead @15',even15:'Close @15',behind15:'Behind @15',adc:'ADC only'};
+  document.querySelectorAll('[data-game-filter]').forEach(btn=>{
+    const key=String(btn.dataset.gameFilter||'all'),count=key==='all'?championScoped.length:championScoped.filter(g=>gameMatchesNamedFilter(g,key)).length;
+    btn.innerHTML=esc(filterLabels[key]||key)+' <span class="filter-count">'+count+'</span>';
+  });
   const filtered=games.map((g,i)=>({g,i})).filter(x=>gamePassesFilter(x.g));
   $('gameCountLabel').textContent=(filtered.length===games.length?games.length+' games':filtered.length+' shown · '+games.length+' eligible');
   const filterSummary=$('gameFilterSummary');if(filterSummary)filterSummary.textContent=filtered.length===games.length?'Showing the full sample.':'Filters narrow the table only; report metrics still use the full eligible sample.';
@@ -1008,8 +1017,9 @@ function renderGames(r){
     const icon=championIcon(g.champion),goldTone=deltaTone(g.goldDiff15,0,100,false);
     const firstItem=g.firstMajorItem,itemSrc=firstItem?itemIcon(firstItem.itemId):'';
     const goldLabel=!hasNum(g.goldDiff15)?'n/a':Number(g.goldDiff15)>100?'ahead':Number(g.goldDiff15)<-100?'behind':'even';
-    return '<tr class="game-row" data-match="'+esc(g.matchId||String(i))+'" data-index="'+i+'">'+
-      '<td class="caret">▸ <small>'+(displayIndex+1)+'</small></td>'+
+    const rowLabel=[g.champion||'Unknown',g.win?'win':'loss',shortGameDate(g.gameStartTimestamp)].filter(Boolean).join(' · ');
+    return '<tr class="game-row" data-match="'+esc(g.matchId||String(i))+'" data-index="'+i+'" tabindex="0" role="button" aria-expanded="false" aria-label="Open match details · '+esc(rowLabel)+'">'+
+      '<td class="caret"><span class="caret-arrow" aria-hidden="true">▸</span> <small>'+(displayIndex+1)+'</small></td>'+
       '<td><div class="champion-cell">'+(icon?'<img class="champion-icon" loading="lazy" src="'+esc(icon)+'" alt="">':'')+
         '<span><b>'+esc(g.champion||'Unknown')+'</b>'+(firstItem?'<small class="table-item">'+(itemSrc?'<img loading="lazy" src="'+esc(itemSrc)+'" alt="">':'')+esc(firstItem.name||'First major')+' · '+esc(fmt(firstItem.time,1))+'m</small>':'')+'</span></div></td>'+
       '<td>'+esc(g.role==='ADC'?'ADC':(g.role||'GENERIC'))+'</td>'+
@@ -1020,8 +1030,16 @@ function renderGames(r){
       '<td>'+esc(fmtInt(g.dpm))+'</td>'+
       '<td><div class="table-delta tone-'+goldTone+'"><strong>'+esc(hasNum(g.goldDiff15)?signed(g.goldDiff15,0)+'g':'n/a')+'</strong><small>'+esc(goldLabel)+'</small>'+contextBar(g.goldDiff15,1200)+'</div></td></tr>';
   }).join(''):'<tr class="games-empty-row"><td colspan="9">No games match the current filters.</td></tr>';
-  $('gamesBody').querySelectorAll('.game-row').forEach(row=>row.addEventListener('click',()=>toggleGame(Number(row.dataset.index))));
-  document.querySelectorAll('[data-game-filter]').forEach(btn=>btn.classList.toggle('active-filter',String(btn.dataset.gameFilter||'all')===state.gameFilter));
+  $('gamesBody').querySelectorAll('.game-row').forEach(row=>{
+    const open=()=>toggleGame(Number(row.dataset.index));
+    row.addEventListener('click',open);
+    row.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();open();}});
+  });
+  document.querySelectorAll('[data-game-filter]').forEach(btn=>{
+    const active=String(btn.dataset.gameFilter||'all')===state.gameFilter;
+    btn.classList.toggle('active-filter',active);
+    btn.setAttribute('aria-pressed',active?'true':'false');
+  });
   if($('clearGameFilters'))$('clearGameFilters').disabled=state.gameFilter==='all'&&state.gameChampion==='all';
   document.querySelectorAll('[data-game-sort]').forEach(btn=>{
     const active=String(btn.dataset.gameSort||'')===state.gameSort.key;
@@ -1034,10 +1052,10 @@ function renderGames(r){
 function toggleGame(index){
   const body=$('gamesBody'),rows=[...body.querySelectorAll('.game-row')];
   body.querySelectorAll('.details-row').forEach(n=>n.remove());
-  rows.forEach(r=>{const c=r.querySelector('.caret');if(c)c.textContent='▸';});
+  rows.forEach(r=>{const c=r.querySelector('.caret-arrow');if(c)c.textContent='▸';r.setAttribute('aria-expanded','false');});
   if(state.openMatch===index){state.openMatch=null;return;}
   const game=state.report.games[index],row=rows.find(r=>Number(r.dataset.index)===index);if(!game||!row)return;
-  state.openMatch=index;row.querySelector('.caret').textContent='▾';
+  state.openMatch=index;const arrow=row.querySelector('.caret-arrow');if(arrow)arrow.textContent='▾';row.setAttribute('aria-expanded','true');
   const tr=document.createElement('tr');tr.className='details-row';const td=document.createElement('td');td.colSpan=9;td.innerHTML=detailsHtml(game,index);tr.appendChild(td);row.insertAdjacentElement('afterend',tr);
   bindDetailTabs(tr,game,index);bindMapFallbacks(tr);
 }
