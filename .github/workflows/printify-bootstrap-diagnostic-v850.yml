@@ -35,3 +35,5 @@ jobs:
             }
           }'
           printf '%s' "$body" | jq -e '.ok == true and (.catalogAudit.upstreamProducts // 0) > 0' >/dev/null
+
+# catalog-audit-rerun-rpc-first
