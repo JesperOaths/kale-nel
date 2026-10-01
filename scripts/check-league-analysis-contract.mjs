@@ -162,6 +162,14 @@ ok(backend.includes('earlyTeamKills=validTimeline.reduce')&&backend.includes('ea
 ok(backend.includes('earlyKp=earlyTeamKills?100*earlyPlayerKillInvolvements/earlyTeamKills:null'), 'primary early KP must use pooled event denominators');
 ok(backend.includes('meanGameEarlyKp'), 'mean per-game early KP must remain separately observable');
 ok(app.includes('Early KP · pooled')&&app.includes('Objective-context death % · pooled'), 'frontend must label pooled rates explicitly');
+ok(backend.includes('const pooledEventRate='), 'derived event-rate comparisons must share a pooled helper');
+ok(backend.includes('earlyKp:{wins:winEarlyWins.rate,losses:winEarlyLosses.rate'), 'win/loss early KP must be event-pooled');
+ok(backend.includes('objectiveJoin:{wins:winObjWins.rate,losses:winObjLosses.rate'), 'win/loss objective presence must be event-pooled');
+ok(backend.includes('objectiveJoin:trendEventRate(g=>g.objectiveJoined,g=>g.objectiveTeamTotal)'), 'recent objective-presence trend must be event-pooled');
+ok(backend.includes('earlyKp:trendEventRate(g=>g.earlyPlayerKillInvolvements,g=>g.earlyTeamKills)'), 'recent early-KP trend must be event-pooled');
+ok(backend.includes('aggregation:"pooled_events"'), 'pooled comparison provenance must remain explicit');
+ok(app.includes('Early KP · wins / losses · pooled')&&app.includes('Latest 5 objective presence / previous · pooled'), 'frontend must expose pooled comparison evidence counts');
+ok(!backend.includes('deaths followed by enemy objective conversion'), 'death-before-objective evidence must remain non-causal');
 ok(!app.includes('Pre-objective conversion deaths'), 'temporal death-before-objective evidence must not imply conversion causality');
 ok(backend.includes('STANDARD_PVP_SR_QUEUE_IDS=new Set([400,420,430,440,490,700])'), 'standard PvP Summoner’s Rift queue eligibility must remain explicit');
 ok(backend.includes('SWIFTPLAY_SR_QUEUE_IDS=new Set([480])'), 'Swiftplay must remain a separate queue family');
