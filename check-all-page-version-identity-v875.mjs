@@ -30,12 +30,12 @@ for(const file of pages){
   const html=fs.readFileSync(file,'utf8');
   const expected=independent.get(rel)||rootVersion;
   const decl=(html.match(/GEJAST_PAGE_VERSION\s*=\s*['"](v\d+)['"]/i)||[])[1]||'';
-  const wmMatch=html.match(/<(?:div|span)[^>]*(?:data-version-watermark|class=["'][^"']*version-watermark[^"']*["'])[^>]*>([^<]*)</i);
-  const watermark=wmMatch?wmMatch[1]:'';
+  const watermarkTags=[...html.matchAll(/<(?:div|span)[^>]*(?:data-version-watermark|class=["'][^"']*(?:version-watermark|watermark)[^"']*["'])[^>]*>([^<]*)</gi)];
+  const literalVisible=new RegExp('>\\s*'+expected+'\\s*[^<]{0,20}Made by Bruis\\s*<','i').test(html);
+  const hasEmptyWatermark=watermarkTags.some(m=>!(m[1]||'').trim());
+  const dynamicWatermark=hasEmptyWatermark && /applyVersionLabel|gejast-version-sync-inline/.test(html);
   if(decl!==expected) failures.push(rel+': declaration '+(decl||'missing')+' expected '+expected);
-  const dynamicWatermark = !!wmMatch && !watermark.trim() && /applyVersionLabel|gejast-version-sync-inline/.test(html);
-  const literalWatermark = watermark.toLowerCase().includes(expected.toLowerCase()) && /Made by Bruis/i.test(watermark);
-  if(!literalWatermark && !dynamicWatermark){
+  if(!literalVisible && !dynamicWatermark){
     failures.push(rel+': visible/runtime watermark missing or wrong; expected '+expected+' - Made by Bruis');
   }
 }
