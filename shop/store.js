@@ -213,15 +213,17 @@ async function refreshLiveCatalog(attempts = 2){
   return [];
 }
 
+function staticCatalogSnapshot(){
+  return sortByShirtBase(FALLBACK_PRODUCTS.map(normalizeProduct)
+    .filter(p => p.baseKey !== '1382' && p.name && p.mockups.length && p.price > 0));
+}
 async function loadCatalog(){
   // The deployment-generated snapshot is the deterministic first-paint source.
   // It must win over an older browser cache and it never depends on Supabase.
-  const staticProducts = FALLBACK_PRODUCTS.map(normalizeProduct)
-    .filter(p => p.baseKey !== '1382' && p.name && p.mockups.length && p.price > 0);
+  const staticProducts = staticCatalogSnapshot();
   if(staticProducts.length){
-    const sorted = sortByShirtBase(staticProducts);
-    saveLastGoodCatalog(sorted);
-    return { products: sorted, source: 'static-snapshot' };
+    saveLastGoodCatalog(staticProducts);
+    return { products: staticProducts, source: 'static-snapshot' };
   }
   const cachedProducts = readLastGoodCatalog();
   if(cachedProducts.length){
@@ -669,7 +671,7 @@ document.addEventListener('click', event => {
   if(event.target.closest('[data-close-cart]') || event.target === qs('[data-cart-drawer]')) closeCart();
 });
 
-loadCatalog().then(result => {
+function applyInitialCatalog(result){
   products = Array.isArray(result?.products) ? result.products : [];
   if(products.length) updateCollectionCounts();
   else setCollectionCountsStatus('Catalog temporarily unavailable');
@@ -685,11 +687,20 @@ loadCatalog().then(result => {
     updateShapeControls();
     openShapeEntry({ scroll: false, updateUrl: false });
   }
+}
+const synchronousStaticCatalog = staticCatalogSnapshot();
+if(synchronousStaticCatalog.length){
+  saveLastGoodCatalog(synchronousStaticCatalog);
+  applyInitialCatalog({ products:synchronousStaticCatalog, source:'static-snapshot-sync' });
+}else{
+  loadCatalog().then(applyInitialCatalog).catch(()=>{
+    applyInitialCatalog({products:readLastGoodCatalog({allowExpired:true}),source:'stale-cache'});
+  });
+}
 
-  // The generated static snapshot is intentionally a complete first-paint source.
-  // Never hit Supabase during initial render. The cross-tab-coordinated background
-  // watcher performs live reconciliation later, while checkout remains authoritative.
-});
+// The generated static snapshot is intentionally a complete first-paint source.
+// It is rendered synchronously before any Supabase request; background reconciliation
+// may update it later but cannot block or blank the initial storefront.
 
 document.addEventListener('click', event => {
   const open = event.target.closest('[data-open-size-guide]');
