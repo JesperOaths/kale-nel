@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   expectedPageVersion,
-  listPublishedHtml,
+  listPublishedRoutes,
   pageVersionDeclarations,
   readRootVersion,
 } from './published-page-inventory.mjs';
@@ -11,11 +11,11 @@ import {
 const root=process.cwd();
 const base=String(process.env.GEJAST_BASE_URL||'https://kalenel.nl/').replace(/\/+$/,'')+'/';
 const rootVersion=readRootVersion(root);
-const pages=listPublishedHtml(root);
+const routes=listPublishedRoutes(root);
 const concurrency=Math.max(1,Math.min(24,Number(process.env.GEJAST_LIVE_VERSION_CONCURRENCY||12)));
 const timeoutMs=Math.max(3000,Number(process.env.GEJAST_LIVE_VERSION_TIMEOUT_MS||15000));
 const maxRedirects=8;
-const results=new Array(pages.length);
+const results=new Array(routes.length);
 let next=0;
 
 function literalWatermark(body,expected){
@@ -24,7 +24,7 @@ function literalWatermark(body,expected){
 function dynamicWatermark(body){
   return /data-version-watermark/i.test(body)&&/applyVersionLabel|gejast-version-sync-inline/i.test(body);
 }
-function cacheBustedUrl(rel,index){
+function cacheBustedUrl(route,index){
   const u=new URL(rel.replace(/^\/+/,''),base);
   u.searchParams.set('__version_audit',String(Date.now())+'_'+String(index));
   return u.toString();
@@ -85,33 +85,35 @@ async function requestRoute(startUrl,signal){
   }
   return {kind:'error',status:0,finalUrl:current,text:'',trace,reason:`more than ${maxRedirects} redirects`};
 }
-async function fetchPage(rel,index){
+async function fetchPage(entry,index){
+  const rel=entry.sourcePath;
+  const route=entry.route;
   const source=fs.readFileSync(path.join(root,rel),'utf8');
   const expected=expectedPageVersion(rel,rootVersion,source);
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),timeoutMs);
   try{
-    const outcome=await requestRoute(cacheBustedUrl(rel,index),controller.signal);
+    const outcome=await requestRoute(cacheBustedUrl(route,index),controller.signal);
     const traceText=outcome.trace.map(x=>`${x.status}:${x.url}`).join(' -> ');
     if(outcome.kind==='protected'){
-      return {rel,expected,status:outcome.status,final_url:outcome.finalUrl,state:'protected',redirect_trace:traceText};
+      return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'protected',redirect_trace:traceText};
     }
     if(outcome.kind==='error'){
-      return {rel,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:outcome.reason,redirect_trace:traceText};
+      return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:outcome.reason,redirect_trace:traceText};
     }
     if(outcome.status<200||outcome.status>=300){
-      return {rel,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:'HTTP '+outcome.status,redirect_trace:traceText};
+      return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:'HTTP '+outcome.status,redirect_trace:traceText};
     }
     const declarations=[...new Set(pageVersionDeclarations(outcome.text))];
     if(declarations.length!==1||declarations[0]!==expected){
-      return {rel,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:'declaration '+(declarations.join('|')||'missing'),redirect_trace:traceText};
+      return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:'declaration '+(declarations.join('|')||'missing'),redirect_trace:traceText};
     }
     if(!literalWatermark(outcome.text,expected)&&!dynamicWatermark(outcome.text)){
-      return {rel,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:'watermark owner missing/wrong',redirect_trace:traceText};
+      return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'fail',reason:'watermark owner missing/wrong',redirect_trace:traceText};
     }
-    return {rel,expected,status:outcome.status,final_url:outcome.finalUrl,state:'pass',redirect_trace:traceText};
+    return {rel,route,expected,status:outcome.status,final_url:outcome.finalUrl,state:'pass',redirect_trace:traceText};
   }catch(error){
-    return {rel,expected,status:0,final_url:'',state:'fail',reason:String(error?.name||error)+': '+String(error?.message||'')};
+    return {rel,route,expected,status:0,final_url:'',state:'fail',reason:String(error?.name||error)+': '+String(error?.message||'')};
   }finally{
     clearTimeout(timer);
   }
@@ -120,21 +122,21 @@ async function fetchPage(rel,index){
 async function worker(){
   for(;;){
     const index=next++;
-    if(index>=pages.length) return;
-    results[index]=await fetchPage(pages[index],index);
+    if(index>=routes.length) return;
+    results[index]=await fetchPage(routes[index],index);
   }
 }
-await Promise.all(Array.from({length:Math.min(concurrency,pages.length)},()=>worker()));
+await Promise.all(Array.from({length:Math.min(concurrency,routes.length)},()=>worker()));
 
 const failures=results.filter(r=>r.state==='fail');
 const protectedRows=results.filter(r=>r.state==='protected');
 for(const row of results){
-  console.log(`LIVE_PAGE_VERSION ${row.state.toUpperCase()} ${row.rel} expected=${row.expected} http=${row.status} final=${row.final_url}${row.reason?' reason='+row.reason:''}`);
+  console.log(`LIVE_PAGE_VERSION ${row.state.toUpperCase()} route=${row.route} source=${row.rel} expected=${row.expected} http=${row.status} final=${row.final_url}${row.reason?' reason='+row.reason:''}`);
 }
-console.log(`LIVE_PAGE_VERSION_SUMMARY pages=${pages.length} pass=${results.filter(r=>r.state==='pass').length} protected=${protectedRows.length} fail=${failures.length} root=${rootVersion}`);
+console.log(`LIVE_PAGE_VERSION_SUMMARY source_pages=${new Set(routes.map(x=>x.sourcePath)).size} routes=${routes.length} pass=${results.filter(r=>r.state==='pass').length} protected=${protectedRows.length} fail=${failures.length} root=${rootVersion}`);
 if(failures.length){
   console.error('LIVE_PAGE_VERSION_FAILURES');
-  for(const row of failures) console.error(`${row.rel}: ${row.reason||'unknown'} (HTTP ${row.status}, ${row.final_url||'no final URL'}) trace=${row.redirect_trace||'n/a'}`);
+  for(const row of failures) console.error(`${row.route} [${row.rel}]: ${row.reason||'unknown'} (HTTP ${row.status}, ${row.final_url||'no final URL'}) trace=${row.redirect_trace||'n/a'}`);
   process.exit(1);
 }
 console.log('RESULT=ALL_LIVE_PUBLISHED_PAGE_VERSION_INTEGRITY_PASS');
