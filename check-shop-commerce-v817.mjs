@@ -688,9 +688,9 @@ assert.match(paymentAmountMigration, /paid_amount_cents/i);
 assert.match(directMigration, /shop_catalog_cache_v828/i);
 assert.match(directMigration, /security definer/i);
 
-assert.match(refresh, /POLL_MS\s*=\s*15\s*\*\s*60\s*\*\s*1000/, 'background full-catalog polling must remain at fifteen minutes');
-assert.match(refresh, /FIRST_POLL_MS\s*=\s*5\s*\*\s*60\s*\*\s*1000/, 'first live reconciliation must wait five minutes so static first paint stays independent of Supabase');
-assert.match(refresh, /SHARED_MIN_REFRESH_MS\s*=\s*10\s*\*\s*60\s*\*\s*1000/, 'focus/visibility refreshes must share a ten-minute cross-tab floor');
+assert.match(refresh, /POLL_MS\s*=\s*30\s*\*\s*60\s*\*\s*1000/, 'background full-catalog reconciliation must remain at thirty minutes');
+assert.match(refresh, /FIRST_POLL_MS\s*=\s*15\s*\*\s*60\s*\*\s*1000/, 'first live reconciliation must wait fifteen minutes so static first paint stays independent of Supabase');
+assert.match(refresh, /SHARED_MIN_REFRESH_MS\s*=\s*20\s*\*\s*60\s*\*\s*1000/, 'focus/visibility refreshes must share a twenty-minute cross-tab floor');
 assert.match(refresh, /SHARED_CHECK_KEY/, 'catalog refreshes must coordinate across tabs rather than multiplying with each open storefront');
 assert.doesNotMatch(refresh, /checkCatalog\(true\)/, 'no timer/focus path may bypass the shared refresh floor');
 assert.match(catalogEdge, /CACHE_FRESH_MS\s*=\s*15\s*\*\s*60_000/, 'server catalog freshness window must not force expensive full-cache refreshes every minute');
