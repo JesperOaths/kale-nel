@@ -55,6 +55,18 @@
         <button class="button primary" id="analyzeBtn" type="button" disabled>Analyze cached Last 20</button>
       </div>
 
+      <details class="batch-tools" id="batchTools">
+        <summary>Batch profiles · sequential</summary>
+        <div class="batch-tools-body">
+          <div class="batch-profile-list" id="batchProfiles" aria-label="Profiles for batch processing"></div>
+          <div class="batch-actions">
+            <button class="button secondary small" id="batchFetchBtn" type="button" disabled>Fetch / update selected</button>
+            <button class="button secondary small" id="batchAnalyzeBtn" type="button" disabled>Analyze selected</button>
+          </div>
+          <p class="muted tiny">Selected profiles run one at a time to keep Riot/API load controlled. A failure on one profile is logged and the remaining selected profiles continue.</p>
+        </div>
+      </details>
+
       <div class="profile-editor" id="profileEditor" hidden>
         <div class="editor-grid">
           <label class="field"><span>Profile label</span><input id="profileLabel" autocomplete="off" placeholder="Main EUW"></label>
