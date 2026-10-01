@@ -282,7 +282,9 @@ assert.ok(api.includes('objectiveFamilyStats:{}')&&api.includes('objectiveFamily
 assert.ok(api.includes('familyRaw==="DRAGON"&&memberSubtypes.some((x:any)=>x.includes("ELDER"))?"ELDER_DRAGON"'),'Elder Dragon must remain distinguishable from ordinary dragons when Riot subtype supports it');
 assert.ok(api.includes('objectiveSetupClears'),'Objective-setup ward clears must remain measurable');
 assert.ok(api.includes('controlWardPurchases'),'Control Ward purchases must remain distinct from placements');
-assert.ok(api.includes('Number(e.itemId)===2055||text(info?.name).toLowerCase()==="control ward"'),'Control Ward purchase detection must retain catalog-name plus stable item-id fallback');
+assert.ok(api.includes('function committedItemPurchaseCount('),'Control Ward purchases must account for ITEM_UNDO instead of counting transient shop clicks');
+assert.ok(api.includes('e.type==="ITEM_UNDO"&&Number(e.beforeId)===Number(itemId)'),'Undone purchases must be removed from committed purchase counts');
+assert.ok(api.includes('controlWardIds=new Set<number>([2055])')&&api.includes('text(info?.name).toLowerCase()==="control ward"'),'Control Ward detection must retain stable item-id plus catalog-name evidence');
 assert.ok(api.includes('function majorOwnershipMilestones(')&&api.includes('secondMajorItemDeltaVsOpponent'),'Second major-item timing must remain derived from reconstructed owned inventory and compared with the direct role opponent');
 assert.ok(api.includes('ownedMajorCount<=milestones.length'),'Second-major timing must not count a sale/rebuy or one-for-one major upgrade as a new owned-item milestone');
 assert.ok(api.includes('inventoryCountsAt(sorted,Number(e.tMs))'),'Major-item milestones must use the reconstructed inventory ledger');
@@ -357,7 +359,7 @@ assert.ok(api.includes('higherRankMajorItemGames'),'Higher-ranked peer item samp
 assert.ok(api.includes('higherRankAvgMajorItemDeltaMin'),'Higher-ranked peer first-major timing delta must remain exported');
 assert.ok(api.includes('higherRankMajorItemFasterPct'),'Higher-ranked peer first-major faster rate must remain exported');
 assert.ok(api.includes('First-major timing slips against higher-ranked direct opponents'),'Higher-rank item timing must remain actionable coaching evidence');
-assert.ok(api.includes('league-web-behavior-v4.38'),'Analyzer version must include season-aware rules and turret-tier involvement');
+assert.ok(api.includes('league-web-behavior-v4.39'),'Analyzer version must include season-aware rules and turret-tier involvement');
 assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
 assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
 assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
