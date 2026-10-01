@@ -254,7 +254,7 @@ function renderReport(raw,sourceKind){
   $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':(r.analyzerVersion||'Web analysis');
   renderKpis(r);renderBullets('recentFocus',r.recentFocus,'No grounded recent-focus tips are available from the active analyzer yet.');
   renderBullets('overallHighlights',r.overallHighlights,'No broader highlights are available from the active analyzer yet.');
-  renderGames(r);renderCharts(r);renderAdvanced(r);renderBreakdowns(r);renderQuality(r);
+  renderPracticePlan(r);renderGames(r);renderCharts(r);renderAdvanced(r);renderBreakdowns(r);renderQuality(r);
 }
 function renderKpis(r){
   const s=r.summary||{},role=String(s.primaryRole||'GENERIC').toUpperCase();
@@ -282,6 +282,16 @@ function renderBullets(id,items,empty){
   }).join(''):'<div class="bullet empty">'+esc(empty)+'</div>';
 }
 
+function renderPracticePlan(r){
+  const focus=(r.recentFocus||[]).filter(x=>x&&typeof x==='object'&&x.action).sort((a,b)=>Number(a.priority||9)-Number(b.priority||9)).slice(0,3);
+  if(!focus.length){
+    $('practicePlan').innerHTML='<div class="practice-empty">No strong improvement priority has enough evidence yet. Fetch/analyze more timeline-complete games rather than forcing a conclusion.</div>';
+    return;
+  }
+  $('practicePlan').innerHTML=focus.map((x,i)=>'<article class="practice-card">'+
+    '<div class="practice-number">'+(i+1)+'</div><div><span>'+esc(x.category||'focus')+'</span><strong>'+esc(x.title||'Practice focus')+'</strong>'+
+    '<p>'+esc(x.action)+'</p><small>'+esc(x.comparison||'Last-20 evidence')+' · '+esc(x.confidence||'medium')+' confidence</small></div></article>').join('');
+}
 function renderGames(r){
   const games=r.games||[];$('gameCountLabel').textContent=games.length+' games';
   state.openMatch=null;
