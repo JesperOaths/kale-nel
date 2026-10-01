@@ -1,0 +1,88 @@
+name: Published page version integrity
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.html'
+      - 'VERSION'
+      - 'check-version-drift.mjs'
+      - 'check-all-page-version-identity-v875.mjs'
+      - 'check-all-published-page-versions.mjs'
+      - 'scripts/published-page-inventory.mjs'
+      - 'scripts/check-live-published-page-versions.mjs'
+      - '.github/workflows/page-version-integrity.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**/*.html'
+      - 'VERSION'
+      - 'check-version-drift.mjs'
+      - 'check-all-page-version-identity-v875.mjs'
+      - 'check-all-published-page-versions.mjs'
+      - 'scripts/published-page-inventory.mjs'
+      - 'scripts/check-live-published-page-versions.mjs'
+      - '.github/workflows/page-version-integrity.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: page-version-integrity-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact tested revision
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+
+      - name: Verify repository page version ownership
+        run: |
+          set -euo pipefail
+          node --check scripts/published-page-inventory.mjs
+          node --check scripts/check-live-published-page-versions.mjs
+          node --check check-version-drift.mjs
+          node --check check-all-page-version-identity-v875.mjs
+          node --check check-all-published-page-versions.mjs
+          node check-version-drift.mjs
+          node check-all-page-version-identity-v875.mjs
+          node check-all-published-page-versions.mjs
+
+      - name: Wait for exact main deployment
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(tr -d '\r\n ' < VERSION)"
+          actual=''
+          for i in $(seq 1 60); do
+            actual="$(curl -fsS --max-time 10 "https://kalenel.nl/VERSION?version_integrity_run=${GITHUB_RUN_ID}&attempt=${i}" 2>/dev/null | tr -d '\r\n ' || true)"
+            if [ "$actual" = "$expected" ]; then
+              echo "DEPLOYED_VERSION_PARITY expected=$expected actual=$actual attempt=$i"
+              exit 0
+            fi
+            if [ "$i" -lt 60 ]; then sleep 10; fi
+          done
+          echo "Deployed VERSION did not reach exact tested revision: expected=$expected actual=${actual:-unavailable}"
+          exit 1
+
+      - name: Verify every deployed page route version
+        if: github.event_name != 'pull_request'
+        env:
+          GEJAST_BASE_URL: https://kalenel.nl/
+          GEJAST_LIVE_VERSION_CONCURRENCY: '12'
+          GEJAST_LIVE_VERSION_TIMEOUT_MS: '15000'
+        run: node scripts/check-live-published-page-versions.mjs
