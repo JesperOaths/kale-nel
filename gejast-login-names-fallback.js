@@ -69,7 +69,9 @@
       // not compete with page boot or a degraded Supabase data plane. Refresh
       // only later, while visible/online, and never block the selector.
       setTimeout(function(){
-        if(document.hidden || navigator.onLine===false) return;
+        var hidden = typeof document !== 'undefined' && !!document.hidden;
+        var offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+        if(hidden || offline) return;
         authoritative(resolvedScope).catch(function(){});
       },15000);
       return immediate;
