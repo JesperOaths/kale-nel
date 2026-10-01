@@ -756,7 +756,8 @@ function detailContent(g,tab){
     detailCard('XP diff @10',signed(g.xpDiff10,0))+detailCard('XP diff @15',signed(g.xpDiff15,0))+detailCard('XP diff @25',signed(g.xpDiff25,0))+
     detailCard('Opponent',peer?(peer.champion||'Same-role peer'):'n/a')+detailCard('Opponent rank',peer?rankText(peer.rank):'n/a')+
     detailCard('Pre-14 clean duel',String(g.laneDuel?.pre14SoloKillsVsRole??0)+' solo kills / '+String(g.laneDuel?.pre14SoloDeathsToRole??0)+' solo deaths')+
-    detailCard('Pre-14 credited plates',String(g.structurePressure?.pre14PlayerPlates??0)+' vs '+String(g.structurePressure?.pre14OpponentPlates??0)+' peer')+
+    detailCard('Plate credits ≤20m',String(g.structurePressure?.first20PlayerPlateCredits??g.structurePressure?.pre14PlayerPlates??0)+' vs '+String(g.structurePressure?.first20OpponentPlateCredits??g.structurePressure?.pre14OpponentPlates??0)+' peer')+
+    detailCard('Plate credits · full match',String(g.structurePressure?.allGamePlayerPlateCredits??g.structurePressure?.pre14PlayerPlates??0)+' vs '+String(g.structurePressure?.allGameOpponentPlateCredits??g.structurePressure?.pre14OpponentPlates??0)+' peer')+
     detailCard('Solo-kill structure conversion',String(g.structurePressure?.soloKillStructureConversions??0)+' / '+String(g.structurePressure?.soloKillWindows??0)+' · '+fmtPct(g.structurePressure?.soloKillStructureConversionRate))+
     detailCard('All-game clean duel',String(g.laneDuel?.soloKillsVsRole??0)+' / '+String(g.laneDuel?.soloDeathsToRole??0))+
     detailCard('Pre-14 home-lane deaths',String(g.lanePressure?.pre14HomeLaneDeaths??0))+
@@ -768,6 +769,7 @@ function detailContent(g,tab){
     detailCard('Gap after previous game',hasNum(g.sessionContext?.gapAfterPreviousMin)?fmt(g.sessionContext.gapAfterPreviousMin,0)+' min':'n/a')+
     detailCard('Previous result',g.sessionContext?.previousWin===true?'WIN':g.sessionContext?.previousWin===false?'LOSS':'n/a')+
     detailList((g.structurePressure?.events||[]).map(x=>(Number(x.killTime)||0).toFixed(1)+'m solo kill · '+(x.converted?('structure converted'+(hasNum(x.secondsAfter)?' '+fmtInt(x.secondsAfter)+'s later':'')):'no credited plate/turret within 90s')),'No pre-14 clean solo-kill structure window detected.')+
+    '<div class="detail-note">2026 turret plates are permanent on every non-Nexus turret. The ≤20m plate row is a fixed coaching slice, not a plate-expiry rule; full-match credits are shown separately.</div>'+
     detailList((g.laneDuel?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+(x.result==='solo_kill'?'solo kill on role opponent':'solo death to role opponent')+(x.pre14?' · pre-14':'')+(hasNum(x.goldDiffAtEvent)?' · role gold '+signed(x.goldDiffAtEvent,0)+'g at event':'')+(hasNum(x.goldSwingTo15)?' · '+signed(x.goldSwingTo15,0)+'g swing to 15':'')+(hasNum(x.csSwingTo15)?' · '+signed(x.csSwingTo15,0)+' CS swing to 15':'')+(x.result==='solo_kill'&&x.pre14&&hasNum(x.convertedBy15)?(x.convertedBy15?' · converted':' · not converted'):'')+(x.result==='solo_kill'&&x.pre14&&hasNum(x.nextShopDelaySec)?' · next shop '+fmtInt(x.nextShopDelaySec)+'s':'')+(x.result==='solo_kill'&&x.pre14&&x.diedBeforeNextShop?' · died before shop':'')),'No clean direct-role solo duel event detected.')+
     detailList((g.lanePressure?.events||[]).filter(x=>x.outsidePressure).map(x=>(Number(x.time)||0).toFixed(1)+'m · outside pressure'+((x.outsideRoles||[]).length?' from '+x.outsideRoles.join(', '):'')+' · '+String(x.attackerCount||'?')+' attacker(s)'),'No pre-14 outside-pressure lane death detected.')+
     '<div class="detail-note">Clean direct-role duel events require the player and actual same-role opponent to be killer/victim with no assisting participants. This separates direct matchup outcomes from outside intervention.</div>';
@@ -838,6 +840,8 @@ function renderAdvanced(r){
     ['Objective diagnosis',objectiveDiagnosisLabel(r.behaviorSummary?.objectiveDiagnosis?.primaryCause)],
     ['Early KP',fmtPct(a.earlyKP)],
     ['Pre-14 role solo kills / deaths',String(r.behaviorSummary?.pre14RoleSoloKills??0)+' / '+String(r.behaviorSummary?.pre14RoleSoloDeaths??0)],
+    ['Plate credits ≤20m',String(r.behaviorSummary?.first20PlayerPlateCredits??r.behaviorSummary?.pre14PlayerPlates??0)+' / '+String(r.behaviorSummary?.first20OpponentPlateCredits??r.behaviorSummary?.pre14OpponentPlates??0)+' vs role peer'],
+    ['Plate credits · full match',String(r.behaviorSummary?.allGamePlayerPlateCredits??r.behaviorSummary?.pre14PlayerPlates??0)+' / '+String(r.behaviorSummary?.allGameOpponentPlateCredits??r.behaviorSummary?.pre14OpponentPlates??0)+' vs role peer'],
     ['Clean solo-kill lane conversion',String(r.behaviorSummary?.soloKillConvertedEvents??0)+' / '+String(r.behaviorSummary?.soloKillConversionEvents??0)+' · '+fmtPct(r.behaviorSummary?.soloKillConversionRate)],
     ['Avg gold swing after clean solo kill',hasNum(r.behaviorSummary?.avgSoloKillGoldSwingTo15)?signed(r.behaviorSummary.avgSoloKillGoldSwingTo15,0)+'g to 15':'n/a'],
     ['Avg CS swing after clean solo kill',hasNum(r.behaviorSummary?.avgSoloKillCsSwingTo15)?signed(r.behaviorSummary.avgSoloKillCsSwingTo15,1)+' to 15':'n/a'],
