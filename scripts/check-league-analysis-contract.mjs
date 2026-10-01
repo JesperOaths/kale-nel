@@ -404,6 +404,10 @@ ok(html.includes('id="compoundSignals"')&&app.includes('function renderCompoundS
 ok(html.includes('id="reportDrivers"')&&app.includes('function renderReportDrivers('), 'report must compress the strongest supported weakness, strength and recent direction into an action-first layer');
 ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('matchHistorySignals('), 'recent selected-role games must have collapsible coaching-readable history rows with derived evidence signals');
 ok(html.includes('id="outcomeFingerprint"')&&app.includes('function renderOutcomeFingerprint('), 'selected-role games must expose descriptive win/loss fingerprint analysis without requiring another backend fetch');
+ok(app.includes('function standardizedMeanGap(')&&app.includes('Largest standardized separation:'), 'win/loss fingerprint must compare cross-unit metrics by standardized within-metric separation rather than raw numeric magnitude');
+ok(app.includes('function reportCoachingGames(')&&app.includes('mechanicsCohortApplied===true')&&app.includes('currentMechanicsKey'), 'frontend-derived coaching analysis must follow the backend mechanics cohort when one is applied');
+ok(app.includes("gameMatchesNamedFilter(g,'ahead15')")&&app.includes("gameMatchesNamedFilter(g,'behind15')"), 'match-history lane classifications must stay synchronized with the evidence-table bands');
+ok(app.includes('Timeline evidence is unavailable, so this game cannot be treated as having zero high-risk deaths.'), 'missing timelines must remain an explicit evidence gap in match-history risk summaries');
 ok(app.includes("objDiagnosed?tonePct(objective,70,45,false):'neutral'"), 'objective attendance judgment must require role-appropriate supported diagnosis');
 ok(html.includes('id="rankRadarPanel"')&&app.includes("reportRole!=='ADC'"), 'ADC benchmark UI must be withheld for non-ADC role reports');
 ok(app.includes('Next 5 comparable games'), 'practice cards must identify the short practice horizon');
