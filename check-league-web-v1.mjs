@@ -193,6 +193,8 @@ assert.ok(api.includes('LEGACY_SR_RULES')&&api.includes('phaseComparable:false')
 assert.ok(api.includes('FUTURE_UNVERIFIED_RULES'),'Future unknown mechanics must fail closed instead of silently inheriting current coaching rules');
 assert.ok(api.includes('major===16'),'2026 Riot internal game-version major must select the 2026 rules profile');
 assert.ok(api.includes('function roleQuestRevisionFor2026('),'2026 role-quest revisions must be patch-aware');
+assert.ok(api.includes('2026_revision_unknown'),'Missing internal minor versions must fail closed for patch-specific role-quest rewards');
+assert.ok(api.includes('Exact 2026 minor patch is unavailable'),'Unknown 2026 revisions must be described without inventing a reward revision');
 assert.ok(api.includes('26.9_role_quest_rework')&&api.includes('26.11_mid_8pct')&&api.includes('26.19_top_teleport'),'Material 2026 role-quest revisions must remain encoded');
 assert.ok(api.includes('laneRoleQuestsEnabled:!isSwift'),'Standard lane-role quests must remain disabled for Swiftplay');
 assert.ok(api.includes('function roleQuestContext('),'Per-game role-quest context must remain explicit');
@@ -265,7 +267,7 @@ assert.ok(css.includes('.map-marker-label'),'Numbered death marker styling must 
 assert.ok(!app.includes("['DQI'"));
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v73'),'League assets must cache-bust the v4.29 frontend');
+assert.ok(html.includes('20261001-league-web-v74'),'League assets must cache-bust the v4.30 frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
@@ -312,7 +314,7 @@ assert.ok(api.includes('higherRankMajorItemGames'),'Higher-ranked peer item samp
 assert.ok(api.includes('higherRankAvgMajorItemDeltaMin'),'Higher-ranked peer first-major timing delta must remain exported');
 assert.ok(api.includes('higherRankMajorItemFasterPct'),'Higher-ranked peer first-major faster rate must remain exported');
 assert.ok(api.includes('First-major timing slips against higher-ranked direct opponents'),'Higher-rank item timing must remain actionable coaching evidence');
-assert.ok(api.includes('league-web-behavior-v4.29'),'Analyzer version must include season-aware rules and turret-tier involvement');
+assert.ok(api.includes('league-web-behavior-v4.30'),'Analyzer version must include season-aware rules and turret-tier involvement');
 assert.ok(api.includes('earlyLeadWindow:{eligible:false'),'per-game early lead state must remain explicit');
 assert.ok(api.includes('Number(peak.goldDiff)>=500'),'early lead opportunity threshold must remain +500g');
 assert.ok(api.includes('giveback:swing<=-500'),'early lead give-back threshold must remain a 500g loss from peak');
