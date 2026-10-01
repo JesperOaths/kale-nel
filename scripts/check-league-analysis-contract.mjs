@@ -150,6 +150,11 @@ ok(backend.includes('playerSupported:isNeutralObjectiveEvent(o)?participantNearE
 ok(backend.includes('maxFrameDeltaMs=35000'), 'event proximity must remain bounded to a nearby sampled timeline frame');
 ok(backend.includes('members.some((event:any)=>participantNearEvent(frames,participantId,event,radius,35000))'), 'objective-window presence must anchor to each actual objective event');
 ok(!backend.includes('startPadMs=45000,endPadMs=45000'), 'broad padded objective-presence windows must stay retired');
+ok(backend.includes('function unresolvedItemUndoEvents('), 'zero-ID Riot item undos must remain explicitly detectable');
+ok(backend.includes('zeroIdUndoPolicy:"flag_approximate_do_not_guess"'), 'unresolvable item undos must remain uncertainty flags rather than guessed identities');
+ok(backend.includes('itemUndoQualityPolicy:"zero_id_undo_flagged_approximate_not_guessed"'), 'report quality must preserve the item-undo policy');
+ok(backend.includes('positionEvidenceModel:"nearest_timeline_frame_within_35s"'), 'report quality must preserve the sampled-position evidence model');
+ok(app.includes('Timeline position evidence')&&app.includes('Item undo quality'), 'frontend must expose both evidence-quality caveats');
 ok(backend.includes('structureInvolvement(o,frames,whoId,whoTeam,mapId)'), 'structure conversion credit must require supported involvement');
 ok(app.includes('Player-supported kill conversion')&&app.includes('Team conversion after your kill windows'), 'supported and team-only conversion must remain visibly distinct');
 ok(backend.includes('VERIFIED_2026_RULES_THROUGH_MINOR=19')&&backend.includes('minor>VERIFIED_2026_RULES_THROUGH_MINOR'), 'newer 2026 patches must fail closed beyond the audited mechanics boundary');
