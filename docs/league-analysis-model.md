@@ -873,7 +873,11 @@ A game with one relevant event therefore does not receive the same weight as a g
 
 For timeline-derived death classifications, the denominator is the number of deaths actually represented/classified in the timeline evidence, not blindly the match-summary death total. The full reported death total remains available for coverage checks. This keeps missing or incomplete timeline evidence from silently entering the denominator as if it had been classified.
 
-Mid-routing objective presence and win/loss objective-presence splits follow the same pooled-denominator principle. Temporal labels such as "death before enemy objective" describe sequence only; they do not claim the death caused the objective loss.
+Mid-routing objective presence follows the same pooled-denominator principle. Derived comparisons must preserve it too: win-vs-loss **objective presence** and **early KP** are pooled from their event numerators/denominators, and recent-5 versus prior-15 objective presence / early KP use pooled event rates rather than averages of per-game percentages. The derived objects retain numerator, denominator, contributing-game count and `aggregation: "pooled_events"` so UI and future coaching can disclose how the rate was formed.
+
+Ordinary continuous metrics such as CS/min, DPM or gold difference remain means over comparable games; they are not event proportions and should not be forced through the pooled-event helper.
+
+Temporal labels such as "death before enemy objective" describe sequence only; they do not claim the death caused the objective loss.
 
 ## Objective-family evidence
 
