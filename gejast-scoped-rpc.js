@@ -89,12 +89,11 @@
 
   function rpcHeaders() {
     const cfg = getConfig();
-    return {
-      apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '',
-      Authorization: `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    };
+    if (typeof cfg.publicApiHeaders === 'function') return cfg.publicApiHeaders({ 'Content-Type':'application/json', Accept:'application/json' });
+    const key = String(cfg.SUPABASE_PUBLISHABLE_KEY || '').trim();
+    const headers = { apikey:key, 'Content-Type':'application/json', Accept:'application/json' };
+    if (/^[^.]+\.[^.]+\.[^.]+$/.test(key)) headers.Authorization = `Bearer ${key}`;
+    return headers;
   }
 
   async function parseResponse(res) {
