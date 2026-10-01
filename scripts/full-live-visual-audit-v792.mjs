@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
 import { chromium } from 'playwright';
+import { expectedPageVersion, listPublishedHtml, readRootVersion } from './published-page-inventory.mjs';
 
 const BASE = String(process.env.GEJAST_BASE_URL || 'https://kalenel.nl/').replace(/\/+$/, '') + '/';
 const token1 = String(process.env.GEJAST_PLAYER1_TOKEN || '').trim();
@@ -30,12 +30,12 @@ const supabaseUrl = configText.match(/SUPABASE_URL:\s*'([^']+)'/)?.[1];
 const publishableKey = configText.match(/SUPABASE_PUBLISHABLE_KEY:\s*'([^']+)'/)?.[1];
 if (!supabaseUrl || !publishableKey) throw new Error('Could not resolve checked-in Supabase public config');
 
-const trackedHtml = execFileSync('git', ['ls-files', '-z', '*.html'], { encoding: 'utf8' })
-  .split('\0')
-  .map((value) => value.trim())
-  .filter(Boolean)
-  .filter((value) => !value.startsWith('node_modules/'))
-  .sort((a, b) => a.localeCompare(b));
+const rootVersion = readRootVersion(process.cwd());
+const trackedHtml = listPublishedHtml(process.cwd());
+const expectedVersionByRoute = new Map(trackedHtml.map((rel) => {
+  const source = fs.readFileSync(rel, 'utf8');
+  return [rel, expectedPageVersion(rel, rootVersion, source)];
+}));
 
 const state = { pikkenId: '', pikkenCode: '', paardenCode: '', klaverId: '', klaverCode: '' };
 const records = [];
@@ -222,6 +222,21 @@ async function capture(context, route, label, index, kind = 'tracked') {
   const authState = await page.evaluate(() => document.documentElement.getAttribute('data-gejast-auth-state') || '').catch(() => '');
   const title = await page.title().catch(() => '');
   const bodyText = await page.locator('body').innerText().catch(() => '');
+  const repoPath = kind === 'tracked' ? String(route || '').split('?')[0].replace(/^\/+/, '') : '';
+  const expectedVersion = kind === 'tracked' ? (expectedVersionByRoute.get(repoPath) || '') : '';
+  const runtimeVersion = await page.evaluate(() => {
+    const declared = String(window.GEJAST_PAGE_VERSION || window.GEJAST_SITE_VERSION || '').trim().toLowerCase();
+    const selectors = '[data-version-watermark],.site-credit-watermark,.version-watermark,.watermark';
+    const watermarkTexts = [...document.querySelectorAll(selectors)]
+      .map((el) => {
+        const style = getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        if (style.display === 'none' || style.visibility === 'hidden' || rect.width <= 0 || rect.height <= 0) return '';
+        return String(el.textContent || '').replace(/\s+/g, ' ').trim();
+      })
+      .filter(Boolean);
+    return { declared, watermarkTexts };
+  }).catch(() => ({ declared: '', watermarkTexts: [] }));
   const metrics = await page.evaluate(() => ({
     width: window.innerWidth,
     scrollWidth: document.documentElement.scrollWidth,
@@ -256,6 +271,21 @@ async function capture(context, route, label, index, kind = 'tracked') {
   if (!protectedGate && status >= 500) { judgement = 'broken'; reasons.push(`document HTTP ${status}`); }
   if (!protectedGate && authGate.expected && !authGate.settled) { judgement = 'broken'; reasons.push(`auth gate did not settle within ${authSettleTimeout}ms (last state ${authState || authGate.state || 'missing'})`); }
   if (!protectedGate && bodyText.trim().length < 20) { judgement = 'broken'; reasons.push('rendered body is effectively empty'); }
+  if (!protectedGate && kind === 'tracked' && expectedVersion) {
+    const declared = String(runtimeVersion.declared || '').toLowerCase();
+    const expected = String(expectedVersion).toLowerCase();
+    const expectedWatermark = (runtimeVersion.watermarkTexts || []).some((text) =>
+      new RegExp('\\b' + expected.replace(/[.*+?^$\\{}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(text) && /Made by Bruis/i.test(text)
+    );
+    if (declared && declared !== expected) {
+      judgement = 'broken';
+      reasons.push(`runtime page version ${declared} != expected ${expected}`);
+    }
+    if (!expectedWatermark) {
+      judgement = 'broken';
+      reasons.push(`runtime watermark does not expose ${expected} - Made by Bruis`);
+    }
+  }
   if (signals.length) { judgement = 'broken'; reasons.push(`visible runtime signal: ${signals.join(', ')}`); }
   if (kind === 'context' && finalPath === '/login.html') { judgement = 'broken'; reasons.push('contextual authenticated capture ended at login'); }
   if (kind === 'context' && authState !== 'authenticated') { judgement = 'broken'; reasons.push(`contextual auth state is ${authState || 'missing'}, expected authenticated`); }
@@ -275,6 +305,9 @@ async function capture(context, route, label, index, kind = 'tracked') {
     final_url: finalUrl,
     status,
     title,
+    expected_version: expectedVersion,
+    runtime_version_declared: runtimeVersion.declared || '',
+    runtime_watermark_texts: runtimeVersion.watermarkTexts || [],
     auth_state: authState,
     auth_gate_expected: authGate.expected,
     auth_gate_settled: authGate.settled,

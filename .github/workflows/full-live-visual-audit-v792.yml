@@ -8,6 +8,8 @@ on:
     paths:
       - '.github/workflows/full-live-visual-audit-v792.yml'
       - 'scripts/full-live-visual-audit-v792.mjs'
+      - 'scripts/published-page-inventory.mjs'
+      - 'scripts/check-live-published-page-versions.mjs'
       - 'scripts/prepare-visual-audit-runtime-v812.mjs'
       - 'scripts/full-live-visual-fixtures-v801.mjs'
       - 'scripts/refine-degraded-visual-report-v807.mjs'
@@ -31,6 +33,8 @@ on:
     paths:
       - '.github/workflows/full-live-visual-audit-v792.yml'
       - 'scripts/full-live-visual-audit-v792.mjs'
+      - 'scripts/published-page-inventory.mjs'
+      - 'scripts/check-live-published-page-versions.mjs'
       - 'scripts/prepare-visual-audit-runtime-v812.mjs'
       - 'scripts/full-live-visual-fixtures-v801.mjs'
       - 'scripts/refine-degraded-visual-report-v807.mjs'
@@ -93,6 +97,8 @@ jobs:
           echo "GEJAST_SYSTEM_CHROME=$chrome" >> "$GITHUB_ENV"
           GEJAST_SYSTEM_CHROME="$chrome" node scripts/prepare-visual-audit-runtime-v812.mjs
           node --check scripts/full-live-visual-audit-v792.mjs
+          node --check scripts/published-page-inventory.mjs
+          node --check scripts/check-live-published-page-versions.mjs
           node --check scripts/prepare-visual-audit-runtime-v812.mjs
           node --check scripts/full-live-visual-fixtures-v801.mjs
           node --check scripts/refine-degraded-visual-report-v807.mjs
@@ -140,6 +146,13 @@ jobs:
             echo 'Main visual certification requires the deployed VERSION to match the tested source revision.'
             exit 1
           fi
+
+      - name: Verify every published live page version identity
+        if: env.GEJAST_LIVE_VERSION_MATCH == '1'
+        env:
+          GEJAST_LIVE_VERSION_CONCURRENCY: '12'
+          GEJAST_LIVE_VERSION_TIMEOUT_MS: '15000'
+        run: node scripts/check-live-published-page-versions.mjs
 
       - name: Probe Supabase auth data plane before fixture provisioning
         id: data_plane
