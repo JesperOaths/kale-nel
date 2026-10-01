@@ -388,12 +388,16 @@ function wardTerritory(teamId:any,pos:any){
 }
 const VERIFIED_2026_RULES_THROUGH_MINOR=19;
 const STANDARD_PVP_SR_QUEUE_IDS=new Set([400,420,430,440,490,700]);
+const ASSIGNED_POSITION_SR_QUEUE_IDS=new Set([400,420,440,490]);
 const SWIFTPLAY_SR_QUEUE_IDS=new Set([480]);
 function supportedLeagueQueue(queueId:any){
   const q=Number(queueId||0);
-  if(STANDARD_PVP_SR_QUEUE_IDS.has(q))return{supported:true,family:"standard_pvp_sr",rulesFamily:"standard"};
-  if(SWIFTPLAY_SR_QUEUE_IDS.has(q))return{supported:true,family:"swiftplay_sr",rulesFamily:"swiftplay"};
-  return{supported:false,family:q?"unsupported_queue_"+q:"queue_unknown",rulesFamily:"unverified"};
+  if(STANDARD_PVP_SR_QUEUE_IDS.has(q)){
+    const roleQuestAssignmentKnown=ASSIGNED_POSITION_SR_QUEUE_IDS.has(q);
+    return{supported:true,family:"standard_pvp_sr",rulesFamily:"standard",roleQuestAssignmentKnown,roleQuestAssignmentBasis:roleQuestAssignmentKnown?"assigned_position_queue":"queue_assignment_unverified"};
+  }
+  if(SWIFTPLAY_SR_QUEUE_IDS.has(q))return{supported:true,family:"swiftplay_sr",rulesFamily:"swiftplay",roleQuestAssignmentKnown:true,roleQuestAssignmentBasis:"swiftplay_explicit_exclusion"};
+  return{supported:false,family:q?"unsupported_queue_"+q:"queue_unknown",rulesFamily:"unverified",roleQuestAssignmentKnown:false,roleQuestAssignmentBasis:"unsupported_queue"};
 }
 function cachedMatchStartMs(row:any){
   const direct=Number(row?.match_json?.info?.gameStartTimestamp||0);if(direct>0)return direct;
@@ -472,14 +476,14 @@ function gameRules(match:any){
   if(major>16||(!major&&start>=Date.UTC(2027,0,1)))return{...FUTURE_UNVERIFIED_RULES,patchMinor:minor||null,publicPatchKey:publicPatchKey(gv),laneRoleQuestsEnabled:null,roleQuestRevision:"future_unverified",verifiedThroughPublicPatch:"26."+VERIFIED_2026_RULES_THROUGH_MINOR,queueFamily:queueProfile.family};
   if(is2026){
     if(minor>VERIFIED_2026_RULES_THROUGH_MINOR)return{...FUTURE_UNVERIFIED_RULES,season:"2026_unverified_minor",patchMinor:minor,publicPatchKey:publicPatchKey(gv),laneRoleQuestsEnabled:null,roleQuestRevision:"2026_minor_unverified",verifiedThroughPublicPatch:"26."+VERIFIED_2026_RULES_THROUGH_MINOR,queueFamily:queueProfile.family,sourceBasis:"2026_minor_newer_than_verified_rules"};
-    const base=isSwift?SWIFTPLAY_2026_RULES:STANDARD_SR_2026_RULES,revision=minor>0?roleQuestRevisionFor2026(minor):"2026_revision_unknown";
-    return{...base,patchMinor:minor||null,publicPatchKey:publicPatchKey(gv),laneRoleQuestsEnabled:!isSwift,roleQuestRevision:isSwift?"swiftplay_legacy_quest_model":revision,verifiedThroughPublicPatch:"26."+VERIFIED_2026_RULES_THROUGH_MINOR,queueFamily:queueProfile.family,sourceBasis:isSwift?"swiftplay_2026":("2026_standard|"+revision)};
+    const base=isSwift?SWIFTPLAY_2026_RULES:STANDARD_SR_2026_RULES,revision=minor>0?roleQuestRevisionFor2026(minor):"2026_revision_unknown",questKnown=isSwift||queueProfile.roleQuestAssignmentKnown===true;
+    return{...base,patchMinor:minor||null,publicPatchKey:publicPatchKey(gv),laneRoleQuestsEnabled:isSwift?false:questKnown?true:null,roleQuestRevision:isSwift?"swiftplay_legacy_quest_model":questKnown?revision:"queue_assignment_unverified",roleQuestAssignmentBasis:queueProfile.roleQuestAssignmentBasis,verifiedThroughPublicPatch:"26."+VERIFIED_2026_RULES_THROUGH_MINOR,queueFamily:queueProfile.family,sourceBasis:isSwift?"swiftplay_2026":questKnown?("2026_standard|"+revision):"2026_standard|quest_assignment_unverified"};
   }
   return{...LEGACY_SR_RULES,patchMinor:minor||null,publicPatchKey:publicPatchKey(gv),laneRoleQuestsEnabled:false,roleQuestRevision:"legacy_pre2026",queueFamily:queueProfile.family};
 }
 function roleQuestContext(rules:any,rr:string){
   const roleName=text(rr).toUpperCase(),minor=Number(rules?.patchMinor||0),revision=rules?.key==="standard_sr_2026"?roleQuestRevisionForRole2026(minor,roleName):text(rules?.roleQuestRevision);
-  if(rules?.laneRoleQuestsEnabled===null)return{enabled:null,role:roleName,revision,known:false,economyCheckpointCaveat:true,note:rules?.season==="2026_unverified_minor"?"This 2026 minor patch is newer than the analyzer’s verified rules boundary ("+text(rules?.verifiedThroughPublicPatch||"unknown")+"); mechanics-sensitive assumptions are suppressed until audited.":"Future mechanics are unverified; no current role-quest assumptions are applied."};
+  if(rules?.laneRoleQuestsEnabled===null)return{enabled:null,role:roleName,revision,known:false,economyCheckpointCaveat:true,note:rules?.season==="2026_unverified_minor"?"This 2026 minor patch is newer than the analyzer’s verified rules boundary ("+text(rules?.verifiedThroughPublicPatch||"unknown")+"); mechanics-sensitive assumptions are suppressed until audited.":revision==="queue_assignment_unverified"?"Standard Summoner's Rift mechanics remain usable, but this queue does not provide verified assigned-position Role Quest evidence, so quest-specific economy/reward assumptions are withheld.":"Future mechanics are unverified; no current role-quest assumptions are applied."};
   if(rules?.key==="swiftplay_2026")return{enabled:false,role:roleName,revision,known:true,economyCheckpointCaveat:false,note:"Swiftplay does not use the standard 2026 lane-role quest package; accelerated queue rules are kept separate."};
   if(rules?.key!=="standard_sr_2026")return{enabled:false,role:roleName,revision,known:false,economyCheckpointCaveat:false,note:"Historical game; current 2026 role-quest assumptions are not back-applied."};
   if(!(minor>0))return{enabled:true,role:roleName,revision:"2026_revision_unknown",known:false,economyCheckpointCaveat:true,completionObserved:false,completionTime:null,reward:"2026 standard role quest",detail:"Exact 2026 minor patch is unavailable, so patch-specific reward details are not asserted.",checkpointEffect:"Observed gold/XP/level can include quest rewards, but the analyzer does not guess which 2026 reward revision applied."};
