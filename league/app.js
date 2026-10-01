@@ -1477,10 +1477,10 @@ function objectiveDiagnosisHtml(r){
   const d=r?.behaviorSummary?.objectiveDiagnosis||{},causes=Array.isArray(d.causes)?d.causes:[];
   if(!d.presenceLow&&!causes.length)return '<div class="detail-note">Objective presence is not currently flagged low enough for a root-cause diagnosis.</div>';
   const primary=d.primaryCause?objectiveDiagnosisLabel(d.primaryCause):'Arrival / pathing remains the unresolved hypothesis';
-  return '<div class="objective-diagnosis"><div class="diagnosis-primary"><span>Primary supported cause</span><strong>'+esc(primary)+'</strong></div>'+
+  return '<div class="objective-diagnosis"><div class="diagnosis-primary"><span>Primary supported explanation</span><strong>'+esc(primary)+'</strong></div>'+
     (causes.length?'<ol>'+causes.map(x=>'<li><strong>'+esc(x.label||objectiveDiagnosisLabel(x.key))+'</strong><span>'+esc(x.evidence||'')+'</span><small>Evidence severity '+esc(fmt(x.severity,0))+'</small></li>').join('')+'</ol>':
     '<p>No shop/death/vision association crossed its evidence threshold. Arrival/pathing remains a hypothesis rather than a proven cause.</p>')+
-    '<small class="diagnosis-caveat">This ranks supported evidence; it does not prove a single cause.</small></div>';
+    '<small class="diagnosis-caveat">This ranks supported evidence and associations; it does not prove a single cause.</small></div>';
 }
 function reportPhaseRules(g){
   const r=g?.phaseRules||{};
