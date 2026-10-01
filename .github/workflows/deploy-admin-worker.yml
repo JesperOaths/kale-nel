@@ -166,7 +166,7 @@ jobs:
           const base = 'cloudflare/workers/admin-gate/static';
           const manifestPath = `${base}/admin-worker-manifest.json`;
           const expected = new Map([
-            ['admin_shop_orders.html', 'v858'],
+            ['admin_shop_orders.html', 'v874'],
             ['admin_shop_connection.html', 'v828'],
             ['admin_shop_analytics.html', 'v843'],
             ['admin_shop_operations.html', 'v858'],
