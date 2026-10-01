@@ -6,10 +6,20 @@ on:
     paths:
       - '.github/workflows/deploy-admin-worker.yml'
       - 'cloudflare/workers/admin-gate/**'
-      - 'admin.html'
-      - 'admin_shop_orders.html'
-      - 'admin-session-sync.js'
+      - 'admin*.html'
+      - '*_vault.html'
+      - 'vault.html'
+      - 'drinks_admin.html'
+      - 'familie_admin.html'
+      - 'familie/admin.html'
+      - 'match_control.html'
+      - 'match_swap.html'
+      - '*.js'
+      - '*.css'
+      - 'familie/**/*.js'
+      - 'familie/**/*.css'
       - 'scripts/build-admin-worker-assets.mjs'
+      - 'scripts/admin-source-boundary.mjs'
       - 'scripts/test-admin-worker-gate.mjs'
   workflow_dispatch:
     inputs:
