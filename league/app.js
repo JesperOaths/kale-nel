@@ -402,9 +402,12 @@ function detailContent(g,tab){
       detailList(pre.map(x=>(Number(x.time)||0).toFixed(1)+'m death → '+String(x.objectiveType||'objective')+' '+String(x.secondsBeforeObjective||'?')+'s later'),'No death was followed by an enemy objective within 75 seconds.');
   }
   if(tab==='objectives'){
+    const kc=g.killConversion||{},okc=g.opponentKillConversion||{};
     return detailCard('Objective presence',fmtPct(g.objectiveJoinRate))+detailCard('Joined / team objectives',String(g.objectiveJoined??0)+' / '+String(g.objectiveTeamTotal??0))+detailCard('Early KP',fmtPct(g.earlyKp))+
-      detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+' min · '+String(g.impactType||'event'):'n/a')+detailCard('Objective-context death %',fmtPct(g.objectiveDeathPct))+detailCard('Pre-objective conversion deaths',String(g.preObjectiveDeathCount??0))+detailCard('Tracked events',String(g.objectives?.length||0))+
-      '<div class="detail-note">Objective presence counts a team objective once and checks whether your timeline position is within the action radius; it does not convert objectives into fake gold values.</div>';
+      detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+' min · '+String(g.impactType||'event'):'n/a')+detailCard('Objective-context death %',fmtPct(g.objectiveDeathPct))+detailCard('Pre-objective conversion deaths',String(g.preObjectiveDeathCount??0))+
+      detailCard('Kill-window conversion',String(kc.converted??0)+' / '+String(kc.windows??0)+' · '+fmtPct(kc.rate))+detailCard('Opposing-role conversion',String(okc.converted??0)+' / '+String(okc.windows??0)+' · '+fmtPct(okc.rate))+detailCard('Tracked objective events',String(g.objectives?.length||0))+
+      detailList((kc.events||[]).map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+String(x.kills||0)+' involved kill(s) · '+(x.converted?('converted to '+String(x.objectiveType||'objective')+' in '+String(x.secondsAfter??'?')+'s'):'no objective/structure within 75s')),'No player-involved kill-conversion windows were available.')+
+      '<div class="detail-note">Conversion is team context: it asks whether player-involved kills are followed by tracked objectives/structures within 75 seconds. It does not claim the player alone caused or prevented the conversion.</div>';
   }
   if(tab==='resets'){
     const mine=g.firstMajorItem,opp=g.opponentFirstMajorItem,shops=g.shopVisits||[],greedy=g.greedyStayWindows||[];
@@ -485,7 +488,9 @@ function renderAdvanced(r){
     ['Fight starts with ≥1000g unspent',String(r.behaviorSummary?.highUnspentFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.highUnspentFightRate)],
     ['Fight starts down major item',String(r.behaviorSummary?.itemDisadvantageFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.itemDisadvantageFightRate)],
     ['Fight starts ≥600g down vs role',String(r.behaviorSummary?.goldDeficitFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.goldDeficitFightRate)],
-    ['Objective-setup vision Δ',hasNum(a.visionSetup?.avgDeltaVsOpponent)?signed(a.visionSetup.avgDeltaVsOpponent,1)+' wards vs peer':'n/a']
+    ['Objective-setup vision Δ',hasNum(a.visionSetup?.avgDeltaVsOpponent)?signed(a.visionSetup.avgDeltaVsOpponent,1)+' wards vs peer':'n/a'],
+    ['Post-kill conversion',String(r.behaviorSummary?.killConversions??0)+' / '+String(r.behaviorSummary?.killConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.killConversionRate)],
+    ['Opposing-role post-kill conversion',String(r.behaviorSummary?.opponentKillConversions??0)+' / '+String(r.behaviorSummary?.opponentKillConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.opponentKillConversionRate)]
   ];
   $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('not recovered')||v==='n/a')).join('');
   const p=r.peerComparison||{},conv=r.conversion||{},wl=r.winLoss||{},trend=r.recentTrend||{},base=r.coachingLifetime||null,s=r.coachingSummary||r.summary||{},rank=r.profile?.rank||null;
@@ -516,7 +521,8 @@ function renderAdvanced(r){
     metric('Deficit recovery 15→25',hasNum(p.avgDeficitSwing15to25)?signed(p.avgDeficitSwing15to25,0)+'g · '+String(p.deficitGames15to25??0)+' games':'n/a',!hasNum(p.avgDeficitSwing15to25)),
     metric('Higher-rank gold @15',hasNum(p.higherRankAvgGoldDiff15)?signed(p.higherRankAvgGoldDiff15,0)+'g':'n/a',!hasNum(p.higherRankAvgGoldDiff15)),
     metric('Beat higher-rank peer on gold @15',fmtPct(p.higherRankGoldOutperformPct),!hasNum(p.higherRankGoldOutperformPct)),
-    metric('DPM vs higher-rank peer',hasNum(p.higherRankAvgDpmDelta)?signed(p.higherRankAvgDpmDelta,0):'n/a',!hasNum(p.higherRankAvgDpmDelta))
+    metric('DPM vs higher-rank peer',hasNum(p.higherRankAvgDpmDelta)?signed(p.higherRankAvgDpmDelta,0):'n/a',!hasNum(p.higherRankAvgDpmDelta)),
+    metric('Post-kill conversion Δ',hasNum(r.behaviorSummary?.killConversionDelta)?signed(r.behaviorSummary.killConversionDelta,0)+' pp':'n/a',!hasNum(r.behaviorSummary?.killConversionDelta))
   ];
   const conversionRows=[
     metric('Wins when ≥250g ahead @15',hasNum(conv.laneLeadWinRate)?fmtPct(conv.laneLeadWinRate)+' · '+String(conv.laneLeadGames||0)+' games':'n/a',!hasNum(conv.laneLeadWinRate)),
