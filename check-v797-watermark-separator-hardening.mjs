@@ -8,7 +8,7 @@ assert.ok(current>=797,'v797 watermark separator contract requires VERSION v797 
 for(const owner of ['check-version-drift.mjs','fix-version-drift.mjs']){const body=fs.readFileSync(owner,'utf8');assert(body.includes('[^\\w\\r\\n<>]{0,12}'),`${owner} must recognize arbitrary short punctuation/encoding-damaged watermark separators`);}
 const activeExt=new Set(['.html','.js','.mjs','.css']);
 const ignoredDirs=new Set(['.git','node_modules','dist','build','.next','.vercel','coverage','tmp','temp','patch_bundles','repo','mnt']);
-const ignoredFiles=new Set(['check-version-drift.mjs','fix-version-drift.mjs','check-v797-watermark-separator-hardening.mjs']);
+const ignoredFiles=new Set(['check-version-drift.mjs','fix-version-drift.mjs','check-v797-watermark-separator-hardening.mjs','check-shop-admin-cleanup-v874.mjs']);
 function walk(dir,out=[]){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){if(entry.isDirectory()){if(!ignoredDirs.has(entry.name))walk(path.join(dir,entry.name),out);}else out.push(path.join(dir,entry.name));}return out;}
 function archived(rel){const base=path.basename(rel);return (/^gejast-v\d+-repair\.js$/i.test(base)&&!base.toLowerCase().includes(version.toLowerCase()))||/^README_v\d+/i.test(base)||/^PATCH_NOTES_v\d+/i.test(base)||/^GEJAST_v\d+/i.test(base);}
 function allowedIndependentWatermark(rel,found){return (rel==='admin_shop_orders.html'&&found==='874')||(rel==='admin_shop_connection.html'&&found==='828')||(rel==='admin_shop_analytics.html'&&found==='843')||(rel==='admin_shop_operations.html'&&found==='858');}
