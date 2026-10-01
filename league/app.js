@@ -693,6 +693,7 @@ function renderReport(raw,sourceKind){
   renderDecisionMetrics(r);
   renderCompoundSignals(r);
   renderSessionHabits(r);
+  renderGameArcs(r);
   renderMatchHistory(r);
   renderGames(r);
   renderReplayReviewQueue(r);
@@ -1317,6 +1318,129 @@ function gameIsCoachingContext(r,g){
   const dq=r?.dataQuality||{};
   return !(dq.mechanicsCohortApplied===true&&dq.currentMechanicsKey&&gameMechanicsKey(g)!==String(dq.currentMechanicsKey));
 }
+
+function arcRoleGoldState(g,minute){
+  const rules=g?.phaseRules||{},field=minute===15?'goldDiff15':'goldDiff25',v=g?.[field];
+  if(minute===15&&rules.lane15Comparable===false)return {key:'unavailable',label:'@15 not comparable',tone:'neutral',value:null};
+  if(minute===25&&rules.closing25Comparable===false)return {key:'unavailable',label:'@25 not comparable',tone:'neutral',value:null};
+  if(!hasNum(v))return {key:'unavailable',label:'No @'+minute+' checkpoint',tone:'neutral',value:null};
+  const n=Number(v);
+  if(n>100)return {key:'ahead',label:'Ahead',tone:'good',value:n};
+  if(n<-100)return {key:'behind',label:'Behind',tone:'bad',value:n};
+  return {key:'close',label:'Close',tone:'neutral',value:n};
+}
+function gameArcStages(g){
+  const lane=arcRoleGoldState(g,15),at25=arcRoleGoldState(g,25),reset=g.firstResetSequence||null,spike=g.itemSpikeWindow||{},fight=g.fightProfile||{},obj=g.objectiveReadiness||{},side=g.sideLaneRisk||{},closing=g.closing25||{};
+  const stages=[];
+  stages.push({
+    key:'lane_'+lane.key,label:'Lane @15',tone:lane.tone,
+    value:lane.value==null?lane.label:lane.label+' · '+signed(lane.value,0)+'g',
+    copy:lane.key==='unavailable'?'No coaching-safe @15 role-gold state is available.':'Direct same-role gold state using the same ±100g bands as the evidence table.'
+  });
+  if(g.timelineAvailable!==true){
+    stages.push({key:'power_unavailable',label:'Reset / power',tone:'neutral',value:'Timeline unavailable',copy:'Reset and item-window sequencing cannot be reconstructed without timeline evidence.'});
+  }else if(spike.eligible){
+    const delta=hasNum(g.itemSpikeDeltaVsOpponent)?Number(g.itemSpikeDeltaVsOpponent):null;
+    if(spike.diedBeforeImpact)stages.push({key:'power_spike_died',label:'Reset / power',tone:'bad',value:'Earlier item → death before impact',copy:(delta!=null?'First major arrived '+fmt(Math.abs(delta),1)+'m earlier; ':'')+'the measurable earlier-item window ended in death before tracked impact.'});
+    else if(spike.used)stages.push({key:'power_spike_used',label:'Reset / power',tone:'good',value:'Earlier item → tracked impact',copy:(delta!=null?'First major arrived '+fmt(Math.abs(delta),1)+'m earlier; ':'')+'the power window produced tracked kill/assist or objective impact before role-opponent parity.'});
+    else stages.push({key:'power_spike_unused',label:'Reset / power',tone:'neutral',value:'Earlier item window unused',copy:'An earlier first-major window existed, but no tracked impact was recorded before role-opponent item parity.'});
+  }else if(reset){
+    if(reset.deathInWindow)stages.push({key:'reset_disrupted',label:'Reset / power',tone:'bad',value:'First-reset window disrupted',copy:'A death occurred inside the post-reset measurement window, so economy swing is not treated as clean reset evidence.'});
+    else if(reset.economyLoss)stages.push({key:'reset_loss',label:'Reset / power',tone:'bad',value:'Lost ground after first reset',copy:'The clean post-reset window lost at least 350g role differential or 6 CS by the supported next frame.'});
+    else if(reset.economyGain)stages.push({key:'reset_gain',label:'Reset / power',tone:'good',value:'Gained ground after first reset',copy:'The clean post-reset window gained at least 150g and 4 CS of direct-role differential.'});
+    else stages.push({key:'reset_stable',label:'Reset / power',tone:'neutral',value:'No strong reset swing',copy:'A first return shop was detected, but its supported aftermath did not cross the report’s gain/loss thresholds.'});
+  }else{
+    stages.push({key:'power_unknown',label:'Reset / power',tone:'neutral',value:'No supported sequence',copy:'No qualifying first-reset or earlier-item power-window sequence is available.'});
+  }
+
+  const fixedComparable=g?.phaseRules?.fixed15to25Comparable!==false;
+  if(!fixedComparable||lane.key==='unavailable'||at25.key==='unavailable'){
+    stages.push({key:'transition_unavailable',label:'15 → 25',tone:'neutral',value:'Transition unavailable',copy:'This rules profile or game length does not support a standard @15→@25 role-state comparison.'});
+  }else{
+    const swing=Number(at25.value)-Number(lane.value),from=lane.key,to=at25.key;
+    let tone='neutral',value=lane.label+' → '+at25.label,copy='Role-gold differential changed '+signed(swing,0)+'g from 15 to 25.';
+    if(from==='ahead'&&to==='ahead'){tone=swing<=-500?'neutral':'good';value=swing<=-500?'Lead retained, but eroded':'Role lead preserved';}
+    else if(from==='ahead'&&to!=='ahead'){tone='bad';value='Role lead gone by 25';}
+    else if(from==='behind'&&to!=='behind'){tone='good';value='Role deficit recovered by 25';}
+    else if(from==='behind'&&to==='behind'&&swing>=500){tone='neutral';value='Deficit improved';}
+    else if(from==='behind'&&to==='behind'&&swing<=-500){tone='bad';value='Role deficit deepened';}
+    else if(from==='close'&&to==='ahead'){tone='good';value='Created role lead';}
+    else if(from==='close'&&to==='behind'){tone='bad';value='Fell behind by 25';}
+    else if(from==='close'&&to==='close'){value='Stayed close';}
+    stages.push({key:'transition_'+from+'_to_'+to,label:'15 → 25',tone,value,copy});
+  }
+
+  if(g.timelineAvailable!==true){
+    stages.push({key:'teamplay_unavailable',label:'Teamplay',tone:'neutral',value:'Not measurable',copy:'Fight and objective sequencing requires timeline evidence.'});
+  }else{
+    const preSide=Number(side.preNeutralObjectiveSideLaneDeaths||0),preFight=Number(fight.diedBeforeContribution||0),shopAbs=Number(obj.recentShopAbsences??obj.lateResetMisses??0),contested=Number(obj.contestedObjectives||0),setupRate=hasNum(obj.earlySetupJoinRate)?Number(obj.earlySetupJoinRate):null;
+    if(preSide>0)stages.push({key:'teamplay_side_lane',label:'Teamplay',tone:'bad',value:preSide+' pre-objective side-lane death'+(preSide===1?'':'s'),copy:'These deaths occurred in the supported pre-neutral-objective side-lane window.'});
+    else if(preFight>0)stages.push({key:'teamplay_preimpact_death',label:'Teamplay',tone:'bad',value:preFight+' fight'+(preFight===1?'':'s')+' died before contribution',copy:'Tracked fight clusters show death before a recorded contribution in the cluster.'});
+    else if(shopAbs>0)stages.push({key:'teamplay_recent_shop_absence',label:'Teamplay',tone:'neutral',value:shopAbs+' recent-shop objective absence'+(shopAbs===1?'':'s'),copy:'A detected shop visit occurred within 60 seconds before these contested-objective absences. This is an association, not a proven reset cause.'});
+    else if(contested>=2&&setupRate!=null&&setupRate>=60)stages.push({key:'teamplay_setup',label:'Teamplay',tone:'good',value:'Early objective setup '+fmtPct(setupRate),copy:'In contested neutral-objective joins, supported player position was already near the area 45–105 seconds before the event often enough to cross the report’s positive setup band.'});
+    else stages.push({key:'teamplay_neutral',label:'Teamplay',tone:'neutral',value:'No dominant teamplay flag',copy:'No single supported side-lane, pre-contribution, recent-shop-absence or strong early-setup signal dominates this game.'});
+  }
+
+  const lateRisk=Number(closing.highRiskDeaths||0)+Number(closing.costlyDeaths||0),duration=Number(g.durationMinutes||0);
+  if(duration<25||at25.key==='unavailable'){
+    stages.push({key:'finish_no25_'+(g.win?'win':'loss'),label:'Finish',tone:g.win?'good':'bad',value:(g.win?'Win':'Loss')+' without comparable @25 state',copy:'Result is known, but no standard role-relative @25 closing checkpoint is used for this game.'});
+  }else if(at25.key==='ahead'&&g.win){
+    stages.push({key:'finish_ahead_win',label:'Finish',tone:lateRisk?'neutral':'good',value:lateRisk?'Ahead @25 → win with late risk':'Ahead @25 → win',copy:lateRisk?lateRisk+' late high-risk/costly death flags were recorded after 25.':'No late high-risk/costly death flag was recorded after the ahead-at-25 checkpoint.'});
+  }else if(at25.key==='ahead'&&!g.win){
+    stages.push({key:'finish_ahead_loss',label:'Finish',tone:'bad',value:lateRisk?'Ahead @25 → loss + late risk':'Ahead @25 → loss',copy:lateRisk?lateRisk+' late high-risk/costly death flags are review evidence; they are not assumed to be the sole cause of the loss.':'The role lead did not become a win, but the current late-risk model does not identify a supported cause.'});
+  }else if(at25.key==='behind'&&g.win){
+    stages.push({key:'finish_behind_win',label:'Finish',tone:'good',value:'Behind @25 → win',copy:'The game was won despite a direct-role gold deficit at the comparable 25-minute checkpoint.'});
+  }else if(at25.key==='behind'&&!g.win){
+    stages.push({key:'finish_behind_loss',label:'Finish',tone:'bad',value:'Behind @25 → loss',copy:'The game remained behind the direct-role opponent at the comparable 25-minute checkpoint and ended in a loss.'});
+  }else{
+    stages.push({key:'finish_close_'+(g.win?'win':'loss'),label:'Finish',tone:g.win?'good':'bad',value:'Close @25 → '+(g.win?'win':'loss'),copy:'The direct-role gold state was within ±100g at 25; the result is shown without attributing causality to that checkpoint.'});
+  }
+  return stages;
+}
+function gameArcStripHtml(g){
+  const stages=gameArcStages(g);
+  return '<div class="match-game-arc" aria-label="Game arc">'+stages.map((x,i)=>'<div class="game-arc-stage tone-'+x.tone+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><small>'+esc(x.copy)+'</small></div>'+(i<stages.length-1?'<i class="game-arc-arrow" aria-hidden="true">→</i>':'')).join('')+'</div>';
+}
+function gameArcTransition(g){
+  const a=arcRoleGoldState(g,15),b=arcRoleGoldState(g,25);
+  if(g?.phaseRules?.fixed15to25Comparable===false||a.key==='unavailable'||b.key==='unavailable')return null;
+  return {key:a.key+'>'+b.key,label:a.label+' @15 → '+b.label+' @25',from:a,to:b,swing:Number(b.value)-Number(a.value)};
+}
+const ARC_TURNING_POINT_DEFS=[
+  {key:'early_lead_giveback',label:'Early role lead gave back ≥500g by 15',tone:'bad',test:g=>g.earlyLeadWindow?.giveback===true,why:'A measured pre-15 direct-role lead of at least 500g lost at least 500g before the @15 checkpoint.'},
+  {key:'first_reset_loss',label:'Clean first-reset aftermath lost economy',tone:'bad',test:g=>g.firstResetSequence?.economyLoss===true,why:'The clean post-reset evidence window lost at least 350g role differential or 6 CS.'},
+  {key:'first_reset_gain',label:'Clean first-reset aftermath gained economy',tone:'good',test:g=>g.firstResetSequence?.economyGain===true,why:'The clean post-reset evidence window gained at least 150g and 4 CS.'},
+  {key:'spike_used',label:'Earlier first-major window produced impact',tone:'good',test:g=>g.itemSpikeWindow?.eligible===true&&g.itemSpikeWindow?.used===true,why:'An earlier first-major window produced tracked impact before the direct role opponent reached item parity.'},
+  {key:'spike_died',label:'Earlier first-major window ended in death first',tone:'bad',test:g=>g.itemSpikeWindow?.eligible===true&&g.itemSpikeWindow?.diedBeforeImpact===true,why:'An earlier first-major window ended in death before tracked impact.'},
+  {key:'preobj_side',label:'Side-lane death shortly before contested objective',tone:'bad',test:g=>Number(g.sideLaneRisk?.preNeutralObjectiveSideLaneDeaths||0)>0,why:'At least one side-lane death occurred inside the analyzer’s supported pre-neutral-objective window.'},
+  {key:'recent_shop_absence',label:'Recent-shop objective absence',tone:'neutral',test:g=>Number(g.objectiveReadiness?.recentShopAbsences??g.objectiveReadiness?.lateResetMisses??0)>0,why:'A shop visit occurred within 60 seconds before at least one contested-objective absence. This is association evidence only.'},
+  {key:'preimpact_fight_death',label:'Died before contribution in a tracked fight',tone:'bad',test:g=>Number(g.fightProfile?.diedBeforeContribution||0)>0,why:'At least one attended fight cluster recorded death before tracked contribution.'},
+  {key:'repeat_death',label:'Rapid repeat-death sequence',tone:'bad',test:g=>Number(g.deathRecovery?.repeatDeaths||0)>0,why:'At least one measured recovery opportunity became another death inside the repeat-death window.'},
+  {key:'late_risk',label:'Late high-risk / costly death evidence',tone:'bad',test:g=>Number(g.closing25?.highRiskDeaths||0)>0||Number(g.closing25?.costlyDeaths||0)>0,why:'At least one high-risk or measured costly death occurred after 25 minutes.'}
+];
+function renderGameArcs(r){
+  const patternBox=$('gameArcPatterns'),turnBox=$('gameArcTurningPoints'),note=$('gameArcNote');if(!patternBox||!turnBox)return;
+  const games=reportCoachingGames(r),transitions=games.map(g=>({g,t:gameArcTransition(g)})).filter(x=>x.t);
+  const groups=new Map();
+  transitions.forEach(({g,t})=>{
+    const row=groups.get(t.key)||{key:t.key,label:t.label,games:[],swings:[]};
+    row.games.push(g);row.swings.push(t.swing);groups.set(t.key,row);
+  });
+  const repeated=[...groups.values()].filter(x=>x.games.length>=2).sort((a,b)=>b.games.length-a.games.length||String(a.label).localeCompare(String(b.label))).slice(0,6);
+  patternBox.innerHTML=repeated.length?repeated.map(x=>{
+    const wins=x.games.filter(g=>g.win).length,wr=100*wins/x.games.length,avgSwing=x.swings.reduce((a,b)=>a+b,0)/x.swings.length,lateRiskGames=x.games.filter(g=>Number(g.closing25?.highRiskDeaths||0)>0||Number(g.closing25?.costlyDeaths||0)>0).length;
+    return '<article class="game-arc-pattern"><span>Repeated transition · '+x.games.length+' games</span><strong>'+esc(x.label)+'</strong><div class="arc-pattern-stats"><b>'+esc(fmtPct(wr))+' wins</b><b>'+esc(signed(avgSwing,0))+'g avg 15→25 swing</b><b>'+lateRiskGames+' late-risk game'+(lateRiskGames===1?'':'s')+'</b></div><p>Outcome and risk are shown as context. The transition itself is direct-role gold state, not whole-team game state.</p></article>';
+  }).join(''):'<div class="bullet empty">No @15→@25 role-state transition repeats at least twice inside the current coaching cohort yet.</div>';
+
+  const turning=ARC_TURNING_POINT_DEFS.map(d=>{
+    const hit=games.filter(g=>g.timelineAvailable===true&&d.test(g));
+    return {...d,count:hit.length,wins:hit.filter(g=>g.win).length};
+  }).filter(x=>x.count>=2).sort((a,b)=>b.count-a.count||String(a.label).localeCompare(String(b.label))).slice(0,7);
+  turnBox.innerHTML='<div class="section-subhead"><strong>Recurring turning-point evidence</strong><span>Games containing the signal · minimum 2</span></div>'+
+    (turning.length?'<div class="arc-turning-grid">'+turning.map(x=>'<article class="arc-turning-card tone-'+x.tone+'"><span>'+x.count+' / '+games.length+' games</span><strong>'+esc(x.label)+'</strong><p>'+esc(x.why)+'</p><small>'+esc(fmtPct(100*x.wins/x.count))+' wins in games containing this signal · descriptive only</small></article>').join('')+'</div>':'<div class="bullet empty">No defined turning-point signal repeats in at least two coaching-cohort games.</div>');
+  if(note)note.textContent='Coaching cohort: '+games.length+' games · comparable @15→@25 transitions: '+transitions.length+'. Turning-point counts are games containing supported evidence, not raw event totals. Older-mechanics context-only games are excluded when the backend applies a mechanics cohort.';
+}
+
 function matchHistoryLaneState(g){
   if(g?.phaseRules?.lane15Comparable===false||!hasNum(g.goldDiff15))return {tone:'neutral',label:'@15 unavailable',copy:'No role-comparable 15-minute gold checkpoint is available for this game.'};
   const d=Number(g.goldDiff15);
@@ -1368,6 +1492,7 @@ function matchHistoryRow(g,index,displayIndex,r){
       '<span class="history-chevron" aria-hidden="true">▾</span>'+
     '</button>'+
     '<div class="match-history-detail" id="'+detailId+'" hidden>'+
+      gameArcStripHtml(g)+
       '<div class="history-signal-grid">'+signals.map(x=>'<div class="history-signal tone-'+x.tone+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><p>'+esc(x.copy)+'</p></div>').join('')+'</div>'+
       '<div class="history-coaching-read tone-'+judge.tone+'"><span>Game-level coaching read</span><strong>'+esc(judge.title)+'</strong><p>'+esc(judge.evidence||'No additional evidence sentence was generated.')+'</p>'+(judge.action?'<div><b>Next time:</b> '+esc(judge.action)+'</div>':'')+'</div>'+
       '<div class="history-actions"><button class="button secondary small" type="button" data-open-full-match="'+esc(g.matchId||'')+'">Open full match evidence</button><small>Full evidence includes macro, resets, vision, fights, phases, deaths, objectives and map context.</small></div>'+
