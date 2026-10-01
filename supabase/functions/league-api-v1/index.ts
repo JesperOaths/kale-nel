@@ -280,12 +280,12 @@ const SWIFTPLAY_2026_RULES={
 };
 const LEGACY_SR_RULES={
   key:"legacy_sr_pre2026",season:"pre2026",phaseComparable:false,midRoutingComparable:false,lane15Comparable:true,fixed15to25Comparable:true,closing25Comparable:true,
-  earlyEndMin:14,lateStartMin:25,postLaneStartMin:14,roamEndMin:20,midRoutingStartMin:14,midRoutingEndMin:25,earlyKpEndMin:14,
+  earlyEndMin:14,lateStartMin:25,macroTransitionMin:14,postLaneStartMin:14,roamEndMin:20,midRoutingStartMin:14,midRoutingEndMin:25,earlyKpEndMin:14,
   platesPermanent:false,sourceBasis:"historical_compatibility"
 };
 const FUTURE_UNVERIFIED_RULES={
   key:"future_rules_unverified",season:"future",phaseComparable:false,midRoutingComparable:false,lane15Comparable:false,fixed15to25Comparable:false,closing25Comparable:false,
-  earlyEndMin:14,lateStartMin:20,postLaneStartMin:14,roamEndMin:20,midRoutingStartMin:15,midRoutingEndMin:25,earlyKpEndMin:14,
+  earlyEndMin:14,lateStartMin:20,macroTransitionMin:14,postLaneStartMin:14,roamEndMin:20,midRoutingStartMin:15,midRoutingEndMin:25,earlyKpEndMin:14,
   platesPermanent:null,sourceBasis:"do_not_coach_from_unverified_future_mechanics"
 };
 function roleQuestRevisionFor2026(minor:any){
