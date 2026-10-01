@@ -303,6 +303,9 @@ assert.ok(html.includes('id="recentPulse"')&&app.includes('function renderRecent
 assert.ok(app.includes('sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-Number(b.gameStartTimestamp||0))')&&app.includes('sourceGames.reverse()'),'Trend charts must render oldest-to-newest even though the report contract is newest-first');
 assert.ok(app.includes('chart-reference-line')&&app.includes("reference:bench?.dpm")&&app.includes("reference:bench?.kp"),'ADC DPM/KP charts must retain same-tier external reference lines');
 assert.ok(!html.includes('ADC rank averages'),'UI must not overstate role-adjusted rank benchmarks as direct ADC rank averages');
+assert.ok(!app.includes('Rank avg ')&&!app.includes('ADC average')&&!app.includes('sourced rank average'),'Prominent KPI/Quick Read copy must not overstate adjusted references as observed ADC averages');
+assert.ok(html.includes('Your ADC sample vs rank-reference profiles')&&app.includes('External ref '),'Prominent rank-comparison surfaces must consistently use reference language');
+assert.ok(app.includes('raw rank reference')&&app.includes('not ADC-adjusted'),'Deaths comparison must disclose that the source does not publish an ADC-specific deaths multiplier');
 assert.ok(app.includes('chart-zero-line')&&app.includes('fixedMin:-2000')&&app.includes('fixedMax:2000'),'Signed lane-economy charts must retain a prominent zero line and stable gold scale');
 assert.ok(app.includes('fixedMin:-35')&&app.includes('fixedMax:35'),'CS-difference charts must retain a stable symmetric scale');
 assert.ok(app.includes('itemIcon')&&app.includes('purchaseItemStrip')&&app.includes('championIcon'),'League report must use Riot champion/item imagery for visual context');
@@ -465,7 +468,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v108'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v109'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
