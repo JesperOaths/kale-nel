@@ -160,10 +160,8 @@ async function loadLiveCatalog(timeoutMs = 5000){
     const response = await fetch(LIVE_CATALOG_URL, {
       cache: 'default',
       signal: controller.signal,
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`
-      }
+      mode: 'cors',
+      credentials: 'omit'
     });
     if(!response.ok) return [];
     const payload = await response.json();
