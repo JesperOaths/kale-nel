@@ -1609,3 +1609,30 @@ Parity decisions:
 The V21 report also computed longest/current win and loss streaks. The web analyzer restores these as descriptive Last-20 facts only: contiguous results are measured inside the eligible displayed sample, but they are never used as evidence of tilt, momentum, confidence, fatigue, or any other psychological state.
 
 When a legacy feature is superseded, preserve its underlying information need rather than duplicating a weaker heuristic under a second label. When a legacy consumer references data its producer never emitted, record that as an incomplete historical feature rather than silently inventing the missing data.
+
+
+## Game-arc reconstruction
+
+The report may derive a coaching-readable game arc from already-exported per-game evidence. This is a presentation/interpretation layer; it must not invent events or bypass the backend sample rules.
+
+Game arcs use the same selected-role, selected-queue Last-20 games as the report. When `dataQuality.mechanicsCohortApplied` is true, aggregate arc patterns, outcome fingerprints, advantage-conversion funnels and recurring turning points use only the backend-selected current-mechanics cohort. Older-mechanics matches may remain visible in match history as context, but are labelled context-only and do not enter those coaching aggregates.
+
+Role-gold states use the same bands as the evidence-table filters:
+- **ahead:** direct-role gold differential > +100g,
+- **close:** -100g through +100g,
+- **behind:** direct-role gold differential < -100g.
+
+The @15 state requires `lane15Comparable`. The @15→@25 transition additionally requires `fixed15to25Comparable`, a supported @25 frame and a coaching-safe @25 state. Closing interpretation requires `closing25Comparable`. A raw checkpoint may remain visible elsewhere for traceability when these flags are false, but it must not become a coaching arc state.
+
+The five per-game stages are:
+1. **Lane @15** — same-band direct-role economy state.
+2. **Reset / power** — first-reset aftermath or, when available, the earlier-first-major power window.
+3. **15 → 25** — direct-role gold-state transition and supported differential swing.
+4. **Teamplay** — supported side-lane/objective/fight-entry evidence; recent-shop objective absence is explicitly an association rather than a proven reset cause.
+5. **Finish** — result plus the supported @25 role state and late-risk evidence, without claiming that the checkpoint caused the result.
+
+A transition is called **repeated** only when the same @15→@25 state transition occurs in at least two coaching-cohort games. A recurring turning point likewise requires the defined signal in at least two timeline-complete coaching games. Counts are games containing evidence, not raw event totals.
+
+Advantage-conversion funnels report what happened after ahead / close / behind @15 states: comparable @25 state, result and late-risk context. They are descriptive state-conversion summaries, not causal models or significance tests.
+
+Missing timeline or checkpoint evidence must remain explicit. It must never be converted into a clean-risk claim, a preserved lead, successful setup, or any other positive coaching conclusion.
