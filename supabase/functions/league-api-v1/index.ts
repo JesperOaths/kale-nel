@@ -1060,6 +1060,7 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,p
       phaseRisk,
       pre14RoleSoloKills,pre14RoleSoloDeaths,pre14RoleSoloDeathPerGame,soloKillConversionEvents:soloKillConversionEvents.length,soloKillConvertedEvents:soloKillConvertedEvents.length,soloKillConversionRate,avgSoloKillGoldSwingTo15,avgSoloKillCsSwingTo15,
       soloKillResetEvents:soloKillResetEvents.length,soloKillDeathsBeforeShop,soloKillDeathsBeforeShopRate,avgSoloKillNextShopDelaySec,
+      itemSpikeEligibleWindows,itemSpikeUtilizedWindows,itemSpikeUtilizationRate,itemSpikeDeathsBeforeImpact,avgItemSpikeLeadSec,
       badDeathsPerTimelineGame:badPer,totalTimelineDeaths,tradedDeaths,deathTradeRate,highRiskUntradedDeaths,highRiskUntradedPerGame,
       measuredDeathConsequences,costlyDeathEvents,severeDeathEvents,untradedCostlyDeathEvents,costlyDeathRate,costlyDeathsPerTimelineGame,severeDeathsPerTimelineGame,avgGoldSwingAfterDeath,avgCsSwingAfterDeath,
       leadDeaths,highRiskLeadDeaths,highRiskLeadDeathsPerGame,
