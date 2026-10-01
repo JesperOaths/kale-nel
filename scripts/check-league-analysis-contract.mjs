@@ -368,6 +368,8 @@ ok(appVersion&&cssVersion&&appVersion===cssVersion, 'League app/css cache-bust v
 ok(html.includes('data-game-sort="gold15"')&&app.includes('bindGameSortControls'), 'per-game evidence table must remain sortable');
 ok(html.includes('id="consistencySummary"')&&app.includes('function renderConsistencySummary('), 'per-game averages must retain robust median/IQR context');
 ok(html.includes('id="gameChampionFilter"')&&html.includes('data-game-filter="ahead15"')&&app.includes('function bindGameFilterControls('), 'game evidence filters must remain available');
+ok(app.includes('tabindex="0" role="button" aria-expanded="false"')&&app.includes("ev.key==='Enter'||ev.key===' '"), 'game evidence rows must remain keyboard expandable');
+ok(app.includes('filter-count')&&app.includes("setAttribute('aria-pressed'"), 'game evidence filters must retain counts and pressed state');
 ok(html.includes('Gold @15 vs role'), 'per-game lane checkpoint label must remain role-correct');
 ok(app.includes("label:'Fewer deaths'"), 'radar deaths axis must remain explicitly labeled as fewer deaths');
 ok(app.includes('Roam paths · this match')&&app.includes('roamPathSvg'), 'per-game real map must retain roam paths');
