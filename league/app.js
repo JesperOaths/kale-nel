@@ -486,6 +486,8 @@ function detailContent(g,tab){
     detailCard('Opponent',peer?(peer.champion||'Same-role peer'):'n/a')+detailCard('Opponent rank',peer?rankText(peer.rank):'n/a')+
     detailCard('Pre-14 clean duel',String(g.laneDuel?.pre14SoloKillsVsRole??0)+' solo kills / '+String(g.laneDuel?.pre14SoloDeathsToRole??0)+' solo deaths')+
     detailCard('All-game clean duel',String(g.laneDuel?.soloKillsVsRole??0)+' / '+String(g.laneDuel?.soloDeathsToRole??0))+
+    detailCard('Pre-14 home-lane deaths',String(g.lanePressure?.pre14HomeLaneDeaths??0))+
+    detailCard('Outside-pressure lane deaths',String(g.lanePressure?.pre14OutsidePressureDeaths??0)+' · '+fmtPct(g.lanePressure?.outsidePressureShare))+
     detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+'m':'n/a')+detailCard('Opponent first impact',hasNum(g.opponentImpactTimeMin)?fmt(g.opponentImpactTimeMin,1)+'m':'n/a')+detailCard('Impact timing vs peer',hasNum(g.impactDeltaVsOpponent)?signed(g.impactDeltaVsOpponent,1)+' min':'n/a')+
     detailCard('DPM vs same-role opponent',peer?signed(peer.dpmDelta,0):'n/a')+detailCard('CS/min vs opponent',peer?signed(peer.csMinDelta,2):'n/a')+detailCard('Team damage rank',hasNum(g.damageRank)?'#'+g.damageRank+' of 5':'n/a')+
     detailCard('Damage share',fmtPct(g.damageShare))+detailCard('Gold share',fmtPct(g.goldShare))+detailCard('Damage − gold share',hasNum(g.damageShare)&&hasNum(g.goldShare)?signed(Number(g.damageShare)-Number(g.goldShare),1)+' pp':'n/a')+
@@ -493,6 +495,7 @@ function detailContent(g,tab){
     detailCard('Gap after previous game',hasNum(g.sessionContext?.gapAfterPreviousMin)?fmt(g.sessionContext.gapAfterPreviousMin,0)+' min':'n/a')+
     detailCard('Previous result',g.sessionContext?.previousWin===true?'WIN':g.sessionContext?.previousWin===false?'LOSS':'n/a')+
     detailList((g.laneDuel?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+(x.result==='solo_kill'?'solo kill on role opponent':'solo death to role opponent')+(x.pre14?' · pre-14':'')),'No clean direct-role solo duel event detected.')+
+    detailList((g.lanePressure?.events||[]).filter(x=>x.outsidePressure).map(x=>(Number(x.time)||0).toFixed(1)+'m · outside pressure'+((x.outsideRoles||[]).length?' from '+x.outsideRoles.join(', '):'')+' · '+String(x.attackerCount||'?')+' attacker(s)'),'No pre-14 outside-pressure lane death detected.')+
     '<div class="detail-note">Clean direct-role duel events require the player and actual same-role opponent to be killer/victim with no assisting participants. This separates direct matchup outcomes from outside intervention.</div>';
 }
 function bindDetailTabs(container,g,index){
@@ -560,6 +563,9 @@ function renderAdvanced(r){
     ['Objective presence',fmtPct(a.objectivePresence)],
     ['Early KP',fmtPct(a.earlyKP)],
     ['Pre-14 role solo kills / deaths',String(r.behaviorSummary?.pre14RoleSoloKills??0)+' / '+String(r.behaviorSummary?.pre14RoleSoloDeaths??0)],
+    ['Pre-14 TOP/MID home-lane deaths',String(r.behaviorSummary?.pre14HomeLaneDeaths??0)],
+    ['Outside-pressure early lane deaths',String(r.behaviorSummary?.pre14OutsidePressureDeaths??0)],
+    ['Outside-pressure share of early lane deaths',fmtPct(r.behaviorSummary?.pre14OutsidePressureShare)],
     ['All-game role solo kills / deaths',String(r.behaviorSummary?.roleSoloKills??0)+' / '+String(r.behaviorSummary?.roleSoloDeaths??0)],
     ['First impact timing',hasNum(a.firstImpact?.avgDeltaVsOpponentMin)?signed(a.firstImpact.avgDeltaVsOpponentMin,1)+' min vs peer':'n/a'],
     ['Objective-context death %',fmtPct(a.objectiveDeathPct)],
