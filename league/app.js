@@ -233,6 +233,27 @@ function perGameSpatialHtml(g){
   '</div>';
 }
 
+function renderSpatial(r){
+  const games=Array.isArray(r.games)?r.games:[];
+  const deathPoints=[],wardPoints=[];
+  for(const g of games){
+    if(Number(g.mapId)!==11)continue;
+    for(const x of (g.badDeaths||[]))if(hasNum(x.x)&&hasNum(x.y))deathPoints.push({...x,highRisk:true});
+    for(const w of (g.wards||[]))if(hasNum(w.x)&&hasNum(w.y))wardPoints.push(w);
+  }
+  const image=map11Image(),fallback='https://ddragon.leagueoflegends.com/cdn/6.8.1/img/map/map11.png';
+  const mapHtml=(points,kind,empty)=>points.length
+    ?'<div class="map-stage"><img src="'+esc(image)+'" data-map-fallback="'+esc(fallback)+'" alt="Summoner’s Rift minimap"><svg viewBox="0 0 512 512" preserveAspectRatio="none" aria-label="'+esc(kind==='death'?'High-risk death positions':'Ward positions')+'">'+points.map(p=>mapPointSvg(p,kind)).join('')+'</svg></div>'
+    :'<div class="spatial-empty">'+esc(empty)+'</div>';
+  $('deathMap').innerHTML=mapHtml(deathPoints,'death','No high-risk death coordinates are available in this sample.');
+  $('wardMap').innerHTML=mapHtml(wardPoints,'ward','No ward coordinates are available in this sample.');
+  bindMapFallbacks($('spatialReview')||document);
+  const leadDeaths=deathPoints.filter(x=>hasNum(x.goldDiffAtDeath)&&Number(x.goldDiffAtDeath)>=500).length;
+  const offensive=wardPoints.filter(x=>x.territory==='offensive').length,river=wardPoints.filter(x=>x.territory==='river').length,defensive=wardPoints.filter(x=>x.territory==='defensive').length,setup=wardPoints.filter(x=>x.objectiveSetup).length,offPct=wardPoints.length?Math.round(offensive/wardPoints.length*100):0;
+  $('deathMapMeta').textContent=deathPoints.length+' high-risk deaths mapped'+(leadDeaths?' · '+leadDeaths+' while ≥500g ahead vs role':'');
+  $('wardMapMeta').textContent=wardPoints.length+' wards across '+games.length+' games · '+offPct+'% offensive · '+river+' river · '+defensive+' defensive · '+setup+' objective setup';
+  $('spatialProjectionNote').textContent='Summoner’s Rift world projection: x −120→14870, y −120→14980, with Y inverted. Only mapId 11 coordinates are plotted.';
+}
 function directRequestComplete(){
   const game=String($('requestGameName')?.value||'').trim();
   const tag=String($('requestTagLine')?.value||'').trim();
