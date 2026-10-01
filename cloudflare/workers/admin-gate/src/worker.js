@@ -1,5 +1,7 @@
 const ADMIN_HOST = 'admin.kalenel.nl';
 const PUBLIC_HOST = 'kalenel.nl';
+// Visible version is the single site-wide release number, not this Worker's build identifier.
+const SITE_VERSION = 'v817';
 const SESSION_COOKIE = '__Host-kalenel_admin_session';
 const OAUTH_COOKIE = '__Host-kalenel_admin_oauth';
 const ATTEMPT_COOKIE = '__Host-kalenel_admin_attempts';
@@ -26,7 +28,7 @@ const ADMIN_SESSION_RPC_ALLOWLIST = new Set([
   'admin_forget_trusted_device_v844'
 ]);
 const ADMIN_BUILD = 'v861-page-version-watermark';
-const ADMIN_PAGE_VERSION = ADMIN_BUILD.match(/^v\d+/i)?.[0] || ADMIN_BUILD;
+const ADMIN_PAGE_VERSION = SITE_VERSION;
 const PUBLIC_SHOP_ORIGIN_BUILD = 'v857-clean-collection-art';
 
 const PROTECTED_PUBLIC_PATTERNS = [
