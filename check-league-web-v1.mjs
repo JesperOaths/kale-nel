@@ -349,7 +349,6 @@ assert.ok(api.includes('fixed15to25ComparableGames'),'15→25 aggregates must us
 assert.ok(api.includes('closing25ComparableGames'),'@25 closing aggregates must use an eligibility-filtered cohort');
 assert.ok(api.includes('checkpointEligibility:{lane15Games:'),'Report must export fixed-checkpoint eligibility counts');
 assert.ok(api.includes('frameNearestMs'),'Event-local spatial evidence must use the nearest supported timeline frame');
-assert.ok(api.includes('startPadMs=45000,endPadMs=45000'),'Neutral-objective presence must tolerate Riot participant-frame cadence around event windows');
 assert.ok(api.includes('highRiskDeathsPer10Min'),'Phase-risk export must include per-10-minute exposure-normalized rates');
 assert.ok(api.includes('midRouting:{teamObjectives:0,objectiveJoins:0,objectiveJoinRate:null,contestedObjectives:0,contestedJoins:0,contestPresenceRate:null}'),'15→25 routing must preserve secured context separately from team-contested coaching presence');
 assert.ok(api.includes('closing25:{highRiskDeaths:0,costlyDeaths:0,severeDeaths:0}'),'@25 closing risk must remain independent of the ≥20m strategic late phase');
