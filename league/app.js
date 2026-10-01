@@ -9,16 +9,27 @@ const state={profiles:[],profile:null,report:null,ddVersion:'',openMatch:null,ac
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const LEAGUE_WORKSPACE_KEY='bruisienator_public_workspace_v1';
+function secureWorkspaceToken(){
+  if(globalThis.crypto&&typeof globalThis.crypto.randomUUID==='function')return globalThis.crypto.randomUUID();
+  if(globalThis.crypto&&typeof globalThis.crypto.getRandomValues==='function'){
+    const bytes=new Uint8Array(24);globalThis.crypto.getRandomValues(bytes);
+    return 'lw1_'+Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  throw new Error('Secure browser randomness is unavailable; League workspace cannot be created safely.');
+}
+function validWorkspaceToken(value){
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)||/^lw1_[0-9a-f]{48,64}$/i.test(value);
+}
 function workspaceId(){
   try{
     let value=String(localStorage.getItem(LEAGUE_WORKSPACE_KEY)||'').trim();
-    if(!/^[a-z0-9][a-z0-9._:-]{15,159}$/i.test(value)){
-      value=(globalThis.crypto&&typeof globalThis.crypto.randomUUID==='function')?globalThis.crypto.randomUUID():('league-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2));
+    if(!validWorkspaceToken(value)){
+      value=secureWorkspaceToken();
       localStorage.setItem(LEAGUE_WORKSPACE_KEY,value);
     }
     return value;
-  }catch(_){
-    if(!state._ephemeralWorkspace)state._ephemeralWorkspace='league-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+  }catch(err){
+    if(!state._ephemeralWorkspace)state._ephemeralWorkspace=secureWorkspaceToken();
     return state._ephemeralWorkspace;
   }
 }
@@ -51,7 +62,12 @@ async function api(action,payload={}){
   });
   const raw=await res.text();let data=null;
   try{data=raw?JSON.parse(raw):{};}catch(_){throw new Error(raw||('HTTP '+res.status));}
-  if(!res.ok||data?.ok===false)throw new Error(data?.error||('HTTP '+res.status));
+  if(!res.ok||data?.ok===false){
+    const code=String(data?.error||'');
+    if(code==='public_workspace_profile_limit')throw new Error('This public browser workspace already has the maximum '+String(data?.limit||8)+' League profiles. Edit an existing profile instead of creating another.');
+    if(code==='league_workspace_invalid'||code==='league_workspace_required')throw new Error('The public League workspace identity is invalid. Reload the page to create a fresh isolated workspace.');
+    throw new Error(code||('HTTP '+res.status));
+  }
   return data;
 }
 
