@@ -26,6 +26,13 @@
     ADMIN_PUSH_DIAGNOSTICS_RPC_V3: 'admin_get_web_push_diagnostics_v3',
   };
 
+  function publicApiHeaders(extra={}) {
+    const key = String(CONFIG.SUPABASE_PUBLISHABLE_KEY || '').trim();
+    const headers = Object.assign({}, extra || {}, { apikey: key });
+    if (/^[^.]+\.[^.]+\.[^.]+$/.test(key)) headers.Authorization = `Bearer ${key}`;
+    return headers;
+  }
+
   function detectScriptVersion(){
     try {
       const scripts = Array.from(document.scripts || []);
@@ -135,7 +142,7 @@
   }
   async function fetchScopedActivePlayerNames_ORIGINAL(scope){
     const resolvedScope = normalizeScope(scope || inferRuntimeScope());
-    const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}` };
+    const headers = publicApiHeaders({ 'Content-Type':'application/json' });
     async function callRpc(name, payload){
       const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(payload || {}) });
       const txt = await res.text();
@@ -258,7 +265,7 @@ async function fetchJson(url, options){
 }
 async function fetchAllowedUsernamesStrong(scope){
   const normalizedScope = normalizeScope(scope || inferRuntimeScope());
-  const headers = { apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization: `Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}`, Accept: 'application/json' };
+  const headers = publicApiHeaders({ Accept: 'application/json' });
   const urls = [
     `${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope,has_pin,pin_is_set,activated,is_active&order=display_name.asc`,
     `${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&order=display_name.asc`
@@ -275,7 +282,7 @@ async function fetchAllowedUsernamesStrong(scope){
 async function fetchScopedActivePlayerNames(scope){
   const resolvedScope = normalizeScope(scope || inferRuntimeScope());
   const cached = readCachedLoginNames(resolvedScope);
-  const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}`, Accept:'application/json' };
+  const headers = publicApiHeaders({ 'Content-Type':'application/json', Accept:'application/json' });
   async function callRpc(name, payload){
     const data = await fetchJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(payload || {}) });
     return data && data[name] !== undefined ? data[name] : data;
@@ -432,12 +439,7 @@ async function touchPlayerSessionServer(force){
   const lastRaw = localStorage.getItem(CONFIG.PLAYER_LAST_SERVER_TOUCH_KEY) || sessionStorage.getItem(CONFIG.PLAYER_LAST_SERVER_TOUCH_KEY) || '0';
   const last = Number(lastRaw || 0) || 0;
   if (!force && last && (now - last) < CONFIG.PLAYER_SESSION_SERVER_TOUCH_MS) return null;
-  const headers = {
-    'Content-Type':'application/json',
-    apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '',
-    Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}`,
-    Accept:'application/json'
-  };
+  const headers = publicApiHeaders({ 'Content-Type':'application/json', Accept:'application/json' });
   const payload = {
     session_token: token,
     session_token_input: token,
@@ -543,12 +545,7 @@ function playerSessionNamesOverlap(left, right){
 async function fetchPlayerSessionSnapshot(token){
   const value = String(token || '').trim();
   if (!value || !CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_PUBLISHABLE_KEY) return { status:'missing', state:null, aliases:[] };
-  const headers = {
-    'Content-Type':'application/json',
-    apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '',
-    Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}`,
-    Accept:'application/json'
-  };
+  const headers = publicApiHeaders({ 'Content-Type':'application/json', Accept:'application/json' });
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
   const timeout = controller ? window.setTimeout(()=>{ try { controller.abort(); } catch (_) {} }, 4000) : null;
   try {
@@ -752,6 +749,7 @@ function buildRequestUrl(returnTo, scope){
     applyVersionLabel,
     refreshVersionFromFile,
     normalizeProfileImageUrl,
+    publicApiHeaders,
     fetchScopedActivePlayerNames,
     getActivatedPlayerNamesForScope,
     readCachedLoginNames,
