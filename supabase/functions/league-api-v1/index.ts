@@ -19,7 +19,7 @@ const now=()=>new Date().toISOString();
 function cors(req:Request){
   const origin=text(req.headers.get("origin"));
   const allow=ALLOWED_ORIGINS.has(origin)||/^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/i.test(origin)?origin:"https://kalenel.nl";
-  return {"Access-Control-Allow-Origin":allow,"Vary":"Origin","Access-Control-Allow-Headers":"authorization, apikey, content-type, x-gejast-session, x-riot-api-key","Access-Control-Allow-Methods":"GET, POST, OPTIONS","Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store","Referrer-Policy":"no-referrer"};
+  return {"Access-Control-Allow-Origin":allow,"Vary":"Origin","Access-Control-Allow-Headers":"authorization, apikey, content-type, x-gejast-session, x-league-workspace, x-riot-api-key","Access-Control-Allow-Methods":"GET, POST, OPTIONS","Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store","Referrer-Policy":"no-referrer"};
 }
 const json=(req:Request,body:any,status=200)=>new Response(JSON.stringify(body),{status,headers:cors(req)});
 function sbClient(){
@@ -63,16 +63,27 @@ function avg(xs:any[]){const a=(xs||[]).filter(hasNum).map(Number);return a.leng
 function pct(a:number,b:number){return b>0?a/b*100:null;}
 function xy(v:any){const x=num(v?.x),y=num(v?.y);return x!=null&&y!=null?{x,y}:null;}
 
-async function session(req:Request,body:any){
+async function publicWorkspaceOwnerId(raw:any){
+  const workspace=text(raw).slice(0,160);
+  if(!/^[a-z0-9][a-z0-9._:-]{15,159}$/i.test(workspace))throw Object.assign(new Error("league_workspace_required"),{status:400});
+  const bytes=new TextEncoder().encode(workspace),digest=new Uint8Array(await crypto.subtle.digest("SHA-256",bytes));
+  let value=0;for(let i=0;i<6;i++)value=value*256+digest[i];
+  return 900000000000000+(value%90000000000000);
+}
+async function accessContext(req:Request,body:any){
+  const sb=sbClient(),workspace=text(req.headers.get("x-league-workspace")||body?.workspace_id);
+  if(workspace){
+    const playerId=await publicWorkspaceOwnerId(workspace);
+    return{sb,viewer:{player_id:playerId,display_name:"Public League workspace",site_scope:"friends",anonymous:true,workspace_id:workspace}};
+  }
   const token=text(req.headers.get("x-gejast-session")||body?.session_token);
-  if(!token)throw Object.assign(new Error("session_required"),{status:401});
-  const sb=sbClient();
+  if(!token)throw Object.assign(new Error("league_workspace_required"),{status:400});
   const {data,error}=await sb.from("gejast_player_sessions_v746").select("player_id,display_name,site_scope,expires_at").eq("session_token",token).gt("expires_at",now()).maybeSingle();
   if(error||!data)throw Object.assign(new Error("invalid_session"),{status:401});
-  return{sb,viewer:data};
+  return{sb,viewer:{...data,anonymous:false}};
 }
-async function riot(url:string, requestKey=""){
-  const key=RIOT_KEY||text(requestKey);
+async function riot(url:string, requestKey="", allowServerKey=true){
+  const key=(allowServerKey?RIOT_KEY:"")||text(requestKey);
   if(!key)throw Object.assign(new Error("riot_api_key_not_configured"),{status:503});
   let last="riot_request_failed";
   for(let i=0;i<4;i++){
@@ -101,12 +112,12 @@ async function getProfile(sb:any,owner:any,id:any){
   if(error||!data)throw Object.assign(new Error("profile_not_found"),{status:404});
   return data;
 }
-async function resolveProfile(sb:any,p:any,requestKey=""){
+async function resolveProfile(sb:any,p:any,requestKey="",allowServerKey=true){
   if(text(p.puuid))return p;
   const gn=text(p.game_name),tag=text(p.tag_line);
   if(!gn||!tag)throw Object.assign(new Error("riot_id_required"),{status:400});
   const rr=text(p.routing_region)||routeFor(p.platform_region);
-  const account=await riot("https://"+rr+".api.riotgames.com/riot/account/v1/accounts/by-riot-id/"+encodeURIComponent(gn)+"/"+encodeURIComponent(tag),requestKey);
+  const account=await riot("https://"+rr+".api.riotgames.com/riot/account/v1/accounts/by-riot-id/"+encodeURIComponent(gn)+"/"+encodeURIComponent(tag),requestKey,allowServerKey);
   const patch={puuid:text(account?.puuid),riot_account:account,last_resolved_at:now(),routing_region:rr,updated_at:now()};
   if(!patch.puuid)throw new Error("riot_account_missing_puuid");
   const {data,error}=await sb.from("league_profiles_v1").update(patch).eq("id",p.id).select("*").single();
@@ -114,11 +125,11 @@ async function resolveProfile(sb:any,p:any,requestKey=""){
   return data;
 }
 
-async function rankSnapshotFor(p:any,requestKey=""){
+async function rankSnapshotFor(p:any,requestKey="",allowServerKey=true){
   if(!p||!text(p.puuid))return null;
   try{
     const plat=platform(p.platform_region);
-    const rows=await riot("https://"+plat+".api.riotgames.com/lol/league/v4/entries/by-puuid/"+encodeURIComponent(p.puuid),requestKey);
+    const rows=await riot("https://"+plat+".api.riotgames.com/lol/league/v4/entries/by-puuid/"+encodeURIComponent(p.puuid),requestKey,allowServerKey);
     if(!Array.isArray(rows))return null;
     const pick=rows.find((x:any)=>text(x?.queueType)==="RANKED_SOLO_5x5")||rows.find((x:any)=>text(x?.queueType)==="RANKED_FLEX_SR")||rows[0]||null;
     if(!pick)return null;
@@ -1911,20 +1922,20 @@ function report(profile:any,rows:any[],catalog:any){
   const priorityThemes=synthesizePriorityThemes(cm.recentFocus);
   const replayReviewQueue=buildReplayReviewQueue(games);
   const practiceTargets=buildPracticeTargets(priorityThemes,coachingSummary,cm.behaviorSummary,cm.peerComparison,cm.sessionModel);
-  return{schemaVersion:"league-report-v2",analyzerVersion:"league-web-behavior-v4.42",generatedAt:now(),profile:{id:profile.id,displayName:profile.display_name,gameName:profile.game_name,tagLine:profile.tag_line,platformRegion:profile.platform_region,routingRegion:profile.routing_region,rank:profile.rank_snapshot||null},summary,lifetime,outcomeStreaks,coachingSummary,coachingLifetime,baselineContext,byRole,byChampion,championBehavior:championModel.profiles,matchupBehavior:matchupModel.profiles,recentFocus:cm.recentFocus,priorityThemes,practiceTargets,replayReviewQueue,overallHighlights:cm.highlights,coaching:cm.coaching,peerComparison:cm.peerComparison,conversion:cm.conversion,winLoss:cm.winLoss,recentTrend:cm.recentTrend,sessionBehavior:cm.sessionModel,games,charts:{csMin:games.map((g:any)=>({matchId:g.matchId,value:g.csMin})),kp:games.map((g:any)=>({matchId:g.matchId,value:g.kp})),dpm:games.map((g:any)=>({matchId:g.matchId,value:g.dpm})),goldDiff15:games.map((g:any)=>({matchId:g.matchId,value:g.goldDiff15}))},hiddenCharts:[],benchmarks:{rankAbove:{definition:"Actual higher-ranked same-role opponents encountered",sample:cm.peerComparison.higherRankPeerGames,avgGoldDiff15:cm.peerComparison.higherRankAvgGoldDiff15,goldOutperformPct:cm.peerComparison.higherRankGoldOutperformPct,avgDpmDelta:cm.peerComparison.higherRankAvgDpmDelta,majorItemSample:cm.peerComparison.higherRankMajorItemGames,avgMajorItemDeltaMin:cm.peerComparison.higherRankAvgMajorItemDeltaMin,majorItemFasterPct:cm.peerComparison.higherRankMajorItemFasterPct},itemSpike:{peerDefinition:"same-role opponent",avgDeltaMin:cm.peerComparison.avgMajorItemDeltaMin,sample:cm.peerComparison.majorItemGames,higherRankDefinition:"actual higher-ranked same-role opponents encountered",higherRankSample:cm.peerComparison.higherRankMajorItemGames,higherRankAvgDeltaMin:cm.peerComparison.higherRankAvgMajorItemDeltaMin,higherRankFasterPct:cm.peerComparison.higherRankMajorItemFasterPct}},aggregateMaps:{wards:games.flatMap((g:any)=>g.wards||[]),deaths:games.flatMap((g:any)=>g.deathPositions||[])},advanced:{dqi:null,agor:null,objectivePresence:cm.behaviorSummary.objectiveJoinRate,earlyKP:cm.behaviorSummary.earlyKp,firstImpact:{games:cm.peerComparison.impactGames,avgDeltaVsOpponentMin:cm.peerComparison.avgImpactDeltaMin,earlierPct:cm.peerComparison.impactEarlierPct},objectiveDeathPct:cm.behaviorSummary.objectiveDeathPct,preObjectiveDeaths:cm.behaviorSummary.preObjectiveDeaths,preObjectiveDeathPct:cm.behaviorSummary.preObjectiveDeathPct,roams:{attempts:cm.behaviorSummary.roamAttempts,successRate:cm.behaviorSummary.roamSuccessRate,measuredLaneCost:cm.behaviorSummary.roamLaneCostGames,avgLaneCostCs:cm.behaviorSummary.avgRoamLaneCostCs,costlyRoams:cm.behaviorSummary.costlyRoams,emptyCostlyRoams:cm.behaviorSummary.emptyCostlyRoams},recalls:{greedyStayWindows:cm.behaviorSummary.greedyStayWindows,majorReadinessGames:cm.behaviorSummary.majorReadinessGames,delayedMajorCompletionGames:cm.behaviorSummary.delayedMajorCompletionGames,avgMajorCompletionDelayMin:cm.behaviorSummary.avgMajorCompletionDelayMin,majorReadinessPeerGames:cm.behaviorSummary.majorReadinessPeerGames,avgMajorCompletionDelayVsPeerMin:cm.behaviorSummary.avgMajorCompletionDelayVsPeerMin},itemSpike:{avgDeltaVsOpponentMin:cm.peerComparison.avgMajorItemDeltaMin,higherRankGames:cm.peerComparison.higherRankMajorItemGames,higherRankAvgDeltaMin:cm.peerComparison.higherRankAvgMajorItemDeltaMin,higherRankFasterPct:cm.peerComparison.higherRankMajorItemFasterPct,eligibleWindows:cm.peerComparison.itemSpikeEligibleWindows,utilizedWindows:cm.peerComparison.itemSpikeUtilizedWindows,utilizationRate:cm.peerComparison.itemSpikeUtilizationRate,deathsBeforeImpact:cm.peerComparison.itemSpikeDeathsBeforeImpact,avgLeadSec:cm.peerComparison.avgItemSpikeLeadSec},visionSetup:{games:cm.peerComparison.visionSetupGames,avgDeltaVsOpponent:cm.peerComparison.avgObjectiveSetupDelta,outperformPct:cm.peerComparison.objectiveSetupOutperformPct},wardClassification:true,currentSourcePortRequired:false,judgmentModel:"evidence+peer+self-baseline-v2"},behaviorSummary:cm.behaviorSummary,dataQuality:{cachedGames:cachedRows.length,summonersRiftGames:summonersRiftRows.length,durationEligibleSummonersRiftGames:durationEligibleRows.length,eligibleSummonersRiftGames:eligibleRows.length,dominantQueueId,dominantQueueGames:eligibleRows.length,queueCounts:Object.fromEntries([...queueCounts.entries()].map(([k,v])=>[String(k),v])),rulesProfileCounts,roleQuestRevisionCounts,roleQuestCompletionTimingObserved:false,roleQuestCheckpointNote:"Riot timeline state includes quest rewards after completion, but this analyzer does not infer an exact universal quest-completion timestamp; role-quest-sensitive checkpoint effects remain contextual.",lane15ComparableGames:Number(cm.behaviorSummary?.checkpointEligibility?.lane15Games||0),fixed15to25ComparableGames:Number(cm.behaviorSummary?.checkpointEligibility?.fixed15to25Games||0),closing25ComparableGames:Number(cm.behaviorSummary?.checkpointEligibility?.closing25Games||0),excludedOtherMaps:cachedRows.length-summonersRiftRows.length,excludedShortGames:summonersRiftRows.length-durationEligibleRows.length,excludedOtherQueues:durationEligibleRows.length-eligibleRows.length,shortGameThresholdSeconds:600,excludedMissingRole:eligibleRows.length-deepCandidates.length,analyzedGames:games.length,validTimelineGames:validTimeline,validCoordinateGames:coordinateGames,missingTimelineGames:games.length-validTimeline,baselineGames:lifetime?allGames.length:0,coachingRoleGames:coachingGames.length,primaryRoleGamesInLast20:coachingRoleGamesAll.length,currentMechanicsKey,currentMechanicsKnown,mechanicsCohortGames:mechanicsCohortGames.length,mechanicsCohortApplied,mixedMechanicsFallback,mechanicsCohortReason,currentPatchKey,currentPublicPatchKey,currentPatchRoleGames:currentPatchRoleGames.length,olderSamePatchRoleGames:olderSamePatchRoleGames.length,crossPatchBaselineRoleGames:crossPatchBaselineRoleGames.length,patchCounts,patchBaselineReady,itemCatalogResolution:catalog?.resolution||{},itemCatalogExactPatches:Object.values(catalog?.resolution||{}).filter((x:any)=>x?.exact).length,itemCatalogFallbackPatches:Object.values(catalog?.resolution||{}).filter((x:any)=>x?.fallback).length,itemCatalogUnknownPatchGames:allGames.filter((g:any)=>!g.patchKey).length,coachingBaselineRoleGames:coachingLifetime?olderSamePatchRoleGames.length:0,peerComparableGames:cm.peerComparison.sameRoleGames,rankedPeerGames:cm.peerComparison.rankedPeerGames,higherRankPeerGames:cm.peerComparison.higherRankPeerGames},sourceStatus:{currentBruisienatorSourceAvailable:true,historicalAnalyzerRecovered:true,uploadedBruisienatorRevision:"V21_PHASE2_SAFE_STATS_ENRICH",note:"The uploaded Bruisienator source is available for parity auditing. V21 HTML defines a five-input DQI, but the supplied PowerShell pipeline emits only badDeaths; the compatibility score therefore reproduces that effective pipeline behavior and keeps the unpopulated source inputs explicit. Current death coaching uses transparent risk/consequence evidence rather than an invented replacement score. AGOR remains unavailable because no defensible recovered formula was found in the supplied files."}};
+  return{schemaVersion:"league-report-v2",analyzerVersion:"league-web-behavior-v4.43",generatedAt:now(),profile:{id:profile.id,displayName:profile.display_name,gameName:profile.game_name,tagLine:profile.tag_line,platformRegion:profile.platform_region,routingRegion:profile.routing_region,rank:profile.rank_snapshot||null},summary,lifetime,outcomeStreaks,coachingSummary,coachingLifetime,baselineContext,byRole,byChampion,championBehavior:championModel.profiles,matchupBehavior:matchupModel.profiles,recentFocus:cm.recentFocus,priorityThemes,practiceTargets,replayReviewQueue,overallHighlights:cm.highlights,coaching:cm.coaching,peerComparison:cm.peerComparison,conversion:cm.conversion,winLoss:cm.winLoss,recentTrend:cm.recentTrend,sessionBehavior:cm.sessionModel,games,charts:{csMin:games.map((g:any)=>({matchId:g.matchId,value:g.csMin})),kp:games.map((g:any)=>({matchId:g.matchId,value:g.kp})),dpm:games.map((g:any)=>({matchId:g.matchId,value:g.dpm})),goldDiff15:games.map((g:any)=>({matchId:g.matchId,value:g.goldDiff15}))},hiddenCharts:[],benchmarks:{rankAbove:{definition:"Actual higher-ranked same-role opponents encountered",sample:cm.peerComparison.higherRankPeerGames,avgGoldDiff15:cm.peerComparison.higherRankAvgGoldDiff15,goldOutperformPct:cm.peerComparison.higherRankGoldOutperformPct,avgDpmDelta:cm.peerComparison.higherRankAvgDpmDelta,majorItemSample:cm.peerComparison.higherRankMajorItemGames,avgMajorItemDeltaMin:cm.peerComparison.higherRankAvgMajorItemDeltaMin,majorItemFasterPct:cm.peerComparison.higherRankMajorItemFasterPct},itemSpike:{peerDefinition:"same-role opponent",avgDeltaMin:cm.peerComparison.avgMajorItemDeltaMin,sample:cm.peerComparison.majorItemGames,higherRankDefinition:"actual higher-ranked same-role opponents encountered",higherRankSample:cm.peerComparison.higherRankMajorItemGames,higherRankAvgDeltaMin:cm.peerComparison.higherRankAvgMajorItemDeltaMin,higherRankFasterPct:cm.peerComparison.higherRankMajorItemFasterPct}},aggregateMaps:{wards:games.flatMap((g:any)=>g.wards||[]),deaths:games.flatMap((g:any)=>g.deathPositions||[])},advanced:{dqi:null,agor:null,objectivePresence:cm.behaviorSummary.objectiveJoinRate,earlyKP:cm.behaviorSummary.earlyKp,firstImpact:{games:cm.peerComparison.impactGames,avgDeltaVsOpponentMin:cm.peerComparison.avgImpactDeltaMin,earlierPct:cm.peerComparison.impactEarlierPct},objectiveDeathPct:cm.behaviorSummary.objectiveDeathPct,preObjectiveDeaths:cm.behaviorSummary.preObjectiveDeaths,preObjectiveDeathPct:cm.behaviorSummary.preObjectiveDeathPct,roams:{attempts:cm.behaviorSummary.roamAttempts,successRate:cm.behaviorSummary.roamSuccessRate,measuredLaneCost:cm.behaviorSummary.roamLaneCostGames,avgLaneCostCs:cm.behaviorSummary.avgRoamLaneCostCs,costlyRoams:cm.behaviorSummary.costlyRoams,emptyCostlyRoams:cm.behaviorSummary.emptyCostlyRoams},recalls:{greedyStayWindows:cm.behaviorSummary.greedyStayWindows,majorReadinessGames:cm.behaviorSummary.majorReadinessGames,delayedMajorCompletionGames:cm.behaviorSummary.delayedMajorCompletionGames,avgMajorCompletionDelayMin:cm.behaviorSummary.avgMajorCompletionDelayMin,majorReadinessPeerGames:cm.behaviorSummary.majorReadinessPeerGames,avgMajorCompletionDelayVsPeerMin:cm.behaviorSummary.avgMajorCompletionDelayVsPeerMin},itemSpike:{avgDeltaVsOpponentMin:cm.peerComparison.avgMajorItemDeltaMin,higherRankGames:cm.peerComparison.higherRankMajorItemGames,higherRankAvgDeltaMin:cm.peerComparison.higherRankAvgMajorItemDeltaMin,higherRankFasterPct:cm.peerComparison.higherRankMajorItemFasterPct,eligibleWindows:cm.peerComparison.itemSpikeEligibleWindows,utilizedWindows:cm.peerComparison.itemSpikeUtilizedWindows,utilizationRate:cm.peerComparison.itemSpikeUtilizationRate,deathsBeforeImpact:cm.peerComparison.itemSpikeDeathsBeforeImpact,avgLeadSec:cm.peerComparison.avgItemSpikeLeadSec},visionSetup:{games:cm.peerComparison.visionSetupGames,avgDeltaVsOpponent:cm.peerComparison.avgObjectiveSetupDelta,outperformPct:cm.peerComparison.objectiveSetupOutperformPct},wardClassification:true,currentSourcePortRequired:false,judgmentModel:"evidence+peer+self-baseline-v2"},behaviorSummary:cm.behaviorSummary,dataQuality:{cachedGames:cachedRows.length,summonersRiftGames:summonersRiftRows.length,durationEligibleSummonersRiftGames:durationEligibleRows.length,eligibleSummonersRiftGames:eligibleRows.length,dominantQueueId,dominantQueueGames:eligibleRows.length,queueCounts:Object.fromEntries([...queueCounts.entries()].map(([k,v])=>[String(k),v])),rulesProfileCounts,roleQuestRevisionCounts,roleQuestCompletionTimingObserved:false,roleQuestCheckpointNote:"Riot timeline state includes quest rewards after completion, but this analyzer does not infer an exact universal quest-completion timestamp; role-quest-sensitive checkpoint effects remain contextual.",lane15ComparableGames:Number(cm.behaviorSummary?.checkpointEligibility?.lane15Games||0),fixed15to25ComparableGames:Number(cm.behaviorSummary?.checkpointEligibility?.fixed15to25Games||0),closing25ComparableGames:Number(cm.behaviorSummary?.checkpointEligibility?.closing25Games||0),excludedOtherMaps:cachedRows.length-summonersRiftRows.length,excludedShortGames:summonersRiftRows.length-durationEligibleRows.length,excludedOtherQueues:durationEligibleRows.length-eligibleRows.length,shortGameThresholdSeconds:600,excludedMissingRole:eligibleRows.length-deepCandidates.length,analyzedGames:games.length,validTimelineGames:validTimeline,validCoordinateGames:coordinateGames,missingTimelineGames:games.length-validTimeline,baselineGames:lifetime?allGames.length:0,coachingRoleGames:coachingGames.length,primaryRoleGamesInLast20:coachingRoleGamesAll.length,currentMechanicsKey,currentMechanicsKnown,mechanicsCohortGames:mechanicsCohortGames.length,mechanicsCohortApplied,mixedMechanicsFallback,mechanicsCohortReason,currentPatchKey,currentPublicPatchKey,currentPatchRoleGames:currentPatchRoleGames.length,olderSamePatchRoleGames:olderSamePatchRoleGames.length,crossPatchBaselineRoleGames:crossPatchBaselineRoleGames.length,patchCounts,patchBaselineReady,itemCatalogResolution:catalog?.resolution||{},itemCatalogExactPatches:Object.values(catalog?.resolution||{}).filter((x:any)=>x?.exact).length,itemCatalogFallbackPatches:Object.values(catalog?.resolution||{}).filter((x:any)=>x?.fallback).length,itemCatalogUnknownPatchGames:allGames.filter((g:any)=>!g.patchKey).length,coachingBaselineRoleGames:coachingLifetime?olderSamePatchRoleGames.length:0,peerComparableGames:cm.peerComparison.sameRoleGames,rankedPeerGames:cm.peerComparison.rankedPeerGames,higherRankPeerGames:cm.peerComparison.higherRankPeerGames},sourceStatus:{currentBruisienatorSourceAvailable:true,historicalAnalyzerRecovered:true,uploadedBruisienatorRevision:"V21_PHASE2_SAFE_STATS_ENRICH",note:"The uploaded Bruisienator source is available for parity auditing. V21 HTML defines a five-input DQI, but the supplied PowerShell pipeline emits only badDeaths; the compatibility score therefore reproduces that effective pipeline behavior and keeps the unpopulated source inputs explicit. Current death coaching uses transparent risk/consequence evidence rather than an invented replacement score. AGOR remains unavailable because no defensible recovered formula was found in the supplied files."}};
 }
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="OPTIONS")return new Response("ok",{headers:cors(req)});
-  if(req.method==="GET")return json(req,{ok:true,mode:"league-api-v1",internal_slot:"retired-diagnostic-reuse",requires_session:true,riot_configured:!!RIOT_KEY});
+  if(req.method==="GET")return json(req,{ok:true,mode:"league-api-v1",internal_slot:"retired-diagnostic-reuse",requires_session:false,public_workspace:true,server_riot_key_for_public:false,riot_configured:!!RIOT_KEY});
   if(req.method!=="POST")return json(req,{ok:false,error:"method_not_allowed"},405);
   let body:any={};try{body=await req.json();}catch{return json(req,{ok:false,error:"invalid_json"},400);}
   try{
-    const{sb,viewer}=await session(req,body),action=text(body.action||"health"),requestRiotKey=text(req.headers.get("x-riot-api-key")||body?.riot_api_key);
-    if(action==="health")return json(req,{ok:true,riot_configured:!!(RIOT_KEY||requestRiotKey),server_riot_key:!!RIOT_KEY,player:viewer.display_name,site_scope:viewer.site_scope});
+    const{sb,viewer}=await accessContext(req,body),action=text(body.action||"health"),requestRiotKey=text(req.headers.get("x-riot-api-key")||body?.riot_api_key),allowServerRiotKey=viewer.anonymous!==true;
+    if(action==="health")return json(req,{ok:true,public_workspace:viewer.anonymous===true,riot_configured:!!(requestRiotKey||(allowServerRiotKey&&RIOT_KEY)),server_riot_key:allowServerRiotKey&&!!RIOT_KEY,player:viewer.display_name,site_scope:viewer.site_scope});
     if(action==="riot_test"){
       const p=await getProfile(sb,viewer.player_id,body.profile_id);
-      const resolved=await resolveProfile(sb,{...p,puuid:null},requestRiotKey);
+      const resolved=await resolveProfile(sb,{...p,puuid:null},requestRiotKey,allowServerRiotKey);
       return json(req,{ok:true,profile_id:resolved.id,game_name:resolved.game_name,tag_line:resolved.tag_line,platform_region:resolved.platform_region,puuid_resolved:!!text(resolved.puuid)});
     }
     if(action==="profiles_list"){
@@ -1938,18 +1949,18 @@ Deno.serve(async(req:Request)=>{
       let saved:any;
       if(text(input.id)){const{data,error}=await sb.from("league_profiles_v1").update(patch).eq("id",text(input.id)).eq("owner_player_id",viewer.player_id).select("*").maybeSingle();if(error||!data)throw error||Object.assign(new Error("profile_not_found"),{status:404});saved=data;}
       else{const{data,error}=await sb.from("league_profiles_v1").upsert(patch,{onConflict:"owner_player_id,site_scope,profile_key"}).select("*").single();if(error)throw error;saved=data;}
-      if((RIOT_KEY||requestRiotKey)&&saved.game_name&&saved.tag_line){try{saved=await resolveProfile(sb,saved,requestRiotKey);}catch(e:any){return json(req,{ok:true,profile:saved,resolve_warning:text(e?.message||e)});}}
+      if(((allowServerRiotKey&&RIOT_KEY)||requestRiotKey)&&saved.game_name&&saved.tag_line){try{saved=await resolveProfile(sb,saved,requestRiotKey,allowServerRiotKey);}catch(e:any){return json(req,{ok:true,profile:saved,resolve_warning:text(e?.message||e)});}}
       return json(req,{ok:true,profile:saved});
     }
     if(action==="fetch_prepare"){
-      let p=await getProfile(sb,viewer.player_id,body.profile_id);p=await resolveProfile(sb,p,requestRiotKey);
-      const rank=await rankSnapshotFor(p,requestRiotKey);
+      let p=await getProfile(sb,viewer.player_id,body.profile_id);p=await resolveProfile(sb,p,requestRiotKey,allowServerRiotKey);
+      const rank=await rankSnapshotFor(p,requestRiotKey,allowServerRiotKey);
       if(rank){
         const {data:ranked}=await sb.from("league_profiles_v1").update({rank_snapshot:rank,ranked_fetched_at:now(),updated_at:now()}).eq("id",p.id).select("*").maybeSingle();
         if(ranked)p=ranked;
       }
       const count=Math.max(1,Math.min(100,Number(body.count||50))),rr=text(p.routing_region)||routeFor(p.platform_region);
-      const ids=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/by-puuid/"+encodeURIComponent(p.puuid)+"/ids?start=0&count="+count,requestRiotKey),matchIds=Array.isArray(ids)?ids.map(text).filter(Boolean):[];
+      const ids=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/by-puuid/"+encodeURIComponent(p.puuid)+"/ids?start=0&count="+count,requestRiotKey,allowServerRiotKey),matchIds=Array.isArray(ids)?ids.map(text).filter(Boolean):[];
       const recentRankIds=new Set(matchIds.slice(0,20));
       const{data:cached}=matchIds.length?await sb.from("league_match_cache_v1").select("match_id,timeline_json,peer_rank_fetched_at").eq("profile_id",p.id).in("match_id",matchIds).not("match_json","is",null):{data:[]};
       const set=new Set((cached||[]).filter((x:any)=>!!x.timeline_json&&(!recentRankIds.has(x.match_id)||!!x.peer_rank_fetched_at)).map((x:any)=>x.match_id));
@@ -1964,12 +1975,12 @@ Deno.serve(async(req:Request)=>{
       if(old?.match_json&&old?.timeline_json&&!needsPeerRank&&body.force!==true)return json(req,{ok:true,match_id:id,cache_hit:true,timeline_available:true,peer_rank_checked:idx>=20||!!old?.peer_rank_fetched_at});
       const rr=text(p.routing_region)||routeFor(p.platform_region);
       let m=old?.match_json||null,tl=old?.timeline_json||null,tlError:string|null=null;
-      if(!m||body.force===true)m=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/"+encodeURIComponent(id),requestRiotKey);
-      if(!tl||body.force===true){try{tl=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/"+encodeURIComponent(id)+"/timeline",requestRiotKey);}catch(e:any){tlError=text(e?.message||e).slice(0,500);}}
+      if(!m||body.force===true)m=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/"+encodeURIComponent(id),requestRiotKey,allowServerRiotKey);
+      if(!tl||body.force===true){try{tl=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/"+encodeURIComponent(id)+"/timeline",requestRiotKey,allowServerRiotKey);}catch(e:any){tlError=text(e?.message||e).slice(0,500);}}
       let peerRank=old?.peer_rank_json||null,peerRankFetchedAt=old?.peer_rank_fetched_at||null;
       if(idx<20&&(!peerRankFetchedAt||body.force===true)){
         const participants=Array.isArray(m?.info?.participants)?m.info.participants:[],me=participants.find((x:any)=>text(x?.puuid)===text(p.puuid)),opp=me?opponent(m,me):null;
-        peerRank=opp?.puuid?await rankSnapshotFor({puuid:opp.puuid,platform_region:p.platform_region},requestRiotKey):null;
+        peerRank=opp?.puuid?await rankSnapshotFor({puuid:opp.puuid,platform_region:p.platform_region},requestRiotKey,allowServerRiotKey):null;
         peerRankFetchedAt=now();
       }
       const gs=Number(m?.info?.gameStartTimestamp||0),row={profile_id:p.id,match_id:id,owner_player_id:viewer.player_id,game_start_at:gs?new Date(gs).toISOString():null,map_id:num(m?.info?.mapId),queue_id:num(m?.info?.queueId),game_duration_seconds:num(m?.info?.gameDuration),match_json:m,timeline_json:tl,peer_rank_json:peerRank,peer_rank_fetched_at:peerRankFetchedAt,match_fetched_at:now(),timeline_fetched_at:tl?now():null,fetch_error:tlError,updated_at:now()};
@@ -1992,7 +2003,7 @@ Deno.serve(async(req:Request)=>{
       for(const row of targets){
         if(row?.peer_rank_fetched_at)continue;
         const participants=Array.isArray(row?.match_json?.info?.participants)?row.match_json.info.participants:[],me=participants.find((x:any)=>text(x?.puuid)===text(p.puuid)),opp=me?opponent(row.match_json,me):null;
-        const peerRank=opp?.puuid?await rankSnapshotFor({puuid:opp.puuid,platform_region:p.platform_region},requestRiotKey):null,stamp=now();
+        const peerRank=opp?.puuid?await rankSnapshotFor({puuid:opp.puuid,platform_region:p.platform_region},requestRiotKey,allowServerRiotKey):null,stamp=now();
         const{error:updateError}=await sb.from("league_match_cache_v1").update({peer_rank_json:peerRank,peer_rank_fetched_at:stamp,updated_at:stamp}).eq("profile_id",p.id).eq("match_id",row.match_id);
         if(updateError)throw updateError;peerRankBackfilled++;
       }
