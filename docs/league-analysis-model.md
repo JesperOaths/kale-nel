@@ -19,6 +19,8 @@ Public resource bounds:
 - retain at most 80 recent cached matches per profile,
 - retain at most 25 analysis runs and 20 fetch-run records per profile.
 
+Public profile deletion is owner-scoped to the current browser workspace. Deleting a profile cascades through its match cache, fetch runs and analysis rows via the existing foreign-key relationships, so the profile cap does not strand stale data.
+
 These limits are storage/service hygiene rather than coaching rules. They do not apply to legacy authenticated internal workspaces.
 
 # Bruisienator web analysis model
