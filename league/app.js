@@ -1143,10 +1143,10 @@ function renderProgressComparison(current,previous,previousAt){
     {label:'Level-down shared-role fight rate',path:'behaviorSummary.roleLevelDisadvantageFightRate',threshold:10,direction:-1,format:v=>fmtPct(v)},
     {label:'Game 3+ gold delta',path:'sessionBehavior.game3PlusGoldDelta',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
     {label:'Post-loss requeue gold delta',path:'sessionBehavior.postLossGoldDelta',threshold:150,direction:1,format:v=>signed(v,0)+'g'},
-    {label:'Prior-frame objective setup rate',path:'behaviorSummary.earlySetupObjectiveJoinRate',threshold:10,direction:1,format:v=>fmtPct(v)},
+    {label:'Prior setup presence (45–105s)',path:'behaviorSummary.earlySetupObjectiveJoinRate',threshold:10,direction:1,format:v=>fmtPct(v)},
     {label:'Vision-action death rate',path:'behaviorSummary.visionActionDeathRate',threshold:5,direction:-1,format:v=>fmtPct(v)},
     {label:'High-risk vision deaths / game',path:'behaviorSummary.highRiskVisionActionDeathsPerGame',threshold:.15,direction:-1,format:v=>fmt(v,2)},
-    {label:'Late-reset objective miss rate',path:'behaviorSummary.lateResetObjectiveMissRate',threshold:10,direction:-1,format:v=>fmtPct(v)}
+    {label:'Recent-shop objective absence rate',path:'behaviorSummary.recentShopObjectiveAbsenceRate',threshold:10,direction:-1,format:v=>fmtPct(v)}
   ];
   if(['ADC','MID','TOP'].includes(role))specs.splice(1,0,{label:'CS / min',path:'summary.csMin',threshold:.3,direction:1,format:v=>fmt(v,2)});
   if(['SUPPORT','JUNGLE'].includes(role))specs.push({label:'Team-contested objective presence',path:'advanced.objectivePresence',threshold:10,direction:1,format:v=>fmtPct(v)});
@@ -1456,7 +1456,7 @@ function detailsHtml(g,index){
   return '<div class="details-shell">'+matchVisualHeader(g)+judgmentHtml(g)+'<div class="details-tabs">'+['map','macro','resets','vision','roams','fights','phases','deaths','objectives'].map(t=>'<button class="tab-btn '+(state.activeDetailTab===t?'active':'')+'" data-tab="'+t+'" type="button">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div><div class="details-content" data-detail-content>'+detailContent(g,state.activeDetailTab)+'</div></div>';
 }
 function objectiveDiagnosisLabel(key){
-  return ({late_reset:'Late reset timing',pre_objective_death:'Death before the contest',setup_vision:'Setup-vision deficit',arrival_pathing:'Arrival / pathing'})[String(key||'')]||'No supported primary cause';
+  return ({recent_shop_absence:'Recent-shop absence pattern',late_reset:'Recent-shop absence pattern (legacy report)',pre_objective_death:'Death before the contest',setup_vision:'Setup-vision deficit',arrival_pathing:'Arrival / pathing'})[String(key||'')]||'No supported primary cause';
 }
 function objectiveDiagnosisHtml(r){
   const d=r?.behaviorSummary?.objectiveDiagnosis||{},causes=Array.isArray(d.causes)?d.causes:[];
@@ -1464,7 +1464,7 @@ function objectiveDiagnosisHtml(r){
   const primary=d.primaryCause?objectiveDiagnosisLabel(d.primaryCause):'Arrival / pathing remains the unresolved hypothesis';
   return '<div class="objective-diagnosis"><div class="diagnosis-primary"><span>Primary supported cause</span><strong>'+esc(primary)+'</strong></div>'+
     (causes.length?'<ol>'+causes.map(x=>'<li><strong>'+esc(x.label||objectiveDiagnosisLabel(x.key))+'</strong><span>'+esc(x.evidence||'')+'</span><small>Evidence severity '+esc(fmt(x.severity,0))+'</small></li>').join('')+'</ol>':
-    '<p>No reset/death/vision cause crossed its evidence threshold. Arrival/pathing remains a hypothesis rather than a proven cause.</p>')+
+    '<p>No shop/death/vision association crossed its evidence threshold. Arrival/pathing remains a hypothesis rather than a proven cause.</p>')+
     '<small class="diagnosis-caveat">This ranks supported evidence; it does not prove a single cause.</small></div>';
 }
 function reportPhaseRules(g){
@@ -1616,13 +1616,14 @@ function detailContent(g,tab){
       detailCard('Player-supported kill conversion',String(kc.playerSupportedConverted??kc.converted??0)+' / '+String(kc.windows??0)+' · '+fmtPct(kc.rate))+detailCard('Team conversion after your kill windows',String(kc.teamConverted??kc.converted??0)+' / '+String(kc.windows??0)+' · '+fmtPct(kc.teamRate??kc.rate))+
       detailCard('Peer-supported kill conversion',String(okc.playerSupportedConverted??okc.converted??0)+' / '+String(okc.windows??0)+' · '+fmtPct(okc.rate))+detailCard('Peer team conversion context',String(okc.teamConverted??okc.converted??0)+' / '+String(okc.windows??0)+' · '+fmtPct(okc.teamRate??okc.rate))+
       detailCard('Contested encounters joined',String(g.objectiveReadiness?.contestedJoined??0)+' / '+String(g.objectiveReadiness?.contestedObjectives??0))+
-      detailCard('Prior-frame setup joins',String(g.objectiveReadiness?.earlySetupJoins??0)+' · '+fmtPct(g.objectiveReadiness?.earlySetupJoinRate))+
+      detailCard('Prior setup presence (45–105s)',String(g.objectiveReadiness?.earlySetupJoins??0)+' · '+fmtPct(g.objectiveReadiness?.earlySetupJoinRate))+
       detailCard('Event-frame-only joins',String(g.objectiveReadiness?.eventFrameOnlyJoins??0))+detailCard('Contested-objective absences',String(g.objectiveReadiness?.contestedAbsent??0))+
-      detailCard('Late-reset objective misses',String(g.objectiveReadiness?.lateResetMisses??0))+detailCard('Fresh-purchase objective joins',String(g.objectiveReadiness?.freshPurchaseJoins??0))+detailCard('Raw objective/structure events',String(Array.isArray(g.objectives)?g.objectives.length:Number(g.objectiveEventCount||0)))+
+      detailCard('Recent-shop objective absences',String(g.objectiveReadiness?.recentShopAbsences??g.objectiveReadiness?.lateResetMisses??0))+detailCard('Fresh-purchase objective joins',String(g.objectiveReadiness?.freshPurchaseJoins??0))+detailCard('Raw objective/structure events',String(Array.isArray(g.objectives)?g.objectives.length:Number(g.objectiveEventCount||0)))+
       detailList((kc.events||[]).map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+String(x.kills||0)+' involved kill(s) · '+(x.playerSupportedConverted??x.converted?('supported conversion to '+String(x.objectiveType||'objective')+' in '+String(x.secondsAfter??'?')+'s'):x.teamConverted?('team-only conversion to '+String(x.teamObjectiveType||'objective')+' in '+String(x.teamSecondsAfter??'?')+'s'):'no tracked conversion within 75s')),'No player-involved kill-conversion windows were available.')+
       detailList(familyRows,'No objective-family encounter data were available.')+
-      detailList((g.objectiveReadiness?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+String(x.objectiveType||'neutral objective')+(Number(x.rawEventCount||1)>1?' · '+String(x.rawEventCount)+' raw kills grouped':'')+' · '+(x.teamSecured?'team secured':x.enemySecured?'enemy secured':'result unknown')+' · '+String(x.alliedPresentCount??'?')+' ally presence · '+(x.earlySetup?('prior-frame setup'+(hasNum(x.setupLeadSec)?' ~'+fmtInt(x.setupLeadSec)+'s lead':'')):x.eventFrameOnlyJoin?'event-frame-only join':x.present?'present':'absent')+(hasNum(x.secondsSinceShop)?' · shopped '+String(x.secondsSinceShop)+'s before':'')+(x.recentDeath?' · recent death':x.lateResetMiss?' · late reset miss':x.freshPurchaseJoin?' · fresh purchase + joined':'')),'No team-contested neutral-objective readiness events were available.')+
+      detailList((g.objectiveReadiness?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+String(x.objectiveType||'neutral objective')+(Number(x.rawEventCount||1)>1?' · '+String(x.rawEventCount)+' raw kills grouped':'')+' · '+(x.teamSecured?'team secured':x.enemySecured?'enemy secured':'result unknown')+' · '+String(x.alliedPresentCount??'?')+' ally presence · '+(x.earlySetup?('prior setup evidence'+(hasNum(x.setupLeadSec)?' ~'+fmtInt(x.setupLeadSec)+'s before':'')+' (45–105s band)'):x.eventFrameOnlyJoin?'event-frame-only join':x.present?'present':'absent')+(hasNum(x.secondsSinceShop)?' · shopped '+String(x.secondsSinceShop)+'s before':'')+(x.recentDeath?' · recent death':(x.recentShopAbsence??x.lateResetMiss)?' · recent-shop absence':x.freshPurchaseJoin?' · fresh purchase + joined':'')),'No team-contested neutral-objective readiness events were available.')+
       '<div class="detail-note"><strong>Objective-presence basis:</strong> coaching uses team-contested windows. A team-secured objective is always included; an objective your team loses enters the denominator only when Riot timeline positions support at least one allied champion near the encounter. Fully conceded cross-map objectives are not treated as personal absences. Team-secured presence remains visible separately as outcome context.</div>'+
+      '<div class="detail-note"><strong>Setup timing evidence:</strong> “prior setup” requires supported position evidence near the objective 45–105 seconds before the encounter <em>and</em> supported presence at the encounter. “Recent-shop absence” means the last detected shop visit ended within 60 seconds while the player was absent and not recently dead; it is an association, not proof that shopping/reset timing caused the absence.</div>'+
       '<div class="detail-note">Supported conversion is the coaching metric: a tracked objective/structure must follow the player-involved kill window within 75 seconds <em>and</em> Riot timeline evidence must place/credit the player at that conversion. Team conversion is shown separately as context so an objective taken elsewhere on the map does not become individual credit.</div>';
   }
   if(tab==='resets'){
