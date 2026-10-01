@@ -873,7 +873,7 @@ function detailContent(g,tab){
     const kc=g.killConversion||{},okc=g.opponentKillConversion||{},families=g.objectiveFamilyStats||{};
     const familyRows=Object.entries(families).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))).map(([name,x])=>String(name).replaceAll('_',' ')+' · joined '+String(x.joinedTeamEncounters??0)+' / '+String(x.teamEncounters??0)+' team encounters · '+fmtPct(x.teamJoinRate)+' · secured '+String(x.teamUnitsSecured??0)+' vs '+String(x.enemyUnitsSecured??0));
     return detailCard('Neutral-objective presence',fmtPct(g.objectiveJoinRate))+detailCard('Joined / neutral encounters',String(g.objectiveJoined??0)+' / '+String(g.objectiveTeamTotal??0))+detailCard('Early KP',fmtPct(g.earlyKp))+
-      detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+' min · '+String(g.impactType||'event'):'n/a')+detailCard('Objective-context death %',fmtPct(g.objectiveDeathPct))+detailCard('Pre-objective conversion deaths',String(g.preObjectiveDeathCount??0))+
+      detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+' min · '+String(g.impactType||'event'):'n/a')+detailCard('Objective-context death %',fmtPct(g.objectiveDeathPct))+detailCard('Deaths before enemy objective',String(g.preObjectiveDeathCount??0))+
       detailCard('Player-supported kill conversion',String(kc.playerSupportedConverted??kc.converted??0)+' / '+String(kc.windows??0)+' · '+fmtPct(kc.rate))+detailCard('Team conversion after your kill windows',String(kc.teamConverted??kc.converted??0)+' / '+String(kc.windows??0)+' · '+fmtPct(kc.teamRate??kc.rate))+
       detailCard('Peer-supported kill conversion',String(okc.playerSupportedConverted??okc.converted??0)+' / '+String(okc.windows??0)+' · '+fmtPct(okc.rate))+detailCard('Peer team conversion context',String(okc.teamConverted??okc.converted??0)+' / '+String(okc.windows??0)+' · '+fmtPct(okc.teamRate??okc.rate))+
       detailCard('Neutral encounters joined',String(g.objectiveReadiness?.joined??0)+' / '+String(g.objectiveReadiness?.neutralTeamObjectives??0))+
@@ -1015,7 +1015,8 @@ function renderAdvanced(r){
     ['@25 closing-checkpoint comparable games',String(r.behaviorSummary?.checkpointEligibility?.closing25Games??'n/a')],
     ['Neutral-objective presence',fmtPct(a.objectivePresence)],
     ['Objective diagnosis',objectiveDiagnosisLabel(r.behaviorSummary?.objectiveDiagnosis?.primaryCause)],
-    ['Early KP · queue-aware',fmtPct(a.earlyKP)],
+    ['Early KP · pooled',fmtPct(a.earlyKP)+' · '+String(r.behaviorSummary?.earlyPlayerKillInvolvements??0)+' / '+String(r.behaviorSummary?.earlyTeamKills??0)+' team kills'],
+    ['Early KP · mean game rate',fmtPct(r.behaviorSummary?.meanGameEarlyKp)],
     ['Early role solo kills / deaths',String(r.behaviorSummary?.earlyRoleSoloKills??r.behaviorSummary?.pre14RoleSoloKills??0)+' / '+String(r.behaviorSummary?.earlyRoleSoloDeaths??r.behaviorSummary?.pre14RoleSoloDeaths??0)],
     ['Plate involvement ≤20m',String(r.behaviorSummary?.first20PlayerPlateInvolvement??r.behaviorSummary?.first20PlayerPlateCredits??0)+' / '+String(r.behaviorSummary?.first20OpponentPlateInvolvement??r.behaviorSummary?.first20OpponentPlateCredits??0)+' vs role peer'],
     ['Plate involvement · full match',String(r.behaviorSummary?.allGamePlayerPlateInvolvement??r.behaviorSummary?.allGamePlayerPlateCredits??0)+' / '+String(r.behaviorSummary?.allGameOpponentPlateInvolvement??r.behaviorSummary?.allGameOpponentPlateCredits??0)+' vs role peer'],
@@ -1040,7 +1041,10 @@ function renderAdvanced(r){
     ['Current result streak',r.outcomeStreaks?.currentResult?(String(r.outcomeStreaks.currentResult).toUpperCase()+' × '+String(r.outcomeStreaks?.currentLength??0)):'n/a'],
     ['Objective presence · pooled',fmtPct(r.behaviorSummary?.objectiveJoinRate)+' · '+String(r.behaviorSummary?.objectiveJoinedEncounters??0)+' / '+String(r.behaviorSummary?.objectiveTeamEncounters??0)+' team encounters'],
     ['Objective presence · mean game rate',fmtPct(r.behaviorSummary?.meanGameObjectiveJoinRate)],
-    ['Objective-context death %',fmtPct(a.objectiveDeathPct)],
+    ['Objective-context death % · pooled',fmtPct(a.objectiveDeathPct)+' · '+String(r.behaviorSummary?.objectiveContextDeaths??0)+' / '+String(r.behaviorSummary?.classifiedTimelineDeaths??0)+' classified deaths'],
+    ['Objective-context death % · mean game rate',fmtPct(r.behaviorSummary?.meanGameObjectiveDeathPct)],
+    ['Death before enemy objective % · pooled',fmtPct(r.behaviorSummary?.preObjectiveDeathPct)+' · '+String(r.behaviorSummary?.preObjectiveDeaths??0)+' / '+String(r.behaviorSummary?.classifiedTimelineDeaths??0)+' classified deaths'],
+    ['Death before enemy objective % · mean game rate',fmtPct(r.behaviorSummary?.meanGamePreObjectiveDeathPct)],
     ['Bruisienator V21 DQI · effective pipeline',hasNum(r.behaviorSummary?.avgLegacyBruisienatorDqi)?fmt(r.behaviorSummary.avgLegacyBruisienatorDqi,2)+'/10':'n/a'],
     ['Death-consequence evidence coverage',fmtPct(r.behaviorSummary?.deathConsequenceCoveragePct)],
     ['Isolated deaths · all',String(r.behaviorSummary?.isolatedDeaths??0)],
@@ -1072,7 +1076,7 @@ function renderAdvanced(r){
     ['Avg post-death role-CS swing',hasNum(r.behaviorSummary?.avgCsSwingAfterDeath)?signed(r.behaviorSummary.avgCsSwingAfterDeath,1):'n/a'],
     ['Deaths while ≥500g behind',String(r.behaviorSummary?.behindStateDeaths??0)],
     ['High-risk while behind',String(r.behaviorSummary?.highRiskBehindDeaths??0)+' · '+fmtPct(r.behaviorSummary?.highRiskBehindDeathRate)],
-    ['Enemy objective after death',String(a.preObjectiveDeaths??0)+' deaths · '+fmtPct(a.preObjectiveDeathPct)],
+    ['Enemy objective after death',String(a.preObjectiveDeaths??0)+' deaths · '+fmtPct(a.preObjectiveDeathPct)+' of classified deaths'],
     ['Post-early-phase side-lane deaths',String(r.behaviorSummary?.postLaneSideLaneDeaths??r.behaviorSummary?.post15SideLaneDeaths??0)],
     ['Isolated side-lane deaths',String(r.behaviorSummary?.isolatedSideLaneDeaths??0)+' · '+fmtPct(r.behaviorSummary?.isolatedSideLaneDeathRate)],
     ['Pre-objective side-lane deaths',String(r.behaviorSummary?.preNeutralObjectiveSideLaneDeaths??0)+' · '+fmt(r.behaviorSummary?.preNeutralObjectiveSideLaneDeathsPerGame,2)+'/game'],
