@@ -322,6 +322,19 @@ During roughly 6–22 minutes, a timeline state can be flagged when:
 
 This is a **candidate high-gold stay window**, not proof the player should have recalled immediately. Coaching should combine it with objective/death context rather than overstate it.
 
+## Vision quality versus vision volume
+
+For SUPPORT/JUNGLE especially, ward count and VPM are not enough. Preserve the share of tracked wards that qualify as objective-setup wards.
+
+Compare:
+- player's objective-setup wards / all tracked wards,
+- same-role opponent's objective-setup wards / all tracked wards,
+- percentage-point delta.
+
+This distinguishes genuinely useful pre-objective vision from high raw vision volume placed too late or away from the next contest.
+
+Aggregate coaching requires a meaningful ward sample on both sides. A lower setup share should produce a timing recommendation, not simply "place more wards."
+
 ## Vision
 
 Preserve raw ward coordinates and ward type.
