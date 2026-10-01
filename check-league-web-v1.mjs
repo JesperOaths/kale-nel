@@ -100,6 +100,9 @@ assert.ok(api.includes('enemy_contested_objective_after'),'Death-risk tags must 
 assert.ok(!app.includes('Pre-objective conversion deaths'),'Temporal death-before-objective evidence must not be mislabeled as conversion causality');
 assert.ok(api.includes('STANDARD_PVP_SR_QUEUE_IDS=new Set([400,420,430,440,490,700])'),'Supported standard Summoner’s Rift PvP queues must remain explicit');
 assert.ok(api.includes('SWIFTPLAY_SR_QUEUE_IDS=new Set([480])'),'Swiftplay queue must remain explicitly separate');
+assert.ok(api.includes('voidGrubsEnabled:false')&&api.includes('riftHeraldEnabled:false'),'Swiftplay must encode removed Void Grubs and Rift Herald');
+assert.ok(api.includes('elementalDrakeCap:2')&&api.includes('dragonSoulRequirement:2')&&api.includes('elderSpawnMin:15'),'Swiftplay condensed dragon/Soul/Elder rules must remain explicit');
+assert.ok(api.includes('minionFrenzyEnabled:true'),'Swiftplay-only Minion Frenzy must remain explicit');
 assert.ok(api.includes('r==="DUO_SUPPORT"')&&api.includes('r==="DUO_CARRY"'),'Legacy Riot bot-lane role aliases must normalize correctly');
 assert.ok(api.includes('function participantRoleEvidence('),'Role selection must retain source/conflict evidence');
 assert.ok(api.includes('team!=="GENERIC"&&individual!=="GENERIC"&&team!==individual'),'Conflicting teamPosition/individualPosition must fail closed');
@@ -287,6 +290,11 @@ assert.ok(!app.includes('bruisienator_recent_request_identity'),'Riot ID request
 assert.ok(api.includes('LEGENDSTRACKER_RANK_BASELINES_20260323')&&api.includes('LEGENDSTRACKER_ADC_MULTIPLIERS_20260323'),'Population rank radar must use an explicit externally sourced ADC benchmark corpus');
 assert.ok(api.includes('sourceUrl:"https://legendstracker.fr/methodologie"')&&api.includes('sourceCorpus:"830k+ ranked EUW1 games"'),'External benchmark provenance must remain visible in the report contract');
 assert.ok(api.includes('externalBenchmarks')&&app.includes('Population benchmark, not your opponents.'),'Frontend rank radar must use population benchmarks rather than encountered opponents');
+assert.ok(api.includes('function externalAdcBenchmarkSet(rankSnapshot:any,cohortQueueId:any)'),'External ADC benchmark must receive the selected queue context');
+assert.ok(api.includes('queueId===420?"RANKED_SOLO_5x5":queueId===440?"RANKED_FLEX_SR":null'),'Population rank benchmark must only use Ranked Solo/Flex cohorts and their matching ladder');
+assert.ok(api.includes('eligibilityReason:!rankedQueueType?"selected_cohort_not_ranked"'),'Non-ranked cohorts must fail closed for ranked population benchmarking');
+assert.ok(app.includes("ext.eligible!==false"),'Frontend ADC benchmark summary must respect backend comparability eligibility');
+assert.ok(app.includes('selected Last-20 cohort is not Ranked Solo/Flex'),'Frontend must explain why ranked population comparison is withheld for normal/Clash/Swiftplay cohorts');
 assert.ok(!app.includes('rankStepBands'),'Frontend must not regress to opponent-derived rank-step radar bands');
 assert.ok(app.includes('role-adjusted benchmarks rather than directly measured rank×ADC population means'),'Frontend must state the external benchmark derivation without overstating it as a direct ADC population mean');
 assert.ok(app.includes("return role==='BOTTOM'?(r.coachingSummary||r.summary||null):null"),'ADC benchmark must fail closed outside the primary-role ADC coaching sample');
@@ -449,7 +457,7 @@ assert.ok(app.includes('Bruisienator V21 DQI · effective pipeline'),'Frontend m
 assert.ok(app.includes('Death-consequence coverage'),'Frontend must expose transparent death-evidence coverage');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261001-league-web-v107'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261001-league-web-v108'),'League assets must cache-bust the current frontend');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
 assert.ok(app.includes('High-risk deaths while ahead'));
 assert.ok(app.includes('High-risk deaths while behind'));
