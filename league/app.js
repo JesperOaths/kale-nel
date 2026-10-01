@@ -744,6 +744,7 @@ function renderQuality(r){
   const fightN=Number(b.fightSamples??0),objectiveN=Number(b.neutralObjectiveEvents??0),wardN=Number(p.visionWardTotal??0);
   const cards=[
     qualityCard('Analyzed games',String(analyzed),String(coaching)+' primary-role coaching games',evidenceLevel(coaching)),
+    qualityCard('Sample exclusions',String(Number(q.excludedShortGames||0)+Number(q.excludedOtherMaps||0)+Number(q.excludedMissingRole||0))+' games',String(q.excludedShortGames??0)+' under 10m · '+String(q.excludedOtherMaps??0)+' other maps · '+String(q.excludedMissingRole??0)+' missing role','neutral'),
     qualityCard('Timeline coverage',hasNum(timelinePct)?fmtPct(timelinePct):'n/a',String(timelines)+' / '+String(analyzed)+' games',evidenceLevel(timelines)),
     qualityCard('Direct peer evidence',String(peerN)+' games','Actual same-role opponents',evidenceLevel(peerN)),
     qualityCard('Ranked peer evidence',String(rankedN)+' games',String(q.higherRankPeerGames??p.higherRankPeerGames??0)+' higher-rank peers',evidenceLevel(rankedN)),
@@ -758,6 +759,7 @@ function renderQuality(r){
   if(peerN<5)low.push('direct-peer comparisons');
   if(rankedN<3)low.push('rank-band comparisons');
   if(fightN<6)low.push('fight-order/readiness');
+  if(Number(q.excludedShortGames||0)>0)low.push('short games excluded from coaching');
   const base=r.sourceStatus?.note||'Report data remains traceable through the report contract. Missing data remains unknown rather than zero.';
   $('sourceNote').textContent=base+(low.length?' Thin-evidence areas right now: '+low.join(', ')+'.':' Core evidence coverage is sufficient for the main coaching dimensions.');
 }
