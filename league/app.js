@@ -5,7 +5,7 @@ const cfg=window.GEJAST_CONFIG||{};
 const API=(cfg.SUPABASE_URL||'')+'/functions/v1/printify-gildan-diff-diag-v1';
 const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
 const $=(id)=>document.getElementById(id);
-const state={profiles:[],profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false};
+const state={profiles:[],profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false};
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function token(){try{return (cfg.getPlayerSessionToken&&cfg.getPlayerSessionToken())||'';}catch(_){return'';}}
@@ -21,7 +21,7 @@ async function api(action,payload={}){
   if(!API||!KEY)throw new Error('League backend configuration is missing.');
   const res=await fetch(API,{
     method:'POST',mode:'cors',cache:'no-store',
-    headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY,'x-gejast-session':token()},
+    headers:Object.assign({'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY,'x-gejast-session':token()},state.riotApiKey?{'x-riot-api-key':state.riotApiKey}:{}),
     body:JSON.stringify(Object.assign({action},payload))
   });
   const raw=await res.text();let data=null;
@@ -69,10 +69,13 @@ async function boot(){
   await getDdragonVersion();
   try{
     const health=await api('health');
-    $('backendState').textContent=health.riot_configured?'Backend + Riot ready':'Backend ready · Riot key missing';
+    state.serverRiotKey=!!health.server_riot_key;
+    $('backendState').textContent=health.riot_configured?'Backend + Riot ready':'Backend ready · add Riot key';
     $('backendState').className='pill '+(health.riot_configured?'':'warn');
+    $('riotKeyRow').hidden=state.serverRiotKey;
+    $('riotKeyStatus').textContent=state.serverRiotKey?'Server Riot key configured':'No server Riot key configured';
     log('Authenticated as '+(health.player||'Kalenel player')+'.','ok');
-    if(!health.riot_configured)log('Riot API key is not configured in the server environment; saved/imported reports still work.','bad');
+    if(!health.riot_configured)log('Add a Riot development/personal key in the session-only field before Fetch / update. Saved/imported reports still work without it.');
   }catch(e){
     $('backendState').textContent='Backend unavailable';$('backendState').className='pill error';log(e.message,'bad');
   }
@@ -388,6 +391,12 @@ function exportReport(){
   a.href=URL.createObjectURL(blob);a.download='bruisienator_'+(state.profile?.profile_key||'profile')+'_last20.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 
+$('riotApiKey').addEventListener('input',(ev)=>{
+  state.riotApiKey=String(ev.target.value||'').trim();
+  $('riotKeyStatus').textContent=state.riotApiKey?'Session key ready':'No server Riot key configured';
+  $('backendState').textContent=state.serverRiotKey||state.riotApiKey?'Backend + Riot ready':'Backend ready · add Riot key';
+  $('backendState').className='pill '+(state.serverRiotKey||state.riotApiKey?'':'warn');
+});
 $('profileSelect').addEventListener('change',()=>selectProfile($('profileSelect').value));
 $('newProfileBtn').addEventListener('click',()=>openProfileEditor(null));
 $('cancelProfileBtn').addEventListener('click',()=>$('profileEditor').hidden=true);
