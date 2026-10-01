@@ -708,6 +708,32 @@ This metric does not require the player to force a fight just because an item wa
 
 A window shorter than 45 seconds is not considered meaningfully actionable and is excluded rather than counted as a failure.
 
+## First-reset sequence quality
+
+The first meaningful purchase sequence is analyzed separately from later recalls and item spikes.
+
+Current detection:
+- first purchase group from roughly 2.5–12 minutes,
+- at least 250g detected spend,
+- compare direct-role gold/CS differential before the shop with the next supported post-shop frame,
+- preserve timing versus the direct same-role opponent's first comparable shop.
+
+The sequence is marked:
+- **economy loss** when no death contaminates the measurement and direct-role differential worsens by at least ~6 CS or ~350g,
+- **economy gain** when no death contaminates the measurement and the player gains at least ~4 CS and ~150g of direct-role differential,
+- otherwise neutral/mixed/unmeasured.
+
+A death in the evidence window makes the first-reset economy classification unsuitable for clean aggregate coaching; those games remain visible but are excluded from the clean loss-rate sample.
+
+Aggregate coaching uses:
+- measured and clean game counts,
+- loss/gain counts,
+- first-reset loss rate,
+- average post-reset direct-role gold/CS swing,
+- average reset timing delta versus the same-role opponent.
+
+The coaching instruction is not “recall earlier.” The goal is to prepare the wave and return path so the purchase is made without surrendering the next lane-economy window.
+
 ## Resets, shop visits and item timing
 
 Riot timeline item purchases are grouped into approximate shop visits.
