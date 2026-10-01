@@ -6,7 +6,7 @@ import { fxAuditSnapshot, marginEurCentsForSize, parseEcbUsdRate, PRINTIFY_VAT_R
 const PRINTIFY_BASE = "https://api.printify.com/v1";
 const CACHE_FRESH_MS = 15 * 60_000;
 const REFRESH_LEASE_MS = 120_000;
-const MEMORY_ROW_TTL_MS = 60_000;
+const MEMORY_ROW_TTL_MS = 5 * 60_000;
 let memoryCatalogRow: any = null;
 let memoryCatalogLoadedAt = 0;
 const MAX_PAGES = 100;
@@ -115,7 +115,7 @@ function cors(req: Request) {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "public, max-age=15, stale-while-revalidate=45",
+    "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
   };
 }
 
@@ -177,18 +177,24 @@ async function readCatalogCacheDirect() {
     finally { clearTimeout(timer); }
   }
 
-  const sql = directDb();
+  let sql: any = null;
   try {
+    sql = directDb();
     const rows = await sql`
       select payload, generated_at, refresh_started_at
       from public.shop_catalog_cache_v828
       where id = 1
       limit 1
     `;
-    memoryCatalogRow=rows?.[0]||null;memoryCatalogLoadedAt=Date.now();
+    memoryCatalogRow=rows?.[0]||memoryCatalogRow||null;memoryCatalogLoadedAt=Date.now();
     return memoryCatalogRow;
+  } catch (error) {
+    // Availability beats freshness here: checkout revalidates price/availability,
+    // so a previously loaded catalog is safer than failing the public storefront.
+    if(memoryCatalogRow) return memoryCatalogRow;
+    throw error;
   } finally {
-    try { await sql.end({ timeout: 1 }); } catch {}
+    try { if(sql) await sql.end({ timeout: 1 }); } catch {}
   }
 }
 async function claimCatalogRefreshLeaseDirect() {
