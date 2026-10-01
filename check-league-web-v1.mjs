@@ -25,6 +25,7 @@ const behaviorExport=api.slice(behaviorStart,behaviorEnd);
 for(const field of [
   'deathTradeRate','highRiskUntradedDeaths','highRiskUntradedPerGame',
   'measuredDeathConsequences','costlyDeathEvents','severeDeathEvents','costlyDeathRate','costlyDeathsPerTimelineGame','severeDeathsPerTimelineGame','avgGoldSwingAfterDeath','avgCsSwingAfterDeath',
+  'itemSpikeEligibleWindows','itemSpikeUtilizedWindows','itemSpikeUtilizationRate','itemSpikeDeathsBeforeImpact','avgItemSpikeLeadSec',
   'fightSamples','firstAllyFightDeathRate','preContributionFightDeathRate','fightSurvivalRate',
   'highUnspentFightRate','itemDisadvantageFightRate','goldDeficitFightRate',
   'killConversionRate','opponentKillConversionRate','killConversionDelta',
@@ -69,6 +70,9 @@ assert.ok(app.includes('Locally outnumbered'));
 assert.ok(app.includes('Pre-14 clean duel'));
 assert.ok(app.includes('Clean solo-kill lane conversion'));
 assert.ok(app.includes('Clean solo-kill conversion rate'));
+assert.ok(app.includes('Item-spike window'));
+assert.ok(app.includes('Major-item spike utilization'));
+assert.ok(app.includes('Earlier-item windows used'));
 assert.ok(app.includes('Solo-kill deaths before next shop'));
 assert.ok(app.includes('Deaths before shop after solo kill'));
 assert.ok(app.includes('Outside-pressure lane deaths'));
