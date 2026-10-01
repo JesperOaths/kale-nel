@@ -43,9 +43,11 @@ if(!text('gejast-account-runtime.js').includes('isVisualAuditFixtureName')) fail
 if(!text('gejast-account-runtime.js').includes('function staticLoginNames()')) failures.push('login selector must expose the verified static active-name snapshot as a synchronous bootstrap source');
 if(!text('gejast-account-runtime.js').includes('seed = normalizeNames([...cached,...snapshot])')) failures.push('login selector must merge durable cache and static snapshot before network work');
 if(!text('gejast-account-runtime.js').includes('else if(seed.length)')) failures.push('empty/slow live login-name refresh must preserve the synchronous seed');
+if(!text('gejast-account-runtime.js').includes('function domSeedNames(sel)')) failures.push('login runtime must preserve server-rendered option names as an independent synchronous seed');
+if(!text('gejast-account-runtime.js').includes('seed = normalizeNames([...domSeed,...cached,...snapshot])')) failures.push('login bootstrap must merge DOM, cache and static snapshot names before live RPC work');
 if(!text('gejast-login-names-fallback.js').includes('v817-html-static-first-delayed-active-name-rpc')) failures.push('standalone login-name fallback must remain static-first with one bounded authoritative refresh');
 if(!text('gejast-login-names-fallback.js').includes("get_login_active_names_v687',{site_scope_input:resolvedScope},2500")) failures.push('background authoritative login-name confirmation must remain bounded');
-if(!text('login.html').includes('20261001-login-resilience-r7')) failures.push('login page must cache-bust the network-independent synchronous selector runtime');
+if(!text('login.html').includes('20261001-login-resilience-r8')) failures.push('login page must cache-bust the network-independent synchronous selector runtime');
 if(!text('login.html').includes('gejast-login-inline-seed')) failures.push('login page must render its last-known-good selector options before deferred/runtime network work');
 if(!text('login.html').includes('data-login-scope="friends"')||!text('login.html').includes('data-login-scope="family"')) failures.push('login HTML itself must carry both active-name scope lists so the selector survives JS/Supabase failure');
 if(!text('gejast-login-names-fallback.js').includes('setTimeout(function(){ authoritative(resolvedScope).catch(function(){}); },3000)')) failures.push('authoritative login-name refresh must stay delayed off first paint');
