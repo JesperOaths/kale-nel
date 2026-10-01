@@ -83,7 +83,7 @@ assert.match(store, /S:24, M:24, L:24, XL:24, '2XL':26, '3XL':30, '4XL':30, '5XL
 assert.match(store, /price: baseKey === '6' && variantPrices\.length \? Math\.min/, 'classic-shirt card price must derive from normalized canonical variant prices');
 assert.doesNotMatch(store, /bruisCatalogLastGoodV1/, 'old browser catalog cache key must not remain active');
 assert.match(index, /catalog-last-good\.js\?v=20261001-stable-pricing-r5/, 'fallback catalog asset must be cache-busted after canonical pricing repair');
-assert.match(index, /store\.js\?v=20261001-static-first-r7/, 'store runtime must publish the resilient deterministic static-first revision');
+assert.match(index, /store\.js\?v=20261001-static-first-r8/, 'store runtime must publish the resilient deterministic static-first revision');
 assert.match(index, /live-catalog-refresh-v818\.js\?v=20261001-cross-tab-r4/, 'shop must publish the reduced-pressure cross-tab refresh revision');
 assert.match(store, /function readCartSafe\(\)/, 'corrupt browser cart state must not abort the storefront before the static catalog renders');
 assert.match(store, /localStorage\.removeItem\(cartKey\)/, 'invalid saved cart JSON must be discarded safely');
