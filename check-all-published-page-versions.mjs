@@ -34,6 +34,8 @@ function versionTokensFromVisibleOwners(body){
   return [...new Set(tokens.map(v=>v.toLowerCase()))];
 }
 
+const independentPageVersions = new Set(['admin_shop_analytics.html','admin_shop_connection.html','admin_shop_operations.html','admin_shop_orders.html']);
+
 const missing=[];
 const ambiguous=[];
 const rootDrift=[];
