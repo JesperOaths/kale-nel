@@ -110,7 +110,20 @@
   }
 
   async function getLoginNames(){
-    const cached=readLoginCache(),currentScope=scope();
+    const currentScope=scope(),snapshot=staticLoginNames(),cached=readLoginCache();
+    // Login availability must never depend on the Supabase data plane.
+    // Prefer the deployment snapshot synchronously; live RPC is background enrichment only.
+    const immediate=normalizeNames([...snapshot,...cached]);
+    if(immediate.length){
+      try{
+        const loader=window.GEJAST_LOGIN_NAMES_FALLBACK&&window.GEJAST_LOGIN_NAMES_FALLBACK.load;
+        if(typeof loader==='function') Promise.resolve(loader(currentScope)).then((names)=>{
+          const live=normalizeNames(names);
+          if(live.length) writeLoginCache(normalizeNames([...immediate,...live]));
+        }).catch(()=>{});
+      }catch(_){}
+      return immediate;
+    }
     try {
       const loader=window.GEJAST_LOGIN_NAMES_FALLBACK&&window.GEJAST_LOGIN_NAMES_FALLBACK.load;
       if(typeof loader==='function'){
@@ -118,9 +131,8 @@
         if(names.length) return writeLoginCache(names);
       }
     } catch (_) {}
-    if(cached.length) return cached;
     try {
-      const names=namesFromPayload(await rpc('get_login_active_names_v687',{site_scope_input:currentScope},{timeoutMs:4500}));
+      const names=namesFromPayload(await rpc('get_login_active_names_v687',{site_scope_input:currentScope},{timeoutMs:2500}));
       if(names.length) return writeLoginCache(names);
     } catch (_) {}
     return [];
@@ -249,8 +261,12 @@
   function fillSelect(sel,names){ if(!sel) return; const current=sel.value; const clean=normalizeNames(names); sel.innerHTML='<option value="">Kies je naam</option>'+clean.map((n)=>`<option value="${esc(n)}">${esc(n)}</option>`).join(''); if(clean.includes(current)) sel.value=current; }
   function domSeedNames(sel){
     if(!sel) return [];
-    try { return normalizeNames([...sel.querySelectorAll('option')].map((opt)=>String(opt.value||opt.textContent||'').trim()).filter(Boolean)); }
-    catch(_) { return []; }
+    try {
+      return normalizeNames([...sel.querySelectorAll('option')]
+        .filter((opt)=>String(opt.value||'').trim() && !opt.disabled)
+        .map((opt)=>String(opt.value||opt.textContent||'').trim())
+        .filter((name)=>name && name.toLowerCase()!=='kies je naam'));
+    } catch(_) { return []; }
   }
 
   function safeReturnTarget(raw){
