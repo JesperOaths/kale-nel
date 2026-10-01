@@ -228,7 +228,8 @@ async function fetchMatches(){
       setProgress(done,ids.length);
       await sleep(100);
     }
-    await api('fetch_finish',{run_id:prep.run_id});
+    const finish=await api('fetch_finish',{run_id:prep.run_id});
+    if(hasNum(finish?.dominant_queue_id))log('Comparable queue context: '+String(finish.dominant_queue_id)+' · '+String(finish.peer_rank_target_count??0)+' final-sample peer-rank targets · '+String(finish.peer_rank_backfilled??0)+' rank snapshots backfilled.','ok');
     log('Fetch/update complete. Analyze remains a separate cached-data operation.','ok');
     statusPill('Fetch complete');
     await loadCacheStatus();
