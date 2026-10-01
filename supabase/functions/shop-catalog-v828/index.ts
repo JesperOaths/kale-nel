@@ -545,48 +545,56 @@ function isPublicVariant(product: any, variant: any) {
 }
 
 async function gildanRouteSafeCostCeilings(supabase: any, entries: any[]) {
-  const currentCosts = new Map<string, number>();
+  // Blueprint 6 is one garment family. Pricing must therefore be canonical by
+  // variant/size, not by the historical source provider attached to a design.
+  // Approved route rows contain both provider cost snapshots, so the same pair
+  // produces the same safe cost whichever direction a product was created in.
+  const liveFallbackByVariant = new Map<string, number[]>();
   for (const entry of Array.isArray(entries) ? entries : []) {
     const product = entry?.product;
     if (String(product?.blueprint_id || "") !== "6") continue;
-    const productId = text(product?.id);
-    if (!productId) continue;
     for (const variant of Array.isArray(product?.variants) ? product.variants : []) {
       if (!isPublicVariant(product, variant)) continue;
       const variantId = String(variant?.id || "");
       const cost = Math.round(Number(variant?.cost));
       if (!variantId || !Number.isFinite(cost) || cost <= 0) continue;
-      currentCosts.set(`${productId}:${variantId}`, cost);
+      const costs = liveFallbackByVariant.get(variantId) || [];
+      costs.push(cost);
+      liveFallbackByVariant.set(variantId, costs);
     }
   }
 
-  const productIds = [...new Set([...currentCosts.keys()].map(key => key.split(":")[0]))];
-  const ceilings = new Map(currentCosts);
-  if (!productIds.length) return ceilings;
-
+  const ceilings = new Map<string, number>();
   const { data: routes, error } = await supabase
     .from("shop_provider_routes_v1")
-    .select("source_product_id,source_variant_id,target_cost_usd_cents,cost_delta_usd_cents")
+    .select("source_variant_id,source_cost_usd_cents,target_cost_usd_cents")
     .eq("approved", true)
-    .in("source_product_id", productIds);
-  if (error) {
-    console.warn("Route-safe catalog pricing could not load direct provider costs", error.message);
-    return ceilings;
+    .eq("source_blueprint_id", 6);
+
+  if (!error) {
+    for (const route of Array.isArray(routes) ? routes : []) {
+      const variantId = String(route?.source_variant_id || "");
+      if (!variantId) continue;
+      const sourceSnapshot = Math.round(Number(route?.source_cost_usd_cents));
+      const targetSnapshot = Math.round(Number(route?.target_cost_usd_cents));
+      const safe = Math.max(
+        Number.isFinite(sourceSnapshot) ? sourceSnapshot : 0,
+        Number.isFinite(targetSnapshot) ? targetSnapshot : 0,
+      );
+      if (safe > Number(ceilings.get(variantId) || 0)) ceilings.set(variantId, safe);
+    }
+  } else {
+    console.warn("Canonical classic-shirt route costs unavailable", error.message);
   }
 
-  for (const route of Array.isArray(routes) ? routes : []) {
-    const key = `${text(route?.source_product_id)}:${String(route?.source_variant_id || "")}`;
-    const current = Number(currentCosts.get(key) || 0);
-    if (!current) continue;
-    const snapshot = Math.round(Number(route?.target_cost_usd_cents));
-    const delta = Math.round(Number(route?.cost_delta_usd_cents));
-    const adjusted = Number.isFinite(delta) ? current + delta : Number.NaN;
-    const safe = Math.max(
-      current,
-      Number.isFinite(snapshot) ? snapshot : 0,
-      Number.isFinite(adjusted) ? adjusted : 0,
-    );
-    if (safe > Number(ceilings.get(key) || 0)) ceilings.set(key, safe);
+  // Only use live product costs as a fallback when no approved provider pair is
+  // known for that variant. Use the median so product provenance cannot create
+  // design-specific pricing drift.
+  for (const [variantId, costs] of liveFallbackByVariant) {
+    if (ceilings.has(variantId) || !costs.length) continue;
+    const sorted = [...costs].sort((a, b) => a - b);
+    const median = sorted[Math.floor((sorted.length - 1) / 2)];
+    if (Number.isFinite(median) && median > 0) ceilings.set(variantId, median);
   }
   return ceilings;
 }
@@ -671,7 +679,7 @@ function publicProduct(product: any, fx: any, shopId: number, shop: any, routeSa
       const routeSafeRawUsdCost = String(product?.blueprint_id || "") === "6"
         ? Math.max(
             Math.round(Number(variant?.cost) || 0),
-            Number(routeSafeCostCeilings.get(`${text(product?.id)}:${String(variant?.id || "")}`) || 0),
+            Number(routeSafeCostCeilings.get(String(variant?.id || "")) || 0),
           )
         : Number(variant?.cost);
       return ({
