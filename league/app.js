@@ -109,6 +109,40 @@ function championIcon(name){
   if(!name||!state.ddVersion)return'';
   return 'https://ddragon.leagueoflegends.com/cdn/'+encodeURIComponent(state.ddVersion)+'/img/champion/'+encodeURIComponent(name)+'.png';
 }
+function itemIcon(itemId){
+  const id=Number(itemId||0);if(!id||!state.ddVersion)return'';
+  return 'https://ddragon.leagueoflegends.com/cdn/'+encodeURIComponent(state.ddVersion)+'/img/item/'+encodeURIComponent(String(id))+'.png';
+}
+function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
+function deltaTone(value,neutral=0,goodThreshold=0,inverse=false){
+  if(!hasNum(value))return'neutral';
+  const n=Number(value)-Number(neutral||0),v=inverse?-n:n;
+  if(Math.abs(v)<Math.max(1e-9,Number(goodThreshold||0)))return'neutral';
+  return v>0?'good':'bad';
+}
+function plainDelta(value,unit='',digits=0,inverse=false){
+  if(!hasNum(value))return{value:'n/a',tone:'neutral',word:'Not enough evidence'};
+  const n=Number(value),tone=deltaTone(n,0,unit==='gold'?100:unit==='csmin'?0.15:unit==='dpm'?50:unit==='minutes'?0.2:0.01,inverse);
+  const magnitude=Math.abs(n);
+  let formatted;
+  if(unit==='gold')formatted=signed(n,0)+'g';
+  else if(unit==='csmin')formatted=signed(n,2)+' CS/min';
+  else if(unit==='dpm')formatted=signed(n,0)+' DPM';
+  else if(unit==='minutes')formatted=signed(n,1)+' min';
+  else if(unit==='pp')formatted=signed(n,1)+' pp';
+  else formatted=signed(n,digits);
+  const favorable=inverse?n<0:n>0;
+  const word=tone==='neutral'?'Essentially even':favorable?'Favorable':'Unfavorable';
+  return{value:formatted,tone,word};
+}
+function contextBar(value,scale,inverse=false){
+  if(!hasNum(value))return'<div class="context-bar is-empty"><span></span><i></i></div>';
+  const normalized=clamp(Number(value)/Math.max(1e-9,Number(scale||1)),-1,1)*(inverse?-1:1);
+  const pct=Math.abs(normalized)*50;
+  const left=normalized<0?50-pct:50;
+  return '<div class="context-bar '+(normalized>0?'positive':normalized<0?'negative':'neutral')+'"><i class="zero"></i><span style="left:'+left+'%;width:'+pct+'%"></span></div>';
+}
+
 const SR_MAP_BOUNDS={minX:-120,minY:-120,maxX:14870,maxY:14980,size:512};
 function worldToMapPoint(x,y){
   if(!hasNum(x)||!hasNum(y))return null;
@@ -380,18 +414,19 @@ function renderReport(raw,sourceKind){
   scheduleHeavyReportRender(r);
 }
 function renderKpis(r){
-  const s=r.summary||{},role=String(s.primaryRole||'GENERIC').toUpperCase();
-  const item=(label,value,sub='')=>({label,value,sub});
-  let rows;
-  if(role==='SUPPORT'){
-    rows=[item('Recent WR',fmtPct(s.winRate)),item('Primary role',role,(s.primaryRoleGames||0)+' games'),item('Vision / min',fmt(s.vpm,2)),item('Neutral objective presence',fmtPct(r.advanced?.objectivePresence)),item('Early skirmish KP',fmtPct(r.advanced?.earlyKP))];
-  }else if(role==='JUNGLE'){
-    rows=[item('Recent WR',fmtPct(s.winRate)),item('Primary role',role,(s.primaryRoleGames||0)+' games'),item('Gold / min',fmtInt(s.gpm)),item('Neutral objective presence',fmtPct(r.advanced?.objectivePresence)),item('Early KP',fmtPct(r.advanced?.earlyKP))];
-  }else{
-    rows=[item('Recent WR',fmtPct(s.winRate)),item('Primary role',role,(s.primaryRoleGames||0)+' games'),item('CS / min',fmt(s.csMin,2)),item('KP',fmtPct(s.kp)),item('DPM',fmtInt(s.dpm))];
-  }
-  $('kpiGrid').innerHTML=rows.map(x=>'<div class="kpi-card"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><small>'+esc(x.sub||'Last-20 sample')+'</small></div>').join('');
+  const s=r.summary||{},p=r.peerComparison||{},role=String(s.primaryRole||'GENERIC').toUpperCase();
+  const metric=(label,value,sub,tone='neutral',bar='')=>({label,value,sub,tone,bar});
+  const gold=plainDelta(p.avgGoldDiff15,'gold'),cs=plainDelta(p.avgCsMinDelta,'csmin'),dpm=plainDelta(p.avgDpmDelta,'dpm'),item=plainDelta(p.avgMajorItemDeltaMin,'minutes',1,true);
+  const rows=[
+    metric('Recent win rate',fmtPct(s.winRate),(s.games||0)+' analyzed games','neutral',''),
+    metric('Gold @15 vs role peer',gold.value,gold.word+' · '+String(p.laneGames15||0)+' comparable games',gold.tone,contextBar(p.avgGoldDiff15,1000)),
+    metric('Farm pace vs role peer',cs.value,cs.word+' · CS/min difference',cs.tone,contextBar(p.avgCsMinDelta,2)),
+    metric('Damage vs role peer',dpm.value,dpm.word+' · DPM difference',dpm.tone,contextBar(p.avgDpmDelta,600)),
+    metric('First major item vs peer',item.value,item.word+' · negative time = earlier item',item.tone,contextBar(p.avgMajorItemDeltaMin,2.5,true))
+  ];
+  $('kpiGrid').innerHTML=rows.map(x=>'<article class="kpi-card tone-'+x.tone+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong>'+(x.bar||'')+'<small>'+esc(x.sub)+'</small></article>').join('');
 }
+
 function renderBullets(id,items,empty){
   const list=(items||[]).filter(Boolean);
   $(id).innerHTML=list.length?list.map(x=>{
@@ -881,58 +916,70 @@ function bindDetailTabs(container,g,index){
   }));
 }
 
-function chartSvg(points,unit){
-  const vals=points.map(p=>Number(p.value)).filter(Number.isFinite);if(vals.length<3)return null;
-  const min=Math.min(...vals),max=Math.max(...vals),span=Math.max(1,max-min),w=560,h=190,pad=26;
-  const valid=points.map((p,i)=>({i,v:Number(p.value)})).filter(x=>Number.isFinite(x.v));
-  const coords=valid.map((x,n)=>({x:pad+(n/Math.max(1,valid.length-1))*(w-pad*2),y:h-pad-((x.v-min)/span)*(h-pad*2),v:x.v}));
-  const path=coords.map((c,i)=>(i?'L':'M')+c.x.toFixed(1)+' '+c.y.toFixed(1)).join(' ');
-  const dots=coords.map(c=>'<circle cx="'+c.x+'" cy="'+c.y+'" r="3.5"><title>'+esc(formatChartValue(c.v,unit))+'</title></circle>').join('');
-  return '<svg class="chart-svg" viewBox="0 0 '+w+' '+h+'" role="img"><line x1="'+pad+'" y1="'+(h-pad)+'" x2="'+(w-pad)+'" y2="'+(h-pad)+'" stroke="#29404f"/><line x1="'+pad+'" y1="'+pad+'" x2="'+pad+'" y2="'+(h-pad)+'" stroke="#29404f"/><path d="'+path+'" fill="none" stroke="#c79b3b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><g fill="#0ac8b9">'+dots+'</g><text x="'+pad+'" y="16" fill="#8294a0" font-size="10">'+esc(formatChartValue(max,unit))+'</text><text x="'+pad+'" y="'+(h-5)+'" fill="#8294a0" font-size="10">'+esc(formatChartValue(min,unit))+'</text></svg>';
+function niceCeil(value,step){
+  const x=Math.max(step,Math.abs(Number(value)||0));
+  return Math.ceil(x/step)*step;
 }
-function formatChartValue(v,unit){if(unit==='%')return Math.round(v)+'%';if(unit==='int')return Math.round(v).toLocaleString();if(unit==='signed')return signed(v,0);return Number(v).toFixed(2);}
+function chartSvg(points,spec){
+  const vals=points.map(p=>Number(p.value)).filter(Number.isFinite);if(vals.length<3)return null;
+  const valid=points.map((p,i)=>({i,v:Number(p.value)})).filter(x=>Number.isFinite(x.v));
+  const w=820,h=300,padL=64,padR=24,padT=26,padB=42,unit=spec.unit||'num',signedAxis=!!spec.signedAxis;
+  let min,max;
+  if(signedAxis){
+    const step=unit==='signedGold'?500:unit==='signedCs'?5:1;
+    const bound=niceCeil(Math.max(...vals.map(v=>Math.abs(v))),step);
+    min=-bound;max=bound;
+  }else if(unit==='percent'){min=0;max=100;}
+  else if(unit==='cs'){min=0;max=Math.max(10,niceCeil(Math.max(...vals),2));}
+  else if(unit==='dpm'){min=0;max=Math.max(1000,niceCeil(Math.max(...vals),250));}
+  else{min=Math.min(0,Math.floor(Math.min(...vals)));max=niceCeil(Math.max(...vals),Math.max(1,(Math.max(...vals)-Math.min(...vals))/4));}
+  const span=Math.max(1,max-min),plotW=w-padL-padR,plotH=h-padT-padB;
+  const xAt=n=>padL+(n/Math.max(1,valid.length-1))*plotW;
+  const yAt=v=>padT+(max-v)/span*plotH;
+  const coords=valid.map((x,n)=>({x:xAt(n),y:yAt(x.v),v:x.v}));
+  const path=coords.map((c,i)=>(i?'L':'M')+c.x.toFixed(1)+' '+c.y.toFixed(1)).join(' ');
+  const ticks=5,grid=[];
+  for(let i=0;i<ticks;i++){
+    const value=max-(span/(ticks-1))*i,y=yAt(value);
+    grid.push('<line class="chart-grid-line" x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(w-padR)+'" y2="'+y.toFixed(1)+'"/><text class="chart-axis-label" x="'+(padL-10)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end">'+esc(formatChartValue(value,spec.formatUnit||spec.unit))+'</text>');
+  }
+  const zeroY=signedAxis?yAt(0):null;
+  const bands=signedAxis?'<rect class="chart-positive-band" x="'+padL+'" y="'+padT+'" width="'+plotW+'" height="'+Math.max(0,zeroY-padT)+'"/><rect class="chart-negative-band" x="'+padL+'" y="'+zeroY+'" width="'+plotW+'" height="'+Math.max(0,padT+plotH-zeroY)+'"/>':'';
+  const zero=signedAxis?'<line class="chart-zero-line" x1="'+padL+'" y1="'+zeroY+'" x2="'+(w-padR)+'" y2="'+zeroY+'"/><text class="chart-zero-label" x="'+(w-padR-4)+'" y="'+(zeroY-7)+'" text-anchor="end">EVEN WITH ROLE OPPONENT</text>':'';
+  const dots=coords.map((c,i)=>'<circle class="chart-dot '+(signedAxis?(c.v>0?'positive':c.v<0?'negative':'even'):'')+'" cx="'+c.x.toFixed(1)+'" cy="'+c.y.toFixed(1)+'" r="5"><title>Game '+String(i+1)+': '+esc(formatChartValue(c.v,spec.formatUnit||spec.unit))+'</title></circle>').join('');
+  const xLabels=valid.length?'<text class="chart-axis-label x" x="'+padL+'" y="'+(h-12)+'">older</text><text class="chart-axis-label x" x="'+(w-padR)+'" y="'+(h-12)+'" text-anchor="end">newer</text>':'';
+  return '<svg class="chart-svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(spec.title||'Trend chart')+'">'+bands+grid.join('')+zero+'<path class="chart-line" d="'+path+'"/>'+dots+xLabels+'</svg>';
+}
+function chartSummary(points,spec){
+  const vals=points.map(p=>Number(p.value)).filter(Number.isFinite);if(!vals.length)return'No valid values.';
+  const avgV=vals.reduce((a,b)=>a+b,0)/vals.length,recent=vals.slice(-Math.min(5,vals.length)),recentAvg=recent.reduce((a,b)=>a+b,0)/recent.length;
+  const unit=spec.formatUnit||spec.unit;
+  if(spec.signedAxis){
+    const delta=recentAvg-avgV,dir=Math.abs(delta)<(spec.relevance||50)?'stable':delta>0?'improving':'worsening';
+    return 'Sample average '+formatChartValue(avgV,unit)+' · latest '+recent.length+' average '+formatChartValue(recentAvg,unit)+' · '+dir+'. Zero means even with the direct role opponent.';
+  }
+  return 'Sample average '+formatChartValue(avgV,unit)+' · latest '+recent.length+' average '+formatChartValue(recentAvg,unit)+'.';
+}
+
 function renderCharts(r){
   const lane15Comparable=Number(r.behaviorSummary?.checkpointEligibility?.lane15Games??0)>0;
   const specs=[
-    {key:'csMin',title:'CS/min across the sample',q:'How has farming rate changed?',unit:'num'},
-    {key:'kp',title:'Kill participation',q:'How has fight involvement changed?',unit:'%'},
-    {key:'dpm',title:'Damage per minute',q:'How has champion damage output varied?',unit:'int'},
-    {key:'goldDiff15',title:lane15Comparable?'Gold difference @15':'Gold difference @15 · raw checkpoint',q:lane15Comparable?'How has lane/economy position changed?':'Descriptive role-relative frame only; this queue is not interpreted with standard @15 lane coaching.',unit:'signed'}
+    {key:'goldDiff15',title:lane15Comparable?'Gold @15 vs opposing ADC':'Gold @15 vs role opponent · raw checkpoint',q:'Positive means you had more gold than the direct role opponent at 15.',unit:'signedGold',formatUnit:'signed',signedAxis:true,relevance:150},
+    {key:'csDiff15',title:lane15Comparable?'CS @15 vs opposing ADC':'CS @15 vs role opponent · raw checkpoint',q:'Positive means you had more farm than the direct role opponent at 15.',unit:'signedCs',formatUnit:'signed',signedAxis:true,relevance:5},
+    {key:'dpm',title:'Damage per minute',q:'Raw champion damage output. Use this beside gold and survival, not alone.',unit:'dpm',formatUnit:'int'},
+    {key:'kp',title:'Kill participation',q:'Share of team champion kills you participated in.',unit:'percent',formatUnit:'%'}
   ];
   const hidden=[];
-  $('chartGrid').innerHTML=specs.map(s=>{
-    const points=Array.isArray(r.charts?.[s.key])?r.charts[s.key]:(r.games||[]).map(g=>({matchId:g.matchId,value:g[s.key]}));
-    const svg=chartSvg(points,s.unit);
-    if(!svg)hidden.push(s.title);
-    return '<article class="chart-card"><h3>'+esc(s.title)+'</h3><p>'+esc(s.q)+'</p>'+(svg||'<div class="chart-empty">Insufficient valid data</div>')+'</article>';
+  $('chartGrid').innerHTML=specs.map(spec=>{
+    const points=spec.key==='csDiff15'?(r.games||[]).map(g=>({matchId:g.matchId,value:g.csDiff15})):(Array.isArray(r.charts?.[spec.key])?r.charts[spec.key]:(r.games||[]).map(g=>({matchId:g.matchId,value:g[spec.key]})));
+    const svg=chartSvg(points,spec);
+    if(!svg)hidden.push(spec.title);
+    return '<article class="chart-card '+(spec.signedAxis?'signed-chart':'')+'"><div class="chart-card-head"><div><h3>'+esc(spec.title)+'</h3><p>'+esc(spec.q)+'</p></div><span class="chart-kind">'+(spec.signedAxis?'0 = even':'trend')+'</span></div>'+(svg||'<div class="chart-empty">Insufficient valid data</div>')+(svg?'<p class="chart-reading">'+esc(chartSummary(points,spec))+'</p>':'')+'</article>';
   }).join('');
   const all=[...(r.hiddenCharts||[]),...hidden];
   $('hiddenCharts').hidden=!all.length;$('hiddenCharts').textContent=all.length?'Unavailable / low-sample charts: '+[...new Set(all)].join(', '):'';
 }
-function metric(label,value,pending){
-  return '<div class="metric-row"><span>'+esc(label)+'</span><strong class="'+(pending?'pending':'')+'">'+esc(value)+'</strong></div>';
-}
-function renderSpatial(r){
-  const games=Array.isArray(r.games)?r.games:[];
-  const deathPoints=[],wardPoints=[];
-  for(const g of games){
-    if(Number(g.mapId)!==11)continue;
-    for(const x of (g.badDeaths||[]))if(hasNum(x.x)&&hasNum(x.y))deathPoints.push({...x,highRisk:true});
-    for(const w of (g.wards||[]))if(hasNum(w.x)&&hasNum(w.y))wardPoints.push(w);
-  }
-  const image=map11Image(),fallback='https://ddragon.leagueoflegends.com/cdn/6.8.1/img/map/map11.png';
-  const mapHtml=(points,kind,empty)=>points.length
-    ?'<div class="map-stage"><img src="'+esc(image)+'" data-map-fallback="'+esc(fallback)+'" alt="Summoner’s Rift minimap"><svg viewBox="0 0 512 512" preserveAspectRatio="none" aria-label="'+esc(kind==='death'?'High-risk death positions':'Ward positions')+'">'+points.map(p=>mapPointSvg(p,kind)).join('')+'</svg></div>'
-    :'<div class="spatial-empty">'+esc(empty)+'</div>';
-  $('deathMap').innerHTML=mapHtml(deathPoints,'death','No high-risk death coordinates are available in this sample.');
-  $('wardMap').innerHTML=mapHtml(wardPoints,'ward','No ward coordinates are available in this sample.');
-  bindMapFallbacks($('spatialReview')||document);
-  const leadDeaths=deathPoints.filter(x=>hasNum(x.goldDiffAtDeath)&&Number(x.goldDiffAtDeath)>=500).length;
-  const offensive=wardPoints.filter(x=>x.territory==='offensive').length,river=wardPoints.filter(x=>x.territory==='river').length,defensive=wardPoints.filter(x=>x.territory==='defensive').length,setup=wardPoints.filter(x=>x.objectiveSetup).length,offPct=wardPoints.length?Math.round(offensive/wardPoints.length*100):0;
-  $('deathMapMeta').textContent=deathPoints.length+' high-risk deaths mapped'+(leadDeaths?' · '+leadDeaths+' while ≥500g ahead vs role':'');
-  $('wardMapMeta').textContent=wardPoints.length+' wards across '+games.length+' games · '+offPct+'% offensive · '+river+' river · '+defensive+' defensive · '+setup+' objective setup';
-  $('spatialProjectionNote').textContent='Summoner’s Rift world projection: x −120→14870, y −120→14980, with Y inverted. Only mapId 11 coordinates are plotted.';
-}
+
 function renderAdvanced(r){
   const a=r.advanced||{},roam=a.roams||{},recall=a.recalls||{},itemSpike=a.itemSpike||{};
   const rows=[
