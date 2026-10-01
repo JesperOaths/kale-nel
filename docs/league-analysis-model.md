@@ -527,18 +527,25 @@ Do not imply that every post-impact death is bad. Some are correct trades or nec
 
 Post-lane side pressure is useful, so the analyzer must not label every side-lane death as bad.
 
-A **post-15 side-lane death** requires:
-- game time at least 15 minutes,
+The start of the side-lane-risk window is **rules-driven**, not hard-coded to 15:00:
+- 2026 standard Summoner's Rift: 14:00,
+- 2026 Swiftplay: 12:00,
+- historical/future rules use their stored compatibility profile.
+
+A **post-early-phase side-lane death** requires:
+- game time at or after that rules profile's post-lane start,
 - death in the coarse top-lane or bot-lane zone.
 
 A death is additionally **isolated** when no allied participant is within 3,000 map units at the supported timeline frame.
 
 A **pre-neutral-objective side-lane death** requires:
-- post-15 side-lane death,
+- a post-early-phase side-lane death,
 - isolated/no ally within 3,000 units,
 - a tracked neutral-objective event within 90 seconds afterward.
 
-This is a timing/macro signal, not a blanket criticism of split pushing. Coaching should emphasize leaving the side wave earlier when the next neutral-objective window matters. If the objective is intentionally conceded, the death can still destroy the value of the cross-map trade.
+The old `post15SideLaneDeaths` field is retained only as a compatibility counter. New coaching and rates use `postLaneSideLaneDeaths`.
+
+This is a timing/macro signal, not a blanket criticism of split pushing. Coaching should emphasize reconnect timing when the next neutral-objective window matters. If an objective is intentionally conceded, dying on the cross-map trade can still erase the value of the side pressure.
 
 ## Spatial clustering of high-risk deaths
 
@@ -716,17 +723,22 @@ Use **associated with**, not causal wording.
 Roaming is not "a kill outside lane."
 
 For non-jungle lane roles on Summoner's Rift:
-- analyze roughly the 3–20 minute window,
+- begin movement sampling around minute 3,
+- end the roam-detection window at the rules profile's **major-objective-era boundary** rather than assuming every queue uses 20:00,
+- use 20:00 for 2026 standard Summoner's Rift,
+- use 12:00 for 2026 Swiftplay,
 - determine the normalized role's home lane,
 - use timeline movement samples to detect a sustained departure from home lane into another meaningful zone,
 - ignore base movement and ordinary home-lane activity.
 
 Outcomes:
-- kill/assist or team objective during the detected departure → success,
+- kill/assist or neutral-objective conversion during the detected departure → success,
 - player death during the departure with no successful event → failure,
 - otherwise neutral.
 
 For SUPPORT, also inspect the change in allied ADC versus enemy ADC CS differential during the roam. A roam that gives no kill/assist/objective return and costs the ADC substantial lane CS can be highlighted as expensive.
+
+The cutoff is a behavior-analysis window, not a claim that rotations stop when Baron becomes available. After the major-objective-era boundary, movement is better interpreted as broader macro/side-lane/objective routing rather than an early roam.
 
 ### Roam lane cost
 
