@@ -2195,18 +2195,17 @@ Deno.serve(async(req:Request)=>{
       const profileKey=directRequest?"recent-request":safeKey(input.profile_key||input.display_name||input.game_name),displayName=text(input.display_name||input.game_name||profileKey);
       if(!profileKey||!displayName)return json(req,{ok:false,error:"profile_name_required"},400);
       const plat=platform(input.platform_region);
-      let existing:any=null,reuseLegacyId="";
+      let existing:any=null,reuseExistingId="";
       if(directRequest){
         const{data,error}=await sb.from("league_profiles_v1").select("*").eq("owner_player_id",viewer.player_id).eq("site_scope",viewer.site_scope).eq("profile_key","recent-request").maybeSingle();
         if(error)throw error;existing=data||null;
       }else if(!text(input.id)&&text(input.game_name)&&text(input.tag_line)){
-        const{data:legacy,error:legacyError}=await sb.from("league_profiles_v1").select("*").eq("owner_player_id",viewer.player_id).eq("site_scope",viewer.site_scope).eq("profile_key","recent-request").maybeSingle();
-        if(legacyError)throw legacyError;
-        if(legacy&&text(legacy.game_name).toLowerCase()===text(input.game_name).toLowerCase()&&text(legacy.tag_line).toLowerCase()===text(input.tag_line).toLowerCase()&&platform(legacy.platform_region)===plat){
-          existing=legacy;reuseLegacyId=text(legacy.id);
-        }
+        const{data:candidates,error:candidateError}=await sb.from("league_profiles_v1").select("*").eq("owner_player_id",viewer.player_id).eq("site_scope",viewer.site_scope).limit(PUBLIC_MAX_PROFILES);
+        if(candidateError)throw candidateError;
+        const identityMatch=(candidates||[]).find((p:any)=>text(p.game_name).toLowerCase()===text(input.game_name).toLowerCase()&&text(p.tag_line).toLowerCase()===text(input.tag_line).toLowerCase()&&platform(p.platform_region)===plat)||null;
+        if(identityMatch){existing=identityMatch;reuseExistingId=text(identityMatch.id);}
       }
-      if(viewer.anonymous===true&&!text(input.id)&&!reuseLegacyId&&!directRequest){
+      if(viewer.anonymous===true&&!text(input.id)&&!reuseExistingId&&!directRequest){
         const{count,error:countError}=await sb.from("league_profiles_v1").select("*",{count:"exact",head:true}).eq("owner_player_id",viewer.player_id).eq("site_scope",viewer.site_scope);
         if(countError)throw countError;
         if(Number(count||0)>=PUBLIC_MAX_PROFILES)return json(req,{ok:false,error:"public_workspace_profile_limit",limit:PUBLIC_MAX_PROFILES},429);
@@ -2219,7 +2218,7 @@ Deno.serve(async(req:Request)=>{
       const patch:any={owner_player_id:viewer.player_id,owner_display_name:viewer.display_name,site_scope:viewer.site_scope,profile_key:profileKey,display_name:displayName.slice(0,120),game_name:text(input.game_name).slice(0,80)||null,tag_line:text(input.tag_line).slice(0,32)||null,platform_region:plat,routing_region:routeFor(plat),notes:text(input.notes).slice(0,500)||null,updated_at:now()};
       if(identityChanged)Object.assign(patch,{puuid:null,riot_account:null,last_resolved_at:null,rank_snapshot:null,ranked_fetched_at:null});
       let saved:any;
-      const updateId=text(input.id)||reuseLegacyId;
+      const updateId=text(input.id)||reuseExistingId;
       if(updateId){const{data,error}=await sb.from("league_profiles_v1").update(patch).eq("id",updateId).eq("owner_player_id",viewer.player_id).select("*").maybeSingle();if(error||!data)throw error||Object.assign(new Error("profile_not_found"),{status:404});saved=data;}
       else{const{data,error}=await sb.from("league_profiles_v1").upsert(patch,{onConflict:"owner_player_id,site_scope,profile_key"}).select("*").single();if(error)throw error;saved=data;}
       if(identityChanged&&saved?.id){
