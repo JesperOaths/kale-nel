@@ -481,11 +481,11 @@ assert.match(adminEdge, /production_notified_at:null/, 'false local production s
 assert.match(adminPage, /Production funding — bunq/);
 assert.match(adminPage, /bunqApiKey/);
 assert.match(adminPage, /shop-bunq-production-v1/);
-assert.match(adminPage, /This exact bunq card is saved as Printify's default payment card/);
+assert.match(adminPage, /This exact bunq card is saved as the production partner's default payment card/);
 assert.match(adminPage, /bunqOnlyConfirmed/);
 assert.match(adminPage, /bunqManualApprovalConfirmed/);
 assert.match(adminPage, /I approved in bunq — complete production/);
-assert.match(adminPage, /Printify Balance is not usable/);
+assert.match(adminPage, /production-account balance is not usable/);
 assert.match(adminPage, /const canRelease=\(bunqReady\(\)\|\|awaitingBunq\|\|readyForBunqCharge\)&&!!o\.payment_verified_at&&hasEnoughPayment\(o\)/, 'new production requests require bunq readiness while in-progress bunq charge states remain resumable');
 assert.match(adminPage, /if\(!bunqReady\(\)&&!\['ready_for_bunq_charge','awaiting_bunq_approval'\]\.includes\(row\.production_charge_state\)\)/, 'submit handler must block new production requests when bunq funding is not ready');
 assert.match(adminEdge, /prepareBunqFunding/);
