@@ -12,11 +12,11 @@ const ALLOWED_ORIGINS = new Set(["https://kalenel.nl", "https://www.kalenel.nl",
 const text = (value: unknown) => String(value ?? "").trim();
 const MARGIN_CENTS = 500;
 const LARGE_SIZE_MARGIN_CENTS = 700;
-const PUBLIC_MERCH_PRODUCT_IDS = new Set([
-  "6aaff223e0eef877800262df",
-  "6aaa152378f50f3725033e18",
-  "6a975ec45d07cc05a702a491",
-  "6a9742c08816f2362104d5cc",
+// Product visibility in Printify is a sales-channel publishing flag, not the
+// authority for the custom Bruis storefront. Only explicit retirements belong
+// here; otherwise sellability is determined by variants/media below.
+const HIDDEN_PUBLIC_PRODUCT_IDS = new Set([
+  "6ab0fa9a0b770861f80da032", // retired Bearded Dragon alternate artwork
 ]);
 
 // Explicit customer-facing identities for the current Printify catalog.
@@ -437,7 +437,6 @@ async function loadProducts(token: string, shopId: number) {
 
 function sellableCatalogScore(products: any[]) {
   return products.filter((product: any) => {
-    if (product?.visible === false) return false;
     if (text(product?.title).startsWith(ROUTE_PREFIX) || text(product?.title).startsWith(ROUTE_TITLE_PREFIX)) return false;
     const variants = Array.isArray(product?.variants) ? product.variants : [];
     const hasEnabled = variants.some((variant: any) => variant?.is_enabled !== false && variant?.is_available !== false);
@@ -733,14 +732,25 @@ async function buildCatalog(supabase: any) {
   const cleanProducts = account.entries
     .filter((entry: any) => {
       const id = text(entry.product?.id);
-      const explicitlyApprovedMerch = PUBLIC_MERCH_PRODUCT_IDS.has(id);
-      return !HIDDEN_PUBLIC_BLUEPRINT_IDS.has(String(entry.product?.blueprint_id || ""))
-        && (entry.product?.visible !== false || explicitlyApprovedMerch);
+      return !HIDDEN_PUBLIC_PRODUCT_IDS.has(id)
+        && !HIDDEN_PUBLIC_BLUEPRINT_IDS.has(String(entry.product?.blueprint_id || ""));
     })
     .map((entry: any) => publicProduct(entry.product, fx, entry.shopId, entry.shop, routeSafeCostCeilings))
     .filter((product: any) => product.id && product.name && product.price > 0 && product.mockups.length > 0 && product.variants.length > 0);
 
   if (!cleanProducts.length) throw new Error("no_sellable_products_in_printify_account");
+
+  // One storefront article per design/base. If Printify contains an older
+  // duplicate copy, prefer the most recently updated product deterministically.
+  const deduped = new Map<string, any>();
+  for (const product of cleanProducts) {
+    const key = [String(product.collection || ""), String(product.baseKey || ""), String(product.name || "").trim().toLowerCase()].join("|");
+    const current = deduped.get(key);
+    const currentUpdated = current?.updatedAt ? Date.parse(String(current.updatedAt)) : 0;
+    const nextUpdated = product?.updatedAt ? Date.parse(String(product.updatedAt)) : 0;
+    if (!current || nextUpdated >= currentUpdated) deduped.set(key, product);
+  }
+  const publicProducts = [...deduped.values()];
 
   const singleShop = account.shops.length === 1 ? account.shops[0] : null;
   return {
@@ -752,7 +762,7 @@ async function buildCatalog(supabase: any) {
     // read payload.shop.id. Multi-shop catalogs still rely on per-product shopId.
     shop: singleShop,
     shops: account.shops,
-    products: cleanProducts,
+    products: publicProducts,
   };
 }
 
@@ -875,10 +885,9 @@ Deno.serve(async (req: Request) => {
           const product = entry.product;
           const id = text(product?.id);
           const blueprint = String(product?.blueprint_id || "");
-          const explicitlyApprovedMerch = PUBLIC_MERCH_PRODUCT_IDS.has(id);
           const reasons: string[] = [];
+          if (HIDDEN_PUBLIC_PRODUCT_IDS.has(id)) reasons.push("hidden_product");
           if (HIDDEN_PUBLIC_BLUEPRINT_IDS.has(blueprint)) reasons.push("hidden_blueprint");
-          if (product?.visible === false && !explicitlyApprovedMerch) reasons.push("not_visible");
           const variants = Array.isArray(product?.variants) ? product.variants : [];
           const publicVariants = variants.filter((variant: any) => isPublicVariant(product, variant));
           if (!publicVariants.length) reasons.push("no_public_variants");
