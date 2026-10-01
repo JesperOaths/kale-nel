@@ -52,8 +52,13 @@ ok(backend.includes('currentMechanicsKnown'), 'unknown mechanics revisions must 
 ok(backend.includes('mechanicsCohortApplied=currentMechanicsKnown&&'), 'mechanics cohort filtering must require verified current mechanics');
 ok(backend.includes('current_mechanics_unverified'), 'unknown mechanics fallback reason must remain explicit');
 ok(backend.includes('function legacyBruisienatorDqiCompatibility('), 'recovered Bruisienator DQI compatibility formula must remain explicit');
-ok(backend.includes('function modernDeathQualityIndex('), 'modern consequence-aware death quality must remain explicit');
-ok(backend.includes('avgDeathQualityIndex'), 'aggregate death-quality score must remain exported');
+ok(backend.includes('effectivePipelineScore=clampNumber(10-bad*1.4'), 'effective V21 DQI must match the actual supplied producer behavior');
+ok(backend.includes('pipelineBehavior:"only_badDeaths_was_emitted"'), 'V21 DQI producer/consumer mismatch must remain explicit');
+ok(backend.includes('missingSourceInputs:["soloDeaths","greedyDeaths","facecheckDeaths","deathsNearObjective"]'), 'unpopulated historical DQI inputs must never be silently synthesized');
+ok(backend.includes('function deathQualityEvidence('), 'current death-quality analysis must be transparent evidence rather than a replacement score');
+ok(!backend.includes('function modernDeathQualityIndex('), 'retired arbitrary composite DQI must not return');
+ok(!backend.includes('avgDeathQualityIndex'), 'retired arbitrary DQI aggregate must not return');
+ok(backend.includes('deathConsequenceCoveragePct'), 'death evidence coverage must remain measurable');
 ok(backend.includes('uploadedBruisienatorRevision:"V21_PHASE2_SAFE_STATS_ENRICH"'), 'report provenance must record the supplied Bruisienator revision');
 ok(backend.includes('mixedMechanicsFallback'), 'small current mechanics samples remain explicit');
 ok(backend.includes('championBehaviorModel(coachingGames'), 'champion behavior uses the same selected mechanics sample');
@@ -107,11 +112,16 @@ ok(backend.includes('behaviorSummary.earlyLeadGivebackRate'), 'self-relative pra
 ok(backend.includes('Review where this early lead started to unwind'), 'replay queue must retain early-lead review moments');
 ok(backend.includes('impactDeltaVsOpponent'), 'direct-peer first-impact comparison must remain in analyzer');
 ok(backend.includes('roam.laneCostCs='), 'roam lane-cost comparison must remain in analyzer');
-ok(backend.includes('evidenceVersion:"roam_window_v2"'), 'roam windows must preserve the enriched V21 evidence contract');
+ok(backend.includes('evidenceVersion:"roam_window_v3"'), 'roam windows must preserve the hardened V21 evidence contract');
+ok(backend.includes('pathSamples=[samples[i-1],...outside,endSample]'), 'roam paths must include departure plus supported return/end evidence');
 ok(backend.includes('pathPoints'), 'roam windows must retain sampled Riot-frame paths');
-ok(backend.includes('objectivePresent')&&backend.includes('objectiveAway'), 'roam objective presence and away evidence must remain distinct');
+ok(backend.includes('objectivePresent')&&backend.includes('teamObjectivesWithoutPlayer')&&backend.includes('enemyObjectivesDuringRoam'), 'roam objective presence and away/enemy context must remain distinct');
 ok(backend.includes('playerKillAssists')&&backend.includes('playerDeaths'), 'roam K/A and death evidence must remain explicit');
+ok(backend.includes('e.eventLane===homeLane')&&backend.includes('homeLaneStructuresLost'), 'roam structural cost must be scoped to the player home lane');
 ok(backend.includes('supportRoamsHurtingAdc'), 'support roams must aggregate allied-ADC lane-cost evidence');
+ok(backend.includes('objectiveFamilyStats:{}')&&backend.includes('objectiveFamilySummary'), 'objective-family control/presence must remain exported');
+ok(backend.includes('familyRaw==="DRAGON"&&memberSubtypes.some((x:any)=>x.includes("ELDER"))?"ELDER_DRAGON"'), 'Elder Dragon must remain distinguishable when Riot subtype supports it');
+ok(backend.includes('objectiveSetupClears'), 'objective-setup ward clears must remain measurable');
 ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
 ok(backend.includes('objectiveRootCauses'), 'objective root-cause evidence ranking must remain in analyzer');
 ok(backend.includes('objectiveRootCauses.sort'), 'objective root causes must remain severity-ranked');
@@ -229,7 +239,10 @@ const cssVersion=(html.match(/\/league\/styles\.css\?v=([^"]+)/)||[])[1]||'';
 ok(appVersion&&cssVersion&&appVersion===cssVersion, 'League app/css cache-bust versions must match');
 ok(html.includes('data-game-sort="gold15"')&&app.includes('bindGameSortControls'), 'per-game evidence table must remain sortable');
 ok(app.includes('Roam paths · this match')&&app.includes('roamPathSvg'), 'per-game real map must retain roam paths');
-ok(app.includes('Legacy Bruisienator DQI'), 'recovered DQI provenance must remain visible');
+ok(app.includes('Bruisienator V21 DQI · effective pipeline'), 'source-accurate DQI provenance must remain visible');
+ok(app.includes('Death-consequence coverage'), 'transparent death-evidence coverage must remain visible');
+ok(app.includes('Objective setup ward clears'), 'objective-setup ward clears must remain visible');
+ok(app.includes('objectiveFamilyStats'), 'per-game objective-family evidence must remain visible');
 
 ok(backend.includes('"post-play discipline"'), 'post-play discipline must consolidate into a stable coaching theme');
 ok(backend.includes('"side-lane timing"'), 'side-lane timing must consolidate into a stable coaching theme');
@@ -250,5 +263,5 @@ console.log(JSON.stringify({
   appVersion,
   domRefs:refs.length,
   domIds:ids.length,
-  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','role-specific-mechanics','macro-transition-semantics']
+  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence']
 },null,2));
