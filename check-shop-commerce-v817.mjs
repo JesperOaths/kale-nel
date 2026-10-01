@@ -5,6 +5,7 @@ import { applyPrintifyVatReserveEurCents, parseEcbUsdRate, PRINTIFY_VAT_RESERVE_
 import fs from 'node:fs';
 
 const read = path => fs.readFileSync(path, 'utf8');
+const siteVersion = read('VERSION').trim();
 const index = read('shop/index.html');
 const directCommerce = read('shop/direct-commerce-v832.js');
 const deliveryEstimate = read('shop/delivery-estimate-v833.js');
