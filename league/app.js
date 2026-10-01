@@ -614,7 +614,7 @@ function detailContent(g,tab){
   }
   if(tab==='objectives'){
     const kc=g.killConversion||{},okc=g.opponentKillConversion||{};
-    return objectiveDiagnosisHtml({behaviorSummary:{objectiveDiagnosis:g.objectiveDiagnosis||null}})+detailCard('Objective presence',fmtPct(g.objectiveJoinRate))+detailCard('Joined / team objectives',String(g.objectiveJoined??0)+' / '+String(g.objectiveTeamTotal??0))+detailCard('Early KP',fmtPct(g.earlyKp))+
+    return detailCard('Objective presence',fmtPct(g.objectiveJoinRate))+detailCard('Joined / team objectives',String(g.objectiveJoined??0)+' / '+String(g.objectiveTeamTotal??0))+detailCard('Early KP',fmtPct(g.earlyKp))+
       detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+' min · '+String(g.impactType||'event'):'n/a')+detailCard('Objective-context death %',fmtPct(g.objectiveDeathPct))+detailCard('Pre-objective conversion deaths',String(g.preObjectiveDeathCount??0))+
       detailCard('Kill-window conversion',String(kc.converted??0)+' / '+String(kc.windows??0)+' · '+fmtPct(kc.rate))+detailCard('Opposing-role conversion',String(okc.converted??0)+' / '+String(okc.windows??0)+' · '+fmtPct(okc.rate))+
       detailCard('Neutral objectives joined',String(g.objectiveReadiness?.joined??0)+' / '+String(g.objectiveReadiness?.neutralTeamObjectives??0))+
