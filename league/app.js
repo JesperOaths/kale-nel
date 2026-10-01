@@ -5,7 +5,7 @@ const cfg=window.GEJAST_CONFIG||{};
 const API=(cfg.SUPABASE_URL||'')+'/functions/v1/printify-gildan-diff-diag-v1';
 const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
 const $=(id)=>document.getElementById(id);
-const state={profiles:[],profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,publicWorkspace:true,gameSort:{key:'recent',dir:'desc'}};
+const state={profiles:[],profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},requestReady:false};
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const LEAGUE_WORKSPACE_KEY='bruisienator_public_workspace_v1';
@@ -73,7 +73,8 @@ async function api(action,payload={}){
 
 function setBusy(on,label){
   state.busy=!!on;
-  ['fetchBtn','analyzeBtn','batchFetchBtn','batchAnalyzeBtn','newProfileBtn','saveProfileBtn','deleteProfileBtn','importBtn','testRiotKeyBtn'].forEach(id=>{const n=$(id);if(n)n.disabled=!!on||((id==='fetchBtn'||id==='analyzeBtn')&&!state.profile)||((id==='batchFetchBtn'||id==='batchAnalyzeBtn')&&batchSelectedIds().length===0)||((id==='importBtn')&&(!state.profile||!$('reportFile')?.files?.length))||((id==='testRiotKeyBtn')&&(!state.profile||(!state.serverRiotKey&&!state.riotApiKey)));});
+  const run=$('loadRecentBtn');if(run)run.disabled=!!on||!directRequestComplete();
+  const imp=$('importBtn');if(imp)imp.disabled=!!on||!state.profile||!$('reportFile')?.files?.length;
   if(label)$('progressState').textContent=label;
 }
 function setProgress(current,total){
@@ -83,9 +84,11 @@ function setProgress(current,total){
 function log(message,type=''){
   const line=document.createElement('div');line.className='log-line '+type;line.textContent='['+new Date().toLocaleTimeString()+'] '+message;
   $('progressLog').appendChild(line);$('progressLog').scrollTop=$('progressLog').scrollHeight;
+  const summary=$('progressSummary');if(summary)summary.textContent=message;
 }
 function clearLog(){
   $('progressLog').innerHTML='';
+  const summary=$('progressSummary');if(summary)summary.textContent='Ready to request recent matches.';
   setProgress(0,1);
 }
 function statusPill(textValue,kind='neutral'){
@@ -194,9 +197,68 @@ function perGameSpatialHtml(g){
   '</div>';
 }
 
+const DIRECT_REQUEST_IDENTITY_KEY='bruisienator_recent_request_identity_v1';
+function directRequestComplete(){
+  const game=String($('requestGameName')?.value||'').trim();
+  const tag=String($('requestTagLine')?.value||'').trim();
+  const region=String($('requestRegion')?.value||'').trim();
+  return !!game&&!!tag&&!!region&&(state.serverRiotKey||!!state.riotApiKey);
+}
+function persistRequestIdentity(){
+  try{
+    localStorage.setItem(DIRECT_REQUEST_IDENTITY_KEY,JSON.stringify({
+      game_name:String($('requestGameName')?.value||'').trim(),
+      tag_line:String($('requestTagLine')?.value||'').trim(),
+      platform_region:String($('requestRegion')?.value||'euw1')
+    }));
+  }catch(_){}
+}
+async function loadRequestDefaults(){
+  let saved=null;
+  try{saved=JSON.parse(localStorage.getItem(DIRECT_REQUEST_IDENTITY_KEY)||'null');}catch(_){}
+  try{
+    const data=await api('profiles_list');
+    state.profiles=data.profiles||[];
+    const prior=state.profiles.find(p=>p.profile_key==='recent-request')||state.profiles[0]||null;
+    if(!saved&&prior)saved={game_name:prior.game_name||'',tag_line:prior.tag_line||'',platform_region:prior.platform_region||'euw1'};
+  }catch(e){log('Could not restore previous summoner fields: '+e.message,'bad');}
+  if(saved){
+    if($('requestGameName'))$('requestGameName').value=String(saved.game_name||'');
+    if($('requestTagLine'))$('requestTagLine').value=String(saved.tag_line||'');
+    if($('requestRegion'))$('requestRegion').value=String(saved.platform_region||'euw1');
+  }
+  syncButtons();
+}
+async function ensureDirectRequestProfile(){
+  const gameName=String($('requestGameName')?.value||'').trim();
+  const tagLine=String($('requestTagLine')?.value||'').trim();
+  const platformRegion=String($('requestRegion')?.value||'euw1');
+  if(!gameName||!tagLine)throw new Error('Enter a Riot game name and tag.');
+  persistRequestIdentity();
+  let existing=state.profiles.find(p=>p.profile_key==='recent-request')||null;
+  const d=await api('profile_save',{
+    direct_request:true,
+    profile:{
+      id:existing?.id||undefined,
+      profile_key:'recent-request',
+      display_name:gameName+'#'+tagLine,
+      game_name:gameName,
+      tag_line:tagLine,
+      platform_region:platformRegion,
+      notes:'Direct recent-match request'
+    }
+  });
+  if(d.resolve_warning)throw new Error('Riot account lookup failed: '+d.resolve_warning);
+  if(!d.profile?.puuid)throw new Error('Riot account lookup did not return a PUUID.');
+  state.profile=d.profile;
+  const ix=state.profiles.findIndex(p=>p.id===d.profile.id);
+  if(ix>=0)state.profiles[ix]=d.profile;else state.profiles.unshift(d.profile);
+  $('sourceState').textContent='Riot account resolved';
+  return d.profile;
+}
 async function boot(){
   bindGameSortControls();
-  clearLog();log('Opening public League workspace. Profiles and reports are isolated to this browser unless you export them.');
+  clearLog();log('Ready. Enter a Riot ID, region and Riot API key, then load recent matches.');
   await getDdragonVersion();
   try{
     const health=await api('health');
@@ -204,16 +266,13 @@ async function boot(){
     state.publicWorkspace=health.public_workspace!==false;
     $('backendState').textContent=health.riot_configured?'Backend + Riot ready':'Backend ready · add Riot key';
     $('backendState').className='pill '+(health.riot_configured?'':'warn');
-    $('riotKeyRow').hidden=state.serverRiotKey;
-    $('riotKeyStatus').textContent=state.serverRiotKey?'Server Riot key configured':'Public workspace · add your Riot key for fetch/update';
-    log(state.publicWorkspace?'Public browser workspace ready. No Kalenel login is required.':('Workspace ready as '+(health.player||'Kalenel player')+'.'),'ok');
-    if(!health.riot_configured)log('Add a Riot development/personal key in the session-only field before Fetch / update. Saved/imported reports still work without it.');
+    $('riotKeyStatus').textContent=state.serverRiotKey?'Server Riot key available':'Your Riot key stays only in this browser tab.';
+    log('League backend ready. No profile setup or separate fetch/analyze step is required.','ok');
   }catch(e){
     $('backendState').textContent='Backend unavailable';$('backendState').className='pill error';log(e.message,'bad');
   }
-  await loadProfiles();
+  await loadRequestDefaults();
 }
-
 function batchSelectedIds(){
   return [...($('batchProfiles')?.querySelectorAll('input[data-profile-id]:checked')||[])].map(n=>String(n.dataset.profileId||'')).filter(Boolean);
 }
@@ -236,13 +295,8 @@ async function loadProfiles(selectId){
   renderBatchProfiles();syncButtons();
 }
 function syncButtons(){
-  const batchCount=batchSelectedIds().length;
-  $('fetchBtn').disabled=state.busy||!state.profile;
-  $('analyzeBtn').disabled=state.busy||!state.profile;
-  if($('batchFetchBtn'))$('batchFetchBtn').disabled=state.busy||batchCount===0;
-  if($('batchAnalyzeBtn'))$('batchAnalyzeBtn').disabled=state.busy||batchCount===0;
-  $('importBtn').disabled=state.busy||!state.profile||!$('reportFile')?.files?.length;
-  $('testRiotKeyBtn').disabled=state.busy||!state.profile||(!state.serverRiotKey&&!state.riotApiKey);
+  const run=$('loadRecentBtn');if(run)run.disabled=state.busy||!directRequestComplete();
+  const imp=$('importBtn');if(imp)imp.disabled=state.busy||!state.profile||!$('reportFile')?.files?.length;
 }
 async function selectProfile(id){
   state.profile=state.profiles.find(p=>p.id===id)||null;
@@ -346,7 +400,7 @@ async function fetchProfileData(profile,requestedCount){
   const ids=prep.match_ids||[],cached=new Set(prep.cached_match_ids||[]);
   if(!ids.length)throw new Error('Riot returned no recent match IDs.');
   log(ids.length+' recent matches found for '+profile.display_name+'; '+cached.size+' already cached.');
-  let done=0;
+  let done=0,usable=cached.size,failed=0;
   for(const id of ids){
     done++;
     if(cached.has(id)){
@@ -355,23 +409,64 @@ async function fetchProfileData(profile,requestedCount){
     log('['+done+'/'+ids.length+'] '+profile.display_name+' · fetching match + timeline '+id+'…');
     try{
       const one=await api('fetch_one',{run_id:prep.run_id,match_id:id});
-      if(one.timeline_available)log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · match + timeline cached','ok');
-      else log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · match cached, timeline unavailable: '+(one.timeline_error||'unknown'),'bad');
-    }catch(e){log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · '+e.message,'bad');}
+      if(one.timeline_available){usable++;log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · match + timeline cached','ok');}
+      else{usable++;log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · match cached, timeline unavailable: '+(one.timeline_error||'unknown'),'bad');}
+    }catch(e){failed++;log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · '+e.message,'bad');}
     setProgress(done,ids.length);
     await sleep(100);
   }
   const finish=await api('fetch_finish',{run_id:prep.run_id});
   if(hasNum(finish?.dominant_queue_id))log(profile.display_name+' · comparable queue '+String(finish.dominant_queue_id)+' · '+String(finish.comparable_cached_games??finish.peer_rank_target_count??0)+' comparable cached games · '+String(finish.peer_rank_target_count??0)+' final-sample peer-rank targets · '+String(finish.peer_rank_backfilled??0)+' rank snapshots backfilled.','ok');
-  if(finish?.recommend_deeper_cache)log(profile.display_name+' · only '+String(finish.comparable_cached_games??0)+' comparable cached games are currently available after map/duration/queue filtering. Use the 100-match cache depth on the next update.','bad');
-  return{prep,finish};
+  if(finish?.recommend_deeper_cache)log(profile.display_name+' · only '+String(finish.comparable_cached_games??0)+' comparable cached games are available after map/duration/queue filtering; the request can automatically scan deeper.','bad');
+  if(usable===0)throw new Error('Riot returned match IDs, but none could be cached successfully.');
+  return{prep,finish,usable,failed};
 }
 async function analyzeProfileData(profile){
-  log(profile.display_name+' · loading cached matches only — no new match fetch is requested.');
+  log(profile.display_name+' · building the Last-20 analysis from the matches just fetched/cached.');
   const d=await api('analyze_basic',{profile_id:profile.id});
   log(profile.display_name+' · deterministic web analysis generated for '+(d.report?.dataQuality?.analyzedGames||0)+' games.','ok');
   return d;
 }
+async function runRecentAnalysis(){
+  if(state.busy)return;
+  if(!directRequestComplete()){
+    statusPill('Missing details','error');
+    log('Enter game name, tag, region and a Riot API key first.','bad');
+    return;
+  }
+  clearLog();setBusy(true,'Resolving Riot ID');statusPill('Resolving Riot ID','warn');
+  $('report').hidden=true;$('reportEmpty').hidden=false;
+  try{
+    const profile=await ensureDirectRequestProfile();
+    $('riotKeyStatus').textContent='Riot access verified for this request';
+    log('Resolved '+profile.display_name+'. Fetching recent Riot matches now.','ok');
+    statusPill('Fetching recent matches','warn');
+    setProgress(4,100);
+    let result=await fetchProfileData(profile,30);
+    if(Number(result.finish?.comparable_cached_games||0)<20){
+      log('Fewer than 20 comparable games found in the first 30. Extending the scan to 50 recent matches automatically.','ok');
+      result=await fetchProfileData(profile,50);
+    }
+    await loadCacheStatus();
+    statusPill('Analyzing Last 20','warn');
+    setProgress(88,100);
+    const d=await analyzeProfileData(profile);
+    const analyzed=Number(d.report?.dataQuality?.analyzedGames??d.report?.games?.length??0);
+    if(analyzed<=0)throw new Error('Recent matches were fetched, but none were eligible for the Last-20 analysis. Check the progress details for queue/map/duration exclusions.');
+    renderReport(d.report,'web_behavior');
+    try{const history=await api('report_latest',{profile_id:profile.id});renderProgressComparison(d.report,history.previous?.report_data||null,history.previous?.created_at||null);}catch(_){$('progressComparisonPanel').hidden=true;}
+    $('analysisState').textContent=analyzed+' games analyzed';
+    $('sourceState').textContent='Riot + behavioral analyzer';
+    setProgress(100,100);
+    statusPill('Last 20 ready');
+    log('Done — '+analyzed+' eligible recent games analyzed.','ok');
+  }catch(e){
+    $('analysisState').textContent='Request failed';
+    statusPill('Request failed','error');
+    log('Request failed: '+e.message,'bad');
+  }finally{setBusy(false);syncButtons();}
+}
+
 async function fetchMatches(){
   if(!state.profile||state.busy)return;
   clearLog();setBusy(true,'Fetching');statusPill('Fetching','warn');
@@ -1326,25 +1421,24 @@ function exportReport(){
   a.href=URL.createObjectURL(blob);a.download='bruisienator_'+(state.profile?.profile_key||'profile')+'_last20.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 
-$('riotApiKey').addEventListener('input',(ev)=>{
-  state.riotApiKey=String(ev.target.value||'').trim();
-  $('riotKeyStatus').textContent=state.riotApiKey?'Session key ready':'No server Riot key configured';
-  $('backendState').textContent=state.serverRiotKey||state.riotApiKey?'Backend + Riot ready':'Backend ready · add Riot key';
-  $('backendState').className='pill '+(state.serverRiotKey||state.riotApiKey?'':'warn');
-  syncButtons();
+const requestInputs=['requestGameName','requestTagLine','requestRegion','riotApiKey'];
+requestInputs.forEach(id=>{
+  const node=$(id);if(!node)return;
+  node.addEventListener(id==='requestRegion'?'change':'input',(ev)=>{
+    if(id==='riotApiKey'){
+      state.riotApiKey=String(ev.target.value||'').trim();
+      $('riotKeyStatus').textContent=state.riotApiKey?'Session key ready — it will not be saved.':(state.serverRiotKey?'Server Riot key available':'Add a Riot API key to load matches.');
+      $('backendState').textContent=state.serverRiotKey||state.riotApiKey?'Backend + Riot ready':'Backend ready · add Riot key';
+      $('backendState').className='pill '+(state.serverRiotKey||state.riotApiKey?'':'warn');
+    }else{
+      persistRequestIdentity();
+    }
+    syncButtons();
+  });
 });
-$('profileSelect').addEventListener('change',()=>selectProfile($('profileSelect').value));
-$('newProfileBtn').addEventListener('click',()=>openProfileEditor(null));
-$('cancelProfileBtn').addEventListener('click',()=>$('profileEditor').hidden=true);
-$('saveProfileBtn').addEventListener('click',saveProfile);
-$('deleteProfileBtn').addEventListener('click',deleteProfile);
-$('testRiotKeyBtn').addEventListener('click',testRiotKey);
-$('fetchBtn').addEventListener('click',fetchMatches);
-$('analyzeBtn').addEventListener('click',analyze);
-$('batchFetchBtn').addEventListener('click',()=>runBatch('fetch'));
-$('batchAnalyzeBtn').addEventListener('click',()=>runBatch('analyze'));
-$('reportFile').addEventListener('change',syncButtons);
-$('importBtn').addEventListener('click',importReport);
+$('loadRecentBtn').addEventListener('click',runRecentAnalysis);
+if($('reportFile'))$('reportFile').addEventListener('change',syncButtons);
+if($('importBtn'))$('importBtn').addEventListener('click',importReport);
 $('exportBtn').addEventListener('click',exportReport);
 
 boot().catch(e=>{log('Startup failed: '+e.message,'bad');$('backendState').textContent='Startup failed';$('backendState').className='pill error';});
