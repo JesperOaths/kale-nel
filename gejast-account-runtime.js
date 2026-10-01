@@ -104,34 +104,19 @@
   }
 
   async function getLoginNames(){
-    const cached = readLoginCache(), currentScope=scope();
-    // The dedicated active-login RPC is authoritative and normally sub-second.
-    // Never block the dropdown behind a chain of sequential fallback timeouts.
+    const cached=readLoginCache(),currentScope=scope();
     try {
-      const names = namesFromPayload(await rpc('get_login_active_names_v687',{site_scope_input:currentScope},{timeoutMs:1500}));
-      const clean = writeLoginCache(names);
-      if(clean.length) return clean;
-    } catch (_) {}
-    const selectorRefresh = async()=>{
-      try {
-        const raw=await rpc('get_player_selector_source_v1',{session_token:null,site_scope_input:currentScope},{timeoutMs:1800});
-        return writeLoginCache(namesFromPayload(raw));
-      } catch (_) {
-        return [];
+      const loader=window.GEJAST_LOGIN_NAMES_FALLBACK&&window.GEJAST_LOGIN_NAMES_FALLBACK.load;
+      if(typeof loader==='function'){
+        const names=normalizeNames(await loader(currentScope));
+        if(names.length) return writeLoginCache(names);
       }
-    };
-    if(cached.length){
-      // Keep a known-good selector usable immediately while the degraded backend heals.
-      selectorRefresh().then((names)=>{ if(names.length&&typeof window.dispatchEvent==='function') window.dispatchEvent(new CustomEvent('gejast:login-names-refreshed',{detail:{names,scope:currentScope}})); }).catch(()=>{});
-      return cached;
-    }
-    const selectorNames=await selectorRefresh().catch(()=>[]);
-    if(selectorNames.length) return selectorNames;
-    const configNames=await Promise.race([
-      fetchLoginNamesFromConfig().catch(()=>[]),
-      new Promise(resolve=>setTimeout(()=>resolve([]),1800))
-    ]);
-    if(configNames.length) return writeLoginCache(configNames);
+    } catch (_) {}
+    if(cached.length) return cached;
+    try {
+      const names=namesFromPayload(await rpc('get_login_active_names_v687',{site_scope_input:currentScope},{timeoutMs:4500}));
+      if(names.length) return writeLoginCache(names);
+    } catch (_) {}
     return [];
   }
 
