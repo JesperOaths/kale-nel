@@ -820,7 +820,9 @@ body{
   background:linear-gradient(180deg,#f5efe3 0%,#f8f4ec 52%,#f2ede3 100%);
 }
 .page-wrap{
-  width:min(1960px,calc(100% - 10px));
+  /* Desktop report target: 1760px. On a 1920px viewport this leaves ~80px
+     breathing room per side while still using ~92% of the screen. */
+  width:min(1760px,calc(100% - 32px));
   margin:0 auto;
 }
 .site-shell{
