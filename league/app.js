@@ -1733,7 +1733,7 @@ function renderAdvanced(r){
     ['Deaths while ≥500g behind',String(r.behaviorSummary?.behindStateDeaths??0)],
     ['High-risk while behind',String(r.behaviorSummary?.highRiskBehindDeaths??0)+' · '+fmtPct(r.behaviorSummary?.highRiskBehindDeathRate)],
     ['Enemy objective after death',String(a.preObjectiveDeaths??0)+' deaths · '+fmtPct(a.preObjectiveDeathPct)+' of classified deaths'],
-    ['Post-early-phase side-lane deaths',String(r.behaviorSummary?.postLaneSideLaneDeaths??r.behaviorSummary?.post15SideLaneDeaths??0)],
+    ['Post-macro-transition side-lane deaths',String(r.behaviorSummary?.macroTransitionSideLaneDeaths??r.behaviorSummary?.postLaneSideLaneDeaths??r.behaviorSummary?.post15SideLaneDeaths??0)],
     ['Isolated side-lane deaths',String(r.behaviorSummary?.isolatedSideLaneDeaths??0)+' · '+fmtPct(r.behaviorSummary?.isolatedSideLaneDeathRate)],
     ['Pre-objective side-lane deaths',String(r.behaviorSummary?.preNeutralObjectiveSideLaneDeaths??0)+' · '+fmt(r.behaviorSummary?.preNeutralObjectiveSideLaneDeathsPerGame,2)+'/game'],
     ['Post-impact deaths',String(r.behaviorSummary?.postImpactDeaths??0)+' / '+String(r.behaviorSummary?.playerImpactEvents??0)+' · '+fmtPct(r.behaviorSummary?.postImpactDeathRate)],
