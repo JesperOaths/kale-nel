@@ -1418,9 +1418,44 @@ const ARC_TURNING_POINT_DEFS=[
   {key:'repeat_death',label:'Rapid repeat-death sequence',tone:'bad',test:g=>Number(g.deathRecovery?.repeatDeaths||0)>0,why:'At least one measured recovery opportunity became another death inside the repeat-death window.'},
   {key:'late_risk',label:'Late high-risk / costly death evidence',tone:'bad',test:g=>Number(g.closing25?.highRiskDeaths||0)>0||Number(g.closing25?.costlyDeaths||0)>0,why:'At least one high-risk or measured costly death occurred after 25 minutes.'}
 ];
+
+function arcFunnelCard(kind,label,games,transitions){
+  const n=games.length,wins=games.filter(g=>g.win).length,valid=transitions.length,lateRisk=games.filter(g=>Number(g.closing25?.highRiskDeaths||0)>0||Number(g.closing25?.costlyDeaths||0)>0).length;
+  if(!n)return '<article class="game-arc-funnel tone-neutral"><span>'+esc(label)+'</span><strong>No games</strong><p>No coaching-cohort game begins in this @15 role-gold band.</p></article>';
+  let headline='',facts=[];
+  if(kind==='ahead'){
+    const retained=transitions.filter(x=>x.t.to.key==='ahead').length,lost=valid-retained;
+    headline=valid?fmtPct(100*retained/valid)+' still ahead @25':'No comparable @25 follow-up';
+    facts=[wins+'/'+n+' wins',retained+'/'+valid+' retained @25',lost+'/'+valid+' no longer ahead',lateRisk+'/'+n+' late-risk evidence'];
+  }else if(kind==='behind'){
+    const recovered=transitions.filter(x=>x.t.to.key!=='behind').length;
+    headline=valid?fmtPct(100*recovered/valid)+' recovered out of behind':'No comparable @25 follow-up';
+    facts=[wins+'/'+n+' wins',recovered+'/'+valid+' recovered by @25',lateRisk+'/'+n+' late-risk evidence'];
+  }else{
+    const ahead=transitions.filter(x=>x.t.to.key==='ahead').length,behind=transitions.filter(x=>x.t.to.key==='behind').length,close=transitions.filter(x=>x.t.to.key==='close').length;
+    headline=valid?(ahead+' ahead · '+close+' close · '+behind+' behind @25'):'No comparable @25 follow-up';
+    facts=[wins+'/'+n+' wins',ahead+'/'+valid+' created lead',behind+'/'+valid+' fell behind',lateRisk+'/'+n+' late-risk evidence'];
+  }
+  return '<article class="game-arc-funnel tone-'+(kind==='ahead'?'good':kind==='behind'?'bad':'neutral')+'"><span>'+esc(label)+' · '+n+' game'+(n===1?'':'s')+'</span><strong>'+esc(headline)+'</strong><div>'+facts.map(x=>'<b>'+esc(x)+'</b>').join('')+'</div><p>Descriptive selected-role state conversion; @15 and @25 refer to direct-role gold, not total team gold.</p></article>';
+}
+function matchReplayReviewHtml(r,g){
+  const items=(Array.isArray(r?.replayReviewQueue)?r.replayReviewQueue:[]).filter(x=>String(x.matchId||'')===String(g.matchId||'')).slice(0,2);
+  if(!items.length)return '';
+  return '<div class="history-review-cues"><div class="section-subhead"><strong>Best replay moments from this match</strong><span>Ranked by supported consequence</span></div>'+items.map(x=>
+    '<article class="history-review-cue"><span>#'+esc(String(x.rank||''))+' overall · '+esc(fmt(x.minute,1))+'m · '+esc(x.category||'review')+'</span><strong>'+esc(x.title||'Replay moment')+'</strong><p>'+esc(x.evidence||'')+'</p><div><b>Question:</b> '+esc(x.prompt||'What decision would improve this sequence next time?')+'</div><button class="button secondary small" type="button" data-open-review-match="'+esc(g.matchId||'')+'" data-review-tab="'+esc(x.tab||'macro')+'">Open '+esc(x.tab||'macro')+' evidence</button></article>'
+  ).join('')+'</div>';
+}
+
 function renderGameArcs(r){
-  const patternBox=$('gameArcPatterns'),turnBox=$('gameArcTurningPoints'),note=$('gameArcNote');if(!patternBox||!turnBox)return;
+  const funnelBox=$('gameArcFunnels'),patternBox=$('gameArcPatterns'),turnBox=$('gameArcTurningPoints'),note=$('gameArcNote');if(!funnelBox||!patternBox||!turnBox)return;
   const games=reportCoachingGames(r),transitions=games.map(g=>({g,t:gameArcTransition(g)})).filter(x=>x.t);
+  const by15={ahead:games.filter(g=>arcRoleGoldState(g,15).key==='ahead'),close:games.filter(g=>arcRoleGoldState(g,15).key==='close'),behind:games.filter(g=>arcRoleGoldState(g,15).key==='behind')};
+  const transFor=key=>transitions.filter(x=>x.t.from.key===key);
+  funnelBox.innerHTML='<div class="section-subhead"><strong>Advantage conversion</strong><span>What happens after the @15 role state?</span></div><div class="game-arc-funnel-grid">'+
+    arcFunnelCard('ahead','Ahead @15',by15.ahead,transFor('ahead'))+
+    arcFunnelCard('close','Close @15',by15.close,transFor('close'))+
+    arcFunnelCard('behind','Behind @15',by15.behind,transFor('behind'))+
+  '</div><div class="section-subhead arc-repeat-head"><strong>Repeated @15 → @25 transitions</strong><span>Only shown when the same transition appears in at least 2 games</span></div>';
   const groups=new Map();
   transitions.forEach(({g,t})=>{
     const row=groups.get(t.key)||{key:t.key,label:t.label,games:[],swings:[]};
@@ -1495,6 +1530,7 @@ function matchHistoryRow(g,index,displayIndex,r){
       gameArcStripHtml(g)+
       '<div class="history-signal-grid">'+signals.map(x=>'<div class="history-signal tone-'+x.tone+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><p>'+esc(x.copy)+'</p></div>').join('')+'</div>'+
       '<div class="history-coaching-read tone-'+judge.tone+'"><span>Game-level coaching read</span><strong>'+esc(judge.title)+'</strong><p>'+esc(judge.evidence||'No additional evidence sentence was generated.')+'</p>'+(judge.action?'<div><b>Next time:</b> '+esc(judge.action)+'</div>':'')+'</div>'+
+      matchReplayReviewHtml(r,g)+
       '<div class="history-actions"><button class="button secondary small" type="button" data-open-full-match="'+esc(g.matchId||'')+'">Open full match evidence</button><small>Full evidence includes macro, resets, vision, fights, phases, deaths, objectives and map context.</small></div>'+
     '</div>'+
   '</article>';
@@ -1514,6 +1550,9 @@ function renderMatchHistory(r){
   }));
   list.querySelectorAll('[data-open-full-match]').forEach(btn=>btn.addEventListener('click',ev=>{
     ev.stopPropagation();const matchId=btn.dataset.openFullMatch;if(matchId)openReplayReviewMatch(matchId,'macro');
+  }));
+  list.querySelectorAll('[data-open-review-match]').forEach(btn=>btn.addEventListener('click',ev=>{
+    ev.stopPropagation();const matchId=btn.dataset.openReviewMatch,tab=btn.dataset.reviewTab||'macro';if(matchId)openReplayReviewMatch(matchId,tab);
   }));
 }
 
