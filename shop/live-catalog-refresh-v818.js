@@ -1,10 +1,12 @@
 (() => {
   'use strict';
 
-  const POLL_MS = 15 * 1000;
-  const FIRST_POLL_MS = 4 * 1000;
+  const POLL_MS = 5 * 60 * 1000;
+  const FIRST_POLL_MS = 45 * 1000;
+  const MIN_FOREGROUND_REFRESH_MS = 60 * 1000;
   let lastSignature = '';
   let checking = false;
+  let lastCheckedAt = 0;
 
   const stableSignature = list => JSON.stringify(
     [...(Array.isArray(list) ? list : [])]
@@ -101,9 +103,12 @@
     renderCart();
   }
 
-  async function checkCatalog(){
+  async function checkCatalog(force = false){
     if(checking || typeof loadLiveCatalog !== 'function') return;
+    const now = Date.now();
+    if(!force && lastCheckedAt && now - lastCheckedAt < MIN_FOREGROUND_REFRESH_MS) return;
     checking = true;
+    lastCheckedAt = now;
     try {
       if(!lastSignature && Array.isArray(products) && products.length){
         lastSignature = stableSignature(products);
@@ -131,9 +136,9 @@
   }
 
   window.setTimeout(checkCatalog, FIRST_POLL_MS);
-  window.setInterval(checkCatalog, POLL_MS);
+  window.setInterval(() => checkCatalog(true), POLL_MS);
   document.addEventListener('visibilitychange', () => {
-    if(document.visibilityState === 'visible') checkCatalog();
+    if(document.visibilityState === 'visible') checkCatalog(false);
   });
-  window.addEventListener('focus', checkCatalog);
+  window.addEventListener('focus', () => checkCatalog(false));
 })();
