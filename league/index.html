@@ -8,7 +8,7 @@
   <title>Bruisienator · League playstyle analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends playstyle analysis with evidence-backed Last-20 coaching and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261001-league-web-v85">
+  <link rel="stylesheet" href="/league/styles.css?v=20261001-league-web-v86">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817"></script>
 </head>
@@ -30,7 +30,7 @@
         <p class="eyebrow">Last-20 · evidence-backed</p>
         <h1>Your League GUI now lives in the browser.</h1>
         <p class="lede">Select a profile, update Riot data when needed, then analyze the cached Last 20 without downloading a separate Windows GUI.</p>
-        <p class="muted tiny"><strong>Public workspace:</strong> no Kalenel login is required. Profiles and reports are isolated to this browser workspace. Fetch/update uses your session-only Riot key; the site's private Riot key is never exposed to public workspaces.</p>
+        <p class="muted tiny"><strong>Public workspace:</strong> no Kalenel login is required. Profiles and reports are isolated to this browser workspace. Fetch/update uses your session-only Riot key; the site's private Riot key is never exposed to public workspaces. Public storage is bounded (up to 8 profiles, 50-match fetches, retained recent cache/history) so the shared service stays responsive.</p>
       </div>
 
       <div class="profile-toolbar">
@@ -45,8 +45,7 @@
           <span>Cache depth</span>
           <select id="fetchCount" aria-label="Number of recent matches to cache">
             <option value="20">20 matches · lighter fetch</option>
-            <option value="50" selected>50 matches · recommended</option>
-            <option value="100">100 matches</option>
+            <option value="50" selected>50 matches · public maximum</option>
           </select>
         </label>
         <button class="button" id="fetchBtn" type="button" disabled>Fetch / update</button>
@@ -279,6 +278,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261001-league-web-v85" defer></script>
+  <script src="/league/app.js?v=20261001-league-web-v86" defer></script>
 </body>
 </html>
