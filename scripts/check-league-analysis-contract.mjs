@@ -46,6 +46,9 @@ ok(backend.includes('excludedOtherQueues'), 'data quality must expose cross-queu
 ok(backend.includes('peerRankTargetCount'), 'fetch finish must compute peer-rank targets for the comparable sample');
 ok(backend.includes('slice(0,20)'), 'peer-rank backfill must remain bounded to the final Last-20 target');
 ok(backend.includes('peer_rank_backfilled'), 'fetch finish must report peer-rank backfill results');
+ok(backend.includes('comparableCachedGames'), 'fetch finish must measure comparable cached sample size');
+ok(backend.includes('.order("game_start_at",{ascending:false}).limit(100)'), 'peer-rank backfill must use the same last-100 cache horizon as analysis');
+ok(backend.includes('recommend_deeper_cache'), 'fetch finish must flag a comparable sample smaller than Last 20');
 ok(backend.includes('x-riot-api-key'), 'session Riot-key header must remain supported by backend/CORS');
 ok(!/localStorage|sessionStorage|indexedDB/.test(app), 'Riot key or League state must not be persisted in browser storage');
 
