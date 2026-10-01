@@ -270,6 +270,32 @@ The analyzer can compare:
 
 This is descriptive. Do not claim the gold state alone caused the win or loss.
 
+## Game-phase behavioral risk
+
+The analyzer groups selected timeline evidence into three explicit phases:
+
+- **early:** before 14:00,
+- **mid:** 14:00 through 24:59,
+- **late:** 25:00 and later.
+
+Per phase, preserve:
+- deaths,
+- high-risk deaths,
+- costly and severe death-consequence events,
+- kill/assist impact events,
+- joined team-objective events,
+- attended multi-kill fight clusters,
+- first-allied-death fight events.
+
+Aggregate rates use **phase-eligible game counts** as denominators. For example, late high-risk deaths/game is divided only by analyzed games that reach 25 minutes. This prevents a small set of long games from being compared unfairly with all early-game samples.
+
+Phase coaching should only fire when:
+- at least five games support the phase,
+- the rate is materially high,
+- and it is meaningfully above the next-highest phase.
+
+The purpose is to localize review: lane decisions before 14, rotations/resets/objective approach from 14–25, or late objective/teamfight discipline after 25.
+
 ## Death aftermath / consequence analysis
 
 Death quality and death consequence are separate questions.
