@@ -264,6 +264,7 @@ function normalizeReport(r){
   out.byChampion=out.byChampion||out.byChamp||{};
   out.recentFocus=Array.isArray(out.recentFocus)?out.recentFocus:Array.isArray(out.tips20)?out.tips20:[];
   out.overallHighlights=Array.isArray(out.overallHighlights)?out.overallHighlights:Array.isArray(out.tips)?out.tips:[];
+  out.priorityThemes=Array.isArray(out.priorityThemes)?out.priorityThemes:[];
   out.advanced=out.advanced||{};
   out.benchmarks=out.benchmarks||{};
   out.dataQuality=out.dataQuality||{};
@@ -281,7 +282,7 @@ function renderReport(raw,sourceKind){
   const coachingN=r.coachingSummary?.games??s.primaryRoleGames??0;
   $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(rank?rank+' · ':'')+(s.games??r.games.length)+' analyzed games · Primary role '+(s.primaryRole||'GENERIC')+' · Coaching sample '+coachingN+' '+(s.primaryRole||'GENERIC')+' games';
   $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':(r.analyzerVersion||'Web analysis');
-  renderKpis(r);renderBullets('recentFocus',r.recentFocus,'No grounded recent-focus tips are available from the active analyzer yet.');
+  renderKpis(r);renderBullets('recentFocus',r.priorityThemes?.length?r.priorityThemes:r.recentFocus,'No grounded recent-focus tips are available from the active analyzer yet.');
   renderBullets('overallHighlights',r.overallHighlights,'No broader highlights are available from the active analyzer yet.');
   renderSessionHabits(r);renderPracticePlan(r);renderGames(r);renderCharts(r);renderSpatial(r);renderAdvanced(r);renderBreakdowns(r);renderQuality(r);
 }
@@ -302,9 +303,9 @@ function renderBullets(id,items,empty){
   const list=(items||[]).filter(Boolean);
   $(id).innerHTML=list.length?list.map(x=>{
     if(typeof x==='string')return '<div class="bullet">'+esc(x)+'</div>';
-    const title=x.title||x.label||x.category||'Insight',evidence=x.evidence||x.text||'',action=x.action||'',confidence=x.confidence||'';
+    const title=x.title||x.label||x.category||'Insight',evidence=x.evidence||x.text||'',action=x.action||'',confidence=x.confidence||'',supportCount=Number(x.supportCount||0);
     return '<div class="bullet coaching-bullet priority-'+esc(String(x.priority||3))+'">'+
-      '<div class="coaching-head"><strong>'+esc(title)+'</strong>'+(x.category?'<span>'+esc(x.category)+'</span>':'')+(x.priority?'<em>Priority '+esc(String(x.priority))+'</em>':'')+(confidence?'<small>'+esc(confidence)+' confidence</small>':'')+'</div>'+
+      '<div class="coaching-head"><strong>'+esc(title)+'</strong>'+(x.category?'<span>'+esc(x.category)+'</span>':'')+(x.priority?'<em>Priority '+esc(String(x.priority))+'</em>':'')+(confidence?'<small>'+esc(confidence)+' confidence'+(supportCount?' · '+supportCount+' supporting finding'+(supportCount===1?'':'s'):'')+'</small>':'')+'</div>'+
       (evidence?'<p>'+esc(evidence)+'</p>':'')+
       (x.comparison?'<p class="coaching-source"><b>Compared with:</b> '+esc(x.comparison)+'</p>':'')+
       (action?'<p class="coaching-action"><b>Improve:</b> '+esc(action)+'</p>':'')+
@@ -398,14 +399,15 @@ function renderSessionHabits(r){
 }
 
 function renderPracticePlan(r){
-  const focus=(r.recentFocus||[]).filter(x=>x&&typeof x==='object'&&x.action).sort((a,b)=>Number(a.priority||9)-Number(b.priority||9)).slice(0,3);
+  const source=(r.priorityThemes?.length?r.priorityThemes:r.recentFocus)||[];
+  const focus=source.filter(x=>x&&typeof x==='object'&&x.action).sort((a,b)=>Number(a.priority||9)-Number(b.priority||9)||Number(b.score||0)-Number(a.score||0)).slice(0,3);
   if(!focus.length){
     $('practicePlan').innerHTML='<div class="practice-empty">No strong improvement priority has enough evidence yet. Fetch/analyze more timeline-complete games rather than forcing a conclusion.</div>';
     return;
   }
   $('practicePlan').innerHTML=focus.map((x,i)=>'<article class="practice-card">'+
     '<div class="practice-number">'+(i+1)+'</div><div><span>'+esc(x.category||'focus')+'</span><strong>'+esc(x.title||'Practice focus')+'</strong>'+
-    '<p>'+esc(x.action)+'</p><small>'+esc(x.comparison||'Last-20 evidence')+' · '+esc(x.confidence||'medium')+' confidence</small></div></article>').join('');
+    '<p>'+esc(x.action)+'</p><small>'+esc(x.comparison||'Last-20 evidence')+' · '+esc(x.confidence||'medium')+' confidence'+(Number(x.supportCount||0)?' · '+esc(String(x.supportCount))+' supporting finding'+(Number(x.supportCount)===1?'':'s'):'')+'</small></div></article>').join('');
 }
 function renderGames(r){
   const games=r.games||[];$('gameCountLabel').textContent=games.length+' games';
