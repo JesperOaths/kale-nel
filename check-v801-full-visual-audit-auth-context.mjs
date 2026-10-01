@@ -6,6 +6,7 @@ const workflow = fs.readFileSync('.github/workflows/full-live-visual-audit-v792.
 const runner = fs.readFileSync('scripts/full-live-visual-audit-v792.mjs', 'utf8');
 const fixtures = fs.readFileSync('scripts/full-live-visual-fixtures-v801.mjs', 'utf8');
 const dataPlaneProbe = fs.readFileSync('check-live-data-plane.mjs', 'utf8');
+const pagesDeploymentWait = fs.readFileSync('scripts/wait-for-exact-pages-deployment.mjs', 'utf8');
 
 assert.match(workflow, /SUPABASE_SERVICE_ROLE_KEY:\s*\$\{\{ secrets\.SUPABASE_SERVICE_ROLE_KEY \}\}/, 'visual audit fixture CRUD must use the existing service-role secret');
 assert.match(workflow, /SUPABASE_URL:\s*https:\/\/uiqntazgnrxwliaidkmy\.supabase\.co/, 'visual audit must target the checked production Supabase project');
@@ -113,7 +114,13 @@ assert.match(fallbackStep, /GEJAST_VISUAL_PAGE_CONCURRENCY=1/, 'degraded visual 
 assert.doesNotMatch(workflow, /'league\/\*\*\/\*\.js'/, 'high-frequency League JS commits must not launch a full 137-page production visual campaign');
 assert.match(workflow, /cron:\s*'17 3 \* \* \*'/, 'a quiet daily full-site visual campaign must cover dynamic regressions without coupling them to every League JS commit');
 assert.match(workflow, /deployments:\s*read/, 'full visual certification must be able to prove the exact GitHub Pages deployment SHA');
-assert.match(workflow, /exact_sha_match/, 'full visual certification must require exact deployed revision parity, not VERSION parity alone');
+assert.match(workflow, /node scripts\/wait-for-exact-pages-deployment\.mjs/, 'full visual certification must delegate exact Pages activation proof to the shared deployment helper');
+assert.match(workflow, /GEJAST_LIVE_VERSION_MATCH=0/, 'pull-request visual runs must remain observations and must never inherit exact-production certification from matching VERSION text alone');
+assert.match(pagesDeploymentWait, /const active=enriched\.find\(row=>row\.state==='success'\)/, 'deployment helper must identify the currently active successful Pages deployment');
+assert.match(pagesDeploymentWait, /String\(active\.deployment\?\.sha\|\|'\'\)===expectedSha/, 'deployment helper must require the active successful deployment SHA to equal the tested SHA');
+assert.match(pagesDeploymentWait, /was superseded by active SHA/, 'deployment helper must fail closed if a newer successful deployment supersedes the tested revision');
+assert.match(pagesDeploymentWait, /GEJAST_LIVE_SHA_MATCH:'1'/, 'deployment helper must export exact live SHA parity only after active deployment proof');
+assert.match(pagesDeploymentWait, /actualVersion===expectedVersion/, 'exact SHA proof must also retain live VERSION parity');
 assert.match(runner, /if \(!protectedOnArrival\) \{\s*authGate = await waitForAuthGateToSettle/s, 'Cloudflare-protected admin responses must bypass player-auth settlement waiting');
 assert.match(runner, /seriousConsole\.length && judgement !== 'broken' && judgement !== 'protected'/, 'expected Cloudflare protection must not be downgraded to warning by perimeter console noise');
 
