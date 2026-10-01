@@ -35,7 +35,10 @@ if(!text('admin_drinks_push_health.html').includes('production proof complete'))
 if(!text('admin_game_group_a_health.html').includes('save proof complete')) failures.push('game group A health page must state completed save proof');
 if(!text('gejast-game-phase-bridge.js').includes('Controleer de bestaande v661 read-contract/RPC-beschikbaarheid en de gekozen scope.')) failures.push('game phase bridge must use current troubleshooting guidance');
 if(!text('gejast-drinks-push-bridge.js').includes('Controleer de bestaande read-contracts, sessie/context en gekozen scope.')) failures.push('Drinks/push bridge must use current troubleshooting guidance');
-if(!text('gejast-account-runtime.js').includes("const VERSION = 'v690'")) failures.push('account runtime v690 module contract was changed unexpectedly');
+if(!text('gejast-account-runtime.js').includes("const VERSION = 'v691'")) failures.push('account runtime v691 resilience contract was changed unexpectedly');
+if(!text('gejast-account-runtime.js').includes('30*24*60*60*1000')) failures.push('login-name last-good cache must remain durable through transient Supabase outages');
+if(!text('gejast-account-runtime.js').includes('...new Set([')) failures.push('login-name fallback loaders must remain deduplicated');
+if(!text('gejast-login-names-fallback.js').includes("throw new Error('login_names_timeout')")) failures.push('login-name fallback RPC must remain bounded instead of hanging with the database');
 if(!text('gejast-home-profile-runtime.js').includes("const VERSION = 'v687'")) failures.push('home/profile runtime v687 module contract was changed unexpectedly');
 if(failures.length){console.error('Diagnostic self-consistency v773 FAILED');failures.forEach(f=>console.error('- '+f));process.exit(1);}
 console.log('Diagnostic self-consistency v773 PASS: v773+ releases preserve dynamic current-release diagnostics and distinct historical module/RPC versions.');
