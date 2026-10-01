@@ -265,6 +265,20 @@ Also count wards near an upcoming objective as objective setup when supported by
 
 For SUPPORT/JUNGLE, same-role VPM comparison is especially useful. Do not assume lower VPM is always wrong without role/sample context.
 
+### Objective setup versus the direct peer
+
+For timeline-complete games, count wards placed shortly before and near a subsequent tracked objective for both the player and the actual same-role opponent.
+
+Use the per-game difference:
+
+`player objective-setup wards - same-role opponent objective-setup wards`
+
+For SUPPORT/JUNGLE, aggregate this across enough games and report:
+- average setup-ward difference,
+- percentage of games in which the player places more setup wards.
+
+This is a better coaching signal than raw vision score alone because it rewards **timely, contest-relevant setup**. It still does not measure whether a ward survived, was redundant, or was placed in the strategically perfect brush, so do not call it complete vision quality.
+
 ## Team-context comparisons
 
 Per match, preserve:
