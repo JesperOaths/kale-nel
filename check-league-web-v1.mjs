@@ -63,6 +63,14 @@ assert.ok(api.includes('earlyTeamKills=validTimeline.reduce')&&api.includes('ear
 assert.ok(api.includes('earlyKp=earlyTeamKills?100*earlyPlayerKillInvolvements/earlyTeamKills:null'),'Primary early KP must pool kill-event denominators');
 assert.ok(api.includes('meanGameEarlyKp'),'Mean per-game early KP must remain separate from the pooled coaching rate');
 assert.ok(app.includes('Early KP · pooled')&&app.includes('Objective-context death % · pooled'),'Frontend must label pooled event rates explicitly');
+assert.ok(api.includes('const pooledEventRate='),'Derived event-rate comparisons must share one pooled numerator/denominator helper');
+assert.ok(api.includes('earlyKp:{wins:winEarlyWins.rate,losses:winEarlyLosses.rate'),'Win/loss early KP must use pooled event rates');
+assert.ok(api.includes('objectiveJoin:{wins:winObjWins.rate,losses:winObjLosses.rate'),'Win/loss objective presence must use pooled event rates');
+assert.ok(api.includes('objectiveJoin:trendEventRate(g=>g.objectiveJoined,g=>g.objectiveTeamTotal)'),'Recent objective-presence trend must use pooled event rates');
+assert.ok(api.includes('earlyKp:trendEventRate(g=>g.earlyPlayerKillInvolvements,g=>g.earlyTeamKills)'),'Recent early-KP trend must use pooled event rates');
+assert.ok(api.includes('aggregation:"pooled_events"'),'Pooled derived metrics must carry aggregation provenance');
+assert.ok(app.includes('Early KP · wins / losses · pooled')&&app.includes('Latest 5 objective presence / previous · pooled'),'Frontend must disclose pooled derived comparison semantics');
+assert.ok(!api.includes('deaths followed by enemy objective conversion'),'Death-before-objective evidence must not use causal conversion wording');
 assert.ok(!app.includes('Pre-objective conversion deaths'),'Temporal death-before-objective evidence must not be mislabeled as conversion causality');
 assert.ok(api.includes('STANDARD_PVP_SR_QUEUE_IDS=new Set([400,420,430,440,490,700])'),'Supported standard Summoner’s Rift PvP queues must remain explicit');
 assert.ok(api.includes('SWIFTPLAY_SR_QUEUE_IDS=new Set([480])'),'Swiftplay queue must remain explicitly separate');
