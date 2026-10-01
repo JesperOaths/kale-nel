@@ -45,9 +45,10 @@ async function request(path, { method = 'GET', body = undefined, key = SERVICE_R
     try {
       const headers = {
         apikey: key,
-        Authorization: `Bearer ${key}`,
         Accept: 'application/json',
       };
+      const legacyJwtKey = /^[^.]+\.[^.]+\.[^.]+$/.test(key);
+      if (legacyJwtKey) headers.Authorization = `Bearer ${key}`;
       if (body !== undefined) headers['Content-Type'] = 'application/json';
       if (prefer) headers.Prefer = prefer;
       const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
