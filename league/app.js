@@ -733,7 +733,7 @@ function detailContent(g,tab){
     const risk=g.riskStateDeaths||{};
     return detailCard('Deaths',String(g.deaths??'n/a'))+detailCard('Flagged high-risk',String(g.badDeathCount??0))+detailCard('Deaths while ≥500g ahead',String(g.leadDeathCount??0))+detailCard('High-risk deaths while ahead',String(g.highRiskLeadDeathCount??0))+
       detailCard('Deaths while ≥500g behind',String(risk.behind??0))+detailCard('High-risk deaths while behind',String(risk.highRiskBehind??0)+' · '+(Number(risk.behind||0)>0?fmtPct(100*Number(risk.highRiskBehind||0)/Number(risk.behind)):'n/a'))+
-      detailCard('Post-early-phase side-lane deaths',String(g.sideLaneRisk?.postLaneSideLaneDeaths??g.sideLaneRisk?.post15SideLaneDeaths??0))+
+      detailCard('Post-macro-transition side-lane deaths',String(g.sideLaneRisk?.macroTransitionSideLaneDeaths??g.sideLaneRisk?.postLaneSideLaneDeaths??g.sideLaneRisk?.post15SideLaneDeaths??0))+
       detailCard('Isolated side-lane deaths',String(g.sideLaneRisk?.isolatedSideLaneDeaths??0))+
       detailCard('Pre-objective side-lane deaths',String(g.sideLaneRisk?.preNeutralObjectiveSideLaneDeaths??0))+
       detailCard('Post-impact deaths',String(g.postImpactRisk?.deathsWithin30s??0)+' · '+fmtPct(g.postImpactRisk?.ratePerImpact))+
