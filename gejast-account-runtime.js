@@ -38,7 +38,18 @@
   function emailOk(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim()); }
   function setBusy(form,busy){ if(!form) return; form.querySelectorAll('input,select,textarea,button').forEach((el)=>el.disabled=!!busy); }
   function cacheKey(){ return LOGIN_CACHE_PREFIX + scope(); }
-  function readLoginCache(){ try{ const raw=localStorage.getItem(cacheKey())||sessionStorage.getItem(cacheKey())||''; if(!raw) return []; const parsed=JSON.parse(raw); const age=Date.now()-Number(parsed.at||0); if(age > 30*24*60*60*1000) return []; return normalizeNames(parsed.names||[]); }catch(_){ return []; } }
+  function readLoginCache(){
+    const merged=[];
+    try{
+      const raw=localStorage.getItem(cacheKey())||sessionStorage.getItem(cacheKey())||'';
+      if(raw){
+        const parsed=JSON.parse(raw),age=Date.now()-Number(parsed.at||0);
+        if(age <= 30*24*60*60*1000) merged.push(...normalizeNames(parsed.names||[]));
+      }
+    }catch(_){}
+    try{ if(cfg.readCachedLoginNames) merged.push(...normalizeNames(cfg.readCachedLoginNames(scope())||[])); }catch(_){}
+    return normalizeNames(merged);
+  }
   function writeLoginCache(names){ const clean=normalizeNames(names); if(!clean.length) return clean; const payload=JSON.stringify({at:Date.now(),names:clean,version:VERSION}); try{ localStorage.setItem(cacheKey(),payload); }catch(_){} try{ sessionStorage.setItem(cacheKey(),payload); }catch(_){} try{ if(cfg.writeCachedLoginNames) cfg.writeCachedLoginNames(clean, scope()); }catch(_){} return clean; }
 
   function extractNameRows(raw){
@@ -92,24 +103,40 @@
   }
 
   async function getLoginNames(){
-    const cached = readLoginCache();
-    // One fast authoritative call first, then the committed selector RPC, then the shared config loader.
-    // Do not use requestable/scope-only names; those caused the polluted dropdown.
-    const attempts = [
-      { name:'get_login_active_names_v687', body:{site_scope_input:scope()}, options:{timeoutMs:1200} },
-      { name:'get_player_selector_source_v1', body:{site_scope_input:scope()}, options:{timeoutMs:1600} },
-      { name:'get_player_selector_source_v1', body:{session_token:null, site_scope_input:scope()}, options:{timeoutMs:1600} }
-    ];
-    for (const attempt of attempts) {
-      try {
-        const names = namesFromPayload(await rpc(attempt.name, attempt.body, attempt.options));
-        const clean = writeLoginCache(names);
-        if (clean.length) return clean;
-      } catch (_) {}
+    const cached = readLoginCache(), currentScope=scope();
+    // The dedicated active-login RPC is authoritative and normally sub-second.
+    // Never block the dropdown behind a chain of sequential fallback timeouts.
+    try {
+      const names = namesFromPayload(await rpc('get_login_active_names_v687',{site_scope_input:currentScope},{timeoutMs:1500}));
+      const clean = writeLoginCache(names);
+      if(clean.length) return clean;
+    } catch (_) {}
+    const selectorRefresh = async()=>{
+      const calls=[
+        rpc('get_player_selector_source_v1',{site_scope_input:currentScope},{timeoutMs:1800}),
+        rpc('get_player_selector_source_v1',{session_token:null,site_scope_input:currentScope},{timeoutMs:1800})
+      ];
+      const settled=await Promise.allSettled(calls);
+      for(const result of settled){
+        if(result.status!=='fulfilled') continue;
+        const clean=writeLoginCache(namesFromPayload(result.value));
+        if(clean.length) return clean;
+      }
+      return [];
+    };
+    if(cached.length){
+      // Keep a known-good selector usable immediately while the degraded backend heals.
+      selectorRefresh().then((names)=>{ if(names.length&&typeof window.dispatchEvent==='function') window.dispatchEvent(new CustomEvent('gejast:login-names-refreshed',{detail:{names,scope:currentScope}})); }).catch(()=>{});
+      return cached;
     }
-    const configNames = await fetchLoginNamesFromConfig();
-    if (configNames.length) return writeLoginCache(configNames);
-    return cached;
+    const selectorNames=await selectorRefresh().catch(()=>[]);
+    if(selectorNames.length) return selectorNames;
+    const configNames=await Promise.race([
+      fetchLoginNamesFromConfig().catch(()=>[]),
+      new Promise(resolve=>setTimeout(()=>resolve([]),1800))
+    ]);
+    if(configNames.length) return writeLoginCache(configNames);
+    return [];
   }
 
   async function getRequestableNames(){
@@ -251,7 +278,8 @@
     const cached = readLoginCache();
     if (cached.length) { fillSelect(sel, cached); setStatus('statusBox',`Namen direct uit snelle cache geladen; live controle op achtergrond...`,''); }
     else setStatus('statusBox','Actieve loginnamen laden...','');
-    getLoginNames().then((names)=>{ fillSelect(sel,names); if(names.length) setStatus('statusBox',`${names.length} actieve loginspeler(s) geladen.`,'ok'); else setStatus('statusBox','Geen actieve loginnamen ontvangen. Controleer of de login-SQL is uitgerold of open Naam aanvragen als je nog geen pincode hebt.','warn'); }).catch((err)=>{ setStatus('statusBox', cached.length ? 'Kon namen niet live verversen; cache blijft zichtbaar.' : friendly(err), cached.length ? '' : 'warn'); });
+    getLoginNames().then((names)=>{ fillSelect(sel,names); if(names.length) setStatus('statusBox',String(names.length)+' actieve loginspeler(s) geladen.','ok'); else setStatus('statusBox','Geen actieve loginnamen ontvangen. Controleer of de login-SQL is uitgerold of open Naam aanvragen als je nog geen pincode hebt.','warn'); }).catch((err)=>{ setStatus('statusBox', cached.length ? 'Kon namen niet live verversen; cache blijft zichtbaar.' : friendly(err), cached.length ? '' : 'warn'); });
+    window.addEventListener('gejast:login-names-refreshed',(event)=>{ const names=normalizeNames(event?.detail?.names||[]); if(!names.length) return; fillSelect(sel,names); setStatus('statusBox',String(names.length)+' actieve loginspeler(s) bijgewerkt.','ok'); });
     getPublicState().then((st)=>{ if(st?.my_name||st?.display_name||st?.player_name) setStatus('statusBox',`Deze browser heeft al een sessie voor ${st.my_name||st.display_name||st.player_name}.`,'ok'); }).catch(()=>{});
     form.addEventListener('submit', async(ev)=>{ ev.preventDefault(); const name=String(sel.value||'').trim(); const p=String(pin.value||'').replace(/\D/g,'').slice(0,4); if(!name) return setStatus('statusBox','Kies eerst je naam.','warn'); if(!/^\d{4}$/.test(p)) return setStatus('statusBox','Voer je 4-cijferige pincode in.','warn'); try{ setBusy(form,true); setStatus('statusBox','Inloggen...'); const out=await login({name,pin:p}); setStatus('statusBox',`Ingelogd als ${out.display_name||out.player_name||name}.`,'ok'); setTimeout(()=>location.href=loginReturnTarget(),350); }catch(err){ setStatus('statusBox',friendly(err),'warn'); }finally{ setBusy(form,false); } });
     const logout=$('logoutBtn'); if(logout) logout.addEventListener('click',()=>{ clearPlayerToken(); setStatus('statusBox','Sessie gewist.','ok'); });
