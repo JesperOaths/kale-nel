@@ -1586,3 +1586,7 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 }
 .session-sample-card.thin-sample{border-style:dashed}
 .session-sample-card>small{line-height:1.55}
+
+.decision-card.thin-evidence{border-style:dashed;box-shadow:none}
+.decision-card.thin-evidence .decision-meter{opacity:.45}
+.decision-card.thin-evidence>small{color:var(--muted)}
