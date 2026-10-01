@@ -403,8 +403,19 @@ async function refreshSavedProfiles({restore=false}={}){
     const duplicate=legacy?profiles.find(p=>String(p.id)!==String(legacy.id)&&sameRiotIdentity(p,legacy.game_name,legacy.tag_line,legacy.platform_region)):null;
     if(legacy&&!duplicate){
       try{
-        const migrated=await api('profile_save',{profile:{id:legacy.id,profile_key:generatedProfileKey(legacy.game_name,legacy.tag_line,legacy.platform_region),display_name:legacy.display_name||legacy.game_name+'#'+legacy.tag_line,game_name:legacy.game_name,tag_line:legacy.tag_line,platform_region:legacy.platform_region||'euw1',notes:profileNotes(profileRole(legacy))}});
-        if(migrated.profile){profiles=profiles.map(p=>String(p.id)===String(legacy.id)?migrated.profile:p);log('Your previous recent-request Riot identity was upgraded into a saved League profile without moving its cached match data.','ok');}
+        let inferredRole=profileRole(legacy);
+        try{
+          const oldHistory=await api('report_latest',{profile_id:legacy.id});
+          inferredRole=canonicalRole(oldHistory.analysis?.report_data?.dataQuality?.selectedRole||oldHistory.analysis?.report_data?.summary?.primaryRole||inferredRole);
+        }catch(_){}
+        const migrated=await api('profile_save',{profile:{id:legacy.id,profile_key:generatedProfileKey(legacy.game_name,legacy.tag_line,legacy.platform_region),display_name:legacy.display_name||legacy.game_name+'#'+legacy.tag_line,game_name:legacy.game_name,tag_line:legacy.tag_line,platform_region:legacy.platform_region||'euw1',notes:profileNotes(inferredRole)}});
+        if(migrated.profile){
+          profiles=profiles.map(p=>String(p.id)===String(legacy.id)?migrated.profile:p);
+          try{
+            const rebuilt=await api('analyze_basic',{profile_id:migrated.profile.id,target_role:inferredRole});
+            log('Your previous Riot identity was upgraded in place and '+String(rebuilt.report?.games?.length||0)+' cached '+roleLabel(inferredRole)+' game(s) were rebuilt into a role-pure saved report.','ok');
+          }catch(rebuildError){log('Profile migrated; cached role report can be rebuilt on the next analysis: '+rebuildError.message,'bad');}
+        }
       }catch(e){log('Legacy Riot profile migration was skipped: '+e.message,'bad');}
     }
     state.savedProfiles=profiles.filter(p=>String(p.profile_key||'')!=='recent-request');
