@@ -73,9 +73,9 @@ assert.match(accountRuntime,/seed = normalizeNames\(\[\.\.\.domSeed,\.\.\.cached
 assert.match(accountRuntime,/merged=normalizeNames\(\[\.\.\.seed,\.\.\.clean,\.\.\.domSeedNames\(sel\)\]\)/,'live login-name refresh must merge with the synchronous seed instead of erasing known-good names');
 assert.match(accountRuntime,/gejast:login-names-refreshed[\s\S]*?merged=normalizeNames\(\[\.\.\.seed,\.\.\.domSeedNames\(sel\),\.\.\.names\]\)/,'background refreshed names must merge with currently rendered/static names');
 assert.match(accountRuntime,/else if\(seed\.length\)/,'an empty or slow live refresh must preserve the synchronous seed');
-assert.ok(loginHtml.includes(`gejast-login-names-static.js?${siteVersion}&rev=20261001-login-resilience-r11`),'login must load the static name snapshot with site version + resilience revision');
-assert.ok(loginHtml.includes(`gejast-login-names-fallback.js?${siteVersion}&rev=20261001-login-resilience-r11`),'login must load the single-RPC fallback with site version + resilience revision');
-assert.ok(loginHtml.includes(`gejast-account-runtime.js?${siteVersion}&rev=20261001-login-resilience-r11`),'login must load the account runtime with site version + resilience revision');
+assert.ok(loginHtml.includes(`gejast-login-names-static.js?${siteVersion}&rev=20261001-login-resilience-r12`),'login must load the static name snapshot with site version + resilience revision');
+assert.ok(loginHtml.includes(`gejast-login-names-fallback.js?${siteVersion}&rev=20261001-login-resilience-r12`),'login must load the single-RPC fallback with site version + resilience revision');
+assert.ok(loginHtml.includes(`gejast-account-runtime.js?${siteVersion}&rev=20261001-login-resilience-r12`),'login must load the account runtime with site version + resilience revision');
 assert.match(loginHtml,/window\.GEJAST_LOGIN_NAMES_STATIC=Object\.freeze\(/,'login HTML must contain an inline last-known-good name seed so the selector works even when Supabase or a deferred asset stalls');
 assert.match(loginHtml,/data-login-scope="friends"/,'login HTML must contain literal friends options before JS runs');
 assert.match(loginHtml,/data-login-scope="family"/,'login HTML must contain literal family options before JS runs');
