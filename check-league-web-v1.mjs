@@ -118,6 +118,8 @@ assert.ok(app.includes('Loss rate while outnumbered'));
 assert.ok(app.includes('Level-down shared-role fights'));
 assert.ok(app.includes('Post-kill conversion'));
 assert.ok(app.includes('Prior-frame objective setup'));
+assert.ok(app.includes('Objective diagnosis'));
+assert.ok(app.includes('Primary supported cause'));
 assert.ok(app.includes('Vision-action deaths'));
 assert.ok(app.includes('Vision-action death rate'));
 assert.ok(app.includes('Sample exclusions'));
