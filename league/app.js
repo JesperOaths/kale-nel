@@ -65,6 +65,30 @@ function championIcon(name){
   if(!name||!state.ddVersion)return'';
   return 'https://ddragon.leagueoflegends.com/cdn/'+encodeURIComponent(state.ddVersion)+'/img/champion/'+encodeURIComponent(name)+'.png';
 }
+const SR_MAP_BOUNDS={minX:-120,minY:-120,maxX:14870,maxY:14980,size:512};
+function worldToMapPoint(x,y){
+  if(!hasNum(x)||!hasNum(y))return null;
+  const bx=SR_MAP_BOUNDS,xx=Number(x),yy=Number(y);
+  if(xx<bx.minX-500||xx>bx.maxX+500||yy<bx.minY-500||yy>bx.maxY+500)return null;
+  const px=(xx-bx.minX)/(bx.maxX-bx.minX)*bx.size;
+  const py=(bx.maxY-yy)/(bx.maxY-bx.minY)*bx.size;
+  return{x:Math.max(0,Math.min(bx.size,px)),y:Math.max(0,Math.min(bx.size,py))};
+}
+function map11Image(){
+  const version=state.ddVersion||'6.8.1';
+  return 'https://ddragon.leagueoflegends.com/cdn/'+encodeURIComponent(version)+'/img/map/map11.png';
+}
+function mapPointSvg(point,kind){
+  const p=worldToMapPoint(point.x,point.y);if(!p)return'';
+  const lead=kind==='death'&&hasNum(point.goldDiffAtDeath)&&Number(point.goldDiffAtDeath)>=500;
+  const cls=kind==='death'?('map-point death'+(lead?' lead':'')):('map-point ward '+String(point.territory||'unknown').replace(/[^a-z0-9_-]/gi,''));
+  const radius=kind==='death'?(lead?7:5):3.6;
+  const title=kind==='death'
+    ?[(hasNum(point.time)?fmt(point.time,1)+'m':''),point.zone||'',Array.isArray(point.tags)?point.tags.join(', '):'',lead?'ahead '+signed(point.goldDiffAtDeath,0)+'g vs role':''].filter(Boolean).join(' · ')
+    :[(hasNum(point.time)?fmt(point.time,1)+'m':''),point.territory||'unknown',point.wardType||'ward'].filter(Boolean).join(' · ');
+  return '<circle class="'+esc(cls)+'" cx="'+p.x.toFixed(2)+'" cy="'+p.y.toFixed(2)+'" r="'+radius+'"><title>'+esc(title)+'</title></circle>';
+}
+
 
 async function boot(){
   clearLog();log('Opening League web workspace.');
@@ -257,7 +281,7 @@ function renderReport(raw,sourceKind){
   $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':(r.analyzerVersion||'Web analysis');
   renderKpis(r);renderBullets('recentFocus',r.recentFocus,'No grounded recent-focus tips are available from the active analyzer yet.');
   renderBullets('overallHighlights',r.overallHighlights,'No broader highlights are available from the active analyzer yet.');
-  renderSessionHabits(r);renderPracticePlan(r);renderGames(r);renderCharts(r);renderAdvanced(r);renderBreakdowns(r);renderQuality(r);
+  renderSessionHabits(r);renderPracticePlan(r);renderGames(r);renderCharts(r);renderSpatial(r);renderAdvanced(r);renderBreakdowns(r);renderQuality(r);
 }
 function renderKpis(r){
   const s=r.summary||{},role=String(s.primaryRole||'GENERIC').toUpperCase();
@@ -502,6 +526,27 @@ function renderCharts(r){
 }
 function metric(label,value,pending){
   return '<div class="metric-row"><span>'+esc(label)+'</span><strong class="'+(pending?'pending':'')+'">'+esc(value)+'</strong></div>';
+}
+function renderSpatial(r){
+  const games=Array.isArray(r.games)?r.games:[];
+  const deathPoints=[],wardPoints=[];
+  for(const g of games){
+    if(Number(g.mapId)!==11)continue;
+    for(const x of (g.badDeaths||[]))if(hasNum(x.x)&&hasNum(x.y))deathPoints.push(x);
+    for(const w of (g.wards||[]))if(hasNum(w.x)&&hasNum(w.y))wardPoints.push(w);
+  }
+  const image=map11Image(),fallback='https://ddragon.leagueoflegends.com/cdn/6.8.1/img/map/map11.png';
+  const mapHtml=(points,kind,empty)=>points.length
+    ?'<div class="map-stage"><img src="'+esc(image)+'" data-map-fallback="'+esc(fallback)+'" alt="Summoner’s Rift minimap"><svg viewBox="0 0 512 512" preserveAspectRatio="none" aria-label="'+esc(kind==='death'?'High-risk death positions':'Ward positions')+'">'+points.map(p=>mapPointSvg(p,kind)).join('')+'</svg></div>'
+    :'<div class="spatial-empty">'+esc(empty)+'</div>';
+  $('deathMap').innerHTML=mapHtml(deathPoints,'death','No high-risk death coordinates are available in this sample.');
+  $('wardMap').innerHTML=mapHtml(wardPoints,'ward','No ward coordinates are available in this sample.');
+  document.querySelectorAll('.map-stage img[data-map-fallback]').forEach(img=>img.addEventListener('error',()=>{const f=img.dataset.mapFallback;if(f&&img.src!==f)img.src=f;},{once:true}));
+  const leadDeaths=deathPoints.filter(x=>hasNum(x.goldDiffAtDeath)&&Number(x.goldDiffAtDeath)>=500).length;
+  const offensive=wardPoints.filter(x=>x.territory==='offensive').length,river=wardPoints.filter(x=>x.territory==='river').length,defensive=wardPoints.filter(x=>x.territory==='defensive').length;
+  $('deathMapMeta').textContent=deathPoints.length+' high-risk deaths mapped'+(leadDeaths?' · '+leadDeaths+' while ≥500g ahead vs role':'');
+  $('wardMapMeta').textContent=wardPoints.length+' wards mapped · '+offensive+' offensive · '+river+' river · '+defensive+' defensive';
+  $('spatialProjectionNote').textContent='Summoner’s Rift world projection: x −120→14870, y −120→14980, with Y inverted. Only mapId 11 coordinates are plotted.';
 }
 function renderAdvanced(r){
   const a=r.advanced||{},roam=a.roams||{},recall=a.recalls||{},itemSpike=a.itemSpike||{};
