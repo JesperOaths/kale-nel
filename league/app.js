@@ -526,18 +526,18 @@ function benchmarkKpi(label,value,benchmark,unit,inverse=false,extra=''){
   const formatted=unit==='percent'?fmtPct(value):unit==='csmin'?fmt(value,2):unit==='dpm'?fmtInt(value):unit==='deaths'?fmt(value,1):fmt(value,2);
   const benchmarkText=unit==='percent'?fmtPct(benchmark):unit==='csmin'?fmt(benchmark,2):unit==='dpm'?fmtInt(benchmark):unit==='deaths'?fmt(benchmark,1):fmt(benchmark,2);
   const deltaText=delta==null?'benchmark unavailable':unit==='percent'?signed(delta,1)+' pp':unit==='csmin'?signed(delta,2):unit==='dpm'?signed(delta,0):unit==='deaths'?signed(delta,1):signed(delta,2);
-  return{label,value:formatted,tone,sub:'Rank avg '+benchmarkText+' · '+deltaText+(extra?' · '+extra:''),bar:delta==null?'':contextBar(delta,unit==='dpm'?500:unit==='csmin'?2:unit==='percent'?15:unit==='deaths'?3:2,inverse)};
+  return{label,value:formatted,tone,sub:'External ref '+benchmarkText+' · '+deltaText+(extra?' · '+extra:''),bar:delta==null?'':contextBar(delta,unit==='dpm'?500:unit==='csmin'?2:unit==='percent'?15:unit==='deaths'?3:2,inverse)};
 }
 function renderKpis(r){
   const adc=adcBenchmarkSummary(r),s=adc||r.summary||{},bench=adc?r.externalBenchmarks?.same:null,rank=bench?.tier||'rank';
   const raw=(label,value,unit)=>({label,value:unit==='percent'?fmtPct(value):unit==='csmin'?fmt(value,2):unit==='dpm'?fmtInt(value):unit==='deaths'?fmt(value,1):fmt(value,2),tone:'neutral',sub:adc?'ADC coaching sample':(String(r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||'')==='BOTTOM'?adcBenchmarkUnavailableReason(r):'No ADC population benchmark applied to this primary role'),bar:''});
   const rows=[
     {label:adc?'ADC sample win rate':'Recent win rate',value:fmtPct(s.winRate),tone:'neutral',sub:String(s.games||0)+(adc?' primary-role ADC':' analyzed')+' games',bar:''},
-    bench?benchmarkKpi('CS / min · '+rank,s.csMin,bench.csMin,'csmin'):raw('CS / min',s.csMin,'csmin'),
-    bench?benchmarkKpi('Kill participation · '+rank,s.kp,bench.kp,'percent'):raw('Kill participation',s.kp,'percent'),
-    bench?benchmarkKpi('Damage / min · '+rank,s.dpm,bench.dpm,'dpm'):raw('Damage / min',s.dpm,'dpm'),
-    bench?benchmarkKpi('KDA · '+rank,s.kda,bench.kda,'kda'):raw('KDA',s.kda,'kda'),
-    bench?benchmarkKpi('Deaths / game · '+rank,s.avgDeaths,bench.deaths,'deaths',true,'lower is better'):raw('Deaths / game',s.avgDeaths,'deaths')
+    bench?benchmarkKpi('CS / min · '+rank+' ref',s.csMin,bench.csMin,'csmin'):raw('CS / min',s.csMin,'csmin'),
+    bench?benchmarkKpi('Kill participation · '+rank+' ref',s.kp,bench.kp,'percent'):raw('Kill participation',s.kp,'percent'),
+    bench?benchmarkKpi('Damage / min · '+rank+' ref',s.dpm,bench.dpm,'dpm'):raw('Damage / min',s.dpm,'dpm'),
+    bench?benchmarkKpi('KDA · '+rank+' ref',s.kda,bench.kda,'kda'):raw('KDA',s.kda,'kda'),
+    bench?benchmarkKpi('Deaths / game · '+rank+' ref',s.avgDeaths,bench.deaths,'deaths',true,'lower is better · raw rank reference, not ADC-adjusted'):raw('Deaths / game',s.avgDeaths,'deaths')
   ];
   $('kpiGrid').innerHTML=rows.map(x=>'<article class="kpi-card tone-'+x.tone+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong>'+(x.bar||'')+'<small>'+esc(x.sub)+'</small></article>').join('');
 }
@@ -565,10 +565,10 @@ function renderQuickRead(r){
   const objText=objective==null?'Not enough contested-objective evidence.':objective>=70?'You are present for most neutral objectives your team actually contests.':objective<45?'You are absent from many real contest windows; reset timing and pathing deserve review.':'Objective presence is mixed rather than clearly strong or weak.';
   $('quickRead').innerHTML=[
     comparisonCard('Lane economy @15',p.avgGoldDiff15,'gold',1000,false,goldExplanation,String(p.laneGames15||0)+' direct-role checkpoints'),
-    comparisonCard('CS/min vs '+rankLabel+' ADC',csDelta,'csmin',2,false,csDelta==null?'External benchmark unavailable.':csDelta>.15?'You farm faster than the sourced '+rankLabel+' ADC average.':csDelta<-.15?'You farm slower than the sourced '+rankLabel+' ADC average.':'Your farming rate is very close to the sourced '+rankLabel+' ADC average.',bench?'You '+fmt(s.csMin,2)+' · benchmark '+fmt(bench.csMin,2):''),
-    comparisonCard('KP vs '+rankLabel+' ADC',kpDelta,'pp',15,false,kpDelta==null?'External benchmark unavailable.':kpDelta>2?'You participate in a larger share of team kills than the sourced rank average.':kpDelta<-2?'Your kill participation trails the sourced rank average.':'Your kill participation is close to the sourced rank average.',bench?'You '+fmtPct(s.kp)+' · benchmark '+fmtPct(bench.kp):''),
-    comparisonCard('DPM vs '+rankLabel+' ADC',dpmDelta,'dpm',500,false,dpmDelta==null?'External benchmark unavailable.':dpmDelta>50?'Your damage/minute is above the sourced rank average.':dpmDelta<-50?'Your damage/minute is below the sourced rank average.':'Your damage/minute is close to the sourced rank average.',bench?'You '+fmtInt(s.dpm)+' · benchmark '+fmtInt(bench.dpm):''),
-    comparisonCard('Deaths vs '+rankLabel+' ADC',deathDelta,'num',3,true,deathDelta==null?'External benchmark unavailable.':deathDelta<-.25?'You die less often than the sourced rank average.':deathDelta>.25?'You die more often than the sourced rank average.':'Your death rate is close to the sourced rank average.',bench?'You '+fmt(s.avgDeaths,1)+'/g · benchmark '+fmt(bench.deaths,1)+'/g':''),
+    comparisonCard('CS/min vs '+rankLabel+' ref',csDelta,'csmin',2,false,csDelta==null?'External reference unavailable.':csDelta>.15?'You are above the sourced, ADC-adjusted '+rankLabel+' reference.':csDelta<-.15?'You are below the sourced, ADC-adjusted '+rankLabel+' reference.':'You are very close to the sourced, ADC-adjusted '+rankLabel+' reference.',bench?'You '+fmt(s.csMin,2)+' · reference '+fmt(bench.csMin,2):''),
+    comparisonCard('KP vs '+rankLabel+' ref',kpDelta,'pp',15,false,kpDelta==null?'External reference unavailable.':kpDelta>2?'You are above the sourced, ADC-adjusted '+rankLabel+' reference.':kpDelta<-2?'You are below the sourced, ADC-adjusted '+rankLabel+' reference.':'You are close to the sourced, ADC-adjusted '+rankLabel+' reference.',bench?'You '+fmtPct(s.kp)+' · reference '+fmtPct(bench.kp):''),
+    comparisonCard('DPM vs '+rankLabel+' ref',dpmDelta,'dpm',500,false,dpmDelta==null?'External reference unavailable.':dpmDelta>50?'You are above the sourced, ADC-adjusted '+rankLabel+' reference.':dpmDelta<-50?'You are below the sourced, ADC-adjusted '+rankLabel+' reference.':'You are close to the sourced, ADC-adjusted '+rankLabel+' reference.',bench?'You '+fmtInt(s.dpm)+' · reference '+fmtInt(bench.dpm):''),
+    comparisonCard('Deaths vs '+rankLabel+' ref',deathDelta,'num',3,true,deathDelta==null?'External reference unavailable.':deathDelta<-.25?'You die less often than the sourced '+rankLabel+' rank reference.':deathDelta>.25?'You die more often than the sourced '+rankLabel+' rank reference.':'Your death rate is close to the sourced '+rankLabel+' rank reference.',bench?'You '+fmt(s.avgDeaths,1)+'/g · raw rank reference '+fmt(bench.deaths,1)+'/g · not ADC-adjusted':''),
     '<article class="quick-read-card tone-'+objTone+'"><div class="quick-read-head"><span>Contested objective presence</span><strong>'+esc(fmtPct(objective))+'</strong></div><div class="percent-track"><span style="width:'+clamp(objective||0,0,100)+'%"></span></div><p>'+esc(objText)+'</p><small>Only team-contested windows count; fully conceded cross-map objectives are excluded.</small></article>'
   ].join('');
 }
@@ -680,7 +680,7 @@ function renderRankRadar(r){
     return '<line class="radar-spoke" x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'"/><text class="radar-axis-label" x="'+lx.toFixed(1)+'" y="'+(ly+4).toFixed(1)+'" text-anchor="middle">'+esc(a.label)+'</text>';
   }).join('');
   const polygons=series.filter(x=>x.usable).map(x=>'<polygon class="radar-series '+x.cls+'" points="'+radarPolygon(x.values,cx,cy,radius)+'"><title>'+esc(x.label)+'</title></polygon>').join('');
-  $('radarChart').innerHTML=polygons?'<svg viewBox="0 0 520 505" role="img" aria-label="Your ADC statistics compared with externally sourced rank averages">'+rings+spokes+polygons+'</svg>':'<div class="radar-empty">A ranked ADC benchmark cannot be built until Riot returns your ranked tier and the report has the five required metrics.</div>';
+  $('radarChart').innerHTML=polygons?'<svg viewBox="0 0 520 505" role="img" aria-label="Your ADC sample compared with externally sourced rank-reference values">'+rings+spokes+polygons+'</svg>':'<div class="radar-empty">A ranked ADC benchmark cannot be built until Riot returns your ranked tier and the report has the five required metrics.</div>';
   $('radarLegend').innerHTML=series.map(x=>'<div class="radar-legend-row '+x.cls+' '+(x.usable?'':'unavailable')+'"><i></i><div><strong>'+esc(x.label)+'</strong><span>'+(
     x.usable?axes.map(a=>esc(a.label)+' '+esc(a.format(a.key==='survival'?x.raw?.deaths:x.raw?.[a.key]))).join(' · '):'Benchmark unavailable'
   )+'</span></div></div>').join('');
