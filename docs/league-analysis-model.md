@@ -861,8 +861,19 @@ Use **associated with**, not causal wording.
 
 Aggregate event-presence rates use pooled numerators and denominators rather than averaging per-game percentages.
 
-For example, Last-20 neutral-objective presence is:
-`sum(joined team objective encounters) / sum(team objective encounters)`.
+The primary Last-20 neutral-objective coaching rate is **team-contested presence**:
+
+`sum(player joins to team-contested objective encounters) / sum(team-contested objective encounters)`.
+
+A grouped neutral-objective encounter is team-contested when either:
+- the player's team secures at least one unit in that grouped encounter, or
+- Riot participant-frame positions support at least one allied champion near the encounter window.
+
+This deliberately excludes fully conceded cross-map objectives from the coaching denominator while still including lost objectives the team actually contested. The older **team-secured presence** rate remains separately visible as outcome context:
+
+`sum(player joins to team-secured encounters) / sum(team-secured encounters)`.
+
+Do not use the secured-only rate as the primary coaching metric; doing so creates survivorship bias because lost contests disappear from the denominator.
 
 The same rule applies to other event percentages:
 - **Early KP** = pooled early player kill/assist involvements / pooled early team champion kills.
@@ -873,11 +884,11 @@ A game with one relevant event therefore does not receive the same weight as a g
 
 For timeline-derived death classifications, the denominator is the number of deaths actually represented/classified in the timeline evidence, not blindly the match-summary death total. The full reported death total remains available for coverage checks. This keeps missing or incomplete timeline evidence from silently entering the denominator as if it had been classified.
 
-Mid-routing objective presence follows the same pooled-denominator principle. Derived comparisons must preserve it too: win-vs-loss **objective presence** and **early KP** are pooled from their event numerators/denominators, and recent-5 versus prior-15 objective presence / early KP use pooled event rates rather than averages of per-game percentages. The derived objects retain numerator, denominator, contributing-game count and `aggregation: "pooled_events"` so UI and future coaching can disclose how the rate was formed.
+Mid-routing objective presence follows the same pooled-denominator principle and uses team-contested encounters for coaching; secured-objective presence remains separate descriptive context. Derived comparisons preserve that distinction: win-vs-loss and recent-5 versus prior-15 coaching objective presence pool contested-event numerators/denominators, while secured presence is exported separately. Early KP is likewise pooled from event counts rather than per-game percentages. The derived objects retain numerator, denominator, contributing-game count and aggregation provenance so UI and future coaching can disclose how the rate was formed.
 
 Ordinary continuous metrics such as CS/min, DPM or gold difference remain means over comparable games; they are not event proportions and should not be forced through the pooled-event helper.
 
-Temporal labels such as "death before enemy objective" describe sequence only; they do not claim the death caused the objective loss.
+Temporal labels such as "death before enemy objective" describe sequence only; they do not claim the death caused the objective loss. For objective-consequence coaching, an enemy objective must also belong to a **team-contested** grouped encounter. An objective that the team fully concedes elsewhere on the map does not retroactively turn an unrelated death or side-lane death into an objective mistake.
 
 ## Objective-family evidence
 
@@ -887,8 +898,12 @@ For each supported family, preserve:
 - total grouped encounters,
 - encounters won by the player's team and by the enemy team,
 - units secured by each team (important for multi-unit Void Grub encounters),
-- player presence in team-won encounters,
-- family-specific team-encounter join rate.
+- player presence in team-won encounters and the secured-encounter join rate,
+- team-contested encounters,
+- player joins to those contested encounters,
+- family-specific team-contested presence rate.
+
+The secured and contested rates answer different questions and must not be collapsed into one field.
 
 Normalize Riot families conservatively:
 - `RIFTHERALD` → **HERALD**,
