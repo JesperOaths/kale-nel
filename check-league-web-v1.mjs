@@ -300,6 +300,9 @@ assert.ok(app.includes("const VERIFIED_DDRAGON_FALLBACK='16.19.1'"),'Spatial fal
 assert.ok(app.includes('function map11FallbackImage('),'Spatial maps must share one verified fallback helper');
 assert.ok(!app.includes('6.8.1/img/map/map11.png'),'Do not silently render the decade-old 6.8.1 Summoner\'s Rift map');
 assert.ok(html.includes('id="sessionHabitsPanel"'),'Session habits panel must remain in the League page');
+assert.ok(api.includes('timelineGames:timeline.length')&&api.includes('minGamesPerComparedGroup:2')&&api.includes('minTimelineGamesPerRiskGroup:2'),'Session model must export metric-specific coverage and require paired evidence before deltas');
+assert.ok(app.includes('function sessionPairReady(')&&app.includes('thin sample')&&app.includes('timelines'),'Session UI must disclose subgroup thinness and timeline coverage rather than present every subgroup as equally reliable');
+assert.ok(modelDoc.includes('two valid observations in both compared groups')&&modelDoc.includes('One-game subgroup differences must never be promoted'),'Session/requeue sample thresholds must remain documented');
 assert.ok(html.includes('id="spatialReview"'),'Spatial review panel must remain in the League page');
 assert.ok(api.includes('body.count||50'),'backend fetch fallback must remain bounded at 50 raw matches');
 assert.ok(api.includes('peer_rank_backfilled'),'fetch finish must expose final-sample peer-rank backfill count');
