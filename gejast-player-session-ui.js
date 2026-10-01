@@ -17,7 +17,12 @@
     if (CONFIG.clearPlayerSessionTokens) return CONFIG.clearPlayerSessionTokens();
     for (const key of SESSION_KEYS){ localStorage.removeItem(key); sessionStorage.removeItem(key); }
   }
-  function rpcHeaders(){ return { 'Content-Type':'application/json', apikey: SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}` }; }
+  function rpcHeaders(){
+    if(CONFIG&&typeof CONFIG.publicApiHeaders==='function') return CONFIG.publicApiHeaders({'Content-Type':'application/json'});
+    const h={'Content-Type':'application/json',apikey:SUPABASE_KEY};
+    if(/^[^.]+\.[^.]+\.[^.]+$/.test(SUPABASE_KEY)) h.Authorization=`Bearer ${SUPABASE_KEY}`;
+    return h;
+  }
   async function parseJson(res){ const txt = await res.text(); let data = null; try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }
   function inferScope(){
     try {
