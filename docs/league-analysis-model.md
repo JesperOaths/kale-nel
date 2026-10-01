@@ -207,11 +207,15 @@ This boundary is intentionally conservative. Updating it requires both rule revi
 
 ## Role normalization
 
-- `UTILITY`, `SUPPORT` → **SUPPORT**
-- `BOTTOM`, `BOT`, `ADC` → **ADC**
+- `UTILITY`, `SUPPORT`, legacy `DUO_SUPPORT` → **SUPPORT**
+- `BOTTOM`, `BOT`, `ADC`, legacy `DUO_CARRY` → **ADC**
 - `MIDDLE`, `MID` → **MID**
 - `JUNGLE` → **JUNGLE**
 - `TOP` → **TOP**
+
+Current Match-V5 `teamPosition` and `individualPosition` are the preferred role sources. If both normalize to usable roles but disagree, the match fails closed to **GENERIC** for role-specific coaching rather than arbitrarily choosing one field. The report counts these as conflicting Riot role metadata.
+
+Direct peer comparison is stricter still: exactly one enemy participant must normalize to the player's resolved role. Zero candidates means the role peer is unavailable; more than one candidate is treated as ambiguous. Neither case is allowed to silently pick an opponent. Data Quality exposes missing and ambiguous direct-peer counts.
 
 Role-aware conclusions must use the normalized role.
 
