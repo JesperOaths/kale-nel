@@ -771,25 +771,69 @@ function reportInsightParts(x,fallback){
   const meta=[x.confidence?String(x.confidence)+' confidence':'',Number(x.supportCount||0)>0?String(Number(x.supportCount))+' supporting finding'+(Number(x.supportCount)===1?'':'s'):'',x.comparison?'vs '+String(x.comparison):''].filter(Boolean).join(' · ');
   return {present,title:present?(sourceTitle||fallback):'Not enough evidence',copy:present?copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:present?action:'',meta:present?meta:''};
 }
-function recentDirectionSummary(r){
-  const t=r.recentTrend||{},defs=[
-    ['CS / min',t.csMin,false,.15],['Gold @15',t.goldDiff15,false,150],['Damage / min',t.dpm,false,50],
-    ['Kill participation',t.kp,false,2],['High-risk deaths',t.badDeaths,true,.2]
+function roleRecentTrendSpecs(r){
+  const t=r.recentTrend||{},role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole);
+  const spec=(label,obj,unit,inverse,threshold,minRecentEvents=0,minPriorEvents=0)=>({label,obj,unit,inverse,threshold,minRecentEvents,minPriorEvents});
+  if(role==='SUPPORT')return[
+    spec('Roam conversion',t.roamConversion,'percent',false,15,3,5),
+    spec('ADC lane cost during roams',t.supportAdcLaneCost,'cs',false,2),
+    spec('Vision-action death rate',t.visionActionDeath,'percent',true,5,6,10),
+    spec('Prior objective setup',t.objectiveSetup,'percent',false,10,3,5),
+    spec('Contested objective presence',t.objectiveJoin,'percent',false,10,3,5)
   ];
-  let good=0,bad=0,stable=0,supported=0;
-  defs.forEach(([,o,inverse,threshold])=>{
-    if(!o||!hasNum(o.recent)||!hasNum(o.prior)||Number(o.recentN||0)<3||Number(o.priorN||0)<5)return;
-    supported++;
-    const d=Number(o.recent)-Number(o.prior);
-    if(Math.abs(d)<threshold){stable++;return;}
-    const signal=inverse?-d:d;if(signal>0)good++;else bad++;
-  });
-  if(!supported)return {tone:'neutral',value:'Not enough evidence',copy:'The latest-five window does not yet have enough valid recent-versus-prior observations for a directional read.'};
-  if(!good&&!bad)return {tone:'neutral',value:'Broadly stable',copy:stable+' supported recent signal'+(stable===1?' is':'s are')+' inside the report’s practical change bands; there is no strong short-window movement to chase.'};
-  if(good>=bad+2)return {tone:'good',value:'Moving favorably',copy:good+' meaningful recent signals improved, '+bad+' moved unfavorably and '+stable+' stayed inside the practical change bands. Treat this as short-window direction, not proof of a lasting trend.'};
-  if(bad>=good+2)return {tone:'bad',value:'Needs stabilizing',copy:bad+' meaningful recent signals worsened, '+good+' improved and '+stable+' stayed inside the practical change bands. Emphasize the primary practice target rather than adding new goals.'};
-  return {tone:'neutral',value:'Mixed direction',copy:'Recent movement is split: '+good+' favorable, '+bad+' unfavorable and '+stable+' stable supported signals. Keep the practice plan narrow until the signal separates.'};
+  if(role==='JUNGLE')return[
+    spec('CS/min vs JUNGLE peer',t.peerCsMinDelta,'csmin',false,.15),
+    spec('First impact vs JUNGLE peer',t.impactDelta,'minutes',true,1),
+    spec('First major vs JUNGLE peer',t.itemDelta,'minutes',true,.5),
+    spec('Prior objective setup',t.objectiveSetup,'percent',false,10,3,5),
+    spec('Contested objective presence',t.objectiveJoin,'percent',false,10,3,5)
+  ];
+  if(role==='MID')return[
+    spec('Gold @15 vs MID peer',t.goldDiff15,'gold',false,150),
+    spec('First impact vs MID peer',t.impactDelta,'minutes',true,1),
+    spec('Roam conversion',t.roamConversion,'percent',false,15,3,5),
+    spec('Prior objective setup',t.objectiveSetup,'percent',false,10,3,5),
+    spec('High-risk deaths',t.badDeaths,'num',true,.2)
+  ];
+  if(role==='TOP')return[
+    spec('Gold @15 vs TOP peer',t.goldDiff15,'gold',false,150),
+    spec('CS/min vs TOP peer',t.peerCsMinDelta,'csmin',false,.15),
+    spec('Early-lead give-back',t.earlyLeadGiveback,'percent',true,15,2,4),
+    spec('Pre-objective side-lane deaths',t.preObjectiveSideLaneDeaths,'num',true,.2),
+    spec('High-risk deaths',t.badDeaths,'num',true,.2)
+  ];
+  return[
+    spec('CS / min',t.csMin,'csminRaw',false,.15),
+    spec('Gold @15 vs ADC peer',t.goldDiff15,'gold',false,150),
+    spec('Damage / min',t.dpm,'dpm',false,50),
+    spec('Kill participation',t.kp,'percent',false,2),
+    spec('High-risk deaths',t.badDeaths,'num',true,.2)
+  ];
 }
+function recentTrendSpecReady(spec){
+  const o=spec?.obj;
+  if(!o||!hasNum(o.recent)||!hasNum(o.prior)||Number(o.recentN||0)<3||Number(o.priorN||0)<5)return false;
+  if(Number(spec.minRecentEvents||0)>0&&Number(o.recentEvents||0)<Number(spec.minRecentEvents))return false;
+  if(Number(spec.minPriorEvents||0)>0&&Number(o.priorEvents||0)<Number(spec.minPriorEvents))return false;
+  return true;
+}
+function recentDirectionSummary(r){
+  const defs=roleRecentTrendSpecs(r);
+  let good=0,bad=0,stable=0,supported=0;
+  defs.forEach(spec=>{
+    if(!recentTrendSpecReady(spec))return;
+    supported++;
+    const d=Number(spec.obj.recent)-Number(spec.obj.prior);
+    if(Math.abs(d)<Number(spec.threshold||0)){stable++;return;}
+    const signal=(spec.inverse?-1:1)*d;if(signal>0)good++;else bad++;
+  });
+  if(!supported)return {tone:'neutral',value:'Not enough evidence',copy:'The latest-five window does not yet have enough valid role-relevant recent-versus-prior observations for a directional read.'};
+  if(!good&&!bad)return {tone:'neutral',value:'Broadly stable',copy:stable+' supported role-relevant signal'+(stable===1?' is':'s are')+' inside the report’s practical change bands; there is no strong short-window movement to chase.'};
+  if(good>=bad+2)return {tone:'good',value:'Moving favorably',copy:good+' role-relevant recent signals moved favorably, '+bad+' moved unfavorably and '+stable+' stayed inside practical change bands. Treat this as short-window direction, not proof of a lasting trend.'};
+  if(bad>=good+2)return {tone:'bad',value:'Needs stabilizing',copy:bad+' role-relevant recent signals moved unfavorably, '+good+' moved favorably and '+stable+' stayed inside practical change bands. Emphasize the primary practice target rather than adding new goals.'};
+  return {tone:'neutral',value:'Mixed direction',copy:'Recent role-relevant movement is split: '+good+' favorable, '+bad+' unfavorable and '+stable+' stable supported signals. Keep the practice plan narrow until the signal separates.'};
+}
+
 function renderPriorityEvidenceChain(r){
   const box=$('priorityEvidenceChain');if(!box)return;
   const theme=topPracticeThemes(r)[0]||null;
@@ -1068,33 +1112,44 @@ function renderQuickRead(r){
 function pulseFormat(v,unit){
   if(!hasNum(v))return'n/a';
   if(unit==='gold')return signed(v,0)+'g';
-  if(unit==='csmin')return fmt(v,2);
+  if(unit==='csminRaw')return fmt(v,2);
+  if(unit==='csmin')return signed(v,2)+' CS/min';
+  if(unit==='cs')return signed(v,1)+' CS';
   if(unit==='dpm')return fmtInt(v);
   if(unit==='percent')return fmtPct(v);
-  if(unit==='csmin')return signed(v,2)+' CS/min';
   if(unit==='minutes')return signed(v,1)+'m';
   if(unit==='vpm')return fmt(v,2)+' / min';
   return fmt(v,2);
 }
+
 function pulseDeltaFormat(v,unit){
   if(!hasNum(v))return'n/a';
   if(unit==='gold')return signed(v,0)+'g';
-  if(unit==='csmin')return signed(v,2);
+  if(unit==='csminRaw'||unit==='csmin')return signed(v,2)+' CS/min';
+  if(unit==='cs')return signed(v,1)+' CS';
   if(unit==='dpm')return signed(v,0)+' DPM';
   if(unit==='percent')return signed(v,1)+' pp';
+  if(unit==='minutes')return signed(v,1)+'m';
   return signed(v,2);
 }
-function pulseCard(label,obj,unit,inverse=false,threshold=0){
-  const recent=obj&&hasNum(obj.recent)?Number(obj.recent):null,prior=obj&&hasNum(obj.prior)?Number(obj.prior):null;
-  const recentN=Number(obj?.recentN||0),priorN=Number(obj?.priorN||0);
-  if(recent==null||prior==null||recentN<3||priorN<5){
-    return '<article class="pulse-card tone-neutral"><span>'+esc(label)+'</span><strong>Not enough evidence</strong><small>'+recentN+' recent / '+priorN+' prior valid games</small></article>';
+
+function pulseCard(spec){
+  const label=spec.label,obj=spec.obj,unit=spec.unit,inverse=!!spec.inverse,threshold=Number(spec.threshold||0),recent=obj&&hasNum(obj.recent)?Number(obj.recent):null,prior=obj&&hasNum(obj.prior)?Number(obj.prior):null;
+  const recentN=Number(obj?.recentN||0),priorN=Number(obj?.priorN||0),recentEvents=Number(obj?.recentEvents||0),priorEvents=Number(obj?.priorEvents||0),ready=recentTrendSpecReady(spec);
+  const eventNote=(Number(spec.minRecentEvents||0)>0||Number(spec.minPriorEvents||0)>0)?' · '+recentEvents+' recent / '+priorEvents+' prior events':'';
+  if(!ready){
+    return '<article class="pulse-card tone-neutral"><span>'+esc(label)+'</span><strong>Not enough evidence</strong><small>'+recentN+' recent / '+priorN+' prior valid games'+eventNote+'</small></article>';
   }
   const delta=recent-prior,signal=inverse?-delta:delta;
   const tone=Math.abs(delta)<threshold?'neutral':signal>0?'good':'bad';
   const word=tone==='neutral'?'stable':tone==='good'?'favorable shift':'unfavorable shift';
-  return '<article class="pulse-card tone-'+tone+'"><span>'+esc(label)+'</span><strong>'+esc(pulseFormat(recent,unit))+'</strong><p>Previous '+esc(pulseFormat(prior,unit))+' · Δ '+esc(pulseDeltaFormat(delta,unit))+'</p><small>'+esc(word)+' · latest '+recentN+' vs previous '+priorN+' valid games</small></article>';
+  return '<article class="pulse-card tone-'+tone+'"><span>'+esc(label)+'</span><strong>'+esc(pulseFormat(recent,unit))+'</strong><p>Previous '+esc(pulseFormat(prior,unit))+' · Δ '+esc(pulseDeltaFormat(delta,unit))+'</p><small>'+esc(word)+' · latest '+recentN+' vs previous '+priorN+' valid games'+eventNote+'</small></article>';
 }
+function renderRecentPulse(r){
+  const target=$('recentPulse');if(!target)return;
+  target.innerHTML=roleRecentTrendSpecs(r).map(pulseCard).join('');
+}
+
 function renderRecentPulse(r){
   const t=r.recentTrend||{},target=$('recentPulse');if(!target)return;
   target.innerHTML=[
