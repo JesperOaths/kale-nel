@@ -373,6 +373,9 @@ assert.ok(api.includes('role:"ADC"')&&api.includes('sourceRole:"Bot (ADC)"'),'Ex
 assert.ok(api.includes('queueId===420?"RANKED_SOLO_5x5":queueId===440?"RANKED_FLEX_SR":null'),'Population rank benchmark must only use Ranked Solo/Flex cohorts and their matching ladder');
 assert.ok(api.includes('eligibilityReason:!rankedQueueType?"selected_cohort_not_ranked"'),'Non-ranked cohorts must fail closed for ranked population benchmarking');
 assert.ok(app.includes("ext.eligible!==false"),'Frontend ADC benchmark summary must respect backend comparability eligibility');
+assert.ok(api.includes('directPeerTimelineGames=validDirectPeerTimeline.length')&&api.includes('earlyRoleSoloDeathPerGame=directPeerTimelineGames?earlyRoleSoloDeaths/directPeerTimelineGames'),'Clean direct-role duel rates must use only timeline games with a trusted direct peer');
+assert.ok(api.includes('csMinGames:peerCsGames.length')&&api.includes('dpmGames:peerDpmGames.length')&&api.includes('vpmGames:peerVpmGames.length'),'Peer means must export metric-specific contributing-game counts');
+assert.ok(app.includes('direct-role CS/min comparisons')&&app.includes('direct-role DPM comparisons')&&app.includes('Direct-peer timeline games'),'Frontend peer comparisons must display the exact denominator behind each metric');
 assert.ok(app.includes('selected Last-20 cohort is not Ranked Solo/Flex'),'Frontend must explain why ranked population comparison is withheld for normal/Clash/Swiftplay cohorts');
 assert.ok(!app.includes('rankStepBands'),'Frontend must not regress to opponent-derived rank-step radar bands');
 assert.ok(app.includes('role-adjusted benchmarks rather than directly measured rank×ADC population means'),'Frontend must state the external benchmark derivation without overstating it as a direct ADC population mean');
@@ -610,7 +613,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v143'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v144'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
