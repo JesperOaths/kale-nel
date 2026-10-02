@@ -1626,6 +1626,7 @@ const PRACTICE_TARGET_SAMPLE_PATHS={
   'behaviorSummary.visionActionDeathRate':['behaviorSummary.visionActions'],
   'behaviorSummary.roamSuccessRate':['behaviorSummary.roamAttempts'],
   'behaviorSummary.avgRoamLaneCostCs':['behaviorSummary.roamLaneCostGames'],
+  'behaviorSummary.meanGameSupportRoamAdcLaneMovementCs':['behaviorSummary.supportRoamAdcLaneMovementGames'],
   'sessionBehavior.game3PlusGoldDelta':['sessionBehavior.firstGame.lane15Games','sessionBehavior.game3Plus.lane15Games'],
   'sessionBehavior.postLossGoldDelta':['sessionBehavior.quickAfterLoss.lane15Games','sessionBehavior.quickAfterWin.lane15Games']
 };
@@ -1640,10 +1641,50 @@ function practiceTargetSamplePaths(t){
   const metricPath=String(t?.metricPath||'');
   return xs.length?xs:(PRACTICE_TARGET_SAMPLE_PATHS[metricPath]||PRACTICE_TARGET_SAMPLE_PATHS[practiceTargetMetricPath(t)]||['coachingSummary.games']);
 }
+function practiceTargetSampleRequirements(t){
+  const explicit=Array.isArray(t?.sampleRequirements)?t.sampleRequirements.filter(x=>x&&String(x.path||'').trim()).map(x=>({path:String(x.path),min:Math.max(1,Number(x.min||1)),value:hasNum(x.value)?Number(x.value):null})):[];
+  if(explicit.length)return explicit;
+  const min=Math.max(1,Number(t?.minSample||1));
+  return practiceTargetSamplePaths(t).map(path=>({path,min,value:null}));
+}
+function practiceRequirementLabel(path){
+  const labels={
+    'behaviorSummary.roamAttempts':'roam attempts',
+    'behaviorSummary.roamAttemptGames':'roam games',
+    'behaviorSummary.roamLaneCostGames':'measured roam windows',
+    'behaviorSummary.supportRoamAdcLaneMovementWindows':'ADC lane-movement windows',
+    'behaviorSummary.supportRoamAdcLaneMovementGames':'ADC lane-movement games',
+    'behaviorSummary.visionActions':'vision actions',
+    'behaviorSummary.visionActionGames':'vision-action games',
+    'behaviorSummary.neutralObjectiveJoins':'joined objective encounters',
+    'behaviorSummary.objectiveSetupGames':'objective-setup games',
+    'behaviorSummary.neutralObjectiveEvents':'contested objective encounters',
+    'behaviorSummary.objectiveContestGames':'contested-objective games',
+    'behaviorSummary.timelineGames':'timeline games',
+    'behaviorSummary.classifiedTimelineDeaths':'classified deaths',
+    'sessionBehavior.firstGame.lane15Games':'opener @15 games',
+    'sessionBehavior.game3Plus.lane15Games':'game 3+ @15 games',
+    'sessionBehavior.quickAfterLoss.lane15Games':'post-loss @15 games',
+    'sessionBehavior.quickAfterWin.lane15Games':'post-win @15 games'
+  };
+  return labels[String(path||'')]||String(path||'sample').split('.').pop().replace(/([a-z])([A-Z])/g,'$1 $2').toLowerCase();
+}
+function practiceTargetEvidence(report,t){
+  const rows=practiceTargetSampleRequirements(t).map(req=>{
+    const raw=pathValue(report,req.path),value=hasNum(raw)?Number(raw):null;
+    return{...req,value,ready:value!=null&&value>=Number(req.min||1)};
+  });
+  const ready=rows.length>0&&rows.every(x=>x.ready),finite=rows.filter(x=>x.value!=null).map(x=>Number(x.value)),currentSample=finite.length===rows.length&&finite.length?Math.min(...finite):0,minSample=rows.length?Math.min(...rows.map(x=>Number(x.min||1))):Math.max(1,Number(t?.minSample||1));
+  const summary=rows.map(x=>practiceRequirementLabel(x.path)+' '+(x.value==null?'n/a':fmtInt(x.value))+'/'+fmtInt(x.min)).join(' · ');
+  return{ready,rows,currentSample,minSample,summary};
+}
 function practiceTargetCurrentSample(report,t){
-  const paths=practiceTargetSamplePaths(t),values=paths.map(p=>pathValue(report,p));
-  if(values.some(v=>!hasNum(v)))return 0;
-  return values.length?Math.min(...values.map(Number)):0;
+  return practiceTargetEvidence(report,t).currentSample;
+}
+function practiceTargetBaselineEvidenceText(t){
+  const reqs=practiceTargetSampleRequirements(t),explicit=reqs.some(x=>x.value!=null);
+  if(explicit)return reqs.map(x=>practiceRequirementLabel(x.path)+' '+(x.value==null?'n/a':fmtInt(x.value))+'/'+fmtInt(x.min)).join(' · ');
+  return 'based on '+String(t?.sampleSize||0)+' relevant observation'+(Number(t?.sampleSize||0)===1?'':'s');
 }
 function reportNewMatchCount(current,previous){
   const prev=new Set((previous?.games||[]).map(g=>String(g.matchId||'')).filter(Boolean));
@@ -1653,7 +1694,7 @@ function reportNewMatchCount(current,previous){
 function previousPracticeTargetOutcomes(current,previous){
   const targets=Array.isArray(previous?.practiceTargets)?previous.practiceTargets:[];
   if(!targets.length)return{rows:[],reason:''};
-  const curRole=String(current?.summary?.primaryRole||''),prevRole=String(previous?.summary?.primaryRole||'');
+  const curRole=canonicalRole(current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole||current?.summary?.primaryRole),prevRole=canonicalRole(previous?.dataQuality?.selectedRole||previous?.coachingSummary?.primaryRole||previous?.summary?.primaryRole);
   const curQueue=current?.dataQuality?.dominantQueueId,prevQueue=previous?.dataQuality?.dominantQueueId;
   const curPatch=String(current?.dataQuality?.currentPatchKey||''),prevPatch=String(previous?.dataQuality?.currentPatchKey||''),curMechanics=String(current?.dataQuality?.currentMechanicsKey||''),prevMechanics=String(previous?.dataQuality?.currentMechanicsKey||'');
   if(curRole!==prevRole)return{rows:[],reason:'Previous practice targets are not scored because the primary role changed.'};
@@ -1664,13 +1705,13 @@ function previousPracticeTargetOutcomes(current,previous){
   const rows=targets.map(t=>{
     const currentValue=pathValue(current,practiceTargetMetricPath(t));
     if(!hasNum(currentValue)||!hasNum(t.baseline)||!hasNum(t.goal))return null;
-    const cur=Number(currentValue),base=Number(t.baseline),goal=Number(t.goal),higher=t.direction!=='lower',windowGames=Math.max(1,Number(t.windowGames||5)),minSample=Math.max(1,Number(t.minSample||1)),currentSample=practiceTargetCurrentSample(current,t);
-    const common={label:t.label||t.metricPath,current:practiceTargetValue(cur,t.unit),baseline:practiceTargetValue(base,t.unit),goal:practiceTargetValue(goal,t.unit),sampleSize:Number(t.sampleSize||0),currentSample,minSample,newGames,windowGames};
+    const cur=Number(currentValue),base=Number(t.baseline),goal=Number(t.goal),higher=t.direction!=='lower',windowGames=Math.max(1,Number(t.windowGames||5)),evidence=practiceTargetEvidence(current,t);
+    const common={label:t.label||t.metricPath,current:practiceTargetValue(cur,t.unit),baseline:practiceTargetValue(base,t.unit),goal:practiceTargetValue(goal,t.unit),sampleSize:Number(t.sampleSize||0),currentSample:evidence.currentSample,minSample:evidence.minSample,sampleSummary:evidence.summary,newGames,windowGames};
     if(newGames<windowGames){
       const left=windowGames-newGames;
       return{...common,status:'awaiting '+left+' more new game'+(left===1?'':'s'),cls:'stable',pending:true};
     }
-    if(currentSample<minSample)return{...common,status:'not enough current evidence',cls:'stable',pending:true};
+    if(!evidence.ready)return{...common,status:'not enough current evidence',cls:'stable',pending:true};
     const met=higher?cur>=goal:cur<=goal,needed=Math.abs(goal-base),toward=(higher?cur-base:base-cur);
     const material=Math.max(needed*.2,1e-9);
     const status=met?'met':toward>=material?'moving closer':toward<=-material?'moved away':'unchanged';
@@ -1909,9 +1950,9 @@ function practiceTargetValue(v,unit){
 }
 function practiceTargetHtml(target){
   if(!target||!hasNum(target.baseline)||!hasNum(target.goal))return'';
-  const relation=target.direction==='lower'?'≤':'≥';
+  const relation=target.direction==='lower'?'≤':'≥',evidence=practiceTargetBaselineEvidenceText(target);
   return '<div class="practice-target"><span>Next 5 comparable games</span><strong>'+esc(practiceTargetValue(target.baseline,target.unit))+' → aim '+esc(relation+' '+practiceTargetValue(target.goal,target.unit))+'</strong>'+
-    '<small>'+esc(target.rationale||'Self-relative short-term target')+' · based on '+esc(String(target.sampleSize||0))+' relevant observation'+(Number(target.sampleSize||0)===1?'':'s')+'</small></div>';
+    '<small>'+esc(target.rationale||'Self-relative short-term target')+' · '+esc(evidence)+'</small></div>';
 }
 
 
