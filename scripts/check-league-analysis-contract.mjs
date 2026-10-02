@@ -208,6 +208,9 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
+ok(backend.includes('league-web-behavior-v4.99'), 'analysis provenance must identify the refined supported-conversion revision');
+ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
+ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
 ok(backend.includes('playerSupportEvidence=isNeutralObjectiveEvent(o)?(participantNearEvent(frames,whoId,o,2800)?"event_position_proximity":null):structureStrongInvolvementEvidence(o,frames,whoId,whoTeam,mapId)')&&backend.includes('playerSupported:!!playerSupportEvidence'), 'neutral-objective conversion credit must require explicit supported presence and preserve its method');
 ok(backend.includes('maxFrameDeltaMs=35000'), 'event proximity must remain bounded to a nearby sampled timeline frame');
 ok(backend.includes('members.some((event:any)=>participantNearEvent(frames,participantId,event,radius,35000))'), 'objective-window presence must anchor to each actual objective event');
