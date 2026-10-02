@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.89";
+const ANALYZER_VERSION="league-web-behavior-v4.90";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -2019,8 +2019,8 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
   const titles=(t:any)=>[t?.title,...(Array.isArray(t?.supportingTitles)?t.supportingTitles:[])].map(text).join(" ").toLowerCase();
   const samplePathsFor=(metricPath:string):string[]=>({
     "behaviorSummary.earlyLeadGivebackRate":["behaviorSummary.earlyLeadGames"],
-    "summary.csMin":["summary.games"],
-    "summary.goldDiff15":["peerComparison.laneGames15"],
+    "coachingSummary.csMin":["coachingSummary.games"],
+    "coachingSummary.goldDiff15":["peerComparison.laneGames15"],
     "behaviorSummary.highRiskUntradedPostImpactPerGame":["behaviorSummary.playerImpactEvents"],
     "behaviorSummary.highRiskBehindDeathsPerGame":["behaviorSummary.behindStateDeaths"],
     "behaviorSummary.highRiskLeadDeathsPerGame":["behaviorSummary.leadDeaths"],
@@ -2043,14 +2043,14 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
     "behaviorSummary.objectiveJoinRate":["behaviorSummary.neutralObjectiveEvents"],
     "behaviorSummary.firstAllyFightDeathRate":["behaviorSummary.fightSamples"],
     "behaviorSummary.preContributionFightDeathRate":["behaviorSummary.fightSamples"],
-    "behaviorSummary.damageGoldEfficiency":["summary.games"],
+    "behaviorSummary.damageGoldEfficiency":["coachingSummary.games"],
     "behaviorSummary.highRiskBehindDeathRate":["behaviorSummary.behindStateDeaths"],
     "behaviorSummary.visionActionDeathRate":["behaviorSummary.visionActions"],
     "behaviorSummary.roamSuccessRate":["behaviorSummary.roamAttempts"],
     "behaviorSummary.avgRoamLaneCostCs":["behaviorSummary.roamLaneCostGames"],
     "sessionBehavior.game3PlusGoldDelta":["sessionBehavior.firstGame.games","sessionBehavior.game3Plus.games"],
     "sessionBehavior.postLossGoldDelta":["sessionBehavior.quickAfterLoss.games","sessionBehavior.quickAfterWin.games"]
-  } as Record<string,string[]>)[metricPath]||["summary.games"];
+  } as Record<string,string[]>)[metricPath]||["coachingSummary.games"];
   const add=(theme:any,label:string,metricPath:string,baseline:any,goal:any,direction:"higher"|"lower",unit:string,sampleSize:any,minSample:number,rationale:string)=>{
     if(out.length>=3||!hasNum(baseline)||!hasNum(goal)||Number(sampleSize||0)<minSample)return false;
     out.push({themeKey:text(theme?.key),themeLabel:text(theme?.label||theme?.category),label,metricPath,samplePaths:samplePathsFor(metricPath),baseline:Number(baseline),goal:Number(goal),direction,unit,sampleSize:Number(sampleSize||0),minSample,windowGames:5,rationale,source:"self_relative_short_term"});
@@ -2061,8 +2061,8 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
     const key=text(theme?.key),tt=titles(theme);let added=false;
     if(key==="early-lane"){
       if(/lead|leak|give.?back|preserv/.test(tt)&&hasNum(behavior?.earlyLeadGivebackRate))added=add(theme,"Early-lead give-back rate","behaviorSummary.earlyLeadGivebackRate",behavior.earlyLeadGivebackRate,clampPct(Number(behavior.earlyLeadGivebackRate)-15),"lower","percent",behavior?.earlyLeadGames,4,"Test whether meaningful pre-15 direct-role leads are surviving to the 15-minute checkpoint more consistently.");
-      if(!added&&/farm|cs\/min/.test(tt)&&hasNum(summary?.csMin))added=add(theme,"CS / min","summary.csMin",summary.csMin,Number(summary.csMin)+0.3,"higher","cs_per_min",summary?.games,5,"A small self-relative farming increase is easier to practise and verify than a generic rank benchmark.");
-      if(!added&&hasNum(summary?.goldDiff15))added=add(theme,"Gold differential @15","summary.goldDiff15",summary.goldDiff15,Number(summary.goldDiff15)+150,"higher","gold",peer?.laneGames15,5,"Move the direct-role lane state by about 150g without changing the comparison population.");
+      if(!added&&/farm|cs\/min/.test(tt)&&hasNum(summary?.csMin))added=add(theme,"CS / min","coachingSummary.csMin",summary.csMin,Number(summary.csMin)+0.3,"higher","cs_per_min",summary?.games,5,"A small self-relative farming increase is easier to practise and verify than a generic rank benchmark.");
+      if(!added&&hasNum(summary?.goldDiff15))added=add(theme,"Gold differential @15","coachingSummary.goldDiff15",summary.goldDiff15,Number(summary.goldDiff15)+150,"higher","gold",peer?.laneGames15,5,"Move the direct-role lane state by about 150g without changing the comparison population.");
     }else if(key==="death-risk"){
       if(/post-play|give-back|successful play/.test(tt)&&hasNum(behavior?.highRiskUntradedPostImpactPerGame))added=add(theme,"High-risk post-play give-backs / game","behaviorSummary.highRiskUntradedPostImpactPerGame",behavior.highRiskUntradedPostImpactPerGame,Math.max(0,Number(behavior.highRiskUntradedPostImpactPerGame)-0.15),"lower","per_game",behavior?.playerImpactEvents,5,"Measure whether successful plays are being preserved instead of immediately surrendered by a high-risk untraded follow-up death.");
       if(!added&&/behind|deficit/.test(tt)&&hasNum(behavior?.highRiskBehindDeathsPerGame))added=add(theme,"High-risk deaths while behind / game","behaviorSummary.highRiskBehindDeathsPerGame",behavior.highRiskBehindDeathsPerGame,Math.max(0,Number(behavior.highRiskBehindDeathsPerGame)-0.2),"lower","per_game",behavior?.behindStateDeaths,4,"Reduce the specific high-variance deaths that compound an existing direct-role deficit.");
