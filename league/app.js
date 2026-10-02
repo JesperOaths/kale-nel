@@ -928,34 +928,50 @@ function supportLensCard(label,value,detail,tone='neutral',ready=true,interval=n
     (hasInterval?'<div class="support-lens-interval"><i style="left:'+clamp(interval.low,0,100)+'%;width:'+(clamp(interval.high,0,100)-clamp(interval.low,0,100))+'%"></i><b style="left:'+clamp(Number(String(value).replace(/[^0-9.-]/g,'')),0,100)+'%"></b></div><small>95% Wilson '+esc(fmtPct(interval.low))+'–'+esc(fmtPct(interval.high))+'</small>':'')+
     '<p>'+esc(detail)+(ready?'':' · thin sample — descriptive only')+'</p></article>';
 }
+function roleEventCoverage(r){
+  const b=r?.behaviorSummary||{},games=reportCoachingGames(r).filter(g=>g.timelineAvailable===true);
+  const gameCount=fn=>games.filter(fn).length;
+  const laneValues=games.map(perGameSupportAdcLaneCost).filter(hasNum).map(Number);
+  const laneMean=laneValues.length?laneValues.reduce((a,b)=>a+b,0)/laneValues.length:null;
+  const roamN=Number(b.roamAttempts||0),roamGames=hasNum(b.roamAttemptGames)?Number(b.roamAttemptGames):gameCount(g=>Number(g?.roams?.attempts||0)>0);
+  const laneWindows=Number(b.supportRoamAdcLaneMovementWindows??b.supportRoamAdcCostGames??0),laneGames=hasNum(b.supportRoamAdcLaneMovementGames)?Number(b.supportRoamAdcLaneMovementGames):laneValues.length;
+  const visionN=Number(b.visionActions||0),visionGames=hasNum(b.visionActionGames)?Number(b.visionActionGames):gameCount(g=>Number(g?.visionMission?.actions||0)>0);
+  const setupN=Number(b.neutralObjectiveJoins||0),setupGames=hasNum(b.objectiveSetupGames)?Number(b.objectiveSetupGames):gameCount(g=>Number(g?.objectiveReadiness?.contestedJoined||0)>0);
+  const contestN=Number(b.objectiveContestEncounters??b.neutralObjectiveEvents??0),contestGames=hasNum(b.objectiveContestGames)?Number(b.objectiveContestGames):gameCount(g=>Number(g?.objectiveReadiness?.contestedObjectives||0)>0);
+  return{
+    roamN,roamGames,roamReady:roamN>=4&&roamGames>=3,
+    laneWindows,laneGames,laneMean:hasNum(b.meanGameSupportRoamAdcLaneMovementCs)?Number(b.meanGameSupportRoamAdcLaneMovementCs):laneMean,laneReady:laneWindows>=4&&laneGames>=3,
+    visionN,visionGames,visionReady:visionN>=12&&visionGames>=4,
+    setupN,setupGames,setupReady:setupN>=5&&setupGames>=3,
+    contestN,contestGames,contestReady:contestN>=5&&contestGames>=3
+  };
+}
+
 function renderSupportRoleLens(r){
   const panel=$('supportRoleLensPanel'),box=$('supportRoleLens'),note=$('supportRoleLensNote');if(!panel||!box)return;
   const role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole);
   if(role!=='SUPPORT'){panel.hidden=true;box.innerHTML='';if(note)note.textContent='';return;}
-  const b=r.behaviorSummary||{},roamN=Number(b.roamAttempts||0),roamRate=hasNum(b.roamSuccessRate)?Number(b.roamSuccessRate):null,roamReady=roamN>=4;
-  const adcCostN=Number(b.supportRoamAdcCostGames||0),adcCost=hasNum(b.avgSupportRoamAdcLaneCostCs)?Number(b.avgSupportRoamAdcLaneCostCs):null,harmful=Number(b.supportRoamsHurtingAdc||0),costReady=adcCostN>=4,repeatedHarm=harmful>=2;
-  const visionN=Number(b.visionActions||0),visionDeaths=Number(b.visionActionDeaths||0),visionRate=hasNum(b.visionActionDeathRate)?Number(b.visionActionDeathRate):null,visionReady=visionN>=12,highRiskVision=Number(b.highRiskVisionActionDeaths||0),unsupportedVision=Number(b.unsupportedVisionActionDeaths||0);
-  const setupN=Number(b.neutralObjectiveJoins||0),setupHits=Number(b.earlySetupObjectiveJoins||0),setupRate=hasNum(b.earlySetupObjectiveJoinRate)?Number(b.earlySetupObjectiveJoinRate):null,setupReady=setupN>=5;
-  const contestN=Number(b.objectiveContestEncounters??b.neutralObjectiveEvents??0),contestHits=Number(b.objectiveContestJoinedEncounters??b.neutralObjectiveJoins??0),contestRate=hasNum(b.objectiveContestPresenceRate??b.objectiveJoinRate)?Number(b.objectiveContestPresenceRate??b.objectiveJoinRate):null,contestReady=contestN>=5;
+  const b=r.behaviorSummary||{},c=roleEventCoverage(r),roamRate=hasNum(b.roamSuccessRate)?Number(b.roamSuccessRate):null,adcMove=c.laneMean,harmful=Number(b.supportRoamsHurtingAdc||0),repeatedHarm=harmful>=2;
+  const visionDeaths=Number(b.visionActionDeaths||0),visionRate=hasNum(b.visionActionDeathRate)?Number(b.visionActionDeathRate):null,highRiskVision=Number(b.highRiskVisionActionDeaths||0),unsupportedVision=Number(b.unsupportedVisionActionDeaths||0);
+  const setupHits=Number(b.earlySetupObjectiveJoins||0),setupRate=hasNum(b.earlySetupObjectiveJoinRate)?Number(b.earlySetupObjectiveJoinRate):null,contestHits=Number(b.objectiveContestJoinedEncounters??b.neutralObjectiveJoins??0),contestRate=hasNum(b.objectiveContestPresenceRate??b.objectiveJoinRate)?Number(b.objectiveContestPresenceRate??b.objectiveJoinRate):null;
   const roamTone=roamRate==null?'neutral':roamRate<45?'bad':roamRate>=65?'good':'neutral';
-  const costTone=costReady&&repeatedHarm?'bad':costReady&&adcCost!=null&&adcCost>=-2&&roamRate!=null&&roamRate>=60?'good':'neutral';
-  const visionTone=visionDeaths>=3&&(highRiskVision>=2||unsupportedVision>=2)?'bad':visionN>=18&&visionDeaths===0?'good':'neutral';
+  const moveTone=c.laneReady&&repeatedHarm?'bad':c.laneReady&&adcMove!=null&&adcMove>=-2&&roamRate!=null&&roamRate>=60?'good':'neutral';
+  const visionTone=visionDeaths>=3&&(highRiskVision>=2||unsupportedVision>=2)?'bad':c.visionN>=18&&visionDeaths===0?'good':'neutral';
   const setupTone=setupRate==null?'neutral':setupRate<45?'bad':setupRate>=70?'good':'neutral';
   const contestTone=contestRate==null?'neutral':contestRate<50?'bad':contestRate>=70?'good':'neutral';
   box.innerHTML=[
-    supportLensCard('Roam conversion',roamRate==null?'n/a':fmtPct(roamRate),roamN+' detected early roam departures inside the queue-specific roam window · evidence floor 4',roamTone,roamReady),
-    supportLensCard('ADC lane movement during roams',adcCost==null?'n/a':signed(adcCost,1)+' CS',adcCostN+' ADC-vs-ADC lane-movement windows · '+harmful+' lost ≥6 CS without supported roam return · evidence floor 4',costTone,costReady),
-    supportLensCard('Vision-action safety',visionRate==null?'n/a':fmtPct(visionRate),visionDeaths+' deaths after '+visionN+' tracked ward placements/clears · '+highRiskVision+' high-risk · '+unsupportedVision+' unsupported',visionTone,visionReady,wilsonInterval(visionDeaths,visionN)),
-    supportLensCard('Prior objective setup',setupRate==null?'n/a':fmtPct(setupRate),setupHits+' / '+setupN+' joined neutral-objective encounters already near the area 45–105s before the event',setupTone,setupReady,wilsonInterval(setupHits,setupN)),
-    supportLensCard('Contested objective presence',contestRate==null?'n/a':fmtPct(contestRate),contestHits+' / '+contestN+' supported team-contested neutral-objective encounters',contestTone,contestReady,wilsonInterval(contestHits,contestN))
+    supportLensCard('Roam conversion',roamRate==null?'n/a':fmtPct(roamRate),c.roamN+' detected early roam departures across '+c.roamGames+' games · evidence floor 4 attempts across 3 games',roamTone,c.roamReady),
+    supportLensCard('ADC lane movement during roams',adcMove==null?'n/a':signed(adcMove,1)+' CS',c.laneWindows+' measured windows across '+c.laneGames+' games · game-weighted mean · '+harmful+' lost ≥6 CS without supported roam return · floor 4 windows across 3 games',moveTone,c.laneReady),
+    supportLensCard('Vision-action safety',visionRate==null?'n/a':fmtPct(visionRate),visionDeaths+' deaths after '+c.visionN+' tracked ward placements/clears across '+c.visionGames+' games · '+highRiskVision+' high-risk · '+unsupportedVision+' unsupported · floor 12 actions across 4 games',visionTone,c.visionReady,wilsonInterval(visionDeaths,c.visionN)),
+    supportLensCard('Prior objective setup',setupRate==null?'n/a':fmtPct(setupRate),setupHits+' / '+c.setupN+' joined neutral-objective encounters across '+c.setupGames+' games already near the area 45–105s before the event · floor 5 encounters across 3 games',setupTone,c.setupReady,wilsonInterval(setupHits,c.setupN)),
+    supportLensCard('Contested objective presence',contestRate==null?'n/a':fmtPct(contestRate),contestHits+' / '+c.contestN+' supported team-contested neutral-objective encounters across '+c.contestGames+' games · floor 5 encounters across 3 games',contestTone,c.contestReady,wilsonInterval(contestHits,c.contestN))
   ].join('');
   if(note){
-    const read=costReady&&repeatedHarm?'Repeated measured support roams are associated with substantial ADC-vs-ADC CS loss; review whether the ADC could safely crash, reset or collect before you leave.':repeatedHarm&&!costReady?'Two or more harmful roam windows are visible, but the lane-cost sample is still below the four-window evidence floor; treat this as a review cue, not a stable pattern.':roamReady&&roamRate!=null&&roamRate>=65&&costReady&&adcCost!=null&&adcCost>=-2?'Roams are converting while preserving ADC lane economy in the measured windows; keep the same wave-preparation rule.':'Use the cards independently: a successful roam can still be expensive for bot lane, and low lane cost does not prove the roam created value.';
-    note.textContent=read+' Support roam lane movement is the change in ADC-vs-ADC CS differential during the detected support roam. Positive favors the allied ADC; negative is lane cost. It is not a claim that every CS change was caused solely by the Support.';
+    const read=c.laneReady&&repeatedHarm?'Repeated measured support roams are associated with substantial ADC-vs-ADC CS loss across multiple games; review whether the ADC could safely crash, reset or collect before you leave.':repeatedHarm&&!c.laneReady?'Two or more harmful roam windows are visible, but the evidence is not spread across enough measured windows and games; treat this as a review cue, not a stable pattern.':c.roamReady&&roamRate!=null&&roamRate>=65&&c.laneReady&&adcMove!=null&&adcMove>=-2?'Roams are converting while preserving ADC lane economy across the measured game sample; keep the same wave-preparation rule.':'Use the cards independently: a successful roam can still be expensive for bot lane, and favorable lane movement does not prove the roam created value.';
+    note.textContent=read+' Support roam lane movement is the change in ADC-vs-ADC CS differential during the detected support roam. The headline is game-weighted so one roam-heavy game cannot dominate it. Positive favors the allied ADC; negative is lane cost. It is not a claim that every CS change was caused solely by the Support.';
   }
   panel.hidden=false;
 }
-
 function roleLensCard(label,value,detail,tone='neutral',ready=true,interval=null){
   const effective=ready?tone:'neutral',hasInterval=interval&&hasNum(interval.low)&&hasNum(interval.high);
   return '<article class="role-specific-lens-card tone-'+effective+(ready?'':' thin-evidence')+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong>'+
@@ -965,7 +981,7 @@ function roleLensCard(label,value,detail,tone='neutral',ready=true,interval=null
 function renderRoleSpecificLens(r){
   const panel=$('roleSpecificLensPanel'),box=$('roleSpecificLens'),note=$('roleSpecificLensNote'),eyebrow=$('roleSpecificLensEyebrow'),title=$('roleSpecificLensTitle'),hint=$('roleSpecificLensHint');
   if(!panel||!box)return;
-  const role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),b=r.behaviorSummary||{},p=r.peerComparison||{},q=r.dataQuality||{};
+  const role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),b=r.behaviorSummary||{},p=r.peerComparison||{},q=r.dataQuality||{},c=roleEventCoverage(r);
   if(!['TOP','MID','JUNGLE'].includes(role)){panel.hidden=true;box.innerHTML='';if(note)note.textContent='';return;}
   const laneN=Number(p.laneGames15||0),peerN=Number(p.sameRoleGames||0),impactN=Number(p.impactGames||0),itemN=Number(p.majorItemGames||0),timelineN=Number(q.validTimelineGames||0);
   const gold=hasNum(p.avgGoldDiff15)?Number(p.avgGoldDiff15):null,cs=hasNum(p.avgCsMinDelta)?Number(p.avgCsMinDelta):null,impact=hasNum(p.avgImpactDeltaMin)?Number(p.avgImpactDeltaMin):null,item=hasNum(p.avgMajorItemDeltaMin)?Number(p.avgMajorItemDeltaMin):null;
@@ -991,7 +1007,7 @@ function renderRoleSpecificLens(r){
       roleLensCard('Role gold @15',gold==null?'n/a':signed(gold,0)+'g',laneN+' comparable @15 games versus the actual MID opponent · evidence floor 5',goldTone,laneN>=5),
       roleLensCard('CS/min vs MID peer',cs==null?'n/a':signed(cs,2),peerN+' direct-role comparable games · evidence floor 5',csTone,peerN>=5),
       roleLensCard('First tracked impact vs MID',impact==null?'n/a':signed(impact,1)+' min',impactN+' comparable first kill/assist/objective-impact timings · negative means earlier · evidence floor 5',impact==null?'neutral':impact<=-1.5?'good':impact>=1.5?'bad':'neutral',impactN>=5),
-      roleLensCard('Early roam conversion',roamRate==null?'n/a':fmtPct(roamRate),roamSuccess+' / '+roamN+' detected early roam departures returned supported kill/assist or objective value · evidence floor 4',roamRate==null?'neutral':roamRate>=65?'good':roamRate<45?'bad':'neutral',roamN>=4,wilsonInterval(roamSuccess,roamN)),
+      roleLensCard('Early roam conversion',roamRate==null?'n/a':fmtPct(roamRate),roamSuccess+' / '+roamN+' detected early roam departures across '+c.roamGames+' games returned supported kill/assist or objective value · floor 4 attempts across 3 games',roamRate==null?'neutral':roamRate>=65?'good':roamRate<45?'bad':'neutral',c.roamReady,wilsonInterval(roamSuccess,roamN)),
       roleLensCard('15→25 objective reconnect',objRate==null?'n/a':fmtPct(objRate),midN+' comparable mid-routing games; this is supported objective presence alongside the 15→25 farm transition · evidence floor 4',objRate==null?'neutral':objRate>=60?'good':objRate<40?'bad':'neutral',midN>=4)
     );
     if(eyebrow)eyebrow.textContent='Mid lens';
@@ -1004,8 +1020,8 @@ function renderRoleSpecificLens(r){
       roleLensCard('CS/min vs JUNGLE peer',cs==null?'n/a':signed(cs,2),peerN+' direct-role comparable games versus the actual enemy jungler · evidence floor 5',csTone,peerN>=5),
       roleLensCard('First tracked impact vs JUNGLE',impact==null?'n/a':signed(impact,1)+' min',impactN+' comparable first kill/assist/objective-impact timings · negative means earlier · evidence floor 5',impact==null?'neutral':impact<=-1.5?'good':impact>=1.5?'bad':'neutral',impactN>=5),
       roleLensCard('First major vs JUNGLE peer',item==null?'n/a':signed(item,1)+' min',itemN+' comparable first-major completions · negative means earlier · evidence floor 4',item==null?'neutral':item<=-.75?'good':item>=.75?'bad':'neutral',itemN>=4),
-      roleLensCard('Prior objective setup',setupRate==null?'n/a':fmtPct(setupRate),setupHits+' / '+setupN+' joined neutral-objective encounters already near the area 45–105s before the event · evidence floor 5',setupRate==null?'neutral':setupRate>=70?'good':setupRate<45?'bad':'neutral',setupN>=5,wilsonInterval(setupHits,setupN)),
-      roleLensCard('Contested objective presence',contestRate==null?'n/a':fmtPct(contestRate),contestHits+' / '+contestN+' supported team-contested neutral-objective encounters · evidence floor 5',contestRate==null?'neutral':contestRate>=75?'good':contestRate<55?'bad':'neutral',contestN>=5,wilsonInterval(contestHits,contestN))
+      roleLensCard('Prior objective setup',setupRate==null?'n/a':fmtPct(setupRate),setupHits+' / '+setupN+' joined neutral-objective encounters across '+c.setupGames+' games already near the area 45–105s before the event · floor 5 encounters across 3 games',setupRate==null?'neutral':setupRate>=70?'good':setupRate<45?'bad':'neutral',c.setupReady,wilsonInterval(setupHits,setupN)),
+      roleLensCard('Contested objective presence',contestRate==null?'n/a':fmtPct(contestRate),contestHits+' / '+contestN+' supported team-contested neutral-objective encounters across '+c.contestGames+' games · floor 5 encounters across 3 games',contestRate==null?'neutral':contestRate>=75?'good':contestRate<55?'bad':'neutral',c.contestReady,wilsonInterval(contestHits,contestN))
     );
     if(eyebrow)eyebrow.textContent='Jungle lens';
     if(title)title.textContent='Are farm and item tempo arriving before the objective window?';
@@ -1736,7 +1752,7 @@ function renderProgressComparison(current,previous,previousAt){
       {label:'Vision/min vs Support peer',path:'peerComparison.avgVpmDelta',samplePath:'peerComparison.vpmGames',min:5,threshold:.15,direction:1,format:v=>signed(v,2)},
       {label:'Objective setup wards vs Support',path:'peerComparison.avgObjectiveSetupDelta',samplePath:'peerComparison.visionSetupGames',min:5,threshold:.5,direction:1,format:v=>signed(v,1)},
       {label:'Roam conversion',path:'behaviorSummary.roamSuccessRate',samplePath:'behaviorSummary.roamAttempts',min:4,threshold:15,direction:1,format:v=>fmtPct(v)},
-      {label:'ADC lane movement during roams',path:'behaviorSummary.avgSupportRoamAdcLaneCostCs',samplePath:'behaviorSummary.supportRoamAdcCostGames',min:4,threshold:2,direction:1,format:v=>signed(v,1)+' CS'},
+      {label:'ADC lane movement during roams',path:'behaviorSummary.meanGameSupportRoamAdcLaneMovementCs',samplePath:'behaviorSummary.supportRoamAdcLaneMovementGames',min:4,threshold:2,direction:1,format:v=>signed(v,1)+' CS'},
       {label:'Vision-action death rate',path:'behaviorSummary.visionActionDeathRate',samplePath:'behaviorSummary.visionActions',min:8,threshold:5,direction:-1,format:v=>fmtPct(v)},
       {label:'Team-contested objective presence',path:'advanced.objectivePresence',samplePath:'behaviorSummary.objectiveContestEncounters',min:5,threshold:10,direction:1,format:v=>fmtPct(v)},
       ...commonTempo,...commonRisk
