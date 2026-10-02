@@ -54,7 +54,29 @@
         if (typeof Request !== 'undefined' && input instanceof Request) {
           const cleaned = cleanHeaders(input.headers);
           if (cleaned.get('Authorization') !== input.headers.get('Authorization')) {
-            return nativeFetch(new Request(input, { headers: cleaned }), init);
+            const method = String(input.method || 'GET').toUpperCase();
+            // Never reconstruct a consumed request body. GET/HEAD are rebuilt
+            // bodyless; mutation requests are cloned only while their stream is
+            // still unused. This avoids "input stream is disturbed/locked".
+            if (method === 'GET' || method === 'HEAD') {
+              return nativeFetch(new Request(input.url, {
+                method,
+                headers: cleaned,
+                cache: input.cache,
+                credentials: input.credentials,
+                integrity: input.integrity,
+                keepalive: input.keepalive,
+                mode: input.mode,
+                redirect: input.redirect,
+                referrer: input.referrer,
+                referrerPolicy: input.referrerPolicy,
+                signal: input.signal
+              }), init);
+            }
+            if (!input.bodyUsed) {
+              try { return nativeFetch(new Request(input.clone(), { headers: cleaned }), init); } catch (_) {}
+            }
+            return nativeFetch(input, init);
           }
         }
         return nativeFetch(input, init);
