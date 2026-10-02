@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.102'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.103'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -819,7 +819,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v201'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v202'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -906,3 +906,7 @@ assert.ok(app.includes("if(role==='SUPPORT'){\n    specs=[")&&app.includes("Visi
 assert.ok(app.includes("}else if(role==='JUNGLE'){\n    specs=[")&&app.includes("First tracked impact vs Jungle")&&app.includes("Recent-shop objective absence rate"),'Jungle rolling progress must use role-specific tempo/objective metrics');
 assert.ok(app.includes("}else if(role==='TOP'){\n    specs=[")&&app.includes("Pre-objective side-lane deaths / game"),'Top rolling progress must include side-lane exposure rather than generic carry output');
 assert.ok(modelDoc.includes('## Role-specific rolling progress comparison'),'Role-specific progress semantics must remain documented');
+assert.ok(api.includes('kpGames:kpGames.length')&&api.includes('vpmGames:vpmGames.length')&&api.includes('game3PlusKpDelta')&&api.includes('game3PlusVpmDelta'),'Session backend must expose role-ready KP/VPM samples and paired deltas');
+assert.ok(app.includes("if(r==='SUPPORT'){")&&app.includes("'Vision/min '+fmt(sample.vpm,2)")&&app.includes("role==='JUNGLE'"),'Session cards must switch output by selected role');
+assert.ok(app.includes("game3+ vision/min")&&app.includes("quick post-loss CS/min"),'Session delta copy must use Support/Jungle role-relevant metrics');
+assert.ok(modelDoc.includes('## Role-aware session habit model'),'Role-aware session semantics must remain documented');
