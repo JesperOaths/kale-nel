@@ -78,7 +78,7 @@ ok(backend.includes('if(g?.directPeerComparable!==true||!opponentChampion||roleN
 ok(backend.includes('peerGames:trustedPeer.length')&&backend.includes('dpmGames:dpmPeerGames.length'), 'champion/matchup outputs must carry exact support counts');
 ok(app.includes("laneN>=3,'n='+laneN")&&app.includes("riskN>=3,'n='+riskN")&&app.includes("pressureN>=3,'deaths='+pressureN"), 'diagnostic coloring must use metric-specific minimum evidence');
 ok(modelDoc.includes('## Champion and repeated-matchup evidence gates')&&modelDoc.includes('An inferred or low-confidence opponent champion must not define a repeated matchup'), 'analysis documentation must preserve trusted-peer matchup grouping');
-ok(app.includes('ADC lane cost on roams')&&app.includes('VPM vs Support peer')&&app.includes('Setup wards vs Support'), 'SUPPORT champion diagnostics must use support-relevant evidence');
+ok(app.includes('ADC lane movement on roams')&&app.includes('VPM vs Support peer')&&app.includes('Setup wards vs Support'), 'SUPPORT champion diagnostics must use support-relevant evidence');
 ok(app.includes('First impact vs Jungle')&&app.includes('VPM vs Jungle peer')&&app.includes('Setup wards vs Jungle'), 'JUNGLE champion diagnostics must use jungle-relevant evidence');
 ok(backend.includes('if([\"ADC\",\"MID\",\"TOP\"].includes(roleName))')&&backend.includes('if([\"SUPPORT\",\"JUNGLE\"].includes(roleName))'), 'backend champion/matchup diagnosis must gate carry and vision-role logic explicitly');
 ok(backend.includes('vpmGames:vpmGames.length')&&backend.includes('visionSetupGames:visionSetupGames.length')&&backend.includes('avgSupportAdcLaneCostCs'), 'champion behavior model must export role-specific evidence');
@@ -166,7 +166,7 @@ ok(backend.includes('laneCostBasis=rr==="SUPPORT"'), 'roam lane-cost evidence mu
 ok(backend.includes('Number(r.structureInvolvements||0)===0'), 'structure-producing roams must not be classified as empty costly roams');
 ok(!backend.includes('if(Number(g.objectiveTeamTotal)>=2&&hasNum(g.objectiveJoinRate))'), 'per-game objective judgments must not use secured-only attendance thresholds');
 ok(backend.includes('contestedObjectives>=3&&contestedJoins===0'), 'per-game objective criticism must require direct contested-window absence evidence');
-ok(app.includes('ADC-vs-ADC lane cost')&&app.includes('direct-role lane cost'), 'frontend must disclose the role-correct roam lane-cost basis');
+ok(app.includes('ADC-vs-ADC lane movement')&&app.includes('direct-role lane movement'), 'frontend must disclose the role-correct roam lane-cost basis');
 ok(backend.includes('objectiveFamilyStats:{}')&&backend.includes('objectiveFamilySummary'), 'objective-family control/presence must remain exported');
 ok(html.includes('id="objectiveFamilyOverview"')&&app.includes('function renderObjectiveFamilyOverview('), 'main decision surface must expose rules-aware objective-family context');
 ok(html.includes('data-history-filter="objective-family"')&&app.includes('function objectiveFamilyMatchIds('), 'objective-family context must link to the exact recent matches containing supported contested windows');
@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.103'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.104'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -522,7 +522,7 @@ ok(backend.includes('function persistedReportProjection(rep:any)')&&backend.incl
 ok(!backend.includes('omittedPerGame:["badDeaths"')&&!backend.includes('omittedPerGame:["wards"'), 'compact saved reports must preserve death/ward evidence used by reloaded intelligence views');
 ok(html.includes('id="compoundSignals"')&&app.includes('function renderCompoundSignals('), 'compound evidence analysis must combine related metrics into interpretable intelligence');
 ok(app.includes("if(['ADC','MID','TOP'].includes(role)&&(hasNum(b.damageGoldEfficiency)")&&app.includes("if(['ADC','MID','TOP'].includes(role)&&(hasNum(mid.avgCsSwing15to25)"), 'carry/laner compound metrics must not leak into Jungle or Support');
-ok(app.includes("intelligenceCard('Tempo → objective readiness'")&&app.includes("intelligenceCard('Roam value ↔ ADC lane cost'")&&app.includes("intelligenceCard('Vision safety → objective setup'"), 'Jungle and Support must have role-appropriate compound evidence joins');
+ok(app.includes("intelligenceCard('Tempo → objective readiness'")&&app.includes("intelligenceCard('Roam value ↔ ADC lane movement'")&&app.includes("intelligenceCard('Vision safety → objective setup'"), 'Jungle and Support must have role-appropriate compound evidence joins');
 ok(app.includes('association evidence, not sole causation'), 'Support roam/lane-cost compound evidence must remain explicitly non-causal');
 ok(modelDoc.includes('## Role-aware combined intelligence')&&modelDoc.includes('Combining several weak inputs must never make a role-specific conclusion look mature'), 'analysis model must preserve role-aware compound gates and evidence floors');
 ok(app.includes('lead games · analyzer threshold 4')&&app.includes('all-game recovery opportunities')&&app.includes('analyzer threshold 8')&&app.includes('thin sample — descriptive only'), 'compound evidence must remain neutral until its joined denominator reaches analyzer coaching floors');
@@ -613,7 +613,7 @@ ok(app.includes("if(!['TOP','MID','JUNGLE'].includes(role))")&&app.includes("rol
 ok(app.includes("roleLensCard('Early-lead give-back'")&&app.includes("roleLensCard('15→25 objective reconnect'")&&app.includes("roleLensCard('Contested objective presence'"), 'TOP/MID/JUNGLE lenses must consume role-appropriate lead/routing/objective evidence');
 ok(modelDoc.includes('## Top, Mid and Jungle role-specific lenses')&&modelDoc.includes('Direct-role comparisons always mean the actual same-role opponent'), 'analysis model must preserve role-lens sample and comparator semantics');
 ok(app.includes("if(role!=='SUPPORT')")&&app.includes('supportRoamAdcCostGames')&&app.includes('avgSupportRoamAdcLaneCostCs'), 'Support role lens must remain role-gated and consume exported ADC lane-cost evidence');
-ok(modelDoc.includes('## Support-specific lens')&&modelDoc.includes('4 measured ADC lane-cost windows for a stable lane-cost interpretation')&&modelDoc.includes('Two or more costly roam windows below the four-window floor may be shown as a **review cue**'), 'analysis model must preserve Support-specific roam-cost evidence floors and review-cue semantics');
+ok(modelDoc.includes('## Support-specific lens')&&modelDoc.includes('4 measured ADC lane-movement windows for a stable directional interpretation')&&modelDoc.includes('Two or more costly roam windows below the four-window floor may be shown as a **review cue**'), 'analysis model must preserve Support-specific roam-cost evidence floors and review-cue semantics');
 ok(html.indexOf('id="report-driver"')<html.indexOf('id="quickRead"'), 'action-first conclusions must precede comparison diagnostics');
 ok(app.includes("unit==='vpm'?0.15")&&app.includes("unit==='wards'?0.5"), 'role-aware peer deltas must use the analyzer vision thresholds');
 ok(html.indexOf('id="report-driver"')<html.indexOf('id="practice-plan"')&&html.indexOf('id="practice-plan"')<html.indexOf('id="quickRead"'), 'practice plan must sit directly after the top driver so action precedes deeper diagnostics');
@@ -727,3 +727,8 @@ ok(backend.includes('kpGames:kpGames.length')&&backend.includes('vpmGames:vpmGam
 ok(backend.includes('game3PlusKpDelta')&&backend.includes('postLossVpmDelta')&&backend.includes('minMetricGamesPerComparedGroup:2'), 'session model must gate new role deltas on paired valid observations');
 ok(app.includes("role==='SUPPORT'")&&app.includes("game3+ vision/min")&&app.includes("role==='JUNGLE'")&&app.includes("game3+ CS/min"), 'session presentation must follow the selected role');
 ok(modelDoc.includes('## Role-aware session habit model'), 'analysis documentation must preserve role-aware session semantics');
+ok(backend.includes('g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false'), 'session Gold @15 must require a trusted direct-role peer');
+ok(app.includes("role=canonicalRole(current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole||current?.summary?.primaryRole)"), 'rolling progress must use the canonical selected coaching role');
+ok(app.includes("path:'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame',samplePath:'dataQuality.validTimelineGames',min:5"), 'TOP side-lane progress must use valid timeline games as its evidence denominator');
+ok(app.includes('ADC lane movement during roams')&&!app.includes('ADC lane cost during roams'), 'Support roam presentation must preserve signed lane-movement semantics');
+ok(modelDoc.includes('## v203 audit corrections'), 'analysis documentation must preserve the v203 audit repairs');
