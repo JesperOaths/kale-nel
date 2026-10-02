@@ -1740,3 +1740,18 @@ Champion diagnostics may combine self-only and opponent-relative fields, but the
 Repeated opponent-champion matchup groups are stricter: a game may enter the group only when the opponent is a trusted direct-role peer. An inferred or low-confidence opponent champion must not define a repeated matchup.
 
 Every diagnostic chip uses its own support count. Directional coloring requires at least 3 relevant observations: 3 lane-comparable trusted-peer games for role-gold chips, 3 DPM observations for DPM chips, 3 timeline-complete games for champion risk, 3 first-major peer comparisons for item timing, and at least 3 relevant home-lane deaths before an outside-pressure share is directionally colored. Below those floors the value may remain visible for traceability but the chip is neutral.
+
+
+## Death-pattern review priority
+
+High-risk death maps classify each flagged death into one primary supported pattern. The page separates **recurring patterns** (at least two deaths) from one-off patterns; one-offs remain available in a collapsed traceability section and are not promoted as recurring behavior.
+
+Recurring pattern cards are ordered lexicographically by bounded consequence evidence:
+1. more **severe** measured aftermath,
+2. then more **costly** measured aftermath,
+3. then more **untraded costly** aftermath,
+4. then raw recurrence count.
+
+This is a review-priority ordering, not a numeric severity score and not a causal model. A pattern does not become "worse" merely because unlike consequence types have larger numeric values.
+
+Pattern cards disclose aftermath measurement coverage and repeat-death-contaminated economy samples. Contaminated economy windows must not be presented as clean post-death gold/CS loss evidence. Objective/structure aftermath may still remain independently supported when its own bounded attribution rule is satisfied.
