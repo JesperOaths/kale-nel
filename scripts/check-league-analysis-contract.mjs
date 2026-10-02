@@ -493,6 +493,8 @@ ok(html.includes('id="compoundSignals"')&&app.includes('function renderCompoundS
 ok(app.includes('lead games · analyzer threshold 4')&&app.includes('all-game recovery opportunities')&&app.includes('analyzer threshold 8')&&app.includes('thin sample — descriptive only'), 'compound evidence must remain neutral until its joined denominator reaches analyzer coaching floors');
 ok(modelDoc.includes('## Combined-intelligence evidence floors')&&modelDoc.includes('Combining metrics must never make a thin input look more certain'), 'compound evidence floors must remain explicit in the analysis model');
 ok(app.includes('analyzer coaching threshold 8')&&app.includes('analyzer coaching threshold 4')&&app.includes('thin sample — descriptive only'), 'decision synthesis must not color thin denominator rates as mature coaching evidence');
+ok(app.includes('function wilsonInterval(')&&app.includes('95% Wilson'), 'prominent binomial coaching rates must expose Wilson sampling uncertainty');
+ok(modelDoc.includes('## Rate uncertainty')&&modelDoc.includes('does not override the analyzer'), 'analysis model must distinguish rate uncertainty from coaching confidence and evidence floors');
 ok(modelDoc.includes('## Decision-card evidence thresholds')&&modelDoc.includes('first-reset economy-loss rate: at least 4'), 'analysis model must lock the prominent-card evidence floors');
 ok(html.includes('id="reportDrivers"')&&app.includes('function renderReportDrivers('), 'report must compress the strongest supported weakness, strength and recent direction into an action-first layer');
 ok(app.includes('function orderedPriorityThemes(')&&app.includes('return orderedPriorityThemes(report).slice(0,3)'), 'all action surfaces must consume the canonical backend theme ordering');
