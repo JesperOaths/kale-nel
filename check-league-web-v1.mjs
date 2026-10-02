@@ -427,6 +427,10 @@ assert.ok(modelDoc.includes('## Priority evidence chain')&&modelDoc.includes('bl
 assert.ok(app.includes('driver-evidence-meta')&&app.includes('supporting finding')&&app.includes('confidence'),'Top report drivers must expose the confidence/support metadata behind their selected evidence when available');
 assert.ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('data-open-full-match'),'League must retain the expandable coaching-readable recent match history with a path into full evidence');
 assert.ok(html.includes('data-history-filter="priority"')&&app.includes('function currentPriorityReplayIds('),'Match history must expose a Current focus filter driven by ranked replay evidence');
+assert.ok(api.includes('add(g,116,"mid routing"')&&api.includes('secondsBeforeNeutralObjective'),'Replay queue must include specific pre-objective isolated side-lane evidence for mid-game routing');
+assert.ok(api.includes('add(g,94,"mid routing"')&&api.includes('ev?.highRisk===true'),'Non-objective side-lane replay moments must require an existing high-risk flag');
+assert.ok(app.includes("if(/mid.?routing|routing|side.?lane/.test(text))add('mid routing')"),'Mid-game routing priority must map directly to its dedicated replay category');
+assert.ok(modelDoc.includes('### Mid-routing replay evidence')&&modelDoc.includes('prevents the Current focus filter from substituting generic death clips'),'Routing-specific replay semantics must remain documented');
 assert.ok(app.includes('data-open-priority-history')&&app.includes("state.matchHistoryFilter='priority'"),'Primary limiter card must link directly to matching match-history evidence when available');
 assert.ok(app.includes("filter==='priority'")&&app.includes('currentPriorityReplayLabel(r)'),'Current-focus filtering must be an evidence-only visibility filter and preserve the active priority label');
 assert.ok(app.includes("filter==='priority'&&Number(counts.priority||0)===0")&&app.includes("state.matchHistoryFilter='all'"),'An empty Current focus filter must reset to All instead of leaving a hidden empty-state filter active');
@@ -711,7 +715,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v164'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v165'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
