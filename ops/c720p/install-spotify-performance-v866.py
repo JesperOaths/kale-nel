@@ -93,7 +93,7 @@ Type=simple
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=/home/jespern/.Xauthority
 ExecStartPre={PERF} on
-ExecStart={browser} --user-data-dir={SPOTIFY_PROFILE} --app=https://open.spotify.com/ --no-first-run --no-default-browser-check --disable-session-crashed-bubble --disable-pings --media-router=0 --disable-dev-shm-usage --enable-gpu-rasterization --num-raster-threads=2 --use-gl=angle --use-angle=gl --disable-features=Vulkan,UseSkiaRenderer,InfiniteSessionRestore,Translate --disk-cache-size=33554432 --media-cache-size=67108864 --window-position=683,0 --window-size=683,768
+ExecStart={browser} --user-data-dir={SPOTIFY_PROFILE} --password-store=basic --app=https://open.spotify.com/ --no-first-run --no-default-browser-check --disable-session-crashed-bubble --disable-pings --media-router=0 --disable-dev-shm-usage --enable-gpu-rasterization --num-raster-threads=2 --use-gl=angle --use-angle=gl --disable-features=Vulkan,UseSkiaRenderer,InfiniteSessionRestore,Translate --disk-cache-size=33554432 --media-cache-size=67108864 --window-position=683,0 --window-size=683,768
 ExecStopPost={PERF} off
 Restart=no
 KillMode=mixed
