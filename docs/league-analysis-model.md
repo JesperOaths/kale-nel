@@ -1869,3 +1869,18 @@ When eligible, the card shows:
 This comparison is never labelled causal impact. A signal can co-occur with game state, champion choice, opponent strength or other unmeasured context. If either side has fewer than three games, the card may show the signal's own win rate for traceability but must withhold the with-vs-without difference.
 
 Turning-point cards remain ordered by recurrence, not by observed win-rate difference, to avoid ranking noisy associations as if they were validated drivers.
+
+
+## Coaching charts and visual snapshots
+
+Surfaces that summarize a "typical" current game must use the same mechanics-filtered coaching cohort as the coaching model when a mechanics cohort is active.
+
+This includes:
+- lane/economy trend charts,
+- consistency medians and middle-50% summaries,
+- champion snapshot counts/win rates,
+- first-major item snapshot timing.
+
+These are coaching interpretation surfaces, not archival history. Older-mechanics games remain visible in the Recent match story and technical Game evidence table as context, but must not shift current chart distributions, consistency bands or first-major timing summaries.
+
+The report header may still state the full selected-role report depth alongside the coaching-comparable count so the distinction remains visible.
