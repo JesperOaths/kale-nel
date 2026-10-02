@@ -1750,3 +1750,10 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 .history-ledger-empty{padding:11px 13px;color:var(--muted);font-size:.64rem}
 .button.tiny{padding:6px 8px;font-size:.58rem;min-height:auto}
 @media(max-width:700px){.history-ledger-row{grid-template-columns:44px minmax(0,1fr)}.history-ledger-row>.button{grid-column:2;justify-self:start}}
+
+.practice-trigger{
+  margin:11px 0;padding:11px 12px;border:1px solid var(--line);border-left:4px solid #6b4aa0;border-radius:12px;background:#fbf9ff
+}
+.practice-trigger>span{display:block;margin-bottom:6px;color:#6b4aa0;font-size:.56rem;text-transform:uppercase;letter-spacing:.07em;font-weight:950}
+.practice-trigger>div{font-size:.66rem;line-height:1.45;color:var(--ink-soft)}
+.practice-trigger>div+div{margin-top:4px}
