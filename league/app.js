@@ -2561,8 +2561,11 @@ function renderMatchHistory(r){
   }));
 }
 function renderGames(r){
-  const games=r.games||[];
+  const games=r.games||[],role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),carryGoldRole=['ADC','MID','TOP'].includes(role);
   state.openMatch=null;
+  if(!carryGoldRole&&['ahead15','even15','behind15'].includes(state.gameFilter))state.gameFilter='all';
+  const goldSortButton=document.querySelector('[data-game-sort="gold15"]');
+  if(goldSortButton)goldSortButton.textContent=carryGoldRole?'Gold @15 vs role':'Gold @15 vs role · context';
   const championSelect=$('gameChampionFilter');
   if(championSelect){
     const champions=[...new Set(games.map(g=>String(g.champion||'')).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
@@ -2573,7 +2576,9 @@ function renderGames(r){
   const championScoped=state.gameChampion==='all'?games:games.filter(g=>String(g.champion||'')===state.gameChampion);
   const filterLabels={all:'All',win:'Wins',loss:'Losses',ahead15:'Ahead @15',even15:'Close @15',behind15:'Behind @15'};
   document.querySelectorAll('[data-game-filter]').forEach(btn=>{
-    const key=String(btn.dataset.gameFilter||'all'),count=key==='all'?championScoped.length:championScoped.filter(g=>gameMatchesNamedFilter(g,key)).length;
+    const key=String(btn.dataset.gameFilter||'all'),laneBand=['ahead15','even15','behind15'].includes(key);
+    btn.hidden=laneBand&&!carryGoldRole;
+    const count=key==='all'?championScoped.length:championScoped.filter(g=>gameMatchesNamedFilter(g,key)).length;
     btn.innerHTML=esc(filterLabels[key]||key)+' <span class="filter-count">'+count+'</span>';
   });
   const filtered=games.map((g,i)=>({g,i})).filter(x=>gamePassesFilter(x.g));
@@ -2586,9 +2591,9 @@ function renderGames(r){
   });
   $('gamesBody').innerHTML=order.length?order.map(({g,i},displayIndex)=>{
     const kda=[g.kills,g.deaths,g.assists].map(x=>hasNum(x)?Number(x):'?').join('/');
-    const icon=championIcon(g.champion),peerChampion=String(g.peer?.champion||''),peerIcon=peerChampion?championIcon(peerChampion):'',peerTrusted=trustedDirectPeer(g),peerOk=peerTrusted&&g?.phaseRules?.lane15Comparable!==false,goldTone=peerOk?deltaTone(g.goldDiff15,0,100,false):'neutral';
+    const icon=championIcon(g.champion),peerChampion=String(g.peer?.champion||''),peerIcon=peerChampion?championIcon(peerChampion):'',peerTrusted=trustedDirectPeer(g),peerOk=peerTrusted&&g?.phaseRules?.lane15Comparable!==false,goldTone=carryGoldRole&&peerOk?deltaTone(g.goldDiff15,0,100,false):'neutral';
     const firstItem=g.firstMajorItem,itemSrc=firstItem?itemIcon(firstItem.itemId):'';
-    const goldLabel=!peerOk?'peer withheld':!hasNum(g.goldDiff15)?'n/a':Number(g.goldDiff15)>100?'ahead':Number(g.goldDiff15)<-100?'behind':'even';
+    const goldLabel=!peerOk?'peer withheld':!hasNum(g.goldDiff15)?'n/a':carryGoldRole?(Number(g.goldDiff15)>100?'ahead':Number(g.goldDiff15)<-100?'behind':'even'):'context only';
     const rowLabel=[g.champion||'Unknown',peerChampion?'vs '+peerChampion:'',g.win?'win':'loss',shortGameDate(g.gameStartTimestamp)].filter(Boolean).join(' · ');
     return '<tr class="game-row" data-match="'+esc(g.matchId||String(i))+'" data-index="'+i+'" tabindex="0" role="button" aria-expanded="false" aria-label="Open match details · '+esc(rowLabel)+'">'+
       '<td class="caret"><span class="caret-arrow" aria-hidden="true">▸</span> <small>'+(displayIndex+1)+'</small></td>'+
