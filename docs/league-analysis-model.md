@@ -1714,3 +1714,18 @@ Headline progress uses denominator-safe metrics only. Each metric must meet its 
 Only the strongest material shifts are kept prominent. Metrics that remain inside their practical change bands are placed in a collapsible stable/smaller-shifts section. Missing or thin metrics are counted as withheld rather than silently converted to zero.
 
 Heavy Last-20 overlap, analyzer-version changes and patch changes must remain visible context. No rolling comparison should be described as an independent experiment or causal development estimate.
+
+
+## Frontend direct-peer fail-closed rule
+
+Backend direct-peer eligibility is authoritative all the way through presentation. A per-game peer-relative coaching state exists only when `directPeerComparable === true`, meaning both player and opponent role resolution passed the high-confidence Riot-position requirement.
+
+When that flag is not true:
+- Ahead / Close / Behind @15 filters must not include the game.
+- Match-history role-gold badges and game-arc @15/@25 states are withheld.
+- The evidence-table role-gold coaching cell stays neutral and displays **peer withheld** rather than classifying the raw delta.
+- Peer-relative first-reset economy, early-lead and first-major power-window arc signals are withheld.
+- Peer-dependent recurring turning points cannot count the game.
+- Compact match-history copy must not call the inferred champion a direct role opponent.
+
+Raw checkpoint/opponent material may remain in the technical traceability view with its confidence context, but it must not leak back into coaching summaries through frontend-derived logic. Legacy saved reports without an explicit trusted-peer flag therefore fail closed until re-analysis rather than being assumed comparable.
