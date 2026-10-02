@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.103'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.104'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -404,7 +404,7 @@ assert.ok(modelDoc.includes('## Death-pattern review priority')&&modelDoc.includ
 assert.ok(html.includes('id="compoundSignals"')&&app.includes('function renderCompoundSignals('),'Combined-evidence intelligence must remain visible');
 assert.ok(app.includes("if(['ADC','MID','TOP'].includes(role)&&(hasNum(mid.avgCsSwing15to25)")&&app.includes("if(['ADC','MID','TOP'].includes(role)&&(hasNum(b.damageGoldEfficiency)"),'Farm-map and damage-share resource conversion cards must remain carry/laner role-gated rather than leaking into Support/Jungle');
 assert.ok(app.includes("if(role==='JUNGLE')")&&app.includes("intelligenceCard('Tempo → objective readiness'")&&app.includes('floors 5/5/5 for directional read'),'Jungle combined intelligence must join peer tempo with objective readiness under explicit evidence floors');
-assert.ok(app.includes("if(role==='SUPPORT')")&&app.includes("intelligenceCard('Roam value ↔ ADC lane cost'")&&app.includes("intelligenceCard('Vision safety → objective setup'"),'Support combined intelligence must use roam/lane-cost and vision/setup relationships instead of carry resource conversion');
+assert.ok(app.includes("if(role==='SUPPORT')")&&app.includes("intelligenceCard('Roam value ↔ ADC lane movement'")&&app.includes("intelligenceCard('Vision safety → objective setup'"),'Support combined intelligence must use roam/lane-cost and vision/setup relationships instead of carry resource conversion');
 assert.ok(app.includes('association evidence, not sole causation'),'Support combined roam intelligence must retain the ADC-CS causal caveat');
 assert.ok(modelDoc.includes('## Role-aware combined intelligence')&&modelDoc.includes('Damage-share-minus-gold-share coaching must not leak into SUPPORT or JUNGLE'),'Role gates for compound intelligence must remain documented');
 assert.ok(app.includes("objDiagnosed?tonePct(objective,70,45,false):'neutral'"),'Objective attendance must not be generically red-scored for roles without a supported diagnosis');
@@ -541,7 +541,7 @@ assert.ok(app.includes('aria-controls=')&&app.includes('match-history-detail-'),
 assert.ok(css.includes('.match-history-toggle')&&css.includes('.history-signal-grid'),'Recent match history must remain readable as expandable rows rather than another dense technical table');
 assert.ok(html.includes('id="outcomeFingerprint"')&&app.includes('function renderOutcomeFingerprint('),'League report must retain the within-sample wins-versus-losses diagnostic fingerprint');
 assert.ok(app.includes('function outcomeFingerprintSpecs(')&&app.includes("role==='SUPPORT'")&&app.includes("role==='JUNGLE'")&&app.includes("role==='MID'")&&app.includes("role==='TOP'"),'Outcome fingerprint must select a role-appropriate metric set instead of applying ADC-shaped metrics to every role');
-assert.ok(app.includes("label:'ADC lane cost during roams'")&&app.includes("label:'First impact vs JUNGLE peer'")&&app.includes("label:'15→25 objective reconnect'")&&app.includes("label:'Early lead give-back'"),'Role-aware outcome fingerprint must preserve Support/Jungle/Mid/Top-specific metrics');
+assert.ok(app.includes("label:'ADC lane movement during roams'")&&app.includes("label:'First impact vs JUNGLE peer'")&&app.includes("label:'15→25 objective reconnect'")&&app.includes("label:'Early lead give-back'"),'Role-aware outcome fingerprint must preserve Support/Jungle/Mid/Top-specific metrics');
 assert.ok(app.includes('ready=wins?.n>=3&&losses?.n>=3')&&app.includes('thin sample — no directional color'),'Outcome fingerprint must withhold directional coloring below 3 valid observations on either outcome side');
 assert.ok(css.includes('.outcome-fingerprint-card.thin-evidence'),'Thin outcome-fingerprint metrics must be visually neutral');
 assert.ok(modelDoc.includes('## Role-aware outcome fingerprint')&&modelDoc.includes('3 valid observations in wins and 3 in losses'),'Role-aware outcome-fingerprint sample rules must remain documented');
@@ -643,7 +643,7 @@ assert.ok(api.includes('if(g?.directPeerComparable!==true||!opponentChampion||ro
 assert.ok(api.includes('dpmGames:dpmPeerGames.length')&&api.includes('peerGames:trustedPeer.length'),'Champion/matchup models must export exact support counts for diagnostic metrics');
 assert.ok(app.includes('diagnosticChip(label,value,tone=\'neutral\',evidenceReady=true,sample=\'\')')&&app.includes("vpmN>=3,'n='+vpmN")&&app.includes("setupN>=3,'n='+setupN")&&app.includes("riskN>=3,'n='+riskN"),'Role-aware champion and matchup chips must stay neutral below their own evidence floors');
 assert.ok(css.includes('.diagnostic-chip.thin-evidence')&&modelDoc.includes('## Champion and repeated-matchup evidence gates'),'Thin diagnostic styling and evidence-gate documentation must remain present');
-assert.ok(app.includes('ADC lane cost on roams')&&app.includes('VPM vs Support peer')&&app.includes('Setup wards vs Support'),'SUPPORT champion diagnostics must prioritize roam/lane-cost/vision/setup evidence');
+assert.ok(app.includes('ADC lane movement on roams')&&app.includes('VPM vs Support peer')&&app.includes('Setup wards vs Support'),'SUPPORT champion diagnostics must prioritize roam/lane-cost/vision/setup evidence');
 assert.ok(app.includes('First impact vs Jungle')&&app.includes('VPM vs Jungle peer')&&app.includes('Setup wards vs Jungle'),'JUNGLE champion diagnostics must prioritize tempo/vision/setup evidence');
 assert.ok(api.includes('vpmGames:vpmGames.length')&&api.includes('visionSetupGames:visionSetupGames.length')&&api.includes('impactGames:impactGames.length'),'Backend champion profiles must export role-specific peer evidence counts');
 assert.ok(api.includes('vpmGames:vpmPeerGames.length')&&api.includes('avgItemDelta:meanField(itemGames'),'Repeated-opponent profiles must export role-specific peer vision/tempo/item evidence');
@@ -737,7 +737,7 @@ assert.ok(api.includes('laneCostBasis=rr==="SUPPORT"'),'Roam evidence must state
 assert.ok(api.includes('Number(r.structureInvolvements||0)===0'),'A structure-producing roam must not be mislabeled as an empty costly roam');
 assert.ok(!api.includes('if(Number(g.objectiveTeamTotal)>=2&&hasNum(g.objectiveJoinRate))'),'Per-game objective judgments must not grade secured-only attendance');
 assert.ok(api.includes('contestedObjectives>=3&&contestedJoins===0'),'Per-game objective criticism must use direct contested-window absence evidence');
-assert.ok(app.includes('ADC-vs-ADC lane cost')&&app.includes('direct-role lane cost'),'Frontend must disclose the role-correct roam lane-cost basis');
+assert.ok(app.includes('ADC-vs-ADC lane movement')&&app.includes('direct-role lane movement'),'Frontend must disclose the role-correct roam lane-cost basis');
 assert.ok(app.includes('Roam paths · this match'),'Per-game map must expose roam paths');
 assert.ok(app.includes('roamEvidenceText('),'Roam tab must expose per-window evidence');
 assert.ok(css.includes('.map-roam-path'),'Roam paths must retain dedicated map styling');
@@ -819,7 +819,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v202'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v203'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -910,3 +910,8 @@ assert.ok(api.includes('kpGames:kpGames.length')&&api.includes('vpmGames:vpmGame
 assert.ok(app.includes("if(r==='SUPPORT'){")&&app.includes("'Vision/min '+fmt(sample.vpm,2)")&&app.includes("role==='JUNGLE'"),'Session cards must switch output by selected role');
 assert.ok(app.includes("game 3+ vision/min")&&app.includes("quick post-loss CS/min"),'Session delta copy must use Support/Jungle role-relevant metrics');
 assert.ok(modelDoc.includes('## Role-aware session habit model'),'Role-aware session semantics must remain documented');
+assert.ok(api.includes('g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false'),'Session Gold @15 must fail closed without a trusted direct-role peer');
+assert.ok(app.includes("role=canonicalRole(current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole||current?.summary?.primaryRole)"),'Rolling progress must resolve the same selected coaching role as the rest of the report');
+assert.ok(app.includes("path:'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame',samplePath:'dataQuality.validTimelineGames',min:5"),'TOP side-lane progress readiness must use its timeline-game denominator rather than death-event counts');
+assert.ok(app.includes('ADC lane movement during roams')&&!app.includes('ADC lane cost during roams'),'Prominent Support roam copy must expose signed lane movement rather than mislabel positive values as cost');
+assert.ok(modelDoc.includes('## v203 audit corrections'),'v203 audit denominator and role-source repairs must remain documented');
