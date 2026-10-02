@@ -502,6 +502,11 @@ ok(modelDoc.includes('## Saved Riot profile workflow')&&modelDoc.includes('role-
 ok(!modelDoc.includes('Batch profiles · sequential')&&!modelDoc.includes('Choose the most common normalized role in the Last 20'), 'analysis model must not preserve retired mixed-role or batch-browser semantics');
 ok(app.includes("oldHistory=await api('report_latest'")&&app.includes("target_role:inferredRole"), 'legacy mixed analysis may infer a preferred role but must be rebuilt role-pure from cached data');
 ok(app.includes("cache=await api('cache_status',{profile_id:profile.id,target_role:selectedRole})")&&app.includes("api('analyze_basic',{profile_id:profile.id,target_role:selectedRole})"), 'saved profiles with only old mixed reports must rebuild role-pure reports from cached Riot data without refetching');
+ok(backend.includes('analyzer_version:ANALYZER_VERSION'), 'health endpoint must expose analyzer provenance for saved-report freshness');
+ok(app.includes("state.backendAnalyzerVersion=String(health.analyzer_version||'')")&&app.includes('staleAnalyzer'), 'saved-report loader must detect analyzer-version drift');
+ok(app.includes('rebuildSavedRoleReportFromCache')&&app.includes('no Riot refetch or API key was needed'), 'analyzer drift must trigger cache-only analyzer refresh');
+ok(app.includes('Showing the existing saved report instead'), 'cache-only analyzer refresh failure must preserve the existing saved report');
+ok(modelDoc.includes('## Saved-report analyzer freshness'), 'analysis model must document saved-report analyzer freshness');
 ok(app.includes('Role-selection safety check failed during saved-report rebuild'), 'cached report rebuild must reject cross-role contamination');
 ok(backend.includes('role(x?.data_quality?.selectedRole)===targetRole'), 'saved analysis history must be filtered by role before previous-analysis comparison');
 ok(backend.includes('nearest_player_frame_35s')&&backend.includes('wardFrameProjectedPositions'), 'ward events with omitted coordinates must be counted and boundedly projected rather than disappearing');
