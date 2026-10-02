@@ -506,6 +506,8 @@ ok(app.includes('This is an evidence trace, not a causal proof.'), 'priority evi
 ok(modelDoc.includes('## Priority evidence chain'), 'analysis model must document the evidence-to-action trace');
 ok(app.includes('driver-evidence-meta')&&app.includes('supporting finding')&&app.includes('confidence'), 'action-first report drivers must retain visible evidence-strength metadata when supplied by the backend');
 ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('matchHistorySignals('), 'recent selected-role games must have collapsible coaching-readable history rows with derived evidence signals');
+ok(app.includes('function matchEvidenceLedgerHtml(')&&app.includes('trustedDirectPeer(g)'), 'expanded match history must provide a chronological supported-evidence ledger without bypassing role-peer trust');
+ok(modelDoc.includes('## Per-match chronological evidence ledger')&&modelDoc.includes('evidence navigation aid'), 'analysis model must keep the chronological ledger scoped to supported evidence navigation');
 ok(html.includes('data-history-filter="priority"')&&app.includes('function currentPriorityReplayIds('), 'current top coaching priority must map to ranked replay evidence in match history');
 ok(backend.includes('add(g,116,"mid routing"')&&backend.includes('secondsBeforeNeutralObjective'), 'mid-routing priorities must have routing-specific replay evidence for isolated pre-objective side-lane deaths');
 ok(backend.includes('add(g,94,"mid routing"')&&backend.includes('ev?.highRisk===true'), 'isolated side-lane replay fallback must remain gated by the existing high-risk classification');
