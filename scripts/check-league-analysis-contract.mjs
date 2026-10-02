@@ -101,6 +101,10 @@ ok(backend.includes('frameNearestMs'), 'event-local spatial evidence must use th
 ok(backend.includes('phaseComparable!==false'), 'cross-game phase risk must exclude historical/future-unverified rule profiles');
 ok(backend.includes('midRoutingComparable!==false'), 'fixed 15→25 routing must be disabled for accelerated/incompatible rules profiles');
 ok(backend.includes('highRiskDeathsPer10Min'), 'phase-risk comparison must use per-10-minute rates');
+ok(html.includes('id="phase-diagnostic"')&&app.includes('function renderPhaseDiagnostic('), 'frontend must surface the backend phase-normalized risk model as an interpretable diagnostic');
+ok(app.includes("Number(highTop.high)>=.35&&highGap>=.15")&&app.includes("Number(costTop.costly)>=.30&&costGap>=.12"), 'frontend phase hotspot thresholds must stay aligned with backend coaching rules');
+ok(app.includes("x.games>=5&&Number(x.exposureMinutes||0)>=20"), 'phase diagnostic must fail neutral below minimum compatible exposure');
+ok(modelDoc.includes('## Phase-risk diagnostic')&&modelDoc.includes('Lower-risk phases remain neutral'), 'phase diagnostic semantics must remain documented');
 ok(backend.includes('phaseRisk'), 'phase-normalized behavioral risk summary must remain exported');
 ok(backend.includes('function neutralObjectiveWindows('), 'multi-kill neutral-objective events must be grouped into encounters');
 ok(backend.includes('ownerCounts'), 'contested multi-kill objective encounters must preserve split ownership');
