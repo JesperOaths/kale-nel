@@ -1839,19 +1839,22 @@ function openReplayReviewMatch(matchId,tab){
 }
 function renderReplayReviewQueue(r){
   const box=$('replayReviewQueue'),panel=$('replayReviewPanel');if(!box||!panel)return;
-  const items=Array.isArray(r.replayReviewQueue)?r.replayReviewQueue:[];
+  const items=Array.isArray(r.replayReviewQueue)?r.replayReviewQueue:[],theme=topPracticeThemes(r)[0]||null,cats=practiceReplayCategories(theme);
   panel.hidden=!items.length;
   if(!items.length){box.innerHTML='';return;}
-  box.innerHTML=items.map(x=>'<article class="review-card">'+
+  const focusItems=cats.length?items.filter(x=>cats.includes(String(x.category||'').toLowerCase())):[],focusKeys=new Set(focusItems.map(x=>String(x.matchId||'')+'|'+String(x.rank||''))),otherItems=items.filter(x=>!focusKeys.has(String(x.matchId||'')+'|'+String(x.rank||'')));
+  const card=(x,focusMatch)=>'<article class="review-card '+(focusMatch?'focus-match':'')+'">'+
     '<div class="review-rank">#'+esc(String(x.rank||''))+'</div>'+
-    '<div class="review-copy"><div class="review-head"><span>'+esc(x.category||'review')+'</span><strong>'+esc(x.title||'Replay review')+'</strong></div>'+
+    '<div class="review-copy"><div class="review-head"><span>'+esc(x.category||'review')+(focusMatch?' · current focus':'')+'</span><strong>'+esc(x.title||'Replay review')+'</strong></div>'+
     '<p>'+esc(x.evidence||'')+'</p><p class="review-prompt"><b>Look for:</b> '+esc(x.prompt||'')+'</p>'+
-    '<small>'+esc(x.champion||'Unknown')+' · '+esc(x.role||'GENERIC')+(x.opponentChampion?' · vs '+esc(x.opponentChampion):'')+' · '+esc(fmt(x.minute,1))+'m</small></div>'+
+    '<small>'+esc(x.champion||'Unknown')+' · '+esc(x.role||'GENERIC')+(x.opponentChampion?' · vs '+esc(x.opponentChampion):'')+' · '+esc(fmt(x.minute,1))+'m · analyzer rank #'+esc(String(x.rank||''))+'</small></div>'+
     '<button class="button secondary small review-open" type="button" data-review-match="'+esc(x.matchId||'')+'" data-review-tab="'+esc(x.tab||'macro')+'">Open match</button>'+
-    '</article>').join('');
+    '</article>';
+  const focusLabel=theme?practiceThemeLabel(theme):'Current focus';
+  box.innerHTML=(focusItems.length?'<div class="review-queue-group focus-group"><div class="review-group-head"><div><span>Practice-first review</span><strong>'+esc(focusLabel)+'</strong></div><small>'+focusItems.length+' matching moment'+(focusItems.length===1?'':'s')+' · original analyzer ranks preserved</small></div>'+focusItems.map(x=>card(x,true)).join('')+'</div>':'')+
+    (otherItems.length?'<div class="review-queue-group"><div class="review-group-head"><div><span>Other high-value evidence</span><strong>Keep after the current focus</strong></div><small>'+otherItems.length+' additional ranked moment'+(otherItems.length===1?'':'s')+'</small></div>'+otherItems.map(x=>card(x,false)).join('')+'</div>':'');
   box.querySelectorAll('.review-open').forEach(btn=>btn.addEventListener('click',()=>openReplayReviewMatch(btn.dataset.reviewMatch,btn.dataset.reviewTab)));
 }
-
 function gameSortValue(g,key,index){
   if(key==='champion')return String(g.champion||'').toLowerCase();
   if(key==='opponent')return String(g.peer?.champion||'').toLowerCase();
