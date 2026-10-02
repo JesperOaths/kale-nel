@@ -1722,17 +1722,17 @@ function matchHistoryJudgment(g){
   return {tone:x.tone==='strength'?'good':'bad',title:String(x.title||x.category||'Game insight'),evidence:String(x.evidence||''),action:String(x.action||'')};
 }
 function matchHistoryRow(g,index,displayIndex,r){
-  const peerOk=trustedDirectPeer(g),icon=championIcon(g.champion),opp=peerOk?championIcon(g.peer?.champion):'',lane=matchHistoryLaneState(g),judge=matchHistoryJudgment(g),signals=matchHistorySignals(g),coachingContext=gameIsCoachingContext(r,g),detailId='match-history-detail-'+index;
+  const peerOk=trustedDirectPeer(g),icon=championIcon(g.champion),opp=peerOk?championIcon(g.peer?.champion):'',lane=matchHistoryLaneState(g),judge=matchHistoryJudgment(g),signals=matchHistorySignals(g),coachingContext=gameIsCoachingContext(r,g),detailId='match-history-detail-'+index,focusMatch=currentPriorityReplayIds(r).has(String(g.matchId||''));
   const reviewItems=(Array.isArray(r?.replayReviewQueue)?r.replayReviewQueue:[]).filter(x=>String(x.matchId||'')===String(g.matchId||'')),reviewRank=reviewItems.length?Math.min(...reviewItems.map(x=>Number(x.rank||999)).filter(Number.isFinite)):null;
   const kda=[g.kills,g.deaths,g.assists].map(x=>hasNum(x)?Number(x):'?').join('/');
   const title=(g.win?'Win':'Loss')+' · '+String(g.champion||'Unknown');
-  return '<article class="match-history-row tone-'+(g.win?'good':'bad')+(coachingContext?'':' context-only')+'" data-history-index="'+index+'">'+
+  return '<article class="match-history-row tone-'+(g.win?'good':'bad')+(coachingContext?'':' context-only')+(focusMatch?' focus-match':'')+'" data-history-index="'+index+'">'+
     '<button class="match-history-toggle" type="button" aria-expanded="false" aria-controls="'+detailId+'">'+
       '<span class="history-rank">#'+(displayIndex+1)+'</span>'+
       '<span class="history-champions">'+(icon?'<img loading="lazy" src="'+esc(icon)+'" alt="">':'')+'<span><b>'+esc(title)+(coachingContext?'':' <em class="history-context-badge">context only</em>')+'</b><small>'+esc(shortGameDate(g.gameStartTimestamp))+' · '+esc(g.role||'')+(peerOk&&g.peer?.champion?' · vs '+esc(g.peer.champion):g.peer?.champion?' · role peer withheld':'')+(coachingContext?'':' · older mechanics excluded from coaching aggregates')+'</small></span>'+(opp?'<img class="history-opponent" loading="lazy" src="'+esc(opp)+'" alt="">':'')+'</span>'+
       '<span class="history-stat"><small>K/D/A</small><b>'+esc(kda)+'</b></span>'+
       '<span class="history-stat tone-'+lane.tone+'"><small>Role gold @15</small><b>'+esc(lane.label)+'</b></span>'+
-      '<span class="history-judgment tone-'+judge.tone+'"><small>Strongest read'+(reviewRank!=null?' · review #'+esc(String(reviewRank)):'')+'</small><b>'+esc(judge.title)+'</b></span>'+
+      '<span class="history-judgment tone-'+judge.tone+'"><small>Strongest read'+(reviewRank!=null?' · review #'+esc(String(reviewRank)):'')+(focusMatch?' · current focus':'')+'</small><b>'+esc(judge.title)+'</b></span>'+
       '<span class="history-chevron" aria-hidden="true">▾</span>'+
     '</button>'+
     '<div class="match-history-detail" id="'+detailId+'" hidden>'+
