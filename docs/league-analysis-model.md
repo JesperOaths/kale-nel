@@ -2428,3 +2428,14 @@ The SUPPORT Direct-role comparison surface is built around role-relevant peer ev
 ## Role-aware raw KPI strip
 
 The neutral KPI strip follows the selected coaching role before any comparison or judgment is shown. ADC, MID and TOP retain CS/min and damage/min because those are useful raw carry/lane outputs. JUNGLE keeps CS/min but replaces the carry-style damage card with vision/min. SUPPORT does not foreground CS/min or damage/min: it shows kill participation, vision/min, assists/game and deaths/game alongside win rate and KDA. These are still descriptive self-sample values; vision/min is explicitly volume rather than vision quality or objective control.
+
+
+## Role-aligned economy and tempo charts
+
+The chart/consistency layer must use the same role semantics as Quick Read and the role lenses rather than reverting to one carry-oriented chart set.
+
+- **SUPPORT:** direct-peer vision/min, direct-peer pre-objective setup wards, detected roam conversion, and ADC-vs-ADC lane CS movement during Support roam windows. Raw VPM/KP can remain elsewhere as descriptive context but must not replace the peer/setup evidence in this primary chart layer.
+- **JUNGLE:** direct-peer CS/min, first-major timing versus the enemy Jungler, first tracked impact versus the enemy Jungler, and supported presence in team-contested neutral-objective encounters. Gold @15 remains traceable technical context but is not the primary Jungle economy/tempo chart.
+- **ADC / MID / TOP:** retain their lane/economy chart families where role-relative gold/CS and damage or map-impact signals are materially interpretable.
+
+Missing peer, setup, roam, item, or objective evidence stays missing. The chart layer must not synthesize zeroes. Support ADC lane movement is descriptive association over the detected roam window and must not be described as caused by the roam.
