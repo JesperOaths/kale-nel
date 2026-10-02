@@ -344,6 +344,9 @@ ok(app.includes('Avg affordable → purchase delay'), 'frontend must surface rec
 ok(app.includes('Readiness delay vs peer'), 'frontend must surface recipe-aware direct-peer delay');
 ok(backend.includes('itemSpikeWindow'), 'first-major-item spike utilization model must remain in analyzer');
 ok(backend.includes('LEGENDSTRACKER_RANK_BASELINES_20260323')&&backend.includes('LEGENDSTRACKER_ADC_MULTIPLIERS_20260323'), 'ADC rank comparison must use an explicit external population benchmark corpus');
+ok(backend.includes('sourceCapturedPatch:"26.6"')&&backend.includes('calibrationAgeDays')&&backend.includes('freshnessStatus'), 'external rank reference must carry explicit capture-patch freshness metadata');
+ok(app.includes('function benchmarkFreshnessHtml(')&&app.includes('Historical reference'), 'historical population benchmark status must be prominent in the frontend');
+ok(modelDoc.includes('## Population benchmark freshness')&&modelDoc.includes('they are not current-patch expected values'), 'analysis model must preserve historical-reference limits');
 ok(backend.includes('sourceUrl:"https://legendstracker.fr/methodologie"')&&backend.includes('sourceCorpus:"830k+ ranked EUW1 games"'), 'external ADC benchmark provenance must remain embedded in the report');
 ok(backend.includes('externalBenchmarks'), 'reports must expose external rank benchmarks to the frontend');
 ok(backend.includes('finalItems=[p.item0,p.item1,p.item2,p.item3,p.item4,p.item5,p.item6]'), 'per-game reports must preserve the player final item build for visual review');
