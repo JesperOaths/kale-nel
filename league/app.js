@@ -1119,6 +1119,55 @@ function renderBullets(id,items,empty){
 function pathValue(obj,path){
   return String(path||'').split('.').reduce((v,k)=>v==null?null:v[k],obj);
 }
+
+const PRACTICE_TARGET_SAMPLE_PATHS={
+  'behaviorSummary.earlyLeadGivebackRate':['behaviorSummary.earlyLeadGames'],
+  'summary.csMin':['summary.games'],
+  'summary.goldDiff15':['peerComparison.laneGames15'],
+  'behaviorSummary.highRiskUntradedPostImpactPerGame':['behaviorSummary.playerImpactEvents'],
+  'behaviorSummary.highRiskBehindDeathsPerGame':['behaviorSummary.behindStateDeaths'],
+  'behaviorSummary.highRiskLeadDeathsPerGame':['behaviorSummary.leadDeaths'],
+  'behaviorSummary.repeatDeathRate':['behaviorSummary.repeatDeathOpportunities'],
+  'behaviorSummary.costlyDeathsPerTimelineGame':['behaviorSummary.measuredDeathConsequences'],
+  'behaviorSummary.badDeathsPerTimelineGame':['behaviorSummary.totalTimelineDeaths'],
+  'behaviorSummary.firstResetLossRate':['behaviorSummary.firstResetCleanGames'],
+  'behaviorSummary.soloKillDeathsBeforeShopRate':['behaviorSummary.soloKillResetEvents'],
+  'behaviorSummary.itemSpikeUtilizationRate':['behaviorSummary.itemSpikeEligibleWindows'],
+  'behaviorSummary.highUnspentFightRate':['behaviorSummary.fightSamples'],
+  'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame':['behaviorSummary.macroTransitionSideLaneDeaths'],
+  'behaviorSummary.midRouting.avgCsSwing15to25':['behaviorSummary.midRouting.games'],
+  'behaviorSummary.midRouting.avgObjectiveJoinRate':['behaviorSummary.midRouting.games'],
+  'behaviorSummary.recentShopObjectiveAbsenceRate':['behaviorSummary.neutralObjectiveEvents'],
+  'behaviorSummary.preObjectiveDeathPct':['behaviorSummary.totalTimelineDeaths'],
+  'behaviorSummary.objectiveSetupWardRate':['behaviorSummary.visionWardTotal'],
+  'behaviorSummary.earlySetupObjectiveJoinRate':['behaviorSummary.neutralObjectiveJoins'],
+  'behaviorSummary.killConversionRate':['behaviorSummary.killConversionWindows'],
+  'behaviorSummary.closing25.leadLateRiskLossRate':['behaviorSummary.closing25.leadLosses'],
+  'behaviorSummary.objectiveJoinRate':['behaviorSummary.neutralObjectiveEvents'],
+  'behaviorSummary.firstAllyFightDeathRate':['behaviorSummary.fightSamples'],
+  'behaviorSummary.preContributionFightDeathRate':['behaviorSummary.fightSamples'],
+  'behaviorSummary.damageGoldEfficiency':['summary.games'],
+  'behaviorSummary.highRiskBehindDeathRate':['behaviorSummary.behindStateDeaths'],
+  'behaviorSummary.visionActionDeathRate':['behaviorSummary.visionActions'],
+  'behaviorSummary.roamSuccessRate':['behaviorSummary.roamAttempts'],
+  'behaviorSummary.avgRoamLaneCostCs':['behaviorSummary.roamLaneCostGames'],
+  'sessionBehavior.game3PlusGoldDelta':['sessionBehavior.firstGame.games','sessionBehavior.game3Plus.games'],
+  'sessionBehavior.postLossGoldDelta':['sessionBehavior.quickAfterLoss.games','sessionBehavior.quickAfterWin.games']
+};
+function practiceTargetSamplePaths(t){
+  const xs=Array.isArray(t?.samplePaths)?t.samplePaths.map(String).filter(Boolean):[];
+  return xs.length?xs:(PRACTICE_TARGET_SAMPLE_PATHS[String(t?.metricPath||'')]||['summary.games']);
+}
+function practiceTargetCurrentSample(report,t){
+  const paths=practiceTargetSamplePaths(t),values=paths.map(p=>pathValue(report,p));
+  if(values.some(v=>!hasNum(v)))return 0;
+  return values.length?Math.min(...values.map(Number)):0;
+}
+function reportNewMatchCount(current,previous){
+  const prev=new Set((previous?.games||[]).map(g=>String(g.matchId||'')).filter(Boolean));
+  return [...new Set((current?.games||[]).map(g=>String(g.matchId||'')).filter(Boolean))].filter(id=>!prev.has(id)).length;
+}
+
 function previousPracticeTargetOutcomes(current,previous){
   const targets=Array.isArray(previous?.practiceTargets)?previous.practiceTargets:[];
   if(!targets.length)return{rows:[],reason:''};
@@ -1129,19 +1178,25 @@ function previousPracticeTargetOutcomes(current,previous){
   if(hasNum(curQueue)&&hasNum(prevQueue)&&Number(curQueue)!==Number(prevQueue))return{rows:[],reason:'Previous practice targets are not scored because the comparable queue context changed.'};
   if(curMechanics&&prevMechanics&&curMechanics!==prevMechanics)return{rows:[],reason:'Previous practice targets are not scored because the verified mechanics cohort changed.'};
   if(curPatch&&prevPatch&&curPatch!==prevPatch)return{rows:[],reason:'Previous practice targets are not scored because the patch cohort changed.'};
+  const newGames=reportNewMatchCount(current,previous);
   const rows=targets.map(t=>{
     const currentValue=pathValue(current,t.metricPath);
     if(!hasNum(currentValue)||!hasNum(t.baseline)||!hasNum(t.goal))return null;
-    const cur=Number(currentValue),base=Number(t.baseline),goal=Number(t.goal),higher=t.direction!=='lower';
+    const cur=Number(currentValue),base=Number(t.baseline),goal=Number(t.goal),higher=t.direction!=='lower',windowGames=Math.max(1,Number(t.windowGames||5)),minSample=Math.max(1,Number(t.minSample||1)),currentSample=practiceTargetCurrentSample(current,t);
+    const common={label:t.label||t.metricPath,current:practiceTargetValue(cur,t.unit),baseline:practiceTargetValue(base,t.unit),goal:practiceTargetValue(goal,t.unit),sampleSize:Number(t.sampleSize||0),currentSample,minSample,newGames,windowGames};
+    if(newGames<windowGames){
+      const left=windowGames-newGames;
+      return{...common,status:'awaiting '+left+' more new game'+(left===1?'':'s'),cls:'stable',pending:true};
+    }
+    if(currentSample<minSample)return{...common,status:'not enough current evidence',cls:'stable',pending:true};
     const met=higher?cur>=goal:cur<=goal,needed=Math.abs(goal-base),toward=(higher?cur-base:base-cur);
     const material=Math.max(needed*.2,1e-9);
     const status=met?'met':toward>=material?'moving closer':toward<=-material?'moved away':'unchanged';
     const cls=met||status==='moving closer'?'improved':status==='moved away'?'worsened':'stable';
-    return{label:t.label||t.metricPath,current:practiceTargetValue(cur,t.unit),baseline:practiceTargetValue(base,t.unit),goal:practiceTargetValue(goal,t.unit),status,cls,sampleSize:Number(t.sampleSize||0)};
+    return{...common,status,cls,pending:false};
   }).filter(Boolean);
-  return{rows,reason:''};
+  return{rows,reason:'',newGames};
 }
-
 function progressComparisonContext(current,previous){
   const curRole=canonicalRole(current?.coachingSummary?.primaryRole||current?.summary?.primaryRole),prevRole=canonicalRole(previous?.coachingSummary?.primaryRole||previous?.summary?.primaryRole);
   const curQueue=current?.dataQuality?.dominantQueueId,prevQueue=previous?.dataQuality?.dominantQueueId;
@@ -1212,7 +1267,7 @@ function renderProgressComparison(current,previous,previousAt){
   const targetRows=targetOutcome.rows||[];
   if($('practiceOutcome')){
     $('practiceOutcome').innerHTML=targetRows.length?'<div class="target-outcome-head"><strong>Previous Next-5 targets</strong><small>Descriptive check against the exact saved metric path and goal.</small></div><div class="progress-comparison-grid">'+
-      targetRows.map(x=>'<article class="progress-comparison-card '+x.cls+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.status)+'</strong><p>Now '+esc(x.current)+' · baseline '+esc(x.baseline)+' · target '+esc(x.goal)+'</p></article>').join('')+'</div>':
+      targetRows.map(x=>'<article class="progress-comparison-card '+x.cls+(x.pending?' pending-target':'')+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.status)+'</strong><p>Now '+esc(x.current)+' · baseline '+esc(x.baseline)+' · target '+esc(x.goal)+'</p><small>'+esc(String(x.newGames))+' / '+esc(String(x.windowGames))+' new games · valid n '+esc(String(x.currentSample))+' / '+esc(String(x.minSample))+' required</small></article>').join('')+'</div>':
       (targetOutcome.reason?'<div class="target-outcome-note">'+esc(targetOutcome.reason)+'</div>':'');
   }
   if(!allRows.length&&!targetRows.length&&!targetOutcome.reason&&!context.reason){$('progressComparisonPanel').hidden=true;return;}
