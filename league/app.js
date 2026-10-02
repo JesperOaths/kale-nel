@@ -948,6 +948,12 @@ function radarPolygon(values,cx,cy,radius){
     return (cx+Math.cos(angle)*rr).toFixed(1)+','+(cy+Math.sin(angle)*rr).toFixed(1);
   }).join(' ');
 }
+function benchmarkFreshnessHtml(ext){
+  const age=hasNum(ext?.calibrationAgeDays)?Number(ext.calibrationAgeDays):null,historical=ext?.freshnessStatus==='historical_reference'||(age!=null&&age>90);
+  const captured=ext?.sourceCapturedAt?fmtDate(ext.sourceCapturedAt):'unknown date',patch=ext?.sourceCapturedPatch?' · patch '+String(ext.sourceCapturedPatch):'',ageText=age!=null?' · '+String(age)+' days old':'';
+  return '<span class="benchmark-freshness '+(historical?'historical':'recent')+'">'+(historical?'Historical reference':'Recent reference')+' · captured '+esc(captured)+esc(patch+ageText)+'</span>';
+}
+
 function renderRankRadar(r){
   const ext=r.externalBenchmarks||{},summary=adcBenchmarkSummary(r);
   if(!summary){
@@ -993,7 +999,7 @@ function renderRankRadar(r){
     '</tbody></table></div>':'';
   $('radarLegend').insertAdjacentHTML('beforeend',table);
   const source=ext.source||'External rank benchmark',captured=ext.sourceCapturedAt?' · corpus captured '+ext.sourceCapturedAt:'',corpus=ext.sourceCorpus?' · '+ext.sourceCorpus:'';
-  $('radarNote').innerHTML='<strong>Population benchmark, not your opponents.</strong> '+esc(ext.methodology||'')+' '+(ext.currentTier?'<b>Tier mapping:</b> '+esc(ext.currentTier)+' → '+esc(ext.plus1?.tier||'n/a')+' → '+esc(ext.plus2?.tier||'n/a')+'. ':'')+'<a href="'+esc(ext.sourceUrl||'https://legendstracker.fr/methodologie')+'" target="_blank" rel="noopener noreferrer">'+esc(source)+'</a>'+esc(captured+corpus)+'. The source publishes tier-level rank averages; CS/min, KP and DPM are then Bot/ADC-adjusted with the published ×1.1 multipliers, so these are role-adjusted benchmarks rather than directly measured rank×ADC population means. KDA and deaths/game remain a raw rank reference and are not ADC-adjusted because the source does not publish ADC-specific multipliers for those fields. Because the corpus was captured on '+esc(ext.sourceCapturedAt||'an earlier patch')+', treat it as cross-patch reference context rather than a current-patch expected value. The spider uses fixed display ranges only to put different units on one shape; the adjacent table shows the real values.';
+  $('radarNote').innerHTML=benchmarkFreshnessHtml(ext)+' <strong>Population benchmark, not your opponents.</strong> '+esc(ext.methodology||'')+' '+(ext.currentTier?'<b>Tier mapping:</b> '+esc(ext.currentTier)+' → '+esc(ext.plus1?.tier||'n/a')+' → '+esc(ext.plus2?.tier||'n/a')+'. ':'')+'<a href="'+esc(ext.sourceUrl||'https://legendstracker.fr/methodologie')+'" target="_blank" rel="noopener noreferrer">'+esc(source)+'</a>'+esc(captured+corpus)+'. The source publishes tier-level rank averages; CS/min, KP and DPM are then Bot/ADC-adjusted with the published ×1.1 multipliers, so these are role-adjusted benchmarks rather than directly measured rank×ADC population means. KDA and deaths/game remain a raw rank reference and are not ADC-adjusted because the source does not publish ADC-specific multipliers for those fields. This reference was captured on '+esc(ext.sourceCapturedAt||'an earlier patch')+(ext.sourceCapturedPatch?' during patch '+esc(ext.sourceCapturedPatch):'')+' and is intentionally treated as historical cross-patch context, not a current-patch expected value. The spider uses fixed display ranges only to put different units on one shape; the adjacent table shows the real values.';
   renderRankBridge(r);
 }
 function bridgeFormat(v,unit){
@@ -1023,7 +1029,7 @@ function renderRankBridge(r){
     {key:'kda',label:'KDA',unit:'num'},
     {key:'deaths',sourceKey:'avgDeaths',label:'Deaths / game',unit:'deaths',inverse:true}
   ];
-  target.innerHTML='<div class="rank-bridge-head"><div><span>Benchmark bridge</span><strong>How does this ADC sample differ from higher-tier reference values?</strong></div><small>Descriptive cross-patch context only — higher-tier averages are not targets, causes, or promotion predictors.</small></div><div class="rank-bridge-grid">'+metrics.map(m=>{
+  target.innerHTML='<div class="rank-bridge-head"><div><span>Benchmark bridge</span><strong>How does this ADC sample differ from higher-tier reference values?</strong></div><div class="rank-bridge-meta">'+benchmarkFreshnessHtml(ext)+'<small>Descriptive cross-patch context only — higher-tier averages are not targets, causes, or promotion predictors.</small></div></div><div class="rank-bridge-grid">'+metrics.map(m=>{
     const value=s[m.sourceKey||m.key],g1=bridgeDifference(value,plus1?.[m.key],m.unit,m.inverse),g2=bridgeDifference(value,plus2?.[m.key],m.unit,m.inverse);
     return '<article class="rank-bridge-card"><span>'+esc(m.label)+'</span><strong>'+esc(bridgeFormat(value,m.unit))+'</strong><div><b>'+(plus1?.tier?esc(plus1.tier):'+1 tier')+'</b><em>'+esc(bridgeFormat(plus1?.[m.key],m.unit))+'</em><small class="tone-'+g1.tone+'">'+esc(g1.text)+'</small></div><div><b>'+(plus2?.tier?esc(plus2.tier):'+2 tiers')+'</b><em>'+esc(bridgeFormat(plus2?.[m.key],m.unit))+'</em><small class="tone-'+g2.tone+'">'+esc(g2.text)+'</small></div></article>';
   }).join('')+'</div>';
