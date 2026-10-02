@@ -2320,3 +2320,16 @@ For **JUNGLE**, champion diagnostics prioritize:
 Repeated SUPPORT/JUNGLE opponent cards likewise use direct-peer VPM, objective-setup vision, first-impact/item timing and role-appropriate resource context. Carry-only “lane economy suppressed” and clean-lane-1v1 diagnoses are gated to ADC/MID/TOP.
 
 Champion and repeated-matchup groups still require at least three games before they enter these diagnostic surfaces. Individual colored chips additionally require at least three valid observations for their own metric. Win rate remains descriptive and is never used by itself to label a champion or matchup good/bad.
+
+## Saved-report analyzer freshness
+
+A saved role-pure report is not automatically analytically current merely because its match cache is current. The frontend reads the live backend `analyzer_version` from the health endpoint and compares it with the saved report's `analyzerVersion`.
+
+When those revisions differ, and cached games for the selected role exist, the page automatically calls the cache-only `analyze_basic` path to rebuild the report with the live analyzer. This rebuild must:
+- preserve selected-role isolation,
+- use existing cached match/timeline data,
+- require no Riot refetch and no Riot API key,
+- save the refreshed report so subsequent loads use the current analyzer,
+- retain the previous report for rolling comparison with the analyzer-change caveat.
+
+If the automatic rebuild fails or the role cache is unavailable, the existing saved report remains visible as stale context and is labelled as an older analyzer result. Analyzer freshness must never turn a recoverable saved report into an empty/broken page.
