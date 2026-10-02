@@ -487,6 +487,8 @@ ok(modelDoc.includes('## Match-story filters')&&modelDoc.includes('must never en
 ok(modelDoc.includes('## Game-arc reconstruction')&&modelDoc.includes('direct-role gold differential > +100g')&&modelDoc.includes('at least two coaching-cohort games'), 'analysis documentation must lock the game-arc bands, mechanics cohort and recurrence floor');
 ok(app.includes("openReplayReviewMatch(matchId,tab)"), 'match-level replay cues must retain their evidence-tab routing');
 ok(app.includes("filter(x=>x.games.length>=2)")&&app.includes("filter(x=>x.count>=2)"), 'game-arc recurrence must require evidence in at least two coaching-cohort games');
+ok(app.includes('associationReady=hit.length>=3&&miss.length>=3')&&app.includes('descriptive association only, not causation'), 'turning-point win-rate association must require balanced minimum samples and remain non-causal');
+ok(modelDoc.includes('## Turning-point outcome association')&&modelDoc.includes('ordered by recurrence, not by observed win-rate difference'), 'analysis model must prevent outcome-association ranking inflation');
 ok(app.includes('reportCoachingGames(r)')&&app.includes('gameArcTransition(g)'), 'game-arc aggregation must inherit the backend mechanics-cohort boundary');
 ok(app.includes('not a proven reset cause'), 'game-arc objective timing language must remain association-only');
 ok(html.includes('id="outcomeFingerprint"')&&app.includes('function renderOutcomeFingerprint('), 'selected-role games must expose descriptive win/loss fingerprint analysis without requiring another backend fetch');
