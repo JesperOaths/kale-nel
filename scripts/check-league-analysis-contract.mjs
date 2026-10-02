@@ -328,6 +328,9 @@ ok(app.includes('Lane-presence-only plate signals'), 'frontend must display weak
 ok(backend.includes('fightProfile:{present:0,active:0,attended:0,proximityOnly:0'), 'fight model must distinguish presence from active involvement');
 ok(backend.includes('fightPresenceSamples')&&backend.includes('fightProximityOnlySamples'), 'aggregate fight evidence must retain presence-only counts');
 ok(backend.includes('fightSampleBasis:"active_involvement_only"'), 'fight coaching denominator must remain explicit');
+ok(app.includes("'risk death','High-risk death'")&&app.includes("'objective','Contested '")&&app.includes("'fight','Active fight'"), 'chronological match ledger must preserve death, objective and active-fight evidence');
+ok(app.includes(".filter(x=>x.active)")&&app.includes('Proximity-only clusters stay in the fight detail tab'), 'chronological fight ledger must not promote proximity-only clusters into execution evidence');
+ok(modelDoc.includes('## Chronological match evidence ledger')&&modelDoc.includes('Fully conceded cross-map objectives must not be converted into personal absence events.'), 'analysis documentation must protect chronological ledger evidence boundaries');
 ok(backend.includes('out.fightProfile.survivalRate=100*out.fightProfile.survived/out.fightProfile.active'), 'fight survival must use active involvement only');
 ok(backend.includes('if(!ev.active)continue;'), 'readiness and phase fight metrics must exclude proximity-only clusters');
 ok(app.includes('Fight survival · active involvement')&&app.includes('Proximity-only presence'), 'frontend must expose the active/proximity distinction');
