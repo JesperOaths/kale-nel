@@ -53,6 +53,13 @@ assert(worker.includes("if (isLeaguePublicPath(url.pathname))"),'League public b
 assert(worker.indexOf("if (isLeaguePublicPath(url.pathname))") < worker.indexOf("if (!isProtectedPublicPath(url.pathname))"),'League public bypass must precede generic protected/public routing');
 assert(worker.includes("PUBLIC_AUTH_ENTRY_DOCUMENTS"),'login/home/request/activate documents must have explicit fresh public bootstrap handling');
 assert(worker.includes("'Cache-Control', 'no-store, max-age=0, must-revalidate'"),'fresh public bootstrap documents must bypass stale edge/browser HTML caches');
+assert(worker.includes("const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r14'"),'login bootstrap must have an independent public cache identity');
+assert(worker.includes("const PUBLIC_SHOP_ORIGIN_BUILD = 'v857-clean-collection-art'"),'shop bootstrap must retain its independent public cache identity');
+assert(worker.includes("const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-v140'"),'League bootstrap must have an independent public cache identity');
+assert(worker.includes("cacheBustValue = ADMIN_BUILD"),'public origin helper must accept an explicit cache-bust value');
+assert(worker.includes("cacheBustValue: PUBLIC_LEAGUE_ORIGIN_BUILD"),'League document refresh must not inherit the admin build identity');
+assert(worker.includes("cacheBustValue: isShopDocument ? PUBLIC_SHOP_ORIGIN_BUILD : PUBLIC_AUTH_ORIGIN_BUILD"),'shop/login document refreshes must use their own public build identities');
+assert(worker.includes("return new Response(response.body"),'public no-store responses must forward the untouched origin stream once');
 const missing=[]; const leaked=[]; const publicGateLeaks=[]; let protectedCount=0;
 for(const file of walk(process.cwd())){
   const r=rel(file);const body=fs.readFileSync(file,'utf8');
