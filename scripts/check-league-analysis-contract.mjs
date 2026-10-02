@@ -577,7 +577,7 @@ ok(modelDoc.includes('## Practice-to-replay bridge')&&modelDoc.includes('never m
 ok(html.includes('id="matchHistoryToggle"')&&app.includes('matchHistoryLimit:10'), 'match history must stay scannable at 10 by default while allowing the full eligible Last-20');
 ok(html.includes('id="matchHistoryFilters"')&&app.includes("matchHistoryFilter:'all'"), 'match story must provide presentation-only evidence filters');
 ok(app.includes("filter==='risk'")&&app.includes("g.timelineAvailable===true")&&app.includes("filter==='review'"), 'risk/replay match-story filters must fail closed on supported timeline/replay evidence');
-ok(app.includes("gameMatchesNamedFilter(g,filter)"), 'match-story lane-state filtering must stay synchronized with technical evidence-table bands');
+ok(app.includes("function matchHistoryLaneState(")&&app.includes("gameMatchesNamedFilter(g,'ahead15')")&&app.includes("gameMatchesNamedFilter(g,'behind15')"), 'carry-role match-story lane state must stay synchronized with technical evidence-table bands');
 ok(modelDoc.includes('## Match-story filters')&&modelDoc.includes('must never enter **Risk flagged**'), 'analysis model must preserve risk-filter evidence semantics');
 ok(modelDoc.includes('## Game-arc reconstruction')&&modelDoc.includes('For **SUPPORT**')&&modelDoc.includes('For **JUNGLE**')&&modelDoc.includes('direct-role gold differential > +100g'), 'analysis documentation must lock role-aware arc semantics and carry-role bands');
 ok(app.includes("openReplayReviewMatch(matchId,tab)"), 'match-level replay cues must retain their evidence-tab routing');
@@ -603,7 +603,7 @@ ok(app.includes("if(key==='ahead15')return trustedDirectPeer(g)")&&app.includes(
 ok(app.includes("test:g=>trustedDirectPeer(g)&&g.firstResetSequence?.economyLoss===true")&&app.includes("test:g=>trustedDirectPeer(g)&&g.itemSpikeWindow?.eligible===true"), 'peer-relative arc turning points must reject untrusted role-peer games');
 ok(app.includes("goldLabel=!peerOk?'peer withheld'")&&app.includes("g.peer?.champion?' · role peer withheld'"), 'compact evidence surfaces must label withheld peers instead of presenting them as direct opponents');
 ok(modelDoc.includes('## Frontend direct-peer fail-closed rule')&&modelDoc.includes('Raw checkpoint/opponent material may remain in the technical traceability view'), 'analysis model must distinguish technical traceability from peer-relative coaching eligibility');
-ok(app.includes("gameMatchesNamedFilter(g,'ahead15')")&&app.includes("gameMatchesNamedFilter(g,'behind15')"), 'match-history lane classifications must stay synchronized with the evidence-table bands');
+ok(app.includes("return{label:'Role gold @15'")&&app.includes("const lane=matchHistoryLaneState(g)"), 'ADC/MID/TOP story classification must delegate to the shared @15 lane-state helper');
 ok(app.includes('Timeline evidence is unavailable, so this game cannot be treated as having zero high-risk deaths.'), 'missing timelines must remain an explicit evidence gap in match-history risk summaries');
 ok(app.includes("objDiagnosed?tonePct(objective,70,45,false):'neutral'"), 'objective attendance judgment must require role-appropriate supported diagnosis');
 ok(html.includes('id="rankRadarPanel"')&&app.includes("reportRole!=='ADC'"), 'ADC benchmark UI must be withheld for non-ADC role reports');
