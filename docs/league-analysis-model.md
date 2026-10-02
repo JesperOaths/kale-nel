@@ -2391,3 +2391,12 @@ The lower game-evidence table is an audit/traceability surface, not the primary 
 - **SUPPORT / JUNGLE:** @15 role-gold remains neutral **context only**. The ahead/close/behind table filters are hidden, and a stale carry-role filter is reset to all when the selected role changes.
 
 This preserves the raw evidence without turning carry-lane economy into a SUPPORT/JUNGLE coaching target. The role-aware recent-match story remains the preferred coaching surface for those roles.
+
+
+## Focus-aligned match-story reads
+
+The recent-match story may mark games that contain replay evidence matching the current top practice theme. For those **current-focus games**, the collapsed judgment should prefer the supported per-game judgment that maps to the same practice category instead of showing an unrelated generic strongest read.
+
+Theme-to-judgment matching reuses the existing replay-category mapping. It may connect resets/item spikes, mid routing, laning/matchup, lead protection, objectives, teamfights/fight selection, death consequences, vision safety and roaming to their corresponding per-game judgment categories.
+
+If no per-game judgment matches the active focus, the row falls back to the normal strongest supported improvement/strength judgment and is labelled as a current-focus game rather than pretending the displayed judgment is focus-aligned.
