@@ -399,6 +399,7 @@ assert.ok(html.includes('id="supportRoleLensPanel"')&&app.includes('function ren
 assert.ok(app.includes("if(role!=='SUPPORT')")&&app.includes("panel.hidden=true"),'Support-specific analysis must stay hidden for every non-SUPPORT selected role');
 assert.ok(app.includes('supportRoamAdcCostGames')&&app.includes('avgSupportRoamAdcLaneCostCs')&&app.includes('supportRoamsHurtingAdc'),'Support lens must expose the backend ADC lane-cost evidence from detected support roams');
 assert.ok(app.includes('roamReady=roamN>=4')&&app.includes('visionReady=visionN>=12')&&app.includes('setupReady=setupN>=5')&&app.includes('45–105s'),'Support lens must retain the analyzer-aligned roam, vision and objective-setup evidence thresholds');
+assert.ok(app.includes('costReady=adcCostN>=4')&&app.includes("repeatedHarm&&!costReady?'Two or more harmful roam windows are visible"),'Support ADC lane-cost conclusions must stay thin below four measured windows even when two costly examples repeat');
 assert.ok(modelDoc.includes('## Support-specific lens')&&modelDoc.includes('does not prove the Support alone caused every CS change'),'Support lane-cost semantics and causal caveat must remain documented');
 assert.ok(!app.includes('adcOnly:true'),'DPM/KP charts must use the selected role rather than an ADC-only chart filter');
 assert.ok(app.includes('if(analyzed<=0)throw new Error'),'A zero-game analysis must be treated as a failed request rather than a successful report');
@@ -646,7 +647,7 @@ assert.ok(app.includes('@15 lane-checkpoint comparable games'),'Advanced metrics
 assert.ok(app.includes('15→25 fixed-checkpoint comparable games'),'Advanced metrics must expose transition checkpoint eligibility');
 assert.ok(app.includes('@25 closing-checkpoint comparable games'),'Advanced metrics must expose closing checkpoint eligibility');
 assert.ok(app.includes('Gold @15 vs role opponent · raw checkpoint'),'Swiftplay/nonstandard @15 chart must not be mislabeled as ordinary lane state');
-assert.ok(app.includes('pre-major-objective-era roam departures'),'Frontend roam language must remain queue-aware');
+assert.ok(app.includes('queue-specific roam window')&&!app.includes('pre-major-objective-era roam departures'),'Frontend roam language must use the configured queue window without falsely implying neutral objectives have not spawned');
 assert.ok(app.includes('const collapsed=rules.earlyEndMin>=rules.lateStartMin'),'Swiftplay phase UI must not invent an empty transition bucket');
 assert.ok(app.includes('function plateTierText('),'Frontend must expose turret-tier plate pressure');
 assert.ok(app.includes('Your plate tiers')&&app.includes('Peer plate tiers'),'Per-game macro view must show deeper-turret pressure explicitly');
