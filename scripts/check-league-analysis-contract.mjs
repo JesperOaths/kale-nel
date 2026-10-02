@@ -319,6 +319,10 @@ ok(backend.includes('higherRankAvgMajorItemDeltaMin'), 'higher-ranked direct-pee
 ok(backend.includes('higherRankMajorItemFasterPct'), 'higher-ranked direct-peer faster-first-major rate must remain exported');
 ok(backend.includes('actual higher-ranked same-role opponents with measurable first-major completions'), 'higher-rank item coaching must use actual encountered role peers');
 ok(backend.includes('higherRankDefinition:"actual higher-ranked same-role opponents encountered"'), 'item-spike benchmark must identify the higher-rank comparison population');
+ok(backend.includes('directPeerTimelineGames=validDirectPeerTimeline.length')&&backend.includes('earlyRoleSoloDeathPerGame=directPeerTimelineGames?earlyRoleSoloDeaths/directPeerTimelineGames')&&backend.includes('pre14RoleSoloDeathPerGame=directPeerTimelineGames?pre14RoleSoloDeaths/directPeerTimelineGames'), 'direct-role solo-death rates must use the matched direct-peer timeline denominator, never all timeline games');
+ok(backend.includes('peerCsGames=finiteGames(peerGames')&&backend.includes('csMinGames:peerCsGames.length')&&backend.includes('dpmGames:peerDpmGames.length')&&backend.includes('vpmGames:peerVpmGames.length'), 'peer means must export their exact metric-specific contributing-game counts');
+ok(app.includes('direct-role CS/min comparisons')&&app.includes('direct-role DPM comparisons')&&app.includes('Direct-peer timeline games'), 'frontend must display the exact matched denominator for peer CS/DPM and clean duel evidence');
+ok(modelDoc.includes('Metric-specific same-role means also export their exact contributing-game count')&&modelDoc.includes('directPeerTimelineGames'), 'analysis documentation must lock exact metric-specific peer denominators');
 ok(app.includes('Avg affordable → purchase delay'), 'frontend must surface recipe-aware first-major delay');
 ok(app.includes('Readiness delay vs peer'), 'frontend must surface recipe-aware direct-peer delay');
 ok(backend.includes('itemSpikeWindow'), 'first-major-item spike utilization model must remain in analyzer');
