@@ -711,6 +711,7 @@ function renderReport(raw,sourceKind){
   renderBullets('overallHighlights',r.overallHighlights,'No broader strength has enough evidence yet.');
   renderPracticePlan(r);
   renderDecisionMetrics(r);
+  renderObjectiveFamilyOverview(r);
   renderPhaseDiagnostic(r);
   renderCompoundSignals(r);
   renderSessionHabits(r);
@@ -1109,6 +1110,39 @@ function renderDecisionMetrics(r){
   ].join('');
   $('objectiveDiagnosisSummary').innerHTML=objectiveDiagnosisHtml(r);
 }
+
+function objectiveFamilyLabel(key){
+  const k=String(key||'').toUpperCase();
+  if(k==='DRAGON')return'Dragon';
+  if(k==='ELDER_DRAGON'||k==='ELDER')return'Elder Dragon';
+  if(k==='BARON_NASHOR'||k==='BARON')return'Baron Nashor';
+  if(k==='RIFT_HERALD'||k==='RIFTHERALD'||k==='HERALD')return'Rift Herald';
+  if(k==='VOID_GRUBS'||k==='VOID_GRUB'||k==='HORDE')return'Void Grubs';
+  return String(key||'Objective').replaceAll('_',' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
+}
+function renderObjectiveFamilyOverview(r){
+  const box=$('objectiveFamilyOverview');if(!box)return;
+  const summary=r?.behaviorSummary?.objectiveFamilySummary||{},rows=Object.entries(summary).map(([key,x])=>({
+    key,label:objectiveFamilyLabel(key),encounters:Number(x?.encounters||0),team:Number(x?.teamEncounters||0),enemy:Number(x?.enemyEncounters||0),
+    teamUnits:Number(x?.teamUnitsSecured||0),enemyUnits:Number(x?.enemyUnitsSecured||0),contested:Number(x?.contestedEncounters||0),
+    joined:Number(x?.joinedContestedEncounters||0),presence:hasNum(x?.contestPresenceRate)?Number(x.contestPresenceRate):null,
+    teamJoined:Number(x?.joinedTeamEncounters||0),teamJoinRate:hasNum(x?.teamJoinRate)?Number(x.teamJoinRate):null
+  })).filter(x=>x.encounters>0||x.contested>0).sort((a,b)=>b.contested-a.contested||b.encounters-a.encounters||a.label.localeCompare(b.label));
+  if(!rows.length){box.innerHTML='';return;}
+  const reviewable=rows.filter(x=>x.contested>=3),mostMissed=reviewable.slice().sort((a,b)=>(a.presence??101)-(b.presence??101)||b.contested-a.contested)[0]||null;
+  box.innerHTML='<div class="section-subhead objective-family-head"><div><span>Objective families</span><strong>Where do the contested windows actually occur?</strong></div><small>Family presence is descriptive context, not a role-grade by itself.</small></div>'+
+    '<div class="objective-family-grid">'+rows.map(x=>{
+      const interval=wilsonInterval(x.joined,x.contested),thin=x.contested<3;
+      return '<article class="objective-family-card '+(thin?'thin-evidence':'')+'"><span>'+esc(x.label)+'</span><strong>'+(x.presence==null?'n/a':esc(fmtPct(x.presence)))+' contested presence</strong>'+
+        '<div class="objective-family-statline"><b>'+x.joined+'/'+x.contested+'</b><small>contested joins</small></div>'+
+        (interval?'<div class="objective-family-interval"><i style="left:'+clamp(interval.low,0,100)+'%;width:'+(clamp(interval.high,0,100)-clamp(interval.low,0,100))+'%"></i><b style="left:'+clamp(x.presence,0,100)+'%"></b></div><small class="objective-family-ci">95% Wilson '+esc(fmtPct(interval.low))+'–'+esc(fmtPct(interval.high))+'</small>':'')+
+        '<p>Team-controlled encounters '+x.team+' · enemy-controlled '+x.enemy+' · secured units '+x.teamUnits+' vs '+x.enemyUnits+(hasNum(x.teamJoinRate)?' · present for '+fmtPct(x.teamJoinRate)+' of team-secured encounters':'')+'.</p>'+
+        (thin?'<small class="objective-family-thin">Fewer than 3 contested encounters — context only.</small>':'')+
+      '</article>';
+    }).join('')+'</div>'+
+    (mostMissed?'<div class="objective-family-note"><b>Review clue:</b> '+esc(mostMissed.label)+' has the lowest contested-presence point estimate among families with at least 3 contested encounters ('+esc(fmtPct(mostMissed.presence))+' across '+mostMissed.contested+'). Treat this as a replay-priority clue, not proof that objective attendance caused results.</div>':'');
+}
+
 function renderPhaseDiagnostic(r){
   const box=$('phaseDiagnostic'),note=$('phaseDiagnosticNote');if(!box)return;
   const b=r.behaviorSummary||{},p=r.peerComparison||{},phase=b.phaseRisk||{},mid=b.midRouting||{},closing=b.closing25||{};
