@@ -1866,7 +1866,7 @@ function renderProgressComparison(current,previous,previousAt){
   if($('practiceContinuity'))$('practiceContinuity').innerHTML=practiceContinuityHtml(current,previous,context,targetOutcome);
   if($('practiceOutcome')){
     $('practiceOutcome').innerHTML=targetRows.length?'<div class="target-outcome-head"><strong>Previous Next-5 targets</strong><small>Descriptive check against the exact saved metric path and goal.</small></div><div class="progress-comparison-grid">'+
-      targetRows.map(x=>'<article class="progress-comparison-card '+x.cls+(x.pending?' pending-target':'')+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.status)+'</strong><p>Now '+esc(x.current)+' · baseline '+esc(x.baseline)+' · target '+esc(x.goal)+'</p><small>'+esc(String(x.newGames))+' / '+esc(String(x.windowGames))+' new games · valid n '+esc(String(x.currentSample))+' / '+esc(String(x.minSample))+' required</small></article>').join('')+'</div>':
+      targetRows.map(x=>'<article class="progress-comparison-card '+x.cls+(x.pending?' pending-target':'')+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.status)+'</strong><p>Now '+esc(x.current)+' · baseline '+esc(x.baseline)+' · target '+esc(x.goal)+'</p><small>'+esc(String(x.newGames))+' / '+esc(String(x.windowGames))+' new games · '+esc(x.sampleSummary||('valid n '+String(x.currentSample)+' / '+String(x.minSample)+' required'))+'</small></article>').join('')+'</div>':
       (targetOutcome.reason?'<div class="target-outcome-note">'+esc(targetOutcome.reason)+'</div>':'');
   }
   if(!allRows.length&&!targetRows.length&&!targetOutcome.reason&&!context.reason){$('progressComparisonPanel').hidden=true;return;}
