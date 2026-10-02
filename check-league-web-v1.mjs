@@ -405,6 +405,12 @@ assert.ok(app.includes('This is an association, not a proven reset cause.'),'Rec
 assert.ok(app.includes("gameMatchesNamedFilter(g,'ahead15')")&&app.includes("gameMatchesNamedFilter(g,'behind15')"),'Match-story lane bands must reuse the same ahead/close/behind thresholds as the evidence table');
 assert.ok(app.includes('Timeline evidence is unavailable, so this game cannot be treated as having zero high-risk deaths.'),'Match story must not convert missing timeline evidence into a clean-risk claim');
 assert.ok(app.includes('function reportCoachingGames(')&&app.includes('mechanicsCohortApplied===true')&&app.includes('currentMechanicsKey'),'New derived coaching analysis must respect the backend current-mechanics cohort');
+assert.ok(app.includes('function trustedDirectPeer(g){return g?.directPeerComparable===true;}'),'Frontend must centralize the trusted direct-peer gate');
+assert.ok(app.includes("if(key==='ahead15')return trustedDirectPeer(g)")&&app.includes("if(key==='even15')return trustedDirectPeer(g)")&&app.includes("if(key==='behind15')return trustedDirectPeer(g)"),'Ahead/close/behind filters must exclude games without a trusted direct peer');
+assert.ok(app.includes("if(!trustedDirectPeer(g))return {key:'unavailable',label:'Role peer withheld'")&&app.includes("value:'Role peer withheld'"),'Game arcs must fail closed for peer-relative state/reset-power evidence');
+assert.ok(app.includes("test:g=>trustedDirectPeer(g)&&g.earlyLeadWindow?.giveback===true")&&app.includes("test:g=>trustedDirectPeer(g)&&g.itemSpikeWindow?.eligible===true"),'Peer-dependent recurring turning points must require trusted direct-peer evidence');
+assert.ok(app.includes("goldLabel=!peerOk?'peer withheld'")&&app.includes("peerOk&&hasNum(g.goldDiff15)?signed(g.goldDiff15,0)+'g':'n/a'"),'Evidence-table role-gold cells must not classify untrusted peer deltas');
+assert.ok(modelDoc.includes('## Frontend direct-peer fail-closed rule')&&modelDoc.includes('Legacy saved reports without an explicit trusted-peer flag therefore fail closed'),'Frontend peer-derived coaching must fail closed consistently and remain documented');
 assert.ok(app.includes('aria-controls=')&&app.includes('match-history-detail-'),'Expandable match-story controls must expose their controlled detail region');
 assert.ok(css.includes('.match-history-toggle')&&css.includes('.history-signal-grid'),'Recent match history must remain readable as expandable rows rather than another dense technical table');
 assert.ok(html.includes('id="outcomeFingerprint"')&&app.includes('function renderOutcomeFingerprint('),'League report must retain the within-sample wins-versus-losses diagnostic fingerprint');
@@ -617,7 +623,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v145'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v146'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
