@@ -82,6 +82,9 @@ assert.ok(api.includes('itemUndoQualityPolicy:"zero_id_undo_flagged_approximate_
 assert.ok(api.includes('positionEvidenceModel:"nearest_timeline_frame_within_35s"'),'Report Data Quality must expose the event-position evidence model');
 assert.ok(app.includes('Timeline position evidence')&&app.includes('Item undo quality'),'Frontend Data Quality must expose position timing and unresolved undo evidence');
 assert.ok(api.includes('structureInvolvement(o,frames,whoId,whoTeam,mapId)'),'Structure conversion credit must require supported player involvement');
+assert.ok(api.includes('playerSupportEvidence=isNeutralObjectiveEvent(o)?(participantNearEvent(frames,whoId,o,2800)?"event_position_proximity":null):structureStrongInvolvementEvidence(o,frames,whoId,whoTeam,mapId)'),'Conversion/item-spike objective evidence must retain an explicit support method');
+assert.ok(api.includes('obj.playerSupported!==true')&&api.includes('supportEvidence:obj.playerSupportEvidence'),'Item-spike objective impact must require supported neutral/structure evidence and preserve its provenance');
+assert.ok(app.includes('Supported spike-window impact')&&app.includes('supported objective/structure impact'),'Frontend must label item-spike objective impact as supported evidence rather than generic proximity');
 assert.ok(app.includes('Player-supported kill conversion')&&app.includes('Team conversion after your kill windows'),'Frontend must expose supported conversion and team context separately');
 assert.ok(api.includes('VERIFIED_2026_RULES_THROUGH_MINOR=19'),'2026 mechanics must have an explicit audited-through patch boundary');
 assert.ok(api.includes('minor>VERIFIED_2026_RULES_THROUGH_MINOR'),'Newer 2026 minors must fail closed rather than inherit stale mechanics');
@@ -701,7 +704,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v162'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v163'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
