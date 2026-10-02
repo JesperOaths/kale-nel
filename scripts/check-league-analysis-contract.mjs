@@ -567,6 +567,10 @@ ok(app.includes('Timeline evidence is unavailable, so this game cannot be treate
 ok(app.includes("objDiagnosed?tonePct(objective,70,45,false):'neutral'"), 'objective attendance judgment must require role-appropriate supported diagnosis');
 ok(html.includes('id="rankRadarPanel"')&&app.includes("reportRole!=='ADC'"), 'ADC benchmark UI must be withheld for non-ADC role reports');
 ok(html.includes('id="supportRoleLensPanel"')&&app.includes('function renderSupportRoleLens('), 'SUPPORT must have a role-specific visible evidence lens');
+ok(html.includes('id="roleSpecificLensPanel"')&&app.includes('function renderRoleSpecificLens('), 'TOP/MID/JUNGLE must have a role-specific evidence lens rather than generic-only output');
+ok(app.includes("if(!['TOP','MID','JUNGLE'].includes(role))")&&app.includes("role==='TOP'")&&app.includes("role==='MID'"), 'role-specific lens must be gated to TOP/MID/JUNGLE only');
+ok(app.includes("roleLensCard('Early-lead give-back'")&&app.includes("roleLensCard('15→25 objective reconnect'")&&app.includes("roleLensCard('Contested objective presence'"), 'TOP/MID/JUNGLE lenses must consume role-appropriate lead/routing/objective evidence');
+ok(modelDoc.includes('## Top, Mid and Jungle role-specific lenses')&&modelDoc.includes('Direct-role comparisons always mean the actual same-role opponent'), 'analysis model must preserve role-lens sample and comparator semantics');
 ok(app.includes("if(role!=='SUPPORT')")&&app.includes('supportRoamAdcCostGames')&&app.includes('avgSupportRoamAdcLaneCostCs'), 'Support role lens must remain role-gated and consume exported ADC lane-cost evidence');
 ok(modelDoc.includes('## Support-specific lens')&&modelDoc.includes('4 measured ADC lane-cost windows for a stable lane-cost interpretation')&&modelDoc.includes('Two or more costly roam windows below the four-window floor may be shown as a **review cue**'), 'analysis model must preserve Support-specific roam-cost evidence floors and review-cue semantics');
 ok(html.indexOf('id="report-driver"')<html.indexOf('id="quickRead"'), 'action-first conclusions must precede comparison diagnostics');
