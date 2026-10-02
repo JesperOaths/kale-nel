@@ -1721,24 +1721,66 @@ function renderProgressComparison(current,previous,previousAt){
     return;
   }
   const context=progressComparisonContext(current,previous),role=String(current?.summary?.primaryRole||'GENERIC').toUpperCase();
-  const specs=[
-    {label:'Gold @15 vs role opponent',path:'peerComparison.avgGoldDiff15',samplePath:'peerComparison.laneGames15',min:5,threshold:150,direction:1,format:v=>signed(v,0)+'g'},
-    {label:'Early-lead give-back rate',path:'behaviorSummary.earlyLeadGivebackRate',samplePath:'behaviorSummary.earlyLeadGames',min:4,threshold:15,direction:-1,format:v=>fmtPct(v)},
+  const commonRisk=[
     {label:'High-risk deaths / game',path:'behaviorSummary.badDeathsPerTimelineGame',samplePath:'dataQuality.validTimelineGames',min:5,threshold:.3,direction:-1,format:v=>fmt(v,1)},
-    {label:'Mid routing CS swing 15→25',path:'behaviorSummary.midRouting.avgCsSwing15to25',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:4,direction:1,format:v=>signed(v,1)+' CS'},
-    {label:'Mid routing objective presence',path:'behaviorSummary.midRouting.avgObjectiveJoinRate',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
-    {label:'Win rate from role lead @25',path:'behaviorSummary.closing25.leadWinRate',samplePath:'behaviorSummary.closing25.leadGames',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
-    {label:'First-reset loss rate',path:'behaviorSummary.firstResetLossRate',samplePath:'behaviorSummary.firstResetCleanGames',min:4,threshold:15,direction:-1,format:v=>fmtPct(v)},
-    {label:'First major item vs peer',path:'peerComparison.avgMajorItemDeltaMin',samplePath:'peerComparison.majorItemGames',min:4,threshold:.4,direction:-1,format:v=>signed(v,1)+' min'},
-    {label:'Major-item spike utilization',path:'behaviorSummary.itemSpikeUtilizationRate',samplePath:'behaviorSummary.itemSpikeEligibleWindows',min:4,threshold:15,direction:1,format:v=>fmtPct(v)},
-    {label:'Damage share − gold share',path:'behaviorSummary.damageGoldEfficiency',samplePath:'coachingSummary.games',min:5,threshold:2,direction:1,format:v=>signed(v,1)+' pp'},
     {label:'Died before contribution',path:'behaviorSummary.preContributionFightDeathRate',samplePath:'behaviorSummary.fightSamples',min:8,threshold:10,direction:-1,format:v=>fmtPct(v)},
-    {label:'Rapid repeat-death rate',path:'behaviorSummary.repeatDeathRate',samplePath:'behaviorSummary.repeatDeathOpportunities',min:8,threshold:10,direction:-1,format:v=>fmtPct(v)},
-    {label:'Prior setup presence (45–105s)',path:'behaviorSummary.earlySetupObjectiveJoinRate',samplePath:'behaviorSummary.neutralObjectiveJoins',min:5,threshold:10,direction:1,format:v=>fmtPct(v)},
-    {label:'Recent-shop objective absence rate',path:'behaviorSummary.recentShopObjectiveAbsenceRate',samplePath:'behaviorSummary.neutralObjectiveEvents',min:5,threshold:10,direction:-1,format:v=>fmtPct(v)}
+    {label:'Rapid repeat-death rate',path:'behaviorSummary.repeatDeathRate',samplePath:'behaviorSummary.repeatDeathOpportunities',min:8,threshold:10,direction:-1,format:v=>fmtPct(v)}
   ];
-  if(['ADC','MID','TOP'].includes(role))specs.splice(1,0,{label:'CS / min',path:'coachingSummary.csMin',samplePath:'coachingSummary.games',min:5,threshold:.3,direction:1,format:v=>fmt(v,2)});
-  if(['SUPPORT','JUNGLE'].includes(role))specs.push({label:'Team-contested objective presence',path:'advanced.objectivePresence',samplePath:'behaviorSummary.objectiveContestEncounters',min:5,threshold:10,direction:1,format:v=>fmtPct(v)});
+  const commonTempo=[
+    {label:'First major item vs role peer',path:'peerComparison.avgMajorItemDeltaMin',samplePath:'peerComparison.majorItemGames',min:4,threshold:.4,direction:-1,format:v=>signed(v,1)+' min'},
+    {label:'Major-item spike utilization',path:'behaviorSummary.itemSpikeUtilizationRate',samplePath:'behaviorSummary.itemSpikeEligibleWindows',min:4,threshold:15,direction:1,format:v=>fmtPct(v)}
+  ];
+  let specs;
+  if(role==='SUPPORT'){
+    specs=[
+      {label:'Vision/min vs Support peer',path:'peerComparison.avgVpmDelta',samplePath:'peerComparison.vpmGames',min:5,threshold:.15,direction:1,format:v=>signed(v,2)},
+      {label:'Objective setup wards vs Support',path:'peerComparison.avgObjectiveSetupDelta',samplePath:'peerComparison.visionSetupGames',min:5,threshold:.5,direction:1,format:v=>signed(v,1)},
+      {label:'Roam conversion',path:'behaviorSummary.roamSuccessRate',samplePath:'behaviorSummary.roamAttempts',min:4,threshold:15,direction:1,format:v=>fmtPct(v)},
+      {label:'ADC lane movement during roams',path:'behaviorSummary.avgSupportRoamAdcLaneCostCs',samplePath:'behaviorSummary.supportRoamAdcCostGames',min:4,threshold:2,direction:1,format:v=>signed(v,1)+' CS'},
+      {label:'Vision-action death rate',path:'behaviorSummary.visionActionDeathRate',samplePath:'behaviorSummary.visionActions',min:8,threshold:5,direction:-1,format:v=>fmtPct(v)},
+      {label:'Team-contested objective presence',path:'advanced.objectivePresence',samplePath:'behaviorSummary.objectiveContestEncounters',min:5,threshold:10,direction:1,format:v=>fmtPct(v)},
+      ...commonTempo,...commonRisk
+    ];
+  }else if(role==='JUNGLE'){
+    specs=[
+      {label:'CS/min vs Jungle peer',path:'peerComparison.avgCsMinDelta',samplePath:'peerComparison.csMinGames',min:5,threshold:.15,direction:1,format:v=>signed(v,2)},
+      {label:'First tracked impact vs Jungle',path:'peerComparison.avgImpactDeltaMin',samplePath:'peerComparison.impactGames',min:5,threshold:1,direction:-1,format:v=>signed(v,1)+' min'},
+      {label:'Objective setup wards vs Jungle',path:'peerComparison.avgObjectiveSetupDelta',samplePath:'peerComparison.visionSetupGames',min:5,threshold:.5,direction:1,format:v=>signed(v,1)},
+      {label:'Team-contested objective presence',path:'advanced.objectivePresence',samplePath:'behaviorSummary.objectiveContestEncounters',min:5,threshold:10,direction:1,format:v=>fmtPct(v)},
+      {label:'Recent-shop objective absence rate',path:'behaviorSummary.recentShopObjectiveAbsenceRate',samplePath:'behaviorSummary.neutralObjectiveEvents',min:5,threshold:10,direction:-1,format:v=>fmtPct(v)},
+      ...commonTempo,...commonRisk
+    ];
+  }else if(role==='TOP'){
+    specs=[
+      {label:'Gold @15 vs role opponent',path:'peerComparison.avgGoldDiff15',samplePath:'peerComparison.laneGames15',min:5,threshold:150,direction:1,format:v=>signed(v,0)+'g'},
+      {label:'CS / min',path:'coachingSummary.csMin',samplePath:'coachingSummary.games',min:5,threshold:.3,direction:1,format:v=>fmt(v,2)},
+      {label:'Early-lead give-back rate',path:'behaviorSummary.earlyLeadGivebackRate',samplePath:'behaviorSummary.earlyLeadGames',min:4,threshold:15,direction:-1,format:v=>fmtPct(v)},
+      {label:'Pre-objective side-lane deaths / game',path:'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame',samplePath:'behaviorSummary.macroTransitionSideLaneDeaths',min:4,threshold:.2,direction:-1,format:v=>fmt(v,2)},
+      {label:'Mid routing objective presence',path:'behaviorSummary.midRouting.avgObjectiveJoinRate',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
+      {label:'Win rate from role lead @25',path:'behaviorSummary.closing25.leadWinRate',samplePath:'behaviorSummary.closing25.leadGames',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
+      ...commonTempo,...commonRisk
+    ];
+  }else if(role==='MID'){
+    specs=[
+      {label:'Gold @15 vs role opponent',path:'peerComparison.avgGoldDiff15',samplePath:'peerComparison.laneGames15',min:5,threshold:150,direction:1,format:v=>signed(v,0)+'g'},
+      {label:'CS / min',path:'coachingSummary.csMin',samplePath:'coachingSummary.games',min:5,threshold:.3,direction:1,format:v=>fmt(v,2)},
+      {label:'First tracked impact vs Mid',path:'peerComparison.avgImpactDeltaMin',samplePath:'peerComparison.impactGames',min:5,threshold:1,direction:-1,format:v=>signed(v,1)+' min'},
+      {label:'Mid routing CS swing 15→25',path:'behaviorSummary.midRouting.avgCsSwing15to25',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:4,direction:1,format:v=>signed(v,1)+' CS'},
+      {label:'Mid routing objective presence',path:'behaviorSummary.midRouting.avgObjectiveJoinRate',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
+      {label:'Recent-shop objective absence rate',path:'behaviorSummary.recentShopObjectiveAbsenceRate',samplePath:'behaviorSummary.neutralObjectiveEvents',min:5,threshold:10,direction:-1,format:v=>fmtPct(v)},
+      ...commonTempo,...commonRisk
+    ];
+  }else{
+    specs=[
+      {label:'Gold @15 vs role opponent',path:'peerComparison.avgGoldDiff15',samplePath:'peerComparison.laneGames15',min:5,threshold:150,direction:1,format:v=>signed(v,0)+'g'},
+      {label:'CS / min',path:'coachingSummary.csMin',samplePath:'coachingSummary.games',min:5,threshold:.3,direction:1,format:v=>fmt(v,2)},
+      {label:'Early-lead give-back rate',path:'behaviorSummary.earlyLeadGivebackRate',samplePath:'behaviorSummary.earlyLeadGames',min:4,threshold:15,direction:-1,format:v=>fmtPct(v)},
+      {label:'Damage share − gold share',path:'behaviorSummary.damageGoldEfficiency',samplePath:'coachingSummary.games',min:5,threshold:2,direction:1,format:v=>signed(v,1)+' pp'},
+      {label:'Mid routing CS swing 15→25',path:'behaviorSummary.midRouting.avgCsSwing15to25',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:4,direction:1,format:v=>signed(v,1)+' CS'},
+      {label:'Win rate from role lead @25',path:'behaviorSummary.closing25.leadWinRate',samplePath:'behaviorSummary.closing25.leadGames',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
+      ...commonTempo,...commonRisk
+    ];
+  }
   const allRows=specs.map(spec=>{
     const cur=pathValue(current,spec.path),prev=pathValue(previous,spec.path),curN=progressSampleCount(current,spec),prevN=progressSampleCount(previous,spec);
     if(!hasNum(cur)||!hasNum(prev)||curN<spec.min||prevN<spec.min)return null;
