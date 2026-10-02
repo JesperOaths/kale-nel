@@ -356,6 +356,10 @@ assert.ok(api.includes('positionEvidence:pxy?"event_position":inferred?"nearest_
 assert.ok(html.includes('Death-pattern intelligence')&&app.includes('function deathPatternEntries(')&&app.includes('objective_side_lane')&&app.includes('vision_facecheck')&&app.includes('post_play_giveback'),'Aggregate risky-death cloud must remain replaced by evidence-based repeated death-pattern maps');
 assert.ok(app.includes('<b>Do differently:</b>')&&app.includes('Explain these deaths'),'Each death-pattern map must explain the pattern, list its deaths and give a concrete alternative');
 assert.ok(app.includes('deathPatternMap(examples)')&&app.includes('map numbers match this list'),'Death-pattern marker numbering must use the exact same ordering as its explanation list');
+assert.ok(app.includes('function deathPatternGroupStats(')&&app.includes('function deathPatternGroupCompare(')&&app.includes('untradedCostly'),'Death-pattern review must order repeated patterns by bounded consequence evidence before raw recurrence');
+assert.ok(app.includes('One-off high-risk patterns')&&css.includes('.death-pattern-oneoffs'),'One-off high-risk classifications must remain traceable without competing with recurring patterns');
+assert.ok(app.includes('repeat-death contaminated')&&app.includes('not treated as clean loss evidence'),'Death-pattern cards must surface contaminated economy aftermath instead of treating it as clean loss evidence');
+assert.ok(modelDoc.includes('## Death-pattern review priority')&&modelDoc.includes('review-priority ordering, not a numeric severity score'),'Death-pattern consequence ordering must remain documented as non-causal and non-mixed-unit');
 assert.ok(html.includes('id="compoundSignals"')&&app.includes('function renderCompoundSignals('),'Combined-evidence intelligence must remain visible');
 assert.ok(app.includes("objDiagnosed?tonePct(objective,70,45,false):'neutral'"),'Objective attendance must not be generically red-scored for roles without a supported diagnosis');
 assert.ok(html.includes('id="rankRadarPanel"')&&app.includes("reportRole!=='ADC'"),'ADC population benchmark panel must be hidden for non-ADC selected roles');
@@ -635,7 +639,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v147'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v148'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
