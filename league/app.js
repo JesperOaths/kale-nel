@@ -1150,16 +1150,6 @@ function renderRecentPulse(r){
   target.innerHTML=roleRecentTrendSpecs(r).map(pulseCard).join('');
 }
 
-function renderRecentPulse(r){
-  const t=r.recentTrend||{},target=$('recentPulse');if(!target)return;
-  target.innerHTML=[
-    pulseCard('CS / min',t.csMin,'csmin',false,.15),
-    pulseCard('Gold @15 vs role',t.goldDiff15,'gold',false,150),
-    pulseCard('Damage / min',t.dpm,'dpm',false,50),
-    pulseCard('Kill participation',t.kp,'percent',false,2),
-    pulseCard('High-risk deaths',t.badDeaths,'num',true,.2)
-  ].join('');
-}
 function renderVisualSummary(r){
   const games=reportCoachingGames(r),champs=new Map(),items=new Map();
   for(const g of games){
