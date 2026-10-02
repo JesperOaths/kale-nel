@@ -582,6 +582,9 @@ ok(app.includes("evidenceHealthCard('Timeline behavior'")&&app.includes("evidenc
 ok(modelDoc.includes('## Top-level evidence health')&&modelDoc.includes('Ready means the dimension clears its minimum evidence floor'), 'analysis model must distinguish evidence readiness from certainty');
 ok(app.includes("comparisonCard('CS/min vs role opponent'")&&app.includes("comparisonCard('DPM vs role opponent'"), 'quick-read comparison must use actual direct-role opponents rather than population rank references');
 ok(html.includes('Raw selected-role output')&&app.includes('Raw selected-role sample'), 'Raw KPI layer must remain neutral self-sample context, separate from benchmark inference');
+ok(app.includes('function renderRoleSectionCopy(')&&app.includes("JUNGLE:{nav:'Jungle economy & tempo'")&&app.includes("SUPPORT:{nav:'Support economy & setup'"), 'report framing must adapt to selected role instead of assuming lane-centric ADC semantics');
+ok(html.includes('<h3>Cohort context</h3>')&&app.includes('Trusted role peer')&&app.includes('Current mechanics'), 'role-pure report context must surface evidence construction rather than a redundant role breakdown');
+ok(modelDoc.includes('## Role-aware report framing')&&modelDoc.includes('Because reports are role-pure upstream'), 'analysis model must preserve role-aware framing and cohort-context rationale');
 ok(modelDoc.includes('## Report information hierarchy')&&modelDoc.includes('Do not present direct same-role opponents as population rank averages'), 'report hierarchy and population-vs-opponent distinction must stay documented');
 ok(app.includes('Next 5 comparable games'), 'practice cards must identify the short practice horizon');
 const browserStorageLines=app.split(/\r?\n/).filter(line=>/localStorage|sessionStorage|indexedDB/.test(line));
