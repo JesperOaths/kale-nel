@@ -276,7 +276,7 @@ function roamEvidenceText(r){
     hasNum(r.platesGained)&&Number(r.platesGained)>0?String(r.platesGained)+' plates gained':null,
     hasNum(r.platesLost)&&Number(r.platesLost)>0?String(r.platesLost)+' home-lane plates lost while away':null,
     hasNum(r.homeLaneStructuresLost)&&Number(r.homeLaneStructuresLost)>0?String(r.homeLaneStructuresLost)+' home-lane turrets lost while away':null,
-    hasNum(r.coachingLaneCostCs??r.laneCostCs)?((r.laneCostBasis==='allied_adc_vs_enemy_adc'?'ADC-vs-ADC lane cost':'direct-role lane cost')+' '+signed(r.coachingLaneCostCs??r.laneCostCs,0)+' CS'):null
+    hasNum(r.coachingLaneCostCs??r.laneCostCs)?((r.laneCostBasis==='allied_adc_vs_enemy_adc'?'ADC-vs-ADC lane movement':'direct-role lane movement')+' '+signed(r.coachingLaneCostCs??r.laneCostCs,0)+' CS'):null
   ].filter(Boolean);
   return bits.join(' · ');
 }
@@ -801,7 +801,7 @@ function roleRecentTrendSpecs(r){
   const spec=(label,obj,unit,inverse,threshold,minRecentEvents=0,minPriorEvents=0)=>({label,obj,unit,inverse,threshold,minRecentEvents,minPriorEvents});
   if(role==='SUPPORT')return[
     spec('Roam conversion',t.roamConversion,'percent',false,15,3,5),
-    spec('ADC lane cost during roams',t.supportAdcLaneCost,'cs',false,2),
+    spec('ADC lane movement during roams',t.supportAdcLaneCost,'cs',false,2),
     spec('Vision-action death rate',t.visionActionDeath,'percent',true,5,6,10),
     spec('Prior objective setup',t.objectiveSetup,'percent',false,10,3,5),
     spec('Contested objective presence',t.objectiveJoin,'percent',false,10,3,5)
@@ -944,14 +944,14 @@ function renderSupportRoleLens(r){
   const contestTone=contestRate==null?'neutral':contestRate<50?'bad':contestRate>=70?'good':'neutral';
   box.innerHTML=[
     supportLensCard('Roam conversion',roamRate==null?'n/a':fmtPct(roamRate),roamN+' detected early roam departures inside the queue-specific roam window · evidence floor 4',roamTone,roamReady),
-    supportLensCard('ADC lane cost during roams',adcCost==null?'n/a':signed(adcCost,1)+' CS',adcCostN+' ADC-vs-ADC lane-cost windows · '+harmful+' lost ≥6 CS without supported roam return · evidence floor 4',costTone,costReady),
+    supportLensCard('ADC lane movement during roams',adcCost==null?'n/a':signed(adcCost,1)+' CS',adcCostN+' ADC-vs-ADC lane-movement windows · '+harmful+' lost ≥6 CS without supported roam return · evidence floor 4',costTone,costReady),
     supportLensCard('Vision-action safety',visionRate==null?'n/a':fmtPct(visionRate),visionDeaths+' deaths after '+visionN+' tracked ward placements/clears · '+highRiskVision+' high-risk · '+unsupportedVision+' unsupported',visionTone,visionReady,wilsonInterval(visionDeaths,visionN)),
     supportLensCard('Prior objective setup',setupRate==null?'n/a':fmtPct(setupRate),setupHits+' / '+setupN+' joined neutral-objective encounters already near the area 45–105s before the event',setupTone,setupReady,wilsonInterval(setupHits,setupN)),
     supportLensCard('Contested objective presence',contestRate==null?'n/a':fmtPct(contestRate),contestHits+' / '+contestN+' supported team-contested neutral-objective encounters',contestTone,contestReady,wilsonInterval(contestHits,contestN))
   ].join('');
   if(note){
     const read=costReady&&repeatedHarm?'Repeated measured support roams are associated with substantial ADC-vs-ADC CS loss; review whether the ADC could safely crash, reset or collect before you leave.':repeatedHarm&&!costReady?'Two or more harmful roam windows are visible, but the lane-cost sample is still below the four-window evidence floor; treat this as a review cue, not a stable pattern.':roamReady&&roamRate!=null&&roamRate>=65&&costReady&&adcCost!=null&&adcCost>=-2?'Roams are converting while preserving ADC lane economy in the measured windows; keep the same wave-preparation rule.':'Use the cards independently: a successful roam can still be expensive for bot lane, and low lane cost does not prove the roam created value.';
-    note.textContent=read+' Support roam cost uses change in ADC-vs-ADC CS differential during the detected support roam; it is not a claim that every CS change was caused solely by the Support.';
+    note.textContent=read+' Support roam lane movement is the change in ADC-vs-ADC CS differential during the detected support roam. Positive favors the allied ADC; negative is lane cost. It is not a claim that every CS change was caused solely by the Support.';
   }
   panel.hidden=false;
 }
@@ -1025,7 +1025,7 @@ function perGameSupportAdcLaneCost(g){
 function outcomeFingerprintSpecs(role){
   if(role==='SUPPORT')return[
     {label:'Roam conversion',unit:'percent',inverse:false,get:g=>perGamePct(g?.roams?.successes,g?.roams?.attempts)},
-    {label:'ADC lane cost during roams',unit:'cs',inverse:false,get:g=>perGameSupportAdcLaneCost(g)},
+    {label:'ADC lane movement during roams',unit:'cs',inverse:false,get:g=>perGameSupportAdcLaneCost(g)},
     {label:'Vision-action death rate',unit:'percent',inverse:true,get:g=>perGamePct(g?.visionMission?.deaths,g?.visionMission?.actions)},
     {label:'Prior objective setup',unit:'percent',inverse:false,get:g=>perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.joined)}
   ];
@@ -1398,9 +1398,9 @@ function renderDecisionMetrics(r){
       decisionCard('Prior objective setup',fmtPct(setup),tonePct(setup,70,45,false),
         setup==null?'No joined-objective setup sample.':thin(setupN>=5,setup>=70?'You are often established near the objective before the event frame.':setup<45?'Objective arrival is often reactive rather than pre-established.':'Prior setup is mixed.'),
         String(b.earlySetupObjectiveJoins??0)+' / '+String(setupN)+' joined neutral-objective encounters · analyzer threshold 5',setup,setupN>=5,wilsonInterval(Number(b.earlySetupObjectiveJoins??0),setupN)),
-      decisionCard('Roam return ↔ ADC lane cost',roam==null?'n/a':fmtPct(roam),roamTone,
-        roam==null?'No measured early-roam sample.':thin(roamReady,'Supported roam conversion is '+fmtPct(roam)+(cost!=null?' while associated ADC-vs-ADC lane movement averages '+signed(cost,1)+' CS.':'')+(harm?' '+harm+' roam window(s) lost at least 6 ADC CS without supported return.':'')+' Treat the lane-cost link as association evidence, not sole causation.'),
-        String(roamN)+' roam attempts · '+String(costN)+' ADC lane-cost windows · thresholds 4/4',roam,roamReady,wilsonInterval(Number(b.roamSuccesses??0),roamN))
+      decisionCard('Roam return ↔ ADC lane movement',roam==null?'n/a':fmtPct(roam),roamTone,
+        roam==null?'No measured early-roam sample.':thin(roamReady,'Supported roam conversion is '+fmtPct(roam)+(cost!=null?' while associated ADC-vs-ADC lane movement averages '+signed(cost,1)+' CS.':'')+(harm?' '+harm+' roam window(s) lost at least 6 ADC CS without supported return.':'')+' Treat the lane-movement link as association evidence, not sole causation.'),
+        String(roamN)+' roam attempts · '+String(costN)+' ADC lane-movement windows · thresholds 4/4',roam,roamReady,wilsonInterval(Number(b.roamSuccesses??0),roamN))
     );
   }else if(reportRole==='JUNGLE'){
     const impact=hasNum(p.avgImpactDeltaMin)?Number(p.avgImpactDeltaMin):null,impactN=Number(p.impactGames||0),setup=hasNum(b.earlySetupObjectiveJoinRate)?Number(b.earlySetupObjectiveJoinRate):null,setupN=Number(b.neutralObjectiveJoins||0),item=hasNum(p.avgMajorItemDeltaMin)?Number(p.avgMajorItemDeltaMin):null,itemN=Number(p.majorItemGames||0);
@@ -1548,7 +1548,7 @@ function renderCompoundSignals(r){
   }
   if(role==='SUPPORT'){
     const roamN=Number(b.roamAttempts||0),roam=hasNum(b.roamSuccessRate)?Number(b.roamSuccessRate):null,costN=Number(b.supportRoamAdcCostGames||0),cost=hasNum(b.avgSupportRoamAdcLaneCostCs)?Number(b.avgSupportRoamAdcLaneCostCs):null,harm=Number(b.supportRoamsHurtingAdc||0),roamReady=roamN>=4&&costN>=4,roamTone=!roamReady?'neutral':harm>=2?'bad':roam!=null&&roam>=60&&cost!=null&&cost>=-2?'good':'neutral';
-    rows.push(intelligenceCard('Roam value ↔ ADC lane cost',roam==null?'Support roam sample':fmtPct(roam)+' conversion',roamTone,(roam!=null?'Detected roam conversion is '+fmtPct(roam)+'. ':'')+(cost!=null?'Measured ADC-vs-ADC CS change during those roam windows averages '+signed(cost,1)+' CS. ':'')+(harm?harm+' roam window(s) lost ≥6 CS without supported roam return.':''),roamN+' roam attempts · '+costN+' ADC lane-cost windows · floors 4/4 · association evidence, not sole causation',roamReady));
+    rows.push(intelligenceCard('Roam value ↔ ADC lane movement',roam==null?'Support roam sample':fmtPct(roam)+' conversion',roamTone,(roam!=null?'Detected roam conversion is '+fmtPct(roam)+'. ':'')+(cost!=null?'Measured ADC-vs-ADC CS change during those roam windows averages '+signed(cost,1)+' CS. ':'')+(harm?harm+' roam window(s) lost ≥6 CS without supported roam return.':''),roamN+' roam attempts · '+costN+' ADC lane-movement windows · floors 4/4 · association evidence, not sole causation',roamReady));
     const visionN=Number(b.visionActions||0),visionRate=hasNum(b.visionActionDeathRate)?Number(b.visionActionDeathRate):null,setupN=Number(b.neutralObjectiveJoins||0),setup=hasNum(b.earlySetupObjectiveJoinRate)?Number(b.earlySetupObjectiveJoinRate):null,ready=visionN>=12&&setupN>=5,tone=!ready?'neutral':visionRate!=null&&visionRate<=8&&setup!=null&&setup>=70?'good':visionRate!=null&&visionRate>=20&&setup!=null&&setup<45?'bad':'neutral';
     rows.push(intelligenceCard('Vision safety → objective setup',setup==null?'Support setup sample':fmtPct(setup)+' prior setup',tone,(visionRate!=null?'Vision-action death rate is '+fmtPct(visionRate)+'. ':'')+(setup!=null?'Prior objective setup is '+fmtPct(setup)+'. ':'')+'These signals are paired to distinguish productive setup work from risky information gathering.',visionN+' vision actions · '+setupN+' joined objective encounters · floors 12/5',ready));
   }
@@ -1720,7 +1720,7 @@ function renderProgressComparison(current,previous,previousAt){
     if(note)note.textContent='';
     return;
   }
-  const context=progressComparisonContext(current,previous),role=String(current?.summary?.primaryRole||'GENERIC').toUpperCase();
+  const context=progressComparisonContext(current,previous),role=canonicalRole(current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole||current?.summary?.primaryRole);
   const commonRisk=[
     {label:'High-risk deaths / game',path:'behaviorSummary.badDeathsPerTimelineGame',samplePath:'dataQuality.validTimelineGames',min:5,threshold:.3,direction:-1,format:v=>fmt(v,1)},
     {label:'Died before contribution',path:'behaviorSummary.preContributionFightDeathRate',samplePath:'behaviorSummary.fightSamples',min:8,threshold:10,direction:-1,format:v=>fmtPct(v)},
@@ -1755,7 +1755,7 @@ function renderProgressComparison(current,previous,previousAt){
       {label:'Gold @15 vs role opponent',path:'peerComparison.avgGoldDiff15',samplePath:'peerComparison.laneGames15',min:5,threshold:150,direction:1,format:v=>signed(v,0)+'g'},
       {label:'CS / min',path:'coachingSummary.csMin',samplePath:'coachingSummary.games',min:5,threshold:.3,direction:1,format:v=>fmt(v,2)},
       {label:'Early-lead give-back rate',path:'behaviorSummary.earlyLeadGivebackRate',samplePath:'behaviorSummary.earlyLeadGames',min:4,threshold:15,direction:-1,format:v=>fmtPct(v)},
-      {label:'Pre-objective side-lane deaths / game',path:'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame',samplePath:'behaviorSummary.macroTransitionSideLaneDeaths',min:4,threshold:.2,direction:-1,format:v=>fmt(v,2)},
+      {label:'Pre-objective side-lane deaths / game',path:'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame',samplePath:'dataQuality.validTimelineGames',min:5,threshold:.2,direction:-1,format:v=>fmt(v,2)},
       {label:'Mid routing objective presence',path:'behaviorSummary.midRouting.avgObjectiveJoinRate',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
       {label:'Win rate from role lead @25',path:'behaviorSummary.closing25.leadWinRate',samplePath:'behaviorSummary.closing25.leadGames',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
       ...commonTempo,...commonRisk
@@ -3234,7 +3234,7 @@ function renderAdvanced(r){
     ['High-risk untraded post-impact',String(r.behaviorSummary?.highRiskUntradedPostImpactDeaths??0)+' · '+fmt(r.behaviorSummary?.highRiskUntradedPostImpactPerGame,2)+'/game'],
     ['Top risky-death area',r.behaviorSummary?.topBadDeathZone?String(r.behaviorSummary.topBadDeathZone)+' · '+fmtPct(r.behaviorSummary.topBadDeathZonePct):'n/a'],
     ['Roam attempts / success',String(roam.attempts??0)+' / '+fmtPct(roam.successRate)],
-    ['Coaching roam lane cost',hasNum(roam.avgLaneCostCs)?signed(roam.avgLaneCostCs,1)+' CS avg · '+String(roam.emptyCostlyRoams??0)+' empty costly':'n/a'],
+    ['Coaching roam lane movement',hasNum(roam.avgLaneCostCs)?signed(roam.avgLaneCostCs,1)+' CS avg · '+String(roam.emptyCostlyRoams??0)+' empty costly':'n/a'],
     ['First-reset measured / clean games',String(r.behaviorSummary?.firstResetMeasuredGames??0)+' / '+String(r.behaviorSummary?.firstResetCleanGames??0)],
     ['First-reset loss / gain games',String(r.behaviorSummary?.firstResetLossGames??0)+' / '+String(r.behaviorSummary?.firstResetGainGames??0)],
     ['First-reset loss rate',fmtPct(r.behaviorSummary?.firstResetLossRate)],
@@ -3412,7 +3412,7 @@ function renderRoleSectionCopy(r){
     TOP:{nav:'Lane & side economy',eyebrow:'Lane & side economy',title:'Are lane advantages surviving into side-lane pressure?',hint:'Current TOP coaching cohort only. Direct-role lane checkpoints are separated from later side-lane and objective-timing evidence.'},
     MID:{nav:'Lane → map economy',eyebrow:'Lane → map economy',title:'Are lane resources turning into useful map tempo?',hint:'Current MID coaching cohort only. Lane checkpoints, 15→25 routing and direct-role comparisons remain separate so movement does not erase its lane cost.'},
     JUNGLE:{nav:'Jungle economy & tempo',eyebrow:'Jungle economy & tempo',title:'Are farm and item timings becoming earlier map impact?',hint:'Current JUNGLE coaching cohort only. Direct-jungle farm/item comparisons are separated from objective presence so one does not stand in for the other.'},
-    SUPPORT:{nav:'Support economy & setup',eyebrow:'Support economy & setup',title:'Are support resources, vision and movement buying enough map value?',hint:'Current SUPPORT coaching cohort only. Support economy is contextual; roam, ADC lane-cost, vision and objective setup evidence are interpreted separately.'}
+    SUPPORT:{nav:'Support economy & setup',eyebrow:'Support economy & setup',title:'Are support resources, vision and movement buying enough map value?',hint:'Current SUPPORT coaching cohort only. Support economy is contextual; roam, ADC lane movement, vision and objective setup evidence are interpreted separately.'}
   }[role]||{nav:'Role economy',eyebrow:'Role economy',title:'How does your role economy develop?',hint:'Current coaching cohort only.'};
   if(nav)nav.textContent=copy.nav;if(eyebrow)eyebrow.textContent=copy.eyebrow;if(title)title.textContent=copy.title;if(hint)hint.textContent=copy.hint;
 }
@@ -3424,12 +3424,12 @@ function championDiagnosticSet(v,role,base,riskBase){
     return{
       chips:[
         diagnosticChip('Roam conversion',roamRate==null?'n/a':fmtPct(roamRate),roamRate==null?'neutral':roamRate>=65?'good':roamRate<45?'bad':'neutral',roamN>=4,'n='+roamN),
-        diagnosticChip('ADC lane cost on roams',cost==null?'n/a':signed(cost,1)+' CS',deltaTone(cost,0,2,false),costN>=4,'n='+costN),
+        diagnosticChip('ADC lane movement on roams',cost==null?'n/a':signed(cost,1)+' CS',deltaTone(cost,0,2,false),costN>=4,'n='+costN),
         diagnosticChip('VPM vs Support peer',vpm==null?'n/a':signed(vpm,2),deltaTone(vpm,0,.15),vpmN>=3,'n='+vpmN),
         diagnosticChip('Setup wards vs Support',setup==null?'n/a':signed(setup,1),deltaTone(setup,0,.5),setupN>=3,'n='+setupN),
         diagnosticChip('Risk deaths vs usual',hasNum(riskDelta)?signed(riskDelta,2)+'/g':'n/a',deltaTone(riskDelta,0,.25,true),riskN>=3,'n='+riskN)
       ].join(''),
-      coverage:String(v.peerGames||0)+' trusted peer · '+roamN+' roam attempts · '+costN+' ADC lane-cost windows · '+vpmN+' VPM comparisons · '+setupN+' setup-ward comparisons · '+riskN+' timeline games'
+      coverage:String(v.peerGames||0)+' trusted peer · '+roamN+' roam attempts · '+costN+' ADC lane-movement windows · '+vpmN+' VPM comparisons · '+setupN+' setup-ward comparisons · '+riskN+' timeline games'
     };
   }
   if(role==='JUNGLE'){
