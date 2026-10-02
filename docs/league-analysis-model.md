@@ -1828,3 +1828,12 @@ This includes:
 Older-mechanics games may remain visible in ordinary match history as **context only**, but they must not generate current replay priorities, recurring death-pattern conclusions, ward-pattern conclusions or practice evidence.
 
 If no mechanics cohort is applied, these surfaces use the full selected-role coaching sample as before.
+
+
+## Overlapping late-risk categories
+
+Late closing evidence distinguishes **high-risk** deaths from **costly** deaths. The same death may satisfy both definitions.
+
+Game-arc finish text must therefore display the two category counts separately and must never add them together as though they were unique deaths. For example, `1 high-risk · 1 costly` can describe one death carrying both labels.
+
+The presence of either category may flag a game for late-risk review, but category overlap must remain explicit and neither category is assumed to be the sole cause of a win or loss.
