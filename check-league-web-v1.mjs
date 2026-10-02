@@ -448,6 +448,10 @@ assert.ok(app.includes("return role==='ADC'&&ext.eligible!==false?(r.coachingSum
 assert.ok(app.includes("if(r==='BOTTOM'||r==='BOT'||r==='DUO_CARRY'||r==='ADC')return'ADC'"),'Frontend may normalize raw Riot bottom aliases but must canonicalize them to ADC before report logic');
 assert.ok(html.includes('id="rankBridge"')&&app.includes('function renderRankBridge('),'Next-tier benchmark bridge must remain visible and role-safe');
 assert.ok(html.includes('id="recentPulse"')&&app.includes('function renderRecentPulse('),'Recent-vs-prior pulse must remain visible without adding backend work');
+const namedFunctions=[...app.matchAll(/function\s+([A-Za-z0-9_]+)\s*\(/g)].map(m=>m[1]);
+const duplicateNamedFunctions=[...new Set(namedFunctions.filter((name,index)=>namedFunctions.indexOf(name)!==index))];
+assert.deepEqual(duplicateNamedFunctions,[],'League app must not contain duplicate named function declarations that silently override newer logic');
+assert.ok((app.match(/function renderRecentPulse\(/g)||[]).length===1&&app.includes("roleRecentTrendSpecs(r).map(pulseCard)"),'Recent pulse must have one renderer and it must consume role-aware trend specifications');
 assert.ok(html.includes('id="reportDrivers"')&&app.includes('function renderReportDrivers('),'League overview must retain the decision-driven primary limiter / strength / direction layer');
 assert.ok(app.includes('function orderedPriorityThemes(')&&app.includes('return orderedPriorityThemes(report).slice(0,3)'),'Canonical priority order must drive every top-three coaching surface');
 assert.ok(app.includes("const priorities=topPracticeThemes(r)")&&app.includes("targets=Array.isArray(r.practiceTargets)?r.practiceTargets:[],focus=topPracticeThemes(r)"),'Primary limiter and Next-5 plan must consume the same canonical theme order');
@@ -780,7 +784,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v182'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v183'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
