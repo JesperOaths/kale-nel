@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.106";
+const ANALYZER_VERSION="league-web-behavior-v4.107";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -2125,6 +2125,8 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
   const out:any[]=[];
   const clampPct=(v:number)=>Math.max(0,Math.min(100,v));
   const titles=(t:any)=>[t?.title,...(Array.isArray(t?.supportingTitles)?t.supportingTitles:[])].map(text).join(" ").toLowerCase();
+  const primaryRole=text(summary?.primaryRole).toUpperCase(),targetContext:any={coachingSummary:summary,behaviorSummary:behavior,peerComparison:peer,sessionBehavior:sessionModel};
+  const targetValue=(path:string)=>String(path||"").split(".").reduce((v:any,k:string)=>v==null?null:v[k],targetContext);
   const samplePathsFor=(metricPath:string):string[]=>({
     "behaviorSummary.earlyLeadGivebackRate":["behaviorSummary.earlyLeadGames"],
     "coachingSummary.csMin":["coachingSummary.games"],
@@ -2156,12 +2158,27 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
     "behaviorSummary.visionActionDeathRate":["behaviorSummary.visionActions"],
     "behaviorSummary.roamSuccessRate":["behaviorSummary.roamAttempts"],
     "behaviorSummary.avgRoamLaneCostCs":["behaviorSummary.roamLaneCostGames"],
+    "behaviorSummary.meanGameSupportRoamAdcLaneMovementCs":["behaviorSummary.supportRoamAdcLaneMovementGames"],
     "sessionBehavior.game3PlusGoldDelta":["sessionBehavior.firstGame.lane15Games","sessionBehavior.game3Plus.lane15Games"],
     "sessionBehavior.postLossGoldDelta":["sessionBehavior.quickAfterLoss.lane15Games","sessionBehavior.quickAfterWin.lane15Games"]
   } as Record<string,string[]>)[metricPath]||["coachingSummary.games"];
+  const sampleRequirementsFor=(metricPath:string,minSample:number):any[]=>{
+    const special:any={
+      "behaviorSummary.roamSuccessRate":[{path:"behaviorSummary.roamAttempts",min:4},{path:"behaviorSummary.roamAttemptGames",min:3}],
+      "behaviorSummary.avgRoamLaneCostCs":[{path:"behaviorSummary.roamLaneCostGames",min:4},{path:"behaviorSummary.roamAttemptGames",min:3}],
+      "behaviorSummary.meanGameSupportRoamAdcLaneMovementCs":[{path:"behaviorSummary.supportRoamAdcLaneMovementWindows",min:4},{path:"behaviorSummary.supportRoamAdcLaneMovementGames",min:3}],
+      "behaviorSummary.visionActionDeathRate":[{path:"behaviorSummary.visionActions",min:12},{path:"behaviorSummary.visionActionGames",min:4}],
+      "behaviorSummary.earlySetupObjectiveJoinRate":[{path:"behaviorSummary.neutralObjectiveJoins",min:5},{path:"behaviorSummary.objectiveSetupGames",min:3}],
+      "behaviorSummary.recentShopObjectiveAbsenceRate":[{path:"behaviorSummary.neutralObjectiveEvents",min:5},{path:"behaviorSummary.objectiveContestGames",min:3}],
+      "behaviorSummary.objectiveJoinRate":[{path:"behaviorSummary.neutralObjectiveEvents",min:5},{path:"behaviorSummary.objectiveContestGames",min:3}]
+    };
+    return special[metricPath]||samplePathsFor(metricPath).map(path=>({path,min:minSample}));
+  };
   const add=(theme:any,label:string,metricPath:string,baseline:any,goal:any,direction:"higher"|"lower",unit:string,sampleSize:any,minSample:number,rationale:string)=>{
     if(out.length>=3||!hasNum(baseline)||!hasNum(goal)||Number(sampleSize||0)<minSample)return false;
-    out.push({themeKey:text(theme?.key),themeLabel:text(theme?.label||theme?.category),label,metricPath,samplePaths:samplePathsFor(metricPath),baseline:Number(baseline),goal:Number(goal),direction,unit,sampleSize:Number(sampleSize||0),minSample,windowGames:5,rationale,source:"self_relative_short_term"});
+    const requirementDefs=sampleRequirementsFor(metricPath,minSample),sampleRequirements=requirementDefs.map(req=>({path:req.path,min:Number(req.min||1),value:targetValue(req.path)}));
+    if(sampleRequirements.some(req=>!hasNum(req.value)||Number(req.value)<Number(req.min)))return false;
+    out.push({themeKey:text(theme?.key),themeLabel:text(theme?.label||theme?.category),label,metricPath,samplePaths:samplePathsFor(metricPath),sampleRequirements,baseline:Number(baseline),goal:Number(goal),direction,unit,sampleSize:Number(sampleSize||0),minSample,windowGames:5,rationale,source:"self_relative_short_term"});
     return true;
   };
   for(const theme of themes||[]){
@@ -2207,11 +2224,12 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
       if(hasNum(behavior?.visionActionDeathRate)&&Number(behavior?.visionActions||0)>=12)added=add(theme,"Vision-action death rate","behaviorSummary.visionActionDeathRate",behavior.visionActionDeathRate,clampPct(Number(behavior.visionActionDeathRate)-5),"lower","percent",behavior?.visionActions,12,"Keep creating vision while making the route/team timing safer.");
       if(!added&&hasNum(behavior?.objectiveSetupWardRate))added=add(theme,"Objective-setup ward share","behaviorSummary.objectiveSetupWardRate",behavior.objectiveSetupWardRate,clampPct(Number(behavior.objectiveSetupWardRate)+10),"higher","percent",behavior?.visionWardTotal,8,"Shift vision toward useful pre-objective setup rather than simply increasing ward volume.");
     }else if(key==="roaming"){
-      if(hasNum(behavior?.roamSuccessRate))added=add(theme,"Roam conversion","behaviorSummary.roamSuccessRate",behavior.roamSuccessRate,clampPct(Number(behavior.roamSuccessRate)+10),"higher","percent",behavior?.roamAttempts,4,"Improve the share of detected departures that return a kill/assist or objective.");
-      if(!added&&hasNum(behavior?.avgRoamLaneCostCs))added=add(theme,"Roam lane-cost CS","behaviorSummary.avgRoamLaneCostCs",behavior.avgRoamLaneCostCs,Math.min(0,Number(behavior.avgRoamLaneCostCs)+2),"higher","cs",behavior?.roamLaneCostGames,4,"Reduce the direct-role farm cost paid during moves away from lane.");
+      if(hasNum(behavior?.roamSuccessRate))added=add(theme,"Roam conversion","behaviorSummary.roamSuccessRate",behavior.roamSuccessRate,clampPct(Number(behavior.roamSuccessRate)+10),"higher","percent",behavior?.roamAttempts,4,"Improve the share of detected departures that return a kill/assist or objective across a multi-game sample.");
+      if(!added&&primaryRole==="SUPPORT"&&hasNum(behavior?.meanGameSupportRoamAdcLaneMovementCs))added=add(theme,"ADC lane movement during roams","behaviorSummary.meanGameSupportRoamAdcLaneMovementCs",behavior.meanGameSupportRoamAdcLaneMovementCs,Number(behavior.meanGameSupportRoamAdcLaneMovementCs)+2,"higher","cs",behavior?.supportRoamAdcLaneMovementGames,3,"Improve the game-weighted ADC-vs-ADC lane movement during measured Support roam windows without treating the roam as sole cause.");
+      if(!added&&hasNum(behavior?.avgRoamLaneCostCs))added=add(theme,"Roam lane movement","behaviorSummary.avgRoamLaneCostCs",behavior.avgRoamLaneCostCs,Number(behavior.avgRoamLaneCostCs)+2,"higher","cs",behavior?.roamLaneCostGames,4,"Improve the role-relative lane movement measured during roaming windows without forcing more roams.");
     }else if(key==="consistency"){
-      if(hasNum(sessionModel?.game3PlusGoldDelta))added=add(theme,"Game 3+ gold@15 delta","sessionBehavior.game3PlusGoldDelta",sessionModel.game3PlusGoldDelta,Math.min(0,Number(sessionModel.game3PlusGoldDelta)+150),"higher","gold",Math.min(Number(sessionModel?.firstGame?.games||0),Number(sessionModel?.game3Plus?.games||0)),3,"Move later-session lane state closer to the player's own session-opening level.");
-      if(!added&&hasNum(sessionModel?.postLossGoldDelta))added=add(theme,"Quick post-loss requeue gold@15 delta","sessionBehavior.postLossGoldDelta",sessionModel.postLossGoldDelta,Math.min(0,Number(sessionModel.postLossGoldDelta)+150),"higher","gold",Math.min(Number(sessionModel?.quickAfterLoss?.games||0),Number(sessionModel?.quickAfterWin?.games||0)),3,"Test whether an intentional reset after losses narrows the observed next-game performance gap.");
+      if(hasNum(sessionModel?.game3PlusGoldDelta))added=add(theme,"Game 3+ gold@15 delta","sessionBehavior.game3PlusGoldDelta",sessionModel.game3PlusGoldDelta,Math.min(0,Number(sessionModel.game3PlusGoldDelta)+150),"higher","gold",Math.min(Number(sessionModel?.firstGame?.lane15Games||0),Number(sessionModel?.game3Plus?.lane15Games||0)),3,"Move later-session lane state closer to the player's own session-opening level.");
+      if(!added&&hasNum(sessionModel?.postLossGoldDelta))added=add(theme,"Quick post-loss requeue gold@15 delta","sessionBehavior.postLossGoldDelta",sessionModel.postLossGoldDelta,Math.min(0,Number(sessionModel.postLossGoldDelta)+150),"higher","gold",Math.min(Number(sessionModel?.quickAfterLoss?.lane15Games||0),Number(sessionModel?.quickAfterWin?.lane15Games||0)),3,"Test whether an intentional reset after losses narrows the observed next-game performance gap.");
     }
   }
   return out;
