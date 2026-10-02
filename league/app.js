@@ -832,7 +832,7 @@ function comparisonCard(title,delta,unit,scale,inverse,explanation,sample,eviden
 }
 function renderQuickRead(r){
   const p=r.peerComparison||{},b=r.behaviorSummary||{};
-  const laneN=Number(p.laneGames15||0),peerN=Number(p.sameRoleGames||0),itemN=Number(p.majorItemGames||0),impactN=Number(p.impactGames||0),repeatN=Number(b.peerMatchedRepeatDeathOpportunities??0);
+  const laneN=Number(p.laneGames15||0),csN=Number(p.csMinGames??p.sameRoleGames??0),dpmN=Number(p.dpmGames??p.sameRoleGames??0),itemN=Number(p.majorItemGames||0),impactN=Number(p.impactGames||0),repeatN=Number(b.peerMatchedRepeatDeathOpportunities??0);
   const lane=p.avgGoldDiff15,cs=p.avgCsMinDelta,dpm=p.avgDpmDelta,item=p.avgMajorItemDeltaMin,impact=p.avgImpactDeltaMin,repeat=p.repeatDeathRateDelta;
   $('quickRead').innerHTML=[
     comparisonCard('Role gold @15',lane,'gold',1000,false,
@@ -840,10 +840,10 @@ function renderQuickRead(r){
       laneN+' comparable @15 games · threshold 5',laneN>=5),
     comparisonCard('CS/min vs role opponent',cs,'csmin',2,false,
       !hasNum(cs)?'No same-role CS/min comparison is available.':Number(cs)>.15?'You farm faster than the direct role opponent on average.':Number(cs)<-.15?'You farm slower than the direct role opponent on average.':'Your CS/min is close to the direct role opponent.',
-      peerN+' direct-role peer games · threshold 5',peerN>=5),
+      csN+' direct-role CS/min comparisons · threshold 5',csN>=5),
     comparisonCard('DPM vs role opponent',dpm,'dpm',500,false,
       !hasNum(dpm)?'No same-role damage comparison is available.':Number(dpm)>100?'Your champion damage output is materially above the direct role opponent.':Number(dpm)<-100?'Your champion damage output trails the direct role opponent.':'Damage output is close to the direct role opponent.',
-      peerN+' direct-role peer games · threshold 5',peerN>=5),
+      dpmN+' direct-role DPM comparisons · threshold 5',dpmN>=5),
     comparisonCard('First major timing vs role',item,'minutes',3,true,
       !hasNum(item)?'No comparable first-major timing sample is available.':Number(item)<-.75?'Your first major item completes earlier than the direct role opponent on average.':Number(item)>.75?'Your first major item completes later than the direct role opponent on average.':'First-major timing is close to the direct role opponent.',
       itemN+' comparable item games · threshold 4',itemN>=4),
@@ -2066,6 +2066,7 @@ function renderAdvanced(r){
     ['Matched plate involvement ≤20m',String(r.behaviorSummary?.peerMatchedFirst20PlayerPlateInvolvement??0)+' vs '+String(r.behaviorSummary?.first20OpponentPlateInvolvement??0)+' peer · Δ '+signed(r.behaviorSummary?.first20PlateInvolvementDelta,0)],
     ['Matched plate involvement · full match',String(r.behaviorSummary?.peerMatchedAllGamePlayerPlateInvolvement??0)+' vs '+String(r.behaviorSummary?.allGameOpponentPlateInvolvement??0)+' peer · Δ '+signed(r.behaviorSummary?.allGamePlateInvolvementDelta,0)],
     ['Plate involvement · full match',String(r.behaviorSummary?.allGamePlayerPlateInvolvement??r.behaviorSummary?.allGamePlayerPlateCredits??0)+' / '+String(r.behaviorSummary?.allGameOpponentPlateInvolvement??r.behaviorSummary?.allGameOpponentPlateCredits??0)+' vs role peer'],
+    ['Direct-peer timeline games',String(r.behaviorSummary?.directPeerTimelineGames??r.dataQuality?.peerComparableGames??0)],
     ['Clean solo-kill lane conversion',String(r.behaviorSummary?.soloKillConvertedEvents??0)+' / '+String(r.behaviorSummary?.soloKillConversionEvents??0)+' · '+fmtPct(r.behaviorSummary?.soloKillConversionRate)],
     ['Avg gold swing after clean solo kill',hasNum(r.behaviorSummary?.avgSoloKillGoldSwingTo15)?signed(r.behaviorSummary.avgSoloKillGoldSwingTo15,0)+'g to 15':'n/a'],
     ['Avg CS swing after clean solo kill',hasNum(r.behaviorSummary?.avgSoloKillCsSwingTo15)?signed(r.behaviorSummary.avgSoloKillCsSwingTo15,1)+' to 15':'n/a'],
@@ -2203,10 +2204,10 @@ function renderAdvanced(r){
     metric('Lower-rank band',rankBandLine(rankBands.lower),!(rankBands.lower&&Number(rankBands.lower.games))),
     metric('Gold @15 vs peer',hasNum(p.avgGoldDiff15)?signed(p.avgGoldDiff15,0)+'g':'n/a',!hasNum(p.avgGoldDiff15)),
     metric('Beat peer on gold @15',fmtPct(p.gold15OutperformPct),!hasNum(p.gold15OutperformPct)),
-    metric('CS/min vs peer',hasNum(p.avgCsMinDelta)?signed(p.avgCsMinDelta,2):'n/a',!hasNum(p.avgCsMinDelta)),
-    metric('Beat peer on CS/min',fmtPct(p.csMinOutperformPct),!hasNum(p.csMinOutperformPct)),
-    metric('DPM vs peer',hasNum(p.avgDpmDelta)?signed(p.avgDpmDelta,0):'n/a',!hasNum(p.avgDpmDelta)),
-    metric('Beat peer on DPM',fmtPct(p.dpmOutperformPct),!hasNum(p.dpmOutperformPct)),
+    metric('CS/min vs peer',hasNum(p.avgCsMinDelta)?signed(p.avgCsMinDelta,2)+' · n='+String(p.csMinGames??p.sameRoleGames??0):'n/a',!hasNum(p.avgCsMinDelta)),
+    metric('Beat peer on CS/min',fmtPct(p.csMinOutperformPct)+(hasNum(p.csMinOutperformPct)?' · n='+String(p.csMinGames??p.sameRoleGames??0):''),!hasNum(p.csMinOutperformPct)),
+    metric('DPM vs peer',hasNum(p.avgDpmDelta)?signed(p.avgDpmDelta,0)+' · n='+String(p.dpmGames??p.sameRoleGames??0):'n/a',!hasNum(p.avgDpmDelta)),
+    metric('Beat peer on DPM',fmtPct(p.dpmOutperformPct)+(hasNum(p.dpmOutperformPct)?' · n='+String(p.dpmGames??p.sameRoleGames??0):''),!hasNum(p.dpmOutperformPct)),
     metric('Vision/min vs peer',hasNum(p.avgVpmDelta)?signed(p.avgVpmDelta,2):'n/a',!hasNum(p.avgVpmDelta)),
     metric('Beat peer on vision/min',fmtPct(p.vpmOutperformPct),!hasNum(p.vpmOutperformPct)),
     metric('Objective-setup ward games',String(p.visionSetupGames??0),false),
