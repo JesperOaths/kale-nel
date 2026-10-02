@@ -2427,8 +2427,8 @@ function matchHistoryLaneState(g){
   return {tone:'neutral',label:signed(d,0)+'g @15',copy:'This game is in the same close-at-15 band used by the evidence-table filter.'};
 }
 function matchHistorySignals(g){
-  const out=[],lane=matchHistoryLaneState(g),fight=g.fightProfile||{},death=g.deathConsequences||{},recovery=g.deathRecovery||{};
-  out.push({label:'Lane state',value:lane.label,tone:lane.tone,copy:lane.copy});
+  const role=canonicalRole(g?.role),roleMetric=matchHistoryRoleMetric(g,role),out=[],fight=g.fightProfile||{},death=g.deathConsequences||{},recovery=g.deathRecovery||{};
+  out.push({label:roleMetric.label,value:roleMetric.value,tone:roleMetric.tone,copy:roleMetric.copy});
   if(g.timelineAvailable!==true){
     out.push({label:'Risk cost',value:'Not measurable',tone:'neutral',copy:'Timeline evidence is unavailable, so this game cannot be treated as having zero high-risk deaths.'});
   }else if(Number(g.badDeathCount||0)>0||Number(death.costly||0)>0){
@@ -2438,9 +2438,10 @@ function matchHistorySignals(g){
     const measured=Number(death.measured||0),deaths=Number(g.deaths||0),coverage=deaths?measured+'/'+deaths+' consequences measured':'no deaths';
     out.push({label:'Risk cost',value:'No flagged high-risk death',tone:deaths===0||measured>=deaths?'good':'neutral',copy:'Timeline review found no high-risk death flags; '+coverage+'. Missing consequence coverage is not treated as proof of no cost.'});
   }
-  if(Number(fight.attended||0)>0){
+  const activeFights=Number(fight.active??fight.attended??0);
+  if(activeFights>0){
     const pre=Number(fight.diedBeforeContribution||0),surv=hasNum(fight.survivalRate)?fmtPct(fight.survivalRate):'n/a';
-    out.push({label:'Fight uptime',value:pre+' pre-impact deaths · '+surv+' survival',tone:pre>0?'bad':'good',copy:'Tracked multi-player fight clusters separate dying before contribution from surviving or dying after impact.'});
+    out.push({label:'Fight uptime',value:pre+' pre-impact deaths · '+surv+' survival',tone:pre>0?'bad':'good',copy:'Execution rates use active fight involvement only; proximity-only clusters remain positioning context and are excluded from survival/contribution judgments.'});
   }
   if(g.firstMajorItem){
     out.push({label:'First major',value:String(g.firstMajorItem.name||'Item')+' · '+fmt(g.firstMajorItem.time,1)+'m',tone:'neutral',copy:'Item timing is shown as a power-window checkpoint, not treated as good or bad without opponent/context evidence.'});
