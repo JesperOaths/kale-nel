@@ -73,12 +73,12 @@
         var offline = typeof navigator !== 'undefined' && navigator.onLine === false;
         if(hidden || offline) return;
         authoritative(resolvedScope).catch(function(){});
-      },15000);
+      },60000);
       return immediate;
     }
     try { return await authoritative(resolvedScope); } catch(_) { return []; }
   }
   cfg.fetchScopedActivePlayerNames=load;
   cfg.getActivatedPlayerNamesForScope=load;
-  window.GEJAST_LOGIN_NAMES_FALLBACK={load:load,source:'v817-snapshot-authoritative-first-delayed-active-name-rpc',staticSource:'gejast-login-names-static.js'};
+  window.GEJAST_LOGIN_NAMES_FALLBACK={load:load,source:'v817-snapshot-authoritative-first-delayed60s-active-name-rpc',staticSource:'gejast-login-names-static.js'};
 })();
