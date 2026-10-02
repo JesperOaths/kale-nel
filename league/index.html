@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends playstyle analysis with evidence-backed Last-20 coaching and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261002-league-web-v185">
+  <link rel="stylesheet" href="/league/styles.css?v=20261002-league-web-v186">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261002-public-bootstrap-r4"></script>
 </head>
@@ -169,6 +169,7 @@
 
         <nav class="report-jump-nav" aria-label="Report sections">
           <a href="#overview">Overview</a>
+          <a href="#practice-plan">Practice plan</a>
           <a href="#rank-comparison">Rank comparison</a>
           <a href="#lane-economy" id="laneEconomyNav">Role economy</a>
           <a href="#decisions">Fights & objectives</a>
@@ -192,6 +193,14 @@
             <div class="evidence-health-grid" id="evidenceHealth"></div>
             <button class="button secondary tiny evidence-health-link" type="button" id="evidenceHealthLink">Open full trust & coverage</button>
           </div>
+        </section>
+
+        <section class="panel practice-panel" id="practice-plan">
+          <div class="section-head">
+            <div><p class="eyebrow">Turn insight into play</p><h2>Next 5 games</h2></div>
+            <span class="section-hint">The actionable plan sits directly under the report driver so diagnosis immediately becomes a practice rule, target and replay cue.</span>
+          </div>
+          <div class="practice-grid" id="practicePlan"></div>
         </section>
 
         <section class="panel quick-read-panel">
@@ -273,23 +282,21 @@
           </article>
         </section>
 
-        <section class="coaching-layout">
-          <article class="panel coaching-panel">
-            <div class="section-head"><div><p class="eyebrow">Most important next</p><h2>Improvement priorities</h2></div></div>
-            <div id="recentFocus" class="bullet-list"></div>
-          </article>
-          <article class="panel strength-panel">
-            <div class="section-head"><div><p class="eyebrow">Keep doing this</p><h2>Strengths worth preserving</h2></div></div>
-            <div id="overallHighlights" class="bullet-list"></div>
-          </article>
-        </section>
-
-        <section class="panel practice-panel">
+        <section class="panel supporting-findings-panel">
           <div class="section-head">
-            <div><p class="eyebrow">Turn insight into play</p><h2>Next 5 games</h2></div>
-            <span class="section-hint">A short practice plan based on the strongest repeatable evidence.</span>
+            <div><p class="eyebrow">Supporting coaching evidence</p><h2>What else supports or challenges the top read?</h2></div>
+            <span class="section-hint">The main action plan stays above. Open these only when you want the longer evidence list behind it.</span>
           </div>
-          <div class="practice-grid" id="practicePlan"></div>
+          <div class="supporting-findings-grid">
+            <details class="supporting-findings-details">
+              <summary><span>Additional improvement findings</span><small>Open full ranked list</small></summary>
+              <div id="recentFocus" class="bullet-list supporting-findings-body"></div>
+            </details>
+            <details class="supporting-findings-details">
+              <summary><span>Additional strengths</span><small>Open full preservation list</small></summary>
+              <div id="overallHighlights" class="bullet-list supporting-findings-body"></div>
+            </details>
+          </div>
         </section>
 
         <section class="panel economy-panel" id="lane-economy">
@@ -500,6 +507,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261002-league-web-v185" defer></script>
+  <script src="/league/app.js?v=20261002-league-web-v186" defer></script>
 </body>
 </html>
