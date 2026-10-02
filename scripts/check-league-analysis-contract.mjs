@@ -289,9 +289,19 @@ ok(backend.includes('Number(x.goldSwingTo15)>=200'), 'clean solo-kill conversion
 ok(backend.includes('soloKillConversionRate'), 'aggregate clean solo-kill conversion rate must remain exported');
 ok(backend.includes('soloKillStructureConversionRate'), 'clean solo-kill structure conversion must remain exported');
 ok(backend.includes('endMs=startMs+90000'), 'solo-kill structure conversion window must remain 90 seconds');
-ok(backend.includes('function structureInvolvementEvidence('), 'structure conversion must preserve direct/proximity/lane evidence quality rather than require direct event credit');
+ok(backend.includes('function structureInvolvementEvidence('), 'structure evidence must retain direct/proximity/lane provenance');
+ok(backend.includes('function structureStrongInvolvementEvidence('), 'structure coaching must have an explicit strong-evidence gate');
+ok(backend.includes('evidence==="direct_event_credit"||evidence==="event_position_proximity"'), 'strong structure involvement must exclude lane-presence-only evidence');
 ok(backend.includes('participantNearEvent('), 'structure involvement must support coordinate proximity evidence');
 ok(backend.includes('timeline_lane_presence'), 'coordinate-less plate events must retain weaker same-lane timeline evidence');
+ok(backend.includes('first20PlayerPlateLanePresenceSignals')&&backend.includes('allGamePlayerPlateLanePresenceSignals'), 'weak lane-presence plate evidence must remain separately exported');
+ok(app.includes('Lane-presence-only plate signals'), 'frontend must display weak plate presence separately');
+ok(backend.includes('fightProfile:{present:0,active:0,attended:0,proximityOnly:0'), 'fight model must distinguish presence from active involvement');
+ok(backend.includes('fightPresenceSamples')&&backend.includes('fightProximityOnlySamples'), 'aggregate fight evidence must retain presence-only counts');
+ok(backend.includes('fightSampleBasis:"active_involvement_only"'), 'fight coaching denominator must remain explicit');
+ok(backend.includes('out.fightProfile.survivalRate=100*out.fightProfile.survived/out.fightProfile.active'), 'fight survival must use active involvement only');
+ok(backend.includes('if(!ev.active)continue;'), 'readiness and phase fight metrics must exclude proximity-only clusters');
+ok(app.includes('Fight survival · active involvement')&&app.includes('Proximity-only presence'), 'frontend must expose the active/proximity distinction');
 ok(backend.includes('function turretTier('), 'turret tier parsing must remain explicit');
 ok(backend.includes('playerPlateByTier')&&backend.includes('opponentPlateByTier'), 'plate involvement must remain split by turret tier');
 ok(backend.includes('directPlayerPlateCredits'), 'direct plate credit must remain only as provenance/diagnostic evidence');
@@ -567,5 +577,5 @@ console.log(JSON.stringify({
   appVersion,
   domRefs:refs.length,
   domIds:ids.length,
-  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','external-adc-rank-benchmarks','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence','control-ward-purchases','second-major-timing','last20-result-streaks','committed-shop-ledger','supported-kill-conversion','public-league-workspace','verified-patch-boundary','supported-sr-queues','bounded-public-workspace','owner-scoped-profile-delete']
+  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','external-adc-rank-benchmarks','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence','control-ward-purchases','second-major-timing','last20-result-streaks','committed-shop-ledger','supported-kill-conversion','public-league-workspace','verified-patch-boundary','supported-sr-queues','bounded-public-workspace','owner-scoped-profile-delete','strong-structure-attribution','active-fight-denominator']
 },null,2));
