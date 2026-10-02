@@ -7,6 +7,11 @@ on:
       - '.github/workflows/deploy-admin-worker.yml'
       - 'cloudflare/workers/admin-gate/**'
       - 'VERSION'
+      - 'login.html'
+      - 'league/**'
+      - 'shop/**'
+      - 'logo-small.png'
+      - 'site-bg-desktop.webp'
       - 'admin*.html'
       - '*_vault.html'
       - 'vault.html'
@@ -272,7 +277,7 @@ jobs:
             league_s="$(curl --silent --show-error --max-time 20 --dump-header "$league_h" --output "$league_b" --write-out '%{http_code}' 'https://kalenel.nl/league/' || true)"
             names_s="$(curl --silent --show-error --max-time 20 --dump-header "$names_h" --output "$names_b" --write-out '%{http_code}' 'https://kalenel.nl/gejast-login-names-static.js?v817' || true)"
             echo "attempt=$attempt login=$login_s shop=$shop_s league=$league_s names=$names_s"
-            if [[ "$login_s" == "200" ]]               && [[ "$shop_s" == "200" ]]               && [[ "$league_s" == "200" ]]               && [[ "$names_s" == "200" ]]               && grep -qi '^x-kalenel-public-source: worker-assets' "$login_h"               && grep -qi '^x-kalenel-public-source: worker-assets' "$shop_h"               && grep -qi '^x-kalenel-public-source: worker-assets' "$league_h"               && grep -qi '^x-kalenel-public-source: worker-assets' "$names_h"               && grep -q '<option>Antoni</option>' "$login_b"               && grep -q '<option>Sierk</option>' "$login_b"               && grep -q 'GEJAST_LOGIN_NAMES_STATIC' "$names_b"               && grep -q 'catalog-last-good.js?v=20261002-stable-pricing-r8' "$shop_b"               && grep -q 'store.js?v=20261002-static-first-r12' "$shop_b"               && grep -q '<title>Bruisienator · League analysis</title>' "$league_b"               && ! grep -qi '^location:.*login' "$league_h"; then
+            if [[ "$login_s" == "200" ]]               && [[ "$shop_s" == "200" ]]               && [[ "$league_s" == "200" ]]               && [[ "$names_s" == "200" ]]               && grep -qi '^x-kalenel-public-source: worker-assets' "$login_h"               && grep -qi '^x-kalenel-public-source: worker-assets' "$shop_h"               && grep -qi '^x-kalenel-public-source: worker-assets' "$league_h"               && grep -qi '^x-kalenel-public-source: worker-assets' "$names_h"               && grep -q '<option>Antoni</option>' "$login_b"               && grep -q '<option>Sierk</option>' "$login_b"               && grep -q 'gejast-config.js?v817&rev=20261002-public-bootstrap-r4' "$login_b"               && grep -q 'gejast-account-runtime.js?v817&rev=20261002-login-resilience-r18' "$login_b"               && grep -q 'GEJAST_LOGIN_NAMES_STATIC' "$names_b"               && grep -q 'catalog-last-good.js?v=20261002-stable-pricing-r8' "$shop_b"               && grep -q 'store.js?v=20261002-static-first-r12' "$shop_b"               && grep -q '<title>Bruisienator · League analysis</title>' "$league_b"               && grep -q 'gejast-config.js?v817&rev=20261002-public-bootstrap-r4' "$league_b"               && ! grep -qi '^location:.*login' "$league_h"; then
               echo "Public login names, static-first shop, and unauthenticated League are live from Worker assets."
               exit 0
             fi
