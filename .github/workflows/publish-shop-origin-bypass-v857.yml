@@ -99,3 +99,32 @@ jobs:
           done
           echo "::error::Plain /shop/ did not expose the current static-first v817 bootstrap."
           exit 1
+
+      - name: Verify live login static names and public League
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..20}; do
+            login_headers="$(mktemp)"
+            login_body="$(mktemp)"
+            login_status="$(curl --silent --show-error --max-time 20 --dump-header "$login_headers" --output "$login_body" --write-out '%{http_code}' 'https://kalenel.nl/login.html' || true)"
+            league_headers="$(mktemp)"
+            league_body="$(mktemp)"
+            league_status="$(curl --silent --show-error --max-time 20 --dump-header "$league_headers" --output "$league_body" --write-out '%{http_code}' 'https://kalenel.nl/league/' || true)"
+            echo "attempt=$attempt login=$login_status league=$league_status"
+            if [[ "$login_status" == "200" ]] \
+              && grep -q 'get_login_active_names_v687-verified-r15' "$login_body" \
+              && grep -q '<option>Antoni</option>' "$login_body" \
+              && grep -q '<option>Sierk</option>' "$login_body" \
+              && grep -qi '^cache-control:.*no-store' "$login_headers" \
+              && [[ "$league_status" == "200" ]] \
+              && grep -q '20261002-league-web-v144' "$league_body" \
+              && ! grep -qi '^location:.*login' "$league_headers"; then
+              echo "Login static names and public League shell are live."
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::Login static-name bootstrap or public League shell is not live."
+          exit 1
+
