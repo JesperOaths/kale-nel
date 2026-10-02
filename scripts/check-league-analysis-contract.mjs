@@ -563,6 +563,9 @@ ok(app.includes('Timeline evidence is unavailable, so this game cannot be treate
 ok(app.includes("objDiagnosed?tonePct(objective,70,45,false):'neutral'"), 'objective attendance judgment must require role-appropriate supported diagnosis');
 ok(html.includes('id="rankRadarPanel"')&&app.includes("reportRole!=='ADC'"), 'ADC benchmark UI must be withheld for non-ADC role reports');
 ok(html.indexOf('id="report-driver"')<html.indexOf('id="quickRead"'), 'action-first conclusions must precede comparison diagnostics');
+ok(html.includes('id="evidenceHealth"')&&app.includes('function renderEvidenceHealth('), 'action-first report must expose separate top-level evidence-health dimensions');
+ok(app.includes("evidenceHealthCard('Timeline behavior'")&&app.includes("evidenceHealthCard('Comparable @15'")&&app.includes("evidenceHealthCard('Exact item mechanics'"), 'evidence-health strip must expose behavior, peer/checkpoint and item-mechanics readiness separately');
+ok(modelDoc.includes('## Top-level evidence health')&&modelDoc.includes('Ready means the dimension clears its minimum evidence floor'), 'analysis model must distinguish evidence readiness from certainty');
 ok(app.includes("comparisonCard('CS/min vs role opponent'")&&app.includes("comparisonCard('DPM vs role opponent'"), 'quick-read comparison must use actual direct-role opponents rather than population rank references');
 ok(html.includes('Raw selected-role output')&&app.includes('Raw selected-role sample'), 'Raw KPI layer must remain neutral self-sample context, separate from benchmark inference');
 ok(modelDoc.includes('## Report information hierarchy')&&modelDoc.includes('Do not present direct same-role opponents as population rank averages'), 'report hierarchy and population-vs-opponent distinction must stay documented');
