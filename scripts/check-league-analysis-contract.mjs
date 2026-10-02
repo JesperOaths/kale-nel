@@ -198,7 +198,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('playerSupported:isNeutralObjectiveEvent(o)?participantNearEvent'), 'neutral-objective conversion credit must require supported presence');
+ok(backend.includes('playerSupportEvidence=isNeutralObjectiveEvent(o)?(participantNearEvent(frames,whoId,o,2800)?"event_position_proximity":null):structureStrongInvolvementEvidence(o,frames,whoId,whoTeam,mapId)')&&backend.includes('playerSupported:!!playerSupportEvidence'), 'neutral-objective conversion credit must require explicit supported presence and preserve its method');
 ok(backend.includes('maxFrameDeltaMs=35000'), 'event proximity must remain bounded to a nearby sampled timeline frame');
 ok(backend.includes('members.some((event:any)=>participantNearEvent(frames,participantId,event,radius,35000))'), 'objective-window presence must anchor to each actual objective event');
 ok(!backend.includes('startPadMs=45000,endPadMs=45000'), 'broad padded objective-presence windows must stay retired');
@@ -207,7 +207,7 @@ ok(backend.includes('zeroIdUndoPolicy:"flag_approximate_do_not_guess"'), 'unreso
 ok(backend.includes('itemUndoQualityPolicy:"zero_id_undo_flagged_approximate_not_guessed"'), 'report quality must preserve the item-undo policy');
 ok(backend.includes('positionEvidenceModel:"nearest_timeline_frame_within_35s"'), 'report quality must preserve the sampled-position evidence model');
 ok(app.includes('Timeline position evidence')&&app.includes('Item undo quality'), 'frontend must expose both evidence-quality caveats');
-ok(backend.includes('structureInvolvement(o,frames,whoId,whoTeam,mapId)'), 'structure conversion credit must require supported involvement');
+ok(backend.includes('function structureStrongInvolvementEvidence(')&&backend.includes('return evidence==="direct_event_credit"||evidence==="event_position_proximity"?evidence:null')&&backend.includes('structureStrongInvolvementEvidence(o,frames,whoId,whoTeam,mapId)'), 'structure conversion credit must require strong direct/proximity involvement rather than lane-presence-only evidence');
 ok(app.includes('Player-supported kill conversion')&&app.includes('Team conversion after your kill windows'), 'supported and team-only conversion must remain visibly distinct');
 ok(backend.includes('VERIFIED_2026_RULES_THROUGH_MINOR=19')&&backend.includes('minor>VERIFIED_2026_RULES_THROUGH_MINOR'), 'newer 2026 patches must fail closed beyond the audited mechanics boundary');
 ok(backend.includes('objectiveContestEncounters=validTimeline.reduce')&&backend.includes('objectiveContestJoinedEncounters=validTimeline.reduce'), 'aggregate coaching objective presence must pool team-contested event denominators');
