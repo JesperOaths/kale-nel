@@ -387,6 +387,10 @@ ok(backend.includes('rr!=="GENERIC"&&(targetRole==="GENERIC"||rr===targetRole)')
 ok(backend.includes('x-riot-api-key'), 'session Riot-key header must remain supported by backend/CORS');
 ok(app.includes('practiceTargetHtml'), 'frontend must render measurable practice checkpoints');
 ok(app.includes('previousPracticeTargetOutcomes'), 'frontend must score prior practice targets against later distinct analyses');
+ok(app.includes('function progressComparisonContext(')&&app.includes('overlapping game'), 'development comparison must expose rolling Last-20 sample overlap and turnover');
+ok(app.includes('favorable shift')&&app.includes('unfavorable shift')&&app.includes('Cross-context metric deltas are not treated as development evidence.'), 'progress UI must avoid causal improvement language and fail closed across incompatible contexts');
+ok(app.includes('Stable / smaller shifts')&&app.includes('valid n '), 'progress UI must prioritize material denominator-safe shifts and collapse smaller movement');
+ok(modelDoc.includes('## Rolling progress comparison')&&modelDoc.includes('No rolling comparison should be described as an independent experiment'), 'analysis model must preserve rolling-comparison limitations');
 ok(app.includes('curRole!==prevRole'), 'practice-target follow-up must fail closed when primary role changes');
 ok(app.includes('Number(curQueue)!==Number(prevQueue)'), 'practice-target follow-up must fail closed when queue context changes');
 ok(app.includes('curPatch!==prevPatch'), 'practice-target follow-up must fail closed when patch cohort changes');
