@@ -1122,8 +1122,10 @@ function pathValue(obj,path){
 
 const PRACTICE_TARGET_SAMPLE_PATHS={
   'behaviorSummary.earlyLeadGivebackRate':['behaviorSummary.earlyLeadGames'],
-  'summary.csMin':['summary.games'],
+  'summary.csMin':['coachingSummary.games'],
   'summary.goldDiff15':['peerComparison.laneGames15'],
+  'coachingSummary.csMin':['coachingSummary.games'],
+  'coachingSummary.goldDiff15':['peerComparison.laneGames15'],
   'behaviorSummary.highRiskUntradedPostImpactPerGame':['behaviorSummary.playerImpactEvents'],
   'behaviorSummary.highRiskBehindDeathsPerGame':['behaviorSummary.behindStateDeaths'],
   'behaviorSummary.highRiskLeadDeathsPerGame':['behaviorSummary.leadDeaths'],
@@ -1146,7 +1148,7 @@ const PRACTICE_TARGET_SAMPLE_PATHS={
   'behaviorSummary.objectiveJoinRate':['behaviorSummary.neutralObjectiveEvents'],
   'behaviorSummary.firstAllyFightDeathRate':['behaviorSummary.fightSamples'],
   'behaviorSummary.preContributionFightDeathRate':['behaviorSummary.fightSamples'],
-  'behaviorSummary.damageGoldEfficiency':['summary.games'],
+  'behaviorSummary.damageGoldEfficiency':['coachingSummary.games'],
   'behaviorSummary.highRiskBehindDeathRate':['behaviorSummary.behindStateDeaths'],
   'behaviorSummary.visionActionDeathRate':['behaviorSummary.visionActions'],
   'behaviorSummary.roamSuccessRate':['behaviorSummary.roamAttempts'],
@@ -1154,9 +1156,16 @@ const PRACTICE_TARGET_SAMPLE_PATHS={
   'sessionBehavior.game3PlusGoldDelta':['sessionBehavior.firstGame.games','sessionBehavior.game3Plus.games'],
   'sessionBehavior.postLossGoldDelta':['sessionBehavior.quickAfterLoss.games','sessionBehavior.quickAfterWin.games']
 };
+function practiceTargetMetricPath(t){
+  const p=String(t?.metricPath||'');
+  if(p==='summary.csMin')return'coachingSummary.csMin';
+  if(p==='summary.goldDiff15')return'coachingSummary.goldDiff15';
+  return p;
+}
 function practiceTargetSamplePaths(t){
   const xs=Array.isArray(t?.samplePaths)?t.samplePaths.map(String).filter(Boolean):[];
-  return xs.length?xs:(PRACTICE_TARGET_SAMPLE_PATHS[String(t?.metricPath||'')]||['summary.games']);
+  const metricPath=String(t?.metricPath||'');
+  return xs.length?xs:(PRACTICE_TARGET_SAMPLE_PATHS[metricPath]||PRACTICE_TARGET_SAMPLE_PATHS[practiceTargetMetricPath(t)]||['coachingSummary.games']);
 }
 function practiceTargetCurrentSample(report,t){
   const paths=practiceTargetSamplePaths(t),values=paths.map(p=>pathValue(report,p));
@@ -1180,7 +1189,7 @@ function previousPracticeTargetOutcomes(current,previous){
   if(curPatch&&prevPatch&&curPatch!==prevPatch)return{rows:[],reason:'Previous practice targets are not scored because the patch cohort changed.'};
   const newGames=reportNewMatchCount(current,previous);
   const rows=targets.map(t=>{
-    const currentValue=pathValue(current,t.metricPath);
+    const currentValue=pathValue(current,practiceTargetMetricPath(t));
     if(!hasNum(currentValue)||!hasNum(t.baseline)||!hasNum(t.goal))return null;
     const cur=Number(currentValue),base=Number(t.baseline),goal=Number(t.goal),higher=t.direction!=='lower',windowGames=Math.max(1,Number(t.windowGames||5)),minSample=Math.max(1,Number(t.minSample||1)),currentSample=practiceTargetCurrentSample(current,t);
     const common={label:t.label||t.metricPath,current:practiceTargetValue(cur,t.unit),baseline:practiceTargetValue(base,t.unit),goal:practiceTargetValue(goal,t.unit),sampleSize:Number(t.sampleSize||0),currentSample,minSample,newGames,windowGames};
@@ -1232,13 +1241,13 @@ function renderProgressComparison(current,previous,previousAt){
     {label:'First-reset loss rate',path:'behaviorSummary.firstResetLossRate',samplePath:'behaviorSummary.firstResetCleanGames',min:4,threshold:15,direction:-1,format:v=>fmtPct(v)},
     {label:'First major item vs peer',path:'peerComparison.avgMajorItemDeltaMin',samplePath:'peerComparison.majorItemGames',min:4,threshold:.4,direction:-1,format:v=>signed(v,1)+' min'},
     {label:'Major-item spike utilization',path:'behaviorSummary.itemSpikeUtilizationRate',samplePath:'behaviorSummary.itemSpikeEligibleWindows',min:4,threshold:15,direction:1,format:v=>fmtPct(v)},
-    {label:'Damage share − gold share',path:'behaviorSummary.damageGoldEfficiency',samplePath:'summary.games',min:5,threshold:2,direction:1,format:v=>signed(v,1)+' pp'},
+    {label:'Damage share − gold share',path:'behaviorSummary.damageGoldEfficiency',samplePath:'coachingSummary.games',min:5,threshold:2,direction:1,format:v=>signed(v,1)+' pp'},
     {label:'Died before contribution',path:'behaviorSummary.preContributionFightDeathRate',samplePath:'behaviorSummary.fightSamples',min:8,threshold:10,direction:-1,format:v=>fmtPct(v)},
     {label:'Rapid repeat-death rate',path:'behaviorSummary.repeatDeathRate',samplePath:'behaviorSummary.repeatDeathOpportunities',min:8,threshold:10,direction:-1,format:v=>fmtPct(v)},
     {label:'Prior setup presence (45–105s)',path:'behaviorSummary.earlySetupObjectiveJoinRate',samplePath:'behaviorSummary.neutralObjectiveJoins',min:5,threshold:10,direction:1,format:v=>fmtPct(v)},
     {label:'Recent-shop objective absence rate',path:'behaviorSummary.recentShopObjectiveAbsenceRate',samplePath:'behaviorSummary.neutralObjectiveEvents',min:5,threshold:10,direction:-1,format:v=>fmtPct(v)}
   ];
-  if(['ADC','MID','TOP'].includes(role))specs.splice(1,0,{label:'CS / min',path:'summary.csMin',samplePath:'summary.games',min:5,threshold:.3,direction:1,format:v=>fmt(v,2)});
+  if(['ADC','MID','TOP'].includes(role))specs.splice(1,0,{label:'CS / min',path:'coachingSummary.csMin',samplePath:'coachingSummary.games',min:5,threshold:.3,direction:1,format:v=>fmt(v,2)});
   if(['SUPPORT','JUNGLE'].includes(role))specs.push({label:'Team-contested objective presence',path:'advanced.objectivePresence',samplePath:'behaviorSummary.objectiveContestEncounters',min:5,threshold:10,direction:1,format:v=>fmtPct(v)});
   const allRows=specs.map(spec=>{
     const cur=pathValue(current,spec.path),prev=pathValue(previous,spec.path),curN=progressSampleCount(current,spec),prevN=progressSampleCount(previous,spec);
