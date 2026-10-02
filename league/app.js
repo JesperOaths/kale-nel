@@ -332,7 +332,7 @@ function deathPatternEntries(r){
       if(hasNum(d.currentGold)&&Number(d.currentGold)>=1000)bits.push(fmtInt(d.currentGold)+'g unspent');
       if(consequence?.enemyObjectiveAfter)bits.push('enemy objective followed');
       if(consequence?.severe)bits.push('severe follow-on loss');
-      out.push({...d,patternKey:key,patternLabel:def.label,patternWhy:def.why,patternAction:def.action,champion:g.champion,matchId:g.matchId,gameStartTimestamp:g.gameStartTimestamp,opponentChampion:g.peer?.champion||null,detail:bits.join(' · ')});
+      out.push({...d,patternKey:key,patternLabel:def.label,patternWhy:def.why,patternAction:def.action,champion:g.champion,matchId:g.matchId,gameStartTimestamp:g.gameStartTimestamp,opponentChampion:g.peer?.champion||null,detail:bits.join(' · '),consequenceMeasured:!!consequence,costly:!!consequence?.costly,severe:!!consequence?.severe,consequenceTraded:consequence?consequence.traded:null,economyWindowContaminatedByRepeatDeath:!!consequence?.economyWindowContaminatedByRepeatDeath,consequenceSignals:Array.isArray(consequence?.signals)?consequence.signals:[]});
     }
   }
   return out;
@@ -341,22 +341,42 @@ function deathPatternMap(entries){
   const image=map11Image(),fallback=map11FallbackImage(),points=entries.filter(x=>hasNum(x.x)&&hasNum(x.y));
   return points.length?'<div class="map-stage"><img src="'+esc(image)+'" data-map-fallback="'+esc(fallback)+'" alt="Summoner’s Rift map for '+esc(entries[0]?.patternLabel||'death pattern')+'"><svg viewBox="0 0 512 512" preserveAspectRatio="none" aria-label="'+esc(entries[0]?.patternLabel||'death pattern')+' positions">'+points.map((p,i)=>mapPointSvg({...p,tags:[p.patternLabel,p.detail].filter(Boolean)},'death',i)).join('')+'</svg></div>':'<div class="spatial-empty">No coordinate evidence is available for this pattern.</div>';
 }
+
+function deathPatternGroupStats(entries){
+  const measured=entries.filter(x=>x.consequenceMeasured),costly=entries.filter(x=>x.costly),severe=entries.filter(x=>x.severe),untradedCostly=entries.filter(x=>x.costly&&x.consequenceTraded===false),contaminated=entries.filter(x=>x.economyWindowContaminatedByRepeatDeath);
+  return{count:entries.length,measured:measured.length,costly:costly.length,severe:severe.length,untradedCostly:untradedCostly.length,contaminated:contaminated.length};
+}
+function deathPatternGroupCompare(a,b){
+  const as=deathPatternGroupStats(a[1]),bs=deathPatternGroupStats(b[1]);
+  return bs.severe-as.severe||bs.costly-as.costly||bs.untradedCostly-as.untradedCostly||bs.count-as.count||String(a[0]).localeCompare(String(b[0]));
+}
+function deathPatternCardHtml(key,entries){
+  const def=DEATH_PATTERN_DEFS[key]||DEATH_PATTERN_DEFS.multi_signal,examples=entries.slice().sort((a,b)=>Number(b.gameStartTimestamp||0)-Number(a.gameStartTimestamp||0)),stats=deathPatternGroupStats(entries);
+  const priority=stats.severe?'Severe consequence evidence':stats.costly?'Costly consequence evidence':entries.length>=2?'Repeated high-risk pattern':'One-off high-risk pattern';
+  return '<article class="death-pattern-card '+(stats.severe?'priority-severe':stats.costly?'priority-costly':'')+'">'+
+    '<div class="death-pattern-head"><div><span>'+esc(def.label)+'</span><strong>'+entries.length+' death'+(entries.length===1?'':'s')+'</strong></div><p>'+esc(def.why)+'</p></div>'+
+    '<div class="death-pattern-impact"><span>'+esc(priority)+'</span><div><b>'+stats.measured+'/'+stats.count+' aftermath measured</b><b>'+stats.costly+' costly</b><b>'+stats.severe+' severe</b><b>'+stats.untradedCostly+' untraded costly</b></div>'+(stats.contaminated?'<small>'+stats.contaminated+' economy aftermath sample'+(stats.contaminated===1?' was':'s were')+' repeat-death contaminated; contaminated economy swings are not treated as clean loss evidence.</small>':'')+'</div>'+
+    deathPatternMap(examples)+
+    '<div class="death-pattern-action"><b>Do differently:</b> '+esc(def.action)+'</div>'+
+    '<details><summary>Explain these deaths · map numbers match this list</summary><div class="death-pattern-events">'+examples.map((x,i)=>'<div><b>#'+(i+1)+' · '+esc(x.champion||'Unknown')+' · '+esc(fmt(x.time,1))+'m</b><span>'+esc(x.detail||((x.tags||[]).join(', '))||'Multi-signal high-risk death')+(x.costly?' · measured costly aftermath':'')+(x.severe?' · severe aftermath':'')+'</span><small>'+esc(shortGameDate(x.gameStartTimestamp)+(x.opponentChampion?' · vs '+x.opponentChampion:''))+'</small></div>').join('')+'</div></details>'+
+  '</article>';
+}
+
 function renderSpatial(r){
   const games=Array.isArray(r.games)?r.games:[],patterns=deathPatternEntries(r),wardEvents=games.flatMap(g=>(g.wards||[])),wardPoints=wardEvents.filter(w=>hasNum(w.x)&&hasNum(w.y));
   const grouped=new Map();for(const d of patterns){if(!grouped.has(d.patternKey))grouped.set(d.patternKey,[]);grouped.get(d.patternKey).push(d);}
-  const groups=[...grouped.entries()].sort((a,b)=>b[1].length-a[1].length);
-  $('deathMap').innerHTML=groups.length?'<div class="death-pattern-grid">'+groups.map(([key,entries])=>{
-    const def=DEATH_PATTERN_DEFS[key]||DEATH_PATTERN_DEFS.multi_signal,examples=entries.slice().sort((a,b)=>Number(b.gameStartTimestamp||0)-Number(a.gameStartTimestamp||0));
-    return '<article class="death-pattern-card"><div class="death-pattern-head"><div><span>'+esc(def.label)+'</span><strong>'+entries.length+' death'+(entries.length===1?'':'s')+'</strong></div><p>'+esc(def.why)+'</p></div>'+deathPatternMap(examples)+'<div class="death-pattern-action"><b>Do differently:</b> '+esc(def.action)+'</div><details><summary>Explain these deaths · map numbers match this list</summary><div class="death-pattern-events">'+examples.map((x,i)=>'<div><b>#'+(i+1)+' · '+esc(x.champion||'Unknown')+' · '+esc(fmt(x.time,1))+'m</b><span>'+esc(x.detail||((x.tags||[]).join(', '))||'Multi-signal high-risk death')+'</span><small>'+esc(shortGameDate(x.gameStartTimestamp)+(x.opponentChampion?' · vs '+x.opponentChampion:''))+'</small></div>').join('')+'</div></details></article>';
-  }).join('')+'</div>':'<div class="spatial-empty">No repeated high-risk death pattern has coordinate evidence in this role-selected sample.</div>';
+  const groups=[...grouped.entries()].sort(deathPatternGroupCompare),repeated=groups.filter(([,xs])=>xs.length>=2),oneOff=groups.filter(([,xs])=>xs.length===1);
+  const repeatedHtml=repeated.length?'<div class="death-pattern-grid">'+repeated.map(([key,entries])=>deathPatternCardHtml(key,entries)).join('')+'</div>':'<div class="spatial-empty">No high-risk death pattern repeats at least twice in this role-selected sample.</div>';
+  const oneOffHtml=oneOff.length?'<details class="death-pattern-oneoffs"><summary>One-off high-risk patterns · '+oneOff.length+'</summary><p>Kept for traceability, but not promoted as recurring behavior.</p><div class="death-pattern-grid">'+oneOff.map(([key,entries])=>deathPatternCardHtml(key,entries)).join('')+'</div></details>':'';
+  $('deathMap').innerHTML=repeatedHtml+oneOffHtml;
   const image=map11Image(),fallback=map11FallbackImage();
   $('wardMap').innerHTML=wardPoints.length?'<div class="map-stage"><img src="'+esc(image)+'" data-map-fallback="'+esc(fallback)+'" alt="Summoner’s Rift ward placement map"><svg viewBox="0 0 512 512" preserveAspectRatio="none" aria-label="Ward positions">'+wardPoints.map(p=>mapPointSvg(p,'ward')).join('')+'</svg></div>':'<div class="spatial-empty">Ward events were counted, but none have event or ≤35s frame coordinates to project.</div>';
   bindMapFallbacks($('spatialReview')||document);
-  const classified=patterns.length,repeatGroups=groups.filter(([,xs])=>xs.length>=2).length,leadDeaths=patterns.filter(x=>hasNum(x.goldDiffAtDeath)&&Number(x.goldDiffAtDeath)>=500).length;
-  $('deathMapMeta').textContent=classified+' high-risk deaths · '+repeatGroups+' repeated pattern'+(repeatGroups===1?'':'s')+(leadDeaths?' · '+leadDeaths+' while ≥500g ahead':'');
+  const classified=patterns.length,repeatGroups=repeated.length,leadDeaths=patterns.filter(x=>hasNum(x.goldDiffAtDeath)&&Number(x.goldDiffAtDeath)>=500).length,costly=patterns.filter(x=>x.costly).length,severe=patterns.filter(x=>x.severe).length;
+  $('deathMapMeta').textContent=classified+' high-risk deaths · '+repeatGroups+' repeated pattern'+(repeatGroups===1?'':'s')+' · '+costly+' costly · '+severe+' severe'+(leadDeaths?' · '+leadDeaths+' while ≥500g ahead':'');
   const offensive=wardEvents.filter(x=>x.territory==='offensive').length,river=wardEvents.filter(x=>x.territory==='river').length,defensive=wardEvents.filter(x=>x.territory==='defensive').length,setup=wardEvents.filter(x=>x.objectiveSetup).length,offPct=wardEvents.length?Math.round(offensive/wardEvents.length*100):0,projected=wardPoints.length;
   $('wardMapMeta').textContent=wardEvents.length+' ward events · '+projected+' mapped · '+offPct+'% offensive · '+river+' river · '+defensive+' defensive · '+setup+' objective setup';
-  $('spatialProjectionNote').textContent='Death maps are split by primary supported reason so repeated mistakes are visible instead of collapsing into one dot cloud. Ward events without Riot coordinates use the player’s nearest timeline-frame position only when it is within 35 seconds; projected versus direct evidence is disclosed in Trust & coverage.';
+  $('spatialProjectionNote').textContent='Repeated death patterns are ordered by bounded consequence evidence first (severe, then costly), then recurrence. This is a review-priority ordering, not a causal severity score. One-offs remain available for traceability. Ward events without Riot coordinates use the player’s nearest timeline-frame position only when it is within 35 seconds; projected versus direct evidence is disclosed in Trust & coverage.';
 }
 function renderSavedProfiles(){
   const select=$('savedProfileSelect');if(!select)return;
