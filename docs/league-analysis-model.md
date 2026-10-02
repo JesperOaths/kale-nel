@@ -1796,3 +1796,18 @@ Before scoring a target:
 Until both the new-game horizon and current denominator are satisfied, the target is shown as **pending**, with the remaining new games and current valid sample displayed. It must not be called met, moving closer, moved away, or unchanged.
 
 New targets use `coachingSummary` paths for self metrics such as CS/min and role gold @15. Legacy saved targets that used `summary.csMin` or `summary.goldDiff15` are remapped to the current `coachingSummary` on read so the comparison population stays mechanics-filtered and consistent with the baseline that created the target.
+
+
+## Match-story filters
+
+The expandable Recent match story can be filtered without changing any report calculation or saved sample.
+
+Supported filters:
+- wins / losses,
+- ahead / close / behind @15 using the **same** direct-role gold bands as the evidence table,
+- **Risk flagged**: only timeline-complete games containing at least one high-risk death flag or at least one measured costly-death aftermath,
+- **Replay priority**: only games with at least one backend-ranked item in `replayReviewQueue`.
+
+The filter chips display counts from the full selected-role report sample. The 10-row default and Show all control apply *after* the story filter, so filtering does not silently change analysis; it changes only which rows are visible.
+
+A game with a missing timeline must never enter **Risk flagged** merely because another field is absent or zero. Conversely, an unflagged game must not be described as proven safe; the filter means only that the analyzer has supported risk evidence for included games.
