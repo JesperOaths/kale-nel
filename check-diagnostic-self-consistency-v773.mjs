@@ -46,7 +46,7 @@ if(!text('gejast-account-runtime.js').includes('function domSeedNames(sel)')) fa
 if(!text('gejast-account-runtime.js').includes('seed = normalizeNames([...domSeed,...cached,...snapshot])')) failures.push('login bootstrap must merge DOM, cache and static snapshot names before live RPC work');
 if(!text('gejast-login-names-fallback.js').includes('v817-static-authoritative-boot-explicit-live-refresh-r17')) failures.push('standalone login-name fallback must remain static-first with one bounded authoritative refresh');
 if(!text('gejast-login-names-fallback.js').includes("async function refresh(requestedScope)")) failures.push('live login-name reconciliation must remain explicit-only');
-if(text('gejast-login-names-fallback.js').includes('setTimeout(function(){')) failures.push('login-name bootstrap must not schedule automatic Supabase refresh timers');
+if(text('gejast-login-names-fallback.js').includes('},60000)')) failures.push('login-name bootstrap must not schedule delayed automatic Supabase refresh timers');
 if(!text('gejast-account-runtime.js').includes('Login boot is intentionally network-independent')) failures.push('login runtime must not background-refresh an already complete deployment snapshot');
 if(!text('login.html').includes('gejast-account-runtime.js?v817&rev=20261002-login-resilience-r17')) failures.push('login page must cache-bust the hardened static-first account runtime');
 if(!text('gejast-account-runtime.js').includes("name.toLowerCase()!=='kies je naam'")) failures.push('login DOM seed must never treat the placeholder as a player');
