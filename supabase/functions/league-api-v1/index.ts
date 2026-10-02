@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.103";
+const ANALYZER_VERSION="league-web-behavior-v4.104";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1519,7 +1519,7 @@ function sessionBehaviorModel(games:any[]){
   const quickAfterLoss=games.filter((g:any)=>g.sessionContext?.previousWin===false&&hasNum(g.sessionContext?.gapAfterPreviousMin)&&Number(g.sessionContext.gapAfterPreviousMin)<=45);
   const quickAfterWin=games.filter((g:any)=>g.sessionContext?.previousWin===true&&hasNum(g.sessionContext?.gapAfterPreviousMin)&&Number(g.sessionContext.gapAfterPreviousMin)<=45);
   const pack=(xs:any[])=>{
-    const lane15=finiteGames(xs.filter((g:any)=>g?.phaseRules?.lane15Comparable!==false),g=>g.goldDiff15),timeline=xs.filter((g:any)=>g.timelineAvailable===true),dpmGames=finiteGames(xs,g=>g.dpm),csGames=finiteGames(xs,g=>g.csMin),kpGames=finiteGames(xs,g=>g.kp),vpmGames=finiteGames(xs,g=>g.vpm);
+    const lane15=finiteGames(xs.filter((g:any)=>g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false),g=>g.goldDiff15),timeline=xs.filter((g:any)=>g.timelineAvailable===true),dpmGames=finiteGames(xs,g=>g.dpm),csGames=finiteGames(xs,g=>g.csMin),kpGames=finiteGames(xs,g=>g.kp),vpmGames=finiteGames(xs,g=>g.vpm);
     return{
       games:xs.length,lane15Games:lane15.length,timelineGames:timeline.length,dpmGames:dpmGames.length,csMinGames:csGames.length,kpGames:kpGames.length,vpmGames:vpmGames.length,
       goldDiff15:meanField(lane15,g=>g.goldDiff15),badDeaths:meanField(timeline,g=>g.badDeathCount),dpm:meanField(dpmGames,g=>g.dpm),csMin:meanField(csGames,g=>g.csMin),kp:meanField(kpGames,g=>g.kp),vpm:meanField(vpmGames,g=>g.vpm)
