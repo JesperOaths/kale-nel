@@ -1,8 +1,8 @@
 (function(global){
-  const POLL_MS = 5 * 60 * 1000;
-  const FIRST_POLL_MS = 30 * 1000;
-  const SHARED_MIN_POLL_MS = 4 * 60 * 1000;
-  const SHARED_POLL_KEY = 'gejastAnnouncementsLastPollV2';
+  const POLL_MS = 30 * 60 * 1000;
+  const FIRST_POLL_MS = 5 * 60 * 1000;
+  const SHARED_MIN_POLL_MS = 20 * 60 * 1000;
+  const SHARED_POLL_KEY = 'gejastAnnouncementsLastPollV3';
   let lastLocalPollAt = 0;
   function sharedLastPollAt(){
     try { return Number(global.localStorage.getItem(SHARED_POLL_KEY) || 0) || 0; } catch(_) { return 0; }
@@ -14,7 +14,7 @@
     try { global.localStorage.setItem(SHARED_POLL_KEY,String(now)); } catch(_) {}
     return true;
   }
-  const STATE = { timer:null, showing:false, disabled:false };
+  const STATE = { timer:null, showing:false, disabled:false, backoffUntil:0 };
   function cfg(){ return global.GEJAST_CONFIG || {}; }
   function hasPlayer(){ try { return !!(cfg().getPlayerSessionToken && cfg().getPlayerSessionToken()); } catch(_) { return false; } }
   function scope(){
@@ -136,9 +136,11 @@
     global.setTimeout(done, 7000);
   }
   async function poll(){
-    if (STATE.disabled || !hasPlayer() || STATE.showing || global.document.hidden || !claimSharedPoll()) return;
+    if (STATE.disabled || Date.now()<Number(STATE.backoffUntil||0) || !hasPlayer() || STATE.showing || global.document.hidden || !claimSharedPoll()) return;
+    const started=Date.now();
     try {
       const data = await rpc('get_player_site_announcements_scoped', { site_scope_input: scope() });
+      if(Date.now()-started>2500) STATE.backoffUntil=Date.now()+30*60*1000;
       const rows = normalizeRows(data?.rows || data);
       if (!rows.length) return;
       const first = rows[0];
@@ -147,6 +149,7 @@
       else if (kind === 'despimarkt_follow_bet' || kind === 'despimarkt_follow_close_soon' || kind === 'despimarkt_promotional_market_live') await showToast(first);
       else await consumeAnnouncement(first);
     } catch(err){
+      STATE.backoffUntil=Date.now()+30*60*1000;
       if (/could not find|schema cache|function|404/i.test(String(err && err.message || err))) {
         STATE.disabled = true;
         if (STATE.timer) {
