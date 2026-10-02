@@ -234,6 +234,15 @@ ok(backend.includes('directPeerComparable=!!oppFull&&roleEvidence.confidence==="
 ok(backend.includes('excludedLowConfidenceDirectPeerGames'), 'low-confidence direct-peer comparisons must remain observable');
 ok(backend.includes('lane15ComparableGames=directPeerGames.filter'), 'direct-role lane checkpoints must exclude fallback peer-role evidence');
 ok(backend.includes('validDirectPeerTimeline=validTimeline.filter'), 'role-duel timeline aggregates must exclude fallback peer-role evidence');
+ok(backend.includes('firstResetMeasuredGames=validDirectPeerTimeline.filter'), 'role-relative first-reset outcomes must use trusted matched peers');
+ok(backend.includes('majorReadinessGames.filter(g=>g.directPeerComparable===true'), 'peer major-readiness delay must use trusted matched peers');
+ok(backend.includes('secondMajorPeerGames=finiteGames(validDirectPeerTimeline'), 'second-major peer timing must use trusted matched peers');
+ok(backend.includes('impactGames=finiteGames(validDirectPeerTimeline'), 'first-impact peer timing must use trusted matched peers');
+ok(backend.includes('rolePeerFightSamples=validDirectPeerTimeline.reduce'), 'role-level fight comparisons must use trusted matched peers');
+ok(backend.includes('visionSetupGames=finiteGames(validDirectPeerTimeline'), 'vision peer comparison must use trusted matched peers');
+ok(backend.includes('peerMatchedRepeatDeathRate')&&backend.includes('peerMatchedObjectiveSetupWardRate')&&backend.includes('peerMatchedKillConversionRate'), 'opponent-relative deltas must expose matched player denominators');
+ok(backend.includes('peerMatchedFirst20PlayerPlateInvolvement'), 'plate deltas must use a matched player denominator');
+ok(app.includes('matched peer games')&&app.includes('Δ · matched'), 'frontend must expose matched comparison denominators');
 ok(app.includes('High-confidence same-role comparisons')&&app.includes('withheld from direct-peer coaching'), 'frontend must explain the direct-peer confidence boundary');
 ok(backend.includes('team!=="GENERIC"&&individual!=="GENERIC"&&team!==individual'), 'conflicting Riot role fields must fail closed');
 ok(backend.includes('function opponentResolution(')&&backend.includes('candidates.length!==1'), 'direct role peer comparison must require exactly one enemy candidate');
