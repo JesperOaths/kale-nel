@@ -427,6 +427,10 @@ assert.ok(app.includes("filter==='priority'&&Number(counts.priority||0)===0")&&a
 assert.ok(css.includes('.match-history-row.focus-match')&&app.includes("' focus-match'"),'Current-focus games must be visually identifiable without changing calculations');
 assert.ok(modelDoc.includes('## Priority-to-match evidence linkage')&&modelDoc.includes('intentionally narrower than a fuzzy stat/text match'),'Priority-to-match evidence semantics must remain documented');
 assert.ok(html.includes('id="gameArcPatterns"')&&html.includes('id="gameArcTurningPoints"')&&app.includes('function renderGameArcs('),'League must retain repeated @15→@25 game-arc analysis and recurring turning-point evidence');
+assert.ok(html.includes('data-history-filter="arc"')&&app.includes('data-review-arc'),'Repeated game-arc cards must link directly into the collapsible match-history evidence');
+assert.ok(app.includes("gameArcTransition(g)?.key===arcKey")&&app.includes("state.matchHistoryFilter='arc'"),'Arc review must filter by the exact derived transition key rather than fuzzy text');
+assert.ok(app.includes("filter==='arc'&&Number(counts.arc||0)===0")&&app.includes("state.matchHistoryArcKey=''"),'Invalid arc filters must reset instead of leaving a hidden empty filter active');
+assert.ok(modelDoc.includes('### Reviewing repeated arcs')&&modelDoc.includes('does not recalculate the report'),'Repeated-arc review must remain a visibility-only drill-down');
 assert.ok(html.includes('id="gameArcFunnels"')&&app.includes('function arcFunnelCard('),'League must expose advantage-conversion funnels for ahead / close / behind @15 states');
 assert.ok(app.includes("transFor('ahead')")&&app.includes("transFor('behind')")&&app.includes("transFor('close')"),'Advantage-conversion funnels must derive from the same comparable @15→@25 transitions');
 assert.ok(app.includes('function matchReplayReviewHtml(')&&app.includes('data-open-review-match'),'Expanded match history must surface backend-ranked replay moments with direct evidence links');
@@ -697,7 +701,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v161'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v162'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
