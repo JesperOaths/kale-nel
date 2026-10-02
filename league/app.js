@@ -715,6 +715,7 @@ function renderReport(raw,sourceKind){
   renderKpis(r);
   renderSupportRoleLens(r);
   renderRoleSpecificLens(r);
+  renderRoleSectionCopy(r);
   renderOutcomeFingerprint(r);
   renderRankRadar(r);
   renderVisualSummary(r);
@@ -2913,9 +2914,34 @@ function renderAdvanced(r){
 function diagnosticChip(label,value,tone='neutral',evidenceReady=true,sample=''){
   return '<span class="diagnostic-chip tone-'+(evidenceReady?tone:'neutral')+(evidenceReady?'':' thin-evidence')+'"><small>'+esc(label)+(sample?' · '+esc(sample):'')+'</small><b>'+esc(value)+'</b></span>';
 }
+
+function queueContextLabel(q,family){
+  const id=Number(q||0),known={400:'Normal Draft',420:'Ranked Solo',430:'Normal Blind',440:'Ranked Flex',480:'Swiftplay',490:'Quickplay',700:'Clash'};
+  return (known[id]||('Queue '+(id||'?')))+(family?' · '+String(family).replaceAll('_',' '):'');
+}
+function renderRoleSectionCopy(r){
+  const role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),nav=$('laneEconomyNav'),eyebrow=$('laneEconomyEyebrow'),title=$('laneEconomyTitle'),hint=$('laneEconomyHint');
+  const copy={
+    ADC:{nav:'Lane & economy',eyebrow:'Lane & economy',title:'Are you leaving bot lane ahead or behind?',hint:'Current ADC coaching cohort only. Signed direct-role economy charts use a fixed neutral line at zero; older-mechanics context stays in match history.'},
+    TOP:{nav:'Lane & side economy',eyebrow:'Lane & side economy',title:'Are lane advantages surviving into side-lane pressure?',hint:'Current TOP coaching cohort only. Direct-role lane checkpoints are separated from later side-lane and objective-timing evidence.'},
+    MID:{nav:'Lane → map economy',eyebrow:'Lane → map economy',title:'Are lane resources turning into useful map tempo?',hint:'Current MID coaching cohort only. Lane checkpoints, 15→25 routing and direct-role comparisons remain separate so movement does not erase its lane cost.'},
+    JUNGLE:{nav:'Jungle economy & tempo',eyebrow:'Jungle economy & tempo',title:'Are farm and item timings becoming earlier map impact?',hint:'Current JUNGLE coaching cohort only. Direct-jungle farm/item comparisons are separated from objective presence so one does not stand in for the other.'},
+    SUPPORT:{nav:'Support economy & setup',eyebrow:'Support economy & setup',title:'Are support resources, vision and movement buying enough map value?',hint:'Current SUPPORT coaching cohort only. Support economy is contextual; roam, ADC lane-cost, vision and objective setup evidence are interpreted separately.'}
+  }[role]||{nav:'Role economy',eyebrow:'Role economy',title:'How does your role economy develop?',hint:'Current coaching cohort only.'};
+  if(nav)nav.textContent=copy.nav;if(eyebrow)eyebrow.textContent=copy.eyebrow;if(title)title.textContent=copy.title;if(hint)hint.textContent=copy.hint;
+}
+
 function renderBreakdowns(r){
-  const roleRows=Object.entries(r.byRole||{}).sort((a,b)=>Number(b[1]?.games||0)-Number(a[1]?.games||0));
-  $('roleBreakdown').innerHTML=roleRows.length?roleRows.map(([name,v])=>'<div class="break-row"><span>'+esc(name==='ADC'?'ADC':name)+'</span><small>'+esc(String(v.games||0))+' games</small><strong>'+esc(fmtPct((v.games||0)?Number(v.wins||0)/Number(v.games)*100:null))+' WR</strong></div>').join(''):'<div class="bullet empty">No role sample available.</div>';
+  const q=r.dataQuality||{},role=canonicalRole(q.selectedRole||r.coachingSummary?.primaryRole||r.summary?.primaryRole||state.selectedRole),games=Number(q.analyzedGames??r.games?.length??0),timeline=Number(q.validTimelineGames||0),peer=Number(q.directPeerComparableGames??q.peerComparableGames??0),mech=Number(q.mechanicsCohortGames??r.coachingSummary?.games??games),patch=String(q.currentPatchKey||'unknown'),queue=queueContextLabel(q.dominantQueueId,q.dominantQueueFamily);
+  const cohortRows=[
+    ['Selected role',roleLabel(role),games+' analyzed games'],
+    ['Queue cohort',queue,String(q.queueSelection||'role-first recent cohort').replaceAll('_',' ')],
+    ['Current mechanics',mech+'/'+games+' games',q.mechanicsCohortApplied===true?'older-mechanics games remain context-only':'single compatible mechanics cohort'],
+    ['Timeline coverage',timeline+'/'+games+' games',games?fmtPct(100*timeline/games)+' timeline-complete':'n/a'],
+    ['Trusted role peer',peer+'/'+games+' games',games?fmtPct(100*peer/games)+' direct-peer comparable':'n/a'],
+    ['Current patch',patch,Object.keys(q.patchCounts||{}).length+' patch key'+(Object.keys(q.patchCounts||{}).length===1?'':'s')+' visible in selected history']
+  ];
+  $('roleBreakdown').innerHTML=cohortRows.map(x=>'<div class="cohort-context-row"><span>'+esc(x[0])+'</span><strong>'+esc(x[1])+'</strong><small>'+esc(x[2])+'</small></div>').join('');
 
   const behaviorRows=Array.isArray(r.championBehavior)?r.championBehavior:[],base=r.coachingSummary||r.summary||{},riskBase=r.behaviorSummary||{};
   if(behaviorRows.length){
