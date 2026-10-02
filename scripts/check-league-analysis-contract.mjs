@@ -505,6 +505,10 @@ ok(modelDoc.includes('## Priority evidence chain'), 'analysis model must documen
 ok(app.includes('driver-evidence-meta')&&app.includes('supporting finding')&&app.includes('confidence'), 'action-first report drivers must retain visible evidence-strength metadata when supplied by the backend');
 ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('matchHistorySignals('), 'recent selected-role games must have collapsible coaching-readable history rows with derived evidence signals');
 ok(html.includes('data-history-filter="priority"')&&app.includes('function currentPriorityReplayIds('), 'current top coaching priority must map to ranked replay evidence in match history');
+ok(backend.includes('add(g,116,"mid routing"')&&backend.includes('secondsBeforeNeutralObjective'), 'mid-routing priorities must have routing-specific replay evidence for isolated pre-objective side-lane deaths');
+ok(backend.includes('add(g,94,"mid routing"')&&backend.includes('ev?.highRisk===true'), 'isolated side-lane replay fallback must remain gated by the existing high-risk classification');
+ok(app.includes("add('mid routing')"), 'frontend practice/replay mapping must include the dedicated mid-routing category');
+ok(modelDoc.includes('### Mid-routing replay evidence'), 'analysis model must document routing-specific replay evidence');
 ok(app.includes('data-open-priority-history')&&app.includes("state.matchHistoryFilter='priority'"), 'action-first primary limiter must provide a direct path into matching game evidence when such evidence exists');
 ok(modelDoc.includes('## Priority-to-match evidence linkage')&&modelDoc.includes('never changes the report sample'), 'priority-driven review filtering must remain visibility-only and non-mutating');
 ok(html.includes('id="gameArcPatterns"')&&app.includes('function renderGameArcs(')&&app.includes('function gameArcStages('), 'League report must reconstruct supported per-game arcs and aggregate repeated state transitions');
