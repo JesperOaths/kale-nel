@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.86";
+const ANALYZER_VERSION="league-web-behavior-v4.87";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1298,7 +1298,7 @@ function legacyBruisienatorDqiCompatibility(out:any,totalDeaths:number){
 function deathQualityEvidence(out:any,totalDeaths:number){
   const measured=Number(out?.deathConsequences?.measured||0),pct=(a:any,b:any)=>Number(b)>0?100*Number(a||0)/Number(b):null;
   return{
-    deaths:totalDeaths,measuredConsequences:measured,consequenceCoveragePct:pct(measured,totalDeaths),
+    deaths:totalDeaths,measuredConsequences:measured,consequenceCoveragePct:pct(measured,totalDeaths),economySamplesContaminated:Number(out?.deathConsequences?.economySamplesContaminated||0),
     highRiskDeaths:Number(out?.badDeathCount||0),highRiskRate:pct(out?.badDeathCount,totalDeaths),
     costlyDeaths:Number(out?.deathConsequences?.costly||0),costlyMeasuredRate:pct(out?.deathConsequences?.costly,measured),
     severeDeaths:Number(out?.deathConsequences?.severe||0),severeMeasuredRate:pct(out?.deathConsequences?.severe,measured),
