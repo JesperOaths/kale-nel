@@ -79,11 +79,19 @@ function readinessReason(v){
 }
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
+function leagueApiHeaders(){
+  const headers={'Content-Type':'application/json','apikey':KEY,'x-league-workspace':workspaceId()};
+  // Supabase's opaque publishable keys belong on apikey, not as a synthetic
+  // bearer token. Keep Authorization only for legacy JWT anon-key compatibility.
+  if(/^[^.]+\.[^.]+\.[^.]+$/.test(String(KEY||'')))headers.Authorization='Bearer '+KEY;
+  if(state.riotApiKey)headers['x-riot-api-key']=state.riotApiKey;
+  return headers;
+}
 async function api(action,payload={}){
   if(!API||!KEY)throw new Error('League backend configuration is missing.');
   const res=await fetch(API,{
     method:'POST',mode:'cors',cache:'no-store',
-    headers:Object.assign({'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY,'x-league-workspace':workspaceId()},state.riotApiKey?{'x-riot-api-key':state.riotApiKey}:{}),
+    headers:leagueApiHeaders(),
     body:JSON.stringify(Object.assign({action},payload))
   });
   const raw=await res.text();let data=null;
