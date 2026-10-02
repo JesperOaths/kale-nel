@@ -452,6 +452,8 @@ ok(backend.includes('rr!=="GENERIC"&&(targetRole==="GENERIC"||rr===targetRole)')
 ok(backend.includes('x-riot-api-key'), 'session Riot-key header must remain supported by backend/CORS');
 ok(app.includes('practiceTargetHtml'), 'frontend must render measurable practice checkpoints');
 ok(app.includes('previousPracticeTargetOutcomes'), 'frontend must score prior practice targets against later distinct analyses');
+ok(app.includes('function practiceLiveTrigger(')&&app.includes('function practiceTriggerHtml('), 'practice priorities must translate supported themes into simple live-game If→Then rules');
+ok(modelDoc.includes('## Live practice triggers')&&modelDoc.includes('operational recall'), 'analysis model must keep live triggers as an execution aid rather than a new inference layer');
 ok(app.includes('function progressComparisonContext(')&&app.includes('overlapping game'), 'development comparison must expose rolling Last-20 sample overlap and turnover');
 ok(html.includes('id="practiceContinuity"')&&app.includes('function practiceContinuityHtml('), 'development reporting must distinguish practice-plan continuity from raw metric movement');
 ok(app.includes('Dropping from the top-three plan is not treated as proof that a problem was solved.'), 'practice focus turnover must remain non-causal and non-resolutionary');
