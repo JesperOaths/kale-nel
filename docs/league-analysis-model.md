@@ -1657,7 +1657,7 @@ The supplied archive includes `Bruisienator_ROAMS_V21_PHASE2_SAFE_STATS_ENRICH`,
 A second-pass producer/consumer audit is required before declaring a legacy UI feature "implemented." The V21 HTML reads several fields that its supplied PowerShell producer does not emit. In particular, `soloDeaths`, `greedyDeaths`, `facecheckDeaths` and `deathsNearObjective` are referenced by DQI but absent from the generated per-game rows. The same audit found several intended objective/vision fields that were incompletely wired in the desktop pipeline.
 
 Parity decisions:
-- **implemented / upgraded:** departure→path→return roam rendering; per-window kill/death/objective/structure evidence; home-lane-specific plate/turret cost while roaming; support ADC lane-cost context; source-accurate V21 DQI provenance; sortable per-game evidence table; objective-family control/presence (Dragon, Elder, Herald, Void Grubs, Baron when exposed by Riot); objective-setup ward clears; Control Ward purchases distinct from placements; and second major-item completion timing versus the direct role opponent;
+- **implemented / upgraded:** departure→path→return roam rendering; per-window kill/death/objective/structure evidence; home-lane-specific plate/turret cost while roaming; support ADC lane-movement context; source-accurate V21 DQI provenance; sortable per-game evidence table; objective-family control/presence (Dragon, Elder, Herald, Void Grubs, Baron when exposed by Riot); objective-setup ward clears; Control Ward purchases distinct from placements; and second major-item completion timing versus the direct role opponent;
 - **already superseded:** old win/loss profile, per-game narrative, objective/death/macro/vision/laning/teamfight/tempo text analyzers, static role thresholds, crude support-roam share, and square heatmaps are covered by richer same-role peer comparisons, evidence-backed judgments, objective evidence explanations, replay review, session/trend models and real-map spatial rendering;
 - **intentionally retired:** the first-pass invented `consequence_aware_v1` DQI score. Its evidence inputs remain useful, but arbitrary overlapping weights are not a trustworthy replacement metric;
 - **not fabricated:** AGOR stays unavailable because no defensible formula is present in the supplied source.
@@ -1688,7 +1688,7 @@ The @15 state requires `lane15Comparable`. The @15→@25 transition additionally
 5. **Finish** — result plus supported @25 state and late-risk context.
 
 For **SUPPORT**, do not force a carry-lane gold conversion story. The per-match sequence is:
-1. **Roam / lane** — detected roam return together with associated ADC-vs-ADC lane-cost movement.
+1. **Roam / lane** — detected roam return together with associated ADC-vs-ADC lane movement.
 2. **Vision vs peer** — direct-role VPM and pre-objective setup-ward differences when the opposing Support is high-confidence.
 3. **Objective setup** — supported prior setup and contested-objective presence.
 4. **Teamplay** — pre-contribution fight deaths, high-risk vision deaths or rapid repeat-death evidence.
@@ -2154,9 +2154,9 @@ The Support lens uses analyzer-exported evidence only:
 - prior neutral-objective setup presence,
 - team-contested neutral-objective presence.
 
-Use the analyzer's existing evidence floors: 4 roam attempts for roam conversion, 4 measured ADC lane-cost windows for a stable lane-cost interpretation, 12 vision actions for vision-safety interpretation, and 5 supported objective observations for setup/presence rates. Two or more costly roam windows below the four-window floor may be shown as a **review cue**, but must remain visually and textually thin evidence rather than being promoted to a stable negative pattern.
+Use the analyzer's existing evidence floors: 4 roam attempts for roam conversion, 4 measured ADC lane-movement windows for a stable directional interpretation, 12 vision actions for vision-safety interpretation, and 5 supported objective observations for setup/presence rates. Two or more costly roam windows below the four-window floor may be shown as a **review cue**, but must remain visually and textually thin evidence rather than being promoted to a stable negative pattern.
 
-ADC lane-cost evidence is an observed change in ADC-vs-ADC CS differential during the detected Support roam window. It is useful opportunity-cost evidence, but it does not prove the Support alone caused every CS change.
+ADC lane movement is the observed change in ADC-vs-ADC CS differential during the detected Support roam window. Positive movement favors the allied ADC; negative movement is lane cost. It is useful opportunity-cost evidence, but it does not prove the Support alone caused every CS change.
 
 This panel must remain hidden unless the selected report role is SUPPORT. Other roles retain their own generic/role-appropriate report surfaces without Support-specific assumptions.
 
@@ -2465,3 +2465,15 @@ Presentation follows the selected role:
 - **ADC / MID / TOP:** retain role-gold @15, DPM, CS/min and risk, with the new CS/min paired delta available alongside the existing gold/DPM reads.
 
 Session deltas are behavioral context only. They must not be framed as fatigue, tilt, mental-state diagnosis, or causation.
+
+
+## v203 audit corrections
+
+A full in-memory rerun of both League source-contract suites exposed stale assertions and two denominator/role-source inconsistencies that spot checks had not caught.
+
+- **Session @15 peer safety:** session-level Gold @15 samples now require `directPeerComparable === true` in addition to the compatible @15 mechanics checkpoint. A low-confidence or unresolved role opponent cannot enter session Gold @15 deltas.
+- **Rolling-progress role source:** progress metric families resolve the selected role from `dataQuality.selectedRole`, then `coachingSummary.primaryRole`, then `summary.primaryRole`, matching the rest of the report instead of relying on the legacy summary field alone.
+- **TOP side-lane denominator:** pre-objective side-lane deaths per game are divided by timeline-complete coaching games, so rolling-progress evidence readiness also uses valid timeline games. The number of side-lane deaths is not an evidence denominator.
+- **Support roam sign semantics:** the stored legacy field name contains “cost,” but its value is signed ADC-vs-ADC CS-differential movement. Positive movement favors the allied ADC; negative movement is cost. Prominent UI copy therefore says **lane movement** and reserves **cost/costly** for negative windows.
+
+These repairs do not change historical stored field names; they correct eligibility, evidence denominators and interpretation at analysis/presentation boundaries.
