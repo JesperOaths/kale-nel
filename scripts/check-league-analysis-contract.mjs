@@ -284,6 +284,9 @@ ok(app.includes('unsupported special/bot queue'), 'Data Quality must explain uns
 ok(backend.includes('x-league-workspace')&&backend.includes('publicWorkspaceOwnerId('), 'public League must use isolated browser-workspace ownership');
 ok(backend.includes('const uuid=/^[0-9a-f]{8}-')&&backend.includes('hex=/^lw1_[0-9a-f]{48,64}$/i'), 'public workspace identifiers must use a strong accepted token format');
 ok(app.includes('function secureWorkspaceToken()')&&app.includes('crypto.randomUUID')&&app.includes('crypto.getRandomValues'), 'browser workspace identity must use cryptographic randomness');
+ok(app.includes('function leagueApiHeaders()'), 'League API calls must use a dedicated public header builder');
+ok(app.includes("/^[^.]+\\.[^.]+\\.[^.]+$/.test(String(KEY||''))"), 'League public header builder must distinguish legacy JWT keys from opaque publishable keys');
+ok(!app.includes("'Authorization':'Bearer '+KEY"), 'League must not synthesize bearer auth from an opaque publishable key');
 ok(!app.includes('Math.random()'), 'public League workspace identity must not use weak Math.random entropy');
 ok(backend.includes('PUBLIC_MAX_PROFILES=8')&&backend.includes('PUBLIC_MAX_FETCH_MATCHES=50')&&backend.includes('PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE=80')&&backend.includes('PUBLIC_MAX_ANALYSES_PER_PROFILE=25'), 'anonymous public workspace resource limits must remain explicit');
 ok(backend.includes('trimAnonymousMatchCache(')&&backend.includes('trimAnonymousRows('), 'anonymous League storage histories must be bounded');
