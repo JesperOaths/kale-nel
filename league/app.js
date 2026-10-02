@@ -1854,7 +1854,7 @@ function renderReplayReviewQueue(r){
 
 function gameSortValue(g,key,index){
   if(key==='champion')return String(g.champion||'').toLowerCase();
-  if(key==='role')return String(g.role||'').toLowerCase();
+  if(key==='opponent')return String(g.peer?.champion||'').toLowerCase();
   if(key==='result')return g.win?1:0;
   if(key==='kda')return (Number(g.kills||0)+Number(g.assists||0))/Math.max(1,Number(g.deaths||0));
   if(key==='kp')return Number(g.kp??-Infinity);
@@ -1867,7 +1867,7 @@ function bindGameSortControls(){
   document.querySelectorAll('[data-game-sort]').forEach(btn=>btn.onclick=()=>{
     const key=String(btn.dataset.gameSort||'recent');
     if(state.gameSort.key===key)state.gameSort.dir=state.gameSort.dir==='desc'?'asc':'desc';
-    else state.gameSort={key,dir:key==='champion'||key==='role'?'asc':'desc'};
+    else state.gameSort={key,dir:key==='champion'||key==='opponent'?'asc':'desc'};
     if(state.report)renderGames(state.report);
   });
 }
@@ -1886,7 +1886,6 @@ function gameMatchesNamedFilter(g,key){
   if(key==='ahead15')return trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)&&Number(g.goldDiff15)>100;
   if(key==='even15')return trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)&&Math.abs(Number(g.goldDiff15))<=100;
   if(key==='behind15')return trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)&&Number(g.goldDiff15)<-100;
-  if(key==='adc')return g.role==='ADC';
   return true;
 }
 function gamePassesFilter(g){
@@ -2285,7 +2284,7 @@ function renderGames(r){
     championSelect.value=state.gameChampion;
   }
   const championScoped=state.gameChampion==='all'?games:games.filter(g=>String(g.champion||'')===state.gameChampion);
-  const filterLabels={all:'All',win:'Wins',loss:'Losses',ahead15:'Ahead @15',even15:'Close @15',behind15:'Behind @15',adc:'ADC only'};
+  const filterLabels={all:'All',win:'Wins',loss:'Losses',ahead15:'Ahead @15',even15:'Close @15',behind15:'Behind @15'};
   document.querySelectorAll('[data-game-filter]').forEach(btn=>{
     const key=String(btn.dataset.gameFilter||'all'),count=key==='all'?championScoped.length:championScoped.filter(g=>gameMatchesNamedFilter(g,key)).length;
     btn.innerHTML=esc(filterLabels[key]||key)+' <span class="filter-count">'+count+'</span>';
@@ -2300,15 +2299,15 @@ function renderGames(r){
   });
   $('gamesBody').innerHTML=order.length?order.map(({g,i},displayIndex)=>{
     const kda=[g.kills,g.deaths,g.assists].map(x=>hasNum(x)?Number(x):'?').join('/');
-    const icon=championIcon(g.champion),peerOk=trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false,goldTone=peerOk?deltaTone(g.goldDiff15,0,100,false):'neutral';
+    const icon=championIcon(g.champion),peerChampion=String(g.peer?.champion||''),peerIcon=peerChampion?championIcon(peerChampion):'',peerTrusted=trustedDirectPeer(g),peerOk=peerTrusted&&g?.phaseRules?.lane15Comparable!==false,goldTone=peerOk?deltaTone(g.goldDiff15,0,100,false):'neutral';
     const firstItem=g.firstMajorItem,itemSrc=firstItem?itemIcon(firstItem.itemId):'';
     const goldLabel=!peerOk?'peer withheld':!hasNum(g.goldDiff15)?'n/a':Number(g.goldDiff15)>100?'ahead':Number(g.goldDiff15)<-100?'behind':'even';
-    const rowLabel=[g.champion||'Unknown',g.win?'win':'loss',shortGameDate(g.gameStartTimestamp)].filter(Boolean).join(' · ');
+    const rowLabel=[g.champion||'Unknown',peerChampion?'vs '+peerChampion:'',g.win?'win':'loss',shortGameDate(g.gameStartTimestamp)].filter(Boolean).join(' · ');
     return '<tr class="game-row" data-match="'+esc(g.matchId||String(i))+'" data-index="'+i+'" tabindex="0" role="button" aria-expanded="false" aria-label="Open match details · '+esc(rowLabel)+'">'+
       '<td class="caret"><span class="caret-arrow" aria-hidden="true">▸</span> <small>'+(displayIndex+1)+'</small></td>'+
       '<td><div class="champion-cell">'+(icon?'<img class="champion-icon" loading="lazy" src="'+esc(icon)+'" alt="">':'')+
         '<span><b>'+esc(g.champion||'Unknown')+'</b>'+(firstItem?'<small class="table-item">'+(itemSrc?'<img loading="lazy" src="'+esc(itemSrc)+'" alt="">':'')+esc(firstItem.name||'First major')+' · '+esc(fmt(firstItem.time,1))+'m</small>':'')+'</span></div></td>'+
-      '<td>'+esc(g.role==='ADC'?'ADC':(g.role||'GENERIC'))+'</td>'+
+      '<td><div class="champion-cell opponent-cell">'+(peerIcon?'<img class="champion-icon" loading="lazy" src="'+esc(peerIcon)+'" alt="">':'')+'<span><b>'+esc(peerChampion||'Peer unavailable')+'</b><small>'+(peerTrusted?'same-role opponent':'comparison withheld')+'</small></span></div></td>'+
       '<td class="result '+(g.win?'win':'loss')+'"><b>'+(g.win?'WIN':'LOSS')+'</b></td>'+
       '<td><strong>'+esc(kda)+'</strong></td>'+
       '<td>'+esc(fmtPct(g.kp))+'</td>'+
