@@ -700,3 +700,7 @@ ok(modelDoc.includes('## Technical game table role safety'), 'analysis documenta
 ok(app.includes('function judgmentMatchesPracticeTheme(')&&app.includes('focusMatch?xs.filter'), 'current-focus match story must prefer a theme-aligned supported judgment when one exists');
 ok(app.includes("judge.focusMatched?'Current-focus read':'Strongest read'"), 'frontend must distinguish focus-aligned judgments from generic strongest reads');
 ok(modelDoc.includes('## Focus-aligned match-story reads'), 'analysis documentation must preserve focus-aligned match-story behavior');
+
+ok(app.includes('roleMetric=matchHistoryRoleMetric(g,role)')&&app.includes('out.push({label:roleMetric.label'), 'expanded match-story signal grid must reuse the role-aware collapsed metric');
+ok(app.includes('const activeFights=Number(fight.active??fight.attended??0)')&&app.includes('Execution rates use active fight involvement only'), 'expanded match-story fight execution must use the active-involvement denominator');
+ok(modelDoc.includes('## Expanded match-story signal alignment'), 'analysis documentation must preserve expanded match-story alignment');
