@@ -56,7 +56,9 @@ jobs:
             export KALENEL_REQUIRE_PRIVATE_ADMIN_SOURCE=1
           fi
           node scripts/build-admin-worker-assets.mjs
-          grep -q "PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r11'" cloudflare/workers/admin-gate/src/worker.js
+          grep -q "PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r16'" cloudflare/workers/admin-gate/src/worker.js
+          grep -q "PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r12'" cloudflare/workers/admin-gate/src/worker.js
+          grep -q "PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-r2'" cloudflare/workers/admin-gate/src/worker.js
 
       - name: Run Worker security tests
         run: node scripts/test-admin-worker-gate.mjs
@@ -90,7 +92,7 @@ jobs:
             body="$(mktemp)"
             status="$(curl --silent --show-error --max-time 20               --dump-header "$headers" --output "$body" --write-out '%{http_code}'               'https://kalenel.nl/shop/' || true)"
             echo "attempt=$attempt status=$status"
-            if [[ "$status" == "200" ]]               && grep -q 'version-watermark" data-version-watermark>v817 - Made by Bruis<' "$body"               && grep -q 'catalog-last-good.js?v=20261002-stable-pricing-r7' "$body"               && grep -q 'store.js?v=20261002-static-first-r11' "$body"; then
+            if [[ "$status" == "200" ]]               && grep -q 'version-watermark" data-version-watermark>v817 - Made by Bruis<' "$body"               && grep -q 'catalog-last-good.js?v=20261002-stable-pricing-r8' "$body"               && grep -q 'store.js?v=20261002-static-first-r12' "$body"; then
               grep -qi '^cache-control:.*no-store' "$headers"
               echo "Plain /shop/ is live on current v817 static-first assets and bypasses stale origin HTML."
               exit 0
@@ -113,7 +115,7 @@ jobs:
             league_status="$(curl --silent --show-error --max-time 20 --dump-header "$league_headers" --output "$league_body" --write-out '%{http_code}' 'https://kalenel.nl/league/' || true)"
             echo "attempt=$attempt login=$login_status league=$league_status"
             if [[ "$login_status" == "200" ]] \
-              && grep -q 'get_login_active_names_v687-verified-r15' "$login_body" \
+              && grep -q 'get_login_active_names_v687-verified-r16' "$login_body" \
               && grep -q '<option>Antoni</option>' "$login_body" \
               && grep -q '<option>Sierk</option>' "$login_body" \
               && grep -qi '^cache-control:.*no-store' "$login_headers" \
