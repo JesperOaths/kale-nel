@@ -376,6 +376,9 @@ assert.ok(app.includes("ext.eligible!==false"),'Frontend ADC benchmark summary m
 assert.ok(api.includes('directPeerTimelineGames=validDirectPeerTimeline.length')&&api.includes('earlyRoleSoloDeathPerGame=directPeerTimelineGames?earlyRoleSoloDeaths/directPeerTimelineGames'),'Clean direct-role duel rates must use only timeline games with a trusted direct peer');
 assert.ok(api.includes('if(directPeerTimelineGames>=5&&earlyRoleSoloDeaths>=3')&&api.includes('conf(directPeerTimelineGames)')&&api.includes('timeline-complete games with a trusted direct peer. Kills with assisting participants are excluded.'),'Clean-duel coaching must gate, describe and score confidence on the same trusted direct-peer timeline denominator');
 assert.ok(api.includes('csMinGames:peerCsGames.length')&&api.includes('dpmGames:peerDpmGames.length')&&api.includes('vpmGames:peerVpmGames.length'),'Peer means must export metric-specific contributing-game counts');
+assert.ok(api.includes('csMinGames:cs.length')&&api.includes('dpmGames:dpm.length')&&api.includes('vpmGames:vpm.length')&&api.includes('majorItemGames:items.length'),'Rank-band means must export metric-specific contributing-game counts');
+assert.ok(app.includes("x.csMinGames??x.games")&&app.includes("x.dpmGames??x.games")&&app.includes("x.majorItemGames??0"),'Rank-band UI must print metric-specific n values beside lane/output/item means');
+assert.ok(modelDoc.includes('Rank-band summaries retain a broad matched-game count only as context')&&modelDoc.includes('A broad rank-band game count must never be presented as the denominator'),'Rank-band denominator semantics must remain documented');
 assert.ok(app.includes('direct-role CS/min comparisons')&&app.includes('direct-role DPM comparisons')&&app.includes('Direct-peer timeline games'),'Frontend peer comparisons must display the exact denominator behind each metric');
 assert.ok(app.includes('selected Last-20 cohort is not Ranked Solo/Flex'),'Frontend must explain why ranked population comparison is withheld for normal/Clash/Swiftplay cohorts');
 assert.ok(!app.includes('rankStepBands'),'Frontend must not regress to opponent-derived rank-step radar bands');
@@ -614,7 +617,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v144'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v145'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
