@@ -394,6 +394,11 @@ assert.ok(modelDoc.includes('## Death-pattern review priority')&&modelDoc.includ
 assert.ok(html.includes('id="compoundSignals"')&&app.includes('function renderCompoundSignals('),'Combined-evidence intelligence must remain visible');
 assert.ok(app.includes("objDiagnosed?tonePct(objective,70,45,false):'neutral'"),'Objective attendance must not be generically red-scored for roles without a supported diagnosis');
 assert.ok(html.includes('id="rankRadarPanel"')&&app.includes("reportRole!=='ADC'"),'ADC population benchmark panel must be hidden for non-ADC selected roles');
+assert.ok(html.includes('id="supportRoleLensPanel"')&&app.includes('function renderSupportRoleLens('),'SUPPORT reports must expose a dedicated role-specific lens rather than only hiding ADC widgets');
+assert.ok(app.includes("if(role!=='SUPPORT')")&&app.includes("panel.hidden=true"),'Support-specific analysis must stay hidden for every non-SUPPORT selected role');
+assert.ok(app.includes('supportRoamAdcCostGames')&&app.includes('avgSupportRoamAdcLaneCostCs')&&app.includes('supportRoamsHurtingAdc'),'Support lens must expose the backend ADC lane-cost evidence from detected support roams');
+assert.ok(app.includes('analyzer floor 4')&&app.includes('analyzer floor 12')&&app.includes('45–105s'),'Support lens must keep roam, vision and objective-setup evidence thresholds visible');
+assert.ok(modelDoc.includes('## Support-specific lens')&&modelDoc.includes('does not prove the Support alone caused every CS change'),'Support lane-cost semantics and causal caveat must remain documented');
 assert.ok(!app.includes('adcOnly:true'),'DPM/KP charts must use the selected role rather than an ADC-only chart filter');
 assert.ok(app.includes('if(analyzed<=0)throw new Error'),'A zero-game analysis must be treated as a failed request rather than a successful report');
 assert.ok(app.includes('scheduleHeavyReportRender')&&app.includes("renderWhenNear('lane-economy'")&&app.includes("renderWhenNear('spatialReview'"),'Charts/maps must render only when their sections approach the viewport');
@@ -743,7 +748,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v175'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v176'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
