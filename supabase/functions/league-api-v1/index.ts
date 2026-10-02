@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.81";
+const ANALYZER_VERSION="league-web-behavior-v4.82";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1777,7 +1777,7 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,p
   const higherRankGames=usableRankComparisons.filter((x:any)=>Number(x.comparison.peerBand)>Number(x.comparison.ownBand)).map((x:any)=>x.g);
   const sameRankGames=usableRankComparisons.filter((x:any)=>Number(x.comparison.peerBand)===Number(x.comparison.ownBand)).map((x:any)=>x.g);
   const lowerRankGames=usableRankComparisons.filter((x:any)=>Number(x.comparison.peerBand)<Number(x.comparison.ownBand)).map((x:any)=>x.g);
-  const rankBandStats=(xs:any[])=>{const lane=finiteGames(xs.filter((g:any)=>g?.phaseRules?.lane15Comparable!==false),g=>g.goldDiff15),items=finiteGames(xs,g=>g.itemSpikeDeltaVsOpponent);return{games:xs.length,laneGames:lane.length,avgGoldDiff15:meanField(lane,g=>g.goldDiff15),goldOutperformPct:outperform(lane,g=>g.goldDiff15),avgCsMinDelta:meanField(xs,g=>g.peer?.csMinDelta),avgDpmDelta:meanField(xs,g=>g.peer?.dpmDelta),avgVpmDelta:meanField(xs,g=>g.peer?.vpmDelta),majorItemGames:items.length,avgMajorItemDeltaMin:meanField(items,g=>g.itemSpikeDeltaVsOpponent),majorItemFasterPct:outperform(items,g=>g.itemSpikeDeltaVsOpponent,true)};};
+  const rankBandStats=(xs:any[])=>{const lane=finiteGames(xs.filter((g:any)=>g?.phaseRules?.lane15Comparable!==false),g=>g.goldDiff15),cs=finiteGames(xs,g=>g.peer?.csMinDelta),dpm=finiteGames(xs,g=>g.peer?.dpmDelta),vpm=finiteGames(xs,g=>g.peer?.vpmDelta),items=finiteGames(xs,g=>g.itemSpikeDeltaVsOpponent);return{games:xs.length,laneGames:lane.length,csMinGames:cs.length,dpmGames:dpm.length,vpmGames:vpm.length,avgGoldDiff15:meanField(lane,g=>g.goldDiff15),goldOutperformPct:outperform(lane,g=>g.goldDiff15),avgCsMinDelta:meanField(cs,g=>g.peer.csMinDelta),avgDpmDelta:meanField(dpm,g=>g.peer.dpmDelta),avgVpmDelta:meanField(vpm,g=>g.peer.vpmDelta),majorItemGames:items.length,avgMajorItemDeltaMin:meanField(items,g=>g.itemSpikeDeltaVsOpponent),majorItemFasterPct:outperform(items,g=>g.itemSpikeDeltaVsOpponent,true)};};
   const higherRankStats=rankBandStats(higherRankGames),sameRankStats=rankBandStats(sameRankGames),lowerRankStats=rankBandStats(lowerRankGames);
   const higherLane=finiteGames(higherRankGames.filter((g:any)=>g?.phaseRules?.lane15Comparable!==false),g=>g.goldDiff15),higherGold=higherRankStats.avgGoldDiff15,higherDpm=higherRankStats.avgDpmDelta,higherGoldWin=higherRankStats.goldOutperformPct,higherItemGames=Number(higherRankStats.majorItemGames||0),higherItemDelta=higherRankStats.avgMajorItemDeltaMin,higherItemFaster=higherRankStats.majorItemFasterPct;
   if(higherRankGames.length>=3&&higherLane.length>=3){
