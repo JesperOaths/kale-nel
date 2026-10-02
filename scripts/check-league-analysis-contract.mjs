@@ -696,3 +696,7 @@ console.log(JSON.stringify({
 ok(app.includes("carryGoldRole=['ADC','MID','TOP'].includes(role)")&&app.includes("btn.hidden=laneBand&&!carryGoldRole"), 'technical game table must keep SUPPORT/JUNGLE out of carry-style @15 coaching filters');
 ok(app.includes("'Gold @15 vs role · context'")&&app.includes("'context only'"), 'raw @15 economy may remain visible for SUPPORT/JUNGLE only as neutral traceability context');
 ok(modelDoc.includes('## Technical game table role safety'), 'analysis documentation must preserve technical-table role safety');
+
+ok(app.includes('function judgmentMatchesPracticeTheme(')&&app.includes('focusMatch?xs.filter'), 'current-focus match story must prefer a theme-aligned supported judgment when one exists');
+ok(app.includes("judge.focusMatched?'Current-focus read':'Strongest read'"), 'frontend must distinguish focus-aligned judgments from generic strongest reads');
+ok(modelDoc.includes('## Focus-aligned match-story reads'), 'analysis documentation must preserve focus-aligned match-story behavior');
