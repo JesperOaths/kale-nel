@@ -33,7 +33,7 @@ const ADMIN_PAGE_VERSION = SITE_VERSION;
 // ADMIN_BUILD or a stale public HTML shell can survive an unrelated admin deploy.
 const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r14';
 const PUBLIC_SHOP_ORIGIN_BUILD = 'v857-clean-collection-art';
-const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-v140';
+const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-v141';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
