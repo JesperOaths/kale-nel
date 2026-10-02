@@ -518,6 +518,10 @@ assert.ok(app.includes('sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-
 assert.ok(app.includes('chart-reference-line')&&app.includes("reference:bench?.dpm")&&app.includes("reference:bench?.kp"),'ADC DPM/KP charts must retain same-tier external reference lines');
 assert.ok(app.includes('function renderVisualSummary(r){\n  const games=reportCoachingGames(r)')&&app.includes('function renderConsistencySummary(r){')&&app.includes('const games=reportCoachingGames(r),reportRole='),'Visual summary and consistency coaching surfaces must use the verified mechanics coaching cohort');
 assert.ok(app.includes('const sourceGames=[...reportCoachingGames(r)]'),'Lane/economy trend charts must use the mechanics-filtered coaching cohort rather than all context games');
+assert.ok(app.includes('function roleEconomyChartSpecs(')&&app.includes("if(reportRole==='SUPPORT')return[vpm,kp,roam,setup]")&&app.includes("if(reportRole==='JUNGLE')return[gold,peerCsMin,impact,contest]"),'Economy/tempo charts must use selected-role-specific metric sets instead of universal ADC/laner charts');
+assert.ok(app.includes("signal=c.v*(spec.inverse?-1:1)")&&app.includes("upperBand=spec.inverse?'chart-negative-band':'chart-positive-band'"),'Inverse signed timing metrics must flip point and favorable-band semantics');
+assert.ok(app.includes("signal=delta*(spec.inverse?-1:1)")&&app.includes('more favorable recently')&&app.includes('less favorable recently'),'Signed chart trend wording must respect metric direction rather than assume numerically higher is better');
+assert.ok(modelDoc.includes('## Role-specific economy chart sets')&&modelDoc.includes('negative as favorable'),'Role-specific chart sets and inverse timing semantics must remain documented');
 assert.ok(modelDoc.includes('## Coaching charts and visual snapshots')&&modelDoc.includes('must not shift current chart distributions'),'Chart/snapshot cohort boundaries must remain documented');
 assert.ok(!html.includes('ADC rank averages'),'UI must not overstate role-adjusted rank benchmarks as direct ADC rank averages');
 assert.ok(!app.includes('Rank avg ')&&!app.includes('ADC average')&&!app.includes('sourced rank average'),'Prominent KPI/Quick Read copy must not overstate adjusted references as observed ADC averages');
@@ -667,7 +671,7 @@ assert.ok(app.includes('Checkpoint interpretation:'),'Per-game UI must explain r
 assert.ok(app.includes('@15 lane-checkpoint comparable games'),'Advanced metrics must expose @15 semantic eligibility');
 assert.ok(app.includes('15→25 fixed-checkpoint comparable games'),'Advanced metrics must expose transition checkpoint eligibility');
 assert.ok(app.includes('@25 closing-checkpoint comparable games'),'Advanced metrics must expose closing checkpoint eligibility');
-assert.ok(app.includes('Gold @15 vs role opponent · raw checkpoint'),'Swiftplay/nonstandard @15 chart must not be mislabeled as ordinary lane state');
+assert.ok(app.includes("trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false")&&app.includes('Only trusted, coaching-comparable checkpoints are plotted.'),'Lane/economy charts must withhold unsafe @15 peer checkpoints rather than relabel raw data as coaching evidence');
 assert.ok(app.includes('queue-specific roam window')&&!app.includes('pre-major-objective-era roam departures'),'Frontend roam language must use the configured queue window without falsely implying neutral objectives have not spawned');
 assert.ok(app.includes('const collapsed=rules.earlyEndMin>=rules.lateStartMin'),'Swiftplay phase UI must not invent an empty transition bucket');
 assert.ok(app.includes('function plateTierText('),'Frontend must expose turret-tier plate pressure');
@@ -739,7 +743,7 @@ assert.ok(app.includes('Objective setup ward clears'),'Frontend must expose obje
 assert.ok(app.includes('objectiveFamilyStats'),'Per-game objective tab must expose objective-family evidence');
 assert.ok(html.includes('data-game-sort="gold15"')&&app.includes('bindGameSortControls'),'Per-game evidence table must retain Bruisienator-style sortable columns');
 assert.ok(html.includes('id="consistencySummary"')&&app.includes('function renderConsistencySummary(')&&app.includes('function robustStats('),'Lane/economy must retain median + middle-50 consistency context so averages are not the only summary');
-assert.ok(app.includes("stats.q1")&&app.includes("stats.q3")&&app.includes("consistencySplit(gold,0,150,false)")&&app.includes("consistencySplit(cs,0,5,false)"),'Consistency cards must retain explicit robust ranges and neutral bands');
+assert.ok(app.includes('stats.q1')&&app.includes('stats.q3')&&app.includes('roleEconomyChartSpecs(r,reportRole)')&&app.includes('consistencySplit(vals,Number(spec.splitCenter),Number(spec.splitThreshold),!!spec.inverse)'),'Consistency cards must retain robust ranges while sharing the exact role-specific chart definition and direction');
 assert.ok(html.includes('data-game-filter="ahead15"')&&html.includes('data-game-filter="behind15"')&&html.includes('id="gameChampionFilter"')&&app.includes('function bindGameFilterControls(')&&app.includes('function gamePassesFilter('),'Game evidence must retain lightweight result/lane/champion filters');
 assert.ok(app.includes('function gameMatchesNamedFilter(')&&app.includes('filter-count'),'Game filter chips must expose useful per-filter evidence counts');
 assert.ok(app.includes('tabindex="0" role="button" aria-expanded="false"')&&app.includes("ev.key==='Enter'||ev.key===' '")&&app.includes("setAttribute('aria-pressed'"),'Game evidence rows and filters must remain keyboard/screen-reader operable');
@@ -771,7 +775,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v180'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v181'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
