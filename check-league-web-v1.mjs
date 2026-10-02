@@ -819,7 +819,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v195'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v196'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -883,3 +883,7 @@ assert.ok(modelDoc.includes('## Technical game table role safety')&&modelDoc.inc
 assert.ok(app.includes('function judgmentMatchesPracticeTheme(')&&app.includes('focusMatch?xs.filter'),'Current-focus match rows must prefer a per-game judgment aligned with the active practice theme');
 assert.ok(app.includes("judge.focusMatched?'Current-focus read':'Strongest read'"),'Collapsed match row must disclose when the displayed judgment is focus-aligned');
 assert.ok(modelDoc.includes('## Focus-aligned match-story reads')&&modelDoc.includes('falls back to the normal strongest supported'),'Focus-aligned match-story fallback semantics must remain documented');
+
+assert.ok(app.includes('roleMetric=matchHistoryRoleMetric(g,role)')&&app.includes('out.push({label:roleMetric.label'),'Expanded match-story signals must reuse the same role-aware metric as the collapsed row');
+assert.ok(app.includes('const activeFights=Number(fight.active??fight.attended??0)')&&app.includes('Execution rates use active fight involvement only'),'Expanded match-story fight signals must use active involvement rather than generic presence');
+assert.ok(modelDoc.includes('## Expanded match-story signal alignment')&&modelDoc.includes('active involvement only'),'Expanded match-story signal semantics must remain documented');
