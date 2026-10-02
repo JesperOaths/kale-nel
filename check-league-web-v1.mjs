@@ -256,6 +256,8 @@ assert.ok(app.includes('function hasNum(v)'));
 assert.ok(app.includes('renderPracticePlan'));
 assert.ok(app.includes('practiceTargetHtml'));
 assert.ok(app.includes('previousPracticeTargetOutcomes'));
+assert.ok(app.includes('function practiceLiveTrigger(')&&app.includes('function practiceTriggerHtml(')&&css.includes('.practice-trigger'),'Practice priorities must expose a compact live-game If→Then trigger');
+assert.ok(modelDoc.includes('## Live practice triggers')&&modelDoc.includes('must not create a new diagnosis'),'Live trigger scope and non-diagnostic semantics must remain documented');
 assert.ok(api.includes('samplePaths:samplePathsFor(metricPath)')&&api.includes('"coachingSummary.csMin"')&&api.includes('"coachingSummary.goldDiff15"'),'Practice targets must persist exact current-denominator paths and mechanics-filtered self-metric paths');
 assert.ok(app.includes('function reportNewMatchCount(')&&app.includes('if(newGames<windowGames)')&&app.includes('if(currentSample<minSample)'),'Next-5 outcomes must wait for the requested number of new matches and sufficient current evidence');
 assert.ok(app.includes("if(p==='summary.csMin')return'coachingSummary.csMin'")&&app.includes("if(p==='summary.goldDiff15')return'coachingSummary.goldDiff15'"),'Legacy saved self-metric targets must be remapped to the current coaching cohort');
@@ -722,7 +724,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v168'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v169'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
