@@ -500,6 +500,9 @@ assert.ok(modelDoc.includes('## Game-arc reconstruction')&&modelDoc.includes('Fo
 assert.ok(app.includes("openReplayReviewMatch(matchId,tab)"),'Per-match replay cues must open the relevant full-evidence tab rather than a generic match view');
 assert.ok(app.includes('function gameArcStages(')&&app.includes('gameArcStripHtml(g)'),'Expanded match story must reconstruct a staged game arc from supported evidence');
 assert.ok(app.includes('function supportGameArcStages(')&&app.includes("label:'Roam / lane'")&&app.includes("label:'Vision vs peer'"),'SUPPORT match arcs must use roam/vision/objective/teamplay stages instead of carry-lane gold stages');
+assert.ok(app.includes("roamRate>=65")&&app.includes("roamRate<45")&&app.includes("laneCost>=-2")&&app.includes("laneCost<=-6"),'SUPPORT role-sequence roam bands must stay aligned with the Support lens');
+assert.ok(app.includes("setupRate>=70")&&app.includes("setupRate<45"),'Role-sequence objective-setup bands must stay aligned with analyzer positive/negative coaching bands');
+assert.ok(app.includes("contested>=2&&setupRate!=null&&setupRate>=70")&&!app.includes("contested>=2&&setupRate!=null&&setupRate>=60"),'Carry-role game-arc positive setup must use the analyzer 70% positive band');
 assert.ok(app.includes('function jungleGameArcStages(')&&app.includes("label:'Farm vs Jungle'")&&app.includes("label:'Tempo vs Jungle'"),'JUNGLE match arcs must use farm/tempo/objective/teamplay stages instead of carry-lane gold stages');
 assert.ok(app.includes('lateHighRisk')&&app.includes('lateCostly')&&app.includes('categories can overlap')&&!app.includes('Number(closing.highRiskDeaths||0)+Number(closing.costlyDeaths||0)'),'Game arcs must not add overlapping high-risk and costly late-death categories as unique deaths');
 assert.ok(modelDoc.includes('## Overlapping late-risk categories')&&modelDoc.includes('must never add them together'),'Late-risk overlap semantics must remain documented');
@@ -796,7 +799,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v188'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v189'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
