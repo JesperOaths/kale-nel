@@ -1641,3 +1641,8 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
   .practice-replay-link{grid-template-columns:1fr}
   .practice-replay-link>.button{grid-column:1;grid-row:auto;justify-self:start}
 }
+
+.progress-comparison-card.pending-target{
+  border-style:dashed;box-shadow:none;background:#fbf9f5
+}
+.progress-comparison-card.pending-target>strong{color:var(--muted)}
