@@ -61,6 +61,11 @@ assert.match(runtimeConfig, /function publicApiHeaders\(extra=\{\}\)/, 'shared r
 assert.match(runtimeConfig, /key\.startsWith\('sb_publishable_'\)/, 'shared fetch guard must specifically recognize opaque publishable keys');
 assert.match(runtimeConfig, /authorization === \`Bearer \$\{key\}\`\) headers\.delete\('Authorization'\)/, 'shared fetch guard must strip only the duplicated opaque publishable-key bearer');
 assert.match(runtimeConfig, /window\.__GEJAST_PUBLIC_KEY_FETCH_GUARD_V1 = true/, 'shared fetch guard must be idempotent');
+assert.match(runtimeConfig, /const isRequest = typeof Request !== 'undefined' && input instanceof Request/, 'shared fetch guard must branch on Request inputs before applying init-header rewrites');
+assert.match(runtimeConfig, /return nativeFetch\(input\.url, next\)/, 'GET/HEAD Request forwarding must use the URL and a bodyless init rather than consume the caller Request');
+assert.match(runtimeConfig, /const reusableClone = input\.clone\(\)/, 'mutation Request forwarding must clone pristine caller-owned streams');
+assert.match(runtimeConfig, /return nativeFetch\(reusableClone, next\)/, 'mutation forwarding must send the clone so caller retries retain the original Request stream');
+assert.match(runtimeConfig, /if \(init && Object\.prototype\.hasOwnProperty\.call\(init, 'body'\)\)/, 'already-consumed Request fallback must require an explicit replacement body before URL reconstruction');
 assert.doesNotMatch(authGateRuntime, /apikey:key,Authorization:'Bearer '\+key/, 'auth gate must not unconditionally duplicate the opaque public key into Authorization');
 
 const mutatingSignals = [
