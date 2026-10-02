@@ -1746,7 +1746,7 @@ function matchHistoryRow(g,index,displayIndex,r){
 }
 function renderMatchHistory(r){
   const list=$('matchHistoryList'),summary=$('matchHistorySummary'),toggle=$('matchHistoryToggle'),filters=$('matchHistoryFilters'),filterSummary=$('matchHistoryFilterSummary');if(!list||!summary)return;
-  const sourceGames=r.games||[],reviewIds=new Set((Array.isArray(r.replayReviewQueue)?r.replayReviewQueue:[]).map(x=>String(x.matchId||'')).filter(Boolean));
+  const sourceGames=r.games||[],reviewIds=new Set((Array.isArray(r.replayReviewQueue)?r.replayReviewQueue:[]).map(x=>String(x.matchId||'')).filter(Boolean)),priorityIds=currentPriorityReplayIds(r);
   const counts={
     all:sourceGames.length,
     win:sourceGames.filter(g=>g.win).length,
@@ -1755,7 +1755,8 @@ function renderMatchHistory(r){
     even15:sourceGames.filter(g=>gameMatchesNamedFilter(g,'even15')).length,
     behind15:sourceGames.filter(g=>gameMatchesNamedFilter(g,'behind15')).length,
     risk:sourceGames.filter(g=>g.timelineAvailable===true&&(Number(g.badDeathCount||0)>0||Number(g.deathConsequences?.costly||0)>0)).length,
-    review:sourceGames.filter(g=>reviewIds.has(String(g.matchId||''))).length
+    review:sourceGames.filter(g=>reviewIds.has(String(g.matchId||''))).length,
+    priority:sourceGames.filter(g=>priorityIds.has(String(g.matchId||''))).length
   };
   const filter=String(state.matchHistoryFilter||'all');
   const matchFilter=g=>{
@@ -1764,6 +1765,7 @@ function renderMatchHistory(r){
     if(filter==='ahead15'||filter==='even15'||filter==='behind15')return gameMatchesNamedFilter(g,filter);
     if(filter==='risk')return g.timelineAvailable===true&&(Number(g.badDeathCount||0)>0||Number(g.deathConsequences?.costly||0)>0);
     if(filter==='review')return reviewIds.has(String(g.matchId||''));
+    if(filter==='priority')return priorityIds.has(String(g.matchId||''));
     return true;
   };
   const filteredGames=sourceGames.filter(matchFilter),limit=Math.min(Math.max(1,Number(state.matchHistoryLimit||10)),Math.max(1,filteredGames.length)),games=filteredGames.slice(0,limit);
@@ -1771,13 +1773,14 @@ function renderMatchHistory(r){
     filters.querySelectorAll('[data-history-filter]').forEach(btn=>{
       const key=btn.dataset.historyFilter||'all',active=key===filter;
       btn.classList.toggle('active-filter',active);btn.setAttribute('aria-pressed',active?'true':'false');
-      const base=key==='all'?'All':key==='win'?'Wins':key==='loss'?'Losses':key==='ahead15'?'Ahead @15':key==='even15'?'Close @15':key==='behind15'?'Behind @15':key==='risk'?'Risk flagged':'Replay priority';
+      const base=key==='all'?'All':key==='win'?'Wins':key==='loss'?'Losses':key==='ahead15'?'Ahead @15':key==='even15'?'Close @15':key==='behind15'?'Behind @15':key==='risk'?'Risk flagged':key==='priority'?'Current focus':'Replay priority';
+      if(key==='priority')btn.hidden=Number(counts.priority||0)===0;else btn.hidden=false;
       btn.textContent=base+' · '+String(counts[key]??0);
       btn.onclick=()=>{state.matchHistoryFilter=key;state.matchHistoryLimit=10;renderMatchHistory(r);};
     });
   }
   if(filterSummary){
-    const label=filter==='all'?'full recent sample':filter==='risk'?'timeline-supported risk-flagged games':filter==='review'?'games with ranked replay moments':filter==='win'?'wins':filter==='loss'?'losses':filter==='ahead15'?'ahead-at-15 games':filter==='even15'?'close-at-15 games':'behind-at-15 games';
+    const label=filter==='all'?'full recent sample':filter==='risk'?'timeline-supported risk-flagged games':filter==='review'?'games with ranked replay moments':filter==='priority'?'games with ranked replay moments matching '+currentPriorityReplayLabel(r):filter==='win'?'wins':filter==='loss'?'losses':filter==='ahead15'?'ahead-at-15 games':filter==='even15'?'close-at-15 games':'behind-at-15 games';
     filterSummary.textContent='Showing '+filteredGames.length+' / '+sourceGames.length+' '+label+'. Filters change only visible rows, never report calculations.';
   }
   if(toggle){
