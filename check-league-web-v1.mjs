@@ -397,6 +397,11 @@ assert.ok(app.includes('One-off high-risk patterns')&&css.includes('.death-patte
 assert.ok(app.includes('repeat-death contaminated')&&app.includes('not treated as clean loss evidence'),'Death-pattern cards must surface contaminated economy aftermath instead of treating it as clean loss evidence');
 assert.ok(modelDoc.includes('## Death-pattern review priority')&&modelDoc.includes('review-priority ordering, not a numeric severity score'),'Death-pattern consequence ordering must remain documented as non-causal and non-mixed-unit');
 assert.ok(html.includes('id="compoundSignals"')&&app.includes('function renderCompoundSignals('),'Combined-evidence intelligence must remain visible');
+assert.ok(app.includes("if(['ADC','MID','TOP'].includes(role)&&(hasNum(mid.avgCsSwing15to25)")&&app.includes("if(['ADC','MID','TOP'].includes(role)&&(hasNum(b.damageGoldEfficiency)"),'Farm-map and damage-share resource conversion cards must remain carry/laner role-gated rather than leaking into Support/Jungle');
+assert.ok(app.includes("if(role==='JUNGLE')")&&app.includes("intelligenceCard('Tempo → objective readiness'")&&app.includes('floors 5/5/5 for directional read'),'Jungle combined intelligence must join peer tempo with objective readiness under explicit evidence floors');
+assert.ok(app.includes("if(role==='SUPPORT')")&&app.includes("intelligenceCard('Roam value ↔ ADC lane cost'")&&app.includes("intelligenceCard('Vision safety → objective setup'"),'Support combined intelligence must use roam/lane-cost and vision/setup relationships instead of carry resource conversion');
+assert.ok(app.includes('association evidence, not sole causation'),'Support combined roam intelligence must retain the ADC-CS causal caveat');
+assert.ok(modelDoc.includes('## Role-aware combined intelligence')&&modelDoc.includes('Damage-share-minus-gold-share coaching must not leak into SUPPORT or JUNGLE'),'Role gates for compound intelligence must remain documented');
 assert.ok(app.includes("objDiagnosed?tonePct(objective,70,45,false):'neutral'"),'Objective attendance must not be generically red-scored for roles without a supported diagnosis');
 assert.ok(html.includes('id="rankRadarPanel"')&&app.includes("reportRole!=='ADC'"),'ADC population benchmark panel must be hidden for non-ADC selected roles');
 assert.ok(html.includes('id="supportRoleLensPanel"')&&app.includes('function renderSupportRoleLens('),'SUPPORT reports must expose a dedicated role-specific lens rather than only hiding ADC widgets');
@@ -775,7 +780,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v181'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v182'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
