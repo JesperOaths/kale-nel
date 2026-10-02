@@ -1979,3 +1979,17 @@ Each repeated @15→@25 state-transition card may link directly to the collapsib
 The temporary **Game arc** filter matches games by the exact `gameArcTransition().key`; it is not a text search and does not recalculate the report. If the selected arc no longer exists after another report/profile is loaded, the filter must reset to **All** rather than leave an invisible empty filter active.
 
 Reviewing a repeated arc exposes examples of the state transition. It does not imply that the transition caused the game result; win rate and late-risk context remain descriptive.
+
+
+## Canonical priority ordering
+
+When the backend exports `priorityThemes`, its order is authoritative. The backend has already combined source priority, confidence and supporting-finding count into the theme score and sorted the result.
+
+All action surfaces must consume that same order:
+- Primary limiter,
+- priority evidence chain,
+- Current focus replay/match filter,
+- Next-5 practice plan,
+- practice-plan continuity.
+
+The frontend must not re-sort grouped `priorityThemes` by raw source priority, because doing so can make different sections disagree about what priority #1 actually is. Only the legacy `recentFocus` fallback may be locally ordered by its raw priority/score fields.
