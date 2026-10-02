@@ -42,20 +42,22 @@ if(!text('gejast-login-names-fallback.js').includes("throw new Error('login_name
 if(!text('gejast-account-runtime.js').includes('isVisualAuditFixtureName')) failures.push('login selector must filter stale visual-audit fixture names from browser caches');
 if(!text('gejast-account-runtime.js').includes('function staticLoginNames()')) failures.push('login selector must expose the verified static active-name snapshot as a synchronous bootstrap source');
 if(!text('gejast-account-runtime.js').includes('else if(seed.length)')) failures.push('empty/slow live login-name refresh must preserve the synchronous seed');
+if(!text('gejast-account-runtime.js').includes('restoreStaticNamesIfBlank')) failures.push('login selector must self-heal if later scripts blank the static seed');
+if(!text('gejast-account-runtime.js').includes("window.addEventListener('pageshow',restoreStaticNamesIfBlank)")) failures.push('login selector must restore static names after bfcache pageshow');
 if(!text('gejast-account-runtime.js').includes('function domSeedNames(sel)')) failures.push('login runtime must preserve server-rendered option names as an independent synchronous seed');
 if(!text('gejast-account-runtime.js').includes('seed = normalizeNames([...domSeed,...cached,...snapshot])')) failures.push('login bootstrap must merge DOM, cache and static snapshot names before live RPC work');
 if(!text('gejast-login-names-fallback.js').includes('v817-static-authoritative-boot-explicit-live-refresh-r17')) failures.push('standalone login-name fallback must remain static-first with one bounded authoritative refresh');
 if(!text('gejast-login-names-fallback.js').includes("async function refresh(requestedScope)")) failures.push('live login-name reconciliation must remain explicit-only');
 if(text('gejast-login-names-fallback.js').includes('},60000)')) failures.push('login-name bootstrap must not schedule delayed automatic Supabase refresh timers');
 if(!text('gejast-account-runtime.js').includes('Login boot is intentionally network-independent')) failures.push('login runtime must not background-refresh an already complete deployment snapshot');
-if(!text('login.html').includes('gejast-account-runtime.js?v817&rev=20261002-login-resilience-r17')) failures.push('login page must cache-bust the hardened static-first account runtime');
+if(!text('login.html').includes('gejast-account-runtime.js?v817&rev=20261002-login-resilience-r18')) failures.push('login page must cache-bust the hardened static-first account runtime');
 if(!text('gejast-account-runtime.js').includes("name.toLowerCase()!=='kies je naam'")) failures.push('login DOM seed must never treat the placeholder as a player');
 if(!text('gejast-account-runtime.js').includes('const immediate=normalizeNames([...snapshot,...cached])')) failures.push('login names must resolve from deployment snapshot/cache before any live Supabase request');
 if(!text('login.html').includes('gejast-login-inline-seed')) failures.push('login page must render its last-known-good selector options before deferred/runtime network work');
 if(!text('login.html').includes('data-login-scope="friends"')||!text('login.html').includes('data-login-scope="family"')) failures.push('login HTML itself must carry both active-name scope lists so the selector survives JS/Supabase failure');
 if(text('gejast-login-names-fallback.js').includes('},60000)')) failures.push('login-name bootstrap must not schedule an automatic authoritative refresh');
 if(!text('gejast-config.js').includes('if (!input.bodyUsed)')||!text('gejast-config.js').includes("method === 'GET' || method === 'HEAD'")) failures.push('public fetch guard must avoid cloning consumed Request streams and rebuild GET/HEAD bodyless');
-if(!text('login.html').includes('gejast-config.js?v817&rev=20261002-public-bootstrap-r3')) failures.push('login must cache-bust the locked-input-stream-safe public bootstrap');
+if(!text('login.html').includes('gejast-config.js?v817&rev=20261002-public-bootstrap-r4')) failures.push('login must cache-bust the locked-input-stream-safe public bootstrap');
 if(!text('login.html').includes('sel.dataset.seedCount=')) failures.push('login inline seed must prove a synchronous selector population count');
 if(!text('gejast-home-profile-runtime.js').includes("const VERSION = 'v687'")) failures.push('home/profile runtime v687 module contract was changed unexpectedly');
 if(failures.length){console.error('Diagnostic self-consistency v773 FAILED');failures.forEach(f=>console.error('- '+f));process.exit(1);}
