@@ -509,6 +509,9 @@ assert.ok(app.includes("comparisonCard('CS/min vs role opponent'")&&app.includes
 assert.ok(html.includes('Raw selected-role output')&&app.includes('Raw selected-role sample')&&app.includes("tone-neutral"),'Raw KPI layer must remain neutral and self-descriptive rather than duplicate benchmark judgment');
 assert.ok(modelDoc.includes('## Report information hierarchy')&&modelDoc.includes('Do not duplicate external ADC benchmark claims'),'Report layer responsibilities must remain documented');
 assert.ok(app.includes('analyzer coaching threshold 8')&&app.includes('analyzer coaching threshold 4')&&app.includes('timeline-complete games · analyzer coaching threshold 5'),'Prominent decision cards must disclose analyzer-aligned evidence floors');
+assert.ok(app.includes('function wilsonInterval(')&&app.includes('95% Wilson')&&css.includes('.decision-interval'),'Binomial decision rates must expose Wilson uncertainty bands rather than only point estimates');
+assert.ok(app.includes('survivedFightSamples')&&app.includes('firstResetLossGames')&&app.includes('earlyLeadGivebackGames'),'Wilson intervals must use explicit numerator counts for fight, reset and lead rates');
+assert.ok(modelDoc.includes('## Rate uncertainty')&&modelDoc.includes('not a confidence score for the coaching interpretation'),'Rate-interval limitations must remain documented');
 assert.ok(app.includes('thin sample — descriptive only')&&css.includes('.decision-card.thin-evidence'),'Below-threshold decision metrics must remain visually neutral and explicitly descriptive');
 assert.ok(modelDoc.includes('## Decision-card evidence thresholds')&&modelDoc.includes('A small denominator must not visually impersonate high-confidence evidence'),'Decision-card denominator policy must remain documented');
 assert.ok(html.includes('id="technicalMetricsDetails"'),'The exhaustive analysis must remain collapsed into an on-demand appendix');
@@ -715,7 +718,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v166'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v167'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
