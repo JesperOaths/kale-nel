@@ -429,7 +429,7 @@ assert.ok(html.includes('id="matchHistoryList"')&&app.includes('function renderM
 assert.ok(html.includes('data-history-filter="priority"')&&app.includes('function currentPriorityReplayIds('),'Match history must expose a Current focus filter driven by ranked replay evidence');
 assert.ok(api.includes('add(g,116,"mid routing"')&&api.includes('secondsBeforeNeutralObjective'),'Replay queue must include specific pre-objective isolated side-lane evidence for mid-game routing');
 assert.ok(api.includes('add(g,94,"mid routing"')&&api.includes('ev?.highRisk===true'),'Non-objective side-lane replay moments must require an existing high-risk flag');
-assert.ok(app.includes("if(/mid.?routing|routing|side.?lane/.test(text))add('mid routing')"),'Mid-game routing priority must map directly to its dedicated replay category');
+assert.ok(app.includes("if(/side.?lane|mid.?routing|routing|reconnect/.test(specific))add('mid routing')")&&app.includes("else if(key==='mid-routing')add('mid routing')"),'Mid-game routing findings must map directly to their dedicated replay category, with a narrow key fallback only when titles provide no replay family');
 assert.ok(modelDoc.includes('### Mid-routing replay evidence')&&modelDoc.includes('prevents the Current focus filter from substituting generic death clips'),'Routing-specific replay semantics must remain documented');
 assert.ok(app.includes('data-open-priority-history')&&app.includes("state.matchHistoryFilter='priority'"),'Primary limiter card must link directly to matching match-history evidence when available');
 assert.ok(app.includes("filter==='priority'")&&app.includes('currentPriorityReplayLabel(r)'),'Current-focus filtering must be an evidence-only visibility filter and preserve the active priority label');
