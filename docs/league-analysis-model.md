@@ -2262,8 +2262,8 @@ Current chart sets:
 - **ADC:** trusted direct-role gold @15, trusted direct-role CS @15, DPM, KP.
 - **TOP:** trusted direct-role gold @15, trusted direct-role CS @15, DPM, KP.
 - **MID:** trusted direct-role gold @15, trusted direct-role CS @15, first tracked impact timing versus the MID peer, KP.
-- **JUNGLE:** trusted direct-role gold @15, CS/min delta versus the enemy jungler, first tracked impact timing versus the enemy jungler, contested neutral-objective presence.
-- **SUPPORT:** vision score/min, KP, detected early-roam conversion, prior neutral-objective setup.
+- **JUNGLE:** CS/min delta versus the enemy Jungler, first-major timing versus the enemy Jungler, first tracked impact timing versus the enemy Jungler, contested neutral-objective presence. Raw gold @15 remains technical context rather than a primary Jungle coaching chart.
+- **SUPPORT:** vision/min delta versus the opposing Support, pre-objective setup-ward delta versus the opposing Support, detected early-roam conversion, and ADC-vs-ADC lane CS movement during detected Support roam windows. Raw VPM/KP remain descriptive context rather than the primary coaching chart set.
 
 Peer-relative checkpoint charts must use only trusted direct-peer games and coaching-comparable checkpoints. Missing or unsupported per-game denominators remain missing; they are never converted to zero.
 
@@ -2285,7 +2285,7 @@ Compound-intelligence cards must not reintroduce role assumptions that the dedic
 JUNGLE additionally gets **Tempo → objective readiness**, joining direct-jungle first-impact timing with prior objective setup and contested-objective presence. A directional read requires at least 5 comparable impact games, 5 supported setup joins and 5 contested encounters. First-major timing may be displayed as additional context but is not allowed to manufacture readiness when those three core denominators are thin.
 
 SUPPORT additionally gets:
-- **Roam value ↔ ADC lane cost:** at least 4 detected roam attempts and 4 measured ADC-vs-ADC lane-cost windows. This remains association evidence; it does not assign sole causation for ADC CS movement to the Support.
+- **Roam value ↔ ADC lane movement:** at least 4 detected roam attempts and 4 measured ADC-vs-ADC lane-movement windows. This remains association evidence; it does not assign sole causation for ADC CS movement to the Support. Positive movement favors the allied ADC; negative movement is lane cost.
 - **Vision safety → objective setup:** at least 12 vision actions and 5 joined objective encounters.
 
 Compound cards remain neutral below their joined evidence floors. Combining several weak inputs must never make a role-specific conclusion look mature.
