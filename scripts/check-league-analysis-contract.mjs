@@ -160,6 +160,9 @@ ok(!backend.includes('if(Number(g.objectiveTeamTotal)>=2&&hasNum(g.objectiveJoin
 ok(backend.includes('contestedObjectives>=3&&contestedJoins===0'), 'per-game objective criticism must require direct contested-window absence evidence');
 ok(app.includes('ADC-vs-ADC lane cost')&&app.includes('direct-role lane cost'), 'frontend must disclose the role-correct roam lane-cost basis');
 ok(backend.includes('objectiveFamilyStats:{}')&&backend.includes('objectiveFamilySummary'), 'objective-family control/presence must remain exported');
+ok(html.includes('id="objectiveFamilyOverview"')&&app.includes('function renderObjectiveFamilyOverview('), 'main decision surface must expose rules-aware objective-family context');
+ok(app.includes('wilsonInterval(x.joined,x.contested)')&&app.includes('Fewer than 3 contested encounters — context only.'), 'objective-family high-level rates must retain uncertainty and thin-sample gating');
+ok(modelDoc.includes('## High-level objective-family overview')&&modelDoc.includes('replay-priority clue rather than a causal statement'), 'analysis model must keep objective-family callouts descriptive and non-causal');
 ok(backend.includes('enemyTeamId=Number(teamId)===100?200:Number(teamId)===200?100:null'), 'enemy objective control must derive from Riot team identity');
 ok(!backend.includes('enemyUnits=Number(opp?window.ownerCounts'), 'objective-family enemy control must not depend on direct-role matching');
 ok(backend.includes('familyRaw==="DRAGON"&&memberSubtypes.some((x:any)=>x.includes("ELDER"))?"ELDER_DRAGON"'), 'Elder Dragon must remain distinguishable when Riot subtype supports it');
