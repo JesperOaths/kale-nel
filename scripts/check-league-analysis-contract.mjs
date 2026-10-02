@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.104'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.105'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -732,3 +732,9 @@ ok(app.includes("role=canonicalRole(current?.dataQuality?.selectedRole||current?
 ok(app.includes("path:'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame',samplePath:'dataQuality.validTimelineGames',min:5"), 'TOP side-lane progress must use valid timeline games as its evidence denominator');
 ok(app.includes('ADC lane movement during roams')&&!app.includes('ADC lane cost during roams'), 'Support roam presentation must preserve signed lane-movement semantics');
 ok(modelDoc.includes('## v203 audit corrections'), 'analysis documentation must preserve the v203 audit repairs');
+ok(backend.includes('timelineGames:validTimeline.length'), 'behavior summary must export the timeline-game denominator for per-game targets');
+ok(backend.includes('"behaviorSummary.highRiskUntradedPostImpactPerGame":["behaviorSummary.timelineGames"]')&&backend.includes('"behaviorSummary.costlyDeathsPerTimelineGame":["behaviorSummary.timelineGames"]'), 'backend practice-target metadata must use actual per-game denominators');
+ok(app.includes("'behaviorSummary.badDeathsPerTimelineGame':['behaviorSummary.timelineGames']")&&app.includes("'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame':['behaviorSummary.timelineGames']"), 'frontend target compatibility must preserve per-game denominator semantics');
+ok(backend.includes('"behaviorSummary.preObjectiveDeathPct":["behaviorSummary.classifiedTimelineDeaths"]'), 'pre-objective death target metadata must use classified deaths');
+ok(backend.includes('"sessionBehavior.postLossGoldDelta":["sessionBehavior.quickAfterLoss.lane15Games","sessionBehavior.quickAfterWin.lane15Games"]'), 'session Gold target metadata must use comparable lane samples');
+ok(modelDoc.includes('## Next-5 practice target denominator integrity'), 'analysis documentation must preserve practice-target denominator integrity');
