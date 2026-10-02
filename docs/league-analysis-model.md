@@ -1673,23 +1673,39 @@ The report may derive a coaching-readable game arc from already-exported per-gam
 
 Game arcs use the same selected-role, selected-queue Last-20 games as the report. When `dataQuality.mechanicsCohortApplied` is true, aggregate arc patterns, outcome fingerprints, advantage-conversion funnels and recurring turning points use only the backend-selected current-mechanics cohort. Older-mechanics matches may remain visible in match history as context, but are labelled context-only and do not enter those coaching aggregates.
 
-Role-gold states use the same bands as the evidence-table filters:
+Game arcs are role-aware.
+
+For **ADC, MID and TOP**, role-gold states use the same bands as the evidence-table filters:
 - **ahead:** direct-role gold differential > +100g,
 - **close:** -100g through +100g,
 - **behind:** direct-role gold differential < -100g.
 
-The @15 state requires `lane15Comparable`. The @15→@25 transition additionally requires `fixed15to25Comparable`, a supported @25 frame and a coaching-safe @25 state. Closing interpretation requires `closing25Comparable`. A raw checkpoint may remain visible elsewhere for traceability when these flags are false, but it must not become a coaching arc state.
-
-The five per-game stages are:
+The @15 state requires `lane15Comparable`. The @15→@25 transition additionally requires `fixed15to25Comparable`, a supported @25 frame and a coaching-safe @25 state. Closing interpretation requires `closing25Comparable`. These carry-role arcs use:
 1. **Lane @15** — same-band direct-role economy state.
-2. **Reset / power** — first-reset aftermath or, when available, the earlier-first-major power window.
-3. **15 → 25** — direct-role gold-state transition and supported differential swing.
-4. **Teamplay** — supported side-lane/objective/fight-entry evidence; recent-shop objective absence is explicitly an association rather than a proven reset cause.
-5. **Finish** — result plus the supported @25 role state and late-risk evidence, without claiming that the checkpoint caused the result.
+2. **Reset / power** — first-reset aftermath or earlier-first-major power window.
+3. **15 → 25** — direct-role gold-state transition.
+4. **Teamplay** — supported side-lane/objective/fight-entry evidence.
+5. **Finish** — result plus supported @25 state and late-risk context.
 
-A transition is called **repeated** only when the same @15→@25 state transition occurs in at least two coaching-cohort games. A recurring turning point likewise requires the defined signal in at least two timeline-complete coaching games. Counts are games containing evidence, not raw event totals.
+For **SUPPORT**, do not force a carry-lane gold conversion story. The per-match sequence is:
+1. **Roam / lane** — detected roam return together with associated ADC-vs-ADC lane-cost movement.
+2. **Vision vs peer** — direct-role VPM and pre-objective setup-ward differences when the opposing Support is high-confidence.
+3. **Objective setup** — supported prior setup and contested-objective presence.
+4. **Teamplay** — pre-contribution fight deaths, high-risk vision deaths or rapid repeat-death evidence.
+5. **Finish** — result plus late-risk context, without causal attribution.
 
-Advantage-conversion funnels report what happened after ahead / close / behind @15 states: comparable @25 state, result and late-risk context. They are descriptive state-conversion summaries, not causal models or significance tests.
+For **JUNGLE**, the per-match sequence is:
+1. **Farm vs Jungle** — direct-jungle CS/min difference.
+2. **Tempo vs Jungle** — first tracked impact and, when available, first-major timing versus the enemy Jungler.
+3. **Objective setup** — supported prior setup and contested-objective presence.
+4. **Teamplay** — the same supported fight/risk evidence.
+5. **Finish** — result plus late-risk context.
+
+SUPPORT/JUNGLE aggregate patterns require at least two known role-sequence components in a game and at least two games with the same sequence before it is called repeated. Their aggregate arc panel shows role-sequence evidence coverage instead of the carry-role ahead/close/behind funnel.
+
+For ADC/MID/TOP, a transition is called **repeated** only when the same @15→@25 state transition occurs in at least two coaching-cohort games. A recurring turning point for any role likewise requires the defined signal in at least two timeline-complete coaching games. Counts are games containing evidence, not raw event totals.
+
+Carry-role advantage-conversion funnels remain descriptive state-conversion summaries, not causal models or significance tests. SUPPORT/JUNGLE role-sequence patterns are also descriptive and must never be interpreted as causes of match outcomes.
 
 Missing timeline or checkpoint evidence must remain explicit. It must never be converted into a clean-risk claim, a preserved lead, successful setup, or any other positive coaching conclusion.
 
@@ -1714,7 +1730,7 @@ Below those floors, show the value and sample count for traceability, label it *
 The prominent report layers have deliberately different jobs and should not duplicate one another:
 
 1. **What should drive the next games?** — strongest supported limiter, bankable strength and recent direction.
-2. **Direct-role comparison** — actual same-role opponents from analyzed matches: role gold @15, CS/min, DPM, first-major timing, first tracked impact and repeat-death recurrence. Directional coloring requires the same minimum samples used by the analyzer (5 lane/peer/impact games, 4 first-major games, 8 recovery opportunities).
+2. **Direct-role comparison** — actual same-role opponents from analyzed matches. ADC/MID/TOP emphasize role gold, CS/min and DPM; SUPPORT/JUNGLE replace weak carry metrics with VPM and pre-objective setup-ward differences. First-major timing, first tracked impact and peer-matched repeat-death recurrence remain available when supported. Directional coloring uses the analyzer’s existing evidence floors.
 3. **Raw selected-role output** — the player's own win rate, KDA, CS/min, KP, DPM and deaths/game. These cards remain neutral and contain no benchmark inference.
 4. **ADC rank comparison** — the external population/rank reference, kept separate from actual per-match opponents.
 
