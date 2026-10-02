@@ -519,6 +519,8 @@ ok(app.includes('function wilsonInterval(')&&app.includes('95% Wilson'), 'promin
 ok(modelDoc.includes('## Rate uncertainty')&&modelDoc.includes('does not override the analyzer'), 'analysis model must distinguish rate uncertainty from coaching confidence and evidence floors');
 ok(modelDoc.includes('## Decision-card evidence thresholds')&&modelDoc.includes('first-reset economy-loss rate: at least 4'), 'analysis model must lock the prominent-card evidence floors');
 ok(html.includes('id="reportDrivers"')&&app.includes('function renderReportDrivers('), 'report must compress the strongest supported weakness, strength and recent direction into an action-first layer');
+ok((app.match(/function renderRecentPulse\(/g)||[]).length===1&&app.includes("roleRecentTrendSpecs(r).map(pulseCard)"), 'recent pulse must use the same role-aware trend specifications as the recent-direction summary');
+ok(app.includes("if(role==='SUPPORT')")&&app.includes("if(role==='JUNGLE')")&&app.includes("if(role==='MID')")&&app.includes("if(role==='TOP')"), 'recent-trend frontend must preserve explicit role-specific signal sets');
 ok(app.includes('function orderedPriorityThemes(')&&app.includes('return orderedPriorityThemes(report).slice(0,3)'), 'all action surfaces must consume the canonical backend theme ordering');
 ok(app.includes("const priorities=topPracticeThemes(r)")&&app.includes("focus=topPracticeThemes(r)"), 'primary limiter and practice plan must not independently re-sort grouped priorities');
 ok(modelDoc.includes('## Canonical priority ordering')&&modelDoc.includes('frontend must not re-sort grouped `priorityThemes`'), 'analysis model must preserve canonical priority ordering');
