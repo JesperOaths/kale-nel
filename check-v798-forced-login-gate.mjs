@@ -55,7 +55,7 @@ assert(worker.includes("PUBLIC_AUTH_ENTRY_DOCUMENTS"),'login/home/request/activa
 assert(worker.includes("'Cache-Control', 'no-store, max-age=0, must-revalidate'"),'fresh public bootstrap documents must bypass stale edge/browser HTML caches');
 assert(worker.includes("const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r14'"),'login bootstrap must have an independent public cache identity');
 assert(worker.includes("const PUBLIC_SHOP_ORIGIN_BUILD = 'v857-clean-collection-art'"),'shop bootstrap must retain its independent public cache identity');
-assert(worker.includes("const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-v143'"),'League bootstrap must have an independent public cache identity');
+assert(worker.includes("const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-v144'"),'League bootstrap must have an independent public cache identity');
 assert(worker.includes("cacheBustValue = ADMIN_BUILD"),'public origin helper must accept an explicit cache-bust value');
 assert(worker.includes("cacheBustValue: PUBLIC_LEAGUE_ORIGIN_BUILD"),'League document refresh must not inherit the admin build identity');
 assert(worker.includes("cacheBustValue: isShopDocument ? PUBLIC_SHOP_ORIGIN_BUILD : PUBLIC_AUTH_ORIGIN_BUILD"),'shop/login document refreshes must use their own public build identities');
