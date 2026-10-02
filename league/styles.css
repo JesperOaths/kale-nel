@@ -1853,3 +1853,14 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
   .review-group-head{align-items:flex-start;flex-direction:column}
   .review-group-head>small{text-align:left}
 }
+
+.supporting-findings-panel{border-top:4px solid #8d867b;background:#fcfaf6}
+.supporting-findings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.supporting-findings-details{border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}
+.supporting-findings-details>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;cursor:pointer;list-style:none}
+.supporting-findings-details>summary::-webkit-details-marker{display:none}
+.supporting-findings-details>summary span{font-size:.75rem;font-weight:950}
+.supporting-findings-details>summary small{color:var(--muted);font-size:.59rem}
+.supporting-findings-details[open]>summary{border-bottom:1px solid var(--line);background:#faf7f0}
+.supporting-findings-body{padding:12px 14px}
+@media(max-width:900px){.supporting-findings-grid{grid-template-columns:1fr}}
