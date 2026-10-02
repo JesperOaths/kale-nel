@@ -498,6 +498,9 @@ ok(html.includes('data-history-filter="priority"')&&app.includes('function curre
 ok(app.includes('data-open-priority-history')&&app.includes("state.matchHistoryFilter='priority'"), 'action-first primary limiter must provide a direct path into matching game evidence when such evidence exists');
 ok(modelDoc.includes('## Priority-to-match evidence linkage')&&modelDoc.includes('never changes the report sample'), 'priority-driven review filtering must remain visibility-only and non-mutating');
 ok(html.includes('id="gameArcPatterns"')&&app.includes('function renderGameArcs(')&&app.includes('function gameArcStages('), 'League report must reconstruct supported per-game arcs and aggregate repeated state transitions');
+ok(html.includes('data-history-filter="arc"')&&app.includes('data-review-arc'), 'repeated state-transition summaries must drill into the exact underlying match-history examples');
+ok(app.includes("gameArcTransition(g)?.key===arcKey")&&app.includes("state.matchHistoryFilter='arc'"), 'arc drill-down must reuse the same derived transition key as aggregation');
+ok(modelDoc.includes('### Reviewing repeated arcs')&&modelDoc.includes('does not imply that the transition caused the game result'), 'arc-review semantics must stay descriptive and non-causal');
 ok(app.includes('lateHighRisk')&&app.includes('lateCostly')&&!app.includes('Number(closing.highRiskDeaths||0)+Number(closing.costlyDeaths||0)'), 'game-arc finish logic must keep overlapping late-risk categories separate');
 ok(modelDoc.includes('## Overlapping late-risk categories')&&modelDoc.includes('can describe one death carrying both labels'), 'analysis model must preserve late-risk overlap semantics');
 ok(html.includes('id="gameArcFunnels"')&&app.includes('function arcFunnelCard('), 'League report must summarize how ahead / close / behind @15 role states convert by @25 and result');
