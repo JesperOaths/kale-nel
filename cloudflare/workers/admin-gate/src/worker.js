@@ -34,7 +34,7 @@ const ADMIN_PAGE_VERSION = SITE_VERSION;
 const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r17';
 const PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r13';
 const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-r4';
-const PUBLIC_CRITICAL_ASSET_BUILD = '20261002-worker-bundle-first-r1';
+const PUBLIC_CRITICAL_ASSET_BUILD = '20261002-worker-bundle-first-r2';
 const PUBLIC_LOGIN_BOOTSTRAP_ASSETS = new Set([
   '/login.html',
   '/gejast-config.js',
