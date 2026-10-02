@@ -1438,6 +1438,7 @@ function practiceReplayCategories(theme){
   if(/fight|combat|damage|resource|uptime|position/.test(text)){add('teamfights');add('fight selection');}
   if(/death|recovery|risk|overstay|catch|side.?lane|post.?play/.test(text)){add('death consequences');add('lead protection');}
   if(/vision|ward|facecheck/.test(text))add('vision safety');
+  if(/mid.?routing|routing|side.?lane/.test(text))add('mid routing');
   if(/roam|rotation/.test(text))add('roaming');
   return out;
 }
