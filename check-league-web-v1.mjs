@@ -68,7 +68,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('playerSupported:isNeutralObjectiveEvent(o)?participantNearEvent'),'Neutral-objective conversion credit must require supported player presence');
+assert.ok(api.includes('playerSupportEvidence=isNeutralObjectiveEvent(o)?(participantNearEvent(frames,whoId,o,2800)?"event_position_proximity":null):structureStrongInvolvementEvidence(o,frames,whoId,whoTeam,mapId)')&&api.includes('playerSupported:!!playerSupportEvidence'),'Neutral-objective conversion credit must require explicit supported player presence and preserve the evidence method');
 assert.ok(api.includes('maxFrameDeltaMs=35000'),'Event proximity must reject participant-position frames that are too far from the actual event time');
 assert.ok(api.includes('leadMs<45000||leadMs>105000'),'Objective prior-setup evidence must use the conservative 45–105 second position band');
 assert.ok(api.includes('setupEvidence:earlySetup?"prior_position_frame_45_105s":null'),'Objective setup provenance must remain explicit');
@@ -81,7 +81,7 @@ assert.ok(api.includes('zeroIdUndoPolicy:"flag_approximate_do_not_guess"'),'Unkn
 assert.ok(api.includes('itemUndoQualityPolicy:"zero_id_undo_flagged_approximate_not_guessed"'),'Report Data Quality must export the item-undo uncertainty policy');
 assert.ok(api.includes('positionEvidenceModel:"nearest_timeline_frame_within_35s"'),'Report Data Quality must expose the event-position evidence model');
 assert.ok(app.includes('Timeline position evidence')&&app.includes('Item undo quality'),'Frontend Data Quality must expose position timing and unresolved undo evidence');
-assert.ok(api.includes('structureInvolvement(o,frames,whoId,whoTeam,mapId)'),'Structure conversion credit must require supported player involvement');
+assert.ok(api.includes('function structureStrongInvolvementEvidence(')&&api.includes('return evidence==="direct_event_credit"||evidence==="event_position_proximity"?evidence:null')&&api.includes('structureStrongInvolvementEvidence(o,frames,whoId,whoTeam,mapId)'),'Structure conversion credit must require strong direct/proximity involvement and exclude lane-presence-only attribution');
 assert.ok(api.includes('playerSupportEvidence=isNeutralObjectiveEvent(o)?(participantNearEvent(frames,whoId,o,2800)?"event_position_proximity":null):structureStrongInvolvementEvidence(o,frames,whoId,whoTeam,mapId)'),'Conversion/item-spike objective evidence must retain an explicit support method');
 assert.ok(api.includes('obj.playerSupported!==true')&&api.includes('supportEvidence:obj.playerSupportEvidence'),'Item-spike objective impact must require supported neutral/structure evidence and preserve its provenance');
 assert.ok(app.includes('Supported spike-window impact')&&app.includes('supported objective/structure impact'),'Frontend must label item-spike objective impact as supported evidence rather than generic proximity');
