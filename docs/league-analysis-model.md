@@ -2106,3 +2106,19 @@ Keep event and game denominators separate:
 - filtering changes only which match-story rows are visible and never recomputes the report sample or coaching aggregates.
 
 The temporary family filter should be visible only while active, just like repeated-arc review. Returning to All restores the ordinary match-story view.
+
+
+## Top-level evidence health
+
+The action-first section may expose a compact Evidence health strip so the coverage behind top conclusions is visible before the user reaches the full Trust & coverage panel.
+
+Do not collapse evidence health into one synthetic score. Keep at least these dimensions separate:
+- timeline-complete coaching games,
+- high-confidence direct-role peer games,
+- comparable @15 games with timeline + trusted peer + compatible lane checkpoint,
+- mechanics-cohort status,
+- timeline games with an exact patch-matched item catalog.
+
+Use analyzer-aligned readiness floors for the compact state labels: 5 timeline behavior games, 5 trusted direct-peer comparisons, 5 comparable @15 games and 4 exact-catalog item-window games. Mechanics is Limited when the newest mechanics revision is unverified or the analyzer must use a broader/mixed fallback.
+
+Ready means the dimension clears its minimum evidence floor; it does not mean the conclusion is certain, causal or immune to sample variance. Limited and Withheld must remain explicit rather than being averaged away by stronger dimensions.
