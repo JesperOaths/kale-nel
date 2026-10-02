@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.107'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.108'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -749,3 +749,8 @@ ok(backend.includes('"behaviorSummary.meanGameSupportRoamAdcLaneMovementCs"')&&b
 ok(app.includes('function practiceTargetSampleRequirements(t){')&&app.includes('function practiceTargetEvidence(report,t){'), 'frontend target scoring must enforce explicit requirements while preserving legacy targets');
 ok(app.includes('sampleSummary:evidence.summary')&&app.includes('if(!evidence.ready)'), 'target outcome cards must retain exact current evidence state and fail closed');
 ok(modelDoc.includes('explicit `sampleRequirements`')&&modelDoc.includes('Session Gold @15 practice targets use the trusted/comparable subgroup-specific'), 'analysis documentation must preserve exact target-evidence semantics');
+ok(backend.includes('roamLaneCostMeasuredGames')&&backend.includes('supportRoamsHurtingAdcGames'), 'roam evidence must export measured-game spread separately from event counts');
+ok(backend.includes('"behaviorSummary.avgRoamLaneCostCs":[{path:"behaviorSummary.roamLaneCostGames",min:4},{path:"behaviorSummary.roamLaneCostMeasuredGames",min:3}]'), 'generic roam target spread must be based on measured lane-movement games');
+ok(app.includes('harmRepeated:harmWindows>=2&&harmGames>=2')&&app.includes("c.harmRepeated?'bad'"), 'Support roam harm must repeat across games before stable negative styling');
+ok(app.includes("const curRole=canonicalRole(current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole"), 'rolling progress compatibility must prefer the canonical selected role');
+ok(modelDoc.includes('Stable harmful Support-roam styling requires at least two harmful ADC lane-movement windows occurring in at least two different games'), 'analysis documentation must preserve cross-game harmful-roam semantics');
