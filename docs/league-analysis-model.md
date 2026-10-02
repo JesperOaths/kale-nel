@@ -2368,3 +2368,16 @@ The three top driver cards are intentionally stricter than the long supporting l
 - When several strengths exist, prefer the first non-low-confidence highlight before falling back to the top low-confidence item.
 
 This affects presentation priority, not the underlying evidence record. Low-confidence findings remain available in the supporting coaching evidence and can become stronger as the rolling sample grows.
+
+
+## Role-aware recent match story
+
+The collapsible recent-match story must use a role-appropriate collapsed comparison instead of forcing every role into carry-lane gold framing.
+
+- **ADC / MID / TOP:** direct-role gold state at @15 using the same ±100g bands as the evidence table.
+- **JUNGLE:** first tracked impact timing versus the trusted enemy Jungler. ≤-1.5m is the favorable/earlier band, ≥+1.5m is the unfavorable/later band. If impact timing is unavailable but a trusted Jungle peer CS/min delta exists, that farm delta may be used as neutral fallback context.
+- **SUPPORT:** vision score per minute versus the trusted opposing Support. >+0.15 VPM is a favorable vision edge; <-0.15 VPM is an unfavorable vision deficit; values between remain close.
+
+The recent-story summary and its positive/neutral/negative filter chips must use the exact same role metric as the collapsed row. Unknown/untrusted peer evidence stays neutral context and must not be counted into positive/negative role-state filters.
+
+The technical game-evidence table may continue to expose raw @15 economy for traceability, but the coaching-oriented match-story surface must not present SUPPORT/JUNGLE as though lane-gold state were their primary role diagnostic.
