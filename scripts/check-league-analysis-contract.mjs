@@ -708,3 +708,7 @@ ok(modelDoc.includes('## Expanded match-story signal alignment'), 'analysis docu
 ok(app.includes("roleEvidenceLabel='Support vision peer'")&&app.includes("roleEvidenceLabel='Jungle impact peer'"), 'evidence-health strip must follow the selected role lens rather than force carry @15 framing');
 ok(app.includes("hasNum(g?.peer?.vpmDelta)")&&app.includes("hasNum(g?.impactDeltaVsOpponent)"), 'Support/Jungle evidence health must use trusted role-specific peer evidence');
 ok(modelDoc.includes('## Role-aware evidence health'), 'analysis documentation must preserve role-aware evidence-health semantics');
+
+ok(app.includes("comparisonCard('Vision/min vs Support'")&&app.includes("comparisonCard('Objective setup wards vs Support'"), 'Support Direct-role comparison must remain role-specific');
+ok(!app.includes('No comparable @15 Support gold checkpoint is available.'), 'Support Quick Read must not regress to carry-style @15 gold coaching');
+ok(modelDoc.includes('## Support Quick Read role safety'), 'analysis documentation must preserve Support Quick Read role safety');
