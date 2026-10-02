@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.104";
+const ANALYZER_VERSION="league-web-behavior-v4.105";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1921,6 +1921,7 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,p
     conversion:{laneLeadGames:laneLeads.length,laneLeadWinRate:laneLeadWr,laneDeficitGames:laneDeficits.length,laneDeficitWinRate:laneDeficitWr,lead25Games:lead25Games.length,lead25WinRate,deficit25Games:deficit25Games.length,deficit25WinRate},
     winLoss,recentTrend,sessionModel,
     behaviorSummary:{
+      timelineGames:validTimeline.length,
       checkpointEligibility:{lane15Games:lane15ComparableGames.length,fixed15to25Games:fixed15to25ComparableGames.length,closing25Games:closing25ComparableGames.length},
       phaseRisk,
       midRouting:{games:midRoutingGames.length,avgCsSwing15to25:avgMidRoutingCsSwing,avgObjectiveJoinRate:avgMidRoutingObjectiveJoinRate,pooledObjectiveJoinRate:pooledMidRoutingObjectiveJoinRate,meanGameObjectiveJoinRate:meanGameMidRoutingObjectiveJoinRate,teamObjectiveEvents:midRoutingTeamObjectives,joinedObjectiveEvents:midRoutingObjectiveJoins,securedTeamObjectiveEvents:securedMidRoutingObjectives,securedJoinedObjectiveEvents:securedMidRoutingJoins,securedObjectivePresenceRate:securedMidRoutingPresenceRate,presenceBasis:"team_contested",inefficientGames:inefficientMidRoutingGames,balancedGames:balancedMidRoutingGames,sideFarmLowPresenceGames},
@@ -2123,21 +2124,21 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
     "behaviorSummary.earlyLeadGivebackRate":["behaviorSummary.earlyLeadGames"],
     "coachingSummary.csMin":["coachingSummary.games"],
     "coachingSummary.goldDiff15":["peerComparison.laneGames15"],
-    "behaviorSummary.highRiskUntradedPostImpactPerGame":["behaviorSummary.playerImpactEvents"],
-    "behaviorSummary.highRiskBehindDeathsPerGame":["behaviorSummary.behindStateDeaths"],
-    "behaviorSummary.highRiskLeadDeathsPerGame":["behaviorSummary.leadDeaths"],
+    "behaviorSummary.highRiskUntradedPostImpactPerGame":["behaviorSummary.timelineGames"],
+    "behaviorSummary.highRiskBehindDeathsPerGame":["behaviorSummary.timelineGames"],
+    "behaviorSummary.highRiskLeadDeathsPerGame":["behaviorSummary.timelineGames"],
     "behaviorSummary.repeatDeathRate":["behaviorSummary.repeatDeathOpportunities"],
-    "behaviorSummary.costlyDeathsPerTimelineGame":["behaviorSummary.measuredDeathConsequences"],
-    "behaviorSummary.badDeathsPerTimelineGame":["behaviorSummary.totalTimelineDeaths"],
+    "behaviorSummary.costlyDeathsPerTimelineGame":["behaviorSummary.timelineGames"],
+    "behaviorSummary.badDeathsPerTimelineGame":["behaviorSummary.timelineGames"],
     "behaviorSummary.firstResetLossRate":["behaviorSummary.firstResetCleanGames"],
     "behaviorSummary.soloKillDeathsBeforeShopRate":["behaviorSummary.soloKillResetEvents"],
     "behaviorSummary.itemSpikeUtilizationRate":["behaviorSummary.itemSpikeEligibleWindows"],
     "behaviorSummary.highUnspentFightRate":["behaviorSummary.fightSamples"],
-    "behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame":["behaviorSummary.macroTransitionSideLaneDeaths"],
+    "behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame":["behaviorSummary.timelineGames"],
     "behaviorSummary.midRouting.avgCsSwing15to25":["behaviorSummary.midRouting.games"],
     "behaviorSummary.midRouting.avgObjectiveJoinRate":["behaviorSummary.midRouting.games"],
     "behaviorSummary.recentShopObjectiveAbsenceRate":["behaviorSummary.neutralObjectiveEvents"],
-    "behaviorSummary.preObjectiveDeathPct":["behaviorSummary.totalTimelineDeaths"],
+    "behaviorSummary.preObjectiveDeathPct":["behaviorSummary.classifiedTimelineDeaths"],
     "behaviorSummary.objectiveSetupWardRate":["behaviorSummary.visionWardTotal"],
     "behaviorSummary.earlySetupObjectiveJoinRate":["behaviorSummary.neutralObjectiveJoins"],
     "behaviorSummary.killConversionRate":["behaviorSummary.killConversionWindows"],
@@ -2150,8 +2151,8 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
     "behaviorSummary.visionActionDeathRate":["behaviorSummary.visionActions"],
     "behaviorSummary.roamSuccessRate":["behaviorSummary.roamAttempts"],
     "behaviorSummary.avgRoamLaneCostCs":["behaviorSummary.roamLaneCostGames"],
-    "sessionBehavior.game3PlusGoldDelta":["sessionBehavior.firstGame.games","sessionBehavior.game3Plus.games"],
-    "sessionBehavior.postLossGoldDelta":["sessionBehavior.quickAfterLoss.games","sessionBehavior.quickAfterWin.games"]
+    "sessionBehavior.game3PlusGoldDelta":["sessionBehavior.firstGame.lane15Games","sessionBehavior.game3Plus.lane15Games"],
+    "sessionBehavior.postLossGoldDelta":["sessionBehavior.quickAfterLoss.lane15Games","sessionBehavior.quickAfterWin.lane15Games"]
   } as Record<string,string[]>)[metricPath]||["coachingSummary.games"];
   const add=(theme:any,label:string,metricPath:string,baseline:any,goal:any,direction:"higher"|"lower",unit:string,sampleSize:any,minSample:number,rationale:string)=>{
     if(out.length>=3||!hasNum(baseline)||!hasNum(goal)||Number(sampleSize||0)<minSample)return false;
@@ -2166,12 +2167,12 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
       if(!added&&/farm|cs\/min/.test(tt)&&hasNum(summary?.csMin))added=add(theme,"CS / min","coachingSummary.csMin",summary.csMin,Number(summary.csMin)+0.3,"higher","cs_per_min",summary?.games,5,"A small self-relative farming increase is easier to practise and verify than a generic rank benchmark.");
       if(!added&&hasNum(summary?.goldDiff15))added=add(theme,"Gold differential @15","coachingSummary.goldDiff15",summary.goldDiff15,Number(summary.goldDiff15)+150,"higher","gold",peer?.laneGames15,5,"Move the direct-role lane state by about 150g without changing the comparison population.");
     }else if(key==="death-risk"){
-      if(/post-play|give-back|successful play/.test(tt)&&hasNum(behavior?.highRiskUntradedPostImpactPerGame))added=add(theme,"High-risk post-play give-backs / game","behaviorSummary.highRiskUntradedPostImpactPerGame",behavior.highRiskUntradedPostImpactPerGame,Math.max(0,Number(behavior.highRiskUntradedPostImpactPerGame)-0.15),"lower","per_game",behavior?.playerImpactEvents,5,"Measure whether successful plays are being preserved instead of immediately surrendered by a high-risk untraded follow-up death.");
-      if(!added&&/behind|deficit/.test(tt)&&hasNum(behavior?.highRiskBehindDeathsPerGame))added=add(theme,"High-risk deaths while behind / game","behaviorSummary.highRiskBehindDeathsPerGame",behavior.highRiskBehindDeathsPerGame,Math.max(0,Number(behavior.highRiskBehindDeathsPerGame)-0.2),"lower","per_game",behavior?.behindStateDeaths,4,"Reduce the specific high-variance deaths that compound an existing direct-role deficit.");
-      if(!added&&/lead|ahead|throw/.test(tt)&&hasNum(behavior?.highRiskLeadDeathsPerGame))added=add(theme,"High-risk deaths while ahead / game","behaviorSummary.highRiskLeadDeathsPerGame",behavior.highRiskLeadDeathsPerGame,Math.max(0,Number(behavior.highRiskLeadDeathsPerGame)-0.2),"lower","per_game",behavior?.leadDeaths,3,"Protect existing advantages by cutting one high-risk lead death roughly every five games.");
+      if(/post-play|give-back|successful play/.test(tt)&&hasNum(behavior?.highRiskUntradedPostImpactPerGame))added=add(theme,"High-risk post-play give-backs / game","behaviorSummary.highRiskUntradedPostImpactPerGame",behavior.highRiskUntradedPostImpactPerGame,Math.max(0,Number(behavior.highRiskUntradedPostImpactPerGame)-0.15),"lower","per_game",behavior?.timelineGames,5,"Measure whether successful plays are being preserved instead of immediately surrendered by a high-risk untraded follow-up death.");
+      if(!added&&/behind|deficit/.test(tt)&&hasNum(behavior?.highRiskBehindDeathsPerGame))added=add(theme,"High-risk deaths while behind / game","behaviorSummary.highRiskBehindDeathsPerGame",behavior.highRiskBehindDeathsPerGame,Math.max(0,Number(behavior.highRiskBehindDeathsPerGame)-0.2),"lower","per_game",behavior?.timelineGames,5,"Reduce the specific high-variance deaths that compound an existing direct-role deficit.");
+      if(!added&&/lead|ahead|throw/.test(tt)&&hasNum(behavior?.highRiskLeadDeathsPerGame))added=add(theme,"High-risk deaths while ahead / game","behaviorSummary.highRiskLeadDeathsPerGame",behavior.highRiskLeadDeathsPerGame,Math.max(0,Number(behavior.highRiskLeadDeathsPerGame)-0.2),"lower","per_game",behavior?.timelineGames,5,"Protect existing advantages by cutting one high-risk lead death roughly every five games.");
       if(!added&&/repeat/.test(tt)&&hasNum(behavior?.repeatDeathRate))added=add(theme,"Rapid repeat-death rate","behaviorSummary.repeatDeathRate",behavior.repeatDeathRate,clampPct(Number(behavior.repeatDeathRate)-10),"lower","percent",behavior?.repeatDeathOpportunities,5,"A 10-point reduction tests whether recovery after a death is becoming more disciplined.");
-      if(!added&&hasNum(behavior?.costlyDeathsPerTimelineGame))added=add(theme,"Costly deaths / game","behaviorSummary.costlyDeathsPerTimelineGame",behavior.costlyDeathsPerTimelineGame,Math.max(0,Number(behavior.costlyDeathsPerTimelineGame)-0.25),"lower","per_game",behavior?.measuredDeathConsequences,6,"Prioritize deaths with measurable follow-on loss rather than chasing a prettier raw KDA.");
-      if(!added&&hasNum(behavior?.badDeathsPerTimelineGame))added=add(theme,"High-risk deaths / game","behaviorSummary.badDeathsPerTimelineGame",behavior.badDeathsPerTimelineGame,Math.max(0,Number(behavior.badDeathsPerTimelineGame)-0.25),"lower","per_game",behavior?.totalTimelineDeaths,5,"A modest reduction is measurable over a short practice block without demanding zero deaths.");
+      if(!added&&hasNum(behavior?.costlyDeathsPerTimelineGame))added=add(theme,"Costly deaths / game","behaviorSummary.costlyDeathsPerTimelineGame",behavior.costlyDeathsPerTimelineGame,Math.max(0,Number(behavior.costlyDeathsPerTimelineGame)-0.25),"lower","per_game",behavior?.timelineGames,5,"Prioritize deaths with measurable follow-on loss rather than chasing a prettier raw KDA.");
+      if(!added&&hasNum(behavior?.badDeathsPerTimelineGame))added=add(theme,"High-risk deaths / game","behaviorSummary.badDeathsPerTimelineGame",behavior.badDeathsPerTimelineGame,Math.max(0,Number(behavior.badDeathsPerTimelineGame)-0.25),"lower","per_game",behavior?.timelineGames,5,"A modest reduction is measurable over a short practice block without demanding zero deaths.");
     }else if(key==="reset-power"){
       if(/first shop|shop sequence|reset sequence|first reset/.test(tt)&&hasNum(behavior?.firstResetLossRate))added=add(theme,"First-shop economy-loss rate","behaviorSummary.firstResetLossRate",behavior.firstResetLossRate,clampPct(Number(behavior.firstResetLossRate)-15),"lower","percent",behavior?.firstResetCleanGames,4,"Reduce first-shop sequences that surrender a wave-sized amount of direct-role economy.");
       if(/post-kill|solo kill|bank/.test(tt)&&hasNum(behavior?.soloKillDeathsBeforeShopRate))added=add(theme,"Deaths before next shop after solo kill","behaviorSummary.soloKillDeathsBeforeShopRate",behavior.soloKillDeathsBeforeShopRate,clampPct(Number(behavior.soloKillDeathsBeforeShopRate)-15),"lower","percent",behavior?.soloKillResetEvents,3,"Convert won duels into banked power instead of giving the advantage back before shopping.");
@@ -2179,13 +2180,13 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
       if(!added&&hasNum(behavior?.highUnspentFightRate))added=add(theme,"Fight starts with ≥1000g unspent","behaviorSummary.highUnspentFightRate",behavior.highUnspentFightRate,clampPct(Number(behavior.highUnspentFightRate)-10),"lower","percent",behavior?.fightSamples,8,"Convert stored gold into combat stats before likely contest windows.");
     }else if(key==="mid-routing"){
       const m=behavior?.midRouting||{};
-      if(/side-lane|side lane/.test(tt)&&hasNum(behavior?.preNeutralObjectiveSideLaneDeathsPerGame))added=add(theme,"Pre-objective side-lane deaths / game","behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame",behavior.preNeutralObjectiveSideLaneDeathsPerGame,Math.max(0,Number(behavior.preNeutralObjectiveSideLaneDeathsPerGame)-0.15),"lower","per_game",behavior?.macroTransitionSideLaneDeaths??behavior?.postLaneSideLaneDeaths??behavior?.post15SideLaneDeaths,4,"Measure whether side-lane pressure is ending earlier and reconnecting before the next neutral-objective window.");
+      if(/side-lane|side lane/.test(tt)&&hasNum(behavior?.preNeutralObjectiveSideLaneDeathsPerGame))added=add(theme,"Pre-objective side-lane deaths / game","behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame",behavior.preNeutralObjectiveSideLaneDeathsPerGame,Math.max(0,Number(behavior.preNeutralObjectiveSideLaneDeathsPerGame)-0.15),"lower","per_game",behavior?.timelineGames,5,"Measure whether side-lane pressure is ending earlier and reconnecting before the next neutral-objective window.");
       if(!added&&hasNum(m.avgCsSwing15to25)&&Number(m.avgCsSwing15to25)<0)added=add(theme,"CS swing 15→25","behaviorSummary.midRouting.avgCsSwing15to25",m.avgCsSwing15to25,Number(m.avgCsSwing15to25)+2,"higher","cs",m.games,4,"Keep more side-wave economy through the first rotations without abandoning objective presence.");
       if(!added&&hasNum(m.avgObjectiveJoinRate))added=add(theme,"Mid-routing objective presence","behaviorSummary.midRouting.avgObjectiveJoinRate",m.avgObjectiveJoinRate,clampPct(Number(m.avgObjectiveJoinRate)+10),"higher","percent",m.games,4,"Improve the trade-off between collecting mid-game resources and arriving for team neutral-objective action.");
     }else if(key==="objectives-closing"){
       const closing=behavior?.closing25||{},diagnosis=behavior?.objectiveDiagnosis||{},cause=text(diagnosis?.primaryExplanation??diagnosis?.primaryCause);
       if(cause==="recent_shop_absence"&&hasNum(behavior?.recentShopObjectiveAbsenceRate??behavior?.lateResetObjectiveMissRate))added=add(theme,"Recent-shop objective absence rate","behaviorSummary.recentShopObjectiveAbsenceRate",behavior.recentShopObjectiveAbsenceRate??behavior.lateResetObjectiveMissRate,clampPct(Number(behavior.recentShopObjectiveAbsenceRate??behavior.lateResetObjectiveMissRate)-10),"lower","percent",behavior?.neutralObjectiveEvents,5,"Reduce the observed association between finishing a shop in the final minute and being absent at the next team-contested neutral-objective encounter.");
-      if(!added&&cause==="pre_objective_death"&&hasNum(behavior?.preObjectiveDeathPct))added=add(theme,"Pre-objective death rate","behaviorSummary.preObjectiveDeathPct",behavior.preObjectiveDeathPct,clampPct(Number(behavior.preObjectiveDeathPct)-10),"lower","percent",behavior?.totalTimelineDeaths,5,"Target the strongest supported pre-contest death signal directly rather than measuring only eventual objective attendance.");
+      if(!added&&cause==="pre_objective_death"&&hasNum(behavior?.preObjectiveDeathPct))added=add(theme,"Pre-objective death rate","behaviorSummary.preObjectiveDeathPct",behavior.preObjectiveDeathPct,clampPct(Number(behavior.preObjectiveDeathPct)-10),"lower","percent",behavior?.classifiedTimelineDeaths,5,"Target the strongest supported pre-contest death signal directly rather than measuring only eventual objective attendance.");
       if(!added&&cause==="setup_vision"&&hasNum(behavior?.objectiveSetupWardRate))added=add(theme,"Objective-setup ward share","behaviorSummary.objectiveSetupWardRate",behavior.objectiveSetupWardRate,clampPct(Number(behavior.objectiveSetupWardRate)+10),"higher","percent",behavior?.visionWardTotal,12,"Target the strongest supported setup-vision gap directly with a self-relative increase in wards that actually support an upcoming objective.");
       if(!added&&/setup|arrival|objective/.test(tt)&&hasNum(behavior?.earlySetupObjectiveJoinRate))added=add(theme,"Prior-frame objective setup","behaviorSummary.earlySetupObjectiveJoinRate",behavior.earlySetupObjectiveJoinRate,clampPct(Number(behavior.earlySetupObjectiveJoinRate)+10),"higher","percent",behavior?.neutralObjectiveJoins,5,"Measure whether objective attendance is becoming earlier and more proactive, not merely present at the event frame.");
       if(!added&&/conversion|kill/.test(tt)&&hasNum(behavior?.killConversionRate))added=add(theme,"Post-kill conversion","behaviorSummary.killConversionRate",behavior.killConversionRate,clampPct(Number(behavior.killConversionRate)+10),"higher","percent",behavior?.killConversionWindows,5,"Turn more won action into the next supported objective or structure window.");
