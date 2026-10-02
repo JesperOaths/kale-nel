@@ -704,3 +704,7 @@ ok(modelDoc.includes('## Focus-aligned match-story reads'), 'analysis documentat
 ok(app.includes('roleMetric=matchHistoryRoleMetric(g,role)')&&app.includes('out.push({label:roleMetric.label'), 'expanded match-story signal grid must reuse the role-aware collapsed metric');
 ok(app.includes('const activeFights=Number(fight.active??fight.attended??0)')&&app.includes('Execution rates use active fight involvement only'), 'expanded match-story fight execution must use the active-involvement denominator');
 ok(modelDoc.includes('## Expanded match-story signal alignment'), 'analysis documentation must preserve expanded match-story alignment');
+
+ok(app.includes("roleEvidenceLabel='Support vision peer'")&&app.includes("roleEvidenceLabel='Jungle impact peer'"), 'evidence-health strip must follow the selected role lens rather than force carry @15 framing');
+ok(app.includes("hasNum(g?.peer?.vpmDelta)")&&app.includes("hasNum(g?.impactDeltaVsOpponent)"), 'Support/Jungle evidence health must use trusted role-specific peer evidence');
+ok(modelDoc.includes('## Role-aware evidence health'), 'analysis documentation must preserve role-aware evidence-health semantics');
