@@ -1003,13 +1003,14 @@ Deno.serve(async (req: Request) => {
   const refreshLeaseActive = refreshStartedMs > 0 && Date.now() - refreshStartedMs < REFRESH_LEASE_MS;
   const refreshFailureCooldown = !!text(row?.last_error) && updatedMs > 0 && Date.now() - updatedMs < REFRESH_FAILURE_COOLDOWN_MS;
   const stale = ageMs > CACHE_FRESH_MS;
+  const refreshRequested = url.searchParams.has("ops_refresh") || url.searchParams.has("refresh");
   let refreshScheduled = false;
 
-  // The storefront never falls back to static catalog data. When the live Printify
-  // cache is empty or was built with an obsolete selector, schedule a bounded
-  // background refresh and return quickly so browsers can poll without timing out.
+  // Public catalog reads are read-only/cache-only. Freshness is owned by the
+  // scheduled/admin control plane. This prevents stale public browser tabs from
+  // turning ordinary GETs into Printify refresh work under Supabase pressure.
   if (!products.length || !selectionCurrent) {
-    if (!refreshLeaseActive && !refreshFailureCooldown) refreshScheduled = scheduleCatalogRefreshNonBlocking(supabase);
+    if (refreshRequested && !refreshLeaseActive && !refreshFailureCooldown) refreshScheduled = scheduleCatalogRefreshNonBlocking(supabase);
 
     if (url.searchParams.get("health") === "1") {
       return json(req, {
@@ -1029,6 +1030,7 @@ Deno.serve(async (req: Request) => {
         catalogSelection: payload?.catalogSelection || null,
         refreshScheduled,
         refreshFailureCooldown,
+        refreshRequested,
       });
     }
 
@@ -1039,10 +1041,11 @@ Deno.serve(async (req: Request) => {
       products: [],
       refreshScheduled,
         refreshFailureCooldown,
+      refreshRequested,
     }, 202);
   }
 
-  if (stale && !refreshLeaseActive && !refreshFailureCooldown) refreshScheduled = scheduleCatalogRefreshNonBlocking(supabase);
+  if (stale && refreshRequested && !refreshLeaseActive && !refreshFailureCooldown) refreshScheduled = scheduleCatalogRefreshNonBlocking(supabase);
 
   if (url.searchParams.get("health") === "1") {
     return json(req, {
@@ -1065,6 +1068,7 @@ Deno.serve(async (req: Request) => {
       stale,
       refreshScheduled,
         refreshFailureCooldown,
+      refreshRequested,
     },
   });
 });
