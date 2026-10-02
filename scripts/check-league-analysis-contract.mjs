@@ -546,6 +546,9 @@ ok(app.includes('Provisional limiter')&&app.includes('Emerging strength')&&app.i
 ok(app.includes("weak.confidence!=='low'||weak.supportCount>=2")&&app.includes("strong.confidence!=='low'"), 'top-driver tone must require confidence or grouped support');
 ok(modelDoc.includes('## Top-driver confidence semantics'), 'analysis model must document top-driver confidence behavior');
 ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('matchHistorySignals('), 'recent selected-role games must have collapsible coaching-readable history rows with derived evidence signals');
+ok(app.includes('function matchHistoryRoleMetric(')&&app.includes("r==='SUPPORT'")&&app.includes("r==='JUNGLE'"), 'recent match story must stay role-aware rather than carry-lane shaped');
+ok(html.includes('data-history-filter="role-positive"')&&app.includes('matchHistoryRoleFilterLabels(role)'), 'match-story filtering and summary must share one semantic role-state model');
+ok(modelDoc.includes('## Role-aware recent match story')&&modelDoc.includes('SUPPORT/JUNGLE'), 'analysis documentation must preserve role-aware recent-match interpretation');
 ok(app.includes('function matchEvidenceLedgerHtml(')&&app.includes('trustedDirectPeer(g)'), 'expanded match history must provide a chronological supported-evidence ledger without bypassing role-peer trust');
 ok(modelDoc.includes('## Per-match chronological evidence ledger')&&modelDoc.includes('evidence navigation aid'), 'analysis model must keep the chronological ledger scoped to supported evidence navigation');
 ok(html.includes('data-history-filter="priority"')&&app.includes('function currentPriorityReplayIds('), 'current top coaching priority must map to ranked replay evidence in match history');
