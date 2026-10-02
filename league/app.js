@@ -960,7 +960,7 @@ function renderSupportRoleLens(r){
   const setupTone=setupRate==null?'neutral':setupRate<45?'bad':setupRate>=70?'good':'neutral';
   const contestTone=contestRate==null?'neutral':contestRate<50?'bad':contestRate>=70?'good':'neutral';
   box.innerHTML=[
-    supportLensCard('Roam conversion',roamRate==null?'n/a':fmtPct(roamRate),c.roamN+' detected early roam departures across '+c.roamGames+' games · evidence floor 4 attempts across 3 games',roamTone,c.roamReady),
+    supportLensCard('Roam conversion',roamRate==null?'n/a':fmtPct(roamRate),c.roamN+' detected early roam departures inside the queue-specific roam window across '+c.roamGames+' games · evidence floor 4 attempts across 3 games',roamTone,c.roamReady),
     supportLensCard('ADC lane movement during roams',adcMove==null?'n/a':signed(adcMove,1)+' CS',c.laneWindows+' measured windows across '+c.laneGames+' games · game-weighted mean · '+harmful+' lost ≥6 CS without supported roam return · floor 4 windows across 3 games',moveTone,c.laneReady),
     supportLensCard('Vision-action safety',visionRate==null?'n/a':fmtPct(visionRate),visionDeaths+' deaths after '+c.visionN+' tracked ward placements/clears across '+c.visionGames+' games · '+highRiskVision+' high-risk · '+unsupportedVision+' unsupported · floor 12 actions across 4 games',visionTone,c.visionReady,wilsonInterval(visionDeaths,c.visionN)),
     supportLensCard('Prior objective setup',setupRate==null?'n/a':fmtPct(setupRate),setupHits+' / '+c.setupN+' joined neutral-objective encounters across '+c.setupGames+' games already near the area 45–105s before the event · floor 5 encounters across 3 games',setupTone,c.setupReady,wilsonInterval(setupHits,c.setupN)),
