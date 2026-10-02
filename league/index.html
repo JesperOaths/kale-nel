@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends playstyle analysis with evidence-backed Last-20 coaching and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261002-league-web-v172">
+  <link rel="stylesheet" href="/league/styles.css?v=20261002-league-web-v173">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261002-public-bootstrap-r4"></script>
 </head>
@@ -187,6 +187,11 @@
           </div>
           <div class="report-driver-grid" id="reportDrivers"></div>
           <div class="priority-evidence-chain" id="priorityEvidenceChain"></div>
+          <div class="evidence-health-wrap">
+            <div class="evidence-health-head"><span>Evidence health</span><small>Coverage behind the conclusions above — kept as separate dimensions rather than one synthetic confidence score.</small></div>
+            <div class="evidence-health-grid" id="evidenceHealth"></div>
+            <button class="button secondary tiny evidence-health-link" type="button" id="evidenceHealthLink">Open full trust & coverage</button>
+          </div>
         </section>
 
         <section class="panel quick-read-panel">
@@ -462,7 +467,7 @@
           </details>
         </section>
 
-        <section class="panel trust-panel">
+        <section class="panel trust-panel" id="trust-coverage">
           <div class="section-head"><div><p class="eyebrow">Trust & coverage</p><h2>How much evidence supports this report?</h2></div></div>
           <div class="quality-grid" id="qualityGrid"></div>
           <div class="source-note" id="sourceNote"></div>
@@ -477,6 +482,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261002-league-web-v172" defer></script>
+  <script src="/league/app.js?v=20261002-league-web-v173" defer></script>
 </body>
 </html>
