@@ -471,6 +471,10 @@ assert.ok(app.includes("weak.confidence!=='low'||weak.supportCount>=2")&&app.inc
 assert.ok(app.includes("strengths.find(x=>String(x?.confidence||'').toLowerCase()!=='low')"),'Bankable-strength selection must prefer non-low-confidence highlights');
 assert.ok(modelDoc.includes('## Top-driver confidence semantics')&&modelDoc.includes('Provisional limiter')&&modelDoc.includes('Emerging strength'),'Top-driver confidence rules must remain documented');
 assert.ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('data-open-full-match'),'League must retain the expandable coaching-readable recent match history with a path into full evidence');
+assert.ok(app.includes('function matchHistoryRoleMetric(')&&app.includes("r==='SUPPORT'")&&app.includes("r==='JUNGLE'"),'Recent match story must be role-aware rather than hard-coding carry-lane gold');
+assert.ok(html.includes('data-history-filter="role-positive"')&&html.includes('data-history-filter="role-neutral"')&&html.includes('data-history-filter="role-negative"'),'Recent match-story filters must use semantic role-state keys');
+assert.ok(app.includes("return{positive:'Vision edge'")&&app.includes("return{positive:'Earlier impact'"),'SUPPORT/JUNGLE story filters must expose role-appropriate labels');
+assert.ok(modelDoc.includes('## Role-aware recent match story')&&modelDoc.includes('must use the exact same role metric'),'Role-aware recent-match semantics must remain documented');
 assert.ok(app.includes('function matchEvidenceLedgerHtml(')&&app.includes('Chronological evidence ·')&&css.includes('.history-ledger-row'),'Expanded match history must expose a compact chronological evidence ledger');
 assert.ok(app.includes('trustedDirectPeer(g)')&&app.includes('direct-role economy comparison withheld'),'Ledger peer-relative evidence must fail closed when the direct role peer is not trusted');
 assert.ok(app.includes('data-ledger-review-match')&&app.includes('openReplayReviewMatch(matchId,tab)'),'Ledger review moments must deep-link into the existing full evidence tabs');
@@ -815,7 +819,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v192'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v193'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
