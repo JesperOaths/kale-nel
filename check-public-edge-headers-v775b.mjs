@@ -11,7 +11,7 @@ assert.match(source,/const method = String\(request\.method \|\| 'GET'\)\.toUppe
 assert.match(source,/method === 'GET' \|\| method === 'HEAD'/,'public GET\/HEAD origin requests must be rebuilt bodyless');
 assert.doesNotMatch(source,/if \(!noStore\) return withPublicSecurityHeaders\(await fetch\(request\)\)/,'public proxy must never reuse the incoming Request stream');
 assert.match(source,/async function publicBundledFirstResponse\(request, env, url\)/,'critical public assets must have Worker-bundle-first delivery');
-assert.match(source,/X-Kalenel-Public-Source','critical bundled responses must expose delivery provenance');
+assert.match(source,/X-Kalenel-Public-Source/,'critical bundled responses must expose delivery provenance');
 assert.doesNotMatch(source,/const secured = withPublicSecurityHeaders\(response\)/,'no-store public documents must not transfer the origin body through an intermediate Response');
 assert.match(source,/const headers = new Headers\(response\.headers\)/);
 assert.match(source,/applyPublicSecurityHeaders\(headers\)/);
