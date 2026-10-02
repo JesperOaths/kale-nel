@@ -789,12 +789,12 @@ function benchmarkKpi(label,value,benchmark,unit,inverse=false,extra=''){
 
 function reportInsightParts(x,fallback){
   if(typeof x==='string'){
-    const copy=x.trim();return copy?{present:true,title:fallback,copy,action:'',meta:''}:{present:false,title:'Not enough evidence',copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:'',meta:''};
+    const copy=x.trim();return copy?{present:true,title:fallback,copy,action:'',meta:'',confidence:'',supportCount:0}:{present:false,title:'Not enough evidence',copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:'',meta:'',confidence:'',supportCount:0};
   }
-  if(!x||typeof x!=='object')return {present:false,title:'Not enough evidence',copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:'',meta:''};
-  const sourceTitle=String(x.title||x.label||x.category||'').trim(),copy=String(x.evidence||x.text||x.comparison||'').trim(),action=String(x.action||'').trim(),present=Boolean(sourceTitle||copy||action);
-  const meta=[x.confidence?String(x.confidence)+' confidence':'',Number(x.supportCount||0)>0?String(Number(x.supportCount))+' supporting finding'+(Number(x.supportCount)===1?'':'s'):'',x.comparison?'vs '+String(x.comparison):''].filter(Boolean).join(' · ');
-  return {present,title:present?(sourceTitle||fallback):'Not enough evidence',copy:present?copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:present?action:'',meta:present?meta:''};
+  if(!x||typeof x!=='object')return {present:false,title:'Not enough evidence',copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:'',meta:'',confidence:'',supportCount:0};
+  const sourceTitle=String(x.title||x.label||x.category||'').trim(),copy=String(x.evidence||x.text||x.comparison||'').trim(),action=String(x.action||'').trim(),present=Boolean(sourceTitle||copy||action),confidence=String(x.confidence||'').trim().toLowerCase(),supportCount=Number(x.supportCount||0);
+  const meta=[confidence?confidence+' confidence':'',supportCount>0?String(supportCount)+' supporting finding'+(supportCount===1?'':'s'):'',x.comparison?'vs '+String(x.comparison):''].filter(Boolean).join(' · ');
+  return {present,title:present?(sourceTitle||fallback):'Not enough evidence',copy:present?copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:present?action:'',meta:present?meta:'',confidence,supportCount};
 }
 function roleRecentTrendSpecs(r){
   const t=r.recentTrend||{},role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole);
@@ -881,13 +881,14 @@ function renderPriorityEvidenceChain(r){
 }
 function renderReportDrivers(r){
   const box=$('reportDrivers');if(!box)return;
-  const priorities=topPracticeThemes(r),strengths=r.overallHighlights||[];
-  const weak=reportInsightParts(priorities[0],'Primary limiter'),strong=reportInsightParts(strengths[0],'Bankable strength'),direction=recentDirectionSummary(r),priorityIds=currentPriorityReplayIds(r);
+  const priorities=topPracticeThemes(r),strengths=Array.isArray(r.overallHighlights)?r.overallHighlights:[],establishedStrength=strengths.find(x=>String(x?.confidence||'').toLowerCase()!=='low')||strengths[0]||null;
+  const weak=reportInsightParts(priorities[0],'Primary limiter'),strong=reportInsightParts(establishedStrength,'Bankable strength'),direction=recentDirectionSummary(r),priorityIds=currentPriorityReplayIds(r);
+  const weakEstablished=weak.present&&(weak.confidence!=='low'||weak.supportCount>=2),strongEstablished=strong.present&&strong.confidence!=='low';
   const card=(kind,title,value,copy,action,tone,actionLabel='Next',meta='',footer='')=>'<article class="report-driver-card '+kind+' tone-'+tone+'"><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong><p>'+esc(copy||'No high-confidence supporting sentence is available yet.')+'</p>'+(meta?'<small class="driver-evidence-meta">'+esc(meta)+'</small>':'')+(action?'<div><b>'+esc(actionLabel)+':</b> '+esc(action)+'</div>':'')+footer+'</article>';
   const priorityFooter=priorityIds.size?'<button class="button secondary small driver-review-button" type="button" data-open-priority-history>Review '+priorityIds.size+' matching game'+(priorityIds.size===1?'':'s')+'</button>':'';
   box.innerHTML=[
-    card('driver-priority','Primary limiter',weak.title,weak.copy,weak.action,weak.present?'bad':'neutral','Next',weak.meta,priorityFooter),
-    card('driver-strength','Bankable strength',strong.title,strong.copy,strong.action,strong.present?'good':'neutral','Preserve',strong.meta),
+    card('driver-priority',weak.present&&!weakEstablished?'Provisional limiter':'Primary limiter',weak.title,weak.copy,weak.action,weakEstablished?'bad':'neutral',weakEstablished?'Next':'Test next',weak.meta,priorityFooter),
+    card('driver-strength',strong.present&&!strongEstablished?'Emerging strength':'Bankable strength',strong.title,strong.copy,strong.action,strongEstablished?'good':'neutral',strongEstablished?'Preserve':'Keep testing',strong.meta),
     card('driver-direction','Recent direction',direction.value,direction.copy,'',direction.tone)
   ].join('');
   const reviewBtn=box.querySelector('[data-open-priority-history]');
