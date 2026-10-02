@@ -157,8 +157,9 @@ assert.match(store, /source: 'static-snapshot'/, 'generated catalog snapshot mus
 assert.doesNotMatch(store, /result\?\.source === 'cache'[\s\S]*?refreshLiveCatalog/, 'initial render must not immediately hit Supabase for a valid browser cache');
 assert.match(store, /BRUIS_CATALOG_LAST_GOOD/, 'storefront must have a generated read-only last-good rendering fallback');
 assert.match(store, /source: 'static-snapshot'/, 'deployment snapshot must be labelled separately from live/cache authority');
-assert.doesNotMatch(store, /refreshLiveCatalog\(1\)\.then\(replaceCatalogFromLive\)/, 'initial storefront bootstrap must not duplicate the dedicated background live-catalog watcher');
-assert.match(refresh, /window\.setTimeout\(checkCatalog, FIRST_POLL_MS\)/, 'live reconciliation must be owned by the bounded background watcher');
+assert.doesNotMatch(store, /refreshLiveCatalog\(1\)\.then\(replaceCatalogFromLive\)/, 'initial storefront bootstrap must not start live catalog reconciliation');
+assert.match(refresh, /refreshNow: \(\) => checkCatalog\(\)/, 'live reconciliation must be explicit-only and callable on demand');
+assert.doesNotMatch(refresh, /window\.setTimeout\(checkCatalog/, 'active storefront must not schedule background catalog reconciliation');
 assert.doesNotMatch(store, /catalog\.json/, 'storefront must not revive legacy JSON catalog fallbacks');
 assert.match(catalogLastGood, /window\.BRUIS_CATALOG_LAST_GOOD=/, 'generated last-good snapshot must expose the dedicated immutable browser object');
 const snapshotMatch=catalogLastGood.match(/window\.BRUIS_CATALOG_LAST_GOOD=(\{.*\});\}\)\(\);/s);
@@ -695,11 +696,11 @@ assert.match(paymentAmountMigration, /paid_amount_cents/i);
 assert.match(directMigration, /shop_catalog_cache_v828/i);
 assert.match(directMigration, /security definer/i);
 
-assert.match(refresh, /POLL_MS\s*=\s*30\s*\*\s*60\s*\*\s*1000/, 'background full-catalog reconciliation must remain at thirty minutes');
-assert.match(refresh, /FIRST_POLL_MS\s*=\s*15\s*\*\s*60\s*\*\s*1000/, 'first live reconciliation must wait fifteen minutes so static first paint stays independent of Supabase');
-assert.match(refresh, /SHARED_MIN_REFRESH_MS\s*=\s*20\s*\*\s*60\s*\*\s*1000/, 'focus/visibility refreshes must share a twenty-minute cross-tab floor');
-assert.match(refresh, /SHARED_CHECK_KEY/, 'catalog refreshes must coordinate across tabs rather than multiplying with each open storefront');
-assert.doesNotMatch(refresh, /checkCatalog\(true\)/, 'no timer/focus path may bypass the shared refresh floor');
+assert.doesNotMatch(refresh, /const POLL_MS\s*=/, 'active storefront reconciler must not retain an automatic poll interval');
+assert.doesNotMatch(refresh, /const FIRST_POLL_MS\s*=/, 'active storefront reconciler must not retain an automatic first-poll timer');
+assert.match(refresh, /SHARED_MIN_REFRESH_MS\s*=\s*20\s*\*\s*60\s*\*\s*1000/, 'explicit reconciliation requests must still share a twenty-minute cross-tab floor');
+assert.match(refresh, /SHARED_CHECK_KEY/, 'explicit catalog refreshes must coordinate across tabs rather than multiplying work');
+assert.doesNotMatch(refresh, /checkCatalog\(true\)/, 'no explicit/public path may bypass the shared refresh floor');
 assert.match(catalogEdge, /CACHE_FRESH_MS\s*=\s*60\s*\*\s*60_000/, 'server catalog freshness window must keep a valid catalog off the critical refresh path for one hour');
 assert.match(catalogEdge, /REFRESH_FAILURE_COOLDOWN_MS\s*=\s*30\s*\*\s*60_000/, 'failed upstream refreshes must back off for thirty minutes instead of retrying on every stale request');
 assert.match(catalogEdge, /refreshFailureCooldown/, 'catalog scheduling must expose and honor failed-refresh cooldown state');
