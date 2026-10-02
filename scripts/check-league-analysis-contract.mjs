@@ -542,6 +542,9 @@ ok(app.includes("stage('1','Signal'")&&app.includes("stage('3','Replay proof'")&
 ok(app.includes('This is an evidence trace, not a causal proof.'), 'priority evidence trace must not be phrased as causal proof');
 ok(modelDoc.includes('## Priority evidence chain'), 'analysis model must document the evidence-to-action trace');
 ok(app.includes('driver-evidence-meta')&&app.includes('supporting finding')&&app.includes('confidence'), 'action-first report drivers must retain visible evidence-strength metadata when supplied by the backend');
+ok(app.includes('Provisional limiter')&&app.includes('Emerging strength')&&app.includes('Keep testing'), 'low-confidence top findings must not be visually promoted to established limiter/strength status');
+ok(app.includes("weak.confidence!=='low'||weak.supportCount>=2")&&app.includes("strong.confidence!=='low'"), 'top-driver tone must require confidence or grouped support');
+ok(modelDoc.includes('## Top-driver confidence semantics'), 'analysis model must document top-driver confidence behavior');
 ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('matchHistorySignals('), 'recent selected-role games must have collapsible coaching-readable history rows with derived evidence signals');
 ok(app.includes('function matchEvidenceLedgerHtml(')&&app.includes('trustedDirectPeer(g)'), 'expanded match history must provide a chronological supported-evidence ledger without bypassing role-peer trust');
 ok(modelDoc.includes('## Per-match chronological evidence ledger')&&modelDoc.includes('evidence navigation aid'), 'analysis model must keep the chronological ledger scoped to supported evidence navigation');
