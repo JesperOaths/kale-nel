@@ -1907,3 +1907,20 @@ This includes:
 These are coaching interpretation surfaces, not archival history. Older-mechanics games remain visible in the Recent match story and technical Game evidence table as context, but must not shift current chart distributions, consistency bands or first-major timing summaries.
 
 The report header may still state the full selected-role report depth alongside the coaching-comparable count so the distinction remains visible.
+
+
+## Practice-plan continuity
+
+Development reporting should distinguish metric movement from **plan continuity**.
+
+Compare the current and previous top-three actionable priority themes only when the saved reports share the same role, queue and verified mechanics context. Show:
+- how many prior top-three themes remain in the current top three,
+- which themes are newly promoted,
+- which prior themes dropped out,
+- the status of the previous Next-5 targets.
+
+A dropped priority is **not** evidence that the underlying problem is solved. It may have improved, become lower priority relative to another issue, lost evidence support, or moved outside the current rolling window.
+
+The continuity read is marked early until at least five genuinely new match IDs have entered the current report. Before that point, large Last-20 overlap can make plan turnover unstable.
+
+Use the labels **focus mostly retained**, **focus partly shifted**, and **focus set changed** as descriptive plan-state summaries only. Do not treat plan persistence as proof that coaching failed, and do not treat plan turnover as proof that coaching succeeded.
