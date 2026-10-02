@@ -1071,6 +1071,9 @@ function pulseFormat(v,unit){
   if(unit==='csmin')return fmt(v,2);
   if(unit==='dpm')return fmtInt(v);
   if(unit==='percent')return fmtPct(v);
+  if(unit==='csmin')return signed(v,2)+' CS/min';
+  if(unit==='minutes')return signed(v,1)+'m';
+  if(unit==='vpm')return fmt(v,2)+' / min';
   return fmt(v,2);
 }
 function pulseDeltaFormat(v,unit){
@@ -2562,6 +2565,7 @@ function formatChartValue(value,unit){
   if(unit==='int')return fmtInt(v);
   if(unit==='signed')return signed(v,0);
   if(unit==='signed1')return signed(v,1);
+  if(unit==='signed2')return signed(v,2);
   return fmt(v,2);
 }
 function chartSvg(points,spec){
@@ -2589,11 +2593,12 @@ function chartSvg(points,spec){
     grid.push('<line class="chart-grid-line" x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(w-padR)+'" y2="'+y.toFixed(1)+'"/><text class="chart-axis-label" x="'+(padL-10)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end">'+esc(formatChartValue(value,spec.formatUnit||spec.unit))+'</text>');
   }
   const zeroY=signedAxis?yAt(0):null;
-  const bands=signedAxis?'<rect class="chart-positive-band" x="'+padL+'" y="'+padT+'" width="'+plotW+'" height="'+Math.max(0,zeroY-padT)+'"/><rect class="chart-negative-band" x="'+padL+'" y="'+zeroY+'" width="'+plotW+'" height="'+Math.max(0,padT+plotH-zeroY)+'"/>':'';
+  const upperBand=spec.inverse?'chart-negative-band':'chart-positive-band',lowerBand=spec.inverse?'chart-positive-band':'chart-negative-band';
+  const bands=signedAxis?'<rect class="'+upperBand+'" x="'+padL+'" y="'+padT+'" width="'+plotW+'" height="'+Math.max(0,zeroY-padT)+'"/><rect class="'+lowerBand+'" x="'+padL+'" y="'+zeroY+'" width="'+plotW+'" height="'+Math.max(0,padT+plotH-zeroY)+'"/>':'';
   const zero=signedAxis?'<line class="chart-zero-line" x1="'+padL+'" y1="'+zeroY+'" x2="'+(w-padR)+'" y2="'+zeroY+'"/><text class="chart-zero-label" x="'+(w-padR-4)+'" y="'+(zeroY-7)+'" text-anchor="end">EVEN WITH ROLE OPPONENT</text>':'';
   const refValue=hasNum(spec.reference)?Number(spec.reference):null,refY=refValue!=null&&refValue>=min&&refValue<=max?yAt(refValue):null;
   const reference=refY==null?'':'<line class="chart-reference-line" x1="'+padL+'" y1="'+refY+'" x2="'+(w-padR)+'" y2="'+refY+'"/><text class="chart-reference-label" x="'+(w-padR-4)+'" y="'+(refY-7)+'" text-anchor="end">'+esc(spec.referenceLabel||'REFERENCE')+' · '+esc(formatChartValue(refValue,spec.formatUnit||spec.unit))+'</text>';
-  const dots=coords.map((c,i)=>{const when=shortGameDate(c.p?.gameStartTimestamp)||('Game '+String(i+1)),champ=c.p?.champion?String(c.p.champion)+' · ':'';return '<circle class="chart-dot '+(signedAxis?(c.v>0?'positive':c.v<0?'negative':'even'):'')+'" cx="'+c.x.toFixed(1)+'" cy="'+c.y.toFixed(1)+'" r="5"><title>'+esc(champ+when+': '+formatChartValue(c.v,spec.formatUnit||spec.unit))+'</title></circle>';}).join('');
+  const dots=coords.map((c,i)=>{const when=shortGameDate(c.p?.gameStartTimestamp)||('Game '+String(i+1)),champ=c.p?.champion?String(c.p.champion)+' · ':'',signal=c.v*(spec.inverse?-1:1);return '<circle class="chart-dot '+(signedAxis?(signal>0?'positive':signal<0?'negative':'even'):'')+'" cx="'+c.x.toFixed(1)+'" cy="'+c.y.toFixed(1)+'" r="5"><title>'+esc(champ+when+': '+formatChartValue(c.v,spec.formatUnit||spec.unit))+'</title></circle>';}).join('');
   const firstTime=valid[0]?.p?.gameStartTimestamp,lastTime=valid[valid.length-1]?.p?.gameStartTimestamp;
   const xLabels=valid.length?'<text class="chart-axis-label x" x="'+padL+'" y="'+(h-12)+'">'+esc(shortGameDate(firstTime)||'older')+'</text><text class="chart-axis-label x" x="'+(w-padR)+'" y="'+(h-12)+'" text-anchor="end">'+esc(shortGameDate(lastTime)||'newer')+'</text>':'';
   return '<svg class="chart-svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(spec.title||'Trend chart')+'">'+bands+grid.join('')+zero+reference+'<path class="chart-line" d="'+path+'"/>'+dots+xLabels+'</svg>';
@@ -2603,7 +2608,7 @@ function chartSummary(points,spec){
   const avgV=vals.reduce((a,b)=>a+b,0)/vals.length,recent=vals.slice(-Math.min(5,vals.length)),recentAvg=recent.reduce((a,b)=>a+b,0)/recent.length;
   const unit=spec.formatUnit||spec.unit;
   if(spec.signedAxis){
-    const delta=recentAvg-avgV,dir=Math.abs(delta)<(spec.relevance||50)?'stable':delta>0?'improving':'worsening';
+    const delta=recentAvg-avgV,signal=delta*(spec.inverse?-1:1),dir=Math.abs(delta)<(spec.relevance||50)?'similar recently':signal>0?'more favorable recently':'less favorable recently';
     return 'Sample average '+formatChartValue(avgV,unit)+' · latest '+recent.length+' average '+formatChartValue(recentAvg,unit)+' · '+dir+'. Zero means even with the direct role opponent.';
   }
   return 'Sample average '+formatChartValue(avgV,unit)+' · latest '+recent.length+' average '+formatChartValue(recentAvg,unit)+'.';
@@ -2640,39 +2645,46 @@ function consistencyCard(label,stats,unit,split,detail){
 }
 function renderConsistencySummary(r){
   const target=$('consistencySummary');if(!target)return;
-  const games=reportCoachingGames(r),reportRole=canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole),roleGames=games.filter(g=>canonicalRole(g.role)===reportRole),bench=reportRole==='ADC'&&adcBenchmarkSummary(r)?r.externalBenchmarks?.same:null;
-  const gold=roleGames.filter(g=>g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)).map(g=>Number(g.goldDiff15));
-  const cs=roleGames.filter(g=>g?.phaseRules?.lane15Comparable!==false&&hasNum(g.csDiff15)).map(g=>Number(g.csDiff15));
-  const dpm=roleGames.filter(g=>hasNum(g.dpm)).map(g=>Number(g.dpm)),kp=roleGames.filter(g=>hasNum(g.kp)).map(g=>Number(g.kp));
-  target.innerHTML=[
-    consistencyCard('Gold @15 vs role',robustStats(gold),'gold',consistencySplit(gold,0,150,false),'close band ±150g · '+gold.length+' valid checkpoints'),
-    consistencyCard('CS @15 vs role',robustStats(cs),'cs',consistencySplit(cs,0,5,false),'close band ±5 CS · '+cs.length+' valid checkpoints'),
-    consistencyCard(roleLabel(reportRole)+' damage / min',robustStats(dpm),'dpm',bench&&hasNum(bench.dpm)?consistencySplit(dpm,Number(bench.dpm),50,false):null,bench&&hasNum(bench.dpm)?'vs '+String(bench.tier||'same-tier')+' external reference ±50 DPM':dpm.length+' valid '+roleLabel(reportRole)+' games'),
-    consistencyCard(roleLabel(reportRole)+' kill participation',robustStats(kp),'percent',bench&&hasNum(bench.kp)?consistencySplit(kp,Number(bench.kp),2,false):null,bench&&hasNum(bench.kp)?'vs '+String(bench.tier||'same-tier')+' external reference ±2 pp':kp.length+' valid '+roleLabel(reportRole)+' games')
-  ].join('');
+  const games=reportCoachingGames(r),reportRole=canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole),roleGames=games.filter(g=>canonicalRole(g.role)===reportRole),specs=roleEconomyChartSpecs(r,reportRole);
+  target.innerHTML=specs.map(spec=>{
+    const vals=roleGames.map(g=>spec.get?spec.get(g):g[spec.key]).filter(hasNum).map(Number),hasSplit=hasNum(spec.splitCenter)&&hasNum(spec.splitThreshold),split=hasSplit?consistencySplit(vals,Number(spec.splitCenter),Number(spec.splitThreshold),!!spec.inverse):null;
+    const detail=hasSplit?('close band ±'+formatChartValue(spec.splitThreshold,spec.formatUnit||spec.unit)+' · '+vals.length+' valid observations'):(vals.length+' valid '+roleLabel(reportRole)+' observations');
+    return consistencyCard(spec.title,robustStats(vals),spec.consistencyUnit||'num',split,detail);
+  }).join('');
 }
+function roleEconomyChartSpecs(r,reportRole){
+  const lane15Comparable=Number(r.behaviorSummary?.checkpointEligibility?.lane15Games??0)>0,roleName=roleLabel(reportRole),adc=reportRole==='ADC'?adcBenchmarkSummary(r):null,bench=adc?r.externalBenchmarks?.same:null;
+  const gold={key:'goldDiff15',get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)?Number(g.goldDiff15):null,title:'Gold @15 vs direct role opponent',q:'Positive means more gold than the actual same-role opponent at 15. Only trusted, coaching-comparable checkpoints are plotted.',unit:'signedGold',formatUnit:'signed',consistencyUnit:'gold',signedAxis:true,relevance:150,fixedMin:-2000,fixedMax:2000,splitCenter:0,splitThreshold:150};
+  const cs={key:'csDiff15',get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.csDiff15)?Number(g.csDiff15):null,title:'CS @15 vs direct role opponent',q:'Positive means more CS than the actual same-role opponent at 15. Only trusted, coaching-comparable checkpoints are plotted.',unit:'signedCs',formatUnit:'signed',consistencyUnit:'cs',signedAxis:true,relevance:5,fixedMin:-35,fixedMax:35,splitCenter:0,splitThreshold:5};
+  const dpm={key:'dpm',get:g=>hasNum(g.dpm)?Number(g.dpm):null,title:'Damage per minute · '+roleName+' sample',q:bench?'Selected-role games on a fixed 0–1500 DPM scale. Dashed line = same-tier ADC-adjusted external reference.':'Selected '+roleName+' games on a fixed 0–1500 DPM scale.',unit:'dpm',formatUnit:'int',consistencyUnit:'dpm',fixedMin:0,fixedMax:1500,reference:bench?.dpm,referenceLabel:(bench?.tier||'same tier')+' reference',splitCenter:bench?.dpm,splitThreshold:50};
+  const kp={key:'kp',get:g=>hasNum(g.kp)?Number(g.kp):null,title:'Kill participation · '+roleName+' sample',q:bench?'Selected-role games on a fixed 0–100% scale. Dashed line = same-tier ADC-adjusted external reference.':'Selected '+roleName+' games on a fixed 0–100% scale.',unit:'percent',formatUnit:'%',consistencyUnit:'percent',fixedMin:0,fixedMax:100,reference:bench?.kp,referenceLabel:(bench?.tier||'same tier')+' reference',splitCenter:bench?.kp,splitThreshold:2};
+  const impact={key:'impactDeltaVsOpponent',get:g=>trustedDirectPeer(g)&&hasNum(g.impactDeltaVsOpponent)?Number(g.impactDeltaVsOpponent):null,title:'First tracked impact vs '+roleName+' peer',q:'Negative means your first tracked kill/assist/objective impact happened earlier than the actual same-role opponent. Timing is not treated as causal by itself.',unit:'num',formatUnit:'signed1',consistencyUnit:'minutes',signedAxis:true,inverse:true,relevance:1.5,fixedMin:-6,fixedMax:6,splitCenter:0,splitThreshold:1.5};
+  const peerCsMin={key:'peerCsMin',get:g=>trustedDirectPeer(g)&&hasNum(g?.peer?.csMinDelta)?Number(g.peer.csMinDelta):null,title:'CS/min vs '+roleName+' peer',q:'Positive means higher CS/min than the actual same-role opponent over the match. This is farm pace, not lane ownership.',unit:'num',formatUnit:'signed2',consistencyUnit:'csmin',signedAxis:true,relevance:.15,fixedMin:-2.5,fixedMax:2.5,splitCenter:0,splitThreshold:.15};
+  const contest={key:'objectiveContest',get:g=>perGamePct(g?.objectiveReadiness?.contestedJoined,g?.objectiveReadiness?.contestedObjectives),title:'Contested objective presence · '+roleName,q:'Per-game supported presence in team-contested neutral-objective encounters. Missing/no contested event is not converted into zero.',unit:'percent',formatUnit:'%',consistencyUnit:'percent',fixedMin:0,fixedMax:100};
+  const setup={key:'objectiveSetup',get:g=>perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.joined),title:'Prior objective setup · '+roleName,q:'Per-game share of joined neutral-objective encounters where supported position was already near the area 45–105 seconds before the event.',unit:'percent',formatUnit:'%',consistencyUnit:'percent',fixedMin:0,fixedMax:100};
+  const roam={key:'roamConversion',get:g=>perGamePct(g?.roams?.successes,g?.roams?.attempts),title:'Early roam conversion · '+roleName,q:'Per-game conversion among detected early roam departures. A converted roam can still carry lane cost.',unit:'percent',formatUnit:'%',consistencyUnit:'percent',fixedMin:0,fixedMax:100};
+  const vpm={key:'vpm',get:g=>hasNum(g.vpm)?Number(g.vpm):null,title:'Vision score per minute · '+roleName,q:'Raw selected-role vision score per minute. This is context, not a standalone quality score.',unit:'num',formatUnit:'num',consistencyUnit:'vpm',fixedMin:0,fixedMax:4};
+  if(reportRole==='SUPPORT')return[vpm,kp,roam,setup];
+  if(reportRole==='JUNGLE')return[gold,peerCsMin,impact,contest];
+  if(reportRole==='MID')return[gold,cs,impact,kp];
+  if(reportRole==='TOP')return[gold,cs,dpm,kp];
+  return[gold,cs,dpm,kp];
+}
+
 function renderCharts(r){
-  const lane15Comparable=Number(r.behaviorSummary?.checkpointEligibility?.lane15Games??0)>0,reportRole=canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole),adc=reportRole==='ADC'?adcBenchmarkSummary(r):null,bench=adc?r.externalBenchmarks?.same:null;
-  const sourceGames=[...reportCoachingGames(r)].filter(g=>canonicalRole(g.role)===reportRole),hasTimestamps=sourceGames.some(g=>Number(g?.gameStartTimestamp||0)>0);
-  const chronological=hasTimestamps?sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-Number(b.gameStartTimestamp||0)):sourceGames.reverse(),roleName=roleLabel(reportRole);
-  const specs=[
-    {key:'goldDiff15',title:lane15Comparable?'Gold @15 vs direct role opponent':'Gold @15 vs role opponent · raw checkpoint',q:'Positive means you had more gold than the direct role opponent at 15. Fixed −2000 to +2000 scale makes games directly comparable.',unit:'signedGold',formatUnit:'signed',signedAxis:true,relevance:150,fixedMin:-2000,fixedMax:2000},
-    {key:'csDiff15',title:lane15Comparable?'CS @15 vs direct role opponent':'CS @15 vs role opponent · raw checkpoint',q:'Positive means you had more farm than the direct role opponent at 15. Fixed −35 to +35 scale.',unit:'signedCs',formatUnit:'signed',signedAxis:true,relevance:5,fixedMin:-35,fixedMax:35},
-    {key:'dpm',title:'Damage per minute · '+roleName+' sample',q:bench?'Selected-role games on a fixed 0–1500 DPM scale. The dashed line is the same-tier ADC-adjusted external reference.':'Selected '+roleName+' games on a fixed 0–1500 DPM scale.',unit:'dpm',formatUnit:'int',fixedMin:0,fixedMax:1500,reference:bench?.dpm,referenceLabel:(bench?.tier||'same tier')+' reference'},
-    {key:'kp',title:'Kill participation · '+roleName+' sample',q:bench?'Selected-role games on a fixed 0–100% scale. The dashed line is the same-tier ADC-adjusted external reference.':'Selected '+roleName+' games on a fixed 0–100% scale.',unit:'percent',formatUnit:'%',fixedMin:0,fixedMax:100,reference:bench?.kp,referenceLabel:(bench?.tier||'same tier')+' reference'}
-  ];
+  const reportRole=canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole),sourceGames=[...reportCoachingGames(r)].filter(g=>canonicalRole(g.role)===reportRole),hasTimestamps=sourceGames.some(g=>Number(g?.gameStartTimestamp||0)>0);
+  const chronological=hasTimestamps?sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-Number(b.gameStartTimestamp||0)):sourceGames.reverse(),specs=roleEconomyChartSpecs(r,reportRole);
   const hidden=[];
   $('chartGrid').innerHTML=specs.map(spec=>{
-    const points=chronological.map(g=>({matchId:g.matchId,gameStartTimestamp:g.gameStartTimestamp,champion:g.champion,value:g[spec.key]}));
+    const points=chronological.map(g=>({matchId:g.matchId,gameStartTimestamp:g.gameStartTimestamp,champion:g.champion,value:spec.get?spec.get(g):g[spec.key]}));
     const svg=chartSvg(points,spec);
     if(!svg)hidden.push(spec.title);
-    return '<article class="chart-card '+(spec.signedAxis?'signed-chart':'')+'"><div class="chart-card-head"><div><h3>'+esc(spec.title)+'</h3><p>'+esc(spec.q)+'</p></div><span class="chart-kind">'+(spec.signedAxis?'0 = even':'trend')+'</span></div>'+(svg||'<div class="chart-empty">Insufficient valid data</div>')+(svg?'<p class="chart-reading">'+esc(chartSummary(points,spec))+'</p>':'')+'</article>';
+    return '<article class="chart-card '+(spec.signedAxis?'signed-chart':'')+'"><div class="chart-card-head"><div><h3>'+esc(spec.title)+'</h3><p>'+esc(spec.q)+'</p></div><span class="chart-kind">'+(spec.signedAxis?'0 = role peer':'trend')+'</span></div>'+(svg||'<div class="chart-empty">Insufficient valid data</div>')+(svg?'<p class="chart-reading">'+esc(chartSummary(points,spec))+'</p>':'')+'</article>';
   }).join('');
   const all=[...(r.hiddenCharts||[]),...hidden];
   $('hiddenCharts').hidden=!all.length;$('hiddenCharts').textContent=all.length?'Unavailable / low-sample charts: '+[...new Set(all)].join(', '):'';
   renderConsistencySummary(r);
 }
-
 function renderAdvanced(r){
   const a=r.advanced||{},roam=a.roams||{},recall=a.recalls||{},itemSpike=a.itemSpike||{};
   const rows=[
