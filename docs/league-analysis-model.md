@@ -2423,3 +2423,8 @@ All three use an evidence floor of five comparable games for a ready state. The 
 ## Support Quick Read role safety
 
 The SUPPORT Direct-role comparison surface is built around role-relevant peer evidence: vision/min, objective-setup wards, first tracked impact, first-major timing and peer-matched death recovery. Direct-role gold @15 remains available only in the raw technical evidence layer for traceability; it is not a prominent Support coaching card.
+
+
+## Role-aware raw KPI strip
+
+The neutral KPI strip follows the selected coaching role before any comparison or judgment is shown. ADC, MID and TOP retain CS/min and damage/min because those are useful raw carry/lane outputs. JUNGLE keeps CS/min but replaces the carry-style damage card with vision/min. SUPPORT does not foreground CS/min or damage/min: it shows kill participation, vision/min, assists/game and deaths/game alongside win rate and KDA. These are still descriptive self-sample values; vision/min is explicitly volume rather than vision quality or objective control.
