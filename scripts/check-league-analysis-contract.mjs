@@ -484,6 +484,10 @@ ok(modelDoc.includes('## Combined-intelligence evidence floors')&&modelDoc.inclu
 ok(app.includes('analyzer coaching threshold 8')&&app.includes('analyzer coaching threshold 4')&&app.includes('thin sample — descriptive only'), 'decision synthesis must not color thin denominator rates as mature coaching evidence');
 ok(modelDoc.includes('## Decision-card evidence thresholds')&&modelDoc.includes('first-reset economy-loss rate: at least 4'), 'analysis model must lock the prominent-card evidence floors');
 ok(html.includes('id="reportDrivers"')&&app.includes('function renderReportDrivers('), 'report must compress the strongest supported weakness, strength and recent direction into an action-first layer');
+ok(html.includes('id="priorityEvidenceChain"')&&app.includes('function renderPriorityEvidenceChain('), 'highest-priority coaching theme must expose an auditable evidence chain');
+ok(app.includes("stage('1','Signal'")&&app.includes("stage('3','Replay proof'")&&app.includes("stage('4','Next-5 measure'")&&app.includes("stage('5','Action'"), 'priority chain must connect aggregate evidence, ranked replay, measurement and prescription');
+ok(app.includes('This is an evidence trace, not a causal proof.'), 'priority evidence trace must not be phrased as causal proof');
+ok(modelDoc.includes('## Priority evidence chain'), 'analysis model must document the evidence-to-action trace');
 ok(app.includes('driver-evidence-meta')&&app.includes('supporting finding')&&app.includes('confidence'), 'action-first report drivers must retain visible evidence-strength metadata when supplied by the backend');
 ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('matchHistorySignals('), 'recent selected-role games must have collapsible coaching-readable history rows with derived evidence signals');
 ok(html.includes('data-history-filter="priority"')&&app.includes('function currentPriorityReplayIds('), 'current top coaching priority must map to ranked replay evidence in match history');
