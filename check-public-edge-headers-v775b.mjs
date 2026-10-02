@@ -7,11 +7,15 @@ const source=fs.readFileSync('cloudflare/workers/admin-gate/src/worker.js','utf8
 assert.match(source,/async function handlePublicApex\(request, env, url\)/);
 assert.match(source,/if \(isSecurityPath\(url\.pathname\)\) return await handlePublicSecurity\(request, env, url\)/);
 assert.match(source,/async function publicOriginResponse\(request, url,/);
-assert.match(source,/if \(!noStore\) return withPublicSecurityHeaders\(await fetch\(request\)\)/);
+assert.match(source,/const method = String\(request\.method \|\| 'GET'\)\.toUpperCase\(\)/,'public origin proxy must normalize method');
+assert.match(source,/method === 'GET' \|\| method === 'HEAD'/,'public GET\/HEAD origin requests must be rebuilt bodyless');
+assert.doesNotMatch(source,/if \(!noStore\) return withPublicSecurityHeaders\(await fetch\(request\)\)/,'public proxy must never reuse the incoming Request stream');
+assert.match(source,/async function publicBundledFirstResponse\(request, env, url\)/,'critical public assets must have Worker-bundle-first delivery');
+assert.match(source,/X-Kalenel-Public-Source','critical bundled responses must expose delivery provenance');
 assert.doesNotMatch(source,/const secured = withPublicSecurityHeaders\(response\)/,'no-store public documents must not transfer the origin body through an intermediate Response');
 assert.match(source,/const headers = new Headers\(response\.headers\)/);
 assert.match(source,/applyPublicSecurityHeaders\(headers\)/);
-assert.match(source,/return new Response\(response\.body,/);
+assert.match(source,/return new Response\(method === 'HEAD' \? null : response\.body,/);
 assert.match(source,/headers\.set\('Cache-Control', 'no-store, max-age=0, must-revalidate'\)/);
 assert.match(source,/if \(isLeaguePublicPath\(url\.pathname\)\)/);
 assert.match(source,/PUBLIC_AUTH_ENTRY_DOCUMENTS/);
