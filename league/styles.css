@@ -1776,3 +1776,5 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 .objective-family-note{margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#f8f5ef;font-size:.64rem;line-height:1.45;color:var(--ink-soft)}
 @media(max-width:1250px){.objective-family-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.objective-family-grid{grid-template-columns:1fr}}
+
+.objective-family-review{margin-top:9px;width:100%}
