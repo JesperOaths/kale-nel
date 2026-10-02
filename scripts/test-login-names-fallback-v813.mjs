@@ -41,10 +41,12 @@ vm.createContext(context);
 new vm.Script(staticSource,{filename:'gejast-login-names-static.js'}).runInContext(context);
 new vm.Script(source,{filename:'gejast-login-names-fallback.js'}).runInContext(context);
 
-assert.equal(context.GEJAST_LOGIN_NAMES_FALLBACK?.source,'v817-snapshot-authoritative-first-delayed60s-active-name-rpc');
+assert.equal(context.GEJAST_LOGIN_NAMES_FALLBACK?.source,'v817-static-authoritative-boot-explicit-live-refresh-r17');
 assert.equal(context.GEJAST_LOGIN_NAMES_FALLBACK?.staticSource,'gejast-login-names-static.js');
 assert.match(source,/get_login_active_names_v687/);
-assert.match(source,/2500/,'authoritative refresh must stay tightly bounded so login does not hang behind Supabase latency');
+assert.match(source,/async function refresh\(requestedScope\)/,'live reconciliation must remain available only as an explicit action');
+assert.doesNotMatch(source,/setTimeout\(function\(\)\{/,'static login bootstrap must not schedule delayed Supabase traffic');
+assert.match(accountRuntime,/Login boot is intentionally network-independent/,'account runtime must return the complete snapshot without background RPC enrichment');
 assert.doesNotMatch(source,/get_player_selector_source_v1/,'expensive selector scan must never be part of login name loading');
 assert.match(source,/login_names_timeout/);
 assert.equal(cfg.fetchScopedActivePlayerNames,context.GEJAST_LOGIN_NAMES_FALLBACK.load);
@@ -76,9 +78,9 @@ assert.match(accountRuntime,/seed = normalizeNames\(\[\.\.\.domSeed,\.\.\.cached
 assert.match(accountRuntime,/merged=normalizeNames\(\[\.\.\.seed,\.\.\.clean,\.\.\.domSeedNames\(sel\)\]\)/,'live login-name refresh must merge with the synchronous seed instead of erasing known-good names');
 assert.match(accountRuntime,/gejast:login-names-refreshed[\s\S]*?merged=normalizeNames\(\[\.\.\.seed,\.\.\.domSeedNames\(sel\),\.\.\.names\]\)/,'background refreshed names must merge with currently rendered/static names');
 assert.match(accountRuntime,/else if\(seed\.length\)/,'an empty or slow live refresh must preserve the synchronous seed');
-assert.ok(loginHtml.includes(`gejast-login-names-static.js?${siteVersion}&rev=20261002-login-resilience-r16`),'login must load the static name snapshot with site version + resilience revision');
-assert.ok(loginHtml.includes(`gejast-login-names-fallback.js?${siteVersion}&rev=20261002-login-resilience-r16`),'login must load the single-RPC fallback with site version + resilience revision');
-assert.ok(loginHtml.includes(`gejast-account-runtime.js?${siteVersion}&rev=20261002-login-resilience-r16`),'login must load the hardened account runtime with site version + current resilience revision');
+assert.ok(loginHtml.includes(`gejast-login-names-static.js?${siteVersion}&rev=20261002-login-resilience-r17`),'login must load the static name snapshot with site version + resilience revision');
+assert.ok(loginHtml.includes(`gejast-login-names-fallback.js?${siteVersion}&rev=20261002-login-resilience-r17`),'login must load the single-RPC fallback with site version + resilience revision');
+assert.ok(loginHtml.includes(`gejast-account-runtime.js?${siteVersion}&rev=20261002-login-resilience-r17`),'login must load the hardened account runtime with site version + current resilience revision');
 assert.match(accountRuntime,/name\.toLowerCase\(\)!=='kies je naam'/,'placeholder text must never enter the login-name seed');
 assert.match(accountRuntime,/const immediate=normalizeNames\(\[\.\.\.snapshot,\.\.\.cached\]\)/,'deployment snapshot/cache must satisfy login-name loading before live Supabase work');
 assert.match(loginHtml,/window\.GEJAST_LOGIN_NAMES_STATIC=Object\.freeze\(/,'login HTML must contain an inline last-known-good name seed so the selector works even when Supabase or a deferred asset stalls');
