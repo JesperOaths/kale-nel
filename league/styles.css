@@ -1757,3 +1757,22 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 .practice-trigger>span{display:block;margin-bottom:6px;color:#6b4aa0;font-size:.56rem;text-transform:uppercase;letter-spacing:.07em;font-weight:950}
 .practice-trigger>div{font-size:.66rem;line-height:1.45;color:var(--ink-soft)}
 .practice-trigger>div+div{margin-top:4px}
+
+.objective-family-overview{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.objective-family-head{margin-bottom:10px}
+.objective-family-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.objective-family-card{position:relative;min-width:0;padding:13px;border:1px solid var(--line);border-radius:14px;background:#fff}
+.objective-family-card>span{display:block;color:var(--muted);font-size:.58rem;text-transform:uppercase;letter-spacing:.07em;font-weight:950}
+.objective-family-card>strong{display:block;margin-top:5px;font-size:.78rem;line-height:1.3}
+.objective-family-statline{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:9px}
+.objective-family-statline b{font-size:.7rem}.objective-family-statline small{color:var(--muted);font-size:.56rem}
+.objective-family-interval{position:relative;height:10px;margin-top:9px;border:1px solid var(--line);border-radius:999px;background:#eee9e0}
+.objective-family-interval i{position:absolute;top:2px;height:4px;border-radius:999px;background:#1d5f91;opacity:.68}
+.objective-family-interval b{position:absolute;top:-3px;width:3px;height:14px;border-radius:999px;background:#17130f;transform:translateX(-1px)}
+.objective-family-ci{display:block;margin-top:4px;color:var(--muted);font-size:.54rem}
+.objective-family-card>p{margin:8px 0 0;color:var(--muted);font-size:.61rem;line-height:1.45}
+.objective-family-card.thin-evidence{border-style:dashed;background:#fcfaf6}
+.objective-family-thin{display:block;margin-top:7px;color:var(--muted);font-size:.55rem}
+.objective-family-note{margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#f8f5ef;font-size:.64rem;line-height:1.45;color:var(--ink-soft)}
+@media(max-width:1250px){.objective-family-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.objective-family-grid{grid-template-columns:1fr}}
