@@ -659,6 +659,10 @@ assert.ok(app.includes('roamEvidenceText('),'Roam tab must expose per-window evi
 assert.ok(css.includes('.map-roam-path'),'Roam paths must retain dedicated map styling');
 assert.ok(api.includes('objectiveFamilyStats:{}')&&api.includes('objectiveFamilySummary'),'Objective-family presence/control must remain explicit');
 assert.ok(html.includes('id="objectiveFamilyOverview"')&&app.includes('function renderObjectiveFamilyOverview('),'Main decision section must surface objective-family evidence without requiring Advanced Metrics');
+assert.ok(html.includes('data-history-filter="objective-family"')&&app.includes('matchHistoryObjectiveFamilyKey'),'Objective-family cards must be able to open an evidence-only Recent match story filter');
+assert.ok(app.includes('function objectiveFamilyMatchIds(')&&app.includes('gameObjectiveFamilyRow(g,key)?.contestedEncounters'),'Objective-family match linkage must use the backend per-game family key and supported contested encounters');
+assert.ok(app.includes('Review '+"'+matchCount+'"+' matching game')&&app.includes("filter==='objective-family'"),'Objective-family review must display matching-game counts separately from event counts and filter rows without recalculating the report');
+assert.ok(modelDoc.includes('### Objective-family match linkage')&&modelDoc.includes('Keep event and game denominators separate'),'Objective-family match linkage semantics must remain documented');
 assert.ok(app.includes('Fewer than 3 contested encounters — context only.')&&app.includes('Review clue:'),'Objective-family summary must gate thin families and keep any lowest-presence callout as a review clue');
 assert.ok(app.includes('wilsonInterval(x.joined,x.contested)')&&css.includes('.objective-family-interval'),'Objective-family contested presence must expose Wilson uncertainty');
 assert.ok(modelDoc.includes('## High-level objective-family overview')&&modelDoc.includes('not a generic role grade'),'Objective-family high-level semantics must remain documented');
@@ -728,7 +732,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v170'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v172'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
