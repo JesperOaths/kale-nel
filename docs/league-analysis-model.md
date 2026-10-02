@@ -231,6 +231,8 @@ Role-aware conclusions must use the normalized role, and direct-role comparative
 
 All opponent-relative **deltas** must use matched denominators on both sides. The player's all-game descriptive rate may still be shown separately, but it must never be subtracted from an opponent rate measured on a smaller trusted-peer subset. This applies to plate pressure, first-reset timing/economy, major-item readiness, second-major timing, first impact, repeat-death recurrence, role-level fight state, objective-setup vision, and post-kill conversion. The report labels all-valid and matched-peer values separately whenever both are useful.
 
+Metric-specific same-role means also export their exact contributing-game count. `avgCsMinDelta`, `avgDpmDelta` and `avgVpmDelta` must not borrow `sameRoleGames` as a denominator label unless every contributing delta is present. Clean direct-role duel rates are normalized by `directPeerTimelineGames`, not by all timeline-complete games; unresolved/missing direct-role games cannot dilute a role-opponent event rate.
+
 ## Early lane outside pressure
 
 For **TOP and MID only**, the analyzer separates clean direct-role duel deaths from early home-lane deaths involving other enemy roles.
