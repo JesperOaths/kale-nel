@@ -2124,3 +2124,22 @@ Do not collapse evidence health into one synthetic score. Keep at least these di
 Use analyzer-aligned readiness floors for the compact state labels: 5 timeline behavior games, 5 trusted direct-peer comparisons, 5 comparable @15 games and 4 exact-catalog item-window games. Mechanics is Limited when the newest mechanics revision is unverified or the analyzer must use a broader/mixed fallback.
 
 Ready means the dimension clears its minimum evidence floor; it does not mean the conclusion is certain, causal or immune to sample variance. Limited and Withheld must remain explicit rather than being averaged away by stronger dimensions.
+
+
+## Support-specific lens
+
+SUPPORT reports may surface a dedicated role lens rather than merely hiding ADC-only benchmark UI.
+
+The Support lens uses analyzer-exported evidence only:
+- detected pre-major-objective-era roam conversion,
+- change in ADC-vs-ADC CS differential during measured Support roam windows,
+- repeated ADC-costly roams (at least 6 CS lost without a kill/assist or objective return),
+- vision-action death evidence,
+- prior neutral-objective setup presence,
+- team-contested neutral-objective presence.
+
+Use the analyzer's existing evidence floors: 4 roam attempts for roam conversion, 12 vision actions for vision-safety interpretation, and 5 supported objective observations for setup/presence rates. ADC lane-cost evidence may become actionable when at least two individually costly Support roams repeat; otherwise an average lane-cost read should remain thin until four measured windows are available.
+
+ADC lane-cost evidence is an observed change in ADC-vs-ADC CS differential during the detected Support roam window. It is useful opportunity-cost evidence, but it does not prove the Support alone caused every CS change.
+
+This panel must remain hidden unless the selected report role is SUPPORT. Other roles retain their own generic/role-appropriate report surfaces without Support-specific assumptions.
