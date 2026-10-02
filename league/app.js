@@ -1073,10 +1073,22 @@ function evidenceHealthCard(label,value,detail,status){
 }
 function renderEvidenceHealth(r){
   const box=$('evidenceHealth'),link=$('evidenceHealthLink');if(!box)return;
-  const q=r.dataQuality||{},games=reportCoachingGames(r),n=games.length;
+  const q=r.dataQuality||{},games=reportCoachingGames(r),n=games.length,role=canonicalRole(q.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole);
   const timeline=games.filter(g=>g.timelineAvailable===true).length;
   const peers=games.filter(g=>trustedDirectPeer(g)).length;
-  const lane15=games.filter(g=>g.timelineAvailable===true&&trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)).length;
+  let roleEvidenceLabel='Comparable @15',roleEvidenceDetail='',roleEvidenceCount=0,roleEvidenceFloor=5;
+  if(role==='SUPPORT'){
+    roleEvidenceLabel='Support vision peer';
+    roleEvidenceCount=games.filter(g=>g.timelineAvailable===true&&trustedDirectPeer(g)&&hasNum(g?.peer?.vpmDelta)).length;
+    roleEvidenceDetail='timeline + trusted opposing Support + VPM comparison';
+  }else if(role==='JUNGLE'){
+    roleEvidenceLabel='Jungle impact peer';
+    roleEvidenceCount=games.filter(g=>g.timelineAvailable===true&&trustedDirectPeer(g)&&hasNum(g?.impactDeltaVsOpponent)).length;
+    roleEvidenceDetail='timeline + trusted enemy Jungler + first-impact timing';
+  }else{
+    roleEvidenceCount=games.filter(g=>g.timelineAvailable===true&&trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)).length;
+    roleEvidenceDetail='timeline + trusted peer + compatible lane checkpoint';
+  }
   const exactItems=games.filter(g=>g.timelineAvailable===true&&g.itemCatalogExactPatch===true).length;
   const mechanicsLimited=q.currentMechanicsKnown===false||q.mixedMechanicsFallback===true||q.mechanicsCohortReason==='current_mechanics_unverified';
   const status=(count,min)=>count>=min?'ready':count>0?'limited':'withheld';
@@ -1084,7 +1096,7 @@ function renderEvidenceHealth(r){
   box.innerHTML=[
     evidenceHealthCard('Timeline behavior',timeline+'/'+n,pct(timeline)+' of coaching games · directional behavior floor 5',status(timeline,5)),
     evidenceHealthCard('Trusted role peer',peers+'/'+n,pct(peers)+' of coaching games · direct-peer comparison floor 5',status(peers,5)),
-    evidenceHealthCard('Comparable @15',lane15+'/'+n,pct(lane15)+' with timeline + trusted peer + compatible lane checkpoint',status(lane15,5)),
+    evidenceHealthCard(roleEvidenceLabel,roleEvidenceCount+'/'+n,pct(roleEvidenceCount)+' with '+roleEvidenceDetail+' · evidence floor '+roleEvidenceFloor,status(roleEvidenceCount,roleEvidenceFloor)),
     evidenceHealthCard('Mechanics cohort',String(q.mechanicsCohortGames ?? n)+' games',mechanicsLimited?(q.mechanicsCohortReason==='current_mechanics_unverified'?'newest mechanics revision unverified':'broader/mixed mechanics fallback in use'):(q.mechanicsCohortApplied?'verified current-mechanics cohort applied':'single compatible mechanics context'),mechanicsLimited?'limited':'ready'),
     evidenceHealthCard('Exact item mechanics',exactItems+'/'+n,pct(exactItems)+' with timeline + exact patch item catalog · item-window floor 4',status(exactItems,4))
   ].join('');
