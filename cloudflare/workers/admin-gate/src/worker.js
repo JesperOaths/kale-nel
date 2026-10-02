@@ -31,8 +31,8 @@ const ADMIN_BUILD = 'v861-page-version-watermark';
 const ADMIN_PAGE_VERSION = SITE_VERSION;
 // Public bootstraps have independent cache identities. They must not inherit
 // ADMIN_BUILD or a stale public HTML shell can survive an unrelated admin deploy.
-const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r14';
-const PUBLIC_SHOP_ORIGIN_BUILD = 'v857-clean-collection-art';
+const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r15';
+const PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r11';
 const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-v145';
 
 const PROTECTED_PUBLIC_PATTERNS = [
@@ -73,18 +73,23 @@ async function publicOriginResponse(request, url, { noStore = false, cacheBustKe
   if (!noStore) return withPublicSecurityHeaders(await fetch(request));
   const originUrl = new URL(url.toString());
   if (cacheBustKey) originUrl.searchParams.set(cacheBustKey, String(cacheBustValue || ADMIN_BUILD));
-  const originRequest = new Request(originUrl.toString(), request);
+  // Public no-store documents are GET/HEAD only. Rebuild a bodyless origin
+  // request explicitly instead of cloning the incoming Request object; this
+  // prevents any request-body ReadableStream from being reused/locked.
+  const originRequest = new Request(originUrl.toString(), {
+    method: request.method,
+    headers: request.headers,
+    redirect: 'manual'
+  });
   const response = await fetch(originRequest, { cf: { cacheEverything: false, cacheTtl: 0 } });
-  // Do not wrap/transfer the origin ReadableStream twice. Some browsers surface a
-  // disturbed/locked body as an "input stream" error when a public no-store
-  // document is re-wrapped repeatedly. Copy headers once and forward the one
-  // untouched origin stream into the final response.
+  // Forward the origin response stream exactly once. HEAD responses stay
+  // bodyless by construction, avoiding disturbed/locked input-stream failures.
   const headers = new Headers(response.headers);
   applyPublicSecurityHeaders(headers);
   headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
   headers.set('Pragma', 'no-cache');
   headers.delete('Age');
-  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+  return new Response(request.method === 'HEAD' ? null : response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
 export default {
