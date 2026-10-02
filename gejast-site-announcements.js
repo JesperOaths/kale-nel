@@ -1,7 +1,7 @@
 (function(global){
-  const POLL_MS = 90 * 1000;
-  const FIRST_POLL_MS = 5000;
-  const SHARED_MIN_POLL_MS = 60 * 1000;
+  const POLL_MS = 5 * 60 * 1000;
+  const FIRST_POLL_MS = 30 * 1000;
+  const SHARED_MIN_POLL_MS = 4 * 60 * 1000;
   const SHARED_POLL_KEY = 'gejastAnnouncementsLastPollV2';
   let lastLocalPollAt = 0;
   function sharedLastPollAt(){
