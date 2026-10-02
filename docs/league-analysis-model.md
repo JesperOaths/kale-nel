@@ -1837,3 +1837,18 @@ Late closing evidence distinguishes **high-risk** deaths from **costly** deaths.
 Game-arc finish text must therefore display the two category counts separately and must never add them together as though they were unique deaths. For example, `1 high-risk · 1 costly` can describe one death carrying both labels.
 
 The presence of either category may flag a game for late-risk review, but category overlap must remain explicit and neither category is assumed to be the sole cause of a win or loss.
+
+
+## Population benchmark freshness
+
+External population references must disclose their capture age and patch context separately from the current analyzed Riot sample.
+
+The current LegendsTracker rank corpus was captured on **2026-03-23**, during Riot patch **26.6**. The analyzer exports `sourceCapturedAt`, `sourceCapturedPatch`, `calibrationAgeDays` and `freshnessStatus`.
+
+A reference older than 90 days is labeled **Historical reference** in both the ADC radar and benchmark bridge. Historical rank references may remain useful for broad cross-tier context, but:
+- they are not current-patch expected values,
+- they do not feed coaching priorities or practice targets,
+- they do not become promotion/rank predictions,
+- their age must be visible before the user interprets the comparison.
+
+A newer public dataset should replace the formal corpus only when its rank/role selection, sample provenance and values are reproducibly retrievable. Freshness alone is not enough reason to replace a transparent benchmark with an opaque one.
