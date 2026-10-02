@@ -886,7 +886,7 @@ function renderEvidenceHealth(r){
     evidenceHealthCard('Timeline behavior',timeline+'/'+n,pct(timeline)+' of coaching games · directional behavior floor 5',status(timeline,5)),
     evidenceHealthCard('Trusted role peer',peers+'/'+n,pct(peers)+' of coaching games · direct-peer comparison floor 5',status(peers,5)),
     evidenceHealthCard('Comparable @15',lane15+'/'+n,pct(lane15)+' with timeline + trusted peer + compatible lane checkpoint',status(lane15,5)),
-    evidenceHealthCard('Mechanics cohort',String(q.mechanicsCohortGames??n)+' games',mechanicsLimited?(q.mechanicsCohortReason==='current_mechanics_unverified'?'newest mechanics revision unverified':'broader/mixed mechanics fallback in use'):(q.mechanicsCohortApplied?'verified current-mechanics cohort applied':'single compatible mechanics context'),mechanicsLimited?'limited':'ready'),
+    evidenceHealthCard('Mechanics cohort',String(q.mechanicsCohortGames ?? n)+' games',mechanicsLimited?(q.mechanicsCohortReason==='current_mechanics_unverified'?'newest mechanics revision unverified':'broader/mixed mechanics fallback in use'):(q.mechanicsCohortApplied?'verified current-mechanics cohort applied':'single compatible mechanics context'),mechanicsLimited?'limited':'ready'),
     evidenceHealthCard('Exact item mechanics',exactItems+'/'+n,pct(exactItems)+' with timeline + exact patch item catalog · item-window floor 4',status(exactItems,4))
   ].join('');
   if(link)link.onclick=()=>$('trust-coverage')?.scrollIntoView({behavior:'auto',block:'start'});
