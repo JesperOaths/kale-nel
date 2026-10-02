@@ -2161,6 +2161,8 @@ ADC lane movement is the observed change in ADC-vs-ADC CS differential during th
 This panel must remain hidden unless the selected report role is SUPPORT. Other roles retain their own generic/role-appropriate report surfaces without Support-specific assumptions.
 
 
+A stable ADC lane-movement read requires 4 measured ADC lane-movement windows across 3 games. Below the combined window/game floor, repeated costly windows remain a review cue only.
+
 ## Top, Mid and Jungle role-specific lenses
 
 TOP, MID and JUNGLE reports should not fall back to an ADC-shaped interpretation after ADC population widgets are hidden. Each role may surface a dedicated lens, but only from analyzer-exported evidence that already has a defensible role interpretation.
