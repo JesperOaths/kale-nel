@@ -2400,3 +2400,10 @@ The recent-match story may mark games that contain replay evidence matching the 
 Theme-to-judgment matching reuses the existing replay-category mapping. It may connect resets/item spikes, mid routing, laning/matchup, lead protection, objectives, teamfights/fight selection, death consequences, vision safety and roaming to their corresponding per-game judgment categories.
 
 If no per-game judgment matches the active focus, the row falls back to the normal strongest supported improvement/strength judgment and is labelled as a current-focus game rather than pretending the displayed judgment is focus-aligned.
+
+
+## Expanded match-story signal alignment
+
+The first signal inside an expanded recent-match row must reuse the same role-aware metric as the collapsed row: carry-role @15 economy for ADC/MID/TOP, first-impact/farm peer context for JUNGLE, and Support vision peer context for SUPPORT. The expansion must not silently revert to generic lane-gold framing.
+
+Fight-uptime signals use **active involvement only**. Proximity-only fight clusters remain visible as positioning context elsewhere, but they are excluded from survival and died-before-contribution judgments in the expanded story signal grid.
