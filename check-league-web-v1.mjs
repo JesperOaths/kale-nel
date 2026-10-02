@@ -378,6 +378,9 @@ assert.ok(app.includes('bindTechnicalMetrics')&&app.includes("details.addEventLi
 assert.ok(app.includes('progressStart+(progressEnd-progressStart)'),'One-click progress must remain monotonic across fetch and analysis phases');
 assert.ok(!app.includes('bruisienator_recent_request_identity'),'Riot ID request fields must not become another persistent browser profile');
 assert.ok(api.includes('LEGENDSTRACKER_RANK_BASELINES_20260323')&&api.includes('LEGENDSTRACKER_ADC_MULTIPLIERS_20260323'),'Population rank radar must use an explicit externally sourced ADC benchmark corpus');
+assert.ok(api.includes('sourceCapturedPatch:"26.6"')&&api.includes('calibrationAgeDays')&&api.includes('freshnessStatus'),'Population benchmark metadata must expose capture patch and age');
+assert.ok(app.includes('function benchmarkFreshnessHtml(')&&app.includes('Historical reference')&&css.includes('.benchmark-freshness.historical'),'ADC population reference must visibly disclose when the calibration is historical');
+assert.ok(modelDoc.includes('## Population benchmark freshness')&&modelDoc.includes('Freshness alone is not enough reason'),'Benchmark replacement/freshness policy must remain documented');
 assert.ok(api.includes('sourceUrl:"https://legendstracker.fr/methodologie"')&&api.includes('sourceCorpus:"830k+ ranked EUW1 games"'),'External benchmark provenance must remain visible in the report contract');
 assert.ok(api.includes('externalBenchmarks')&&app.includes('Population benchmark, not your opponents.'),'Frontend rank radar must use population benchmarks rather than encountered opponents');
 assert.ok(api.includes('function externalAdcBenchmarkSet(rankSnapshot:any,cohortQueueId:any)'),'External ADC benchmark must receive the selected queue context');
@@ -657,7 +660,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v153'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v154'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
