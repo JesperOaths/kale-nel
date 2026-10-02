@@ -692,3 +692,7 @@ console.log(JSON.stringify({
   domIds:ids.length,
   invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','external-adc-rank-benchmarks','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence','control-ward-purchases','second-major-timing','last20-result-streaks','committed-shop-ledger','supported-kill-conversion','public-league-workspace','verified-patch-boundary','supported-sr-queues','bounded-public-workspace','owner-scoped-profile-delete','strong-structure-attribution','active-fight-denominator']
 },null,2));
+
+ok(app.includes("carryGoldRole=['ADC','MID','TOP'].includes(role)")&&app.includes("btn.hidden=laneBand&&!carryGoldRole"), 'technical game table must keep SUPPORT/JUNGLE out of carry-style @15 coaching filters');
+ok(app.includes("'Gold @15 vs role · context'")&&app.includes("'context only'"), 'raw @15 economy may remain visible for SUPPORT/JUNGLE only as neutral traceability context');
+ok(modelDoc.includes('## Technical game table role safety'), 'analysis documentation must preserve technical-table role safety');
