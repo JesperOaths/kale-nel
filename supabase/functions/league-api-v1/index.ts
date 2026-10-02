@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.95";
+const ANALYZER_VERSION="league-web-behavior-v4.96";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1085,7 +1085,10 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
   if(teamEarly>0)out.earlyKp=100*playerEarly/teamEarly;
   for(const ev of involved){out.phaseBehavior[gamePhaseKey(ev.tMin,rules)].killAssistImpacts++;}
   // Post-kill conversion accepts neutral objectives or structures, but individual coaching requires supported presence/involvement.
-  const conversionEvidence=(events:any[],whoId:number,whoTeam:number)=>events.map((o:any)=>({...o,playerSupported:isNeutralObjectiveEvent(o)?participantNearEvent(frames,whoId,o,2800):structureInvolvement(o,frames,whoId,whoTeam,mapId)}));
+  const conversionEvidence=(events:any[],whoId:number,whoTeam:number)=>events.map((o:any)=>{
+    const playerSupportEvidence=isNeutralObjectiveEvent(o)?(participantNearEvent(frames,whoId,o,2800)?"event_position_proximity":null):structureStrongInvolvementEvidence(o,frames,whoId,whoTeam,mapId);
+    return{...o,playerSupported:!!playerSupportEvidence,playerSupportEvidence};
+  });
   out.killConversion=killConversionWindows(involved,conversionEvidence(ownObjectiveEvents,pid,teamId));
   out.opponentKillConversion=killConversionWindows(oppInvolved,conversionEvidence(oppObjectiveEvents,Number(oppId||0),Number(opp?.teamId||0)));
   if(out.firstMajorItem&&out.opponentFirstMajorItem){
@@ -1095,10 +1098,10 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
       const killImpacts=involved.filter((ev:any)=>Number(ev.tMin)>=startMin&&Number(ev.tMin)<endMin);
       for(const ev of killImpacts)out.itemSpikeWindow.events.push({time:ev.tMin,type:"kill_or_assist"});
       out.itemSpikeWindow.killAssistImpacts=killImpacts.length;
-      for(const obj of ownObjectiveEvents){
-        if(Number(obj.tMin)<startMin||Number(obj.tMin)>=endMin)continue;
-        const fs=frameAtMs(frames,obj.tMs),me=frameStats(fs,pid),near=me?.position&&obj.x!=null&&obj.y!=null&&dist2(me.position,obj)<=2500*2500;
-        if(near){out.itemSpikeWindow.objectiveImpacts++;out.itemSpikeWindow.events.push({time:obj.tMin,type:"objective",objectiveType:text(obj.monsterType||obj.monsterSubType||obj.buildingType||obj.type)});}
+      for(const obj of conversionEvidence(ownObjectiveEvents,pid,teamId)){
+        if(Number(obj.tMin)<startMin||Number(obj.tMin)>=endMin||obj.playerSupported!==true)continue;
+        out.itemSpikeWindow.objectiveImpacts++;
+        out.itemSpikeWindow.events.push({time:obj.tMin,type:"objective",objectiveType:text(obj.monsterType||obj.monsterSubType||obj.buildingType||obj.type),supportEvidence:obj.playerSupportEvidence||"supported"});
       }
       out.itemSpikeWindow.events.sort((a:any,b:any)=>Number(a.time)-Number(b.time));
       out.itemSpikeWindow.totalImpacts=out.itemSpikeWindow.killAssistImpacts+out.itemSpikeWindow.objectiveImpacts;
