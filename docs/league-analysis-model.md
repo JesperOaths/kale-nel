@@ -1729,3 +1729,12 @@ When that flag is not true:
 - Compact match-history copy must not call the inferred champion a direct role opponent.
 
 Raw checkpoint/opponent material may remain in the technical traceability view with its confidence context, but it must not leak back into coaching summaries through frontend-derived logic. Legacy saved reports without an explicit trusted-peer flag therefore fail closed until re-analysis rather than being assumed comparable.
+
+
+## Champion and repeated-matchup evidence gates
+
+Champion diagnostics may combine self-only and opponent-relative fields, but their eligibility is different. Champion DPM and high-risk-death context can use the player's own valid champion games; role-gold @15 and first-major timing versus peer use only games where `directPeerComparable === true`.
+
+Repeated opponent-champion matchup groups are stricter: a game may enter the group only when the opponent is a trusted direct-role peer. An inferred or low-confidence opponent champion must not define a repeated matchup.
+
+Every diagnostic chip uses its own support count. Directional coloring requires at least 3 relevant observations: 3 lane-comparable trusted-peer games for role-gold chips, 3 DPM observations for DPM chips, 3 timeline-complete games for champion risk, 3 first-major peer comparisons for item timing, and at least 3 relevant home-lane deaths before an outside-pressure share is directionally colored. Below those floors the value may remain visible for traceability but the chip is neutral.
