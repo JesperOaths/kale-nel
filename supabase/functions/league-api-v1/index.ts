@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.97";
+const ANALYZER_VERSION="league-web-behavior-v4.98";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -2162,6 +2162,17 @@ function buildReplayReviewQueue(games:any[]){
     for(const ev of g.objectiveReadiness?.events||[]){
       if(!(ev?.recentShopAbsence??ev?.lateResetMiss))continue;
       add(g,114,"objective setup",ev.time,"Review this recent-shop objective absence",(ev.objectiveType||"neutral objective")+(hasNum(ev.secondsSinceShop)?" · shopped "+Math.round(Number(ev.secondsSinceShop))+"s before objective":"")+" · association, not proven cause","Reconstruct the minute before the objective: was the purchase timing actually too late, or did the wave/path decision after shopping make arrival impossible?","objectives");
+    }
+    for(const ev of g.sideLaneRisk?.events||[]){
+      if(ev?.isolated!==true)continue;
+      const beforeObj=ev?.neutralObjectiveSoon===true&&hasNum(ev?.secondsBeforeNeutralObjective);
+      if(beforeObj){
+        const evidence=[String(ev.zone||"side lane"),Math.round(Number(ev.secondsBeforeNeutralObjective))+"s before "+String(ev.neutralObjectiveType||"neutral objective"),hasNum(ev.goldDiffAtDeath)?signedText(ev.goldDiffAtDeath,0)+"g vs role":null,ev.highRisk?"high-risk":null].filter(Boolean).join(" · ");
+        add(g,116,"mid routing",ev.time,"Review this isolated side-lane death before an objective",evidence,"Start the replay from the previous wave. When should the side-lane collection have ended so you could preserve the farm while still reconnecting safely before the objective window?","deaths");
+      }else if(ev?.highRisk===true){
+        const evidence=[String(ev.zone||"side lane"),"isolated",hasNum(ev.goldDiffAtDeath)?signedText(ev.goldDiffAtDeath,0)+"g vs role":null].filter(Boolean).join(" · ");
+        add(g,94,"mid routing",ev.time,"Review this high-risk isolated side-lane death",evidence,"Identify the last safe exit timing. Which missing opponents, wave depth or next map event should have ended the side-lane extension earlier?","deaths");
+      }
     }
     for(const ev of g.fightProfile?.events||[]){
       if(ev?.firstAllyDeath)add(g,112,"teamfights",ev.startMin,"Review this first-death fight entry",(ev.kills||0)+"-kill fight cluster"+(ev.outnumberedAtFirstKill?" · started outnumbered":"")+(ev.itemDisadvantage?" · item disadvantage":"") ,"Watch only your first three seconds in the fight: could you enter second, preserve range, or wait for the first enemy threat/CC to be committed?","fights");
