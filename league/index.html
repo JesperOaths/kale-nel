@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends playstyle analysis with evidence-backed Last-20 coaching and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261002-league-web-v183">
+  <link rel="stylesheet" href="/league/styles.css?v=20261002-league-web-v184">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261002-public-bootstrap-r4"></script>
 </head>
@@ -404,7 +404,7 @@
             <div><p class="eyebrow">Game evidence</p><h2>Your latest selected-role games</h2></div>
             <span class="muted" id="gameCountLabel">—</span>
           </div>
-          <p class="section-intro">Start with the colored lane/economy cells, then open a match only when something looks unusual. Filters change only the visible rows; they never change the report calculations.</p>
+          <p class="section-intro">Start with the selected champion, actual same-role opponent and colored lane/economy cell, then open a match when something looks unusual. Filters change only the visible rows; they never change the report calculations.</p>
           <div class="game-filter-bar">
             <div class="game-filter-chips" role="group" aria-label="Filter game evidence">
               <button type="button" class="game-filter-chip active-filter" data-game-filter="all">All</button>
@@ -422,7 +422,7 @@
           </div>
           <div class="table-wrap">
             <table class="games-table">
-              <thead><tr><th><button class="table-sort" type="button" data-game-sort="recent" aria-label="Sort by recency">#</button></th><th><button class="table-sort" type="button" data-game-sort="champion">Champion</button></th><th><button class="table-sort" type="button" data-game-sort="role">Role</button></th><th><button class="table-sort" type="button" data-game-sort="result">Result</button></th><th><button class="table-sort" type="button" data-game-sort="kda">K / D / A</button></th><th><button class="table-sort" type="button" data-game-sort="kp">KP</button></th><th><button class="table-sort" type="button" data-game-sort="cs">CS/min</button></th><th><button class="table-sort" type="button" data-game-sort="dpm">DPM</button></th><th><button class="table-sort" type="button" data-game-sort="gold15">Gold @15 vs role</button></th></tr></thead>
+              <thead><tr><th><button class="table-sort" type="button" data-game-sort="recent" aria-label="Sort by recency">#</button></th><th><button class="table-sort" type="button" data-game-sort="champion">Champion</button></th><th><button class="table-sort" type="button" data-game-sort="opponent">Opponent</button></th><th><button class="table-sort" type="button" data-game-sort="result">Result</button></th><th><button class="table-sort" type="button" data-game-sort="kda">K / D / A</button></th><th><button class="table-sort" type="button" data-game-sort="kp">KP</button></th><th><button class="table-sort" type="button" data-game-sort="cs">CS/min</button></th><th><button class="table-sort" type="button" data-game-sort="dpm">DPM</button></th><th><button class="table-sort" type="button" data-game-sort="gold15">Gold @15 vs role</button></th></tr></thead>
               <tbody id="gamesBody"></tbody>
             </table>
           </div>
@@ -500,6 +500,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261002-league-web-v183" defer></script>
+  <script src="/league/app.js?v=20261002-league-web-v184" defer></script>
 </body>
 </html>
