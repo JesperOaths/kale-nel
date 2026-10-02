@@ -2407,3 +2407,14 @@ If no per-game judgment matches the active focus, the row falls back to the norm
 The first signal inside an expanded recent-match row must reuse the same role-aware metric as the collapsed row: carry-role @15 economy for ADC/MID/TOP, first-impact/farm peer context for JUNGLE, and Support vision peer context for SUPPORT. The expansion must not silently revert to generic lane-gold framing.
 
 Fight-uptime signals use **active involvement only**. Proximity-only fight clusters remain visible as positioning context elsewhere, but they are excluded from survival and died-before-contribution judgments in the expanded story signal grid.
+
+
+## Role-aware evidence health
+
+The top Evidence Health strip must reflect the evidence actually used by the selected role lens rather than always reporting a carry-style @15 checkpoint.
+
+- **ADC / MID / TOP:** the role-specific health card measures coaching games with timeline data, a trusted direct-role opponent and a compatible @15 role-gold checkpoint.
+- **JUNGLE:** it measures timeline-complete games with a trusted enemy Jungler and a supported first-impact timing comparison.
+- **SUPPORT:** it measures timeline-complete games with a trusted opposing Support and a VPM comparison.
+
+All three use an evidence floor of five comparable games for a ready state. The generic trusted-peer card remains separate so users can distinguish overall peer resolution from the role-specific metric needed by the coaching lens.
