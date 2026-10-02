@@ -1967,3 +1967,12 @@ If no phase clears both the absolute-rate and separation conditions, say **no ho
 Phase context may pair the normalized risk with existing supported evidence: direct-role gold / reset evidence early, 15→25 farm/objective routing in transition, and @25 lead/deficit conversion late. These contextual metrics do not alter hotspot classification.
 
 Phase boundaries are rule-profile aware. Do not hard-code standard-SR timestamps onto accelerated or otherwise incompatible rules profiles.
+
+
+### Reviewing repeated arcs
+
+Each repeated @15→@25 state-transition card may link directly to the collapsible match-history rows that generated that transition.
+
+The temporary **Game arc** filter matches games by the exact `gameArcTransition().key`; it is not a text search and does not recalculate the report. If the selected arc no longer exists after another report/profile is loaded, the filter must reset to **All** rather than leave an invisible empty filter active.
+
+Reviewing a repeated arc exposes examples of the state transition. It does not imply that the transition caused the game result; win rate and late-risk context remain descriptive.
