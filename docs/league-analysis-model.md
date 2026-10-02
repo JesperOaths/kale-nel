@@ -781,7 +781,9 @@ Useful aggregate comparison:
 - opposing team conversion context,
 - supported percentage-point delta between the player and role opponent.
 
-This is explicitly **team-context evidence**. The player can influence the decision after a won skirmish, but they do not unilaterally control four teammates. Coaching should say "your team converts player-involved kill windows at X%" rather than attributing every conversion/failure solely to the player.
+The two readings have different interpretation limits. **Player-supported conversion** is individual participation evidence: it shows that the player was supported as present/involved when map value followed the kill window, but it still does not prove the player caused that conversion alone. **Team conversion** is broader context only and must never be turned into individual credit or blame.
+
+Negative coaching should be conservative: a kill window is treated as a missed map-conversion opportunity only when neither player-supported nor team conversion is observed in the 75-second window. If the team converts elsewhere while the player is not supported at that event, keep that as team-only context rather than calling the player's decision a failure.
 
 The action recommendation is decision-oriented: after winning a skirmish, scan immediately for objective, structure and wave value before chasing or resetting.
 
