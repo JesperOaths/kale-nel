@@ -819,7 +819,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v194'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v195'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -879,3 +879,7 @@ assert.ok(api.includes('Review where this early lead started to unwind'),'replay
 assert.ok(app.includes("carryGoldRole=['ADC','MID','TOP'].includes(role)")&&app.includes("btn.hidden=laneBand&&!carryGoldRole"),'Technical League table must hide carry-style @15 filters for SUPPORT/JUNGLE');
 assert.ok(app.includes("'Gold @15 vs role · context'")&&app.includes("'context only'"),'SUPPORT/JUNGLE technical @15 gold must remain neutral context rather than a coaching state');
 assert.ok(modelDoc.includes('## Technical game table role safety')&&modelDoc.includes('raw evidence without turning carry-lane economy'),'Technical-table role safety must remain documented');
+
+assert.ok(app.includes('function judgmentMatchesPracticeTheme(')&&app.includes('focusMatch?xs.filter'),'Current-focus match rows must prefer a per-game judgment aligned with the active practice theme');
+assert.ok(app.includes("judge.focusMatched?'Current-focus read':'Strongest read'"),'Collapsed match row must disclose when the displayed judgment is focus-aligned');
+assert.ok(modelDoc.includes('## Focus-aligned match-story reads')&&modelDoc.includes('falls back to the normal strongest supported'),'Focus-aligned match-story fallback semantics must remain documented');
