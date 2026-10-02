@@ -53,12 +53,12 @@ assert(worker.includes("if (isLeaguePublicPath(url.pathname))"),'League public b
 assert(worker.indexOf("if (isLeaguePublicPath(url.pathname))") < worker.indexOf("if (!isProtectedPublicPath(url.pathname))"),'League public bypass must precede generic protected/public routing');
 assert(worker.includes("PUBLIC_AUTH_ENTRY_DOCUMENTS"),'login/home/request/activate documents must have explicit fresh public bootstrap handling');
 assert(worker.includes("'Cache-Control', 'no-store, max-age=0, must-revalidate'"),'fresh public bootstrap documents must bypass stale edge/browser HTML caches');
-assert(worker.includes("method: request.method")&&worker.includes("redirect: 'manual'"),'public bootstrap origin requests must be rebuilt bodyless instead of cloning an incoming request stream');
+assert(worker.includes("new Request(originUrl.toString(), { method, headers: request.headers, redirect: 'manual' })"),'public GET/HEAD origin requests must be rebuilt bodyless instead of cloning an incoming request stream');
 assert(!worker.includes("const originRequest = new Request(originUrl.toString(), request);"),'public bootstrap helper must not reuse the incoming Request ReadableStream');
 assert(worker.includes("const method = String(request.method || 'GET').toUpperCase()"),'public origin proxy must normalize request method before forwarding');
 assert(worker.includes("method === 'GET' || method === 'HEAD'"),'all public GET/HEAD origin requests must be rebuilt bodyless');
 assert(!worker.includes("if (!noStore) return withPublicSecurityHeaders(await fetch(request));"),'normal public GET/HEAD assets must not reuse the incoming Request stream');
-assert(worker.includes("request.method === 'HEAD' ? null : response.body"),'HEAD bootstrap responses must stay bodyless while GET forwards the origin stream once');
+assert(worker.includes("method === 'HEAD' ? null : response.body"),'HEAD public responses must stay bodyless while GET forwards the origin stream once');
 assert(worker.includes("const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r17'"),'login bootstrap must have an independent public cache identity');
 assert(worker.includes("const PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r13'"),'shop bootstrap must retain its independent public cache identity');
 assert(worker.includes("const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-r3'"),'League bootstrap must have an independent public cache identity');
