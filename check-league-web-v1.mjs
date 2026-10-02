@@ -506,7 +506,7 @@ assert.ok(html.includes('id="matchHistoryToggle"')&&app.includes('matchHistoryLi
 assert.ok(html.includes('id="matchHistoryFilters"')&&app.includes("matchHistoryFilter:'all'"),'Recent match story must expose evidence-aware visibility filters without changing the report sample');
 assert.ok(app.includes("filter==='risk'")&&app.includes("g.timelineAvailable===true")&&app.includes("deathConsequences?.costly"),'Risk-filtered match story must require timeline-supported high-risk/costly evidence');
 assert.ok(app.includes("filter==='review'")&&app.includes('replayReviewQueue'),'Replay-priority story filter must derive only from backend-ranked replay moments');
-assert.ok(app.includes("gameMatchesNamedFilter(g,filter)"),'Ahead/close/behind story filters must reuse the evidence-table lane bands');
+assert.ok(app.includes("function matchHistoryLaneState(")&&app.includes("gameMatchesNamedFilter(g,'ahead15')")&&app.includes("gameMatchesNamedFilter(g,'behind15')"),'Carry-role match-story lane state must reuse the technical evidence-table @15 bands');
 assert.ok(modelDoc.includes('## Match-story filters')&&modelDoc.includes('filtering does not silently change analysis'),'Match-story filter semantics must remain documented as presentation-only');
 assert.ok(app.includes('review #')&&app.includes('replayReviewQueue'),'Match-history rows must expose analyzer replay priority when a game contains a ranked review moment');
 assert.ok(app.includes('function practiceReplayCategories(')&&app.includes('function practiceReplayHtml(')&&app.includes('data-practice-review-match'),'Practice priorities must link only to ranked replay evidence and preserve exact match/tab routing');
@@ -528,7 +528,7 @@ assert.ok(app.includes('sort((a,b)=>b.count-a.count'),'Turning points must remai
 assert.ok(modelDoc.includes('## Turning-point outcome association')&&modelDoc.includes('must withhold the with-vs-without difference'),'Turning-point association minimums must remain documented');
 assert.ok(app.includes('reportCoachingGames(r)')&&app.includes('gameArcDescriptor(g)')&&app.includes('roleSequenceArc(g)'),'Game-arc aggregation must stay inside the same mechanics-filtered coaching cohort and use role-aware descriptors');
 assert.ok(app.includes('This is an association, not a proven reset cause.'),'Recent-shop objective evidence inside game arcs must remain explicitly non-causal');
-assert.ok(app.includes("gameMatchesNamedFilter(g,'ahead15')")&&app.includes("gameMatchesNamedFilter(g,'behind15')"),'Match-story lane bands must reuse the same ahead/close/behind thresholds as the evidence table');
+assert.ok(app.includes("return{label:'Role gold @15'")&&app.includes("const lane=matchHistoryLaneState(g)"),'ADC/MID/TOP match-story role state must delegate to the same @15 lane-band helper as the evidence table');
 assert.ok(app.includes('Timeline evidence is unavailable, so this game cannot be treated as having zero high-risk deaths.'),'Match story must not convert missing timeline evidence into a clean-risk claim');
 assert.ok(app.includes('function reportCoachingGames(')&&app.includes('mechanicsCohortApplied===true')&&app.includes('currentMechanicsKey'),'New derived coaching analysis must respect the backend current-mechanics cohort');
 assert.ok(app.includes('function trustedDirectPeer(g){return g?.directPeerComparable===true;}'),'Frontend must centralize the trusted direct-peer gate');
