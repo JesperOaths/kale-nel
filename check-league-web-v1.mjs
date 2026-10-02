@@ -504,6 +504,11 @@ assert.ok(modelDoc.includes('## Frontend direct-peer fail-closed rule')&&modelDo
 assert.ok(app.includes('aria-controls=')&&app.includes('match-history-detail-'),'Expandable match-story controls must expose their controlled detail region');
 assert.ok(css.includes('.match-history-toggle')&&css.includes('.history-signal-grid'),'Recent match history must remain readable as expandable rows rather than another dense technical table');
 assert.ok(html.includes('id="outcomeFingerprint"')&&app.includes('function renderOutcomeFingerprint('),'League report must retain the within-sample wins-versus-losses diagnostic fingerprint');
+assert.ok(app.includes('function outcomeFingerprintSpecs(')&&app.includes("role==='SUPPORT'")&&app.includes("role==='JUNGLE'")&&app.includes("role==='MID'")&&app.includes("role==='TOP'"),'Outcome fingerprint must select a role-appropriate metric set instead of applying ADC-shaped metrics to every role');
+assert.ok(app.includes("label:'ADC lane cost during roams'")&&app.includes("label:'First impact vs JUNGLE peer'")&&app.includes("label:'15→25 objective reconnect'")&&app.includes("label:'Early lead give-back'"),'Role-aware outcome fingerprint must preserve Support/Jungle/Mid/Top-specific metrics');
+assert.ok(app.includes('ready=wins?.n>=3&&losses?.n>=3')&&app.includes('thin sample — no directional color'),'Outcome fingerprint must withhold directional coloring below 3 valid observations on either outcome side');
+assert.ok(css.includes('.outcome-fingerprint-card.thin-evidence'),'Thin outcome-fingerprint metrics must be visually neutral');
+assert.ok(modelDoc.includes('## Role-aware outcome fingerprint')&&modelDoc.includes('3 valid observations in wins and 3 in losses'),'Role-aware outcome-fingerprint sample rules must remain documented');
 assert.ok(app.includes('Largest standardized separation:')&&app.includes('standardizedMeanGap(')&&app.includes('Hedges-corrected gap')&&app.includes('not a causal or significance claim'),'Outcome fingerprint must use a small-sample-corrected standardized within-metric gap and avoid causal/significance claims');
 assert.ok(app.includes('sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-Number(b.gameStartTimestamp||0))')&&app.includes('sourceGames.reverse()'),'Trend charts must render oldest-to-newest even though the report contract is newest-first');
 assert.ok(app.includes('chart-reference-line')&&app.includes("reference:bench?.dpm")&&app.includes("reference:bench?.kp"),'ADC DPM/KP charts must retain same-tier external reference lines');
@@ -757,7 +762,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v177'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v178'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
