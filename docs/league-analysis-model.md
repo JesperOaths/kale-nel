@@ -2131,14 +2131,14 @@ Ready means the dimension clears its minimum evidence floor; it does not mean th
 SUPPORT reports may surface a dedicated role lens rather than merely hiding ADC-only benchmark UI.
 
 The Support lens uses analyzer-exported evidence only:
-- detected pre-major-objective-era roam conversion,
+- detected early roam conversion inside the queue-specific roam-analysis window,
 - change in ADC-vs-ADC CS differential during measured Support roam windows,
-- repeated ADC-costly roams (at least 6 CS lost without a kill/assist or objective return),
+- repeated ADC-costly roams (at least 6 CS lost without a supported roam return),
 - vision-action death evidence,
 - prior neutral-objective setup presence,
 - team-contested neutral-objective presence.
 
-Use the analyzer's existing evidence floors: 4 roam attempts for roam conversion, 12 vision actions for vision-safety interpretation, and 5 supported objective observations for setup/presence rates. ADC lane-cost evidence may become actionable when at least two individually costly Support roams repeat; otherwise an average lane-cost read should remain thin until four measured windows are available.
+Use the analyzer's existing evidence floors: 4 roam attempts for roam conversion, 4 measured ADC lane-cost windows for a stable lane-cost interpretation, 12 vision actions for vision-safety interpretation, and 5 supported objective observations for setup/presence rates. Two or more costly roam windows below the four-window floor may be shown as a **review cue**, but must remain visually and textually thin evidence rather than being promoted to a stable negative pattern.
 
 ADC lane-cost evidence is an observed change in ADC-vs-ADC CS differential during the detected Support roam window. It is useful opportunity-cost evidence, but it does not prove the Support alone caused every CS change.
 
