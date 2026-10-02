@@ -2236,3 +2236,21 @@ Phase-risk rates remain queue/rules-profile aware and normalized by exposure tim
 - **ADC / MID / TOP late:** role-relative @25 lead/deficit conversion context.
 
 The phase label is **Late strategic phase**, not a universal "Baron-era" label, because verified queue/rules profiles can use different phase boundaries. Context fields do not change the hotspot calculation; they only make the interpretation role-appropriate.
+
+
+## Role-specific economy chart sets
+
+The four-chart economy/tempo surface must reflect the selected role rather than merely relabeling one universal laner chart set.
+
+Current chart sets:
+- **ADC:** trusted direct-role gold @15, trusted direct-role CS @15, DPM, KP.
+- **TOP:** trusted direct-role gold @15, trusted direct-role CS @15, DPM, KP.
+- **MID:** trusted direct-role gold @15, trusted direct-role CS @15, first tracked impact timing versus the MID peer, KP.
+- **JUNGLE:** trusted direct-role gold @15, CS/min delta versus the enemy jungler, first tracked impact timing versus the enemy jungler, contested neutral-objective presence.
+- **SUPPORT:** vision score/min, KP, detected early-roam conversion, prior neutral-objective setup.
+
+Peer-relative checkpoint charts must use only trusted direct-peer games and coaching-comparable checkpoints. Missing or unsupported per-game denominators remain missing; they are never converted to zero.
+
+Signed chart semantics are direction-aware. Gold/CS deltas treat positive as favorable. Timing deltas such as first impact treat **negative as favorable** because negative means earlier. The chart engine must flip both the shaded favorable/unfavorable side and point coloring for inverse signed metrics. Recent-vs-sample summary wording should say **more favorable recently / less favorable recently**, not assume numerically higher always means improvement.
+
+The consistency snapshot must be generated from the same role-specific chart specifications so its medians/IQR and favorable-close-unfavorable counts cannot drift from the plotted metric definition.
