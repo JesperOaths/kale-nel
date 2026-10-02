@@ -541,6 +541,9 @@ ok(app.includes('data-open-priority-history')&&app.includes("state.matchHistoryF
 ok(modelDoc.includes('## Priority-to-match evidence linkage')&&modelDoc.includes('never changes the report sample'), 'priority-driven review filtering must remain visibility-only and non-mutating');
 ok(html.includes('id="gameArcPatterns"')&&app.includes('function renderGameArcs(')&&app.includes('function gameArcStages('), 'League report must reconstruct supported per-game arcs and aggregate repeated state transitions');
 ok(app.includes('function supportGameArcStages(')&&app.includes("label:'Roam / lane'")&&app.includes("label:'Vision vs peer'"), 'SUPPORT per-match arcs must use support-specific sequence evidence');
+ok(app.includes("roamRate>=65")&&app.includes("roamRate<45")&&app.includes("laneCost>=-2")&&app.includes("laneCost<=-6"), 'SUPPORT role-sequence roam states must share the audited Support-lens bands');
+ok(app.includes("setupRate>=70")&&app.includes("setupRate<45"), 'role-sequence setup states must share analyzer objective-setup bands');
+ok(app.includes("contested>=2&&setupRate!=null&&setupRate>=70")&&!app.includes("contested>=2&&setupRate!=null&&setupRate>=60"), 'carry-role arc setup-positive band must remain 70%');
 ok(app.includes('function jungleGameArcStages(')&&app.includes("label:'Farm vs Jungle'")&&app.includes("label:'Tempo vs Jungle'"), 'JUNGLE per-match arcs must use jungle-specific sequence evidence');
 ok(html.includes('data-history-filter="arc"')&&app.includes('data-review-arc'), 'repeated state-transition summaries must drill into the exact underlying match-history examples');
 ok(app.includes("gameArcDescriptor(g)?.key===arcKey")&&app.includes("state.matchHistoryFilter='arc'"), 'arc drill-down must reuse the same role-aware derived key as aggregation');
