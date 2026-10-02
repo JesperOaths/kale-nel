@@ -620,6 +620,8 @@ const appVersion=(html.match(/\/league\/app\.js\?v=([^"]+)/)||[])[1]||'';
 const cssVersion=(html.match(/\/league\/styles\.css\?v=([^"]+)/)||[])[1]||'';
 ok(appVersion&&cssVersion&&appVersion===cssVersion, 'League app/css cache-bust versions must match');
 ok(html.includes('data-game-sort="gold15"')&&app.includes('bindGameSortControls'), 'per-game evidence table must remain sortable');
+ok(html.includes('data-game-sort="opponent"')&&!html.includes('data-game-sort="role"'), 'role-pure evidence table must use its spare column for direct-role opponent context');
+ok(!app.includes("if(key==='adc')return g.role==='ADC'")&&!app.includes("adc:'ADC only'"), 'role-first reports must not regress to a redundant ADC-only table filter');
 ok(html.includes('id="consistencySummary"')&&app.includes('function renderConsistencySummary('), 'per-game averages must retain robust median/IQR context');
 ok(html.includes('id="gameChampionFilter"')&&html.includes('data-game-filter="ahead15"')&&app.includes('function bindGameFilterControls('), 'game evidence filters must remain available');
 ok(app.includes('tabindex="0" role="button" aria-expanded="false"')&&app.includes("ev.key==='Enter'||ev.key===' '"), 'game evidence rows must remain keyboard expandable');
