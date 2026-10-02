@@ -2189,7 +2189,7 @@ function renderAdvanced(r){
   $('advancedMetrics').innerHTML=rows.map(([l,v])=>metric(l,v,String(v).includes('not recovered')||v==='n/a')).join('')+
     '<div class="source-note">Result streaks are descriptive contiguous outcomes within the eligible Last-20 sample; they are not treated as evidence of tilt, momentum, or player psychology.</div>';
   const p=r.peerComparison||{},conv=r.conversion||{},wl=r.winLoss||{},trend=r.recentTrend||{},session=r.sessionBehavior||{},base=r.coachingLifetime||null,s=r.coachingSummary||r.summary||{},rank=r.profile?.rank||null,rankBands=p.rankBands||{};
-  const rankBandLine=(x)=>x&&Number(x.games)?String(x.games)+' games · @15 '+signed(x.avgGoldDiff15,0)+'g · DPM '+signed(x.avgDpmDelta,0):'n/a';
+  const rankBandLine=(x)=>x&&Number(x.games)?String(x.games)+' matched games · @15 '+signed(x.avgGoldDiff15,0)+'g (n='+String(x.laneGames??0)+') · CS/min '+signed(x.avgCsMinDelta,2)+' (n='+String(x.csMinGames??x.games??0)+') · DPM '+signed(x.avgDpmDelta,0)+' (n='+String(x.dpmGames??x.games??0)+') · first major '+signed(x.avgMajorItemDeltaMin,1)+'m (n='+String(x.majorItemGames??0)+')':'n/a';
   const peerRows=[
     metric('Peer definition',p.definition||'Same-role opponent in each match',false),
     metric('Comparable peer games',String(p.sameRoleGames??0),false),
@@ -2208,8 +2208,8 @@ function renderAdvanced(r){
     metric('Beat peer on CS/min',fmtPct(p.csMinOutperformPct)+(hasNum(p.csMinOutperformPct)?' · n='+String(p.csMinGames??p.sameRoleGames??0):''),!hasNum(p.csMinOutperformPct)),
     metric('DPM vs peer',hasNum(p.avgDpmDelta)?signed(p.avgDpmDelta,0)+' · n='+String(p.dpmGames??p.sameRoleGames??0):'n/a',!hasNum(p.avgDpmDelta)),
     metric('Beat peer on DPM',fmtPct(p.dpmOutperformPct)+(hasNum(p.dpmOutperformPct)?' · n='+String(p.dpmGames??p.sameRoleGames??0):''),!hasNum(p.dpmOutperformPct)),
-    metric('Vision/min vs peer',hasNum(p.avgVpmDelta)?signed(p.avgVpmDelta,2):'n/a',!hasNum(p.avgVpmDelta)),
-    metric('Beat peer on vision/min',fmtPct(p.vpmOutperformPct),!hasNum(p.vpmOutperformPct)),
+    metric('Vision/min vs peer',hasNum(p.avgVpmDelta)?signed(p.avgVpmDelta,2)+' · n='+String(p.vpmGames??p.sameRoleGames??0):'n/a',!hasNum(p.avgVpmDelta)),
+    metric('Beat peer on vision/min',fmtPct(p.vpmOutperformPct)+(hasNum(p.vpmOutperformPct)?' · n='+String(p.vpmGames??p.sameRoleGames??0):''),!hasNum(p.vpmOutperformPct)),
     metric('Objective-setup ward games',String(p.visionSetupGames??0),false),
     metric('Objective-setup wards vs peer',hasNum(p.avgObjectiveSetupDelta)?signed(p.avgObjectiveSetupDelta,1):'n/a',!hasNum(p.avgObjectiveSetupDelta)),
     metric('Beat peer on setup wards',fmtPct(p.objectiveSetupOutperformPct),!hasNum(p.objectiveSetupOutperformPct)),
