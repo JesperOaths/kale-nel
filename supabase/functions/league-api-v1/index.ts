@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.100";
+const ANALYZER_VERSION="league-web-behavior-v4.101";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1642,7 +1642,26 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,p
   const recent5=games.slice(0,5),prior15=games.slice(5,20);
   const trendMetric=(fn:(g:any)=>any)=>({recent:meanField(finiteGames(recent5,fn),fn),prior:meanField(finiteGames(prior15,fn),fn),recentN:finiteGames(recent5,fn).length,priorN:finiteGames(prior15,fn).length,aggregation:"mean_games"});
   const trendEventRate=(numFn:(g:any)=>any,denFn:(g:any)=>any)=>{const recent=pooledEventRate(recent5,numFn,denFn),prior=pooledEventRate(prior15,numFn,denFn);return{recent:recent.rate,prior:prior.rate,recentN:recent.games,priorN:prior.games,recentEvents:recent.denominator,priorEvents:prior.denominator,recentNumerator:recent.numerator,priorNumerator:prior.numerator,aggregation:"pooled_events"};};
-  const recentTrend={csMin:trendMetric(g=>g.csMin),dpm:trendMetric(g=>g.dpm),kp:trendMetric(g=>g.kp),goldDiff15:trendMetric(g=>g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false?g.goldDiff15:null),badDeaths:trendMetric(g=>g.timelineAvailable===true?g.badDeathCount:null),objectiveJoin:trendEventRate(g=>g.objectiveContestJoined,g=>g.objectiveContestTotal),securedObjectiveJoin:trendEventRate(g=>g.objectiveJoined,g=>g.objectiveTeamTotal),earlyKp:trendEventRate(g=>g.earlyPlayerKillInvolvements,g=>g.earlyTeamKills),itemDelta:trendMetric(g=>g.directPeerComparable===true?g.itemSpikeDeltaVsOpponent:null)};
+  const recentSupportAdcLaneCost=(g:any)=>{const xs=(g?.roams?.events||[]).map((x:any)=>x?.adcLaneCostCs).filter(hasNum).map(Number);return xs.length?avg(xs):null;};
+  const recentTrend={
+    csMin:trendMetric(g=>g.csMin),
+    dpm:trendMetric(g=>g.dpm),
+    kp:trendMetric(g=>g.kp),
+    goldDiff15:trendMetric(g=>g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false?g.goldDiff15:null),
+    peerCsMinDelta:trendMetric(g=>g.directPeerComparable===true?g.peer?.csMinDelta:null),
+    impactDelta:trendMetric(g=>g.directPeerComparable===true?g.impactDeltaVsOpponent:null),
+    itemDelta:trendMetric(g=>g.directPeerComparable===true?g.itemSpikeDeltaVsOpponent:null),
+    badDeaths:trendMetric(g=>g.timelineAvailable===true?g.badDeathCount:null),
+    preObjectiveSideLaneDeaths:trendMetric(g=>g.timelineAvailable===true?Number(g.sideLaneRisk?.preNeutralObjectiveSideLaneDeaths||0):null),
+    earlyLeadGiveback:trendEventRate(g=>g.earlyLeadWindow?.giveback?1:0,g=>g.earlyLeadWindow?.eligible?1:0),
+    roamConversion:trendEventRate(g=>g.roams?.successes,g=>g.roams?.attempts),
+    supportAdcLaneCost:trendMetric(recentSupportAdcLaneCost),
+    visionActionDeath:trendEventRate(g=>g.visionMission?.deaths,g=>g.visionMission?.actions),
+    objectiveSetup:trendEventRate(g=>g.objectiveReadiness?.earlySetupJoins,g=>g.objectiveReadiness?.joined),
+    objectiveJoin:trendEventRate(g=>g.objectiveContestJoined,g=>g.objectiveContestTotal),
+    securedObjectiveJoin:trendEventRate(g=>g.objectiveJoined,g=>g.objectiveTeamTotal),
+    earlyKp:trendEventRate(g=>g.earlyPlayerKillInvolvements,g=>g.earlyTeamKills)
+  };
   const objectivePresenceLow=["JUNGLE","SUPPORT"].includes(primaryRole)&&validTimeline.length>=5&&hasNum(objJoin)&&Number(objJoin)<50,objectiveRootCauses:any[]=[];
   if(neutralObjectiveJoins>=5&&hasNum(earlySetupObjectiveJoinRate)){
     const setupThreshold=["SUPPORT","JUNGLE","MID"].includes(primaryRole)?45:30;
