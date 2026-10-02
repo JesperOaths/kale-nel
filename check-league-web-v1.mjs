@@ -423,6 +423,7 @@ assert.ok(html.includes('id="matchHistoryList"')&&app.includes('function renderM
 assert.ok(html.includes('data-history-filter="priority"')&&app.includes('function currentPriorityReplayIds('),'Match history must expose a Current focus filter driven by ranked replay evidence');
 assert.ok(app.includes('data-open-priority-history')&&app.includes("state.matchHistoryFilter='priority'"),'Primary limiter card must link directly to matching match-history evidence when available');
 assert.ok(app.includes("filter==='priority'")&&app.includes('currentPriorityReplayLabel(r)'),'Current-focus filtering must be an evidence-only visibility filter and preserve the active priority label');
+assert.ok(app.includes("filter==='priority'&&Number(counts.priority||0)===0")&&app.includes("state.matchHistoryFilter='all'"),'An empty Current focus filter must reset to All instead of leaving a hidden empty-state filter active');
 assert.ok(css.includes('.match-history-row.focus-match')&&app.includes("' focus-match'"),'Current-focus games must be visually identifiable without changing calculations');
 assert.ok(modelDoc.includes('## Priority-to-match evidence linkage')&&modelDoc.includes('intentionally narrower than a fuzzy stat/text match'),'Priority-to-match evidence semantics must remain documented');
 assert.ok(html.includes('id="gameArcPatterns"')&&html.includes('id="gameArcTurningPoints"')&&app.includes('function renderGameArcs('),'League must retain repeated @15→@25 game-arc analysis and recurring turning-point evidence');
@@ -696,7 +697,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v160'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v161'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
