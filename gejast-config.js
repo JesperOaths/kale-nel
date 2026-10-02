@@ -47,37 +47,47 @@
         return headers;
       };
       window.fetch = function(input, init) {
-        if (init && init.headers) {
-          const next = Object.assign({}, init, { headers: cleanHeaders(init.headers) });
-          return nativeFetch(input, next);
-        }
-        if (typeof Request !== 'undefined' && input instanceof Request) {
-          const cleaned = cleanHeaders(input.headers);
-          if (cleaned.get('Authorization') !== input.headers.get('Authorization')) {
-            const method = String(input.method || 'GET').toUpperCase();
-            // Never reconstruct a consumed request body. GET/HEAD are rebuilt
-            // bodyless; mutation requests are cloned only while their stream is
-            // still unused. This avoids "input stream is disturbed/locked".
-            if (method === 'GET' || method === 'HEAD') {
-              return nativeFetch(new Request(input.url, {
-                method,
-                headers: cleaned,
-                cache: input.cache,
-                credentials: input.credentials,
-                integrity: input.integrity,
-                keepalive: input.keepalive,
-                mode: input.mode,
-                redirect: input.redirect,
-                referrer: input.referrer,
-                referrerPolicy: input.referrerPolicy,
-                signal: input.signal
-              }), init);
-            }
-            if (!input.bodyUsed) {
-              try { return nativeFetch(new Request(input.clone(), { headers: cleaned }), init); } catch (_) {}
-            }
-            return nativeFetch(input, init);
+        const isRequest = typeof Request !== 'undefined' && input instanceof Request;
+        if (!isRequest) {
+          if (init && init.headers) {
+            const next = Object.assign({}, init, { headers: cleanHeaders(init.headers) });
+            return nativeFetch(input, next);
           }
+          return nativeFetch(input, init);
+        }
+
+        const method = String((init && init.method) || input.method || 'GET').toUpperCase();
+        const sourceHeaders = (init && init.headers) || input.headers;
+        const originalHeaders = new Headers(sourceHeaders || {});
+        const cleaned = cleanHeaders(originalHeaders);
+        const headersChanged = cleaned.get('Authorization') !== originalHeaders.get('Authorization');
+
+        // GET/HEAD are always rebuilt bodyless. This never touches the caller's
+        // Request stream and therefore cannot disturb a reusable Request object.
+        if (method === 'GET' || method === 'HEAD') {
+          const next = Object.assign({}, init || {}, {
+            method,
+            headers: headersChanged ? cleaned : originalHeaders
+          });
+          delete next.body;
+          return nativeFetch(input.url, next);
+        }
+
+        // For mutations, fetch a clone whenever the stream is still pristine.
+        // The original Request stays reusable for caller-owned retries. If a
+        // caller already consumed/locked its Request, do not attempt another
+        // clone/reconstruction here; only an explicit init.body can bypass it.
+        if (!input.bodyUsed) {
+          try {
+            const reusableClone = input.clone();
+            const next = Object.assign({}, init || {});
+            if (headersChanged || (init && init.headers)) next.headers = headersChanged ? cleaned : originalHeaders;
+            return nativeFetch(reusableClone, next);
+          } catch (_) {}
+        }
+        if (init && Object.prototype.hasOwnProperty.call(init, 'body')) {
+          const next = Object.assign({}, init, { headers: headersChanged ? cleaned : originalHeaders });
+          return nativeFetch(input.url, next);
         }
         return nativeFetch(input, init);
       };
