@@ -1392,6 +1392,16 @@ function practiceReplayItems(r,theme){
   const cats=practiceReplayCategories(theme),items=Array.isArray(r?.replayReviewQueue)?r.replayReviewQueue:[];
   return items.filter(x=>cats.includes(String(x.category||'').toLowerCase())).sort((a,b)=>Number(a.rank||999)-Number(b.rank||999)).slice(0,2);
 }
+function currentPriorityReplayIds(r){
+  const theme=topPracticeThemes(r)[0]||null,cats=practiceReplayCategories(theme),ids=new Set();
+  if(!cats.length)return ids;
+  (Array.isArray(r?.replayReviewQueue)?r.replayReviewQueue:[]).forEach(x=>{if(cats.includes(String(x.category||'').toLowerCase())&&x.matchId)ids.add(String(x.matchId));});
+  return ids;
+}
+function currentPriorityReplayLabel(r){
+  const theme=topPracticeThemes(r)[0]||null;
+  return theme?practiceThemeLabel(theme):'Current focus';
+}
 function practiceReplayHtml(r,theme){
   const items=practiceReplayItems(r,theme);if(!items.length)return'';
   return '<div class="practice-replay-links"><b>Review these moments</b>'+items.map(x=>
