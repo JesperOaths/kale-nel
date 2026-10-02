@@ -543,6 +543,11 @@ assert.ok(app.includes("directional behavior floor 5")&&app.includes("item-windo
 assert.ok(modelDoc.includes('## Top-level evidence health')&&modelDoc.includes('Do not collapse evidence health into one synthetic score'),'Top-level evidence-health semantics must remain documented');
 assert.ok(app.includes("comparisonCard('CS/min vs role opponent'")&&app.includes("comparisonCard('DPM vs role opponent'")&&app.includes("comparisonCard('First major timing vs role'"),'Direct-role comparison must use actual same-role opponents rather than external population references');
 assert.ok(html.includes('Raw selected-role output')&&app.includes('Raw selected-role sample')&&app.includes("tone-neutral"),'Raw KPI layer must remain neutral and self-descriptive rather than duplicate benchmark judgment');
+assert.ok(html.includes('id="laneEconomyNav"')&&html.includes('id="laneEconomyTitle"')&&app.includes('function renderRoleSectionCopy('),'League economy framing must be selected-role aware');
+assert.ok(app.includes("JUNGLE:{nav:'Jungle economy & tempo'")&&app.includes("SUPPORT:{nav:'Support economy & setup'")&&app.includes("MID:{nav:'Lane → map economy'"),'Jungle/Support/Mid reports must not retain generic laner-only economy copy');
+assert.ok(html.includes('<h3>Cohort context</h3>')&&app.includes('Trusted role peer')&&app.includes('Current mechanics')&&app.includes('Timeline coverage'),'Redundant role-sample space must expose report cohort/evidence context instead');
+assert.ok(!html.includes('<h3>Role sample</h3>'),'Role-pure reports must not waste champion-context space on a redundant role sample block');
+assert.ok(modelDoc.includes('## Role-aware report framing')&&modelDoc.includes('This block describes evidence construction and must not be scored as performance'),'Role-aware framing and cohort-context semantics must remain documented');
 assert.ok(modelDoc.includes('## Report information hierarchy')&&modelDoc.includes('Do not duplicate external ADC benchmark claims'),'Report layer responsibilities must remain documented');
 assert.ok(app.includes('analyzer coaching threshold 8')&&app.includes('analyzer coaching threshold 4')&&app.includes('timeline-complete games · analyzer coaching threshold 5'),'Prominent decision cards must disclose analyzer-aligned evidence floors');
 assert.ok(app.includes('function wilsonInterval(')&&app.includes('95% Wilson')&&css.includes('.decision-interval'),'Binomial decision rates must expose Wilson uncertainty bands rather than only point estimates');
@@ -762,7 +767,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v178'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v179'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
