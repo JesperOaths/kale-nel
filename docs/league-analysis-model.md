@@ -2055,3 +2055,24 @@ Eligible ledger entries are supported milestones already present in the report:
 Direct-role timing/economy language is gated by the same high-confidence role-peer requirement used elsewhere. If the role peer is withheld, own-item/shop milestones can remain visible but peer-relative deltas are omitted. Missing timeline evidence must produce an explicit unavailable state rather than a fabricated ledger.
 
 The ledger is chronological, collapsible by default, and capped to a compact set of key moments. It is an evidence navigation aid, not a claim that the listed moments caused the match result.
+
+
+## Live practice triggers
+
+Each displayed practice priority may include a compact **If → Then** trigger. The trigger is a usability layer over the already-selected coaching theme; it must not create a new diagnosis or outrank the analyzer.
+
+Trigger families are keyed to the existing grouped coaching themes:
+- early lane & matchup,
+- risk & death discipline,
+- resets & power windows,
+- mid-game routing,
+- objectives & closing,
+- teamfights & output,
+- consistency & session habits,
+- recovery play,
+- vision,
+- roaming.
+
+The trigger may inspect the representative/supporting titles to choose a narrower instruction inside that family (for example lead preservation vs farming inside early lane, or item-spike use vs first-reset quality inside reset/power). It must stay consistent with the analyzer's supported semantics and must not invent hidden game state.
+
+The goal is operational recall: a player should be able to recognize the condition in-game and execute one simple response. The full evidence, replay links, Next-5 metric and longer coaching action remain available immediately around it.
