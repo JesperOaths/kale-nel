@@ -715,3 +715,7 @@ ok(modelDoc.includes('## Support Quick Read role safety'), 'analysis documentati
 ok(app.includes("roleKey==='SUPPORT'")&&app.includes("Raw Support sample · vision volume, not vision quality")&&app.includes("{label:'Assists / game',value:fmt(s.avgAssists,1)"), 'Support KPI strip must remain role-aware and neutral');
 ok(app.includes("roleKey==='JUNGLE'")&&app.includes("Raw Jungle sample · vision volume, not objective control"), 'Jungle KPI strip must expose role-relevant raw vision context');
 ok(modelDoc.includes('## Role-aware raw KPI strip'), 'analysis documentation must preserve role-aware raw KPI semantics');
+ok(app.includes("if(reportRole==='SUPPORT')return[peerVpm,setupDelta,roam,adcLaneCost]"), 'Support chart family must follow role-specific evidence');
+ok(app.includes("if(reportRole==='JUNGLE')return[peerCsMin,itemTiming,impact,contest]"), 'Jungle chart family must follow farm/item/impact/objective evidence');
+ok(app.includes("trustedDirectPeer(g)&&hasNum(g?.itemSpikeDeltaVsOpponent)")&&app.includes("trustedDirectPeer(g)&&hasNum(g?.vision?.objectiveSetupDeltaVsOpponent)"), 'role chart peer metrics must fail closed when peer evidence is missing');
+ok(modelDoc.includes('## Role-aligned economy and tempo charts'), 'analysis documentation must preserve role-aligned chart semantics');
