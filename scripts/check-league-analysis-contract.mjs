@@ -357,6 +357,9 @@ ok(modelDoc.includes('Metric-specific same-role means also export their exact co
 ok(app.includes('Avg affordable → purchase delay'), 'frontend must surface recipe-aware first-major delay');
 ok(app.includes('Readiness delay vs peer'), 'frontend must surface recipe-aware direct-peer delay');
 ok(backend.includes('itemSpikeWindow'), 'first-major-item spike utilization model must remain in analyzer');
+ok(backend.includes('playerSupportEvidence=isNeutralObjectiveEvent(o)?(participantNearEvent(frames,whoId,o,2800)?"event_position_proximity":null):structureStrongInvolvementEvidence(o,frames,whoId,whoTeam,mapId)'), 'item-spike/conversion evidence must expose the support method');
+ok(backend.includes('obj.playerSupported!==true')&&backend.includes('supportEvidence:obj.playerSupportEvidence'), 'item-spike objective impact must require supported evidence and preserve attribution provenance');
+ok(app.includes('Supported spike-window impact')&&app.includes('supported objective/structure impact'), 'frontend must not present weak proximity as generic item-spike impact');
 ok(backend.includes('LEGENDSTRACKER_RANK_BASELINES_20260323')&&backend.includes('LEGENDSTRACKER_ADC_MULTIPLIERS_20260323'), 'ADC rank comparison must use an explicit external population benchmark corpus');
 ok(backend.includes('sourceCapturedPatch:"26.6"')&&backend.includes('calibrationAgeDays')&&backend.includes('freshnessStatus'), 'external rank reference must carry explicit capture-patch freshness metadata');
 ok(app.includes('function benchmarkFreshnessHtml(')&&app.includes('Historical reference'), 'historical population benchmark status must be prominent in the frontend');
