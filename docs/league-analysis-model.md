@@ -2187,3 +2187,19 @@ Objective presence/setup is not a smite-skill score, objective ownership score o
 TOP/MID/JUNGLE role lenses use the same selected-role, selected-queue, mechanics-filtered coaching cohort as the rest of the report. Thin samples remain neutral and explicitly descriptive. Direct-role comparisons always mean the actual same-role opponent from analyzed matches, not population rank averages.
 
 The role-specific lens panel must remain hidden for ADC and SUPPORT. ADC keeps its dedicated external rank-reference layer; SUPPORT keeps the separate roam/vision/objective Support lens.
+
+
+## Role-aware outcome fingerprint
+
+The win-versus-loss fingerprint is descriptive and must use a metric set appropriate to the selected role rather than applying one ADC-shaped set to every report.
+
+Current role sets:
+- **ADC:** role gold @15, DPM delta versus the actual ADC opponent, high-risk deaths/game, kill participation.
+- **TOP:** role gold @15, CS/min delta versus the actual TOP opponent, measured early-lead give-back, pre-objective side-lane deaths.
+- **MID:** role gold @15, first tracked impact timing versus the actual MID opponent, detected early-roam conversion, 15→25 objective reconnect.
+- **JUNGLE:** CS/min delta versus the actual enemy jungler, first tracked impact timing versus the enemy jungler, contested-objective presence, prior objective setup.
+- **SUPPORT:** detected roam conversion, measured ADC-vs-ADC CS change during Support roams, vision-action death rate, prior objective setup.
+
+Per-metric win/loss means may be shown when both outcome sides have at least 2 valid observations. Directional color and "largest standardized separation" require at least **3 valid observations in wins and 3 in losses for that metric**. Thin metrics remain neutral and explicitly say that directional color is withheld.
+
+Standardized separation remains Hedges-corrected and descriptive only. It is not a causal estimate, significance test or prescription to optimize the displayed metric.
