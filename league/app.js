@@ -5,7 +5,7 @@ const cfg=window.GEJAST_CONFIG||{};
 const API=(cfg.SUPABASE_URL||'')+'/functions/v1/printify-gildan-diff-diag-v1';
 const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
 const $=(id)=>document.getElementById(id);
-const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,matchHistoryFilter:'all',savedProfiles:[],selectedProfileId:'',selectedRole:'ADC'};
+const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,matchHistoryFilter:'all',matchHistoryArcKey:'',savedProfiles:[],selectedProfileId:'',selectedRole:'ADC'};
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const LEAGUE_WORKSPACE_KEY='bruisienator_public_workspace_v1';
@@ -1711,8 +1711,12 @@ function renderGameArcs(r){
   const repeated=[...groups.values()].filter(x=>x.games.length>=2).sort((a,b)=>b.games.length-a.games.length||String(a.label).localeCompare(String(b.label))).slice(0,6);
   patternBox.innerHTML=repeated.length?repeated.map(x=>{
     const wins=x.games.filter(g=>g.win).length,wr=100*wins/x.games.length,avgSwing=x.swings.reduce((a,b)=>a+b,0)/x.swings.length,lateRiskGames=x.games.filter(g=>Number(g.closing25?.highRiskDeaths||0)>0||Number(g.closing25?.costlyDeaths||0)>0).length;
-    return '<article class="game-arc-pattern"><span>Repeated transition · '+x.games.length+' games</span><strong>'+esc(x.label)+'</strong><div class="arc-pattern-stats"><b>'+esc(fmtPct(wr))+' wins</b><b>'+esc(signed(avgSwing,0))+'g avg 15→25 swing</b><b>'+lateRiskGames+' late-risk game'+(lateRiskGames===1?'':'s')+'</b></div><p>Outcome and risk are shown as context. The transition itself is direct-role gold state, not whole-team game state.</p></article>';
+    return '<article class="game-arc-pattern"><span>Repeated transition · '+x.games.length+' games</span><strong>'+esc(x.label)+'</strong><div class="arc-pattern-stats"><b>'+esc(fmtPct(wr))+' wins</b><b>'+esc(signed(avgSwing,0))+'g avg 15→25 swing</b><b>'+lateRiskGames+' late-risk game'+(lateRiskGames===1?'':'s')+'</b></div><p>Outcome and risk are shown as context. The transition itself is direct-role gold state, not whole-team game state.</p><button class="button secondary small arc-review-button" type="button" data-review-arc="'+esc(x.key)+'">Review these '+x.games.length+' games</button></article>';
   }).join(''):'<div class="bullet empty">No @15→@25 role-state transition repeats at least twice inside the current coaching cohort yet.</div>';
+  patternBox.querySelectorAll('[data-review-arc]').forEach(btn=>btn.addEventListener('click',()=>{
+    state.matchHistoryArcKey=String(btn.dataset.reviewArc||'');state.matchHistoryFilter='arc';state.matchHistoryLimit=10;renderMatchHistory(r);
+    $('match-history')?.scrollIntoView({behavior:'auto',block:'start'});
+  }));
 
   const timelineGames=games.filter(g=>g.timelineAvailable===true);
   const turning=ARC_TURNING_POINT_DEFS.map(d=>{
