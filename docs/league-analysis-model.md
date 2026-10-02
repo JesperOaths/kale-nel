@@ -2452,3 +2452,16 @@ Rolling Last-20 development comparisons must use metrics appropriate to the sele
 - **ADC:** retains the carry-oriented gold/CS/output/conversion family plus item timing and shared risk/recovery metrics.
 
 Every progress metric continues to require its own current and previous sample floor before a directional card is shown. A metric changing across two overlapping rolling Last-20 windows is descriptive development evidence only, not an independent before/after experiment.
+
+
+## Role-aware session habit model
+
+Session grouping remains descriptive: a session continues while the gap after the prior game end is at most 90 minutes, and the quick-requeue comparison uses at most 45 minutes. The model now carries per-subgroup KP and vision/min alongside CS/min, DPM, role-gold @15 and timeline risk, with explicit valid-game counts for each metric.
+
+Presentation follows the selected role:
+
+- **SUPPORT:** subgroup KP, vision/min and risky-death rate; supported deltas compare KP/VPM and risk only when both session groups have at least two valid observations for that metric.
+- **JUNGLE:** subgroup CS/min, KP, vision/min and risky-death rate; supported deltas compare CS/min/KP and risk with the same paired-sample rule.
+- **ADC / MID / TOP:** retain role-gold @15, DPM, CS/min and risk, with the new CS/min paired delta available alongside the existing gold/DPM reads.
+
+Session deltas are behavioral context only. They must not be framed as fatigue, tilt, mental-state diagnosis, or causation.
