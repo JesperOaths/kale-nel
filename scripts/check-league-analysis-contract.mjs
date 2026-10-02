@@ -719,3 +719,7 @@ ok(app.includes("if(reportRole==='SUPPORT')return[peerVpm,setupDelta,roam,adcLan
 ok(app.includes("if(reportRole==='JUNGLE')return[peerCsMin,itemTiming,impact,contest]"), 'Jungle chart family must follow farm/item/impact/objective evidence');
 ok(app.includes("trustedDirectPeer(g)&&hasNum(g?.itemSpikeDeltaVsOpponent)")&&app.includes("trustedDirectPeer(g)&&hasNum(g?.vision?.objectiveSetupDeltaVsOpponent)"), 'role chart peer metrics must fail closed when peer evidence is missing');
 ok(modelDoc.includes('## Role-aligned economy and tempo charts'), 'analysis documentation must preserve role-aligned chart semantics');
+ok(app.includes("Vision/min vs Support peer")&&app.includes("behaviorSummary.avgSupportRoamAdcLaneCostCs"), 'Support progress comparison must follow Support evidence rather than carry metrics');
+ok(app.includes("First tracked impact vs Jungle")&&app.includes("peerComparison.avgImpactDeltaMin"), 'Jungle progress comparison must follow Jungle tempo evidence');
+ok(app.includes("Pre-objective side-lane deaths / game")&&app.includes("behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame"), 'Top progress comparison must retain side-lane risk evidence');
+ok(modelDoc.includes('## Role-specific rolling progress comparison'), 'analysis documentation must preserve role-specific rolling progress semantics');
