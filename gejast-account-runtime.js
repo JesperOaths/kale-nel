@@ -115,13 +115,9 @@
     // Prefer the deployment snapshot synchronously; live RPC is background enrichment only.
     const immediate=normalizeNames([...snapshot,...cached]);
     if(immediate.length){
-      try{
-        const loader=window.GEJAST_LOGIN_NAMES_FALLBACK&&window.GEJAST_LOGIN_NAMES_FALLBACK.load;
-        if(typeof loader==='function') Promise.resolve(loader(currentScope)).then((names)=>{
-          const live=normalizeNames(names);
-          if(live.length) writeLoginCache(normalizeNames([...immediate,...live]));
-        }).catch(()=>{});
-      }catch(_){}
+      // Login boot is intentionally network-independent. The deployment snapshot
+      // is generated from the active-name RPC and is already validated at deploy
+      // time; do not create a background RPC storm just to re-confirm it.
       return immediate;
     }
     try {
