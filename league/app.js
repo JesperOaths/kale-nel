@@ -713,6 +713,7 @@ function renderReport(raw,sourceKind){
   renderReportDrivers(r);
   renderEvidenceHealth(r);
   renderKpis(r);
+  renderSupportRoleLens(r);
   renderOutcomeFingerprint(r);
   renderRankRadar(r);
   renderVisualSummary(r);
@@ -848,6 +849,41 @@ function outcomeFingerprintCard(label,wins,losses,unit,inverse=false){
   const deltaText=delta==null?'Not enough valid observations.':('Observed mean gap: '+(unit==='percent'?signed(delta,1)+' pp':unit==='gold'?signed(delta,0)+'g':signed(delta,unit==='num'?2:0)+(unit==='dpm'?' DPM':'')));
   return {label,wins,losses,delta,effect,tone,html:'<article class="outcome-fingerprint-card tone-'+tone+'"><span>'+esc(label)+'</span><div><strong>'+esc(fmtValue(wins?.mean))+'</strong><small>in wins · n='+Number(wins?.n||0)+'</small></div><div><strong>'+esc(fmtValue(losses?.mean))+'</strong><small>in losses · n='+Number(losses?.n||0)+'</small></div><p>'+esc(deltaText)+(hasNum(effect)?' · Hedges-corrected gap '+fmt(effect,2):'')+'</p></article>'};
 }
+
+function supportLensCard(label,value,detail,tone='neutral',ready=true,interval=null){
+  const effective=ready?tone:'neutral',hasInterval=interval&&hasNum(interval.low)&&hasNum(interval.high);
+  return '<article class="support-lens-card tone-'+effective+(ready?'':' thin-evidence')+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong>'+
+    (hasInterval?'<div class="support-lens-interval"><i style="left:'+clamp(interval.low,0,100)+'%;width:'+(clamp(interval.high,0,100)-clamp(interval.low,0,100))+'%"></i><b style="left:'+clamp(Number(String(value).replace(/[^0-9.-]/g,'')),0,100)+'%"></b></div><small>95% Wilson '+esc(fmtPct(interval.low))+'–'+esc(fmtPct(interval.high))+'</small>':'')+
+    '<p>'+esc(detail)+(ready?'':' · thin sample — descriptive only')+'</p></article>';
+}
+function renderSupportRoleLens(r){
+  const panel=$('supportRoleLensPanel'),box=$('supportRoleLens'),note=$('supportRoleLensNote');if(!panel||!box)return;
+  const role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole);
+  if(role!=='SUPPORT'){panel.hidden=true;box.innerHTML='';if(note)note.textContent='';return;}
+  const b=r.behaviorSummary||{},roamN=Number(b.roamAttempts||0),roamRate=hasNum(b.roamSuccessRate)?Number(b.roamSuccessRate):null,roamReady=roamN>=4;
+  const adcCostN=Number(b.supportRoamAdcCostGames||0),adcCost=hasNum(b.avgSupportRoamAdcLaneCostCs)?Number(b.avgSupportRoamAdcLaneCostCs):null,harmful=Number(b.supportRoamsHurtingAdc||0),costReady=adcCostN>=4||harmful>=2;
+  const visionN=Number(b.visionActions||0),visionDeaths=Number(b.visionActionDeaths||0),visionRate=hasNum(b.visionActionDeathRate)?Number(b.visionActionDeathRate):null,visionReady=visionN>=12,highRiskVision=Number(b.highRiskVisionActionDeaths||0),unsupportedVision=Number(b.unsupportedVisionActionDeaths||0);
+  const setupN=Number(b.neutralObjectiveJoins||0),setupHits=Number(b.earlySetupObjectiveJoins||0),setupRate=hasNum(b.earlySetupObjectiveJoinRate)?Number(b.earlySetupObjectiveJoinRate):null,setupReady=setupN>=5;
+  const contestN=Number(b.objectiveContestEncounters??b.neutralObjectiveEvents??0),contestHits=Number(b.objectiveContestJoinedEncounters??b.neutralObjectiveJoins??0),contestRate=hasNum(b.objectiveContestPresenceRate??b.objectiveJoinRate)?Number(b.objectiveContestPresenceRate??b.objectiveJoinRate):null,contestReady=contestN>=5;
+  const roamTone=roamRate==null?'neutral':roamRate<45?'bad':roamRate>=65?'good':'neutral';
+  const costTone=harmful>=2?'bad':costReady&&adcCost!=null&&adcCost>=-2&&roamRate!=null&&roamRate>=60?'good':'neutral';
+  const visionTone=visionDeaths>=3&&(highRiskVision>=2||unsupportedVision>=2)?'bad':visionN>=18&&visionDeaths===0?'good':'neutral';
+  const setupTone=setupRate==null?'neutral':setupRate<45?'bad':setupRate>=70?'good':'neutral';
+  const contestTone=contestRate==null?'neutral':contestRate<50?'bad':contestRate>=70?'good':'neutral';
+  box.innerHTML=[
+    supportLensCard('Roam conversion',roamRate==null?'n/a':fmtPct(roamRate),roamN+' detected pre-major-objective-era departures · analyzer floor 4',roamTone,roamReady),
+    supportLensCard('ADC lane cost during roams',adcCost==null?'n/a':signed(adcCost,1)+' CS',adcCostN+' ADC-vs-ADC lane-cost windows · '+harmful+' lost ≥6 CS without kill/assist/objective return',costTone,costReady),
+    supportLensCard('Vision-action safety',visionRate==null?'n/a':fmtPct(visionRate),visionDeaths+' deaths after '+visionN+' tracked ward placements/clears · '+highRiskVision+' high-risk · '+unsupportedVision+' unsupported',visionTone,visionReady,wilsonInterval(visionDeaths,visionN)),
+    supportLensCard('Prior objective setup',setupRate==null?'n/a':fmtPct(setupRate),setupHits+' / '+setupN+' joined neutral-objective encounters already near the area 45–105s before the event',setupTone,setupReady,wilsonInterval(setupHits,setupN)),
+    supportLensCard('Contested objective presence',contestRate==null?'n/a':fmtPct(contestRate),contestHits+' / '+contestN+' supported team-contested neutral-objective encounters',contestTone,contestReady,wilsonInterval(contestHits,contestN))
+  ].join('');
+  if(note){
+    const read=harmful>=2?'Repeated support roams are measurably expensive for the ADC lane; review whether the ADC could safely crash, reset or collect before you leave.':roamReady&&roamRate!=null&&roamRate>=65&&costReady&&adcCost!=null&&adcCost>=-2?'Roams are converting while preserving ADC lane economy in the measured windows; keep the same wave-preparation rule.':'Use the cards independently: a successful roam can still be expensive for bot lane, and low lane cost does not prove the roam created value.';
+    note.textContent=read+' Support roam cost uses change in ADC-vs-ADC CS differential during the detected support roam; it is not a claim that every CS change was caused solely by the Support.';
+  }
+  panel.hidden=false;
+}
+
 function renderOutcomeFingerprint(r){
   const box=$('outcomeFingerprint'),note=$('outcomeFingerprintNote');if(!box)return;
   const games=reportCoachingGames(r),wins=games.filter(g=>g.win),losses=games.filter(g=>!g.win);
