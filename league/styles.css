@@ -1723,3 +1723,14 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 @media(max-width:950px){.phase-diagnostic-grid{grid-template-columns:1fr}}
 
 .arc-review-button{width:100%;margin-top:10px}
+
+.decision-meter{position:relative}
+.decision-meter .decision-fill{position:absolute;left:0;top:0;bottom:0;display:block;background:#1d5f91;opacity:.28}
+.uncertainty-meter{overflow:visible}
+.uncertainty-meter .decision-interval{
+  position:absolute;top:3px;height:5px;border-radius:999px;background:#1d5f91;opacity:.72;z-index:2
+}
+.uncertainty-meter .decision-point{
+  position:absolute;top:-3px;width:3px;height:17px;border-radius:999px;background:#17130f;transform:translateX(-1px);z-index:3
+}
+.decision-card.thin-evidence .uncertainty-meter{opacity:.55}
