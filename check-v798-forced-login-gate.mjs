@@ -55,14 +55,17 @@ assert(worker.includes("PUBLIC_AUTH_ENTRY_DOCUMENTS"),'login/home/request/activa
 assert(worker.includes("'Cache-Control', 'no-store, max-age=0, must-revalidate'"),'fresh public bootstrap documents must bypass stale edge/browser HTML caches');
 assert(worker.includes("method: request.method")&&worker.includes("redirect: 'manual'"),'public bootstrap origin requests must be rebuilt bodyless instead of cloning an incoming request stream');
 assert(!worker.includes("const originRequest = new Request(originUrl.toString(), request);"),'public bootstrap helper must not reuse the incoming Request ReadableStream');
+assert(worker.includes("const method = String(request.method || 'GET').toUpperCase()"),'public origin proxy must normalize request method before forwarding');
+assert(worker.includes("method === 'GET' || method === 'HEAD'"),'all public GET/HEAD origin requests must be rebuilt bodyless');
+assert(!worker.includes("if (!noStore) return withPublicSecurityHeaders(await fetch(request));"),'normal public GET/HEAD assets must not reuse the incoming Request stream');
 assert(worker.includes("request.method === 'HEAD' ? null : response.body"),'HEAD bootstrap responses must stay bodyless while GET forwards the origin stream once');
-assert(worker.includes("const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r16'"),'login bootstrap must have an independent public cache identity');
-assert(worker.includes("const PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r12'"),'shop bootstrap must retain its independent public cache identity');
-assert(worker.includes("const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-r2'"),'League bootstrap must have an independent public cache identity');
+assert(worker.includes("const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r17'"),'login bootstrap must have an independent public cache identity');
+assert(worker.includes("const PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r13'"),'shop bootstrap must retain its independent public cache identity');
+assert(worker.includes("const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-r3'"),'League bootstrap must have an independent public cache identity');
 assert(worker.includes("cacheBustValue = ADMIN_BUILD"),'public origin helper must accept an explicit cache-bust value');
 assert(worker.includes("cacheBustValue: PUBLIC_LEAGUE_ORIGIN_BUILD"),'League document refresh must not inherit the admin build identity');
 assert(worker.includes("cacheBustValue: isShopDocument ? PUBLIC_SHOP_ORIGIN_BUILD : PUBLIC_AUTH_ORIGIN_BUILD"),'shop/login document refreshes must use their own public build identities');
-assert(worker.includes("return new Response(response.body"),'public no-store responses must forward the untouched origin stream once');
+assert(worker.includes("return new Response(method === 'HEAD' ? null : response.body"),'public responses must forward the origin stream at most once and keep HEAD bodyless');
 const missing=[]; const leaked=[]; const publicGateLeaks=[]; let protectedCount=0;
 for(const file of walk(process.cwd())){
   const r=rel(file);const body=fs.readFileSync(file,'utf8');
