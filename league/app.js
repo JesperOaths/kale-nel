@@ -799,7 +799,7 @@ function renderPriorityEvidenceChain(r){
 }
 function renderReportDrivers(r){
   const box=$('reportDrivers');if(!box)return;
-  const priorities=(r.priorityThemes?.length?r.priorityThemes:r.recentFocus)||[],strengths=r.overallHighlights||[];
+  const priorities=topPracticeThemes(r),strengths=r.overallHighlights||[];
   const weak=reportInsightParts(priorities[0],'Primary limiter'),strong=reportInsightParts(strengths[0],'Bankable strength'),direction=recentDirectionSummary(r),priorityIds=currentPriorityReplayIds(r);
   const card=(kind,title,value,copy,action,tone,actionLabel='Next',meta='',footer='')=>'<article class="report-driver-card '+kind+' tone-'+tone+'"><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong><p>'+esc(copy||'No high-confidence supporting sentence is available yet.')+'</p>'+(meta?'<small class="driver-evidence-meta">'+esc(meta)+'</small>':'')+(action?'<div><b>'+esc(actionLabel)+':</b> '+esc(action)+'</div>':'')+footer+'</article>';
   const priorityFooter=priorityIds.size?'<button class="button secondary small driver-review-button" type="button" data-open-priority-history>Review '+priorityIds.size+' matching game'+(priorityIds.size===1?'':'s')+'</button>':'';
@@ -1284,9 +1284,13 @@ function practiceThemeKey(x){
 function practiceThemeLabel(x){
   return String(x?.title||x?.label||x?.category||x?.themeKey||x?.key||'Practice focus').trim();
 }
+function orderedPriorityThemes(report){
+  const grouped=Array.isArray(report?.priorityThemes)&&report.priorityThemes.length?report.priorityThemes:null;
+  if(grouped)return grouped.filter(x=>x&&typeof x==='object'&&x.action);
+  return (Array.isArray(report?.recentFocus)?report.recentFocus:[]).filter(x=>x&&typeof x==='object'&&x.action).sort((a,b)=>Number(a.priority||9)-Number(b.priority||9)||Number(b.score||0)-Number(a.score||0));
+}
 function topPracticeThemes(report){
-  const source=(report?.priorityThemes?.length?report.priorityThemes:report?.recentFocus)||[];
-  return source.filter(x=>x&&typeof x==='object'&&x.action).sort((a,b)=>Number(a.priority||9)-Number(b.priority||9)||Number(b.score||0)-Number(a.score||0)).slice(0,3);
+  return orderedPriorityThemes(report).slice(0,3);
 }
 function practiceContinuityHtml(current,previous,context,targetOutcome){
   if(!previous)return '';
@@ -1459,8 +1463,7 @@ function practiceReplayHtml(r,theme){
 }
 
 function renderPracticePlan(r){
-  const source=(r.priorityThemes?.length?r.priorityThemes:r.recentFocus)||[],targets=Array.isArray(r.practiceTargets)?r.practiceTargets:[];
-  const focus=source.filter(x=>x&&typeof x==='object'&&x.action).sort((a,b)=>Number(a.priority||9)-Number(b.priority||9)||Number(b.score||0)-Number(a.score||0)).slice(0,3);
+  const targets=Array.isArray(r.practiceTargets)?r.practiceTargets:[],focus=topPracticeThemes(r);
   if(!focus.length){
     $('practicePlan').innerHTML='<div class="practice-empty">No strong improvement priority has enough evidence yet. Fetch/analyze more timeline-complete games rather than forcing a conclusion.</div>';
     return;
