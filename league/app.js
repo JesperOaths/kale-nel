@@ -1228,11 +1228,40 @@ function progressComparisonContext(current,previous){
 function progressSampleCount(report,spec){
   const v=pathValue(report,spec.samplePath||'summary.games');return hasNum(v)?Number(v):0;
 }
+
+function practiceThemeKey(x){
+  return String(x?.themeKey||x?.key||x?.category||x?.title||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+}
+function practiceThemeLabel(x){
+  return String(x?.title||x?.label||x?.category||x?.themeKey||x?.key||'Practice focus').trim();
+}
+function topPracticeThemes(report){
+  const source=(report?.priorityThemes?.length?report.priorityThemes:report?.recentFocus)||[];
+  return source.filter(x=>x&&typeof x==='object'&&x.action).sort((a,b)=>Number(a.priority||9)-Number(b.priority||9)||Number(b.score||0)-Number(a.score||0)).slice(0,3);
+}
+function practiceContinuityHtml(current,previous,context,targetOutcome){
+  if(!previous)return '';
+  if(!context?.comparable)return '<article class="practice-continuity-summary withheld"><span>Practice-plan continuity</span><strong>Comparison withheld</strong><p>'+esc(context?.reason||'The saved reports are not in a comparable coaching context.')+'</p></article>';
+  const cur=topPracticeThemes(current),prev=topPracticeThemes(previous),curMap=new Map(cur.map(x=>[practiceThemeKey(x),x])),prevMap=new Map(prev.map(x=>[practiceThemeKey(x),x]));
+  const retained=[...curMap.keys()].filter(k=>k&&prevMap.has(k)),added=[...curMap.keys()].filter(k=>k&&!prevMap.has(k)),dropped=[...prevMap.keys()].filter(k=>k&&!curMap.has(k));
+  const newGames=reportNewMatchCount(current,previous),window=5,early=newGames<window;
+  const rows=Array.isArray(targetOutcome?.rows)?targetOutcome.rows:[],met=rows.filter(x=>x.status==='met').length,closer=rows.filter(x=>x.status==='moving closer').length,away=rows.filter(x=>x.status==='moved away').length,pending=rows.filter(x=>x.pending).length;
+  const state=retained.length>=2?'Focus mostly retained':retained.length===1?'Focus partly shifted':'Focus set changed';
+  const labels=(keys,map)=>keys.map(k=>practiceThemeLabel(map.get(k))).join(' · ');
+  return '<div class="practice-continuity-grid">'+
+    '<article class="practice-continuity-summary '+(early?'early':'')+'"><span>Practice-plan continuity</span><strong>'+esc(state)+'</strong><p>'+retained.length+' of '+Math.max(1,Math.min(3,prev.length))+' previous top priorities remain in the current top three.'+(early?' Only '+newGames+' / '+window+' new games have entered, so treat this as an early read.':' The Next-5 review window has enough new games for a fuller continuity read.')+'</p></article>'+
+    '<article class="practice-continuity-summary"><span>Retained focus</span><strong>'+esc(String(retained.length))+' theme'+(retained.length===1?'':'s')+'</strong><p>'+esc(retained.length?labels(retained,curMap):'No previous top-three priority remains in the current top three.')+'</p></article>'+
+    '<article class="practice-continuity-summary"><span>New / dropped focus</span><strong>'+added.length+' new · '+dropped.length+' dropped</strong><p>'+(added.length?'<b>New:</b> '+esc(labels(added,curMap))+'. ':'')+(dropped.length?'<b>Dropped:</b> '+esc(labels(dropped,prevMap))+'.':'No prior top-three focus dropped out.')+'</p></article>'+
+    '<article class="practice-continuity-summary"><span>Previous target check</span><strong>'+met+' met · '+closer+' closer</strong><p>'+away+' moved away · '+pending+' pending. Dropping from the top-three plan is not treated as proof that a problem was solved.</p></article>'+
+  '</div>';
+}
+
 function renderProgressComparison(current,previous,previousAt){
   const note=$('progressComparisonNote');
   if(!previous){
     $('progressComparisonPanel').hidden=true;
     if($('practiceOutcome'))$('practiceOutcome').innerHTML='';
+    if($('practiceContinuity'))$('practiceContinuity').innerHTML='';
     if(note)note.textContent='';
     return;
   }
@@ -1280,6 +1309,7 @@ function renderProgressComparison(current,previous,previousAt){
   }
   const targetOutcome=context.comparable?previousPracticeTargetOutcomes(current,previous):{rows:[],reason:'Previous Next-5 targets are not scored because '+context.reason.toLowerCase()};
   const targetRows=targetOutcome.rows||[];
+  if($('practiceContinuity'))$('practiceContinuity').innerHTML=practiceContinuityHtml(current,previous,context,targetOutcome);
   if($('practiceOutcome')){
     $('practiceOutcome').innerHTML=targetRows.length?'<div class="target-outcome-head"><strong>Previous Next-5 targets</strong><small>Descriptive check against the exact saved metric path and goal.</small></div><div class="progress-comparison-grid">'+
       targetRows.map(x=>'<article class="progress-comparison-card '+x.cls+(x.pending?' pending-target':'')+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.status)+'</strong><p>Now '+esc(x.current)+' · baseline '+esc(x.baseline)+' · target '+esc(x.goal)+'</p><small>'+esc(String(x.newGames))+' / '+esc(String(x.windowGames))+' new games · valid n '+esc(String(x.currentSample))+' / '+esc(String(x.minSample))+' required</small></article>').join('')+'</div>':
