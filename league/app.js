@@ -1712,6 +1712,62 @@ function arcFunnelCard(kind,label,games,transitions){
   }
   return '<article class="game-arc-funnel tone-'+(kind==='ahead'?'good':kind==='behind'?'bad':'neutral')+'"><span>'+esc(label)+' · '+n+' game'+(n===1?'':'s')+'</span><strong>'+esc(headline)+'</strong><div>'+facts.map(x=>'<b>'+esc(x)+'</b>').join('')+'</div><p>Descriptive selected-role state conversion; @15 and @25 refer to direct-role gold, not total team gold.</p></article>';
 }
+
+function matchEvidenceLedgerHtml(r,g){
+  if(g.timelineAvailable!==true)return '<details class="history-ledger"><summary>Chronological evidence</summary><div class="history-ledger-empty">Timeline evidence is unavailable for this match.</div></details>';
+  const peerOk=trustedDirectPeer(g),events=[],add=(time,kind,title,detail,tone='neutral',tab='')=>{
+    if(!hasNum(time))return;
+    events.push({time:Number(time),kind:String(kind||'evidence'),title:String(title||'Evidence'),detail:String(detail||''),tone,tab});
+  };
+  const reset=g.firstResetSequence;
+  if(reset&&hasNum(reset.time)){
+    let detail='Committed spend '+(hasNum(reset.spent)?fmtInt(reset.spent)+'g':'n/a');
+    if(reset.spendApproximate)detail+=' · spend estimate approximate';
+    if(peerOk&&reset.measured){
+      if(reset.deathInWindow)detail+=' · post-reset economy comparison disrupted by death';
+      else detail+=' · role gold swing '+(hasNum(reset.goldSwingAfter)?signed(reset.goldSwingAfter,0)+'g':'n/a')+' · CS swing '+(hasNum(reset.csSwingAfter)?signed(reset.csSwingAfter,1):'n/a');
+    }else if(!peerOk)detail+=' · direct-role economy comparison withheld';
+    add(reset.time,'reset','First meaningful shop',detail,reset.deathInWindow?'bad':reset.economyLoss?'bad':reset.economyGain?'good':'neutral','resets');
+  }
+  if(g.firstMajorItem&&hasNum(g.firstMajorItem.time)){
+    const detail=(g.firstMajorItem.name||'First major item')+(peerOk&&hasNum(g.itemSpikeDeltaVsOpponent)?' · '+(Number(g.itemSpikeDeltaVsOpponent)<0?fmt(Math.abs(Number(g.itemSpikeDeltaVsOpponent)),1)+'m before role peer':Number(g.itemSpikeDeltaVsOpponent)>0?fmt(Math.abs(Number(g.itemSpikeDeltaVsOpponent)),1)+'m after role peer':'same minute as role peer'):'');
+    add(g.firstMajorItem.time,'item','First major online',detail,peerOk&&hasNum(g.itemSpikeDeltaVsOpponent)?(Number(g.itemSpikeDeltaVsOpponent)<-.75?'good':Number(g.itemSpikeDeltaVsOpponent)>.75?'bad':'neutral'):'neutral','resets');
+  }
+  if(g.secondMajorItem&&hasNum(g.secondMajorItem.time)){
+    const detail=(g.secondMajorItem.name||'Second major item')+(peerOk&&hasNum(g.secondMajorItemDeltaVsOpponent)?' · '+signed(g.secondMajorItemDeltaVsOpponent,1)+'m vs role peer':'');
+    add(g.secondMajorItem.time,'item','Second major online',detail,'neutral','resets');
+  }
+  if(peerOk&&g.earlyLeadWindow?.eligible&&hasNum(g.earlyLeadWindow.peakMin)){
+    const peak=Number(g.earlyLeadWindow.peakGoldDiff||0),give=!!g.earlyLeadWindow.giveback;
+    add(g.earlyLeadWindow.peakMin,'lane','Measured early role lead peaked',signed(peak,0)+'g vs role peer'+(give?' · later gave back ≥500g by @15':' · no ≥500g give-back by @15'),give?'bad':'good','macro');
+  }
+  if(peerOk&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)){
+    const lane=arcRoleGoldState(g,15);
+    add(15,'checkpoint','Role state @15',lane.label+' · '+signed(g.goldDiff15,0)+'g vs role peer',lane.tone,'macro');
+  }
+  if(hasNum(g.impactTimeMin)){
+    const delta=peerOk&&hasNum(g.impactDeltaVsOpponent)?Number(g.impactDeltaVsOpponent):null;
+    add(g.impactTimeMin,'impact','First tracked impact',String(g.impactType||'kill / assist / objective').replaceAll('_',' ')+(delta==null?'':delta<0?' · '+fmt(Math.abs(delta),1)+'m before role peer':delta>0?' · '+fmt(Math.abs(delta),1)+'m after role peer':' · same minute as role peer'),delta==null?'neutral':delta<-1.5?'good':delta>1.5?'bad':'neutral','macro');
+  }
+  if(peerOk&&g.itemSpikeWindow?.eligible){
+    for(const ev of (g.itemSpikeWindow.events||[]).slice(0,3)){
+      add(ev.time,'power window',ev.type==='objective'?'Earlier-item objective impact':'Earlier-item combat impact',ev.type==='objective'&&ev.objectiveType?String(ev.objectiveType):'Tracked before role-opponent first-major parity','good','resets');
+    }
+  }
+  if(peerOk&&g?.phaseRules?.closing25Comparable!==false&&hasNum(g.goldDiff25)){
+    const state25=arcRoleGoldState(g,25);
+    add(25,'checkpoint','Role state @25',state25.label+' · '+signed(g.goldDiff25,0)+'g vs role peer',state25.tone,'macro');
+  }
+  const reviewItems=(Array.isArray(r?.replayReviewQueue)?r.replayReviewQueue:[]).filter(x=>String(x.matchId||'')===String(g.matchId||''));
+  reviewItems.forEach(x=>add(x.minute,'review #'+String(x.rank||''),x.title||'Ranked replay moment',x.evidence||'',Number(x.rank||999)<=3?'bad':'neutral',x.tab||'macro'));
+  events.sort((a,b)=>a.time-b.time||String(a.title).localeCompare(String(b.title)));
+  const seen=new Set(),unique=events.filter(x=>{const key=Math.round(x.time*20)+'|'+x.title.toLowerCase();if(seen.has(key))return false;seen.add(key);return true;}).slice(0,14);
+  if(!unique.length)return '<details class="history-ledger"><summary>Chronological evidence</summary><div class="history-ledger-empty">No supported key moments are available beyond the summary cards.</div></details>';
+  return '<details class="history-ledger"><summary>Chronological evidence · '+unique.length+' key moment'+(unique.length===1?'':'s')+'</summary><div class="history-ledger-list">'+unique.map(x=>
+    '<div class="history-ledger-row tone-'+x.tone+'"><time>'+esc(fmt(x.time,1))+'m</time><div><span>'+esc(x.kind)+'</span><strong>'+esc(x.title)+'</strong><p>'+esc(x.detail||'')+'</p></div>'+(x.tab?'<button class="button secondary tiny" type="button" data-ledger-review-match="'+esc(g.matchId||'')+'" data-ledger-review-tab="'+esc(x.tab)+'">Evidence</button>':'')+'</div>'
+  ).join('')+'</div></details>';
+}
+
 function matchReplayReviewHtml(r,g){
   const items=(Array.isArray(r?.replayReviewQueue)?r.replayReviewQueue:[]).filter(x=>String(x.matchId||'')===String(g.matchId||'')).slice(0,2);
   if(!items.length)return '';
@@ -1815,6 +1871,7 @@ function matchHistoryRow(g,index,displayIndex,r){
       gameArcStripHtml(g)+
       '<div class="history-signal-grid">'+signals.map(x=>'<div class="history-signal tone-'+x.tone+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><p>'+esc(x.copy)+'</p></div>').join('')+'</div>'+
       '<div class="history-coaching-read tone-'+judge.tone+'"><span>Game-level coaching read</span><strong>'+esc(judge.title)+'</strong><p>'+esc(judge.evidence||'No additional evidence sentence was generated.')+'</p>'+(judge.action?'<div><b>Next time:</b> '+esc(judge.action)+'</div>':'')+'</div>'+
+      matchEvidenceLedgerHtml(r,g)+
       matchReplayReviewHtml(r,g)+
       '<div class="history-actions"><button class="button secondary small" type="button" data-open-full-match="'+esc(g.matchId||'')+'">Open full match evidence</button><small>Full evidence includes macro, resets, vision, fights, phases, deaths, objectives and map context.</small></div>'+
     '</div>'+
@@ -1888,6 +1945,9 @@ function renderMatchHistory(r){
   }));
   list.querySelectorAll('[data-open-review-match]').forEach(btn=>btn.addEventListener('click',ev=>{
     ev.stopPropagation();const matchId=btn.dataset.openReviewMatch,tab=btn.dataset.reviewTab||'macro';if(matchId)openReplayReviewMatch(matchId,tab);
+  }));
+  list.querySelectorAll('[data-ledger-review-match]').forEach(btn=>btn.addEventListener('click',ev=>{
+    ev.stopPropagation();const matchId=btn.dataset.ledgerReviewMatch,tab=btn.dataset.ledgerReviewTab||'macro';if(matchId)openReplayReviewMatch(matchId,tab);
   }));
 }
 function renderGames(r){
