@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.107'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.108'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -819,7 +819,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v206'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v207'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -933,3 +933,9 @@ assert.ok(app.includes('function practiceTargetSampleRequirements(t){')&&app.inc
 assert.ok(app.includes("current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole")&&app.includes("previous?.dataQuality?.selectedRole||previous?.coachingSummary?.primaryRole"),'Practice-target follow-up must use canonical selected-role sources');
 assert.ok(app.includes("x.sampleSummary||('valid n '"),'Previous-target UI must expose exact evidence requirements while retaining legacy fallback');
 assert.ok(modelDoc.includes('explicit `sampleRequirements`')&&modelDoc.includes('4 roam attempts across 3 games'),'Next-5 documentation must preserve multi-denominator scoring semantics');
+assert.ok(api.includes('roamLaneCostMeasuredGames')&&api.includes('supportRoamsHurtingAdcGames'),'Analyzer must distinguish roam window counts from contributing-game spread');
+assert.ok(api.includes('"behaviorSummary.avgRoamLaneCostCs":[{path:"behaviorSummary.roamLaneCostGames",min:4},{path:"behaviorSummary.roamLaneCostMeasuredGames",min:3}]'),'Generic roam practice targets must require measured lane-movement games, not merely games with any roam');
+assert.ok(app.includes('harmRepeated:harmWindows>=2&&harmGames>=2'),'Support harmful-roam pattern must repeat across at least two games');
+assert.ok(app.includes("c.harmRepeated?'bad'"),'Stable Support negative styling must consume the cross-game harm gate');
+assert.ok(app.includes("current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole")&&app.includes("previous?.dataQuality?.selectedRole||previous?.coachingSummary?.primaryRole"),'Rolling comparison compatibility must use the selected role before legacy role fallbacks');
+assert.ok(modelDoc.includes('Stable harmful Support-roam styling requires at least two harmful ADC lane-movement windows occurring in at least two different games'),'Cross-game harmful-roam semantics must remain documented');
