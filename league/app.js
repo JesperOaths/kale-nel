@@ -714,6 +714,7 @@ function renderReport(raw,sourceKind){
   renderEvidenceHealth(r);
   renderKpis(r);
   renderSupportRoleLens(r);
+  renderRoleSpecificLens(r);
   renderOutcomeFingerprint(r);
   renderRankRadar(r);
   renderVisualSummary(r);
@@ -881,6 +882,67 @@ function renderSupportRoleLens(r){
     const read=costReady&&repeatedHarm?'Repeated measured support roams are associated with substantial ADC-vs-ADC CS loss; review whether the ADC could safely crash, reset or collect before you leave.':repeatedHarm&&!costReady?'Two or more harmful roam windows are visible, but the lane-cost sample is still below the four-window evidence floor; treat this as a review cue, not a stable pattern.':roamReady&&roamRate!=null&&roamRate>=65&&costReady&&adcCost!=null&&adcCost>=-2?'Roams are converting while preserving ADC lane economy in the measured windows; keep the same wave-preparation rule.':'Use the cards independently: a successful roam can still be expensive for bot lane, and low lane cost does not prove the roam created value.';
     note.textContent=read+' Support roam cost uses change in ADC-vs-ADC CS differential during the detected support roam; it is not a claim that every CS change was caused solely by the Support.';
   }
+  panel.hidden=false;
+}
+
+function roleLensCard(label,value,detail,tone='neutral',ready=true,interval=null){
+  const effective=ready?tone:'neutral',hasInterval=interval&&hasNum(interval.low)&&hasNum(interval.high);
+  return '<article class="role-specific-lens-card tone-'+effective+(ready?'':' thin-evidence')+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong>'+
+    (hasInterval?'<div class="role-lens-interval"><i style="left:'+clamp(interval.low,0,100)+'%;width:'+(clamp(interval.high,0,100)-clamp(interval.low,0,100))+'%"></i><b style="left:'+clamp(Number(String(value).replace(/[^0-9.-]/g,'')),0,100)+'%"></b></div><small>95% Wilson '+esc(fmtPct(interval.low))+'–'+esc(fmtPct(interval.high))+'</small>':'')+
+    '<p>'+esc(detail)+(ready?'':' · thin sample — descriptive only')+'</p></article>';
+}
+function renderRoleSpecificLens(r){
+  const panel=$('roleSpecificLensPanel'),box=$('roleSpecificLens'),note=$('roleSpecificLensNote'),eyebrow=$('roleSpecificLensEyebrow'),title=$('roleSpecificLensTitle'),hint=$('roleSpecificLensHint');
+  if(!panel||!box)return;
+  const role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),b=r.behaviorSummary||{},p=r.peerComparison||{},q=r.dataQuality||{};
+  if(!['TOP','MID','JUNGLE'].includes(role)){panel.hidden=true;box.innerHTML='';if(note)note.textContent='';return;}
+  const laneN=Number(p.laneGames15||0),peerN=Number(p.sameRoleGames||0),impactN=Number(p.impactGames||0),itemN=Number(p.majorItemGames||0),timelineN=Number(q.validTimelineGames||0);
+  const gold=hasNum(p.avgGoldDiff15)?Number(p.avgGoldDiff15):null,cs=hasNum(p.avgCsMinDelta)?Number(p.avgCsMinDelta):null,impact=hasNum(p.avgImpactDeltaMin)?Number(p.avgImpactDeltaMin):null,item=hasNum(p.avgMajorItemDeltaMin)?Number(p.avgMajorItemDeltaMin):null;
+  const goldTone=gold==null?'neutral':gold>=150?'good':gold<=-150?'bad':'neutral',csTone=cs==null?'neutral':cs>=.15?'good':cs<=-.15?'bad':'neutral';
+  const cards=[];
+  let noteText='';
+  if(role==='TOP'){
+    const soloK=Number(b.earlyRoleSoloKills||0),soloD=Number(b.earlyRoleSoloDeaths||0),duels=soloK+soloD,leadN=Number(b.earlyLeadGames||0),givebacks=Number(b.earlyLeadGivebackGames||0),giveRate=hasNum(b.earlyLeadGivebackRate)?Number(b.earlyLeadGivebackRate):null,sideDeaths=Number(b.preNeutralObjectiveSideLaneDeaths||0);
+    cards.push(
+      roleLensCard('Role gold @15',gold==null?'n/a':signed(gold,0)+'g',laneN+' comparable @15 games versus the actual TOP opponent · evidence floor 5',goldTone,laneN>=5),
+      roleLensCard('CS/min vs TOP peer',cs==null?'n/a':signed(cs,2),peerN+' direct-role comparable games · evidence floor 5',csTone,peerN>=5),
+      roleLensCard('Early clean duel',soloK+' / '+soloD+' K/D',duels+' clean direct-role solo duel events before the configured early-phase boundary · review floor 3 events',duels>=3?(soloK>=soloD+2?'good':soloD>=soloK+2?'bad':'neutral'):'neutral',duels>=3),
+      roleLensCard('Early-lead give-back',giveRate==null?'n/a':fmtPct(giveRate),givebacks+' / '+leadN+' measured ≥500g pre-15 role leads gave back ≥500g before @15 · evidence floor 4',giveRate==null?'neutral':giveRate<=30?'good':giveRate>=50?'bad':'neutral',leadN>=4,wilsonInterval(givebacks,leadN)),
+      roleLensCard('Pre-objective side-lane deaths',String(sideDeaths),sideDeaths+' supported side-lane death'+(sideDeaths===1?'':'s')+' shortly before a contested neutral objective across '+timelineN+' timeline-complete games · evidence floor 5 games',timelineN>=5?(sideDeaths===0&&timelineN>=10?'good':sideDeaths>=2?'bad':'neutral'):'neutral',timelineN>=5)
+    );
+    if(eyebrow)eyebrow.textContent='Top lens';
+    if(title)title.textContent='Are lane leads becoming controlled side-lane pressure?';
+    if(hint)hint.textContent='Shown only for TOP reports. It combines direct-lane state, clean duels, lead preservation and objective-adjacent side-lane risk.';
+    noteText='TOP interpretation stays role-relative: lane gold/CS compare with the actual TOP opponent, while side-lane deaths are reviewed as timing/risk evidence rather than assuming that side-laning itself was wrong.';
+  }else if(role==='MID'){
+    const roamN=Number(b.roamAttempts||0),roamSuccess=Number(b.roamSuccesses||0),roamRate=hasNum(b.roamSuccessRate)?Number(b.roamSuccessRate):null,mid=b.midRouting||{},midN=Number(mid.games||0),objRate=hasNum(mid.avgObjectiveJoinRate)?Number(mid.avgObjectiveJoinRate):null;
+    cards.push(
+      roleLensCard('Role gold @15',gold==null?'n/a':signed(gold,0)+'g',laneN+' comparable @15 games versus the actual MID opponent · evidence floor 5',goldTone,laneN>=5),
+      roleLensCard('CS/min vs MID peer',cs==null?'n/a':signed(cs,2),peerN+' direct-role comparable games · evidence floor 5',csTone,peerN>=5),
+      roleLensCard('First tracked impact vs MID',impact==null?'n/a':signed(impact,1)+' min',impactN+' comparable first kill/assist/objective-impact timings · negative means earlier · evidence floor 5',impact==null?'neutral':impact<=-1.5?'good':impact>=1.5?'bad':'neutral',impactN>=5),
+      roleLensCard('Early roam conversion',roamRate==null?'n/a':fmtPct(roamRate),roamSuccess+' / '+roamN+' detected early roam departures returned supported kill/assist or objective value · evidence floor 4',roamRate==null?'neutral':roamRate>=65?'good':roamRate<45?'bad':'neutral',roamN>=4,wilsonInterval(roamSuccess,roamN)),
+      roleLensCard('15→25 objective reconnect',objRate==null?'n/a':fmtPct(objRate),midN+' comparable mid-routing games; this is supported objective presence alongside the 15→25 farm transition · evidence floor 4',objRate==null?'neutral':objRate>=60?'good':objRate<40?'bad':'neutral',midN>=4)
+    );
+    if(eyebrow)eyebrow.textContent='Mid lens';
+    if(title)title.textContent='Are lane resources turning into earlier map impact?';
+    if(hint)hint.textContent='Shown only for MID reports. It combines direct-lane state, impact timing, early roam conversion and 15→25 objective reconnection.';
+    noteText='MID roam conversion is event-backed, but a converted roam can still be economically expensive. Read it together with lane gold/CS and the 15→25 routing evidence rather than as “roam more.”';
+  }else{
+    const setupN=Number(b.neutralObjectiveJoins||0),setupHits=Number(b.earlySetupObjectiveJoins||0),setupRate=hasNum(b.earlySetupObjectiveJoinRate)?Number(b.earlySetupObjectiveJoinRate):null,contestN=Number(b.objectiveContestEncounters??b.neutralObjectiveEvents??0),contestHits=Number(b.objectiveContestJoinedEncounters??b.neutralObjectiveJoins??0),contestRate=hasNum(b.objectiveContestPresenceRate??b.objectiveJoinRate)?Number(b.objectiveContestPresenceRate??b.objectiveJoinRate):null;
+    cards.push(
+      roleLensCard('CS/min vs JUNGLE peer',cs==null?'n/a':signed(cs,2),peerN+' direct-role comparable games versus the actual enemy jungler · evidence floor 5',csTone,peerN>=5),
+      roleLensCard('First tracked impact vs JUNGLE',impact==null?'n/a':signed(impact,1)+' min',impactN+' comparable first kill/assist/objective-impact timings · negative means earlier · evidence floor 5',impact==null?'neutral':impact<=-1.5?'good':impact>=1.5?'bad':'neutral',impactN>=5),
+      roleLensCard('First major vs JUNGLE peer',item==null?'n/a':signed(item,1)+' min',itemN+' comparable first-major completions · negative means earlier · evidence floor 4',item==null?'neutral':item<=-.75?'good':item>=.75?'bad':'neutral',itemN>=4),
+      roleLensCard('Prior objective setup',setupRate==null?'n/a':fmtPct(setupRate),setupHits+' / '+setupN+' joined neutral-objective encounters already near the area 45–105s before the event · evidence floor 5',setupRate==null?'neutral':setupRate>=70?'good':setupRate<45?'bad':'neutral',setupN>=5,wilsonInterval(setupHits,setupN)),
+      roleLensCard('Contested objective presence',contestRate==null?'n/a':fmtPct(contestRate),contestHits+' / '+contestN+' supported team-contested neutral-objective encounters · evidence floor 5',contestRate==null?'neutral':contestRate>=75?'good':contestRate<55?'bad':'neutral',contestN>=5,wilsonInterval(contestHits,contestN))
+    );
+    if(eyebrow)eyebrow.textContent='Jungle lens';
+    if(title)title.textContent='Are farm and item tempo arriving before the objective window?';
+    if(hint)hint.textContent='Shown only for JUNGLE reports. It combines direct-jungle farm/impact timing with prior setup and contested-objective presence.';
+    noteText='JUNGLE objective cards measure supported presence/setup, not smite skill and not objective “ownership.” First impact and item timing compare only with the actual enemy jungler in analyzed games.';
+  }
+  box.innerHTML=cards.join('');
+  if(note)note.textContent=noteText;
   panel.hidden=false;
 }
 
