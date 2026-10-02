@@ -2037,3 +2037,21 @@ Prominent binomial coaching rates should expose denominator uncertainty rather t
 The interval is a sampling-uncertainty aid for the observed proportion. It is **not** a confidence score for the coaching interpretation, is not a causal estimate, and does not override the analyzer's minimum evidence floors. A below-threshold card remains neutral even if its point estimate looks extreme.
 
 The visual meter keeps the point estimate and overlays the Wilson interval. Wider intervals make small denominators visibly less certain; narrower intervals reflect more observed opportunities, not stronger causal proof.
+
+
+## Per-match chronological evidence ledger
+
+Expanded Recent match story rows may include a collapsed chronological evidence ledger. Its purpose is to bridge the five-stage game arc and the full technical tabs without dumping every timeline event.
+
+Eligible ledger entries are supported milestones already present in the report:
+- first meaningful committed shop and its bounded post-reset evidence,
+- first and second major item ownership milestones when exact item mechanics are available,
+- measured early direct-role lead peak / give-back state,
+- comparable @15 and @25 direct-role checkpoints,
+- first tracked supported impact,
+- supported events inside an eligible earlier-item power window,
+- ranked replay-review moments.
+
+Direct-role timing/economy language is gated by the same high-confidence role-peer requirement used elsewhere. If the role peer is withheld, own-item/shop milestones can remain visible but peer-relative deltas are omitted. Missing timeline evidence must produce an explicit unavailable state rather than a fabricated ledger.
+
+The ledger is chronological, collapsible by default, and capped to a compact set of key moments. It is an evidence navigation aid, not a claim that the listed moments caused the match result.
