@@ -6,8 +6,9 @@
   if(window.__BRUIS_LIVE_CATALOG_REFRESH_V818_R5__) return;
   window.__BRUIS_LIVE_CATALOG_REFRESH_V818_R5__ = true;
 
-  const POLL_MS = 30 * 60 * 1000;
-  const FIRST_POLL_MS = 15 * 60 * 1000;
+  // Public storefront reconciliation is explicit-only. The generated catalog
+  // snapshot is the first-paint source and checkout revalidates price/availability.
+  // Automatic timers/focus polling previously amplified Supabase catalog traffic.
   const SHARED_MIN_REFRESH_MS = 20 * 60 * 1000;
   const SHARED_CHECK_KEY = 'bruisCatalogLiveCheckAtV4';
   const SHARED_OWNER_KEY = 'bruisCatalogLiveCheckOwnerV4';
@@ -159,15 +160,11 @@
     }
   }
 
-  window.setTimeout(checkCatalog, FIRST_POLL_MS);
-  window.setInterval(checkCatalog, POLL_MS);
-  // Focus/visibility only attempt a refresh when the shared 20-minute lease has
-  // expired. This keeps multiple tabs/windows from multiplying catalog traffic.
-  document.addEventListener('visibilitychange', () => {
-    if(document.visibilityState === 'visible' && Date.now() - sharedLastCheckedAt() >= SHARED_MIN_REFRESH_MS) checkCatalog();
-  });
-  window.addEventListener('focus', () => {
-    if(Date.now() - sharedLastCheckedAt() >= SHARED_MIN_REFRESH_MS) checkCatalog();
+  // No automatic setTimeout/setInterval/focus/visibility catalog requests.
+  // Admin/ops code owns freshness; public browsers render the generated snapshot.
+  window.BRUIS_LIVE_CATALOG_REFRESH_V818 = Object.freeze({
+    refreshNow: () => checkCatalog(),
+    mode: 'explicit-only-static-first-r8'
   });
   window.addEventListener('storage', event => {
     if(event.key !== catalogCacheKey || !event.newValue) return;
