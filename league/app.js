@@ -843,12 +843,12 @@ function standardizedMeanGap(a,b){
   return cohenD*hedgesCorrection;
 }
 function outcomeFingerprintCard(label,wins,losses,unit,inverse=false){
-  const valid=wins?.n>=2&&losses?.n>=2&&hasNum(wins?.mean)&&hasNum(losses?.mean);
+  const valid=wins?.n>=2&&losses?.n>=2&&hasNum(wins?.mean)&&hasNum(losses?.mean),ready=wins?.n>=3&&losses?.n>=3;
   const delta=valid?Number(wins.mean)-Number(losses.mean):null,effect=valid?standardizedMeanGap(wins,losses):null;
-  const tone=delta==null?'neutral':(inverse?(delta<0?'good':'bad'):(delta>0?'good':'bad'));
-  const fmtValue=v=>unit==='percent'?fmtPct(v):unit==='gold'?(hasNum(v)?signed(v,0)+'g':'n/a'):unit==='dpm'?fmtInt(v):unit==='num'?fmt(v,2):fmt(v,2);
-  const deltaText=delta==null?'Not enough valid observations.':('Observed mean gap: '+(unit==='percent'?signed(delta,1)+' pp':unit==='gold'?signed(delta,0)+'g':signed(delta,unit==='num'?2:0)+(unit==='dpm'?' DPM':'')));
-  return {label,wins,losses,delta,effect,tone,html:'<article class="outcome-fingerprint-card tone-'+tone+'"><span>'+esc(label)+'</span><div><strong>'+esc(fmtValue(wins?.mean))+'</strong><small>in wins · n='+Number(wins?.n||0)+'</small></div><div><strong>'+esc(fmtValue(losses?.mean))+'</strong><small>in losses · n='+Number(losses?.n||0)+'</small></div><p>'+esc(deltaText)+(hasNum(effect)?' · Hedges-corrected gap '+fmt(effect,2):'')+'</p></article>'};
+  const tone=!ready||delta==null?'neutral':(inverse?(delta<0?'good':'bad'):(delta>0?'good':'bad'));
+  const fmtValue=v=>unit==='percent'?fmtPct(v):unit==='gold'?(hasNum(v)?signed(v,0)+'g':'n/a'):unit==='dpm'?fmtInt(v):unit==='minutes'?(hasNum(v)?signed(v,1)+'m':'n/a'):unit==='cs'?(hasNum(v)?signed(v,2)+' CS':'n/a'):unit==='csmin'?(hasNum(v)?signed(v,2):'n/a'):unit==='num'?fmt(v,2):fmt(v,2);
+  const deltaText=delta==null?'Not enough valid observations.':('Observed mean gap: '+(unit==='percent'?signed(delta,1)+' pp':unit==='gold'?signed(delta,0)+'g':unit==='minutes'?signed(delta,1)+'m':unit==='cs'?signed(delta,2)+' CS':unit==='csmin'?signed(delta,2)+' CS/min':signed(delta,unit==='num'?2:0)+(unit==='dpm'?' DPM':'')));
+  return {label,wins,losses,delta,effect,tone,ready,html:'<article class="outcome-fingerprint-card tone-'+tone+(ready?'':' thin-evidence')+'"><span>'+esc(label)+'</span><div><strong>'+esc(fmtValue(wins?.mean))+'</strong><small>in wins · n='+Number(wins?.n||0)+'</small></div><div><strong>'+esc(fmtValue(losses?.mean))+'</strong><small>in losses · n='+Number(losses?.n||0)+'</small></div><p>'+esc(deltaText)+(hasNum(effect)?' · Hedges-corrected gap '+fmt(effect,2):'')+(ready?'':' · thin sample — no directional color')+'</p></article>'};
 }
 
 function supportLensCard(label,value,detail,tone='neutral',ready=true,interval=null){
@@ -946,26 +946,56 @@ function renderRoleSpecificLens(r){
   panel.hidden=false;
 }
 
+function perGamePct(n,d){const den=Number(d||0);return den>0?100*Number(n||0)/den:null;}
+function perGameSupportAdcLaneCost(g){
+  const xs=(g?.roams?.events||[]).map(x=>x?.adcLaneCostCs).filter(hasNum).map(Number);
+  return xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null;
+}
+function outcomeFingerprintSpecs(role){
+  if(role==='SUPPORT')return[
+    {label:'Roam conversion',unit:'percent',inverse:false,get:g=>perGamePct(g?.roams?.successes,g?.roams?.attempts)},
+    {label:'ADC lane cost during roams',unit:'cs',inverse:false,get:g=>perGameSupportAdcLaneCost(g)},
+    {label:'Vision-action death rate',unit:'percent',inverse:true,get:g=>perGamePct(g?.visionMission?.deaths,g?.visionMission?.actions)},
+    {label:'Prior objective setup',unit:'percent',inverse:false,get:g=>perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.joined)}
+  ];
+  if(role==='JUNGLE')return[
+    {label:'CS/min vs JUNGLE peer',unit:'csmin',inverse:false,get:g=>trustedDirectPeer(g)&&hasNum(g?.peer?.csMinDelta)?Number(g.peer.csMinDelta):null},
+    {label:'First impact vs JUNGLE peer',unit:'minutes',inverse:true,get:g=>trustedDirectPeer(g)&&hasNum(g?.impactDeltaVsOpponent)?Number(g.impactDeltaVsOpponent):null},
+    {label:'Contested objective presence',unit:'percent',inverse:false,get:g=>perGamePct(g?.objectiveReadiness?.contestedJoined,g?.objectiveReadiness?.contestedObjectives)},
+    {label:'Prior objective setup',unit:'percent',inverse:false,get:g=>perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.joined)}
+  ];
+  if(role==='MID')return[
+    {label:'Role gold @15',unit:'gold',inverse:false,get:g=>g?.phaseRules?.lane15Comparable===false?null:g.goldDiff15},
+    {label:'First impact vs MID peer',unit:'minutes',inverse:true,get:g=>trustedDirectPeer(g)&&hasNum(g?.impactDeltaVsOpponent)?Number(g.impactDeltaVsOpponent):null},
+    {label:'Roam conversion',unit:'percent',inverse:false,get:g=>perGamePct(g?.roams?.successes,g?.roams?.attempts)},
+    {label:'15→25 objective reconnect',unit:'percent',inverse:false,get:g=>hasNum(g?.midRouting?.objectiveJoinRate)?Number(g.midRouting.objectiveJoinRate):null}
+  ];
+  if(role==='TOP')return[
+    {label:'Role gold @15',unit:'gold',inverse:false,get:g=>g?.phaseRules?.lane15Comparable===false?null:g.goldDiff15},
+    {label:'CS/min vs TOP peer',unit:'csmin',inverse:false,get:g=>trustedDirectPeer(g)&&hasNum(g?.peer?.csMinDelta)?Number(g.peer.csMinDelta):null},
+    {label:'Early lead give-back',unit:'percent',inverse:true,get:g=>g?.earlyLeadWindow?.eligible?(g.earlyLeadWindow.giveback?100:0):null},
+    {label:'Pre-objective side-lane deaths',unit:'num',inverse:true,get:g=>g.timelineAvailable===true?Number(g?.sideLaneRisk?.preNeutralObjectiveSideLaneDeaths||0):null}
+  ];
+  return[
+    {label:'Role gold @15',unit:'gold',inverse:false,get:g=>g?.phaseRules?.lane15Comparable===false?null:g.goldDiff15},
+    {label:'DPM vs ADC peer',unit:'dpm',inverse:false,get:g=>trustedDirectPeer(g)&&hasNum(g?.peer?.dpmDelta)?Number(g.peer.dpmDelta):null},
+    {label:'High-risk deaths / game',unit:'num',inverse:true,get:g=>g.timelineAvailable===true?g.badDeathCount:null},
+    {label:'Kill participation',unit:'percent',inverse:false,get:g=>g.kp}
+  ];
+}
 function renderOutcomeFingerprint(r){
   const box=$('outcomeFingerprint'),note=$('outcomeFingerprintNote');if(!box)return;
-  const games=reportCoachingGames(r),wins=games.filter(g=>g.win),losses=games.filter(g=>!g.win);
+  const games=reportCoachingGames(r),wins=games.filter(g=>g.win),losses=games.filter(g=>!g.win),role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole);
   if(wins.length<2||losses.length<2){
     box.innerHTML='<div class="bullet empty">At least two wins and two losses are needed for a useful within-sample outcome comparison.</div>';
-    if(note)note.textContent='The report does not force an outcome story from a one-sided coaching cohort. Current comparison sample: '+wins.length+' wins / '+losses.length+' losses.';
+    if(note)note.textContent='The report does not force an outcome story from a one-sided '+roleLabel(role)+' coaching cohort. Current comparison sample: '+wins.length+' wins / '+losses.length+' losses.';
     return;
   }
-  const cards=[
-    outcomeFingerprintCard('Role gold @15',gameMetricSummary(wins,g=>g?.phaseRules?.lane15Comparable===false?null:g.goldDiff15),gameMetricSummary(losses,g=>g?.phaseRules?.lane15Comparable===false?null:g.goldDiff15),'gold',false),
-    outcomeFingerprintCard('High-risk deaths / game',gameMetricSummary(wins,g=>g.timelineAvailable===true?g.badDeathCount:null),gameMetricSummary(losses,g=>g.timelineAvailable===true?g.badDeathCount:null),'num',true),
-    outcomeFingerprintCard('Damage / min',gameMetricSummary(wins,g=>g.dpm),gameMetricSummary(losses,g=>g.dpm),'dpm',false),
-    outcomeFingerprintCard('Kill participation',gameMetricSummary(wins,g=>g.kp),gameMetricSummary(losses,g=>g.kp),'percent',false)
-  ];
+  const cards=outcomeFingerprintSpecs(role).map(spec=>outcomeFingerprintCard(spec.label,gameMetricSummary(wins,spec.get),gameMetricSummary(losses,spec.get),spec.unit,spec.inverse));
   box.innerHTML=cards.map(x=>x.html).join('');
-  const usable=cards.filter(x=>hasNum(x.effect)).sort((a,b)=>Number(b.effect)-Number(a.effect)),lead=usable[0];
-  if(note)note.innerHTML=lead?'<b>Largest standardized separation:</b> '+esc(lead.label)+' (Hedges g '+esc(fmt(lead.effect,2))+'). The small-sample correction makes unlike units more comparable, but this remains descriptive and is not a causal or significance claim. Coaching cohort: '+wins.length+' wins / '+losses.length+' losses.':'No metric has at least two valid observations in both wins and losses with enough variation for a standardized comparison in the coaching cohort.';
+  const usable=cards.filter(x=>x.ready&&hasNum(x.effect)).sort((a,b)=>Number(b.effect)-Number(a.effect)),lead=usable[0],thin=cards.filter(x=>!x.ready).length;
+  if(note)note.innerHTML=lead?'<b>Largest role-specific standardized separation:</b> '+esc(lead.label)+' (Hedges g '+esc(fmt(lead.effect,2))+'). The small-sample correction makes unlike units more comparable, but this remains descriptive and is not a causal or significance claim. '+esc(roleLabel(role))+' coaching cohort: '+wins.length+' wins / '+losses.length+' losses.'+(thin?' '+thin+' metric'+(thin===1?' is':'s are')+' shown without directional color because one outcome side has fewer than 3 valid observations.':''):'No role-specific metric has at least three valid observations in both wins and losses with enough variation for a directional standardized comparison.';
 }
-
-
 function evidenceHealthCard(label,value,detail,status){
   const stateLabel=status==='ready'?'Ready':status==='limited'?'Limited':'Withheld';
   return '<article class="evidence-health-card evidence-'+status+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small><b>'+stateLabel+'</b> · '+esc(detail)+'</small></article>';
