@@ -1956,7 +1956,56 @@ function arcRoleGoldState(g,minute){
   if(n<-100)return {key:'behind',label:'Behind',tone:'bad',value:n};
   return {key:'close',label:'Close',tone:'neutral',value:n};
 }
+function roleArcObjectiveStage(g){
+  if(g?.timelineAvailable!==true)return {key:'objective_unavailable',label:'Objective setup',tone:'neutral',value:'Timeline unavailable',copy:'Objective setup sequencing cannot be reconstructed without timeline evidence.'};
+  const obj=g?.objectiveReadiness||{},joined=Number(obj.joined||0),early=Number(obj.earlySetupJoins||0),contested=Number(obj.contestedObjectives||0),contestedJoined=Number(obj.contestedJoined||0),setupRate=joined?100*early/joined:null;
+  if(!joined&&!contested)return {key:'objective_no_sample',label:'Objective setup',tone:'neutral',value:'No supported objective sample',copy:'No joined or team-contested neutral-objective encounter is available for this match.'};
+  const presence=contested?100*contestedJoined/contested:null,tone=joined>=2&&setupRate!=null?(setupRate>=60?'good':setupRate<40?'bad':'neutral'):'neutral';
+  return {key:'objective_'+(setupRate==null?'unknown':setupRate>=60?'early':setupRate<40?'late':'mixed'),label:'Objective setup',tone,value:(setupRate==null?'Prior setup n/a':fmtPct(setupRate)+' prior setup')+(presence!=null?' · '+fmtPct(presence)+' contested presence':''),copy:'Prior setup means supported position near the objective 45–105 seconds before the event; presence and setup are descriptive event evidence.'};
+}
+function roleArcTeamplayStage(g){
+  if(g?.timelineAvailable!==true)return {key:'teamplay_unavailable',label:'Teamplay',tone:'neutral',value:'Timeline unavailable',copy:'Fight/risk sequencing cannot be reconstructed without timeline evidence.'};
+  const fight=g?.fightProfile||{},vision=g?.visionMission||{},recovery=g?.deathRecovery||{},pre=Number(fight.diedBeforeContribution||0),visionRisk=Number(vision.highRiskDeaths||0),repeat=Number(recovery.repeatDeaths||0);
+  if(pre>0)return {key:'teamplay_preimpact',label:'Teamplay',tone:'bad',value:pre+' pre-contribution fight death'+(pre===1?'':'s'),copy:'Tracked active-fight clusters include death before recorded contribution.'};
+  if(visionRisk>0)return {key:'teamplay_vision_risk',label:'Teamplay',tone:'bad',value:visionRisk+' high-risk vision death'+(visionRisk===1?'':'s'),copy:'These deaths occurred shortly after tracked ward placement/clear actions and crossed the high-risk classifier.'};
+  if(repeat>0)return {key:'teamplay_repeat',label:'Teamplay',tone:'bad',value:repeat+' rapid repeat death'+(repeat===1?'':'s'),copy:'A measured post-death recovery opportunity became another death inside the repeat-death window.'};
+  return {key:'teamplay_clear',label:'Teamplay',tone:'neutral',value:'No dominant risk flag',copy:'No pre-contribution fight death, high-risk vision death or rapid repeat-death sequence dominates this match.'};
+}
+function roleArcFinishStage(g){
+  const lateHigh=Number(g?.closing25?.highRiskDeaths||0),lateCostly=Number(g?.closing25?.costlyDeaths||0),risk=lateHigh>0||lateCostly>0;
+  return {key:'finish_'+(g?.win?'win':'loss')+(risk?'_risk':''),label:'Finish',tone:g?.win?(risk?'neutral':'good'):'bad',value:(g?.win?'Win':'Loss')+(risk?' · late risk flagged':''),copy:risk?'Late high-risk/costly death evidence is shown as review context; overlapping categories are not added as unique deaths and are not assumed to cause the result.':'Result is shown without assigning a causal explanation when no stronger supported closing signal exists.'};
+}
+function supportGameArcStages(g){
+  const stages=[],roams=g?.roams||{},attempts=Number(roams.attempts||0),successes=Number(roams.successes||0),rate=attempts?100*successes/attempts:null,laneCost=perGameSupportAdcLaneCost(g);
+  let tone='neutral',value='No measured early roam',copy='No supported early roam departure was detected in this match.',key='support_roam_none';
+  if(attempts>0){
+    if(rate>=60&&(laneCost==null||laneCost>=-4)){tone='good';key='support_roam_value';value=fmtPct(rate)+' roam conversion';}
+    else if(rate<50&&laneCost!=null&&laneCost<=-6){tone='bad';key='support_roam_cost';value=fmtPct(rate)+' conversion · '+signed(laneCost,1)+' ADC CS';}
+    else{key='support_roam_mixed';value=fmtPct(rate)+' roam conversion'+(laneCost!=null?' · '+signed(laneCost,1)+' ADC CS':'');}
+    copy='Roam return and ADC-vs-ADC lane-cost movement are shown together; the CS change is associated with the roam window, not attributed solely to Support movement.';
+  }
+  stages.push({key,label:'Roam / lane',tone,value,copy});
+  const peerOk=trustedDirectPeer(g),vpm=peerOk&&hasNum(g?.peer?.vpmDelta)?Number(g.peer.vpmDelta):null,setup=peerOk&&hasNum(g?.vision?.objectiveSetupDeltaVsOpponent)?Number(g.vision.objectiveSetupDeltaVsOpponent):null;
+  let visionTone='neutral';
+  if(vpm!=null&&setup!=null){if(vpm>=.15&&setup>=.5)visionTone='good';else if(vpm<=-.15&&setup<=-.5)visionTone='bad';}
+  stages.push({key:'support_vision_peer',label:'Vision vs peer',tone:visionTone,value:(vpm==null?'VPM n/a':signed(vpm,2)+' VPM')+' · '+(setup==null?'setup n/a':signed(setup,1)+' setup wards'),copy:peerOk?'Direct-role vision volume and pre-objective setup-ward differences versus the opposing Support.':'Direct-role vision comparison is withheld because the Support peer is not high-confidence.'});
+  stages.push(roleArcObjectiveStage(g),roleArcTeamplayStage(g),roleArcFinishStage(g));
+  return stages;
+}
+function jungleGameArcStages(g){
+  const stages=[],peerOk=trustedDirectPeer(g),cs=peerOk&&hasNum(g?.peer?.csMinDelta)?Number(g.peer.csMinDelta):null;
+  stages.push({key:'jungle_farm_'+(cs==null?'unknown':cs>.15?'ahead':cs<-.15?'behind':'close'),label:'Farm vs Jungle',tone:cs==null?'neutral':cs>.15?'good':cs<-.15?'bad':'neutral',value:cs==null?'Peer evidence unavailable':signed(cs,2)+' CS/min',copy:peerOk?'Direct-jungle farm rate relative to the actual opposing Jungler.':'Direct-jungle farm comparison is withheld because the peer is not high-confidence.'});
+  const impact=peerOk&&hasNum(g?.impactDeltaVsOpponent)?Number(g.impactDeltaVsOpponent):null,item=peerOk&&hasNum(g?.itemSpikeDeltaVsOpponent)?Number(g.itemSpikeDeltaVsOpponent):null;
+  let tempoTone='neutral';if(impact!=null){if(impact<=-1.5)tempoTone='good';else if(impact>=1.5)tempoTone='bad';}
+  stages.push({key:'jungle_tempo_'+(impact==null?'unknown':impact<=-1.5?'early':impact>=1.5?'late':'close'),label:'Tempo vs Jungle',tone:tempoTone,value:(impact==null?'impact n/a':signed(impact,1)+'m first impact')+(item!=null?' · '+signed(item,1)+'m first major':''),copy:'Negative timing means you reached the tracked event/item earlier than the enemy Jungler; timing is contextual rather than proof of better pathing.'});
+  stages.push(roleArcObjectiveStage(g),roleArcTeamplayStage(g),roleArcFinishStage(g));
+  return stages;
+}
+
 function gameArcStages(g){
+  const role=canonicalRole(g?.role);
+  if(role==='SUPPORT')return supportGameArcStages(g);
+  if(role==='JUNGLE')return jungleGameArcStages(g);
   const peerOk=trustedDirectPeer(g),lane=arcRoleGoldState(g,15),at25=arcRoleGoldState(g,25),reset=peerOk?(g.firstResetSequence||null):null,spike=peerOk?(g.itemSpikeWindow||{}):{},fight=g.fightProfile||{},obj=g.objectiveReadiness||{},side=g.sideLaneRisk||{},closing=g.closing25||{};
   const stages=[];
   stages.push({
