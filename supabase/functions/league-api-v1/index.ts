@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.96";
+const ANALYZER_VERSION="league-web-behavior-v4.97";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -800,7 +800,8 @@ function participantFullGameMetrics(match:any,p:any){
     damageRank:rankIn("totalDamageDealtToChampions"),goldRank:rankIn("goldEarned"),visionRank:rankIn("visionScore")
   };
 }
-function timelineFacts(match:any,timeline:any,p:any,catalog:any){
+function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:any=null){
+  const itemCatalogExactPatch=catalogContext?.exact===true,itemMechanicsEligible=itemCatalogExactPatch&&!!catalog&&Object.keys(catalog||{}).length>0;
   const frames=Array.isArray(timeline?.info?.frames)?timeline.info.frames:[],pid=Number(p.participantId),opp=opponent(match,p),oppId=opp?Number(opp.participantId):null;
   const ps=Array.isArray(match?.info?.participants)?match.info.participants:[],byId=new Map<number,any>();for(const q of ps)byId.set(Number(q.participantId),q);
   const mapId=Number(match?.info?.mapId||0),teamId=Number(p.teamId),rr=participantRole(p),homeLane=homeLaneForRole(rr),rules=gameRules(match);
@@ -969,9 +970,10 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
     out.fightProfile.roleLevelDisadvantageRate=out.fightProfile.rolePeerFightStarts?100*out.fightProfile.roleLevelDisadvantageStarts/out.fightProfile.rolePeerFightStarts:null;
   }
   for(const ev of out.fightProfile.events){if(!ev.active)continue;const ph=out.phaseBehavior[gamePhaseKey(ev.startMin,rules)];ph.fightClusters++;if(ev.firstAllyDeath)ph.firstAllyFightDeaths++;}
-  out.itemLedgerQuality={unresolvedUndoEvents:unresolvedItemUndoEvents(itemEventsByPid).length,opponentUnresolvedUndoEvents:unresolvedItemUndoEvents(itemEventsByOpp).length,source:"riot_timeline",zeroIdUndoPolicy:"flag_approximate_do_not_guess"};
-  out.shopVisits=applyDynamicShopSpendBounds(purchaseGroups(itemEventsByPid,catalog),out.roleQuestContext);
-  out.opponentShopVisits=applyDynamicShopSpendBounds(purchaseGroups(itemEventsByOpp,catalog),oppId?roleQuestContext(rules,participantRole(opp)):null);
+  out.itemLedgerQuality={unresolvedUndoEvents:unresolvedItemUndoEvents(itemEventsByPid).length,opponentUnresolvedUndoEvents:unresolvedItemUndoEvents(itemEventsByOpp).length,source:"riot_timeline",zeroIdUndoPolicy:"flag_approximate_do_not_guess",itemCatalogExactPatch,itemMechanicsEligible,itemCatalogPolicy:itemMechanicsEligible?"exact_patch_required_satisfied":"fallback_catalog_display_only_item_mechanics_withheld"};
+  const markCatalogFallback=(visits:any[])=>{if(itemMechanicsEligible)return visits;for(const v of visits||[]){v.spendApproximate=true;v.spentLowerBound=null;v.spendEstimateCaveats=Array.isArray(v.spendEstimateCaveats)?v.spendEstimateCaveats:[];if(!v.spendEstimateCaveats.includes("item_catalog_patch_fallback"))v.spendEstimateCaveats.push("item_catalog_patch_fallback");v.spendEstimateCaveat=v.spendEstimateCaveats.join("|");}return visits;};
+  out.shopVisits=markCatalogFallback(applyDynamicShopSpendBounds(purchaseGroups(itemEventsByPid,catalog),out.roleQuestContext));
+  out.opponentShopVisits=markCatalogFallback(applyDynamicShopSpendBounds(purchaseGroups(itemEventsByOpp,catalog),oppId?roleQuestContext(rules,participantRole(opp)):null));
   const firstReturnShop=firstMeaningfulReturnShop(out.shopVisits,frames,pid,mapId,teamId),opponentFirstReturnShop=oppId?firstMeaningfulReturnShop(out.opponentShopVisits,frames,oppId,mapId,Number(opp?.teamId||0)):null;
   if(firstReturnShop){
     const resetBeforeTargetMs=Number(firstReturnShop.startMs)-30000,resetAfterTargetMs=Number(firstReturnShop.lastMs)+60000;
@@ -986,7 +988,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
     const measured=hasNum(goldSwing)||hasNum(csSwing),economyLoss=!deathInWindow&&((hasNum(csSwing)&&Number(csSwing)<=-6)||(hasNum(goldSwing)&&Number(goldSwing)<=-350)),economyGain=!deathInWindow&&hasNum(csSwing)&&hasNum(goldSwing)&&Number(csSwing)>=4&&Number(goldSwing)>=150;
     out.firstResetSequence={time:Number(firstReturnShop.startMin),beforeSampleTargetSec:-30,afterSampleTargetSec:60,beforeSampleMs:beforeMs,afterSampleMs:afterMs,beforeSampleDeltaSec:beforeMs?Math.round((Number(firstReturnShop.startMs)-beforeMs)/1000):null,afterSampleDeltaSec:afterMs?Math.round((afterMs-Number(firstReturnShop.lastMs))/1000):null,sampleWindowBounded:!!beforeMs&&!!afterMs,spent:Number(firstReturnShop.spent||0),spentLowerBound:hasNum(firstReturnShop.spentLowerBound)?Number(firstReturnShop.spentLowerBound):null,spentUpperBound:hasNum(firstReturnShop.spentUpperBound)?Number(firstReturnShop.spentUpperBound):Number(firstReturnShop.spent||0),spendMethod:firstReturnShop.spendMethod||"recipe_owned_component_credit",committedPurchases:Number(firstReturnShop.committedPurchases||0),spendApproximate:!!firstReturnShop.spendApproximate,spendEstimateCaveat:firstReturnShop.spendEstimateCaveat||null,unresolvedUndoCount:Number(firstReturnShop.unresolvedUndoCount||0),items:(firstReturnShop.items||[]).slice(0,6),opponentTime:opponentFirstReturnShop?Number(opponentFirstReturnShop.startMin):null,timingDeltaVsOpponent:opponentFirstReturnShop?Number(firstReturnShop.startMin)-Number(opponentFirstReturnShop.startMin):null,goldDiffBefore:goldBefore,goldDiffAfter:goldAfter,goldSwingAfter:goldSwing,csDiffBefore:csBefore,csDiffAfter:csAfter,csSwingAfter:csSwing,measured,deathInWindow,economyLoss,economyGain,evidenceWindowEndMin:afterMs?afterMs/60000:null,definition:"first committed ≥250g recipe-aware purchase group by 12m after the player has demonstrably left base; ITEM_UNDO transactions are excluded; direct-role economy uses supported frames targeted ~30s before shop and ~60s after shop, each within a 35s tolerance, and is suppressed when a death occurs inside that bounded comparison window"};
   }
-  const myMajorSequence=majorOwnershipMilestones(itemEventsByPid,catalog,2),oppMajorSequence=majorOwnershipMilestones(itemEventsByOpp,catalog,2);
+  const myMajorSequence=itemMechanicsEligible?majorOwnershipMilestones(itemEventsByPid,catalog,2):[],oppMajorSequence=itemMechanicsEligible?majorOwnershipMilestones(itemEventsByOpp,catalog,2):[];
   out.firstMajorItem=myMajorSequence[0]||null;out.secondMajorItem=myMajorSequence[1]||null;out.opponentFirstMajorItem=oppMajorSequence[0]||null;out.opponentSecondMajorItem=oppMajorSequence[1]||null;
   if(out.secondMajorItem&&out.opponentSecondMajorItem)out.secondMajorItemDeltaVsOpponent=Number(out.secondMajorItem.time)-Number(out.opponentSecondMajorItem.time);
   const controlWardIds=new Set<number>([2055]);for(const [id,info] of Object.entries(catalog||{}) as any)if(text(info?.name).toLowerCase()==="control ward")controlWardIds.add(Number(id));
@@ -1477,7 +1479,7 @@ function game(row:any,puuid:string,catalog:any){
   const m=row?.match_json||{},ps=Array.isArray(m?.info?.participants)?m.info.participants:[],p=ps.find((x:any)=>text(x?.puuid)===puuid);if(!p)return null;
   const full=participantFullGameMetrics(m,p);if(!full)return null;
   const gv=text(m?.info?.gameVersion),pk=patchKey(gv),catalogMeta=pk?catalog?.resolution?.[pk]||null:null,gameCatalog=(pk&&catalog?.byPatch?.[pk])||catalog?.fallback||catalog||{};
-  const roleEvidence=participantRoleEvidence(p),peerResolution=opponentResolution(m,p),opp=peerResolution.opponent,oppFull=participantFullGameMetrics(m,opp),facts=timelineFacts(m,row?.timeline_json,p,gameCatalog);
+  const roleEvidence=participantRoleEvidence(p),peerResolution=opponentResolution(m,p),opp=peerResolution.opponent,oppFull=participantFullGameMetrics(m,opp),facts=timelineFacts(m,row?.timeline_json,p,gameCatalog,catalogMeta);
   const directPeerComparable=!!oppFull&&roleEvidence.confidence==="high"&&peerResolution.opponentRoleConfidence==="high";
   const directPeerExclusionReason=!oppFull?(peerResolution.reason||"peer_missing"):roleEvidence.confidence!=="high"?"player_role_not_high_confidence":peerResolution.opponentRoleConfidence!=="high"?"opponent_role_not_high_confidence":null;
   const peer=oppFull?{champion:text(opp?.championName||"Unknown"),role:participantRole(opp),rank:row?.peer_rank_json||null,directComparisonEligible:directPeerComparable,comparisonExclusionReason:directPeerExclusionReason,csMinDelta:full.csMin-oppFull.csMin,dpmDelta:full.dpm-oppFull.dpm,gpmDelta:full.gpm-oppFull.gpm,vpmDelta:full.vpm-oppFull.vpm,kdaDelta:full.kda-oppFull.kda,opponent:{kda:oppFull.kda,csMin:oppFull.csMin,dpm:oppFull.dpm,gpm:oppFull.gpm,vpm:oppFull.vpm,kp:oppFull.kp}}:null;
