@@ -495,6 +495,9 @@ ok(modelDoc.includes('## Combined-intelligence evidence floors')&&modelDoc.inclu
 ok(app.includes('analyzer coaching threshold 8')&&app.includes('analyzer coaching threshold 4')&&app.includes('thin sample — descriptive only'), 'decision synthesis must not color thin denominator rates as mature coaching evidence');
 ok(modelDoc.includes('## Decision-card evidence thresholds')&&modelDoc.includes('first-reset economy-loss rate: at least 4'), 'analysis model must lock the prominent-card evidence floors');
 ok(html.includes('id="reportDrivers"')&&app.includes('function renderReportDrivers('), 'report must compress the strongest supported weakness, strength and recent direction into an action-first layer');
+ok(app.includes('function orderedPriorityThemes(')&&app.includes('return orderedPriorityThemes(report).slice(0,3)'), 'all action surfaces must consume the canonical backend theme ordering');
+ok(app.includes("const priorities=topPracticeThemes(r)")&&app.includes("focus=topPracticeThemes(r)"), 'primary limiter and practice plan must not independently re-sort grouped priorities');
+ok(modelDoc.includes('## Canonical priority ordering')&&modelDoc.includes('frontend must not re-sort grouped `priorityThemes`'), 'analysis model must preserve canonical priority ordering');
 ok(html.includes('id="priorityEvidenceChain"')&&app.includes('function renderPriorityEvidenceChain('), 'highest-priority coaching theme must expose an auditable evidence chain');
 ok(app.includes("stage('1','Signal'")&&app.includes("stage('3','Replay proof'")&&app.includes("stage('4','Next-5 measure'")&&app.includes("stage('5','Action'"), 'priority chain must connect aggregate evidence, ranked replay, measurement and prescription');
 ok(app.includes('This is an evidence trace, not a causal proof.'), 'priority evidence trace must not be phrased as causal proof');
