@@ -53,7 +53,7 @@ assert.equal(cfg.getActivatedPlayerNamesForScope,context.GEJAST_LOGIN_NAMES_FALL
 const names=await context.GEJAST_LOGIN_NAMES_FALLBACK.load();
 assert.deepEqual(Array.from(names),['Anouk','Emil','Gunnar','Lilian','Sierk'],'fresh browser must render the static last-known-good family names immediately');
 assert.equal(calls.length,0,'static-first load must not hit Supabase during the critical selector render');
-const refreshTimer=delayedTimers.find(x=>x.ms===15000);
+const refreshTimer=delayedTimers.find(x=>x.ms===60000);
 assert.ok(refreshTimer,'static-first load must schedule one well-delayed authoritative refresh');
 assert.match(source,/typeof document !== 'undefined'/,'delayed reconciliation must guard non-browser environments before reading document.hidden');
 assert.match(source,/typeof navigator !== 'undefined'/,'delayed reconciliation must guard non-browser environments before reading navigator.onLine');
