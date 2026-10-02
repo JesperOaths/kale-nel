@@ -404,6 +404,11 @@ assert.ok(html.includes('id="gameArcFunnels"')&&app.includes('function arcFunnel
 assert.ok(app.includes("transFor('ahead')")&&app.includes("transFor('behind')")&&app.includes("transFor('close')"),'Advantage-conversion funnels must derive from the same comparable @15→@25 transitions');
 assert.ok(app.includes('function matchReplayReviewHtml(')&&app.includes('data-open-review-match'),'Expanded match history must surface backend-ranked replay moments with direct evidence links');
 assert.ok(html.includes('id="matchHistoryToggle"')&&app.includes('matchHistoryLimit:10')&&app.includes("Show newest 10"),'Recent match story must default to 10 rows but allow the full eligible Last-20 to be expanded');
+assert.ok(html.includes('id="matchHistoryFilters"')&&app.includes("matchHistoryFilter:'all'"),'Recent match story must expose evidence-aware visibility filters without changing the report sample');
+assert.ok(app.includes("filter==='risk'")&&app.includes("g.timelineAvailable===true")&&app.includes("deathConsequences?.costly"),'Risk-filtered match story must require timeline-supported high-risk/costly evidence');
+assert.ok(app.includes("filter==='review'")&&app.includes('replayReviewQueue'),'Replay-priority story filter must derive only from backend-ranked replay moments');
+assert.ok(app.includes("gameMatchesNamedFilter(g,filter)"),'Ahead/close/behind story filters must reuse the evidence-table lane bands');
+assert.ok(modelDoc.includes('## Match-story filters')&&modelDoc.includes('filtering does not silently change analysis'),'Match-story filter semantics must remain documented as presentation-only');
 assert.ok(app.includes('review #')&&app.includes('replayReviewQueue'),'Match-history rows must expose analyzer replay priority when a game contains a ranked review moment');
 assert.ok(app.includes('function practiceReplayCategories(')&&app.includes('function practiceReplayHtml(')&&app.includes('data-practice-review-match'),'Practice priorities must link only to ranked replay evidence and preserve exact match/tab routing');
 assert.ok(app.includes("openReplayReviewMatch(matchId,tab)"),'Practice replay links must open the backend-selected evidence tab');
@@ -647,7 +652,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v150'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v151'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
