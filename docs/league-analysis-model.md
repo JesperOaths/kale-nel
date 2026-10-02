@@ -223,9 +223,11 @@ This boundary is intentionally conservative. Updating it requires both rule revi
 
 Current Match-V5 `teamPosition` and `individualPosition` are the preferred role sources. If both normalize to usable roles but disagree, the match fails closed to **GENERIC** for role-specific coaching rather than arbitrarily choosing one field. The report counts these as conflicting Riot role metadata.
 
-Direct peer comparison is stricter still: exactly one enemy participant must normalize to the player's resolved role. Zero candidates means the role peer is unavailable; more than one candidate is treated as ambiguous. Neither case is allowed to silently pick an opponent. Data Quality exposes missing and ambiguous direct-peer counts.
+Direct peer comparison is stricter still: exactly one enemy participant must normalize to the player's resolved role. Zero candidates means the role peer is unavailable; more than one candidate is treated as ambiguous. Neither case is allowed to silently pick an opponent.
 
-Role-aware conclusions must use the normalized role.
+For **coaching and benchmarks**, uniqueness is not enough. Both the player and that unique enemy counterpart must have **high-confidence Riot position evidence** from `teamPosition` or `individualPosition`. Legacy `role`/`lane` fallbacks may remain visible for match traceability, but they are withheld from direct-role gold/CS checkpoints, same-role peer deltas, role-duel conversion, item-timing comparisons and rank-band benchmarking. Data Quality exposes both fallback labels and the number of low-confidence direct-peer comparisons withheld.
+
+Role-aware conclusions must use the normalized role, and direct-role comparative conclusions must also satisfy this confidence boundary.
 
 ## Early lane outside pressure
 
