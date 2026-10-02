@@ -31,9 +31,9 @@ const ADMIN_BUILD = 'v861-page-version-watermark';
 const ADMIN_PAGE_VERSION = SITE_VERSION;
 // Public bootstraps have independent cache identities. They must not inherit
 // ADMIN_BUILD or a stale public HTML shell can survive an unrelated admin deploy.
-const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r15';
-const PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r11';
-const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-v147';
+const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r16';
+const PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r12';
+const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-r2';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
