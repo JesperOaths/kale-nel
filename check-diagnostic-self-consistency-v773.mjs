@@ -53,8 +53,9 @@ if(!text('gejast-account-runtime.js').includes("name.toLowerCase()!=='kies je na
 if(!text('gejast-account-runtime.js').includes('const immediate=normalizeNames([...snapshot,...cached])')) failures.push('login names must resolve from deployment snapshot/cache before any live Supabase request');
 if(!text('login.html').includes('gejast-login-inline-seed')) failures.push('login page must render its last-known-good selector options before deferred/runtime network work');
 if(!text('login.html').includes('data-login-scope="friends"')||!text('login.html').includes('data-login-scope="family"')) failures.push('login HTML itself must carry both active-name scope lists so the selector survives JS/Supabase failure');
-if(!text('gejast-login-names-fallback.js').includes('},60000)')) failures.push('authoritative login-name refresh must stay well behind first paint');
-if(!text('gejast-login-names-fallback.js').includes("typeof document !== 'undefined'")||!text('gejast-login-names-fallback.js').includes("typeof navigator !== 'undefined'")||!text('gejast-login-names-fallback.js').includes('if(hidden || offline) return;')) failures.push('background login-name reconciliation must stay environment-safe and must not compete while hidden/offline');
+if(text('gejast-login-names-fallback.js').includes('},60000)')) failures.push('login-name bootstrap must not schedule an automatic authoritative refresh');
+if(!text('gejast-config.js').includes('if (!input.bodyUsed)')||!text('gejast-config.js').includes("method === 'GET' || method === 'HEAD'")) failures.push('public fetch guard must avoid cloning consumed Request streams and rebuild GET/HEAD bodyless');
+if(!text('login.html').includes('gejast-config.js?v817&rev=20261002-public-bootstrap-r3')) failures.push('login must cache-bust the locked-input-stream-safe public bootstrap');
 if(!text('login.html').includes('sel.dataset.seedCount=')) failures.push('login inline seed must prove a synchronous selector population count');
 if(!text('gejast-home-profile-runtime.js').includes("const VERSION = 'v687'")) failures.push('home/profile runtime v687 module contract was changed unexpectedly');
 if(failures.length){console.error('Diagnostic self-consistency v773 FAILED');failures.forEach(f=>console.error('- '+f));process.exit(1);}
