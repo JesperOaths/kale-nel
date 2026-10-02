@@ -56,9 +56,9 @@ jobs:
             export KALENEL_REQUIRE_PRIVATE_ADMIN_SOURCE=1
           fi
           node scripts/build-admin-worker-assets.mjs
-          grep -q "PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r16'" cloudflare/workers/admin-gate/src/worker.js
-          grep -q "PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r12'" cloudflare/workers/admin-gate/src/worker.js
-          grep -q "PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-r2'" cloudflare/workers/admin-gate/src/worker.js
+          grep -q "PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r17'" cloudflare/workers/admin-gate/src/worker.js
+          grep -q "PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r13'" cloudflare/workers/admin-gate/src/worker.js
+          grep -q "PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-r3'" cloudflare/workers/admin-gate/src/worker.js
 
       - name: Run Worker security tests
         run: node scripts/test-admin-worker-gate.mjs
