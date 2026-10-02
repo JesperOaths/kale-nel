@@ -1830,18 +1830,21 @@ Each target stores:
 - the exact metric path,
 - the baseline and goal,
 - direction and unit,
-- the baseline sample size and minimum sample,
+- the legacy baseline sample size/minimum fields for compatibility,
 - the denominator path(s) needed to re-evaluate the same metric later,
+- explicit `sampleRequirements` for new reports, with an independent minimum for every required denominator or game-spread path,
 - a requested practice horizon (currently 5 new games).
 
 Before scoring a target:
 1. role, queue, verified mechanics cohort and patch context must remain comparable;
 2. at least the target's requested number of **new match IDs** must have entered the current rolling Last-20 since the baseline report;
-3. the current report must still meet the target's original minimum denominator for that metric.
+3. every saved current-evidence requirement must still pass. A target can therefore require combinations such as **4 roam attempts across 3 games**, rather than collapsing unlike denominators into one synthetic sample count.
 
-Until both the new-game horizon and current denominator are satisfied, the target is shown as **pending**, with the remaining new games and current valid sample displayed. It must not be called met, moving closer, moved away, or unchanged.
+Until both the new-game horizon and all current evidence requirements are satisfied, the target is shown as **pending**, with each current requirement displayed separately. It must not be called met, moving closer, moved away, or unchanged.
 
 New targets use `coachingSummary` paths for self metrics such as CS/min and role gold @15. Legacy saved targets that used `summary.csMin` or `summary.goldDiff15` are remapped to the current `coachingSummary` on read so the comparison population stays mechanics-filtered and consistent with the baseline that created the target.
+
+Session Gold @15 practice targets use the trusted/comparable subgroup-specific `lane15Games` counts both when the target is created and when it is later scored. Support roaming targets prefer `meanGameSupportRoamAdcLaneMovementCs` with separate measured-window and measured-game requirements, keeping Next-5 semantics aligned with the main Support coaching surfaces.
 
 
 ## Match-story filters
