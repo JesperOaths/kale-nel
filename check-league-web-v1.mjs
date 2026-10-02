@@ -17,6 +17,10 @@ assert.ok(api.includes('x-league-workspace'),'Public League API must accept an i
 assert.ok(api.includes('publicWorkspaceOwnerId('),'Public League workspaces must map to isolated non-session owners');
 assert.ok(api.includes('const uuid=/^[0-9a-f]{8}-')&&api.includes('hex=/^lw1_[0-9a-f]{48,64}$/i'),'Backend must reject weak/arbitrary public workspace identifiers');
 assert.ok(app.includes('function secureWorkspaceToken()')&&app.includes('crypto.randomUUID')&&app.includes('crypto.getRandomValues'),'Frontend public workspace identity must use cryptographic randomness');
+assert.ok(app.includes('function leagueApiHeaders()'),'League frontend must own its public API header policy rather than rely on the global fetch guard');
+assert.ok(app.includes("headers={'Content-Type':'application/json','apikey':KEY,'x-league-workspace':workspaceId()}"),'League public API calls must always send apikey plus isolated workspace identity');
+assert.ok(app.includes("/^[^.]+\\.[^.]+\\.[^.]+$/.test(String(KEY||''))"),'League must distinguish legacy JWT anon keys from opaque publishable keys');
+assert.ok(!app.includes("'Authorization':'Bearer '+KEY"),'Opaque Supabase publishable keys must never be unconditionally duplicated into Authorization by League');
 assert.ok(!app.includes('Math.random()'),'League workspace identity must never fall back to weak Math.random entropy');
 assert.ok(api.includes('PUBLIC_MAX_PROFILES=8')&&api.includes('PUBLIC_MAX_FETCH_MATCHES=50')&&api.includes('PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE=80')&&api.includes('PUBLIC_MAX_ANALYSES_PER_PROFILE=25'),'Anonymous public workspace storage/fetch limits must remain explicit');
 assert.ok(api.includes('public_workspace_profile_limit'),'Anonymous profile creation must be bounded');
@@ -732,7 +736,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v172'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v174'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
