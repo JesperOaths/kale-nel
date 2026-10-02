@@ -2186,10 +2186,61 @@ function matchEvidenceLedgerHtml(r,g){
     const state25=arcRoleGoldState(g,25);
     add(25,'checkpoint','Role state @25',state25.label+' · '+signed(g.goldDiff25,0)+'g vs role peer',state25.tone,'macro');
   }
+
+  // Risky deaths belong in the same chronological story as economy/item checkpoints.
+  for(const d of (Array.isArray(g.badDeaths)?g.badDeaths:[]).slice(0,6)){
+    const consequence=(g.deathConsequences?.events||[]).find(x=>hasNum(x.time)&&hasNum(d.time)&&Math.abs(Number(x.time)-Number(d.time))<=.04),tags=Array.isArray(d.tags)?d.tags:[];
+    const detail=[
+      d.zone?String(d.zone):'unknown zone',
+      tags.length?tags.join(', '):'high-risk classification',
+      hasNum(d.currentGold)?fmtInt(d.currentGold)+'g unspent':'',
+      d.traded?('traded'+(hasNum(d.tradeDelaySec)?' in '+String(d.tradeDelaySec)+'s':'')):'untraded',
+      consequence?.severe?'severe aftermath':consequence?.costly?'costly aftermath':'',
+      consequence?.enemyObjectiveAfter?'enemy objective followed':'',
+      consequence?.enemyStructureAfter?'enemy structure followed':''
+    ].filter(Boolean).join(' · ');
+    add(d.time,'risk death','High-risk death',detail,'bad','deaths');
+  }
+
+  // Show only supported contested-objective windows; fully conceded cross-map objectives are not coaching absences.
+  for(const x of (g.objectiveReadiness?.events||[]).filter(x=>x.teamSecured||x.contested||x.present||x.absent).slice(0,8)){
+    const result=x.teamSecured?'team secured':x.enemySecured?'enemy secured':'contested';
+    const presence=x.earlySetup?'prior setup + present':x.eventFrameOnlyJoin?'event-frame-only join':x.present?'present':x.absent?'absent':'presence unknown';
+    const detail=[
+      String(x.objectiveType||'neutral objective'),
+      result,
+      presence,
+      hasNum(x.setupLeadSec)&&x.earlySetup?('setup ~'+fmtInt(x.setupLeadSec)+'s before'):'',
+      hasNum(x.secondsSinceShop)?('shop ended '+String(x.secondsSinceShop)+'s before'):'',
+      x.recentDeath?'recent death before window':'',
+      (x.recentShopAbsence??x.lateResetMiss)?'recent-shop absence':'',
+      x.freshPurchaseJoin?'fresh purchase + joined':''
+    ].filter(Boolean).join(' · ');
+    const tone=x.absent&&x.enemySecured?'bad':x.teamSecured&&x.present?'good':'neutral';
+    add(x.time,'objective','Contested '+String(x.objectiveType||'objective'),detail,tone,'objectives');
+  }
+
+  // Fight ledger uses active involvement only. Proximity-only clusters stay in the fight detail tab but cannot become execution judgments.
+  for(const x of (g.fightProfile?.events||[]).filter(x=>x.active).slice(0,8)){
+    const signal=x.diedBeforeContribution||x.firstAllyDeath||x.outnumbered||x.highUnspent||x.itemDisadvantage||x.goldDeficit;
+    if(!signal&&!x.survived)continue;
+    const outcome=x.survived?'survived':x.diedBeforeContribution?'died before contribution':x.firstAllyDeath?'first allied death':'died after contribution';
+    const detail=[
+      outcome,
+      x.outnumbered?'locally outnumbered':'',
+      x.highUnspent&&hasNum(x.currentGoldAtStart)?fmtInt(x.currentGoldAtStart)+'g unspent at start':'',
+      x.itemDisadvantage?'major-item disadvantage':'',
+      x.goldDeficit&&hasNum(x.goldDiffAtStart)?('role gold '+signed(x.goldDiffAtStart,0)+'g at start'):'',
+      hasNum(x.kills)?String(x.kills)+' cluster kill'+(Number(x.kills)===1?'':'s'):''
+    ].filter(Boolean).join(' · ');
+    const tone=x.diedBeforeContribution||x.firstAllyDeath?'bad':x.survived?'good':'neutral';
+    add(x.startMin,'fight','Active fight',detail,tone,'fights');
+  }
+
   const reviewItems=(Array.isArray(r?.replayReviewQueue)?r.replayReviewQueue:[]).filter(x=>String(x.matchId||'')===String(g.matchId||''));
   reviewItems.forEach(x=>add(x.minute,'review #'+String(x.rank||''),x.title||'Ranked replay moment',x.evidence||'',Number(x.rank||999)<=3?'bad':'neutral',x.tab||'macro'));
   events.sort((a,b)=>a.time-b.time||String(a.title).localeCompare(String(b.title)));
-  const seen=new Set(),unique=events.filter(x=>{const key=Math.round(x.time*20)+'|'+x.title.toLowerCase();if(seen.has(key))return false;seen.add(key);return true;}).slice(0,14);
+  const seen=new Set(),unique=events.filter(x=>{const key=Math.round(x.time*20)+'|'+x.title.toLowerCase();if(seen.has(key))return false;seen.add(key);return true;}).slice(0,20);
   if(!unique.length)return '<details class="history-ledger"><summary>Chronological evidence</summary><div class="history-ledger-empty">No supported key moments are available beyond the summary cards.</div></details>';
   return '<details class="history-ledger"><summary>Chronological evidence · '+unique.length+' key moment'+(unique.length===1?'':'s')+'</summary><div class="history-ledger-list">'+unique.map(x=>
     '<div class="history-ledger-row tone-'+x.tone+'"><time>'+esc(fmt(x.time,1))+'m</time><div><span>'+esc(x.kind)+'</span><strong>'+esc(x.title)+'</strong><p>'+esc(x.detail||'')+'</p></div>'+(x.tab?'<button class="button secondary tiny" type="button" data-ledger-review-match="'+esc(g.matchId||'')+'" data-ledger-review-tab="'+esc(x.tab)+'">Evidence</button>':'')+'</div>'
@@ -3341,7 +3392,7 @@ function renderQuality(r){
     qualityCard('Timeline coverage',hasNum(timelinePct)?fmtPct(timelinePct):'n/a',String(timelines)+' / '+String(analyzed)+' games',evidenceLevel(timelines)),
     qualityCard('Direct peer evidence',String(peerN)+' games','High-confidence same-role comparisons · '+String(q.excludedLowConfidenceDirectPeerGames??0)+' fallback-role comparison(s) withheld · '+String(q.ambiguousDirectPeerGames??0)+' ambiguous enemy-role game(s) withheld · '+String(q.missingDirectPeerGames??0)+' missing enemy-role game(s)',evidenceLevel(peerN)),
     qualityCard('Ranked peer evidence',String(rankedN)+' games',String(q.higherRankPeerGames??p.higherRankPeerGames??0)+' higher-rank peers',evidenceLevel(rankedN)),
-    qualityCard('Fight evidence',String(fightN)+' clusters','Attended multi-kill fight clusters',evidenceLevel(fightN,12,6)),
+    qualityCard('Fight evidence',String(fightN)+' active clusters',String(b.fightPresenceSamples??fightN)+' supported-presence clusters · '+String(b.fightProximityOnlySamples??0)+' proximity-only context clusters excluded from execution rates',evidenceLevel(fightN,12,6)),
     qualityCard('Objective evidence',String(objectiveN)+' contested encounters','Team-secured objectives plus lost objectives with supported allied presence; full concessions excluded',evidenceLevel(objectiveN,10,5)),
     qualityCard('Ward evidence',String(wardN)+' ward events',String(q.wardEventPositions??0)+' direct-position · '+String(q.wardFrameProjectedPositions??0)+' projected from nearest ≤35s player frame · '+String(q.wardUnpositionedEvents??0)+' unpositioned',evidenceLevel(wardN,30,12)),
     qualityCard('Same-patch self baseline',String(q.coachingBaselineRoleGames??0)+' games',(q.currentPublicPatchKey||q.currentPatchKey)?('Older primary-role games on patch '+String(q.currentPublicPatchKey||q.currentPatchKey)):'No usable patch cohort',evidenceLevel(q.coachingBaselineRoleGames??0))
