@@ -1852,3 +1852,20 @@ A reference older than 90 days is labeled **Historical reference** in both the A
 - their age must be visible before the user interprets the comparison.
 
 A newer public dataset should replace the formal corpus only when its rank/role selection, sample provenance and values are reproducibly retrievable. Freshness alone is not enough reason to replace a transparent benchmark with an opaque one.
+
+
+## Turning-point outcome association
+
+Recurring game-arc turning points may show a **descriptive outcome association** only when both comparison groups are large enough:
+
+- at least 3 timeline-complete coaching games **with** the signal,
+- at least 3 timeline-complete coaching games **without** the signal.
+
+When eligible, the card shows:
+- win rate in games containing the signal,
+- win rate in timeline-complete coaching games without it,
+- the signed percentage-point difference.
+
+This comparison is never labelled causal impact. A signal can co-occur with game state, champion choice, opponent strength or other unmeasured context. If either side has fewer than three games, the card may show the signal's own win rate for traceability but must withhold the with-vs-without difference.
+
+Turning-point cards remain ordered by recurrence, not by observed win-rate difference, to avoid ranking noisy associations as if they were validated drivers.
