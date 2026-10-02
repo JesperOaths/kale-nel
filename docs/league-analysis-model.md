@@ -2076,3 +2076,19 @@ Trigger families are keyed to the existing grouped coaching themes:
 The trigger may inspect the representative/supporting titles to choose a narrower instruction inside that family (for example lead preservation vs farming inside early lane, or item-spike use vs first-reset quality inside reset/power). It must stay consistent with the analyzer's supported semantics and must not invent hidden game state.
 
 The goal is operational recall: a player should be able to recognize the condition in-game and execute one simple response. The full evidence, replay links, Next-5 metric and longer coaching action remain available immediately around it.
+
+
+## High-level objective-family overview
+
+The main decision section may summarize the existing objective-family summary so Dragon, Elder, Baron, Rift Herald and Void Grub evidence does not remain hidden in Advanced Metrics.
+
+For each observed family, show:
+- player joins / supported contested encounters and the contested-presence point estimate,
+- a 95% Wilson interval for that contested-presence proportion,
+- team-controlled vs enemy-controlled encounters,
+- units secured by each team, preserving multi-unit objective semantics such as Void Grubs,
+- presence in team-secured encounters when available.
+
+Objective-family presence is descriptive context, not a generic role grade. A family with fewer than three contested encounters remains thin/context-only. A "review clue" may identify the lowest contested-presence point estimate only among families with at least three contested encounters, and must explicitly remain a replay-priority clue rather than a causal statement.
+
+This surface consumes the existing rules-aware objective-family model. It does not reconstruct or rename objective families from raw event strings in the browser, and preserves Elder Dragon as distinct when the backend can identify it.
