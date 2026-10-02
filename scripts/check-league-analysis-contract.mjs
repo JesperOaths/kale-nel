@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.106'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.107'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -420,7 +420,7 @@ ok(app.includes('for(const g of reportCoachingGames(r))')&&app.includes('const g
 ok(modelDoc.includes('## Coaching-cohort evidence surfaces')&&modelDoc.includes('must not generate current replay priorities'), 'analysis model must preserve cohort boundaries across evidence surfaces');
 ok(backend.includes('buildPracticeTargets'), 'measurable practice-target builder must remain explicit');
 ok(backend.includes('samplePaths:samplePathsFor(metricPath)')&&backend.includes('"coachingSummary.csMin"')&&backend.includes('"coachingSummary.goldDiff15"'), 'practice targets must preserve denominator paths and coaching-cohort self metrics');
-ok(app.includes('function reportNewMatchCount(')&&app.includes('if(newGames<windowGames)')&&app.includes('if(currentSample<minSample)'), 'practice-target outcomes must fail closed until both new-game horizon and current denominator are satisfied');
+ok(app.includes('function reportNewMatchCount(')&&app.includes('if(newGames<windowGames)')&&app.includes('if(!evidence.ready)'), 'practice-target outcomes must fail closed until the new-game horizon and all saved evidence requirements are satisfied');
 ok(app.includes("if(p==='summary.csMin')return'coachingSummary.csMin'")&&app.includes("if(p==='summary.goldDiff15')return'coachingSummary.goldDiff15'"), 'legacy saved target paths must remain cohort-safe');
 ok(modelDoc.includes('## Next-5 target outcome scoring')&&modelDoc.includes('must not be called met, moving closer, moved away, or unchanged'), 'analysis model must preserve pending target semantics');
 ok(backend.includes('source:"self_relative_short_term"'), 'practice targets must remain explicitly self-relative');
@@ -743,3 +743,9 @@ ok(backend.includes('supportRoamAdcLaneMovementWindows')&&backend.includes('supp
 ok(app.includes('function roleEventCoverage(r){')&&app.includes('contestReady:contestN>=5&&contestGames>=3'), 'frontend must apply one centralized event-plus-game readiness policy');
 ok(app.includes("behaviorSummary.meanGameSupportRoamAdcLaneMovementCs")&&app.includes("behaviorSummary.supportRoamAdcLaneMovementGames"), 'Support progress must use game-weighted cross-game lane movement');
 ok(modelDoc.includes('## Event-count plus game-spread evidence'), 'analysis documentation must preserve event-concentration safeguards');
+ok(backend.includes('const requirementDefs=sampleRequirementsFor(metricPath,minSample),sampleRequirements='), 'practice targets must persist exact per-path evidence requirements');
+ok(backend.includes('sessionModel?.firstGame?.lane15Games')&&backend.includes('sessionModel?.game3Plus?.lane15Games')&&backend.includes('sessionModel?.quickAfterLoss?.lane15Games'), 'session practice-target generation must use lane-comparable subgroup counts');
+ok(backend.includes('"behaviorSummary.meanGameSupportRoamAdcLaneMovementCs"')&&backend.includes('"behaviorSummary.supportRoamAdcLaneMovementGames"'), 'Support practice targets must align with the game-weighted lane-movement model');
+ok(app.includes('function practiceTargetSampleRequirements(t){')&&app.includes('function practiceTargetEvidence(report,t){'), 'frontend target scoring must enforce explicit requirements while preserving legacy targets');
+ok(app.includes('sampleSummary:evidence.summary')&&app.includes('if(!evidence.ready)'), 'target outcome cards must retain exact current evidence state and fail closed');
+ok(modelDoc.includes('explicit `sampleRequirements`')&&modelDoc.includes('Session Gold @15 practice targets use the trusted/comparable subgroup-specific'), 'analysis documentation must preserve exact target-evidence semantics');
