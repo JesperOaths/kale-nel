@@ -2439,3 +2439,16 @@ The chart/consistency layer must use the same role semantics as Quick Read and t
 - **ADC / MID / TOP:** retain their lane/economy chart families where role-relative gold/CS and damage or map-impact signals are materially interpretable.
 
 Missing peer, setup, roam, item, or objective evidence stays missing. The chart layer must not synthesize zeroes. Support ADC lane movement is descriptive association over the detected roam window and must not be described as caused by the roam.
+
+
+## Role-specific rolling progress comparison
+
+Rolling Last-20 development comparisons must use metrics appropriate to the selected role instead of a single carry-biased list.
+
+- **SUPPORT:** direct-peer VPM, direct-peer objective-setup wards, roam conversion, ADC-vs-ADC lane movement during detected roam windows, vision-action death rate, contested-objective presence, first-major/spike timing, and shared risk/recovery metrics.
+- **JUNGLE:** direct-peer CS/min, first tracked impact, direct-peer objective setup, contested-objective presence, recent-shop objective absence, first-major/spike timing, and shared risk/recovery metrics.
+- **MID:** direct-role lane economy, CS/min, first impact, mid-routing economy/presence, objective-timing absence, item timing and shared risk/recovery metrics.
+- **TOP:** direct-role lane economy, CS/min, early-lead preservation, pre-objective side-lane death exposure, mid-routing objective presence, lead conversion, item timing and shared risk/recovery metrics.
+- **ADC:** retains the carry-oriented gold/CS/output/conversion family plus item timing and shared risk/recovery metrics.
+
+Every progress metric continues to require its own current and previous sample floor before a directional card is shown. A metric changing across two overlapping rolling Last-20 windows is descriptive development evidence only, not an independent before/after experiment.
