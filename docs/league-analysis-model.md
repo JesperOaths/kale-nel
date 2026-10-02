@@ -2356,3 +2356,15 @@ Fight execution entries use **active involvement only**. Proximity-only clusters
 Objective ledger entries use supported contested windows. Fully conceded cross-map objectives must not be converted into personal absence events. Death entries remain evidence-specific: tags, unspent gold, trade status and measured consequence signals are shown without inventing a single causal explanation.
 
 The ledger is capped to the newest/earliest supported key moments after chronological sorting and de-duplication so an expanded game remains readable.
+
+## Top-driver confidence semantics
+
+The three top driver cards are intentionally stricter than the long supporting lists.
+
+- A primary limiter is visually red only when its representative finding is not low-confidence, or when a low-confidence representative is reinforced by at least two grouped supporting findings.
+- A low-confidence single-source limiter remains visible as a **Provisional limiter** with neutral styling.
+- A strength is visually green as **Bankable strength** only when its selected highlight is not low-confidence.
+- If only low-confidence strengths are available, the card is labelled **Emerging strength**, remains neutral, and uses **Keep testing** rather than **Preserve**.
+- When several strengths exist, prefer the first non-low-confidence highlight before falling back to the top low-confidence item.
+
+This affects presentation priority, not the underlying evidence record. Low-confidence findings remain available in the supporting coaching evidence and can become stronger as the rolling sample grows.
