@@ -109,6 +109,13 @@ ok(backend.includes('rawEventCount'), 'encounter evidence must expose how many r
 ok(backend.includes('w.objectiveSetup=neutralObjectives.some'), 'vision setup must use neutral objectives only');
 ok(!backend.includes('w.objectiveSetup=allObjectives.some'), 'structure events must not inflate neutral-objective ward setup');
 ok(backend.includes('enemyStructureAfter'), 'structure consequences must remain separate from neutral-objective death consequences');
+ok(backend.includes('consequenceTargetMs=Number(d.tMs)+60000'), 'death aftermath must target a bounded ~60-second economy sample');
+ok(backend.includes('frameNearestMs(frames,consequenceTargetMs,35000)'), 'death aftermath must use a bounded nearest-frame tolerance');
+ok(backend.includes('economyWindowContaminatedByRepeatDeath'), 'repeat death before the aftermath frame must suppress economy attribution');
+ok(backend.includes('economySamplesContaminated'), 'suppressed contaminated death-economy samples must remain measurable');
+ok(backend.includes('eventLane===deathZoneNow')&&backend.includes('dist2(pos,o)<=5000*5000'), 'structure aftermath must be local by coordinates or same-lane metadata');
+ok(app.includes('Economy samples suppressed by repeat death'), 'per-game death review must expose repeat-death sample suppression');
+ok(app.includes('Death economy samples suppressed by repeat death'), 'aggregate diagnostics must expose repeat-death sample suppression');
 ok(backend.includes('firstMeaningfulReturnShop'), 'first-reset analysis must infer a true return after leaving base');
 ok(backend.includes('hasLeftBaseBefore'), 'first-reset inference must verify prior departure from base');
 ok(!backend.includes('Number(v.startMin)>=2.5'), 'first-reset detection must not rely on the obsolete 2.5-minute floor');
