@@ -1144,10 +1144,7 @@ function renderQuickRead(r){
       comparisonCard('Objective setup wards vs Support',setup,'wards',2,false,
         !hasNum(setup)?'No direct-role pre-objective setup-ward comparison is available.':Number(setup)>=.5?'You establish more wards near upcoming objectives than the opposing Support.':Number(setup)<=-.5?'The opposing Support establishes more wards near upcoming objectives.':'Pre-objective setup-ward volume is close.',
         setupN+' peer-comparable timeline games · threshold 5',setupN>=5),
-      commonImpact,commonItem,commonRecovery,
-      comparisonCard('Role gold @15',lane,'gold',1000,false,
-        !hasNum(lane)?'No comparable @15 Support gold checkpoint is available.':Number(lane)>150?'You average a meaningful Support gold lead at 15.':Number(lane)<-150?'You average a meaningful Support gold deficit at 15.':'Support gold is close at 15; treat this as context rather than a farm target.',
-        laneN+' comparable @15 games · threshold 5',laneN>=5)
+      commonImpact,commonItem,commonRecovery
     ];
   }else if(role==='JUNGLE'){
     cards=[
