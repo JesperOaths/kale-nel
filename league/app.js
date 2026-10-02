@@ -1076,8 +1076,9 @@ function renderCompoundSignals(r){
     rows.push(intelligenceCard('Resources → fight uptime',eff!=null?signed(eff,1)+' pp damage−gold':'Fight conversion',tone,(eff!=null?'Damage share minus gold share is '+signed(eff,1)+' percentage points. ':'')+(pre!=null?'You die before tracked contribution in '+fmtPct(pre)+' of attended fight clusters. ':'')+(surv!=null?'Fight survival is '+fmtPct(surv)+'.':''),fights+' fight clusters · '+sampleGames+' coaching games · thresholds 8 fights / 5 games',ready));
   }
   if(hasNum(b.repeatDeathRate)){
-    const mine=Number(b.repeatDeathRate),peer=hasNum(b.opponentRepeatDeathRate)?Number(b.opponentRepeatDeathRate):null,costly=Number(b.costlyRepeatDeaths||0),n=Number(b.repeatDeathOpportunities||0),ready=n>=8,tone=mine>=60?'bad':mine<=30?'good':'neutral';
-    rows.push(intelligenceCard('Death → recovery stability',fmtPct(mine)+' repeat-death rate',tone,'After a death, '+fmtPct(mine)+' of measured opportunities become another death within four minutes.'+(peer!=null?' Direct-role opponents are at '+fmtPct(peer)+'.':'')+(costly?' '+costly+' repeat death(s) also had measurable costly aftermath.':''),n+' recovery opportunities · analyzer threshold 8 · combines recurrence + consequence',ready));
+    const mine=Number(b.repeatDeathRate),matchedMine=hasNum(b.peerMatchedRepeatDeathRate)?Number(b.peerMatchedRepeatDeathRate):null,peer=hasNum(b.opponentRepeatDeathRate)?Number(b.opponentRepeatDeathRate):null,costly=Number(b.costlyRepeatDeaths||0),n=Number(b.repeatDeathOpportunities||0),matchedN=Number(b.peerMatchedRepeatDeathOpportunities||0),ready=n>=8,tone=mine>=60?'bad':mine<=30?'good':'neutral';
+    const peerText=matchedMine!=null&&peer!=null?' In the trusted matched-peer subset, you are at '+fmtPct(matchedMine)+' versus '+fmtPct(peer)+' for the direct role opponents.':'';
+    rows.push(intelligenceCard('Death → recovery stability',fmtPct(mine)+' repeat-death rate',tone,'Across all valid games, '+fmtPct(mine)+' of measured recovery opportunities become another death within four minutes.'+peerText+(costly?' '+costly+' repeat death(s) also had measurable costly aftermath.':''),n+' all-game recovery opportunities'+(matchedN?' · '+matchedN+' matched-peer opportunities':'')+' · analyzer threshold 8',ready));
   }
   panel.hidden=!rows.length;target.innerHTML=rows.join('');
 }
@@ -2118,7 +2119,7 @@ function renderAdvanced(r){
     ['Severe death consequences',String(r.behaviorSummary?.severeDeathEvents??0)+' · '+fmt(r.behaviorSummary?.severeDeathsPerTimelineGame,2)+'/game'],
     ['Rapid repeat deaths',String(r.behaviorSummary?.repeatDeaths??0)+' / '+String(r.behaviorSummary?.repeatDeathOpportunities??0)+' · '+fmtPct(r.behaviorSummary?.repeatDeathRate)],
     ['High-risk / costly repeat deaths',String(r.behaviorSummary?.highRiskRepeatDeaths??0)+' / '+String(r.behaviorSummary?.costlyRepeatDeaths??0)],
-    ['Repeat-death rate vs peer',fmtPct(r.behaviorSummary?.repeatDeathRate)+' / '+fmtPct(r.behaviorSummary?.opponentRepeatDeathRate)+' · Δ '+(hasNum(r.behaviorSummary?.repeatDeathRateDelta)?signed(r.behaviorSummary.repeatDeathRateDelta,0)+' pp':'n/a')],
+    ['Repeat-death rate vs peer · matched',fmtPct(r.behaviorSummary?.peerMatchedRepeatDeathRate)+' / '+fmtPct(r.behaviorSummary?.opponentRepeatDeathRate)+' · Δ '+(hasNum(r.behaviorSummary?.repeatDeathRateDelta)?signed(r.behaviorSummary.repeatDeathRateDelta,0)+' pp':'n/a')],
     ['Avg post-death role-gold swing',hasNum(r.behaviorSummary?.avgGoldSwingAfterDeath)?signed(r.behaviorSummary.avgGoldSwingAfterDeath,0)+'g':'n/a'],
     ['Avg post-death role-CS swing',hasNum(r.behaviorSummary?.avgCsSwingAfterDeath)?signed(r.behaviorSummary.avgCsSwingAfterDeath,1):'n/a'],
     ['Deaths while ≥500g behind',String(r.behaviorSummary?.behindStateDeaths??0)],
@@ -2239,7 +2240,7 @@ function renderAdvanced(r){
     metric('Higher-rank major-item games',String(p.higherRankMajorItemGames??0),false),
     metric('Major-item timing vs higher-rank peer',hasNum(p.higherRankAvgMajorItemDeltaMin)?signed(p.higherRankAvgMajorItemDeltaMin,1)+' min':'n/a',!hasNum(p.higherRankAvgMajorItemDeltaMin)),
     metric('Faster major item vs higher-rank peer',fmtPct(p.higherRankMajorItemFasterPct),!hasNum(p.higherRankMajorItemFasterPct)),
-    metric('Post-kill conversion Δ',hasNum(r.behaviorSummary?.killConversionDelta)?signed(r.behaviorSummary.killConversionDelta,0)+' pp':'n/a',!hasNum(r.behaviorSummary?.killConversionDelta))
+    metric('Post-kill conversion Δ · matched',hasNum(r.behaviorSummary?.killConversionDelta)?signed(r.behaviorSummary.killConversionDelta,0)+' pp':'n/a',!hasNum(r.behaviorSummary?.killConversionDelta))
   ];
   const conversionRows=[
     metric('Wins when ≥250g ahead @15',hasNum(conv.laneLeadWinRate)?fmtPct(conv.laneLeadWinRate)+' · '+String(conv.laneLeadGames||0)+' games':'n/a',!hasNum(conv.laneLeadWinRate)),
