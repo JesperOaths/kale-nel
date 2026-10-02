@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends playstyle analysis with evidence-backed Last-20 coaching and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261002-league-web-v178">
+  <link rel="stylesheet" href="/league/styles.css?v=20261002-league-web-v179">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261002-public-bootstrap-r4"></script>
 </head>
@@ -170,7 +170,7 @@
         <nav class="report-jump-nav" aria-label="Report sections">
           <a href="#overview">Overview</a>
           <a href="#rank-comparison">Rank comparison</a>
-          <a href="#lane-economy">Lane & economy</a>
+          <a href="#lane-economy" id="laneEconomyNav">Role economy</a>
           <a href="#decisions">Fights & objectives</a>
           <a href="#phase-diagnostic">Phases</a>
           <a href="#game-arcs">Game arcs</a>
@@ -294,8 +294,8 @@
 
         <section class="panel economy-panel" id="lane-economy">
           <div class="section-head">
-            <div><p class="eyebrow">Lane & economy</p><h2>Are you leaving lane ahead or behind?</h2></div>
-            <span class="section-hint">Current coaching cohort only. Signed lane/economy charts use a fixed neutral line at zero; older-mechanics context stays in match history.</span>
+            <div><p class="eyebrow" id="laneEconomyEyebrow">Role economy</p><h2 id="laneEconomyTitle">How does your role economy develop?</h2></div>
+            <span class="section-hint" id="laneEconomyHint">Current coaching cohort only. Signed role/economy charts use a fixed neutral line at zero; older-mechanics context stays in match history.</span>
           </div>
           <div class="chart-grid" id="chartGrid"></div>
           <div class="consistency-summary-wrap">
@@ -435,8 +435,8 @@
           </div>
           <div class="champion-context-grid">
             <article>
-              <h3>Role sample</h3>
-              <div id="roleBreakdown" class="breakdown-grid"></div>
+              <h3>Cohort context</h3>
+              <div id="roleBreakdown" class="breakdown-grid cohort-context-grid"></div>
             </article>
             <article>
               <h3>Champion sample</h3>
@@ -500,6 +500,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261002-league-web-v178" defer></script>
+  <script src="/league/app.js?v=20261002-league-web-v179" defer></script>
 </body>
 </html>
