@@ -1532,13 +1532,14 @@ function gameArcStages(g){
     else stages.push({key:'teamplay_neutral',label:'Teamplay',tone:'neutral',value:'No dominant teamplay flag',copy:'No single supported side-lane, pre-contribution, recent-shop-absence or strong early-setup signal dominates this game.'});
   }
 
-  const lateRisk=Number(closing.highRiskDeaths||0)+Number(closing.costlyDeaths||0),duration=Number(g.durationMinutes||0);
+  const lateHighRisk=Number(closing.highRiskDeaths||0),lateCostly=Number(closing.costlyDeaths||0),hasLateRisk=lateHighRisk>0||lateCostly>0,duration=Number(g.durationMinutes||0);
+  const lateRiskText=(lateHighRisk?lateHighRisk+' high-risk':'')+(lateHighRisk&&lateCostly?' · ':'')+(lateCostly?lateCostly+' costly':'')+' late-death flag'+((lateHighRisk===1&&lateCostly===0)||(lateCostly===1&&lateHighRisk===0)?'':'s');
   if(duration<25||at25.key==='unavailable'){
     stages.push({key:'finish_no25_'+(g.win?'win':'loss'),label:'Finish',tone:g.win?'good':'bad',value:(g.win?'Win':'Loss')+' without comparable @25 state',copy:'Result is known, but no standard role-relative @25 closing checkpoint is used for this game.'});
   }else if(at25.key==='ahead'&&g.win){
-    stages.push({key:'finish_ahead_win',label:'Finish',tone:lateRisk?'neutral':'good',value:lateRisk?'Ahead @25 → win with late risk':'Ahead @25 → win',copy:lateRisk?lateRisk+' late high-risk/costly death flags were recorded after 25.':'No late high-risk/costly death flag was recorded after the ahead-at-25 checkpoint.'});
+    stages.push({key:'finish_ahead_win',label:'Finish',tone:hasLateRisk?'neutral':'good',value:hasLateRisk?'Ahead @25 → win with late risk':'Ahead @25 → win',copy:hasLateRisk?lateRiskText+' were recorded after 25. High-risk and costly categories can overlap, so they are not added together as unique deaths.':'No late high-risk/costly death flag was recorded after the ahead-at-25 checkpoint.'});
   }else if(at25.key==='ahead'&&!g.win){
-    stages.push({key:'finish_ahead_loss',label:'Finish',tone:'bad',value:lateRisk?'Ahead @25 → loss + late risk':'Ahead @25 → loss',copy:lateRisk?lateRisk+' late high-risk/costly death flags are review evidence; they are not assumed to be the sole cause of the loss.':'The role lead did not become a win, but the current late-risk model does not identify a supported cause.'});
+    stages.push({key:'finish_ahead_loss',label:'Finish',tone:'bad',value:hasLateRisk?'Ahead @25 → loss + late risk':'Ahead @25 → loss',copy:hasLateRisk?lateRiskText+' are review evidence. High-risk and costly categories can overlap, and neither category is assumed to be the sole cause of the loss.':'The role lead did not become a win, but the current late-risk model does not identify a supported cause.'});
   }else if(at25.key==='behind'&&g.win){
     stages.push({key:'finish_behind_win',label:'Finish',tone:'good',value:'Behind @25 → win',copy:'The game was won despite a direct-role gold deficit at the comparable 25-minute checkpoint.'});
   }else if(at25.key==='behind'&&!g.win){
