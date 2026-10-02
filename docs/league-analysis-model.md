@@ -1924,3 +1924,14 @@ A dropped priority is **not** evidence that the underlying problem is solved. It
 The continuity read is marked early until at least five genuinely new match IDs have entered the current report. Before that point, large Last-20 overlap can make plan turnover unstable.
 
 Use the labels **focus mostly retained**, **focus partly shifted**, and **focus set changed** as descriptive plan-state summaries only. Do not treat plan persistence as proof that coaching failed, and do not treat plan turnover as proof that coaching succeeded.
+
+
+## Priority-to-match evidence linkage
+
+The top coaching priority should lead directly to concrete replay evidence.
+
+Use the same category mapping that links practice themes to the ranked replay-review queue. The **Current focus** match-history filter contains only matches with at least one ranked replay moment whose category matches the current top priority. This is intentionally narrower than a fuzzy stat/text match.
+
+The primary-limiter card may show a **Review matching games** action only when at least one such match exists. Activating it changes only the visible match-history filter and never changes the report sample or recalculates coaching conclusions.
+
+A focus-match badge means "this game contains ranked replay evidence relevant to the current top priority." It does not mean that the game caused the priority, that every mistake in the game belongs to that theme, or that games without the badge are irrelevant.
