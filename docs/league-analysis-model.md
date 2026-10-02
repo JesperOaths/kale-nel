@@ -1755,3 +1755,22 @@ Recurring pattern cards are ordered lexicographically by bounded consequence evi
 This is a review-priority ordering, not a numeric severity score and not a causal model. A pattern does not become "worse" merely because unlike consequence types have larger numeric values.
 
 Pattern cards disclose aftermath measurement coverage and repeat-death-contaminated economy samples. Contaminated economy windows must not be presented as clean post-death gold/CS loss evidence. Objective/structure aftermath may still remain independently supported when its own bounded attribution rule is satisfied.
+
+
+## Practice-to-replay bridge
+
+The practice plan may attach up to two ranked replay-review moments to each priority. This bridge is navigation over already-supported evidence; it does not create a new finding.
+
+Replay categories are matched conservatively from the practice theme:
+- reset/shop themes → reset and item-spike moments,
+- lane/duel themes → early-lead and matchup moments,
+- lead-preservation themes → early-lead and lead-protection moments,
+- objective/setup themes → objective-setup moments,
+- fight/output themes → teamfight and fight-selection moments,
+- death/recovery/risk themes → death-consequence and lead-protection moments,
+- vision themes → vision-safety moments,
+- roam themes → roaming moments.
+
+Only moments already present in the backend-ranked `replayReviewQueue` are eligible. The practice card never manufactures a replay example just to fill the UI. If no ranked moment matches a priority, the priority remains aggregate-only.
+
+Opening a linked moment must preserve the backend-selected evidence tab and match ID so the user lands on the relevant death, reset, fight, objective, or macro context directly.
