@@ -426,6 +426,10 @@ assert.ok(app.includes('This is an evidence trace, not a causal proof.'),'Priori
 assert.ok(modelDoc.includes('## Priority evidence chain')&&modelDoc.includes('black-box verdict'),'Priority evidence-chain semantics must remain documented');
 assert.ok(app.includes('driver-evidence-meta')&&app.includes('supporting finding')&&app.includes('confidence'),'Top report drivers must expose the confidence/support metadata behind their selected evidence when available');
 assert.ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('data-open-full-match'),'League must retain the expandable coaching-readable recent match history with a path into full evidence');
+assert.ok(app.includes('function matchEvidenceLedgerHtml(')&&app.includes('Chronological evidence ·')&&css.includes('.history-ledger-row'),'Expanded match history must expose a compact chronological evidence ledger');
+assert.ok(app.includes('trustedDirectPeer(g)')&&app.includes('direct-role economy comparison withheld'),'Ledger peer-relative evidence must fail closed when the direct role peer is not trusted');
+assert.ok(app.includes('data-ledger-review-match')&&app.includes('openReplayReviewMatch(matchId,tab)'),'Ledger review moments must deep-link into the existing full evidence tabs');
+assert.ok(modelDoc.includes('## Per-match chronological evidence ledger')&&modelDoc.includes('not a claim that the listed moments caused the match result'),'Ledger evidence and causal limitations must remain documented');
 assert.ok(html.includes('data-history-filter="priority"')&&app.includes('function currentPriorityReplayIds('),'Match history must expose a Current focus filter driven by ranked replay evidence');
 assert.ok(api.includes('add(g,116,"mid routing"')&&api.includes('secondsBeforeNeutralObjective'),'Replay queue must include specific pre-objective isolated side-lane evidence for mid-game routing');
 assert.ok(api.includes('add(g,94,"mid routing"')&&api.includes('ev?.highRisk===true'),'Non-objective side-lane replay moments must require an existing high-risk flag');
@@ -718,7 +722,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v167'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v168'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
