@@ -65,20 +65,18 @@
     // The embedded deployment snapshot is newer and deterministic; a stale browser cache must never overwrite it.
     var immediate=snapshot.length?snapshot:cached;
     if(immediate.length){
-      // Login already has a deployment snapshot and server-rendered names. Do
-      // not compete with page boot or a degraded Supabase data plane. Refresh
-      // only later, while visible/online, and never block the selector.
-      setTimeout(function(){
-        var hidden = typeof document !== 'undefined' && !!document.hidden;
-        var offline = typeof navigator !== 'undefined' && navigator.onLine === false;
-        if(hidden || offline) return;
-        authoritative(resolvedScope).catch(function(){});
-      },60000);
+      // The deployment snapshot + rendered HTML are authoritative for page boot.
+      // Never create automatic Supabase traffic merely to populate a selector
+      // that is already complete. Live reconciliation is explicit-only.
       return immediate;
     }
     try { return await authoritative(resolvedScope); } catch(_) { return []; }
   }
+  async function refresh(requestedScope){
+    var resolvedScope=requestedScope==='family'?'family':(requestedScope==='friends'?'friends':scope());
+    try { return await authoritative(resolvedScope); } catch(_) { return []; }
+  }
   cfg.fetchScopedActivePlayerNames=load;
   cfg.getActivatedPlayerNamesForScope=load;
-  window.GEJAST_LOGIN_NAMES_FALLBACK={load:load,source:'v817-snapshot-authoritative-first-delayed60s-active-name-rpc',staticSource:'gejast-login-names-static.js'};
+  window.GEJAST_LOGIN_NAMES_FALLBACK={load:load,refresh:refresh,source:'v817-static-authoritative-boot-explicit-live-refresh-r17',staticSource:'gejast-login-names-static.js'};
 })();
