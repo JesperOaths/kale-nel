@@ -5,7 +5,7 @@ const cfg=window.GEJAST_CONFIG||{};
 const API=(cfg.SUPABASE_URL||'')+'/functions/v1/printify-gildan-diff-diag-v1';
 const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
 const $=(id)=>document.getElementById(id);
-const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,savedProfiles:[],selectedProfileId:'',selectedRole:'ADC'};
+const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,matchHistoryFilter:'all',savedProfiles:[],selectedProfileId:'',selectedRole:'ADC'};
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const LEAGUE_WORKSPACE_KEY='bruisienator_public_workspace_v1';
@@ -1689,19 +1689,56 @@ function matchHistoryRow(g,index,displayIndex,r){
   '</article>';
 }
 function renderMatchHistory(r){
-  const list=$('matchHistoryList'),summary=$('matchHistorySummary'),toggle=$('matchHistoryToggle');if(!list||!summary)return;
-  const allGames=r.games||[],limit=Math.min(Math.max(1,Number(state.matchHistoryLimit||10)),Math.max(1,allGames.length)),games=allGames.slice(0,limit);
-  if(toggle){
-    const canExpand=allGames.length>10;
-    toggle.hidden=!canExpand;
-    toggle.textContent=limit>=allGames.length?'Show newest 10':'Show all '+Math.min(20,allGames.length);
-    toggle.onclick=()=>{state.matchHistoryLimit=limit>=allGames.length?10:Math.min(20,allGames.length);renderMatchHistory(r);};
+  const list=$('matchHistoryList'),summary=$('matchHistorySummary'),toggle=$('matchHistoryToggle'),filters=$('matchHistoryFilters'),filterSummary=$('matchHistoryFilterSummary');if(!list||!summary)return;
+  const sourceGames=r.games||[],reviewIds=new Set((Array.isArray(r.replayReviewQueue)?r.replayReviewQueue:[]).map(x=>String(x.matchId||'')).filter(Boolean));
+  const counts={
+    all:sourceGames.length,
+    win:sourceGames.filter(g=>g.win).length,
+    loss:sourceGames.filter(g=>!g.win).length,
+    ahead15:sourceGames.filter(g=>gameMatchesNamedFilter(g,'ahead15')).length,
+    even15:sourceGames.filter(g=>gameMatchesNamedFilter(g,'even15')).length,
+    behind15:sourceGames.filter(g=>gameMatchesNamedFilter(g,'behind15')).length,
+    risk:sourceGames.filter(g=>g.timelineAvailable===true&&(Number(g.badDeathCount||0)>0||Number(g.deathConsequences?.costly||0)>0)).length,
+    review:sourceGames.filter(g=>reviewIds.has(String(g.matchId||''))).length
+  };
+  const filter=String(state.matchHistoryFilter||'all');
+  const matchFilter=g=>{
+    if(filter==='win')return !!g.win;
+    if(filter==='loss')return !g.win;
+    if(filter==='ahead15'||filter==='even15'||filter==='behind15')return gameMatchesNamedFilter(g,filter);
+    if(filter==='risk')return g.timelineAvailable===true&&(Number(g.badDeathCount||0)>0||Number(g.deathConsequences?.costly||0)>0);
+    if(filter==='review')return reviewIds.has(String(g.matchId||''));
+    return true;
+  };
+  const filteredGames=sourceGames.filter(matchFilter),limit=Math.min(Math.max(1,Number(state.matchHistoryLimit||10)),Math.max(1,filteredGames.length)),games=filteredGames.slice(0,limit);
+  if(filters){
+    filters.querySelectorAll('[data-history-filter]').forEach(btn=>{
+      const key=btn.dataset.historyFilter||'all',active=key===filter;
+      btn.classList.toggle('active-filter',active);btn.setAttribute('aria-pressed',active?'true':'false');
+      const base=key==='all'?'All':key==='win'?'Wins':key==='loss'?'Losses':key==='ahead15'?'Ahead @15':key==='even15'?'Close @15':key==='behind15'?'Behind @15':key==='risk'?'Risk flagged':'Replay priority';
+      btn.textContent=base+' · '+String(counts[key]??0);
+      btn.onclick=()=>{state.matchHistoryFilter=key;state.matchHistoryLimit=10;renderMatchHistory(r);};
+    });
   }
-  if(!games.length){summary.innerHTML='';list.innerHTML='<div class="bullet empty">No recent comparable matches are available.</div>';return;}
+  if(filterSummary){
+    const label=filter==='all'?'full recent sample':filter==='risk'?'timeline-supported risk-flagged games':filter==='review'?'games with ranked replay moments':filter==='win'?'wins':filter==='loss'?'losses':filter==='ahead15'?'ahead-at-15 games':filter==='even15'?'close-at-15 games':'behind-at-15 games';
+    filterSummary.textContent='Showing '+filteredGames.length+' / '+sourceGames.length+' '+label+'. Filters change only visible rows, never report calculations.';
+  }
+  if(toggle){
+    const canExpand=filteredGames.length>10;
+    toggle.hidden=!canExpand;
+    toggle.textContent=limit>=filteredGames.length?'Show newest 10':'Show all '+Math.min(20,filteredGames.length);
+    toggle.onclick=()=>{state.matchHistoryLimit=limit>=filteredGames.length?10:Math.min(20,filteredGames.length);renderMatchHistory(r);};
+  }
+  if(!games.length){
+    summary.innerHTML='<small>No matches in this filter. The underlying report sample is unchanged.</small>';
+    list.innerHTML='<div class="bullet empty">No recent comparable matches match this story filter.</div>';
+    return;
+  }
   const wins=games.filter(g=>g.win).length,ahead=games.filter(g=>gameMatchesNamedFilter(g,'ahead15')).length,behind=games.filter(g=>gameMatchesNamedFilter(g,'behind15')).length;
   const timelineGames=games.filter(g=>g.timelineAvailable===true),risky=timelineGames.reduce((n,g)=>n+Number(g.badDeathCount||0),0),coachingGames=reportCoachingGames(r);
   const mechanicsNote=r.dataQuality?.mechanicsCohortApplied===true?' · coaching aggregates use '+coachingGames.length+'/'+String((r.games||[]).length)+' current-mechanics games':'';
-  summary.innerHTML='<span><b>'+wins+'–'+(games.length-wins)+'</b> visible result</span><span><b>'+ahead+'</b> ahead @15</span><span><b>'+behind+'</b> behind @15</span><span><b>'+risky+'</b> flagged high-risk deaths</span><small>Showing newest '+games.length+' of '+allGames.length+' comparable '+esc(roleLabel(canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole||state.selectedRole)))+' games · risk evidence '+timelineGames.length+'/'+games.length+' visible timelines'+esc(mechanicsNote)+'</small>';
+  summary.innerHTML='<span><b>'+wins+'–'+(games.length-wins)+'</b> visible result</span><span><b>'+ahead+'</b> ahead @15</span><span><b>'+behind+'</b> behind @15</span><span><b>'+risky+'</b> flagged high-risk deaths</span><small>Showing newest '+games.length+' of '+filteredGames.length+' filtered · '+sourceGames.length+' total comparable '+esc(roleLabel(canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole||state.selectedRole)))+' games · risk evidence '+timelineGames.length+'/'+games.length+' visible timelines'+esc(mechanicsNote)+'</small>';
   list.innerHTML=games.map((g,i)=>matchHistoryRow(g,i,i,r)).join('');
   list.querySelectorAll('.match-history-toggle').forEach(btn=>btn.addEventListener('click',()=>{
     const row=btn.closest('.match-history-row'),detail=row?.querySelector('.match-history-detail');if(!detail)return;
@@ -1714,7 +1751,6 @@ function renderMatchHistory(r){
     ev.stopPropagation();const matchId=btn.dataset.openReviewMatch,tab=btn.dataset.reviewTab||'macro';if(matchId)openReplayReviewMatch(matchId,tab);
   }));
 }
-
 function renderGames(r){
   const games=r.games||[];
   state.openMatch=null;
