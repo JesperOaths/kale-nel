@@ -186,7 +186,7 @@ for(const field of [
   'earlyLeadGames','earlyLeadGivebackGames','earlyLeadGivebackRate','avgEarlyLeadPeakGold','avgEarlyLeadGoldSwingTo15','earlyLeadGivebackDeaths','earlyLeadGivebackHighRiskDeaths',
   'majorReadinessGames','delayedMajorCompletionGames','avgMajorCompletionDelayMin','majorReadinessPeerGames','avgMajorCompletionDelayVsPeerMin',
   'itemSpikeEligibleWindows','itemSpikeUtilizedWindows','itemSpikeUtilizationRate','itemSpikeDeathsBeforeImpact','avgItemSpikeLeadSec',
-  'fightSamples','firstAllyFightDeathRate','preContributionFightDeathRate','fightSurvivalRate',
+  'fightPresenceSamples','fightSamples','fightProximityOnlySamples','fightSampleBasis','firstAllyFightDeathRate','preContributionFightDeathRate','fightSurvivalRate',
   'highUnspentFightRate','itemDisadvantageFightRate','goldDeficitFightRate',
   'killConversionRate','opponentKillConversionRate','killConversionDelta',
   'neutralObjectiveEvents','earlySetupObjectiveJoinRate','earlySetupObjectiveCoverageRate','lateResetObjectiveMissRate','freshPurchaseObjectiveJoinRate',
@@ -202,6 +202,13 @@ assert.ok(api.includes('postImpactRisk'));
 assert.ok(api.includes('highRiskUntradedPostImpactPerGame'));
 assert.ok(api.includes('isolatedSideLaneDeathRate'));
 assert.ok(api.includes('itemDisadvantageFightRate'));
+assert.ok(api.includes('fightProfile:{present:0,active:0,attended:0,proximityOnly:0'),'Fight model must distinguish supported presence, active involvement and proximity-only presence');
+assert.ok(api.includes('fightSampleBasis:"active_involvement_only"'),'Aggregate fight coaching must document the active-involvement denominator');
+assert.ok(api.includes('if(!ev.active)continue;'),'Fight readiness/phase metrics must exclude proximity-only clusters');
+assert.ok(api.includes('out.fightProfile.survivalRate=100*out.fightProfile.survived/out.fightProfile.active'),'Fight survival must use active fights only');
+assert.ok(app.includes('Fight survival · active involvement'),'Decision UI must name the active-fight denominator');
+assert.ok(app.includes('Proximity-only presence'),'Per-game fight UI must keep nearby-only evidence separate');
+assert.ok(app.includes('survival, first-death, readiness, numbers and contribution rates use only active fights'),'Fight UI must explain the denominator distinction');
 assert.ok(api.includes('outnumberedFightLossRate'));
 assert.ok(api.includes('roleLevelDisadvantageFightRate'));
 assert.ok(api.includes('rolePeerNear'));
@@ -552,8 +559,13 @@ assert.ok(api.includes('dist2(pos,o)<=5000*5000'),'Enemy structure aftermath wit
 assert.ok(app.includes('Economy samples suppressed by repeat death'),'Frontend must expose suppressed contaminated death-economy samples');
 assert.ok(api.includes('firstMeaningfulReturnShop'),'First reset must be inferred from leaving base, not a hard-coded 2.5-minute floor');
 assert.ok(api.includes('hasLeftBaseBefore'),'First meaningful return must require prior departure from base');
-assert.ok(api.includes('structureInvolvementEvidence'),'Plate/turret conversion must preserve evidence quality when Riot omits direct participant credit');
-assert.ok(api.includes('timeline_lane_presence'),'Coordinate-less plate events must support weaker same-lane timeline evidence rather than being silently dropped');
+assert.ok(api.includes('structureInvolvementEvidence'),'Plate/turret evidence must preserve direct/proximity/lane provenance when Riot omits direct participant credit');
+assert.ok(api.includes('function structureStrongInvolvementEvidence('),'Coaching structure involvement must have an explicit strong-evidence gate');
+assert.ok(api.includes('evidence==="direct_event_credit"||evidence==="event_position_proximity"'),'Strong structure involvement must require direct credit or supported event-position proximity');
+assert.ok(api.includes('timeline_lane_presence'),'Coordinate-less plate events must retain weaker same-lane timeline evidence rather than being silently dropped');
+assert.ok(api.includes('first20PlayerPlateLanePresenceSignals')&&api.includes('allGamePlayerPlateLanePresenceSignals'),'Weak same-lane plate signals must remain separately measurable');
+assert.ok(app.includes('Lane-presence-only plate signals'),'Frontend must expose weak plate presence without calling it involvement');
+assert.ok(app.includes('never earns plate/turret conversion credit by itself'),'Frontend must explain that weak lane presence is non-credit evidence');
 assert.ok(api.includes('playerPlateByTier')&&api.includes('opponentPlateByTier'),'Plate pressure must remain split across outer/inner/inhibitor/Nexus tiers');
 assert.ok(api.includes('unattributedPlateEvents'),'Plate attribution uncertainty must remain measurable');
 assert.ok(api.includes('earlySoloKillsVsRole')&&api.includes('earlyOutsidePressureDeaths'),'Primary early-lane coaching must use queue-aware early-phase fields');
