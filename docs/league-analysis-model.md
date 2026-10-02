@@ -2254,3 +2254,22 @@ Peer-relative checkpoint charts must use only trusted direct-peer games and coac
 Signed chart semantics are direction-aware. Gold/CS deltas treat positive as favorable. Timing deltas such as first impact treat **negative as favorable** because negative means earlier. The chart engine must flip both the shaded favorable/unfavorable side and point coloring for inverse signed metrics. Recent-vs-sample summary wording should say **more favorable recently / less favorable recently**, not assume numerically higher always means improvement.
 
 The consistency snapshot must be generated from the same role-specific chart specifications so its medians/IQR and favorable-close-unfavorable counts cannot drift from the plotted metric definition.
+
+
+## Role-aware combined intelligence
+
+Compound-intelligence cards must not reintroduce role assumptions that the dedicated role lenses have already removed. Joined evidence is role-gated before interpretation:
+
+- **Lead → preservation:** available to ADC, TOP, MID and JUNGLE when the supported early-lead model exists; hidden for SUPPORT.
+- **Farm ↔ map trade-off:** ADC, TOP and MID only. It uses the defined 15→25 routing model and must not be repurposed as Jungle/Support economy.
+- **Item timing → impact:** ADC, TOP, MID and JUNGLE only; hidden for SUPPORT because the Support role lens uses roam/vision/setup evidence instead of carry-style first-major conversion.
+- **Resources → fight uptime:** ADC, TOP and MID only. Damage-share-minus-gold-share coaching must not leak into SUPPORT or JUNGLE simply because the raw fields happen to exist.
+- **Death → recovery stability:** role-agnostic when the repeat-death evidence floor is met.
+
+JUNGLE additionally gets **Tempo → objective readiness**, joining direct-jungle first-impact timing with prior objective setup and contested-objective presence. A directional read requires at least 5 comparable impact games, 5 supported setup joins and 5 contested encounters. First-major timing may be displayed as additional context but is not allowed to manufacture readiness when those three core denominators are thin.
+
+SUPPORT additionally gets:
+- **Roam value ↔ ADC lane cost:** at least 4 detected roam attempts and 4 measured ADC-vs-ADC lane-cost windows. This remains association evidence; it does not assign sole causation for ADC CS movement to the Support.
+- **Vision safety → objective setup:** at least 12 vision actions and 5 joined objective encounters.
+
+Compound cards remain neutral below their joined evidence floors. Combining several weak inputs must never make a role-specific conclusion look mature.
