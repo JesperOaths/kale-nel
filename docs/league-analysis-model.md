@@ -2459,6 +2459,8 @@ Rolling Last-20 development comparisons must use metrics appropriate to the sele
 Every progress metric continues to require its own current and previous sample floor before a directional card is shown. A metric changing across two overlapping rolling Last-20 windows is descriptive development evidence only, not an independent before/after experiment.
 
 
+Rolling-comparison role compatibility resolves `dataQuality.selectedRole` first, then the coaching/summary role fallbacks, so a saved legacy summary field cannot make two differently selected role reports look comparable.
+
 ## Role-aware session habit model
 
 Session grouping remains descriptive: a session continues while the gap after the prior game end is at most 90 minutes, and the quick-requeue comparison uses at most 45 minutes. The model now carries per-subgroup KP and vision/min alongside CS/min, DPM, role-gold @15 and timeline risk, with explicit valid-game counts for each metric.
@@ -2504,3 +2506,7 @@ For Support/Mid roaming, directional roam-conversion interpretation needs at lea
 The analyzer exports `roamAttemptGames`, `supportRoamAdcLaneMovementWindows`, `supportRoamAdcLaneMovementGames`, `visionActionGames`, `objectiveSetupGames`, and `objectiveContestGames`. Saved older reports can derive the same game-spread counts from their per-game ledgers when those aggregate fields are absent.
 
 Support ADC lane movement also exports `meanGameSupportRoamAdcLaneMovementCs`. Prominent cross-game surfaces use this game-weighted mean, while the legacy pooled-window average remains available for compatibility and technical inspection.
+
+Stable harmful Support-roam styling requires at least two harmful ADC lane-movement windows occurring in at least two different games. Two harmful windows concentrated in one match remain a replay cue, not a stable cross-game pattern.
+
+Generic roam lane-movement targets distinguish the legacy measured-window count (`roamLaneCostGames`) from the explicit contributing-game count (`roamLaneCostMeasuredGames`). A multi-game target must use the latter for spread rather than treating any roam game as measured lane-movement evidence.
