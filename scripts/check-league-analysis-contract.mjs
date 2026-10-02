@@ -161,6 +161,9 @@ ok(backend.includes('contestedObjectives>=3&&contestedJoins===0'), 'per-game obj
 ok(app.includes('ADC-vs-ADC lane cost')&&app.includes('direct-role lane cost'), 'frontend must disclose the role-correct roam lane-cost basis');
 ok(backend.includes('objectiveFamilyStats:{}')&&backend.includes('objectiveFamilySummary'), 'objective-family control/presence must remain exported');
 ok(html.includes('id="objectiveFamilyOverview"')&&app.includes('function renderObjectiveFamilyOverview('), 'main decision surface must expose rules-aware objective-family context');
+ok(html.includes('data-history-filter="objective-family"')&&app.includes('function objectiveFamilyMatchIds('), 'objective-family context must link to the exact recent matches containing supported contested windows');
+ok(app.includes('gameObjectiveFamilyRow(g,key)?.contestedEncounters')&&app.includes("filter==='objective-family'"), 'objective-family review must use backend family identity and remain a visibility-only match-history filter');
+ok(modelDoc.includes('### Objective-family match linkage')&&modelDoc.includes('never recomputes the report sample or coaching aggregates'), 'objective-family review linkage must remain non-mutating and documented');
 ok(app.includes('wilsonInterval(x.joined,x.contested)')&&app.includes('Fewer than 3 contested encounters — context only.'), 'objective-family high-level rates must retain uncertainty and thin-sample gating');
 ok(modelDoc.includes('## High-level objective-family overview')&&modelDoc.includes('replay-priority clue rather than a causal statement'), 'analysis model must keep objective-family callouts descriptive and non-causal');
 ok(backend.includes('enemyTeamId=Number(teamId)===100?200:Number(teamId)===200?100:null'), 'enemy objective control must derive from Riot team identity');
