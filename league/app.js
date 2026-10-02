@@ -1625,12 +1625,17 @@ function renderGameArcs(r){
     return '<article class="game-arc-pattern"><span>Repeated transition · '+x.games.length+' games</span><strong>'+esc(x.label)+'</strong><div class="arc-pattern-stats"><b>'+esc(fmtPct(wr))+' wins</b><b>'+esc(signed(avgSwing,0))+'g avg 15→25 swing</b><b>'+lateRiskGames+' late-risk game'+(lateRiskGames===1?'':'s')+'</b></div><p>Outcome and risk are shown as context. The transition itself is direct-role gold state, not whole-team game state.</p></article>';
   }).join(''):'<div class="bullet empty">No @15→@25 role-state transition repeats at least twice inside the current coaching cohort yet.</div>';
 
+  const timelineGames=games.filter(g=>g.timelineAvailable===true);
   const turning=ARC_TURNING_POINT_DEFS.map(d=>{
-    const hit=games.filter(g=>g.timelineAvailable===true&&d.test(g));
-    return {...d,count:hit.length,wins:hit.filter(g=>g.win).length};
+    const hit=timelineGames.filter(g=>d.test(g)),miss=timelineGames.filter(g=>!d.test(g)),wins=hit.filter(g=>g.win).length,missWins=miss.filter(g=>g.win).length;
+    const withWr=hit.length?100*wins/hit.length:null,withoutWr=miss.length?100*missWins/miss.length:null,associationReady=hit.length>=3&&miss.length>=3,winRateDelta=associationReady?Number(withWr)-Number(withoutWr):null;
+    return {...d,count:hit.length,wins,withoutCount:miss.length,withoutWins:missWins,withWr,withoutWr,associationReady,winRateDelta};
   }).filter(x=>x.count>=2).sort((a,b)=>b.count-a.count||String(a.label).localeCompare(String(b.label))).slice(0,7);
-  turnBox.innerHTML='<div class="section-subhead"><strong>Recurring turning-point evidence</strong><span>Games containing the signal · minimum 2</span></div>'+
-    (turning.length?'<div class="arc-turning-grid">'+turning.map(x=>'<article class="arc-turning-card tone-'+x.tone+'"><span>'+x.count+' / '+games.length+' games</span><strong>'+esc(x.label)+'</strong><p>'+esc(x.why)+'</p><small>'+esc(fmtPct(100*x.wins/x.count))+' wins in games containing this signal · descriptive only</small></article>').join('')+'</div>':'<div class="bullet empty">No defined turning-point signal repeats in at least two coaching-cohort games.</div>');
+  turnBox.innerHTML='<div class="section-subhead"><strong>Recurring turning-point evidence</strong><span>Recurring at ≥2 games · outcome association needs ≥3 with and ≥3 without</span></div>'+
+    (turning.length?'<div class="arc-turning-grid">'+turning.map(x=>{
+      const association=x.associationReady?('Win rate '+fmtPct(x.withWr)+' with vs '+fmtPct(x.withoutWr)+' without · '+signed(x.winRateDelta,1)+' pp'):(fmtPct(x.withWr)+' wins in '+x.count+' games with signal · comparison withheld ('+x.withoutCount+' without)');
+      return '<article class="arc-turning-card tone-'+x.tone+'"><span>'+x.count+' / '+timelineGames.length+' timeline games</span><strong>'+esc(x.label)+'</strong><p>'+esc(x.why)+'</p><small>'+esc(association)+' · descriptive association only, not causation</small></article>';
+    }).join('')+'</div>':'<div class="bullet empty">No defined turning-point signal repeats in at least two coaching-cohort games.</div>');
   if(note)note.textContent='Coaching cohort: '+games.length+' games · comparable @15→@25 transitions: '+transitions.length+'. Turning-point counts are games containing supported evidence, not raw event totals. Older-mechanics context-only games are excluded when the backend applies a mechanics cohort.';
 }
 
