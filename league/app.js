@@ -1803,7 +1803,8 @@ function renderMatchHistory(r){
     review:sourceGames.filter(g=>reviewIds.has(String(g.matchId||''))).length,
     priority:sourceGames.filter(g=>priorityIds.has(String(g.matchId||''))).length
   };
-  const filter=String(state.matchHistoryFilter||'all');
+  let filter=String(state.matchHistoryFilter||'all');
+  if(filter==='priority'&&Number(counts.priority||0)===0){filter='all';state.matchHistoryFilter='all';}
   const matchFilter=g=>{
     if(filter==='win')return !!g.win;
     if(filter==='loss')return !g.win;
