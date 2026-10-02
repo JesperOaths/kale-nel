@@ -485,7 +485,7 @@ assert.ok(html.includes('id="quickRead"')&&html.includes('id="radarChart"')&&htm
 assert.ok(html.includes('id="phase-diagnostic"')&&html.includes('id="phaseDiagnostic"')&&app.includes('function renderPhaseDiagnostic('),'League must surface phase-normalized decision-risk concentration');
 assert.ok(app.includes("Number(highTop.high)>=.35&&highGap>=.15")&&app.includes("Number(costTop.costly)>=.30&&costGap>=.12"),'Phase hotspot UI must reuse the analyzer absolute-rate and separation thresholds');
 assert.ok(app.includes("tone=isHighHot||isCostHot?'bad':'neutral'"),'Non-hotspot phases must remain neutral rather than be promoted to strengths');
-assert.ok(app.includes("x.games>=5&&Number(x.exposureMinutes||0)>=20"),'Phase diagnostic must require minimum compatible games and actual exposure minutes');
+assert.ok(app.includes("Number(x.games||0)>=5&&Number(x.exposureMinutes||0)>=20"),'Phase diagnostic must require minimum compatible games and actual exposure minutes');
 assert.ok(modelDoc.includes('## Phase-risk diagnostic')&&modelDoc.includes('actual phase exposure minutes'),'Phase-risk normalization and hotspot rules must remain documented');
 assert.ok(app.includes('lead games · analyzer threshold 4')&&app.includes('all-game recovery opportunities')&&app.includes('analyzer threshold 8')&&css.includes('.intelligence-card.thin-evidence'),'Combined-intelligence cards must disclose their denominator floors and stay neutral below them');
 assert.ok(modelDoc.includes('## Combined-intelligence evidence floors')&&modelDoc.includes('Combining metrics must never make a thin input look more certain'),'Compound evidence denominator policy must remain documented');
