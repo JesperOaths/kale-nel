@@ -396,6 +396,13 @@ assert.ok(html.includes('id="compoundSignals"')&&app.includes('function renderCo
 assert.ok(app.includes("objDiagnosed?tonePct(objective,70,45,false):'neutral'"),'Objective attendance must not be generically red-scored for roles without a supported diagnosis');
 assert.ok(html.includes('id="rankRadarPanel"')&&app.includes("reportRole!=='ADC'"),'ADC population benchmark panel must be hidden for non-ADC selected roles');
 assert.ok(html.includes('id="supportRoleLensPanel"')&&app.includes('function renderSupportRoleLens('),'SUPPORT reports must expose a dedicated role-specific lens rather than only hiding ADC widgets');
+assert.ok(html.includes('id="roleSpecificLensPanel"')&&app.includes('function renderRoleSpecificLens('),'TOP/MID/JUNGLE reports must expose a dedicated role-specific lens instead of falling back to generic or ADC-shaped interpretation');
+assert.ok(app.includes("if(!['TOP','MID','JUNGLE'].includes(role))")&&app.includes("role==='TOP'")&&app.includes("role==='MID'"),'TOP/MID/JUNGLE role lens must stay hidden for ADC/SUPPORT and branch explicitly by selected role');
+assert.ok(app.includes("roleLensCard('Early-lead give-back'")&&app.includes("roleLensCard('Pre-objective side-lane deaths'"),'TOP lens must preserve lead-protection and side-lane timing evidence');
+assert.ok(app.includes("roleLensCard('First tracked impact vs MID'")&&app.includes("roleLensCard('Early roam conversion'")&&app.includes("roleLensCard('15→25 objective reconnect'"),'MID lens must preserve lane-to-map impact and reconnect evidence');
+assert.ok(app.includes("roleLensCard('CS/min vs JUNGLE peer'")&&app.includes("roleLensCard('First major vs JUNGLE peer'")&&app.includes("roleLensCard('Prior objective setup'"),'JUNGLE lens must preserve farm/item tempo and objective-readiness evidence');
+assert.ok(app.includes('evidence floor 5')&&app.includes('evidence floor 4')&&app.includes('review floor 3 events'),'Role-specific lenses must retain explicit evidence floors rather than coloring one-off observations');
+assert.ok(modelDoc.includes('## Top, Mid and Jungle role-specific lenses')&&modelDoc.includes('Side-laning itself is never treated as an error')&&modelDoc.includes('Objective presence/setup is not a smite-skill score'),'Role-specific lens limitations must remain documented');
 assert.ok(app.includes("if(role!=='SUPPORT')")&&app.includes("panel.hidden=true"),'Support-specific analysis must stay hidden for every non-SUPPORT selected role');
 assert.ok(app.includes('supportRoamAdcCostGames')&&app.includes('avgSupportRoamAdcLaneCostCs')&&app.includes('supportRoamsHurtingAdc'),'Support lens must expose the backend ADC lane-cost evidence from detected support roams');
 assert.ok(app.includes('roamReady=roamN>=4')&&app.includes('visionReady=visionN>=12')&&app.includes('setupReady=setupN>=5')&&app.includes('45–105s'),'Support lens must retain the analyzer-aligned roam, vision and objective-setup evidence thresholds');
@@ -750,7 +757,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v176'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v177'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
