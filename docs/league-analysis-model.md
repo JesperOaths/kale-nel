@@ -1026,7 +1026,10 @@ The window runs from:
 
 Within that temporary advantage window, count supported player impact:
 - kill/assist involvement,
-- nearby participation in a grouped neutral-objective encounter.
+- neutral-objective participation only when the nearest supported Riot position frame places the player within the objective evidence radius,
+- structure impact only with strong involvement evidence: direct Riot event credit or event-position proximity. Same-lane frame presence alone is retained elsewhere as weak context and does **not** make the item-spike window "used."
+
+Every tracked objective/structure spike event preserves the support-evidence method so the UI can distinguish why it counted.
 
 Also preserve whether the player dies inside the window **before any tracked impact**.
 
