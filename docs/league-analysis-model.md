@@ -2219,3 +2219,20 @@ The main economy section uses role-specific framing:
 This is a copy/information-hierarchy rule, not a change to the underlying evidence. Direct-role lane/economy metrics, routing evidence, objective evidence and support roam/vision evidence remain separately defined.
 
 Because reports are role-pure upstream, a generic "Role sample" block is redundant. That space instead shows **cohort context**: selected role, exact queue cohort, mechanics-cohort depth, timeline coverage, trusted direct-peer coverage and current patch context. This block describes evidence construction and must not be scored as performance.
+
+
+## Role-aware phase context
+
+Phase-risk rates remain queue/rules-profile aware and normalized by exposure time. The contextual sentence shown beside each phase must also respect the selected role:
+
+- **ADC / MID / TOP early:** direct-role @15 economy plus first-reset evidence.
+- **JUNGLE early:** first tracked impact timing and first-major timing versus the enemy jungler.
+- **SUPPORT early:** detected roam conversion plus vision-action death rate.
+- **JUNGLE transition:** prior objective setup plus contested-objective presence.
+- **SUPPORT transition:** prior objective setup plus vision-action safety.
+- **ADC / MID / TOP transition:** 15→25 role-CS swing plus objective reconnect.
+- **JUNGLE late:** fight survival plus contested-objective presence.
+- **SUPPORT late:** fight survival plus prior objective setup.
+- **ADC / MID / TOP late:** role-relative @25 lead/deficit conversion context.
+
+The phase label is **Late strategic phase**, not a universal "Baron-era" label, because verified queue/rules profiles can use different phase boundaries. Context fields do not change the hotspot calculation; they only make the interpretation role-appropriate.
