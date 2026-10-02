@@ -1778,3 +1778,19 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 @media(max-width:650px){.objective-family-grid{grid-template-columns:1fr}}
 
 .objective-family-review{margin-top:9px;width:100%}
+
+.evidence-health-wrap{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.evidence-health-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:9px}
+.evidence-health-head>span{font-size:.64rem;text-transform:uppercase;letter-spacing:.075em;font-weight:950;color:var(--ink-soft)}
+.evidence-health-head>small{color:var(--muted);font-size:.59rem;text-align:right}
+.evidence-health-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.evidence-health-card{min-width:0;padding:10px 11px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.evidence-health-card>span{display:block;color:var(--muted);font-size:.53rem;text-transform:uppercase;letter-spacing:.06em;font-weight:900}
+.evidence-health-card>strong{display:block;margin-top:4px;font-size:.78rem}
+.evidence-health-card>small{display:block;margin-top:5px;color:var(--muted);font-size:.56rem;line-height:1.38}
+.evidence-health-card.evidence-ready{border-top:4px solid var(--good)}
+.evidence-health-card.evidence-limited{border-top:4px solid #a8792a;background:#fffaf0}
+.evidence-health-card.evidence-withheld{border-top:4px solid #8c857b;border-style:dashed}
+.evidence-health-link{margin-top:9px}
+@media(max-width:1250px){.evidence-health-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:750px){.evidence-health-head{align-items:flex-start;flex-direction:column}.evidence-health-head>small{text-align:left}.evidence-health-grid{grid-template-columns:1fr}}
