@@ -600,15 +600,17 @@ The recommended intervention is a **post-death recovery protocol**: spend, ident
 
 Death quality and death consequence are separate questions.
 
-For each death where the timeline supports a later comparison, preserve the direct-role economy state at death and at the next supported timeline state roughly one frame later.
+For each death where the timeline supports a later comparison, preserve the direct-role economy state at death and target a **bounded ~60-second aftermath sample**. Use the nearest supported Riot frame within ±35 seconds of that target. Do not let the economy window drift arbitrarily later.
+
+If the player dies again before that aftermath frame, the first death's gold/CS aftermath is **suppressed as contaminated** rather than allowing the second death's losses to be counted against both deaths. Preserve the number of suppressed economy samples as evidence-quality metadata.
 
 Current consequence signals include:
 - direct-role gold differential worsens by at least ~300g,
 - direct-role CS differential worsens by at least ~6 CS,
 - an enemy **neutral objective** is converted inside the post-death neutral-objective window,
-- an enemy **structure** is converted inside the post-death structure window.
+- an enemy **structure** is converted inside the post-death structure window **and is geographically local to the death or matches the death lane when event coordinates are unavailable**.
 
-Neutral objectives and structures are retained as distinct signals. A nearby turret/plate event must not be relabeled as a dragon/Baron-style objective consequence.
+Neutral objectives and structures are retained as distinct signals. A turret/plate loss elsewhere on the map must not become a death-consequence signal merely because it happened within the same 75-second clock window.
 
 A death is **costly** when at least one supported consequence signal is present and **severe** when at least two are present. Also preserve whether the death was traded.
 
