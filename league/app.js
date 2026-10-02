@@ -1816,42 +1816,70 @@ function renderProgressComparison(current,previous,previousAt){
   $('previousAnalysisDate').textContent='Rolling comparison with '+fmtDate(previousAt);
   $('progressComparisonPanel').hidden=false;
 }
-function sessionCard(title,sample){
+function sessionCard(title,sample,role){
   if(!sample||!Number(sample.games))return '';
-  const games=Number(sample.games||0),laneN=Number(sample.lane15Games||0),timelineN=Number(sample.timelineGames??(hasNum(sample.badDeaths)?games:0)),dpmN=Number(sample.dpmGames??(hasNum(sample.dpm)?games:0)),csN=Number(sample.csMinGames??(hasNum(sample.csMin)?games:0)),thin=games<3;
-  const lane=laneN>0&&hasNum(sample.goldDiff15)?'Gold @15 '+signed(sample.goldDiff15,0)+'g · '+laneN+'/'+games+' comparable':'Gold @15 n/a · '+laneN+'/'+games+' comparable';
+  const games=Number(sample.games||0),laneN=Number(sample.lane15Games||0),timelineN=Number(sample.timelineGames??(hasNum(sample.badDeaths)?games:0)),dpmN=Number(sample.dpmGames??(hasNum(sample.dpm)?games:0)),csN=Number(sample.csMinGames??(hasNum(sample.csMin)?games:0)),kpN=Number(sample.kpGames??(hasNum(sample.kp)?games:0)),vpmN=Number(sample.vpmGames??(hasNum(sample.vpm)?games:0)),thin=games<3,r=canonicalRole(role);
   const risk=timelineN>0&&hasNum(sample.badDeaths)?'Risky deaths '+fmt(sample.badDeaths,1)+'/game · '+timelineN+'/'+games+' timelines':'Risky deaths n/a · 0/'+games+' timelines';
-  const output='DPM '+fmtInt(sample.dpm)+' · n='+dpmN+' · CS/min '+fmt(sample.csMin,2)+' · n='+csN;
+  let lines;
+  if(r==='SUPPORT'){
+    lines=[
+      'KP '+fmtPct(sample.kp)+' · n='+kpN,
+      'Vision/min '+fmt(sample.vpm,2)+' · n='+vpmN,
+      risk
+    ];
+  }else if(r==='JUNGLE'){
+    lines=[
+      'CS/min '+fmt(sample.csMin,2)+' · n='+csN+' · KP '+fmtPct(sample.kp)+' · n='+kpN,
+      'Vision/min '+fmt(sample.vpm,2)+' · n='+vpmN,
+      risk
+    ];
+  }else{
+    const lane=laneN>0&&hasNum(sample.goldDiff15)?'Gold @15 '+signed(sample.goldDiff15,0)+'g · '+laneN+'/'+games+' comparable':'Gold @15 n/a · '+laneN+'/'+games+' comparable';
+    const output='DPM '+fmtInt(sample.dpm)+' · n='+dpmN+' · CS/min '+fmt(sample.csMin,2)+' · n='+csN;
+    lines=[lane,risk,output];
+  }
   return '<div class="quality-card session-sample-card '+(thin?'thin-sample':'')+'"><span>'+esc(title)+(thin?' <em>thin sample</em>':'')+'</span><strong>'+esc(String(games))+' games</strong>'+
-    '<small>'+esc(lane)+'<br>'+esc(risk)+'<br>'+esc(output)+'</small></div>';
+    '<small>'+lines.map(esc).join('<br>')+'</small></div>';
 }
 function sessionPairReady(a,b,countField='games'){
   return Number(a?.games||0)>=2&&Number(b?.games||0)>=2&&Number(a?.[countField]??a?.games??0)>=2&&Number(b?.[countField]??b?.games??0)>=2;
 }
 function renderSessionHabits(r){
-  const s=r.sessionBehavior||r.sessionModel||{},first=s.firstGame||{},late=s.game3Plus||{},afterLoss=s.quickAfterLoss||{},afterWin=s.quickAfterWin||{};
+  const s=r.sessionBehavior||r.sessionModel||{},first=s.firstGame||{},late=s.game3Plus||{},afterLoss=s.quickAfterLoss||{},afterWin=s.quickAfterWin||{},role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole);
   const cards=[
-    sessionCard('Session-opening game',first),
-    sessionCard('Game 3+ in session',late),
-    sessionCard('Quick requeue after loss',afterLoss),
-    sessionCard('Quick requeue after win',afterWin)
+    sessionCard('Session-opening game',first,role),
+    sessionCard('Game 3+ in session',late,role),
+    sessionCard('Quick requeue after loss',afterLoss,role),
+    sessionCard('Quick requeue after win',afterWin,role)
   ].filter(Boolean);
   if(!cards.length){
     $('sessionHabitsPanel').hidden=true;return;
   }
   $('sessionHabits').innerHTML=cards.join('');
   const deltas=[];
-  if(sessionPairReady(late,first,'lane15Games')&&hasNum(s.game3PlusGoldDelta))deltas.push('game 3+ gold@15 '+signed(s.game3PlusGoldDelta,0)+'g vs opener');
   if(sessionPairReady(late,first,'timelineGames')&&hasNum(s.game3PlusBadDeathDelta))deltas.push('game 3+ risky deaths '+signed(s.game3PlusBadDeathDelta,1)+'/game');
-  if(sessionPairReady(late,first,'dpmGames')&&hasNum(s.game3PlusDpmDelta))deltas.push('game 3+ DPM '+signed(s.game3PlusDpmDelta,0)+' vs opener');
-  if(sessionPairReady(afterLoss,afterWin,'lane15Games')&&hasNum(s.postLossGoldDelta))deltas.push('quick post-loss gold@15 '+signed(s.postLossGoldDelta,0)+'g vs quick post-win');
   if(sessionPairReady(afterLoss,afterWin,'timelineGames')&&hasNum(s.postLossBadDeathDelta))deltas.push('quick post-loss risky deaths '+signed(s.postLossBadDeathDelta,1)+'/game');
+  if(role==='SUPPORT'){
+    if(sessionPairReady(late,first,'vpmGames')&&hasNum(s.game3PlusVpmDelta))deltas.push('game 3+ vision/min '+signed(s.game3PlusVpmDelta,2)+' vs opener');
+    if(sessionPairReady(late,first,'kpGames')&&hasNum(s.game3PlusKpDelta))deltas.push('game 3+ KP '+signed(s.game3PlusKpDelta,1)+' pp vs opener');
+    if(sessionPairReady(afterLoss,afterWin,'vpmGames')&&hasNum(s.postLossVpmDelta))deltas.push('quick post-loss vision/min '+signed(s.postLossVpmDelta,2)+' vs quick post-win');
+    if(sessionPairReady(afterLoss,afterWin,'kpGames')&&hasNum(s.postLossKpDelta))deltas.push('quick post-loss KP '+signed(s.postLossKpDelta,1)+' pp vs quick post-win');
+  }else if(role==='JUNGLE'){
+    if(sessionPairReady(late,first,'csMinGames')&&hasNum(s.game3PlusCsMinDelta))deltas.push('game 3+ CS/min '+signed(s.game3PlusCsMinDelta,2)+' vs opener');
+    if(sessionPairReady(late,first,'kpGames')&&hasNum(s.game3PlusKpDelta))deltas.push('game 3+ KP '+signed(s.game3PlusKpDelta,1)+' pp vs opener');
+    if(sessionPairReady(afterLoss,afterWin,'csMinGames')&&hasNum(s.postLossCsMinDelta))deltas.push('quick post-loss CS/min '+signed(s.postLossCsMinDelta,2)+' vs quick post-win');
+    if(sessionPairReady(afterLoss,afterWin,'kpGames')&&hasNum(s.postLossKpDelta))deltas.push('quick post-loss KP '+signed(s.postLossKpDelta,1)+' pp vs quick post-win');
+  }else{
+    if(sessionPairReady(late,first,'lane15Games')&&hasNum(s.game3PlusGoldDelta))deltas.push('game 3+ gold@15 '+signed(s.game3PlusGoldDelta,0)+'g vs opener');
+    if(sessionPairReady(late,first,'dpmGames')&&hasNum(s.game3PlusDpmDelta))deltas.push('game 3+ DPM '+signed(s.game3PlusDpmDelta,0)+' vs opener');
+    if(sessionPairReady(late,first,'csMinGames')&&hasNum(s.game3PlusCsMinDelta))deltas.push('game 3+ CS/min '+signed(s.game3PlusCsMinDelta,2)+' vs opener');
+    if(sessionPairReady(afterLoss,afterWin,'lane15Games')&&hasNum(s.postLossGoldDelta))deltas.push('quick post-loss gold@15 '+signed(s.postLossGoldDelta,0)+'g vs quick post-win');
+  }
   const thin=[['opener',first],['game 3+',late],['post-loss',afterLoss],['post-win',afterWin]].filter(([,x])=>Number(x?.games||0)>0&&Number(x.games)<3).map(([label,x])=>label+' n='+Number(x.games));
   const base=s.definition||'Session grouping uses game timing. Deltas require at least two valid observations in both compared groups.';
-  $('sessionHabitsNote').textContent=base+(deltas.length?' Supported observed deltas: '+deltas.join(' · ')+'.':' No comparison currently has enough paired evidence for a supported delta.')+(thin.length?' Thin subgroups shown for traceability only: '+thin.join(', ')+'.':'');
+  $('sessionHabitsNote').textContent=base+(deltas.length?' Supported observed '+roleLabel(role)+' deltas: '+deltas.join(' · ')+'.':' No role-relevant comparison currently has enough paired evidence for a supported delta.')+(thin.length?' Thin subgroups shown for traceability only: '+thin.join(', ')+'.':'');
   $('sessionHabitsPanel').hidden=false;
 }
-
 function practiceTargetValue(v,unit){
   if(!hasNum(v))return'n/a';
   const n=Number(v);
