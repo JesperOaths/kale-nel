@@ -2143,3 +2143,47 @@ Use the analyzer's existing evidence floors: 4 roam attempts for roam conversion
 ADC lane-cost evidence is an observed change in ADC-vs-ADC CS differential during the detected Support roam window. It is useful opportunity-cost evidence, but it does not prove the Support alone caused every CS change.
 
 This panel must remain hidden unless the selected report role is SUPPORT. Other roles retain their own generic/role-appropriate report surfaces without Support-specific assumptions.
+
+
+## Top, Mid and Jungle role-specific lenses
+
+TOP, MID and JUNGLE reports should not fall back to an ADC-shaped interpretation after ADC population widgets are hidden. Each role may surface a dedicated lens, but only from analyzer-exported evidence that already has a defensible role interpretation.
+
+### TOP lens
+
+The TOP lens focuses on **lane state → lead preservation → side-lane timing**:
+- direct-role gold differential at 15 versus the actual TOP opponent, minimum 5 comparable @15 games,
+- CS/min delta versus the actual TOP opponent, minimum 5 direct-role comparable games,
+- clean direct-role solo-duel K/D as a review signal, minimum 3 supported duel events before directional coloring,
+- give-back rate among measured ≥500g pre-15 role leads, minimum 4 lead opportunities,
+- supported side-lane deaths shortly before contested neutral objectives, minimum 5 timeline-complete games before directional coloring.
+
+Side-laning itself is never treated as an error. Only supported death/timing evidence is judged. A death while split does not prove the split decision was wrong without the event context.
+
+### MID lens
+
+The MID lens focuses on **lane resources → first map impact → reconnect**:
+- direct-role gold differential at 15 versus the actual MID opponent, minimum 5 comparable games,
+- CS/min delta versus the actual MID opponent, minimum 5 direct-role comparable games,
+- first tracked kill/assist/objective impact timing versus the actual MID opponent, minimum 5 comparable impact games,
+- early roam conversion from detected roam windows, minimum 4 attempts,
+- supported 15→25 objective presence inside comparable mid-routing games, minimum 4 routing games.
+
+Roam conversion is not a command to roam more. A converted roam can still be expensive; read it together with role-gold/CS state and the 15→25 routing evidence.
+
+### JUNGLE lens
+
+The JUNGLE lens focuses on **farm/item tempo → map impact → objective readiness**:
+- CS/min delta versus the actual enemy jungler, minimum 5 direct-role comparable games,
+- first tracked kill/assist/objective impact timing versus the enemy jungler, minimum 5 comparable impact games,
+- first-major completion timing versus the enemy jungler, minimum 4 comparable item games,
+- supported prior objective setup presence 45–105 seconds before joined neutral-objective events, minimum 5 joined observations,
+- supported presence in team-contested neutral-objective encounters, minimum 5 contested observations.
+
+Objective presence/setup is not a smite-skill score, objective ownership score or proof that the jungler caused the objective result. It is readiness/presence evidence only.
+
+### Shared rules
+
+TOP/MID/JUNGLE role lenses use the same selected-role, selected-queue, mechanics-filtered coaching cohort as the rest of the report. Thin samples remain neutral and explicitly descriptive. Direct-role comparisons always mean the actual same-role opponent from analyzed matches, not population rank averages.
+
+The role-specific lens panel must remain hidden for ADC and SUPPORT. ADC keeps its dedicated external rank-reference layer; SUPPORT keeps the separate roam/vision/objective Support lens.
