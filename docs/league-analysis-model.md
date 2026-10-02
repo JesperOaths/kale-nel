@@ -1811,3 +1811,20 @@ Supported filters:
 The filter chips display counts from the full selected-role report sample. The 10-row default and Show all control apply *after* the story filter, so filtering does not silently change analysis; it changes only which rows are visible.
 
 A game with a missing timeline must never enter **Risk flagged** merely because another field is absent or zero. Conversely, an unflagged game must not be described as proven safe; the filter means only that the analyzer has supported risk evidence for included games.
+
+
+## Coaching-cohort evidence surfaces
+
+Any surface that tells the player what to practise or what to rewatch must use the same mechanics-filtered coaching cohort as the backend coaching model when `mechanicsCohortApplied` is true.
+
+This includes:
+- replay-review priority,
+- practice-to-replay links,
+- high-risk death-pattern maps,
+- ward spatial summaries,
+- game-arc aggregates,
+- outcome fingerprint analysis.
+
+Older-mechanics games may remain visible in ordinary match history as **context only**, but they must not generate current replay priorities, recurring death-pattern conclusions, ward-pattern conclusions or practice evidence.
+
+If no mechanics cohort is applied, these surfaces use the full selected-role coaching sample as before.
