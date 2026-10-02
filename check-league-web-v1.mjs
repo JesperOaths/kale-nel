@@ -515,6 +515,13 @@ assert.ok(api.includes('teamSecured||alliedPresentIds.length>0'),'Team-contested
 assert.ok(api.includes('objectiveContestEvidence.set(w'),'Objective contest classification must remain explicit and inspectable');
 assert.ok(api.includes('scope:"team_contested"'),'Objective-readiness events must preserve contested-window provenance');
 assert.ok(api.includes('enemyStructureAfter'),'Structure consequences must remain distinct from neutral-objective consequences');
+assert.ok(api.includes('consequenceTargetMs=Number(d.tMs)+60000'),'Death economy aftermath must target a bounded ~60-second post-death sample');
+assert.ok(api.includes('frameNearestMs(frames,consequenceTargetMs,35000)'),'Death aftermath must use a nearest-frame tolerance instead of drifting out to an unbounded later frame');
+assert.ok(api.includes('economyWindowContaminatedByRepeatDeath'),'A second death before the aftermath sample must suppress the first death’s economy attribution');
+assert.ok(api.includes('economySamplesContaminated'),'Suppressed repeat-death economy windows must remain measurable as evidence coverage');
+assert.ok(api.includes('eventLane===deathZoneNow'),'Enemy structure aftermath must require same-lane metadata when coordinate proximity is unavailable');
+assert.ok(api.includes('dist2(pos,o)<=5000*5000'),'Enemy structure aftermath with coordinates must remain geographically local to the death');
+assert.ok(app.includes('Economy samples suppressed by repeat death'),'Frontend must expose suppressed contaminated death-economy samples');
 assert.ok(api.includes('firstMeaningfulReturnShop'),'First reset must be inferred from leaving base, not a hard-coded 2.5-minute floor');
 assert.ok(api.includes('hasLeftBaseBefore'),'First meaningful return must require prior departure from base');
 assert.ok(api.includes('structureInvolvementEvidence'),'Plate/turret conversion must preserve evidence quality when Riot omits direct participant credit');
