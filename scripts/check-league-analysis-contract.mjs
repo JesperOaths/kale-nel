@@ -547,6 +547,7 @@ ok(app.includes('lateHighRisk')&&app.includes('lateCostly')&&!app.includes('Numb
 ok(modelDoc.includes('## Overlapping late-risk categories')&&modelDoc.includes('can describe one death carrying both labels'), 'analysis model must preserve late-risk overlap semantics');
 ok(html.includes('id="gameArcFunnels"')&&app.includes('function arcFunnelCard('), 'League report must summarize how ahead / close / behind @15 role states convert by @25 and result');
 ok(app.includes('function matchReplayReviewHtml(')&&app.includes('data-open-review-match'), 'match history must surface the backend replay-priority queue inside the relevant expandable game');
+ok(app.includes('Practice-first review')&&app.includes('analyzer rank #')&&app.includes('practiceReplayCategories(theme)'), 'standalone replay review must use practice-first current-focus grouping while preserving original analyzer rank');
 ok(app.includes('function practiceReplayCategories(')&&app.includes('function practiceReplayHtml(')&&app.includes('data-practice-review-match'), 'practice priorities must bridge only to existing backend-ranked replay evidence');
 ok(modelDoc.includes('## Practice-to-replay bridge')&&modelDoc.includes('never manufactures a replay example'), 'analysis model must preserve the evidence-only practice-to-replay bridge');
 ok(html.includes('id="matchHistoryToggle"')&&app.includes('matchHistoryLimit:10'), 'match history must stay scannable at 10 by default while allowing the full eligible Last-20');
