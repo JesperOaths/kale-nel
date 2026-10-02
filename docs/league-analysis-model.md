@@ -2009,3 +2009,17 @@ A pre-objective side-lane review moment requires:
 The replay evidence preserves the exact death minute, lane, time to objective, direct-role gold state when available, and high-risk classification. Other isolated side-lane deaths enter this replay category only when they already cross the high-risk threshold.
 
 The Mid-game routing priority maps directly to this category. This prevents the Current focus filter from substituting generic death clips for routing-specific evidence.
+
+
+### Evidence-specific replay mapping
+
+Current-focus replay matching must use the **representative and supporting finding titles** inside a priority theme before considering its broad grouped key.
+
+Broad groups such as `early-lane` or `objectives-closing` deliberately cover multiple behaviors. The group name alone must not make:
+- a farming problem look like a matchup/duel problem,
+- a closing/lead-protection problem look like an objective-setup problem,
+- or another non-replayable aggregate signal inherit unrelated clips.
+
+Narrow key-level fallbacks are allowed only when the grouped theme has a single defensible replay family (for example death-risk, reset-power, mid-routing, teamfights, vision or roaming).
+
+If no replay category is supported by the actual finding, show no matching replay rather than manufacturing a loose connection.
