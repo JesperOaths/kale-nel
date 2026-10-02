@@ -1303,7 +1303,7 @@ function gameSortValue(g,key,index){
   if(key==='kp')return Number(g.kp??-Infinity);
   if(key==='cs')return Number(g.csMin??-Infinity);
   if(key==='dpm')return Number(g.dpm??-Infinity);
-  if(key==='gold15')return hasNum(g.goldDiff15)?Number(g.goldDiff15):-Infinity;
+  if(key==='gold15')return trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)?Number(g.goldDiff15):-Infinity;
   return -Number(index);
 }
 function bindGameSortControls(){
@@ -1322,12 +1322,13 @@ function bindGameFilterControls(){
   const champion=$('gameChampionFilter');if(champion)champion.onchange=()=>{state.gameChampion=String(champion.value||'all');state.openMatch=null;if(state.report)renderGames(state.report);};
   const clear=$('clearGameFilters');if(clear)clear.onclick=()=>{state.gameFilter='all';state.gameChampion='all';state.openMatch=null;if(state.report)renderGames(state.report);};
 }
+function trustedDirectPeer(g){return g?.directPeerComparable===true;}
 function gameMatchesNamedFilter(g,key){
   if(key==='win')return!!g.win;
   if(key==='loss')return!g.win;
-  if(key==='ahead15')return hasNum(g.goldDiff15)&&Number(g.goldDiff15)>100;
-  if(key==='even15')return hasNum(g.goldDiff15)&&Math.abs(Number(g.goldDiff15))<=100;
-  if(key==='behind15')return hasNum(g.goldDiff15)&&Number(g.goldDiff15)<-100;
+  if(key==='ahead15')return trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)&&Number(g.goldDiff15)>100;
+  if(key==='even15')return trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)&&Math.abs(Number(g.goldDiff15))<=100;
+  if(key==='behind15')return trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)&&Number(g.goldDiff15)<-100;
   if(key==='adc')return g.role==='ADC';
   return true;
 }
@@ -1354,6 +1355,7 @@ function gameIsCoachingContext(r,g){
 
 function arcRoleGoldState(g,minute){
   const rules=g?.phaseRules||{},field=minute===15?'goldDiff15':'goldDiff25',v=g?.[field];
+  if(!trustedDirectPeer(g))return {key:'unavailable',label:'Role peer withheld',tone:'neutral',value:null};
   if(minute===15&&rules.lane15Comparable===false)return {key:'unavailable',label:'@15 not comparable',tone:'neutral',value:null};
   if(minute===25&&rules.closing25Comparable===false)return {key:'unavailable',label:'@25 not comparable',tone:'neutral',value:null};
   if(!hasNum(v))return {key:'unavailable',label:'No @'+minute+' checkpoint',tone:'neutral',value:null};
@@ -1363,7 +1365,7 @@ function arcRoleGoldState(g,minute){
   return {key:'close',label:'Close',tone:'neutral',value:n};
 }
 function gameArcStages(g){
-  const lane=arcRoleGoldState(g,15),at25=arcRoleGoldState(g,25),reset=g.firstResetSequence||null,spike=g.itemSpikeWindow||{},fight=g.fightProfile||{},obj=g.objectiveReadiness||{},side=g.sideLaneRisk||{},closing=g.closing25||{};
+  const peerOk=trustedDirectPeer(g),lane=arcRoleGoldState(g,15),at25=arcRoleGoldState(g,25),reset=peerOk?(g.firstResetSequence||null):null,spike=peerOk?(g.itemSpikeWindow||{}):{},fight=g.fightProfile||{},obj=g.objectiveReadiness||{},side=g.sideLaneRisk||{},closing=g.closing25||{};
   const stages=[];
   stages.push({
     key:'lane_'+lane.key,label:'Lane @15',tone:lane.tone,
@@ -1372,6 +1374,8 @@ function gameArcStages(g){
   });
   if(g.timelineAvailable!==true){
     stages.push({key:'power_unavailable',label:'Reset / power',tone:'neutral',value:'Timeline unavailable',copy:'Reset and item-window sequencing cannot be reconstructed without timeline evidence.'});
+  }else if(!peerOk){
+    stages.push({key:'power_peer_withheld',label:'Reset / power',tone:'neutral',value:'Role peer withheld',copy:'Peer-relative reset economy and earlier-item power windows are withheld because the direct role opponent is not high-confidence.'});
   }else if(spike.eligible){
     const delta=hasNum(g.itemSpikeDeltaVsOpponent)?Number(g.itemSpikeDeltaVsOpponent):null;
     if(spike.diedBeforeImpact)stages.push({key:'power_spike_died',label:'Reset / power',tone:'bad',value:'Earlier item → death before impact',copy:(delta!=null?'First major arrived '+fmt(Math.abs(delta),1)+'m earlier; ':'')+'the measurable earlier-item window ended in death before tracked impact.'});
@@ -1440,11 +1444,11 @@ function gameArcTransition(g){
   return {key:a.key+'>'+b.key,label:a.label+' @15 → '+b.label+' @25',from:a,to:b,swing:Number(b.value)-Number(a.value)};
 }
 const ARC_TURNING_POINT_DEFS=[
-  {key:'early_lead_giveback',label:'Early role lead gave back ≥500g by 15',tone:'bad',test:g=>g.earlyLeadWindow?.giveback===true,why:'A measured pre-15 direct-role lead of at least 500g lost at least 500g before the @15 checkpoint.'},
-  {key:'first_reset_loss',label:'Clean first-reset aftermath lost economy',tone:'bad',test:g=>g.firstResetSequence?.economyLoss===true,why:'The clean post-reset evidence window lost at least 350g role differential or 6 CS.'},
-  {key:'first_reset_gain',label:'Clean first-reset aftermath gained economy',tone:'good',test:g=>g.firstResetSequence?.economyGain===true,why:'The clean post-reset evidence window gained at least 150g and 4 CS.'},
-  {key:'spike_used',label:'Earlier first-major window produced impact',tone:'good',test:g=>g.itemSpikeWindow?.eligible===true&&g.itemSpikeWindow?.used===true,why:'An earlier first-major window produced tracked impact before the direct role opponent reached item parity.'},
-  {key:'spike_died',label:'Earlier first-major window ended in death first',tone:'bad',test:g=>g.itemSpikeWindow?.eligible===true&&g.itemSpikeWindow?.diedBeforeImpact===true,why:'An earlier first-major window ended in death before tracked impact.'},
+  {key:'early_lead_giveback',label:'Early role lead gave back ≥500g by 15',tone:'bad',test:g=>trustedDirectPeer(g)&&g.earlyLeadWindow?.giveback===true,why:'A measured pre-15 direct-role lead of at least 500g lost at least 500g before the @15 checkpoint.'},
+  {key:'first_reset_loss',label:'Clean first-reset aftermath lost economy',tone:'bad',test:g=>trustedDirectPeer(g)&&g.firstResetSequence?.economyLoss===true,why:'The clean post-reset evidence window lost at least 350g role differential or 6 CS.'},
+  {key:'first_reset_gain',label:'Clean first-reset aftermath gained economy',tone:'good',test:g=>trustedDirectPeer(g)&&g.firstResetSequence?.economyGain===true,why:'The clean post-reset evidence window gained at least 150g and 4 CS.'},
+  {key:'spike_used',label:'Earlier first-major window produced impact',tone:'good',test:g=>trustedDirectPeer(g)&&g.itemSpikeWindow?.eligible===true&&g.itemSpikeWindow?.used===true,why:'An earlier first-major window produced tracked impact before the direct role opponent reached item parity.'},
+  {key:'spike_died',label:'Earlier first-major window ended in death first',tone:'bad',test:g=>trustedDirectPeer(g)&&g.itemSpikeWindow?.eligible===true&&g.itemSpikeWindow?.diedBeforeImpact===true,why:'An earlier first-major window ended in death before tracked impact.'},
   {key:'preobj_side',label:'Side-lane death shortly before contested objective',tone:'bad',test:g=>Number(g.sideLaneRisk?.preNeutralObjectiveSideLaneDeaths||0)>0,why:'At least one side-lane death occurred inside the analyzer’s supported pre-neutral-objective window.'},
   {key:'recent_shop_absence',label:'Recent-shop objective absence',tone:'neutral',test:g=>Number(g.objectiveReadiness?.recentShopAbsences??g.objectiveReadiness?.lateResetMisses??0)>0,why:'A shop visit occurred within 60 seconds before at least one contested-objective absence. This is association evidence only.'},
   {key:'preimpact_fight_death',label:'Died before contribution in a tracked fight',tone:'bad',test:g=>Number(g.fightProfile?.diedBeforeContribution||0)>0,why:'At least one attended fight cluster recorded death before tracked contribution.'},
@@ -1510,6 +1514,7 @@ function renderGameArcs(r){
 }
 
 function matchHistoryLaneState(g){
+  if(!trustedDirectPeer(g))return {tone:'neutral',label:'Peer withheld',copy:'The direct-role opponent could not be resolved with high-confidence Riot role evidence, so role-relative @15 coaching is withheld.'};
   if(g?.phaseRules?.lane15Comparable===false||!hasNum(g.goldDiff15))return {tone:'neutral',label:'@15 unavailable',copy:'No role-comparable 15-minute gold checkpoint is available for this game.'};
   const d=Number(g.goldDiff15);
   if(gameMatchesNamedFilter(g,'ahead15'))return {tone:'good',label:signed(d,0)+'g @15',copy:'This game is in the same ahead-at-15 band used by the evidence-table filter.'};
@@ -1547,14 +1552,14 @@ function matchHistoryJudgment(g){
   return {tone:x.tone==='strength'?'good':'bad',title:String(x.title||x.category||'Game insight'),evidence:String(x.evidence||''),action:String(x.action||'')};
 }
 function matchHistoryRow(g,index,displayIndex,r){
-  const icon=championIcon(g.champion),opp=championIcon(g.peer?.champion),lane=matchHistoryLaneState(g),judge=matchHistoryJudgment(g),signals=matchHistorySignals(g),coachingContext=gameIsCoachingContext(r,g),detailId='match-history-detail-'+index;
+  const peerOk=trustedDirectPeer(g),icon=championIcon(g.champion),opp=peerOk?championIcon(g.peer?.champion):'',lane=matchHistoryLaneState(g),judge=matchHistoryJudgment(g),signals=matchHistorySignals(g),coachingContext=gameIsCoachingContext(r,g),detailId='match-history-detail-'+index;
   const reviewItems=(Array.isArray(r?.replayReviewQueue)?r.replayReviewQueue:[]).filter(x=>String(x.matchId||'')===String(g.matchId||'')),reviewRank=reviewItems.length?Math.min(...reviewItems.map(x=>Number(x.rank||999)).filter(Number.isFinite)):null;
   const kda=[g.kills,g.deaths,g.assists].map(x=>hasNum(x)?Number(x):'?').join('/');
   const title=(g.win?'Win':'Loss')+' · '+String(g.champion||'Unknown');
   return '<article class="match-history-row tone-'+(g.win?'good':'bad')+(coachingContext?'':' context-only')+'" data-history-index="'+index+'">'+
     '<button class="match-history-toggle" type="button" aria-expanded="false" aria-controls="'+detailId+'">'+
       '<span class="history-rank">#'+(displayIndex+1)+'</span>'+
-      '<span class="history-champions">'+(icon?'<img loading="lazy" src="'+esc(icon)+'" alt="">':'')+'<span><b>'+esc(title)+(coachingContext?'':' <em class="history-context-badge">context only</em>')+'</b><small>'+esc(shortGameDate(g.gameStartTimestamp))+' · '+esc(g.role||'')+(g.peer?.champion?' · vs '+esc(g.peer.champion):'')+(coachingContext?'':' · older mechanics excluded from coaching aggregates')+'</small></span>'+(opp?'<img class="history-opponent" loading="lazy" src="'+esc(opp)+'" alt="">':'')+'</span>'+
+      '<span class="history-champions">'+(icon?'<img loading="lazy" src="'+esc(icon)+'" alt="">':'')+'<span><b>'+esc(title)+(coachingContext?'':' <em class="history-context-badge">context only</em>')+'</b><small>'+esc(shortGameDate(g.gameStartTimestamp))+' · '+esc(g.role||'')+(peerOk&&g.peer?.champion?' · vs '+esc(g.peer.champion):g.peer?.champion?' · role peer withheld':'')+(coachingContext?'':' · older mechanics excluded from coaching aggregates')+'</small></span>'+(opp?'<img class="history-opponent" loading="lazy" src="'+esc(opp)+'" alt="">':'')+'</span>'+
       '<span class="history-stat"><small>K/D/A</small><b>'+esc(kda)+'</b></span>'+
       '<span class="history-stat tone-'+lane.tone+'"><small>Role gold @15</small><b>'+esc(lane.label)+'</b></span>'+
       '<span class="history-judgment tone-'+judge.tone+'"><small>Strongest read'+(reviewRank!=null?' · review #'+esc(String(reviewRank)):'')+'</small><b>'+esc(judge.title)+'</b></span>'+
@@ -1622,9 +1627,9 @@ function renderGames(r){
   });
   $('gamesBody').innerHTML=order.length?order.map(({g,i},displayIndex)=>{
     const kda=[g.kills,g.deaths,g.assists].map(x=>hasNum(x)?Number(x):'?').join('/');
-    const icon=championIcon(g.champion),goldTone=deltaTone(g.goldDiff15,0,100,false);
+    const icon=championIcon(g.champion),peerOk=trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false,goldTone=peerOk?deltaTone(g.goldDiff15,0,100,false):'neutral';
     const firstItem=g.firstMajorItem,itemSrc=firstItem?itemIcon(firstItem.itemId):'';
-    const goldLabel=!hasNum(g.goldDiff15)?'n/a':Number(g.goldDiff15)>100?'ahead':Number(g.goldDiff15)<-100?'behind':'even';
+    const goldLabel=!peerOk?'peer withheld':!hasNum(g.goldDiff15)?'n/a':Number(g.goldDiff15)>100?'ahead':Number(g.goldDiff15)<-100?'behind':'even';
     const rowLabel=[g.champion||'Unknown',g.win?'win':'loss',shortGameDate(g.gameStartTimestamp)].filter(Boolean).join(' · ');
     return '<tr class="game-row" data-match="'+esc(g.matchId||String(i))+'" data-index="'+i+'" tabindex="0" role="button" aria-expanded="false" aria-label="Open match details · '+esc(rowLabel)+'">'+
       '<td class="caret"><span class="caret-arrow" aria-hidden="true">▸</span> <small>'+(displayIndex+1)+'</small></td>'+
@@ -1636,7 +1641,7 @@ function renderGames(r){
       '<td>'+esc(fmtPct(g.kp))+'</td>'+
       '<td>'+esc(fmt(g.csMin,2))+'</td>'+
       '<td>'+esc(fmtInt(g.dpm))+'</td>'+
-      '<td><div class="table-delta tone-'+goldTone+'"><strong>'+esc(hasNum(g.goldDiff15)?signed(g.goldDiff15,0)+'g':'n/a')+'</strong><small>'+esc(goldLabel)+'</small>'+contextBar(g.goldDiff15,1200)+'</div></td></tr>';
+      '<td><div class="table-delta tone-'+goldTone+'"><strong>'+esc(peerOk&&hasNum(g.goldDiff15)?signed(g.goldDiff15,0)+'g':'n/a')+'</strong><small>'+esc(goldLabel)+'</small>'+(peerOk?contextBar(g.goldDiff15,1200):'')+'</div></td></tr>';
   }).join(''):'<tr class="games-empty-row"><td colspan="9">No games match the current filters.</td></tr>';
   $('gamesBody').querySelectorAll('.game-row').forEach(row=>{
     const open=()=>toggleGame(Number(row.dataset.index));
