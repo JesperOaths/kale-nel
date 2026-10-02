@@ -619,12 +619,12 @@ assert.ok(app.includes('High-risk deaths while behind'));
 assert.ok(app.includes('Isolated side-lane deaths'));
 assert.ok(app.includes('Pre-objective side-lane deaths'));
 assert.ok(app.includes('Post-impact deaths'));
-assert.ok(app.includes('High-risk post-play give-backs / game'));
+assert.ok(app.includes('High-risk untraded post-impact'));
 assert.ok(app.includes('Costly measured deaths'));
 assert.ok(app.includes('Rapid repeat deaths'));
 assert.ok(app.includes('Rapid repeat-death rate'));
 assert.ok(app.includes('Repeat-death rate Δ · matched'));
-assert.ok(app.includes('Costly deaths / game'));
+assert.ok(app.includes('Costly measured deaths'));
 assert.ok(app.includes('prior setup evidence')&&app.includes('45–105s band'),'Objective setup UI must expose the bounded sampled-position evidence band');
 
 const refs=[...app.matchAll(/\$\('([^']+)'\)/g)].map(m=>m[1]);
