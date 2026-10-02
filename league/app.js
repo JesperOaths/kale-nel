@@ -779,16 +779,20 @@ function recentDirectionSummary(r){
 function renderReportDrivers(r){
   const box=$('reportDrivers');if(!box)return;
   const priorities=(r.priorityThemes?.length?r.priorityThemes:r.recentFocus)||[],strengths=r.overallHighlights||[];
-  const weak=reportInsightParts(priorities[0],'Primary limiter'),strong=reportInsightParts(strengths[0],'Bankable strength'),direction=recentDirectionSummary(r);
-  const card=(kind,title,value,copy,action,tone,actionLabel='Next',meta='')=>'<article class="report-driver-card '+kind+' tone-'+tone+'"><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong><p>'+esc(copy||'No high-confidence supporting sentence is available yet.')+'</p>'+(meta?'<small class="driver-evidence-meta">'+esc(meta)+'</small>':'')+(action?'<div><b>'+esc(actionLabel)+':</b> '+esc(action)+'</div>':'')+'</article>';
+  const weak=reportInsightParts(priorities[0],'Primary limiter'),strong=reportInsightParts(strengths[0],'Bankable strength'),direction=recentDirectionSummary(r),priorityIds=currentPriorityReplayIds(r);
+  const card=(kind,title,value,copy,action,tone,actionLabel='Next',meta='',footer='')=>'<article class="report-driver-card '+kind+' tone-'+tone+'"><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong><p>'+esc(copy||'No high-confidence supporting sentence is available yet.')+'</p>'+(meta?'<small class="driver-evidence-meta">'+esc(meta)+'</small>':'')+(action?'<div><b>'+esc(actionLabel)+':</b> '+esc(action)+'</div>':'')+footer+'</article>';
+  const priorityFooter=priorityIds.size?'<button class="button secondary small driver-review-button" type="button" data-open-priority-history>Review '+priorityIds.size+' matching game'+(priorityIds.size===1?'':'s')+'</button>':'';
   box.innerHTML=[
-    card('driver-priority','Primary limiter',weak.title,weak.copy,weak.action,weak.present?'bad':'neutral','Next',weak.meta),
+    card('driver-priority','Primary limiter',weak.title,weak.copy,weak.action,weak.present?'bad':'neutral','Next',weak.meta,priorityFooter),
     card('driver-strength','Bankable strength',strong.title,strong.copy,strong.action,strong.present?'good':'neutral','Preserve',strong.meta),
     card('driver-direction','Recent direction',direction.value,direction.copy,'',direction.tone)
   ].join('');
+  const reviewBtn=box.querySelector('[data-open-priority-history]');
+  if(reviewBtn)reviewBtn.addEventListener('click',()=>{
+    state.matchHistoryFilter='priority';state.matchHistoryLimit=10;renderMatchHistory(r);
+    $('match-history')?.scrollIntoView({behavior:'auto',block:'start'});
+  });
 }
-
-
 function gameMetricSummary(games,getter){
   const xs=games.map(getter).filter(hasNum).map(Number),n=xs.length;
   if(!n)return {mean:null,n:0,sd:null};
