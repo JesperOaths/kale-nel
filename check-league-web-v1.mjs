@@ -751,6 +751,9 @@ assert.ok(app.includes('not treated as evidence of tilt, momentum, or player psy
 assert.ok(app.includes('Objective setup ward clears'),'Frontend must expose objective-setup ward clears');
 assert.ok(app.includes('objectiveFamilyStats'),'Per-game objective tab must expose objective-family evidence');
 assert.ok(html.includes('data-game-sort="gold15"')&&app.includes('bindGameSortControls'),'Per-game evidence table must retain Bruisienator-style sortable columns');
+assert.ok(html.includes('data-game-sort="opponent"')&&!html.includes('data-game-sort="role"'),'Role-pure evidence table must use its spare column for the actual same-role opponent instead of repeating the selected role');
+assert.ok(app.includes("if(key==='opponent')return String(g.peer?.champion||'').toLowerCase()")&&app.includes('same-role opponent'),'Opponent column must remain sortable and visibly tied to direct-role matchup context');
+assert.ok(!app.includes("if(key==='adc')return g.role==='ADC'")&&!app.includes("adc:'ADC only'"),'Retired ADC-only evidence filtering must not return after role-first report isolation');
 assert.ok(html.includes('id="consistencySummary"')&&app.includes('function renderConsistencySummary(')&&app.includes('function robustStats('),'Lane/economy must retain median + middle-50 consistency context so averages are not the only summary');
 assert.ok(app.includes('stats.q1')&&app.includes('stats.q3')&&app.includes('roleEconomyChartSpecs(r,reportRole)')&&app.includes('consistencySplit(vals,Number(spec.splitCenter),Number(spec.splitThreshold),!!spec.inverse)'),'Consistency cards must retain robust ranges while sharing the exact role-specific chart definition and direction');
 assert.ok(html.includes('data-game-filter="ahead15"')&&html.includes('data-game-filter="behind15"')&&html.includes('id="gameChampionFilter"')&&app.includes('function bindGameFilterControls(')&&app.includes('function gamePassesFilter('),'Game evidence must retain lightweight result/lane/champion filters');
@@ -784,7 +787,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v183'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v184'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
