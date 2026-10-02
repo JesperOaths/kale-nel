@@ -1084,6 +1084,8 @@ The current major-item comparison:
 
 Reset, shop-spend, Control-Ward purchase and major-item timing logic share one item-event ledger.
 
+**Mechanics-sensitive item analysis also requires an exact patch-matched Data Dragon item catalog.** If only a fallback/latest catalog is available, item IDs/names may still be shown for traceability, but the analyzer withholds recipe spend thresholds, first-reset spend qualification, major-item completion timing, affordability/readiness and item-spike coaching. A fallback catalog must never silently stand in for historical/current patch mechanics.
+
 - `ITEM_PURCHASED` enters the provisional purchase stream.
 - `ITEM_UNDO` invalidates the matching transient purchase rather than leaving it counted as spend.
 - sold/destroyed/undone items are handled by the reconstructed inventory ledger.
