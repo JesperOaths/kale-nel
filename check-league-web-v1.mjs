@@ -416,6 +416,11 @@ assert.ok(html.includes('id="recentPulse"')&&app.includes('function renderRecent
 assert.ok(html.includes('id="reportDrivers"')&&app.includes('function renderReportDrivers('),'League overview must retain the decision-driven primary limiter / strength / direction layer');
 assert.ok(app.includes('driver-evidence-meta')&&app.includes('supporting finding')&&app.includes('confidence'),'Top report drivers must expose the confidence/support metadata behind their selected evidence when available');
 assert.ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('data-open-full-match'),'League must retain the expandable coaching-readable recent match history with a path into full evidence');
+assert.ok(html.includes('data-history-filter="priority"')&&app.includes('function currentPriorityReplayIds('),'Match history must expose a Current focus filter driven by ranked replay evidence');
+assert.ok(app.includes('data-open-priority-history')&&app.includes("state.matchHistoryFilter='priority'"),'Primary limiter card must link directly to matching match-history evidence when available');
+assert.ok(app.includes("filter==='priority'")&&app.includes('currentPriorityReplayLabel(r)'),'Current-focus filtering must be an evidence-only visibility filter and preserve the active priority label');
+assert.ok(css.includes('.match-history-row.focus-match')&&app.includes("' focus-match'"),'Current-focus games must be visually identifiable without changing calculations');
+assert.ok(modelDoc.includes('## Priority-to-match evidence linkage')&&modelDoc.includes('intentionally narrower than a fuzzy stat/text match'),'Priority-to-match evidence semantics must remain documented');
 assert.ok(html.includes('id="gameArcPatterns"')&&html.includes('id="gameArcTurningPoints"')&&app.includes('function renderGameArcs('),'League must retain repeated @15→@25 game-arc analysis and recurring turning-point evidence');
 assert.ok(html.includes('id="gameArcFunnels"')&&app.includes('function arcFunnelCard('),'League must expose advantage-conversion funnels for ahead / close / behind @15 states');
 assert.ok(app.includes("transFor('ahead')")&&app.includes("transFor('behind')")&&app.includes("transFor('close')"),'Advantage-conversion funnels must derive from the same comparable @15→@25 transitions');
@@ -682,7 +687,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v157'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v158'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
