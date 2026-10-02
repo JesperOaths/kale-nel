@@ -118,7 +118,8 @@ jobs:
               && grep -q '<option>Sierk</option>' "$login_body" \
               && grep -qi '^cache-control:.*no-store' "$login_headers" \
               && [[ "$league_status" == "200" ]] \
-              && grep -q '20261002-league-web-v144' "$league_body" \
+              && grep -q '<title>Bruisienator · League analysis</title>' "$league_body" \
+              && grep -q '<link rel="canonical" href="https://kalenel.nl/league/">' "$league_body" \
               && ! grep -qi '^location:.*login' "$league_headers"; then
               echo "Login static names and public League shell are live."
               exit 0
