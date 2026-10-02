@@ -776,6 +776,26 @@ function recentDirectionSummary(r){
   if(bad>=good+2)return {tone:'bad',value:'Needs stabilizing',copy:bad+' meaningful recent signals worsened, '+good+' improved and '+stable+' stayed inside the practical change bands. Emphasize the primary practice target rather than adding new goals.'};
   return {tone:'neutral',value:'Mixed direction',copy:'Recent movement is split: '+good+' favorable, '+bad+' unfavorable and '+stable+' stable supported signals. Keep the practice plan narrow until the signal separates.'};
 }
+function renderPriorityEvidenceChain(r){
+  const box=$('priorityEvidenceChain');if(!box)return;
+  const theme=topPracticeThemes(r)[0]||null;
+  if(!theme){box.innerHTML='<div class="priority-chain-empty">No top priority has enough supported evidence to build a coaching chain yet.</div>';return;}
+  const targets=Array.isArray(r.practiceTargets)?r.practiceTargets:[],target=targets.find(t=>practiceThemeKey(t)===practiceThemeKey(theme))||targets.find(t=>String(t.themeKey||'')===String(theme.key||''))||null;
+  const replay=practiceReplayItems(r,theme)[0]||null,supporting=(Array.isArray(theme.supportingTitles)?theme.supportingTitles:[]).filter(x=>String(x||'').trim()&&String(x)!==String(theme.title||'')).slice(0,3);
+  const supportText=supporting.length?supporting.join(' · '):(Number(theme.supportCount||0)>1?String(theme.supportCount)+' related findings support this theme':'No second independent supporting finding crossed the display threshold.');
+  const targetText=target?(String(target.label||target.metricPath)+' · '+practiceTargetValue(target.baseline,target.unit)+' → '+practiceTargetValue(target.goal,target.unit)+' over '+String(target.windowGames||5)+' new games'):'No denominator-safe Next-5 metric is available for this theme yet.';
+  const replayText=replay?(String(replay.champion||'Unknown')+' · '+fmt(replay.minute,1)+'m · '+String(replay.title||'Replay moment')):'No ranked replay moment currently maps to this theme.';
+  const stage=(step,label,value,copy,cls='')=>'<article class="priority-chain-stage '+cls+'"><span>'+step+' · '+esc(label)+'</span><strong>'+esc(value)+'</strong><p>'+esc(copy||'')+'</p></article>';
+  box.innerHTML='<div class="priority-chain-head"><strong>Why this is priority #1</strong><span>Evidence → reinforcement → replay → measurement → action</span></div><div class="priority-chain-grid">'+
+    stage('1','Signal',String(theme.title||theme.label||'Primary limiter'),String(theme.evidence||'Supported report finding.'),'signal')+
+    stage('2','Reinforcement',Number(theme.supportCount||1)+' supporting finding'+(Number(theme.supportCount||1)===1?'':'s'),supportText,'support')+
+    stage('3','Replay proof',replayText,replay?'Open the ranked moment to inspect the actual decision sequence.':'The priority remains evidence-supported, but no replay-queue moment is strong enough to surface.','replay')+
+    stage('4','Next-5 measure',target?String(target.label||'Practice metric'):'Measurement pending',targetText,'measure')+
+    stage('5','Action',String(theme.action||'Keep the practice plan narrow.'),'This action is the coaching prescription attached to the current highest-scoring supported theme.','action')+
+  '</div><small class="priority-chain-caveat">This is an evidence trace, not a causal proof. Priority rank can change as new games enter the rolling sample.</small>';
+  if(replay)box.querySelector('.priority-chain-stage.replay')?.insertAdjacentHTML('beforeend','<button class="button secondary small" type="button" data-chain-replay>Open replay evidence</button>');
+  const btn=box.querySelector('[data-chain-replay]');if(btn&&replay)btn.addEventListener('click',()=>openReplayReviewMatch(replay.matchId,replay.tab||'macro'));
+}
 function renderReportDrivers(r){
   const box=$('reportDrivers');if(!box)return;
   const priorities=(r.priorityThemes?.length?r.priorityThemes:r.recentFocus)||[],strengths=r.overallHighlights||[];
@@ -792,6 +812,7 @@ function renderReportDrivers(r){
     state.matchHistoryFilter='priority';state.matchHistoryLimit=10;renderMatchHistory(r);
     $('match-history')?.scrollIntoView({behavior:'auto',block:'start'});
   });
+  renderPriorityEvidenceChain(r);
 }
 function gameMetricSummary(games,getter){
   const xs=games.map(getter).filter(hasNum).map(Number),n=xs.length;
