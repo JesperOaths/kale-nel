@@ -1774,3 +1774,25 @@ Replay categories are matched conservatively from the practice theme:
 Only moments already present in the backend-ranked `replayReviewQueue` are eligible. The practice card never manufactures a replay example just to fill the UI. If no ranked moment matches a priority, the priority remains aggregate-only.
 
 Opening a linked moment must preserve the backend-selected evidence tab and match ID so the user lands on the relevant death, reset, fight, objective, or macro context directly.
+
+
+## Next-5 target outcome scoring
+
+A saved practice target is not scored merely because a later report exists.
+
+Each target stores:
+- the exact metric path,
+- the baseline and goal,
+- direction and unit,
+- the baseline sample size and minimum sample,
+- the denominator path(s) needed to re-evaluate the same metric later,
+- a requested practice horizon (currently 5 new games).
+
+Before scoring a target:
+1. role, queue, verified mechanics cohort and patch context must remain comparable;
+2. at least the target's requested number of **new match IDs** must have entered the current rolling Last-20 since the baseline report;
+3. the current report must still meet the target's original minimum denominator for that metric.
+
+Until both the new-game horizon and current denominator are satisfied, the target is shown as **pending**, with the remaining new games and current valid sample displayed. It must not be called met, moving closer, moved away, or unchanged.
+
+New targets use `coachingSummary` paths for self metrics such as CS/min and role gold @15. Legacy saved targets that used `summary.csMin` or `summary.goldDiff15` are remapped to the current `coachingSummary` on read so the comparison population stays mechanics-filtered and consistent with the baseline that created the target.
