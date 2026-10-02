@@ -417,6 +417,9 @@ assert.ok(app.includes("if(r==='BOTTOM'||r==='BOT'||r==='DUO_CARRY'||r==='ADC')r
 assert.ok(html.includes('id="rankBridge"')&&app.includes('function renderRankBridge('),'Next-tier benchmark bridge must remain visible and role-safe');
 assert.ok(html.includes('id="recentPulse"')&&app.includes('function renderRecentPulse('),'Recent-vs-prior pulse must remain visible without adding backend work');
 assert.ok(html.includes('id="reportDrivers"')&&app.includes('function renderReportDrivers('),'League overview must retain the decision-driven primary limiter / strength / direction layer');
+assert.ok(app.includes('function orderedPriorityThemes(')&&app.includes('return orderedPriorityThemes(report).slice(0,3)'),'Canonical priority order must drive every top-three coaching surface');
+assert.ok(app.includes("const priorities=topPracticeThemes(r)")&&app.includes("targets=Array.isArray(r.practiceTargets)?r.practiceTargets:[],focus=topPracticeThemes(r)"),'Primary limiter and Next-5 plan must consume the same canonical theme order');
+assert.ok(modelDoc.includes('## Canonical priority ordering')&&modelDoc.includes('backend exports `priorityThemes`, its order is authoritative'),'Canonical priority ordering must remain documented');
 assert.ok(html.includes('id="priorityEvidenceChain"')&&app.includes('function renderPriorityEvidenceChain('),'Top priority must expose an auditable evidence-to-action chain');
 assert.ok(app.includes("stage('1','Signal'")&&app.includes("stage('3','Replay proof'")&&app.includes("stage('4','Next-5 measure'")&&app.includes("stage('5','Action'"),'Priority evidence chain must retain signal, replay, metric and action stages');
 assert.ok(app.includes('This is an evidence trace, not a causal proof.'),'Priority chain must remain explicitly non-causal');
