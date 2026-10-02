@@ -556,6 +556,9 @@ assert.ok(modelDoc.includes('## Phase-risk diagnostic')&&modelDoc.includes('actu
 assert.ok(app.includes('lead games · analyzer threshold 4')&&app.includes('all-game recovery opportunities')&&app.includes('analyzer threshold 8')&&css.includes('.intelligence-card.thin-evidence'),'Combined-intelligence cards must disclose their denominator floors and stay neutral below them');
 assert.ok(modelDoc.includes('## Combined-intelligence evidence floors')&&modelDoc.includes('Combining metrics must never make a thin input look more certain'),'Compound evidence denominator policy must remain documented');
 assert.ok(html.indexOf('id="report-driver"')<html.indexOf('id="quickRead"'),'Action-first report drivers must appear before diagnostic comparison layers');
+assert.ok(html.indexOf('id="report-driver"')<html.indexOf('id="practice-plan"')&&html.indexOf('id="practice-plan"')<html.indexOf('id="quickRead"'),'Next-5 practice plan must immediately follow the action-first driver before diagnostic comparison layers');
+assert.ok(html.includes('supporting-findings-panel')&&html.includes('<details class="supporting-findings-details">'),'Longer improvement/strength lists must remain available as collapsible supporting evidence rather than duplicate the primary reading path');
+assert.ok((html.match(/id="practicePlan"/g)||[]).length===1,'League page must have exactly one actionable practice-plan surface');
 assert.ok(html.includes('id="evidenceHealth"')&&html.includes('id="trust-coverage"')&&app.includes('function renderEvidenceHealth('),'Top action section must expose evidence-health coverage with a path to full Trust & coverage');
 assert.ok(app.includes("evidenceHealthCard('Timeline behavior'")&&app.includes("evidenceHealthCard('Trusted role peer'")&&app.includes("evidenceHealthCard('Exact item mechanics'"),'Evidence health must keep major evidence dimensions separate rather than collapse them into one score');
 assert.ok(app.includes("directional behavior floor 5")&&app.includes("item-window floor 4"),'Evidence-health readiness must use analyzer-aligned evidence floors');
@@ -789,7 +792,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v185'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v186'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
