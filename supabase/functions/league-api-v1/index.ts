@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.88";
+const ANALYZER_VERSION="league-web-behavior-v4.89";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -2017,9 +2017,43 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
   const out:any[]=[];
   const clampPct=(v:number)=>Math.max(0,Math.min(100,v));
   const titles=(t:any)=>[t?.title,...(Array.isArray(t?.supportingTitles)?t.supportingTitles:[])].map(text).join(" ").toLowerCase();
+  const samplePathsFor=(metricPath:string):string[]=>({
+    "behaviorSummary.earlyLeadGivebackRate":["behaviorSummary.earlyLeadGames"],
+    "summary.csMin":["summary.games"],
+    "summary.goldDiff15":["peerComparison.laneGames15"],
+    "behaviorSummary.highRiskUntradedPostImpactPerGame":["behaviorSummary.playerImpactEvents"],
+    "behaviorSummary.highRiskBehindDeathsPerGame":["behaviorSummary.behindStateDeaths"],
+    "behaviorSummary.highRiskLeadDeathsPerGame":["behaviorSummary.leadDeaths"],
+    "behaviorSummary.repeatDeathRate":["behaviorSummary.repeatDeathOpportunities"],
+    "behaviorSummary.costlyDeathsPerTimelineGame":["behaviorSummary.measuredDeathConsequences"],
+    "behaviorSummary.badDeathsPerTimelineGame":["behaviorSummary.totalTimelineDeaths"],
+    "behaviorSummary.firstResetLossRate":["behaviorSummary.firstResetCleanGames"],
+    "behaviorSummary.soloKillDeathsBeforeShopRate":["behaviorSummary.soloKillResetEvents"],
+    "behaviorSummary.itemSpikeUtilizationRate":["behaviorSummary.itemSpikeEligibleWindows"],
+    "behaviorSummary.highUnspentFightRate":["behaviorSummary.fightSamples"],
+    "behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame":["behaviorSummary.macroTransitionSideLaneDeaths"],
+    "behaviorSummary.midRouting.avgCsSwing15to25":["behaviorSummary.midRouting.games"],
+    "behaviorSummary.midRouting.avgObjectiveJoinRate":["behaviorSummary.midRouting.games"],
+    "behaviorSummary.recentShopObjectiveAbsenceRate":["behaviorSummary.neutralObjectiveEvents"],
+    "behaviorSummary.preObjectiveDeathPct":["behaviorSummary.totalTimelineDeaths"],
+    "behaviorSummary.objectiveSetupWardRate":["behaviorSummary.visionWardTotal"],
+    "behaviorSummary.earlySetupObjectiveJoinRate":["behaviorSummary.neutralObjectiveJoins"],
+    "behaviorSummary.killConversionRate":["behaviorSummary.killConversionWindows"],
+    "behaviorSummary.closing25.leadLateRiskLossRate":["behaviorSummary.closing25.leadLosses"],
+    "behaviorSummary.objectiveJoinRate":["behaviorSummary.neutralObjectiveEvents"],
+    "behaviorSummary.firstAllyFightDeathRate":["behaviorSummary.fightSamples"],
+    "behaviorSummary.preContributionFightDeathRate":["behaviorSummary.fightSamples"],
+    "behaviorSummary.damageGoldEfficiency":["summary.games"],
+    "behaviorSummary.highRiskBehindDeathRate":["behaviorSummary.behindStateDeaths"],
+    "behaviorSummary.visionActionDeathRate":["behaviorSummary.visionActions"],
+    "behaviorSummary.roamSuccessRate":["behaviorSummary.roamAttempts"],
+    "behaviorSummary.avgRoamLaneCostCs":["behaviorSummary.roamLaneCostGames"],
+    "sessionBehavior.game3PlusGoldDelta":["sessionBehavior.firstGame.games","sessionBehavior.game3Plus.games"],
+    "sessionBehavior.postLossGoldDelta":["sessionBehavior.quickAfterLoss.games","sessionBehavior.quickAfterWin.games"]
+  } as Record<string,string[]>)[metricPath]||["summary.games"];
   const add=(theme:any,label:string,metricPath:string,baseline:any,goal:any,direction:"higher"|"lower",unit:string,sampleSize:any,minSample:number,rationale:string)=>{
     if(out.length>=3||!hasNum(baseline)||!hasNum(goal)||Number(sampleSize||0)<minSample)return false;
-    out.push({themeKey:text(theme?.key),themeLabel:text(theme?.label||theme?.category),label,metricPath,baseline:Number(baseline),goal:Number(goal),direction,unit,sampleSize:Number(sampleSize||0),minSample,windowGames:5,rationale,source:"self_relative_short_term"});
+    out.push({themeKey:text(theme?.key),themeLabel:text(theme?.label||theme?.category),label,metricPath,samplePaths:samplePathsFor(metricPath),baseline:Number(baseline),goal:Number(goal),direction,unit,sampleSize:Number(sampleSize||0),minSample,windowGames:5,rationale,source:"self_relative_short_term"});
     return true;
   };
   for(const theme of themes||[]){
