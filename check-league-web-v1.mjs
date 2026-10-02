@@ -159,6 +159,9 @@ assert.ok(api.includes('practiceTargets'));
 assert.ok(api.includes('source:"self_relative_short_term"'));
 assert.ok(api.includes('windowGames:5'));
 assert.ok(api.includes('replayReviewQueue'));
+assert.ok(api.includes('const replayReviewQueue=buildReplayReviewQueue(coachingGames);'),'Replay-review priorities must use the mechanics-filtered coaching cohort, not all role-selected context games');
+assert.ok(app.includes('for(const g of reportCoachingGames(r))')&&app.includes('const games=reportCoachingGames(r),patterns=deathPatternEntries(r)'),'Death/ward spatial intelligence must use the same mechanics-filtered coaching cohort');
+assert.ok(modelDoc.includes('## Coaching-cohort evidence surfaces')&&modelDoc.includes('Older-mechanics games may remain visible in ordinary match history as **context only**'),'Coaching evidence surfaces must remain cohort-consistent and documented');
 assert.ok(api.includes('if(n>=2)continue'));
 assert.ok(api.includes('if(selected.length>=10)break'));
 assert.ok(api.includes('matchupBehavior:matchupModel.profiles'));
@@ -652,7 +655,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v151'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v152'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
