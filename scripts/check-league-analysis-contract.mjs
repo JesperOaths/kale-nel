@@ -472,6 +472,10 @@ ok(app.includes('function matchReplayReviewHtml(')&&app.includes('data-open-revi
 ok(app.includes('function practiceReplayCategories(')&&app.includes('function practiceReplayHtml(')&&app.includes('data-practice-review-match'), 'practice priorities must bridge only to existing backend-ranked replay evidence');
 ok(modelDoc.includes('## Practice-to-replay bridge')&&modelDoc.includes('never manufactures a replay example'), 'analysis model must preserve the evidence-only practice-to-replay bridge');
 ok(html.includes('id="matchHistoryToggle"')&&app.includes('matchHistoryLimit:10'), 'match history must stay scannable at 10 by default while allowing the full eligible Last-20');
+ok(html.includes('id="matchHistoryFilters"')&&app.includes("matchHistoryFilter:'all'"), 'match story must provide presentation-only evidence filters');
+ok(app.includes("filter==='risk'")&&app.includes("g.timelineAvailable===true")&&app.includes("filter==='review'"), 'risk/replay match-story filters must fail closed on supported timeline/replay evidence');
+ok(app.includes("gameMatchesNamedFilter(g,filter)"), 'match-story lane-state filtering must stay synchronized with technical evidence-table bands');
+ok(modelDoc.includes('## Match-story filters')&&modelDoc.includes('must never enter **Risk flagged**'), 'analysis model must preserve risk-filter evidence semantics');
 ok(modelDoc.includes('## Game-arc reconstruction')&&modelDoc.includes('direct-role gold differential > +100g')&&modelDoc.includes('at least two coaching-cohort games'), 'analysis documentation must lock the game-arc bands, mechanics cohort and recurrence floor');
 ok(app.includes("openReplayReviewMatch(matchId,tab)"), 'match-level replay cues must retain their evidence-tab routing');
 ok(app.includes("filter(x=>x.games.length>=2)")&&app.includes("filter(x=>x.count>=2)"), 'game-arc recurrence must require evidence in at least two coaching-cohort games');
