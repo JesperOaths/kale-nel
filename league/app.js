@@ -1324,14 +1324,25 @@ function renderObjectiveFamilyOverview(r){
 
 function renderPhaseDiagnostic(r){
   const box=$('phaseDiagnostic'),note=$('phaseDiagnosticNote');if(!box)return;
-  const b=r.behaviorSummary||{},p=r.peerComparison||{},phase=b.phaseRisk||{},mid=b.midRouting||{},closing=b.closing25||{};
-  const defs=[['early','Early phase'],['mid','Transition phase'],['late','Late / Baron-era']];
+  const b=r.behaviorSummary||{},p=r.peerComparison||{},phase=b.phaseRisk||{},mid=b.midRouting||{},closing=b.closing25||{},role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole);
+  const defs=[['early','Early phase'],['mid','Transition phase'],['late','Late strategic phase']];
   const rows=defs.map(([key,label])=>{const x=phase[key]||{};return{key,label,games:Number(x.games||0),exposure:Number(x.exposureMinutes||0),high:hasNum(x.highRiskDeathsPer10Min)?Number(x.highRiskDeathsPer10Min):null,costly:hasNum(x.costlyDeathsPer10Min)?Number(x.costlyDeathsPer10Min):null,severe:hasNum(x.severeDeathsPer10Min)?Number(x.severeDeathsPer10Min):null,fights:Number(x.fightClusters||0),first:hasNum(x.firstAllyFightDeathRate)?Number(x.firstAllyFightDeathRate):null,raw:x,ready:Number(x.games||0)>=5&&Number(x.exposureMinutes||0)>=20};});
   const highEligible=rows.filter(x=>x.ready&&hasNum(x.high)).sort((a,b)=>Number(b.high)-Number(a.high)),highTop=highEligible[0]||null,highNext=highEligible[1]||null,highGap=highTop?(Number(highTop.high)-Number(highNext?.high||0)):0,highHot=!!highTop&&Number(highTop.high)>=.35&&highGap>=.15;
   const costlyEligible=rows.filter(x=>x.ready&&hasNum(x.costly)).sort((a,b)=>Number(b.costly)-Number(a.costly)),costTop=costlyEligible[0]||null,costNext=costlyEligible[1]||null,costGap=costTop?(Number(costTop.costly)-Number(costNext?.costly||0)):0,costHot=!!costTop&&Number(costTop.costly)>=.30&&costGap>=.12;
   const context=x=>{
-    if(x.key==='early'){const lane=hasNum(p.avgGoldDiff15)?'Role gold @15 '+signed(p.avgGoldDiff15,0)+'g':'Role gold @15 n/a',reset=hasNum(b.firstResetLossRate)?'first-reset loss '+fmtPct(b.firstResetLossRate):'first-reset loss n/a';return lane+' · '+reset;}
-    if(x.key==='mid'){const cs=hasNum(mid.avgCsSwing15to25)?'CS swing '+signed(mid.avgCsSwing15to25,1):'CS swing n/a',obj=hasNum(mid.avgObjectiveJoinRate)?'objective presence '+fmtPct(mid.avgObjectiveJoinRate):'objective presence n/a';return cs+' · '+obj;}
+    const contest=hasNum(b.objectiveContestPresenceRate??b.objectiveJoinRate)?fmtPct(b.objectiveContestPresenceRate??b.objectiveJoinRate):'n/a',setup=hasNum(b.earlySetupObjectiveJoinRate)?fmtPct(b.earlySetupObjectiveJoinRate):'n/a',fight=hasNum(b.fightSurvivalRate)?fmtPct(b.fightSurvivalRate):'n/a';
+    if(x.key==='early'){
+      if(role==='JUNGLE'){const impact=hasNum(p.avgImpactDeltaMin)?signed(p.avgImpactDeltaMin,1)+'m':'n/a',item=hasNum(p.avgMajorItemDeltaMin)?signed(p.avgMajorItemDeltaMin,1)+'m':'n/a';return 'first impact vs jungler '+impact+' · first major vs jungler '+item;}
+      if(role==='SUPPORT'){const roam=hasNum(b.roamSuccessRate)?fmtPct(b.roamSuccessRate):'n/a',vision=hasNum(b.visionActionDeathRate)?fmtPct(b.visionActionDeathRate):'n/a';return 'early roam conversion '+roam+' · vision-action death rate '+vision;}
+      const lane=hasNum(p.avgGoldDiff15)?'Role gold @15 '+signed(p.avgGoldDiff15,0)+'g':'Role gold @15 n/a',reset=hasNum(b.firstResetLossRate)?'first-reset loss '+fmtPct(b.firstResetLossRate):'first-reset loss n/a';return lane+' · '+reset;
+    }
+    if(x.key==='mid'){
+      if(role==='JUNGLE')return 'prior objective setup '+setup+' · contested presence '+contest;
+      if(role==='SUPPORT')return 'prior objective setup '+setup+' · vision-action death rate '+(hasNum(b.visionActionDeathRate)?fmtPct(b.visionActionDeathRate):'n/a');
+      const cs=hasNum(mid.avgCsSwing15to25)?'CS swing '+signed(mid.avgCsSwing15to25,1):'CS swing n/a',obj=hasNum(mid.avgObjectiveJoinRate)?'objective presence '+fmtPct(mid.avgObjectiveJoinRate):'objective presence n/a';return cs+' · '+obj;
+    }
+    if(role==='JUNGLE')return 'fight survival '+fight+' · contested objective presence '+contest;
+    if(role==='SUPPORT')return 'fight survival '+fight+' · prior objective setup '+setup;
     const lead=hasNum(closing.leadWinRate)?'lead@25 win '+fmtPct(closing.leadWinRate):'lead@25 win n/a',def=hasNum(closing.deficitWinRate)?'deficit@25 win '+fmtPct(closing.deficitWinRate):'deficit@25 win n/a';return lead+' · '+def;
   };
   box.innerHTML=rows.map(x=>{
