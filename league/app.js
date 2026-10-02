@@ -1486,6 +1486,43 @@ function practiceReplayHtml(r,theme){
   ).join('')+'</div>';
 }
 
+
+function practiceLiveTrigger(theme){
+  const key=String(theme?.key||'').toLowerCase(),textValue=[theme?.title,...(Array.isArray(theme?.supportingTitles)?theme.supportingTitles:[])].filter(Boolean).join(' ').toLowerCase();
+  if(key==='early-lane'){
+    if(/lead|give.?back|preserv/.test(textValue))return{when:'You create a meaningful direct-role lead',do:'Protect the next wave/reset first; do not re-enter a low-value fight that can hand the lead back.'};
+    if(/farm|cs/.test(textValue))return{when:'A lane wave is available and no higher-value supported play is imminent',do:'Take the guaranteed CS, then reconnect before the next objective or fight window.'};
+    if(/solo|duel|matchup|lane death/.test(textValue))return{when:'The lane becomes a clean 1v1 decision',do:'Check threat range, cooldowns and your exit before committing; avoid turning an even lane into a solo death.'};
+    return{when:'Before the comparable early-lane checkpoint',do:'Choose the wave, reset and trade sequence that protects direct-role economy rather than chasing activity for its own sake.'};
+  }
+  if(key==='death-risk'){
+    if(/repeat|recovery|second death/.test(textValue))return{when:'You die',do:'Spend, route to the safest guaranteed resource and rebuild information before contesting the same area again.'};
+    if(/post.?play|give.?back|successful play/.test(textValue))return{when:'Your team just won a kill, fight or objective',do:'Bank the gain first—reset, take the safe resource or leave—before looking for one more low-information play.'};
+    if(/ahead|lead protection/.test(textValue))return{when:'You are materially ahead of the direct role opponent',do:'Lower variance: take the high-certainty resource or objective setup instead of offering a catch window.'};
+    return{when:'The payoff is unclear but the route extends into fog, isolation or high unspent gold',do:'End the sequence early and reset/reconnect rather than forcing the next action.'};
+  }
+  if(key==='reset-power'){
+    if(/item|spike|power window|major/.test(textValue))return{when:'Your major item completes before the direct role opponent',do:'Leave base with one specific lane, objective or fight to pressure before item parity closes the window.'};
+    if(/post.?kill|solo kill/.test(textValue))return{when:'You win a clean lane kill',do:'Check the next wave and shop immediately; do not stay exposed long enough to die before converting the kill.'};
+    return{when:'Your first meaningful purchase becomes available',do:'Prepare the wave and recall so the spend does not surrender the next direct-role economy window.'};
+  }
+  if(key==='mid-routing')return{when:'A neutral objective or major team event is approaching within roughly 90 seconds',do:'Finish the current safe wave, stop extending the side lane and reconnect before the contest becomes urgent.'};
+  if(key==='objectives-closing'){
+    if(/closing|lead|ahead/.test(textValue))return{when:'You reach the late game with a direct-role lead',do:'Trade only for high-value map progress; do not expose the lead to a low-information catch or extra chase.'};
+    return{when:'The next neutral objective is entering its setup window',do:'Resolve shop + wave + pathing early enough to arrive with information instead of reacting after the contest starts.'};
+  }
+  if(key==='teamfights')return{when:'A fight is about to become committed',do:'Check local numbers, item/level state and the first enemy threat; enter only when you can stay alive long enough to contribute.'};
+  if(key==='consistency')return{when:'You are starting game 3+ in a session or quickly requeueing',do:'Reuse the same opening checklist and practice target; do not change the plan just because of the previous result.'};
+  if(key==='recovery')return{when:'The direct-role state is already materially behind',do:'Take guaranteed resources and cross-map value first; require a real numbers, vision or cooldown advantage before fighting.'};
+  if(key==='vision')return{when:'You are about to enter unwarded fog to place or clear vision',do:'Require ally proximity, known enemy locations or a safe exit path; otherwise delay the vision action.'};
+  if(key==='roaming')return{when:'You are about to leave your lane assignment',do:'Estimate the wave/resource cost and the return path first; roam only when the supported payoff justifies what you give up.'};
+  return{when:'The same evidence pattern starts to appear again',do:String(theme?.action||'Use the current practice action and keep the decision rule narrow.')};
+}
+function practiceTriggerHtml(theme){
+  const x=practiceLiveTrigger(theme);if(!x?.when||!x?.do)return'';
+  return '<div class="practice-trigger"><span>Live trigger</span><div><b>If:</b> '+esc(x.when)+'</div><div><b>Then:</b> '+esc(x.do)+'</div></div>';
+}
+
 function renderPracticePlan(r){
   const targets=Array.isArray(r.practiceTargets)?r.practiceTargets:[],focus=topPracticeThemes(r);
   if(!focus.length){
@@ -1497,6 +1534,7 @@ function renderPracticePlan(r){
     return '<article class="practice-card">'+
       '<div class="practice-number">'+(i+1)+'</div><div><span>'+esc(x.category||'focus')+'</span><strong>'+esc(x.title||'Practice focus')+'</strong>'+
       '<p>'+esc(x.action)+'</p>'+
+      practiceTriggerHtml(x)+
       (Array.isArray(x.supportingTitles)&&x.supportingTitles.length>1?'<div class="practice-supporting"><b>Why this is a priority</b>'+x.supportingTitles.slice(0,4).map(t=>'<span>• '+esc(t)+'</span>').join('')+'</div>':'')+
       practiceTargetHtml(target)+practiceReplayHtml(r,x)+
       '<small>'+esc(x.comparison||'Last-20 evidence')+' · '+esc(x.confidence||'medium')+' confidence'+(Number(x.supportCount||0)?' · '+esc(String(x.supportCount))+' supporting finding'+(Number(x.supportCount)===1?'':'s'):'')+'</small></div></article>';
