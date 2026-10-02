@@ -548,6 +548,7 @@ assert.ok(css.includes('.games-table th{position:static!important}')&&css.includ
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))')&&css.includes('html{font-size:18px'),'League report must retain a spacious 1760px desktop shell with larger base typography');
 assert.ok(css.includes('--good:#126a45')&&css.includes('--bad:#b23a2f'),'Positive and negative data must retain high-contrast visual tokens');
 assert.ok(html.includes('id="quickRead"')&&html.includes('id="radarChart"')&&html.includes('id="decisionMetrics"'),'Logical overview, population radar and decision sections must remain present');
+assert.ok(app.includes("unit==='vpm'?0.15")&&app.includes("unit==='wards'?0.5"),'Role-aware peer deltas must use analyzer-aligned VPM/setup-ward thresholds');
 assert.ok(html.includes('id="phase-diagnostic"')&&html.includes('id="phaseDiagnostic"')&&app.includes('function renderPhaseDiagnostic('),'League must surface phase-normalized decision-risk concentration');
 assert.ok(app.includes("Number(highTop.high)>=.35&&highGap>=.15")&&app.includes("Number(costTop.costly)>=.30&&costGap>=.12"),'Phase hotspot UI must reuse the analyzer absolute-rate and separation thresholds');
 assert.ok(app.includes("tone=isHighHot||isCostHot?'bad':'neutral'"),'Non-hotspot phases must remain neutral rather than be promoted to strengths');
@@ -563,7 +564,8 @@ assert.ok(html.includes('id="evidenceHealth"')&&html.includes('id="trust-coverag
 assert.ok(app.includes("evidenceHealthCard('Timeline behavior'")&&app.includes("evidenceHealthCard('Trusted role peer'")&&app.includes("evidenceHealthCard('Exact item mechanics'"),'Evidence health must keep major evidence dimensions separate rather than collapse them into one score');
 assert.ok(app.includes("directional behavior floor 5")&&app.includes("item-window floor 4"),'Evidence-health readiness must use analyzer-aligned evidence floors');
 assert.ok(modelDoc.includes('## Top-level evidence health')&&modelDoc.includes('Do not collapse evidence health into one synthetic score'),'Top-level evidence-health semantics must remain documented');
-assert.ok(app.includes("comparisonCard('CS/min vs role opponent'")&&app.includes("comparisonCard('DPM vs role opponent'")&&app.includes("comparisonCard('First major timing vs role'"),'Direct-role comparison must use actual same-role opponents rather than external population references');
+assert.ok(app.includes("if(role==='SUPPORT')")&&app.includes("if(role==='JUNGLE')")&&app.includes("Objective setup wards vs Support")&&app.includes("Vision/min vs Jungle"),'Direct-role Quick Read must use role-relevant peer metrics for SUPPORT and JUNGLE');
+assert.ok(app.includes("comparisonCard('Role gold @15'")&&app.includes("comparisonCard('DPM vs '+roleLabel(role)")&&app.includes("First major timing vs '+roleLabel(role)"),'ADC/MID/TOP Quick Read must retain economy/damage/item direct-peer context');
 assert.ok(html.includes('Raw selected-role output')&&app.includes('Raw selected-role sample')&&app.includes("tone-neutral"),'Raw KPI layer must remain neutral and self-descriptive rather than duplicate benchmark judgment');
 assert.ok(html.includes('id="laneEconomyNav"')&&html.includes('id="laneEconomyTitle"')&&app.includes('function renderRoleSectionCopy('),'League economy framing must be selected-role aware');
 assert.ok(app.includes("JUNGLE:{nav:'Jungle economy & tempo'")&&app.includes("SUPPORT:{nav:'Support economy & setup'")&&app.includes("MID:{nav:'Lane → map economy'"),'Jungle/Support/Mid reports must not retain generic laner-only economy copy');
@@ -792,7 +794,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v186'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v187'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
