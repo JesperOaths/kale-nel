@@ -33,7 +33,20 @@ const ADMIN_PAGE_VERSION = SITE_VERSION;
 // ADMIN_BUILD or a stale public HTML shell can survive an unrelated admin deploy.
 const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r17';
 const PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r13';
-const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-r3';
+const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-r4';
+const PUBLIC_CRITICAL_ASSET_BUILD = '20261002-worker-bundle-first-r1';
+const PUBLIC_LOGIN_BOOTSTRAP_ASSETS = new Set([
+  '/login.html',
+  '/gejast-config.js',
+  '/gejast-mobile-route-fixes-v583.js',
+  '/gejast-mobile-foundation-v583.js',
+  '/gejast-login-names-static.js',
+  '/gejast-login-names-fallback.js',
+  '/gejast-account-runtime.js',
+  '/logo-small.png',
+  '/site-bg-desktop.webp',
+  '/VERSION'
+]);
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -68,6 +81,47 @@ function isLeaguePublicPath(pathname) {
 }
 function isLeagueDocument(pathname) {
   return pathname === '/league' || pathname === '/league/' || pathname === '/league/index.html';
+}
+function criticalPublicAssetPath(pathname) {
+  const p=String(pathname||'');
+  if(p==='/shop') return '/shop/';
+  if(p==='/league') return '/league/';
+  if(p==='/shop/' || p==='/shop/index.html') return '/shop/index.html';
+  if(p==='/league/' || p==='/league/index.html') return '/league/index.html';
+  if(p.startsWith('/shop/') || p.startsWith('/league/')) return p;
+  if(PUBLIC_LOGIN_BOOTSTRAP_ASSETS.has(p)) return p;
+  return '';
+}
+function publicCriticalDocument(pathname) {
+  const p=String(pathname||'');
+  return p==='/login.html' || p==='/shop/' || p==='/shop/index.html' || isLeagueDocument(p);
+}
+async function publicBundledFirstResponse(request, env, url) {
+  const method=String(request.method||'GET').toUpperCase();
+  const mapped=criticalPublicAssetPath(url.pathname);
+  if(!mapped || (method!=='GET'&&method!=='HEAD')) return null;
+  if(mapped==='/shop/' || mapped==='/league/') return canonicalRedirect(mapped);
+  if(!env.ASSETS || typeof env.ASSETS.fetch!=='function') return null;
+  const assetUrl=new URL(url.toString());
+  assetUrl.pathname=mapped;
+  assetUrl.search='';
+  const assetRequest=new Request(assetUrl.toString(),{method,headers:request.headers,redirect:'manual'});
+  let response=null;
+  try{response=await env.ASSETS.fetch(assetRequest);}catch(_){return null;}
+  if(!response || response.status===404) return null;
+  const headers=new Headers(response.headers);
+  applyPublicSecurityHeaders(headers);
+  const documentResponse=publicCriticalDocument(url.pathname);
+  if(documentResponse){
+    headers.set('Cache-Control','no-store, max-age=0, must-revalidate');
+    headers.set('Pragma','no-cache');
+    headers.delete('Age');
+  }else{
+    headers.set('Cache-Control','public, max-age=300, stale-while-revalidate=60');
+  }
+  headers.set('X-Kalenel-Public-Source','worker-assets');
+  headers.set('X-Kalenel-Public-Build',PUBLIC_CRITICAL_ASSET_BUILD);
+  return new Response(method==='HEAD'?null:response.body,{status:response.status,statusText:response.statusText,headers});
 }
 async function publicOriginResponse(request, url, { noStore = false, cacheBustKey = '', cacheBustValue = ADMIN_BUILD } = {}) {
   const method = String(request.method || 'GET').toUpperCase();
@@ -123,9 +177,14 @@ async function handlePublicApex(request, env, url) {
   if (!isSafePath(url.pathname)) return notFound();
   if (isSecurityPath(url.pathname)) return await handlePublicSecurity(request, env, url);
 
-  // League/Bruisienator is intentionally public. Keep this explicit and ahead
-  // of the protected-pattern redirect so future admin-gate broadening cannot
-  // accidentally put /league or its assets behind player/admin login.
+  // Critical public bootstraps are served from the Worker's own static bundle first.
+  // This keeps login-name rendering, shop first paint, and every /league/** resource
+  // independent of transient Supabase/origin latency and avoids proxying request bodies.
+  const bundled=await publicBundledFirstResponse(request,env,url);
+  if(bundled)return bundled;
+
+  // League/Bruisienator is intentionally public. This fallback remains ahead of
+  // protected-pattern routing so a missing bundled asset can never turn into a login gate.
   if (isLeaguePublicPath(url.pathname)) {
     const freshDocument = (request.method === 'GET' || request.method === 'HEAD') && isLeagueDocument(url.pathname);
     return await publicOriginResponse(request, url, { noStore: freshDocument, cacheBustKey: freshDocument ? '__kalenel_league_public' : '', cacheBustValue: PUBLIC_LEAGUE_ORIGIN_BUILD });
