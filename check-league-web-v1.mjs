@@ -425,6 +425,9 @@ assert.ok(app.includes('function gameArcStages(')&&app.includes('gameArcStripHtm
 assert.ok(app.includes('lateHighRisk')&&app.includes('lateCostly')&&app.includes('categories can overlap')&&!app.includes('Number(closing.highRiskDeaths||0)+Number(closing.costlyDeaths||0)'),'Game arcs must not add overlapping high-risk and costly late-death categories as unique deaths');
 assert.ok(modelDoc.includes('## Overlapping late-risk categories')&&modelDoc.includes('must never add them together'),'Late-risk overlap semantics must remain documented');
 assert.ok(app.includes("filter(x=>x.games.length>=2)")&&app.includes("filter(x=>x.count>=2)"),'Game-arc UI must require at least two games before labeling a transition or turning point recurring');
+assert.ok(app.includes('associationReady=hit.length>=3&&miss.length>=3')&&app.includes('descriptive association only, not causation'),'Turning-point outcome comparison must require ≥3 games with and without the signal and remain explicitly non-causal');
+assert.ok(app.includes('sort((a,b)=>b.count-a.count'),'Turning points must remain recurrence-sorted rather than ranked by noisy outcome association');
+assert.ok(modelDoc.includes('## Turning-point outcome association')&&modelDoc.includes('must withhold the with-vs-without difference'),'Turning-point association minimums must remain documented');
 assert.ok(app.includes('reportCoachingGames(r)')&&app.includes('gameArcTransition(g)'),'Game-arc aggregation must stay inside the same mechanics-filtered coaching cohort');
 assert.ok(app.includes('This is an association, not a proven reset cause.'),'Recent-shop objective evidence inside game arcs must remain explicitly non-causal');
 assert.ok(app.includes("gameMatchesNamedFilter(g,'ahead15')")&&app.includes("gameMatchesNamedFilter(g,'behind15')"),'Match-story lane bands must reuse the same ahead/close/behind thresholds as the evidence table');
@@ -660,7 +663,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v154'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v155'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
