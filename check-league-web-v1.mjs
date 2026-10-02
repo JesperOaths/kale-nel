@@ -122,7 +122,12 @@ assert.ok(api.includes('function participantRoleEvidence('),'Role selection must
 assert.ok(api.includes('chosen.source==="teamPosition"||chosen.source==="individualPosition"'),'Modern Riot position fields must own high-confidence role evidence');
 assert.ok(api.includes('?"high":"fallback"'),'Legacy role/lane metadata must remain lower-confidence fallback evidence');
 assert.ok(api.includes('fallbackPlayerRoleGames')&&api.includes('fallbackDirectPeerRoleGames'),'Data Quality must expose fallback role evidence');
-assert.ok(app.includes('peer role(s) from legacy fallback metadata'),'Frontend must surface fallback peer-role evidence instead of hiding it');
+assert.ok(api.includes('directPeerComparable=!!oppFull&&roleEvidence.confidence==="high"&&peerResolution.opponentRoleConfidence==="high"'),'Direct-peer coaching must require high-confidence Riot position evidence for both players');
+assert.ok(api.includes('excludedLowConfidenceDirectPeerGames'),'Low-confidence direct-peer comparisons must remain observable');
+assert.ok(api.includes('lane15ComparableGames=directPeerGames.filter'),'Direct-role lane checkpoints must exclude fallback peer-role evidence');
+assert.ok(api.includes('validDirectPeerTimeline=validTimeline.filter'),'Role-duel timeline coaching must exclude fallback peer-role evidence');
+assert.ok(app.includes('High-confidence same-role comparisons'),'Frontend must label the stricter direct-peer denominator');
+assert.ok(app.includes('withheld from direct-peer coaching'),'Frontend must explain fallback peer-role withholding');
 assert.ok(api.includes('team!=="GENERIC"&&individual!=="GENERIC"&&team!==individual'),'Conflicting teamPosition/individualPosition must fail closed');
 assert.ok(api.includes('function opponentResolution(')&&api.includes('candidates.length!==1'),'Direct same-role peer must require exactly one enemy candidate');
 assert.ok(api.includes('excludedAmbiguousRole')&&api.includes('ambiguousDirectPeerGames'),'Role and peer ambiguity must remain observable');
@@ -596,7 +601,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v140'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v141'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
