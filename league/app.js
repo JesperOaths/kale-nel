@@ -913,7 +913,7 @@ function renderRecentPulse(r){
   ].join('');
 }
 function renderVisualSummary(r){
-  const games=Array.isArray(r.games)?r.games:[],champs=new Map(),items=new Map();
+  const games=reportCoachingGames(r),champs=new Map(),items=new Map();
   for(const g of games){
     const champ=String(g.champion||'').trim();
     if(champ){
@@ -2188,7 +2188,7 @@ function consistencyCard(label,stats,unit,split,detail){
 }
 function renderConsistencySummary(r){
   const target=$('consistencySummary');if(!target)return;
-  const games=Array.isArray(r.games)?r.games:[],reportRole=canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole),roleGames=games.filter(g=>canonicalRole(g.role)===reportRole),bench=reportRole==='ADC'&&adcBenchmarkSummary(r)?r.externalBenchmarks?.same:null;
+  const games=reportCoachingGames(r),reportRole=canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole),roleGames=games.filter(g=>canonicalRole(g.role)===reportRole),bench=reportRole==='ADC'&&adcBenchmarkSummary(r)?r.externalBenchmarks?.same:null;
   const gold=roleGames.filter(g=>g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)).map(g=>Number(g.goldDiff15));
   const cs=roleGames.filter(g=>g?.phaseRules?.lane15Comparable!==false&&hasNum(g.csDiff15)).map(g=>Number(g.csDiff15));
   const dpm=roleGames.filter(g=>hasNum(g.dpm)).map(g=>Number(g.dpm)),kp=roleGames.filter(g=>hasNum(g.kp)).map(g=>Number(g.kp));
@@ -2201,7 +2201,7 @@ function renderConsistencySummary(r){
 }
 function renderCharts(r){
   const lane15Comparable=Number(r.behaviorSummary?.checkpointEligibility?.lane15Games??0)>0,reportRole=canonicalRole(r.dataQuality?.selectedRole||r.summary?.primaryRole),adc=reportRole==='ADC'?adcBenchmarkSummary(r):null,bench=adc?r.externalBenchmarks?.same:null;
-  const sourceGames=[...(r.games||[])].filter(g=>canonicalRole(g.role)===reportRole),hasTimestamps=sourceGames.some(g=>Number(g?.gameStartTimestamp||0)>0);
+  const sourceGames=[...reportCoachingGames(r)].filter(g=>canonicalRole(g.role)===reportRole),hasTimestamps=sourceGames.some(g=>Number(g?.gameStartTimestamp||0)>0);
   const chronological=hasTimestamps?sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-Number(b.gameStartTimestamp||0)):sourceGames.reverse(),roleName=roleLabel(reportRole);
   const specs=[
     {key:'goldDiff15',title:lane15Comparable?'Gold @15 vs direct role opponent':'Gold @15 vs role opponent · raw checkpoint',q:'Positive means you had more gold than the direct role opponent at 15. Fixed −2000 to +2000 scale makes games directly comparable.',unit:'signedGold',formatUnit:'signed',signedAxis:true,relevance:150,fixedMin:-2000,fixedMax:2000},
