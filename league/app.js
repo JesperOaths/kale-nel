@@ -5,7 +5,7 @@ const cfg=window.GEJAST_CONFIG||{};
 const API=(cfg.SUPABASE_URL||'')+'/functions/v1/printify-gildan-diff-diag-v1';
 const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
 const $=(id)=>document.getElementById(id);
-const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,matchHistoryFilter:'all',matchHistoryArcKey:'',savedProfiles:[],selectedProfileId:'',selectedRole:'ADC'};
+const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,matchHistoryFilter:'all',matchHistoryArcKey:'',matchHistoryObjectiveFamilyKey:'',savedProfiles:[],selectedProfileId:'',selectedRole:'ADC'};
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const LEAGUE_WORKSPACE_KEY='bruisienator_public_workspace_v1';
@@ -1120,6 +1120,17 @@ function objectiveFamilyLabel(key){
   if(k==='VOID_GRUBS'||k==='VOID_GRUB'||k==='HORDE')return'Void Grubs';
   return String(key||'Objective').replaceAll('_',' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
 }
+function gameObjectiveFamilyRow(g,key){
+  const rows=g?.objectiveFamilyStats||{},wanted=String(key||'');
+  if(!wanted)return null;
+  if(rows[wanted])return rows[wanted];
+  const upper=wanted.toUpperCase();
+  const found=Object.keys(rows).find(k=>String(k).toUpperCase()===upper);
+  return found?rows[found]:null;
+}
+function objectiveFamilyMatchIds(r,key){
+  return new Set((r?.games||[]).filter(g=>Number(gameObjectiveFamilyRow(g,key)?.contestedEncounters||0)>0).map(g=>String(g.matchId||'')).filter(Boolean));
+}
 function renderObjectiveFamilyOverview(r){
   const box=$('objectiveFamilyOverview');if(!box)return;
   const summary=r?.behaviorSummary?.objectiveFamilySummary||{},rows=Object.entries(summary).map(([key,x])=>({
@@ -1137,10 +1148,15 @@ function renderObjectiveFamilyOverview(r){
         '<div class="objective-family-statline"><b>'+x.joined+'/'+x.contested+'</b><small>contested joins</small></div>'+
         (interval?'<div class="objective-family-interval"><i style="left:'+clamp(interval.low,0,100)+'%;width:'+(clamp(interval.high,0,100)-clamp(interval.low,0,100))+'%"></i><b style="left:'+clamp(x.presence,0,100)+'%"></b></div><small class="objective-family-ci">95% Wilson '+esc(fmtPct(interval.low))+'–'+esc(fmtPct(interval.high))+'</small>':'')+
         '<p>Team-controlled encounters '+x.team+' · enemy-controlled '+x.enemy+' · secured units '+x.teamUnits+' vs '+x.enemyUnits+(hasNum(x.teamJoinRate)?' · present for '+fmtPct(x.teamJoinRate)+' of team-secured encounters':'')+'.</p>'+
-        (thin?'<small class="objective-family-thin">Fewer than 3 contested encounters — context only.</small>':'')+
+        (thin?'<small class="objective-family-thin">Fewer than 3 contested encounters — context only.</small>':'<button class="button secondary tiny objective-family-review" type="button" data-objective-family-review="'+esc(x.key)+'">Review '+x.contested+' contested-window game'+(x.contested===1?'':'s')+'</button>')+
       '</article>';
     }).join('')+'</div>'+
     (mostMissed?'<div class="objective-family-note"><b>Review clue:</b> '+esc(mostMissed.label)+' has the lowest contested-presence point estimate among families with at least 3 contested encounters ('+esc(fmtPct(mostMissed.presence))+' across '+mostMissed.contested+'). Treat this as a replay-priority clue, not proof that objective attendance caused results.</div>':'');
+  box.querySelectorAll('[data-objective-family-review]').forEach(btn=>btn.addEventListener('click',()=>{
+    state.matchHistoryObjectiveFamilyKey=String(btn.dataset.objectiveFamilyReview||'');
+    state.matchHistoryFilter='objective-family';state.matchHistoryLimit=10;renderMatchHistory(r);
+    $('match-history')?.scrollIntoView({behavior:'auto',block:'start'});
+  }));
 }
 
 function renderPhaseDiagnostic(r){
@@ -1951,7 +1967,7 @@ function matchHistoryRow(g,index,displayIndex,r){
 }
 function renderMatchHistory(r){
   const list=$('matchHistoryList'),summary=$('matchHistorySummary'),toggle=$('matchHistoryToggle'),filters=$('matchHistoryFilters'),filterSummary=$('matchHistoryFilterSummary');if(!list||!summary)return;
-  const sourceGames=r.games||[],reviewIds=new Set((Array.isArray(r.replayReviewQueue)?r.replayReviewQueue:[]).map(x=>String(x.matchId||'')).filter(Boolean)),priorityIds=currentPriorityReplayIds(r),arcKey=String(state.matchHistoryArcKey||''),arcGames=arcKey?sourceGames.filter(g=>gameArcTransition(g)?.key===arcKey):[],arcLabel=arcGames.length?(gameArcTransition(arcGames[0])?.label||'Selected game arc'):'Selected game arc';
+  const sourceGames=r.games||[],reviewIds=new Set((Array.isArray(r.replayReviewQueue)?r.replayReviewQueue:[]).map(x=>String(x.matchId||'')).filter(Boolean)),priorityIds=currentPriorityReplayIds(r),arcKey=String(state.matchHistoryArcKey||''),arcGames=arcKey?sourceGames.filter(g=>gameArcTransition(g)?.key===arcKey):[],arcLabel=arcGames.length?(gameArcTransition(arcGames[0])?.label||'Selected game arc'):'Selected game arc',objectiveFamilyKey=String(state.matchHistoryObjectiveFamilyKey||''),objectiveFamilyIds=objectiveFamilyKey?objectiveFamilyMatchIds(r,objectiveFamilyKey):new Set(),objectiveFamilyLabelText=objectiveFamilyKey?objectiveFamilyLabel(objectiveFamilyKey):'Objective family';
   const counts={
     all:sourceGames.length,
     win:sourceGames.filter(g=>g.win).length,
@@ -1962,11 +1978,13 @@ function renderMatchHistory(r){
     risk:sourceGames.filter(g=>g.timelineAvailable===true&&(Number(g.badDeathCount||0)>0||Number(g.deathConsequences?.costly||0)>0)).length,
     review:sourceGames.filter(g=>reviewIds.has(String(g.matchId||''))).length,
     priority:sourceGames.filter(g=>priorityIds.has(String(g.matchId||''))).length,
-    arc:arcGames.length
+    arc:arcGames.length,
+    'objective-family':sourceGames.filter(g=>objectiveFamilyIds.has(String(g.matchId||''))).length
   };
   let filter=String(state.matchHistoryFilter||'all');
   if(filter==='priority'&&Number(counts.priority||0)===0){filter='all';state.matchHistoryFilter='all';}
   if(filter==='arc'&&Number(counts.arc||0)===0){filter='all';state.matchHistoryFilter='all';state.matchHistoryArcKey='';}
+  if(filter==='objective-family'&&Number(counts['objective-family']||0)===0){filter='all';state.matchHistoryFilter='all';state.matchHistoryObjectiveFamilyKey='';}
   const matchFilter=g=>{
     if(filter==='win')return !!g.win;
     if(filter==='loss')return !g.win;
@@ -1975,6 +1993,7 @@ function renderMatchHistory(r){
     if(filter==='review')return reviewIds.has(String(g.matchId||''));
     if(filter==='priority')return priorityIds.has(String(g.matchId||''));
     if(filter==='arc')return gameArcTransition(g)?.key===arcKey;
+    if(filter==='objective-family')return objectiveFamilyIds.has(String(g.matchId||''));
     return true;
   };
   const filteredGames=sourceGames.filter(matchFilter),limit=Math.min(Math.max(1,Number(state.matchHistoryLimit||10)),Math.max(1,filteredGames.length)),games=filteredGames.slice(0,limit);
@@ -1982,14 +2001,14 @@ function renderMatchHistory(r){
     filters.querySelectorAll('[data-history-filter]').forEach(btn=>{
       const key=btn.dataset.historyFilter||'all',active=key===filter;
       btn.classList.toggle('active-filter',active);btn.setAttribute('aria-pressed',active?'true':'false');
-      const base=key==='all'?'All':key==='win'?'Wins':key==='loss'?'Losses':key==='ahead15'?'Ahead @15':key==='even15'?'Close @15':key==='behind15'?'Behind @15':key==='risk'?'Risk flagged':key==='priority'?'Current focus':key==='arc'?'Arc: '+arcLabel:'Replay priority';
-      if(key==='priority')btn.hidden=Number(counts.priority||0)===0;else if(key==='arc')btn.hidden=filter!=='arc'||Number(counts.arc||0)===0;else btn.hidden=false;
+      const base=key==='all'?'All':key==='win'?'Wins':key==='loss'?'Losses':key==='ahead15'?'Ahead @15':key==='even15'?'Close @15':key==='behind15'?'Behind @15':key==='risk'?'Risk flagged':key==='priority'?'Current focus':key==='arc'?'Arc: '+arcLabel:key==='objective-family'?objectiveFamilyLabelText:'Replay priority';
+      if(key==='priority')btn.hidden=Number(counts.priority||0)===0;else if(key==='arc')btn.hidden=filter!=='arc'||Number(counts.arc||0)===0;else if(key==='objective-family')btn.hidden=filter!=='objective-family'||Number(counts['objective-family']||0)===0;else btn.hidden=false;
       btn.textContent=base+' · '+String(counts[key]??0);
       btn.onclick=()=>{state.matchHistoryFilter=key;state.matchHistoryLimit=10;renderMatchHistory(r);};
     });
   }
   if(filterSummary){
-    const label=filter==='all'?'full recent sample':filter==='risk'?'timeline-supported risk-flagged games':filter==='review'?'games with ranked replay moments':filter==='priority'?'games with ranked replay moments matching '+currentPriorityReplayLabel(r):filter==='arc'?'games matching '+arcLabel:filter==='win'?'wins':filter==='loss'?'losses':filter==='ahead15'?'ahead-at-15 games':filter==='even15'?'close-at-15 games':'behind-at-15 games';
+    const label=filter==='all'?'full recent sample':filter==='risk'?'timeline-supported risk-flagged games':filter==='review'?'games with ranked replay moments':filter==='priority'?'games with ranked replay moments matching '+currentPriorityReplayLabel(r):filter==='arc'?'games matching '+arcLabel:filter==='objective-family'?'games with a contested '+objectiveFamilyLabelText+' window':filter==='win'?'wins':filter==='loss'?'losses':filter==='ahead15'?'ahead-at-15 games':filter==='even15'?'close-at-15 games':'behind-at-15 games';
     filterSummary.textContent='Showing '+filteredGames.length+' / '+sourceGames.length+' '+label+'. Filters change only visible rows, never report calculations.';
   }
   if(toggle){
