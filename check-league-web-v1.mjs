@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.105'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.106'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -403,7 +403,7 @@ assert.ok(app.includes('repeat-death contaminated')&&app.includes('not treated a
 assert.ok(modelDoc.includes('## Death-pattern review priority')&&modelDoc.includes('review-priority ordering, not a numeric severity score'),'Death-pattern consequence ordering must remain documented as non-causal and non-mixed-unit');
 assert.ok(html.includes('id="compoundSignals"')&&app.includes('function renderCompoundSignals('),'Combined-evidence intelligence must remain visible');
 assert.ok(app.includes("if(['ADC','MID','TOP'].includes(role)&&(hasNum(mid.avgCsSwing15to25)")&&app.includes("if(['ADC','MID','TOP'].includes(role)&&(hasNum(b.damageGoldEfficiency)"),'Farm-map and damage-share resource conversion cards must remain carry/laner role-gated rather than leaking into Support/Jungle');
-assert.ok(app.includes("if(role==='JUNGLE')")&&app.includes("intelligenceCard('Tempo → objective readiness'")&&app.includes('floors 5/5/5 for directional read'),'Jungle combined intelligence must join peer tempo with objective readiness under explicit evidence floors');
+assert.ok(app.includes("if(role==='JUNGLE')")&&app.includes("intelligenceCard('Tempo → objective readiness'")&&app.includes('event floors 5/5 plus 3-game spread'),'Jungle combined intelligence must require objective opportunity counts plus game spread');
 assert.ok(app.includes("if(role==='SUPPORT')")&&app.includes("intelligenceCard('Roam value ↔ ADC lane movement'")&&app.includes("intelligenceCard('Vision safety → objective setup'"),'Support combined intelligence must use roam/lane-cost and vision/setup relationships instead of carry resource conversion');
 assert.ok(app.includes('association evidence, not sole causation'),'Support combined roam intelligence must retain the ADC-CS causal caveat');
 assert.ok(modelDoc.includes('## Role-aware combined intelligence')&&modelDoc.includes('Damage-share-minus-gold-share coaching must not leak into SUPPORT or JUNGLE'),'Role gates for compound intelligence must remain documented');
@@ -418,9 +418,9 @@ assert.ok(app.includes("roleLensCard('CS/min vs JUNGLE peer'")&&app.includes("ro
 assert.ok(app.includes('evidence floor 5')&&app.includes('evidence floor 4')&&app.includes('review floor 3 events'),'Role-specific lenses must retain explicit evidence floors rather than coloring one-off observations');
 assert.ok(modelDoc.includes('## Top, Mid and Jungle role-specific lenses')&&modelDoc.includes('Side-laning itself is never treated as an error')&&modelDoc.includes('Objective presence/setup is not a smite-skill score'),'Role-specific lens limitations must remain documented');
 assert.ok(app.includes("if(role!=='SUPPORT')")&&app.includes("panel.hidden=true"),'Support-specific analysis must stay hidden for every non-SUPPORT selected role');
-assert.ok(app.includes('supportRoamAdcCostGames')&&app.includes('avgSupportRoamAdcLaneCostCs')&&app.includes('supportRoamsHurtingAdc'),'Support lens must expose the backend ADC lane-cost evidence from detected support roams');
-assert.ok(app.includes('roamReady=roamN>=4')&&app.includes('visionReady=visionN>=12')&&app.includes('setupReady=setupN>=5')&&app.includes('45–105s'),'Support lens must retain the analyzer-aligned roam, vision and objective-setup evidence thresholds');
-assert.ok(app.includes('costReady=adcCostN>=4')&&app.includes("repeatedHarm&&!costReady?'Two or more harmful roam windows are visible"),'Support ADC lane-cost conclusions must stay thin below four measured windows even when two costly examples repeat');
+assert.ok(app.includes('supportRoamAdcLaneMovementWindows')&&app.includes('supportRoamAdcLaneMovementGames')&&app.includes('meanGameSupportRoamAdcLaneMovementCs')&&app.includes('supportRoamsHurtingAdc'),'Support lens must expose window count, game spread and game-weighted ADC lane movement');
+assert.ok(app.includes('roamReady:roamN>=4&&roamGames>=3')&&app.includes('visionReady:visionN>=12&&visionGames>=4')&&app.includes('setupReady:setupN>=5&&setupGames>=3')&&app.includes('45–105s'),'Support lens must require both opportunity counts and cross-game spread');
+assert.ok(app.includes('laneReady:laneWindows>=4&&laneGames>=3')&&app.includes("repeatedHarm&&!c.laneReady?'Two or more harmful roam windows are visible"),'Support ADC lane-movement conclusions must stay thin until windows are spread across enough games');
 assert.ok(modelDoc.includes('## Support-specific lens')&&modelDoc.includes('does not prove the Support alone caused every CS change'),'Support lane-cost semantics and causal caveat must remain documented');
 assert.ok(!app.includes('adcOnly:true'),'DPM/KP charts must use the selected role rather than an ADC-only chart filter');
 assert.ok(app.includes('if(analyzed<=0)throw new Error'),'A zero-game analysis must be treated as a failed request rather than a successful report');
@@ -819,7 +819,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v204'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v205'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -921,3 +921,8 @@ assert.ok(app.includes("'behaviorSummary.costlyDeathsPerTimelineGame':['behavior
 assert.ok(api.includes('"behaviorSummary.preObjectiveDeathPct":["behaviorSummary.classifiedTimelineDeaths"]')&&app.includes("'behaviorSummary.preObjectiveDeathPct':['behaviorSummary.classifiedTimelineDeaths']"),'Pre-objective death target sample path must match its classified-death denominator');
 assert.ok(api.includes('"sessionBehavior.game3PlusGoldDelta":["sessionBehavior.firstGame.lane15Games","sessionBehavior.game3Plus.lane15Games"]')&&app.includes("'sessionBehavior.postLossGoldDelta':['sessionBehavior.quickAfterLoss.lane15Games','sessionBehavior.quickAfterWin.lane15Games']"),'Session Gold @15 target scoring must use lane-comparable subgroup counts');
 assert.ok(modelDoc.includes('## Next-5 practice target denominator integrity'),'Next-5 denominator safeguards must remain documented');
+assert.ok(api.includes('roamAttemptGames')&&api.includes('visionActionGames')&&api.includes('objectiveSetupGames')&&api.includes('objectiveContestGames'),'Analyzer must export cross-game coverage for event-based role evidence');
+assert.ok(api.includes('supportRoamAdcLaneMovementGames')&&api.includes('meanGameSupportRoamAdcLaneMovementCs'),'Analyzer must export game-weighted Support lane movement');
+assert.ok(app.includes('function roleEventCoverage(r){')&&app.includes('laneReady:laneWindows>=4&&laneGames>=3'),'Frontend must centralize event plus game-spread readiness with saved-report fallback');
+assert.ok(app.includes("path:'behaviorSummary.meanGameSupportRoamAdcLaneMovementCs',samplePath:'behaviorSummary.supportRoamAdcLaneMovementGames'"),'Support rolling progress must use game-weighted lane movement across measured games');
+assert.ok(modelDoc.includes('## Event-count plus game-spread evidence'),'Event concentration safeguards must remain documented');
