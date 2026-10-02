@@ -126,6 +126,17 @@ assert.ok(api.includes('directPeerComparable=!!oppFull&&roleEvidence.confidence=
 assert.ok(api.includes('excludedLowConfidenceDirectPeerGames'),'Low-confidence direct-peer comparisons must remain observable');
 assert.ok(api.includes('lane15ComparableGames=directPeerGames.filter'),'Direct-role lane checkpoints must exclude fallback peer-role evidence');
 assert.ok(api.includes('validDirectPeerTimeline=validTimeline.filter'),'Role-duel timeline coaching must exclude fallback peer-role evidence');
+assert.ok(api.includes('firstResetMeasuredGames=validDirectPeerTimeline.filter'),'Role-relative first-reset outcomes must use trusted matched peers');
+assert.ok(api.includes('majorReadinessGames.filter(g=>g.directPeerComparable===true'),'Peer major-readiness delay must use trusted matched peers');
+assert.ok(api.includes('secondMajorPeerGames=finiteGames(validDirectPeerTimeline'),'Second-major peer timing must use trusted matched peers');
+assert.ok(api.includes('impactGames=finiteGames(validDirectPeerTimeline'),'First-impact peer timing must use trusted matched peers');
+assert.ok(api.includes('rolePeerFightSamples=validDirectPeerTimeline.reduce'),'Role-level fight comparisons must use trusted matched peers');
+assert.ok(api.includes('visionSetupGames=finiteGames(validDirectPeerTimeline'),'Vision peer comparison must use trusted matched peers');
+assert.ok(api.includes('peerMatchedRepeatDeathRate'),'Repeat-death delta must compare matched player and opponent evidence');
+assert.ok(api.includes('peerMatchedObjectiveSetupWardRate'),'Vision-share delta must compare matched player and opponent evidence');
+assert.ok(api.includes('peerMatchedKillConversionRate'),'Kill-conversion delta must compare matched player and opponent evidence');
+assert.ok(api.includes('peerMatchedFirst20PlayerPlateInvolvement'),'Plate delta must compare matched player and opponent evidence');
+assert.ok(app.includes('matched peer games')&&app.includes('Δ · matched'),'Frontend must disclose matched comparison denominators');
 assert.ok(app.includes('High-confidence same-role comparisons'),'Frontend must label the stricter direct-peer denominator');
 assert.ok(app.includes('withheld from direct-peer coaching'),'Frontend must explain fallback peer-role withholding');
 assert.ok(api.includes('team!=="GENERIC"&&individual!=="GENERIC"&&team!==individual'),'Conflicting teamPosition/individualPosition must fail closed');
@@ -291,7 +302,6 @@ assert.ok(app.includes('No supported primary explanation')&&!app.includes('No su
 assert.ok(app.includes('evidence-based explanation')&&!app.includes('root-cause diagnosis'),'Objective UI must not call an evidence-ranked hypothesis a root-cause diagnosis');
 assert.ok(app.includes('primaryExplanation??d.primaryCause'),'Frontend must prefer the canonical explanation field while retaining saved-report compatibility');
 assert.ok(app.includes('Vision-action deaths'));
-assert.ok(app.includes('Vision-action death rate'));
 assert.ok(app.includes('Sample exclusions'));
 assert.ok(html.includes('id="rank-comparison"')&&html.includes('id="radarChart"')&&html.includes('id="rankBridge"')&&app.includes('function renderRankRadar(')&&app.includes('function renderRankBridge('),'Rank benchmark visual section and its renderers must remain present regardless of heading-copy refinements');
 assert.ok(html.includes('id="replayReviewPanel"')&&html.includes('Highest-value moments to rewatch'),'Replay review queue must remain present');
@@ -600,7 +610,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v141'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v142'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -613,7 +623,7 @@ assert.ok(app.includes('High-risk post-play give-backs / game'));
 assert.ok(app.includes('Costly measured deaths'));
 assert.ok(app.includes('Rapid repeat deaths'));
 assert.ok(app.includes('Rapid repeat-death rate'));
-assert.ok(app.includes('Repeat-death rate delta'));
+assert.ok(app.includes('Repeat-death rate Δ · matched'));
 assert.ok(app.includes('Costly deaths / game'));
 assert.ok(app.includes('prior setup evidence')&&app.includes('45–105s band'),'Objective setup UI must expose the bounded sampled-position evidence band');
 
