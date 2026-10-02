@@ -908,5 +908,5 @@ assert.ok(app.includes("}else if(role==='TOP'){\n    specs=[")&&app.includes("Pr
 assert.ok(modelDoc.includes('## Role-specific rolling progress comparison'),'Role-specific progress semantics must remain documented');
 assert.ok(api.includes('kpGames:kpGames.length')&&api.includes('vpmGames:vpmGames.length')&&api.includes('game3PlusKpDelta')&&api.includes('game3PlusVpmDelta'),'Session backend must expose role-ready KP/VPM samples and paired deltas');
 assert.ok(app.includes("if(r==='SUPPORT'){")&&app.includes("'Vision/min '+fmt(sample.vpm,2)")&&app.includes("role==='JUNGLE'"),'Session cards must switch output by selected role');
-assert.ok(app.includes("game3+ vision/min")&&app.includes("quick post-loss CS/min"),'Session delta copy must use Support/Jungle role-relevant metrics');
+assert.ok(app.includes("game 3+ vision/min")&&app.includes("quick post-loss CS/min"),'Session delta copy must use Support/Jungle role-relevant metrics');
 assert.ok(modelDoc.includes('## Role-aware session habit model'),'Role-aware session semantics must remain documented');
