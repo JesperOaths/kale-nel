@@ -397,7 +397,7 @@ assert.ok(html.includes('id="rankRadarPanel"')&&app.includes("reportRole!=='ADC'
 assert.ok(html.includes('id="supportRoleLensPanel"')&&app.includes('function renderSupportRoleLens('),'SUPPORT reports must expose a dedicated role-specific lens rather than only hiding ADC widgets');
 assert.ok(app.includes("if(role!=='SUPPORT')")&&app.includes("panel.hidden=true"),'Support-specific analysis must stay hidden for every non-SUPPORT selected role');
 assert.ok(app.includes('supportRoamAdcCostGames')&&app.includes('avgSupportRoamAdcLaneCostCs')&&app.includes('supportRoamsHurtingAdc'),'Support lens must expose the backend ADC lane-cost evidence from detected support roams');
-assert.ok(app.includes('analyzer floor 4')&&app.includes('analyzer floor 12')&&app.includes('45–105s'),'Support lens must keep roam, vision and objective-setup evidence thresholds visible');
+assert.ok(app.includes('roamReady=roamN>=4')&&app.includes('visionReady=visionN>=12')&&app.includes('setupReady=setupN>=5')&&app.includes('45–105s'),'Support lens must retain the analyzer-aligned roam, vision and objective-setup evidence thresholds');
 assert.ok(modelDoc.includes('## Support-specific lens')&&modelDoc.includes('does not prove the Support alone caused every CS change'),'Support lane-cost semantics and causal caveat must remain documented');
 assert.ok(!app.includes('adcOnly:true'),'DPM/KP charts must use the selected role rather than an ADC-only chart filter');
 assert.ok(app.includes('if(analyzed<=0)throw new Error'),'A zero-game analysis must be treated as a failed request rather than a successful report');
