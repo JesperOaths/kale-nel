@@ -385,6 +385,11 @@ assert.ok(modelDoc.includes('## Saved Riot profile workflow')&&modelDoc.includes
 assert.ok(!modelDoc.includes('Batch profiles · sequential')&&!modelDoc.includes('Choose the most common normalized role in the Last 20'),'Retired batch/automatic-primary-role browser semantics must not return to the analysis contract');
 assert.ok(app.includes("oldHistory=await api('report_latest'")&&app.includes("api('analyze_basic',{profile_id:migrated.profile.id,target_role:inferredRole})"),'Legacy mixed reports must be used only to infer role, then rebuilt from cached Riot data into a role-pure saved report');
 assert.ok(app.includes("cache=await api('cache_status',{profile_id:profile.id,target_role:selectedRole})")&&app.includes("api('analyze_basic',{profile_id:profile.id,target_role:selectedRole})"),'A saved profile with only pre-role mixed reports must auto-rebuild a role-pure report from existing cached Riot data without requiring a refetch');
+assert.ok(api.includes('analyzer_version:ANALYZER_VERSION'),'League health endpoint must expose the live analyzer revision');
+assert.ok(app.includes("state.backendAnalyzerVersion=String(health.analyzer_version||'')")&&app.includes('const staleAnalyzer=!!liveAnalyzer&&savedAnalyzer!==liveAnalyzer'),'Frontend must compare saved report provenance with the live analyzer');
+assert.ok(app.includes('async function rebuildSavedRoleReportFromCache(')&&app.includes('no Riot refetch or API key was needed'),'Analyzer-stale saved reports must rebuild through cached data without Riot refetch');
+assert.ok(app.includes('Showing the existing saved report instead')&&app.includes('older analyzer'),'Analyzer refresh failure must fail soft and preserve the existing saved report');
+assert.ok(modelDoc.includes('## Saved-report analyzer freshness')&&modelDoc.includes('require no Riot refetch and no Riot API key'),'Saved-report analyzer freshness must remain documented');
 assert.ok(app.includes('Role-selection safety check failed during saved-report rebuild'),'Automatic cached report rebuild must fail closed on any cross-role contamination');
 assert.ok(app.includes("api('report_latest',{profile_id:profile.id,target_role:selectedRole})")&&api.includes('role(x?.data_quality?.selectedRole)===targetRole'),'Saved report history must be role-specific');
 assert.ok(app.includes('LEAGUE_SLOT_SELECTION_KEY')&&!app.includes('LEAGUE_PROFILE_SELECTION_KEY'),'Browser storage may remember only the selected profile slot pointer; Riot profile/report data stays server-side');
@@ -803,7 +808,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v190'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v191'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
