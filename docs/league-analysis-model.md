@@ -2203,3 +2203,19 @@ Current role sets:
 Per-metric win/loss means may be shown when both outcome sides have at least 2 valid observations. Directional color and "largest standardized separation" require at least **3 valid observations in wins and 3 in losses for that metric**. Thin metrics remain neutral and explicitly say that directional color is withheld.
 
 Standardized separation remains Hedges-corrected and descriptive only. It is not a causal estimate, significance test or prescription to optimize the displayed metric.
+
+
+## Role-aware report framing
+
+A selected-role report must not retain headings that imply every role is a laner.
+
+The main economy section uses role-specific framing:
+- ADC: lane & economy,
+- TOP: lane & side economy,
+- MID: lane → map economy,
+- JUNGLE: jungle economy & tempo,
+- SUPPORT: support economy & setup.
+
+This is a copy/information-hierarchy rule, not a change to the underlying evidence. Direct-role lane/economy metrics, routing evidence, objective evidence and support roam/vision evidence remain separately defined.
+
+Because reports are role-pure upstream, a generic "Role sample" block is redundant. That space instead shows **cohort context**: selected role, exact queue cohort, mechanics-cohort depth, timeline coverage, trusted direct-peer coverage and current patch context. This block describes evidence construction and must not be scored as performance.
