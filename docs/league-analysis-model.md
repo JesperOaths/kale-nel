@@ -229,6 +229,8 @@ For **coaching and benchmarks**, uniqueness is not enough. Both the player and t
 
 Role-aware conclusions must use the normalized role, and direct-role comparative conclusions must also satisfy this confidence boundary.
 
+All opponent-relative **deltas** must use matched denominators on both sides. The player's all-game descriptive rate may still be shown separately, but it must never be subtracted from an opponent rate measured on a smaller trusted-peer subset. This applies to plate pressure, first-reset timing/economy, major-item readiness, second-major timing, first impact, repeat-death recurrence, role-level fight state, objective-setup vision, and post-kill conversion. The report labels all-valid and matched-peer values separately whenever both are useful.
+
 ## Early lane outside pressure
 
 For **TOP and MID only**, the analyzer separates clean direct-role duel deaths from early home-lane deaths involving other enemy roles.
