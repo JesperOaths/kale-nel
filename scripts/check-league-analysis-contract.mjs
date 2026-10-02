@@ -73,6 +73,11 @@ ok(backend.includes('uploadedBruisienatorRevision:"V21_PHASE2_SAFE_STATS_ENRICH"
 ok(backend.includes('mixedMechanicsFallback'), 'small current mechanics samples remain explicit');
 ok(backend.includes('championBehaviorModel(coachingGames'), 'champion behavior uses the same selected mechanics sample');
 ok(app.includes('function diagnosticChip(')&&app.includes('Vs your usual @15')&&app.includes('Risk deaths vs usual'), 'champion UI must interpret pick-specific metrics against the same role coaching baseline');
+ok(backend.includes('trustedPeer=list.filter(g=>g.directPeerComparable===true)')&&backend.includes('items=finiteGames(trustedPeer'), 'champion peer-relative metrics must use only trusted direct-peer games');
+ok(backend.includes('if(g?.directPeerComparable!==true||!opponentChampion||roleName!==primaryRole)continue;'), 'repeated matchup grouping must fail closed on untrusted role opponents');
+ok(backend.includes('peerGames:trustedPeer.length')&&backend.includes('dpmGames:dpmPeerGames.length'), 'champion/matchup outputs must carry exact support counts');
+ok(app.includes("laneN>=3,'n='+laneN")&&app.includes("riskN>=3,'n='+riskN")&&app.includes("pressureN>=3,'deaths='+pressureN"), 'diagnostic coloring must use metric-specific minimum evidence');
+ok(modelDoc.includes('## Champion and repeated-matchup evidence gates')&&modelDoc.includes('An inferred or low-confidence opponent champion must not define a repeated matchup'), 'analysis documentation must preserve trusted-peer matchup grouping');
 ok(app.includes('Repeated-matchup read')&&app.includes('Outside-pressure share')&&app.includes('DPM vs role peer'), 'repeated-matchup UI must preserve duel, pressure-source and direct-peer evidence');
 ok(backend.includes('phaseExposureMinutes'), 'phase risk must normalize by actual phase exposure');
 ok(backend.includes('macroTransitionMin:14')&&backend.includes('roamEndMin:20'), 'standard side-lane risk must use the 14-minute macro transition without asserting a literal lane ending');
