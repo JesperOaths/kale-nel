@@ -310,7 +310,7 @@ const DEATH_PATTERN_DEFS={
 function sameMoment(a,b,eps=.06){return a&&b&&hasNum(a.time)&&hasNum(b.time)&&Math.abs(Number(a.time)-Number(b.time))<=eps;}
 function deathPatternEntries(r){
   const out=[];
-  for(const g of (r.games||[])){
+  for(const g of reportCoachingGames(r)){
     if(Number(g.mapId)!==11)continue;
     for(const d of (g.badDeaths||[])){
       const tags=new Set(Array.isArray(d.tags)?d.tags:[]),side=(g.sideLaneRisk?.events||[]).find(x=>sameMoment(x,d)),vision=(g.visionMission?.events||[]).find(x=>sameMoment(x,d)),post=(g.postImpactRisk?.events||[]).find(x=>hasNum(x.deathTime)&&Math.abs(Number(x.deathTime)-Number(d.time))<=.06),consequence=(g.deathConsequences?.events||[]).find(x=>sameMoment(x,d));
@@ -363,7 +363,7 @@ function deathPatternCardHtml(key,entries){
 }
 
 function renderSpatial(r){
-  const games=Array.isArray(r.games)?r.games:[],patterns=deathPatternEntries(r),wardEvents=games.flatMap(g=>(g.wards||[])),wardPoints=wardEvents.filter(w=>hasNum(w.x)&&hasNum(w.y));
+  const games=reportCoachingGames(r),patterns=deathPatternEntries(r),wardEvents=games.flatMap(g=>(g.wards||[])),wardPoints=wardEvents.filter(w=>hasNum(w.x)&&hasNum(w.y));
   const grouped=new Map();for(const d of patterns){if(!grouped.has(d.patternKey))grouped.set(d.patternKey,[]);grouped.get(d.patternKey).push(d);}
   const groups=[...grouped.entries()].sort(deathPatternGroupCompare),repeated=groups.filter(([,xs])=>xs.length>=2),oneOff=groups.filter(([,xs])=>xs.length===1);
   const repeatedHtml=repeated.length?'<div class="death-pattern-grid">'+repeated.map(([key,entries])=>deathPatternCardHtml(key,entries)).join('')+'</div>':'<div class="spatial-empty">No high-risk death pattern repeats at least twice in this role-selected sample.</div>';
@@ -376,7 +376,7 @@ function renderSpatial(r){
   $('deathMapMeta').textContent=classified+' high-risk deaths · '+repeatGroups+' repeated pattern'+(repeatGroups===1?'':'s')+' · '+costly+' costly · '+severe+' severe'+(leadDeaths?' · '+leadDeaths+' while ≥500g ahead':'');
   const offensive=wardEvents.filter(x=>x.territory==='offensive').length,river=wardEvents.filter(x=>x.territory==='river').length,defensive=wardEvents.filter(x=>x.territory==='defensive').length,setup=wardEvents.filter(x=>x.objectiveSetup).length,offPct=wardEvents.length?Math.round(offensive/wardEvents.length*100):0,projected=wardPoints.length;
   $('wardMapMeta').textContent=wardEvents.length+' ward events · '+projected+' mapped · '+offPct+'% offensive · '+river+' river · '+defensive+' defensive · '+setup+' objective setup';
-  $('spatialProjectionNote').textContent='Repeated death patterns are ordered by bounded consequence evidence first (severe, then costly), then recurrence. This is a review-priority ordering, not a causal severity score. One-offs remain available for traceability. Ward events without Riot coordinates use the player’s nearest timeline-frame position only when it is within 35 seconds; projected versus direct evidence is disclosed in Trust & coverage.';
+  $('spatialProjectionNote').textContent='Repeated death patterns use the current mechanics-filtered coaching cohort and are ordered by bounded consequence evidence first (severe, then costly), then recurrence. This is a review-priority ordering, not a causal severity score. One-offs remain available for traceability. Ward events without Riot coordinates use the player’s nearest timeline-frame position only when it is within 35 seconds; projected versus direct evidence is disclosed in Trust & coverage.';
 }
 function renderSavedProfiles(){
   const select=$('savedProfileSelect');if(!select)return;
