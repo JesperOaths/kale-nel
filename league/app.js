@@ -1761,14 +1761,14 @@ function detailList(items,empty){
 function detailContent(g,tab){
   if(tab==='map')return perGameSpatialHtml(g);
   if(tab==='vision'){
-    const v=g.vision||{};
+    const v=g.vision||{},peerOk=g.directPeerComparable===true;
     const vm=g.visionMission||{};
     return detailCard('Vision / min',fmt(g.vpm,2))+detailCard('Wards placed',String(v.wardCount??g.wards?.length??0))+detailCard('Control Wards bought',String(v.controlWardPurchases??0))+detailCard('Control Wards placed',String(v.controlWardCount??0))+detailCard('Wards / 30 min',fmt(v.wardsPer30,1))+
       detailCard('Vision actions',String(vm.actions??0))+detailCard('Vision-action deaths',String(vm.deaths??0)+' · '+fmtPct(vm.deathRate))+
       detailCard('High-risk vision deaths',String(vm.highRiskDeaths??0)+' · '+fmtPct(vm.highRiskDeathRate))+detailCard('Unsupported vision deaths',String(vm.unsupportedDeaths??0))+
       detailCard('Untraded vision deaths',String(vm.untradedDeaths??0))+detailCard('Objective-setup vision deaths',String(vm.objectiveSetupDeaths??0))+
       detailCard('Offensive / defensive',String(v.offensive??0)+' / '+String(v.defensive??0))+detailCard('River wards',String(v.river??0))+detailCard('Objective setup wards',String(v.objectiveSetup??0))+detailCard('Objective setup ward clears',String(v.objectiveSetupClears??0))+detailCard('Objective setup share',fmtPct(v.objectiveSetupRate))+
-      detailCard('Peer setup wards',String(g.opponentVision?.objectiveSetup??0))+detailCard('Peer setup share',fmtPct(g.opponentVision?.objectiveSetupRate))+detailCard('Setup count Δ vs peer',hasNum(v.objectiveSetupDeltaVsOpponent)?signed(v.objectiveSetupDeltaVsOpponent,0):'n/a')+detailCard('Setup share Δ vs peer',hasNum(v.objectiveSetupRateDeltaVsOpponent)?signed(v.objectiveSetupRateDeltaVsOpponent,0)+' pp':'n/a')+
+      detailCard('Peer setup wards',peerOk?String(g.opponentVision?.objectiveSetup??0):'n/a')+detailCard('Peer setup share',peerOk?fmtPct(g.opponentVision?.objectiveSetupRate):'n/a')+detailCard('Setup count Δ vs peer',peerOk&&hasNum(v.objectiveSetupDeltaVsOpponent)?signed(v.objectiveSetupDeltaVsOpponent,0):'n/a')+detailCard('Setup share Δ vs peer',peerOk&&hasNum(v.objectiveSetupRateDeltaVsOpponent)?signed(v.objectiveSetupRateDeltaVsOpponent,0)+' pp':'n/a')+
       detailList((vm.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m death · '+String(x.action||'vision action')+' '+String(x.secondsAfterAction??'?')+'s earlier · '+String(x.wardType||'ward')+(x.territory?' · '+x.territory:'')+(x.objectiveSetup?' · objective setup':'')+(x.unsupported?' · no ally within 3k':'')+(x.highRisk?' · high-risk':'')+(x.traded?' · traded':' · untraded')),'No death occurred within the defined vision-action window.')+
       detailList((g.wards||[]).slice(0,8).map(w=>(Number(w.time)||0).toFixed(1)+'m · '+(w.territory||'unknown')+' · '+(w.wardType||'ward')),'No player ward positions were available.');
   }
@@ -1837,13 +1837,13 @@ function detailContent(g,tab){
       '<div class="detail-note"><strong>DQI provenance:</strong> the uploaded V21 HTML defines a five-input DQI, but its supplied PowerShell pipeline emits only <code>badDeaths</code>. This compatibility value reproduces the effective generated V21 behavior instead of inventing four missing inputs. Current coaching uses the individual risk and consequence evidence above, not a replacement composite score.</div>';
   }
   if(tab==='objectives'){
-    const kc=g.killConversion||{},okc=g.opponentKillConversion||{},families=g.objectiveFamilyStats||{};
+    const kc=g.killConversion||{},okc=g.opponentKillConversion||{},families=g.objectiveFamilyStats||{},peerOk=g.directPeerComparable===true;
     const familyRows=Object.entries(families).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))).map(([name,x])=>String(name).replaceAll('_',' ')+' · contested '+String(x.joinedContestedEncounters??0)+' / '+String(x.contestedEncounters??0)+' joined · '+fmtPct(x.contestPresenceRate)+' · secured-presence '+String(x.joinedTeamEncounters??0)+' / '+String(x.teamEncounters??0)+' · secured units '+String(x.teamUnitsSecured??0)+' vs '+String(x.enemyUnitsSecured??0));
     return detailCard('Team-contested objective presence',fmtPct(g.objectiveContestPresenceRate))+detailCard('Joined / contested encounters',String(g.objectiveContestJoined??0)+' / '+String(g.objectiveContestTotal??0))+
       detailCard('Team-secured objective presence',fmtPct(g.objectiveJoinRate))+detailCard('Joined / secured encounters',String(g.objectiveJoined??0)+' / '+String(g.objectiveTeamTotal??0))+detailCard('Early KP',fmtPct(g.earlyKp))+
       detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+' min · '+String(g.impactType||'event'):'n/a')+detailCard('Objective-context death %',fmtPct(g.objectiveDeathPct))+detailCard('Deaths before enemy objective',String(g.preObjectiveDeathCount??0))+
       detailCard('Player-supported kill conversion',String(kc.playerSupportedConverted??kc.converted??0)+' / '+String(kc.windows??0)+' · '+fmtPct(kc.rate))+detailCard('Team conversion after your kill windows',String(kc.teamConverted??kc.converted??0)+' / '+String(kc.windows??0)+' · '+fmtPct(kc.teamRate??kc.rate))+
-      detailCard('Peer-supported kill conversion',String(okc.playerSupportedConverted??okc.converted??0)+' / '+String(okc.windows??0)+' · '+fmtPct(okc.rate))+detailCard('Peer team conversion context',String(okc.teamConverted??okc.converted??0)+' / '+String(okc.windows??0)+' · '+fmtPct(okc.teamRate??okc.rate))+
+      detailCard('Peer-supported kill conversion',peerOk?(String(okc.playerSupportedConverted??okc.converted??0)+' / '+String(okc.windows??0)+' · '+fmtPct(okc.rate)):'n/a')+detailCard('Peer team conversion context',peerOk?(String(okc.teamConverted??okc.converted??0)+' / '+String(okc.windows??0)+' · '+fmtPct(okc.teamRate??okc.rate)):'n/a')+
       detailCard('Contested encounters joined',String(g.objectiveReadiness?.contestedJoined??0)+' / '+String(g.objectiveReadiness?.contestedObjectives??0))+
       detailCard('Prior setup presence (45–105s)',String(g.objectiveReadiness?.earlySetupJoins??0)+' · '+fmtPct(g.objectiveReadiness?.earlySetupJoinRate))+
       detailCard('Event-frame-only joins',String(g.objectiveReadiness?.eventFrameOnlyJoins??0))+detailCard('Contested-objective absences',String(g.objectiveReadiness?.contestedAbsent??0))+
@@ -1856,10 +1856,10 @@ function detailContent(g,tab){
       '<div class="detail-note">Supported conversion is the coaching metric: a tracked objective/structure must follow the player-involved kill window within 75 seconds <em>and</em> Riot timeline evidence must place/credit the player at that conversion. Team conversion is shown separately as context so an objective taken elsewhere on the map does not become individual credit.</div>';
   }
   if(tab==='resets'){
-    const mine=g.firstMajorItem,opp=g.opponentFirstMajorItem,second=g.secondMajorItem,oppSecond=g.opponentSecondMajorItem,shops=g.shopVisits||[],shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0),greedy=g.greedyStayWindows||[],spike=g.itemSpikeWindow||{},firstReset=g.firstResetSequence||null,ready=g.majorItemReadiness||null,oppReady=g.opponentMajorItemReadiness||null;
+    const peerOk=g.directPeerComparable===true,mine=g.firstMajorItem,opp=g.opponentFirstMajorItem,second=g.secondMajorItem,oppSecond=g.opponentSecondMajorItem,shops=g.shopVisits||[],shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0),greedy=g.greedyStayWindows||[],spike=g.itemSpikeWindow||{},firstReset=g.firstResetSequence||null,ready=g.majorItemReadiness||null,oppReady=g.opponentMajorItemReadiness||null;
     return roleQuestNote(g)+detailCard('First reset / shop',firstReset?(fmt(firstReset.time,1)+'m · '+resetSpendText(firstReset)):'n/a')+
       detailCard('First-reset spend evidence',firstReset?resetSpendEvidenceText(firstReset):'n/a')+
-      detailCard('First reset vs peer',firstReset&&hasNum(firstReset.timingDeltaVsOpponent)?signed(firstReset.timingDeltaVsOpponent,1)+' min':'n/a')+
+      detailCard('First reset vs peer',peerOk&&firstReset&&hasNum(firstReset.timingDeltaVsOpponent)?signed(firstReset.timingDeltaVsOpponent,1)+' min':'n/a')+
       detailCard('Post-reset role-gold swing',firstReset&&hasNum(firstReset.goldSwingAfter)?signed(firstReset.goldSwingAfter,0)+'g':'n/a')+
       detailCard('Post-reset role-CS swing',firstReset&&hasNum(firstReset.csSwingAfter)?signed(firstReset.csSwingAfter,1)+' CS':'n/a')+
       detailCard('First-reset outcome',!firstReset?'n/a':firstReset.deathInWindow?'measurement contaminated by death':firstReset.economyLoss?'economy loss':firstReset.economyGain?'economy gain':firstReset.measured?'neutral / mixed':'unmeasured')+
@@ -1867,13 +1867,13 @@ function detailContent(g,tab){
       detailCard('Recipe components ready',ready&&hasNum(ready.ingredientsReadyMin)?fmt(ready.ingredientsReadyMin,1)+'m':'n/a')+
       detailCard('First major affordable',ready&&ready.eligible?(fmt(ready.affordableMin,1)+'m · '+fmtInt(ready.combineCost)+'g combine'):(ready?.reason?'not measurable · '+readinessReason(ready.reason):'n/a'))+
       detailCard('Affordable → purchased',ready&&ready.eligible?(fmt(ready.delayMin,1)+' min · '+(ready.delayed?'delayed':'prompt')):'n/a')+
-      itemDetailCard('Opponent major item',opp)+
+      itemDetailCard('Opponent major item',peerOk?opp:null)+
       itemDetailCard('Second major item',second)+
-      itemDetailCard('Opponent second major',oppSecond)+
-      detailCard('Second-major timing vs peer',hasNum(g.secondMajorItemDeltaVsOpponent)?signed(g.secondMajorItemDeltaVsOpponent,1)+' min':'n/a')+
-      detailCard('Opponent affordability delay',oppReady&&oppReady.eligible?fmt(oppReady.delayMin,1)+' min':'n/a')+
-      detailCard('Readiness delay vs peer',ready&&hasNum(ready.delayDeltaVsOpponent)?signed(ready.delayDeltaVsOpponent,1)+' min':'n/a')+
-      detailCard('Timing vs opponent',hasNum(g.itemSpikeDeltaVsOpponent)?signed(g.itemSpikeDeltaVsOpponent,1)+' min':'n/a')+
+      itemDetailCard('Opponent second major',peerOk?oppSecond:null)+
+      detailCard('Second-major timing vs peer',peerOk&&hasNum(g.secondMajorItemDeltaVsOpponent)?signed(g.secondMajorItemDeltaVsOpponent,1)+' min':'n/a')+
+      detailCard('Opponent affordability delay',peerOk&&oppReady&&oppReady.eligible?fmt(oppReady.delayMin,1)+' min':'n/a')+
+      detailCard('Readiness delay vs peer',peerOk&&ready&&hasNum(ready.delayDeltaVsOpponent)?signed(ready.delayDeltaVsOpponent,1)+' min':'n/a')+
+      detailCard('Timing vs opponent',peerOk&&hasNum(g.itemSpikeDeltaVsOpponent)?signed(g.itemSpikeDeltaVsOpponent,1)+' min':'n/a')+
       detailCard('Item-spike window',spike.eligible?(fmtInt(spike.leadSec)+'s advantage'):'No ≥45s item window')+
       detailCard('Spike-window impact',spike.eligible?(String(spike.totalImpacts||0)+' impact(s) · '+(spike.used?'used':'unused')):'n/a')+
       detailCard('Died before spike impact',spike.eligible?(spike.diedBeforeImpact?'yes':'no'):'n/a')+
@@ -1886,28 +1886,28 @@ function detailContent(g,tab){
       detailList(greedy.map(x=>(Number(x.startMin)||0).toFixed(1)+'m · '+fmtInt(x.currentGold)+'g held · next shop '+(Number(x.nextShopMin)||0).toFixed(1)+'m ('+fmt(x.delayMin,1)+'m delay)'),'No repeated high-gold stay window detected.')+
       '<div class="detail-note">Shop/reset spend uses committed Riot purchase events: ITEM_UNDO reversals are removed, and cash cost is estimated from the patch item recipe minus owned build components. The first meaningful reset threshold uses the <strong>minimum plausible spend</strong>, not the optimistic estimate. Dynamic discounts such as the post-support-quest Control Ward price are shown as a range; an unresolvable zero-ID undo makes that shop ineligible for the spend threshold instead of being guessed through. First-major affordability separately requires observed recipe components plus a supported current-gold frame; purchase events confirm shop completion, not an exact recall-channel timestamp.</div>';
   }
-  const peer=g.peer||null,earlyLead=g.earlyLeadWindow||{},rules=reportPhaseRules(g);
+  const peer=g.peer||null,peerOk=g.directPeerComparable===true,earlyLead=peerOk?(g.earlyLeadWindow||{}):{},rules=reportPhaseRules(g);
   const checkpointNote=(!rules.lane15Comparable||!rules.fixed15to25Comparable||!rules.closing25Comparable)
     ?'<div class="detail-note"><strong>Checkpoint interpretation:</strong> Raw @15/@25 role-relative frames are shown for traceability, but this rules profile does not treat them as standard lane / 15→25 routing / closing checkpoints. Coaching that depends on those meanings is suppressed.</div>'
     :'';
-  return checkpointNote+roleQuestNote(g)+detailCard('Patch',g.publicPatchKey?(String(g.publicPatchKey)+(g.patchKey&&String(g.patchKey)!==String(g.publicPatchKey)?' · build '+String(g.patchKey):'')):(g.patchKey||'n/a'))+detailCard('Role-quest rules',roleQuestText(g))+detailCard('Gold diff @10',signed(g.goldDiff10,0))+detailCard('Gold diff @15',signed(g.goldDiff15,0))+detailCard('Gold diff @25',signed(g.goldDiff25,0))+
+  return checkpointNote+roleQuestNote(g)+detailCard('Patch',g.publicPatchKey?(String(g.publicPatchKey)+(g.patchKey&&String(g.patchKey)!==String(g.publicPatchKey)?' · build '+String(g.patchKey):'')):(g.patchKey||'n/a'))+detailCard('Role-quest rules',roleQuestText(g))+detailCard('Gold diff @10',peerOk?signed(g.goldDiff10,0):'n/a')+detailCard('Gold diff @15',peerOk?signed(g.goldDiff15,0):'n/a')+detailCard('Gold diff @25',peerOk?signed(g.goldDiff25,0):'n/a')+
     detailCard('Peak pre-15 role lead',earlyLead.eligible?(signed(earlyLead.peakGoldDiff,0)+'g @ '+fmt(earlyLead.peakMin,1)+'m'):'No ≥500g measured peak')+
     detailCard('Peak → 15 gold swing',earlyLead.eligible?(signed(earlyLead.goldSwingTo15,0)+'g · '+(earlyLead.giveback?'give-back':earlyLead.preserved?'preserved':'partial erosion')):'n/a')+
     detailCard('Deaths after early peak',earlyLead.eligible?(String(earlyLead.deathsAfterPeak??0)+' · '+String(earlyLead.highRiskDeathsAfterPeak??0)+' high-risk'):'n/a')+
-    detailCard('CS diff @10',signed(g.csDiff10,0))+detailCard('CS diff @15',signed(g.csDiff15,0))+detailCard('CS diff @25',signed(g.csDiff25,0))+
-    detailCard('XP diff @10',signed(g.xpDiff10,0))+detailCard('XP diff @15',signed(g.xpDiff15,0))+detailCard('XP diff @25',signed(g.xpDiff25,0))+
+    detailCard('CS diff @10',peerOk?signed(g.csDiff10,0):'n/a')+detailCard('CS diff @15',peerOk?signed(g.csDiff15,0):'n/a')+detailCard('CS diff @25',peerOk?signed(g.csDiff25,0):'n/a')+
+    detailCard('XP diff @10',peerOk?signed(g.xpDiff10,0):'n/a')+detailCard('XP diff @15',peerOk?signed(g.xpDiff15,0):'n/a')+detailCard('XP diff @25',peerOk?signed(g.xpDiff25,0):'n/a')+
     detailCard('Opponent',peer?(peer.champion||'Same-role peer'):'n/a')+detailCard('Opponent rank',peer?rankText(peer.rank):'n/a')+
-    detailCard('Early clean duel',String(modernOrLegacy(g.laneDuel,'earlySoloKillsVsRole','pre14SoloKillsVsRole'))+' solo kills / '+String(modernOrLegacy(g.laneDuel,'earlySoloDeathsToRole','pre14SoloDeathsToRole'))+' solo deaths')+
-    detailCard('Plate involvement ≤20m',String(modernOrLegacy(g.structurePressure,'first20PlayerPlateInvolvement','first20PlayerPlateCredits'))+' vs '+String(modernOrLegacy(g.structurePressure,'first20OpponentPlateInvolvement','first20OpponentPlateCredits'))+' peer')+
-    detailCard('Plate involvement · full match',String(modernOrLegacy(g.structurePressure,'allGamePlayerPlateInvolvement','allGamePlayerPlateCredits'))+' vs '+String(modernOrLegacy(g.structurePressure,'allGameOpponentPlateInvolvement','allGameOpponentPlateCredits'))+' peer')+
+    detailCard('Early clean duel',peerOk?(String(modernOrLegacy(g.laneDuel,'earlySoloKillsVsRole','pre14SoloKillsVsRole'))+' solo kills / '+String(modernOrLegacy(g.laneDuel,'earlySoloDeathsToRole','pre14SoloDeathsToRole'))+' solo deaths'):'n/a')+
+    detailCard('Plate involvement ≤20m',peerOk?(String(modernOrLegacy(g.structurePressure,'first20PlayerPlateInvolvement','first20PlayerPlateCredits'))+' vs '+String(modernOrLegacy(g.structurePressure,'first20OpponentPlateInvolvement','first20OpponentPlateCredits'))+' peer'):'n/a')+
+    detailCard('Plate involvement · full match',peerOk?(String(modernOrLegacy(g.structurePressure,'allGamePlayerPlateInvolvement','allGamePlayerPlateCredits'))+' vs '+String(modernOrLegacy(g.structurePressure,'allGameOpponentPlateInvolvement','allGameOpponentPlateCredits'))+' peer'):'n/a')+
     detailCard('Your plate tiers',g.structurePressure?.playerPlateByTier?plateTierText(g.structurePressure.playerPlateByTier):'legacy report')+
-    detailCard('Peer plate tiers',g.structurePressure?.opponentPlateByTier?plateTierText(g.structurePressure.opponentPlateByTier):'legacy report')+
-    detailCard('Solo-kill structure conversion',String(g.structurePressure?.soloKillStructureConversions??0)+' / '+String(g.structurePressure?.soloKillWindows??0)+' · '+fmtPct(g.structurePressure?.soloKillStructureConversionRate))+
-    detailCard('All-game clean duel',String(g.laneDuel?.soloKillsVsRole??0)+' / '+String(g.laneDuel?.soloDeathsToRole??0))+
+    detailCard('Peer plate tiers',peerOk&&g.structurePressure?.opponentPlateByTier?plateTierText(g.structurePressure.opponentPlateByTier):'n/a')+
+    detailCard('Solo-kill structure conversion',peerOk?(String(g.structurePressure?.soloKillStructureConversions??0)+' / '+String(g.structurePressure?.soloKillWindows??0)+' · '+fmtPct(g.structurePressure?.soloKillStructureConversionRate)):'n/a')+
+    detailCard('All-game clean duel',peerOk?(String(g.laneDuel?.soloKillsVsRole??0)+' / '+String(g.laneDuel?.soloDeathsToRole??0)):'n/a')+
     detailCard('Early home-lane deaths',String(modernOrLegacy(g.lanePressure,'earlyHomeLaneDeaths','pre14HomeLaneDeaths')))+
     detailCard('Outside-pressure early deaths',String(modernOrLegacy(g.lanePressure,'earlyOutsidePressureDeaths','pre14OutsidePressureDeaths'))+' · '+fmtPct(g.lanePressure?.earlyOutsidePressureShare??g.lanePressure?.outsidePressureShare))+
-    detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+'m':'n/a')+detailCard('Opponent first impact',hasNum(g.opponentImpactTimeMin)?fmt(g.opponentImpactTimeMin,1)+'m':'n/a')+detailCard('Impact timing vs peer',hasNum(g.impactDeltaVsOpponent)?signed(g.impactDeltaVsOpponent,1)+' min':'n/a')+
-    detailCard('DPM vs same-role opponent',peer?signed(peer.dpmDelta,0):'n/a')+detailCard('CS/min vs opponent',peer?signed(peer.csMinDelta,2):'n/a')+detailCard('Team damage rank',hasNum(g.damageRank)?'#'+g.damageRank+' of 5':'n/a')+
+    detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+'m':'n/a')+detailCard('Opponent first impact',peerOk&&hasNum(g.opponentImpactTimeMin)?fmt(g.opponentImpactTimeMin,1)+'m':'n/a')+detailCard('Impact timing vs peer',peerOk&&hasNum(g.impactDeltaVsOpponent)?signed(g.impactDeltaVsOpponent,1)+' min':'n/a')+
+    detailCard('DPM vs same-role opponent',peerOk&&peer?signed(peer.dpmDelta,0):'n/a')+detailCard('CS/min vs opponent',peerOk&&peer?signed(peer.csMinDelta,2):'n/a')+detailCard('Team damage rank',hasNum(g.damageRank)?'#'+g.damageRank+' of 5':'n/a')+
     detailCard('Damage share',fmtPct(g.damageShare))+detailCard('Gold share',fmtPct(g.goldShare))+detailCard('Damage − gold share',hasNum(g.damageShare)&&hasNum(g.goldShare)?signed(Number(g.damageShare)-Number(g.goldShare),1)+' pp':'n/a')+
     detailCard('Session game #',g.sessionContext?.sessionGameNumber?String(g.sessionContext.sessionGameNumber):'n/a')+
     detailCard('Gap after previous game',hasNum(g.sessionContext?.gapAfterPreviousMin)?fmt(g.sessionContext.gapAfterPreviousMin,0)+' min':'n/a')+
@@ -1916,6 +1916,7 @@ function detailContent(g,tab){
     '<div class="detail-note">2026 turret plates no longer use the old 14:00 expiry assumption and plate-style rewards extend through deeper turret tiers. The ≤20m row is only a fixed coaching slice; full-match involvement and the outer/inner/inhibitor/Nexus breakdown are shown separately. Direct event credit is preferred; when Riot omits participant credit, event-position proximity or same-lane timeline presence is retained as weaker supported evidence.</div>'+
     detailList((g.laneDuel?.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m · '+(x.result==='solo_kill'?'solo kill on role opponent':'solo death to role opponent')+(x.early?' · early phase':'')+(hasNum(x.goldDiffAtEvent)?' · role gold '+signed(x.goldDiffAtEvent,0)+'g at event':'')+(hasNum(x.goldSwingTo15)?' · '+signed(x.goldSwingTo15,0)+'g swing to 15':'')+(hasNum(x.csSwingTo15)?' · '+signed(x.csSwingTo15,0)+' CS swing to 15':'')+(x.result==='solo_kill'&&x.conversionEligibleTo15&&hasNum(x.convertedBy15)?(x.convertedBy15?' · converted by 15':' · not converted by 15'):'')+(x.result==='solo_kill'&&(x.early||x.pre14)&&hasNum(x.nextShopDelaySec)?' · next shop '+fmtInt(x.nextShopDelaySec)+'s':'')+(x.result==='solo_kill'&&(x.early||x.pre14)&&x.diedBeforeNextShop?' · died before shop':'')),'No clean direct-role solo duel event detected.')+
     detailList((g.lanePressure?.events||[]).filter(x=>x.outsidePressure).map(x=>(Number(x.time)||0).toFixed(1)+'m · outside pressure'+((x.outsideRoles||[]).length?' from '+x.outsideRoles.join(', '):'')+' · '+String(x.attackerCount||'?')+' attacker(s)'),'No early-phase outside-pressure lane death detected.')+
+    '<div class="detail-note">Direct-role comparative cards require high-confidence Riot teamPosition/individualPosition evidence for both players. '+(peerOk?'This match passes that evidence gate.':'This match does not pass that gate; fallback opponent context may remain visible, but comparative coaching values are withheld.')+'</div>'+
     '<div class="detail-note">Clean direct-role duel events require the player and actual same-role opponent to be killer/victim with no assisting participants. This separates direct matchup outcomes from outside intervention.</div>';
 }
 function bindDetailTabs(container,g,index){
