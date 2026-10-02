@@ -511,7 +511,7 @@ assert.ok(modelDoc.includes('## Report information hierarchy')&&modelDoc.include
 assert.ok(app.includes('analyzer coaching threshold 8')&&app.includes('analyzer coaching threshold 4')&&app.includes('timeline-complete games · analyzer coaching threshold 5'),'Prominent decision cards must disclose analyzer-aligned evidence floors');
 assert.ok(app.includes('function wilsonInterval(')&&app.includes('95% Wilson')&&css.includes('.decision-interval'),'Binomial decision rates must expose Wilson uncertainty bands rather than only point estimates');
 assert.ok(app.includes('survivedFightSamples')&&app.includes('firstResetLossGames')&&app.includes('earlyLeadGivebackGames'),'Wilson intervals must use explicit numerator counts for fight, reset and lead rates');
-assert.ok(modelDoc.includes('## Rate uncertainty')&&modelDoc.includes('not a confidence score for the coaching interpretation'),'Rate-interval limitations must remain documented');
+assert.ok(modelDoc.includes('## Rate uncertainty')&&modelDoc.includes('confidence score for the coaching interpretation')&&modelDoc.includes("does not override the analyzer's minimum evidence floors"),'Rate-interval limitations must remain documented');
 assert.ok(app.includes('thin sample — descriptive only')&&css.includes('.decision-card.thin-evidence'),'Below-threshold decision metrics must remain visually neutral and explicitly descriptive');
 assert.ok(modelDoc.includes('## Decision-card evidence thresholds')&&modelDoc.includes('A small denominator must not visually impersonate high-confidence evidence'),'Decision-card denominator policy must remain documented');
 assert.ok(html.includes('id="technicalMetricsDetails"'),'The exhaustive analysis must remain collapsed into an on-demand appendix');
