@@ -1428,18 +1428,32 @@ function practiceTargetHtml(target){
 
 
 function practiceReplayCategories(theme){
-  const text=[theme?.key,theme?.category,theme?.title].filter(Boolean).join(' ').toLowerCase(),out=[];
+  const specific=[theme?.title,...(Array.isArray(theme?.supportingTitles)?theme.supportingTitles:[])].filter(Boolean).join(' ').toLowerCase(),key=String(theme?.key||'').toLowerCase(),out=[];
   const add=x=>{if(!out.includes(x))out.push(x);};
-  if(/reset|shop|recall/.test(text)){add('resets');add('item spike');}
-  if(/item|spike|power/.test(text))add('item spike');
-  if(/lane|laning|solo|duel|matchup/.test(text)){add('early lead');add('matchup');}
-  if(/lead|preserv|give.?back/.test(text)){add('early lead');add('lead protection');}
-  if(/objective|setup|dragon|baron|herald|grub/.test(text))add('objective setup');
-  if(/fight|combat|damage|resource|uptime|position/.test(text)){add('teamfights');add('fight selection');}
-  if(/death|recovery|risk|overstay|catch|side.?lane|post.?play/.test(text)){add('death consequences');add('lead protection');}
-  if(/vision|ward|facecheck/.test(text))add('vision safety');
-  if(/mid.?routing|routing|side.?lane/.test(text))add('mid routing');
-  if(/roam|rotation/.test(text))add('roaming');
+  // Map from the actual supported findings first. Broad grouped keys such as
+  // early-lane or objectives-closing are not themselves evidence that a replay
+  // category is relevant.
+  if(/reset|shop|recall/.test(specific)){add('resets');add('item spike');}
+  if(/item|spike|power window|major item/.test(specific))add('item spike');
+  if(/side.?lane|mid.?routing|routing|reconnect/.test(specific))add('mid routing');
+  if(/solo|duel|matchup|lane death|lane state/.test(specific)){add('early lead');add('matchup');}
+  if(/lead|preserv|give.?back|ahead|comeback/.test(specific)){add('early lead');add('lead protection');}
+  if(/objective|setup|dragon|baron|herald|grub/.test(specific))add('objective setup');
+  if(/fight|combat|damage share|resource conversion|uptime|position/.test(specific)){add('teamfights');add('fight selection');}
+  if(/death|recovery|risk|overstay|catch|post.?play/.test(specific)){add('death consequences');add('lead protection');}
+  if(/vision|ward|facecheck/.test(specific))add('vision safety');
+  if(/roam|rotation/.test(specific))add('roaming');
+  // Only use narrow fallback groups when the representative/supporting titles
+  // did not expose a replayable event type.
+  if(!out.length){
+    if(key==='death-risk'){add('death consequences');add('lead protection');}
+    else if(key==='reset-power'){add('resets');add('item spike');}
+    else if(key==='mid-routing')add('mid routing');
+    else if(key==='teamfights'){add('teamfights');add('fight selection');}
+    else if(key==='vision')add('vision safety');
+    else if(key==='roaming')add('roaming');
+    else if(key==='recovery')add('death consequences');
+  }
   return out;
 }
 function practiceReplayItems(r,theme){
