@@ -711,6 +711,7 @@ function renderReport(raw,sourceKind){
   renderBullets('overallHighlights',r.overallHighlights,'No broader strength has enough evidence yet.');
   renderPracticePlan(r);
   renderDecisionMetrics(r);
+  renderPhaseDiagnostic(r);
   renderCompoundSignals(r);
   renderSessionHabits(r);
   renderGameArcs(r);
@@ -1098,6 +1099,29 @@ function renderDecisionMetrics(r){
       String(b.earlyLeadGivebackGames??0)+' / '+String(leadN)+' lead games · analyzer coaching threshold 4',giveback,ready.giveback)
   ].join('');
   $('objectiveDiagnosisSummary').innerHTML=objectiveDiagnosisHtml(r);
+}
+function renderPhaseDiagnostic(r){
+  const box=$('phaseDiagnostic'),note=$('phaseDiagnosticNote');if(!box)return;
+  const b=r.behaviorSummary||{},p=r.peerComparison||{},phase=b.phaseRisk||{},mid=b.midRouting||{},closing=b.closing25||{};
+  const defs=[['early','Early phase'],['mid','Transition phase'],['late','Late / Baron-era']];
+  const rows=defs.map(([key,label])=>{const x=phase[key]||{};return{key,label,games:Number(x.games||0),exposure:Number(x.exposureMinutes||0),high:hasNum(x.highRiskDeathsPer10Min)?Number(x.highRiskDeathsPer10Min):null,costly:hasNum(x.costlyDeathsPer10Min)?Number(x.costlyDeathsPer10Min):null,severe:hasNum(x.severeDeathsPer10Min)?Number(x.severeDeathsPer10Min):null,fights:Number(x.fightClusters||0),first:hasNum(x.firstAllyFightDeathRate)?Number(x.firstAllyFightDeathRate):null,raw:x,ready:Number(x.games||0)>=5&&Number(x.exposureMinutes||0)>=20};});
+  const highEligible=rows.filter(x=>x.ready&&hasNum(x.high)).sort((a,b)=>Number(b.high)-Number(a.high)),highTop=highEligible[0]||null,highNext=highEligible[1]||null,highGap=highTop?(Number(highTop.high)-Number(highNext?.high||0)):0,highHot=!!highTop&&Number(highTop.high)>=.35&&highGap>=.15;
+  const costlyEligible=rows.filter(x=>x.ready&&hasNum(x.costly)).sort((a,b)=>Number(b.costly)-Number(a.costly)),costTop=costlyEligible[0]||null,costNext=costlyEligible[1]||null,costGap=costTop?(Number(costTop.costly)-Number(costNext?.costly||0)):0,costHot=!!costTop&&Number(costTop.costly)>=.30&&costGap>=.12;
+  const context=x=>{
+    if(x.key==='early'){const lane=hasNum(p.avgGoldDiff15)?'Role gold @15 '+signed(p.avgGoldDiff15,0)+'g':'Role gold @15 n/a',reset=hasNum(b.firstResetLossRate)?'first-reset loss '+fmtPct(b.firstResetLossRate):'first-reset loss n/a';return lane+' · '+reset;}
+    if(x.key==='mid'){const cs=hasNum(mid.avgCsSwing15to25)?'CS swing '+signed(mid.avgCsSwing15to25,1):'CS swing n/a',obj=hasNum(mid.avgObjectiveJoinRate)?'objective presence '+fmtPct(mid.avgObjectiveJoinRate):'objective presence n/a';return cs+' · '+obj;}
+    const lead=hasNum(closing.leadWinRate)?'lead@25 win '+fmtPct(closing.leadWinRate):'lead@25 win n/a',def=hasNum(closing.deficitWinRate)?'deficit@25 win '+fmtPct(closing.deficitWinRate):'deficit@25 win n/a';return lead+' · '+def;
+  };
+  box.innerHTML=rows.map(x=>{
+    const isHighHot=highHot&&highTop?.key===x.key,isCostHot=costHot&&costTop?.key===x.key,tone=isHighHot||isCostHot?'bad':'neutral';
+    const headline=!x.ready?'Thin phase sample':(isHighHot&&isCostHot?'High-risk + costly hotspot':isHighHot?'High-risk hotspot':isCostHot?'Costly-death hotspot':'No hotspot call');
+    return '<article class="phase-diagnostic-card tone-'+tone+(x.ready?'':' thin-evidence')+'"><span>'+esc(x.label)+'</span><strong>'+esc(headline)+'</strong><div class="phase-rate-row"><b>'+esc(hasNum(x.high)?fmt(x.high,2):'n/a')+'</b><small>high-risk /10m</small><b>'+esc(hasNum(x.costly)?fmt(x.costly,2):'n/a')+'</b><small>costly /10m</small></div><p>'+esc(context(x))+'</p><small>'+x.games+' eligible games · '+fmtInt(x.exposure)+' exposure-min · '+x.fights+' active fight clusters'+(hasNum(x.first)?' · first allied death '+fmtPct(x.first):'')+'</small></article>';
+  }).join('');
+  const messages=[];
+  if(highHot)messages.push('High-risk hotspot: '+highTop.label+' at '+fmt(highTop.high,2)+'/10m, '+signed(highGap,2)+'/10m above the next phase.');
+  if(costHot)messages.push('Costly-death hotspot: '+costTop.label+' at '+fmt(costTop.costly,2)+'/10m, '+signed(costGap,2)+'/10m above the next phase.');
+  if(!messages.length){const top=highTop;messages.push(top?'No phase clears the hotspot rule. Highest supported high-risk rate is '+top.label+' at '+fmt(top.high,2)+'/10m; either the absolute rate or separation is below threshold.':'Not enough phase exposure to compare risk concentration.');}
+  if(note)note.textContent=messages.join(' ')+' Hotspot rule: ≥5 eligible games, ≥20 exposure-minutes, high-risk rate ≥0.35/10m with ≥0.15 gap; costly rate ≥0.30/10m with ≥0.12 gap. Phase boundaries follow each game’s verified rules profile rather than assuming one fixed timer.';
 }
 function intelligenceCard(title,value,tone,body,evidence,evidenceReady=true){
   return '<article class="intelligence-card tone-'+(evidenceReady?tone:'neutral')+(evidenceReady?'':' thin-evidence')+'"><div><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong></div><p>'+esc(body)+'</p><small>'+esc(evidence||'')+(evidenceReady?'':' · thin sample — descriptive only')+'</small></article>';
