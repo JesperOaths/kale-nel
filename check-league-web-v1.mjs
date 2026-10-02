@@ -452,6 +452,9 @@ assert.ok(html.includes('id="outcomeFingerprint"')&&app.includes('function rende
 assert.ok(app.includes('Largest standardized separation:')&&app.includes('standardizedMeanGap(')&&app.includes('Hedges-corrected gap')&&app.includes('not a causal or significance claim'),'Outcome fingerprint must use a small-sample-corrected standardized within-metric gap and avoid causal/significance claims');
 assert.ok(app.includes('sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-Number(b.gameStartTimestamp||0))')&&app.includes('sourceGames.reverse()'),'Trend charts must render oldest-to-newest even though the report contract is newest-first');
 assert.ok(app.includes('chart-reference-line')&&app.includes("reference:bench?.dpm")&&app.includes("reference:bench?.kp"),'ADC DPM/KP charts must retain same-tier external reference lines');
+assert.ok(app.includes('function renderVisualSummary(r){\n  const games=reportCoachingGames(r)')&&app.includes('function renderConsistencySummary(r){')&&app.includes('const games=reportCoachingGames(r),reportRole='),'Visual summary and consistency coaching surfaces must use the verified mechanics coaching cohort');
+assert.ok(app.includes('const sourceGames=[...reportCoachingGames(r)]'),'Lane/economy trend charts must use the mechanics-filtered coaching cohort rather than all context games');
+assert.ok(modelDoc.includes('## Coaching charts and visual snapshots')&&modelDoc.includes('must not shift current chart distributions'),'Chart/snapshot cohort boundaries must remain documented');
 assert.ok(!html.includes('ADC rank averages'),'UI must not overstate role-adjusted rank benchmarks as direct ADC rank averages');
 assert.ok(!app.includes('Rank avg ')&&!app.includes('ADC average')&&!app.includes('sourced rank average'),'Prominent KPI/Quick Read copy must not overstate adjusted references as observed ADC averages');
 assert.ok(html.includes('Your ADC sample vs rank-reference profiles')&&app.includes('Population benchmark, not your opponents.'),'Dedicated ADC rank-comparison surfaces must remain explicitly population-reference based');
@@ -675,7 +678,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v155'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v156'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
