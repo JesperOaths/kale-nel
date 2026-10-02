@@ -651,7 +651,11 @@ assert.ok(api.includes('function committedPurchaseEvents('),'All shop/reset/item
 assert.ok(api.includes('purchases[idx].committed=false'),'ITEM_UNDO must invalidate the matching transient purchase');
 assert.ok(api.includes('function committedItemPurchaseCount('),'Control Ward purchases must consume the canonical committed-purchase stream');
 assert.ok(api.includes('function purchaseCashCost(')&&api.includes('recipe_owned_component_credit'),'Shop spend must be recipe-aware instead of using raw Data Dragon base gold');
-assert.ok(api.includes('out.shopVisits=applyDynamicShopSpendBounds(purchaseGroups(itemEventsByPid,catalog),out.roleQuestContext)'),'Reset/shop visits must consume the full item ledger and role-aware dynamic-price bounds');
+assert.ok(api.includes('out.shopVisits=markCatalogFallback(applyDynamicShopSpendBounds(purchaseGroups(itemEventsByPid,catalog),out.roleQuestContext))'),'Reset/shop visits must consume the full item ledger, dynamic-price bounds and exact-catalog confidence gate');
+assert.ok(api.includes('itemMechanicsEligible=itemCatalogExactPatch&&!!catalog'),'Item recipe/cost coaching must require an exact patch item catalog');
+assert.ok(api.includes('fallback_catalog_display_only_item_mechanics_withheld'),'Fallback item catalogs must be display-only for mechanics-sensitive coaching');
+assert.ok(api.includes('const myMajorSequence=itemMechanicsEligible?majorOwnershipMilestones'),'Major-item timing must fail closed without an exact patch item catalog');
+assert.ok(app.includes('Item mechanics catalog')&&app.includes('fallback display only · spend/item timing withheld'),'Frontend must disclose fallback-catalog suppression');
 assert.ok(api.includes('controlWardPriceAfterQuest:40'),'Support post-quest Control Ward floor must remain machine-readable');
 assert.ok(api.includes('spentLowerBound:null')||api.includes('g.spentLowerBound=null'),'Unresolvable zero-ID undo evidence must invalidate the spend lower bound rather than be guessed');
 assert.ok(api.includes('hasNum(v.spentLowerBound)&&Number(v.spentLowerBound)>=250'),'First meaningful reset must qualify on the conservative spend lower bound');
@@ -704,7 +708,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v163'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v164'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
