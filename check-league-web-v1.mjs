@@ -414,6 +414,10 @@ assert.ok(app.includes("if(r==='BOTTOM'||r==='BOT'||r==='DUO_CARRY'||r==='ADC')r
 assert.ok(html.includes('id="rankBridge"')&&app.includes('function renderRankBridge('),'Next-tier benchmark bridge must remain visible and role-safe');
 assert.ok(html.includes('id="recentPulse"')&&app.includes('function renderRecentPulse('),'Recent-vs-prior pulse must remain visible without adding backend work');
 assert.ok(html.includes('id="reportDrivers"')&&app.includes('function renderReportDrivers('),'League overview must retain the decision-driven primary limiter / strength / direction layer');
+assert.ok(html.includes('id="priorityEvidenceChain"')&&app.includes('function renderPriorityEvidenceChain('),'Top priority must expose an auditable evidence-to-action chain');
+assert.ok(app.includes("stage('1','Signal'")&&app.includes("stage('3','Replay proof'")&&app.includes("stage('4','Next-5 measure'")&&app.includes("stage('5','Action'"),'Priority evidence chain must retain signal, replay, metric and action stages');
+assert.ok(app.includes('This is an evidence trace, not a causal proof.'),'Priority chain must remain explicitly non-causal');
+assert.ok(modelDoc.includes('## Priority evidence chain')&&modelDoc.includes('black-box verdict'),'Priority evidence-chain semantics must remain documented');
 assert.ok(app.includes('driver-evidence-meta')&&app.includes('supporting finding')&&app.includes('confidence'),'Top report drivers must expose the confidence/support metadata behind their selected evidence when available');
 assert.ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('data-open-full-match'),'League must retain the expandable coaching-readable recent match history with a path into full evidence');
 assert.ok(html.includes('data-history-filter="priority"')&&app.includes('function currentPriorityReplayIds('),'Match history must expose a Current focus filter driven by ranked replay evidence');
@@ -687,7 +691,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v158'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v159'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
