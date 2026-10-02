@@ -1935,3 +1935,18 @@ Use the same category mapping that links practice themes to the ranked replay-re
 The primary-limiter card may show a **Review matching games** action only when at least one such match exists. Activating it changes only the visible match-history filter and never changes the report sample or recalculates coaching conclusions.
 
 A focus-match badge means "this game contains ranked replay evidence relevant to the current top priority." It does not mean that the game caused the priority, that every mistake in the game belongs to that theme, or that games without the badge are irrelevant.
+
+
+## Priority evidence chain
+
+The top priority should expose an auditable coaching chain rather than appear as a black-box verdict:
+
+1. **Signal** — the representative evidence statement from the highest-scoring supported priority theme.
+2. **Reinforcement** — additional finding titles grouped into the same coaching theme.
+3. **Replay proof** — the highest-ranked replay-review moment whose category maps to that theme, when available.
+4. **Next-5 measure** — the denominator-safe self-relative practice target, baseline and goal.
+5. **Action** — the coaching prescription attached to the priority theme.
+
+Missing links remain explicit. A priority can be evidence-supported even when no replay-queue moment or denominator-safe short-term metric is available.
+
+This chain is an evidence trace, not a causal proof. The replay example illustrates the supported theme; it does not establish that the replay event caused the aggregate pattern. Priority rank can change as genuinely new games enter the rolling Last-20 sample.
