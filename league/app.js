@@ -832,7 +832,7 @@ function comparisonCard(title,delta,unit,scale,inverse,explanation,sample,eviden
 }
 function renderQuickRead(r){
   const p=r.peerComparison||{},b=r.behaviorSummary||{};
-  const laneN=Number(p.laneGames15||0),peerN=Number(p.sameRoleGames||0),itemN=Number(p.majorItemGames||0),impactN=Number(p.impactGames||0),repeatN=Number(b.repeatDeathOpportunities??p.repeatDeathOpportunities??0);
+  const laneN=Number(p.laneGames15||0),peerN=Number(p.sameRoleGames||0),itemN=Number(p.majorItemGames||0),impactN=Number(p.impactGames||0),repeatN=Number(b.peerMatchedRepeatDeathOpportunities??0);
   const lane=p.avgGoldDiff15,cs=p.avgCsMinDelta,dpm=p.avgDpmDelta,item=p.avgMajorItemDeltaMin,impact=p.avgImpactDeltaMin,repeat=p.repeatDeathRateDelta;
   $('quickRead').innerHTML=[
     comparisonCard('Role gold @15',lane,'gold',1000,false,
@@ -2062,6 +2062,8 @@ function renderAdvanced(r){
     ['Early KP · mean game rate',fmtPct(r.behaviorSummary?.meanGameEarlyKp)],
     ['Early role solo kills / deaths',String(r.behaviorSummary?.earlyRoleSoloKills??r.behaviorSummary?.pre14RoleSoloKills??0)+' / '+String(r.behaviorSummary?.earlyRoleSoloDeaths??r.behaviorSummary?.pre14RoleSoloDeaths??0)],
     ['Plate involvement ≤20m',String(r.behaviorSummary?.first20PlayerPlateInvolvement??r.behaviorSummary?.first20PlayerPlateCredits??0)+' / '+String(r.behaviorSummary?.first20OpponentPlateInvolvement??r.behaviorSummary?.first20OpponentPlateCredits??0)+' vs role peer'],
+    ['Matched plate involvement ≤20m',String(r.behaviorSummary?.peerMatchedFirst20PlayerPlateInvolvement??0)+' vs '+String(r.behaviorSummary?.first20OpponentPlateInvolvement??0)+' peer · Δ '+signed(r.behaviorSummary?.first20PlateInvolvementDelta,0)],
+    ['Matched plate involvement · full match',String(r.behaviorSummary?.peerMatchedAllGamePlayerPlateInvolvement??0)+' vs '+String(r.behaviorSummary?.allGameOpponentPlateInvolvement??0)+' peer · Δ '+signed(r.behaviorSummary?.allGamePlateInvolvementDelta,0)],
     ['Plate involvement · full match',String(r.behaviorSummary?.allGamePlayerPlateInvolvement??r.behaviorSummary?.allGamePlayerPlateCredits??0)+' / '+String(r.behaviorSummary?.allGameOpponentPlateInvolvement??r.behaviorSummary?.allGameOpponentPlateCredits??0)+' vs role peer'],
     ['Clean solo-kill lane conversion',String(r.behaviorSummary?.soloKillConvertedEvents??0)+' / '+String(r.behaviorSummary?.soloKillConversionEvents??0)+' · '+fmtPct(r.behaviorSummary?.soloKillConversionRate)],
     ['Avg gold swing after clean solo kill',hasNum(r.behaviorSummary?.avgSoloKillGoldSwingTo15)?signed(r.behaviorSummary.avgSoloKillGoldSwingTo15,0)+'g to 15':'n/a'],
@@ -2165,9 +2167,10 @@ function renderAdvanced(r){
     ['Untraded vision-action deaths',String(r.behaviorSummary?.untradedVisionActionDeaths??0)],
     ['Objective-setup vision deaths',String(r.behaviorSummary?.objectiveSetupVisionActionDeaths??0)],
     ['Objective-setup vision Δ',hasNum(a.visionSetup?.avgDeltaVsOpponent)?signed(a.visionSetup.avgDeltaVsOpponent,1)+' wards vs peer':'n/a'],
-    ['Player-supported post-kill conversion',String(r.behaviorSummary?.killConversions??0)+' / '+String(r.behaviorSummary?.killConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.killConversionRate)],
+    ['Player-supported post-kill conversion · all valid games',String(r.behaviorSummary?.killConversions??0)+' / '+String(r.behaviorSummary?.killConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.killConversionRate)],
+    ['Player-supported conversion · matched peer games',String(r.behaviorSummary?.peerMatchedKillConversions??0)+' / '+String(r.behaviorSummary?.peerMatchedKillConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.peerMatchedKillConversionRate)],
     ['Team conversion after your kill windows',String(r.behaviorSummary?.teamKillConversions??0)+' / '+String(r.behaviorSummary?.killConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.teamKillConversionRate)],
-    ['Peer-supported post-kill conversion',String(r.behaviorSummary?.opponentKillConversions??0)+' / '+String(r.behaviorSummary?.opponentKillConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.opponentKillConversionRate)],
+    ['Peer-supported post-kill conversion · matched games',String(r.behaviorSummary?.opponentKillConversions??0)+' / '+String(r.behaviorSummary?.opponentKillConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.opponentKillConversionRate)],
     ['Peer team conversion context',String(r.behaviorSummary?.oppTeamKillConversions??r.behaviorSummary?.opponentTeamKillConversions??0)+' / '+String(r.behaviorSummary?.opponentKillConversionWindows??0)+' · '+fmtPct(r.behaviorSummary?.opponentTeamKillConversionRate)],
     ['Prior setup presence (45–105s)',String(r.behaviorSummary?.earlySetupObjectiveJoins??0)+' / '+String(r.behaviorSummary?.neutralObjectiveJoins??0)+' joins · '+fmtPct(r.behaviorSummary?.earlySetupObjectiveJoinRate)],
     ['Event-frame-only neutral-objective joins',String(r.behaviorSummary?.eventFrameOnlyObjectiveJoins??0)],
@@ -2208,12 +2211,14 @@ function renderAdvanced(r){
     metric('Objective-setup ward games',String(p.visionSetupGames??0),false),
     metric('Objective-setup wards vs peer',hasNum(p.avgObjectiveSetupDelta)?signed(p.avgObjectiveSetupDelta,1):'n/a',!hasNum(p.avgObjectiveSetupDelta)),
     metric('Beat peer on setup wards',fmtPct(p.objectiveSetupOutperformPct),!hasNum(p.objectiveSetupOutperformPct)),
-    metric('Objective-setup ward share',hasNum(p.objectiveSetupWardRate)?fmtPct(p.objectiveSetupWardRate):'n/a',!hasNum(p.objectiveSetupWardRate)),
-    metric('Peer objective-setup share',hasNum(p.opponentObjectiveSetupWardRate)?fmtPct(p.opponentObjectiveSetupWardRate):'n/a',!hasNum(p.opponentObjectiveSetupWardRate)),
-    metric('Objective-setup share Δ',hasNum(p.objectiveSetupWardRateDelta)?signed(p.objectiveSetupWardRateDelta,0)+' pp':'n/a',!hasNum(p.objectiveSetupWardRateDelta)),
-    metric('Repeat-death rate',fmtPct(p.repeatDeathRate),!hasNum(p.repeatDeathRate)),
-    metric('Peer repeat-death rate',fmtPct(p.opponentRepeatDeathRate),!hasNum(p.opponentRepeatDeathRate)),
-    metric('Repeat-death rate delta',hasNum(p.repeatDeathRateDelta)?signed(p.repeatDeathRateDelta,0)+' pp':'n/a',!hasNum(p.repeatDeathRateDelta)),
+    metric('Your objective-setup share · all valid games',hasNum(p.objectiveSetupWardRate)?fmtPct(p.objectiveSetupWardRate):'n/a',!hasNum(p.objectiveSetupWardRate)),
+    metric('Your objective-setup share · matched peer games',hasNum(p.peerMatchedObjectiveSetupWardRate)?fmtPct(p.peerMatchedObjectiveSetupWardRate):'n/a',!hasNum(p.peerMatchedObjectiveSetupWardRate)),
+    metric('Peer objective-setup share · matched games',hasNum(p.opponentObjectiveSetupWardRate)?fmtPct(p.opponentObjectiveSetupWardRate):'n/a',!hasNum(p.opponentObjectiveSetupWardRate)),
+    metric('Objective-setup share Δ · matched',hasNum(p.objectiveSetupWardRateDelta)?signed(p.objectiveSetupWardRateDelta,0)+' pp':'n/a',!hasNum(p.objectiveSetupWardRateDelta)),
+    metric('Your repeat-death rate · all valid games',fmtPct(p.repeatDeathRate),!hasNum(p.repeatDeathRate)),
+    metric('Your repeat-death rate · matched peer games',fmtPct(p.peerMatchedRepeatDeathRate),!hasNum(p.peerMatchedRepeatDeathRate)),
+    metric('Peer repeat-death rate · matched games',fmtPct(p.opponentRepeatDeathRate),!hasNum(p.opponentRepeatDeathRate)),
+    metric('Repeat-death rate Δ · matched',hasNum(p.repeatDeathRateDelta)?signed(p.repeatDeathRateDelta,0)+' pp':'n/a',!hasNum(p.repeatDeathRateDelta)),
     metric('Major-item timing vs peer',hasNum(p.avgMajorItemDeltaMin)?signed(p.avgMajorItemDeltaMin,1)+' min':'n/a',!hasNum(p.avgMajorItemDeltaMin)),
     metric('Faster major item than peer',fmtPct(p.majorItemFasterPct),!hasNum(p.majorItemFasterPct)),
     metric('Measurable earlier-item windows',String(p.itemSpikeEligibleWindows??0),false),
