@@ -31,9 +31,9 @@ const ADMIN_BUILD = 'v861-page-version-watermark';
 const ADMIN_PAGE_VERSION = SITE_VERSION;
 // Public bootstraps have independent cache identities. They must not inherit
 // ADMIN_BUILD or a stale public HTML shell can survive an unrelated admin deploy.
-const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r16';
-const PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r12';
-const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-r2';
+const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r17';
+const PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r13';
+const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-r3';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -70,26 +70,26 @@ function isLeagueDocument(pathname) {
   return pathname === '/league' || pathname === '/league/' || pathname === '/league/index.html';
 }
 async function publicOriginResponse(request, url, { noStore = false, cacheBustKey = '', cacheBustValue = ADMIN_BUILD } = {}) {
-  if (!noStore) return withPublicSecurityHeaders(await fetch(request));
+  const method = String(request.method || 'GET').toUpperCase();
   const originUrl = new URL(url.toString());
-  if (cacheBustKey) originUrl.searchParams.set(cacheBustKey, String(cacheBustValue || ADMIN_BUILD));
-  // Public no-store documents are GET/HEAD only. Rebuild a bodyless origin
-  // request explicitly instead of cloning the incoming Request object; this
-  // prevents any request-body ReadableStream from being reused/locked.
-  const originRequest = new Request(originUrl.toString(), {
-    method: request.method,
-    headers: request.headers,
-    redirect: 'manual'
-  });
-  const response = await fetch(originRequest, { cf: { cacheEverything: false, cacheTtl: 0 } });
-  // Forward the origin response stream exactly once. HEAD responses stay
-  // bodyless by construction, avoiding disturbed/locked input-stream failures.
+  if (noStore && cacheBustKey) originUrl.searchParams.set(cacheBustKey, String(cacheBustValue || ADMIN_BUILD));
+  // Every public GET/HEAD is rebuilt bodyless. Never clone or reuse the incoming
+  // Request stream just to proxy a static asset/document.
+  const originRequest = (method === 'GET' || method === 'HEAD')
+    ? new Request(originUrl.toString(), { method, headers: request.headers, redirect: 'manual' })
+    : request;
+  const response = noStore
+    ? await fetch(originRequest, { cf: { cacheEverything: false, cacheTtl: 0 } })
+    : await fetch(originRequest);
+  // Forward the origin response stream exactly once. HEAD remains bodyless.
   const headers = new Headers(response.headers);
   applyPublicSecurityHeaders(headers);
-  headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
-  headers.set('Pragma', 'no-cache');
-  headers.delete('Age');
-  return new Response(request.method === 'HEAD' ? null : response.body, { status: response.status, statusText: response.statusText, headers });
+  if (noStore) {
+    headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+    headers.set('Pragma', 'no-cache');
+    headers.delete('Age');
+  }
+  return new Response(method === 'HEAD' ? null : response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
 export default {
