@@ -29,7 +29,11 @@ const ADMIN_SESSION_RPC_ALLOWLIST = new Set([
 ]);
 const ADMIN_BUILD = 'v861-page-version-watermark';
 const ADMIN_PAGE_VERSION = SITE_VERSION;
+// Public bootstraps have independent cache identities. They must not inherit
+// ADMIN_BUILD or a stale public HTML shell can survive an unrelated admin deploy.
+const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r14';
 const PUBLIC_SHOP_ORIGIN_BUILD = 'v857-clean-collection-art';
+const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-v140';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -65,10 +69,10 @@ function isLeaguePublicPath(pathname) {
 function isLeagueDocument(pathname) {
   return pathname === '/league' || pathname === '/league/' || pathname === '/league/index.html';
 }
-async function publicOriginResponse(request, url, { noStore = false, cacheBustKey = '' } = {}) {
+async function publicOriginResponse(request, url, { noStore = false, cacheBustKey = '', cacheBustValue = ADMIN_BUILD } = {}) {
   if (!noStore) return withPublicSecurityHeaders(await fetch(request));
   const originUrl = new URL(url.toString());
-  if (cacheBustKey) originUrl.searchParams.set(cacheBustKey, ADMIN_BUILD);
+  if (cacheBustKey) originUrl.searchParams.set(cacheBustKey, String(cacheBustValue || ADMIN_BUILD));
   const originRequest = new Request(originUrl.toString(), request);
   const response = await fetch(originRequest, { cf: { cacheEverything: false, cacheTtl: 0 } });
   // Do not wrap/transfer the origin ReadableStream twice. Some browsers surface a
@@ -119,7 +123,7 @@ async function handlePublicApex(request, env, url) {
   // accidentally put /league or its assets behind player/admin login.
   if (isLeaguePublicPath(url.pathname)) {
     const freshDocument = (request.method === 'GET' || request.method === 'HEAD') && isLeagueDocument(url.pathname);
-    return await publicOriginResponse(request, url, { noStore: freshDocument, cacheBustKey: freshDocument ? '__kalenel_league_public' : '' });
+    return await publicOriginResponse(request, url, { noStore: freshDocument, cacheBustKey: freshDocument ? '__kalenel_league_public' : '', cacheBustValue: PUBLIC_LEAGUE_ORIGIN_BUILD });
   }
 
   if (!isProtectedPublicPath(url.pathname)) {
@@ -134,7 +138,8 @@ async function handlePublicApex(request, env, url) {
 
     return await publicOriginResponse(request, url, {
       noStore: true,
-      cacheBustKey: isShopDocument ? '__kalenel_origin_build' : '__kalenel_public_boot'
+      cacheBustKey: isShopDocument ? '__kalenel_origin_build' : '__kalenel_public_boot',
+      cacheBustValue: isShopDocument ? PUBLIC_SHOP_ORIGIN_BUILD : PUBLIC_AUTH_ORIGIN_BUILD
     });
   }
   const target = new URL(url.pathname + url.search, `https://${ADMIN_HOST}`);
