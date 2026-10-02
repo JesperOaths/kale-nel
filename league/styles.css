@@ -1605,3 +1605,6 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 .progress-stable-details{grid-column:1/-1;margin-top:4px;border:1px solid var(--line);border-radius:14px;background:#fbf9f5}
 .progress-stable-details>summary{padding:11px 13px;cursor:pointer;color:var(--muted);font-size:.68rem;font-weight:900}
 .progress-stable-details>.progress-comparison-grid{padding:0 11px 11px}
+
+.diagnostic-chip.thin-evidence{border-style:dashed;box-shadow:none}
+.diagnostic-chip.thin-evidence b{color:var(--ink-soft)}
