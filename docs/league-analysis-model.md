@@ -264,29 +264,35 @@ A clean solo kill is useful only if the player converts the temporary advantage 
 
 The primary window is the **queue-aware early phase**, not an obsolete turret-plate timer. For 2026 standard Summoner's Rift that early phase ends at 14:00 because the map's macro cadence changes there; turret plates themselves do **not** expire at 14:00. For 2026 Swiftplay the early window follows its accelerated rules profile.
 
-For each clean early-phase solo kill on the actual same-role opponent, inspect supported structure evidence for the next 90 seconds.
+For each clean early-phase solo kill on the actual same-role opponent, inspect structure evidence for the next 90 seconds.
 
-A structure conversion can be supported by:
-- direct Riot participant credit on a turret plate or turret building event,
-- event-position proximity when the timeline event has usable coordinates,
-- same-lane timeline presence when a plate event exposes lane/tower metadata but omits participant credit and usable coordinates.
+Structure evidence now has two deliberately different confidence classes:
 
-The evidence source must be retained. A weaker lane-presence fallback is not equivalent to direct event credit and must not be presented as such.
+- **strong involvement** — direct Riot participant credit, or supported event-position proximity within roughly 2200 world units;
+- **lane-presence-only signal** — when the event has lane/tower metadata but no usable coordinates or participant credit, and the nearest supported timeline frame merely places the player in that same lane.
+
+Only **strong involvement** may count as:
+- plate/turret involvement,
+- solo-kill → structure conversion,
+- player-supported post-kill structure conversion,
+- turret-tier pressure used by coaching.
+
+Lane-presence-only evidence is still retained because dropping it would hide useful uncertainty, but it is shown separately and can never by itself earn conversion credit. Being somewhere in the same lane within a coarse timeline frame is not proof that the player participated in that turret event.
 
 Since Patch 26.1, the analyzer treats plate rewards as a persistent turret-system mechanic rather than a pre-14 mechanic. Preserve:
-- player and direct-role-opponent plate involvement through the fixed 20-minute coaching slice,
-- full-match plate involvement,
+- player and direct-role-opponent **strong** plate involvement through the fixed 20-minute coaching slice,
+- full-match strong plate involvement,
+- lane-presence-only plate signals separately for both the player and peer,
 - direct-credit counts as provenance diagnostics,
 - the number of unattributed plate events,
-- plate involvement split by turret tier: outer, inner, inhibitor, Nexus, and unknown,
-- supported turret-kill involvement.
+- strong plate involvement split by turret tier: outer, inner, inhibitor, Nexus, and unknown,
+- strong turret-kill involvement.
 
 The 20-minute slice is a coaching comparison window, **not** an expiry rule. Full-match and tier breakdowns are required because later/deeper turret pressure now matters.
 
 The 2026 rules profile also records the related system reset explicitly: Atakhan and Feats of Strength are disabled, First Blood again carries its +100g bonus, and the first turret again carries its +300g bonus. These values are rule context only; the analyzer must not synthesize timeline gold that Riot did not expose.
 
-This metric complements, rather than replaces, solo-kill → @15 economy conversion and post-kill reset/banking metrics. Resetting can be the correct conversion after a kill, so low structure conversion is not automatically a mistake. Coaching should ask whether the player deliberately chose wave denial, safe structure value, reset, or another higher-value map action.
-
+This metric complements, rather than replaces, solo-kill → @15 economy conversion and post-kill reset/banking metrics. Resetting can be the correct conversion after a kill, so low structure conversion is not automatically a mistake. Coaching should ask whether the player deliberately chose wave denial, a clean reset, a strong structure hit, or another supported map conversion rather than grading every kill by turret damage alone.
 ## Direct-role solo duels
 
 Timeline champion-kill events isolate **clean 1v1 outcomes against the actual same-role opponent**.
@@ -1198,7 +1204,16 @@ This is a better coaching signal than raw vision score alone because it rewards 
 
 ## Same-role level readiness in shared fights
 
-Fight-start level differential is only treated as a readiness signal when the **actual same-role opponent is also locally present in the same attended fight cluster**.
+Fight clustering first preserves **supported presence**, then separates **active involvement** from proximity-only context.
+
+Definitions:
+- **present:** the player died in the cluster, contributed to a tracked kill/assist, or a supported timeline frame places them near a kill event;
+- **active:** the player died in the cluster or contributed to a tracked kill/assist;
+- **proximity-only:** supported nearby position evidence exists, but Riot records neither a player death nor a kill/assist contribution in that cluster.
+
+The legacy `attended` field remains as a compatibility alias for **active** involvement. Coaching denominators must use active involvement, never proximity-only presence.
+
+Fight-start level differential is treated as a readiness signal only when the player is actively involved **and** the actual same-role opponent is locally present in that same fight cluster.
 
 Current implementation:
 - use the first kill-event position as the fight anchor,
@@ -1208,11 +1223,11 @@ Current implementation:
 
 This is stricter than simply comparing global role levels while the opponent may be elsewhere on the map.
 
-Repeated shared fights entered a level down can support coaching to include **level** in the pre-fight readiness check alongside items, gold and local numbers. The recommendation should be to take a nearby XP breakpoint or trade the play when the contest is optional—not to imply every level-down fight must be abandoned.
+Repeated active fights entered a level down can support coaching to include **level** in the pre-fight readiness check alongside items, gold and local numbers. The recommendation should be to take a nearby XP breakpoint or trade the play when the contest is optional—not to imply every level-down fight must be abandoned.
 
 ## Local numbers and fight selection
 
-For each attended multi-kill fight cluster, inspect the local participant count around the first kill event.
+For each **active** multi-kill fight cluster, inspect the local participant count around the first kill event.
 
 Current implementation:
 - anchor on the first kill-event position, falling back to the player's timeline position,
@@ -1220,13 +1235,15 @@ Current implementation:
 - classify the fight as locally outnumbered when there are at least **two fewer nearby allies than enemies**,
 - preserve the kill score of the resulting cluster and whether the outnumbered cluster ended with more enemy kills.
 
-This is a **fight-context** signal, not proof that the player initiated the fight. The coaching language must therefore focus on the controllable follow/re-enter decision: count who is actually in fight distance and who can arrive next, rather than treating distant allies on the minimap as present.
+Proximity-only clusters remain visible as positioning context but do not enter the outnumbered-start denominator.
 
-Aggregate coaching requires repeated samples. A local-numbers concern currently needs at least three outnumbered attended clusters and a high loss rate among them before it becomes a priority finding.
+This is a **fight-context** signal, not proof that the player initiated the fight. Coaching should therefore focus on the controllable follow/re-enter decision: count who is actually in fight distance and who can arrive next, rather than treating distant allies on the minimap as present.
+
+Aggregate coaching requires repeated active samples. A local-numbers concern currently needs repeated outnumbered active clusters and a high loss rate among them before it becomes a priority finding.
 
 ## Fight readiness and purchase state
 
-For each attended multi-kill fight cluster, preserve the player's approximate state at fight start:
+For each **active** multi-kill fight cluster, preserve the player's approximate state at fight start:
 - current/unspent gold,
 - gold differential versus the direct same-role opponent,
 - level differential versus the direct same-role opponent,
@@ -1238,26 +1255,32 @@ Useful readiness flags include:
 - **role-gold deficit start:** at least 600g behind the direct role opponent,
 - **major-item disadvantage start:** the direct role opponent has completed the first major item and the player has not.
 
-These flags do not prove the player chose the fight; some contests are forced. Coaching should therefore say the fight **began under a resource disadvantage** and recommend earlier reset/purchase planning, rather than claiming the player mechanically misplayed merely because the fight happened.
+These readiness rates use active fight involvement only. A player who is merely near a fight cannot improve or worsen the readiness denominator.
 
-Aggregate coaching requires multiple attended fight samples.
+These flags do not prove the player chose the fight; some contests are forced. Coaching should therefore say the fight **began under a resource disadvantage** and recommend earlier reset/purchase planning, rather than claiming the player mechanically misplayed merely because the fight happened.
 
 ## Fight order and carry survival
 
 The timeline analyzer groups nearby champion-kill events into approximate **multi-kill fight clusters** using time and map proximity.
 
-A player's fight is counted only when there is evidence they attended: they contributed to a kill/assist, died in the cluster, or their timeline position is near the fight.
-
-For attended clusters preserve:
+For every supported-presence cluster preserve whether it is active or proximity-only. For **active** clusters preserve:
 - whether the player survived,
 - whether they were the first allied death,
 - whether they died before a tracked kill/assist contribution.
 
-For ADC/MID/TOP, repeated first-allied-death or pre-contribution-death patterns can be treated as a positioning/entry-timing improvement signal. This is more actionable than total deaths because it asks whether the team's damage source is being removed at the start of a fight.
+Only active clusters enter:
+- fight survival,
+- first-allied-death rate,
+- pre-contribution-death rate,
+- high-unspent/item-disadvantage/gold-deficit start rates,
+- local outnumbering rates,
+- phase fight counts used by coaching.
 
-Do not apply the same negative interpretation mechanically to engage/support roles, where dying first can be role-contextual.
+A nearby player with no tracked contribution/death is therefore no longer credited as having "survived" a fight. Their proximity remains visible, but it cannot inflate execution metrics.
 
-Fight clustering is heuristic rather than ground-truth teamfight labeling. Aggregate coaching therefore requires multiple attended fight samples and should expose the sample count.
+For ADC/MID/TOP, repeated first-allied-death or pre-contribution-death patterns can be treated as a positioning/entry-timing improvement signal. Do not apply the same negative interpretation mechanically to engage/support roles, where dying first can be role-contextual.
+
+Fight clustering is heuristic rather than ground-truth teamfight labeling. Aggregate coaching therefore requires multiple **active** fight samples and should expose active, supported-presence, and proximity-only counts separately.
 
 ## Team-context comparisons
 
