@@ -2381,3 +2381,13 @@ The collapsible recent-match story must use a role-appropriate collapsed compari
 The recent-story summary and its positive/neutral/negative filter chips must use the exact same role metric as the collapsed row. Unknown/untrusted peer evidence stays neutral context and must not be counted into positive/negative role-state filters.
 
 The technical game-evidence table may continue to expose raw @15 economy for traceability, but the coaching-oriented match-story surface must not present SUPPORT/JUNGLE as though lane-gold state were their primary role diagnostic.
+
+
+## Technical game table role safety
+
+The lower game-evidence table is an audit/traceability surface, not the primary coaching summary. Direct-role @15 gold may remain visible for every role when a trusted peer/checkpoint exists, but it is treated differently by role:
+
+- **ADC / MID / TOP:** @15 role-gold may retain ahead/close/behind coloring and the three matching table filters.
+- **SUPPORT / JUNGLE:** @15 role-gold remains neutral **context only**. The ahead/close/behind table filters are hidden, and a stale carry-role filter is reset to all when the selected role changes.
+
+This preserves the raw evidence without turning carry-lane economy into a SUPPORT/JUNGLE coaching target. The role-aware recent-match story remains the preferred coaching surface for those roles.
