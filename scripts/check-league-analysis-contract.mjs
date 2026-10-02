@@ -568,7 +568,7 @@ ok(app.includes("objDiagnosed?tonePct(objective,70,45,false):'neutral'"), 'objec
 ok(html.includes('id="rankRadarPanel"')&&app.includes("reportRole!=='ADC'"), 'ADC benchmark UI must be withheld for non-ADC role reports');
 ok(html.includes('id="supportRoleLensPanel"')&&app.includes('function renderSupportRoleLens('), 'SUPPORT must have a role-specific visible evidence lens');
 ok(app.includes("if(role!=='SUPPORT')")&&app.includes('supportRoamAdcCostGames')&&app.includes('avgSupportRoamAdcLaneCostCs'), 'Support role lens must remain role-gated and consume exported ADC lane-cost evidence');
-ok(modelDoc.includes('## Support-specific lens')&&modelDoc.includes('at least two individually costly Support roams repeat'), 'analysis model must preserve Support-specific roam-cost sample rules');
+ok(modelDoc.includes('## Support-specific lens')&&modelDoc.includes('4 measured ADC lane-cost windows for a stable lane-cost interpretation')&&modelDoc.includes('Two or more costly roam windows below the four-window floor may be shown as a **review cue**'), 'analysis model must preserve Support-specific roam-cost evidence floors and review-cue semantics');
 ok(html.indexOf('id="report-driver"')<html.indexOf('id="quickRead"'), 'action-first conclusions must precede comparison diagnostics');
 ok(html.includes('id="evidenceHealth"')&&app.includes('function renderEvidenceHealth('), 'action-first report must expose separate top-level evidence-health dimensions');
 ok(app.includes("evidenceHealthCard('Timeline behavior'")&&app.includes("evidenceHealthCard('Comparable @15'")&&app.includes("evidenceHealthCard('Exact item mechanics'"), 'evidence-health strip must expose behavior, peer/checkpoint and item-mechanics readiness separately');
