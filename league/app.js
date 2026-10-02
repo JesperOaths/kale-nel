@@ -5,7 +5,7 @@ const cfg=window.GEJAST_CONFIG||{};
 const API=(cfg.SUPABASE_URL||'')+'/functions/v1/printify-gildan-diff-diag-v1';
 const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
 const $=(id)=>document.getElementById(id);
-const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,matchHistoryFilter:'all',matchHistoryArcKey:'',matchHistoryObjectiveFamilyKey:'',savedProfiles:[],selectedProfileId:'',selectedRole:'ADC'};
+const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,backendAnalyzerVersion:'',publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,matchHistoryFilter:'all',matchHistoryArcKey:'',matchHistoryObjectiveFamilyKey:'',savedProfiles:[],selectedProfileId:'',selectedRole:'ADC'};
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const LEAGUE_WORKSPACE_KEY='bruisienator_public_workspace_v1';
@@ -403,48 +403,70 @@ function rememberProfileSelection(id){
   try{if(state.selectedProfileId)localStorage.setItem(LEAGUE_SLOT_SELECTION_KEY,state.selectedProfileId);else localStorage.removeItem(LEAGUE_SLOT_SELECTION_KEY);}catch(_){}
   renderSavedProfiles();
 }
+async function rebuildSavedRoleReportFromCache(profile,selectedRole,reason=''){
+  let cache=null;
+  try{cache=await api('cache_status',{profile_id:profile.id,target_role:selectedRole});}catch(_){}
+  const cachedRoleGames=Number(cache?.selected_role_cached_games??cache?.role_counts?.[selectedRole]??0);
+  if(cachedRoleGames<=0)return null;
+  $('analysisState').textContent='Rebuilding saved '+roleLabel(selectedRole)+' report';
+  $('sourceState').textContent='Using cached Riot data'+(reason?' · '+reason:'');
+  statusPill('Rebuilding '+roleLabel(selectedRole)+' report','warn');
+  const rebuilt=await api('analyze_basic',{profile_id:profile.id,target_role:selectedRole});
+  const report=rebuilt?.report||null,wrongRole=(report?.games||[]).find(g=>canonicalRole(g.role)!==selectedRole);
+  if(wrongRole)throw new Error('Role-selection safety check failed during saved-report rebuild.');
+  if(!report?.games?.length)return null;
+  let history=null;
+  try{history=await api('report_latest',{profile_id:profile.id,target_role:selectedRole});}catch(_){}
+  return{report,cachedRoleGames,previous:history?.previous?.report_data||null,previousAt:history?.previous?.created_at||null};
+}
 async function loadSavedReport(profile){
   if(!profile?.id)return;
   const selectedRole=selectedAnalysisRole();
   try{
     const d=await api('report_latest',{profile_id:profile.id,target_role:selectedRole});
-    const current=d.analysis?.report_data||null,previous=d.previous?.report_data||null;
+    const current=d.analysis?.report_data||null,previous=d.previous?.report_data||null,liveAnalyzer=String(state.backendAnalyzerVersion||''),savedAnalyzer=String(current?.analyzerVersion||'');
     if(current){
+      const staleAnalyzer=!!liveAnalyzer&&savedAnalyzer!==liveAnalyzer;
+      if(staleAnalyzer){
+        try{
+          const rebuilt=await rebuildSavedRoleReportFromCache(profile,selectedRole,'analyzer '+(savedAnalyzer||'unknown')+' → '+liveAnalyzer);
+          if(rebuilt){
+            renderReport(rebuilt.report,'saved_server');
+            renderProgressComparison(rebuilt.report,rebuilt.previous,rebuilt.previousAt);
+            $('analysisState').textContent=rebuilt.report.games.length+' saved '+roleLabel(selectedRole)+' games';
+            $('sourceState').textContent='Saved Kalenel analysis · refreshed to '+liveAnalyzer;
+            statusPill('Saved '+roleLabel(selectedRole)+' report refreshed');
+            log('Refreshed the saved '+roleLabel(selectedRole)+' report from analyzer '+(savedAnalyzer||'unknown')+' to '+liveAnalyzer+' using '+rebuilt.cachedRoleGames+' cached role game(s); no Riot refetch or API key was needed.','ok');
+            return;
+          }
+          log('Saved '+roleLabel(selectedRole)+' report uses analyzer '+(savedAnalyzer||'unknown')+' while the backend is '+liveAnalyzer+', but no cached role games were available for an automatic rebuild. Showing the saved report as stale context.','bad');
+        }catch(rebuildError){
+          log('Automatic cached rebuild for analyzer '+(savedAnalyzer||'unknown')+' → '+liveAnalyzer+' failed: '+rebuildError.message+'. Showing the existing saved report instead.','bad');
+        }
+      }
       renderReport(current,'saved_server');
       renderProgressComparison(current,previous,d.previous?.created_at||null);
       $('analysisState').textContent=(current.games?.length||0)+' saved '+roleLabel(selectedRole)+' games';
-      $('sourceState').textContent='Saved Kalenel analysis';
-      statusPill('Saved '+roleLabel(selectedRole)+' report loaded');
+      $('sourceState').textContent=staleAnalyzer?'Saved Kalenel analysis · older analyzer '+(savedAnalyzer||'unknown'):'Saved Kalenel analysis';
+      statusPill(staleAnalyzer?'Saved report · analyzer refresh pending':'Saved '+roleLabel(selectedRole)+' report loaded',staleAnalyzer?'warn':undefined);
     }else{
-      // Older stored reports predate role tagging. Never reuse a mixed-role
-      // payload for a selected-role view; rebuild deterministically from the
-      // already cached Riot match/timeline data instead. This needs no Riot key.
-      let cache=null;
-      try{cache=await api('cache_status',{profile_id:profile.id,target_role:selectedRole});}catch(_){}
-      const cachedRoleGames=Number(cache?.selected_role_cached_games??cache?.role_counts?.[selectedRole]??0);
-      if(cachedRoleGames>0){
-        $('analysisState').textContent='Rebuilding saved '+roleLabel(selectedRole)+' report';
-        $('sourceState').textContent='Using cached Riot data';
-        statusPill('Rebuilding '+roleLabel(selectedRole)+' report','warn');
-        try{
-          const rebuilt=await api('analyze_basic',{profile_id:profile.id,target_role:selectedRole});
-          const report=rebuilt?.report||null;
-          const wrongRole=(report?.games||[]).find(g=>canonicalRole(g.role)!==selectedRole);
-          if(wrongRole)throw new Error('Role-selection safety check failed during saved-report rebuild.');
-          if(report?.games?.length){
-            renderReport(report,'saved_server');
-            renderProgressComparison(report,null,null);
-            $('analysisState').textContent=report.games.length+' saved '+roleLabel(selectedRole)+' games';
-            $('sourceState').textContent='Saved Kalenel analysis · rebuilt from cache';
-            statusPill('Saved '+roleLabel(selectedRole)+' report rebuilt');
-            log('Rebuilt a role-pure '+roleLabel(selectedRole)+' report from '+cachedRoleGames+' cached '+roleLabel(selectedRole)+' game(s); no Riot refetch was needed.','ok');
-            return;
-          }
-        }catch(rebuildError){log('Cached '+roleLabel(selectedRole)+' report rebuild: '+rebuildError.message,'bad');}
-      }
+      // A role-pure report may be absent even though the Riot match/timeline cache
+      // is already complete. Rebuild deterministically from cache with no Riot key.
+      try{
+        const rebuilt=await rebuildSavedRoleReportFromCache(profile,selectedRole,'role report missing');
+        if(rebuilt){
+          renderReport(rebuilt.report,'saved_server');
+          renderProgressComparison(rebuilt.report,rebuilt.previous,rebuilt.previousAt);
+          $('analysisState').textContent=rebuilt.report.games.length+' saved '+roleLabel(selectedRole)+' games';
+          $('sourceState').textContent='Saved Kalenel analysis · rebuilt from cache';
+          statusPill('Saved '+roleLabel(selectedRole)+' report rebuilt');
+          log('Rebuilt a role-pure '+roleLabel(selectedRole)+' report from '+rebuilt.cachedRoleGames+' cached '+roleLabel(selectedRole)+' game(s); no Riot refetch was needed.','ok');
+          return;
+        }
+      }catch(rebuildError){log('Cached '+roleLabel(selectedRole)+' report rebuild: '+rebuildError.message,'bad');}
       $('report').hidden=true;$('reportEmpty').hidden=false;
       $('analysisState').textContent='No saved '+roleLabel(selectedRole)+' report yet';
-      $('sourceState').textContent=cachedRoleGames?'Cached games available · retry analysis':'Profile saved · analyze this role';
+      $('sourceState').textContent='Profile saved · analyze this role';
     }
   }catch(e){log('Saved report: '+e.message,'bad');}
 }
@@ -542,6 +564,7 @@ async function boot(){
   try{
     const health=await api('health');
     state.serverRiotKey=!!health.server_riot_key;
+    state.backendAnalyzerVersion=String(health.analyzer_version||'');
     state.publicWorkspace=health.public_workspace!==false;
     $('backendState').textContent=health.riot_configured?'Backend + Riot ready':'Backend ready · add Riot key';
     $('backendState').className='pill '+(health.riot_configured?'':'warn');
