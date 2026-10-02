@@ -658,6 +658,10 @@ assert.ok(app.includes('Roam paths · this match'),'Per-game map must expose roa
 assert.ok(app.includes('roamEvidenceText('),'Roam tab must expose per-window evidence');
 assert.ok(css.includes('.map-roam-path'),'Roam paths must retain dedicated map styling');
 assert.ok(api.includes('objectiveFamilyStats:{}')&&api.includes('objectiveFamilySummary'),'Objective-family presence/control must remain explicit');
+assert.ok(html.includes('id="objectiveFamilyOverview"')&&app.includes('function renderObjectiveFamilyOverview('),'Main decision section must surface objective-family evidence without requiring Advanced Metrics');
+assert.ok(app.includes('Fewer than 3 contested encounters — context only.')&&app.includes('Review clue:'),'Objective-family summary must gate thin families and keep any lowest-presence callout as a review clue');
+assert.ok(app.includes('wilsonInterval(x.joined,x.contested)')&&css.includes('.objective-family-interval'),'Objective-family contested presence must expose Wilson uncertainty');
+assert.ok(modelDoc.includes('## High-level objective-family overview')&&modelDoc.includes('not a generic role grade'),'Objective-family high-level semantics must remain documented');
 assert.ok(api.includes('enemyTeamId=Number(teamId)===100?200:Number(teamId)===200?100:null'),'Enemy objective ownership must derive from Riot team IDs, not availability of a direct role opponent');
 assert.ok(!api.includes('enemyUnits=Number(opp?window.ownerCounts'),'Objective-family enemy control must not depend on role matching');
 assert.ok(api.includes('familyRaw==="DRAGON"&&memberSubtypes.some((x:any)=>x.includes("ELDER"))?"ELDER_DRAGON"'),'Elder Dragon must remain distinguishable from ordinary dragons when Riot subtype supports it');
@@ -724,7 +728,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v169'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v170'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
