@@ -3154,6 +3154,101 @@ function renderRoleSectionCopy(r){
   if(nav)nav.textContent=copy.nav;if(eyebrow)eyebrow.textContent=copy.eyebrow;if(title)title.textContent=copy.title;if(hint)hint.textContent=copy.hint;
 }
 
+function championDiagnosticSet(v,role,base,riskBase){
+  const riskDelta=hasNum(v.badDeaths)&&hasNum(riskBase.badDeathsPerTimelineGame)?Number(v.badDeaths)-Number(riskBase.badDeathsPerTimelineGame):null,riskN=Number(v.timelineGames||0),itemN=Number(v.itemGames||0),itemDelta=hasNum(v.itemDelta)?Number(v.itemDelta):null;
+  if(role==='SUPPORT'){
+    const roamN=Number(v.roamAttempts||0),roamRate=hasNum(v.roamSuccessRate)?Number(v.roamSuccessRate):null,costN=Number(v.supportAdcCostEvents||0),cost=hasNum(v.avgSupportAdcLaneCostCs)?Number(v.avgSupportAdcLaneCostCs):null,vpmN=Number(v.vpmGames||0),vpm=hasNum(v.avgVpmDelta)?Number(v.avgVpmDelta):null,setupN=Number(v.visionSetupGames||0),setup=hasNum(v.avgObjectiveSetupDelta)?Number(v.avgObjectiveSetupDelta):null;
+    return{
+      chips:[
+        diagnosticChip('Roam conversion',roamRate==null?'n/a':fmtPct(roamRate),roamRate==null?'neutral':roamRate>=65?'good':roamRate<45?'bad':'neutral',roamN>=4,'n='+roamN),
+        diagnosticChip('ADC lane cost on roams',cost==null?'n/a':signed(cost,1)+' CS',deltaTone(cost,0,2,false),costN>=4,'n='+costN),
+        diagnosticChip('VPM vs Support peer',vpm==null?'n/a':signed(vpm,2),deltaTone(vpm,0,.15),vpmN>=3,'n='+vpmN),
+        diagnosticChip('Setup wards vs Support',setup==null?'n/a':signed(setup,1),deltaTone(setup,0,.5),setupN>=3,'n='+setupN),
+        diagnosticChip('Risk deaths vs usual',hasNum(riskDelta)?signed(riskDelta,2)+'/g':'n/a',deltaTone(riskDelta,0,.25,true),riskN>=3,'n='+riskN)
+      ].join(''),
+      coverage:String(v.peerGames||0)+' trusted peer · '+roamN+' roam attempts · '+costN+' ADC lane-cost windows · '+vpmN+' VPM comparisons · '+setupN+' setup-ward comparisons · '+riskN+' timeline games'
+    };
+  }
+  if(role==='JUNGLE'){
+    const impactN=Number(v.impactGames||0),impact=hasNum(v.avgImpactDelta)?Number(v.avgImpactDelta):null,vpmN=Number(v.vpmGames||0),vpm=hasNum(v.avgVpmDelta)?Number(v.avgVpmDelta):null,setupN=Number(v.visionSetupGames||0),setup=hasNum(v.avgObjectiveSetupDelta)?Number(v.avgObjectiveSetupDelta):null;
+    return{
+      chips:[
+        diagnosticChip('First impact vs Jungle',impact==null?'n/a':signed(impact,1)+'m',deltaTone(impact,0,1.5,true),impactN>=3,'n='+impactN),
+        diagnosticChip('1st major vs Jungle',itemDelta==null?'n/a':signed(itemDelta,1)+'m',deltaTone(itemDelta,0,.5,true),itemN>=3,'n='+itemN),
+        diagnosticChip('VPM vs Jungle peer',vpm==null?'n/a':signed(vpm,2),deltaTone(vpm,0,.15),vpmN>=3,'n='+vpmN),
+        diagnosticChip('Setup wards vs Jungle',setup==null?'n/a':signed(setup,1),deltaTone(setup,0,.5),setupN>=3,'n='+setupN),
+        diagnosticChip('Risk deaths vs usual',hasNum(riskDelta)?signed(riskDelta,2)+'/g':'n/a',deltaTone(riskDelta,0,.25,true),riskN>=3,'n='+riskN)
+      ].join(''),
+      coverage:String(v.peerGames||0)+' trusted peer · '+impactN+' impact timings · '+itemN+' first-major comparisons · '+vpmN+' VPM comparisons · '+setupN+' setup-ward comparisons · '+riskN+' timeline games'
+    };
+  }
+  const goldDelta=hasNum(v.goldDiff15)&&hasNum(base.goldDiff15)?Number(v.goldDiff15)-Number(base.goldDiff15):null,dpmDelta=hasNum(v.dpm)&&hasNum(base.dpm)?Number(v.dpm)-Number(base.dpm):null,laneN=Number(v.laneGames||0),dpmN=Number(v.dpmGames??v.games??0);
+  return{
+    chips:[
+      diagnosticChip('Role gold @15',hasNum(v.goldDiff15)?signed(v.goldDiff15,0)+'g':'n/a',deltaTone(v.goldDiff15,0,100),laneN>=3,'n='+laneN),
+      diagnosticChip('Vs your usual @15',hasNum(goldDelta)?signed(goldDelta,0)+'g':'n/a',deltaTone(goldDelta,0,150),laneN>=3,'n='+laneN),
+      diagnosticChip('DPM vs your usual',hasNum(dpmDelta)?signed(dpmDelta,0):'n/a',deltaTone(dpmDelta,0,75),dpmN>=3,'n='+dpmN),
+      diagnosticChip('Risk deaths vs usual',hasNum(riskDelta)?signed(riskDelta,2)+'/g':'n/a',deltaTone(riskDelta,0,.25,true),riskN>=3,'n='+riskN),
+      diagnosticChip('1st major vs peer',itemDelta==null?'n/a':signed(itemDelta,1)+'m',deltaTone(itemDelta,0,.5,true),itemN>=3,'n='+itemN)
+    ].join(''),
+    coverage:String(v.peerGames||0)+' trusted peer · '+laneN+' lane-comparable · '+riskN+' timeline · '+dpmN+' DPM · '+itemN+' first-major comparisons'
+  };
+}
+function matchupDiagnosticSet(v,role,base,riskBase){
+  const gamesN=Number(v.games||0),riskDelta=hasNum(v.badDeaths)&&hasNum(riskBase.badDeathsPerTimelineGame)?Number(v.badDeaths)-Number(riskBase.badDeathsPerTimelineGame):null,riskN=Number(v.timelineGames||0),impactN=Number(v.impactGames||0),impact=hasNum(v.avgImpactDelta)?Number(v.avgImpactDelta):null,itemN=Number(v.itemGames||0),item=hasNum(v.avgItemDelta)?Number(v.avgItemDelta):null,vpmN=Number(v.vpmGames||0),vpm=hasNum(v.avgVpmDelta)?Number(v.avgVpmDelta):null,setupN=Number(v.visionSetupGames||0),setup=hasNum(v.avgObjectiveSetupDelta)?Number(v.avgObjectiveSetupDelta):null;
+  if(role==='SUPPORT'){
+    let read='Mixed repeated Support matchup evidence',readTone='neutral';
+    if(setupN>=3&&setup!=null&&setup<=-.5){read='Pre-objective setup trails this Support';readTone='bad';}
+    else if(vpmN>=3&&vpm!=null&&vpm<=-.15){read='Vision volume trails this Support';readTone='bad';}
+    else if(setupN>=3&&vpmN>=3&&setup!=null&&vpm!=null&&setup>=.5&&vpm>=.15){read='Vision and setup lead this Support';readTone='good';}
+    return{
+      read,readTone,
+      chips:[
+        diagnosticChip('VPM vs Support',vpm==null?'n/a':signed(vpm,2),deltaTone(vpm,0,.15),vpmN>=3,'n='+vpmN),
+        diagnosticChip('Setup wards vs Support',setup==null?'n/a':signed(setup,1),deltaTone(setup,0,.5),setupN>=3,'n='+setupN),
+        diagnosticChip('First impact vs Support',impact==null?'n/a':signed(impact,1)+'m',deltaTone(impact,0,1.5,true),impactN>=3,'n='+impactN),
+        diagnosticChip('1st major vs Support',item==null?'n/a':signed(item,1)+'m',deltaTone(item,0,.5,true),itemN>=3,'n='+itemN),
+        diagnosticChip('Risk deaths vs usual',hasNum(riskDelta)?signed(riskDelta,2)+'/g':'n/a',deltaTone(riskDelta,0,.25,true),riskN>=3,'n='+riskN)
+      ].join(''),
+      coverage:gamesN+' trusted peer · '+vpmN+' VPM · '+setupN+' setup · '+impactN+' impact · '+itemN+' item · '+riskN+' timeline comparisons'
+    };
+  }
+  if(role==='JUNGLE'){
+    const cs=hasNum(v.csDiff15)?Number(v.csDiff15):null,laneN=Number(v.laneGames||0);
+    let read='Mixed repeated Jungle matchup evidence',readTone='neutral';
+    if(impactN>=3&&impact!=null&&impact>=1.5){read='First impact arrives later against this Jungler';readTone='bad';}
+    else if(setupN>=3&&setup!=null&&setup<=-.5){read='Objective setup trails this Jungler';readTone='bad';}
+    else if(impactN>=3&&impact!=null&&impact<=-1.5){read='First impact arrives earlier against this Jungler';readTone='good';}
+    return{
+      read,readTone,
+      chips:[
+        diagnosticChip('CS diff @15',cs==null?'n/a':signed(cs,1),deltaTone(cs,0,8),laneN>=3,'n='+laneN),
+        diagnosticChip('First impact vs Jungle',impact==null?'n/a':signed(impact,1)+'m',deltaTone(impact,0,1.5,true),impactN>=3,'n='+impactN),
+        diagnosticChip('1st major vs Jungle',item==null?'n/a':signed(item,1)+'m',deltaTone(item,0,.5,true),itemN>=3,'n='+itemN),
+        diagnosticChip('VPM vs Jungle',vpm==null?'n/a':signed(vpm,2),deltaTone(vpm,0,.15),vpmN>=3,'n='+vpmN),
+        diagnosticChip('Setup wards vs Jungle',setup==null?'n/a':signed(setup,1),deltaTone(setup,0,.5),setupN>=3,'n='+setupN)
+      ].join(''),
+      coverage:gamesN+' trusted peer · '+laneN+' @15 · '+impactN+' impact · '+itemN+' item · '+vpmN+' VPM · '+setupN+' setup comparisons'
+    };
+  }
+  const goldDelta=hasNum(v.goldDiff15)&&hasNum(base.goldDiff15)?Number(v.goldDiff15)-Number(base.goldDiff15):null,soloKills=Number(v.earlySoloKills||0),soloDeaths=Number(v.earlySoloDeaths||0),outside=hasNum(v.outsidePressureShare)?Number(v.outsidePressureShare):null,dpmPeer=hasNum(v.avgDpmDelta)?Number(v.avgDpmDelta):null,laneN=Number(v.laneGames||0),pressureN=Number(v.earlyHomeLaneDeaths||0),dpmN=Number(v.dpmGames||0);
+  let read='Mixed repeated matchup evidence',readTone='neutral';
+  if(soloDeaths>=2&&soloDeaths>=soloKills+2){read='Clean 1v1 deaths recur';readTone='bad';}
+  else if(pressureN>=3&&outside!=null&&outside>=60){read='Lane deaths are mostly outside pressure';}
+  else if(laneN>=3&&hasNum(goldDelta)&&goldDelta<=-300){read='Lane economy below your usual role level';readTone='bad';}
+  else if(laneN>=3&&hasNum(goldDelta)&&goldDelta>=300&&soloKills>=soloDeaths){read='Lane economy above your usual role level';readTone='good';}
+  return{
+    read,readTone,
+    chips:[
+      diagnosticChip('Role gold @15',hasNum(v.goldDiff15)?signed(v.goldDiff15,0)+'g':'n/a',deltaTone(v.goldDiff15,0,100),laneN>=3,'n='+laneN),
+      diagnosticChip('Vs your usual @15',hasNum(goldDelta)?signed(goldDelta,0)+'g':'n/a',deltaTone(goldDelta,0,150),laneN>=3,'n='+laneN),
+      diagnosticChip('Clean 1v1 K / D',soloKills+' / '+soloDeaths,soloDeaths>=soloKills+2?'bad':soloKills>=soloDeaths+2?'good':'neutral',gamesN>=3,'n='+gamesN),
+      diagnosticChip('Outside-pressure share',outside!=null?fmtPct(outside):'n/a',outside!=null&&outside>=60?'bad':'neutral',pressureN>=3,'deaths='+pressureN),
+      diagnosticChip('DPM vs role peer',dpmPeer==null?'n/a':signed(dpmPeer,0),deltaTone(dpmPeer,0,75),dpmN>=3,'n='+dpmN)
+    ].join(''),
+    coverage:gamesN+' trusted peer · '+laneN+' lane-comparable · '+riskN+' timeline · '+dpmN+' DPM comparisons'
+  };
+}
 function renderBreakdowns(r){
   const q=r.dataQuality||{},role=canonicalRole(q.selectedRole||r.coachingSummary?.primaryRole||r.summary?.primaryRole||state.selectedRole),games=Number(q.analyzedGames??r.games?.length??0),timeline=Number(q.validTimelineGames||0),peer=Number(q.directPeerComparableGames??q.peerComparableGames??0),mech=Number(q.mechanicsCohortGames??r.coachingSummary?.games??games),patch=String(q.currentPatchKey||'unknown'),queue=queueContextLabel(q.dominantQueueId,q.dominantQueueFamily);
   const cohortRows=[
@@ -3169,19 +3264,11 @@ function renderBreakdowns(r){
   const behaviorRows=Array.isArray(r.championBehavior)?r.championBehavior:[],base=r.coachingSummary||r.summary||{},riskBase=r.behaviorSummary||{};
   if(behaviorRows.length){
     $('championBreakdown').innerHTML=behaviorRows.slice(0,8).map(v=>{
-      const src=championIcon(v.champion),goldDelta=hasNum(v.goldDiff15)&&hasNum(base.goldDiff15)?Number(v.goldDiff15)-Number(base.goldDiff15):null,dpmDelta=hasNum(v.dpm)&&hasNum(base.dpm)?Number(v.dpm)-Number(base.dpm):null,riskDelta=hasNum(v.badDeaths)&&hasNum(riskBase.badDeathsPerTimelineGame)?Number(v.badDeaths)-Number(riskBase.badDeathsPerTimelineGame):null,itemDelta=hasNum(v.itemDelta)?Number(v.itemDelta):null;
-      const laneN=Number(v.laneGames||0),dpmN=Number(v.dpmGames??v.games??0),riskN=Number(v.timelineGames||0),itemN=Number(v.itemGames||0);
-      const chips=[
-        diagnosticChip('Role gold @15',hasNum(v.goldDiff15)?signed(v.goldDiff15,0)+'g':'n/a',deltaTone(v.goldDiff15,0,100),laneN>=3,'n='+laneN),
-        diagnosticChip('Vs your usual @15',hasNum(goldDelta)?signed(goldDelta,0)+'g':'n/a',deltaTone(goldDelta,0,150),laneN>=3,'n='+laneN),
-        diagnosticChip('DPM vs your usual',hasNum(dpmDelta)?signed(dpmDelta,0):'n/a',deltaTone(dpmDelta,0,75),dpmN>=3,'n='+dpmN),
-        diagnosticChip('Risk deaths vs usual',hasNum(riskDelta)?signed(riskDelta,2)+'/g':'n/a',deltaTone(riskDelta,0,.25,true),riskN>=3,'n='+riskN),
-        diagnosticChip('1st major vs peer',hasNum(itemDelta)?signed(itemDelta,1)+'m':'n/a',deltaTone(itemDelta,0,.5,true),itemN>=3,'n='+itemN)
-      ].join('');
+      const src=championIcon(v.champion),diag=championDiagnosticSet(v,role,base,riskBase);
       return '<article class="diagnostic-break-row champion-diagnostic">'+
-        '<div class="diagnostic-break-head"><div class="break-visual">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<span><b>'+esc(v.champion)+'</b><small>'+esc(v.role==='ADC'?'ADC':v.role)+' · '+esc(String(v.games||0))+' games</small></span></div><div class="diagnostic-result"><strong>'+esc(fmtPct(v.winRate))+'</strong><small>sample WR</small></div></div>'+
-        '<div class="diagnostic-chip-grid">'+chips+'</div>'+
-        '<p>'+esc(String(v.peerGames||0))+' trusted peer games · '+esc(String(v.laneGames||0))+' lane-comparable · '+esc(String(v.timelineGames||0))+' timeline-complete · '+esc(String(v.dpmGames??v.games??0))+' DPM observations · '+esc(String(v.itemGames||0))+' first-major peer comparisons. Relative chips require at least 3 valid observations for their own metric.</p>'+
+        '<div class="diagnostic-break-head"><div class="break-visual">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<span><b>'+esc(v.champion)+'</b><small>'+esc(roleLabel(v.role||role))+' · '+esc(String(v.games||0))+' games</small></span></div><div class="diagnostic-result"><strong>'+esc(fmtPct(v.winRate))+'</strong><small>sample WR</small></div></div>'+
+        '<div class="diagnostic-chip-grid">'+diag.chips+'</div>'+
+        '<p>'+esc(diag.coverage)+'. Colored champion diagnostics require their own metric-specific evidence floor; sample win rate remains descriptive.</p>'+
       '</article>';
     }).join('');
   }else{
@@ -3195,30 +3282,16 @@ function renderBreakdowns(r){
   const matchupRows=Array.isArray(r.matchupBehavior)?r.matchupBehavior:[],target=$('matchupBreakdown');
   if(target){
     target.innerHTML=matchupRows.length?matchupRows.slice(0,10).map(v=>{
-      const own=(v.ownChampions||[]).slice(0,3).map(x=>x.champion+' '+x.games+'g').join(', '),src=championIcon(v.opponentChampion),goldDelta=hasNum(v.goldDiff15)&&hasNum(base.goldDiff15)?Number(v.goldDiff15)-Number(base.goldDiff15):null,soloKills=Number(v.earlySoloKills||0),soloDeaths=Number(v.earlySoloDeaths||0),outside=hasNum(v.outsidePressureShare)?Number(v.outsidePressureShare):null,dpmPeer=hasNum(v.avgDpmDelta)?Number(v.avgDpmDelta):null;
-      const gamesN=Number(v.games||0),laneN=Number(v.laneGames||0),pressureN=Number(v.earlyHomeLaneDeaths||0),dpmN=Number(v.dpmGames||0);
-      let read='Mixed repeated matchup evidence',readTone='neutral';
-      if(soloDeaths>=2&&soloDeaths>=soloKills+2){read='Clean 1v1 deaths recur';readTone='bad';}
-      else if(pressureN>=3&&outside!=null&&outside>=60){read='Lane deaths are mostly outside pressure';readTone='neutral';}
-      else if(laneN>=3&&hasNum(goldDelta)&&goldDelta<=-300){read='Lane economy below your usual role level';readTone='bad';}
-      else if(laneN>=3&&hasNum(goldDelta)&&goldDelta>=300&&soloKills>=soloDeaths){read='Lane economy above your usual role level';readTone='good';}
-      const chips=[
-        diagnosticChip('Role gold @15',hasNum(v.goldDiff15)?signed(v.goldDiff15,0)+'g':'n/a',deltaTone(v.goldDiff15,0,100),laneN>=3,'n='+laneN),
-        diagnosticChip('Vs your usual @15',hasNum(goldDelta)?signed(goldDelta,0)+'g':'n/a',deltaTone(goldDelta,0,150),laneN>=3,'n='+laneN),
-        diagnosticChip('Clean 1v1 K / D',soloKills+' / '+soloDeaths,soloDeaths>=soloKills+2?'bad':soloKills>=soloDeaths+2?'good':'neutral',gamesN>=3,'n='+gamesN),
-        diagnosticChip('Outside-pressure share',outside!=null?fmtPct(outside):'n/a',outside!=null&&outside>=60?'bad':'neutral',pressureN>=3,'deaths='+pressureN),
-        diagnosticChip('DPM vs role peer',hasNum(dpmPeer)?signed(dpmPeer,0):'n/a',deltaTone(dpmPeer,0,75),dpmN>=3,'n='+dpmN)
-      ].join('');
+      const own=(v.ownChampions||[]).slice(0,3).map(x=>x.champion+' '+x.games+'g').join(', '),src=championIcon(v.opponentChampion),diag=matchupDiagnosticSet(v,role,base,riskBase);
       return '<article class="diagnostic-break-row matchup-diagnostic">'+
-        '<div class="diagnostic-break-head"><div class="break-visual">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<span><b>vs '+esc(v.opponentChampion)+'</b><small>'+esc(v.role==='ADC'?'ADC':v.role)+' · '+esc(String(v.games||0))+' games</small></span></div><div class="diagnostic-result"><strong>'+esc(fmtPct(v.winRate))+'</strong><small>sample WR</small></div></div>'+
-        '<div class="matchup-read tone-'+readTone+'"><span>Repeated-matchup read</span><strong>'+esc(read)+'</strong></div>'+
-        '<div class="diagnostic-chip-grid">'+chips+'</div>'+
-        '<p>'+(own?'Own picks: '+esc(own)+'. ':'')+esc(String(v.games||0))+' trusted direct-peer games · '+esc(String(v.laneGames||0))+' lane-comparable · '+esc(String(v.timelineGames||0))+' timeline-complete · '+esc(String(v.dpmGames||0))+' DPM comparisons. Each colored diagnostic uses its own minimum evidence.</p>'+
+        '<div class="diagnostic-break-head"><div class="break-visual">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<span><b>vs '+esc(v.opponentChampion)+'</b><small>'+esc(roleLabel(v.role||role))+' · '+esc(String(v.games||0))+' games</small></span></div><div class="diagnostic-result"><strong>'+esc(fmtPct(v.winRate))+'</strong><small>sample WR</small></div></div>'+
+        '<div class="matchup-read tone-'+diag.readTone+'"><span>Repeated-matchup read</span><strong>'+esc(diag.read)+'</strong></div>'+
+        '<div class="diagnostic-chip-grid">'+diag.chips+'</div>'+
+        '<p>'+(own?'Own picks: '+esc(own)+'. ':'')+esc(diag.coverage)+'. Each colored diagnostic uses its own minimum evidence; repeated-matchup win rate remains descriptive.</p>'+
       '</article>';
     }).join(''):'<div class="bullet empty">No opposing champion appears at least three times in the primary-role coaching sample.</div>';
   }
 }
-
 function evidenceLevel(n,good=10,moderate=5){
   const x=Number(n);return Number.isFinite(x)?(x>=good?'strong':x>=moderate?'moderate':'thin'):'unknown';
 }
