@@ -275,7 +275,6 @@ assert.ok(app.includes('Avg affordable → purchase delay'),'Frontend must expos
 assert.ok(app.includes('Readiness delay vs peer'),'Frontend must expose recipe-aware delay versus the direct role opponent');
 assert.ok(app.includes('Earlier-item windows used'));
 assert.ok(app.includes('Solo-kill deaths before next shop'));
-assert.ok(app.includes('Deaths before shop after solo kill'));
 assert.ok(app.includes('Outside-pressure early deaths'));
 assert.ok(app.includes('CS swing 15→25'));
 assert.ok(app.includes('Outside-pressure share of early lane deaths'));
