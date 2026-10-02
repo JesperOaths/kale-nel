@@ -2450,14 +2450,32 @@ function matchHistorySignals(g){
   }
   return out.slice(0,5);
 }
-function matchHistoryJudgment(g){
-  const xs=Array.isArray(g.judgments)?g.judgments:[];
-  const improve=xs.find(x=>x&&x.tone!=='strength'),strength=xs.find(x=>x&&x.tone==='strength'),x=improve||strength||xs[0];
-  if(!x)return {tone:'neutral',title:'No high-confidence game judgment',evidence:'The game remains visible, but the analyzer did not have enough supported evidence for a specific action judgment.',action:''};
-  return {tone:x.tone==='strength'?'good':'bad',title:String(x.title||x.category||'Game insight'),evidence:String(x.evidence||''),action:String(x.action||'')};
+function judgmentMatchesPracticeTheme(j,theme){
+  if(!j||!theme)return false;
+  const wanted=new Set(practiceReplayCategories(theme)),category=String(j.category||'').toLowerCase(),mapped=[];
+  const add=x=>mapped.push(x);
+  if(category==='resets'){add('resets');add('item spike');}
+  if(category==='item spike')add('item spike');
+  if(category==='mid routing'||category==='mid game')add('mid routing');
+  if(category==='laning'||category==='lane conversion'||category==='map awareness'){add('early lead');add('matchup');}
+  if(category==='lead protection'||category==='closing'){add('lead protection');add('early lead');}
+  if(category==='objectives'||category==='side-lane timing')add('objective setup');
+  if(category==='teamfights'||category==='fighting'||category==='resource conversion')add('teamfights');
+  if(category==='fight selection'||category==='fight readiness'){add('fight selection');add('teamfights');}
+  if(['deaths','death consequences','death recovery','post-play discipline'].includes(category)){add('death consequences');add('lead protection');}
+  if(category==='vision safety')add('vision safety');
+  if(category==='roaming')add('roaming');
+  return mapped.some(x=>wanted.has(x));
+}
+function matchHistoryJudgment(g,r){
+  const xs=Array.isArray(g.judgments)?g.judgments:[],theme=topPracticeThemes(r)[0]||null,focusMatch=currentPriorityReplayIds(r).has(String(g.matchId||''));
+  const focus=focusMatch?xs.filter(x=>judgmentMatchesPracticeTheme(x,theme)).sort((a,b)=>Number(a.priority||99)-Number(b.priority||99))[0]:null;
+  const improve=xs.find(x=>x&&x.tone!=='strength'),strength=xs.find(x=>x&&x.tone==='strength'),x=focus||improve||strength||xs[0];
+  if(!x)return {tone:'neutral',title:'No high-confidence game judgment',evidence:'The game remains visible, but the analyzer did not have enough supported evidence for a specific action judgment.',action:'',focusMatched:false};
+  return {tone:x.tone==='strength'?'good':'bad',title:String(x.title||x.category||'Game insight'),evidence:String(x.evidence||''),action:String(x.action||''),focusMatched:!!focus};
 }
 function matchHistoryRow(g,index,displayIndex,r){
-  const peerOk=trustedDirectPeer(g),icon=championIcon(g.champion),opp=peerOk?championIcon(g.peer?.champion):'',role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||g?.role||state.selectedRole),roleMetric=matchHistoryRoleMetric(g,role),judge=matchHistoryJudgment(g),signals=matchHistorySignals(g),coachingContext=gameIsCoachingContext(r,g),detailId='match-history-detail-'+index,focusMatch=currentPriorityReplayIds(r).has(String(g.matchId||''));
+  const peerOk=trustedDirectPeer(g),icon=championIcon(g.champion),opp=peerOk?championIcon(g.peer?.champion):'',role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||g?.role||state.selectedRole),roleMetric=matchHistoryRoleMetric(g,role),judge=matchHistoryJudgment(g,r),signals=matchHistorySignals(g),coachingContext=gameIsCoachingContext(r,g),detailId='match-history-detail-'+index,focusMatch=currentPriorityReplayIds(r).has(String(g.matchId||''));
   const reviewItems=(Array.isArray(r?.replayReviewQueue)?r.replayReviewQueue:[]).filter(x=>String(x.matchId||'')===String(g.matchId||'')),reviewRank=reviewItems.length?Math.min(...reviewItems.map(x=>Number(x.rank||999)).filter(Number.isFinite)):null;
   const kda=[g.kills,g.deaths,g.assists].map(x=>hasNum(x)?Number(x):'?').join('/');
   const title=(g.win?'Win':'Loss')+' · '+String(g.champion||'Unknown');
@@ -2467,13 +2485,13 @@ function matchHistoryRow(g,index,displayIndex,r){
       '<span class="history-champions">'+(icon?'<img loading="lazy" src="'+esc(icon)+'" alt="">':'')+'<span><b>'+esc(title)+(coachingContext?'':' <em class="history-context-badge">context only</em>')+'</b><small>'+esc(shortGameDate(g.gameStartTimestamp))+' · '+esc(g.role||'')+(peerOk&&g.peer?.champion?' · vs '+esc(g.peer.champion):g.peer?.champion?' · role peer withheld':'')+(coachingContext?'':' · older mechanics excluded from coaching aggregates')+'</small></span>'+(opp?'<img class="history-opponent" loading="lazy" src="'+esc(opp)+'" alt="">':'')+'</span>'+
       '<span class="history-stat"><small>K/D/A</small><b>'+esc(kda)+'</b></span>'+
       '<span class="history-stat tone-'+roleMetric.tone+'"><small>'+esc(roleMetric.label)+'</small><b>'+esc(roleMetric.value)+'</b></span>'+
-      '<span class="history-judgment tone-'+judge.tone+'"><small>Strongest read'+(reviewRank!=null?' · review #'+esc(String(reviewRank)):'')+(focusMatch?' · current focus':'')+'</small><b>'+esc(judge.title)+'</b></span>'+
+      '<span class="history-judgment tone-'+judge.tone+'"><small>'+(judge.focusMatched?'Current-focus read':'Strongest read')+(reviewRank!=null?' · review #'+esc(String(reviewRank)):'')+(focusMatch&&!judge.focusMatched?' · current focus game':'')+'</small><b>'+esc(judge.title)+'</b></span>'+
       '<span class="history-chevron" aria-hidden="true">▾</span>'+
     '</button>'+
     '<div class="match-history-detail" id="'+detailId+'" hidden>'+
       gameArcStripHtml(g)+
       '<div class="history-signal-grid">'+signals.map(x=>'<div class="history-signal tone-'+x.tone+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><p>'+esc(x.copy)+'</p></div>').join('')+'</div>'+
-      '<div class="history-coaching-read tone-'+judge.tone+'"><span>Game-level coaching read</span><strong>'+esc(judge.title)+'</strong><p>'+esc(judge.evidence||'No additional evidence sentence was generated.')+'</p>'+(judge.action?'<div><b>Next time:</b> '+esc(judge.action)+'</div>':'')+'</div>'+
+      '<div class="history-coaching-read tone-'+judge.tone+'"><span>'+(judge.focusMatched?'Current-focus coaching read':'Game-level coaching read')+'</span><strong>'+esc(judge.title)+'</strong><p>'+esc(judge.evidence||'No additional evidence sentence was generated.')+'</p>'+(judge.action?'<div><b>Next time:</b> '+esc(judge.action)+'</div>':'')+'</div>'+
       matchEvidenceLedgerHtml(r,g)+
       matchReplayReviewHtml(r,g)+
       '<div class="history-actions"><button class="button secondary small" type="button" data-open-full-match="'+esc(g.matchId||'')+'">Open full match evidence</button><small>Full evidence includes macro, resets, vision, fights, phases, deaths, objectives and map context.</small></div>'+
