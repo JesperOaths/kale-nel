@@ -2333,3 +2333,26 @@ When those revisions differ, and cached games for the selected role exist, the p
 - retain the previous report for rolling comparison with the analyzer-change caveat.
 
 If the automatic rebuild fails or the role cache is unavailable, the existing saved report remains visible as stale context and is labelled as an older analyzer result. Analyzer freshness must never turn a recoverable saved report into an empty/broken page.
+
+
+## Chronological match evidence ledger
+
+Each expandable match-story row contains a chronological evidence ledger. It is a reconstruction from already-supported per-game evidence, not a new event detector.
+
+The ledger may include:
+- first meaningful shop and supported post-reset economy swing,
+- first and second major-item completion,
+- early direct-role lead peak,
+- direct-role @15 and @25 checkpoints when comparable,
+- first tracked impact,
+- earlier-item power-window impact,
+- high-risk deaths with trade/consequence context,
+- supported team-contested neutral-objective windows,
+- active fight involvement with readiness/execution context,
+- ranked replay-review moments.
+
+Fight execution entries use **active involvement only**. Proximity-only clusters may remain visible in the dedicated fight detail tab, but they cannot become survival, first-death, readiness or chronological execution judgments.
+
+Objective ledger entries use supported contested windows. Fully conceded cross-map objectives must not be converted into personal absence events. Death entries remain evidence-specific: tags, unspent gold, trade status and measured consequence signals are shown without inventing a single causal explanation.
+
+The ledger is capped to the newest/earliest supported key moments after chronological sorting and de-duplication so an expanded game remains readable.
