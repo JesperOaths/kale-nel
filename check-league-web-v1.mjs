@@ -192,6 +192,10 @@ assert.ok(behaviorStart>=0&&behaviorEnd>behaviorStart,'Behavior summary export b
 const behaviorExport=api.slice(behaviorStart,behaviorEnd);
 for(const field of [
   'phaseRisk','midRouting','closing25','deathTradeRate','highRiskUntradedDeaths','highRiskUntradedPerGame',
+assert.ok(app.includes("'Late strategic phase'")&&!app.includes("'Late / Baron-era'"),'Phase diagnostic must avoid a universal Baron-era label across differing verified rules profiles');
+assert.ok(app.includes("role==='JUNGLE'")&&app.includes('first impact vs jungler')&&app.includes('contested objective presence'),'JUNGLE phase context must use tempo/objective evidence rather than laner-only context');
+assert.ok(app.includes("role==='SUPPORT'")&&app.includes('early roam conversion')&&app.includes('vision-action death rate'),'SUPPORT phase context must use roam/vision/setup evidence rather than laner-only context');
+assert.ok(modelDoc.includes('## Role-aware phase context')&&modelDoc.includes('Context fields do not change the hotspot calculation'),'Role-aware phase interpretation must remain documented without changing phase hotspot math');
   'measuredDeathConsequences','costlyDeathEvents','severeDeathEvents','costlyDeathRate','costlyDeathsPerTimelineGame','severeDeathsPerTimelineGame','avgGoldSwingAfterDeath','avgCsSwingAfterDeath',
   'repeatDeathOpportunities','repeatDeaths','repeatDeathRate','highRiskRepeatDeaths','costlyRepeatDeaths','opponentRepeatDeathRate','repeatDeathRateDelta',
   'earlyLeadGames','earlyLeadGivebackGames','earlyLeadGivebackRate','avgEarlyLeadPeakGold','avgEarlyLeadGoldSwingTo15','earlyLeadGivebackDeaths','earlyLeadGivebackHighRiskDeaths',
@@ -767,7 +771,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261002-league-web-v179'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261002-league-web-v180'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
