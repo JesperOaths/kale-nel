@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.84";
+const ANALYZER_VERSION="league-web-behavior-v4.85";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1096,8 +1096,13 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
     const fr=frameAtMs(frames,d.tMs),me=frameStats(fr,pid),pos=(d.x!=null&&d.y!=null)?{x:d.x,y:d.y}:me?.position;let alliesNear=0,enemiesNear=0,nearestAlly=Infinity;
     if(pos&&fr?.participantFrames){for(const [id,q] of byId.entries()){if(id===pid)continue;const fs=frameStats(fr,id);if(!fs?.position)continue;const dd=dist2(pos,fs.position);if(Number(q.teamId)===teamId){nearestAlly=Math.min(nearestAlly,dd);if(dd<=3000*3000)alliesNear++;}else if(dd<=3000*3000)enemiesNear++;}}
     const isolated=!Number.isFinite(nearestAlly)||nearestAlly>3000*3000,sum=pos?Number(pos.x)+Number(pos.y):null,deep=sum==null?false:(teamId===100?sum>19000:sum<11000),outnumbered=enemiesNear>=alliesNear+2;
+    const deathZoneNow=deathArea(mapId,pos,teamId);
     const nextEnemyObj=neutralObjectives.find((o:any)=>o.ownerTeam&&o.ownerTeam!==teamId&&o.tMs>d.tMs&&o.tMs<=d.tMs+75000&&contestedNeutralEvent(o)),enemyObjSoon=!!nextEnemyObj,objectiveContext=neutralObjectives.some((o:any)=>Math.abs(o.tMs-d.tMs)<=45000&&(o.x==null||pos==null||dist2(pos,o)<=3500*3500));
-    const nextEnemyStructure=structureEvents.find((o:any)=>o.ownerTeam&&o.ownerTeam!==teamId&&o.tMs>d.tMs&&o.tMs<=d.tMs+75000),enemyStructureSoon=!!nextEnemyStructure;
+    const nextEnemyStructure=structureEvents.find((o:any)=>{
+      if(!(o.ownerTeam&&o.ownerTeam!==teamId&&o.tMs>d.tMs&&o.tMs<=d.tMs+75000))return false;
+      if(pos&&hasNum(o.x)&&hasNum(o.y)&&dist2(pos,o)<=5000*5000)return true;
+      const eventLane=structureEventLane(o);return !!eventLane&&eventLane===deathZoneNow;
+    }),enemyStructureSoon=!!nextEnemyStructure;
     const nextNeutralObj=neutralObjectives.find((o:any)=>o.tMs>d.tMs&&o.tMs<=d.tMs+90000&&contestedNeutralEvent(o));
     const tradeKill=allChampionKills.find((k:any)=>{
       if(Number(k.tMs)<=Number(d.tMs)||Number(k.tMs)>Number(d.tMs)+15000||Number(k.killerTeam)!==teamId||Number(k.victimTeam)===teamId)return false;
@@ -1106,14 +1111,16 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
     });
     const traded=!!tradeKill,tradeDelaySec=tradeKill?Math.round((Number(tradeKill.tMs)-Number(d.tMs))/1000):null;
     const them=oppId?frameStats(fr,oppId):null,goldDiffAtDeath=me&&them&&hasNum(me.gold)&&hasNum(them.gold)?Number(me.gold)-Number(them.gold):null,csDiffAtDeath=me&&them?Number(me.cs)-Number(them.cs):null;
-    const afterFr=frameAfterMs(frames,d.tMs+45000,90000),afterMe=frameStats(afterFr,pid),afterThem=oppId?frameStats(afterFr,oppId):null;
+    const consequenceTargetMs=Number(d.tMs)+60000,afterFrCandidate=frameNearestMs(frames,consequenceTargetMs,35000),afterSampleMs=Number(afterFrCandidate?.timestamp||0)||null;
+    const interveningDeath=afterSampleMs?deathEvents.find((x:any)=>Number(x.tMs)>Number(d.tMs)&&Number(x.tMs)<=afterSampleMs):null,economyWindowContaminatedByRepeatDeath=!!interveningDeath;
+    const afterFr=economyWindowContaminatedByRepeatDeath?null:afterFrCandidate,afterMe=frameStats(afterFr,pid),afterThem=oppId?frameStats(afterFr,oppId):null;
     const goldDiffAfter=afterMe&&afterThem&&hasNum(afterMe.gold)&&hasNum(afterThem.gold)?Number(afterMe.gold)-Number(afterThem.gold):null,csDiffAfter=afterMe&&afterThem?Number(afterMe.cs)-Number(afterThem.cs):null;
     const goldSwingAfter=hasNum(goldDiffAtDeath)&&hasNum(goldDiffAfter)?Number(goldDiffAfter)-Number(goldDiffAtDeath):null,csSwingAfter=hasNum(csDiffAtDeath)&&hasNum(csDiffAfter)?Number(csDiffAfter)-Number(csDiffAtDeath):null;
     const currentGold=Number(me?.currentGold||0),highUnspent=currentGold>=1000;let score=0;const tags:string[]=[];
     if(isolated){score++;tags.push("isolated");}if(deep){score++;tags.push("deep_enemy_side");}if(outnumbered){score++;tags.push("outnumbered");}if(enemyObjSoon){score+=2;tags.push("enemy_contested_objective_after");out.preObjectiveDeathCount++;out.preObjectiveDeaths.push({time:d.tMin,secondsBeforeObjective:Math.round((nextEnemyObj.tMs-d.tMs)/1000),objectiveType:nextEnemyObj.monsterType||nextEnemyObj.monsterSubType||nextEnemyObj.type,currentGold,scope:"team_contested"});}if(enemyStructureSoon){score+=1;tags.push("enemy_structure_after");}if(highUnspent){score++;tags.push("high_unspent_gold");}if(objectiveContext){out.objectiveDeathCount++;tags.push("objective_context");}
     if(isolated)out.isolatedDeathCount++;
     const bad=score>=2,wasMateriallyAhead=hasNum(goldDiffAtDeath)&&Number(goldDiffAtDeath)>=500;
-    const deathZone=deathArea(mapId,pos,teamId),macroTransitionMin=Number(rules.macroTransitionMin??rules.postLaneStartMin??14),isMacroTransitionSideLane=Number(d.tMin)>=macroTransitionMin&&(deathZone==="top lane"||deathZone==="bot lane"),isolatedSideLane=isMacroTransitionSideLane&&alliesNear===0,preNeutralObjectiveSideLane=isolatedSideLane&&!!nextNeutralObj;
+    const deathZone=deathZoneNow,macroTransitionMin=Number(rules.macroTransitionMin??rules.postLaneStartMin??14),isMacroTransitionSideLane=Number(d.tMin)>=macroTransitionMin&&(deathZone==="top lane"||deathZone==="bot lane"),isolatedSideLane=isMacroTransitionSideLane&&alliesNear===0,preNeutralObjectiveSideLane=isolatedSideLane&&!!nextNeutralObj;
     if(isMacroTransitionSideLane){
       out.sideLaneRisk.macroTransitionSideLaneDeaths++;
       out.sideLaneRisk.postLaneSideLaneDeaths++; // compatibility alias only; this does not assert that lane phase literally ended.
@@ -1162,7 +1169,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
       if(costlyDeath){out.deathConsequences.costly++;out.phaseBehavior[deathPhase].costlyDeaths++;}
       if(severeCostDeath){out.deathConsequences.severe++;out.phaseBehavior[deathPhase].severeDeaths++;}
       if(costlyDeath&&!traded)out.deathConsequences.untradedCostly++;
-      out.deathConsequences.events.push({time:d.tMin,goldDiffAtDeath,csDiffAtDeath,goldDiffAfter,csDiffAfter,goldSwingAfter,csSwingAfter,enemyObjectiveAfter:enemyObjSoon,enemyStructureAfter:enemyStructureSoon,traded,highRisk:bad,costly:costlyDeath,severe:severeCostDeath,signals:consequenceSignals,zone:deathArea(mapId,pos,teamId)});
+      out.deathConsequences.events.push({time:d.tMin,goldDiffAtDeath,csDiffAtDeath,goldDiffAfter,csDiffAfter,goldSwingAfter,csSwingAfter,economySampleTargetSec:60,economySampleMs:afterSampleMs,economyWindowContaminatedByRepeatDeath,interveningDeathTime:interveningDeath?Number(interveningDeath.tMin):null,enemyObjectiveAfter:enemyObjSoon,enemyStructureAfter:enemyStructureSoon,structureAttribution:enemyStructureSoon?(hasNum(nextEnemyStructure?.x)&&hasNum(nextEnemyStructure?.y)?"nearby_event_position":"same_lane_metadata"):null,traded,highRisk:bad,costly:costlyDeath,severe:severeCostDeath,signals:consequenceSignals,zone:deathZoneNow});
     }
     if(traded)out.tradedDeathCount++;else out.untradedDeathCount++;
     if(bad&&!traded)out.highRiskUntradedDeathCount++;
