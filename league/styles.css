@@ -1656,3 +1656,16 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 @media(max-width:900px){
   .match-history-filter-bar .game-filter-summary{flex-basis:100%;text-align:left}
 }
+
+.benchmark-freshness{
+  display:inline-flex;align-items:center;width:max-content;max-width:100%;margin:0 6px 6px 0;padding:4px 8px;
+  border:1px solid var(--line);border-radius:999px;font-size:.58rem;font-weight:900;letter-spacing:.04em
+}
+.benchmark-freshness.historical{background:#fff3db;border-color:#d8b876;color:#765514}
+.benchmark-freshness.recent{background:#eef7ee;border-color:#9ec59e;color:#315f31}
+.rank-bridge-meta{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.rank-bridge-meta>small{max-width:520px;text-align:right}
+@media(max-width:800px){
+  .rank-bridge-meta{align-items:flex-start}
+  .rank-bridge-meta>small{text-align:left}
+}
