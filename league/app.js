@@ -711,6 +711,7 @@ function renderReport(raw,sourceKind){
   renderQuickRead(r);
   renderRecentPulse(r);
   renderReportDrivers(r);
+  renderEvidenceHealth(r);
   renderKpis(r);
   renderOutcomeFingerprint(r);
   renderRankRadar(r);
@@ -864,6 +865,31 @@ function renderOutcomeFingerprint(r){
   box.innerHTML=cards.map(x=>x.html).join('');
   const usable=cards.filter(x=>hasNum(x.effect)).sort((a,b)=>Number(b.effect)-Number(a.effect)),lead=usable[0];
   if(note)note.innerHTML=lead?'<b>Largest standardized separation:</b> '+esc(lead.label)+' (Hedges g '+esc(fmt(lead.effect,2))+'). The small-sample correction makes unlike units more comparable, but this remains descriptive and is not a causal or significance claim. Coaching cohort: '+wins.length+' wins / '+losses.length+' losses.':'No metric has at least two valid observations in both wins and losses with enough variation for a standardized comparison in the coaching cohort.';
+}
+
+
+function evidenceHealthCard(label,value,detail,status){
+  const stateLabel=status==='ready'?'Ready':status==='limited'?'Limited':'Withheld';
+  return '<article class="evidence-health-card evidence-'+status+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small><b>'+stateLabel+'</b> · '+esc(detail)+'</small></article>';
+}
+function renderEvidenceHealth(r){
+  const box=$('evidenceHealth'),link=$('evidenceHealthLink');if(!box)return;
+  const q=r.dataQuality||{},games=reportCoachingGames(r),n=games.length;
+  const timeline=games.filter(g=>g.timelineAvailable===true).length;
+  const peers=games.filter(g=>trustedDirectPeer(g)).length;
+  const lane15=games.filter(g=>g.timelineAvailable===true&&trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)).length;
+  const exactItems=games.filter(g=>g.timelineAvailable===true&&g.itemCatalogExactPatch===true).length;
+  const mechanicsLimited=q.currentMechanicsKnown===false||q.mixedMechanicsFallback===true||q.mechanicsCohortReason==='current_mechanics_unverified';
+  const status=(count,min)=>count>=min?'ready':count>0?'limited':'withheld';
+  const pct=(count)=>n?fmtPct(100*count/n):'n/a';
+  box.innerHTML=[
+    evidenceHealthCard('Timeline behavior',timeline+'/'+n,pct(timeline)+' of coaching games · directional behavior floor 5',status(timeline,5)),
+    evidenceHealthCard('Trusted role peer',peers+'/'+n,pct(peers)+' of coaching games · direct-peer comparison floor 5',status(peers,5)),
+    evidenceHealthCard('Comparable @15',lane15+'/'+n,pct(lane15)+' with timeline + trusted peer + compatible lane checkpoint',status(lane15,5)),
+    evidenceHealthCard('Mechanics cohort',String(q.mechanicsCohortGames??n)+' games',mechanicsLimited?(q.mechanicsCohortReason==='current_mechanics_unverified'?'newest mechanics revision unverified':'broader/mixed mechanics fallback in use'):(q.mechanicsCohortApplied?'verified current-mechanics cohort applied':'single compatible mechanics context'),mechanicsLimited?'limited':'ready'),
+    evidenceHealthCard('Exact item mechanics',exactItems+'/'+n,pct(exactItems)+' with timeline + exact patch item catalog · item-window floor 4',status(exactItems,4))
+  ].join('');
+  if(link)link.onclick=()=>$('trust-coverage')?.scrollIntoView({behavior:'auto',block:'start'});
 }
 
 function renderKpis(r){
