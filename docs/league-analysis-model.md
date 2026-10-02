@@ -2023,3 +2023,17 @@ Broad groups such as `early-lane` or `objectives-closing` deliberately cover mul
 Narrow key-level fallbacks are allowed only when the grouped theme has a single defensible replay family (for example death-risk, reset-power, mid-routing, teamfights, vision or roaming).
 
 If no replay category is supported by the actual finding, show no matching replay rather than manufacturing a loose connection.
+
+
+## Rate uncertainty
+
+Prominent binomial coaching rates should expose denominator uncertainty rather than only a point estimate. The frontend uses a two-sided **95% Wilson score interval** for supported success/total pairs such as:
+- contested-objective joins / contested encounters,
+- survived active fights / active fight involvements,
+- first-reset economy-loss sequences / clean measured first resets,
+- utilized earlier-item windows / eligible earlier-item windows,
+- early-lead give-backs / measured early-lead opportunities.
+
+The interval is a sampling-uncertainty aid for the observed proportion. It is **not** a confidence score for the coaching interpretation, is not a causal estimate, and does not override the analyzer's minimum evidence floors. A below-threshold card remains neutral even if its point estimate looks extreme.
+
+The visual meter keeps the point estimate and overlays the Wilson interval. Wider intervals make small denominators visibly less certain; narrower intervals reflect more observed opportunities, not stronger causal proof.
