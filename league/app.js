@@ -1273,6 +1273,32 @@ function practiceTargetHtml(target){
     '<small>'+esc(target.rationale||'Self-relative short-term target')+' · based on '+esc(String(target.sampleSize||0))+' relevant observation'+(Number(target.sampleSize||0)===1?'':'s')+'</small></div>';
 }
 
+
+function practiceReplayCategories(theme){
+  const text=[theme?.key,theme?.category,theme?.title].filter(Boolean).join(' ').toLowerCase(),out=[];
+  const add=x=>{if(!out.includes(x))out.push(x);};
+  if(/reset|shop|recall/.test(text)){add('resets');add('item spike');}
+  if(/item|spike|power/.test(text))add('item spike');
+  if(/lane|laning|solo|duel|matchup/.test(text)){add('early lead');add('matchup');}
+  if(/lead|preserv|give.?back/.test(text)){add('early lead');add('lead protection');}
+  if(/objective|setup|dragon|baron|herald|grub/.test(text))add('objective setup');
+  if(/fight|combat|damage|resource|uptime|position/.test(text)){add('teamfights');add('fight selection');}
+  if(/death|recovery|risk|overstay|catch|side.?lane|post.?play/.test(text)){add('death consequences');add('lead protection');}
+  if(/vision|ward|facecheck/.test(text))add('vision safety');
+  if(/roam|rotation/.test(text))add('roaming');
+  return out;
+}
+function practiceReplayItems(r,theme){
+  const cats=practiceReplayCategories(theme),items=Array.isArray(r?.replayReviewQueue)?r.replayReviewQueue:[];
+  return items.filter(x=>cats.includes(String(x.category||'').toLowerCase())).sort((a,b)=>Number(a.rank||999)-Number(b.rank||999)).slice(0,2);
+}
+function practiceReplayHtml(r,theme){
+  const items=practiceReplayItems(r,theme);if(!items.length)return'';
+  return '<div class="practice-replay-links"><b>Review these moments</b>'+items.map(x=>
+    '<div class="practice-replay-link"><span>#'+esc(String(x.rank||''))+' · '+esc(x.champion||'Unknown')+' · '+esc(fmt(x.minute,1))+'m</span><strong>'+esc(x.title||'Replay moment')+'</strong><button class="button secondary small" type="button" data-practice-review-match="'+esc(x.matchId||'')+'" data-practice-review-tab="'+esc(x.tab||'macro')+'">Open evidence</button></div>'
+  ).join('')+'</div>';
+}
+
 function renderPracticePlan(r){
   const source=(r.priorityThemes?.length?r.priorityThemes:r.recentFocus)||[],targets=Array.isArray(r.practiceTargets)?r.practiceTargets:[];
   const focus=source.filter(x=>x&&typeof x==='object'&&x.action).sort((a,b)=>Number(a.priority||9)-Number(b.priority||9)||Number(b.score||0)-Number(a.score||0)).slice(0,3);
@@ -1286,8 +1312,12 @@ function renderPracticePlan(r){
       '<div class="practice-number">'+(i+1)+'</div><div><span>'+esc(x.category||'focus')+'</span><strong>'+esc(x.title||'Practice focus')+'</strong>'+
       '<p>'+esc(x.action)+'</p>'+
       (Array.isArray(x.supportingTitles)&&x.supportingTitles.length>1?'<div class="practice-supporting"><b>Why this is a priority</b>'+x.supportingTitles.slice(0,4).map(t=>'<span>• '+esc(t)+'</span>').join('')+'</div>':'')+
-      practiceTargetHtml(target)+'<small>'+esc(x.comparison||'Last-20 evidence')+' · '+esc(x.confidence||'medium')+' confidence'+(Number(x.supportCount||0)?' · '+esc(String(x.supportCount))+' supporting finding'+(Number(x.supportCount)===1?'':'s'):'')+'</small></div></article>';
+      practiceTargetHtml(target)+practiceReplayHtml(r,x)+
+      '<small>'+esc(x.comparison||'Last-20 evidence')+' · '+esc(x.confidence||'medium')+' confidence'+(Number(x.supportCount||0)?' · '+esc(String(x.supportCount))+' supporting finding'+(Number(x.supportCount)===1?'':'s'):'')+'</small></div></article>';
   }).join('');
+  $('practicePlan').querySelectorAll('[data-practice-review-match]').forEach(btn=>btn.addEventListener('click',()=>{
+    const matchId=btn.dataset.practiceReviewMatch,tab=btn.dataset.practiceReviewTab||'macro';if(matchId)openReplayReviewMatch(matchId,tab);
+  }));
 }
 function openReplayReviewMatch(matchId,tab){
   const games=state.report?.games||[],index=games.findIndex(g=>String(g.matchId)===String(matchId));
