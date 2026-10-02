@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.94";
+const ANALYZER_VERSION="league-web-behavior-v4.95";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1054,10 +1054,10 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any){
     if(ev.itemDisadvantage)out.fightProfile.itemDisadvantageStarts++;
     if(ev.highUnspent&&ev.goldDeficit)out.fightProfile.unspentAndBehindStarts++;
   }
-  if(out.fightProfile.attended>0){
-    out.fightProfile.highUnspentStartRate=100*out.fightProfile.highUnspentStarts/out.fightProfile.attended;
-    out.fightProfile.itemDisadvantageStartRate=100*out.fightProfile.itemDisadvantageStarts/out.fightProfile.attended;
-    out.fightProfile.goldDeficitStartRate=100*out.fightProfile.goldDeficitStarts/out.fightProfile.attended;
+  if(out.fightProfile.active>0){
+    out.fightProfile.highUnspentStartRate=100*out.fightProfile.highUnspentStarts/out.fightProfile.active;
+    out.fightProfile.itemDisadvantageStartRate=100*out.fightProfile.itemDisadvantageStarts/out.fightProfile.active;
+    out.fightProfile.goldDeficitStartRate=100*out.fightProfile.goldDeficitStarts/out.fightProfile.active;
   }
   const duration=Math.max(1,Number(match?.info?.gameDuration||0)/60);out.vision.wardsPer30=out.vision.wardCount/duration*30;
   for(const window of neutralOwnWindows){
@@ -1387,8 +1387,8 @@ function gameJudgments(g:any){
     add(1,"fight selection","Repeated fights are occurring with a local numbers disadvantage",String(g.fightProfile.outnumberedStarts)+" actively involved fight cluster(s) had at least two fewer nearby allies than enemies at the first kill event; "+String(g.fightProfile.lostOutnumberedStarts||0)+" of those clusters ended with more enemy kills.","Before committing to a developing fight, count visible/nearby bodies and identify which teammate can actually arrive in the next few seconds; do not treat distant allies on the minimap as present.");
   }
   if(["ADC","MID","TOP"].includes(String(g.role))&&Number(g.fightProfile?.active??g.fightProfile?.attended??0)>=2){
-    if(Number(g.fightProfile?.firstAllyDeaths)>=2)add(1,"teamfights","You are dying first in repeated multi-kill fights","You were the first allied death in "+String(g.fightProfile.firstAllyDeaths)+" of "+String(g.fightProfile.attended)+" active multi-kill fight clusters.","Delay entry until key enemy threat/CC is committed, preserve your escape route, and prioritize uninterrupted damage time over being the first body in range.");
-    else if(Number(g.fightProfile?.diedBeforeContribution)>=2)add(1,"teamfights","You are being removed before contributing in fights","You died before a tracked kill/assist contribution in "+String(g.fightProfile.diedBeforeContribution)+" of "+String(g.fightProfile.attended)+" active multi-kill fights.","Review fight approach and initial positioning; entering one screen later can be worth more than arriving first.");
+    if(Number(g.fightProfile?.firstAllyDeaths)>=2)add(1,"teamfights","You are dying first in repeated multi-kill fights","You were the first allied death in "+String(g.fightProfile.firstAllyDeaths)+" of "+String(g.fightProfile.active??g.fightProfile.attended??0)+" active multi-kill fight clusters.","Delay entry until key enemy threat/CC is committed, preserve your escape route, and prioritize uninterrupted damage time over being the first body in range.");
+    else if(Number(g.fightProfile?.diedBeforeContribution)>=2)add(1,"teamfights","You are being removed before contributing in fights","You died before a tracked kill/assist contribution in "+String(g.fightProfile.diedBeforeContribution)+" of "+String(g.fightProfile.active??g.fightProfile.attended??0)+" active multi-kill fights.","Review fight approach and initial positioning; entering one screen later can be worth more than arriving first.");
   }
   if(Number(g.killConversion?.windows)>=2){
     if(Number(g.killConversion?.converted)===0)add(2,"conversion","Kill windows did not convert into map value",String(g.killConversion.windows)+" player-involved kill windows were followed by no tracked team objective/structure within 75 seconds.","After a won skirmish, check the nearest objective, structure and wave before chasing another kill or defaulting to a reset.");
