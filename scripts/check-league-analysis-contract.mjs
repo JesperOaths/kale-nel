@@ -368,6 +368,10 @@ ok(backend.includes('shortGameThresholdSeconds:600'), 'short-game threshold must
 ok(backend.includes('opponentMatchupBehaviorModel'), 'repeated opposing-champion matchup model must remain in analyzer');
 ok(backend.includes('buildReplayReviewQueue'), 'replay review queue must remain explicit in analyzer');
 ok(backend.includes('buildPracticeTargets'), 'measurable practice-target builder must remain explicit');
+ok(backend.includes('samplePaths:samplePathsFor(metricPath)')&&backend.includes('"coachingSummary.csMin"')&&backend.includes('"coachingSummary.goldDiff15"'), 'practice targets must preserve denominator paths and coaching-cohort self metrics');
+ok(app.includes('function reportNewMatchCount(')&&app.includes('if(newGames<windowGames)')&&app.includes('if(currentSample<minSample)'), 'practice-target outcomes must fail closed until both new-game horizon and current denominator are satisfied');
+ok(app.includes("if(p==='summary.csMin')return'coachingSummary.csMin'")&&app.includes("if(p==='summary.goldDiff15')return'coachingSummary.goldDiff15'"), 'legacy saved target paths must remain cohort-safe');
+ok(modelDoc.includes('## Next-5 target outcome scoring')&&modelDoc.includes('must not be called met, moving closer, moved away, or unchanged'), 'analysis model must preserve pending target semantics');
 ok(backend.includes('source:"self_relative_short_term"'), 'practice targets must remain explicitly self-relative');
 ok(backend.includes('Number(sampleSize||0)<minSample'), 'practice targets must fail closed on thin evidence');
 ok(backend.includes('windowGames:5'), 'practice targets must remain scoped to a five-game practice horizon');
