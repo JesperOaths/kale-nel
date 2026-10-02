@@ -1104,15 +1104,32 @@ function renderEvidenceHealth(r){
 }
 
 function renderKpis(r){
-  const s=r.coachingSummary||r.summary||{},role=roleLabel(s.primaryRole||r.summary?.primaryRole||state.selectedRole),games=Number(s.games||0);
-  const rows=[
+  const s=r.coachingSummary||r.summary||{},roleKey=canonicalRole(s.primaryRole||r.summary?.primaryRole||state.selectedRole),role=roleLabel(roleKey),games=Number(s.games||0);
+  const common=[
     {label:'Win rate',value:fmtPct(s.winRate),sub:games+' '+role+' coaching games'},
-    {label:'KDA',value:fmt(s.kda,2),sub:'Raw selected-role sample'},
-    {label:'CS / min',value:fmt(s.csMin,2),sub:'Raw selected-role sample'},
-    {label:'Kill participation',value:fmtPct(s.kp),sub:'Raw selected-role sample'},
-    {label:'Damage / min',value:fmtInt(s.dpm),sub:'Raw selected-role sample'},
-    {label:'Deaths / game',value:fmt(s.avgDeaths,1),sub:'Raw selected-role sample · lower is not automatically better'}
+    {label:'KDA',value:fmt(s.kda,2),sub:'Raw selected-role sample'}
   ];
+  const roleRows=roleKey==='SUPPORT'
+    ?[
+      {label:'Kill participation',value:fmtPct(s.kp),sub:'Raw Support sample'},
+      {label:'Vision / min',value:fmt(s.vpm,2),sub:'Raw Support sample · vision volume, not vision quality'},
+      {label:'Assists / game',value:fmt(s.avgAssists,1),sub:'Raw Support sample'},
+      {label:'Deaths / game',value:fmt(s.avgDeaths,1),sub:'Raw Support sample · lower is not automatically better'}
+    ]
+    :roleKey==='JUNGLE'
+      ?[
+        {label:'CS / min',value:fmt(s.csMin,2),sub:'Raw Jungle sample'},
+        {label:'Kill participation',value:fmtPct(s.kp),sub:'Raw Jungle sample'},
+        {label:'Vision / min',value:fmt(s.vpm,2),sub:'Raw Jungle sample · vision volume, not objective control'},
+        {label:'Deaths / game',value:fmt(s.avgDeaths,1),sub:'Raw Jungle sample · lower is not automatically better'}
+      ]
+      :[
+        {label:'CS / min',value:fmt(s.csMin,2),sub:'Raw selected-role sample'},
+        {label:'Kill participation',value:fmtPct(s.kp),sub:'Raw selected-role sample'},
+        {label:'Damage / min',value:fmtInt(s.dpm),sub:'Raw selected-role sample'},
+        {label:'Deaths / game',value:fmt(s.avgDeaths,1),sub:'Raw selected-role sample · lower is not automatically better'}
+      ];
+  const rows=[...common,...roleRows];
   $('kpiGrid').innerHTML=rows.map(x=>'<article class="kpi-card tone-neutral"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><small>'+esc(x.sub)+'</small></article>').join('');
 }
 function comparisonCard(title,delta,unit,scale,inverse,explanation,sample,evidenceReady=true){
