@@ -442,6 +442,10 @@ ok(backend.includes('x-riot-api-key'), 'session Riot-key header must remain supp
 ok(app.includes('practiceTargetHtml'), 'frontend must render measurable practice checkpoints');
 ok(app.includes('previousPracticeTargetOutcomes'), 'frontend must score prior practice targets against later distinct analyses');
 ok(app.includes('function progressComparisonContext(')&&app.includes('overlapping game'), 'development comparison must expose rolling Last-20 sample overlap and turnover');
+ok(html.includes('id="practiceContinuity"')&&app.includes('function practiceContinuityHtml('), 'development reporting must distinguish practice-plan continuity from raw metric movement');
+ok(app.includes('Dropping from the top-three plan is not treated as proof that a problem was solved.'), 'practice focus turnover must remain non-causal and non-resolutionary');
+ok(app.includes("newGames<window")&&app.includes("window=5"), 'practice continuity must disclose when fewer than five genuinely new games support the read');
+ok(modelDoc.includes('## Practice-plan continuity')&&modelDoc.includes('focus set changed'), 'analysis model must preserve practice-continuity semantics');
 ok(app.includes('favorable shift')&&app.includes('unfavorable shift')&&app.includes('Cross-context metric deltas are not treated as development evidence.'), 'progress UI must avoid causal improvement language and fail closed across incompatible contexts');
 ok(app.includes('Stable / smaller shifts')&&app.includes('valid n '), 'progress UI must prioritize material denominator-safe shifts and collapse smaller movement');
 ok(modelDoc.includes('## Rolling progress comparison')&&modelDoc.includes('No rolling comparison should be described as an independent experiment'), 'analysis model must preserve rolling-comparison limitations');
