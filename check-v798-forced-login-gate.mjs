@@ -61,7 +61,11 @@ assert(!worker.includes("if (!noStore) return withPublicSecurityHeaders(await fe
 assert(worker.includes("method === 'HEAD' ? null : response.body"),'HEAD public responses must stay bodyless while GET forwards the origin stream once');
 assert(worker.includes("const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r17'"),'login bootstrap must have an independent public cache identity');
 assert(worker.includes("const PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r13'"),'shop bootstrap must retain its independent public cache identity');
-assert(worker.includes("const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-r3'"),'League bootstrap must have an independent public cache identity');
+assert(worker.includes("const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-r4'"),'League bootstrap must have an independent public cache identity');
+assert(worker.includes("const PUBLIC_CRITICAL_ASSET_BUILD = '20261002-worker-bundle-first-r1'"),'critical public login/shop/League bundle must have an explicit deployment identity');
+assert(worker.includes("headers.set('X-Kalenel-Public-Source','worker-assets')"),'critical public bundle responses must identify Worker-asset delivery');
+assert(worker.includes("if(p.startsWith('/shop/') || p.startsWith('/league/')) return p;"),'all shop and League subsidiary assets must remain eligible for public Worker-bundle delivery');
+assert(worker.includes("const bundled=await publicBundledFirstResponse(request,env,url)"),'critical public bundle path must run before protected redirect logic');
 assert(worker.includes("cacheBustValue = ADMIN_BUILD"),'public origin helper must accept an explicit cache-bust value');
 assert(worker.includes("cacheBustValue: PUBLIC_LEAGUE_ORIGIN_BUILD"),'League document refresh must not inherit the admin build identity');
 assert(worker.includes("cacheBustValue: isShopDocument ? PUBLIC_SHOP_ORIGIN_BUILD : PUBLIC_AUTH_ORIGIN_BUILD"),'shop/login document refreshes must use their own public build identities');
