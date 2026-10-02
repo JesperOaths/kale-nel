@@ -1829,3 +1829,16 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 
 .outcome-fingerprint-card.thin-evidence{border-style:dashed;box-shadow:none}
 .outcome-fingerprint-card.thin-evidence>p{color:var(--muted)}
+
+.cohort-context-grid{display:grid;gap:8px}
+.cohort-context-row{
+  display:grid;grid-template-columns:minmax(120px,.75fr) minmax(0,1fr);gap:3px 12px;
+  padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:#faf8f3
+}
+.cohort-context-row>span{color:var(--muted);font-size:.56rem;text-transform:uppercase;letter-spacing:.06em;font-weight:900}
+.cohort-context-row>strong{justify-self:end;text-align:right;font-size:.7rem}
+.cohort-context-row>small{grid-column:1/-1;color:var(--muted);font-size:.59rem;line-height:1.35}
+@media(max-width:700px){
+  .cohort-context-row{grid-template-columns:1fr}
+  .cohort-context-row>strong{justify-self:start;text-align:left}
+}
