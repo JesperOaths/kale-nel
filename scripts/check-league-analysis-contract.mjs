@@ -102,6 +102,9 @@ ok(backend.includes('phaseComparable!==false'), 'cross-game phase risk must excl
 ok(backend.includes('midRoutingComparable!==false'), 'fixed 15→25 routing must be disabled for accelerated/incompatible rules profiles');
 ok(backend.includes('highRiskDeathsPer10Min'), 'phase-risk comparison must use per-10-minute rates');
 ok(html.includes('id="phase-diagnostic"')&&app.includes('function renderPhaseDiagnostic('), 'frontend must surface the backend phase-normalized risk model as an interpretable diagnostic');
+ok(app.includes("'Late strategic phase'")&&!app.includes("'Late / Baron-era'"), 'phase labels must remain rules-profile neutral rather than assuming one universal Baron era');
+ok(app.includes('first impact vs jungler')&&app.includes('early roam conversion')&&app.includes('vision-action death rate'), 'phase context must adapt to Jungle/Support role evidence');
+ok(modelDoc.includes('## Role-aware phase context')&&modelDoc.includes('Context fields do not change the hotspot calculation'), 'analysis model must preserve role-aware phase context without altering hotspot math');
 ok(app.includes("Number(highTop.high)>=.35&&highGap>=.15")&&app.includes("Number(costTop.costly)>=.30&&costGap>=.12"), 'frontend phase hotspot thresholds must stay aligned with backend coaching rules');
 ok(app.includes("Number(x.games||0)>=5&&Number(x.exposureMinutes||0)>=20"), 'phase diagnostic must fail neutral below minimum compatible exposure');
 ok(modelDoc.includes('## Phase-risk diagnostic')&&modelDoc.includes('Lower-risk phases remain neutral'), 'phase diagnostic semantics must remain documented');
