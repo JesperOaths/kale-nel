@@ -508,7 +508,7 @@ assert.ok(api.includes('conversionEligibleTo15'),'The narrower ≤14m window mus
 assert.ok(app.includes('Plate involvement ≤20m'),'Frontend must describe plate evidence as involvement, not unreliable direct credit');
 assert.ok(app.includes('Team-contested objective presence'),'Frontend must label the primary neutral-objective coaching denominator as team-contested');
 assert.ok(app.includes('Team-secured objective presence'),'Frontend must keep team-secured presence visible as separate context');
-assert.ok(app.includes('Early high-risk deaths / 10m'),'Frontend must expose phase-risk normalization by time');
+assert.ok(app.includes('Early-phase high-risk deaths')&&app.includes('phaseRisk?.early?.highRiskDeathsPer10Min'),'Frontend must expose phase-risk normalization by time');
 assert.ok(app.includes('function reportPhaseRules('),'Per-game phase labels must read the stored queue/rules profile');
 assert.ok(app.includes('Post-macro-transition side-lane deaths'),'Frontend must describe the 14m/12m anchor as a macro transition rather than a literal lane ending');
 assert.ok(app.includes('Side-lane death before team-contested objective'),'Death-pattern language must describe supported contest evidence rather than imply an unseen objective setup process');
