@@ -2154,7 +2154,7 @@ The Support lens uses analyzer-exported evidence only:
 - prior neutral-objective setup presence,
 - team-contested neutral-objective presence.
 
-Use the analyzer's existing evidence floors: 4 roam attempts for roam conversion, 4 measured ADC lane-movement windows for a stable directional interpretation, 12 vision actions for vision-safety interpretation, and 5 supported objective observations for setup/presence rates. Two or more costly roam windows below the four-window floor may be shown as a **review cue**, but must remain visually and textually thin evidence rather than being promoted to a stable negative pattern.
+Use event floors together with game-spread floors: roam conversion needs at least 4 attempts across 3 games; ADC lane movement needs at least 4 measured windows across 3 games; vision safety needs at least 12 actions across 4 games; and objective setup/presence needs at least 5 supported encounters across 3 games. Two or more costly roam windows below the combined window/game floor may be shown as a **review cue**, but must remain visually and textually thin evidence rather than being promoted to a stable negative pattern.
 
 ADC lane movement is the observed change in ADC-vs-ADC CS differential during the detected Support roam window. Positive movement favors the allied ADC; negative movement is lane cost. It is useful opportunity-cost evidence, but it does not prove the Support alone caused every CS change.
 
@@ -2285,7 +2285,7 @@ Compound-intelligence cards must not reintroduce role assumptions that the dedic
 JUNGLE additionally gets **Tempo → objective readiness**, joining direct-jungle first-impact timing with prior objective setup and contested-objective presence. A directional read requires at least 5 comparable impact games, 5 supported setup joins and 5 contested encounters. First-major timing may be displayed as additional context but is not allowed to manufacture readiness when those three core denominators are thin.
 
 SUPPORT additionally gets:
-- **Roam value ↔ ADC lane movement:** at least 4 detected roam attempts and 4 measured ADC-vs-ADC lane-movement windows. This remains association evidence; it does not assign sole causation for ADC CS movement to the Support. Positive movement favors the allied ADC; negative movement is lane cost.
+- **Roam value ↔ ADC lane movement:** at least 4 detected roam attempts across 3 games and 4 measured ADC-vs-ADC lane-movement windows across 3 games. The headline lane-movement value is the mean of per-game means so a roam-heavy match cannot dominate the report. This remains association evidence; it does not assign sole causation for ADC CS movement to the Support. Positive movement favors the allied ADC; negative movement is lane cost.
 - **Vision safety → objective setup:** at least 12 vision actions and 5 joined objective encounters.
 
 Compound cards remain neutral below their joined evidence floors. Combining several weak inputs must never make a role-specific conclusion look mature.
@@ -2488,3 +2488,14 @@ The following per-timeline-game targets use `behaviorSummary.timelineGames` as t
 Pre-objective death percentage uses `classifiedTimelineDeaths`, matching its actual rate denominator. Session Gold @15 targets use the subgroup-specific `lane15Games` counts rather than total subgroup games.
 
 This matters when a target improves toward zero: the target must not become “under-sampled” merely because the unwanted event stopped occurring, and it must not become “well sampled” merely because many bad events happened in a few games.
+
+
+## Event-count plus game-spread evidence
+
+Role coaching that uses pooled opportunities must also disclose and gate on how many games supplied those opportunities. This prevents one event-heavy match from creating a mature-looking cross-game conclusion.
+
+For Support/Mid roaming, directional roam-conversion interpretation needs at least 4 detected attempts spread across at least 3 games. Support ADC lane movement needs at least 4 measured roam windows across at least 3 games. Support vision-action safety needs at least 12 actions across at least 4 games. Prior objective setup and contested-objective presence need at least 5 relevant encounters across at least 3 games when used for Support/Jungle directional coaching.
+
+The analyzer exports `roamAttemptGames`, `supportRoamAdcLaneMovementWindows`, `supportRoamAdcLaneMovementGames`, `visionActionGames`, `objectiveSetupGames`, and `objectiveContestGames`. Saved older reports can derive the same game-spread counts from their per-game ledgers when those aggregate fields are absent.
+
+Support ADC lane movement also exports `meanGameSupportRoamAdcLaneMovementCs`. Prominent cross-game surfaces use this game-weighted mean, while the legacy pooled-window average remains available for compatibility and technical inspection.
