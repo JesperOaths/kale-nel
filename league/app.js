@@ -1960,8 +1960,8 @@ function roleArcObjectiveStage(g){
   if(g?.timelineAvailable!==true)return {key:'objective_unavailable',label:'Objective setup',tone:'neutral',value:'Timeline unavailable',copy:'Objective setup sequencing cannot be reconstructed without timeline evidence.'};
   const obj=g?.objectiveReadiness||{},joined=Number(obj.joined||0),early=Number(obj.earlySetupJoins||0),contested=Number(obj.contestedObjectives||0),contestedJoined=Number(obj.contestedJoined||0),setupRate=joined?100*early/joined:null;
   if(!joined&&!contested)return {key:'objective_no_sample',label:'Objective setup',tone:'neutral',value:'No supported objective sample',copy:'No joined or team-contested neutral-objective encounter is available for this match.'};
-  const presence=contested?100*contestedJoined/contested:null,tone=joined>=2&&setupRate!=null?(setupRate>=60?'good':setupRate<40?'bad':'neutral'):'neutral';
-  return {key:'objective_'+(setupRate==null?'unknown':setupRate>=60?'early':setupRate<40?'late':'mixed'),label:'Objective setup',tone,value:(setupRate==null?'Prior setup n/a':fmtPct(setupRate)+' prior setup')+(presence!=null?' · '+fmtPct(presence)+' contested presence':''),copy:'Prior setup means supported position near the objective 45–105 seconds before the event; presence and setup are descriptive event evidence.'};
+  const presence=contested?100*contestedJoined/contested:null,tone=joined>=2&&setupRate!=null?(setupRate>=70?'good':setupRate<45?'bad':'neutral'):'neutral';
+  return {key:'objective_'+(setupRate==null?'unknown':setupRate>=70?'early':setupRate<45?'late':'mixed'),label:'Objective setup',tone,value:(setupRate==null?'Prior setup n/a':fmtPct(setupRate)+' prior setup')+(presence!=null?' · '+fmtPct(presence)+' contested presence':''),copy:'Prior setup means supported position near the objective 45–105 seconds before the event; presence and setup are descriptive event evidence.'};
 }
 function roleArcTeamplayStage(g){
   if(g?.timelineAvailable!==true)return {key:'teamplay_unavailable',label:'Teamplay',tone:'neutral',value:'Timeline unavailable',copy:'Fight/risk sequencing cannot be reconstructed without timeline evidence.'};
@@ -1979,8 +1979,8 @@ function supportGameArcStages(g){
   const stages=[],roams=g?.roams||{},attempts=Number(roams.attempts||0),successes=Number(roams.successes||0),rate=attempts?100*successes/attempts:null,laneCost=perGameSupportAdcLaneCost(g);
   let tone='neutral',value='No measured early roam',copy='No supported early roam departure was detected in this match.',key='support_roam_none';
   if(attempts>0){
-    if(rate>=60&&(laneCost==null||laneCost>=-4)){tone='good';key='support_roam_value';value=fmtPct(rate)+' roam conversion';}
-    else if(rate<50&&laneCost!=null&&laneCost<=-6){tone='bad';key='support_roam_cost';value=fmtPct(rate)+' conversion · '+signed(laneCost,1)+' ADC CS';}
+    if(rate>=65&&(laneCost==null||laneCost>=-2)){tone='good';key='support_roam_value';value=fmtPct(rate)+' roam conversion';}
+    else if(rate<45&&laneCost!=null&&laneCost<=-6){tone='bad';key='support_roam_cost';value=fmtPct(rate)+' conversion · '+signed(laneCost,1)+' ADC CS';}
     else{key='support_roam_mixed';value=fmtPct(rate)+' roam conversion'+(laneCost!=null?' · '+signed(laneCost,1)+' ADC CS':'');}
     copy='Roam return and ADC-vs-ADC lane-cost movement are shown together; the CS change is associated with the roam window, not attributed solely to Support movement.';
   }
@@ -2186,10 +2186,10 @@ function roleSequenceArc(g){
   if(role==='SUPPORT'){
     const roamAttempts=Number(g?.roams?.attempts||0),roamSuccesses=Number(g?.roams?.successes||0),roamRate=roamAttempts?100*roamSuccesses/roamAttempts:null,laneCost=perGameSupportAdcLaneCost(g);
     let roamKey='roam_unknown',roamLabel='Roam evidence thin',known=0;
-    if(roamAttempts>0){known++;if(roamRate>=60&&(laneCost==null||laneCost>=-4)){roamKey='roam_value';roamLabel='Roam value preserved';}else if(roamRate<50&&laneCost!=null&&laneCost<=-6){roamKey='roam_cost';roamLabel='Roam cost without return';}else{roamKey='roam_mixed';roamLabel='Mixed roam return';}}
+    if(roamAttempts>0){known++;if(roamRate>=65&&(laneCost==null||laneCost>=-2)){roamKey='roam_value';roamLabel='Roam value preserved';}else if(roamRate<45&&laneCost!=null&&laneCost<=-6){roamKey='roam_cost';roamLabel='Roam cost without return';}else{roamKey='roam_mixed';roamLabel='Mixed roam return';}}
     const joined=Number(g?.objectiveReadiness?.joined||0),early=Number(g?.objectiveReadiness?.earlySetupJoins||0),setupRate=joined?100*early/joined:null;
     let setupKey='setup_unknown',setupLabel='Setup evidence thin';
-    if(joined>0){known++;if(setupRate>=60){setupKey='setup_early';setupLabel='Early objective setup';}else if(setupRate<40){setupKey='setup_late';setupLabel='Late/no prior setup';}else{setupKey='setup_mixed';setupLabel='Mixed setup timing';}}
+    if(joined>0){known++;if(setupRate>=70){setupKey='setup_early';setupLabel='Early objective setup';}else if(setupRate<45){setupKey='setup_late';setupLabel='Late/no prior setup';}else{setupKey='setup_mixed';setupLabel='Mixed setup timing';}}
     const visionActions=Number(g?.visionMission?.actions||0),visionRisk=Number(g?.visionMission?.highRiskDeaths||0);
     let safetyKey='vision_unknown',safetyLabel='Vision safety thin';
     if(visionActions>0){known++;if(visionRisk>0){safetyKey='vision_risk';safetyLabel='High-risk vision death';}else{safetyKey='vision_safe';safetyLabel='No high-risk vision death';}}
@@ -2203,7 +2203,7 @@ function roleSequenceArc(g){
     let impactKey='impact_unknown',impactLabel='Impact timing thin';
     if(impact!=null){known++;if(impact<=-1.5){impactKey='impact_early';impactLabel='Earlier first impact';}else if(impact>=1.5){impactKey='impact_late';impactLabel='Later first impact';}else{impactKey='impact_close';impactLabel='Similar first-impact timing';}}
     let setupKey='setup_unknown',setupLabel='Setup evidence thin';
-    if(joined>0){known++;if(setupRate>=60){setupKey='setup_early';setupLabel='Early objective setup';}else if(setupRate<40){setupKey='setup_late';setupLabel='Late/no prior setup';}else{setupKey='setup_mixed';setupLabel='Mixed setup timing';}}
+    if(joined>0){known++;if(setupRate>=70){setupKey='setup_early';setupLabel='Early objective setup';}else if(setupRate<45){setupKey='setup_late';setupLabel='Late/no prior setup';}else{setupKey='setup_mixed';setupLabel='Mixed setup timing';}}
     if(known<2)return null;
     return{key:['jungle',farmKey,impactKey,setupKey].join('|'),label:[farmLabel,impactLabel,setupLabel].join(' → '),role,known};
   }
