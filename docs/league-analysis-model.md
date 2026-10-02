@@ -2477,3 +2477,14 @@ A full in-memory rerun of both League source-contract suites exposed stale asser
 - **Support roam sign semantics:** the stored legacy field name contains “cost,” but its value is signed ADC-vs-ADC CS-differential movement. Positive movement favors the allied ADC; negative movement is cost. Prominent UI copy therefore says **lane movement** and reserves **cost/costly** for negative windows.
 
 These repairs do not change historical stored field names; they correct eligibility, evidence denominators and interpretation at analysis/presentation boundaries.
+
+
+## Next-5 practice target denominator integrity
+
+Saved practice targets must carry sample paths that match the metric they score. Event counts may be useful supporting evidence, but they cannot replace a game denominator for a per-game metric.
+
+The following per-timeline-game targets use `behaviorSummary.timelineGames` as their sample path and generation sample: high-risk post-play give-backs/game, high-risk deaths while behind/game, high-risk deaths while ahead/game, costly deaths/game, high-risk deaths/game, and pre-objective side-lane deaths/game. The analyzer exports `behaviorSummary.timelineGames` directly from the current mechanics coaching cohort.
+
+Pre-objective death percentage uses `classifiedTimelineDeaths`, matching its actual rate denominator. Session Gold @15 targets use the subgroup-specific `lane15Games` counts rather than total subgroup games.
+
+This matters when a target improves toward zero: the target must not become “under-sampled” merely because the unwanted event stopped occurring, and it must not become “well sampled” merely because many bad events happened in a few games.
