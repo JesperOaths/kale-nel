@@ -192,10 +192,6 @@ assert.ok(behaviorStart>=0&&behaviorEnd>behaviorStart,'Behavior summary export b
 const behaviorExport=api.slice(behaviorStart,behaviorEnd);
 for(const field of [
   'phaseRisk','midRouting','closing25','deathTradeRate','highRiskUntradedDeaths','highRiskUntradedPerGame',
-assert.ok(app.includes("'Late strategic phase'")&&!app.includes("'Late / Baron-era'"),'Phase diagnostic must avoid a universal Baron-era label across differing verified rules profiles');
-assert.ok(app.includes("role==='JUNGLE'")&&app.includes('first impact vs jungler')&&app.includes('contested objective presence'),'JUNGLE phase context must use tempo/objective evidence rather than laner-only context');
-assert.ok(app.includes("role==='SUPPORT'")&&app.includes('early roam conversion')&&app.includes('vision-action death rate'),'SUPPORT phase context must use roam/vision/setup evidence rather than laner-only context');
-assert.ok(modelDoc.includes('## Role-aware phase context')&&modelDoc.includes('Context fields do not change the hotspot calculation'),'Role-aware phase interpretation must remain documented without changing phase hotspot math');
   'measuredDeathConsequences','costlyDeathEvents','severeDeathEvents','costlyDeathRate','costlyDeathsPerTimelineGame','severeDeathsPerTimelineGame','avgGoldSwingAfterDeath','avgCsSwingAfterDeath',
   'repeatDeathOpportunities','repeatDeaths','repeatDeathRate','highRiskRepeatDeaths','costlyRepeatDeaths','opponentRepeatDeathRate','repeatDeathRateDelta',
   'earlyLeadGames','earlyLeadGivebackGames','earlyLeadGivebackRate','avgEarlyLeadPeakGold','avgEarlyLeadGoldSwingTo15','earlyLeadGivebackDeaths','earlyLeadGivebackHighRiskDeaths',
@@ -207,6 +203,10 @@ assert.ok(modelDoc.includes('## Role-aware phase context')&&modelDoc.includes('C
   'neutralObjectiveEvents','earlySetupObjectiveJoinRate','earlySetupObjectiveCoverageRate','lateResetObjectiveMissRate','freshPurchaseObjectiveJoinRate',
   'objectiveSetupWardRate','objectiveSetupWardRateDelta','visionActions','visionActionDeaths','visionActionDeathRate','highRiskVisionActionDeaths','highRiskVisionActionDeathsPerGame','unsupportedVisionActionDeaths','damageGoldEfficiency'
 ])assert.ok(behaviorExport.includes(field),'Behavior summary must export '+field);
+assert.ok(app.includes("'Late strategic phase'")&&!app.includes("'Late / Baron-era'"),'Phase diagnostic must avoid a universal Baron-era label across differing verified rules profiles');
+assert.ok(app.includes("role==='JUNGLE'")&&app.includes('first impact vs jungler')&&app.includes('contested objective presence'),'JUNGLE phase context must use tempo/objective evidence rather than laner-only context');
+assert.ok(app.includes("role==='SUPPORT'")&&app.includes('early roam conversion')&&app.includes('vision-action death rate'),'SUPPORT phase context must use roam/vision/setup evidence rather than laner-only context');
+assert.ok(modelDoc.includes('## Role-aware phase context')&&modelDoc.includes('Context fields do not change the hotspot calculation'),'Role-aware phase interpretation must remain documented without changing phase hotspot math');
 assert.ok(api.includes('objectiveDiagnosis'));
 assert.ok(api.includes('sessionBehaviorModel'));
 assert.ok(api.includes('highRiskLeadDeathsPerGame'));
