@@ -712,3 +712,6 @@ ok(modelDoc.includes('## Role-aware evidence health'), 'analysis documentation m
 ok(app.includes("comparisonCard('Vision/min vs Support'")&&app.includes("comparisonCard('Objective setup wards vs Support'"), 'Support Direct-role comparison must remain role-specific');
 ok(!app.includes('No comparable @15 Support gold checkpoint is available.'), 'Support Quick Read must not regress to carry-style @15 gold coaching');
 ok(modelDoc.includes('## Support Quick Read role safety'), 'analysis documentation must preserve Support Quick Read role safety');
+ok(app.includes("roleKey==='SUPPORT'")&&app.includes("Raw Support sample · vision volume, not vision quality")&&app.includes("{label:'Assists / game',value:fmt(s.avgAssists,1)"), 'Support KPI strip must remain role-aware and neutral');
+ok(app.includes("roleKey==='JUNGLE'")&&app.includes("Raw Jungle sample · vision volume, not objective control"), 'Jungle KPI strip must expose role-relevant raw vision context');
+ok(modelDoc.includes('## Role-aware raw KPI strip'), 'analysis documentation must preserve role-aware raw KPI semantics');
