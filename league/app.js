@@ -2132,30 +2132,89 @@ function matchReplayReviewHtml(r,g){
   ).join('')+'</div>';
 }
 
+function roleSequenceArc(g){
+  const role=canonicalRole(g?.role),peerOk=trustedDirectPeer(g);
+  if(role==='SUPPORT'){
+    const roamAttempts=Number(g?.roams?.attempts||0),roamSuccesses=Number(g?.roams?.successes||0),roamRate=roamAttempts?100*roamSuccesses/roamAttempts:null,laneCost=perGameSupportAdcLaneCost(g);
+    let roamKey='roam_unknown',roamLabel='Roam evidence thin',known=0;
+    if(roamAttempts>0){known++;if(roamRate>=60&&(laneCost==null||laneCost>=-4)){roamKey='roam_value';roamLabel='Roam value preserved';}else if(roamRate<50&&laneCost!=null&&laneCost<=-6){roamKey='roam_cost';roamLabel='Roam cost without return';}else{roamKey='roam_mixed';roamLabel='Mixed roam return';}}
+    const joined=Number(g?.objectiveReadiness?.joined||0),early=Number(g?.objectiveReadiness?.earlySetupJoins||0),setupRate=joined?100*early/joined:null;
+    let setupKey='setup_unknown',setupLabel='Setup evidence thin';
+    if(joined>0){known++;if(setupRate>=60){setupKey='setup_early';setupLabel='Early objective setup';}else if(setupRate<40){setupKey='setup_late';setupLabel='Late/no prior setup';}else{setupKey='setup_mixed';setupLabel='Mixed setup timing';}}
+    const visionActions=Number(g?.visionMission?.actions||0),visionRisk=Number(g?.visionMission?.highRiskDeaths||0);
+    let safetyKey='vision_unknown',safetyLabel='Vision safety thin';
+    if(visionActions>0){known++;if(visionRisk>0){safetyKey='vision_risk';safetyLabel='High-risk vision death';}else{safetyKey='vision_safe';safetyLabel='No high-risk vision death';}}
+    if(known<2)return null;
+    return{key:['support',roamKey,setupKey,safetyKey].join('|'),label:[roamLabel,setupLabel,safetyLabel].join(' → '),role,known};
+  }
+  if(role==='JUNGLE'){
+    const cs=peerOk&&hasNum(g?.peer?.csMinDelta)?Number(g.peer.csMinDelta):null,impact=peerOk&&hasNum(g?.impactDeltaVsOpponent)?Number(g.impactDeltaVsOpponent):null,joined=Number(g?.objectiveReadiness?.joined||0),early=Number(g?.objectiveReadiness?.earlySetupJoins||0),setupRate=joined?100*early/joined:null;
+    let known=0,farmKey='farm_unknown',farmLabel='Farm peer evidence thin';
+    if(cs!=null){known++;if(cs>.15){farmKey='farm_ahead';farmLabel='Farm ahead of Jungle peer';}else if(cs<-.15){farmKey='farm_behind';farmLabel='Farm behind Jungle peer';}else{farmKey='farm_close';farmLabel='Farm close to Jungle peer';}}
+    let impactKey='impact_unknown',impactLabel='Impact timing thin';
+    if(impact!=null){known++;if(impact<=-1.5){impactKey='impact_early';impactLabel='Earlier first impact';}else if(impact>=1.5){impactKey='impact_late';impactLabel='Later first impact';}else{impactKey='impact_close';impactLabel='Similar first-impact timing';}}
+    let setupKey='setup_unknown',setupLabel='Setup evidence thin';
+    if(joined>0){known++;if(setupRate>=60){setupKey='setup_early';setupLabel='Early objective setup';}else if(setupRate<40){setupKey='setup_late';setupLabel='Late/no prior setup';}else{setupKey='setup_mixed';setupLabel='Mixed setup timing';}}
+    if(known<2)return null;
+    return{key:['jungle',farmKey,impactKey,setupKey].join('|'),label:[farmLabel,impactLabel,setupLabel].join(' → '),role,known};
+  }
+  return null;
+}
+function gameArcDescriptor(g){
+  return ['SUPPORT','JUNGLE'].includes(canonicalRole(g?.role))?roleSequenceArc(g):gameArcTransition(g);
+}
+function roleSequenceCoverageHtml(role,games){
+  if(role==='SUPPORT'){
+    const roam=games.filter(g=>Number(g?.roams?.attempts||0)>0).length,setup=games.filter(g=>Number(g?.objectiveReadiness?.joined||0)>0).length,vision=games.filter(g=>Number(g?.visionMission?.actions||0)>0).length;
+    return '<div class="game-arc-funnel-grid">'+
+      '<article class="game-arc-funnel tone-neutral"><span>Roam evidence</span><strong>'+roam+' / '+games.length+' games</strong><p>Detected early roam attempts with supported outcome context.</p></article>'+
+      '<article class="game-arc-funnel tone-neutral"><span>Objective setup evidence</span><strong>'+setup+' / '+games.length+' games</strong><p>Games with joined neutral-objective encounters that can support prior-setup timing.</p></article>'+
+      '<article class="game-arc-funnel tone-neutral"><span>Vision safety evidence</span><strong>'+vision+' / '+games.length+' games</strong><p>Games with tracked ward placement/clear actions for vision-risk context.</p></article>'+
+    '</div>';
+  }
+  const farm=games.filter(g=>trustedDirectPeer(g)&&hasNum(g?.peer?.csMinDelta)).length,impact=games.filter(g=>trustedDirectPeer(g)&&hasNum(g?.impactDeltaVsOpponent)).length,setup=games.filter(g=>Number(g?.objectiveReadiness?.joined||0)>0).length;
+  return '<div class="game-arc-funnel-grid">'+
+    '<article class="game-arc-funnel tone-neutral"><span>Jungle farm peer evidence</span><strong>'+farm+' / '+games.length+' games</strong><p>Games with high-confidence direct-jungle CS/min comparison.</p></article>'+
+    '<article class="game-arc-funnel tone-neutral"><span>First-impact evidence</span><strong>'+impact+' / '+games.length+' games</strong><p>Games with comparable first tracked impact timing versus the enemy Jungler.</p></article>'+
+    '<article class="game-arc-funnel tone-neutral"><span>Objective setup evidence</span><strong>'+setup+' / '+games.length+' games</strong><p>Games with joined neutral-objective encounters that can support prior-setup timing.</p></article>'+
+  '</div>';
+}
+
 function renderGameArcs(r){
   const funnelBox=$('gameArcFunnels'),patternBox=$('gameArcPatterns'),turnBox=$('gameArcTurningPoints'),note=$('gameArcNote');if(!funnelBox||!patternBox||!turnBox)return;
-  const games=reportCoachingGames(r),transitions=games.map(g=>({g,t:gameArcTransition(g)})).filter(x=>x.t);
-  const by15={ahead:games.filter(g=>arcRoleGoldState(g,15).key==='ahead'),close:games.filter(g=>arcRoleGoldState(g,15).key==='close'),behind:games.filter(g=>arcRoleGoldState(g,15).key==='behind')};
-  const transFor=key=>transitions.filter(x=>x.t.from.key===key);
-  funnelBox.innerHTML='<div class="section-subhead"><strong>Advantage conversion</strong><span>What happens after the @15 role state?</span></div><div class="game-arc-funnel-grid">'+
-    arcFunnelCard('ahead','Ahead @15',by15.ahead,transFor('ahead'))+
-    arcFunnelCard('close','Close @15',by15.close,transFor('close'))+
-    arcFunnelCard('behind','Behind @15',by15.behind,transFor('behind'))+
-  '</div><div class="section-subhead arc-repeat-head"><strong>Repeated @15 → @25 transitions</strong><span>Only shown when the same transition appears in at least 2 games</span></div>';
-  const groups=new Map();
-  transitions.forEach(({g,t})=>{
-    const row=groups.get(t.key)||{key:t.key,label:t.label,games:[],swings:[]};
-    row.games.push(g);row.swings.push(t.swing);groups.set(t.key,row);
-  });
-  const repeated=[...groups.values()].filter(x=>x.games.length>=2).sort((a,b)=>b.games.length-a.games.length||String(a.label).localeCompare(String(b.label))).slice(0,6);
-  patternBox.innerHTML=repeated.length?repeated.map(x=>{
-    const wins=x.games.filter(g=>g.win).length,wr=100*wins/x.games.length,avgSwing=x.swings.reduce((a,b)=>a+b,0)/x.swings.length,lateRiskGames=x.games.filter(g=>Number(g.closing25?.highRiskDeaths||0)>0||Number(g.closing25?.costlyDeaths||0)>0).length;
-    return '<article class="game-arc-pattern"><span>Repeated transition · '+x.games.length+' games</span><strong>'+esc(x.label)+'</strong><div class="arc-pattern-stats"><b>'+esc(fmtPct(wr))+' wins</b><b>'+esc(signed(avgSwing,0))+'g avg 15→25 swing</b><b>'+lateRiskGames+' late-risk game'+(lateRiskGames===1?'':'s')+'</b></div><p>Outcome and risk are shown as context. The transition itself is direct-role gold state, not whole-team game state.</p><button class="button secondary small arc-review-button" type="button" data-review-arc="'+esc(x.key)+'">Review these '+x.games.length+' games</button></article>';
-  }).join(''):'<div class="bullet empty">No @15→@25 role-state transition repeats at least twice inside the current coaching cohort yet.</div>';
-  patternBox.querySelectorAll('[data-review-arc]').forEach(btn=>btn.addEventListener('click',()=>{
-    state.matchHistoryArcKey=String(btn.dataset.reviewArc||'');state.matchHistoryFilter='arc';state.matchHistoryLimit=10;renderMatchHistory(r);
-    $('match-history')?.scrollIntoView({behavior:'auto',block:'start'});
-  }));
+  const games=reportCoachingGames(r),role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),roleSequence=['SUPPORT','JUNGLE'].includes(role);
+  if(roleSequence){
+    const descriptors=games.map(g=>({g,t:roleSequenceArc(g)})).filter(x=>x.t),groups=new Map();
+    descriptors.forEach(({g,t})=>{const row=groups.get(t.key)||{key:t.key,label:t.label,games:[]};row.games.push(g);groups.set(t.key,row);});
+    const repeated=[...groups.values()].filter(x=>x.games.length>=2).sort((a,b)=>b.games.length-a.games.length||String(a.label).localeCompare(String(b.label))).slice(0,6);
+    funnelBox.innerHTML='<div class="section-subhead"><strong>'+esc(roleLabel(role))+' sequence coverage</strong><span>Role-relevant evidence replaces the carry-lane @15→@25 gold funnel</span></div>'+roleSequenceCoverageHtml(role,games)+'<div class="section-subhead arc-repeat-head"><strong>Repeated '+esc(roleLabel(role))+' sequences</strong><span>Only shown when the same role-specific sequence appears in at least 2 games</span></div>';
+    patternBox.innerHTML=repeated.length?repeated.map(x=>{
+      const wins=x.games.filter(g=>g.win).length,wr=100*wins/x.games.length,timeline=x.games.filter(g=>g.timelineAvailable===true).length;
+      return '<article class="game-arc-pattern"><span>Repeated role sequence · '+x.games.length+' games</span><strong>'+esc(x.label)+'</strong><div class="arc-pattern-stats"><b>'+esc(fmtPct(wr))+' wins</b><b>'+timeline+'/'+x.games.length+' timelines</b></div><p>This sequence combines role-relevant supported states. Outcome is context only; the sequence is not treated as a cause of the result.</p><button class="button secondary small arc-review-button" type="button" data-review-arc="'+esc(x.key)+'">Review these '+x.games.length+' games</button></article>';
+    }).join(''):'<div class="bullet empty">No '+esc(roleLabel(role))+' role sequence repeats at least twice with enough supported components yet.</div>';
+    patternBox.querySelectorAll('[data-review-arc]').forEach(btn=>btn.addEventListener('click',()=>{
+      state.matchHistoryArcKey=String(btn.dataset.reviewArc||'');state.matchHistoryFilter='arc';state.matchHistoryLimit=10;renderMatchHistory(r);
+      $('match-history')?.scrollIntoView({behavior:'auto',block:'start'});
+    }));
+  }else{
+    const transitions=games.map(g=>({g,t:gameArcTransition(g)})).filter(x=>x.t),by15={ahead:games.filter(g=>arcRoleGoldState(g,15).key==='ahead'),close:games.filter(g=>arcRoleGoldState(g,15).key==='close'),behind:games.filter(g=>arcRoleGoldState(g,15).key==='behind')},transFor=key=>transitions.filter(x=>x.t.from.key===key);
+    funnelBox.innerHTML='<div class="section-subhead"><strong>Advantage conversion</strong><span>What happens after the @15 role state?</span></div><div class="game-arc-funnel-grid">'+
+      arcFunnelCard('ahead','Ahead @15',by15.ahead,transFor('ahead'))+
+      arcFunnelCard('close','Close @15',by15.close,transFor('close'))+
+      arcFunnelCard('behind','Behind @15',by15.behind,transFor('behind'))+
+    '</div><div class="section-subhead arc-repeat-head"><strong>Repeated @15 → @25 transitions</strong><span>Only shown when the same transition appears in at least 2 games</span></div>';
+    const groups=new Map();
+    transitions.forEach(({g,t})=>{const row=groups.get(t.key)||{key:t.key,label:t.label,games:[],swings:[]};row.games.push(g);row.swings.push(t.swing);groups.set(t.key,row);});
+    const repeated=[...groups.values()].filter(x=>x.games.length>=2).sort((a,b)=>b.games.length-a.games.length||String(a.label).localeCompare(String(b.label))).slice(0,6);
+    patternBox.innerHTML=repeated.length?repeated.map(x=>{
+      const wins=x.games.filter(g=>g.win).length,wr=100*wins/x.games.length,avgSwing=x.swings.reduce((a,b)=>a+b,0)/x.swings.length,lateRiskGames=x.games.filter(g=>Number(g.closing25?.highRiskDeaths||0)>0||Number(g.closing25?.costlyDeaths||0)>0).length;
+      return '<article class="game-arc-pattern"><span>Repeated transition · '+x.games.length+' games</span><strong>'+esc(x.label)+'</strong><div class="arc-pattern-stats"><b>'+esc(fmtPct(wr))+' wins</b><b>'+esc(signed(avgSwing,0))+'g avg 15→25 swing</b><b>'+lateRiskGames+' late-risk game'+(lateRiskGames===1?'':'s')+'</b></div><p>Outcome and risk are shown as context. The transition itself is direct-role gold state, not whole-team game state.</p><button class="button secondary small arc-review-button" type="button" data-review-arc="'+esc(x.key)+'">Review these '+x.games.length+' games</button></article>';
+    }).join(''):'<div class="bullet empty">No @15→@25 role-state transition repeats at least twice inside the current coaching cohort yet.</div>';
+    patternBox.querySelectorAll('[data-review-arc]').forEach(btn=>btn.addEventListener('click',()=>{
+      state.matchHistoryArcKey=String(btn.dataset.reviewArc||'');state.matchHistoryFilter='arc';state.matchHistoryLimit=10;renderMatchHistory(r);
+      $('match-history')?.scrollIntoView({behavior:'auto',block:'start'});
+    }));
+  }
 
   const timelineGames=games.filter(g=>g.timelineAvailable===true);
   const turning=ARC_TURNING_POINT_DEFS.map(d=>{
@@ -2168,9 +2227,10 @@ function renderGameArcs(r){
       const association=x.associationReady?('Win rate '+fmtPct(x.withWr)+' with vs '+fmtPct(x.withoutWr)+' without · '+signed(x.winRateDelta,1)+' pp'):(fmtPct(x.withWr)+' wins in '+x.count+' games with signal · comparison withheld ('+x.withoutCount+' without)');
       return '<article class="arc-turning-card tone-'+x.tone+'"><span>'+x.count+' / '+timelineGames.length+' timeline games</span><strong>'+esc(x.label)+'</strong><p>'+esc(x.why)+'</p><small>'+esc(association)+' · descriptive association only, not causation</small></article>';
     }).join('')+'</div>':'<div class="bullet empty">No defined turning-point signal repeats in at least two coaching-cohort games.</div>');
-  if(note)note.textContent='Coaching cohort: '+games.length+' games · comparable @15→@25 transitions: '+transitions.length+'. Turning-point counts are games containing supported evidence, not raw event totals. Older-mechanics context-only games are excluded when the backend applies a mechanics cohort.';
+  if(note)note.textContent=roleSequence
+    ?'Coaching cohort: '+games.length+' '+roleLabel(role)+' games. Aggregate arc patterns use role-specific supported sequences instead of carry-lane gold states. Turning-point counts are games containing supported evidence, not raw event totals.'
+    :'Coaching cohort: '+games.length+' games · comparable @15→@25 transitions: '+games.filter(g=>gameArcTransition(g)).length+'. Turning-point counts are games containing supported evidence, not raw event totals. Older-mechanics context-only games are excluded when the backend applies a mechanics cohort.';
 }
-
 function matchHistoryLaneState(g){
   if(!trustedDirectPeer(g))return {tone:'neutral',label:'Peer withheld',copy:'The direct-role opponent could not be resolved with high-confidence Riot role evidence, so role-relative @15 coaching is withheld.'};
   if(g?.phaseRules?.lane15Comparable===false||!hasNum(g.goldDiff15))return {tone:'neutral',label:'@15 unavailable',copy:'No role-comparable 15-minute gold checkpoint is available for this game.'};
@@ -2235,7 +2295,7 @@ function matchHistoryRow(g,index,displayIndex,r){
 }
 function renderMatchHistory(r){
   const list=$('matchHistoryList'),summary=$('matchHistorySummary'),toggle=$('matchHistoryToggle'),filters=$('matchHistoryFilters'),filterSummary=$('matchHistoryFilterSummary');if(!list||!summary)return;
-  const sourceGames=r.games||[],reviewIds=new Set((Array.isArray(r.replayReviewQueue)?r.replayReviewQueue:[]).map(x=>String(x.matchId||'')).filter(Boolean)),priorityIds=currentPriorityReplayIds(r),arcKey=String(state.matchHistoryArcKey||''),arcGames=arcKey?sourceGames.filter(g=>gameArcTransition(g)?.key===arcKey):[],arcLabel=arcGames.length?(gameArcTransition(arcGames[0])?.label||'Selected game arc'):'Selected game arc',objectiveFamilyKey=String(state.matchHistoryObjectiveFamilyKey||''),objectiveFamilyIds=objectiveFamilyKey?objectiveFamilyMatchIds(r,objectiveFamilyKey):new Set(),objectiveFamilyLabelText=objectiveFamilyKey?objectiveFamilyLabel(objectiveFamilyKey):'Objective family';
+  const sourceGames=r.games||[],reviewIds=new Set((Array.isArray(r.replayReviewQueue)?r.replayReviewQueue:[]).map(x=>String(x.matchId||'')).filter(Boolean)),priorityIds=currentPriorityReplayIds(r),arcKey=String(state.matchHistoryArcKey||''),arcGames=arcKey?sourceGames.filter(g=>gameArcDescriptor(g)?.key===arcKey):[],arcLabel=arcGames.length?(gameArcDescriptor(arcGames[0])?.label||'Selected game arc'):'Selected game arc',objectiveFamilyKey=String(state.matchHistoryObjectiveFamilyKey||''),objectiveFamilyIds=objectiveFamilyKey?objectiveFamilyMatchIds(r,objectiveFamilyKey):new Set(),objectiveFamilyLabelText=objectiveFamilyKey?objectiveFamilyLabel(objectiveFamilyKey):'Objective family';
   const counts={
     all:sourceGames.length,
     win:sourceGames.filter(g=>g.win).length,
@@ -2260,7 +2320,7 @@ function renderMatchHistory(r){
     if(filter==='risk')return g.timelineAvailable===true&&(Number(g.badDeathCount||0)>0||Number(g.deathConsequences?.costly||0)>0);
     if(filter==='review')return reviewIds.has(String(g.matchId||''));
     if(filter==='priority')return priorityIds.has(String(g.matchId||''));
-    if(filter==='arc')return gameArcTransition(g)?.key===arcKey;
+    if(filter==='arc')return gameArcDescriptor(g)?.key===arcKey;
     if(filter==='objective-family')return objectiveFamilyIds.has(String(g.matchId||''));
     return true;
   };
