@@ -1646,3 +1646,13 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
   border-style:dashed;box-shadow:none;background:#fbf9f5
 }
 .progress-comparison-card.pending-target>strong{color:var(--muted)}
+
+.match-history-filter-bar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  margin:0 0 12px;padding:10px 11px;border:1px solid var(--line);border-radius:13px;background:#faf8f3
+}
+.match-history-filter-bar .game-filter-chips{flex:1 1 720px}
+.match-history-filter-bar .game-filter-summary{flex:0 1 420px;text-align:right}
+@media(max-width:900px){
+  .match-history-filter-bar .game-filter-summary{flex-basis:100%;text-align:left}
+}
