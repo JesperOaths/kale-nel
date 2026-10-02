@@ -2418,3 +2418,8 @@ The top Evidence Health strip must reflect the evidence actually used by the sel
 - **SUPPORT:** it measures timeline-complete games with a trusted opposing Support and a VPM comparison.
 
 All three use an evidence floor of five comparable games for a ready state. The generic trusted-peer card remains separate so users can distinguish overall peer resolution from the role-specific metric needed by the coaching lens.
+
+
+## Support Quick Read role safety
+
+The SUPPORT Direct-role comparison surface is built around role-relevant peer evidence: vision/min, objective-setup wards, first tracked impact, first-major timing and peer-matched death recovery. Direct-role gold @15 remains available only in the raw technical evidence layer for traceability; it is not a prominent Support coaching card.
