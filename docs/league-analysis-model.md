@@ -1995,3 +1995,17 @@ All action surfaces must consume that same order:
 - practice-plan continuity.
 
 The frontend must not re-sort grouped `priorityThemes` by raw source priority, because doing so can make different sections disagree about what priority #1 actually is. Only the legacy `recentFocus` fallback may be locally ordered by its raw priority/score fields.
+
+
+### Mid-routing replay evidence
+
+The ranked replay queue includes a dedicated **mid routing** category for supported isolated side-lane deaths after the macro-transition boundary.
+
+A pre-objective side-lane review moment requires:
+- a recorded top/bot-lane death after the role/rules-aware macro-transition boundary,
+- no ally within 3,000 units,
+- and a tracked neutral-objective event within 90 seconds.
+
+The replay evidence preserves the exact death minute, lane, time to objective, direct-role gold state when available, and high-risk classification. Other isolated side-lane deaths enter this replay category only when they already cross the high-risk threshold.
+
+The Mid-game routing priority maps directly to this category. This prevents the Current focus filter from substituting generic death clips for routing-specific evidence.
