@@ -85,7 +85,7 @@ assert.match(loginHtml,/window\.GEJAST_LOGIN_NAMES_STATIC=Object\.freeze\(/,'log
 assert.match(loginHtml,/data-login-scope="friends"/,'login HTML must contain literal friends options before JS runs');
 assert.match(loginHtml,/data-login-scope="family"/,'login HTML must contain literal family options before JS runs');
 assert.match(source,/get_login_active_names_v687'?,?\{site_scope_input:resolvedScope\},2500/,'live login-name verification must stay tightly bounded');
-assert.match(source,/\},15000\);/,'live name verification must remain well behind first paint');
+assert.match(source,/\},60000\);/,'live name verification must remain well behind first paint');
 assert.match(loginHtml,/id="gejast-login-inline-seed"/,'login must synchronously populate the selector during HTML parsing rather than waiting for DOMContentLoaded');
 assert.match(loginHtml,/sel\.dataset\.seedSource='html-static-active-names'/,'synchronous HTML selector seed must be observable for diagnostics');
 for(const name of ['Bruis','Jesper','Sierk']) assert.ok(loginHtml.includes(`"${name}"`),`inline login seed missing representative name ${name}`);
