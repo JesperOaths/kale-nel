@@ -56,7 +56,7 @@ jobs:
             export KALENEL_REQUIRE_PRIVATE_ADMIN_SOURCE=1
           fi
           node scripts/build-admin-worker-assets.mjs
-          grep -q "PUBLIC_SHOP_ORIGIN_BUILD = 'v857-clean-collection-art'" cloudflare/workers/admin-gate/src/worker.js
+          grep -q "PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r11'" cloudflare/workers/admin-gate/src/worker.js
 
       - name: Run Worker security tests
         run: node scripts/test-admin-worker-gate.mjs
