@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.99";
+const ANALYZER_VERSION="league-web-behavior-v4.100";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1396,7 +1396,7 @@ function gameJudgments(g:any){
     else if(Number(g.fightProfile?.diedBeforeContribution)>=2)add(1,"teamfights","You are being removed before contributing in fights","You died before a tracked kill/assist contribution in "+String(g.fightProfile.diedBeforeContribution)+" of "+String(g.fightProfile.active??g.fightProfile.attended??0)+" active multi-kill fights.","Review fight approach and initial positioning; entering one screen later can be worth more than arriving first.");
   }
   if(Number(g.killConversion?.windows)>=2){
-    const supported=Number(g.killConversion?.playerSupportedConverted??g.killConversion?.converted||0),teamOnlyContext=Number(g.killConversion?.teamConverted??g.killConversion?.converted||0);
+    const supported=Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0),teamOnlyContext=Number((g.killConversion?.teamConverted??g.killConversion?.converted)||0);
     if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion",String(g.killConversion.windows)+" player-involved kill windows had neither a player-supported nor a team-only tracked objective/structure conversion within 75 seconds.","After a won skirmish, check the nearest objective, structure and wave before chasing another kill or defaulting to a reset.");
     else if(Number(g.killConversion?.rate)>=67)add(4,"conversion","You were present for repeated post-kill conversions",String(supported)+" of "+String(g.killConversion.windows)+" player-involved kill windows were followed by a tracked objective/structure with supported player presence/involvement within 75 seconds.","Keep the immediate post-kill decision discipline: objective/structure first when the map allows it.","strength");
   }
