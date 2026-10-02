@@ -1,4 +1,4 @@
-name: Publish shop origin bypass v857
+name: Publish public shop origin refresh
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: kalenel-shop-origin-bypass-v857
+  group: kalenel-public-shop-origin-refresh
   cancel-in-progress: false
 
 jobs:
@@ -81,7 +81,7 @@ jobs:
           done
           [[ "$success" == "1" ]] || { echo "::error::No configured Cloudflare token could deploy the Worker."; exit 1; }
 
-      - name: Verify plain live shop is v857
+      - name: Verify plain live shop is current static-first v817
         shell: bash
         run: |
           set -euo pipefail
@@ -90,12 +90,12 @@ jobs:
             body="$(mktemp)"
             status="$(curl --silent --show-error --max-time 20               --dump-header "$headers" --output "$body" --write-out '%{http_code}'               'https://kalenel.nl/shop/' || true)"
             echo "attempt=$attempt status=$status"
-            if [[ "$status" == "200" ]]               && grep -q 'version-watermark">v857<' "$body"               && grep -q 'styles.css?v=20260921-storefront-v857-r1' "$body"               && grep -q 'collection-media-v831.js?v=20260921-storefront-v857-r1' "$body"; then
+            if [[ "$status" == "200" ]]               && grep -q 'version-watermark" data-version-watermark>v817 - Made by Bruis<' "$body"               && grep -q 'catalog-last-good.js?v=20261002-stable-pricing-r7' "$body"               && grep -q 'store.js?v=20261002-static-first-r11' "$body"; then
               grep -qi '^cache-control:.*no-store' "$headers"
-              echo "Plain /shop/ is live on v857 and bypasses stale origin HTML."
+              echo "Plain /shop/ is live on current v817 static-first assets and bypasses stale origin HTML."
               exit 0
             fi
             sleep 3
           done
-          echo "::error::Plain /shop/ did not switch to v857."
+          echo "::error::Plain /shop/ did not expose the current static-first v817 bootstrap."
           exit 1
