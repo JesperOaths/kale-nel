@@ -187,13 +187,15 @@ function deltaTone(value,neutral=0,goodThreshold=0,inverse=false){
 }
 function plainDelta(value,unit='',digits=0,inverse=false){
   if(!hasNum(value))return{value:'n/a',tone:'neutral',word:'Not enough evidence'};
-  const n=Number(value),tone=deltaTone(n,0,unit==='gold'?100:unit==='csmin'?0.15:unit==='dpm'?50:unit==='minutes'?0.2:0.01,inverse);
+  const n=Number(value),tone=deltaTone(n,0,unit==='gold'?100:unit==='csmin'?0.15:unit==='dpm'?50:unit==='minutes'?0.2:unit==='vpm'?0.15:unit==='wards'?0.5:0.01,inverse);
   const magnitude=Math.abs(n);
   let formatted;
   if(unit==='gold')formatted=signed(n,0)+'g';
   else if(unit==='csmin')formatted=signed(n,2)+' CS/min';
   else if(unit==='dpm')formatted=signed(n,0)+' DPM';
   else if(unit==='minutes')formatted=signed(n,1)+' min';
+  else if(unit==='vpm')formatted=signed(n,2)+' VPM';
+  else if(unit==='wards')formatted=signed(n,1)+' wards';
   else if(unit==='pp')formatted=signed(n,1)+' pp';
   else formatted=signed(n,digits);
   const favorable=inverse?n<0:n>0;
@@ -1085,29 +1087,60 @@ function comparisonCard(title,delta,unit,scale,inverse,explanation,sample,eviden
     (sample?'<small>'+esc(sample)+(evidenceReady?'':' · descriptive only')+'</small>':'')+'</article>';
 }
 function renderQuickRead(r){
-  const p=r.peerComparison||{},b=r.behaviorSummary||{};
-  const laneN=Number(p.laneGames15||0),csN=Number(p.csMinGames??p.sameRoleGames??0),dpmN=Number(p.dpmGames??p.sameRoleGames??0),itemN=Number(p.majorItemGames||0),impactN=Number(p.impactGames||0),repeatN=Number(b.peerMatchedRepeatDeathOpportunities??0);
-  const lane=p.avgGoldDiff15,cs=p.avgCsMinDelta,dpm=p.avgDpmDelta,item=p.avgMajorItemDeltaMin,impact=p.avgImpactDeltaMin,repeat=p.repeatDeathRateDelta;
-  $('quickRead').innerHTML=[
-    comparisonCard('Role gold @15',lane,'gold',1000,false,
-      !hasNum(lane)?'No comparable @15 direct-role checkpoint is available.':Number(lane)>150?'You average a meaningful gold lead over the actual same-role opponent at 15.':Number(lane)<-150?'You average a meaningful gold deficit versus the actual same-role opponent at 15.':'Your average direct-role economy is close around 15 minutes.',
-      laneN+' comparable @15 games · threshold 5',laneN>=5),
-    comparisonCard('CS/min vs role opponent',cs,'csmin',2,false,
-      !hasNum(cs)?'No same-role CS/min comparison is available.':Number(cs)>.15?'You farm faster than the direct role opponent on average.':Number(cs)<-.15?'You farm slower than the direct role opponent on average.':'Your CS/min is close to the direct role opponent.',
-      csN+' direct-role CS/min comparisons · threshold 5',csN>=5),
-    comparisonCard('DPM vs role opponent',dpm,'dpm',500,false,
-      !hasNum(dpm)?'No same-role damage comparison is available.':Number(dpm)>100?'Your champion damage output is materially above the direct role opponent.':Number(dpm)<-100?'Your champion damage output trails the direct role opponent.':'Damage output is close to the direct role opponent.',
-      dpmN+' direct-role DPM comparisons · threshold 5',dpmN>=5),
-    comparisonCard('First major timing vs role',item,'minutes',3,true,
-      !hasNum(item)?'No comparable first-major timing sample is available.':Number(item)<-.75?'Your first major item completes earlier than the direct role opponent on average.':Number(item)>.75?'Your first major item completes later than the direct role opponent on average.':'First-major timing is close to the direct role opponent.',
-      itemN+' comparable item games · threshold 4',itemN>=4),
-    comparisonCard('First tracked impact vs role',impact,'minutes',4,true,
-      !hasNum(impact)?'No comparable first-impact timing sample is available.':Number(impact)<-1.5?'Your first tracked kill/assist/objective impact arrives earlier.':Number(impact)>1.5?'The direct role opponent reaches tracked map impact earlier.':'First tracked impact timing is close.',
-      impactN+' comparable impact games · threshold 5',impactN>=5),
-    comparisonCard('Repeat-death rate vs role',repeat,'pp',35,true,
-      !hasNum(repeat)?'No comparable death-recovery rate is available.':Number(repeat)<-10?'You are less likely than direct role opponents to die again within four minutes.':Number(repeat)>10?'Rapid repeat deaths occur more often for you than for direct role opponents.':'Death-recovery recurrence is close to the direct role opponents.',
-      repeatN+' recovery opportunities · threshold 8',repeatN>=8)
-  ].join('');
+  const p=r.peerComparison||{},b=r.behaviorSummary||{},role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole);
+  const laneN=Number(p.laneGames15||0),csN=Number(p.csMinGames??p.sameRoleGames??0),dpmN=Number(p.dpmGames??p.sameRoleGames??0),vpmN=Number(p.vpmGames??0),setupN=Number(p.visionSetupGames||0),itemN=Number(p.majorItemGames||0),impactN=Number(p.impactGames||0),repeatN=Number(b.peerMatchedRepeatDeathOpportunities??0);
+  const lane=p.avgGoldDiff15,cs=p.avgCsMinDelta,dpm=p.avgDpmDelta,vpm=p.avgVpmDelta,setup=p.avgObjectiveSetupDelta,item=p.avgMajorItemDeltaMin,impact=p.avgImpactDeltaMin,repeat=p.repeatDeathRateDelta;
+  const commonImpact=comparisonCard('First tracked impact vs '+roleLabel(role),impact,'minutes',4,true,
+    !hasNum(impact)?'No comparable first-impact timing sample is available.':Number(impact)<-1.5?'Your first tracked kill/assist/objective impact arrives earlier.':Number(impact)>1.5?'The direct role opponent reaches tracked map impact earlier.':'First tracked impact timing is close.',
+    impactN+' comparable impact games · threshold 5',impactN>=5);
+  const commonItem=comparisonCard('First major timing vs '+roleLabel(role),item,'minutes',3,true,
+    !hasNum(item)?'No comparable first-major timing sample is available.':Number(item)<-.75?'Your first major item completes earlier than the direct role opponent on average.':Number(item)>.75?'Your first major item completes later than the direct role opponent on average.':'First-major timing is close to the direct role opponent.',
+    itemN+' comparable item games · threshold 4',itemN>=4);
+  const commonRecovery=comparisonCard('Repeat-death rate vs '+roleLabel(role),repeat,'pp',35,true,
+    !hasNum(repeat)?'No peer-matched death-recovery rate is available.':Number(repeat)<-10?'You are less likely than the direct role opponent sample to die again within four minutes.':Number(repeat)>10?'Rapid repeat deaths occur more often for you than in the peer-matched opponent opportunities.':'Death-recovery recurrence is close to the direct role opponents.',
+    repeatN+' peer-matched recovery opportunities · threshold 8',repeatN>=8);
+  let cards;
+  if(role==='SUPPORT'){
+    cards=[
+      comparisonCard('Vision/min vs Support',vpm,'vpm',.8,false,
+        !hasNum(vpm)?'No same-role vision/min comparison is available.':Number(vpm)>.15?'You generate more vision score per minute than the opposing Support on average.':Number(vpm)<-.15?'You generate less vision score per minute than the opposing Support on average.':'Vision volume is close to the opposing Support.',
+        vpmN+' direct-role VPM comparisons · threshold 5',vpmN>=5),
+      comparisonCard('Objective setup wards vs Support',setup,'wards',2,false,
+        !hasNum(setup)?'No direct-role pre-objective setup-ward comparison is available.':Number(setup)>=.5?'You establish more wards near upcoming objectives than the opposing Support.':Number(setup)<=-.5?'The opposing Support establishes more wards near upcoming objectives.':'Pre-objective setup-ward volume is close.',
+        setupN+' peer-comparable timeline games · threshold 5',setupN>=5),
+      commonImpact,commonItem,commonRecovery,
+      comparisonCard('Role gold @15',lane,'gold',1000,false,
+        !hasNum(lane)?'No comparable @15 Support gold checkpoint is available.':Number(lane)>150?'You average a meaningful Support gold lead at 15.':Number(lane)<-150?'You average a meaningful Support gold deficit at 15.':'Support gold is close at 15; treat this as context rather than a farm target.',
+        laneN+' comparable @15 games · threshold 5',laneN>=5)
+    ];
+  }else if(role==='JUNGLE'){
+    cards=[
+      comparisonCard('CS/min vs Jungle',cs,'csmin',2,false,
+        !hasNum(cs)?'No same-role jungle CS/min comparison is available.':Number(cs)>.15?'You farm faster than the enemy Jungler on average.':Number(cs)<-.15?'You farm slower than the enemy Jungler on average.':'Jungle CS/min is close.',
+        csN+' direct-role CS/min comparisons · threshold 5',csN>=5),
+      comparisonCard('Vision/min vs Jungle',vpm,'vpm',.8,false,
+        !hasNum(vpm)?'No same-role vision/min comparison is available.':Number(vpm)>.15?'You generate more vision score per minute than the enemy Jungler.':Number(vpm)<-.15?'You generate less vision score per minute than the enemy Jungler.':'Vision volume is close to the enemy Jungler.',
+        vpmN+' direct-role VPM comparisons · threshold 5',vpmN>=5),
+      comparisonCard('Objective setup wards vs Jungle',setup,'wards',2,false,
+        !hasNum(setup)?'No direct-role pre-objective setup-ward comparison is available.':Number(setup)>=.5?'You establish more wards near upcoming objectives than the enemy Jungler.':Number(setup)<=-.5?'The enemy Jungler establishes more wards near upcoming objectives.':'Pre-objective setup-ward volume is close.',
+        setupN+' peer-comparable timeline games · threshold 5',setupN>=5),
+      commonImpact,commonItem,commonRecovery
+    ];
+  }else{
+    cards=[
+      comparisonCard('Role gold @15',lane,'gold',1000,false,
+        !hasNum(lane)?'No comparable @15 direct-role checkpoint is available.':Number(lane)>150?'You average a meaningful gold lead over the actual same-role opponent at 15.':Number(lane)<-150?'You average a meaningful gold deficit versus the actual same-role opponent at 15.':'Your average direct-role economy is close around 15 minutes.',
+        laneN+' comparable @15 games · threshold 5',laneN>=5),
+      comparisonCard('CS/min vs '+roleLabel(role),cs,'csmin',2,false,
+        !hasNum(cs)?'No same-role CS/min comparison is available.':Number(cs)>.15?'You farm faster than the direct role opponent on average.':Number(cs)<-.15?'You farm slower than the direct role opponent on average.':'Your CS/min is close to the direct role opponent.',
+        csN+' direct-role CS/min comparisons · threshold 5',csN>=5),
+      comparisonCard('DPM vs '+roleLabel(role),dpm,'dpm',500,false,
+        !hasNum(dpm)?'No same-role damage comparison is available.':Number(dpm)>100?'Your champion damage output is materially above the direct role opponent.':Number(dpm)<-100?'Your champion damage output trails the direct role opponent.':'Damage output is close to the direct role opponent.',
+        dpmN+' direct-role DPM comparisons · threshold 5',dpmN>=5),
+      commonItem,commonImpact,commonRecovery
+    ];
+  }
+  $('quickRead').innerHTML=cards.join('');
 }
 function pulseFormat(v,unit){
   if(!hasNum(v))return'n/a';
