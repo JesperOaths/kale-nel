@@ -659,7 +659,7 @@ assert.ok(api.includes('macroTransitionMin:12')&&api.includes('roamEndMin:12'),'
 assert.ok(api.includes('macroTransitionSideLaneDeaths'),'Primary side-lane risk must be tied to a macro transition rather than falsely asserting lane phase ended');
 assert.ok(app.includes('Post-macro-transition side-lane deaths'),'Aggregate UI must use macro-transition terminology');
 assert.ok(!app.includes('Post-early-phase side-lane deaths'),'Retired post-early-phase side-lane wording must not return');
-assert.ok(api.includes('behavior?.macroTransitionSideLaneDeaths??behavior?.postLaneSideLaneDeaths'),'Coaching targets must consume the macro-transition counter before legacy aliases');
+assert.ok(api.includes('behavior?.timelineGames,5,"Measure whether side-lane pressure'),'Side-lane practice-target readiness must use timeline-complete games rather than the number of side-lane death events');
 assert.ok(api.includes('lane15Comparable:true')&&api.includes('fixed15to25Comparable:true')&&api.includes('closing25Comparable:true'),'Standard SR fixed checkpoint semantics must remain explicitly enabled');
 assert.ok(api.includes('lane15Comparable:false')&&api.includes('fixed15to25Comparable:false')&&api.includes('closing25Comparable:false'),'Accelerated/unverified rules must be able to suppress incompatible fixed-checkpoint coaching');
 assert.ok(api.includes('lane15ComparableGames'),'@15 lane aggregates must use an eligibility-filtered cohort');
