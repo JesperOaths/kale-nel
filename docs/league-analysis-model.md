@@ -2092,3 +2092,17 @@ For each observed family, show:
 Objective-family presence is descriptive context, not a generic role grade. A family with fewer than three contested encounters remains thin/context-only. A "review clue" may identify the lowest contested-presence point estimate only among families with at least three contested encounters, and must explicitly remain a replay-priority clue rather than a causal statement.
 
 This surface consumes the existing rules-aware objective-family model. It does not reconstruct or rename objective families from raw event strings in the browser, and preserves Elder Dragon as distinct when the backend can identify it.
+
+
+### Objective-family match linkage
+
+A sufficiently observed objective-family card may link into Recent match story using a visibility-only objective-family filter.
+
+The link is driven by the existing per-game objectiveFamilyStats key from the backend. A match qualifies when that exact family has at least one supported contested encounter. The browser must not infer family identity from free-text objective labels.
+
+Keep event and game denominators separate:
+- the family card's joined / contested values count supported contested objective encounters,
+- the review button states the number of matching games,
+- filtering changes only which match-story rows are visible and never recomputes the report sample or coaching aggregates.
+
+The temporary family filter should be visible only while active, just like repeated-arc review. Returning to All restores the ordinary match-story view.
