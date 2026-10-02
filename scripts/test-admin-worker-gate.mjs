@@ -30,6 +30,13 @@ function env(extra = {}) {
         const url = new URL(request.url);
         if (url.pathname === '/admin.html') return new Response(`<!doctype html><title>Beheerhub - Wordt er gejast?</title><script>window.GEJAST_PAGE_VERSION='${FRONTEND_VERSION}';</script><script src="./gejast-home-gate.js?${FRONTEND_VERSION}"></script><script src="./admin-session-sync.js?${FRONTEND_VERSION}"></script>`, { status: 200, headers: { 'Content-Type': 'text/html' } });
         if (url.pathname === '/admin.js') return new Response('window.GEJAST_ADMIN=1;', { status: 200, headers: { 'Content-Type': 'application/javascript' } });
+        if (url.pathname === '/login.html') return new Response('<!doctype html><title>Inloggen</title><option>Antoni</option><option>Sierk</option>', { status: 200, headers: { 'Content-Type': 'text/html' } });
+        if (url.pathname === '/gejast-login-names-static.js') return new Response('window.GEJAST_LOGIN_NAMES_STATIC={friends:["Antoni"],family:["Sierk"]};', { status: 200, headers: { 'Content-Type': 'application/javascript' } });
+        if (url.pathname === '/shop/index.html') return new Response('<!doctype html><title>Bruis shop</title><script src="catalog-last-good.js"></script><script src="store.js"></script>', { status: 200, headers: { 'Content-Type': 'text/html' } });
+        if (url.pathname === '/shop/store.js') return new Response('window.__SHOP_STATIC_FIRST__=true;', { status: 200, headers: { 'Content-Type': 'application/javascript' } });
+        if (url.pathname === '/league/index.html') return new Response('<!doctype html><title>Bruisienator · League analysis</title>', { status: 200, headers: { 'Content-Type': 'text/html' } });
+        if (url.pathname === '/league/app.js') return new Response('window.__LEAGUE_PUBLIC__=true;', { status: 200, headers: { 'Content-Type': 'application/javascript' } });
+        if (url.pathname === '/VERSION') return new Response(FRONTEND_VERSION, { status: 200, headers: { 'Content-Type': 'text/plain' } });
         return new Response('missing', { status: 404 });
       }
     },
@@ -119,6 +126,43 @@ assert.match(loginStart.headers.get('Set-Cookie'), /__Host-kalenel_admin_attempt
 const logout = await req('https://admin.kalenel.nl/logout', { headers: { Cookie: validCookie }, redirect: 'manual' });
 assert.equal(logout.status, 302);
 assert.match(logout.headers.get('Set-Cookie'), /Max-Age=0/);
+
+const publicLogin = await req('https://kalenel.nl/login.html');
+assert.equal(publicLogin.status, 200);
+assert.equal(publicLogin.headers.get('X-Kalenel-Public-Source'), 'worker-assets');
+assert.equal(publicLogin.headers.get('Cache-Control'), 'no-store, max-age=0, must-revalidate');
+assert.match(await publicLogin.text(), /Antoni/);
+
+const publicLoginNamesAsset = await req('https://kalenel.nl/gejast-login-names-static.js?v817');
+assert.equal(publicLoginNamesAsset.status, 200);
+assert.equal(publicLoginNamesAsset.headers.get('X-Kalenel-Public-Source'), 'worker-assets');
+
+const publicShopSlash = await req('https://kalenel.nl/shop/');
+assert.equal(publicShopSlash.status, 200);
+assert.equal(publicShopSlash.headers.get('X-Kalenel-Public-Source'), 'worker-assets');
+assert.equal(publicShopSlash.headers.get('Cache-Control'), 'no-store, max-age=0, must-revalidate');
+assert.match(await publicShopSlash.text(), /Bruis shop/);
+
+const publicShopAsset = await req('https://kalenel.nl/shop/store.js?v=static');
+assert.equal(publicShopAsset.status, 200);
+assert.equal(publicShopAsset.headers.get('X-Kalenel-Public-Source'), 'worker-assets');
+
+const publicLeagueSlash = await req('https://kalenel.nl/league/');
+assert.equal(publicLeagueSlash.status, 200);
+assert.equal(publicLeagueSlash.headers.get('X-Kalenel-Public-Source'), 'worker-assets');
+assert.equal(publicLeagueSlash.headers.get('Cache-Control'), 'no-store, max-age=0, must-revalidate');
+assert.match(await publicLeagueSlash.text(), /Bruisienator/);
+
+const publicLeagueAsset = await req('https://kalenel.nl/league/app.js?v=public');
+assert.equal(publicLeagueAsset.status, 200);
+assert.equal(publicLeagueAsset.headers.get('X-Kalenel-Public-Source'), 'worker-assets');
+
+const leagueCanonical = await req('https://kalenel.nl/league', { redirect:'manual' });
+assert.equal(leagueCanonical.status, 302);
+assert.equal(leagueCanonical.headers.get('Location'), '/league/');
+const shopCanonical = await req('https://kalenel.nl/shop', { redirect:'manual' });
+assert.equal(shopCanonical.status, 302);
+assert.equal(shopCanonical.headers.get('Location'), '/shop/');
 
 const publicAdmin = await req('https://kalenel.nl/admin.html', { redirect: 'manual' });
 assert.equal(publicAdmin.status, 302);
