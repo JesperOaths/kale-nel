@@ -449,6 +449,9 @@ ok(backend.includes('role(x?.data_quality?.selectedRole)===targetRole'), 'saved 
 ok(backend.includes('nearest_player_frame_35s')&&backend.includes('wardFrameProjectedPositions'), 'ward events with omitted coordinates must be counted and boundedly projected rather than disappearing');
 ok(app.includes('function deathPatternEntries(')&&app.includes('objective_side_lane')&&app.includes('vision_facecheck')&&app.includes('post_play_giveback'), 'death review must classify recurring supported patterns instead of showing only one undifferentiated map');
 ok(app.includes('deathPatternMap(examples)')&&app.includes('map numbers match this list'), 'death-pattern map markers and explanation rows must retain one shared ordering');
+ok(app.includes('function deathPatternGroupStats(')&&app.includes('function deathPatternGroupCompare(')&&app.includes('untradedCostly'), 'death-pattern review priority must use bounded severe/costly evidence before recurrence');
+ok(app.includes('One-off high-risk patterns')&&app.includes('repeat-death contaminated'), 'one-off patterns and contaminated aftermath must remain explicitly separated from repeated clean evidence');
+ok(modelDoc.includes('## Death-pattern review priority')&&modelDoc.includes('not a numeric severity score'), 'analysis model must preserve non-causal death-pattern ordering semantics');
 ok(backend.includes('function persistedReportProjection(rep:any)')&&backend.includes('league_saved_report_compact_v1'), 'saved reports must use a versioned compact storage projection');
 ok(!backend.includes('omittedPerGame:["badDeaths"')&&!backend.includes('omittedPerGame:["wards"'), 'compact saved reports must preserve death/ward evidence used by reloaded intelligence views');
 ok(html.includes('id="compoundSignals"')&&app.includes('function renderCompoundSignals('), 'compound evidence analysis must combine related metrics into interpretable intelligence');
