@@ -819,7 +819,7 @@ function buildRequestUrl(returnTo, scope){
       if (/\/(?:login|request|activate|invite)\.html$/.test(path)) return;
       if (document.querySelector('script[data-despimarkt-announcements]')) return;
       const script = document.createElement('script');
-      script.src = `/gejast-site-announcements.js?${effectiveVersion}&rev=20261002-supabase-relief-r3`;
+      script.src = `/gejast-site-announcements.js?${effectiveVersion}&rev=20261002-supabase-relief-r4`;
       script.async = false;
       script.setAttribute('data-despimarkt-announcements','1');
       document.head.appendChild(script);
