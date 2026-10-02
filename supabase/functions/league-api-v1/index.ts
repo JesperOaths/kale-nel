@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.101";
+const ANALYZER_VERSION="league-web-behavior-v4.102";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -2002,26 +2002,49 @@ function opponentMatchupBehaviorModel(games:any[],summary:any,behaviorSummary:an
     const ownChampions=Object.entries(ownChampionCounts).sort((a:any,b:any)=>Number(b[1])-Number(a[1])).map(([champion,games])=>({champion,games:Number(games)}));
     const soloKills=list.reduce((n,g)=>n+Number(g.laneDuel?.earlySoloKillsVsRole||0),0),soloDeaths=list.reduce((n,g)=>n+Number(g.laneDuel?.earlySoloDeathsToRole||0),0);
     const homeLaneDeaths=list.reduce((n,g)=>n+Number(g.lanePressure?.earlyHomeLaneDeaths||0),0),outsidePressureDeaths=list.reduce((n,g)=>n+Number(g.lanePressure?.earlyOutsidePressureDeaths||0),0),outsidePressureShare=homeLaneDeaths?100*outsidePressureDeaths/homeLaneDeaths:null;
-    const dpmPeerGames=finiteGames(list,g=>g.peer?.dpmDelta);
-    const p:any={opponentChampion,role:roleName,games:list.length,wins:list.filter(g=>g.win).length,winRate:pct(list.filter(g=>g.win).length,list.length),laneGames:lane.length,goldDiff15:meanField(lane,g=>g.goldDiff15),csDiff15:meanField(finiteGames(laneComparable,g=>g.csDiff15),g=>g.csDiff15),badDeaths:meanField(tl,g=>g.badDeathCount),timelineGames:tl.length,dpmGames:dpmPeerGames.length,earlySoloKills:soloKills,earlySoloDeaths:soloDeaths,earlyHomeLaneDeaths:homeLaneDeaths,earlyOutsidePressureDeaths:outsidePressureDeaths,outsidePressureShare,avgDpmDelta:meanField(dpmPeerGames,g=>g.peer.dpmDelta),ownChampions};
+    const dpmPeerGames=finiteGames(list,g=>g.peer?.dpmDelta),vpmPeerGames=finiteGames(list,g=>g.peer?.vpmDelta),impactGames=finiteGames(tl,g=>g.impactDeltaVsOpponent),itemGames=finiteGames(list,g=>g.itemSpikeDeltaVsOpponent),visionSetupGames=finiteGames(tl,g=>g.vision?.objectiveSetupDeltaVsOpponent);
+    const p:any={
+      opponentChampion,role:roleName,games:list.length,wins:list.filter(g=>g.win).length,winRate:pct(list.filter(g=>g.win).length,list.length),
+      laneGames:lane.length,goldDiff15:meanField(lane,g=>g.goldDiff15),csDiff15:meanField(finiteGames(laneComparable,g=>g.csDiff15),g=>g.csDiff15),
+      badDeaths:meanField(tl,g=>g.badDeathCount),timelineGames:tl.length,dpmGames:dpmPeerGames.length,avgDpmDelta:meanField(dpmPeerGames,g=>g.peer.dpmDelta),
+      vpmGames:vpmPeerGames.length,avgVpmDelta:meanField(vpmPeerGames,g=>g.peer.vpmDelta),
+      impactGames:impactGames.length,avgImpactDelta:meanField(impactGames,g=>g.impactDeltaVsOpponent),
+      itemGames:itemGames.length,avgItemDelta:meanField(itemGames,g=>g.itemSpikeDeltaVsOpponent),
+      visionSetupGames:visionSetupGames.length,avgObjectiveSetupDelta:meanField(visionSetupGames,g=>g.vision?.objectiveSetupDeltaVsOpponent),
+      earlySoloKills:soloKills,earlySoloDeaths:soloDeaths,earlyHomeLaneDeaths:homeLaneDeaths,earlyOutsidePressureDeaths:outsidePressureDeaths,outsidePressureShare,ownChampions
+    };
     profiles.push(p);
     const ownMix=ownChampions.slice(0,3).map((x:any)=>x.champion+" "+x.games+"g").join(", ");
-    if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(summary?.goldDiff15)&&Number(p.goldDiff15)-Number(summary.goldDiff15)<=-300){
-      focus.push({category:"matchup",title:opponentChampion+" repeatedly suppresses your lane economy",evidence:"Across "+lane.length+" "+primaryRole+" games against "+opponentChampion+", you average "+signedText(p.goldDiff15,0)+"g at 15 versus "+signedText(summary.goldDiff15,0)+"g across your primary-role coaching sample. Own picks: "+ownMix+".",action:"Review these games together: identify which wave/trade/recall condition repeats before the deficit instead of treating each loss as unrelated.",confidence:confidence(lane.length),priority:2,comparison:"repeated same-role opponent champion vs your primary-role sample"});
-    }
-    if(soloDeaths>=2&&soloDeaths>=soloKills+2){
-      focus.push({category:"matchup",title:"Direct 1v1 execution against "+opponentChampion+" is a repeated problem",evidence:soloKills+" clean early-phase solo kill(s) versus "+soloDeaths+" clean solo death(s) to the actual "+opponentChampion+" role opponent across "+list.length+" games; assisted kills are excluded.",action:"Build a matchup-specific rule from the replay set: which cooldown/resource/wave state makes the all-in unsafe, and what exact disengage condition should replace it?",confidence:confidence(list.length),priority:1,comparison:"clean queue-aware early-phase 1v1 events in repeated "+opponentChampion+" matchups"});
-    }else if(homeLaneDeaths>=3&&outsidePressureDeaths>=2&&hasNum(outsidePressureShare)&&Number(outsidePressureShare)>=60){
-      focus.push({category:"map awareness",title:"The "+opponentChampion+" matchup losses are mostly outside pressure, not the 1v1",evidence:outsidePressureDeaths+" of "+homeLaneDeaths+" early-phase home-lane deaths in these "+list.length+" games involved an enemy beyond the direct role opponent ("+Math.round(Number(outsidePressureShare))+"%).",action:"Do not over-correct the champion matchup mechanically. Review wave depth, jungle/support tracking and vision timing around the vulnerable waves instead.",confidence:confidence(list.length),priority:2,comparison:"assisted/outside-pressure lane deaths in repeated "+opponentChampion+" matchups"});
-    }
-    if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(summary?.goldDiff15)&&Number(p.goldDiff15)-Number(summary.goldDiff15)>=300&&soloKills>=soloDeaths){
-      highlights.push({category:"matchup",title:"You handle "+opponentChampion+" well in the current sample",evidence:"Across "+lane.length+" "+primaryRole+" games you average "+signedText(p.goldDiff15,0)+"g at 15, at least 300g better than your normal primary-role sample, with "+soloKills+" clean solo kill(s) versus "+soloDeaths+" solo death(s).",action:"Preserve the matchup-specific wave/trade conditions behind this advantage; do not generalize the result beyond the repeated sample.",confidence:confidence(lane.length),priority:4,comparison:"repeated same-role opponent champion vs your primary-role sample"});
+
+    if(["ADC","MID","TOP"].includes(roleName)){
+      if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(summary?.goldDiff15)&&Number(p.goldDiff15)-Number(summary.goldDiff15)<=-300){
+        focus.push({category:"matchup",title:opponentChampion+" repeatedly suppresses your lane economy",evidence:"Across "+lane.length+" "+primaryRole+" games against "+opponentChampion+", you average "+signedText(p.goldDiff15,0)+"g at 15 versus "+signedText(summary.goldDiff15,0)+"g across your primary-role coaching sample. Own picks: "+ownMix+".",action:"Review these games together: identify which wave/trade/recall condition repeats before the deficit instead of treating each loss as unrelated.",confidence:confidence(lane.length),priority:2,comparison:"repeated same-role opponent champion vs your primary-role sample"});
+      }
+      if(soloDeaths>=2&&soloDeaths>=soloKills+2){
+        focus.push({category:"matchup",title:"Direct 1v1 execution against "+opponentChampion+" is a repeated problem",evidence:soloKills+" clean early-phase solo kill(s) versus "+soloDeaths+" clean solo death(s) to the actual "+opponentChampion+" role opponent across "+list.length+" games; assisted kills are excluded.",action:"Build a matchup-specific rule from the replay set: which cooldown/resource/wave state makes the all-in unsafe, and what exact disengage condition should replace it?",confidence:confidence(list.length),priority:1,comparison:"clean queue-aware early-phase 1v1 events in repeated "+opponentChampion+" matchups"});
+      }else if(homeLaneDeaths>=3&&outsidePressureDeaths>=2&&hasNum(outsidePressureShare)&&Number(outsidePressureShare)>=60){
+        focus.push({category:"map awareness",title:"The "+opponentChampion+" matchup losses are mostly outside pressure, not the 1v1",evidence:outsidePressureDeaths+" of "+homeLaneDeaths+" early-phase home-lane deaths in these "+list.length+" games involved an enemy beyond the direct role opponent ("+Math.round(Number(outsidePressureShare))+"%).",action:"Do not over-correct the champion matchup mechanically. Review wave depth, jungle/support tracking and vision timing around the vulnerable waves instead.",confidence:confidence(list.length),priority:2,comparison:"assisted/outside-pressure lane deaths in repeated "+opponentChampion+" matchups"});
+      }
+      if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(summary?.goldDiff15)&&Number(p.goldDiff15)-Number(summary.goldDiff15)>=300&&soloKills>=soloDeaths){
+        highlights.push({category:"matchup",title:"You handle "+opponentChampion+" well in the current sample",evidence:"Across "+lane.length+" "+primaryRole+" games you average "+signedText(p.goldDiff15,0)+"g at 15, at least 300g better than your normal primary-role sample, with "+soloKills+" clean solo kill(s) versus "+soloDeaths+" solo death(s).",action:"Preserve the matchup-specific wave/trade conditions behind this advantage; do not generalize the result beyond the repeated sample.",confidence:confidence(lane.length),priority:4,comparison:"repeated same-role opponent champion vs your primary-role sample"});
+      }
+    }else{
+      if(vpmPeerGames.length>=3&&hasNum(p.avgVpmDelta)&&Number(p.avgVpmDelta)<=-0.15){
+        focus.push({category:"matchup",title:"Vision volume trails "+opponentChampion+" in repeated "+roleName+" matchups",evidence:"Across "+vpmPeerGames.length+" games, your VPM averages "+signedText(p.avgVpmDelta,2)+" versus this direct-role opponent champion.",action:"Review where the opposing role is gaining earlier safe access to river/objective information rather than treating this as a generic ward-count problem.",confidence:confidence(vpmPeerGames.length),priority:2,comparison:"repeated direct-role VPM versus "+opponentChampion});
+      }else if(vpmPeerGames.length>=3&&hasNum(p.avgVpmDelta)&&Number(p.avgVpmDelta)>=0.15){
+        highlights.push({category:"matchup",title:"You create more vision volume than "+opponentChampion,evidence:"Across "+vpmPeerGames.length+" games, your VPM advantage averages "+signedText(p.avgVpmDelta,2)+" versus this direct-role opponent champion.",action:"Preserve the timing and safe routes that create this vision edge; do not overextend simply to maintain the number.",confidence:confidence(vpmPeerGames.length),priority:4,comparison:"repeated direct-role VPM versus "+opponentChampion});
+      }
+      if(visionSetupGames.length>=3&&hasNum(p.avgObjectiveSetupDelta)&&Number(p.avgObjectiveSetupDelta)<=-0.5){
+        focus.push({category:"matchup",title:"Pre-objective setup trails "+opponentChampion,evidence:"Across "+visionSetupGames.length+" peer-comparable timeline games, you average "+Math.abs(Number(p.avgObjectiveSetupDelta)).toFixed(1)+" fewer setup wards near upcoming objectives than "+opponentChampion+".",action:"Review the minute before the objective: reset timing, route choice and when the opposing role first gains uncontested setup access.",confidence:confidence(visionSetupGames.length),priority:2,comparison:"repeated objective-setup wards versus "+opponentChampion});
+      }
+      if(roleName==="JUNGLE"&&impactGames.length>=3&&hasNum(p.avgImpactDelta)&&Number(p.avgImpactDelta)>=1.5){
+        focus.push({category:"matchup",title:"First impact arrives later against "+opponentChampion,evidence:"Across "+impactGames.length+" games, your first tracked impact arrives "+Number(p.avgImpactDelta).toFixed(1)+" minutes later than this enemy Jungler.",action:"Compare opening paths and first actionable windows across these games; identify where tempo is lost before the first supported impact.",confidence:confidence(impactGames.length),priority:2,comparison:"repeated first-impact timing versus "+opponentChampion});
+      }
     }
   }
   profiles.sort((a,b)=>b.games-a.games||String(a.opponentChampion).localeCompare(String(b.opponentChampion)));
   return{profiles,focus,highlights};
 }
-
 function championBehaviorModel(games:any[],summary:any,behaviorSummary:any,primaryRole:string){
   const groups=new Map<string,any[]>();
   for(const g of games){
@@ -2034,25 +2057,52 @@ function championBehaviorModel(games:any[],summary:any,behaviorSummary:any,prima
   for(const [key,list] of groups.entries()){
     if(list.length<3)continue;
     const [champion,roleName]=key.split("|"),trustedPeer=list.filter(g=>g.directPeerComparable===true),lane=finiteGames(trustedPeer.filter(g=>g?.phaseRules?.lane15Comparable!==false),g=>g.goldDiff15),tl=list.filter(g=>g.timelineAvailable),items=finiteGames(trustedPeer,g=>g.itemSpikeDeltaVsOpponent),dpmGames=finiteGames(list,g=>g.dpm);
+    const vpmGames=finiteGames(trustedPeer,g=>g.peer?.vpmDelta),visionSetupGames=finiteGames(tl.filter(g=>g.directPeerComparable===true),g=>g.vision?.objectiveSetupDeltaVsOpponent),impactGames=finiteGames(tl.filter(g=>g.directPeerComparable===true),g=>g.impactDeltaVsOpponent);
+    const roamAttempts=list.reduce((n,g)=>n+Number(g.roams?.attempts||0),0),roamSuccesses=list.reduce((n,g)=>n+Number(g.roams?.successes||0),0),supportCostEvents=list.flatMap((g:any)=>(g.roams?.events||[]).filter((x:any)=>hasNum(x?.adcLaneCostCs)));
     const p:any={
       champion,role:roleName,games:list.length,wins:list.filter(g=>g.win).length,winRate:pct(list.filter(g=>g.win).length,list.length),
       csMin:meanField(list,g=>g.csMin),dpm:meanField(dpmGames,g=>g.dpm),kp:meanField(list,g=>g.kp),
       peerGames:trustedPeer.length,laneGames:lane.length,goldDiff15:meanField(lane,g=>g.goldDiff15),badDeaths:meanField(tl,g=>g.badDeathCount),
-      timelineGames:tl.length,dpmGames:dpmGames.length,itemGames:items.length,itemDelta:meanField(items,g=>g.itemSpikeDeltaVsOpponent)
+      timelineGames:tl.length,dpmGames:dpmGames.length,itemGames:items.length,itemDelta:meanField(items,g=>g.itemSpikeDeltaVsOpponent),
+      vpmGames:vpmGames.length,avgVpmDelta:meanField(vpmGames,g=>g.peer?.vpmDelta),
+      visionSetupGames:visionSetupGames.length,avgObjectiveSetupDelta:meanField(visionSetupGames,g=>g.vision?.objectiveSetupDeltaVsOpponent),
+      impactGames:impactGames.length,avgImpactDelta:meanField(impactGames,g=>g.impactDeltaVsOpponent),
+      roamAttempts,roamSuccesses,roamSuccessRate:roamAttempts?100*roamSuccesses/roamAttempts:null,
+      supportAdcCostEvents:supportCostEvents.length,avgSupportAdcLaneCostCs:meanField(supportCostEvents,(x:any)=>x.adcLaneCostCs)
     };
     profiles.push(p);
     if(roleName!==primaryRole)continue;
-    if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(summary.goldDiff15)&&Number(p.goldDiff15)-Number(summary.goldDiff15)<=-300){
-      focus.push({category:"champion",title:champion+" lane state is below your usual "+primaryRole+" level",evidence:"Across "+lane.length+" "+champion+" "+primaryRole+" games you average "+signedText(p.goldDiff15,0)+"g at 15 versus "+signedText(summary.goldDiff15,0)+"g across the full Last-20 role sample.",action:"Review the champion-specific first waves, trade pattern and first recall rather than assuming the problem is your general laning.",confidence:confidence(lane.length),priority:2,comparison:"champion-role sample vs your Last-20 primary-role sample"});
+
+    if(["ADC","MID","TOP"].includes(roleName)){
+      if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(summary.goldDiff15)&&Number(p.goldDiff15)-Number(summary.goldDiff15)<=-300){
+        focus.push({category:"champion",title:champion+" lane state is below your usual "+primaryRole+" level",evidence:"Across "+lane.length+" "+champion+" "+primaryRole+" games you average "+signedText(p.goldDiff15,0)+"g at 15 versus "+signedText(summary.goldDiff15,0)+"g across the full Last-20 role sample.",action:"Review the champion-specific first waves, trade pattern and first recall rather than assuming the problem is your general laning.",confidence:confidence(lane.length),priority:2,comparison:"champion-role sample vs your Last-20 primary-role sample"});
+      }
+      if(list.length>=3&&hasNum(p.dpm)&&hasNum(summary.dpm)&&Number(p.dpm)-Number(summary.dpm)>=150){
+        highlights.push({category:"champion",title:champion+" is a high-output pick in your current sample",evidence:"DPM averages "+Math.round(Number(p.dpm))+" across "+list.length+" games versus "+Math.round(Number(summary.dpm))+" across the Last 20.",action:"Preserve the fight positioning and resource conversion that make this pick productive; do not infer mastery from win rate alone.",confidence:confidence(list.length),priority:4,comparison:"champion-role sample vs your Last-20 primary-role sample"});
+      }
     }
     if(tl.length>=3&&hasNum(p.badDeaths)&&hasNum(behaviorSummary?.badDeathsPerTimelineGame)&&Number(p.badDeaths)-Number(behaviorSummary.badDeathsPerTimelineGame)>=0.7){
-      focus.push({category:"champion",title:champion+" games contain more high-risk deaths",evidence:"This champion averages "+Number(p.badDeaths).toFixed(1)+" flagged high-risk deaths per timeline game versus "+Number(behaviorSummary.badDeathsPerTimelineGame).toFixed(1)+" overall.",action:"Check whether this champion's engage/range pattern is pulling you deeper or leaving you with fewer exit options after committing.",confidence:confidence(tl.length),priority:2,comparison:"champion-role sample vs your Last-20 primary-role sample"});
+      focus.push({category:"champion",title:champion+" games contain more high-risk deaths",evidence:"This champion averages "+Number(p.badDeaths).toFixed(1)+" flagged high-risk deaths per timeline game versus "+Number(behaviorSummary.badDeathsPerTimelineGame).toFixed(1)+" overall.",action:"Check whether this champion's range, engage pattern or pathing is pulling you into repeatable risk states.",confidence:confidence(tl.length),priority:2,comparison:"champion-role sample vs your Last-20 primary-role sample"});
     }
     if(items.length>=3&&hasNum(p.itemDelta)&&Number(p.itemDelta)>=1){
-      focus.push({category:"champion",title:champion+" reaches the first major item late versus its direct peers",evidence:"Across "+items.length+" comparable games, your first major item is "+Number(p.itemDelta).toFixed(1)+" minutes later than the same-role opponent on average.",action:"Check whether this champion's early recall plan or wave clearing is delaying the first complete item.",confidence:confidence(items.length),priority:2,comparison:"same-role opponents in "+champion+" games"});
+      focus.push({category:"champion",title:champion+" reaches the first major item late versus its direct peers",evidence:"Across "+items.length+" comparable games, your first major item is "+Number(p.itemDelta).toFixed(1)+" minutes later than the same-role opponent on average.",action:"Check whether this champion's early recall/resource plan is delaying the first complete item.",confidence:confidence(items.length),priority:2,comparison:"same-role opponents in "+champion+" games"});
     }
-    if(list.length>=3&&hasNum(p.dpm)&&hasNum(summary.dpm)&&Number(p.dpm)-Number(summary.dpm)>=150){
-      highlights.push({category:"champion",title:champion+" is a high-output pick in your current sample",evidence:"DPM averages "+Math.round(Number(p.dpm))+" across "+list.length+" games versus "+Math.round(Number(summary.dpm))+" across the Last 20.",action:"Preserve the fight positioning and resource conversion that make this pick productive; do not infer mastery from win rate alone.",confidence:confidence(list.length),priority:4,comparison:"champion-role sample vs your Last-20 primary-role sample"});
+    if(["SUPPORT","JUNGLE"].includes(roleName)){
+      if(vpmGames.length>=3&&hasNum(p.avgVpmDelta)&&Number(p.avgVpmDelta)<=-0.15){
+        focus.push({category:"champion",title:champion+" gives up vision volume to the opposing "+roleName,evidence:"Across "+vpmGames.length+" direct-peer games, your vision score is "+Math.abs(Number(p.avgVpmDelta)).toFixed(2)+" per minute lower than the opposing "+roleName+" on average.",action:"Review whether this pick's movement windows are being used to establish information before the next contest rather than after contact starts.",confidence:confidence(vpmGames.length),priority:2,comparison:"champion-specific VPM vs same-role opponents"});
+      }else if(vpmGames.length>=3&&hasNum(p.avgVpmDelta)&&Number(p.avgVpmDelta)>=0.15){
+        highlights.push({category:"champion",title:champion+" creates strong vision volume versus direct peers",evidence:"Across "+vpmGames.length+" direct-peer games, your VPM advantage averages "+signedText(p.avgVpmDelta,2)+" versus the opposing "+roleName+".",action:"Preserve the movement windows that create this information without turning extra warding into unsafe entries.",confidence:confidence(vpmGames.length),priority:4,comparison:"champion-specific VPM vs same-role opponents"});
+      }
+      if(visionSetupGames.length>=3&&hasNum(p.avgObjectiveSetupDelta)&&Number(p.avgObjectiveSetupDelta)<=-0.5){
+        focus.push({category:"champion",title:champion+" reaches objective setup with less vision than its role peer",evidence:"Across "+visionSetupGames.length+" peer-comparable timeline games, you average "+Math.abs(Number(p.avgObjectiveSetupDelta)).toFixed(1)+" fewer setup wards near upcoming objectives than the opposing "+roleName+".",action:"Start the vision cycle earlier on this pick and protect enough ward resources for the actual objective approach.",confidence:confidence(visionSetupGames.length),priority:2,comparison:"champion-specific objective-setup wards vs same-role opponents"});
+      }
+    }
+    if(roleName==="JUNGLE"&&impactGames.length>=3&&hasNum(p.avgImpactDelta)){
+      if(Number(p.avgImpactDelta)>=1.5)focus.push({category:"champion",title:champion+" reaches first tracked impact later than the enemy Jungler",evidence:"Across "+impactGames.length+" comparable games, first tracked impact arrives "+Number(p.avgImpactDelta).toFixed(1)+" minutes later than the direct Jungle opponent.",action:"Review the opening path and first actionable window on this champion; the goal is not forced ganks, but earlier supported impact when a real window exists.",confidence:confidence(impactGames.length),priority:2,comparison:"champion-specific first impact vs enemy Jungler"});
+      else if(Number(p.avgImpactDelta)<=-1.5)highlights.push({category:"champion",title:champion+" reaches first tracked impact early",evidence:"Across "+impactGames.length+" comparable games, first tracked impact arrives "+Math.abs(Number(p.avgImpactDelta)).toFixed(1)+" minutes earlier than the enemy Jungler.",action:"Preserve the pathing/tempo that creates early impact without sacrificing the later objective setup the report measures separately.",confidence:confidence(impactGames.length),priority:4,comparison:"champion-specific first impact vs enemy Jungler"});
+    }
+    if(roleName==="SUPPORT"&&roamAttempts>=4&&hasNum(p.roamSuccessRate)&&Number(p.roamSuccessRate)<45){
+      focus.push({category:"champion",title:champion+" roams are converting poorly in the current sample",evidence:roamSuccesses+" of "+roamAttempts+" detected early roam departures produced supported return ("+Number(p.roamSuccessRate).toFixed(0)+"%)."+(hasNum(p.avgSupportAdcLaneCostCs)?" Associated ADC-vs-ADC lane movement averages "+signedText(p.avgSupportAdcLaneCostCs,1)+" CS.":""),action:"Review whether the wave was secure before leaving and when the target play stopped being available; do not compensate by roaming more often.",confidence:confidence(roamAttempts),priority:2,comparison:"champion-specific supported roam return"});
     }
   }
   profiles.sort((a,b)=>b.games-a.games);
