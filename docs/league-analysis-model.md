@@ -1950,3 +1950,20 @@ The top priority should expose an auditable coaching chain rather than appear as
 Missing links remain explicit. A priority can be evidence-supported even when no replay-queue moment or denominator-safe short-term metric is available.
 
 This chain is an evidence trace, not a causal proof. The replay example illustrates the supported theme; it does not establish that the replay event caused the aggregate pattern. Priority rank can change as genuinely new games enter the rolling Last-20 sample.
+
+
+## Phase-risk diagnostic
+
+The report may surface early / transition / late decision risk using the backend `phaseRisk` model. Rates are normalized by **actual phase exposure minutes**, not by games alone.
+
+A phase is eligible for a hotspot comparison only with at least 5 compatible timeline games and at least 20 exposure-minutes.
+
+Use the analyzer's existing hotspot rules:
+- **high-risk hotspot:** at least 0.35 high-risk deaths per 10 phase-minutes and at least 0.15/10m above the next-highest eligible phase;
+- **costly-death hotspot:** at least 0.30 costly deaths per 10 phase-minutes and at least 0.12/10m above the next-highest eligible phase.
+
+If no phase clears both the absolute-rate and separation conditions, say **no hotspot call**. Lower-risk phases remain neutral; they are not automatically labelled strengths.
+
+Phase context may pair the normalized risk with existing supported evidence: direct-role gold / reset evidence early, 15→25 farm/objective routing in transition, and @25 lead/deficit conversion late. These contextual metrics do not alter hotspot classification.
+
+Phase boundaries are rule-profile aware. Do not hard-code standard-SR timestamps onto accelerated or otherwise incompatible rules profiles.
