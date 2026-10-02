@@ -367,6 +367,9 @@ ok(backend.includes('gameDuration||r?.game_duration_seconds||0)>=600'), 'coachin
 ok(backend.includes('shortGameThresholdSeconds:600'), 'short-game threshold must remain explicit in data quality');
 ok(backend.includes('opponentMatchupBehaviorModel'), 'repeated opposing-champion matchup model must remain in analyzer');
 ok(backend.includes('buildReplayReviewQueue'), 'replay review queue must remain explicit in analyzer');
+ok(backend.includes('const replayReviewQueue=buildReplayReviewQueue(coachingGames);'), 'replay-review priority must inherit the verified mechanics coaching cohort');
+ok(app.includes('for(const g of reportCoachingGames(r))')&&app.includes('const games=reportCoachingGames(r),patterns=deathPatternEntries(r)'), 'death and ward spatial intelligence must inherit the same mechanics cohort');
+ok(modelDoc.includes('## Coaching-cohort evidence surfaces')&&modelDoc.includes('must not generate current replay priorities'), 'analysis model must preserve cohort boundaries across evidence surfaces');
 ok(backend.includes('buildPracticeTargets'), 'measurable practice-target builder must remain explicit');
 ok(backend.includes('samplePaths:samplePathsFor(metricPath)')&&backend.includes('"coachingSummary.csMin"')&&backend.includes('"coachingSummary.goldDiff15"'), 'practice targets must preserve denominator paths and coaching-cohort self metrics');
 ok(app.includes('function reportNewMatchCount(')&&app.includes('if(newGames<windowGames)')&&app.includes('if(currentSample<minSample)'), 'practice-target outcomes must fail closed until both new-game horizon and current denominator are satisfied');
