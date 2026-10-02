@@ -1721,3 +1721,5 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 .phase-diagnostic-card.tone-bad{border-top:4px solid var(--bad)}
 .phase-diagnostic-card.thin-evidence{border-style:dashed}
 @media(max-width:950px){.phase-diagnostic-grid{grid-template-columns:1fr}}
+
+.arc-review-button{width:100%;margin-top:10px}
