@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.82";
+const ANALYZER_VERSION="league-web-behavior-v4.83";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1932,7 +1932,7 @@ function opponentMatchupBehaviorModel(games:any[],summary:any,behaviorSummary:an
   const groups=new Map<string,any[]>();
   for(const g of games||[]){
     const opponentChampion=text(g?.peer?.champion),roleName=text(g?.role);
-    if(!opponentChampion||roleName!==primaryRole)continue;
+    if(g?.directPeerComparable!==true||!opponentChampion||roleName!==primaryRole)continue;
     const key=roleName+"|"+opponentChampion;
     if(!groups.has(key))groups.set(key,[]);
     groups.get(key)!.push(g);
@@ -1946,7 +1946,8 @@ function opponentMatchupBehaviorModel(games:any[],summary:any,behaviorSummary:an
     const ownChampions=Object.entries(ownChampionCounts).sort((a:any,b:any)=>Number(b[1])-Number(a[1])).map(([champion,games])=>({champion,games:Number(games)}));
     const soloKills=list.reduce((n,g)=>n+Number(g.laneDuel?.earlySoloKillsVsRole||0),0),soloDeaths=list.reduce((n,g)=>n+Number(g.laneDuel?.earlySoloDeathsToRole||0),0);
     const homeLaneDeaths=list.reduce((n,g)=>n+Number(g.lanePressure?.earlyHomeLaneDeaths||0),0),outsidePressureDeaths=list.reduce((n,g)=>n+Number(g.lanePressure?.earlyOutsidePressureDeaths||0),0),outsidePressureShare=homeLaneDeaths?100*outsidePressureDeaths/homeLaneDeaths:null;
-    const p:any={opponentChampion,role:roleName,games:list.length,wins:list.filter(g=>g.win).length,winRate:pct(list.filter(g=>g.win).length,list.length),laneGames:lane.length,goldDiff15:meanField(lane,g=>g.goldDiff15),csDiff15:meanField(finiteGames(laneComparable,g=>g.csDiff15),g=>g.csDiff15),badDeaths:meanField(tl,g=>g.badDeathCount),timelineGames:tl.length,earlySoloKills:soloKills,earlySoloDeaths:soloDeaths,earlyHomeLaneDeaths:homeLaneDeaths,earlyOutsidePressureDeaths:outsidePressureDeaths,outsidePressureShare,avgDpmDelta:meanField(list.filter(g=>hasNum(g.peer?.dpmDelta)),g=>g.peer.dpmDelta),ownChampions};
+    const dpmPeerGames=finiteGames(list,g=>g.peer?.dpmDelta);
+    const p:any={opponentChampion,role:roleName,games:list.length,wins:list.filter(g=>g.win).length,winRate:pct(list.filter(g=>g.win).length,list.length),laneGames:lane.length,goldDiff15:meanField(lane,g=>g.goldDiff15),csDiff15:meanField(finiteGames(laneComparable,g=>g.csDiff15),g=>g.csDiff15),badDeaths:meanField(tl,g=>g.badDeathCount),timelineGames:tl.length,dpmGames:dpmPeerGames.length,earlySoloKills:soloKills,earlySoloDeaths:soloDeaths,earlyHomeLaneDeaths:homeLaneDeaths,earlyOutsidePressureDeaths:outsidePressureDeaths,outsidePressureShare,avgDpmDelta:meanField(dpmPeerGames,g=>g.peer.dpmDelta),ownChampions};
     profiles.push(p);
     const ownMix=ownChampions.slice(0,3).map((x:any)=>x.champion+" "+x.games+"g").join(", ");
     if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(summary?.goldDiff15)&&Number(p.goldDiff15)-Number(summary.goldDiff15)<=-300){
@@ -1976,12 +1977,12 @@ function championBehaviorModel(games:any[],summary:any,behaviorSummary:any,prima
   const confidence=(n:number)=>n>=5?"medium":"low";
   for(const [key,list] of groups.entries()){
     if(list.length<3)continue;
-    const [champion,roleName]=key.split("|"),lane=finiteGames(list.filter(g=>g?.phaseRules?.lane15Comparable!==false),g=>g.goldDiff15),tl=list.filter(g=>g.timelineAvailable),items=finiteGames(list,g=>g.itemSpikeDeltaVsOpponent);
+    const [champion,roleName]=key.split("|"),trustedPeer=list.filter(g=>g.directPeerComparable===true),lane=finiteGames(trustedPeer.filter(g=>g?.phaseRules?.lane15Comparable!==false),g=>g.goldDiff15),tl=list.filter(g=>g.timelineAvailable),items=finiteGames(trustedPeer,g=>g.itemSpikeDeltaVsOpponent),dpmGames=finiteGames(list,g=>g.dpm);
     const p:any={
       champion,role:roleName,games:list.length,wins:list.filter(g=>g.win).length,winRate:pct(list.filter(g=>g.win).length,list.length),
-      csMin:meanField(list,g=>g.csMin),dpm:meanField(list,g=>g.dpm),kp:meanField(list,g=>g.kp),
-      laneGames:lane.length,goldDiff15:meanField(lane,g=>g.goldDiff15),badDeaths:meanField(tl,g=>g.badDeathCount),
-      timelineGames:tl.length,itemGames:items.length,itemDelta:meanField(items,g=>g.itemSpikeDeltaVsOpponent)
+      csMin:meanField(list,g=>g.csMin),dpm:meanField(dpmGames,g=>g.dpm),kp:meanField(list,g=>g.kp),
+      peerGames:trustedPeer.length,laneGames:lane.length,goldDiff15:meanField(lane,g=>g.goldDiff15),badDeaths:meanField(tl,g=>g.badDeathCount),
+      timelineGames:tl.length,dpmGames:dpmGames.length,itemGames:items.length,itemDelta:meanField(items,g=>g.itemSpikeDeltaVsOpponent)
     };
     profiles.push(p);
     if(roleName!==primaryRole)continue;
