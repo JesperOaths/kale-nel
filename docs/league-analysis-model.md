@@ -2289,3 +2289,34 @@ SUPPORT additionally gets:
 - **Vision safety → objective setup:** at least 12 vision actions and 5 joined objective encounters.
 
 Compound cards remain neutral below their joined evidence floors. Combining several weak inputs must never make a role-specific conclusion look mature.
+
+
+## Role-aware champion and repeated-matchup diagnostics
+
+Champion and repeated-opponent cards use the same selected-role coaching cohort and must not force lane-carry diagnostics onto every role.
+
+For **ADC, MID and TOP**, champion/repeated-matchup interpretation may use:
+- direct-role gold state at 15,
+- DPM versus the player's usual role sample or direct role peer,
+- clean early 1v1 evidence,
+- outside-pressure share of early lane deaths,
+- first-major timing,
+- high-risk death rate.
+
+For **SUPPORT**, champion diagnostics instead prioritize:
+- supported roam conversion,
+- associated ADC-vs-ADC CS movement during measured roam windows,
+- VPM versus the opposing Support,
+- pre-objective setup wards versus the opposing Support,
+- high-risk deaths versus the player's Support baseline.
+
+For **JUNGLE**, champion diagnostics prioritize:
+- first tracked impact timing versus the enemy Jungler,
+- first-major timing,
+- VPM versus the enemy Jungler,
+- pre-objective setup wards versus the enemy Jungler,
+- high-risk deaths versus the player's Jungle baseline.
+
+Repeated SUPPORT/JUNGLE opponent cards likewise use direct-peer VPM, objective-setup vision, first-impact/item timing and role-appropriate resource context. Carry-only “lane economy suppressed” and clean-lane-1v1 diagnoses are gated to ADC/MID/TOP.
+
+Champion and repeated-matchup groups still require at least three games before they enter these diagnostic surfaces. Individual colored chips additionally require at least three valid observations for their own metric. Win rate remains descriptive and is never used by itself to label a champion or matchup good/bad.
