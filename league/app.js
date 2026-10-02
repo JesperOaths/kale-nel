@@ -1143,12 +1143,12 @@ function renderObjectiveFamilyOverview(r){
   const reviewable=rows.filter(x=>x.contested>=3),mostMissed=reviewable.slice().sort((a,b)=>(a.presence??101)-(b.presence??101)||b.contested-a.contested)[0]||null;
   box.innerHTML='<div class="section-subhead objective-family-head"><div><span>Objective families</span><strong>Where do the contested windows actually occur?</strong></div><small>Family presence is descriptive context, not a role-grade by itself.</small></div>'+
     '<div class="objective-family-grid">'+rows.map(x=>{
-      const interval=wilsonInterval(x.joined,x.contested),thin=x.contested<3;
+      const interval=wilsonInterval(x.joined,x.contested),thin=x.contested<3,matchCount=objectiveFamilyMatchIds(r,x.key).size;
       return '<article class="objective-family-card '+(thin?'thin-evidence':'')+'"><span>'+esc(x.label)+'</span><strong>'+(x.presence==null?'n/a':esc(fmtPct(x.presence)))+' contested presence</strong>'+
         '<div class="objective-family-statline"><b>'+x.joined+'/'+x.contested+'</b><small>contested joins</small></div>'+
         (interval?'<div class="objective-family-interval"><i style="left:'+clamp(interval.low,0,100)+'%;width:'+(clamp(interval.high,0,100)-clamp(interval.low,0,100))+'%"></i><b style="left:'+clamp(x.presence,0,100)+'%"></b></div><small class="objective-family-ci">95% Wilson '+esc(fmtPct(interval.low))+'–'+esc(fmtPct(interval.high))+'</small>':'')+
         '<p>Team-controlled encounters '+x.team+' · enemy-controlled '+x.enemy+' · secured units '+x.teamUnits+' vs '+x.enemyUnits+(hasNum(x.teamJoinRate)?' · present for '+fmtPct(x.teamJoinRate)+' of team-secured encounters':'')+'.</p>'+
-        (thin?'<small class="objective-family-thin">Fewer than 3 contested encounters — context only.</small>':'<button class="button secondary tiny objective-family-review" type="button" data-objective-family-review="'+esc(x.key)+'">Review '+x.contested+' contested-window game'+(x.contested===1?'':'s')+'</button>')+
+        (thin?'<small class="objective-family-thin">Fewer than 3 contested encounters — context only.</small>':'<button class="button secondary tiny objective-family-review" type="button" data-objective-family-review="'+esc(x.key)+'">Review '+matchCount+' matching game'+(matchCount===1?'':'s')+'</button>')+
       '</article>';
     }).join('')+'</div>'+
     (mostMissed?'<div class="objective-family-note"><b>Review clue:</b> '+esc(mostMissed.label)+' has the lowest contested-presence point estimate among families with at least 3 contested encounters ('+esc(fmtPct(mostMissed.presence))+' across '+mostMissed.contested+'). Treat this as a replay-priority clue, not proof that objective attendance caused results.</div>':'');
