@@ -169,7 +169,11 @@ ok(backend.includes('function committedPurchaseEvents('), 'shop/reset/item metri
 ok(backend.includes('purchases[idx].committed=false'), 'ITEM_UNDO must invalidate a transient matching purchase');
 ok(backend.includes('function committedItemPurchaseCount('), 'Control Ward purchase counts must consume the committed-purchase stream');
 ok(backend.includes('function purchaseCashCost(')&&backend.includes('recipe_owned_component_credit'), 'shop spend must use recipe-aware cash-cost estimates');
-ok(backend.includes('out.shopVisits=applyDynamicShopSpendBounds(purchaseGroups(itemEventsByPid,catalog),out.roleQuestContext)'), 'shop visits must receive the complete item ledger before role-aware dynamic spend bounds are applied');
+ok(backend.includes('out.shopVisits=markCatalogFallback(applyDynamicShopSpendBounds(purchaseGroups(itemEventsByPid,catalog),out.roleQuestContext))'), 'shop visits must receive the complete item ledger, dynamic price bounds and exact-catalog confidence gate');
+ok(backend.includes('itemMechanicsEligible=itemCatalogExactPatch&&!!catalog'), 'recipe/cost/major-item coaching must require an exact patch item catalog');
+ok(backend.includes('fallback_catalog_display_only_item_mechanics_withheld'), 'fallback item catalogs must remain display-only for mechanics-sensitive coaching');
+ok(backend.includes('const myMajorSequence=itemMechanicsEligible?majorOwnershipMilestones'), 'major-item timing must fail closed without an exact patch catalog');
+ok(app.includes('Item mechanics catalog')&&app.includes('fallback display only · spend/item timing withheld'), 'frontend must disclose fallback item-catalog suppression');
 ok(backend.includes('function persistedReportProjection('), 'saved reports must use an explicit compact storage projection');
 ok(backend.includes('schema:"league_saved_report_compact_v1"'), 'saved-report compact schema must remain versioned');
 ok(backend.includes('report_data:persistedRep'), 'analysis persistence must write the compact projection rather than the full live report');
