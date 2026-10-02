@@ -2293,7 +2293,7 @@ function detailContent(g,tab){
     const kills=events.reduce((n,x)=>n+Number((x.playerKillAssists??(x.killOrAssist?1:0))||0),0),deaths=events.reduce((n,x)=>n+Number((x.playerDeaths??(x.death?1:0))||0),0),obj=events.reduce((n,x)=>n+Number((x.objectivePresent??(x.objective?1:0))||0),0),away=events.reduce((n,x)=>n+Number(x.objectiveAway||0),0);
     return detailCard('Attempts',String(r.attempts??0))+detailCard('Successful',String(r.successes??0))+detailCard('Failed',String(r.failures??0))+
       detailCard('Roam K/A / deaths',String(kills)+' / '+String(deaths))+detailCard('Objectives joined / while away',String(obj)+' / '+String(away))+
-      detailList(events.map((x,i)=>'Roam '+String(i+1)+' · '+(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+(x.targetZone||'map')+' · '+(x.outcome||'neutral')+(roamEvidenceText(x)?' · '+roamEvidenceText(x):'')),'No qualifying pre-major-objective-era roam departures detected.')+
+      detailList(events.map((x,i)=>'Roam '+String(i+1)+' · '+(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+(x.targetZone||'map')+' · '+(x.outcome||'neutral')+(roamEvidenceText(x)?' · '+roamEvidenceText(x):'')),'No qualifying early roam departures were detected inside this queue’s configured roam window.')+
       '<div class="detail-note">V21 parity upgrade: each roam keeps its Riot-frame departure/path/return plus kill/assist, death, neutral-objective, structure/plate and lane-cost evidence. Objective success requires supported player presence. Plate/turret losses count as roam cost only when they occur in the player’s home lane, avoiding unrelated map-wide structure losses.</div>';
   }
   if(tab==='fights'){
