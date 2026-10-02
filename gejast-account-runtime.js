@@ -283,9 +283,23 @@
     // This gives login a third independent synchronous source: even if both
     // Supabase and deferred static JS are slow/broken, the HTML names survive.
     const domSeed = domSeedNames(sel), cached = readLoginCache(), snapshot = staticLoginNames(), seed = normalizeNames([...domSeed,...cached,...snapshot]);
+    const restoreStaticNamesIfBlank=()=>{
+      if(!sel||!seed.length||domSeedNames(sel).length)return;
+      fillSelect(sel,seed);
+      sel.dataset.seedSource='runtime-static-self-heal';
+      sel.dataset.seedCount=String(seed.length);
+    };
     if(seed.length){
       fillSelect(sel, seed);
       setStatus('statusBox',String(seed.length)+' actieve loginspeler(s) direct geladen; live controle op achtergrond...','ok');
+      // A late/deferred script must never be able to leave the selector empty.
+      // Observe only for accidental blanking; valid later merges are untouched.
+      if(typeof MutationObserver!=='undefined'){
+        const observer=new MutationObserver(()=>restoreStaticNamesIfBlank());
+        observer.observe(sel,{childList:true});
+        window.setTimeout(()=>observer.disconnect(),30000);
+      }
+      window.addEventListener('pageshow',restoreStaticNamesIfBlank);
     } else {
       setStatus('statusBox','Actieve loginnamen laden...','');
     }
