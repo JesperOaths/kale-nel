@@ -2378,7 +2378,7 @@ The ledger is capped to the newest/earliest supported key moments after chronolo
 
 The three top driver cards are intentionally stricter than the long supporting lists.
 
-- A primary limiter is visually red only when its representative finding is not low-confidence, or when a low-confidence representative is reinforced by at least two grouped supporting findings.
+- A primary limiter is visually red only when its representative finding is not low-confidence, or when a low-confidence representative is reinforced by at least **two distinct evidence channels beyond the representative finding**.
 - A low-confidence single-source limiter remains visible as a **Provisional limiter** with neutral styling.
 - A strength is visually green as **Bankable strength** only when its selected highlight is not low-confidence.
 - If only low-confidence strengths are available, the card is labelled **Emerging strength**, remains neutral, and uses **Keep testing** rather than **Preserve**.
@@ -2386,6 +2386,8 @@ The three top driver cards are intentionally stricter than the long supporting l
 
 This affects presentation priority, not the underlying evidence record. Low-confidence findings remain available in the supporting coaching evidence and can become stronger as the rolling sample grows.
 
+
+Theme synthesis records total related findings separately from independent reinforcement. The representative finding does not count as its own reinforcement, and multiple findings with the same comparison/evidence channel do not increase independent support. Theme ranking also uses the number of distinct channels rather than raw duplicate finding count, preventing repeated formulations of one signal from inflating priority.
 
 ## Role-aware recent match story
 
