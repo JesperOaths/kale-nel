@@ -1101,3 +1101,4 @@ ok(modelDoc.includes('## v271 resource-to-output conversion'), 'analysis documen
 ok(backend.includes('lowResourceTop2DamageRate:lowResourceDamageRate(sample)')&&backend.includes('lowResourceTop2DamageRate:trend("lowResourceTop2DamageRate")'), 'carry-role history must expose denominator-safe lower-resource damage conversion');
 ok(app.includes("Lower gold → top-2 damage")&&app.includes("games outside top-2 team gold still reached top-2 team damage"), 'frontend must show lower-resource punch-up numerator and denominator');
 ok(modelDoc.includes('## v272 lower-resource punch-up context'), 'analysis documentation must preserve v272 lower-resource output semantics');
+ok(app.includes('damageTop2Rate')&&app.includes('damageLeaderRate')&&app.includes('top-2 team damage overall')&&app.includes('team damage leader'), 'existing team damage-rank history metrics must be visibly consumed rather than computed and discarded');
