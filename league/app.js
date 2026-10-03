@@ -412,8 +412,8 @@ async function rebuildSavedRoleReportFromCache(profile,selectedRole,reason=''){
   $('sourceState').textContent='Using cached Riot data'+(reason?' · '+reason:'');
   statusPill('Rebuilding '+roleLabel(selectedRole)+' report','warn');
   const rebuilt=await api('analyze_basic',{profile_id:profile.id,target_role:selectedRole});
-  const report=rebuilt?.report||null,wrongRole=(report?.games||[]).find(g=>canonicalRole(g.role)!==selectedRole);
-  if(wrongRole)throw new Error('Role-selection safety check failed during saved-report rebuild.');
+  const report=rebuilt?.report||null,scope=reportRoleScopeViolations(report,selectedRole);
+  if(scope.total)throw new Error('Role-selection safety check failed during saved-report rebuild: '+scope.total+' other-role game(s) detected.');
   if(!report?.games?.length)return null;
   let history=null;
   try{history=await api('report_latest',{profile_id:profile.id,target_role:selectedRole});}catch(_){}
@@ -426,10 +426,10 @@ async function loadSavedReport(profile){
     const d=await api('report_latest',{profile_id:profile.id,target_role:selectedRole});
     const current=d.analysis?.report_data||null,previous=d.previous?.report_data||null,liveAnalyzer=String(state.backendAnalyzerVersion||''),savedAnalyzer=String(current?.analyzerVersion||'');
     if(current){
-      const staleAnalyzer=!!liveAnalyzer&&savedAnalyzer!==liveAnalyzer;
-      if(staleAnalyzer){
+      const staleAnalyzer=!!liveAnalyzer&&savedAnalyzer!==liveAnalyzer,scope=reportRoleScopeViolations(current,selectedRole),roleContaminated=scope.total>0;
+      if(staleAnalyzer||roleContaminated){
         try{
-          const rebuilt=await rebuildSavedRoleReportFromCache(profile,selectedRole,'analyzer '+(savedAnalyzer||'unknown')+' → '+liveAnalyzer);
+          const rebuilt=await rebuildSavedRoleReportFromCache(profile,selectedRole,roleContaminated?('role-scope repair: '+scope.total+' other-role game(s)'):('analyzer '+(savedAnalyzer||'unknown')+' → '+liveAnalyzer));
           if(rebuilt){
             renderReport(rebuilt.report,'saved_server');
             renderProgressComparison(rebuilt.report,rebuilt.previous,rebuilt.previousAt);
@@ -439,11 +439,14 @@ async function loadSavedReport(profile){
             log('Refreshed the saved '+roleLabel(selectedRole)+' report from analyzer '+(savedAnalyzer||'unknown')+' to '+liveAnalyzer+' using '+rebuilt.cachedRoleGames+' cached role game(s); no Riot refetch or API key was needed.','ok');
             return;
           }
+          if(roleContaminated)throw new Error('Saved '+roleLabel(selectedRole)+' report contains '+scope.total+' other-role game(s) and could not be rebuilt safely.');
           log('Saved '+roleLabel(selectedRole)+' report uses analyzer '+(savedAnalyzer||'unknown')+' while the backend is '+liveAnalyzer+', but no cached role games were available for an automatic rebuild. Showing the saved report as stale context.','bad');
         }catch(rebuildError){
+          if(roleContaminated)throw rebuildError;
           log('Automatic cached rebuild for analyzer '+(savedAnalyzer||'unknown')+' → '+liveAnalyzer+' failed: '+rebuildError.message+'. Showing the existing saved report instead.','bad');
         }
       }
+      if(roleContaminated)throw new Error('Unsafe saved report role scope; rebuild required before display.');
       renderReport(current,'saved_server');
       renderProgressComparison(current,previous,d.previous?.created_at||null);
       $('analysisState').textContent=(current.games?.length||0)+' saved '+roleLabel(selectedRole)+' games';
@@ -650,8 +653,8 @@ async function runRecentAnalysis(){
     const d=await analyzeProfileData(profile,targetRole);
     const analyzed=Number(d.report?.dataQuality?.analyzedGames??d.report?.games?.length??0);
     if(analyzed<=0)throw new Error('No '+roleLabel(targetRole)+' games were eligible after queue/map/duration filtering. Try another role or fetch again after more matches.');
-    const wrongRole=(d.report?.games||[]).find(g=>canonicalRole(g.role)!==targetRole);
-    if(wrongRole)throw new Error('Role-selection safety check failed: a '+String(wrongRole.role||'different-role')+' match entered the '+targetRole+' report.');
+    const scope=reportRoleScopeViolations(d.report,targetRole);
+    if(scope.total)throw new Error('Role-selection safety check failed: '+scope.deep+' deep and '+scope.history+' history game(s) outside '+targetRole+' entered the report.');
     renderReport(d.report,'web_behavior');
     try{const history=await api('report_latest',{profile_id:profile.id,target_role:targetRole});renderProgressComparison(d.report,history.previous?.report_data||null,history.previous?.created_at||null);}catch(_){$('progressComparisonPanel').hidden=true;}
     $('analysisState').textContent=analyzed+' '+roleLabel(targetRole)+' games analyzed';
@@ -685,6 +688,15 @@ function normalizeReport(r){
   out.sourceStatus=out.sourceStatus||{};
   out.charts=out.charts||{};
   return out;
+}
+function reportRoleScopeViolations(report,requestedRole){
+  const selected=canonicalRole(requestedRole||report?.dataQuality?.selectedRole||report?.coachingSummary?.primaryRole||report?.summary?.primaryRole||state.selectedRole);
+  if(!selected)return{selectedRole:null,deep:0,history:0,total:0};
+  const deep=(Array.isArray(report?.games)?report.games:[]).filter(g=>explicitGameRole(g?.role)!==selected).length;
+  const counts=report?.longHorizon?.roleCounts&&typeof report.longHorizon.roleCounts==='object'?report.longHorizon.roleCounts:{};
+  const historyFromCounts=Object.entries(counts).reduce((n,[roleKey,count])=>n+(canonicalRole(roleKey)!==selected?Number(count||0):0),0);
+  const history=Math.max(historyFromCounts,Number(report?.dataQuality?.historyRoleScopeViolations||0));
+  return{selectedRole:selected,deep,history,total:deep+history};
 }
 let heavyRenderTicket=0;
 let heavyObservers=[];
@@ -1272,22 +1284,63 @@ function historyTrendCard(label,obj,unit='num',inverse=false,threshold=0){
   const deltaText=unit==='percent'||unit==='pp'?signed(delta,1)+' pp':unit==='dpm'?signed(delta,0):unit==='cs'?signed(delta,1):signed(delta,2);
   return '<article class="pulse-card tone-'+tone+'"><span>'+esc(label)+'</span><strong>'+esc(format(recent))+'</strong><p>Previous '+esc(format(prior))+' · Δ '+esc(deltaText)+'</p><small>latest '+recentN+' vs previous '+priorN+' valid games · descriptive history shift</small></article>';
 }
+function historyDistributionCard(label,obj,unit='num'){
+  const n=Number(obj?.n||0);if(!n||!hasNum(obj?.median))return '<article class="quick-read-card tone-neutral thin-evidence"><div class="quick-read-head"><span>'+esc(label)+'</span><strong>n/a</strong></div><p>No stable history distribution is available.</p><small>0 valid games</small></article>';
+  const format=(v)=>{
+    if(unit==='percent')return fmt(v,1)+'%';
+    if(unit==='pp')return signed(v,1)+' pp';
+    if(unit==='dpm')return fmtInt(v);
+    if(unit==='csmin')return fmt(v,2);
+    return fmt(v,1);
+  };
+  return '<article class="quick-read-card tone-neutral"><div class="quick-read-head"><span>'+esc(label)+'</span><strong>'+esc(format(obj.median))+'</strong></div><p>Middle 50%: '+esc(format(obj.q25))+' → '+esc(format(obj.q75))+'</p><small>'+n+' valid games · median + interquartile range</small></article>';
+}
 function renderLongHorizon(r){
-  const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),note=$('longHorizonNote');if(!kpi||!trend)return;
+  const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),consistency=$('historyConsistency'),champions=$('historyChampionMix'),note=$('longHorizonNote');if(!kpi||!trend)return;
   const s=h.summary||{},role=canonicalRole(h.selectedRole||r?.dataQuality?.selectedRole||state.selectedRole),games=Number(h.sampleGames||0);
-  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
-  const laner=['ADC','MID','TOP'].includes(role),rows=[
-    {label:'History depth',value:games+' games',sub:'up to 100 same-role + selected-queue matches'},
-    laner?{label:'Lane minions @10',value:hasNum(s?.laneCs10?.value)?fmt(s.laneCs10.value,1):'n/a',sub:String(s?.laneCs10?.n||0)+' match-level Riot challenge observations'}:{label:'Vision actions / min',value:hasNum(s?.visionActionsPerMin?.value)?fmt(s.visionActionsPerMin.value,2):'n/a',sub:'wards placed + wards cleared per minute'},
-    {label:'Death downtime',value:hasNum(s?.deadTimePct?.value)?fmtPct(s.deadTimePct.value):'n/a',sub:'share of game time spent dead · timing-sensitive'},
-    {label:'Damage share − gold share',value:hasNum(s?.damageEfficiencyPp?.value)?signed(s.damageEfficiencyPp.value,1)+' pp':'n/a',sub:'team champion-damage share minus team gold share'},
-    {label:'Turret damage / min',value:hasNum(s?.turretDamagePerMin?.value)?fmtInt(s.turretDamagePerMin.value):'n/a',sub:'direct structure pressure from match data'},
-    {label:'Epic damage / min',value:hasNum(s?.epicDamagePerMin?.value)?fmtInt(s.epicDamagePerMin.value):'n/a',sub:'damage to epic monsters; context, not objective credit'}
+  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
+  const laner=['ADC','MID','TOP'].includes(role),roleCounts=h.roleCounts||{},otherRoleGames=Object.entries(roleCounts).reduce((n,[rk,count])=>n+(canonicalRole(rk)!==role?Number(count||0):0),0);
+  const roleVolume=laner
+    ?{label:'Lane minions @10',value:hasNum(s?.laneCs10?.value)?fmt(s.laneCs10.value,1):'n/a',sub:String(s?.laneCs10?.n||0)+' Riot match-level lane observations'}
+    :{label:'Vision actions / min',value:hasNum(s?.visionActionsPerMin?.value)?fmt(s.visionActionsPerMin.value,2):'n/a',sub:'wards placed + wards cleared per minute'};
+  const roleContext=laner
+    ?{label:'Solo kills / game',value:hasNum(s?.soloKills?.value)?fmt(s.soloKills.value,2):'n/a',sub:(hasNum(s?.soloKillsPer30?.value)?fmt(s.soloKillsPer30.value,2)+' per 30 min · ':'')+'Riot soloKills challenge; per-game is the primary unit'}
+    :role==='SUPPORT'
+      ?{label:'Control wards / game',value:hasNum(s?.controlWardsPlaced?.value)?fmt(s.controlWardsPlaced.value,2):'n/a',sub:String(s?.controlWardsPlaced?.n||0)+' Riot challenge observations'}
+      :{label:'Epic damage / min',value:hasNum(s?.epicDamagePerMin?.value)?fmtInt(s.epicDamagePerMin.value):'n/a',sub:'epic-monster pressure context · not objective credit'};
+  const rows=[
+    {label:'History depth',value:games+' '+roleLabel(role)+' games',sub:'selected role + selected queue from the latest 100 account matches · '+otherRoleGames+' other-role games included'},
+    roleVolume,roleContext,
+    {label:'Death downtime',value:hasNum(s?.deadTimePct?.value)?fmt(s.deadTimePct.value,1)+'%':'n/a',sub:'share of game time spent dead · timing-sensitive'},
+    {label:'Damage share − gold share',value:hasNum(s?.damageEfficiencyPp?.value)?signed(s.damageEfficiencyPp.value,1)+' pp':'n/a',sub:'team champion-damage share minus team gold share · composition-sensitive'},
+    {label:'Turret damage / min',value:hasNum(s?.turretDamagePerMin?.value)?fmtInt(s.turretDamagePerMin.value):'n/a',sub:'direct structure pressure from match data'}
   ];
   kpi.innerHTML=rows.map(x=>'<article class="kpi-card tone-neutral"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><small>'+esc(x.sub)+'</small></article>').join('');
   const specs=[{label:'CS / min',obj:h?.trend?.csMin,unit:'csmin',inverse:false,threshold:.08},...(laner?[{label:'Lane minions @10',obj:h?.trend?.laneCs10,unit:'cs',inverse:false,threshold:1.5}]:[{label:'Vision actions / min',obj:h?.trend?.visionActionsPerMin,unit:'num',inverse:false,threshold:.05}]),{label:'Damage / min',obj:h?.trend?.dpm,unit:'dpm',inverse:false,threshold:60},{label:'Death downtime',obj:h?.trend?.deadTimePct,unit:'percent',inverse:true,threshold:1.5},{label:'Damage share − gold share',obj:h?.trend?.damageEfficiencyPp,unit:'pp',inverse:false,threshold:1.5},{label:'Turret damage / min',obj:h?.trend?.turretDamagePerMin,unit:'dpm',inverse:false,threshold:35}];
   trend.innerHTML=specs.map(x=>historyTrendCard(x.label,x.obj,x.unit,x.inverse,x.threshold)).join('');
-  if(note)note.innerHTML='<b>Scope:</b> '+games+' selected-role + selected-queue matches, with '+String(h.deepTimelineGames||0)+' carrying deep timeline evidence. Last-20 behavior coaching still uses the deep sample; older matches are deliberately used for stable match-level history only. '+String(s.compromisedOutcomeGames||0)+' history game(s) are tagged as outcome-compromised by AFK/early-surrender evidence. Riot plate-segment data is retained for structure context but is not interpreted as old pre-14 outer-turret plating.';
+  if(consistency){
+    const c=h.consistency||{},specs=[
+      {label:'CS / min',obj:c.csMin,unit:'csmin'},
+      ...(laner?[{label:'Lane minions @10',obj:c.laneCs10,unit:'num'},{label:'Solo kills / game',obj:c.soloKills,unit:'num'}]:role==='SUPPORT'?[{label:'Vision actions / min',obj:c.visionActionsPerMin,unit:'num'},{label:'Control wards / game',obj:c.controlWardsPlaced,unit:'num'}]:[{label:'Epic damage / min',obj:c.epicDamagePerMin,unit:'dpm'}]),
+      {label:'Deaths / game',obj:c.deaths,unit:'num'},
+      {label:'Death downtime',obj:c.deadTimePct,unit:'percent'},
+      {label:'Turret damage / min',obj:c.turretDamagePerMin,unit:'dpm'}
+    ];
+    consistency.innerHTML=specs.map(x=>historyDistributionCard(x.label,x.obj,x.unit)).join('');
+  }
+  const top=Array.isArray(h.topChampions)?h.topChampions.slice(0,6):[];
+  if(champions)champions.innerHTML=top.length?top.map(x=>{
+    const src=championIcon(x.champion),share=games?Number(x.games||0)/games*100:null;
+    return '<article class="game-visual-card">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="'+esc(x.champion)+' portrait">':'')+'<div><strong>'+esc(x.champion)+'</strong><span>'+String(x.games||0)+' game'+(Number(x.games)===1?'':'s')+' · '+esc(fmtPct(share))+' of '+roleLabel(role)+' history</span></div></article>';
+  }).join(''):'<p class="muted">No champion-mix history available.</p>';
+  const leader=top[0]||null,leaderShare=leader&&games?Number(leader.games||0)/games*100:null,patches=Array.isArray(h.patches)?h.patches.filter(Boolean):[];
+  let mixNote='';
+  if(leader&&hasNum(leaderShare)){
+    if(Number(leaderShare)>=90)mixNote=' Champion mix is essentially controlled: '+esc(leader.champion)+' is '+esc(fmtPct(leaderShare))+' of this '+roleLabel(role)+' history. Within-sample trends are less confounded by champion swaps, but they should not be generalized to other champions.';
+    else if(Number(leaderShare)>=50)mixNote=' History is heavily shaped by '+esc(leader.champion)+' ('+esc(fmtPct(leaderShare))+'), so output changes can reflect champion mix as well as play changes.';
+    else mixNote=' Champion mix is spread across several picks, so DPM/resource-output shifts can partly reflect champion composition.';
+  }
+  if(note)note.innerHTML='<b>Role integrity:</b> '+games+' '+esc(roleLabel(role))+' history game(s), '+otherRoleGames+' other-role game(s) included.'+(otherRoleGames?' <b>Warning: role scope is contaminated.</b>':' Role scope is clean.')+' <b>Evidence depth:</b> '+String(h.deepTimelineGames||0)+' game(s) carry deep timeline evidence; older games provide match-level history only. '+String(s.compromisedOutcomeGames||0)+' history game(s) are tagged as AFK/early-surrender outcome-compromised.'+(patches.length?' Patches represented: '+esc(patches.join(', '))+'.':'')+mixNote;
 }
 
 function renderVisualSummary(r){
