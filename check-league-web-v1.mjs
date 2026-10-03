@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v222'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v223'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -871,6 +871,9 @@ for(const table of ['league_profiles_v1','league_match_cache_v1','league_fetch_r
   assert.ok(migration.includes('alter table public.'+table+' enable row level security'));
   assert.ok(migration.includes('revoke all on public.'+table+' from anon, authenticated'));
 }
+
+assert.ok(app.includes("aggregation==='pooled_events'?' · pooled event rate'")&&app.includes("aggregation==='mean_games_with_event_coverage'?' · equal-weight game mean'"),'Recent Pulse must disclose whether a short-window metric is pooled by event or averaged equally across games');
+assert.ok(modelDoc.includes('The Recent Pulse UI must also disclose the aggregation inline'),'Recent-direction aggregation disclosure must remain documented');
 console.log('league-web-contract=PASS');
 
 assert.ok(css.includes('.objective-diagnosis'),'Objective diagnosis must have dedicated styling');
