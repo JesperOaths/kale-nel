@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.127";
+const ANALYZER_VERSION="league-web-behavior-v4.128";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -2195,7 +2195,13 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
     "behaviorSummary.meanGameRoamLaneMovementCs":["behaviorSummary.roamLaneCostMeasuredGames"],
     "behaviorSummary.meanGameSupportRoamAdcLaneMovementCs":["behaviorSummary.supportRoamAdcLaneMovementGames"],
     "sessionBehavior.game3PlusGoldDelta":["sessionBehavior.firstGame.lane15Games","sessionBehavior.game3Plus.lane15Games"],
-    "sessionBehavior.postLossGoldDelta":["sessionBehavior.quickAfterLoss.lane15Games","sessionBehavior.quickAfterWin.lane15Games"]
+    "sessionBehavior.postLossGoldDelta":["sessionBehavior.quickAfterLoss.lane15Games","sessionBehavior.quickAfterWin.lane15Games"],
+    "sessionBehavior.game3PlusVpmDelta":["sessionBehavior.firstGame.vpmGames","sessionBehavior.game3Plus.vpmGames"],
+    "sessionBehavior.postLossVpmDelta":["sessionBehavior.quickAfterLoss.vpmGames","sessionBehavior.quickAfterWin.vpmGames"],
+    "sessionBehavior.game3PlusKpDelta":["sessionBehavior.firstGame.kpGames","sessionBehavior.game3Plus.kpGames"],
+    "sessionBehavior.postLossKpDelta":["sessionBehavior.quickAfterLoss.kpGames","sessionBehavior.quickAfterWin.kpGames"],
+    "sessionBehavior.game3PlusCsMinDelta":["sessionBehavior.firstGame.csMinGames","sessionBehavior.game3Plus.csMinGames"],
+    "sessionBehavior.postLossCsMinDelta":["sessionBehavior.quickAfterLoss.csMinGames","sessionBehavior.quickAfterWin.csMinGames"]
   } as Record<string,string[]>)[metricPath]||["coachingSummary.games"];
   const sampleRequirementsFor=(metricPath:string,minSample:number):any[]=>{
     const special:any={
@@ -2268,8 +2274,36 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
       if(!added&&primaryRole==="SUPPORT"&&hasNum(behavior?.meanGameSupportRoamAdcLaneMovementCs))added=add(theme,"ADC lane movement during roams","behaviorSummary.meanGameSupportRoamAdcLaneMovementCs",behavior.meanGameSupportRoamAdcLaneMovementCs,Number(behavior.meanGameSupportRoamAdcLaneMovementCs)+2,"higher","cs",behavior?.supportRoamAdcLaneMovementGames,3,"Improve the game-weighted ADC-vs-ADC lane movement during measured Support roam windows without treating the roam as sole cause.");
       if(!added&&hasNum(behavior?.meanGameRoamLaneMovementCs))added=add(theme,"Roam lane movement","behaviorSummary.meanGameRoamLaneMovementCs",behavior.meanGameRoamLaneMovementCs,Number(behavior.meanGameRoamLaneMovementCs)+2,"higher","cs",behavior?.roamLaneCostMeasuredGames,3,"Improve the game-weighted role-relative lane movement across measured roaming games without forcing more roams.");
     }else if(key==="consistency"){
-      if(hasNum(sessionModel?.game3PlusGoldDelta))added=add(theme,"Game 3+ gold@15 delta","sessionBehavior.game3PlusGoldDelta",sessionModel.game3PlusGoldDelta,Math.min(0,Number(sessionModel.game3PlusGoldDelta)+150),"higher","gold",Math.min(Number(sessionModel?.firstGame?.lane15Games||0),Number(sessionModel?.game3Plus?.lane15Games||0)),3,"Move later-session lane state closer to the player's own session-opening level.");
-      if(!added&&hasNum(sessionModel?.postLossGoldDelta))added=add(theme,"Quick post-loss requeue gold@15 delta","sessionBehavior.postLossGoldDelta",sessionModel.postLossGoldDelta,Math.min(0,Number(sessionModel.postLossGoldDelta)+150),"higher","gold",Math.min(Number(sessionModel?.quickAfterLoss?.lane15Games||0),Number(sessionModel?.quickAfterWin?.lane15Games||0)),3,"Test whether an intentional reset after losses narrows the observed next-game performance gap.");
+      const postLossIntent=/post.?loss|requeue/.test(tt),laterIntent=/later.?session|game 3|session habit/.test(tt);
+      const laterFirst=()=> {
+        if(primaryRole==="SUPPORT"){
+          if(hasNum(sessionModel?.game3PlusVpmDelta)&&Number(sessionModel.game3PlusVpmDelta)<=-0.15)return add(theme,"Game 3+ vision/min delta","sessionBehavior.game3PlusVpmDelta",sessionModel.game3PlusVpmDelta,Math.min(0,Number(sessionModel.game3PlusVpmDelta)+0.15),"higher","vpm",Math.min(Number(sessionModel?.firstGame?.vpmGames||0),Number(sessionModel?.game3Plus?.vpmGames||0)),3,"Test whether later-session Support vision volume moves back toward the player's own session-opening level.");
+          if(hasNum(sessionModel?.game3PlusKpDelta)&&Number(sessionModel.game3PlusKpDelta)<=-10)return add(theme,"Game 3+ kill-participation delta","sessionBehavior.game3PlusKpDelta",sessionModel.game3PlusKpDelta,Math.min(0,Number(sessionModel.game3PlusKpDelta)+10),"higher","percentage_points",Math.min(Number(sessionModel?.firstGame?.kpGames||0),Number(sessionModel?.game3Plus?.kpGames||0)),3,"Test whether later-session Support involvement moves back toward the player's own session-opening level.");
+        }else if(primaryRole==="JUNGLE"){
+          if(hasNum(sessionModel?.game3PlusCsMinDelta)&&Number(sessionModel.game3PlusCsMinDelta)<=-0.3)return add(theme,"Game 3+ CS/min delta","sessionBehavior.game3PlusCsMinDelta",sessionModel.game3PlusCsMinDelta,Math.min(0,Number(sessionModel.game3PlusCsMinDelta)+0.3),"higher","cs_per_min",Math.min(Number(sessionModel?.firstGame?.csMinGames||0),Number(sessionModel?.game3Plus?.csMinGames||0)),3,"Test whether later-session Jungle farm pace moves back toward the player's own session-opening level.");
+          if(hasNum(sessionModel?.game3PlusKpDelta)&&Number(sessionModel.game3PlusKpDelta)<=-10)return add(theme,"Game 3+ kill-participation delta","sessionBehavior.game3PlusKpDelta",sessionModel.game3PlusKpDelta,Math.min(0,Number(sessionModel.game3PlusKpDelta)+10),"higher","percentage_points",Math.min(Number(sessionModel?.firstGame?.kpGames||0),Number(sessionModel?.game3Plus?.kpGames||0)),3,"Test whether later-session Jungle involvement moves back toward the player's own session-opening level.");
+        }else if(["ADC","MID","TOP"].includes(primaryRole)){
+          if(hasNum(sessionModel?.game3PlusGoldDelta)&&Number(sessionModel.game3PlusGoldDelta)<=-300)return add(theme,"Game 3+ gold@15 delta","sessionBehavior.game3PlusGoldDelta",sessionModel.game3PlusGoldDelta,Math.min(0,Number(sessionModel.game3PlusGoldDelta)+150),"higher","gold",Math.min(Number(sessionModel?.firstGame?.lane15Games||0),Number(sessionModel?.game3Plus?.lane15Games||0)),3,"Move later-session lane state closer to the player's own session-opening level.");
+          if(hasNum(sessionModel?.game3PlusCsMinDelta)&&Number(sessionModel.game3PlusCsMinDelta)<=-0.3)return add(theme,"Game 3+ CS/min delta","sessionBehavior.game3PlusCsMinDelta",sessionModel.game3PlusCsMinDelta,Math.min(0,Number(sessionModel.game3PlusCsMinDelta)+0.3),"higher","cs_per_min",Math.min(Number(sessionModel?.firstGame?.csMinGames||0),Number(sessionModel?.game3Plus?.csMinGames||0)),3,"Test whether later-session farm pace moves back toward the player's own session-opening level.");
+        }
+        return false;
+      };
+      const postLossFirst=()=> {
+        if(primaryRole==="SUPPORT"){
+          if(hasNum(sessionModel?.postLossVpmDelta)&&Number(sessionModel.postLossVpmDelta)<=-0.15)return add(theme,"Quick post-loss vision/min delta","sessionBehavior.postLossVpmDelta",sessionModel.postLossVpmDelta,Math.min(0,Number(sessionModel.postLossVpmDelta)+0.15),"higher","vpm",Math.min(Number(sessionModel?.quickAfterLoss?.vpmGames||0),Number(sessionModel?.quickAfterWin?.vpmGames||0)),3,"Test whether Support vision volume after a quick post-loss requeue moves back toward the quick post-win comparison level.");
+          if(hasNum(sessionModel?.postLossKpDelta)&&Number(sessionModel.postLossKpDelta)<=-10)return add(theme,"Quick post-loss kill-participation delta","sessionBehavior.postLossKpDelta",sessionModel.postLossKpDelta,Math.min(0,Number(sessionModel.postLossKpDelta)+10),"higher","percentage_points",Math.min(Number(sessionModel?.quickAfterLoss?.kpGames||0),Number(sessionModel?.quickAfterWin?.kpGames||0)),3,"Test whether Support involvement after a quick post-loss requeue moves back toward the quick post-win comparison level.");
+        }else if(primaryRole==="JUNGLE"){
+          if(hasNum(sessionModel?.postLossCsMinDelta)&&Number(sessionModel.postLossCsMinDelta)<=-0.3)return add(theme,"Quick post-loss CS/min delta","sessionBehavior.postLossCsMinDelta",sessionModel.postLossCsMinDelta,Math.min(0,Number(sessionModel.postLossCsMinDelta)+0.3),"higher","cs_per_min",Math.min(Number(sessionModel?.quickAfterLoss?.csMinGames||0),Number(sessionModel?.quickAfterWin?.csMinGames||0)),3,"Test whether Jungle farm pace after a quick post-loss requeue moves back toward the quick post-win comparison level.");
+          if(hasNum(sessionModel?.postLossKpDelta)&&Number(sessionModel.postLossKpDelta)<=-10)return add(theme,"Quick post-loss kill-participation delta","sessionBehavior.postLossKpDelta",sessionModel.postLossKpDelta,Math.min(0,Number(sessionModel.postLossKpDelta)+10),"higher","percentage_points",Math.min(Number(sessionModel?.quickAfterLoss?.kpGames||0),Number(sessionModel?.quickAfterWin?.kpGames||0)),3,"Test whether Jungle involvement after a quick post-loss requeue moves back toward the quick post-win comparison level.");
+        }else if(["ADC","MID","TOP"].includes(primaryRole)){
+          if(hasNum(sessionModel?.postLossGoldDelta)&&Number(sessionModel.postLossGoldDelta)<=-300)return add(theme,"Quick post-loss requeue gold@15 delta","sessionBehavior.postLossGoldDelta",sessionModel.postLossGoldDelta,Math.min(0,Number(sessionModel.postLossGoldDelta)+150),"higher","gold",Math.min(Number(sessionModel?.quickAfterLoss?.lane15Games||0),Number(sessionModel?.quickAfterWin?.lane15Games||0)),3,"Test whether the quick post-loss lane-state gap narrows toward the quick post-win comparison level.");
+          if(hasNum(sessionModel?.postLossCsMinDelta)&&Number(sessionModel.postLossCsMinDelta)<=-0.3)return add(theme,"Quick post-loss CS/min delta","sessionBehavior.postLossCsMinDelta",sessionModel.postLossCsMinDelta,Math.min(0,Number(sessionModel.postLossCsMinDelta)+0.3),"higher","cs_per_min",Math.min(Number(sessionModel?.quickAfterLoss?.csMinGames||0),Number(sessionModel?.quickAfterWin?.csMinGames||0)),3,"Test whether farm pace after a quick post-loss requeue moves back toward the quick post-win comparison level.");
+        }
+        return false;
+      };
+      added=postLossIntent?postLossFirst():laterFirst();
+      if(!added&&!postLossIntent&&(!laterIntent||/requeue|post.?loss/.test(tt)))added=postLossFirst();
+      if(!added&&postLossIntent)added=laterFirst();
     }
   }
   return out;
