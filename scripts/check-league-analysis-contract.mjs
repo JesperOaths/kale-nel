@@ -76,7 +76,7 @@ ok(app.includes('function championDiagnosticSet(')&&app.includes('function match
 ok(backend.includes('trustedPeer=list.filter(g=>g.directPeerComparable===true)')&&backend.includes('items=finiteGames(trustedPeer'), 'champion peer-relative metrics must use only trusted direct-peer games');
 ok(backend.includes('if(g?.directPeerComparable!==true||!opponentChampion||roleName!==primaryRole)continue;'), 'repeated matchup grouping must fail closed on untrusted role opponents');
 ok(backend.includes('peerGames:trustedPeer.length')&&backend.includes('dpmGames:dpmPeerGames.length'), 'champion/matchup outputs must carry exact support counts');
-ok(app.includes("laneN>=3,'n='+laneN")&&app.includes("riskN>=3,'n='+riskN")&&app.includes("pressureN>=3,'deaths='+pressureN"), 'diagnostic coloring must use metric-specific minimum evidence');
+ok(app.includes("laneN>=3,'n='+laneN")&&app.includes("riskN>=3,'n='+riskN")&&app.includes('soloReady=soloKills+soloDeaths>=3&&soloEventGames>=2')&&app.includes('pressureReady=pressureN>=3&&pressureGames>=2'), 'diagnostic coloring must use metric-specific minimum evidence with cross-game spread where required');
 ok(modelDoc.includes('## Champion and repeated-matchup evidence gates')&&modelDoc.includes('An inferred or low-confidence opponent champion must not define a repeated matchup'), 'analysis documentation must preserve trusted-peer matchup grouping');
 ok(app.includes('ADC lane movement on roams')&&app.includes('VPM vs Support peer')&&app.includes('Setup wards vs Support'), 'SUPPORT champion diagnostics must use support-relevant evidence');
 ok(app.includes('First impact vs Jungle')&&app.includes('VPM vs Jungle peer')&&app.includes('Setup wards vs Jungle'), 'JUNGLE champion diagnostics must use jungle-relevant evidence');
