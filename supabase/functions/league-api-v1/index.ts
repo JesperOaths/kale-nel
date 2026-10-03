@@ -20,7 +20,7 @@ const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=100;
 const ANALYSIS_HISTORY_TARGET_GAMES=100;
-const ANALYZER_VERSION="league-web-behavior-v4.150";
+const ANALYZER_VERSION="league-web-behavior-v4.151";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1560,7 +1560,7 @@ function longHorizonModel(allGames:any[],primaryRole:string){
   const distFor=(sample:any[],fn:(g:any)=>any)=>distribution((sample||[]).map(fn).filter(hasNum).map(Number));
   const stability=(fn:(g:any)=>any)=>{
     const a:any=distFor(recent,fn),b:any=distFor(prior,fn),ai=hasNum(a?.q25)&&hasNum(a?.q75)?Number(a.q75)-Number(a.q25):null,bi=hasNum(b?.q25)&&hasNum(b?.q75)?Number(b.q75)-Number(b.q25):null;
-    return{recentN:Number(a?.n||0),priorN:Number(b?.n||0),recentMedian:a?.median??null,priorMedian:b?.median??null,medianDelta:hasNum(a?.median)&&hasNum(b?.median)?Number(a.median)-Number(b.median):null,recentIqr:ai,priorIqr:bi,iqrDelta:hasNum(ai)&&hasNum(bi)?Number(ai)-Number(bi):null};
+    return{recentN:Number(a?.n||0),priorN:Number(b?.n||0),recentMedian:a?.median??null,priorMedian:b?.median??null,medianDelta:hasNum(a?.median)&&hasNum(b?.median)?Number(a.median)-Number(b.median):null,recentQ25:a?.q25??null,priorQ25:b?.q25??null,recentQ75:a?.q75??null,priorQ75:b?.q75??null,recentIqr:ai,priorIqr:bi,iqrDelta:hasNum(ai)&&hasNum(bi)?Number(ai)-Number(bi):null};
   };
   const values=(fn:(g:any)=>any)=>history.map(fn).filter(hasNum).map(Number),championCounts:any={};for(const g of history){const c=text(g?.champion)||"Unknown";championCounts[c]=(championCounts[c]||0)+1;}
   return{roleMetricModel:"role_specific_match_history_v1",targetGames:ANALYSIS_HISTORY_TARGET_GAMES,sampleGames:history.length,deepTimelineGames:history.filter((g:any)=>g?.timelineAvailable===true).length,matchOnlyHistoryGames:history.filter((g:any)=>g?.timelineAvailable!==true).length,

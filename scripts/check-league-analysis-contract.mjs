@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.150'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.151'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -1091,3 +1091,7 @@ ok(html.includes('id="historyStabilityTrend"')&&app.includes('function historySt
 ok(html.includes('Latest 20 vs previous up to 20'), 'history copy must disclose that the prior comparison window may contain fewer than 20 games');
 ok(app.includes('middle-50% spread narrowed')&&app.includes('middle-50% spread widened'), 'variability direction must be explicit rather than hidden in a composite score');
 ok(modelDoc.includes('## v269 robust history shift'), 'analysis documentation must preserve v269 robust-history semantics');
+ok(backend.includes('recentQ25:a?.q25')&&backend.includes('recentQ75:a?.q75'), 'robust history model must preserve lower and upper quartile tails');
+ok(app.includes("Performance floor (Q25)")&&app.includes("Bad-tail ceiling (Q75)"), 'frontend must expose the appropriate weak-game tail for higher- and lower-is-better metrics');
+ok(html.includes('weak-game floor and variability'), 'history copy must distinguish typical level, weak-game tail and variability');
+ok(modelDoc.includes('## v270 performance floor and risk tail'), 'analysis documentation must preserve v270 tail semantics');

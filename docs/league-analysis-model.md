@@ -3041,3 +3041,16 @@ This allows distinctions such as “typical CS/min improved but match-to-match s
 The comparison heading deliberately says **latest 20 vs previous up to 20**. A 100-account-match scan does not guarantee forty selected-role, selected-queue matches. The UI therefore never implies that the older side contains twenty games when only (for example) eight valid ADC games are available.
 
 Role-specific robust-shift cards remain role-pure and role-aware: lane roles use lane-minions@10, Support uses vision actions, and Jungle uses enemy-jungle monster pressure alongside shared CS/min, damage/min and death-downtime context.
+
+
+## v270 performance floor and risk tail
+
+Robust history cards now expose the weak-game tail as a third concept alongside the median and IQR.
+
+For metrics where **higher is better** (for example CS/min, lane minions @10 or damage/min), the page uses the **25th percentile (Q25)** as a descriptive performance floor. This answers: “what does the weaker quarter of this sample look like?” A rising Q25 can indicate that low-output games are becoming less weak even when the average barely changes.
+
+For metrics where **lower is better** (currently death downtime in this panel), the page uses the **75th percentile (Q75)** as a bad-tail ceiling. This asks whether the high-cost quarter of games is becoming less extreme.
+
+The tail is never treated as a pass/fail threshold or external benchmark. It is a within-player, selected-role, selected-queue comparison between the latest 20 and the previous up-to-20 games. The median, tail and IQR are intentionally reported separately because they answer different questions: typical level, weak-game severity and variability.
+
+In the current ADC cache this distinction is already useful: the recent Q25 CS/min and lane-CS@10 floors are higher than in the older role sample, while the recent Q25 DPM floor is lower. That combination would be obscured by a single average or synthetic score.

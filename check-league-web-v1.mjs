@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.150'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.151'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v269'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v270'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1298,3 +1298,7 @@ assert.ok(html.includes('id="historyStabilityTrend"')&&app.includes('function hi
 assert.ok(html.includes('Latest 20 vs previous up to 20'),'History comparison copy must not imply a full previous-20 sample when fewer older games exist');
 assert.ok(app.includes('middle-50% spread narrowed')&&app.includes('middle-50% spread widened'),'History stability UI must describe variability direction without collapsing it into a composite score');
 assert.ok(modelDoc.includes('## v269 robust history shift'),'Robust median/IQR history semantics must remain documented');
+assert.ok(api.includes('recentQ25:a?.q25')&&api.includes('recentQ75:a?.q75'),'Robust history payload must preserve quartile tails as well as median/IQR');
+assert.ok(app.includes("Performance floor (Q25)")&&app.includes("Bad-tail ceiling (Q75)"),'Robust history cards must surface lower-quarter floor or upper-quarter risk tail according to metric direction');
+assert.ok(html.includes('weak-game floor and variability'),'Long-horizon copy must explain that tails and spread are distinct signals');
+assert.ok(modelDoc.includes('## v270 performance floor and risk tail'),'Performance-floor/risk-tail semantics must remain documented');

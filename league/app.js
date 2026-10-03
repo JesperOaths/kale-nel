@@ -1299,6 +1299,7 @@ function historyStabilityCard(label,obj,unit='num',inverse=false,medianThreshold
   const recentN=Number(obj?.recentN||0),priorN=Number(obj?.priorN||0),ready=recentN>=5&&priorN>=5&&hasNum(obj?.recentMedian)&&hasNum(obj?.priorMedian)&&hasNum(obj?.recentIqr)&&hasNum(obj?.priorIqr);
   if(!ready)return '<article class="pulse-card tone-neutral"><span>'+esc(label)+'</span><strong>Not enough history</strong><small>'+recentN+' recent / '+priorN+' prior valid games · need 5 each</small></article>';
   const medianDelta=Number(obj.recentMedian)-Number(obj.priorMedian),iqrDelta=Number(obj.recentIqr)-Number(obj.priorIqr),signal=inverse?-medianDelta:medianDelta,tone=Math.abs(medianDelta)<medianThreshold?'neutral':signal>0?'good':'bad';
+  const recentTail=inverse?obj?.recentQ75:obj?.recentQ25,priorTail=inverse?obj?.priorQ75:obj?.priorQ25,tailDelta=hasNum(recentTail)&&hasNum(priorTail)?Number(recentTail)-Number(priorTail):null;
   const format=(v)=>{
     if(unit==='percent')return fmt(v,1)+'%';
     if(unit==='pp')return signed(v,1)+' pp';
@@ -1309,7 +1310,8 @@ function historyStabilityCard(label,obj,unit='num',inverse=false,medianThreshold
   };
   const deltaText=unit==='percent'||unit==='pp'?signed(medianDelta,1)+' pp':unit==='dpm'?signed(medianDelta,0):unit==='cs'?signed(medianDelta,1):signed(medianDelta,2);
   const rangeText=Math.abs(iqrDelta)<iqrThreshold?'middle-50% spread roughly stable':iqrDelta<0?'middle-50% spread narrowed '+format(Math.abs(iqrDelta)):'middle-50% spread widened '+format(Math.abs(iqrDelta));
-  return '<article class="pulse-card tone-'+tone+'"><span>'+esc(label)+'</span><strong>Median '+esc(format(obj.recentMedian))+'</strong><p>Previous median '+esc(format(obj.priorMedian))+' · Δ '+esc(deltaText)+'</p><small>Recent IQR '+esc(format(obj.recentIqr))+' vs '+esc(format(obj.priorIqr))+' · '+esc(rangeText)+' · '+recentN+' vs '+priorN+' games</small></article>';
+  const tailLabel=inverse?'Bad-tail ceiling (Q75)':'Performance floor (Q25)',tailText=hasNum(recentTail)&&hasNum(priorTail)?tailLabel+' '+format(recentTail)+' vs '+format(priorTail)+' · Δ '+(unit==='percent'||unit==='pp'?signed(tailDelta,1)+' pp':unit==='dpm'?signed(tailDelta,0):unit==='cs'?signed(tailDelta,1):signed(tailDelta,2)):'Tail comparison unavailable';
+  return '<article class="pulse-card tone-'+tone+'"><span>'+esc(label)+'</span><strong>Median '+esc(format(obj.recentMedian))+'</strong><p>Previous median '+esc(format(obj.priorMedian))+' · Δ '+esc(deltaText)+'</p><small>'+esc(tailText)+' · recent IQR '+esc(format(obj.recentIqr))+' vs '+esc(format(obj.priorIqr))+' · '+esc(rangeText)+' · '+recentN+' vs '+priorN+' games</small></article>';
 }
 function renderLongHorizon(r){
   const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),stability=$('historyStabilityTrend'),consistency=$('historyConsistency'),champions=$('historyChampionMix'),note=$('longHorizonNote');if(!kpi||!trend)return;
