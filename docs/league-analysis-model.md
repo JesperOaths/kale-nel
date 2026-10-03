@@ -2551,3 +2551,14 @@ The backend action-first findings must not promote an event-heavy single match i
 - A pre-objective-death clue requires at least 2 supported deaths across at least 2 games; setup-vision peer-gap clues require at least 5 comparable setup games in addition to ward-volume evidence.
 
 Confidence for these action-first findings is based on contributing-game counts where appropriate, not raw event counts. The analyzer exports the relevant game-spread counters so the evidence remains auditable.
+
+
+## Game-weighted generic roam lane movement
+
+For MID/TOP direct-role roam economy, cross-game coaching uses a **mean of per-game means** rather than averaging every measured roam window together. This prevents a match with many measured roams from receiving disproportionate weight simply because it contributed more windows.
+
+The analyzer exports both:
+- `avgRoamLaneCostCs`: legacy pooled-window average, retained for technical traceability and previously saved targets;
+- `meanGameRoamLaneMovementCs`: game-weighted cross-game average used by new prominent MID/TOP action-first conclusions and newly created generic roaming practice targets.
+
+The evidence floor remains at least 4 measured roam windows across at least 3 measured games. Repeated no-return costly-roam findings separately require at least 2 qualifying windows across at least 2 games.
