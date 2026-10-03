@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.112'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.113'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -989,3 +989,8 @@ assert.ok(api.includes('supportRoamAdcEmptyCostlyEvents.length>=2&&supportRoamAd
 assert.ok(api.includes('recentShopObjectiveAbsences>=2&&recentShopObjectiveAbsenceGames>=2'),'Recent-shop objective absence findings must repeat across games');
 assert.ok(api.includes('preObjDeaths>=2&&preObjectiveDeathGames>=2'),'Pre-objective-death clues must repeat across games');
 assert.ok(modelDoc.includes('## Action-first cross-game evidence spread'),'v4.112 action-first spread safeguards must remain documented');
+assert.ok(api.includes('meanGameRoamLaneMovementCs=avg(roamLaneMovementGameValues)'),'Analyzer must export a game-weighted generic roam lane-movement mean');
+assert.ok(api.includes('hasNum(meanGameRoamLaneMovementCs)&&Number(meanGameRoamLaneMovementCs)<=-5')&&api.includes('hasNum(meanGameRoamLaneMovementCs)&&Number(meanGameRoamLaneMovementCs)>=-2'),'MID/TOP action-first roam conclusions must use the game-weighted mean');
+assert.ok(api.includes('"behaviorSummary.meanGameRoamLaneMovementCs":[{path:"behaviorSummary.roamLaneCostGames",min:4},{path:"behaviorSummary.roamLaneCostMeasuredGames",min:3}]'),'New generic roam targets must preserve window and game-spread evidence floors');
+assert.ok(api.includes('"behaviorSummary.meanGameRoamLaneMovementCs",behavior.meanGameRoamLaneMovementCs'),'New generic roaming practice targets must use the game-weighted metric');
+assert.ok(modelDoc.includes('## Game-weighted generic roam lane movement'),'Generic roam aggregation semantics must remain documented');
