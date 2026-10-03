@@ -2455,7 +2455,7 @@ The top Evidence Health strip must reflect the evidence actually used by the sel
 
 - **ADC / MID / TOP:** the role-specific health card measures coaching games with timeline data, a trusted direct-role opponent and a compatible @15 role-gold checkpoint.
 - **JUNGLE:** it measures timeline-complete games with a trusted enemy Jungler and a supported first-impact timing comparison.
-- **SUPPORT:** it measures timeline-complete games with a trusted opposing Support and a VPM comparison.
+- **SUPPORT:** it measures games with a trusted opposing Support and a valid VPM comparison. VPM is match-summary/direct-peer evidence, so timeline completeness is **not** required. This must match `peerComparison.vpmGames` and the Support Quick Read evidence floor.
 
 All three use an evidence floor of five comparable games for a ready state. The generic trusted-peer card remains separate so users can distinguish overall peer resolution from the role-specific metric needed by the coaching lens.
 
