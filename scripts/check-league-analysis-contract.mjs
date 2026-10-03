@@ -755,7 +755,7 @@ ok(app.includes("Pre-objective side-lane deaths / game")&&app.includes("behavior
 ok(modelDoc.includes('## Role-specific rolling progress comparison'), 'analysis documentation must preserve role-specific rolling progress semantics');
 ok(backend.includes('kpGames:kpGames.length')&&backend.includes('vpmGames:vpmGames.length'), 'session model must retain per-metric KP/VPM evidence counts');
 ok(backend.includes('game3PlusKpDelta')&&backend.includes('postLossVpmDelta')&&backend.includes('minMetricGamesPerComparedGroup:2'), 'session model must gate new role deltas on paired valid observations');
-ok(app.includes("role==='SUPPORT'")&&app.includes("game3+ vision/min")&&app.includes("role==='JUNGLE'")&&app.includes("game3+ CS/min"), 'session presentation must follow the selected role');
+ok(app.includes("role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole)")&&app.includes("if(role==='SUPPORT'){")&&app.includes("game 3+ vision/min")&&app.includes("}else if(role==='JUNGLE'){")&&app.includes("game 3+ CS/min"), 'session presentation must follow the canonical selected role with distinct Support and Jungle metrics');
 ok(modelDoc.includes('## Role-aware session habit model'), 'analysis documentation must preserve role-aware session semantics');
 ok(backend.includes('g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false'), 'session Gold @15 must require a trusted direct-role peer');
 ok(app.includes("role=canonicalRole(current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole||current?.summary?.primaryRole)"), 'rolling progress must use the canonical selected coaching role');
