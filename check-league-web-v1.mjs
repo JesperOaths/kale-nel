@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.138'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.139'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -272,7 +272,7 @@ assert.ok(app.includes('function practiceLiveTrigger(')&&app.includes('function 
 assert.ok(modelDoc.includes('## Live practice triggers')&&modelDoc.includes('must not create a new diagnosis'),'Live trigger scope and non-diagnostic semantics must remain documented');
 assert.ok(api.includes('samplePaths:samplePathsFor(metricPath)')&&api.includes('"coachingSummary.csMin"')&&api.includes('"coachingSummary.goldDiff15"'),'Practice targets must persist exact current-denominator paths and mechanics-filtered self-metric paths');
 assert.ok(app.includes('function reportNewMatchCount(')&&app.includes('if(newGames<windowGames)')&&app.includes('if(!evidence.ready)'),'Next-5 outcomes must wait for the requested new-match horizon and every saved evidence requirement');
-assert.ok(app.includes("if(p==='summary.csMin')return'coachingSummary.csMin'")&&app.includes("if(p==='summary.goldDiff15')return'coachingSummary.goldDiff15'"),'Legacy saved self-metric targets must be remapped to the current coaching cohort');
+assert.ok(app.includes("if(p==='summary.csMin')return'coachingSummary.csMin'")&&app.includes("savedMetricPath==='summary.goldDiff15'||savedMetricPath==='coachingSummary.goldDiff15'")&&app.includes("status:'re-baseline required'"),'Legacy CS/min targets may remap, but legacy raw-summary Gold@15 targets must be withheld for trusted-peer re-baselining');
 assert.ok(css.includes('.pending-target')&&app.includes('awaiting '+''),'Pending Next-5 outcomes must remain visually distinct from scored target movement');
 assert.ok(modelDoc.includes('## Next-5 target outcome scoring')&&modelDoc.includes('new match IDs')&&modelDoc.includes('must not be called met'),'Next-5 scoring gates and pending semantics must remain documented');
 assert.ok(app.includes('curRole!==prevRole'));
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v258'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v259'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1235,3 +1235,11 @@ assert.ok(app.includes('Outside-pressure classified sample')&&app.includes('excl
 assert.ok(app.includes('pressureN=Number(v.earlyClassifiedHomeLaneDeaths??v.earlyHomeLaneDeaths??0)'),'Repeated-matchup outside-pressure readiness must prefer the classified denominator with legacy fallback');
 assert.ok(api.includes('ordinary enemy bot-lane duo')&&api.includes('enemy jungler or roamer last seen'),'Bot-lane outside-pressure wording must not treat the ordinary enemy Support/ADC as external pressure');
 assert.ok(modelDoc.includes('## v258 outside-pressure classification integrity'),'Outside-pressure fail-closed semantics must remain documented');
+assert.ok(api.includes('"peerComparison.avgGoldDiff15":["peerComparison.laneGames15"]')&&app.includes("'peerComparison.avgGoldDiff15':['peerComparison.laneGames15']"),'Trusted Gold@15 practice metric must have backend/frontend registry parity');
+assert.ok(api.includes('usualTrustedGold15=hasNum(peerComparison?.avgGoldDiff15)')&&api.includes('usualTrustedGold15Games=Number(peerComparison?.laneGames15||0)'),'Champion and matchup models must receive the trusted direct-peer @15 baseline');
+assert.ok(api.includes('championBehaviorModel(coachingGames,coachingSummary,cm.behaviorSummary,primaryRole,cm.peerComparison)')&&api.includes('opponentMatchupBehaviorModel(coachingGames,coachingSummary,cm.behaviorSummary,primaryRole,cm.peerComparison)'),'Diagnostic models must be passed the authoritative peer comparison baseline');
+assert.ok(api.includes('"Gold differential @15","peerComparison.avgGoldDiff15",peer.avgGoldDiff15'),'New generic lane-gold practice targets must use trusted peerComparison Gold@15');
+assert.ok(!api.includes('"Gold differential @15","coachingSummary.goldDiff15",summary.goldDiff15'),'New lane-gold targets must not use the raw coaching-summary checkpoint average');
+assert.ok(app.includes('base={...rawBase,goldDiff15:hasNum(r.peerComparison?.avgGoldDiff15)?Number(r.peerComparison.avgGoldDiff15):null}'),'Frontend champion/matchup diagnostic baseline must use trusted peerComparison Gold@15');
+assert.ok(app.includes("sampleSummary:'re-baseline required · saved target predates trusted direct-peer @15 normalization'"),'Legacy raw Gold@15 practice targets must fail closed instead of mixing populations');
+assert.ok(modelDoc.includes('## v259 trusted Gold @15 baseline integrity'),'Trusted Gold@15 population semantics must remain documented');
