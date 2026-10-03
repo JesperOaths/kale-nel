@@ -1725,6 +1725,17 @@ Use the analyzer's own coaching floors:
 Below those floors, show the value and sample count for traceability, label it **thin sample — descriptive only**, and keep the card neutral. A small denominator must not visually impersonate high-confidence evidence.
 
 
+## Recent-direction evidence parity
+
+The **Recent direction** card and recent pulse compare the latest five selected-role coaching games with the preceding role sample. They are short-window descriptive signals, not an independent trend experiment, and they must not quietly switch populations or use looser evidence than the role analysis they summarize.
+
+Prior objective setup uses `earlySetupJoins / contestedJoined`, matching the main team-contested setup model. The historical `objectiveReadiness.joined` field is team-secured presence context and must not be used as the denominator for this coaching trend.
+
+Pooled event-rate trends require both opportunity volume and contributing-game spread. For SUPPORT, latest-five roam conversion requires at least 4 attempts across 3 games; ADC lane movement requires at least 4 measured windows across 3 games; vision-action safety requires at least 12 actions across 4 games; prior setup and contested-objective presence require at least 5 qualifying encounters across 3 games. The prior comparison side requires at least 5 contributing games and the configured opportunity floor. JUNGLE objective setup/presence and MID roam/setup use the same denominator-family rules.
+
+Support ADC lane movement remains a mean of per-game means. Its trend object carries measured-window counts separately from measured-game counts so a few event-heavy matches cannot manufacture directional confidence.
+
+
 ## Report information hierarchy
 
 The prominent report layers have deliberately different jobs and should not duplicate one another:
