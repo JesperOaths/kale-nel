@@ -1648,7 +1648,13 @@ const PRACTICE_TARGET_SAMPLE_PATHS={
   'behaviorSummary.meanGameRoamLaneMovementCs':['behaviorSummary.roamLaneCostMeasuredGames'],
   'behaviorSummary.meanGameSupportRoamAdcLaneMovementCs':['behaviorSummary.supportRoamAdcLaneMovementGames'],
   'sessionBehavior.game3PlusGoldDelta':['sessionBehavior.firstGame.lane15Games','sessionBehavior.game3Plus.lane15Games'],
-  'sessionBehavior.postLossGoldDelta':['sessionBehavior.quickAfterLoss.lane15Games','sessionBehavior.quickAfterWin.lane15Games']
+  'sessionBehavior.postLossGoldDelta':['sessionBehavior.quickAfterLoss.lane15Games','sessionBehavior.quickAfterWin.lane15Games'],
+  'sessionBehavior.game3PlusVpmDelta':['sessionBehavior.firstGame.vpmGames','sessionBehavior.game3Plus.vpmGames'],
+  'sessionBehavior.postLossVpmDelta':['sessionBehavior.quickAfterLoss.vpmGames','sessionBehavior.quickAfterWin.vpmGames'],
+  'sessionBehavior.game3PlusKpDelta':['sessionBehavior.firstGame.kpGames','sessionBehavior.game3Plus.kpGames'],
+  'sessionBehavior.postLossKpDelta':['sessionBehavior.quickAfterLoss.kpGames','sessionBehavior.quickAfterWin.kpGames'],
+  'sessionBehavior.game3PlusCsMinDelta':['sessionBehavior.firstGame.csMinGames','sessionBehavior.game3Plus.csMinGames'],
+  'sessionBehavior.postLossCsMinDelta':['sessionBehavior.quickAfterLoss.csMinGames','sessionBehavior.quickAfterWin.csMinGames']
 };
 function practiceTargetMetricPath(t){
   const p=String(t?.metricPath||'');
@@ -1697,7 +1703,19 @@ function practiceRequirementLabel(path){
     'sessionBehavior.firstGame.lane15Games':'opener @15 games',
     'sessionBehavior.game3Plus.lane15Games':'game 3+ @15 games',
     'sessionBehavior.quickAfterLoss.lane15Games':'post-loss @15 games',
-    'sessionBehavior.quickAfterWin.lane15Games':'post-win @15 games'
+    'sessionBehavior.quickAfterWin.lane15Games':'post-win @15 games',
+    'sessionBehavior.firstGame.vpmGames':'opener VPM games',
+    'sessionBehavior.game3Plus.vpmGames':'game 3+ VPM games',
+    'sessionBehavior.quickAfterLoss.vpmGames':'post-loss VPM games',
+    'sessionBehavior.quickAfterWin.vpmGames':'post-win VPM games',
+    'sessionBehavior.firstGame.kpGames':'opener KP games',
+    'sessionBehavior.game3Plus.kpGames':'game 3+ KP games',
+    'sessionBehavior.quickAfterLoss.kpGames':'post-loss KP games',
+    'sessionBehavior.quickAfterWin.kpGames':'post-win KP games',
+    'sessionBehavior.firstGame.csMinGames':'opener CS/min games',
+    'sessionBehavior.game3Plus.csMinGames':'game 3+ CS/min games',
+    'sessionBehavior.quickAfterLoss.csMinGames':'post-loss CS/min games',
+    'sessionBehavior.quickAfterWin.csMinGames':'post-win CS/min games'
   };
   return labels[String(path||'')]||String(path||'sample').split('.').pop().replace(/([a-z])([A-Z])/g,'$1 $2').toLowerCase();
 }
@@ -1990,6 +2008,7 @@ function practiceTargetValue(v,unit){
   if(unit==='cs_per_min')return n.toFixed(2)+' CS/min';
   if(unit==='cs')return signed(n,1)+' CS';
   if(unit==='percentage_points')return signed(n,1)+' pp';
+  if(unit==='vpm')return signed(n,2)+' VPM';
   return n.toFixed(2);
 }
 function practiceTargetHtml(target){
