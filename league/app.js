@@ -1248,13 +1248,14 @@ function pulseCard(spec){
   const label=spec.label,obj=spec.obj,unit=spec.unit,inverse=!!spec.inverse,threshold=Number(spec.threshold||0),recent=obj&&hasNum(obj.recent)?Number(obj.recent):null,prior=obj&&hasNum(obj.prior)?Number(obj.prior):null;
   const recentN=Number(obj?.recentN||0),priorN=Number(obj?.priorN||0),recentEvents=Number(obj?.recentEvents||0),priorEvents=Number(obj?.priorEvents||0),ready=recentTrendSpecReady(spec);
   const eventNote=(Number(spec.minRecentEvents||0)>0||Number(spec.minPriorEvents||0)>0)?' · '+recentEvents+' recent / '+priorEvents+' prior events':'';
+  const aggregation=String(obj?.aggregation||''),aggregationNote=aggregation==='pooled_events'?' · pooled event rate':aggregation==='mean_games_with_event_coverage'?' · equal-weight game mean':'';
   if(!ready){
-    return '<article class="pulse-card tone-neutral"><span>'+esc(label)+'</span><strong>Not enough evidence</strong><small>'+recentN+' recent / '+priorN+' prior valid games'+eventNote+'</small></article>';
+    return '<article class="pulse-card tone-neutral"><span>'+esc(label)+'</span><strong>Not enough evidence</strong><small>'+recentN+' recent / '+priorN+' prior valid games'+eventNote+aggregationNote+'</small></article>';
   }
   const delta=recent-prior,signal=inverse?-delta:delta;
   const tone=Math.abs(delta)<threshold?'neutral':signal>0?'good':'bad';
   const word=tone==='neutral'?'stable':tone==='good'?'favorable shift':'unfavorable shift';
-  return '<article class="pulse-card tone-'+tone+'"><span>'+esc(label)+'</span><strong>'+esc(pulseFormat(recent,unit))+'</strong><p>Previous '+esc(pulseFormat(prior,unit))+' · Δ '+esc(pulseDeltaFormat(delta,unit))+'</p><small>'+esc(word)+' · latest '+recentN+' vs previous '+priorN+' valid games'+eventNote+'</small></article>';
+  return '<article class="pulse-card tone-'+tone+'"><span>'+esc(label)+'</span><strong>'+esc(pulseFormat(recent,unit))+'</strong><p>Previous '+esc(pulseFormat(prior,unit))+' · Δ '+esc(pulseDeltaFormat(delta,unit))+'</p><small>'+esc(word)+' · latest '+recentN+' vs previous '+priorN+' valid games'+eventNote+aggregationNote+'</small></article>';
 }
 function renderRecentPulse(r){
   const target=$('recentPulse');if(!target)return;
