@@ -3632,16 +3632,16 @@ function renderRoleSectionCopy(r){
 function championDiagnosticSet(v,role,base,riskBase){
   const riskDelta=hasNum(v.badDeaths)&&hasNum(riskBase.badDeathsPerTimelineGame)?Number(v.badDeaths)-Number(riskBase.badDeathsPerTimelineGame):null,riskN=Number(v.timelineGames||0),itemN=Number(v.itemGames||0),itemDelta=hasNum(v.itemDelta)?Number(v.itemDelta):null;
   if(role==='SUPPORT'){
-    const roamN=Number(v.roamAttempts||0),roamRate=hasNum(v.roamSuccessRate)?Number(v.roamSuccessRate):null,costN=Number(v.supportAdcCostEvents||0),cost=hasNum(v.avgSupportAdcLaneCostCs)?Number(v.avgSupportAdcLaneCostCs):null,vpmN=Number(v.vpmGames||0),vpm=hasNum(v.avgVpmDelta)?Number(v.avgVpmDelta):null,setupN=Number(v.visionSetupGames||0),setup=hasNum(v.avgObjectiveSetupDelta)?Number(v.avgObjectiveSetupDelta):null;
+    const roamN=Number(v.roamAttempts||0),roamGames=Number(v.roamAttemptGames||0),roamRate=hasNum(v.roamSuccessRate)?Number(v.roamSuccessRate):null,costN=Number(v.supportAdcCostEvents||0),costGames=Number(v.supportAdcLaneMovementGames||0),cost=hasNum(v.meanGameSupportAdcLaneMovementCs)?Number(v.meanGameSupportAdcLaneMovementCs):hasNum(v.avgSupportAdcLaneCostCs)?Number(v.avgSupportAdcLaneCostCs):null,vpmN=Number(v.vpmGames||0),vpm=hasNum(v.avgVpmDelta)?Number(v.avgVpmDelta):null,setupN=Number(v.visionSetupGames||0),setup=hasNum(v.avgObjectiveSetupDelta)?Number(v.avgObjectiveSetupDelta):null,roamReady=roamN>=4&&roamGames>=3,costReady=costN>=4&&costGames>=3;
     return{
       chips:[
-        diagnosticChip('Roam conversion',roamRate==null?'n/a':fmtPct(roamRate),roamRate==null?'neutral':roamRate>=65?'good':roamRate<45?'bad':'neutral',roamN>=4,'n='+roamN),
-        diagnosticChip('ADC lane movement on roams',cost==null?'n/a':signed(cost,1)+' CS',deltaTone(cost,0,2,false),costN>=4,'n='+costN),
+        diagnosticChip('Roam conversion',roamRate==null?'n/a':fmtPct(roamRate),roamRate==null?'neutral':roamRate>=65?'good':roamRate<45?'bad':'neutral',roamReady,roamN+' attempts · '+roamGames+' games'),
+        diagnosticChip('ADC lane movement on roams',cost==null?'n/a':signed(cost,1)+' CS',deltaTone(cost,0,2,false),costReady,costN+' windows · '+costGames+' games'),
         diagnosticChip('VPM vs Support peer',vpm==null?'n/a':signed(vpm,2),deltaTone(vpm,0,.15),vpmN>=3,'n='+vpmN),
         diagnosticChip('Setup wards vs Support',setup==null?'n/a':signed(setup,1),deltaTone(setup,0,.5),setupN>=3,'n='+setupN),
         diagnosticChip('Risk deaths vs usual',hasNum(riskDelta)?signed(riskDelta,2)+'/g':'n/a',deltaTone(riskDelta,0,.25,true),riskN>=3,'n='+riskN)
       ].join(''),
-      coverage:String(v.peerGames||0)+' trusted peer · '+roamN+' roam attempts · '+costN+' ADC lane-movement windows · '+vpmN+' VPM comparisons · '+setupN+' setup-ward comparisons · '+riskN+' timeline games'
+      coverage:String(v.peerGames||0)+' trusted peer · '+roamN+' roam attempts across '+roamGames+' games · '+costN+' ADC lane-movement windows across '+costGames+' games · '+vpmN+' VPM comparisons · '+setupN+' setup-ward comparisons · '+riskN+' timeline games'
     };
   }
   if(role==='JUNGLE'){
