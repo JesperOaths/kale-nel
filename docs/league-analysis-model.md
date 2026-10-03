@@ -2992,3 +2992,20 @@ The 100-game scan now treats a timeline fetch failure as a failed deep-evidence 
 The analyzer mirrors that rule. Its deep-read loop counts a game toward the deep target only when timeline JSON is actually present, and report construction prefers timeline-backed selected-role candidates before any residual no-timeline fallback. Failed recent games remain available in the match-level 100-game history rather than disappearing from the account record.
 
 Data Quality now reports both `deepTimelineGames` and `deepTimelineFallbackGames`, making any residual evidence shortfall explicit instead of silently presenting a 20-game behavioral sample that contains unavailable timelines. Peer-rank targeting follows the same replacement cohort produced by the final fetch plan.
+
+
+## v267 role-pure history and readable solo-kill rates
+
+Role-specific reports now enforce role purity at the final report boundary as well as during fetch/cohort selection. For a requested ADC report, both the deep sample and the longer-horizon history are checked after hydration. If any TOP, MID, JUNGLE or SUPPORT game survives into either sample, report construction fails with `selected_role_scope_violation` instead of returning a mixed report. The same rule applies symmetrically to every selected role.
+
+The browser independently checks saved reports before display. If a saved report contains another role, it attempts a deterministic rebuild from the existing role-filtered Riot cache. A contaminated saved report is never shown as acceptable fallback context merely because its analyzer version is current.
+
+The long-horizon payload now exposes `roleCounts`, and the page states the included role composition explicitly. This makes “28 ADC games, 0 other-role games” inspectable rather than relying on an implicit upstream filter.
+
+Riot's `challenges.soloKills` is a per-match count. The primary history display is therefore **solo kills per game**. A time-normalized **per 30 minutes** value is included only as secondary context. A raw per-minute value is mathematically valid but produces tiny decimals (for example, roughly 0.04/min for about 1.2 solo kills/game in a 28-minute sample) and is not a useful primary coaching unit.
+
+The history usefulness pass also promotes existing consistency and composition data to visible report sections:
+- median and interquartile range for stable history metrics, so one outlier has less influence than it would on a mean;
+- role-aware consistency metrics (lane CS and solo kills for lane roles, vision/control wards for Support, epic-monster pressure for Jungle);
+- champion-mix cards, so long-horizon DPM/resource changes are interpreted with champion composition in view;
+- a special interpretation note when one champion dominates at least 90% of the role history: within-sample trend comparisons are less confounded by champion swaps, but conclusions should not be generalized to other champions.
