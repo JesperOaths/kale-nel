@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.148'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.149'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v267'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v268'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1287,3 +1287,9 @@ assert.ok(api.includes('selected_role_scope_violation')&&api.includes('deepRoleS
 assert.ok(app.includes('function reportRoleScopeViolations(')&&app.includes('roleContaminated=scope.total>0'),'Frontend saved-report loading must detect and rebuild role-contaminated reports');
 assert.ok(html.includes('id="historyConsistency"')&&html.includes('id="historyChampionMix"')&&app.includes('function historyDistributionCard('),'100-game history must render consistency distributions and champion mix');
 assert.ok(modelDoc.includes('## v267 role-pure history and readable solo-kill rates'),'Role-pure history and solo-kill unit semantics must remain documented');
+assert.ok(api.includes('enemyJungleMonsters:metric(sample,g=>g.enemyJungleMonsters)')&&app.includes("Enemy-jungle monsters / game"),'Jungle long-horizon analysis must consume cached enemy-jungle farm instead of leaving it unused');
+assert.ok(api.includes('firstTurretParticipationRate:boolRate')&&app.includes("First-turret participation"),'Lane-role history must use first-turret participation as descriptive structure context');
+assert.ok(api.includes('visionLeaderRate:boolRate')&&app.includes("Team vision leader"),'Support history must consume team vision-rank context');
+assert.ok(app.includes("detailCard('Team gold rank'")&&app.includes("detailCard('Team vision rank'"),'Per-game details must expose already-computed gold and vision team ranks');
+assert.ok(app.includes('Previous report withheld.')&&app.includes('previousScope=reportRoleScopeViolations(previous,role)'),'Progress comparison must fail closed on cross-role previous reports');
+assert.ok(modelDoc.includes('## v268 role-specific unused-metric promotion'),'Role-specific unused-metric promotion must remain documented');
