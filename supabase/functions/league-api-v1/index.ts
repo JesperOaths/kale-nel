@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.118";
+const ANALYZER_VERSION="league-web-behavior-v4.119";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -2237,7 +2237,7 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
       if(!added&&hasNum(behavior?.preContributionFightDeathRate))added=add(theme,"Died before contribution","behaviorSummary.preContributionFightDeathRate",behavior.preContributionFightDeathRate,clampPct(Number(behavior.preContributionFightDeathRate)-10),"lower","percent",behavior?.fightSamples,8,"Reduce fights where the player is removed before producing tracked combat impact.");
       if(!added&&hasNum(behavior?.damageGoldEfficiency))added=add(theme,"Damage share − gold share","behaviorSummary.damageGoldEfficiency",behavior.damageGoldEfficiency,Number(behavior.damageGoldEfficiency)+2,"higher","percentage_points",summary?.games,5,"Improve output from the same share of team resources rather than simply demanding more farm.");
     }else if(key==="recovery"){
-      if(hasNum(behavior?.highRiskBehindDeathRate))added=add(theme,"High-risk death rate while behind","behaviorSummary.highRiskBehindDeathRate",behavior.highRiskBehindDeathRate,clampPct(Number(behavior.highRiskBehindDeathRate)-10),"lower","percent",behavior?.behindStateDeaths,4,"Measure whether recovery play is becoming lower variance when the direct role matchup is already behind.");
+      if(hasNum(behavior?.highRiskBehindDeathsPerGame))added=add(theme,"High-risk deaths while behind / game","behaviorSummary.highRiskBehindDeathsPerGame",behavior.highRiskBehindDeathsPerGame,Math.max(0,Number(behavior.highRiskBehindDeathsPerGame)-0.2),"lower","per_game",behavior?.timelineGames,5,"Measure whether recovery play is becoming lower variance when the direct role matchup is already behind; the per-game metric remains measurable when the unwanted death count reaches zero.");
     }else if(key==="vision"){
       if(hasNum(behavior?.visionActionDeathRate)&&Number(behavior?.visionActions||0)>=12)added=add(theme,"Vision-action death rate","behaviorSummary.visionActionDeathRate",behavior.visionActionDeathRate,clampPct(Number(behavior.visionActionDeathRate)-5),"lower","percent",behavior?.visionActions,12,"Keep creating vision while making the route/team timing safer.");
       if(!added&&hasNum(behavior?.objectiveSetupWardRate))added=add(theme,"Objective-setup ward share","behaviorSummary.objectiveSetupWardRate",behavior.objectiveSetupWardRate,clampPct(Number(behavior.objectiveSetupWardRate)+10),"higher","percent",behavior?.visionWardTotal,8,"Shift vision toward useful pre-objective setup rather than simply increasing ward volume.");
