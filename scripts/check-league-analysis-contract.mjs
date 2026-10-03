@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.128'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.129'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -955,3 +955,13 @@ ok(backend.includes('primaryRole==="JUNGLE"')&&backend.includes('"Game 3+ CS/min
 ok(backend.includes('Number(sessionModel.game3PlusGoldDelta)<=-300')&&backend.includes('Number(sessionModel.game3PlusCsMinDelta)<=-0.3'), 'carry consistency targets must require a materially unfavorable session delta');
 ok(app.includes("if(unit==='vpm')return signed(n,2)+' VPM'"), 'frontend must format VPM session targets explicitly');
 ok(modelDoc.includes('## v244 role-specific session practice targets'), 'analysis documentation must preserve role-specific session target semantics');
+
+ok(backend.includes('"peerComparison.avgImpactDeltaMin":["peerComparison.impactGames"]')&&app.includes("'peerComparison.avgImpactDeltaMin':['peerComparison.impactGames']"), 'first-impact target registry must remain backend/frontend aligned');
+ok(backend.includes('"peerComparison.higherRankAvgMajorItemDeltaMin":["peerComparison.higherRankMajorItemGames"]'), 'higher-rank item target must use its exact subset denominator');
+ok(backend.includes('"peerComparison.rankBands.higher.avgGoldDiff15":["peerComparison.rankBands.higher.laneGames"]')&&backend.includes('"peerComparison.rankBands.lower.avgGoldDiff15":["peerComparison.rankBands.lower.laneGames"]'), 'rank-band lane targets must use exact rank-subset denominators');
+ok(backend.includes('/impact|influence/.test(tt)')&&backend.includes('"First-impact timing vs role peer"'), 'early-impact themes must route to impact timing');
+ok(!backend.includes('if(!added&&hasNum(summary?.goldDiff15))added=add(theme,"Gold differential @15"'), 'early-lane practice targets must not fall back unconditionally to Gold@15');
+ok(backend.includes('added=postLossIntent?postLossFirst():laterIntent?laterFirst():false;'), 'non-session consistency themes must not inherit session practice targets');
+ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&hasNum(behavior?.damageGoldEfficiency)'), 'damage-share practice target fallback must remain carry-role scoped');
+ok(app.includes("if(unit==='minutes')return signed(n,1)+' min'"), 'frontend must format timing practice targets explicitly');
+ok(modelDoc.includes('## v245 practice-theme target alignment'), 'analysis documentation must preserve target-theme alignment');
