@@ -3706,10 +3706,11 @@ function matchupDiagnosticSet(v,role,base,riskBase){
       coverage:gamesN+' trusted peer · '+laneN+' @15 · '+impactN+' impact · '+itemN+' item · '+vpmN+' VPM · '+setupN+' setup comparisons'
     };
   }
-  const goldDelta=hasNum(v.goldDiff15)&&hasNum(base.goldDiff15)?Number(v.goldDiff15)-Number(base.goldDiff15):null,soloKills=Number(v.earlySoloKills||0),soloDeaths=Number(v.earlySoloDeaths||0),outside=hasNum(v.outsidePressureShare)?Number(v.outsidePressureShare):null,dpmPeer=hasNum(v.avgDpmDelta)?Number(v.avgDpmDelta):null,laneN=Number(v.laneGames||0),pressureN=Number(v.earlyHomeLaneDeaths||0),dpmN=Number(v.dpmGames||0);
+  const goldDelta=hasNum(v.goldDiff15)&&hasNum(base.goldDiff15)?Number(v.goldDiff15)-Number(base.goldDiff15):null,soloKills=Number(v.earlySoloKills||0),soloKillGames=Number(v.earlySoloKillGames||0),soloDeaths=Number(v.earlySoloDeaths||0),soloDeathGames=Number(v.earlySoloDeathGames||0),soloEventGames=Number(v.earlySoloEventGames||0),outside=hasNum(v.outsidePressureShare)?Number(v.outsidePressureShare):null,dpmPeer=hasNum(v.avgDpmDelta)?Number(v.avgDpmDelta):null,laneN=Number(v.laneGames||0),pressureN=Number(v.earlyHomeLaneDeaths||0),pressureGames=Number(v.earlyHomeLaneDeathGames||0),outsideDeaths=Number(v.earlyOutsidePressureDeaths||0),outsideGames=Number(v.earlyOutsidePressureGames||0),dpmN=Number(v.dpmGames||0);
+  const soloReady=soloKills+soloDeaths>=3&&soloEventGames>=2,soloBad=soloDeaths>=2&&soloDeathGames>=2&&soloDeaths>=soloKills+2,soloGood=soloKills>=2&&soloKillGames>=2&&soloKills>=soloDeaths+2,pressureReady=pressureN>=3&&pressureGames>=2,pressureBad=pressureReady&&outsideDeaths>=2&&outsideGames>=2&&outside!=null&&outside>=60;
   let read='Mixed repeated matchup evidence',readTone='neutral';
-  if(soloDeaths>=2&&soloDeaths>=soloKills+2){read='Clean 1v1 deaths recur';readTone='bad';}
-  else if(pressureN>=3&&outside!=null&&outside>=60){read='Lane deaths are mostly outside pressure';}
+  if(soloBad){read='Clean 1v1 deaths recur across games';readTone='bad';}
+  else if(pressureBad){read='Lane deaths are mostly outside pressure across games';}
   else if(laneN>=3&&hasNum(goldDelta)&&goldDelta<=-300){read='Lane economy below your usual role level';readTone='bad';}
   else if(laneN>=3&&hasNum(goldDelta)&&goldDelta>=300&&soloKills>=soloDeaths){read='Lane economy above your usual role level';readTone='good';}
   return{
@@ -3717,8 +3718,8 @@ function matchupDiagnosticSet(v,role,base,riskBase){
     chips:[
       diagnosticChip('Role gold @15',hasNum(v.goldDiff15)?signed(v.goldDiff15,0)+'g':'n/a',deltaTone(v.goldDiff15,0,100),laneN>=3,'n='+laneN),
       diagnosticChip('Vs your usual @15',hasNum(goldDelta)?signed(goldDelta,0)+'g':'n/a',deltaTone(goldDelta,0,150),laneN>=3,'n='+laneN),
-      diagnosticChip('Clean 1v1 K / D',soloKills+' / '+soloDeaths,soloDeaths>=soloKills+2?'bad':soloKills>=soloDeaths+2?'good':'neutral',gamesN>=3,'n='+gamesN),
-      diagnosticChip('Outside-pressure share',outside!=null?fmtPct(outside):'n/a',outside!=null&&outside>=60?'bad':'neutral',pressureN>=3,'deaths='+pressureN),
+      diagnosticChip('Clean 1v1 K / D',soloKills+' / '+soloDeaths,soloBad?'bad':soloGood?'good':'neutral',soloReady,'events='+(soloKills+soloDeaths)+' · '+soloEventGames+' games'),
+      diagnosticChip('Outside-pressure share',outside!=null?fmtPct(outside):'n/a',pressureBad?'bad':'neutral',pressureReady,'deaths='+pressureN+' / '+pressureGames+' games · outside='+outsideDeaths+' / '+outsideGames+' games'),
       diagnosticChip('DPM vs role peer',dpmPeer==null?'n/a':signed(dpmPeer,0),deltaTone(dpmPeer,0,75),dpmN>=3,'n='+dpmN)
     ].join(''),
     coverage:gamesN+' trusted peer · '+laneN+' lane-comparable · '+riskN+' timeline · '+dpmN+' DPM comparisons'
