@@ -2334,6 +2334,10 @@ Repeated SUPPORT/JUNGLE opponent cards likewise use direct-peer VPM, objective-s
 
 Champion and repeated-matchup groups still require at least three games before they enter these diagnostic surfaces. Individual colored chips additionally require at least three valid observations for their own metric. Win rate remains descriptive and is never used by itself to label a champion or matchup good/bad.
 
+Event repetition must also be game repetition when the wording claims a recurring champion or matchup pattern. A Support champion roam-conversion limiter needs at least 4 detected roam attempts spread across at least 3 games; confidence is based on contributing roam games, not the number of roam events. Associated ADC lane movement is only added to that champion finding when at least 4 measured windows are spread across at least 3 games, and the displayed value is the mean of per-game means.
+
+For repeated opponent matchups, a “repeated 1v1 problem” needs clean solo deaths in at least 2 different games. An outside-pressure lane-death pattern likewise needs affected home-lane deaths and outside-pressure deaths spread across at least 2 games. Multiple events in one unusually bad match remain replay evidence, not a recurring matchup diagnosis.
+
 ## Saved-report analyzer freshness
 
 A saved role-pure report is not automatically analytically current merely because its match cache is current. The frontend reads the live backend `analyzer_version` from the health endpoint and compares it with the saved report's `analyzerVersion`.
