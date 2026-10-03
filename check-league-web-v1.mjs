@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.109'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.110'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -819,7 +819,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v211'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v212'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -965,3 +965,10 @@ assert.ok(api.includes('confidence:confidence(roamAttemptGames)'), 'Champion roa
 assert.ok(api.includes('soloDeathGames=list.filter')&&api.includes('outsidePressureGames=list.filter'), 'Repeated matchup event patterns must track how many games contain the event');
 assert.ok(api.includes('soloDeaths>=2&&soloDeathGames>=2')&&api.includes('outsidePressureDeaths>=2&&outsidePressureGames>=2'), 'Repeated matchup 1v1/outside-pressure findings must repeat across games');
 assert.ok(modelDoc.includes('Event repetition must also be game repetition'), 'Cross-game champion/matchup repetition semantics must remain documented');
+assert.ok(api.includes('function coachingEvidenceChannel(')&&api.includes('independentSupportCount=independentChannels.length'), 'Priority theme synthesis must distinguish independent evidence channels from raw related finding count');
+assert.ok(api.includes('Math.min(5,1+independentSupportCount)*2'), 'Priority ranking must reward distinct evidence channels rather than duplicate findings');
+assert.ok(api.includes('supportCount,independentSupportCount,evidenceChannels:'), 'Priority themes must export both total related findings and independent reinforcement');
+assert.ok(app.includes("weak.independentSupportCount>=2"), 'A low-confidence top limiter must require two independent supporting channels beyond its representative signal');
+assert.ok(app.includes("stage('2','Reinforcement',independentSupportCount+' independent support'"), 'Priority evidence chain must disclose independent reinforcement rather than raw finding count');
+assert.ok(app.includes("independentSupportCount>0?String(independentSupportCount)+' independent reinforcement"), 'Driver evidence metadata must distinguish independent support from related findings');
+assert.ok(modelDoc.includes('Theme synthesis records total related findings separately from independent reinforcement.'), 'Independent top-driver reinforcement semantics must remain documented');
