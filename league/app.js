@@ -995,7 +995,7 @@ function renderRoleSpecificLens(r){
   if(!panel||!box)return;
   const role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),b=r.behaviorSummary||{},p=r.peerComparison||{},q=r.dataQuality||{},c=roleEventCoverage(r);
   if(!['TOP','MID','JUNGLE'].includes(role)){panel.hidden=true;box.innerHTML='';if(note)note.textContent='';return;}
-  const laneN=Number(p.laneGames15||0),peerN=Number(p.sameRoleGames||0),impactN=Number(p.impactGames||0),itemN=Number(p.majorItemGames||0),timelineN=Number(q.validTimelineGames||0);
+  const laneN=Number(p.laneGames15||0),peerN=Number(p.sameRoleGames||0),impactN=Number(p.impactGames||0),itemN=Number(p.majorItemGames||0),timelineN=Number(b.timelineGames||0);
   const gold=hasNum(p.avgGoldDiff15)?Number(p.avgGoldDiff15):null,cs=hasNum(p.avgCsMinDelta)?Number(p.avgCsMinDelta):null,impact=hasNum(p.avgImpactDeltaMin)?Number(p.avgImpactDeltaMin):null,item=hasNum(p.avgMajorItemDeltaMin)?Number(p.avgMajorItemDeltaMin):null;
   const goldTone=gold==null?'neutral':gold>=150?'good':gold<=-150?'bad':'neutral',csTone=cs==null?'neutral':cs>=.15?'good':cs<=-.15?'bad':'neutral';
   const cards=[];
@@ -1402,7 +1402,7 @@ function decisionCard(title,value,tone,explanation,sub,percent=null,evidenceRead
 function renderDecisionMetrics(r){
   const b=r.behaviorSummary||{},p=r.peerComparison||{},q=r.dataQuality||{},reportRole=canonicalRole(q.selectedRole||r.coachingSummary?.primaryRole||r.summary?.primaryRole||state.selectedRole),roleCoverage=roleEventCoverage(r);
   const objectiveGameWeighted=hasNum(b.objectiveCoachingPresenceRate??b.meanGameObjectiveContestPresenceRate),objective=hasNum(b.objectiveCoachingPresenceRate??b.meanGameObjectiveContestPresenceRate??b.objectiveContestPresenceRate??b.objectiveJoinRate)?Number(b.objectiveCoachingPresenceRate??b.meanGameObjectiveContestPresenceRate??b.objectiveContestPresenceRate??b.objectiveJoinRate):null,objDiagnosis=b.objectiveDiagnosis||{},objDiagnosed=!!objDiagnosis.presenceLow||(Array.isArray(objDiagnosis.causes)&&objDiagnosis.causes.length>0),objectiveN=roleCoverage.contestN,objectiveGames=roleCoverage.contestGames,objectiveReady=roleCoverage.contestReady;
-  const fight=hasNum(b.fightSurvivalRate)?Number(b.fightSurvivalRate):null,fightN=Number(b.fightSamples||0),timelineN=Number(q.validTimelineGames||0),deaths=hasNum(b.badDeathsPerTimelineGame)?Number(b.badDeathsPerTimelineGame):null;
+  const fight=hasNum(b.fightSurvivalRate)?Number(b.fightSurvivalRate):null,fightN=Number(b.fightSamples||0),timelineN=Number(b.timelineGames||0),deaths=hasNum(b.badDeathsPerTimelineGame)?Number(b.badDeathsPerTimelineGame):null;
   const tonePct=(v,good,bad,inverse=false)=>v==null?'neutral':inverse?(v<=good?'good':v>=bad?'bad':'neutral'):(v>=good?'good':v<=bad?'bad':'neutral');
   const thin=(isReady,normal)=>isReady?normal:'Current value is shown for context, but the sample is below the analyzer threshold for a directional judgment.';
   const cards=[
@@ -1805,7 +1805,7 @@ function renderProgressComparison(current,previous,previousAt){
   }
   const context=progressComparisonContext(current,previous),role=canonicalRole(current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole||current?.summary?.primaryRole);
   const commonRisk=[
-    {label:'High-risk deaths / game',path:'behaviorSummary.badDeathsPerTimelineGame',samplePath:'dataQuality.validTimelineGames',min:5,threshold:.3,direction:-1,format:v=>fmt(v,1)},
+    {label:'High-risk deaths / game',path:'behaviorSummary.badDeathsPerTimelineGame',samplePath:'behaviorSummary.timelineGames',min:5,threshold:.3,direction:-1,format:v=>fmt(v,1)},
     {label:'Died before contribution',path:'behaviorSummary.preContributionFightDeathRate',samplePath:'behaviorSummary.fightSamples',min:8,threshold:10,direction:-1,format:v=>fmtPct(v)},
     {label:'Rapid repeat-death rate',path:'behaviorSummary.repeatDeathRate',samplePath:'behaviorSummary.repeatDeathOpportunities',min:8,threshold:10,direction:-1,format:v=>fmtPct(v)}
   ];
@@ -1838,7 +1838,7 @@ function renderProgressComparison(current,previous,previousAt){
       {label:'Gold @15 vs role opponent',path:'peerComparison.avgGoldDiff15',samplePath:'peerComparison.laneGames15',min:5,threshold:150,direction:1,format:v=>signed(v,0)+'g'},
       {label:'CS / min',path:'coachingSummary.csMin',samplePath:'coachingSummary.games',min:5,threshold:.3,direction:1,format:v=>fmt(v,2)},
       {label:'Early-lead give-back rate',path:'behaviorSummary.earlyLeadGivebackRate',samplePath:'behaviorSummary.earlyLeadGames',min:4,threshold:15,direction:-1,format:v=>fmtPct(v)},
-      {label:'Pre-objective side-lane deaths / game',path:'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame',samplePath:'dataQuality.validTimelineGames',min:5,threshold:.2,direction:-1,format:v=>fmt(v,2)},
+      {label:'Pre-objective side-lane deaths / game',path:'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame',samplePath:'behaviorSummary.timelineGames',min:5,threshold:.2,direction:-1,format:v=>fmt(v,2)},
       {label:'Mid routing objective presence',path:'behaviorSummary.midRouting.coachingObjectivePresenceRate',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
       {label:'Win rate from role lead @25',path:'behaviorSummary.closing25.leadWinRate',samplePath:'behaviorSummary.closing25.leadGames',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
       ...commonTempo,...commonRisk
