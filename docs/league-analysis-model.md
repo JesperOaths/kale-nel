@@ -2615,3 +2615,13 @@ The 15→25 routing model distinguishes three objective-presence populations and
 - `securedObjectivePresenceRate` and each game’s legacy `objectiveJoinRate` describe team-secured objective context and remain separate outcome/traceability fields.
 
 MID outcome fingerprint **15→25 objective reconnect** uses each game’s `contestPresenceRate` when available, with the legacy secured rate only as a saved-report fallback. New practice targets and rolling-progress cards use `coachingObjectivePresenceRate`; old saved targets keep their original pooled metric path so historical baseline semantics are not silently rewritten.
+
+
+## Coaching versus raw timeline coverage
+
+The report intentionally exposes two timeline counts with different scopes:
+
+- `dataQuality.validTimelineGames` is raw availability across the selected-role Last-20 before an optional current-mechanics cohort is applied. It belongs in coverage/quality displays.
+- `behaviorSummary.timelineGames` is timeline coverage inside the actual mechanics-filtered coaching cohort. Any directional coaching readiness or rolling-progress sample gate for timeline-derived metrics must use this count.
+
+TOP pre-objective side-lane risk, high-risk deaths/game, and other mechanics-sensitive timeline coaching therefore use `behaviorSummary.timelineGames`. The cohort/breakdown panels continue to show the raw Last-20 timeline count so users can see the difference between data availability and coaching eligibility.
