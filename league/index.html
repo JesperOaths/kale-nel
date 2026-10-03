@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends analysis with a 100-game role scan, evidence-backed Last-20 deep coaching, long-horizon trends and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261003-league-web-v266">
+  <link rel="stylesheet" href="/league/styles.css?v=20261003-league-web-v267">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261002-public-bootstrap-r4"></script>
 </head>
@@ -170,6 +170,7 @@
         <nav class="report-jump-nav" aria-label="Report sections">
           <a href="#overview">Overview</a>
           <a href="#practice-plan">Practice plan</a>
+          <a href="#long-horizon">100-game form</a>
           <a href="#rank-comparison">Rank comparison</a>
           <a href="#lane-economy" id="laneEconomyNav">Role economy</a>
           <a href="#decisions">Fights & objectives</a>
@@ -224,6 +225,14 @@
           <div class="recent-pulse">
             <div class="recent-pulse-head"><div><span>History direction</span><strong>Latest 20 vs previous 20</strong></div><small>Five valid observations are required on both sides. Patch-sensitive interpretation remains descriptive.</small></div>
             <div class="pulse-grid" id="longHorizonTrend"></div>
+          </div>
+          <div class="consistency-summary-wrap">
+            <div class="section-subhead"><div><span>Long-horizon consistency</span><strong>Typical range, not just the average</strong></div><small>Median and middle 50% reduce the influence of one extreme game.</small></div>
+            <div class="quality-grid consistency-grid" id="historyConsistency"></div>
+          </div>
+          <div class="visual-summary-block">
+            <h3>Champion mix behind this role history</h3>
+            <div id="historyChampionMix" class="game-visual-strip"></div>
           </div>
           <p class="source-note" id="longHorizonNote"></p>
         </section>
@@ -520,6 +529,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261003-league-web-v266" defer></script>
+  <script src="/league/app.js?v=20261003-league-web-v267" defer></script>
 </body>
 </html>
