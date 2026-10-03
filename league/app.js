@@ -1616,6 +1616,7 @@ const PRACTICE_TARGET_SAMPLE_PATHS={
   'behaviorSummary.highRiskBehindDeathsPerGame':['behaviorSummary.timelineGames'],
   'behaviorSummary.highRiskLeadDeathsPerGame':['behaviorSummary.timelineGames'],
   'behaviorSummary.repeatDeathRate':['behaviorSummary.repeatDeathOpportunities'],
+  'behaviorSummary.repeatDeathsPerTimelineGame':['behaviorSummary.timelineGames'],
   'behaviorSummary.costlyDeathsPerTimelineGame':['behaviorSummary.timelineGames'],
   'behaviorSummary.badDeathsPerTimelineGame':['behaviorSummary.timelineGames'],
   'behaviorSummary.firstResetLossRate':['behaviorSummary.firstResetCleanGames'],
