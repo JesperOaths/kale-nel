@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.122'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.123'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -361,11 +361,11 @@ ok(backend.includes('function rankComparisonForGame('), 'rank comparisons must c
 ok(backend.includes('q===420?["RANKED_SOLO_5x5"]:q===440?["RANKED_FLEX_SR"]'), 'ranked Solo/Flex direct-peer comparisons must use their matching ladder');
 ok(backend.includes('if(r==="BOTTOM"||r==="BOT"||r==="ADC"||r==="DUO_CARRY")return"ADC"'), 'backend must normalize all Riot bottom-lane aliases to canonical ADC');
 ok(app.includes("if(r==='BOTTOM'||r==='BOT'||r==='DUO_CARRY'||r==='ADC')return'ADC'"), 'frontend may accept raw Riot bottom aliases only through the canonical ADC normalization helper');
-ok(backend.includes('function externalAdcBenchmarkSet(rankSnapshot:any,cohortQueueId:any)'), 'external population benchmark must receive the selected cohort queue');
+ok(backend.includes('function externalAdcBenchmarkSet(rankSnapshot:any,cohortQueueId:any,selectedRole:any)'), 'external population benchmark must receive selected queue and role context');
 ok(backend.includes('role:"ADC"')&&backend.includes('sourceRole:"Bot (ADC)"'), 'external benchmark metadata must use canonical ADC while preserving source-role provenance');
 ok(backend.includes('queueId===420?"RANKED_SOLO_5x5":queueId===440?"RANKED_FLEX_SR":null'), 'external ranked benchmark must be ineligible outside Ranked Solo/Flex');
-ok(backend.includes('eligibilityReason:!rankedQueueType?"selected_cohort_not_ranked"'), 'non-ranked benchmark exclusion reason must remain explicit');
-ok(app.includes("ext.eligible!==false")&&app.includes('selected Last-20 cohort is not Ranked Solo/Flex'), 'frontend must fail closed and explain non-ranked population-benchmark exclusion');
+ok(backend.includes('eligibilityReason:role!=="ADC"?"selected_role_not_adc":!rankedQueueType?"selected_cohort_not_ranked"'), 'external ADC benchmark must fail closed for non-ADC selected roles');
+ok(app.includes("ext.eligible===true")&&app.includes('selected Last-20 cohort is not Ranked Solo/Flex'), 'frontend must require explicit benchmark eligibility and explain non-ranked exclusion');
 ok(backend.includes('rankContextExcludedGames')&&backend.includes('rankComparisonQueueCounts'), 'rank-context exclusions and ladder use must stay exported');
 ok(backend.includes('peer_rank_json?.schema!=="rank_snapshot_v2"'), 'recent stale single-ladder peer snapshots must be refreshed');
 ok(app.includes('Rank context excluded')&&app.includes('Rank ladders used'), 'rank-ladder comparability must remain visible');
@@ -895,3 +895,7 @@ ok(backend.includes('"Pre-objective deaths / game"')&&backend.includes('"behavio
 ok(backend.includes('behavior?.timelineGames,5,"Target the supported pre-contest death pattern directly'), 'pre-objective practice target must use timeline-complete coaching games');
 ok(app.includes("'behaviorSummary.preObjectiveDeathsPerTimelineGame':['behaviorSummary.timelineGames']"), 'frontend must retain zero-safe pre-objective target compatibility');
 ok(modelDoc.includes('## Zero-safe pre-objective death practice target'), 'analysis documentation must preserve zero-safe pre-objective target semantics');
+
+ok(backend.includes('externalAdcBenchmarkSet(profile.rank_snapshot||null,dominantQueueId,primaryRole)'), 'report construction must pass selected primary role into ADC benchmark gating');
+ok(app.includes("role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole)")&&app.includes("ext.eligibilityReason==='selected_role_not_adc'"), 'saved-report ADC benchmark UI must use canonical selected role and fail closed');
+ok(modelDoc.includes('## ADC benchmark role eligibility'), 'analysis documentation must preserve ADC benchmark role gating');
