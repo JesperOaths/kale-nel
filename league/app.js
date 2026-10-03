@@ -1316,7 +1316,7 @@ function historyStabilityCard(label,obj,unit='num',inverse=false,medianThreshold
 function renderLongHorizon(r){
   const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),stability=$('historyStabilityTrend'),consistency=$('historyConsistency'),champions=$('historyChampionMix'),note=$('longHorizonNote');if(!kpi||!trend)return;
   const s=h.summary||{},role=canonicalRole(h.selectedRole||r?.dataQuality?.selectedRole||state.selectedRole),games=Number(h.sampleGames||0);
-  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
+  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';const aw=$('resourceOutputArchetypesWrap'),ag=$('resourceOutputArchetypes');if(aw)aw.hidden=true;if(ag)ag.innerHTML='';if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
   const laner=['ADC','MID','TOP'].includes(role),roleCounts=h.roleCounts||{},otherRoleGames=Object.entries(roleCounts).reduce((n,[rk,count])=>n+(canonicalRole(rk)!==role?Number(count||0):0),0);
   const roleVolume=laner
     ?{label:'Lane minions @10',value:hasNum(s?.laneCs10?.value)?fmt(s.laneCs10.value,1):'n/a',sub:String(s?.laneCs10?.n||0)+' Riot match-level lane observations'}
@@ -1379,6 +1379,25 @@ function renderLongHorizon(r){
       {label:'Turret damage / min',obj:c.turretDamagePerMin,unit:'dpm'}
     ];
     consistency.innerHTML=specs.map(x=>historyDistributionCard(x.label,x.obj,x.unit)).join('');
+  }
+  {
+    const wrap=$('resourceOutputArchetypesWrap'),grid=$('resourceOutputArchetypes'),matrix=h.resourceOutputArchetypes||{},cats=Array.isArray(matrix.categories)?matrix.categories:[];
+    if(wrap)wrap.hidden=!laner||!Number(matrix.eligibleGames||0);
+    if(grid){
+      if(!laner||!Number(matrix.eligibleGames||0))grid.innerHTML='';
+      else grid.innerHTML=cats.map(x=>{
+        const n=Number(x?.games||0),share=hasNum(x?.share)?fmtPct(x.share):'n/a',wr=n>=3&&hasNum(x?.winRate)?' · '+fmtPct(x.winRate)+' WR':' · WR withheld (n<3)';
+        const lowerDamage=String(x?.key||'').includes('lower_damage');
+        const deadCtx=lowerDamage&&Number(x?.deadTimeComparableGames||0)>0
+          ?String(x.aboveMedianDeadTimeGames||0)+' / '+String(x.deadTimeComparableGames||0)+' above your '+fmt(matrix.deadTimeMedian,1)+'% death-downtime median'
+          :'';
+        const turretCtx=lowerDamage&&Number(x?.turretComparableGames||0)>0
+          ?String(x.aboveMedianTurretPressureGames||0)+' / '+String(x.turretComparableGames||0)+' above your '+fmtInt(matrix.turretDamagePerMinMedian)+' turret-DPM median'
+          :'';
+        const context=[deadCtx,turretCtx].filter(Boolean).join(' · ');
+        return '<article class="kpi-card tone-neutral"><span>'+esc(x.label||x.key||'Archetype')+'</span><strong>'+n+' game'+(n===1?'':'s')+' · '+esc(share)+'</strong><small>'+esc('role-history share'+wr+(context?' · '+context:'')+' · descriptive, not causal')+'</small></article>';
+      }).join('');
+    }
   }
   const top=Array.isArray(h.topChampions)?h.topChampions.slice(0,6):[];
   if(champions)champions.innerHTML=top.length?top.map(x=>{
