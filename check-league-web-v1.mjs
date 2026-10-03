@@ -546,6 +546,12 @@ assert.ok(html.includes('id="outcomeFingerprint"')&&app.includes('function rende
 assert.ok(app.includes('function outcomeFingerprintSpecs(')&&app.includes("role==='SUPPORT'")&&app.includes("role==='JUNGLE'")&&app.includes("role==='MID'")&&app.includes("role==='TOP'"),'Outcome fingerprint must select a role-appropriate metric set instead of applying ADC-shaped metrics to every role');
 assert.ok(app.includes("label:'ADC lane movement during roams'")&&app.includes("label:'First impact vs JUNGLE peer'")&&app.includes("label:'15→25 objective reconnect'")&&app.includes("label:'Early lead give-back'"),'Role-aware outcome fingerprint must preserve Support/Jungle/Mid/Top-specific metrics');
 assert.ok(app.includes('ready=wins?.n>=3&&losses?.n>=3')&&app.includes('thin sample — no directional color'),'Outcome fingerprint must withhold directional coloring below 3 valid observations on either outcome side');
+assert.ok(app.includes('opportunityReady=!minOpportunities')&&app.includes('ready=wins?.n>=3&&losses?.n>=3&&opportunityReady'),'Outcome fingerprint readiness must combine game-count and opportunity evidence');
+assert.ok(app.includes("minOpportunities:4,opportunityLabel:'roam attempts'")&&app.includes("minOpportunities:12,opportunityLabel:'vision actions'"),'Support/MID roam and Support vision fingerprints must retain opportunity floors');
+assert.ok(app.includes("minOpportunities:5,opportunityLabel:'contested encounters'")&&app.includes("minOpportunities:5,opportunityLabel:'joined contests'"),'Objective fingerprints must require contested/joined opportunity floors');
+assert.ok(app.includes("minOpportunities:4,opportunityLabel:'measured windows'"),'Support ADC lane-movement fingerprint must require measured roam windows');
+assert.ok(app.includes('gameMetricSummary(wins,spec.get,spec.opportunity)')&&app.includes('gameMetricSummary(losses,spec.get,spec.opportunity)'),'Outcome fingerprint must count opportunities only alongside valid per-game metric observations');
+assert.ok(modelDoc.includes('Event-based fingerprint metrics additionally require their opportunity floor'),'Event-based outcome fingerprint metrics must require opportunity floors on both outcome sides');
 assert.ok(css.includes('.outcome-fingerprint-card.thin-evidence'),'Thin outcome-fingerprint metrics must be visually neutral');
 assert.ok(modelDoc.includes('## Role-aware outcome fingerprint')&&modelDoc.includes('3 valid observations in wins and 3 in losses'),'Role-aware outcome-fingerprint sample rules must remain documented');
 
@@ -837,7 +843,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v219'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v220'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
