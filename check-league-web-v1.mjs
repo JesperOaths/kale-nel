@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v236'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v237'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1103,3 +1103,8 @@ assert.deepEqual(frontendPracticeRegistryKeys,backendPracticeRegistryKeys,'Front
 assert.ok(app.includes("'behaviorSummary.meanGameRoamLaneMovementCs':['behaviorSummary.roamLaneCostMeasuredGames']"),'Frontend fallback must retain the game-weighted generic roam target denominator');
 assert.ok(modelDoc.includes('## Practice-target registry parity'),'Practice-target registry parity must remain documented');
 
+assert.ok(app.includes('function explicitGameRole(v){')&&app.includes("return null;\n}\nfunction gameMatchesNamedFilter"),'Saved-report coaching role parsing must fail closed instead of defaulting unknown game roles to ADC');
+assert.ok(app.includes("selectedRole?games.filter(g=>explicitGameRole(g?.role)===selectedRole):games"),'Frontend coaching cohort must filter older saved game rows to the explicit selected role before mechanics filtering');
+assert.ok(app.includes("if(selectedRole&&explicitGameRole(g?.role)!==selectedRole)return false;"),'Role-mismatched or unknown saved-report games must remain context-only');
+assert.ok(app.includes('const coachingN=reportCoachingGames(r).length'),'Report header must derive coaching-comparable count from the same strict frontend cohort');
+assert.ok(modelDoc.includes('## Saved-report strict role cohort'),'Strict saved-report role cohort semantics must remain documented');
