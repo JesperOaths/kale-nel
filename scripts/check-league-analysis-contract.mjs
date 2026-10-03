@@ -962,7 +962,7 @@ ok(backend.includes('"peerComparison.rankBands.higher.avgGoldDiff15":["peerCompa
 ok(backend.includes('/impact|influence/.test(tt)')&&backend.includes('"First-impact timing vs role peer"'), 'early-impact themes must route to impact timing');
 ok(!backend.includes('if(!added&&hasNum(summary?.goldDiff15))added=add(theme,"Gold differential @15"'), 'early-lane practice targets must not fall back unconditionally to Gold@15');
 ok(backend.includes('added=postLossIntent?postLossFirst():laterIntent?laterFirst():false;'), 'non-session consistency themes must not inherit session practice targets');
-ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&hasNum(behavior?.damageGoldEfficiency)'), 'damage-share practice target fallback must remain carry-role scoped');
+ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&/damage|resource|output|gold share/.test(tt)&&hasNum(behavior?.damageGoldEfficiency)'), 'damage-share practice target must require both carry-role eligibility and representative source wording');
 ok(app.includes("if(unit==='minutes')return signed(n,1)+' min'"), 'frontend must format timing practice targets explicitly');
 ok(modelDoc.includes('## v245 practice-theme target alignment'), 'analysis documentation must preserve target-theme alignment');
 
