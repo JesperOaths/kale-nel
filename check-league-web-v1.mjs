@@ -247,7 +247,7 @@ assert.ok(api.includes('avgCsSwing15to25'));
 assert.ok(api.includes('lanePressure'));
 assert.ok(api.includes('laneDuel'));
 assert.ok(api.includes('killConversionRate'));
-assert.ok(api.includes('games=deepCandidates.slice(0,20)'));
+assert.ok(api.includes('timelineDeepCandidates=roleDeepCandidates.filter((x:any)=>x.g.timelineAvailable===true)')&&api.includes('games=chosenDeepCandidates.map((x:any)=>x.g)'));
 assert.ok(api.includes('excludedShortGames'));
 assert.ok(api.includes('shortGameThresholdSeconds:600'));
 assert.ok(api.includes('dominantQueueId'));
@@ -373,7 +373,7 @@ assert.ok(/fetchProfileData\(profile,100(?:,|\))/.test(app)&&app.includes("fetch
 assert.ok(app.includes('await fetchProfileData')&&app.includes('await analyzeProfileData'),'Direct request must fetch before analyzing rather than analyzing an empty cache');
 assert.ok(html.includes('id="requestRole"')&&html.includes('<option value="ADC" selected>ADC</option>')&&html.includes('<option value="TOP">Top</option>'),'Role selector must expose every canonical League role and default to ADC');
 assert.ok(app.includes('target_role:targetRole')&&api.includes('targetRole=role(body.target_role)'),'Selected role must be transmitted to fetch/analyze/history backend actions');
-assert.ok(api.includes('deepCandidates=selectedRole==="GENERIC"?allDeepCandidates:allDeepCandidates.filter((x:any)=>x.g.role===selectedRole)')&&api.includes('games=deepCandidates.slice(0,20)'),'Selected-role filtering must happen before the Last-20 sample is cut');
+assert.ok(api.includes('roleDeepCandidates=selectedRole==="GENERIC"?allDeepCandidates:allDeepCandidates.filter((x:any)=>x.g.role===selectedRole)')&&api.includes('timelineDeepCandidates=roleDeepCandidates.filter')&&api.includes('games=chosenDeepCandidates.map'),'Selected-role filtering and timeline availability must happen before the deep Last-20 sample is cut');
 assert.ok(api.includes('rr!=="GENERIC"&&(targetRole==="GENERIC"||rr===targetRole)'),'Timeline batching must count only the requested role toward the 20-game target');
 assert.ok(api.includes('selected_role_total_cached_games')&&api.includes('selected_role_cached_games')&&api.includes('queue_comparable_cached_games'),'Fetch completion must distinguish all selected-role cache from the role+queue comparable cohort');
 assert.ok(app.includes('Role-selection safety check failed'),'Frontend must fail closed if another role ever leaks into a selected-role report');
