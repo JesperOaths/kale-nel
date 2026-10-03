@@ -2843,3 +2843,16 @@ The legacy pooled-window lane-movement average may remain a compatibility fallba
 Champion-specific DPM averages are calculated only from games with a finite DPM observation. Any coaching/highlight rule based on that average must therefore gate on `dpmGames.length`, not the total number of games on the champion.
 
 For ADC/MID/TOP, the “high-output pick” highlight requires at least 3 measurable DPM games. Its evidence copy and confidence level also use that measurable DPM count. This keeps backend coaching aligned with the frontend DPM chip, which already uses the exported `dpmGames` support count.
+
+
+## v254 repeated-matchup cross-game event spread
+
+Repeated-matchup conclusions must distinguish repeated events from repeated **games**. Multiple lane deaths in one chaotic matchup game are replay evidence, but they are not by themselves a stable repeated-matchup pattern.
+
+For ADC/MID/TOP repeated opponent-champion diagnostics:
+- “Clean 1v1 deaths recur” requires at least 2 clean solo deaths spread across at least 2 games, while still exceeding solo kills by at least 2.
+- Positive clean-1v1 coloring likewise requires at least 2 solo kills spread across at least 2 games and a +2 kill/death margin.
+- The Clean 1v1 K/D chip needs at least 3 tracked solo events across at least 2 matchup games before it receives directional styling.
+- Outside-pressure share needs at least 3 early home-lane deaths across at least 2 games for a mature denominator. A negative outside-pressure read additionally requires at least 2 outside-pressure deaths spread across at least 2 games.
+
+The analyzer exports `earlySoloKillGames`, `earlySoloDeathGames`, `earlySoloEventGames`, `earlyHomeLaneDeathGames`, and `earlyOutsidePressureGames` so the browser can enforce the same cross-game repetition rules as backend coaching.
