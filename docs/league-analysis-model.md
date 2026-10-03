@@ -1710,6 +1710,8 @@ Carry-role advantage-conversion funnels remain descriptive state-conversion summ
 Missing timeline or checkpoint evidence must remain explicit. It must never be converted into a clean-risk claim, a preserved lead, successful setup, or any other positive coaching conclusion.
 
 
+For SUPPORT and JUNGLE role-sequence arcs, objective-setup state and setup-coverage counts use `objectiveReadiness.contestedJoined`. The team-secured `objectiveReadiness.joined` field must not define setup timing or whether a game has setup evidence.
+
 ## Decision-card evidence thresholds
 
 The prominent fight/reset/risk/power-window cards may display a measured value before it is mature enough for a directional coaching judgment, but thin samples must remain visually neutral.
