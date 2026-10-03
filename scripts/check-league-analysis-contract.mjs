@@ -760,3 +760,9 @@ ok(app.includes("path:'behaviorSummary.visionActionDeathRate',sampleRequirements
 ok(app.includes("path:'behaviorSummary.recentShopObjectiveAbsenceRate',sampleRequirements:[{path:'behaviorSummary.neutralObjectiveEvents',min:5},{path:'behaviorSummary.objectiveContestGames',min:3}]"), 'objective-absence progress must require event and game spread');
 ok(app.includes('!curEvidence.ready||!prevEvidence.ready'), 'rolling progress must withhold a delta when either report misses any required denominator');
 ok(modelDoc.includes('Support rolling progress uses the same floors as the live Support lens'), 'analysis documentation must preserve rolling-progress evidence parity');
+ok(app.includes('function chartSpecEvidence(r,spec){')&&app.includes('evidenceRequirements'), 'chart/consistency analysis must separate evidence maturity from drawable point count');
+ok(app.includes("evidenceRequirements:[{path:'peerComparison.vpmGames',min:5}]")&&app.includes("evidenceRequirements:[{path:'peerComparison.impactGames',min:5}]"), 'role peer charts must preserve comparator-specific evidence floors');
+ok(app.includes("evidenceRequirements:[{path:'behaviorSummary.roamAttempts',min:4},{path:'behaviorSummary.roamAttemptGames',min:3}]"), 'Support roam chart must require opportunity and game spread');
+ok(app.includes("evidenceRequirements:[{path:'behaviorSummary.objectiveContestEncounters',min:5},{path:'behaviorSummary.objectiveContestGames',min:3}]"), 'objective presence chart must require event and game spread');
+ok(app.includes('const svg=evidence.ready?chartSvg(points,spec):null')&&app.includes('hasSplit=evidence.ready&&'), 'charts and consistency splits must both fail closed on thin evidence');
+ok(modelDoc.includes('A chart being drawable is not the same as its coaching evidence being mature.'), 'analysis documentation must preserve chart maturity semantics');
