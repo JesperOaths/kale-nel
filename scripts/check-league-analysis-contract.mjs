@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.120'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.121'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -883,3 +883,9 @@ ok(backend.includes('"Rapid repeat deaths / game"')&&backend.includes('"behavior
 ok(backend.includes('behavior?.timelineGames,5,"Cut roughly one rapid repeat death per five timeline-complete coaching games'), 'repeat-death practice target must use timeline-complete coaching games');
 ok(app.includes("'behaviorSummary.repeatDeathsPerTimelineGame':['behaviorSummary.timelineGames']"), 'frontend must retain zero-safe repeat-death target compatibility');
 ok(modelDoc.includes('## Zero-safe repeat-death practice target'), 'analysis documentation must preserve zero-safe repeat-death target semantics');
+
+ok(backend.includes('lead25LateRiskPerLeadGameRate=lead25Games.length?100*lead25LossesWithLateRisk/lead25Games.length:null'), 'backend must export zero-safe late-risk rate across all lead@25 games');
+ok(backend.includes('"Lead@25 games lost with late risk"')&&backend.includes('"behaviorSummary.closing25.leadLateRiskPerLeadGameRate"'), 'closing practice target must remain measurable when lead losses fall to zero');
+ok(backend.includes('closing?.leadGames,4,"Reduce the share of all games with a ≥+500g direct-role lead at 25'), 'closing target must use lead-game sample maturity');
+ok(app.includes("'behaviorSummary.closing25.leadLateRiskPerLeadGameRate':['behaviorSummary.closing25.leadGames']"), 'frontend must retain zero-safe closing target compatibility');
+ok(modelDoc.includes('## Zero-safe closing practice target'), 'analysis documentation must preserve zero-safe closing target semantics');
