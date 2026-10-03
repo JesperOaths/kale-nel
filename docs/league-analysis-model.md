@@ -2778,3 +2778,16 @@ The repeated high-gold-stay finding and its Next-5 target now share one explicit
 - The **Fight starts with ≥1000g unspent** target is no longer a generic reset-power fallback. It is used only when the source theme explicitly concerns unspent/stored gold at fight start.
 
 This separates repeated-pattern eligibility from zero-safe outcome scoring while keeping both tied to the same underlying reset behavior.
+
+
+## v247 representative-evidence target routing
+
+Practice-target routing uses the synthesized theme's **representative evidence title only**. Supporting titles remain visible reinforcement, but they cannot select or override the Next-5 metric. This prevents a secondary finding from hijacking the measurable target attached to priority #1.
+
+The main mixed families are source-specific:
+- **Roaming:** ADC/direct-role lane-cost themes use game-weighted lane movement; conversion themes use roam conversion. A lane-cost diagnosis does not fall back to conversion merely because a conversion rate exists.
+- **Vision:** vision-action safety findings use vision-action death rate; objective/setup findings use objective-setup ward share.
+- **Mid-routing:** side-lane risk, farm/CS loss and objective-presence problems route to their matching metric families rather than a generic routing fallback.
+- **Teamfights:** entry/first-death, died-before-contribution and carry-role damage/resource findings each require matching representative wording. Unsupported fight-selection themes may have no Next-5 metric rather than borrowing an unrelated output metric.
+
+Returning no target is valid when the current evidence theme has no denominator-safe measurable counterpart.
