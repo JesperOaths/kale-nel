@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.139'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.140'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -1026,7 +1026,7 @@ ok(backend.includes('earlyClassifiedHomeLaneDeathGames=validTimeline.filter')&&b
 ok(backend.includes('earlyRoleSoloDeaths>=3&&earlyRoleSoloDeathGames>=2')&&backend.includes('earlyRoleSoloKills>=3&&earlyRoleSoloKillGames>=2'), 'global duel coaching must not infer recurrence from one game');
 ok(app.includes('duelReady=duels>=3&&duelGames>=2')&&app.includes('duelTone=duelReady?'), 'TOP duel lens must require cross-game evidence before coloring');
 ok(modelDoc.includes('## v256 global lane-event game spread'), 'analysis documentation must preserve global lane-event spread semantics');
-ok(backend.includes('laneOppositionResolved=!!oppId')&&backend.includes('lanePartnerOppCandidates.length===1'), 'outside-pressure classification must require resolvable ordinary lane opposition');
+ok(backend.includes('playerRoleEvidence.confidence==="high"&&!!oppId&&oppRoleEvidence?.confidence==="high"')&&backend.includes('participantRoleEvidence(x).confidence==="high"&&participantRole(x)===partnerRole'), 'outside-pressure classification must require high-confidence ordinary lane opposition');
 ok(backend.includes('earlyClassifiedHomeLaneDeaths:0')&&backend.includes('earlyUnclassifiedHomeLaneDeaths:0'), 'per-game lane pressure must distinguish classified from unresolved deaths');
 ok(backend.includes('classificationEligible:false')&&backend.includes('outsidePressure:null'), 'unresolved lane-pressure deaths must fail closed instead of becoming clean observations');
 ok(backend.includes('earlyOutsidePressureShare=earlyClassifiedHomeLaneDeaths?100*earlyOutsidePressureDeaths/earlyClassifiedHomeLaneDeaths:null'), 'aggregate outside-pressure rate must use its true classified denominator');
@@ -1041,3 +1041,5 @@ ok(!backend.includes('"Gold differential @15","coachingSummary.goldDiff15",summa
 ok(app.includes('base={...rawBase,goldDiff15:hasNum(r.peerComparison?.avgGoldDiff15)?Number(r.peerComparison.avgGoldDiff15):null}'), 'frontend diagnostic deltas must use the same trusted Gold@15 baseline');
 ok(app.includes("status:'re-baseline required'")&&app.includes("saved target predates trusted direct-peer @15 normalization"), 'legacy raw-summary Gold@15 targets must be withheld for re-baselining');
 ok(modelDoc.includes('## v259 trusted Gold @15 baseline integrity'), 'analysis documentation must preserve trusted Gold@15 population integrity');
+ok(backend.includes('"player_role_not_high_confidence"')&&backend.includes('"same_role_opponent_not_high_confidence"')&&backend.includes('"bot_lane_partner_not_high_confidence_or_unresolved"'), 'lane-pressure evidence must fail closed with explicit low-confidence exclusion reasons');
+ok(modelDoc.includes('## v260 high-confidence lane-opposition gate'), 'analysis documentation must preserve the high-confidence lane-opposition gate');
