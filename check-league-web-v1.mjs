@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.117'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.118'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v229'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v230'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1061,4 +1061,9 @@ assert.ok(app.includes("tone=contestedJoined>=2&&setupRate!=null"),'Game-arc set
 assert.ok(app.includes("legacySecuredJoined=Number(obj.joined||0)")&&app.includes("legacy team-secured joins ('+legacySecuredJoined+') are traceability only"),'Legacy secured joins may remain visible only as game-arc traceability');
 assert.ok(modelDoc.includes('The per-match `roleArcObjectiveStage()` follows the same rule')&&modelDoc.includes('`earlySetupJoins / contestedJoined`'),'Per-match game-arc setup denominator parity must remain documented');
 
+assert.ok(api.includes('"behaviorSummary.preObjectiveDeathPct":[{path:"behaviorSummary.classifiedTimelineDeaths",min:5},{path:"behaviorSummary.timelineGames",min:3}]'),'Pre-objective-death targets must require classified-death volume plus timeline-game spread');
+assert.ok(api.includes('"behaviorSummary.objectiveSetupWardRate":[{path:"behaviorSummary.visionWardTotal",min:12},{path:"peerComparison.visionSetupGames",min:5}]'),'Setup-vision targets must preserve ward volume plus comparable setup-game evidence');
+assert.ok(app.includes("'behaviorSummary.preObjectiveDeathPct':[")&&app.includes("'behaviorSummary.timelineGames',min:3"),'Legacy pre-objective-death targets must inherit safe cross-game requirements');
+assert.ok(app.includes("'behaviorSummary.objectiveSetupWardRate':[")&&app.includes("'peerComparison.visionSetupGames',min:5"),'Legacy setup-vision targets must inherit comparable-game requirements');
+assert.ok(modelDoc.includes('## Objective target continuity safeguards'),'Objective target continuity safeguards must remain documented');
 console.log('league-web-contract=PASS');
