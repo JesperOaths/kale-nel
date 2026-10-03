@@ -547,6 +547,9 @@ assert.ok(css.includes('.outcome-fingerprint-card.thin-evidence'),'Thin outcome-
 assert.ok(modelDoc.includes('## Role-aware outcome fingerprint')&&modelDoc.includes('3 valid observations in wins and 3 in losses'),'Role-aware outcome-fingerprint sample rules must remain documented');
 
 assert.ok(app.includes("perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.contestedJoined)"),'Support/Jungle outcome setup fingerprint must use the team-contested joined denominator');
+assert.ok((app.split("get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)?Number(g.goldDiff15):null").length-1)>=3,'ADC/MID/TOP outcome gold must fail closed without a trusted direct-role peer');
+assert.ok(!app.includes("get:g=>g?.phaseRules?.lane15Comparable===false?null:g.goldDiff15"),'Outcome fingerprint must not classify untrusted raw role-gold deltas');
+assert.ok(modelDoc.includes('ADC, MID and TOP Role gold @15 fingerprint observations require')&&modelDoc.includes('trustedDirectPeer(g)'),'Outcome gold peer eligibility must remain documented');
 assert.ok(!app.includes("perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.joined)"),'Team-secured objective presence must never be used as the outcome-fingerprint setup denominator');
 assert.ok(modelDoc.includes('Prior objective setup')&&modelDoc.includes('earlySetupJoins / contestedJoined'),'Outcome-fingerprint setup denominator parity must remain documented');
 assert.ok(api.includes('meanGameEarlySetupObjectiveJoinRate=meanField(finiteGames(validTimeline,g=>g.objectiveReadiness?.earlySetupJoinRate)')&&api.includes('objectiveSetupCoachingRate=meanGameEarlySetupObjectiveJoinRate'),'Analyzer must expose game-weighted prior-setup coaching');
@@ -829,7 +832,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v216'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v217'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
