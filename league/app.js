@@ -1612,6 +1612,10 @@ const PRACTICE_TARGET_SAMPLE_PATHS={
   'summary.goldDiff15':['peerComparison.laneGames15'],
   'coachingSummary.csMin':['coachingSummary.games'],
   'coachingSummary.goldDiff15':['peerComparison.laneGames15'],
+  'peerComparison.avgImpactDeltaMin':['peerComparison.impactGames'],
+  'peerComparison.higherRankAvgMajorItemDeltaMin':['peerComparison.higherRankMajorItemGames'],
+  'peerComparison.rankBands.higher.avgGoldDiff15':['peerComparison.rankBands.higher.laneGames'],
+  'peerComparison.rankBands.lower.avgGoldDiff15':['peerComparison.rankBands.lower.laneGames'],
   'behaviorSummary.highRiskUntradedPostImpactPerGame':['behaviorSummary.timelineGames'],
   'behaviorSummary.highRiskBehindDeathsPerGame':['behaviorSummary.timelineGames'],
   'behaviorSummary.highRiskLeadDeathsPerGame':['behaviorSummary.timelineGames'],
@@ -1698,6 +1702,10 @@ function practiceRequirementLabel(path){
     'behaviorSummary.neutralObjectiveEvents':'contested objective encounters',
     'behaviorSummary.objectiveContestGames':'contested-objective games',
     'behaviorSummary.timelineGames':'timeline games',
+    'peerComparison.impactGames':'first-impact peer games',
+    'peerComparison.higherRankMajorItemGames':'higher-rank item games',
+    'peerComparison.rankBands.higher.laneGames':'higher-rank @15 games',
+    'peerComparison.rankBands.lower.laneGames':'lower-rank @15 games',
     'peerComparison.visionSetupGames':'comparable setup games',
     'behaviorSummary.classifiedTimelineDeaths':'classified deaths',
     'sessionBehavior.firstGame.lane15Games':'opener @15 games',
@@ -2009,6 +2017,7 @@ function practiceTargetValue(v,unit){
   if(unit==='cs')return signed(n,1)+' CS';
   if(unit==='percentage_points')return signed(n,1)+' pp';
   if(unit==='vpm')return signed(n,2)+' VPM';
+  if(unit==='minutes')return signed(n,1)+' min';
   return n.toFixed(2);
 }
 function practiceTargetHtml(target){
