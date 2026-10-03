@@ -1302,26 +1302,38 @@ function renderLongHorizon(r){
   const laner=['ADC','MID','TOP'].includes(role),roleCounts=h.roleCounts||{},otherRoleGames=Object.entries(roleCounts).reduce((n,[rk,count])=>n+(canonicalRole(rk)!==role?Number(count||0):0),0);
   const roleVolume=laner
     ?{label:'Lane minions @10',value:hasNum(s?.laneCs10?.value)?fmt(s.laneCs10.value,1):'n/a',sub:String(s?.laneCs10?.n||0)+' Riot match-level lane observations'}
-    :{label:'Vision actions / min',value:hasNum(s?.visionActionsPerMin?.value)?fmt(s.visionActionsPerMin.value,2):'n/a',sub:'wards placed + wards cleared per minute'};
+    :role==='SUPPORT'
+      ?{label:'Vision actions / min',value:hasNum(s?.visionActionsPerMin?.value)?fmt(s.visionActionsPerMin.value,2):'n/a',sub:'wards placed + wards cleared per minute'}
+      :{label:'Enemy-jungle monsters / game',value:hasNum(s?.enemyJungleMonsters?.value)?fmt(s.enemyJungleMonsters.value,1):'n/a',sub:'counter-jungle pressure context · not proof an invade was safe or valuable'};
   const roleContext=laner
     ?{label:'Solo kills / game',value:hasNum(s?.soloKills?.value)?fmt(s.soloKills.value,2):'n/a',sub:(hasNum(s?.soloKillsPer30?.value)?fmt(s.soloKillsPer30.value,2)+' per 30 min · ':'')+'Riot soloKills challenge; per-game is the primary unit'}
     :role==='SUPPORT'
       ?{label:'Control wards / game',value:hasNum(s?.controlWardsPlaced?.value)?fmt(s.controlWardsPlaced.value,2):'n/a',sub:String(s?.controlWardsPlaced?.n||0)+' Riot challenge observations'}
       :{label:'Epic damage / min',value:hasNum(s?.epicDamagePerMin?.value)?fmtInt(s.epicDamagePerMin.value):'n/a',sub:'epic-monster pressure context · not objective credit'};
+  const roleExtra=laner
+    ?{label:'First-turret participation',value:hasNum(s?.firstTurretParticipationRate?.value)?fmtPct(s.firstTurretParticipationRate.value):'n/a',sub:'Riot firstTower kill/assist flag · descriptive team structure involvement'}
+    :role==='SUPPORT'
+      ?{label:'Team vision leader',value:hasNum(s?.visionLeaderRate?.value)?fmtPct(s.visionLeaderRate.value):'n/a',sub:'share of games ranked #1 on team vision score'}
+      :{label:'Vision actions / min',value:hasNum(s?.visionActionsPerMin?.value)?fmt(s.visionActionsPerMin.value,2):'n/a',sub:'wards placed + wards cleared per minute'};
   const rows=[
     {label:'History depth',value:games+' '+roleLabel(role)+' games',sub:'selected role + selected queue from the latest 100 account matches · '+otherRoleGames+' other-role games included'},
-    roleVolume,roleContext,
+    roleVolume,roleContext,roleExtra,
     {label:'Death downtime',value:hasNum(s?.deadTimePct?.value)?fmt(s.deadTimePct.value,1)+'%':'n/a',sub:'share of game time spent dead · timing-sensitive'},
     {label:'Damage share − gold share',value:hasNum(s?.damageEfficiencyPp?.value)?signed(s.damageEfficiencyPp.value,1)+' pp':'n/a',sub:'team champion-damage share minus team gold share · composition-sensitive'},
     {label:'Turret damage / min',value:hasNum(s?.turretDamagePerMin?.value)?fmtInt(s.turretDamagePerMin.value):'n/a',sub:'direct structure pressure from match data'}
   ];
   kpi.innerHTML=rows.map(x=>'<article class="kpi-card tone-neutral"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><small>'+esc(x.sub)+'</small></article>').join('');
-  const specs=[{label:'CS / min',obj:h?.trend?.csMin,unit:'csmin',inverse:false,threshold:.08},...(laner?[{label:'Lane minions @10',obj:h?.trend?.laneCs10,unit:'cs',inverse:false,threshold:1.5}]:[{label:'Vision actions / min',obj:h?.trend?.visionActionsPerMin,unit:'num',inverse:false,threshold:.05}]),{label:'Damage / min',obj:h?.trend?.dpm,unit:'dpm',inverse:false,threshold:60},{label:'Death downtime',obj:h?.trend?.deadTimePct,unit:'percent',inverse:true,threshold:1.5},{label:'Damage share − gold share',obj:h?.trend?.damageEfficiencyPp,unit:'pp',inverse:false,threshold:1.5},{label:'Turret damage / min',obj:h?.trend?.turretDamagePerMin,unit:'dpm',inverse:false,threshold:35}];
+  const roleTrend=laner
+    ?{label:'Lane minions @10',obj:h?.trend?.laneCs10,unit:'cs',inverse:false,threshold:1.5}
+    :role==='SUPPORT'
+      ?{label:'Vision actions / min',obj:h?.trend?.visionActionsPerMin,unit:'num',inverse:false,threshold:.05}
+      :{label:'Enemy-jungle monsters / game',obj:h?.trend?.enemyJungleMonsters,unit:'num',inverse:false,threshold:1};
+  const specs=[{label:'CS / min',obj:h?.trend?.csMin,unit:'csmin',inverse:false,threshold:.08},roleTrend,{label:'Damage / min',obj:h?.trend?.dpm,unit:'dpm',inverse:false,threshold:60},{label:'Death downtime',obj:h?.trend?.deadTimePct,unit:'percent',inverse:true,threshold:1.5},{label:'Damage share − gold share',obj:h?.trend?.damageEfficiencyPp,unit:'pp',inverse:false,threshold:1.5},{label:'Turret damage / min',obj:h?.trend?.turretDamagePerMin,unit:'dpm',inverse:false,threshold:35}];
   trend.innerHTML=specs.map(x=>historyTrendCard(x.label,x.obj,x.unit,x.inverse,x.threshold)).join('');
   if(consistency){
     const c=h.consistency||{},specs=[
       {label:'CS / min',obj:c.csMin,unit:'csmin'},
-      ...(laner?[{label:'Lane minions @10',obj:c.laneCs10,unit:'num'},{label:'Solo kills / game',obj:c.soloKills,unit:'num'}]:role==='SUPPORT'?[{label:'Vision actions / min',obj:c.visionActionsPerMin,unit:'num'},{label:'Control wards / game',obj:c.controlWardsPlaced,unit:'num'}]:[{label:'Epic damage / min',obj:c.epicDamagePerMin,unit:'dpm'}]),
+      ...(laner?[{label:'Lane minions @10',obj:c.laneCs10,unit:'num'},{label:'Solo kills / game',obj:c.soloKills,unit:'num'}]:role==='SUPPORT'?[{label:'Vision actions / min',obj:c.visionActionsPerMin,unit:'num'},{label:'Control wards / game',obj:c.controlWardsPlaced,unit:'num'}]:[{label:'Enemy-jungle monsters / game',obj:c.enemyJungleMonsters,unit:'num'},{label:'Epic damage / min',obj:c.epicDamagePerMin,unit:'dpm'}]),
       {label:'Deaths / game',obj:c.deaths,unit:'num'},
       {label:'Death downtime',obj:c.deadTimePct,unit:'percent'},
       {label:'Turret damage / min',obj:c.turretDamagePerMin,unit:'dpm'}
@@ -1981,7 +1993,17 @@ function renderProgressComparison(current,previous,previousAt){
     if(note)note.textContent='';
     return;
   }
-  const context=progressComparisonContext(current,previous),role=canonicalRole(current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole||current?.summary?.primaryRole);
+  const role=canonicalRole(current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole||current?.summary?.primaryRole),previousScope=reportRoleScopeViolations(previous,role);
+  if(previousScope.total){
+    $('progressComparison').innerHTML='<div class="target-outcome-note"><strong>Previous report withheld.</strong> It contains '+previousScope.total+' game(s) outside the current '+esc(roleLabel(role))+' role scope, so it is not used for progress comparisons.</div>';
+    if($('practiceOutcome'))$('practiceOutcome').innerHTML='';
+    if($('practiceContinuity'))$('practiceContinuity').innerHTML='';
+    if(note)note.textContent='Cross-role historical comparison is disabled. Rebuild the older report from its role-filtered cache to compare it safely.';
+    $('previousAnalysisDate').textContent='Previous report role scope mismatch';
+    $('progressComparisonPanel').hidden=false;
+    return;
+  }
+  const context=progressComparisonContext(current,previous);
   const commonRisk=[
     {label:'High-risk deaths / game',path:'behaviorSummary.badDeathsPerTimelineGame',samplePath:'behaviorSummary.timelineGames',min:5,threshold:.3,direction:-1,format:v=>fmt(v,1)},
     {label:'Died before contribution',path:'behaviorSummary.preContributionFightDeathRate',samplePath:'behaviorSummary.fightSamples',min:8,threshold:10,direction:-1,format:v=>fmtPct(v)},
@@ -3273,7 +3295,7 @@ function detailContent(g,tab){
     detailCard('Outside-pressure classified sample',String(g.lanePressure?.earlyClassifiedHomeLaneDeaths??g.lanePressure?.earlyHomeLaneDeaths??g.lanePressure?.pre14ClassifiedHomeLaneDeaths??g.lanePressure?.pre14HomeLaneDeaths??0)+' classified · '+String(g.lanePressure?.earlyUnclassifiedHomeLaneDeaths??g.lanePressure?.pre14UnclassifiedHomeLaneDeaths??0)+' excluded')+
     detailCard('Outside-pressure classified deaths',String(modernOrLegacy(g.lanePressure,'earlyOutsidePressureDeaths','pre14OutsidePressureDeaths'))+' · '+fmtPct(g.lanePressure?.earlyOutsidePressureShare??g.lanePressure?.outsidePressureShare))+
     detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+'m':'n/a')+detailCard('Opponent first impact',peerOk&&hasNum(g.opponentImpactTimeMin)?fmt(g.opponentImpactTimeMin,1)+'m':'n/a')+detailCard('Impact timing vs peer',peerOk&&hasNum(g.impactDeltaVsOpponent)?signed(g.impactDeltaVsOpponent,1)+' min':'n/a')+
-    detailCard('DPM vs same-role opponent',peerOk&&peer?signed(peer.dpmDelta,0):'n/a')+detailCard('CS/min vs opponent',peerOk&&peer?signed(peer.csMinDelta,2):'n/a')+detailCard('Team damage rank',hasNum(g.damageRank)?'#'+g.damageRank+' of 5':'n/a')+
+    detailCard('DPM vs same-role opponent',peerOk&&peer?signed(peer.dpmDelta,0):'n/a')+detailCard('CS/min vs opponent',peerOk&&peer?signed(peer.csMinDelta,2):'n/a')+detailCard('Team damage rank',hasNum(g.damageRank)?'#'+g.damageRank+' of 5':'n/a')+detailCard('Team gold rank',hasNum(g.goldRank)?'#'+g.goldRank+' of 5':'n/a')+detailCard('Team vision rank',hasNum(g.visionRank)?'#'+g.visionRank+' of 5':'n/a')+
     detailCard('Damage share',fmtPct(g.damageShare))+detailCard('Gold share',fmtPct(g.goldShare))+detailCard('Damage − gold share',hasNum(g.damageShare)&&hasNum(g.goldShare)?signed(Number(g.damageShare)-Number(g.goldShare),1)+' pp':'n/a')+
     detailCard('Session game #',g.sessionContext?.sessionGameNumber?String(g.sessionContext.sessionGameNumber):'n/a')+
     detailCard('Gap after previous game',hasNum(g.sessionContext?.gapAfterPreviousMin)?fmt(g.sessionContext.gapAfterPreviousMin,0)+' min':'n/a')+
