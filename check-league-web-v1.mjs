@@ -1172,7 +1172,13 @@ assert.ok(modelDoc.includes('## v246 reset-target evidence alignment'),'Reset-ta
 assert.ok(api.includes('const key=text(theme?.key),tt=text(theme?.title).toLowerCase();let added=false;'),'Practice target routing must use the representative title rather than supporting titles');
 assert.ok(api.includes('const laneIntent=/lane cost|lane economy|lane movement|expensive for|costing lane|adc/.test(tt)'),'Roaming target routing must distinguish lane-movement diagnoses from conversion');
 assert.ok(api.includes('!laneIntent&&/roam|convert|conversion|return/.test(tt)&&hasNum(behavior?.roamSuccessRate)'),'Roam conversion target must not override a lane-cost diagnosis');
-assert.ok(api.includes('/vision-action|ward placement|ward clear|vision.*death|unsafe vision/.test(tt)')&&api.includes('/setup|objective|ward share|vision volume/.test(tt)'),'Vision target routing must match safety versus setup evidence');
+assert.ok(
+  api.includes('/vision-action|ward placement|ward clear|vision.*death|unsafe vision/.test(tt)')&&
+  api.includes('/giving up vision volume|vision volume trails|vision score/.test(tt)')&&
+  api.includes('/ward volume.*objective setup|ward share/.test(tt)')&&
+  api.includes('/pre-objective vision setup|setup trails|fewer wards/.test(tt)'),
+  'Vision target routing must preserve separate safety, volume, setup-share and setup-count diagnoses'
+);
 assert.ok(api.includes('/farm|cs|wave/.test(tt)&&hasNum(m.avgCsSwing15to25)')&&api.includes('/objective|presence|attendance|reconnect|routing|movement/.test(tt)'),'Mid-routing practice targets must match farm versus objective-presence wording');
 assert.ok(api.includes('/before.*contribut|contribution|removed before|uptime/.test(tt)')&&api.includes('/damage|resource|output|gold share/.test(tt)'),'Teamfight target routing must require matching evidence wording');
 assert.ok(modelDoc.includes('## v247 representative-evidence target routing'),'Representative-evidence target routing must remain documented');
