@@ -1001,11 +1001,11 @@ function renderRoleSpecificLens(r){
   const cards=[];
   let noteText='';
   if(role==='TOP'){
-    const soloK=Number(b.earlyRoleSoloKills||0),soloD=Number(b.earlyRoleSoloDeaths||0),duels=soloK+soloD,leadN=Number(b.earlyLeadGames||0),givebacks=Number(b.earlyLeadGivebackGames||0),giveRate=hasNum(b.earlyLeadGivebackRate)?Number(b.earlyLeadGivebackRate):null,sideDeaths=Number(b.preNeutralObjectiveSideLaneDeaths||0);
+    const soloK=Number(b.earlyRoleSoloKills||0),soloKGames=Number(b.earlyRoleSoloKillGames||0),soloD=Number(b.earlyRoleSoloDeaths||0),soloDGames=Number(b.earlyRoleSoloDeathGames||0),duels=soloK+soloD,duelGames=Number(b.earlyRoleSoloEventGames||0),duelReady=duels>=3&&duelGames>=2,duelTone=duelReady?(soloK>=soloD+2&&soloKGames>=2?'good':soloD>=soloK+2&&soloDGames>=2?'bad':'neutral'):'neutral',leadN=Number(b.earlyLeadGames||0),givebacks=Number(b.earlyLeadGivebackGames||0),giveRate=hasNum(b.earlyLeadGivebackRate)?Number(b.earlyLeadGivebackRate):null,sideDeaths=Number(b.preNeutralObjectiveSideLaneDeaths||0);
     cards.push(
       roleLensCard('Role gold @15',gold==null?'n/a':signed(gold,0)+'g',laneN+' comparable @15 games versus the actual TOP opponent · evidence floor 5',goldTone,laneN>=5),
       roleLensCard('CS/min vs TOP peer',cs==null?'n/a':signed(cs,2),peerN+' direct-role comparable games · evidence floor 5',csTone,peerN>=5),
-      roleLensCard('Early clean duel',soloK+' / '+soloD+' K/D',duels+' clean direct-role solo duel events before the configured early-phase boundary · review floor 3 events',duels>=3?(soloK>=soloD+2?'good':soloD>=soloK+2?'bad':'neutral'):'neutral',duels>=3),
+      roleLensCard('Early clean duel',soloK+' / '+soloD+' K/D',duels+' clean direct-role solo duel events across '+duelGames+' games before the configured early-phase boundary · floor 3 events across 2 games',duelTone,duelReady),
       roleLensCard('Early-lead give-back',giveRate==null?'n/a':fmtPct(giveRate),givebacks+' / '+leadN+' measured ≥500g pre-15 role leads gave back ≥500g before @15 · evidence floor 4',giveRate==null?'neutral':giveRate<=30?'good':giveRate>=50?'bad':'neutral',leadN>=4,wilsonInterval(givebacks,leadN)),
       roleLensCard('Pre-objective side-lane deaths',String(sideDeaths),sideDeaths+' supported side-lane death'+(sideDeaths===1?'':'s')+' shortly before a contested neutral objective across '+timelineN+' timeline-complete games · evidence floor 5 games',timelineN>=5?(sideDeaths===0&&timelineN>=10?'good':sideDeaths>=2?'bad':'neutral'):'neutral',timelineN>=5)
     );
@@ -3368,7 +3368,7 @@ function renderAdvanced(r){
     ['Objective explanation',objectiveDiagnosisLabel(r.behaviorSummary?.objectiveDiagnosis?.primaryExplanation??r.behaviorSummary?.objectiveDiagnosis?.primaryCause)],
     ['Early KP · pooled',fmtPct(a.earlyKP)+' · '+String(r.behaviorSummary?.earlyPlayerKillInvolvements??0)+' / '+String(r.behaviorSummary?.earlyTeamKills??0)+' team kills'],
     ['Early KP · mean game rate',fmtPct(r.behaviorSummary?.meanGameEarlyKp)],
-    ['Early role solo kills / deaths',String(r.behaviorSummary?.earlyRoleSoloKills??r.behaviorSummary?.pre14RoleSoloKills??0)+' / '+String(r.behaviorSummary?.earlyRoleSoloDeaths??r.behaviorSummary?.pre14RoleSoloDeaths??0)],
+    ['Early role solo kills / deaths',String(r.behaviorSummary?.earlyRoleSoloKills??r.behaviorSummary?.pre14RoleSoloKills??0)+' / '+String(r.behaviorSummary?.earlyRoleSoloDeaths??r.behaviorSummary?.pre14RoleSoloDeaths??0)+' · games '+String(r.behaviorSummary?.earlyRoleSoloKillGames??0)+' / '+String(r.behaviorSummary?.earlyRoleSoloDeathGames??0)],
     ['Plate involvement ≤20m · strong',String(r.behaviorSummary?.first20PlayerPlateInvolvement??r.behaviorSummary?.first20PlayerPlateCredits??0)+' / '+String(r.behaviorSummary?.first20OpponentPlateInvolvement??r.behaviorSummary?.first20OpponentPlateCredits??0)+' vs role peer'],
     ['Matched plate involvement ≤20m · strong',String(r.behaviorSummary?.peerMatchedFirst20PlayerPlateInvolvement??0)+' vs '+String(r.behaviorSummary?.first20OpponentPlateInvolvement??0)+' peer · Δ '+signed(r.behaviorSummary?.first20PlateInvolvementDelta,0)],
     ['Lane-presence-only plate signals ≤20m',String(r.behaviorSummary?.first20PlayerPlateLanePresenceSignals??0)+' all games · '+String(r.behaviorSummary?.peerMatchedFirst20PlayerPlateLanePresenceSignals??0)+' matched vs '+String(r.behaviorSummary?.first20OpponentPlateLanePresenceSignals??0)+' peer'],
@@ -3381,8 +3381,8 @@ function renderAdvanced(r){
     ['Avg CS swing after clean solo kill',hasNum(r.behaviorSummary?.avgSoloKillCsSwingTo15)?signed(r.behaviorSummary.avgSoloKillCsSwingTo15,1)+' to 15':'n/a'],
     ['Solo-kill deaths before next shop',String(r.behaviorSummary?.soloKillDeathsBeforeShop??0)+' / '+String(r.behaviorSummary?.soloKillResetEvents??0)+' · '+fmtPct(r.behaviorSummary?.soloKillDeathsBeforeShopRate)],
     ['Avg next-shop delay after solo kill',hasNum(r.behaviorSummary?.avgSoloKillNextShopDelaySec)?fmtInt(r.behaviorSummary.avgSoloKillNextShopDelaySec)+'s':'n/a'],
-    ['Early home-lane deaths',String(r.behaviorSummary?.earlyHomeLaneDeaths??r.behaviorSummary?.pre14HomeLaneDeaths??0)],
-    ['Outside-pressure early lane deaths',String(r.behaviorSummary?.earlyOutsidePressureDeaths??r.behaviorSummary?.pre14OutsidePressureDeaths??0)],
+    ['Early home-lane deaths',String(r.behaviorSummary?.earlyHomeLaneDeaths??r.behaviorSummary?.pre14HomeLaneDeaths??0)+' · '+String(r.behaviorSummary?.earlyHomeLaneDeathGames??0)+' games'],
+    ['Outside-pressure early lane deaths',String(r.behaviorSummary?.earlyOutsidePressureDeaths??r.behaviorSummary?.pre14OutsidePressureDeaths??0)+' · '+String(r.behaviorSummary?.earlyOutsidePressureDeathGames??0)+' games'],
     ['Outside-pressure share of early lane deaths',fmtPct(r.behaviorSummary?.earlyOutsidePressureShare??r.behaviorSummary?.pre14OutsidePressureShare)],
     ['All-game role solo kills / deaths',String(r.behaviorSummary?.roleSoloKills??0)+' / '+String(r.behaviorSummary?.roleSoloDeaths??0)],
     ['≥500g pre-15 lead opportunities',String(r.behaviorSummary?.earlyLeadGames??0)],
