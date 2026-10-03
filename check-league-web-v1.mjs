@@ -819,7 +819,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v207'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v208'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -924,7 +924,7 @@ assert.ok(modelDoc.includes('## Next-5 practice target denominator integrity'),'
 assert.ok(api.includes('roamAttemptGames')&&api.includes('visionActionGames')&&api.includes('objectiveSetupGames')&&api.includes('objectiveContestGames'),'Analyzer must export cross-game coverage for event-based role evidence');
 assert.ok(api.includes('supportRoamAdcLaneMovementGames')&&api.includes('meanGameSupportRoamAdcLaneMovementCs'),'Analyzer must export game-weighted Support lane movement');
 assert.ok(app.includes('function roleEventCoverage(r){')&&app.includes('laneReady:laneWindows>=4&&laneGames>=3'),'Frontend must centralize event plus game-spread readiness with saved-report fallback');
-assert.ok(app.includes("path:'behaviorSummary.meanGameSupportRoamAdcLaneMovementCs',samplePath:'behaviorSummary.supportRoamAdcLaneMovementGames'"),'Support rolling progress must use game-weighted lane movement across measured games');
+assert.ok(app.includes("path:'behaviorSummary.meanGameSupportRoamAdcLaneMovementCs',sampleRequirements:[{path:'behaviorSummary.supportRoamAdcLaneMovementWindows',min:4},{path:'behaviorSummary.supportRoamAdcLaneMovementGames',min:3}]"),'Support rolling progress must use game-weighted lane movement with window and game-spread requirements');
 assert.ok(modelDoc.includes('## Event-count plus game-spread evidence'),'Event concentration safeguards must remain documented');
 assert.ok(api.includes('sampleRequirements:sampleRequirementsFor(metricPath,minSample)')||api.includes('const requirementDefs=sampleRequirementsFor(metricPath,minSample),sampleRequirements='),'Practice targets must persist independent denominator/game-spread requirements');
 assert.ok(api.includes('sessionModel?.firstGame?.lane15Games')&&api.includes('sessionModel?.quickAfterLoss?.lane15Games'),'Session practice-target creation must use comparable @15 subgroup counts, not total session games');
@@ -939,3 +939,10 @@ assert.ok(app.includes('harmRepeated:harmWindows>=2&&harmGames>=2'),'Support har
 assert.ok(app.includes("c.harmRepeated?'bad'"),'Stable Support negative styling must consume the cross-game harm gate');
 assert.ok(app.includes("current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole")&&app.includes("previous?.dataQuality?.selectedRole||previous?.coachingSummary?.primaryRole"),'Rolling comparison compatibility must use the selected role before legacy role fallbacks');
 assert.ok(modelDoc.includes('Stable harmful Support-roam styling requires at least two harmful ADC lane-movement windows occurring in at least two different games'),'Cross-game harmful-roam semantics must remain documented');
+assert.ok(app.includes('function progressEvidence(report,spec){')&&app.includes('Array.isArray(spec?.sampleRequirements)'), 'Rolling progress must support multi-path evidence requirements');
+assert.ok(app.includes("path:'behaviorSummary.roamSuccessRate',sampleRequirements:[{path:'behaviorSummary.roamAttempts',min:4},{path:'behaviorSummary.roamAttemptGames',min:3}]"), 'Support roam progress must match the live roam opportunity/game floor');
+assert.ok(app.includes("path:'behaviorSummary.visionActionDeathRate',sampleRequirements:[{path:'behaviorSummary.visionActions',min:12},{path:'behaviorSummary.visionActionGames',min:4}]"), 'Support vision progress must match the live action/game floor');
+assert.ok(app.includes("path:'advanced.objectivePresence',sampleRequirements:[{path:'behaviorSummary.objectiveContestEncounters',min:5},{path:'behaviorSummary.objectiveContestGames',min:3}]"), 'Support/Jungle objective-presence progress must require encounters across games');
+assert.ok(app.includes("path:'behaviorSummary.recentShopObjectiveAbsenceRate',sampleRequirements:[{path:'behaviorSummary.neutralObjectiveEvents',min:5},{path:'behaviorSummary.objectiveContestGames',min:3}]"), 'Recent-shop objective progress must require contested-event game spread');
+assert.ok(app.includes('curEvidence=progressEvidence(current,spec)')&&app.includes('!curEvidence.ready||!prevEvidence.ready'), 'Rolling progress must fail closed unless both reports satisfy every evidence requirement');
+assert.ok(modelDoc.includes('Support rolling progress uses the same floors as the live Support lens'), 'Rolling-progress evidence parity must remain documented');
