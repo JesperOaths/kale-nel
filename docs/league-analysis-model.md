@@ -2813,3 +2813,12 @@ Older saved reports may contain practice targets created before explicit `sample
 When a saved target lacks explicit requirements, the frontend reconstructs the current safe evidence contract for every multi-denominator metric family that existed in legacy reports: roam conversion, generic roam lane movement, Support ADC lane movement, pre-objective death rate, objective-setup ward share, vision-action safety, prior objective setup, recent-shop objective absence, and objective presence.
 
 The fallback preserves the current event-count plus game-spread floors. For example, a legacy roam-conversion target still needs at least 4 attempts across 3 games, a legacy Support lane-movement target still needs 4 measured windows across 3 games, and a legacy vision-safety target still needs 12 actions across 4 games before it can be scored as met, moving closer, moved away, or unchanged.
+
+
+## v250 game-weighted recent objective direction
+
+The short-window **Recent direction** panel must compare objective setup and contested-objective presence using the same equal-weight per-game definitions as the main coaching model.
+
+For both the latest-five and prior comparison windows, objective setup is the mean of each game's supported prior-setup percentage among joined contested objectives, and objective presence is the mean of each game's supported contested-objective presence percentage. Games without a relevant denominator remain missing rather than becoming zero.
+
+The trend objects still retain pooled encounter counts as `recentEvents` / `priorEvents` so the existing evidence floors can require both enough contributing games and enough objective encounters. Event counts support confidence; they do not determine the headline rate.
