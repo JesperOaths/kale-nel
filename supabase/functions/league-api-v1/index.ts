@@ -1553,7 +1553,7 @@ function longHorizonModel(allGames:any[],primaryRole:string){
       controlWardsPlaced:metric(sample,g=>g.controlWardsPlaced),soloKills:metric(sample,g=>g.soloKills),plateSegments:metric(plateRows,g=>g.riotPlateSegments),
       compromisedOutcomeGames:compromised.length,cleanOutcomeGames:sample.length-compromised.length};
   };
-  const recentPack=pack(recent),priorPack=pack(prior),historyPack=pack(history);
+  const recentPack:any=pack(recent),priorPack:any=pack(prior),historyPack:any=pack(history);
   const trend=(key:string)=>{const a=recentPack?.[key],b=priorPack?.[key];return{recent:a?.value??null,prior:b?.value??null,recentN:Number(a?.n||0),priorN:Number(b?.n||0),delta:hasNum(a?.value)&&hasNum(b?.value)?Number(a.value)-Number(b.value):null};};
   const values=(fn:(g:any)=>any)=>history.map(fn).filter(hasNum).map(Number),championCounts:any={};for(const g of history){const c=text(g?.champion)||"Unknown";championCounts[c]=(championCounts[c]||0)+1;}
   return{targetGames:ANALYSIS_HISTORY_TARGET_GAMES,sampleGames:history.length,deepTimelineGames:history.filter((g:any)=>g?.timelineAvailable===true).length,matchOnlyHistoryGames:history.filter((g:any)=>g?.timelineAvailable!==true).length,
