@@ -759,7 +759,7 @@ ok(app.includes("role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSum
 ok(modelDoc.includes('## Role-aware session habit model'), 'analysis documentation must preserve role-aware session semantics');
 ok(backend.includes('g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false'), 'session Gold @15 must require a trusted direct-role peer');
 ok(app.includes("role=canonicalRole(current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole||current?.summary?.primaryRole)"), 'rolling progress must use the canonical selected coaching role');
-ok(app.includes("path:'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame',samplePath:'dataQuality.validTimelineGames',min:5"), 'TOP side-lane progress must use valid timeline games as its evidence denominator');
+ok(app.includes("path:'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame',samplePath:'behaviorSummary.timelineGames',min:5"), 'TOP side-lane progress must use the mechanics-filtered coaching timeline denominator');
 ok(app.includes('ADC lane movement during roams')&&!app.includes('ADC lane cost during roams'), 'Support roam presentation must preserve signed lane-movement semantics');
 ok(modelDoc.includes('## v203 audit corrections'), 'analysis documentation must preserve the v203 audit repairs');
 ok(backend.includes('timelineGames:validTimeline.length'), 'behavior summary must export the timeline-game denominator for per-game targets');
@@ -856,3 +856,9 @@ ok(app.includes("mid.coachingObjectivePresenceRate??mid.meanGameObjectiveJoinRat
 ok(app.includes("path:'behaviorSummary.midRouting.coachingObjectivePresenceRate',samplePath:'behaviorSummary.midRouting.games'"), 'rolling progress must compare the canonical mid-routing presence metric');
 ok(app.includes("g?.midRouting?.contestPresenceRate??g?.midRouting?.objectiveJoinRate"), 'MID outcome fingerprint must use team-contested per-game presence before legacy secured presence');
 ok(modelDoc.includes('## Mid-routing objective-presence aggregation')&&modelDoc.includes('legacy `avgObjectiveJoinRate` alias retains this pooled meaning'), 'analysis documentation must preserve mid-routing aggregation compatibility');
+
+ok(app.includes("itemN=Number(p.majorItemGames||0),timelineN=Number(b.timelineGames||0)"), 'role-lens timeline readiness must use the mechanics-filtered coaching cohort');
+ok(app.includes("fightN=Number(b.fightSamples||0),timelineN=Number(b.timelineGames||0),deaths="), 'generic decision risk readiness must use behaviorSummary.timelineGames');
+ok(app.includes("path:'behaviorSummary.badDeathsPerTimelineGame',samplePath:'behaviorSummary.timelineGames',min:5"), 'rolling risk progress must use coaching timeline games rather than raw Last-20 coverage');
+ok(app.includes("timeline=Number(q.validTimelineGames||0)")&&app.includes("['Timeline coverage',timeline+'/'+games+' games'"), 'data-quality panels must still expose raw selected-role Last-20 timeline coverage');
+ok(modelDoc.includes('## Coaching versus raw timeline coverage'), 'analysis documentation must preserve raw-versus-coaching timeline denominator semantics');
