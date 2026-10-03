@@ -1634,6 +1634,7 @@ const PRACTICE_TARGET_SAMPLE_PATHS={
   'behaviorSummary.objectiveSetupCoachingRate':['behaviorSummary.objectiveSetupGames'],
   'behaviorSummary.killConversionRate':['behaviorSummary.killConversionWindows'],
   'behaviorSummary.closing25.leadLateRiskLossRate':['behaviorSummary.closing25.leadLosses'],
+  'behaviorSummary.closing25.leadLateRiskPerLeadGameRate':['behaviorSummary.closing25.leadGames'],
   'behaviorSummary.objectiveJoinRate':['behaviorSummary.neutralObjectiveEvents'],
   'behaviorSummary.objectiveCoachingPresenceRate':['behaviorSummary.objectiveContestGames'],
   'behaviorSummary.firstAllyFightDeathRate':['behaviorSummary.fightSamples'],
