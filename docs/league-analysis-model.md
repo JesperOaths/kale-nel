@@ -2681,3 +2681,12 @@ External benchmark eligibility is reference-only and does not affect coaching pr
 Every metric path that the analyzer can persist in a Next-5 practice target must also exist in the frontend fallback registry used for older or partially populated saved reports. The only frontend-only entries are the intentional legacy aliases `summary.csMin` and `summary.goldDiff15`, which are remapped to the mechanics-filtered `coachingSummary` paths.
 
 The game-weighted generic roam metric `behaviorSummary.meanGameRoamLaneMovementCs` therefore falls back to `behaviorSummary.roamLaneCostMeasuredGames` when explicit saved `sampleRequirements` are unavailable. Explicit requirements remain authoritative whenever present.
+
+
+## Saved-report strict role cohort
+
+New analyzer reports already store only the selected role in the report game sample, but imported or older saved reports may predate that guarantee. Frontend-derived coaching surfaces therefore reconstruct their cohort with a **strict per-game role parser** before applying the mechanics-key filter.
+
+Only a game whose explicit Riot/report role normalizes to the selected coaching role may enter `reportCoachingGames(r)`. Missing, unknown or unsupported per-game role labels are **context only** and are never allowed to inherit the general UI default of ADC. This is intentionally stricter than `canonicalRole()`, whose ADC default remains useful for form/profile UI but would be unsafe for evidence membership.
+
+Raw match history can still display those older rows for traceability. `gameIsCoachingContext(r,g)` marks a role-mismatched or role-unknown row as non-coaching, and the report header's coaching-comparable count is reconstructed from the same strict cohort rather than trusting a stale legacy aggregate.
