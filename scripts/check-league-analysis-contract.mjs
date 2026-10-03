@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.148'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.149'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -1080,3 +1080,9 @@ ok(backend.includes('selected_role_scope_violation')&&backend.includes('deepRole
 ok(app.includes('function reportRoleScopeViolations(')&&app.includes('roleContaminated=scope.total>0'), 'saved reports must be checked for role contamination before display');
 ok(html.includes('id="historyConsistency"')&&html.includes('id="historyChampionMix"')&&app.includes('function historyDistributionCard('), 'history consistency and champion-mix data must have visible consumers');
 ok(modelDoc.includes('## v267 role-pure history and readable solo-kill rates'), 'analysis documentation must preserve v267 role-scope and solo-kill semantics');
+ok(backend.includes('enemyJungleMonsters:metric(sample,g=>g.enemyJungleMonsters)')&&app.includes("Enemy-jungle monsters / game"), 'Jungle history must use enemy-jungle monster pressure context');
+ok(backend.includes('firstTurretParticipationRate:boolRate')&&app.includes("First-turret participation"), 'lane-role history must consume first-turret participation');
+ok(backend.includes('visionLeaderRate:boolRate')&&app.includes("Team vision leader"), 'Support history must consume team vision-leader context');
+ok(app.includes("detailCard('Team gold rank'")&&app.includes("detailCard('Team vision rank'"), 'per-game detail must expose existing team rank metrics');
+ok(app.includes('Previous report withheld.')&&app.includes('previousScope=reportRoleScopeViolations(previous,role)'), 'progress comparison must never compare against a cross-role previous report');
+ok(modelDoc.includes('## v268 role-specific unused-metric promotion'), 'analysis documentation must preserve v268 role-specific metric decisions');
