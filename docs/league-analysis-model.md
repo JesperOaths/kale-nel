@@ -2863,3 +2863,14 @@ The analyzer exports `earlySoloKillGames`, `earlySoloDeathGames`, `earlySoloEven
 Repeated Jungle matchup diagnostics keep gold @15 and CS @15 evidence counts separate. Both use trusted direct-role, checkpoint-compatible games, but either metric may be missing independently.
 
 The backend exports `csDiff15Games` from the finite CS-difference sample and computes `csDiff15` from exactly that set. The frontend's **CS diff @15** chip uses `csDiff15Games` for its three-observation evidence floor and displays that count directly. It must not borrow `laneGames`, which is the finite gold-difference sample.
+
+
+## v256 global lane-event game spread
+
+Role-level lane coaching must not call a behavior recurring merely because several events occurred inside one unusually chaotic game.
+
+Across the current mechanics coaching cohort, the analyzer now exports game-spread counts for early clean direct-role duels and early home-lane outside-pressure deaths: `earlyRoleSoloKillGames`, `earlyRoleSoloDeathGames`, `earlyRoleSoloEventGames`, `earlyHomeLaneDeathGames`, and `earlyOutsidePressureDeathGames`.
+
+Global clean-1v1 negative/positive coaching retains the existing event and trusted-peer sample floors but additionally requires the relevant solo outcomes to appear in at least 2 games. The global outside-pressure finding requires at least 4 early home-lane deaths across at least 3 affected games, with at least 3 outside-pressure deaths occurring across at least 2 games.
+
+The TOP **Early clean duel** card requires at least 3 clean duel events across at least 2 games before directional styling. Positive or negative coloring also requires the corresponding wins/deaths to repeat across at least 2 games. Technical traceability displays the event counts and contributing-game counts separately.
