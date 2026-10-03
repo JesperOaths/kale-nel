@@ -2580,3 +2580,14 @@ Prominent Support/Jungle objective-presence coaching uses the equal-weight **mea
 Analyzer v4.115 exports `objectiveCoachingPresenceRate` as the coaching-facing alias of `meanGameObjectiveContestPresenceRate`. The report's `advanced.objectivePresence` uses this game-weighted value and also exposes `objectivePresencePooled` plus `objectivePresenceAggregation: "mean_games"`.
 
 Action-first low/strong objective-presence findings, Support/Jungle role cards, compound Jungle objective-readiness context, rolling progress and newly created generic objective-presence practice targets all use the game-weighted coaching value. The target still requires at least 5 contested encounters across at least 3 contributing games. Legacy saved pooled-rate targets remain readable through their historical metric paths.
+
+
+## Coaching-facing prior objective setup aggregation
+
+Prominent cross-game **Prior objective setup** coaching uses an equal-weight mean of each game's supported setup rate, where the per-game denominator is `objectiveReadiness.contestedJoined`. The pooled `earlySetupObjectiveJoinRate` remains available for technical traceability and legacy saved targets.
+
+Analyzer v4.116 exports `meanGameEarlySetupObjectiveJoinRate` and the coaching-facing alias `objectiveSetupCoachingRate`. Action-first setup findings and newly created setup practice targets use this game-weighted coaching value, subject to at least 5 joined contested-objective encounters across at least 3 setup-contributing games.
+
+Support/Jungle role lenses, decision cards and compound coaching prefer `objectiveSetupCoachingRate`, then the mean-game field, then the pooled legacy rate for older saved reports. Because a Wilson binomial interval computed from pooled encounters does not describe a mean of per-game rates, those prominent mean-game setup cards do **not** render the pooled Wilson band. Pooled numerator/denominator counts remain visible as traceability.
+
+The short-window Recent direction setup signal intentionally remains a pooled event-rate trend with explicit opportunity and game-spread gates; it is separately labelled and documented as such. Outcome Fingerprint remains an equal-weight per-game comparison using `earlySetupJoins / contestedJoined` within each game.
