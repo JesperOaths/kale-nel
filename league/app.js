@@ -1718,9 +1718,12 @@ function practiceTargetBaselineEvidenceText(t){
   if(explicit)return reqs.map(x=>practiceRequirementLabel(x.path)+' '+(x.value==null?'n/a':fmtInt(x.value))+'/'+fmtInt(x.min)).join(' · ');
   return 'based on '+String(t?.sampleSize||0)+' relevant observation'+(Number(t?.sampleSize||0)===1?'':'s');
 }
+function coachingMatchIds(report){
+  return [...new Set(reportCoachingGames(report).map(g=>String(g.matchId||'')).filter(Boolean))];
+}
 function reportNewMatchCount(current,previous){
-  const prev=new Set((previous?.games||[]).map(g=>String(g.matchId||'')).filter(Boolean));
-  return [...new Set((current?.games||[]).map(g=>String(g.matchId||'')).filter(Boolean))].filter(id=>!prev.has(id)).length;
+  const prev=new Set(coachingMatchIds(previous));
+  return coachingMatchIds(current).filter(id=>!prev.has(id)).length;
 }
 
 function previousPracticeTargetOutcomes(current,previous){
@@ -1757,7 +1760,7 @@ function progressComparisonContext(current,previous){
   const curQueue=current?.dataQuality?.dominantQueueId,prevQueue=previous?.dataQuality?.dominantQueueId;
   const curMechanics=String(current?.dataQuality?.currentMechanicsKey||''),prevMechanics=String(previous?.dataQuality?.currentMechanicsKey||'');
   const curPatch=String(current?.dataQuality?.currentPatchKey||''),prevPatch=String(previous?.dataQuality?.currentPatchKey||'');
-  const curIds=[...new Set((current?.games||[]).map(g=>String(g.matchId||'')).filter(Boolean))],prevIds=[...new Set((previous?.games||[]).map(g=>String(g.matchId||'')).filter(Boolean))],prevSet=new Set(prevIds),curSet=new Set(curIds);
+  const curIds=coachingMatchIds(current),prevIds=coachingMatchIds(previous),prevSet=new Set(prevIds),curSet=new Set(curIds);
   const overlap=curIds.filter(id=>prevSet.has(id)).length,newGames=curIds.filter(id=>!prevSet.has(id)).length,dropped=prevIds.filter(id=>!curSet.has(id)).length,base=Math.max(1,Math.min(curIds.length||1,prevIds.length||1));
   let reason='';
   if(curRole!==prevRole)reason='Primary role changed from '+roleLabel(prevRole)+' to '+roleLabel(curRole)+'.';
