@@ -2856,3 +2856,10 @@ For ADC/MID/TOP repeated opponent-champion diagnostics:
 - Outside-pressure share needs at least 3 early home-lane deaths across at least 2 games for a mature denominator. A negative outside-pressure read additionally requires at least 2 outside-pressure deaths spread across at least 2 games.
 
 The analyzer exports `earlySoloKillGames`, `earlySoloDeathGames`, `earlySoloEventGames`, `earlyHomeLaneDeathGames`, and `earlyOutsidePressureGames` so the browser can enforce the same cross-game repetition rules as backend coaching.
+
+
+## v255 Jungle matchup CS denominator integrity
+
+Repeated Jungle matchup diagnostics keep gold @15 and CS @15 evidence counts separate. Both use trusted direct-role, checkpoint-compatible games, but either metric may be missing independently.
+
+The backend exports `csDiff15Games` from the finite CS-difference sample and computes `csDiff15` from exactly that set. The frontend's **CS diff @15** chip uses `csDiff15Games` for its three-observation evidence floor and displays that count directly. It must not borrow `laneGames`, which is the finite gold-difference sample.
