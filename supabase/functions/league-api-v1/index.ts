@@ -246,7 +246,7 @@ function externalAdcBenchmarkSet(rankSnapshot:any,cohortQueueId:any,selectedRole
     cohortQueueId:queueId||null,
     cohortQueueType:rankedQueueType,
     eligible,
-    eligibilityReason:role!=="ADC"?"selected_role_not_adc":!rankedQueueType?"selected_cohort_not_ranked":idx<0?"matching_rank_queue_tier_unavailable":"ranked_queue_and_tier_available",
+    eligibilityReason:selectedRoleKey!=="ADC"?"selected_role_not_adc":!rankedQueueType?"selected_cohort_not_ranked":idx<0?"matching_rank_queue_tier_unavailable":"ranked_queue_and_tier_available",
     methodology:"Rank-level averages from the published ranked corpus. CS/min, KP and DPM are adjusted using the source's Bot (ADC) role multipliers ×1.1; KDA, deaths/game and GPM use the published rank averages directly. These values are visual/reference context only and are never inputs to coaching priority, practice targets, or rank predictions.",
     currentTier:tier||null,
     same:at(0),
