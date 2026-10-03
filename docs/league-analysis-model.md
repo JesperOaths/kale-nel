@@ -2905,3 +2905,12 @@ The authoritative coaching baseline is therefore `peerComparison.avgGoldDiff15`,
 New generic lane-gold Next-5 targets persist `peerComparison.avgGoldDiff15` rather than `coachingSummary.goldDiff15`. Older saved Gold@15 targets whose metric path is `summary.goldDiff15` or `coachingSummary.goldDiff15` are shown as **re-baseline required**. Their old numeric baseline is not silently compared with the newer trusted population.
 
 This does not delete raw checkpoint values from technical traceability. It prevents low-confidence or withheld direct-peer games from re-entering coaching through a summary average.
+
+
+## v260 high-confidence lane-opposition gate
+
+Outside-pressure classification now uses the same fail-closed role-evidence philosophy as direct-peer coaching. A home-lane death is eligible for ordinary-vs-outside-pressure classification only when the player's role and the ordinary same-role opponent are both resolved from **high-confidence Riot position evidence**. For ADC/SUPPORT, the ordinary enemy bot-lane partner must also be uniquely resolved from high-confidence role evidence.
+
+Legacy/fallback `role` or `lane` labels are not sufficient for this classifier. If the player role, same-role opponent, or required bot-lane partner is only fallback-quality, the death remains visible but is exported as unclassified with an explicit reason such as `player_role_not_high_confidence`, `same_role_opponent_not_high_confidence`, or `bot_lane_partner_not_high_confidence_or_unresolved`.
+
+This deliberately reduces classification coverage rather than allowing low-confidence role labels to create a false gank/outside-pressure pattern.
