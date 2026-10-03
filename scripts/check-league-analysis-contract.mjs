@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.144'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.145'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -464,7 +464,7 @@ ok(backend.includes('player_role:playerRole')&&backend.includes('const stored=ro
 ok(backend.includes('roleEligible=targetRole==="GENERIC"?metaEligible:metaEligible.filter')&&backend.includes('queueSelection=selectRecentQueueCohort(roleEligible,20)'), 'analysis must filter to the selected role before choosing the dominant queue');
 ok(backend.includes('selectedRoleEligibleGames=roleEligible.length'), 'data quality must expose selected-role eligible cache depth');
 ok(app.includes("roleCount=Number(d.selected_role_cached_games"), 'frontend cache status must show selected-role depth');
-ok(backend.includes('.not("timeline_json","is",null)')&&backend.includes('select("match_id,peer_rank_json,peer_rank_fetched_at")'), 'fetch-start cache detection must not transfer timeline JSON');
+ok(backend.includes('.not("timeline_json","is",null)')&&backend.includes('select("match_id")'), 'fetch-start cache detection must not transfer timeline or peer-rank metadata merely to prove a full cache hit');
 ok(backend.includes('metadata_then_selected_reports_v1'), 'report_latest must expose metadata-first selected-payload retrieval');
 ok(backend.includes('select("id,source_kind,analyzer_version,sample_match_ids,created_at,data_quality")'), 'report history must scan lightweight metadata plus role-selection quality without report blobs');
 ok(backend.includes('detailIds=[currentMeta?.id,previousMeta?.id]')&&backend.includes('select("id,report_data,data_quality")'), 'report_latest must hydrate at most current and previous full reports');
@@ -1061,3 +1061,9 @@ ok(backend.includes('alliedAdcCandidates=ps.filter((x:any)=>Number(x.teamId)===t
 ok(backend.includes('for(const ev of g.directPeerComparable===true?(g.laneDuel?.events||[]):[])'), 'replay matchup review must not promote untrusted lane-duel evidence');
 ok(app.includes("peerChampion=peerOk?String(g.peer?.champion||''):'")&&app.includes("peerChampion=peerTrusted?String(g.peer?.champion||''):''"), 'per-game opponent identity must be withheld in current and legacy frontend reports when peer confidence is insufficient');
 ok(modelDoc.includes('## v263 fail-closed per-game opponent evidence'), 'analysis documentation must preserve v263 per-game opponent integrity');
+ok(!backend.includes('recentRankIds=new Set(matchIds.slice(0,20))'), 'raw first-20 matches must not drive peer-rank refresh before selected-role cohorting');
+ok(backend.includes('peer_rank_plan:"selected_role_queue_cohort_after_cache"')&&app.includes("fetch_prepare',{profile_id:profile.id,count:requestedCount,target_role:targetRole}"), 'fetch preparation must defer peer-rank work until the selected role/queue cohort is known');
+ok(backend.includes('rankRelevant=idx<20&&(targetRole==="GENERIC"||playerRole===targetRole)&&directPeerComparable')&&app.includes("fetch_one',{run_id:prep.run_id,match_id:id,target_role:targetRole}"), 'new-match peer-rank lookup must require selected-role relevance and a trusted direct peer');
+ok(backend.includes('!row?.peer_rank_fetched_at||(row?.peer_rank_json&&row.peer_rank_json?.schema!=="rank_snapshot_v2")'), 'null peer-rank results with a fetched timestamp must remain negative-cached');
+ok(backend.includes('peer_rank_selection_scope:"trusted_selected_role_queue_cohort"')&&backend.includes('peer_rank_unavailable_cached:peerRankUnavailableCached'), 'fetch completion must expose trusted role-first peer-rank targeting and unavailable-result caching');
+ok(modelDoc.includes('## v264 role-first peer-rank fetch integrity'), 'analysis documentation must preserve v264 role-first peer-rank fetch integrity');

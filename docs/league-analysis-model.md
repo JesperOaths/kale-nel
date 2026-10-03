@@ -2951,3 +2951,14 @@ The serialized per-game `peer` object is now emitted only for `directPeerCompara
 Support roam lane-cost evidence has the same standard. The allied ADC and enemy ADC must each be uniquely identifiable from high-confidence Riot role fields before ADC-vs-ADC CS movement can become the coaching lane-cost signal; otherwise that comparison is unavailable rather than inferred from a fallback role.
 
 Replay review now applies the trusted-peer gate to clean 1v1 lane-death prompts as well. A low-confidence opponent can therefore contribute ordinary non-peer facts such as a player's own death, position, team objective context, or KDA, but cannot become named matchup evidence or a direct-role economy/vision/item comparison.
+
+
+## v264 role-first peer-rank fetch integrity
+
+Peer-rank acquisition now obeys the same role-first boundary as the report itself. A fully cached match+timeline row is always a cache hit during fetch preparation; missing peer-rank metadata no longer causes a cached wrong-role game to be re-opened simply because it happened to sit inside the first 20 raw Riot match IDs. The browser sends the selected role with fetch preparation and per-match fetch calls, and new-match rank lookup is eligible only when the fetched game matches that selected role and the direct role opponent is supported by high-confidence Riot role evidence.
+
+The authoritative peer-rank target set remains the final selected-role, supported-queue cohort chosen in fetch completion. Any remaining rank gaps are resolved there after role and queue selection. This keeps API work aligned with the population that can actually enter the report and prevents TOP/MID/etc. games from consuming opponent-rank calls during an ADC analysis merely because they were recent in the raw account history.
+
+Peer-rank misses are now negative-cached correctly. A row with `peer_rank_fetched_at` and no rank snapshot means the lookup was completed but no usable ranked snapshot was available; it is not retried on every later analysis. Existing non-null snapshots using an older schema are still refreshed. Fetch completion exposes `peer_rank_checked`, `peer_rank_backfilled`, `peer_rank_unavailable_cached`, and `peer_rank_selection_scope=trusted_selected_role_queue_cohort` so the UI and diagnostics can distinguish attempted checks, successful snapshots, and intentionally cached unavailability.
+
+The trusted-opponent rule from v263 also applies before a Riot rank request is made. Low-confidence role opposition can therefore no longer waste a peer-rank lookup that the analyzer would subsequently refuse to use.

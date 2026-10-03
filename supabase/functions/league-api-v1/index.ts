@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.144";
+const ANALYZER_VERSION="league-web-behavior-v4.145";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -2581,41 +2581,40 @@ Deno.serve(async(req:Request)=>{
       }
       const fetchLimit=viewer.anonymous===true?PUBLIC_MAX_FETCH_MATCHES:100,count=Math.max(1,Math.min(fetchLimit,Number(body.count||50))),rr=text(p.routing_region)||routeFor(p.platform_region);
       const ids=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/by-puuid/"+encodeURIComponent(p.puuid)+"/ids?start=0&count="+count,requestRiotKey,allowServerRiotKey),matchIds=Array.isArray(ids)?ids.map(text).filter(Boolean):[];
-      const recentRankIds=new Set(matchIds.slice(0,20));
-      const{data:cached}=matchIds.length?await sb.from("league_match_cache_v1").select("match_id,peer_rank_json,peer_rank_fetched_at").eq("profile_id",p.id).in("match_id",matchIds).not("match_json","is",null).not("timeline_json","is",null):{data:[]};
-      // Existence filters answer whether full match/timeline data is cached; never
-      // transfer timeline_json simply to test its truthiness.
-      const set=new Set((cached||[]).filter((x:any)=>!recentRankIds.has(x.match_id)||(!!x.peer_rank_fetched_at&&x.peer_rank_json?.schema==="rank_snapshot_v2")).map((x:any)=>x.match_id));
+      const targetRole=role(body.target_role);
+      const{data:cached}=matchIds.length?await sb.from("league_match_cache_v1").select("match_id").eq("profile_id",p.id).in("match_id",matchIds).not("match_json","is",null).not("timeline_json","is",null):{data:[]};
+      // A complete match+timeline row is a cache hit regardless of peer-rank state.
+      // Peer-rank work is deferred until selected-role + queue cohorting is known.
+      const set=new Set((cached||[]).map((x:any)=>x.match_id));
       const{data:run,error}=await sb.from("league_fetch_runs_v1").insert({profile_id:p.id,owner_player_id:viewer.player_id,status:"running",match_ids:matchIds,completed_count:set.size,total_count:matchIds.length,cache_hits:set.size,updated_at:now()}).select("*").single();
-      if(error)throw error;return json(req,{ok:true,run_id:run.id,match_ids:matchIds,cached_match_ids:[...set],profile:p});
+      if(error)throw error;return json(req,{ok:true,run_id:run.id,match_ids:matchIds,cached_match_ids:[...set],profile:p,target_role:targetRole==="GENERIC"?null:targetRole,peer_rank_plan:"selected_role_queue_cohort_after_cache"});
     }
     if(action==="fetch_one"){
       const{data:run,error:re}=await sb.from("league_fetch_runs_v1").select("*").eq("id",text(body.run_id)).eq("owner_player_id",viewer.player_id).maybeSingle();if(re||!run)throw re||Object.assign(new Error("fetch_run_not_found"),{status:404});
-      const id=text(body.match_id),runIds=Array.isArray(run.match_ids)?run.match_ids:[],idx=runIds.indexOf(id);if(idx<0)return json(req,{ok:false,error:"match_not_in_run"},400);
+      const targetRole=role(body.target_role),id=text(body.match_id),runIds=Array.isArray(run.match_ids)?run.match_ids:[],idx=runIds.indexOf(id);if(idx<0)return json(req,{ok:false,error:"match_not_in_run"},400);
       const p=await getProfile(sb,viewer.player_id,run.profile_id),{data:old}=await sb.from("league_match_cache_v1").select("match_json,timeline_json,peer_rank_json,peer_rank_fetched_at,player_role").eq("profile_id",p.id).eq("match_id",id).maybeSingle();
-      const needsPeerRank=idx<20&&(!old?.peer_rank_fetched_at||old?.peer_rank_json?.schema!=="rank_snapshot_v2"||body.force===true);
-      if(old?.match_json&&old?.timeline_json&&!needsPeerRank&&body.force!==true)return json(req,{ok:true,match_id:id,cache_hit:true,timeline_available:true,peer_rank_checked:idx>=20||!!old?.peer_rank_fetched_at});
+      if(old?.match_json&&old?.timeline_json&&body.force!==true)return json(req,{ok:true,match_id:id,cache_hit:true,timeline_available:true,peer_rank_checked:!!old?.peer_rank_fetched_at,peer_rank_relevant:null,peer_rank_deferred:true});
       const rr=text(p.routing_region)||routeFor(p.platform_region);
       let m=old?.match_json||null,tl=old?.timeline_json||null,tlError:string|null=null;
       if(!m||body.force===true)m=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/"+encodeURIComponent(id),requestRiotKey,allowServerRiotKey);
       if(!tl||body.force===true){try{tl=await riot("https://"+rr+".api.riotgames.com/lol/match/v5/matches/"+encodeURIComponent(id)+"/timeline",requestRiotKey,allowServerRiotKey);}catch(e:any){tlError=text(e?.message||e).slice(0,500);}}
-      const participants=Array.isArray(m?.info?.participants)?m.info.participants:[],me=participants.find((x:any)=>text(x?.puuid)===text(p.puuid)),playerRole=me?participantRole(me):"GENERIC";
+      const participants=Array.isArray(m?.info?.participants)?m.info.participants:[],me=participants.find((x:any)=>text(x?.puuid)===text(p.puuid)),playerRoleEvidence=me?participantRoleEvidence(me):null,playerRole=playerRoleEvidence?.role||"GENERIC",peerResolution=me?opponentResolution(m,me):null,directPeerComparable=playerRoleEvidence?.confidence==="high"&&peerResolution?.opponentRoleConfidence==="high"&&!!peerResolution?.opponent,rankRelevant=idx<20&&(targetRole==="GENERIC"||playerRole===targetRole)&&directPeerComparable;
       let peerRank=old?.peer_rank_json||null,peerRankFetchedAt=old?.peer_rank_fetched_at||null;
-      if(idx<20&&(!peerRankFetchedAt||body.force===true)){
-        const opp=me?opponent(m,me):null;
+      if(rankRelevant&&(!peerRankFetchedAt||(peerRank&&peerRank?.schema!=="rank_snapshot_v2")||body.force===true)){
+        const opp=peerResolution?.opponent||null;
         peerRank=opp?.puuid?await rankSnapshotFor({puuid:opp.puuid,platform_region:p.platform_region},requestRiotKey,allowServerRiotKey):null;
         peerRankFetchedAt=now();
       }
       const gs=Number(m?.info?.gameStartTimestamp||0),row={profile_id:p.id,match_id:id,owner_player_id:viewer.player_id,game_start_at:gs?new Date(gs).toISOString():null,map_id:num(m?.info?.mapId),queue_id:num(m?.info?.queueId),game_duration_seconds:num(m?.info?.gameDuration),player_role:playerRole,match_json:m,timeline_json:tl,peer_rank_json:peerRank,peer_rank_fetched_at:peerRankFetchedAt,match_fetched_at:now(),timeline_fetched_at:tl?now():null,fetch_error:tlError,updated_at:now()};
       const{error}=await sb.from("league_match_cache_v1").upsert(row,{onConflict:"profile_id,match_id"});if(error)throw error;
       await sb.from("league_fetch_runs_v1").update({completed_count:Math.min(Number(run.total_count||0),Number(run.completed_count||0)+1),updated_at:now(),last_error:tlError}).eq("id",run.id);
-      return json(req,{ok:true,match_id:id,cache_hit:!!old?.match_json&&!!old?.timeline_json,timeline_available:!!tl,timeline_error:tlError,peer_rank_checked:idx>=20||!!peerRankFetchedAt,peer_rank:peerRank});
+      return json(req,{ok:true,match_id:id,cache_hit:!!old?.match_json&&!!old?.timeline_json,timeline_available:!!tl,timeline_error:tlError,peer_rank_checked:rankRelevant?!!peerRankFetchedAt:false,peer_rank_relevant:rankRelevant,peer_rank:peerRank});
     }
     if(action==="fetch_finish"){
       const runId=text(body.run_id),{data:run,error:runError}=await sb.from("league_fetch_runs_v1").select("*").eq("id",runId).eq("owner_player_id",viewer.player_id).maybeSingle();
       if(runError||!run)throw runError||Object.assign(new Error("fetch_run_not_found"),{status:404});
       const p=await getProfile(sb,viewer.player_id,run.profile_id),targetRole=role(body.target_role);
-      let peerRankBackfilled=0,peerRankTargetCount=0,comparableCachedGames=0,queueComparableCachedGames=0,dominantQueueId:any=null;
+      let peerRankBackfilled=0,peerRankChecked=0,peerRankUnavailableCached=0,peerRankTargetCount=0,comparableCachedGames=0,queueComparableCachedGames=0,dominantQueueId:any=null;
       // Queue selection only needs stored metadata. Do not deserialize every cached
       // match JSON merely to identify the recent comparable cohort.
       const{data:cachedMeta,error:cacheError}=await sb.from("league_match_cache_v1").select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,player_role,peer_rank_json,peer_rank_fetched_at").eq("profile_id",p.id).not("match_json","is",null).order("game_start_at",{ascending:false}).limit(ANALYSIS_CACHE_METADATA_LIMIT);
@@ -2625,7 +2624,7 @@ Deno.serve(async(req:Request)=>{
       const comparable=dominantQueueId==null?roleEligible:roleEligible.filter((r:any)=>Number(r?.queue_id||0)===Number(dominantQueueId));queueComparableCachedGames=comparable.length;
       const targets=comparable.slice(0,20);
       comparableCachedGames=comparable.length;peerRankTargetCount=targets.length;
-      const rankNeeds=targets.filter((row:any)=>!(row?.peer_rank_fetched_at&&row?.peer_rank_json?.schema==="rank_snapshot_v2")),rankNeedIds=rankNeeds.map((row:any)=>text(row.match_id)).filter(Boolean);
+      const rankNeeds=targets.filter((row:any)=>!row?.peer_rank_fetched_at||(row?.peer_rank_json&&row.peer_rank_json?.schema!=="rank_snapshot_v2")),rankNeedIds=rankNeeds.map((row:any)=>text(row.match_id)).filter(Boolean);
       let rankMatchById=new Map<string,any>();
       if(rankNeedIds.length){
         const{data:rankRows,error:rankRowsError}=await sb.from("league_match_cache_v1").select("match_id,match_json").eq("profile_id",p.id).in("match_id",rankNeedIds);
@@ -2633,10 +2632,10 @@ Deno.serve(async(req:Request)=>{
       }
       for(const row of targets){
         if(row?.peer_rank_fetched_at&&row?.peer_rank_json?.schema==="rank_snapshot_v2")continue;
-        const matchJson=rankMatchById.get(text(row.match_id)),participants=Array.isArray(matchJson?.info?.participants)?matchJson.info.participants:[],me=participants.find((x:any)=>text(x?.puuid)===text(p.puuid)),opp=me?opponent(matchJson,me):null;
+        const matchJson=rankMatchById.get(text(row.match_id)),participants=Array.isArray(matchJson?.info?.participants)?matchJson.info.participants:[],me=participants.find((x:any)=>text(x?.puuid)===text(p.puuid)),playerRoleEvidence=me?participantRoleEvidence(me):null,peerResolution=me?opponentResolution(matchJson,me):null,directPeerComparable=playerRoleEvidence?.confidence==="high"&&peerResolution?.opponentRoleConfidence==="high"&&!!peerResolution?.opponent,opp=directPeerComparable?peerResolution?.opponent:null;
         const peerRank=opp?.puuid?await rankSnapshotFor({puuid:opp.puuid,platform_region:p.platform_region},requestRiotKey,allowServerRiotKey):null,stamp=now();
         const{error:updateError}=await sb.from("league_match_cache_v1").update({peer_rank_json:peerRank,peer_rank_fetched_at:stamp,updated_at:stamp}).eq("profile_id",p.id).eq("match_id",row.match_id);
-        if(updateError)throw updateError;peerRankBackfilled++;
+        if(updateError)throw updateError;peerRankChecked++;if(peerRank?.schema==="rank_snapshot_v2")peerRankBackfilled++;else peerRankUnavailableCached++;
       }
       const{data,error}=await sb.from("league_fetch_runs_v1").update({status:"done",completed_at:now(),updated_at:now()}).eq("id",runId).eq("owner_player_id",viewer.player_id).select("*").maybeSingle();
       if(error||!data)throw error||Object.assign(new Error("fetch_run_not_found"),{status:404});
@@ -2650,7 +2649,7 @@ Deno.serve(async(req:Request)=>{
           console.error("league-api-v1 anonymous fetch cleanup",pruneWarning);
         }
       }
-      return json(req,{ok:true,run:data,dominant_queue_id:dominantQueueId,queue_selection_basis:"dominant_within_recent_selected_role_supported_window_tie_newest",queue_selection_window:20,target_role:targetRole==="GENERIC"?null:targetRole,selected_role_total_cached_games:targetRole==="GENERIC"?null:roleEligible.length,queue_comparable_cached_games:queueComparableCachedGames,selected_role_cached_games:targetRole==="GENERIC"?null:comparableCachedGames,comparable_cached_games:comparableCachedGames,peer_rank_target_count:peerRankTargetCount,peer_rank_backfilled:peerRankBackfilled,public_cache_pruned:prunedMatches,public_fetch_runs_pruned:prunedFetchRuns,public_prune_warning:pruneWarning,recommend_deeper_cache:comparableCachedGames<20&&Number(run.total_count||0)<(viewer.anonymous===true?PUBLIC_MAX_FETCH_MATCHES:100)});
+      return json(req,{ok:true,run:data,dominant_queue_id:dominantQueueId,queue_selection_basis:"dominant_within_recent_selected_role_supported_window_tie_newest",queue_selection_window:20,target_role:targetRole==="GENERIC"?null:targetRole,selected_role_total_cached_games:targetRole==="GENERIC"?null:roleEligible.length,queue_comparable_cached_games:queueComparableCachedGames,selected_role_cached_games:targetRole==="GENERIC"?null:comparableCachedGames,comparable_cached_games:comparableCachedGames,peer_rank_target_count:peerRankTargetCount,peer_rank_checked:peerRankChecked,peer_rank_backfilled:peerRankBackfilled,peer_rank_unavailable_cached:peerRankUnavailableCached,peer_rank_selection_scope:"trusted_selected_role_queue_cohort",public_cache_pruned:prunedMatches,public_fetch_runs_pruned:prunedFetchRuns,public_prune_warning:pruneWarning,recommend_deeper_cache:comparableCachedGames<20&&Number(run.total_count||0)<(viewer.anonymous===true?PUBLIC_MAX_FETCH_MATCHES:100)});
     }
     if(action==="cache_status"){
       const p=await getProfile(sb,viewer.player_id,body.profile_id),targetRole=role(body.target_role),{data:rows,error}=await sb.from("league_match_cache_v1").select("player_role,updated_at,game_start_at").eq("profile_id",p.id).order("updated_at",{ascending:false}).limit(PUBLIC_MAX_CACHED_MATCHES_PER_PROFILE);

@@ -593,7 +593,7 @@ async function loadCacheStatus(){
 
 async function fetchProfileData(profile,requestedCount,progressStart=8,progressEnd=82,targetRole=selectedAnalysisRole()){
   log('Preparing recent match list for '+profile.display_name+' · '+roleLabel(targetRole)+'. Queue/map/duration and selected-role filtering are applied before the Last-20 report; '+requestedCount+' raw matches requested.');
-  const prep=await api('fetch_prepare',{profile_id:profile.id,count:requestedCount});
+  const prep=await api('fetch_prepare',{profile_id:profile.id,count:requestedCount,target_role:targetRole});
   const ids=prep.match_ids||[],cached=new Set(prep.cached_match_ids||[]);
   if(!ids.length)throw new Error('Riot returned no recent match IDs.');
   log(ids.length+' recent matches found for '+profile.display_name+'; '+cached.size+' already cached.');
@@ -605,7 +605,7 @@ async function fetchProfileData(profile,requestedCount,progressStart=8,progressE
     }
     log('['+done+'/'+ids.length+'] '+profile.display_name+' · fetching match + timeline '+id+'…');
     try{
-      const one=await api('fetch_one',{run_id:prep.run_id,match_id:id});
+      const one=await api('fetch_one',{run_id:prep.run_id,match_id:id,target_role:targetRole});
       if(one.timeline_available){usable++;log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · match + timeline cached','ok');}
       else{usable++;log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · match cached, timeline unavailable: '+(one.timeline_error||'unknown'),'bad');}
     }catch(e){failed++;log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · '+e.message,'bad');}
@@ -613,7 +613,7 @@ async function fetchProfileData(profile,requestedCount,progressStart=8,progressE
     await sleep(100);
   }
   const finish=await api('fetch_finish',{run_id:prep.run_id,target_role:targetRole});
-  if(hasNum(finish?.dominant_queue_id))log(profile.display_name+' · '+roleLabel(targetRole)+' queue '+String(finish.dominant_queue_id)+' selected from the '+String(finish.queue_selection_window??20)+' newest supported '+roleLabel(targetRole)+' games · '+String(finish.comparable_cached_games??finish.peer_rank_target_count??0)+' role+queue comparable games'+(hasNum(finish?.selected_role_total_cached_games)?' from '+String(finish.selected_role_total_cached_games)+' cached '+roleLabel(targetRole)+' games':'')+' · '+String(finish.peer_rank_target_count??0)+' peer-rank targets · '+String(finish.peer_rank_backfilled??0)+' rank snapshots backfilled.','ok');
+  if(hasNum(finish?.dominant_queue_id))log(profile.display_name+' · '+roleLabel(targetRole)+' queue '+String(finish.dominant_queue_id)+' selected from the '+String(finish.queue_selection_window??20)+' newest supported '+roleLabel(targetRole)+' games · '+String(finish.comparable_cached_games??finish.peer_rank_target_count??0)+' role+queue comparable games'+(hasNum(finish?.selected_role_total_cached_games)?' from '+String(finish.selected_role_total_cached_games)+' cached '+roleLabel(targetRole)+' games':'')+' · '+String(finish.peer_rank_target_count??0)+' peer-rank targets · '+String(finish.peer_rank_checked??0)+' checked now · '+String(finish.peer_rank_backfilled??0)+' snapshots added'+(Number(finish.peer_rank_unavailable_cached||0)?' · '+String(finish.peer_rank_unavailable_cached)+' unavailable marked checked':'')+'.','ok');
   if(finish?.recommend_deeper_cache)log(profile.display_name+' · only '+String(finish.comparable_cached_games??0)+' comparable cached games are available after map/duration/queue filtering; the request can automatically scan deeper.','bad');
   if(usable===0)throw new Error('Riot returned match IDs, but none could be cached successfully.');
   return{prep,finish,usable,failed};

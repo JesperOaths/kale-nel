@@ -44,7 +44,7 @@ assert.ok(api.includes('select("match_id,game_start_at,map_id,queue_id,game_dura
 assert.ok(api.includes('select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,player_role,peer_rank_json,peer_rank_fetched_at,fetch_error")'),'Analyze stage-one role selection must remain metadata-only');
 assert.ok(app.includes("Number(result.finish?.comparable_cached_games??0)<20"),'Automatic deepening must be driven by the final role+queue comparable sample rather than all games in the role');
 assert.ok(app.includes("roleCount=Number(d.selected_role_cached_games"),'Cache status must expose selected-role depth to the user');
-assert.ok(api.includes('.not("timeline_json","is",null)')&&api.includes('select("match_id,peer_rank_json,peer_rank_fetched_at")'),'Fetch-start cache detection must use null filters instead of transferring timeline blobs');
+assert.ok(api.includes('.not("timeline_json","is",null)')&&api.includes('select("match_id")'),'Fetch-start cache detection must treat complete match+timeline rows as cache hits without pulling peer-rank metadata');
 assert.ok(api.includes('metadata_then_selected_reports_v1'),'Latest-report retrieval must select metadata first and hydrate only current/previous report payloads');
 assert.ok(api.includes('select("id,source_kind,analyzer_version,sample_match_ids,created_at,data_quality")'),'Report-history scan may include lightweight data_quality role metadata but must exclude report_data blobs');
 assert.ok(api.includes('select("id,report_data,data_quality")')&&api.includes('detailIds=[currentMeta?.id,previousMeta?.id]'),'Only selected current/previous analyses may load full report payloads');
@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.144'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.145'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v263'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v264'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1267,3 +1267,9 @@ assert.ok(api.includes('for(const ev of g.directPeerComparable===true?(g.laneDue
 assert.ok(app.includes("peerChampion=peerOk?String(g.peer?.champion||''):'")&&app.includes("peerChampion=peerTrusted?String(g.peer?.champion||''):''"),'Match header/table must not expose an untrusted opponent champion');
 assert.ok(app.includes("detailCard('Opponent',peerOk&&peer?")&&app.includes("if(key==='opponent')return trustedDirectPeer(g)?"),'Detailed evidence and opponent sorting must fail closed for legacy reports with untrusted peer identities');
 assert.ok(modelDoc.includes('## v263 fail-closed per-game opponent evidence'),'Per-game opponent fail-closed semantics must remain documented');
+assert.ok(!api.includes('recentRankIds=new Set(matchIds.slice(0,20))'),'Fetch preparation must not target peer ranks from the first 20 raw matches before role/queue selection');
+assert.ok(api.includes('peer_rank_plan:"selected_role_queue_cohort_after_cache"')&&app.includes("fetch_prepare',{profile_id:profile.id,count:requestedCount,target_role:targetRole}"),'Fetch preparation must carry selected-role context while deferring rank targeting');
+assert.ok(api.includes('rankRelevant=idx<20&&(targetRole==="GENERIC"||playerRole===targetRole)&&directPeerComparable')&&app.includes("fetch_one',{run_id:prep.run_id,match_id:id,target_role:targetRole}"),'Per-match peer-rank lookup must not run for a known wrong-role or untrusted opponent');
+assert.ok(api.includes('!row?.peer_rank_fetched_at||(row?.peer_rank_json&&row.peer_rank_json?.schema!=="rank_snapshot_v2")'),'A checked null peer-rank result must be negative-cached instead of retried forever');
+assert.ok(api.includes('peer_rank_selection_scope:"trusted_selected_role_queue_cohort"')&&api.includes('peer_rank_unavailable_cached:peerRankUnavailableCached'),'Fetch completion must expose trusted selected-role rank targeting and negative-cache counts');
+assert.ok(modelDoc.includes('## v264 role-first peer-rank fetch integrity'),'Role-first peer-rank fetch semantics must remain documented');
