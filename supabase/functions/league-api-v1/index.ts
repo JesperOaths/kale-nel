@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.124";
+const ANALYZER_VERSION="league-web-behavior-v4.125";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1824,7 +1824,7 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,p
   }
   if(peerGames.length>=5){
     if(Number(peerDpm)<=-100&&["ADC","MID","TOP"].includes(primaryRole))push(recentFocus,"fighting","Damage conversion trails your direct counterpart","You average "+Math.round(Math.abs(Number(peerDpm)))+" less champion damage per minute than the same-role opponent and beat them on DPM in "+Math.round(Number(peerDpmWin||0))+"% of "+peerGames.length+" games.","Check whether farm leads are being converted into timely fights and whether deaths are removing you before damage windows.",conf(peerGames.length),2,"same-role opponents");
-    if(Number(peerDpm)>=120)push(highlights,"fighting","You outperform the direct counterpart in damage","You average +"+Math.round(Number(peerDpm))+" champion damage per minute versus the same-role opponent and beat them on DPM in "+Math.round(Number(peerDpmWin||0))+"% of "+peerGames.length+" games.","Protect this strength by reducing deaths that occur before objectives.",conf(peerGames.length),4,"same-role opponents");
+    if(Number(peerDpm)>=120&&["ADC","MID","TOP"].includes(primaryRole))push(highlights,"fighting","You outperform the direct counterpart in damage","You average +"+Math.round(Number(peerDpm))+" champion damage per minute versus the same-role opponent and beat them on DPM in "+Math.round(Number(peerDpmWin||0))+"% of "+peerGames.length+" games.","Protect this strength by reducing deaths that occur before objectives.",conf(peerGames.length),4,"same-role opponents");
     if(Number(peerCs)<=-0.5&&["ADC","MID","TOP"].includes(primaryRole))push(recentFocus,"farming","Farm pace trails the actual lane peer","You average "+Math.abs(Number(peerCs)).toFixed(2)+" CS/min less than the same-role opponent and finish ahead on CS/min in only "+Math.round(Number(peerCsWin||0))+"% of comparable games.","Track the waves lost around recalls, roams and unnecessary mid-game grouping.",conf(peerGames.length),2,"same-role opponents");
   }
   if(rolePeerFightSamples>=5&&roleLevelDisadvantageFightStarts>=3&&Number(roleLevelDisadvantageFightRate)>=40)push(recentFocus,"fight readiness","Role-opponent level disadvantage recurs in shared fights",roleLevelDisadvantageFightStarts+" of "+rolePeerFightSamples+" attended fights where the actual same-role opponent was nearby ("+Number(roleLevelDisadvantageFightRate).toFixed(0)+"%) began with you at least one level lower.","Add level to the pre-fight readiness check alongside items, gold and local numbers; when the contest is optional, take the nearby XP/wave breakpoint first or trade the play elsewhere.",conf(rolePeerFightSamples),2,"same-role opponent nearby at first kill + role level differential");
@@ -1910,7 +1910,7 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,p
   if(recentTrend.dpm.recentN>=4&&recentTrend.dpm.priorN>=5&&hasNum(recentTrend.dpm.recent)&&hasNum(recentTrend.dpm.prior)){
     const d=Number(recentTrend.dpm.recent)-Number(recentTrend.dpm.prior);
     if(d<=-120&&["ADC","MID","TOP"].includes(primaryRole))push(recentFocus,"recent trend","Recent damage output has fallen","DPM is "+Math.round(Number(recentTrend.dpm.recent))+" in the latest five versus "+Math.round(Number(recentTrend.dpm.prior))+" previously.","Check whether this follows weaker lane economy, later item completions or deaths before major fights.","medium",2,"latest 5 vs preceding Last-20 games");
-    else if(d>=120)push(highlights,"recent trend","Recent damage output is improving","DPM is "+Math.round(Number(recentTrend.dpm.recent))+" in the latest five versus "+Math.round(Number(recentTrend.dpm.prior))+" previously.","Keep the fight-entry and item-timing choices that are increasing uptime.","medium",4,"latest 5 vs preceding Last-20 games");
+    else if(d>=120&&["ADC","MID","TOP"].includes(primaryRole))push(highlights,"recent trend","Recent damage output is improving","DPM is "+Math.round(Number(recentTrend.dpm.recent))+" in the latest five versus "+Math.round(Number(recentTrend.dpm.prior))+" previously.","Keep the fight-entry and item-timing choices that are increasing uptime.","medium",4,"latest 5 vs preceding Last-20 games");
   }
   const baselineRecent=baselineContext?.recentSummary||summary;
   if(lifetime&&hasNum(lifetime.csMin)&&hasNum(baselineRecent?.csMin)){
@@ -1920,7 +1920,7 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,p
   }
   if(greedy>=4)push(recentFocus,"resets","High-gold stays appear repeatedly",greedy+" timeline windows show at least 1200 current gold followed by more than two minutes before the next detected shop visit.","When the map is quiet, cash the spike instead of carrying unspent power through another risky sequence.",conf(validTimeline.length),2,"timeline gold + shop events");
   if(wins.length>=4&&losses.length>=4&&hasNum(winLoss.greedyStays.wins)&&hasNum(winLoss.greedyStays.losses)&&Number(winLoss.greedyStays.losses)-Number(winLoss.greedyStays.wins)>=0.6)push(recentFocus,"resets","Greedy stays rise noticeably in losses","You average "+Number(winLoss.greedyStays.losses).toFixed(1)+" high-gold stay windows in losses versus "+Number(winLoss.greedyStays.wins).toFixed(1)+" in wins.","When behind, do not try to recover the deficit by staying indefinitely for one more wave; buy the power you already earned.",conf(Math.min(wins.length,losses.length)),2,"wins vs losses in your own sample");
-  if(topDamage>=Math.max(5,Math.ceil(games.length*0.4)))push(highlights,"team impact","You frequently lead your team in champion damage","You are #1 on your team in champion damage in "+topDamage+"/"+games.length+" games.","Make survival around your damage windows a priority because your team loses substantial output when you die first.",conf(games.length),4,"own-team rank each match");
+  if(["ADC","MID","TOP"].includes(primaryRole)&&topDamage>=Math.max(5,Math.ceil(games.length*0.4)))push(highlights,"team impact","You frequently lead your team in champion damage","You are #1 on your team in champion damage in "+topDamage+"/"+games.length+" games.","Make survival around your damage windows a priority because your team loses substantial output when you die first.",conf(games.length),4,"own-team rank each match");
   recentFocus.sort((a,b)=>a.priority-b.priority);highlights.sort((a,b)=>a.priority-b.priority);coaching.push(...recentFocus,...highlights);
   return{
     recentFocus,highlights,coaching,
