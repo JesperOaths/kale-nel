@@ -2744,3 +2744,14 @@ Backend session/requeue priorities use the same role semantics as the role-aware
 Quick post-loss comparisons follow the same split, using the exported post-loss VPM/KP/CS/Gold deltas as appropriate. Session timing is descriptive association only; the report does not infer fatigue, tilt, concentration, posture, or another unmeasured cause.
 
 Rank-pressure lane-gold coaching against higher/lower-ranked direct peers is likewise carry-lane coaching and is restricted to ADC/MID/TOP. First-major timing against higher-ranked peers remains role-agnostic when its own evidence is supported.
+
+
+## v244 role-specific session practice targets
+
+A session/requeue coaching theme must receive a Next-5 target from the same role-specific metric family that created the theme. The practice layer must not fall back to raw Gold@15 merely because that field exists.
+
+- **SUPPORT:** later-session and quick post-loss targets use vision/min first, then kill-participation delta when that is the supported unfavorable session signal.
+- **JUNGLE:** targets use CS/min first, then kill-participation delta.
+- **ADC / MID / TOP:** targets use trusted/comparable Gold@15 first, then CS/min.
+
+A target is only created when its delta is already materially unfavorable (Gold ≤ -300g, CS/min ≤ -0.30, VPM ≤ -0.15, or KP ≤ -10 percentage points). Each target stores the exact paired subgroup denominator paths, with at least three valid observations required in both groups. Generic consistency themes try the matching later-session or post-loss family rather than manufacturing a target from an unrelated role metric.
