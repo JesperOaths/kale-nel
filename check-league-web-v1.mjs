@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.113'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.114'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -994,3 +994,7 @@ assert.ok(api.includes('hasNum(meanGameRoamLaneMovementCs)&&Number(meanGameRoamL
 assert.ok(api.includes('"behaviorSummary.meanGameRoamLaneMovementCs":[{path:"behaviorSummary.roamLaneCostGames",min:4},{path:"behaviorSummary.roamLaneCostMeasuredGames",min:3}]'),'New generic roam targets must preserve window and game-spread evidence floors');
 assert.ok(api.includes('"behaviorSummary.meanGameRoamLaneMovementCs",behavior.meanGameRoamLaneMovementCs'),'New generic roaming practice targets must use the game-weighted metric');
 assert.ok(modelDoc.includes('## Game-weighted generic roam lane movement'),'Generic roam aggregation semantics must remain documented');
+assert.ok(api.includes('objectiveJoinGameMean:{...gameObjectivePresenceWl,aggregation:"mean_games"}'),'Backend must preserve a game-weighted objective win/loss comparison alongside pooled technical rates');
+assert.ok(api.includes('mean per-game objective presence is')&&api.includes('equal-weight per-game team-contested objective presence in wins vs losses'),'Action-first objective outcome association must use equal-weight per-game presence');
+assert.ok(api.includes('Number(gameObjectivePresenceWl.winsN||0)>=4&&Number(gameObjectivePresenceWl.lossesN||0)>=4'),'Objective outcome association must require four evidence-bearing games on both outcome sides');
+assert.ok(modelDoc.includes('## Game-weighted objective outcome association'),'Game-weighted objective outcome semantics must remain documented');
