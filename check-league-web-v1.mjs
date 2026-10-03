@@ -560,6 +560,8 @@ assert.ok(api.includes('hasNum(objectiveSetupCoachingRate)')&&api.includes('Mean
 assert.ok(api.includes('"behaviorSummary.objectiveSetupCoachingRate":[{path:"behaviorSummary.neutralObjectiveJoins",min:5},{path:"behaviorSummary.objectiveSetupGames",min:3}]'),'New setup practice targets must preserve encounter and game-spread requirements');
 assert.ok(api.includes('"Prior objective setup","behaviorSummary.objectiveSetupCoachingRate"'),'New setup practice targets must use the coaching-facing game-weighted metric');
 assert.ok(app.includes('b.objectiveSetupCoachingRate??b.meanGameEarlySetupObjectiveJoinRate??b.earlySetupObjectiveJoinRate'),'Prominent setup UI must prefer game-weighted coaching value with legacy fallback');
+assert.ok(app.includes("setup=hasNum(b.objectiveSetupCoachingRate??b.meanGameEarlySetupObjectiveJoinRate??b.earlySetupObjectiveJoinRate)?fmtPct(b.objectiveSetupCoachingRate??b.meanGameEarlySetupObjectiveJoinRate??b.earlySetupObjectiveJoinRate):'n/a'"),'Phase-driver setup context must use the same game-weighted coaching value');
+assert.ok(!app.includes("setup=hasNum(b.earlySetupObjectiveJoinRate)?fmtPct(b.earlySetupObjectiveJoinRate):'n/a'"),'Phase-driver context must not regress to pooled prior-setup rate');
 assert.ok(app.includes("'mean per-game rate · pooled '")&&!app.includes("c.setupReady,wilsonInterval(setupHits,c.setupN)"),'Mean-game setup headlines must disclose pooled traceability without a mismatched pooled Wilson interval');
 assert.ok(modelDoc.includes('## Coaching-facing prior objective setup aggregation'),'Game-weighted prior-setup coaching semantics must remain documented');assert.ok(app.includes('Largest role-specific standardized separation:')&&app.includes('standardizedMeanGap(')&&app.includes('Hedges-corrected gap')&&app.includes('not a causal or significance claim'),'Outcome fingerprint must use a role-specific small-sample-corrected standardized within-metric gap and avoid causal/significance claims');
 assert.ok(app.includes('sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-Number(b.gameStartTimestamp||0))')&&app.includes('sourceGames.reverse()'),'Trend charts must render oldest-to-newest even though the report contract is newest-first');
@@ -835,7 +837,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v218'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v219'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
