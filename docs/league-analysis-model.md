@@ -2603,3 +2603,15 @@ Support/Jungle role lenses, decision cards and compound coaching prefer `objecti
 The short-window Recent direction setup signal intentionally remains a pooled event-rate trend with explicit opportunity and game-spread gates; it is separately labelled and documented as such. The Recent Pulse UI must also disclose the aggregation inline: pooled event-rate cards say **pooled event rate**, while the Support ADC lane-movement trend says **equal-weight game mean**. This prevents same-named short-window and full-sample coaching percentages from looking like contradictory copies of one statistic. Outcome Fingerprint remains an equal-weight per-game comparison using `earlySetupJoins / contestedJoined` within each game.
 
 Phase-driver context text also uses the same coaching-facing setup rate, so a phase summary cannot silently fall back to the pooled encounter percentage while adjacent setup cards show a mean-game value.
+
+
+## Mid-routing objective-presence aggregation
+
+The 15→25 routing model distinguishes three objective-presence populations and must not collapse them:
+
+- `midRouting.contestPresenceRate` is the per-game coaching rate: joined **team-contested** neutral-objective encounters divided by team-contested encounters during the routing window.
+- `midRouting.coachingObjectivePresenceRate` is the equal-weight mean of those per-game contested-presence rates across comparable routing games. This is the canonical coaching/progress/practice value so one objective-heavy match cannot dominate the cross-game headline.
+- `midRouting.pooledObjectiveJoinRate` is the pooled team-contested event rate and remains a technical diagnostic. The legacy `avgObjectiveJoinRate` alias retains this pooled meaning for saved-report compatibility.
+- `securedObjectivePresenceRate` and each game’s legacy `objectiveJoinRate` describe team-secured objective context and remain separate outcome/traceability fields.
+
+MID outcome fingerprint **15→25 objective reconnect** uses each game’s `contestPresenceRate` when available, with the legacy secured rate only as a saved-report fallback. New practice targets and rolling-progress cards use `coachingObjectivePresenceRate`; old saved targets keep their original pooled metric path so historical baseline semantics are not silently rewritten.
