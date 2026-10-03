@@ -592,6 +592,11 @@ ok(app.includes('not a proven reset cause'), 'game-arc objective timing language
 ok(html.includes('id="outcomeFingerprint"')&&app.includes('function renderOutcomeFingerprint('), 'selected-role games must expose descriptive win/loss fingerprint analysis without requiring another backend fetch');
 ok(app.includes('function outcomeFingerprintSpecs(')&&app.includes("role==='SUPPORT'")&&app.includes("role==='JUNGLE'")&&app.includes("role==='MID'")&&app.includes("role==='TOP'"), 'win/loss fingerprint must use selected-role-specific metrics');
 ok(app.includes('ready=wins?.n>=3&&losses?.n>=3')&&app.includes('thin sample — no directional color'), 'win/loss fingerprint directional interpretation must require at least 3 valid observations per outcome side');
+ok(app.includes('opportunityReady=!minOpportunities')&&app.includes('ready=wins?.n>=3&&losses?.n>=3&&opportunityReady'), 'outcome fingerprint must combine per-game and opportunity readiness');
+ok(app.includes("minOpportunities:4,opportunityLabel:'roam attempts'")&&app.includes("minOpportunities:12,opportunityLabel:'vision actions'"), 'roam and vision outcome metrics must retain per-side opportunity floors');
+ok(app.includes("minOpportunities:5,opportunityLabel:'contested encounters'")&&app.includes("minOpportunities:5,opportunityLabel:'joined contests'"), 'objective outcome metrics must retain per-side event floors');
+ok(app.includes("minOpportunities:4,opportunityLabel:'measured windows'"), 'Support lane-movement outcome metric must require measured windows on both sides');
+ok(modelDoc.includes('Event-based fingerprint metrics additionally require their opportunity floor'), 'event-based outcome fingerprint metrics must require per-side opportunity floors');
 ok(modelDoc.includes('## Role-aware outcome fingerprint')&&modelDoc.includes('Standardized separation remains Hedges-corrected and descriptive only'), 'analysis model must preserve role-aware fingerprint limits');
 
 ok(app.includes("perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.contestedJoined)"), 'outcome fingerprint prior setup must use contested-joined coaching denominator');
