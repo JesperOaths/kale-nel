@@ -467,7 +467,7 @@ assert.ok(app.includes('This is an evidence trace, not a causal proof.'),'Priori
 assert.ok(modelDoc.includes('## Priority evidence chain')&&modelDoc.includes('black-box verdict'),'Priority evidence-chain semantics must remain documented');
 assert.ok(app.includes('driver-evidence-meta')&&app.includes('supporting finding')&&app.includes('confidence'),'Top report drivers must expose the confidence/support metadata behind their selected evidence when available');
 assert.ok(app.includes('Provisional limiter')&&app.includes('Emerging strength')&&app.includes('Keep testing'),'Low-confidence top findings must be presented as provisional/emerging rather than established');
-assert.ok(app.includes("weak.confidence!=='low'||weak.supportCount>=2")&&app.includes("strong.confidence!=='low'"),'Top-driver red/green styling must require stronger confidence or multi-source reinforcement');
+assert.ok(app.includes("weak.confidence!=='low'||weak.independentSupportCount>=2")&&app.includes("strong.confidence!=='low'"),'Top-driver red/green styling must require stronger confidence or two independent reinforcements beyond a low-confidence representative');
 assert.ok(app.includes("strengths.find(x=>String(x?.confidence||'').toLowerCase()!=='low')"),'Bankable-strength selection must prefer non-low-confidence highlights');
 assert.ok(modelDoc.includes('## Top-driver confidence semantics')&&modelDoc.includes('Provisional limiter')&&modelDoc.includes('Emerging strength'),'Top-driver confidence rules must remain documented');
 assert.ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('data-open-full-match'),'League must retain the expandable coaching-readable recent match history with a path into full evidence');
