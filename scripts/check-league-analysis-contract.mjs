@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.136'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.137'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -1021,3 +1021,8 @@ ok(modelDoc.includes('## v254 repeated-matchup cross-game event spread'), 'analy
 ok(backend.includes('cs15Games=finiteGames(laneComparable,g=>g.csDiff15)')&&backend.includes('csDiff15Games:cs15Games.length'), 'Jungle matchup CS@15 must export its metric-specific sample');
 ok(app.includes("csN=Number(v.csDiff15Games||0)")&&app.includes("csN>=3,'n='+csN"), 'Jungle matchup CS chip must use the CS sample rather than gold laneGames');
 ok(modelDoc.includes('## v255 Jungle matchup CS denominator integrity'), 'analysis documentation must preserve Jungle matchup CS denominator integrity');
+ok(backend.includes('earlyRoleSoloKillGames=validDirectPeerTimeline.filter')&&backend.includes('earlyRoleSoloDeathGames=validDirectPeerTimeline.filter'), 'global clean-duel coaching must retain per-outcome game spread');
+ok(backend.includes('earlyHomeLaneDeathGames=validTimeline.filter')&&backend.includes('earlyOutsidePressureDeathGames=validTimeline.filter'), 'global outside-pressure coaching must retain affected-game spread');
+ok(backend.includes('earlyRoleSoloDeaths>=3&&earlyRoleSoloDeathGames>=2')&&backend.includes('earlyRoleSoloKills>=3&&earlyRoleSoloKillGames>=2'), 'global duel coaching must not infer recurrence from one game');
+ok(app.includes('duelReady=duels>=3&&duelGames>=2')&&app.includes('duelTone=duelReady?'), 'TOP duel lens must require cross-game evidence before coloring');
+ok(modelDoc.includes('## v256 global lane-event game spread'), 'analysis documentation must preserve global lane-event spread semantics');
