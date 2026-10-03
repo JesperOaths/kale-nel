@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.135";
+const ANALYZER_VERSION="league-web-behavior-v4.136";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -2043,7 +2043,7 @@ function opponentMatchupBehaviorModel(games:any[],summary:any,behaviorSummary:an
   const confidence=(n:number)=>n>=5?"medium":"low";
   for(const [key,list] of groups.entries()){
     if(list.length<3)continue;
-    const [roleName,opponentChampion]=key.split("|"),laneComparable=list.filter((g:any)=>g?.phaseRules?.lane15Comparable!==false),lane=finiteGames(laneComparable,g=>g.goldDiff15),tl=list.filter(g=>g.timelineAvailable);
+    const [roleName,opponentChampion]=key.split("|"),laneComparable=list.filter((g:any)=>g?.phaseRules?.lane15Comparable!==false),lane=finiteGames(laneComparable,g=>g.goldDiff15),cs15Games=finiteGames(laneComparable,g=>g.csDiff15),tl=list.filter(g=>g.timelineAvailable);
     const ownChampionCounts:any={};for(const g of list){const name=text(g.champion)||"Unknown";ownChampionCounts[name]=(ownChampionCounts[name]||0)+1;}
     const ownChampions=Object.entries(ownChampionCounts).sort((a:any,b:any)=>Number(b[1])-Number(a[1])).map(([champion,games])=>({champion,games:Number(games)}));
     const soloKills=list.reduce((n,g)=>n+Number(g.laneDuel?.earlySoloKillsVsRole||0),0),soloDeaths=list.reduce((n,g)=>n+Number(g.laneDuel?.earlySoloDeathsToRole||0),0),soloKillGames=list.filter((g:any)=>Number(g.laneDuel?.earlySoloKillsVsRole||0)>0).length,soloDeathGames=list.filter((g:any)=>Number(g.laneDuel?.earlySoloDeathsToRole||0)>0).length,soloEventGames=list.filter((g:any)=>Number(g.laneDuel?.earlySoloKillsVsRole||0)+Number(g.laneDuel?.earlySoloDeathsToRole||0)>0).length;
@@ -2051,7 +2051,7 @@ function opponentMatchupBehaviorModel(games:any[],summary:any,behaviorSummary:an
     const dpmPeerGames=finiteGames(list,g=>g.peer?.dpmDelta),vpmPeerGames=finiteGames(list,g=>g.peer?.vpmDelta),impactGames=finiteGames(tl,g=>g.impactDeltaVsOpponent),itemGames=finiteGames(list,g=>g.itemSpikeDeltaVsOpponent),visionSetupGames=finiteGames(tl,g=>g.vision?.objectiveSetupDeltaVsOpponent);
     const p:any={
       opponentChampion,role:roleName,games:list.length,wins:list.filter(g=>g.win).length,winRate:pct(list.filter(g=>g.win).length,list.length),
-      laneGames:lane.length,goldDiff15:meanField(lane,g=>g.goldDiff15),csDiff15:meanField(finiteGames(laneComparable,g=>g.csDiff15),g=>g.csDiff15),
+      laneGames:lane.length,goldDiff15:meanField(lane,g=>g.goldDiff15),csDiff15Games:cs15Games.length,csDiff15:meanField(cs15Games,g=>g.csDiff15),
       badDeaths:meanField(tl,g=>g.badDeathCount),timelineGames:tl.length,dpmGames:dpmPeerGames.length,avgDpmDelta:meanField(dpmPeerGames,g=>g.peer.dpmDelta),
       vpmGames:vpmPeerGames.length,avgVpmDelta:meanField(vpmPeerGames,g=>g.peer.vpmDelta),
       impactGames:impactGames.length,avgImpactDelta:meanField(impactGames,g=>g.impactDeltaVsOpponent),
