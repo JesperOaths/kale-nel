@@ -2923,3 +2923,20 @@ The raw per-game `earlyLeadWindow` can remain available for technical traceabili
 Aggregate early-lead opportunity/give-back rates use timeline-complete trusted direct-peer games only. Recent-vs-prior early-lead trend opportunities use that same population. The replay-review queue does not create an early-lead review moment from an untrusted role opponent, and the TOP win/loss outcome fingerprint withholds the early-lead metric for such games.
 
 This keeps `behaviorSummary.earlyLeadGivebackRate`, its Next-5 practice target, rolling progress, replay review and outcome fingerprint on the same direct-peer evidence population as the underlying Gold@15 coaching model.
+
+
+## v262 peer-relative coaching population integrity
+
+Raw timeline facts may retain fallback-opponent context for technical traceability, but any coaching statement whose meaning depends on the **same-role opponent** must reapply the trusted direct-peer gate before aggregation, judgment, replay selection or target scoring.
+
+The trusted-only family now includes:
+- first-impact timing versus the role opponent;
+- first-major timing / earlier-item spike windows and spike utilization;
+- first-reset direct-role economy aftermath;
+- deaths classified as ahead/even/behind versus the role opponent;
+- high-risk deaths while materially ahead or behind;
+- lead-protection replay moments.
+
+`behaviorSummary.directPeerTimelineGames` is the denominator for peer-economy per-game death metrics such as `highRiskLeadDeathsPerGame` and `highRiskBehindDeathsPerGame`. Non-peer death metrics such as generic high-risk deaths/game, costly deaths/game and repeat deaths/game continue to use all timeline-complete coaching games.
+
+Earlier-item spike utilization is aggregated only from timeline-complete trusted direct-peer games. Self-only major-item affordability remains independent of opponent trust; only its comparison **versus** the opponent requires a trusted peer. This distinction prevents a low-confidence opponent role from entering coaching without unnecessarily discarding valid self-only reset evidence.
