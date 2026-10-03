@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.114'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.115'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -805,3 +805,8 @@ ok(backend.includes('objectiveJoinGameMean:{...gameObjectivePresenceWl,aggregati
 ok(backend.includes('mean per-game objective presence is')&&backend.includes('equal-weight per-game team-contested objective presence in wins vs losses'), 'action-first objective outcome finding must use game-weighted presence');
 ok(backend.includes('Number(gameObjectivePresenceWl.winsN||0)>=4&&Number(gameObjectivePresenceWl.lossesN||0)>=4'), 'objective outcome association must fail closed below four evidence-bearing wins or losses');
 ok(modelDoc.includes('## Game-weighted objective outcome association'), 'analysis documentation must preserve objective outcome weighting semantics');
+ok(backend.includes('objectiveCoachingPresenceRate=meanGameObjectiveContestPresenceRate'), 'backend must define game-weighted coaching objective presence');
+ok(backend.includes('objectivePresence:cm.behaviorSummary.objectiveCoachingPresenceRate')&&backend.includes('objectivePresencePooled:cm.behaviorSummary.objectiveJoinRate'), 'advanced objective presence must prefer game-weighted coaching value and retain pooled context');
+ok(backend.includes('"behaviorSummary.objectiveCoachingPresenceRate":[{path:"behaviorSummary.neutralObjectiveEvents",min:5},{path:"behaviorSummary.objectiveContestGames",min:3}]'), 'objective-presence practice targets must preserve encounter and game-spread requirements');
+ok(app.includes('b.objectiveCoachingPresenceRate??b.meanGameObjectiveContestPresenceRate??b.objectiveContestPresenceRate??b.objectiveJoinRate'), 'Support/Jungle coaching UI must prefer game-weighted objective presence');
+ok(modelDoc.includes('## Coaching-facing objective presence aggregation'), 'analysis documentation must preserve coaching objective-presence aggregation semantics');
