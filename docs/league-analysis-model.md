@@ -2704,3 +2704,14 @@ Context-only rows in older mixed-role saved reports may remain visible in match 
 Objective-family summary rates/counts come from the coaching cohort, so their match-count badges and drill-down filters must use the same population. `objectiveFamilyMatchIds(r,key)` therefore derives IDs from `reportCoachingGames(r)`, not raw `report.games`.
 
 Older mixed-role or older-mechanics rows can remain visible in general history for traceability, but they must not appear as supporting matches for a coaching-cohort objective-family statistic they did not help compute.
+
+
+## v240 cross-game vision coaching
+
+Backend coaching priorities must use the same cross-game confidence rules as the role-specific frontend vision surfaces.
+
+- Vision-action safety for SUPPORT/JUNGLE requires at least **12 tracked vision actions across 4 coaching games** before it can create a stable positive or negative coaching finding.
+- Objective-setup ward-share comparison requires at least **20 tracked wards on both player and same-role-opponent sides and at least 5 trusted setup games** before it can create a directional coaching finding.
+- Confidence for these findings is based on contributing coaching games, not raw event count, so one unusually long ward-heavy match cannot masquerade as repeated behavior.
+
+The underlying event definitions are unchanged; this is an evidence-spread safeguard only.
