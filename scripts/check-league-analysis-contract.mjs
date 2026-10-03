@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.108'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.109'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -770,3 +770,8 @@ ok(app.includes("spec.zeroLabel||'EVEN WITH ROLE OPPONENT'")&&app.includes("spec
 ok(app.includes("zeroLabel:'NO ADC LANE MOVEMENT'")&&app.includes("Zero means no measured change in ADC-vs-ADC CS differential during the roam window."), 'Support lane-movement zero must not be mislabeled as direct-role parity');
 ok(app.includes("recentText='latest '+recent.length+' valid observation"), 'chart recent-average wording must acknowledge missing observations');
 ok(modelDoc.includes('Signed zero-line wording is metric-specific.'), 'analysis documentation must preserve metric-specific chart zero semantics');
+ok(backend.includes('roamAttemptGames=list.filter')&&backend.includes('supportAdcLaneMovementGameValues=list.map'), 'champion Support analysis must export game-spread-aware roam context');
+ok(backend.includes('roleName==="SUPPORT"&&roamAttempts>=4&&roamAttemptGames>=3')&&backend.includes('confidence:confidence(roamAttemptGames)'), 'Support champion roam findings must require and score contributing games');
+ok(backend.includes('laneMovementReady=supportCostEvents.length>=4&&supportAdcLaneMovementGameValues.length>=3'), 'champion Support lane movement must not piggyback on a thin measured sample');
+ok(backend.includes('soloDeaths>=2&&soloDeathGames>=2')&&backend.includes('outsidePressureDeaths>=2&&outsidePressureGames>=2'), 'repeated matchup event diagnoses must repeat across multiple matches');
+ok(modelDoc.includes('Event repetition must also be game repetition'), 'analysis documentation must preserve cross-game champion/matchup semantics');
