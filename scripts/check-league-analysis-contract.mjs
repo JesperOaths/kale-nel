@@ -705,17 +705,23 @@ ok(!app.includes('Late-reset objective misses')&&!app.includes('Late-reset neutr
 ok(backend.includes('cause==="pre_objective_death"'), 'pre-objective-death diagnosis must select a death-rate target');
 ok(backend.includes('cause==="setup_vision"'), 'setup-vision diagnosis must select a setup-ward target');
 
-if(failures.length){
-  console.error('\nLeague analysis contract FAILED:\n- '+failures.join('\n- '));
-  process.exit(1);
-}
-console.log('League analysis contract OK');
-console.log(JSON.stringify({
-  appVersion,
-  domRefs:refs.length,
-  domIds:ids.length,
-  invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','external-adc-rank-benchmarks','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence','control-ward-purchases','second-major-timing','last20-result-streaks','committed-shop-ledger','supported-kill-conversion','public-league-workspace','verified-patch-boundary','supported-sr-queues','bounded-public-workspace','owner-scoped-profile-delete','strong-structure-attribution','active-fight-denominator']
-},null,2));
+let contractFinalized=false;
+process.on('beforeExit',()=>{
+  if(contractFinalized)return;
+  contractFinalized=true;
+  if(failures.length){
+    console.error('\nLeague analysis contract FAILED:\n- '+failures.join('\n- '));
+    process.exitCode=1;
+    return;
+  }
+  console.log('League analysis contract OK');
+  console.log(JSON.stringify({
+    appVersion,
+    domRefs:refs.length,
+    domIds:ids.length,
+    invariants:['missing-is-not-zero','primary-role-coaching','real-25-minute-frame','summoners-rift-only','session-only-riot-key','peer-comparison','external-adc-rank-benchmarks','role-specific-mechanics','macro-transition-semantics','source-accurate-v21-dqi','home-lane-roam-cost','objective-family-evidence','control-ward-purchases','second-major-timing','last20-result-streaks','committed-shop-ledger','supported-kill-conversion','public-league-workspace','verified-patch-boundary','supported-sr-queues','bounded-public-workspace','owner-scoped-profile-delete','strong-structure-attribution','active-fight-denominator']
+  },null,2));
+});
 
 ok(app.includes("carryGoldRole=['ADC','MID','TOP'].includes(role)")&&app.includes("btn.hidden=laneBand&&!carryGoldRole"), 'technical game table must keep SUPPORT/JUNGLE out of carry-style @15 coaching filters');
 ok(app.includes("'Gold @15 vs role · context'")&&app.includes("'context only'"), 'raw @15 economy may remain visible for SUPPORT/JUNGLE only as neutral traceability context');
@@ -836,3 +842,5 @@ ok(modelDoc.includes('mean-game contested-objective presence cards do not render
 ok(backend.includes('"behaviorSummary.objectiveCoachingPresenceRate":[{path:"behaviorSummary.neutralObjectiveEvents",min:5},{path:"behaviorSummary.objectiveContestGames",min:3}]'), 'objective-presence practice targets must preserve encounter and game-spread requirements');
 ok(app.includes('b.objectiveCoachingPresenceRate??b.meanGameObjectiveContestPresenceRate??b.objectiveContestPresenceRate??b.objectiveJoinRate'), 'Support/Jungle coaching UI must prefer game-weighted objective presence');
 ok(modelDoc.includes('## Coaching-facing objective presence aggregation'), 'analysis documentation must preserve coaching objective-presence aggregation semantics');
+ok(app.includes("aggregation==='pooled_events'?' · pooled event rate'")&&app.includes("aggregation==='mean_games_with_event_coverage'?' · equal-weight game mean'"), 'Recent Pulse must distinguish pooled event rates from equal-weight game means');
+ok(modelDoc.includes('The Recent Pulse UI must also disclose the aggregation inline'), 'analysis documentation must preserve Recent Pulse aggregation disclosure');
