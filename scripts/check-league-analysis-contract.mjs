@@ -914,3 +914,7 @@ ok(app.includes("selectedRole?games.filter(g=>explicitGameRole(g?.role)===select
 ok(app.includes("if(selectedRole&&explicitGameRole(g?.role)!==selectedRole)return false;"), 'legacy mixed-role rows must remain context-only in match history');
 ok(app.includes('const coachingN=reportCoachingGames(r).length'), 'report coaching-comparable count must use reconstructed strict cohort');
 ok(modelDoc.includes('## Saved-report strict role cohort'), 'analysis documentation must preserve strict saved-report role cohort semantics');
+ok(app.includes('function coachingMatchIds(report){')&&app.includes('reportCoachingGames(report).map(g=>String(g.matchId||\'\'))'), 'development horizon IDs must inherit the strict coaching cohort');
+ok(app.includes('const prev=new Set(coachingMatchIds(previous));')&&app.includes('return coachingMatchIds(current).filter(id=>!prev.has(id)).length;'), 'Next-5 horizon must count only new coaching-comparable match IDs');
+ok(app.includes('const curIds=coachingMatchIds(current),prevIds=coachingMatchIds(previous)'), 'rolling progress overlap must use coaching-comparable IDs');
+ok(modelDoc.includes('## Coaching-cohort progress horizons'), 'analysis documentation must preserve coaching-cohort progress horizons');
