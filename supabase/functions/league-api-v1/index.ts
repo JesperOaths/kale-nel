@@ -2664,7 +2664,7 @@ Deno.serve(async(req:Request)=>{
       for(const row of comparable){
         if(targets.length>=ANALYSIS_DEEP_TARGET_GAMES)break;
         if(row?.timeline_fetched_at){targets.push(row);continue;}
-        // A timeline that already failed in this run is not allowed to consume
+        // A timeline that already failed in this fetch run is not allowed to consume
         // a deep-evidence slot; continue into older comparable games instead.
         if(row?.fetch_error)continue;
         targets.push(row);
