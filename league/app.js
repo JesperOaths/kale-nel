@@ -1044,13 +1044,13 @@ function outcomeFingerprintSpecs(role){
     {label:'Roam conversion',unit:'percent',inverse:false,get:g=>perGamePct(g?.roams?.successes,g?.roams?.attempts)},
     {label:'ADC lane movement during roams',unit:'cs',inverse:false,get:g=>perGameSupportAdcLaneCost(g)},
     {label:'Vision-action death rate',unit:'percent',inverse:true,get:g=>perGamePct(g?.visionMission?.deaths,g?.visionMission?.actions)},
-    {label:'Prior objective setup',unit:'percent',inverse:false,get:g=>perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.joined)}
+    {label:'Prior objective setup',unit:'percent',inverse:false,get:g=>perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.contestedJoined)}
   ];
   if(role==='JUNGLE')return[
     {label:'CS/min vs JUNGLE peer',unit:'csmin',inverse:false,get:g=>trustedDirectPeer(g)&&hasNum(g?.peer?.csMinDelta)?Number(g.peer.csMinDelta):null},
     {label:'First impact vs JUNGLE peer',unit:'minutes',inverse:true,get:g=>trustedDirectPeer(g)&&hasNum(g?.impactDeltaVsOpponent)?Number(g.impactDeltaVsOpponent):null},
     {label:'Contested objective presence',unit:'percent',inverse:false,get:g=>perGamePct(g?.objectiveReadiness?.contestedJoined,g?.objectiveReadiness?.contestedObjectives)},
-    {label:'Prior objective setup',unit:'percent',inverse:false,get:g=>perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.joined)}
+    {label:'Prior objective setup',unit:'percent',inverse:false,get:g=>perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.contestedJoined)}
   ];
   if(role==='MID')return[
     {label:'Role gold @15',unit:'gold',inverse:false,get:g=>g?.phaseRules?.lane15Comparable===false?null:g.goldDiff15},
