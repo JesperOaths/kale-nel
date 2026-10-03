@@ -2914,3 +2914,12 @@ Outside-pressure classification now uses the same fail-closed role-evidence phil
 Legacy/fallback `role` or `lane` labels are not sufficient for this classifier. If the player role, same-role opponent, or required bot-lane partner is only fallback-quality, the death remains visible but is exported as unclassified with an explicit reason such as `player_role_not_high_confidence`, `same_role_opponent_not_high_confidence`, or `bot_lane_partner_not_high_confidence_or_unresolved`.
 
 This deliberately reduces classification coverage rather than allowing low-confidence role labels to create a false gank/outside-pressure pattern.
+
+
+## v261 early-lead direct-peer integrity
+
+The raw per-game `earlyLeadWindow` can remain available for technical traceability, but it is a role-relative economy construct and therefore cannot become coaching evidence unless the same-role opponent passes the trusted direct-peer gate and the @15 rules checkpoint is comparable.
+
+Aggregate early-lead opportunity/give-back rates use timeline-complete trusted direct-peer games only. Recent-vs-prior early-lead trend opportunities use that same population. The replay-review queue does not create an early-lead review moment from an untrusted role opponent, and the TOP win/loss outcome fingerprint withholds the early-lead metric for such games.
+
+This keeps `behaviorSummary.earlyLeadGivebackRate`, its Next-5 practice target, rolling progress, replay review and outcome fingerprint on the same direct-peer evidence population as the underlying Gold@15 coaching model.
