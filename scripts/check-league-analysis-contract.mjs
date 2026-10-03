@@ -996,3 +996,8 @@ ok(backend.includes('/setup|arrival/.test(tt)')&&backend.includes('/objective|pr
 ok(!backend.includes('/setup|arrival|objective/.test(tt)&&hasNum(behavior?.objectiveSetupCoachingRate)'), 'generic objective wording must not be treated as prior-setup evidence');
 ok(app.includes("if(unit==='wards')return signed(n,1)+' wards'"), 'frontend must format peer setup-ward targets explicitly');
 ok(modelDoc.includes('## v248 diagnosis-aligned vision and objective targets'), 'analysis documentation must preserve diagnosis-aligned target semantics');
+ok(app.includes("'behaviorSummary.roamSuccessRate':[")&&app.includes("{path:'behaviorSummary.roamAttemptGames',min:3,value:null}"), 'legacy roam targets must reconstruct cross-game evidence');
+ok(app.includes("'behaviorSummary.meanGameSupportRoamAdcLaneMovementCs':[")&&app.includes("{path:'behaviorSummary.supportRoamAdcLaneMovementGames',min:3,value:null}"), 'legacy Support lane-movement targets must reconstruct window/game evidence');
+ok(app.includes("'behaviorSummary.visionActionDeathRate':[")&&app.includes("{path:'behaviorSummary.visionActionGames',min:4,value:null}"), 'legacy vision-safety targets must reconstruct action/game evidence');
+ok(app.includes("'behaviorSummary.objectiveCoachingPresenceRate':[")&&app.includes("{path:'behaviorSummary.objectiveContestGames',min:3,value:null}"), 'legacy objective-presence targets must reconstruct event/game evidence');
+ok(modelDoc.includes('## v249 legacy practice-target evidence parity'), 'analysis documentation must preserve legacy target evidence parity');
