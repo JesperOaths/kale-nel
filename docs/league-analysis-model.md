@@ -3009,3 +3009,17 @@ The history usefulness pass also promotes existing consistency and composition d
 - role-aware consistency metrics (lane CS and solo kills for lane roles, vision/control wards for Support, epic-monster pressure for Jungle);
 - champion-mix cards, so long-horizon DPM/resource changes are interpreted with champion composition in view;
 - a special interpretation note when one champion dominates at least 90% of the role history: within-sample trend comparisons are less confounded by champion swaps, but conclusions should not be generalized to other champions.
+
+
+## v268 role-specific unused-metric promotion
+
+The history audit now consumes several match-level fields that were previously computed but not used, but only where they have a defensible role-specific interpretation.
+
+- **Jungle:** `enemyJungleMonsters` is shown as enemy-jungle monsters per game and can participate in latest-20 vs previous-20 history. It is counter-jungle pressure context only; a higher value does not prove an invade was safe, efficient or strategically correct.
+- **ADC / MID / TOP:** Riot `firstTowerKill` / `firstTowerAssist` flags are aggregated as first-turret participation. This is descriptive team structure involvement, not proof that the player won lane.
+- **Support:** team `visionScore` rank is aggregated as a vision-leader rate, because leading the team in vision is a more role-relevant historical check for Support than lane-CS style metrics.
+- **All roles, per-match detail:** existing team gold rank and team vision rank are now shown next to team damage rank so resource position, output and vision responsibility can be inspected together.
+
+The progress-comparison layer now applies the same role-purity rule as current-report rendering. A previous TOP report is never compared against a current ADC report, even if both belong to the same Riot profile. Cross-role previous reports are explicitly withheld and must be rebuilt in the requested role before they can act as development evidence.
+
+Some available fields remain intentionally unpromoted. `structureDamagePerMin` largely duplicates the clearer turret-damage signal for the current coaching UI, while team-rank fields are ordinal and composition-sensitive, so they are kept as per-match context rather than turned into broad performance scores.
