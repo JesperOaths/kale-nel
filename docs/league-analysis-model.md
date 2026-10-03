@@ -3096,3 +3096,18 @@ For the two lower-damage archetypes, the analyzer adds two overlap checks rather
 Those overlap checks are intentionally phrased as context, not cause. Above-median death downtime can mean the player had less time alive to participate in fights, but it can also be a consequence of fighting. Above-median turret pressure can indicate that some output went into structures rather than champions, but it does not prove split-pushing was strategically correct. Champion identity, composition, role assignment, game state and fight access still matter.
 
 The archetype panel is shown only for ADC, MID and TOP. Jungle and Support retain their role-specific long-horizon lenses instead of inheriting a carry-lane resource/output model.
+
+
+## v275 Support vision burden
+
+Support long-horizon history now consumes the already-computed per-match `visionShare` field instead of leaving it unused.
+
+**Team vision share** is the player's vision score divided by the team's total vision score for that match. It complements rather than replaces vision actions per minute:
+
+- vision actions per minute describes ward-placement and ward-clear activity normalized for game length;
+- team vision share describes how much of the team's total recorded vision score came from the Support;
+- vision-leader rate remains secondary context showing how often the player ranked first on their own team in vision score.
+
+The metric is deliberately Support-specific in the main history UI. Higher vision share is not automatically better because team composition, game state, teammates' warding, sweeper usage, objective control and map access all affect the denominator. It is therefore presented as burden/context, not as a universal grade.
+
+Latest-20 versus previous-up-to-20 history can show team vision-share movement when both windows contain at least five valid observations. Whole-history consistency also exposes its median and middle-50% range.
