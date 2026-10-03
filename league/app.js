@@ -1331,7 +1331,7 @@ function renderLongHorizon(r){
   const roleExtra=laner
     ?{label:'First-turret participation',value:hasNum(s?.firstTurretParticipationRate?.value)?fmtPct(s.firstTurretParticipationRate.value):'n/a',sub:'Riot firstTower kill/assist flag · descriptive team structure involvement'}
     :role==='SUPPORT'
-      ?{label:'Team vision leader',value:hasNum(s?.visionLeaderRate?.value)?fmtPct(s.visionLeaderRate.value):'n/a',sub:'share of games ranked #1 on team vision score'}
+      ?{label:'Team vision share',value:hasNum(s?.visionShare?.value)?fmtPct(s.visionShare.value):'n/a',sub:(hasNum(s?.visionLeaderRate?.value)?fmtPct(s.visionLeaderRate.value)+' of games #1 on team vision · ':'')+'share of team vision score · composition-sensitive'}
       :{label:'Vision actions / min',value:hasNum(s?.visionActionsPerMin?.value)?fmt(s.visionActionsPerMin.value,2):'n/a',sub:'wards placed + wards cleared per minute'};
   const resourceOutput=laner
     ?{label:'Top-2 gold → top-2 damage',value:hasNum(s?.top2GoldToTop2DamageRate?.value)?fmtPct(s.top2GoldToTop2DamageRate.value):'n/a',sub:String(s?.top2GoldToTop2DamageRate?.events||0)+' / '+String(s?.top2GoldToTop2DamageRate?.n||0)+' high-resource games converted · '+(hasNum(s?.damageTop2Rate?.value)?fmtPct(s.damageTop2Rate.value)+' top-2 team damage overall · ':'')+(hasNum(s?.damageLeaderRate?.value)?fmtPct(s.damageLeaderRate.value)+' team damage leader · ':'')+'descriptive carry context'}
@@ -1354,7 +1354,8 @@ function renderLongHorizon(r){
       :{label:'Enemy-jungle monsters / game',obj:h?.trend?.enemyJungleMonsters,unit:'num',inverse:false,threshold:1};
   const roleOutputTrend=laner?{label:'Top-2 gold → top-2 damage',obj:h?.trend?.top2GoldToTop2DamageRate,unit:'percent',inverse:false,threshold:10}:null;
   const lowResourceTrend=laner?{label:'Lower gold → top-2 damage',obj:h?.trend?.lowResourceTop2DamageRate,unit:'percent',inverse:false,threshold:10}:null;
-  const specs=[{label:'CS / min',obj:h?.trend?.csMin,unit:'csmin',inverse:false,threshold:.08},roleTrend,...(roleOutputTrend?[roleOutputTrend]:[]),...(lowResourceTrend?[lowResourceTrend]:[]),{label:'Damage / min',obj:h?.trend?.dpm,unit:'dpm',inverse:false,threshold:60},{label:'Death downtime',obj:h?.trend?.deadTimePct,unit:'percent',inverse:true,threshold:1.5},{label:'Damage share − gold share',obj:h?.trend?.damageEfficiencyPp,unit:'pp',inverse:false,threshold:1.5},{label:'Turret damage / min',obj:h?.trend?.turretDamagePerMin,unit:'dpm',inverse:false,threshold:35}];
+  const supportVisionTrend=role==='SUPPORT'?{label:'Team vision share',obj:h?.trend?.visionShare,unit:'percent',inverse:false,threshold:3}:null;
+  const specs=[{label:'CS / min',obj:h?.trend?.csMin,unit:'csmin',inverse:false,threshold:.08},roleTrend,...(supportVisionTrend?[supportVisionTrend]:[]),...(roleOutputTrend?[roleOutputTrend]:[]),...(lowResourceTrend?[lowResourceTrend]:[]),{label:'Damage / min',obj:h?.trend?.dpm,unit:'dpm',inverse:false,threshold:60},{label:'Death downtime',obj:h?.trend?.deadTimePct,unit:'percent',inverse:true,threshold:1.5},{label:'Damage share − gold share',obj:h?.trend?.damageEfficiencyPp,unit:'pp',inverse:false,threshold:1.5},{label:'Turret damage / min',obj:h?.trend?.turretDamagePerMin,unit:'dpm',inverse:false,threshold:35}];
   trend.innerHTML=specs.map(x=>historyTrendCard(x.label,x.obj,x.unit,x.inverse,x.threshold)).join('');
   if(stability){
     const st=h.stabilityTrend||{},roleStability=laner
@@ -1373,7 +1374,7 @@ function renderLongHorizon(r){
   if(consistency){
     const c=h.consistency||{},specs=[
       {label:'CS / min',obj:c.csMin,unit:'csmin'},
-      ...(laner?[{label:'Lane minions @10',obj:c.laneCs10,unit:'num'},{label:'Solo kills / game',obj:c.soloKills,unit:'num'}]:role==='SUPPORT'?[{label:'Vision actions / min',obj:c.visionActionsPerMin,unit:'num'},{label:'Control wards / game',obj:c.controlWardsPlaced,unit:'num'}]:[{label:'Enemy-jungle monsters / game',obj:c.enemyJungleMonsters,unit:'num'},{label:'Epic damage / min',obj:c.epicDamagePerMin,unit:'dpm'}]),
+      ...(laner?[{label:'Lane minions @10',obj:c.laneCs10,unit:'num'},{label:'Solo kills / game',obj:c.soloKills,unit:'num'}]:role==='SUPPORT'?[{label:'Vision actions / min',obj:c.visionActionsPerMin,unit:'num'},{label:'Team vision share',obj:c.visionShare,unit:'percent'},{label:'Control wards / game',obj:c.controlWardsPlaced,unit:'num'}]:[{label:'Enemy-jungle monsters / game',obj:c.enemyJungleMonsters,unit:'num'},{label:'Epic damage / min',obj:c.epicDamagePerMin,unit:'dpm'}]),
       {label:'Deaths / game',obj:c.deaths,unit:'num'},
       {label:'Death downtime',obj:c.deadTimePct,unit:'percent'},
       {label:'Turret damage / min',obj:c.turretDamagePerMin,unit:'dpm'}
