@@ -2658,3 +2658,10 @@ The closing diagnosis may still describe the share of **lead@25 losses** that co
 The Next-5 practice target instead uses `behaviorSummary.closing25.leadLateRiskPerLeadGameRate`: the number of ≥+500g direct-role lead@25 games that both end in a loss and contain late-risk evidence, divided by **all** lead@25 games. New targets require at least 4 lead@25 games.
 
 This keeps the target measurable at zero when every lead closes successfully or when remaining lead losses contain no late-risk evidence. It avoids treating a zero-loss sample as “missing evidence” for a short-term closing target.
+
+
+## Zero-safe pre-objective death practice target
+
+The objective diagnosis can continue to explain a **pre-objective death rate** as a share of classified deaths, because that is useful evidence about the pattern when deaths occur. The Next-5 practice target uses `behaviorSummary.preObjectiveDeathsPerTimelineGame` instead.
+
+New targets require at least 5 timeline-complete coaching games and aim for a self-relative reduction of about `0.2/game`, bounded at zero. A five-game block with zero deaths—or simply zero supported pre-objective deaths—therefore remains scoreable instead of becoming undefined because the classified-death denominator disappeared.
