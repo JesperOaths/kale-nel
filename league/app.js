@@ -1679,6 +1679,22 @@ function practiceTargetSampleRequirements(t){
   const explicit=Array.isArray(t?.sampleRequirements)?t.sampleRequirements.filter(x=>x&&String(x.path||'').trim()).map(x=>({path:String(x.path),min:Math.max(1,Number(x.min||1)),value:hasNum(x.value)?Number(x.value):null})):[];
   if(explicit.length)return explicit;
   const metricPath=practiceTargetMetricPath(t),min=Math.max(1,Number(t?.minSample||1)),legacySafe={
+    'behaviorSummary.roamSuccessRate':[
+      {path:'behaviorSummary.roamAttempts',min:Math.max(4,min),value:null},
+      {path:'behaviorSummary.roamAttemptGames',min:3,value:null}
+    ],
+    'behaviorSummary.avgRoamLaneCostCs':[
+      {path:'behaviorSummary.roamLaneCostGames',min:Math.max(4,min),value:null},
+      {path:'behaviorSummary.roamLaneCostMeasuredGames',min:3,value:null}
+    ],
+    'behaviorSummary.meanGameRoamLaneMovementCs':[
+      {path:'behaviorSummary.roamLaneCostGames',min:Math.max(4,min),value:null},
+      {path:'behaviorSummary.roamLaneCostMeasuredGames',min:3,value:null}
+    ],
+    'behaviorSummary.meanGameSupportRoamAdcLaneMovementCs':[
+      {path:'behaviorSummary.supportRoamAdcLaneMovementWindows',min:Math.max(4,min),value:null},
+      {path:'behaviorSummary.supportRoamAdcLaneMovementGames',min:3,value:null}
+    ],
     'behaviorSummary.preObjectiveDeathPct':[
       {path:'behaviorSummary.classifiedTimelineDeaths',min:Math.max(5,min),value:null},
       {path:'behaviorSummary.timelineGames',min:3,value:null}
@@ -1686,6 +1702,30 @@ function practiceTargetSampleRequirements(t){
     'behaviorSummary.objectiveSetupWardRate':[
       {path:'behaviorSummary.visionWardTotal',min:Math.max(12,min),value:null},
       {path:'peerComparison.visionSetupGames',min:5,value:null}
+    ],
+    'behaviorSummary.visionActionDeathRate':[
+      {path:'behaviorSummary.visionActions',min:Math.max(12,min),value:null},
+      {path:'behaviorSummary.visionActionGames',min:4,value:null}
+    ],
+    'behaviorSummary.earlySetupObjectiveJoinRate':[
+      {path:'behaviorSummary.neutralObjectiveJoins',min:Math.max(5,min),value:null},
+      {path:'behaviorSummary.objectiveSetupGames',min:3,value:null}
+    ],
+    'behaviorSummary.objectiveSetupCoachingRate':[
+      {path:'behaviorSummary.neutralObjectiveJoins',min:Math.max(5,min),value:null},
+      {path:'behaviorSummary.objectiveSetupGames',min:3,value:null}
+    ],
+    'behaviorSummary.recentShopObjectiveAbsenceRate':[
+      {path:'behaviorSummary.neutralObjectiveEvents',min:Math.max(5,min),value:null},
+      {path:'behaviorSummary.objectiveContestGames',min:3,value:null}
+    ],
+    'behaviorSummary.objectiveJoinRate':[
+      {path:'behaviorSummary.neutralObjectiveEvents',min:Math.max(5,min),value:null},
+      {path:'behaviorSummary.objectiveContestGames',min:3,value:null}
+    ],
+    'behaviorSummary.objectiveCoachingPresenceRate':[
+      {path:'behaviorSummary.neutralObjectiveEvents',min:Math.max(5,min),value:null},
+      {path:'behaviorSummary.objectiveContestGames',min:3,value:null}
     ]
   };
   if(legacySafe[metricPath])return legacySafe[metricPath];
