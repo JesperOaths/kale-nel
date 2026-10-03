@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.138";
+const ANALYZER_VERSION="league-web-behavior-v4.139";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -2042,7 +2042,7 @@ function synthesizePriorityThemes(insights:any[]){
   }
   return themes.sort((a:any,b:any)=>Number(b.score)-Number(a.score)||Number(a.priority)-Number(b.priority)||String(a.label).localeCompare(String(b.label)));
 }
-function opponentMatchupBehaviorModel(games:any[],summary:any,behaviorSummary:any,primaryRole:string){
+function opponentMatchupBehaviorModel(games:any[],summary:any,behaviorSummary:any,primaryRole:string,peerComparison:any=null){
   const groups=new Map<string,any[]>();
   for(const g of games||[]){
     const opponentChampion=text(g?.peer?.champion),roleName=text(g?.role);
@@ -2053,6 +2053,7 @@ function opponentMatchupBehaviorModel(games:any[],summary:any,behaviorSummary:an
   }
   const profiles:any[]=[],focus:any[]=[],highlights:any[]=[];
   const confidence=(n:number)=>n>=5?"medium":"low";
+  const usualTrustedGold15=hasNum(peerComparison?.avgGoldDiff15)?Number(peerComparison.avgGoldDiff15):null,usualTrustedGold15Games=Number(peerComparison?.laneGames15||0);
   for(const [key,list] of groups.entries()){
     if(list.length<3)continue;
     const [roleName,opponentChampion]=key.split("|"),laneComparable=list.filter((g:any)=>g?.phaseRules?.lane15Comparable!==false),lane=finiteGames(laneComparable,g=>g.goldDiff15),cs15Games=finiteGames(laneComparable,g=>g.csDiff15),tl=list.filter(g=>g.timelineAvailable);
@@ -2075,8 +2076,8 @@ function opponentMatchupBehaviorModel(games:any[],summary:any,behaviorSummary:an
     const ownMix=ownChampions.slice(0,3).map((x:any)=>x.champion+" "+x.games+"g").join(", ");
 
     if(["ADC","MID","TOP"].includes(roleName)){
-      if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(summary?.goldDiff15)&&Number(p.goldDiff15)-Number(summary.goldDiff15)<=-300){
-        focus.push({category:"matchup",title:opponentChampion+" repeatedly suppresses your lane economy",evidence:"Across "+lane.length+" "+primaryRole+" games against "+opponentChampion+", you average "+signedText(p.goldDiff15,0)+"g at 15 versus "+signedText(summary.goldDiff15,0)+"g across your primary-role coaching sample. Own picks: "+ownMix+".",action:"Review these games together: identify which wave/trade/recall condition repeats before the deficit instead of treating each loss as unrelated.",confidence:confidence(lane.length),priority:2,comparison:"repeated same-role opponent champion vs your primary-role sample"});
+      if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(usualTrustedGold15)&&usualTrustedGold15Games>=3&&Number(p.goldDiff15)-Number(usualTrustedGold15)<=-300){
+        focus.push({category:"matchup",title:opponentChampion+" repeatedly suppresses your lane economy",evidence:"Across "+lane.length+" "+primaryRole+" games against "+opponentChampion+", you average "+signedText(p.goldDiff15,0)+"g at 15 versus "+signedText(usualTrustedGold15,0)+"g across "+usualTrustedGold15Games+" trusted direct-peer @15 games in your primary-role coaching sample. Own picks: "+ownMix+".",action:"Review these games together: identify which wave/trade/recall condition repeats before the deficit instead of treating each loss as unrelated.",confidence:confidence(lane.length),priority:2,comparison:"repeated same-role opponent champion vs your primary-role sample"});
       }
       if(soloDeaths>=2&&soloDeathGames>=2&&soloDeaths>=soloKills+2){
         focus.push({category:"matchup",title:"Direct 1v1 execution against "+opponentChampion+" is a repeated problem",evidence:soloKills+" clean early-phase solo kill(s) versus "+soloDeaths+" clean solo death(s) to the actual "+opponentChampion+" role opponent, with solo deaths occurring in "+soloDeathGames+" of "+list.length+" games; assisted kills are excluded.",action:"Build a matchup-specific rule from the replay set: which cooldown/resource/wave state makes the all-in unsafe, and what exact disengage condition should replace it?",confidence:confidence(soloDeathGames),priority:1,comparison:"clean queue-aware early-phase 1v1 events repeated across "+opponentChampion+" matchup games"});
@@ -2084,8 +2085,8 @@ function opponentMatchupBehaviorModel(games:any[],summary:any,behaviorSummary:an
         const opposition=roleName==="ADC"||roleName==="SUPPORT"?"ordinary enemy bot-lane opposition":"the direct role lane opponent";
         focus.push({category:"map awareness",title:"The "+opponentChampion+" matchup losses are mostly outside pressure, not ordinary lane opposition",evidence:outsidePressureDeaths+" of "+classifiedHomeLaneDeaths+" classified early-phase home-lane deaths across "+classifiedHomeLaneDeathGames+" affected games involved an enemy beyond "+opposition+" ("+Math.round(Number(outsidePressureShare))+"%), with outside pressure repeating in "+outsidePressureGames+" games."+(unclassifiedHomeLaneDeaths?" "+unclassifiedHomeLaneDeaths+" additional death(s) were excluded because lane opposition was unresolved.":""),action:"Do not over-correct the champion matchup mechanically. Review wave depth, jungle/roam tracking and vision timing around the vulnerable waves instead.",confidence:confidence(outsidePressureGames),priority:2,comparison:"classified outside-pressure lane deaths repeated across "+opponentChampion+" matchups"});
       }
-      if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(summary?.goldDiff15)&&Number(p.goldDiff15)-Number(summary.goldDiff15)>=300&&soloKills>=soloDeaths){
-        highlights.push({category:"matchup",title:"You handle "+opponentChampion+" well in the current sample",evidence:"Across "+lane.length+" "+primaryRole+" games you average "+signedText(p.goldDiff15,0)+"g at 15, at least 300g better than your normal primary-role sample, with "+soloKills+" clean solo kill(s) versus "+soloDeaths+" solo death(s).",action:"Preserve the matchup-specific wave/trade conditions behind this advantage; do not generalize the result beyond the repeated sample.",confidence:confidence(lane.length),priority:4,comparison:"repeated same-role opponent champion vs your primary-role sample"});
+      if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(usualTrustedGold15)&&usualTrustedGold15Games>=3&&Number(p.goldDiff15)-Number(usualTrustedGold15)>=300&&soloKills>=soloDeaths){
+        highlights.push({category:"matchup",title:"You handle "+opponentChampion+" well in the current sample",evidence:"Across "+lane.length+" "+primaryRole+" games you average "+signedText(p.goldDiff15,0)+"g at 15, at least 300g better than your trusted direct-peer primary-role @15 baseline, with "+soloKills+" clean solo kill(s) versus "+soloDeaths+" solo death(s).",action:"Preserve the matchup-specific wave/trade conditions behind this advantage; do not generalize the result beyond the repeated sample.",confidence:confidence(lane.length),priority:4,comparison:"repeated same-role opponent champion vs your primary-role sample"});
       }
     }else{
       if(vpmPeerGames.length>=3&&hasNum(p.avgVpmDelta)&&Number(p.avgVpmDelta)<=-0.15){
@@ -2104,7 +2105,7 @@ function opponentMatchupBehaviorModel(games:any[],summary:any,behaviorSummary:an
   profiles.sort((a,b)=>b.games-a.games||String(a.opponentChampion).localeCompare(String(b.opponentChampion)));
   return{profiles,focus,highlights};
 }
-function championBehaviorModel(games:any[],summary:any,behaviorSummary:any,primaryRole:string){
+function championBehaviorModel(games:any[],summary:any,behaviorSummary:any,primaryRole:string,peerComparison:any=null){
   const groups=new Map<string,any[]>();
   for(const g of games){
     const key=String(g.champion||"Unknown")+"|"+String(g.role||"GENERIC");
@@ -2113,6 +2114,7 @@ function championBehaviorModel(games:any[],summary:any,behaviorSummary:any,prima
   }
   const profiles:any[]=[],focus:any[]=[],highlights:any[]=[];
   const confidence=(n:number)=>n>=5?"medium":"low";
+  const usualTrustedGold15=hasNum(peerComparison?.avgGoldDiff15)?Number(peerComparison.avgGoldDiff15):null,usualTrustedGold15Games=Number(peerComparison?.laneGames15||0);
   for(const [key,list] of groups.entries()){
     if(list.length<3)continue;
     const [champion,roleName]=key.split("|"),trustedPeer=list.filter(g=>g.directPeerComparable===true),lane=finiteGames(trustedPeer.filter(g=>g?.phaseRules?.lane15Comparable!==false),g=>g.goldDiff15),tl=list.filter(g=>g.timelineAvailable),items=finiteGames(trustedPeer,g=>g.itemSpikeDeltaVsOpponent),dpmGames=finiteGames(list,g=>g.dpm);
@@ -2133,8 +2135,8 @@ function championBehaviorModel(games:any[],summary:any,behaviorSummary:any,prima
     if(roleName!==primaryRole)continue;
 
     if(["ADC","MID","TOP"].includes(roleName)){
-      if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(summary.goldDiff15)&&Number(p.goldDiff15)-Number(summary.goldDiff15)<=-300){
-        focus.push({category:"champion",title:champion+" lane state is below your usual "+primaryRole+" level",evidence:"Across "+lane.length+" "+champion+" "+primaryRole+" games you average "+signedText(p.goldDiff15,0)+"g at 15 versus "+signedText(summary.goldDiff15,0)+"g across the full Last-20 role sample.",action:"Review the champion-specific first waves, trade pattern and first recall rather than assuming the problem is your general laning.",confidence:confidence(lane.length),priority:2,comparison:"champion-role sample vs your Last-20 primary-role sample"});
+      if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(usualTrustedGold15)&&usualTrustedGold15Games>=3&&Number(p.goldDiff15)-Number(usualTrustedGold15)<=-300){
+        focus.push({category:"champion",title:champion+" lane state is below your usual "+primaryRole+" level",evidence:"Across "+lane.length+" "+champion+" "+primaryRole+" games you average "+signedText(p.goldDiff15,0)+"g at 15 versus "+signedText(usualTrustedGold15,0)+"g across "+usualTrustedGold15Games+" trusted direct-peer @15 games in the Last-20 role sample.",action:"Review the champion-specific first waves, trade pattern and first recall rather than assuming the problem is your general laning.",confidence:confidence(lane.length),priority:2,comparison:"champion-role sample vs your Last-20 primary-role sample"});
       }
       if(dpmGames.length>=3&&hasNum(p.dpm)&&hasNum(summary.dpm)&&Number(p.dpm)-Number(summary.dpm)>=150){
         highlights.push({category:"champion",title:champion+" is a high-output pick in your current sample",evidence:"DPM averages "+Math.round(Number(p.dpm))+" across "+dpmGames.length+" measurable DPM games versus "+Math.round(Number(summary.dpm))+" across the Last-20 role sample.",action:"Preserve the fight positioning and resource conversion that make this pick productive; do not infer mastery from win rate alone.",confidence:confidence(dpmGames.length),priority:4,comparison:"champion-role DPM sample vs your Last-20 primary-role sample"});
@@ -2178,6 +2180,7 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
     "behaviorSummary.earlyLeadGivebackRate":["behaviorSummary.earlyLeadGames"],
     "coachingSummary.csMin":["coachingSummary.games"],
     "coachingSummary.goldDiff15":["peerComparison.laneGames15"],
+    "peerComparison.avgGoldDiff15":["peerComparison.laneGames15"],
     "peerComparison.avgImpactDeltaMin":["peerComparison.impactGames"],
     "peerComparison.avgVpmDelta":["peerComparison.vpmGames"],
     "peerComparison.avgObjectiveSetupDelta":["peerComparison.visionSetupGames"],
@@ -2265,7 +2268,7 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
       if(!added&&/impact|influence/.test(tt)&&hasNum(peer?.avgImpactDeltaMin)&&Number(peer.avgImpactDeltaMin)>=1.5)added=add(theme,"First-impact timing vs role peer","peerComparison.avgImpactDeltaMin",peer.avgImpactDeltaMin,Math.max(0,Number(peer.avgImpactDeltaMin)-1),"lower","minutes",peer?.impactGames,5,"Test whether the first supported kill/assist/objective impact moves closer to the direct role opponent's timing.");
       if(!added&&carryRole&&/lead|leak|give.?back|preserv/.test(tt)&&hasNum(behavior?.earlyLeadGivebackRate))added=add(theme,"Early-lead give-back rate","behaviorSummary.earlyLeadGivebackRate",behavior.earlyLeadGivebackRate,clampPct(Number(behavior.earlyLeadGivebackRate)-15),"lower","percent",behavior?.earlyLeadGames,4,"Test whether meaningful pre-15 direct-role leads are surviving to the 15-minute checkpoint more consistently.");
       if(!added&&["ADC","MID","TOP","JUNGLE"].includes(primaryRole)&&/farm|cs\/min/.test(tt)&&hasNum(summary?.csMin))added=add(theme,"CS / min","coachingSummary.csMin",summary.csMin,Number(summary.csMin)+0.3,"higher","cs_per_min",summary?.games,5,"A small self-relative farming increase is easier to practise and verify than a generic rank benchmark.");
-      if(!added&&carryRole&&/lane|laning|gold|economy/.test(tt)&&!/higher.?rank|lower.?rank/.test(tt)&&hasNum(summary?.goldDiff15))added=add(theme,"Gold differential @15","coachingSummary.goldDiff15",summary.goldDiff15,Number(summary.goldDiff15)+150,"higher","gold",peer?.laneGames15,5,"Move the direct-role lane state by about 150g without changing the comparison population.");
+      if(!added&&carryRole&&/lane|laning|gold|economy/.test(tt)&&!/higher.?rank|lower.?rank/.test(tt)&&hasNum(peer?.avgGoldDiff15))added=add(theme,"Gold differential @15","peerComparison.avgGoldDiff15",peer.avgGoldDiff15,Number(peer.avgGoldDiff15)+150,"higher","gold",peer?.laneGames15,5,"Move the trusted direct-role @15 lane state by about 150g without changing the comparison population.");
     }else if(key==="death-risk"){
       if(/post-play|give-back|successful play/.test(tt)&&hasNum(behavior?.highRiskUntradedPostImpactPerGame))added=add(theme,"High-risk post-play give-backs / game","behaviorSummary.highRiskUntradedPostImpactPerGame",behavior.highRiskUntradedPostImpactPerGame,Math.max(0,Number(behavior.highRiskUntradedPostImpactPerGame)-0.15),"lower","per_game",behavior?.timelineGames,5,"Measure whether successful plays are being preserved instead of immediately surrendered by a high-risk untraded follow-up death.");
       if(!added&&/behind|deficit/.test(tt)&&hasNum(behavior?.highRiskBehindDeathsPerGame))added=add(theme,"High-risk deaths while behind / game","behaviorSummary.highRiskBehindDeathsPerGame",behavior.highRiskBehindDeathsPerGame,Math.max(0,Number(behavior.highRiskBehindDeathsPerGame)-0.2),"lower","per_game",behavior?.timelineGames,5,"Reduce the specific high-variance deaths that compound an existing direct-role deficit.");
@@ -2488,7 +2491,7 @@ function report(profile:any,rows:any[],catalog:any,requestedRole:any=null){
   const coachingLifetime=patchBaselineReady?{...makeSummary(olderSamePatchRoleGames),patchKey:currentPatchKey,baselineKind:"older_same_patch"}:null;
   const patchRecentSummary=currentPatchRoleGames.length?{...makeSummary(currentPatchRoleGames),patchKey:currentPatchKey,publicPatchKey:currentPublicPatchKey}:null;
   const baselineContext={patchKey:currentPatchKey,displayPatchKey:currentPublicPatchKey||currentPatchKey,recentGames:currentPatchRoleGames.length,olderGames:olderSamePatchRoleGames.length,recentSummary:patchRecentSummary,ready:patchBaselineReady};
-  const cm=coachingModel(coachingGames,coachingSummary,coachingLifetime,primaryRole,profile.rank_snapshot||null,baselineContext),championModel=championBehaviorModel(coachingGames,coachingSummary,cm.behaviorSummary,primaryRole),matchupModel=opponentMatchupBehaviorModel(coachingGames,coachingSummary,cm.behaviorSummary,primaryRole);
+  const cm=coachingModel(coachingGames,coachingSummary,coachingLifetime,primaryRole,profile.rank_snapshot||null,baselineContext),championModel=championBehaviorModel(coachingGames,coachingSummary,cm.behaviorSummary,primaryRole,cm.peerComparison),matchupModel=opponentMatchupBehaviorModel(coachingGames,coachingSummary,cm.behaviorSummary,primaryRole,cm.peerComparison);
   cm.recentFocus.push(...championModel.focus,...matchupModel.focus);cm.highlights.push(...championModel.highlights,...matchupModel.highlights);cm.recentFocus.sort((a:any,b:any)=>Number(a.priority||9)-Number(b.priority||9));cm.highlights.sort((a:any,b:any)=>Number(a.priority||9)-Number(b.priority||9));cm.coaching=[...cm.recentFocus,...cm.highlights];
   const priorityThemes=synthesizePriorityThemes(cm.recentFocus);
   const replayReviewQueue=buildReplayReviewQueue(coachingGames);
