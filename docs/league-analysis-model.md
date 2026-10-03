@@ -2827,3 +2827,12 @@ The trend objects still retain pooled encounter counts as `recentEvents` / `prio
 ## v251 recent-trend aggregation provenance
 
 Technical trend rows must display the aggregation reported by the analyzer instead of hard-coding “pooled.” `mean_games_with_event_coverage` is shown as **equal-weight game mean** and `pooled_events` as **pooled event rate**. This keeps team-contested objective setup/presence distinct from team-secured presence and early-KP event rates.
+
+
+## v252 Support champion diagnostic spread
+
+Support champion diagnostics must use the same cross-game evidence rules as the main Support coaching model and backend champion findings.
+
+Champion-specific roam conversion is directionally colored only with at least 4 detected roam attempts spread across at least 3 games on that champion. Champion-specific ADC lane movement uses the game-weighted mean (`meanGameSupportAdcLaneMovementCs`) and is directionally colored only with at least 4 measured roam windows across at least 3 champion games. The diagnostic chip displays both the opportunity count and contributing-game count.
+
+The legacy pooled-window lane-movement average may remain a compatibility fallback when reading older saved reports, but it must not receive directional color without the cross-game evidence fields.
