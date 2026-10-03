@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.141'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.142'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v261'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v262'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -946,7 +946,7 @@ assert.ok(app.includes('ADC lane movement during roams')&&!app.includes('ADC lan
 assert.ok(modelDoc.includes('## v203 audit corrections'),'v203 audit denominator and role-source repairs must remain documented');
 assert.ok(api.includes('timelineGames:validTimeline.length'),'Behavior summary must export the true timeline-game denominator used by per-game coaching metrics');
 assert.ok(api.includes('"behaviorSummary.badDeathsPerTimelineGame":["behaviorSummary.timelineGames"]')&&api.includes('"behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame":["behaviorSummary.timelineGames"]'),'Backend Next-5 per-game targets must save timeline-game sample paths');
-assert.ok(app.includes("'behaviorSummary.costlyDeathsPerTimelineGame':['behaviorSummary.timelineGames']")&&app.includes("'behaviorSummary.highRiskLeadDeathsPerGame':['behaviorSummary.timelineGames']"),'Frontend saved-target compatibility must use timeline-game denominators for per-game metrics');
+assert.ok(app.includes("'behaviorSummary.costlyDeathsPerTimelineGame':['behaviorSummary.timelineGames']")&&app.includes("'behaviorSummary.highRiskLeadDeathsPerGame':['behaviorSummary.directPeerTimelineGames']"),'Frontend target compatibility must keep non-peer deaths on all timelines while peer-economy lead deaths use trusted direct-peer timelines');
 assert.ok(api.includes('"behaviorSummary.preObjectiveDeathPct":["behaviorSummary.classifiedTimelineDeaths"]')&&app.includes("'behaviorSummary.preObjectiveDeathPct':['behaviorSummary.classifiedTimelineDeaths']"),'Pre-objective death target sample path must match its classified-death denominator');
 assert.ok(api.includes('"sessionBehavior.game3PlusGoldDelta":["sessionBehavior.firstGame.lane15Games","sessionBehavior.game3Plus.lane15Games"]')&&app.includes("'sessionBehavior.postLossGoldDelta':['sessionBehavior.quickAfterLoss.lane15Games','sessionBehavior.quickAfterWin.lane15Games']"),'Session Gold @15 target scoring must use lane-comparable subgroup counts');
 assert.ok(modelDoc.includes('## Next-5 practice target denominator integrity'),'Next-5 denominator safeguards must remain documented');
@@ -1069,7 +1069,7 @@ assert.ok(modelDoc.includes('## Objective target continuity safeguards'),'Object
 console.log('league-web-contract=PASS');
 
 assert.ok(api.includes('key==="recovery"')&&api.includes('"High-risk deaths while behind / game"')&&api.includes('"behaviorSummary.highRiskBehindDeathsPerGame"'),'Recovery practice must use the zero-safe per-game behind-risk metric');
-assert.ok(api.includes('behavior?.timelineGames,5,"Measure whether recovery play is becoming lower variance'),'Recovery practice target must use timeline-complete games as its denominator');
+assert.ok(api.includes('behavior?.directPeerTimelineGames,5,"Measure whether recovery play is becoming lower variance'),'Peer-relative recovery practice target must use trusted direct-peer timeline games as its denominator');
 assert.ok(modelDoc.includes('## Zero-safe recovery practice target'),'Zero-safe recovery target semantics must remain documented');
 
 assert.ok(api.includes('repeatDeathsPerTimelineGame=validTimeline.length?repeatDeaths/validTimeline.length:null'),'Analyzer must export zero-safe repeat deaths per timeline game');
@@ -1251,3 +1251,12 @@ assert.ok(api.includes('g=>g.directPeerComparable===true&&g?.phaseRules?.lane15C
 assert.ok(api.includes('if(g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false&&earlyLead?.eligible&&earlyLead?.giveback)add('),'Replay queue must not promote untrusted early-lead windows');
 assert.ok(app.includes("label:'Early lead give-back',unit:'percent',inverse:true,get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false"),'TOP outcome fingerprint must fail closed on untrusted early-lead evidence');
 assert.ok(modelDoc.includes('## v261 early-lead direct-peer integrity'),'Trusted early-lead population semantics must remain documented');
+assert.ok(api.includes('itemSpikeEligibleGames=validDirectPeerTimeline.filter(g=>g.itemSpikeWindow?.eligible)'),'Earlier-item spike utilization must use trusted direct-peer timeline games');
+assert.ok(api.includes('directPeerTimelineGames=validDirectPeerTimeline.length')&&api.includes('highRiskLeadDeathsPerGame=directPeerTimelineGames?highRiskLeadDeaths/directPeerTimelineGames:null'),'Peer-economy lead-death rates must expose and use their trusted direct-peer timeline denominator');
+assert.ok(api.includes('behindStateDeaths=validDirectPeerTimeline.reduce')&&api.includes('highRiskBehindDeathsPerGame=directPeerTimelineGames?highRiskBehindDeaths/directPeerTimelineGames:null'),'Behind-state risk metrics must be aggregated only from trusted direct-peer timeline games');
+assert.ok(api.includes('if(directPeerComparable&&hasNum(g.impactDeltaVsOpponent))')&&api.includes('if(directPeerComparable&&g.itemSpikeWindow?.eligible)'),'Per-game peer impact and item-spike judgments must fail closed without a trusted direct peer');
+assert.ok(api.includes('if(directPeerComparable&&g.firstResetSequence?.measured&&!g.firstResetSequence?.deathInWindow)')&&api.includes('if(directPeerComparable&&hasNum(g.itemSpikeDeltaVsOpponent))'),'First-reset and first-major opponent-relative game judgments must require trusted peers');
+assert.ok(api.includes('for(const ev of g.directPeerComparable===true?(g.leadDeaths||[]):[])')&&api.includes('if(g.directPeerComparable===true&&firstReset?.economyLoss'),'Replay review must not surface peer-economy lead/reset moments from fallback opponents');
+assert.ok(api.includes('g.directPeerComparable===true&&spike.eligible&&spike.diedBeforeImpact')&&api.includes('g.directPeerComparable===true&&spike.eligible&&!spike.used'),'Item-spike replay moments must require trusted direct peers');
+assert.ok(api.includes('"behaviorSummary.highRiskLeadDeathsPerGame":["behaviorSummary.directPeerTimelineGames"]')&&app.includes("'behaviorSummary.highRiskBehindDeathsPerGame':['behaviorSummary.directPeerTimelineGames']"),'Backend/frontend practice target registries must use trusted peer timeline denominators for role-economy death metrics');
+assert.ok(modelDoc.includes('## v262 peer-relative coaching population integrity'),'Peer-relative coaching population safeguards must remain documented');
