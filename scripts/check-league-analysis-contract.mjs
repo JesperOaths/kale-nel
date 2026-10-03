@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.109'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.110'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -775,3 +775,9 @@ ok(backend.includes('roleName==="SUPPORT"&&roamAttempts>=4&&roamAttemptGames>=3'
 ok(backend.includes('laneMovementReady=supportCostEvents.length>=4&&supportAdcLaneMovementGameValues.length>=3'), 'champion Support lane movement must not piggyback on a thin measured sample');
 ok(backend.includes('soloDeaths>=2&&soloDeathGames>=2')&&backend.includes('outsidePressureDeaths>=2&&outsidePressureGames>=2'), 'repeated matchup event diagnoses must repeat across multiple matches');
 ok(modelDoc.includes('Event repetition must also be game repetition'), 'analysis documentation must preserve cross-game champion/matchup semantics');
+ok(backend.includes('function coachingEvidenceChannel(')&&backend.includes('independentSupportCount=independentChannels.length'), 'theme synthesis must count distinct supporting evidence channels');
+ok(backend.includes('Math.min(5,1+independentSupportCount)*2'), 'theme score must not be amplified by duplicate formulations of one evidence channel');
+ok(backend.includes('supportCount,independentSupportCount,evidenceChannels:'), 'theme contract must preserve raw and independent support separately');
+ok(app.includes("weak.independentSupportCount>=2"), 'low-confidence top driver must require two independent reinforcements beyond the representative');
+ok(app.includes("stage('2','Reinforcement',independentSupportCount+' independent support'"), 'priority evidence chain must report true independent reinforcement');
+ok(modelDoc.includes('Theme synthesis records total related findings separately from independent reinforcement.'), 'analysis documentation must preserve independent driver confidence semantics');
