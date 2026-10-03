@@ -1861,7 +1861,7 @@ Before scoring a target:
 
 Until both the new-game horizon and all current evidence requirements are satisfied, the target is shown as **pending**, with each current requirement displayed separately. It must not be called met, moving closer, moved away, or unchanged.
 
-New targets use `coachingSummary` paths for self metrics such as CS/min and role gold @15. Legacy saved targets that used `summary.csMin` or `summary.goldDiff15` are remapped to the current `coachingSummary` on read so the comparison population stays mechanics-filtered and consistent with the baseline that created the target.
+New targets use `coachingSummary` for non-peer self metrics such as CS/min, but role-relative Gold @15 now uses `peerComparison.avgGoldDiff15` with `peerComparison.laneGames15`. Legacy `summary.csMin` targets are still remapped to `coachingSummary.csMin`. Legacy `summary.goldDiff15` / `coachingSummary.goldDiff15` practice targets are not force-migrated: their stored baseline may include peer observations that current coaching correctly withholds, so follow-up scoring marks them **re-baseline required** and a new trusted-peer target must be created.
 
 Session Gold @15 practice targets use the trusted/comparable subgroup-specific `lane15Games` counts both when the target is created and when it is later scored. Support roaming targets prefer `meanGameSupportRoamAdcLaneMovementCs` with separate measured-window and measured-game requirements, keeping Next-5 semantics aligned with the main Support coaching surfaces.
 
@@ -2894,3 +2894,14 @@ For TOP/MID, classification requires a resolvable ordinary same-role lane oppone
 The analyzer exports raw, classified and unclassified early home-lane death counts separately. `earlyOutsidePressureShare` and the repeated-matchup outside-pressure share use `earlyClassifiedHomeLaneDeaths` as their denominator. Global and repeated-matchup coaching floors use classified deaths and classified affected games; unresolved deaths can be displayed for traceability but cannot make an outside-pressure pattern look stronger or weaker.
 
 Bot-lane copy must say **ordinary enemy bot-lane opposition** (or equivalent) rather than “enemy other than the direct role opponent.” The enemy Support is ordinary lane opposition for an ADC, and the enemy ADC is ordinary lane opposition for a Support.
+
+
+## v259 trusted Gold @15 baseline integrity
+
+A role-relative @15 coaching baseline must use the same population as the champion, matchup and practice metric being compared against it. Raw `summary.goldDiff15` / historical `coachingSummary.goldDiff15` values can contain finite checkpoint deltas from games whose same-role opponent was not high-confidence enough for direct-peer coaching.
+
+The authoritative coaching baseline is therefore `peerComparison.avgGoldDiff15`, supported by `peerComparison.laneGames15`: games must have `directPeerComparable === true`, a compatible @15 rules checkpoint, and a finite role-gold delta. Champion and repeated-matchup “vs your usual @15” reads receive this trusted baseline explicitly. Frontend diagnostic chips use the same baseline.
+
+New generic lane-gold Next-5 targets persist `peerComparison.avgGoldDiff15` rather than `coachingSummary.goldDiff15`. Older saved Gold@15 targets whose metric path is `summary.goldDiff15` or `coachingSummary.goldDiff15` are shown as **re-baseline required**. Their old numeric baseline is not silently compared with the newer trusted population.
+
+This does not delete raw checkpoint values from technical traceability. It prevents low-confidence or withheld direct-peer games from re-entering coaching through a summary average.
