@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.123'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.124'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -920,3 +920,8 @@ ok(app.includes('const curIds=coachingMatchIds(current),prevIds=coachingMatchIds
 ok(modelDoc.includes('## Coaching-cohort progress horizons'), 'analysis documentation must preserve coaching-cohort progress horizons');
 ok(app.includes('function objectiveFamilyMatchIds(r,key){')&&app.includes('return new Set(reportCoachingGames(r).filter(g=>Number(gameObjectiveFamilyRow(g,key)?.contestedEncounters||0)>0)'), 'objective-family match drilldown must use the same coaching cohort as the summary');
 ok(modelDoc.includes('## Objective-family drill-down cohort'), 'analysis documentation must preserve objective-family drilldown cohort semantics');
+
+ok(backend.includes('visionActions>=12&&visionActionGames>=4'), 'vision-action coaching must require cross-game spread');
+ok(backend.includes('visionWardTotal>=20&&opponentVisionWardTotal>=20&&visionSetupGames.length>=5'), 'vision-quality ward-share coaching must require at least five trusted setup games');
+ok(backend.includes('conf(visionActionGames)')&&backend.includes('conf(visionSetupGames.length)'), 'vision coaching confidence must use contributing games rather than pooled event counts');
+ok(modelDoc.includes('## v240 cross-game vision coaching'), 'analysis documentation must preserve v240 vision spread safeguards');
