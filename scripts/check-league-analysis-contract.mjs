@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.129'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.130'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -965,3 +965,10 @@ ok(backend.includes('added=postLossIntent?postLossFirst():laterIntent?laterFirst
 ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&hasNum(behavior?.damageGoldEfficiency)'), 'damage-share practice target fallback must remain carry-role scoped');
 ok(app.includes("if(unit==='minutes')return signed(n,1)+' min'"), 'frontend must format timing practice targets explicitly');
 ok(modelDoc.includes('## v245 practice-theme target alignment'), 'analysis documentation must preserve target-theme alignment');
+
+ok(backend.includes('greedyStayGames=validTimeline.filter')&&backend.includes('greedyStaysPerTimelineGame=validTimeline.length?greedy/validTimeline.length:null'), 'greedy-stay evidence must export game spread and zero-safe per-game rate');
+ok(backend.includes('if(greedy>=4&&greedyStayGames>=3)push(recentFocus,"resets","High-gold stays appear repeatedly"'), 'greedy-stay coaching must require event and game spread');
+ok(backend.includes('"behaviorSummary.greedyStaysPerTimelineGame":["behaviorSummary.timelineGames"]')&&app.includes("'behaviorSummary.greedyStaysPerTimelineGame':['behaviorSummary.timelineGames']"), 'greedy-stay target scoring must stay zero-safe on timeline games');
+ok(backend.includes('/high.?gold|greedy|stay|spendable gold/.test(tt)')&&backend.includes('"High-gold stays / game"'), 'reset target router must map high-gold-stay themes to the exact metric');
+ok(backend.includes('/unspent|stored gold|1000g/.test(tt)&&hasNum(behavior?.highUnspentFightRate)'), 'high-unspent-fight target must not remain a generic reset fallback');
+ok(modelDoc.includes('## v246 reset-target evidence alignment'), 'analysis documentation must preserve v246 reset-target semantics');
