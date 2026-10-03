@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.133";
+const ANALYZER_VERSION="league-web-behavior-v4.134";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -2123,8 +2123,8 @@ function championBehaviorModel(games:any[],summary:any,behaviorSummary:any,prima
       if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(summary.goldDiff15)&&Number(p.goldDiff15)-Number(summary.goldDiff15)<=-300){
         focus.push({category:"champion",title:champion+" lane state is below your usual "+primaryRole+" level",evidence:"Across "+lane.length+" "+champion+" "+primaryRole+" games you average "+signedText(p.goldDiff15,0)+"g at 15 versus "+signedText(summary.goldDiff15,0)+"g across the full Last-20 role sample.",action:"Review the champion-specific first waves, trade pattern and first recall rather than assuming the problem is your general laning.",confidence:confidence(lane.length),priority:2,comparison:"champion-role sample vs your Last-20 primary-role sample"});
       }
-      if(list.length>=3&&hasNum(p.dpm)&&hasNum(summary.dpm)&&Number(p.dpm)-Number(summary.dpm)>=150){
-        highlights.push({category:"champion",title:champion+" is a high-output pick in your current sample",evidence:"DPM averages "+Math.round(Number(p.dpm))+" across "+list.length+" games versus "+Math.round(Number(summary.dpm))+" across the Last 20.",action:"Preserve the fight positioning and resource conversion that make this pick productive; do not infer mastery from win rate alone.",confidence:confidence(list.length),priority:4,comparison:"champion-role sample vs your Last-20 primary-role sample"});
+      if(dpmGames.length>=3&&hasNum(p.dpm)&&hasNum(summary.dpm)&&Number(p.dpm)-Number(summary.dpm)>=150){
+        highlights.push({category:"champion",title:champion+" is a high-output pick in your current sample",evidence:"DPM averages "+Math.round(Number(p.dpm))+" across "+dpmGames.length+" measurable DPM games versus "+Math.round(Number(summary.dpm))+" across the Last-20 role sample.",action:"Preserve the fight positioning and resource conversion that make this pick productive; do not infer mastery from win rate alone.",confidence:confidence(dpmGames.length),priority:4,comparison:"champion-role DPM sample vs your Last-20 primary-role sample"});
       }
     }
     if(tl.length>=3&&hasNum(p.badDeaths)&&hasNum(behaviorSummary?.badDeathsPerTimelineGame)&&Number(p.badDeaths)-Number(behaviorSummary.badDeathsPerTimelineGame)>=0.7){
