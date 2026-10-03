@@ -1479,7 +1479,7 @@ function gameObjectiveFamilyRow(g,key){
   return found?rows[found]:null;
 }
 function objectiveFamilyMatchIds(r,key){
-  return new Set((r?.games||[]).filter(g=>Number(gameObjectiveFamilyRow(g,key)?.contestedEncounters||0)>0).map(g=>String(g.matchId||'')).filter(Boolean));
+  return new Set(reportCoachingGames(r).filter(g=>Number(gameObjectiveFamilyRow(g,key)?.contestedEncounters||0)>0).map(g=>String(g.matchId||'')).filter(Boolean));
 }
 function renderObjectiveFamilyOverview(r){
   const box=$('objectiveFamilyOverview');if(!box)return;
