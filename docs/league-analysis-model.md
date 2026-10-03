@@ -2625,3 +2625,13 @@ The report intentionally exposes two timeline counts with different scopes:
 - `behaviorSummary.timelineGames` is timeline coverage inside the actual mechanics-filtered coaching cohort. Any directional coaching readiness or rolling-progress sample gate for timeline-derived metrics must use this count.
 
 TOP pre-objective side-lane risk, high-risk deaths/game, and other mechanics-sensitive timeline coaching therefore use `behaviorSummary.timelineGames`. The cohort/breakdown panels continue to show the raw Last-20 timeline count so users can see the difference between data availability and coaching eligibility.
+
+
+## Objective target continuity safeguards
+
+Objective diagnosis and Next-5 follow-up must use compatible evidence maturity. A diagnosis that required cross-game or peer-comparable evidence must not later be scored from a concentrated raw count alone.
+
+- **Pre-objective death target:** the metric remains the pooled share of classified deaths that are followed by an enemy-secured, team-contested neutral objective inside the supported evidence window, but target scoring requires at least 5 classified deaths **and** at least 3 timeline-complete coaching games. The bad event itself is not required to keep occurring, so reaching zero pre-objective deaths can still be scored.
+- **Objective-setup ward-share target:** target scoring requires at least 12 tracked player wards and at least 5 direct-role comparable setup games, preserving the peer/game context that originally supported a setup-vision diagnosis.
+
+New reports persist these as explicit `sampleRequirements`. Older saved targets for the same metric paths are upgraded on read to the same safe requirements rather than retaining the earlier single-count fallback.
