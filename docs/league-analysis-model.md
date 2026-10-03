@@ -2804,3 +2804,12 @@ For SUPPORT/JUNGLE vision themes:
 - vision-action safety still targets the self vision-action death rate.
 
 The objectives/closing router distinguishes prior **setup/arrival**, post-kill **conversion**, **closing/lead@25** risk, and generic objective **presence/attendance**. The word “objective” alone must not force a prior-setup target. When the objective diagnosis specifically identifies setup-vision share, the target uses the exact peer-relative setup-share delta rather than substituting self ward volume.
+
+
+## v249 legacy practice-target evidence parity
+
+Older saved reports may contain practice targets created before explicit `sampleRequirements` were stored. Those targets must not be rescored under weaker one-denominator rules than current reports.
+
+When a saved target lacks explicit requirements, the frontend reconstructs the current safe evidence contract for every multi-denominator metric family that existed in legacy reports: roam conversion, generic roam lane movement, Support ADC lane movement, pre-objective death rate, objective-setup ward share, vision-action safety, prior objective setup, recent-shop objective absence, and objective presence.
+
+The fallback preserves the current event-count plus game-spread floors. For example, a legacy roam-conversion target still needs at least 4 attempts across 3 games, a legacy Support lane-movement target still needs 4 measured windows across 3 games, and a legacy vision-safety target still needs 12 actions across 4 games before it can be scored as met, moving closer, moved away, or unchanged.
