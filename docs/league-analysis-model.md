@@ -2635,3 +2635,10 @@ Objective diagnosis and Next-5 follow-up must use compatible evidence maturity. 
 - **Objective-setup ward-share target:** target scoring requires at least 12 tracked player wards and at least 5 direct-role comparable setup games, preserving the peer/game context that originally supported a setup-vision diagnosis.
 
 New reports persist these as explicit `sampleRequirements`. Older saved targets for the same metric paths are upgraded on read to the same safe requirements rather than retaining the earlier single-count fallback.
+
+
+## Zero-safe recovery practice target
+
+The **Recovery play** Next-5 target must remain measurable when the unwanted behavior disappears. The explanatory diagnosis may still report the share of deaths taken while behind that were high-risk, but the practice target uses `behaviorSummary.highRiskBehindDeathsPerGame` over timeline-complete coaching games.
+
+That means a successful five-game block with zero high-risk behind-state deaths produces a valid target value of `0/game` rather than an undefined percentage caused by a zero-event denominator. New recovery targets require at least 5 timeline-complete coaching games and use the same per-game metric already used by the death-risk target family.
