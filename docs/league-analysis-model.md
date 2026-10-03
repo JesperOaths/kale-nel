@@ -2722,3 +2722,12 @@ The underlying event definitions are unchanged; this is an evidence-spread safeg
 Damage-output headline coaching is role-scoped symmetrically. ADC, MID and TOP may receive direct-peer DPM strengths, recent DPM trend strengths, or frequent top-team-damage highlights. SUPPORT and JUNGLE keep DPM/damage available as technical traceability, but those carry-style outputs do not become primary coaching praise.
 
 This mirrors the existing role-aware KPI, Quick Read, chart and progress policies and prevents a positive metric from bypassing a role gate that already applies to its negative counterpart.
+
+
+## v242 carry-lane coaching boundary
+
+The backend coaching-priority layer follows the same role boundary already used by Quick Read, charts, diagnostics and rolling progress. Raw direct-role economy remains traceable for every role when evidence is trusted, but carry-lane conclusions are headline coaching only for **ADC, MID and TOP**.
+
+Carry-only coaching families include clean 1v1 lane diagnoses, solo-kill-to-lane-economy conversion, @15 lead/deficit coaching, lead/deficit-to-result conversion, @25 role-gold closing/recovery, 15→25 direct-role CS/gold routing, and first-reset direct-role economy. Recent Gold@15 trend is also carry-only. Recent raw CS/min trend remains available for JUNGLE as a farm-tempo signal but is not used for SUPPORT.
+
+SUPPORT/JUNGLE still retain these raw checkpoint fields in technical evidence where applicable; the restriction is on primary coaching interpretation, not data deletion.
