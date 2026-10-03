@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261004-league-web-v272'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261004-league-web-v273'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1308,3 +1308,4 @@ assert.ok(modelDoc.includes('## v271 resource-to-output conversion'),'Resource-t
 assert.ok(api.includes('lowResourceTop2DamageRate:lowResourceDamageRate(sample)')&&api.includes('lowResourceTop2DamageRate:trend("lowResourceTop2DamageRate")'),'Carry-role history must expose denominator-safe lower-resource damage conversion');
 assert.ok(app.includes("Lower gold → top-2 damage")&&app.includes("games outside top-2 team gold still reached top-2 team damage"),'Frontend must surface lower-resource punch-up output with numerator and denominator');
 assert.ok(modelDoc.includes('## v272 lower-resource punch-up context'),'Lower-resource output semantics must remain documented');
+assert.ok(app.includes('damageTop2Rate')&&app.includes('damageLeaderRate')&&app.includes('top-2 team damage overall')&&app.includes('team damage leader'),'Existing team damage-rank history metrics must have a visible carry-context consumer');
