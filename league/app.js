@@ -1053,19 +1053,19 @@ function outcomeFingerprintSpecs(role){
     {label:'Prior objective setup',unit:'percent',inverse:false,get:g=>perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.contestedJoined)}
   ];
   if(role==='MID')return[
-    {label:'Role gold @15',unit:'gold',inverse:false,get:g=>g?.phaseRules?.lane15Comparable===false?null:g.goldDiff15},
+    {label:'Role gold @15',unit:'gold',inverse:false,get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)?Number(g.goldDiff15):null},
     {label:'First impact vs MID peer',unit:'minutes',inverse:true,get:g=>trustedDirectPeer(g)&&hasNum(g?.impactDeltaVsOpponent)?Number(g.impactDeltaVsOpponent):null},
     {label:'Roam conversion',unit:'percent',inverse:false,get:g=>perGamePct(g?.roams?.successes,g?.roams?.attempts)},
     {label:'15→25 objective reconnect',unit:'percent',inverse:false,get:g=>hasNum(g?.midRouting?.objectiveJoinRate)?Number(g.midRouting.objectiveJoinRate):null}
   ];
   if(role==='TOP')return[
-    {label:'Role gold @15',unit:'gold',inverse:false,get:g=>g?.phaseRules?.lane15Comparable===false?null:g.goldDiff15},
+    {label:'Role gold @15',unit:'gold',inverse:false,get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)?Number(g.goldDiff15):null},
     {label:'CS/min vs TOP peer',unit:'csmin',inverse:false,get:g=>trustedDirectPeer(g)&&hasNum(g?.peer?.csMinDelta)?Number(g.peer.csMinDelta):null},
     {label:'Early lead give-back',unit:'percent',inverse:true,get:g=>g?.earlyLeadWindow?.eligible?(g.earlyLeadWindow.giveback?100:0):null},
     {label:'Pre-objective side-lane deaths',unit:'num',inverse:true,get:g=>g.timelineAvailable===true?Number(g?.sideLaneRisk?.preNeutralObjectiveSideLaneDeaths||0):null}
   ];
   return[
-    {label:'Role gold @15',unit:'gold',inverse:false,get:g=>g?.phaseRules?.lane15Comparable===false?null:g.goldDiff15},
+    {label:'Role gold @15',unit:'gold',inverse:false,get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)?Number(g.goldDiff15):null},
     {label:'DPM vs ADC peer',unit:'dpm',inverse:false,get:g=>trustedDirectPeer(g)&&hasNum(g?.peer?.dpmDelta)?Number(g.peer.dpmDelta):null},
     {label:'High-risk deaths / game',unit:'num',inverse:true,get:g=>g.timelineAvailable===true?g.badDeathCount:null},
     {label:'Kill participation',unit:'percent',inverse:false,get:g=>g.kp}
