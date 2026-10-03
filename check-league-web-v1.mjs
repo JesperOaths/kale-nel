@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.116'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.117'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v226'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v227'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1040,5 +1040,14 @@ assert.ok(modelDoc.includes('## Coaching-facing objective presence aggregation')
 assert.ok(app.includes("objectiveGameWeighted=hasNum(b.objectiveCoachingPresenceRate??b.meanGameObjectiveContestPresenceRate)")&&app.includes("objectiveReady=roleCoverage.contestReady"),'Generic objective decision card must use game-weighted presence with encounter-and-game readiness');
 assert.ok(app.includes("(objectiveGameWeighted?'mean per-game rate · ':'legacy pooled rate · ')")&&app.includes("floor 5 encounters across 3 games',objective,objectiveReady,null"),'Generic objective decision card must disclose aggregation, retain pooled traceability and omit pooled Wilson uncertainty');
 assert.ok(modelDoc.includes('The generic Decision metrics **Contested objective presence** card follows the same rule'),'Objective decision-card aggregation parity must remain documented');
+
+assert.ok(api.includes('coachingMidRoutingObjectivePresenceRate=meanGameMidRoutingObjectiveJoinRate'),'Mid-routing coaching must use the equal-weight contested-presence mean while preserving pooled diagnostics');
+assert.ok(api.includes('coachingObjectivePresenceRate:coachingMidRoutingObjectivePresenceRate')&&api.includes('avgObjectiveJoinRate:avgMidRoutingObjectiveJoinRate')&&api.includes('pooledObjectiveJoinRate:pooledMidRoutingObjectiveJoinRate'),'Mid-routing export must keep canonical coaching, legacy pooled alias and explicit pooled diagnostic separate');
+assert.ok(api.includes('"behaviorSummary.midRouting.coachingObjectivePresenceRate":["behaviorSummary.midRouting.games"]')&&api.includes('"behaviorSummary.midRouting.coachingObjectivePresenceRate",midPresence'),'New mid-routing practice targets must use the canonical game-weighted coaching field');
+assert.ok(app.includes("mid.coachingObjectivePresenceRate??mid.meanGameObjectiveJoinRate??mid.avgObjectiveJoinRate"),'Prominent mid-routing frontend coaching must prefer the canonical game-weighted field with saved-report fallbacks');
+assert.ok(app.includes("path:'behaviorSummary.midRouting.coachingObjectivePresenceRate',samplePath:'behaviorSummary.midRouting.games'"),'Rolling progress must use canonical mid-routing objective presence');
+assert.ok(app.includes("g?.midRouting?.contestPresenceRate??g?.midRouting?.objectiveJoinRate"),'MID outcome fingerprint must prefer per-game team-contested presence over legacy team-secured presence');
+assert.ok(app.includes("'Mid-routing objective presence · pooled',fmtPct(r.behaviorSummary?.midRouting?.pooledObjectiveJoinRate??r.behaviorSummary?.midRouting?.avgObjectiveJoinRate)")&&app.includes("'Mid-routing objective presence · coaching mean game rate'"),'Technical appendix must expose pooled and coaching mean-game mid-routing presence separately');
+assert.ok(modelDoc.includes('## Mid-routing objective-presence aggregation')&&modelDoc.includes('legacy `avgObjectiveJoinRate` alias retains this pooled meaning'),'Mid-routing compatibility and coaching aggregation must remain documented');
 
 console.log('league-web-contract=PASS');
