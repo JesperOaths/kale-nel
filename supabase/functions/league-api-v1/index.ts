@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.109";
+const ANALYZER_VERSION="league-web-behavior-v4.110";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1981,6 +1981,11 @@ function coachingThemeMeta(category:any){
   return{key:c.replace(/[^a-z0-9]+/g,"-")||"other",label:c?c.replace(/\b\w/g,(x:string)=>x.toUpperCase()):"Other"};
 }
 function coachingConfidenceWeight(v:any){const x=text(v).toLowerCase();return x==="high"?3:x==="medium"?2:1;}
+function coachingEvidenceChannel(x:any){
+  const comparison=text(x?.comparison).toLowerCase().replace(/\s+/g," ").trim();
+  if(comparison)return comparison;
+  return text(x?.title||x?.category).toLowerCase().replace(/[^a-z0-9]+/g," ").replace(/\s+/g," ").trim();
+}
 function synthesizePriorityThemes(insights:any[]){
   const grouped=new Map<string,any>();
   for(const x of insights||[]){
@@ -1991,11 +1996,12 @@ function synthesizePriorityThemes(insights:any[]){
   const themes:any[]=[];
   for(const entry of grouped.values()){
     const items=[...entry.items].sort((a:any,b:any)=>Number(a.priority||9)-Number(b.priority||9)||coachingConfidenceWeight(b.confidence)-coachingConfidenceWeight(a.confidence));
-    const rep=items[0],priority=Math.min(...items.map((x:any)=>Number(x.priority||9))),supportCount=items.length;
+    const rep=items[0],priority=Math.min(...items.map((x:any)=>Number(x.priority||9))),supportCount=items.length,repChannel=coachingEvidenceChannel(rep);
+    const allChannels=[...new Set(items.map((x:any)=>coachingEvidenceChannel(x)).filter(Boolean))],independentChannels=allChannels.filter((x:any)=>x!==repChannel),independentSupportCount=independentChannels.length;
     const comparisons=[...new Set(items.map((x:any)=>text(x.comparison)).filter(Boolean))].slice(0,3);
-    const supportingTitles=[...new Set(items.map((x:any)=>text(x.title)).filter(Boolean))].slice(0,5);
-    const score=(5-priority)*20+coachingConfidenceWeight(rep.confidence)*5+Math.min(5,supportCount)*2;
-    themes.push({key:entry.key,label:entry.label,category:entry.label,title:rep.title,evidence:rep.evidence,action:rep.action,confidence:rep.confidence,priority,comparison:comparisons.join(" · "),supportCount,supportingTitles,score});
+    const supportingTitles=[...new Set(items.slice(1).map((x:any)=>text(x.title)).filter(Boolean))].slice(0,5);
+    const score=(5-priority)*20+coachingConfidenceWeight(rep.confidence)*5+Math.min(5,1+independentSupportCount)*2;
+    themes.push({key:entry.key,label:entry.label,category:entry.label,title:rep.title,evidence:rep.evidence,action:rep.action,confidence:rep.confidence,priority,comparison:comparisons.join(" · "),supportCount,independentSupportCount,evidenceChannels:allChannels.slice(0,5),supportingTitles,score});
   }
   return themes.sort((a:any,b:any)=>Number(b.score)-Number(a.score)||Number(a.priority)-Number(b.priority)||String(a.label).localeCompare(String(b.label)));
 }
