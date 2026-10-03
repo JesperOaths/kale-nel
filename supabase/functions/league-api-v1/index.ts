@@ -1243,8 +1243,9 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
   if(out.visionMission.deaths>0)out.visionMission.highRiskDeathRate=100*out.visionMission.highRiskDeaths/out.visionMission.deaths;
   if(out.deathConsequences.measured>0){
     out.deathConsequences.costlyRate=100*out.deathConsequences.costly/out.deathConsequences.measured;
-    out.deathConsequences.avgGoldSwing=avg(out.deathConsequences.events.map((x:any)=>x.goldSwingAfter));
-    out.deathConsequences.avgCsSwing=avg(out.deathConsequences.events.map((x:any)=>x.csSwingAfter));
+    const trustedEconomyEvents=(out.deathConsequences.events||[]).filter((x:any)=>x.roleEconomyComparable===true);
+    out.deathConsequences.avgGoldSwing=avg(trustedEconomyEvents.map((x:any)=>x.goldSwingAfter));
+    out.deathConsequences.avgCsSwing=avg(trustedEconomyEvents.map((x:any)=>x.csSwingAfter));
   }
   out.closing25.highRiskDeaths=(out.badDeaths||[]).filter((x:any)=>Number(x.time)>=25).length;
   out.closing25.costlyDeaths=(out.deathConsequences.events||[]).filter((x:any)=>Number(x.time)>=25&&x.costly).length;
