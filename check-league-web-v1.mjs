@@ -1103,7 +1103,7 @@ assert.deepEqual(frontendPracticeRegistryKeys,backendPracticeRegistryKeys,'Front
 assert.ok(app.includes("'behaviorSummary.meanGameRoamLaneMovementCs':['behaviorSummary.roamLaneCostMeasuredGames']"),'Frontend fallback must retain the game-weighted generic roam target denominator');
 assert.ok(modelDoc.includes('## Practice-target registry parity'),'Practice-target registry parity must remain documented');
 
-assert.ok(app.includes('function explicitGameRole(v){')&&app.includes("return null;\n}\nfunction gameMatchesNamedFilter"),'Saved-report coaching role parsing must fail closed instead of defaulting unknown game roles to ADC');
+assert.ok(app.includes('function explicitGameRole(v){')&&app.includes("if(r==='TOP')return'TOP';\n  return null;"),'Saved-report coaching role parsing must fail closed instead of defaulting unknown game roles to ADC');
 assert.ok(app.includes("selectedRole?games.filter(g=>explicitGameRole(g?.role)===selectedRole):games"),'Frontend coaching cohort must filter older saved game rows to the explicit selected role before mechanics filtering');
 assert.ok(app.includes("if(selectedRole&&explicitGameRole(g?.role)!==selectedRole)return false;"),'Role-mismatched or unknown saved-report games must remain context-only');
 assert.ok(app.includes('const coachingN=reportCoachingGames(r).length'),'Report header must derive coaching-comparable count from the same strict frontend cohort');
