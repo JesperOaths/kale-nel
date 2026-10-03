@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.108";
+const ANALYZER_VERSION="league-web-behavior-v4.109";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -2015,8 +2015,8 @@ function opponentMatchupBehaviorModel(games:any[],summary:any,behaviorSummary:an
     const [roleName,opponentChampion]=key.split("|"),laneComparable=list.filter((g:any)=>g?.phaseRules?.lane15Comparable!==false),lane=finiteGames(laneComparable,g=>g.goldDiff15),tl=list.filter(g=>g.timelineAvailable);
     const ownChampionCounts:any={};for(const g of list){const name=text(g.champion)||"Unknown";ownChampionCounts[name]=(ownChampionCounts[name]||0)+1;}
     const ownChampions=Object.entries(ownChampionCounts).sort((a:any,b:any)=>Number(b[1])-Number(a[1])).map(([champion,games])=>({champion,games:Number(games)}));
-    const soloKills=list.reduce((n,g)=>n+Number(g.laneDuel?.earlySoloKillsVsRole||0),0),soloDeaths=list.reduce((n,g)=>n+Number(g.laneDuel?.earlySoloDeathsToRole||0),0);
-    const homeLaneDeaths=list.reduce((n,g)=>n+Number(g.lanePressure?.earlyHomeLaneDeaths||0),0),outsidePressureDeaths=list.reduce((n,g)=>n+Number(g.lanePressure?.earlyOutsidePressureDeaths||0),0),outsidePressureShare=homeLaneDeaths?100*outsidePressureDeaths/homeLaneDeaths:null;
+    const soloKills=list.reduce((n,g)=>n+Number(g.laneDuel?.earlySoloKillsVsRole||0),0),soloDeaths=list.reduce((n,g)=>n+Number(g.laneDuel?.earlySoloDeathsToRole||0),0),soloDeathGames=list.filter((g:any)=>Number(g.laneDuel?.earlySoloDeathsToRole||0)>0).length;
+    const homeLaneDeaths=list.reduce((n,g)=>n+Number(g.lanePressure?.earlyHomeLaneDeaths||0),0),homeLaneDeathGames=list.filter((g:any)=>Number(g.lanePressure?.earlyHomeLaneDeaths||0)>0).length,outsidePressureDeaths=list.reduce((n,g)=>n+Number(g.lanePressure?.earlyOutsidePressureDeaths||0),0),outsidePressureGames=list.filter((g:any)=>Number(g.lanePressure?.earlyOutsidePressureDeaths||0)>0).length,outsidePressureShare=homeLaneDeaths?100*outsidePressureDeaths/homeLaneDeaths:null;
     const dpmPeerGames=finiteGames(list,g=>g.peer?.dpmDelta),vpmPeerGames=finiteGames(list,g=>g.peer?.vpmDelta),impactGames=finiteGames(tl,g=>g.impactDeltaVsOpponent),itemGames=finiteGames(list,g=>g.itemSpikeDeltaVsOpponent),visionSetupGames=finiteGames(tl,g=>g.vision?.objectiveSetupDeltaVsOpponent);
     const p:any={
       opponentChampion,role:roleName,games:list.length,wins:list.filter(g=>g.win).length,winRate:pct(list.filter(g=>g.win).length,list.length),
@@ -2026,7 +2026,7 @@ function opponentMatchupBehaviorModel(games:any[],summary:any,behaviorSummary:an
       impactGames:impactGames.length,avgImpactDelta:meanField(impactGames,g=>g.impactDeltaVsOpponent),
       itemGames:itemGames.length,avgItemDelta:meanField(itemGames,g=>g.itemSpikeDeltaVsOpponent),
       visionSetupGames:visionSetupGames.length,avgObjectiveSetupDelta:meanField(visionSetupGames,g=>g.vision?.objectiveSetupDeltaVsOpponent),
-      earlySoloKills:soloKills,earlySoloDeaths:soloDeaths,earlyHomeLaneDeaths:homeLaneDeaths,earlyOutsidePressureDeaths:outsidePressureDeaths,outsidePressureShare,ownChampions
+      earlySoloKills:soloKills,earlySoloDeaths:soloDeaths,earlySoloDeathGames:soloDeathGames,earlyHomeLaneDeaths:homeLaneDeaths,earlyHomeLaneDeathGames:homeLaneDeathGames,earlyOutsidePressureDeaths:outsidePressureDeaths,earlyOutsidePressureGames:outsidePressureGames,outsidePressureShare,ownChampions
     };
     profiles.push(p);
     const ownMix=ownChampions.slice(0,3).map((x:any)=>x.champion+" "+x.games+"g").join(", ");
@@ -2035,10 +2035,10 @@ function opponentMatchupBehaviorModel(games:any[],summary:any,behaviorSummary:an
       if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(summary?.goldDiff15)&&Number(p.goldDiff15)-Number(summary.goldDiff15)<=-300){
         focus.push({category:"matchup",title:opponentChampion+" repeatedly suppresses your lane economy",evidence:"Across "+lane.length+" "+primaryRole+" games against "+opponentChampion+", you average "+signedText(p.goldDiff15,0)+"g at 15 versus "+signedText(summary.goldDiff15,0)+"g across your primary-role coaching sample. Own picks: "+ownMix+".",action:"Review these games together: identify which wave/trade/recall condition repeats before the deficit instead of treating each loss as unrelated.",confidence:confidence(lane.length),priority:2,comparison:"repeated same-role opponent champion vs your primary-role sample"});
       }
-      if(soloDeaths>=2&&soloDeaths>=soloKills+2){
-        focus.push({category:"matchup",title:"Direct 1v1 execution against "+opponentChampion+" is a repeated problem",evidence:soloKills+" clean early-phase solo kill(s) versus "+soloDeaths+" clean solo death(s) to the actual "+opponentChampion+" role opponent across "+list.length+" games; assisted kills are excluded.",action:"Build a matchup-specific rule from the replay set: which cooldown/resource/wave state makes the all-in unsafe, and what exact disengage condition should replace it?",confidence:confidence(list.length),priority:1,comparison:"clean queue-aware early-phase 1v1 events in repeated "+opponentChampion+" matchups"});
-      }else if(homeLaneDeaths>=3&&outsidePressureDeaths>=2&&hasNum(outsidePressureShare)&&Number(outsidePressureShare)>=60){
-        focus.push({category:"map awareness",title:"The "+opponentChampion+" matchup losses are mostly outside pressure, not the 1v1",evidence:outsidePressureDeaths+" of "+homeLaneDeaths+" early-phase home-lane deaths in these "+list.length+" games involved an enemy beyond the direct role opponent ("+Math.round(Number(outsidePressureShare))+"%).",action:"Do not over-correct the champion matchup mechanically. Review wave depth, jungle/support tracking and vision timing around the vulnerable waves instead.",confidence:confidence(list.length),priority:2,comparison:"assisted/outside-pressure lane deaths in repeated "+opponentChampion+" matchups"});
+      if(soloDeaths>=2&&soloDeathGames>=2&&soloDeaths>=soloKills+2){
+        focus.push({category:"matchup",title:"Direct 1v1 execution against "+opponentChampion+" is a repeated problem",evidence:soloKills+" clean early-phase solo kill(s) versus "+soloDeaths+" clean solo death(s) to the actual "+opponentChampion+" role opponent, with solo deaths occurring in "+soloDeathGames+" of "+list.length+" games; assisted kills are excluded.",action:"Build a matchup-specific rule from the replay set: which cooldown/resource/wave state makes the all-in unsafe, and what exact disengage condition should replace it?",confidence:confidence(soloDeathGames),priority:1,comparison:"clean queue-aware early-phase 1v1 events repeated across "+opponentChampion+" matchup games"});
+      }else if(homeLaneDeaths>=3&&homeLaneDeathGames>=2&&outsidePressureDeaths>=2&&outsidePressureGames>=2&&hasNum(outsidePressureShare)&&Number(outsidePressureShare)>=60){
+        focus.push({category:"map awareness",title:"The "+opponentChampion+" matchup losses are mostly outside pressure, not the 1v1",evidence:outsidePressureDeaths+" of "+homeLaneDeaths+" early-phase home-lane deaths across "+homeLaneDeathGames+" affected games involved an enemy beyond the direct role opponent ("+Math.round(Number(outsidePressureShare))+"%), with outside pressure repeating in "+outsidePressureGames+" games.",action:"Do not over-correct the champion matchup mechanically. Review wave depth, jungle/support tracking and vision timing around the vulnerable waves instead.",confidence:confidence(outsidePressureGames),priority:2,comparison:"assisted/outside-pressure lane deaths repeated across "+opponentChampion+" matchups"});
       }
       if(lane.length>=3&&hasNum(p.goldDiff15)&&hasNum(summary?.goldDiff15)&&Number(p.goldDiff15)-Number(summary.goldDiff15)>=300&&soloKills>=soloDeaths){
         highlights.push({category:"matchup",title:"You handle "+opponentChampion+" well in the current sample",evidence:"Across "+lane.length+" "+primaryRole+" games you average "+signedText(p.goldDiff15,0)+"g at 15, at least 300g better than your normal primary-role sample, with "+soloKills+" clean solo kill(s) versus "+soloDeaths+" solo death(s).",action:"Preserve the matchup-specific wave/trade conditions behind this advantage; do not generalize the result beyond the repeated sample.",confidence:confidence(lane.length),priority:4,comparison:"repeated same-role opponent champion vs your primary-role sample"});
@@ -2073,7 +2073,7 @@ function championBehaviorModel(games:any[],summary:any,behaviorSummary:any,prima
     if(list.length<3)continue;
     const [champion,roleName]=key.split("|"),trustedPeer=list.filter(g=>g.directPeerComparable===true),lane=finiteGames(trustedPeer.filter(g=>g?.phaseRules?.lane15Comparable!==false),g=>g.goldDiff15),tl=list.filter(g=>g.timelineAvailable),items=finiteGames(trustedPeer,g=>g.itemSpikeDeltaVsOpponent),dpmGames=finiteGames(list,g=>g.dpm);
     const vpmGames=finiteGames(trustedPeer,g=>g.peer?.vpmDelta),visionSetupGames=finiteGames(tl.filter(g=>g.directPeerComparable===true),g=>g.vision?.objectiveSetupDeltaVsOpponent),impactGames=finiteGames(tl.filter(g=>g.directPeerComparable===true),g=>g.impactDeltaVsOpponent);
-    const roamAttempts=list.reduce((n,g)=>n+Number(g.roams?.attempts||0),0),roamSuccesses=list.reduce((n,g)=>n+Number(g.roams?.successes||0),0),supportCostEvents=list.flatMap((g:any)=>(g.roams?.events||[]).filter((x:any)=>hasNum(x?.adcLaneCostCs)));
+    const roamAttempts=list.reduce((n,g)=>n+Number(g.roams?.attempts||0),0),roamSuccesses=list.reduce((n,g)=>n+Number(g.roams?.successes||0),0),roamAttemptGames=list.filter((g:any)=>Number(g.roams?.attempts||0)>0).length,supportCostEvents=list.flatMap((g:any)=>(g.roams?.events||[]).filter((x:any)=>hasNum(x?.adcLaneCostCs))),supportAdcLaneMovementGameValues=list.map((g:any)=>{const xs=(g.roams?.events||[]).map((x:any)=>x?.adcLaneCostCs).filter(hasNum).map(Number);return xs.length?avg(xs):null;}).filter(hasNum);
     const p:any={
       champion,role:roleName,games:list.length,wins:list.filter(g=>g.win).length,winRate:pct(list.filter(g=>g.win).length,list.length),
       csMin:meanField(list,g=>g.csMin),dpm:meanField(dpmGames,g=>g.dpm),kp:meanField(list,g=>g.kp),
@@ -2082,8 +2082,8 @@ function championBehaviorModel(games:any[],summary:any,behaviorSummary:any,prima
       vpmGames:vpmGames.length,avgVpmDelta:meanField(vpmGames,g=>g.peer?.vpmDelta),
       visionSetupGames:visionSetupGames.length,avgObjectiveSetupDelta:meanField(visionSetupGames,g=>g.vision?.objectiveSetupDeltaVsOpponent),
       impactGames:impactGames.length,avgImpactDelta:meanField(impactGames,g=>g.impactDeltaVsOpponent),
-      roamAttempts,roamSuccesses,roamSuccessRate:roamAttempts?100*roamSuccesses/roamAttempts:null,
-      supportAdcCostEvents:supportCostEvents.length,avgSupportAdcLaneCostCs:meanField(supportCostEvents,(x:any)=>x.adcLaneCostCs)
+      roamAttempts,roamAttemptGames,roamSuccesses,roamSuccessRate:roamAttempts?100*roamSuccesses/roamAttempts:null,
+      supportAdcCostEvents:supportCostEvents.length,supportAdcLaneMovementGames:supportAdcLaneMovementGameValues.length,avgSupportAdcLaneCostCs:meanField(supportCostEvents,(x:any)=>x.adcLaneCostCs),meanGameSupportAdcLaneMovementCs:avg(supportAdcLaneMovementGameValues)
     };
     profiles.push(p);
     if(roleName!==primaryRole)continue;
@@ -2116,8 +2116,9 @@ function championBehaviorModel(games:any[],summary:any,behaviorSummary:any,prima
       if(Number(p.avgImpactDelta)>=1.5)focus.push({category:"champion",title:champion+" reaches first tracked impact later than the enemy Jungler",evidence:"Across "+impactGames.length+" comparable games, first tracked impact arrives "+Number(p.avgImpactDelta).toFixed(1)+" minutes later than the direct Jungle opponent.",action:"Review the opening path and first actionable window on this champion; the goal is not forced ganks, but earlier supported impact when a real window exists.",confidence:confidence(impactGames.length),priority:2,comparison:"champion-specific first impact vs enemy Jungler"});
       else if(Number(p.avgImpactDelta)<=-1.5)highlights.push({category:"champion",title:champion+" reaches first tracked impact early",evidence:"Across "+impactGames.length+" comparable games, first tracked impact arrives "+Math.abs(Number(p.avgImpactDelta)).toFixed(1)+" minutes earlier than the enemy Jungler.",action:"Preserve the pathing/tempo that creates early impact without sacrificing the later objective setup the report measures separately.",confidence:confidence(impactGames.length),priority:4,comparison:"champion-specific first impact vs enemy Jungler"});
     }
-    if(roleName==="SUPPORT"&&roamAttempts>=4&&hasNum(p.roamSuccessRate)&&Number(p.roamSuccessRate)<45){
-      focus.push({category:"champion",title:champion+" roams are converting poorly in the current sample",evidence:roamSuccesses+" of "+roamAttempts+" detected early roam departures produced supported return ("+Number(p.roamSuccessRate).toFixed(0)+"%)."+(hasNum(p.avgSupportAdcLaneCostCs)?" Associated ADC-vs-ADC lane movement averages "+signedText(p.avgSupportAdcLaneCostCs,1)+" CS.":""),action:"Review whether the wave was secure before leaving and when the target play stopped being available; do not compensate by roaming more often.",confidence:confidence(roamAttempts),priority:2,comparison:"champion-specific supported roam return"});
+    if(roleName==="SUPPORT"&&roamAttempts>=4&&roamAttemptGames>=3&&hasNum(p.roamSuccessRate)&&Number(p.roamSuccessRate)<45){
+      const laneMovementReady=supportCostEvents.length>=4&&supportAdcLaneMovementGameValues.length>=3;
+      focus.push({category:"champion",title:champion+" roams are converting poorly in the current sample",evidence:roamSuccesses+" of "+roamAttempts+" detected early roam departures across "+roamAttemptGames+" games produced supported return ("+Number(p.roamSuccessRate).toFixed(0)+"%)."+(laneMovementReady&&hasNum(p.meanGameSupportAdcLaneMovementCs)?" Game-weighted ADC-vs-ADC lane movement across "+supportAdcLaneMovementGameValues.length+" measured games averages "+signedText(p.meanGameSupportAdcLaneMovementCs,1)+" CS.":""),action:"Review whether the wave was secure before leaving and when the target play stopped being available; do not compensate by roaming more often.",confidence:confidence(roamAttemptGames),priority:2,comparison:"champion-specific supported roam return across games"});
     }
   }
   profiles.sort((a,b)=>b.games-a.games);
