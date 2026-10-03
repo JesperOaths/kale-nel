@@ -2467,7 +2467,7 @@ The SUPPORT Direct-role comparison surface is built around role-relevant peer ev
 
 ## Role-aware raw KPI strip
 
-The neutral KPI strip follows the selected coaching role before any comparison or judgment is shown. ADC, MID and TOP retain CS/min and damage/min because those are useful raw carry/lane outputs. JUNGLE keeps CS/min but replaces the carry-style damage card with vision/min. SUPPORT does not foreground CS/min or damage/min: it shows kill participation, vision/min, assists/game and deaths/game alongside win rate and KDA. These are still descriptive self-sample values; vision/min is explicitly volume rather than vision quality or objective control.
+The neutral KPI strip follows the selected coaching role before any comparison or judgment is shown. Role resolution uses `dataQuality.selectedRole` first, then the coaching/summary role fallbacks, matching the other top-level report surfaces and preventing a stale saved summary role from changing the KPI family. ADC, MID and TOP retain CS/min and damage/min because those are useful raw carry/lane outputs. JUNGLE keeps CS/min but replaces the carry-style damage card with vision/min. SUPPORT does not foreground CS/min or damage/min: it shows kill participation, vision/min, assists/game and deaths/game alongside win rate and KDA. These are still descriptive self-sample values; vision/min is explicitly volume rather than vision quality or objective control.
 
 
 ## Role-aligned economy and tempo charts
