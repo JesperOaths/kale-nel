@@ -249,11 +249,11 @@ ok(app.includes('Early KP · pooled')&&app.includes('Objective-context death % �
 ok(backend.includes('const pooledEventRate='), 'derived event-rate comparisons must share a pooled helper');
 ok(backend.includes('earlyKp:{wins:winEarlyWins.rate,losses:winEarlyLosses.rate'), 'win/loss early KP must be event-pooled');
 ok(backend.includes('objectiveJoin:{wins:winObjWins.rate,losses:winObjLosses.rate'), 'win/loss objective presence must be event-pooled');
-ok(backend.includes('objectiveJoin:trendEventRate(g=>g.objectiveContestJoined,g=>g.objectiveContestTotal)'), 'recent coaching objective presence must pool team-contested events');
+ok(backend.includes('objectiveJoin:trendGameMeanWithEvents(')&&backend.includes('g=>Number(g.objectiveContestTotal||0)>0?100*Number(g.objectiveContestJoined||0)/Number(g.objectiveContestTotal):null'), 'recent coaching objective presence must use equal-weight per-game contested-objective rates');
 ok(backend.includes('securedObjectiveJoin:trendEventRate(g=>g.objectiveJoined,g=>g.objectiveTeamTotal)'), 'recent secured-objective presence must remain separately trendable');
 ok(backend.includes('earlyKp:trendEventRate(g=>g.earlyPlayerKillInvolvements,g=>g.earlyTeamKills)'), 'recent early-KP trend must be event-pooled');
 ok(backend.includes('aggregation:"pooled_events"'), 'pooled comparison provenance must remain explicit');
-ok(app.includes('Early KP · wins / losses · pooled')&&app.includes('Latest 5 team-contested presence / previous · pooled'), 'frontend must expose pooled contested-objective comparison evidence counts');
+ok(app.includes('Early KP · wins / losses · pooled')&&app.includes("aggregation==='mean_games_with_event_coverage'?'equal-weight game mean'")&&app.includes("aggregation==='pooled_events'?'pooled event rate'"), 'frontend must expose analyzer-specific recent-trend aggregation provenance');
 ok(app.includes('Team-contested objective presence')&&app.includes('Team-secured objective presence'), 'frontend must distinguish contested coaching presence from secured outcome context');
 ok(!backend.includes('deaths followed by enemy objective conversion'), 'death-before-objective evidence must remain non-causal');
 ok(backend.includes('contestedNeutralEvent(o)'), 'death-before-objective and side-lane consequences must ignore fully conceded neutral objectives');
@@ -811,12 +811,12 @@ ok(backend.includes('supportCount,independentSupportCount,evidenceChannels:'), '
 ok(app.includes("weak.independentSupportCount>=2"), 'low-confidence top driver must require two independent reinforcements beyond the representative');
 ok(app.includes("stage('2','Reinforcement',independentSupportCount+' independent support'"), 'priority evidence chain must report true independent reinforcement');
 ok(modelDoc.includes('Theme synthesis records total related findings separately from independent reinforcement.'), 'analysis documentation must preserve independent driver confidence semantics');
-ok(backend.includes('objectiveSetup:trendEventRate(g=>g.objectiveReadiness?.earlySetupJoins,g=>g.objectiveReadiness?.contestedJoined)'), 'recent setup trend must match the contested-joined aggregate denominator');
+ok(backend.includes('objectiveSetup:trendGameMeanWithEvents(')&&backend.includes('g=>Number(g.objectiveReadiness?.contestedJoined||0)>0?100*Number(g.objectiveReadiness?.earlySetupJoins||0)/Number(g.objectiveReadiness.contestedJoined):null'), 'recent setup trend must use equal-weight per-game prior-setup rates');
 ok(!backend.includes('objectiveSetup:trendEventRate(g=>g.objectiveReadiness?.earlySetupJoins,g=>g.objectiveReadiness?.joined)'), 'historical team-secured presence must not leak into recent setup coaching');
 ok(backend.includes('trendGameMeanWithEvents')&&backend.includes('supportAdcLaneCost:trendGameMeanWithEvents(recentSupportAdcLaneCost,supportAdcLaneWindowCount)'), 'Support lane-movement recent trend must expose both game and window evidence');
 ok(app.includes("spec('Roam conversion',t.roamConversion,'percent',false,15,4,5,3,5)")&&app.includes("spec('Vision-action death rate',t.visionActionDeath,'percent',true,5,12,12,4,5)"), 'Support recent direction must use analyzer-aligned opportunity and game floors');
 ok(app.includes("spec('Prior objective setup',t.objectiveSetup,'percent',false,10,5,5,3,5)")&&app.includes("spec('Contested objective presence',t.objectiveJoin,'percent',false,10,5,5,3,5)"), 'recent objective direction must require event and game spread');
-ok(modelDoc.includes('## Recent-direction evidence parity')&&modelDoc.includes('earlySetupJoins / contestedJoined'), 'analysis documentation must preserve recent-direction denominator semantics');
+ok(modelDoc.includes('## Recent-direction evidence parity')&&modelDoc.includes('equal-weight means of valid per-game percentages'), 'analysis documentation must preserve game-weighted recent objective semantics');
 
 ok(backend.includes('objectivePresenceEvidenceReady=neutralObjectiveEvents>=5&&objectiveContestGames>=3'), 'action-first objective presence must require encounters across games');
 ok(backend.includes('roamAttempts>=4&&roamAttemptGames>=3'), 'action-first roam conversion must require cross-game spread');
@@ -1004,3 +1004,5 @@ ok(modelDoc.includes('## v249 legacy practice-target evidence parity'), 'analysi
 ok(backend.includes('objectiveSetup:trendGameMeanWithEvents(')&&backend.includes('objectiveJoin:trendGameMeanWithEvents('), 'recent objective setup/presence must use equal-weight per-game aggregation');
 ok(backend.includes('recentEvents:recent.events')&&backend.includes('priorEvents:prior.events'), 'game-weighted recent objective trends must retain event-count evidence coverage');
 ok(modelDoc.includes('## v250 game-weighted recent objective direction'), 'analysis documentation must preserve recent objective aggregation parity');
+ok(app.includes('eventCoveredTrendRow')&&app.includes('equal-weight game mean'), 'technical appendix must display game-weighted recent objective provenance');
+ok(modelDoc.includes('## v251 recent-trend aggregation provenance'), 'analysis documentation must preserve recent-trend provenance labels');
