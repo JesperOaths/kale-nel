@@ -570,6 +570,9 @@ ok(modelDoc.includes('### Reviewing repeated arcs')&&modelDoc.includes('does not
 ok(app.includes('lateHighRisk')&&app.includes('lateCostly')&&!app.includes('Number(closing.highRiskDeaths||0)+Number(closing.costlyDeaths||0)'), 'game-arc finish logic must keep overlapping late-risk categories separate');
 ok(modelDoc.includes('## Overlapping late-risk categories')&&modelDoc.includes('can describe one death carrying both labels'), 'analysis model must preserve late-risk overlap semantics');
 ok(html.includes('id="gameArcFunnels"')&&app.includes('function arcFunnelCard(')&&app.includes('function roleSequenceCoverageHtml('), 'League report must use carry-role advantage funnels and SUPPORT/JUNGLE role-sequence coverage');
+ok((app.split("Number(g?.objectiveReadiness?.contestedJoined||0)").length-1)>=4, 'Support/Jungle role-sequence setup state and coverage must use contested-joined evidence');
+ok(!app.includes("Number(g?.objectiveReadiness?.joined||0)"), 'team-secured joined counts must not define role-sequence setup coaching');
+ok(modelDoc.includes('For SUPPORT and JUNGLE role-sequence arcs')&&modelDoc.includes('objectiveReadiness.contestedJoined'), 'analysis documentation must preserve role-sequence setup denominator parity');
 ok(app.includes('function matchReplayReviewHtml(')&&app.includes('data-open-review-match'), 'match history must surface the backend replay-priority queue inside the relevant expandable game');
 ok(app.includes('Practice-first review')&&app.includes('analyzer rank #')&&app.includes('practiceReplayCategories(theme)'), 'standalone replay review must use practice-first current-focus grouping while preserving original analyzer rank');
 ok(app.includes('function practiceReplayCategories(')&&app.includes('function practiceReplayHtml(')&&app.includes('data-practice-review-match'), 'practice priorities must bridge only to existing backend-ranked replay evidence');
