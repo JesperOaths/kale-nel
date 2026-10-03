@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.141'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.142'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -875,7 +875,7 @@ ok(app.includes("'behaviorSummary.objectiveSetupWardRate':[")&&app.includes("'pe
 ok(modelDoc.includes('## Objective target continuity safeguards'), 'analysis documentation must preserve objective target continuity safeguards');
 
 ok(backend.includes('key==="recovery"')&&backend.includes('"High-risk deaths while behind / game"')&&backend.includes('"behaviorSummary.highRiskBehindDeathsPerGame"'), 'recovery practice target must remain measurable at zero unwanted deaths');
-ok(backend.includes('behavior?.timelineGames,5,"Measure whether recovery play is becoming lower variance'), 'recovery practice target must use timeline-complete games as its sample');
+ok(backend.includes('behavior?.directPeerTimelineGames,5,"Measure whether recovery play is becoming lower variance'), 'peer-relative recovery practice target must use trusted direct-peer timeline games as its sample');
 ok(modelDoc.includes('## Zero-safe recovery practice target'), 'analysis documentation must preserve zero-safe recovery target semantics');
 
 ok(backend.includes('repeatDeathsPerTimelineGame=validTimeline.length?repeatDeaths/validTimeline.length:null'), 'backend must export repeat deaths per timeline game');
@@ -1048,3 +1048,10 @@ ok(backend.includes('g=>g.directPeerComparable===true&&g?.phaseRules?.lane15Comp
 ok(backend.includes('if(g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false&&earlyLead?.eligible&&earlyLead?.giveback)add('), 'early-lead replay review must fail closed without a trusted peer');
 ok(app.includes("label:'Early lead give-back',unit:'percent',inverse:true,get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false"), 'TOP outcome fingerprint must use trusted early-lead evidence');
 ok(modelDoc.includes('## v261 early-lead direct-peer integrity'), 'analysis documentation must preserve early-lead direct-peer integrity');
+ok(backend.includes('itemSpikeEligibleGames=validDirectPeerTimeline.filter(g=>g.itemSpikeWindow?.eligible)'), 'item-spike utilization must inherit the trusted direct-peer timeline cohort');
+ok(backend.includes('directPeerTimelineGames=validDirectPeerTimeline.length')&&backend.includes('leadDeaths=validDirectPeerTimeline.reduce')&&backend.includes('behindStateDeaths=validDirectPeerTimeline.reduce'), 'role-economy death-state aggregates must use trusted direct-peer timeline games');
+ok(backend.includes('if(directPeerComparable&&hasNum(g.impactDeltaVsOpponent))')&&backend.includes('if(directPeerComparable&&g.itemSpikeWindow?.eligible)'), 'per-game peer timing/item judgments must fail closed without a trusted peer');
+ok(backend.includes('if(directPeerComparable&&g.firstResetSequence?.measured&&!g.firstResetSequence?.deathInWindow)')&&backend.includes('if(directPeerComparable&&hasNum(g.itemSpikeDeltaVsOpponent))'), 'per-game reset/item opponent-relative judgments must use trusted peers');
+ok(backend.includes('for(const ev of g.directPeerComparable===true?(g.leadDeaths||[]):[])')&&backend.includes('g.directPeerComparable===true&&spike.eligible'), 'replay queue peer-economy moments must be trusted-peer only');
+ok(backend.includes('"behaviorSummary.highRiskBehindDeathsPerGame":["behaviorSummary.directPeerTimelineGames"]')&&app.includes("'behaviorSummary.highRiskLeadDeathsPerGame':['behaviorSummary.directPeerTimelineGames']"), 'practice-target denominator parity must preserve trusted role-economy populations');
+ok(modelDoc.includes('## v262 peer-relative coaching population integrity'), 'analysis documentation must preserve peer-relative coaching population integrity');
