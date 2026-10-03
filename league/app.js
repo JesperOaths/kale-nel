@@ -2188,10 +2188,10 @@ function arcRoleGoldState(g,minute){
 }
 function roleArcObjectiveStage(g){
   if(g?.timelineAvailable!==true)return {key:'objective_unavailable',label:'Objective setup',tone:'neutral',value:'Timeline unavailable',copy:'Objective setup sequencing cannot be reconstructed without timeline evidence.'};
-  const obj=g?.objectiveReadiness||{},joined=Number(obj.joined||0),early=Number(obj.earlySetupJoins||0),contested=Number(obj.contestedObjectives||0),contestedJoined=Number(obj.contestedJoined||0),setupRate=joined?100*early/joined:null;
-  if(!joined&&!contested)return {key:'objective_no_sample',label:'Objective setup',tone:'neutral',value:'No supported objective sample',copy:'No joined or team-contested neutral-objective encounter is available for this match.'};
-  const presence=contested?100*contestedJoined/contested:null,tone=joined>=2&&setupRate!=null?(setupRate>=70?'good':setupRate<45?'bad':'neutral'):'neutral';
-  return {key:'objective_'+(setupRate==null?'unknown':setupRate>=70?'early':setupRate<45?'late':'mixed'),label:'Objective setup',tone,value:(setupRate==null?'Prior setup n/a':fmtPct(setupRate)+' prior setup')+(presence!=null?' · '+fmtPct(presence)+' contested presence':''),copy:'Prior setup means supported position near the objective 45–105 seconds before the event; presence and setup are descriptive event evidence.'};
+  const obj=g?.objectiveReadiness||{},legacySecuredJoined=Number(obj.joined||0),early=Number(obj.earlySetupJoins||0),contested=Number(obj.contestedObjectives||0),contestedJoined=Number(obj.contestedJoined||0),setupRate=contestedJoined?100*early/contestedJoined:null;
+  if(!contestedJoined&&!contested)return {key:'objective_no_sample',label:'Objective setup',tone:'neutral',value:'No supported objective sample',copy:'No joined or team-contested neutral-objective encounter is available for this match.'};
+  const presence=contested?100*contestedJoined/contested:null,tone=contestedJoined>=2&&setupRate!=null?(setupRate>=70?'good':setupRate<45?'bad':'neutral'):'neutral';
+  return {key:'objective_'+(setupRate==null?'unknown':setupRate>=70?'early':setupRate<45?'late':'mixed'),label:'Objective setup',tone,value:(setupRate==null?'Prior setup n/a':fmtPct(setupRate)+' prior setup')+(presence!=null?' · '+fmtPct(presence)+' contested presence':''),copy:'Prior setup means supported position near the objective 45–105 seconds before a joined team-contested encounter; legacy team-secured joins ('+legacySecuredJoined+') are traceability only.'};
 }
 function roleArcTeamplayStage(g){
   if(g?.timelineAvailable!==true)return {key:'teamplay_unavailable',label:'Teamplay',tone:'neutral',value:'Timeline unavailable',copy:'Fight/risk sequencing cannot be reconstructed without timeline evidence.'};
