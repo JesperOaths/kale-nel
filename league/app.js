@@ -1295,10 +1295,26 @@ function historyDistributionCard(label,obj,unit='num'){
   };
   return '<article class="quick-read-card tone-neutral"><div class="quick-read-head"><span>'+esc(label)+'</span><strong>'+esc(format(obj.median))+'</strong></div><p>Middle 50%: '+esc(format(obj.q25))+' → '+esc(format(obj.q75))+'</p><small>'+n+' valid games · median + interquartile range</small></article>';
 }
+function historyStabilityCard(label,obj,unit='num',inverse=false,medianThreshold=0,iqrThreshold=0){
+  const recentN=Number(obj?.recentN||0),priorN=Number(obj?.priorN||0),ready=recentN>=5&&priorN>=5&&hasNum(obj?.recentMedian)&&hasNum(obj?.priorMedian)&&hasNum(obj?.recentIqr)&&hasNum(obj?.priorIqr);
+  if(!ready)return '<article class="pulse-card tone-neutral"><span>'+esc(label)+'</span><strong>Not enough history</strong><small>'+recentN+' recent / '+priorN+' prior valid games · need 5 each</small></article>';
+  const medianDelta=Number(obj.recentMedian)-Number(obj.priorMedian),iqrDelta=Number(obj.recentIqr)-Number(obj.priorIqr),signal=inverse?-medianDelta:medianDelta,tone=Math.abs(medianDelta)<medianThreshold?'neutral':signal>0?'good':'bad';
+  const format=(v)=>{
+    if(unit==='percent')return fmt(v,1)+'%';
+    if(unit==='pp')return signed(v,1)+' pp';
+    if(unit==='dpm')return fmtInt(v);
+    if(unit==='csmin')return fmt(v,2);
+    if(unit==='cs')return fmt(v,1);
+    return fmt(v,2);
+  };
+  const deltaText=unit==='percent'||unit==='pp'?signed(medianDelta,1)+' pp':unit==='dpm'?signed(medianDelta,0):unit==='cs'?signed(medianDelta,1):signed(medianDelta,2);
+  const rangeText=Math.abs(iqrDelta)<iqrThreshold?'middle-50% spread roughly stable':iqrDelta<0?'middle-50% spread narrowed '+format(Math.abs(iqrDelta)):'middle-50% spread widened '+format(Math.abs(iqrDelta));
+  return '<article class="pulse-card tone-'+tone+'"><span>'+esc(label)+'</span><strong>Median '+esc(format(obj.recentMedian))+'</strong><p>Previous median '+esc(format(obj.priorMedian))+' · Δ '+esc(deltaText)+'</p><small>Recent IQR '+esc(format(obj.recentIqr))+' vs '+esc(format(obj.priorIqr))+' · '+esc(rangeText)+' · '+recentN+' vs '+priorN+' games</small></article>';
+}
 function renderLongHorizon(r){
-  const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),consistency=$('historyConsistency'),champions=$('historyChampionMix'),note=$('longHorizonNote');if(!kpi||!trend)return;
+  const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),stability=$('historyStabilityTrend'),consistency=$('historyConsistency'),champions=$('historyChampionMix'),note=$('longHorizonNote');if(!kpi||!trend)return;
   const s=h.summary||{},role=canonicalRole(h.selectedRole||r?.dataQuality?.selectedRole||state.selectedRole),games=Number(h.sampleGames||0);
-  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
+  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
   const laner=['ADC','MID','TOP'].includes(role),roleCounts=h.roleCounts||{},otherRoleGames=Object.entries(roleCounts).reduce((n,[rk,count])=>n+(canonicalRole(rk)!==role?Number(count||0):0),0);
   const roleVolume=laner
     ?{label:'Lane minions @10',value:hasNum(s?.laneCs10?.value)?fmt(s.laneCs10.value,1):'n/a',sub:String(s?.laneCs10?.n||0)+' Riot match-level lane observations'}
@@ -1330,6 +1346,20 @@ function renderLongHorizon(r){
       :{label:'Enemy-jungle monsters / game',obj:h?.trend?.enemyJungleMonsters,unit:'num',inverse:false,threshold:1};
   const specs=[{label:'CS / min',obj:h?.trend?.csMin,unit:'csmin',inverse:false,threshold:.08},roleTrend,{label:'Damage / min',obj:h?.trend?.dpm,unit:'dpm',inverse:false,threshold:60},{label:'Death downtime',obj:h?.trend?.deadTimePct,unit:'percent',inverse:true,threshold:1.5},{label:'Damage share − gold share',obj:h?.trend?.damageEfficiencyPp,unit:'pp',inverse:false,threshold:1.5},{label:'Turret damage / min',obj:h?.trend?.turretDamagePerMin,unit:'dpm',inverse:false,threshold:35}];
   trend.innerHTML=specs.map(x=>historyTrendCard(x.label,x.obj,x.unit,x.inverse,x.threshold)).join('');
+  if(stability){
+    const st=h.stabilityTrend||{},roleStability=laner
+      ?{label:'Lane minions @10',obj:st.laneCs10,unit:'cs',inverse:false,medianThreshold:1.5,iqrThreshold:1}
+      :role==='SUPPORT'
+        ?{label:'Vision actions / min',obj:st.visionActionsPerMin,unit:'num',inverse:false,medianThreshold:.05,iqrThreshold:.05}
+        :{label:'Enemy-jungle monsters / game',obj:st.enemyJungleMonsters,unit:'num',inverse:false,medianThreshold:1,iqrThreshold:1};
+    const stabilitySpecs=[
+      {label:'CS / min',obj:st.csMin,unit:'csmin',inverse:false,medianThreshold:.08,iqrThreshold:.15},
+      roleStability,
+      {label:'Damage / min',obj:st.dpm,unit:'dpm',inverse:false,medianThreshold:60,iqrThreshold:60},
+      {label:'Death downtime',obj:st.deadTimePct,unit:'percent',inverse:true,medianThreshold:1.5,iqrThreshold:1.5}
+    ];
+    stability.innerHTML=stabilitySpecs.map(x=>historyStabilityCard(x.label,x.obj,x.unit,x.inverse,x.medianThreshold,x.iqrThreshold)).join('');
+  }
   if(consistency){
     const c=h.consistency||{},specs=[
       {label:'CS / min',obj:c.csMin,unit:'csmin'},

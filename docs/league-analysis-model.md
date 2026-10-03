@@ -3023,3 +3023,21 @@ The history audit now consumes several match-level fields that were previously c
 The progress-comparison layer now applies the same role-purity rule as current-report rendering. A previous TOP report is never compared against a current ADC report, even if both belong to the same Riot profile. Cross-role previous reports are explicitly withheld and must be rebuilt in the requested role before they can act as development evidence.
 
 Some available fields remain intentionally unpromoted. `structureDamagePerMin` largely duplicates the clearer turret-damage signal for the current coaching UI, while team-rank fields are ordinal and composition-sensitive, so they are kept as per-match context rather than turned into broad performance scores.
+
+
+## v269 robust history shift
+
+The long-horizon panel now separates **typical performance** from **variability**. Mean-only latest-window comparisons can be distorted by one unusually strong or weak match, so the analyzer also computes the median and interquartile range (IQR, the middle 50% of observations) for the latest 20 selected-role games and the previous up-to-20 selected-role games.
+
+The page never combines these into a synthetic “consistency score”. Each robust-shift card reports:
+- recent median versus previous median;
+- the median change in the metric's natural unit;
+- recent IQR versus previous IQR;
+- whether the middle-50% spread narrowed, widened or stayed roughly stable;
+- the actual valid-game counts on both sides.
+
+This allows distinctions such as “typical CS/min improved but match-to-match spread widened” or “lane CS@10 stayed similar while its spread narrowed materially”. Those are more informative than treating average movement and consistency as the same concept.
+
+The comparison heading deliberately says **latest 20 vs previous up to 20**. A 100-account-match scan does not guarantee forty selected-role, selected-queue matches. The UI therefore never implies that the older side contains twenty games when only (for example) eight valid ADC games are available.
+
+Role-specific robust-shift cards remain role-pure and role-aware: lane roles use lane-minions@10, Support uses vision actions, and Jungle uses enemy-jungle monster pressure alongside shared CS/min, damage/min and death-downtime context.

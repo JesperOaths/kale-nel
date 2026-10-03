@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends analysis with a 100-game role scan, evidence-backed Last-20 deep coaching, long-horizon trends and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261003-league-web-v268">
+  <link rel="stylesheet" href="/league/styles.css?v=20261003-league-web-v269">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261002-public-bootstrap-r4"></script>
 </head>
@@ -223,11 +223,15 @@
           </div>
           <div class="kpi-grid" id="longHorizonKpis"></div>
           <div class="recent-pulse">
-            <div class="recent-pulse-head"><div><span>History direction</span><strong>Latest 20 vs previous 20</strong></div><small>Five valid observations are required on both sides. Patch-sensitive interpretation remains descriptive.</small></div>
+            <div class="recent-pulse-head"><div><span>History direction</span><strong>Latest 20 vs previous up to 20</strong></div><small>Five valid observations are required on both sides. Actual valid-game counts appear on every card; patch-sensitive interpretation remains descriptive.</small></div>
             <div class="pulse-grid" id="longHorizonTrend"></div>
           </div>
           <div class="consistency-summary-wrap">
-            <div class="section-subhead"><div><span>Long-horizon consistency</span><strong>Typical range, not just the average</strong></div><small>Median and middle 50% reduce the influence of one extreme game.</small></div>
+            <div class="section-subhead"><div><span>Robust history shift</span><strong>Did the typical game and the variability change?</strong></div><small>Median change and middle-50% spread are shown separately; no composite “consistency score” is invented.</small></div>
+            <div class="pulse-grid" id="historyStabilityTrend"></div>
+          </div>
+          <div class="consistency-summary-wrap">
+            <div class="section-subhead"><div><span>Long-horizon consistency</span><strong>Typical range across the whole role history</strong></div><small>Median and middle 50% reduce the influence of one extreme game.</small></div>
             <div class="quality-grid consistency-grid" id="historyConsistency"></div>
           </div>
           <div class="visual-summary-block">
@@ -529,6 +533,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261003-league-web-v268" defer></script>
+  <script src="/league/app.js?v=20261003-league-web-v269" defer></script>
 </body>
 </html>

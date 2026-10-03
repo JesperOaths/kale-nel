@@ -20,7 +20,7 @@ const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=100;
 const ANALYSIS_HISTORY_TARGET_GAMES=100;
-const ANALYZER_VERSION="league-web-behavior-v4.149";
+const ANALYZER_VERSION="league-web-behavior-v4.150";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1557,10 +1557,16 @@ function longHorizonModel(allGames:any[],primaryRole:string){
   };
   const recentPack:any=pack(recent),priorPack:any=pack(prior),historyPack:any=pack(history);
   const trend=(key:string)=>{const a=recentPack?.[key],b=priorPack?.[key];return{recent:a?.value??null,prior:b?.value??null,recentN:Number(a?.n||0),priorN:Number(b?.n||0),delta:hasNum(a?.value)&&hasNum(b?.value)?Number(a.value)-Number(b.value):null};};
+  const distFor=(sample:any[],fn:(g:any)=>any)=>distribution((sample||[]).map(fn).filter(hasNum).map(Number));
+  const stability=(fn:(g:any)=>any)=>{
+    const a:any=distFor(recent,fn),b:any=distFor(prior,fn),ai=hasNum(a?.q25)&&hasNum(a?.q75)?Number(a.q75)-Number(a.q25):null,bi=hasNum(b?.q25)&&hasNum(b?.q75)?Number(b.q75)-Number(b.q25):null;
+    return{recentN:Number(a?.n||0),priorN:Number(b?.n||0),recentMedian:a?.median??null,priorMedian:b?.median??null,medianDelta:hasNum(a?.median)&&hasNum(b?.median)?Number(a.median)-Number(b.median):null,recentIqr:ai,priorIqr:bi,iqrDelta:hasNum(ai)&&hasNum(bi)?Number(ai)-Number(bi):null};
+  };
   const values=(fn:(g:any)=>any)=>history.map(fn).filter(hasNum).map(Number),championCounts:any={};for(const g of history){const c=text(g?.champion)||"Unknown";championCounts[c]=(championCounts[c]||0)+1;}
   return{roleMetricModel:"role_specific_match_history_v1",targetGames:ANALYSIS_HISTORY_TARGET_GAMES,sampleGames:history.length,deepTimelineGames:history.filter((g:any)=>g?.timelineAvailable===true).length,matchOnlyHistoryGames:history.filter((g:any)=>g?.timelineAvailable!==true).length,
     recent20:recentPack,previous20:priorPack,olderHistory:pack(older),summary:historyPack,
     trend:{csMin:trend("csMin"),laneCs10:trend("laneCs10"),dpm:trend("dpm"),gpm:trend("gpm"),vpm:trend("vpm"),deaths:trend("deaths"),deadTimePct:trend("deadTimePct"),damageEfficiencyPp:trend("damageEfficiencyPp"),turretDamagePerMin:trend("turretDamagePerMin"),epicDamagePerMin:trend("epicDamagePerMin"),visionActionsPerMin:trend("visionActionsPerMin"),controlWardsPlaced:trend("controlWardsPlaced"),enemyJungleMonsters:trend("enemyJungleMonsters"),firstTurretParticipationRate:trend("firstTurretParticipationRate"),visionLeaderRate:trend("visionLeaderRate")},
+    stabilityTrend:{csMin:stability(g=>g.csMin),laneCs10:stability(g=>g.laneCs10),dpm:stability(g=>g.dpm),deaths:stability(g=>g.deaths),deadTimePct:stability(g=>g.deadTimePct),damageEfficiencyPp:stability(g=>g.damageEfficiencyPp),turretDamagePerMin:stability(g=>g.turretDamagePerMin),epicDamagePerMin:stability(g=>g.epicDamagePerMin),visionActionsPerMin:stability(g=>g.visionActionsPerMin),controlWardsPlaced:stability(g=>g.controlWardsPlaced),enemyJungleMonsters:stability(g=>g.enemyJungleMonsters),soloKills:stability(g=>g.soloKills)},
     consistency:{csMin:distribution(values(g=>g.csMin)),laneCs10:distribution(values(g=>g.laneCs10)),soloKills:distribution(values(g=>g.soloKills)),deaths:distribution(values(g=>g.deaths)),deadTimePct:distribution(values(g=>g.deadTimePct)),damageEfficiencyPp:distribution(values(g=>g.damageEfficiencyPp)),turretDamagePerMin:distribution(values(g=>g.turretDamagePerMin)),epicDamagePerMin:distribution(values(g=>g.epicDamagePerMin)),visionActionsPerMin:distribution(values(g=>g.visionActionsPerMin)),controlWardsPlaced:distribution(values(g=>g.controlWardsPlaced)),enemyJungleMonsters:distribution(values(g=>g.enemyJungleMonsters))},
     topChampions:Object.entries(championCounts).map(([champion,games])=>({champion,games:Number(games)})).sort((a:any,b:any)=>b.games-a.games||a.champion.localeCompare(b.champion)).slice(0,8),
     selectedRole:primaryRole,roleCounts:history.reduce((acc:any,g:any)=>{const k=text(g?.role)||"GENERIC";acc[k]=(acc[k]||0)+1;return acc;},{}),patches:[...new Set(history.map((g:any)=>g?.publicPatchKey||g?.patchKey).filter(Boolean))],

@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.149'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.150'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -1086,3 +1086,8 @@ ok(backend.includes('visionLeaderRate:boolRate')&&app.includes("Team vision lead
 ok(app.includes("detailCard('Team gold rank'")&&app.includes("detailCard('Team vision rank'"), 'per-game detail must expose existing team rank metrics');
 ok(app.includes('Previous report withheld.')&&app.includes('previousScope=reportRoleScopeViolations(previous,role)'), 'progress comparison must never compare against a cross-role previous report');
 ok(modelDoc.includes('## v268 role-specific unused-metric promotion'), 'analysis documentation must preserve v268 role-specific metric decisions');
+ok(backend.includes('stabilityTrend:{csMin:stability')&&backend.includes('recentIqr:ai')&&backend.includes('priorIqr:bi'), 'long-horizon model must expose robust median and IQR shifts');
+ok(html.includes('id="historyStabilityTrend"')&&app.includes('function historyStabilityCard('), 'robust history-shift evidence must have a visible consumer');
+ok(html.includes('Latest 20 vs previous up to 20'), 'history copy must disclose that the prior comparison window may contain fewer than 20 games');
+ok(app.includes('middle-50% spread narrowed')&&app.includes('middle-50% spread widened'), 'variability direction must be explicit rather than hidden in a composite score');
+ok(modelDoc.includes('## v269 robust history shift'), 'analysis documentation must preserve v269 robust-history semantics');
