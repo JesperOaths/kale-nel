@@ -976,7 +976,13 @@ ok(modelDoc.includes('## v246 reset-target evidence alignment'), 'analysis docum
 ok(backend.includes('const key=text(theme?.key),tt=text(theme?.title).toLowerCase();let added=false;'), 'target selection must use only the representative theme title');
 ok(backend.includes('const laneIntent=/lane cost|lane economy|lane movement|expensive for|costing lane|adc/.test(tt)'), 'roaming targets must distinguish lane-cost evidence from conversion evidence');
 ok(backend.includes('!laneIntent&&/roam|convert|conversion|return/.test(tt)&&hasNum(behavior?.roamSuccessRate)'), 'roam conversion must not remain a lane-cost fallback');
-ok(backend.includes('/vision-action|ward placement|ward clear|vision.*death|unsafe vision/.test(tt)')&&backend.includes('/setup|objective|ward share|vision volume/.test(tt)'), 'vision targets must follow the representative vision problem');
+ok(
+  backend.includes('/vision-action|ward placement|ward clear|vision.*death|unsafe vision/.test(tt)')&&
+  backend.includes('/giving up vision volume|vision volume trails|vision score/.test(tt)')&&
+  backend.includes('/ward volume.*objective setup|ward share/.test(tt)')&&
+  backend.includes('/pre-objective vision setup|setup trails|fewer wards/.test(tt)'),
+  'vision targets must preserve separate safety, volume, setup-share and setup-count diagnoses'
+);
 ok(backend.includes('/farm|cs|wave/.test(tt)&&hasNum(m.avgCsSwing15to25)')&&backend.includes('/objective|presence|attendance|reconnect|routing|movement/.test(tt)'), 'mid-routing targets must distinguish farm loss from objective presence');
 ok(backend.includes('/before.*contribut|contribution|removed before|uptime/.test(tt)')&&backend.includes('/damage|resource|output|gold share/.test(tt)'), 'teamfight targets must not use generic metric fallbacks');
 ok(modelDoc.includes('## v247 representative-evidence target routing'), 'analysis documentation must preserve representative-evidence target routing');
