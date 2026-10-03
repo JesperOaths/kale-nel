@@ -1006,3 +1006,6 @@ ok(backend.includes('recentEvents:recent.events')&&backend.includes('priorEvents
 ok(modelDoc.includes('## v250 game-weighted recent objective direction'), 'analysis documentation must preserve recent objective aggregation parity');
 ok(app.includes('eventCoveredTrendRow')&&app.includes('equal-weight game mean'), 'technical appendix must display game-weighted recent objective provenance');
 ok(modelDoc.includes('## v251 recent-trend aggregation provenance'), 'analysis documentation must preserve recent-trend provenance labels');
+ok(app.includes('roamReady=roamN>=4&&roamGames>=3')&&app.includes('costReady=costN>=4&&costGames>=3'), 'Support champion diagnostics must fail closed without cross-game roam evidence');
+ok(app.includes('meanGameSupportAdcLaneMovementCs')&&app.includes("costN+' windows · '+costGames+' games'"), 'Support champion lane-movement diagnostic must use the game-weighted value and expose spread');
+ok(modelDoc.includes('## v252 Support champion diagnostic spread'), 'analysis documentation must preserve Support champion spread semantics');
