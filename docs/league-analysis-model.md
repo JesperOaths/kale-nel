@@ -2883,3 +2883,14 @@ The TOP **Early clean duel** card requires at least 3 clean duel events across a
 ## v257 bot-lane outside-pressure semantics
 
 Outside-pressure classification is intentionally available to ADC and SUPPORT. The bot-lane classifier constructs an ordinary lane-opposition set containing both enemy bot-lane roles before checking kill participants. Additional enemy participants outside that set are the outside-pressure signal. Documentation and regression contracts must not revert to the obsolete TOP/MID-only rule.
+
+
+## v258 outside-pressure classification integrity
+
+Outside-pressure analysis is fail-closed when ordinary lane opposition cannot be resolved. Raw early home-lane deaths remain visible for traceability, but only **classified** deaths enter the outside-pressure denominator.
+
+For TOP/MID, classification requires a resolvable ordinary same-role lane opponent. For ADC/SUPPORT, classification requires both ordinary enemy bot-lane counterparts to be resolvable: enemy ADC and enemy Support. If either bot-lane counterpart is missing or ambiguous, that home-lane death is exported as **unclassified** rather than being treated as outside pressure or as a clean ordinary-lane death.
+
+The analyzer exports raw, classified and unclassified early home-lane death counts separately. `earlyOutsidePressureShare` and the repeated-matchup outside-pressure share use `earlyClassifiedHomeLaneDeaths` as their denominator. Global and repeated-matchup coaching floors use classified deaths and classified affected games; unresolved deaths can be displayed for traceability but cannot make an outside-pressure pattern look stronger or weaker.
+
+Bot-lane copy must say **ordinary enemy bot-lane opposition** (or equivalent) rather than “enemy other than the direct role opponent.” The enemy Support is ordinary lane opposition for an ADC, and the enemy ADC is ordinary lane opposition for a Support.
