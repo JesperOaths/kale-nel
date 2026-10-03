@@ -2535,3 +2535,19 @@ Support ADC lane movement also exports `meanGameSupportRoamAdcLaneMovementCs`. P
 Stable harmful Support-roam styling requires at least two harmful ADC lane-movement windows occurring in at least two different games. Two harmful windows concentrated in one match remain a replay cue, not a stable cross-game pattern.
 
 Generic roam lane-movement targets distinguish the legacy measured-window count (`roamLaneCostGames`) from the explicit contributing-game count (`roamLaneCostMeasuredGames`). A multi-game target must use the latter for spread rather than treating any roam game as measured lane-movement evidence.
+
+
+## Action-first cross-game evidence spread
+
+The backend action-first findings must not promote an event-heavy single match into a recurring coaching conclusion. Analyzer v4.112 applies game-spread gates before emitting prominent objective/roam findings.
+
+- Low or strong team-contested objective presence for JUNGLE/SUPPORT requires at least 5 contested encounters across at least 3 contributing games.
+- Prior objective setup requires at least 5 joined contested-objective encounters across at least 3 setup-contributing games.
+- MID/SUPPORT/TOP roam-conversion findings require at least 4 detected queue-specific roam attempts across at least 3 games.
+- MID/TOP lane-movement roam findings require at least 4 measured roam windows across at least 3 measured games; a no-return costly-roam pattern requires at least 2 qualifying windows across at least 2 games.
+- SUPPORT no-return ADC-costly roam findings require at least 2 qualifying windows across at least 2 games.
+- Recent-shop objective-absence findings require the general contested-objective evidence floor and at least 2 recent-shop absences across at least 2 games.
+- A positive fresh-purchase/objective-attendance finding requires the general objective evidence floor plus at least 3 attended fresh-purchase encounters across at least 2 games.
+- A pre-objective-death clue requires at least 2 supported deaths across at least 2 games; setup-vision peer-gap clues require at least 5 comparable setup games in addition to ward-volume evidence.
+
+Confidence for these action-first findings is based on contributing-game counts where appropriate, not raw event counts. The analyzer exports the relevant game-spread counters so the evidence remains auditable.
