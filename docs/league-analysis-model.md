@@ -1731,9 +1731,9 @@ Below those floors, show the value and sample count for traceability, label it *
 
 The **Recent direction** card and recent pulse compare the latest five selected-role coaching games with the preceding role sample. They are short-window descriptive signals, not an independent trend experiment, and they must not quietly switch populations or use looser evidence than the role analysis they summarize.
 
-Prior objective setup uses `earlySetupJoins / contestedJoined`, matching the main team-contested setup model. The historical `objectiveReadiness.joined` field is team-secured presence context and must not be used as the denominator for this coaching trend.
+Prior objective setup uses each game's `earlySetupJoins / contestedJoined` percentage and then averages those valid game percentages, matching the main equal-weight team-contested setup model. Contested-objective presence follows the same per-game-then-mean rule. The historical `objectiveReadiness.joined` field is team-secured presence context and must not be used as the denominator for this coaching trend.
 
-Pooled event-rate trends require both opportunity volume and contributing-game spread. For SUPPORT, latest-five roam conversion requires at least 4 attempts across 3 games; ADC lane movement requires at least 4 measured windows across 3 games; vision-action safety requires at least 12 actions across 4 games; prior setup and contested-objective presence require at least 5 qualifying encounters across 3 games. The prior comparison side requires at least 5 contributing games and the configured opportunity floor. JUNGLE objective setup/presence and MID roam/setup use the same denominator-family rules.
+Event-rate trends such as roam conversion and vision-action safety remain pooled over opportunities but require both opportunity volume and contributing-game spread. Objective setup and contested-objective presence are different: their headline recent/prior values are equal-weight means of valid per-game percentages, while pooled encounter counts remain coverage evidence only. For SUPPORT, latest-five roam conversion requires at least 4 attempts across 3 games; ADC lane movement requires at least 4 measured windows across 3 games; vision-action safety requires at least 12 actions across 4 games; prior setup and contested-objective presence require at least 5 qualifying encounters across 3 games. The prior comparison side requires at least 5 contributing games and the configured opportunity floor. JUNGLE objective setup/presence and MID roam/setup use the same denominator-family rules.
 
 Support ADC lane movement remains a mean of per-game means. Its trend object carries measured-window counts separately from measured-game counts so a few event-heavy matches cannot manufacture directional confidence.
 
@@ -2822,3 +2822,8 @@ The short-window **Recent direction** panel must compare objective setup and con
 For both the latest-five and prior comparison windows, objective setup is the mean of each game's supported prior-setup percentage among joined contested objectives, and objective presence is the mean of each game's supported contested-objective presence percentage. Games without a relevant denominator remain missing rather than becoming zero.
 
 The trend objects still retain pooled encounter counts as `recentEvents` / `priorEvents` so the existing evidence floors can require both enough contributing games and enough objective encounters. Event counts support confidence; they do not determine the headline rate.
+
+
+## v251 recent-trend aggregation provenance
+
+Technical trend rows must display the aggregation reported by the analyzer instead of hard-coding “pooled.” `mean_games_with_event_coverage` is shown as **equal-weight game mean** and `pooled_events` as **pooled event rate**. This keeps team-contested objective setup/presence distinct from team-secured presence and early-KP event rates.
