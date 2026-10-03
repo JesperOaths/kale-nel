@@ -862,3 +862,8 @@ ok(app.includes("fightN=Number(b.fightSamples||0),timelineN=Number(b.timelineGam
 ok(app.includes("path:'behaviorSummary.badDeathsPerTimelineGame',samplePath:'behaviorSummary.timelineGames',min:5"), 'rolling risk progress must use coaching timeline games rather than raw Last-20 coverage');
 ok(app.includes("timeline=Number(q.validTimelineGames||0)")&&app.includes("['Timeline coverage',timeline+'/'+games+' games'"), 'data-quality panels must still expose raw selected-role Last-20 timeline coverage');
 ok(modelDoc.includes('## Coaching versus raw timeline coverage'), 'analysis documentation must preserve raw-versus-coaching timeline denominator semantics');
+
+ok(app.includes("function roleArcObjectiveStage(g)")&&app.includes("setupRate=contestedJoined?100*early/contestedJoined:null"), 'per-match game-arc objective setup must use contested-joined evidence');
+ok(app.includes("tone=contestedJoined>=2&&setupRate!=null"), 'game-arc setup tone must require two joined contested encounters');
+ok(app.includes("legacySecuredJoined=Number(obj.joined||0)")&&app.includes("legacy team-secured joins ('+legacySecuredJoined+') are traceability only"), 'team-secured joins must remain traceability-only inside the game-arc setup stage');
+ok(modelDoc.includes('The per-match `roleArcObjectiveStage()` follows the same rule'), 'analysis documentation must explicitly bind the per-match arc to the contested-joined setup denominator');
