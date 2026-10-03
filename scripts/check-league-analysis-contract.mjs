@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.124'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.125'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -925,3 +925,8 @@ ok(backend.includes('visionActions>=12&&visionActionGames>=4'), 'vision-action c
 ok(backend.includes('visionWardTotal>=20&&opponentVisionWardTotal>=20&&visionSetupGames.length>=5'), 'vision-quality ward-share coaching must require at least five trusted setup games');
 ok(backend.includes('conf(visionActionGames)')&&backend.includes('conf(visionSetupGames.length)'), 'vision coaching confidence must use contributing games rather than pooled event counts');
 ok(modelDoc.includes('## v240 cross-game vision coaching'), 'analysis documentation must preserve v240 vision spread safeguards');
+
+ok(backend.includes('peerDpm)>=120&&["ADC","MID","TOP"].includes(primaryRole)'), 'positive direct-peer DPM highlight must stay carry-role scoped');
+ok(backend.includes('d>=120&&["ADC","MID","TOP"].includes(primaryRole)'), 'recent positive DPM trend must stay carry-role scoped');
+ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&topDamage>=Math.max'), 'top-team-damage highlight must stay carry-role scoped');
+ok(modelDoc.includes('## v241 carry-role damage headline safety'), 'analysis documentation must preserve carry-role damage headline safety');
