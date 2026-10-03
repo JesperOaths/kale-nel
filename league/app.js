@@ -1629,6 +1629,7 @@ const PRACTICE_TARGET_SAMPLE_PATHS={
   'behaviorSummary.midRouting.coachingObjectivePresenceRate':['behaviorSummary.midRouting.games'],
   'behaviorSummary.recentShopObjectiveAbsenceRate':['behaviorSummary.neutralObjectiveEvents'],
   'behaviorSummary.preObjectiveDeathPct':['behaviorSummary.classifiedTimelineDeaths'],
+  'behaviorSummary.preObjectiveDeathsPerTimelineGame':['behaviorSummary.timelineGames'],
   'behaviorSummary.objectiveSetupWardRate':['behaviorSummary.visionWardTotal'],
   'behaviorSummary.earlySetupObjectiveJoinRate':['behaviorSummary.neutralObjectiveJoins'],
   'behaviorSummary.objectiveSetupCoachingRate':['behaviorSummary.objectiveSetupGames'],
