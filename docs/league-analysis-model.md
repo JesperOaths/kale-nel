@@ -239,24 +239,28 @@ Metric-specific same-role means also export their exact contributing-game count.
 
 ## Early lane outside pressure
 
-For **TOP and MID only**, the analyzer separates clean direct-role duel deaths from early home-lane deaths involving other enemy roles.
+For **TOP, MID, ADC and SUPPORT**, the analyzer separates ordinary lane-opponent pressure from early home-lane deaths involving an additional enemy role.
 
 A death enters this comparison when:
-- it occurs by 14 minutes,
+- it occurs inside the queue-aware early phase,
 - the player's mapped position is in their normalized home lane,
-- the role is TOP or MID.
+- the selected role is TOP, MID, ADC or SUPPORT.
 
-An **outside-pressure death** means at least one enemy participant in the kill event is not the actual same-role opponent. The report preserves the attacker-role set where Riot participant data supports it.
+The lane-opposition set is role-aware:
+- **TOP / MID:** the ordinary lane opponent is the actual same-role opponent.
+- **ADC / SUPPORT:** both ordinary enemy bot-lane counterparts are lane opposition. For an ADC, the enemy Support is not “outside pressure”; for a Support, the enemy ADC is not “outside pressure.”
 
-This is deliberately not applied to ADC/SUPPORT, because bot lane is structurally a multi-player lane and the same interpretation would be misleading.
+An **outside-pressure death** means at least one supported enemy participant in the kill event falls outside that ordinary lane-opposition set. In bot lane this therefore points to additional Jungle/Mid/Top or other extra-role pressure rather than normal 2v2 participation. The report preserves the attacker-role set where Riot participant data supports it.
 
-If outside-pressure deaths dominate a sufficiently large early-lane death sample, coaching should focus on:
+Global coaching requires repeated evidence rather than one chaotic game: at least 4 early home-lane deaths across at least 3 affected games, with at least 3 outside-pressure deaths spread across at least 2 games and an outside-pressure share of at least 60%.
+
+If outside-pressure deaths dominate that sufficiently distributed sample, coaching should focus on:
 - wave depth while enemy positions are unknown,
 - ward timing before vulnerable waves,
-- jungle/support tracking,
-- whether a trade is still safe when outside pressure is missing from the map.
+- jungle/roam tracking,
+- whether a trade is still safe when extra pressure is missing from the map.
 
-This distinction prevents the report from misdiagnosing a map-awareness problem as a pure matchup-mechanics problem.
+This distinction prevents the report from misdiagnosing ordinary bot-lane 2v2 pressure as a gank/roam problem, while still allowing ADC/SUPPORT reports to identify genuinely additional enemy pressure.
 
 ## Solo-kill structure conversion
 
@@ -2874,3 +2878,8 @@ Across the current mechanics coaching cohort, the analyzer now exports game-spre
 Global clean-1v1 negative/positive coaching retains the existing event and trusted-peer sample floors but additionally requires the relevant solo outcomes to appear in at least 2 games. The global outside-pressure finding requires at least 4 early home-lane deaths across at least 3 affected games, with at least 3 outside-pressure deaths occurring across at least 2 games.
 
 The TOP **Early clean duel** card requires at least 3 clean duel events across at least 2 games before directional styling. Positive or negative coloring also requires the corresponding wins/deaths to repeat across at least 2 games. Technical traceability displays the event counts and contributing-game counts separately.
+
+
+## v257 bot-lane outside-pressure semantics
+
+Outside-pressure classification is intentionally available to ADC and SUPPORT. The bot-lane classifier constructs an ordinary lane-opposition set containing both enemy bot-lane roles before checking kill participants. Additional enemy participants outside that set are the outside-pressure signal. Documentation and regression contracts must not revert to the obsolete TOP/MID-only rule.
