@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.146'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.147'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -1071,3 +1071,7 @@ ok(backend.includes('ANALYSIS_HISTORY_TARGET_GAMES=100')&&backend.includes('func
 ok(backend.includes('body.plan_only===true')&&backend.includes('timeline_target_ids:timelineTargetIds')&&app.includes("fetchProfileData(profile,100,8,84,targetRole)"), '100-game scan must separate metadata discovery from Last-20 deep timeline fetch');
 ok(app.includes("g?.outcomeCompromised!==true")&&backend.includes('outcomeCompromised:hadAfkTeammate||earlySurrender'), 'outcome fingerprint must prefer uncontaminated win/loss samples when possible');
 ok(modelDoc.includes('## v265 100-game history and metric-utility audit'), 'analysis documentation must preserve the v265 metric-utility audit');
+ok(backend.includes('if(row?.fetch_error)continue')&&app.includes('for(let round=0;round<4;round++)'), 'timeline failures must trigger bounded replacement planning from older comparable games');
+ok(backend.includes('!!row?.timeline_json&&rr!=="GENERIC"')&&backend.includes('timelineDeepCandidates=roleDeepCandidates.filter'), 'deep sample construction must count and prioritize real timeline evidence');
+ok(backend.includes('deepTimelineFallbackGames:games.filter'), 'data quality must expose residual no-timeline fallback games');
+ok(modelDoc.includes('## v266 deep-timeline failover integrity'), 'analysis documentation must preserve v266 deep-timeline failover integrity');

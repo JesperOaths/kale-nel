@@ -2983,3 +2983,12 @@ The new Long-horizon form panel shows the available selected-role/same-queue his
 Not every available Riot field was promoted. Skillshot hit/dodge counts are highly champion- and spell-dependent; opaque challenge flags such as `laningPhaseGoldExpAdvantage` are not treated as precise coaching measurements; and `kTurretsDestroyedBeforePlatesFall` is obsolete as a 2026 concept. Riot changed Summoner's Rift in 26.1 so turret plates are permanent and extend to inner/inhibitor structures. The analyzer may retain `turretPlatesTaken` as all-game structure-pressure context, but never labels it “pre-14 plates” or uses the retired 14-minute disappearance assumption.
 
 The historical object formerly exposed internally as `lifetime` is now also named `historySummary`. It is bounded recent history, not a lifetime career sample; the legacy alias remains only for report compatibility.
+
+
+## v266 deep-timeline failover integrity
+
+The 100-game scan now treats a timeline fetch failure as a failed deep-evidence slot, not as a successfully filled Last-20 slot. The browser re-runs the bounded deep plan after each fetch round. A row with a timeline error is skipped for the remainder of that run and the planner moves into the next older selected-role, same-queue game until twenty usable timeline slots are available, the comparable history is exhausted, or four bounded replacement rounds have been attempted.
+
+The analyzer mirrors that rule. Its deep-read loop counts a game toward the deep target only when timeline JSON is actually present, and report construction prefers timeline-backed selected-role candidates before any residual no-timeline fallback. Failed recent games remain available in the match-level 100-game history rather than disappearing from the account record.
+
+Data Quality now reports both `deepTimelineGames` and `deepTimelineFallbackGames`, making any residual evidence shortfall explicit instead of silently presenting a 20-game behavioral sample that contains unavailable timelines. Peer-rank targeting follows the same replacement cohort produced by the final fetch plan.

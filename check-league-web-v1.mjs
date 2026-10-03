@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.146'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.147'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v265'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v266'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1278,3 +1278,7 @@ assert.ok(api.includes('body.plan_only===true')&&api.includes('timeline_target_i
 assert.ok(html.includes('id="long-horizon"')&&html.includes('id="longHorizonKpis"')&&html.includes('id="longHorizonTrend"')&&app.includes('function renderLongHorizon('),'Long-horizon analysis must be visible on the League page');
 assert.ok(app.includes("g?.outcomeCompromised!==true")&&api.includes('outcomeCompromised:hadAfkTeammate||earlySurrender'),'Win/loss fingerprint must prefer clean outcomes when AFK/early-surrender context is available');
 assert.ok(modelDoc.includes('## v265 100-game history and metric-utility audit'),'100-game scan and metric-utility decisions must remain documented');
+assert.ok(api.includes('if(row?.fetch_error)continue')&&app.includes('for(let round=0;round<4;round++)'),'Timeline failures must trigger bounded replanning into older comparable games instead of shrinking the deep evidence sample');
+assert.ok(api.includes('!!row?.timeline_json&&rr!=="GENERIC"')&&api.includes('timelineDeepCandidates=roleDeepCandidates.filter'),'Deep sample completion and report selection must prefer actual timeline evidence, not merely matching roles');
+assert.ok(api.includes('deepTimelineFallbackGames:games.filter'),'Data quality must disclose any no-timeline fallback games that remain after replacement attempts');
+assert.ok(modelDoc.includes('## v266 deep-timeline failover integrity'),'Deep-timeline failover semantics must remain documented');

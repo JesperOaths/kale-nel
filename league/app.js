@@ -603,16 +603,20 @@ async function fetchProfileData(profile,requestedCount,progressStart=8,progressE
     setProgress(progressStart+(progressEnd-progressStart)*.68*(done/Math.max(1,ids.length)),100);
     if(done%10===0||done===ids.length)log('Scanned '+done+'/'+ids.length+' recent matches · '+scanned+' metadata rows available · '+failed+' failed.',failed?'bad':'ok');
   }
-  const plan=await api('fetch_finish',{run_id:prep.run_id,target_role:targetRole,plan_only:true}),deepIds=Array.isArray(plan.timeline_target_ids)?plan.timeline_target_ids:[];
-  log(roleLabel(targetRole)+' cohort selected from the 100-game scan: '+String(plan.comparable_cached_games||0)+' same-role + queue games found; '+String(plan.timeline_available_count||0)+' Last-20 timelines already cached and '+deepIds.length+' need deep fetch.','ok');
-  let deepDone=0,deepFetched=0,deepFailed=0;
-  for(const id of deepIds){
-    deepDone++;
-    try{const one=await api('fetch_one',{run_id:prep.run_id,match_id:id,target_role:targetRole,fetch_depth:'deep'});if(one.timeline_available)deepFetched++;else deepFailed++;if(!one.timeline_available)log('Timeline '+id+' unavailable: '+(one.timeline_error||'unknown'),'bad');}catch(e){deepFailed++;log('Timeline '+id+' · '+e.message,'bad');}
-    setProgress(progressStart+(progressEnd-progressStart)*(.68+.32*(deepDone/Math.max(1,deepIds.length))),100);await sleep(90);
+  let plan=null,deepFetched=0,deepFailed=0,deepAttempted=0;
+  for(let round=0;round<4;round++){
+    plan=await api('fetch_finish',{run_id:prep.run_id,target_role:targetRole,plan_only:true});
+    const deepIds=Array.isArray(plan.timeline_target_ids)?plan.timeline_target_ids:[];
+    if(round===0)log(roleLabel(targetRole)+' cohort selected from the 100-game scan: '+String(plan.comparable_cached_games||0)+' same-role + queue games found; '+String(plan.timeline_available_count||0)+' deep timelines already cached and '+deepIds.length+' need fetch.','ok');
+    if(!deepIds.length)break;
+    for(const id of deepIds){
+      deepAttempted++;
+      try{const one=await api('fetch_one',{run_id:prep.run_id,match_id:id,target_role:targetRole,fetch_depth:'deep'});if(one.timeline_available)deepFetched++;else{deepFailed++;log('Timeline '+id+' unavailable; an older comparable game will be tried instead: '+(one.timeline_error||'unknown'),'bad');}}catch(e){deepFailed++;log('Timeline '+id+' · '+e.message,'bad');}
+      setProgress(progressStart+(progressEnd-progressStart)*(.68+.32*Math.min(1,deepAttempted/20)),100);await sleep(90);
+    }
   }
   const finish=await api('fetch_finish',{run_id:prep.run_id,target_role:targetRole});
-  if(hasNum(finish?.dominant_queue_id))log(profile.display_name+' · '+roleLabel(targetRole)+' queue '+String(finish.dominant_queue_id)+' selected · '+String(finish.comparable_cached_games??0)+' comparable history games · '+String(finish.timeline_available_count??0)+' deep Last-20 timelines · '+String(finish.peer_rank_backfilled??0)+' peer-rank snapshots added.','ok');
+  if(hasNum(finish?.dominant_queue_id))log(profile.display_name+' · '+roleLabel(targetRole)+' queue '+String(finish.dominant_queue_id)+' selected · '+String(finish.comparable_cached_games??0)+' comparable history games · '+String(finish.timeline_available_count??0)+' deep timeline slots ready · '+String(deepFailed)+' timeline failure'+(deepFailed===1?'':'s')+' replaced where possible · '+String(finish.peer_rank_backfilled??0)+' peer-rank snapshots added.','ok');
   const usable=Number(finish?.comparable_cached_games||0);if(usable===0)throw new Error('The 100-game scan found no eligible '+roleLabel(targetRole)+' games in a supported Summoner’s Rift queue.');
   return{prep,plan,finish,usable,failed:failed+deepFailed,newMetadata,deepFetched};
 }
