@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.113'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.114'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -801,3 +801,7 @@ ok(backend.includes('hasNum(meanGameRoamLaneMovementCs)&&Number(meanGameRoamLane
 ok(backend.includes('"behaviorSummary.meanGameRoamLaneMovementCs":[{path:"behaviorSummary.roamLaneCostGames",min:4},{path:"behaviorSummary.roamLaneCostMeasuredGames",min:3}]'), 'new generic roam targets must retain window/game evidence requirements');
 ok(backend.includes('"behaviorSummary.meanGameRoamLaneMovementCs",behavior.meanGameRoamLaneMovementCs'), 'new generic roaming targets must use the game-weighted metric');
 ok(modelDoc.includes('## Game-weighted generic roam lane movement'), 'analysis documentation must preserve game-weighted generic roam semantics');
+ok(backend.includes('objectiveJoinGameMean:{...gameObjectivePresenceWl,aggregation:"mean_games"}'), 'backend must retain an equal-weight per-game objective win/loss comparison');
+ok(backend.includes('mean per-game objective presence is')&&backend.includes('equal-weight per-game team-contested objective presence in wins vs losses'), 'action-first objective outcome finding must use game-weighted presence');
+ok(backend.includes('Number(gameObjectivePresenceWl.winsN||0)>=4&&Number(gameObjectivePresenceWl.lossesN||0)>=4'), 'objective outcome association must fail closed below four evidence-bearing wins or losses');
+ok(modelDoc.includes('## Game-weighted objective outcome association'), 'analysis documentation must preserve objective outcome weighting semantics');
