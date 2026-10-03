@@ -3067,3 +3067,14 @@ This is deliberately narrower than a generic “efficiency score”. It asks whe
 The metric is shown only for the lane carry roles (ADC, MID, TOP). Support is evaluated with role-relevant vision/control context, and Jungle retains counter-jungle/objective-pressure context rather than inheriting this carry-lane lens.
 
 In the current role-pure ADC cache, 25 of 28 games finish top-two on team gold and 19 of those 25 also finish top-two on team champion damage (76%). The latest-20 and previous-up-to-20 history windows carry their own eligible-game denominators, so a small-sample percentage cannot masquerade as equally strong evidence.
+
+
+## v272 lower-resource punch-up context
+
+ADC, MID and TOP long-horizon history now adds a complementary **lower gold → top-2 damage** view beside the existing top-2 gold → top-2 damage conversion.
+
+The denominator is only games where the player finishes outside the top two on their own team in gold earned. The numerator is the subset of those games where the player still finishes top-two on the team in champion damage. The page shows numerator and denominator with the percentage so a tiny eligible sample cannot look like strong evidence.
+
+This is descriptive carry-role context, not an efficiency grade. It is useful because the existing high-resource conversion only answers whether large resource share turned into large damage share. The new view answers the opposite question: whether the player sometimes produces high team-relative damage despite receiving a smaller team-relative gold share.
+
+Champion identity, split-push assignments, utility responsibilities, matchup state, fight access and game duration can all make low gold plus top-two damage more or less meaningful. For that reason the metric is never used alone as a coaching verdict and remains restricted to ADC, MID and TOP history.
