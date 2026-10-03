@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.117";
+const ANALYZER_VERSION="league-web-behavior-v4.118";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -2181,6 +2181,8 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
       "behaviorSummary.avgRoamLaneCostCs":[{path:"behaviorSummary.roamLaneCostGames",min:4},{path:"behaviorSummary.roamLaneCostMeasuredGames",min:3}],
       "behaviorSummary.meanGameRoamLaneMovementCs":[{path:"behaviorSummary.roamLaneCostGames",min:4},{path:"behaviorSummary.roamLaneCostMeasuredGames",min:3}],
       "behaviorSummary.meanGameSupportRoamAdcLaneMovementCs":[{path:"behaviorSummary.supportRoamAdcLaneMovementWindows",min:4},{path:"behaviorSummary.supportRoamAdcLaneMovementGames",min:3}],
+      "behaviorSummary.preObjectiveDeathPct":[{path:"behaviorSummary.classifiedTimelineDeaths",min:5},{path:"behaviorSummary.timelineGames",min:3}],
+      "behaviorSummary.objectiveSetupWardRate":[{path:"behaviorSummary.visionWardTotal",min:12},{path:"peerComparison.visionSetupGames",min:5}],
       "behaviorSummary.visionActionDeathRate":[{path:"behaviorSummary.visionActions",min:12},{path:"behaviorSummary.visionActionGames",min:4}],
       "behaviorSummary.earlySetupObjectiveJoinRate":[{path:"behaviorSummary.neutralObjectiveJoins",min:5},{path:"behaviorSummary.objectiveSetupGames",min:3}],
       "behaviorSummary.objectiveSetupCoachingRate":[{path:"behaviorSummary.neutralObjectiveJoins",min:5},{path:"behaviorSummary.objectiveSetupGames",min:3}],
