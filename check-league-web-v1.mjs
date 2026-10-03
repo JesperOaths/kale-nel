@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v228'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v229'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1055,5 +1055,10 @@ assert.ok(app.includes("fightN=Number(b.fightSamples||0),timelineN=Number(b.time
 assert.ok(app.includes("path:'behaviorSummary.badDeathsPerTimelineGame',samplePath:'behaviorSummary.timelineGames',min:5"),'Rolling high-risk-death progress must use the coaching-cohort timeline denominator');
 assert.ok(app.includes("timeline=Number(q.validTimelineGames||0)")&&app.includes("['Timeline coverage',timeline+'/'+games+' games'"),'Raw cohort/coverage UI must retain dataQuality.validTimelineGames for availability reporting');
 assert.ok(modelDoc.includes('## Coaching versus raw timeline coverage')&&modelDoc.includes('`behaviorSummary.timelineGames` is timeline coverage inside the actual mechanics-filtered coaching cohort'),'Mechanics-sensitive coaching cards must use behaviorSummary.timelineGames while raw quality panels retain Last-20 coverage');
+
+assert.ok(app.includes("function roleArcObjectiveStage(g)")&&app.includes("setupRate=contestedJoined?100*early/contestedJoined:null"),'Per-match game-arc setup must use joined team-contested encounters, not team-secured joins');
+assert.ok(app.includes("tone=contestedJoined>=2&&setupRate!=null"),'Game-arc setup directional tone must require at least two joined team-contested encounters');
+assert.ok(app.includes("legacySecuredJoined=Number(obj.joined||0)")&&app.includes("legacy team-secured joins ('+legacySecuredJoined+') are traceability only"),'Legacy secured joins may remain visible only as game-arc traceability');
+assert.ok(modelDoc.includes('The per-match `roleArcObjectiveStage()` follows the same rule')&&modelDoc.includes('`earlySetupJoins / contestedJoined`'),'Per-match game-arc setup denominator parity must remain documented');
 
 console.log('league-web-contract=PASS');
