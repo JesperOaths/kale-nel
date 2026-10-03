@@ -829,6 +829,8 @@ ok(backend.includes('Number(gameObjectivePresenceWl.winsN||0)>=4&&Number(gameObj
 ok(modelDoc.includes('## Game-weighted objective outcome association'), 'analysis documentation must preserve objective outcome weighting semantics');
 ok(backend.includes('objectiveCoachingPresenceRate=meanGameObjectiveContestPresenceRate'), 'backend must define game-weighted coaching objective presence');
 ok(backend.includes('objectivePresence:cm.behaviorSummary.objectiveCoachingPresenceRate')&&backend.includes('objectivePresencePooled:cm.behaviorSummary.objectiveJoinRate'), 'advanced objective presence must prefer game-weighted coaching value and retain pooled context');
+ok(!app.includes('c.contestReady,wilsonInterval(contestHits,c.contestN)')&&!app.includes('c.contestReady,wilsonInterval(contestHits,contestN)'), 'mean-game objective-presence cards must not attach pooled Wilson intervals');
+ok(modelDoc.includes('mean-game contested-objective presence cards do not render a Wilson interval'), 'analysis documentation must preserve objective-presence uncertainty semantics');
 ok(backend.includes('"behaviorSummary.objectiveCoachingPresenceRate":[{path:"behaviorSummary.neutralObjectiveEvents",min:5},{path:"behaviorSummary.objectiveContestGames",min:3}]'), 'objective-presence practice targets must preserve encounter and game-spread requirements');
 ok(app.includes('b.objectiveCoachingPresenceRate??b.meanGameObjectiveContestPresenceRate??b.objectiveContestPresenceRate??b.objectiveJoinRate'), 'Support/Jungle coaching UI must prefer game-weighted objective presence');
 ok(modelDoc.includes('## Coaching-facing objective presence aggregation'), 'analysis documentation must preserve coaching objective-presence aggregation semantics');
