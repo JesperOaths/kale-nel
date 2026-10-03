@@ -2283,6 +2283,8 @@ A chart being drawable is not the same as its coaching evidence being mature. Ro
 
 Current chart floors mirror the report semantics: direct-role @15 charts need 5 comparable lane games; peer VPM/CS-min/impact/setup charts need 5 comparable peer games; first-major timing needs 4; Support roam conversion needs 4 attempts across 3 games; Support ADC lane movement needs 4 measured windows across 3 games; and contested-objective presence needs 5 encounters across 3 games. DPM/KP sample charts require 5 selected-role coaching games.
 
+Signed zero-line wording is metric-specific. Peer deltas may label zero as even with the direct role opponent, but Support ADC lane movement must label zero as no measured ADC lane movement. Trend summaries use the latest valid observations rather than implying that missing games were observed values.
+
 ## Role-aware combined intelligence
 
 Compound-intelligence cards must not reintroduce role assumptions that the dedicated role lenses have already removed. Joined evidence is role-gated before interpretation:
