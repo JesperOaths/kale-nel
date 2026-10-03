@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.117'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.118'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -867,3 +867,9 @@ ok(app.includes("function roleArcObjectiveStage(g)")&&app.includes("setupRate=co
 ok(app.includes("tone=contestedJoined>=2&&setupRate!=null"), 'game-arc setup tone must require two joined contested encounters');
 ok(app.includes("legacySecuredJoined=Number(obj.joined||0)")&&app.includes("legacy team-secured joins ('+legacySecuredJoined+') are traceability only"), 'team-secured joins must remain traceability-only inside the game-arc setup stage');
 ok(modelDoc.includes('The per-match `roleArcObjectiveStage()` follows the same rule'), 'analysis documentation must explicitly bind the per-match arc to the contested-joined setup denominator');
+
+ok(backend.includes('"behaviorSummary.preObjectiveDeathPct":[{path:"behaviorSummary.classifiedTimelineDeaths",min:5},{path:"behaviorSummary.timelineGames",min:3}]'), 'pre-objective-death practice targets must require death volume plus timeline-game spread');
+ok(backend.includes('"behaviorSummary.objectiveSetupWardRate":[{path:"behaviorSummary.visionWardTotal",min:12},{path:"peerComparison.visionSetupGames",min:5}]'), 'setup-vision practice targets must preserve comparable peer/setup-game context');
+ok(app.includes("'behaviorSummary.preObjectiveDeathPct':[")&&app.includes("'behaviorSummary.timelineGames',min:3"), 'legacy pre-objective-death targets must be upgraded on read');
+ok(app.includes("'behaviorSummary.objectiveSetupWardRate':[")&&app.includes("'peerComparison.visionSetupGames',min:5"), 'legacy setup-vision targets must be upgraded on read');
+ok(modelDoc.includes('## Objective target continuity safeguards'), 'analysis documentation must preserve objective target continuity safeguards');
