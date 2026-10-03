@@ -843,7 +843,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v220'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v221'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1028,4 +1028,6 @@ assert.ok(api.includes('"behaviorSummary.objectiveCoachingPresenceRate":[{path:"
 assert.ok(api.includes('"Objective presence","behaviorSummary.objectiveCoachingPresenceRate"'),'New generic objective-presence practice targets must use the coaching-facing game-weighted metric');
 assert.ok(app.includes('b.objectiveCoachingPresenceRate??b.meanGameObjectiveContestPresenceRate??b.objectiveContestPresenceRate??b.objectiveJoinRate'),'Prominent frontend objective coaching must prefer game-weighted presence with saved-report fallbacks');
 assert.ok(app.includes("'mean per-game rate · pooled '"),'Role cards must disclose pooled encounter traceability alongside the mean-game headline');
+assert.ok(!app.includes('c.contestReady,wilsonInterval(contestHits,c.contestN)')&&!app.includes('c.contestReady,wilsonInterval(contestHits,contestN)'),'Mean-game objective-presence cards must not render pooled Wilson intervals');
+assert.ok(modelDoc.includes('mean-game contested-objective presence cards do not render a Wilson interval'),'Objective-presence uncertainty semantics must remain documented');
 assert.ok(modelDoc.includes('## Coaching-facing objective presence aggregation'),'Coaching objective-presence aggregation semantics must remain documented');
