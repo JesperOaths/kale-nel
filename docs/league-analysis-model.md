@@ -2562,3 +2562,10 @@ The analyzer exports both:
 - `meanGameRoamLaneMovementCs`: game-weighted cross-game average used by new prominent MID/TOP action-first conclusions and newly created generic roaming practice targets.
 
 The evidence floor remains at least 4 measured roam windows across at least 3 measured games. Repeated no-return costly-roam findings separately require at least 2 qualifying windows across at least 2 games.
+
+
+## Game-weighted objective outcome association
+
+The prominent action-first finding **Objective attendance is strongly associated with your wins** compares equal-weight per-game team-contested objective presence, not a pooled count of every objective encounter. This keeps one unusually long objective-heavy match from dominating the win/loss comparison.
+
+The backend still exports the pooled event-rate win/loss object as `winLoss.objectiveJoin` for technical traceability. The action-first association uses `winLoss.objectiveJoinGameMean`, which is the mean of each game's supported contested-objective presence rate. Both outcome sides require at least 4 games with contested-objective evidence, and the finding remains explicitly descriptive/associational rather than causal.
