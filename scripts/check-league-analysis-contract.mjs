@@ -909,7 +909,7 @@ ok(JSON.stringify(frontendPracticeRegistryKeys)===JSON.stringify(backendPractice
 ok(app.includes("'behaviorSummary.meanGameRoamLaneMovementCs':['behaviorSummary.roamLaneCostMeasuredGames']"), 'frontend fallback must preserve game-weighted generic roam denominator');
 ok(modelDoc.includes('## Practice-target registry parity'), 'analysis documentation must preserve practice-target registry parity');
 
-ok(app.includes('function explicitGameRole(v){')&&app.includes("return null;\n}\nfunction gameMatchesNamedFilter"), 'saved-report game role parser must fail closed on missing/unknown role instead of inheriting ADC');
+ok(app.includes('function explicitGameRole(v){')&&app.includes("if(r==='TOP')return'TOP';\n  return null;"), 'saved-report game role parser must fail closed on missing/unknown role instead of inheriting ADC');
 ok(app.includes("selectedRole?games.filter(g=>explicitGameRole(g?.role)===selectedRole):games"), 'frontend-derived coaching cohort must filter explicit selected role before mechanics cohort');
 ok(app.includes("if(selectedRole&&explicitGameRole(g?.role)!==selectedRole)return false;"), 'legacy mixed-role rows must remain context-only in match history');
 ok(app.includes('const coachingN=reportCoachingGames(r).length'), 'report coaching-comparable count must use reconstructed strict cohort');
