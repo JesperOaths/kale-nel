@@ -2569,3 +2569,12 @@ The evidence floor remains at least 4 measured roam windows across at least 3 me
 The prominent action-first finding **Objective attendance is strongly associated with your wins** compares equal-weight per-game team-contested objective presence, not a pooled count of every objective encounter. This keeps one unusually long objective-heavy match from dominating the win/loss comparison.
 
 The backend still exports the pooled event-rate win/loss object as `winLoss.objectiveJoin` for technical traceability. The action-first association uses `winLoss.objectiveJoinGameMean`, which is the mean of each game's supported contested-objective presence rate. Both outcome sides require at least 4 games with contested-objective evidence, and the finding remains explicitly descriptive/associational rather than causal.
+
+
+## Coaching-facing objective presence aggregation
+
+Prominent Support/Jungle objective-presence coaching uses the equal-weight **mean per-game** contested-objective presence rate. The pooled encounter rate remains available as technical traceability and is shown separately in the appendix.
+
+Analyzer v4.115 exports `objectiveCoachingPresenceRate` as the coaching-facing alias of `meanGameObjectiveContestPresenceRate`. The report's `advanced.objectivePresence` uses this game-weighted value and also exposes `objectivePresencePooled` plus `objectivePresenceAggregation: "mean_games"`.
+
+Action-first low/strong objective-presence findings, Support/Jungle role cards, compound Jungle objective-readiness context, rolling progress and newly created generic objective-presence practice targets all use the game-weighted coaching value. The target still requires at least 5 contested encounters across at least 3 contributing games. Legacy saved pooled-rate targets remain readable through their historical metric paths.
