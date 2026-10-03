@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.129'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.130'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v245'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v246'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1161,3 +1161,10 @@ assert.ok(api.includes('added=postLossIntent?postLossFirst():laterIntent?laterFi
 assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&hasNum(behavior?.damageGoldEfficiency)'),'Teamfight damage-resource practice targets must stay carry-role scoped');
 assert.ok(app.includes("if(unit==='minutes')return signed(n,1)+' min'"),'Timing practice targets must retain explicit minute formatting');
 assert.ok(modelDoc.includes('## v245 practice-theme target alignment'),'Practice-theme target alignment must remain documented');
+
+assert.ok(api.includes('greedyStayGames=validTimeline.filter')&&api.includes('greedyStaysPerTimelineGame=validTimeline.length?greedy/validTimeline.length:null'),'Analyzer must export greedy-stay game spread and zero-safe per-game rate');
+assert.ok(api.includes('if(greedy>=4&&greedyStayGames>=3)push(recentFocus,"resets","High-gold stays appear repeatedly"'),'Greedy-stay coaching must require repeated windows across games');
+assert.ok(api.includes('"behaviorSummary.greedyStaysPerTimelineGame":["behaviorSummary.timelineGames"]')&&app.includes("'behaviorSummary.greedyStaysPerTimelineGame':['behaviorSummary.timelineGames']"),'Greedy-stay Next-5 target must use the zero-safe timeline-game denominator');
+assert.ok(api.includes('/high.?gold|greedy|stay|spendable gold/.test(tt)')&&api.includes('"High-gold stays / game"'),'High-gold reset themes must map to the exact greedy-stay target');
+assert.ok(api.includes('/unspent|stored gold|1000g/.test(tt)&&hasNum(behavior?.highUnspentFightRate)'),'Fight-unspent target must require source-theme wording rather than act as a generic reset fallback');
+assert.ok(modelDoc.includes('## v246 reset-target evidence alignment'),'Reset-target evidence alignment must remain documented');
