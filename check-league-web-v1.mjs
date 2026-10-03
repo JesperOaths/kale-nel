@@ -113,11 +113,11 @@ assert.ok(app.includes('Early KP · pooled')&&app.includes('Objective-context de
 assert.ok(api.includes('const pooledEventRate='),'Derived event-rate comparisons must share one pooled numerator/denominator helper');
 assert.ok(api.includes('earlyKp:{wins:winEarlyWins.rate,losses:winEarlyLosses.rate'),'Win/loss early KP must use pooled event rates');
 assert.ok(api.includes('objectiveJoin:{wins:winObjWins.rate,losses:winObjLosses.rate'),'Win/loss objective presence must use pooled event rates');
-assert.ok(api.includes('objectiveJoin:trendEventRate(g=>g.objectiveContestJoined,g=>g.objectiveContestTotal)'),'Recent coaching objective-presence trend must pool team-contested events');
+assert.ok(api.includes('objectiveJoin:trendGameMeanWithEvents(')&&api.includes('g=>Number(g.objectiveContestTotal||0)>0?100*Number(g.objectiveContestJoined||0)/Number(g.objectiveContestTotal):null'),'Recent coaching objective-presence trend must use equal-weight per-game contested-objective rates');
 assert.ok(api.includes('securedObjectiveJoin:trendEventRate(g=>g.objectiveJoined,g=>g.objectiveTeamTotal)'),'Recent team-secured presence must remain separately trendable');
 assert.ok(api.includes('earlyKp:trendEventRate(g=>g.earlyPlayerKillInvolvements,g=>g.earlyTeamKills)'),'Recent early-KP trend must use pooled event rates');
 assert.ok(api.includes('aggregation:"pooled_events"'),'Pooled derived metrics must carry aggregation provenance');
-assert.ok(app.includes('Early KP · wins / losses · pooled')&&app.includes('Latest 5 team-contested presence / previous · pooled'),'Frontend must disclose pooled team-contested comparison semantics');
+assert.ok(app.includes('Early KP · wins / losses · pooled')&&app.includes("aggregation==='mean_games_with_event_coverage'?'equal-weight game mean'")&&app.includes("aggregation==='pooled_events'?'pooled event rate'"),'Frontend must disclose recent-trend aggregation from analyzer provenance');
 assert.ok(app.includes('Team-contested objective presence')&&app.includes('Team-secured objective presence'),'Frontend must visibly distinguish coaching presence from outcome-context presence');
 assert.ok(!api.includes('deaths followed by enemy objective conversion'),'Death-before-objective evidence must not use causal conversion wording');
 assert.ok(api.includes('contestedNeutralEvent(o)'),'Death-before-objective and side-lane consequence labels must ignore fully conceded neutral objectives');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v250'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v251'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1202,3 +1202,5 @@ assert.ok(api.includes('objectiveSetup:trendGameMeanWithEvents(')&&api.includes(
 assert.ok(api.includes('g=>Number(g.objectiveReadiness?.contestedJoined||0)>0?100*Number(g.objectiveReadiness?.earlySetupJoins||0)/Number(g.objectiveReadiness.contestedJoined):null'),'Recent objective setup must remain missing when a game has no joined contested objective');
 assert.ok(api.includes('g=>Number(g.objectiveContestTotal||0)>0?100*Number(g.objectiveContestJoined||0)/Number(g.objectiveContestTotal):null'),'Recent objective presence must remain missing when a game has no contested-objective denominator');
 assert.ok(modelDoc.includes('## v250 game-weighted recent objective direction'),'Recent objective trend aggregation policy must remain documented');
+assert.ok(app.includes('eventCoveredTrendRow')&&app.includes('Latest 5 team-contested presence / previous'),'Technical recent-trend rows must render objective aggregation provenance dynamically');
+assert.ok(modelDoc.includes('## v251 recent-trend aggregation provenance'),'Recent-trend provenance labeling must remain documented');
