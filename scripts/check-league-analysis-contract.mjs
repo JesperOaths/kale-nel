@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.138'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.139'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -421,7 +421,7 @@ ok(modelDoc.includes('## Coaching-cohort evidence surfaces')&&modelDoc.includes(
 ok(backend.includes('buildPracticeTargets'), 'measurable practice-target builder must remain explicit');
 ok(backend.includes('samplePaths:samplePathsFor(metricPath)')&&backend.includes('"coachingSummary.csMin"')&&backend.includes('"coachingSummary.goldDiff15"'), 'practice targets must preserve denominator paths and coaching-cohort self metrics');
 ok(app.includes('function reportNewMatchCount(')&&app.includes('if(newGames<windowGames)')&&app.includes('if(!evidence.ready)'), 'practice-target outcomes must fail closed until the new-game horizon and all saved evidence requirements are satisfied');
-ok(app.includes("if(p==='summary.csMin')return'coachingSummary.csMin'")&&app.includes("if(p==='summary.goldDiff15')return'coachingSummary.goldDiff15'"), 'legacy saved target paths must remain cohort-safe');
+ok(app.includes("if(p==='summary.csMin')return'coachingSummary.csMin'")&&app.includes("savedMetricPath==='summary.goldDiff15'||savedMetricPath==='coachingSummary.goldDiff15'")&&app.includes("status:'re-baseline required'"), 'legacy Gold@15 target baselines must fail closed across the trusted-peer population change');
 ok(modelDoc.includes('## Next-5 target outcome scoring')&&modelDoc.includes('must not be called met, moving closer, moved away, or unchanged'), 'analysis model must preserve pending target semantics');
 ok(backend.includes('source:"self_relative_short_term"'), 'practice targets must remain explicitly self-relative');
 ok(backend.includes('Number(sampleSize||0)<minSample'), 'practice targets must fail closed on thin evidence');
@@ -1034,3 +1034,10 @@ ok(backend.includes('classifiedHomeLaneDeaths=list.reduce')&&backend.includes('o
 ok(app.includes('Outside-pressure classified sample')&&app.includes('classification withheld'), 'frontend traceability must expose both classified and unresolved lane-pressure evidence');
 ok(app.includes('pressureN=Number(v.earlyClassifiedHomeLaneDeaths??v.earlyHomeLaneDeaths??0)'), 'matchup diagnostics must use the classified denominator with legacy fallback');
 ok(modelDoc.includes('## v258 outside-pressure classification integrity'), 'analysis documentation must preserve fail-closed outside-pressure semantics');
+ok(backend.includes('"peerComparison.avgGoldDiff15":["peerComparison.laneGames15"]')&&app.includes("'peerComparison.avgGoldDiff15':['peerComparison.laneGames15']"), 'trusted Gold@15 practice registry must remain backend/frontend aligned');
+ok(backend.includes('usualTrustedGold15=hasNum(peerComparison?.avgGoldDiff15)')&&backend.includes('usualTrustedGold15Games=Number(peerComparison?.laneGames15||0)'), 'champion/matchup usual-lane baseline must come from trusted direct-peer @15 games');
+ok(backend.includes('"Gold differential @15","peerComparison.avgGoldDiff15",peer.avgGoldDiff15'), 'new lane-gold practice targets must use the trusted peerComparison metric');
+ok(!backend.includes('"Gold differential @15","coachingSummary.goldDiff15",summary.goldDiff15'), 'new practice targets must not reintroduce raw coachingSummary Gold@15');
+ok(app.includes('base={...rawBase,goldDiff15:hasNum(r.peerComparison?.avgGoldDiff15)?Number(r.peerComparison.avgGoldDiff15):null}'), 'frontend diagnostic deltas must use the same trusted Gold@15 baseline');
+ok(app.includes("status:'re-baseline required'")&&app.includes("saved target predates trusted direct-peer @15 normalization"), 'legacy raw-summary Gold@15 targets must be withheld for re-baselining');
+ok(modelDoc.includes('## v259 trusted Gold @15 baseline integrity'), 'analysis documentation must preserve trusted Gold@15 population integrity');
