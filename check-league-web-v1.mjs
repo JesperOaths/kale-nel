@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.108'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.109'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -819,7 +819,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v210'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v211'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -958,3 +958,10 @@ assert.ok(app.includes("spec.zeroLabel||'EVEN WITH ROLE OPPONENT'")&&app.include
 assert.ok(app.includes("zeroLabel:'NO ADC LANE MOVEMENT'")&&app.includes("zeroMeaning:'Zero means no measured change in ADC-vs-ADC CS differential during the roam window.'"), 'Support ADC lane-movement chart must not describe zero as Support-peer parity');
 assert.ok(app.includes("recentText='latest '+recent.length+' valid observation"), 'Chart summaries must disclose that recent averages use valid observations only');
 assert.ok(modelDoc.includes('Signed zero-line wording is metric-specific.'), 'Metric-specific zero semantics must remain documented');
+assert.ok(api.includes('roamAttemptGames=list.filter')&&api.includes('supportAdcLaneMovementGameValues=list.map'), 'Champion Support roam analysis must track contributing games and game-weighted lane movement');
+assert.ok(api.includes('roleName==="SUPPORT"&&roamAttempts>=4&&roamAttemptGames>=3'), 'Support champion roam limiter must require attempts spread across at least three games');
+assert.ok(api.includes('laneMovementReady=supportCostEvents.length>=4&&supportAdcLaneMovementGameValues.length>=3'), 'Champion Support lane-movement context must meet window and game-spread floors before display');
+assert.ok(api.includes('confidence:confidence(roamAttemptGames)'), 'Champion roam confidence must be based on contributing games rather than event count');
+assert.ok(api.includes('soloDeathGames=list.filter')&&api.includes('outsidePressureGames=list.filter'), 'Repeated matchup event patterns must track how many games contain the event');
+assert.ok(api.includes('soloDeaths>=2&&soloDeathGames>=2')&&api.includes('outsidePressureDeaths>=2&&outsidePressureGames>=2'), 'Repeated matchup 1v1/outside-pressure findings must repeat across games');
+assert.ok(modelDoc.includes('Event repetition must also be game repetition'), 'Cross-game champion/matchup repetition semantics must remain documented');
