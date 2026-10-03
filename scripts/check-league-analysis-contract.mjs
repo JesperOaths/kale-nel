@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.125'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.126'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -930,3 +930,12 @@ ok(backend.includes('peerDpm)>=120&&["ADC","MID","TOP"].includes(primaryRole)'),
 ok(backend.includes('d>=120&&["ADC","MID","TOP"].includes(primaryRole)'), 'recent positive DPM trend must stay carry-role scoped');
 ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&topDamage>=Math.max'), 'top-team-damage highlight must stay carry-role scoped');
 ok(modelDoc.includes('## v241 carry-role damage headline safety'), 'analysis documentation must preserve carry-role damage headline safety');
+
+ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&lane15.length>=5'), 'generic lane15 coaching must remain carry-role scoped');
+ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&soloKillConversionEvents.length>=3'), 'solo-kill lane-economy conversion must remain carry-role scoped');
+ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&lead25Games.length>=4'), 'role-gold @25 closing coaching must remain carry-role scoped');
+ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&midRoutingGames.length>=4'), 'direct-role mid-routing coaching must remain carry-role scoped');
+ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&firstResetCleanGames.length>=4'), 'first-reset direct-role economy coaching must remain carry-role scoped');
+ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&recentTrend.goldDiff15.recentN>=4'), 'recent Gold@15 coaching must remain carry-role scoped');
+ok(backend.includes('["ADC","MID","TOP","JUNGLE"].includes(primaryRole)&&recentTrend.csMin.recentN>=4'), 'recent CS/min coaching must exclude Support while retaining Jungle farm tempo');
+ok(modelDoc.includes('## v242 carry-lane coaching boundary'), 'analysis documentation must preserve carry-lane coaching role safety');
