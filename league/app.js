@@ -3572,15 +3572,18 @@ function renderAdvanced(r){
     wlRow('Greedy stays · wins / losses',wl.greedyStays,v=>fmt(v,1))
   ];
   const trendRow=(label,obj,formatter)=>metric(label,obj&&hasNum(obj.recent)&&hasNum(obj.prior)?formatter(obj.recent)+' / '+formatter(obj.prior):'n/a',!(obj&&hasNum(obj.recent)&&hasNum(obj.prior)));
-  const pooledTrendRow=(label,obj)=>metric(label,obj&&hasNum(obj.recent)&&hasNum(obj.prior)?fmtPct(obj.recent)+' / '+fmtPct(obj.prior)+' · events '+String(obj.recentEvents??0)+' / '+String(obj.priorEvents??0):'n/a',!(obj&&hasNum(obj.recent)&&hasNum(obj.prior)));
+  const eventCoveredTrendRow=(label,obj)=>{
+    const aggregation=String(obj?.aggregation||''),suffix=aggregation==='mean_games_with_event_coverage'?'equal-weight game mean':aggregation==='pooled_events'?'pooled event rate':'event-covered rate';
+    return metric(label+' · '+suffix,obj&&hasNum(obj.recent)&&hasNum(obj.prior)?fmtPct(obj.recent)+' / '+fmtPct(obj.prior)+' · events '+String(obj.recentEvents??0)+' / '+String(obj.priorEvents??0):'n/a',!(obj&&hasNum(obj.recent)&&hasNum(obj.prior)));
+  };
   const trendRows=[
     trendRow('Latest 5 CS/min / previous',trend.csMin,v=>fmt(v,2)),
     trendRow('Latest 5 gold @15 / previous',trend.goldDiff15,v=>signed(v,0)+'g'),
     trendRow('Latest 5 high-risk deaths / previous',trend.badDeaths,v=>fmt(v,1)),
     trendRow('Latest 5 DPM / previous',trend.dpm,v=>fmtInt(v)),
-    pooledTrendRow('Latest 5 team-contested presence / previous · pooled',trend.objectiveJoin),
-    pooledTrendRow('Latest 5 team-secured presence / previous · pooled',trend.securedObjectiveJoin),
-    pooledTrendRow('Latest 5 early KP / previous · pooled',trend.earlyKp)
+    eventCoveredTrendRow('Latest 5 team-contested presence / previous',trend.objectiveJoin),
+    eventCoveredTrendRow('Latest 5 team-secured presence / previous',trend.securedObjectiveJoin),
+    eventCoveredTrendRow('Latest 5 early KP / previous',trend.earlyKp)
   ];
   const sessionRows=[
     metric('Session model',session.definition||'Not enough data',!session.definition),
