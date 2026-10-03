@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.115'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.116'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -548,7 +548,14 @@ assert.ok(modelDoc.includes('## Role-aware outcome fingerprint')&&modelDoc.inclu
 
 assert.ok(app.includes("perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.contestedJoined)"),'Support/Jungle outcome setup fingerprint must use the team-contested joined denominator');
 assert.ok(!app.includes("perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.joined)"),'Team-secured objective presence must never be used as the outcome-fingerprint setup denominator');
-assert.ok(modelDoc.includes('Prior objective setup')&&modelDoc.includes('earlySetupJoins / contestedJoined'),'Outcome-fingerprint setup denominator parity must remain documented');assert.ok(app.includes('Largest role-specific standardized separation:')&&app.includes('standardizedMeanGap(')&&app.includes('Hedges-corrected gap')&&app.includes('not a causal or significance claim'),'Outcome fingerprint must use a role-specific small-sample-corrected standardized within-metric gap and avoid causal/significance claims');
+assert.ok(modelDoc.includes('Prior objective setup')&&modelDoc.includes('earlySetupJoins / contestedJoined'),'Outcome-fingerprint setup denominator parity must remain documented');
+assert.ok(api.includes('meanGameEarlySetupObjectiveJoinRate=meanField(finiteGames(validTimeline,g=>g.objectiveReadiness?.earlySetupJoinRate)')&&api.includes('objectiveSetupCoachingRate=meanGameEarlySetupObjectiveJoinRate'),'Analyzer must expose game-weighted prior-setup coaching');
+assert.ok(api.includes('hasNum(objectiveSetupCoachingRate)')&&api.includes('Mean per-game prior-setup rate is'),'Action-first setup findings must use the game-weighted coaching rate');
+assert.ok(api.includes('"behaviorSummary.objectiveSetupCoachingRate":[{path:"behaviorSummary.neutralObjectiveJoins",min:5},{path:"behaviorSummary.objectiveSetupGames",min:3}]'),'New setup practice targets must preserve encounter and game-spread requirements');
+assert.ok(api.includes('"Prior objective setup","behaviorSummary.objectiveSetupCoachingRate"'),'New setup practice targets must use the coaching-facing game-weighted metric');
+assert.ok(app.includes('b.objectiveSetupCoachingRate??b.meanGameEarlySetupObjectiveJoinRate??b.earlySetupObjectiveJoinRate'),'Prominent setup UI must prefer game-weighted coaching value with legacy fallback');
+assert.ok(app.includes("'mean per-game rate · pooled '")&&!app.includes("c.setupReady,wilsonInterval(setupHits,c.setupN)"),'Mean-game setup headlines must disclose pooled traceability without a mismatched pooled Wilson interval');
+assert.ok(modelDoc.includes('## Coaching-facing prior objective setup aggregation'),'Game-weighted prior-setup coaching semantics must remain documented');assert.ok(app.includes('Largest role-specific standardized separation:')&&app.includes('standardizedMeanGap(')&&app.includes('Hedges-corrected gap')&&app.includes('not a causal or significance claim'),'Outcome fingerprint must use a role-specific small-sample-corrected standardized within-metric gap and avoid causal/significance claims');
 assert.ok(app.includes('sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-Number(b.gameStartTimestamp||0))')&&app.includes('sourceGames.reverse()'),'Trend charts must render oldest-to-newest even though the report contract is newest-first');
 assert.ok(app.includes('chart-reference-line')&&app.includes("reference:bench?.dpm")&&app.includes("reference:bench?.kp"),'ADC DPM/KP charts must retain same-tier external reference lines');
 assert.ok(app.includes('function renderVisualSummary(r){\n  const games=reportCoachingGames(r)')&&app.includes('function renderConsistencySummary(r){')&&app.includes('const games=reportCoachingGames(r),reportRole='),'Visual summary and consistency coaching surfaces must use the verified mechanics coaching cohort');
@@ -822,7 +829,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v215'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v216'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
