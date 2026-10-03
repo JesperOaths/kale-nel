@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.110'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.111'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -781,3 +781,9 @@ ok(backend.includes('supportCount,independentSupportCount,evidenceChannels:'), '
 ok(app.includes("weak.independentSupportCount>=2"), 'low-confidence top driver must require two independent reinforcements beyond the representative');
 ok(app.includes("stage('2','Reinforcement',independentSupportCount+' independent support'"), 'priority evidence chain must report true independent reinforcement');
 ok(modelDoc.includes('Theme synthesis records total related findings separately from independent reinforcement.'), 'analysis documentation must preserve independent driver confidence semantics');
+ok(backend.includes('objectiveSetup:trendEventRate(g=>g.objectiveReadiness?.earlySetupJoins,g=>g.objectiveReadiness?.contestedJoined)'), 'recent setup trend must match the contested-joined aggregate denominator');
+ok(!backend.includes('objectiveSetup:trendEventRate(g=>g.objectiveReadiness?.earlySetupJoins,g=>g.objectiveReadiness?.joined)'), 'historical team-secured presence must not leak into recent setup coaching');
+ok(backend.includes('trendGameMeanWithEvents')&&backend.includes('supportAdcLaneCost:trendGameMeanWithEvents(recentSupportAdcLaneCost,supportAdcLaneWindowCount)'), 'Support lane-movement recent trend must expose both game and window evidence');
+ok(app.includes("spec('Roam conversion',t.roamConversion,'percent',false,15,4,5,3,5)")&&app.includes("spec('Vision-action death rate',t.visionActionDeath,'percent',true,5,12,12,4,5)"), 'Support recent direction must use analyzer-aligned opportunity and game floors');
+ok(app.includes("spec('Prior objective setup',t.objectiveSetup,'percent',false,10,5,5,3,5)")&&app.includes("spec('Contested objective presence',t.objectiveJoin,'percent',false,10,5,5,3,5)"), 'recent objective direction must require event and game spread');
+ok(modelDoc.includes('## Recent-direction evidence parity')&&modelDoc.includes('earlySetupJoins / contestedJoined'), 'analysis documentation must preserve recent-direction denominator semantics');
