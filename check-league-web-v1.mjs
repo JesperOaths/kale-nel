@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v224'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v225'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -924,9 +924,9 @@ assert.ok(modelDoc.includes('## Role-aware evidence health')&&modelDoc.includes(
 assert.ok(app.includes("if(role==='SUPPORT')")&&app.includes("comparisonCard('Vision/min vs Support'")&&app.includes("comparisonCard('Objective setup wards vs Support'"),'Support Quick Read must retain role-relevant peer metrics');
 assert.ok(!app.includes("No comparable @15 Support gold checkpoint is available."),'Support Quick Read must not promote @15 role gold as a coaching card');
 assert.ok(modelDoc.includes('## Support Quick Read role safety'),'Support Quick Read role-safety rule must remain documented');
-assert.ok(app.includes("roleKey==='SUPPORT'")&&app.includes("{label:'Vision / min',value:fmt(s.vpm,2),sub:'Raw Support sample · vision volume, not vision quality'}")&&app.includes("{label:'Assists / game',value:fmt(s.avgAssists,1),sub:'Raw Support sample'}"),'Support raw KPI strip must foreground role-relevant neutral outputs');
+assert.ok(app.includes("roleKey=canonicalRole(r?.dataQuality?.selectedRole||s.primaryRole||r.summary?.primaryRole||state.selectedRole)")&&app.includes("roleKey==='SUPPORT'")&&app.includes("{label:'Vision / min',value:fmt(s.vpm,2),sub:'Raw Support sample · vision volume, not vision quality'}")&&app.includes("{label:'Assists / game',value:fmt(s.avgAssists,1),sub:'Raw Support sample'}"),'Support raw KPI strip must use the canonical selected role and foreground role-relevant neutral outputs');
 assert.ok(app.includes("roleKey==='JUNGLE'")&&app.includes("Raw Jungle sample · vision volume, not objective control"),'Jungle raw KPI strip must keep role-relevant neutral vision context instead of carry-style DPM');
-assert.ok(modelDoc.includes('## Role-aware raw KPI strip')&&modelDoc.includes('SUPPORT does not foreground CS/min or damage/min'),'Role-aware raw KPI semantics must remain documented');
+assert.ok(modelDoc.includes('## Role-aware raw KPI strip')&&modelDoc.includes('Role resolution uses `dataQuality.selectedRole` first')&&modelDoc.includes('SUPPORT does not foreground CS/min or damage/min'),'Role-aware raw KPI semantics and role-source precedence must remain documented');
 assert.ok(app.includes("if(reportRole==='SUPPORT')return[peerVpm,setupDelta,roam,adcLaneCost]"),'Support economy charts must use role-specific peer/setup/roam evidence');
 assert.ok(app.includes("if(reportRole==='JUNGLE')return[peerCsMin,itemTiming,impact,contest]"),'Jungle economy charts must use farm/item/impact/objective evidence instead of carry-style gold framing');
 assert.ok(app.includes("ADC lane movement during roams")&&app.includes("This does not say the roam caused the movement."),'Support roam lane-movement chart must preserve non-causal wording');
