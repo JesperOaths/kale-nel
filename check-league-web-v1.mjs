@@ -819,7 +819,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v209'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v210'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -954,3 +954,7 @@ assert.ok(app.includes('const svg=evidence.ready?chartSvg(points,spec):null')&&a
 assert.ok(app.includes('consistencyCard(spec.title,robustStats(vals),spec.consistencyUnit||\'num\',split,detail,evidence.ready,evidence.summary)'), 'Consistency summaries must share the same evidence gate as the chart');
 assert.ok(css.includes('.chart-card.thin-evidence')&&css.includes('.consistency-card.evidence-unknown'), 'Thin chart and consistency evidence must remain visually neutral');
 assert.ok(modelDoc.includes('A chart being drawable is not the same as its coaching evidence being mature.'), 'Chart evidence-gating rationale must remain documented');
+assert.ok(app.includes("spec.zeroLabel||'EVEN WITH ROLE OPPONENT'")&&app.includes("spec.zeroMeaning||'Zero means even with the direct role opponent.'"), 'Signed chart zero labels and explanations must be metric-configurable');
+assert.ok(app.includes("zeroLabel:'NO ADC LANE MOVEMENT'")&&app.includes("zeroMeaning:'Zero means no measured change in ADC-vs-ADC CS differential during the roam window.'"), 'Support ADC lane-movement chart must not describe zero as Support-peer parity');
+assert.ok(app.includes("recentText='latest '+recent.length+' valid observation"), 'Chart summaries must disclose that recent averages use valid observations only');
+assert.ok(modelDoc.includes('Signed zero-line wording is metric-specific.'), 'Metric-specific zero semantics must remain documented');
