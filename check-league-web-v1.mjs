@@ -498,6 +498,9 @@ assert.ok(app.includes("gameArcDescriptor(g)?.key===arcKey")&&app.includes("stat
 assert.ok(app.includes("filter==='arc'&&Number(counts.arc||0)===0")&&app.includes("state.matchHistoryArcKey=''"),'Invalid arc filters must reset instead of leaving a hidden empty filter active');
 assert.ok(modelDoc.includes('### Reviewing repeated arcs')&&modelDoc.includes('does not recalculate the report'),'Repeated-arc review must remain a visibility-only drill-down');
 assert.ok(html.includes('id="gameArcFunnels"')&&app.includes('function arcFunnelCard(')&&app.includes('function roleSequenceCoverageHtml('),'League must expose carry-role advantage funnels and SUPPORT/JUNGLE role-sequence coverage');
+assert.ok((app.split("Number(g?.objectiveReadiness?.contestedJoined||0)").length-1)>=4,'Support/Jungle role-sequence setup classification and coverage must use contested-joined evidence');
+assert.ok(!app.includes("Number(g?.objectiveReadiness?.joined||0)"),'Team-secured joined counts must not leak into role-sequence setup coaching');
+assert.ok(modelDoc.includes('For SUPPORT and JUNGLE role-sequence arcs')&&modelDoc.includes('objectiveReadiness.contestedJoined'),'Role-sequence setup denominator parity must remain documented');
 assert.ok(app.includes("transFor('ahead')")&&app.includes("transFor('behind')")&&app.includes("transFor('close')"),'Advantage-conversion funnels must derive from the same comparable @15→@25 transitions');
 assert.ok(app.includes('function matchReplayReviewHtml(')&&app.includes('data-open-review-match'),'Expanded match history must surface backend-ranked replay moments with direct evidence links');
 assert.ok(app.includes('Practice-first review')&&app.includes('original analyzer ranks preserved')&&app.includes('focus-match'),'Standalone replay queue must surface current-practice matches first without erasing analyzer severity rank');
@@ -832,7 +835,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v217'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v218'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
