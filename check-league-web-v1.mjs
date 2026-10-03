@@ -1158,7 +1158,7 @@ assert.ok(api.includes('/impact|influence/.test(tt)')&&api.includes('"First-impa
 assert.ok(api.includes('carryRole&&/lane|laning|gold|economy/.test(tt)&&!/higher.?rank|lower.?rank/.test(tt)'),'Generic lane-gold practice targets must remain carry-role and source-wording gated');
 assert.ok(!api.includes('if(!added&&hasNum(summary?.goldDiff15))added=add(theme,"Gold differential @15"'),'Early-lane target routing must not retain an unconditional Gold@15 fallback');
 assert.ok(api.includes('added=postLossIntent?postLossFirst():laterIntent?laterFirst():false;'),'Consistency themes must not create session targets without session/requeue intent');
-assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&hasNum(behavior?.damageGoldEfficiency)'),'Teamfight damage-resource practice targets must stay carry-role scoped');
+assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&/damage|resource|output|gold share/.test(tt)&&hasNum(behavior?.damageGoldEfficiency)'),'Teamfight damage-resource practice targets must require both carry-role eligibility and matching source wording');
 assert.ok(app.includes("if(unit==='minutes')return signed(n,1)+' min'"),'Timing practice targets must retain explicit minute formatting');
 assert.ok(modelDoc.includes('## v245 practice-theme target alignment'),'Practice-theme target alignment must remain documented');
 
