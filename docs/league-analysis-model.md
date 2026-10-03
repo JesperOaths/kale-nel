@@ -2665,3 +2665,12 @@ This keeps the target measurable at zero when every lead closes successfully or 
 The objective diagnosis can continue to explain a **pre-objective death rate** as a share of classified deaths, because that is useful evidence about the pattern when deaths occur. The Next-5 practice target uses `behaviorSummary.preObjectiveDeathsPerTimelineGame` instead.
 
 New targets require at least 5 timeline-complete coaching games and aim for a self-relative reduction of about `0.2/game`, bounded at zero. A five-game block with zero deaths—or simply zero supported pre-objective deaths—therefore remains scoreable instead of becoming undefined because the classified-death denominator disappeared.
+
+
+## ADC benchmark role eligibility
+
+The LegendsTracker-derived external population reference is **ADC-only**. Eligibility is therefore decided in the analyzer from three independent conditions: the selected coaching role is canonical ADC, the selected cohort is Ranked Solo/Flex, and a matching ranked-queue tier is available.
+
+A non-ADC report exports `externalBenchmarks.eligible = false` with `eligibilityReason = "selected_role_not_adc"`, even when the account has a valid ranked tier. The frontend independently resolves `dataQuality.selectedRole` first, then coaching/summary fallbacks, so older saved reports also fail closed instead of exposing ADC population comparisons through a stale legacy role field.
+
+External benchmark eligibility is reference-only and does not affect coaching priorities, practice targets, rank predictions, or direct-peer analysis.
