@@ -2674,3 +2674,10 @@ The LegendsTracker-derived external population reference is **ADC-only**. Eligib
 A non-ADC report exports `externalBenchmarks.eligible = false` with `eligibilityReason = "selected_role_not_adc"`, even when the account has a valid ranked tier. The frontend independently resolves `dataQuality.selectedRole` first, then coaching/summary fallbacks, so older saved reports also fail closed instead of exposing ADC population comparisons through a stale legacy role field.
 
 External benchmark eligibility is reference-only and does not affect coaching priorities, practice targets, rank predictions, or direct-peer analysis.
+
+
+## Practice-target registry parity
+
+Every metric path that the analyzer can persist in a Next-5 practice target must also exist in the frontend fallback registry used for older or partially populated saved reports. The only frontend-only entries are the intentional legacy aliases `summary.csMin` and `summary.goldDiff15`, which are remapped to the mechanics-filtered `coachingSummary` paths.
+
+The game-weighted generic roam metric `behaviorSummary.meanGameRoamLaneMovementCs` therefore falls back to `behaviorSummary.roamLaneCostMeasuredGames` when explicit saved `sampleRequirements` are unavailable. Explicit requirements remain authoritative whenever present.
