@@ -2245,6 +2245,8 @@ For SUPPORT and JUNGLE, the **Prior objective setup** fingerprint is calculated 
 
 ADC, MID and TOP Role gold @15 fingerprint observations require `trustedDirectPeer(g)`, a compatible @15 checkpoint, and a finite gold delta. Low-confidence or inferred role opponents therefore cannot enter the win/loss gold separation.
 
+Directional coloring still requires at least 3 valid games in wins and 3 in losses. Event-based fingerprint metrics additionally require their opportunity floor on **each** outcome side: roam conversion ≥4 attempts; Support ADC lane movement ≥4 measured roam windows; vision-action death rate ≥12 vision actions; contested-objective presence ≥5 contested encounters; prior objective setup ≥5 joined contested-objective encounters. The means remain equal-weight per-game values; opportunity counts gate interpretation rather than reweighting the effect-size calculation.
+
 ## Role-aware report framing
 
 A selected-role report must not retain headings that imply every role is a laner.
