@@ -2731,3 +2731,16 @@ The backend coaching-priority layer follows the same role boundary already used 
 Carry-only coaching families include clean 1v1 lane diagnoses, solo-kill-to-lane-economy conversion, @15 lead/deficit coaching, lead/deficit-to-result conversion, @25 role-gold closing/recovery, 15→25 direct-role CS/gold routing, and first-reset direct-role economy. Recent Gold@15 trend is also carry-only. Recent raw CS/min trend remains available for JUNGLE as a farm-tempo signal but is not used for SUPPORT.
 
 SUPPORT/JUNGLE still retain these raw checkpoint fields in technical evidence where applicable; the restriction is on primary coaching interpretation, not data deletion.
+
+
+## v243 role-specific session coaching
+
+Backend session/requeue priorities use the same role semantics as the role-aware session cards. A directional session finding also requires at least three valid observations in both compared subgroups for each metric used.
+
+- **SUPPORT:** vision/min, kill participation and timeline high-risk deaths.
+- **JUNGLE:** CS/min, kill participation and timeline high-risk deaths.
+- **ADC / MID / TOP:** trusted/comparable Gold@15, DPM where available, CS/min and timeline high-risk deaths.
+
+Quick post-loss comparisons follow the same split, using the exported post-loss VPM/KP/CS/Gold deltas as appropriate. Session timing is descriptive association only; the report does not infer fatigue, tilt, concentration, posture, or another unmeasured cause.
+
+Rank-pressure lane-gold coaching against higher/lower-ranked direct peers is likewise carry-lane coaching and is restricted to ADC/MID/TOP. First-major timing against higher-ranked peers remains role-agnostic when its own evidence is supported.
