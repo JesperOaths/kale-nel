@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.122'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.123'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -434,11 +434,11 @@ assert.ok(app.includes('function benchmarkFreshnessHtml(')&&app.includes('Histor
 assert.ok(modelDoc.includes('## Population benchmark freshness')&&modelDoc.includes('Freshness alone is not enough reason'),'Benchmark replacement/freshness policy must remain documented');
 assert.ok(api.includes('sourceUrl:"https://legendstracker.fr/methodologie"')&&api.includes('sourceCorpus:"830k+ ranked EUW1 games"'),'External benchmark provenance must remain visible in the report contract');
 assert.ok(api.includes('externalBenchmarks')&&app.includes('Population benchmark, not your opponents.'),'Frontend rank radar must use population benchmarks rather than encountered opponents');
-assert.ok(api.includes('function externalAdcBenchmarkSet(rankSnapshot:any,cohortQueueId:any)'),'External ADC benchmark must receive the selected queue context');
+assert.ok(api.includes('function externalAdcBenchmarkSet(rankSnapshot:any,cohortQueueId:any,selectedRole:any)'),'External ADC benchmark must receive selected queue and role context');
 assert.ok(api.includes('role:"ADC"')&&api.includes('sourceRole:"Bot (ADC)"'),'External benchmark metadata must use canonical ADC while preserving source-role provenance');
 assert.ok(api.includes('queueId===420?"RANKED_SOLO_5x5":queueId===440?"RANKED_FLEX_SR":null'),'Population rank benchmark must only use Ranked Solo/Flex cohorts and their matching ladder');
-assert.ok(api.includes('eligibilityReason:!rankedQueueType?"selected_cohort_not_ranked"'),'Non-ranked cohorts must fail closed for ranked population benchmarking');
-assert.ok(app.includes("ext.eligible!==false"),'Frontend ADC benchmark summary must respect backend comparability eligibility');
+assert.ok(api.includes('eligibilityReason:role!=="ADC"?"selected_role_not_adc":!rankedQueueType?"selected_cohort_not_ranked"'),'ADC population benchmarking must fail closed for non-ADC roles before queue/tier checks');
+assert.ok(app.includes("ext.eligible===true"),'Frontend ADC benchmark summary must require explicit backend eligibility');
 assert.ok(api.includes('directPeerTimelineGames=validDirectPeerTimeline.length')&&api.includes('earlyRoleSoloDeathPerGame=directPeerTimelineGames?earlyRoleSoloDeaths/directPeerTimelineGames'),'Clean direct-role duel rates must use only timeline games with a trusted direct peer');
 assert.ok(api.includes('if(directPeerTimelineGames>=5&&earlyRoleSoloDeaths>=3')&&api.includes('conf(directPeerTimelineGames)')&&api.includes('timeline-complete games with a trusted direct peer. Kills with assisting participants are excluded.'),'Clean-duel coaching must gate, describe and score confidence on the same trusted direct-peer timeline denominator');
 assert.ok(api.includes('csMinGames:peerCsGames.length')&&api.includes('dpmGames:peerDpmGames.length')&&api.includes('vpmGames:peerVpmGames.length'),'Peer means must export metric-specific contributing-game counts');
@@ -449,7 +449,7 @@ assert.ok(app.includes('direct-role CS/min comparisons')&&app.includes('direct-r
 assert.ok(app.includes('selected Last-20 cohort is not Ranked Solo/Flex'),'Frontend must explain why ranked population comparison is withheld for normal/Clash/Swiftplay cohorts');
 assert.ok(!app.includes('rankStepBands'),'Frontend must not regress to opponent-derived rank-step radar bands');
 assert.ok(app.includes('role-adjusted benchmarks rather than directly measured rank×ADC population means'),'Frontend must state the external benchmark derivation without overstating it as a direct ADC population mean');
-assert.ok(app.includes("return role==='ADC'&&ext.eligible!==false?(r.coachingSummary||r.summary||null):null"),'ADC population benchmark must use the backend canonical ADC role and fail closed outside an eligible ranked cohort');
+assert.ok(app.includes("role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole)")&&app.includes("return role==='ADC'&&ext.eligible===true?(r.coachingSummary||r.summary||null):null"),'ADC population benchmark must use canonical selected role and explicit backend eligibility');
 assert.ok(app.includes("if(r==='BOTTOM'||r==='BOT'||r==='DUO_CARRY'||r==='ADC')return'ADC'"),'Frontend may normalize raw Riot bottom aliases but must canonicalize them to ADC before report logic');
 assert.ok(html.includes('id="rankBridge"')&&app.includes('function renderRankBridge('),'Next-tier benchmark bridge must remain visible and role-safe');
 assert.ok(html.includes('id="recentPulse"')&&app.includes('function renderRecentPulse('),'Recent-vs-prior pulse must remain visible without adding backend work');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v234'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v235'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1089,3 +1089,7 @@ assert.ok(api.includes('"Pre-objective deaths / game"')&&api.includes('"behavior
 assert.ok(api.includes('behavior?.timelineGames,5,"Target the supported pre-contest death pattern directly'),'Pre-objective practice target must use timeline-complete coaching games');
 assert.ok(app.includes("'behaviorSummary.preObjectiveDeathsPerTimelineGame':['behaviorSummary.timelineGames']"),'Frontend target fallback must understand zero-safe pre-objective metric');
 assert.ok(modelDoc.includes('## Zero-safe pre-objective death practice target'),'Zero-safe pre-objective target semantics must remain documented');
+
+assert.ok(api.includes('externalAdcBenchmarkSet(profile.rank_snapshot||null,dominantQueueId,primaryRole)'),'Report construction must pass the canonical selected primary role into ADC benchmark eligibility');
+assert.ok(app.includes("ext.eligibilityReason==='selected_role_not_adc'")&&app.includes("not this report’s selected coaching role"),'Frontend must explain role-based ADC benchmark withholding');
+assert.ok(modelDoc.includes('## ADC benchmark role eligibility'),'ADC benchmark role eligibility must remain documented');
