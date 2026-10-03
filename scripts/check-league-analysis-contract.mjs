@@ -484,7 +484,7 @@ ok(app.includes('Dropping from the top-three plan is not treated as proof that a
 ok(app.includes("newGames<window")&&app.includes("window=5"), 'practice continuity must disclose when fewer than five genuinely new games support the read');
 ok(modelDoc.includes('## Practice-plan continuity')&&modelDoc.includes('focus set changed'), 'analysis model must preserve practice-continuity semantics');
 ok(app.includes('favorable shift')&&app.includes('unfavorable shift')&&app.includes('Cross-context metric deltas are not treated as development evidence.'), 'progress UI must avoid causal improvement language and fail closed across incompatible contexts');
-ok(app.includes('Stable / smaller shifts')&&app.includes('valid n '), 'progress UI must prioritize material denominator-safe shifts and collapse smaller movement');
+ok(app.includes('Stable / smaller shifts')&&app.includes('x.curEvidence.summary')&&app.includes('x.prevEvidence.summary'), 'progress UI must prioritize material denominator-safe shifts, disclose exact evidence, and collapse smaller movement');
 ok(modelDoc.includes('## Rolling progress comparison')&&modelDoc.includes('No rolling comparison should be described as an independent experiment'), 'analysis model must preserve rolling-comparison limitations');
 ok(app.includes('curRole!==prevRole'), 'practice-target follow-up must fail closed when primary role changes');
 ok(app.includes('Number(curQueue)!==Number(prevQueue)'), 'practice-target follow-up must fail closed when queue context changes');
@@ -719,7 +719,7 @@ ok(app.includes("if(reportRole==='SUPPORT')return[peerVpm,setupDelta,roam,adcLan
 ok(app.includes("if(reportRole==='JUNGLE')return[peerCsMin,itemTiming,impact,contest]"), 'Jungle chart family must follow farm/item/impact/objective evidence');
 ok(app.includes("trustedDirectPeer(g)&&hasNum(g?.itemSpikeDeltaVsOpponent)")&&app.includes("trustedDirectPeer(g)&&hasNum(g?.vision?.objectiveSetupDeltaVsOpponent)"), 'role chart peer metrics must fail closed when peer evidence is missing');
 ok(modelDoc.includes('## Role-aligned economy and tempo charts'), 'analysis documentation must preserve role-aligned chart semantics');
-ok(app.includes("Vision/min vs Support peer")&&app.includes("behaviorSummary.meanGameSupportRoamAdcLaneMovementCs"), 'Support progress comparison must use game-weighted lane movement rather than a roam-window-weighted carry proxy');
+ok(app.includes("Vision/min vs Support peer")&&app.includes("path:'behaviorSummary.meanGameSupportRoamAdcLaneMovementCs',sampleRequirements:[{path:'behaviorSummary.supportRoamAdcLaneMovementWindows',min:4},{path:'behaviorSummary.supportRoamAdcLaneMovementGames',min:3}]"), 'Support progress comparison must use game-weighted lane movement with exact window/game evidence floors');
 ok(app.includes("First tracked impact vs Jungle")&&app.includes("peerComparison.avgImpactDeltaMin"), 'Jungle progress comparison must follow Jungle tempo evidence');
 ok(app.includes("Pre-objective side-lane deaths / game")&&app.includes("behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame"), 'Top progress comparison must retain side-lane risk evidence');
 ok(modelDoc.includes('## Role-specific rolling progress comparison'), 'analysis documentation must preserve role-specific rolling progress semantics');
@@ -754,3 +754,9 @@ ok(backend.includes('"behaviorSummary.avgRoamLaneCostCs":[{path:"behaviorSummary
 ok(app.includes('harmRepeated:harmWindows>=2&&harmGames>=2')&&app.includes("c.harmRepeated?'bad'"), 'Support roam harm must repeat across games before stable negative styling');
 ok(app.includes("const curRole=canonicalRole(current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole"), 'rolling progress compatibility must prefer the canonical selected role');
 ok(modelDoc.includes('Stable harmful Support-roam styling requires at least two harmful ADC lane-movement windows occurring in at least two different games'), 'analysis documentation must preserve cross-game harmful-roam semantics');
+ok(app.includes('function progressEvidence(report,spec){')&&app.includes('Array.isArray(spec?.sampleRequirements)'), 'rolling progress must support exact multi-denominator evidence requirements');
+ok(app.includes("path:'behaviorSummary.roamSuccessRate',sampleRequirements:[{path:'behaviorSummary.roamAttempts',min:4},{path:'behaviorSummary.roamAttemptGames',min:3}]"), 'Support roam progress must share the live roam evidence floor');
+ok(app.includes("path:'behaviorSummary.visionActionDeathRate',sampleRequirements:[{path:'behaviorSummary.visionActions',min:12},{path:'behaviorSummary.visionActionGames',min:4}]"), 'Support vision progress must share the live vision evidence floor');
+ok(app.includes("path:'behaviorSummary.recentShopObjectiveAbsenceRate',sampleRequirements:[{path:'behaviorSummary.neutralObjectiveEvents',min:5},{path:'behaviorSummary.objectiveContestGames',min:3}]"), 'objective-absence progress must require event and game spread');
+ok(app.includes('!curEvidence.ready||!prevEvidence.ready'), 'rolling progress must withhold a delta when either report misses any required denominator');
+ok(modelDoc.includes('Support rolling progress uses the same floors as the live Support lens'), 'analysis documentation must preserve rolling-progress evidence parity');
