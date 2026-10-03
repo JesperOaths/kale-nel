@@ -3689,7 +3689,7 @@ function matchupDiagnosticSet(v,role,base,riskBase){
     };
   }
   if(role==='JUNGLE'){
-    const cs=hasNum(v.csDiff15)?Number(v.csDiff15):null,laneN=Number(v.laneGames||0);
+    const cs=hasNum(v.csDiff15)?Number(v.csDiff15):null,csN=Number(v.csDiff15Games||0),laneN=Number(v.laneGames||0);
     let read='Mixed repeated Jungle matchup evidence',readTone='neutral';
     if(impactN>=3&&impact!=null&&impact>=1.5){read='First impact arrives later against this Jungler';readTone='bad';}
     else if(setupN>=3&&setup!=null&&setup<=-.5){read='Objective setup trails this Jungler';readTone='bad';}
@@ -3697,13 +3697,13 @@ function matchupDiagnosticSet(v,role,base,riskBase){
     return{
       read,readTone,
       chips:[
-        diagnosticChip('CS diff @15',cs==null?'n/a':signed(cs,1),deltaTone(cs,0,8),laneN>=3,'n='+laneN),
+        diagnosticChip('CS diff @15',cs==null?'n/a':signed(cs,1),deltaTone(cs,0,8),csN>=3,'n='+csN),
         diagnosticChip('First impact vs Jungle',impact==null?'n/a':signed(impact,1)+'m',deltaTone(impact,0,1.5,true),impactN>=3,'n='+impactN),
         diagnosticChip('1st major vs Jungle',item==null?'n/a':signed(item,1)+'m',deltaTone(item,0,.5,true),itemN>=3,'n='+itemN),
         diagnosticChip('VPM vs Jungle',vpm==null?'n/a':signed(vpm,2),deltaTone(vpm,0,.15),vpmN>=3,'n='+vpmN),
         diagnosticChip('Setup wards vs Jungle',setup==null?'n/a':signed(setup,1),deltaTone(setup,0,.5),setupN>=3,'n='+setupN)
       ].join(''),
-      coverage:gamesN+' trusted peer · '+laneN+' @15 · '+impactN+' impact · '+itemN+' item · '+vpmN+' VPM · '+setupN+' setup comparisons'
+      coverage:gamesN+' trusted peer · '+laneN+' gold@15 · '+csN+' CS@15 · '+impactN+' impact · '+itemN+' item · '+vpmN+' VPM · '+setupN+' setup comparisons'
     };
   }
   const goldDelta=hasNum(v.goldDiff15)&&hasNum(base.goldDiff15)?Number(v.goldDiff15)-Number(base.goldDiff15):null,soloKills=Number(v.earlySoloKills||0),soloKillGames=Number(v.earlySoloKillGames||0),soloDeaths=Number(v.earlySoloDeaths||0),soloDeathGames=Number(v.earlySoloDeathGames||0),soloEventGames=Number(v.earlySoloEventGames||0),outside=hasNum(v.outsidePressureShare)?Number(v.outsidePressureShare):null,dpmPeer=hasNum(v.avgDpmDelta)?Number(v.avgDpmDelta):null,laneN=Number(v.laneGames||0),pressureN=Number(v.earlyHomeLaneDeaths||0),pressureGames=Number(v.earlyHomeLaneDeathGames||0),outsideDeaths=Number(v.earlyOutsidePressureDeaths||0),outsideGames=Number(v.earlyOutsidePressureGames||0),dpmN=Number(v.dpmGames||0);
