@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.133'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.134'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -1009,3 +1009,7 @@ ok(modelDoc.includes('## v251 recent-trend aggregation provenance'), 'analysis d
 ok(app.includes('roamReady=roamN>=4&&roamGames>=3')&&app.includes('costReady=costN>=4&&costGames>=3'), 'Support champion diagnostics must fail closed without cross-game roam evidence');
 ok(app.includes('meanGameSupportAdcLaneMovementCs')&&app.includes("costN+' windows · '+costGames+' games'"), 'Support champion lane-movement diagnostic must use the game-weighted value and expose spread');
 ok(modelDoc.includes('## v252 Support champion diagnostic spread'), 'analysis documentation must preserve Support champion spread semantics');
+ok(backend.includes('if(dpmGames.length>=3&&hasNum(p.dpm)&&hasNum(summary.dpm)'), 'champion DPM highlight must require metric-specific measurable games');
+ok(backend.includes('confidence:confidence(dpmGames.length)')&&backend.includes('measurable DPM games'), 'champion DPM highlight confidence/evidence must use the DPM denominator');
+ok(!backend.includes('if(list.length>=3&&hasNum(p.dpm)&&hasNum(summary.dpm)'), 'champion DPM highlight must never gate on total champion games');
+ok(modelDoc.includes('## v253 champion DPM denominator integrity'), 'analysis documentation must preserve champion DPM denominator integrity');
