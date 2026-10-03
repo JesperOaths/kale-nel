@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.126'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.127'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -939,3 +939,11 @@ ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&firstResetCleanG
 ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&recentTrend.goldDiff15.recentN>=4'), 'recent Gold@15 coaching must remain carry-role scoped');
 ok(backend.includes('["ADC","MID","TOP","JUNGLE"].includes(primaryRole)&&recentTrend.csMin.recentN>=4'), 'recent CS/min coaching must exclude Support while retaining Jungle farm tempo');
 ok(modelDoc.includes('## v242 carry-lane coaching boundary'), 'analysis documentation must preserve carry-lane coaching role safety');
+
+ok(backend.includes('primaryRole==="SUPPORT"')&&backend.includes('game3PlusVpmDelta')&&backend.includes('postLossVpmDelta'), 'Support session coaching must use role-specific VPM/KP');
+ok(backend.includes('primaryRole==="JUNGLE"')&&backend.includes('game3PlusCsMinDelta')&&backend.includes('postLossCsMinDelta'), 'Jungle session coaching must use role-specific CS/KP');
+ok(backend.includes('sessionMetricReady')&&backend.includes('Number(a?.[field]||0)>=3&&Number(b?.[field]||0)>=3'), 'session coaching must enforce metric-specific evidence in both compared groups');
+ok(backend.includes('The timing association does not identify fatigue, focus or any other cause.'), 'session coaching must avoid unmeasured causal/mental-state explanations');
+ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&higherRankGames.length>=3&&higherLane.length>=3'), 'higher-rank lane-gold coaching must remain carry-role scoped');
+ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&lowerRankStats.laneGames>=3'), 'lower-rank lane-gold coaching must remain carry-role scoped');
+ok(modelDoc.includes('## v243 role-specific session coaching'), 'analysis documentation must preserve v243 session/rank role safety');
