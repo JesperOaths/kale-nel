@@ -3078,3 +3078,21 @@ The denominator is only games where the player finishes outside the top two on t
 This is descriptive carry-role context, not an efficiency grade. It is useful because the existing high-resource conversion only answers whether large resource share turned into large damage share. The new view answers the opposite question: whether the player sometimes produces high team-relative damage despite receiving a smaller team-relative gold share.
 
 Champion identity, split-push assignments, utility responsibilities, matchup state, fight access and game duration can all make low gold plus top-two damage more or less meaningful. For that reason the metric is never used alone as a coaching verdict and remains restricted to ADC, MID and TOP history.
+
+
+## v274 resource-output archetypes
+
+ADC, MID and TOP long-horizon history now groups every game with valid team gold rank and team champion-damage rank into one of four mutually exclusive resource/output archetypes:
+
+- **Top-2 gold + top-2 damage** — high team-relative resource position accompanied by high team-relative champion damage.
+- **Top-2 gold + lower damage** — high team-relative resource position without a top-two team damage finish.
+- **Lower gold + top-2 damage** — a lower team-relative gold position that still reaches top-two team champion damage.
+- **Lower gold + lower damage** — neither team-relative gold nor champion damage finishes in the top two.
+
+These groups are descriptive. They do not assign a grade, and their win rates are withheld when the category has fewer than three games.
+
+For the two lower-damage archetypes, the analyzer adds two overlap checks rather than pretending that lower champion damage has one explanation. It reports how many eligible games also have death downtime above the player's own selected-role history median, and how many have turret damage per minute above the player's own selected-role history median.
+
+Those overlap checks are intentionally phrased as context, not cause. Above-median death downtime can mean the player had less time alive to participate in fights, but it can also be a consequence of fighting. Above-median turret pressure can indicate that some output went into structures rather than champions, but it does not prove split-pushing was strategically correct. Champion identity, composition, role assignment, game state and fight access still matter.
+
+The archetype panel is shown only for ADC, MID and TOP. Jungle and Support retain their role-specific long-horizon lenses instead of inheriting a carry-lane resource/output model.
