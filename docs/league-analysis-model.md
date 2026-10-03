@@ -2755,3 +2755,14 @@ A session/requeue coaching theme must receive a Next-5 target from the same role
 - **ADC / MID / TOP:** targets use trusted/comparable Gold@15 first, then CS/min.
 
 A target is only created when its delta is already materially unfavorable (Gold ≤ -300g, CS/min ≤ -0.30, VPM ≤ -0.15, or KP ≤ -10 percentage points). Each target stores the exact paired subgroup denominator paths, with at least three valid observations required in both groups. Generic consistency themes try the matching later-session or post-loss family rather than manufacturing a target from an unrelated role metric.
+
+
+## v245 practice-theme target alignment
+
+Next-5 targets must remain semantically aligned with the evidence theme that created them. A target builder may return no measurable target when no denominator-safe metric matches the theme; it must not substitute an unrelated metric merely to fill the card.
+
+- The **early-lane** theme family no longer has an unconditional Gold@15 fallback. Higher-rank first-major findings target the exact higher-ranked first-major delta; higher/lower-rank lane findings use their exact rank-band Gold@15 subset; first-impact findings use direct-peer first-impact timing. Generic lane-gold targets remain ADC/MID/TOP only and require lane/gold/economy wording. CS/min targets may also serve JUNGLE when the source theme is explicitly farming-related.
+- The shared **consistency** theme family creates a session target only when the theme itself is later-session or quick post-loss/requeue evidence. A generic recent-trend theme must not silently inherit a session target.
+- The teamfight fallback **damage share − gold share** target remains ADC/MID/TOP only, matching the role boundary of its source coaching signal.
+
+Backend and frontend target registries include the exact first-impact, higher-rank item-timing and higher/lower-rank lane subset denominator paths so those targets can be scored later without broad-population substitution.
