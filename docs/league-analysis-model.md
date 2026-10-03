@@ -2766,3 +2766,15 @@ Next-5 targets must remain semantically aligned with the evidence theme that cre
 - The teamfight fallback **damage share − gold share** target remains ADC/MID/TOP only, matching the role boundary of its source coaching signal.
 
 Backend and frontend target registries include the exact first-impact, higher-rank item-timing and higher/lower-rank lane subset denominator paths so those targets can be scored later without broad-population substitution.
+
+
+## v246 reset-target evidence alignment
+
+The repeated high-gold-stay finding and its Next-5 target now share one explicit metric family instead of borrowing an unrelated fight-readiness rate.
+
+- A stable **High-gold stays appear repeatedly** coaching finding requires at least 4 detected ≥1200g / >2-minute-to-shop windows spread across at least 3 coaching games.
+- The analyzer exports both `greedyStayGames` and zero-safe `greedyStaysPerTimelineGame`.
+- The Next-5 target is **High-gold stays / game** and uses timeline-complete coaching games as its follow-up denominator. It intentionally does **not** require future games containing a greedy stay; otherwise improvement toward zero would make the target look under-sampled.
+- The **Fight starts with ≥1000g unspent** target is no longer a generic reset-power fallback. It is used only when the source theme explicitly concerns unspent/stored gold at fight start.
+
+This separates repeated-pattern eligibility from zero-safe outcome scoring while keeping both tied to the same underlying reset behavior.
