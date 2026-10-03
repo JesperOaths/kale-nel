@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.127'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.128'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -947,3 +947,11 @@ ok(backend.includes('The timing association does not identify fatigue, focus or 
 ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&higherRankGames.length>=3&&higherLane.length>=3'), 'higher-rank lane-gold coaching must remain carry-role scoped');
 ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&lowerRankStats.laneGames>=3'), 'lower-rank lane-gold coaching must remain carry-role scoped');
 ok(modelDoc.includes('## v243 role-specific session coaching'), 'analysis documentation must preserve v243 session/rank role safety');
+
+ok(backend.includes('"sessionBehavior.game3PlusVpmDelta":["sessionBehavior.firstGame.vpmGames","sessionBehavior.game3Plus.vpmGames"]')&&backend.includes('"sessionBehavior.postLossKpDelta":["sessionBehavior.quickAfterLoss.kpGames","sessionBehavior.quickAfterWin.kpGames"]'), 'session target registry must include paired VPM/KP/CS denominators');
+ok(backend.includes('"sessionBehavior.game3PlusCsMinDelta":["sessionBehavior.firstGame.csMinGames","sessionBehavior.game3Plus.csMinGames"]')&&app.includes("'sessionBehavior.postLossCsMinDelta':['sessionBehavior.quickAfterLoss.csMinGames','sessionBehavior.quickAfterWin.csMinGames']"), 'session target backend/frontend registries must retain CS-min parity');
+ok(backend.includes('primaryRole==="SUPPORT"')&&backend.includes('"Game 3+ vision/min delta"')&&backend.includes('"Quick post-loss kill-participation delta"'), 'Support consistency targets must remain role-specific');
+ok(backend.includes('primaryRole==="JUNGLE"')&&backend.includes('"Game 3+ CS/min delta"')&&backend.includes('"Quick post-loss CS/min delta"'), 'Jungle consistency targets must remain role-specific');
+ok(backend.includes('Number(sessionModel.game3PlusGoldDelta)<=-300')&&backend.includes('Number(sessionModel.game3PlusCsMinDelta)<=-0.3'), 'carry consistency targets must require a materially unfavorable session delta');
+ok(app.includes("if(unit==='vpm')return signed(n,2)+' VPM'"), 'frontend must format VPM session targets explicitly');
+ok(modelDoc.includes('## v244 role-specific session practice targets'), 'analysis documentation must preserve role-specific session target semantics');
