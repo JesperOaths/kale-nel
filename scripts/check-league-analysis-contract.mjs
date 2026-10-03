@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.112'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.113'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -796,3 +796,8 @@ ok(backend.includes('supportRoamAdcEmptyCostlyEvents.length>=2&&supportRoamAdcEm
 ok(backend.includes('recentShopObjectiveAbsences>=2&&recentShopObjectiveAbsenceGames>=2'), 'recent-shop objective absence findings must repeat across games');
 ok(backend.includes('preObjDeaths>=2&&preObjectiveDeathGames>=2'), 'pre-objective death clues must require cross-game repetition');
 ok(modelDoc.includes('## Action-first cross-game evidence spread'), 'analysis documentation must preserve v4.112 action-first spread safeguards');
+ok(backend.includes('meanGameRoamLaneMovementCs=avg(roamLaneMovementGameValues)'), 'backend must export game-weighted generic roam lane movement');
+ok(backend.includes('hasNum(meanGameRoamLaneMovementCs)&&Number(meanGameRoamLaneMovementCs)<=-5')&&backend.includes('hasNum(meanGameRoamLaneMovementCs)&&Number(meanGameRoamLaneMovementCs)>=-2'), 'MID/TOP action-first roam conclusions must use game-weighted lane movement');
+ok(backend.includes('"behaviorSummary.meanGameRoamLaneMovementCs":[{path:"behaviorSummary.roamLaneCostGames",min:4},{path:"behaviorSummary.roamLaneCostMeasuredGames",min:3}]'), 'new generic roam targets must retain window/game evidence requirements');
+ok(backend.includes('"behaviorSummary.meanGameRoamLaneMovementCs",behavior.meanGameRoamLaneMovementCs'), 'new generic roaming targets must use the game-weighted metric');
+ok(modelDoc.includes('## Game-weighted generic roam lane movement'), 'analysis documentation must preserve game-weighted generic roam semantics');
