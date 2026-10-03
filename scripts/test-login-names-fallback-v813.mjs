@@ -45,7 +45,7 @@ assert.equal(context.GEJAST_LOGIN_NAMES_FALLBACK?.source,'v817-static-authoritat
 assert.equal(context.GEJAST_LOGIN_NAMES_FALLBACK?.staticSource,'gejast-login-names-static.js');
 assert.match(source,/get_login_active_names_v687/);
 assert.match(source,/async function refresh\(requestedScope\)/,'live reconciliation must remain available only as an explicit action');
-assert.doesNotMatch(source,/setTimeout\(function\(\)\{/,'static login bootstrap must not schedule delayed Supabase traffic');
+assert.match(source,/if\(immediate\.length\)\{[\s\S]*?return immediate;[\s\S]*?\}\s*try \{ return await authoritative\(resolvedScope\); \}/,'static login bootstrap must return the last-known-good snapshot before any authoritative RPC fallback');
 assert.match(accountRuntime,/Login boot is intentionally network-independent/,'account runtime must return the complete snapshot without background RPC enrichment');
 assert.doesNotMatch(source,/get_player_selector_source_v1/,'expensive selector scan must never be part of login name loading');
 assert.match(source,/login_names_timeout/);
@@ -59,6 +59,8 @@ assert.equal(delayedTimers.length,0,'static-first login must schedule no automat
 const refreshed=await context.GEJAST_LOGIN_NAMES_FALLBACK.refresh('family');
 assert.deepEqual(Array.from(refreshed),['Familie A','Familie B'],'explicit refresh must still return authoritative names');
 assert.equal(calls.length,1,'explicit refresh must make exactly one authoritative name request');
+assert.equal(delayedTimers.length,1,'the only scheduled timer must belong to the explicit authoritative RPC timeout, never static page boot');
+assert.equal(delayedTimers[0].ms,2500,'explicit live verification must retain its 2.5s abort timeout');
 assert.equal(calls[0].init.method,'POST');
 assert.equal(calls[0].init.headers.apikey,'publishable-test-key');
 assert.ok(cacheWrites.some(x=>x.scope==='family'&&x.names.join('|')==='Familie A|Familie B'),'explicit live refresh must update the last-known-good cache');
