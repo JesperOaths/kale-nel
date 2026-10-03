@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.114'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.115'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -819,7 +819,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v213'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v214'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -998,3 +998,10 @@ assert.ok(api.includes('objectiveJoinGameMean:{...gameObjectivePresenceWl,aggreg
 assert.ok(api.includes('mean per-game objective presence is')&&api.includes('equal-weight per-game team-contested objective presence in wins vs losses'),'Action-first objective outcome association must use equal-weight per-game presence');
 assert.ok(api.includes('Number(gameObjectivePresenceWl.winsN||0)>=4&&Number(gameObjectivePresenceWl.lossesN||0)>=4'),'Objective outcome association must require four evidence-bearing games on both outcome sides');
 assert.ok(modelDoc.includes('## Game-weighted objective outcome association'),'Game-weighted objective outcome semantics must remain documented');
+assert.ok(api.includes('objectiveCoachingPresenceRate=meanGameObjectiveContestPresenceRate'),'Analyzer must define a game-weighted coaching objective-presence alias');
+assert.ok(api.includes('objectivePresence:cm.behaviorSummary.objectiveCoachingPresenceRate')&&api.includes('objectivePresencePooled:cm.behaviorSummary.objectiveJoinRate')&&api.includes('objectivePresenceAggregation:"mean_games"'),'Advanced objective presence must use game-weighted coaching value while retaining pooled traceability');
+assert.ok(api.includes('"behaviorSummary.objectiveCoachingPresenceRate":[{path:"behaviorSummary.neutralObjectiveEvents",min:5},{path:"behaviorSummary.objectiveContestGames",min:3}]'),'New objective-presence practice targets must retain event and game-spread requirements');
+assert.ok(api.includes('"Objective presence","behaviorSummary.objectiveCoachingPresenceRate"'),'New generic objective-presence practice targets must use the coaching-facing game-weighted metric');
+assert.ok(app.includes('b.objectiveCoachingPresenceRate??b.meanGameObjectiveContestPresenceRate??b.objectiveContestPresenceRate??b.objectiveJoinRate'),'Prominent frontend objective coaching must prefer game-weighted presence with saved-report fallbacks');
+assert.ok(app.includes("'mean per-game rate · pooled '"),'Role cards must disclose pooled encounter traceability alongside the mean-game headline');
+assert.ok(modelDoc.includes('## Coaching-facing objective presence aggregation'),'Coaching objective-presence aggregation semantics must remain documented');
