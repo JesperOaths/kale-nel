@@ -898,12 +898,22 @@ function renderReportDrivers(r){
   });
   renderPriorityEvidenceChain(r);
 }
-function gameMetricSummary(games,getter){
-  const xs=games.map(getter).filter(hasNum).map(Number),n=xs.length;
-  if(!n)return {mean:null,n:0,sd:null};
+function gameMetricSummary(games,getter,opportunityGetter=null){
+  const xs=[],opportunities=[];
+  for(const g of games){
+    const value=getter(g);
+    if(!hasNum(value))continue;
+    xs.push(Number(value));
+    if(opportunityGetter){
+      const opportunity=opportunityGetter(g);
+      if(hasNum(opportunity))opportunities.push(Math.max(0,Number(opportunity)));
+    }
+  }
+  const n=xs.length,opportunityCount=opportunityGetter?opportunities.reduce((a,b)=>a+b,0):null;
+  if(!n)return {mean:null,n:0,sd:null,opportunities:opportunityCount};
   const mean=xs.reduce((a,b)=>a+b,0)/n;
   const variance=n>1?xs.reduce((sum,x)=>sum+(x-mean)*(x-mean),0)/(n-1):null;
-  return {mean,n,sd:variance==null?null:Math.sqrt(Math.max(0,variance))};
+  return {mean,n,sd:variance==null?null:Math.sqrt(Math.max(0,variance)),opportunities:opportunityCount};
 }
 function standardizedMeanGap(a,b){
   if(!a||!b||a.n<2||b.n<2||!hasNum(a.mean)||!hasNum(b.mean)||!hasNum(a.sd)||!hasNum(b.sd))return null;
@@ -913,13 +923,14 @@ function standardizedMeanGap(a,b){
   const cohenD=Math.abs(Number(a.mean)-Number(b.mean))/Math.sqrt(pooledVar),hedgesCorrection=Math.max(0,1-3/(4*df-1));
   return cohenD*hedgesCorrection;
 }
-function outcomeFingerprintCard(label,wins,losses,unit,inverse=false){
-  const valid=wins?.n>=2&&losses?.n>=2&&hasNum(wins?.mean)&&hasNum(losses?.mean),ready=wins?.n>=3&&losses?.n>=3;
+function outcomeFingerprintCard(label,wins,losses,unit,inverse=false,minOpportunities=0,opportunityLabel='opportunities'){
+  const valid=wins?.n>=2&&losses?.n>=2&&hasNum(wins?.mean)&&hasNum(losses?.mean),opportunityReady=!minOpportunities||(Number(wins?.opportunities||0)>=minOpportunities&&Number(losses?.opportunities||0)>=minOpportunities),ready=wins?.n>=3&&losses?.n>=3&&opportunityReady;
   const delta=valid?Number(wins.mean)-Number(losses.mean):null,effect=valid?standardizedMeanGap(wins,losses):null;
   const tone=!ready||delta==null?'neutral':(inverse?(delta<0?'good':'bad'):(delta>0?'good':'bad'));
   const fmtValue=v=>unit==='percent'?fmtPct(v):unit==='gold'?(hasNum(v)?signed(v,0)+'g':'n/a'):unit==='dpm'?fmtInt(v):unit==='minutes'?(hasNum(v)?signed(v,1)+'m':'n/a'):unit==='cs'?(hasNum(v)?signed(v,2)+' CS':'n/a'):unit==='csmin'?(hasNum(v)?signed(v,2):'n/a'):unit==='num'?fmt(v,2):fmt(v,2);
   const deltaText=delta==null?'Not enough valid observations.':('Observed mean gap: '+(unit==='percent'?signed(delta,1)+' pp':unit==='gold'?signed(delta,0)+'g':unit==='minutes'?signed(delta,1)+'m':unit==='cs'?signed(delta,2)+' CS':unit==='csmin'?signed(delta,2)+' CS/min':signed(delta,unit==='num'?2:0)+(unit==='dpm'?' DPM':'')));
-  return {label,wins,losses,delta,effect,tone,ready,html:'<article class="outcome-fingerprint-card tone-'+tone+(ready?'':' thin-evidence')+'"><span>'+esc(label)+'</span><div><strong>'+esc(fmtValue(wins?.mean))+'</strong><small>in wins · n='+Number(wins?.n||0)+'</small></div><div><strong>'+esc(fmtValue(losses?.mean))+'</strong><small>in losses · n='+Number(losses?.n||0)+'</small></div><p>'+esc(deltaText)+(hasNum(effect)?' · Hedges-corrected gap '+fmt(effect,2):'')+(ready?'':' · thin sample — no directional color')+'</p></article>'};
+  const opp=x=>minOpportunities?' · '+fmtInt(x?.opportunities||0)+' '+opportunityLabel:'';
+  return {label,wins,losses,delta,effect,tone,ready,opportunityReady,minOpportunities,html:'<article class="outcome-fingerprint-card tone-'+tone+(ready?'':' thin-evidence')+'"><span>'+esc(label)+'</span><div><strong>'+esc(fmtValue(wins?.mean))+'</strong><small>in wins · n='+Number(wins?.n||0)+esc(opp(wins))+'</small></div><div><strong>'+esc(fmtValue(losses?.mean))+'</strong><small>in losses · n='+Number(losses?.n||0)+esc(opp(losses))+'</small></div><p>'+esc(deltaText)+(hasNum(effect)?' · Hedges-corrected gap '+fmt(effect,2):'')+(ready?'':' · thin sample — no directional color')+'</p></article>'};
 }
 
 function supportLensCard(label,value,detail,tone='neutral',ready=true,interval=null){
@@ -1041,21 +1052,21 @@ function perGameSupportAdcLaneCost(g){
 }
 function outcomeFingerprintSpecs(role){
   if(role==='SUPPORT')return[
-    {label:'Roam conversion',unit:'percent',inverse:false,get:g=>perGamePct(g?.roams?.successes,g?.roams?.attempts)},
-    {label:'ADC lane movement during roams',unit:'cs',inverse:false,get:g=>perGameSupportAdcLaneCost(g)},
-    {label:'Vision-action death rate',unit:'percent',inverse:true,get:g=>perGamePct(g?.visionMission?.deaths,g?.visionMission?.actions)},
-    {label:'Prior objective setup',unit:'percent',inverse:false,get:g=>perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.contestedJoined)}
+    {label:'Roam conversion',unit:'percent',inverse:false,get:g=>perGamePct(g?.roams?.successes,g?.roams?.attempts),opportunity:g=>Number(g?.roams?.attempts||0),minOpportunities:4,opportunityLabel:'roam attempts'},
+    {label:'ADC lane movement during roams',unit:'cs',inverse:false,get:g=>perGameSupportAdcLaneCost(g),opportunity:g=>(g?.roams?.events||[]).filter(x=>hasNum(x?.adcLaneCostCs)).length,minOpportunities:4,opportunityLabel:'measured windows'},
+    {label:'Vision-action death rate',unit:'percent',inverse:true,get:g=>perGamePct(g?.visionMission?.deaths,g?.visionMission?.actions),opportunity:g=>Number(g?.visionMission?.actions||0),minOpportunities:12,opportunityLabel:'vision actions'},
+    {label:'Prior objective setup',unit:'percent',inverse:false,get:g=>perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.contestedJoined),opportunity:g=>Number(g?.objectiveReadiness?.contestedJoined||0),minOpportunities:5,opportunityLabel:'joined contests'}
   ];
   if(role==='JUNGLE')return[
     {label:'CS/min vs JUNGLE peer',unit:'csmin',inverse:false,get:g=>trustedDirectPeer(g)&&hasNum(g?.peer?.csMinDelta)?Number(g.peer.csMinDelta):null},
     {label:'First impact vs JUNGLE peer',unit:'minutes',inverse:true,get:g=>trustedDirectPeer(g)&&hasNum(g?.impactDeltaVsOpponent)?Number(g.impactDeltaVsOpponent):null},
-    {label:'Contested objective presence',unit:'percent',inverse:false,get:g=>perGamePct(g?.objectiveReadiness?.contestedJoined,g?.objectiveReadiness?.contestedObjectives)},
-    {label:'Prior objective setup',unit:'percent',inverse:false,get:g=>perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.contestedJoined)}
+    {label:'Contested objective presence',unit:'percent',inverse:false,get:g=>perGamePct(g?.objectiveReadiness?.contestedJoined,g?.objectiveReadiness?.contestedObjectives),opportunity:g=>Number(g?.objectiveReadiness?.contestedObjectives||0),minOpportunities:5,opportunityLabel:'contested encounters'},
+    {label:'Prior objective setup',unit:'percent',inverse:false,get:g=>perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.contestedJoined),opportunity:g=>Number(g?.objectiveReadiness?.contestedJoined||0),minOpportunities:5,opportunityLabel:'joined contests'}
   ];
   if(role==='MID')return[
     {label:'Role gold @15',unit:'gold',inverse:false,get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)?Number(g.goldDiff15):null},
     {label:'First impact vs MID peer',unit:'minutes',inverse:true,get:g=>trustedDirectPeer(g)&&hasNum(g?.impactDeltaVsOpponent)?Number(g.impactDeltaVsOpponent):null},
-    {label:'Roam conversion',unit:'percent',inverse:false,get:g=>perGamePct(g?.roams?.successes,g?.roams?.attempts)},
+    {label:'Roam conversion',unit:'percent',inverse:false,get:g=>perGamePct(g?.roams?.successes,g?.roams?.attempts),opportunity:g=>Number(g?.roams?.attempts||0),minOpportunities:4,opportunityLabel:'roam attempts'},
     {label:'15→25 objective reconnect',unit:'percent',inverse:false,get:g=>hasNum(g?.midRouting?.objectiveJoinRate)?Number(g.midRouting.objectiveJoinRate):null}
   ];
   if(role==='TOP')return[
@@ -1079,10 +1090,10 @@ function renderOutcomeFingerprint(r){
     if(note)note.textContent='The report does not force an outcome story from a one-sided '+roleLabel(role)+' coaching cohort. Current comparison sample: '+wins.length+' wins / '+losses.length+' losses.';
     return;
   }
-  const cards=outcomeFingerprintSpecs(role).map(spec=>outcomeFingerprintCard(spec.label,gameMetricSummary(wins,spec.get),gameMetricSummary(losses,spec.get),spec.unit,spec.inverse));
+  const cards=outcomeFingerprintSpecs(role).map(spec=>outcomeFingerprintCard(spec.label,gameMetricSummary(wins,spec.get,spec.opportunity),gameMetricSummary(losses,spec.get,spec.opportunity),spec.unit,spec.inverse,spec.minOpportunities||0,spec.opportunityLabel||'opportunities'));
   box.innerHTML=cards.map(x=>x.html).join('');
   const usable=cards.filter(x=>x.ready&&hasNum(x.effect)).sort((a,b)=>Number(b.effect)-Number(a.effect)),lead=usable[0],thin=cards.filter(x=>!x.ready).length;
-  if(note)note.innerHTML=lead?'<b>Largest role-specific standardized separation:</b> '+esc(lead.label)+' (Hedges g '+esc(fmt(lead.effect,2))+'). The small-sample correction makes unlike units more comparable, but this remains descriptive and is not a causal or significance claim. '+esc(roleLabel(role))+' coaching cohort: '+wins.length+' wins / '+losses.length+' losses.'+(thin?' '+thin+' metric'+(thin===1?' is':'s are')+' shown without directional color because one outcome side has fewer than 3 valid observations.':''):'No role-specific metric has at least three valid observations in both wins and losses with enough variation for a directional standardized comparison.';
+  if(note)note.innerHTML=lead?'<b>Largest role-specific standardized separation:</b> '+esc(lead.label)+' (Hedges g '+esc(fmt(lead.effect,2))+'). The small-sample correction makes unlike units more comparable, but this remains descriptive and is not a causal or significance claim. '+esc(roleLabel(role))+' coaching cohort: '+wins.length+' wins / '+losses.length+' losses.'+(thin?' '+thin+' metric'+(thin===1?' is':'s are')+' shown without directional color because one outcome side misses its valid-game or metric-specific opportunity floor.':''):'No role-specific metric has at least three valid observations in both wins and losses with enough variation for a directional standardized comparison.';
 }
 function evidenceHealthCard(label,value,detail,status){
   const stateLabel=status==='ready'?'Ready':status==='limited'?'Limited':'Withheld';
