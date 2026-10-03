@@ -789,12 +789,12 @@ function benchmarkKpi(label,value,benchmark,unit,inverse=false,extra=''){
 
 function reportInsightParts(x,fallback){
   if(typeof x==='string'){
-    const copy=x.trim();return copy?{present:true,title:fallback,copy,action:'',meta:'',confidence:'',supportCount:0}:{present:false,title:'Not enough evidence',copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:'',meta:'',confidence:'',supportCount:0};
+    const copy=x.trim();return copy?{present:true,title:fallback,copy,action:'',meta:'',confidence:'',supportCount:0,independentSupportCount:0}:{present:false,title:'Not enough evidence',copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:'',meta:'',confidence:'',supportCount:0,independentSupportCount:0};
   }
-  if(!x||typeof x!=='object')return {present:false,title:'Not enough evidence',copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:'',meta:'',confidence:'',supportCount:0};
-  const sourceTitle=String(x.title||x.label||x.category||'').trim(),copy=String(x.evidence||x.text||x.comparison||'').trim(),action=String(x.action||'').trim(),present=Boolean(sourceTitle||copy||action),confidence=String(x.confidence||'').trim().toLowerCase(),supportCount=Number(x.supportCount||0);
-  const meta=[confidence?confidence+' confidence':'',supportCount>0?String(supportCount)+' supporting finding'+(supportCount===1?'':'s'):'',x.comparison?'vs '+String(x.comparison):''].filter(Boolean).join(' · ');
-  return {present,title:present?(sourceTitle||fallback):'Not enough evidence',copy:present?copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:present?action:'',meta:present?meta:'',confidence,supportCount};
+  if(!x||typeof x!=='object')return {present:false,title:'Not enough evidence',copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:'',meta:'',confidence:'',supportCount:0,independentSupportCount:0};
+  const sourceTitle=String(x.title||x.label||x.category||'').trim(),copy=String(x.evidence||x.text||x.comparison||'').trim(),action=String(x.action||'').trim(),present=Boolean(sourceTitle||copy||action),confidence=String(x.confidence||'').trim().toLowerCase(),supportCount=Number(x.supportCount||0),independentSupportCount=Number(x.independentSupportCount||0);
+  const meta=[confidence?confidence+' confidence':'',independentSupportCount>0?String(independentSupportCount)+' independent reinforcement'+(independentSupportCount===1?'':'s'):'',supportCount>1?String(supportCount)+' related findings total':'',x.comparison?'vs '+String(x.comparison):''].filter(Boolean).join(' · ');
+  return {present,title:present?(sourceTitle||fallback):'Not enough evidence',copy:present?copy:'No supported '+fallback.toLowerCase()+' has crossed the report threshold yet.',action:present?action:'',meta:present?meta:'',confidence,supportCount,independentSupportCount};
 }
 function roleRecentTrendSpecs(r){
   const t=r.recentTrend||{},role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole);
@@ -864,14 +864,14 @@ function renderPriorityEvidenceChain(r){
   const theme=topPracticeThemes(r)[0]||null;
   if(!theme){box.innerHTML='<div class="priority-chain-empty">No top priority has enough supported evidence to build a coaching chain yet.</div>';return;}
   const targets=Array.isArray(r.practiceTargets)?r.practiceTargets:[],target=targets.find(t=>practiceThemeKey(t)===practiceThemeKey(theme))||targets.find(t=>String(t.themeKey||'')===String(theme.key||''))||null;
-  const replay=practiceReplayItems(r,theme)[0]||null,supporting=(Array.isArray(theme.supportingTitles)?theme.supportingTitles:[]).filter(x=>String(x||'').trim()&&String(x)!==String(theme.title||'')).slice(0,3);
-  const supportText=supporting.length?supporting.join(' · '):(Number(theme.supportCount||0)>1?String(theme.supportCount)+' related findings support this theme':'No second independent supporting finding crossed the display threshold.');
+  const replay=practiceReplayItems(r,theme)[0]||null,supporting=(Array.isArray(theme.supportingTitles)?theme.supportingTitles:[]).filter(x=>String(x||'').trim()&&String(x)!==String(theme.title||'')).slice(0,3),independentSupportCount=Number(theme.independentSupportCount||0);
+  const supportText=supporting.length?supporting.join(' · '):(independentSupportCount>0?String(independentSupportCount)+' independent evidence channel'+(independentSupportCount===1?'':'s')+' reinforce this theme':'No independent supporting evidence channel crossed the display threshold.');
   const targetText=target?(String(target.label||target.metricPath)+' · '+practiceTargetValue(target.baseline,target.unit)+' → '+practiceTargetValue(target.goal,target.unit)+' over '+String(target.windowGames||5)+' new games'):'No denominator-safe Next-5 metric is available for this theme yet.';
   const replayText=replay?(String(replay.champion||'Unknown')+' · '+fmt(replay.minute,1)+'m · '+String(replay.title||'Replay moment')):'No ranked replay moment currently maps to this theme.';
   const stage=(step,label,value,copy,cls='')=>'<article class="priority-chain-stage '+cls+'"><span>'+step+' · '+esc(label)+'</span><strong>'+esc(value)+'</strong><p>'+esc(copy||'')+'</p></article>';
   box.innerHTML='<div class="priority-chain-head"><strong>Why this is priority #1</strong><span>Evidence → reinforcement → replay → measurement → action</span></div><div class="priority-chain-grid">'+
     stage('1','Signal',String(theme.title||theme.label||'Primary limiter'),String(theme.evidence||'Supported report finding.'),'signal')+
-    stage('2','Reinforcement',Number(theme.supportCount||1)+' supporting finding'+(Number(theme.supportCount||1)===1?'':'s'),supportText,'support')+
+    stage('2','Reinforcement',independentSupportCount+' independent support'+(independentSupportCount===1?'':'s'),supportText,'support')+
     stage('3','Replay proof',replayText,replay?'Open the ranked moment to inspect the actual decision sequence.':'The priority remains evidence-supported, but no replay-queue moment is strong enough to surface.','replay')+
     stage('4','Next-5 measure',target?String(target.label||'Practice metric'):'Measurement pending',targetText,'measure')+
     stage('5','Action',String(theme.action||'Keep the practice plan narrow.'),'This action is the coaching prescription attached to the current highest-scoring supported theme.','action')+
@@ -883,7 +883,7 @@ function renderReportDrivers(r){
   const box=$('reportDrivers');if(!box)return;
   const priorities=topPracticeThemes(r),strengths=Array.isArray(r.overallHighlights)?r.overallHighlights:[],establishedStrength=strengths.find(x=>String(x?.confidence||'').toLowerCase()!=='low')||strengths[0]||null;
   const weak=reportInsightParts(priorities[0],'Primary limiter'),strong=reportInsightParts(establishedStrength,'Bankable strength'),direction=recentDirectionSummary(r),priorityIds=currentPriorityReplayIds(r);
-  const weakEstablished=weak.present&&(weak.confidence!=='low'||weak.supportCount>=2),strongEstablished=strong.present&&strong.confidence!=='low';
+  const weakEstablished=weak.present&&(weak.confidence!=='low'||weak.independentSupportCount>=2),strongEstablished=strong.present&&strong.confidence!=='low';
   const card=(kind,title,value,copy,action,tone,actionLabel='Next',meta='',footer='')=>'<article class="report-driver-card '+kind+' tone-'+tone+'"><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong><p>'+esc(copy||'No high-confidence supporting sentence is available yet.')+'</p>'+(meta?'<small class="driver-evidence-meta">'+esc(meta)+'</small>':'')+(action?'<div><b>'+esc(actionLabel)+':</b> '+esc(action)+'</div>':'')+footer+'</article>';
   const priorityFooter=priorityIds.size?'<button class="button secondary small driver-review-button" type="button" data-open-priority-history>Review '+priorityIds.size+' matching game'+(priorityIds.size===1?'':'s')+'</button>':'';
   box.innerHTML=[
