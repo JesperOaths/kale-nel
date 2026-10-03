@@ -3054,3 +3054,16 @@ For metrics where **lower is better** (currently death downtime in this panel), 
 The tail is never treated as a pass/fail threshold or external benchmark. It is a within-player, selected-role, selected-queue comparison between the latest 20 and the previous up-to-20 games. The median, tail and IQR are intentionally reported separately because they answer different questions: typical level, weak-game severity and variability.
 
 In the current ADC cache this distinction is already useful: the recent Q25 CS/min and lane-CS@10 floors are higher than in the older role sample, while the recent Q25 DPM floor is lower. That combination would be obscured by a single average or synthetic score.
+
+
+## v271 resource-to-output conversion
+
+ADC, MID and TOP long-horizon history now includes a descriptive **top-2 gold → top-2 damage conversion** metric.
+
+The denominator is only games where the player finishes top-two on their own team in gold earned. The numerator is the subset of those games where the player also finishes top-two on the team in champion damage. The page always shows both numerator and denominator alongside the percentage.
+
+This is deliberately narrower than a generic “efficiency score”. It asks whether games with high team resource position also produce high team damage position. It does not claim that every high-gold game should lead damage, because champion identity, team composition, damage type, split-push responsibilities, game length and who the opponents expose to damage all matter.
+
+The metric is shown only for the lane carry roles (ADC, MID, TOP). Support is evaluated with role-relevant vision/control context, and Jungle retains counter-jungle/objective-pressure context rather than inheriting this carry-lane lens.
+
+In the current role-pure ADC cache, 25 of 28 games finish top-two on team gold and 19 of those 25 also finish top-two on team champion damage (76%). The latest-20 and previous-up-to-20 history windows carry their own eligible-game denominators, so a small-sample percentage cannot masquerade as equally strong evidence.

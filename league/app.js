@@ -1333,9 +1333,12 @@ function renderLongHorizon(r){
     :role==='SUPPORT'
       ?{label:'Team vision leader',value:hasNum(s?.visionLeaderRate?.value)?fmtPct(s.visionLeaderRate.value):'n/a',sub:'share of games ranked #1 on team vision score'}
       :{label:'Vision actions / min',value:hasNum(s?.visionActionsPerMin?.value)?fmt(s.visionActionsPerMin.value,2):'n/a',sub:'wards placed + wards cleared per minute'};
+  const resourceOutput=laner
+    ?{label:'Top-2 gold → top-2 damage',value:hasNum(s?.top2GoldToTop2DamageRate?.value)?fmtPct(s.top2GoldToTop2DamageRate.value):'n/a',sub:String(s?.top2GoldToTop2DamageRate?.events||0)+' / '+String(s?.top2GoldToTop2DamageRate?.n||0)+' high-resource games converted · descriptive carry context'}
+    :null;
   const rows=[
     {label:'History depth',value:games+' '+roleLabel(role)+' games',sub:'selected role + selected queue from the latest 100 account matches · '+otherRoleGames+' other-role games included'},
-    roleVolume,roleContext,roleExtra,
+    roleVolume,roleContext,roleExtra,...(resourceOutput?[resourceOutput]:[]),
     {label:'Death downtime',value:hasNum(s?.deadTimePct?.value)?fmt(s.deadTimePct.value,1)+'%':'n/a',sub:'share of game time spent dead · timing-sensitive'},
     {label:'Damage share − gold share',value:hasNum(s?.damageEfficiencyPp?.value)?signed(s.damageEfficiencyPp.value,1)+' pp':'n/a',sub:'team champion-damage share minus team gold share · composition-sensitive'},
     {label:'Turret damage / min',value:hasNum(s?.turretDamagePerMin?.value)?fmtInt(s.turretDamagePerMin.value):'n/a',sub:'direct structure pressure from match data'}
@@ -1346,7 +1349,8 @@ function renderLongHorizon(r){
     :role==='SUPPORT'
       ?{label:'Vision actions / min',obj:h?.trend?.visionActionsPerMin,unit:'num',inverse:false,threshold:.05}
       :{label:'Enemy-jungle monsters / game',obj:h?.trend?.enemyJungleMonsters,unit:'num',inverse:false,threshold:1};
-  const specs=[{label:'CS / min',obj:h?.trend?.csMin,unit:'csmin',inverse:false,threshold:.08},roleTrend,{label:'Damage / min',obj:h?.trend?.dpm,unit:'dpm',inverse:false,threshold:60},{label:'Death downtime',obj:h?.trend?.deadTimePct,unit:'percent',inverse:true,threshold:1.5},{label:'Damage share − gold share',obj:h?.trend?.damageEfficiencyPp,unit:'pp',inverse:false,threshold:1.5},{label:'Turret damage / min',obj:h?.trend?.turretDamagePerMin,unit:'dpm',inverse:false,threshold:35}];
+  const roleOutputTrend=laner?{label:'Top-2 gold → top-2 damage',obj:h?.trend?.top2GoldToTop2DamageRate,unit:'percent',inverse:false,threshold:10}:null;
+  const specs=[{label:'CS / min',obj:h?.trend?.csMin,unit:'csmin',inverse:false,threshold:.08},roleTrend,...(roleOutputTrend?[roleOutputTrend]:[]),{label:'Damage / min',obj:h?.trend?.dpm,unit:'dpm',inverse:false,threshold:60},{label:'Death downtime',obj:h?.trend?.deadTimePct,unit:'percent',inverse:true,threshold:1.5},{label:'Damage share − gold share',obj:h?.trend?.damageEfficiencyPp,unit:'pp',inverse:false,threshold:1.5},{label:'Turret damage / min',obj:h?.trend?.turretDamagePerMin,unit:'dpm',inverse:false,threshold:35}];
   trend.innerHTML=specs.map(x=>historyTrendCard(x.label,x.obj,x.unit,x.inverse,x.threshold)).join('');
   if(stability){
     const st=h.stabilityTrend||{},roleStability=laner
