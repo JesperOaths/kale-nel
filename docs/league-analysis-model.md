@@ -2588,6 +2588,8 @@ Analyzer v4.115 exports `objectiveCoachingPresenceRate` as the coaching-facing a
 Action-first low/strong objective-presence findings, Support/Jungle role cards, compound Jungle objective-readiness context, rolling progress and newly created generic objective-presence practice targets all use the game-weighted coaching value. The target still requires at least 5 contested encounters across at least 3 contributing games. Legacy saved pooled-rate targets remain readable through their historical metric paths.
 
 
+As with mean-game setup, prominent mean-game contested-objective presence cards do not render a Wilson interval calculated from pooled encounter counts; pooled joined/contested counts remain visible only as traceability.
+
 ## Coaching-facing prior objective setup aggregation
 
 Prominent cross-game **Prior objective setup** coaching uses an equal-weight mean of each game's supported setup rate, where the per-game denominator is `objectiveReadiness.contestedJoined`. The pooled `earlySetupObjectiveJoinRate` remains available for technical traceability and legacy saved targets.
