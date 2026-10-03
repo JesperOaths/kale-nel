@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v235'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v236'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1093,3 +1093,13 @@ assert.ok(modelDoc.includes('## Zero-safe pre-objective death practice target'),
 assert.ok(api.includes('externalAdcBenchmarkSet(profile.rank_snapshot||null,dominantQueueId,primaryRole)'),'Report construction must pass the canonical selected primary role into ADC benchmark eligibility');
 assert.ok(app.includes("ext.eligibilityReason==='selected_role_not_adc'")&&app.includes("not this report’s selected coaching role"),'Frontend must explain role-based ADC benchmark withholding');
 assert.ok(modelDoc.includes('## ADC benchmark role eligibility'),'ADC benchmark role eligibility must remain documented');
+
+const backendPracticeRegistryBlock=api.slice(api.indexOf('const samplePathsFor='),api.indexOf('const sampleRequirementsFor='));
+const frontendPracticeRegistryBlock=app.slice(app.indexOf('const PRACTICE_TARGET_SAMPLE_PATHS='),app.indexOf('function practiceTargetMetricPath'));
+const registryMetricKeys=block=>[...new Set([...block.matchAll(/["']([^"']+)["']\s*:/g)].map(m=>m[1]).filter(x=>x.includes('.')))].sort();
+const backendPracticeRegistryKeys=registryMetricKeys(backendPracticeRegistryBlock);
+const frontendPracticeRegistryKeys=registryMetricKeys(frontendPracticeRegistryBlock).filter(x=>!['summary.csMin','summary.goldDiff15'].includes(x));
+assert.deepEqual(frontendPracticeRegistryKeys,backendPracticeRegistryKeys,'Frontend practice-target fallback registry must cover every backend-persisted metric path; summary.* aliases are the only intentional frontend-only entries');
+assert.ok(app.includes("'behaviorSummary.meanGameRoamLaneMovementCs':['behaviorSummary.roamLaneCostMeasuredGames']"),'Frontend fallback must retain the game-weighted generic roam target denominator');
+assert.ok(modelDoc.includes('## Practice-target registry parity'),'Practice-target registry parity must remain documented');
+
