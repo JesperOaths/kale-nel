@@ -2241,6 +2241,8 @@ Standardized separation remains Hedges-corrected and descriptive only. It is not
 
 For SUPPORT and JUNGLE, the **Prior objective setup** fingerprint is calculated per game as `earlySetupJoins / contestedJoined`. The historical team-secured `objectiveReadiness.joined` field is not a valid denominator for this coaching metric.
 
+ADC, MID and TOP Role gold @15 fingerprint observations require `trustedDirectPeer(g)`, a compatible @15 checkpoint, and a finite gold delta. Low-confidence or inferred role opponents therefore cannot enter the win/loss gold separation.
+
 ## Role-aware report framing
 
 A selected-role report must not retain headings that imply every role is a laner.
