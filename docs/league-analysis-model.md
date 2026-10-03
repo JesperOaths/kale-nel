@@ -2649,3 +2649,12 @@ That means a successful five-game block with zero high-risk behind-state deaths 
 The repeat-death diagnosis remains opportunity-based: it can still report what share of measured death-to-next-death opportunities become another death within four minutes, including peer context. The **Next-5 practice target** uses `behaviorSummary.repeatDeathsPerTimelineGame` instead.
 
 This makes the practice target scoreable when repeat-death opportunities disappear entirely. New targets require at least 5 timeline-complete coaching games and aim for a self-relative reduction of about `0.2/game` (roughly one fewer rapid repeat death per five games), bounded at zero. A zero-opportunity block therefore remains measurable rather than becoming an undefined percentage.
+
+
+## Zero-safe closing practice target
+
+The closing diagnosis may still describe the share of **lead@25 losses** that contain late high-risk or costly-death evidence. That diagnostic is conditional on a loss and is useful for explaining *why* some leads fail.
+
+The Next-5 practice target instead uses `behaviorSummary.closing25.leadLateRiskPerLeadGameRate`: the number of ≥+500g direct-role lead@25 games that both end in a loss and contain late-risk evidence, divided by **all** lead@25 games. New targets require at least 4 lead@25 games.
+
+This keeps the target measurable at zero when every lead closes successfully or when remaining lead losses contain no late-risk evidence. It avoids treating a zero-loss sample as “missing evidence” for a short-term closing target.
