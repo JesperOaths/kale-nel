@@ -6,9 +6,9 @@
   <meta name="robots" content="index,follow,max-image-preview:large">
   <meta http-equiv="Cache-Control" content="no-store, max-age=0">
   <title>Bruisienator · League analysis</title>
-  <meta name="description" content="Public Bruisienator League of Legends playstyle analysis with evidence-backed Last-20 coaching and replay review.">
+  <meta name="description" content="Public Bruisienator League of Legends analysis with a 100-game role scan, evidence-backed Last-20 deep coaching, long-horizon trends and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261003-league-web-v264">
+  <link rel="stylesheet" href="/league/styles.css?v=20261003-league-web-v265">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261002-public-bootstrap-r4"></script>
 </head>
@@ -31,9 +31,9 @@
 
       <section class="league-intro">
         <div class="intro-copy">
-          <p class="eyebrow">Bruisienator · Last-20 evidence</p>
+          <p class="eyebrow">Bruisienator · 100-game scan + Last-20 deep evidence</p>
           <h1>League analysis, in the Kalenel site.</h1>
-          <p class="lede">Enter a Riot ID and API key once, then load and analyze recent matches in one step. The page automatically builds the latest eligible Last 20.</p>
+          <p class="lede">Enter a Riot ID and API key once. The page scans up to 100 recent matches for selected-role history, then builds deep timeline coaching from the latest eligible Last 20.</p>
           <div class="intro-chips" aria-label="Workspace properties">
             <span>Public workspace</span>
             <span>Saved League profiles</span>
@@ -44,7 +44,7 @@
         <aside class="intro-note">
           <strong>No Kalenel login required</strong>
           <p>Your Riot API key is session-only and is never stored. Riot ID profiles, cached Riot match data and analysis history can be saved in this isolated Kalenel League workspace so you can reopen them later.</p>
-          <small>The analyzer scans up to 50 recent matches when needed to build the selected role’s latest eligible Last-20 sample.</small>
+          <small>The analyzer scans up to 100 recent matches, but only deep-loads timelines for the selected role’s final Last-20 cohort.</small>
         </aside>
       </section>
 
@@ -109,7 +109,7 @@
           </label>
           <button class="button primary request-button" id="loadRecentBtn" type="button" disabled>
             <span>Load & analyze</span>
-            <small>Latest eligible 20</small>
+            <small>100-game scan · deep Last 20</small>
           </button>
         </div>
 
@@ -119,8 +119,8 @@
             <span>The key stays in this browser tab and is not saved.</span>
           </div>
           <div class="request-help-item auto-note">
-            <strong>Automatic depth</strong>
-            <span>Starts with 30 recent matches and scans up to 50 when the selected role still has fewer than 20 queue/map/duration-eligible games.</span>
+            <strong>100-game role scan</strong>
+            <span>Scans match metadata across the latest 100, then fetches expensive timelines only for the final selected-role, selected-queue Last 20.</span>
           </div>
         </div>
 
@@ -213,6 +213,19 @@
             <div class="recent-pulse-head"><div><span>Recent pulse</span><strong>Latest 5 vs earlier games</strong></div><small>Actual valid-game counts are shown on each card. This is descriptive only, not proof of a trend.</small></div>
             <div class="pulse-grid" id="recentPulse"></div>
           </div>
+        </section>
+
+        <section class="panel long-horizon-panel" id="long-horizon">
+          <div class="section-head">
+            <div><p class="eyebrow">Long-horizon form</p><h2>What holds up beyond the Last 20?</h2></div>
+            <span class="section-hint">Up to 100 selected-role, selected-queue matches. Match-level metrics provide history without pretending older games have deep timeline evidence.</span>
+          </div>
+          <div class="kpi-grid" id="longHorizonKpis"></div>
+          <div class="recent-pulse">
+            <div class="recent-pulse-head"><div><span>History direction</span><strong>Latest 20 vs previous 20</strong></div><small>Five valid observations are required on both sides. Patch-sensitive interpretation remains descriptive.</small></div>
+            <div class="pulse-grid" id="longHorizonTrend"></div>
+          </div>
+          <p class="source-note" id="longHorizonNote"></p>
         </section>
 
         <section class="panel sample-kpi-panel">
@@ -507,6 +520,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261003-league-web-v264" defer></script>
+  <script src="/league/app.js?v=20261003-league-web-v265" defer></script>
 </body>
 </html>

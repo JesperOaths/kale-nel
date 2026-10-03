@@ -2962,3 +2962,24 @@ The authoritative peer-rank target set remains the final selected-role, supporte
 Peer-rank misses are now negative-cached correctly. A row with `peer_rank_fetched_at` and no rank snapshot means the lookup was completed but no usable ranked snapshot was available; it is not retried on every later analysis. Existing non-null snapshots using an older schema are still refreshed. Fetch completion exposes `peer_rank_checked`, `peer_rank_backfilled`, `peer_rank_unavailable_cached`, and `peer_rank_selection_scope=trusted_selected_role_queue_cohort` so the UI and diagnostics can distinguish attempted checks, successful snapshots, and intentionally cached unavailability.
 
 The trusted-opponent rule from v263 also applies before a Riot rank request is made. Low-confidence role opposition can therefore no longer waste a peer-rank lookup that the analyzer would subsequently refuse to use.
+
+
+## v265 100-game history and metric-utility audit
+
+The fetch pipeline now separates **history discovery** from **deep behavioral evidence**. A normal request asks Riot for up to 100 recent match IDs and caches match payloads across that window. It does not automatically download 100 timelines. After the metadata scan, the backend applies the same map, duration, selected-role and supported-queue rules used by the analyzer, chooses the final recent queue cohort, and returns only the Last-20 rows that still need timeline data. The browser deep-fetches those rows and only then finalizes peer-rank context. Public workspaces retain the newest 100 cached matches.
+
+This makes “last 100” useful instead of merely expensive. The latest eligible 20 remain the deep coaching cohort for deaths, fights, resets, objective setup, spatial review and direct timeline comparisons. Older selected-role/same-queue games are loaded as match-level history, giving a bounded 100-game context without pretending those older games have timeline evidence.
+
+The metric audit also promoted several Riot fields that were already present in cached match JSON but unused:
+- **lane minions at 10 minutes** from `challenges.laneMinionsFirst10Minutes`, used as a timeline-free early-farming trend for lane roles;
+- **death downtime** from `totalTimeSpentDead / gameDuration`, which captures the timing cost of deaths that raw death count misses;
+- **damage-share minus gold-share** in percentage points, a descriptive resource-output lens that is explicitly champion/composition sensitive rather than a universal efficiency score;
+- **turret damage/min** and **epic-monster damage/min**, used as transparent structure/objective-pressure context;
+- **vision actions/min**, control-ward count and solo-kill count as match-level role context;
+- **AFK / early-surrender evidence**, used to mark outcome-compromised games. Win/loss fingerprinting excludes these games when both clean outcome groups still have adequate samples.
+
+The new Long-horizon form panel shows the available selected-role/same-queue history from the 100-match account scan and compares the latest 20 with the previous 20 using valid-observation counts. It intentionally keeps this separate from deep Last-20 coaching.
+
+Not every available Riot field was promoted. Skillshot hit/dodge counts are highly champion- and spell-dependent; opaque challenge flags such as `laningPhaseGoldExpAdvantage` are not treated as precise coaching measurements; and `kTurretsDestroyedBeforePlatesFall` is obsolete as a 2026 concept. Riot changed Summoner's Rift in 26.1 so turret plates are permanent and extend to inner/inhibitor structures. The analyzer may retain `turretPlatesTaken` as all-game structure-pressure context, but never labels it “pre-14 plates” or uses the retired 14-minute disappearance assumption.
+
+The historical object formerly exposed internally as `lifetime` is now also named `historySummary`. It is bounded recent history, not a lifetime career sample; the legacy alias remains only for report compatibility.

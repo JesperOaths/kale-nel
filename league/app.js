@@ -592,31 +592,29 @@ async function loadCacheStatus(){
 }
 
 async function fetchProfileData(profile,requestedCount,progressStart=8,progressEnd=82,targetRole=selectedAnalysisRole()){
-  log('Preparing recent match list for '+profile.display_name+' · '+roleLabel(targetRole)+'. Queue/map/duration and selected-role filtering are applied before the Last-20 report; '+requestedCount+' raw matches requested.');
+  log('Scanning up to '+requestedCount+' recent Riot matches for '+profile.display_name+' · '+roleLabel(targetRole)+'. Match metadata is cached first; expensive timelines are then limited to the final selected-role Last-20 cohort.');
   const prep=await api('fetch_prepare',{profile_id:profile.id,count:requestedCount,target_role:targetRole});
   const ids=prep.match_ids||[],cached=new Set(prep.cached_match_ids||[]);
   if(!ids.length)throw new Error('Riot returned no recent match IDs.');
-  log(ids.length+' recent matches found for '+profile.display_name+'; '+cached.size+' already cached.');
-  let done=0,usable=cached.size,failed=0;
+  let scanned=cached.size,failed=0,newMetadata=0,done=0;
   for(const id of ids){
     done++;
-    if(cached.has(id)){
-      log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · cache hit','ok');setProgress(progressStart+(progressEnd-progressStart)*(done/Math.max(1,ids.length)),100);continue;
-    }
-    log('['+done+'/'+ids.length+'] '+profile.display_name+' · fetching match + timeline '+id+'…');
-    try{
-      const one=await api('fetch_one',{run_id:prep.run_id,match_id:id,target_role:targetRole});
-      if(one.timeline_available){usable++;log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · match + timeline cached','ok');}
-      else{usable++;log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · match cached, timeline unavailable: '+(one.timeline_error||'unknown'),'bad');}
-    }catch(e){failed++;log('['+done+'/'+ids.length+'] '+profile.display_name+' · '+id+' · '+e.message,'bad');}
-    setProgress(progressStart+(progressEnd-progressStart)*(done/Math.max(1,ids.length)),100);
-    await sleep(100);
+    if(!cached.has(id)){try{const one=await api('fetch_one',{run_id:prep.run_id,match_id:id,target_role:targetRole,fetch_depth:'metadata'});if(one.metadata_available){scanned++;newMetadata++;}}catch(e){failed++;log('Metadata scan '+id+' · '+e.message,'bad');}await sleep(70);}
+    setProgress(progressStart+(progressEnd-progressStart)*.68*(done/Math.max(1,ids.length)),100);
+    if(done%10===0||done===ids.length)log('Scanned '+done+'/'+ids.length+' recent matches · '+scanned+' metadata rows available · '+failed+' failed.',failed?'bad':'ok');
+  }
+  const plan=await api('fetch_finish',{run_id:prep.run_id,target_role:targetRole,plan_only:true}),deepIds=Array.isArray(plan.timeline_target_ids)?plan.timeline_target_ids:[];
+  log(roleLabel(targetRole)+' cohort selected from the 100-game scan: '+String(plan.comparable_cached_games||0)+' same-role + queue games found; '+String(plan.timeline_available_count||0)+' Last-20 timelines already cached and '+deepIds.length+' need deep fetch.','ok');
+  let deepDone=0,deepFetched=0,deepFailed=0;
+  for(const id of deepIds){
+    deepDone++;
+    try{const one=await api('fetch_one',{run_id:prep.run_id,match_id:id,target_role:targetRole,fetch_depth:'deep'});if(one.timeline_available)deepFetched++;else deepFailed++;if(!one.timeline_available)log('Timeline '+id+' unavailable: '+(one.timeline_error||'unknown'),'bad');}catch(e){deepFailed++;log('Timeline '+id+' · '+e.message,'bad');}
+    setProgress(progressStart+(progressEnd-progressStart)*(.68+.32*(deepDone/Math.max(1,deepIds.length))),100);await sleep(90);
   }
   const finish=await api('fetch_finish',{run_id:prep.run_id,target_role:targetRole});
-  if(hasNum(finish?.dominant_queue_id))log(profile.display_name+' · '+roleLabel(targetRole)+' queue '+String(finish.dominant_queue_id)+' selected from the '+String(finish.queue_selection_window??20)+' newest supported '+roleLabel(targetRole)+' games · '+String(finish.comparable_cached_games??finish.peer_rank_target_count??0)+' role+queue comparable games'+(hasNum(finish?.selected_role_total_cached_games)?' from '+String(finish.selected_role_total_cached_games)+' cached '+roleLabel(targetRole)+' games':'')+' · '+String(finish.peer_rank_target_count??0)+' peer-rank targets · '+String(finish.peer_rank_checked??0)+' checked now · '+String(finish.peer_rank_backfilled??0)+' snapshots added'+(Number(finish.peer_rank_unavailable_cached||0)?' · '+String(finish.peer_rank_unavailable_cached)+' unavailable marked checked':'')+'.','ok');
-  if(finish?.recommend_deeper_cache)log(profile.display_name+' · only '+String(finish.comparable_cached_games??0)+' comparable cached games are available after map/duration/queue filtering; the request can automatically scan deeper.','bad');
-  if(usable===0)throw new Error('Riot returned match IDs, but none could be cached successfully.');
-  return{prep,finish,usable,failed};
+  if(hasNum(finish?.dominant_queue_id))log(profile.display_name+' · '+roleLabel(targetRole)+' queue '+String(finish.dominant_queue_id)+' selected · '+String(finish.comparable_cached_games??0)+' comparable history games · '+String(finish.timeline_available_count??0)+' deep Last-20 timelines · '+String(finish.peer_rank_backfilled??0)+' peer-rank snapshots added.','ok');
+  const usable=Number(finish?.comparable_cached_games||0);if(usable===0)throw new Error('The 100-game scan found no eligible '+roleLabel(targetRole)+' games in a supported Summoner’s Rift queue.');
+  return{prep,plan,finish,usable,failed:failed+deepFailed,newMetadata,deepFetched};
 }
 async function analyzeProfileData(profile,targetRole=selectedAnalysisRole()){
   log(profile.display_name+' · building the '+roleLabel(targetRole)+' Last-20 analysis from the matches just fetched/cached.');
@@ -640,12 +638,8 @@ async function runRecentAnalysis(){
     log('Resolved '+profile.display_name+'. Fetching recent Riot matches for a '+roleLabel(targetRole)+'-only report.','ok');
     statusPill('Fetching '+roleLabel(targetRole)+' matches','warn');
     setProgress(4,100);
-    let result=await fetchProfileData(profile,30,8,64,targetRole);
-    if(Number(result.finish?.comparable_cached_games??0)<20){
-      log('Fewer than 20 queue-comparable '+roleLabel(targetRole)+' games found in the first 30. Extending the scan to 50 recent matches automatically.','ok');
-      result=await fetchProfileData(profile,50,64,84,targetRole);
-    }
-    if(Number(result.finish?.comparable_cached_games??0)>=20)setProgress(84,100);
+    const result=await fetchProfileData(profile,100,8,84,targetRole);
+    setProgress(84,100);
     await loadCacheStatus();
     statusPill('Analyzing '+roleLabel(targetRole)+' Last 20','warn');
     setProgress(90,100);
@@ -682,6 +676,8 @@ function normalizeReport(r){
   out.benchmarks=out.benchmarks||{};
   out.externalBenchmarks=out.externalBenchmarks||{};
   out.dataQuality=out.dataQuality||{};
+  out.longHorizon=out.longHorizon||{};
+  out.historySummary=out.historySummary||out.lifetime||null;
   out.sourceStatus=out.sourceStatus||{};
   out.charts=out.charts||{};
   return out;
@@ -728,13 +724,14 @@ function renderReport(raw,sourceKind){
   const riotId=[p.gameName||p.game_name,p.tagLine||p.tag_line].filter(Boolean).join('#');
   const rank=p.rank&&p.rank.tier?[p.rank.tier,p.rank.rank,p.rank.leaguePoints!=null?String(p.rank.leaguePoints)+' LP':''].filter(Boolean).join(' '):'';
   const coachingN=reportCoachingGames(r).length,reportRole=canonicalRole(r.dataQuality?.selectedRole||r.coachingSummary?.primaryRole||s.primaryRole||state.selectedRole);
-  const reportTimes=(r.games||[]).map(g=>gameTimestampMs(g.gameStartTimestamp)).filter(Boolean).sort((a,b)=>a-b);
+  const reportTimes=(r.games||[]).map(g=>gameTimestampMs(g.gameStartTimestamp)).filter(Boolean).sort((a,b)=>a-b),historyN=Number(r?.longHorizon?.sampleGames||0);
   const reportRange=reportTimes.length?(new Date(reportTimes[0]).toLocaleDateString(undefined,{day:'numeric',month:'short'})+' → '+new Date(reportTimes[reportTimes.length-1]).toLocaleDateString(undefined,{day:'numeric',month:'short'})):'';
-  $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(rank?rank+' · ':'')+(s.games??r.games.length)+' '+roleLabel(reportRole)+' games · '+coachingN+' coaching-comparable'+(reportRange?' · '+reportRange:'');
+  $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(rank?rank+' · ':'')+(s.games??r.games.length)+' '+roleLabel(reportRole)+' deep games · '+coachingN+' coaching-comparable'+(historyN>Number(s.games??r.games.length)?' · '+historyN+'-game history':'')+(reportRange?' · '+reportRange:'');
   if($('rankRadarPanel'))$('rankRadarPanel').hidden=reportRole!=='ADC';
   $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':sourceKind==='saved_server'?'Saved Kalenel report':(r.analyzerVersion||'Web analysis');
   renderQuickRead(r);
   renderRecentPulse(r);
+  renderLongHorizon(r);
   renderReportDrivers(r);
   renderEvidenceHealth(r);
   renderKpis(r);
@@ -1079,21 +1076,23 @@ function outcomeFingerprintSpecs(role){
     {label:'Role gold @15',unit:'gold',inverse:false,get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)?Number(g.goldDiff15):null},
     {label:'DPM vs ADC peer',unit:'dpm',inverse:false,get:g=>trustedDirectPeer(g)&&hasNum(g?.peer?.dpmDelta)?Number(g.peer.dpmDelta):null},
     {label:'High-risk deaths / game',unit:'num',inverse:true,get:g=>g.timelineAvailable===true?g.badDeathCount:null},
-    {label:'Kill participation',unit:'percent',inverse:false,get:g=>g.kp}
+    {label:'Death downtime',unit:'percent',inverse:true,get:g=>hasNum(g.deadTimePct)?Number(g.deadTimePct):null},
+    {label:'Lane minions @10',unit:'num',inverse:false,get:g=>hasNum(g.laneCs10)?Number(g.laneCs10):null},
+    {label:'Damage share − gold share',unit:'percent',inverse:false,get:g=>hasNum(g.damageEfficiencyPp)?Number(g.damageEfficiencyPp):null}
   ];
 }
 function renderOutcomeFingerprint(r){
   const box=$('outcomeFingerprint'),note=$('outcomeFingerprintNote');if(!box)return;
-  const games=reportCoachingGames(r),wins=games.filter(g=>g.win),losses=games.filter(g=>!g.win),role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole);
+  const allGames=reportCoachingGames(r),cleanGames=allGames.filter(g=>g?.outcomeCompromised!==true),cleanWins=cleanGames.filter(g=>g.win),cleanLosses=cleanGames.filter(g=>!g.win),useClean=cleanWins.length>=2&&cleanLosses.length>=2,games=useClean?cleanGames:allGames,wins=games.filter(g=>g.win),losses=games.filter(g=>!g.win),role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole);
   if(wins.length<2||losses.length<2){
     box.innerHTML='<div class="bullet empty">At least two wins and two losses are needed for a useful within-sample outcome comparison.</div>';
-    if(note)note.textContent='The report does not force an outcome story from a one-sided '+roleLabel(role)+' coaching cohort. Current comparison sample: '+wins.length+' wins / '+losses.length+' losses.';
+    if(note)note.textContent='The report does not force an outcome story from a one-sided '+roleLabel(role)+' coaching cohort. Current comparison sample: '+wins.length+' wins / '+losses.length+' losses.'+(useClean&&allGames.length!==games.length?' Outcome-compromised games were excluded.':'');
     return;
   }
   const cards=outcomeFingerprintSpecs(role).map(spec=>outcomeFingerprintCard(spec.label,gameMetricSummary(wins,spec.get,spec.opportunity),gameMetricSummary(losses,spec.get,spec.opportunity),spec.unit,spec.inverse,spec.minOpportunities||0,spec.opportunityLabel||'opportunities'));
   box.innerHTML=cards.map(x=>x.html).join('');
   const usable=cards.filter(x=>x.ready&&hasNum(x.effect)).sort((a,b)=>Number(b.effect)-Number(a.effect)),lead=usable[0],thin=cards.filter(x=>!x.ready).length;
-  if(note)note.innerHTML=lead?'<b>Largest role-specific standardized separation:</b> '+esc(lead.label)+' (Hedges g '+esc(fmt(lead.effect,2))+'). The small-sample correction makes unlike units more comparable, but this remains descriptive and is not a causal or significance claim. '+esc(roleLabel(role))+' coaching cohort: '+wins.length+' wins / '+losses.length+' losses.'+(thin?' '+thin+' metric'+(thin===1?' is':'s are')+' shown without directional color because one outcome side misses its valid-game or metric-specific opportunity floor.':''):'No role-specific metric has at least three valid observations in both wins and losses with enough variation for a directional standardized comparison.';
+  if(note)note.innerHTML=lead?'<b>Largest role-specific standardized separation:</b> '+esc(lead.label)+' (Hedges g '+esc(fmt(lead.effect,2))+'). The small-sample correction makes unlike units more comparable, but this remains descriptive and is not a causal or significance claim. '+esc(roleLabel(role))+' coaching cohort: '+wins.length+' wins / '+losses.length+' losses.'+(useClean&&allGames.length!==games.length?' '+String(allGames.length-games.length)+' AFK/early-surrender outcome-compromised game(s) excluded.':'')+(thin?' '+thin+' metric'+(thin===1?' is':'s are')+' shown without directional color because one outcome side misses its valid-game or metric-specific opportunity floor.':''):'No role-specific metric has at least three valid observations in both wins and losses with enough variation for a directional standardized comparison.';
 }
 function evidenceHealthCard(label,value,detail,status){
   const stateLabel=status==='ready'?'Ready':status==='limited'?'Limited':'Withheld';
@@ -1260,6 +1259,31 @@ function pulseCard(spec){
 function renderRecentPulse(r){
   const target=$('recentPulse');if(!target)return;
   target.innerHTML=roleRecentTrendSpecs(r).map(pulseCard).join('');
+}
+function historyTrendCard(label,obj,unit='num',inverse=false,threshold=0){
+  const recent=hasNum(obj?.recent)?Number(obj.recent):null,prior=hasNum(obj?.prior)?Number(obj.prior):null,recentN=Number(obj?.recentN||0),priorN=Number(obj?.priorN||0),ready=recentN>=5&&priorN>=5&&recent!=null&&prior!=null;
+  if(!ready)return '<article class="pulse-card tone-neutral"><span>'+esc(label)+'</span><strong>Not enough history</strong><small>'+recentN+' recent / '+priorN+' prior valid games · need 5 each</small></article>';
+  const delta=recent-prior,signal=inverse?-delta:delta,tone=Math.abs(delta)<threshold?'neutral':signal>0?'good':'bad';
+  const format=(v)=>unit==='percent'?fmtPct(v):unit==='pp'?signed(v,1)+' pp':unit==='dpm'?fmtInt(v):unit==='cs'?fmt(v,1):unit==='csmin'?fmt(v,2):fmt(v,2);
+  const deltaText=unit==='percent'||unit==='pp'?signed(delta,1)+' pp':unit==='dpm'?signed(delta,0):unit==='cs'?signed(delta,1):signed(delta,2);
+  return '<article class="pulse-card tone-'+tone+'"><span>'+esc(label)+'</span><strong>'+esc(format(recent))+'</strong><p>Previous '+esc(format(prior))+' · Δ '+esc(deltaText)+'</p><small>latest '+recentN+' vs previous '+priorN+' valid games · descriptive history shift</small></article>';
+}
+function renderLongHorizon(r){
+  const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),note=$('longHorizonNote');if(!kpi||!trend)return;
+  const s=h.summary||{},role=canonicalRole(h.selectedRole||r?.dataQuality?.selectedRole||state.selectedRole),games=Number(h.sampleGames||0);
+  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
+  const laner=['ADC','MID','TOP'].includes(role),rows=[
+    {label:'History depth',value:games+' games',sub:'up to 100 same-role + selected-queue matches'},
+    laner?{label:'Lane minions @10',value:hasNum(s?.laneCs10?.value)?fmt(s.laneCs10.value,1):'n/a',sub:String(s?.laneCs10?.n||0)+' match-level Riot challenge observations'}:{label:'Vision actions / min',value:hasNum(s?.visionActionsPerMin?.value)?fmt(s.visionActionsPerMin.value,2):'n/a',sub:'wards placed + wards cleared per minute'},
+    {label:'Death downtime',value:hasNum(s?.deadTimePct?.value)?fmtPct(s.deadTimePct.value):'n/a',sub:'share of game time spent dead · timing-sensitive'},
+    {label:'Damage share − gold share',value:hasNum(s?.damageEfficiencyPp?.value)?signed(s.damageEfficiencyPp.value,1)+' pp':'n/a',sub:'team champion-damage share minus team gold share'},
+    {label:'Turret damage / min',value:hasNum(s?.turretDamagePerMin?.value)?fmtInt(s.turretDamagePerMin.value):'n/a',sub:'direct structure pressure from match data'},
+    {label:'Epic damage / min',value:hasNum(s?.epicDamagePerMin?.value)?fmtInt(s.epicDamagePerMin.value):'n/a',sub:'damage to epic monsters; context, not objective credit'}
+  ];
+  kpi.innerHTML=rows.map(x=>'<article class="kpi-card tone-neutral"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><small>'+esc(x.sub)+'</small></article>').join('');
+  const specs=[{label:'CS / min',obj:h?.trend?.csMin,unit:'csmin',inverse:false,threshold:.08},...(laner?[{label:'Lane minions @10',obj:h?.trend?.laneCs10,unit:'cs',inverse:false,threshold:1.5}]:[{label:'Vision actions / min',obj:h?.trend?.visionActionsPerMin,unit:'num',inverse:false,threshold:.05}]),{label:'Damage / min',obj:h?.trend?.dpm,unit:'dpm',inverse:false,threshold:60},{label:'Death downtime',obj:h?.trend?.deadTimePct,unit:'percent',inverse:true,threshold:1.5},{label:'Damage share − gold share',obj:h?.trend?.damageEfficiencyPp,unit:'pp',inverse:false,threshold:1.5},{label:'Turret damage / min',obj:h?.trend?.turretDamagePerMin,unit:'dpm',inverse:false,threshold:35}];
+  trend.innerHTML=specs.map(x=>historyTrendCard(x.label,x.obj,x.unit,x.inverse,x.threshold)).join('');
+  if(note)note.innerHTML='<b>Scope:</b> '+games+' selected-role + selected-queue matches, with '+String(h.deepTimelineGames||0)+' carrying deep timeline evidence. Last-20 behavior coaching still uses the deep sample; older matches are deliberately used for stable match-level history only. '+String(s.compromisedOutcomeGames||0)+' history game(s) are tagged as outcome-compromised by AFK/early-surrender evidence. Riot plate-segment data is retained for structure context but is not interpreted as old pre-14 outer-turret plating.';
 }
 
 function renderVisualSummary(r){
