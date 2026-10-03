@@ -1132,7 +1132,7 @@ function renderEvidenceHealth(r){
 }
 
 function renderKpis(r){
-  const s=r.coachingSummary||r.summary||{},roleKey=canonicalRole(s.primaryRole||r.summary?.primaryRole||state.selectedRole),role=roleLabel(roleKey),games=Number(s.games||0);
+  const s=r.coachingSummary||r.summary||{},roleKey=canonicalRole(r?.dataQuality?.selectedRole||s.primaryRole||r.summary?.primaryRole||state.selectedRole),role=roleLabel(roleKey),games=Number(s.games||0);
   const common=[
     {label:'Win rate',value:fmtPct(s.winRate),sub:games+' '+role+' coaching games'},
     {label:'KDA',value:fmt(s.kda,2),sub:'Raw selected-role sample'}
