@@ -454,10 +454,10 @@ ok(backend.includes('peer_rank_backfilled'), 'fetch finish must report peer-rank
 ok(backend.includes('comparableCachedGames'), 'fetch finish must measure comparable cached sample size');
 ok(backend.includes('ANALYSIS_CACHE_METADATA_LIMIT=100'), 'League must keep the historical cache horizon as lightweight metadata rather than a 100-timeline payload');
 ok(backend.includes('ANALYSIS_DEEP_TARGET_GAMES=20')&&backend.includes('ANALYSIS_DEEP_BATCH_SIZE=20'), 'deep timeline loading must target the final Last-20 in bounded batches');
-ok(backend.includes('ANALYSIS_BASELINE_MAX_ROWS=80'), 'historical baseline depth must remain available without timeline payloads');
+ok(backend.includes('ANALYSIS_BASELINE_MAX_ROWS=100')&&backend.includes('ANALYSIS_HISTORY_TARGET_GAMES=100'), '100-game historical baseline depth must remain available without timeline payloads');
 ok(backend.includes('metadata_role_then_queue_then_bounded_timelines_v3')&&backend.includes('queueSelectionScope:"selected_role"'), 'analysis data quality must expose role-first metadata cohorting before queue selection');
 ok(backend.includes('avoidsHistoricalTimelinePayload:true'), 'analysis must explicitly record that baseline timelines were not transferred');
-ok(backend.includes('select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,player_role,peer_rank_json,peer_rank_fetched_at")'), 'fetch-finish selected-role queue selection must remain metadata-only');
+ok(backend.includes('select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,player_role,timeline_fetched_at,fetch_error,peer_rank_json,peer_rank_fetched_at")'), 'fetch-finish selected-role queue selection must remain metadata-only');
 ok(backend.includes('rankNeedIds.length')&&backend.includes('select("match_id,match_json")'), 'fetch-finish must load match JSON only for peer-rank rows that still need it');
 ok(roleCacheMigration.includes('add column if not exists player_role text')&&roleCacheMigration.includes('league_match_cache_profile_role_queue_time_idx'), 'cache schema must persist canonical player role with a role+queue+time index');
 ok(backend.includes('player_role:playerRole')&&backend.includes('const stored=role(row?.player_role)'), 'new fetches must persist canonical role and metadata reads must prefer it');
@@ -495,7 +495,7 @@ ok(html.includes('id="requestRole"')&&app.includes('selectedAnalysisRole()'), 'f
 ok(backend.includes('function report(profile:any,rows:any[],catalog:any,requestedRole:any=null)')&&backend.includes('allDeepCandidates.filter((x:any)=>x.g.role===selectedRole)'), 'backend report construction must filter by selected role before Last-20 slicing');
 ok(backend.includes('selectedRole:primaryRole')&&backend.includes('excludedOtherRoles'), 'report data quality must disclose selected role and excluded other-role games');
 ok(backend.includes('selected_role_total_cached_games')&&backend.includes('selected_role_cached_games'), 'backend must expose total selected-role depth separately from final role+queue comparability');
-ok(app.includes("Number(result.finish?.comparable_cached_games??0)<20"), 'automatic fetch deepening must be driven by the role+queue comparable sample');
+ok(app.includes("timeline_target_ids")&&app.includes("fetch_depth:'deep'"), 'automatic deep fetch must be driven by planned role+queue Last-20 timeline targets');
 ok(app.includes('Role-selection safety check failed'), 'frontend must reject any selected-role contamination');
 ok(html.includes('id="savedProfileSelect"')&&app.includes("api('profiles_list')")&&app.includes("api('profile_save'"), 'Riot identity and analysis history must be reusable through saved Kalenel League profiles');
 ok(app.includes("String(p.profile_key||'')==='recent-request'")&&app.includes('id:legacy.id'), 'legacy direct-request profile must migrate in place rather than cloning or discarding its cache');
@@ -1062,7 +1062,7 @@ ok(backend.includes('for(const ev of g.directPeerComparable===true?(g.laneDuel?.
 ok(app.includes("peerChampion=peerOk?String(g.peer?.champion||''):'")&&app.includes("peerChampion=peerTrusted?String(g.peer?.champion||''):''"), 'per-game opponent identity must be withheld in current and legacy frontend reports when peer confidence is insufficient');
 ok(modelDoc.includes('## v263 fail-closed per-game opponent evidence'), 'analysis documentation must preserve v263 per-game opponent integrity');
 ok(!backend.includes('recentRankIds=new Set(matchIds.slice(0,20))'), 'raw first-20 matches must not drive peer-rank refresh before selected-role cohorting');
-ok(backend.includes('peer_rank_plan:"selected_role_queue_cohort_after_cache"')&&app.includes("fetch_prepare',{profile_id:profile.id,count:requestedCount,target_role:targetRole}"), 'fetch preparation must defer peer-rank work until the selected role/queue cohort is known');
+ok(backend.includes('peer_rank_plan:"selected_role_queue_cohort_after_deep_plan"')&&app.includes("fetch_prepare',{profile_id:profile.id,count:requestedCount,target_role:targetRole}"), 'fetch preparation must defer peer-rank work until the selected role/queue deep cohort is known');
 ok(!backend.includes('rankRelevant=idx<20')&&app.includes("fetch_depth:'metadata'")&&app.includes("fetch_depth:'deep'"), 'raw metadata scan must not perform peer-rank lookup and deep timeline work must be a second phase');
 ok(backend.includes('!row?.peer_rank_fetched_at||(row?.peer_rank_json&&row.peer_rank_json?.schema!=="rank_snapshot_v2")'), 'null peer-rank results with a fetched timestamp must remain negative-cached');
 ok(backend.includes('peer_rank_selection_scope:"trusted_selected_role_queue_cohort"')&&backend.includes('peer_rank_unavailable_cached:peerRankUnavailableCached'), 'fetch completion must expose trusted role-first peer-rank targeting and unavailable-result caching');

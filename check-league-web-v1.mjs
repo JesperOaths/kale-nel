@@ -31,7 +31,7 @@ assert.ok(api.includes('trimAnonymousMatchCache(')&&api.includes('trimAnonymousR
 const matchCachePruner=api.slice(api.indexOf('async function trimAnonymousMatchCache'),api.indexOf('async function riot('));
 assert.ok(matchCachePruner.includes('select("match_id")')&&matchCachePruner.includes('.in("match_id",matchIds)'),'Match-cache pruning must use the real composite key rather than a nonexistent id column');
 assert.ok(!matchCachePruner.includes('select("id")')&&!matchCachePruner.includes('.in("id",'),'Match-cache pruning must never assume league_match_cache_v1 has an id column');
-assert.ok(html.includes('scans up to 50 recent matches')&&html.includes('Latest eligible 20'),'Public UI must describe the automatic bounded Last-20 scan instead of exposing cache-depth controls');
+assert.ok(html.includes('scans up to 100 recent matches')&&html.includes('100-game scan · deep Last 20'),'Public UI must describe the automatic 100-game metadata scan plus bounded deep Last-20 analysis instead of exposing cache-depth controls');
 assert.ok(api.includes('requires_session:false')&&api.includes('public_workspace:true'),'League health contract must remain public');
 assert.ok(api.includes('ANALYSIS_CACHE_METADATA_LIMIT=100'),'League must retain broad cache discovery as lightweight metadata');
 assert.ok(api.includes('ANALYSIS_DEEP_TARGET_GAMES=20')&&api.includes('ANALYSIS_DEEP_BATCH_SIZE=20'),'League must load timeline JSON only in bounded batches until the final Last-20 is satisfied');
@@ -40,9 +40,9 @@ assert.ok(api.includes('rankNeedIds.length')&&api.includes('select("match_id,mat
 assert.ok(roleCacheMigration.includes('add column if not exists player_role text')&&roleCacheMigration.includes('league_match_cache_profile_role_queue_time_idx'),'Role cache migration must persist canonical role and index role+queue recency');
 assert.ok(api.includes('player_role:playerRole')&&api.includes('const stored=role(row?.player_role)'),'New cache rows must persist canonical role and role reads must prefer lightweight metadata');
 assert.ok(api.includes('queueSelection=selectRecentQueueCohort(roleEligible,20)')&&api.includes('dominant_within_recent_selected_role_supported_window_tie_newest'),'Dominant queue selection must be computed inside the selected role, never from other-role matches');
-assert.ok(api.includes('select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,player_role,peer_rank_json,peer_rank_fetched_at")'),'Fetch-finish role/queue cohorting must remain metadata-only');
+assert.ok(api.includes('select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,player_role,timeline_fetched_at,fetch_error,peer_rank_json,peer_rank_fetched_at")'),'Fetch-finish role/queue cohorting must remain metadata-only');
 assert.ok(api.includes('select("match_id,game_start_at,map_id,queue_id,game_duration_seconds,player_role,peer_rank_json,peer_rank_fetched_at,fetch_error")'),'Analyze stage-one role selection must remain metadata-only');
-assert.ok(app.includes("Number(result.finish?.comparable_cached_games??0)<20"),'Automatic deepening must be driven by the final role+queue comparable sample rather than all games in the role');
+assert.ok(app.includes("timeline_target_ids")&&app.includes("fetch_depth:'deep'"),'Automatic deepening must be driven by planned final role+queue Last-20 timeline targets rather than all scanned games');
 assert.ok(app.includes("roleCount=Number(d.selected_role_cached_games"),'Cache status must expose selected-role depth to the user');
 assert.ok(api.includes('select("match_id").eq("profile_id",p.id).in("match_id",matchIds).not("match_json","is",null)')&&!api.includes('in("match_id",matchIds).not("match_json","is",null).not("timeline_json","is",null)'),'100-game scan cache detection must reuse match metadata even when an older history row has no timeline');
 assert.ok(api.includes('metadata_then_selected_reports_v1'),'Latest-report retrieval must select metadata first and hydrate only current/previous report payloads');
@@ -1268,7 +1268,7 @@ assert.ok(app.includes("peerChampion=peerOk?String(g.peer?.champion||''):'")&&ap
 assert.ok(app.includes("detailCard('Opponent',peerOk&&peer?")&&app.includes("if(key==='opponent')return trustedDirectPeer(g)?"),'Detailed evidence and opponent sorting must fail closed for legacy reports with untrusted peer identities');
 assert.ok(modelDoc.includes('## v263 fail-closed per-game opponent evidence'),'Per-game opponent fail-closed semantics must remain documented');
 assert.ok(!api.includes('recentRankIds=new Set(matchIds.slice(0,20))'),'Fetch preparation must not target peer ranks from the first 20 raw matches before role/queue selection');
-assert.ok(api.includes('peer_rank_plan:"selected_role_queue_cohort_after_cache"')&&app.includes("fetch_prepare',{profile_id:profile.id,count:requestedCount,target_role:targetRole}"),'Fetch preparation must carry selected-role context while deferring rank targeting');
+assert.ok(api.includes('peer_rank_plan:"selected_role_queue_cohort_after_deep_plan"')&&app.includes("fetch_prepare',{profile_id:profile.id,count:requestedCount,target_role:targetRole}"),'Fetch preparation must carry selected-role context while deferring rank targeting until the final deep cohort');
 assert.ok(!api.includes('rankRelevant=idx<20')&&app.includes("fetch_depth:'metadata'")&&app.includes("fetch_depth:'deep'"),'Peer rank must be fully deferred from raw-match scanning while frontend uses separate metadata and deep phases');
 assert.ok(api.includes('!row?.peer_rank_fetched_at||(row?.peer_rank_json&&row.peer_rank_json?.schema!=="rank_snapshot_v2")'),'A checked null peer-rank result must be negative-cached instead of retried forever');
 assert.ok(api.includes('peer_rank_selection_scope:"trusted_selected_role_queue_cohort"')&&api.includes('peer_rank_unavailable_cached:peerRankUnavailableCached'),'Fetch completion must expose trusted selected-role rank targeting and negative-cache counts');
