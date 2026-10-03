@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.134'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.135'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -1013,3 +1013,8 @@ ok(backend.includes('if(dpmGames.length>=3&&hasNum(p.dpm)&&hasNum(summary.dpm)')
 ok(backend.includes('confidence:confidence(dpmGames.length)')&&backend.includes('measurable DPM games'), 'champion DPM highlight confidence/evidence must use the DPM denominator');
 ok(!backend.includes('if(list.length>=3&&hasNum(p.dpm)&&hasNum(summary.dpm)'), 'champion DPM highlight must never gate on total champion games');
 ok(modelDoc.includes('## v253 champion DPM denominator integrity'), 'analysis documentation must preserve champion DPM denominator integrity');
+ok(backend.includes('soloKillGames=list.filter')&&backend.includes('soloEventGames=list.filter'), 'matchup backend must count solo-event spread by game');
+ok(backend.includes('earlySoloKillGames:soloKillGames')&&backend.includes('earlySoloEventGames:soloEventGames'), 'matchup profiles must export solo-event game spread');
+ok(app.includes('soloBad=soloDeaths>=2&&soloDeathGames>=2')&&app.includes('soloGood=soloKills>=2&&soloKillGames>=2'), 'matchup 1v1 direction must require cross-game repetition');
+ok(app.includes('pressureReady=pressureN>=3&&pressureGames>=2')&&app.includes('outsideDeaths>=2&&outsideGames>=2'), 'outside-pressure matchup diagnosis must require denominator and negative events across games');
+ok(modelDoc.includes('## v254 repeated-matchup cross-game event spread'), 'analysis documentation must preserve repeated-matchup spread semantics');
