@@ -844,3 +844,7 @@ ok(app.includes('b.objectiveCoachingPresenceRate??b.meanGameObjectiveContestPres
 ok(modelDoc.includes('## Coaching-facing objective presence aggregation'), 'analysis documentation must preserve coaching objective-presence aggregation semantics');
 ok(app.includes("aggregation==='pooled_events'?' · pooled event rate'")&&app.includes("aggregation==='mean_games_with_event_coverage'?' · equal-weight game mean'"), 'Recent Pulse must distinguish pooled event rates from equal-weight game means');
 ok(modelDoc.includes('The Recent Pulse UI must also disclose the aggregation inline'), 'analysis documentation must preserve Recent Pulse aggregation disclosure');
+
+ok(app.includes("objectiveGameWeighted=hasNum(b.objectiveCoachingPresenceRate??b.meanGameObjectiveContestPresenceRate)")&&app.includes("objectiveReady=roleCoverage.contestReady"), 'generic objective decision card must use game-weighted presence and cross-game evidence readiness');
+ok(app.includes("(objectiveGameWeighted?'mean per-game rate · ':'legacy pooled rate · ')")&&app.includes("floor 5 encounters across 3 games',objective,objectiveReady,null"), 'generic objective decision card must expose pooled counts only as traceability and omit a pooled Wilson interval');
+ok(modelDoc.includes('The generic Decision metrics **Contested objective presence** card follows the same rule'), 'analysis documentation must preserve generic objective-card aggregation parity');
