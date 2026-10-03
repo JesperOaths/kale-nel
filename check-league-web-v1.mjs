@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.127'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.128'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v243'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v244'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1141,3 +1141,12 @@ assert.ok(api.includes('The timing association does not identify fatigue, focus 
 assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&higherRankGames.length>=3&&higherLane.length>=3'),'Higher-rank lane-gold coaching must stay carry-role scoped');
 assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&lowerRankStats.laneGames>=3'),'Lower-rank lane-gold coaching must stay carry-role scoped');
 assert.ok(modelDoc.includes('## v243 role-specific session coaching'),'Role-specific session/rank-pressure policy must remain documented');
+
+assert.ok(api.includes('"sessionBehavior.game3PlusVpmDelta":["sessionBehavior.firstGame.vpmGames","sessionBehavior.game3Plus.vpmGames"]')&&app.includes("'sessionBehavior.game3PlusVpmDelta':['sessionBehavior.firstGame.vpmGames','sessionBehavior.game3Plus.vpmGames']"),'Support consistency targets must use VPM/KP session deltas with scorer parity');
+assert.ok(api.includes('"sessionBehavior.game3PlusKpDelta":["sessionBehavior.firstGame.kpGames","sessionBehavior.game3Plus.kpGames"]')&&app.includes("'sessionBehavior.postLossKpDelta':['sessionBehavior.quickAfterLoss.kpGames','sessionBehavior.quickAfterWin.kpGames']"),'KP session target denominator paths must remain backend/frontend aligned');
+assert.ok(api.includes('"sessionBehavior.game3PlusCsMinDelta":["sessionBehavior.firstGame.csMinGames","sessionBehavior.game3Plus.csMinGames"]')&&app.includes("'sessionBehavior.postLossCsMinDelta':['sessionBehavior.quickAfterLoss.csMinGames','sessionBehavior.quickAfterWin.csMinGames']"),'Jungle/carry CS-min session target paths must remain scoreable');
+assert.ok(api.includes('primaryRole==="SUPPORT"')&&api.includes('"Game 3+ vision/min delta"')&&api.includes('"Quick post-loss vision/min delta"'),'Support session practice targets must be role-specific');
+assert.ok(api.includes('primaryRole==="JUNGLE"')&&api.includes('"Game 3+ CS/min delta"')&&api.includes('"Quick post-loss CS/min delta"'),'Jungle session practice targets must be role-specific');
+assert.ok(api.includes('Number(sessionModel.game3PlusGoldDelta)<=-300')&&api.includes('Number(sessionModel.game3PlusVpmDelta)<=-0.15')&&api.includes('Number(sessionModel.game3PlusKpDelta)<=-10'),'Session targets must only be created for materially unfavorable deltas');
+assert.ok(app.includes("if(unit==='vpm')return signed(n,2)+' VPM'"),'Session VPM targets must have explicit readable formatting');
+assert.ok(modelDoc.includes('## v244 role-specific session practice targets'),'Role-specific session target policy must remain documented');
