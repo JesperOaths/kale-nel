@@ -798,26 +798,26 @@ function reportInsightParts(x,fallback){
 }
 function roleRecentTrendSpecs(r){
   const t=r.recentTrend||{},role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole);
-  const spec=(label,obj,unit,inverse,threshold,minRecentEvents=0,minPriorEvents=0)=>({label,obj,unit,inverse,threshold,minRecentEvents,minPriorEvents});
+  const spec=(label,obj,unit,inverse,threshold,minRecentEvents=0,minPriorEvents=0,minRecentGames=3,minPriorGames=5)=>({label,obj,unit,inverse,threshold,minRecentEvents,minPriorEvents,minRecentGames,minPriorGames});
   if(role==='SUPPORT')return[
-    spec('Roam conversion',t.roamConversion,'percent',false,15,3,5),
-    spec('ADC lane movement during roams',t.supportAdcLaneCost,'cs',false,2),
-    spec('Vision-action death rate',t.visionActionDeath,'percent',true,5,6,10),
-    spec('Prior objective setup',t.objectiveSetup,'percent',false,10,3,5),
-    spec('Contested objective presence',t.objectiveJoin,'percent',false,10,3,5)
+    spec('Roam conversion',t.roamConversion,'percent',false,15,4,5,3,5),
+    spec('ADC lane movement during roams',t.supportAdcLaneCost,'cs',false,2,4,5,3,5),
+    spec('Vision-action death rate',t.visionActionDeath,'percent',true,5,12,12,4,5),
+    spec('Prior objective setup',t.objectiveSetup,'percent',false,10,5,5,3,5),
+    spec('Contested objective presence',t.objectiveJoin,'percent',false,10,5,5,3,5)
   ];
   if(role==='JUNGLE')return[
     spec('CS/min vs JUNGLE peer',t.peerCsMinDelta,'csmin',false,.15),
     spec('First impact vs JUNGLE peer',t.impactDelta,'minutes',true,1),
     spec('First major vs JUNGLE peer',t.itemDelta,'minutes',true,.5),
-    spec('Prior objective setup',t.objectiveSetup,'percent',false,10,3,5),
-    spec('Contested objective presence',t.objectiveJoin,'percent',false,10,3,5)
+    spec('Prior objective setup',t.objectiveSetup,'percent',false,10,5,5,3,5),
+    spec('Contested objective presence',t.objectiveJoin,'percent',false,10,5,5,3,5)
   ];
   if(role==='MID')return[
     spec('Gold @15 vs MID peer',t.goldDiff15,'gold',false,150),
     spec('First impact vs MID peer',t.impactDelta,'minutes',true,1),
-    spec('Roam conversion',t.roamConversion,'percent',false,15,3,5),
-    spec('Prior objective setup',t.objectiveSetup,'percent',false,10,3,5),
+    spec('Roam conversion',t.roamConversion,'percent',false,15,4,5,3,5),
+    spec('Prior objective setup',t.objectiveSetup,'percent',false,10,5,5,3,5),
     spec('High-risk deaths',t.badDeaths,'num',true,.2)
   ];
   if(role==='TOP')return[
@@ -837,7 +837,7 @@ function roleRecentTrendSpecs(r){
 }
 function recentTrendSpecReady(spec){
   const o=spec?.obj;
-  if(!o||!hasNum(o.recent)||!hasNum(o.prior)||Number(o.recentN||0)<3||Number(o.priorN||0)<5)return false;
+  if(!o||!hasNum(o.recent)||!hasNum(o.prior)||Number(o.recentN||0)<Number(spec.minRecentGames||3)||Number(o.priorN||0)<Number(spec.minPriorGames||5))return false;
   if(Number(spec.minRecentEvents||0)>0&&Number(o.recentEvents||0)<Number(spec.minRecentEvents))return false;
   if(Number(spec.minPriorEvents||0)>0&&Number(o.priorEvents||0)<Number(spec.minPriorEvents))return false;
   return true;
