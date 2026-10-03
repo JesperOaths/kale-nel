@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.140'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.141'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -1043,3 +1043,8 @@ ok(app.includes("status:'re-baseline required'")&&app.includes("saved target pre
 ok(modelDoc.includes('## v259 trusted Gold @15 baseline integrity'), 'analysis documentation must preserve trusted Gold@15 population integrity');
 ok(backend.includes('"player_role_not_high_confidence"')&&backend.includes('"same_role_opponent_not_high_confidence"')&&backend.includes('"bot_lane_partner_not_high_confidence_or_unresolved"'), 'lane-pressure evidence must fail closed with explicit low-confidence exclusion reasons');
 ok(modelDoc.includes('## v260 high-confidence lane-opposition gate'), 'analysis documentation must preserve the high-confidence lane-opposition gate');
+ok(backend.includes('earlyLeadGames=validDirectPeerTimeline.filter(g=>g?.phaseRules?.lane15Comparable!==false&&g.earlyLeadWindow?.eligible)'), 'aggregate early-lead metrics must inherit the trusted direct-peer timeline cohort');
+ok(backend.includes('g=>g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false&&g.earlyLeadWindow?.eligible?1:0'), 'early-lead trend opportunities must be trusted-peer comparable');
+ok(backend.includes('if(g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false&&earlyLead?.eligible&&earlyLead?.giveback)add('), 'early-lead replay review must fail closed without a trusted peer');
+ok(app.includes("label:'Early lead give-back',unit:'percent',inverse:true,get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false"), 'TOP outcome fingerprint must use trusted early-lead evidence');
+ok(modelDoc.includes('## v261 early-lead direct-peer integrity'), 'analysis documentation must preserve early-lead direct-peer integrity');
