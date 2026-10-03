@@ -1757,7 +1757,9 @@ Saved-report development comparisons are **rolling Last-20 comparisons**, not in
 
 General metric comparison is withheld when the selected primary role, selected queue context or verified mechanics cohort changes. A patch change does not automatically erase every descriptive comparison, but it is disclosed prominently; saved Next-5 target scoring remains stricter and is withheld across patch changes.
 
-Headline progress uses denominator-safe metrics only. Each metric must meet its own analyzer-aligned minimum in **both** reports before a delta is eligible. Materiality is expressed as the observed directional change divided by that metric's predefined practical change band. The UI calls material movement **favorable shift** or **unfavorable shift**, not proof of improvement/decline.
+Headline progress uses denominator-safe metrics only. Each metric must meet its own analyzer-aligned evidence requirements in **both** reports before a delta is eligible. A simple metric may have one denominator; event-based role metrics can require multiple paths, such as roam attempts **and** contributing games, or objective encounters **and** objective-event games. Materiality is expressed as the observed directional change divided by that metric's predefined practical change band. The UI calls material movement **favorable shift** or **unfavorable shift**, not proof of improvement/decline.
+
+Support rolling progress uses the same floors as the live Support lens: roam conversion needs 4 attempts across 3 games; ADC lane movement needs 4 measured windows across 3 games; vision-action death rate needs 12 actions across 4 games; contested-objective presence needs 5 encounters across 3 games. Jungle/Mid recent-shop objective absence and Jungle contested-objective presence likewise require 5 contested encounters across 3 games.
 
 Only the strongest material shifts are kept prominent. Metrics that remain inside their practical change bands are placed in a collapsible stable/smaller-shifts section. Missing or thin metrics are counted as withheld rather than silently converted to zero.
 
