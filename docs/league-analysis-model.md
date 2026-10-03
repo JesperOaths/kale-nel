@@ -1800,7 +1800,7 @@ Champion diagnostics may combine self-only and opponent-relative fields, but the
 
 Repeated opponent-champion matchup groups are stricter: a game may enter the group only when the opponent is a trusted direct-role peer. An inferred or low-confidence opponent champion must not define a repeated matchup.
 
-Every diagnostic chip uses its own support count. Directional coloring requires at least 3 relevant observations: 3 lane-comparable trusted-peer games for role-gold chips, 3 DPM observations for DPM chips, 3 timeline-complete games for champion risk, 3 first-major peer comparisons for item timing, and at least 3 relevant home-lane deaths before an outside-pressure share is directionally colored. Below those floors the value may remain visible for traceability but the chip is neutral.
+Every diagnostic chip uses its own support count. Directional coloring requires at least 3 relevant observations: 3 lane-comparable trusted-peer games for role-gold chips, 3 measurable DPM games for DPM chips, 3 timeline-complete games for champion risk, 3 first-major peer comparisons for item timing, and at least 3 relevant home-lane deaths before an outside-pressure share is directionally colored. Backend champion highlights use the same metric-specific denominator: a high-output DPM highlight requires at least 3 measurable DPM games, not merely 3 total champion games. Below those floors the value may remain visible for traceability but the chip is neutral.
 
 
 ## Death-pattern review priority
@@ -2836,3 +2836,10 @@ Support champion diagnostics must use the same cross-game evidence rules as the 
 Champion-specific roam conversion is directionally colored only with at least 4 detected roam attempts spread across at least 3 games on that champion. Champion-specific ADC lane movement uses the game-weighted mean (`meanGameSupportAdcLaneMovementCs`) and is directionally colored only with at least 4 measured roam windows across at least 3 champion games. The diagnostic chip displays both the opportunity count and contributing-game count.
 
 The legacy pooled-window lane-movement average may remain a compatibility fallback when reading older saved reports, but it must not receive directional color without the cross-game evidence fields.
+
+
+## v253 champion DPM denominator integrity
+
+Champion-specific DPM averages are calculated only from games with a finite DPM observation. Any coaching/highlight rule based on that average must therefore gate on `dpmGames.length`, not the total number of games on the champion.
+
+For ADC/MID/TOP, the “high-output pick” highlight requires at least 3 measurable DPM games. Its evidence copy and confidence level also use that measurable DPM count. This keeps backend coaching aligned with the frontend DPM chip, which already uses the exported `dpmGames` support count.
