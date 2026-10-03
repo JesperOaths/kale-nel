@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.131'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.132'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -980,3 +980,13 @@ ok(backend.includes('/vision-action|ward placement|ward clear|vision.*death|unsa
 ok(backend.includes('/farm|cs|wave/.test(tt)&&hasNum(m.avgCsSwing15to25)')&&backend.includes('/objective|presence|attendance|reconnect|routing|movement/.test(tt)'), 'mid-routing targets must distinguish farm loss from objective presence');
 ok(backend.includes('/before.*contribut|contribution|removed before|uptime/.test(tt)')&&backend.includes('/damage|resource|output|gold share/.test(tt)'), 'teamfight targets must not use generic metric fallbacks');
 ok(modelDoc.includes('## v247 representative-evidence target routing'), 'analysis documentation must preserve representative-evidence target routing');
+
+ok(backend.includes('"peerComparison.avgVpmDelta":["peerComparison.vpmGames"]')&&app.includes("'peerComparison.avgVpmDelta':['peerComparison.vpmGames']"), 'vision-volume target must preserve direct-peer VPM denominator');
+ok(backend.includes('"peerComparison.avgObjectiveSetupDelta":["peerComparison.visionSetupGames"]')&&backend.includes('"peerComparison.objectiveSetupWardRateDelta":["peerComparison.visionSetupGames"]'), 'peer setup targets must use trusted setup-game denominator');
+ok(backend.includes('/giving up vision volume|vision volume trails|vision score/.test(tt)')&&backend.includes('"Vision/min delta vs role peer"'), 'vision-volume diagnosis must route to VPM delta');
+ok(backend.includes('/ward volume.*objective setup|ward share/.test(tt)')&&backend.includes('"Objective-setup ward-share delta vs role peer"'), 'setup-share diagnosis must route to peer-relative share delta');
+ok(backend.includes('/pre-objective vision setup|setup trails|fewer wards/.test(tt)')&&backend.includes('"Objective-setup wards vs role peer"'), 'setup-count diagnosis must route to peer-relative ward-count delta');
+ok(backend.includes('/setup|arrival/.test(tt)')&&backend.includes('/objective|presence|attendance|contest/.test(tt)'), 'objectives router must separate setup from attendance/presence');
+ok(!backend.includes('/setup|arrival|objective/.test(tt)&&hasNum(behavior?.objectiveSetupCoachingRate)'), 'generic objective wording must not be treated as prior-setup evidence');
+ok(app.includes("if(unit==='wards')return signed(n,1)+' wards'"), 'frontend must format peer setup-ward targets explicitly');
+ok(modelDoc.includes('## v248 diagnosis-aligned vision and objective targets'), 'analysis documentation must preserve diagnosis-aligned target semantics');
