@@ -2690,3 +2690,10 @@ New analyzer reports already store only the selected role in the report game sam
 Only a game whose explicit Riot/report role normalizes to the selected coaching role may enter `reportCoachingGames(r)`. Missing, unknown or unsupported per-game role labels are **context only** and are never allowed to inherit the general UI default of ADC. This is intentionally stricter than `canonicalRole()`, whose ADC default remains useful for form/profile UI but would be unsafe for evidence membership.
 
 Raw match history can still display those older rows for traceability. `gameIsCoachingContext(r,g)` marks a role-mismatched or role-unknown row as non-coaching, and the report header's coaching-comparable count is reconstructed from the same strict cohort rather than trusting a stale legacy aggregate.
+
+
+## Coaching-cohort progress horizons
+
+Rolling overlap/new/dropped counts and Next-5 practice-target horizons must use the same reconstructed coaching cohort as the metrics they describe. The frontend therefore derives match IDs from `reportCoachingGames(report)`, which applies the strict selected-role filter and, when active, the verified current-mechanics filter.
+
+Context-only rows in older mixed-role saved reports may remain visible in match history, but they cannot advance a five-game practice horizon, increase rolling-overlap counts, or make practice-plan continuity look more mature. A “new game” for development tracking means a new coaching-comparable match ID, not merely a new row in `report.games`.
