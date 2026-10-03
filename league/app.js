@@ -1334,7 +1334,7 @@ function renderLongHorizon(r){
       ?{label:'Team vision leader',value:hasNum(s?.visionLeaderRate?.value)?fmtPct(s.visionLeaderRate.value):'n/a',sub:'share of games ranked #1 on team vision score'}
       :{label:'Vision actions / min',value:hasNum(s?.visionActionsPerMin?.value)?fmt(s.visionActionsPerMin.value,2):'n/a',sub:'wards placed + wards cleared per minute'};
   const resourceOutput=laner
-    ?{label:'Top-2 gold → top-2 damage',value:hasNum(s?.top2GoldToTop2DamageRate?.value)?fmtPct(s.top2GoldToTop2DamageRate.value):'n/a',sub:String(s?.top2GoldToTop2DamageRate?.events||0)+' / '+String(s?.top2GoldToTop2DamageRate?.n||0)+' high-resource games converted · descriptive carry context'}
+    ?{label:'Top-2 gold → top-2 damage',value:hasNum(s?.top2GoldToTop2DamageRate?.value)?fmtPct(s.top2GoldToTop2DamageRate.value):'n/a',sub:String(s?.top2GoldToTop2DamageRate?.events||0)+' / '+String(s?.top2GoldToTop2DamageRate?.n||0)+' high-resource games converted · '+(hasNum(s?.damageTop2Rate?.value)?fmtPct(s.damageTop2Rate.value)+' top-2 team damage overall · ':'')+(hasNum(s?.damageLeaderRate?.value)?fmtPct(s.damageLeaderRate.value)+' team damage leader · ':'')+'descriptive carry context'}
     :null;
   const lowResourceOutput=laner
     ?{label:'Lower gold → top-2 damage',value:hasNum(s?.lowResourceTop2DamageRate?.value)?fmtPct(s.lowResourceTop2DamageRate.value):'n/a',sub:String(s?.lowResourceTop2DamageRate?.events||0)+' / '+String(s?.lowResourceTop2DamageRate?.n||0)+' games outside top-2 team gold still reached top-2 team damage · descriptive punch-up context'}
