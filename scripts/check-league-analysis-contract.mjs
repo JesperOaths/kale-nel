@@ -899,3 +899,12 @@ ok(modelDoc.includes('## Zero-safe pre-objective death practice target'), 'analy
 ok(backend.includes('externalAdcBenchmarkSet(profile.rank_snapshot||null,dominantQueueId,primaryRole)'), 'report construction must pass selected primary role into ADC benchmark gating');
 ok(app.includes("role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole)")&&app.includes("ext.eligibilityReason==='selected_role_not_adc'"), 'saved-report ADC benchmark UI must use canonical selected role and fail closed');
 ok(modelDoc.includes('## ADC benchmark role eligibility'), 'analysis documentation must preserve ADC benchmark role gating');
+
+const backendPracticeRegistryBlock=backend.slice(backend.indexOf('const samplePathsFor='),backend.indexOf('const sampleRequirementsFor='));
+const frontendPracticeRegistryBlock=app.slice(app.indexOf('const PRACTICE_TARGET_SAMPLE_PATHS='),app.indexOf('function practiceTargetMetricPath'));
+const registryMetricKeys=block=>[...new Set([...block.matchAll(/["']([^"']+)["']\s*:/g)].map(m=>m[1]).filter(x=>x.includes('.')))].sort();
+const backendPracticeRegistryKeys=registryMetricKeys(backendPracticeRegistryBlock);
+const frontendPracticeRegistryKeys=registryMetricKeys(frontendPracticeRegistryBlock).filter(x=>!['summary.csMin','summary.goldDiff15'].includes(x));
+ok(JSON.stringify(frontendPracticeRegistryKeys)===JSON.stringify(backendPracticeRegistryKeys), 'frontend practice-target fallback registry must cover every backend metric path except intentional summary.* legacy aliases');
+ok(app.includes("'behaviorSummary.meanGameRoamLaneMovementCs':['behaviorSummary.roamLaneCostMeasuredGames']"), 'frontend fallback must preserve game-weighted generic roam denominator');
+ok(modelDoc.includes('## Practice-target registry parity'), 'analysis documentation must preserve practice-target registry parity');
