@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.147'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.148'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v266'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v267'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1282,3 +1282,8 @@ assert.ok(api.includes('if(row?.fetch_error)continue')&&app.includes('for(let ro
 assert.ok(api.includes('!!row?.timeline_json&&rr!=="GENERIC"')&&api.includes('timelineDeepCandidates=roleDeepCandidates.filter'),'Deep sample completion and report selection must prefer actual timeline evidence, not merely matching roles');
 assert.ok(api.includes('deepTimelineFallbackGames:games.filter'),'Data quality must disclose any no-timeline fallback games that remain after replacement attempts');
 assert.ok(modelDoc.includes('## v266 deep-timeline failover integrity'),'Deep-timeline failover semantics must remain documented');
+assert.ok(api.includes('soloKillsPer30:per30(sample,g=>g.soloKills)')&&app.includes("Solo kills / game")&&app.includes("per 30 min"),'Solo-kill history must use readable per-game units with per-30 context instead of tiny per-minute presentation');
+assert.ok(api.includes('selected_role_scope_violation')&&api.includes('deepRoleScopeViolations')&&api.includes('historyRoleScopeViolations'),'Backend must fail closed if a role-specific report contains another role');
+assert.ok(app.includes('function reportRoleScopeViolations(')&&app.includes('roleContaminated=scope.total>0'),'Frontend saved-report loading must detect and rebuild role-contaminated reports');
+assert.ok(html.includes('id="historyConsistency"')&&html.includes('id="historyChampionMix"')&&app.includes('function historyDistributionCard('),'100-game history must render consistency distributions and champion mix');
+assert.ok(modelDoc.includes('## v267 role-pure history and readable solo-kill rates'),'Role-pure history and solo-kill unit semantics must remain documented');
