@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.111'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.112'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -787,3 +787,12 @@ ok(backend.includes('trendGameMeanWithEvents')&&backend.includes('supportAdcLane
 ok(app.includes("spec('Roam conversion',t.roamConversion,'percent',false,15,4,5,3,5)")&&app.includes("spec('Vision-action death rate',t.visionActionDeath,'percent',true,5,12,12,4,5)"), 'Support recent direction must use analyzer-aligned opportunity and game floors');
 ok(app.includes("spec('Prior objective setup',t.objectiveSetup,'percent',false,10,5,5,3,5)")&&app.includes("spec('Contested objective presence',t.objectiveJoin,'percent',false,10,5,5,3,5)"), 'recent objective direction must require event and game spread');
 ok(modelDoc.includes('## Recent-direction evidence parity')&&modelDoc.includes('earlySetupJoins / contestedJoined'), 'analysis documentation must preserve recent-direction denominator semantics');
+
+ok(backend.includes('objectivePresenceEvidenceReady=neutralObjectiveEvents>=5&&objectiveContestGames>=3'), 'action-first objective presence must require encounters across games');
+ok(backend.includes('roamAttempts>=4&&roamAttemptGames>=3'), 'action-first roam conversion must require cross-game spread');
+ok(backend.includes('roamLaneCostEvents.length>=4&&roamLaneCostMeasuredGames>=3'), 'roam lane-movement coaching must require measured windows across games');
+ok(backend.includes('emptyCostlyRoams.length>=2&&emptyCostlyRoamGames>=2'), 'costly no-return roam findings must repeat across games');
+ok(backend.includes('supportRoamAdcEmptyCostlyEvents.length>=2&&supportRoamAdcEmptyCostlyGames>=2'), 'Support no-return ADC-costly roam findings must repeat across games');
+ok(backend.includes('recentShopObjectiveAbsences>=2&&recentShopObjectiveAbsenceGames>=2'), 'recent-shop objective absence findings must repeat across games');
+ok(backend.includes('preObjDeaths>=2&&preObjectiveDeathGames>=2'), 'pre-objective death clues must require cross-game repetition');
+ok(modelDoc.includes('## Action-first cross-game evidence spread'), 'analysis documentation must preserve v4.112 action-first spread safeguards');
