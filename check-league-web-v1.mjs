@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v251'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v252'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1204,3 +1204,6 @@ assert.ok(api.includes('g=>Number(g.objectiveContestTotal||0)>0?100*Number(g.obj
 assert.ok(modelDoc.includes('## v250 game-weighted recent objective direction'),'Recent objective trend aggregation policy must remain documented');
 assert.ok(app.includes('eventCoveredTrendRow')&&app.includes('Latest 5 team-contested presence / previous'),'Technical recent-trend rows must render objective aggregation provenance dynamically');
 assert.ok(modelDoc.includes('## v251 recent-trend aggregation provenance'),'Recent-trend provenance labeling must remain documented');
+assert.ok(app.includes('roamReady=roamN>=4&&roamGames>=3')&&app.includes('costReady=costN>=4&&costGames>=3'),'Support champion diagnostics must require opportunity counts across multiple champion games');
+assert.ok(app.includes('v.meanGameSupportAdcLaneMovementCs')&&app.includes("costN+' windows · '+costGames+' games'"),'Support champion lane-movement diagnostics must use game-weighted mean with window/game traceability');
+assert.ok(modelDoc.includes('## v252 Support champion diagnostic spread'),'Support champion evidence-spread policy must remain documented');
