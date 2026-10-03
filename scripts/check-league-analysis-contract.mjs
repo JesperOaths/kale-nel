@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.130'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.131'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -972,3 +972,11 @@ ok(backend.includes('"behaviorSummary.greedyStaysPerTimelineGame":["behaviorSumm
 ok(backend.includes('/high.?gold|greedy|stay|spendable gold/.test(tt)')&&backend.includes('"High-gold stays / game"'), 'reset target router must map high-gold-stay themes to the exact metric');
 ok(backend.includes('/unspent|stored gold|1000g/.test(tt)&&hasNum(behavior?.highUnspentFightRate)'), 'high-unspent-fight target must not remain a generic reset fallback');
 ok(modelDoc.includes('## v246 reset-target evidence alignment'), 'analysis documentation must preserve v246 reset-target semantics');
+
+ok(backend.includes('const key=text(theme?.key),tt=text(theme?.title).toLowerCase();let added=false;'), 'target selection must use only the representative theme title');
+ok(backend.includes('const laneIntent=/lane cost|lane economy|lane movement|expensive for|costing lane|adc/.test(tt)'), 'roaming targets must distinguish lane-cost evidence from conversion evidence');
+ok(backend.includes('!laneIntent&&/roam|convert|conversion|return/.test(tt)&&hasNum(behavior?.roamSuccessRate)'), 'roam conversion must not remain a lane-cost fallback');
+ok(backend.includes('/vision-action|ward placement|ward clear|vision.*death|unsafe vision/.test(tt)')&&backend.includes('/setup|objective|ward share|vision volume/.test(tt)'), 'vision targets must follow the representative vision problem');
+ok(backend.includes('/farm|cs|wave/.test(tt)&&hasNum(m.avgCsSwing15to25)')&&backend.includes('/objective|presence|attendance|reconnect|routing|movement/.test(tt)'), 'mid-routing targets must distinguish farm loss from objective presence');
+ok(backend.includes('/before.*contribut|contribution|removed before|uptime/.test(tt)')&&backend.includes('/damage|resource|output|gold share/.test(tt)'), 'teamfight targets must not use generic metric fallbacks');
+ok(modelDoc.includes('## v247 representative-evidence target routing'), 'analysis documentation must preserve representative-evidence target routing');
