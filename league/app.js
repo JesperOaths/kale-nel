@@ -1072,7 +1072,7 @@ function outcomeFingerprintSpecs(role){
   if(role==='TOP')return[
     {label:'Role gold @15',unit:'gold',inverse:false,get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)?Number(g.goldDiff15):null},
     {label:'CS/min vs TOP peer',unit:'csmin',inverse:false,get:g=>trustedDirectPeer(g)&&hasNum(g?.peer?.csMinDelta)?Number(g.peer.csMinDelta):null},
-    {label:'Early lead give-back',unit:'percent',inverse:true,get:g=>g?.earlyLeadWindow?.eligible?(g.earlyLeadWindow.giveback?100:0):null},
+    {label:'Early lead give-back',unit:'percent',inverse:true,get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&g?.earlyLeadWindow?.eligible?(g.earlyLeadWindow.giveback?100:0):null},
     {label:'Pre-objective side-lane deaths',unit:'num',inverse:true,get:g=>g.timelineAvailable===true?Number(g?.sideLaneRisk?.preNeutralObjectiveSideLaneDeaths||0):null}
   ];
   return[
