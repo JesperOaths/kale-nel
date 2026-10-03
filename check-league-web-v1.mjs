@@ -819,7 +819,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v208'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v209'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -946,3 +946,11 @@ assert.ok(app.includes("path:'advanced.objectivePresence',sampleRequirements:[{p
 assert.ok(app.includes("path:'behaviorSummary.recentShopObjectiveAbsenceRate',sampleRequirements:[{path:'behaviorSummary.neutralObjectiveEvents',min:5},{path:'behaviorSummary.objectiveContestGames',min:3}]"), 'Recent-shop objective progress must require contested-event game spread');
 assert.ok(app.includes('curEvidence=progressEvidence(current,spec)')&&app.includes('!curEvidence.ready||!prevEvidence.ready'), 'Rolling progress must fail closed unless both reports satisfy every evidence requirement');
 assert.ok(modelDoc.includes('Support rolling progress uses the same floors as the live Support lens'), 'Rolling-progress evidence parity must remain documented');
+assert.ok(app.includes('function chartSpecEvidence(r,spec){')&&app.includes('evidenceRequirements'), 'Role charts must have report-level evidence requirements separate from mere drawable point count');
+assert.ok(app.includes("evidenceRequirements:[{path:'peerComparison.laneGames15',min:5}]")&&app.includes("evidenceRequirements:[{path:'peerComparison.majorItemGames',min:4}]"), 'Peer lane/item charts must respect analyzer-aligned sample floors');
+assert.ok(app.includes("evidenceRequirements:[{path:'behaviorSummary.roamAttempts',min:4},{path:'behaviorSummary.roamAttemptGames',min:3}]")&&app.includes("evidenceRequirements:[{path:'behaviorSummary.supportRoamAdcLaneMovementWindows',min:4},{path:'behaviorSummary.supportRoamAdcLaneMovementGames',min:3}]"), 'Support charts must require both event opportunities and game spread');
+assert.ok(app.includes("evidenceRequirements:[{path:'behaviorSummary.objectiveContestEncounters',min:5},{path:'behaviorSummary.objectiveContestGames',min:3}]"), 'Objective-presence charts must require contested encounters across multiple games');
+assert.ok(app.includes('const svg=evidence.ready?chartSvg(points,spec):null')&&app.includes("evidence.ready?'Insufficient valid data':'Thin evidence · '"), 'Thin role-chart evidence must be withheld rather than graphed');
+assert.ok(app.includes('consistencyCard(spec.title,robustStats(vals),spec.consistencyUnit||\'num\',split,detail,evidence.ready,evidence.summary)'), 'Consistency summaries must share the same evidence gate as the chart');
+assert.ok(css.includes('.chart-card.thin-evidence')&&css.includes('.consistency-card.evidence-unknown'), 'Thin chart and consistency evidence must remain visually neutral');
+assert.ok(modelDoc.includes('A chart being drawable is not the same as its coaching evidence being mature.'), 'Chart evidence-gating rationale must remain documented');
