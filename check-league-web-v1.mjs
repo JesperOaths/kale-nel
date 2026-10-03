@@ -874,7 +874,7 @@ for(const table of ['league_profiles_v1','league_match_cache_v1','league_fetch_r
 
 assert.ok(app.includes("aggregation==='pooled_events'?' · pooled event rate'")&&app.includes("aggregation==='mean_games_with_event_coverage'?' · equal-weight game mean'"),'Recent Pulse must disclose whether a short-window metric is pooled by event or averaged equally across games');
 assert.ok(modelDoc.includes('The Recent Pulse UI must also disclose the aggregation inline'),'Recent-direction aggregation disclosure must remain documented');
-console.log('league-web-contract=PASS');
+
 
 assert.ok(css.includes('.objective-diagnosis'),'Objective diagnosis must have dedicated styling');
 
@@ -1036,3 +1036,5 @@ assert.ok(app.includes("'mean per-game rate · pooled '"),'Role cards must discl
 assert.ok(!app.includes('c.contestReady,wilsonInterval(contestHits,c.contestN)')&&!app.includes('c.contestReady,wilsonInterval(contestHits,contestN)'),'Mean-game objective-presence cards must not render pooled Wilson intervals');
 assert.ok(modelDoc.includes('mean-game contested-objective presence cards do not render a Wilson interval'),'Objective-presence uncertainty semantics must remain documented');
 assert.ok(modelDoc.includes('## Coaching-facing objective presence aggregation'),'Coaching objective-presence aggregation semantics must remain documented');
+
+console.log('league-web-contract=PASS');
