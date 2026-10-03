@@ -2791,3 +2791,16 @@ The main mixed families are source-specific:
 - **Teamfights:** entry/first-death, died-before-contribution and carry-role damage/resource findings each require matching representative wording. Unsupported fight-selection themes may have no Next-5 metric rather than borrowing an unrelated output metric.
 
 Returning no target is valid when the current evidence theme has no denominator-safe measurable counterpart.
+
+
+## v248 diagnosis-aligned vision and objective targets
+
+Vision and objective Next-5 targets now preserve the comparison population and diagnosis that created the priority.
+
+For SUPPORT/JUNGLE vision themes:
+- a direct-role VPM deficit targets `peerComparison.avgVpmDelta` over `vpmGames`;
+- a setup-ward **share** deficit targets `peerComparison.objectiveSetupWardRateDelta` over trusted `visionSetupGames`;
+- a direct setup-ward **count** deficit targets `peerComparison.avgObjectiveSetupDelta` over the same trusted setup-game cohort;
+- vision-action safety still targets the self vision-action death rate.
+
+The objectives/closing router distinguishes prior **setup/arrival**, post-kill **conversion**, **closing/lead@25** risk, and generic objective **presence/attendance**. The word “objective” alone must not force a prior-setup target. When the objective diagnosis specifically identifies setup-vision share, the target uses the exact peer-relative setup-share delta rather than substituting self ward volume.
