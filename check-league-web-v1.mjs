@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.126'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.127'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v242'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v243'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1133,3 +1133,11 @@ assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&firstResetCle
 assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&recentTrend.goldDiff15.recentN>=4'),'Recent Gold@15 coaching must stay carry-role scoped');
 assert.ok(api.includes('["ADC","MID","TOP","JUNGLE"].includes(primaryRole)&&recentTrend.csMin.recentN>=4'),'Recent CS/min coaching may include Jungle but must exclude Support');
 assert.ok(modelDoc.includes('## v242 carry-lane coaching boundary'),'Carry-lane coaching role boundary must remain documented');
+
+assert.ok(api.includes('primaryRole==="SUPPORT"')&&api.includes('game3PlusVpmDelta')&&api.includes('game3PlusKpDelta'),'Support session coaching must use VPM/KP rather than carry metrics');
+assert.ok(api.includes('primaryRole==="JUNGLE"')&&api.includes('game3PlusCsMinDelta')&&api.includes('game3PlusKpDelta'),'Jungle session coaching must use CS/KP rather than carry-lane Gold/DPM');
+assert.ok(api.includes('sessionMetricReady')&&api.includes('Number(a?.[field]||0)>=3&&Number(b?.[field]||0)>=3'),'Session coaching must require metric-specific subgroup evidence in both sides');
+assert.ok(api.includes('The timing association does not identify fatigue, focus or any other cause.'),'Session coaching must preserve non-causal wording for unmeasured mental/physical explanations');
+assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&higherRankGames.length>=3&&higherLane.length>=3'),'Higher-rank lane-gold coaching must stay carry-role scoped');
+assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&lowerRankStats.laneGames>=3'),'Lower-rank lane-gold coaching must stay carry-role scoped');
+assert.ok(modelDoc.includes('## v243 role-specific session coaching'),'Role-specific session/rank-pressure policy must remain documented');
