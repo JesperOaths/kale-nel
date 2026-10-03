@@ -369,7 +369,7 @@ assert.ok(html.includes('id="requestGameName"')&&html.includes('id="requestTagLi
 assert.ok(html.includes('id="loadRecentBtn"')&&html.includes('Load & analyze'),'League must expose one primary recent-match action');
 assert.ok(!html.includes('id="profileSelect"')&&!html.includes('id="batchProfiles"')&&!html.includes('id="fetchBtn"')&&!html.includes('id="analyzeBtn"'),'Profile/batch/separate fetch-analyze controls must not return');
 assert.ok(app.includes('async function runRecentAnalysis()'),'One-click recent-match orchestration must remain explicit');
-assert.ok(/fetchProfileData\(profile,30(?:,|\))/.test(app)&&/fetchProfileData\(profile,50(?:,|\))/.test(app),'Direct request must scan 30 first and automatically deepen to 50 only when needed');
+assert.ok(/fetchProfileData\(profile,100(?:,|\))/.test(app)&&app.includes("fetch_depth:'metadata'")&&app.includes("fetch_depth:'deep'"),'Direct request must scan up to 100 match payloads and deep-fetch only the planned selected-role Last-20 timelines');
 assert.ok(app.includes('await fetchProfileData')&&app.includes('await analyzeProfileData'),'Direct request must fetch before analyzing rather than analyzing an empty cache');
 assert.ok(html.includes('id="requestRole"')&&html.includes('<option value="ADC" selected>ADC</option>')&&html.includes('<option value="TOP">Top</option>'),'Role selector must expose every canonical League role and default to ADC');
 assert.ok(app.includes('target_role:targetRole')&&api.includes('targetRole=role(body.target_role)'),'Selected role must be transmitted to fetch/analyze/history backend actions');
