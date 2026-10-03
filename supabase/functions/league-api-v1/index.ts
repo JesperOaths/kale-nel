@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.132";
+const ANALYZER_VERSION="league-web-behavior-v4.133";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1672,8 +1672,14 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,p
     roamConversion:trendEventRate(g=>g.roams?.successes,g=>g.roams?.attempts),
     supportAdcLaneCost:trendGameMeanWithEvents(recentSupportAdcLaneCost,supportAdcLaneWindowCount),
     visionActionDeath:trendEventRate(g=>g.visionMission?.deaths,g=>g.visionMission?.actions),
-    objectiveSetup:trendEventRate(g=>g.objectiveReadiness?.earlySetupJoins,g=>g.objectiveReadiness?.contestedJoined),
-    objectiveJoin:trendEventRate(g=>g.objectiveContestJoined,g=>g.objectiveContestTotal),
+    objectiveSetup:trendGameMeanWithEvents(
+      g=>Number(g.objectiveReadiness?.contestedJoined||0)>0?100*Number(g.objectiveReadiness?.earlySetupJoins||0)/Number(g.objectiveReadiness.contestedJoined):null,
+      g=>g.objectiveReadiness?.contestedJoined
+    ),
+    objectiveJoin:trendGameMeanWithEvents(
+      g=>Number(g.objectiveContestTotal||0)>0?100*Number(g.objectiveContestJoined||0)/Number(g.objectiveContestTotal):null,
+      g=>g.objectiveContestTotal
+    ),
     securedObjectiveJoin:trendEventRate(g=>g.objectiveJoined,g=>g.objectiveTeamTotal),
     earlyKp:trendEventRate(g=>g.earlyPlayerKillInvolvements,g=>g.earlyTeamKills)
   };
