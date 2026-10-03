@@ -1645,6 +1645,7 @@ const PRACTICE_TARGET_SAMPLE_PATHS={
   'behaviorSummary.visionActionDeathRate':['behaviorSummary.visionActions'],
   'behaviorSummary.roamSuccessRate':['behaviorSummary.roamAttempts'],
   'behaviorSummary.avgRoamLaneCostCs':['behaviorSummary.roamLaneCostGames'],
+  'behaviorSummary.meanGameRoamLaneMovementCs':['behaviorSummary.roamLaneCostMeasuredGames'],
   'behaviorSummary.meanGameSupportRoamAdcLaneMovementCs':['behaviorSummary.supportRoamAdcLaneMovementGames'],
   'sessionBehavior.game3PlusGoldDelta':['sessionBehavior.firstGame.lane15Games','sessionBehavior.game3Plus.lane15Games'],
   'sessionBehavior.postLossGoldDelta':['sessionBehavior.quickAfterLoss.lane15Games','sessionBehavior.quickAfterWin.lane15Games']
