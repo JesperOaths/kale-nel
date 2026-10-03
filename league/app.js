@@ -3125,7 +3125,7 @@ function chartSvg(points,spec){
   const zeroY=signedAxis?yAt(0):null;
   const upperBand=spec.inverse?'chart-negative-band':'chart-positive-band',lowerBand=spec.inverse?'chart-positive-band':'chart-negative-band';
   const bands=signedAxis?'<rect class="'+upperBand+'" x="'+padL+'" y="'+padT+'" width="'+plotW+'" height="'+Math.max(0,zeroY-padT)+'"/><rect class="'+lowerBand+'" x="'+padL+'" y="'+zeroY+'" width="'+plotW+'" height="'+Math.max(0,padT+plotH-zeroY)+'"/>':'';
-  const zero=signedAxis?'<line class="chart-zero-line" x1="'+padL+'" y1="'+zeroY+'" x2="'+(w-padR)+'" y2="'+zeroY+'"/><text class="chart-zero-label" x="'+(w-padR-4)+'" y="'+(zeroY-7)+'" text-anchor="end">EVEN WITH ROLE OPPONENT</text>':'';
+  const zero=signedAxis?'<line class="chart-zero-line" x1="'+padL+'" y1="'+zeroY+'" x2="'+(w-padR)+'" y2="'+zeroY+'"/><text class="chart-zero-label" x="'+(w-padR-4)+'" y="'+(zeroY-7)+'" text-anchor="end">'+esc(spec.zeroLabel||'EVEN WITH ROLE OPPONENT')+'</text>':'';
   const refValue=hasNum(spec.reference)?Number(spec.reference):null,refY=refValue!=null&&refValue>=min&&refValue<=max?yAt(refValue):null;
   const reference=refY==null?'':'<line class="chart-reference-line" x1="'+padL+'" y1="'+refY+'" x2="'+(w-padR)+'" y2="'+refY+'"/><text class="chart-reference-label" x="'+(w-padR-4)+'" y="'+(refY-7)+'" text-anchor="end">'+esc(spec.referenceLabel||'REFERENCE')+' · '+esc(formatChartValue(refValue,spec.formatUnit||spec.unit))+'</text>';
   const dots=coords.map((c,i)=>{const when=shortGameDate(c.p?.gameStartTimestamp)||('Game '+String(i+1)),champ=c.p?.champion?String(c.p.champion)+' · ':'',signal=c.v*(spec.inverse?-1:1);return '<circle class="chart-dot '+(signedAxis?(signal>0?'positive':signal<0?'negative':'even'):'')+'" cx="'+c.x.toFixed(1)+'" cy="'+c.y.toFixed(1)+'" r="5"><title>'+esc(champ+when+': '+formatChartValue(c.v,spec.formatUnit||spec.unit))+'</title></circle>';}).join('');
@@ -3136,12 +3136,12 @@ function chartSvg(points,spec){
 function chartSummary(points,spec){
   const vals=points.map(p=>Number(p.value)).filter(Number.isFinite);if(!vals.length)return'No valid values.';
   const avgV=vals.reduce((a,b)=>a+b,0)/vals.length,recent=vals.slice(-Math.min(5,vals.length)),recentAvg=recent.reduce((a,b)=>a+b,0)/recent.length;
-  const unit=spec.formatUnit||spec.unit;
+  const unit=spec.formatUnit||spec.unit,recentText='latest '+recent.length+' valid observation'+(recent.length===1?'':'s')+' average ';
   if(spec.signedAxis){
     const delta=recentAvg-avgV,signal=delta*(spec.inverse?-1:1),dir=Math.abs(delta)<(spec.relevance||50)?'similar recently':signal>0?'more favorable recently':'less favorable recently';
-    return 'Sample average '+formatChartValue(avgV,unit)+' · latest '+recent.length+' average '+formatChartValue(recentAvg,unit)+' · '+dir+'. Zero means even with the direct role opponent.';
+    return 'Sample average '+formatChartValue(avgV,unit)+' · '+recentText+formatChartValue(recentAvg,unit)+' · '+dir+'. '+(spec.zeroMeaning||'Zero means even with the direct role opponent.');
   }
-  return 'Sample average '+formatChartValue(avgV,unit)+' · latest '+recent.length+' average '+formatChartValue(recentAvg,unit)+'.';
+  return 'Sample average '+formatChartValue(avgV,unit)+' · '+recentText+formatChartValue(recentAvg,unit)+'.';
 }
 
 function quantile(values,q){
@@ -3215,7 +3215,7 @@ function roleEconomyChartSpecs(r,reportRole){
   const contest={key:'objectiveContest',get:g=>perGamePct(g?.objectiveReadiness?.contestedJoined,g?.objectiveReadiness?.contestedObjectives),title:'Contested objective presence · '+roleName,q:'Per-game supported presence in team-contested neutral-objective encounters. Missing/no contested event is not converted into zero.',unit:'percent',formatUnit:'%',consistencyUnit:'percent',fixedMin:0,fixedMax:100,evidenceRequirements:[{path:'behaviorSummary.objectiveContestEncounters',min:5},{path:'behaviorSummary.objectiveContestGames',min:3}]};
   const setupDelta={key:'objectiveSetupDelta',get:g=>trustedDirectPeer(g)&&hasNum(g?.vision?.objectiveSetupDeltaVsOpponent)?Number(g.vision.objectiveSetupDeltaVsOpponent):null,title:'Objective setup wards vs '+roleName+' peer',q:'Positive means more supported pre-objective setup wards than the actual same-role opponent in the same game. Missing setup evidence is not converted into zero.',unit:'num',formatUnit:'signed1',consistencyUnit:'num',signedAxis:true,relevance:.5,fixedMin:-4,fixedMax:4,splitCenter:0,splitThreshold:.5,evidenceRequirements:[{path:'peerComparison.visionSetupGames',min:5}]};
   const roam={key:'roamConversion',get:g=>perGamePct(g?.roams?.successes,g?.roams?.attempts),title:'Early roam conversion · '+roleName,q:'Per-game conversion among detected early roam departures. A converted roam can still carry lane cost.',unit:'percent',formatUnit:'%',consistencyUnit:'percent',fixedMin:0,fixedMax:100,evidenceRequirements:[{path:'behaviorSummary.roamAttempts',min:4},{path:'behaviorSummary.roamAttemptGames',min:3}]};
-  const adcLaneCost={key:'supportAdcLaneCost',get:g=>perGameSupportAdcLaneCost(g),title:'ADC lane movement during roams',q:'ADC-vs-ADC CS movement measured over detected Support roam windows. Positive is favorable lane movement for your ADC; negative is lane cost. This does not say the roam caused the movement.',unit:'num',formatUnit:'signed1',consistencyUnit:'cs',signedAxis:true,relevance:2,fixedMin:-15,fixedMax:15,splitCenter:0,splitThreshold:2,evidenceRequirements:[{path:'behaviorSummary.supportRoamAdcLaneMovementWindows',min:4},{path:'behaviorSummary.supportRoamAdcLaneMovementGames',min:3}]};
+  const adcLaneCost={key:'supportAdcLaneCost',get:g=>perGameSupportAdcLaneCost(g),title:'ADC lane movement during roams',q:'ADC-vs-ADC CS movement measured over detected Support roam windows. Positive is favorable lane movement for your ADC; negative is lane cost. This does not say the roam caused the movement.',unit:'num',formatUnit:'signed1',consistencyUnit:'cs',signedAxis:true,zeroLabel:'NO ADC LANE MOVEMENT',zeroMeaning:'Zero means no measured change in ADC-vs-ADC CS differential during the roam window.',relevance:2,fixedMin:-15,fixedMax:15,splitCenter:0,splitThreshold:2,evidenceRequirements:[{path:'behaviorSummary.supportRoamAdcLaneMovementWindows',min:4},{path:'behaviorSummary.supportRoamAdcLaneMovementGames',min:3}]};
   if(reportRole==='SUPPORT')return[peerVpm,setupDelta,roam,adcLaneCost];
   if(reportRole==='JUNGLE')return[peerCsMin,itemTiming,impact,contest];
   if(reportRole==='MID')return[gold,cs,impact,kp];
