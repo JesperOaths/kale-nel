@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.143'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.144'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v262'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v263'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1260,3 +1260,10 @@ assert.ok(api.includes('for(const ev of g.directPeerComparable===true?(g.leadDea
 assert.ok(api.includes('g.directPeerComparable===true&&spike.eligible&&spike.diedBeforeImpact')&&api.includes('g.directPeerComparable===true&&spike.eligible&&!spike.used'),'Item-spike replay moments must require trusted direct peers');
 assert.ok(api.includes('"behaviorSummary.highRiskLeadDeathsPerGame":["behaviorSummary.directPeerTimelineGames"]')&&app.includes("'behaviorSummary.highRiskBehindDeathsPerGame':['behaviorSummary.directPeerTimelineGames']"),'Backend/frontend practice target registries must use trusted peer timeline denominators for role-economy death metrics');
 assert.ok(modelDoc.includes('## v262 peer-relative coaching population integrity'),'Peer-relative coaching population safeguards must remain documented');
+assert.ok(api.includes('roleEconomyComparable?oppId:null')&&api.includes('if(rolePeerId&&ev.assistingIds.length===0)')&&api.includes('opponentContribution:rolePeerId?playerInKill(e,rolePeerId):false'),'Timeline direct-role evidence must be derived only from the trusted role-peer id');
+assert.ok(api.includes('const peer=directPeerComparable&&oppFull?')&&api.includes('directComparisonEligible:true,comparisonExclusionReason:null'),'Per-game peer identity and full-game deltas must be absent when direct-role resolution is not trusted');
+assert.ok(api.includes('alliedAdcCandidates=ps.filter((x:any)=>Number(x.teamId)===teamId&&participantRoleEvidence(x).confidence==="high"')&&api.includes('enemyAdcCandidates=ps.filter((x:any)=>Number(x.teamId)!==teamId&&participantRoleEvidence(x).confidence==="high"'),'Support roam ADC lane-cost evidence must require unique high-confidence ADC role evidence on both teams');
+assert.ok(api.includes('for(const ev of g.directPeerComparable===true?(g.laneDuel?.events||[]):[])'),'Replay matchup moments must not use lane-duel events from an untrusted role opponent');
+assert.ok(app.includes("peerChampion=peerOk?String(g.peer?.champion||''):'")&&app.includes("peerChampion=peerTrusted?String(g.peer?.champion||''):''"),'Match header/table must not expose an untrusted opponent champion');
+assert.ok(app.includes("detailCard('Opponent',peerOk&&peer?")&&app.includes("if(key==='opponent')return trustedDirectPeer(g)?"),'Detailed evidence and opponent sorting must fail closed for legacy reports with untrusted peer identities');
+assert.ok(modelDoc.includes('## v263 fail-closed per-game opponent evidence'),'Per-game opponent fail-closed semantics must remain documented');

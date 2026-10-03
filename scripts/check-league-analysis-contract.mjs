@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.143'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.144'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -1055,3 +1055,9 @@ ok(backend.includes('if(directPeerComparable&&g.firstResetSequence?.measured&&!g
 ok(backend.includes('for(const ev of g.directPeerComparable===true?(g.leadDeaths||[]):[])')&&backend.includes('g.directPeerComparable===true&&spike.eligible'), 'replay queue peer-economy moments must be trusted-peer only');
 ok(backend.includes('"behaviorSummary.highRiskBehindDeathsPerGame":["behaviorSummary.directPeerTimelineGames"]')&&app.includes("'behaviorSummary.highRiskLeadDeathsPerGame':['behaviorSummary.directPeerTimelineGames']"), 'practice-target denominator parity must preserve trusted role-economy populations');
 ok(modelDoc.includes('## v262 peer-relative coaching population integrity'), 'analysis documentation must preserve peer-relative coaching population integrity');
+ok(backend.includes('roleEconomyComparable?oppId:null')&&backend.includes('if(rolePeerId&&ev.assistingIds.length===0)')&&backend.includes('opponentContribution:rolePeerId?playerInKill(e,rolePeerId):false'), 'timeline direct-role evidence must use only a trusted role-peer id');
+ok(backend.includes('const peer=directPeerComparable&&oppFull?')&&backend.includes('directComparisonEligible:true,comparisonExclusionReason:null'), 'untrusted role opposition must not escape in the per-game peer payload');
+ok(backend.includes('alliedAdcCandidates=ps.filter((x:any)=>Number(x.teamId)===teamId&&participantRoleEvidence(x).confidence==="high"')&&backend.includes('enemyAdcCandidates=ps.filter((x:any)=>Number(x.teamId)!==teamId&&participantRoleEvidence(x).confidence==="high"'), 'Support ADC lane-cost comparison must require high-confidence ADC role evidence on both teams');
+ok(backend.includes('for(const ev of g.directPeerComparable===true?(g.laneDuel?.events||[]):[])'), 'replay matchup review must not promote untrusted lane-duel evidence');
+ok(app.includes("peerChampion=peerOk?String(g.peer?.champion||''):'")&&app.includes("peerChampion=peerTrusted?String(g.peer?.champion||''):''"), 'per-game opponent identity must be withheld in current and legacy frontend reports when peer confidence is insufficient');
+ok(modelDoc.includes('## v263 fail-closed per-game opponent evidence'), 'analysis documentation must preserve v263 per-game opponent integrity');

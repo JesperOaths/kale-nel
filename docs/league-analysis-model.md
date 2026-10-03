@@ -2940,3 +2940,14 @@ The trusted-only family now includes:
 `behaviorSummary.directPeerTimelineGames` is the denominator for peer-economy per-game death metrics such as `highRiskLeadDeathsPerGame` and `highRiskBehindDeathsPerGame`. Non-peer death metrics such as generic high-risk deaths/game, costly deaths/game and repeat deaths/game continue to use all timeline-complete coaching games.
 
 Earlier-item spike utilization is aggregated only from timeline-complete trusted direct-peer games. Self-only major-item affordability remains independent of opponent trust; only its comparison **versus** the opponent requires a trusted peer. This distinction prevents a low-confidence opponent role from entering coaching without unnecessarily discarding valid self-only reset evidence.
+
+
+## v263 fail-closed per-game opponent evidence
+
+The trusted-peer gate now applies at the per-game data-production boundary, not only at aggregate coaching consumers. A candidate same-role opponent is converted into a `rolePeerId` only when both the player and the resolved opposing role have high-confidence Riot role evidence. Direct-role checkpoints, early gold samples, clean lane-duel events, opponent vision/shop/item timelines, role-peer fight context, opponent first-impact timing, death-economy deltas, opponent repeat-death context, direct-peer roam lane cost, and other opponent-relative timeline facts use that trusted identifier. This prevents a fallback or ambiguous role candidate from leaving plausible-looking comparison fields in the report for a later renderer to accidentally reuse.
+
+The serialized per-game `peer` object is now emitted only for `directPeerComparable === true`. Exclusion provenance remains available through `peerResolution.directPeerExclusionReason`, so the report can explain why comparison was withheld without exposing a low-confidence opponent identity or its derived deltas. Frontend match headers, evidence-table opponent cells, detailed opponent/rank cards, death-pattern labels, and opponent sorting independently re-check `directPeerComparable` so older saved reports also fail closed.
+
+Support roam lane-cost evidence has the same standard. The allied ADC and enemy ADC must each be uniquely identifiable from high-confidence Riot role fields before ADC-vs-ADC CS movement can become the coaching lane-cost signal; otherwise that comparison is unavailable rather than inferred from a fallback role.
+
+Replay review now applies the trusted-peer gate to clean 1v1 lane-death prompts as well. A low-confidence opponent can therefore contribute ordinary non-peer facts such as a player's own death, position, team objective context, or KDA, but cannot become named matchup evidence or a direct-role economy/vision/item comparison.

@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.143";
+const ANALYZER_VERSION="league-web-behavior-v4.144";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -805,7 +805,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
   const frames=Array.isArray(timeline?.info?.frames)?timeline.info.frames:[],pid=Number(p.participantId),opp=opponent(match,p),oppId=opp?Number(opp.participantId):null;
   const ps=Array.isArray(match?.info?.participants)?match.info.participants:[],byId=new Map<number,any>();for(const q of ps)byId.set(Number(q.participantId),q);
   const mapId=Number(match?.info?.mapId||0),teamId=Number(p.teamId),playerRoleEvidence=participantRoleEvidence(p),rr=playerRoleEvidence.role,homeLane=homeLaneForRole(rr),rules=gameRules(match);
-  const laneOpponentIds=new Set<number>(),oppRoleEvidence=opp?participantRoleEvidence(opp):null,roleEconomyComparable=playerRoleEvidence.confidence==="high"&&!!oppId&&oppRoleEvidence?.confidence==="high";
+  const laneOpponentIds=new Set<number>(),oppRoleEvidence=opp?participantRoleEvidence(opp):null,roleEconomyComparable=playerRoleEvidence.confidence==="high"&&!!oppId&&oppRoleEvidence?.confidence==="high",rolePeerId=roleEconomyComparable?oppId:null;
   let laneOppositionResolved=roleEconomyComparable,laneOppositionReason=playerRoleEvidence.confidence!=="high"?"player_role_not_high_confidence":!oppId?"same_role_opponent_unresolved":oppRoleEvidence?.confidence!=="high"?"same_role_opponent_not_high_confidence":null;
   if(laneOppositionResolved&&oppId)laneOpponentIds.add(oppId);
   if(rr==="ADC"||rr==="SUPPORT"){
@@ -817,32 +817,32 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
   const gameDurationSec=Number(match?.info?.gameDuration||0);
   for(const minute of[10,15]){
     if(gameDurationSec<minute*60)continue;
-    const fr=frameNearMinute(frames,minute,45000),a=frameStats(fr,pid),b=oppId?frameStats(fr,oppId):null;
+    const fr=frameNearMinute(frames,minute,45000),a=frameStats(fr,pid),b=rolePeerId?frameStats(fr,rolePeerId):null;
     if(a&&b){out["goldDiff"+minute]=(a.gold!=null&&b.gold!=null)?a.gold-b.gold:null;out["csDiff"+minute]=a.cs-b.cs;out["xpDiff"+minute]=(a.xp!=null&&b.xp!=null)?a.xp-b.xp:null;out["levelDiff"+minute]=(a.level!=null&&b.level!=null)?a.level-b.level:null;}
   }
-  const reaches25=gameDurationSec>=25*60,fr25=reaches25?frameNearMinute(frames,25,45000):null,a25=frameStats(fr25,pid),b25=oppId?frameStats(fr25,oppId):null;
+  const reaches25=gameDurationSec>=25*60,fr25=reaches25?frameNearMinute(frames,25,45000):null,a25=frameStats(fr25,pid),b25=rolePeerId?frameStats(fr25,rolePeerId):null;
   if(a25&&b25){out.goldDiff25=(a25.gold!=null&&b25.gold!=null)?a25.gold-b25.gold:null;out.csDiff25=a25.cs-b25.cs;out.xpDiff25=(a25.xp!=null&&b25.xp!=null)?a25.xp-b25.xp:null;out.levelDiff25=(a25.level!=null&&b25.level!=null)?a25.level-b25.level:null;}
 
   const itemEventsByPid:any[]=[],itemEventsByOpp:any[]=[],allObjectives:any[]=[],ownObjectiveEvents:any[]=[],oppObjectiveEvents:any[]=[],deathEvents:any[]=[],involved:any[]=[],oppInvolved:any[]=[],oppWards:any[]=[],allChampionKills:any[]=[],earlyRoleGoldSamples:any[]=[];
   for(const fr of frames){
-    const mine=frameStats(fr,pid),frameMinute=Number(fr?.timestamp||0)/60000,rolePeerFrame=oppId?frameStats(fr,oppId):null;
+    const mine=frameStats(fr,pid),frameMinute=Number(fr?.timestamp||0)/60000,rolePeerFrame=rolePeerId?frameStats(fr,rolePeerId):null;
     if(rules.lane15Comparable!==false&&mine&&rolePeerFrame&&frameMinute>=3&&frameMinute<15&&hasNum(mine.gold)&&hasNum(rolePeerFrame.gold))earlyRoleGoldSamples.push({time:frameMinute,goldDiff:Number(mine.gold)-Number(rolePeerFrame.gold)});
     if(mine){const sample={time:frameMinute,totalGold:mine.gold,currentGold:mine.currentGold,cs:mine.cs,xp:mine.xp,level:mine.level,position:mine.position,zone:zoneFor(mapId,mine.position,teamId)};out.frameSamples.push(sample);if(mine.gold!=null)out.goldSeries.push({minute:sample.time,totalGold:mine.gold,currentGold:mine.currentGold});}
     for(const e of(Array.isArray(fr?.events)?fr.events:[])){
       const pxy=xy(e.position),tMs=Number(e.timestamp||0),tMin=tMs/60000;
       if(e.type==="CHAMPION_KILL"){
         const killer=byId.get(Number(e.killerId||0)),victim=byId.get(Number(e.victimId||0));
-        const ev={tMs,tMin,...(pxy||{}),killerId:Number(e.killerId||0),victimId:Number(e.victimId||0),killerTeam:Number(killer?.teamId||0)||null,victimTeam:Number(victim?.teamId||0)||null,assistingIds:Array.isArray(e.assistingParticipantIds)?e.assistingParticipantIds.map(Number):[],playerContribution:playerInKill(e,pid),opponentContribution:oppId?playerInKill(e,oppId):false};
+        const ev={tMs,tMin,...(pxy||{}),killerId:Number(e.killerId||0),victimId:Number(e.victimId||0),killerTeam:Number(killer?.teamId||0)||null,victimTeam:Number(victim?.teamId||0)||null,assistingIds:Array.isArray(e.assistingParticipantIds)?e.assistingParticipantIds.map(Number):[],playerContribution:playerInKill(e,pid),opponentContribution:rolePeerId?playerInKill(e,rolePeerId):false};
         allChampionKills.push(ev);
-        if(oppId&&ev.assistingIds.length===0){
-          const duelFrame=frameAtMs(frames,tMs),duelMe=frameStats(duelFrame,pid),duelOpp=frameStats(duelFrame,oppId);
+        if(rolePeerId&&ev.assistingIds.length===0){
+          const duelFrame=frameAtMs(frames,tMs),duelMe=frameStats(duelFrame,pid),duelOpp=frameStats(duelFrame,rolePeerId);
           const duelGoldDiff=duelMe&&duelOpp&&hasNum(duelMe.gold)&&hasNum(duelOpp.gold)?Number(duelMe.gold)-Number(duelOpp.gold):null,duelCsDiff=duelMe&&duelOpp?Number(duelMe.cs)-Number(duelOpp.cs):null;
           const early=tMin<Number(rules.earlyEndMin),pre14=tMin<=14,conversionEligibleTo15=rules.key==="standard_sr_2026"&&tMin<=14;
           const goldSwingTo15=conversionEligibleTo15&&hasNum(out.goldDiff15)&&hasNum(duelGoldDiff)?Number(out.goldDiff15)-Number(duelGoldDiff):null,csSwingTo15=conversionEligibleTo15&&hasNum(out.csDiff15)&&hasNum(duelCsDiff)?Number(out.csDiff15)-Number(duelCsDiff):null;
-          if(ev.killerId===pid&&ev.victimId===oppId){
+          if(ev.killerId===pid&&ev.victimId===rolePeerId){
             out.laneDuel.soloKillsVsRole++;if(early)out.laneDuel.earlySoloKillsVsRole++;if(pre14)out.laneDuel.pre14SoloKillsVsRole++;
             out.laneDuel.events.push({time:tMin,result:"solo_kill",early,pre14,conversionEligibleTo15,goldDiffAtEvent:duelGoldDiff,csDiffAtEvent:duelCsDiff,goldSwingTo15,csSwingTo15,convertedBy15:hasNum(goldSwingTo15)?Number(goldSwingTo15)>=200:null,...(pxy||{})});
-          }else if(ev.killerId===oppId&&ev.victimId===pid){
+          }else if(ev.killerId===rolePeerId&&ev.victimId===pid){
             out.laneDuel.soloDeathsToRole++;if(early)out.laneDuel.earlySoloDeathsToRole++;if(pre14)out.laneDuel.pre14SoloDeathsToRole++;
             out.laneDuel.events.push({time:tMin,result:"solo_death",early,pre14,conversionEligibleTo15,goldDiffAtEvent:duelGoldDiff,csDiffAtEvent:duelCsDiff,goldSwingTo15,csSwingTo15,...(pxy||{})});
           }
@@ -876,8 +876,8 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
       }else if(e.type==="WARD_PLACED"&&Number(e.creatorId)===pid){
         const inferred=pxy||frameStats(frameNearestMs(frames,tMs,35000),pid)?.position||null,territory=wardTerritory(teamId,inferred),w={time:tMin,tMs,...(inferred||{}),wardType:text(e.wardType),territory,positionEvidence:pxy?"event_position":inferred?"nearest_player_frame_35s":"unavailable"};
         out.wards.push(w);out.vision.wardCount++;if(text(e.wardType).toUpperCase().includes("CONTROL"))out.vision.controlWardCount++;if(territory==="offensive")out.vision.offensive++;else if(territory==="defensive")out.vision.defensive++;else if(territory==="river")out.vision.river++;
-      }else if(e.type==="WARD_PLACED"&&oppId&&Number(e.creatorId)===oppId){
-        const inferred=pxy||frameStats(frameNearestMs(frames,tMs,35000),oppId)?.position||null,w={time:tMin,tMs,...(inferred||{}),wardType:text(e.wardType),positionEvidence:pxy?"event_position":inferred?"nearest_player_frame_35s":"unavailable"};
+      }else if(e.type==="WARD_PLACED"&&rolePeerId&&Number(e.creatorId)===rolePeerId){
+        const inferred=pxy||frameStats(frameNearestMs(frames,tMs,35000),rolePeerId)?.position||null,w={time:tMin,tMs,...(inferred||{}),wardType:text(e.wardType),positionEvidence:pxy?"event_position":inferred?"nearest_player_frame_35s":"unavailable"};
         oppWards.push(w);out.opponentVision.wardCount++;if(text(e.wardType).toUpperCase().includes("CONTROL"))out.opponentVision.controlWardCount++;
       }else if(e.type==="WARD_KILL"&&Number(e.killerId)===pid){
         const inferred=pxy||frameStats(frameNearestMs(frames,tMs,35000),pid)?.position||null;
@@ -886,7 +886,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
       else if(["ITEM_PURCHASED","ITEM_SOLD","ITEM_DESTROYED","ITEM_UNDO"].includes(String(e.type))){
         const ev={type:String(e.type),tMs,tMin,itemId:Number(e.itemId||0),beforeId:Number(e.beforeId||0),afterId:Number(e.afterId||0)};
         if(Number(e.participantId)===pid)itemEventsByPid.push(ev);
-        if(oppId&&Number(e.participantId)===oppId)itemEventsByOpp.push(ev);
+        if(rolePeerId&&Number(e.participantId)===rolePeerId)itemEventsByOpp.push(ev);
       }
     }
   }
@@ -896,21 +896,21 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
     objectiveContestEvidence.set(w,{teamContested:teamSecured||alliedPresentIds.length>0,teamSecured,alliedPresentIds,alliedPresentCount:alliedPresentIds.length,playerPresent:alliedPresentIds.includes(pid)});
   }
   const neutralContestedWindows=neutralWindows.filter((w:any)=>objectiveContestEvidence.get(w)?.teamContested),structureEvents=allObjectives.filter((o:any)=>isStructureEvent(o)),plateEvents=structureEvents.filter((o:any)=>o.type==="TURRET_PLATE_DESTROYED");
-  const playerPlateEvidence=(o:any)=>structureInvolvementEvidence(o,frames,pid,teamId,mapId),oppPlateEvidence=(o:any)=>oppId?structureInvolvementEvidence(o,frames,oppId,Number(opp?.teamId||0),mapId):null;
-  const playerPlateInvolved=(o:any)=>!!structureStrongInvolvementEvidence(o,frames,pid,teamId,mapId),oppPlateInvolved=(o:any)=>!!(oppId&&structureStrongInvolvementEvidence(o,frames,oppId,Number(opp?.teamId||0),mapId));
-  const playerPlateLanePresence=(o:any)=>playerPlateEvidence(o)==="timeline_lane_presence",oppPlateLanePresence=(o:any)=>!!(oppId&&oppPlateEvidence(o)==="timeline_lane_presence");
+  const playerPlateEvidence=(o:any)=>structureInvolvementEvidence(o,frames,pid,teamId,mapId),oppPlateEvidence=(o:any)=>rolePeerId?structureInvolvementEvidence(o,frames,rolePeerId,Number(opp?.teamId||0),mapId):null;
+  const playerPlateInvolved=(o:any)=>!!structureStrongInvolvementEvidence(o,frames,pid,teamId,mapId),oppPlateInvolved=(o:any)=>!!(rolePeerId&&structureStrongInvolvementEvidence(o,frames,rolePeerId,Number(opp?.teamId||0),mapId));
+  const playerPlateLanePresence=(o:any)=>playerPlateEvidence(o)==="timeline_lane_presence",oppPlateLanePresence=(o:any)=>!!(rolePeerId&&oppPlateEvidence(o)==="timeline_lane_presence");
   out.structurePressure.first20PlayerPlateInvolvement=plateEvents.filter((o:any)=>Number(o.tMin)<=20&&playerPlateInvolved(o)).length;
-  out.structurePressure.first20OpponentPlateInvolvement=oppId?plateEvents.filter((o:any)=>Number(o.tMin)<=20&&oppPlateInvolved(o)).length:0;
+  out.structurePressure.first20OpponentPlateInvolvement=rolePeerId?plateEvents.filter((o:any)=>Number(o.tMin)<=20&&oppPlateInvolved(o)).length:0;
   out.structurePressure.first20PlayerPlateLanePresenceSignals=plateEvents.filter((o:any)=>Number(o.tMin)<=20&&playerPlateLanePresence(o)).length;
-  out.structurePressure.first20OpponentPlateLanePresenceSignals=oppId?plateEvents.filter((o:any)=>Number(o.tMin)<=20&&oppPlateLanePresence(o)).length:0;
+  out.structurePressure.first20OpponentPlateLanePresenceSignals=rolePeerId?plateEvents.filter((o:any)=>Number(o.tMin)<=20&&oppPlateLanePresence(o)).length:0;
   out.structurePressure.first20PlateInvolvementDelta=out.structurePressure.first20PlayerPlateInvolvement-out.structurePressure.first20OpponentPlateInvolvement;
   out.structurePressure.allGamePlayerPlateInvolvement=plateEvents.filter(playerPlateInvolved).length;
-  out.structurePressure.allGameOpponentPlateInvolvement=oppId?plateEvents.filter(oppPlateInvolved).length:0;
+  out.structurePressure.allGameOpponentPlateInvolvement=rolePeerId?plateEvents.filter(oppPlateInvolved).length:0;
   out.structurePressure.allGamePlayerPlateLanePresenceSignals=plateEvents.filter(playerPlateLanePresence).length;
-  out.structurePressure.allGameOpponentPlateLanePresenceSignals=oppId?plateEvents.filter(oppPlateLanePresence).length:0;
+  out.structurePressure.allGameOpponentPlateLanePresenceSignals=rolePeerId?plateEvents.filter(oppPlateLanePresence).length:0;
   out.structurePressure.allGamePlateInvolvementDelta=out.structurePressure.allGamePlayerPlateInvolvement-out.structurePressure.allGameOpponentPlateInvolvement;
   out.structurePressure.directPlayerPlateCredits=plateEvents.filter((o:any)=>Number(o.killerId)===pid).length;
-  out.structurePressure.directOpponentPlateCredits=oppId?plateEvents.filter((o:any)=>Number(o.killerId)===oppId).length:0;
+  out.structurePressure.directOpponentPlateCredits=rolePeerId?plateEvents.filter((o:any)=>Number(o.killerId)===rolePeerId).length:0;
   out.structurePressure.unattributedPlateEvents=plateEvents.filter((o:any)=>!Number(o.killerId||0)).length;
   for(const o of plateEvents){
     const tier=turretTier(o);
@@ -918,7 +918,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
     if(oppPlateInvolved(o))out.structurePressure.opponentPlateByTier[tier]=(out.structurePressure.opponentPlateByTier[tier]||0)+1;
   }
   out.structurePressure.earlyPlayerTurretInvolvement=structureEvents.filter((o:any)=>o.type==="BUILDING_KILL"&&Number(o.tMin)<=20&&structureInvolvement(o,frames,pid,teamId,mapId)).length;
-  out.structurePressure.earlyOpponentTurretInvolvement=oppId?structureEvents.filter((o:any)=>o.type==="BUILDING_KILL"&&Number(o.tMin)<=20&&structureInvolvement(o,frames,oppId,Number(opp?.teamId||0),mapId)).length:0;
+  out.structurePressure.earlyOpponentTurretInvolvement=rolePeerId?structureEvents.filter((o:any)=>o.type==="BUILDING_KILL"&&Number(o.tMin)<=20&&structureInvolvement(o,frames,rolePeerId,Number(opp?.teamId||0),mapId)).length:0;
   // Structure conversion follows the queue-aware early phase. The narrower ≤14m flag is reserved only for economy-to-@15 measurements.
   const earlySoloKills=(out.laneDuel.events||[]).filter((x:any)=>x.result==="solo_kill"&&x.early);
   for(const duel of earlySoloKills){
@@ -938,7 +938,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
     cluster.events.push(ev);
   }
   for(const cluster of fightClusters.filter((x:any)=>x.events.length>=2)){
-    const events=cluster.events,first=events[0],fr=frameAtMs(frames,first.tMs),me=frameStats(fr,pid),them=oppId?frameStats(fr,oppId):null;
+    const events=cluster.events,first=events[0],fr=frameAtMs(frames,first.tMs),me=frameStats(fr,pid),them=rolePeerId?frameStats(fr,rolePeerId):null;
     const nearby=events.some((e:any)=>hasNum(e.x)&&hasNum(e.y)&&participantNearEvent(frames,pid,e,5000,35000));
     const playerDeath=events.find((e:any)=>Number(e.victimId)===pid),contributed=events.some((e:any)=>e.playerContribution),active=!!playerDeath||contributed,present=active||!!nearby,proximityOnly=present&&!active;
     if(!present)continue;
@@ -985,14 +985,14 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
   out.itemLedgerQuality={unresolvedUndoEvents:unresolvedItemUndoEvents(itemEventsByPid).length,opponentUnresolvedUndoEvents:unresolvedItemUndoEvents(itemEventsByOpp).length,source:"riot_timeline",zeroIdUndoPolicy:"flag_approximate_do_not_guess",itemCatalogExactPatch,itemMechanicsEligible,itemCatalogPolicy:itemMechanicsEligible?"exact_patch_required_satisfied":"fallback_catalog_display_only_item_mechanics_withheld"};
   const markCatalogFallback=(visits:any[])=>{if(itemMechanicsEligible)return visits;for(const v of visits||[]){v.spendApproximate=true;v.spentLowerBound=null;v.spendEstimateCaveats=Array.isArray(v.spendEstimateCaveats)?v.spendEstimateCaveats:[];if(!v.spendEstimateCaveats.includes("item_catalog_patch_fallback"))v.spendEstimateCaveats.push("item_catalog_patch_fallback");v.spendEstimateCaveat=v.spendEstimateCaveats.join("|");}return visits;};
   out.shopVisits=markCatalogFallback(applyDynamicShopSpendBounds(purchaseGroups(itemEventsByPid,catalog),out.roleQuestContext));
-  out.opponentShopVisits=markCatalogFallback(applyDynamicShopSpendBounds(purchaseGroups(itemEventsByOpp,catalog),oppId?roleQuestContext(rules,participantRole(opp)):null));
-  const firstReturnShop=firstMeaningfulReturnShop(out.shopVisits,frames,pid,mapId,teamId),opponentFirstReturnShop=oppId?firstMeaningfulReturnShop(out.opponentShopVisits,frames,oppId,mapId,Number(opp?.teamId||0)):null;
+  out.opponentShopVisits=rolePeerId?markCatalogFallback(applyDynamicShopSpendBounds(purchaseGroups(itemEventsByOpp,catalog),roleQuestContext(rules,participantRole(opp)))):[];
+  const firstReturnShop=firstMeaningfulReturnShop(out.shopVisits,frames,pid,mapId,teamId),opponentFirstReturnShop=rolePeerId?firstMeaningfulReturnShop(out.opponentShopVisits,frames,rolePeerId,mapId,Number(opp?.teamId||0)):null;
   if(firstReturnShop){
     const resetBeforeTargetMs=Number(firstReturnShop.startMs)-30000,resetAfterTargetMs=Number(firstReturnShop.lastMs)+60000;
     const beforeFrameCandidate=frameNearestMs(frames,resetBeforeTargetMs,35000),afterFrameCandidate=frameNearestMs(frames,resetAfterTargetMs,35000);
     const beforeCandidateMs=Number(beforeFrameCandidate?.timestamp||0)||null,afterCandidateMs=Number(afterFrameCandidate?.timestamp||0)||null;
     const beforeFrame=beforeCandidateMs&&beforeCandidateMs<Number(firstReturnShop.startMs)?beforeFrameCandidate:null,afterFrame=afterCandidateMs&&afterCandidateMs>Number(firstReturnShop.lastMs)?afterFrameCandidate:null;
-    const me0=frameStats(beforeFrame,pid),opp0=oppId?frameStats(beforeFrame,oppId):null,me1=frameStats(afterFrame,pid),opp1=oppId?frameStats(afterFrame,oppId):null;
+    const me0=frameStats(beforeFrame,pid),opp0=rolePeerId?frameStats(beforeFrame,rolePeerId):null,me1=frameStats(afterFrame,pid),opp1=rolePeerId?frameStats(afterFrame,rolePeerId):null;
     const goldBefore=me0&&opp0&&hasNum(me0.gold)&&hasNum(opp0.gold)?Number(me0.gold)-Number(opp0.gold):null,goldAfter=me1&&opp1&&hasNum(me1.gold)&&hasNum(opp1.gold)?Number(me1.gold)-Number(opp1.gold):null;
     const csBefore=me0&&opp0?Number(me0.cs)-Number(opp0.cs):null,csAfter=me1&&opp1?Number(me1.cs)-Number(opp1.cs):null;
     const goldSwing=hasNum(goldBefore)&&hasNum(goldAfter)?Number(goldAfter)-Number(goldBefore):null,csSwing=hasNum(csBefore)&&hasNum(csAfter)?Number(csAfter)-Number(csBefore):null;
@@ -1006,7 +1006,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
   const controlWardIds=new Set<number>([2055]);for(const [id,info] of Object.entries(catalog||{}) as any)if(text(info?.name).toLowerCase()==="control ward")controlWardIds.add(Number(id));
   out.vision.controlWardPurchases=[...controlWardIds].reduce((n,id)=>n+committedItemPurchaseCount(itemEventsByPid,id),0);
   out.majorItemReadiness=majorItemReadiness(out.firstMajorItem,itemEventsByPid,frames,pid,catalog);
-  out.opponentMajorItemReadiness=oppId?majorItemReadiness(out.opponentFirstMajorItem,itemEventsByOpp,frames,oppId,catalog):null;
+  out.opponentMajorItemReadiness=rolePeerId?majorItemReadiness(out.opponentFirstMajorItem,itemEventsByOpp,frames,rolePeerId,catalog):null;
   if(out.firstMajorItem&&out.opponentFirstMajorItem)out.itemSpikeDeltaVsOpponent=out.firstMajorItem.time-out.opponentFirstMajorItem.time;
   if(out.majorItemReadiness?.eligible&&out.opponentMajorItemReadiness?.eligible&&hasNum(out.majorItemReadiness.delayMin)&&hasNum(out.opponentMajorItemReadiness.delayMin))out.majorItemReadiness.delayDeltaVsOpponent=Number(out.majorItemReadiness.delayMin)-Number(out.opponentMajorItemReadiness.delayMin);
   for(const duel of (out.laneDuel?.events||[]).filter((x:any)=>x.result==="solo_kill"&&x.early)){
@@ -1090,7 +1090,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
   if(out.midRouting.teamObjectives>0)out.midRouting.objectiveJoinRate=100*out.midRouting.objectiveJoins/out.midRouting.teamObjectives;
   if(out.midRouting.contestedObjectives>0)out.midRouting.contestPresenceRate=100*out.midRouting.contestedJoins/out.midRouting.contestedObjectives;
   for(const window of neutralOppWindows){
-    const near=oppId?objectiveWindowNear(frames,oppId,window,2500):false;
+    const near=rolePeerId?objectiveWindowNear(frames,rolePeerId,window,2500):false;
     if(near&&(out.opponentImpactTimeMin==null||Number(window.startMin)<out.opponentImpactTimeMin)){out.opponentImpactTimeMin=Number(window.startMin);out.opponentImpactType="neutral_objective";}
   }
   let teamEarly=0,playerEarly=0;
@@ -1104,7 +1104,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
     return{...o,playerSupported:!!playerSupportEvidence,playerSupportEvidence};
   });
   out.killConversion=killConversionWindows(involved,conversionEvidence(ownObjectiveEvents,pid,teamId));
-  out.opponentKillConversion=killConversionWindows(oppInvolved,conversionEvidence(oppObjectiveEvents,Number(oppId||0),Number(opp?.teamId||0)));
+  if(rolePeerId)out.opponentKillConversion=killConversionWindows(oppInvolved,conversionEvidence(oppObjectiveEvents,Number(rolePeerId),Number(opp?.teamId||0)));
   if(out.firstMajorItem&&out.opponentFirstMajorItem){
     const startMin=Number(out.firstMajorItem.time),endMin=Number(out.opponentFirstMajorItem.time),leadSec=Math.round((endMin-startMin)*60);
     if(Number.isFinite(startMin)&&Number.isFinite(endMin)&&leadSec>=45){
@@ -1149,11 +1149,11 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
       return false;
     });
     const traded=!!tradeKill,tradeDelaySec=tradeKill?Math.round((Number(tradeKill.tMs)-Number(d.tMs))/1000):null;
-    const them=oppId?frameStats(fr,oppId):null,goldDiffAtDeath=me&&them&&hasNum(me.gold)&&hasNum(them.gold)?Number(me.gold)-Number(them.gold):null,csDiffAtDeath=me&&them?Number(me.cs)-Number(them.cs):null;
+    const them=rolePeerId?frameStats(fr,rolePeerId):null,goldDiffAtDeath=me&&them&&hasNum(me.gold)&&hasNum(them.gold)?Number(me.gold)-Number(them.gold):null,csDiffAtDeath=me&&them?Number(me.cs)-Number(them.cs):null;
     const consequenceTargetMs=Number(d.tMs)+60000,afterFrCandidate=frameNearestMs(frames,consequenceTargetMs,35000),afterSampleMs=Number(afterFrCandidate?.timestamp||0)||null;
     const interveningDeath=afterSampleMs?deathEvents.find((x:any)=>Number(x.tMs)>Number(d.tMs)&&Number(x.tMs)<=afterSampleMs):null,economyWindowContaminatedByRepeatDeath=!!interveningDeath;
     if(roleEconomyComparable&&economyWindowContaminatedByRepeatDeath)out.deathConsequences.economySamplesContaminated++;
-    const afterFr=economyWindowContaminatedByRepeatDeath?null:afterFrCandidate,afterMe=frameStats(afterFr,pid),afterThem=oppId?frameStats(afterFr,oppId):null;
+    const afterFr=economyWindowContaminatedByRepeatDeath?null:afterFrCandidate,afterMe=frameStats(afterFr,pid),afterThem=rolePeerId?frameStats(afterFr,rolePeerId):null;
     const goldDiffAfter=afterMe&&afterThem&&hasNum(afterMe.gold)&&hasNum(afterThem.gold)?Number(afterMe.gold)-Number(afterThem.gold):null,csDiffAfter=afterMe&&afterThem?Number(afterMe.cs)-Number(afterThem.cs):null;
     const goldSwingAfter=hasNum(goldDiffAtDeath)&&hasNum(goldDiffAfter)?Number(goldDiffAfter)-Number(goldDiffAtDeath):null,csSwingAfter=hasNum(csDiffAtDeath)&&hasNum(csDiffAfter)?Number(csDiffAfter)-Number(csDiffAtDeath):null;
     const currentGold=Number(me?.currentGold||0),highUnspent=currentGold>=1000;let score=0;const tags:string[]=[];
@@ -1230,7 +1230,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
     }
   }
   if(deathEvents.length){out.objectiveDeathPct=100*out.objectiveDeathCount/deathEvents.length;out.preObjectiveDeathPct=100*out.preObjectiveDeathCount/deathEvents.length;}
-  const ownRepeat=repeatDeathSummary(deathEvents),oppDeathEvents=oppId?allChampionKills.filter((x:any)=>Number(x.victimId)===oppId):[],oppRepeat=repeatDeathSummary(oppDeathEvents);
+  const ownRepeat=repeatDeathSummary(deathEvents),oppDeathEvents=rolePeerId?allChampionKills.filter((x:any)=>Number(x.victimId)===rolePeerId):[],oppRepeat=repeatDeathSummary(oppDeathEvents);
   const ownRepeatEvents=ownRepeat.events.map((x:any)=>{
     const bad=(out.badDeaths||[]).find((b:any)=>Math.abs(Number(b.time)-Number(x.secondMin))<0.02),cost=(out.deathConsequences?.events||[]).find((d:any)=>Math.abs(Number(d.time)-Number(x.secondMin))<0.02),trade=(out.deathTrades||[]).find((d:any)=>Math.abs(Number(d.time)-Number(x.secondMin))<0.02);
     return{...x,highRisk:!!bad,costly:!!cost?.costly,severe:!!cost?.severe,traded:!!trade?.traded,phase:gamePhaseKey(x.secondMin,rules)};
@@ -1256,7 +1256,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
   for(const w of out.wards){w.objectiveSetup=neutralObjectives.some(o=>o.x!=null&&Math.abs(o.tMin-w.time)<=1.5&&o.tMin>=w.time&&dist2(w,o)<=3500*3500);if(w.objectiveSetup)out.vision.objectiveSetup++;}
   for(const w of oppWards){w.objectiveSetup=neutralObjectives.some(o=>o.x!=null&&Math.abs(o.tMin-w.time)<=1.5&&o.tMin>=w.time&&dist2(w,o)<=3500*3500);if(w.objectiveSetup)out.opponentVision.objectiveSetup++;}
   for(const w of out.wardKills){w.objectiveSetup=neutralObjectives.some(o=>o.x!=null&&o.y!=null&&Number(o.tMin)>=Number(w.time)&&Number(o.tMin)-Number(w.time)<=1.5&&dist2(w,o)<=3500*3500);if(w.objectiveSetup)out.vision.objectiveSetupClears++;}
-  if(oppId)out.vision.objectiveSetupDeltaVsOpponent=Number(out.vision.objectiveSetup||0)-Number(out.opponentVision.objectiveSetup||0);
+  if(rolePeerId)out.vision.objectiveSetupDeltaVsOpponent=Number(out.vision.objectiveSetup||0)-Number(out.opponentVision.objectiveSetup||0);
   if(homeLane&&rr!=="JUNGLE"&&mapId===11){
     const roamEndMin=Number(rules.roamEndMin||20),samples=out.frameSamples.filter((x:any)=>x.time>=3&&x.time<roamEndMin&&x.zone!=="unknown");let i=1;
     while(i<samples.length){
@@ -1297,13 +1297,13 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
             death:playerDeaths.length>0,playerDeaths:playerDeaths.length,structureInvolvements,structureEvents:structureEvidence,
             platesGained,platesLost,homeLaneStructuresLost,pathPoints,evidenceVersion:"roam_window_v3"
           };
-          if(oppId){
-            const sf=frameAtMs(frames,startSample.time*60000),ef=frameAtMs(frames,endSample.time*60000),m0=frameStats(sf,pid),o0=frameStats(sf,oppId),m1=frameStats(ef,pid),o1=frameStats(ef,oppId);
+          if(rolePeerId){
+            const sf=frameAtMs(frames,startSample.time*60000),ef=frameAtMs(frames,endSample.time*60000),m0=frameStats(sf,pid),o0=frameStats(sf,rolePeerId),m1=frameStats(ef,pid),o1=frameStats(ef,rolePeerId);
             if(m0&&o0&&m1&&o1)roam.laneCostCs=(m1.cs-o1.cs)-(m0.cs-o0.cs);
           }
-          if(rr==="SUPPORT"){const adc=ps.find((x:any)=>Number(x.teamId)===teamId&&participantRole(x)==="ADC"),enemyAdc=adc?ps.find((x:any)=>Number(x.teamId)!==teamId&&participantRole(x)==="ADC"):null;if(adc&&enemyAdc){const sf=frameAtMs(frames,startSample.time*60000),ef=frameAtMs(frames,endSample.time*60000),a0=frameStats(sf,adc.participantId),b0=frameStats(sf,enemyAdc.participantId),a1=frameStats(ef,adc.participantId),b1=frameStats(ef,enemyAdc.participantId);if(a0&&b0&&a1&&b1)roam.adcLaneCostCs=(a1.cs-b1.cs)-(a0.cs-b0.cs);}}
+          if(rr==="SUPPORT"){const alliedAdcCandidates=ps.filter((x:any)=>Number(x.teamId)===teamId&&participantRoleEvidence(x).confidence==="high"&&participantRole(x)==="ADC"),enemyAdcCandidates=ps.filter((x:any)=>Number(x.teamId)!==teamId&&participantRoleEvidence(x).confidence==="high"&&participantRole(x)==="ADC"),adc=alliedAdcCandidates.length===1?alliedAdcCandidates[0]:null,enemyAdc=enemyAdcCandidates.length===1?enemyAdcCandidates[0]:null;if(adc&&enemyAdc){const sf=frameAtMs(frames,startSample.time*60000),ef=frameAtMs(frames,endSample.time*60000),a0=frameStats(sf,adc.participantId),b0=frameStats(sf,enemyAdc.participantId),a1=frameStats(ef,adc.participantId),b1=frameStats(ef,enemyAdc.participantId);if(a0&&b0&&a1&&b1)roam.adcLaneCostCs=(a1.cs-b1.cs)-(a0.cs-b0.cs);}}
           roam.coachingLaneCostCs=rr==="SUPPORT"&&hasNum(roam.adcLaneCostCs)?Number(roam.adcLaneCostCs):hasNum(roam.laneCostCs)?Number(roam.laneCostCs):null;
-          roam.laneCostBasis=rr==="SUPPORT"&&hasNum(roam.adcLaneCostCs)?"allied_adc_vs_enemy_adc":"player_vs_direct_role_peer";
+          roam.laneCostBasis=rr==="SUPPORT"&&hasNum(roam.adcLaneCostCs)?"allied_adc_vs_enemy_adc":hasNum(roam.laneCostCs)?"player_vs_direct_role_peer":"unavailable";
           out.roams.events.push(roam);out.roams.attempts++;if(outcome==="success")out.roams.successes++;else if(outcome==="failure")out.roams.failures++;else out.roams.neutral++;
         }
         i=Math.max(j,i+1);
@@ -1497,7 +1497,7 @@ function game(row:any,puuid:string,catalog:any){
   const roleEvidence=participantRoleEvidence(p),peerResolution=opponentResolution(m,p),opp=peerResolution.opponent,oppFull=participantFullGameMetrics(m,opp),facts=timelineFacts(m,row?.timeline_json,p,gameCatalog,catalogMeta);
   const directPeerComparable=!!oppFull&&roleEvidence.confidence==="high"&&peerResolution.opponentRoleConfidence==="high";
   const directPeerExclusionReason=!oppFull?(peerResolution.reason||"peer_missing"):roleEvidence.confidence!=="high"?"player_role_not_high_confidence":peerResolution.opponentRoleConfidence!=="high"?"opponent_role_not_high_confidence":null;
-  const peer=oppFull?{champion:text(opp?.championName||"Unknown"),role:participantRole(opp),rank:row?.peer_rank_json||null,directComparisonEligible:directPeerComparable,comparisonExclusionReason:directPeerExclusionReason,csMinDelta:full.csMin-oppFull.csMin,dpmDelta:full.dpm-oppFull.dpm,gpmDelta:full.gpm-oppFull.gpm,vpmDelta:full.vpm-oppFull.vpm,kdaDelta:full.kda-oppFull.kda,opponent:{kda:oppFull.kda,csMin:oppFull.csMin,dpm:oppFull.dpm,gpm:oppFull.gpm,vpm:oppFull.vpm,kp:oppFull.kp}}:null;
+  const peer=directPeerComparable&&oppFull?{champion:text(opp?.championName||"Unknown"),role:participantRole(opp),rank:row?.peer_rank_json||null,directComparisonEligible:true,comparisonExclusionReason:null,csMinDelta:full.csMin-oppFull.csMin,dpmDelta:full.dpm-oppFull.dpm,gpmDelta:full.gpm-oppFull.gpm,vpmDelta:full.vpm-oppFull.vpm,kdaDelta:full.kda-oppFull.kda,opponent:{kda:oppFull.kda,csMin:oppFull.csMin,dpm:oppFull.dpm,gpm:oppFull.gpm,vpm:oppFull.vpm,kp:oppFull.kp}}:null;
   const finalItems=[p.item0,p.item1,p.item2,p.item3,p.item4,p.item5,p.item6].map((id:any)=>Number(id||0)).filter((id:number)=>id>0).map((id:number)=>({itemId:id,name:text(itemInfo(gameCatalog,id)?.name)||String(id)}));
   const out:any={matchId:text(m?.metadata?.matchId||row.match_id),gameStartTimestamp:Number(m?.info?.gameStartTimestamp||0),gameVersion:gv||null,patchKey:pk,publicPatchKey:publicPatchKey(gv),itemCatalogVersion:catalogMeta?.version||catalog?.fallbackMeta?.version||null,itemCatalogExactPatch:catalogMeta?!!catalogMeta.exact:null,champion:text(p.championName||"Unknown"),championId:num(p.championId),finalItems,role:roleEvidence.role,roleEvidence,peerResolution:{role:peerResolution.role,candidateCount:peerResolution.candidateCount,reason:peerResolution.reason,opponentRoleConfidence:peerResolution.opponentRoleConfidence||null,opponentRoleSource:peerResolution.opponentRoleSource||null,directPeerComparable,directPeerExclusionReason},directPeerComparable,rawRole:text(p.teamPosition||p.individualPosition||p.role),win:!!p.win,...full,durationMinutes:Math.max(1,Number(m?.info?.gameDuration||row?.game_duration_seconds||0)/60),mapId:Number(m?.info?.mapId||row.map_id||0)||null,queueId:Number(m?.info?.queueId||row.queue_id||0)||null,timelineAvailable:!!row.timeline_json,peer,...facts};
   out.judgments=gameJudgments(out);return out;
@@ -2397,7 +2397,7 @@ function buildReplayReviewQueue(games:any[]){
       else if(ev?.diedBeforeContribution)add(g,109,"teamfights",ev.startMin,"Review this pre-contribution death",(ev.kills||0)+"-kill fight cluster · died before tracked kill/assist contribution","Check approach angle, threat range and initial positioning. What single positioning change would let you survive long enough to contribute?","fights");
       else if(ev?.outnumberedAtFirstKill&&ev?.lostFight)add(g,101,"fight selection",ev.startMin,"Review this outnumbered fight","Fight began "+String(Math.abs(Number(ev.numbersDelta||0)))+" nearby player(s) down and was lost","Find the last moment you could still disengage or trade elsewhere. What information should have stopped the commitment?","fights");
     }
-    for(const ev of g.laneDuel?.events||[]){
+    for(const ev of g.directPeerComparable===true?(g.laneDuel?.events||[]):[]){
       if(ev?.result==="solo_death"&&ev?.early)add(g,106,"matchup",ev.time,"Review this clean 1v1 lane death",(g.peer?.champion?"vs "+g.peer.champion+" · ":"")+(hasNum(ev.goldDiffAtEvent)?signedText(ev.goldDiffAtEvent,0)+"g role state at death":"clean direct-role solo death"),"Review cooldowns, health/resources and wave position immediately before the all-in. Define the exact disengage condition for this matchup.","macro");
     }
     for(const ev of g.roams?.events||[]){

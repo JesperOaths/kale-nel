@@ -166,7 +166,7 @@ function purchaseItemStrip(items){
   }).join('')+'</div>';
 }
 function matchVisualHeader(g){
-  const mine=championIcon(g.champion),opp=championIcon(g.peer?.champion),items=Array.isArray(g.finalItems)?g.finalItems:[];
+  const peerOk=trustedDirectPeer(g),peerChampion=peerOk?String(g.peer?.champion||''):'',mine=championIcon(g.champion),opp=peerChampion?championIcon(peerChampion):'',items=Array.isArray(g.finalItems)?g.finalItems:[];
   return '<div class="match-visual-header"><div class="match-champion">'+
     (mine?'<img loading="lazy" src="'+esc(mine)+'" alt="'+esc(g.champion||'Champion')+'">':'')+
     '<div><span>Your champion</span><strong>'+esc(g.champion||'Unknown')+'</strong></div></div>'+
@@ -174,8 +174,8 @@ function matchVisualHeader(g){
       items.length?items.slice(0,7).map(x=>{const src=itemIcon(x.itemId);return src?'<img loading="lazy" src="'+esc(src)+'" alt="'+esc(x.name||'Item')+'" title="'+esc(x.name||'Item')+'">':'';}).join(''):'<small>No final build data</small>'
     )+'</div></div>'+
     '<div class="match-champion opponent">'+
-    (opp?'<img loading="lazy" src="'+esc(opp)+'" alt="'+esc(g.peer?.champion||'Opponent')+'">':'')+
-    '<div><span>Role opponent</span><strong>'+esc(g.peer?.champion||'Unknown')+'</strong></div></div></div>';
+    (opp?'<img loading="lazy" src="'+esc(opp)+'" alt="'+esc(peerChampion||'Opponent')+'">':'')+
+    '<div><span>Role opponent</span><strong>'+esc(peerOk?(peerChampion||'Unknown'):'Comparison withheld')+'</strong></div></div></div>';
 }
 
 function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
@@ -342,7 +342,7 @@ function deathPatternEntries(r){
       if(hasNum(d.currentGold)&&Number(d.currentGold)>=1000)bits.push(fmtInt(d.currentGold)+'g unspent');
       if(consequence?.enemyObjectiveAfter)bits.push('enemy objective followed');
       if(consequence?.severe)bits.push('severe follow-on loss');
-      out.push({...d,patternKey:key,patternLabel:def.label,patternWhy:def.why,patternAction:def.action,champion:g.champion,matchId:g.matchId,gameStartTimestamp:g.gameStartTimestamp,opponentChampion:g.peer?.champion||null,detail:bits.join(' · '),consequenceMeasured:!!consequence,costly:!!consequence?.costly,severe:!!consequence?.severe,consequenceTraded:consequence?consequence.traded:null,economyWindowContaminatedByRepeatDeath:!!consequence?.economyWindowContaminatedByRepeatDeath,consequenceSignals:Array.isArray(consequence?.signals)?consequence.signals:[]});
+      out.push({...d,patternKey:key,patternLabel:def.label,patternWhy:def.why,patternAction:def.action,champion:g.champion,matchId:g.matchId,gameStartTimestamp:g.gameStartTimestamp,opponentChampion:trustedDirectPeer(g)?g.peer?.champion||null:null,detail:bits.join(' · '),consequenceMeasured:!!consequence,costly:!!consequence?.costly,severe:!!consequence?.severe,consequenceTraded:consequence?consequence.traded:null,economyWindowContaminatedByRepeatDeath:!!consequence?.economyWindowContaminatedByRepeatDeath,consequenceSignals:Array.isArray(consequence?.signals)?consequence.signals:[]});
     }
   }
   return out;
@@ -2220,7 +2220,7 @@ function renderReplayReviewQueue(r){
 }
 function gameSortValue(g,key,index){
   if(key==='champion')return String(g.champion||'').toLowerCase();
-  if(key==='opponent')return String(g.peer?.champion||'').toLowerCase();
+  if(key==='opponent')return trustedDirectPeer(g)?String(g.peer?.champion||'').toLowerCase():'';
   if(key==='result')return g.win?1:0;
   if(key==='kda')return (Number(g.kills||0)+Number(g.assists||0))/Math.max(1,Number(g.deaths||0));
   if(key==='kp')return Number(g.kp??-Infinity);
@@ -2901,7 +2901,7 @@ function renderGames(r){
   });
   $('gamesBody').innerHTML=order.length?order.map(({g,i},displayIndex)=>{
     const kda=[g.kills,g.deaths,g.assists].map(x=>hasNum(x)?Number(x):'?').join('/');
-    const icon=championIcon(g.champion),peerChampion=String(g.peer?.champion||''),peerIcon=peerChampion?championIcon(peerChampion):'',peerTrusted=trustedDirectPeer(g),peerOk=peerTrusted&&g?.phaseRules?.lane15Comparable!==false,goldTone=carryGoldRole&&peerOk?deltaTone(g.goldDiff15,0,100,false):'neutral';
+    const icon=championIcon(g.champion),peerTrusted=trustedDirectPeer(g),peerChampion=peerTrusted?String(g.peer?.champion||''):'',peerIcon=peerChampion?championIcon(peerChampion):'',peerOk=peerTrusted&&g?.phaseRules?.lane15Comparable!==false,goldTone=carryGoldRole&&peerOk?deltaTone(g.goldDiff15,0,100,false):'neutral';
     const firstItem=g.firstMajorItem,itemSrc=firstItem?itemIcon(firstItem.itemId):'';
     const goldLabel=!peerOk?'peer withheld':!hasNum(g.goldDiff15)?'n/a':carryGoldRole?(Number(g.goldDiff15)>100?'ahead':Number(g.goldDiff15)<-100?'behind':'even'):'context only';
     const rowLabel=[g.champion||'Unknown',peerChampion?'vs '+peerChampion:'',g.win?'win':'loss',shortGameDate(g.gameStartTimestamp)].filter(Boolean).join(' · ');
@@ -3178,7 +3178,7 @@ function detailContent(g,tab){
     detailCard('Deaths after early peak',earlyLead.eligible?(String(earlyLead.deathsAfterPeak??0)+' · '+String(earlyLead.highRiskDeathsAfterPeak??0)+' high-risk'):'n/a')+
     detailCard('CS diff @10',peerOk?signed(g.csDiff10,0):'n/a')+detailCard('CS diff @15',peerOk?signed(g.csDiff15,0):'n/a')+detailCard('CS diff @25',peerOk?signed(g.csDiff25,0):'n/a')+
     detailCard('XP diff @10',peerOk?signed(g.xpDiff10,0):'n/a')+detailCard('XP diff @15',peerOk?signed(g.xpDiff15,0):'n/a')+detailCard('XP diff @25',peerOk?signed(g.xpDiff25,0):'n/a')+
-    detailCard('Opponent',peer?(peer.champion||'Same-role peer'):'n/a')+detailCard('Opponent rank',peer?rankText(peer.rank):'n/a')+
+    detailCard('Opponent',peerOk&&peer?(peer.champion||'Same-role peer'):'withheld')+detailCard('Opponent rank',peerOk&&peer?rankText(peer.rank):'withheld')+
     detailCard('Early clean duel',peerOk?(String(modernOrLegacy(g.laneDuel,'earlySoloKillsVsRole','pre14SoloKillsVsRole'))+' solo kills / '+String(modernOrLegacy(g.laneDuel,'earlySoloDeathsToRole','pre14SoloDeathsToRole'))+' solo deaths'):'n/a')+
     detailCard('Plate involvement ≤20m · strong',peerOk?(String(modernOrLegacy(g.structurePressure,'first20PlayerPlateInvolvement','first20PlayerPlateCredits'))+' vs '+String(modernOrLegacy(g.structurePressure,'first20OpponentPlateInvolvement','first20OpponentPlateCredits'))+' peer'):'n/a')+
     detailCard('Lane-presence-only plate signals ≤20m',String(g.structurePressure?.first20PlayerPlateLanePresenceSignals??0)+(peerOk?' vs '+String(g.structurePressure?.first20OpponentPlateLanePresenceSignals??0)+' peer':''))+
