@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.131'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.132'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v247'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v248'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1176,3 +1176,14 @@ assert.ok(api.includes('/vision-action|ward placement|ward clear|vision.*death|u
 assert.ok(api.includes('/farm|cs|wave/.test(tt)&&hasNum(m.avgCsSwing15to25)')&&api.includes('/objective|presence|attendance|reconnect|routing|movement/.test(tt)'),'Mid-routing practice targets must match farm versus objective-presence wording');
 assert.ok(api.includes('/before.*contribut|contribution|removed before|uptime/.test(tt)')&&api.includes('/damage|resource|output|gold share/.test(tt)'),'Teamfight target routing must require matching evidence wording');
 assert.ok(modelDoc.includes('## v247 representative-evidence target routing'),'Representative-evidence target routing must remain documented');
+
+assert.ok(api.includes('"peerComparison.avgVpmDelta":["peerComparison.vpmGames"]')&&app.includes("'peerComparison.avgVpmDelta':['peerComparison.vpmGames']"),'Vision-volume target must preserve the direct-peer VPM population');
+assert.ok(api.includes('"peerComparison.avgObjectiveSetupDelta":["peerComparison.visionSetupGames"]')&&app.includes("'peerComparison.avgObjectiveSetupDelta':['peerComparison.visionSetupGames']"),'Setup-ward count target must preserve trusted setup-game denominator');
+assert.ok(api.includes('"peerComparison.objectiveSetupWardRateDelta":["peerComparison.visionSetupGames"]')&&app.includes("'peerComparison.objectiveSetupWardRateDelta':['peerComparison.visionSetupGames']"),'Setup-share target must remain backend/frontend scoreable');
+assert.ok(api.includes('/giving up vision volume|vision volume trails|vision score/.test(tt)')&&api.includes('"Vision/min delta vs role peer"'),'Vision-volume diagnosis must map to peer VPM delta');
+assert.ok(api.includes('/ward volume.*objective setup|ward share/.test(tt)')&&api.includes('"Objective-setup ward-share delta vs role peer"'),'Ward-share diagnosis must map to peer setup-share delta');
+assert.ok(api.includes('/pre-objective vision setup|setup trails|fewer wards/.test(tt)')&&api.includes('"Objective-setup wards vs role peer"'),'Setup-count diagnosis must map to peer setup-ward delta');
+assert.ok(api.includes('/setup|arrival/.test(tt)')&&api.includes('/objective|presence|attendance|contest/.test(tt)'),'Objective target router must distinguish setup from attendance/presence');
+assert.ok(!api.includes('/setup|arrival|objective/.test(tt)&&hasNum(behavior?.objectiveSetupCoachingRate)'),'Generic objective wording must not force prior-setup target selection');
+assert.ok(app.includes("if(unit==='wards')return signed(n,1)+' wards'"),'Peer setup-ward targets must retain readable ward-count formatting');
+assert.ok(modelDoc.includes('## v248 diagnosis-aligned vision and objective targets'),'Diagnosis-aligned vision/objective target policy must remain documented');
