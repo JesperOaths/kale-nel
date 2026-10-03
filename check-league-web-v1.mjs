@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.140'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.141'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v260'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v261'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1246,3 +1246,8 @@ assert.ok(modelDoc.includes('## v259 trusted Gold @15 baseline integrity'),'Trus
 assert.ok(api.includes('"player_role_not_high_confidence"')&&api.includes('"same_role_opponent_not_high_confidence"'),'Lane-pressure classification must expose why low-confidence role evidence was withheld');
 assert.ok(api.includes('lanePartnerOppCandidates=ps.filter((x:any)=>Number(x.teamId)!==teamId&&participantRoleEvidence(x).confidence==="high"'),'Bot-lane ordinary opposition must be built only from high-confidence Riot role evidence');
 assert.ok(modelDoc.includes('## v260 high-confidence lane-opposition gate'),'High-confidence lane-opposition semantics must remain documented');
+assert.ok(api.includes('earlyLeadGames=validDirectPeerTimeline.filter(g=>g?.phaseRules?.lane15Comparable!==false&&g.earlyLeadWindow?.eligible)'),'Aggregate early-lead coaching must use trusted direct-peer timeline games');
+assert.ok(api.includes('g=>g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false&&g.earlyLeadWindow?.eligible?1:0'),'Recent early-lead trend denominator must use the trusted comparable @15 population');
+assert.ok(api.includes('if(g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false&&earlyLead?.eligible&&earlyLead?.giveback)add('),'Replay queue must not promote untrusted early-lead windows');
+assert.ok(app.includes("label:'Early lead give-back',unit:'percent',inverse:true,get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false"),'TOP outcome fingerprint must fail closed on untrusted early-lead evidence');
+assert.ok(modelDoc.includes('## v261 early-lead direct-peer integrity'),'Trusted early-lead population semantics must remain documented');
