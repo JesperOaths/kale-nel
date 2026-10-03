@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.124'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.125'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v240'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v241'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1119,3 +1119,8 @@ assert.ok(api.includes('visionActions>=12&&visionActionGames>=4'),'Backend visio
 assert.ok(api.includes('visionWardTotal>=20&&opponentVisionWardTotal>=20&&visionSetupGames.length>=5'),'Objective-setup ward-share coaching must require a trusted multi-game cohort');
 assert.ok(api.includes('conf(visionActionGames)')&&api.includes('conf(visionSetupGames.length)'),'Vision coaching confidence must be based on contributing games rather than raw event volume');
 assert.ok(modelDoc.includes('## v240 cross-game vision coaching'),'Cross-game vision coaching safeguards must remain documented');
+
+assert.ok(api.includes('peerDpm)>=120&&["ADC","MID","TOP"].includes(primaryRole)'),'Positive damage coaching must stay carry-role scoped');
+assert.ok(api.includes('d>=120&&["ADC","MID","TOP"].includes(primaryRole)'),'Recent positive DPM trend must stay carry-role scoped');
+assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&topDamage>=Math.max'),'Top-team-damage highlight must stay carry-role scoped');
+assert.ok(modelDoc.includes('## v241 carry-role damage headline safety'),'Carry-role damage headline policy must remain documented');
