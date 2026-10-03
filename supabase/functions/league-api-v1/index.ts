@@ -19,7 +19,7 @@ const ANALYSIS_CACHE_METADATA_LIMIT=100;
 const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=80;
-const ANALYZER_VERSION="league-web-behavior-v4.128";
+const ANALYZER_VERSION="league-web-behavior-v4.129";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -2159,6 +2159,10 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
     "behaviorSummary.earlyLeadGivebackRate":["behaviorSummary.earlyLeadGames"],
     "coachingSummary.csMin":["coachingSummary.games"],
     "coachingSummary.goldDiff15":["peerComparison.laneGames15"],
+    "peerComparison.avgImpactDeltaMin":["peerComparison.impactGames"],
+    "peerComparison.higherRankAvgMajorItemDeltaMin":["peerComparison.higherRankMajorItemGames"],
+    "peerComparison.rankBands.higher.avgGoldDiff15":["peerComparison.rankBands.higher.laneGames"],
+    "peerComparison.rankBands.lower.avgGoldDiff15":["peerComparison.rankBands.lower.laneGames"],
     "behaviorSummary.highRiskUntradedPostImpactPerGame":["behaviorSummary.timelineGames"],
     "behaviorSummary.highRiskBehindDeathsPerGame":["behaviorSummary.timelineGames"],
     "behaviorSummary.highRiskLeadDeathsPerGame":["behaviorSummary.timelineGames"],
@@ -2231,9 +2235,14 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
     if(out.length>=3)break;
     const key=text(theme?.key),tt=titles(theme);let added=false;
     if(key==="early-lane"){
-      if(/lead|leak|give.?back|preserv/.test(tt)&&hasNum(behavior?.earlyLeadGivebackRate))added=add(theme,"Early-lead give-back rate","behaviorSummary.earlyLeadGivebackRate",behavior.earlyLeadGivebackRate,clampPct(Number(behavior.earlyLeadGivebackRate)-15),"lower","percent",behavior?.earlyLeadGames,4,"Test whether meaningful pre-15 direct-role leads are surviving to the 15-minute checkpoint more consistently.");
-      if(!added&&/farm|cs\/min/.test(tt)&&hasNum(summary?.csMin))added=add(theme,"CS / min","coachingSummary.csMin",summary.csMin,Number(summary.csMin)+0.3,"higher","cs_per_min",summary?.games,5,"A small self-relative farming increase is easier to practise and verify than a generic rank benchmark.");
-      if(!added&&hasNum(summary?.goldDiff15))added=add(theme,"Gold differential @15","coachingSummary.goldDiff15",summary.goldDiff15,Number(summary.goldDiff15)+150,"higher","gold",peer?.laneGames15,5,"Move the direct-role lane state by about 150g without changing the comparison population.");
+      const carryRole=["ADC","MID","TOP"].includes(primaryRole);
+      if(/first.?major|major item|item timing/.test(tt)&&/higher.?rank/.test(tt)&&hasNum(peer?.higherRankAvgMajorItemDeltaMin)&&Number(peer.higherRankAvgMajorItemDeltaMin)>=0.75)added=add(theme,"First-major timing vs higher-ranked peer","peerComparison.higherRankAvgMajorItemDeltaMin",peer.higherRankAvgMajorItemDeltaMin,Math.max(0,Number(peer.higherRankAvgMajorItemDeltaMin)-0.5),"lower","minutes",peer?.higherRankMajorItemGames,3,"Test whether first-major completion timing against the actual higher-ranked direct-peer subset moves closer to parity.");
+      if(!added&&/higher.?rank/.test(tt)&&/lane|laning|gold/.test(tt)&&carryRole&&hasNum(peer?.rankBands?.higher?.avgGoldDiff15))added=add(theme,"Gold @15 vs higher-ranked peers","peerComparison.rankBands.higher.avgGoldDiff15",peer.rankBands.higher.avgGoldDiff15,Number(peer.rankBands.higher.avgGoldDiff15)+150,"higher","gold",peer?.rankBands?.higher?.laneGames,3,"Move the exact higher-ranked direct-peer lane-gold comparison toward a more favorable @15 state.");
+      if(!added&&/lower.?rank/.test(tt)&&/lane|laning|gold|peer/.test(tt)&&carryRole&&hasNum(peer?.rankBands?.lower?.avgGoldDiff15))added=add(theme,"Gold @15 vs lower-ranked peers","peerComparison.rankBands.lower.avgGoldDiff15",peer.rankBands.lower.avgGoldDiff15,Number(peer.rankBands.lower.avgGoldDiff15)+150,"higher","gold",peer?.rankBands?.lower?.laneGames,3,"Move the exact lower-ranked direct-peer lane-gold comparison toward a more favorable @15 state.");
+      if(!added&&/impact|influence/.test(tt)&&hasNum(peer?.avgImpactDeltaMin)&&Number(peer.avgImpactDeltaMin)>=1.5)added=add(theme,"First-impact timing vs role peer","peerComparison.avgImpactDeltaMin",peer.avgImpactDeltaMin,Math.max(0,Number(peer.avgImpactDeltaMin)-1),"lower","minutes",peer?.impactGames,5,"Test whether the first supported kill/assist/objective impact moves closer to the direct role opponent's timing.");
+      if(!added&&carryRole&&/lead|leak|give.?back|preserv/.test(tt)&&hasNum(behavior?.earlyLeadGivebackRate))added=add(theme,"Early-lead give-back rate","behaviorSummary.earlyLeadGivebackRate",behavior.earlyLeadGivebackRate,clampPct(Number(behavior.earlyLeadGivebackRate)-15),"lower","percent",behavior?.earlyLeadGames,4,"Test whether meaningful pre-15 direct-role leads are surviving to the 15-minute checkpoint more consistently.");
+      if(!added&&["ADC","MID","TOP","JUNGLE"].includes(primaryRole)&&/farm|cs\/min/.test(tt)&&hasNum(summary?.csMin))added=add(theme,"CS / min","coachingSummary.csMin",summary.csMin,Number(summary.csMin)+0.3,"higher","cs_per_min",summary?.games,5,"A small self-relative farming increase is easier to practise and verify than a generic rank benchmark.");
+      if(!added&&carryRole&&/lane|laning|gold|economy/.test(tt)&&!/higher.?rank|lower.?rank/.test(tt)&&hasNum(summary?.goldDiff15))added=add(theme,"Gold differential @15","coachingSummary.goldDiff15",summary.goldDiff15,Number(summary.goldDiff15)+150,"higher","gold",peer?.laneGames15,5,"Move the direct-role lane state by about 150g without changing the comparison population.");
     }else if(key==="death-risk"){
       if(/post-play|give-back|successful play/.test(tt)&&hasNum(behavior?.highRiskUntradedPostImpactPerGame))added=add(theme,"High-risk post-play give-backs / game","behaviorSummary.highRiskUntradedPostImpactPerGame",behavior.highRiskUntradedPostImpactPerGame,Math.max(0,Number(behavior.highRiskUntradedPostImpactPerGame)-0.15),"lower","per_game",behavior?.timelineGames,5,"Measure whether successful plays are being preserved instead of immediately surrendered by a high-risk untraded follow-up death.");
       if(!added&&/behind|deficit/.test(tt)&&hasNum(behavior?.highRiskBehindDeathsPerGame))added=add(theme,"High-risk deaths while behind / game","behaviorSummary.highRiskBehindDeathsPerGame",behavior.highRiskBehindDeathsPerGame,Math.max(0,Number(behavior.highRiskBehindDeathsPerGame)-0.2),"lower","per_game",behavior?.timelineGames,5,"Reduce the specific high-variance deaths that compound an existing direct-role deficit.");
@@ -2263,7 +2272,7 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
     }else if(key==="teamfights"){
       if(/first|entry|position/.test(tt)&&hasNum(behavior?.firstAllyFightDeathRate))added=add(theme,"First allied death rate","behaviorSummary.firstAllyFightDeathRate",behavior.firstAllyFightDeathRate,clampPct(Number(behavior.firstAllyFightDeathRate)-10),"lower","percent",behavior?.fightSamples,8,"Test whether later/safer fight entry is preserving uptime.");
       if(!added&&hasNum(behavior?.preContributionFightDeathRate))added=add(theme,"Died before contribution","behaviorSummary.preContributionFightDeathRate",behavior.preContributionFightDeathRate,clampPct(Number(behavior.preContributionFightDeathRate)-10),"lower","percent",behavior?.fightSamples,8,"Reduce fights where the player is removed before producing tracked combat impact.");
-      if(!added&&hasNum(behavior?.damageGoldEfficiency))added=add(theme,"Damage share − gold share","behaviorSummary.damageGoldEfficiency",behavior.damageGoldEfficiency,Number(behavior.damageGoldEfficiency)+2,"higher","percentage_points",summary?.games,5,"Improve output from the same share of team resources rather than simply demanding more farm.");
+      if(!added&&["ADC","MID","TOP"].includes(primaryRole)&&hasNum(behavior?.damageGoldEfficiency))added=add(theme,"Damage share − gold share","behaviorSummary.damageGoldEfficiency",behavior.damageGoldEfficiency,Number(behavior.damageGoldEfficiency)+2,"higher","percentage_points",summary?.games,5,"Improve output from the same share of team resources rather than simply demanding more farm.");
     }else if(key==="recovery"){
       if(hasNum(behavior?.highRiskBehindDeathsPerGame))added=add(theme,"High-risk deaths while behind / game","behaviorSummary.highRiskBehindDeathsPerGame",behavior.highRiskBehindDeathsPerGame,Math.max(0,Number(behavior.highRiskBehindDeathsPerGame)-0.2),"lower","per_game",behavior?.timelineGames,5,"Measure whether recovery play is becoming lower variance when the direct role matchup is already behind; the per-game metric remains measurable when the unwanted death count reaches zero.");
     }else if(key==="vision"){
@@ -2301,9 +2310,7 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
         }
         return false;
       };
-      added=postLossIntent?postLossFirst():laterFirst();
-      if(!added&&!postLossIntent&&(!laterIntent||/requeue|post.?loss/.test(tt)))added=postLossFirst();
-      if(!added&&postLossIntent)added=laterFirst();
+      added=postLossIntent?postLossFirst():laterIntent?laterFirst():false;
     }
   }
   return out;
