@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.134'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.135'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v253'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v254'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1211,3 +1211,9 @@ assert.ok(api.includes('if(dpmGames.length>=3&&hasNum(p.dpm)&&hasNum(summary.dpm
 assert.ok(api.includes('" across "+dpmGames.length+" measurable DPM games versus "')&&api.includes('confidence:confidence(dpmGames.length)'), 'Champion DPM evidence copy and confidence must use the measurable DPM denominator');
 assert.ok(!api.includes('if(list.length>=3&&hasNum(p.dpm)&&hasNum(summary.dpm)'), 'Champion DPM coaching must not fall back to total champion games');
 assert.ok(modelDoc.includes('## v253 champion DPM denominator integrity'),'Champion DPM denominator policy must remain documented');
+assert.ok(api.includes('soloKillGames=list.filter')&&api.includes('soloEventGames=list.filter'),'Repeated-matchup backend must export solo-event game spread');
+assert.ok(api.includes('earlySoloKillGames:soloKillGames')&&api.includes('earlySoloEventGames:soloEventGames'),'Repeated-matchup profile must retain solo-event game counts');
+assert.ok(app.includes('soloBad=soloDeaths>=2&&soloDeathGames>=2')&&app.includes('soloGood=soloKills>=2&&soloKillGames>=2'),'Repeated-matchup 1v1 direction must require events across multiple games');
+assert.ok(app.includes('soloReady=soloKills+soloDeaths>=3&&soloEventGames>=2'),'Clean 1v1 diagnostic must require event volume plus game spread');
+assert.ok(app.includes('pressureReady=pressureN>=3&&pressureGames>=2')&&app.includes('outsideDeaths>=2&&outsideGames>=2'),'Outside-pressure matchup read must require repeated events across games');
+assert.ok(modelDoc.includes('## v254 repeated-matchup cross-game event spread'),'Repeated-matchup game-spread policy must remain documented');
