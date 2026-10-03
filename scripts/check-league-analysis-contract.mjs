@@ -918,3 +918,5 @@ ok(app.includes('function coachingMatchIds(report){')&&app.includes('reportCoach
 ok(app.includes('const prev=new Set(coachingMatchIds(previous));')&&app.includes('return coachingMatchIds(current).filter(id=>!prev.has(id)).length;'), 'Next-5 horizon must count only new coaching-comparable match IDs');
 ok(app.includes('const curIds=coachingMatchIds(current),prevIds=coachingMatchIds(previous)'), 'rolling progress overlap must use coaching-comparable IDs');
 ok(modelDoc.includes('## Coaching-cohort progress horizons'), 'analysis documentation must preserve coaching-cohort progress horizons');
+ok(app.includes('function objectiveFamilyMatchIds(r,key){')&&app.includes('return new Set(reportCoachingGames(r).filter(g=>Number(gameObjectiveFamilyRow(g,key)?.contestedEncounters||0)>0)'), 'objective-family match drilldown must use the same coaching cohort as the summary');
+ok(modelDoc.includes('## Objective-family drill-down cohort'), 'analysis documentation must preserve objective-family drilldown cohort semantics');
