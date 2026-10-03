@@ -364,7 +364,7 @@ ok(app.includes("if(r==='BOTTOM'||r==='BOT'||r==='DUO_CARRY'||r==='ADC')return'A
 ok(backend.includes('function externalAdcBenchmarkSet(rankSnapshot:any,cohortQueueId:any,selectedRole:any)'), 'external population benchmark must receive selected queue and role context');
 ok(backend.includes('role:"ADC"')&&backend.includes('sourceRole:"Bot (ADC)"'), 'external benchmark metadata must use canonical ADC while preserving source-role provenance');
 ok(backend.includes('queueId===420?"RANKED_SOLO_5x5":queueId===440?"RANKED_FLEX_SR":null'), 'external ranked benchmark must be ineligible outside Ranked Solo/Flex');
-ok(backend.includes('eligibilityReason:role!=="ADC"?"selected_role_not_adc":!rankedQueueType?"selected_cohort_not_ranked"'), 'external ADC benchmark must fail closed for non-ADC selected roles');
+ok(backend.includes('eligibilityReason:selectedRoleKey!=="ADC"?"selected_role_not_adc":!rankedQueueType?"selected_cohort_not_ranked"'), 'external ADC benchmark must fail closed for non-ADC selected roles');
 ok(app.includes("ext.eligible===true")&&app.includes('selected Last-20 cohort is not Ranked Solo/Flex'), 'frontend must require explicit benchmark eligibility and explain non-ranked exclusion');
 ok(backend.includes('rankContextExcludedGames')&&backend.includes('rankComparisonQueueCounts'), 'rank-context exclusions and ladder use must stay exported');
 ok(backend.includes('peer_rank_json?.schema!=="rank_snapshot_v2"'), 'recent stale single-ladder peer snapshots must be refreshed');
