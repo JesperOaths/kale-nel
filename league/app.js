@@ -768,12 +768,12 @@ function renderReport(raw,sourceKind){
 }
 
 function adcBenchmarkSummary(r){
-  const role=String(r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||''),ext=r?.externalBenchmarks||{};
-  return role==='ADC'&&ext.eligible!==false?(r.coachingSummary||r.summary||null):null;
+  const role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),ext=r?.externalBenchmarks||{};
+  return role==='ADC'&&ext.eligible===true?(r.coachingSummary||r.summary||null):null;
 }
 function adcBenchmarkUnavailableReason(r){
-  const role=String(r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||''),ext=r?.externalBenchmarks||{};
-  if(role!=='ADC')return 'The external benchmark is ADC-specific and is withheld because ADC is not this report’s primary coaching role.';
+  const role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),ext=r?.externalBenchmarks||{};
+  if(role!=='ADC'||ext.eligibilityReason==='selected_role_not_adc')return 'The external benchmark is ADC-specific and is withheld because ADC is not this report’s selected coaching role.';
   if(ext.eligibilityReason==='selected_cohort_not_ranked')return 'The selected Last-20 cohort is not Ranked Solo/Flex, while the external reference corpus is ranked games. The population spider is withheld to avoid an apples-to-oranges comparison.';
   if(ext.eligibilityReason==='matching_rank_queue_tier_unavailable')return 'Riot did not return a ranked tier for the same ranked queue as this report cohort, so the population benchmark is withheld.';
   return 'The ranked ADC population benchmark is unavailable for this report.';
