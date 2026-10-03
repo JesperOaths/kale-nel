@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.147'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.148'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -1075,3 +1075,8 @@ ok(backend.includes('if(row?.fetch_error)continue')&&app.includes('for(let round
 ok(backend.includes('!!row?.timeline_json&&rr!=="GENERIC"')&&backend.includes('timelineDeepCandidates=roleDeepCandidates.filter'), 'deep sample construction must count and prioritize real timeline evidence');
 ok(backend.includes('deepTimelineFallbackGames:games.filter'), 'data quality must expose residual no-timeline fallback games');
 ok(modelDoc.includes('## v266 deep-timeline failover integrity'), 'analysis documentation must preserve v266 deep-timeline failover integrity');
+ok(backend.includes('soloKillsPer30:per30(sample,g=>g.soloKills)')&&app.includes("Solo kills / game")&&app.includes("per 30 min"), 'solo-kill history must use per-game primary units plus per-30 context');
+ok(backend.includes('selected_role_scope_violation')&&backend.includes('deepRoleScopeViolations')&&backend.includes('historyRoleScopeViolations'), 'role-specific reports must fail closed on deep or history cross-role contamination');
+ok(app.includes('function reportRoleScopeViolations(')&&app.includes('roleContaminated=scope.total>0'), 'saved reports must be checked for role contamination before display');
+ok(html.includes('id="historyConsistency"')&&html.includes('id="historyChampionMix"')&&app.includes('function historyDistributionCard('), 'history consistency and champion-mix data must have visible consumers');
+ok(modelDoc.includes('## v267 role-pure history and readable solo-kill rates'), 'analysis documentation must preserve v267 role-scope and solo-kill semantics');
