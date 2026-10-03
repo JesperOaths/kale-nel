@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v227'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v228'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -941,7 +941,7 @@ assert.ok(app.includes("game 3+ vision/min")&&app.includes("quick post-loss CS/m
 assert.ok(modelDoc.includes('## Role-aware session habit model'),'Role-aware session semantics must remain documented');
 assert.ok(api.includes('g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false'),'Session Gold @15 must fail closed without a trusted direct-role peer');
 assert.ok(app.includes("role=canonicalRole(current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole||current?.summary?.primaryRole)"),'Rolling progress must resolve the same selected coaching role as the rest of the report');
-assert.ok(app.includes("path:'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame',samplePath:'dataQuality.validTimelineGames',min:5"),'TOP side-lane progress readiness must use its timeline-game denominator rather than death-event counts');
+assert.ok(app.includes("path:'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame',samplePath:'behaviorSummary.timelineGames',min:5"),'TOP side-lane progress readiness must use the mechanics-filtered coaching timeline denominator rather than raw Last-20 coverage or death-event counts');
 assert.ok(app.includes('ADC lane movement during roams')&&!app.includes('ADC lane cost during roams'),'Prominent Support roam copy must expose signed lane movement rather than mislabel positive values as cost');
 assert.ok(modelDoc.includes('## v203 audit corrections'),'v203 audit denominator and role-source repairs must remain documented');
 assert.ok(api.includes('timelineGames:validTimeline.length'),'Behavior summary must export the true timeline-game denominator used by per-game coaching metrics');
@@ -1049,5 +1049,11 @@ assert.ok(app.includes("path:'behaviorSummary.midRouting.coachingObjectivePresen
 assert.ok(app.includes("g?.midRouting?.contestPresenceRate??g?.midRouting?.objectiveJoinRate"),'MID outcome fingerprint must prefer per-game team-contested presence over legacy team-secured presence');
 assert.ok(app.includes("'Mid-routing objective presence · pooled',fmtPct(r.behaviorSummary?.midRouting?.pooledObjectiveJoinRate??r.behaviorSummary?.midRouting?.avgObjectiveJoinRate)")&&app.includes("'Mid-routing objective presence · coaching mean game rate'"),'Technical appendix must expose pooled and coaching mean-game mid-routing presence separately');
 assert.ok(modelDoc.includes('## Mid-routing objective-presence aggregation')&&modelDoc.includes('legacy `avgObjectiveJoinRate` alias retains this pooled meaning'),'Mid-routing compatibility and coaching aggregation must remain documented');
+
+assert.ok(app.includes("itemN=Number(p.majorItemGames||0),timelineN=Number(b.timelineGames||0)"),'TOP/MID/Jungle role lens timeline readiness must use behaviorSummary.timelineGames from the coaching cohort');
+assert.ok(app.includes("fightN=Number(b.fightSamples||0),timelineN=Number(b.timelineGames||0),deaths="),'Decision high-risk-death readiness must use the coaching-cohort timeline count');
+assert.ok(app.includes("path:'behaviorSummary.badDeathsPerTimelineGame',samplePath:'behaviorSummary.timelineGames',min:5"),'Rolling high-risk-death progress must use the coaching-cohort timeline denominator');
+assert.ok(app.includes("timeline=Number(q.validTimelineGames||0)")&&app.includes("['Timeline coverage',timeline+'/'+games+' games'"),'Raw cohort/coverage UI must retain dataQuality.validTimelineGames for availability reporting');
+assert.ok(modelDoc.includes('## Coaching versus raw timeline coverage')&&modelDoc.includes('`behaviorSummary.timelineGames` is timeline coverage inside the actual mechanics-filtered coaching cohort'),'Mechanics-sensitive coaching cards must use behaviorSummary.timelineGames while raw quality panels retain Last-20 coverage');
 
 console.log('league-web-contract=PASS');
