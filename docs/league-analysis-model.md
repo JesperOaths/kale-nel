@@ -2697,3 +2697,10 @@ Raw match history can still display those older rows for traceability. `gameIsCo
 Rolling overlap/new/dropped counts and Next-5 practice-target horizons must use the same reconstructed coaching cohort as the metrics they describe. The frontend therefore derives match IDs from `reportCoachingGames(report)`, which applies the strict selected-role filter and, when active, the verified current-mechanics filter.
 
 Context-only rows in older mixed-role saved reports may remain visible in match history, but they cannot advance a five-game practice horizon, increase rolling-overlap counts, or make practice-plan continuity look more mature. A “new game” for development tracking means a new coaching-comparable match ID, not merely a new row in `report.games`.
+
+
+## Objective-family drill-down cohort
+
+Objective-family summary rates/counts come from the coaching cohort, so their match-count badges and drill-down filters must use the same population. `objectiveFamilyMatchIds(r,key)` therefore derives IDs from `reportCoachingGames(r)`, not raw `report.games`.
+
+Older mixed-role or older-mechanics rows can remain visible in general history for traceability, but they must not appear as supporting matches for a coaching-cohort objective-family statistic they did not help compute.
