@@ -2455,7 +2455,7 @@ function roleSequenceArc(g){
     const roamAttempts=Number(g?.roams?.attempts||0),roamSuccesses=Number(g?.roams?.successes||0),roamRate=roamAttempts?100*roamSuccesses/roamAttempts:null,laneCost=perGameSupportAdcLaneCost(g);
     let roamKey='roam_unknown',roamLabel='Roam evidence thin',known=0;
     if(roamAttempts>0){known++;if(roamRate>=65&&(laneCost==null||laneCost>=-2)){roamKey='roam_value';roamLabel='Roam value preserved';}else if(roamRate<45&&laneCost!=null&&laneCost<=-6){roamKey='roam_cost';roamLabel='Roam cost without return';}else{roamKey='roam_mixed';roamLabel='Mixed roam return';}}
-    const joined=Number(g?.objectiveReadiness?.joined||0),early=Number(g?.objectiveReadiness?.earlySetupJoins||0),setupRate=joined?100*early/joined:null;
+    const joined=Number(g?.objectiveReadiness?.contestedJoined||0),early=Number(g?.objectiveReadiness?.earlySetupJoins||0),setupRate=joined?100*early/joined:null;
     let setupKey='setup_unknown',setupLabel='Setup evidence thin';
     if(joined>0){known++;if(setupRate>=70){setupKey='setup_early';setupLabel='Early objective setup';}else if(setupRate<45){setupKey='setup_late';setupLabel='Late/no prior setup';}else{setupKey='setup_mixed';setupLabel='Mixed setup timing';}}
     const visionActions=Number(g?.visionMission?.actions||0),visionRisk=Number(g?.visionMission?.highRiskDeaths||0);
@@ -2465,7 +2465,7 @@ function roleSequenceArc(g){
     return{key:['support',roamKey,setupKey,safetyKey].join('|'),label:[roamLabel,setupLabel,safetyLabel].join(' → '),role,known};
   }
   if(role==='JUNGLE'){
-    const cs=peerOk&&hasNum(g?.peer?.csMinDelta)?Number(g.peer.csMinDelta):null,impact=peerOk&&hasNum(g?.impactDeltaVsOpponent)?Number(g.impactDeltaVsOpponent):null,joined=Number(g?.objectiveReadiness?.joined||0),early=Number(g?.objectiveReadiness?.earlySetupJoins||0),setupRate=joined?100*early/joined:null;
+    const cs=peerOk&&hasNum(g?.peer?.csMinDelta)?Number(g.peer.csMinDelta):null,impact=peerOk&&hasNum(g?.impactDeltaVsOpponent)?Number(g.impactDeltaVsOpponent):null,joined=Number(g?.objectiveReadiness?.contestedJoined||0),early=Number(g?.objectiveReadiness?.earlySetupJoins||0),setupRate=joined?100*early/joined:null;
     let known=0,farmKey='farm_unknown',farmLabel='Farm peer evidence thin';
     if(cs!=null){known++;if(cs>.15){farmKey='farm_ahead';farmLabel='Farm ahead of Jungle peer';}else if(cs<-.15){farmKey='farm_behind';farmLabel='Farm behind Jungle peer';}else{farmKey='farm_close';farmLabel='Farm close to Jungle peer';}}
     let impactKey='impact_unknown',impactLabel='Impact timing thin';
@@ -2482,14 +2482,14 @@ function gameArcDescriptor(g){
 }
 function roleSequenceCoverageHtml(role,games){
   if(role==='SUPPORT'){
-    const roam=games.filter(g=>Number(g?.roams?.attempts||0)>0).length,setup=games.filter(g=>Number(g?.objectiveReadiness?.joined||0)>0).length,vision=games.filter(g=>Number(g?.visionMission?.actions||0)>0).length;
+    const roam=games.filter(g=>Number(g?.roams?.attempts||0)>0).length,setup=games.filter(g=>Number(g?.objectiveReadiness?.contestedJoined||0)>0).length,vision=games.filter(g=>Number(g?.visionMission?.actions||0)>0).length;
     return '<div class="game-arc-funnel-grid">'+
       '<article class="game-arc-funnel tone-neutral"><span>Roam evidence</span><strong>'+roam+' / '+games.length+' games</strong><p>Detected early roam attempts with supported outcome context.</p></article>'+
       '<article class="game-arc-funnel tone-neutral"><span>Objective setup evidence</span><strong>'+setup+' / '+games.length+' games</strong><p>Games with joined neutral-objective encounters that can support prior-setup timing.</p></article>'+
       '<article class="game-arc-funnel tone-neutral"><span>Vision safety evidence</span><strong>'+vision+' / '+games.length+' games</strong><p>Games with tracked ward placement/clear actions for vision-risk context.</p></article>'+
     '</div>';
   }
-  const farm=games.filter(g=>trustedDirectPeer(g)&&hasNum(g?.peer?.csMinDelta)).length,impact=games.filter(g=>trustedDirectPeer(g)&&hasNum(g?.impactDeltaVsOpponent)).length,setup=games.filter(g=>Number(g?.objectiveReadiness?.joined||0)>0).length;
+  const farm=games.filter(g=>trustedDirectPeer(g)&&hasNum(g?.peer?.csMinDelta)).length,impact=games.filter(g=>trustedDirectPeer(g)&&hasNum(g?.impactDeltaVsOpponent)).length,setup=games.filter(g=>Number(g?.objectiveReadiness?.contestedJoined||0)>0).length;
   return '<div class="game-arc-funnel-grid">'+
     '<article class="game-arc-funnel tone-neutral"><span>Jungle farm peer evidence</span><strong>'+farm+' / '+games.length+' games</strong><p>Games with high-confidence direct-jungle CS/min comparison.</p></article>'+
     '<article class="game-arc-funnel tone-neutral"><span>First-impact evidence</span><strong>'+impact+' / '+games.length+' games</strong><p>Games with comparable first tracked impact timing versus the enemy Jungler.</p></article>'+
