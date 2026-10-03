@@ -1612,6 +1612,7 @@ const PRACTICE_TARGET_SAMPLE_PATHS={
   'summary.goldDiff15':['peerComparison.laneGames15'],
   'coachingSummary.csMin':['coachingSummary.games'],
   'coachingSummary.goldDiff15':['peerComparison.laneGames15'],
+  'peerComparison.avgGoldDiff15':['peerComparison.laneGames15'],
   'peerComparison.avgImpactDeltaMin':['peerComparison.impactGames'],
   'peerComparison.avgVpmDelta':['peerComparison.vpmGames'],
   'peerComparison.avgObjectiveSetupDelta':['peerComparison.visionSetupGames'],
@@ -1810,6 +1811,11 @@ function previousPracticeTargetOutcomes(current,previous){
   if(curPatch&&prevPatch&&curPatch!==prevPatch)return{rows:[],reason:'Previous practice targets are not scored because the patch cohort changed.'};
   const newGames=reportNewMatchCount(current,previous);
   const rows=targets.map(t=>{
+    const savedMetricPath=String(t?.metricPath||'');
+    if(savedMetricPath==='summary.goldDiff15'||savedMetricPath==='coachingSummary.goldDiff15'){
+      const windowGames=Math.max(1,Number(t.windowGames||5));
+      return{label:t.label||'Gold differential @15',current:'n/a',baseline:hasNum(t.baseline)?practiceTargetValue(t.baseline,t.unit):'n/a',goal:hasNum(t.goal)?practiceTargetValue(t.goal,t.unit):'n/a',sampleSize:Number(t.sampleSize||0),currentSample:0,minSample:0,sampleSummary:'re-baseline required · saved target predates trusted direct-peer @15 normalization',newGames,windowGames,status:'re-baseline required',cls:'stable',pending:true};
+    }
     const currentValue=pathValue(current,practiceTargetMetricPath(t));
     if(!hasNum(currentValue)||!hasNum(t.baseline)||!hasNum(t.goal))return null;
     const cur=Number(currentValue),base=Number(t.baseline),goal=Number(t.goal),higher=t.direction!=='lower',windowGames=Math.max(1,Number(t.windowGames||5)),evidence=practiceTargetEvidence(current,t);
@@ -3741,7 +3747,7 @@ function renderBreakdowns(r){
   ];
   $('roleBreakdown').innerHTML=cohortRows.map(x=>'<div class="cohort-context-row"><span>'+esc(x[0])+'</span><strong>'+esc(x[1])+'</strong><small>'+esc(x[2])+'</small></div>').join('');
 
-  const behaviorRows=Array.isArray(r.championBehavior)?r.championBehavior:[],base=r.coachingSummary||r.summary||{},riskBase=r.behaviorSummary||{};
+  const behaviorRows=Array.isArray(r.championBehavior)?r.championBehavior:[],rawBase=r.coachingSummary||r.summary||{},base={...rawBase,goldDiff15:hasNum(r.peerComparison?.avgGoldDiff15)?Number(r.peerComparison.avgGoldDiff15):null},riskBase=r.behaviorSummary||{};
   if(behaviorRows.length){
     $('championBreakdown').innerHTML=behaviorRows.slice(0,8).map(v=>{
       const src=championIcon(v.champion),diag=championDiagnosticSet(v,role,base,riskBase);
