@@ -592,6 +592,9 @@ ok(app.includes('ready=wins?.n>=3&&losses?.n>=3')&&app.includes('thin sample —
 ok(modelDoc.includes('## Role-aware outcome fingerprint')&&modelDoc.includes('Standardized separation remains Hedges-corrected and descriptive only'), 'analysis model must preserve role-aware fingerprint limits');
 
 ok(app.includes("perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.contestedJoined)"), 'outcome fingerprint prior setup must use contested-joined coaching denominator');
+ok((app.split("get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)?Number(g.goldDiff15):null").length-1)>=3, 'ADC/MID/TOP outcome gold must require trusted direct-peer evidence');
+ok(!app.includes("get:g=>g?.phaseRules?.lane15Comparable===false?null:g.goldDiff15"), 'outcome fingerprint must not use untrusted raw role-gold deltas');
+ok(modelDoc.includes('ADC, MID and TOP Role gold @15 fingerprint observations require')&&modelDoc.includes('trustedDirectPeer(g)'), 'analysis documentation must preserve outcome-gold peer safety');
 ok(!app.includes("perGamePct(g?.objectiveReadiness?.earlySetupJoins,g?.objectiveReadiness?.joined)"), 'team-secured presence denominator must not leak into outcome setup fingerprint');
 ok(modelDoc.includes('earlySetupJoins / contestedJoined'), 'analysis documentation must preserve outcome setup denominator parity');
 ok(backend.includes('meanGameEarlySetupObjectiveJoinRate=meanField(finiteGames(validTimeline,g=>g.objectiveReadiness?.earlySetupJoinRate)')&&backend.includes('objectiveSetupCoachingRate=meanGameEarlySetupObjectiveJoinRate'), 'backend must expose game-weighted prior-setup coaching');
