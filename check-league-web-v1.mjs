@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.125'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.126'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v241'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v242'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1124,3 +1124,12 @@ assert.ok(api.includes('peerDpm)>=120&&["ADC","MID","TOP"].includes(primaryRole)
 assert.ok(api.includes('d>=120&&["ADC","MID","TOP"].includes(primaryRole)'),'Recent positive DPM trend must stay carry-role scoped');
 assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&topDamage>=Math.max'),'Top-team-damage highlight must stay carry-role scoped');
 assert.ok(modelDoc.includes('## v241 carry-role damage headline safety'),'Carry-role damage headline policy must remain documented');
+
+assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&lane15.length>=5'),'Generic lane15 coaching must stay carry-role scoped');
+assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&soloKillConversionEvents.length>=3'),'Solo-kill lane-economy conversion must stay carry-role scoped');
+assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&lead25Games.length>=4'),'Role-gold @25 closing coaching must stay carry-role scoped');
+assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&midRoutingGames.length>=4'),'Direct-role CS/gold mid-routing coaching must stay carry-role scoped');
+assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&firstResetCleanGames.length>=4'),'First-reset lane-economy coaching must stay carry-role scoped');
+assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&recentTrend.goldDiff15.recentN>=4'),'Recent Gold@15 coaching must stay carry-role scoped');
+assert.ok(api.includes('["ADC","MID","TOP","JUNGLE"].includes(primaryRole)&&recentTrend.csMin.recentN>=4'),'Recent CS/min coaching may include Jungle but must exclude Support');
+assert.ok(modelDoc.includes('## v242 carry-lane coaching boundary'),'Carry-lane coaching role boundary must remain documented');
