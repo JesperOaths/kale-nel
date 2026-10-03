@@ -1660,7 +1660,17 @@ function practiceTargetSamplePaths(t){
 function practiceTargetSampleRequirements(t){
   const explicit=Array.isArray(t?.sampleRequirements)?t.sampleRequirements.filter(x=>x&&String(x.path||'').trim()).map(x=>({path:String(x.path),min:Math.max(1,Number(x.min||1)),value:hasNum(x.value)?Number(x.value):null})):[];
   if(explicit.length)return explicit;
-  const min=Math.max(1,Number(t?.minSample||1));
+  const metricPath=practiceTargetMetricPath(t),min=Math.max(1,Number(t?.minSample||1)),legacySafe={
+    'behaviorSummary.preObjectiveDeathPct':[
+      {path:'behaviorSummary.classifiedTimelineDeaths',min:Math.max(5,min),value:null},
+      {path:'behaviorSummary.timelineGames',min:3,value:null}
+    ],
+    'behaviorSummary.objectiveSetupWardRate':[
+      {path:'behaviorSummary.visionWardTotal',min:Math.max(12,min),value:null},
+      {path:'peerComparison.visionSetupGames',min:5,value:null}
+    ]
+  };
+  if(legacySafe[metricPath])return legacySafe[metricPath];
   return practiceTargetSamplePaths(t).map(path=>({path,min,value:null}));
 }
 function practiceRequirementLabel(path){
@@ -1678,6 +1688,7 @@ function practiceRequirementLabel(path){
     'behaviorSummary.neutralObjectiveEvents':'contested objective encounters',
     'behaviorSummary.objectiveContestGames':'contested-objective games',
     'behaviorSummary.timelineGames':'timeline games',
+    'peerComparison.visionSetupGames':'comparable setup games',
     'behaviorSummary.classifiedTimelineDeaths':'classified deaths',
     'sessionBehavior.firstGame.lane15Games':'opener @15 games',
     'sessionBehavior.game3Plus.lane15Games':'game 3+ @15 games',
