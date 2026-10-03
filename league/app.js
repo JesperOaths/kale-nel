@@ -1738,6 +1738,15 @@ function progressComparisonContext(current,previous){
 function progressSampleCount(report,spec){
   const v=pathValue(report,spec.samplePath||'summary.games');return hasNum(v)?Number(v):0;
 }
+function progressEvidence(report,spec){
+  const reqs=Array.isArray(spec?.sampleRequirements)&&spec.sampleRequirements.length?spec.sampleRequirements:[{path:spec.samplePath||'summary.games',min:Number(spec.min||1)}];
+  const rows=reqs.map(req=>{
+    const raw=pathValue(report,req.path),value=hasNum(raw)?Number(raw):null,min=Math.max(1,Number(req.min||spec.min||1));
+    return{path:req.path,value,min,ready:value!=null&&value>=min};
+  });
+  const ready=rows.every(x=>x.ready),summary=rows.map(x=>practiceRequirementLabel(x.path)+' '+(x.value==null?'n/a':fmtInt(x.value))+'/'+fmtInt(x.min)).join(' · ');
+  return{ready,rows,summary,primary:rows.length===1&&rows[0].value!=null?Number(rows[0].value):null};
+}
 
 function practiceThemeKey(x){
   return String(x?.themeKey||x?.key||x?.category||x?.title||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
@@ -1794,10 +1803,10 @@ function renderProgressComparison(current,previous,previousAt){
     specs=[
       {label:'Vision/min vs Support peer',path:'peerComparison.avgVpmDelta',samplePath:'peerComparison.vpmGames',min:5,threshold:.15,direction:1,format:v=>signed(v,2)},
       {label:'Objective setup wards vs Support',path:'peerComparison.avgObjectiveSetupDelta',samplePath:'peerComparison.visionSetupGames',min:5,threshold:.5,direction:1,format:v=>signed(v,1)},
-      {label:'Roam conversion',path:'behaviorSummary.roamSuccessRate',samplePath:'behaviorSummary.roamAttempts',min:4,threshold:15,direction:1,format:v=>fmtPct(v)},
-      {label:'ADC lane movement during roams',path:'behaviorSummary.meanGameSupportRoamAdcLaneMovementCs',samplePath:'behaviorSummary.supportRoamAdcLaneMovementGames',min:4,threshold:2,direction:1,format:v=>signed(v,1)+' CS'},
-      {label:'Vision-action death rate',path:'behaviorSummary.visionActionDeathRate',samplePath:'behaviorSummary.visionActions',min:8,threshold:5,direction:-1,format:v=>fmtPct(v)},
-      {label:'Team-contested objective presence',path:'advanced.objectivePresence',samplePath:'behaviorSummary.objectiveContestEncounters',min:5,threshold:10,direction:1,format:v=>fmtPct(v)},
+      {label:'Roam conversion',path:'behaviorSummary.roamSuccessRate',sampleRequirements:[{path:'behaviorSummary.roamAttempts',min:4},{path:'behaviorSummary.roamAttemptGames',min:3}],threshold:15,direction:1,format:v=>fmtPct(v)},
+      {label:'ADC lane movement during roams',path:'behaviorSummary.meanGameSupportRoamAdcLaneMovementCs',sampleRequirements:[{path:'behaviorSummary.supportRoamAdcLaneMovementWindows',min:4},{path:'behaviorSummary.supportRoamAdcLaneMovementGames',min:3}],threshold:2,direction:1,format:v=>signed(v,1)+' CS'},
+      {label:'Vision-action death rate',path:'behaviorSummary.visionActionDeathRate',sampleRequirements:[{path:'behaviorSummary.visionActions',min:12},{path:'behaviorSummary.visionActionGames',min:4}],threshold:5,direction:-1,format:v=>fmtPct(v)},
+      {label:'Team-contested objective presence',path:'advanced.objectivePresence',sampleRequirements:[{path:'behaviorSummary.objectiveContestEncounters',min:5},{path:'behaviorSummary.objectiveContestGames',min:3}],threshold:10,direction:1,format:v=>fmtPct(v)},
       ...commonTempo,...commonRisk
     ];
   }else if(role==='JUNGLE'){
@@ -1805,8 +1814,8 @@ function renderProgressComparison(current,previous,previousAt){
       {label:'CS/min vs Jungle peer',path:'peerComparison.avgCsMinDelta',samplePath:'peerComparison.csMinGames',min:5,threshold:.15,direction:1,format:v=>signed(v,2)},
       {label:'First tracked impact vs Jungle',path:'peerComparison.avgImpactDeltaMin',samplePath:'peerComparison.impactGames',min:5,threshold:1,direction:-1,format:v=>signed(v,1)+' min'},
       {label:'Objective setup wards vs Jungle',path:'peerComparison.avgObjectiveSetupDelta',samplePath:'peerComparison.visionSetupGames',min:5,threshold:.5,direction:1,format:v=>signed(v,1)},
-      {label:'Team-contested objective presence',path:'advanced.objectivePresence',samplePath:'behaviorSummary.objectiveContestEncounters',min:5,threshold:10,direction:1,format:v=>fmtPct(v)},
-      {label:'Recent-shop objective absence rate',path:'behaviorSummary.recentShopObjectiveAbsenceRate',samplePath:'behaviorSummary.neutralObjectiveEvents',min:5,threshold:10,direction:-1,format:v=>fmtPct(v)},
+      {label:'Team-contested objective presence',path:'advanced.objectivePresence',sampleRequirements:[{path:'behaviorSummary.objectiveContestEncounters',min:5},{path:'behaviorSummary.objectiveContestGames',min:3}],threshold:10,direction:1,format:v=>fmtPct(v)},
+      {label:'Recent-shop objective absence rate',path:'behaviorSummary.recentShopObjectiveAbsenceRate',sampleRequirements:[{path:'behaviorSummary.neutralObjectiveEvents',min:5},{path:'behaviorSummary.objectiveContestGames',min:3}],threshold:10,direction:-1,format:v=>fmtPct(v)},
       ...commonTempo,...commonRisk
     ];
   }else if(role==='TOP'){
@@ -1826,7 +1835,7 @@ function renderProgressComparison(current,previous,previousAt){
       {label:'First tracked impact vs Mid',path:'peerComparison.avgImpactDeltaMin',samplePath:'peerComparison.impactGames',min:5,threshold:1,direction:-1,format:v=>signed(v,1)+' min'},
       {label:'Mid routing CS swing 15→25',path:'behaviorSummary.midRouting.avgCsSwing15to25',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:4,direction:1,format:v=>signed(v,1)+' CS'},
       {label:'Mid routing objective presence',path:'behaviorSummary.midRouting.avgObjectiveJoinRate',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
-      {label:'Recent-shop objective absence rate',path:'behaviorSummary.recentShopObjectiveAbsenceRate',samplePath:'behaviorSummary.neutralObjectiveEvents',min:5,threshold:10,direction:-1,format:v=>fmtPct(v)},
+      {label:'Recent-shop objective absence rate',path:'behaviorSummary.recentShopObjectiveAbsenceRate',sampleRequirements:[{path:'behaviorSummary.neutralObjectiveEvents',min:5},{path:'behaviorSummary.objectiveContestGames',min:3}],threshold:10,direction:-1,format:v=>fmtPct(v)},
       ...commonTempo,...commonRisk
     ];
   }else{
@@ -1841,14 +1850,14 @@ function renderProgressComparison(current,previous,previousAt){
     ];
   }
   const allRows=specs.map(spec=>{
-    const cur=pathValue(current,spec.path),prev=pathValue(previous,spec.path),curN=progressSampleCount(current,spec),prevN=progressSampleCount(previous,spec);
-    if(!hasNum(cur)||!hasNum(prev)||curN<spec.min||prevN<spec.min)return null;
+    const cur=pathValue(current,spec.path),prev=pathValue(previous,spec.path),curEvidence=progressEvidence(current,spec),prevEvidence=progressEvidence(previous,spec);
+    if(!hasNum(cur)||!hasNum(prev)||!curEvidence.ready||!prevEvidence.ready)return null;
     const raw=Number(cur)-Number(prev),effect=raw*spec.direction,score=Math.abs(effect)/spec.threshold,status=effect>=spec.threshold?'improved':effect<=-spec.threshold?'worsened':'stable';
-    return{label:spec.label,current:spec.format(cur),previous:spec.format(prev),delta:raw,effect,status,score,curN,prevN,min:spec.min};
+    return{label:spec.label,current:spec.format(cur),previous:spec.format(prev),delta:raw,effect,status,score,curEvidence,prevEvidence};
   }).filter(Boolean);
   const withheld=specs.length-allRows.length,material=allRows.filter(x=>x.status!=='stable').sort((a,b)=>b.score-a.score),stable=allRows.filter(x=>x.status==='stable').sort((a,b)=>b.score-a.score);
   const visible=material.slice(0,8),statusText=x=>x.status==='improved'?'favorable shift':x.status==='worsened'?'unfavorable shift':'within change band';
-  const card=x=>'<article class="progress-comparison-card '+x.status+'"><span>'+esc(x.label)+'</span><strong>'+esc(statusText(x))+'</strong><p>Now '+esc(x.current)+' · previous '+esc(x.previous)+'</p><small>valid n '+x.curN+' now / '+x.prevN+' previous · materiality '+esc(fmt(x.score,1))+'× change band</small></article>';
+  const card=x=>'<article class="progress-comparison-card '+x.status+'"><span>'+esc(x.label)+'</span><strong>'+esc(statusText(x))+'</strong><p>Now '+esc(x.current)+' · previous '+esc(x.previous)+'</p><small>now: '+esc(x.curEvidence.summary)+' · previous: '+esc(x.prevEvidence.summary)+' · materiality '+esc(fmt(x.score,1))+'× change band</small></article>';
   if(!context.comparable){
     $('progressComparison').innerHTML='<div class="target-outcome-note"><strong>General progress comparison withheld.</strong> '+esc(context.reason)+' Cross-context metric deltas are not treated as development evidence.</div>';
   }else{
