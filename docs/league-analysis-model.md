@@ -2595,3 +2595,5 @@ Analyzer v4.116 exports `meanGameEarlySetupObjectiveJoinRate` and the coaching-f
 Support/Jungle role lenses, decision cards and compound coaching prefer `objectiveSetupCoachingRate`, then the mean-game field, then the pooled legacy rate for older saved reports. Because a Wilson binomial interval computed from pooled encounters does not describe a mean of per-game rates, those prominent mean-game setup cards do **not** render the pooled Wilson band. Pooled numerator/denominator counts remain visible as traceability.
 
 The short-window Recent direction setup signal intentionally remains a pooled event-rate trend with explicit opportunity and game-spread gates; it is separately labelled and documented as such. Outcome Fingerprint remains an equal-weight per-game comparison using `earlySetupJoins / contestedJoined` within each game.
+
+Phase-driver context text also uses the same coaching-facing setup rate, so a phase summary cannot silently fall back to the pooled encounter percentage while adjacent setup cards show a mean-game value.
