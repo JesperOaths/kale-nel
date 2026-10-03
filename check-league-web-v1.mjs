@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.136'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.137'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v255'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v256'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1221,3 +1221,9 @@ assert.ok(api.includes('cs15Games=finiteGames(laneComparable,g=>g.csDiff15)')&&a
 assert.ok(app.includes("const cs=hasNum(v.csDiff15)?Number(v.csDiff15):null,csN=Number(v.csDiff15Games||0)")&&app.includes("diagnosticChip('CS diff @15',cs==null?'n/a':signed(cs,1),deltaTone(cs,0,8),csN>=3,'n='+csN)"),'Jungle matchup CS diagnostic must use its own finite CS sample');
 assert.ok(app.includes("laneN+' gold@15 · '+csN+' CS@15"),'Jungle matchup coverage must disclose separate gold and CS sample counts');
 assert.ok(modelDoc.includes('## v255 Jungle matchup CS denominator integrity'),'Jungle matchup CS denominator policy must remain documented');
+assert.ok(api.includes('earlyRoleSoloKillGames=validDirectPeerTimeline.filter')&&api.includes('earlyRoleSoloEventGames=validDirectPeerTimeline.filter'),'Global lane coaching must export clean-duel game spread');
+assert.ok(api.includes('earlyHomeLaneDeathGames=validTimeline.filter')&&api.includes('earlyOutsidePressureDeathGames=validTimeline.filter'),'Global lane coaching must export outside-pressure game spread');
+assert.ok(api.includes('earlyRoleSoloDeaths>=3&&earlyRoleSoloDeathGames>=2')&&api.includes('earlyRoleSoloKills>=3&&earlyRoleSoloKillGames>=2'),'Global clean-duel findings must require cross-game repetition');
+assert.ok(api.includes('earlyHomeLaneDeaths>=4&&earlyHomeLaneDeathGames>=3&&earlyOutsidePressureDeaths>=3&&earlyOutsidePressureDeathGames>=2'),'Global outside-pressure finding must require event and game spread');
+assert.ok(app.includes('duelReady=duels>=3&&duelGames>=2')&&app.includes('soloKGames>=2')&&app.includes('soloDGames>=2'),'TOP clean-duel card must require event volume plus cross-game spread');
+assert.ok(modelDoc.includes('## v256 global lane-event game spread'),'Global lane-event spread semantics must remain documented');
