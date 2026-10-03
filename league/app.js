@@ -1107,8 +1107,8 @@ function renderEvidenceHealth(r){
   let roleEvidenceLabel='Comparable @15',roleEvidenceDetail='',roleEvidenceCount=0,roleEvidenceFloor=5;
   if(role==='SUPPORT'){
     roleEvidenceLabel='Support vision peer';
-    roleEvidenceCount=games.filter(g=>g.timelineAvailable===true&&trustedDirectPeer(g)&&hasNum(g?.peer?.vpmDelta)).length;
-    roleEvidenceDetail='timeline + trusted opposing Support + VPM comparison';
+    roleEvidenceCount=games.filter(g=>trustedDirectPeer(g)&&hasNum(g?.peer?.vpmDelta)).length;
+    roleEvidenceDetail='trusted opposing Support + VPM comparison; timeline not required';
   }else if(role==='JUNGLE'){
     roleEvidenceLabel='Jungle impact peer';
     roleEvidenceCount=games.filter(g=>g.timelineAvailable===true&&trustedDirectPeer(g)&&hasNum(g?.impactDeltaVsOpponent)).length;
