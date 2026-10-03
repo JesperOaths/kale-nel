@@ -1014,7 +1014,7 @@ function renderRoleSpecificLens(r){
     if(hint)hint.textContent='Shown only for TOP reports. It combines direct-lane state, clean duels, lead preservation and objective-adjacent side-lane risk.';
     noteText='TOP interpretation stays role-relative: lane gold/CS compare with the actual TOP opponent, while side-lane deaths are reviewed as timing/risk evidence rather than assuming that side-laning itself was wrong.';
   }else if(role==='MID'){
-    const roamN=Number(b.roamAttempts||0),roamSuccess=Number(b.roamSuccesses||0),roamRate=hasNum(b.roamSuccessRate)?Number(b.roamSuccessRate):null,mid=b.midRouting||{},midN=Number(mid.games||0),objRate=hasNum(mid.avgObjectiveJoinRate)?Number(mid.avgObjectiveJoinRate):null;
+    const roamN=Number(b.roamAttempts||0),roamSuccess=Number(b.roamSuccesses||0),roamRate=hasNum(b.roamSuccessRate)?Number(b.roamSuccessRate):null,mid=b.midRouting||{},midN=Number(mid.games||0),objRate=hasNum(mid.coachingObjectivePresenceRate??mid.meanGameObjectiveJoinRate??mid.avgObjectiveJoinRate)?Number(mid.coachingObjectivePresenceRate??mid.meanGameObjectiveJoinRate??mid.avgObjectiveJoinRate):null;
     cards.push(
       roleLensCard('Role gold @15',gold==null?'n/a':signed(gold,0)+'g',laneN+' comparable @15 games versus the actual MID opponent · evidence floor 5',goldTone,laneN>=5),
       roleLensCard('CS/min vs MID peer',cs==null?'n/a':signed(cs,2),peerN+' direct-role comparable games · evidence floor 5',csTone,peerN>=5),
@@ -1067,7 +1067,7 @@ function outcomeFingerprintSpecs(role){
     {label:'Role gold @15',unit:'gold',inverse:false,get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)?Number(g.goldDiff15):null},
     {label:'First impact vs MID peer',unit:'minutes',inverse:true,get:g=>trustedDirectPeer(g)&&hasNum(g?.impactDeltaVsOpponent)?Number(g.impactDeltaVsOpponent):null},
     {label:'Roam conversion',unit:'percent',inverse:false,get:g=>perGamePct(g?.roams?.successes,g?.roams?.attempts),opportunity:g=>Number(g?.roams?.attempts||0),minOpportunities:4,opportunityLabel:'roam attempts'},
-    {label:'15→25 objective reconnect',unit:'percent',inverse:false,get:g=>hasNum(g?.midRouting?.objectiveJoinRate)?Number(g.midRouting.objectiveJoinRate):null}
+    {label:'15→25 objective reconnect',unit:'percent',inverse:false,get:g=>hasNum(g?.midRouting?.contestPresenceRate??g?.midRouting?.objectiveJoinRate)?Number(g.midRouting.contestPresenceRate??g.midRouting.objectiveJoinRate):null}
   ];
   if(role==='TOP')return[
     {label:'Role gold @15',unit:'gold',inverse:false,get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)?Number(g.goldDiff15):null},
@@ -1526,7 +1526,7 @@ function renderPhaseDiagnostic(r){
     if(x.key==='mid'){
       if(role==='JUNGLE')return 'prior objective setup '+setup+' · contested presence '+contest;
       if(role==='SUPPORT')return 'prior objective setup '+setup+' · vision-action death rate '+(hasNum(b.visionActionDeathRate)?fmtPct(b.visionActionDeathRate):'n/a');
-      const cs=hasNum(mid.avgCsSwing15to25)?'CS swing '+signed(mid.avgCsSwing15to25,1):'CS swing n/a',obj=hasNum(mid.avgObjectiveJoinRate)?'objective presence '+fmtPct(mid.avgObjectiveJoinRate):'objective presence n/a';return cs+' · '+obj;
+      const cs=hasNum(mid.avgCsSwing15to25)?'CS swing '+signed(mid.avgCsSwing15to25,1):'CS swing n/a',obj=hasNum(mid.coachingObjectivePresenceRate??mid.meanGameObjectiveJoinRate??mid.avgObjectiveJoinRate)?'objective presence '+fmtPct(mid.coachingObjectivePresenceRate??mid.meanGameObjectiveJoinRate??mid.avgObjectiveJoinRate):'objective presence n/a';return cs+' · '+obj;
     }
     if(role==='JUNGLE')return 'fight survival '+fight+' · contested objective presence '+contest;
     if(role==='SUPPORT')return 'fight survival '+fight+' · prior objective setup '+setup;
@@ -1555,8 +1555,8 @@ function renderCompoundSignals(r){
     rows.push(intelligenceCard('Lead → preservation',hasNum(p.avgGoldDiff15)?signed(p.avgGoldDiff15,0)+'g @15':'Lead sample',tone,(lead>150?'You usually create a role lead. ':'')+(give==null?'There is not yet enough lead-preservation evidence.':give.toFixed(0)+'% of measured ≥500g early leads were given back by 15.')+(leadDeaths?' '+leadDeaths+' high-risk death(s) occurred while materially ahead.':''),n+' lead games · analyzer threshold 4 · combines role state + subsequent risk',ready));
   }
   const mid=b.midRouting||{};
-  if(['ADC','MID','TOP'].includes(role)&&(hasNum(mid.avgCsSwing15to25)||hasNum(mid.avgObjectiveJoinRate))){
-    const cs=hasNum(mid.avgCsSwing15to25)?Number(mid.avgCsSwing15to25):null,obj=hasNum(mid.avgObjectiveJoinRate)?Number(mid.avgObjectiveJoinRate):null,side=Number(b.preNeutralObjectiveSideLaneDeaths||0),n=Number(mid.games||0),ready=n>=4;
+  if(['ADC','MID','TOP'].includes(role)&&(hasNum(mid.avgCsSwing15to25)||hasNum(mid.coachingObjectivePresenceRate??mid.meanGameObjectiveJoinRate??mid.avgObjectiveJoinRate))){
+    const cs=hasNum(mid.avgCsSwing15to25)?Number(mid.avgCsSwing15to25):null,obj=hasNum(mid.coachingObjectivePresenceRate??mid.meanGameObjectiveJoinRate??mid.avgObjectiveJoinRate)?Number(mid.coachingObjectivePresenceRate??mid.meanGameObjectiveJoinRate??mid.avgObjectiveJoinRate):null,side=Number(b.preNeutralObjectiveSideLaneDeaths||0),n=Number(mid.games||0),ready=n>=4;
     const tone=side>=3?'bad':cs!=null&&cs>=0&&obj!=null&&obj>=50?'good':'neutral';
     rows.push(intelligenceCard('Farm ↔ map trade-off',(cs!=null?signed(cs,1)+' CS 15→25':'Routing sample'),tone,(cs!=null?'Your direct-role CS differential changes '+signed(cs,1)+' between 15 and 25. ':'')+(obj!=null?'Supported objective presence in comparable routing games is '+fmtPct(obj)+'. ':'')+(side?side+' isolated side-lane death(s) happened shortly before a neutral objective.':'No repeated pre-objective side-lane death pattern is currently measured.'),n+' comparable routing games · analyzer threshold 4 · combines farm gain + objective reconnect timing',ready));
   }
@@ -1625,6 +1625,7 @@ const PRACTICE_TARGET_SAMPLE_PATHS={
   'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame':['behaviorSummary.timelineGames'],
   'behaviorSummary.midRouting.avgCsSwing15to25':['behaviorSummary.midRouting.games'],
   'behaviorSummary.midRouting.avgObjectiveJoinRate':['behaviorSummary.midRouting.games'],
+  'behaviorSummary.midRouting.coachingObjectivePresenceRate':['behaviorSummary.midRouting.games'],
   'behaviorSummary.recentShopObjectiveAbsenceRate':['behaviorSummary.neutralObjectiveEvents'],
   'behaviorSummary.preObjectiveDeathPct':['behaviorSummary.classifiedTimelineDeaths'],
   'behaviorSummary.objectiveSetupWardRate':['behaviorSummary.visionWardTotal'],
@@ -1838,7 +1839,7 @@ function renderProgressComparison(current,previous,previousAt){
       {label:'CS / min',path:'coachingSummary.csMin',samplePath:'coachingSummary.games',min:5,threshold:.3,direction:1,format:v=>fmt(v,2)},
       {label:'Early-lead give-back rate',path:'behaviorSummary.earlyLeadGivebackRate',samplePath:'behaviorSummary.earlyLeadGames',min:4,threshold:15,direction:-1,format:v=>fmtPct(v)},
       {label:'Pre-objective side-lane deaths / game',path:'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame',samplePath:'dataQuality.validTimelineGames',min:5,threshold:.2,direction:-1,format:v=>fmt(v,2)},
-      {label:'Mid routing objective presence',path:'behaviorSummary.midRouting.avgObjectiveJoinRate',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
+      {label:'Mid routing objective presence',path:'behaviorSummary.midRouting.coachingObjectivePresenceRate',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
       {label:'Win rate from role lead @25',path:'behaviorSummary.closing25.leadWinRate',samplePath:'behaviorSummary.closing25.leadGames',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
       ...commonTempo,...commonRisk
     ];
@@ -1848,7 +1849,7 @@ function renderProgressComparison(current,previous,previousAt){
       {label:'CS / min',path:'coachingSummary.csMin',samplePath:'coachingSummary.games',min:5,threshold:.3,direction:1,format:v=>fmt(v,2)},
       {label:'First tracked impact vs Mid',path:'peerComparison.avgImpactDeltaMin',samplePath:'peerComparison.impactGames',min:5,threshold:1,direction:-1,format:v=>signed(v,1)+' min'},
       {label:'Mid routing CS swing 15→25',path:'behaviorSummary.midRouting.avgCsSwing15to25',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:4,direction:1,format:v=>signed(v,1)+' CS'},
-      {label:'Mid routing objective presence',path:'behaviorSummary.midRouting.avgObjectiveJoinRate',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
+      {label:'Mid routing objective presence',path:'behaviorSummary.midRouting.coachingObjectivePresenceRate',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
       {label:'Recent-shop objective absence rate',path:'behaviorSummary.recentShopObjectiveAbsenceRate',sampleRequirements:[{path:'behaviorSummary.neutralObjectiveEvents',min:5},{path:'behaviorSummary.objectiveContestGames',min:3}],threshold:10,direction:-1,format:v=>fmtPct(v)},
       ...commonTempo,...commonRisk
     ];
@@ -3309,8 +3310,8 @@ function renderAdvanced(r){
     ['Early / transition / late costly deaths',String(r.behaviorSummary?.phaseRisk?.early?.costlyDeaths??0)+' / '+String(r.behaviorSummary?.phaseRisk?.mid?.costlyDeaths??0)+' / '+String(r.behaviorSummary?.phaseRisk?.late?.costlyDeaths??0)],
     ['Mid-routing comparable games',String(r.behaviorSummary?.midRouting?.games??0)],
     ['Mid-routing CS swing 15→25',hasNum(r.behaviorSummary?.midRouting?.avgCsSwing15to25)?signed(r.behaviorSummary.midRouting.avgCsSwing15to25,1)+' CS':'n/a'],
-    ['Mid-routing objective presence · pooled',fmtPct(r.behaviorSummary?.midRouting?.avgObjectiveJoinRate)+' · '+String(r.behaviorSummary?.midRouting?.joinedObjectiveEvents??0)+' / '+String(r.behaviorSummary?.midRouting?.teamObjectiveEvents??0)+' encounters'],
-    ['Mid-routing objective presence · mean game rate',fmtPct(r.behaviorSummary?.midRouting?.meanGameObjectiveJoinRate)],
+    ['Mid-routing objective presence · pooled',fmtPct(r.behaviorSummary?.midRouting?.pooledObjectiveJoinRate??r.behaviorSummary?.midRouting?.avgObjectiveJoinRate)+' · '+String(r.behaviorSummary?.midRouting?.joinedObjectiveEvents??0)+' / '+String(r.behaviorSummary?.midRouting?.teamObjectiveEvents??0)+' contested encounters'],
+    ['Mid-routing objective presence · coaching mean game rate',fmtPct(r.behaviorSummary?.midRouting?.coachingObjectivePresenceRate??r.behaviorSummary?.midRouting?.meanGameObjectiveJoinRate)],
     ['Mid-routing inefficient games',String(r.behaviorSummary?.midRouting?.inefficientGames??0)],
     ['Mid-routing balanced games',String(r.behaviorSummary?.midRouting?.balancedGames??0)],
     ['Side-farm / low-presence games',String(r.behaviorSummary?.midRouting?.sideFarmLowPresenceGames??0)],
