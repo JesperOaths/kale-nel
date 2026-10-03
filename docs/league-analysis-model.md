@@ -2279,6 +2279,10 @@ Signed chart semantics are direction-aware. Gold/CS deltas treat positive as fav
 The consistency snapshot must be generated from the same role-specific chart specifications so its medians/IQR and favorable-close-unfavorable counts cannot drift from the plotted metric definition.
 
 
+A chart being drawable is not the same as its coaching evidence being mature. Role chart and consistency surfaces therefore use report-level evidence requirements before drawing a trend line, recent-shift summary, median/IQR, or favorable/close/unfavorable split. A thin-but-valid sample is shown as a neutral withheld card with the missing evidence requirement instead of a directional chart.
+
+Current chart floors mirror the report semantics: direct-role @15 charts need 5 comparable lane games; peer VPM/CS-min/impact/setup charts need 5 comparable peer games; first-major timing needs 4; Support roam conversion needs 4 attempts across 3 games; Support ADC lane movement needs 4 measured windows across 3 games; and contested-objective presence needs 5 encounters across 3 games. DPM/KP sample charts require 5 selected-role coaching games.
+
 ## Role-aware combined intelligence
 
 Compound-intelligence cards must not reintroduce role assumptions that the dedicated role lenses have already removed. Joined evidence is role-gated before interpretation:
