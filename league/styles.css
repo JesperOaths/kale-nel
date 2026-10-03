@@ -1587,6 +1587,11 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 .session-sample-card.thin-sample{border-style:dashed}
 .session-sample-card>small{line-height:1.55}
 
+.chart-card.thin-evidence{border-style:dashed;box-shadow:none;background:#fcfaf6}
+.chart-card.thin-evidence .chart-kind{opacity:.55}
+.chart-card.thin-evidence .chart-empty{color:var(--muted)}
+.consistency-card.evidence-unknown{border-style:dashed;box-shadow:none;background:#fcfaf6}
+
 .decision-card.thin-evidence{border-style:dashed;box-shadow:none}
 .decision-card.thin-evidence .decision-meter{opacity:.45}
 .decision-card.thin-evidence>small{color:var(--muted)}
