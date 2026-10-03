@@ -1710,7 +1710,7 @@ Carry-role advantage-conversion funnels remain descriptive state-conversion summ
 Missing timeline or checkpoint evidence must remain explicit. It must never be converted into a clean-risk claim, a preserved lead, successful setup, or any other positive coaching conclusion.
 
 
-For SUPPORT and JUNGLE role-sequence arcs, objective-setup state and setup-coverage counts use `objectiveReadiness.contestedJoined`. The team-secured `objectiveReadiness.joined` field must not define setup timing or whether a game has setup evidence.
+For SUPPORT and JUNGLE role-sequence arcs, objective-setup state and setup-coverage counts use `objectiveReadiness.contestedJoined`. The team-secured `objectiveReadiness.joined` field must not define setup timing or whether a game has setup evidence. The per-match `roleArcObjectiveStage()` follows the same rule for every role: `earlySetupJoins / contestedJoined`; its directional setup tone requires at least two joined team-contested encounters. Legacy team-secured joins may be printed only as traceability and never enter the setup percentage.
 
 ## Decision-card evidence thresholds
 
