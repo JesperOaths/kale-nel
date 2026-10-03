@@ -543,7 +543,7 @@ ok(app.includes('This is an evidence trace, not a causal proof.'), 'priority evi
 ok(modelDoc.includes('## Priority evidence chain'), 'analysis model must document the evidence-to-action trace');
 ok(app.includes('driver-evidence-meta')&&app.includes('supporting finding')&&app.includes('confidence'), 'action-first report drivers must retain visible evidence-strength metadata when supplied by the backend');
 ok(app.includes('Provisional limiter')&&app.includes('Emerging strength')&&app.includes('Keep testing'), 'low-confidence top findings must not be visually promoted to established limiter/strength status');
-ok(app.includes("weak.confidence!=='low'||weak.supportCount>=2")&&app.includes("strong.confidence!=='low'"), 'top-driver tone must require confidence or grouped support');
+ok(app.includes("weak.confidence!=='low'||weak.independentSupportCount>=2")&&app.includes("strong.confidence!=='low'"), 'top-driver tone must require confidence or two independent reinforcements beyond a low-confidence representative');
 ok(modelDoc.includes('## Top-driver confidence semantics'), 'analysis model must document top-driver confidence behavior');
 ok(html.includes('id="matchHistoryList"')&&app.includes('function renderMatchHistory(')&&app.includes('matchHistorySignals('), 'recent selected-role games must have collapsible coaching-readable history rows with derived evidence signals');
 ok(app.includes('function matchHistoryRoleMetric(')&&app.includes("r==='SUPPORT'")&&app.includes("r==='JUNGLE'"), 'recent match story must stay role-aware rather than carry-lane shaped');
