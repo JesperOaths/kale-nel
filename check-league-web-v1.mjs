@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.128'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.129'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v244'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v245'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1150,3 +1150,14 @@ assert.ok(api.includes('primaryRole==="JUNGLE"')&&api.includes('"Game 3+ CS/min 
 assert.ok(api.includes('Number(sessionModel.game3PlusGoldDelta)<=-300')&&api.includes('Number(sessionModel.game3PlusVpmDelta)<=-0.15')&&api.includes('Number(sessionModel.game3PlusKpDelta)<=-10'),'Session targets must only be created for materially unfavorable deltas');
 assert.ok(app.includes("if(unit==='vpm')return signed(n,2)+' VPM'"),'Session VPM targets must have explicit readable formatting');
 assert.ok(modelDoc.includes('## v244 role-specific session practice targets'),'Role-specific session target policy must remain documented');
+
+assert.ok(api.includes('"peerComparison.avgImpactDeltaMin":["peerComparison.impactGames"]')&&app.includes("'peerComparison.avgImpactDeltaMin':['peerComparison.impactGames']"),'First-impact practice target denominator path must remain backend/frontend aligned');
+assert.ok(api.includes('"peerComparison.higherRankAvgMajorItemDeltaMin":["peerComparison.higherRankMajorItemGames"]')&&app.includes("'peerComparison.higherRankAvgMajorItemDeltaMin':['peerComparison.higherRankMajorItemGames']"),'Higher-rank first-major target path must remain scoreable');
+assert.ok(api.includes('"peerComparison.rankBands.higher.avgGoldDiff15":["peerComparison.rankBands.higher.laneGames"]')&&app.includes("'peerComparison.rankBands.lower.avgGoldDiff15':['peerComparison.rankBands.lower.laneGames']"),'Rank-band lane targets must retain exact subset denominators');
+assert.ok(api.includes('/impact|influence/.test(tt)')&&api.includes('"First-impact timing vs role peer"'),'Early-impact themes must map to direct-peer impact timing rather than generic lane gold');
+assert.ok(api.includes('carryRole&&/lane|laning|gold|economy/.test(tt)&&!/higher.?rank|lower.?rank/.test(tt)'),'Generic lane-gold practice targets must remain carry-role and source-wording gated');
+assert.ok(!api.includes('if(!added&&hasNum(summary?.goldDiff15))added=add(theme,"Gold differential @15"'),'Early-lane target routing must not retain an unconditional Gold@15 fallback');
+assert.ok(api.includes('added=postLossIntent?postLossFirst():laterIntent?laterFirst():false;'),'Consistency themes must not create session targets without session/requeue intent');
+assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&hasNum(behavior?.damageGoldEfficiency)'),'Teamfight damage-resource practice targets must stay carry-role scoped');
+assert.ok(app.includes("if(unit==='minutes')return signed(n,1)+' min'"),'Timing practice targets must retain explicit minute formatting');
+assert.ok(modelDoc.includes('## v245 practice-theme target alignment'),'Practice-theme target alignment must remain documented');
