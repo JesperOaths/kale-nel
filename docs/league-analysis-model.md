@@ -2715,3 +2715,10 @@ Backend coaching priorities must use the same cross-game confidence rules as the
 - Confidence for these findings is based on contributing coaching games, not raw event count, so one unusually long ward-heavy match cannot masquerade as repeated behavior.
 
 The underlying event definitions are unchanged; this is an evidence-spread safeguard only.
+
+
+## v241 carry-role damage headline safety
+
+Damage-output headline coaching is role-scoped symmetrically. ADC, MID and TOP may receive direct-peer DPM strengths, recent DPM trend strengths, or frequent top-team-damage highlights. SUPPORT and JUNGLE keep DPM/damage available as technical traceability, but those carry-style outputs do not become primary coaching praise.
+
+This mirrors the existing role-aware KPI, Quick Read, chart and progress policies and prevents a positive metric from bypassing a role gate that already applies to its negative counterpart.
