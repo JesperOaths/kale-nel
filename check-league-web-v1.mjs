@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v248'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v249'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1193,3 +1193,8 @@ assert.ok(api.includes('/setup|arrival/.test(tt)')&&api.includes('/objective|pre
 assert.ok(!api.includes('/setup|arrival|objective/.test(tt)&&hasNum(behavior?.objectiveSetupCoachingRate)'),'Generic objective wording must not force prior-setup target selection');
 assert.ok(app.includes("if(unit==='wards')return signed(n,1)+' wards'"),'Peer setup-ward targets must retain readable ward-count formatting');
 assert.ok(modelDoc.includes('## v248 diagnosis-aligned vision and objective targets'),'Diagnosis-aligned vision/objective target policy must remain documented');
+assert.ok(app.includes("'behaviorSummary.roamSuccessRate':[")&&app.includes("{path:'behaviorSummary.roamAttemptGames',min:3,value:null}"),'Legacy roam targets must reconstruct event plus game-spread evidence');
+assert.ok(app.includes("'behaviorSummary.meanGameSupportRoamAdcLaneMovementCs':[")&&app.includes("{path:'behaviorSummary.supportRoamAdcLaneMovementWindows',min:Math.max(4,min),value:null}")&&app.includes("{path:'behaviorSummary.supportRoamAdcLaneMovementGames',min:3,value:null}"),'Legacy Support lane-movement targets must retain window/game floors');
+assert.ok(app.includes("'behaviorSummary.visionActionDeathRate':[")&&app.includes("{path:'behaviorSummary.visionActionGames',min:4,value:null}"),'Legacy vision-safety targets must retain action/game floors');
+assert.ok(app.includes("'behaviorSummary.recentShopObjectiveAbsenceRate':[")&&app.includes("{path:'behaviorSummary.objectiveContestGames',min:3,value:null}"),'Legacy objective timing targets must retain event/game floors');
+assert.ok(modelDoc.includes('## v249 legacy practice-target evidence parity'),'Legacy target evidence parity must remain documented');
