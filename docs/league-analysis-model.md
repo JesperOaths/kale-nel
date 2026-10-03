@@ -2239,6 +2239,8 @@ Per-metric win/loss means may be shown when both outcome sides have at least 2 v
 Standardized separation remains Hedges-corrected and descriptive only. It is not a causal estimate, significance test or prescription to optimize the displayed metric.
 
 
+For SUPPORT and JUNGLE, the **Prior objective setup** fingerprint is calculated per game as `earlySetupJoins / contestedJoined`. The historical team-secured `objectiveReadiness.joined` field is not a valid denominator for this coaching metric.
+
 ## Role-aware report framing
 
 A selected-role report must not retain headings that imply every role is a laner.
