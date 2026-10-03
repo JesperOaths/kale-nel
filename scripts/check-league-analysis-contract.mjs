@@ -766,3 +766,7 @@ ok(app.includes("evidenceRequirements:[{path:'behaviorSummary.roamAttempts',min:
 ok(app.includes("evidenceRequirements:[{path:'behaviorSummary.objectiveContestEncounters',min:5},{path:'behaviorSummary.objectiveContestGames',min:3}]"), 'objective presence chart must require event and game spread');
 ok(app.includes('const svg=evidence.ready?chartSvg(points,spec):null')&&app.includes('hasSplit=evidence.ready&&'), 'charts and consistency splits must both fail closed on thin evidence');
 ok(modelDoc.includes('A chart being drawable is not the same as its coaching evidence being mature.'), 'analysis documentation must preserve chart maturity semantics');
+ok(app.includes("spec.zeroLabel||'EVEN WITH ROLE OPPONENT'")&&app.includes("spec.zeroMeaning||'Zero means even with the direct role opponent.'"), 'signed chart interpretation must support metric-specific zero semantics');
+ok(app.includes("zeroLabel:'NO ADC LANE MOVEMENT'")&&app.includes("Zero means no measured change in ADC-vs-ADC CS differential during the roam window."), 'Support lane-movement zero must not be mislabeled as direct-role parity');
+ok(app.includes("recentText='latest '+recent.length+' valid observation"), 'chart recent-average wording must acknowledge missing observations');
+ok(modelDoc.includes('Signed zero-line wording is metric-specific.'), 'analysis documentation must preserve metric-specific chart zero semantics');
