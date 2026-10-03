@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.121'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.122'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261003-league-web-v233'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261003-league-web-v234'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1083,3 +1083,9 @@ assert.ok(api.includes('"Lead@25 games lost with late risk"')&&api.includes('"be
 assert.ok(api.includes('closing?.leadGames,4,"Reduce the share of all games with a ≥+500g direct-role lead at 25'),'Closing practice target must require lead-game evidence rather than lead-loss evidence');
 assert.ok(app.includes("'behaviorSummary.closing25.leadLateRiskPerLeadGameRate':['behaviorSummary.closing25.leadGames']"),'Frontend target fallback must understand zero-safe closing metric');
 assert.ok(modelDoc.includes('## Zero-safe closing practice target'),'Zero-safe closing target semantics must remain documented');
+
+assert.ok(api.includes('preObjectiveDeathsPerTimelineGame=validTimeline.length?preObjDeaths/validTimeline.length:null'),'Analyzer must export zero-safe pre-objective deaths per timeline game');
+assert.ok(api.includes('"Pre-objective deaths / game"')&&api.includes('"behaviorSummary.preObjectiveDeathsPerTimelineGame"'),'Pre-objective practice target must use the zero-safe per-game metric');
+assert.ok(api.includes('behavior?.timelineGames,5,"Target the supported pre-contest death pattern directly'),'Pre-objective practice target must use timeline-complete coaching games');
+assert.ok(app.includes("'behaviorSummary.preObjectiveDeathsPerTimelineGame':['behaviorSummary.timelineGames']"),'Frontend target fallback must understand zero-safe pre-objective metric');
+assert.ok(modelDoc.includes('## Zero-safe pre-objective death practice target'),'Zero-safe pre-objective target semantics must remain documented');
