@@ -1127,3 +1127,6 @@ ok(backend.includes('trackedAbsentTeamFights')&&backend.includes('positionSuppor
 ok(app.includes("key:'tracked_fight_absence'")&&app.includes('not that joining was necessarily correct'), 'high-resource lower-damage review must use supported absence context without prescriptive overclaiming');
 ok(app.includes("detailCard('Tracked teamfight absences'")&&app.includes('does not claim the player should have joined'), 'per-match fight detail must expose absence evidence and caveat');
 ok(modelDoc.includes('## v280 position-supported teamfight absence'), 'analysis documentation must preserve teamfight-absence semantics');
+ok(html.includes('id="resourceOutputContrast"')&&app.includes('High-resource conversion split:')&&app.includes('descriptive win-rate gap'), 'carry archetype panel must expose a denominator-gated high-resource conversion contrast');
+ok(app.includes('nA>=5&&nB>=5')&&app.includes('Association only:')&&app.includes('do not establish that damage conversion caused the result'), 'conversion contrast must require five games per group and remain non-causal');
+ok(modelDoc.includes('## v281 high-resource conversion contrast'), 'analysis documentation must preserve high-resource conversion contrast semantics');
