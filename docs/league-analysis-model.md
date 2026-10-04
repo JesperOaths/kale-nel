@@ -3343,3 +3343,18 @@ Frontend `20261004-league-web-v287` replaces the abstract “Recent direction”
 ### v287 readable text floor
 
 The readability pass now also overrides legacy micro-label rules that were still as small as 0.53–0.74rem. Supporting text and card/row/header labels have a readable floor while preserving visual hierarchy, and the desktop shell remains capped at the established 1760px width rather than becoming edge-to-edge.
+
+
+## v289 support-champion and recurring support-player reliability
+
+Analyzer `league-web-behavior-v4.164` separates three distinct questions that were previously too easy to conflate:
+
+- **Established support champion result:** at least five clean outcomes with that allied Support champion. Ranking uses the 95% Wilson lower bound, so a 3–0 support cannot claim the established top spot over a much larger repeated sample.
+- **Promising support champion sample:** three or four clean outcomes. These remain visible with their observed win rate and output context but are explicitly unranked as established evidence.
+- **Recurring Support player result:** grouped by the Riot ID recorded in the match, again requiring five clean outcomes for the established ranking. The report shows the ally's own KDA, kill participation and vision/min alongside the ADC player's KDA/DPM and that support player's champion pool.
+
+ADC × Support champion pairings keep a separate three-clean-game floor because pair samples are naturally thinner than champion-level or recurring-player samples. AFK and early-surrender outcome-compromised games remain excluded from every result ranking.
+
+The recurring-player model deliberately stores and exposes the recorded Riot ID only. It does not export allied PUUIDs. Riot-ID renames can therefore split one human player's historical sample into two labels; the UI states this limitation rather than pretending identity continuity that Riot match history cannot prove from the display name alone.
+
+Frontend `20261004-league-web-v289` adds the recurring Support-player table and changes the support summary to distinguish established results from promising small samples.
