@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.166'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.167'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
 ok(backend.includes('aboveOwnDeadTimeMedian:Number(g.damageRank)>2&&')&&backend.includes('aboveOwnTurretMedian:Number(g.damageRank)>2&&'), 'resource/output exemplar annotations must compute lower-damage state in their own callback scope');
 ok(backend.includes('highUnspentFightSamples')&&backend.includes('itemDisadvantageFightSamples')&&backend.includes('goldDeficitFightSamples')&&backend.includes('outnumberedFightSamples'), 'fight-state rates must use metric-specific supported-opportunity denominators');
 ok(backend.includes('const cleanOutcomeGames=games.filter(g=>g?.outcomeCompromised!==true)')&&backend.includes('afk_or_early_surrender_excluded_from_final_result_conversion'), 'final-result coaching must exclude compromised outcomes');
@@ -1094,6 +1094,9 @@ ok(app.includes("detailCard('Team gold rank'")&&app.includes("detailCard('Team v
 ok(app.includes('Previous report withheld.')&&app.includes('previousScope=reportRoleScopeViolations(previous,role)'), 'progress comparison must never compare against a cross-role previous report');
 ok(modelDoc.includes('## v268 role-specific unused-metric promotion'), 'analysis documentation must preserve v268 role-specific metric decisions');
 ok(backend.includes('stabilityTrend:{csMin:stability')&&backend.includes('recentIqr:ai')&&backend.includes('priorIqr:bi'), 'long-horizon model must expose robust median and IQR shifts');
+ok(backend.includes('championHistory=[')&&backend.includes('historyShare:pct(list.length,history.length)')&&app.includes('history-champion-card'), 'long-horizon model must group only reviewed-account performance by own champion with metric denominators');
+ok(backend.includes('longOutcomeFingerprint={')&&backend.includes('directionalEligible:useCleanOutcome')&&html.includes('id="longOutcomeFingerprint"')&&app.includes('function renderLongOutcomeFingerprint'), '100-game outcome fingerprint must be visible and clean-outcome gated');
+ok(backend.includes('baseWindowGames:5')&&backend.includes('maxWindowGames:20')&&backend.includes('windowPolicy:"minimum_5_extend_until_evidence_max_20"')&&app.includes("'extended for evidence'")&&app.includes("'inconclusive — evidence floor not reached'"), 'practice target evaluation must support evidence-aware extension from 5 to at most 20 new games');
 ok(html.includes('id="historyStabilityTrend"')&&app.includes('function historyStabilityCard('), 'robust history-shift evidence must have a visible consumer');
 ok(html.includes('Latest 20 vs previous up to 20'), 'history copy must disclose that the prior comparison window may contain fewer than 20 games');
 ok(app.includes('middle-50% spread narrowed')&&app.includes('middle-50% spread widened'), 'variability direction must be explicit rather than hidden in a composite score');
