@@ -1,6 +1,6 @@
 # Current League agent state
 
-Last updated: 2026-10-04 17:12 Europe/Amsterdam
+Last updated: 2026-10-04 17:23 Europe/Amsterdam
 
 ## Trial
 
@@ -19,12 +19,16 @@ Last updated: 2026-10-04 17:12 Europe/Amsterdam
 - Local source advertises `/league/styles.css?v=20261004-league-web-v294` and `GEJAST_PAGE_VERSION='v817'`.
 - No deployment was attempted in this maintenance cycle.
 
+## Completed this cycle
+
+- Repaired the local League analysis contract failure found on the first trial run.
+- `renderVisualSummary` now uses `reportCoachingGames(r)` as its explicit source cohort.
+- Match history now derives its source list from the role-pure, mechanics-cohort-aware `reportCoachingGames(r)` path instead of raw `r.games`.
+- Committed initial trial mission/state docs and the frontend cohort fix in `22ca4385`.
+
 ## Current goal
 
-Repair the local League analysis contract failure found on the first trial run:
-
-- visual summaries and match-history coaching charts must inherit the mechanics-filtered coaching cohort;
-- saved-report role parsing must fail closed on missing/unknown roles.
+No active lease. Next run should pick the highest-value P1 backlog item unless the user changes priorities.
 
 ## Notes
 
