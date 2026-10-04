@@ -3216,3 +3216,32 @@ Only after that check succeeds does the page describe the result as a **Saved Ka
 Cache-only saved-report rebuilds apply the same first boundary: a rebuild without a returned `analysis_id` is treated as a persistence failure rather than silently presenting the report as saved.
 
 This hardening is motivated by the current persisted state: the profile and match cache are populated while `league_analysis_runs_v1` contains no saved analysis rows. Fetch completion and analysis are separate requests, so interruption between them can legitimately leave this state. The existing load path will rebuild from cached Riot data when the saved role report is missing.
+
+
+## v283 deep high-resource behavior contrast
+
+The analyzer now compares the two deep selected-role **high-resource** cohorts directly:
+
+- Top-2 team gold + top-2 team champion damage
+- Top-2 team gold + lower team champion damage
+
+This comparison is separate from the long-horizon 100-game archetype summary. Only deep games with timeline evidence enter behavior metrics.
+
+The comparison includes:
+- deaths before tracked contribution / active fights;
+- active fight starts with at least 1000g unspent;
+- active fight starts where a trusted direct-role opponent had completed a major item first;
+- tracked teamfight absence / position-supported teamfight clusters;
+- first-reset economy-loss rate;
+- first-reset timing delta versus the trusted direct-role peer;
+- utilization rate of supported earlier-major-item windows;
+- death-before-impact rate inside those item-spike windows;
+- death downtime;
+- turret damage per minute;
+- damage-share minus gold-share.
+
+Every metric retains its own evidence denominator. Event-rate rows expose eligible games plus event opportunities. Peer-relative reset and item-spike rows require a trusted direct-role opponent and fail closed otherwise.
+
+The frontend withholds a metric row unless both cohorts have at least three eligible games with a supported value. Therefore a well-populated death-downtime comparison can remain visible while a thin item-spike comparison is hidden.
+
+Differences are shown as **lower-damage cohort minus converted cohort**. They are descriptive within-player associations and are intended to identify replay questions, not causal mechanisms or universal targets.
