@@ -3180,7 +3180,7 @@ A fight cluster can contribute to this absence model only when:
 - it is a supported multi-kill cluster;
 - the player's team is involved in the cluster;
 - Riot provides event coordinates;
-- a player position frame is available;
+- a player position frame within 35 seconds of a positioned fight event is available;
 - the player has no tracked kill/assist contribution or death in the cluster;
 - no supported player proximity within 5000 units is found around the cluster.
 
@@ -3198,7 +3198,7 @@ The carry-role archetype panel now adds a direct comparison between the two **hi
 - Top-2 gold + top-2 damage
 - Top-2 gold + lower damage
 
-The contrast is withheld until both groups contain at least five games. When available, the page reports each group's game count and win rate, the descriptive win-rate gap, the difference in average damage-share minus gold-share, and the difference in average death downtime.
+The contrast is withheld until both groups contain at least five **clean outcomes** after AFK/early-surrender games are excluded. When available, the page reports total and clean game counts, each clean win rate, the descriptive clean win-rate gap, and clean-population differences in damage-share minus gold-share and death downtime.
 
 This is explicitly an association, not a causal model. The comparison answers whether high-resource games with stronger team-relative champion-damage output happened to have different outcomes and availability patterns in this player's own role history. It does not claim that increasing champion damage would reproduce the observed win-rate gap.
 
@@ -3227,21 +3227,39 @@ The analyzer now compares the two deep selected-role **high-resource** cohorts d
 
 This comparison is separate from the long-horizon 100-game archetype summary. Only deep games with timeline evidence enter behavior metrics.
 
+AFK/early-surrender games are excluded before the deep cohorts are built.
+
 The comparison includes:
 - deaths before tracked contribution / active fights;
 - active fight starts with at least 1000g unspent;
-- active fight starts where a trusted direct-role opponent had completed a major item first;
+- active fight starts where a trusted direct-role opponent had completed a major item first, only when exact-patch item mechanics are available;
 - tracked teamfight absence / position-supported teamfight clusters;
 - first-reset economy-loss rate;
 - first-reset timing delta versus the trusted direct-role peer;
 - utilization rate of supported earlier-major-item windows;
 - death-before-impact rate inside those item-spike windows;
 - death downtime;
-- turret damage per minute;
-- damage-share minus gold-share.
+- turret damage per minute.
 
 Every metric retains its own evidence denominator. Event-rate rows expose eligible games plus event opportunities. Peer-relative reset and item-spike rows require a trusted direct-role opponent and fail closed otherwise.
 
-The frontend withholds a metric row unless both cohorts have at least three eligible games with a supported value. Therefore a well-populated death-downtime comparison can remain visible while a thin item-spike comparison is hidden.
+The frontend withholds a metric row unless both cohorts have at least three eligible games with a supported value. Event-rate rows additionally require at least five supported opportunities in each cohort. Therefore a well-populated death-downtime comparison can remain visible while a thin fight or item-spike comparison is hidden.
 
 Differences are shown as **lower-damage cohort minus converted cohort**. They are descriptive within-player associations and are intended to identify replay questions, not causal mechanisms or universal targets.
+
+
+## v284 verification corrections
+
+A full verification pass over v274–v283 found four places where the implementation was structurally present but the evidence boundary could be stronger. These are corrected in v284 / analyzer v4.160.
+
+1. **Tracked teamfight absence now requires temporally bounded position evidence.** The player position used to support an absence must come from the nearest timeline frame within 35 seconds of a positioned fight event. A generic previous frame is no longer sufficient. The stored absence event includes the frame-to-event time delta for traceability.
+
+2. **Item-disadvantage fight rates fail closed when item mechanics are unavailable.** A game now enters that denominator only when the direct role peer is trusted and the exact-patch item catalog made item mechanics eligible. Fallback Data Dragon catalogs can no longer turn unavailable item evidence into a misleading 0% disadvantage rate.
+
+3. **Deep event-rate contrasts require opportunity depth as well as game depth.** Every row still needs at least three eligible games in each cohort, but event-based rows additionally require at least five supported event opportunities in each cohort. A rate based on one or two fights is withheld.
+
+4. **Outcome and explanatory populations are cleaned up.** AFK/early-surrender games are excluded from the high-resource outcome contrast and from the deep behavior contrast. Archetype cards use clean-outcome win rates when at least three clean games exist, and compromised exemplars are explicitly labeled. The deep behavior table no longer includes damage-share minus gold-share because that output quantity is partly entailed by the cohort definition and is therefore circular as an explanatory behavior.
+
+The high-resource outcome contrast now requires at least five clean games in each high-resource group. Its damage-share-minus-gold-share and death-downtime context are calculated on the same clean-outcome population used for the clean win-rate comparison.
+
+For the current cached ADC sample, the raw high-resource groups are still 19 top-2-gold/top-2-damage games and 6 top-2-gold/lower-damage games. One game in the former group carries compromised-outcome context. The clean outcome comparison is therefore 13/18 wins (72.2%) versus 1/6 wins (16.7%). This remains descriptive association, not causal evidence.
