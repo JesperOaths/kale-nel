@@ -1316,7 +1316,7 @@ function historyStabilityCard(label,obj,unit='num',inverse=false,medianThreshold
 function renderLongHorizon(r){
   const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),stability=$('historyStabilityTrend'),consistency=$('historyConsistency'),champions=$('historyChampionMix'),note=$('longHorizonNote');if(!kpi||!trend)return;
   const s=h.summary||{},role=canonicalRole(h.selectedRole||r?.dataQuality?.selectedRole||state.selectedRole),games=Number(h.sampleGames||0);
-  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';const aw=$('resourceOutputArchetypesWrap'),ag=$('resourceOutputArchetypes');if(aw)aw.hidden=true;if(ag)ag.innerHTML='';if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
+  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';const aw=$('resourceOutputArchetypesWrap'),ag=$('resourceOutputArchetypes'),ad=$('resourceOutputArchetypeDetail');if(aw)aw.hidden=true;if(ag)ag.innerHTML='';if(ad){ad.hidden=true;ad.innerHTML='';}if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
   const laner=['ADC','MID','TOP'].includes(role),roleCounts=h.roleCounts||{},otherRoleGames=Object.entries(roleCounts).reduce((n,[rk,count])=>n+(canonicalRole(rk)!==role?Number(count||0):0),0);
   const roleVolume=laner
     ?{label:'Lane minions @10',value:hasNum(s?.laneCs10?.value)?fmt(s.laneCs10.value,1):'n/a',sub:String(s?.laneCs10?.n||0)+' Riot match-level lane observations'}
@@ -1382,22 +1382,40 @@ function renderLongHorizon(r){
     consistency.innerHTML=specs.map(x=>historyDistributionCard(x.label,x.obj,x.unit)).join('');
   }
   {
-    const wrap=$('resourceOutputArchetypesWrap'),grid=$('resourceOutputArchetypes'),matrix=h.resourceOutputArchetypes||{},cats=Array.isArray(matrix.categories)?matrix.categories:[];
+    const wrap=$('resourceOutputArchetypesWrap'),grid=$('resourceOutputArchetypes'),detail=$('resourceOutputArchetypeDetail'),matrix=h.resourceOutputArchetypes||{},cats=Array.isArray(matrix.categories)?matrix.categories:[];
     if(wrap)wrap.hidden=!laner||!Number(matrix.eligibleGames||0);
+    if(detail){detail.hidden=true;detail.innerHTML='';}
     if(grid){
       if(!laner||!Number(matrix.eligibleGames||0))grid.innerHTML='';
-      else grid.innerHTML=cats.map(x=>{
-        const n=Number(x?.games||0),share=hasNum(x?.share)?fmtPct(x.share):'n/a',wr=n>=3&&hasNum(x?.winRate)?' · '+fmtPct(x.winRate)+' WR':' · WR withheld (n<3)';
-        const lowerDamage=String(x?.key||'').includes('lower_damage');
-        const deadCtx=lowerDamage&&Number(x?.deadTimeComparableGames||0)>0
-          ?String(x.aboveMedianDeadTimeGames||0)+' / '+String(x.deadTimeComparableGames||0)+' above your '+fmt(matrix.deadTimeMedian,1)+'% death-downtime median'
-          :'';
-        const turretCtx=lowerDamage&&Number(x?.turretComparableGames||0)>0
-          ?String(x.aboveMedianTurretPressureGames||0)+' / '+String(x.turretComparableGames||0)+' above your '+fmtInt(matrix.turretDamagePerMinMedian)+' turret-DPM median'
-          :'';
-        const context=[deadCtx,turretCtx].filter(Boolean).join(' · ');
-        return '<article class="kpi-card tone-neutral"><span>'+esc(x.label||x.key||'Archetype')+'</span><strong>'+n+' game'+(n===1?'':'s')+' · '+esc(share)+'</strong><small>'+esc('role-history share'+wr+(context?' · '+context:'')+' · descriptive, not causal')+'</small></article>';
-      }).join('');
+      else{
+        grid.innerHTML=cats.map(x=>{
+          const n=Number(x?.games||0),share=hasNum(x?.share)?fmtPct(x.share):'n/a',wr=n>=3&&hasNum(x?.winRate)?' · '+fmtPct(x.winRate)+' WR':' · WR withheld (n<3)';
+          const lowerDamage=String(x?.key||'').includes('lower_damage');
+          const deadCtx=lowerDamage&&Number(x?.deadTimeComparableGames||0)>0
+            ?String(x.aboveMedianDeadTimeGames||0)+' / '+String(x.deadTimeComparableGames||0)+' above your '+fmt(matrix.deadTimeMedian,1)+'% death-downtime median'
+            :'';
+          const turretCtx=lowerDamage&&Number(x?.turretComparableGames||0)>0
+            ?String(x.aboveMedianTurretPressureGames||0)+' / '+String(x.turretComparableGames||0)+' above your '+fmtInt(matrix.turretDamagePerMinMedian)+' turret-DPM median'
+            :'';
+          const context=[deadCtx,turretCtx].filter(Boolean).join(' · ');
+          return '<button type="button" class="kpi-card tone-neutral archetype-card" data-archetype-key="'+esc(x.key||'')+'" aria-expanded="false"><span>'+esc(x.label||x.key||'Archetype')+'</span><strong>'+n+' game'+(n===1?'':'s')+' · '+esc(share)+'</strong><small>'+esc('role-history share'+wr+(context?' · '+context:'')+' · descriptive, not causal')+'</small><em>Inspect example games</em></button>';
+        }).join('');
+        grid.querySelectorAll('[data-archetype-key]').forEach(btn=>btn.addEventListener('click',()=>{
+          const key=String(btn.dataset.archetypeKey||''),cat=cats.find(x=>String(x?.key||'')===key),examples=Array.isArray(cat?.examples)?cat.examples:[];
+          grid.querySelectorAll('[data-archetype-key]').forEach(x=>x.setAttribute('aria-expanded',x===btn?'true':'false'));
+          if(!detail)return;
+          if(!cat){detail.hidden=true;detail.innerHTML='';return;}
+          detail.hidden=false;
+          const rows=examples.map((x,i)=>{
+            const deepMatch=(r.games||[]).find(g=>String(g?.matchId||'')===String(x?.matchId||'')),canOpen=!!deepMatch;
+            const overlap=[x?.aboveOwnDeadTimeMedian===true?'above own death-downtime median':'',x?.aboveOwnTurretMedian===true?'above own turret-DPM median':''].filter(Boolean).join(' · ');
+            return '<article class="archetype-example"><div><span>#'+(i+1)+' · '+esc(shortGameDate(x.gameStartTimestamp))+'</span><strong>'+esc((x.win?'Win':'Loss')+' · '+String(x.champion||'Unknown'))+'</strong><small>team gold #'+esc(String(x.goldRank??'?'))+' · team damage #'+esc(String(x.damageRank??'?'))+' · '+esc(hasNum(x.dpm)?fmtInt(x.dpm)+' DPM':'DPM n/a')+' · '+esc(hasNum(x.deadTimePct)?fmt(x.deadTimePct,1)+'% death downtime':'death downtime n/a')+' · '+esc(hasNum(x.turretDamagePerMin)?fmtInt(x.turretDamagePerMin)+' turret DPM':'turret DPM n/a')+(overlap?' · '+esc(overlap):'')+'</small></div>'+(canOpen?'<button type="button" class="button secondary small" data-open-archetype-match="'+esc(x.matchId||'')+'">Open full evidence</button>':'<span class="archetype-evidence-badge">Match-level history only</span>')+'</article>';
+          }).join('');
+          detail.innerHTML='<div class="section-subhead"><div><span>Example games</span><strong>'+esc(cat.label||key)+'</strong></div><small>Ranked by contrast in the available explanatory context, not by inferred causality. Up to 8 examples are retained.</small></div>'+(rows||'<div class="bullet empty">No exemplar games are available for this archetype.</div>');
+          detail.querySelectorAll('[data-open-archetype-match]').forEach(x=>x.addEventListener('click',()=>{const matchId=x.dataset.openArchetypeMatch;if(matchId)openReplayReviewMatch(matchId,'macro');}));
+          detail.scrollIntoView({block:'nearest',behavior:'smooth'});
+        }));
+      }
     }
   }
   const top=Array.isArray(h.topChampions)?h.topChampions.slice(0,6):[];
