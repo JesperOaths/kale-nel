@@ -1104,7 +1104,7 @@ ok(modelDoc.includes('## v272 lower-resource punch-up context'), 'analysis docum
 ok(app.includes('damageTop2Rate')&&app.includes('damageLeaderRate')&&app.includes('top-2 team damage overall')&&app.includes('team damage leader'), 'existing team damage-rank history metrics must be visibly consumed rather than computed and discarded');
 ok(backend.includes('resourceOutputArchetypes=(()=>')&&backend.includes('high_resource_high_damage')&&backend.includes('lower_resource_lower_damage'), 'carry archetypes must remain an exclusive 2x2 gold/damage-rank matrix');
 ok(backend.includes('aboveMedianDeadTimeGames')&&backend.includes('aboveMedianTurretPressureGames'), 'lower-damage archetypes must retain own-history-median explanatory overlap context');
-ok(html.includes('id="resourceOutputArchetypes"')&&app.includes('WR withheld (n<3)')&&app.includes('descriptive, not causal'), 'archetype UI must disclose thin samples and non-causal interpretation');
+ok(html.includes('id="resourceOutputArchetypes"')&&app.includes('clean WR withheld (n<3)')&&app.includes('descriptive, not causal'), 'archetype UI must disclose clean-outcome thin samples and non-causal interpretation');
 ok(modelDoc.includes('## v274 resource-output archetypes'), 'analysis documentation must preserve resource-output archetype semantics');
 ok(backend.includes('visionShare:metric(sample,g=>g.visionShare)')&&backend.includes('visionShare:trend("visionShare")'), 'support history must preserve team vision-share aggregation and trend');
 ok(app.includes("label:'Team vision share'")&&app.includes('share of team vision score')&&app.includes('composition-sensitive'), 'support UI must visibly consume team vision share with caveat');
