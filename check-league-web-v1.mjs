@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.157'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.158'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261004-league-web-v279'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261004-league-web-v280'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1330,3 +1330,7 @@ assert.ok(app.includes('function archetypeDeepDiagnostic(')&&app.includes("key:'
 assert.ok(app.includes('active fight')&&app.includes('This is readiness context, not proof it caused lower damage.')&&app.includes('Lower champion damage is left unexplained rather than guessed.'),'Archetype diagnostics must preserve active-fight and non-causal evidence boundaries');
 assert.ok(!app.includes("key:'missed_fights'"),'Frontend must not invent a missed-fight diagnosis without a supported all-teamfight attendance denominator');
 assert.ok(modelDoc.includes('## v279 deep archetype review contexts'),'Deep archetype diagnostic semantics must remain documented');
+assert.ok(api.includes('trackedAbsentTeamFights')&&api.includes('positionSupportedTeamFightClusters')&&api.includes('absenceEvents.push'),'Fight model must expose position-supported teamfight absence context without converting it into execution rates');
+assert.ok(app.includes("key:'tracked_fight_absence'")&&app.includes('This shows absence, not that joining was necessarily correct.'),'High-resource lower-damage diagnostics must use supported absence context without prescriptive overclaiming');
+assert.ok(app.includes("detailCard('Tracked teamfight absences'")&&app.includes('does not claim the player should have joined'),'Per-match fight detail must expose the absence denominator and caveat');
+assert.ok(modelDoc.includes('## v280 position-supported teamfight absence'),'Teamfight absence semantics must remain documented');
