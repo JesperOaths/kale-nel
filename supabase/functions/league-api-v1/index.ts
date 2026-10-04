@@ -20,7 +20,7 @@ const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=100;
 const ANALYSIS_HISTORY_TARGET_GAMES=100;
-const ANALYZER_VERSION="league-web-behavior-v4.155";
+const ANALYZER_VERSION="league-web-behavior-v4.156";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1571,14 +1571,28 @@ function longHorizonModel(allGames:any[],primaryRole:string){
     const pack=(key:string,label:string,fn:(g:any)=>boolean)=>{
       const rows=eligible.filter(fn),wins=rows.filter((g:any)=>g?.win===true).length,lowerDamage=rows.filter((g:any)=>Number(g.damageRank)>2),deadRows=lowerDamage.filter((g:any)=>hasNum(g?.deadTimePct)),turretRows=lowerDamage.filter((g:any)=>hasNum(g?.turretDamagePerMin));
       const highDead=hasNum(deadMedian)?deadRows.filter((g:any)=>Number(g.deadTimePct)>Number(deadMedian)).length:0,highTurret=hasNum(turretMedian)?turretRows.filter((g:any)=>Number(g.turretDamagePerMin)>Number(turretMedian)).length:0;
-      return{key,label,games:rows.length,share:pct(rows.length,eligible.length),wins,winRate:pct(wins,rows.length),avgDpm:meanField(finiteGames(rows,g=>g.dpm),g=>g.dpm),avgDeadTimePct:meanField(finiteGames(rows,g=>g.deadTimePct),g=>g.deadTimePct),avgTurretDamagePerMin:meanField(finiteGames(rows,g=>g.turretDamagePerMin),g=>g.turretDamagePerMin),aboveMedianDeadTimeGames:highDead,deadTimeComparableGames:deadRows.length,aboveMedianTurretPressureGames:highTurret,turretComparableGames:turretRows.length};
+      const exemplarScore=(g:any)=>{
+        const lower=Number(g.damageRank)>2;
+        const dead=lower&&hasNum(deadMedian)&&hasNum(g?.deadTimePct)?Math.max(0,Number(g.deadTimePct)-Number(deadMedian)):0;
+        const turret=lower&&hasNum(turretMedian)&&hasNum(g?.turretDamagePerMin)?Math.max(0,Number(g.turretDamagePerMin)-Number(turretMedian))/10:0;
+        const rankGap=Math.abs(Number(g.goldRank)-Number(g.damageRank));
+        return dead+turret+rankGap;
+      };
+      const examples=[...rows].sort((a:any,b:any)=>exemplarScore(b)-exemplarScore(a)||Number(b?.gameStartTimestamp||0)-Number(a?.gameStartTimestamp||0)).slice(0,8).map((g:any)=>({
+        matchId:text(g?.matchId),gameStartTimestamp:Number(g?.gameStartTimestamp||0),champion:text(g?.champion)||"Unknown",win:g?.win===true,
+        goldRank:hasNum(g?.goldRank)?Number(g.goldRank):null,damageRank:hasNum(g?.damageRank)?Number(g.damageRank):null,dpm:hasNum(g?.dpm)?Number(g.dpm):null,
+        deadTimePct:hasNum(g?.deadTimePct)?Number(g.deadTimePct):null,turretDamagePerMin:hasNum(g?.turretDamagePerMin)?Number(g.turretDamagePerMin):null,
+        timelineAvailable:g?.timelineAvailable===true,aboveOwnDeadTimeMedian:lower&&hasNum(deadMedian)&&hasNum(g?.deadTimePct)?Number(g.deadTimePct)>Number(deadMedian):null,
+        aboveOwnTurretMedian:lower&&hasNum(turretMedian)&&hasNum(g?.turretDamagePerMin)?Number(g.turretDamagePerMin)>Number(turretMedian):null
+      }));
+      return{key,label,games:rows.length,share:pct(rows.length,eligible.length),wins,winRate:pct(wins,rows.length),avgDpm:meanField(finiteGames(rows,g=>g.dpm),g=>g.dpm),avgDeadTimePct:meanField(finiteGames(rows,g=>g.deadTimePct),g=>g.deadTimePct),avgTurretDamagePerMin:meanField(finiteGames(rows,g=>g.turretDamagePerMin),g=>g.turretDamagePerMin),aboveMedianDeadTimeGames:highDead,deadTimeComparableGames:deadRows.length,aboveMedianTurretPressureGames:highTurret,turretComparableGames:turretRows.length,examples};
     };
     return{eligibleGames:eligible.length,deadTimeMedian:deadMedian,turretDamagePerMinMedian:turretMedian,categories:[
       pack("high_resource_high_damage","Top-2 gold + top-2 damage",(g:any)=>Number(g.goldRank)<=2&&Number(g.damageRank)<=2),
       pack("high_resource_lower_damage","Top-2 gold + lower damage",(g:any)=>Number(g.goldRank)<=2&&Number(g.damageRank)>2),
       pack("lower_resource_high_damage","Lower gold + top-2 damage",(g:any)=>Number(g.goldRank)>2&&Number(g.damageRank)<=2),
       pack("lower_resource_lower_damage","Lower gold + lower damage",(g:any)=>Number(g.goldRank)>2&&Number(g.damageRank)>2)
-    ],definition:"Exclusive team-relative gold/damage rank matrix. Death-downtime and turret-pressure overlaps use this selected-role history's own median and are descriptive, not causal."};
+    ],definition:"Exclusive team-relative gold/damage rank matrix. Death-downtime and turret-pressure overlaps use this selected-role history's own median and are descriptive, not causal. Each category includes up to eight bounded exemplars ranked by explanatory-context contrast, never by inferred causality."};
   })();
   return{roleMetricModel:"role_specific_match_history_v1",targetGames:ANALYSIS_HISTORY_TARGET_GAMES,sampleGames:history.length,deepTimelineGames:history.filter((g:any)=>g?.timelineAvailable===true).length,matchOnlyHistoryGames:history.filter((g:any)=>g?.timelineAvailable!==true).length,
     recent20:recentPack,previous20:priorPack,olderHistory:pack(older),summary:historyPack,resourceOutputArchetypes,
