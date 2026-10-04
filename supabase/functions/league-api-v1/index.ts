@@ -20,7 +20,7 @@ const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=100;
 const ANALYSIS_HISTORY_TARGET_GAMES=100;
-const ANALYZER_VERSION="league-web-behavior-v4.159";
+const ANALYZER_VERSION="league-web-behavior-v4.160";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -954,12 +954,12 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
     const events=cluster.events,first=events[0],fr=frameAtMs(frames,first.tMs),me=frameStats(fr,pid),them=rolePeerId?frameStats(fr,rolePeerId):null;
     const nearby=events.some((e:any)=>hasNum(e.x)&&hasNum(e.y)&&participantNearEvent(frames,pid,e,5000,35000));
     const playerDeath=events.find((e:any)=>Number(e.victimId)===pid),contributed=events.some((e:any)=>e.playerContribution),active=!!playerDeath||contributed,present=active||!!nearby,proximityOnly=present&&!active;
-    const teamInvolved=events.some((e:any)=>Number(e.killerTeam)===teamId||Number(e.victimTeam)===teamId),hasEventPosition=events.some((e:any)=>hasNum(e.x)&&hasNum(e.y)),positionSupported=teamInvolved&&hasEventPosition&&!!me?.position;
+    const teamInvolved=events.some((e:any)=>Number(e.killerTeam)===teamId||Number(e.victimTeam)===teamId),positionAnchor=events.find((e:any)=>hasNum(e.x)&&hasNum(e.y))||null,positionFrame=positionAnchor?frameNearestMs(frames,Number(positionAnchor.tMs||0),35000):null,positionMe=frameStats(positionFrame,pid),positionSupported=teamInvolved&&!!positionAnchor&&!!positionMe?.position;
     if(teamInvolved)out.fightProfile.teamFightClusters++;
     if(positionSupported)out.fightProfile.positionSupportedTeamFightClusters++;
     if(positionSupported&&!present){
       out.fightProfile.trackedAbsentTeamFights++;
-      out.fightProfile.absenceEvents.push({startMin:first.tMin,endMin:events[events.length-1].tMin,kills:events.length,playerPosition:{x:Number(me.position.x),y:Number(me.position.y)},definition:"team-involved multi-kill cluster with supported event coordinates and player frame position; no tracked player death/contribution and no <=5000 proximity evidence"});
+      out.fightProfile.absenceEvents.push({startMin:first.tMin,endMin:events[events.length-1].tMin,kills:events.length,positionEvidenceDeltaSec:Math.abs(Number(positionFrame?.timestamp||0)-Number(positionAnchor?.tMs||0))/1000,playerPosition:{x:Number(positionMe.position.x),y:Number(positionMe.position.y)},definition:"team-involved multi-kill cluster with event coordinates and a player position frame within 35s; no tracked player death/contribution and no <=5000 proximity evidence"});
     }
     if(!present)continue;
     const alliedDeaths=events.filter((e:any)=>Number(e.victimTeam)===teamId).sort((a:any,b:any)=>a.tMs-b.tMs);
@@ -1555,15 +1555,15 @@ function highResourceDeepBehaviorContrast(games:any[],primaryRole:string){
     const rows=eligible.filter((g:any)=>(Number(g.damageRank)<=2)===damageTop2);
     const eventRate=(eventFn:(g:any)=>number,oppFn:(g:any)=>number,gameEligible:(g:any)=>boolean=()=>true)=>{
       const xs=rows.filter(gameEligible),events=xs.reduce((n:number,g:any)=>n+Math.max(0,Number(eventFn(g)||0)),0),opportunities=xs.reduce((n:number,g:any)=>n+Math.max(0,Number(oppFn(g)||0)),0);
-      return{value:opportunities>0?100*events/opportunities:null,events,opportunities,eligibleGames:xs.length};
+      return{basis:"event",value:opportunities>0?100*events/opportunities:null,events,opportunities,eligibleGames:xs.length};
     };
     const gameRate=(eventFn:(g:any)=>boolean,gameEligible:(g:any)=>boolean=()=>true)=>{
       const xs=rows.filter(gameEligible),events=xs.filter(eventFn).length;
-      return{value:xs.length?100*events/xs.length:null,events,opportunities:xs.length,eligibleGames:xs.length};
+      return{basis:"game",value:xs.length?100*events/xs.length:null,events,opportunities:xs.length,eligibleGames:xs.length};
     };
     const meanMetric=(fn:(g:any)=>any,gameEligible:(g:any)=>boolean=()=>true)=>{
       const xs=rows.filter((g:any)=>gameEligible(g)&&hasNum(fn(g))),vals=xs.map((g:any)=>Number(fn(g)));
-      return{value:vals.length?avg(vals):null,eligibleGames:xs.length};
+      return{basis:"mean",value:vals.length?avg(vals):null,eligibleGames:xs.length};
     };
     const trustedReset=(g:any)=>g?.directPeerComparable===true&&g?.firstResetSequence?.measured===true&&g?.firstResetSequence?.deathInWindow!==true;
     const trustedSpike=(g:any)=>g?.directPeerComparable===true&&g?.itemSpikeWindow?.eligible===true;
@@ -1571,20 +1571,19 @@ function highResourceDeepBehaviorContrast(games:any[],primaryRole:string){
       key,label,games:rows.length,wins:rows.filter((g:any)=>g?.win===true).length,winRate:pct(rows.filter((g:any)=>g?.win===true).length,rows.length),
       preImpactDeathRate:eventRate(g=>Number(g?.fightProfile?.diedBeforeContribution||0),g=>Number(g?.fightProfile?.active??g?.fightProfile?.attended??0),g=>Number(g?.fightProfile?.active??g?.fightProfile?.attended??0)>0),
       highUnspentFightStartRate:eventRate(g=>Number(g?.fightProfile?.highUnspentStarts||0),g=>Number(g?.fightProfile?.active??g?.fightProfile?.attended??0),g=>Number(g?.fightProfile?.active??g?.fightProfile?.attended??0)>0),
-      itemDisadvantageFightStartRate:eventRate(g=>Number(g?.fightProfile?.itemDisadvantageStarts||0),g=>Number(g?.fightProfile?.active??g?.fightProfile?.attended??0),g=>g?.directPeerComparable===true&&Number(g?.fightProfile?.active??g?.fightProfile?.attended??0)>0),
+      itemDisadvantageFightStartRate:eventRate(g=>Number(g?.fightProfile?.itemDisadvantageStarts||0),g=>Number(g?.fightProfile?.active??g?.fightProfile?.attended??0),g=>g?.directPeerComparable===true&&g?.itemLedgerQuality?.itemMechanicsEligible===true&&Number(g?.fightProfile?.active??g?.fightProfile?.attended??0)>0),
       trackedFightAbsenceRate:eventRate(g=>Number(g?.fightProfile?.trackedAbsentTeamFights||0),g=>Number(g?.fightProfile?.positionSupportedTeamFightClusters||0),g=>Number(g?.fightProfile?.positionSupportedTeamFightClusters||0)>0),
       resetEconomyLossRate:gameRate(g=>g?.firstResetSequence?.economyLoss===true,trustedReset),
       resetTimingDeltaVsPeerMin:meanMetric(g=>g?.firstResetSequence?.timingDeltaVsOpponent,trustedReset),
       itemSpikeUtilizationRate:gameRate(g=>g?.itemSpikeWindow?.used===true,trustedSpike),
       itemSpikeDeathBeforeImpactRate:gameRate(g=>g?.itemSpikeWindow?.diedBeforeImpact===true,trustedSpike),
       deadTimePct:meanMetric(g=>g?.deadTimePct),
-      turretDamagePerMin:meanMetric(g=>g?.turretDamagePerMin),
-      damageEfficiencyPp:meanMetric(g=>g?.damageEfficiencyPp)
+      turretDamagePerMin:meanMetric(g=>g?.turretDamagePerMin)
     };
   };
   const converted=group("high_resource_high_damage","Top-2 gold + top-2 damage",true),lower=group("high_resource_lower_damage","Top-2 gold + lower damage",false);
   const usable=converted.games>=3&&lower.games>=3;
-  return{usable,minimumEligibleGamesPerCohort:3,deepEligibleGames:eligible.length,converted,lowerDamage:lower,definition:"Deep selected-role timeline comparison between high-resource games split by top-2 team champion-damage outcome. Metric rows retain their own eligible-game/opportunity denominators; trusted-peer metrics fail closed without a comparable direct role peer. Descriptive association only."};
+  return{usable,minimumEligibleGamesPerCohort:3,minimumEventOpportunitiesPerCohort:5,deepEligibleGames:eligible.length,converted,lowerDamage:lower,definition:"Deep selected-role timeline comparison between high-resource games split by top-2 team champion-damage outcome. Metric rows retain their own eligible-game/opportunity denominators; event-rate rows require at least five opportunities per cohort in the frontend; trusted-peer metrics fail closed without a comparable direct role peer, and item-disadvantage fight starts additionally require exact-patch item mechanics. Descriptive association only."};
 }
 function longHorizonModel(allGames:any[],primaryRole:string){
   const history=[...(allGames||[])].sort((a:any,b:any)=>Number(b?.gameStartTimestamp||0)-Number(a?.gameStartTimestamp||0)).slice(0,ANALYSIS_HISTORY_TARGET_GAMES),recent=history.slice(0,20),prior=history.slice(20,40),older=history.slice(40);
@@ -1614,7 +1613,7 @@ function longHorizonModel(allGames:any[],primaryRole:string){
     const eligible=history.filter((g:any)=>hasNum(g?.goldRank)&&hasNum(g?.damageRank)),deadDist:any=distribution(eligible.map((g:any)=>g?.deadTimePct).filter(hasNum).map(Number)),turretDist:any=distribution(eligible.map((g:any)=>g?.turretDamagePerMin).filter(hasNum).map(Number));
     const deadMedian=hasNum(deadDist?.median)?Number(deadDist.median):null,turretMedian=hasNum(turretDist?.median)?Number(turretDist.median):null;
     const pack=(key:string,label:string,fn:(g:any)=>boolean)=>{
-      const rows=eligible.filter(fn),wins=rows.filter((g:any)=>g?.win===true).length,lowerDamage=rows.filter((g:any)=>Number(g.damageRank)>2),deadRows=lowerDamage.filter((g:any)=>hasNum(g?.deadTimePct)),turretRows=lowerDamage.filter((g:any)=>hasNum(g?.turretDamagePerMin));
+      const rows=eligible.filter(fn),wins=rows.filter((g:any)=>g?.win===true).length,cleanRows=rows.filter((g:any)=>g?.outcomeCompromised!==true),cleanWins=cleanRows.filter((g:any)=>g?.win===true).length,lowerDamage=rows.filter((g:any)=>Number(g.damageRank)>2),deadRows=lowerDamage.filter((g:any)=>hasNum(g?.deadTimePct)),turretRows=lowerDamage.filter((g:any)=>hasNum(g?.turretDamagePerMin));
       const highDead=hasNum(deadMedian)?deadRows.filter((g:any)=>Number(g.deadTimePct)>Number(deadMedian)).length:0,highTurret=hasNum(turretMedian)?turretRows.filter((g:any)=>Number(g.turretDamagePerMin)>Number(turretMedian)).length:0;
       const exemplarScore=(g:any)=>{
         const lower=Number(g.damageRank)>2;
@@ -1630,7 +1629,7 @@ function longHorizonModel(allGames:any[],primaryRole:string){
         timelineAvailable:g?.timelineAvailable===true,aboveOwnDeadTimeMedian:lower&&hasNum(deadMedian)&&hasNum(g?.deadTimePct)?Number(g.deadTimePct)>Number(deadMedian):null,
         aboveOwnTurretMedian:lower&&hasNum(turretMedian)&&hasNum(g?.turretDamagePerMin)?Number(g.turretDamagePerMin)>Number(turretMedian):null
       }));
-      return{key,label,games:rows.length,share:pct(rows.length,eligible.length),wins,winRate:pct(wins,rows.length),avgGoldShare:meanField(finiteGames(rows,g=>g.goldShare),g=>g.goldShare),avgDamageShare:meanField(finiteGames(rows,g=>g.damageShare),g=>g.damageShare),avgDamageEfficiencyPp:meanField(finiteGames(rows,g=>g.damageEfficiencyPp),g=>g.damageEfficiencyPp),avgDpm:meanField(finiteGames(rows,g=>g.dpm),g=>g.dpm),avgDeadTimePct:meanField(finiteGames(rows,g=>g.deadTimePct),g=>g.deadTimePct),avgTurretDamagePerMin:meanField(finiteGames(rows,g=>g.turretDamagePerMin),g=>g.turretDamagePerMin),aboveMedianDeadTimeGames:highDead,deadTimeComparableGames:deadRows.length,aboveMedianTurretPressureGames:highTurret,turretComparableGames:turretRows.length,examples};
+      return{key,label,games:rows.length,share:pct(rows.length,eligible.length),wins,winRate:pct(wins,rows.length),cleanGames:cleanRows.length,cleanWins,cleanWinRate:pct(cleanWins,cleanRows.length),avgGoldShare:meanField(finiteGames(rows,g=>g.goldShare),g=>g.goldShare),avgDamageShare:meanField(finiteGames(rows,g=>g.damageShare),g=>g.damageShare),avgDamageEfficiencyPp:meanField(finiteGames(rows,g=>g.damageEfficiencyPp),g=>g.damageEfficiencyPp),avgDpm:meanField(finiteGames(rows,g=>g.dpm),g=>g.dpm),avgDeadTimePct:meanField(finiteGames(rows,g=>g.deadTimePct),g=>g.deadTimePct),avgTurretDamagePerMin:meanField(finiteGames(rows,g=>g.turretDamagePerMin),g=>g.turretDamagePerMin),aboveMedianDeadTimeGames:highDead,deadTimeComparableGames:deadRows.length,aboveMedianTurretPressureGames:highTurret,turretComparableGames:turretRows.length,examples};
     };
     return{eligibleGames:eligible.length,deadTimeMedian:deadMedian,turretDamagePerMinMedian:turretMedian,categories:[
       pack("high_resource_high_damage","Top-2 gold + top-2 damage",(g:any)=>Number(g.goldRank)<=2&&Number(g.damageRank)<=2),
