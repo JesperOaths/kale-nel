@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.161'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.162'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -1148,5 +1148,6 @@ ok(backend.includes('cleanRows=rows.filter((g:any)=>g?.outcomeCompromised!==true
 ok(backend.includes('const rankIn=(key:string)=>1+team.filter((x:any)=>Number(x[key]||0)>Number(p[key]||0)).length;'), 'team-relative ranks must use competition-rank semantics so exact ties are stable');
 ok(backend.includes('eligible=timelineHighResource.filter((g:any)=>g?.outcomeCompromised!==true)'), 'deep high-resource behavior contrast must exclude compromised outcomes');
 ok(backend.includes('highResourceBehaviorContrast=highResourceDeepBehaviorContrast(coachingGames,primaryRole)'), 'deep high-resource behavior contrast must use the mechanics-compatible coaching cohort');
+ok(backend.includes('const trustedResetEconomy=(g:any)=>')&&backend.includes('const trustedResetTiming=(g:any)=>')&&backend.includes('resetEconomyLossRate:gameRate(g=>g?.firstResetSequence?.economyLoss===true,trustedResetEconomy)')&&backend.includes('resetTimingDeltaVsPeerMin:meanMetric(g=>g?.firstResetSequence?.timingDeltaVsOpponent,trustedResetTiming)'), 'reset timing and reset economy contrasts must use separate evidence populations');
 ok(app.includes("key:'outcome_compromised'")&&app.includes('AFK/early-surrender outcome context'), 'compromised exemplar games must be visibly caveated');
 ok(modelDoc.includes('## v284 verification corrections'), 'analysis documentation must preserve verification corrections');
