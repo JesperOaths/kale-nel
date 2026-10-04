@@ -3302,3 +3302,12 @@ A verification pass found that the deep high-resource comparison was using one o
 Timing no longer requires the post-reset economy swing to be measurable and does not discard a valid timing observation merely because a death later contaminates the economy comparison window.
 
 This keeps each row's denominator aligned with the evidence needed for that row rather than inheriting stricter requirements from a neighboring metric.
+
+
+## v287 production persistence runtime certification
+
+A production smoke test against the deployed League Edge Function exposed a runtime-only scope error in the resource/output archetype exemplar projection: the exemplar map callback referenced a `lower` binding that existed only inside the separate exemplar scoring callback. Static source-contract checks did not execute that path, so the error survived while `analyze_basic` failed before persistence.
+
+Analyzer `league-web-behavior-v4.162.1` computes the lower-damage predicate inside the exemplar map callback itself. The regression contracts now explicitly forbid the out-of-scope form.
+
+The repaired production function was then exercised against an isolated clone of the existing 30-match cache. A fresh ADC analysis completed with 20 selected-role games, persisted a compact report, and `report_latest` returned the exact same analysis id and analyzer provenance. The reloaded compact payload retained all four resource/output archetype categories and the usable high-resource behavioral contrast (13 high-resource/high-damage games versus 4 high-resource/lower-damage games). This turns saved-report persistence from a source-only claim into an observed production read-after-write property.
