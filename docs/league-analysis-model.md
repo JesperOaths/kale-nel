@@ -3151,3 +3151,22 @@ For every archetype the backend exposes:
 The drilldown exemplar rows expose the same gold-share → damage-share relationship per match. This prevents ordinal rank boundaries from hiding important differences: two games can both be “top-2 gold + lower damage” while one misses the damage cutoff narrowly and another consumes materially more team gold than the damage share it produces.
 
 The percentage-point gap is still descriptive, not an efficiency grade. Champion identity, damage profile, split-push responsibility, utility contribution, game duration and fight access can all change the expected relationship between gold and champion damage.
+
+
+## v279 deep archetype review contexts
+
+The **Top-2 gold + lower damage** archetype now adds one strongest supported replay context for each exemplar that belongs to the deep recent sample.
+
+The diagnostic hierarchy is intentionally conservative:
+
+- **Pre-impact fight deaths** when the player died before tracked contribution in at least one active fight.
+- **Fight-readiness pressure** when an active fight began with at least 1000g unspent and/or the trusted direct-role opponent had completed a major item first.
+- **Earlier-item window unused** when trusted direct-peer evidence shows a supported earlier-major-item window but no tracked kill/assist or player-supported objective impact occurred inside it.
+- **High structure pressure** when turret damage per minute is above the player's own selected-role history median.
+- **No supported explanation** when none of the defined deep-evidence contexts is supported.
+
+The ordering chooses one review prompt, not a cause. A pre-impact death can reduce later damage opportunity, but it can also result from the same difficult fight state that reduced damage. Readiness signals likewise describe the state at fight start and do not prove why damage output was lower.
+
+The model deliberately does **not** create a generic “missed fights” label. The current fight evidence reliably distinguishes active involvement from proximity-only presence for tracked fight clusters, but it does not provide a defensible denominator of every teamfight the player should have attended. Until such an attendance model exists, absence from fights is not inferred.
+
+The drilldown also summarizes how many recent deep exemplars fall into each review-context label. Older 100-game examples remain match-level only and receive no deep diagnostic tag.
