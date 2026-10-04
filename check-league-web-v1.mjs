@@ -1289,7 +1289,7 @@ assert.ok(html.includes('id="historyConsistency"')&&html.includes('id="historyCh
 assert.ok(modelDoc.includes('## v267 role-pure history and readable solo-kill rates'),'Role-pure history and solo-kill unit semantics must remain documented');
 assert.ok(api.includes('enemyJungleMonsters:metric(sample,g=>g.enemyJungleMonsters)')&&app.includes("Enemy-jungle monsters / game"),'Jungle long-horizon analysis must consume cached enemy-jungle farm instead of leaving it unused');
 assert.ok(api.includes('firstTurretParticipationRate:boolRate')&&app.includes("First-turret participation"),'Lane-role history must use first-turret participation as descriptive structure context');
-assert.ok(api.includes('visionLeaderRate:boolRate')&&app.includes("Team vision leader"),'Support history must consume team vision-rank context');
+assert.ok(api.includes('visionLeaderRate:boolRate')&&api.includes('visionShare:metric(sample,g=>g.visionShare)')&&app.includes("Team vision share")&&app.includes('#1 on team vision'),'Support history must consume team vision share while retaining vision-leader context');
 assert.ok(app.includes("detailCard('Team gold rank'")&&app.includes("detailCard('Team vision rank'"),'Per-game details must expose already-computed gold and vision team ranks');
 assert.ok(app.includes('Previous report withheld.')&&app.includes('previousScope=reportRoleScopeViolations(previous,role)'),'Progress comparison must fail closed on cross-role previous reports');
 assert.ok(modelDoc.includes('## v268 role-specific unused-metric promotion'),'Role-specific unused-metric promotion must remain documented');
@@ -1334,8 +1334,8 @@ assert.ok(api.includes('trackedAbsentTeamFights')&&api.includes('positionSupport
 assert.ok(app.includes("key:'tracked_fight_absence'")&&app.includes('This shows absence, not that joining was necessarily correct.'),'High-resource lower-damage diagnostics must use supported absence context without prescriptive overclaiming');
 assert.ok(app.includes("detailCard('Tracked teamfight absences'")&&app.includes('does not claim the player should have joined'),'Per-match fight detail must expose the absence denominator and caveat');
 assert.ok(modelDoc.includes('## v280 position-supported teamfight absence'),'Teamfight absence semantics must remain documented');
-assert.ok(html.includes('id="resourceOutputContrast"')&&app.includes('High-resource conversion split:')&&app.includes('descriptive win-rate gap'),'Carry archetype panel must expose a denominator-gated high-resource conversion contrast');
-assert.ok(app.includes('nA>=5&&nB>=5')&&app.includes('Association only:')&&app.includes('do not establish that damage conversion caused the result'),'Conversion contrast must require five games per group and avoid causal claims');
+assert.ok(html.includes('id="resourceOutputContrast"')&&app.includes('High-resource conversion split:')&&app.includes('descriptive clean win-rate gap'),'Carry archetype panel must expose a denominator-gated clean high-resource conversion contrast');
+assert.ok(app.includes('cleanA>=5&&cleanB>=5')&&app.includes('Association only:')&&app.includes('do not establish that damage conversion caused the result'),'Conversion contrast must require five clean outcomes per group and avoid causal claims');
 assert.ok(modelDoc.includes('## v281 high-resource conversion contrast'),'High-resource contrast semantics must remain documented');
 assert.ok(app.includes("if(!d?.analysis_id)throw new Error('Analyzer returned a report without a saved analysis ID.')"),'Fresh analyses must fail closed if backend persistence does not return an analysis ID');
 assert.ok(app.includes("saveVerified=String(history?.analysis?.id||'')===String(d.analysis_id||'')")&&app.includes('Generated report · save verification pending'),'Fresh report UI must verify retrievable persistence before claiming saved');
