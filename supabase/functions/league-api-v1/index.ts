@@ -20,7 +20,7 @@ const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=100;
 const ANALYSIS_HISTORY_TARGET_GAMES=100;
-const ANALYZER_VERSION="league-web-behavior-v4.161";
+const ANALYZER_VERSION="league-web-behavior-v4.162";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1565,7 +1565,8 @@ function highResourceDeepBehaviorContrast(games:any[],primaryRole:string){
       const xs=rows.filter((g:any)=>gameEligible(g)&&hasNum(fn(g))),vals=xs.map((g:any)=>Number(fn(g)));
       return{basis:"mean",value:vals.length?avg(vals):null,eligibleGames:xs.length};
     };
-    const trustedReset=(g:any)=>g?.directPeerComparable===true&&g?.firstResetSequence?.measured===true&&g?.firstResetSequence?.deathInWindow!==true;
+    const trustedResetEconomy=(g:any)=>g?.directPeerComparable===true&&g?.firstResetSequence?.measured===true&&g?.firstResetSequence?.deathInWindow!==true;
+    const trustedResetTiming=(g:any)=>g?.directPeerComparable===true&&hasNum(g?.firstResetSequence?.timingDeltaVsOpponent);
     const trustedSpike=(g:any)=>g?.directPeerComparable===true&&g?.itemSpikeWindow?.eligible===true;
     return{
       key,label,games:rows.length,wins:rows.filter((g:any)=>g?.win===true).length,winRate:pct(rows.filter((g:any)=>g?.win===true).length,rows.length),
@@ -1573,8 +1574,8 @@ function highResourceDeepBehaviorContrast(games:any[],primaryRole:string){
       highUnspentFightStartRate:eventRate(g=>Number(g?.fightProfile?.highUnspentStarts||0),g=>Number(g?.fightProfile?.active??g?.fightProfile?.attended??0),g=>Number(g?.fightProfile?.active??g?.fightProfile?.attended??0)>0),
       itemDisadvantageFightStartRate:eventRate(g=>Number(g?.fightProfile?.itemDisadvantageStarts||0),g=>Number(g?.fightProfile?.active??g?.fightProfile?.attended??0),g=>g?.directPeerComparable===true&&g?.itemLedgerQuality?.itemMechanicsEligible===true&&Number(g?.fightProfile?.active??g?.fightProfile?.attended??0)>0),
       trackedFightAbsenceRate:eventRate(g=>Number(g?.fightProfile?.trackedAbsentTeamFights||0),g=>Number(g?.fightProfile?.positionSupportedTeamFightClusters||0),g=>Number(g?.fightProfile?.positionSupportedTeamFightClusters||0)>0),
-      resetEconomyLossRate:gameRate(g=>g?.firstResetSequence?.economyLoss===true,trustedReset),
-      resetTimingDeltaVsPeerMin:meanMetric(g=>g?.firstResetSequence?.timingDeltaVsOpponent,trustedReset),
+      resetEconomyLossRate:gameRate(g=>g?.firstResetSequence?.economyLoss===true,trustedResetEconomy),
+      resetTimingDeltaVsPeerMin:meanMetric(g=>g?.firstResetSequence?.timingDeltaVsOpponent,trustedResetTiming),
       itemSpikeUtilizationRate:gameRate(g=>g?.itemSpikeWindow?.used===true,trustedSpike),
       itemSpikeDeathBeforeImpactRate:gameRate(g=>g?.itemSpikeWindow?.diedBeforeImpact===true,trustedSpike),
       deadTimePct:meanMetric(g=>g?.deadTimePct),
