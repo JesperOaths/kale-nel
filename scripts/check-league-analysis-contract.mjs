@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.155'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.156'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -1109,3 +1109,7 @@ ok(modelDoc.includes('## v274 resource-output archetypes'), 'analysis documentat
 ok(backend.includes('visionShare:metric(sample,g=>g.visionShare)')&&backend.includes('visionShare:trend("visionShare")'), 'support history must preserve team vision-share aggregation and trend');
 ok(app.includes("label:'Team vision share'")&&app.includes('share of team vision score')&&app.includes('composition-sensitive'), 'support UI must visibly consume team vision share with caveat');
 ok(modelDoc.includes('## v275 Support vision burden'), 'analysis documentation must preserve Support vision-share semantics');
+ok(backend.includes('examples=[...rows]')&&backend.includes('slice(0,8)')&&backend.includes('aboveOwnDeadTimeMedian')&&backend.includes('aboveOwnTurretMedian'), 'archetype categories must retain a bounded exemplar ledger with explanatory overlap flags');
+ok(html.includes('id="resourceOutputArchetypeDetail"')&&app.includes('data-archetype-key')&&app.includes('data-open-archetype-match'), 'archetype cards must drill into examples and deep evidence where available');
+ok(app.includes('Match-level history only')&&app.includes('not by inferred causality'), 'older exemplar rows must disclose evidence limits and non-causal ranking');
+ok(modelDoc.includes('## v276 drillable archetype evidence'), 'analysis documentation must preserve archetype drilldown semantics');
