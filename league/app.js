@@ -412,6 +412,7 @@ async function rebuildSavedRoleReportFromCache(profile,selectedRole,reason=''){
   $('sourceState').textContent='Using cached Riot data'+(reason?' · '+reason:'');
   statusPill('Rebuilding '+roleLabel(selectedRole)+' report','warn');
   const rebuilt=await api('analyze_basic',{profile_id:profile.id,target_role:selectedRole});
+  if(!rebuilt?.analysis_id)throw new Error('Cache rebuild returned no saved analysis ID.');
   const report=rebuilt?.report||null,scope=reportRoleScopeViolations(report,selectedRole);
   if(scope.total)throw new Error('Role-selection safety check failed during saved-report rebuild: '+scope.total+' other-role game(s) detected.');
   if(!report?.games?.length)return null;
@@ -626,7 +627,8 @@ async function fetchProfileData(profile,requestedCount,progressStart=8,progressE
 async function analyzeProfileData(profile,targetRole=selectedAnalysisRole()){
   log(profile.display_name+' · building the '+roleLabel(targetRole)+' Last-20 analysis from the matches just fetched/cached.');
   const d=await api('analyze_basic',{profile_id:profile.id,target_role:targetRole});
-  log(profile.display_name+' · deterministic '+roleLabel(targetRole)+' analysis generated for '+(d.report?.dataQuality?.analyzedGames||0)+' games.','ok');
+  if(!d?.analysis_id)throw new Error('Analyzer returned a report without a saved analysis ID.');
+  log(profile.display_name+' · deterministic '+roleLabel(targetRole)+' analysis generated for '+(d.report?.dataQuality?.analyzedGames||0)+' games and assigned saved analysis '+String(d.analysis_id).slice(0,8)+'.','ok');
   return d;
 }
 async function runRecentAnalysis(){
@@ -656,12 +658,21 @@ async function runRecentAnalysis(){
     const scope=reportRoleScopeViolations(d.report,targetRole);
     if(scope.total)throw new Error('Role-selection safety check failed: '+scope.deep+' deep and '+scope.history+' history game(s) outside '+targetRole+' entered the report.');
     renderReport(d.report,'web_behavior');
-    try{const history=await api('report_latest',{profile_id:profile.id,target_role:targetRole});renderProgressComparison(d.report,history.previous?.report_data||null,history.previous?.created_at||null);}catch(_){$('progressComparisonPanel').hidden=true;}
+    let saveVerified=false;
+    try{
+      const history=await api('report_latest',{profile_id:profile.id,target_role:targetRole});
+      saveVerified=String(history?.analysis?.id||'')===String(d.analysis_id||'');
+      if(!saveVerified)log('Analysis rendered, but saved-report verification did not return the new analysis ID yet. The cache is preserved and the page will retry from cache on the next load.','bad');
+      renderProgressComparison(d.report,history.previous?.report_data||null,history.previous?.created_at||null);
+    }catch(e){
+      $('progressComparisonPanel').hidden=true;
+      log('Analysis rendered, but saved-report verification failed: '+e.message+'. The cached Riot data remains available for an automatic rebuild.','bad');
+    }
     $('analysisState').textContent=analyzed+' '+roleLabel(targetRole)+' games analyzed';
-    $('sourceState').textContent='Saved Kalenel report · Riot + behavioral analyzer';
+    $('sourceState').textContent=saveVerified?'Saved Kalenel report · Riot + behavioral analyzer':'Generated report · save verification pending';
     setProgress(100,100);
     statusPill(roleLabel(targetRole)+' Last 20 ready');
-    log('Done — '+analyzed+' eligible '+roleLabel(targetRole)+' games analyzed and saved to this Kalenel League profile.','ok');
+    log(saveVerified?'Done — '+analyzed+' eligible '+roleLabel(targetRole)+' games analyzed and persistence verified on this Kalenel League profile.':'Done — '+analyzed+' eligible '+roleLabel(targetRole)+' games analyzed; saved-report verification is pending but the Riot cache is intact.',saveVerified?'ok':'bad');
   }catch(e){
     $('analysisState').textContent='Request failed';
     statusPill('Request failed','error');
