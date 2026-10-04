@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261004-league-web-v281'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261004-league-web-v282'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1337,3 +1337,7 @@ assert.ok(modelDoc.includes('## v280 position-supported teamfight absence'),'Tea
 assert.ok(html.includes('id="resourceOutputContrast"')&&app.includes('High-resource conversion split:')&&app.includes('descriptive win-rate gap'),'Carry archetype panel must expose a denominator-gated high-resource conversion contrast');
 assert.ok(app.includes('nA>=5&&nB>=5')&&app.includes('Association only:')&&app.includes('do not establish that damage conversion caused the result'),'Conversion contrast must require five games per group and avoid causal claims');
 assert.ok(modelDoc.includes('## v281 high-resource conversion contrast'),'High-resource contrast semantics must remain documented');
+assert.ok(app.includes("if(!d?.analysis_id)throw new Error('Analyzer returned a report without a saved analysis ID.')"),'Fresh analyses must fail closed if backend persistence does not return an analysis ID');
+assert.ok(app.includes("saveVerified=String(history?.analysis?.id||'')===String(d.analysis_id||'')")&&app.includes('Generated report · save verification pending'),'Fresh report UI must verify retrievable persistence before claiming saved');
+assert.ok(app.includes("if(!rebuilt?.analysis_id)throw new Error('Cache rebuild returned no saved analysis ID.')"),'Cache-only report rebuild must also require persistence confirmation');
+assert.ok(modelDoc.includes('## v282 saved-report persistence verification'),'Saved-report verification semantics must remain documented');
