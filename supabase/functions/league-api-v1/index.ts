@@ -20,7 +20,7 @@ const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=100;
 const ANALYSIS_HISTORY_TARGET_GAMES=100;
-const ANALYZER_VERSION="league-web-behavior-v4.162";
+const ANALYZER_VERSION="league-web-behavior-v4.162.1";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1627,8 +1627,8 @@ function longHorizonModel(allGames:any[],primaryRole:string){
         matchId:text(g?.matchId),gameStartTimestamp:Number(g?.gameStartTimestamp||0),champion:text(g?.champion)||"Unknown",win:g?.win===true,outcomeCompromised:g?.outcomeCompromised===true,
         goldRank:hasNum(g?.goldRank)?Number(g.goldRank):null,damageRank:hasNum(g?.damageRank)?Number(g.damageRank):null,goldShare:hasNum(g?.goldShare)?Number(g.goldShare):null,damageShare:hasNum(g?.damageShare)?Number(g.damageShare):null,damageEfficiencyPp:hasNum(g?.damageEfficiencyPp)?Number(g.damageEfficiencyPp):null,dpm:hasNum(g?.dpm)?Number(g.dpm):null,
         deadTimePct:hasNum(g?.deadTimePct)?Number(g.deadTimePct):null,turretDamagePerMin:hasNum(g?.turretDamagePerMin)?Number(g.turretDamagePerMin):null,
-        timelineAvailable:g?.timelineAvailable===true,aboveOwnDeadTimeMedian:lower&&hasNum(deadMedian)&&hasNum(g?.deadTimePct)?Number(g.deadTimePct)>Number(deadMedian):null,
-        aboveOwnTurretMedian:lower&&hasNum(turretMedian)&&hasNum(g?.turretDamagePerMin)?Number(g.turretDamagePerMin)>Number(turretMedian):null
+        timelineAvailable:g?.timelineAvailable===true,aboveOwnDeadTimeMedian:Number(g.damageRank)>2&&hasNum(deadMedian)&&hasNum(g?.deadTimePct)?Number(g.deadTimePct)>Number(deadMedian):null,
+        aboveOwnTurretMedian:Number(g.damageRank)>2&&hasNum(turretMedian)&&hasNum(g?.turretDamagePerMin)?Number(g.turretDamagePerMin)>Number(turretMedian):null
       }));
       return{key,label,games:rows.length,share:pct(rows.length,eligible.length),wins,winRate:pct(wins,rows.length),cleanGames:cleanRows.length,cleanWins,cleanWinRate:pct(cleanWins,cleanRows.length),cleanAvgDamageEfficiencyPp:meanField(finiteGames(cleanRows,g=>g.damageEfficiencyPp),g=>g.damageEfficiencyPp),cleanAvgDeadTimePct:meanField(finiteGames(cleanRows,g=>g.deadTimePct),g=>g.deadTimePct),avgGoldShare:meanField(finiteGames(rows,g=>g.goldShare),g=>g.goldShare),avgDamageShare:meanField(finiteGames(rows,g=>g.damageShare),g=>g.damageShare),avgDamageEfficiencyPp:meanField(finiteGames(rows,g=>g.damageEfficiencyPp),g=>g.damageEfficiencyPp),avgDpm:meanField(finiteGames(rows,g=>g.dpm),g=>g.dpm),avgDeadTimePct:meanField(finiteGames(rows,g=>g.deadTimePct),g=>g.deadTimePct),avgTurretDamagePerMin:meanField(finiteGames(rows,g=>g.turretDamagePerMin),g=>g.turretDamagePerMin),aboveMedianDeadTimeGames:highDead,deadTimeComparableGames:deadRows.length,aboveMedianTurretPressureGames:highTurret,turretComparableGames:turretRows.length,examples};
     };
