@@ -2137,7 +2137,7 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 
 /* v286 — readable-first League layout + ADC/support synergy */
 html{font-size:19px}
-.page-wrap{width:min(1840px,calc(100% - 20px))}
+.page-wrap{width:min(1760px,calc(100% - 20px))}
 .site-shell{padding-left:clamp(18px,2vw,36px);padding-right:clamp(18px,2vw,36px)}
 .panel{padding:36px 40px}
 #report{gap:28px}
