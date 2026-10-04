@@ -3137,3 +3137,17 @@ The filter never changes report calculations, coaching aggregates, archetype cou
 The archetype filter is hidden unless it is actively meaningful. If no matching deep games remain, it fails back to the unfiltered story rather than leaving the user on an empty stale filter.
 
 Older 100-game exemplars remain in the archetype ledger as match-level evidence only and are not injected into the deep story, preserving the distinction between long-horizon pattern evidence and timeline-backed game review.
+
+
+## v278 archetype share magnitude
+
+Resource/output archetypes remain defined by the simple team-rank 2x2 matrix, but each category now also reports continuous magnitude using the match-level team-share fields already present in the analyzer.
+
+For every archetype the backend exposes:
+- average team gold share;
+- average team champion-damage share;
+- average **damage share minus gold share** in percentage points.
+
+The drilldown exemplar rows expose the same gold-share → damage-share relationship per match. This prevents ordinal rank boundaries from hiding important differences: two games can both be “top-2 gold + lower damage” while one misses the damage cutoff narrowly and another consumes materially more team gold than the damage share it produces.
+
+The percentage-point gap is still descriptive, not an efficiency grade. Champion identity, damage profile, split-push responsibility, utility contribution, game duration and fight access can all change the expected relationship between gold and champion damage.
