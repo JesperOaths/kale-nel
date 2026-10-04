@@ -1321,6 +1321,10 @@ function archetypeDeepDiagnostic(g,matrix){
     const bits=[];if(highUnspent)bits.push(highUnspent+' active fight start'+(highUnspent===1?'':'s')+' with ≥1000g unspent');if(itemDisadvantage)bits.push(itemDisadvantage+' with the role opponent on a major item first');
     return{key:'fight_readiness',label:'Fight-readiness pressure',tone:'bad',copy:bits.join(' · ')+'. This is readiness context, not proof it caused lower damage.'};
   }
+  const supportedFightClusters=Number(fight.positionSupportedTeamFightClusters||0),trackedAbsences=Number(fight.trackedAbsentTeamFights||0);
+  if(supportedFightClusters>=2&&trackedAbsences>0){
+    return{key:'tracked_fight_absence',label:'Tracked teamfight absence',tone:'neutral',copy:trackedAbsences+' of '+supportedFightClusters+' position-supported team fight cluster'+(supportedFightClusters===1?'':'s')+' had no tracked contribution/death and no ≤5000 proximity evidence. This shows absence, not that joining was necessarily correct.'};
+  }
   if(trustedDirectPeer(g)&&g.itemSpikeWindow?.eligible===true&&g.itemSpikeWindow?.used===false){
     return{key:'unused_item_window',label:'Earlier-item window unused',tone:'neutral',copy:'A supported earlier-major-item window existed, but no tracked kill/assist or supported objective impact occurred inside it.'};
   }
@@ -3275,6 +3279,7 @@ function detailContent(g,tab){
   if(tab==='fights'){
     const f=g.fightProfile||{},events=f.events||[],active=Number(f.active??f.attended??0),present=Number(f.present??f.attended??0),nearOnly=Number(f.proximityOnly||0);
     return detailCard('Active fight involvements',String(active))+detailCard('Supported fight presence',String(present))+detailCard('Proximity-only presence',String(nearOnly))+
+      detailCard('Position-supported teamfight clusters',String(f.positionSupportedTeamFightClusters??0))+detailCard('Tracked teamfight absences',String(f.trackedAbsentTeamFights??0))+
       detailCard('First allied death · active fights',String(f.firstAllyDeaths??0)+' · '+fmtPct(f.firstAllyDeathRate))+
       detailCard('Died before contribution · active fights',String(f.diedBeforeContribution??0)+' · '+fmtPct(f.diedBeforeContributionRate))+detailCard('Fight survival · active fights',fmtPct(f.survivalRate))+
       detailCard('≥1000g unspent active starts',String(f.highUnspentStarts??0)+' · '+fmtPct(f.highUnspentStartRate))+detailCard('Major-item disadvantage active starts',String(f.itemDisadvantageStarts??0)+' · '+fmtPct(f.itemDisadvantageStartRate))+
@@ -3282,7 +3287,8 @@ function detailContent(g,tab){
       detailCard('Locally outnumbered · active starts',String(f.outnumberedStarts??0)+' · '+fmtPct(f.outnumberedStartRate))+detailCard('Loss rate while outnumbered · active fights',fmtPct(f.outnumberedLossRate))+
       detailList(events.slice(0,10).map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+String(x.kills||0)+' kills · '+(x.proximityOnly?'nearby only · no tracked contribution/death':x.survived?'active · survived':x.firstAllyDeath?'active · first ally death':x.diedBeforeContribution?'active · died before contribution':'active · died after contribution')+
         (x.active&&hasNum(x.currentGoldAtStart)?' · '+fmtInt(x.currentGoldAtStart)+'g unspent':'')+(x.active&&hasNum(x.goldDiffAtStart)?' · role gold '+signed(x.goldDiffAtStart,0)+'g':'')+(x.active&&x.itemDisadvantage?' · opponent major item first':'')),'No supported multi-kill fight presence was detected.')+
-      '<div class="detail-note">Fight presence and fight execution are deliberately separate. Proximity-only clusters remain visible as positioning context, but survival, first-death, readiness, numbers and contribution rates use only active fights where Riot records your death or kill/assist contribution.</div>';
+      detailList((f.absenceEvents||[]).slice(0,8).map(x=>(Number(x.startMin)||0).toFixed(1)+'–'+(Number(x.endMin)||0).toFixed(1)+'m · '+String(x.kills||0)+' kill events · position-supported teamfight absence'),'No position-supported teamfight absences were detected.')+
+      '<div class="detail-note">Fight presence and fight execution are deliberately separate. Proximity-only clusters remain visible as positioning context, but survival, first-death, readiness, numbers and contribution rates use only active fights where Riot records your death or kill/assist contribution. Tracked teamfight absence requires a team-involved multi-kill cluster, event coordinates, a supported player position frame, no tracked contribution/death and no ≤5000 proximity evidence; it does not claim the player should have joined.</div>';
   }
   if(tab==='phases'){
     const p=g.phaseBehavior||{},rules=reportPhaseRules(g),phase=(key,label)=>{
