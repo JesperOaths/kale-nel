@@ -293,7 +293,7 @@ assert.ok(app.includes('Number(curQueue)!==Number(prevQueue)'));
 assert.ok(app.includes('curPatch!==prevPatch'));
 assert.ok(app.includes("'moving closer'"));
 assert.ok(html.includes('id="practiceOutcome"'));
-assert.ok(app.includes("baseWindow=Math.max(1,Number(target.baseWindowGames||target.windowGames||5))")&&app.includes('rare-opportunity evidence can extend to'));
+assert.ok(app.includes("baseWindow=Math.max(1,Number(target.baseWindowGames||target.windowGames||5))")&&app.includes('new-game evidence can extend to')&&app.includes('while this target remains active'),'Practice cards must expose the five-game minimum and stable target-origin evidence extension');
 assert.ok(app.includes('based on '));
 assert.ok(app.includes('renderProgressComparison'));
 assert.ok(html.includes('id="progressComparisonNote"')&&app.includes('function progressComparisonContext('),'Development UI must expose rolling-sample overlap/context rather than only raw metric deltas');
