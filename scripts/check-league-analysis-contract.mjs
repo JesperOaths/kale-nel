@@ -1146,5 +1146,6 @@ ok(backend.includes('minimumEventOpportunitiesPerCohort:5')&&app.includes('suppo
 ok(!app.includes("key:'damageEfficiencyPp',unit:'pp',note:'composition-sensitive output magnitude'"), 'definition-linked output magnitude must not appear as explanatory behavior');
 ok(backend.includes('cleanRows=rows.filter((g:any)=>g?.outcomeCompromised!==true)')&&app.includes('clean WR')&&app.includes('AFK/early-surrender game'), 'archetype outcome contrasts must exclude compromised outcomes');
 ok(backend.includes('eligible=timelineHighResource.filter((g:any)=>g?.outcomeCompromised!==true)'), 'deep high-resource behavior contrast must exclude compromised outcomes');
+ok(backend.includes('highResourceBehaviorContrast=highResourceDeepBehaviorContrast(coachingGames,primaryRole)'), 'deep high-resource behavior contrast must use the mechanics-compatible coaching cohort');
 ok(app.includes("key:'outcome_compromised'")&&app.includes('AFK/early-surrender outcome context'), 'compromised exemplar games must be visibly caveated');
 ok(modelDoc.includes('## v284 verification corrections'), 'analysis documentation must preserve verification corrections');
