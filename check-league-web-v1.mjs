@@ -73,7 +73,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.166'),'League backend contract must identify the current runtime-certified role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.167'),'League backend contract must identify the current runtime-certified role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('aboveOwnDeadTimeMedian:Number(g.damageRank)>2&&')&&api.includes('aboveOwnTurretMedian:Number(g.damageRank)>2&&'),'Resource/output exemplar annotations must compute lower-damage status inside their own map callback');
 assert.ok(api.includes('highUnspentFightSamples')&&api.includes('itemDisadvantageFightSamples')&&api.includes('goldDeficitFightSamples')&&api.includes('outnumberedFightSamples'),'Fight-state rates must retain metric-specific supported-opportunity denominators');
 assert.ok(api.includes('const cleanOutcomeGames=games.filter(g=>g?.outcomeCompromised!==true)')&&api.includes('afk_or_early_surrender_excluded_from_final_result_conversion'),'Outcome-linked coaching must exclude compromised AFK/early-surrender results');
@@ -84,7 +84,7 @@ assert.ok(app.includes('This section analyzes only the reviewed account.'),'Supp
 assert.ok(app.includes("x.sampleTier==='developing'")&&app.includes('Developing support sample'),'Frontend must keep 3–4 game support-champion samples neutral/contextual rather than presenting them as established');
 assert.ok(!api.includes('allySupportPuuid'),'Support-player analysis must not expose allied PUUIDs in the report contract');
 assert.ok(app.includes('function renderSupportSynergy')&&app.includes('Recent form · latest 5 vs prior games'),'Frontend must expose support synergy and concrete recent-form evidence');
-assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261004-league-web-v292'),'Support synergy panel and frontend cache-bust must be present');
+assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261004-league-web-v293'),'Support synergy panel and frontend cache-bust must be present');
 assert.ok(!api.includes('aboveOwnDeadTimeMedian:lower&&')&&!api.includes('aboveOwnTurretMedian:lower&&'),'Resource/output exemplar annotations must not reference the exemplarScore-local lower variable');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
@@ -858,7 +858,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261004-league-web-v292'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261004-league-web-v293'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('v285 — semantic color hierarchy for faster report scanning')&&css.includes('--league-teal:#176d70')&&css.includes('--league-purple:#684696'),'League report must retain the semantic section color system');
 assert.ok(css.includes('archetype-card[data-archetype-key="high_resource_high_damage"]')&&css.includes('archetype-card[data-archetype-key="high_resource_lower_damage"]'),'Resource/output archetypes must remain visually distinguishable');
 assert.ok(css.includes('.games-table tr.game-row:has(.result.win)>td')&&css.includes('.games-table tr.game-row:has(.result.loss)>td'),'Evidence table wins and losses must remain visually scannable');
@@ -1310,6 +1310,9 @@ assert.ok(app.includes("detailCard('Team gold rank'")&&app.includes("detailCard(
 assert.ok(app.includes('Previous report withheld.')&&app.includes('previousScope=reportRoleScopeViolations(previous,role)'),'Progress comparison must fail closed on cross-role previous reports');
 assert.ok(modelDoc.includes('## v268 role-specific unused-metric promotion'),'Role-specific unused-metric promotion must remain documented');
 assert.ok(api.includes('stabilityTrend:{csMin:stability')&&api.includes('recentIqr:ai')&&api.includes('priorIqr:bi'),'Long-horizon history must expose median and IQR shifts separately');
+assert.ok(api.includes('championHistory=[')&&api.includes('historyShare:pct(list.length,history.length)')&&app.includes('history-champion-card'),'Long-horizon history must expose reviewed-account champion-conditioned performance, not only champion counts');
+assert.ok(api.includes('longOutcomeFingerprint={')&&api.includes('directionalEligible:useCleanOutcome')&&html.includes('id="longOutcomeFingerprint"')&&app.includes('function renderLongOutcomeFingerprint'),'Long-horizon result fingerprint must use a visible clean-outcome-gated match-level model');
+assert.ok(api.includes('baseWindowGames:5')&&api.includes('maxWindowGames:20')&&api.includes('windowPolicy:"minimum_5_extend_until_evidence_max_20"')&&app.includes("'extended for evidence'")&&app.includes("'inconclusive — evidence floor not reached'"),'Rare-opportunity practice targets must extend beyond the five-game minimum without extending forever');
 assert.ok(html.includes('id="historyStabilityTrend"')&&app.includes('function historyStabilityCard('),'Robust history-shift evidence must be visible on the page');
 assert.ok(html.includes('Latest 20 vs previous up to 20'),'History comparison copy must not imply a full previous-20 sample when fewer older games exist');
 assert.ok(app.includes('middle-50% spread narrowed')&&app.includes('middle-50% spread widened'),'History stability UI must describe variability direction without collapsing it into a composite score');
