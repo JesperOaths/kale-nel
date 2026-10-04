@@ -1620,7 +1620,8 @@ function renderLongHorizon(r){
 }
 
 function renderVisualSummary(r){
-  const games=reportCoachingGames(r),champs=new Map(),items=new Map();
+  const games=reportCoachingGames(r);
+  const champs=new Map(),items=new Map();
   for(const g of games){
     const champ=String(g.champion||'').trim();
     if(champ){
@@ -3236,7 +3237,7 @@ function matchHistoryRow(g,index,displayIndex,r){
 }
 function renderMatchHistory(r){
   const list=$('matchHistoryList'),summary=$('matchHistorySummary'),toggle=$('matchHistoryToggle'),filters=$('matchHistoryFilters'),filterSummary=$('matchHistoryFilterSummary');if(!list||!summary)return;
-  const sourceGames=r.games||[],role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),roleFilterLabels=matchHistoryRoleFilterLabels(role),reviewIds=new Set((Array.isArray(r.replayReviewQueue)?r.replayReviewQueue:[]).map(x=>String(x.matchId||'')).filter(Boolean)),priorityIds=currentPriorityReplayIds(r),arcKey=String(state.matchHistoryArcKey||''),arcGames=arcKey?sourceGames.filter(g=>gameArcDescriptor(g)?.key===arcKey):[],arcLabel=arcGames.length?(gameArcDescriptor(arcGames[0])?.label||'Selected game arc'):'Selected game arc',objectiveFamilyKey=String(state.matchHistoryObjectiveFamilyKey||''),objectiveFamilyIds=objectiveFamilyKey?objectiveFamilyMatchIds(r,objectiveFamilyKey):new Set(),objectiveFamilyLabelText=objectiveFamilyKey?objectiveFamilyLabel(objectiveFamilyKey):'Objective family',archetypeKey=String(state.matchHistoryArchetypeKey||''),archetypeCategories=Array.isArray(r?.longHorizon?.resourceOutputArchetypes?.categories)?r.longHorizon.resourceOutputArchetypes.categories:[],archetypeCategory=archetypeCategories.find(x=>String(x?.key||'')===archetypeKey)||null,archetypeIds=new Set((Array.isArray(archetypeCategory?.examples)?archetypeCategory.examples:[]).map(x=>String(x?.matchId||'')).filter(Boolean)),archetypeLabel=String(archetypeCategory?.label||'Carry archetype');
+  const sourceGames=[...reportCoachingGames(r)].filter(g=>gameIsCoachingContext(r,g)),role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),roleFilterLabels=matchHistoryRoleFilterLabels(role),reviewIds=new Set((Array.isArray(r.replayReviewQueue)?r.replayReviewQueue:[]).map(x=>String(x.matchId||'')).filter(Boolean)),priorityIds=currentPriorityReplayIds(r),arcKey=String(state.matchHistoryArcKey||''),arcGames=arcKey?sourceGames.filter(g=>gameArcDescriptor(g)?.key===arcKey):[],arcLabel=arcGames.length?(gameArcDescriptor(arcGames[0])?.label||'Selected game arc'):'Selected game arc',objectiveFamilyKey=String(state.matchHistoryObjectiveFamilyKey||''),objectiveFamilyIds=objectiveFamilyKey?objectiveFamilyMatchIds(r,objectiveFamilyKey):new Set(),objectiveFamilyLabelText=objectiveFamilyKey?objectiveFamilyLabel(objectiveFamilyKey):'Objective family',archetypeKey=String(state.matchHistoryArchetypeKey||''),archetypeCategories=Array.isArray(r?.longHorizon?.resourceOutputArchetypes?.categories)?r.longHorizon.resourceOutputArchetypes.categories:[],archetypeCategory=archetypeCategories.find(x=>String(x?.key||'')===archetypeKey)||null,archetypeIds=new Set((Array.isArray(archetypeCategory?.examples)?archetypeCategory.examples:[]).map(x=>String(x?.matchId||'')).filter(Boolean)),archetypeLabel=String(archetypeCategory?.label||'Carry archetype');
   const counts={
     all:sourceGames.length,
     win:sourceGames.filter(g=>g.win).length,
