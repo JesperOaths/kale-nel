@@ -3284,3 +3284,21 @@ The current cached ADC/TOP sample contains no exact player ties in gold earned o
 Tracked teamfight absence no longer relies on the first kill event in a cluster that happens to contain coordinates. The analyzer scans positioned kill events in the cluster and accepts the first event for which Riot also supplies a player position frame within 35 seconds.
 
 This remains fail-closed: if no positioned event has temporally bounded player-position evidence, the cluster cannot enter the tracked-absence denominator.
+
+
+## v286 reset denominator separation
+
+A verification pass found that the deep high-resource comparison was using one overly strict reset-eligibility predicate for two different questions.
+
+**First-reset economy loss** still requires:
+- a trusted direct-role peer;
+- a measured before/after economy window;
+- no death contamination inside that bounded comparison window.
+
+**First-reset timing versus the role peer** now uses its own population:
+- a trusted direct-role peer;
+- a finite first-reset timing delta versus that peer.
+
+Timing no longer requires the post-reset economy swing to be measurable and does not discard a valid timing observation merely because a death later contaminates the economy comparison window.
+
+This keeps each row's denominator aligned with the evidence needed for that row rather than inheriting stricter requirements from a neighboring metric.
