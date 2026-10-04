@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.156'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.157'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261004-league-web-v277'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261004-league-web-v278'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1323,3 +1323,6 @@ assert.ok(modelDoc.includes('## v276 drillable archetype evidence'),'Archetype d
 assert.ok(html.includes('data-history-filter="archetype"')&&app.includes('matchHistoryArchetypeKey')&&app.includes("filter==='archetype'"),'Archetype drilldowns must link recent deep exemplars into the existing Recent match story filter');
 assert.ok(app.includes('Review '+"'+deepIds.size+'"+' recent deep example')&&app.includes('report calculations stay unchanged'),'Archetype-to-story navigation must disclose that filtering changes visibility only');
 assert.ok(modelDoc.includes('## v277 archetype-to-story linkage'),'Archetype-to-story linkage semantics must remain documented');
+assert.ok(api.includes('avgGoldShare:meanField')&&api.includes('avgDamageShare:meanField')&&api.includes('avgDamageEfficiencyPp:meanField'),'Archetypes must preserve continuous resource/output magnitude alongside ordinal rank groups');
+assert.ok(api.includes('goldShare:hasNum(g?.goldShare)')&&api.includes('damageShare:hasNum(g?.damageShare)')&&app.includes('% gold → '),'Exemplar rows must expose gold-share to damage-share magnitude');
+assert.ok(modelDoc.includes('## v278 archetype share magnitude'),'Archetype share-magnitude semantics must remain documented');
