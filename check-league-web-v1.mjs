@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261004-league-web-v276'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261004-league-web-v277'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1320,3 +1320,6 @@ assert.ok(api.includes('examples=[...rows]')&&api.includes('slice(0,8)')&&api.in
 assert.ok(html.includes('id="resourceOutputArchetypeDetail"')&&app.includes('data-archetype-key')&&app.includes('data-open-archetype-match'),'Archetype cards must be drillable into example games and deep evidence where available');
 assert.ok(app.includes('Match-level history only')&&app.includes('Ranked by contrast in the available explanatory context, not by inferred causality'),'Older archetype examples must disclose match-only evidence and non-causal ordering');
 assert.ok(modelDoc.includes('## v276 drillable archetype evidence'),'Archetype drilldown semantics must remain documented');
+assert.ok(html.includes('data-history-filter="archetype"')&&app.includes('matchHistoryArchetypeKey')&&app.includes("filter==='archetype'"),'Archetype drilldowns must link recent deep exemplars into the existing Recent match story filter');
+assert.ok(app.includes('Review '+"'+deepIds.size+'"+' recent deep example')&&app.includes('report calculations stay unchanged'),'Archetype-to-story navigation must disclose that filtering changes visibility only');
+assert.ok(modelDoc.includes('## v277 archetype-to-story linkage'),'Archetype-to-story linkage semantics must remain documented');
