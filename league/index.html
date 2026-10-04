@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends analysis with a 100-game role scan, evidence-backed Last-20 deep coaching, long-horizon trends and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261004-league-web-v285">
+  <link rel="stylesheet" href="/league/styles.css?v=20261004-league-web-v286">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261002-public-bootstrap-r4"></script>
 </head>
@@ -173,6 +173,7 @@
           <a href="#long-horizon">100-game form</a>
           <a href="#rank-comparison">Rank comparison</a>
           <a href="#lane-economy" id="laneEconomyNav">Role economy</a>
+          <a href="#support-synergy" id="supportSynergyNav">Support synergy</a>
           <a href="#decisions">Fights & objectives</a>
           <a href="#phase-diagnostic">Phases</a>
           <a href="#game-arcs">Game arcs</a>
@@ -490,6 +491,20 @@
           </div>
         </section>
 
+
+        <section class="panel support-synergy-panel" id="supportSynergyPanel" hidden>
+          <div class="section-head">
+            <div><p class="eyebrow">ADC + Support history</p><h2>Which support champions work best with your ADC games?</h2></div>
+            <span class="section-hint">Every uniquely resolved allied Support champion in the selected ADC history is shown. Tiny samples remain visible but cannot win the ranking.</span>
+          </div>
+          <div class="support-synergy-summary" id="supportSynergySummary"></div>
+          <div class="section-subhead support-synergy-subhead"><div><span>Support champion ranking</span><strong>Your results and output with each support pick</strong></div><small>Best ranking starts at 3 clean outcomes and uses a 95% Wilson lower bound.</small></div>
+          <div class="support-synergy-table" id="supportChampionSynergy"></div>
+          <div class="section-subhead support-synergy-subhead"><div><span>ADC × Support pairings</span><strong>Which of your ADC picks pair best with each support?</strong></div><small>Pairing rows use the same clean-outcome policy; @15 gold only appears where direct ADC-vs-ADC evidence exists.</small></div>
+          <div class="support-pair-grid" id="supportPairingSynergy"></div>
+          <p class="source-note" id="supportSynergyNote"></p>
+        </section>
+
         <section class="panel death-intelligence-panel" id="spatialReview">
           <div class="section-head">
             <div><p class="eyebrow">Death-pattern intelligence</p><h2>Which risky deaths keep repeating — and why?</h2></div>
@@ -541,6 +556,6 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261004-league-web-v285" defer></script>
+  <script src="/league/app.js?v=20261004-league-web-v286" defer></script>
 </body>
 </html>

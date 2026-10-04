@@ -781,6 +781,7 @@ function renderReport(raw,sourceKind){
   renderGames(r);
   renderReplayReviewQueue(r);
   renderBreakdowns(r);
+  renderSupportSynergy(r);
   renderQuality(r);
   $('advancedMetrics').innerHTML='<div class="technical-placeholder">Open this section to render the full metric set.</div>';
   $('benchmarkMetrics').innerHTML='<div class="technical-placeholder">Open this section to render the full benchmark set.</div>';
@@ -867,20 +868,21 @@ function recentTrendSpecReady(spec){
   return true;
 }
 function recentDirectionSummary(r){
-  const defs=roleRecentTrendSpecs(r);
-  let good=0,bad=0,stable=0,supported=0;
-  defs.forEach(spec=>{
-    if(!recentTrendSpecReady(spec))return;
-    supported++;
-    const d=Number(spec.obj.recent)-Number(spec.obj.prior);
-    if(Math.abs(d)<Number(spec.threshold||0)){stable++;return;}
-    const signal=(spec.inverse?-1:1)*d;if(signal>0)good++;else bad++;
-  });
-  if(!supported)return {tone:'neutral',value:'Not enough evidence',copy:'The latest-five window does not yet have enough valid role-relevant recent-versus-prior observations for a directional read.'};
-  if(!good&&!bad)return {tone:'neutral',value:'Broadly stable',copy:stable+' supported role-relevant signal'+(stable===1?' is':'s are')+' inside the report’s practical change bands; there is no strong short-window movement to chase.'};
-  if(good>=bad+2)return {tone:'good',value:'Moving favorably',copy:good+' role-relevant recent signals moved favorably, '+bad+' moved unfavorably and '+stable+' stayed inside practical change bands. Treat this as short-window direction, not proof of a lasting trend.'};
-  if(bad>=good+2)return {tone:'bad',value:'Needs stabilizing',copy:bad+' role-relevant recent signals moved unfavorably, '+good+' moved favorably and '+stable+' stayed inside practical change bands. Emphasize the primary practice target rather than adding new goals.'};
-  return {tone:'neutral',value:'Mixed direction',copy:'Recent role-relevant movement is split: '+good+' favorable, '+bad+' unfavorable and '+stable+' stable supported signals. Keep the practice plan narrow until the signal separates.'};
+  const defs=roleRecentTrendSpecs(r),format=(v,unit)=>unit==='percent'?fmtPct(v):unit==='gold'?signed(v,0)+'g':unit==='dpm'?fmtInt(v):unit==='csmin'||unit==='csminRaw'?fmt(v,2):unit==='minutes'?fmt(v,1)+'m':unit==='cs'?signed(v,1)+' CS':fmt(v,2);
+  const rows=[];
+  for(const spec of defs){
+    if(!recentTrendSpecReady(spec))continue;
+    const recent=Number(spec.obj.recent),prior=Number(spec.obj.prior),delta=recent-prior,threshold=Math.max(.0001,Number(spec.threshold||0)),signal=(spec.inverse?-1:1)*delta;
+    rows.push({...spec,recent,prior,delta,signal,strength:Math.abs(delta)/threshold,state:Math.abs(delta)<threshold?'stable':signal>0?'good':'bad'});
+  }
+  if(!rows.length)return{tone:'neutral',value:'No reliable latest-5 comparison yet',copy:'The latest-five window does not yet have enough valid role-relevant observations to compare with the previous games.',meta:'No directional claim is made until each metric clears its own game/event evidence floor.'};
+  const moved=[...rows].filter(x=>x.state!=='stable').sort((a,b)=>b.strength-a.strength),good=rows.filter(x=>x.state==='good'),bad=rows.filter(x=>x.state==='bad'),stable=rows.filter(x=>x.state==='stable');
+  const primary=moved[0]||[...rows].sort((a,b)=>b.strength-a.strength)[0],secondary=moved.find(x=>x!==primary&&x.state!==primary.state)||moved.find(x=>x!==primary)||null;
+  const describe=x=>x?x.label+': '+format(x.recent,x.unit)+' latest 5 vs '+format(x.prior,x.unit)+' previous sample':'';
+  const tone=bad.length>good.length?'bad':good.length>bad.length?'good':'neutral';
+  const value=primary?(primary.label+' · '+(primary.state==='good'?'improving':primary.state==='bad'?'slipping':'stable')):'Latest 5 stable';
+  const copy=[describe(primary),secondary?describe(secondary):''].filter(Boolean).join('. ')+'.';
+  return{tone,value,copy,meta:good.length+' improving · '+bad.length+' slipping · '+stable.length+' inside practical-change bands · latest 5 versus the preceding valid sample'};
 }
 
 function renderPriorityEvidenceChain(r){
@@ -893,13 +895,12 @@ function renderPriorityEvidenceChain(r){
   const targetText=target?(String(target.label||target.metricPath)+' · '+practiceTargetValue(target.baseline,target.unit)+' → '+practiceTargetValue(target.goal,target.unit)+' over '+String(target.windowGames||5)+' new games'):'No denominator-safe Next-5 metric is available for this theme yet.';
   const replayText=replay?(String(replay.champion||'Unknown')+' · '+fmt(replay.minute,1)+'m · '+String(replay.title||'Replay moment')):'No ranked replay moment currently maps to this theme.';
   const stage=(step,label,value,copy,cls='')=>'<article class="priority-chain-stage '+cls+'"><span>'+step+' · '+esc(label)+'</span><strong>'+esc(value)+'</strong><p>'+esc(copy||'')+'</p></article>';
-  box.innerHTML='<div class="priority-chain-head"><strong>Why this is priority #1</strong><span>Evidence → reinforcement → replay → measurement → action</span></div><div class="priority-chain-grid">'+
-    stage('1','Signal',String(theme.title||theme.label||'Primary limiter'),String(theme.evidence||'Supported report finding.'),'signal')+
-    stage('2','Reinforcement',independentSupportCount+' independent support'+(independentSupportCount===1?'':'s'),supportText,'support')+
-    stage('3','Replay proof',replayText,replay?'Open the ranked moment to inspect the actual decision sequence.':'The priority remains evidence-supported, but no replay-queue moment is strong enough to surface.','replay')+
-    stage('4','Next-5 measure',target?String(target.label||'Practice metric'):'Measurement pending',targetText,'measure')+
-    stage('5','Action',String(theme.action||'Keep the practice plan narrow.'),'This action is the coaching prescription attached to the current highest-scoring supported theme.','action')+
-  '</div><small class="priority-chain-caveat">This is an evidence trace, not a causal proof. Priority rank can change as new games enter the rolling sample.</small>';
+  box.innerHTML='<div class="priority-chain-head"><strong>Why this is the main focus</strong><span>What repeats → where to verify it → what to change next</span></div><div class="priority-chain-grid">'+
+    stage('1','What keeps repeating',String(theme.title||theme.label||'Primary limiter'),String(theme.evidence||'Supported report finding.'),'signal')+
+    stage('2','Why it ranks first',independentSupportCount?independentSupportCount+' independent supporting signal'+(independentSupportCount===1?'':'s'):'Strongest available supported theme',supportText,'support')+
+    stage('3','Game to review',replayText,replay?'Open this moment and check the decision immediately before the flagged event.':'No replay moment is strong enough yet; keep the theme as a measured practice cue, not a guessed cause.','replay')+
+    stage('4','What to do next',String(theme.action||'Keep the practice plan narrow.'),targetText,'action')+
+  '</div><small class="priority-chain-caveat">This row explains why the analyzer chose the focus. It is evidence-backed coaching context, not proof that one behavior caused a win or loss.</small>';
   if(replay)box.querySelector('.priority-chain-stage.replay')?.insertAdjacentHTML('beforeend','<button class="button secondary small" type="button" data-chain-replay>Open replay evidence</button>');
   const btn=box.querySelector('[data-chain-replay]');if(btn&&replay)btn.addEventListener('click',()=>openReplayReviewMatch(replay.matchId,replay.tab||'macro'));
 }
@@ -913,7 +914,7 @@ function renderReportDrivers(r){
   box.innerHTML=[
     card('driver-priority',weak.present&&!weakEstablished?'Provisional limiter':'Primary limiter',weak.title,weak.copy,weak.action,weakEstablished?'bad':'neutral',weakEstablished?'Next':'Test next',weak.meta,priorityFooter),
     card('driver-strength',strong.present&&!strongEstablished?'Emerging strength':'Bankable strength',strong.title,strong.copy,strong.action,strongEstablished?'good':'neutral',strongEstablished?'Preserve':'Keep testing',strong.meta),
-    card('driver-direction','Recent direction',direction.value,direction.copy,'',direction.tone)
+    card('driver-direction','Recent form · latest 5 vs prior games',direction.value,direction.copy,'',direction.tone,'',direction.meta)
   ].join('');
   const reviewBtn=box.querySelector('[data-open-priority-history]');
   if(reviewBtn)reviewBtn.addEventListener('click',()=>{
@@ -1906,7 +1907,7 @@ const PRACTICE_TARGET_SAMPLE_PATHS={
   'behaviorSummary.greedyStaysPerTimelineGame':['behaviorSummary.timelineGames'],
   'behaviorSummary.soloKillDeathsBeforeShopRate':['behaviorSummary.soloKillResetEvents'],
   'behaviorSummary.itemSpikeUtilizationRate':['behaviorSummary.itemSpikeEligibleWindows'],
-  'behaviorSummary.highUnspentFightRate':['behaviorSummary.fightSamples'],
+  'behaviorSummary.highUnspentFightRate':['behaviorSummary.highUnspentFightSamples'],
   'behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame':['behaviorSummary.timelineGames'],
   'behaviorSummary.midRouting.avgCsSwing15to25':['behaviorSummary.midRouting.games'],
   'behaviorSummary.midRouting.avgObjectiveJoinRate':['behaviorSummary.midRouting.games'],
@@ -3768,10 +3769,10 @@ function renderAdvanced(r){
     ['First allied death · active fights',fmtPct(r.behaviorSummary?.firstAllyFightDeathRate)],
     ['Died before contribution · active fights',fmtPct(r.behaviorSummary?.preContributionFightDeathRate)],
     ['Fight survival · active fights',fmtPct(r.behaviorSummary?.fightSurvivalRate)],
-    ['Fight starts with ≥1000g unspent',String(r.behaviorSummary?.highUnspentFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.highUnspentFightRate)],
-    ['Fight starts down major item',String(r.behaviorSummary?.itemDisadvantageFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.itemDisadvantageFightRate)],
-    ['Fight starts ≥600g down vs role',String(r.behaviorSummary?.goldDeficitFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.goldDeficitFightRate)],
-    ['Locally outnumbered fight starts',String(r.behaviorSummary?.outnumberedFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.outnumberedFightStartRate)],
+    ['Fight starts with ≥1000g unspent',String(r.behaviorSummary?.highUnspentFightStarts??0)+' / '+String(r.behaviorSummary?.highUnspentFightSamples??r.behaviorSummary?.fightSamples??0)+' · '+fmtPct(r.behaviorSummary?.highUnspentFightRate)],
+    ['Fight starts down major item',String(r.behaviorSummary?.itemDisadvantageFightStarts??0)+' / '+String(r.behaviorSummary?.itemDisadvantageFightSamples??r.behaviorSummary?.fightSamples??0)+' · '+fmtPct(r.behaviorSummary?.itemDisadvantageFightRate)],
+    ['Fight starts ≥600g down vs role',String(r.behaviorSummary?.goldDeficitFightStarts??0)+' / '+String(r.behaviorSummary?.goldDeficitFightSamples??r.behaviorSummary?.fightSamples??0)+' · '+fmtPct(r.behaviorSummary?.goldDeficitFightRate)],
+    ['Locally outnumbered fight starts',String(r.behaviorSummary?.outnumberedFightStarts??0)+' / '+String(r.behaviorSummary?.outnumberedFightSamples??r.behaviorSummary?.fightSamples??0)+' · '+fmtPct(r.behaviorSummary?.outnumberedFightStartRate)],
     ['Loss rate when locally outnumbered',fmtPct(r.behaviorSummary?.outnumberedFightLossRate)],
     ['Shared fights with role peer nearby',String(r.behaviorSummary?.rolePeerFightSamples??0)],
     ['Level-down shared-role fights',String(r.behaviorSummary?.roleLevelDisadvantageFightStarts??0)+' · '+fmtPct(r.behaviorSummary?.roleLevelDisadvantageFightRate)],
@@ -4025,6 +4026,33 @@ function matchupDiagnosticSet(v,role,base,riskBase){
     ].join(''),
     coverage:gamesN+' trusted peer · '+laneN+' lane-comparable · '+riskN+' timeline · '+dpmN+' DPM comparisons'
   };
+}
+function renderSupportSynergy(r){
+  const panel=$('supportSynergyPanel'),nav=$('supportSynergyNav'),summary=$('supportSynergySummary'),table=$('supportChampionSynergy'),pairs=$('supportPairingSynergy'),note=$('supportSynergyNote');
+  if(!panel||!summary||!table||!pairs)return;
+  const role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),m=r?.supportSynergy||{};
+  const show=role==='ADC'&&m?.eligible===true;
+  panel.hidden=!show;if(nav)nav.hidden=!show;
+  if(!show){summary.innerHTML='';table.innerHTML='';pairs.innerHTML='';if(note)note.textContent='';return;}
+  const rows=Array.isArray(m.supportChampions)?m.supportChampions:[],pairRows=Array.isArray(m.pairings)?m.pairings:[],best=m.bestSupportChampion||null;
+  const most=[...rows].sort((a,b)=>Number(b.games||0)-Number(a.games||0))[0]||null;
+  const lane=[...rows].filter(x=>Number(x.laneGames||0)>=3&&hasNum(x.avgGoldDiff15)).sort((a,b)=>Number(b.avgGoldDiff15)-Number(a.avgGoldDiff15))[0]||null;
+  const summaryCard=(label,value,sub,src='')=>'<article class="support-synergy-summary-card">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<div><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small>'+esc(sub)+'</small></div></article>';
+  summary.innerHTML=[
+    summaryCard('Best supported win-rate sample',best?best.supportChampion:'No ranked sample yet',best?(fmtPct(best.cleanWinRate)+' · '+best.cleanWins+'/'+best.cleanGames+' clean outcomes · Wilson floor '+fmtPct(best.wilsonLower95)):'Needs at least 3 clean outcomes with one support champion',best?championIcon(best.supportChampion):''),
+    summaryCard('Most played support',most?most.supportChampion:'n/a',most?(most.games+' games · '+fmtPct(most.cleanWinRate)+' clean WR'):'No resolved support partner',most?championIcon(most.supportChampion):''),
+    summaryCard('Best @15 lane sample',lane?lane.supportChampion:'No 3-game lane sample',lane?(signed(lane.avgGoldDiff15,0)+'g vs enemy ADC · '+lane.laneGames+' comparable deep games'):'Direct-peer @15 evidence is still thin',lane?championIcon(lane.supportChampion):''),
+    summaryCard('Support-partner coverage',String(m.resolvedGames||0)+' / '+String(m.historyGames||0)+' games',String(m.unresolvedGames||0)+' unresolved · selected-role ADC history')
+  ].join('');
+  const rankLabel=(x,i)=>x.rankingEligible?('#'+(i+1)):'small sample';
+  table.innerHTML=rows.length?'<div class="support-synergy-table-head"><span>Support</span><span>Clean WR</span><span>KDA</span><span>DPM</span><span>KP</span><span>Deaths</span><span>Gold @15</span></div>'+
+    rows.map((x,i)=>'<article class="support-synergy-row '+(x.rankingEligible?'ranked':'thin-sample')+'"><div class="support-synergy-champion">'+(championIcon(x.supportChampion)?'<img loading="lazy" src="'+esc(championIcon(x.supportChampion))+'" alt="">':'')+'<div><strong>'+esc(x.supportChampion)+'</strong><small>'+esc(rankLabel(x,i))+' · '+String(x.games||0)+' total / '+String(x.cleanGames||0)+' clean</small></div></div><div><strong>'+esc(fmtPct(x.cleanWinRate))+'</strong><small>'+(x.rankingEligible?'Wilson floor '+esc(fmtPct(x.wilsonLower95)):'unranked until 3 clean')+'</small></div><div><strong>'+esc(fmt(x.avgKda,2))+'</strong><small>your KDA</small></div><div><strong>'+esc(fmtInt(x.avgDpm))+'</strong><small>your DPM</small></div><div><strong>'+esc(fmtPct(x.avgKp))+'</strong><small>your KP</small></div><div><strong>'+esc(fmt(x.avgDeaths,1))+'</strong><small>per game</small></div><div><strong>'+(hasNum(x.avgGoldDiff15)?esc(signed(x.avgGoldDiff15,0)+'g'):'n/a')+'</strong><small>'+String(x.laneGames||0)+' comparable</small></div></article>').join(''):
+    '<div class="bullet empty">No allied Support champion could be resolved in this ADC history.</div>';
+  pairs.innerHTML=pairRows.length?pairRows.slice(0,16).map(x=>{
+    const a=championIcon(x.ownChampion),s=championIcon(x.supportChampion);
+    return '<article class="support-pair-card '+(x.rankingEligible?'ranked':'thin-sample')+'"><div class="support-pair-icons">'+(a?'<img loading="lazy" src="'+esc(a)+'" alt="">':'')+(s?'<img loading="lazy" src="'+esc(s)+'" alt="">':'')+'</div><div><span>'+esc(x.ownChampion)+' + '+esc(x.supportChampion)+'</span><strong>'+esc(fmtPct(x.cleanWinRate))+' clean WR</strong><small>'+String(x.games||0)+' total · '+String(x.cleanGames||0)+' clean · '+(x.rankingEligible?'Wilson floor '+esc(fmtPct(x.wilsonLower95)):'small sample')+(hasNum(x.avgGoldDiff15)?' · '+esc(signed(x.avgGoldDiff15,0))+'g @15':'')+'</small></div></article>';
+  }).join(''):'<div class="bullet empty">No ADC + support pairings available.</div>';
+  if(note)note.textContent='Ranking excludes AFK/early-surrender outcomes and only activates from '+String(m.minimumCleanGamesForRanking||3)+' clean games. The ranking score is the 95% Wilson lower bound, so a 1–0 pairing cannot outrank a larger established sample. KDA, DPM, KP, deaths and lane gold are descriptive context from your own games, not claims that the support champion caused the result.';
 }
 function renderBreakdowns(r){
   const q=r.dataQuality||{},role=canonicalRole(q.selectedRole||r.coachingSummary?.primaryRole||r.summary?.primaryRole||state.selectedRole),games=Number(q.analyzedGames??r.games?.length??0),timeline=Number(q.validTimelineGames||0),peer=Number(q.directPeerComparableGames??q.peerComparableGames??0),mech=Number(q.mechanicsCohortGames??r.coachingSummary?.games??games),patch=String(q.currentPatchKey||'unknown'),queue=queueContextLabel(q.dominantQueueId,q.dominantQueueFamily);

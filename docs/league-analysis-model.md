@@ -3311,3 +3311,14 @@ A production smoke test against the deployed League Edge Function exposed a runt
 Analyzer `league-web-behavior-v4.162.1` computes the lower-damage predicate inside the exemplar map callback itself. The regression contracts now explicitly forbid the out-of-scope form.
 
 The repaired production function was then exercised against an isolated clone of the existing 30-match cache. A fresh ADC analysis completed with 20 selected-role games, persisted a compact report, and `report_latest` returned the exact same analysis id and analyzer provenance. The reloaded compact payload retained all four resource/output archetype categories and the usable high-resource behavioral contrast (13 high-resource/high-damage games versus 4 high-resource/lower-damage games). This turns saved-report persistence from a source-only claim into an observed production read-after-write property.
+
+
+## v288 full-page integrity, readability and support-synergy audit
+
+Analyzer `league-web-behavior-v4.163` was re-audited from Riot match/timeline inputs through report aggregation, compact persistence and frontend interpretation.
+
+Fight-state rates now use their own supported-opportunity denominators (current gold, direct-role gold, local numbers, or exact-patch direct-peer item state) instead of treating missing evidence as an implicit negative. Outcome-linked coaching now excludes AFK/early-surrender compromised games from win/loss comparisons and lead/deficit-to-final-result conversion claims.
+
+ADC reports now retain the uniquely resolved allied Support champion for both deep and match-only history and build a support-synergy model across the selected-role queue cohort. Every resolved Support champion is shown, while the “best” ranking requires at least three clean outcomes and sorts by the 95% Wilson lower bound. This prevents 1–0 or 2–0 pairings from outranking larger established samples. The section also reports the ADC player's KDA, DPM, CS/min, KP, deaths, direct-peer @15 gold where available, and ADC × Support champion pairings.
+
+Frontend `20261004-league-web-v286` replaces the abstract “Recent direction” count summary with named latest-five vs prior metrics, rewrites the priority explanation into four plain-language stages, and applies a readable-first typography/spacing pass across the League page.
