@@ -2470,3 +2470,9 @@ html{font-size:20px}
   .support-player-table{overflow-x:auto;padding-bottom:6px}
   .support-player-table-head,.support-player-row{min-width:1250px}
 }
+
+
+/* v290 — neutral developing sample tier + repeated-player floor */
+.support-synergy-row.developing-sample,
+.support-pair-card.developing-sample,
+.support-player-row.developing-sample{border-style:dashed;border-color:#b99a54;background:#fffdf7}
