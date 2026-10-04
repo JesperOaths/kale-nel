@@ -3381,3 +3381,16 @@ Analyzer `league-web-behavior-v4.166` no longer stores or returns allied Support
 Support **champions** remain only as contextual grouping for the reviewed ADC account. Every performance metric in the section belongs to the reviewed account: clean win rate, KDA, DPM, CS/min, KP, deaths, direct ADC-peer gold @15, and the reviewed account's ADC × support-champion combinations. The allied champion is a grouping variable, not a second player being reviewed.
 
 Frontend `20261004-league-web-v292` removes the recurring-player table and labels the support section explicitly as reviewed-account-only analysis.
+
+
+## v293 / analyzer v4.167 champion-conditioned history and evidence-aware review
+
+The longer-horizon layer now separates three questions that were previously mixed together.
+
+**Champion-conditioned history** groups only the reviewed account's own selected-role games by the champion the reviewed account played. It reports exact per-metric denominators, clean win rate only when at least three clean outcomes exist, and match-level role metrics that remain available beyond the deep Last-20 timeline window. This is descriptive within-account context. Champion selection, matchup, patch, composition and player state can all confound the differences, so the cards do not claim a champion caused an outcome.
+
+**Long-horizon outcome fingerprint** compares match-level win/loss distributions across up to the selected 100-game role history. Directional coloring and the "largest separation" read require at least five outcome-uncompromised wins and five outcome-uncompromised losses. When that clean split is not available, the broader result split may still be shown, but it remains neutral context only. Standardized gaps use the same small-sample Hedges correction as the deep coaching-cohort fingerprint and are descriptive rather than causal or significance tests.
+
+**Practice target review windows** still begin with a five-new-game minimum. Metrics whose evidence opportunities are naturally rare can continue collecting evidence until the metric's existing evidence floor is reached, with a hard cap of twenty new games. If the cap is reached without enough evidence, the result is marked inconclusive instead of silently treating missing opportunities as success or failure. Saved windowGames:5 remains for compatibility; new reports also carry baseWindowGames:5, maxWindowGames:20, and the explicit minimum_5_extend_until_evidence_max_20 policy.
+
+The account-only Support rule remains unchanged: allied Support champions can be contextual grouping variables for the reviewed account's own performance, while human teammate identities and teammate-performance profiles remain excluded from the report contract.
