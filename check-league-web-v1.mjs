@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261004-league-web-v278'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261004-league-web-v279'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1326,3 +1326,7 @@ assert.ok(modelDoc.includes('## v277 archetype-to-story linkage'),'Archetype-to-
 assert.ok(api.includes('avgGoldShare:meanField')&&api.includes('avgDamageShare:meanField')&&api.includes('avgDamageEfficiencyPp:meanField'),'Archetypes must preserve continuous resource/output magnitude alongside ordinal rank groups');
 assert.ok(api.includes('goldShare:hasNum(g?.goldShare)')&&api.includes('damageShare:hasNum(g?.damageShare)')&&app.includes('% gold → '),'Exemplar rows must expose gold-share to damage-share magnitude');
 assert.ok(modelDoc.includes('## v278 archetype share magnitude'),'Archetype share-magnitude semantics must remain documented');
+assert.ok(app.includes('function archetypeDeepDiagnostic(')&&app.includes("key:'pre_impact_deaths'")&&app.includes("key:'fight_readiness'")&&app.includes("key:'unused_item_window'")&&app.includes("key:'structure_pressure'")&&app.includes("key:'unexplained'"),'High-resource lower-damage exemplars must use bounded deep-evidence review contexts with an explicit unexplained fallback');
+assert.ok(app.includes('active fight')&&app.includes('This is readiness context, not proof it caused lower damage.')&&app.includes('Lower champion damage is left unexplained rather than guessed.'),'Archetype diagnostics must preserve active-fight and non-causal evidence boundaries');
+assert.ok(!app.includes("key:'missed_fights'"),'Frontend must not invent a missed-fight diagnosis without a supported all-teamfight attendance denominator');
+assert.ok(modelDoc.includes('## v279 deep archetype review contexts'),'Deep archetype diagnostic semantics must remain documented');
