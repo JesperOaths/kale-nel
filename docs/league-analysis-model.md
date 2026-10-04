@@ -3321,4 +3321,9 @@ Fight-state rates now use their own supported-opportunity denominators (current 
 
 ADC reports now retain the uniquely resolved allied Support champion for both deep and match-only history and build a support-synergy model across the selected-role queue cohort. Every resolved Support champion is shown, while the “best” ranking requires at least three clean outcomes and sorts by the 95% Wilson lower bound. This prevents 1–0 or 2–0 pairings from outranking larger established samples. The section also reports the ADC player's KDA, DPM, CS/min, KP, deaths, direct-peer @15 gold where available, and ADC × Support champion pairings.
 
-Frontend `20261004-league-web-v286` replaces the abstract “Recent direction” count summary with named latest-five vs prior metrics, rewrites the priority explanation into four plain-language stages, and applies a readable-first typography/spacing pass across the League page.
+Frontend `20261004-league-web-v287` replaces the abstract “Recent direction” count summary with named latest-five vs prior metrics, rewrites the priority explanation into four plain-language stages, and applies a readable-first typography/spacing pass across the League page.
+
+
+### v287 readable text floor
+
+The readability pass now also overrides legacy micro-label rules that were still as small as 0.53–0.74rem. Supporting text and card/row/header labels have a readable floor while preserving visual hierarchy, and the desktop shell remains capped at the established 1760px width rather than becoming edge-to-edge.

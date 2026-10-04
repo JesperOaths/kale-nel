@@ -78,7 +78,7 @@ assert.ok(api.includes('highUnspentFightSamples')&&api.includes('itemDisadvantag
 assert.ok(api.includes('const cleanOutcomeGames=games.filter(g=>g?.outcomeCompromised!==true)')&&api.includes('afk_or_early_surrender_excluded_from_final_result_conversion'),'Outcome-linked coaching must exclude compromised AFK/early-surrender results');
 assert.ok(api.includes('function supportSynergyModel')&&api.includes('wilsonLower95')&&api.includes('minimumCleanGamesForRanking:3'),'ADC support synergy must rank only established clean samples with Wilson adjustment');
 assert.ok(app.includes('function renderSupportSynergy')&&app.includes('Recent form · latest 5 vs prior games'),'Frontend must expose support synergy and concrete recent-form evidence');
-assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261004-league-web-v286'),'Support synergy panel and frontend cache-bust must be present');
+assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261004-league-web-v287'),'Support synergy panel and frontend cache-bust must be present');
 assert.ok(!api.includes('aboveOwnDeadTimeMedian:lower&&')&&!api.includes('aboveOwnTurretMedian:lower&&'),'Resource/output exemplar annotations must not reference the exemplarScore-local lower variable');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
@@ -852,7 +852,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261004-league-web-v286'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261004-league-web-v287'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('v285 — semantic color hierarchy for faster report scanning')&&css.includes('--league-teal:#176d70')&&css.includes('--league-purple:#684696'),'League report must retain the semantic section color system');
 assert.ok(css.includes('archetype-card[data-archetype-key="high_resource_high_damage"]')&&css.includes('archetype-card[data-archetype-key="high_resource_lower_damage"]'),'Resource/output archetypes must remain visually distinguishable');
 assert.ok(css.includes('.games-table tr.game-row:has(.result.win)>td')&&css.includes('.games-table tr.game-row:has(.result.loss)>td'),'Evidence table wins and losses must remain visually scannable');
@@ -1008,7 +1008,7 @@ assert.ok(api.includes('function coachingEvidenceChannel(')&&api.includes('indep
 assert.ok(api.includes('Math.min(5,1+independentSupportCount)*2'), 'Priority ranking must reward distinct evidence channels rather than duplicate findings');
 assert.ok(api.includes('supportCount,independentSupportCount,evidenceChannels:'), 'Priority themes must export both total related findings and independent reinforcement');
 assert.ok(app.includes("weak.independentSupportCount>=2"), 'A low-confidence top limiter must require two independent supporting channels beyond its representative signal');
-assert.ok(app.includes("stage('2','Reinforcement',independentSupportCount+' independent support'"), 'Priority evidence chain must disclose independent reinforcement rather than raw finding count');
+assert.ok(app.includes("stage('2','Why it ranks first',independentSupportCount?independentSupportCount+' independent supporting signal'"), 'Priority evidence chain must disclose independent reinforcement rather than raw finding count');
 assert.ok(app.includes("independentSupportCount>0?String(independentSupportCount)+' independent reinforcement"), 'Driver evidence metadata must distinguish independent support from related findings');
 assert.ok(modelDoc.includes('Theme synthesis records total related findings separately from independent reinforcement.'), 'Independent top-driver reinforcement semantics must remain documented');
 assert.ok(api.includes('objectiveSetup:trendGameMeanWithEvents(')&&api.includes('g=>Number(g.objectiveReadiness?.contestedJoined||0)>0?100*Number(g.objectiveReadiness?.earlySetupJoins||0)/Number(g.objectiveReadiness.contestedJoined):null'), 'Recent prior-objective setup must use equal-weight per-game rates over the same team-contested joined denominator as the aggregate coaching model');

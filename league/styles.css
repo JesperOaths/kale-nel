@@ -2258,3 +2258,37 @@ html{font-size:19px}
   .priority-chain-grid,.support-synergy-summary,.support-pair-grid{grid-template-columns:1fr}
   .report-driver-grid{grid-template-columns:1fr}
 }
+
+
+/* v287 — minimum readable label floor across League.
+   Legacy components accumulated many 0.53–0.74rem labels. Keep hierarchy,
+   but never make supporting text depend on ~10–12px type on desktop. */
+#league-main small{font-size:.82rem!important;line-height:1.5}
+#league-main [class*="-card"]>span,
+#league-main [class*="-row"]>span,
+#league-main [class*="-head"]>span,
+#league-main [class*="-head"]>em,
+#league-main [class*="-summary"]>span,
+#league-main [class*="-impact"]>span,
+#league-main [class*="-trigger"]>span{
+  font-size:.8rem!important;
+  line-height:1.4
+}
+#league-main [class*="-card"]>p,
+#league-main [class*="-row"]>p,
+#league-main [class*="-summary"]>p{
+  font-size:.88rem!important;
+  line-height:1.55
+}
+#league-main summary{font-size:.88rem;line-height:1.45}
+#league-main .detail-card span,
+#league-main .quality-card span,
+#league-main .practice-card span,
+#league-main .section-subhead span,
+#league-main .coaching-head>span,
+#league-main .coaching-head>em,
+#league-main .matchup-read span,
+#league-main .diagnostic-chip small,
+#league-main .diagnostic-result small{
+  font-size:.8rem!important;
+}
