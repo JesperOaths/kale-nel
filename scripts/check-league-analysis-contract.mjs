@@ -1113,3 +1113,6 @@ ok(backend.includes('examples=[...rows]')&&backend.includes('slice(0,8)')&&backe
 ok(html.includes('id="resourceOutputArchetypeDetail"')&&app.includes('data-archetype-key')&&app.includes('data-open-archetype-match'), 'archetype cards must drill into examples and deep evidence where available');
 ok(app.includes('Match-level history only')&&app.includes('not by inferred causality'), 'older exemplar rows must disclose evidence limits and non-causal ranking');
 ok(modelDoc.includes('## v276 drillable archetype evidence'), 'analysis documentation must preserve archetype drilldown semantics');
+ok(html.includes('data-history-filter="archetype"')&&app.includes('matchHistoryArchetypeKey')&&app.includes("filter==='archetype'"), 'archetype drilldowns must connect recent deep exemplars to the existing match-story filter');
+ok(app.includes('recent deep example')&&app.includes('report calculations stay unchanged'), 'archetype-to-story navigation must disclose display-only filtering');
+ok(modelDoc.includes('## v277 archetype-to-story linkage'), 'analysis documentation must preserve archetype-to-story linkage semantics');
