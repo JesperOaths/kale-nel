@@ -949,8 +949,8 @@ function standardizedMeanGap(a,b){
   const cohenD=Math.abs(Number(a.mean)-Number(b.mean))/Math.sqrt(pooledVar),hedgesCorrection=Math.max(0,1-3/(4*df-1));
   return cohenD*hedgesCorrection;
 }
-function outcomeFingerprintCard(label,wins,losses,unit,inverse=false,minOpportunities=0,opportunityLabel='opportunities'){
-  const valid=wins?.n>=2&&losses?.n>=2&&hasNum(wins?.mean)&&hasNum(losses?.mean),opportunityReady=!minOpportunities||(Number(wins?.opportunities||0)>=minOpportunities&&Number(losses?.opportunities||0)>=minOpportunities),ready=wins?.n>=3&&losses?.n>=3&&opportunityReady;
+function outcomeFingerprintCard(label,wins,losses,unit,inverse=false,minOpportunities=0,opportunityLabel='opportunities',minPerSide=3){
+  const valid=wins?.n>=2&&losses?.n>=2&&hasNum(wins?.mean)&&hasNum(losses?.mean),opportunityReady=!minOpportunities||(Number(wins?.opportunities||0)>=minOpportunities&&Number(losses?.opportunities||0)>=minOpportunities),ready=wins?.n>=minPerSide&&losses?.n>=minPerSide&&opportunityReady;
   const delta=valid?Number(wins.mean)-Number(losses.mean):null,effect=valid?standardizedMeanGap(wins,losses):null;
   const tone=!ready||delta==null?'neutral':(inverse?(delta<0?'good':'bad'):(delta>0?'good':'bad'));
   const fmtValue=v=>unit==='percent'?fmtPct(v):unit==='gold'?(hasNum(v)?signed(v,0)+'g':'n/a'):unit==='dpm'?fmtInt(v):unit==='minutes'?(hasNum(v)?signed(v,1)+'m':'n/a'):unit==='cs'?(hasNum(v)?signed(v,2)+' CS':'n/a'):unit==='csmin'?(hasNum(v)?signed(v,2):'n/a'):unit==='num'?fmt(v,2):fmt(v,2);
@@ -1440,10 +1440,26 @@ function renderHighResourceBehaviorContrast(r){
     rows.join('')+
     '<p class="source-note">These are within-player associations in the deep selected-role sample. They identify replay questions, not causes. Trusted-peer metrics fail closed when direct-role comparison evidence is unavailable.</p>';
 }
+function renderLongOutcomeFingerprint(h,role){
+  const box=$('longOutcomeFingerprint'),note=$('longOutcomeFingerprintNote');if(!box)return;
+  const m=h?.longOutcomeFingerprint||{},metrics=Array.isArray(m.metrics)?m.metrics:[],wins=Number(m.wins||0),losses=Number(m.losses||0),directional=m.directionalEligible===true,minSide=Math.max(5,Number(m.minPerSideForDirectional||5));
+  if(!metrics.length||wins<2||losses<2){
+    box.innerHTML='<div class="bullet empty">Long-horizon outcome context needs at least two wins and two losses.</div>';
+    if(note)note.textContent='The 100-game role history does not yet support a useful result split.';
+    return;
+  }
+  const cards=metrics.map(spec=>outcomeFingerprintCard(spec.label,spec.wins,spec.losses,spec.unit,!!spec.inverse,0,'opportunities',directional?minSide:999));
+  box.innerHTML=cards.map(x=>x.html).join('');
+  const usable=cards.filter(x=>x.ready&&hasNum(x.effect)).sort((a,b)=>Number(b.effect)-Number(a.effect)),lead=usable[0],thin=cards.filter(x=>!x.ready).length;
+  if(note){
+    if(directional&&lead)note.innerHTML='<b>Largest long-horizon standardized separation:</b> '+esc(lead.label)+' (Hedges g '+esc(fmt(lead.effect,2))+'). '+esc(String(wins))+' clean wins / '+esc(String(losses))+' clean losses across the selected '+esc(roleLabel(role))+' history'+(Number(m.excludedCompromised||0)?' · '+esc(String(m.excludedCompromised))+' outcome-compromised game(s) excluded':'')+'. Descriptive association only; it is not a causal or significance claim.'+(thin?' '+thin+' metric'+(thin===1?' is':'s are')+' neutral because one side has fewer than '+minSide+' valid observations.':'');
+    else note.innerHTML='<b>Context only:</b> clean outcomes do not yet provide at least '+minSide+' wins and '+minSide+' losses. The cards show the broader result split without directional color so AFK/early-surrender contamination is not promoted into a coaching conclusion.';
+  }
+}
 function renderLongHorizon(r){
-  const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),stability=$('historyStabilityTrend'),consistency=$('historyConsistency'),champions=$('historyChampionMix'),note=$('longHorizonNote');if(!kpi||!trend)return;
+  const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),stability=$('historyStabilityTrend'),consistency=$('historyConsistency'),champions=$('historyChampionMix'),outcome=$('longOutcomeFingerprint'),outcomeNote=$('longOutcomeFingerprintNote'),note=$('longHorizonNote');if(!kpi||!trend)return;
   const s=h.summary||{},role=canonicalRole(h.selectedRole||r?.dataQuality?.selectedRole||state.selectedRole),games=Number(h.sampleGames||0);
-  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';const aw=$('resourceOutputArchetypesWrap'),ac=$('resourceOutputContrast'),hb=$('highResourceBehaviorContrast'),ag=$('resourceOutputArchetypes'),ad=$('resourceOutputArchetypeDetail');if(aw)aw.hidden=true;if(ac)ac.innerHTML='';if(hb){hb.hidden=true;hb.innerHTML='';}if(ag)ag.innerHTML='';if(ad){ad.hidden=true;ad.innerHTML='';}if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
+  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';if(outcome)outcome.innerHTML='';if(outcomeNote)outcomeNote.textContent='';const aw=$('resourceOutputArchetypesWrap'),ac=$('resourceOutputContrast'),hb=$('highResourceBehaviorContrast'),ag=$('resourceOutputArchetypes'),ad=$('resourceOutputArchetypeDetail');if(aw)aw.hidden=true;if(ac)ac.innerHTML='';if(hb){hb.hidden=true;hb.innerHTML='';}if(ag)ag.innerHTML='';if(ad){ad.hidden=true;ad.innerHTML='';}if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
   const laner=['ADC','MID','TOP'].includes(role),roleCounts=h.roleCounts||{},otherRoleGames=Object.entries(roleCounts).reduce((n,[rk,count])=>n+(canonicalRole(rk)!==role?Number(count||0):0),0);
   const roleVolume=laner
     ?{label:'Lane minions @10',value:hasNum(s?.laneCs10?.value)?fmt(s.laneCs10.value,1):'n/a',sub:String(s?.laneCs10?.n||0)+' Riot match-level lane observations'}
@@ -1508,6 +1524,7 @@ function renderLongHorizon(r){
     ];
     consistency.innerHTML=specs.map(x=>historyDistributionCard(x.label,x.obj,x.unit)).join('');
   }
+  renderLongOutcomeFingerprint(h,role);
   renderHighResourceBehaviorContrast(r);
   {
     const wrap=$('resourceOutputArchetypesWrap'),contrast=$('resourceOutputContrast'),grid=$('resourceOutputArchetypes'),detail=$('resourceOutputArchetypeDetail'),matrix=h.resourceOutputArchetypes||{},cats=Array.isArray(matrix.categories)?matrix.categories:[];
@@ -1572,11 +1589,26 @@ function renderLongHorizon(r){
       }
     }
   }
-  const top=Array.isArray(h.topChampions)?h.topChampions.slice(0,6):[];
-  if(champions)champions.innerHTML=top.length?top.map(x=>{
+  const top=Array.isArray(h.topChampions)?h.topChampions.slice(0,6):[],historyChamps=Array.isArray(h.championHistory)?h.championHistory.slice(0,6):[];
+  if(champions)champions.innerHTML=historyChamps.length?historyChamps.map(x=>{
+    const src=championIcon(x.champion),cleanN=Number(x.cleanGames||0),cleanReady=cleanN>=3,share=hasNum(x.historyShare)?Number(x.historyShare):(games?Number(x.games||0)/games*100:null);
+    const roleMetric=laner?{label:'Lane minions @10',obj:x.laneCs10,fmt:v=>fmt(v,1)}:role==='SUPPORT'?{label:'Team vision share',obj:x.visionShare,fmt:v=>fmtPct(v)}:{label:'Enemy jungle / game',obj:x.enemyJungleMonsters,fmt:v=>fmt(v,1)};
+    const recentDpm=x?.recentDpm,priorDpm=x?.priorDpm,recentDelta=Number(recentDpm?.n||0)>=3&&Number(priorDpm?.n||0)>=3&&hasNum(recentDpm?.value)&&hasNum(priorDpm?.value)?Number(recentDpm.value)-Number(priorDpm.value):null;
+    return '<article class="history-champion-card">'+
+      '<div class="history-champion-head">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="'+esc(x.champion)+' portrait">':'')+'<div><strong>'+esc(x.champion)+'</strong><span>'+String(x.games||0)+' games · '+esc(fmtPct(share))+' of '+roleLabel(role)+' history</span></div></div>'+
+      '<div class="history-champion-stats">'+
+        '<div><span>Clean WR</span><strong>'+(cleanReady?esc(fmtPct(x.cleanWinRate)):'withheld')+'</strong><small>'+cleanN+' clean outcomes</small></div>'+
+        '<div><span>CS / min</span><strong>'+esc(hasNum(x?.csMin?.value)?fmt(x.csMin.value,2):'n/a')+'</strong><small>n='+String(x?.csMin?.n||0)+'</small></div>'+
+        '<div><span>DPM</span><strong>'+esc(hasNum(x?.dpm?.value)?fmtInt(x.dpm.value):'n/a')+'</strong><small>n='+String(x?.dpm?.n||0)+'</small></div>'+
+        '<div><span>Deaths / game</span><strong>'+esc(hasNum(x?.deaths?.value)?fmt(x.deaths.value,1):'n/a')+'</strong><small>n='+String(x?.deaths?.n||0)+'</small></div>'+
+        '<div><span>'+esc(roleMetric.label)+'</span><strong>'+esc(hasNum(roleMetric.obj?.value)?roleMetric.fmt(roleMetric.obj.value):'n/a')+'</strong><small>n='+String(roleMetric.obj?.n||0)+'</small></div>'+
+      '</div>'+
+      '<small class="history-champion-note">'+(hasNum(recentDelta)?'Latest-20 vs previous-window DPM '+esc(signed(recentDelta,0))+'. ':'Recent-vs-prior champion split needs at least 3 measurable games on both sides. ')+'Descriptive within-account champion context, not proof the champion caused the result.</small>'+
+    '</article>';
+  }).join(''):top.length?top.map(x=>{
     const src=championIcon(x.champion),share=games?Number(x.games||0)/games*100:null;
     return '<article class="game-visual-card">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="'+esc(x.champion)+' portrait">':'')+'<div><strong>'+esc(x.champion)+'</strong><span>'+String(x.games||0)+' game'+(Number(x.games)===1?'':'s')+' · '+esc(fmtPct(share))+' of '+roleLabel(role)+' history</span></div></article>';
-  }).join(''):'<p class="muted">No champion-mix history available.</p>';
+  }).join(''):'<p class="muted">No champion-conditioned history available.</p>';
   const leader=top[0]||null,leaderShare=leader&&games?Number(leader.games||0)/games*100:null,patches=Array.isArray(h.patches)?h.patches.filter(Boolean):[];
   let mixNote='';
   if(leader&&hasNum(leaderShare)){
@@ -2144,18 +2176,21 @@ function previousPracticeTargetOutcomes(current,previous){
     }
     const currentValue=pathValue(current,practiceTargetMetricPath(t));
     if(!hasNum(currentValue)||!hasNum(t.baseline)||!hasNum(t.goal))return null;
-    const cur=Number(currentValue),base=Number(t.baseline),goal=Number(t.goal),higher=t.direction!=='lower',windowGames=Math.max(1,Number(t.windowGames||5)),evidence=practiceTargetEvidence(current,t);
-    const common={label:t.label||t.metricPath,current:practiceTargetValue(cur,t.unit),baseline:practiceTargetValue(base,t.unit),goal:practiceTargetValue(goal,t.unit),sampleSize:Number(t.sampleSize||0),currentSample:evidence.currentSample,minSample:evidence.minSample,sampleSummary:evidence.summary,newGames,windowGames};
-    if(newGames<windowGames){
-      const left=windowGames-newGames;
-      return{...common,status:'awaiting '+left+' more new game'+(left===1?'':'s'),cls:'stable',pending:true};
+    const cur=Number(currentValue),base=Number(t.baseline),goal=Number(t.goal),higher=t.direction!=='lower',baseWindowGames=Math.max(1,Number(t.baseWindowGames||t.windowGames||5)),maxWindowGames=Math.max(baseWindowGames,Number(t.maxWindowGames||20)),evidence=practiceTargetEvidence(current,t);
+    const common={label:t.label||t.metricPath,current:practiceTargetValue(cur,t.unit),baseline:practiceTargetValue(base,t.unit),goal:practiceTargetValue(goal,t.unit),sampleSize:Number(t.sampleSize||0),currentSample:evidence.currentSample,minSample:evidence.minSample,sampleSummary:evidence.summary,newGames,baseWindowGames,maxWindowGames,windowGames:baseWindowGames};
+    if(newGames<baseWindowGames){
+      const left=baseWindowGames-newGames;
+      return{...common,status:'awaiting '+left+' more new game'+(left===1?'':'s'),cls:'stable',pending:true,extended:false};
     }
-    if(!evidence.ready)return{...common,status:'not enough current evidence',cls:'stable',pending:true};
+    if(!evidence.ready){
+      if(newGames<maxWindowGames)return{...common,status:'extended for evidence',cls:'stable',pending:true,extended:true,windowGames:maxWindowGames};
+      return{...common,status:'inconclusive — evidence floor not reached',cls:'stable',pending:false,extended:true,inconclusive:true,windowGames:maxWindowGames};
+    }
     const met=higher?cur>=goal:cur<=goal,needed=Math.abs(goal-base),toward=(higher?cur-base:base-cur);
     const material=Math.max(needed*.2,1e-9);
     const status=met?'met':toward>=material?'moving closer':toward<=-material?'moved away':'unchanged';
     const cls=met||status==='moving closer'?'improved':status==='moved away'?'worsened':'stable';
-    return{...common,status,cls,pending:false};
+    return{...common,status,cls,pending:false,extended:newGames>baseWindowGames};
   }).filter(Boolean);
   return{rows,reason:'',newGames};
 }
@@ -2209,7 +2244,7 @@ function practiceContinuityHtml(current,previous,context,targetOutcome){
   const state=retained.length>=2?'Focus mostly retained':retained.length===1?'Focus partly shifted':'Focus set changed';
   const labels=(keys,map)=>keys.map(k=>practiceThemeLabel(map.get(k))).join(' · ');
   return '<div class="practice-continuity-grid">'+
-    '<article class="practice-continuity-summary '+(early?'early':'')+'"><span>Practice-plan continuity</span><strong>'+esc(state)+'</strong><p>'+retained.length+' of '+Math.max(1,Math.min(3,prev.length))+' previous top priorities remain in the current top three.'+(early?' Only '+newGames+' / '+window+' new games have entered, so treat this as an early read.':' The Next-5 review window has enough new games for a fuller continuity read.')+'</p></article>'+
+    '<article class="practice-continuity-summary '+(early?'early':'')+'"><span>Practice-plan continuity</span><strong>'+esc(state)+'</strong><p>'+retained.length+' of '+Math.max(1,Math.min(3,prev.length))+' previous top priorities remain in the current top three.'+(early?' Only '+newGames+' / '+window+' new games have entered, so treat this as an early read.':' The minimum five-game review window has enough new games for a fuller continuity read; rare-opportunity targets can continue collecting evidence.')+'</p></article>'+
     '<article class="practice-continuity-summary"><span>Retained focus</span><strong>'+esc(String(retained.length))+' theme'+(retained.length===1?'':'s')+'</strong><p>'+esc(retained.length?labels(retained,curMap):'No previous top-three priority remains in the current top three.')+'</p></article>'+
     '<article class="practice-continuity-summary"><span>New / dropped focus</span><strong>'+added.length+' new · '+dropped.length+' dropped</strong><p>'+(added.length?'<b>New:</b> '+esc(labels(added,curMap))+'. ':'')+(dropped.length?'<b>Dropped:</b> '+esc(labels(dropped,prevMap))+'.':'No prior top-three focus dropped out.')+'</p></article>'+
     '<article class="practice-continuity-summary"><span>Previous target check</span><strong>'+met+' met · '+closer+' closer</strong><p>'+away+' moved away · '+pending+' pending. Dropping from the top-three plan is not treated as proof that a problem was solved.</p></article>'+
@@ -2323,8 +2358,8 @@ function renderProgressComparison(current,previous,previousAt){
   const targetRows=targetOutcome.rows||[];
   if($('practiceContinuity'))$('practiceContinuity').innerHTML=practiceContinuityHtml(current,previous,context,targetOutcome);
   if($('practiceOutcome')){
-    $('practiceOutcome').innerHTML=targetRows.length?'<div class="target-outcome-head"><strong>Previous Next-5 targets</strong><small>Descriptive check against the exact saved metric path and goal.</small></div><div class="progress-comparison-grid">'+
-      targetRows.map(x=>'<article class="progress-comparison-card '+x.cls+(x.pending?' pending-target':'')+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.status)+'</strong><p>Now '+esc(x.current)+' · baseline '+esc(x.baseline)+' · target '+esc(x.goal)+'</p><small>'+esc(String(x.newGames))+' / '+esc(String(x.windowGames))+' new games · '+esc(x.sampleSummary||('valid n '+String(x.currentSample)+' / '+String(x.minSample)+' required'))+'</small></article>').join('')+'</div>':
+    $('practiceOutcome').innerHTML=targetRows.length?'<div class="target-outcome-head"><strong>Previous practice targets</strong><small>Minimum five new games; rare-opportunity targets extend only until their evidence floor is reached, capped at 20. Values are the current rolling selected-role metric after that new-game gate.</small></div><div class="progress-comparison-grid">'+
+      targetRows.map(x=>'<article class="progress-comparison-card '+x.cls+(x.pending?' pending-target':'')+(x.inconclusive?' inconclusive-target':'')+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.status)+'</strong><p>Now '+esc(x.current)+' · baseline '+esc(x.baseline)+' · target '+esc(x.goal)+'</p><small>'+(x.extended?esc(String(x.newGames))+' new games · minimum '+esc(String(x.baseWindowGames||5))+' reached · evidence window up to '+esc(String(x.maxWindowGames||20)):esc(String(x.newGames))+' / '+esc(String(x.baseWindowGames||x.windowGames||5))+' new games')+' · '+esc(x.sampleSummary||('valid n '+String(x.currentSample)+' / '+String(x.minSample)+' required'))+'</small></article>').join('')+'</div>':
       (targetOutcome.reason?'<div class="target-outcome-note">'+esc(targetOutcome.reason)+'</div>':'');
   }
   if(!allRows.length&&!targetRows.length&&!targetOutcome.reason&&!context.reason){$('progressComparisonPanel').hidden=true;return;}
@@ -2411,9 +2446,9 @@ function practiceTargetValue(v,unit){
 }
 function practiceTargetHtml(target){
   if(!target||!hasNum(target.baseline)||!hasNum(target.goal))return'';
-  const relation=target.direction==='lower'?'≤':'≥',evidence=practiceTargetBaselineEvidenceText(target);
-  return '<div class="practice-target"><span>Next 5 comparable games</span><strong>'+esc(practiceTargetValue(target.baseline,target.unit))+' → aim '+esc(relation+' '+practiceTargetValue(target.goal,target.unit))+'</strong>'+
-    '<small>'+esc(target.rationale||'Self-relative short-term target')+' · '+esc(evidence)+'</small></div>';
+  const relation=target.direction==='lower'?'≤':'≥',evidence=practiceTargetBaselineEvidenceText(target),baseWindow=Math.max(1,Number(target.baseWindowGames||target.windowGames||5)),maxWindow=Math.max(baseWindow,Number(target.maxWindowGames||20));
+  return '<div class="practice-target"><span>Minimum '+baseWindow+' comparable games</span><strong>'+esc(practiceTargetValue(target.baseline,target.unit))+' → aim '+esc(relation+' '+practiceTargetValue(target.goal,target.unit))+'</strong>'+
+    '<small>'+esc(target.rationale||'Self-relative short-term target')+' · '+esc(evidence)+(maxWindow>baseWindow?' · rare-opportunity evidence can extend to '+maxWindow+' new games':'')+'</small></div>';
 }
 
 
