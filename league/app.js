@@ -2156,6 +2156,79 @@ function reportNewMatchCount(current,previous){
   const prev=new Set(coachingMatchIds(previous));
   return coachingMatchIds(current).filter(id=>!prev.has(id)).length;
 }
+function practiceTargetOriginIds(target,previous){
+  const xs=Array.isArray(target?.originMatchIds)?target.originMatchIds.map(String).filter(Boolean):[];
+  return xs.length?new Set(xs):new Set(coachingMatchIds(previous));
+}
+function practiceTargetNewGames(current,previous,target){
+  const origin=practiceTargetOriginIds(target,previous);
+  return reportCoachingGames(current).filter(g=>{const id=String(g?.matchId||'');return id&&!origin.has(id);});
+}
+function practiceFreshSessionRequirement(rows,path){
+  const m=String(path||'').match(/^sessionBehavior\.(firstGame|game3Plus|quickAfterLoss|quickAfterWin)\.(lane15Games|vpmGames|kpGames|csMinGames)$/);if(!m)return null;
+  const cohort=m[1],metric=m[2],subset=rows.filter(g=>{
+    const s=g?.sessionContext||{},n=Number(s.sessionGameNumber||0),gap=Number(s.gapAfterPreviousMin);
+    if(cohort==='firstGame')return n===1;
+    if(cohort==='game3Plus')return n>=3;
+    if(cohort==='quickAfterLoss')return s.previousWin===false&&Number.isFinite(gap)&&gap<=45;
+    return s.previousWin===true&&Number.isFinite(gap)&&gap<=45;
+  });
+  if(metric==='lane15Games')return subset.filter(g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)).length;
+  if(metric==='vpmGames')return subset.filter(g=>hasNum(g.vpm)).length;
+  if(metric==='kpGames')return subset.filter(g=>hasNum(g.kp)).length;
+  if(metric==='csMinGames')return subset.filter(g=>hasNum(g.csMin)).length;
+  return null;
+}
+function practiceFreshRequirementValue(rows,path){
+  const timeline=rows.filter(g=>g?.timelineAvailable===true),directTimeline=timeline.filter(trustedDirectPeer),p=String(path||'');
+  const session=practiceFreshSessionRequirement(rows,p);if(session!=null)return session;
+  const count=(xs,fn)=>xs.filter(fn).length,sum=(xs,fn)=>xs.reduce((n,g)=>n+Number(fn(g)||0),0);
+  const closingLead=(g)=>trustedDirectPeer(g)&&g?.phaseRules?.closing25Comparable!==false&&g?.outcomeCompromised!==true&&hasNum(g.goldDiff25)&&Number(g.goldDiff25)>=500;
+  switch(p){
+    case'coachingSummary.games':return rows.length;
+    case'behaviorSummary.timelineGames':return timeline.length;
+    case'behaviorSummary.directPeerTimelineGames':return directTimeline.length;
+    case'peerComparison.laneGames15':return count(rows,g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15));
+    case'peerComparison.impactGames':return count(directTimeline,g=>hasNum(g.impactDeltaVsOpponent));
+    case'peerComparison.vpmGames':return count(rows,g=>trustedDirectPeer(g)&&hasNum(g?.peer?.vpmDelta));
+    case'peerComparison.visionSetupGames':return count(directTimeline,g=>hasNum(g?.vision?.objectiveSetupDeltaVsOpponent));
+    case'behaviorSummary.earlyLeadGames':return count(directTimeline,g=>g?.phaseRules?.lane15Comparable!==false&&g?.earlyLeadWindow?.eligible===true);
+    case'behaviorSummary.repeatDeathOpportunities':return sum(timeline,g=>g?.deathRecovery?.opportunities);
+    case'behaviorSummary.firstResetCleanGames':return count(directTimeline,g=>g?.firstResetSequence?.measured===true&&!g?.firstResetSequence?.deathInWindow);
+    case'behaviorSummary.soloKillResetEvents':return sum(directTimeline,g=>(g?.laneDuel?.events||[]).filter(x=>x?.result==='solo_kill'&&x?.early&&hasNum(x?.nextShopDelaySec)).length);
+    case'behaviorSummary.itemSpikeEligibleWindows':return count(directTimeline,g=>g?.itemSpikeWindow?.eligible===true);
+    case'behaviorSummary.highUnspentFightSamples':return sum(timeline,g=>g?.fightProfile?.highUnspentFightSamples);
+    case'behaviorSummary.fightSamples':return sum(timeline,g=>g?.fightProfile?.active??g?.fightProfile?.attended);
+    case'behaviorSummary.classifiedTimelineDeaths':return sum(timeline,g=>g?.deathRecovery?.deaths??g?.deathPositions?.length);
+    case'behaviorSummary.behindStateDeaths':return sum(directTimeline,g=>g?.riskStateDeaths?.behind);
+    case'behaviorSummary.visionActions':return sum(timeline,g=>g?.visionMission?.actions);
+    case'behaviorSummary.visionActionGames':return count(timeline,g=>Number(g?.visionMission?.actions||0)>0);
+    case'behaviorSummary.visionWardTotal':return sum(timeline,g=>g?.vision?.wardCount);
+    case'behaviorSummary.neutralObjectiveJoins':return sum(timeline,g=>g?.objectiveReadiness?.contestedJoined);
+    case'behaviorSummary.objectiveSetupGames':return count(timeline,g=>Number(g?.objectiveReadiness?.contestedJoined||0)>0);
+    case'behaviorSummary.neutralObjectiveEvents':return sum(timeline,g=>g?.objectiveReadiness?.contestedObjectives);
+    case'behaviorSummary.objectiveContestGames':return count(timeline,g=>Number(g?.objectiveReadiness?.contestedObjectives||0)>0);
+    case'behaviorSummary.killConversionWindows':return sum(timeline,g=>g?.killConversion?.windows);
+    case'behaviorSummary.closing25.leadGames':return count(rows,closingLead);
+    case'behaviorSummary.closing25.leadLosses':return count(rows,g=>closingLead(g)&&g?.win===false);
+    case'behaviorSummary.roamAttempts':return sum(timeline,g=>g?.roams?.attempts);
+    case'behaviorSummary.roamAttemptGames':return count(timeline,g=>Number(g?.roams?.attempts||0)>0);
+    case'behaviorSummary.roamLaneCostGames':return sum(timeline,g=>(g?.roams?.events||[]).filter(x=>hasNum(x?.coachingLaneCostCs??x?.laneCostCs)).length);
+    case'behaviorSummary.roamLaneCostMeasuredGames':return count(timeline,g=>(g?.roams?.events||[]).some(x=>hasNum(x?.coachingLaneCostCs??x?.laneCostCs)));
+    case'behaviorSummary.supportRoamAdcLaneMovementWindows':return sum(timeline,g=>(g?.roams?.events||[]).filter(x=>hasNum(x?.adcLaneCostCs)).length);
+    case'behaviorSummary.supportRoamAdcLaneMovementGames':return count(timeline,g=>(g?.roams?.events||[]).some(x=>hasNum(x?.adcLaneCostCs)));
+    case'behaviorSummary.midRouting.games':return count(rows,g=>['ADC','MID','TOP'].includes(explicitGameRole(g?.role)||'')&&trustedDirectPeer(g)&&g?.timelineAvailable===true&&g?.phaseRules?.fixed15to25Comparable!==false&&g?.phaseRules?.midRoutingComparable!==false&&hasNum(g.csDiff15)&&hasNum(g.csDiff25)&&Number(g?.midRouting?.contestedObjectives||0)>=1);
+    default:return null;
+  }
+}
+function practiceTargetFreshEvidence(current,previous,target){
+  const rows=practiceTargetNewGames(current,previous,target),requirements=practiceTargetSampleRequirements(target).map(req=>{
+    const value=practiceFreshRequirementValue(rows,req.path),supported=value!=null,min=Math.max(1,Number(req.min||1));
+    return{...req,value,supported,ready:supported&&Number(value)>=min};
+  }),supported=requirements.length>0&&requirements.every(x=>x.supported),ready=supported&&requirements.every(x=>x.ready);
+  const summary=supported?requirements.map(x=>practiceRequirementLabel(x.path)+' '+fmtInt(x.value)+'/'+fmtInt(x.min)).join(' · '):'fresh-game evidence gate unavailable for '+requirements.filter(x=>!x.supported).map(x=>practiceRequirementLabel(x.path)).join(', ');
+  return{rows,newGames:rows.length,requirements,supported,ready,summary,currentSample:supported&&requirements.length?Math.min(...requirements.map(x=>Number(x.value||0))):0,minSample:requirements.length?Math.min(...requirements.map(x=>Number(x.min||1))):0};
+}
 
 function previousPracticeTargetOutcomes(current,previous){
   const targets=Array.isArray(previous?.practiceTargets)?previous.practiceTargets:[];
@@ -2167,32 +2240,33 @@ function previousPracticeTargetOutcomes(current,previous){
   if(hasNum(curQueue)&&hasNum(prevQueue)&&Number(curQueue)!==Number(prevQueue))return{rows:[],reason:'Previous practice targets are not scored because the comparable queue context changed.'};
   if(curMechanics&&prevMechanics&&curMechanics!==prevMechanics)return{rows:[],reason:'Previous practice targets are not scored because the verified mechanics cohort changed.'};
   if(curPatch&&prevPatch&&curPatch!==prevPatch)return{rows:[],reason:'Previous practice targets are not scored because the patch cohort changed.'};
-  const newGames=reportNewMatchCount(current,previous);
   const rows=targets.map(t=>{
-    const savedMetricPath=String(t?.metricPath||'');
+    const fresh=practiceTargetFreshEvidence(current,previous,t),newGames=fresh.newGames,savedMetricPath=String(t?.metricPath||'');
     if(savedMetricPath==='summary.goldDiff15'||savedMetricPath==='coachingSummary.goldDiff15'){
       const windowGames=Math.max(1,Number(t.windowGames||5));
       return{label:t.label||'Gold differential @15',current:'n/a',baseline:hasNum(t.baseline)?practiceTargetValue(t.baseline,t.unit):'n/a',goal:hasNum(t.goal)?practiceTargetValue(t.goal,t.unit):'n/a',sampleSize:Number(t.sampleSize||0),currentSample:0,minSample:0,sampleSummary:'re-baseline required · saved target predates trusted direct-peer @15 normalization',newGames,windowGames,status:'re-baseline required',cls:'stable',pending:true};
     }
     const currentValue=pathValue(current,practiceTargetMetricPath(t));
     if(!hasNum(currentValue)||!hasNum(t.baseline)||!hasNum(t.goal))return null;
-    const cur=Number(currentValue),base=Number(t.baseline),goal=Number(t.goal),higher=t.direction!=='lower',baseWindowGames=Math.max(1,Number(t.baseWindowGames||t.windowGames||5)),maxWindowGames=Math.max(baseWindowGames,Number(t.maxWindowGames||20)),evidence=practiceTargetEvidence(current,t);
-    const common={label:t.label||t.metricPath,current:practiceTargetValue(cur,t.unit),baseline:practiceTargetValue(base,t.unit),goal:practiceTargetValue(goal,t.unit),sampleSize:Number(t.sampleSize||0),currentSample:evidence.currentSample,minSample:evidence.minSample,sampleSummary:evidence.summary,newGames,baseWindowGames,maxWindowGames,windowGames:baseWindowGames};
+    const cur=Number(currentValue),base=Number(t.baseline),goal=Number(t.goal),higher=t.direction!=='lower',baseWindowGames=Math.max(1,Number(t.baseWindowGames||t.windowGames||5)),maxWindowGames=Math.max(baseWindowGames,Number(t.maxWindowGames||20)),rollingEvidence=practiceTargetEvidence(current,t),adaptive=t?.evidenceWindowBasis==='new_games_only'&&fresh.supported;
+    const evidence=adaptive?fresh:rollingEvidence,evidenceBasis=adaptive?'new-games only':'rolling fallback';
+    const common={label:t.label||t.metricPath,current:practiceTargetValue(cur,t.unit),baseline:practiceTargetValue(base,t.unit),goal:practiceTargetValue(goal,t.unit),sampleSize:Number(t.sampleSize||0),currentSample:evidence.currentSample,minSample:evidence.minSample,sampleSummary:evidence.summary,newGames,baseWindowGames,maxWindowGames,windowGames:baseWindowGames,evidenceBasis,originGeneratedAt:t?.originGeneratedAt||null,lineageRuns:Number(t?.lineageRuns||1)};
     if(newGames<baseWindowGames){
       const left=baseWindowGames-newGames;
       return{...common,status:'awaiting '+left+' more new game'+(left===1?'':'s'),cls:'stable',pending:true,extended:false};
     }
-    if(!evidence.ready){
-      if(newGames<maxWindowGames)return{...common,status:'extended for evidence',cls:'stable',pending:true,extended:true,windowGames:maxWindowGames};
-      return{...common,status:'inconclusive — evidence floor not reached',cls:'stable',pending:false,extended:true,inconclusive:true,windowGames:maxWindowGames};
+    if(adaptive&&!fresh.ready){
+      if(newGames<maxWindowGames)return{...common,status:'extended for fresh evidence',cls:'stable',pending:true,extended:true,windowGames:maxWindowGames};
+      return{...common,status:'inconclusive — fresh evidence floor not reached',cls:'stable',pending:false,extended:true,inconclusive:true,windowGames:maxWindowGames};
     }
+    if(!adaptive&&!rollingEvidence.ready)return{...common,status:'inconclusive — rolling evidence unavailable',cls:'stable',pending:false,extended:false,inconclusive:true};
     const met=higher?cur>=goal:cur<=goal,needed=Math.abs(goal-base),toward=(higher?cur-base:base-cur);
     const material=Math.max(needed*.2,1e-9);
     const status=met?'met':toward>=material?'moving closer':toward<=-material?'moved away':'unchanged';
     const cls=met||status==='moving closer'?'improved':status==='moved away'?'worsened':'stable';
-    return{...common,status,cls,pending:false,extended:newGames>baseWindowGames};
+    return{...common,status,cls,pending:false,extended:adaptive&&newGames>baseWindowGames};
   }).filter(Boolean);
-  return{rows,reason:'',newGames};
+  return{rows,reason:'',newGames:rows.length?Math.max(...rows.map(x=>Number(x.newGames||0))):0};
 }
 function progressComparisonContext(current,previous){
   const curRole=canonicalRole(current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole||current?.summary?.primaryRole),prevRole=canonicalRole(previous?.dataQuality?.selectedRole||previous?.coachingSummary?.primaryRole||previous?.summary?.primaryRole);
@@ -2358,8 +2432,8 @@ function renderProgressComparison(current,previous,previousAt){
   const targetRows=targetOutcome.rows||[];
   if($('practiceContinuity'))$('practiceContinuity').innerHTML=practiceContinuityHtml(current,previous,context,targetOutcome);
   if($('practiceOutcome')){
-    $('practiceOutcome').innerHTML=targetRows.length?'<div class="target-outcome-head"><strong>Previous practice targets</strong><small>Minimum five new games; rare-opportunity targets extend only until their evidence floor is reached, capped at 20. Values are the current rolling selected-role metric after that new-game gate.</small></div><div class="progress-comparison-grid">'+
-      targetRows.map(x=>'<article class="progress-comparison-card '+x.cls+(x.pending?' pending-target':'')+(x.inconclusive?' inconclusive-target':'')+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.status)+'</strong><p>Now '+esc(x.current)+' · baseline '+esc(x.baseline)+' · target '+esc(x.goal)+'</p><small>'+(x.extended?esc(String(x.newGames))+' new games · minimum '+esc(String(x.baseWindowGames||5))+' reached · evidence window up to '+esc(String(x.maxWindowGames||20)):esc(String(x.newGames))+' / '+esc(String(x.baseWindowGames||x.windowGames||5))+' new games')+' · '+esc(x.sampleSummary||('valid n '+String(x.currentSample)+' / '+String(x.minSample)+' required'))+'</small></article>').join('')+'</div>':
+    $('practiceOutcome').innerHTML=targetRows.length?'<div class="target-outcome-head"><strong>Previous practice targets</strong><small>Targets keep their original baseline while the same metric remains a priority. The review waits for at least five games since that target origin; supported rare-event denominators use only those new games and may extend to 20. The displayed performance value remains the current rolling selected-role metric.</small></div><div class="progress-comparison-grid">'+
+      targetRows.map(x=>'<article class="progress-comparison-card '+x.cls+(x.pending?' pending-target':'')+(x.inconclusive?' inconclusive-target':'')+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.status)+'</strong><p>Now '+esc(x.current)+' · baseline '+esc(x.baseline)+' · target '+esc(x.goal)+'</p><small>'+(x.extended?esc(String(x.newGames))+' new games since target origin · minimum '+esc(String(x.baseWindowGames||5))+' reached · fresh-evidence cap '+esc(String(x.maxWindowGames||20)):esc(String(x.newGames))+' / '+esc(String(x.baseWindowGames||x.windowGames||5))+' new games since target origin')+' · '+esc(x.sampleSummary||('valid n '+String(x.currentSample)+' / '+String(x.minSample)+' required'))+' · '+esc(x.evidenceBasis||'evidence')+(x.lineageRuns>1?' · target held fixed across '+esc(String(x.lineageRuns))+' analyses':'')+'</small></article>').join('')+'</div>':
       (targetOutcome.reason?'<div class="target-outcome-note">'+esc(targetOutcome.reason)+'</div>':'');
   }
   if(!allRows.length&&!targetRows.length&&!targetOutcome.reason&&!context.reason){$('progressComparisonPanel').hidden=true;return;}
@@ -2448,7 +2522,7 @@ function practiceTargetHtml(target){
   if(!target||!hasNum(target.baseline)||!hasNum(target.goal))return'';
   const relation=target.direction==='lower'?'≤':'≥',evidence=practiceTargetBaselineEvidenceText(target),baseWindow=Math.max(1,Number(target.baseWindowGames||target.windowGames||5)),maxWindow=Math.max(baseWindow,Number(target.maxWindowGames||20));
   return '<div class="practice-target"><span>Minimum '+baseWindow+' comparable games</span><strong>'+esc(practiceTargetValue(target.baseline,target.unit))+' → aim '+esc(relation+' '+practiceTargetValue(target.goal,target.unit))+'</strong>'+
-    '<small>'+esc(target.rationale||'Self-relative short-term target')+' · '+esc(evidence)+(maxWindow>baseWindow?' · rare-opportunity evidence can extend to '+maxWindow+' new games':'')+'</small></div>';
+    '<small>'+esc(target.rationale||'Self-relative short-term target')+' · '+esc(evidence)+(maxWindow>baseWindow?' · new-game evidence can extend to '+maxWindow+' games while this target remains active':'')+'</small></div>';
 }
 
 
