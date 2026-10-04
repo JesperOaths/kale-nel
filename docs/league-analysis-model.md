@@ -3170,3 +3170,22 @@ The ordering chooses one review prompt, not a cause. A pre-impact death can redu
 The model deliberately does **not** create a generic “missed fights” label. The current fight evidence reliably distinguishes active involvement from proximity-only presence for tracked fight clusters, but it does not provide a defensible denominator of every teamfight the player should have attended. Until such an attendance model exists, absence from fights is not inferred.
 
 The drilldown also summarizes how many recent deep exemplars fall into each review-context label. Older 100-game examples remain match-level only and receive no deep diagnostic tag.
+
+
+## v280 position-supported teamfight absence
+
+The deep timeline model now exposes a conservative **tracked teamfight absence** context without pretending to know whether the player should have joined every fight.
+
+A fight cluster can contribute to this absence model only when:
+- it is a supported multi-kill cluster;
+- the player's team is involved in the cluster;
+- Riot provides event coordinates;
+- a player position frame is available;
+- the player has no tracked kill/assist contribution or death in the cluster;
+- no supported player proximity within 5000 units is found around the cluster.
+
+The analyzer records both the number of **position-supported teamfight clusters** and the subset counted as **tracked absences**, plus a bounded event ledger. These counts are separate from active-fight execution metrics: survival, first-death, readiness and contribution rates still use active involvement only.
+
+For high-resource/lower-damage archetype review, tracked absence is considered only after stronger direct evidence such as pre-impact deaths and fight-readiness pressure. The page phrases it as absence context — never as proof that joining the fight was correct, possible, or strategically preferable.
+
+This closes part of the earlier evidence gap without introducing a generic missed-fight label. Fully unsupported or position-ambiguous fight absence remains unclassified.
