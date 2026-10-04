@@ -3203,3 +3203,16 @@ The contrast is withheld until both groups contain at least five games. When ava
 This is explicitly an association, not a causal model. The comparison answers whether high-resource games with stronger team-relative champion-damage output happened to have different outcomes and availability patterns in this player's own role history. It does not claim that increasing champion damage would reproduce the observed win-rate gap.
 
 The current 28-game ADC cache provides enough evidence for this contrast: 19 high-resource/high-damage games and 6 high-resource/lower-damage games. Small categories outside this comparison remain contextual and do not receive an equivalent outcome claim.
+
+
+## v282 saved-report persistence verification
+
+The frontend no longer equates “analyzer returned a report” with “the report is safely stored”.
+
+Every fresh `analyze_basic` response must include an `analysis_id`. After rendering, the browser immediately calls the role-specific `report_latest` path and verifies that the newest saved analysis ID matches the ID returned by the analyzer.
+
+Only after that check succeeds does the page describe the result as a **Saved Kalenel report**. If the report renders but the persistence readback does not match yet, the UI says **Generated report · save verification pending** and explicitly notes that cached Riot data remains available for deterministic rebuild.
+
+Cache-only saved-report rebuilds apply the same first boundary: a rebuild without a returned `analysis_id` is treated as a persistence failure rather than silently presenting the report as saved.
+
+This hardening is motivated by the current persisted state: the profile and match cache are populated while `league_analysis_runs_v1` contains no saved analysis rows. Fetch completion and analysis are separate requests, so interruption between them can legitimately leave this state. The existing load path will rebuild from cached Riot data when the saved role report is missing.
