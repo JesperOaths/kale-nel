@@ -1082,7 +1082,7 @@ ok(html.includes('id="historyConsistency"')&&html.includes('id="historyChampionM
 ok(modelDoc.includes('## v267 role-pure history and readable solo-kill rates'), 'analysis documentation must preserve v267 role-scope and solo-kill semantics');
 ok(backend.includes('enemyJungleMonsters:metric(sample,g=>g.enemyJungleMonsters)')&&app.includes("Enemy-jungle monsters / game"), 'Jungle history must use enemy-jungle monster pressure context');
 ok(backend.includes('firstTurretParticipationRate:boolRate')&&app.includes("First-turret participation"), 'lane-role history must consume first-turret participation');
-ok(backend.includes('visionLeaderRate:boolRate')&&app.includes("Team vision leader"), 'Support history must consume team vision-leader context');
+ok(backend.includes('visionLeaderRate:boolRate')&&backend.includes('visionShare:metric(sample,g=>g.visionShare)')&&app.includes("Team vision share")&&app.includes('#1 on team vision'), 'Support history must consume team vision share while retaining vision-leader context');
 ok(app.includes("detailCard('Team gold rank'")&&app.includes("detailCard('Team vision rank'"), 'per-game detail must expose existing team rank metrics');
 ok(app.includes('Previous report withheld.')&&app.includes('previousScope=reportRoleScopeViolations(previous,role)'), 'progress comparison must never compare against a cross-role previous report');
 ok(modelDoc.includes('## v268 role-specific unused-metric promotion'), 'analysis documentation must preserve v268 role-specific metric decisions');
@@ -1127,8 +1127,8 @@ ok(backend.includes('trackedAbsentTeamFights')&&backend.includes('positionSuppor
 ok(app.includes("key:'tracked_fight_absence'")&&app.includes('not that joining was necessarily correct'), 'high-resource lower-damage review must use supported absence context without prescriptive overclaiming');
 ok(app.includes("detailCard('Tracked teamfight absences'")&&app.includes('does not claim the player should have joined'), 'per-match fight detail must expose absence evidence and caveat');
 ok(modelDoc.includes('## v280 position-supported teamfight absence'), 'analysis documentation must preserve teamfight-absence semantics');
-ok(html.includes('id="resourceOutputContrast"')&&app.includes('High-resource conversion split:')&&app.includes('descriptive win-rate gap'), 'carry archetype panel must expose a denominator-gated high-resource conversion contrast');
-ok(app.includes('nA>=5&&nB>=5')&&app.includes('Association only:')&&app.includes('do not establish that damage conversion caused the result'), 'conversion contrast must require five games per group and remain non-causal');
+ok(html.includes('id="resourceOutputContrast"')&&app.includes('High-resource conversion split:')&&app.includes('descriptive clean win-rate gap'), 'carry archetype panel must expose a clean-outcome denominator-gated high-resource conversion contrast');
+ok(app.includes('cleanA>=5&&cleanB>=5')&&app.includes('Association only:')&&app.includes('do not establish that damage conversion caused the result'), 'conversion contrast must require five clean outcomes per group and remain non-causal');
 ok(modelDoc.includes('## v281 high-resource conversion contrast'), 'analysis documentation must preserve high-resource conversion contrast semantics');
 ok(app.includes("if(!d?.analysis_id)throw new Error('Analyzer returned a report without a saved analysis ID.')"), 'fresh analyses must require a backend analysis ID');
 ok(app.includes("saveVerified=String(history?.analysis?.id||'')===String(d.analysis_id||'')")&&app.includes('Generated report · save verification pending'), 'fresh report UI must verify persistence before claiming saved');
