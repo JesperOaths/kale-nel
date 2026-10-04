@@ -1130,3 +1130,7 @@ ok(modelDoc.includes('## v280 position-supported teamfight absence'), 'analysis 
 ok(html.includes('id="resourceOutputContrast"')&&app.includes('High-resource conversion split:')&&app.includes('descriptive win-rate gap'), 'carry archetype panel must expose a denominator-gated high-resource conversion contrast');
 ok(app.includes('nA>=5&&nB>=5')&&app.includes('Association only:')&&app.includes('do not establish that damage conversion caused the result'), 'conversion contrast must require five games per group and remain non-causal');
 ok(modelDoc.includes('## v281 high-resource conversion contrast'), 'analysis documentation must preserve high-resource conversion contrast semantics');
+ok(app.includes("if(!d?.analysis_id)throw new Error('Analyzer returned a report without a saved analysis ID.')"), 'fresh analyses must require a backend analysis ID');
+ok(app.includes("saveVerified=String(history?.analysis?.id||'')===String(d.analysis_id||'')")&&app.includes('Generated report · save verification pending'), 'fresh report UI must verify persistence before claiming saved');
+ok(app.includes("if(!rebuilt?.analysis_id)throw new Error('Cache rebuild returned no saved analysis ID.')"), 'cache-only rebuilds must require persisted analysis IDs');
+ok(modelDoc.includes('## v282 saved-report persistence verification'), 'analysis documentation must preserve saved-report verification semantics');
