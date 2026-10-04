@@ -20,7 +20,7 @@ const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=100;
 const ANALYSIS_HISTORY_TARGET_GAMES=100;
-const ANALYZER_VERSION="league-web-behavior-v4.160";
+const ANALYZER_VERSION="league-web-behavior-v4.161";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -798,7 +798,7 @@ function participantFullGameMetrics(match:any,p:any){
   const teamDamage=team.reduce((sum:number,x:any)=>sum+Number(x.totalDamageDealtToChampions||0),0),teamGold=team.reduce((sum:number,x:any)=>sum+Number(x.goldEarned||0),0),teamVision=team.reduce((sum:number,x:any)=>sum+Number(x.visionScore||0),0);
   const damageShare=pct(Number(p.totalDamageDealtToChampions||0),teamDamage),goldShare=pct(Number(p.goldEarned||0),teamGold),visionShare=pct(Number(p.visionScore||0),teamVision),ch=p?.challenges&&typeof p.challenges==="object"?p.challenges:{};
   const wardsPlaced=Number(p.wardsPlaced||0),wardsKilled=Number(p.wardsKilled||0),controlWardsPlaced=hasNum(ch.controlWardsPlaced)?Number(ch.controlWardsPlaced):Number(p.detectorWardsPlaced||0);
-  const rankIn=(key:string)=>1+[...team].sort((a:any,b:any)=>Number(b[key]||0)-Number(a[key]||0)).findIndex((x:any)=>Number(x.participantId)===Number(p.participantId));
+  const rankIn=(key:string)=>1+team.filter((x:any)=>Number(x[key]||0)>Number(p[key]||0)).length;
   const hadAfkTeammate=Number(ch.hadAfkTeammate||0)>0,earlySurrender=!!p.gameEndedInEarlySurrender||!!p.teamEarlySurrendered;
   return{
     kills:Number(p.kills||0),deaths:Number(p.deaths||0),assists:Number(p.assists||0),kda:Number(p.deaths||0)>0?(Number(p.kills||0)+Number(p.assists||0))/Number(p.deaths):Number(p.kills||0)+Number(p.assists||0),
