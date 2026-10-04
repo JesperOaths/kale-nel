@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.161'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.162'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -1355,5 +1355,6 @@ assert.ok(api.includes('cleanRows=rows.filter((g:any)=>g?.outcomeCompromised!==t
 assert.ok(api.includes('const rankIn=(key:string)=>1+team.filter((x:any)=>Number(x[key]||0)>Number(p[key]||0)).length;'),'Team-relative ranks must use competition-rank semantics so exact ties cannot be split by participant array order');
 assert.ok(api.includes('eligible=timelineHighResource.filter((g:any)=>g?.outcomeCompromised!==true)'),'Deep high-resource behavior contrast must also exclude compromised outcomes');
 assert.ok(api.includes('highResourceBehaviorContrast=highResourceDeepBehaviorContrast(coachingGames,primaryRole)'),'Deep high-resource behavior contrast must use the same mechanics-compatible coaching cohort as other behavior analysis');
+assert.ok(api.includes('const trustedResetEconomy=(g:any)=>')&&api.includes('const trustedResetTiming=(g:any)=>')&&api.includes('resetEconomyLossRate:gameRate(g=>g?.firstResetSequence?.economyLoss===true,trustedResetEconomy)')&&api.includes('resetTimingDeltaVsPeerMin:meanMetric(g=>g?.firstResetSequence?.timingDeltaVsOpponent,trustedResetTiming)'),'Reset timing and reset economy contrasts must use separate evidence populations');
 assert.ok(app.includes("key:'outcome_compromised'")&&app.includes('AFK/early-surrender outcome context'),'Compromised exemplar games must be visibly caveated');
 assert.ok(modelDoc.includes('## v284 verification corrections'),'Verification fixes must remain documented');
