@@ -1869,3 +1869,15 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 .supporting-findings-details[open]>summary{border-bottom:1px solid var(--line);background:#faf7f0}
 .supporting-findings-body{padding:12px 14px}
 @media(max-width:900px){.supporting-findings-grid{grid-template-columns:1fr}}
+
+.archetype-card{appearance:none;text-align:left;cursor:pointer;width:100%;font:inherit}
+.archetype-card em{display:block;margin-top:8px;font-style:normal;font-size:.76rem;font-weight:700;opacity:.72}
+.archetype-card[aria-expanded="true"]{outline:2px solid currentColor;outline-offset:2px}
+.archetype-detail{margin-top:14px;padding-top:14px;border-top:1px solid rgba(127,127,127,.22)}
+.archetype-example{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid rgba(127,127,127,.16)}
+.archetype-example:last-child{border-bottom:0}
+.archetype-example div{min-width:0}
+.archetype-example span,.archetype-example small{display:block;opacity:.75}
+.archetype-example strong{display:block;margin:3px 0 4px}
+.archetype-evidence-badge{flex:0 0 auto;font-size:.72rem;font-weight:700;padding:6px 9px;border-radius:999px;border:1px solid rgba(127,127,127,.28)}
+@media (max-width:760px){.archetype-example{align-items:flex-start;flex-direction:column}.archetype-example .button{width:100%}}
