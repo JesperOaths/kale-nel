@@ -469,8 +469,8 @@ assert.ok(app.includes('function orderedPriorityThemes(')&&app.includes('return 
 assert.ok(app.includes("const priorities=topPracticeThemes(r)")&&app.includes("targets=Array.isArray(r.practiceTargets)?r.practiceTargets:[],focus=topPracticeThemes(r)"),'Primary limiter and Next-5 plan must consume the same canonical theme order');
 assert.ok(modelDoc.includes('## Canonical priority ordering')&&modelDoc.includes('backend exports `priorityThemes`, its order is authoritative'),'Canonical priority ordering must remain documented');
 assert.ok(html.includes('id="priorityEvidenceChain"')&&app.includes('function renderPriorityEvidenceChain('),'Top priority must expose an auditable evidence-to-action chain');
-assert.ok(app.includes("stage('1','Signal'")&&app.includes("stage('3','Replay proof'")&&app.includes("stage('4','Next-5 measure'")&&app.includes("stage('5','Action'"),'Priority evidence chain must retain signal, replay, metric and action stages');
-assert.ok(app.includes('This is an evidence trace, not a causal proof.'),'Priority chain must remain explicitly non-causal');
+assert.ok(app.includes("stage('1','What keeps repeating'")&&app.includes("stage('2','Why it ranks first'")&&app.includes("stage('3','Game to review'")&&app.includes("stage('4','What to do next'"),'Priority evidence chain must retain readable repeated-pattern, reinforcement, replay and action stages');
+assert.ok(app.includes('evidence-backed coaching context, not proof that one behavior caused a win or loss'),'Priority chain must remain explicitly non-causal');
 assert.ok(modelDoc.includes('## Priority evidence chain')&&modelDoc.includes('black-box verdict'),'Priority evidence-chain semantics must remain documented');
 assert.ok(app.includes('driver-evidence-meta')&&app.includes('supporting finding')&&app.includes('confidence'),'Top report drivers must expose the confidence/support metadata behind their selected evidence when available');
 assert.ok(app.includes('Provisional limiter')&&app.includes('Emerging strength')&&app.includes('Keep testing'),'Low-confidence top findings must be presented as provisional/emerging rather than established');

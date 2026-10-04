@@ -140,8 +140,8 @@ ok(backend.includes('midRouting:{teamObjectives:0,objectiveJoins:0,objectiveJoin
 ok(backend.includes('closing25:{highRiskDeaths:0,costlyDeaths:0,severeDeaths:0}'), '@25 closing risk must remain independent from the ≥20m strategic late phase');
 ok(backend.includes('x.csSwing<=-8&&x.objectiveJoinRate<50'), 'inefficient mid-routing threshold must remain CS loss + low objective presence');
 ok(backend.includes('x.csSwing>=8&&x.objectiveJoinRate>=60'), 'balanced mid-routing strength threshold must remain CS gain + objective presence');
-ok(backend.includes('lead25Games=closing25ComparableGames.filter(g=>hasNum(g.goldDiff25)&&Number(g.goldDiff25)>=500)'), '25-minute closing model must keep +500g direct-role lead threshold inside the eligible rules cohort');
-ok(backend.includes('deficit25Games=closing25ComparableGames.filter(g=>hasNum(g.goldDiff25)&&Number(g.goldDiff25)<=-500)'), '25-minute recovery model must keep -500g direct-role deficit threshold inside the eligible rules cohort');
+ok(backend.includes('lead25Games=closing25ComparableGames.filter(g=>g?.outcomeCompromised!==true&&hasNum(g.goldDiff25)&&Number(g.goldDiff25)>=500)'), '25-minute closing model must keep +500g direct-role lead threshold inside the eligible rules cohort while excluding compromised outcomes');
+ok(backend.includes('deficit25Games=closing25ComparableGames.filter(g=>g?.outcomeCompromised!==true&&hasNum(g.goldDiff25)&&Number(g.goldDiff25)<=-500)'), '25-minute recovery model must keep -500g direct-role deficit threshold inside the eligible rules cohort while excluding compromised outcomes');
 ok(backend.includes('lead25LossesWithLateRisk'), 'lead@25 losses must preserve late-risk evidence');
 ok(backend.includes('closing25:{'), '25-minute closing summary must remain exported');
 ok(backend.includes('earlyRoleGoldSamples'), 'pre-15 direct-role gold samples must remain explicit');
@@ -543,8 +543,8 @@ ok(app.includes('function orderedPriorityThemes(')&&app.includes('return ordered
 ok(app.includes("const priorities=topPracticeThemes(r)")&&app.includes("focus=topPracticeThemes(r)"), 'primary limiter and practice plan must not independently re-sort grouped priorities');
 ok(modelDoc.includes('## Canonical priority ordering')&&modelDoc.includes('frontend must not re-sort grouped `priorityThemes`'), 'analysis model must preserve canonical priority ordering');
 ok(html.includes('id="priorityEvidenceChain"')&&app.includes('function renderPriorityEvidenceChain('), 'highest-priority coaching theme must expose an auditable evidence chain');
-ok(app.includes("stage('1','Signal'")&&app.includes("stage('3','Replay proof'")&&app.includes("stage('4','Next-5 measure'")&&app.includes("stage('5','Action'"), 'priority chain must connect aggregate evidence, ranked replay, measurement and prescription');
-ok(app.includes('This is an evidence trace, not a causal proof.'), 'priority evidence trace must not be phrased as causal proof');
+ok(app.includes("stage('1','What keeps repeating'")&&app.includes("stage('2','Why it ranks first'")&&app.includes("stage('3','Game to review'")&&app.includes("stage('4','What to do next'"), 'priority chain must connect repeated aggregate evidence, independent reinforcement, ranked replay and prescription');
+ok(app.includes('evidence-backed coaching context, not proof that one behavior caused a win or loss'), 'priority evidence trace must remain explicitly non-causal');
 ok(modelDoc.includes('## Priority evidence chain'), 'analysis model must document the evidence-to-action trace');
 ok(app.includes('driver-evidence-meta')&&app.includes('supporting finding')&&app.includes('confidence'), 'action-first report drivers must retain visible evidence-strength metadata when supplied by the backend');
 ok(app.includes('Provisional limiter')&&app.includes('Emerging strength')&&app.includes('Keep testing'), 'low-confidence top findings must not be visually promoted to established limiter/strength status');
@@ -814,7 +814,7 @@ ok(backend.includes('function coachingEvidenceChannel(')&&backend.includes('inde
 ok(backend.includes('Math.min(5,1+independentSupportCount)*2'), 'theme score must not be amplified by duplicate formulations of one evidence channel');
 ok(backend.includes('supportCount,independentSupportCount,evidenceChannels:'), 'theme contract must preserve raw and independent support separately');
 ok(app.includes("weak.independentSupportCount>=2"), 'low-confidence top driver must require two independent reinforcements beyond the representative');
-ok(app.includes("stage('2','Reinforcement',independentSupportCount+' independent support'"), 'priority evidence chain must report true independent reinforcement');
+ok(app.includes("stage('2','Why it ranks first',independentSupportCount?independentSupportCount+' independent supporting signal'"), 'priority evidence chain must report true independent reinforcement in the readable explanation');
 ok(modelDoc.includes('Theme synthesis records total related findings separately from independent reinforcement.'), 'analysis documentation must preserve independent driver confidence semantics');
 ok(backend.includes('objectiveSetup:trendGameMeanWithEvents(')&&backend.includes('g=>Number(g.objectiveReadiness?.contestedJoined||0)>0?100*Number(g.objectiveReadiness?.earlySetupJoins||0)/Number(g.objectiveReadiness.contestedJoined):null'), 'recent setup trend must use equal-weight per-game prior-setup rates');
 ok(!backend.includes('objectiveSetup:trendEventRate(g=>g.objectiveReadiness?.earlySetupJoins,g=>g.objectiveReadiness?.joined)'), 'historical team-secured presence must not leak into recent setup coaching');
