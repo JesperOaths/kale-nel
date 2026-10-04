@@ -20,7 +20,7 @@ const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=100;
 const ANALYSIS_HISTORY_TARGET_GAMES=100;
-const ANALYZER_VERSION="league-web-behavior-v4.166";
+const ANALYZER_VERSION="league-web-behavior-v4.167";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1618,6 +1618,26 @@ function longHorizonModel(allGames:any[],primaryRole:string){
     return{recentN:Number(a?.n||0),priorN:Number(b?.n||0),recentMedian:a?.median??null,priorMedian:b?.median??null,medianDelta:hasNum(a?.median)&&hasNum(b?.median)?Number(a.median)-Number(b.median):null,recentQ25:a?.q25??null,priorQ25:b?.q25??null,recentQ75:a?.q75??null,priorQ75:b?.q75??null,recentIqr:ai,priorIqr:bi,iqrDelta:hasNum(ai)&&hasNum(bi)?Number(ai)-Number(bi):null};
   };
   const values=(fn:(g:any)=>any)=>history.map(fn).filter(hasNum).map(Number),championCounts:any={};for(const g of history){const c=text(g?.champion)||"Unknown";championCounts[c]=(championCounts[c]||0)+1;}
+  const sampleStats=(sample:any[],fn:(g:any)=>any)=>{const xs=(sample||[]).map(fn).filter(hasNum).map(Number);if(!xs.length)return{mean:null,n:0,sd:null};const mean=xs.reduce((a:number,b:number)=>a+b,0)/xs.length,variance=xs.length>1?xs.reduce((sum:number,x:number)=>sum+(x-mean)*(x-mean),0)/(xs.length-1):null;return{mean,n:xs.length,sd:variance==null?null:Math.sqrt(Math.max(0,variance))};};
+  const championGroups=new Map<string,any[]>();for(const g of history){const champion=text(g?.champion)||"Unknown";if(!championGroups.has(champion))championGroups.set(champion,[]);championGroups.get(champion)!.push(g);}
+  const championHistory=[...championGroups.entries()].map(([champion,list])=>{const clean=list.filter((g:any)=>g?.outcomeCompromised!==true),recentRows=recent.filter((g:any)=>(text(g?.champion)||"Unknown")===champion),priorRows=prior.filter((g:any)=>(text(g?.champion)||"Unknown")===champion);return{
+    champion,games:list.length,historyShare:pct(list.length,history.length),wins:list.filter((g:any)=>g?.win===true).length,winRate:pct(list.filter((g:any)=>g?.win===true).length,list.length),cleanGames:clean.length,cleanWins:clean.filter((g:any)=>g?.win===true).length,cleanWinRate:pct(clean.filter((g:any)=>g?.win===true).length,clean.length),
+    csMin:metric(list,g=>g.csMin),laneCs10:metric(list,g=>g.laneCs10),dpm:metric(list,g=>g.dpm),deaths:metric(list,g=>g.deaths),deadTimePct:metric(list,g=>g.deadTimePct),damageEfficiencyPp:metric(list,g=>g.damageEfficiencyPp),turretDamagePerMin:metric(list,g=>g.turretDamagePerMin),
+    visionActionsPerMin:metric(list,g=>g.visionActionsPerMin),visionShare:metric(list,g=>g.visionShare),controlWardsPlaced:metric(list,g=>g.controlWardsPlaced),enemyJungleMonsters:metric(list,g=>g.enemyJungleMonsters),epicDamagePerMin:metric(list,g=>g.epicDamagePerMin),soloKills:metric(list,g=>g.soloKills),
+    recentGames:recentRows.length,priorGames:priorRows.length,recentDpm:metric(recentRows,g=>g.dpm),priorDpm:metric(priorRows,g=>g.dpm),recentCsMin:metric(recentRows,g=>g.csMin),priorCsMin:metric(priorRows,g=>g.csMin)
+  };}).sort((a:any,b:any)=>b.games-a.games||a.champion.localeCompare(b.champion)).slice(0,8);
+  const cleanHistory=history.filter((g:any)=>g?.outcomeCompromised!==true),cleanWins=cleanHistory.filter((g:any)=>g?.win===true),cleanLosses=cleanHistory.filter((g:any)=>g?.win===false),useCleanOutcome=cleanWins.length>=5&&cleanLosses.length>=5,outcomeRows=useCleanOutcome?cleanHistory:history,outcomeWins=outcomeRows.filter((g:any)=>g?.win===true),outcomeLosses=outcomeRows.filter((g:any)=>g?.win===false);
+  const longOutcomeMetric=(key:string,label:string,unit:string,inverse:boolean,fn:(g:any)=>any)=>({key,label,unit,inverse,wins:sampleStats(outcomeWins,fn),losses:sampleStats(outcomeLosses,fn)});
+  const longOutcomeMetrics:any[]=[
+    longOutcomeMetric("csMin","CS / min","csmin",false,g=>g.csMin),
+    ...(["ADC","MID","TOP"].includes(primaryRole)?[longOutcomeMetric("laneCs10","Lane minions @10","num",false,g=>g.laneCs10)]:primaryRole==="SUPPORT"?[longOutcomeMetric("visionActionsPerMin","Vision actions / min","num",false,g=>g.visionActionsPerMin),longOutcomeMetric("visionShare","Team vision share","percent",false,g=>g.visionShare)]:primaryRole==="JUNGLE"?[longOutcomeMetric("enemyJungleMonsters","Enemy-jungle monsters / game","num",false,g=>g.enemyJungleMonsters),longOutcomeMetric("epicDamagePerMin","Epic damage / min","dpm",false,g=>g.epicDamagePerMin)]:[]),
+    longOutcomeMetric("dpm","Damage / min","dpm",false,g=>g.dpm),
+    longOutcomeMetric("deaths","Deaths / game","num",true,g=>g.deaths),
+    longOutcomeMetric("deadTimePct","Death downtime","percent",true,g=>g.deadTimePct),
+    longOutcomeMetric("damageEfficiencyPp","Damage share − gold share","percent",false,g=>g.damageEfficiencyPp),
+    longOutcomeMetric("turretDamagePerMin","Turret damage / min","dpm",false,g=>g.turretDamagePerMin)
+  ];
+  const longOutcomeFingerprint={source:useCleanOutcome?"clean_outcomes":"all_outcomes_context_only",directionalEligible:useCleanOutcome,minPerSideForDirectional:5,games:outcomeRows.length,wins:outcomeWins.length,losses:outcomeLosses.length,cleanWins:cleanWins.length,cleanLosses:cleanLosses.length,excludedCompromised:useCleanOutcome?history.length-cleanHistory.length:0,metrics:longOutcomeMetrics,definition:"Match-level selected-role history split by final result. Directional interpretation requires at least five clean wins and five clean losses; otherwise all outcomes are shown as neutral context only."};
   const resourceOutputArchetypes=(()=>{
     const eligible=history.filter((g:any)=>hasNum(g?.goldRank)&&hasNum(g?.damageRank)),deadDist:any=distribution(eligible.map((g:any)=>g?.deadTimePct).filter(hasNum).map(Number)),turretDist:any=distribution(eligible.map((g:any)=>g?.turretDamagePerMin).filter(hasNum).map(Number));
     const deadMedian=hasNum(deadDist?.median)?Number(deadDist.median):null,turretMedian=hasNum(turretDist?.median)?Number(turretDist.median):null;
@@ -1648,7 +1668,7 @@ function longHorizonModel(allGames:any[],primaryRole:string){
     ],definition:"Exclusive team-relative gold/damage rank matrix. Death-downtime and turret-pressure overlaps use this selected-role history's own median and are descriptive, not causal. Each category includes up to eight bounded exemplars ranked by explanatory-context contrast, never by inferred causality."};
   })();
   return{roleMetricModel:"role_specific_match_history_v1",targetGames:ANALYSIS_HISTORY_TARGET_GAMES,sampleGames:history.length,deepTimelineGames:history.filter((g:any)=>g?.timelineAvailable===true).length,matchOnlyHistoryGames:history.filter((g:any)=>g?.timelineAvailable!==true).length,
-    recent20:recentPack,previous20:priorPack,olderHistory:pack(older),summary:historyPack,resourceOutputArchetypes,
+    recent20:recentPack,previous20:priorPack,olderHistory:pack(older),summary:historyPack,resourceOutputArchetypes,championHistory,longOutcomeFingerprint,
     trend:{csMin:trend("csMin"),laneCs10:trend("laneCs10"),dpm:trend("dpm"),gpm:trend("gpm"),vpm:trend("vpm"),deaths:trend("deaths"),deadTimePct:trend("deadTimePct"),damageEfficiencyPp:trend("damageEfficiencyPp"),turretDamagePerMin:trend("turretDamagePerMin"),epicDamagePerMin:trend("epicDamagePerMin"),visionActionsPerMin:trend("visionActionsPerMin"),visionShare:trend("visionShare"),controlWardsPlaced:trend("controlWardsPlaced"),enemyJungleMonsters:trend("enemyJungleMonsters"),firstTurretParticipationRate:trend("firstTurretParticipationRate"),visionLeaderRate:trend("visionLeaderRate"),top2GoldToTop2DamageRate:trend("top2GoldToTop2DamageRate"),lowResourceTop2DamageRate:trend("lowResourceTop2DamageRate"),damageTop2Rate:trend("damageTop2Rate"),damageLeaderRate:trend("damageLeaderRate")},
     stabilityTrend:{csMin:stability(g=>g.csMin),laneCs10:stability(g=>g.laneCs10),dpm:stability(g=>g.dpm),deaths:stability(g=>g.deaths),deadTimePct:stability(g=>g.deadTimePct),damageEfficiencyPp:stability(g=>g.damageEfficiencyPp),turretDamagePerMin:stability(g=>g.turretDamagePerMin),epicDamagePerMin:stability(g=>g.epicDamagePerMin),visionActionsPerMin:stability(g=>g.visionActionsPerMin),visionShare:stability(g=>g.visionShare),controlWardsPlaced:stability(g=>g.controlWardsPlaced),enemyJungleMonsters:stability(g=>g.enemyJungleMonsters),soloKills:stability(g=>g.soloKills)},
     consistency:{csMin:distribution(values(g=>g.csMin)),laneCs10:distribution(values(g=>g.laneCs10)),soloKills:distribution(values(g=>g.soloKills)),deaths:distribution(values(g=>g.deaths)),deadTimePct:distribution(values(g=>g.deadTimePct)),damageEfficiencyPp:distribution(values(g=>g.damageEfficiencyPp)),turretDamagePerMin:distribution(values(g=>g.turretDamagePerMin)),epicDamagePerMin:distribution(values(g=>g.epicDamagePerMin)),visionActionsPerMin:distribution(values(g=>g.visionActionsPerMin)),visionShare:distribution(values(g=>g.visionShare)),controlWardsPlaced:distribution(values(g=>g.controlWardsPlaced)),enemyJungleMonsters:distribution(values(g=>g.enemyJungleMonsters))},
@@ -2390,7 +2410,7 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
     if(out.length>=3||!hasNum(baseline)||!hasNum(goal)||Number(sampleSize||0)<minSample)return false;
     const requirementDefs=sampleRequirementsFor(metricPath,minSample),sampleRequirements=requirementDefs.map(req=>({path:req.path,min:Number(req.min||1),value:targetValue(req.path)}));
     if(sampleRequirements.some(req=>!hasNum(req.value)||Number(req.value)<Number(req.min)))return false;
-    out.push({themeKey:text(theme?.key),themeLabel:text(theme?.label||theme?.category),label,metricPath,samplePaths:samplePathsFor(metricPath),sampleRequirements,baseline:Number(baseline),goal:Number(goal),direction,unit,sampleSize:Number(sampleSize||0),minSample,windowGames:5,rationale,source:"self_relative_short_term"});
+    out.push({themeKey:text(theme?.key),themeLabel:text(theme?.label||theme?.category),label,metricPath,samplePaths:samplePathsFor(metricPath),sampleRequirements,baseline:Number(baseline),goal:Number(goal),direction,unit,sampleSize:Number(sampleSize||0),minSample,baseWindowGames:5,maxWindowGames:20,windowGames:5,windowPolicy:"minimum_5_extend_until_evidence_max_20",rationale,source:"self_relative_short_term"});
     return true;
   };
   for(const theme of themes||[]){
