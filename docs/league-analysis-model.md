@@ -15,8 +15,8 @@ This keeps the analysis page publicly usable without turning the site's private 
 Public resource bounds:
 - workspace identifiers must be cryptographically random UUIDv4 or `lw1_` random-hex capability tokens,
 - up to 8 profiles per anonymous workspace,
-- up to 50 matches requested per public fetch,
-- retain at most 80 recent cached matches per profile,
+- up to 100 matches requested per public fetch,
+- retain at most 100 recent cached matches per profile,
 - retain at most 25 analysis runs and 20 fetch-run records per profile.
 
 Public profile deletion is owner-scoped to the current browser workspace. Deleting a profile cascades through its match cache, fetch runs and analysis rows via the existing foreign-key relationships, so the profile cap does not strand stale data.
@@ -24,6 +24,22 @@ Public profile deletion is owner-scoped to the current browser workspace. Deleti
 These limits are storage/service hygiene rather than coaching rules. They do not apply to legacy authenticated internal workspaces.
 
 # Bruisienator web analysis model
+
+## Habit review and result-independent learning
+
+`league/learning-review.js` reconstructs the learning review from the report's preserved per-game evidence, so current and compact saved reports use the same calculations. It does not make an additional Riot request or require a backend schema change. Exports include the derived `learningReview` with its own model version.
+
+Selected role and any applied mechanics cohort are filtered before measuring habits. Matches are deduplicated by ID, unknown/ambiguous roles are excluded, and timeline measurements require Summoner's Rift with explicit timeline availability. The review does not use match-only history as behavioral evidence.
+
+Each habit exposes affected/eligible games, the mean of supported within-game rates, and the separate pooled event numerator/denominator. Missing fields and absent opportunities are excluded, never treated as observed zeros. Three supported games and five opportunities are required for the result review; first-reset and lead-window habits require three opportunities, and measured support-roam lane movement requires four. These are display coverage minimums, not significance thresholds or a skill score.
+
+Shared habits cover risky/costly repeated deaths (union, without double counting), absent contested encounters after a death within 75 seconds, active fights with at least 1,000g stored, deaths before tracked kill/assist contribution, and post-kill windows without either supported personal or team-context conversion. Carry roles additionally expose clean measured first resets and eligible early lead givebacks. Support exposes costly empty roams using measured allied-ADC lane movement. Jungle exposes outnumbered active combat starts with known nearby numbers. Every cue retains its observational limits and a replay question.
+
+Flagged examples use the highest observed within-game rate. Reference examples require supported exposure with no instance of that specific flag, the same queue, known matching game rules/role-quest revision, and an uncompromised final outcome; same-champion references are preferred. They are examples rather than matched causal controls. The absence of one flag is never labeled globally good play.
+
+The result matrix separates wins/losses with tracked cues from wins/losses without cues. Only habits meeting the display minimum participate. A no-cue group requires at least three measured habits in that game; other no-cue games enter limited coverage. Only explicit `outcomeCompromised: false` and boolean results enter result groups, so AFK, early-surrender and unverified outcomes cannot inflate win-rate comparisons. Per-habit outcome comparisons need at least three uncompromised games in both groups and remain descriptive.
+
+Repeated habit pairs require at least three shared affected games with evidence for both habits. They describe co-occurrence within a game, never an event chain or causal relationship. Opportunity counts across habits are not summed because flags can overlap.
 
 This file is the behavioral-analysis contract for `kalenel.nl/league`.
 

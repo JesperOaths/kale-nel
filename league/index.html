@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends analysis with a 100-game role scan, evidence-backed Last-20 deep coaching, long-horizon trends and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261004-league-web-v287">
+  <link rel="stylesheet" href="/league/styles.css?v=20261004-league-web-v288">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261002-public-bootstrap-r4"></script>
 </head>
@@ -170,6 +170,7 @@
         <nav class="report-jump-nav" aria-label="Report sections">
           <a href="#overview">Overview</a>
           <a href="#practice-plan">Practice plan</a>
+          <a href="#learning-review">Habit review</a>
           <a href="#long-horizon">100-game form</a>
           <a href="#rank-comparison">Rank comparison</a>
           <a href="#lane-economy" id="laneEconomyNav">Role economy</a>
@@ -282,6 +283,23 @@
           </div>
           <div class="outcome-fingerprint-grid" id="outcomeFingerprint"></div>
           <p class="source-note" id="outcomeFingerprintNote"></p>
+        </section>
+
+        <section class="panel learning-review-panel" id="learning-review">
+          <div class="section-head">
+            <div><p class="eyebrow">Learn from the decisions</p><h2>Which habits should you review, even in wins?</h2></div>
+            <span class="section-hint">Find a repeat, compare two replays and try one rule next game. Results provide context; each cue still needs a replay judgment.</span>
+          </div>
+          <div class="learning-toolbar">
+            <p>Open a habit to see how often it appears, the exact evidence, a practice rule and matching games.</p>
+            <label class="field"><span>Review a habit</span><select id="learningHabitSelect"><option value="all">All measured habits</option></select></label>
+          </div>
+          <div class="learning-habits" id="learningHabits"></div>
+          <div class="section-subhead learning-results-head"><strong>Separate the result from the review</strong><span>Only supported habits above enter these groups</span></div>
+          <div class="learning-outcome-matrix" id="learningOutcomeMatrix"></div>
+          <div id="learningCombinations"></div>
+          <div class="learning-review-games" id="learningReviewGames" hidden aria-live="polite"></div>
+          <p class="source-note" id="learningReviewNote"></p>
         </section>
 
         <section class="visual-benchmark-grid" id="rank-comparison">
@@ -556,6 +574,7 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/app.js?v=20261004-league-web-v287" defer></script>
+  <script src="/league/learning-review.js?v=20261004-league-web-v288" defer></script>
+  <script src="/league/app.js?v=20261004-league-web-v288" defer></script>
 </body>
 </html>

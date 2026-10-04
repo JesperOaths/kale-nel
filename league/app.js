@@ -5,7 +5,7 @@ const cfg=window.GEJAST_CONFIG||{};
 const API=(cfg.SUPABASE_URL||'')+'/functions/v1/printify-gildan-diff-diag-v1';
 const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
 const $=(id)=>document.getElementById(id);
-const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,backendAnalyzerVersion:'',publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,matchHistoryFilter:'all',matchHistoryArcKey:'',matchHistoryObjectiveFamilyKey:'',matchHistoryArchetypeKey:'',savedProfiles:[],selectedProfileId:'',selectedRole:'ADC'};
+const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',learningHabit:'all',busy:false,riotApiKey:'',serverRiotKey:false,backendAnalyzerVersion:'',publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,matchHistoryFilter:'all',matchHistoryArcKey:'',matchHistoryObjectiveFamilyKey:'',matchHistoryArchetypeKey:'',savedProfiles:[],selectedProfileId:'',selectedRole:'ADC'};
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const LEAGUE_WORKSPACE_KEY='bruisienator_public_workspace_v1';
@@ -766,6 +766,7 @@ function renderReport(raw,sourceKind){
   renderRoleSpecificLens(r);
   renderRoleSectionCopy(r);
   renderOutcomeFingerprint(r);
+  renderLearningReview(r);
   renderRankRadar(r);
   renderVisualSummary(r);
   renderBullets('recentFocus',r.priorityThemes?.length?r.priorityThemes:r.recentFocus,'No grounded improvement priority has enough evidence yet.');
@@ -1122,6 +1123,54 @@ function renderOutcomeFingerprint(r){
   const usable=cards.filter(x=>x.ready&&hasNum(x.effect)).sort((a,b)=>Number(b.effect)-Number(a.effect)),lead=usable[0],thin=cards.filter(x=>!x.ready).length;
   if(note)note.innerHTML=lead?'<b>Largest role-specific standardized separation:</b> '+esc(lead.label)+' (Hedges g '+esc(fmt(lead.effect,2))+'). The small-sample correction makes unlike units more comparable, but this remains descriptive and is not a causal or significance claim. '+esc(roleLabel(role))+' coaching cohort: '+wins.length+' wins / '+losses.length+' losses.'+(useClean&&allGames.length!==games.length?' '+String(allGames.length-games.length)+' AFK/early-surrender outcome-compromised game(s) excluded.':'')+(thin?' '+thin+' metric'+(thin===1?' is':'s are')+' shown without directional color because one outcome side misses its valid-game or metric-specific opportunity floor.':''):'No role-specific metric has at least three valid observations in both wins and losses with enough variation for a directional standardized comparison.';
 }
+function learningMatchButton(x,tab,label){
+  if(!x?.matchId)return '';
+  return '<button class="button secondary learning-open" type="button" data-learning-match="'+esc(x.matchId)+'" data-learning-tab="'+esc(tab)+'">'+esc(label)+'</button>';
+}
+function learningExampleHtml(x,h,reference,sameChampion){
+  if(!x)return '<div class="learning-example unavailable"><span>'+esc(reference?'Comparison game':'Flagged example')+'</span><p>'+esc(reference?'No game without this flag has supported opportunities in the same queue and known mechanics.':'No instance of this cue was observed in the supported sample.')+'</p></div>';
+  const result=x.outcomeCompromised?'Outcome excluded':x.win===true?'Win':x.win===false?'Loss':'Result unknown';
+  return '<div class="learning-example '+(reference?'reference':'flagged')+'"><span>'+esc(reference?'Game without this flag':'Flagged example')+'</span><strong>'+esc(x.champion)+' · '+esc(result)+'</strong><p>'+x.flagged+'/'+x.opportunities+' tracked instances'+(hasNum(x.minute)?' · start near '+esc(fmt(x.minute,1))+'m':'')+'</p><small>'+esc(shortGameDate(x.gameStartTimestamp))+(reference?' · same queue & mechanics'+(sameChampion?' · same champion':' · different champion'):' · highest observed game rate')+'</small>'+learningMatchButton(x,h.tab,'Open '+(reference?'comparison':'flagged')+' game')+'</div>';
+}
+function bindLearningMatchButtons(box){
+  box?.querySelectorAll('[data-learning-match]').forEach(btn=>btn.addEventListener('click',()=>openReplayReviewMatch(btn.dataset.learningMatch,btn.dataset.learningTab)));
+}
+function showLearningGames(r,ids,label,tab='macro'){
+  const box=$('learningReviewGames');if(!box)return;
+  const wanted=new Set(ids),games=reportCoachingGames(r).filter(g=>wanted.has(String(g.matchId)));
+  box.hidden=false;
+  box.innerHTML='<div class="learning-list-head"><h3>'+esc(label)+' · '+games.length+' games</h3><button class="button secondary small" type="button" data-close-learning-list>Close game list</button></div><div class="learning-match-list">'+games.map(g=>{const src=championIcon(g.champion);return '<article class="learning-match"><div>'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<div><strong>'+esc(g.champion)+' · '+(g.win?'Win':'Loss')+'</strong><small>'+esc(shortGameDate(g.gameStartTimestamp))+' · '+esc(fmtDuration(g.durationMinutes))+'</small></div></div>'+learningMatchButton(g,tab,'Open match')+'</article>';}).join('')+'</div>';
+  box.querySelector('[data-close-learning-list]')?.addEventListener('click',()=>{box.hidden=true;box.innerHTML='';});
+  bindLearningMatchButtons(box);box.scrollIntoView({behavior:'auto',block:'start'});
+}
+function renderLearningReview(r){
+  const box=$('learningHabits'),matrixBox=$('learningOutcomeMatrix'),comboBox=$('learningCombinations'),note=$('learningReviewNote'),picker=$('learningHabitSelect');
+  if(!box||!matrixBox||!window.LeagueLearningReview)return;
+  const model=window.LeagueLearningReview.build(r);r.learningReview=model;
+  if(!model.habits.some(h=>h.key===state.learningHabit))state.learningHabit='all';
+  if(picker){
+    picker.innerHTML='<option value="all">All measured habits</option>'+model.habits.map(h=>'<option value="'+esc(h.key)+'">'+esc(h.label)+' · '+h.affectedGames+'/'+h.eligibleGames+' games</option>').join('');
+    picker.value=state.learningHabit;
+    picker.onchange=()=>{state.learningHabit=picker.value;renderLearningReview(r);};
+  }
+  if($('learningReviewGames')){$('learningReviewGames').hidden=true;$('learningReviewGames').innerHTML='';}
+  const display=model.habits.filter(h=>state.learningHabit==='all'?h.eligibleGames>0:h.key===state.learningHabit);
+  box.innerHTML=display.length?display.map((h,i)=>{
+    const incidence=h.eligibleGames?100*h.affectedGames/h.eligibleGames:0,status=!h.ready?'Limited sample':h.repeated?'Repeats across games':h.affectedGames?'Single-game cue':'No tracked instance';
+    const outcome=h.outcomeComparisonReady?'<p class="learning-outcome-context"><b>Result context:</b> games with this cue won '+h.flaggedOutcome.wins+'/'+h.flaggedOutcome.games+' ('+fmtPct(h.flaggedOutcome.winRate)+'); games without it won '+h.withoutOutcome.wins+'/'+h.withoutOutcome.games+' ('+fmtPct(h.withoutOutcome.winRate)+'). Different opponents and game states can explain the gap; this is not an effect estimate.</p>':'<p class="learning-outcome-context">Win-rate comparison needs at least 3 uncompromised games in each group. Currently '+h.flaggedOutcome.games+' with this cue and '+h.withoutOutcome.games+' without it.</p>';
+    return '<details class="learning-habit-card '+(!h.ready?'thin-sample':'')+'" '+(state.learningHabit!=='all'||i<2?'open':'')+'><summary><div><span>'+esc(status)+'</span><strong>'+esc(h.label)+'</strong></div><div class="learning-game-frequency"><strong>'+h.affectedGames+'/'+h.eligibleGames+' games</strong><span>'+esc(fmtPct(incidence))+' with this cue</span></div></summary><div class="learning-habit-body"><div class="learning-frequency-bar" role="img" aria-label="'+h.affectedGames+' of '+h.eligibleGames+' eligible games contain this cue"><i style="width:'+clamp(incidence,0,100)+'%"></i></div><div class="learning-stat-grid"><div><span>Average within a game</span><strong>'+esc(fmtPct(h.meanGameRate))+'</strong><small>Each supported game has equal weight</small></div><div><span>Tracked instances / opportunities</span><strong>'+h.flaggedEvents+'/'+h.opportunities+'</strong><small>'+esc(h.unit)+' · pooled '+esc(fmtPct(h.pooledEventRate))+'</small></div></div><p>'+esc(h.definition)+'</p><div class="learning-cue"><strong>Try this in your next game</strong><p>'+esc(h.cue)+'</p></div><div class="learning-replay-question"><strong>Ask during the replay</strong><p>'+esc(h.question)+'</p></div><div class="learning-example-grid">'+learningExampleHtml(h.flaggedExample,h,false,false)+learningExampleHtml(h.referenceExample,h,true,h.sameChampionReference)+'</div>'+outcome+'<small class="learning-coverage">'+h.eligibleGames+'/'+model.timelineGames+' timeline games have a supported opportunity for this habit. '+h.unknownOrNoOpportunityGames+' have missing evidence or no applicable opportunity.'+(!h.ready?' This needs at least 3 games and '+(h.key==='first-reset'||h.key==='lead-giveback'?3:h.key==='empty-costly-roam'?4:5)+' opportunities before it enters the result review below.':'')+'</small></div></details>';
+  }).join(''):'<div class="bullet empty">No supported habit measurements yet. Load selected-role timelines to build this review.</div>';
+  const groups=[['winFlagged','Wins with review cues','A win can still contain a decision worth changing.','review-win'],['lossFlagged','Losses with review cues','Use the replay to test the decision and its context.','review-loss'],['winNoFlag','Wins without tracked cues','No cue in at least 3 measured habits. Other mistakes may exist.','no-cue-win'],['lossNoFlag','Losses without tracked cues','No cue in at least 3 measured habits. Look for unmeasured decisions.','no-cue-loss']];
+  matrixBox.innerHTML=groups.map(([key,label,copy,cls])=>'<article class="learning-result-card '+cls+'"><span>'+esc(label)+'</span><strong>'+model.matrix[key].length+'</strong><p>'+esc(copy)+'</p><button class="button secondary small" type="button" data-learning-result="'+key+'" '+(model.matrix[key].length?'':'disabled')+'>Review '+model.matrix[key].length+' games</button></article>').join('');
+  matrixBox.querySelectorAll('[data-learning-result]').forEach(btn=>btn.addEventListener('click',()=>{const key=btn.dataset.learningResult;showLearningGames(r,model.matrix[key],groups.find(x=>x[0]===key)[1]);}));
+  if(comboBox){
+    comboBox.innerHTML=model.combinations.length?'<details class="learning-combination-details"><summary>Habits that appear in the same games · '+model.combinations.length+' repeated pairs</summary><p>These cues co-occur in a game; they may happen at different minutes. This does not establish an event chain or cause.</p><div class="learning-combination-grid">'+model.combinations.map((x,i)=>'<article class="learning-combination-card"><strong>'+esc(x.firstLabel)+' + '+esc(x.secondLabel)+'</strong><p>'+x.games+'/'+x.comparableGames+' games with evidence for both contain both cues.</p><button class="button secondary small" type="button" data-learning-pair="'+i+'">Review '+x.games+' shared games</button></article>').join('')+'</div></details>':'';
+    comboBox.querySelectorAll('[data-learning-pair]').forEach(btn=>btn.addEventListener('click',()=>{const x=model.combinations[Number(btn.dataset.learningPair)];showLearningGames(r,x.matchIds,'Both: '+x.firstLabel+' + '+x.secondLabel);}));
+  }
+  bindLearningMatchButtons(box);
+  if(note)note.textContent=model.timelineGames+' '+roleLabel(model.selectedRole)+' timeline games · '+model.supportedHabitCount+' habits meet the review minimum. '+model.missingTimelineGames+' role games lack usable timeline evidence. Result review excludes '+model.matrix.excludedOutcome.length+' unverified/AFK/early-surrender outcomes and '+model.matrix.limitedCoverage.length+' games with no cue and fewer than 3 measured habits. Habits are ordered by affected-game count within supported samples, not severity. These cues can overlap; do not add their event counts. A game without a cue is not proof of good play.';
+}
+
 function evidenceHealthCard(label,value,detail,status){
   const stateLabel=status==='ready'?'Ready':status==='limited'?'Limited':'Withheld';
   return '<article class="evidence-health-card evidence-'+status+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small><b>'+stateLabel+'</b> · '+esc(detail)+'</small></article>';
@@ -3522,7 +3571,7 @@ function formatChartValue(value,unit){
 function chartSvg(points,spec){
   const vals=points.map(p=>Number(p.value)).filter(Number.isFinite);if(vals.length<3)return null;
   const valid=points.map((p,i)=>({i,v:Number(p.value),p})).filter(x=>Number.isFinite(x.v));
-  const w=820,h=300,padL=64,padR=24,padT=26,padB=42,unit=spec.unit||'num',signedAxis=!!spec.signedAxis;
+  const w=820,h=300,padL=88,padR=24,padT=30,padB=48,unit=spec.unit||'num',signedAxis=!!spec.signedAxis;
   let min,max;
   if(hasNum(spec.fixedMin)&&hasNum(spec.fixedMax)){min=Number(spec.fixedMin);max=Number(spec.fixedMax);}
   else if(signedAxis){
@@ -3657,6 +3706,9 @@ function renderCharts(r){
   const all=[...(r.hiddenCharts||[]),...hidden];
   $('hiddenCharts').hidden=!all.length;$('hiddenCharts').textContent=all.length?'Unavailable / low-sample charts: '+[...new Set(all)].join(', '):'';
   renderConsistencySummary(r);
+}
+function metric(label,value,pending=false){
+  return '<div class="metric-row"><span>'+esc(label)+'</span><strong'+(pending?' class="pending"':'')+'>'+esc(value)+'</strong></div>';
 }
 function renderAdvanced(r){
   const a=r.advanced||{},roam=a.roams||{},recall=a.recalls||{},itemSpike=a.itemSpike||{};
