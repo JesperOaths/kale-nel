@@ -3394,3 +3394,14 @@ The longer-horizon layer now separates three questions that were previously mixe
 **Practice target review windows** still begin with a five-new-game minimum. Metrics whose evidence opportunities are naturally rare can continue collecting evidence until the metric's existing evidence floor is reached, with a hard cap of twenty new games. If the cap is reached without enough evidence, the result is marked inconclusive instead of silently treating missing opportunities as success or failure. Saved windowGames:5 remains for compatibility; new reports also carry baseWindowGames:5, maxWindowGames:20, and the explicit minimum_5_extend_until_evidence_max_20 policy.
 
 The account-only Support rule remains unchanged: allied Support champions can be contextual grouping variables for the reviewed account's own performance, while human teammate identities and teammate-performance profiles remain excluded from the report contract.
+
+
+## v294 / analyzer v4.168 practice-target provenance and fresh evidence
+
+Practice targets now have a stable review origin. When the same metric remains one of the active priorities across intermediate analyses, its original baseline, goal, denominator requirements, origin match IDs and origin timestamp are carried forward rather than silently moving the goalposts. A lineage resets when the metric leaves the active plan, the coaching context changes, or the twenty-new-game cap is reached.
+
+For supported evidence denominators, the five-to-twenty-game review gate is now genuinely post-plan. The UI reconstructs the games that entered after the target origin and counts evidence from those games only. This includes timeline games, trusted direct-peer checkpoints, first-impact samples, first-reset clean games, item-spike opportunities, fight samples, classified deaths, vision actions and wards, contested objective encounters, objective setup joins, kill-conversion windows, closing-with-a-lead samples, roam attempts/lane-cost windows, Support ADC-lane-movement windows, mid-routing samples, and session-position samples.
+
+If a denominator cannot be reconstructed safely from persisted per-game evidence, the system does not pretend that the fresh-evidence gate is available. It falls back to the fixed five-game gate and requires the rolling report denominator to remain valid. The value shown for a completed target remains the current rolling selected-role metric; the fresh-only calculation is used to decide whether enough post-target evidence exists to judge it. This distinction is stated in the UI.
+
+Human teammate analytics remain excluded. None of the target-lineage or fresh-evidence logic stores teammate Riot IDs or teammate performance statistics.
