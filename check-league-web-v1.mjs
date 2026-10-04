@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261004-league-web-v280'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261004-league-web-v281'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1334,3 +1334,6 @@ assert.ok(api.includes('trackedAbsentTeamFights')&&api.includes('positionSupport
 assert.ok(app.includes("key:'tracked_fight_absence'")&&app.includes('This shows absence, not that joining was necessarily correct.'),'High-resource lower-damage diagnostics must use supported absence context without prescriptive overclaiming');
 assert.ok(app.includes("detailCard('Tracked teamfight absences'")&&app.includes('does not claim the player should have joined'),'Per-match fight detail must expose the absence denominator and caveat');
 assert.ok(modelDoc.includes('## v280 position-supported teamfight absence'),'Teamfight absence semantics must remain documented');
+assert.ok(html.includes('id="resourceOutputContrast"')&&app.includes('High-resource conversion split:')&&app.includes('descriptive win-rate gap'),'Carry archetype panel must expose a denominator-gated high-resource conversion contrast');
+assert.ok(app.includes('nA>=5&&nB>=5')&&app.includes('Association only:')&&app.includes('do not establish that damage conversion caused the result'),'Conversion contrast must require five games per group and avoid causal claims');
+assert.ok(modelDoc.includes('## v281 high-resource conversion contrast'),'High-resource contrast semantics must remain documented');
