@@ -20,7 +20,7 @@ const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=100;
 const ANALYSIS_HISTORY_TARGET_GAMES=100;
-const ANALYZER_VERSION="league-web-behavior-v4.167";
+const ANALYZER_VERSION="league-web-behavior-v4.168";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -2410,7 +2410,7 @@ function buildPracticeTargets(themes:any[],summary:any,behavior:any,peer:any,ses
     if(out.length>=3||!hasNum(baseline)||!hasNum(goal)||Number(sampleSize||0)<minSample)return false;
     const requirementDefs=sampleRequirementsFor(metricPath,minSample),sampleRequirements=requirementDefs.map(req=>({path:req.path,min:Number(req.min||1),value:targetValue(req.path)}));
     if(sampleRequirements.some(req=>!hasNum(req.value)||Number(req.value)<Number(req.min)))return false;
-    out.push({themeKey:text(theme?.key),themeLabel:text(theme?.label||theme?.category),label,metricPath,samplePaths:samplePathsFor(metricPath),sampleRequirements,baseline:Number(baseline),goal:Number(goal),direction,unit,sampleSize:Number(sampleSize||0),minSample,baseWindowGames:5,maxWindowGames:20,windowGames:5,windowPolicy:"minimum_5_extend_until_evidence_max_20",rationale,source:"self_relative_short_term"});
+    out.push({themeKey:text(theme?.key),themeLabel:text(theme?.label||theme?.category),label,metricPath,samplePaths:samplePathsFor(metricPath),sampleRequirements,baseline:Number(baseline),goal:Number(goal),direction,unit,sampleSize:Number(sampleSize||0),minSample,baseWindowGames:5,maxWindowGames:20,windowGames:5,windowPolicy:"minimum_5_extend_until_evidence_max_20",evidenceWindowBasis:"new_games_only",rationale,source:"self_relative_short_term"});
     return true;
   };
   for(const theme of themes||[]){
@@ -2595,6 +2595,47 @@ function supportSynergyModel(allGames:any[],primaryRole:string){
   const pairings=[...pairGroups.entries()].map(([key,rows])=>{const [ownChampion,supportChampion]=key.split("|");return pack(rows,{ownChampion,supportChampion},3);}).sort((a:any,b:any)=>rankSort(a,b)||String(a.ownChampion).localeCompare(String(b.ownChampion))||String(a.supportChampion).localeCompare(String(b.supportChampion)));
   const bestSupportChampion=supportChampions.find((x:any)=>x.rankingEligible)||null,developingSupportChampion=supportChampions.find((x:any)=>x.sampleTier==="developing")||null;
   return{eligible:true,role:"ADC",historyGames:history.length,resolvedGames:resolved.length,unresolvedGames:unresolved,minimumCleanGamesForRanking:5,minimumCleanGamesForDevelopingSample:3,minimumCleanGamesForPairing:3,supportChampions,pairings,bestSupportChampion,developingSupportChampion,definition:"The reviewed account's selected-role ADC history grouped only by allied Support champion. All KDA, DPM, CS/min, KP, deaths and lane-gold metrics belong to the reviewed account. No teammate identity or teammate performance metric is stored or ranked. Final-result ranking excludes AFK/early-surrender outcomes, requires at least 5 clean outcomes and uses the 95% Wilson lower bound. Three-to-four clean games remain developing context; ADC × Support champion pairings use a separate 3-clean-game floor."};
+}
+
+function practiceTargetLineageKey(t:any){return [text(t?.metricPath),text(t?.direction),text(t?.unit)].join("|");}
+function attachPracticeTargetLineage(currentReport:any,previousReport:any,previousSampleIds:any[]=[]){
+  const currentTargets=Array.isArray(currentReport?.practiceTargets)?currentReport.practiceTargets:[],currentIds=(currentReport?.games||[]).map((g:any)=>text(g?.matchId)).filter(Boolean).slice(0,20),stamp=text(currentReport?.generatedAt)||now();
+  const fresh=(t:any)=>({...t,targetKey:practiceTargetLineageKey(t),originMatchIds:currentIds,originGeneratedAt:stamp,originAnalyzerVersion:ANALYZER_VERSION,lineageRuns:1,evidenceWindowBasis:"new_games_only"});
+  if(!currentTargets.length)return currentTargets;
+  const prevTargets=Array.isArray(previousReport?.practiceTargets)?previousReport.practiceTargets:[],sameContext=!!previousReport&&
+    role(previousReport?.dataQuality?.selectedRole||previousReport?.coachingSummary?.primaryRole||previousReport?.summary?.primaryRole)===role(currentReport?.dataQuality?.selectedRole||currentReport?.coachingSummary?.primaryRole||currentReport?.summary?.primaryRole)&&
+    (!hasNum(previousReport?.dataQuality?.dominantQueueId)||!hasNum(currentReport?.dataQuality?.dominantQueueId)||Number(previousReport.dataQuality.dominantQueueId)===Number(currentReport.dataQuality.dominantQueueId))&&
+    (!text(previousReport?.dataQuality?.currentPatchKey)||!text(currentReport?.dataQuality?.currentPatchKey)||text(previousReport.dataQuality.currentPatchKey)===text(currentReport.dataQuality.currentPatchKey))&&
+    (!text(previousReport?.dataQuality?.currentMechanicsKey)||!text(currentReport?.dataQuality?.currentMechanicsKey)||text(previousReport.dataQuality.currentMechanicsKey)===text(currentReport.dataQuality.currentMechanicsKey));
+  if(!sameContext||!prevTargets.length)return currentTargets.map(fresh);
+  const previousIds=(Array.isArray(previousSampleIds)&&previousSampleIds.length?previousSampleIds:(previousReport?.games||[]).map((g:any)=>text(g?.matchId))).filter(Boolean).slice(0,20);
+  const prevByKey=new Map(prevTargets.map((t:any)=>[text(t?.targetKey)||practiceTargetLineageKey(t),t]));
+  return currentTargets.map((t:any)=>{
+    const key=practiceTargetLineageKey(t),prev:any=prevByKey.get(key);
+    if(!prev)return fresh(t);
+    const originIds=(Array.isArray(prev?.originMatchIds)&&prev.originMatchIds.length?prev.originMatchIds:previousIds).map(text).filter(Boolean).slice(0,20),originSet=new Set(originIds),newGames=currentIds.filter((id:string)=>!originSet.has(id)).length,maxWindow=Math.max(5,Number(prev?.maxWindowGames||t?.maxWindowGames||20));
+    if(newGames>=maxWindow)return fresh(t);
+    return{
+      ...t,
+      baseline:hasNum(prev?.baseline)?Number(prev.baseline):t.baseline,
+      goal:hasNum(prev?.goal)?Number(prev.goal):t.goal,
+      sampleSize:hasNum(prev?.sampleSize)?Number(prev.sampleSize):t.sampleSize,
+      minSample:hasNum(prev?.minSample)?Number(prev.minSample):t.minSample,
+      samplePaths:Array.isArray(prev?.samplePaths)?prev.samplePaths:t.samplePaths,
+      sampleRequirements:Array.isArray(prev?.sampleRequirements)?prev.sampleRequirements:t.sampleRequirements,
+      rationale:text(prev?.rationale)||t.rationale,
+      baseWindowGames:Math.max(1,Number(prev?.baseWindowGames||prev?.windowGames||t?.baseWindowGames||5)),
+      maxWindowGames:maxWindow,
+      windowGames:Math.max(1,Number(prev?.windowGames||t?.windowGames||5)),
+      windowPolicy:text(prev?.windowPolicy)||text(t?.windowPolicy)||"minimum_5_extend_until_evidence_max_20",
+      evidenceWindowBasis:"new_games_only",
+      targetKey:key,
+      originMatchIds:originIds,
+      originGeneratedAt:text(prev?.originGeneratedAt)||text(previousReport?.generatedAt)||stamp,
+      originAnalyzerVersion:text(prev?.originAnalyzerVersion)||text(previousReport?.analyzerVersion)||ANALYZER_VERSION,
+      lineageRuns:Math.max(1,Number(prev?.lineageRuns||1))+1
+    };
+  });
 }
 function persistedReportProjection(rep:any){
   const games=(rep?.games||[]).map((g:any)=>{
@@ -2870,6 +2911,18 @@ Deno.serve(async(req:Request)=>{
       rep.dataQuality.excludedOtherRoles=targetRole==="GENERIC"?Number(rep.dataQuality.excludedOtherRoles||0):Math.max(Number(rep.dataQuality.excludedOtherRoles||0),metaEligible.length-roleEligible.length);
       rep.dataQuality.selectedRoleEligibleGames=roleEligible.length;
       rep.dataQuality.cacheReadStrategy={kind:"metadata_role_then_queue_then_bounded_timelines_v3",metadataRows:metaOrdered.length,roleEligibleRows:roleEligible.length,cohortRows:cohortMeta.length,timelineRows:deepRows.length,timelineRoleUsable:deepRoleUsable,selectedRole:targetRole==="GENERIC"?rep?.summary?.primaryRole:targetRole,baselineRows:baselineRows.length,timelineTarget:ANALYSIS_DEEP_TARGET_GAMES,queueSelectionScope:"selected_role",avoidsHistoricalTimelinePayload:true};
+      let previousPracticeReport:any=null,previousPracticeSampleIds:any[]=[];
+      try{
+        const{data:priorMeta,error:priorMetaError}=await sb.from("league_analysis_runs_v1").select("id,created_at,sample_match_ids,data_quality").eq("profile_id",p.id).eq("owner_player_id",viewer.player_id).order("created_at",{ascending:false}).limit(25);
+        if(priorMetaError)throw priorMetaError;
+        const currentRole=role(rep?.dataQuality?.selectedRole||rep?.coachingSummary?.primaryRole||rep?.summary?.primaryRole),prior=(priorMeta||[]).find((x:any)=>role(x?.data_quality?.selectedRole)===currentRole)||null;
+        if(prior){
+          const{data:priorDetail,error:priorDetailError}=await sb.from("league_analysis_runs_v1").select("report_data").eq("id",prior.id).eq("profile_id",p.id).eq("owner_player_id",viewer.player_id).maybeSingle();
+          if(priorDetailError)throw priorDetailError;
+          previousPracticeReport=priorDetail?.report_data||null;previousPracticeSampleIds=Array.isArray(prior.sample_match_ids)?prior.sample_match_ids:[];
+        }
+      }catch(e:any){console.error("league-api-v1 practice lineage lookup",text(e?.message||e).slice(0,240));}
+      rep.practiceTargets=attachPracticeTargetLineage(rep,previousPracticeReport,previousPracticeSampleIds);
       const persistedRep=persistedReportProjection(rep);
       persistedRep.dataQuality={...(persistedRep.dataQuality||{}),storageProjection:persistedRep.storageProjection};
       const{data:run,error:se}=await sb.from("league_analysis_runs_v1").insert({profile_id:p.id,owner_player_id:viewer.player_id,source_kind:"web_behavior",analyzer_version:rep.analyzerVersion,sample_match_ids:rep.games.map((g:any)=>g.matchId),report_data:persistedRep,data_quality:persistedRep.dataQuality}).select("id,created_at").single();if(se)throw se;
