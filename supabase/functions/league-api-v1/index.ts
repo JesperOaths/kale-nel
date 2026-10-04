@@ -20,7 +20,7 @@ const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=100;
 const ANALYSIS_HISTORY_TARGET_GAMES=100;
-const ANALYZER_VERSION="league-web-behavior-v4.165";
+const ANALYZER_VERSION="league-web-behavior-v4.166";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1518,30 +1518,24 @@ function alliedSupportParticipant(match:any,p:any){
   const candidates=ps.filter((x:any)=>Number(x?.participantId)!==Number(p?.participantId)&&Number(x?.teamId)===teamId&&participantRoleEvidence(x).confidence==="high"&&participantRole(x)==="SUPPORT");
   return candidates.length===1?candidates[0]:null;
 }
-function supportParticipantSnapshot(match:any,p:any){
-  if(!p)return null;
-  const gameName=text(p?.riotIdGameName),tagLine=text(p?.riotIdTagline),metrics=participantFullGameMetrics(match,p);
-  if(!gameName||!tagLine||!metrics)return null;
-  return{riotId:gameName+"#"+tagLine,gameName,tagLine,champion:text(p?.championName||"Unknown"),kda:metrics.kda,kp:metrics.kp,vpm:metrics.vpm,deaths:metrics.deaths,assists:metrics.assists};
-}
 function game(row:any,puuid:string,catalog:any){
   const m=row?.match_json||{},ps=Array.isArray(m?.info?.participants)?m.info.participants:[],p=ps.find((x:any)=>text(x?.puuid)===puuid);if(!p)return null;
   const full=participantFullGameMetrics(m,p);if(!full)return null;
   const gv=text(m?.info?.gameVersion),pk=patchKey(gv),catalogMeta=pk?catalog?.resolution?.[pk]||null:null,gameCatalog=(pk&&catalog?.byPatch?.[pk])||catalog?.fallback||catalog||{};
-  const roleEvidence=participantRoleEvidence(p),allySupport=alliedSupportParticipant(m,p),allySupportSnapshot=supportParticipantSnapshot(m,allySupport),peerResolution=opponentResolution(m,p),opp=peerResolution.opponent,oppFull=participantFullGameMetrics(m,opp),facts=timelineFacts(m,row?.timeline_json,p,gameCatalog,catalogMeta);
+  const roleEvidence=participantRoleEvidence(p),allySupport=alliedSupportParticipant(m,p),peerResolution=opponentResolution(m,p),opp=peerResolution.opponent,oppFull=participantFullGameMetrics(m,opp),facts=timelineFacts(m,row?.timeline_json,p,gameCatalog,catalogMeta);
   const directPeerComparable=!!oppFull&&roleEvidence.confidence==="high"&&peerResolution.opponentRoleConfidence==="high";
   const directPeerExclusionReason=!oppFull?(peerResolution.reason||"peer_missing"):roleEvidence.confidence!=="high"?"player_role_not_high_confidence":peerResolution.opponentRoleConfidence!=="high"?"opponent_role_not_high_confidence":null;
   const peer=directPeerComparable&&oppFull?{champion:text(opp?.championName||"Unknown"),role:participantRole(opp),rank:row?.peer_rank_json||null,directComparisonEligible:true,comparisonExclusionReason:null,csMinDelta:full.csMin-oppFull.csMin,dpmDelta:full.dpm-oppFull.dpm,gpmDelta:full.gpm-oppFull.gpm,vpmDelta:full.vpm-oppFull.vpm,kdaDelta:full.kda-oppFull.kda,opponent:{kda:oppFull.kda,csMin:oppFull.csMin,dpm:oppFull.dpm,gpm:oppFull.gpm,vpm:oppFull.vpm,kp:oppFull.kp}}:null;
   const finalItems=[p.item0,p.item1,p.item2,p.item3,p.item4,p.item5,p.item6].map((id:any)=>Number(id||0)).filter((id:number)=>id>0).map((id:number)=>({itemId:id,name:text(itemInfo(gameCatalog,id)?.name)||String(id)}));
-  const out:any={matchId:text(m?.metadata?.matchId||row.match_id),gameStartTimestamp:Number(m?.info?.gameStartTimestamp||0),gameVersion:gv||null,patchKey:pk,publicPatchKey:publicPatchKey(gv),itemCatalogVersion:catalogMeta?.version||catalog?.fallbackMeta?.version||null,itemCatalogExactPatch:catalogMeta?!!catalogMeta.exact:null,champion:text(p.championName||"Unknown"),championId:num(p.championId),allySupportChampion:allySupport?text(allySupport.championName||"Unknown"):null,allySupportChampionId:allySupport?num(allySupport.championId):null,allySupportPlayer:allySupportSnapshot?.riotId||null,allySupportStats:allySupportSnapshot,allySupportResolved:!!allySupport,finalItems,role:roleEvidence.role,roleEvidence,peerResolution:{role:peerResolution.role,candidateCount:peerResolution.candidateCount,reason:peerResolution.reason,opponentRoleConfidence:peerResolution.opponentRoleConfidence||null,opponentRoleSource:peerResolution.opponentRoleSource||null,directPeerComparable,directPeerExclusionReason},directPeerComparable,rawRole:text(p.teamPosition||p.individualPosition||p.role),win:!!p.win,...full,durationMinutes:Math.max(1,Number(m?.info?.gameDuration||row?.game_duration_seconds||0)/60),mapId:Number(m?.info?.mapId||row.map_id||0)||null,queueId:Number(m?.info?.queueId||row.queue_id||0)||null,timelineAvailable:!!row.timeline_json,peer,...facts};
+  const out:any={matchId:text(m?.metadata?.matchId||row.match_id),gameStartTimestamp:Number(m?.info?.gameStartTimestamp||0),gameVersion:gv||null,patchKey:pk,publicPatchKey:publicPatchKey(gv),itemCatalogVersion:catalogMeta?.version||catalog?.fallbackMeta?.version||null,itemCatalogExactPatch:catalogMeta?!!catalogMeta.exact:null,champion:text(p.championName||"Unknown"),championId:num(p.championId),allySupportChampion:allySupport?text(allySupport.championName||"Unknown"):null,allySupportChampionId:allySupport?num(allySupport.championId):null,allySupportResolved:!!allySupport,finalItems,role:roleEvidence.role,roleEvidence,peerResolution:{role:peerResolution.role,candidateCount:peerResolution.candidateCount,reason:peerResolution.reason,opponentRoleConfidence:peerResolution.opponentRoleConfidence||null,opponentRoleSource:peerResolution.opponentRoleSource||null,directPeerComparable,directPeerExclusionReason},directPeerComparable,rawRole:text(p.teamPosition||p.individualPosition||p.role),win:!!p.win,...full,durationMinutes:Math.max(1,Number(m?.info?.gameDuration||row?.game_duration_seconds||0)/60),mapId:Number(m?.info?.mapId||row.map_id||0)||null,queueId:Number(m?.info?.queueId||row.queue_id||0)||null,timelineAvailable:!!row.timeline_json,peer,...facts};
   out.judgments=gameJudgments(out);return out;
 }
 function baselineGame(row:any,puuid:string){
   const m=row?.match_json||{},ps=Array.isArray(m?.info?.participants)?m.info.participants:[],p=ps.find((x:any)=>text(x?.puuid)===puuid);if(!p)return null;
   const full=participantFullGameMetrics(m,p);
   const gv=text(m?.info?.gameVersion),pk=patchKey(gv);
-  const roleEvidence=participantRoleEvidence(p),allySupport=alliedSupportParticipant(m,p),allySupportSnapshot=supportParticipantSnapshot(m,allySupport);
-  const rules=gameRules(m);return{matchId:text(m?.metadata?.matchId||row.match_id),gameStartTimestamp:Number(m?.info?.gameStartTimestamp||0),gameVersion:gv||null,patchKey:pk,publicPatchKey:publicPatchKey(gv),champion:text(p.championName||"Unknown"),allySupportChampion:allySupport?text(allySupport.championName||"Unknown"):null,allySupportChampionId:allySupport?num(allySupport.championId):null,allySupportPlayer:allySupportSnapshot?.riotId||null,allySupportStats:allySupportSnapshot,allySupportResolved:!!allySupport,role:roleEvidence.role,roleEvidence,win:!!p.win,...full,durationMinutes:Math.max(1,Number(m?.info?.gameDuration||row?.game_duration_seconds||0)/60),mapId:Number(m?.info?.mapId||row.map_id||0)||null,queueId:Number(m?.info?.queueId||row.queue_id||0)||null,timelineAvailable:!!row.timeline_json,phaseRules:rules,goldDiff10:null,goldDiff15:null,csDiff10:null,csDiff15:null,xpDiff10:null,xpDiff15:null};
+  const roleEvidence=participantRoleEvidence(p),allySupport=alliedSupportParticipant(m,p);
+  const rules=gameRules(m);return{matchId:text(m?.metadata?.matchId||row.match_id),gameStartTimestamp:Number(m?.info?.gameStartTimestamp||0),gameVersion:gv||null,patchKey:pk,publicPatchKey:publicPatchKey(gv),champion:text(p.championName||"Unknown"),allySupportChampion:allySupport?text(allySupport.championName||"Unknown"):null,allySupportChampionId:allySupport?num(allySupport.championId):null,allySupportResolved:!!allySupport,role:roleEvidence.role,roleEvidence,win:!!p.win,...full,durationMinutes:Math.max(1,Number(m?.info?.gameDuration||row?.game_duration_seconds||0)/60),mapId:Number(m?.info?.mapId||row.map_id||0)||null,queueId:Number(m?.info?.queueId||row.queue_id||0)||null,timelineAvailable:!!row.timeline_json,phaseRules:rules,goldDiff10:null,goldDiff15:null,csDiff10:null,csDiff15:null,xpDiff10:null,xpDiff15:null};
 }
 function annotateSessionContext(games:any[]){
   const ordered=[...(games||[])].filter((g:any)=>Number(g?.gameStartTimestamp||0)>0).sort((a:any,b:any)=>Number(a.gameStartTimestamp)-Number(b.gameStartTimestamp));
@@ -2562,8 +2556,8 @@ function buildReplayReviewQueue(games:any[]){
 }
 
 function supportSynergyModel(allGames:any[],primaryRole:string){
-  if(primaryRole!=="ADC")return{eligible:false,role:primaryRole,resolvedGames:0,unresolvedGames:0,supportChampions:[],supportPlayers:[],pairings:[],bestSupportChampion:null,developingSupportChampion:null,bestSupportPlayer:null,definition:"ADC-only allied support synergy; hidden for other selected roles."};
-  const history=(allGames||[]).filter((g:any)=>g?.role==="ADC"),resolved=history.filter((g:any)=>text(g?.allySupportChampion)),playerResolved=resolved.filter((g:any)=>text(g?.allySupportPlayer)),unresolved=Math.max(0,history.length-resolved.length);
+  if(primaryRole!=="ADC")return{eligible:false,role:primaryRole,resolvedGames:0,unresolvedGames:0,supportChampions:[],pairings:[],bestSupportChampion:null,developingSupportChampion:null,definition:"ADC-only support-champion context for the reviewed account; hidden for other selected roles."};
+  const history=(allGames||[]).filter((g:any)=>g?.role==="ADC"),resolved=history.filter((g:any)=>text(g?.allySupportChampion)),unresolved=Math.max(0,history.length-resolved.length);
   const wilsonLower=(wins:number,total:number,z=1.96)=>{if(!(total>0))return null;const p=wins/total,z2=z*z,den=1+z2/total,center=(p+z2/(2*total))/den,half=z*Math.sqrt((p*(1-p)+z2/(4*total))/total)/den;return 100*Math.max(0,center-half);};
   const pack=(rows:any[],extra:any={},rankFloor=5)=>{
     const clean=rows.filter((g:any)=>g?.outcomeCompromised!==true),cleanWins=clean.filter((g:any)=>g?.win===true).length,lane=finiteGames(rows.filter((g:any)=>g?.directPeerComparable===true),g=>g?.goldDiff15),cleanGames=clean.length;
@@ -2571,24 +2565,16 @@ function supportSynergyModel(allGames:any[],primaryRole:string){
     return{...extra,games:rows.length,wins:rows.filter((g:any)=>g?.win===true).length,rawWinRate:pct(rows.filter((g:any)=>g?.win===true).length,rows.length),cleanGames,cleanWins,cleanWinRate:pct(cleanWins,cleanGames),wilsonLower95:cleanGames?wilsonLower(cleanWins,cleanGames):null,rankingEligible:sampleTier==="established",sampleTier,rankFloor,avgKda:meanField(finiteGames(rows,g=>g?.kda),g=>g.kda),avgDpm:meanField(finiteGames(rows,g=>g?.dpm),g=>g.dpm),avgCsMin:meanField(finiteGames(rows,g=>g?.csMin),g=>g.csMin),avgDeaths:meanField(finiteGames(rows,g=>g?.deaths),g=>g.deaths),avgKp:meanField(finiteGames(rows,g=>g?.kp),g=>g.kp),laneGames:lane.length,avgGoldDiff15:meanField(lane,g=>g.goldDiff15),compromisedGames:rows.length-cleanGames};
   };
   const rankSort=(a:any,b:any)=>Number(b.rankingEligible)-Number(a.rankingEligible)||Number(b.sampleTier==="developing")-Number(a.sampleTier==="developing")||Number(b.wilsonLower95??-1)-Number(a.wilsonLower95??-1)||Number(b.cleanGames)-Number(a.cleanGames)||Number(b.games)-Number(a.games);
-  const supportGroups=new Map<string,any[]>(),pairGroups=new Map<string,any[]>(),playerGroups=new Map<string,any[]>();
+  const supportGroups=new Map<string,any[]>(),pairGroups=new Map<string,any[]>();
   for(const g of resolved){
     const support=text(g.allySupportChampion),own=text(g.champion)||"Unknown";
     if(!supportGroups.has(support))supportGroups.set(support,[]);supportGroups.get(support)!.push(g);
     const pairKey=own+"|"+support;if(!pairGroups.has(pairKey))pairGroups.set(pairKey,[]);pairGroups.get(pairKey)!.push(g);
-    const player=text(g.allySupportPlayer);if(player){if(!playerGroups.has(player))playerGroups.set(player,[]);playerGroups.get(player)!.push(g);}
   }
   const supportChampions=[...supportGroups.entries()].map(([supportChampion,rows])=>pack(rows,{supportChampion},5)).sort((a:any,b:any)=>rankSort(a,b)||String(a.supportChampion).localeCompare(String(b.supportChampion)));
   const pairings=[...pairGroups.entries()].map(([key,rows])=>{const [ownChampion,supportChampion]=key.split("|");return pack(rows,{ownChampion,supportChampion},3);}).sort((a:any,b:any)=>rankSort(a,b)||String(a.ownChampion).localeCompare(String(b.ownChampion))||String(a.supportChampion).localeCompare(String(b.supportChampion)));
-  const supportPlayers=[...playerGroups.entries()].filter(([,rows])=>rows.length>=2).map(([supportPlayer,rows])=>{
-    const base=pack(rows,{supportPlayer},5),pool=new Map<string,number>();
-    for(const g of rows){const champ=text(g?.allySupportChampion)||"Unknown";pool.set(champ,(pool.get(champ)||0)+1);}
-    const championPool=[...pool.entries()].map(([champion,games])=>({champion,games})).sort((a,b)=>b.games-a.games||a.champion.localeCompare(b.champion));
-    const supportRows=rows.filter((g:any)=>g?.allySupportStats&&typeof g.allySupportStats==="object");
-    return{...base,championPool,uniqueSupportChampions:championPool.length,avgSupportKda:meanField(finiteGames(supportRows,g=>g?.allySupportStats?.kda),g=>g.allySupportStats.kda),avgSupportKp:meanField(finiteGames(supportRows,g=>g?.allySupportStats?.kp),g=>g.allySupportStats.kp),avgSupportVpm:meanField(finiteGames(supportRows,g=>g?.allySupportStats?.vpm),g=>g.allySupportStats.vpm),avgSupportDeaths:meanField(finiteGames(supportRows,g=>g?.allySupportStats?.deaths),g=>g.allySupportStats.deaths)};
-  }).sort((a:any,b:any)=>rankSort(a,b)||String(a.supportPlayer).localeCompare(String(b.supportPlayer)));
-  const bestSupportChampion=supportChampions.find((x:any)=>x.rankingEligible)||null,developingSupportChampion=supportChampions.find((x:any)=>x.sampleTier==="developing")||null,bestSupportPlayer=supportPlayers.find((x:any)=>x.rankingEligible)||null;
-  return{eligible:true,role:"ADC",historyGames:history.length,resolvedGames:resolved.length,playerResolvedGames:playerResolved.length,repeatedSupportPlayerCount:supportPlayers.length,unresolvedGames:unresolved,minimumGamesForRecurringPlayer:2,minimumCleanGamesForRanking:5,minimumCleanGamesForDevelopingSample:3,minimumCleanGamesForPairing:3,supportChampions,supportPlayers,pairings,bestSupportChampion,developingSupportChampion,bestSupportPlayer,definition:"Own selected-role ADC history grouped both by uniquely resolved allied SUPPORT champion and by the recorded Riot ID of recurring Support players. A Support player appears only after at least 2 shared games. Established champion/player ranking excludes AFK/early-surrender outcomes, requires at least 5 clean outcomes, and sorts by the 95% Wilson lower bound. Three-to-four clean games remain visible as developing samples, regardless of whether their observed result is good or bad, but cannot claim the established top spot. ADC × Support champion pairings use a separate 3-clean-game floor because pair samples are naturally thinner. KDA/DPM/CS/KP/deaths and direct-peer @15 gold are descriptive context; support-player KDA/KP/vision are the allied support's own match statistics. Riot-ID grouping follows the ID recorded in each match and may split after a rename."};
+  const bestSupportChampion=supportChampions.find((x:any)=>x.rankingEligible)||null,developingSupportChampion=supportChampions.find((x:any)=>x.sampleTier==="developing")||null;
+  return{eligible:true,role:"ADC",historyGames:history.length,resolvedGames:resolved.length,unresolvedGames:unresolved,minimumCleanGamesForRanking:5,minimumCleanGamesForDevelopingSample:3,minimumCleanGamesForPairing:3,supportChampions,pairings,bestSupportChampion,developingSupportChampion,definition:"The reviewed account's selected-role ADC history grouped only by allied Support champion. All KDA, DPM, CS/min, KP, deaths and lane-gold metrics belong to the reviewed account. No teammate identity or teammate performance metric is stored or ranked. Final-result ranking excludes AFK/early-surrender outcomes, requires at least 5 clean outcomes and uses the 95% Wilson lower bound. Three-to-four clean games remain developing context; ADC × Support champion pairings use a separate 3-clean-game floor."};
 }
 function persistedReportProjection(rep:any){
   const games=(rep?.games||[]).map((g:any)=>{

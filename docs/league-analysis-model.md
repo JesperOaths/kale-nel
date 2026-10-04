@@ -3370,3 +3370,14 @@ The 3–4 clean-game tier is now called a **developing sample**, not a “promis
 ### v291 readability regression guard
 
 The recurring Support-player champion-pool chips were the only post-v288 component that reintroduced text below the page-wide readable floor. They now use 0.9rem text and a larger line height. Frontend `20261004-league-web-v291` cache-busts this correction, and the web contract now prevents that chip text from shrinking again.
+
+
+## v292 reviewed-account-only support context
+
+The human Support-player analytics added in v289-v291 are removed. That branch over-interpreted the requested support review: the League page is meant to analyze the selected account, not build statistical profiles of its teammates.
+
+Analyzer `league-web-behavior-v4.166` no longer stores or returns allied Support Riot IDs, teammate KDA, teammate kill participation, teammate vision/min, recurring-player groups, or “best Support player” rankings.
+
+Support **champions** remain only as contextual grouping for the reviewed ADC account. Every performance metric in the section belongs to the reviewed account: clean win rate, KDA, DPM, CS/min, KP, deaths, direct ADC-peer gold @15, and the reviewed account's ADC × support-champion combinations. The allied champion is a grouping variable, not a second player being reviewed.
+
+Frontend `20261004-league-web-v292` removes the recurring-player table and labels the support section explicitly as reviewed-account-only analysis.
