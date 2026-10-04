@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.159'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.160'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -1140,3 +1140,11 @@ ok(backend.includes('resetEconomyLossRate:gameRate')&&backend.includes('resetTim
 ok(backend.includes('g?.directPeerComparable===true&&g?.firstResetSequence?.measured===true')&&backend.includes('g?.directPeerComparable===true&&g?.itemSpikeWindow?.eligible===true'), 'peer-relative cohort metrics must fail closed without trusted direct peers');
 ok(html.includes('id="highResourceBehaviorContrast"')&&app.includes('function renderHighResourceBehaviorContrast(')&&app.includes('Different rows can have different denominators.'), 'deep behavior contrast must be visible and disclose row-specific denominators');
 ok(modelDoc.includes('## v283 deep high-resource behavior contrast'), 'analysis documentation must preserve deep cohort contrast semantics');
+ok(backend.includes('positionFrame=positionAnchor?frameNearestMs(frames,Number(positionAnchor.tMs||0),35000):null')&&backend.includes('positionEvidenceDeltaSec'), 'tracked teamfight absence must require a temporally bounded player-position frame');
+ok(backend.includes('g?.itemLedgerQuality?.itemMechanicsEligible===true')&&backend.includes('itemDisadvantageFightStartRate:eventRate'), 'item-disadvantage cohort rates must exclude unavailable item mechanics');
+ok(backend.includes('minimumEventOpportunitiesPerCohort:5')&&app.includes('supported opportunities per cohort'), 'deep event-rate contrasts must require an opportunity floor');
+ok(!app.includes("key:'damageEfficiencyPp',unit:'pp',note:'composition-sensitive output magnitude'"), 'definition-linked output magnitude must not appear as explanatory behavior');
+ok(backend.includes('cleanRows=rows.filter((g:any)=>g?.outcomeCompromised!==true)')&&app.includes('clean WR')&&app.includes('AFK/early-surrender game'), 'archetype outcome contrasts must exclude compromised outcomes');
+ok(backend.includes('eligible=timelineHighResource.filter((g:any)=>g?.outcomeCompromised!==true)'), 'deep high-resource behavior contrast must exclude compromised outcomes');
+ok(app.includes("key:'outcome_compromised'")&&app.includes('AFK/early-surrender outcome context'), 'compromised exemplar games must be visibly caveated');
+ok(modelDoc.includes('## v284 verification corrections'), 'analysis documentation must preserve verification corrections');
