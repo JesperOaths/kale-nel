@@ -1311,7 +1311,7 @@ assert.ok(modelDoc.includes('## v272 lower-resource punch-up context'),'Lower-re
 assert.ok(app.includes('damageTop2Rate')&&app.includes('damageLeaderRate')&&app.includes('top-2 team damage overall')&&app.includes('team damage leader'),'Existing team damage-rank history metrics must have a visible carry-context consumer');
 assert.ok(api.includes('resourceOutputArchetypes=(()=>')&&api.includes('high_resource_high_damage')&&api.includes('lower_resource_lower_damage'),'Carry archetypes must be a mutually exclusive 2x2 team-relative gold/damage matrix');
 assert.ok(api.includes('aboveMedianDeadTimeGames')&&api.includes('aboveMedianTurretPressureGames'),'Lower-damage archetypes must expose own-history-median death-downtime and turret-pressure overlap context');
-assert.ok(html.includes('id="resourceOutputArchetypes"')&&app.includes('WR withheld (n<3)')&&app.includes('descriptive, not causal'),'Archetype UI must expose evidence counts and avoid causal overclaiming');
+assert.ok(html.includes('id="resourceOutputArchetypes"')&&app.includes('clean WR withheld (n<3)')&&app.includes('descriptive, not causal'),'Archetype UI must expose clean-outcome sample guards and avoid causal overclaiming');
 assert.ok(modelDoc.includes('## v274 resource-output archetypes'),'Resource-output archetype semantics must remain documented');
 assert.ok(api.includes('visionShare:metric(sample,g=>g.visionShare)')&&api.includes('visionShare:trend("visionShare")'),'Support history must preserve team vision-share aggregation and trend');
 assert.ok(app.includes("label:'Team vision share'")&&app.includes('share of team vision score')&&app.includes('composition-sensitive'),'Support UI must visibly consume vision share with caveat');
