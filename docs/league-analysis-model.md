@@ -3111,3 +3111,16 @@ Support long-horizon history now consumes the already-computed per-match `vision
 The metric is deliberately Support-specific in the main history UI. Higher vision share is not automatically better because team composition, game state, teammates' warding, sweeper usage, objective control and map access all affect the denominator. It is therefore presented as burden/context, not as a universal grade.
 
 Latest-20 versus previous-up-to-20 history can show team vision-share movement when both windows contain at least five valid observations. Whole-history consistency also exposes its median and middle-50% range.
+
+
+## v276 drillable archetype evidence
+
+The ADC/MID/TOP resource-output archetype panel is now drillable instead of ending at aggregate percentages.
+
+Each archetype retains at most eight exemplar games. The ledger includes match ID, date, champion, result, team gold rank, team champion-damage rank, DPM, death-downtime percentage, turret damage per minute and whether the game sits above the player's own selected-role median for death downtime or turret pressure.
+
+The examples are ordered by **contrast in available explanatory context**, not by inferred cause. For lower-damage archetypes the ordering gives more prominence to games where death downtime or turret pressure is unusually high relative to the player's own role history, plus larger gold-rank versus damage-rank separation. This is only a review-ordering heuristic.
+
+If an exemplar is part of the deep recent sample, the page offers **Open full evidence** and enters the existing per-match replay/evidence surface. Older 100-game history examples do not pretend to have timeline evidence; they are explicitly labeled **Match-level history only**.
+
+This keeps the 100-game model useful for pattern discovery while preserving the existing evidence boundary: Last-20 deep timelines can support detailed causal-looking review questions, whereas older history remains match-level descriptive context.
