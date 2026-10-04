@@ -1897,3 +1897,239 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 .behavior-contrast-row b,.behavior-contrast-row span{display:block;font-size:.82rem}
 .behavior-contrast-row small{display:block;margin-top:3px;font-size:.7rem;line-height:1.3;opacity:.7}
 @media(max-width:900px){.behavior-contrast-head{display:none}.behavior-contrast-row{grid-template-columns:1fr 1fr}.behavior-contrast-row>div:first-child{grid-column:1/-1}.behavior-contrast-row>div:nth-child(4){grid-column:1/-1}}
+
+
+/* v285 — semantic color hierarchy for faster report scanning */
+:root{
+  --league-teal:#176d70;
+  --league-teal-soft:#e7f5f3;
+  --league-indigo:#405f9b;
+  --league-indigo-soft:#edf1fb;
+  --league-purple:#684696;
+  --league-purple-soft:#f1ebf8;
+  --league-amber:#a96022;
+  --league-amber-soft:#fff0df;
+  --league-rose:#984f69;
+  --league-rose-soft:#f9eaf0;
+  --league-slate:#53616d;
+  --league-slate-soft:#edf1f3;
+}
+
+/* Make the request area and its state readable at a glance. */
+.request-workspace{
+  border-color:rgba(64,95,155,.22);
+  background:linear-gradient(145deg,#fff 0%,#f2f6fd 54%,#fff8e8 100%);
+}
+.request-workspace>.section-heading .eyebrow{
+  color:var(--league-indigo);
+  background:var(--league-indigo-soft);
+  border:1px solid rgba(64,95,155,.18);
+  padding:5px 9px;
+  border-radius:999px;
+  width:max-content;
+}
+.status-card{
+  position:relative;
+  overflow:hidden;
+  border-width:1px!important;
+  border-left-width:5px!important;
+}
+.status-card.cache-status{border-left-color:var(--league-indigo)!important;background:linear-gradient(135deg,#eef3ff,#fff)!important}
+.status-card.latest-status{border-left-color:var(--league-purple)!important;background:linear-gradient(135deg,#f3edfb,#fff)!important}
+.status-card.analysis-status{border-left-color:var(--good)!important;background:linear-gradient(135deg,#e8f6ef,#fff)!important}
+.status-card.source-status{border-left-color:var(--gold)!important;background:linear-gradient(135deg,#fff4d8,#fff)!important}
+.status-card.cache-status .status-label{color:var(--league-indigo)}
+.status-card.latest-status .status-label{color:var(--league-purple)}
+.status-card.analysis-status .status-label{color:var(--good)}
+.status-card.source-status .status-label{color:var(--gold-dark)}
+
+/* Color the jump navigation by analytical family, not just decoration. */
+.report-jump-nav{
+  background:linear-gradient(135deg,#f7f1e4,#eef4f8);
+  border-color:rgba(61,72,83,.13);
+}
+.report-jump-nav a{
+  border-width:1px;
+  border-left-width:4px;
+  box-shadow:0 2px 8px rgba(40,33,25,.035);
+}
+.report-jump-nav a[href="#overview"]{border-left-color:#25211c;background:#fff;color:#25211c}
+.report-jump-nav a[href="#practice-plan"]{border-left-color:var(--league-indigo);background:#f2f5fc;color:#314d83}
+.report-jump-nav a[href="#long-horizon"]{border-left-color:var(--league-purple);background:#f4effa;color:#583b7d}
+.report-jump-nav a[href="#rank-comparison"]{border-left-color:#3f70a5;background:#edf4fb;color:#315b87}
+.report-jump-nav a[href="#lane-economy"]{border-left-color:var(--league-amber);background:#fff4e7;color:#7d471b}
+.report-jump-nav a[href="#decisions"]{border-left-color:var(--league-teal);background:#eaf6f4;color:#145a5d}
+.report-jump-nav a[href="#phase-diagnostic"]{border-left-color:#b06b2a;background:#fff3e5;color:#7b481b}
+.report-jump-nav a[href="#game-arcs"]{border-left-color:var(--league-rose);background:#faedf2;color:#7c4056}
+.report-jump-nav a[href="#match-history"]{border-left-color:var(--league-purple);background:#f4effa;color:#583b7d}
+.report-jump-nav a[href="#last20"]{border-left-color:var(--league-indigo);background:#eff3fb;color:#314d83}
+.report-jump-nav a[href="#spatialReview"]{border-left-color:var(--league-teal);background:#eaf6f4;color:#145a5d}
+.report-jump-nav a[href="#technical-analysis"]{border-left-color:var(--league-slate);background:#f0f3f5;color:#46515a}
+.report-jump-nav a:hover{
+  transform:translateY(-1px);
+  filter:saturate(1.12);
+  box-shadow:0 6px 14px rgba(40,33,25,.07);
+}
+
+/* Each analytical section gets a stable accent so users can orient themselves
+   while scrolling a long report. */
+#report .panel:not(.report-hero){
+  --section-accent:var(--league-slate);
+  --section-soft:var(--league-slate-soft);
+  position:relative;
+}
+#report .panel:not(.report-hero)::before{
+  content:"";
+  position:absolute;
+  left:0;right:0;top:0;
+  height:5px;
+  border-radius:23px 23px 0 0;
+  background:var(--section-bar,var(--section-accent));
+  pointer-events:none;
+}
+#report .panel:not(.report-hero) .section-head .eyebrow{
+  display:inline-block;
+  color:var(--section-accent);
+  background:var(--section-soft);
+  border:1px solid color-mix(in srgb,var(--section-accent) 22%,transparent);
+  padding:5px 9px;
+  border-radius:999px;
+  width:max-content;
+}
+#report-driver{
+  --section-accent:var(--league-purple);
+  --section-soft:var(--league-purple-soft);
+  --section-bar:linear-gradient(90deg,var(--bad) 0 33.33%,var(--good) 33.33% 66.66%,var(--league-purple) 66.66% 100%);
+  background:linear-gradient(155deg,#fff6f4 0%,#f4faf6 45%,#f5effb 100%);
+}
+#practice-plan{--section-accent:var(--league-indigo);--section-soft:var(--league-indigo-soft);background:linear-gradient(145deg,#f0f4fc,#fff 66%)}
+.quick-read-panel{--section-accent:var(--good);--section-soft:var(--good-soft);background:linear-gradient(145deg,#edf8f2,#fff 58%)}
+#long-horizon{--section-accent:var(--league-purple);--section-soft:var(--league-purple-soft);background:linear-gradient(145deg,#f3eef9,#fff 62%)}
+#supportRoleLensPanel{--section-accent:var(--league-teal);--section-soft:var(--league-teal-soft);background:linear-gradient(145deg,#ebf7f5,#fff 62%)}
+#roleSpecificLensPanel{--section-accent:#537d50;--section-soft:#edf6e9;background:linear-gradient(145deg,#eff7ec,#fff 62%)}
+#outcome-fingerprint{--section-accent:var(--league-rose);--section-soft:var(--league-rose-soft);background:linear-gradient(145deg,#fbeef3,#fff 62%)}
+#rank-comparison .panel{--section-accent:#3f70a5;--section-soft:#eaf2fa;background:linear-gradient(145deg,#eef5fb,#fff 62%)}
+.supporting-findings-panel{--section-accent:#8a7340;--section-soft:#f7f0dd;background:linear-gradient(145deg,#fbf5e5,#fff 62%)}
+#lane-economy{--section-accent:var(--league-amber);--section-soft:var(--league-amber-soft);background:linear-gradient(145deg,#fff3e3,#fff 62%)}
+#decisions{--section-accent:var(--league-teal);--section-soft:var(--league-teal-soft);background:linear-gradient(145deg,#e9f7f5,#fff 62%)}
+#phase-diagnostic{--section-accent:#af6928;--section-soft:#fff0de;background:linear-gradient(145deg,#fff2e3,#fff 62%)}
+#compoundIntelligencePanel{--section-accent:var(--league-purple);--section-soft:var(--league-purple-soft);background:linear-gradient(145deg,#f3eef9,#fff 62%)}
+#sessionHabitsPanel{--section-accent:#31806f;--section-soft:#e8f6f1;background:linear-gradient(145deg,#eaf7f3,#fff 62%)}
+#progressComparisonPanel{--section-accent:var(--league-indigo);--section-soft:var(--league-indigo-soft);background:linear-gradient(145deg,#edf3fc,#fff 62%)}
+#replayReviewPanel{--section-accent:var(--league-rose);--section-soft:var(--league-rose-soft);background:linear-gradient(145deg,#faedf2,#fff 62%)}
+#game-arcs{--section-accent:#a85f28;--section-soft:#fff0e4;background:linear-gradient(145deg,#fff2e7,#fff 62%)}
+#match-history{--section-accent:var(--league-purple);--section-soft:var(--league-purple-soft);background:linear-gradient(145deg,#f4effa,#fff 62%)}
+#last20{--section-accent:var(--league-indigo);--section-soft:var(--league-indigo-soft);background:linear-gradient(145deg,#eef3fb,#fff 62%)}
+#spatialReview{--section-accent:var(--league-teal);--section-soft:var(--league-teal-soft);background:linear-gradient(145deg,#e9f7f5,#fff 62%)}
+#technical-analysis{--section-accent:var(--league-slate);--section-soft:var(--league-slate-soft);background:linear-gradient(145deg,#eef2f4,#fff 62%)}
+#trust-coverage{--section-accent:var(--good);--section-soft:var(--good-soft);background:linear-gradient(145deg,#ebf7f0,#fff 62%)}
+
+/* Make the three headline conclusions visibly distinct. */
+.report-driver-card.driver-priority.tone-bad{
+  border-color:rgba(178,58,47,.38);
+  background:linear-gradient(145deg,var(--bad-soft),#fff 70%);
+}
+.report-driver-card.driver-strength.tone-good{
+  border-color:rgba(18,106,69,.34);
+  background:linear-gradient(145deg,var(--good-soft),#fff 70%);
+}
+.report-driver-card.driver-direction{
+  border-color:rgba(104,70,150,.34);
+  background:linear-gradient(145deg,var(--league-purple-soft),#fff 70%);
+}
+.report-driver-card.driver-priority.tone-bad>span,.report-driver-card.driver-priority.tone-bad>strong{color:#8f3028}
+.report-driver-card.driver-strength.tone-good>span,.report-driver-card.driver-strength.tone-good>strong{color:#0e613e}
+.report-driver-card.driver-direction>span,.report-driver-card.driver-direction>strong{color:#573a7e}
+
+/* KPI blocks stay neutral in meaning but gain a stronger, consistent visual anchor. */
+.kpi-card.tone-neutral{
+  border-color:rgba(64,95,155,.22);
+  border-top:4px solid var(--league-indigo);
+  background:linear-gradient(155deg,#f1f5fd,#fff 66%);
+}
+.kpi-card.tone-good{border-top:4px solid var(--good)}
+.kpi-card.tone-bad{border-top:4px solid var(--bad)}
+
+/* Four resource/output archetypes now have distinct semantic colors. */
+.archetype-card[data-archetype-key="high_resource_high_damage"]{
+  border-color:rgba(18,106,69,.34)!important;
+  border-top:5px solid var(--good)!important;
+  background:linear-gradient(145deg,#e7f6ee,#fff 68%)!important;
+}
+.archetype-card[data-archetype-key="high_resource_lower_damage"]{
+  border-color:rgba(178,58,47,.32)!important;
+  border-top:5px solid var(--bad)!important;
+  background:linear-gradient(145deg,#fdeae7,#fff 68%)!important;
+}
+.archetype-card[data-archetype-key="lower_resource_high_damage"]{
+  border-color:rgba(23,109,112,.34)!important;
+  border-top:5px solid var(--league-teal)!important;
+  background:linear-gradient(145deg,#e5f6f3,#fff 68%)!important;
+}
+.archetype-card[data-archetype-key="lower_resource_lower_damage"]{
+  border-color:rgba(83,97,109,.3)!important;
+  border-top:5px solid var(--league-slate)!important;
+  background:linear-gradient(145deg,#edf1f3,#fff 68%)!important;
+}
+.archetype-card[aria-expanded="true"]{
+  box-shadow:0 0 0 3px rgba(64,95,155,.12),0 10px 24px rgba(40,33,25,.06);
+}
+
+/* Deep contrast columns are intentionally tinted so denominator/value columns
+   cannot visually blur together. */
+.behavior-contrast{
+  border-color:rgba(64,95,155,.18);
+  background:linear-gradient(145deg,#fbfcff,#f8f5ef);
+}
+.behavior-contrast-head>span:nth-child(2){color:var(--good)}
+.behavior-contrast-head>span:nth-child(3){color:var(--bad)}
+.behavior-contrast-head>span:nth-child(4){color:var(--league-purple)}
+.behavior-contrast-row>div:nth-child(2){
+  padding:8px 10px;border-radius:10px;background:#eaf7f0;
+}
+.behavior-contrast-row>div:nth-child(3){
+  padding:8px 10px;border-radius:10px;background:#fdecea;
+}
+.behavior-contrast-row>div:nth-child(4){
+  padding:8px 10px;border-radius:10px;background:#f1ebf8;
+}
+.behavior-contrast-row>div:nth-child(2)>span{color:#0f6541;font-weight:900}
+.behavior-contrast-row>div:nth-child(3)>span{color:#96372e;font-weight:900}
+.behavior-contrast-row>div:nth-child(4)>span{color:#5a3d80;font-weight:900}
+
+/* Win/loss scanability in the evidence table. */
+.games-table tr.game-row:has(.result.win)>td{
+  background:linear-gradient(90deg,rgba(229,245,237,.64),rgba(255,255,255,.2));
+}
+.games-table tr.game-row:has(.result.loss)>td{
+  background:linear-gradient(90deg,rgba(253,234,231,.58),rgba(255,255,255,.2));
+}
+.games-table tr.game-row:has(.result.win):hover>td{background:#e8f6ef}
+.games-table tr.game-row:has(.result.loss):hover>td{background:#fcebe8}
+.games-table .result.win b{
+  display:inline-block;padding:5px 9px;border-radius:999px;background:#dff3e8;color:#0d603d;
+}
+.games-table .result.loss b{
+  display:inline-block;padding:5px 9px;border-radius:999px;background:#fae1dd;color:#913128;
+}
+
+/* Reuse tone classes more boldly across diagnostics and comparisons. */
+.progress-comparison-card.improved{background:linear-gradient(145deg,#e6f5ed,#fff)}
+.progress-comparison-card.worsened{background:linear-gradient(145deg,#fdeae7,#fff)}
+.progress-comparison-card.stable{background:linear-gradient(145deg,#f1f1ee,#fff)}
+.match-history-row.tone-good{background:linear-gradient(90deg,#edf8f2,#fff 30%)}
+.match-history-row.tone-bad{background:linear-gradient(90deg,#fff0ed,#fff 30%)}
+.phase-diagnostic-card.tone-good{background:linear-gradient(145deg,#e9f7f0,#fff)}
+.phase-diagnostic-card.tone-bad{background:linear-gradient(145deg,#fdecea,#fff)}
+.game-arc-stage.tone-good,.game-arc-funnel.tone-good{background:linear-gradient(145deg,#eaf7f0,#fff)}
+.game-arc-stage.tone-bad,.game-arc-funnel.tone-bad{background:linear-gradient(145deg,#fdecea,#fff)}
+.evidence-health-card.evidence-ready{background:linear-gradient(145deg,#eaf7f0,#fff)}
+.death-pattern-card.priority-severe{background:linear-gradient(145deg,#fde9e6,#fff)}
+
+@media(max-width:900px){
+  .report-jump-nav{gap:7px;padding:11px}
+  .report-jump-nav a{min-height:38px;padding:7px 10px;font-size:.75rem}
+  .behavior-contrast-row>div:nth-child(2),
+  .behavior-contrast-row>div:nth-child(3),
+  .behavior-contrast-row>div:nth-child(4){padding:7px 8px}
+}
