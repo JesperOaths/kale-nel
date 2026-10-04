@@ -3189,3 +3189,17 @@ The analyzer records both the number of **position-supported teamfight clusters*
 For high-resource/lower-damage archetype review, tracked absence is considered only after stronger direct evidence such as pre-impact deaths and fight-readiness pressure. The page phrases it as absence context — never as proof that joining the fight was correct, possible, or strategically preferable.
 
 This closes part of the earlier evidence gap without introducing a generic missed-fight label. Fully unsupported or position-ambiguous fight absence remains unclassified.
+
+
+## v281 high-resource conversion contrast
+
+The carry-role archetype panel now adds a direct comparison between the two **high-resource** groups when both have enough evidence:
+
+- Top-2 gold + top-2 damage
+- Top-2 gold + lower damage
+
+The contrast is withheld until both groups contain at least five games. When available, the page reports each group's game count and win rate, the descriptive win-rate gap, the difference in average damage-share minus gold-share, and the difference in average death downtime.
+
+This is explicitly an association, not a causal model. The comparison answers whether high-resource games with stronger team-relative champion-damage output happened to have different outcomes and availability patterns in this player's own role history. It does not claim that increasing champion damage would reproduce the observed win-rate gap.
+
+The current 28-game ADC cache provides enough evidence for this contrast: 19 high-resource/high-damage games and 6 high-resource/lower-damage games. Small categories outside this comparison remain contextual and do not receive an equivalent outcome claim.
