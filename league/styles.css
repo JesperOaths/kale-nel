@@ -1881,3 +1881,10 @@ body,.site-shell,.panel{backdrop-filter:none!important;-webkit-backdrop-filter:n
 .archetype-example strong{display:block;margin:3px 0 4px}
 .archetype-evidence-badge{flex:0 0 auto;font-size:.72rem;font-weight:700;padding:6px 9px;border-radius:999px;border:1px solid rgba(127,127,127,.28)}
 @media (max-width:760px){.archetype-example{align-items:flex-start;flex-direction:column}.archetype-example .button{width:100%}}
+
+.archetype-diagnostic{margin-top:8px;padding:8px 10px;border-radius:10px;border:1px solid rgba(127,127,127,.18);display:grid;gap:3px}
+.archetype-diagnostic b{font-size:.78rem}
+.archetype-diagnostic span{font-size:.74rem;line-height:1.35;opacity:.82}
+.archetype-diagnostic-summary{margin:10px 0 4px;padding:10px 12px;border-radius:12px;border:1px solid rgba(127,127,127,.2);display:grid;gap:4px}
+.archetype-diagnostic-summary b{font-size:.82rem}
+.archetype-diagnostic-summary span,.archetype-diagnostic-summary small{font-size:.74rem;line-height:1.35;opacity:.78}
