@@ -1345,10 +1345,55 @@ function archetypeDeepDiagnostic(g,matrix){
   }
   return{key:'unexplained',label:'No supported explanation',tone:'neutral',copy:'The available deep evidence does not support one of the defined explanatory contexts. Lower champion damage is left unexplained rather than guessed.'};
 }
+function renderHighResourceBehaviorContrast(r){
+  const host=$('highResourceBehaviorContrast'),m=r?.highResourceBehaviorContrast||null;
+  if(!host)return;
+  if(!m||m.usable!==true){host.hidden=true;host.innerHTML='';return;}
+  const a=m.converted||{},b=m.lowerDamage||{},minN=Number(m.minimumEligibleGamesPerCohort||3);
+  const metricRows=[
+    {label:'Pre-impact deaths / active fights',key:'preImpactDeathRate',unit:'percent',note:'death before tracked contribution'},
+    {label:'≥1000g unspent fight starts',key:'highUnspentFightStartRate',unit:'percent',note:'active-fight readiness'},
+    {label:'Role-opponent major-item disadvantage starts',key:'itemDisadvantageFightStartRate',unit:'percent',note:'trusted direct-peer fights only'},
+    {label:'Tracked teamfight absence',key:'trackedFightAbsenceRate',unit:'percent',note:'position-supported teamfight clusters only'},
+    {label:'First-reset economy loss',key:'resetEconomyLossRate',unit:'percent',note:'trusted peer + measured reset, death-contaminated windows excluded'},
+    {label:'First reset vs role peer',key:'resetTimingDeltaVsPeerMin',unit:'minutes',note:'negative = earlier than peer'},
+    {label:'Earlier-item window used',key:'itemSpikeUtilizationRate',unit:'percent',note:'trusted eligible item-spike windows only'},
+    {label:'Death before earlier-item impact',key:'itemSpikeDeathBeforeImpactRate',unit:'percent',note:'trusted eligible item-spike windows only'},
+    {label:'Death downtime',key:'deadTimePct',unit:'percent',note:'whole-game availability'},
+    {label:'Turret damage / min',key:'turretDamagePerMin',unit:'dpm',note:'structure-pressure context'},
+    {label:'Damage share − gold share',key:'damageEfficiencyPp',unit:'pp',note:'composition-sensitive output magnitude'}
+  ];
+  const valueText=(obj,unit)=>{
+    if(!obj||!hasNum(obj.value))return'n/a';
+    if(unit==='percent')return fmt(obj.value,1)+'%';
+    if(unit==='minutes')return signed(obj.value,2)+' min';
+    if(unit==='dpm')return fmtInt(obj.value);
+    if(unit==='pp')return signed(obj.value,1)+' pp';
+    return fmt(obj.value,2);
+  };
+  const denom=(obj)=>{
+    if(!obj)return'';
+    const g=Number(obj.eligibleGames||0),opp=Number(obj.opportunities||0);
+    if(hasNum(obj.opportunities))return g+' games · '+opp+' opportunities';
+    return g+' games';
+  };
+  const rows=metricRows.map(spec=>{
+    const av=a?.[spec.key],bv=b?.[spec.key],aN=Number(av?.eligibleGames||0),bN=Number(bv?.eligibleGames||0),eligible=aN>=minN&&bN>=minN&&hasNum(av?.value)&&hasNum(bv?.value);
+    if(!eligible)return'';
+    const delta=Number(bv.value)-Number(av.value),deltaText=spec.unit==='percent'||spec.unit==='pp'?signed(delta,1)+' pp':spec.unit==='minutes'?signed(delta,2)+' min':spec.unit==='dpm'?signed(delta,0)+' DPM':signed(delta,2);
+    return '<div class="behavior-contrast-row"><div><b>'+esc(spec.label)+'</b><small>'+esc(spec.note)+'</small></div><div><span>'+esc(valueText(av,spec.unit))+'</span><small>'+esc(denom(av))+'</small></div><div><span>'+esc(valueText(bv,spec.unit))+'</span><small>'+esc(denom(bv))+'</small></div><div><span>'+esc(deltaText)+'</span><small>lower-damage minus converted</small></div></div>';
+  }).filter(Boolean);
+  if(!rows.length){host.hidden=true;host.innerHTML='';return;}
+  host.hidden=false;
+  host.innerHTML='<div class="section-subhead"><div><span>Deep behavior contrast</span><strong>What differs between your high-resource games?</strong></div><small>Only rows with at least '+minN+' eligible games in each cohort are shown. Different rows can have different denominators.</small></div>'+
+    '<div class="behavior-contrast-head"><span>Metric</span><span>'+esc(a.label||'Converted')+' · '+Number(a.games||0)+' games</span><span>'+esc(b.label||'Lower damage')+' · '+Number(b.games||0)+' games</span><span>Difference</span></div>'+
+    rows.join('')+
+    '<p class="source-note">These are within-player associations in the deep selected-role sample. They identify replay questions, not causes. Trusted-peer metrics fail closed when direct-role comparison evidence is unavailable.</p>';
+}
 function renderLongHorizon(r){
   const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),stability=$('historyStabilityTrend'),consistency=$('historyConsistency'),champions=$('historyChampionMix'),note=$('longHorizonNote');if(!kpi||!trend)return;
   const s=h.summary||{},role=canonicalRole(h.selectedRole||r?.dataQuality?.selectedRole||state.selectedRole),games=Number(h.sampleGames||0);
-  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';const aw=$('resourceOutputArchetypesWrap'),ac=$('resourceOutputContrast'),ag=$('resourceOutputArchetypes'),ad=$('resourceOutputArchetypeDetail');if(aw)aw.hidden=true;if(ac)ac.innerHTML='';if(ag)ag.innerHTML='';if(ad){ad.hidden=true;ad.innerHTML='';}if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
+  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';const aw=$('resourceOutputArchetypesWrap'),ac=$('resourceOutputContrast'),hb=$('highResourceBehaviorContrast'),ag=$('resourceOutputArchetypes'),ad=$('resourceOutputArchetypeDetail');if(aw)aw.hidden=true;if(ac)ac.innerHTML='';if(hb){hb.hidden=true;hb.innerHTML='';}if(ag)ag.innerHTML='';if(ad){ad.hidden=true;ad.innerHTML='';}if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
   const laner=['ADC','MID','TOP'].includes(role),roleCounts=h.roleCounts||{},otherRoleGames=Object.entries(roleCounts).reduce((n,[rk,count])=>n+(canonicalRole(rk)!==role?Number(count||0):0),0);
   const roleVolume=laner
     ?{label:'Lane minions @10',value:hasNum(s?.laneCs10?.value)?fmt(s.laneCs10.value,1):'n/a',sub:String(s?.laneCs10?.n||0)+' Riot match-level lane observations'}
@@ -1413,6 +1458,7 @@ function renderLongHorizon(r){
     ];
     consistency.innerHTML=specs.map(x=>historyDistributionCard(x.label,x.obj,x.unit)).join('');
   }
+  renderHighResourceBehaviorContrast(r);
   {
     const wrap=$('resourceOutputArchetypesWrap'),contrast=$('resourceOutputContrast'),grid=$('resourceOutputArchetypes'),detail=$('resourceOutputArchetypeDetail'),matrix=h.resourceOutputArchetypes||{},cats=Array.isArray(matrix.categories)?matrix.categories:[];
     if(wrap)wrap.hidden=!laner||!Number(matrix.eligibleGames||0);
