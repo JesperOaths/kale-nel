@@ -3,17 +3,32 @@
 ## Recoverable lease
 
 - status: released
-- owner: OpenClaw scheduled run `cron:f131fc59-e8d6-4f4b-92f3-847094258639`
-- acquired_at: 2026-10-04 17:12 Europe/Amsterdam
-- released_at: 2026-10-04 17:23 Europe/Amsterdam
+- owner: OpenClaw manual run `agent:main:dashboard:b3e1718d-318d-4eb9-bfd8-9c733f474fc0`
+- acquired_at: 2026-10-04 19:57 Europe/Amsterdam
+- released_at: 2026-10-04 20:01 Europe/Amsterdam
 - trial_expires_at: 2026-10-11 17:03 Europe/Amsterdam
 - worktree: `C:\Users\jespe\Documents\GitHub\kale-nel`
 - branch: `main`
-- base: `origin/main` `72d8f1f4`
-- completed_goal: repair League analysis contract cohort/role parser failure
+- base: local `2186c134`; `origin/main` `72d8f1f4`
+- completed_goal: add focused compact saved-report cohort fixtures
+- result_commit: `5a61876e`
 - recoverability: lease is released; later runs should start from the newest local commit and reacquire a fresh lease before changing files.
 
-## This cycle evidence log
+## Current cycle evidence log
+
+- 2026-10-04 19:55: manual run started before trial expiry.
+- 2026-10-04 19:56: read all League agent state files; prior lease was released.
+- 2026-10-04 19:56: live `/league/` returned HTTP 200 with the public workspace and session-only Riot key copy.
+- 2026-10-04 19:57: fetched origin; local `main` was clean and two coherent prior-cycle commits ahead of unchanged `origin/main` `72d8f1f4`.
+- 2026-10-04 19:57: acquired recoverable one-hour lease for the highest-value P1 compact saved-report cohort fixture task.
+- 2026-10-04 19:58: compact saved-report cohort fixture, analysis contract, League web contract, and learning review passed.
+- 2026-10-04 19:59: active JavaScript syntax passed for 529 files.
+- 2026-10-04 19:59: browser rendered the public League workspace with the session-only Riot key copy and no page errors.
+- 2026-10-04 20:00: staged and unstaged diffs were inspected; `commit_check` passed.
+- 2026-10-04 20:01: committed test coverage as `5a61876e`; no production plane changed, so no deployment was attempted.
+- 2026-10-04 20:01: updated state/backlog/automation notes and released the lease.
+
+## Previous cycle evidence log
 
 - 2026-10-04 17:07: scheduled run started before trial expiry.
 - 2026-10-04 17:10: fetched origin; current checkout was stale `agent/v764-live-write-matrix`; switched to `main` and fast-forwarded to `origin/main`.

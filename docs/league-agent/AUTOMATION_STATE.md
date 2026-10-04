@@ -1,6 +1,6 @@
 # League automation state
 
-Last updated: 2026-10-04 17:12 Europe/Amsterdam
+Last updated: 2026-10-04 20:01 Europe/Amsterdam
 
 ## Trial policy
 
@@ -11,7 +11,8 @@ Last updated: 2026-10-04 17:12 Europe/Amsterdam
 ## Existing scheduled run
 
 - Observed from invocation only: `cron:f131fc59-e8d6-4f4b-92f3-847094258639` named “Kalenel League 7-day maintenance worker”.
-- No automation listing, creation, update, or deletion was performed by this repo maintenance cycle.
+- No automation listing, creation, update, or deletion was performed by either completed repo maintenance cycle.
+- The 2026-10-04 19:55 manual cycle respected the existing trial boundary and did not create or modify scheduling, watchdogs, OS tasks, Gateway config, credentials, or self-preservation mechanisms.
 
 ## Production policy
 
