@@ -5,7 +5,7 @@ const cfg=window.GEJAST_CONFIG||{};
 const API=(cfg.SUPABASE_URL||'')+'/functions/v1/printify-gildan-diff-diag-v1';
 const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
 const $=(id)=>document.getElementById(id);
-const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,backendAnalyzerVersion:'',publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,matchHistoryFilter:'all',matchHistoryArcKey:'',matchHistoryObjectiveFamilyKey:'',savedProfiles:[],selectedProfileId:'',selectedRole:'ADC'};
+const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',busy:false,riotApiKey:'',serverRiotKey:false,backendAnalyzerVersion:'',publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,matchHistoryFilter:'all',matchHistoryArcKey:'',matchHistoryObjectiveFamilyKey:'',matchHistoryArchetypeKey:'',savedProfiles:[],selectedProfileId:'',selectedRole:'ADC'};
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const LEAGUE_WORKSPACE_KEY='bruisienator_public_workspace_v1';
@@ -1411,8 +1411,13 @@ function renderLongHorizon(r){
             const overlap=[x?.aboveOwnDeadTimeMedian===true?'above own death-downtime median':'',x?.aboveOwnTurretMedian===true?'above own turret-DPM median':''].filter(Boolean).join(' · ');
             return '<article class="archetype-example"><div><span>#'+(i+1)+' · '+esc(shortGameDate(x.gameStartTimestamp))+'</span><strong>'+esc((x.win?'Win':'Loss')+' · '+String(x.champion||'Unknown'))+'</strong><small>team gold #'+esc(String(x.goldRank??'?'))+' · team damage #'+esc(String(x.damageRank??'?'))+' · '+esc(hasNum(x.dpm)?fmtInt(x.dpm)+' DPM':'DPM n/a')+' · '+esc(hasNum(x.deadTimePct)?fmt(x.deadTimePct,1)+'% death downtime':'death downtime n/a')+' · '+esc(hasNum(x.turretDamagePerMin)?fmtInt(x.turretDamagePerMin)+' turret DPM':'turret DPM n/a')+(overlap?' · '+esc(overlap):'')+'</small></div>'+(canOpen?'<button type="button" class="button secondary small" data-open-archetype-match="'+esc(x.matchId||'')+'">Open full evidence</button>':'<span class="archetype-evidence-badge">Match-level history only</span>')+'</article>';
           }).join('');
-          detail.innerHTML='<div class="section-subhead"><div><span>Example games</span><strong>'+esc(cat.label||key)+'</strong></div><small>Ranked by contrast in the available explanatory context, not by inferred causality. Up to 8 examples are retained.</small></div>'+(rows||'<div class="bullet empty">No exemplar games are available for this archetype.</div>');
+          const deepIds=new Set(examples.filter(x=>(r.games||[]).some(g=>String(g?.matchId||'')===String(x?.matchId||''))).map(x=>String(x.matchId||'')));
+          const storyAction=deepIds.size?'<div class="history-actions"><button type="button" class="button secondary small" data-open-archetype-story="'+esc(key)+'">Review '+deepIds.size+' recent deep example'+(deepIds.size===1?'':'s')+' in match story</button><small>This filters only the visible recent story rows; report calculations stay unchanged.</small></div>':'';
+          detail.innerHTML='<div class="section-subhead"><div><span>Example games</span><strong>'+esc(cat.label||key)+'</strong></div><small>Ranked by contrast in the available explanatory context, not by inferred causality. Up to 8 examples are retained.</small></div>'+(rows||'<div class="bullet empty">No exemplar games are available for this archetype.</div>')+storyAction;
           detail.querySelectorAll('[data-open-archetype-match]').forEach(x=>x.addEventListener('click',()=>{const matchId=x.dataset.openArchetypeMatch;if(matchId)openReplayReviewMatch(matchId,'macro');}));
+          detail.querySelectorAll('[data-open-archetype-story]').forEach(x=>x.addEventListener('click',()=>{
+            state.matchHistoryArchetypeKey=String(x.dataset.openArchetypeStory||'');state.matchHistoryFilter='archetype';state.matchHistoryLimit=20;renderMatchHistory(r);$('match-history')?.scrollIntoView({behavior:'smooth',block:'start'});
+          }));
           detail.scrollIntoView({block:'nearest',behavior:'smooth'});
         }));
       }
@@ -2973,7 +2978,7 @@ function matchHistoryRow(g,index,displayIndex,r){
 }
 function renderMatchHistory(r){
   const list=$('matchHistoryList'),summary=$('matchHistorySummary'),toggle=$('matchHistoryToggle'),filters=$('matchHistoryFilters'),filterSummary=$('matchHistoryFilterSummary');if(!list||!summary)return;
-  const sourceGames=r.games||[],role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),roleFilterLabels=matchHistoryRoleFilterLabels(role),reviewIds=new Set((Array.isArray(r.replayReviewQueue)?r.replayReviewQueue:[]).map(x=>String(x.matchId||'')).filter(Boolean)),priorityIds=currentPriorityReplayIds(r),arcKey=String(state.matchHistoryArcKey||''),arcGames=arcKey?sourceGames.filter(g=>gameArcDescriptor(g)?.key===arcKey):[],arcLabel=arcGames.length?(gameArcDescriptor(arcGames[0])?.label||'Selected game arc'):'Selected game arc',objectiveFamilyKey=String(state.matchHistoryObjectiveFamilyKey||''),objectiveFamilyIds=objectiveFamilyKey?objectiveFamilyMatchIds(r,objectiveFamilyKey):new Set(),objectiveFamilyLabelText=objectiveFamilyKey?objectiveFamilyLabel(objectiveFamilyKey):'Objective family';
+  const sourceGames=r.games||[],role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),roleFilterLabels=matchHistoryRoleFilterLabels(role),reviewIds=new Set((Array.isArray(r.replayReviewQueue)?r.replayReviewQueue:[]).map(x=>String(x.matchId||'')).filter(Boolean)),priorityIds=currentPriorityReplayIds(r),arcKey=String(state.matchHistoryArcKey||''),arcGames=arcKey?sourceGames.filter(g=>gameArcDescriptor(g)?.key===arcKey):[],arcLabel=arcGames.length?(gameArcDescriptor(arcGames[0])?.label||'Selected game arc'):'Selected game arc',objectiveFamilyKey=String(state.matchHistoryObjectiveFamilyKey||''),objectiveFamilyIds=objectiveFamilyKey?objectiveFamilyMatchIds(r,objectiveFamilyKey):new Set(),objectiveFamilyLabelText=objectiveFamilyKey?objectiveFamilyLabel(objectiveFamilyKey):'Objective family',archetypeKey=String(state.matchHistoryArchetypeKey||''),archetypeCategories=Array.isArray(r?.longHorizon?.resourceOutputArchetypes?.categories)?r.longHorizon.resourceOutputArchetypes.categories:[],archetypeCategory=archetypeCategories.find(x=>String(x?.key||'')===archetypeKey)||null,archetypeIds=new Set((Array.isArray(archetypeCategory?.examples)?archetypeCategory.examples:[]).map(x=>String(x?.matchId||'')).filter(Boolean)),archetypeLabel=String(archetypeCategory?.label||'Carry archetype');
   const counts={
     all:sourceGames.length,
     win:sourceGames.filter(g=>g.win).length,
@@ -2985,7 +2990,8 @@ function renderMatchHistory(r){
     review:sourceGames.filter(g=>reviewIds.has(String(g.matchId||''))).length,
     priority:sourceGames.filter(g=>priorityIds.has(String(g.matchId||''))).length,
     arc:arcGames.length,
-    'objective-family':sourceGames.filter(g=>objectiveFamilyIds.has(String(g.matchId||''))).length
+    'objective-family':sourceGames.filter(g=>objectiveFamilyIds.has(String(g.matchId||''))).length,
+    archetype:sourceGames.filter(g=>archetypeIds.has(String(g.matchId||''))).length
   };
   let filter=String(state.matchHistoryFilter||'all');
   if(filter==='ahead15')filter='role-positive';
@@ -2995,6 +3001,7 @@ function renderMatchHistory(r){
   if(filter==='priority'&&Number(counts.priority||0)===0){filter='all';state.matchHistoryFilter='all';}
   if(filter==='arc'&&Number(counts.arc||0)===0){filter='all';state.matchHistoryFilter='all';state.matchHistoryArcKey='';}
   if(filter==='objective-family'&&Number(counts['objective-family']||0)===0){filter='all';state.matchHistoryFilter='all';state.matchHistoryObjectiveFamilyKey='';}
+  if(filter==='archetype'&&Number(counts.archetype||0)===0){filter='all';state.matchHistoryFilter='all';state.matchHistoryArchetypeKey='';}
   const matchFilter=g=>{
     if(filter==='win')return !!g.win;
     if(filter==='loss')return !g.win;
@@ -3004,6 +3011,7 @@ function renderMatchHistory(r){
     if(filter==='priority')return priorityIds.has(String(g.matchId||''));
     if(filter==='arc')return gameArcDescriptor(g)?.key===arcKey;
     if(filter==='objective-family')return objectiveFamilyIds.has(String(g.matchId||''));
+    if(filter==='archetype')return archetypeIds.has(String(g.matchId||''));
     return true;
   };
   const filteredGames=sourceGames.filter(matchFilter),limit=Math.min(Math.max(1,Number(state.matchHistoryLimit||10)),Math.max(1,filteredGames.length)),games=filteredGames.slice(0,limit);
@@ -3011,14 +3019,14 @@ function renderMatchHistory(r){
     filters.querySelectorAll('[data-history-filter]').forEach(btn=>{
       const key=btn.dataset.historyFilter||'all',active=key===filter;
       btn.classList.toggle('active-filter',active);btn.setAttribute('aria-pressed',active?'true':'false');
-      const base=key==='all'?'All':key==='win'?'Wins':key==='loss'?'Losses':key==='role-positive'?roleFilterLabels.positive:key==='role-neutral'?roleFilterLabels.neutral:key==='role-negative'?roleFilterLabels.negative:key==='risk'?'Risk flagged':key==='priority'?'Current focus':key==='arc'?'Arc: '+arcLabel:key==='objective-family'?objectiveFamilyLabelText:'Replay priority';
-      if(key==='priority')btn.hidden=Number(counts.priority||0)===0;else if(key==='arc')btn.hidden=filter!=='arc'||Number(counts.arc||0)===0;else if(key==='objective-family')btn.hidden=filter!=='objective-family'||Number(counts['objective-family']||0)===0;else btn.hidden=false;
+      const base=key==='all'?'All':key==='win'?'Wins':key==='loss'?'Losses':key==='role-positive'?roleFilterLabels.positive:key==='role-neutral'?roleFilterLabels.neutral:key==='role-negative'?roleFilterLabels.negative:key==='risk'?'Risk flagged':key==='priority'?'Current focus':key==='arc'?'Arc: '+arcLabel:key==='objective-family'?objectiveFamilyLabelText:key==='archetype'?archetypeLabel:'Replay priority';
+      if(key==='priority')btn.hidden=Number(counts.priority||0)===0;else if(key==='arc')btn.hidden=filter!=='arc'||Number(counts.arc||0)===0;else if(key==='objective-family')btn.hidden=filter!=='objective-family'||Number(counts['objective-family']||0)===0;else if(key==='archetype')btn.hidden=filter!=='archetype'||Number(counts.archetype||0)===0;else btn.hidden=false;
       btn.textContent=base+' · '+String(counts[key]??0);
       btn.onclick=()=>{state.matchHistoryFilter=key;state.matchHistoryLimit=10;renderMatchHistory(r);};
     });
   }
   if(filterSummary){
-    const label=filter==='all'?'full recent sample':filter==='risk'?'timeline-supported risk-flagged games':filter==='review'?'games with ranked replay moments':filter==='priority'?'games with ranked replay moments matching '+currentPriorityReplayLabel(r):filter==='arc'?'games matching '+arcLabel:filter==='objective-family'?'games with a contested '+objectiveFamilyLabelText+' window':filter==='win'?'wins':filter==='loss'?'losses':filter==='role-positive'?roleFilterLabels.positive.toLowerCase()+' games':filter==='role-neutral'?roleFilterLabels.neutral.toLowerCase()+' games':roleFilterLabels.negative.toLowerCase()+' games';
+    const label=filter==='all'?'full recent sample':filter==='risk'?'timeline-supported risk-flagged games':filter==='review'?'games with ranked replay moments':filter==='priority'?'games with ranked replay moments matching '+currentPriorityReplayLabel(r):filter==='arc'?'games matching '+arcLabel:filter==='objective-family'?'games with a contested '+objectiveFamilyLabelText+' window':filter==='archetype'?'recent deep games matching '+archetypeLabel:filter==='win'?'wins':filter==='loss'?'losses':filter==='role-positive'?roleFilterLabels.positive.toLowerCase()+' games':filter==='role-neutral'?roleFilterLabels.neutral.toLowerCase()+' games':roleFilterLabels.negative.toLowerCase()+' games';
     filterSummary.textContent='Showing '+filteredGames.length+' / '+sourceGames.length+' '+label+'. Filters change only visible rows, never report calculations.';
   }
   if(toggle){
