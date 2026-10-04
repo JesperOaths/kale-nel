@@ -3,18 +3,33 @@
 ## Recoverable lease
 
 - status: released
-- owner: OpenClaw manual run `agent:main:dashboard:b3e1718d-318d-4eb9-bfd8-9c733f474fc0`
-- acquired_at: 2026-10-04 19:57 Europe/Amsterdam
-- released_at: 2026-10-04 20:01 Europe/Amsterdam
+- owner: OpenClaw scheduled run `agent:main:subagent:e6fd3152-d572-4f85-899d-16f19f79bd9b`
+- acquired_at: 2026-10-04 21:06 Europe/Amsterdam
+- released_at: 2026-10-04 21:22 Europe/Amsterdam
 - trial_expires_at: 2026-10-11 17:03 Europe/Amsterdam
 - worktree: `C:\Users\jespe\Documents\GitHub\kale-nel`
 - branch: `main`
-- base: local `2186c134`; `origin/main` `72d8f1f4`
-- completed_goal: add focused compact saved-report cohort fixtures
-- result_commit: `5a61876e`
+- base: local `aa347734`; `origin/main` `72d8f1f4`
+- completed_goal: add lightweight public `/league/` smoke for no-login/session-only Riot-key copy
+- result_commit: `f361faf8`
 - recoverability: lease is released; later runs should start from the newest local commit and reacquire a fresh lease before changing files.
 
 ## Current cycle evidence log
+
+- 2026-10-04 21:03: scheduled run started before trial expiry.
+- 2026-10-04 21:04: read all League agent state files; prior lease was released.
+- 2026-10-04 21:04: live `/league/` returned HTTP 200 with v294 League asset marker and Riot/session-only copy.
+- 2026-10-04 21:05: fetched origin; local `main` was clean and four commits ahead of unchanged `origin/main` `72d8f1f4`.
+- 2026-10-04 21:06: acquired recoverable one-hour lease for the highest-value P1 public League page smoke task.
+- 2026-10-04 21:12: added `scripts/check-league-public-page-smoke.mjs` to verify public markup, no private login/session gates, session-only/non-saved Riot-key copy, password key field, public robots metadata, and optional live asset availability.
+- 2026-10-04 21:14: local and live public-page smoke passed; analysis contract and League web contract passed.
+- 2026-10-04 21:14: active JavaScript syntax passed for 530 files; `git diff --check` passed.
+- 2026-10-04 21:15: browser rendered live `/league/` with public workspace, `Backend + Riot ready`, no-login copy, session-only Riot-key copy, and zero browser errors.
+- 2026-10-04 21:18: staged and unstaged diffs were inspected; `commit_check` passed.
+- 2026-10-04 21:19: committed test coverage as `f361faf8`; no production plane changed, so no deployment was attempted.
+- 2026-10-04 21:22: updated state/backlog/automation notes and released the lease.
+
+## Previous cycle evidence log
 
 - 2026-10-04 19:55: manual run started before trial expiry.
 - 2026-10-04 19:56: read all League agent state files; prior lease was released.
@@ -28,7 +43,7 @@
 - 2026-10-04 20:01: committed test coverage as `5a61876e`; no production plane changed, so no deployment was attempted.
 - 2026-10-04 20:01: updated state/backlog/automation notes and released the lease.
 
-## Previous cycle evidence log
+## Earlier cycle evidence log
 
 - 2026-10-04 17:07: scheduled run started before trial expiry.
 - 2026-10-04 17:10: fetched origin; current checkout was stale `agent/v764-live-write-matrix`; switched to `main` and fast-forwarded to `origin/main`.
@@ -46,8 +61,8 @@
 
 ## Deployment state
 
-No deployment was attempted. The production static plane already serves v294 asset markers, but this local frontend fix has not been pushed or deployed. Deployment remains blocked on an authorized push/deploy plus verification of the static page and any relevant backend/API plane.
+No deployment was attempted. Production still serves v294 asset markers, but local frontend/test/doc commits have not been pushed or deployed. Deployment remains blocked on an authorized push/deploy plus verification of the static page and any relevant backend/API plane.
 
 ## Next handoff
 
-Start with `git status --short`, verify the latest local commit, then choose the next P1 backlog item unless the user renews or changes priorities.
+Start with `git status --short`, verify the latest local commit, then choose the P1 Data Quality wording item unless the user renews or changes priorities.

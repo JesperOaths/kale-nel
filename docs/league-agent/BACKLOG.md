@@ -11,7 +11,7 @@ Prioritize analytical correctness, role purity, evidence quality, and production
 ## P1
 
 1. [done 2026-10-04, `5a61876e`] Expand focused fixtures around compact saved reports so visual summaries, match history, champion cards, and coaching charts all consume the same role/mechanics cohort.
-2. Add a lightweight browser smoke for `/league/` that verifies the public page loads without private login gates and shows the session-only Riot key copy.
+2. [done 2026-10-04, `f361faf8`] Add a lightweight public-page smoke for `/league/` that verifies local no-login/session-only Riot-key copy and optional live HTTP asset availability.
 3. Improve report Data Quality wording for small samples and unsupported queues where users could otherwise over-trust descriptive rates.
 
 ## P2
