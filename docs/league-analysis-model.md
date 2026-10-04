@@ -3124,3 +3124,16 @@ The examples are ordered by **contrast in available explanatory context**, not b
 If an exemplar is part of the deep recent sample, the page offers **Open full evidence** and enters the existing per-match replay/evidence surface. Older 100-game history examples do not pretend to have timeline evidence; they are explicitly labeled **Match-level history only**.
 
 This keeps the 100-game model useful for pattern discovery while preserving the existing evidence boundary: Last-20 deep timelines can support detailed causal-looking review questions, whereas older history remains match-level descriptive context.
+
+
+## v277 archetype-to-story linkage
+
+The resource-output drilldown now connects directly to the existing Recent match story instead of creating a second disconnected per-game review surface.
+
+When an archetype contains exemplar games that are also part of the deep recent sample, the drilldown shows a **Review recent deep examples in match story** action. Activating it applies a display-only match-story filter keyed to that archetype's exemplar match IDs.
+
+The filter never changes report calculations, coaching aggregates, archetype counts or Last-20 selection. It only narrows the already-built Recent match story to the deep-sample games represented by that archetype.
+
+The archetype filter is hidden unless it is actively meaningful. If no matching deep games remain, it fails back to the unfiltered story rather than leaving the user on an empty stale filter.
+
+Older 100-game exemplars remain in the archetype ledger as match-level evidence only and are not injected into the deep story, preserving the distinction between long-horizon pattern evidence and timeline-backed game review.
