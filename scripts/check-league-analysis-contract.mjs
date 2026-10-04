@@ -1119,3 +1119,7 @@ ok(modelDoc.includes('## v277 archetype-to-story linkage'), 'analysis documentat
 ok(backend.includes('avgGoldShare:meanField')&&backend.includes('avgDamageShare:meanField')&&backend.includes('avgDamageEfficiencyPp:meanField'), 'archetypes must retain continuous gold/damage-share magnitude beside ordinal groups');
 ok(backend.includes('goldShare:hasNum(g?.goldShare)')&&backend.includes('damageShare:hasNum(g?.damageShare)')&&app.includes('% gold → '), 'exemplar rows must expose gold-share to damage-share magnitude');
 ok(modelDoc.includes('## v278 archetype share magnitude'), 'analysis documentation must preserve archetype share-magnitude semantics');
+ok(app.includes('function archetypeDeepDiagnostic(')&&app.includes("key:'pre_impact_deaths'")&&app.includes("key:'fight_readiness'")&&app.includes("key:'unused_item_window'")&&app.includes("key:'structure_pressure'")&&app.includes("key:'unexplained'"), 'high-resource lower-damage exemplars must use bounded deep-evidence review contexts with an unexplained fallback');
+ok(app.includes('active fight')&&app.includes('not proof it caused lower damage')&&app.includes('left unexplained rather than guessed'), 'archetype diagnostics must preserve active-involvement and non-causal evidence boundaries');
+ok(!app.includes("key:'missed_fights'"), 'frontend must not invent missed-fight attribution without a supported attendance denominator');
+ok(modelDoc.includes('## v279 deep archetype review contexts'), 'analysis documentation must preserve deep archetype diagnostic semantics');
