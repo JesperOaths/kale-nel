@@ -954,7 +954,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
     const events=cluster.events,first=events[0],fr=frameAtMs(frames,first.tMs),me=frameStats(fr,pid),them=rolePeerId?frameStats(fr,rolePeerId):null;
     const nearby=events.some((e:any)=>hasNum(e.x)&&hasNum(e.y)&&participantNearEvent(frames,pid,e,5000,35000));
     const playerDeath=events.find((e:any)=>Number(e.victimId)===pid),contributed=events.some((e:any)=>e.playerContribution),active=!!playerDeath||contributed,present=active||!!nearby,proximityOnly=present&&!active;
-    const teamInvolved=events.some((e:any)=>Number(e.killerTeam)===teamId||Number(e.victimTeam)===teamId),positionAnchor=events.find((e:any)=>hasNum(e.x)&&hasNum(e.y))||null,positionFrame=positionAnchor?frameNearestMs(frames,Number(positionAnchor.tMs||0),35000):null,positionMe=frameStats(positionFrame,pid),positionSupported=teamInvolved&&!!positionAnchor&&!!positionMe?.position;
+    const teamInvolved=events.some((e:any)=>Number(e.killerTeam)===teamId||Number(e.victimTeam)===teamId),positionEvidence=events.map((e:any)=>{if(!hasNum(e.x)||!hasNum(e.y))return null;const frame=frameNearestMs(frames,Number(e.tMs||0),35000),player=frameStats(frame,pid);return player?.position?{event:e,frame,player}:null;}).find(Boolean)||null,positionAnchor=positionEvidence?.event||null,positionFrame=positionEvidence?.frame||null,positionMe=positionEvidence?.player||null,positionSupported=teamInvolved&&!!positionAnchor&&!!positionMe?.position;
     if(teamInvolved)out.fightProfile.teamFightClusters++;
     if(positionSupported)out.fightProfile.positionSupportedTeamFightClusters++;
     if(positionSupported&&!present){
