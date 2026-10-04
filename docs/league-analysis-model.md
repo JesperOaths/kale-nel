@@ -3263,3 +3263,24 @@ A full verification pass over v274–v283 found four places where the implementa
 The high-resource outcome contrast now requires at least five clean games in each high-resource group. Its damage-share-minus-gold-share and death-downtime context are calculated on the same clean-outcome population used for the clean win-rate comparison.
 
 For the current cached ADC sample, the raw high-resource groups are still 19 top-2-gold/top-2-damage games and 6 top-2-gold/lower-damage games. One game in the former group carries compromised-outcome context. The clean outcome comparison is therefore 13/18 wins (72.2%) versus 1/6 wins (16.7%). This remains descriptive association, not causal evidence.
+
+
+## v285 verification follow-up
+
+A second verification pass corrected two additional edge cases.
+
+### Stable team-relative rank semantics
+
+Team gold, champion-damage and vision ranks now use **competition-rank** semantics:
+
+`1 + number of teammates with a strictly larger value`.
+
+The previous implementation sorted the team and used array position. That could arbitrarily split exact ties based on participant order, potentially placing two equal players on opposite sides of a top-two cutoff. Competition rank keeps tied values tied and makes the resource/output archetypes deterministic.
+
+The current cached ADC/TOP sample contains no exact player ties in gold earned or champion damage, so this correction does not alter the currently observed archetype counts. It prevents incorrect future classifications.
+
+### Fight-position evidence selection
+
+Tracked teamfight absence no longer relies on the first kill event in a cluster that happens to contain coordinates. The analyzer scans positioned kill events in the cluster and accepts the first event for which Riot also supplies a player position frame within 35 seconds.
+
+This remains fail-closed: if no positioned event has temporally bounded player-position evidence, the cluster cannot enter the tracked-absence denominator.
