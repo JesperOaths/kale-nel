@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.158'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.159'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -1134,3 +1134,9 @@ ok(app.includes("if(!d?.analysis_id)throw new Error('Analyzer returned a report 
 ok(app.includes("saveVerified=String(history?.analysis?.id||'')===String(d.analysis_id||'')")&&app.includes('Generated report · save verification pending'), 'fresh report UI must verify persistence before claiming saved');
 ok(app.includes("if(!rebuilt?.analysis_id)throw new Error('Cache rebuild returned no saved analysis ID.')"), 'cache-only rebuilds must require persisted analysis IDs');
 ok(modelDoc.includes('## v282 saved-report persistence verification'), 'analysis documentation must preserve saved-report verification semantics');
+ok(backend.includes('function highResourceDeepBehaviorContrast(')&&backend.includes('minimumEligibleGamesPerCohort:3'), 'deep high-resource cohort comparison must be explicit and denominator-gated');
+ok(backend.includes('preImpactDeathRate:eventRate')&&backend.includes('highUnspentFightStartRate:eventRate')&&backend.includes('trackedFightAbsenceRate:eventRate'), 'deep cohort comparison must include fight execution, readiness and supported absence context');
+ok(backend.includes('resetEconomyLossRate:gameRate')&&backend.includes('resetTimingDeltaVsPeerMin:meanMetric')&&backend.includes('itemSpikeUtilizationRate:gameRate'), 'reset and item-spike cohort metrics must remain in the deep comparison');
+ok(backend.includes('g?.directPeerComparable===true&&g?.firstResetSequence?.measured===true')&&backend.includes('g?.directPeerComparable===true&&g?.itemSpikeWindow?.eligible===true'), 'peer-relative cohort metrics must fail closed without trusted direct peers');
+ok(html.includes('id="highResourceBehaviorContrast"')&&app.includes('function renderHighResourceBehaviorContrast(')&&app.includes('Different rows can have different denominators.'), 'deep behavior contrast must be visible and disclose row-specific denominators');
+ok(modelDoc.includes('## v283 deep high-resource behavior contrast'), 'analysis documentation must preserve deep cohort contrast semantics');
