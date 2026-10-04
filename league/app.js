@@ -1349,7 +1349,7 @@ function renderHighResourceBehaviorContrast(r){
   const host=$('highResourceBehaviorContrast'),m=r?.highResourceBehaviorContrast||null;
   if(!host)return;
   if(!m||m.usable!==true){host.hidden=true;host.innerHTML='';return;}
-  const a=m.converted||{},b=m.lowerDamage||{},minN=Number(m.minimumEligibleGamesPerCohort||3);
+  const a=m.converted||{},b=m.lowerDamage||{},minN=Number(m.minimumEligibleGamesPerCohort||3),minEventOpp=Number(m.minimumEventOpportunitiesPerCohort||5);
   const metricRows=[
     {label:'Pre-impact deaths / active fights',key:'preImpactDeathRate',unit:'percent',note:'death before tracked contribution'},
     {label:'≥1000g unspent fight starts',key:'highUnspentFightStartRate',unit:'percent',note:'active-fight readiness'},
@@ -1360,8 +1360,7 @@ function renderHighResourceBehaviorContrast(r){
     {label:'Earlier-item window used',key:'itemSpikeUtilizationRate',unit:'percent',note:'trusted eligible item-spike windows only'},
     {label:'Death before earlier-item impact',key:'itemSpikeDeathBeforeImpactRate',unit:'percent',note:'trusted eligible item-spike windows only'},
     {label:'Death downtime',key:'deadTimePct',unit:'percent',note:'whole-game availability'},
-    {label:'Turret damage / min',key:'turretDamagePerMin',unit:'dpm',note:'structure-pressure context'},
-    {label:'Damage share − gold share',key:'damageEfficiencyPp',unit:'pp',note:'composition-sensitive output magnitude'}
+    {label:'Turret damage / min',key:'turretDamagePerMin',unit:'dpm',note:'structure-pressure context'}
   ];
   const valueText=(obj,unit)=>{
     if(!obj||!hasNum(obj.value))return'n/a';
@@ -1378,14 +1377,14 @@ function renderHighResourceBehaviorContrast(r){
     return g+' games';
   };
   const rows=metricRows.map(spec=>{
-    const av=a?.[spec.key],bv=b?.[spec.key],aN=Number(av?.eligibleGames||0),bN=Number(bv?.eligibleGames||0),eligible=aN>=minN&&bN>=minN&&hasNum(av?.value)&&hasNum(bv?.value);
+    const av=a?.[spec.key],bv=b?.[spec.key],aN=Number(av?.eligibleGames||0),bN=Number(bv?.eligibleGames||0),eventBased=String(av?.basis||'')==='event'||String(bv?.basis||'')==='event',eventEnough=!eventBased||(Number(av?.opportunities||0)>=minEventOpp&&Number(bv?.opportunities||0)>=minEventOpp),eligible=aN>=minN&&bN>=minN&&eventEnough&&hasNum(av?.value)&&hasNum(bv?.value);
     if(!eligible)return'';
     const delta=Number(bv.value)-Number(av.value),deltaText=spec.unit==='percent'||spec.unit==='pp'?signed(delta,1)+' pp':spec.unit==='minutes'?signed(delta,2)+' min':spec.unit==='dpm'?signed(delta,0)+' DPM':signed(delta,2);
     return '<div class="behavior-contrast-row"><div><b>'+esc(spec.label)+'</b><small>'+esc(spec.note)+'</small></div><div><span>'+esc(valueText(av,spec.unit))+'</span><small>'+esc(denom(av))+'</small></div><div><span>'+esc(valueText(bv,spec.unit))+'</span><small>'+esc(denom(bv))+'</small></div><div><span>'+esc(deltaText)+'</span><small>lower-damage minus converted</small></div></div>';
   }).filter(Boolean);
   if(!rows.length){host.hidden=true;host.innerHTML='';return;}
   host.hidden=false;
-  host.innerHTML='<div class="section-subhead"><div><span>Deep behavior contrast</span><strong>What differs between your high-resource games?</strong></div><small>Only rows with at least '+minN+' eligible games in each cohort are shown. Different rows can have different denominators.</small></div>'+
+  host.innerHTML='<div class="section-subhead"><div><span>Deep behavior contrast</span><strong>What differs between your high-resource games?</strong></div><small>Rows need at least '+minN+' eligible games per cohort; event-rate rows also need at least '+minEventOpp+' supported opportunities per cohort. Different rows can have different denominators.</small></div>'+
     '<div class="behavior-contrast-head"><span>Metric</span><span>'+esc(a.label||'Converted')+' · '+Number(a.games||0)+' games</span><span>'+esc(b.label||'Lower damage')+' · '+Number(b.games||0)+' games</span><span>Difference</span></div>'+
     rows.join('')+
     '<p class="source-note">These are within-player associations in the deep selected-role sample. They identify replay questions, not causes. Trusted-peer metrics fail closed when direct-role comparison evidence is unavailable.</p>';
@@ -1467,14 +1466,14 @@ function renderLongHorizon(r){
       contrast.innerHTML='';
       if(laner&&Number(matrix.eligibleGames||0)){
         const highHigh=cats.find(x=>String(x?.key||'')==='high_resource_high_damage'),highLow=cats.find(x=>String(x?.key||'')==='high_resource_lower_damage');
-        const nA=Number(highHigh?.games||0),nB=Number(highLow?.games||0);
-        if(nA>=5&&nB>=5&&hasNum(highHigh?.winRate)&&hasNum(highLow?.winRate)){
-          const wrGap=Number(highHigh.winRate)-Number(highLow.winRate);
+        const nA=Number(highHigh?.games||0),nB=Number(highLow?.games||0),cleanA=Number(highHigh?.cleanGames||0),cleanB=Number(highLow?.cleanGames||0);
+        if(cleanA>=5&&cleanB>=5&&hasNum(highHigh?.cleanWinRate)&&hasNum(highLow?.cleanWinRate)){
+          const wrGap=Number(highHigh.cleanWinRate)-Number(highLow.cleanWinRate);
           const dmgGap=hasNum(highHigh?.avgDamageEfficiencyPp)&&hasNum(highLow?.avgDamageEfficiencyPp)?Number(highHigh.avgDamageEfficiencyPp)-Number(highLow.avgDamageEfficiencyPp):null;
           const deadGap=hasNum(highLow?.avgDeadTimePct)&&hasNum(highHigh?.avgDeadTimePct)?Number(highLow.avgDeadTimePct)-Number(highHigh.avgDeadTimePct):null;
-          contrast.innerHTML='<b>High-resource conversion split:</b> '+esc(nA+' high-resource/high-damage games · '+fmtPct(highHigh.winRate)+' WR')+' vs '+esc(nB+' high-resource/lower-damage games · '+fmtPct(highLow.winRate)+' WR')+' · '+esc(signed(wrGap,1)+' pp descriptive win-rate gap')+(hasNum(dmgGap)?' · '+esc(signed(dmgGap,1)+' pp difference in damage-share minus gold-share'):'' )+(hasNum(deadGap)?' · '+esc(signed(deadGap,1)+' pp more death downtime in the lower-damage group'):'')+'. <b>Association only:</b> these groups do not establish that damage conversion caused the result.';
+          contrast.innerHTML='<b>High-resource conversion split:</b> '+esc(nA+' total / '+cleanA+' clean high-resource/high-damage games · '+fmtPct(highHigh.cleanWinRate)+' clean WR')+' vs '+esc(nB+' total / '+cleanB+' clean high-resource/lower-damage games · '+fmtPct(highLow.cleanWinRate)+' clean WR')+' · '+esc(signed(wrGap,1)+' pp descriptive clean win-rate gap')+(hasNum(dmgGap)?' · '+esc(signed(dmgGap,1)+' pp difference in damage-share minus gold-share'):'' )+(hasNum(deadGap)?' · '+esc(signed(deadGap,1)+' pp more death downtime in the lower-damage group'):'')+'. <b>Association only:</b> these groups do not establish that damage conversion caused the result.';
         }else{
-          contrast.textContent='High-resource conversion contrast is withheld until both high-resource groups contain at least 5 games.';
+          contrast.textContent='High-resource outcome contrast is withheld until both groups contain at least 5 clean outcomes (AFK/early-surrender games excluded).';
         }
       }
     }
@@ -1482,7 +1481,7 @@ function renderLongHorizon(r){
       if(!laner||!Number(matrix.eligibleGames||0))grid.innerHTML='';
       else{
         grid.innerHTML=cats.map(x=>{
-          const n=Number(x?.games||0),share=hasNum(x?.share)?fmtPct(x.share):'n/a',wr=n>=3&&hasNum(x?.winRate)?' · '+fmtPct(x.winRate)+' WR':' · WR withheld (n<3)';
+          const n=Number(x?.games||0),cleanN=Number(x?.cleanGames||0),share=hasNum(x?.share)?fmtPct(x.share):'n/a',wr=cleanN>=3&&hasNum(x?.cleanWinRate)?' · '+fmtPct(x.cleanWinRate)+' clean WR (n='+cleanN+')':' · clean WR withheld (n<3)';
           const lowerDamage=String(x?.key||'').includes('lower_damage');
           const deadCtx=lowerDamage&&Number(x?.deadTimeComparableGames||0)>0
             ?String(x.aboveMedianDeadTimeGames||0)+' / '+String(x.deadTimeComparableGames||0)+' above your '+fmt(matrix.deadTimeMedian,1)+'% death-downtime median'
