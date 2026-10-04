@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends analysis with a 100-game role scan, evidence-backed Last-20 deep coaching, long-horizon trends and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261004-league-web-v292">
+  <link rel="stylesheet" href="/league/styles.css?v=20261004-league-web-v293">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261002-public-bootstrap-r4"></script>
 </head>
@@ -201,7 +201,7 @@
         <section class="panel practice-panel" id="practice-plan">
           <div class="section-head">
             <div><p class="eyebrow">Turn insight into play</p><h2>Next 5 games</h2></div>
-            <span class="section-hint">The actionable plan sits directly under the report driver so diagnosis immediately becomes a practice rule, target and replay cue.</span>
+            <span class="section-hint">The actionable plan sits directly under the report driver. Targets start with five comparable new games; rare-opportunity measures can extend until their evidence floor is reached, capped at 20.</span>
           </div>
           <div class="practice-grid" id="practicePlan"></div>
         </section>
@@ -236,6 +236,11 @@
             <div class="section-subhead"><div><span>Long-horizon consistency</span><strong>Typical range across the whole role history</strong></div><small>Median and middle 50% reduce the influence of one extreme game.</small></div>
             <div class="quality-grid consistency-grid" id="historyConsistency"></div>
           </div>
+          <div class="consistency-summary-wrap long-outcome-wrap">
+            <div class="section-subhead"><div><span>100-game outcome fingerprint</span><strong>Which match-level traits separate wins from losses over the longer history?</strong></div><small>Directional color requires at least 5 clean wins and 5 clean losses. Otherwise the broader split is shown as neutral context only.</small></div>
+            <div class="outcome-fingerprint-grid" id="longOutcomeFingerprint"></div>
+            <p class="source-note" id="longOutcomeFingerprintNote"></p>
+          </div>
           <div class="consistency-summary-wrap" id="resourceOutputArchetypesWrap" hidden>
             <div class="section-subhead"><div><span>Resource → output archetypes</span><strong>What kind of carry games keep appearing?</strong></div><small>Exclusive team-relative gold/damage groups. Lower-damage groups also show overlap with above-your-own-median death downtime or turret pressure; overlap is context, not proof of cause.</small></div>
             <div class="source-note" id="resourceOutputContrast"></div>
@@ -244,8 +249,9 @@
             <div class="archetype-detail" id="resourceOutputArchetypeDetail" hidden></div>
           </div>
           <div class="visual-summary-block">
-            <h3>Champion mix behind this role history</h3>
-            <div id="historyChampionMix" class="game-visual-strip"></div>
+            <h3>Champion-conditioned role history</h3>
+            <p class="section-intro">Reviewed-account performance grouped by the champion you played. Clean win rate is withheld below 3 clean outcomes; every other metric shows its own contributing n.</p>
+            <div id="historyChampionMix" class="history-champion-grid"></div>
           </div>
           <p class="source-note" id="longHorizonNote"></p>
         </section>
@@ -574,7 +580,7 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/learning-review.js?v=20261004-league-web-v292" defer></script>
-  <script src="/league/app.js?v=20261004-league-web-v292" defer></script>
+  <script src="/league/learning-review.js?v=20261004-league-web-v293" defer></script>
+  <script src="/league/app.js?v=20261004-league-web-v293" defer></script>
 </body>
 </html>
