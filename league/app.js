@@ -1337,7 +1337,7 @@ function archetypeDeepDiagnostic(g,matrix){
 function renderLongHorizon(r){
   const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),stability=$('historyStabilityTrend'),consistency=$('historyConsistency'),champions=$('historyChampionMix'),note=$('longHorizonNote');if(!kpi||!trend)return;
   const s=h.summary||{},role=canonicalRole(h.selectedRole||r?.dataQuality?.selectedRole||state.selectedRole),games=Number(h.sampleGames||0);
-  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';const aw=$('resourceOutputArchetypesWrap'),ag=$('resourceOutputArchetypes'),ad=$('resourceOutputArchetypeDetail');if(aw)aw.hidden=true;if(ag)ag.innerHTML='';if(ad){ad.hidden=true;ad.innerHTML='';}if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
+  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';const aw=$('resourceOutputArchetypesWrap'),ac=$('resourceOutputContrast'),ag=$('resourceOutputArchetypes'),ad=$('resourceOutputArchetypeDetail');if(aw)aw.hidden=true;if(ac)ac.innerHTML='';if(ag)ag.innerHTML='';if(ad){ad.hidden=true;ad.innerHTML='';}if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
   const laner=['ADC','MID','TOP'].includes(role),roleCounts=h.roleCounts||{},otherRoleGames=Object.entries(roleCounts).reduce((n,[rk,count])=>n+(canonicalRole(rk)!==role?Number(count||0):0),0);
   const roleVolume=laner
     ?{label:'Lane minions @10',value:hasNum(s?.laneCs10?.value)?fmt(s.laneCs10.value,1):'n/a',sub:String(s?.laneCs10?.n||0)+' Riot match-level lane observations'}
@@ -1403,9 +1403,24 @@ function renderLongHorizon(r){
     consistency.innerHTML=specs.map(x=>historyDistributionCard(x.label,x.obj,x.unit)).join('');
   }
   {
-    const wrap=$('resourceOutputArchetypesWrap'),grid=$('resourceOutputArchetypes'),detail=$('resourceOutputArchetypeDetail'),matrix=h.resourceOutputArchetypes||{},cats=Array.isArray(matrix.categories)?matrix.categories:[];
+    const wrap=$('resourceOutputArchetypesWrap'),contrast=$('resourceOutputContrast'),grid=$('resourceOutputArchetypes'),detail=$('resourceOutputArchetypeDetail'),matrix=h.resourceOutputArchetypes||{},cats=Array.isArray(matrix.categories)?matrix.categories:[];
     if(wrap)wrap.hidden=!laner||!Number(matrix.eligibleGames||0);
     if(detail){detail.hidden=true;detail.innerHTML='';}
+    if(contrast){
+      contrast.innerHTML='';
+      if(laner&&Number(matrix.eligibleGames||0)){
+        const highHigh=cats.find(x=>String(x?.key||'')==='high_resource_high_damage'),highLow=cats.find(x=>String(x?.key||'')==='high_resource_lower_damage');
+        const nA=Number(highHigh?.games||0),nB=Number(highLow?.games||0);
+        if(nA>=5&&nB>=5&&hasNum(highHigh?.winRate)&&hasNum(highLow?.winRate)){
+          const wrGap=Number(highHigh.winRate)-Number(highLow.winRate);
+          const dmgGap=hasNum(highHigh?.avgDamageEfficiencyPp)&&hasNum(highLow?.avgDamageEfficiencyPp)?Number(highHigh.avgDamageEfficiencyPp)-Number(highLow.avgDamageEfficiencyPp):null;
+          const deadGap=hasNum(highLow?.avgDeadTimePct)&&hasNum(highHigh?.avgDeadTimePct)?Number(highLow.avgDeadTimePct)-Number(highHigh.avgDeadTimePct):null;
+          contrast.innerHTML='<b>High-resource conversion split:</b> '+esc(nA+' high-resource/high-damage games · '+fmtPct(highHigh.winRate)+' WR')+' vs '+esc(nB+' high-resource/lower-damage games · '+fmtPct(highLow.winRate)+' WR')+' · '+esc(signed(wrGap,1)+' pp descriptive win-rate gap')+(hasNum(dmgGap)?' · '+esc(signed(dmgGap,1)+' pp difference in damage-share minus gold-share'):'' )+(hasNum(deadGap)?' · '+esc(signed(deadGap,1)+' pp more death downtime in the lower-damage group'):'')+'. <b>Association only:</b> these groups do not establish that damage conversion caused the result.';
+        }else{
+          contrast.textContent='High-resource conversion contrast is withheld until both high-resource groups contain at least 5 games.';
+        }
+      }
+    }
     if(grid){
       if(!laner||!Number(matrix.eligibleGames||0))grid.innerHTML='';
       else{
