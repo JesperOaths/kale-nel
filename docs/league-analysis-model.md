@@ -3365,3 +3365,8 @@ Frontend `20261004-league-web-v289` adds the recurring Support-player table and 
 Analyzer `league-web-behavior-v4.165` tightens the recurring Support-player view after production validation. A human Support player must now appear in at least **two shared matches** before receiving a row; one-off solo-queue teammates are omitted from that table. The five-clean-game established ranking floor is unchanged.
 
 The 3–4 clean-game tier is now called a **developing sample**, not a “promising” sample. This is intentionally outcome-neutral: a 3-game 0–3 record and a 3-game 3–0 record are both medium-sized samples that are too small to be promoted to the established ranking. Frontend `20261004-league-web-v290` remains backward-compatible with saved v4.164 reports that used the old internal `promising` tier label.
+
+
+### v291 readability regression guard
+
+The recurring Support-player champion-pool chips were the only post-v288 component that reintroduced text below the page-wide readable floor. They now use 0.9rem text and a larger line height. Frontend `20261004-league-web-v291` cache-busts this correction, and the web contract now prevents that chip text from shrinking again.

@@ -84,7 +84,7 @@ assert.ok(app.includes("x?.sampleTier==='developing'||x?.sampleTier==='promising
 assert.ok(!api.includes('allySupportPuuid'),'Support-player analysis must not expose allied PUUIDs in the report contract');
 assert.ok(app.includes('function renderSupportSynergy')&&app.includes('Recent form · latest 5 vs prior games'),'Frontend must expose support synergy and concrete recent-form evidence');
 assert.ok(app.includes("$('supportPlayerSynergy')")&&html.includes('id="supportPlayerSynergy"'),'Frontend must expose recurring human Support-player review separately from support-champion review');
-assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261004-league-web-v290'),'Support synergy panel and frontend cache-bust must be present');
+assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261004-league-web-v291'),'Support synergy panel and frontend cache-bust must be present');
 assert.ok(!api.includes('aboveOwnDeadTimeMedian:lower&&')&&!api.includes('aboveOwnTurretMedian:lower&&'),'Resource/output exemplar annotations must not reference the exemplarScore-local lower variable');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
@@ -858,8 +858,9 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261004-league-web-v290'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261004-league-web-v291'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('v285 — semantic color hierarchy for faster report scanning')&&css.includes('--league-teal:#176d70')&&css.includes('--league-purple:#684696'),'League report must retain the semantic section color system');
+assert.ok(css.includes('.support-pool-chip')&&css.includes('font-size:.9rem!important'),'Recurring Support-player champion chips must obey the League readable-text floor');
 assert.ok(css.includes('archetype-card[data-archetype-key="high_resource_high_damage"]')&&css.includes('archetype-card[data-archetype-key="high_resource_lower_damage"]'),'Resource/output archetypes must remain visually distinguishable');
 assert.ok(css.includes('.games-table tr.game-row:has(.result.win)>td')&&css.includes('.games-table tr.game-row:has(.result.loss)>td'),'Evidence table wins and losses must remain visually scannable');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
