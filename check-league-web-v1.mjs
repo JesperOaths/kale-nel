@@ -72,7 +72,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.158'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.159'),'League backend contract must identify the current role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'),'Negative conversion coaching must require both supported and team-only conversion to be absent');
 assert.ok(api.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'),'Nullish conversion fallback must be parenthesized so Deno/TypeScript parses it unambiguously');
 assert.ok(api.includes('"You were present for repeated post-kill conversions"'),'Positive conversion coaching must describe supported player presence rather than assigning team-only credit');
@@ -845,7 +845,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261004-league-web-v282'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261004-league-web-v283'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League report must use the balanced 1760px shell rather than edge-to-edge ultrawide sizing');
 assert.ok(!css.includes('width:min(1820px')&&!css.includes('width:min(1960px'),'Retired over-wide League desktop shells must not return');
 assert.ok(app.includes('Game 3+ gold @15 delta'));
@@ -1341,3 +1341,9 @@ assert.ok(app.includes("if(!d?.analysis_id)throw new Error('Analyzer returned a 
 assert.ok(app.includes("saveVerified=String(history?.analysis?.id||'')===String(d.analysis_id||'')")&&app.includes('Generated report · save verification pending'),'Fresh report UI must verify retrievable persistence before claiming saved');
 assert.ok(app.includes("if(!rebuilt?.analysis_id)throw new Error('Cache rebuild returned no saved analysis ID.')"),'Cache-only report rebuild must also require persistence confirmation');
 assert.ok(modelDoc.includes('## v282 saved-report persistence verification'),'Saved-report verification semantics must remain documented');
+assert.ok(api.includes('function highResourceDeepBehaviorContrast(')&&api.includes('minimumEligibleGamesPerCohort:3'),'Deep high-resource cohort comparison must be explicit and denominator-gated');
+assert.ok(api.includes('preImpactDeathRate:eventRate')&&api.includes('highUnspentFightStartRate:eventRate')&&api.includes('trackedFightAbsenceRate:eventRate'),'Deep cohort comparison must include fight execution, readiness and supported absence context');
+assert.ok(api.includes('resetEconomyLossRate:gameRate')&&api.includes('resetTimingDeltaVsPeerMin:meanMetric')&&api.includes('itemSpikeUtilizationRate:gameRate'),'Reset and item-spike cohort metrics must remain in the deep comparison');
+assert.ok(api.includes('g?.directPeerComparable===true&&g?.firstResetSequence?.measured===true')&&api.includes('g?.directPeerComparable===true&&g?.itemSpikeWindow?.eligible===true'),'Peer-relative cohort metrics must fail closed without trusted direct peers');
+assert.ok(html.includes('id="highResourceBehaviorContrast"')&&app.includes('function renderHighResourceBehaviorContrast(')&&app.includes('Different rows can have different denominators.'),'Deep behavior contrast must be visible and disclose row-specific denominators');
+assert.ok(modelDoc.includes('## v283 deep high-resource behavior contrast'),'Deep cohort contrast semantics must remain documented');
