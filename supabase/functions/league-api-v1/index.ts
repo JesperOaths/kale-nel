@@ -1550,7 +1550,7 @@ function outcomeStreakSummary(games:any[]){
 }
 function highResourceDeepBehaviorContrast(games:any[],primaryRole:string){
   if(!["ADC","MID","TOP"].includes(primaryRole))return null;
-  const eligible=(games||[]).filter((g:any)=>g?.timelineAvailable===true&&hasNum(g?.goldRank)&&Number(g.goldRank)<=2&&hasNum(g?.damageRank));
+  const timelineHighResource=(games||[]).filter((g:any)=>g?.timelineAvailable===true&&hasNum(g?.goldRank)&&Number(g.goldRank)<=2&&hasNum(g?.damageRank)),eligible=timelineHighResource.filter((g:any)=>g?.outcomeCompromised!==true);
   const group=(key:string,label:string,damageTop2:boolean)=>{
     const rows=eligible.filter((g:any)=>(Number(g.damageRank)<=2)===damageTop2);
     const eventRate=(eventFn:(g:any)=>number,oppFn:(g:any)=>number,gameEligible:(g:any)=>boolean=()=>true)=>{
@@ -1583,7 +1583,7 @@ function highResourceDeepBehaviorContrast(games:any[],primaryRole:string){
   };
   const converted=group("high_resource_high_damage","Top-2 gold + top-2 damage",true),lower=group("high_resource_lower_damage","Top-2 gold + lower damage",false);
   const usable=converted.games>=3&&lower.games>=3;
-  return{usable,minimumEligibleGamesPerCohort:3,minimumEventOpportunitiesPerCohort:5,deepEligibleGames:eligible.length,converted,lowerDamage:lower,definition:"Deep selected-role timeline comparison between high-resource games split by top-2 team champion-damage outcome. Metric rows retain their own eligible-game/opportunity denominators; event-rate rows require at least five opportunities per cohort in the frontend; trusted-peer metrics fail closed without a comparable direct role peer, and item-disadvantage fight starts additionally require exact-patch item mechanics. Descriptive association only."};
+  return{usable,minimumEligibleGamesPerCohort:3,minimumEventOpportunitiesPerCohort:5,deepEligibleGames:eligible.length,excludedCompromisedDeepGames:Math.max(0,timelineHighResource.length-eligible.length),converted,lowerDamage:lower,definition:"Deep selected-role timeline comparison between clean high-resource games split by top-2 team champion-damage outcome. AFK/early-surrender outcomes are excluded. Metric rows retain their own eligible-game/opportunity denominators; event-rate rows require at least five opportunities per cohort in the frontend; trusted-peer metrics fail closed without a comparable direct role peer, and item-disadvantage fight starts additionally require exact-patch item mechanics. Descriptive association only."};
 }
 function longHorizonModel(allGames:any[],primaryRole:string){
   const history=[...(allGames||[])].sort((a:any,b:any)=>Number(b?.gameStartTimestamp||0)-Number(a?.gameStartTimestamp||0)).slice(0,ANALYSIS_HISTORY_TARGET_GAMES),recent=history.slice(0,20),prior=history.slice(20,40),older=history.slice(40);
@@ -1623,13 +1623,13 @@ function longHorizonModel(allGames:any[],primaryRole:string){
         return dead+turret+rankGap;
       };
       const examples=[...rows].sort((a:any,b:any)=>exemplarScore(b)-exemplarScore(a)||Number(b?.gameStartTimestamp||0)-Number(a?.gameStartTimestamp||0)).slice(0,8).map((g:any)=>({
-        matchId:text(g?.matchId),gameStartTimestamp:Number(g?.gameStartTimestamp||0),champion:text(g?.champion)||"Unknown",win:g?.win===true,
+        matchId:text(g?.matchId),gameStartTimestamp:Number(g?.gameStartTimestamp||0),champion:text(g?.champion)||"Unknown",win:g?.win===true,outcomeCompromised:g?.outcomeCompromised===true,
         goldRank:hasNum(g?.goldRank)?Number(g.goldRank):null,damageRank:hasNum(g?.damageRank)?Number(g.damageRank):null,goldShare:hasNum(g?.goldShare)?Number(g.goldShare):null,damageShare:hasNum(g?.damageShare)?Number(g.damageShare):null,damageEfficiencyPp:hasNum(g?.damageEfficiencyPp)?Number(g.damageEfficiencyPp):null,dpm:hasNum(g?.dpm)?Number(g.dpm):null,
         deadTimePct:hasNum(g?.deadTimePct)?Number(g.deadTimePct):null,turretDamagePerMin:hasNum(g?.turretDamagePerMin)?Number(g.turretDamagePerMin):null,
         timelineAvailable:g?.timelineAvailable===true,aboveOwnDeadTimeMedian:lower&&hasNum(deadMedian)&&hasNum(g?.deadTimePct)?Number(g.deadTimePct)>Number(deadMedian):null,
         aboveOwnTurretMedian:lower&&hasNum(turretMedian)&&hasNum(g?.turretDamagePerMin)?Number(g.turretDamagePerMin)>Number(turretMedian):null
       }));
-      return{key,label,games:rows.length,share:pct(rows.length,eligible.length),wins,winRate:pct(wins,rows.length),cleanGames:cleanRows.length,cleanWins,cleanWinRate:pct(cleanWins,cleanRows.length),avgGoldShare:meanField(finiteGames(rows,g=>g.goldShare),g=>g.goldShare),avgDamageShare:meanField(finiteGames(rows,g=>g.damageShare),g=>g.damageShare),avgDamageEfficiencyPp:meanField(finiteGames(rows,g=>g.damageEfficiencyPp),g=>g.damageEfficiencyPp),avgDpm:meanField(finiteGames(rows,g=>g.dpm),g=>g.dpm),avgDeadTimePct:meanField(finiteGames(rows,g=>g.deadTimePct),g=>g.deadTimePct),avgTurretDamagePerMin:meanField(finiteGames(rows,g=>g.turretDamagePerMin),g=>g.turretDamagePerMin),aboveMedianDeadTimeGames:highDead,deadTimeComparableGames:deadRows.length,aboveMedianTurretPressureGames:highTurret,turretComparableGames:turretRows.length,examples};
+      return{key,label,games:rows.length,share:pct(rows.length,eligible.length),wins,winRate:pct(wins,rows.length),cleanGames:cleanRows.length,cleanWins,cleanWinRate:pct(cleanWins,cleanRows.length),cleanAvgDamageEfficiencyPp:meanField(finiteGames(cleanRows,g=>g.damageEfficiencyPp),g=>g.damageEfficiencyPp),cleanAvgDeadTimePct:meanField(finiteGames(cleanRows,g=>g.deadTimePct),g=>g.deadTimePct),avgGoldShare:meanField(finiteGames(rows,g=>g.goldShare),g=>g.goldShare),avgDamageShare:meanField(finiteGames(rows,g=>g.damageShare),g=>g.damageShare),avgDamageEfficiencyPp:meanField(finiteGames(rows,g=>g.damageEfficiencyPp),g=>g.damageEfficiencyPp),avgDpm:meanField(finiteGames(rows,g=>g.dpm),g=>g.dpm),avgDeadTimePct:meanField(finiteGames(rows,g=>g.deadTimePct),g=>g.deadTimePct),avgTurretDamagePerMin:meanField(finiteGames(rows,g=>g.turretDamagePerMin),g=>g.turretDamagePerMin),aboveMedianDeadTimeGames:highDead,deadTimeComparableGames:deadRows.length,aboveMedianTurretPressureGames:highTurret,turretComparableGames:turretRows.length,examples};
     };
     return{eligibleGames:eligible.length,deadTimeMedian:deadMedian,turretDamagePerMinMedian:turretMedian,categories:[
       pack("high_resource_high_damage","Top-2 gold + top-2 damage",(g:any)=>Number(g.goldRank)<=2&&Number(g.damageRank)<=2),
