@@ -1326,6 +1326,7 @@ function historyStabilityCard(label,obj,unit='num',inverse=false,medianThreshold
 }
 function archetypeDeepDiagnostic(g,matrix){
   if(!g||g.timelineAvailable!==true)return{key:'match_only',label:'Match-level history only',tone:'neutral',copy:'No deep timeline diagnosis is available for this older history game.'};
+  if(g.outcomeCompromised===true)return{key:'outcome_compromised',label:'Outcome compromised',tone:'neutral',copy:'AFK/early-surrender context is present, so this game is not used to infer a clean resource-to-output outcome pattern.'};
   const fight=g.fightProfile||{},active=Number(fight.active??fight.attended??0),pre=Number(fight.diedBeforeContribution||0),highUnspent=Number(fight.highUnspentStarts||0),itemDisadvantage=Number(fight.itemDisadvantageStarts||0);
   if(active>0&&pre>0)return{key:'pre_impact_deaths',label:'Pre-impact fight deaths',tone:'bad',copy:pre+' of '+active+' active fight'+(active===1?'':'s')+' ended in death before tracked contribution.'};
   if(active>0&&(highUnspent>0||itemDisadvantage>0)){
@@ -1384,7 +1385,7 @@ function renderHighResourceBehaviorContrast(r){
   }).filter(Boolean);
   if(!rows.length){host.hidden=true;host.innerHTML='';return;}
   host.hidden=false;
-  host.innerHTML='<div class="section-subhead"><div><span>Deep behavior contrast</span><strong>What differs between your high-resource games?</strong></div><small>Rows need at least '+minN+' eligible games per cohort; event-rate rows also need at least '+minEventOpp+' supported opportunities per cohort. Different rows can have different denominators.</small></div>'+
+  host.innerHTML='<div class="section-subhead"><div><span>Deep behavior contrast</span><strong>What differs between your high-resource games?</strong></div><small>Clean deep outcomes only'+(Number(m.excludedCompromisedDeepGames||0)?' · '+Number(m.excludedCompromisedDeepGames||0)+' AFK/early-surrender game'+(Number(m.excludedCompromisedDeepGames||0)===1?'':'s')+' excluded':'')+'. Rows need at least '+minN+' eligible games per cohort; event-rate rows also need at least '+minEventOpp+' supported opportunities per cohort. Different rows can have different denominators.</small></div>'+
     '<div class="behavior-contrast-head"><span>Metric</span><span>'+esc(a.label||'Converted')+' · '+Number(a.games||0)+' games</span><span>'+esc(b.label||'Lower damage')+' · '+Number(b.games||0)+' games</span><span>Difference</span></div>'+
     rows.join('')+
     '<p class="source-note">These are within-player associations in the deep selected-role sample. They identify replay questions, not causes. Trusted-peer metrics fail closed when direct-role comparison evidence is unavailable.</p>';
@@ -1469,8 +1470,8 @@ function renderLongHorizon(r){
         const nA=Number(highHigh?.games||0),nB=Number(highLow?.games||0),cleanA=Number(highHigh?.cleanGames||0),cleanB=Number(highLow?.cleanGames||0);
         if(cleanA>=5&&cleanB>=5&&hasNum(highHigh?.cleanWinRate)&&hasNum(highLow?.cleanWinRate)){
           const wrGap=Number(highHigh.cleanWinRate)-Number(highLow.cleanWinRate);
-          const dmgGap=hasNum(highHigh?.avgDamageEfficiencyPp)&&hasNum(highLow?.avgDamageEfficiencyPp)?Number(highHigh.avgDamageEfficiencyPp)-Number(highLow.avgDamageEfficiencyPp):null;
-          const deadGap=hasNum(highLow?.avgDeadTimePct)&&hasNum(highHigh?.avgDeadTimePct)?Number(highLow.avgDeadTimePct)-Number(highHigh.avgDeadTimePct):null;
+          const dmgGap=hasNum(highHigh?.cleanAvgDamageEfficiencyPp)&&hasNum(highLow?.cleanAvgDamageEfficiencyPp)?Number(highHigh.cleanAvgDamageEfficiencyPp)-Number(highLow.cleanAvgDamageEfficiencyPp):null;
+          const deadGap=hasNum(highLow?.cleanAvgDeadTimePct)&&hasNum(highHigh?.cleanAvgDeadTimePct)?Number(highLow.cleanAvgDeadTimePct)-Number(highHigh.cleanAvgDeadTimePct):null;
           contrast.innerHTML='<b>High-resource conversion split:</b> '+esc(nA+' total / '+cleanA+' clean high-resource/high-damage games · '+fmtPct(highHigh.cleanWinRate)+' clean WR')+' vs '+esc(nB+' total / '+cleanB+' clean high-resource/lower-damage games · '+fmtPct(highLow.cleanWinRate)+' clean WR')+' · '+esc(signed(wrGap,1)+' pp descriptive clean win-rate gap')+(hasNum(dmgGap)?' · '+esc(signed(dmgGap,1)+' pp difference in damage-share minus gold-share'):'' )+(hasNum(deadGap)?' · '+esc(signed(deadGap,1)+' pp more death downtime in the lower-damage group'):'')+'. <b>Association only:</b> these groups do not establish that damage conversion caused the result.';
         }else{
           contrast.textContent='High-resource outcome contrast is withheld until both groups contain at least 5 clean outcomes (AFK/early-surrender games excluded).';
@@ -1501,7 +1502,7 @@ function renderLongHorizon(r){
           detail.hidden=false;
           const rows=examples.map((x,i)=>{
             const deepMatch=(r.games||[]).find(g=>String(g?.matchId||'')===String(x?.matchId||'')),canOpen=!!deepMatch;
-            const overlap=[x?.aboveOwnDeadTimeMedian===true?'above own death-downtime median':'',x?.aboveOwnTurretMedian===true?'above own turret-DPM median':''].filter(Boolean).join(' · ');
+            const overlap=[x?.outcomeCompromised===true?'AFK/early-surrender outcome context':'',x?.aboveOwnDeadTimeMedian===true?'above own death-downtime median':'',x?.aboveOwnTurretMedian===true?'above own turret-DPM median':''].filter(Boolean).join(' · ');
             const shareGap=hasNum(x?.goldShare)&&hasNum(x?.damageShare)?fmt(x.goldShare,1)+'% gold → '+fmt(x.damageShare,1)+'% damage'+(hasNum(x?.damageEfficiencyPp)?' ('+signed(x.damageEfficiencyPp,1)+' pp)':''):'share data n/a';
             const diagnostic=String(cat?.key||'')==='high_resource_lower_damage'&&deepMatch?archetypeDeepDiagnostic(deepMatch,matrix):null;
             return '<article class="archetype-example"><div><span>#'+(i+1)+' · '+esc(shortGameDate(x.gameStartTimestamp))+'</span><strong>'+esc((x.win?'Win':'Loss')+' · '+String(x.champion||'Unknown'))+'</strong><small>team gold #'+esc(String(x.goldRank??'?'))+' · team damage #'+esc(String(x.damageRank??'?'))+' · '+esc(shareGap)+' · '+esc(hasNum(x.dpm)?fmtInt(x.dpm)+' DPM':'DPM n/a')+' · '+esc(hasNum(x.deadTimePct)?fmt(x.deadTimePct,1)+'% death downtime':'death downtime n/a')+' · '+esc(hasNum(x.turretDamagePerMin)?fmtInt(x.turretDamagePerMin)+' turret DPM':'turret DPM n/a')+(overlap?' · '+esc(overlap):'')+'</small>'+(diagnostic?'<div class="archetype-diagnostic tone-'+esc(diagnostic.tone)+'"><b>'+esc(diagnostic.label)+'</b><span>'+esc(diagnostic.copy)+'</span></div>':'')+'</div>'+(canOpen?'<button type="button" class="button secondary small" data-open-archetype-match="'+esc(x.matchId||'')+'">Open full evidence</button>':'<span class="archetype-evidence-badge">Match-level history only</span>')+'</article>';
