@@ -216,7 +216,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.157'), 'analysis provenance must identify the current role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.158'), 'analysis provenance must identify the current role-aware champion/matchup revision');
 ok(backend.includes('if(supported===0&&teamOnlyContext===0)add(2,"conversion","Kill windows produced no tracked map conversion"'), 'negative conversion coaching must not fire when team-only map conversion still occurred');
 ok(backend.includes('Number((g.killConversion?.playerSupportedConverted??g.killConversion?.converted)||0)'), 'nullish conversion fallback must remain parenthesized for Deno-safe parsing');
 ok(backend.includes('"You were present for repeated post-kill conversions"'), 'positive conversion coaching must be framed as supported presence, not sole causation');
@@ -1123,3 +1123,7 @@ ok(app.includes('function archetypeDeepDiagnostic(')&&app.includes("key:'pre_imp
 ok(app.includes('active fight')&&app.includes('not proof it caused lower damage')&&app.includes('left unexplained rather than guessed'), 'archetype diagnostics must preserve active-involvement and non-causal evidence boundaries');
 ok(!app.includes("key:'missed_fights'"), 'frontend must not invent missed-fight attribution without a supported attendance denominator');
 ok(modelDoc.includes('## v279 deep archetype review contexts'), 'analysis documentation must preserve deep archetype diagnostic semantics');
+ok(backend.includes('trackedAbsentTeamFights')&&backend.includes('positionSupportedTeamFightClusters')&&backend.includes('absenceEvents.push'), 'fight model must expose position-supported teamfight absence context without contaminating execution rates');
+ok(app.includes("key:'tracked_fight_absence'")&&app.includes('not that joining was necessarily correct'), 'high-resource lower-damage review must use supported absence context without prescriptive overclaiming');
+ok(app.includes("detailCard('Tracked teamfight absences'")&&app.includes('does not claim the player should have joined'), 'per-match fight detail must expose absence evidence and caveat');
+ok(modelDoc.includes('## v280 position-supported teamfight absence'), 'analysis documentation must preserve teamfight-absence semantics');
