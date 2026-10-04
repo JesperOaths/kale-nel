@@ -81,7 +81,7 @@ assert.ok(api.includes('function supportSynergyModel')&&api.includes('wilsonLowe
 assert.ok(!api.includes('allySupportPlayer')&&!api.includes('allySupportStats')&&!api.includes('supportPlayers')&&!api.includes('bestSupportPlayer')&&!api.includes('supportParticipantSnapshot'),'League report must not store or analyze human Support teammate identities or teammate performance metrics');
 assert.ok(!app.includes('supportPlayerSynergy')&&!html.includes('supportPlayerSynergy')&&!html.includes('Recurring support players'),'League UI must not render human Support teammate analytics');
 assert.ok(app.includes('This section analyzes only the reviewed account.'),'Support-champion context must state that analysis belongs only to the reviewed account');
-assert.ok(app.includes("x?.sampleTier==='developing'||x?.sampleTier==='promising'")&&app.includes("'3–4 game sample'"),'Frontend must use neutral medium-sample wording while remaining compatible with v4.164 saved reports');
+assert.ok(app.includes("x.sampleTier==='developing'")&&app.includes('Developing support sample'),'Frontend must keep 3–4 game support-champion samples neutral/contextual rather than presenting them as established');
 assert.ok(!api.includes('allySupportPuuid'),'Support-player analysis must not expose allied PUUIDs in the report contract');
 assert.ok(app.includes('function renderSupportSynergy')&&app.includes('Recent form · latest 5 vs prior games'),'Frontend must expose support synergy and concrete recent-form evidence');
 assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261004-league-web-v292'),'Support synergy panel and frontend cache-bust must be present');
