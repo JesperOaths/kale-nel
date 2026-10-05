@@ -28,7 +28,7 @@ function functionSource(name){
   assert.fail(`${name} must have a complete function body`);
 }
 
-const helperNames=['canonicalRole','explicitGameRole','gameMechanicsKey','reportCoachingGames'];
+const helperNames=['canonicalRole','explicitGameRole','reportSelectedRole','gameMechanicsKey','reportCoachingGames'];
 const context={};
 vm.createContext(context);
 vm.runInContext(`${helperNames.map(functionSource).join('\n')}\nthis.reportCoachingGames=reportCoachingGames;`,context,{filename:'league/app.js#saved-report-cohort-fixture'});

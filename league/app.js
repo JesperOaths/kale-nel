@@ -700,8 +700,11 @@ function normalizeReport(r){
   out.charts=out.charts||{};
   return out;
 }
+function reportSelectedRole(r,fallback=state.selectedRole){
+  return canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||fallback);
+}
 function reportRoleScopeViolations(report,requestedRole){
-  const selected=canonicalRole(requestedRole||report?.dataQuality?.selectedRole||report?.coachingSummary?.primaryRole||report?.summary?.primaryRole||state.selectedRole);
+  const selected=canonicalRole(requestedRole)||reportSelectedRole(report);
   if(!selected)return{selectedRole:null,deep:0,history:0,total:0};
   const deep=(Array.isArray(report?.games)?report.games:[]).filter(g=>explicitGameRole(g?.role)!==selected).length;
   const counts=report?.longHorizon?.roleCounts&&typeof report.longHorizon.roleCounts==='object'?report.longHorizon.roleCounts:{};
@@ -750,7 +753,7 @@ function renderReport(raw,sourceKind){
   $('reportTitle').textContent=p.displayName||p.display_name||state.profile?.display_name||'League account';
   const riotId=[p.gameName||p.game_name,p.tagLine||p.tag_line].filter(Boolean).join('#');
   const rank=p.rank&&p.rank.tier?[p.rank.tier,p.rank.rank,p.rank.leaguePoints!=null?String(p.rank.leaguePoints)+' LP':''].filter(Boolean).join(' '):'';
-  const coachingN=reportCoachingGames(r).length,reportRole=canonicalRole(r.dataQuality?.selectedRole||r.coachingSummary?.primaryRole||s.primaryRole||state.selectedRole);
+  const coachingN=reportCoachingGames(r).length,reportRole=reportSelectedRole(r,s.primaryRole);
   const reportTimes=(r.games||[]).map(g=>gameTimestampMs(g.gameStartTimestamp)).filter(Boolean).sort((a,b)=>a-b),historyN=Number(r?.longHorizon?.sampleGames||0);
   const reportRange=reportTimes.length?(new Date(reportTimes[0]).toLocaleDateString(undefined,{day:'numeric',month:'short'})+' → '+new Date(reportTimes[reportTimes.length-1]).toLocaleDateString(undefined,{day:'numeric',month:'short'})):'';
   $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(rank?rank+' · ':'')+(s.games??r.games.length)+' '+roleLabel(reportRole)+' deep games · '+coachingN+' coaching-comparable'+(historyN>Number(s.games??r.games.length)?' · '+historyN+'-game history':'')+(reportRange?' · '+reportRange:'');
@@ -2719,7 +2722,7 @@ function gameMechanicsKey(g){
   return [rules,revision].join('|');
 }
 function reportCoachingGames(r){
-  const games=Array.isArray(r?.games)?r.games:[],dq=r?.dataQuality||{},rawRole=dq.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||'',selectedRole=rawRole?canonicalRole(rawRole):null;
+  const games=Array.isArray(r?.games)?r.games:[],dq=r?.dataQuality||{},selectedRole=reportSelectedRole(r,'');
   const roleGames=selectedRole?games.filter(g=>explicitGameRole(g?.role)===selectedRole):games;
   if(dq.mechanicsCohortApplied===true&&dq.currentMechanicsKey){
     return roleGames.filter(g=>gameMechanicsKey(g)===String(dq.currentMechanicsKey));
@@ -2727,7 +2730,7 @@ function reportCoachingGames(r){
   return roleGames;
 }
 function gameIsCoachingContext(r,g){
-  const dq=r?.dataQuality||{},rawRole=dq.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||'',selectedRole=rawRole?canonicalRole(rawRole):null;
+  const dq=r?.dataQuality||{},selectedRole=reportSelectedRole(r,'');
   if(selectedRole&&explicitGameRole(g?.role)!==selectedRole)return false;
   return !(dq.mechanicsCohortApplied===true&&dq.currentMechanicsKey&&gameMechanicsKey(g)!==String(dq.currentMechanicsKey));
 }
