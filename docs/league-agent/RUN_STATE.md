@@ -2,18 +2,17 @@
 
 ## Recoverable lease
 
-- status: released
-- owner: OpenClaw main session `agent:main:dashboard:5775c27b-23d2-43a5-990c-40bf3300e6ba`
-- acquired_at: 2026-10-05 22:28 Europe/Amsterdam
-- released_at: 2026-10-05 22:48 Europe/Amsterdam
+- status: active
+- owner: OpenClaw main session `agent:main:dashboard:0da5bedc-856e-4695-9d37-f498c4913039`
+- acquired_at: 2026-10-05 22:55 Europe/Amsterdam
+- heartbeat_at: 2026-10-05 22:55 Europe/Amsterdam
+- lease_expires_at: 2026-10-05 23:55 Europe/Amsterdam
 - trial_expires_at: 2026-10-11 17:03 Europe/Amsterdam
 - worktree: `C:\Users\jespe\Documents\GitHub\kale-nel`
 - branch: `main`
-- base: local `8f361afe`; `origin/main` `72d8f1f4`
-- completed_goal: preserve missing chart evidence and make plotted values directly inspectable
-- result_commit: `0fbb7921`
-- deployment: static Worker run `37370884905` success; backend run `37370884913` success; live v295 verified
-- recoverability: lease is released; later runs should start from the newest local commit and reacquire a fresh lease before changing files.
+- base: local/origin `56097d9e`
+- current_task: remove a stale pre-deployment tail summary that contradicts the verified v295 state
+- recoverability: if this lease expires, verify the diff and current live state before reclaiming it.
 
 ## Current cycle evidence log
 
@@ -148,8 +147,8 @@
 
 ## Deployment state
 
-No deployment was attempted. This cycle changed the static frontend plane (`league/app.js`) plus contract tests; backend/API code was not changed. Production still serves v294 asset markers while earlier local frontend/test/doc commits have not been pushed or deployed; claiming this cycle live or overall live/source parity remains blocked on authorized push/static deploy plus live static asset and relevant behavior verification.
+The latest implementation commit `0fbb7921` is deployed. Static Worker run `37370884905` and backend run `37370884913` succeeded; live `/league/` serves v295 assets and the read-only backend health contract passed. The state-only release commit does not affect a production plane.
 
 ## Next handoff
 
-Start with `git status --short`, verify the latest local commit, then prioritize live/source drift resolution or a newly identified P0/P1/P2 correctness item; the previously listed P2 backlog is complete.
+Start with `git status --short`, verify the latest local commit, and reacquire a fresh lease. The next documented goal is a non-production rendered chart-card DOM fixture for desktop/mobile gap marks, disclosure-table rendering, and keyboard-focus proof.
