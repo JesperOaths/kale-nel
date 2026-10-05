@@ -2,17 +2,18 @@
 
 ## Recoverable lease
 
-- status: active
+- status: released
 - owner: OpenClaw main session `agent:main:dashboard:5775c27b-23d2-43a5-990c-40bf3300e6ba`
 - acquired_at: 2026-10-05 22:28 Europe/Amsterdam
-- heartbeat_at: 2026-10-05 22:28 Europe/Amsterdam
-- lease_expires_at: 2026-10-05 23:28 Europe/Amsterdam
+- released_at: 2026-10-05 22:48 Europe/Amsterdam
 - trial_expires_at: 2026-10-11 17:03 Europe/Amsterdam
 - worktree: `C:\Users\jespe\Documents\GitHub\kale-nel`
 - branch: `main`
 - base: local `8f361afe`; `origin/main` `72d8f1f4`
-- current_task: audit and implement one coherent high-value League interpretability and presentation batch
-- recoverability: if this heartbeat is stale after lease expiry, inspect the worktree and commits before reclaiming; preserve unrelated work.
+- completed_goal: preserve missing chart evidence and make plotted values directly inspectable
+- result_commit: `0fbb7921`
+- deployment: static Worker run `37370884905` success; backend run `37370884913` success; live v295 verified
+- recoverability: lease is released; later runs should start from the newest local commit and reacquire a fresh lease before changing files.
 
 ## Current cycle evidence log
 
@@ -21,6 +22,15 @@
 - 2026-10-05 22:27: fetched origin; local `main` was clean at `8f361afe`, sixteen commits ahead of unchanged `origin/main` `72d8f1f4`.
 - 2026-10-05 22:27: live `/league/` returned HTTP 200 with v294 static asset markers and session-only Riot-key copy.
 - 2026-10-05 22:28: acquired a recoverable one-hour lease for a bounded interpretability and presentation improvement batch.
+- 2026-10-05 22:31: audit identified that chart nulls could be coerced to zero and missing games were removed from x spacing, allowing lines to bridge unsupported observations.
+- 2026-10-05 22:35: implemented null-safe chart values/summaries, chronological gap-preserving segments, missing marks, accessible SVG copy, and collapsible underlying-value tables; cache-busted assets to v295.
+- 2026-10-05 22:36: focused chart fixture, full League analysis contract, League web contract, public-page smoke, active JavaScript syntax (532 files), and `git diff --check` passed.
+- 2026-10-05 22:37: staged and unstaged diffs were inspected; `commit_check` passed; implementation committed as `0fbb7921` and pushed with the prior tested League cycles.
+- 2026-10-05 22:38: backend workflow `37370884913` completed successfully; read-only health returned the expected public `league-api-v1` mode.
+- 2026-10-05 22:43: static Worker workflow `37370884905` completed successfully through deployment and live public League verification.
+- 2026-10-05 22:46: live `/league/` returned HTTP 200 from Worker assets with v295 markers; live app/style bodies contained the gap/table changes; live smoke passed.
+- 2026-10-05 22:47: browser desktop 1441×1000 and narrow 391×844 loaded v295 with zero console errors; narrow width had no horizontal overflow and visible controls retained 44–74px height.
+- 2026-10-05 22:48: updated state/backlog/automation notes and released the lease.
 
 ## Previous cycle evidence log
 
