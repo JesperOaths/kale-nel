@@ -3,18 +3,33 @@
 ## Recoverable lease
 
 - status: released
-- owner: OpenClaw scheduled run `agent:main:subagent:e6fd3152-d572-4f85-899d-16f19f79bd9b`
-- acquired_at: 2026-10-04 21:06 Europe/Amsterdam
-- released_at: 2026-10-04 21:22 Europe/Amsterdam
+- owner: OpenClaw scheduled run `agent:main:subagent:61ed1318-952a-45d5-85bc-3ecd57b85154`
+- acquired_at: 2026-10-05 02:04 Europe/Amsterdam
+- released_at: 2026-10-05 02:18 Europe/Amsterdam
 - trial_expires_at: 2026-10-11 17:03 Europe/Amsterdam
 - worktree: `C:\Users\jespe\Documents\GitHub\kale-nel`
 - branch: `main`
-- base: local `aa347734`; `origin/main` `72d8f1f4`
-- completed_goal: add lightweight public `/league/` smoke for no-login/session-only Riot-key copy
-- result_commit: `f361faf8`
+- base: local `8f4f8763`; `origin/main` `72d8f1f4`
+- completed_goal: improve report Data Quality wording for small samples and unsupported queues
+- result_commit: `78eb8ac0`
 - recoverability: lease is released; later runs should start from the newest local commit and reacquire a fresh lease before changing files.
 
 ## Current cycle evidence log
+
+- 2026-10-05 02:03: scheduled run started before trial expiry.
+- 2026-10-05 02:03: read all League agent state files; prior lease was released.
+- 2026-10-05 02:03: live `/league/` returned HTTP 200 with public League workspace and Riot/session-only copy.
+- 2026-10-05 02:04: fetched origin; local `main` was clean and six commits ahead of unchanged `origin/main` `72d8f1f4`.
+- 2026-10-05 02:04: acquired recoverable one-hour lease for P1 Data Quality wording improvement.
+- 2026-10-05 02:10: updated frontend Data Quality card details to mark thin samples descriptive-only, missing evidence unknown-not-zero, and unsupported queues fail-closed outside coaching/benchmarks.
+- 2026-10-05 02:11: added League web contract assertions for thin/missing/unsupported queue wording.
+- 2026-10-05 02:13: `node check-league-web-v1.mjs` passed and `node scripts/check-league-analysis-contract.mjs` passed.
+- 2026-10-05 02:15: `node scripts/check-league-public-page-smoke.mjs` passed for local markup; `node check-active-js-syntax.mjs` passed for 530 files; `git diff --check` passed.
+- 2026-10-05 02:16: staged and unstaged diffs were inspected; `commit_check` passed.
+- 2026-10-05 02:16: committed frontend/test improvement as `78eb8ac0`; static frontend plane changed but no deployment was attempted.
+- 2026-10-05 02:18: updated state/backlog/automation notes and released the lease.
+
+## Previous cycle evidence log
 
 - 2026-10-04 21:03: scheduled run started before trial expiry.
 - 2026-10-04 21:04: read all League agent state files; prior lease was released.
@@ -61,8 +76,8 @@
 
 ## Deployment state
 
-No deployment was attempted. Production still serves v294 asset markers, but local frontend/test/doc commits have not been pushed or deployed. Deployment remains blocked on an authorized push/deploy plus verification of the static page and any relevant backend/API plane.
+No deployment was attempted. Production still serves v294 asset markers, but local frontend/test/doc commits have not been pushed or deployed. The 2026-10-05 cycle changed `league/app.js`, so deployment remains blocked on an authorized push/deploy plus verification of the static page and any relevant backend/API plane.
 
 ## Next handoff
 
-Start with `git status --short`, verify the latest local commit, then choose the P1 Data Quality wording item unless the user renews or changes priorities.
+Start with `git status --short`, verify the latest local commit, then choose the highest-value remaining P2 item unless a P0/P1 correctness or live/source drift failure appears.
