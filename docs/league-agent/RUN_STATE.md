@@ -2,20 +2,23 @@
 
 ## Recoverable lease
 
-- status: active
+- status: released
 - owner: OpenClaw main session `agent:main:dashboard:0da5bedc-856e-4695-9d37-f498c4913039`
 - acquired_at: 2026-10-05 22:55 Europe/Amsterdam
-- heartbeat_at: 2026-10-05 22:55 Europe/Amsterdam
-- lease_expires_at: 2026-10-05 23:55 Europe/Amsterdam
+- released_at: 2026-10-05 22:58 Europe/Amsterdam
 - trial_expires_at: 2026-10-11 17:03 Europe/Amsterdam
 - worktree: `C:\Users\jespe\Documents\GitHub\kale-nel`
 - branch: `main`
 - base: local/origin `56097d9e`
-- current_task: remove a stale pre-deployment tail summary that contradicts the verified v295 state
-- recoverability: if this lease expires, verify the diff and current live state before reclaiming it.
+- completed_goal: remove stale pre-deployment tail text that contradicted the verified v295 state
+- result_commit: `59c24a6c`
+- deployment: docs-only correction; no production plane changed
+- recoverability: lease is released; later runs should start from the newest local commit and reacquire a fresh lease before changing files.
 
 ## Current cycle evidence log
 
+- 2026-10-05 22:55: direct final inspection confirmed clean local/origin parity at `56097d9e`, re-ran the focused chart/accessibility, analysis, and web contracts successfully, and found one stale v294 deployment summary at the end of this file.
+- 2026-10-05 22:58: corrected the stale deployment/handoff summary in docs-only commit `59c24a6c` and released the short recovery lease; no production plane changed.
 - 2026-10-05 22:26: manual full-cycle run started before trial expiry.
 - 2026-10-05 22:27: read both required maintenance skills and every file under `docs/league-agent/`; prior lease was released.
 - 2026-10-05 22:27: fetched origin; local `main` was clean at `8f361afe`, sixteen commits ahead of unchanged `origin/main` `72d8f1f4`.
