@@ -3723,6 +3723,12 @@ function chartSummary(points,spec){
   }
   return 'Sample average '+formatChartValue(avgV,unit)+' · '+recentText+formatChartValue(recentAvg,unit)+'.';
 }
+function chartMeta(points,evidence){
+  const valid=points.filter(p=>hasNum(p.value)),dates=valid.map(p=>Number(p.gameStartTimestamp||0)).filter(x=>x>0).sort((a,b)=>a-b);
+  const range=dates.length?(shortGameDate(dates[0])+' → '+shortGameDate(dates[dates.length-1])):'date range unavailable';
+  const evidenceText=evidence?.summary?(' · evidence floor: '+evidence.summary):'';
+  return valid.length+' valid plotted observation'+(valid.length===1?'':'s')+' · '+range+evidenceText;
+}
 
 function quantile(values,q){
   const xs=values.filter(Number.isFinite).slice().sort((a,b)=>a-b);if(!xs.length)return null;
@@ -3811,7 +3817,7 @@ function renderCharts(r){
     const svg=evidence.ready?chartSvg(points,spec):null;
     if(!svg)hidden.push(spec.title);
     const empty=evidence.ready?'Insufficient valid data':'Thin evidence · '+evidence.summary;
-    return '<article class="chart-card '+(spec.signedAxis?'signed-chart':'')+(evidence.ready?'':' thin-evidence')+'"><div class="chart-card-head"><div><h3>'+esc(spec.title)+'</h3><p>'+esc(spec.q)+'</p></div><span class="chart-kind">'+(spec.signedAxis?'0 = role peer':'trend')+'</span></div>'+(svg||'<div class="chart-empty">'+esc(empty)+'</div>')+(svg?'<p class="chart-reading">'+esc(chartSummary(points,spec))+'</p>':'')+'</article>';
+    return '<article class="chart-card '+(spec.signedAxis?'signed-chart':'')+(evidence.ready?'':' thin-evidence')+'"><div class="chart-card-head"><div><h3>'+esc(spec.title)+'</h3><p>'+esc(spec.q)+'</p></div><span class="chart-kind">'+(spec.signedAxis?'0 = role peer':'trend')+'</span></div><p class="chart-meta">'+esc(chartMeta(points,evidence))+'</p>'+(svg||'<div class="chart-empty">'+esc(empty)+'</div>')+(svg?'<p class="chart-reading">'+esc(chartSummary(points,spec))+'</p>':'')+'</article>';
   }).join('');
   const all=[...(r.hiddenCharts||[]),...hidden];
   $('hiddenCharts').hidden=!all.length;$('hiddenCharts').textContent=all.length?'Unavailable / low-sample charts: '+[...new Set(all)].join(', '):'';

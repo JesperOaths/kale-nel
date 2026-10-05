@@ -808,6 +808,7 @@ ok(modelDoc.includes('A chart being drawable is not the same as its coaching evi
 ok(app.includes("spec.zeroLabel||'EVEN WITH ROLE OPPONENT'")&&app.includes("spec.zeroMeaning||'Zero means even with the direct role opponent.'"), 'signed chart interpretation must support metric-specific zero semantics');
 ok(app.includes("zeroLabel:'NO ADC LANE MOVEMENT'")&&app.includes("Zero means no measured change in ADC-vs-ADC CS differential during the roam window."), 'Support lane-movement zero must not be mislabeled as direct-role parity');
 ok(app.includes("recentText='latest '+recent.length+' valid observation"), 'chart recent-average wording must acknowledge missing observations');
+ok(app.includes('function chartMeta(points,evidence){')&&app.includes("' valid plotted observation'")&&app.includes("' · evidence floor: '+evidence.summary"), 'chart cards must disclose plotted-point count, date range, and evidence floor separately from interpretation');
 ok(modelDoc.includes('Signed zero-line wording is metric-specific.'), 'analysis documentation must preserve metric-specific chart zero semantics');
 ok(backend.includes('roamAttemptGames=list.filter')&&backend.includes('supportAdcLaneMovementGameValues=list.map'), 'champion Support analysis must export game-spread-aware roam context');
 ok(backend.includes('roleName==="SUPPORT"&&roamAttempts>=4&&roamAttemptGames>=3')&&backend.includes('confidence:confidence(roamAttemptGames)'), 'Support champion roam findings must require and score contributing games');

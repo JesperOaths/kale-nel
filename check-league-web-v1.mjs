@@ -1004,6 +1004,7 @@ assert.ok(modelDoc.includes('A chart being drawable is not the same as its coach
 assert.ok(app.includes("spec.zeroLabel||'EVEN WITH ROLE OPPONENT'")&&app.includes("spec.zeroMeaning||'Zero means even with the direct role opponent.'"), 'Signed chart zero labels and explanations must be metric-configurable');
 assert.ok(app.includes("zeroLabel:'NO ADC LANE MOVEMENT'")&&app.includes("zeroMeaning:'Zero means no measured change in ADC-vs-ADC CS differential during the roam window.'"), 'Support ADC lane-movement chart must not describe zero as Support-peer parity');
 assert.ok(app.includes("recentText='latest '+recent.length+' valid observation"), 'Chart summaries must disclose that recent averages use valid observations only');
+assert.ok(app.includes('function chartMeta(points,evidence){')&&app.includes('chart-meta')&&css.includes('.chart-meta'), 'Chart cards must show plotted-point and evidence-floor metadata before interpretation');
 assert.ok(modelDoc.includes('Signed zero-line wording is metric-specific.'), 'Metric-specific zero semantics must remain documented');
 assert.ok(api.includes('roamAttemptGames=list.filter')&&api.includes('supportAdcLaneMovementGameValues=list.map'), 'Champion Support roam analysis must track contributing games and game-weighted lane movement');
 assert.ok(api.includes('roleName==="SUPPORT"&&roamAttempts>=4&&roamAttemptGames>=3'), 'Support champion roam limiter must require attempts spread across at least three games');
