@@ -102,6 +102,7 @@ assert.ok(api.includes('zeroIdUndoPolicy:"flag_approximate_do_not_guess"'),'Unkn
 assert.ok(api.includes('itemUndoQualityPolicy:"zero_id_undo_flagged_approximate_not_guessed"'),'Report Data Quality must export the item-undo uncertainty policy');
 assert.ok(api.includes('positionEvidenceModel:"nearest_timeline_frame_within_35s"'),'Report Data Quality must expose the event-position evidence model');
 assert.ok(app.includes('Timeline position evidence')&&app.includes('Item undo quality'),'Frontend Data Quality must expose position timing and unresolved undo evidence');
+assert.ok(app.includes('thin sample — descriptive only; do not treat this rate as stable yet')&&app.includes('evidence unavailable — unknown, not zero'),'Frontend Data Quality must prevent over-trusting thin or missing evidence');
 assert.ok(api.includes('function structureStrongInvolvementEvidence(')&&api.includes('return evidence==="direct_event_credit"||evidence==="event_position_proximity"?evidence:null')&&api.includes('structureStrongInvolvementEvidence(o,frames,whoId,whoTeam,mapId)'),'Structure conversion credit must require strong direct/proximity involvement and exclude lane-presence-only attribution');
 assert.ok(api.includes('playerSupportEvidence=isNeutralObjectiveEvent(o)?(participantNearEvent(frames,whoId,o,2800)?"event_position_proximity":null):structureStrongInvolvementEvidence(o,frames,whoId,whoTeam,mapId)'),'Conversion/item-spike objective evidence must retain an explicit support method');
 assert.ok(api.includes('obj.playerSupported!==true')&&api.includes('supportEvidence:obj.playerSupportEvidence'),'Item-spike objective impact must require supported neutral/structure evidence and preserve its provenance');
@@ -175,6 +176,7 @@ assert.ok(api.includes('excludedOtherRoleRows')&&api.includes('excludedBeyondLas
 assert.ok(api.includes('exclusionModel:"disjoint_metadata_stages_plus_hydrated_role_quality"'),'Data Quality must document the exclusion accounting model');
 assert.ok(app.includes('valid older games outside the Last-20 cap'),'Frontend must distinguish the Last-20 cap from quality/eligibility exclusions');
 assert.ok(app.includes('unsupported special/bot queue'),'Frontend must explain unsupported queue exclusions');
+assert.ok(app.includes('excluded before coaching/benchmarks, not counted as losses or zero-rate events')&&app.includes('fail closed outside the report cohort'),'Frontend must make unsupported queue exclusions fail-closed rather than zero-rate evidence');
 assert.ok(api.includes('championBehaviorModel'));
 assert.ok(api.includes('opponentMatchupBehaviorModel'));
 assert.ok(api.includes('buildReplayReviewQueue'));
