@@ -2,19 +2,27 @@
 
 ## Recoverable lease
 
-- status: released
-- owner: OpenClaw scheduled run `agent:main:subagent:7be0e25b-580d-40d2-b852-77fafc8ac4cf`
-- acquired_at: 2026-10-05 22:05 Europe/Amsterdam
-- released_at: 2026-10-05 22:18 Europe/Amsterdam
+- status: active
+- owner: OpenClaw main session `agent:main:dashboard:5775c27b-23d2-43a5-990c-40bf3300e6ba`
+- acquired_at: 2026-10-05 22:28 Europe/Amsterdam
+- heartbeat_at: 2026-10-05 22:28 Europe/Amsterdam
+- lease_expires_at: 2026-10-05 23:28 Europe/Amsterdam
 - trial_expires_at: 2026-10-11 17:03 Europe/Amsterdam
 - worktree: `C:\Users\jespe\Documents\GitHub\kale-nel`
 - branch: `main`
-- base: local `a77d8217`; `origin/main` `72d8f1f4`
-- completed_goal: reduce duplicated frontend cohort logic once contract coverage is stable
-- result_commit: `d9341e63`
-- recoverability: lease is released; later runs should start from the newest local commit and reacquire a fresh lease before changing files.
+- base: local `8f361afe`; `origin/main` `72d8f1f4`
+- current_task: audit and implement one coherent high-value League interpretability and presentation batch
+- recoverability: if this heartbeat is stale after lease expiry, inspect the worktree and commits before reclaiming; preserve unrelated work.
 
 ## Current cycle evidence log
+
+- 2026-10-05 22:26: manual full-cycle run started before trial expiry.
+- 2026-10-05 22:27: read both required maintenance skills and every file under `docs/league-agent/`; prior lease was released.
+- 2026-10-05 22:27: fetched origin; local `main` was clean at `8f361afe`, sixteen commits ahead of unchanged `origin/main` `72d8f1f4`.
+- 2026-10-05 22:27: live `/league/` returned HTTP 200 with v294 static asset markers and session-only Riot-key copy.
+- 2026-10-05 22:28: acquired a recoverable one-hour lease for a bounded interpretability and presentation improvement batch.
+
+## Previous cycle evidence log
 
 - 2026-10-05 22:03: scheduled run started before trial expiry.
 - 2026-10-05 22:04: read the required maintenance skills and all League agent state files; prior lease was released.
