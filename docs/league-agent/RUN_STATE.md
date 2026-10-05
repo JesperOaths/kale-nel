@@ -3,18 +3,31 @@
 ## Recoverable lease
 
 - status: released
-- owner: OpenClaw scheduled run `agent:main:subagent:51095655-e21d-49ff-bf20-c1afc6559614`
-- acquired_at: 2026-10-05 12:05 Europe/Amsterdam
-- released_at: 2026-10-05 12:22 Europe/Amsterdam
+- owner: OpenClaw scheduled run `agent:main:subagent:936bc42d-521f-4cdd-bfa0-d9ad4d70f351`
+- acquired_at: 2026-10-05 17:06 Europe/Amsterdam
+- released_at: 2026-10-05 17:12 Europe/Amsterdam
 - trial_expires_at: 2026-10-11 17:03 Europe/Amsterdam
 - worktree: `C:\Users\jespe\Documents\GitHub\kale-nel`
 - branch: `main`
-- base: local `12ac305f`; `origin/main` `72d8f1f4`
-- completed_goal: document deployment-plane verification steps for `/league/` static assets and `league-api-v1` separately
-- result_commit: `efbf3211`
+- base: local `50c23bb3`; `origin/main` `72d8f1f4`
+- completed_goal: improve chart readability without changing analysis semantics
+- result_commit: `d21c9b5b`
 - recoverability: lease is released; later runs should start from the newest local commit and reacquire a fresh lease before changing files.
 
 ## Current cycle evidence log
+
+- 2026-10-05 17:03: scheduled run started before trial expiry.
+- 2026-10-05 17:05: read the required maintenance skills and all League agent state files; prior lease was released.
+- 2026-10-05 17:05: fetched origin; local `main` was clean and twelve commits ahead of unchanged `origin/main` `72d8f1f4`.
+- 2026-10-05 17:05: live `/league/` returned HTTP 200 with v294 League asset markers and Riot/session-only copy.
+- 2026-10-05 17:06: acquired recoverable one-hour lease for P2 chart readability without changing analysis semantics.
+- 2026-10-05 17:08: added chart metadata showing valid plotted observations, date range, and evidence-floor summary; added contract coverage and CSS for the metadata row.
+- 2026-10-05 17:09: `node scripts/check-league-analysis-contract.mjs`, `node check-league-web-v1.mjs`, `node scripts/check-league-public-page-smoke.mjs`, `node check-active-js-syntax.mjs`, and `git diff --check` passed.
+- 2026-10-05 17:09: staged and unstaged diffs were inspected; `commit_check` passed.
+- 2026-10-05 17:09: committed frontend/test improvement as `d21c9b5b`; static frontend plane changed but no deployment was attempted.
+- 2026-10-05 17:12: updated state/backlog/automation notes and released the lease.
+
+## Previous cycle evidence log
 
 - 2026-10-05 12:03: scheduled run started before trial expiry.
 - 2026-10-05 12:04: read the required maintenance skills and all League agent state files; prior lease was released.
@@ -104,8 +117,8 @@
 
 ## Deployment state
 
-No deployment was attempted. This cycle changed only League agent documentation files, so no production plane was affected. Production still serves v294 asset markers while earlier local frontend/test/doc commits have not been pushed or deployed; claiming overall live/source parity remains blocked on authorized push/deploy plus static page and relevant backend/API verification.
+No deployment was attempted. This cycle changed the static frontend plane (`league/app.js`, `league/styles.css`) plus contract tests; backend/API code was not changed. Production still serves v294 asset markers while earlier local frontend/test/doc commits have not been pushed or deployed; claiming this cycle live or overall live/source parity remains blocked on authorized push/static deploy plus live static asset and relevant behavior verification.
 
 ## Next handoff
 
-Start with `git status --short`, verify the latest local commit, then choose the highest-value remaining P2 item unless a P0/P1 correctness or live/source drift failure appears.
+Start with `git status --short`, verify the latest local commit, then choose P2 duplicated frontend cohort-logic reduction unless a P0/P1 correctness or live/source drift failure appears.
