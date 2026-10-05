@@ -19,4 +19,4 @@ Prioritize analytical correctness, role purity, evidence quality, and production
 1. Improve chart readability without changing analysis semantics.
 2. Reduce duplicated frontend cohort logic once contract coverage is stable.
 3. Document deployment-plane verification steps for `/league/` static assets and `league-api-v1` separately.
-4. Add a fixture or DOM smoke for rendered Data Quality cards with thin, unknown, and unsupported-queue states.
+4. [done 2026-10-05, `3978321d`] Add a fixture or DOM smoke for rendered Data Quality cards with thin, unknown, and unsupported-queue states.

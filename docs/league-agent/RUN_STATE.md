@@ -3,18 +3,33 @@
 ## Recoverable lease
 
 - status: released
-- owner: OpenClaw scheduled run `agent:main:subagent:61ed1318-952a-45d5-85bc-3ecd57b85154`
-- acquired_at: 2026-10-05 02:04 Europe/Amsterdam
-- released_at: 2026-10-05 02:18 Europe/Amsterdam
+- owner: OpenClaw scheduled run `agent:main:subagent:67506ff0-f7ce-45e1-97a5-ae20106e4002`
+- acquired_at: 2026-10-05 07:05 Europe/Amsterdam
+- released_at: 2026-10-05 07:24 Europe/Amsterdam
 - trial_expires_at: 2026-10-11 17:03 Europe/Amsterdam
 - worktree: `C:\Users\jespe\Documents\GitHub\kale-nel`
 - branch: `main`
-- base: local `8f4f8763`; `origin/main` `72d8f1f4`
-- completed_goal: improve report Data Quality wording for small samples and unsupported queues
-- result_commit: `78eb8ac0`
+- base: local `33e0fc6f`; `origin/main` `72d8f1f4`
+- completed_goal: add rendered Data Quality DOM smoke coverage for thin, unknown, and unsupported-queue states
+- result_commit: `3978321d`
 - recoverability: lease is released; later runs should start from the newest local commit and reacquire a fresh lease before changing files.
 
 ## Current cycle evidence log
+
+- 2026-10-05 07:03: scheduled run started before trial expiry.
+- 2026-10-05 07:04: read all League agent state files and required maintenance skills; prior lease was released.
+- 2026-10-05 07:04: live `/league/` returned HTTP 200 with public workspace and Riot/session-only copy.
+- 2026-10-05 07:05: fetched origin; local `main` was clean and eight commits ahead of unchanged `origin/main` `72d8f1f4`.
+- 2026-10-05 07:05: acquired recoverable one-hour lease for rendered Data Quality DOM smoke coverage.
+- 2026-10-05 07:11: added VM-based `renderQuality` DOM smoke for thin, unknown/unavailable, and unsupported-queue card states.
+- 2026-10-05 07:13: imported the smoke into the League analysis contract.
+- 2026-10-05 07:15: `node scripts/check-league-data-quality-dom-smoke.mjs` passed and `node scripts/check-league-analysis-contract.mjs` passed.
+- 2026-10-05 07:20: `node check-league-web-v1.mjs` passed; `node scripts/check-league-public-page-smoke.mjs` passed for local markup; `node check-active-js-syntax.mjs` passed for 531 files; `git diff --check` passed.
+- 2026-10-05 07:21: staged and unstaged diffs were inspected; `commit_check` passed.
+- 2026-10-05 07:22: committed test improvement as `3978321d`; no production plane changed and no deployment was required.
+- 2026-10-05 07:24: updated state/backlog/automation notes and released the lease.
+
+## Previous cycle evidence log
 
 - 2026-10-05 02:03: scheduled run started before trial expiry.
 - 2026-10-05 02:03: read all League agent state files; prior lease was released.
@@ -76,7 +91,7 @@
 
 ## Deployment state
 
-No deployment was attempted. Production still serves v294 asset markers, but local frontend/test/doc commits have not been pushed or deployed. The 2026-10-05 cycle changed `league/app.js`, so deployment remains blocked on an authorized push/deploy plus verification of the static page and any relevant backend/API plane.
+No deployment was attempted. This cycle changed only test and state documentation files, so no production plane was affected. Production still serves v294 asset markers while earlier local frontend/test/doc commits have not been pushed or deployed; claiming overall live/source parity remains blocked on authorized push/deploy plus static page and relevant backend/API verification.
 
 ## Next handoff
 
