@@ -3,18 +3,31 @@
 ## Recoverable lease
 
 - status: released
-- owner: OpenClaw scheduled run `agent:main:subagent:67506ff0-f7ce-45e1-97a5-ae20106e4002`
-- acquired_at: 2026-10-05 07:05 Europe/Amsterdam
-- released_at: 2026-10-05 07:24 Europe/Amsterdam
+- owner: OpenClaw scheduled run `agent:main:subagent:51095655-e21d-49ff-bf20-c1afc6559614`
+- acquired_at: 2026-10-05 12:05 Europe/Amsterdam
+- released_at: 2026-10-05 12:22 Europe/Amsterdam
 - trial_expires_at: 2026-10-11 17:03 Europe/Amsterdam
 - worktree: `C:\Users\jespe\Documents\GitHub\kale-nel`
 - branch: `main`
-- base: local `33e0fc6f`; `origin/main` `72d8f1f4`
-- completed_goal: add rendered Data Quality DOM smoke coverage for thin, unknown, and unsupported-queue states
-- result_commit: `3978321d`
+- base: local `12ac305f`; `origin/main` `72d8f1f4`
+- completed_goal: document deployment-plane verification steps for `/league/` static assets and `league-api-v1` separately
+- result_commit: `efbf3211`
 - recoverability: lease is released; later runs should start from the newest local commit and reacquire a fresh lease before changing files.
 
 ## Current cycle evidence log
+
+- 2026-10-05 12:03: scheduled run started before trial expiry.
+- 2026-10-05 12:04: read the required maintenance skills and all League agent state files; prior lease was released.
+- 2026-10-05 12:04: live `/league/` returned HTTP 200 with public workspace and Riot/session-only copy.
+- 2026-10-05 12:05: fetched origin; local `main` was clean and ten commits ahead of unchanged `origin/main` `72d8f1f4`.
+- 2026-10-05 12:05: acquired recoverable one-hour lease for documenting separate deployment-plane verification.
+- 2026-10-05 12:12: added `docs/league-agent/DEPLOYMENT_VERIFICATION.md` covering static `/league/` checks, `league-api-v1`/Supabase function checks, reused function-slot evidence, and exact blocker wording.
+- 2026-10-05 12:14: `node scripts/check-league-public-page-smoke.mjs` passed for local markup; `node check-league-web-v1.mjs` passed with League learning review; `git diff --check` passed.
+- 2026-10-05 12:16: staged and unstaged diffs were inspected; `commit_check` passed.
+- 2026-10-05 12:17: committed docs improvement as `efbf3211`; no production plane changed and no deployment was required.
+- 2026-10-05 12:22: updated state/backlog/automation notes and released the lease.
+
+## Previous cycle evidence log
 
 - 2026-10-05 07:03: scheduled run started before trial expiry.
 - 2026-10-05 07:04: read all League agent state files and required maintenance skills; prior lease was released.
@@ -91,7 +104,7 @@
 
 ## Deployment state
 
-No deployment was attempted. This cycle changed only test and state documentation files, so no production plane was affected. Production still serves v294 asset markers while earlier local frontend/test/doc commits have not been pushed or deployed; claiming overall live/source parity remains blocked on authorized push/deploy plus static page and relevant backend/API verification.
+No deployment was attempted. This cycle changed only League agent documentation files, so no production plane was affected. Production still serves v294 asset markers while earlier local frontend/test/doc commits have not been pushed or deployed; claiming overall live/source parity remains blocked on authorized push/deploy plus static page and relevant backend/API verification.
 
 ## Next handoff
 
