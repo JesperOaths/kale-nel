@@ -3682,8 +3682,8 @@ function formatChartValue(value,unit){
   return fmt(v,2);
 }
 function chartSvg(points,spec){
-  const vals=points.map(p=>Number(p.value)).filter(Number.isFinite);if(vals.length<3)return null;
-  const valid=points.map((p,i)=>({i,v:Number(p.value),p})).filter(x=>Number.isFinite(x.v));
+  const vals=points.filter(p=>hasNum(p.value)).map(p=>Number(p.value)).filter(Number.isFinite);if(vals.length<3)return null;
+  const rows=points.map((p,i)=>{const value=Number(p.value);return{i,v:value,p,valid:hasNum(p.value)&&Number.isFinite(value)};}),valid=rows.filter(x=>x.valid);
   const w=820,h=300,padL=88,padR=24,padT=30,padB=48,unit=spec.unit||'num',signedAxis=!!spec.signedAxis;
   let min,max;
   if(hasNum(spec.fixedMin)&&hasNum(spec.fixedMax)){min=Number(spec.fixedMin);max=Number(spec.fixedMax);}
@@ -3696,10 +3696,13 @@ function chartSvg(points,spec){
   else if(unit==='dpm'){min=0;max=Math.max(1000,niceCeil(Math.max(...vals),250));}
   else{min=Math.min(0,Math.floor(Math.min(...vals)));max=niceCeil(Math.max(...vals),Math.max(1,(Math.max(...vals)-Math.min(...vals))/4));}
   const span=Math.max(1,max-min),plotW=w-padL-padR,plotH=h-padT-padB;
-  const xAt=n=>padL+(n/Math.max(1,valid.length-1))*plotW;
+  const xAt=n=>padL+(n/Math.max(1,points.length-1))*plotW;
   const yAt=v=>padT+(max-clamp(v,min,max))/span*plotH;
-  const coords=valid.map((x,n)=>({x:xAt(n),y:yAt(x.v),v:x.v,p:x.p}));
-  const path=coords.map((c,i)=>(i?'L':'M')+c.x.toFixed(1)+' '+c.y.toFixed(1)).join(' ');
+  const coords=valid.map(x=>({x:xAt(x.i),y:yAt(x.v),v:x.v,p:x.p,i:x.i})),segments=[];
+  let segment=[];
+  rows.forEach(x=>{if(x.valid){segment.push({x:xAt(x.i),y:yAt(x.v),v:x.v,p:x.p,i:x.i});return;}if(segment.length){segments.push(segment);segment=[];}});
+  if(segment.length)segments.push(segment);
+  const paths=segments.filter(xs=>xs.length>1).map(xs=>'<path class="chart-line" d="'+xs.map((c,i)=>(i?'L':'M')+c.x.toFixed(1)+' '+c.y.toFixed(1)).join(' ')+'"/>').join('');
   const ticks=5,grid=[];
   for(let i=0;i<ticks;i++){
     const value=max-(span/(ticks-1))*i,y=yAt(value);
@@ -3711,13 +3714,15 @@ function chartSvg(points,spec){
   const zero=signedAxis?'<line class="chart-zero-line" x1="'+padL+'" y1="'+zeroY+'" x2="'+(w-padR)+'" y2="'+zeroY+'"/><text class="chart-zero-label" x="'+(w-padR-4)+'" y="'+(zeroY-7)+'" text-anchor="end">'+esc(spec.zeroLabel||'EVEN WITH ROLE OPPONENT')+'</text>':'';
   const refValue=hasNum(spec.reference)?Number(spec.reference):null,refY=refValue!=null&&refValue>=min&&refValue<=max?yAt(refValue):null;
   const reference=refY==null?'':'<line class="chart-reference-line" x1="'+padL+'" y1="'+refY+'" x2="'+(w-padR)+'" y2="'+refY+'"/><text class="chart-reference-label" x="'+(w-padR-4)+'" y="'+(refY-7)+'" text-anchor="end">'+esc(spec.referenceLabel||'REFERENCE')+' · '+esc(formatChartValue(refValue,spec.formatUnit||spec.unit))+'</text>';
-  const dots=coords.map((c,i)=>{const when=shortGameDate(c.p?.gameStartTimestamp)||('Game '+String(i+1)),champ=c.p?.champion?String(c.p.champion)+' · ':'',signal=c.v*(spec.inverse?-1:1);return '<circle class="chart-dot '+(signedAxis?(signal>0?'positive':signal<0?'negative':'even'):'')+'" cx="'+c.x.toFixed(1)+'" cy="'+c.y.toFixed(1)+'" r="5"><title>'+esc(champ+when+': '+formatChartValue(c.v,spec.formatUnit||spec.unit))+'</title></circle>';}).join('');
-  const firstTime=valid[0]?.p?.gameStartTimestamp,lastTime=valid[valid.length-1]?.p?.gameStartTimestamp;
+  const dots=coords.map(c=>{const when=shortGameDate(c.p?.gameStartTimestamp)||('Game '+String(c.i+1)),champ=c.p?.champion?String(c.p.champion)+' · ':'',signal=c.v*(spec.inverse?-1:1);return '<circle class="chart-dot '+(signedAxis?(signal>0?'positive':signal<0?'negative':'even'):'')+'" cx="'+c.x.toFixed(1)+'" cy="'+c.y.toFixed(1)+'" r="5"><title>'+esc(champ+when+': '+formatChartValue(c.v,spec.formatUnit||spec.unit))+'</title></circle>';}).join('');
+  const missing=rows.filter(x=>!x.valid),missingMarks=missing.map(x=>'<g class="chart-missing-mark" aria-hidden="true" transform="translate('+xAt(x.i).toFixed(1)+' '+(h-padB+10)+')"><path d="M-4 -4L4 4M4 -4L-4 4"/></g>').join('');
+  const firstTime=rows[0]?.p?.gameStartTimestamp,lastTime=rows[rows.length-1]?.p?.gameStartTimestamp;
   const xLabels=valid.length?'<text class="chart-axis-label x" x="'+padL+'" y="'+(h-12)+'">'+esc(shortGameDate(firstTime)||'older')+'</text><text class="chart-axis-label x" x="'+(w-padR)+'" y="'+(h-12)+'" text-anchor="end">'+esc(shortGameDate(lastTime)||'newer')+'</text>':'';
-  return '<svg class="chart-svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(spec.title||'Trend chart')+'">'+bands+grid.join('')+zero+reference+'<path class="chart-line" d="'+path+'"/>'+dots+xLabels+'</svg>';
+  const accessibility=(spec.title||'Trend chart')+'. '+valid.length+' valid observations; '+missing.length+' unavailable. Line breaks and x marks show unavailable observations; unavailable is not zero.';
+  return '<svg class="chart-svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(accessibility)+'">'+bands+grid.join('')+zero+reference+paths+dots+missingMarks+xLabels+'</svg>';
 }
 function chartSummary(points,spec){
-  const vals=points.map(p=>Number(p.value)).filter(Number.isFinite);if(!vals.length)return'No valid values.';
+  const vals=points.filter(p=>hasNum(p.value)).map(p=>Number(p.value)).filter(Number.isFinite);if(!vals.length)return'No valid values.';
   const avgV=vals.reduce((a,b)=>a+b,0)/vals.length,recent=vals.slice(-Math.min(5,vals.length)),recentAvg=recent.reduce((a,b)=>a+b,0)/recent.length;
   const unit=spec.formatUnit||spec.unit,recentText='latest '+recent.length+' valid observation'+(recent.length===1?'':'s')+' average ';
   if(spec.signedAxis){
@@ -3730,7 +3735,16 @@ function chartMeta(points,evidence){
   const valid=points.filter(p=>hasNum(p.value)),dates=valid.map(p=>Number(p.gameStartTimestamp||0)).filter(x=>x>0).sort((a,b)=>a-b);
   const range=dates.length?(shortGameDate(dates[0])+' → '+shortGameDate(dates[dates.length-1])):'date range unavailable';
   const evidenceText=evidence?.summary?(' · evidence floor: '+evidence.summary):'';
-  return valid.length+' valid plotted observation'+(valid.length===1?'':'s')+' · '+range+evidenceText;
+  const unavailable=Math.max(0,points.length-valid.length),gapText=unavailable?(' · '+unavailable+' unavailable (shown as line gaps, not zero)'):'';
+  return valid.length+' valid plotted observation'+(valid.length===1?'':'s')+gapText+' · '+range+evidenceText;
+}
+function chartDataTable(points,spec){
+  const valid=points.filter(p=>hasNum(p.value)).length,total=points.length,unit=spec.formatUnit||spec.unit;
+  const rows=points.map((p,i)=>{
+    const value=hasNum(p.value)?formatChartValue(Number(p.value),unit):'Unavailable';
+    return '<tr class="'+(hasNum(p.value)?'':'value-unavailable')+'"><td>'+(i+1)+'</td><td>'+esc(shortGameDate(p.gameStartTimestamp)||'Date unavailable')+'</td><td>'+esc(p.champion||'Unknown champion')+'</td><td>'+esc(value)+'</td></tr>';
+  }).join('');
+  return '<details class="chart-data-details"><summary>View plotted values · '+valid+' valid / '+total+' games</summary><div class="chart-data-table-wrap"><table class="chart-data-table"><caption>Underlying values for '+esc(spec.title||'trend chart')+'. Unavailable values are unknown, not zero.</caption><thead><tr><th scope="col">Order</th><th scope="col">Date</th><th scope="col">Champion</th><th scope="col">Value</th></tr></thead><tbody>'+rows+'</tbody></table></div></details>';
 }
 
 function quantile(values,q){
@@ -3820,7 +3834,7 @@ function renderCharts(r){
     const svg=evidence.ready?chartSvg(points,spec):null;
     if(!svg)hidden.push(spec.title);
     const empty=evidence.ready?'Insufficient valid data':'Thin evidence · '+evidence.summary;
-    return '<article class="chart-card '+(spec.signedAxis?'signed-chart':'')+(evidence.ready?'':' thin-evidence')+'"><div class="chart-card-head"><div><h3>'+esc(spec.title)+'</h3><p>'+esc(spec.q)+'</p></div><span class="chart-kind">'+(spec.signedAxis?'0 = role peer':'trend')+'</span></div><p class="chart-meta">'+esc(chartMeta(points,evidence))+'</p>'+(svg||'<div class="chart-empty">'+esc(empty)+'</div>')+(svg?'<p class="chart-reading">'+esc(chartSummary(points,spec))+'</p>':'')+'</article>';
+    return '<article class="chart-card '+(spec.signedAxis?'signed-chart':'')+(evidence.ready?'':' thin-evidence')+'"><div class="chart-card-head"><div><h3>'+esc(spec.title)+'</h3><p>'+esc(spec.q)+'</p></div><span class="chart-kind">'+(spec.signedAxis?'0 = role peer':'trend')+'</span></div><p class="chart-meta">'+esc(chartMeta(points,evidence))+'</p>'+(svg||'<div class="chart-empty">'+esc(empty)+'</div>')+(svg?'<p class="chart-reading">'+esc(chartSummary(points,spec))+'</p>':'')+chartDataTable(points,spec)+'</article>';
   }).join('');
   const all=[...(r.hiddenCharts||[]),...hidden];
   $('hiddenCharts').hidden=!all.length;$('hiddenCharts').textContent=all.length?'Unavailable / low-sample charts: '+[...new Set(all)].join(', '):'';

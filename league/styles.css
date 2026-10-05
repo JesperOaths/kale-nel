@@ -1031,6 +1031,7 @@ h3{font-size:1.13rem}
 .chart-axis-label.x{font-size:12px;text-transform:uppercase}
 .chart-line{fill:none;stroke:#142d40;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
 .chart-dot{fill:#1d5f91;stroke:#fff;stroke-width:2}
+.chart-missing-mark path{fill:none;stroke:#8a8175;stroke-width:2.5;stroke-linecap:round}
 .chart-dot.positive{fill:#087a4a}
 .chart-dot.negative{fill:#c33b31}
 .chart-dot.even{fill:#6f685e}
@@ -1039,6 +1040,17 @@ h3{font-size:1.13rem}
 .chart-zero-line{stroke:#16130f;stroke-width:3;stroke-dasharray:8 6}
 .chart-zero-label{fill:#16130f;font-size:12px;font-weight:950}
 .chart-reading{margin:8px 0 0;padding:12px 14px;border-radius:12px;background:#f5f1e9;font-size:.9rem;line-height:1.5;color:#4d453b}
+.chart-data-details{margin-top:12px;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
+.chart-data-details>summary{padding:11px 13px;cursor:pointer;color:var(--ink-soft);font-size:.9rem;font-weight:900;list-style-position:inside}
+.chart-data-details>summary:focus-visible{outline:3px solid #1d5f91;outline-offset:-3px}
+.chart-data-details[open]>summary{border-bottom:1px solid var(--line);background:#f8f5ef}
+.chart-data-table-wrap{max-height:290px;overflow:auto}
+.chart-data-table{width:100%;border-collapse:collapse;font-size:.9rem}
+.chart-data-table caption{padding:10px 12px;text-align:left;color:var(--muted);font-size:.9rem;line-height:1.4}
+.chart-data-table th,.chart-data-table td{padding:9px 11px;border-top:1px solid var(--line);text-align:left;white-space:nowrap}
+.chart-data-table th{position:sticky;top:0;background:#f4f0e8;color:var(--ink-soft);font-size:.9rem;z-index:1}
+.chart-data-table td:last-child{font-variant-numeric:tabular-nums;font-weight:850}
+.chart-data-table tr.value-unavailable td{color:var(--muted);font-style:italic;background:#fcfaf6}
 
 .decisions-panel{border-top:6px solid #a95a20}
 .decision-metric-grid{
