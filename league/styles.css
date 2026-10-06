@@ -2576,3 +2576,7 @@ html{font-size:20px}
   .recent-direction-summary{grid-template-columns:1fr}
   .recent-direction-svg{min-width:900px}
 }
+
+.visual-threshold-band{fill:rgba(154,130,65,.07)}
+.visual-threshold-line{stroke:rgba(154,130,65,.42);stroke-width:1;stroke-dasharray:4 5}
+.visual-threshold-label{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;fill:var(--gold-dark);font-size:10.5px;font-weight:850}
