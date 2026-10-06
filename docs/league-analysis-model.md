@@ -3493,3 +3493,48 @@ exposure, medians/quartiles/IQR, and common game metrics. Values use 'points' in
 unexplained 'pp'; interval labels use '95% range' with the method available in the guide.
 The guide links NIST methods, describes the approximate independent-trial assumption
 for event intervals, and distinguishes association from causation.
+
+## v301 measured current strengths
+
+The report exposes up to six positive patterns in “What’s going well”, followed by
+additional patterns and non-duplicate supporting notes in one disclosure. The
+overview links to this section rather than repeating one strength in full.
+Each card shows a native-unit value, its exact measured-game denominator, a
+plain-language definition, what to preserve, and up to two actual match examples.
+The report generation date is visible; “current” means this report's coaching cohort,
+not a claim that new matches were fetched today.
+
+Strengths are derived from deduplicated `reportCoachingGames`, preserving the selected
+role and mechanics cohort. Peer metrics require a trusted direct role opponent;
+timeline metrics additionally require an available timeline. Null/missing observations
+are excluded rather than converted to zeros or successes. Checkpoints respect
+`lane15Comparable`, `closing25Comparable` and `fixed15to25Comparable` as applicable.
+
+- Farming edge: at least five valid games, average opponent-relative CS/min at least
+  +0.15, and a higher CS/min in at least 60% of those games. A positive latest-five
+  level may be shown with at least three measured games from the actual latest five;
+  it is not labeled as an improving trend.
+- Lane-lead wins: at least five clean known outcomes with gold difference at 15 of
+  at least +250; observed win rate at least 75%.
+- Midgame farm growth: carry lanes only, at least five comparable games with both
+  CS checkpoints; average change in role-relative CS difference at least +8.
+- First recalls: at least five measured death-free windows with known gain/loss
+  flags and numeric gold/CS movement, at least one gain, no more than 20% flagged
+  losses, and nonnegative average CS movement. Gains, neutral windows and losses
+  are separate; neutral windows are never presented as gains.
+- Earlier-item impact: at least five eligible, known-used-or-unused first-major-item
+  windows; tracked impact in at least 75%. This does not establish safe fights.
+- Lead growth: at least five games reaching both comparable gold checkpoints with
+  at least +250 gold at 15; average additional role-relative gold at least +300.
+- Late-lead wins: at least five clean known outcomes with at least +500 gold at 25;
+  observed win rate at least 75%. Lane- and late-lead cards can overlap.
+- Solo-kill follow-up: at least five measured eligible events across at least three
+  distinct games, at least 75% followed by +200 role-relative gold by 15, and mean
+  movement at least +300. The card reports both events and games; repeated events
+  sharing a checkpoint are not independent trials.
+
+Fewer than ten contributing games are labeled “Small sample”. These display gates
+are practical, descriptive thresholds rather than tests of statistical significance.
+Behavior/economy observations may include compromised outcomes; win conversion
+always excludes those outcomes. No population reference or stale external benchmark
+is used to invent a current strength. Unmet gates produce no positive claim.

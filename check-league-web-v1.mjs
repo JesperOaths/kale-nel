@@ -84,7 +84,7 @@ assert.ok(app.includes('This section analyzes only the reviewed account.'),'Supp
 assert.ok(app.includes("x.sampleTier==='developing'")&&app.includes('Developing support sample'),'Frontend must keep 3–4 game support-champion samples neutral/contextual rather than presenting them as established');
 assert.ok(!api.includes('allySupportPuuid'),'Support-player analysis must not expose allied PUUIDs in the report contract');
 assert.ok(app.includes('function renderSupportSynergy')&&app.includes('Recent form · latest 5 vs prior games'),'Frontend must expose support synergy and concrete recent-form evidence');
-assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261007-league-web-v300'),'Support synergy panel and frontend cache-bust must be present');
+assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261007-league-web-v301'),'Support synergy panel and frontend cache-bust must be present');
 assert.ok(html.includes('id="visual-analytics"')&&html.includes('id="recentFormGraph"')&&html.includes('id="phaseRiskGraph"')&&html.includes('id="outcomeEffectGraph"')&&html.includes('id="objectiveFamilyGraph"')&&html.includes('id="championHistoryGraph"'),'League report must expose the visual analytics dashboard with five distinct graph surfaces');
 assert.ok(app.includes('function renderVisualAnalytics')&&app.includes('function visualDivergingSvg')&&app.includes('function visualPercentBarSvg')&&app.includes('function visualGroupedBarsSvg'),'Visual analytics must use explicit reusable graph renderers rather than decorative static markup');
 assert.ok(app.includes("valueLabel:signed(signal,1)+'×'")&&app.includes("spec.inverse?-1:1")&&app.includes("Number(x.games||0)>=5&&Number(x.exposureMinutes||0)>=20"),'Recent-form and phase-risk graphs must preserve practical-change direction and the existing phase evidence floor');
@@ -878,7 +878,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261007-league-web-v300'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261007-league-web-v301'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('v285 — semantic color hierarchy for faster report scanning')&&css.includes('--league-teal:#176d70')&&css.includes('--league-purple:#684696'),'League report must retain the semantic section color system');
 assert.ok(css.includes('archetype-card[data-archetype-key="high_resource_high_damage"]')&&css.includes('archetype-card[data-archetype-key="high_resource_lower_damage"]'),'Resource/output archetypes must remain visually distinguishable');
 assert.ok(css.includes('.games-table tr.game-row:has(.result.win)>td')&&css.includes('.games-table tr.game-row:has(.result.loss)>td'),'Evidence table wins and losses must remain visually scannable');
