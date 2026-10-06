@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends analysis with a 100-game role scan, evidence-backed Last-20 deep coaching, long-horizon trends and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261006-league-web-v297">
+  <link rel="stylesheet" href="/league/styles.css?v=20261006-league-web-v298">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261002-public-bootstrap-r4"></script>
 </head>
@@ -389,11 +389,11 @@
               <div id="outcomeEffectGraph"></div>
             </article>
             <article class="visual-graph-card">
-              <div class="visual-graph-head"><div><span>Objective families</span><h3>Contested presence by objective type</h3></div><small>Joined / contested denominator shown on every bar</small></div>
+              <div class="visual-graph-head"><div><span>Objective families</span><h3>Contested presence with uncertainty</h3></div><small>Point estimate + 95% Wilson interval</small></div>
               <div id="objectiveFamilyGraph"></div>
             </article>
             <article class="visual-graph-card">
-              <div class="visual-graph-head"><div><span>Champion history</span><h3>Clean win rate by your champion</h3></div><small>Ordered by clean sample depth, not by win rate</small></div>
+              <div class="visual-graph-head"><div><span>Champion history</span><h3>Pick mix first, clean results when comparable</h3></div><small>Dominant one-champion histories are shown as composition, not fake rankings</small></div>
               <div id="championHistoryGraph"></div>
             </article>
           </div>
@@ -551,7 +551,7 @@
             <span class="section-hint">Support champions are context for the reviewed account only. Every performance metric here belongs to the account being reviewed; teammate identities and teammate performance are not analyzed.</span>
           </div>
           <div class="support-synergy-summary" id="supportSynergySummary"></div>
-          <div class="section-subhead support-synergy-subhead"><div><span>Support champion graph</span><strong>Your clean result rate with each allied Support champion</strong></div><small>Bars show the reviewed account only; markers show the Wilson lower bound used by the established ranking.</small></div>
+          <div class="section-subhead support-synergy-subhead"><div><span>Support champion graph</span><strong>Your clean result rate with each allied Support champion</strong></div><small>Dots show your clean WR; whiskers show 95% Wilson uncertainty. Established ranking uses the conservative lower bound.</small></div>
           <div class="support-synergy-graph" id="supportSynergyGraph"></div>
           <div class="section-subhead support-synergy-subhead"><div><span>Support champion ranking</span><strong>Your results and output with each support pick</strong></div><small>Established ranking starts at 5 clean outcomes; 3–4 clean games are shown as developing samples.</small></div>
           <div class="support-synergy-table" id="supportChampionSynergy"></div>
@@ -611,7 +611,7 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/learning-review.js?v=20261006-league-web-v297" defer></script>
-  <script src="/league/app.js?v=20261006-league-web-v297" defer></script>
+  <script src="/league/learning-review.js?v=20261006-league-web-v298" defer></script>
+  <script src="/league/app.js?v=20261006-league-web-v298" defer></script>
 </body>
 </html>
