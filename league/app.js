@@ -1,4 +1,4 @@
-/* 20261006-league-web-v299 · long-horizon direction graph */
+/* 20261007-league-web-v300 · readable report and saved profiles */
 (function(){
 'use strict';
 
@@ -6,11 +6,12 @@ const cfg=window.GEJAST_CONFIG||{};
 const API=(cfg.SUPABASE_URL||'')+'/functions/v1/printify-gildan-diff-diag-v1';
 const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
 const $=(id)=>document.getElementById(id);
-const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',learningHabit:'all',busy:false,riotApiKey:'',serverRiotKey:false,backendAnalyzerVersion:'',publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,matchHistoryFilter:'all',matchHistoryArcKey:'',matchHistoryObjectiveFamilyKey:'',matchHistoryArchetypeKey:'',savedProfiles:[],selectedProfileId:'',selectedRole:'ADC'};
+const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',learningHabit:'all',busy:false,riotApiKey:'',serverRiotKey:false,backendAnalyzerVersion:'',publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,matchHistoryFilter:'all',matchHistoryArcKey:'',matchHistoryObjectiveFamilyKey:'',matchHistoryArchetypeKey:'',savedProfiles:[],selectedProfileId:'',selectedRole:'ADC',profileLoadEpoch:0};
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const LEAGUE_WORKSPACE_KEY='bruisienator_public_workspace_v1';
 const LEAGUE_SLOT_SELECTION_KEY='bruisienator_saved_profile_selection_v1';
+const LEAGUE_PROFILE_PREFS_KEY='bruisienator_profile_preferences_v1';
 const LEAGUE_PROFILE_NOTE_PREFIX='kalenel_league_profile_v2';
 function canonicalRole(v){
   const r=String(v||'').trim().toUpperCase();
@@ -25,7 +26,36 @@ function roleLabel(v){const r=canonicalRole(v);return r==='ADC'?'ADC':r==='MID'?
 function selectedAnalysisRole(){return canonicalRole($('requestRole')?.value||state.selectedRole||'ADC');}
 function profileRole(p){
   const m=String(p?.notes||'').match(/(?:^|\|)role=(ADC|SUPPORT|MID|JUNGLE|TOP)(?:\||$)/i);
-  return canonicalRole(m?.[1]||'ADC');
+  const preferred=profilePreferences().roles[String(p?.id||'')];
+  return canonicalRole(preferred||m?.[1]||'ADC');
+}
+function profilePreferences(){
+  try{const p=JSON.parse(localStorage.getItem(LEAGUE_PROFILE_PREFS_KEY)||'{}');return{roles:p?.roles&&typeof p.roles==='object'?p.roles:{},pins:Array.isArray(p?.pins)?p.pins.map(String):[]};}catch(_){return{roles:{},pins:[]};}
+}
+function saveProfilePreference(id,role){
+  const prefs=profilePreferences();prefs.roles[String(id)]=canonicalRole(role);
+  try{localStorage.setItem(LEAGUE_PROFILE_PREFS_KEY,JSON.stringify(prefs));}catch(_){}
+}
+function toggleProfilePin(id){
+  if(state.busy)return;
+  const prefs=profilePreferences(),key=String(id);prefs.pins=prefs.pins.includes(key)?prefs.pins.filter(x=>x!==key):[...prefs.pins,key];
+  try{localStorage.setItem(LEAGUE_PROFILE_PREFS_KEY,JSON.stringify(prefs));}catch(_){}
+  renderSavedProfiles();
+}
+function openReportAncestors(node){
+  for(let p=node;p;p=p.parentElement)if(p.tagName==='DETAILS')p.open=true;
+}
+function openStatGuide(key){
+  const target=$('term-'+key)||$('stat-guide');openReportAncestors(target);target?.scrollIntoView({behavior:'auto',block:'start'});
+}
+function profileFeedback(message,kind=''){
+  const node=$('profileFeedback');if(!node)return;node.textContent=message;node.className='profile-feedback '+kind;
+}
+function clearSelectedReport(message='Choose a saved profile or add a player'){
+  state.report=null;state.openMatch=null;state.gameFilter='all';state.gameChampion='all';state.matchHistoryFilter='all';
+  heavyRenderTicket++;clearHeavyObservers();
+  $('report').hidden=true;$('reportEmpty').hidden=false;
+  $('reportEmpty').querySelector('h2').textContent=message;
 }
 function profileNotes(role){return LEAGUE_PROFILE_NOTE_PREFIX+'|role='+canonicalRole(role);}
 function sameRiotIdentity(p,gameName,tagLine,platformRegion){
@@ -111,8 +141,12 @@ async function api(action,payload={}){
 
 function setBusy(on,label){
   state.busy=!!on;
+  for(const id of ['savedProfileSelect','newSavedProfileBtn','forgetSavedProfileBtn','saveProfileBtn','openSavedReportBtn','requestRole','requestGameName','requestTagLine','requestRegion','profileLabel','riotApiKey'])if($(id))$(id).disabled=!!on;
+  document.querySelectorAll('[data-select-profile],[data-pin-profile]').forEach(n=>n.disabled=!!on);
   const run=$('loadRecentBtn');if(run)run.disabled=!!on||!directRequestComplete();
+  if(on&&$('progressPanel'))$('progressPanel').hidden=false;
   if(label)$('progressState').textContent=label;
+  if(!on)syncButtons();
 }
 function setProgress(current,total){
   const p=total>0?Math.max(0,Math.min(100,current/total*100)):0;
@@ -134,10 +168,11 @@ function statusPill(textValue,kind='neutral'){
 }
 async function getDdragonVersion(){
   if(state.ddVersion)return state.ddVersion;
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),3000);
   try{
-    const r=await fetch('https://ddragon.leagueoflegends.com/api/versions.json',{cache:'force-cache'});
+    const r=await fetch('https://ddragon.leagueoflegends.com/api/versions.json',{cache:'force-cache',signal:controller.signal});
     const list=await r.json();state.ddVersion=Array.isArray(list)&&list[0]?String(list[0]):'';
-  }catch(_){}
+  }catch(_){}finally{clearTimeout(timer);}
   return state.ddVersion;
 }
 function championIcon(name){
@@ -197,7 +232,7 @@ function plainDelta(value,unit='',digits=0,inverse=false){
   else if(unit==='minutes')formatted=signed(n,1)+' min';
   else if(unit==='vpm')formatted=signed(n,2)+' VPM';
   else if(unit==='wards')formatted=signed(n,1)+' wards';
-  else if(unit==='pp')formatted=signed(n,1)+' pp';
+  else if(unit==='pp')formatted=signed(n,1)+' points';
   else formatted=signed(n,digits);
   const favorable=inverse?n<0:n>0;
   const word=tone==='neutral'?'Essentially even':favorable?'Favorable':'Unfavorable';
@@ -391,47 +426,59 @@ function renderSpatial(r){
 }
 function renderSavedProfiles(){
   const select=$('savedProfileSelect');if(!select)return;
-  const profiles=state.savedProfiles||[];
-  select.innerHTML='<option value="">New Riot profile</option>'+profiles.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.display_name||([p.game_name,p.tag_line].filter(Boolean).join('#'))||'Saved profile')+'</option>').join('');
+  const prefs=profilePreferences(),profiles=[...(state.savedProfiles||[])].sort((a,b)=>Number(prefs.pins.includes(String(b.id)))-Number(prefs.pins.includes(String(a.id)))||String(a.display_name||a.game_name).localeCompare(String(b.display_name||b.game_name)));
+  select.innerHTML='<option value="">Add a new Riot profile</option>'+profiles.map(p=>'<option value="'+esc(p.id)+'">'+esc((prefs.pins.includes(String(p.id))?'★ ':'')+(p.display_name||p.game_name+'#'+p.tag_line)+' · '+String(p.platform_region||'euw1').toUpperCase())+'</option>').join('');
   select.value=profiles.some(p=>String(p.id)===String(state.selectedProfileId))?String(state.selectedProfileId):'';
   const current=profiles.find(p=>String(p.id)===String(state.selectedProfileId))||null;
-  if($('savedProfileTitle'))$('savedProfileTitle').textContent=current?(current.display_name||'Saved Riot profile'):'New Riot profile';
-  if($('savedProfileMeta'))$('savedProfileMeta').textContent=current?('Saved on Kalenel · preferred '+roleLabel(profileRole(current))+' · '+String(current.platform_region||'euw1').toUpperCase()):'Enter a Riot ID below. The site will save the Riot profile and analysis history automatically; the Riot API key is never saved.';
-  if($('forgetSavedProfileBtn'))$('forgetSavedProfileBtn').disabled=!current;
+  $('savedProfileTitle').textContent=current?(current.display_name||current.game_name+'#'+current.tag_line):'Add a Riot profile';
+  $('savedProfileMeta').textContent=current?current.game_name+'#'+current.tag_line+' · '+String(current.platform_region||'euw1').toUpperCase()+' · preferred '+roleLabel(profileRole(current))+' · saved in this browser’s workspace':'Save a Riot ID to return to it later. The Riot API key is never saved.';
+  const query=String($('profileSearch')?.value||'').trim().toLowerCase(),visible=profiles.filter(p=>[p.display_name,p.game_name,p.tag_line,p.platform_region,roleLabel(profileRole(p))].join(' ').toLowerCase().includes(query)),cards=$('profileCards');
+  if(cards){
+    cards.innerHTML=visible.length?visible.map(p=>{const active=String(p.id)===String(state.selectedProfileId),pinned=prefs.pins.includes(String(p.id));return '<article class="profile-card'+(active?' selected':'')+'"><button type="button" class="profile-card-select" data-select-profile="'+esc(p.id)+'" aria-pressed="'+active+'"><strong>'+esc(p.display_name||p.game_name+'#'+p.tag_line)+'</strong><span>'+esc(p.game_name+'#'+p.tag_line)+'</span><small>'+esc(String(p.platform_region||'euw1').toUpperCase()+' · '+roleLabel(profileRole(p)))+' · '+(active?'Selected':'Open saved report')+'</small></button><button type="button" class="profile-pin" data-pin-profile="'+esc(p.id)+'" aria-pressed="'+pinned+'" aria-label="'+(pinned?'Unpin ':'Pin ')+esc(p.display_name||p.game_name)+'">'+(pinned?'★':'☆')+'</button></article>';}).join(''):'<p class="profile-empty">'+(query?'No saved profile matches your search.':'Save your first Riot ID below. You can name and pin profiles for quick access.')+'</p>';
+    cards.querySelectorAll('[data-select-profile]').forEach(n=>n.onclick=()=>applySavedProfile(n.dataset.selectProfile));
+    cards.querySelectorAll('[data-pin-profile]').forEach(n=>n.onclick=()=>toggleProfilePin(n.dataset.pinProfile));
+  }
+  syncButtons();
 }
 function rememberProfileSelection(id){
   state.selectedProfileId=String(id||'');
   try{if(state.selectedProfileId)localStorage.setItem(LEAGUE_SLOT_SELECTION_KEY,state.selectedProfileId);else localStorage.removeItem(LEAGUE_SLOT_SELECTION_KEY);}catch(_){}
   renderSavedProfiles();
 }
-async function rebuildSavedRoleReportFromCache(profile,selectedRole,reason=''){
+async function rebuildSavedRoleReportFromCache(profile,selectedRole,reason='',isActive=()=>true){
   let cache=null;
   try{cache=await api('cache_status',{profile_id:profile.id,target_role:selectedRole});}catch(_){}
+  if(!isActive())return null;
   const cachedRoleGames=Number(cache?.selected_role_cached_games??cache?.role_counts?.[selectedRole]??0);
   if(cachedRoleGames<=0)return null;
   $('analysisState').textContent='Rebuilding saved '+roleLabel(selectedRole)+' report';
   $('sourceState').textContent='Using cached Riot data'+(reason?' · '+reason:'');
   statusPill('Rebuilding '+roleLabel(selectedRole)+' report','warn');
   const rebuilt=await api('analyze_basic',{profile_id:profile.id,target_role:selectedRole});
+  if(!isActive())return null;
   if(!rebuilt?.analysis_id)throw new Error('Cache rebuild returned no saved analysis ID.');
   const report=rebuilt?.report||null,scope=reportRoleScopeViolations(report,selectedRole);
   if(scope.total)throw new Error('Role-selection safety check failed during saved-report rebuild: '+scope.total+' other-role game(s) detected.');
   if(!report?.games?.length)return null;
   let history=null;
   try{history=await api('report_latest',{profile_id:profile.id,target_role:selectedRole});}catch(_){}
+  if(!isActive())return null;
   return{report,cachedRoleGames,previous:history?.previous?.report_data||null,previousAt:history?.previous?.created_at||null};
 }
 async function loadSavedReport(profile){
   if(!profile?.id)return;
-  const selectedRole=selectedAnalysisRole();
+  const selectedRole=selectedAnalysisRole(),epoch=state.profileLoadEpoch;
+  const isActive=()=>epoch===state.profileLoadEpoch&&String(state.profile?.id)===String(profile.id)&&selectedAnalysisRole()===selectedRole;
   try{
     const d=await api('report_latest',{profile_id:profile.id,target_role:selectedRole});
+    if(!isActive())return;
     const current=d.analysis?.report_data||null,previous=d.previous?.report_data||null,liveAnalyzer=String(state.backendAnalyzerVersion||''),savedAnalyzer=String(current?.analyzerVersion||'');
     if(current){
       const staleAnalyzer=!!liveAnalyzer&&savedAnalyzer!==liveAnalyzer,scope=reportRoleScopeViolations(current,selectedRole),roleContaminated=scope.total>0;
       if(staleAnalyzer||roleContaminated){
         try{
-          const rebuilt=await rebuildSavedRoleReportFromCache(profile,selectedRole,roleContaminated?('role-scope repair: '+scope.total+' other-role game(s)'):('analyzer '+(savedAnalyzer||'unknown')+' → '+liveAnalyzer));
+          const rebuilt=await rebuildSavedRoleReportFromCache(profile,selectedRole,roleContaminated?('role-scope repair: '+scope.total+' other-role game(s)'):('analyzer '+(savedAnalyzer||'unknown')+' → '+liveAnalyzer),isActive);
+          if(!isActive())return;
           if(rebuilt){
             renderReport(rebuilt.report,'saved_server');
             renderProgressComparison(rebuilt.report,rebuilt.previous,rebuilt.previousAt);
@@ -444,6 +491,7 @@ async function loadSavedReport(profile){
           if(roleContaminated)throw new Error('Saved '+roleLabel(selectedRole)+' report contains '+scope.total+' other-role game(s) and could not be rebuilt safely.');
           log('Saved '+roleLabel(selectedRole)+' report uses analyzer '+(savedAnalyzer||'unknown')+' while the backend is '+liveAnalyzer+', but no cached role games were available for an automatic rebuild. Showing the saved report as stale context.','bad');
         }catch(rebuildError){
+          if(!isActive())return;
           if(roleContaminated)throw rebuildError;
           log('Automatic cached rebuild for analyzer '+(savedAnalyzer||'unknown')+' → '+liveAnalyzer+' failed: '+rebuildError.message+'. Showing the existing saved report instead.','bad');
         }
@@ -458,7 +506,8 @@ async function loadSavedReport(profile){
       // A role-pure report may be absent even though the Riot match/timeline cache
       // is already complete. Rebuild deterministically from cache with no Riot key.
       try{
-        const rebuilt=await rebuildSavedRoleReportFromCache(profile,selectedRole,'role report missing');
+        const rebuilt=await rebuildSavedRoleReportFromCache(profile,selectedRole,'role report missing',isActive);
+        if(!isActive())return;
         if(rebuilt){
           renderReport(rebuilt.report,'saved_server');
           renderProgressComparison(rebuilt.report,rebuilt.previous,rebuilt.previousAt);
@@ -468,21 +517,28 @@ async function loadSavedReport(profile){
           log('Rebuilt a role-pure '+roleLabel(selectedRole)+' report from '+rebuilt.cachedRoleGames+' cached '+roleLabel(selectedRole)+' game(s); no Riot refetch was needed.','ok');
           return;
         }
-      }catch(rebuildError){log('Cached '+roleLabel(selectedRole)+' report rebuild: '+rebuildError.message,'bad');}
-      $('report').hidden=true;$('reportEmpty').hidden=false;
+      }catch(rebuildError){if(!isActive())return;log('Cached '+roleLabel(selectedRole)+' report rebuild: '+rebuildError.message,'bad');}
+      clearSelectedReport('No saved '+roleLabel(selectedRole)+' report yet');
+      profileFeedback('Profile saved. Add a Riot key to fetch new '+roleLabel(selectedRole)+' games.');
       $('analysisState').textContent='No saved '+roleLabel(selectedRole)+' report yet';
       $('sourceState').textContent='Profile saved · analyze this role';
     }
-  }catch(e){log('Saved report: '+e.message,'bad');}
+  }catch(e){if(!isActive())return;clearSelectedReport('Could not open the saved report');profileFeedback('Could not open this report: '+e.message,'bad');log('Saved report: '+e.message,'bad');}
 }
 async function applySavedProfile(id,{loadReport=true}={}){
+  if(state.busy)return;
   const p=(state.savedProfiles||[]).find(x=>String(x.id)===String(id));if(!p)return;
+  const epoch=++state.profileLoadEpoch;clearSelectedReport('Opening saved profile…');
   state.profile=p;rememberProfileSelection(p.id);
-  if($('requestGameName'))$('requestGameName').value=p.game_name||'';
-  if($('requestTagLine'))$('requestTagLine').value=p.tag_line||'';
-  if($('requestRegion'))$('requestRegion').value=p.platform_region||'euw1';
-  state.selectedRole=profileRole(p);if($('requestRole'))$('requestRole').value=state.selectedRole;
-  syncButtons();await loadCacheStatus();if(loadReport)await loadSavedReport(p);
+  $('requestGameName').value=p.game_name||'';$('requestTagLine').value=p.tag_line||'';$('requestRegion').value=p.platform_region||'euw1';
+  if($('profileLabel'))$('profileLabel').value=p.display_name||'';
+  state.selectedRole=profileRole(p);$('requestRole').value=state.selectedRole;
+  if($('profileEditor'))$('profileEditor').open=false;
+  profileFeedback('Opening '+(p.display_name||p.game_name)+' · '+roleLabel(state.selectedRole)+'…');
+  syncButtons();
+  await Promise.all([loadCacheStatus(),loadReport?loadSavedReport(p):Promise.resolve()]);
+  if(epoch!==state.profileLoadEpoch)return;
+  if(state.report)profileFeedback('Saved '+roleLabel(state.selectedRole)+' report opened. Add a Riot key only when you want new matches.','ok');
 }
 async function refreshSavedProfiles({restore=false}={}){
   try{
@@ -516,6 +572,11 @@ async function refreshSavedProfiles({restore=false}={}){
   }catch(e){log('Saved profiles: '+e.message,'bad');}
 }
 function startNewProfile(){
+  if(state.busy)return;
+  state.profileLoadEpoch++;clearSelectedReport();profileFeedback('');
+  if($('profileEditor'))$('profileEditor').open=true;
+  if($('profileLabel'))$('profileLabel').value='';
+  $('cacheState').textContent='0 games';$('latestGameState').textContent='—';
   state.profile=null;rememberProfileSelection('');
   if($('requestGameName'))$('requestGameName').value='';
   if($('requestTagLine'))$('requestTagLine').value='';
@@ -538,7 +599,7 @@ function directRequestComplete(){
   const region=String($('requestRegion')?.value||'').trim();
   return !!game&&!!tag&&!!region&&(state.serverRiotKey||!!state.riotApiKey);
 }
-async function ensureDirectRequestProfile(){
+async function ensureDirectRequestProfile({requireResolved=true}={}){
   const gameName=String($('requestGameName')?.value||'').trim(),tagLine=String($('requestTagLine')?.value||'').trim(),platformRegion=String($('requestRegion')?.value||'euw1'),targetRole=selectedAnalysisRole();
   if(!gameName||!tagLine)throw new Error('Enter a Riot game name and tag.');
   const existing=(state.savedProfiles||[]).find(p=>sameRiotIdentity(p,gameName,tagLine,platformRegion))||null;
@@ -546,28 +607,44 @@ async function ensureDirectRequestProfile(){
     profile:{
       ...(existing?.id?{id:existing.id}:{}),
       profile_key:existing?.profile_key||generatedProfileKey(gameName,tagLine,platformRegion),
-      display_name:gameName+'#'+tagLine,
+      display_name:String($('profileLabel')?.value||'').trim()||existing?.display_name||gameName+'#'+tagLine,
       game_name:gameName,
       tag_line:tagLine,
       platform_region:platformRegion,
       notes:profileNotes(targetRole)
     }
   });
-  if(d.resolve_warning)throw new Error('Riot account lookup failed: '+d.resolve_warning);
-  if(!d.profile?.puuid)throw new Error('Riot account lookup did not return a PUUID.');
-  state.profile=d.profile;state.selectedRole=targetRole;
+  if(requireResolved&&d.resolve_warning)throw new Error('Riot account lookup failed: '+d.resolve_warning);
+  if(requireResolved&&!d.profile?.puuid)throw new Error('Riot account lookup did not return a PUUID.');
+  if(!d.profile?.id)throw new Error('Profile save did not return a saved profile.');
+  state.profile=d.profile;state.selectedRole=targetRole;saveProfilePreference(d.profile.id,targetRole);
   const idx=state.savedProfiles.findIndex(p=>String(p.id)===String(d.profile.id));if(idx>=0)state.savedProfiles[idx]=d.profile;else state.savedProfiles.unshift(d.profile);
   rememberProfileSelection(d.profile.id);
   $('sourceState').textContent='Riot profile saved + resolved';
   return d.profile;
 }
+async function saveProfileOnly(){
+  if(state.busy)return;
+  const oldId=state.profile?.id;state.profileLoadEpoch++;setBusy(true,'Saving profile');profileFeedback('Saving profile…');
+  try{
+    const p=await ensureDirectRequestProfile({requireResolved:false});
+    if(String(oldId)!==String(p.id))clearSelectedReport('Profile saved · fetch matches when ready');
+    if($('profileEditor'))$('profileEditor').open=false;
+    $('profileLabel').value=p.display_name||'';
+    profileFeedback('Saved '+p.display_name+' · preferred '+roleLabel(state.selectedRole)+'.','ok');
+    statusPill('Profile saved');
+    await Promise.all([loadCacheStatus(),loadSavedReport(p)]);
+  }catch(e){profileFeedback('Could not save profile: '+e.message,'bad');statusPill('Profile save failed','error');}
+  finally{setBusy(false);renderSavedProfiles();}
+}
 async function boot(){
   bindGameSortControls();
   bindGameFilterControls();
   clearLog();log('Ready. Enter a Riot ID, region and Riot API key, then load recent matches.');
-  await getDdragonVersion();
+  const dragonPromise=getDdragonVersion();
   try{
     const health=await api('health');
+    await dragonPromise;
     state.serverRiotKey=!!health.server_riot_key;
     state.backendAnalyzerVersion=String(health.analyzer_version||'');
     state.publicWorkspace=health.public_workspace!==false;
@@ -576,6 +653,7 @@ async function boot(){
     $('riotKeyStatus').textContent=state.serverRiotKey?'Server Riot key available':'Your Riot key stays only in this browser tab.';
     log('League backend ready. Riot profiles and analysis history can be stored in this isolated Kalenel workspace; the API key remains session-only.','ok');
     await refreshSavedProfiles({restore:true});
+    if($('progressPanel'))$('progressPanel').hidden=true;
   }catch(e){
     $('backendState').textContent='Backend unavailable';$('backendState').className='pill error';log(e.message,'bad');
   }
@@ -583,11 +661,16 @@ async function boot(){
 }
 function syncButtons(){
   const run=$('loadRecentBtn');if(run)run.disabled=state.busy||!directRequestComplete();
+  if($('saveProfileBtn'))$('saveProfileBtn').disabled=state.busy||!String($('requestGameName')?.value||'').trim()||!String($('requestTagLine')?.value||'').trim();
+  if($('openSavedReportBtn'))$('openSavedReportBtn').disabled=state.busy||!state.profile;
+  if($('forgetSavedProfileBtn'))$('forgetSavedProfileBtn').disabled=state.busy||!state.selectedProfileId;
 }
 async function loadCacheStatus(){
   if(!state.profile)return;
   try{
-    const targetRole=selectedAnalysisRole(),d=await api('cache_status',{profile_id:state.profile.id,target_role:targetRole}),roleCount=Number(d.selected_role_cached_games??d.role_counts?.[targetRole]??0);
+    const targetRole=selectedAnalysisRole(),id=state.profile.id,epoch=state.profileLoadEpoch,d=await api('cache_status',{profile_id:id,target_role:targetRole});
+    if(epoch!==state.profileLoadEpoch||String(state.profile?.id)!==String(id)||selectedAnalysisRole()!==targetRole)return;
+    const roleCount=Number(d.selected_role_cached_games??d.role_counts?.[targetRole]??0);
     $('cacheState').textContent=(d.cached_games||0)+' cached · '+roleCount+' '+roleLabel(targetRole);
     $('latestGameState').textContent=d.last_game_at?fmtDate(d.last_game_at):'None yet';
   }catch(e){
@@ -639,7 +722,7 @@ async function runRecentAnalysis(){
     log('Enter game name, tag, region and a Riot API key first.','bad');
     return;
   }
-  const targetRole=selectedAnalysisRole();state.selectedRole=targetRole;
+  const targetRole=selectedAnalysisRole();state.selectedRole=targetRole;state.profileLoadEpoch++;
   clearLog();setBusy(true,'Resolving Riot ID');statusPill('Resolving Riot ID','warn');
   $('report').hidden=true;$('reportEmpty').hidden=false;
   try{
@@ -766,6 +849,9 @@ function renderReport(raw,sourceKind){
   renderReportDrivers(r);
   renderEvidenceHealth(r);
   renderKpis(r);
+  renderMatchRhythm(r);
+  if($('glanceScope'))$('glanceScope').textContent=coachingN+' '+roleLabel(reportRole)+' coaching games · '+(r.games||[]).length+' deep games';
+  if($('historyScope'))$('historyScope').textContent=historyN+' '+roleLabel(reportRole)+' history games · same selected queue';
   renderSupportRoleLens(r);
   renderRoleSpecificLens(r);
   renderRoleSectionCopy(r);
@@ -814,7 +900,7 @@ function benchmarkKpi(label,value,benchmark,unit,inverse=false,extra=''){
   const tone=delta==null?'neutral':deltaTone(delta,0,unit==='csmin'?.15:unit==='percent'?2:unit==='dpm'?50:unit==='kda'?.2:unit==='deaths'?.25:.01,inverse);
   const formatted=unit==='percent'?fmtPct(value):unit==='csmin'?fmt(value,2):unit==='dpm'?fmtInt(value):unit==='deaths'?fmt(value,1):fmt(value,2);
   const benchmarkText=unit==='percent'?fmtPct(benchmark):unit==='csmin'?fmt(benchmark,2):unit==='dpm'?fmtInt(benchmark):unit==='deaths'?fmt(benchmark,1):fmt(benchmark,2);
-  const deltaText=delta==null?'benchmark unavailable':unit==='percent'?signed(delta,1)+' pp':unit==='csmin'?signed(delta,2):unit==='dpm'?signed(delta,0):unit==='deaths'?signed(delta,1):signed(delta,2);
+  const deltaText=delta==null?'benchmark unavailable':unit==='percent'?signed(delta,1)+' points':unit==='csmin'?signed(delta,2):unit==='dpm'?signed(delta,0):unit==='deaths'?signed(delta,1):signed(delta,2);
   return{label,value:formatted,tone,sub:'External ref '+benchmarkText+' · '+deltaText+(extra?' · '+extra:''),bar:delta==null?'':contextBar(delta,unit==='dpm'?500:unit==='csmin'?2:unit==='percent'?15:unit==='deaths'?3:2,inverse)};
 }
 
@@ -959,15 +1045,15 @@ function outcomeFingerprintCard(label,wins,losses,unit,inverse=false,minOpportun
   const delta=valid?Number(wins.mean)-Number(losses.mean):null,effect=valid?standardizedMeanGap(wins,losses):null;
   const tone=!ready||delta==null?'neutral':(inverse?(delta<0?'good':'bad'):(delta>0?'good':'bad'));
   const fmtValue=v=>unit==='percent'?fmtPct(v):unit==='gold'?(hasNum(v)?signed(v,0)+'g':'n/a'):unit==='dpm'?fmtInt(v):unit==='minutes'?(hasNum(v)?signed(v,1)+'m':'n/a'):unit==='cs'?(hasNum(v)?signed(v,2)+' CS':'n/a'):unit==='csmin'?(hasNum(v)?signed(v,2):'n/a'):unit==='num'?fmt(v,2):fmt(v,2);
-  const deltaText=delta==null?'Not enough valid observations.':('Observed mean gap: '+(unit==='percent'?signed(delta,1)+' pp':unit==='gold'?signed(delta,0)+'g':unit==='minutes'?signed(delta,1)+'m':unit==='cs'?signed(delta,2)+' CS':unit==='csmin'?signed(delta,2)+' CS/min':signed(delta,unit==='num'?2:0)+(unit==='dpm'?' DPM':'')));
+  const deltaText=delta==null?'Not enough valid observations.':('Observed mean gap: '+(unit==='percent'?signed(delta,1)+' points':unit==='gold'?signed(delta,0)+'g':unit==='minutes'?signed(delta,1)+'m':unit==='cs'?signed(delta,2)+' CS':unit==='csmin'?signed(delta,2)+' CS/min':signed(delta,unit==='num'?2:0)+(unit==='dpm'?' DPM':'')));
   const opp=x=>minOpportunities?' · '+fmtInt(x?.opportunities||0)+' '+opportunityLabel:'';
-  return {label,wins,losses,delta,effect,tone,ready,opportunityReady,minOpportunities,html:'<article class="outcome-fingerprint-card tone-'+tone+(ready?'':' thin-evidence')+'"><span>'+esc(label)+'</span><div><strong>'+esc(fmtValue(wins?.mean))+'</strong><small>in wins · n='+Number(wins?.n||0)+esc(opp(wins))+'</small></div><div><strong>'+esc(fmtValue(losses?.mean))+'</strong><small>in losses · n='+Number(losses?.n||0)+esc(opp(losses))+'</small></div><p>'+esc(deltaText)+(ready&&hasNum(effect)?' · Hedges-corrected gap '+fmt(effect,2):ready?'':' · standardized gap withheld')+(ready?'':' · thin sample — no directional color')+'</p></article>'};
+  return {label,wins,losses,delta,effect,tone,ready,opportunityReady,minOpportunities,html:'<article class="outcome-fingerprint-card tone-'+tone+(ready?'':' thin-evidence')+'"><span>'+esc(label)+'</span><div><strong>'+esc(fmtValue(wins?.mean))+'</strong><small>in wins · n='+Number(wins?.n||0)+esc(opp(wins))+'</small></div><div><strong>'+esc(fmtValue(losses?.mean))+'</strong><small>in losses · n='+Number(losses?.n||0)+esc(opp(losses))+'</small></div><p>'+esc(deltaText)+(ready&&hasNum(effect)?' · gap size '+fmt(effect,2):ready?'':' · gap size unavailable')+(ready?'':' · thin sample — no directional color')+'</p></article>'};
 }
 
 function supportLensCard(label,value,detail,tone='neutral',ready=true,interval=null){
   const effective=ready?tone:'neutral',hasInterval=interval&&hasNum(interval.low)&&hasNum(interval.high);
   return '<article class="support-lens-card tone-'+effective+(ready?'':' thin-evidence')+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong>'+
-    (hasInterval?'<div class="support-lens-interval"><i style="left:'+clamp(interval.low,0,100)+'%;width:'+(clamp(interval.high,0,100)-clamp(interval.low,0,100))+'%"></i><b style="left:'+clamp(Number(String(value).replace(/[^0-9.-]/g,'')),0,100)+'%"></b></div><small>95% Wilson '+esc(fmtPct(interval.low))+'–'+esc(fmtPct(interval.high))+'</small>':'')+
+    (hasInterval?'<div class="support-lens-interval"><i style="left:'+clamp(interval.low,0,100)+'%;width:'+(clamp(interval.high,0,100)-clamp(interval.low,0,100))+'%"></i><b style="left:'+clamp(Number(String(value).replace(/[^0-9.-]/g,'')),0,100)+'%"></b></div><small>95% range '+esc(fmtPct(interval.low))+'–'+esc(fmtPct(interval.high))+'</small>':'')+
     '<p>'+esc(detail)+(ready?'':' · thin sample — descriptive only')+'</p></article>';
 }
 function roleEventCoverage(r){
@@ -1018,7 +1104,7 @@ function renderSupportRoleLens(r){
 function roleLensCard(label,value,detail,tone='neutral',ready=true,interval=null){
   const effective=ready?tone:'neutral',hasInterval=interval&&hasNum(interval.low)&&hasNum(interval.high);
   return '<article class="role-specific-lens-card tone-'+effective+(ready?'':' thin-evidence')+'"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong>'+
-    (hasInterval?'<div class="role-lens-interval"><i style="left:'+clamp(interval.low,0,100)+'%;width:'+(clamp(interval.high,0,100)-clamp(interval.low,0,100))+'%"></i><b style="left:'+clamp(Number(String(value).replace(/[^0-9.-]/g,'')),0,100)+'%"></b></div><small>95% Wilson '+esc(fmtPct(interval.low))+'–'+esc(fmtPct(interval.high))+'</small>':'')+
+    (hasInterval?'<div class="role-lens-interval"><i style="left:'+clamp(interval.low,0,100)+'%;width:'+(clamp(interval.high,0,100)-clamp(interval.low,0,100))+'%"></i><b style="left:'+clamp(Number(String(value).replace(/[^0-9.-]/g,'')),0,100)+'%"></b></div><small>95% range '+esc(fmtPct(interval.low))+'–'+esc(fmtPct(interval.high))+'</small>':'')+
     '<p>'+esc(detail)+(ready?'':' · thin sample — descriptive only')+'</p></article>';
 }
 function renderRoleSpecificLens(r){
@@ -1126,7 +1212,7 @@ function renderOutcomeFingerprint(r){
   const cards=outcomeFingerprintSpecs(role).map(spec=>outcomeFingerprintCard(spec.label,gameMetricSummary(wins,spec.get,spec.opportunity),gameMetricSummary(losses,spec.get,spec.opportunity),spec.unit,spec.inverse,spec.minOpportunities||0,spec.opportunityLabel||'opportunities'));
   box.innerHTML=cards.map(x=>x.html).join('');
   const usable=cards.filter(x=>x.ready&&hasNum(x.effect)).sort((a,b)=>Number(b.effect)-Number(a.effect)),lead=usable[0],thin=cards.filter(x=>!x.ready).length;
-  if(note)note.innerHTML=lead?'<b>Largest role-specific standardized separation:</b> '+esc(lead.label)+' (Hedges g '+esc(fmt(lead.effect,2))+'). The small-sample correction makes unlike units more comparable, but this remains descriptive and is not a causal or significance claim. '+esc(roleLabel(role))+' coaching cohort: '+wins.length+' wins / '+losses.length+' losses.'+(useClean&&allGames.length!==games.length?' '+String(allGames.length-games.length)+' AFK/early-surrender outcome-compromised game(s) excluded.':'')+(thin?' '+thin+' metric'+(thin===1?' is':'s are')+' shown without directional color because one outcome side misses its valid-game or metric-specific opportunity floor.':''):'No role-specific metric has at least three valid observations in both wins and losses with enough variation for a directional standardized comparison.';
+  if(note)note.innerHTML=lead?'<b>Largest win/loss difference in this sample:</b> '+esc(lead.label)+' (gap size '+esc(fmt(lead.effect,2))+'). The gap scale compares each difference with that metric’s typical spread, but this remains descriptive and is not a causal or significance claim. '+esc(roleLabel(role))+' coaching cohort: '+wins.length+' wins / '+losses.length+' losses.'+(useClean&&allGames.length!==games.length?' '+String(allGames.length-games.length)+' AFK/early-surrender outcome-compromised game(s) excluded.':'')+(thin?' '+thin+' metric'+(thin===1?' is':'s are')+' shown without directional color because one outcome side misses its valid-game or metric-specific opportunity floor.':''):'No role-specific metric has at least three valid observations in both wins and losses with enough variation for a directional standardized comparison.';
 }
 function learningMatchButton(x,tab,label){
   if(!x?.matchId)return '';
@@ -1209,9 +1295,20 @@ function renderEvidenceHealth(r){
     evidenceHealthCard('Mechanics cohort',String(q.mechanicsCohortGames ?? n)+' games',mechanicsLimited?(q.mechanicsCohortReason==='current_mechanics_unverified'?'newest mechanics revision unverified':'broader/mixed mechanics fallback in use'):(q.mechanicsCohortApplied?'verified current-mechanics cohort applied':'single compatible mechanics context'),mechanicsLimited?'limited':'ready'),
     evidenceHealthCard('Exact item mechanics',exactItems+'/'+n,pct(exactItems)+' with timeline + exact patch item catalog · item-window floor 4',status(exactItems,4))
   ].join('');
-  if(link)link.onclick=()=>$('trust-coverage')?.scrollIntoView({behavior:'auto',block:'start'});
+  if(link)link.onclick=()=>{openReportAncestors($('trust-coverage'));$('trust-coverage')?.scrollIntoView({behavior:'auto',block:'start'});};
 }
 
+function renderMatchRhythm(r){
+  const box=$('matchRhythm');if(!box)return;
+  const role=reportSelectedRole(r),games=reportCoachingGames(r).filter(g=>explicitGameRole(g.role)===role).slice().sort((a,b)=>Number(a.gameStartTimestamp||0)-Number(b.gameStartTimestamp||0)),excluded=games.filter(g=>g.outcomeCompromised===true),known=games.filter(g=>typeof g.win==='boolean'),wins=known.filter(g=>g.win).length;
+  box.innerHTML=games.map((g,i)=>{const result=typeof g.win!=='boolean'?'?':g.win?'W':'L',isExcluded=g.outcomeCompromised===true,src=championIcon(g.champion),lane=trustedDirectPeer(g)&&g.timelineAvailable===true&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)?' · '+signed(g.goldDiff15,0)+' gold at 15 vs role':'';
+    const label=g.champion+' · '+(result==='W'?'Win':result==='L'?'Loss':'Unknown outcome')+' · '+shortGameDate(g.gameStartTimestamp)+(isExcluded?' · AFK/early-surrender outcome excluded from comparable result analysis':'')+lane;
+    return '<button type="button" class="rhythm-game result-'+(result==='W'?'win':result==='L'?'loss':'unknown')+(isExcluded?' result-compromised':'')+'" data-rhythm-match="'+esc(g.matchId)+'" aria-label="'+esc(label)+'" title="'+esc(label)+'">'+(src?'<img src="'+esc(src)+'" alt="" loading="lazy">':'')+'<strong>'+result+(isExcluded?'*':'')+'</strong><small>'+(i+1)+'</small></button>';
+  }).join('');
+  box.querySelectorAll('[data-rhythm-match]').forEach(n=>n.onclick=()=>openReplayReviewMatch(n.dataset.rhythmMatch,'macro'));
+  const clean=known.filter(g=>g.outcomeCompromised!==true),cleanWins=clean.filter(g=>g.win).length;
+  $('matchRhythmNote').textContent=wins+' wins / '+(known.length-wins)+' losses across '+known.length+' known outcomes'+(games.length>known.length?' · '+(games.length-known.length)+' unknown':'')+'. '+(excluded.length?'* '+excluded.length+' AFK/early-surrender game(s) shown; excluded from comparable outcome comparisons. ':'')+'Comparable results: '+cleanWins+'/'+clean.length+' wins'+(clean.length>=3?' ('+fmtPct(100*cleanWins/clean.length)+')':' · too few to estimate a stable rate')+'.';
+}
 function renderKpis(r){
   const s=r.coachingSummary||r.summary||{},roleKey=canonicalRole(r?.dataQuality?.selectedRole||s.primaryRole||r.summary?.primaryRole||state.selectedRole),role=roleLabel(roleKey),games=Number(s.games||0);
   const common=[
@@ -1320,7 +1417,7 @@ function pulseDeltaFormat(v,unit){
   if(unit==='csminRaw'||unit==='csmin')return signed(v,2)+' CS/min';
   if(unit==='cs')return signed(v,1)+' CS';
   if(unit==='dpm')return signed(v,0)+' DPM';
-  if(unit==='percent')return signed(v,1)+' pp';
+  if(unit==='percent')return signed(v,1)+' points';
   if(unit==='minutes')return signed(v,1)+'m';
   return signed(v,2);
 }
@@ -1346,15 +1443,15 @@ function historyTrendCard(label,obj,unit='num',inverse=false,threshold=0){
   const recent=hasNum(obj?.recent)?Number(obj.recent):null,prior=hasNum(obj?.prior)?Number(obj.prior):null,recentN=Number(obj?.recentN||0),priorN=Number(obj?.priorN||0),ready=recentN>=5&&priorN>=5&&recent!=null&&prior!=null;
   if(!ready)return '<article class="pulse-card tone-neutral"><span>'+esc(label)+'</span><strong>Not enough history</strong><small>'+recentN+' recent / '+priorN+' prior valid games · need 5 each</small></article>';
   const delta=recent-prior,signal=inverse?-delta:delta,tone=Math.abs(delta)<threshold?'neutral':signal>0?'good':'bad';
-  const format=(v)=>unit==='percent'?fmtPct(v):unit==='pp'?signed(v,1)+' pp':unit==='dpm'?fmtInt(v):unit==='cs'?fmt(v,1):unit==='csmin'?fmt(v,2):fmt(v,2);
-  const deltaText=unit==='percent'||unit==='pp'?signed(delta,1)+' pp':unit==='dpm'?signed(delta,0):unit==='cs'?signed(delta,1):signed(delta,2);
+  const format=(v)=>unit==='percent'?fmtPct(v):unit==='pp'?signed(v,1)+' points':unit==='dpm'?fmtInt(v):unit==='cs'?fmt(v,1):unit==='csmin'?fmt(v,2):fmt(v,2);
+  const deltaText=unit==='percent'||unit==='pp'?signed(delta,1)+' points':unit==='dpm'?signed(delta,0):unit==='cs'?signed(delta,1):signed(delta,2);
   return '<article class="pulse-card tone-'+tone+'"><span>'+esc(label)+'</span><strong>'+esc(format(recent))+'</strong><p>Previous '+esc(format(prior))+' · Δ '+esc(deltaText)+'</p><small>latest '+recentN+' vs previous '+priorN+' valid games · descriptive history shift</small></article>';
 }
 function historyDistributionCard(label,obj,unit='num'){
   const n=Number(obj?.n||0);if(!n||!hasNum(obj?.median))return '<article class="quick-read-card tone-neutral thin-evidence"><div class="quick-read-head"><span>'+esc(label)+'</span><strong>n/a</strong></div><p>No stable history distribution is available.</p><small>0 valid games</small></article>';
   const format=(v)=>{
     if(unit==='percent')return fmt(v,1)+'%';
-    if(unit==='pp')return signed(v,1)+' pp';
+    if(unit==='pp')return signed(v,1)+' points';
     if(unit==='dpm')return fmtInt(v);
     if(unit==='csmin')return fmt(v,2);
     return fmt(v,1);
@@ -1368,15 +1465,15 @@ function historyStabilityCard(label,obj,unit='num',inverse=false,medianThreshold
   const recentTail=inverse?obj?.recentQ75:obj?.recentQ25,priorTail=inverse?obj?.priorQ75:obj?.priorQ25,tailDelta=hasNum(recentTail)&&hasNum(priorTail)?Number(recentTail)-Number(priorTail):null;
   const format=(v)=>{
     if(unit==='percent')return fmt(v,1)+'%';
-    if(unit==='pp')return signed(v,1)+' pp';
+    if(unit==='pp')return signed(v,1)+' points';
     if(unit==='dpm')return fmtInt(v);
     if(unit==='csmin')return fmt(v,2);
     if(unit==='cs')return fmt(v,1);
     return fmt(v,2);
   };
-  const deltaText=unit==='percent'||unit==='pp'?signed(medianDelta,1)+' pp':unit==='dpm'?signed(medianDelta,0):unit==='cs'?signed(medianDelta,1):signed(medianDelta,2);
+  const deltaText=unit==='percent'||unit==='pp'?signed(medianDelta,1)+' points':unit==='dpm'?signed(medianDelta,0):unit==='cs'?signed(medianDelta,1):signed(medianDelta,2);
   const rangeText=Math.abs(iqrDelta)<iqrThreshold?'middle-50% spread roughly stable':iqrDelta<0?'middle-50% spread narrowed '+format(Math.abs(iqrDelta)):'middle-50% spread widened '+format(Math.abs(iqrDelta));
-  const tailLabel=inverse?'Bad-tail ceiling (Q75)':'Performance floor (Q25)',tailText=hasNum(recentTail)&&hasNum(priorTail)?tailLabel+' '+format(recentTail)+' vs '+format(priorTail)+' · Δ '+(unit==='percent'||unit==='pp'?signed(tailDelta,1)+' pp':unit==='dpm'?signed(tailDelta,0):unit==='cs'?signed(tailDelta,1):signed(tailDelta,2)):'Tail comparison unavailable';
+  const tailLabel=inverse?'Bad-tail ceiling (Q75)':'Performance floor (Q25)',tailText=hasNum(recentTail)&&hasNum(priorTail)?tailLabel+' '+format(recentTail)+' vs '+format(priorTail)+' · Δ '+(unit==='percent'||unit==='pp'?signed(tailDelta,1)+' points':unit==='dpm'?signed(tailDelta,0):unit==='cs'?signed(tailDelta,1):signed(tailDelta,2)):'Tail comparison unavailable';
   return '<article class="pulse-card tone-'+tone+'"><span>'+esc(label)+'</span><strong>Median '+esc(format(obj.recentMedian))+'</strong><p>Previous median '+esc(format(obj.priorMedian))+' · Δ '+esc(deltaText)+'</p><small>'+esc(tailText)+' · recent IQR '+esc(format(obj.recentIqr))+' vs '+esc(format(obj.priorIqr))+' · '+esc(rangeText)+' · '+recentN+' vs '+priorN+' games</small></article>';
 }
 function archetypeDeepDiagnostic(g,matrix){
@@ -1423,7 +1520,7 @@ function renderHighResourceBehaviorContrast(r){
     if(unit==='percent')return fmt(obj.value,1)+'%';
     if(unit==='minutes')return signed(obj.value,2)+' min';
     if(unit==='dpm')return fmtInt(obj.value);
-    if(unit==='pp')return signed(obj.value,1)+' pp';
+    if(unit==='pp')return signed(obj.value,1)+' points';
     return fmt(obj.value,2);
   };
   const denom=(obj)=>{
@@ -1435,7 +1532,7 @@ function renderHighResourceBehaviorContrast(r){
   const rows=metricRows.map(spec=>{
     const av=a?.[spec.key],bv=b?.[spec.key],aN=Number(av?.eligibleGames||0),bN=Number(bv?.eligibleGames||0),eventBased=String(av?.basis||'')==='event'||String(bv?.basis||'')==='event',eventEnough=!eventBased||(Number(av?.opportunities||0)>=minEventOpp&&Number(bv?.opportunities||0)>=minEventOpp),eligible=aN>=minN&&bN>=minN&&eventEnough&&hasNum(av?.value)&&hasNum(bv?.value);
     if(!eligible)return'';
-    const delta=Number(bv.value)-Number(av.value),deltaText=spec.unit==='percent'||spec.unit==='pp'?signed(delta,1)+' pp':spec.unit==='minutes'?signed(delta,2)+' min':spec.unit==='dpm'?signed(delta,0)+' DPM':signed(delta,2);
+    const delta=Number(bv.value)-Number(av.value),deltaText=spec.unit==='percent'||spec.unit==='pp'?signed(delta,1)+' points':spec.unit==='minutes'?signed(delta,2)+' min':spec.unit==='dpm'?signed(delta,0)+' DPM':signed(delta,2);
     return '<div class="behavior-contrast-row"><div><b>'+esc(spec.label)+'</b><small>'+esc(spec.note)+'</small></div><div><span>'+esc(valueText(av,spec.unit))+'</span><small>'+esc(denom(av))+'</small></div><div><span>'+esc(valueText(bv,spec.unit))+'</span><small>'+esc(denom(bv))+'</small></div><div><span>'+esc(deltaText)+'</span><small>lower-damage minus converted</small></div></div>';
   }).filter(Boolean);
   if(!rows.length){host.hidden=true;host.innerHTML='';return;}
@@ -1457,7 +1554,7 @@ function renderLongOutcomeFingerprint(h,role){
   box.innerHTML=cards.map(x=>x.html).join('');
   const usable=cards.filter(x=>x.ready&&hasNum(x.effect)).sort((a,b)=>Number(b.effect)-Number(a.effect)),lead=usable[0],thin=cards.filter(x=>!x.ready).length;
   if(note){
-    if(directional&&lead)note.innerHTML='<b>Largest long-horizon standardized separation:</b> '+esc(lead.label)+' (Hedges g '+esc(fmt(lead.effect,2))+'). '+esc(String(wins))+' clean wins / '+esc(String(losses))+' clean losses across the selected '+esc(roleLabel(role))+' history'+(Number(m.excludedCompromised||0)?' · '+esc(String(m.excludedCompromised))+' outcome-compromised game(s) excluded':'')+'. Descriptive association only; it is not a causal or significance claim.'+(thin?' '+thin+' metric'+(thin===1?' is':'s are')+' neutral because one side has fewer than '+minSide+' valid observations.':'');
+    if(directional&&lead)note.innerHTML='<b>Largest win/loss difference in your history:</b> '+esc(lead.label)+' (gap size '+esc(fmt(lead.effect,2))+'). '+esc(String(wins))+' clean wins / '+esc(String(losses))+' clean losses across the selected '+esc(roleLabel(role))+' history'+(Number(m.excludedCompromised||0)?' · '+esc(String(m.excludedCompromised))+' outcome-compromised game(s) excluded':'')+'. Descriptive association only; it is not a causal or significance claim.'+(thin?' '+thin+' metric'+(thin===1?' is':'s are')+' neutral because one side has fewer than '+minSide+' valid observations.':'');
     else note.innerHTML='<b>Context only:</b> clean outcomes do not yet provide at least '+minSide+' wins and '+minSide+' losses. The cards show the broader result split without directional color so AFK/early-surrender contamination is not promoted into a coaching conclusion.';
   }
 }
@@ -1491,7 +1588,7 @@ function renderLongHorizon(r){
     {label:'History depth',value:games+' '+roleLabel(role)+' games',sub:'selected role + selected queue from the latest 100 account matches · '+otherRoleGames+' other-role games included'},
     roleVolume,roleContext,roleExtra,...(resourceOutput?[resourceOutput]:[]),...(lowResourceOutput?[lowResourceOutput]:[]),
     {label:'Death downtime',value:hasNum(s?.deadTimePct?.value)?fmt(s.deadTimePct.value,1)+'%':'n/a',sub:'share of game time spent dead · timing-sensitive'},
-    {label:'Damage share − gold share',value:hasNum(s?.damageEfficiencyPp?.value)?signed(s.damageEfficiencyPp.value,1)+' pp':'n/a',sub:'team champion-damage share minus team gold share · composition-sensitive'},
+    {label:'Damage share − gold share',value:hasNum(s?.damageEfficiencyPp?.value)?signed(s.damageEfficiencyPp.value,1)+' points':'n/a',sub:'team champion-damage share minus team gold share · composition-sensitive'},
     {label:'Turret damage / min',value:hasNum(s?.turretDamagePerMin?.value)?fmtInt(s.turretDamagePerMin.value):'n/a',sub:'direct structure pressure from match data'}
   ];
   kpi.innerHTML=rows.map(x=>'<article class="kpi-card tone-neutral"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><small>'+esc(x.sub)+'</small></article>').join('');
@@ -1545,7 +1642,7 @@ function renderLongHorizon(r){
           const wrGap=Number(highHigh.cleanWinRate)-Number(highLow.cleanWinRate);
           const dmgGap=hasNum(highHigh?.cleanAvgDamageEfficiencyPp)&&hasNum(highLow?.cleanAvgDamageEfficiencyPp)?Number(highHigh.cleanAvgDamageEfficiencyPp)-Number(highLow.cleanAvgDamageEfficiencyPp):null;
           const deadGap=hasNum(highLow?.cleanAvgDeadTimePct)&&hasNum(highHigh?.cleanAvgDeadTimePct)?Number(highLow.cleanAvgDeadTimePct)-Number(highHigh.cleanAvgDeadTimePct):null;
-          contrast.innerHTML='<b>High-resource conversion split:</b> '+esc(nA+' total / '+cleanA+' clean high-resource/high-damage games · '+fmtPct(highHigh.cleanWinRate)+' clean WR')+' vs '+esc(nB+' total / '+cleanB+' clean high-resource/lower-damage games · '+fmtPct(highLow.cleanWinRate)+' clean WR')+' · '+esc(signed(wrGap,1)+' pp descriptive clean win-rate gap')+(hasNum(dmgGap)?' · '+esc(signed(dmgGap,1)+' pp difference in damage-share minus gold-share'):'' )+(hasNum(deadGap)?' · '+esc(signed(deadGap,1)+' pp more death downtime in the lower-damage group'):'')+'. <b>Association only:</b> these groups do not establish that damage conversion caused the result.';
+          contrast.innerHTML='<b>High-resource conversion split:</b> '+esc(nA+' total / '+cleanA+' clean high-resource/high-damage games · '+fmtPct(highHigh.cleanWinRate)+' clean WR')+' vs '+esc(nB+' total / '+cleanB+' clean high-resource/lower-damage games · '+fmtPct(highLow.cleanWinRate)+' clean WR')+' · '+esc(signed(wrGap,1)+' points descriptive clean win-rate gap')+(hasNum(dmgGap)?' · '+esc(signed(dmgGap,1)+' points difference in damage-share minus gold-share'):'' )+(hasNum(deadGap)?' · '+esc(signed(deadGap,1)+' points more death downtime in the lower-damage group'):'')+'. <b>Association only:</b> these groups do not establish that damage conversion caused the result.';
         }else{
           contrast.textContent='High-resource outcome contrast is withheld until both groups contain at least 5 clean outcomes (AFK/early-surrender games excluded).';
         }
@@ -1563,7 +1660,7 @@ function renderLongHorizon(r){
           const turretCtx=lowerDamage&&Number(x?.turretComparableGames||0)>0
             ?String(x.aboveMedianTurretPressureGames||0)+' / '+String(x.turretComparableGames||0)+' above your '+fmtInt(matrix.turretDamagePerMinMedian)+' turret-DPM median'
             :'';
-          const shareContext=hasNum(x?.avgGoldShare)&&hasNum(x?.avgDamageShare)?fmt(x.avgGoldShare,1)+'% gold → '+fmt(x.avgDamageShare,1)+'% damage'+(hasNum(x?.avgDamageEfficiencyPp)?' · '+signed(x.avgDamageEfficiencyPp,1)+' pp damage−gold':''):'';
+          const shareContext=hasNum(x?.avgGoldShare)&&hasNum(x?.avgDamageShare)?fmt(x.avgGoldShare,1)+'% gold → '+fmt(x.avgDamageShare,1)+'% damage'+(hasNum(x?.avgDamageEfficiencyPp)?' · '+signed(x.avgDamageEfficiencyPp,1)+' points damage−gold':''):'';
           const context=[shareContext,deadCtx,turretCtx].filter(Boolean).join(' · ');
           return '<button type="button" class="kpi-card tone-neutral archetype-card" data-archetype-key="'+esc(x.key||'')+'" aria-expanded="false"><span>'+esc(x.label||x.key||'Archetype')+'</span><strong>'+n+' game'+(n===1?'':'s')+' · '+esc(share)+'</strong><small>'+esc('role-history share'+wr+(context?' · '+context:'')+' · descriptive, not causal')+'</small><em>Inspect example games</em></button>';
         }).join('');
@@ -1726,7 +1823,7 @@ function bridgeFormat(v,unit){
 function bridgeDifference(value,target,unit,inverse=false){
   if(!hasNum(value)||!hasNum(target))return{tone:'neutral',text:'n/a'};
   const you=Number(value),ref=Number(target),raw=you-ref,abs=Math.abs(raw),digits=unit==='dpm'?0:unit==='percent'?1:2;
-  const suffix=unit==='percent'?' pp':unit==='dpm'?' DPM':unit==='deaths'?' deaths/g':'';
+  const suffix=unit==='percent'?' points':unit==='dpm'?' DPM':unit==='deaths'?' deaths/g':'';
   if(abs<1e-9)return{tone:'neutral',text:'matches reference'};
   if(inverse)return{tone:raw<0?'good':'bad',text:fmt(abs,digits)+(raw<0?' fewer':' more')+suffix+' than reference'};
   return{tone:raw>0?'good':'bad',text:fmt(abs,digits)+(raw>0?' above':' below')+suffix+' reference'};
@@ -1759,7 +1856,7 @@ function decisionCard(title,value,tone,explanation,sub,percent=null,evidenceRead
   const meter=pct==null?'':hasInterval?
     '<div class="decision-meter uncertainty-meter" aria-label="Point estimate '+esc(fmtPct(pct))+'; 95% interval '+esc(fmtPct(interval.low))+' to '+esc(fmtPct(interval.high))+'"><span class="decision-fill" style="width:'+pct+'%"></span><i class="decision-interval" style="left:'+clamp(Number(interval.low),0,100)+'%;width:'+(clamp(Number(interval.high),0,100)-clamp(Number(interval.low),0,100))+'%"></i><b class="decision-point" style="left:'+pct+'%"></b></div>':
     '<div class="decision-meter"><span class="decision-fill" style="width:'+pct+'%"></span></div>';
-  const intervalText=hasInterval?' · 95% Wilson '+fmtPct(interval.low)+'–'+fmtPct(interval.high):'';
+  const intervalText=hasInterval?' · 95% range '+fmtPct(interval.low)+'–'+fmtPct(interval.high):'';
   return '<article class="decision-card tone-'+effectiveTone+(evidenceReady?'':' thin-evidence')+'"><div><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong></div>'+
     meter+'<p>'+esc(explanation)+'</p><small>'+esc(sub||'')+esc(intervalText)+(evidenceReady?'':' · thin sample — descriptive only')+'</small></article>';
 }
@@ -1860,7 +1957,7 @@ function renderObjectiveFamilyOverview(r){
       const interval=wilsonInterval(x.joined,x.contested),thin=x.contested<3,matchCount=objectiveFamilyMatchIds(r,x.key).size;
       return '<article class="objective-family-card '+(thin?'thin-evidence':'')+'"><span>'+esc(x.label)+'</span><strong>'+(x.presence==null?'n/a':esc(fmtPct(x.presence)))+' contested presence</strong>'+
         '<div class="objective-family-statline"><b>'+x.joined+'/'+x.contested+'</b><small>contested joins</small></div>'+
-        (interval?'<div class="objective-family-interval"><i style="left:'+clamp(interval.low,0,100)+'%;width:'+(clamp(interval.high,0,100)-clamp(interval.low,0,100))+'%"></i><b style="left:'+clamp(x.presence,0,100)+'%"></b></div><small class="objective-family-ci">95% Wilson '+esc(fmtPct(interval.low))+'–'+esc(fmtPct(interval.high))+'</small>':'')+
+        (interval?'<div class="objective-family-interval"><i style="left:'+clamp(interval.low,0,100)+'%;width:'+(clamp(interval.high,0,100)-clamp(interval.low,0,100))+'%"></i><b style="left:'+clamp(x.presence,0,100)+'%"></b></div><small class="objective-family-ci">95% range '+esc(fmtPct(interval.low))+'–'+esc(fmtPct(interval.high))+'</small>':'')+
         '<p>Team-controlled encounters '+x.team+' · enemy-controlled '+x.enemy+' · secured units '+x.teamUnits+' vs '+x.enemyUnits+(hasNum(x.teamJoinRate)?' · present for '+fmtPct(x.teamJoinRate)+' of team-secured encounters':'')+'.</p>'+
         (thin?'<small class="objective-family-thin">Fewer than 3 contested encounters — context only.</small>':'<button class="button secondary tiny objective-family-review" type="button" data-objective-family-review="'+esc(x.key)+'">Review '+matchCount+' matching game'+(matchCount===1?'':'s')+'</button>')+
       '</article>';
@@ -1932,7 +2029,7 @@ function renderCompoundSignals(r){
   if(['ADC','MID','TOP'].includes(role)&&(hasNum(b.damageGoldEfficiency)||hasNum(b.preContributionFightDeathRate))){
     const eff=hasNum(b.damageGoldEfficiency)?Number(b.damageGoldEfficiency):null,pre=hasNum(b.preContributionFightDeathRate)?Number(b.preContributionFightDeathRate):null,surv=hasNum(b.fightSurvivalRate)?Number(b.fightSurvivalRate):null,fights=Number(b.fightSamples||0),ready=fights>=8&&sampleGames>=5;
     const tone=pre!=null&&pre>=30?'bad':eff!=null&&eff>=2&&surv!=null&&surv>=60?'good':'neutral';
-    rows.push(intelligenceCard('Resources → fight uptime',eff!=null?signed(eff,1)+' pp damage−gold':'Fight conversion',tone,(eff!=null?'Damage share minus gold share is '+signed(eff,1)+' percentage points. ':'')+(pre!=null?'You die before tracked contribution in '+fmtPct(pre)+' of active fight clusters. ':'')+(surv!=null?'Active-fight survival is '+fmtPct(surv)+'.':''),fights+' active fight clusters · '+String(b.fightProximityOnlySamples??0)+' proximity-only clusters excluded · '+sampleGames+' coaching games · thresholds 8 active fights / 5 games',ready));
+    rows.push(intelligenceCard('Resources → fight uptime',eff!=null?signed(eff,1)+' points damage−gold':'Fight conversion',tone,(eff!=null?'Damage share minus gold share is '+signed(eff,1)+' percentage points. ':'')+(pre!=null?'You die before tracked contribution in '+fmtPct(pre)+' of active fight clusters. ':'')+(surv!=null?'Active-fight survival is '+fmtPct(surv)+'.':''),fights+' active fight clusters · '+String(b.fightProximityOnlySamples??0)+' proximity-only clusters excluded · '+sampleGames+' coaching games · thresholds 8 active fights / 5 games',ready));
   }
   if(role==='JUNGLE'){
     const c=roleEventCoverage(r),impact=hasNum(p.avgImpactDeltaMin)?Number(p.avgImpactDeltaMin):null,item=hasNum(p.avgMajorItemDeltaMin)?Number(p.avgMajorItemDeltaMin):null,setup=hasNum(b.objectiveSetupCoachingRate??b.meanGameEarlySetupObjectiveJoinRate??b.earlySetupObjectiveJoinRate)?Number(b.objectiveSetupCoachingRate??b.meanGameEarlySetupObjectiveJoinRate??b.earlySetupObjectiveJoinRate):null,contest=hasNum(b.objectiveCoachingPresenceRate??b.meanGameObjectiveContestPresenceRate??b.objectiveContestPresenceRate??b.objectiveJoinRate)?Number(b.objectiveCoachingPresenceRate??b.meanGameObjectiveContestPresenceRate??b.objectiveContestPresenceRate??b.objectiveJoinRate):null,impactN=Number(p.impactGames||0),itemN=Number(p.majorItemGames||0),setupN=c.setupN,contestN=c.contestN,ready=impactN>=5&&c.setupReady&&c.contestReady;
@@ -2406,7 +2503,7 @@ function renderProgressComparison(current,previous,previousAt){
       {label:'Gold @15 vs role opponent',path:'peerComparison.avgGoldDiff15',samplePath:'peerComparison.laneGames15',min:5,threshold:150,direction:1,format:v=>signed(v,0)+'g'},
       {label:'CS / min',path:'coachingSummary.csMin',samplePath:'coachingSummary.games',min:5,threshold:.3,direction:1,format:v=>fmt(v,2)},
       {label:'Early-lead give-back rate',path:'behaviorSummary.earlyLeadGivebackRate',samplePath:'behaviorSummary.earlyLeadGames',min:4,threshold:15,direction:-1,format:v=>fmtPct(v)},
-      {label:'Damage share − gold share',path:'behaviorSummary.damageGoldEfficiency',samplePath:'coachingSummary.games',min:5,threshold:2,direction:1,format:v=>signed(v,1)+' pp'},
+      {label:'Damage share − gold share',path:'behaviorSummary.damageGoldEfficiency',samplePath:'coachingSummary.games',min:5,threshold:2,direction:1,format:v=>signed(v,1)+' points'},
       {label:'Mid routing CS swing 15→25',path:'behaviorSummary.midRouting.avgCsSwing15to25',samplePath:'behaviorSummary.midRouting.games',min:4,threshold:4,direction:1,format:v=>signed(v,1)+' CS'},
       {label:'Win rate from role lead @25',path:'behaviorSummary.closing25.leadWinRate',samplePath:'behaviorSummary.closing25.leadGames',min:4,threshold:10,direction:1,format:v=>fmtPct(v)},
       ...commonTempo,...commonRisk
@@ -2492,14 +2589,14 @@ function renderSessionHabits(r){
   if(sessionPairReady(afterLoss,afterWin,'timelineGames')&&hasNum(s.postLossBadDeathDelta))deltas.push('quick post-loss risky deaths '+signed(s.postLossBadDeathDelta,1)+'/game');
   if(role==='SUPPORT'){
     if(sessionPairReady(late,first,'vpmGames')&&hasNum(s.game3PlusVpmDelta))deltas.push('game 3+ vision/min '+signed(s.game3PlusVpmDelta,2)+' vs opener');
-    if(sessionPairReady(late,first,'kpGames')&&hasNum(s.game3PlusKpDelta))deltas.push('game 3+ KP '+signed(s.game3PlusKpDelta,1)+' pp vs opener');
+    if(sessionPairReady(late,first,'kpGames')&&hasNum(s.game3PlusKpDelta))deltas.push('game 3+ KP '+signed(s.game3PlusKpDelta,1)+' points vs opener');
     if(sessionPairReady(afterLoss,afterWin,'vpmGames')&&hasNum(s.postLossVpmDelta))deltas.push('quick post-loss vision/min '+signed(s.postLossVpmDelta,2)+' vs quick post-win');
-    if(sessionPairReady(afterLoss,afterWin,'kpGames')&&hasNum(s.postLossKpDelta))deltas.push('quick post-loss KP '+signed(s.postLossKpDelta,1)+' pp vs quick post-win');
+    if(sessionPairReady(afterLoss,afterWin,'kpGames')&&hasNum(s.postLossKpDelta))deltas.push('quick post-loss KP '+signed(s.postLossKpDelta,1)+' points vs quick post-win');
   }else if(role==='JUNGLE'){
     if(sessionPairReady(late,first,'csMinGames')&&hasNum(s.game3PlusCsMinDelta))deltas.push('game 3+ CS/min '+signed(s.game3PlusCsMinDelta,2)+' vs opener');
-    if(sessionPairReady(late,first,'kpGames')&&hasNum(s.game3PlusKpDelta))deltas.push('game 3+ KP '+signed(s.game3PlusKpDelta,1)+' pp vs opener');
+    if(sessionPairReady(late,first,'kpGames')&&hasNum(s.game3PlusKpDelta))deltas.push('game 3+ KP '+signed(s.game3PlusKpDelta,1)+' points vs opener');
     if(sessionPairReady(afterLoss,afterWin,'csMinGames')&&hasNum(s.postLossCsMinDelta))deltas.push('quick post-loss CS/min '+signed(s.postLossCsMinDelta,2)+' vs quick post-win');
-    if(sessionPairReady(afterLoss,afterWin,'kpGames')&&hasNum(s.postLossKpDelta))deltas.push('quick post-loss KP '+signed(s.postLossKpDelta,1)+' pp vs quick post-win');
+    if(sessionPairReady(afterLoss,afterWin,'kpGames')&&hasNum(s.postLossKpDelta))deltas.push('quick post-loss KP '+signed(s.postLossKpDelta,1)+' points vs quick post-win');
   }else{
     if(sessionPairReady(late,first,'lane15Games')&&hasNum(s.game3PlusGoldDelta))deltas.push('game 3+ gold@15 '+signed(s.game3PlusGoldDelta,0)+'g vs opener');
     if(sessionPairReady(late,first,'dpmGames')&&hasNum(s.game3PlusDpmDelta))deltas.push('game 3+ DPM '+signed(s.game3PlusDpmDelta,0)+' vs opener');
@@ -2519,7 +2616,7 @@ function practiceTargetValue(v,unit){
   if(unit==='per_game')return n.toFixed(2)+'/game';
   if(unit==='cs_per_min')return n.toFixed(2)+' CS/min';
   if(unit==='cs')return signed(n,1)+' CS';
-  if(unit==='percentage_points')return signed(n,1)+' pp';
+  if(unit==='percentage_points')return signed(n,1)+' points';
   if(unit==='vpm')return signed(n,2)+' VPM';
   if(unit==='minutes')return signed(n,1)+' min';
   if(unit==='wards')return signed(n,1)+' wards';
@@ -2643,6 +2740,7 @@ function renderPracticePlan(r){
 function openReplayReviewMatch(matchId,tab){
   const games=state.report?.games||[],index=games.findIndex(g=>String(g.matchId)===String(matchId));
   if(index<0)return;
+  openReportAncestors($('last20'));
   state.activeDetailTab=tab||'macro';
   state.gameFilter='all';state.gameChampion='all';
   renderGames(state.report);
@@ -3117,7 +3215,7 @@ function renderGameArcs(r){
   }).filter(x=>x.count>=2).sort((a,b)=>b.count-a.count||String(a.label).localeCompare(String(b.label))).slice(0,7);
   turnBox.innerHTML='<div class="section-subhead"><strong>Recurring turning-point evidence</strong><span>Recurring at ≥2 games · outcome association needs ≥3 with and ≥3 without</span></div>'+
     (turning.length?'<div class="arc-turning-grid">'+turning.map(x=>{
-      const association=x.associationReady?('Win rate '+fmtPct(x.withWr)+' with vs '+fmtPct(x.withoutWr)+' without · '+signed(x.winRateDelta,1)+' pp'):(fmtPct(x.withWr)+' wins in '+x.count+' games with signal · comparison withheld ('+x.withoutCount+' without)');
+      const association=x.associationReady?('Win rate '+fmtPct(x.withWr)+' with vs '+fmtPct(x.withoutWr)+' without · '+signed(x.winRateDelta,1)+' points'):(fmtPct(x.withWr)+' wins in '+x.count+' games with signal · comparison withheld ('+x.withoutCount+' without)');
       return '<article class="arc-turning-card tone-'+x.tone+'"><span>'+x.count+' / '+timelineGames.length+' timeline games</span><strong>'+esc(x.label)+'</strong><p>'+esc(x.why)+'</p><small>'+esc(association)+' · descriptive association only, not causation</small></article>';
     }).join('')+'</div>':'<div class="bullet empty">No defined turning-point signal repeats in at least two coaching-cohort games.</div>');
   if(note)note.textContent=roleSequence
@@ -3502,7 +3600,7 @@ function detailContent(g,tab){
       detailCard('High-risk vision deaths',String(vm.highRiskDeaths??0)+' · '+fmtPct(vm.highRiskDeathRate))+detailCard('Unsupported vision deaths',String(vm.unsupportedDeaths??0))+
       detailCard('Untraded vision deaths',String(vm.untradedDeaths??0))+detailCard('Objective-setup vision deaths',String(vm.objectiveSetupDeaths??0))+
       detailCard('Offensive / defensive',String(v.offensive??0)+' / '+String(v.defensive??0))+detailCard('River wards',String(v.river??0))+detailCard('Objective setup wards',String(v.objectiveSetup??0))+detailCard('Objective setup ward clears',String(v.objectiveSetupClears??0))+detailCard('Objective setup share',fmtPct(v.objectiveSetupRate))+
-      detailCard('Peer setup wards',peerOk?String(g.opponentVision?.objectiveSetup??0):'n/a')+detailCard('Peer setup share',peerOk?fmtPct(g.opponentVision?.objectiveSetupRate):'n/a')+detailCard('Setup count Δ vs peer',peerOk&&hasNum(v.objectiveSetupDeltaVsOpponent)?signed(v.objectiveSetupDeltaVsOpponent,0):'n/a')+detailCard('Setup share Δ vs peer',peerOk&&hasNum(v.objectiveSetupRateDeltaVsOpponent)?signed(v.objectiveSetupRateDeltaVsOpponent,0)+' pp':'n/a')+
+      detailCard('Peer setup wards',peerOk?String(g.opponentVision?.objectiveSetup??0):'n/a')+detailCard('Peer setup share',peerOk?fmtPct(g.opponentVision?.objectiveSetupRate):'n/a')+detailCard('Setup count Δ vs peer',peerOk&&hasNum(v.objectiveSetupDeltaVsOpponent)?signed(v.objectiveSetupDeltaVsOpponent,0):'n/a')+detailCard('Setup share Δ vs peer',peerOk&&hasNum(v.objectiveSetupRateDeltaVsOpponent)?signed(v.objectiveSetupRateDeltaVsOpponent,0)+' points':'n/a')+
       detailList((vm.events||[]).map(x=>(Number(x.time)||0).toFixed(1)+'m death · '+String(x.action||'vision action')+' '+String(x.secondsAfterAction??'?')+'s earlier · '+String(x.wardType||'ward')+(x.territory?' · '+x.territory:'')+(x.objectiveSetup?' · objective setup':'')+(x.unsupported?' · no ally within 3k':'')+(x.highRisk?' · high-risk':'')+(x.traded?' · traded':' · untraded')),'No death occurred within the defined vision-action window.')+
       detailList((g.wards||[]).slice(0,8).map(w=>(Number(w.time)||0).toFixed(1)+'m · '+(w.territory||'unknown')+' · '+(w.wardType||'ward')),'No player ward positions were available.');
   }
@@ -3649,7 +3747,7 @@ function detailContent(g,tab){
     detailCard('Outside-pressure classified deaths',String(modernOrLegacy(g.lanePressure,'earlyOutsidePressureDeaths','pre14OutsidePressureDeaths'))+' · '+fmtPct(g.lanePressure?.earlyOutsidePressureShare??g.lanePressure?.outsidePressureShare))+
     detailCard('First impact',hasNum(g.impactTimeMin)?fmt(g.impactTimeMin,1)+'m':'n/a')+detailCard('Opponent first impact',peerOk&&hasNum(g.opponentImpactTimeMin)?fmt(g.opponentImpactTimeMin,1)+'m':'n/a')+detailCard('Impact timing vs peer',peerOk&&hasNum(g.impactDeltaVsOpponent)?signed(g.impactDeltaVsOpponent,1)+' min':'n/a')+
     detailCard('DPM vs same-role opponent',peerOk&&peer?signed(peer.dpmDelta,0):'n/a')+detailCard('CS/min vs opponent',peerOk&&peer?signed(peer.csMinDelta,2):'n/a')+detailCard('Team damage rank',hasNum(g.damageRank)?'#'+g.damageRank+' of 5':'n/a')+detailCard('Team gold rank',hasNum(g.goldRank)?'#'+g.goldRank+' of 5':'n/a')+detailCard('Team vision rank',hasNum(g.visionRank)?'#'+g.visionRank+' of 5':'n/a')+
-    detailCard('Damage share',fmtPct(g.damageShare))+detailCard('Gold share',fmtPct(g.goldShare))+detailCard('Damage − gold share',hasNum(g.damageShare)&&hasNum(g.goldShare)?signed(Number(g.damageShare)-Number(g.goldShare),1)+' pp':'n/a')+
+    detailCard('Damage share',fmtPct(g.damageShare))+detailCard('Gold share',fmtPct(g.goldShare))+detailCard('Damage − gold share',hasNum(g.damageShare)&&hasNum(g.goldShare)?signed(Number(g.damageShare)-Number(g.goldShare),1)+' points':'n/a')+
     detailCard('Session game #',g.sessionContext?.sessionGameNumber?String(g.sessionContext.sessionGameNumber):'n/a')+
     detailCard('Gap after previous game',hasNum(g.sessionContext?.gapAfterPreviousMin)?fmt(g.sessionContext.gapAfterPreviousMin,0)+' min':'n/a')+
     detailCard('Previous result',g.sessionContext?.previousWin===true?'WIN':g.sessionContext?.previousWin===false?'LOSS':'n/a')+
@@ -3894,7 +3992,7 @@ function visualTrendFormat(v,unit){
 function historyDirectionValue(v,unit){
   if(!hasNum(v))return'n/a';
   if(unit==='percent')return fmtPct(v);
-  if(unit==='pp')return signed(v,1)+' pp';
+  if(unit==='pp')return signed(v,1)+' points';
   if(unit==='dpm')return fmtInt(v);
   if(unit==='cs')return fmt(v,1);
   if(unit==='csmin')return fmt(v,2);
@@ -3902,7 +4000,7 @@ function historyDirectionValue(v,unit){
 }
 function historyDirectionDelta(v,unit){
   if(!hasNum(v))return'n/a';
-  if(unit==='percent'||unit==='pp')return signed(v,1)+' pp';
+  if(unit==='percent'||unit==='pp')return signed(v,1)+' points';
   if(unit==='dpm')return signed(v,0);
   if(unit==='cs')return signed(v,1);
   if(unit==='csmin')return signed(v,2);
@@ -3935,7 +4033,7 @@ function renderRecentFormGraph(r){
   const box=$('recentFormGraph');if(!box)return;
   const rows=roleRecentTrendSpecs(r).filter(recentTrendSpecReady).map(spec=>{
     const recent=Number(spec.obj.recent),prior=Number(spec.obj.prior),threshold=Math.max(.0001,Number(spec.threshold||1)),rawDelta=recent-prior,signal=(spec.inverse?-1:1)*rawDelta/threshold,recentN=Number(spec.obj.recentN||0),priorN=Number(spec.obj.priorN||0);
-    const rawDeltaText=spec.unit==='percent'?signed(rawDelta,1)+' pp':spec.unit==='gold'?signed(rawDelta,0)+'g':spec.unit==='dpm'?signed(rawDelta,0):spec.unit==='csmin'||spec.unit==='csminRaw'?signed(rawDelta,2):spec.unit==='minutes'?signed(rawDelta,1)+'m':spec.unit==='cs'?signed(rawDelta,1)+' CS':signed(rawDelta,2);
+    const rawDeltaText=spec.unit==='percent'?signed(rawDelta,1)+' points':spec.unit==='gold'?signed(rawDelta,0)+'g':spec.unit==='dpm'?signed(rawDelta,0):spec.unit==='csmin'||spec.unit==='csminRaw'?signed(rawDelta,2):spec.unit==='minutes'?signed(rawDelta,1)+'m':spec.unit==='cs'?signed(rawDelta,1)+' CS':signed(rawDelta,2);
     return{label:spec.label,value:signal,tone:Math.abs(signal)<1?'neutral':signal>0?'good':'bad',severity:visualRecentSeverity(signal),valueLabel:signed(signal,1)+'×',rawLine:'Recent '+visualTrendFormat(recent,spec.unit)+' (n='+recentN+') · prior '+visualTrendFormat(prior,spec.unit)+' (n='+priorN+') · Δ '+rawDeltaText,detail:'Latest '+visualTrendFormat(recent,spec.unit)+' vs prior '+visualTrendFormat(prior,spec.unit)+' · raw change '+rawDeltaText+' · '+signed(signal,1)+' practical-change thresholds'};
   });
   if(!rows.length){box.innerHTML=visualGraphEmpty('Recent-vs-prior metrics have not cleared their game and event evidence floors yet.');return;}
@@ -3959,14 +4057,14 @@ function renderOutcomeEffectGraph(r){
   const rows=metrics.map(spec=>{
     if(Number(spec?.wins?.n||0)<2||Number(spec?.losses?.n||0)<2)return null;
     const effect=standardizedMeanGap(spec.wins,spec.losses);if(!hasNum(effect))return null;
-    const adjusted=Number(effect)*(spec.inverse?-1:1),ready=directional&&Number(spec.wins.n)>=minSide&&Number(spec.losses.n)>=minSide;
-    return{label:spec.label,value:adjusted,ready,tone:ready?(adjusted>0?'good':adjusted<0?'bad':'neutral'):'neutral',valueLabel:'g '+signed(adjusted,2),
+    const adjusted=Number(effect)*Math.sign(Number(spec.wins.mean)-Number(spec.losses.mean))*(spec.inverse?-1:1),ready=directional&&Number(spec.wins.n)>=minSide&&Number(spec.losses.n)>=minSide;
+    return{label:spec.label,value:adjusted,ready,tone:ready?(adjusted>0?'good':adjusted<0?'bad':'neutral'):'neutral',valueLabel:signed(adjusted,2)+' gap',
       rawLine:'Wins '+visualOutcomeMeanFormat(spec.wins.mean,spec.unit)+' (n='+spec.wins.n+') · losses '+visualOutcomeMeanFormat(spec.losses.mean,spec.unit)+' (n='+spec.losses.n+')',
-      detail:'Adjusted Hedges g '+signed(adjusted,2)+' · wins '+visualOutcomeMeanFormat(spec.wins.mean,spec.unit)+' n='+spec.wins.n+' · losses '+visualOutcomeMeanFormat(spec.losses.mean,spec.unit)+' n='+spec.losses.n};
+      detail:'Signed standardized gap '+signed(adjusted,2)+' · wins '+visualOutcomeMeanFormat(spec.wins.mean,spec.unit)+' n='+spec.wins.n+' · losses '+visualOutcomeMeanFormat(spec.losses.mean,spec.unit)+' n='+spec.losses.n};
   }).filter(Boolean).sort((a,b)=>Math.abs(Number(b.value))-Math.abs(Number(a.value))||String(a.label).localeCompare(String(b.label)));
   if(!rows.length){box.innerHTML=visualGraphEmpty('The long-horizon result split needs at least two valid wins and losses for a graph.');return;}
-  const bound=Math.max(1,Math.min(3,niceCeil(Math.max(...rows.map(x=>Math.abs(Number(x.value)))),.5))),usable=rows.filter(x=>x.ready),lead=usable[0]||null;
-  box.innerHTML=visualDivergingSvg(rows,{maxAbs:bound,rowDetails:true,neutral:!directional,axisSuffix:' g',leftLabel:'less favorable in wins',rightLabel:'more favorable in wins',ariaLabel:'Long-horizon win loss standardized effect sizes with raw result means'})+
+  const bound=Math.max(1,niceCeil(Math.max(...rows.map(x=>Math.abs(Number(x.value))))*1.14,.5)),usable=rows.filter(x=>x.ready),lead=usable[0]||null;
+  box.innerHTML=visualDivergingSvg(rows,{maxAbs:bound,rowDetails:true,neutral:!directional,axisSuffix:'',leftLabel:'less favorable in wins',rightLabel:'more favorable in wins',ariaLabel:'Long-horizon win loss standardized effect sizes with raw result means'})+
     '<p class="visual-graph-reading"><b>Adjusted direction:</b> right means the metric is more favorable in wins; inverse metrics such as deaths are flipped so the visual direction stays consistent. Raw means and sample sizes are shown under every metric. '+(directional?(lead?'Largest supported separation: '+esc(lead.label)+' ('+esc(lead.valueLabel)+').':'No individual metric clears the per-side evidence floor.'):'Clean outcomes do not yet provide '+minSide+' wins and '+minSide+' losses, so the bars are neutral context only.')+' Descriptive association, not causation.</p>';
 }
 function renderObjectiveFamilyGraph(r){
@@ -3975,12 +4073,12 @@ function renderObjectiveFamilyGraph(r){
   const rows=Object.entries(summary).map(([key,x])=>{
     const contested=Number(x?.contestedEncounters||0),joined=Number(x?.joinedContestedEncounters||0),value=hasNum(x?.contestPresenceRate)?Number(x.contestPresenceRate):null,interval=wilsonInterval(joined,contested);
     if(!(contested>0)||!hasNum(value)||!interval)return null;
-    return{label:objectiveFamilyLabel(key),value,low:interval.low,high:interval.high,ready:contested>=3,tone:'objective',contested,joined,valueLabel:fmtPct(value)+' · '+joined+'/'+contested,subLabel:'95% Wilson '+fmtPct(interval.low)+'–'+fmtPct(interval.high)+' · '+contested+' contested',detail:objectiveFamilyLabel(key)+' · '+joined+'/'+contested+' contested joins · 95% Wilson '+fmtPct(interval.low)+'–'+fmtPct(interval.high)};
+    return{label:objectiveFamilyLabel(key),value,low:interval.low,high:interval.high,ready:contested>=3,tone:'objective',contested,joined,valueLabel:fmtPct(value)+' · '+joined+'/'+contested,subLabel:'95% range '+fmtPct(interval.low)+'–'+fmtPct(interval.high)+' · '+contested+' contested',detail:objectiveFamilyLabel(key)+' · '+joined+'/'+contested+' contested joins · 95% range '+fmtPct(interval.low)+'–'+fmtPct(interval.high)};
   }).filter(Boolean).sort((a,b)=>b.contested-a.contested||a.label.localeCompare(b.label)).slice(0,7);
   if(!rows.length){box.innerHTML=visualGraphEmpty('No objective family has a measurable contested-presence sample yet.');return;}
   const reviewable=rows.filter(x=>x.ready),lowest=[...reviewable].sort((a,b)=>Number(a.value)-Number(b.value))[0]||null;
   box.innerHTML=visualIntervalPlotSvg(rows,{reference50:false,ariaLabel:'Contested objective presence with Wilson uncertainty by objective family'})+
-    '<p class="visual-graph-reading">Dots are supported contested-presence point estimates; whiskers are 95% Wilson intervals from the exact joined/contested denominator. This prevents a small 0% sample from looking like certain zero presence. '+(lowest?'Lowest family with ≥3 contested encounters: '+esc(lowest.label)+' at '+esc(fmtPct(lowest.value))+' ('+lowest.joined+'/'+lowest.contested+').':'No family has three contested encounters yet.')+' Replay-priority context only, not a role grade.</p>';
+    '<p class="visual-graph-reading">The dot shows how often you joined. The line shows uncertainty from the exact joined/contested counts. This prevents a small 0% sample from looking like certain zero presence. '+(lowest?'Lowest family with ≥3 contested encounters: '+esc(lowest.label)+' at '+esc(fmtPct(lowest.value))+' ('+lowest.joined+'/'+lowest.contested+').':'No family has three contested encounters yet.')+' Replay-priority context only, not a role grade.</p>';
 }
 function renderChampionHistoryGraph(r){
   const box=$('championHistoryGraph');if(!box)return;
@@ -3993,8 +4091,8 @@ function renderChampionHistoryGraph(r){
       '<p class="visual-graph-reading"><b>Pick concentration:</b> '+esc(leader.champion)+' accounts for '+esc(fmtPct(leaderShare))+' of this '+esc(roleLabel(h.selectedRole||r?.dataQuality?.selectedRole||state.selectedRole))+' history ('+Number(leader.games||0)+'/'+total+' games). A cross-champion clean-WR ranking is withheld because there is not a real multi-champion comparison; showing one dominant champion as a “ranking” would add no useful information.</p>';
     return;
   }
-  const rows=cleanComparable.slice(0,8).map(x=>{const interval=wilsonInterval(Number(x.cleanWins||0),Number(x.cleanGames||0));return{label:x.champion,value:Number(x.cleanWinRate),low:interval?.low,high:interval?.high,ready:Number(x.cleanGames||0)>=5,tone:'champion',valueLabel:fmtPct(x.cleanWinRate)+' · '+x.cleanWins+'/'+x.cleanGames,subLabel:'95% Wilson '+fmtPct(interval?.low)+'–'+fmtPct(interval?.high)+' · '+x.games+' total games',detail:x.champion+' · '+x.cleanWins+'/'+x.cleanGames+' clean outcomes · '+x.games+' total history games'};}).filter(x=>hasNum(x.low)&&hasNum(x.high));
-  box.innerHTML=visualIntervalPlotSvg(rows,{ariaLabel:'Champion clean win rate with Wilson uncertainty'})+'<p class="visual-graph-reading">Dots are clean-WR point estimates and whiskers are 95% Wilson intervals. Champions are ordered by history sample depth, not by the point estimate, so small samples do not visually jump to the top.</p>';
+  const rows=cleanComparable.slice(0,8).map(x=>{const interval=wilsonInterval(Number(x.cleanWins||0),Number(x.cleanGames||0));return{label:x.champion,value:Number(x.cleanWinRate),low:interval?.low,high:interval?.high,ready:Number(x.cleanGames||0)>=5,tone:'champion',valueLabel:fmtPct(x.cleanWinRate)+' · '+x.cleanWins+'/'+x.cleanGames,subLabel:'95% range '+fmtPct(interval?.low)+'–'+fmtPct(interval?.high)+' · '+x.games+' total games',detail:x.champion+' · '+x.cleanWins+'/'+x.cleanGames+' clean outcomes · '+x.games+' total history games'};}).filter(x=>hasNum(x.low)&&hasNum(x.high));
+  box.innerHTML=visualIntervalPlotSvg(rows,{ariaLabel:'Champion clean win rate with Wilson uncertainty'})+'<p class="visual-graph-reading">The dot is your win rate in comparable outcomes. The line shows uncertainty from the sample size. Champions are ordered by history sample depth, not by the point estimate, so small samples do not visually jump to the top.</p>';
 }
 function renderVisualAnalytics(r){
   renderRecentFormGraph(r);
@@ -4007,13 +4105,13 @@ function renderSupportSynergyGraph(m){
   const box=$('supportSynergyGraph');if(!box)return;
   const rows=(Array.isArray(m?.supportChampions)?m.supportChampions:[]).filter(x=>Number(x.cleanGames||0)>=3&&hasNum(x.cleanWinRate)).map(x=>{
     const interval=wilsonInterval(Number(x.cleanWins||0),Number(x.cleanGames||0));if(!interval)return null;
-    return{label:x.supportChampion,value:Number(x.cleanWinRate),low:interval.low,high:interval.high,ready:x.rankingEligible===true,tone:x.rankingEligible?'support-established':'support-developing',cleanGames:Number(x.cleanGames||0),wilsonLow:interval.low,valueLabel:fmtPct(x.cleanWinRate)+' · '+x.cleanWins+'/'+x.cleanGames,subLabel:(x.rankingEligible?'Established':'Developing')+' · 95% Wilson '+fmtPct(interval.low)+'–'+fmtPct(interval.high),detail:x.supportChampion+' · reviewed-account clean WR '+fmtPct(x.cleanWinRate)+' · '+x.cleanWins+'/'+x.cleanGames+' clean outcomes · 95% Wilson '+fmtPct(interval.low)+'–'+fmtPct(interval.high)};
+    return{label:x.supportChampion,value:Number(x.cleanWinRate),low:interval.low,high:interval.high,ready:x.rankingEligible===true,tone:x.rankingEligible?'support-established':'support-developing',cleanGames:Number(x.cleanGames||0),wilsonLow:interval.low,valueLabel:fmtPct(x.cleanWinRate)+' · '+x.cleanWins+'/'+x.cleanGames,subLabel:(x.rankingEligible?'Established':'Developing')+' · 95% range '+fmtPct(interval.low)+'–'+fmtPct(interval.high),detail:x.supportChampion+' · reviewed-account clean WR '+fmtPct(x.cleanWinRate)+' · '+x.cleanWins+'/'+x.cleanGames+' clean outcomes · 95% range '+fmtPct(interval.low)+'–'+fmtPct(interval.high)};
   }).filter(Boolean).sort((a,b)=>Number(b.ready)-Number(a.ready)||(a.ready?Number(b.wilsonLow)-Number(a.wilsonLow):Number(b.cleanGames)-Number(a.cleanGames))||String(a.label).localeCompare(String(b.label))).slice(0,10);
   if(!rows.length){box.innerHTML=visualGraphEmpty('Support-champion graph needs at least three clean reviewed-account outcomes with the same allied Support champion.');return;}
   const established=rows.filter(x=>x.ready),best=established[0]||null;
-  box.innerHTML='<div class="visual-graph-legend"><span><i class="support-established"></i>Established ≥5 clean</span><span><i class="support-developing"></i>Developing 3–4 clean</span><span><i class="wilson-whisker"></i>95% Wilson interval</span></div>'+
+  box.innerHTML='<div class="visual-graph-legend"><span><i class="support-established"></i>Established ≥5 clean</span><span><i class="support-developing"></i>Developing 3–4 clean</span><span><i class="wilson-whisker"></i>95% uncertainty range</span></div>'+
     visualIntervalPlotSvg(rows,{ariaLabel:'Reviewed account clean win rate and uncertainty by allied support champion'})+
-    '<p class="visual-graph-reading">The dot is the reviewed account’s clean win rate; the whisker shows its 95% Wilson uncertainty interval. Established rows are ranked by the Wilson lower bound, while 3–4 game developing samples stay below them regardless of a flashy point estimate.'+(best?' Best established conservative floor: '+esc(best.label)+' at '+esc(fmtPct(best.wilsonLow))+'.':'')+' Support champion remains a grouping variable only; no human teammate performance is evaluated.</p>';
+    '<p class="visual-graph-reading">The dot is the reviewed account’s clean win rate; the whisker shows its 95% uncertainty range. Established rows are ranked by the Wilson lower bound, while 3–4 game developing samples stay below them regardless of a flashy point estimate.'+(best?' Best established conservative floor: '+esc(best.label)+' at '+esc(fmtPct(best.wilsonLow))+'.':'')+' Support champion remains a grouping variable only; no human teammate performance is evaluated.</p>';
 }
 function roleEconomyChartSpecs(r,reportRole){
   const roleName=roleLabel(reportRole),adc=reportRole==='ADC'?adcBenchmarkSummary(r):null,bench=adc?r.externalBenchmarks?.same:null;
@@ -4127,7 +4225,7 @@ function renderAdvanced(r){
     ['Severe death consequences',String(r.behaviorSummary?.severeDeathEvents??0)+' · '+fmt(r.behaviorSummary?.severeDeathsPerTimelineGame,2)+'/game'],
     ['Rapid repeat deaths',String(r.behaviorSummary?.repeatDeaths??0)+' / '+String(r.behaviorSummary?.repeatDeathOpportunities??0)+' · '+fmtPct(r.behaviorSummary?.repeatDeathRate)],
     ['High-risk / costly repeat deaths',String(r.behaviorSummary?.highRiskRepeatDeaths??0)+' / '+String(r.behaviorSummary?.costlyRepeatDeaths??0)],
-    ['Repeat-death rate vs peer · matched',fmtPct(r.behaviorSummary?.peerMatchedRepeatDeathRate)+' / '+fmtPct(r.behaviorSummary?.opponentRepeatDeathRate)+' · Δ '+(hasNum(r.behaviorSummary?.repeatDeathRateDelta)?signed(r.behaviorSummary.repeatDeathRateDelta,0)+' pp':'n/a')],
+    ['Repeat-death rate vs peer · matched',fmtPct(r.behaviorSummary?.peerMatchedRepeatDeathRate)+' / '+fmtPct(r.behaviorSummary?.opponentRepeatDeathRate)+' · Δ '+(hasNum(r.behaviorSummary?.repeatDeathRateDelta)?signed(r.behaviorSummary.repeatDeathRateDelta,0)+' points':'n/a')],
     ['Avg post-death role-gold swing',hasNum(r.behaviorSummary?.avgGoldSwingAfterDeath)?signed(r.behaviorSummary.avgGoldSwingAfterDeath,0)+'g':'n/a'],
     ['Avg post-death role-CS swing',hasNum(r.behaviorSummary?.avgCsSwingAfterDeath)?signed(r.behaviorSummary.avgCsSwingAfterDeath,1):'n/a'],
     ['Deaths while ≥500g behind',String(r.behaviorSummary?.behindStateDeaths??0)],
@@ -4157,7 +4255,7 @@ function renderAdvanced(r){
     ['Earlier-item windows used',String(itemSpike.utilizedWindows??0)+' / '+String(itemSpike.eligibleWindows??0)+' · '+fmtPct(itemSpike.utilizationRate)],
     ['Deaths before spike impact',String(itemSpike.deathsBeforeImpact??0)],
     ['Avg earlier-item lead',hasNum(itemSpike.avgLeadSec)?fmtInt(itemSpike.avgLeadSec)+'s':'n/a'],
-    ['Damage share − gold share',hasNum(r.behaviorSummary?.damageGoldEfficiency)?signed(r.behaviorSummary.damageGoldEfficiency,1)+' pp':'n/a'],
+    ['Damage share − gold share',hasNum(r.behaviorSummary?.damageGoldEfficiency)?signed(r.behaviorSummary.damageGoldEfficiency,1)+' points':'n/a'],
     ['Fight samples · active involvement',String(r.behaviorSummary?.fightSamples??0)],
     ['Fight presence · supported',String(r.behaviorSummary?.fightPresenceSamples??r.behaviorSummary?.fightSamples??0)],
     ['Fight presence · proximity-only',String(r.behaviorSummary?.fightProximityOnlySamples??0)],
@@ -4225,11 +4323,11 @@ function renderAdvanced(r){
     metric('Your objective-setup share · all valid games',hasNum(p.objectiveSetupWardRate)?fmtPct(p.objectiveSetupWardRate):'n/a',!hasNum(p.objectiveSetupWardRate)),
     metric('Your objective-setup share · matched peer games',hasNum(p.peerMatchedObjectiveSetupWardRate)?fmtPct(p.peerMatchedObjectiveSetupWardRate):'n/a',!hasNum(p.peerMatchedObjectiveSetupWardRate)),
     metric('Peer objective-setup share · matched games',hasNum(p.opponentObjectiveSetupWardRate)?fmtPct(p.opponentObjectiveSetupWardRate):'n/a',!hasNum(p.opponentObjectiveSetupWardRate)),
-    metric('Objective-setup share Δ · matched',hasNum(p.objectiveSetupWardRateDelta)?signed(p.objectiveSetupWardRateDelta,0)+' pp':'n/a',!hasNum(p.objectiveSetupWardRateDelta)),
+    metric('Objective-setup share Δ · matched',hasNum(p.objectiveSetupWardRateDelta)?signed(p.objectiveSetupWardRateDelta,0)+' points':'n/a',!hasNum(p.objectiveSetupWardRateDelta)),
     metric('Your repeat-death rate · all valid games',fmtPct(p.repeatDeathRate),!hasNum(p.repeatDeathRate)),
     metric('Your repeat-death rate · matched peer games',fmtPct(p.peerMatchedRepeatDeathRate),!hasNum(p.peerMatchedRepeatDeathRate)),
     metric('Peer repeat-death rate · matched games',fmtPct(p.opponentRepeatDeathRate),!hasNum(p.opponentRepeatDeathRate)),
-    metric('Repeat-death rate Δ · matched',hasNum(p.repeatDeathRateDelta)?signed(p.repeatDeathRateDelta,0)+' pp':'n/a',!hasNum(p.repeatDeathRateDelta)),
+    metric('Repeat-death rate Δ · matched',hasNum(p.repeatDeathRateDelta)?signed(p.repeatDeathRateDelta,0)+' points':'n/a',!hasNum(p.repeatDeathRateDelta)),
     metric('Major-item timing vs peer',hasNum(p.avgMajorItemDeltaMin)?signed(p.avgMajorItemDeltaMin,1)+' min':'n/a',!hasNum(p.avgMajorItemDeltaMin)),
     metric('Faster major item than peer',fmtPct(p.majorItemFasterPct),!hasNum(p.majorItemFasterPct)),
     metric('Measurable earlier-item windows',String(p.itemSpikeEligibleWindows??0),false),
@@ -4250,7 +4348,7 @@ function renderAdvanced(r){
     metric('Higher-rank major-item games',String(p.higherRankMajorItemGames??0),false),
     metric('Major-item timing vs higher-rank peer',hasNum(p.higherRankAvgMajorItemDeltaMin)?signed(p.higherRankAvgMajorItemDeltaMin,1)+' min':'n/a',!hasNum(p.higherRankAvgMajorItemDeltaMin)),
     metric('Faster major item vs higher-rank peer',fmtPct(p.higherRankMajorItemFasterPct),!hasNum(p.higherRankMajorItemFasterPct)),
-    metric('Post-kill conversion Δ · matched',hasNum(r.behaviorSummary?.killConversionDelta)?signed(r.behaviorSummary.killConversionDelta,0)+' pp':'n/a',!hasNum(r.behaviorSummary?.killConversionDelta))
+    metric('Post-kill conversion Δ · matched',hasNum(r.behaviorSummary?.killConversionDelta)?signed(r.behaviorSummary.killConversionDelta,0)+' points':'n/a',!hasNum(r.behaviorSummary?.killConversionDelta))
   ];
   const conversionRows=[
     metric('Wins when ≥250g ahead @15',hasNum(conv.laneLeadWinRate)?fmtPct(conv.laneLeadWinRate)+' · '+String(conv.laneLeadGames||0)+' games':'n/a',!hasNum(conv.laneLeadWinRate)),
@@ -4450,7 +4548,7 @@ function renderSupportSynergy(r){
     const a=championIcon(x.ownChampion),s=championIcon(x.supportChampion);
     return '<article class="support-pair-card '+(x.rankingEligible?'ranked':x.sampleTier==='developing'?'developing-sample':'thin-sample')+'"><div class="support-pair-icons">'+(a?'<img loading="lazy" src="'+esc(a)+'" alt="">':'')+(s?'<img loading="lazy" src="'+esc(s)+'" alt="">':'')+'</div><div><span>'+esc(x.ownChampion)+' with '+esc(x.supportChampion)+'</span><strong>'+esc(fmtPct(x.cleanWinRate))+' clean WR</strong><small>'+String(x.games||0)+' total · '+String(x.cleanGames||0)+' clean · your '+esc(fmt(x.avgKda,2))+' KDA · '+esc(fmtInt(x.avgDpm))+' DPM'+(hasNum(x.avgGoldDiff15)?' · '+esc(signed(x.avgGoldDiff15,0))+'g @15':'')+'</small></div></article>';
   }).join(''):'<div class="bullet empty">No ADC + support-champion pairings available.</div>';
-  if(note)note.textContent='This section analyzes only the reviewed account. The Support champion is contextual grouping only; no teammate identity or teammate KDA/KP/vision statistic is stored, ranked or displayed. Established support-champion rankings exclude AFK/early-surrender outcomes, require '+String(m.minimumCleanGamesForRanking||5)+' clean games and use the 95% Wilson lower bound. Three-to-four clean games are developing context. Associations are descriptive and do not imply the Support champion caused the result.';
+  if(note)note.textContent='This section analyzes only the reviewed account. The Support champion is contextual grouping only; no teammate identity or teammate KDA/KP/vision statistic is stored, ranked or displayed. Established support-champion rankings exclude AFK/early-surrender outcomes, require '+String(m.minimumCleanGamesForRanking||5)+' clean games and use the lower end of the 95% uncertainty range. Three-to-four clean games are developing context. Associations are descriptive and do not imply the Support champion caused the result.';
 }
 function renderBreakdowns(r){
   const q=r.dataQuality||{},role=canonicalRole(q.selectedRole||r.coachingSummary?.primaryRole||r.summary?.primaryRole||state.selectedRole),games=Number(q.analyzedGames??r.games?.length??0),timeline=Number(q.validTimelineGames||0),peer=Number(q.directPeerComparableGames??q.peerComparableGames??0),mech=Number(q.mechanicsCohortGames??r.coachingSummary?.games??games),patch=String(q.currentPatchKey||'unknown'),queue=queueContextLabel(q.dominantQueueId,q.dominantQueueFamily);
@@ -4560,13 +4658,13 @@ function exportReport(){
   a.href=URL.createObjectURL(blob);a.download='bruisienator_'+String(state.profile?.game_name||'recent').replace(/[^a-z0-9_-]+/gi,'_')+'_'+String(state.profile?.tag_line||'tag').replace(/[^a-z0-9_-]+/gi,'_')+'_last20.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 
-const requestInputs=['requestGameName','requestTagLine','requestRegion','requestRole','riotApiKey'];
+const requestInputs=['requestGameName','requestTagLine','requestRegion','profileLabel','requestRole','riotApiKey'];
 requestInputs.forEach(id=>{
   const node=$(id);if(!node)return;
   node.addEventListener(id==='requestRegion'||id==='requestRole'?'change':'input',(ev)=>{
     if(id==='requestRole'){
-      state.selectedRole=selectedAnalysisRole();
-      if(state.profile){loadCacheStatus();loadSavedReport(state.profile);}
+      state.selectedRole=selectedAnalysisRole();state.profileLoadEpoch++;clearSelectedReport('Opening '+roleLabel(state.selectedRole)+' report…');
+      if(state.profile){saveProfilePreference(state.profile.id,state.selectedRole);renderSavedProfiles();loadCacheStatus();loadSavedReport(state.profile);}else clearSelectedReport('Save a profile to review '+roleLabel(state.selectedRole)+' games');
     }
     if(id==='riotApiKey'){
       state.riotApiKey=String(ev.target.value||'').trim();
@@ -4579,9 +4677,14 @@ requestInputs.forEach(id=>{
 });
 $('loadRecentBtn').addEventListener('click',runRecentAnalysis);
 $('exportBtn').addEventListener('click',exportReport);
+$('saveProfileBtn')?.addEventListener('click',saveProfileOnly);
+$('openSavedReportBtn')?.addEventListener('click',()=>{if(state.profile&&!state.busy){state.profileLoadEpoch++;clearSelectedReport('Opening saved report…');loadSavedReport(state.profile);}});
+$('profileSearch')?.addEventListener('input',renderSavedProfiles);
+document.addEventListener('click',ev=>{const term=ev.target.closest('[data-stat-term]');if(term){ev.preventDefault();openStatGuide(term.dataset.statTerm);return;}const link=ev.target.closest('a[href^="#"]');if(link){const id=link.getAttribute('href').slice(1);openReportAncestors($(id));if(id==='stat-guide')$('statGuideDetails').open=true;}});
 $('savedProfileSelect')?.addEventListener('change',ev=>{const id=String(ev.target.value||'');if(id)applySavedProfile(id,{loadReport:true});else startNewProfile();});
 $('newSavedProfileBtn')?.addEventListener('click',startNewProfile);
 $('forgetSavedProfileBtn')?.addEventListener('click',forgetSavedProfile);
 
+const initialTerm=String(globalThis.location?.hash||'').slice(1);if(initialTerm==='stat-guide')$('statGuideDetails').open=true;else if(initialTerm.startsWith('term-'))openStatGuide(initialTerm.slice(5));
 boot().catch(e=>{log('Startup failed: '+e.message,'bad');$('backendState').textContent='Startup failed';$('backendState').className='pill error';});
 })();

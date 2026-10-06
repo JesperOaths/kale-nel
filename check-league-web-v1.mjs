@@ -32,7 +32,7 @@ assert.ok(api.includes('trimAnonymousMatchCache(')&&api.includes('trimAnonymousR
 const matchCachePruner=api.slice(api.indexOf('async function trimAnonymousMatchCache'),api.indexOf('async function riot('));
 assert.ok(matchCachePruner.includes('select("match_id")')&&matchCachePruner.includes('.in("match_id",matchIds)'),'Match-cache pruning must use the real composite key rather than a nonexistent id column');
 assert.ok(!matchCachePruner.includes('select("id")')&&!matchCachePruner.includes('.in("id",'),'Match-cache pruning must never assume league_match_cache_v1 has an id column');
-assert.ok(html.includes('scans up to 100 recent matches')&&html.includes('100-game scan · deep Last 20'),'Public UI must describe the automatic 100-game metadata scan plus bounded deep Last-20 analysis instead of exposing cache-depth controls');
+assert.ok(html.includes('Scans up to 100 recent account matches')&&html.includes('Scan 100 · deep review 20'),'Public UI must describe the automatic 100-game metadata scan plus bounded deep Last-20 analysis instead of exposing cache-depth controls');
 assert.ok(api.includes('requires_session:false')&&api.includes('public_workspace:true'),'League health contract must remain public');
 assert.ok(api.includes('ANALYSIS_CACHE_METADATA_LIMIT=100'),'League must retain broad cache discovery as lightweight metadata');
 assert.ok(api.includes('ANALYSIS_DEEP_TARGET_GAMES=20')&&api.includes('ANALYSIS_DEEP_BATCH_SIZE=20'),'League must load timeline JSON only in bounded batches until the final Last-20 is satisfied');
@@ -62,7 +62,7 @@ assert.ok(css.includes('background-attachment:scroll')&&!css.includes("cover fix
 assert.ok(css.includes('backdrop-filter:none'),'League shell must avoid full-page backdrop blur while scrolling');
 assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League layout must fill a 1920px screen without stretching the report excessively wide');
 assert.ok(app.includes("scrollIntoView({behavior:'auto'"),'League replay navigation must avoid costly smooth scrolling through the long report');
-assert.ok(html.includes('League analysis, in the Kalenel site.'),'League hero must present the tool as part of Kalenel rather than a detached desktop GUI');
+assert.ok(html.includes('Your League review'),'League hero must present the tool as part of Kalenel rather than a detached desktop GUI');
 assert.ok(css.includes("--paper:#f7f2e9")&&!css.includes("site-bg-desktop.webp"),'League must retain the warm Kalenel palette without the costly scrolling background bitmap');
 assert.ok(css.includes('.site-credit-watermark')&&html.includes('v817 - Made by Bruis'),'League must keep the shared Kalenel version watermark treatment');
 assert.ok(!html.includes('brand-mark')&&!css.includes('--bg:#071018'),'League must not regress to the detached dark League-client shell');
@@ -84,18 +84,18 @@ assert.ok(app.includes('This section analyzes only the reviewed account.'),'Supp
 assert.ok(app.includes("x.sampleTier==='developing'")&&app.includes('Developing support sample'),'Frontend must keep 3–4 game support-champion samples neutral/contextual rather than presenting them as established');
 assert.ok(!api.includes('allySupportPuuid'),'Support-player analysis must not expose allied PUUIDs in the report contract');
 assert.ok(app.includes('function renderSupportSynergy')&&app.includes('Recent form · latest 5 vs prior games'),'Frontend must expose support synergy and concrete recent-form evidence');
-assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261006-league-web-v299'),'Support synergy panel and frontend cache-bust must be present');
+assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261007-league-web-v300'),'Support synergy panel and frontend cache-bust must be present');
 assert.ok(html.includes('id="visual-analytics"')&&html.includes('id="recentFormGraph"')&&html.includes('id="phaseRiskGraph"')&&html.includes('id="outcomeEffectGraph"')&&html.includes('id="objectiveFamilyGraph"')&&html.includes('id="championHistoryGraph"'),'League report must expose the visual analytics dashboard with five distinct graph surfaces');
 assert.ok(app.includes('function renderVisualAnalytics')&&app.includes('function visualDivergingSvg')&&app.includes('function visualPercentBarSvg')&&app.includes('function visualGroupedBarsSvg'),'Visual analytics must use explicit reusable graph renderers rather than decorative static markup');
 assert.ok(app.includes("valueLabel:signed(signal,1)+'×'")&&app.includes("spec.inverse?-1:1")&&app.includes("Number(x.games||0)>=5&&Number(x.exposureMinutes||0)>=20"),'Recent-form and phase-risk graphs must preserve practical-change direction and the existing phase evidence floor');
-assert.ok(app.includes('function renderSupportSynergyGraph')&&html.includes('id="supportSynergyGraph"')&&app.includes('95% Wilson lower bound'),'ADC support-champion context must include a visual clean-WR graph with the conservative ranking marker');
+assert.ok(app.includes('function renderSupportSynergyGraph')&&html.includes('id="supportSynergyGraph"')&&app.includes('lower end of the 95% uncertainty range'),'ADC support-champion context must include a visual clean-WR graph with the conservative ranking marker');
 assert.ok(css.includes('v296 — visual analytics dashboard')&&css.includes('.visual-analytics-grid')&&css.includes('.visual-graph-svg'),'Visual analytics must retain responsive graph styling');
 assert.ok(app.includes('function visualRecentSeverity')&&app.includes('observed*1.14')&&app.includes("rowDetails:true")&&app.includes("axisSuffix:'×'"),'Recent-direction graph must use dynamic headroom instead of the retired fixed ±2.5 clipping');
 assert.ok(app.includes("rows.sort((a,b)=>Math.abs(Number(b.value))")&&app.includes("rawLine:'Recent ")&&app.includes('practical-change thresholds'),'Recent-direction graph must rank supported shifts by magnitude and show raw recent/prior values alongside normalized change');
 assert.ok(css.includes('v297 — recent-direction graph readability and honest scaling')&&css.includes('.visual-bar-end-value')&&css.includes('.visual-bar.bad.extreme'),'Recent-direction graph must keep bar-end values and severity styling');
 assert.ok(app.includes('thresholdBand:true')&&app.includes('within ±1× practical-change band')&&css.includes('.visual-threshold-band'),'Recent-direction graph must visibly show the practical-change reference band instead of explaining it only in prose');
 assert.ok(app.includes('function visualIntervalPlotSvg')&&app.includes('function visualCompositionSvg'),'Visual analytics must support uncertainty plots and champion composition instead of forcing every metric into bars');
-assert.ok(app.includes('95% Wilson uncertainty interval')&&app.includes("Established rows are ranked by the Wilson lower bound"),'Support-champion visual must expose uncertainty and preserve conservative established ranking');
+assert.ok(app.includes('95% uncertainty range')&&app.includes("Established rows are ranked by the Wilson lower bound"),'Support-champion visual must expose uncertainty and preserve conservative established ranking');
 assert.ok(app.includes("leaderShare>=90")&&app.includes("cross-champion clean-WR ranking is withheld"),'Champion visual must switch to pick composition when one champion dominates at least 90% of history');
 assert.ok(app.includes("rawLine:'Wins ")&&app.includes("rowDetails:true,neutral:!directional"),'Outcome-effect graph must expose raw win/loss means and sample sizes under standardized effects');
 assert.ok(app.includes("overlapping classifications, not slices of one total")&&app.includes("label:label+' · '+fmt(exposure,0)+'m'"),'Phase-risk graph must disclose exposure and overlapping death classifications');
@@ -399,7 +399,7 @@ assert.ok(api.includes('comparable_cached_games'),'fetch finish must expose comp
 assert.ok(api.includes('recommend_deeper_cache'),'fetch finish must signal a thin comparable cache');
 assert.ok(api.includes('peerRankTargetCount'),'fetch finish must target only the comparable final sample');
 assert.ok(html.includes('id="requestGameName"')&&html.includes('id="requestTagLine"')&&html.includes('id="requestRegion"')&&html.includes('id="requestRole"')&&html.includes('id="riotApiKey"'),'League request UI must expose Riot identity, region, selected role and session-only API key');
-assert.ok(html.includes('id="loadRecentBtn"')&&html.includes('Load & analyze'),'League must expose one primary recent-match action');
+assert.ok(html.includes('id="loadRecentBtn"')&&html.includes('Update &amp; analyze'),'League must expose one primary recent-match action');
 assert.ok(!html.includes('id="profileSelect"')&&!html.includes('id="batchProfiles"')&&!html.includes('id="fetchBtn"')&&!html.includes('id="analyzeBtn"'),'Profile/batch/separate fetch-analyze controls must not return');
 assert.ok(app.includes('async function runRecentAnalysis()'),'One-click recent-match orchestration must remain explicit');
 assert.ok(/fetchProfileData\(profile,100(?:,|\))/.test(app)&&app.includes("fetch_depth:'metadata'")&&app.includes("fetch_depth:'deep'"),'Direct request must scan up to 100 match payloads and deep-fetch only the planned selected-role Last-20 timelines');
@@ -580,7 +580,7 @@ assert.ok(app.includes('function outcomeFingerprintSpecs(')&&app.includes("role=
 assert.ok(app.includes("label:'ADC lane movement during roams'")&&app.includes("label:'First impact vs JUNGLE peer'")&&app.includes("label:'15→25 objective reconnect'")&&app.includes("label:'Early lead give-back'"),'Role-aware outcome fingerprint must preserve Support/Jungle/Mid/Top-specific metrics');
 assert.ok(app.includes("opportunityLabel='opportunities',minPerSide=3")&&app.includes('ready=wins?.n>=minPerSide&&losses?.n>=minPerSide')&&app.includes('thin sample — no directional color'),'Outcome fingerprint must keep a three-per-side default while allowing stricter long-horizon gates');
 assert.ok(app.includes('opportunityReady=!minOpportunities')&&app.includes('ready=wins?.n>=minPerSide&&losses?.n>=minPerSide&&opportunityReady'),'Outcome fingerprint readiness must combine configurable per-side game counts and opportunity evidence');
-assert.ok(app.includes("ready&&hasNum(effect)?' · Hedges-corrected gap '")&&app.includes("' · standardized gap withheld'"),'Thin outcome fingerprints must withhold standardized Hedges gaps');
+assert.ok(app.includes("ready&&hasNum(effect)?' · gap size '")&&app.includes("' · gap size unavailable'"),'Thin outcome fingerprints must withhold standardized Hedges gaps');
 assert.ok(modelDoc.includes('Hedges-corrected standardized separation is displayed only when the card passes the complete readiness gate'),'Fingerprint standardized-effect withholding must remain documented');
 assert.ok(app.includes("minOpportunities:4,opportunityLabel:'roam attempts'")&&app.includes("minOpportunities:12,opportunityLabel:'vision actions'"),'Support/MID roam and Support vision fingerprints must retain opportunity floors');
 assert.ok(app.includes("minOpportunities:5,opportunityLabel:'contested encounters'")&&app.includes("minOpportunities:5,opportunityLabel:'joined contests'"),'Objective fingerprints must require contested/joined opportunity floors');
@@ -604,7 +604,7 @@ assert.ok(app.includes('b.objectiveSetupCoachingRate??b.meanGameEarlySetupObject
 assert.ok(app.includes("setup=hasNum(b.objectiveSetupCoachingRate??b.meanGameEarlySetupObjectiveJoinRate??b.earlySetupObjectiveJoinRate)?fmtPct(b.objectiveSetupCoachingRate??b.meanGameEarlySetupObjectiveJoinRate??b.earlySetupObjectiveJoinRate):'n/a'"),'Phase-driver setup context must use the same game-weighted coaching value');
 assert.ok(!app.includes("setup=hasNum(b.earlySetupObjectiveJoinRate)?fmtPct(b.earlySetupObjectiveJoinRate):'n/a'"),'Phase-driver context must not regress to pooled prior-setup rate');
 assert.ok(app.includes("'mean per-game rate · pooled '")&&!app.includes("c.setupReady,wilsonInterval(setupHits,c.setupN)"),'Mean-game setup headlines must disclose pooled traceability without a mismatched pooled Wilson interval');
-assert.ok(modelDoc.includes('## Coaching-facing prior objective setup aggregation'),'Game-weighted prior-setup coaching semantics must remain documented');assert.ok(app.includes('Largest role-specific standardized separation:')&&app.includes('standardizedMeanGap(')&&app.includes('Hedges-corrected gap')&&app.includes('not a causal or significance claim'),'Outcome fingerprint must use a role-specific small-sample-corrected standardized within-metric gap and avoid causal/significance claims');
+assert.ok(modelDoc.includes('## Coaching-facing prior objective setup aggregation'),'Game-weighted prior-setup coaching semantics must remain documented');assert.ok(app.includes('Largest win/loss difference in this sample:')&&app.includes('standardizedMeanGap(')&&app.includes('gap size')&&app.includes('not a causal or significance claim'),'Outcome fingerprint must use a role-specific small-sample-corrected standardized within-metric gap and avoid causal/significance claims');
 assert.ok(app.includes('sourceGames.sort((a,b)=>Number(a.gameStartTimestamp||0)-Number(b.gameStartTimestamp||0))')&&app.includes('sourceGames.reverse()'),'Trend charts must render oldest-to-newest even though the report contract is newest-first');
 assert.ok(app.includes('chart-reference-line')&&app.includes("reference:bench?.dpm")&&app.includes("reference:bench?.kp"),'ADC DPM/KP charts must retain same-tier external reference lines');
 assert.ok(app.includes('function renderVisualSummary(r){\n  const games=reportCoachingGames(r)')&&app.includes('function renderConsistencySummary(r){')&&app.includes('const games=reportCoachingGames(r),reportRole='),'Visual summary and consistency coaching surfaces must use the verified mechanics coaching cohort');
@@ -646,7 +646,7 @@ assert.ok(app.includes("directional behavior floor 5")&&app.includes("item-windo
 assert.ok(modelDoc.includes('## Top-level evidence health')&&modelDoc.includes('Do not collapse evidence health into one synthetic score'),'Top-level evidence-health semantics must remain documented');
 assert.ok(app.includes("if(role==='SUPPORT')")&&app.includes("if(role==='JUNGLE')")&&app.includes("Objective setup wards vs Support")&&app.includes("Vision/min vs Jungle"),'Direct-role Quick Read must use role-relevant peer metrics for SUPPORT and JUNGLE');
 assert.ok(app.includes("comparisonCard('Role gold @15'")&&app.includes("comparisonCard('DPM vs '+roleLabel(role)")&&app.includes("First major timing vs '+roleLabel(role)"),'ADC/MID/TOP Quick Read must retain economy/damage/item direct-peer context');
-assert.ok(html.includes('Raw selected-role output')&&app.includes('Raw selected-role sample')&&app.includes("tone-neutral"),'Raw KPI layer must remain neutral and self-descriptive rather than duplicate benchmark judgment');
+assert.ok(html.includes('Your current coaching sample')&&app.includes('Raw selected-role sample')&&app.includes("tone-neutral"),'Raw KPI layer must remain neutral and self-descriptive rather than duplicate benchmark judgment');
 assert.ok(html.includes('id="laneEconomyNav"')&&html.includes('id="laneEconomyTitle"')&&app.includes('function renderRoleSectionCopy('),'League economy framing must be selected-role aware');
 assert.ok(app.includes("JUNGLE:{nav:'Jungle economy & tempo'")&&app.includes("SUPPORT:{nav:'Support economy & setup'")&&app.includes("MID:{nav:'Lane → map economy'"),'Jungle/Support/Mid reports must not retain generic laner-only economy copy');
 assert.ok(html.includes('<h3>Cohort context</h3>')&&app.includes('Trusted role peer')&&app.includes('Current mechanics')&&app.includes('Timeline coverage'),'Redundant role-sample space must expose report cohort/evidence context instead');
@@ -654,7 +654,7 @@ assert.ok(!html.includes('<h3>Role sample</h3>'),'Role-pure reports must not was
 assert.ok(modelDoc.includes('## Role-aware report framing')&&modelDoc.includes('This block describes evidence construction and must not be scored as performance'),'Role-aware framing and cohort-context semantics must remain documented');
 assert.ok(modelDoc.includes('## Report information hierarchy')&&modelDoc.includes('Do not duplicate external ADC benchmark claims'),'Report layer responsibilities must remain documented');
 assert.ok(app.includes('analyzer coaching threshold 8')&&app.includes('analyzer coaching threshold 4')&&app.includes('timeline-complete games · analyzer coaching threshold 5'),'Prominent decision cards must disclose analyzer-aligned evidence floors');
-assert.ok(app.includes('function wilsonInterval(')&&app.includes('95% Wilson')&&css.includes('.decision-interval'),'Binomial decision rates must expose Wilson uncertainty bands rather than only point estimates');
+assert.ok(app.includes('function wilsonInterval(')&&app.includes('95% range')&&css.includes('.decision-interval'),'Binomial decision rates must expose Wilson uncertainty bands rather than only point estimates');
 assert.ok(app.includes('survivedFightSamples')&&app.includes('firstResetLossGames')&&app.includes('earlyLeadGivebackGames'),'Wilson intervals must use explicit numerator counts for fight, reset and lead rates');
 assert.ok(modelDoc.includes('## Rate uncertainty')&&modelDoc.includes('confidence score for the coaching interpretation')&&modelDoc.includes("does not override the analyzer's minimum evidence floors"),'Rate-interval limitations must remain documented');
 assert.ok(app.includes('thin sample — descriptive only')&&css.includes('.decision-card.thin-evidence'),'Below-threshold decision metrics must remain visually neutral and explicitly descriptive');
@@ -855,7 +855,7 @@ assert.ok(app.includes("state.gameFilter='all';state.gameChampion='all';")&&app.
 assert.ok(html.includes('Gold @15 vs role'),'Game table must remain role-correct instead of labeling all public reports as ADC');
 assert.ok(app.includes("label:'Fewer deaths'"),'Radar inverted deaths axis must be described literally rather than implying an independent survival metric');
 assert.ok(app.includes('const reportRange=reportTimes.length?'),'Report identity must expose the actual analyzed-game date span');
-assert.ok(html.includes('Latest 5 vs earlier games'),'Recent pulse heading must not assume exactly 15 valid earlier games');
+assert.ok(html.includes('Latest five vs the earlier comparable games'),'Recent pulse heading must not assume exactly 15 valid earlier games');
 assert.ok(app.includes('g.deathPositions'),'Per-game map must use preserved raw player death positions');
 assert.ok(app.includes('Map renderer unavailable for mapId'),'Non-Summoner’s Rift games must not be forced onto map11');
 assert.ok(app.includes('numbered chronologically'),'Per-game death map must preserve chronological marker correspondence');
@@ -878,7 +878,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261006-league-web-v299'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261007-league-web-v300'),'League assets must cache-bust the current frontend');
 assert.ok(css.includes('v285 — semantic color hierarchy for faster report scanning')&&css.includes('--league-teal:#176d70')&&css.includes('--league-purple:#684696'),'League report must retain the semantic section color system');
 assert.ok(css.includes('archetype-card[data-archetype-key="high_resource_high_damage"]')&&css.includes('archetype-card[data-archetype-key="high_resource_lower_damage"]'),'Resource/output archetypes must remain visually distinguishable');
 assert.ok(css.includes('.games-table tr.game-row:has(.result.win)>td')&&css.includes('.games-table tr.game-row:has(.result.loss)>td'),'Evidence table wins and losses must remain visually scannable');
