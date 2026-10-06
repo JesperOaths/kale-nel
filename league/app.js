@@ -620,7 +620,7 @@ async function ensureDirectRequestProfile({requireResolved=true}={}){
   state.profile=d.profile;state.selectedRole=targetRole;saveProfilePreference(d.profile.id,targetRole);
   const idx=state.savedProfiles.findIndex(p=>String(p.id)===String(d.profile.id));if(idx>=0)state.savedProfiles[idx]=d.profile;else state.savedProfiles.unshift(d.profile);
   rememberProfileSelection(d.profile.id);
-  $('sourceState').textContent='Riot profile saved + resolved';
+  $('sourceState').textContent=d.profile?.puuid?'Riot profile saved + resolved':'Riot ID saved · resolve when fetching matches';
   return d.profile;
 }
 async function saveProfileOnly(){
