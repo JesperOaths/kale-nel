@@ -3405,3 +3405,17 @@ For supported evidence denominators, the five-to-twenty-game review gate is now 
 If a denominator cannot be reconstructed safely from persisted per-game evidence, the system does not pretend that the fresh-evidence gate is available. It falls back to the fixed five-game gate and requires the rolling report denominator to remain valid. The value shown for a completed target remains the current rolling selected-role metric; the fresh-only calculation is used to decide whether enough post-target evidence exists to judge it. This distinction is stated in the UI.
 
 Human teammate analytics remain excluded. None of the target-lineage or fresh-evidence logic stores teammate Riot IDs or teammate performance statistics.
+
+
+## v296 visual analytics surfaces
+
+The report now includes a dedicated visual analytics dashboard. It does not introduce new coaching metrics or alternate thresholds; it visualizes evidence already present in the report contract.
+
+- **Recent-form movement** converts each ready latest-vs-prior change into units of that metric's existing practical-change threshold. Positive always means more favorable after applying the metric's established inverse direction where needed. This makes different units visually comparable without pretending they share a raw scale.
+- **Phase-risk bars** plot high-risk, costly and severe-consequence deaths per ten actual phase-exposure minutes for early, transition and late strategic phases. The existing five-game / twenty-exposure-minute evidence floor is retained; thinner samples are visually faded and remain descriptive.
+- **Long-horizon outcome effects** plot Hedges-corrected standardized gaps from the existing long-horizon win/loss fingerprint. Inverse metrics are direction-adjusted so rightward always means more favorable in wins. Directional interpretation still requires the clean-outcome gate; otherwise bars remain neutral context.
+- **Objective-family presence** plots supported joined/contested presence percentages by neutral-objective family and prints the exact denominator on every bar.
+- **Champion-history clean win rate** plots only champions with at least three clean outcomes and orders them by sample depth rather than win rate, reducing small-sample visual ranking bias.
+- **ADC + Support champion graph** plots the reviewed account's clean win rate grouped by allied Support champion. Established and developing sample tiers stay distinct, and the 95% Wilson lower-bound marker remains the ranking safeguard. No human teammate identity or teammate performance metric is introduced.
+
+All graph renderers preserve unavailable evidence as unavailable rather than coercing missing values to zero. The visual dashboard is therefore another view of the same evidence model, not a second analytics pipeline.
