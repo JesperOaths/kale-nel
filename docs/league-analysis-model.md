@@ -3447,3 +3447,17 @@ The visual layer now changes chart type when a bar chart would overstate certain
 - Phase-risk labels include actual exposure minutes, and the copy states that high-risk, costly and severe classifications can overlap; they are not parts of one total.
 
 These changes are presentation and uncertainty communication only. They reuse the existing report data, clean-outcome rules, role scoping and evidence gates and do not introduce teammate-player analytics.
+
+
+## v299 long-horizon direction graph
+
+The 100-game form section now visualizes its existing latest-20 versus previous-up-to-20 comparison instead of leaving that evidence only in text cards.
+
+- Each ready history metric requires at least five valid observations in both windows.
+- Raw latest and prior values, valid-game counts and native-unit deltas remain visible under each row.
+- The bar itself is normalized by that metric's existing practical-change threshold, with inverse metrics direction-corrected so right means more favorable and left means less favorable.
+- The graph uses its own dynamic range and visible ±1× practical-change band, matching the corrected v297 short-term graph behavior.
+- This graph is intentionally separate from the deep latest-5 recent-direction graph: one represents broader match-level 20-vs-20 form, the other represents the current deep coaching cohort's short-term movement.
+- Existing history cards remain below the graph for metric-by-metric context and are not replaced.
+
+No new metric, threshold or causal claim is introduced.
