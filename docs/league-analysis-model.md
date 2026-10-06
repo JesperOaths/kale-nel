@@ -3434,3 +3434,16 @@ The v296 recent-direction chart used a fixed ±2.5× display range. Supported ch
 - Normalized bar length is explicitly described as movement relative to the practical-change threshold, not causal importance.
 
 This is a presentation correction only. It does not alter analyzer metrics, recent/prior windows, evidence floors or coaching conclusions.
+
+
+## v298 uncertainty-aware visual analytics
+
+The visual layer now changes chart type when a bar chart would overstate certainty or create a fake ranking.
+
+- Objective-family contested presence is shown as a point estimate plus a 95% Wilson interval from the exact joined/contested denominator. A measured 0% therefore keeps visible uncertainty instead of looking like certain zero presence.
+- ADC + Support champion context uses the same interval-plot pattern. Established samples remain above developing 3–4 game samples and are ordered by the 95% Wilson lower bound; a 100% three-game point estimate can no longer visually outrank a deeper established sample just because its raw bar is longer.
+- Champion history switches to a pick-mix composition chart when fewer than two champions have comparable clean samples or one champion is at least 90% of selected-role history. This prevents a one-bar “clean WR ranking” when the history is effectively a one-champion sample.
+- Long-horizon win/loss standardized effects now display the raw win mean, loss mean and sample size under every effect bar.
+- Phase-risk labels include actual exposure minutes, and the copy states that high-risk, costly and severe classifications can overlap; they are not parts of one total.
+
+These changes are presentation and uncertainty communication only. They reuse the existing report data, clean-outcome rules, role scoping and evidence gates and do not introduce teammate-player analytics.
