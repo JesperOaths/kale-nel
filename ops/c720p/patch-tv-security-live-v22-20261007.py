@@ -132,8 +132,8 @@ x = x.replace(
 )
 
 # The primary live component itself should now contain no S3/fallback route.
-if re.search(r'(?i)(s3|fallback_health|fallback_stream|/s3/|camera\.s3|8791)', x):
-    hits = [line for line in x.splitlines() if re.search(r'(?i)(s3|fallback_health|fallback_stream|/s3/|camera\.s3|8791)', line)]
+if re.search(r'(?i)(fallback_health|fallback_stream|/s3/|camera\.s3|8791|live · s3|last s3|using s3)', x):
+    hits = [line for line in x.splitlines() if re.search(r'(?i)(fallback_health|fallback_stream|/s3/|camera\.s3|8791|live · s3|last s3|using s3)', line)]
     raise SystemExit("S3 references remain in primary live component: " + " | ".join(hits[:6]))
 LIVE.write_text(x, encoding="utf-8")
 
@@ -147,7 +147,7 @@ assert "trying verified Bluetooth surround path" in u
 assert "BUTTONS_V22_SELFHEAL_20261007" in row
 assert "C720P_HOME_LIVE_PRIMARY_V3_PRIMARY_ONLY_NO_S3" in live
 assert "/new/live.mjpg" in live
-assert not re.search(r'(?i)(s3|fallback_health|fallback_stream|/s3/|camera\.s3|8791)', live)
+assert not re.search(r'(?i)(fallback_health|fallback_stream|/s3/|camera\.s3|8791|live · s3|last s3|using s3)', live)
 
 # Ensure services are alive; do not restart Home Assistant or kiosk.
 for service in ("ht-e6500-surround.service", "c720p-bluetooth-helper.service"):
@@ -175,7 +175,7 @@ if w:
 print("BACKUP=" + str(BACK))
 print("TV_UI_MARKER=" + str("C720P_TV_SURROUND_ACTIONS_V14_S5_SELFHEAL_PIPELINE_FALLTHROUGH" in u).lower())
 print("TV_CARD_CACHE=" + str("BUTTONS_V22_SELFHEAL_20261007" in row).lower())
-print("HOME_LIVE_S3_FREE=" + str(not bool(re.search(r'(?i)(s3|/s3/|camera\.s3|8791)', live))).lower())
+print("HOME_LIVE_S3_FREE=" + str(not bool(re.search(r'(?i)(/s3/|camera\.s3|8791|live · s3|last s3|using s3)', live))).lower())
 print("HTS_HEALTH_HTTP=" + str(health_code))
 print("HTS_HEALTH=" + health[:1200].replace("\n", " "))
 print("TV_STATE_HTTP=" + str(state_code))
