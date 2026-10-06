@@ -1,3 +1,4 @@
+/* 20261006-league-web-v296 · visual analytics dashboard */
 (function(){
 'use strict';
 
@@ -776,6 +777,7 @@ function renderReport(raw,sourceKind){
   renderBullets('overallHighlights',r.overallHighlights,'No broader strength has enough evidence yet.');
   renderPracticePlan(r);
   renderDecisionMetrics(r);
+  renderVisualAnalytics(r);
   renderObjectiveFamilyOverview(r);
   renderPhaseDiagnostic(r);
   renderCompoundSignals(r);
@@ -3805,6 +3807,94 @@ function renderConsistencySummary(r){
     return consistencyCard(spec.title,robustStats(vals),spec.consistencyUnit||'num',split,detail,evidence.ready,evidence.summary);
   }).join('');
 }
+
+function visualGraphEmpty(message){
+  return '<div class="visual-graph-empty">'+esc(message||'Not enough supported evidence to draw this graph yet.')+'</div>';
+}
+function visualDivergingSvg(rows,opts={}){
+  const valid=(rows||[]).filter(x=>hasNum(x?.value));if(!valid.length)return'';
+  const observed=Math.max(...valid.map(x=>Math.abs(Number(x.value)))),bound=hasNum(opts.maxAbs)?Math.max(.1,Number(opts.maxAbs)):Math.max(1,niceCeil(observed,.5));
+  const w=760,rowH=56,padL=214,padR=118,padT=34,padB=38,h=padT+padB+valid.length*rowH,plotW=w-padL-padR,zeroX=padL+plotW/2,xAt=v=>padL+((clamp(Number(v),-bound,bound)+bound)/(bound*2))*plotW;
+  const ticks=[-bound,-bound/2,0,bound/2,bound],grid=ticks.map(v=>{const x=xAt(v),zero=Math.abs(v)<1e-9;return '<line class="visual-grid-line'+(zero?' zero':'')+'" x1="'+x.toFixed(1)+'" y1="'+padT+'" x2="'+x.toFixed(1)+'" y2="'+(h-padB)+'"/><text class="visual-axis-label" x="'+x.toFixed(1)+'" y="'+(h-12)+'" text-anchor="middle">'+esc(fmt(v,1))+'</text>';}).join('');
+  const bars=valid.map((r,i)=>{const y=padT+i*rowH+10,v=Number(r.value),x=xAt(v),rx=Math.min(zeroX,x),rw=Math.max(2,Math.abs(x-zeroX)),tone=opts.neutral||r.ready===false?'neutral':String(r.tone|| (v>0?'good':v<0?'bad':'neutral')),raw=String(r.valueLabel||signed(v,2)),detail=String(r.detail||r.label||'');return '<text class="visual-row-label" x="8" y="'+(y+16)+'">'+esc(String(r.label||''))+'</text><line class="visual-row-track" x1="'+padL+'" y1="'+(y+11)+'" x2="'+(w-padR)+'" y2="'+(y+11)+'"/><rect class="visual-bar '+esc(tone)+'" x="'+rx.toFixed(1)+'" y="'+(y+2)+'" width="'+rw.toFixed(1)+'" height="18" rx="6"><title>'+esc(detail)+'</title></rect><text class="visual-row-value" x="'+(w-8)+'" y="'+(y+16)+'" text-anchor="end">'+esc(raw)+'</text>';}).join('');
+  return '<svg class="visual-graph-svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(opts.ariaLabel||'Diverging comparison chart')+'">'+grid+bars+'</svg>';
+}
+function visualPercentBarSvg(rows,opts={}){
+  const valid=(rows||[]).filter(x=>hasNum(x?.value));if(!valid.length)return'';
+  const w=760,rowH=54,padL=200,padR=150,padT=30,padB=36,h=padT+padB+valid.length*rowH,plotW=w-padL-padR,xAt=v=>padL+clamp(Number(v),0,100)/100*plotW;
+  const ticks=[0,25,50,75,100],grid=ticks.map(v=>'<line class="visual-grid-line" x1="'+xAt(v).toFixed(1)+'" y1="'+padT+'" x2="'+xAt(v).toFixed(1)+'" y2="'+(h-padB)+'"/><text class="visual-axis-label" x="'+xAt(v).toFixed(1)+'" y="'+(h-10)+'" text-anchor="middle">'+v+'%</text>').join('');
+  const bars=valid.map((r,i)=>{const y=padT+i*rowH+9,value=clamp(Number(r.value),0,100),tone=String(r.tone||'neutral'),secondary=hasNum(r.secondary)?clamp(Number(r.secondary),0,100):null,raw=String(r.valueLabel||fmtPct(value)),detail=String(r.detail||r.label||'');return '<text class="visual-row-label" x="8" y="'+(y+16)+'">'+esc(String(r.label||''))+'</text><rect class="visual-percent-track" x="'+padL+'" y="'+(y+2)+'" width="'+plotW+'" height="18" rx="7"/><rect class="visual-bar '+esc(tone)+'" x="'+padL+'" y="'+(y+2)+'" width="'+Math.max(2,xAt(value)-padL).toFixed(1)+'" height="18" rx="7"><title>'+esc(detail)+'</title></rect>'+(secondary==null?'':'<line class="visual-secondary-marker" x1="'+xAt(secondary).toFixed(1)+'" y1="'+(y-2)+'" x2="'+xAt(secondary).toFixed(1)+'" y2="'+(y+24)+'"><title>'+esc(String(opts.secondaryLabel||'Secondary marker')+' '+fmtPct(secondary))+'</title></line>')+'<text class="visual-row-value" x="'+(w-8)+'" y="'+(y+16)+'" text-anchor="end">'+esc(raw)+'</text>';}).join('');
+  return '<svg class="visual-graph-svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(opts.ariaLabel||'Percentage bar chart')+'">'+grid+bars+'</svg>';
+}
+function visualGroupedBarsSvg(groups,series,opts={}){
+  const usable=(groups||[]).filter(g=>g&&series.some(spec=>hasNum(g?.values?.[spec.key])));if(!usable.length)return'';
+  const values=usable.flatMap(g=>series.map(spec=>g?.values?.[spec.key]).filter(hasNum).map(Number)),observed=Math.max(...values,0),maxV=hasNum(opts.max)?Number(opts.max):Math.max(.5,niceCeil(observed,.25));
+  const w=760,h=330,padL=72,padR=24,padT=30,padB=60,plotW=w-padL-padR,plotH=h-padT-padB,yAt=v=>padT+(maxV-clamp(Number(v),0,maxV))/maxV*plotH;
+  const ticks=5,grid=[];for(let i=0;i<ticks;i++){const v=maxV-(maxV/(ticks-1))*i,y=yAt(v);grid.push('<line class="visual-grid-line" x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(w-padR)+'" y2="'+y.toFixed(1)+'"/><text class="visual-axis-label" x="'+(padL-9)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end">'+esc(fmt(v,2))+'</text>');}
+  const groupW=plotW/usable.length,barGap=5,barW=Math.min(44,(groupW-32-(series.length-1)*barGap)/series.length),bars=[];
+  usable.forEach((g,gi)=>{const center=padL+groupW*(gi+.5),totalW=series.length*barW+(series.length-1)*barGap,start=center-totalW/2;series.forEach((spec,si)=>{const v=g?.values?.[spec.key];if(!hasNum(v))return;const x=start+si*(barW+barGap),y=yAt(v),bh=Math.max(2,padT+plotH-y);bars.push('<rect class="visual-series-bar '+esc(spec.cls||'series-a')+(g.ready===false?' thin':'')+'" x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+barW.toFixed(1)+'" height="'+bh.toFixed(1)+'" rx="5"><title>'+esc(g.label+' · '+spec.label+' '+fmt(v,2)+'/10m')+'</title></rect><text class="visual-bar-number" x="'+(x+barW/2).toFixed(1)+'" y="'+Math.max(padT+10,y-6).toFixed(1)+'" text-anchor="middle">'+esc(fmt(v,2))+'</text>');});bars.push('<text class="visual-group-label" x="'+center.toFixed(1)+'" y="'+(h-22)+'" text-anchor="middle">'+esc(g.label)+'</text>');});
+  return '<svg class="visual-graph-svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(opts.ariaLabel||'Grouped bar chart')+'">'+grid.join('')+bars.join('')+'</svg>';
+}
+function visualTrendFormat(v,unit){
+  if(unit==='percent')return fmtPct(v);
+  if(unit==='gold')return signed(v,0)+'g';
+  if(unit==='dpm')return fmtInt(v);
+  if(unit==='csmin'||unit==='csminRaw')return fmt(v,2);
+  if(unit==='minutes')return signed(v,1)+'m';
+  if(unit==='cs')return signed(v,1)+' CS';
+  return fmt(v,2);
+}
+function renderRecentFormGraph(r){
+  const box=$('recentFormGraph');if(!box)return;
+  const rows=roleRecentTrendSpecs(r).filter(recentTrendSpecReady).map(spec=>{const recent=Number(spec.obj.recent),prior=Number(spec.obj.prior),threshold=Math.max(.0001,Number(spec.threshold||1)),rawDelta=recent-prior,signal=(spec.inverse?-1:1)*rawDelta/threshold;return{label:spec.label,value:signal,tone:Math.abs(signal)<1?'neutral':signal>0?'good':'bad',valueLabel:signed(signal,1)+'×',detail:'Latest '+visualTrendFormat(recent,spec.unit)+' vs prior '+visualTrendFormat(prior,spec.unit)+' · '+signed(signal,1)+' practical-change thresholds'};});
+  if(!rows.length){box.innerHTML=visualGraphEmpty('Recent-vs-prior metrics have not cleared their game and event evidence floors yet.');return;}
+  const strongest=[...rows].sort((a,b)=>Math.abs(Number(b.value))-Math.abs(Number(a.value)))[0];
+  box.innerHTML=visualDivergingSvg(rows,{maxAbs:2.5,ariaLabel:'Recent form movement measured in practical-change thresholds'})+'<p class="visual-graph-reading"><b>How to read:</b> right = improving, left = slipping. 1.0× equals that metric’s practical-change threshold, so unlike raw mixed-unit values these bars are comparable. Strongest movement: '+esc(strongest.label)+' '+esc(strongest.valueLabel)+'.</p>';
+}
+function renderPhaseRiskGraph(r){
+  const box=$('phaseRiskGraph');if(!box)return;
+  const phase=r?.behaviorSummary?.phaseRisk||{},defs=[['early','Early'],['mid','Transition'],['late','Late']];
+  const groups=defs.map(([key,label])=>{const x=phase[key]||{};return{label,ready:Number(x.games||0)>=5&&Number(x.exposureMinutes||0)>=20,values:{high:hasNum(x.highRiskDeathsPer10Min)?Number(x.highRiskDeathsPer10Min):null,costly:hasNum(x.costlyDeathsPer10Min)?Number(x.costlyDeathsPer10Min):null,severe:hasNum(x.severeDeathsPer10Min)?Number(x.severeDeathsPer10Min):null}};});
+  const svg=visualGroupedBarsSvg(groups,[{key:'high',label:'High-risk',cls:'series-risk'},{key:'costly',label:'Costly',cls:'series-costly'},{key:'severe',label:'Severe',cls:'series-severe'}],{ariaLabel:'Risk deaths per ten exposure minutes by game phase'});
+  if(!svg){box.innerHTML=visualGraphEmpty('Phase exposure is not sufficient to graph risk rates.');return;}
+  box.innerHTML='<div class="visual-graph-legend"><span><i class="series-risk"></i>High-risk</span><span><i class="series-costly"></i>Costly</span><span><i class="series-severe"></i>Severe consequence</span></div>'+svg+'<p class="visual-graph-reading">Rates are normalized per 10 minutes of actual phase exposure. Faded bars are below the ≥5-game / ≥20-exposure-minute hotspot evidence floor and remain descriptive only.</p>';
+}
+function renderOutcomeEffectGraph(r){
+  const box=$('outcomeEffectGraph');if(!box)return;
+  const m=r?.longHorizon?.longOutcomeFingerprint||{},metrics=Array.isArray(m.metrics)?m.metrics:[],minSide=Math.max(5,Number(m.minPerSideForDirectional||5)),directional=m.directionalEligible===true;
+  const rows=metrics.map(spec=>{if(Number(spec?.wins?.n||0)<2||Number(spec?.losses?.n||0)<2)return null;const effect=standardizedMeanGap(spec.wins,spec.losses);if(!hasNum(effect))return null;const adjusted=Number(effect)*(spec.inverse?-1:1),ready=directional&&Number(spec.wins.n)>=minSide&&Number(spec.losses.n)>=minSide;return{label:spec.label,value:adjusted,ready,tone:ready?(adjusted>0?'good':adjusted<0?'bad':'neutral'):'neutral',valueLabel:'g '+signed(adjusted,2),detail:'Adjusted Hedges g '+signed(adjusted,2)+' · wins n='+spec.wins.n+' · losses n='+spec.losses.n};}).filter(Boolean);
+  if(!rows.length){box.innerHTML=visualGraphEmpty('The long-horizon result split needs at least two valid wins and losses for a graph.');return;}
+  const bound=Math.max(1,Math.min(3,niceCeil(Math.max(...rows.map(x=>Math.abs(Number(x.value)))),.5)));
+  const usable=rows.filter(x=>x.ready),lead=[...usable].sort((a,b)=>Math.abs(Number(b.value))-Math.abs(Number(a.value)))[0]||null;
+  box.innerHTML=visualDivergingSvg(rows,{maxAbs:bound,neutral:!directional,ariaLabel:'Long-horizon win loss standardized effect sizes'})+'<p class="visual-graph-reading"><b>Adjusted direction:</b> right means the metric is more favorable in wins; inverse metrics such as deaths are flipped so the visual direction stays consistent. '+(directional?(lead?'Largest supported separation: '+esc(lead.label)+' ('+esc(lead.valueLabel)+').':'No individual metric clears the per-side evidence floor.'):'Clean outcomes do not yet provide '+minSide+' wins and '+minSide+' losses, so the bars are neutral context only.')+' Descriptive association, not causation.</p>';
+}
+function renderObjectiveFamilyGraph(r){
+  const box=$('objectiveFamilyGraph');if(!box)return;
+  const summary=r?.behaviorSummary?.objectiveFamilySummary||{},rows=Object.entries(summary).map(([key,x])=>({label:objectiveFamilyLabel(key),value:hasNum(x?.contestPresenceRate)?Number(x.contestPresenceRate):null,contested:Number(x?.contestedEncounters||0),joined:Number(x?.joinedContestedEncounters||0)})).filter(x=>x.contested>0&&hasNum(x.value)).sort((a,b)=>b.contested-a.contested||a.label.localeCompare(b.label)).slice(0,7).map(x=>({...x,tone:'objective',valueLabel:fmtPct(x.value)+' · '+x.joined+'/'+x.contested,detail:x.label+' contested presence '+fmtPct(x.value)+' across '+x.contested+' encounters'}));
+  if(!rows.length){box.innerHTML=visualGraphEmpty('No objective family has a measurable contested-presence sample yet.');return;}
+  const reviewable=rows.filter(x=>x.contested>=3),lowest=[...reviewable].sort((a,b)=>Number(a.value)-Number(b.value))[0]||null;
+  box.innerHTML=visualPercentBarSvg(rows,{ariaLabel:'Contested objective presence by objective family'})+'<p class="visual-graph-reading">Bars show supported presence in team-contested encounters, with the exact joined/contested denominator printed at right. '+(lowest?'Lowest family with ≥3 contested encounters: '+esc(lowest.label)+' at '+esc(fmtPct(lowest.value))+'.':'No family has three contested encounters yet.')+' This is replay-priority context, not a role grade.</p>';
+}
+function renderChampionHistoryGraph(r){
+  const box=$('championHistoryGraph');if(!box)return;
+  const h=r?.longHorizon||{},rows=(Array.isArray(h.championHistory)?h.championHistory:[]).filter(x=>Number(x.cleanGames||0)>=3&&hasNum(x.cleanWinRate)).sort((a,b)=>Number(b.cleanGames||0)-Number(a.cleanGames||0)||Number(b.games||0)-Number(a.games||0)||String(a.champion).localeCompare(String(b.champion))).slice(0,8).map(x=>({label:x.champion,value:Number(x.cleanWinRate),tone:'champion',valueLabel:fmtPct(x.cleanWinRate)+' · '+x.cleanWins+'/'+x.cleanGames,detail:x.champion+' · '+x.cleanGames+' clean outcomes from '+x.games+' total selected-role history games'}));
+  if(!rows.length){box.innerHTML=visualGraphEmpty('Champion-conditioned history needs at least three clean outcomes on a champion before plotting win rate.');return;}
+  box.innerHTML=visualPercentBarSvg(rows,{ariaLabel:'Clean win rate by champion in selected role history'})+'<p class="visual-graph-reading">Champions are ordered by clean sample depth, not by win rate, to avoid visually promoting tiny samples. AFK/early-surrender-compromised outcomes are excluded from these bars.</p>';
+}
+function renderVisualAnalytics(r){
+  renderRecentFormGraph(r);
+  renderPhaseRiskGraph(r);
+  renderOutcomeEffectGraph(r);
+  renderObjectiveFamilyGraph(r);
+  renderChampionHistoryGraph(r);
+}
+function renderSupportSynergyGraph(m){
+  const box=$('supportSynergyGraph');if(!box)return;
+  const rows=(Array.isArray(m?.supportChampions)?m.supportChampions:[]).filter(x=>Number(x.cleanGames||0)>=3&&hasNum(x.cleanWinRate)).sort((a,b)=>Number(b.cleanGames||0)-Number(a.cleanGames||0)||Number(b.games||0)-Number(a.games||0)||String(a.supportChampion).localeCompare(String(b.supportChampion))).slice(0,10).map(x=>({label:x.supportChampion,value:Number(x.cleanWinRate),secondary:hasNum(x.wilsonLower95)?Number(x.wilsonLower95):null,tone:x.rankingEligible?'support-established':'support-developing',valueLabel:fmtPct(x.cleanWinRate)+' · '+x.cleanWins+'/'+x.cleanGames,detail:x.supportChampion+' · reviewed-account clean WR '+fmtPct(x.cleanWinRate)+' · '+x.cleanGames+' clean outcomes'+(hasNum(x.wilsonLower95)?' · Wilson floor '+fmtPct(x.wilsonLower95):'')}));
+  if(!rows.length){box.innerHTML=visualGraphEmpty('Support-champion graph needs at least three clean reviewed-account outcomes with the same allied Support champion.');return;}
+  box.innerHTML='<div class="visual-graph-legend"><span><i class="support-established"></i>Established ≥5 clean</span><span><i class="support-developing"></i>Developing 3–4 clean</span><span><i class="wilson-marker"></i>95% Wilson lower bound</span></div>'+visualPercentBarSvg(rows,{secondaryLabel:'95% Wilson lower bound',ariaLabel:'Reviewed account clean win rate by allied support champion'})+'<p class="visual-graph-reading">The bar is the reviewed account’s clean win rate. The vertical marker is the conservative Wilson lower bound used for established ranking. Support champion is only a grouping variable; no human teammate performance is evaluated.</p>';
+}
+
 function roleEconomyChartSpecs(r,reportRole){
   const roleName=roleLabel(reportRole),adc=reportRole==='ADC'?adcBenchmarkSummary(r):null,bench=adc?r.externalBenchmarks?.same:null;
   const gold={key:'goldDiff15',get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)?Number(g.goldDiff15):null,title:'Gold @15 vs direct role opponent',q:'Positive means more gold than the actual same-role opponent at 15. Only trusted, coaching-comparable checkpoints are plotted.',unit:'signedGold',formatUnit:'signed',consistencyUnit:'gold',signedAxis:true,relevance:150,fixedMin:-2000,fixedMax:2000,splitCenter:0,splitThreshold:150,evidenceRequirements:[{path:'peerComparison.laneGames15',min:5}]};
@@ -4213,12 +4303,12 @@ function matchupDiagnosticSet(v,role,base,riskBase){
   };
 }
 function renderSupportSynergy(r){
-  const panel=$('supportSynergyPanel'),nav=$('supportSynergyNav'),summary=$('supportSynergySummary'),table=$('supportChampionSynergy'),pairs=$('supportPairingSynergy'),note=$('supportSynergyNote');
+  const panel=$('supportSynergyPanel'),nav=$('supportSynergyNav'),summary=$('supportSynergySummary'),graph=$('supportSynergyGraph'),table=$('supportChampionSynergy'),pairs=$('supportPairingSynergy'),note=$('supportSynergyNote');
   if(!panel||!summary||!table||!pairs)return;
   const role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),m=r?.supportSynergy||{};
   const show=role==='ADC'&&m?.eligible===true;
   panel.hidden=!show;if(nav)nav.hidden=!show;
-  if(!show){summary.innerHTML='';table.innerHTML='';pairs.innerHTML='';if(note)note.textContent='';return;}
+  if(!show){summary.innerHTML='';if(graph)graph.innerHTML='';table.innerHTML='';pairs.innerHTML='';if(note)note.textContent='';return;}
   const rows=Array.isArray(m.supportChampions)?m.supportChampions:[],pairRows=Array.isArray(m.pairings)?m.pairings:[],best=m.bestSupportChampion||null,developing=m.developingSupportChampion||null;
   const most=[...rows].sort((a,b)=>Number(b.games||0)-Number(a.games||0))[0]||null;
   const lane=[...rows].filter(x=>Number(x.laneGames||0)>=3&&hasNum(x.avgGoldDiff15)).sort((a,b)=>Number(b.avgGoldDiff15)-Number(a.avgGoldDiff15))[0]||null;
@@ -4230,6 +4320,7 @@ function renderSupportSynergy(r){
     summaryCard('Best @15 lane sample',lane?lane.supportChampion:'No 3-game lane sample',lane?(signed(lane.avgGoldDiff15,0)+'g vs enemy ADC · '+lane.laneGames+' comparable deep games'):'Direct-peer @15 evidence is still thin',lane?championIcon(lane.supportChampion):''),
     summaryCard('Support-champion coverage',String(m.resolvedGames||0)+' / '+String(m.historyGames||0)+' games',String(m.unresolvedGames||0)+' unresolved · all performance metrics belong to the reviewed account')
   ].join('');
+  renderSupportSynergyGraph(m);
   const establishedRows=rows.filter(x=>x.rankingEligible),rankOf=x=>Math.max(0,establishedRows.indexOf(x))+1;
   const sampleLabel=x=>x.rankingEligible?('#'+rankOf(x)+' established'):x.sampleTier==='developing'?'developing sample':'thin sample';
   table.innerHTML=rows.length?'<div class="support-synergy-table-head"><span>Support champion</span><span>Your clean WR</span><span>Your KDA</span><span>Your DPM</span><span>Your KP</span><span>Your deaths</span><span>Your gold @15</span></div>'+
