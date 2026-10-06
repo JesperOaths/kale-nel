@@ -1,4 +1,4 @@
-/* 20261006-league-web-v297 · recent-direction graph redesign */
+/* 20261006-league-web-v298 · uncertainty-aware visual analytics */
 (function(){
 'use strict';
 
@@ -3839,6 +3839,39 @@ function visualPercentBarSvg(rows,opts={}){
   const bars=valid.map((r,i)=>{const y=padT+i*rowH+9,value=clamp(Number(r.value),0,100),tone=String(r.tone||'neutral'),secondary=hasNum(r.secondary)?clamp(Number(r.secondary),0,100):null,raw=String(r.valueLabel||fmtPct(value)),detail=String(r.detail||r.label||'');return '<text class="visual-row-label" x="8" y="'+(y+16)+'">'+esc(String(r.label||''))+'</text><rect class="visual-percent-track" x="'+padL+'" y="'+(y+2)+'" width="'+plotW+'" height="18" rx="7"/><rect class="visual-bar '+esc(tone)+'" x="'+padL+'" y="'+(y+2)+'" width="'+Math.max(2,xAt(value)-padL).toFixed(1)+'" height="18" rx="7"><title>'+esc(detail)+'</title></rect>'+(secondary==null?'':'<line class="visual-secondary-marker" x1="'+xAt(secondary).toFixed(1)+'" y1="'+(y-2)+'" x2="'+xAt(secondary).toFixed(1)+'" y2="'+(y+24)+'"><title>'+esc(String(opts.secondaryLabel||'Secondary marker')+' '+fmtPct(secondary))+'</title></line>')+'<text class="visual-row-value" x="'+(w-8)+'" y="'+(y+16)+'" text-anchor="end">'+esc(raw)+'</text>';}).join('');
   return '<svg class="visual-graph-svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(opts.ariaLabel||'Percentage bar chart')+'">'+grid+bars+'</svg>';
 }
+function visualIntervalPlotSvg(rows,opts={}){
+  const valid=(rows||[]).filter(r=>hasNum(r?.value)&&hasNum(r?.low)&&hasNum(r?.high));if(!valid.length)return'';
+  const detailed=opts.rowDetails!==false,w=detailed?900:760,rowH=detailed?68:54,padL=detailed?220:190,padR=detailed?142:112,padT=44,padB=40,h=padT+padB+valid.length*rowH,plotW=w-padL-padR,xAt=v=>padL+clamp(Number(v),0,100)/100*plotW;
+  const ticks=[0,25,50,75,100],grid=ticks.map(v=>'<line class="visual-grid-line'+(v===50?' reference':'')+'" x1="'+xAt(v).toFixed(1)+'" y1="'+padT+'" x2="'+xAt(v).toFixed(1)+'" y2="'+(h-padB)+'"/><text class="visual-axis-label" x="'+xAt(v).toFixed(1)+'" y="'+(h-12)+'" text-anchor="middle">'+v+'%</text>').join('');
+  const ref=opts.reference50===false?'':'<text class="visual-interval-reference-label" x="'+xAt(50).toFixed(1)+'" y="24" text-anchor="middle">50% result line</text>';
+  const marks=valid.map((r,i)=>{
+    const y=padT+i*rowH+13,value=clamp(Number(r.value),0,100),low=clamp(Number(r.low),0,100),high=clamp(Number(r.high),0,100),tone=String(r.tone||'neutral'),raw=String(r.valueLabel||fmtPct(value)),sub=String(r.subLabel||''),detail=String(r.detail||r.label||'');
+    return '<text class="visual-row-label" x="8" y="'+(y+3)+'">'+esc(String(r.label||''))+'</text>'+
+      (detailed&&sub?'<text class="visual-row-detail" x="8" y="'+(y+22)+'">'+esc(sub)+'</text>':'')+
+      '<line class="visual-interval-whisker '+esc(tone)+'" x1="'+xAt(low).toFixed(1)+'" y1="'+y+'" x2="'+xAt(high).toFixed(1)+'" y2="'+y+'"><title>'+esc(detail)+'</title></line>'+
+      '<line class="visual-interval-cap '+esc(tone)+'" x1="'+xAt(low).toFixed(1)+'" y1="'+(y-7)+'" x2="'+xAt(low).toFixed(1)+'" y2="'+(y+7)+'"/>'+
+      '<line class="visual-interval-cap '+esc(tone)+'" x1="'+xAt(high).toFixed(1)+'" y1="'+(y-7)+'" x2="'+xAt(high).toFixed(1)+'" y2="'+(y+7)+'"/>'+
+      '<circle class="visual-interval-point '+esc(tone)+'" cx="'+xAt(value).toFixed(1)+'" cy="'+y+'" r="'+(r.ready===false?5:7)+'"><title>'+esc(detail)+'</title></circle>'+
+      '<text class="visual-row-value" x="'+(w-8)+'" y="'+(y+4)+'" text-anchor="end">'+esc(raw)+'</text>';
+  }).join('');
+  return '<svg class="visual-graph-svg visual-interval-svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(opts.ariaLabel||'Estimate and uncertainty interval plot')+'">'+ref+grid+marks+'</svg>';
+}
+function visualCompositionSvg(rows,opts={}){
+  const valid=(rows||[]).filter(r=>Number(r?.games||0)>0),total=valid.reduce((n,r)=>n+Number(r.games||0),0);if(!(total>0))return'';
+  const w=900,h=170,padL=24,padR=24,barY=38,barH=42,plotW=w-padL-padR;let cursor=padL;
+  const segments=valid.map((r,i)=>{const share=Number(r.games)/total*100,width=plotW*share/100,x=cursor;cursor+=width;return '<rect class="visual-composition-segment mix-'+((i%6)+1)+'" x="'+x.toFixed(1)+'" y="'+barY+'" width="'+Math.max(.8,width).toFixed(1)+'" height="'+barH+'" rx="'+(i===0?9:0)+'"><title>'+esc(String(r.label||'Unknown')+' · '+r.games+' games · '+fmtPct(share))+'</title></rect>';}).join('');
+  const legend=valid.slice(0,6).map((r,i)=>{const share=Number(r.games)/total*100,x=padL+(i%3)*(plotW/3),y=112+Math.floor(i/3)*28;return '<rect class="visual-composition-key mix-'+((i%6)+1)+'" x="'+x+'" y="'+(y-10)+'" width="12" height="12" rx="3"/><text class="visual-composition-label" x="'+(x+19)+'" y="'+y+'">'+esc(String(r.label||'Unknown')+' · '+r.games+' · '+fmtPct(share))+'</text>';}).join('');
+  return '<svg class="visual-graph-svg visual-composition-svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(opts.ariaLabel||'Composition chart')+'">'+segments+legend+'</svg>';
+}
+function visualOutcomeMeanFormat(v,unit){
+  if(!hasNum(v))return'n/a';
+  if(unit==='percent')return fmt(v,1)+'%';
+  if(unit==='dpm')return fmtInt(v);
+  if(unit==='gold')return signed(v,0)+'g';
+  if(unit==='minutes')return fmt(v,1)+'m';
+  if(unit==='cs'||unit==='csmin')return fmt(v,2);
+  return fmt(v,2);
+}
 function visualGroupedBarsSvg(groups,series,opts={}){
   const usable=(groups||[]).filter(g=>g&&series.some(spec=>hasNum(g?.values?.[spec.key])));if(!usable.length)return'';
   const values=usable.flatMap(g=>series.map(spec=>g?.values?.[spec.key]).filter(hasNum).map(Number)),observed=Math.max(...values,0),maxV=hasNum(opts.max)?Number(opts.max):Math.max(.5,niceCeil(observed,.25));
@@ -3881,32 +3914,53 @@ function renderRecentFormGraph(r){
 function renderPhaseRiskGraph(r){
   const box=$('phaseRiskGraph');if(!box)return;
   const phase=r?.behaviorSummary?.phaseRisk||{},defs=[['early','Early'],['mid','Transition'],['late','Late']];
-  const groups=defs.map(([key,label])=>{const x=phase[key]||{};return{label,ready:Number(x.games||0)>=5&&Number(x.exposureMinutes||0)>=20,values:{high:hasNum(x.highRiskDeathsPer10Min)?Number(x.highRiskDeathsPer10Min):null,costly:hasNum(x.costlyDeathsPer10Min)?Number(x.costlyDeathsPer10Min):null,severe:hasNum(x.severeDeathsPer10Min)?Number(x.severeDeathsPer10Min):null}};});
+  const groups=defs.map(([key,label])=>{const x=phase[key]||{},exposure=Number(x.exposureMinutes||0);return{label:label+' · '+fmt(exposure,0)+'m',ready:Number(x.games||0)>=5&&exposure>=20,values:{high:hasNum(x.highRiskDeathsPer10Min)?Number(x.highRiskDeathsPer10Min):null,costly:hasNum(x.costlyDeathsPer10Min)?Number(x.costlyDeathsPer10Min):null,severe:hasNum(x.severeDeathsPer10Min)?Number(x.severeDeathsPer10Min):null}};});
   const svg=visualGroupedBarsSvg(groups,[{key:'high',label:'High-risk',cls:'series-risk'},{key:'costly',label:'Costly',cls:'series-costly'},{key:'severe',label:'Severe',cls:'series-severe'}],{ariaLabel:'Risk deaths per ten exposure minutes by game phase'});
   if(!svg){box.innerHTML=visualGraphEmpty('Phase exposure is not sufficient to graph risk rates.');return;}
-  box.innerHTML='<div class="visual-graph-legend"><span><i class="series-risk"></i>High-risk</span><span><i class="series-costly"></i>Costly</span><span><i class="series-severe"></i>Severe consequence</span></div>'+svg+'<p class="visual-graph-reading">Rates are normalized per 10 minutes of actual phase exposure. Faded bars are below the ≥5-game / ≥20-exposure-minute hotspot evidence floor and remain descriptive only.</p>';
+  box.innerHTML='<div class="visual-graph-legend"><span><i class="series-risk"></i>High-risk</span><span><i class="series-costly"></i>Costly</span><span><i class="series-severe"></i>Severe consequence</span></div>'+svg+'<p class="visual-graph-reading">Rates are normalized per 10 minutes of actual phase exposure; the phase labels include measured exposure. High-risk, costly and severe are overlapping classifications, not slices of one total. Faded bars are below the ≥5-game / ≥20-exposure-minute hotspot evidence floor and remain descriptive only.</p>';
 }
 function renderOutcomeEffectGraph(r){
   const box=$('outcomeEffectGraph');if(!box)return;
   const m=r?.longHorizon?.longOutcomeFingerprint||{},metrics=Array.isArray(m.metrics)?m.metrics:[],minSide=Math.max(5,Number(m.minPerSideForDirectional||5)),directional=m.directionalEligible===true;
-  const rows=metrics.map(spec=>{if(Number(spec?.wins?.n||0)<2||Number(spec?.losses?.n||0)<2)return null;const effect=standardizedMeanGap(spec.wins,spec.losses);if(!hasNum(effect))return null;const adjusted=Number(effect)*(spec.inverse?-1:1),ready=directional&&Number(spec.wins.n)>=minSide&&Number(spec.losses.n)>=minSide;return{label:spec.label,value:adjusted,ready,tone:ready?(adjusted>0?'good':adjusted<0?'bad':'neutral'):'neutral',valueLabel:'g '+signed(adjusted,2),detail:'Adjusted Hedges g '+signed(adjusted,2)+' · wins n='+spec.wins.n+' · losses n='+spec.losses.n};}).filter(Boolean);
+  const rows=metrics.map(spec=>{
+    if(Number(spec?.wins?.n||0)<2||Number(spec?.losses?.n||0)<2)return null;
+    const effect=standardizedMeanGap(spec.wins,spec.losses);if(!hasNum(effect))return null;
+    const adjusted=Number(effect)*(spec.inverse?-1:1),ready=directional&&Number(spec.wins.n)>=minSide&&Number(spec.losses.n)>=minSide;
+    return{label:spec.label,value:adjusted,ready,tone:ready?(adjusted>0?'good':adjusted<0?'bad':'neutral'):'neutral',valueLabel:'g '+signed(adjusted,2),
+      rawLine:'Wins '+visualOutcomeMeanFormat(spec.wins.mean,spec.unit)+' (n='+spec.wins.n+') · losses '+visualOutcomeMeanFormat(spec.losses.mean,spec.unit)+' (n='+spec.losses.n+')',
+      detail:'Adjusted Hedges g '+signed(adjusted,2)+' · wins '+visualOutcomeMeanFormat(spec.wins.mean,spec.unit)+' n='+spec.wins.n+' · losses '+visualOutcomeMeanFormat(spec.losses.mean,spec.unit)+' n='+spec.losses.n};
+  }).filter(Boolean).sort((a,b)=>Math.abs(Number(b.value))-Math.abs(Number(a.value))||String(a.label).localeCompare(String(b.label)));
   if(!rows.length){box.innerHTML=visualGraphEmpty('The long-horizon result split needs at least two valid wins and losses for a graph.');return;}
-  const bound=Math.max(1,Math.min(3,niceCeil(Math.max(...rows.map(x=>Math.abs(Number(x.value)))),.5)));
-  const usable=rows.filter(x=>x.ready),lead=[...usable].sort((a,b)=>Math.abs(Number(b.value))-Math.abs(Number(a.value)))[0]||null;
-  box.innerHTML=visualDivergingSvg(rows,{maxAbs:bound,neutral:!directional,ariaLabel:'Long-horizon win loss standardized effect sizes'})+'<p class="visual-graph-reading"><b>Adjusted direction:</b> right means the metric is more favorable in wins; inverse metrics such as deaths are flipped so the visual direction stays consistent. '+(directional?(lead?'Largest supported separation: '+esc(lead.label)+' ('+esc(lead.valueLabel)+').':'No individual metric clears the per-side evidence floor.'):'Clean outcomes do not yet provide '+minSide+' wins and '+minSide+' losses, so the bars are neutral context only.')+' Descriptive association, not causation.</p>';
+  const bound=Math.max(1,Math.min(3,niceCeil(Math.max(...rows.map(x=>Math.abs(Number(x.value)))),.5))),usable=rows.filter(x=>x.ready),lead=usable[0]||null;
+  box.innerHTML=visualDivergingSvg(rows,{maxAbs:bound,rowDetails:true,neutral:!directional,axisSuffix:' g',leftLabel:'less favorable in wins',rightLabel:'more favorable in wins',ariaLabel:'Long-horizon win loss standardized effect sizes with raw result means'})+
+    '<p class="visual-graph-reading"><b>Adjusted direction:</b> right means the metric is more favorable in wins; inverse metrics such as deaths are flipped so the visual direction stays consistent. Raw means and sample sizes are shown under every metric. '+(directional?(lead?'Largest supported separation: '+esc(lead.label)+' ('+esc(lead.valueLabel)+').':'No individual metric clears the per-side evidence floor.'):'Clean outcomes do not yet provide '+minSide+' wins and '+minSide+' losses, so the bars are neutral context only.')+' Descriptive association, not causation.</p>';
 }
 function renderObjectiveFamilyGraph(r){
   const box=$('objectiveFamilyGraph');if(!box)return;
-  const summary=r?.behaviorSummary?.objectiveFamilySummary||{},rows=Object.entries(summary).map(([key,x])=>({label:objectiveFamilyLabel(key),value:hasNum(x?.contestPresenceRate)?Number(x.contestPresenceRate):null,contested:Number(x?.contestedEncounters||0),joined:Number(x?.joinedContestedEncounters||0)})).filter(x=>x.contested>0&&hasNum(x.value)).sort((a,b)=>b.contested-a.contested||a.label.localeCompare(b.label)).slice(0,7).map(x=>({...x,tone:'objective',valueLabel:fmtPct(x.value)+' · '+x.joined+'/'+x.contested,detail:x.label+' contested presence '+fmtPct(x.value)+' across '+x.contested+' encounters'}));
+  const summary=r?.behaviorSummary?.objectiveFamilySummary||{};
+  const rows=Object.entries(summary).map(([key,x])=>{
+    const contested=Number(x?.contestedEncounters||0),joined=Number(x?.joinedContestedEncounters||0),value=hasNum(x?.contestPresenceRate)?Number(x.contestPresenceRate):null,interval=wilsonInterval(joined,contested);
+    if(!(contested>0)||!hasNum(value)||!interval)return null;
+    return{label:objectiveFamilyLabel(key),value,low:interval.low,high:interval.high,ready:contested>=3,tone:'objective',contested,joined,valueLabel:fmtPct(value)+' · '+joined+'/'+contested,subLabel:'95% Wilson '+fmtPct(interval.low)+'–'+fmtPct(interval.high)+' · '+contested+' contested',detail:objectiveFamilyLabel(key)+' · '+joined+'/'+contested+' contested joins · 95% Wilson '+fmtPct(interval.low)+'–'+fmtPct(interval.high)};
+  }).filter(Boolean).sort((a,b)=>b.contested-a.contested||a.label.localeCompare(b.label)).slice(0,7);
   if(!rows.length){box.innerHTML=visualGraphEmpty('No objective family has a measurable contested-presence sample yet.');return;}
-  const reviewable=rows.filter(x=>x.contested>=3),lowest=[...reviewable].sort((a,b)=>Number(a.value)-Number(b.value))[0]||null;
-  box.innerHTML=visualPercentBarSvg(rows,{ariaLabel:'Contested objective presence by objective family'})+'<p class="visual-graph-reading">Bars show supported presence in team-contested encounters, with the exact joined/contested denominator printed at right. '+(lowest?'Lowest family with ≥3 contested encounters: '+esc(lowest.label)+' at '+esc(fmtPct(lowest.value))+'.':'No family has three contested encounters yet.')+' This is replay-priority context, not a role grade.</p>';
+  const reviewable=rows.filter(x=>x.ready),lowest=[...reviewable].sort((a,b)=>Number(a.value)-Number(b.value))[0]||null;
+  box.innerHTML=visualIntervalPlotSvg(rows,{reference50:false,ariaLabel:'Contested objective presence with Wilson uncertainty by objective family'})+
+    '<p class="visual-graph-reading">Dots are supported contested-presence point estimates; whiskers are 95% Wilson intervals from the exact joined/contested denominator. This prevents a small 0% sample from looking like certain zero presence. '+(lowest?'Lowest family with ≥3 contested encounters: '+esc(lowest.label)+' at '+esc(fmtPct(lowest.value))+' ('+lowest.joined+'/'+lowest.contested+').':'No family has three contested encounters yet.')+' Replay-priority context only, not a role grade.</p>';
 }
 function renderChampionHistoryGraph(r){
   const box=$('championHistoryGraph');if(!box)return;
-  const h=r?.longHorizon||{},rows=(Array.isArray(h.championHistory)?h.championHistory:[]).filter(x=>Number(x.cleanGames||0)>=3&&hasNum(x.cleanWinRate)).sort((a,b)=>Number(b.cleanGames||0)-Number(a.cleanGames||0)||Number(b.games||0)-Number(a.games||0)||String(a.champion).localeCompare(String(b.champion))).slice(0,8).map(x=>({label:x.champion,value:Number(x.cleanWinRate),tone:'champion',valueLabel:fmtPct(x.cleanWinRate)+' · '+x.cleanWins+'/'+x.cleanGames,detail:x.champion+' · '+x.cleanGames+' clean outcomes from '+x.games+' total selected-role history games'}));
-  if(!rows.length){box.innerHTML=visualGraphEmpty('Champion-conditioned history needs at least three clean outcomes on a champion before plotting win rate.');return;}
-  box.innerHTML=visualPercentBarSvg(rows,{ariaLabel:'Clean win rate by champion in selected role history'})+'<p class="visual-graph-reading">Champions are ordered by clean sample depth, not by win rate, to avoid visually promoting tiny samples. AFK/early-surrender-compromised outcomes are excluded from these bars.</p>';
+  const h=r?.longHorizon||{},history=(Array.isArray(h.championHistory)?h.championHistory:[]).filter(x=>Number(x.games||0)>0).sort((a,b)=>Number(b.games||0)-Number(a.games||0)||String(a.champion).localeCompare(String(b.champion))),total=history.reduce((n,x)=>n+Number(x.games||0),0);
+  if(!history.length||!(total>0)){box.innerHTML=visualGraphEmpty('No champion-conditioned selected-role history is available yet.');return;}
+  const cleanComparable=history.filter(x=>Number(x.cleanGames||0)>=3&&hasNum(x.cleanWinRate)),leader=history[0],leaderShare=Number(leader.games||0)/total*100;
+  if(cleanComparable.length<2||leaderShare>=90){
+    const top=history.slice(0,5).map(x=>({label:x.champion,games:Number(x.games||0)})),shown=top.reduce((n,x)=>n+x.games,0);if(total>shown)top.push({label:'Other',games:total-shown});
+    box.innerHTML=visualCompositionSvg(top,{ariaLabel:'Champion pick mix across selected-role history'})+
+      '<p class="visual-graph-reading"><b>Pick concentration:</b> '+esc(leader.champion)+' accounts for '+esc(fmtPct(leaderShare))+' of this '+esc(roleLabel(h.selectedRole||r?.dataQuality?.selectedRole||state.selectedRole))+' history ('+Number(leader.games||0)+'/'+total+' games). A cross-champion clean-WR ranking is withheld because there is not a real multi-champion comparison; showing one dominant champion as a “ranking” would add no useful information.</p>';
+    return;
+  }
+  const rows=cleanComparable.slice(0,8).map(x=>{const interval=wilsonInterval(Number(x.cleanWins||0),Number(x.cleanGames||0));return{label:x.champion,value:Number(x.cleanWinRate),low:interval?.low,high:interval?.high,ready:Number(x.cleanGames||0)>=5,tone:'champion',valueLabel:fmtPct(x.cleanWinRate)+' · '+x.cleanWins+'/'+x.cleanGames,subLabel:'95% Wilson '+fmtPct(interval?.low)+'–'+fmtPct(interval?.high)+' · '+x.games+' total games',detail:x.champion+' · '+x.cleanWins+'/'+x.cleanGames+' clean outcomes · '+x.games+' total history games'};}).filter(x=>hasNum(x.low)&&hasNum(x.high));
+  box.innerHTML=visualIntervalPlotSvg(rows,{ariaLabel:'Champion clean win rate with Wilson uncertainty'})+'<p class="visual-graph-reading">Dots are clean-WR point estimates and whiskers are 95% Wilson intervals. Champions are ordered by history sample depth, not by the point estimate, so small samples do not visually jump to the top.</p>';
 }
 function renderVisualAnalytics(r){
   renderRecentFormGraph(r);
@@ -3917,11 +3971,16 @@ function renderVisualAnalytics(r){
 }
 function renderSupportSynergyGraph(m){
   const box=$('supportSynergyGraph');if(!box)return;
-  const rows=(Array.isArray(m?.supportChampions)?m.supportChampions:[]).filter(x=>Number(x.cleanGames||0)>=3&&hasNum(x.cleanWinRate)).sort((a,b)=>Number(b.cleanGames||0)-Number(a.cleanGames||0)||Number(b.games||0)-Number(a.games||0)||String(a.supportChampion).localeCompare(String(b.supportChampion))).slice(0,10).map(x=>({label:x.supportChampion,value:Number(x.cleanWinRate),secondary:hasNum(x.wilsonLower95)?Number(x.wilsonLower95):null,tone:x.rankingEligible?'support-established':'support-developing',valueLabel:fmtPct(x.cleanWinRate)+' · '+x.cleanWins+'/'+x.cleanGames,detail:x.supportChampion+' · reviewed-account clean WR '+fmtPct(x.cleanWinRate)+' · '+x.cleanGames+' clean outcomes'+(hasNum(x.wilsonLower95)?' · Wilson floor '+fmtPct(x.wilsonLower95):'')}));
+  const rows=(Array.isArray(m?.supportChampions)?m.supportChampions:[]).filter(x=>Number(x.cleanGames||0)>=3&&hasNum(x.cleanWinRate)).map(x=>{
+    const interval=wilsonInterval(Number(x.cleanWins||0),Number(x.cleanGames||0));if(!interval)return null;
+    return{label:x.supportChampion,value:Number(x.cleanWinRate),low:interval.low,high:interval.high,ready:x.rankingEligible===true,tone:x.rankingEligible?'support-established':'support-developing',cleanGames:Number(x.cleanGames||0),wilsonLow:interval.low,valueLabel:fmtPct(x.cleanWinRate)+' · '+x.cleanWins+'/'+x.cleanGames,subLabel:(x.rankingEligible?'Established':'Developing')+' · 95% Wilson '+fmtPct(interval.low)+'–'+fmtPct(interval.high),detail:x.supportChampion+' · reviewed-account clean WR '+fmtPct(x.cleanWinRate)+' · '+x.cleanWins+'/'+x.cleanGames+' clean outcomes · 95% Wilson '+fmtPct(interval.low)+'–'+fmtPct(interval.high)};
+  }).filter(Boolean).sort((a,b)=>Number(b.ready)-Number(a.ready)||(a.ready?Number(b.wilsonLow)-Number(a.wilsonLow):Number(b.cleanGames)-Number(a.cleanGames))||String(a.label).localeCompare(String(b.label))).slice(0,10);
   if(!rows.length){box.innerHTML=visualGraphEmpty('Support-champion graph needs at least three clean reviewed-account outcomes with the same allied Support champion.');return;}
-  box.innerHTML='<div class="visual-graph-legend"><span><i class="support-established"></i>Established ≥5 clean</span><span><i class="support-developing"></i>Developing 3–4 clean</span><span><i class="wilson-marker"></i>95% Wilson lower bound</span></div>'+visualPercentBarSvg(rows,{secondaryLabel:'95% Wilson lower bound',ariaLabel:'Reviewed account clean win rate by allied support champion'})+'<p class="visual-graph-reading">The bar is the reviewed account’s clean win rate. The vertical marker is the conservative Wilson lower bound used for established ranking. Support champion is only a grouping variable; no human teammate performance is evaluated.</p>';
+  const established=rows.filter(x=>x.ready),best=established[0]||null;
+  box.innerHTML='<div class="visual-graph-legend"><span><i class="support-established"></i>Established ≥5 clean</span><span><i class="support-developing"></i>Developing 3–4 clean</span><span><i class="wilson-whisker"></i>95% Wilson interval</span></div>'+
+    visualIntervalPlotSvg(rows,{ariaLabel:'Reviewed account clean win rate and uncertainty by allied support champion'})+
+    '<p class="visual-graph-reading">The dot is the reviewed account’s clean win rate; the whisker shows its 95% Wilson uncertainty interval. Established rows are ranked by the Wilson lower bound, while 3–4 game developing samples stay below them regardless of a flashy point estimate.'+(best?' Best established conservative floor: '+esc(best.label)+' at '+esc(fmtPct(best.wilsonLow))+'.':'')+' Support champion remains a grouping variable only; no human teammate performance is evaluated.</p>';
 }
-
 function roleEconomyChartSpecs(r,reportRole){
   const roleName=roleLabel(reportRole),adc=reportRole==='ADC'?adcBenchmarkSummary(r):null,bench=adc?r.externalBenchmarks?.same:null;
   const gold={key:'goldDiff15',get:g=>trustedDirectPeer(g)&&g?.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)?Number(g.goldDiff15):null,title:'Gold @15 vs direct role opponent',q:'Positive means more gold than the actual same-role opponent at 15. Only trusted, coaching-comparable checkpoints are plotted.',unit:'signedGold',formatUnit:'signed',consistencyUnit:'gold',signedAxis:true,relevance:150,fixedMin:-2000,fixedMax:2000,splitCenter:0,splitThreshold:150,evidenceRequirements:[{path:'peerComparison.laneGames15',min:5}]};
