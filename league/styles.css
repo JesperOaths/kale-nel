@@ -2603,3 +2603,10 @@ html{font-size:20px}
 .visual-composition-label{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;fill:var(--ink-soft);font-size:12px;font-weight:800}
 .mix-1{fill:#9a8241}.mix-2{fill:#346b7a}.mix-3{fill:#684696}.mix-4{fill:#2f7656}.mix-5{fill:#9b4437}.mix-6{fill:#7c7469}
 @media(max-width:700px){.visual-interval-svg,.visual-composition-svg{min-width:820px}}
+
+
+/* v299 — long-horizon 20-vs-20 direction graph */
+.history-direction-graph{margin:12px 0 16px;padding:16px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,#fff 0%,#fcfaf6 100%);overflow:hidden}
+.history-direction-summary{margin-top:0}
+.history-direction-graph .visual-graph-reading{margin-top:12px}
+@media(max-width:700px){.history-direction-graph{overflow-x:auto}.history-direction-graph>.recent-direction-summary{min-width:780px}.history-direction-graph .recent-direction-svg{min-width:900px}}
