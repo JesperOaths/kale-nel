@@ -3820,6 +3820,7 @@ function visualDivergingSvg(rows,opts={}){
   const axisValue=v=>{if(Math.abs(v)<1e-9)return'0';const rounded=Math.round(v*10)/10,raw=Number.isInteger(rounded)?String(rounded):rounded.toFixed(1);return(v>0?'+':'')+raw+(opts.axisSuffix||'');};
   const ticks=[-bound,-bound/2,0,bound/2,bound],grid=ticks.map(v=>{const x=xAt(v),zero=Math.abs(v)<1e-9;return '<line class="visual-grid-line'+(zero?' zero':'')+'" x1="'+x.toFixed(1)+'" y1="'+padT+'" x2="'+x.toFixed(1)+'" y2="'+(h-padB)+'"/><text class="visual-axis-label" x="'+x.toFixed(1)+'" y="'+(h-13)+'" text-anchor="middle">'+esc(axisValue(v))+'</text>';}).join('');
   const directions=opts.directionLabels===false?'':'<text class="visual-axis-direction bad" x="'+padL+'" y="25">← '+esc(opts.leftLabel||'SLIPPING')+'</text><text class="visual-axis-direction good" x="'+(w-padR)+'" y="25" text-anchor="end">'+esc(opts.rightLabel||'IMPROVING')+' →</text>';
+  const thresholdBand=opts.thresholdBand===true&&bound>1?(()=>{const left=xAt(-1),right=xAt(1),top=padT,bottom=h-padB;return '<rect class="visual-threshold-band" x="'+left.toFixed(1)+'" y="'+top+'" width="'+(right-left).toFixed(1)+'" height="'+(bottom-top)+'"/><line class="visual-threshold-line" x1="'+left.toFixed(1)+'" y1="'+top+'" x2="'+left.toFixed(1)+'" y2="'+bottom+'"/><line class="visual-threshold-line" x1="'+right.toFixed(1)+'" y1="'+top+'" x2="'+right.toFixed(1)+'" y2="'+bottom+'"/><text class="visual-threshold-label" x="'+zeroX.toFixed(1)+'" y="'+(padT-9)+'" text-anchor="middle">within ±1× practical-change band</text>';})():'';
   const bars=valid.map((r,i)=>{
     const y=padT+i*rowH+10,v=Number(r.value),x=xAt(v),rx=Math.min(zeroX,x),rw=Math.max(2,Math.abs(x-zeroX)),baseTone=opts.neutral||r.ready===false?'neutral':String(r.tone||(v>0?'good':v<0?'bad':'neutral')),severity=String(r.severity||''),tone=[baseTone,severity].filter(Boolean).join(' '),raw=String(r.valueLabel||signed(v,2)),detail=String(r.detail||r.label||''),rawLine=String(r.rawLine||'');
     const inside=rw>=74,labelX=inside?(v<0?x+10:x-10):(v<0?x-10:x+10),anchor=inside?(v<0?'start':'end'):(v<0?'end':'start');
@@ -3829,7 +3830,7 @@ function visualDivergingSvg(rows,opts={}){
       '<rect class="visual-bar '+esc(tone)+'" x="'+rx.toFixed(1)+'" y="'+(y+1)+'" width="'+rw.toFixed(1)+'" height="20" rx="7"><title>'+esc(detail)+'</title></rect>'+
       '<text class="visual-bar-end-value '+(inside?'inside ':'')+esc(baseTone)+'" x="'+labelX.toFixed(1)+'" y="'+(y+16)+'" text-anchor="'+anchor+'">'+esc(raw)+'</text>';
   }).join('');
-  return '<svg class="visual-graph-svg'+(detailed?' recent-direction-svg':'')+'" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(opts.ariaLabel||'Diverging comparison chart')+'">'+directions+grid+bars+'</svg>';
+  return '<svg class="visual-graph-svg'+(detailed?' recent-direction-svg':'')+'" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(opts.ariaLabel||'Diverging comparison chart')+'">'+directions+thresholdBand+grid+bars+'</svg>';
 }
 function visualPercentBarSvg(rows,opts={}){
   const valid=(rows||[]).filter(x=>hasNum(x?.value));if(!valid.length)return'';
@@ -3874,7 +3875,7 @@ function renderRecentFormGraph(r){
   rows.sort((a,b)=>Math.abs(Number(b.value))-Math.abs(Number(a.value))||String(a.label).localeCompare(String(b.label)));
   const strongest=rows[0],observed=Math.max(...rows.map(x=>Math.abs(Number(x.value)))),bound=Math.max(2.5,niceCeil(Math.max(observed*1.14,2.5),.5)),scaleText='±'+fmt(bound,bound%1?1:0)+'×';
   box.innerHTML='<div class="recent-direction-summary"><span><b>Strongest recent shift</b><strong class="tone-'+esc(strongest.tone)+'">'+esc(strongest.label)+' '+esc(strongest.valueLabel)+'</strong></span><span><b>Dynamic chart range</b><strong>'+esc(scaleText)+'</strong></span><span><b>Meaning of 1×</b><strong>One practical-change threshold</strong></span></div>'+
-    visualDivergingSvg(rows,{rowDetails:true,axisSuffix:'×',ariaLabel:'Recent form movement measured in practical-change thresholds',leftLabel:'slipping',rightLabel:'improving'})+
+    visualDivergingSvg(rows,{rowDetails:true,thresholdBand:true,axisSuffix:'×',ariaLabel:'Recent form movement measured in practical-change thresholds',leftLabel:'slipping',rightLabel:'improving'})+
     '<p class="visual-graph-reading"><b>How to read:</b> bars are scaled to the actual largest supported shift, so different changes stay visually different instead of being clipped. Raw recent and prior values are printed under every metric. A 1× move equals that metric’s practical-change threshold; bar length shows change relative to that threshold, not causal importance.</p>';
 }
 function renderPhaseRiskGraph(r){
