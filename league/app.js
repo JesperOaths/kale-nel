@@ -1,4 +1,4 @@
-/* 20261006-league-web-v296 · visual analytics dashboard */
+/* 20261006-league-web-v297 · recent-direction graph redesign */
 (function(){
 'use strict';
 
@@ -3813,11 +3813,23 @@ function visualGraphEmpty(message){
 }
 function visualDivergingSvg(rows,opts={}){
   const valid=(rows||[]).filter(x=>hasNum(x?.value));if(!valid.length)return'';
-  const observed=Math.max(...valid.map(x=>Math.abs(Number(x.value)))),bound=hasNum(opts.maxAbs)?Math.max(.1,Number(opts.maxAbs)):Math.max(1,niceCeil(observed,.5));
-  const w=760,rowH=56,padL=214,padR=118,padT=34,padB=38,h=padT+padB+valid.length*rowH,plotW=w-padL-padR,zeroX=padL+plotW/2,xAt=v=>padL+((clamp(Number(v),-bound,bound)+bound)/(bound*2))*plotW;
-  const ticks=[-bound,-bound/2,0,bound/2,bound],grid=ticks.map(v=>{const x=xAt(v),zero=Math.abs(v)<1e-9;return '<line class="visual-grid-line'+(zero?' zero':'')+'" x1="'+x.toFixed(1)+'" y1="'+padT+'" x2="'+x.toFixed(1)+'" y2="'+(h-padB)+'"/><text class="visual-axis-label" x="'+x.toFixed(1)+'" y="'+(h-12)+'" text-anchor="middle">'+esc(fmt(v,1))+'</text>';}).join('');
-  const bars=valid.map((r,i)=>{const y=padT+i*rowH+10,v=Number(r.value),x=xAt(v),rx=Math.min(zeroX,x),rw=Math.max(2,Math.abs(x-zeroX)),tone=opts.neutral||r.ready===false?'neutral':String(r.tone|| (v>0?'good':v<0?'bad':'neutral')),raw=String(r.valueLabel||signed(v,2)),detail=String(r.detail||r.label||'');return '<text class="visual-row-label" x="8" y="'+(y+16)+'">'+esc(String(r.label||''))+'</text><line class="visual-row-track" x1="'+padL+'" y1="'+(y+11)+'" x2="'+(w-padR)+'" y2="'+(y+11)+'"/><rect class="visual-bar '+esc(tone)+'" x="'+rx.toFixed(1)+'" y="'+(y+2)+'" width="'+rw.toFixed(1)+'" height="18" rx="6"><title>'+esc(detail)+'</title></rect><text class="visual-row-value" x="'+(w-8)+'" y="'+(y+16)+'" text-anchor="end">'+esc(raw)+'</text>';}).join('');
-  return '<svg class="visual-graph-svg" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(opts.ariaLabel||'Diverging comparison chart')+'">'+grid+bars+'</svg>';
+  const observed=Math.max(...valid.map(x=>Math.abs(Number(x.value))));
+  const step=hasNum(opts.tickStep)?Math.max(.1,Number(opts.tickStep)):.5;
+  const bound=hasNum(opts.maxAbs)?Math.max(.1,Number(opts.maxAbs)):Math.max(2.5,niceCeil(Math.max(observed*1.14,2.5),step));
+  const detailed=opts.rowDetails===true,w=detailed?940:760,rowH=detailed?78:56,padL=detailed?310:214,padR=detailed?34:72,padT=detailed?52:34,padB=42,h=padT+padB+valid.length*rowH,plotW=w-padL-padR,zeroX=padL+plotW/2,xAt=v=>padL+((clamp(Number(v),-bound,bound)+bound)/(bound*2))*plotW;
+  const axisValue=v=>{if(Math.abs(v)<1e-9)return'0';const rounded=Math.round(v*10)/10,raw=Number.isInteger(rounded)?String(rounded):rounded.toFixed(1);return(v>0?'+':'')+raw+(opts.axisSuffix||'');};
+  const ticks=[-bound,-bound/2,0,bound/2,bound],grid=ticks.map(v=>{const x=xAt(v),zero=Math.abs(v)<1e-9;return '<line class="visual-grid-line'+(zero?' zero':'')+'" x1="'+x.toFixed(1)+'" y1="'+padT+'" x2="'+x.toFixed(1)+'" y2="'+(h-padB)+'"/><text class="visual-axis-label" x="'+x.toFixed(1)+'" y="'+(h-13)+'" text-anchor="middle">'+esc(axisValue(v))+'</text>';}).join('');
+  const directions=opts.directionLabels===false?'':'<text class="visual-axis-direction bad" x="'+padL+'" y="25">← '+esc(opts.leftLabel||'SLIPPING')+'</text><text class="visual-axis-direction good" x="'+(w-padR)+'" y="25" text-anchor="end">'+esc(opts.rightLabel||'IMPROVING')+' →</text>';
+  const bars=valid.map((r,i)=>{
+    const y=padT+i*rowH+10,v=Number(r.value),x=xAt(v),rx=Math.min(zeroX,x),rw=Math.max(2,Math.abs(x-zeroX)),baseTone=opts.neutral||r.ready===false?'neutral':String(r.tone||(v>0?'good':v<0?'bad':'neutral')),severity=String(r.severity||''),tone=[baseTone,severity].filter(Boolean).join(' '),raw=String(r.valueLabel||signed(v,2)),detail=String(r.detail||r.label||''),rawLine=String(r.rawLine||'');
+    const inside=rw>=74,labelX=inside?(v<0?x+10:x-10):(v<0?x-10:x+10),anchor=inside?(v<0?'start':'end'):(v<0?'end':'start');
+    return '<text class="visual-row-label" x="8" y="'+(y+15)+'">'+esc(String(r.label||''))+'</text>'+
+      (detailed&&rawLine?'<text class="visual-row-detail" x="8" y="'+(y+37)+'">'+esc(rawLine)+'</text>':'')+
+      '<line class="visual-row-track" x1="'+padL+'" y1="'+(y+11)+'" x2="'+(w-padR)+'" y2="'+(y+11)+'"/>'+
+      '<rect class="visual-bar '+esc(tone)+'" x="'+rx.toFixed(1)+'" y="'+(y+1)+'" width="'+rw.toFixed(1)+'" height="20" rx="7"><title>'+esc(detail)+'</title></rect>'+
+      '<text class="visual-bar-end-value '+(inside?'inside ':'')+esc(baseTone)+'" x="'+labelX.toFixed(1)+'" y="'+(y+16)+'" text-anchor="'+anchor+'">'+esc(raw)+'</text>';
+  }).join('');
+  return '<svg class="visual-graph-svg'+(detailed?' recent-direction-svg':'')+'" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+esc(opts.ariaLabel||'Diverging comparison chart')+'">'+directions+grid+bars+'</svg>';
 }
 function visualPercentBarSvg(rows,opts={}){
   const valid=(rows||[]).filter(x=>hasNum(x?.value));if(!valid.length)return'';
@@ -3844,12 +3856,26 @@ function visualTrendFormat(v,unit){
   if(unit==='cs')return signed(v,1)+' CS';
   return fmt(v,2);
 }
+function visualRecentSeverity(signal){
+  const magnitude=Math.abs(Number(signal));
+  if(magnitude<1)return'near';
+  if(magnitude<2.5)return'moderate';
+  if(magnitude<4)return'strong';
+  return'extreme';
+}
 function renderRecentFormGraph(r){
   const box=$('recentFormGraph');if(!box)return;
-  const rows=roleRecentTrendSpecs(r).filter(recentTrendSpecReady).map(spec=>{const recent=Number(spec.obj.recent),prior=Number(spec.obj.prior),threshold=Math.max(.0001,Number(spec.threshold||1)),rawDelta=recent-prior,signal=(spec.inverse?-1:1)*rawDelta/threshold;return{label:spec.label,value:signal,tone:Math.abs(signal)<1?'neutral':signal>0?'good':'bad',valueLabel:signed(signal,1)+'×',detail:'Latest '+visualTrendFormat(recent,spec.unit)+' vs prior '+visualTrendFormat(prior,spec.unit)+' · '+signed(signal,1)+' practical-change thresholds'};});
+  const rows=roleRecentTrendSpecs(r).filter(recentTrendSpecReady).map(spec=>{
+    const recent=Number(spec.obj.recent),prior=Number(spec.obj.prior),threshold=Math.max(.0001,Number(spec.threshold||1)),rawDelta=recent-prior,signal=(spec.inverse?-1:1)*rawDelta/threshold,recentN=Number(spec.obj.recentN||0),priorN=Number(spec.obj.priorN||0);
+    const rawDeltaText=spec.unit==='percent'?signed(rawDelta,1)+' pp':spec.unit==='gold'?signed(rawDelta,0)+'g':spec.unit==='dpm'?signed(rawDelta,0):spec.unit==='csmin'||spec.unit==='csminRaw'?signed(rawDelta,2):spec.unit==='minutes'?signed(rawDelta,1)+'m':spec.unit==='cs'?signed(rawDelta,1)+' CS':signed(rawDelta,2);
+    return{label:spec.label,value:signal,tone:Math.abs(signal)<1?'neutral':signal>0?'good':'bad',severity:visualRecentSeverity(signal),valueLabel:signed(signal,1)+'×',rawLine:'Recent '+visualTrendFormat(recent,spec.unit)+' (n='+recentN+') · prior '+visualTrendFormat(prior,spec.unit)+' (n='+priorN+') · Δ '+rawDeltaText,detail:'Latest '+visualTrendFormat(recent,spec.unit)+' vs prior '+visualTrendFormat(prior,spec.unit)+' · raw change '+rawDeltaText+' · '+signed(signal,1)+' practical-change thresholds'};
+  });
   if(!rows.length){box.innerHTML=visualGraphEmpty('Recent-vs-prior metrics have not cleared their game and event evidence floors yet.');return;}
-  const strongest=[...rows].sort((a,b)=>Math.abs(Number(b.value))-Math.abs(Number(a.value)))[0];
-  box.innerHTML=visualDivergingSvg(rows,{maxAbs:2.5,ariaLabel:'Recent form movement measured in practical-change thresholds'})+'<p class="visual-graph-reading"><b>How to read:</b> right = improving, left = slipping. 1.0× equals that metric’s practical-change threshold, so unlike raw mixed-unit values these bars are comparable. Strongest movement: '+esc(strongest.label)+' '+esc(strongest.valueLabel)+'.</p>';
+  rows.sort((a,b)=>Math.abs(Number(b.value))-Math.abs(Number(a.value))||String(a.label).localeCompare(String(b.label)));
+  const strongest=rows[0],observed=Math.max(...rows.map(x=>Math.abs(Number(x.value)))),bound=Math.max(2.5,niceCeil(Math.max(observed*1.14,2.5),.5)),scaleText='±'+fmt(bound,bound%1?1:0)+'×';
+  box.innerHTML='<div class="recent-direction-summary"><span><b>Strongest recent shift</b><strong class="tone-'+esc(strongest.tone)+'">'+esc(strongest.label)+' '+esc(strongest.valueLabel)+'</strong></span><span><b>Dynamic chart range</b><strong>'+esc(scaleText)+'</strong></span><span><b>Meaning of 1×</b><strong>One practical-change threshold</strong></span></div>'+
+    visualDivergingSvg(rows,{rowDetails:true,axisSuffix:'×',ariaLabel:'Recent form movement measured in practical-change thresholds',leftLabel:'slipping',rightLabel:'improving'})+
+    '<p class="visual-graph-reading"><b>How to read:</b> bars are scaled to the actual largest supported shift, so different changes stay visually different instead of being clipped. Raw recent and prior values are printed under every metric. A 1× move equals that metric’s practical-change threshold; bar length shows change relative to that threshold, not causal importance.</p>';
 }
 function renderPhaseRiskGraph(r){
   const box=$('phaseRiskGraph');if(!box)return;
