@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import './check-league-saved-report-cohort-fixtures.mjs';
 import './check-league-data-quality-dom-smoke.mjs';
 import './check-league-chart-gap-accessibility.mjs';
+import './check-league-outcome-visual-direction.mjs';
 
 const read=(p)=>fs.readFileSync(p,'utf8');
 const backend=read('supabase/functions/league-api-v1/index.ts');
