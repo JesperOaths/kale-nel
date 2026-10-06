@@ -46,7 +46,6 @@ Type=simple
 ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/c720p-tv-fast-controller.py
 Restart=on-failure
 RestartSec=1
-Nice=-5
 
 [Install]
 WantedBy=default.target
