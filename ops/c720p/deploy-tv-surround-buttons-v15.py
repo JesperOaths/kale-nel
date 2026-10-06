@@ -30,6 +30,8 @@ for p in (CTRL,UI,ROW,UNIT):
 
 url="https://raw.githubusercontent.com/JesperOaths/kale-nel/417e3a8e4a3e7e8894e2f82896af3cfa4f181439/ops/c720p/c720p-tv-fast-controller-v10.py"
 urllib.request.urlretrieve(url,CTRL)
+raw=CTRL.read_text().replace("PORT=8792","PORT=8793",1)
+CTRL.write_text(raw)
 os.chmod(CTRL,0o755)
 run(["python3","-m","py_compile",str(CTRL)])
 
@@ -56,8 +58,8 @@ time.sleep(1)
 
 hc,h=req("/health")
 sc,st=req("/state")
-if hc!=200 or not h.get("ok"): raise SystemExit("8792 health failed "+repr((hc,h)))
-if sc!=200: raise SystemExit("8792 state failed "+repr((sc,st)))
+if hc!=200 or not h.get("ok"): raise SystemExit("8793 health failed "+repr((hc,h)))
+if sc!=200: raise SystemExit("8793 state failed "+repr((sc,st)))
 print("CTRL_HEALTH=",h)
 print("CTRL_STATE=",{k:st.get(k) for k in ("tv","hts","live_ready","pipeline_state","pipeline_running")})
 
@@ -67,7 +69,7 @@ if start<0: start=src.rfind("<script")
 end=src.find("</script>",start)
 if start<0 or end<0: raise SystemExit("button script not found")
 
-js=r'''<script id="C720P_TV_SURROUND_BUTTONS_V15_FAST_CONTROLLER">
+js=r'''<script id="C720P_TV_SURROUND_BUTTONS_V16_PORT8793">
 "use strict";
 const BASE="http://"+location.hostname+":8792";
 const $=id=>document.getElementById(id);
@@ -135,7 +137,7 @@ refresh();setInterval(()=>{if(!busy)refresh()},2500);
 UI.write_text(src[:start]+js+src[end+9:])
 
 row=ROW.read_text()
-row=re.sub(r'c720p-tv-surround\.html(?:\?v=[^"\']*)?',"c720p-tv-surround.html?v=BUTTONS_V15_20261006",row)
+row=re.sub(r'c720p-tv-surround\.html(?:\?v=[^"\']*)?',"c720p-tv-surround.html?v=BUTTONS_V16_8793_20261006",row)
 ROW.write_text(row)
 
 # Browser parse check.
