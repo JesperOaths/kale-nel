@@ -1,4 +1,4 @@
-/* 20261007-league-web-v300 · readable report and saved profiles */
+/* 20261007-league-web-v301 · measured current strengths and readable profiles */
 (function(){
 'use strict';
 
@@ -847,6 +847,7 @@ function renderReport(raw,sourceKind){
   renderRecentPulse(r);
   renderLongHorizon(r);
   renderReportDrivers(r);
+  renderCurrentStrengths(r);
   renderEvidenceHealth(r);
   renderKpis(r);
   renderMatchRhythm(r);
@@ -860,7 +861,6 @@ function renderReport(raw,sourceKind){
   renderRankRadar(r);
   renderVisualSummary(r);
   renderBullets('recentFocus',r.priorityThemes?.length?r.priorityThemes:r.recentFocus,'No grounded improvement priority has enough evidence yet.');
-  renderBullets('overallHighlights',r.overallHighlights,'No broader strength has enough evidence yet.');
   renderPracticePlan(r);
   renderDecisionMetrics(r);
   renderVisualAnalytics(r);
@@ -1001,11 +1001,12 @@ function renderReportDrivers(r){
   const priorities=topPracticeThemes(r),strengths=Array.isArray(r.overallHighlights)?r.overallHighlights:[],establishedStrength=strengths.find(x=>String(x?.confidence||'').toLowerCase()!=='low')||strengths[0]||null;
   const weak=reportInsightParts(priorities[0],'Primary limiter'),strong=reportInsightParts(establishedStrength,'Bankable strength'),direction=recentDirectionSummary(r),priorityIds=currentPriorityReplayIds(r);
   const weakEstablished=weak.present&&(weak.confidence!=='low'||weak.independentSupportCount>=2),strongEstablished=strong.present&&strong.confidence!=='low';
+  const positiveFindings=currentStrengthFindings(r);
   const card=(kind,title,value,copy,action,tone,actionLabel='Next',meta='',footer='')=>'<article class="report-driver-card '+kind+' tone-'+tone+'"><span>'+esc(title)+'</span><strong>'+esc(value)+'</strong><p>'+esc(copy||'No high-confidence supporting sentence is available yet.')+'</p>'+(meta?'<small class="driver-evidence-meta">'+esc(meta)+'</small>':'')+(action?'<div><b>'+esc(actionLabel)+':</b> '+esc(action)+'</div>':'')+footer+'</article>';
   const priorityFooter=priorityIds.size?'<button class="button secondary small driver-review-button" type="button" data-open-priority-history>Review '+priorityIds.size+' matching game'+(priorityIds.size===1?'':'s')+'</button>':'';
   box.innerHTML=[
     card('driver-priority',weak.present&&!weakEstablished?'Provisional limiter':'Primary limiter',weak.title,weak.copy,weak.action,weakEstablished?'bad':'neutral',weakEstablished?'Next':'Test next',weak.meta,priorityFooter),
-    card('driver-strength',strong.present&&!strongEstablished?'Emerging strength':'Bankable strength',strong.title,strong.copy,strong.action,strongEstablished?'good':'neutral',strongEstablished?'Preserve':'Keep testing',strong.meta),
+    positiveFindings.length?card('driver-strength','What’s working',positiveFindings.length+' positive patterns to build on','See the measured strengths below, including the counts, comparison and example games. Keep these habits while narrowing your next improvement.','','good','','','<a class="button secondary small driver-review-button" href="#current-strengths">See what’s going well</a>'):card('driver-strength',strong.present&&!strongEstablished?'Emerging strength':'Bankable strength',strong.title,strong.copy,strong.action,strongEstablished?'good':'neutral',strongEstablished?'Preserve':'Keep testing',strong.meta),
     card('driver-direction','Recent form · latest 5 vs prior games',direction.value,direction.copy,'',direction.tone,'',direction.meta)
   ].join('');
   const reviewBtn=box.querySelector('[data-open-priority-history]');
@@ -1014,6 +1015,52 @@ function renderReportDrivers(r){
     $('match-history')?.scrollIntoView({behavior:'auto',block:'start'});
   });
   renderPriorityEvidenceChain(r);
+}
+
+function currentStrengthFindings(r){
+  const seen=new Set(),role=reportSelectedRole(r),games=reportCoachingGames(r).filter(g=>{
+    const id=String(g?.matchId||'');if(!id||seen.has(id)||explicitGameRole(g.role)!==role)return false;seen.add(id);return true;
+  }),peers=games.filter(trustedDirectPeer),timeline=peers.filter(g=>g.timelineAvailable===true),rows=[];
+  const mean=(xs,get)=>xs.reduce((n,g)=>n+Number(get(g)),0)/xs.length;
+  const ids=xs=>[...new Set(xs.map(g=>String(g.matchId)))];
+  const add=(key,title,value,unit,copy,keep,measured,examples,method,extra={})=>rows.push({key,title,value,unit,copy,keep,n:measured.length,matchIds:ids(measured),exampleMatchIds:ids(examples).slice(0,2),method,smallSample:measured.length<10,sourceTitles:[],...extra});
+  const farm=['ADC','MID','TOP','JUNGLE'].includes(role)?peers.filter(g=>hasNum(g.peer?.csMinDelta)):[],farmWins=farm.filter(g=>Number(g.peer.csMinDelta)>0),farmMean=farm.length?mean(farm,g=>g.peer.csMinDelta):null;
+  if(farm.length>=5&&farmMean>=.15&&farmWins.length/farm.length>=.6){
+    const latest=games.every(g=>gameTimestampMs(g.gameStartTimestamp))?games.slice().sort((a,b)=>gameTimestampMs(b.gameStartTimestamp)-gameTimestampMs(a.gameStartTimestamp)).slice(0,5).filter(g=>trustedDirectPeer(g)&&hasNum(g.peer?.csMinDelta)):[],latestMean=latest.length?mean(latest,g=>g.peer.csMinDelta):null;
+    const recent=latest.length>=3&&latestMean>=.15?' Latest 5: '+signed(latestMean,2)+' CS/min versus the opponent ('+latest.length+' measured games).':'';
+    add('farm-edge','You outfarm your role opponent',signed(farmMean,2),'CS per minute versus opponent',farmWins.length+' of '+farm.length+' measured games finished with a higher CS/min.'+recent,'Keep the wave collection that maintains this farming edge.',farm,farmWins.slice().sort((a,b)=>Number(b.peer.csMinDelta)-Number(a.peer.csMinDelta)),'The average uses every measured same-role comparison, including games you were out-farmed. CS means minions and monsters killed. A positive recent level does not mean your form is improving.',{rate:100*farmWins.length/farm.length,rateLabel:farmWins.length+'/'+farm.length+' games out-farming the opponent'});
+  }
+  const lane=timeline.filter(g=>g.phaseRules?.lane15Comparable!==false&&hasNum(g.goldDiff15)),laneLeads=lane.filter(g=>Number(g.goldDiff15)>=250&&g.outcomeCompromised!==true&&typeof g.win==='boolean'),laneWins=laneLeads.filter(g=>g.win);
+  if(laneLeads.length>=5&&laneWins.length/laneLeads.length>=.75)add('lane-lead-wins','Lane leads often end in wins',laneWins.length+'/'+laneLeads.length,'wins when ahead at 15 minutes','You won '+laneWins.length+' of '+laneLeads.length+' games with at least +250 gold versus your role opponent at 15.','Review the wins and preserve the decisions that follow the lane lead.',laneLeads,laneWins,'Only games with a valid 15-minute checkpoint and a known final result count. AFK/early-surrender outcomes are excluded. A perfect observed run is not a guaranteed future win rate.',{rate:100*laneWins.length/laneLeads.length,rateLabel:fmtPct(100*laneWins.length/laneLeads.length)+' observed win rate',sourceTitles:['You convert lane leads into wins well']});
+  const mid=timeline.filter(g=>g.phaseRules?.lane15Comparable!==false&&g.phaseRules?.closing25Comparable!==false&&g.phaseRules?.fixed15to25Comparable!==false),midFarm=['ADC','MID','TOP'].includes(role)?mid.filter(g=>hasNum(g.csDiff15)&&hasNum(g.csDiff25)):[],midFarmMean=midFarm.length?mean(midFarm,g=>Number(g.csDiff25)-Number(g.csDiff15)):null;
+  if(midFarm.length>=5&&midFarmMean>=8)add('mid-farm','Your farm advantage grows after lane',signed(midFarmMean,1),'CS gained versus opponent · 15 → 25','Your CS difference improved by this amount on average across '+midFarm.length+' games with both checkpoints.','Keep collecting waves, while checking that the extra farm leaves time for important objectives.',midFarm,midFarm.filter(g=>Number(g.csDiff25)>Number(g.csDiff15)).sort((a,b)=>(Number(b.csDiff25)-Number(b.csDiff15))-(Number(a.csDiff25)-Number(a.csDiff15))),'This measures the change in your CS difference versus the same-role opponent, not your total farm. Only comparable 15- and 25-minute checkpoints count. Farming gains alone do not establish good objective timing.',{sourceTitles:['Your 15→25 farm routing gains ground on the role opponent']});
+  const resets=timeline.filter(g=>{const x=g.firstResetSequence;return x?.measured===true&&x.deathInWindow===false&&typeof x.economyGain==='boolean'&&typeof x.economyLoss==='boolean'&&!(x.economyGain&&x.economyLoss)&&hasNum(x.csSwingAfter)&&hasNum(x.goldSwingAfter);}),resetGains=resets.filter(g=>g.firstResetSequence.economyGain),resetLosses=resets.filter(g=>g.firstResetSequence.economyLoss),resetNeutral=resets.length-resetGains.length-resetLosses.length;
+  if(resets.length>=5&&resetGains.length>0&&resetLosses.length/resets.length<=.2&&mean(resets,g=>g.firstResetSequence.csSwingAfter)>=0)add('first-recalls','Your first recalls stay stable',resetLosses.length+'/'+resets.length,'flagged economy losses after first shop',resetGains.length+' gains · '+resetNeutral+' neutral · '+resetLosses.length+' losses in the measured, death-free windows.','Keep preparing the wave and returning after the first shop.',resets,resetGains,'A gain requires at least +150 gold and +4 CS in role-relative economy; a loss means at least −350 gold or −6 CS. Neutral means neither threshold was met. Missing data and windows with a death are excluded; “no flagged loss” does not mean every recall gained economy.',{resetMix:{gains:resetGains.length,neutral:resetNeutral,losses:resetLosses.length},sourceTitles:['Your first shop sequencing is usually clean']});
+  const spikes=timeline.filter(g=>g.itemSpikeWindow?.eligible===true&&typeof g.itemSpikeWindow.used==='boolean'),used=spikes.filter(g=>g.itemSpikeWindow.used);
+  if(spikes.length>=5&&used.length/spikes.length>=.75)add('item-windows','You use your early item advantages',used.length+'/'+spikes.length,'earlier major-item windows used','These windows recorded a kill, assist or supported objective contribution before your role opponent caught up in items.','Keep turning the earlier purchase into timely pressure.',spikes,used,'Only measurable first-major-item advantage windows count. Tracked impact does not prove a fight was safe, profitable or caused by the item.',{rate:100*used.length/spikes.length,rateLabel:fmtPct(100*used.length/spikes.length)+' windows with tracked impact',sourceTitles:['You reliably use earlier major-item windows']});
+  const leadGrowth=mid.filter(g=>hasNum(g.goldDiff15)&&hasNum(g.goldDiff25)&&Number(g.goldDiff15)>=250),growthMean=leadGrowth.length?mean(leadGrowth,g=>Number(g.goldDiff25)-Number(g.goldDiff15)):null;
+  if(leadGrowth.length>=5&&growthMean>=300)add('lead-growth','You build on your early gold leads',signed(growthMean,0),'extra gold versus opponent · 15 → 25','When at least +250 gold ahead at 15, your role-relative lead grew by this amount on average in '+leadGrowth.length+' games.','Review the wave, shop and rotation sequences that kept the advantage growing.',leadGrowth,leadGrowth.filter(g=>Number(g.goldDiff25)>Number(g.goldDiff15)).sort((a,b)=>(Number(b.goldDiff25)-Number(b.goldDiff15))-(Number(a.goldDiff25)-Number(a.goldDiff15))),'This is the average additional gold difference, not your total gold or a guaranteed lead. Only games reaching both comparable checkpoints count. Compromised outcomes may still provide economy observations.',{sourceTitles:['You tend to extend lane leads through the first rotations']});
+  const lateLeads=timeline.filter(g=>g.phaseRules?.closing25Comparable!==false&&hasNum(g.goldDiff25)&&Number(g.goldDiff25)>=500&&g.outcomeCompromised!==true&&typeof g.win==='boolean'),lateWins=lateLeads.filter(g=>g.win);
+  if(lateLeads.length>=5&&lateWins.length/lateLeads.length>=.75)add('late-lead-wins','You close many games with a late lead',lateWins.length+'/'+lateLeads.length,'wins when ahead at 25 minutes','You won '+lateWins.length+' of '+lateLeads.length+' games with at least +500 gold versus your role opponent at 25.','Check the winning endgames for decisions worth repeating.',lateLeads,lateWins,'Only valid 25-minute checkpoints with known, uncompromised outcomes count. These games can overlap with the lane-lead card; the two cards are not independent evidence.',{rate:100*lateWins.length/lateLeads.length,rateLabel:fmtPct(100*lateWins.length/lateLeads.length)+' observed win rate',sourceTitles:['You usually close games when the role matchup is ahead at 25']});
+  const soloRows=lane.flatMap(g=>(g.laneDuel?.events||[]).filter(e=>e.result==='solo_kill'&&e.conversionEligibleTo15===true&&hasNum(e.goldSwingTo15)).map(e=>({g,e}))),soloGames=[...new Set(soloRows.map(x=>x.g))],converted=soloRows.filter(x=>Number(x.e.goldSwingTo15)>=200);
+  if(soloRows.length>=5&&soloGames.length>=3&&converted.length/soloRows.length>=.75&&mean(soloRows,x=>x.e.goldSwingTo15)>=300)add('solo-kill-followup','Promising follow-up after solo kills',converted.length+'/'+soloRows.length,'early solo kills followed by economy gains',converted.length+' of '+soloRows.length+' measured events across '+soloGames.length+' games were followed by at least +200 gold in role-relative economy by 15.','Review the post-kill waves and recalls before treating this as a repeatable habit.',soloGames,converted.map(x=>x.g),'Events in one game can overlap and share the same 15-minute checkpoint. This is an event observation, not independent trials or proof that the kill caused the later gain.',{eventCount:soloRows.length,sourceTitles:['You reliably convert clean solo kills into durable lane economy']});
+  return rows;
+}
+function currentStrengthCardHtml(x,r){
+  const sample=(x.smallSample?'Small sample · ':'')+x.n+' measured game'+(x.n===1?'':'s'),meter=x.resetMix?'<div class="strength-reset-mix" role="img" aria-label="'+esc(x.copy)+'"><i class="gain" style="width:'+100*x.resetMix.gains/x.n+'%"></i><i class="neutral" style="width:'+100*x.resetMix.neutral/x.n+'%"></i><i class="loss" style="width:'+100*x.resetMix.losses/x.n+'%"></i></div>':hasNum(x.rate)?'<div class="strength-rate"><span>'+esc(x.rateLabel)+'</span><progress max="100" value="'+x.rate+'" aria-label="'+esc(x.rateLabel)+'"></progress></div>':'';
+  const examples=x.exampleMatchIds.map((id,i)=>{const g=(r.games||[]).find(g=>String(g.matchId)===id);return '<button class="strength-game-link" type="button" data-strength-match="'+esc(id)+'" aria-label="'+esc('Review '+x.title+' example: '+(g?.champion||'game')+' '+shortGameDate(g?.gameStartTimestamp))+'">'+esc(g?.champion||'Game')+(g?.gameStartTimestamp?' · '+esc(shortGameDate(g.gameStartTimestamp)):' · example '+(i+1))+'</button>';}).join('');
+  return '<article class="current-strength-card'+(x.smallSample?' small-sample':'')+'" data-strength-key="'+esc(x.key)+'"><div class="strength-card-head"><span class="strength-check" aria-hidden="true">✓</span><span>'+esc(sample)+'</span></div><h3>'+esc(x.title)+'</h3><strong class="strength-value">'+esc(x.value)+'</strong><span class="strength-unit">'+esc(x.unit)+'</span>'+meter+'<p>'+esc(x.copy)+'</p><div class="strength-keep"><b>Keep:</b> '+esc(x.keep)+'</div><details class="strength-method"><summary>What counts?</summary><p>'+esc(x.method)+'</p></details>'+(examples?'<div class="strength-examples"><span>Review examples</span>'+examples+'</div>':'')+'</article>';
+}
+function renderCurrentStrengths(r){
+  const box=$('currentStrengthsGrid');if(!box)return;
+  const rows=currentStrengthFindings(r),sourceTitles=new Set(rows.flatMap(x=>x.sourceTitles).map(x=>x.toLowerCase())),notes=(r.overallHighlights||[]).filter(x=>!sourceTitles.has(String(x?.title||'').toLowerCase())),more=rows.slice(6),scope=$('currentStrengthsScope');
+  box.innerHTML=rows.length?rows.slice(0,6).map(x=>currentStrengthCardHtml(x,r)).join(''):'<div class="strengths-empty"><strong>No measured pattern clears the strengths threshold yet.</strong><p>Each card needs several comparable games and a favorable result. More eligible games may reveal what is working.</p></div>';
+  if(scope)scope.textContent=reportCoachingGames(r).length+' '+roleLabel(reportSelectedRole(r))+' coaching games'+(r.generatedAt?' · report generated '+fmtDate(r.generatedAt):'')+'. Counts differ by metric; missing observations are excluded.';
+  const additional=$('additionalStrengthsGrid');if(additional){additional.innerHTML=more.map(x=>currentStrengthCardHtml(x,r)).join('');additional.hidden=!more.length;}
+  renderBullets('overallHighlights',notes,'');$('overallHighlights').hidden=!notes.length;
+  if($('additionalStrengths'))$('additionalStrengths').hidden=!more.length&&!notes.length;
+  if($('additionalStrengthsSummary'))$('additionalStrengthsSummary').textContent=[more.length?more.length+' more positive pattern'+(more.length===1?'':'s'):'',notes.length?notes.length+' supporting note'+(notes.length===1?'':'s'):''].filter(Boolean).join(' · ')||'More positive patterns';
+  $('current-strengths')?.querySelectorAll('[data-strength-match]').forEach(btn=>btn.onclick=()=>openReplayReviewMatch(btn.dataset.strengthMatch,'macro'));
 }
 function gameMetricSummary(games,getter,opportunityGetter=null){
   const xs=[],opportunities=[];
