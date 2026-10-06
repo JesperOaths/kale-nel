@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends analysis with a 100-game role scan, evidence-backed Last-20 deep coaching, long-horizon trends and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261007-league-web-v301">
+  <link rel="stylesheet" href="/league/styles.css?v=20261007-league-web-v302">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261002-public-bootstrap-r4"></script>
 </head>
@@ -252,6 +252,7 @@
             <div><p class="eyebrow">Fights, objectives &amp; risk</p><h2>How your decisions convert into game impact</h2></div>
             <span class="section-hint">These are outcome-linked behavior signals, not isolated scoreboard totals.</span>
           </div>
+          <div class="spending-fight-comparison" id="spendingFightComparison"></div>
           <details class="report-disclosure"><summary>Fight, reset &amp; conversion measurements</summary><div class="decision-metric-grid" id="decisionMetrics"></div></details>
           <div id="objectiveDiagnosisSummary" class="decision-explanation"></div>
           <article class="primary-chart">
@@ -310,13 +311,6 @@
           <div class="outcome-fingerprint-grid" id="outcomeFingerprint"></div>
           <p class="source-note" id="outcomeFingerprintNote"></p>
         </section></details></div>
-          <div class="consistency-summary-wrap" id="resourceOutputArchetypesWrap" hidden>
-            <div class="section-subhead"><div><span>Resource → output archetypes</span><strong>What kind of carry games keep appearing?</strong></div><small>Exclusive team-relative gold/damage groups. Lower-damage groups also show overlap with above-your-own-median death downtime or turret pressure; overlap is context, not proof of cause.</small></div>
-            <div class="source-note" id="resourceOutputContrast"></div>
-            <div class="behavior-contrast" id="highResourceBehaviorContrast" hidden></div>
-            <div class="quality-grid" id="resourceOutputArchetypes"></div>
-            <div class="archetype-detail" id="resourceOutputArchetypeDetail" hidden></div>
-          </div>
           <div class="visual-summary-block">
             <h3>Champion-conditioned role history</h3>
             <p class="section-intro">Reviewed-account performance grouped by the champion you played. Clean win rate is withheld below 3 clean outcomes; every other metric shows its own contributing n.</p>
@@ -444,7 +438,6 @@
               <button type="button" class="game-filter-chip" data-history-filter="priority">Current focus</button>
               <button type="button" class="game-filter-chip" data-history-filter="arc" hidden>Game arc</button>
               <button type="button" class="game-filter-chip" data-history-filter="objective-family" hidden>Objective family</button>
-              <button type="button" class="game-filter-chip" data-history-filter="archetype" hidden>Carry archetype</button>
             </div>
             <span class="game-filter-summary" id="matchHistoryFilterSummary">Showing the full recent sample.</span>
           </div>
@@ -568,7 +561,7 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark="">v817 - Made by Bruis</div>
-  <script src="/league/learning-review.js?v=20261007-league-web-v301" defer></script>
-  <script src="/league/app.js?v=20261007-league-web-v301" defer></script>
+  <script src="/league/learning-review.js?v=20261007-league-web-v302" defer></script>
+  <script src="/league/app.js?v=20261007-league-web-v302" defer></script>
 </body>
 </html>

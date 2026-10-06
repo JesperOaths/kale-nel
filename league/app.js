@@ -1,4 +1,4 @@
-/* 20261007-league-web-v301 · measured current strengths and readable profiles */
+/* 20261007-league-web-v302 · spending before fighting, without team-rank splits */
 (function(){
 'use strict';
 
@@ -6,7 +6,7 @@ const cfg=window.GEJAST_CONFIG||{};
 const API=(cfg.SUPABASE_URL||'')+'/functions/v1/printify-gildan-diff-diag-v1';
 const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
 const $=(id)=>document.getElementById(id);
-const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',learningHabit:'all',busy:false,riotApiKey:'',serverRiotKey:false,backendAnalyzerVersion:'',publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,matchHistoryFilter:'all',matchHistoryArcKey:'',matchHistoryObjectiveFamilyKey:'',matchHistoryArchetypeKey:'',savedProfiles:[],selectedProfileId:'',selectedRole:'ADC',profileLoadEpoch:0};
+const state={profile:null,report:null,ddVersion:'',openMatch:null,activeDetailTab:'macro',learningHabit:'all',busy:false,riotApiKey:'',serverRiotKey:false,backendAnalyzerVersion:'',publicWorkspace:true,gameSort:{key:'recent',dir:'desc'},gameFilter:'all',gameChampion:'all',matchHistoryLimit:10,matchHistoryFilter:'all',matchHistoryArcKey:'',matchHistoryObjectiveFamilyKey:'',savedProfiles:[],selectedProfileId:'',selectedRole:'ADC',profileLoadEpoch:0};
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const LEAGUE_WORKSPACE_KEY='bruisienator_public_workspace_v1';
@@ -863,6 +863,7 @@ function renderReport(raw,sourceKind){
   renderBullets('recentFocus',r.priorityThemes?.length?r.priorityThemes:r.recentFocus,'No grounded improvement priority has enough evidence yet.');
   renderPracticePlan(r);
   renderDecisionMetrics(r);
+  renderSpendingFightComparison(r);
   renderVisualAnalytics(r);
   renderObjectiveFamilyOverview(r);
   renderPhaseDiagnostic(r);
@@ -1523,71 +1524,72 @@ function historyStabilityCard(label,obj,unit='num',inverse=false,medianThreshold
   const tailLabel=inverse?'Bad-tail ceiling (Q75)':'Performance floor (Q25)',tailText=hasNum(recentTail)&&hasNum(priorTail)?tailLabel+' '+format(recentTail)+' vs '+format(priorTail)+' · Δ '+(unit==='percent'||unit==='pp'?signed(tailDelta,1)+' points':unit==='dpm'?signed(tailDelta,0):unit==='cs'?signed(tailDelta,1):signed(tailDelta,2)):'Tail comparison unavailable';
   return '<article class="pulse-card tone-'+tone+'"><span>'+esc(label)+'</span><strong>Median '+esc(format(obj.recentMedian))+'</strong><p>Previous median '+esc(format(obj.priorMedian))+' · Δ '+esc(deltaText)+'</p><small>'+esc(tailText)+' · recent IQR '+esc(format(obj.recentIqr))+' vs '+esc(format(obj.priorIqr))+' · '+esc(rangeText)+' · '+recentN+' vs '+priorN+' games</small></article>';
 }
-function archetypeDeepDiagnostic(g,matrix){
-  if(!g||g.timelineAvailable!==true)return{key:'match_only',label:'Match-level history only',tone:'neutral',copy:'No deep timeline diagnosis is available for this older history game.'};
-  if(g.outcomeCompromised===true)return{key:'outcome_compromised',label:'Outcome compromised',tone:'neutral',copy:'AFK/early-surrender context is present, so this game is not used to infer a clean resource-to-output outcome pattern.'};
-  const fight=g.fightProfile||{},active=Number(fight.active??fight.attended??0),pre=Number(fight.diedBeforeContribution||0),highUnspent=Number(fight.highUnspentStarts||0),itemDisadvantage=Number(fight.itemDisadvantageStarts||0);
-  if(active>0&&pre>0)return{key:'pre_impact_deaths',label:'Pre-impact fight deaths',tone:'bad',copy:pre+' of '+active+' active fight'+(active===1?'':'s')+' ended in death before tracked contribution.'};
-  if(active>0&&(highUnspent>0||itemDisadvantage>0)){
-    const bits=[];if(highUnspent)bits.push(highUnspent+' active fight start'+(highUnspent===1?'':'s')+' with ≥1000g unspent');if(itemDisadvantage)bits.push(itemDisadvantage+' with the role opponent on a major item first');
-    return{key:'fight_readiness',label:'Fight-readiness pressure',tone:'bad',copy:bits.join(' · ')+'. This is readiness context, not proof it caused lower damage.'};
-  }
-  const supportedFightClusters=Number(fight.positionSupportedTeamFightClusters||0),trackedAbsences=Number(fight.trackedAbsentTeamFights||0);
-  if(supportedFightClusters>=2&&trackedAbsences>0){
-    return{key:'tracked_fight_absence',label:'Tracked teamfight absence',tone:'neutral',copy:trackedAbsences+' of '+supportedFightClusters+' position-supported team fight cluster'+(supportedFightClusters===1?'':'s')+' had no tracked contribution/death and no ≤5000 proximity evidence. This shows absence, not that joining was necessarily correct.'};
-  }
-  if(trustedDirectPeer(g)&&g.itemSpikeWindow?.eligible===true&&g.itemSpikeWindow?.used===false){
-    return{key:'unused_item_window',label:'Earlier-item window unused',tone:'neutral',copy:'A supported earlier-major-item window existed, but no tracked kill/assist or supported objective impact occurred inside it.'};
-  }
-  const turretMedian=hasNum(matrix?.turretDamagePerMinMedian)?Number(matrix.turretDamagePerMinMedian):null;
-  if(hasNum(turretMedian)&&hasNum(g.turretDamagePerMin)&&Number(g.turretDamagePerMin)>turretMedian){
-    return{key:'structure_pressure',label:'High structure pressure',tone:'neutral',copy:fmtInt(g.turretDamagePerMin)+' turret DPM vs your '+fmtInt(turretMedian)+' role-history median. Some output went into structures rather than champions; strategic value is not inferred.'};
-  }
-  return{key:'unexplained',label:'No supported explanation',tone:'neutral',copy:'The available deep evidence does not support one of the defined explanatory contexts. Lower champion damage is left unexplained rather than guessed.'};
+function spendingFightPhase(g,e){
+  const rules=g?.phaseRules||{};
+  if(rules.phaseComparable===false||!hasNum(rules.earlyEndMin)||!hasNum(rules.lateStartMin)||!hasNum(e?.startMin))return null;
+  const early=Number(rules.earlyEndMin),late=Number(rules.lateStartMin),time=Number(e.startMin);
+  if(early<=0||late<early||time<0)return null;
+  return time<early?'early':time<late?'transition':'late';
 }
-function renderHighResourceBehaviorContrast(r){
-  const host=$('highResourceBehaviorContrast'),m=r?.highResourceBehaviorContrast||null;
-  if(!host)return;
-  if(!m||m.usable!==true){host.hidden=true;host.innerHTML='';return;}
-  const a=m.converted||{},b=m.lowerDamage||{},minN=Number(m.minimumEligibleGamesPerCohort||3),minEventOpp=Number(m.minimumEventOpportunitiesPerCohort||5);
-  const metricRows=[
-    {label:'Pre-impact deaths / active fights',key:'preImpactDeathRate',unit:'percent',note:'death before tracked contribution'},
-    {label:'≥1000g unspent fight starts',key:'highUnspentFightStartRate',unit:'percent',note:'active-fight readiness'},
-    {label:'Role-opponent major-item disadvantage starts',key:'itemDisadvantageFightStartRate',unit:'percent',note:'trusted direct-peer fights only'},
-    {label:'Tracked teamfight absence',key:'trackedFightAbsenceRate',unit:'percent',note:'position-supported teamfight clusters only'},
-    {label:'First-reset economy loss',key:'resetEconomyLossRate',unit:'percent',note:'trusted peer + measured reset, death-contaminated windows excluded'},
-    {label:'First reset vs role peer',key:'resetTimingDeltaVsPeerMin',unit:'minutes',note:'negative = earlier than peer'},
-    {label:'Earlier-item window used',key:'itemSpikeUtilizationRate',unit:'percent',note:'trusted eligible item-spike windows only'},
-    {label:'Death before earlier-item impact',key:'itemSpikeDeathBeforeImpactRate',unit:'percent',note:'trusted eligible item-spike windows only'},
-    {label:'Death downtime',key:'deadTimePct',unit:'percent',note:'whole-game availability'},
-    {label:'Turret damage / min',key:'turretDamagePerMin',unit:'dpm',note:'structure-pressure context'}
-  ];
-  const valueText=(obj,unit)=>{
-    if(!obj||!hasNum(obj.value))return'n/a';
-    if(unit==='percent')return fmt(obj.value,1)+'%';
-    if(unit==='minutes')return signed(obj.value,2)+' min';
-    if(unit==='dpm')return fmtInt(obj.value);
-    if(unit==='pp')return signed(obj.value,1)+' points';
-    return fmt(obj.value,2);
-  };
-  const denom=(obj)=>{
-    if(!obj)return'';
-    const g=Number(obj.eligibleGames||0),opp=Number(obj.opportunities||0);
-    if(hasNum(obj.opportunities))return g+' games · '+opp+' opportunities';
-    return g+' games';
-  };
-  const rows=metricRows.map(spec=>{
-    const av=a?.[spec.key],bv=b?.[spec.key],aN=Number(av?.eligibleGames||0),bN=Number(bv?.eligibleGames||0),eventBased=String(av?.basis||'')==='event'||String(bv?.basis||'')==='event',eventEnough=!eventBased||(Number(av?.opportunities||0)>=minEventOpp&&Number(bv?.opportunities||0)>=minEventOpp),eligible=aN>=minN&&bN>=minN&&eventEnough&&hasNum(av?.value)&&hasNum(bv?.value);
-    if(!eligible)return'';
-    const delta=Number(bv.value)-Number(av.value),deltaText=spec.unit==='percent'||spec.unit==='pp'?signed(delta,1)+' points':spec.unit==='minutes'?signed(delta,2)+' min':spec.unit==='dpm'?signed(delta,0)+' DPM':signed(delta,2);
-    return '<div class="behavior-contrast-row"><div><b>'+esc(spec.label)+'</b><small>'+esc(spec.note)+'</small></div><div><span>'+esc(valueText(av,spec.unit))+'</span><small>'+esc(denom(av))+'</small></div><div><span>'+esc(valueText(bv,spec.unit))+'</span><small>'+esc(denom(bv))+'</small></div><div><span>'+esc(deltaText)+'</span><small>lower-damage minus converted</small></div></div>';
-  }).filter(Boolean);
-  if(!rows.length){host.hidden=true;host.innerHTML='';return;}
-  host.hidden=false;
-  host.innerHTML='<div class="section-subhead"><div><span>Deep behavior contrast</span><strong>What differs between your high-resource games?</strong></div><small>Clean deep outcomes only'+(Number(m.excludedCompromisedDeepGames||0)?' · '+Number(m.excludedCompromisedDeepGames||0)+' AFK/early-surrender game'+(Number(m.excludedCompromisedDeepGames||0)===1?'':'s')+' excluded':'')+'. Rows need at least '+minN+' eligible games per cohort; event-rate rows also need at least '+minEventOpp+' supported opportunities per cohort. Different rows can have different denominators.</small></div>'+
-    '<div class="behavior-contrast-head"><span>Metric</span><span>'+esc(a.label||'Converted')+' · '+Number(a.games||0)+' games</span><span>'+esc(b.label||'Lower damage')+' · '+Number(b.games||0)+' games</span><span>Difference</span></div>'+
-    rows.join('')+
-    '<p class="source-note">These are within-player associations in the deep selected-role sample. They identify replay questions, not causes. Trusted-peer metrics fail closed when direct-role comparison evidence is unavailable.</p>';
+function spendingOutcomeComparison(games,key){
+  const average=xs=>xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null;
+  const rate=events=>100*events.filter(e=>e[key]===true).length/events.length;
+  const rows=games.map(g=>{
+    const high=average(g.phases.map(p=>rate(p.high))),low=average(g.phases.map(p=>rate(p.low)));
+    return {matchId:g.matchId,high,low,delta:high-low};
+  });
+  return {key,games:rows.length,high:average(rows.map(x=>x.high)),low:average(rows.map(x=>x.low)),delta:average(rows.map(x=>x.delta)),higherGames:rows.filter(x=>x.delta>0).length,lowerGames:rows.filter(x=>x.delta<0).length,sameGames:rows.filter(x=>x.delta===0).length,rows};
+}
+function buildSpendingFightComparison(r){
+  const seen=new Set(),source=reportCoachingGames(r).filter(g=>{
+    const id=String(g?.matchId||'');if(!id||seen.has(id))return false;seen.add(id);return true;
+  }),excluded=source.filter(g=>g.outcomeCompromised===true),timeline=source.filter(g=>g.timelineAvailable===true&&g.outcomeCompromised!==true),pairs=[];
+  let measuredStarts=0,excludedStarts=0,phasePairs=0,highStarts=0,lowStarts=0;
+  for(const g of timeline){
+    const phases=new Map(),seenEvents=new Set();
+    for(const e of Array.isArray(g.fightProfile?.events)?g.fightProfile.events:[]){
+      if(e?.active!==true)continue;
+      const phase=spendingFightPhase(g,e);
+      if(!phase||!hasNum(e.currentGoldAtStart)||Number(e.currentGoldAtStart)<0||!hasNum(e.endMin)||Number(e.endMin)<Number(e.startMin)||typeof e.playerDied!=='boolean'||typeof e.diedBeforeContribution!=='boolean'||(e.diedBeforeContribution&&!e.playerDied)){excludedStarts++;continue;}
+      const key=String(e.startMin)+'|'+String(e.endMin);if(seenEvents.has(key))continue;seenEvents.add(key);measuredStarts++;
+      if(!phases.has(phase))phases.set(phase,{key:phase,high:[],low:[]});
+      phases.get(phase)[Number(e.currentGoldAtStart)>=1000?'high':'low'].push(e);
+    }
+    const common=[...phases.values()].filter(p=>p.high.length&&p.low.length);
+    if(!common.length)continue;
+    phasePairs+=common.length;highStarts+=common.reduce((n,p)=>n+p.high.length,0);lowStarts+=common.reduce((n,p)=>n+p.low.length,0);
+    pairs.push({matchId:String(g.matchId),champion:g.champion,gameStartTimestamp:g.gameStartTimestamp,phases:common});
+  }
+  const beforeContribution=spendingOutcomeComparison(pairs,'diedBeforeContribution'),fightDeaths=spendingOutcomeComparison(pairs,'playerDied'),ready=pairs.length>=5&&highStarts>=10&&lowStarts>=10;
+  const higherRepeats=pairs.length>0&&beforeContribution.higherGames/pairs.length>=.6,lowerRepeats=pairs.length>0&&beforeContribution.lowerGames/pairs.length>=.6;
+  const signal=!ready?'thin':beforeContribution.delta>=10&&higherRepeats?'review':beforeContribution.delta<=-10&&lowerRepeats?'reverse':'similar';
+  return {ready,signal,role:reportSelectedRole(r),coachingGames:source.length,timelineGames:timeline.length,excludedGames:excluded.length,measuredStarts,excludedStarts,phasePairs,highStarts,lowStarts,pairedGames:pairs.length,beforeContribution,fightDeaths,pairs};
+}
+function spendingComparisonCard(x,m,label,definition){
+  const delta=x.delta>0?fmt(x.delta,1)+' points higher with ≥1,000g':x.delta<0?fmt(Math.abs(x.delta),1)+' points lower with ≥1,000g':'Same observed average';
+  const bar=(key,name,value,starts)=>'<div class="spending-rate '+key+'"><div><span>'+esc(name)+'</span><strong>'+esc(fmt(value,1))+'%</strong></div><progress max="100" value="'+value+'" aria-label="'+esc(label+' · '+name+' · '+fmt(value,1)+' percent average game rate')+'"></progress><small>'+m.pairedGames+' matched games · '+starts+' tracked fight starts</small></div>';
+  return '<article class="spending-outcome-card"><h4>'+esc(label)+'</h4><p>'+esc(definition)+'</p><span class="spending-average-label">Average game rate · same phases compared</span>'+bar('high','≥1,000 gold unspent',x.high,m.highStarts)+bar('low','Under 1,000 gold unspent',x.low,m.lowStarts)+'<strong class="spending-difference">'+esc(delta)+'</strong></article>';
+}
+function spendingReplayPairHtml(pair,comparison){
+  const gameRow=comparison.rows.find(x=>x.matchId===pair.matchId),rate=es=>100*es.filter(e=>e.diedBeforeContribution).length/es.length;
+  const phase=pair.phases.slice().sort((a,b)=>Math.abs((rate(a.high)-rate(a.low))-(gameRow?.delta||0))-Math.abs((rate(b.high)-rate(b.low))-(gameRow?.delta||0)))[0];
+  const eventText=(events,kind)=>{const e=events.slice().sort((a,b)=>Number(a.startMin)-Number(b.startMin))[0];return '<div><span>'+esc(kind)+'</span><b>'+fmt(e.startMin,1)+'m · '+fmtInt(e.currentGoldAtStart)+'g unspent</b><small>'+esc(e.diedBeforeContribution?'Died before a recorded kill/assist':e.playerDied?'Died during the fight':'Survived this tracked fight')+'</small></div>';};
+  return '<article class="spending-replay-pair"><h4>'+esc(pair.champion||'Game')+' · '+esc(shortGameDate(pair.gameStartTimestamp))+' · '+esc(phase.key)+' phase</h4>'+eventText(phase.high,'≥1,000g start')+eventText(phase.low,'Under 1,000g start')+'<button class="button secondary small" type="button" data-spending-match="'+esc(pair.matchId)+'">Open fight evidence</button></article>';
+}
+function renderSpendingFightComparison(r){
+  const host=$('spendingFightComparison');if(!host)return;
+  const m=buildSpendingFightComparison(r),primary=m.beforeContribution;
+  const title=m.signal==='review'?'Review your shop timing before fights':m.signal==='reverse'?'Lower-gold starts were rougher in this sample':m.signal==='similar'?'No consistent spending-related difference yet':'Not enough comparable fight starts yet';
+  const reading=m.signal==='review'?'Deaths before a recorded kill or assist were higher in '+primary.higherGames+' of '+m.pairedGames+' matched games. Check whether a safe shop was possible before those high-gold fight starts.':m.signal==='reverse'?'This does not mean holding more gold helps. Fight timing, items and the situation can differ; inspect the paired moments before drawing a lesson.':m.signal==='similar'?'The matched games do not show a repeated difference large enough to make shop timing a priority from this comparison alone.':m.pairedGames+' matched games, '+m.highStarts+' starts with ≥1,000g and '+m.lowStarts+' starts with less. A comparison needs at least 5 matched games and 10 tracked starts on each side.';
+  const rates=m.ready?'<div class="spending-outcome-grid">'+spendingComparisonCard(primary,m,'Death before a recorded kill or assist','You died before the timeline recorded a kill or assist in that fight. This does not measure how much champion damage you dealt.')+spendingComparisonCard(m.fightDeaths,m,'Death during the fight','You died inside this tracked multi-kill fight. This overlaps with the first outcome; it is not a second independent confirmation.')+'</div>':'';
+  const examples=m.ready?m.pairs.slice().sort((a,b)=>Math.abs(primary.rows.find(x=>x.matchId===a.matchId).delta-primary.delta)-Math.abs(primary.rows.find(x=>x.matchId===b.matchId).delta-primary.delta)).slice(0,2):[];
+  host.innerHTML='<div class="section-subhead"><div><span>Spending before fighting</span><h3>Does unspent gold show up in your rougher fights?</h3></div><small>Your current '+esc(roleLabel(m.role))+' coaching sample · fight starts compared within the same game and phase.</small></div>'+
+    '<div class="spending-reading '+(m.signal==='review'?'review':'neutral')+'"><strong>'+esc(title)+'</strong><p>'+esc(reading)+'</p></div>'+
+    '<div class="spending-coverage"><span><b>'+m.pairedGames+'</b> matched games</span><span><b>'+m.phasePairs+'</b> paired game phases</span><span><b>'+m.highStarts+' / '+m.lowStarts+'</b> tracked starts · higher / lower unspent gold</span></div>'+rates+
+    (m.ready?'<p class="source-note">Compare ≥1,000g unspent with under 1,000g. Each game counts once; only phases with both start types enter its average. These are observed associations, not proof that shopping would have changed a fight.</p>':'')+
+    (examples.length?'<div class="spending-replays"><h4>Compare two moments from the same game</h4><p>Check the wave, available purchases, objective timing and whether the fight was forced. These examples are from games closest to the average difference, not the largest outliers.</p><div class="spending-replay-grid">'+examples.map(x=>spendingReplayPairHtml(x,primary)).join('')+'</div></div>':'')+
+    '<details class="report-disclosure spending-method"><summary>What counts, and how is this compared?</summary><div><p>A tracked active fight is a multi-kill cluster where you died or had a recorded kill/assist. Proximity alone does not count. Gold comes from the latest timeline frame at the cluster’s first kill, rather than the exact moment combat began; missing gold or unknown outcomes are excluded.</p><p>The 1,000g cutoff marks potentially spendable gold, not proof that a useful purchase or safe recall was available. “Under 1,000g” does not mean you just shopped.</p><p>For each game, compare only its phases containing both kinds of start. Average the fight-outcome rates over those shared phases, then average the game rates with each game weighted equally. This limits game-length and broad phase differences, but does not control champion state, exact timing, item costs or fight difficulty.</p><p>'+m.highStarts+' higher-gold and '+m.lowStarts+' lower-gold starts are used from '+m.measuredStarts+' measured starts across '+m.timelineGames+' timeline games. '+m.excludedGames+' AFK/early-surrender game(s) excluded; '+m.excludedStarts+' active starts lack valid comparison data. Counts support the average game rates; the percentages are not pooled event fractions.</p><p>A review cue needs at least 5 matched games, 10 starts on each side, a 10-point average difference and the same direction in at least 60% of matched games. These are display rules, not a significance test. Both outcomes can refer to the same death.</p></div></details>';
+  host.querySelectorAll('[data-spending-match]').forEach(btn=>btn.onclick=()=>openReplayReviewMatch(btn.dataset.spendingMatch,'fights'));
 }
 function renderLongOutcomeFingerprint(h,role){
   const box=$('longOutcomeFingerprint'),note=$('longOutcomeFingerprintNote');if(!box)return;
@@ -1608,7 +1610,7 @@ function renderLongOutcomeFingerprint(h,role){
 function renderLongHorizon(r){
   const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),stability=$('historyStabilityTrend'),consistency=$('historyConsistency'),champions=$('historyChampionMix'),outcome=$('longOutcomeFingerprint'),outcomeNote=$('longOutcomeFingerprintNote'),note=$('longHorizonNote');if(!kpi||!trend)return;
   const s=h.summary||{},role=canonicalRole(h.selectedRole||r?.dataQuality?.selectedRole||state.selectedRole),games=Number(h.sampleGames||0);
-  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if($('longHorizonTrendGraph'))$('longHorizonTrendGraph').innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';if(outcome)outcome.innerHTML='';if(outcomeNote)outcomeNote.textContent='';const aw=$('resourceOutputArchetypesWrap'),ac=$('resourceOutputContrast'),hb=$('highResourceBehaviorContrast'),ag=$('resourceOutputArchetypes'),ad=$('resourceOutputArchetypeDetail');if(aw)aw.hidden=true;if(ac)ac.innerHTML='';if(hb){hb.hidden=true;hb.innerHTML='';}if(ag)ag.innerHTML='';if(ad){ad.hidden=true;ad.innerHTML='';}if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
+  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if($('longHorizonTrendGraph'))$('longHorizonTrendGraph').innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';if(outcome)outcome.innerHTML='';if(outcomeNote)outcomeNote.textContent='';if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
   const laner=['ADC','MID','TOP'].includes(role),roleCounts=h.roleCounts||{},otherRoleGames=Object.entries(roleCounts).reduce((n,[rk,count])=>n+(canonicalRole(rk)!==role?Number(count||0):0),0);
   const roleVolume=laner
     ?{label:'Lane minions @10',value:hasNum(s?.laneCs10?.value)?fmt(s.laneCs10.value,1):'n/a',sub:String(s?.laneCs10?.n||0)+' Riot match-level lane observations'}
@@ -1625,15 +1627,9 @@ function renderLongHorizon(r){
     :role==='SUPPORT'
       ?{label:'Team vision share',value:hasNum(s?.visionShare?.value)?fmtPct(s.visionShare.value):'n/a',sub:(hasNum(s?.visionLeaderRate?.value)?fmtPct(s.visionLeaderRate.value)+' of games #1 on team vision · ':'')+'share of team vision score · composition-sensitive'}
       :{label:'Vision actions / min',value:hasNum(s?.visionActionsPerMin?.value)?fmt(s.visionActionsPerMin.value,2):'n/a',sub:'wards placed + wards cleared per minute'};
-  const resourceOutput=laner
-    ?{label:'Top-2 gold → top-2 damage',value:hasNum(s?.top2GoldToTop2DamageRate?.value)?fmtPct(s.top2GoldToTop2DamageRate.value):'n/a',sub:String(s?.top2GoldToTop2DamageRate?.events||0)+' / '+String(s?.top2GoldToTop2DamageRate?.n||0)+' high-resource games converted · '+(hasNum(s?.damageTop2Rate?.value)?fmtPct(s.damageTop2Rate.value)+' top-2 team damage overall · ':'')+(hasNum(s?.damageLeaderRate?.value)?fmtPct(s.damageLeaderRate.value)+' team damage leader · ':'')+'descriptive carry context'}
-    :null;
-  const lowResourceOutput=laner
-    ?{label:'Lower gold → top-2 damage',value:hasNum(s?.lowResourceTop2DamageRate?.value)?fmtPct(s.lowResourceTop2DamageRate.value):'n/a',sub:String(s?.lowResourceTop2DamageRate?.events||0)+' / '+String(s?.lowResourceTop2DamageRate?.n||0)+' games outside top-2 team gold still reached top-2 team damage · descriptive punch-up context'}
-    :null;
   const rows=[
     {label:'History depth',value:games+' '+roleLabel(role)+' games',sub:'selected role + selected queue from the latest 100 account matches · '+otherRoleGames+' other-role games included'},
-    roleVolume,roleContext,roleExtra,...(resourceOutput?[resourceOutput]:[]),...(lowResourceOutput?[lowResourceOutput]:[]),
+    roleVolume,roleContext,roleExtra,
     {label:'Death downtime',value:hasNum(s?.deadTimePct?.value)?fmt(s.deadTimePct.value,1)+'%':'n/a',sub:'share of game time spent dead · timing-sensitive'},
     {label:'Damage share − gold share',value:hasNum(s?.damageEfficiencyPp?.value)?signed(s.damageEfficiencyPp.value,1)+' points':'n/a',sub:'team champion-damage share minus team gold share · composition-sensitive'},
     {label:'Turret damage / min',value:hasNum(s?.turretDamagePerMin?.value)?fmtInt(s.turretDamagePerMin.value):'n/a',sub:'direct structure pressure from match data'}
@@ -1644,10 +1640,8 @@ function renderLongHorizon(r){
     :role==='SUPPORT'
       ?{label:'Vision actions / min',obj:h?.trend?.visionActionsPerMin,unit:'num',inverse:false,threshold:.05}
       :{label:'Enemy-jungle monsters / game',obj:h?.trend?.enemyJungleMonsters,unit:'num',inverse:false,threshold:1};
-  const roleOutputTrend=laner?{label:'Top-2 gold → top-2 damage',obj:h?.trend?.top2GoldToTop2DamageRate,unit:'percent',inverse:false,threshold:10}:null;
-  const lowResourceTrend=laner?{label:'Lower gold → top-2 damage',obj:h?.trend?.lowResourceTop2DamageRate,unit:'percent',inverse:false,threshold:10}:null;
   const supportVisionTrend=role==='SUPPORT'?{label:'Team vision share',obj:h?.trend?.visionShare,unit:'percent',inverse:false,threshold:3}:null;
-  const specs=[{label:'CS / min',obj:h?.trend?.csMin,unit:'csmin',inverse:false,threshold:.08},roleTrend,...(supportVisionTrend?[supportVisionTrend]:[]),...(roleOutputTrend?[roleOutputTrend]:[]),...(lowResourceTrend?[lowResourceTrend]:[]),{label:'Damage / min',obj:h?.trend?.dpm,unit:'dpm',inverse:false,threshold:60},{label:'Death downtime',obj:h?.trend?.deadTimePct,unit:'percent',inverse:true,threshold:1.5},{label:'Damage share − gold share',obj:h?.trend?.damageEfficiencyPp,unit:'pp',inverse:false,threshold:1.5},{label:'Turret damage / min',obj:h?.trend?.turretDamagePerMin,unit:'dpm',inverse:false,threshold:35}];
+  const specs=[{label:'CS / min',obj:h?.trend?.csMin,unit:'csmin',inverse:false,threshold:.08},roleTrend,...(supportVisionTrend?[supportVisionTrend]:[]),{label:'Damage / min',obj:h?.trend?.dpm,unit:'dpm',inverse:false,threshold:60},{label:'Death downtime',obj:h?.trend?.deadTimePct,unit:'percent',inverse:true,threshold:1.5},{label:'Damage share − gold share',obj:h?.trend?.damageEfficiencyPp,unit:'pp',inverse:false,threshold:1.5},{label:'Turret damage / min',obj:h?.trend?.turretDamagePerMin,unit:'dpm',inverse:false,threshold:35}];
   renderLongHorizonDirectionGraph(specs);
   trend.innerHTML=specs.map(x=>historyTrendCard(x.label,x.obj,x.unit,x.inverse,x.threshold)).join('');
   if(stability){
@@ -1675,70 +1669,6 @@ function renderLongHorizon(r){
     consistency.innerHTML=specs.map(x=>historyDistributionCard(x.label,x.obj,x.unit)).join('');
   }
   renderLongOutcomeFingerprint(h,role);
-  renderHighResourceBehaviorContrast(r);
-  {
-    const wrap=$('resourceOutputArchetypesWrap'),contrast=$('resourceOutputContrast'),grid=$('resourceOutputArchetypes'),detail=$('resourceOutputArchetypeDetail'),matrix=h.resourceOutputArchetypes||{},cats=Array.isArray(matrix.categories)?matrix.categories:[];
-    if(wrap)wrap.hidden=!laner||!Number(matrix.eligibleGames||0);
-    if(detail){detail.hidden=true;detail.innerHTML='';}
-    if(contrast){
-      contrast.innerHTML='';
-      if(laner&&Number(matrix.eligibleGames||0)){
-        const highHigh=cats.find(x=>String(x?.key||'')==='high_resource_high_damage'),highLow=cats.find(x=>String(x?.key||'')==='high_resource_lower_damage');
-        const nA=Number(highHigh?.games||0),nB=Number(highLow?.games||0),cleanA=Number(highHigh?.cleanGames||0),cleanB=Number(highLow?.cleanGames||0);
-        if(cleanA>=5&&cleanB>=5&&hasNum(highHigh?.cleanWinRate)&&hasNum(highLow?.cleanWinRate)){
-          const wrGap=Number(highHigh.cleanWinRate)-Number(highLow.cleanWinRate);
-          const dmgGap=hasNum(highHigh?.cleanAvgDamageEfficiencyPp)&&hasNum(highLow?.cleanAvgDamageEfficiencyPp)?Number(highHigh.cleanAvgDamageEfficiencyPp)-Number(highLow.cleanAvgDamageEfficiencyPp):null;
-          const deadGap=hasNum(highLow?.cleanAvgDeadTimePct)&&hasNum(highHigh?.cleanAvgDeadTimePct)?Number(highLow.cleanAvgDeadTimePct)-Number(highHigh.cleanAvgDeadTimePct):null;
-          contrast.innerHTML='<b>High-resource conversion split:</b> '+esc(nA+' total / '+cleanA+' clean high-resource/high-damage games · '+fmtPct(highHigh.cleanWinRate)+' clean WR')+' vs '+esc(nB+' total / '+cleanB+' clean high-resource/lower-damage games · '+fmtPct(highLow.cleanWinRate)+' clean WR')+' · '+esc(signed(wrGap,1)+' points descriptive clean win-rate gap')+(hasNum(dmgGap)?' · '+esc(signed(dmgGap,1)+' points difference in damage-share minus gold-share'):'' )+(hasNum(deadGap)?' · '+esc(signed(deadGap,1)+' points more death downtime in the lower-damage group'):'')+'. <b>Association only:</b> these groups do not establish that damage conversion caused the result.';
-        }else{
-          contrast.textContent='High-resource outcome contrast is withheld until both groups contain at least 5 clean outcomes (AFK/early-surrender games excluded).';
-        }
-      }
-    }
-    if(grid){
-      if(!laner||!Number(matrix.eligibleGames||0))grid.innerHTML='';
-      else{
-        grid.innerHTML=cats.map(x=>{
-          const n=Number(x?.games||0),cleanN=Number(x?.cleanGames||0),share=hasNum(x?.share)?fmtPct(x.share):'n/a',wr=cleanN>=3&&hasNum(x?.cleanWinRate)?' · '+fmtPct(x.cleanWinRate)+' clean WR (n='+cleanN+')':' · clean WR withheld (n<3)';
-          const lowerDamage=String(x?.key||'').includes('lower_damage');
-          const deadCtx=lowerDamage&&Number(x?.deadTimeComparableGames||0)>0
-            ?String(x.aboveMedianDeadTimeGames||0)+' / '+String(x.deadTimeComparableGames||0)+' above your '+fmt(matrix.deadTimeMedian,1)+'% death-downtime median'
-            :'';
-          const turretCtx=lowerDamage&&Number(x?.turretComparableGames||0)>0
-            ?String(x.aboveMedianTurretPressureGames||0)+' / '+String(x.turretComparableGames||0)+' above your '+fmtInt(matrix.turretDamagePerMinMedian)+' turret-DPM median'
-            :'';
-          const shareContext=hasNum(x?.avgGoldShare)&&hasNum(x?.avgDamageShare)?fmt(x.avgGoldShare,1)+'% gold → '+fmt(x.avgDamageShare,1)+'% damage'+(hasNum(x?.avgDamageEfficiencyPp)?' · '+signed(x.avgDamageEfficiencyPp,1)+' points damage−gold':''):'';
-          const context=[shareContext,deadCtx,turretCtx].filter(Boolean).join(' · ');
-          return '<button type="button" class="kpi-card tone-neutral archetype-card" data-archetype-key="'+esc(x.key||'')+'" aria-expanded="false"><span>'+esc(x.label||x.key||'Archetype')+'</span><strong>'+n+' game'+(n===1?'':'s')+' · '+esc(share)+'</strong><small>'+esc('role-history share'+wr+(context?' · '+context:'')+' · descriptive, not causal')+'</small><em>Inspect example games</em></button>';
-        }).join('');
-        grid.querySelectorAll('[data-archetype-key]').forEach(btn=>btn.addEventListener('click',()=>{
-          const key=String(btn.dataset.archetypeKey||''),cat=cats.find(x=>String(x?.key||'')===key),examples=Array.isArray(cat?.examples)?cat.examples:[];
-          grid.querySelectorAll('[data-archetype-key]').forEach(x=>x.setAttribute('aria-expanded',x===btn?'true':'false'));
-          if(!detail)return;
-          if(!cat){detail.hidden=true;detail.innerHTML='';return;}
-          detail.hidden=false;
-          const rows=examples.map((x,i)=>{
-            const deepMatch=(r.games||[]).find(g=>String(g?.matchId||'')===String(x?.matchId||'')),canOpen=!!deepMatch;
-            const overlap=[x?.outcomeCompromised===true?'AFK/early-surrender outcome context':'',x?.aboveOwnDeadTimeMedian===true?'above own death-downtime median':'',x?.aboveOwnTurretMedian===true?'above own turret-DPM median':''].filter(Boolean).join(' · ');
-            const shareGap=hasNum(x?.goldShare)&&hasNum(x?.damageShare)?fmt(x.goldShare,1)+'% gold → '+fmt(x.damageShare,1)+'% damage'+(hasNum(x?.damageEfficiencyPp)?' ('+signed(x.damageEfficiencyPp,1)+' pp)':''):'share data n/a';
-            const diagnostic=String(cat?.key||'')==='high_resource_lower_damage'&&deepMatch?archetypeDeepDiagnostic(deepMatch,matrix):null;
-            return '<article class="archetype-example"><div><span>#'+(i+1)+' · '+esc(shortGameDate(x.gameStartTimestamp))+'</span><strong>'+esc((x.win?'Win':'Loss')+' · '+String(x.champion||'Unknown'))+'</strong><small>team gold #'+esc(String(x.goldRank??'?'))+' · team damage #'+esc(String(x.damageRank??'?'))+' · '+esc(shareGap)+' · '+esc(hasNum(x.dpm)?fmtInt(x.dpm)+' DPM':'DPM n/a')+' · '+esc(hasNum(x.deadTimePct)?fmt(x.deadTimePct,1)+'% death downtime':'death downtime n/a')+' · '+esc(hasNum(x.turretDamagePerMin)?fmtInt(x.turretDamagePerMin)+' turret DPM':'turret DPM n/a')+(overlap?' · '+esc(overlap):'')+'</small>'+(diagnostic?'<div class="archetype-diagnostic tone-'+esc(diagnostic.tone)+'"><b>'+esc(diagnostic.label)+'</b><span>'+esc(diagnostic.copy)+'</span></div>':'')+'</div>'+(canOpen?'<button type="button" class="button secondary small" data-open-archetype-match="'+esc(x.matchId||'')+'">Open full evidence</button>':'<span class="archetype-evidence-badge">Match-level history only</span>')+'</article>';
-          }).join('');
-          const deepIds=new Set(examples.filter(x=>(r.games||[]).some(g=>String(g?.matchId||'')===String(x?.matchId||''))).map(x=>String(x.matchId||'')));
-          const deepDiagnosticRows=String(cat?.key||'')==='high_resource_lower_damage'?[...(r.games||[])].filter(g=>deepIds.has(String(g?.matchId||''))).map(g=>archetypeDeepDiagnostic(g,matrix)):[];
-          const diagnosticCounts=deepDiagnosticRows.reduce((acc,x)=>{acc[x.key]=(acc[x.key]||{label:x.label,n:0});acc[x.key].n++;return acc;},{});
-          const diagnosticSummary=deepDiagnosticRows.length?'<div class="archetype-diagnostic-summary"><b>Deep-sample review contexts</b><span>'+Object.values(diagnosticCounts).sort((a,b)=>b.n-a.n).map(x=>esc(x.label)+' · '+x.n).join(' · ')+'</span><small>One strongest supported context per deep exemplar. These are replay prompts, not causal labels.</small></div>':'';
-          const storyAction=deepIds.size?'<div class="history-actions"><button type="button" class="button secondary small" data-open-archetype-story="'+esc(key)+'">Review '+deepIds.size+' recent deep example'+(deepIds.size===1?'':'s')+' in match story</button><small>This filters only the visible recent story rows; report calculations stay unchanged.</small></div>':'';
-          detail.innerHTML='<div class="section-subhead"><div><span>Example games</span><strong>'+esc(cat.label||key)+'</strong></div><small>Ranked by contrast in the available explanatory context, not by inferred causality. Up to 8 examples are retained.</small></div>'+diagnosticSummary+(rows||'<div class="bullet empty">No exemplar games are available for this archetype.</div>')+storyAction;
-          detail.querySelectorAll('[data-open-archetype-match]').forEach(x=>x.addEventListener('click',()=>{const matchId=x.dataset.openArchetypeMatch;if(matchId)openReplayReviewMatch(matchId,'macro');}));
-          detail.querySelectorAll('[data-open-archetype-story]').forEach(x=>x.addEventListener('click',()=>{
-            state.matchHistoryArchetypeKey=String(x.dataset.openArchetypeStory||'');state.matchHistoryFilter='archetype';state.matchHistoryLimit=20;renderMatchHistory(r);$('match-history')?.scrollIntoView({behavior:'smooth',block:'start'});
-          }));
-          detail.scrollIntoView({block:'nearest',behavior:'smooth'});
-        }));
-      }
-    }
-  }
   const top=Array.isArray(h.topChampions)?h.topChampions.slice(0,6):[],historyChamps=Array.isArray(h.championHistory)?h.championHistory.slice(0,6):[];
   if(champions)champions.innerHTML=historyChamps.length?historyChamps.map(x=>{
     const src=championIcon(x.champion),cleanN=Number(x.cleanGames||0),cleanReady=cleanN>=3,share=hasNum(x.historyShare)?Number(x.historyShare):(games?Number(x.games||0)/games*100:null);
@@ -3388,7 +3318,7 @@ function matchHistoryRow(g,index,displayIndex,r){
 }
 function renderMatchHistory(r){
   const list=$('matchHistoryList'),summary=$('matchHistorySummary'),toggle=$('matchHistoryToggle'),filters=$('matchHistoryFilters'),filterSummary=$('matchHistoryFilterSummary');if(!list||!summary)return;
-  const sourceGames=[...reportCoachingGames(r)].filter(g=>gameIsCoachingContext(r,g)),role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),roleFilterLabels=matchHistoryRoleFilterLabels(role),reviewIds=new Set((Array.isArray(r.replayReviewQueue)?r.replayReviewQueue:[]).map(x=>String(x.matchId||'')).filter(Boolean)),priorityIds=currentPriorityReplayIds(r),arcKey=String(state.matchHistoryArcKey||''),arcGames=arcKey?sourceGames.filter(g=>gameArcDescriptor(g)?.key===arcKey):[],arcLabel=arcGames.length?(gameArcDescriptor(arcGames[0])?.label||'Selected game arc'):'Selected game arc',objectiveFamilyKey=String(state.matchHistoryObjectiveFamilyKey||''),objectiveFamilyIds=objectiveFamilyKey?objectiveFamilyMatchIds(r,objectiveFamilyKey):new Set(),objectiveFamilyLabelText=objectiveFamilyKey?objectiveFamilyLabel(objectiveFamilyKey):'Objective family',archetypeKey=String(state.matchHistoryArchetypeKey||''),archetypeCategories=Array.isArray(r?.longHorizon?.resourceOutputArchetypes?.categories)?r.longHorizon.resourceOutputArchetypes.categories:[],archetypeCategory=archetypeCategories.find(x=>String(x?.key||'')===archetypeKey)||null,archetypeIds=new Set((Array.isArray(archetypeCategory?.examples)?archetypeCategory.examples:[]).map(x=>String(x?.matchId||'')).filter(Boolean)),archetypeLabel=String(archetypeCategory?.label||'Carry archetype');
+  const sourceGames=[...reportCoachingGames(r)].filter(g=>gameIsCoachingContext(r,g)),role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),roleFilterLabels=matchHistoryRoleFilterLabels(role),reviewIds=new Set((Array.isArray(r.replayReviewQueue)?r.replayReviewQueue:[]).map(x=>String(x.matchId||'')).filter(Boolean)),priorityIds=currentPriorityReplayIds(r),arcKey=String(state.matchHistoryArcKey||''),arcGames=arcKey?sourceGames.filter(g=>gameArcDescriptor(g)?.key===arcKey):[],arcLabel=arcGames.length?(gameArcDescriptor(arcGames[0])?.label||'Selected game arc'):'Selected game arc',objectiveFamilyKey=String(state.matchHistoryObjectiveFamilyKey||''),objectiveFamilyIds=objectiveFamilyKey?objectiveFamilyMatchIds(r,objectiveFamilyKey):new Set(),objectiveFamilyLabelText=objectiveFamilyKey?objectiveFamilyLabel(objectiveFamilyKey):'Objective family';
   const counts={
     all:sourceGames.length,
     win:sourceGames.filter(g=>g.win).length,
@@ -3400,8 +3330,7 @@ function renderMatchHistory(r){
     review:sourceGames.filter(g=>reviewIds.has(String(g.matchId||''))).length,
     priority:sourceGames.filter(g=>priorityIds.has(String(g.matchId||''))).length,
     arc:arcGames.length,
-    'objective-family':sourceGames.filter(g=>objectiveFamilyIds.has(String(g.matchId||''))).length,
-    archetype:sourceGames.filter(g=>archetypeIds.has(String(g.matchId||''))).length
+    'objective-family':sourceGames.filter(g=>objectiveFamilyIds.has(String(g.matchId||''))).length
   };
   let filter=String(state.matchHistoryFilter||'all');
   if(filter==='ahead15')filter='role-positive';
@@ -3411,7 +3340,6 @@ function renderMatchHistory(r){
   if(filter==='priority'&&Number(counts.priority||0)===0){filter='all';state.matchHistoryFilter='all';}
   if(filter==='arc'&&Number(counts.arc||0)===0){filter='all';state.matchHistoryFilter='all';state.matchHistoryArcKey='';}
   if(filter==='objective-family'&&Number(counts['objective-family']||0)===0){filter='all';state.matchHistoryFilter='all';state.matchHistoryObjectiveFamilyKey='';}
-  if(filter==='archetype'&&Number(counts.archetype||0)===0){filter='all';state.matchHistoryFilter='all';state.matchHistoryArchetypeKey='';}
   const matchFilter=g=>{
     if(filter==='win')return !!g.win;
     if(filter==='loss')return !g.win;
@@ -3421,7 +3349,6 @@ function renderMatchHistory(r){
     if(filter==='priority')return priorityIds.has(String(g.matchId||''));
     if(filter==='arc')return gameArcDescriptor(g)?.key===arcKey;
     if(filter==='objective-family')return objectiveFamilyIds.has(String(g.matchId||''));
-    if(filter==='archetype')return archetypeIds.has(String(g.matchId||''));
     return true;
   };
   const filteredGames=sourceGames.filter(matchFilter),limit=Math.min(Math.max(1,Number(state.matchHistoryLimit||10)),Math.max(1,filteredGames.length)),games=filteredGames.slice(0,limit);
@@ -3429,14 +3356,14 @@ function renderMatchHistory(r){
     filters.querySelectorAll('[data-history-filter]').forEach(btn=>{
       const key=btn.dataset.historyFilter||'all',active=key===filter;
       btn.classList.toggle('active-filter',active);btn.setAttribute('aria-pressed',active?'true':'false');
-      const base=key==='all'?'All':key==='win'?'Wins':key==='loss'?'Losses':key==='role-positive'?roleFilterLabels.positive:key==='role-neutral'?roleFilterLabels.neutral:key==='role-negative'?roleFilterLabels.negative:key==='risk'?'Risk flagged':key==='priority'?'Current focus':key==='arc'?'Arc: '+arcLabel:key==='objective-family'?objectiveFamilyLabelText:key==='archetype'?archetypeLabel:'Replay priority';
-      if(key==='priority')btn.hidden=Number(counts.priority||0)===0;else if(key==='arc')btn.hidden=filter!=='arc'||Number(counts.arc||0)===0;else if(key==='objective-family')btn.hidden=filter!=='objective-family'||Number(counts['objective-family']||0)===0;else if(key==='archetype')btn.hidden=filter!=='archetype'||Number(counts.archetype||0)===0;else btn.hidden=false;
+      const base=key==='all'?'All':key==='win'?'Wins':key==='loss'?'Losses':key==='role-positive'?roleFilterLabels.positive:key==='role-neutral'?roleFilterLabels.neutral:key==='role-negative'?roleFilterLabels.negative:key==='risk'?'Risk flagged':key==='priority'?'Current focus':key==='arc'?'Arc: '+arcLabel:key==='objective-family'?objectiveFamilyLabelText:'Replay priority';
+      if(key==='priority')btn.hidden=Number(counts.priority||0)===0;else if(key==='arc')btn.hidden=filter!=='arc'||Number(counts.arc||0)===0;else if(key==='objective-family')btn.hidden=filter!=='objective-family'||Number(counts['objective-family']||0)===0;else btn.hidden=false;
       btn.textContent=base+' · '+String(counts[key]??0);
       btn.onclick=()=>{state.matchHistoryFilter=key;state.matchHistoryLimit=10;renderMatchHistory(r);};
     });
   }
   if(filterSummary){
-    const label=filter==='all'?'full recent sample':filter==='risk'?'timeline-supported risk-flagged games':filter==='review'?'games with ranked replay moments':filter==='priority'?'games with ranked replay moments matching '+currentPriorityReplayLabel(r):filter==='arc'?'games matching '+arcLabel:filter==='objective-family'?'games with a contested '+objectiveFamilyLabelText+' window':filter==='archetype'?'recent deep games matching '+archetypeLabel:filter==='win'?'wins':filter==='loss'?'losses':filter==='role-positive'?roleFilterLabels.positive.toLowerCase()+' games':filter==='role-neutral'?roleFilterLabels.neutral.toLowerCase()+' games':roleFilterLabels.negative.toLowerCase()+' games';
+    const label=filter==='all'?'full recent sample':filter==='risk'?'timeline-supported risk-flagged games':filter==='review'?'games with ranked replay moments':filter==='priority'?'games with ranked replay moments matching '+currentPriorityReplayLabel(r):filter==='arc'?'games matching '+arcLabel:filter==='objective-family'?'games with a contested '+objectiveFamilyLabelText+' window':filter==='win'?'wins':filter==='loss'?'losses':filter==='role-positive'?roleFilterLabels.positive.toLowerCase()+' games':filter==='role-neutral'?roleFilterLabels.neutral.toLowerCase()+' games':roleFilterLabels.negative.toLowerCase()+' games';
     filterSummary.textContent='Showing '+filteredGames.length+' / '+sourceGames.length+' '+label+'. Filters change only visible rows, never report calculations.';
   }
   if(toggle){
