@@ -1,0 +1,10 @@
+from pathlib import Path
+import re,subprocess,time,json,shutil,datetime
+HOME=Path('/home/jespern'); WWW=Path('/opt/homeassistant/config/www')
+STAMP=datetime.datetime.now().strftime('%Y%m%d_%H%M%S'); BACK=HOME/'c720p-backups'/f'home-v86-{STAMP}'; BACK.mkdir(parents=True,exist_ok=True)
+p=WWW/'c720p-surveillance.html'; s=p.read_text(encoding='utf-8')
+for a,b in [
+('data-tab="new">New clips','data-tab="camera">Camera clips'),('data-tab="newSaved">New saved clips','data-tab="saved">Saved clips'),('id="panel-new"','id="panel-camera"'),('id="newFrame"','id="cameraFrame"'),('id="panel-newSaved"','id="panel-saved"'),('id="newSavedFrame"','id="cameraSavedFrame"'),('data-src="/local/c720p-drive-saved.html?camera=new&v=SAVED_DELETE_V2_20260827_0610"','data-src="/local/c720p-drive-saved.html?camera=camera&v=CAMERA_SAVED_V86_20261007"'),('id="newFast"','id="cameraFast"'),('id="newLive"','id="cameraLive"'),('id="newStatus"','id="cameraStatus"'),('LIVE · S9+','LIVE · Camera'),('<h2>New camera</h2>','<h2>Camera</h2>'),('id="newControls"','id="cameraControls"'),('id="newControlMsg"','id="cameraControlMsg"'),("let active='new'","let active='camera'"),("const n=$('#newLive'),f=$('#newFast')","const n=$('#cameraLive'),f=$('#cameraFast')"),("'#newStatus'","'#cameraStatus'"),("for(const id of ['newFrame'])","for(const id of ['cameraFrame'])"),("function refreshControls(){loadControls('new','new')}","function refreshControls(){loadControls('new','camera')}"),("if(t==='newSaved'){const f=$('#newSavedFrame');if(!f.getAttribute('src'))f.src=f.dataset.src}","if(t==='saved'){const f=$('#cameraSavedFrame');if(!f.getAttribute('src'))f.src=f.dataset.src}"),("tab('new')","tab('camera')")]: s=s.replace(a,b)
+s=s.replace('title="S9+ high quality live"','title="Camera live stream"').replace('alt="S9+ live camera"','alt="Camera live stream"').replace('C720P_SECURITY_V84_SINGLE_CAMERA_ONLY','C720P_SECURITY_V86_CAMERA_NAMING_SAVED_FIXED')
+if 'New clips' in s or 'New saved clips' in s or '>New camera<' in s: raise SystemExit('visible New wording remains')
+p.write_text(s,encoding='utf-8')
