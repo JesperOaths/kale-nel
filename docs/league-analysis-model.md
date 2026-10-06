@@ -3461,3 +3461,35 @@ The 100-game form section now visualizes its existing latest-20 versus previous-
 - Existing history cards remain below the graph for metric-by-metric context and are not replaced.
 
 No new metric, threshold or causal claim is introduced.
+
+
+## v300 report readability and saved profiles
+
+Charts live beside their evidence: recent direction under the current-sample overview,
+objective presence under decisions, phase rates under phase risk, and outcome gaps and
+champion composition in longer history. Repeated numeric breakdowns remain available
+in disclosures; they are not rendered as another default dashboard. The current-sample
+KPI group appears once above the coaching plan. Its result strip uses only coaching games
+in the selected role, marks compromised outcomes, and opens the raw match detail.
+
+The signed outcome chart uses the magnitude of the Hedges-corrected standardized gap,
+multiplied by the sign of `wins.mean - losses.mean`, then by -1 only for lower-is-better
+metrics. Retaining this observed sign is essential: absolute magnitude followed by an
+inverse adjustment alone can point the bar the wrong way. The axis expands to the
+largest supported magnitude without a 3-unit clipping cap. Exact means and contributing
+counts stay attached to each row. Thin rows remain neutral, not evidence of significance.
+
+Profile saving is explicit and does not require a Riot key. Names and preferred roles can
+be saved before match fetching. Existing Riot name, tag and platform matches are reused
+case-insensitively. Pins, search and per-profile preferred roles support selection; pins
+and role preferences are local to the browser. Profile/report/cache selection has an epoch
+guard so a late response for a previous profile or role cannot replace the active report.
+The key remains session-only. Cached reports open without one. Saving an edited Riot
+identity does not repurpose a different account's cached profile record.
+
+The on-page stat guide explains percentage points, Hedges' g, Wilson confidence intervals,
+cohorts, metric-specific n, clean outcomes, practical thresholds, role opponents, phase
+exposure, medians/quartiles/IQR, and common game metrics. Values use 'points' instead of
+unexplained 'pp'; interval labels use '95% range' with the method available in the guide.
+The guide links NIST methods, describes the approximate independent-trial assumption
+for event intervals, and distinguishes association from causation.

@@ -136,7 +136,7 @@ assert.ok(r.combinations.every(x=>x.games<=x.comparableGames));
 // Execute the real app in a minimal DOM; skip only network startup.
 const nodes=new Map();
 const node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:'',addEventListener(){},querySelectorAll(){return []}});return nodes.get(id);};
-const appContext={window:{},document:{getElementById:node},console,setTimeout:()=>0};
+const appContext={window:{},document:{getElementById:node,addEventListener(){}},console,setTimeout:()=>0};
 vm.createContext(appContext);
 const appSource=fs.readFileSync('league/app.js','utf8').replace('boot().catch(e=>','if(false)boot().catch(e=>').replace(/\}\)\(\);\s*$/, 'window.__checks={renderAdvanced,metric};})();');
 vm.runInContext(appSource,appContext);

@@ -10,7 +10,7 @@ const REQUIRED_PUBLIC_COPY = [
   'No Kalenel login required',
   'Riot API key is session-only',
   'Riot API key is never saved',
-  'Load & analyze recent matches',
+  'Choose a player to review',
 ];
 
 function assertPublicLeagueMarkup(html, sourceLabel) {

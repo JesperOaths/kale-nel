@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends analysis with a 100-game role scan, evidence-backed Last-20 deep coaching, long-horizon trends and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261006-league-web-v299">
+  <link rel="stylesheet" href="/league/styles.css?v=20261007-league-web-v300">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261002-public-bootstrap-r4"></script>
 </head>
@@ -25,66 +25,42 @@
         <nav class="site-nav" aria-label="League page navigation">
           <a href="/" class="nav-chip">Home</a>
           <a href="/league/" class="nav-chip current" aria-current="page">League</a>
-          <span class="pill backend-pill" id="backendState">Connecting…</span>
+          <a href="#stat-guide" class="nav-chip">Stat guide</a><span class="pill backend-pill" id="backendState">Connecting…</span>
         </nav>
       </header>
 
-      <section class="league-intro">
-        <div class="intro-copy">
-          <p class="eyebrow">Bruisienator · 100-game scan + Last-20 deep evidence</p>
-          <h1>League analysis, in the Kalenel site.</h1>
-          <p class="lede">Enter a Riot ID and API key once. The page scans up to 100 recent matches for selected-role history, then builds deep timeline coaching from the latest eligible Last 20.</p>
-          <div class="intro-chips" aria-label="Workspace properties">
-            <span>Public workspace</span>
-            <span>Saved League profiles</span>
-            <span>Role-selected coaching</span>
-            <span>Evidence-backed analysis</span>
-          </div>
-        </div>
-        <aside class="intro-note">
-          <strong>No Kalenel login required</strong>
-          <p>Your Riot API key is session-only and is never stored. Riot ID profiles, cached Riot match data and analysis history can be saved in this isolated Kalenel League workspace so you can reopen them later.</p>
-          <small>The analyzer scans up to 100 recent matches, but only deep-loads timelines for the selected role’s final Last-20 cohort.</small>
-        </aside>
-      </section>
+      <section class="league-intro"><div class="intro-copy"><p class="eyebrow">Bruisienator</p><h1>Your League review</h1><p class="lede">Find the pattern. Choose one change. Check it in your next games.</p></div><details class="workspace-explainer"><summary>No Kalenel login required</summary><p>Saved profiles belong to this browser’s workspace. Reopen reports without a Riot key; add a key only to fetch new matches. Your Riot API key is session-only and is never stored.</p><p>Scans up to 100 recent account matches. Only the selected role and queue enter your history; the latest eligible 20 get detailed timeline analysis.</p></details></section>
 
       <section class="workspace-card request-workspace" aria-labelledby="workspace-title">
         <div class="section-heading workspace-heading">
           <div>
-            <p class="eyebrow">Recent match request</p>
-            <h2 id="workspace-title">Load & analyze recent matches</h2>
+            <p class="eyebrow">Your profiles</p>
+            <h2 id="workspace-title">Choose a player to review</h2>
           </div>
-          <span class="section-hint">Choose the role you want judged. Only that role enters the report, coaching, champion context, replay queue and maps.</span>
+          <span class="section-hint">Saved reports open without a Riot key. Choose a role to keep the review focused.</span>
         </div>
 
-        <div class="saved-profile-bar">
-          <div class="saved-profile-copy">
-            <span class="status-label">League profile</span>
-            <strong id="savedProfileTitle">New Riot profile</strong>
-            <small id="savedProfileMeta">Enter a Riot ID below. The site will save the Riot profile and analysis history automatically; the Riot API key is never saved.</small>
-          </div>
+        <div class="saved-profile-bar"><div class="saved-profile-copy"><span class="status-label">Selected profile</span><strong id="savedProfileTitle">New Riot profile</strong><small id="savedProfileMeta">Save a Riot ID to return to it later. The Riot API key is never saved.</small></div>
+
           <label class="field saved-profile-select">
             <span>Saved profiles</span>
             <select id="savedProfileSelect" aria-label="Saved League profiles"><option value="">New Riot profile</option></select>
           </label>
           <button class="button secondary small" id="newSavedProfileBtn" type="button">New profile</button>
           <button class="button secondary small" id="forgetSavedProfileBtn" type="button" disabled>Delete profile</button>
-        </div>
+        </div><div class="profile-library"><label class="field profile-search"><span>Find a saved profile</span><input id="profileSearch" type="search" placeholder="Name, Riot ID or region" autocomplete="off"></label><div class="profile-card-list" id="profileCards" aria-label="Saved profile cards"></div></div><p class="profile-feedback" id="profileFeedback" role="status" aria-live="polite"></p>
 
-        <div class="direct-request-grid">
-          <label class="field summoner-field">
+        <details id="profileEditor" class="profile-editor-details"><summary>Edit Riot ID &amp; save profile</summary><div class="profile-identity-grid"><label class="field summoner-field">
             <span>Riot game name</span>
             <input id="requestGameName" autocomplete="off" spellcheck="false" placeholder="Oaths">
-          </label>
-          <label class="field tag-field">
+          </label><label class="field tag-field">
             <span>Tag</span>
             <input id="requestTagLine" autocomplete="off" spellcheck="false" placeholder="Wijf">
-          </label>
-          <label class="field region-field">
+          </label><label class="field region-field">
             <span>Region</span>
             <select id="requestRegion" aria-label="Riot platform region">
               <option value="euw1" selected>EU West</option>
-              <option value="eun1">EU Nordic & East</option>
+              <option value="eun1">EU Nordic &amp; East</option>
               <option value="na1">North America</option>
               <option value="kr">Korea</option>
               <option value="jp1">Japan</option>
@@ -92,7 +68,10 @@
               <option value="oc1">Oceania</option>
               <option value="tr1">Türkiye</option>
             </select>
-          </label>
+          </label><label class="field profile-label-field"><span>Profile name <small>(optional)</small></span><input id="profileLabel" maxlength="120" autocomplete="off" placeholder="e.g. Main account"></label></div><div class="profile-save-row"><button class="button primary" id="saveProfileBtn" type="button" disabled>Save profile</button><span>Save the name, region and preferred role. No Riot API key needed.</span></div></details><div class="direct-request-grid analysis-controls">
+
+
+
           <label class="field role-field">
             <span>Analyze role</span>
             <select id="requestRole" aria-label="Role to analyze">
@@ -103,26 +82,17 @@
               <option value="TOP">Top</option>
             </select>
           </label>
-          <label class="field key-field">
-            <span>Riot API key · session only</span>
+          <button id="openSavedReportBtn" class="button secondary">Open saved report</button><label class="field key-field">
+            <span>Riot API key · new matches only</span>
             <input id="riotApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="RGAPI-…">
           </label>
           <button class="button primary request-button" id="loadRecentBtn" type="button" disabled>
-            <span>Load & analyze</span>
-            <small>100-game scan · deep Last 20</small>
+            <span>Update &amp; analyze</span>
+            <small>Scan 100 · deep review 20</small>
           </button>
         </div>
 
-        <div class="request-help">
-          <div class="request-help-item key-note">
-            <strong id="riotKeyStatus">Add a Riot API key to load matches.</strong>
-            <span>The key stays in this browser tab and is not saved.</span>
-          </div>
-          <div class="request-help-item auto-note">
-            <strong>100-game role scan</strong>
-            <span>Scans match metadata across the latest 100, then fetches expensive timelines only for the final selected-role, selected-queue Last 20.</span>
-          </div>
-        </div>
+        <div class="request-help"><div class="request-help-item key-note"><strong id="riotKeyStatus">Add a Riot API key to fetch new matches.</strong><span>Stored profiles and reports stay available without one.</span></div></div>
 
         <div class="status-strip request-status" aria-label="League request status">
           <div class="status-card cache-status"><span class="status-label">Fetched cache</span><strong id="cacheState">0 games</strong></div>
@@ -148,9 +118,9 @@
       <section id="reportEmpty" class="panel empty-state">
         <div class="empty-icon">20</div>
         <div>
-          <p class="eyebrow">Last-20 report</p>
-          <h2>No analysis loaded yet</h2>
-          <p>Enter your Riot ID, region and API key above, then press “Load & analyze”. Recent matches are fetched first and the eligible Last 20 are analyzed automatically.</p>
+          <p class="eyebrow">Save a Riot ID first. To fetch matches, add a Riot API key and choose “Update &amp; analyze”.</p>
+          <h2>Choose a saved profile or add a player</h2>
+          <p>Open a saved report, or save a Riot ID and region to start. Add a Riot API key and choose “Update &amp; analyze” when you want to fetch recent matches and review the latest eligible 20 games.</p>
         </div>
       </section>
 
@@ -167,81 +137,162 @@
           </div>
         </section>
 
-        <nav class="report-jump-nav" aria-label="Report sections">
-          <a href="#overview">Overview</a>
-          <a href="#practice-plan">Practice plan</a>
-          <a href="#learning-review">Habit review</a>
-          <a href="#long-horizon">100-game form</a>
-          <a href="#rank-comparison">Rank comparison</a>
-          <a href="#lane-economy" id="laneEconomyNav">Role economy</a>
-          <a href="#support-synergy" id="supportSynergyNav">Support synergy</a>
-          <a href="#decisions">Fights & objectives</a>
-          <a href="#phase-diagnostic">Phases</a>
-          <a href="#game-arcs">Game arcs</a>
-          <a href="#match-history">Match story</a>
-          <a href="#last20">Evidence table</a>
-          <a href="#spatialReview">Map</a>
-          <a href="#technical-analysis">Technical detail</a>
-        </nav>
-
-        <section class="panel report-driver-panel" id="report-driver">
+        <nav class="report-jump-nav" aria-label="Report sections"><a href="#overview">Overview</a><a href="#practice-plan">Practice</a><a href="#long-horizon">History</a><a href="#rank-comparison">Rank</a><a href="#lane-economy" id="laneEconomyNav">Economy</a><a href="#decisions">Decisions</a><a href="#support-synergy" id="supportSynergyNav">Support picks</a><a href="#match-history">Matches</a><a href="#stat-guide">Stat guide</a></nav><section id="at-a-glance" class="panel sample-kpi-panel glance-panel">
+          <div class="section-head compact-head">
+            <div><p class="eyebrow">At a glance</p><h2>Your current coaching sample</h2></div>
+            <span class="section-hint"><span id="glanceScope">Latest eligible games in the selected role.</span> <a href="#term-cohort" data-stat-term="cohort">What counts?</a></span>
+          </div>
+          <div class="kpi-grid" id="kpiGrid" aria-label="Raw selected-role key performance indicators"></div>
+        <div class="match-rhythm"><div class="match-rhythm-heading"><h3>Recent results</h3><span>Oldest to newest · select a game to review</span></div><div class="match-rhythm-strip" id="matchRhythm"></div><p class="source-note" id="matchRhythmNote"></p></div></section><section class="panel report-driver-panel" id="report-driver">
           <div class="section-head">
-            <div><p class="eyebrow">Read this first</p><h2>What should drive the next games?</h2></div>
-            <span class="section-hint">The strongest supported limiter, strength and short-window direction come first. Everything below exists to explain or challenge these conclusions.</span>
+            <div><p class="eyebrow">Read this first</p><h2>What to focus on next</h2></div>
+            <span class="section-hint">One main improvement, one strength to keep, and a brief read of recent form.</span>
           </div>
           <div class="report-driver-grid" id="reportDrivers"></div>
-          <div class="priority-evidence-chain" id="priorityEvidenceChain"></div>
-          <div class="evidence-health-wrap">
+          <details class="report-disclosure"><summary>Why this is the main focus</summary><div class="priority-evidence-chain" id="priorityEvidenceChain"></div></details>
+          <details class="report-disclosure"><summary>Check the evidence behind these findings</summary><div class="evidence-health-wrap">
             <div class="evidence-health-head"><span>Evidence health</span><small>Coverage behind the conclusions above — kept as separate dimensions rather than one synthetic confidence score.</small></div>
             <div class="evidence-health-grid" id="evidenceHealth"></div>
-            <button class="button secondary tiny evidence-health-link" type="button" id="evidenceHealthLink">Open full trust & coverage</button>
-          </div>
-        </section>
-
-        <section class="panel practice-panel" id="practice-plan">
+            <button class="button secondary tiny evidence-health-link" type="button" id="evidenceHealthLink">Open full trust &amp; coverage</button>
+          </div></details>
+        </section><section class="panel practice-panel" id="practice-plan">
           <div class="section-head">
             <div><p class="eyebrow">Turn insight into play</p><h2>Next 5 games</h2></div>
-            <span class="section-hint">The actionable plan sits directly under the report driver. Targets keep a fixed baseline while the same metric stays active. Review starts after five games from that target origin; supported rare-event evidence counts only those new games and can extend to 20.</span>
+            <span class="section-hint">Practice one change for five new games. Targets keep the same starting point until the focus changes.</span>
           </div>
           <div class="practice-grid" id="practicePlan"></div>
-        </section>
-
-        <section class="panel quick-read-panel">
+        </section><section class="panel learning-review-panel" id="learning-review">
           <div class="section-head">
-            <div><p class="eyebrow">Direct-role comparison</p><h2>How do you compare with the actual role opponent?</h2></div>
-            <span class="section-hint">Per-game same-role opponents only. This is separate from the population-rank reference farther down the page.</span>
+            <div><p class="eyebrow">Learn from the decisions</p><h2>Which habits should you review, even in wins?</h2></div>
+            <span class="section-hint">Find a repeat, compare two replays and try one rule next game. Results provide context; each cue still needs a replay judgment.</span>
           </div>
-          <div class="quick-read-grid" id="quickRead"></div>
-          <div class="recent-pulse">
-            <div class="recent-pulse-head"><div><span>Recent pulse</span><strong>Latest 5 vs earlier games</strong></div><small>Actual valid-game counts are shown on each card. This is descriptive only, not proof of a trend.</small></div>
-            <div class="pulse-grid" id="recentPulse"></div>
+          <div class="learning-toolbar">
+            <p>Open a habit to see how often it appears, the exact evidence, a practice rule and matching games.</p>
+            <label class="field"><span>Review a habit</span><select id="learningHabitSelect"><option value="all">All measured habits</option></select></label>
           </div>
-        </section>
+          <div class="learning-habits" id="learningHabits"></div>
+          <div class="section-subhead learning-results-head"><strong>Separate the result from the review</strong><span>Only supported habits above enter these groups</span></div>
+          <div class="learning-outcome-matrix" id="learningOutcomeMatrix"></div>
+          <div id="learningCombinations"></div>
+          <div class="learning-review-games" id="learningReviewGames" hidden aria-live="polite"></div>
+          <p class="source-note" id="learningReviewNote"></p>
+        </section><section class="panel quick-read-panel">
+          <div class="section-head">
+            <div><p class="eyebrow">Recent direction</p><h2>How your recent games changed</h2></div>
+            <span class="section-hint">Latest five vs the earlier comparable games. Missing evidence is shown as unknown.</span>
+          </div>
+          <details class="report-disclosure"><summary>Compare with your actual role opponent</summary><div class="quick-read-grid" id="quickRead"></div></details>
+          <div class="recent-pulse"><article id="visual-analytics" class="primary-chart">
+              <div class="visual-graph-head"><div><span>Recent direction</span><h3>What changed in your latest games?</h3></div><small>Bars compare changes on one scale. <a href="#term-threshold" data-stat-term="threshold">Explain the scale</a></small></div>
+              <div id="recentFormGraph"></div>
+            </article>
+
+            <details class="report-disclosure"><summary>Exact recent and earlier averages</summary><div class="pulse-grid" id="recentPulse"></div></details>
+          </div>
+        </section><section class="visual-benchmark-grid" id="rank-comparison">
+          <article class="panel radar-panel" id="rankRadarPanel">
+            <div class="section-head">
+              <div><p class="eyebrow">ADC rank comparison</p><h2>Your ADC sample vs rank-reference profiles</h2></div>
+              <span class="section-hint">External rank references come from a published ranked corpus. CS/min, KP and DPM use its Bot/ADC adjustment; KDA and deaths remain raw rank references.</span>
+            </div>
+            <div class="radar-layout">
+              <div id="radarChart" class="radar-chart" aria-live="polite"></div>
+              <div>
+                <div id="radarLegend" class="radar-legend"></div>
+                <p class="radar-note" id="radarNote"></p>
+              </div>
+            </div>
+            <div class="rank-bridge" id="rankBridge"></div>
+          </article>
+
+          <details class="report-disclosure"><summary>Champions &amp; first items in the current sample</summary><article class="panel visual-summary-panel">
+            <div class="section-head">
+              <div><p class="eyebrow">What you played</p><h2>Champion &amp; item snapshot</h2></div>
+              <span class="section-hint">Current mechanics-filtered coaching cohort. Older-mechanics games remain available in match history as context.</span>
+            </div>
+            <div class="visual-summary-block">
+              <h3>Most played champions</h3>
+              <div id="championVisuals" class="game-visual-strip"></div>
+            </div>
+            <div class="visual-summary-block">
+              <h3>Most common first major items</h3>
+              <div id="itemVisuals" class="game-visual-strip"></div>
+            </div>
+          </article></details>
+        </section><section class="panel economy-panel" id="lane-economy">
+          <div class="section-head">
+            <div><p class="eyebrow" id="laneEconomyEyebrow">Role economy</p><h2 id="laneEconomyTitle">How does your role economy develop?</h2></div>
+            <span class="section-hint" id="laneEconomyHint">Current coaching cohort only. Signed role/economy charts use a fixed neutral line at zero; older-mechanics context stays in match history.</span>
+          </div>
+          <div class="chart-grid" id="chartGrid"></div>
+          <details class="report-disclosure"><summary>Typical economy &amp; consistency</summary><div class="consistency-summary-wrap">
+            <div class="section-subhead"><div><span>Consistency snapshot</span><strong>What does a typical game look like?</strong></div><small>Medians and the middle 50% reduce the influence of one extreme match. Favorable / close / unfavorable counts use the explicit bands shown on each card.</small></div>
+            <div class="quality-grid consistency-grid" id="consistencySummary"></div>
+          </div></details>
+          <div class="hidden-charts" id="hiddenCharts" hidden></div>
+        </section><section class="panel decisions-panel" id="decisions">
+          <div class="section-head">
+            <div><p class="eyebrow">Fights, objectives &amp; risk</p><h2>How your decisions convert into game impact</h2></div>
+            <span class="section-hint">These are outcome-linked behavior signals, not isolated scoreboard totals.</span>
+          </div>
+          <details class="report-disclosure"><summary>Fight, reset &amp; conversion measurements</summary><div class="decision-metric-grid" id="decisionMetrics"></div></details>
+          <div id="objectiveDiagnosisSummary" class="decision-explanation"></div>
+          <article class="primary-chart">
+              <div class="visual-graph-head"><div><span>Objective families</span><h3>How often do you join contested objectives?</h3></div><small>Dot = measured rate · line = uncertainty. <a href="#term-wilson" data-stat-term="wilson">Explain the range</a></small></div>
+              <div id="objectiveFamilyGraph"></div>
+            </article><div class="objective-family-overview" id="objectiveFamilyOverview"></div>
+        </section><details class="report-disclosure"><summary>Risk by game phase</summary><section class="panel phase-diagnostic-panel" id="phase-diagnostic">
+          <div class="section-head">
+            <div><p class="eyebrow">Phase diagnosis</p><h2>Where does decision risk concentrate?</h2></div>
+            <span class="section-hint">High-risk and costly deaths are normalized by actual phase exposure. A phase is called a hotspot only when the rate and the gap to the next phase both clear the analyzer thresholds.</span>
+          </div>
+          <article class="primary-chart">
+              <div class="visual-graph-head"><div><span>Risk by phase</span><h3>Where risky deaths concentrate</h3></div><small>Rates account for time spent in each phase. <a href="#term-exposure" data-stat-term="exposure">Explain rates</a></small></div>
+              <div id="phaseRiskGraph"></div>
+            </article><details class="report-disclosure"><summary>Phase counts, rates &amp; evidence</summary><div class="phase-diagnostic-grid" id="phaseDiagnostic"></div></details>
+          <div class="source-note" id="phaseDiagnosticNote"></div>
+        </section></details>
+
+
+
+
+
+
 
         <section class="panel long-horizon-panel" id="long-horizon">
           <div class="section-head">
-            <div><p class="eyebrow">Long-horizon form</p><h2>What holds up beyond the Last 20?</h2></div>
-            <span class="section-hint">Up to 100 selected-role, selected-queue matches. History metrics adapt to the chosen role and never borrow games from another role.</span>
+            <div><p class="eyebrow">Long-horizon form</p><h2>Your longer game history</h2></div>
+            <span class="section-hint"><span id="historyScope">Up to 100 matches, filtered to this role and queue.</span> <a href="#term-median" data-stat-term="median">Explain typical ranges</a></span>
           </div>
-          <div class="kpi-grid" id="longHorizonKpis"></div>
+          <details class="report-disclosure"><summary>All history averages &amp; resource statistics</summary><div class="kpi-grid" id="longHorizonKpis"></div></details>
           <div class="recent-pulse">
             <div class="recent-pulse-head"><div><span>History direction</span><strong>Latest 20 vs previous up to 20</strong></div><small>Five valid observations are required on both sides. The graph normalizes movement by each metric’s existing practical-change threshold; cards remain below for exact metric context.</small></div>
             <div class="history-direction-graph" id="longHorizonTrendGraph"></div>
-            <div class="pulse-grid" id="longHorizonTrend"></div>
+            <details class="report-disclosure"><summary>Exact latest-20 and previous-window averages</summary><div class="pulse-grid" id="longHorizonTrend"></div></details>
           </div>
-          <div class="consistency-summary-wrap">
+          <details class="report-disclosure"><summary>Typical game, weaker games &amp; variation</summary><div class="consistency-summary-wrap">
             <div class="section-subhead"><div><span>Robust history shift</span><strong>Did the typical game, weak-game floor and variability change?</strong></div><small>Median, lower/upper quartile tail and middle-50% spread are shown separately; no composite “consistency score” is invented.</small></div>
             <div class="pulse-grid" id="historyStabilityTrend"></div>
-          </div>
-          <div class="consistency-summary-wrap">
+          </div></details>
+          <details class="report-disclosure"><summary>Typical ranges across your role history</summary><div class="consistency-summary-wrap">
             <div class="section-subhead"><div><span>Long-horizon consistency</span><strong>Typical range across the whole role history</strong></div><small>Median and middle 50% reduce the influence of one extreme game.</small></div>
             <div class="quality-grid consistency-grid" id="historyConsistency"></div>
-          </div>
+          </div></details>
           <div class="consistency-summary-wrap long-outcome-wrap">
             <div class="section-subhead"><div><span>100-game outcome fingerprint</span><strong>Which match-level traits separate wins from losses over the longer history?</strong></div><small>Directional color requires at least 5 clean wins and 5 clean losses. Otherwise the broader split is shown as neutral context only.</small></div>
-            <div class="outcome-fingerprint-grid" id="longOutcomeFingerprint"></div>
+            <article class="primary-chart">
+              <div class="visual-graph-head"><div><span>Win / loss separation</span><h3>Which stats differ between your wins and losses?</h3></div><small>History sample · average gaps on a common scale. <a href="#term-gap" data-stat-term="gap">Explain the gap</a></small></div>
+              <div id="outcomeEffectGraph"></div>
+            </article><details class="report-disclosure"><summary>Exact win/loss averages &amp; sample sizes</summary><div class="outcome-fingerprint-grid" id="longOutcomeFingerprint"></div></details>
             <p class="source-note" id="longOutcomeFingerprintNote"></p>
+          <details class="report-disclosure"><summary>Win/loss comparison in the current coaching sample</summary><section class="panel outcome-fingerprint-panel" id="outcome-fingerprint">
+          <div class="section-head">
+            <div><p class="eyebrow">Outcome fingerprint</p><h2>What looks different in wins and losses?</h2></div>
+            <span class="section-hint">Descriptive separation inside the current selected-role coaching cohort. These differences are review clues, not proof that one stat caused the result.</span>
           </div>
+          <div class="outcome-fingerprint-grid" id="outcomeFingerprint"></div>
+          <p class="source-note" id="outcomeFingerprintNote"></p>
+        </section></details></div>
           <div class="consistency-summary-wrap" id="resourceOutputArchetypesWrap" hidden>
             <div class="section-subhead"><div><span>Resource → output archetypes</span><strong>What kind of carry games keep appearing?</strong></div><small>Exclusive team-relative gold/damage groups. Lower-damage groups also show overlap with above-your-own-median death downtime or turret pressure; overlap is context, not proof of cause.</small></div>
             <div class="source-note" id="resourceOutputContrast"></div>
@@ -252,18 +303,15 @@
           <div class="visual-summary-block">
             <h3>Champion-conditioned role history</h3>
             <p class="section-intro">Reviewed-account performance grouped by the champion you played. Clean win rate is withheld below 3 clean outcomes; every other metric shows its own contributing n.</p>
-            <div id="historyChampionMix" class="history-champion-grid"></div>
+            <article class="primary-chart">
+              <div class="visual-graph-head"><div><span>Champion history</span><h3>Pick mix first, clean results when comparable</h3></div><small>Pick share comes first. Result comparisons require enough games.</small></div>
+              <div id="championHistoryGraph"></div>
+            </article><details class="report-disclosure"><summary>Champion performance details</summary><div id="historyChampionMix" class="history-champion-grid"></div></details>
           </div>
           <p class="source-note" id="longHorizonNote"></p>
         </section>
 
-        <section class="panel sample-kpi-panel">
-          <div class="section-head compact-head">
-            <div><p class="eyebrow">Your sample</p><h2>Raw selected-role output</h2></div>
-            <span class="section-hint">These are your own coaching-cohort averages. No external benchmark or opponent adjustment is applied here.</span>
-          </div>
-          <div class="kpi-grid" id="kpiGrid" aria-label="Raw selected-role key performance indicators"></div>
-        </section>
+
 
         <section class="panel support-role-lens" id="supportRoleLensPanel" hidden>
           <div class="section-head">
@@ -283,63 +331,11 @@
           <div class="source-note" id="roleSpecificLensNote"></div>
         </section>
 
-        <section class="panel outcome-fingerprint-panel" id="outcome-fingerprint">
-          <div class="section-head">
-            <div><p class="eyebrow">Outcome fingerprint</p><h2>What looks different in wins and losses?</h2></div>
-            <span class="section-hint">Descriptive separation inside the current selected-role coaching cohort. These differences are review clues, not proof that one stat caused the result.</span>
-          </div>
-          <div class="outcome-fingerprint-grid" id="outcomeFingerprint"></div>
-          <p class="source-note" id="outcomeFingerprintNote"></p>
-        </section>
 
-        <section class="panel learning-review-panel" id="learning-review">
-          <div class="section-head">
-            <div><p class="eyebrow">Learn from the decisions</p><h2>Which habits should you review, even in wins?</h2></div>
-            <span class="section-hint">Find a repeat, compare two replays and try one rule next game. Results provide context; each cue still needs a replay judgment.</span>
-          </div>
-          <div class="learning-toolbar">
-            <p>Open a habit to see how often it appears, the exact evidence, a practice rule and matching games.</p>
-            <label class="field"><span>Review a habit</span><select id="learningHabitSelect"><option value="all">All measured habits</option></select></label>
-          </div>
-          <div class="learning-habits" id="learningHabits"></div>
-          <div class="section-subhead learning-results-head"><strong>Separate the result from the review</strong><span>Only supported habits above enter these groups</span></div>
-          <div class="learning-outcome-matrix" id="learningOutcomeMatrix"></div>
-          <div id="learningCombinations"></div>
-          <div class="learning-review-games" id="learningReviewGames" hidden aria-live="polite"></div>
-          <p class="source-note" id="learningReviewNote"></p>
-        </section>
 
-        <section class="visual-benchmark-grid" id="rank-comparison">
-          <article class="panel radar-panel" id="rankRadarPanel">
-            <div class="section-head">
-              <div><p class="eyebrow">ADC rank comparison</p><h2>Your ADC sample vs rank-reference profiles</h2></div>
-              <span class="section-hint">External rank references come from a published ranked corpus. CS/min, KP and DPM use its Bot/ADC adjustment; KDA and deaths remain raw rank references.</span>
-            </div>
-            <div class="radar-layout">
-              <div id="radarChart" class="radar-chart" aria-live="polite"></div>
-              <div>
-                <div id="radarLegend" class="radar-legend"></div>
-                <p class="radar-note" id="radarNote"></p>
-              </div>
-            </div>
-            <div class="rank-bridge" id="rankBridge"></div>
-          </article>
 
-          <article class="panel visual-summary-panel">
-            <div class="section-head">
-              <div><p class="eyebrow">What you played</p><h2>Champion & item snapshot</h2></div>
-              <span class="section-hint">Current mechanics-filtered coaching cohort. Older-mechanics games remain available in match history as context.</span>
-            </div>
-            <div class="visual-summary-block">
-              <h3>Most played champions</h3>
-              <div id="championVisuals" class="game-visual-strip"></div>
-            </div>
-            <div class="visual-summary-block">
-              <h3>Most common first major items</h3>
-              <div id="itemVisuals" class="game-visual-strip"></div>
-            </div>
-          </article>
-        </section>
+
+
 
         <section class="panel supporting-findings-panel">
           <div class="section-head">
@@ -358,66 +354,13 @@
           </div>
         </section>
 
-        <section class="panel economy-panel" id="lane-economy">
-          <div class="section-head">
-            <div><p class="eyebrow" id="laneEconomyEyebrow">Role economy</p><h2 id="laneEconomyTitle">How does your role economy develop?</h2></div>
-            <span class="section-hint" id="laneEconomyHint">Current coaching cohort only. Signed role/economy charts use a fixed neutral line at zero; older-mechanics context stays in match history.</span>
-          </div>
-          <div class="chart-grid" id="chartGrid"></div>
-          <div class="consistency-summary-wrap">
-            <div class="section-subhead"><div><span>Consistency snapshot</span><strong>What does a typical game look like?</strong></div><small>Medians and the middle 50% reduce the influence of one extreme match. Favorable / close / unfavorable counts use the explicit bands shown on each card.</small></div>
-            <div class="quality-grid consistency-grid" id="consistencySummary"></div>
-          </div>
-          <div class="hidden-charts" id="hiddenCharts" hidden></div>
-        </section>
 
-        <section class="panel visual-analytics-panel" id="visual-analytics">
-          <div class="section-head">
-            <div><p class="eyebrow">Visual analytics</p><h2>See the patterns instead of reading another wall of numbers</h2></div>
-            <span class="section-hint">These graphs reuse the same evidence and thresholds as the report. Missing or thin evidence stays visible instead of being converted to zero.</span>
-          </div>
-          <div class="visual-analytics-grid">
-            <article class="visual-graph-card wide">
-              <div class="visual-graph-head"><div><span>Recent direction</span><h3>Latest sample vs prior games</h3></div><small>Dynamic scale · raw recent/prior values shown on every row</small></div>
-              <div id="recentFormGraph"></div>
-            </article>
-            <article class="visual-graph-card">
-              <div class="visual-graph-head"><div><span>Risk by phase</span><h3>Where risky deaths concentrate</h3></div><small>Deaths per 10 exposure-minutes</small></div>
-              <div id="phaseRiskGraph"></div>
-            </article>
-            <article class="visual-graph-card">
-              <div class="visual-graph-head"><div><span>Win / loss separation</span><h3>Which traits differ most across results?</h3></div><small>Hedges-corrected standardized gap</small></div>
-              <div id="outcomeEffectGraph"></div>
-            </article>
-            <article class="visual-graph-card">
-              <div class="visual-graph-head"><div><span>Objective families</span><h3>Contested presence with uncertainty</h3></div><small>Point estimate + 95% Wilson interval</small></div>
-              <div id="objectiveFamilyGraph"></div>
-            </article>
-            <article class="visual-graph-card">
-              <div class="visual-graph-head"><div><span>Champion history</span><h3>Pick mix first, clean results when comparable</h3></div><small>Dominant one-champion histories are shown as composition, not fake rankings</small></div>
-              <div id="championHistoryGraph"></div>
-            </article>
-          </div>
-        </section>
 
-        <section class="panel decisions-panel" id="decisions">
-          <div class="section-head">
-            <div><p class="eyebrow">Fights, objectives & risk</p><h2>How your decisions convert into game impact</h2></div>
-            <span class="section-hint">These are outcome-linked behavior signals, not isolated scoreboard totals.</span>
-          </div>
-          <div class="decision-metric-grid" id="decisionMetrics"></div>
-          <div id="objectiveDiagnosisSummary" class="decision-explanation"></div>
-          <div class="objective-family-overview" id="objectiveFamilyOverview"></div>
-        </section>
 
-        <section class="panel phase-diagnostic-panel" id="phase-diagnostic">
-          <div class="section-head">
-            <div><p class="eyebrow">Phase diagnosis</p><h2>Where does decision risk concentrate?</h2></div>
-            <span class="section-hint">High-risk and costly deaths are normalized by actual phase exposure. A phase is called a hotspot only when the rate and the gap to the next phase both clear the analyzer thresholds.</span>
-          </div>
-          <div class="phase-diagnostic-grid" id="phaseDiagnostic"></div>
-          <div class="source-note" id="phaseDiagnosticNote"></div>
-        </section>
+
+
+
+
 
         <section class="panel intelligence-panel" id="compoundIntelligencePanel" hidden>
           <div class="section-head">
@@ -455,16 +398,16 @@
           <div class="review-queue" id="replayReviewQueue"></div>
         </section>
 
-        <section class="panel game-arcs-panel" id="game-arcs">
+        <details class="report-disclosure"><summary>Repeated game paths &amp; turning points</summary><section class="panel game-arcs-panel" id="game-arcs">
           <div class="section-head">
-            <div><p class="eyebrow">How games unfold</p><h2>Repeated game arcs & turning points</h2></div>
+            <div><p class="eyebrow">How games unfold</p><h2>Repeated game arcs &amp; turning points</h2></div>
             <span class="section-hint">Role-relative state transitions and repeated evidence from the current coaching cohort. Patterns describe what happened; they do not prove why the result happened.</span>
           </div>
           <div class="game-arc-funnels" id="gameArcFunnels"></div>
           <div class="game-arc-patterns" id="gameArcPatterns"></div>
           <div class="game-arc-turning-points" id="gameArcTurningPoints"></div>
           <p class="source-note" id="gameArcNote"></p>
-        </section>
+        </section></details>
 
         <section class="panel match-history-panel" id="match-history">
           <div class="section-head">
@@ -495,7 +438,7 @@
           <div class="match-history-list" id="matchHistoryList"></div>
         </section>
 
-        <section class="panel" id="last20">
+        <details class="report-disclosure"><summary>Raw match table &amp; filters</summary><section class="panel" id="last20">
           <div class="section-head">
             <div><p class="eyebrow">Game evidence</p><h2>Your latest selected-role games</h2></div>
             <span class="muted" id="gameCountLabel">—</span>
@@ -522,11 +465,11 @@
               <tbody id="gamesBody"></tbody>
             </table>
           </div>
-        </section>
+        </section></details>
 
         <section class="panel champion-context-panel">
           <div class="section-head">
-            <div><p class="eyebrow">Champion & matchup intelligence</p><h2>What changes with pick and opponent?</h2></div>
+            <div><p class="eyebrow">Champion &amp; matchup intelligence</p><h2>What changes with pick and opponent?</h2></div>
             <span class="section-hint">Champion and repeated-matchup samples are compared with your own current role baseline. Small samples stay contextual, not proof.</span>
           </div>
           <div class="champion-context-grid">
@@ -552,12 +495,12 @@
             <span class="section-hint">Support champions are context for the reviewed account only. Every performance metric here belongs to the account being reviewed; teammate identities and teammate performance are not analyzed.</span>
           </div>
           <div class="support-synergy-summary" id="supportSynergySummary"></div>
-          <div class="section-subhead support-synergy-subhead"><div><span>Support champion graph</span><strong>Your clean result rate with each allied Support champion</strong></div><small>Dots show your clean WR; whiskers show 95% Wilson uncertainty. Established ranking uses the conservative lower bound.</small></div>
+          <div class="section-subhead support-synergy-subhead"><div><span>Support champion graph</span><strong>Your clean result rate with each allied Support champion</strong></div><small>Dot = your win rate · line = uncertainty. <a href="#term-wilson" data-stat-term="wilson">Why small samples rank cautiously</a></small></div>
           <div class="support-synergy-graph" id="supportSynergyGraph"></div>
           <div class="section-subhead support-synergy-subhead"><div><span>Support champion ranking</span><strong>Your results and output with each support pick</strong></div><small>Established ranking starts at 5 clean outcomes; 3–4 clean games are shown as developing samples.</small></div>
-          <div class="support-synergy-table" id="supportChampionSynergy"></div>
+          <details class="report-disclosure"><summary>All support picks: your results &amp; output</summary><div class="support-synergy-table" id="supportChampionSynergy"></div></details>
           <div class="section-subhead support-synergy-subhead"><div><span>Your ADC × support-champion context</span><strong>How does the reviewed account perform with each ADC and allied support champion?</strong></div><small>All output metrics belong to the reviewed account. The support champion is only a grouping variable; @15 gold uses direct ADC-vs-ADC evidence where available.</small></div>
-          <div class="support-pair-grid" id="supportPairingSynergy"></div>
+          <details class="report-disclosure"><summary>Your ADC and support combinations</summary><div class="support-pair-grid" id="supportPairingSynergy"></div></details>
           <p class="source-note" id="supportSynergyNote"></p>
         </section>
 
@@ -571,7 +514,7 @@
             <div id="deathMap"></div>
           </article>
           <article class="spatial-card ward-intelligence-card">
-            <div class="spatial-card-head"><div><strong>Ward placement & setup</strong><small>Ward events are counted even when Riot omits coordinates; ≤35s player-frame projection is disclosed separately.</small></div><span id="wardMapMeta">—</span></div>
+            <div class="spatial-card-head"><div><strong>Ward placement &amp; setup</strong><small>Ward events are counted even when Riot omits coordinates; ≤35s player-frame projection is disclosed separately.</small></div><span id="wardMapMeta">—</span></div>
             <div id="wardMap"></div>
             <div class="map-legend"><span><i class="legend-dot ward offensive"></i>Offensive</span><span><i class="legend-dot ward river"></i>River</span><span><i class="legend-dot ward defensive"></i>Defensive</span><span><i class="legend-dot ward setup"></i>Objective setup</span></div>
           </article>
@@ -581,7 +524,7 @@
         <section class="panel technical-shell" id="technical-analysis">
           <details id="technicalMetricsDetails">
             <summary>
-              <span><b>Full technical analysis</b><small>Open the exhaustive metric dictionary, peer evidence and model diagnostics</small></span>
+              <span><b>Detailed measurements</b><small>All metrics, opponent comparisons and calculation notes</small></span>
               <strong>Advanced</strong>
             </summary>
             <div class="technical-grid">
@@ -590,29 +533,29 @@
                 <div class="metric-list" id="advancedMetrics"><div class="technical-placeholder">Open this section to render the full metric set.</div></div>
               </article>
               <article>
-                <div class="section-head"><div><p class="eyebrow">Comparative evidence</p><h2>Peers, conversion & trends</h2></div></div>
+                <div class="section-head"><div><p class="eyebrow">Comparative evidence</p><h2>Peers, conversion &amp; trends</h2></div></div>
                 <div class="metric-list" id="benchmarkMetrics"><div class="technical-placeholder">Open this section to render the full benchmark set.</div></div>
               </article>
             </div>
           </details>
         </section>
 
-        <section class="panel trust-panel" id="trust-coverage">
-          <div class="section-head"><div><p class="eyebrow">Trust & coverage</p><h2>How much evidence supports this report?</h2></div></div>
+        <details class="report-disclosure"><summary>Report coverage &amp; sources</summary><section class="panel trust-panel" id="trust-coverage">
+          <div class="section-head"><div><p class="eyebrow">Trust &amp; coverage</p><h2>How much evidence supports this report?</h2></div></div>
           <div class="quality-grid" id="qualityGrid"></div>
           <div class="source-note" id="sourceNote"></div>
-        </section>
+        </section></details>
       </div>
 
-      <footer class="league-footer">
+      <section id="stat-guide" class="panel stat-guide"><details id="statGuideDetails"><summary><span><b>Understand the numbers</b><small>Percentage points, uncertainty, standardized gaps and the game sample</small></span></summary><div class="stat-guide-grid"><details id="term-pp" class="stat-definition"><summary>Percentage points · pp</summary><p>Subtract two percentages directly. If kill participation rises from 50% to 60%, the change is +10 percentage points. That is a 20% relative increase, a different calculation. This report spells the difference out as “points”.</p></details><details id="term-gap" class="stat-definition"><summary>Standardized gap · Hedges’ g</summary><p>An average win/loss difference divided by the metric’s typical within-group spread, with a small-sample correction. It lets CS, damage and deaths share a scale. Zero means no average gap; a size near 1 is roughly one typical spread. In the chart, right means more favorable in wins; lower-is-better metrics are flipped. It is neither a percentage nor a predicted chance of winning.</p><p class="stat-source">Method: <a href="https://www.itl.nist.gov/div898/software/dataplot/refman2/auxillar/hedgeg.htm" target="_blank" rel="noopener">NIST standardized mean differences</a>.</p></details><details id="term-wilson" class="stat-definition"><summary>Uncertainty range · Wilson interval</summary><p>The dot is the observed rate. The line shows a 95% confidence interval based on the success and opportunity counts. For 10 wins in 20 games, the observed rate is 50% and the range is about 30%–70%. A wide line means less precision. Ranking uses the lower end to avoid putting tiny lucky samples first. It does not promise a future win rate. Encounters in the same game can be linked, so event-based ranges are approximate.</p><p class="stat-source">Method: <a href="https://www.itl.nist.gov/div898/handbook/prc/section2/prc241.htm" target="_blank" rel="noopener">NIST proportion confidence intervals</a>.</p></details><details id="term-cohort" class="stat-definition"><summary>Game sample · cohort</summary><p>The games actually used for a calculation. Deep coaching uses the latest eligible 20 games in the selected role and queue, with the report’s mechanics rules applied. History can use more selected-role games from the 100-match account scan. An ADC review does not borrow your Top games. “n” is the valid game count for that particular metric; opportunity counts are separate.</p></details><details id="term-median" class="stat-definition"><summary>Typical game · median, quartiles &amp; IQR</summary><p>The median is the middle value after sorting the games. Q25 and Q75 mark the edges of the middle 50%; the IQR is the distance between them. A narrower middle range means less variation. For damage, a lower Q25 describes weaker games; for deaths, a higher Q75 describes the worse end. These values are less affected by one extreme game than an average.</p></details><details id="term-threshold" class="stat-definition"><summary>Meaningful-change scale · 1×</summary><p>Each metric has a practical threshold chosen by the analyzer, such as 150 gold or 50 damage per minute. A +2× bar means a favorable change twice that threshold, not twice the performance. These thresholds are coaching rules, not tests of statistical significance. The exact averages remain available below the chart.</p></details><details id="term-clean" class="stat-definition"><summary>Comparable results · clean outcomes</summary><p>Win-rate comparisons exclude the outcomes tagged as AFK or early surrender, and unverified results where applicable. “Clean” describes the result sample; it does not mean the player made no mistakes. The result strip still shows excluded games with a separate marker.</p></details><details id="term-peer" class="stat-definition"><summary>Your role opponent · direct peer</summary><p>The enemy player assigned to the same role in that match. Direct comparisons require a trusted role match. Population rank references use an external collection of ranked games instead; those references are approximate and are labeled separately.</p></details><details id="term-exposure" class="stat-definition"><summary>Deaths per 10 minutes · exposure</summary><p>Divide the deaths in a phase by the total minutes actually played in that phase, then multiply by 10. One death in 20 minutes gives 0.5 per 10 minutes. This keeps a long late game from looking worse just because it lasted longer. Risky, costly and severe deaths can overlap, so do not add those bars.</p></details><details id="term-output" class="stat-definition"><summary>CS, DPM, KP, KDA &amp; vision</summary><p>CS/min = minions and monsters killed per minute. DPM = champion damage per minute. KP = the share of team kills you helped with. KDA = (kills + assists) divided by deaths, using the report’s zero-death handling. Vision/min measures vision-score volume; it does not by itself show whether a ward was useful.</p></details><details id="term-association" class="stat-definition"><summary>A pattern is a review clue</summary><p>A statistic can differ between wins and losses because of opponents, game length, champion picks or changing game states. It does not show that raising that number will cause a win. Review the linked games and test one practical change. Missing measurements stay unknown rather than being counted as zero.</p></details></div></details></section><footer class="league-footer">
         <p>Bruisienator is an independent analytics project and is not endorsed or sponsored by Riot Games. League of Legends and Riot Games are trademarks of Riot Games, Inc.</p>
         <a href="/">Back to Kalenel</a>
       </footer>
     </section>
   </main>
 
-  <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/learning-review.js?v=20261006-league-web-v299" defer></script>
-  <script src="/league/app.js?v=20261006-league-web-v299" defer></script>
+  <div class="site-credit-watermark" data-version-watermark="">v817 - Made by Bruis</div>
+  <script src="/league/learning-review.js?v=20261007-league-web-v300" defer></script>
+  <script src="/league/app.js?v=20261007-league-web-v300" defer></script>
 </body>
 </html>

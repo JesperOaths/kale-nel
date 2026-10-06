@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import './check-league-saved-report-cohort-fixtures.mjs';
 import './check-league-data-quality-dom-smoke.mjs';
 import './check-league-chart-gap-accessibility.mjs';
+import './check-league-outcome-visual-direction.mjs';
 
 const read=(p)=>fs.readFileSync(p,'utf8');
 const backend=read('supabase/functions/league-api-v1/index.ts');
@@ -538,7 +539,7 @@ ok(modelDoc.includes('## Role-aware combined intelligence')&&modelDoc.includes('
 ok(app.includes('lead games · analyzer threshold 4')&&app.includes('all-game recovery opportunities')&&app.includes('analyzer threshold 8')&&app.includes('thin sample — descriptive only'), 'compound evidence must remain neutral until its joined denominator reaches analyzer coaching floors');
 ok(modelDoc.includes('## Combined-intelligence evidence floors')&&modelDoc.includes('Combining metrics must never make a thin input look more certain'), 'compound evidence floors must remain explicit in the analysis model');
 ok(app.includes('analyzer coaching threshold 8')&&app.includes('analyzer coaching threshold 4')&&app.includes('thin sample — descriptive only'), 'decision synthesis must not color thin denominator rates as mature coaching evidence');
-ok(app.includes('function wilsonInterval(')&&app.includes('95% Wilson'), 'prominent binomial coaching rates must expose Wilson sampling uncertainty');
+ok(app.includes('function wilsonInterval(')&&app.includes('95% range'), 'prominent binomial coaching rates must expose Wilson sampling uncertainty');
 ok(modelDoc.includes('## Rate uncertainty')&&modelDoc.includes('does not override the analyzer'), 'analysis model must distinguish rate uncertainty from coaching confidence and evidence floors');
 ok(modelDoc.includes('## Decision-card evidence thresholds')&&modelDoc.includes('first-reset economy-loss rate: at least 4'), 'analysis model must lock the prominent-card evidence floors');
 ok(html.includes('id="reportDrivers"')&&app.includes('function renderReportDrivers('), 'report must compress the strongest supported weakness, strength and recent direction into an action-first layer');
@@ -603,7 +604,7 @@ ok(html.includes('id="outcomeFingerprint"')&&app.includes('function renderOutcom
 ok(app.includes('function outcomeFingerprintSpecs(')&&app.includes("role==='SUPPORT'")&&app.includes("role==='JUNGLE'")&&app.includes("role==='MID'")&&app.includes("role==='TOP'"), 'win/loss fingerprint must use selected-role-specific metrics');
 ok(app.includes("opportunityLabel='opportunities',minPerSide=3")&&app.includes('ready=wins?.n>=minPerSide&&losses?.n>=minPerSide')&&app.includes('thin sample — no directional color'), 'win/loss fingerprint must keep a three-per-side default while supporting stricter long-horizon gates');
 ok(app.includes('opportunityReady=!minOpportunities')&&app.includes('ready=wins?.n>=minPerSide&&losses?.n>=minPerSide&&opportunityReady'), 'outcome fingerprint must combine configurable per-side game counts and opportunity readiness');
-ok(app.includes("ready&&hasNum(effect)?' · Hedges-corrected gap '")&&app.includes("' · standardized gap withheld'"), 'thin outcome fingerprints must withhold standardized effect size');
+ok(app.includes("ready&&hasNum(effect)?' · gap size '")&&app.includes("' · gap size unavailable'"), 'thin outcome fingerprints must withhold standardized effect size');
 ok(modelDoc.includes('Hedges-corrected standardized separation is displayed only when the card passes the complete readiness gate'), 'analysis documentation must preserve thin-fingerprint effect withholding');
 ok(app.includes("minOpportunities:4,opportunityLabel:'roam attempts'")&&app.includes("minOpportunities:12,opportunityLabel:'vision actions'"), 'roam and vision outcome metrics must retain per-side opportunity floors');
 ok(app.includes("minOpportunities:5,opportunityLabel:'contested encounters'")&&app.includes("minOpportunities:5,opportunityLabel:'joined contests'"), 'objective outcome metrics must retain per-side event floors');
@@ -624,7 +625,7 @@ ok(app.includes('b.objectiveSetupCoachingRate??b.meanGameEarlySetupObjectiveJoin
 ok(app.includes("setup=hasNum(b.objectiveSetupCoachingRate??b.meanGameEarlySetupObjectiveJoinRate??b.earlySetupObjectiveJoinRate)?fmtPct(b.objectiveSetupCoachingRate??b.meanGameEarlySetupObjectiveJoinRate??b.earlySetupObjectiveJoinRate):'n/a'"), 'phase-driver setup context must use the game-weighted coaching value');
 ok(!app.includes("setup=hasNum(b.earlySetupObjectiveJoinRate)?fmtPct(b.earlySetupObjectiveJoinRate):'n/a'"), 'phase-driver setup context must not use pooled setup rate');
 ok(!app.includes('c.setupReady,wilsonInterval(setupHits,c.setupN)')&&!app.includes('c.setupReady,wilsonInterval(Number(b.earlySetupObjectiveJoins??0),setupN)'), 'mean-game setup cards must not display pooled Wilson uncertainty as if it described the headline');
-ok(modelDoc.includes('## Coaching-facing prior objective setup aggregation'), 'analysis documentation must preserve setup aggregation semantics');ok(app.includes('function standardizedMeanGap(')&&app.includes('hedgesCorrection')&&app.includes('Largest role-specific standardized separation:'), 'win/loss fingerprint must use a role-specific small-sample-corrected standardized separation rather than raw numeric magnitude');
+ok(modelDoc.includes('## Coaching-facing prior objective setup aggregation'), 'analysis documentation must preserve setup aggregation semantics');ok(app.includes('function standardizedMeanGap(')&&app.includes('hedgesCorrection')&&app.includes('Largest win/loss difference in this sample:'), 'win/loss fingerprint must use a role-specific small-sample-corrected standardized separation rather than raw numeric magnitude');
 ok(app.includes('function reportCoachingGames(')&&app.includes('mechanicsCohortApplied===true')&&app.includes('currentMechanicsKey'), 'frontend-derived coaching analysis must follow the backend mechanics cohort when one is applied');
 ok(app.includes('function reportSelectedRole(')&&app.includes('selectedRole=reportSelectedRole(r')&&app.includes('function gameIsCoachingContext(r,g){\n  const dq=r?.dataQuality||{},selectedRole=reportSelectedRole(r'), 'frontend coaching-context helpers must share the canonical selected-role resolver instead of duplicating role precedence');
 ok(app.includes('function renderVisualSummary(r){\n  const games=reportCoachingGames(r)')&&app.includes('sourceGames=[...reportCoachingGames(r)].filter'), 'visual snapshots and coaching charts must inherit the mechanics-filtered coaching cohort');
@@ -658,7 +659,7 @@ ok(app.includes("evidenceHealthCard('Timeline behavior'")&&app.includes("evidenc
 ok(modelDoc.includes('## Top-level evidence health')&&modelDoc.includes('Ready means the dimension clears its minimum evidence floor'), 'analysis model must distinguish evidence readiness from certainty');
 ok(app.includes("if(role==='SUPPORT')")&&app.includes("if(role==='JUNGLE')")&&app.includes("Objective setup wards vs Support")&&app.includes("Vision/min vs Jungle"), 'quick-read comparison must use role-relevant direct-peer metrics for SUPPORT and JUNGLE');
 ok(app.includes("comparisonCard('Role gold @15'")&&app.includes("comparisonCard('DPM vs '+roleLabel(role)"), 'ADC/MID/TOP quick-read must preserve direct-role economy and damage comparison');
-ok(html.includes('Raw selected-role output')&&app.includes('Raw selected-role sample'), 'Raw KPI layer must remain neutral self-sample context, separate from benchmark inference');
+ok(html.includes('Your current coaching sample')&&app.includes('Raw selected-role sample'), 'Raw KPI layer must remain neutral self-sample context, separate from benchmark inference');
 ok(app.includes('function renderRoleSectionCopy(')&&app.includes("JUNGLE:{nav:'Jungle economy & tempo'")&&app.includes("SUPPORT:{nav:'Support economy & setup'"), 'report framing must adapt to selected role instead of assuming lane-centric ADC semantics');
 ok(html.includes('<h3>Cohort context</h3>')&&app.includes('Trusted role peer')&&app.includes('Current mechanics'), 'role-pure report context must surface evidence construction rather than a redundant role breakdown');
 ok(modelDoc.includes('## Role-aware report framing')&&modelDoc.includes('Because reports are role-pure upstream'), 'analysis model must preserve role-aware framing and cohort-context rationale');
@@ -666,7 +667,7 @@ ok(modelDoc.includes('## Report information hierarchy')&&modelDoc.includes('Do n
 ok(app.includes("baseWindow=Math.max(1,Number(target.baseWindowGames||target.windowGames||5))")&&app.includes('new-game evidence can extend to')&&app.includes('while this target remains active'), 'practice cards must identify the five-game minimum, stable target lineage and evidence-aware extension');
 const browserStorageLines=app.split(/\r?\n/).filter(line=>/localStorage|sessionStorage|indexedDB/.test(line));
 ok(!/sessionStorage|indexedDB/.test(app), 'League must not persist Riot keys/reports in sessionStorage or IndexedDB');
-ok(browserStorageLines.every(line=>line.includes('LEAGUE_WORKSPACE_KEY')||line.includes('LEAGUE_SLOT_SELECTION_KEY')||line.includes('localStorage.getItem(LEAGUE_WORKSPACE_KEY)')||line.includes('localStorage.setItem(LEAGUE_WORKSPACE_KEY')),'Persistent League browser storage must be limited to the anonymous workspace identifier plus the selected saved-profile slot pointer');
+ok(browserStorageLines.every(line=>line.includes('LEAGUE_WORKSPACE_KEY')||line.includes('LEAGUE_SLOT_SELECTION_KEY')||line.includes('LEAGUE_PROFILE_PREFS_KEY')||line.includes('localStorage.getItem(LEAGUE_WORKSPACE_KEY)')||line.includes('localStorage.setItem(LEAGUE_WORKSPACE_KEY')),'Persistent League browser storage must be limited to workspace identity, selection pointer and role/pin preferences');
 ok(!/localStorage\.(?:setItem|getItem)\([^\n]*(?:riotApiKey|api.?key|report_data|match_json|timeline_json|puuid)/i.test(app),'Riot keys, reports, match payloads and PUUIDs must not be persisted in localStorage');
 
 let parseError=null;
