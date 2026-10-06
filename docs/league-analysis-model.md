@@ -3538,3 +3538,56 @@ are practical, descriptive thresholds rather than tests of statistical significa
 Behavior/economy observations may include compromised outcomes; win conversion
 always excludes those outcomes. No population reference or stale external benchmark
 is used to invent a current strength. Unmet gates produce no positive claim.
+
+## v302 spending before fighting
+
+The page retires the top-two team gold/damage conversion tiles, their history
+trends, four archetypes, clean-win-rate split and deep behavior contrast. A team
+damage rank depends on champion composition and teammates' output; crossing a
+top-two boundary does not itself establish good play or an actionable mistake.
+The backend's historical fields remain for saved-report compatibility. Sections
+v271–v284 describe that earlier implementation, not the current page.
+
+“Spending before fighting” instead asks whether rougher tracked fights coincide
+with more unspent gold. It derives its evidence from existing saved fight events
+in deduplicated `reportCoachingGames`, preserving selected-role and mechanics
+filtering. Timeline-unavailable and AFK/early-surrender games are excluded.
+No new API requests, analyzer version or report regeneration are required.
+
+An eligible fight is an active multi-kill cluster with valid start/end timestamps,
+nonnegative measured gold and known `playerDied`/`diedBeforeContribution` flags.
+Proximity-only clusters and missing/contradictory observations do not count.
+Duplicate start/end pairs within a game count once. Gold is from the latest
+timeline frame at the cluster's first kill, not the exact onset of combat.
+The comparison uses ≥1,000g versus <1,000g; this is a review cutoff, not proof that
+a worthwhile purchase or safe recall was available. Lower gold does not establish
+that the player recently shopped.
+
+Only phases containing both start types within the same game enter the comparison.
+Phases follow that game's comparable rules; Swiftplay's equal early/late boundary
+has no transition phase. For each outcome, average rates across those shared
+phases, then across games with equal game weights. This prevents event-heavy games
+from dominating; it does not control exact timing, fight difficulty or item state.
+Displayed start counts describe the contributing evidence, not denominators for
+pooled event percentages.
+
+The two outcomes are death before a recorded kill/assist and death during the
+fight. Kill/assist attribution does not measure damage or all useful contribution.
+These outcomes overlap and are not independent confirmation. A visible numerical
+comparison needs five distinct matched games and ten starts of each type. The
+shop-review cue additionally needs a ≥10-point average increase in the first
+outcome and a higher rate in at least 60% of matched games. A repeated reverse
+difference is explicitly not interpreted as a benefit from holding gold; smaller
+or inconsistent differences remain neutral. These are descriptive display gates,
+not a statistical significance test or causal finding.
+
+Replay pairs come from games closest to the average difference, then a shared
+phase closest to that game's difference. They show the earliest measured start
+of each type in that phase rather than selecting the worst death. Each button
+opens that actual game's fight evidence. The review asks about wave state,
+available purchases, objective timing and whether the fight was forced.
+
+Executable regression fixtures cover matching, equal game/phase weighting,
+selected-role/mechanics filtering, duplicate evidence, missing data, valid zero
+gold, compromised outcomes, phase boundaries including Swiftplay, opportunity and
+direction gates, and independence from final team gold/damage rank.
