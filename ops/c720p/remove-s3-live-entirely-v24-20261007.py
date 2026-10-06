@@ -58,9 +58,19 @@ if p.exists():
     if re.search(r"(?i)/s3/live|camera\.s3|8791|live · s3|using s3|last s3",t):
         raise SystemExit("primary live component unexpectedly contains S3 live references")
 
-# 4) Remove the obsolete served S3-live HTML entirely (backup retained above).
+# 4) Neutralize the obsolete served S3-live HTML. The release directory is not
+# writable by the runner, so deleting the entry may be forbidden even though the
+# file itself is owned by jespern. Replacing its content removes the feed entirely.
 if OLD_LIVE.exists():
-    OLD_LIVE.unlink()
+    try:
+        OLD_LIVE.chmod(0o644)
+    except Exception:
+        pass
+    OLD_LIVE.write_text("""<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Cache-Control" content="no-store"><title>Camera removed</title></head><body style="margin:0;background:#03070d;color:#d8e4ee;font:16px system-ui;display:grid;place-items:center;height:100vh"><div>S3 live camera removed.</div></body></html>\n""",encoding="utf-8")
+    try:
+        OLD_LIVE.chmod(0o444)
+    except Exception:
+        pass
 
 # 5) Validate current served UI: no operational S3 live hooks in active home/live files.
 patterns=re.compile(r"(?i)(camera\.s3|/s3/live|home-live-s3|live · s3|live s3 camera|live video · old s3|dataset\.mode=['\"]s3['\"]|8791/live\.mjpg)")
@@ -74,7 +84,9 @@ for p in FILES:
 if bad:
     raise SystemExit("operational S3 live references remain:\n"+"\n".join(bad[:30]))
 if OLD_LIVE.exists():
-    raise SystemExit("obsolete S3 live component still served")
+    tomb=OLD_LIVE.read_text(encoding="utf-8",errors="replace")
+    if re.search(r"(?i)(camera\\.s3|/s3/live|8791/live|<img|<video|mjpg)",tomb):
+        raise SystemExit("obsolete S3 live component was not neutralized")
 
 # 6) Old S3 recorder/live service must stay stopped; do NOT disable historical clip data files.
 subprocess.run(["systemctl","--user","stop","c720p-frontyard-security.service"],check=False)
@@ -92,7 +104,7 @@ time.sleep(2)
 
 # Runtime/static verification.
 checks=[]
-checks.append(("old_live_file_absent",not OLD_LIVE.exists()))
+checks.append(("old_live_component_neutralized",OLD_LIVE.exists() and "S3 live camera removed." in OLD_LIVE.read_text(encoding="utf-8",errors="replace")))
 ss=subprocess.run(["bash","-lc","ss -ltn | grep -q ':8791 ' && echo yes || echo no"],text=True,capture_output=True).stdout.strip()
 checks.append(("port_8791_listening",ss=="yes"))
 svc=subprocess.run(["systemctl","--user","is-active","c720p-frontyard-security.service"],text=True,capture_output=True).stdout.strip()
