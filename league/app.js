@@ -1,4 +1,4 @@
-/* 20261006-league-web-v298 · uncertainty-aware visual analytics */
+/* 20261006-league-web-v299 · long-horizon direction graph */
 (function(){
 'use strict';
 
@@ -1464,7 +1464,7 @@ function renderLongOutcomeFingerprint(h,role){
 function renderLongHorizon(r){
   const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),stability=$('historyStabilityTrend'),consistency=$('historyConsistency'),champions=$('historyChampionMix'),outcome=$('longOutcomeFingerprint'),outcomeNote=$('longOutcomeFingerprintNote'),note=$('longHorizonNote');if(!kpi||!trend)return;
   const s=h.summary||{},role=canonicalRole(h.selectedRole||r?.dataQuality?.selectedRole||state.selectedRole),games=Number(h.sampleGames||0);
-  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';if(outcome)outcome.innerHTML='';if(outcomeNote)outcomeNote.textContent='';const aw=$('resourceOutputArchetypesWrap'),ac=$('resourceOutputContrast'),hb=$('highResourceBehaviorContrast'),ag=$('resourceOutputArchetypes'),ad=$('resourceOutputArchetypeDetail');if(aw)aw.hidden=true;if(ac)ac.innerHTML='';if(hb){hb.hidden=true;hb.innerHTML='';}if(ag)ag.innerHTML='';if(ad){ad.hidden=true;ad.innerHTML='';}if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
+  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if($('longHorizonTrendGraph'))$('longHorizonTrendGraph').innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';if(outcome)outcome.innerHTML='';if(outcomeNote)outcomeNote.textContent='';const aw=$('resourceOutputArchetypesWrap'),ac=$('resourceOutputContrast'),hb=$('highResourceBehaviorContrast'),ag=$('resourceOutputArchetypes'),ad=$('resourceOutputArchetypeDetail');if(aw)aw.hidden=true;if(ac)ac.innerHTML='';if(hb){hb.hidden=true;hb.innerHTML='';}if(ag)ag.innerHTML='';if(ad){ad.hidden=true;ad.innerHTML='';}if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
   const laner=['ADC','MID','TOP'].includes(role),roleCounts=h.roleCounts||{},otherRoleGames=Object.entries(roleCounts).reduce((n,[rk,count])=>n+(canonicalRole(rk)!==role?Number(count||0):0),0);
   const roleVolume=laner
     ?{label:'Lane minions @10',value:hasNum(s?.laneCs10?.value)?fmt(s.laneCs10.value,1):'n/a',sub:String(s?.laneCs10?.n||0)+' Riot match-level lane observations'}
@@ -1504,6 +1504,7 @@ function renderLongHorizon(r){
   const lowResourceTrend=laner?{label:'Lower gold → top-2 damage',obj:h?.trend?.lowResourceTop2DamageRate,unit:'percent',inverse:false,threshold:10}:null;
   const supportVisionTrend=role==='SUPPORT'?{label:'Team vision share',obj:h?.trend?.visionShare,unit:'percent',inverse:false,threshold:3}:null;
   const specs=[{label:'CS / min',obj:h?.trend?.csMin,unit:'csmin',inverse:false,threshold:.08},roleTrend,...(supportVisionTrend?[supportVisionTrend]:[]),...(roleOutputTrend?[roleOutputTrend]:[]),...(lowResourceTrend?[lowResourceTrend]:[]),{label:'Damage / min',obj:h?.trend?.dpm,unit:'dpm',inverse:false,threshold:60},{label:'Death downtime',obj:h?.trend?.deadTimePct,unit:'percent',inverse:true,threshold:1.5},{label:'Damage share − gold share',obj:h?.trend?.damageEfficiencyPp,unit:'pp',inverse:false,threshold:1.5},{label:'Turret damage / min',obj:h?.trend?.turretDamagePerMin,unit:'dpm',inverse:false,threshold:35}];
+  renderLongHorizonDirectionGraph(specs);
   trend.innerHTML=specs.map(x=>historyTrendCard(x.label,x.obj,x.unit,x.inverse,x.threshold)).join('');
   if(stability){
     const st=h.stabilityTrend||{},roleStability=laner
@@ -3889,6 +3890,39 @@ function visualTrendFormat(v,unit){
   if(unit==='minutes')return signed(v,1)+'m';
   if(unit==='cs')return signed(v,1)+' CS';
   return fmt(v,2);
+}
+function historyDirectionValue(v,unit){
+  if(!hasNum(v))return'n/a';
+  if(unit==='percent')return fmtPct(v);
+  if(unit==='pp')return signed(v,1)+' pp';
+  if(unit==='dpm')return fmtInt(v);
+  if(unit==='cs')return fmt(v,1);
+  if(unit==='csmin')return fmt(v,2);
+  return fmt(v,2);
+}
+function historyDirectionDelta(v,unit){
+  if(!hasNum(v))return'n/a';
+  if(unit==='percent'||unit==='pp')return signed(v,1)+' pp';
+  if(unit==='dpm')return signed(v,0);
+  if(unit==='cs')return signed(v,1);
+  if(unit==='csmin')return signed(v,2);
+  return signed(v,2);
+}
+function renderLongHorizonDirectionGraph(specs){
+  const box=$('longHorizonTrendGraph');if(!box)return;
+  const rows=(specs||[]).map(spec=>{
+    const o=spec?.obj,recent=hasNum(o?.recent)?Number(o.recent):null,prior=hasNum(o?.prior)?Number(o.prior):null,recentN=Number(o?.recentN||0),priorN=Number(o?.priorN||0),threshold=Math.max(.0001,Number(spec?.threshold||0));
+    if(recentN<5||priorN<5||recent==null||prior==null||!(threshold>0))return null;
+    const rawDelta=recent-prior,signal=(spec.inverse?-1:1)*rawDelta/threshold;
+    return{label:spec.label,value:signal,tone:Math.abs(signal)<1?'neutral':signal>0?'good':'bad',severity:visualRecentSeverity(signal),valueLabel:signed(signal,1)+'×',
+      rawLine:'Latest '+historyDirectionValue(recent,spec.unit)+' (n='+recentN+') · prior '+historyDirectionValue(prior,spec.unit)+' (n='+priorN+') · Δ '+historyDirectionDelta(rawDelta,spec.unit),
+      detail:spec.label+' · latest '+historyDirectionValue(recent,spec.unit)+' vs prior '+historyDirectionValue(prior,spec.unit)+' · '+signed(signal,1)+' practical-change thresholds'};
+  }).filter(Boolean).sort((a,b)=>Math.abs(Number(b.value))-Math.abs(Number(a.value))||String(a.label).localeCompare(String(b.label)));
+  if(!rows.length){box.innerHTML=visualGraphEmpty('The 100-game history does not yet have five valid observations on both sides for a normalized direction graph.');return;}
+  const strongest=rows[0],observed=Math.max(...rows.map(x=>Math.abs(Number(x.value)))),bound=Math.max(2.5,niceCeil(Math.max(observed*1.14,2.5),.5)),scale='±'+fmt(bound,bound%1?1:0)+'×';
+  box.innerHTML='<div class="recent-direction-summary history-direction-summary"><span><b>Strongest 20-vs-20 shift</b><strong class="tone-'+esc(strongest.tone)+'">'+esc(strongest.label)+' '+esc(strongest.valueLabel)+'</strong></span><span><b>Dynamic chart range</b><strong>'+esc(scale)+'</strong></span><span><b>Window</b><strong>Latest 20 vs previous up to 20</strong></span></div>'+
+    visualDivergingSvg(rows,{rowDetails:true,thresholdBand:true,axisSuffix:'×',ariaLabel:'Long-horizon latest twenty versus previous twenty normalized direction',leftLabel:'slipping',rightLabel:'improving'})+
+    '<p class="visual-graph-reading"><b>Long-horizon read:</b> this uses match-level history rather than the deep Last-5 pulse. Each bar is normalized by that metric’s existing practical-change threshold; raw latest/prior values and valid-game counts are printed underneath. This is descriptive history movement, not a causal trend test.</p>';
 }
 function visualRecentSeverity(signal){
   const magnitude=Math.abs(Number(signal));
