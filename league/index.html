@@ -8,9 +8,9 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends analysis with a 100-game role scan, evidence-backed Last-20 deep coaching, long-horizon trends and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261005-league-web-v295">
-  <script>window.GEJAST_PAGE_VERSION='v817';</script>
-  <script src="/gejast-config.js?v817&rev=20261002-public-bootstrap-r4"></script>
+  <link rel="stylesheet" href="/league/styles.css?v=20261006-league-web-v296">
+  <script>window.GEJAST_PAGE_VERSION='v818';</script>
+  <script src="/gejast-config.js?v818&rev=20261002-public-bootstrap-r4"></script>
 </head>
 <body>
   <a class="skip-link" href="#league-main">Skip to League analysis</a>
@@ -370,6 +370,35 @@
           <div class="hidden-charts" id="hiddenCharts" hidden></div>
         </section>
 
+        <section class="panel visual-analytics-panel" id="visual-analytics">
+          <div class="section-head">
+            <div><p class="eyebrow">Visual analytics</p><h2>See the patterns instead of reading another wall of numbers</h2></div>
+            <span class="section-hint">These graphs reuse the same evidence and thresholds as the report. Missing or thin evidence stays visible instead of being converted to zero.</span>
+          </div>
+          <div class="visual-analytics-grid">
+            <article class="visual-graph-card wide">
+              <div class="visual-graph-head"><div><span>Recent direction</span><h3>Latest sample vs prior games</h3></div><small>Normalized by each metric’s practical-change threshold</small></div>
+              <div id="recentFormGraph"></div>
+            </article>
+            <article class="visual-graph-card">
+              <div class="visual-graph-head"><div><span>Risk by phase</span><h3>Where risky deaths concentrate</h3></div><small>Deaths per 10 exposure-minutes</small></div>
+              <div id="phaseRiskGraph"></div>
+            </article>
+            <article class="visual-graph-card">
+              <div class="visual-graph-head"><div><span>Win / loss separation</span><h3>Which traits differ most across results?</h3></div><small>Hedges-corrected standardized gap</small></div>
+              <div id="outcomeEffectGraph"></div>
+            </article>
+            <article class="visual-graph-card">
+              <div class="visual-graph-head"><div><span>Objective families</span><h3>Contested presence by objective type</h3></div><small>Joined / contested denominator shown on every bar</small></div>
+              <div id="objectiveFamilyGraph"></div>
+            </article>
+            <article class="visual-graph-card">
+              <div class="visual-graph-head"><div><span>Champion history</span><h3>Clean win rate by your champion</h3></div><small>Ordered by clean sample depth, not by win rate</small></div>
+              <div id="championHistoryGraph"></div>
+            </article>
+          </div>
+        </section>
+
         <section class="panel decisions-panel" id="decisions">
           <div class="section-head">
             <div><p class="eyebrow">Fights, objectives & risk</p><h2>How your decisions convert into game impact</h2></div>
@@ -522,6 +551,8 @@
             <span class="section-hint">Support champions are context for the reviewed account only. Every performance metric here belongs to the account being reviewed; teammate identities and teammate performance are not analyzed.</span>
           </div>
           <div class="support-synergy-summary" id="supportSynergySummary"></div>
+          <div class="section-subhead support-synergy-subhead"><div><span>Support champion graph</span><strong>Your clean result rate with each allied Support champion</strong></div><small>Bars show the reviewed account only; markers show the Wilson lower bound used by the established ranking.</small></div>
+          <div class="support-synergy-graph" id="supportSynergyGraph"></div>
           <div class="section-subhead support-synergy-subhead"><div><span>Support champion ranking</span><strong>Your results and output with each support pick</strong></div><small>Established ranking starts at 5 clean outcomes; 3–4 clean games are shown as developing samples.</small></div>
           <div class="support-synergy-table" id="supportChampionSynergy"></div>
           <div class="section-subhead support-synergy-subhead"><div><span>Your ADC × support-champion context</span><strong>How does the reviewed account perform with each ADC and allied support champion?</strong></div><small>All output metrics belong to the reviewed account. The support champion is only a grouping variable; @15 gold uses direct ADC-vs-ADC evidence where available.</small></div>
@@ -579,8 +610,8 @@
     </section>
   </main>
 
-  <div class="site-credit-watermark" data-version-watermark>v817 - Made by Bruis</div>
-  <script src="/league/learning-review.js?v=20261005-league-web-v295" defer></script>
-  <script src="/league/app.js?v=20261005-league-web-v295" defer></script>
+  <div class="site-credit-watermark" data-version-watermark>v818 - Made by Bruis</div>
+  <script src="/league/learning-review.js?v=20261006-league-web-v296" defer></script>
+  <script src="/league/app.js?v=20261006-league-web-v296" defer></script>
 </body>
 </html>
