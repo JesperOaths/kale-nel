@@ -3419,3 +3419,18 @@ The report now includes a dedicated visual analytics dashboard. It does not intr
 - **ADC + Support champion graph** plots the reviewed account's clean win rate grouped by allied Support champion. Established and developing sample tiers stay distinct, and the 95% Wilson lower-bound marker remains the ranking safeguard. No human teammate identity or teammate performance metric is introduced.
 
 All graph renderers preserve unavailable evidence as unavailable rather than coercing missing values to zero. The visual dashboard is therefore another view of the same evidence model, not a second analytics pipeline.
+
+
+## v297 recent-direction visualization correction
+
+The v296 recent-direction chart used a fixed ±2.5× display range. Supported changes larger than that range were numerically correct but visually clipped, which made materially different shifts appear to have the same bar length. v297 removes that mismatch.
+
+- The display range now expands beyond the largest supported absolute shift with about 14% headroom and a readable half-threshold rounding step.
+- Every metric row shows the raw recent value, raw prior value, both sample sizes and the raw delta in the metric's native unit.
+- The normalized ×threshold value sits at the end of its bar instead of being detached at the far edge of the card.
+- Rows are ordered by absolute normalized movement so the largest supported recent change is immediately visible.
+- Severity shading distinguishes near-threshold, moderate, strong and extreme supported movement without changing any evidence gate.
+- The axis explicitly labels slipping on the left and improving on the right. Inverse metrics keep their established direction flip before normalization.
+- Normalized bar length is explicitly described as movement relative to the practical-change threshold, not causal importance.
+
+This is a presentation correction only. It does not alter analyzer metrics, recent/prior windows, evidence floors or coaching conclusions.
