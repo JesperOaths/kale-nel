@@ -980,8 +980,8 @@ assert.ok(app.includes("}else if(role==='JUNGLE'){\n    specs=[")&&app.includes(
 assert.ok(app.includes("}else if(role==='TOP'){\n    specs=[")&&app.includes("Pre-objective side-lane deaths / game"),'Top rolling progress must include side-lane exposure rather than generic carry output');
 assert.ok(modelDoc.includes('## Role-specific rolling progress comparison'),'Role-specific progress semantics must remain documented');
 assert.ok(api.includes('kpGames:kpGames.length')&&api.includes('vpmGames:vpmGames.length')&&api.includes('game3PlusPeerKpDelta')&&api.includes('game3PlusPeerVpmDelta'),'Session backend must expose role-ready KP/VPM samples and paired deltas');
-assert.ok(app.includes("if(r==='SUPPORT'){")&&app.includes("'Vision/min '+fmt(sample.vpm,2)")&&app.includes("role==='JUNGLE'"),'Session cards must switch output by selected role');
-assert.ok(app.includes("game 3+ vision/min")&&app.includes("quick post-loss CS/min"),'Session delta copy must use Support/Jungle role-relevant metrics');
+assert.ok(app.includes("if(r==='SUPPORT'){")&&app.includes("'Vision/min vs Support opponent '")&&app.includes("r==='JUNGLE'"),'Session cards must switch to opponent-adjusted output by selected role');
+assert.ok(app.includes("game 3+ vision/min-vs-peer")&&app.includes("game 3+ CS/min-vs-peer"),'Session delta copy must use Support/Jungle role-relevant opponent-adjusted metrics');
 assert.ok(modelDoc.includes('## Role-aware session habit model'),'Role-aware session semantics must remain documented');
 assert.ok(api.includes('g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false'),'Session Gold @15 must fail closed without a trusted direct-role peer');
 assert.ok(app.includes("role=canonicalRole(current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole||current?.summary?.primaryRole)"),'Rolling progress must resolve the same selected coaching role as the rest of the report');
@@ -1166,7 +1166,7 @@ assert.ok(api.includes('conf(visionActionGames)')&&api.includes('conf(visionSetu
 assert.ok(modelDoc.includes('## v240 cross-game vision coaching'),'Cross-game vision coaching safeguards must remain documented');
 
 assert.ok(api.includes('peerDpm)>=120&&["ADC","MID","TOP"].includes(primaryRole)'),'Positive damage coaching must stay carry-role scoped');
-assert.ok(api.includes('d>=120&&["ADC","MID","TOP"].includes(primaryRole)'),'Recent positive DPM trend must stay carry-role scoped');
+assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&recentTrend.peerDpmDelta.recentN>=4'),'Recent direct-opponent DPM trend must stay carry-role scoped');
 assert.ok(api.includes('["ADC","MID","TOP"].includes(primaryRole)&&topDamage>=Math.max'),'Top-team-damage highlight must stay carry-role scoped');
 assert.ok(modelDoc.includes('## v241 carry-role damage headline safety'),'Carry-role damage headline policy must remain documented');
 
@@ -1338,7 +1338,7 @@ assert.ok(api.includes('visionLeaderRate:boolRate')&&api.includes('visionShare:m
 assert.ok(app.includes("detailCard('Team gold rank'")&&app.includes("detailCard('Team vision rank'"),'Per-game details must expose already-computed gold and vision team ranks');
 assert.ok(app.includes('Previous report withheld.')&&app.includes('previousScope=reportRoleScopeViolations(previous,role)'),'Progress comparison must fail closed on cross-role previous reports');
 assert.ok(modelDoc.includes('## v268 role-specific unused-metric promotion'),'Role-specific unused-metric promotion must remain documented');
-assert.ok(api.includes('stabilityTrend:{csMin:stability')&&api.includes('recentIqr:ai')&&api.includes('priorIqr:bi'),'Long-horizon history must expose median and IQR shifts separately');
+assert.ok(api.includes('stabilityTrend:{peerCsMinDelta:stability')&&api.includes('recentIqr:ai')&&api.includes('priorIqr:bi'),'Long-horizon history must expose opponent-adjusted median and IQR shifts separately');
 assert.ok(api.includes('championHistory=[')&&api.includes('historyShare:pct(list.length,history.length)')&&app.includes('history-champion-card'),'Long-horizon history must expose reviewed-account champion-conditioned performance, not only champion counts');
 assert.ok(api.includes('longOutcomeFingerprint={')&&api.includes('directionalEligible:useCleanOutcome')&&html.includes('id="longOutcomeFingerprint"')&&app.includes('function renderLongOutcomeFingerprint'),'Long-horizon result fingerprint must use a visible clean-outcome-gated match-level model');
 assert.ok(api.includes('baseWindowGames:5')&&api.includes('maxWindowGames:20')&&api.includes('windowPolicy:"minimum_5_extend_until_evidence_max_20"')&&app.includes("'extended for fresh evidence'")&&app.includes("'inconclusive — fresh evidence floor not reached'"),'Rare-opportunity practice targets must extend beyond the five-game minimum without extending forever');
