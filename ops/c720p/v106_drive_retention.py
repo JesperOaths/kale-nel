@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import json,pathlib,subprocess,time,os,datetime,shutil,urllib.request
+import json,pathlib,subprocess,time,os,datetime,shutil,urllib.request,fcntl
 
 HOME=pathlib.Path("/home/jespern")
 BASE=HOME/"c720p-home-hub"
@@ -10,6 +10,7 @@ DET=BASE/"state/person-detection-index.json"
 EVENTS=pathlib.Path("/opt/homeassistant/config/www/frontyard-security-new/events.json")
 CACHE=BASE/"drive-playback-cache"
 TH=BASE/"drive-archive-thumbs"
+LOCK=BASE/"state/drive-security-archive.lock"
 REPORT={"policy_version":"v106-person-protected-drive","started_at":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),"deleted":[]}
 
 def load(p,d):
@@ -32,6 +33,13 @@ def event_rows(d):
         for k in ("events","items","clips"):
             if isinstance(d.get(k),list):return d[k]
     return []
+
+lock_fh=open(LOCK,"a+")
+try:
+    fcntl.flock(lock_fh,fcntl.LOCK_EX|fcntl.LOCK_NB)
+except BlockingIOError:
+    print(json.dumps({"policy_version":"v106-person-protected-drive","action":"archive_busy_noop"},indent=2))
+    raise SystemExit(0)
 
 cfg=load(CFG,{})
 idx=load(IDX,{"items":[]})
@@ -90,7 +98,7 @@ for x in ordered:
     di=ditems.get("new:"+local,{}) if isinstance(ditems,dict) else {}
     st=str(di.get("person_status") or x.get("person_status") or "unknown")
     age=(now-parse_ts(x.get("timestamp")))/86400 if parse_ts(x.get("timestamp")) else 99999
-    is_manual=local in manual or bool(x.get("manual_saved"))
+    is_manual=local in manual or bool(x.get("manual_saved")) or str(x.get("selection_reason") or "").startswith("manual")
     if is_manual:protected["manual"]+=1;continue
     if st=="confirmed_person":
         # Confirmed people in the front-garden camera are evidence. Never delete
