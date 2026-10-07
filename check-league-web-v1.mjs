@@ -87,7 +87,7 @@ assert.ok(app.includes('This section analyzes only the reviewed account.'),'Supp
 assert.ok(app.includes("x.sampleTier==='developing'")&&app.includes('Developing support sample'),'Frontend must keep 3–4 game support-champion samples neutral/contextual rather than presenting them as established');
 assert.ok(!api.includes('allySupportPuuid'),'Support-player analysis must not expose allied PUUIDs in the report contract');
 assert.ok(app.includes('function renderSupportSynergy')&&app.includes('Recent form · latest 5 vs prior games'),'Frontend must expose support synergy and concrete recent-form evidence');
-assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261007-league-web-v304'),'Support synergy panel and frontend cache-bust must be present');
+assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261007-league-web-v305'),'Support synergy panel and frontend cache-bust must be present');
 assert.ok(html.includes('id="visual-analytics"')&&html.includes('id="recentFormGraph"')&&html.includes('id="phaseRiskGraph"')&&html.includes('id="outcomeEffectGraph"')&&html.includes('id="objectiveFamilyGraph"')&&html.includes('id="championHistoryGraph"'),'League report must expose the visual analytics dashboard with five distinct graph surfaces');
 assert.ok(app.includes('function renderVisualAnalytics')&&app.includes('function visualDivergingSvg')&&app.includes('function visualPercentBarSvg')&&app.includes('function visualGroupedBarsSvg'),'Visual analytics must use explicit reusable graph renderers rather than decorative static markup');
 assert.ok(app.includes("valueLabel:signed(signal,1)+'×'")&&app.includes("spec.inverse?-1:1")&&app.includes("Number(x.games||0)>=5&&Number(x.exposureMinutes||0)>=20"),'Recent-form and phase-risk graphs must preserve practical-change direction and the existing phase evidence floor');
@@ -396,10 +396,14 @@ assert.ok(html.includes('id="sessionHabitsAnswer"')&&app.includes('answer.headli
 assert.ok(api.includes('function baselineGame')&&api.includes('peerDpmDelta:metric(peerRows')&&app.includes('Opponent-adjusted read:'),'Long-horizon direction must use direct same-role opponent deltas across match-only history');
 assert.ok(app.includes("spec('DPM vs ADC peer',t.peerDpmDelta")&&app.includes("spec('CS/min vs ADC peer',t.peerCsMinDelta")&&app.includes("spec('Deaths vs ADC peer',t.peerDeathsDelta"),'ADC recent-direction graph must use direct-opponent output deltas rather than raw DPM/CS');
 assert.ok(html.includes('id="teamfightDecisionPanel"')&&app.includes('function renderTeamfightDecisionOverview(')&&api.includes('function fightArea('),'League decisions must expose fight geography and cross-map trade review');
-assert.ok(html.includes('id="decisionIntelligencePanel"')&&html.includes('/league/decision-intelligence.js?v=20261007-league-web-v304')&&app.includes('window.renderDecisionIntelligence?.(r)'),'Decision intelligence panel must be wired into report rendering');
+assert.ok(html.includes('id="decisionIntelligencePanel"')&&html.includes('/league/decision-intelligence.js?v=20261007-league-web-v305')&&app.includes('window.renderDecisionIntelligence?.(r)'),'Decision intelligence panel must be wired into report rendering');
 assert.ok(decisionBackend.includes('fight_decision_ledger')&&decisionBackend.includes('automatic_replay_shortlist')&&decisionBackend.includes('requeue_sweet_spot')&&decisionBackend.includes('expected_performance_residual'),'Decision intelligence backend must retain the requested decision, residual, requeue and replay families');
 assert.equal((decisionBackend.split('analytics.push(metric(').length-1),25,'Decision intelligence backend must expose exactly 25 requested analytic families');
-assert.ok(decisionUi.includes('All 25 additions')&&decisionUi.includes("statusLabel")&&decisionUi.includes("Proxy"),'Decision intelligence UI must expose all 25 and visually distinguish proxy evidence');
+assert.ok(decisionUi.includes('Decision intelligence · visual review')&&decisionUi.includes("statusLabel")&&decisionUi.includes("Proxy"),'Decision intelligence UI must expose all 25 and visually distinguish proxy evidence');
+assert.ok(decisionUi.includes("function fightMap(")&&decisionUi.includes("function scatter(")&&decisionUi.includes("function slope(")&&decisionUi.includes("function sparkline("),'Decision intelligence must include reusable map, scatter, slope and trend visual renderers');
+assert.ok(decisionUi.includes('What it measures')&&decisionUi.includes('Conclusion from this sample')&&decisionUi.includes('What to review'),'Every decision analytic card must explain the metric, conclude from the sample, and give a replay cue');
+assert.ok(decisionUi.includes("case'pre_fight_positioning':return fightMap(report,'pre')")&&decisionUi.includes("case'geographical_clusters':return fightMap(report,'geo')")&&decisionUi.includes("case'objective_trading':return fightMap(report,'trade')"),'Map-suitable decision analytics must reuse Summoner’s Rift spatial review');
+assert.ok(decisionUi.includes("case'champion_tendencies':return championVisual(r)")&&decisionUi.includes("case'matchup_adjusted_lane':return matchupVisual(r)"),'Champion and matchup analytics must use portrait-backed visual cards');
 assert.ok(api.includes('crossMapTradeSupported')&&api.includes('joinReviewPriority')&&api.includes('tradeWindowSec:90'),'Skipped-fight review must use bounded compensation evidence and explicit join-review triage');
 
 assert.ok(api.includes('timelineGames:timeline.length')&&api.includes('peerDpmGames:peerDpmGames.length')&&api.includes('minGamesPerHeadlineMetricGroup:3'),'Session model must export peer-adjusted metric coverage and keep a three-per-side headline evidence floor');
@@ -891,7 +895,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261007-league-web-v304'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261007-league-web-v305'),'League assets must cache-bust the current frontend');
 assert.ok(html.includes('id="spendingFightComparison"')&&app.includes('function renderSpendingFightComparison('),'Spending comparison must render from saved fight evidence');
 assert.ok(css.includes('.spending-outcome-grid')&&css.includes('.spending-replay-grid')&&css.includes('progress::-webkit-progress-value'),'Spending outcomes and replay pairs must be visually comparable');
 assert.ok(modelDoc.includes('## v302 spending before fighting'),'Replacement comparison and retired team-rank split must be documented');
