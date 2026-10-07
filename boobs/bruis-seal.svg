@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-labelledby="t d">
+  <title id="t">Seal of Approval from Bruis</title>
+  <desc id="d">Decorative burgundy and gold approval stamp.</desc>
+  <defs>
+    <radialGradient id="wax" cx="40%" cy="30%" r="75%">
+      <stop offset="0" stop-color="#f1c4cf"/>
+      <stop offset="0.45" stop-color="#d2718d"/>
+      <stop offset="1" stop-color="#9d3b5d"/>
+    </radialGradient>
+    <filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="8" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3"/>
+    </filter>
+  </defs>
+  <path fill="url(#wax)" stroke="#f3d9a0" stroke-width="4" filter="url(#rough)" d="M120 9l13 9 16-5 10 14 17 1 6 16 16 7 1 17 14 10-5 16 9 13-9 13 5 16-14 10-1 17-16 7-6 16-17 1-10 14-16-5-13 9-13-9-16 5-10-14-17-1-6-16-16-7-1-17-14-10 5-16-9-13 9-13-5-16 14-10 1-17 16-7 6-16 17-1 10-14 16 5z"/>
+  <circle cx="120" cy="120" r="82" fill="none" stroke="#4c1022" stroke-width="4" opacity=".75"/>
+  <circle cx="120" cy="120" r="70" fill="none" stroke="#f2ddb0" stroke-width="2" stroke-dasharray="3 7"/>
+  <path d="M85 112l23 23 49-54" fill="none" stroke="#4c1022" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" opacity=".88"/>
+  <text x="120" y="54" text-anchor="middle" fill="#4c1022" font-family="Georgia,serif" font-size="17" font-weight="700" letter-spacing="2">BRUIS</text>
+  <text x="120" y="188" text-anchor="middle" fill="#4c1022" font-family="Arial,sans-serif" font-size="10" font-weight="800" letter-spacing="1.4">SEAL OF APPROVAL</text>
+  <circle cx="60" cy="120" r="4" fill="#f2ddb0"/><circle cx="180" cy="120" r="4" fill="#f2ddb0"/>
+</svg>
