@@ -1,4 +1,4 @@
-/* 20261007-league-web-v309 · decision-intelligence integration and visual coherence */
+/* 20261007-league-web-v319 · full review audit and decision-dashboard integration */
 (function(){
 'use strict';
 
@@ -4970,5 +4970,7 @@ $('newSavedProfileBtn')?.addEventListener('click',startNewProfile);
 $('forgetSavedProfileBtn')?.addEventListener('click',forgetSavedProfile);
 
 const initialTerm=String(globalThis.location?.hash||'').slice(1);if(initialTerm==='stat-guide')$('statGuideDetails').open=true;else if(initialTerm.startsWith('term-'))openStatGuide(initialTerm.slice(5));
+// The separate decision dashboard shares these UI helpers with this private report scope.
+Object.assign(window,{openReplayReviewMatch,worldToMapPoint,map11Image,map11FallbackImage,championIcon,bindMapFallbacks});
 boot().catch(e=>{log('Startup failed: '+e.message,'bad');$('backendState').textContent='Startup failed';$('backendState').className='pill error';});
 })();

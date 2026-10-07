@@ -32,6 +32,17 @@ vm.createContext(context);
 const names=['hasNum','fmt','fmtPct','signed','gameTimestampMs','longitudinalMetricSpecs','trajectoryMetricReady','trajectoryComparison','longitudinalTrajectoryRead','trajectoryValueLabel','trajectoryDateRange','trajectorySparkline','renderLongitudinalProgress','transitionWindowSignals','transitionQuality','transitionMatrixHtml','synthesisAgreementModel','playerStyleModel','reviewEvidenceChip','decisionAnalytic','renderPlayerReview'];
 vm.runInContext(names.map(source).join('\n'),context);
 const plain=x=>JSON.parse(JSON.stringify(x));
+// Evaluate the real app wrapper: helper declarations inside an IIFE are not window exports.
+const genericNode={addEventListener:()=>{},value:'ADC'},bridgeContext={
+  window:{GEJAST_CONFIG:{}},document:{getElementById:()=>genericNode,querySelectorAll:()=>[],addEventListener:()=>{}},
+  localStorage:{getItem:()=>null,setItem:()=>{},removeItem:()=>{}},location:{hash:''},
+  crypto:{randomUUID:()=> '00000000-0000-4000-8000-000000000001'},console,URL,TextEncoder
+};
+vm.createContext(bridgeContext);
+vm.runInContext(app.replace('boot().catch(e=>','if(false)boot().catch(e=>'),bridgeContext);
+for(const helper of ['openReplayReviewMatch','worldToMapPoint','map11Image','map11FallbackImage','championIcon','bindMapFallbacks'])assert.equal(typeof bridgeContext.window[helper],'function','Decision dashboard bridge: '+helper);
+assert.equal(bridgeContext.window.worldToMapPoint(100000,100000),null,'dashboard maps must use the core coordinate validity gate');
+assert.ok(bridgeContext.window.map11Image().includes('16.19.1'));
 const w=(label,value,games=20,count=games)=>({label,games,peerCsMinDelta:{value,n:count},oldestGameStartTimestamp:1700000000000,newestGameStartTimestamp:1700100000000});
 const spec={key:'peerCsMinDelta',label:'Farm vs opponent',unit:'csmin',threshold:.15};
 
