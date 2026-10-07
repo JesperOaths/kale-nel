@@ -93,6 +93,21 @@ function mergedWindowMinutes(rows:any[]){
   }
   return total;
 }
+function sampledZoneExposure(games:any[]){
+  const out=new Map<string,number>();
+  for(const g of games){
+    const fs=arr(g?.frameSamples).filter((x:any)=>finite(x?.time)&&txt(x?.fightZone)!=="")
+      .sort((a:any,b:any)=>n(a.time)-n(b.time));
+    for(let i=0;i<fs.length;i++){
+      const cur=fs[i],z=txt(cur?.fightZone||"unknown");
+      if(!z||z==="unknown"||z.includes("base"))continue;
+      const next=fs[i+1],dt=next?clamp(n(next.time)-n(cur.time),0,1.5):clamp(n(g?.durationMinutes||0)-n(cur.time),0,1);
+      if(dt<=0)continue;
+      out.set(z,(out.get(z)||0)+dt);
+    }
+  }
+  return out;
+}
 function nextEventAfter(g:any, minute:number){
   const rows:any[]=[];
   for(const e of fightEvents(g)) { const t=eventMin(e); if(finite(t)&&n(t)>=minute) rows.push({kind:"fight",t:n(t),raw:e}); }
@@ -298,7 +313,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     resetRows.push({matchId:g.matchId,shopMin:round(sm,1),nextKind:next.kind,eventMin:round(next.t,1),gapMin:round(next.t-sm,1),approachZone:fr?.zone||"unknown"});
   }
   const pairedShopRate=safeRate(resetRows.length,totalShopVisits);
-  analytics.push(metric("post_recall_tempo","Tempo after recall",resetRows.length?"supported":"unavailable",resetRows.length,
+  analytics.push(metric("post_recall_tempo","Recall-to-next-action timing",resetRows.length?"supported":"unavailable",resetRows.length,
     resetRows.length?`Among ${resetRows.length} of ${totalShopVisits} measured shop visits with a tracked fight/objective inside four minutes, the median shop→event gap is ${round(median(resetRows.map(x=>x.gapMin)),1)} minutes. Visits without tracked action inside four minutes are outside this timing distribution.`:"No shop visit could be paired with a fight/objective inside four minutes.",
     {totalShopVisits,pairedEventVisits:resetRows.length,pairedVisitRate:round(pairedShopRate,1),medianGapMin:round(median(resetRows.map(x=>x.gapMin)),1),rows:resetRows.slice(0,16)},resetRows));
 
@@ -339,7 +354,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
       crossedAheadAt25:count(measuredDefRows,x=>x.crossedAheadAt25===true),medianMovement:round(deficitMedianMove,0),rows:measuredDefRows},measuredDefRows));
 
 
-  // 13. Short-interval consecutive deaths
+  // 13. Short-interval consecutive deaths vs direct-role opponent
   const repeatWindowMin=4;
   const chainRows=games.flatMap(g=>arr(g?.deathRecovery?.events).map((e:any)=>({
     matchId:g.matchId,champion:g.champion,minute:round(e?.secondMin??eventMin(e),1),gapMin:finite(e?.gapSec)?round(n(e.gapSec)/60,2):null,...e
@@ -349,13 +364,19 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     repeatDeaths:n(g?.deathRecovery?.repeatDeaths||0),
     repeatRate:round(safeRate(n(g?.deathRecovery?.repeatDeaths||0),n(g?.deathRecovery?.opportunities||0)),1)
   })).filter(x=>x.opportunities>0);
+  const opponentRepeatRows=games.filter(g=>directPeer(g)).map(g=>({
+    matchId:g.matchId,opportunities:n(g?.opponentDeathRecovery?.opportunities||0),
+    repeatDeaths:n(g?.opponentDeathRecovery?.repeatDeaths||0)
+  })).filter(x=>x.opportunities>0);
   const repeatGames=repeatGameRows.filter(x=>x.repeatDeaths>0),totalRepeatOpps=sum(repeatGameRows,x=>x.opportunities);
-  const repeatRate=round(safeRate(chainRows.length,totalRepeatOpps),1);
+  const opponentRepeatOpps=sum(opponentRepeatRows,x=>x.opportunities),opponentRepeatEvents=sum(opponentRepeatRows,x=>x.repeatDeaths);
+  const repeatRate=round(safeRate(chainRows.length,totalRepeatOpps),1),opponentRepeatRate=round(safeRate(opponentRepeatEvents,opponentRepeatOpps),1);
+  const repeatRateDelta=finite(repeatRate)&&finite(opponentRepeatRate)?round(n(repeatRate)-n(opponentRepeatRate),1):null;
   analytics.push(metric("death_chains","Consecutive deaths within 4 minutes",chainRows.length||repeatGames.length?"supported":"unavailable",chainRows.length,
-    chainRows.length?`${chainRows.length} of ${totalRepeatOpps} consecutive-death opportunities (${repeatRate}%) had the next death within ${repeatWindowMin} minutes across ${repeatGames.length} of ${games.length} deep games; median gap was ${round(median(chainRows.map(x=>x.gapSec)),0)??"—"} seconds. Timing alone does not show that the first death caused the second.`:"No consecutive deaths fell inside the four-minute review window.",
+    chainRows.length?`${chainRows.length} of ${totalRepeatOpps} player consecutive-death opportunities (${repeatRate}%) had the next death within ${repeatWindowMin} minutes. The direct-role opponents were ${opponentRepeatEvents} of ${opponentRepeatOpps} (${opponentRepeatRate??"—"}%) in the same deep games${repeatRateDelta!==null?`, a ${repeatRateDelta>=0?"+":""}${repeatRateDelta} percentage-point player-minus-opponent difference`:""}. Median player gap was ${round(median(chainRows.map(x=>x.gapSec)),0)??"—"} seconds. This is a pacing/risk comparison, not proof one death caused the next.`:"No consecutive deaths fell inside the four-minute review window.",
     {windowMinutes:repeatWindowMin,totalOpportunities:totalRepeatOpps,repeatEvents:chainRows.length,repeatRate,
+      opponentOpportunities:opponentRepeatOpps,opponentRepeatEvents,opponentRepeatRate,repeatRateDeltaPp:repeatRateDelta,
       gamesWithRepeat:repeatGames.length,medianGapSec:round(median(chainRows.map(x=>x.gapSec)),0),gameRows:repeatGameRows,rows:chainRows.slice(0,18)},chainRows));
-
 
   // 14. Ahead-state fight execution
   const ri=fights.filter(x=>x.e?.active===true&&finite(x.e?.goldDiffAtStart)).map(({g,e})=>({
@@ -373,20 +394,34 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
       highUnspentRate:round(richHighUnspentRate,1),highUnspentKnown:richHighUnspentKnown.length,rows:rich.slice(0,18)},rich));
 
 
-  // 15. After fight wins: 90-second follow-up
+  // 15. After fight wins: next-fight-bounded follow-up
   const winFightRows:any[]=[];
-  for(const {g,e} of fights.filter(x=>x.e?.active===true&&finite(x.e?.teamFightKills)&&finite(x.e?.enemyFightKills)&&n(x.e.teamFightKills)>n(x.e.enemyFightKills))){
-    const end=n(e?.endMin??e?.startMin),to=end+1.5,teamId=n(g?.teamId||0);
-    const rawObjectives=arr(g?.objectives).filter((o:any)=>finite(eventMin(o))&&n(eventMin(o))>=end&&n(eventMin(o))<=to&&(!teamId||n(o?.ownerTeam||0)===teamId));
-    const neutral=rawObjectives.filter((o:any)=>txt(o?.type)==="ELITE_MONSTER_KILL").length;
-    const structures=rawObjectives.filter((o:any)=>txt(o?.type)==="BUILDING_KILL"||txt(o?.type)==="TURRET_PLATE_DESTROYED").length;
-    const playerFollowUpKills=arr(g?.involvedKills).filter((o:any)=>finite(eventMin(o))&&n(eventMin(o))>end&&n(eventMin(o))<=to).length;
-    const followUp=neutral+structures+playerFollowUpKills>0;
-    winFightRows.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,objectives:neutral,structures,playerFollowUpKills,followUp});
+  for(const g of games){
+    const tracked=[...fightEvents(g),...absenceEvents(g)].filter((e:any)=>finite(e?.startMin)).sort((a:any,b:any)=>n(a.startMin)-n(b.startMin));
+    const wins=fightEvents(g).filter((e:any)=>e?.active===true&&finite(e?.teamFightKills)&&finite(e?.enemyFightKills)&&n(e.teamFightKills)>n(e.enemyFightKills))
+      .sort((a:any,b:any)=>n(a.startMin)-n(b.startMin));
+    for(const e of wins){
+      const end=n(e?.endMin??e?.startMin),nextFight=tracked.find((x:any)=>n(x.startMin)>end+.01);
+      const to=Math.min(end+1.5,nextFight?Math.max(end,n(nextFight.startMin)):Infinity),teamId=n(g?.teamId||0);
+      if(!finite(to)||to<=end)continue;
+      const rawObjectives=arr(g?.objectives).filter((o:any)=>finite(eventMin(o))&&n(eventMin(o))>end&&n(eventMin(o))<=to&&(!teamId||n(o?.ownerTeam||0)===teamId));
+      const neutral=rawObjectives.filter((o:any)=>txt(o?.type)==="ELITE_MONSTER_KILL").length;
+      const towers=rawObjectives.filter((o:any)=>txt(o?.type)==="BUILDING_KILL").length;
+      const plates=rawObjectives.filter((o:any)=>txt(o?.type)==="TURRET_PLATE_DESTROYED").length;
+      const playerFollowUpKills=arr(g?.involvedKills).filter((o:any)=>finite(eventMin(o))&&n(eventMin(o))>end&&n(eventMin(o))<=to).length;
+      const followUp=neutral+towers+plates+playerFollowUpKills>0;
+      winFightRows.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,windowSec:round((to-end)*60,0),
+        objectives:neutral,towers,plates,playerFollowUpKills,followUp});
+    }
   }
-  analytics.push(metric("fight_lead_conversion","After fight wins: 90-second follow-up",winFightRows.length?"supported":"unavailable",winFightRows.length,
-    winFightRows.length?`${round(safeRate(count(winFightRows,x=>x.followUp),winFightRows.length),0)}% of strict tracked fight wins were followed within ~90 seconds by a same-team neutral objective/structure gain or a new reviewed-player kill/assist contribution. This is measured sequencing, not proof the fight caused the follow-up.`:"No strict active fight wins to evaluate.",
-    {followUpRate:round(safeRate(count(winFightRows,x=>x.followUp),winFightRows.length),1),rows:winFightRows},winFightRows));
+  const followUpWins=count(winFightRows,x=>x.followUp),objectiveFollowUps=count(winFightRows,x=>x.objectives>0),
+    towerFollowUps=count(winFightRows,x=>x.towers>0),plateFollowUps=count(winFightRows,x=>x.plates>0),
+    playerKillFollowUps=count(winFightRows,x=>x.playerFollowUpKills>0);
+  analytics.push(metric("fight_lead_conversion","After fight wins: before the next fight",winFightRows.length?"supported":"unavailable",winFightRows.length,
+    winFightRows.length?`${round(safeRate(followUpWins,winFightRows.length),0)}% of strict tracked fight wins had a measured follow-up before the next tracked fight or 90 seconds, whichever came first. ${objectiveFollowUps} windows included a neutral objective, ${towerFollowUps} a building, ${plateFollowUps} a plate and ${playerKillFollowUps} a new reviewed-player kill/assist contribution. Windows are non-overlapping by construction, so one later event cannot inflate several fight wins.`:"No strict active fight wins to evaluate.",
+    {followUpRate:round(safeRate(followUpWins,winFightRows.length),1),objectiveFollowUpWindows:objectiveFollowUps,
+      towerFollowUpWindows:towerFollowUps,plateFollowUpWindows:plateFollowUps,playerKillFollowUpWindows:playerKillFollowUps,
+      medianWindowSec:round(median(winFightRows.map(x=>x.windowSec)),0),windowRule:"ends at next tracked fight or 90 seconds",rows:winFightRows},winFightRows));
 
   // 16. After fight losses: extra high-risk deaths
   const lossRows:any[]=[];
@@ -410,7 +445,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     {rows:objTrade},objTrade));
 
 
-  // 18. Repeated geographical review clusters
+  // 18. Geographical review locations with coarse exposure context
   const geo=new Map<string,{zone:string,count:number,joinMiss:number,badDeaths:number,matches:Set<string>}>();
   const geoMapEvents:any[]=[];
   for(const {g,e} of abs){
@@ -424,10 +459,18 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     r.count++;r.badDeaths++;r.matches.add(g.matchId);geo.set(k,r);
     if(finite(d?.x)&&finite(d?.y))geoMapEvents.push({matchId:g.matchId,minute:round(d.time,1),zone:k,type:"bad_death",position:{x:n(d.x),y:n(d.y)}});
   }
-  const geoRows=[...geo.values()].map(x=>({...x,matches:[...x.matches]})).sort((a,b)=>b.count-a.count);
-  analytics.push(metric("geographical_clusters","Repeated geographical review clusters",geoRows.length?"supported":"unavailable",sum(geoRows,x=>x.count),
-    geoRows.length?`Highest repeated map-relative review zone: ${geoRows[0].zone} (${geoRows[0].count} supported high-risk-death / missed-join review signals).`:"No repeated supported geography cluster.",
-    {rows:geoRows.slice(0,12),mapEvents:geoMapEvents.slice(0,40)}));
+  const exposure=sampledZoneExposure(games);
+  const geoRows=[...geo.values()].map(x=>{
+    const exposureMin=round(exposure.get(x.zone)||0,1);
+    return {...x,matches:[...x.matches],sampledExposureMin:exposureMin,
+      signalsPer30SampledMin:finite(exposureMin)&&n(exposureMin)>=5?round(30*x.count/n(exposureMin),2):null};
+  }).sort((a,b)=>b.count-a.count);
+  const rawTop=geoRows[0]||null,rateTop=geoRows.filter(x=>finite(x.signalsPer30SampledMin)&&n(x.sampledExposureMin)>=5&&x.count>=2)
+    .sort((a,b)=>n(b.signalsPer30SampledMin)-n(a.signalsPer30SampledMin))[0]||null;
+  analytics.push(metric("geographical_clusters","Geographical review locations",geoRows.length?"proxy":"unavailable",sum(geoRows,x=>x.count),
+    geoRows.length?`Most raw review signals occurred in ${rawTop.zone} (${rawTop.count}). ${rateTop?`After coarse timeline-frame exposure adjustment, ${rateTop.zone} is highest at ${rateTop.signalsPer30SampledMin} signals per 30 sampled minutes. `:""}Exposure is estimated from roughly minute-spaced position frames, so this identifies places to inspect rather than proving a zone is intrinsically risky.`:"No repeated supported geography cluster.",
+    {exposureBasis:"team-relative fight-zone minutes approximated from timeline frame intervals; rate requires ≥5 sampled minutes and ≥2 signals",
+      rawTopZone:rawTop?.zone||null,rateTopZone:rateTop?.zone||null,rows:geoRows.slice(0,12),mapEvents:geoMapEvents.slice(0,40)}));
 
   // 19. Champion-specific decision tendencies
   const champs=championGroup(games),champEligible=champs.filter(x=>x.games>=3);
@@ -542,7 +585,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
 
 
   return {
-    version:"decision-intelligence-v5",
+    version:"decision-intelligence-v6",
     generatedFromGames:games.length,
     deepGames:games.length,
     historyGames:history.length,

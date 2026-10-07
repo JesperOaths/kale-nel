@@ -3007,3 +3007,20 @@ body{background:var(--paper);line-height:1.55;padding:18px 16px 74px}
   .di-state-grid{grid-template-columns:1fr}
   .di-requeue-grid article>div{grid-template-columns:1fr}
 }
+
+
+/* v314 — decision review readability */
+.decision-intelligence-panel .di-card>summary strong{font-size:1.09rem;line-height:1.32}
+.decision-intelligence-panel .di-card>summary small{font-size:.9rem;line-height:1.4}
+.decision-intelligence-panel .di-interpretation p{font-size:1rem;line-height:1.58}
+.decision-intelligence-panel .di-interpretation span{font-size:.78rem;letter-spacing:.06em}
+.decision-intelligence-panel .di-evidence-details>summary{font-size:.9rem}
+.decision-intelligence-panel .di-evidence-row span{font-size:.87rem;line-height:1.4}
+.decision-intelligence-panel .di-group-head strong{font-size:1.26rem}
+.decision-intelligence-panel .di-group-head small{font-size:.9rem;line-height:1.4}
+.decision-intelligence-panel .di-mini-summary small{font-size:.82rem}
+.decision-intelligence-panel .di-bar-row{font-size:.88rem}
+.decision-intelligence-panel .di-share-legend span{font-size:.86rem}
+@media(max-width:760px){
+  .decision-intelligence-panel .di-interpretation p{font-size:.98rem}
+}
