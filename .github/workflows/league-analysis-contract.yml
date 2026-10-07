@@ -8,6 +8,7 @@ on:
       - 'supabase/functions/league-api-v1/**'
       - 'docs/league-analysis-model.md'
       - 'scripts/check-league-analysis-contract.mjs'
+      - 'scripts/check-league-review-audit.mjs'
       - '.github/workflows/league-analysis-contract.yml'
   pull_request:
     paths:
@@ -15,6 +16,7 @@ on:
       - 'supabase/functions/league-api-v1/**'
       - 'docs/league-analysis-model.md'
       - 'scripts/check-league-analysis-contract.mjs'
+      - 'scripts/check-league-review-audit.mjs'
       - '.github/workflows/league-analysis-contract.yml'
 
 permissions:

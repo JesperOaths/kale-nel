@@ -187,7 +187,7 @@ function performanceResidualRows(games:any[]){
 }
 
 export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, primaryRole:string, historyInput:any[]=gamesInput){
-  const games=arr(gamesInput).filter(Boolean).sort((a:any,b:any)=>gameStart(a)-gameStart(b));
+  const games=arr(gamesInput).filter(g=>g?.timelineAvailable===true).sort((a:any,b:any)=>gameStart(a)-gameStart(b));
   const history=arr(historyInput).filter(Boolean).sort((a:any,b:any)=>gameStart(a)-gameStart(b));
   const recent=[...games].sort((a,b)=>gameStart(b)-gameStart(a));
   const abs=allAbsenceRows(games),fights=allFightRows(games);
@@ -226,7 +226,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   // 3. Pre-fight sampled positioning
   const pre:any[]=[];
   for(const {g,e} of [...fights,...abs]){
-    const t=n(e?.startMin); if(!finite(t)||!e?.fightPosition)continue;
+    if(!finite(e?.startMin)||!e?.fightPosition)continue;const t=n(e.startMin);
     const seen=new Set<string>(),checkpoints:any[]=[];
     for(const requestedSec of [30,20,10]){
       const fr=nearestFrameBefore(g,t-requestedSec/60,1.15);
@@ -244,7 +244,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
 
   // 4. Pre-fight distance versus sample timing
   const formation:any[]=[];let formationTooCoarse=0;
-  for(const {g,e} of fights.filter(x=>x.e?.active===true)){
+  for(const {g,e} of fights.filter(x=>x.e?.active===true&&finite(x.e?.startMin))){
     const fr=nearestFrameBefore(g,n(e.startMin),1.1),d=fr?.position&&e?.fightPosition?distance(fr.position,e.fightPosition):null;
     if(!finite(d)||!fr||!finite(fr.time))continue;
     const sampleLeadSec=Math.max(0,Math.round((n(e.startMin)-n(fr.time))*60));
@@ -259,7 +259,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
 
 
   // 5. Numbers-aware participation
-  const numF=fights.filter(x=>x.e?.active===true&&finite(x.e?.numbersDelta));
+  const numF=fights.filter(x=>x.e?.active===true&&finite(x.e?.numbersDelta)&&typeof x.e?.lostFight==="boolean");
   const numberGroups=[
     {key:"down2plus",label:"Down ≥2",rows:numF.filter(x=>n(x.e.numbersDelta)<=-2)},
     {key:"down1",label:"Down 1",rows:numF.filter(x=>n(x.e.numbersDelta)===-1)},
@@ -267,12 +267,12 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     {key:"ahead",label:"Ahead",rows:numF.filter(x=>n(x.e.numbersDelta)>=1)}
   ].map(x=>({key:x.key,label:x.label,fights:x.rows.length,lossRate:round(safeRate(count(x.rows,y=>y.e?.lostFight===true),x.rows.length),1)}));
   const numberLead=median(numF.map(x=>x.e?.numberSampleLeadSec));
-  const numberLossRates=numberGroups.map(x=>x.lossRate).filter(finite).map(n);
+  const numberLossRates=numberGroups.filter(x=>x.fights>=5).map(x=>x.lossRate).filter(finite).map(n);
   const numberLossMin=numberLossRates.length?Math.min(...numberLossRates):null,numberLossMax=numberLossRates.length?Math.max(...numberLossRates):null;
-  const numberLossRange=finite(numberLossMin)&&finite(numberLossMax)?n(numberLossMax)-n(numberLossMin):null;
+  const numberLossRange=numberLossRates.length>=2?n(numberLossMax)-n(numberLossMin):null;
   analytics.push(metric("numbers_aware_participation","Local-number snapshot at fight start",numF.length?"proxy":"unavailable",numF.length,
-    numF.length?`Local-number states are shown with their observed fight-loss rate, using a 4.5k-unit radius on the latest Riot timeline frame at or before the first kill (median frame age ${round(numberLead,0)??"—"}s). Across populated states the observed loss rates span ${round(numberLossMin,1)??"—"}–${round(numberLossMax,1)??"—"}% (range ${round(numberLossRange,1)??"—"} percentage points), so this descriptive sample does not show a clear directional outcome separation by the coarse numbers state.`:"No active fights with local-number evidence.",
-    {states:numberGroups,outnumberedStarts:numberGroups[0].fights,downOneStarts:numberGroups[1].fights,evenStarts:numberGroups[2].fights,aheadStarts:numberGroups[3].fights,
+    numF.length?`Local-number states are shown with their observed fight-loss rate, using a 4.5k-unit radius on the latest Riot timeline frame at or before the first kill (median frame age ${round(numberLead,0)??"—"}s). Across states with at least five fights the observed loss rates span ${round(numberLossMin,1)??"—"}–${round(numberLossMax,1)??"—"}% (range ${round(numberLossRange,1)??"—"} percentage points). This reports the observed spread without asserting that the states are equivalent or that sampled numbers caused the outcome.`:"No active fights with local-number evidence.",
+    {states:numberGroups,minimumStateFights:5,supportedStates:numberLossRates.length,outnumberedStarts:numberGroups[0].fights,downOneStarts:numberGroups[1].fights,evenStarts:numberGroups[2].fights,aheadStarts:numberGroups[3].fights,
       medianNumberSampleLeadSec:round(numberLead,0),outnumberedLossRate:numberGroups[0].lossRate,
       minStateLossRate:round(numberLossMin,1),maxStateLossRate:round(numberLossMax,1),stateLossRateRangePp:round(numberLossRange,1)}));
 
@@ -307,7 +307,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   // 9. Tempo after recall
   const resetRows:any[]=[];let totalShopVisits=0;
   for(const g of games)for(const s of arr(g?.shopVisits)){
-    const sm=n(s?.lastMin??s?.startMin); if(!finite(sm))continue;totalShopVisits++;
+    const rawShopMin=s?.lastMin??s?.startMin;if(!finite(rawShopMin))continue;const sm=n(rawShopMin);totalShopVisits++;
     const next=nextEventAfter(g,sm); if(!next||next.t-sm>4)continue;
     const fr=nearestFrameBefore(g,next.t,1.4);
     resetRows.push({matchId:g.matchId,shopMin:round(sm,1),nextKind:next.kind,eventMin:round(next.t,1),gapMin:round(next.t-sm,1),approachZone:fr?.zone||"unknown"});
@@ -325,7 +325,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     {rows:paths.slice(0,18)},paths));
 
   // 11. Lead movement from 15→25
-  const leads=games.filter(g=>finite(g?.goldDiff15)&&n(g.goldDiff15)>=500);
+  const leads=games.filter(g=>directPeer(g)&&g?.phaseRules?.fixed15to25Comparable===true&&finite(g?.goldDiff15)&&n(g.goldDiff15)>=500);
   const leadRows=leads.map(g=>({matchId:g.matchId,gold15:round(g.goldDiff15,0),gold25:round(g.goldDiff25,0),
     leadBand:n(g.goldDiff15)>=1500?"1500g+":n(g.goldDiff15)>=1000?"1000–1499g":"500–999g",
     movement:finite(g.goldDiff25)?round(n(g.goldDiff25)-n(g.goldDiff15),0):null,
@@ -341,7 +341,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
 
 
   // 12. Deficit movement from 15→25
-  const deficits=games.filter(g=>finite(g?.goldDiff15)&&n(g.goldDiff15)<=-500);
+  const deficits=games.filter(g=>directPeer(g)&&g?.phaseRules?.fixed15to25Comparable===true&&finite(g?.goldDiff15)&&n(g.goldDiff15)<=-500);
   const defRows=deficits.map(g=>({matchId:g.matchId,gold15:round(g.goldDiff15,0),gold25:round(g.goldDiff25,0),
     movement:finite(g.goldDiff25)?round(n(g.goldDiff25)-n(g.goldDiff15),0):null,
     narrowed:finite(g.goldDiff25)?n(g.goldDiff25)>n(g.goldDiff15):null,
@@ -370,16 +370,16 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   })).filter(x=>x.opportunities>0);
   const repeatGames=repeatGameRows.filter(x=>x.repeatDeaths>0),totalRepeatOpps=sum(repeatGameRows,x=>x.opportunities);
   const opponentRepeatOpps=sum(opponentRepeatRows,x=>x.opportunities),opponentRepeatEvents=sum(opponentRepeatRows,x=>x.repeatDeaths);
-  const repeatRate=round(safeRate(chainRows.length,totalRepeatOpps),1),opponentRepeatRate=round(safeRate(opponentRepeatEvents,opponentRepeatOpps),1);
+  const repeatRate=round(safeRate(sum(repeatGameRows,x=>x.repeatDeaths),totalRepeatOpps),1),opponentRepeatRate=round(safeRate(opponentRepeatEvents,opponentRepeatOpps),1);
   const repeatRateDelta=finite(repeatRate)&&finite(opponentRepeatRate)?round(n(repeatRate)-n(opponentRepeatRate),1):null;
-  analytics.push(metric("death_chains","Consecutive deaths within 4 minutes",chainRows.length||repeatGames.length?"supported":"unavailable",chainRows.length,
+  analytics.push(metric("death_chains","Consecutive deaths within 4 minutes",totalRepeatOpps>=5?"supported":totalRepeatOpps?"thin":"unavailable",totalRepeatOpps,
     chainRows.length?`${chainRows.length} of ${totalRepeatOpps} player consecutive-death opportunities (${repeatRate}%) had the next death within ${repeatWindowMin} minutes. The direct-role opponents were ${opponentRepeatEvents} of ${opponentRepeatOpps} (${opponentRepeatRate??"—"}%) in the same deep games${repeatRateDelta!==null?`, a ${repeatRateDelta>=0?"+":""}${repeatRateDelta} percentage-point player-minus-opponent difference`:""}. Median player gap was ${round(median(chainRows.map(x=>x.gapSec)),0)??"—"} seconds. This is a pacing/risk comparison, not proof one death caused the next.`:"No consecutive deaths fell inside the four-minute review window.",
-    {windowMinutes:repeatWindowMin,totalOpportunities:totalRepeatOpps,repeatEvents:chainRows.length,repeatRate,
+    {windowMinutes:repeatWindowMin,totalOpportunities:totalRepeatOpps,repeatEvents:sum(repeatGameRows,x=>x.repeatDeaths),repeatRate,
       opponentOpportunities:opponentRepeatOpps,opponentRepeatEvents,opponentRepeatRate,repeatRateDeltaPp:repeatRateDelta,
-      gamesWithRepeat:repeatGames.length,medianGapSec:round(median(chainRows.map(x=>x.gapSec)),0),gameRows:repeatGameRows,rows:chainRows.slice(0,18)},chainRows));
+      gamesWithRepeat:repeatGames.length,medianGapSec:round(median(chainRows.map(x=>x.gapSec)),0),minimumOpportunities:5,gameRows:repeatGameRows,rows:chainRows.slice(0,18)},chainRows));
 
   // 14. Ahead-state fight execution
-  const ri=fights.filter(x=>x.e?.active===true&&finite(x.e?.goldDiffAtStart)).map(({g,e})=>({
+  const ri=fights.filter(x=>directPeer(x.g)&&x.e?.active===true&&finite(x.e?.goldDiffAtStart)).map(({g,e})=>({
     matchId:g.matchId,minute:round(e.startMin,1),goldDiffAtStart:round(e.goldDiffAtStart,0),currentGold:round(e.currentGoldAtStart,0),
     contributed:e.contributed===true,survived:e.survived===true,diedBeforeContribution:e.diedBeforeContribution===true,
     highUnspent:finite(e.currentGoldAtStart)?n(e.currentGoldAtStart)>=1000:null,lostFight:e.lostFight===true
@@ -398,11 +398,11 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   const winFightRows:any[]=[];
   for(const g of games){
     const tracked=[...fightEvents(g),...absenceEvents(g)].filter((e:any)=>finite(e?.startMin)).sort((a:any,b:any)=>n(a.startMin)-n(b.startMin));
-    const wins=fightEvents(g).filter((e:any)=>e?.active===true&&finite(e?.teamFightKills)&&finite(e?.enemyFightKills)&&n(e.teamFightKills)>n(e.enemyFightKills))
+    const wins=fightEvents(g).filter((e:any)=>e?.active===true&&finite(e?.startMin)&&finite(e?.teamFightKills)&&finite(e?.enemyFightKills)&&n(e.teamFightKills)>n(e.enemyFightKills))
       .sort((a:any,b:any)=>n(a.startMin)-n(b.startMin));
     for(const e of wins){
       const end=n(e?.endMin??e?.startMin),nextFight=tracked.find((x:any)=>n(x.startMin)>end+.01);
-      const to=Math.min(end+1.5,nextFight?Math.max(end,n(nextFight.startMin)):Infinity),teamId=n(g?.teamId||0);
+      const to=Math.min(end+1.5,nextFight?Math.max(end,n(nextFight.startMin)):Infinity,finite(g?.durationMinutes)?n(g.durationMinutes):Infinity),teamId=n(g?.teamId||0);
       if(!finite(to)||to<=end)continue;
       const rawObjectives=arr(g?.objectives).filter((o:any)=>finite(eventMin(o))&&n(eventMin(o))>end&&n(eventMin(o))<=to&&(!teamId||n(o?.ownerTeam||0)===teamId));
       const neutral=rawObjectives.filter((o:any)=>txt(o?.type)==="ELITE_MONSTER_KILL").length;
@@ -418,10 +418,10 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     towerFollowUps=count(winFightRows,x=>x.towers>0),plateFollowUps=count(winFightRows,x=>x.plates>0),
     playerKillFollowUps=count(winFightRows,x=>x.playerFollowUpKills>0);
   analytics.push(metric("fight_lead_conversion","After fight wins: before the next fight",winFightRows.length?"supported":"unavailable",winFightRows.length,
-    winFightRows.length?`${round(safeRate(followUpWins,winFightRows.length),0)}% of strict tracked fight wins had a measured follow-up before the next tracked fight or 90 seconds, whichever came first. ${objectiveFollowUps} windows included a neutral objective, ${towerFollowUps} a building, ${plateFollowUps} a plate and ${playerKillFollowUps} a new reviewed-player kill/assist contribution. Windows are non-overlapping by construction, so one later event cannot inflate several fight wins.`:"No strict active fight wins to evaluate.",
+    winFightRows.length?`${round(safeRate(followUpWins,winFightRows.length),0)}% of strict tracked fight wins had a measured follow-up before the next tracked fight, 90 seconds or game end, whichever came first. ${objectiveFollowUps} windows included a neutral objective, ${towerFollowUps} a building, ${plateFollowUps} a plate and ${playerKillFollowUps} a new reviewed-player kill/assist contribution. Windows are non-overlapping by construction, so one later event cannot inflate several fight wins.`:"No strict active fight wins to evaluate.",
     {followUpRate:round(safeRate(followUpWins,winFightRows.length),1),objectiveFollowUpWindows:objectiveFollowUps,
       towerFollowUpWindows:towerFollowUps,plateFollowUpWindows:plateFollowUps,playerKillFollowUpWindows:playerKillFollowUps,
-      medianWindowSec:round(median(winFightRows.map(x=>x.windowSec)),0),windowRule:"ends at next tracked fight or 90 seconds",rows:winFightRows},winFightRows));
+      medianWindowSec:round(median(winFightRows.map(x=>x.windowSec)),0),windowRule:"ends at next tracked fight, 90 seconds or game end",rows:winFightRows},winFightRows));
 
   // 16. After fight losses: next-fight-bounded extra high-risk deaths
   const lossRows:any[]=[];
@@ -430,7 +430,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     const losses=fightEvents(g).filter((e:any)=>e?.active===true&&e?.lostFight===true&&finite(e?.startMin)).sort((a:any,b:any)=>n(a.startMin)-n(b.startMin));
     for(const e of losses){
       const end=n(e?.endMin??e?.startMin),nextFight=tracked.find((x:any)=>n(x.startMin)>end+.01);
-      const to=Math.min(end+1.5,nextFight?Math.max(end,n(nextFight.startMin)):Infinity);
+      const to=Math.min(end+1.5,nextFight?Math.max(end,n(nextFight.startMin)):Infinity,finite(g?.durationMinutes)?n(g.durationMinutes):Infinity);
       if(!finite(to)||to<=end)continue;
       const extraDeaths=count(badDeathEvents(g),d=>finite(eventMin(d))&&n(eventMin(d))>end&&n(eventMin(d))<=to);
       lossRows.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,windowSec:round((to-end)*60,0),
@@ -438,9 +438,9 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     }
   }
   analytics.push(metric("fight_loss_containment","After fight losses: before the next fight",lossRows.length?"supported":"unavailable",lossRows.length,
-    lossRows.length?`${round(safeRate(count(lossRows,x=>x.noExtraRiskDeath),lossRows.length),0)}% of tracked active fight losses had no additional classified high-risk death before the next tracked fight or 90 seconds, whichever came first. Windows do not overlap, and this card does not claim the broader game-state loss was contained.`:"No active lost fights to evaluate.",
+    lossRows.length?`${round(safeRate(count(lossRows,x=>x.noExtraRiskDeath),lossRows.length),0)}% of tracked active fight losses had no additional classified high-risk death before the next tracked fight, 90 seconds or game end, whichever came first. Windows do not overlap, and this card does not claim the broader game-state loss was contained.`:"No active lost fights to evaluate.",
     {noExtraRiskDeathRate:round(safeRate(count(lossRows,x=>x.noExtraRiskDeath),lossRows.length),1),
-      medianWindowSec:round(median(lossRows.map(x=>x.windowSec)),0),windowRule:"ends at next tracked fight or 90 seconds",rows:lossRows},lossRows));
+      medianWindowSec:round(median(lossRows.map(x=>x.windowSec)),0),windowRule:"ends at next tracked fight, 90 seconds or game end",rows:lossRows},lossRows));
 
   // 17. Skipped-fight structure/objective overlap
   const objTrade=abs.filter(x=>x.e?.playerNeutralObjectiveGains>0||x.e?.playerStructureGains>0).map(({g,e})=>({
@@ -498,9 +498,9 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   const contextCounts=residuals.reduce((m:any,x:any)=>(m[x.contextLevel]=(m[x.contextLevel]||0)+1,m),{});
   const contextualRows=residuals.filter(x=>x.contextLevel!=="global_leave_one_out").length;
   const recentResidualMedian=median(recentResidual.map(x=>x.residual));
-  analytics.push(metric("expected_performance_residual","Context-adjusted DPM residuals",residuals.length>=5?"proxy":residuals.length?"thin":"unavailable",residuals.length,
-    residuals.length>=5?`Median residual across the latest ${recentResidual.length} comparable deep games is ${round(recentResidualMedian,0)} DPM versus the leave-one-out personal context baseline. ${contextualRows} of ${residuals.length} history rows use champion and/or duration context; this is descriptive within-history adjustment, not a predictive MMR model.`:"Not enough direct-opponent DPM history for a residual model.",
-    {recentResidual:round(recentResidualMedian,1),recentResidualStatistic:"median",recentResidualGames:recentResidual.length,contextualRows,contextCounts,rows:residuals.slice(-20)}));
+  analytics.push(metric("expected_performance_residual","Context-adjusted DPM residuals",recentResidual.length>=5?"proxy":residuals.length?"thin":"unavailable",residuals.length,
+    recentResidual.length>=5?`Median residual across the latest ${recentResidual.length} comparable deep games is ${round(recentResidualMedian,0)} DPM versus the leave-one-out personal context baseline. ${contextualRows} of ${residuals.length} history rows use champion and/or duration context; this is descriptive within-history adjustment, not a predictive MMR model.`:"The latest deep sample needs at least five direct-opponent DPM residuals before a recent performance conclusion is shown.",
+    {recentResidual:recentResidual.length>=5?round(recentResidualMedian,1):null,minimumRecentGames:5,recentResidualStatistic:"median",recentResidualGames:recentResidual.length,contextualRows,contextCounts,rows:residuals.slice(-20)}));
 
 
   // 22. Later-session change by component
@@ -520,7 +520,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   // 23. Requeue gap context
   const gaps:any[]=[];
   for(let i=1;i<history.length;i++){
-    const prev=history[i-1],g=history[i],gap=(gameStart(g)-gameEnd(prev))/60000;
+    const prev=history[i-1],g=history[i];if(gameStart(prev)<=0||gameStart(g)<=0||!finite(prev?.durationMinutes)||n(prev.durationMinutes)<=0)continue;const gap=(gameStart(g)-gameEnd(prev))/60000;
     if(!finite(gap)||gap<0||gap>180||!directPeer(g))continue;
     const p=g.peer||{},available=[p.dpmDelta,p.csMinDelta,p.deathsDelta,p.kpDelta,p.gpmDelta].filter(finite).length;
     if(available<2)continue;
@@ -529,30 +529,30 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
       dpmDelta:round(p.dpmDelta,1),csMinDelta:round(p.csMinDelta,2),deathsDelta:round(p.deathsDelta,2),
       kpDelta:round(p.kpDelta,1),gpmDelta:round(p.gpmDelta,1)});
   }
+  const gapMetricKeys=["dpmDelta","csMinDelta","deathsDelta","kpDelta","gpmDelta"];
   const gapRows=["<10m","10–25m","25–45m","45m+"].map(bucket=>{
-    const xs=gaps.filter(x=>x.bucket===bucket);
-    return{bucket,games:xs.length,supported:xs.length>=5,
-      dpmDelta:round(mean(xs.map(x=>x.dpmDelta)),1),csMinDelta:round(mean(xs.map(x=>x.csMinDelta)),2),
-      deathsDelta:round(mean(xs.map(x=>x.deathsDelta)),2),kpDelta:round(mean(xs.map(x=>x.kpDelta)),1),gpmDelta:round(mean(xs.map(x=>x.gpmDelta)),1)};
+    const xs=gaps.filter(x=>x.bucket===bucket),metricSamples:any={},values:any={};
+    for(const key of gapMetricKeys){const known=xs.filter(x=>finite(x[key]));metricSamples[key]=known.length;values[key]=known.length>=5?round(mean(known.map(x=>x[key])),key==="csMinDelta"?2:1):null;}
+    return{bucket,games:xs.length,supported:gapMetricKeys.filter(key=>metricSamples[key]>=5).length>=2,metricSamples,...values};
   });
   const supportedGapRows=gapRows.filter(x=>x.supported);
-  analytics.push(metric("requeue_sweet_spot","Requeue gap context",gaps.length?"supported":"unavailable",gaps.length,
-    supportedGapRows.length?`${supportedGapRows.length} requeue-gap bucket(s) have at least five comparable games. DPM, CS/min, deaths, KP and GPM versus the direct-role opponent are reported in their own units; no synthetic “best break” score or causal break recommendation is inferred.`:"No requeue-gap bucket has at least five direct-opponent comparable games yet.",
-    {minimumBucketGames:5,supportedBuckets:supportedGapRows.length,associationOnly:true,rows:gapRows}));
-
+  analytics.push(metric("requeue_sweet_spot","Requeue gap context",supportedGapRows.length?"supported":gaps.length?"thin":"unavailable",gaps.length,
+    supportedGapRows.length?`${supportedGapRows.length} requeue-gap bucket(s) have at least two components with five comparable observations each. DPM, CS/min, deaths, KP and GPM versus the direct-role opponent retain separate denominators; no synthetic “best break” score or causal break recommendation is inferred.`:"No requeue-gap bucket has two components with five direct-opponent observations each yet.",
+    {minimumBucketGames:5,minimumMetricGames:5,supportedBuckets:supportedGapRows.length,associationOnly:true,rows:gapRows}));
 
   // 24. Mistake recurrence trend
   const issues=games.map(g=>({matchId:g.matchId,start:gameStart(g),issues:issueCount(g),...issueComponents(g)}));
-  const recentIssues=mean(issues.slice(-5).map(x=>x.issues)),priorIssues=mean(issues.slice(Math.max(0,issues.length-10),Math.max(0,issues.length-5)).map(x=>x.issues));
+  const recentIssueRows=issues.slice(-5),priorIssueRows=issues.slice(Math.max(0,issues.length-10),Math.max(0,issues.length-5));
+  const recentIssues=recentIssueRows.length===5?mean(recentIssueRows.map(x=>x.issues)):null,priorIssues=priorIssueRows.length===5?mean(priorIssueRows.map(x=>x.issues)):null;
   const recentByType={
     riskyDeaths:mean(issues.slice(-5).map(x=>x.riskyDeaths)),
     preObjectiveDeaths:mean(issues.slice(-5).map(x=>x.preObjectiveDeaths)),
     recentShopAbsences:mean(issues.slice(-5).map(x=>x.recentShopAbsences)),
     missedJoinReviews:mean(issues.slice(-5).map(x=>x.missedJoinReviews))
   };
-  analytics.push(metric("mistake_recurrence","Review-signal recurrence trend",issues.length?"proxy":"unavailable",issues.length,
-    issues.length?`Latest five-game supported review-signal load is ${round(recentIssues,2)} per game versus ${round(priorIssues,2)??"—"} in the prior five. Signal categories can overlap within one event, so this is not a unique-mistake count or a target-linked half-life.`:"No supported review signals in this sample.",
-    {targetLinked:false,recentFive:round(recentIssues,2),priorFive:round(priorIssues,2),recentByType,rows:issues.slice(-20)}));
+  analytics.push(metric("mistake_recurrence","Review-signal recurrence trend",issues.length>=10?"proxy":issues.length?"thin":"unavailable",issues.length,
+    finite(recentIssues)?`Latest five-game supported review-signal load is ${round(recentIssues,2)} per game versus ${round(priorIssues,2)??"—"} in the prior five. Signal categories can overlap within one event, so this is not a unique-mistake count or a target-linked half-life.`:"Five recent timeline games are required for a latest-five load, and five more for its prior-five comparison.",
+    {targetLinked:false,recentGameN:recentIssueRows.length,priorGameN:priorIssueRows.length,recentFive:round(recentIssues,2),priorFive:round(priorIssues,2),recentByType,rows:issues.slice(-20)}));
 
   // 25. Automatic replay shortlist
   const candidates:any[]=[];
@@ -579,21 +579,13 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     shortlist.push(x);perMatch.set(mid,(perMatch.get(mid)||0)+1);perType.set(typ,(perType.get(typ)||0)+1);
     if(shortlist.length>=10)break;
   }
-  if(shortlist.length<10){
-    for(const x of ranked){
-      if(shortlist.includes(x))continue;
-      const mid=txt(x.matchId);if((perMatch.get(mid)||0)>=3)continue;
-      shortlist.push(x);perMatch.set(mid,(perMatch.get(mid)||0)+1);
-      if(shortlist.length>=10)break;
-    }
-  }
   analytics.push(metric("automatic_replay_shortlist","Automatic replay shortlist",shortlist.length?"proxy":"unavailable",shortlist.length,
     shortlist.length?`Top ${shortlist.length} moments use a transparent review-priority heuristic with diversity caps so one match or one event type cannot dominate the entire shortlist.`:"No replay moment crossed the current review-priority rules.",
     {heuristicPriority:true,maxPrimaryPerMatch:2,maxPrimaryPerType:4,rows:shortlist},shortlist));
 
 
   return {
-    version:"decision-intelligence-v7",
+    version:"decision-intelligence-v8",
     generatedFromGames:games.length,
     deepGames:games.length,
     historyGames:history.length,

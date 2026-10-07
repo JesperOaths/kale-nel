@@ -6,8 +6,8 @@ import { chromium } from 'playwright';
 const SUPABASE_URL=process.env.SUPABASE_URL||'https://uiqntazgnrxwliaidkmy.supabase.co';
 const API_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||'';
 const BASE=(process.env.GEJAST_BASE_URL||'https://kalenel.nl/').replace(/\/+$/,'')+'/';
-const EXPECTED_FRONTEND='20261007-league-web-v317';
-const EXPECTED_ANALYZER='league-web-behavior-v4.181';
+const EXPECTED_FRONTEND='20261007-league-web-v318';
+const EXPECTED_ANALYZER='league-web-behavior-v4.182';
 const EDGE=SUPABASE_URL+'/functions/v1/printify-gildan-diff-diag-v1';
 const OUT='league-visual-audit';
 const PROFILE_ID='00000000-0000-4000-8000-000000000316';
@@ -189,13 +189,13 @@ function buildDecisionIntelligence(games){
     analytic('geographical_clusters','Geographical review clusters',{mapEvents:[{matchId:m(3),type:'bad_death',zone:'their mid outer-tower area',minute:19.1,position:{x:9800,y:8200}},{matchId:m(7),type:'bad_death',zone:'bot lane central',minute:18.4,position:{x:7200,y:4800}},{matchId:m(14),type:'missed_join',zone:'their mid outer-tower area',minute:22.2,position:{x:10100,y:8400}}]},[{zone:'their mid outer-tower area',count:6,sampledExposureMin:15.2,signalsPer30SampledMin:11.84},{zone:'bot lane central',count:9,sampledExposureMin:42.5,signalsPer30SampledMin:6.35},{zone:'mid river',count:5,sampledExposureMin:28.4,signalsPer30SampledMin:5.28}],'proxy'),
     analytic('champion_tendencies','Champion tendencies',{sample:3},[{champion:'Jinx',games:8,riskyDeathsPerGame:1.1,crossMapTradeRate:55,skippedFightSamples:9,activeFightSurvivalRate:68,activeFightSamples:12},{champion:'KaiSa',games:6,riskyDeathsPerGame:.8,crossMapTradeRate:48,skippedFightSamples:6,activeFightSurvivalRate:73,activeFightSamples:9},{champion:'Ashe',games:4,riskyDeathsPerGame:1.3,crossMapTradeRate:60,skippedFightSamples:5,activeFightSurvivalRate:64,activeFightSamples:7}],'thin'),
     analytic('matchup_adjusted_lane','Matchup-adjusted lane context',{sample:2},[{matchup:'Jinx vs Jhin',games:4,avgGold15:-120,avgDpmVsPeer:85},{matchup:'KaiSa vs Ezreal',games:3,avgGold15:180,avgDpmVsPeer:40},{matchup:'Ashe vs Sivir',games:3,avgGold15:-260,avgDpmVsPeer:62}],'thin'),
-    analytic('expected_performance_residual','Expected-performance residual',{medianResidual:28},residual),
+    analytic('expected_performance_residual','Expected-performance residual',{recentResidual:28,recentResidualGames:10,recentResidualStatistic:'median'},residual),
     analytic('session_components','Later-session components',{sample:4},[{label:'Gold@15 vs role',rawDelta:-310,baselineN:8,recentN:7,normalized:-2.1},{label:'CS/min vs role',rawDelta:.23,baselineN:8,recentN:7,normalized:1.5},{label:'DPM vs role',rawDelta:72,baselineN:8,recentN:7,normalized:1.2},{label:'Deaths vs role',rawDelta:.18,baselineN:8,recentN:7,normalized:-.7}]),
-    analytic('requeue_sweet_spot','Requeue-gap context',{rows:[{bucket:'<5m',games:6,supported:true,dpmDelta:75,csMinDelta:.26,deathsDelta:.35,kpDelta:1.2,gpmDelta:8},{bucket:'5–15m',games:7,supported:true,dpmDelta:48,csMinDelta:.18,deathsDelta:.05,kpDelta:2.1,gpmDelta:14},{bucket:'15m+',games:4,supported:false,dpmDelta:20,csMinDelta:.09,deathsDelta:-.1,kpDelta:.5,gpmDelta:4}]},[],'thin'),
-    analytic('mistake_recurrence','Review-signal recurrence',{sample:10},games.slice(0,10).map((g,i)=>({matchId:g.matchId,issues:Math.max(0,4-Math.floor(i/3))}))),
+    analytic('requeue_sweet_spot','Requeue-gap context',{rows:[{bucket:'<10m',games:6,supported:true,metricSamples:{dpmDelta:6,csMinDelta:6,deathsDelta:6,kpDelta:6,gpmDelta:6},dpmDelta:75,csMinDelta:.26,deathsDelta:.35,kpDelta:1.2,gpmDelta:8},{bucket:'10–25m',games:7,supported:true,metricSamples:{dpmDelta:7,csMinDelta:7,deathsDelta:7,kpDelta:7,gpmDelta:7},dpmDelta:48,csMinDelta:.18,deathsDelta:.05,kpDelta:2.1,gpmDelta:14},{bucket:'25–45m',games:4,supported:false,metricSamples:{dpmDelta:4,csMinDelta:4,deathsDelta:4,kpDelta:4,gpmDelta:4},dpmDelta:20,csMinDelta:.09,deathsDelta:-.1,kpDelta:.5,gpmDelta:4}]},[],'thin'),
+    analytic('mistake_recurrence','Review-signal recurrence',{sample:10,recentGameN:5,priorGameN:5,recentFive:1.4,priorFive:3.6},games.slice(0,10).map((g,i)=>({matchId:g.matchId,issues:Math.max(0,4-Math.floor(i/3))}))),
     analytic('automatic_replay_shortlist','Automatic replay shortlist',{sample:shortlist.length},shortlist)
   ];
-  return{version:'decision-intelligence-v7',generatedFromGames:20,deepGames:20,historyGames:86,headline:{thin:4,unavailable:0},analytics,replayShortlist:shortlist};
+  return{version:'decision-intelligence-v8',generatedFromGames:20,deepGames:20,historyGames:86,headline:{thin:4,unavailable:0},analytics,replayShortlist:shortlist};
 }
 
 function buildFixtureReport(){
@@ -208,6 +208,7 @@ function buildFixtureReport(){
     {label:'Games 61–80',games:20,peerCsMinDelta:metric(.06,20),peerDpmDelta:metric(14,20),peerGpmDelta:metric(5,20),peerDeathsDelta:metric(-.04,20)},
     {label:'Games 81–86',games:6,peerCsMinDelta:metric(.02,6),peerDpmDelta:metric(5,6),peerGpmDelta:metric(2,6),peerDeathsDelta:metric(-.08,6)}
   ];
+  trajectory.forEach((w,i)=>{w.newestGameStartTimestamp=Date.now()-i*40*3600000;w.oldestGameStartTimestamp=w.newestGameStartTimestamp-(w.games-1)*2*3600000;});
   return{
     analyzerVersion:EXPECTED_ANALYZER,
     generatedAt:new Date().toISOString(),
@@ -386,6 +387,10 @@ async function auditViewport(browser,report,width,height,label){
   assert(metrics.fonts.decision>=16,label+': decision explanation text below 16px');
   assert(metrics.fonts.review>=16,label+': player-review body text below 16px');
   assert(metrics.fonts.synthesis>=15,label+': synthesis body text below 15px');
+  assert(await page.locator('table.transition-matrix caption').count()===1,label+': semantic transition table/caption missing');
+  assert(await page.locator('table.transition-matrix th[scope="row"]').count()===3,label+': transition row headers missing');
+  assert(await page.locator('.trajectory-svg circle.partial').count()===4,label+': partial history markers missing');
+  assert((await page.locator('#evidenceAgreement').innerText()).includes('does not establish statistical independence'),label+': overlapping evidence caveat missing');
   assert(pageErrors.length===0,label+': page errors: '+pageErrors.join(' | '));
 
   await page.screenshot({path:path.join(OUT,'league-'+label+'-full.png'),fullPage:true});
@@ -397,8 +402,57 @@ async function auditViewport(browser,report,width,height,label){
       await loc.screenshot({path:path.join(OUT,'league-'+label+'-'+name+'.png')});
     }
   }
+  const analyticVisuals=[];
+  for(let i=0;i<25;i++){
+    const card=page.locator('#decisionIntelligence .di-card').nth(i);
+    if(!await card.evaluate(el=>el.open))await card.locator(':scope > summary').click();
+    await card.scrollIntoViewIfNeeded();
+    const visual=await card.evaluate(el=>({title:el.querySelector('summary strong')?.textContent||'',visual:!!el.querySelector('.di-visual'),conclusion:!!el.querySelector('.di-conclusion p')?.textContent?.trim(),invalid:/\b(?:NaN|Infinity|undefined)\b/.test(el.textContent),overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,smallestAxisPx:Math.min(...[...el.querySelectorAll('.di-svg-chart svg text')].map(t=>parseFloat(getComputedStyle(t).fontSize)*Math.hypot(t.getScreenCTM().a,t.getScreenCTM().b)),Infinity)}));
+    assert(visual.visual&&visual.conclusion&&!visual.invalid,label+': incomplete analytic card: '+visual.title);
+    assert(visual.overflow<=4,label+': open analytic caused page overflow: '+visual.title);
+    assert(visual.smallestAxisPx>=12,label+': unreadable graph labels: '+visual.title+' '+visual.smallestAxisPx+'px');
+    await card.screenshot({path:path.join(OUT,'league-'+label+'-analytic-'+String(i+1).padStart(2,'0')+'.png')});
+    analyticVisuals.push({...visual,smallestAxisPx:Number.isFinite(visual.smallestAxisPx)?visual.smallestAxisPx:null});
+  }
+  const interactions={};
+  await page.locator('.report-jump-nav a[href="#long-horizon"]').click();
+  assert(await page.evaluate(()=>location.hash==='#long-horizon'),label+': history navigation failed');
+  interactions.historyNavigation=true;
+  for(const selector of ['.trajectory-plot','.transition-matrix-scroll','.di-svg-chart']){
+    const region=page.locator(selector).first();
+    const scrollable=await region.evaluate(el=>el.scrollWidth>el.clientWidth+4);
+    if(scrollable){
+      await region.focus();await page.keyboard.press('ArrowRight');await page.waitForTimeout(220);
+      assert(await region.evaluate(el=>el.scrollLeft>0),label+': keyboard chart/table scrolling failed: '+selector);
+      await region.evaluate(el=>{el.scrollLeft=0;});
+    }
+    interactions[selector]={scrollable,keyboardVerified:scrollable};
+  }
+  await page.locator('#matchHistoryToggle').click();
+  assert(await page.locator('#matchHistoryList .match-history-row').count()===20,label+': expand all matches failed');
+  await page.locator('[data-history-filter="win"]').click();
+  assert(await page.locator('#matchHistoryList .match-history-row.tone-bad').count()===0,label+': wins filter retained losses');
+  assert(await page.locator('[data-history-filter="win"]').getAttribute('aria-pressed')==='true',label+': filter active state missing');
+  await page.locator('[data-history-filter="all"]').click();
+  const matchToggle=page.locator('#matchHistoryList .match-history-toggle').first();
+  await matchToggle.click();
+  assert(await matchToggle.getAttribute('aria-expanded')==='true',label+': match story did not expand');
+  assert(await page.locator('#matchHistoryList .match-history-detail:not([hidden])').count()===1,label+': match story content missing');
+  interactions.matchFiltersAndStory=true;
+  const card=page.locator('#decisionIntelligence .di-card').nth(4);
+  if(!await card.evaluate(el=>el.open))await card.locator(':scope > summary').click();
+  assert(await card.evaluate(el=>el.open),label+': analytic disclosure did not open');
+  const replay=page.locator('.di-shortlist-card .di-open-match').first(),targetMatch=await replay.getAttribute('data-match-id');
+  await replay.click();
+  assert(await page.locator('#gamesBody .game-row[aria-expanded="true"]').getAttribute('data-match')===targetMatch,label+': replay link opened the wrong match');
+  assert(await page.locator('.details-shell [data-tab="fights"].active').count()===1,label+': replay link did not open fight evidence');
+  await page.locator('.details-shell [data-tab="deaths"]').click();
+  assert(await page.locator('.details-shell [data-tab="deaths"].active').count()===1,label+': evidence tab switch failed');
+  interactions.analyticDisclosureAndReplayTabs=true;
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth)<=4,label+': interactive evidence caused page overflow');
+  assert(pageErrors.length===0,label+': interaction page errors: '+pageErrors.join(' | '));
   await context.close();
-  return{label,before,...metrics,pageErrors,consoleErrors};
+  return{label,before,...metrics,analyticVisuals,interactions,pageErrors,consoleErrors};
 }
 
 let browser,primary=null;

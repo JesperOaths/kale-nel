@@ -2428,7 +2428,7 @@ The three top driver cards are intentionally stricter than the long supporting l
 This affects presentation priority, not the underlying evidence record. Low-confidence findings remain available in the supporting coaching evidence and can become stronger as the rolling sample grows.
 
 
-Theme synthesis records total related findings separately from independent reinforcement. The representative finding does not count as its own reinforcement, and multiple findings with the same comparison/evidence channel do not increase independent support. Theme ranking also uses the number of distinct channels rather than raw duplicate finding count, preventing repeated formulations of one signal from inflating priority.
+Theme synthesis records total related findings separately from additional evidence views. The representative finding does not count as its own reinforcement, and multiple findings with the same comparison/evidence channel do not increase the legacy `independentSupportCount` field. Theme ranking uses distinct comparison views rather than raw duplicate findings. Different views can share the same games and events; agreement does not establish statistical independence.
 
 ## Role-aware recent match story
 
@@ -3899,7 +3899,7 @@ Neither surface creates a new composite performance score. Claims must be tracea
 
 ### Evidence agreement
 
-The synthesis separately reports whether evidence is converging, mixed, single-channel or thin. A mixed set of recent/session/history metrics must stay mixed rather than being averaged into one form score. The primary coaching theme can be described as converging only when its existing theme model reports multiple independent evidence channels.
+The synthesis separately reports whether evidence is converging, mixed, single-channel or thin. A mixed set of recent/session/history metrics must stay mixed rather than being averaged into one form score. The primary coaching theme can be described as converging when another distinct evidence view reinforces its representative finding. These views may overlap in games and events; they are not statistically independent observations.
 
 ### Purpose of all 25 decision analytics
 
@@ -3915,7 +3915,7 @@ Purpose is orthogonal to evidence status. A measured diagnostic can still be non
 
 longHorizon.trajectoryWindows exposes up to five non-overlapping 20-game windows from the newest 100 selected-role games. The exported metrics are direct-role-opponent deltas: peerCsMinDelta, peerDpmDelta, peerGpmDelta, peerDeathsDelta, plus role-relevant vision/KP deltas.
 
-The UI requires at least five valid observations for a metric in a window and at least two supported windows before making a direction comparison. This is intentionally not a raw-DPM/raw-CS trend: opponent-relative windows are used so increasing opponent strength does not automatically masquerade as deterioration.
+The UI requires at least five valid observations for a metric in each of two complete 20-game windows. It compares the actual latest 20 with the oldest complete supported reference, never a partial remainder or a fallback older “latest” window. Dates and denominators are visible. Missing observations keep their chronological position and break the line; partial windows use hollow starred points as context. This is a historical endpoint comparison, not a fitted trend or a fully adjusted champion, matchup or MMR model.
 
 Timeline-only metrics such as Gold@15 remain in the deep-game layers because match-only historical rows cannot reconstruct timeline checkpoints.
 
@@ -3928,6 +3928,21 @@ For ADC/MID/TOP, the existing direct-role Gold@15→Gold@25 arc is now shown as 
 - behind at both checkpoints with the role-gold deficit worsening by at least 500g.
 
 The review then counts supported events that occur **inside the 15→25 window**: high-risk deaths, repeat deaths, active-fight death before contribution, first allied death in an active fight, active fight starts with at least 1000 unspent gold, side-lane deaths before a neutral objective, and recent-shop objective absences. A signal is promoted only when it recurs in at least two deteriorating-transition games. Rates versus other comparable transitions are shown as co-occurrence context only; the UI explicitly forbids causal wording.
+
+### Full-page audit: frontend v318 / analyzer v4.182 / decision intelligence v8
+
+The 7 October 2026 audit covers the new synthesis, whole-player review, longer-history charts, state-transition review, lazy sections and all 25 decision analytics, alongside the existing role, mechanics, benchmark, missing-data and learning contracts.
+
+- History verdicts use complete windows and the actual latest sample. Dates expose references from earlier seasons. Missing windows break graph lines; partial windows remain explicitly labelled context.
+- Evidence agreement counts distinct views rather than independent trials. A classified risky-death rate does not establish high variance. Review conclusions cannot invent a strength or turn recurrence into proof of causation.
+- The transition matrix is a native table with row/column headers, thresholds and exact cell counts for favorable, deteriorating and other movement. A behind→behind cell can contain deterioration. Fight-death precursors require the player's actual death timestamp inside both the fight and the 15→25 window; fight-start timing is used only for start-state signals. Unverified fixed-checkpoint eligibility is withheld.
+- Local-number loss-rate comparisons use known outcomes and at least five fights per compared state. Conclusions report the observed spread instead of always asserting a flat outcome relationship. Single-frame fights cannot enter a paired pre-fight movement average.
+- Requeue metrics retain separate observation counts and need five observations each. A large overall bucket cannot promote an almost entirely missing metric. Unknown game/shop/fight timestamps are withheld rather than converted into zero.
+- Recent residual headlines need five recent eligible games. Recurrence labels require an actual five-game window and a second complete window for comparison. Missing timelines cannot become zero review-signal observations. Zero repeat deaths remain a measured zero when enough consecutive-death opportunities exist.
+- Fight follow-up ends at the next tracked fight, 90 seconds or game end. Replay diversity caps remain strict even when fewer than ten moments qualify. Lead/deficit and ahead-fight evidence require trusted direct-role peers and eligible checkpoints.
+- Charts preserve exact zero-width bars, disclose truncated previews, and show the shared gold scale for paired checkpoints. SVG chart labels retain readable sizes instead of shrinking with a phone viewport. History graphs, decision charts and the transition table scroll within their own keyboard-focusable regions on mobile. The browser audit opens and captures all 25 analytic cards in both layouts.
+
+Executable regression coverage lives in `scripts/check-league-review-audit.mjs` and runs as part of the League analysis contract. Live browser verification uses production assets with a deterministic report fixture; cached real report recomputation is a separate check and does not create profile or analysis records. Saved analyses preserve their original analyzer version and require a new analysis to obtain backend v4.182 results.
 
 Support and Jungle keep their role-specific sequence arcs instead of forcing this carry-lane gold-state model onto them.
 
