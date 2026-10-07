@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 const SUPABASE_URL=process.env.SUPABASE_URL||'https://uiqntazgnrxwliaidkmy.supabase.co';
 const API_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||'';
 const BASE=(process.env.GEJAST_BASE_URL||'https://kalenel.nl/').replace(/\/+$/,'')+'/';
-const EXPECTED_FRONTEND='20261007-league-web-v321';
+const EXPECTED_FRONTEND='20261007-league-web-v322';
 const EXPECTED_ANALYZER='league-web-behavior-v4.182';
 const EDGE=SUPABASE_URL+'/functions/v1/printify-gildan-diff-diag-v1';
 const OUT='league-visual-audit';
@@ -380,6 +380,8 @@ async function auditViewport(browser,report,width,height,label){
   assert(!/\b(?:NaN|Infinity|undefined)\b/.test((await page.locator('#report').textContent()).replaceAll('Infinity Edge','')),label+': report contains invalid numeric or missing-field text');
   assert(metrics.decisionCards===25&&metrics.purposeBadges===25,label+': expected all 25 decision cards and purpose badges');
   assert(/Act on this/i.test(metrics.purposeLegend)&&/Useful context/i.test(metrics.purposeLegend)&&/Diagnostic \/ exploratory/i.test(metrics.purposeLegend),label+': coaching-purpose legend incomplete: '+metrics.purposeLegend);
+  const directionCard=page.locator('.coaching-synthesis-card').filter({has:page.getByText('Recent direction',{exact:true})});
+  assert((await directionCard.locator('strong').textContent()).includes('slipping')&&(await directionCard.getAttribute('class')).includes('tone-bad'),label+': slipping recent-direction headline has a contradictory color');
   assert(metrics.synthesisCards===4&&metrics.agreementCards===3,label+': synthesis/evidence-agreement surface incomplete');
   assert(metrics.trajectoryCards===4,label+': expected four longer-history trajectory cards');
   assert(metrics.transitionMatrix,label+': 15→25 transition matrix missing');
