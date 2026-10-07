@@ -398,7 +398,7 @@ assert.ok(app.includes("spec('DPM vs ADC peer',t.peerDpmDelta")&&app.includes("s
 assert.ok(html.includes('id="teamfightDecisionPanel"')&&app.includes('function renderTeamfightDecisionOverview(')&&api.includes('function fightArea('),'League decisions must expose fight geography and cross-map trade review');
 assert.ok(html.includes('id="decisionIntelligencePanel"')&&html.includes('/league/decision-intelligence.js?v=20261007-league-web-v304')&&app.includes('window.renderDecisionIntelligence?.(r)'),'Decision intelligence panel must be wired into report rendering');
 assert.ok(decisionBackend.includes('fight_decision_ledger')&&decisionBackend.includes('automatic_replay_shortlist')&&decisionBackend.includes('requeue_sweet_spot')&&decisionBackend.includes('expected_performance_residual'),'Decision intelligence backend must retain the requested decision, residual, requeue and replay families');
-assert.equal((decisionBackend.match(/analytics\.push\(metric\(/g)||[]).length,25,'Decision intelligence backend must expose exactly 25 requested analytic families');
+assert.equal((decisionBackend.split('analytics.push(metric(').length-1),25,'Decision intelligence backend must expose exactly 25 requested analytic families');
 assert.ok(decisionUi.includes('All 25 additions')&&decisionUi.includes("statusLabel")&&decisionUi.includes("Proxy"),'Decision intelligence UI must expose all 25 and visually distinguish proxy evidence');
 assert.ok(api.includes('crossMapTradeSupported')&&api.includes('joinReviewPriority')&&api.includes('tradeWindowSec:90'),'Skipped-fight review must use bounded compensation evidence and explicit join-review triage');
 
