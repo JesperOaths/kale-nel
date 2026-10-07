@@ -275,12 +275,12 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     csSwing:round(e.crossMapCsSwingVsPeer,1),goldSwing:round(e.crossMapGoldSwingVsPeer,0),fightLost:e.lostFight===true,
     likelyResourceConflict:n(e.crossMapCsSwingVsPeer)>=4}));
   analytics.push(metric("wave_fight_conflict","Wave-to-fight conflict review",wave.length?"proxy":"unavailable",wave.length,
-    wave.length?"Uses direct-role CS/gold movement after a skipped fight as a resource/wave-pressure proxy; Riot timeline data does not expose exact live minion-wave size.":"No skipped fights with peer CS movement.",
-    {resourceConflictWindows:count(wave,x=>x.likelyResourceConflict),rows:wave.slice(0,12)},wave));
+    wave.length?"Uses direct-role CS/gold movement after a skipped fight as a resource-pressure proxy. The review flag uses ≥4 CS movement; Riot timeline data does not expose exact live minion-wave size.":"No skipped fights with peer CS movement.",
+    {csConflictThreshold:4,resourceConflictWindows:count(wave,x=>x.likelyResourceConflict),rows:wave.slice(0,12)},wave));
 
   // 8. Nothing-gained isolation time
   const nothing=abs.filter(x=>x.e?.crossMapTradeSupported!==true),uniqueNothingMinutes=mergedWindowMinutes(nothing);
-  analytics.push(metric("nothing_gained_isolation","Nothing-gained separation windows",nothing.length?"proxy":"unavailable",nothing.length,
+  analytics.push(metric("nothing_gained_isolation","Skipped fights without supported compensation",nothing.length?"proxy":"unavailable",nothing.length,
     nothing.length?`${nothing.length} skipped tracked fights produced no supported 90-second structure/objective/+250g/+6CS compensation. Their de-duplicated review windows cover about ${round(uniqueNothingMinutes,1)} minutes.`:"No uncompensated skipped-fight windows.",
     {reviewableMinutes:round(uniqueNothingMinutes,1),windowCount:nothing.length,highPriority:count(nothing,x=>x.e?.joinReviewPriority==="high"),
       rows:nothing.slice(0,12).map(({g,e})=>({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,priority:e.joinReviewPriority}))},
@@ -309,12 +309,14 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   // 11. Lead utilisation curve
   const leads=games.filter(g=>finite(g?.goldDiff15)&&n(g.goldDiff15)>=500);
   const leadRows=leads.map(g=>({matchId:g.matchId,gold15:round(g.goldDiff15,0),gold25:round(g.goldDiff25,0),
+    leadBand:n(g.goldDiff15)>=1500?"1500g+":n(g.goldDiff15)>=1000?"1000–1499g":"500–999g",
     retainedTo25:finite(g.goldDiff25)?n(g.goldDiff25)>=n(g.goldDiff15)*.5:null,killConversionRate:g?.killConversion?.rate??null,
     structureEvents:arr(g?.structurePressure?.events).length}));
   const measuredLeadRows=leadRows.filter(x=>finite(x.gold25));
-  analytics.push(metric("lead_utilisation","Lead utilisation curve",measuredLeadRows.length>=2?"supported":measuredLeadRows.length?"thin":"unavailable",measuredLeadRows.length,
-    leadRows.length?`${count(leadRows,x=>x.retainedTo25===true)} of ${count(leadRows,x=>x.retainedTo25!==null)} ≥500g-at-15 games retained at least half of that direct-role lead to 25 when 25-minute evidence existed.`:"No ≥500g direct-role lead at 15 in the current deep sample.",
-    {eligibleLeadGames:leadRows.length,rows:measuredLeadRows},measuredLeadRows));
+  const leadBands={"500–999g":count(leadRows,x=>x.leadBand==="500–999g"),"1000–1499g":count(leadRows,x=>x.leadBand==="1000–1499g"),"1500g+":count(leadRows,x=>x.leadBand==="1500g+")};
+  analytics.push(metric("lead_utilisation","Lead movement from 15→25",measuredLeadRows.length>=2?"supported":measuredLeadRows.length?"thin":"unavailable",measuredLeadRows.length,
+    measuredLeadRows.length?`${count(measuredLeadRows,x=>x.retainedTo25===true)} of ${measuredLeadRows.length} paired ≥500g-at-15 games retained at least half of that direct-role lead to 25. The card reports movement by explicit starting-lead bands; it does not equate preserved gold difference with correct lead utilization.`:"No ≥500g-at-15 game has a usable 25-minute checkpoint.",
+    {eligibleLeadGames:leadRows.length,leadBands,rows:measuredLeadRows},measuredLeadRows));
 
   // 12. Deficit movement from 15→25
   const deficits=games.filter(g=>finite(g?.goldDiff15)&&n(g.goldDiff15)<=-500);
