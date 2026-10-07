@@ -3131,7 +3131,7 @@ body{background:var(--paper);line-height:1.55;padding:18px 16px 74px}
 
 /* v318: exact-value graphs and real transition classifications. */
 .trajectory-plot{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;border-radius:10px}
-.trajectory-plot .trajectory-svg{min-width:560px;overflow:hidden}
+.trajectory-plot .trajectory-svg{min-width:700px;overflow:hidden}
 .trajectory-svg text{font-size:14px}.trajectory-svg .trajectory-axis-value{font-size:12px}
 .trajectory-svg circle.partial{stroke-dasharray:2 2;fill:var(--panel-soft)}
 .trajectory-svg .trajectory-missing text{fill:var(--muted);font-size:13px}

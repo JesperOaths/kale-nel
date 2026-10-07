@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 const SUPABASE_URL=process.env.SUPABASE_URL||'https://uiqntazgnrxwliaidkmy.supabase.co';
 const API_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||'';
 const BASE=(process.env.GEJAST_BASE_URL||'https://kalenel.nl/').replace(/\/+$/,'')+'/';
-const EXPECTED_FRONTEND='20261007-league-web-v319';
+const EXPECTED_FRONTEND='20261007-league-web-v320';
 const EXPECTED_ANALYZER='league-web-behavior-v4.182';
 const EDGE=SUPABASE_URL+'/functions/v1/printify-gildan-diff-diag-v1';
 const OUT='league-visual-audit';
@@ -421,10 +421,18 @@ async function auditViewport(browser,report,width,height,label){
   await page.locator('.report-jump-nav a[href="#long-horizon"]').click();
   assert(await page.evaluate(()=>location.hash==='#long-horizon'),label+': history navigation failed');
   interactions.historyNavigation=true;
+  const historyAxisPx=await page.locator('.trajectory-svg text').evaluateAll(xs=>Math.min(...xs.map(t=>parseFloat(getComputedStyle(t).fontSize)*Math.hypot(t.getScreenCTM().a,t.getScreenCTM().b))));
+  assert(historyAxisPx>=12,label+': unreadable history axes: '+historyAxisPx+'px');
+  interactions.historyAxisPx=historyAxisPx;
+  const arcsDisclosure=page.locator('details.report-disclosure').filter({has:page.locator('#game-arcs')});
+  if(!await arcsDisclosure.evaluate(el=>el.open))await arcsDisclosure.locator(':scope > summary').click();
+  await page.locator('#game-arcs').scrollIntoViewIfNeeded();
+  await page.locator('#game-arcs').screenshot({path:path.join(OUT,'league-'+label+'-transitions.png')});
   for(const selector of ['.trajectory-plot','.transition-matrix-scroll','.di-svg-chart']){
     const region=page.locator(selector).first();
     const scrollable=await region.evaluate(el=>el.scrollWidth>el.clientWidth+4);
     if(scrollable){
+      await region.scrollIntoViewIfNeeded();
       await region.focus();await page.keyboard.press('ArrowRight');await page.waitForTimeout(220);
       assert(await region.evaluate(el=>el.scrollLeft>0),label+': keyboard chart/table scrolling failed: '+selector);
       await region.evaluate(el=>{el.scrollLeft=0;});
