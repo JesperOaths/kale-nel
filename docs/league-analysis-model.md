@@ -3715,7 +3715,7 @@ The v308 pass was driven by a fresh production analysis over the saved account's
 - Decision-intelligence numeric guards reject null/undefined/empty values before Number conversion. Missing Gold@25 can no longer become a false zero.
 - Visual conclusions use the full stored `moments` set when available; `evidence.rows` remains a deliberately short disclosure preview only.
 - Fight-win conversion requires a strict kill-cluster win (`teamFightKills > enemyFightKills`). Tied clusters are not wins, and follow-up kills must occur after the cluster endpoint.
-- Objective-setup position is requested before the objective (~45 seconds) and reports its actual seconds-before-event. It is explicitly a Proxy rather than a measured path.
+- Objective setup uses distinct coarse position samples requested around 90/60/30 seconds before the event, collapses duplicate Riot frames, reports actual seconds-before-event, and remains explicitly a Proxy rather than second-perfect pathing.
 - Repeated map locations are called review clusters, not mistake clusters.
 - Champion tendency comparison is Thin unless at least two champions have >=3 deep games.
 - Opponent-adjusted DPM residuals use the longest valid same-role match history and hierarchical leave-one-out context: champion+opponent+duration, champion+duration, champion, duration, then global personal history.
