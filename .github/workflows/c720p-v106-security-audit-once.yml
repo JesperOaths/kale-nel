@@ -1,0 +1,22 @@
+name: C720P V106 security audit once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/c720p-v106-security-audit-once.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Enqueue bounded V106 storage audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 2 --connect-timeout 10 --max-time 45 \
+            'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-control?v106_token=f3402edbb77e7a3226523dfa7b104142479a702e3c4ba4eed73c5f223372d782&v106_action=audit'
