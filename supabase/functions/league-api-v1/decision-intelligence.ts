@@ -423,16 +423,24 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
       towerFollowUpWindows:towerFollowUps,plateFollowUpWindows:plateFollowUps,playerKillFollowUpWindows:playerKillFollowUps,
       medianWindowSec:round(median(winFightRows.map(x=>x.windowSec)),0),windowRule:"ends at next tracked fight or 90 seconds",rows:winFightRows},winFightRows));
 
-  // 16. After fight losses: extra high-risk deaths
+  // 16. After fight losses: next-fight-bounded extra high-risk deaths
   const lossRows:any[]=[];
-  for(const {g,e} of fights.filter(x=>x.e?.active===true&&x.e?.lostFight===true)){
-    const end=n(e?.endMin??e?.startMin),to=end+1.5;
-    const extraDeaths=count(badDeathEvents(g),d=>finite(eventMin(d))&&n(eventMin(d))>end&&n(eventMin(d))<=to);
-    lossRows.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,extraRiskDeaths90s:extraDeaths,noExtraRiskDeath:extraDeaths===0});
+  for(const g of games){
+    const tracked=[...fightEvents(g),...absenceEvents(g)].filter((e:any)=>finite(e?.startMin)).sort((a:any,b:any)=>n(a.startMin)-n(b.startMin));
+    const losses=fightEvents(g).filter((e:any)=>e?.active===true&&e?.lostFight===true&&finite(e?.startMin)).sort((a:any,b:any)=>n(a.startMin)-n(b.startMin));
+    for(const e of losses){
+      const end=n(e?.endMin??e?.startMin),nextFight=tracked.find((x:any)=>n(x.startMin)>end+.01);
+      const to=Math.min(end+1.5,nextFight?Math.max(end,n(nextFight.startMin)):Infinity);
+      if(!finite(to)||to<=end)continue;
+      const extraDeaths=count(badDeathEvents(g),d=>finite(eventMin(d))&&n(eventMin(d))>end&&n(eventMin(d))<=to);
+      lossRows.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,windowSec:round((to-end)*60,0),
+        extraRiskDeaths:extraDeaths,noExtraRiskDeath:extraDeaths===0});
+    }
   }
-  analytics.push(metric("fight_loss_containment","After fight losses: extra high-risk deaths",lossRows.length?"supported":"unavailable",lossRows.length,
-    lossRows.length?`${round(safeRate(count(lossRows,x=>x.noExtraRiskDeath),lossRows.length),0)}% of tracked active fight losses had no additional classified high-risk death in the following ~90 seconds. This card does not claim the broader game-state loss was contained.`:"No active lost fights to evaluate.",
-    {noExtraRiskDeathRate:round(safeRate(count(lossRows,x=>x.noExtraRiskDeath),lossRows.length),1),rows:lossRows},lossRows));
+  analytics.push(metric("fight_loss_containment","After fight losses: before the next fight",lossRows.length?"supported":"unavailable",lossRows.length,
+    lossRows.length?`${round(safeRate(count(lossRows,x=>x.noExtraRiskDeath),lossRows.length),0)}% of tracked active fight losses had no additional classified high-risk death before the next tracked fight or 90 seconds, whichever came first. Windows do not overlap, and this card does not claim the broader game-state loss was contained.`:"No active lost fights to evaluate.",
+    {noExtraRiskDeathRate:round(safeRate(count(lossRows,x=>x.noExtraRiskDeath),lossRows.length),1),
+      medianWindowSec:round(median(lossRows.map(x=>x.windowSec)),0),windowRule:"ends at next tracked fight or 90 seconds",rows:lossRows},lossRows));
 
   // 17. Skipped-fight structure/objective overlap
   const objTrade=abs.filter(x=>x.e?.playerNeutralObjectiveGains>0||x.e?.playerStructureGains>0).map(({g,e})=>({
@@ -463,13 +471,13 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   const geoRows=[...geo.values()].map(x=>{
     const exposureMin=round(exposure.get(x.zone)||0,1);
     return {...x,matches:[...x.matches],sampledExposureMin:exposureMin,
-      signalsPer30SampledMin:finite(exposureMin)&&n(exposureMin)>=5?round(30*x.count/n(exposureMin),2):null};
+      signalsPer30SampledMin:finite(exposureMin)&&n(exposureMin)>=15&&x.count>=3?round(30*x.count/n(exposureMin),2):null};
   }).sort((a,b)=>b.count-a.count);
-  const rawTop=geoRows[0]||null,rateTop=geoRows.filter(x=>finite(x.signalsPer30SampledMin)&&n(x.sampledExposureMin)>=5&&x.count>=2)
+  const rawTop=geoRows[0]||null,rateTop=geoRows.filter(x=>finite(x.signalsPer30SampledMin)&&n(x.sampledExposureMin)>=15&&x.count>=3)
     .sort((a,b)=>n(b.signalsPer30SampledMin)-n(a.signalsPer30SampledMin))[0]||null;
   analytics.push(metric("geographical_clusters","Geographical review locations",geoRows.length?"proxy":"unavailable",sum(geoRows,x=>x.count),
     geoRows.length?`Most raw review signals occurred in ${rawTop.zone} (${rawTop.count}). ${rateTop?`After coarse timeline-frame exposure adjustment, ${rateTop.zone} is highest at ${rateTop.signalsPer30SampledMin} signals per 30 sampled minutes. `:""}Exposure is estimated from roughly minute-spaced position frames, so this identifies places to inspect rather than proving a zone is intrinsically risky.`:"No repeated supported geography cluster.",
-    {exposureBasis:"team-relative fight-zone minutes approximated from timeline frame intervals; rate requires ≥5 sampled minutes and ≥2 signals",
+    {exposureBasis:"team-relative fight-zone minutes approximated from timeline frame intervals; rate requires ≥15 sampled minutes and ≥3 signals",
       rawTopZone:rawTop?.zone||null,rateTopZone:rateTop?.zone||null,rows:geoRows.slice(0,12),mapEvents:geoMapEvents.slice(0,40)}));
 
   // 19. Champion-specific decision tendencies
@@ -585,7 +593,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
 
 
   return {
-    version:"decision-intelligence-v6",
+    version:"decision-intelligence-v7",
     generatedFromGames:games.length,
     deepGames:games.length,
     historyGames:history.length,

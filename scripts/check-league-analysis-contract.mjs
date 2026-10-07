@@ -213,8 +213,10 @@ ok(!decisionBackend.includes('function valueProxy(')&&!decisionBackend.includes(
 ok(decisionBackend.includes('"Skipped-fight trade evidence"')&&decisionBackend.includes('"Cross-map compensation profile"'), 'skipped-fight cards must expose separate evidence and compensation coverage');
 ok(backend.includes('numberSampleLeadSec')&&decisionBackend.includes('medianNumberSampleLeadSec'), 'local-number snapshots must disclose timeline-frame age');
 ok(decisionBackend.includes('totalShopVisits')&&decisionBackend.includes('pairedEventVisits'), 'post-recall timing must disclose conditional-sample coverage');
-ok(decisionBackend.includes('followUpRate')&&decisionBackend.includes('noExtraRiskDeathRate'), 'fight follow-up/loss cards must expose their narrow measured outcomes');
+ok(decisionBackend.includes('followUpRate')&&decisionBackend.includes('"After fight losses: before the next fight"')&&decisionBackend.includes('noExtraRiskDeathRate')&&decisionBackend.includes('windowRule:"ends at next tracked fight or 90 seconds"'), 'fight follow-up/loss cards must use narrow next-fight-bounded measured outcomes');
 ok(decisionBackend.includes('"Skipped-fight structure/objective overlap"'), 'objective trading must remain timing overlap rather than causal claim');
+ok(decisionUi.includes('Row-level counts are window evidence, not unique event totals'), 'overlapping skipped-fight windows must not be summed as unique structure/objective events');
+ok(decisionBackend.includes('version:"decision-intelligence-v7"'), 'decision intelligence must expose the v7 final evidence contract');
 ok(decisionBackend.includes('recentResidualStatistic:"median"')&&decisionBackend.includes('recent.slice(0,20)'), 'residual headline must use latest-20 median');
 ok(decisionBackend.includes('supported:xs.length>=5')&&decisionBackend.includes('minimumBucketGames:5'), 'requeue promoted buckets must have at least five games');
 ok(!decisionBackend.includes('function peerComposite(')&&!decisionBackend.includes('avgRelativeComposite')&&decisionBackend.includes('"Requeue gap context"'), 'requeue context must not use a synthetic mixed-unit winner');
@@ -228,7 +230,7 @@ ok(decisionBackend.includes('"Pre-fight sampled positioning"')&&!decisionBackend
 ok(decisionBackend.includes('stateLossRateRangePp')&&decisionUi.includes('does not show a clear directional outcome separation'), 'local-number conclusion must reflect the flat observed outcome range');
 ok(decisionBackend.includes('sessionStatus')&&decisionUi.includes("Later-session read:"), 'session summary must synthesize opposing component directions');
 ok(css.includes('v312 — final decision audit')&&css.includes('.di-requeue-grid'), 'final decision views must remain in the League design system');
-ok(backend.includes('fightZone:fightArea(mapId,mine.position,teamId)')&&decisionBackend.includes('signalsPer30SampledMin'), 'geographical review must exposure-normalize raw review counts using team-relative sampled zone time');
+ok(backend.includes('fightZone:fightArea(mapId,mine.position,teamId)')&&decisionBackend.includes('signalsPer30SampledMin')&&decisionBackend.includes('n(exposureMin)>=15&&x.count>=3'), 'geographical review must exposure-normalize raw review counts and suppress tiny-denominator rates');
 ok(css.includes('v314 — decision review readability'), 'decision intelligence readability overrides must remain in the warm League design system');
 ok(decisionBackend.includes('maxPrimaryPerMatch:2')&&decisionBackend.includes('maxPrimaryPerType:4'), 'replay shortlist must be diversity capped');
 ok(decisionUi.includes('teamRelativePoint')&&decisionUi.includes('Team-relative orientation · reviewed team base is bottom-left'), 'decision maps must use and disclose team-relative orientation');
@@ -292,7 +294,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.179'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.180'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
 ok(backend.includes('aboveOwnDeadTimeMedian:Number(g.damageRank)>2&&')&&backend.includes('aboveOwnTurretMedian:Number(g.damageRank)>2&&'), 'resource/output exemplar annotations must compute lower-damage state in their own callback scope');
 ok(backend.includes('highUnspentFightSamples')&&backend.includes('itemDisadvantageFightSamples')&&backend.includes('goldDeficitFightSamples')&&backend.includes('outnumberedFightSamples'), 'fight-state rates must use metric-specific supported-opportunity denominators');
 ok(backend.includes('const cleanOutcomeGames=games.filter(g=>g?.outcomeCompromised!==true)')&&backend.includes('afk_or_early_surrender_excluded_from_final_result_conversion'), 'final-result coaching must exclude compromised outcomes');
