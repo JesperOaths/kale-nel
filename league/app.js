@@ -813,11 +813,32 @@ function renderWhenNear(elementId,callback,rootMargin='700px'){
   },{root:null,rootMargin,threshold:0});
   observer.observe(node);heavyObservers.push(observer);
 }
+function prepareDecisionIntelligence(r){
+  const panel=$('decisionIntelligencePanel'),box=$('decisionIntelligence');if(!panel||!box)return;
+  const analytics=Array.isArray(r?.decisionIntelligence?.analytics)?r.decisionIntelligence.analytics:[];
+  if(!analytics.length){panel.hidden=true;box.innerHTML='';return;}
+  panel.hidden=false;box.innerHTML='<div class="deferred-report-placeholder"><strong>25-part decision review</strong><span>The detailed graphs and maps render when this section approaches the viewport.</span></div>';
+}
+function prepareMatchHistory(r){
+  const list=$('matchHistoryList'),summary=$('matchHistorySummary');if(!list||!summary)return;
+  const n=reportCoachingGames(r).filter(g=>gameIsCoachingContext(r,g)).length;
+  summary.innerHTML='<span><b>'+n+'</b> comparable matches</span><small>Rows render when this section approaches the viewport.</small>';
+  list.innerHTML='<div class="deferred-report-placeholder"><strong>Recent match stories</strong><span>Deferred to keep the report’s first paint responsive.</span></div>';
+}
+function measuredDeferredRender(name,fn){
+  const started=typeof performance!=='undefined'&&performance.now?performance.now():0;
+  fn();
+  const ended=typeof performance!=='undefined'&&performance.now?performance.now():0;
+  state.reportRenderPerformance=state.reportRenderPerformance||{};
+  if(started&&ended)state.reportRenderPerformance[name+'Ms']=Math.round((ended-started)*10)/10;
+}
 function scheduleHeavyReportRender(r){
   const ticket=++heavyRenderTicket;clearHeavyObservers();
-  const safe=fn=>()=>{if(ticket===heavyRenderTicket&&state.report===r)fn();};
-  renderWhenNear('lane-economy',safe(()=>renderCharts(r)),'900px');
-  renderWhenNear('spatialReview',safe(()=>renderSpatial(r)),'650px');
+  const safe=(name,fn)=>()=>{if(ticket===heavyRenderTicket&&state.report===r)measuredDeferredRender(name,fn);};
+  renderWhenNear('decisionIntelligencePanel',safe('decisionIntelligence',()=>window.renderDecisionIntelligence?.(r)),'1200px');
+  renderWhenNear('match-history',safe('matchHistory',()=>renderMatchHistory(r)),'1100px');
+  renderWhenNear('lane-economy',safe('economyCharts',()=>renderCharts(r)),'900px');
+  renderWhenNear('spatialReview',safe('spatialReview',()=>renderSpatial(r)),'650px');
 }
 function bindTechnicalMetrics(r){
   const details=$('technicalMetricsDetails');if(!details)return;
@@ -831,6 +852,7 @@ function bindTechnicalMetrics(r){
   details.addEventListener('toggle',()=>{if(details.open)render();},{once:true});
 }
 function renderReport(raw,sourceKind){
+  const renderStarted=typeof performance!=='undefined'&&performance.now?performance.now():0;
   const r=normalizeReport(raw);state.report=r;
   $('reportEmpty').hidden=true;$('report').hidden=false;
   const p=r.profile||{},s=r.summary||{};
@@ -848,6 +870,7 @@ function renderReport(raw,sourceKind){
   renderLongHorizon(r);
   renderReportDrivers(r);
   renderCurrentStrengths(r);
+  renderCoachingSynthesis(r);
   renderEvidenceHealth(r);
   renderKpis(r);
   renderMatchRhythm(r);
@@ -867,12 +890,13 @@ function renderReport(raw,sourceKind){
   renderVisualAnalytics(r);
   renderObjectiveFamilyOverview(r);
   renderTeamfightDecisionOverview(r);
-  window.renderDecisionIntelligence?.(r);
+  prepareDecisionIntelligence(r);
   renderPhaseDiagnostic(r);
   renderCompoundSignals(r);
   renderSessionHabits(r);
   renderGameArcs(r);
-  renderMatchHistory(r);
+  renderPlayerReview(r);
+  prepareMatchHistory(r);
   renderGames(r);
   renderReplayReviewQueue(r);
   renderBreakdowns(r);
@@ -884,6 +908,10 @@ function renderReport(raw,sourceKind){
   $('chartGrid').innerHTML='<div class="chart-empty">Charts load when this section approaches the viewport.</div>';
   $('deathMap').innerHTML='<div class="spatial-empty">Map loads when this section approaches the viewport.</div>';
   $('wardMap').innerHTML='<div class="spatial-empty">Map loads when this section approaches the viewport.</div>';
+  if(renderStarted&&typeof performance!=='undefined'&&performance.now){
+    state.reportRenderPerformance={initialMs:Math.round((performance.now()-renderStarted)*10)/10};
+    $('report').dataset.initialRenderMs=String(state.reportRenderPerformance.initialMs);
+  }
   scheduleHeavyReportRender(r);
 }
 
