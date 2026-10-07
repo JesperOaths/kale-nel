@@ -11,7 +11,7 @@ shutil.copy2(P,B/(P.name+'.before'))
 
 s=P.read_text()
 cur=json.loads(R.read_text())
-om=re.search(r'const SMART_FRAMING_V103=(\\{.*?\\});',OLD.read_text(),re.S)
+om=re.search(r'const SMART_FRAMING_V103=(\{.*?\});',OLD.read_text(),re.S)
 old=json.loads(om.group(1))
 new=sorted(set(cur)-set(old))
 if len(new)!=15: raise SystemExit(f'expected 15 new, got {len(new)}')
@@ -41,7 +41,7 @@ for n in new:
 zs=sorted({cur[n]['zoomPct'] for n in new})
 if len(zs)<3: raise SystemExit('insufficient zoom variation '+repr(zs))
 
-sm=re.search(r'const SMART_FRAMING_V103=(\\{.*?\\});',s,re.S)
+sm=re.search(r'const SMART_FRAMING_V103=(\{.*?\});',s,re.S)
 if not sm: raise SystemExit('live V103 map missing')
 s=s[:sm.start()]+'const SMART_FRAMING_V105='+json.dumps(cur,separators=(',',':'))+';'+s[sm.end():]
 for a,b in [('SMART_FRAMING_V103[','SMART_FRAMING_V105['),('data-framing-v103','data-framing-v105'),('framingV103','framingV105'),('--photo-zoom-v103','--photo-zoom-v105'),('C720P_PHOTO_PIXEL_FOCUS_V103','C720P_PHOTO_PIXEL_FOCUS_V105'),('.photo[data-framing-v103="1"]','.photo[data-framing-v105="1"]'),('var(--photo-zoom-v103,1)','var(--photo-zoom-v105,1)')]:
@@ -64,7 +64,7 @@ shutil.copy2(home,B/(home.name+'.before'))
 try: home.chmod(0o644)
 except: pass
 hs=home.read_text()
-hs=re.sub(r'/local/c720p-google-photos-inner-security\\.html\\?v=[^"]+','/local/c720p-google-photos-inner-security.html?v=PHOTO_V105_'+datetime.datetime.now().strftime('%H%M%S'),hs)
+hs=re.sub(r'/local/c720p-google-photos-inner-security\.html\?v[^"]+','/local/c720p-google-photos-inner-security.html?v=PHOTO_V105_'+datetime.datetime.now().strftime('%H%M%S'),hs)
 home.write_text(hs)
 try: home.chmod(0o444)
 except: pass
