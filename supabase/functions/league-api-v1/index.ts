@@ -984,7 +984,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
     const teamInvolved=events.some((e:any)=>Number(e.killerTeam)===teamId||Number(e.victimTeam)===teamId),positionEvidence=events.map((e:any)=>{if(!hasNum(e.x)||!hasNum(e.y))return null;const frame=frameNearestMs(frames,Number(e.tMs||0),35000),player=frameStats(frame,pid);return player?.position?{event:e,frame,player}:null;}).find(Boolean)||null,positionAnchor=positionEvidence?.event||null,positionFrame=positionEvidence?.frame||null,positionMe=positionEvidence?.player||null,positionSupported=teamInvolved&&!!positionAnchor&&!!positionMe?.position;
     const anchor=positionAnchor&&hasNum(positionAnchor.x)&&hasNum(positionAnchor.y)?{x:Number(positionAnchor.x),y:Number(positionAnchor.y)}:(hasNum(first.x)&&hasNum(first.y)?{x:Number(first.x),y:Number(first.y)}:me?.position);
     const fightZone=anchor?fightArea(mapId,anchor,teamId):"unknown";
-    const numberSampleLeadSec=fr&&finite(first?.tMs)&&finite(fr?.timestamp)?Math.max(0,Math.round((Number(first.tMs)-Number(fr.timestamp))/1000)):null;
+    const numberSampleLeadSec=fr&&hasNum(first?.tMs)&&hasNum(fr?.timestamp)?Math.max(0,Math.round((Number(first.tMs)-Number(fr.timestamp))/1000)):null;
     let alliesNear=null,enemiesNear=null,numbersDelta=null;
     if(anchor&&fr?.participantFrames){
       alliesNear=0;enemiesNear=0;
