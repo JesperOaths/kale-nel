@@ -5,7 +5,7 @@
 type A = Record<string, any>;
 
 const n = (v:any) => Number(v);
-const finite = (v:any) => Number.isFinite(Number(v));
+const finite = (v:any) => v!==null && v!==undefined && v!=="" && Number.isFinite(Number(v));
 const arr = (v:any) => Array.isArray(v) ? v : [];
 const txt = (v:any) => String(v ?? "");
 const mean = (xs:any[]) => {
