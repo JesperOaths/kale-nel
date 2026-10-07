@@ -31,7 +31,7 @@ checks={
  "local_v106":"v106-person-protected-elastic" in ls,
  "local_confirmed_gate":"confirmed_person_emergency_cloud_copy" in ls,
  "drive_v106":"v106-person-protected-drive" in rs,
- "drive_confirmed_never_auto_delete":"confirmed_person_auto_delete" in rs and "Never delete" not in rs,
+ "drive_confirmed_never_auto_delete":"if st==\"confirmed_person\":" in rs and 'protected["confirmed_person"]+=1;continue' in rs,
  "server_force_reconcile":"reconcile_remote(cam,True)" in ss,
  "ui_remote_name_delete":"JSON.stringify({remote_name:e.remote_name})" in us,
  "ui_thumb_manifest":"c720p-saved-thumbs/manifest.json" in us,
