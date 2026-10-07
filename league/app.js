@@ -3364,6 +3364,55 @@ function roleSequenceCoverageHtml(role,games){
   '</div>';
 }
 
+
+function transitionWindowSignals(g){
+  const out=new Set(),inside=v=>hasNum(v)&&Number(v)>15&&Number(v)<=25;
+  if((g.badDeaths||[]).some(x=>inside(x?.time)))out.add('High-risk death');
+  if((g.deathRecovery?.events||[]).some(x=>inside(x?.secondMin)))out.add('Repeat death within 4m');
+  if((g.fightProfile?.events||[]).some(x=>x?.active===true&&x?.diedBeforeContribution===true&&inside(x?.startMin)))out.add('Fight death before contribution');
+  if((g.fightProfile?.events||[]).some(x=>x?.active===true&&x?.firstAllyDeath===true&&inside(x?.startMin)))out.add('First allied death in active fight');
+  if((g.fightProfile?.events||[]).some(x=>x?.active===true&&hasNum(x?.currentGoldAtStart)&&Number(x.currentGoldAtStart)>=1000&&inside(x?.startMin)))out.add('Fight started with ≥1000g unspent');
+  if((g.sideLaneRisk?.events||[]).some(x=>x?.neutralObjectiveSoon===true&&inside(x?.time)))out.add('Side-lane death before neutral objective');
+  if((g.objectiveReadiness?.events||[]).some(x=>(x?.recentShopAbsence??x?.lateResetMiss)===true&&inside(x?.time)))out.add('Recent-shop objective absence');
+  return out;
+}
+function transitionQuality(t){
+  if(!t)return'neutral';
+  const from=t.from?.key,to=t.to?.key,swing=Number(t.swing||0);
+  if(from==='ahead'&&to!=='ahead')return'bad';
+  if(from==='close'&&to==='behind')return'bad';
+  if(from==='behind'&&to==='behind'&&swing<=-500)return'bad';
+  if(from==='behind'&&to!=='behind')return'good';
+  if(from==='close'&&to==='ahead')return'good';
+  if(from==='ahead'&&to==='ahead'&&swing>=-250)return'good';
+  return'neutral';
+}
+function transitionMatrixHtml(rows){
+  const states=['ahead','close','behind'],labels={ahead:'Ahead',close:'Close',behind:'Behind'},counts=new Map();
+  rows.forEach(x=>counts.set(x.t.key,(counts.get(x.t.key)||0)+1));
+  return '<div class="transition-matrix" role="table" aria-label="Direct-role gold state transitions from 15 to 25 minutes"><div class="transition-matrix-corner">15 → 25</div>'+states.map(s=>'<div class="transition-matrix-head">'+labels[s]+' @25</div>').join('')+
+    states.map(from=>'<div class="transition-matrix-head row">'+labels[from]+' @15</div>'+states.map(to=>{const n=Number(counts.get(from+'>'+to)||0),q=transitionQuality({from:{key:from},to:{key:to},swing:0});return '<div class="transition-matrix-cell tone-'+q+'"><strong>'+n+'</strong><span>'+labels[from]+' → '+labels[to]+'</span></div>';}).join('')).join('')+'</div>';
+}
+function renderTransitionPrecursors(r){
+  const box=$('gameArcPrecursors');if(!box)return;
+  const role=reportSelectedRole(r),games=reportCoachingGames(r);
+  if(['SUPPORT','JUNGLE'].includes(role)){
+    box.innerHTML='<div class="section-subhead"><strong>Transition-window precursors</strong><span>Not forced onto '+esc(roleLabel(role))+'</span></div><div class="bullet empty">The @15→@25 direct-role gold-state precursor model is intentionally withheld for '+esc(roleLabel(role))+' because the role-specific sequence model above is the more defensible frame.</div>';
+    return;
+  }
+  const transitions=games.map(g=>({g,t:gameArcTransition(g)})).filter(x=>x.t),bad=transitions.filter(x=>transitionQuality(x.t)==='bad'),other=transitions.filter(x=>transitionQuality(x.t)!=='bad');
+  const labels=['High-risk death','Repeat death within 4m','Fight death before contribution','First allied death in active fight','Fight started with ≥1000g unspent','Side-lane death before neutral objective','Recent-shop objective absence'];
+  const rows=labels.map(label=>{
+    const badN=bad.filter(x=>transitionWindowSignals(x.g).has(label)).length,otherN=other.filter(x=>transitionWindowSignals(x.g).has(label)).length,badRate=bad.length?100*badN/bad.length:null,otherRate=other.length?100*otherN/other.length:null;
+    return{label,badN,otherN,badRate,otherRate,delta:hasNum(badRate)&&hasNum(otherRate)?Number(badRate)-Number(otherRate):null};
+  }).filter(x=>x.badN>=2).sort((a,b)=>b.badN-a.badN||Number(b.delta||0)-Number(a.delta||0));
+  box.innerHTML='<div class="section-subhead"><div><span>State-transition analysis</span><strong>What happens between the @15 and @25 role states?</strong></div><small>Matrix + 15→25 event-window co-occurrence. Signals are not treated as causes.</small></div>'+
+    transitionMatrixHtml(transitions)+
+    '<div class="section-subhead transition-precursor-head"><div><span>Deteriorating-transition context</span><strong>Signals that recur inside the 15→25 window</strong></div><small>Deteriorating = lead lost, close→behind, or a behind state that worsens by ≥500g.</small></div>'+
+    (bad.length?'<div class="transition-precursor-grid">'+(rows.length?rows.map(x=>'<article class="transition-precursor-card"><span>'+x.badN+' / '+bad.length+' deteriorating transitions</span><strong>'+esc(x.label)+'</strong><p>'+esc(fmtPct(x.badRate))+' of deteriorating-transition games vs '+esc(other.length?fmtPct(x.otherRate):'no comparison cohort')+(hasNum(x.delta)?' · '+esc(signed(x.delta,1))+' pp difference':'')+'.</p><small>Co-occurrence only. Replay the event sequence before attributing the state change to this signal.</small></article>').join(''):'<div class="bullet empty">No single supported 15→25 event signal recurs in at least two deteriorating transitions.</div>')+'</div>':'<div class="bullet empty">No comparable game currently meets the deteriorating-transition definition.</div>')+
+    '<p class="source-note">This closes the gap between an aggregate transition and the events worth reviewing. It deliberately excludes after-25 signals and never says a flagged event caused the gold-state movement.</p>';
+}
+
 function renderGameArcs(r){
   const funnelBox=$('gameArcFunnels'),patternBox=$('gameArcPatterns'),turnBox=$('gameArcTurningPoints'),note=$('gameArcNote');if(!funnelBox||!patternBox||!turnBox)return;
   const games=reportCoachingGames(r),role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),roleSequence=['SUPPORT','JUNGLE'].includes(role);
@@ -3411,6 +3460,7 @@ function renderGameArcs(r){
       const association=x.associationReady?('Win rate '+fmtPct(x.withWr)+' with vs '+fmtPct(x.withoutWr)+' without · '+signed(x.winRateDelta,1)+' points'):(fmtPct(x.withWr)+' wins in '+x.count+' games with signal · comparison withheld ('+x.withoutCount+' without)');
       return '<article class="arc-turning-card tone-'+x.tone+'"><span>'+x.count+' / '+timelineGames.length+' timeline games</span><strong>'+esc(x.label)+'</strong><p>'+esc(x.why)+'</p><small>'+esc(association)+' · descriptive association only, not causation</small></article>';
     }).join('')+'</div>':'<div class="bullet empty">No defined turning-point signal repeats in at least two coaching-cohort games.</div>');
+  renderTransitionPrecursors(r);
   if(note)note.textContent=roleSequence
     ?'Coaching cohort: '+games.length+' '+roleLabel(role)+' games. Aggregate arc patterns use role-specific supported sequences instead of carry-lane gold states. Turning-point counts are games containing supported evidence, not raw event totals.'
     :'Coaching cohort: '+games.length+' games · comparable @15→@25 transitions: '+games.filter(g=>gameArcTransition(g)).length+'. Turning-point counts are games containing supported evidence, not raw event totals. Older-mechanics context-only games are excluded when the backend applies a mechanics cohort.';
