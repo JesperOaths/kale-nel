@@ -338,13 +338,21 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
       medianGapSec:round(median(chainRows.map(x=>x.gapSec)),0),rows:chainRows.slice(0,18)},chainRows));
 
 
-  // 14. Resource-to-impact efficiency
-  const ri=fights.filter(x=>x.e?.active===true&&finite(x.e?.goldDiffAtStart)).map(({g,e})=>({matchId:g.matchId,minute:round(e.startMin,1),goldDiffAtStart:round(e.goldDiffAtStart,0),currentGold:round(e.currentGoldAtStart,0),
-    contributed:e.contributed===true,survived:e.survived===true,lostFight:e.lostFight===true}));
-  const rich=ri.filter(x=>n(x.goldDiffAtStart)>=300),richImpact=safeRate(count(rich,x=>x.contributed),rich.length);
-  analytics.push(metric("resource_to_impact","Pre-fight gold state vs tracked contribution",ri.length?"supported":"unavailable",ri.length,
-    ri.length?`Among ${rich.length} active fights started ≥300g ahead of the direct role opponent, the reviewed player registered a tracked kill/assist contribution in ${round(richImpact,0)??"—"}%. This does not measure damage dealt, target quality or whether the fight choice was correct.`:"No active fights with direct-role gold-at-start evidence.",
-    {aheadFightContributionRate:round(richImpact,1),rows:ri.slice(0,18)},ri));
+  // 14. Ahead-state fight execution
+  const ri=fights.filter(x=>x.e?.active===true&&finite(x.e?.goldDiffAtStart)).map(({g,e})=>({
+    matchId:g.matchId,minute:round(e.startMin,1),goldDiffAtStart:round(e.goldDiffAtStart,0),currentGold:round(e.currentGoldAtStart,0),
+    contributed:e.contributed===true,survived:e.survived===true,diedBeforeContribution:e.diedBeforeContribution===true,
+    highUnspent:finite(e.currentGoldAtStart)?n(e.currentGoldAtStart)>=1000:null,lostFight:e.lostFight===true
+  }));
+  const rich=ri.filter(x=>n(x.goldDiffAtStart)>=300);
+  const richPreContributionDeathRate=safeRate(count(rich,x=>x.diedBeforeContribution===true),rich.length);
+  const richSurvivalRate=safeRate(count(rich,x=>x.survived===true),rich.length);
+  const richHighUnspentKnown=rich.filter(x=>x.highUnspent!==null),richHighUnspentRate=safeRate(count(richHighUnspentKnown,x=>x.highUnspent===true),richHighUnspentKnown.length);
+  analytics.push(metric("resource_to_impact","Ahead-state fight execution",rich.length?"supported":"unavailable",rich.length,
+    rich.length?`Across ${rich.length} active fights started ≥300g ahead of the direct role opponent, ${round(richPreContributionDeathRate,0)}% ended in death before tracked kill/assist contribution, ${round(richSurvivalRate,0)}% were survived, and ${round(richHighUnspentRate,0)??"—"}% started with ≥1000 unspent gold where current-gold evidence existed. These are execution/state outcomes, not a generic impact-efficiency score.`:"No active fights started ≥300g ahead of the direct role opponent.",
+    {aheadFightSamples:rich.length,preContributionDeathRate:round(richPreContributionDeathRate,1),survivalRate:round(richSurvivalRate,1),
+      highUnspentRate:round(richHighUnspentRate,1),highUnspentKnown:richHighUnspentKnown.length,rows:rich.slice(0,18)},rich));
+
 
   // 15. After fight wins: 90-second follow-up
   const winFightRows:any[]=[];
