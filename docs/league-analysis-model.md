@@ -3841,3 +3841,28 @@ The post-v312 fresh production report exposed two remaining wording/evidence mis
 - **Local-number snapshot:** the card now reports the minimum/maximum observed loss rate across down ≥2, down 1, even and ahead states plus the percentage-point range. When those descriptive rates are tightly clustered, the conclusion explicitly says the sample does not show a clear directional outcome separation by this coarse local-number state. This is descriptive wording only; no significance test is implied.
 
 No analytic family is added or removed. Decision-intelligence remains contract v5; analyzer v4.178 and frontend v313 identify the production-verification pass.
+
+
+## v314 decision-quality polish
+
+This pass is driven by the fresh production v4.178 / decision-intelligence-v5 ADC output rather than source inspection alone.
+
+### Repeat-death context
+
+The four-minute consecutive-death rule remains a measured timing definition, but the headline no longer presents the player rate in isolation. The same four-minute rule is pooled for the direct-role opponents in the same deep games and the player-minus-opponent percentage-point difference is shown. This helps distinguish a generally fast-death game environment from a player-specific recurrence pattern. It remains descriptive and non-causal.
+
+### Post-fight follow-up
+
+Strict fight wins now use a non-overlapping follow-up window that ends at the next tracked fight or 90 seconds, whichever comes first. Neutral objectives, buildings, turret plates and new reviewed-player kill/assist contributions are reported separately. Because the windows cannot overlap, one later structure/objective/kill event cannot inflate several earlier fight wins.
+
+### Geographical review exposure
+
+Raw high-risk-death / missed-join counts are no longer treated as sufficient evidence of concentration. Deep-game frame samples now also retain the team-relative fight zone. Approximate time in each zone is reconstructed from adjacent Riot timeline frames (capped at 1.5 minutes per interval), and review signals can be expressed per 30 sampled minutes when a zone has at least five sampled minutes and two signals.
+
+This exposure denominator is deliberately labeled **Proxy** because minute-spaced frame sampling cannot reconstruct exact time in zone. Raw counts and the exposure-adjusted rate are both retained; neither proves that a map area is inherently dangerous.
+
+### Recall wording and readability
+
+The old “Tempo after recall” title is now “Recall-to-next-action timing” because the conditional shop→fight/objective interval is context, not an intrinsic quality score. The four-minute selection denominator remains explicit.
+
+Decision-intelligence explanation text, evidence rows and group headings are also larger in v314 so the section matches the readable warm-card hierarchy used elsewhere on the League report instead of reverting to dense small dashboard copy.
