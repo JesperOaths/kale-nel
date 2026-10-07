@@ -391,7 +391,7 @@ async function auditViewport(browser,report,width,height,label){
   assert(await page.locator('table.transition-matrix th[scope="row"]').count()===3,label+': transition row headers missing');
   assert(await page.locator('.trajectory-svg circle.partial').count()===4,label+': partial history markers missing');
   await page.locator('#coaching-synthesis').scrollIntoViewIfNeeded();
-  const agreementText=(await page.locator('#evidenceAgreement').innerText()).replace(/\s+/g,' ').toLowerCase();
+  const agreementText=(await page.locator('#evidenceAgreement').textContent()).replace(/\s+/g,' ').toLowerCase();
   assert(agreementText.includes('does not establish statistical independence'),label+': overlapping evidence caveat missing: '+agreementText);
   assert(pageErrors.length===0,label+': page errors: '+pageErrors.join(' | '));
 
