@@ -64,7 +64,7 @@ async function converge(){
   let frontend='',analyzer='';
   for(let i=0;i<90;i++){
     try{
-      const r=await boundedFetch(BASE+'league/?v316_visual='+Date.now(),{headers:{'cache-control':'no-cache'}},'League page',10000,2);
+      const r=await boundedFetch(BASE+'league/?league_visual_audit='+Date.now(),{headers:{'cache-control':'no-cache'}},'League page',10000,2);
       frontend=(await r.text()).includes(EXPECTED_FRONTEND)?EXPECTED_FRONTEND:'';
     }catch{}
     try{analyzer=String((await edgeHealth()).analyzer_version||'');}catch{}
@@ -313,7 +313,7 @@ async function auditViewport(browser,report,width,height,label){
     localStorage.setItem('bruisienator_saved_profile_selection_v1',profile);
   },{workspace:WORKSPACE_ID,profile:PROFILE_ID});
 
-  await page.goto(BASE+'league/?v316_fixture='+Date.now(),{waitUntil:'domcontentloaded',timeout:30000});
+  await page.goto(BASE+'league/?league_fixture_audit='+Date.now(),{waitUntil:'domcontentloaded',timeout:30000});
   await page.waitForSelector('#report:not([hidden])',{timeout:30000});
   await page.waitForFunction(()=>document.querySelector('#coachingSynthesisLead')?.textContent?.trim().length>20,{timeout:20000});
   const before=await page.evaluate(()=>({
