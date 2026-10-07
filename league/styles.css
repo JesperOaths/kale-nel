@@ -3103,3 +3103,28 @@ body{background:var(--paper);line-height:1.55;padding:18px 16px 74px}
   .player-review-evidence{min-width:100%}
   .di-purpose-explainer{display:grid}
 }
+
+
+/* v317 — mobile report track containment */
+#report{
+  grid-template-columns:minmax(0,1fr);
+  min-width:0;
+  max-width:100%;
+}
+#report>*{
+  min-width:0;
+  max-width:100%;
+}
+#report .visual-benchmark-grid,
+#report .radar-layout,
+#report .recent-pulse,
+#report .history-direction-graph,
+#report .primary-chart,
+#report .report-disclosure{
+  min-width:0;
+  max-width:100%;
+}
+@media(max-width:900px){
+  #report .visual-benchmark-grid,
+  #report .radar-layout{grid-template-columns:minmax(0,1fr)}
+}
