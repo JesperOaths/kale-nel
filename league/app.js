@@ -1,4 +1,4 @@
-/* 20261007-league-web-v302 · spending before fighting, without team-rank splits */
+/* 20261007-league-web-v307 · decision-intelligence integration and visual coherence */
 (function(){
 'use strict';
 
