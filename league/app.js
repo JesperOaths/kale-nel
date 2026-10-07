@@ -1,4 +1,4 @@
-/* 20261007-league-web-v320 · full review audit and decision-dashboard integration */
+/* 20261007-league-web-v321 · full review audit and decision-dashboard integration */
 (function(){
 'use strict';
 
@@ -2063,8 +2063,9 @@ function renderRankBridge(r){
   }).join('')+'</div>';
 }
 function wilsonInterval(successes,total,z=1.96){
-  const n=Number(total||0),k=Number(successes||0);
-  if(!(n>0)||!Number.isFinite(k)||k<0||k>n)return null;
+  if(typeof successes==='boolean'||typeof total==='boolean'||!hasNum(successes)||!hasNum(total))return null;
+  const n=Number(total),k=Number(successes);
+  if(!Number.isInteger(n)||!Number.isInteger(k)||!(n>0)||k<0||k>n)return null;
   const p=k/n,z2=z*z,den=1+z2/n,center=(p+z2/(2*n))/den,half=z*Math.sqrt((p*(1-p)+z2/(4*n))/n)/den;
   return{low:100*Math.max(0,center-half),high:100*Math.min(1,center+half)};
 }
@@ -4355,8 +4356,9 @@ function renderObjectiveFamilyGraph(r){
   const box=$('objectiveFamilyGraph');if(!box)return;
   const summary=r?.behaviorSummary?.objectiveFamilySummary||{};
   const rows=Object.entries(summary).map(([key,x])=>{
-    const contested=Number(x?.contestedEncounters||0),joined=Number(x?.joinedContestedEncounters||0),value=hasNum(x?.contestPresenceRate)?Number(x.contestPresenceRate):null,interval=wilsonInterval(joined,contested);
-    if(!(contested>0)||!hasNum(value)||!interval)return null;
+    const interval=wilsonInterval(x?.joinedContestedEncounters,x?.contestedEncounters);
+    if(!interval)return null;
+    const contested=Number(x.contestedEncounters),joined=Number(x.joinedContestedEncounters),value=100*joined/contested;
     return{label:objectiveFamilyLabel(key),value,low:interval.low,high:interval.high,ready:contested>=3,tone:'objective',contested,joined,valueLabel:fmtPct(value)+' · '+joined+'/'+contested,subLabel:'95% range '+fmtPct(interval.low)+'–'+fmtPct(interval.high)+' · '+contested+' contested',detail:objectiveFamilyLabel(key)+' · '+joined+'/'+contested+' contested joins · 95% range '+fmtPct(interval.low)+'–'+fmtPct(interval.high)};
   }).filter(Boolean).sort((a,b)=>b.contested-a.contested||a.label.localeCompare(b.label)).slice(0,7);
   if(!rows.length){box.innerHTML=visualGraphEmpty('No objective family has a measurable contested-presence sample yet.');return;}
@@ -4368,14 +4370,14 @@ function renderChampionHistoryGraph(r){
   const box=$('championHistoryGraph');if(!box)return;
   const h=r?.longHorizon||{},history=(Array.isArray(h.championHistory)?h.championHistory:[]).filter(x=>Number(x.games||0)>0).sort((a,b)=>Number(b.games||0)-Number(a.games||0)||String(a.champion).localeCompare(String(b.champion))),total=history.reduce((n,x)=>n+Number(x.games||0),0);
   if(!history.length||!(total>0)){box.innerHTML=visualGraphEmpty('No champion-conditioned selected-role history is available yet.');return;}
-  const cleanComparable=history.filter(x=>Number(x.cleanGames||0)>=3&&hasNum(x.cleanWinRate)),leader=history[0],leaderShare=Number(leader.games||0)/total*100;
+  const cleanComparable=history.filter(x=>Number(x.cleanGames)>=3&&wilsonInterval(x.cleanWins,x.cleanGames)),leader=history[0],leaderShare=Number(leader.games||0)/total*100;
   if(cleanComparable.length<2||leaderShare>=90){
     const top=history.slice(0,5).map(x=>({label:x.champion,games:Number(x.games||0)})),shown=top.reduce((n,x)=>n+x.games,0);if(total>shown)top.push({label:'Other',games:total-shown});
     box.innerHTML=visualCompositionSvg(top,{ariaLabel:'Champion pick mix across selected-role history'})+
       '<p class="visual-graph-reading"><b>Pick concentration:</b> '+esc(leader.champion)+' accounts for '+esc(fmtPct(leaderShare))+' of this '+esc(roleLabel(h.selectedRole||r?.dataQuality?.selectedRole||state.selectedRole))+' history ('+Number(leader.games||0)+'/'+total+' games). A cross-champion clean-WR ranking is withheld because there is not a real multi-champion comparison; showing one dominant champion as a “ranking” would add no useful information.</p>';
     return;
   }
-  const rows=cleanComparable.slice(0,8).map(x=>{const interval=wilsonInterval(Number(x.cleanWins||0),Number(x.cleanGames||0));return{label:x.champion,value:Number(x.cleanWinRate),low:interval?.low,high:interval?.high,ready:Number(x.cleanGames||0)>=5,tone:'champion',valueLabel:fmtPct(x.cleanWinRate)+' · '+x.cleanWins+'/'+x.cleanGames,subLabel:'95% range '+fmtPct(interval?.low)+'–'+fmtPct(interval?.high)+' · '+x.games+' total games',detail:x.champion+' · '+x.cleanWins+'/'+x.cleanGames+' clean outcomes · '+x.games+' total history games'};}).filter(x=>hasNum(x.low)&&hasNum(x.high));
+  const rows=cleanComparable.slice(0,8).map(x=>{const interval=wilsonInterval(x.cleanWins,x.cleanGames),value=100*Number(x.cleanWins)/Number(x.cleanGames);return{label:x.champion,value,low:interval.low,high:interval.high,ready:Number(x.cleanGames)>=5,tone:'champion',valueLabel:fmtPct(value)+' · '+x.cleanWins+'/'+x.cleanGames,subLabel:'95% range '+fmtPct(interval.low)+'–'+fmtPct(interval.high)+' · '+x.games+' total games',detail:x.champion+' · '+x.cleanWins+'/'+x.cleanGames+' clean outcomes · '+x.games+' total history games'};});
   box.innerHTML=visualIntervalPlotSvg(rows,{ariaLabel:'Champion clean win rate with Wilson uncertainty'})+'<p class="visual-graph-reading">The dot is your win rate in comparable outcomes. The line shows uncertainty from the sample size. Champions are ordered by history sample depth, not by the point estimate, so small samples do not visually jump to the top.</p>';
 }
 function renderVisualAnalytics(r){
@@ -4387,9 +4389,10 @@ function renderVisualAnalytics(r){
 }
 function renderSupportSynergyGraph(m){
   const box=$('supportSynergyGraph');if(!box)return;
-  const rows=(Array.isArray(m?.supportChampions)?m.supportChampions:[]).filter(x=>Number(x.cleanGames||0)>=3&&hasNum(x.cleanWinRate)).map(x=>{
-    const interval=wilsonInterval(Number(x.cleanWins||0),Number(x.cleanGames||0));if(!interval)return null;
-    return{label:x.supportChampion,value:Number(x.cleanWinRate),low:interval.low,high:interval.high,ready:x.rankingEligible===true,tone:x.rankingEligible?'support-established':'support-developing',cleanGames:Number(x.cleanGames||0),wilsonLow:interval.low,valueLabel:fmtPct(x.cleanWinRate)+' · '+x.cleanWins+'/'+x.cleanGames,subLabel:(x.rankingEligible?'Established':'Developing')+' · 95% range '+fmtPct(interval.low)+'–'+fmtPct(interval.high),detail:x.supportChampion+' · reviewed-account clean WR '+fmtPct(x.cleanWinRate)+' · '+x.cleanWins+'/'+x.cleanGames+' clean outcomes · 95% range '+fmtPct(interval.low)+'–'+fmtPct(interval.high)};
+  const rows=(Array.isArray(m?.supportChampions)?m.supportChampions:[]).filter(x=>Number(x.cleanGames)>=3).map(x=>{
+    const interval=wilsonInterval(x.cleanWins,x.cleanGames);if(!interval)return null;
+    const value=100*Number(x.cleanWins)/Number(x.cleanGames),ready=x.rankingEligible===true&&Number(x.cleanGames)>=5;
+    return{label:x.supportChampion,value,low:interval.low,high:interval.high,ready,tone:ready?'support-established':'support-developing',cleanGames:Number(x.cleanGames),wilsonLow:interval.low,valueLabel:fmtPct(value)+' · '+x.cleanWins+'/'+x.cleanGames,subLabel:(ready?'Established':'Developing')+' · 95% range '+fmtPct(interval.low)+'–'+fmtPct(interval.high),detail:x.supportChampion+' · reviewed-account clean WR '+fmtPct(value)+' · '+x.cleanWins+'/'+x.cleanGames+' clean outcomes · 95% range '+fmtPct(interval.low)+'–'+fmtPct(interval.high)};
   }).filter(Boolean).sort((a,b)=>Number(b.ready)-Number(a.ready)||(a.ready?Number(b.wilsonLow)-Number(a.wilsonLow):Number(b.cleanGames)-Number(a.cleanGames))||String(a.label).localeCompare(String(b.label))).slice(0,10);
   if(!rows.length){box.innerHTML=visualGraphEmpty('Support-champion graph needs at least three clean reviewed-account outcomes with the same allied Support champion.');return;}
   const established=rows.filter(x=>x.ready),best=established[0]||null;

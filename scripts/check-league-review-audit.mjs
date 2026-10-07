@@ -29,9 +29,32 @@ const nodes=new Map(),context={
   playerStyleEvidence:r=>r.styleSignals||[],decisionEvidenceChip:()=>''
 };
 vm.createContext(context);
-const names=['hasNum','fmt','fmtPct','signed','gameTimestampMs','longitudinalMetricSpecs','trajectoryMetricReady','trajectoryComparison','longitudinalTrajectoryRead','trajectoryValueLabel','trajectoryDateRange','trajectorySparkline','renderLongitudinalProgress','transitionWindowSignals','transitionQuality','transitionMatrixHtml','synthesisAgreementModel','playerStyleModel','reviewEvidenceChip','decisionAnalytic','renderPlayerReview'];
+const names=['hasNum','fmt','fmtPct','signed','wilsonInterval','renderObjectiveFamilyGraph','renderChampionHistoryGraph','renderSupportSynergyGraph','gameTimestampMs','longitudinalMetricSpecs','trajectoryMetricReady','trajectoryComparison','longitudinalTrajectoryRead','trajectoryValueLabel','trajectoryDateRange','trajectorySparkline','renderLongitudinalProgress','transitionWindowSignals','transitionQuality','transitionMatrixHtml','synthesisAgreementModel','playerStyleModel','reviewEvidenceChip','decisionAnalytic','renderPlayerReview'];
 vm.runInContext(names.map(source).join('\n'),context);
 const plain=x=>JSON.parse(JSON.stringify(x));
+let countedPlot=null;
+context.visualGraphEmpty=x=>x;
+context.visualCompositionSvg=()=>'<svg>Pick mix</svg>';
+context.visualIntervalPlotSvg=rows=>{countedPlot=plain(rows);return '<svg>Measured intervals</svg>';};
+context.objectiveFamilyLabel=x=>x;
+for(const [wins,total] of [[null,8],[undefined,8],[3,null],[true,8],[1.5,8],[3,8.5],[9,8]])assert.equal(context.wilsonInterval(wins,total),null,'unknown or invalid counts cannot produce an interval');
+assert.ok(context.wilsonInterval(0,5).high>40,'known zero wins retain measured uncertainty');
+const champ=(champion,cleanWins,cleanGames=10)=>({champion,games:10,cleanGames,cleanWins,cleanWinRate:99});
+context.renderChampionHistoryGraph({longHorizon:{championHistory:[champ('Jinx',undefined),champ('Ashe',null)]}});
+assert.ok(nodes.get('championHistoryGraph').innerHTML.includes('Pick mix'),'missing exact win counts retain pick mix rather than fabricated zero-win intervals');
+context.renderChampionHistoryGraph({longHorizon:{championHistory:[champ('Jinx',6),champ('Ashe',0)]}});
+assert.equal(countedPlot.find(x=>x.label==='Jinx').value,60,'win-rate dot and uncertainty must use the same exact counts');
+assert.equal(countedPlot.find(x=>x.label==='Ashe').value,0);
+assert.ok(countedPlot.find(x=>x.label==='Ashe').high>20);
+context.renderSupportSynergyGraph({supportChampions:[{supportChampion:'Lulu',cleanGames:8,cleanWinRate:75,rankingEligible:true}]});
+assert.ok(nodes.get('supportSynergyGraph').innerHTML.includes('needs at least three'));
+context.renderSupportSynergyGraph({supportChampions:[{supportChampion:'Lulu',cleanWins:2,cleanGames:3,cleanWinRate:99,rankingEligible:true}]});
+assert.equal(countedPlot[0].ready,false,'three-game support groups cannot become established from a stale flag');
+assert.equal(countedPlot[0].value,200/3);
+context.renderObjectiveFamilyGraph({behaviorSummary:{objectiveFamilySummary:{DRAGON:{contestedEncounters:6,contestPresenceRate:80}}}});
+assert.ok(nodes.get('objectiveFamilyGraph').innerHTML.includes('No objective family'));
+context.renderObjectiveFamilyGraph({behaviorSummary:{objectiveFamilySummary:{DRAGON:{joinedContestedEncounters:3,contestedEncounters:6,contestPresenceRate:80}}}});
+assert.equal(countedPlot[0].value,50,'objective-presence dot and range must use the same observed counts');
 // Evaluate the real app wrapper: helper declarations inside an IIFE are not window exports.
 const genericNode={addEventListener:()=>{},value:'ADC'},bridgeContext={
   window:{GEJAST_CONFIG:{}},document:{getElementById:()=>genericNode,querySelectorAll:()=>[],addEventListener:()=>{}},

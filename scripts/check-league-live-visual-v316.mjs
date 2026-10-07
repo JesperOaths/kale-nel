@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 const SUPABASE_URL=process.env.SUPABASE_URL||'https://uiqntazgnrxwliaidkmy.supabase.co';
 const API_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||'';
 const BASE=(process.env.GEJAST_BASE_URL||'https://kalenel.nl/').replace(/\/+$/,'')+'/';
-const EXPECTED_FRONTEND='20261007-league-web-v320';
+const EXPECTED_FRONTEND='20261007-league-web-v321';
 const EXPECTED_ANALYZER='league-web-behavior-v4.182';
 const EDGE=SUPABASE_URL+'/functions/v1/printify-gildan-diff-diag-v1';
 const OUT='league-visual-audit';
@@ -183,7 +183,7 @@ function buildDecisionIntelligence(games){
     analytic('lead_utilisation','Lead utilisation',{leadBands:{'500–999g':5,'1000–1499g':1,'1500g+':0},stillAheadAt25:4,flippedBehindAt25:1,medianMovement:130},leads),
     analytic('deficit_recovery','Deficit recovery',{narrowedGames:2,crossedAheadAt25:1,medianMovement:-410},deficits),
     analytic('death_chains','Consecutive-death recovery',{repeatEvents:9,totalOpportunities:11,repeatRate:81.8,opponentRepeatEvents:8,opponentOpportunities:11,opponentRepeatRate:72.7,repeatRateDeltaPp:9.1,windowMinutes:4,medianGapSec:188,gameRows:[{matchId:m(1),repeatDeaths:2,opportunities:2,repeatRate:100},{matchId:m(7),repeatDeaths:1,opportunities:2,repeatRate:50},{matchId:m(11),repeatDeaths:2,opportunities:2,repeatRate:100}]},[]),
-    analytic('resource_to_impact','Resource-to-impact conversion',{preContributionDeathRate:28,survivalRate:56,highUnspentRate:22},[0,3,5,9,12,16].map((i,j)=>({matchId:m(i),goldDiffAtStart:420+j*110,currentGold:650+j*140,diedBeforeContribution:j===2||j===5,survived:j%3===0}))),
+    analytic('resource_to_impact','Resource-to-impact conversion',{aheadFightSamples:6,preContributionDeathRate:100*2/6,survivalRate:100*2/6,highUnspentRate:100*3/6},[0,3,5,9,12,16].map((i,j)=>({matchId:m(i),goldDiffAtStart:420+j*110,currentGold:650+j*140,diedBeforeContribution:j===2||j===5,survived:j%3===0}))),
     analytic('fight_lead_conversion','Fight-win follow-up',{followUpRate:77,objectiveFollowUpWindows:4,towerFollowUpWindows:3,plateFollowUpWindows:2,playerKillFollowUpWindows:5},[0,2,4,6,8,10,12,14].map((i,j)=>({matchId:m(i),followUp:j!==2&&j!==6}))),
     analytic('fight_loss_containment','Post-loss risk before next fight',{noExtraRiskDeathRate:92},[1,3,5,7,9,11,13,15,17,19].map((i,j)=>({matchId:m(i),noExtraRiskDeath:j!==4}))),
     analytic('objective_trading','Objective / structure overlap after skipped fights',{sample:tradeRows.length},tradeRows.map(x=>({...x,fightZone:x.zone}))),
@@ -251,9 +251,10 @@ function buildFixtureReport(){
       },
       trajectoryWindows:trajectory,
       championHistory:[
-        {champion:'Jinx',games:36,cleanGames:34,cleanWinRate:56,historyShare:42,csMin:metric(7.4,36),dpm:metric(720,36),deaths:metric(5.1,36),laneCs10:metric(80,34),recentDpm:metric(748,12),priorDpm:metric(690,12)},
-        {champion:'Kaisa',games:24,cleanGames:23,cleanWinRate:52,historyShare:28,csMin:metric(7.2,24),dpm:metric(682,24),deaths:metric(4.8,24),laneCs10:metric(76,23),recentDpm:metric(700,8),priorDpm:metric(665,8)},
-        {champion:'Ashe',games:14,cleanGames:14,cleanWinRate:50,historyShare:16,csMin:metric(7.0,14),dpm:metric(645,14),deaths:metric(5.0,14),laneCs10:metric(74,14),recentDpm:metric(660,5),priorDpm:metric(630,5)}
+        {champion:'Jinx',games:36,cleanGames:34,cleanWins:19,cleanWinRate:100*19/34,historyShare:100*36/86,csMin:metric(7.4,36),dpm:metric(720,36),deaths:metric(5.1,36),laneCs10:metric(80,34),recentDpm:metric(748,12),priorDpm:metric(690,12)},
+        {champion:'Kaisa',games:24,cleanGames:23,cleanWins:12,cleanWinRate:100*12/23,historyShare:100*24/86,csMin:metric(7.2,24),dpm:metric(682,24),deaths:metric(4.8,24),laneCs10:metric(76,23),recentDpm:metric(700,8),priorDpm:metric(665,8)},
+        {champion:'Ashe',games:14,cleanGames:14,cleanWins:7,cleanWinRate:50,historyShare:100*14/86,csMin:metric(7.0,14),dpm:metric(645,14),deaths:metric(5.0,14),laneCs10:metric(74,14),recentDpm:metric(660,5),priorDpm:metric(630,5)},
+        {champion:'Caitlyn',games:12,cleanGames:12,cleanWins:6,cleanWinRate:50,historyShare:100*12/86,csMin:metric(7.1,12),dpm:metric(670,12),deaths:metric(4.9,12),laneCs10:metric(77,12)}
       ],
       topChampions:[{champion:'Jinx',games:36},{champion:'Kaisa',games:24},{champion:'Ashe',games:14}]
     },
@@ -376,6 +377,7 @@ async function auditViewport(browser,report,width,height,label){
     await page.screenshot({path:path.join(OUT,'league-'+label+'-overflow.png'),fullPage:true});
     throw new Error(label+': horizontal page overflow '+metrics.overflow+'px · offenders='+JSON.stringify(metrics.overflowOffenders));
   }
+  assert(!/\b(?:NaN|Infinity|undefined)\b/.test((await page.locator('#report').textContent()).replaceAll('Infinity Edge','')),label+': report contains invalid numeric or missing-field text');
   assert(metrics.decisionCards===25&&metrics.purposeBadges===25,label+': expected all 25 decision cards and purpose badges');
   assert(/Act on this/i.test(metrics.purposeLegend)&&/Useful context/i.test(metrics.purposeLegend)&&/Diagnostic \/ exploratory/i.test(metrics.purposeLegend),label+': coaching-purpose legend incomplete: '+metrics.purposeLegend);
   assert(metrics.synthesisCards===4&&metrics.agreementCards===3,label+': synthesis/evidence-agreement surface incomplete');

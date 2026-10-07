@@ -3929,7 +3929,7 @@ For ADC/MID/TOP, the existing direct-role Gold@15→Gold@25 arc is now shown as 
 
 The review then counts supported events that occur **inside the 15→25 window**: high-risk deaths, repeat deaths, active-fight death before contribution, first allied death in an active fight, active fight starts with at least 1000 unspent gold, side-lane deaths before a neutral objective, and recent-shop objective absences. A signal is promoted only when it recurs in at least two deteriorating-transition games. Rates versus other comparable transitions are shown as co-occurrence context only; the UI explicitly forbids causal wording.
 
-### Full-page audit: frontend v320 / analyzer v4.182 / decision intelligence v8
+### Full-page audit: frontend v321 / analyzer v4.182 / decision intelligence v8
 
 The 7 October 2026 audit covers the new synthesis, whole-player review, longer-history charts, state-transition review, lazy sections and all 25 decision analytics, alongside the existing role, mechanics, benchmark, missing-data and learning contracts.
 
@@ -3941,6 +3941,7 @@ The 7 October 2026 audit covers the new synthesis, whole-player review, longer-h
 - Recent residual headlines need five recent eligible games. Recurrence labels require an actual five-game window and a second complete window for comparison. Missing timelines cannot become zero review-signal observations. Zero repeat deaths remain a measured zero when enough consecutive-death opportunities exist.
 - Fight follow-up ends at the next tracked fight, 90 seconds or game end. Replay diversity caps remain strict even when fewer than ten moments qualify. Lead/deficit and ahead-fight evidence require trusted direct-role peers and eligible checkpoints.
 - The decision dashboard shares the core replay, map projection, map asset, champion icon and image-fallback helpers through explicit exports. Declaring those functions inside the report IIFE did not make them available to the separately loaded dashboard; replay buttons previously fell back to scrolling rather than opening evidence. The browser audit clicks a real shortlist button, verifies the selected match and checks evidence-tab switching.
+- Champion, allied-Support and objective-family uncertainty plots require known integer numerator/denominator counts. Missing counts cannot become zero; rate dots and Wilson ranges are both calculated from the same exact counts. A stale Support eligibility flag cannot promote a three-game group into the established tier.
 - Charts preserve exact zero-width bars, disclose truncated previews, and show the shared gold scale for paired checkpoints. SVG chart labels retain readable sizes instead of shrinking with a phone viewport. History graphs, decision charts and the transition table scroll within their own keyboard-focusable regions on mobile. The browser audit opens and captures all 25 analytic cards in both layouts.
 
 Executable regression coverage lives in `scripts/check-league-review-audit.mjs` and runs as part of the League analysis contract. Live browser verification uses production assets with a deterministic report fixture; cached real report recomputation is a separate check and does not create profile or analysis records. Saved analyses preserve their original analyzer version and require a new analysis to obtain backend v4.182 results.
