@@ -351,9 +351,40 @@ if not ins or ins.returncode!=0:
     STATE.write_text(json.dumps({"ok":False,"state":"install_failed","stdout":"" if not ins else ins.stdout[-1200:],"stderr":"" if not ins else ins.stderr[-1200:],"at":time.time()},indent=2)+"\n")
     raise SystemExit(1)
 run(["adb","-s",t,"shell","am","startservice","-n",PKG+"/.BridgeService"],12)
+
+# In the same trusted-S5 pass, restore the network control plane as well.
+# The companion is started first so IR-over-HTTP survives even if adbd restarts.
+for cmd in [
+    ["adb","-s",t,"shell","svc","wifi","enable"],
+    ["adb","-s",t,"shell","settings","put","global","wifi_sleep_policy","2"],
+    ["adb","-s",t,"shell","settings","put","global","adb_enabled","1"],
+    ["adb","-s",t,"shell","setprop","persist.adb.tcp.port","5555"],
+    ["adb","-s",t,"shell","setprop","service.adb.tcp.port","5555"],
+]:
+    run(cmd,8)
+
+network_target = t if ":" in t else None
+if t == EXPECTED_SERIAL:
+    ipr=run(["adb","-s",t,"shell","ip","-4","-o","addr","show","dev","wlan0"],6)
+    import re
+    m=re.search(r"\\binet\\s+((?:\\d{1,3}\\.){3}\\d{1,3})/", "" if not ipr else ipr.stdout)
+    ip=m.group(1) if m else ""
+    run(["adb","-s",t,"tcpip","5555"],10)
+    time.sleep(1.2)
+    if ip:
+        network_target=ip+":5555"
+        run(["adb","connect",network_target],8)
+
 time.sleep(1.5)
 ok,detail=http_ok()
-STATE.write_text(json.dumps({"ok":ok,"state":"http_ready" if ok else "installed_but_http_not_ready","target":t,"detail":detail,"at":time.time()},indent=2)+"\n")
+STATE.write_text(json.dumps({
+    "ok":ok,
+    "state":"http_ready" if ok else "installed_but_http_not_ready",
+    "target":t,
+    "network_target":network_target,
+    "detail":detail,
+    "at":time.time()
+},indent=2)+"\n")
 raise SystemExit(0 if ok else 2)
 '''
 rec=BIN/"c720p-s5-http-companion-recover.py"
