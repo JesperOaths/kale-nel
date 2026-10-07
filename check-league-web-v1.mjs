@@ -391,7 +391,7 @@ assert.ok(!app.includes('6.8.1/img/map/map11.png'),'Do not silently render the d
 assert.ok(html.includes('id="sessionHabitsPanel"'),'Session habits panel must remain in the League page');
 assert.ok(html.includes('id="sessionHabitsAnswer"')&&app.includes('answer.headline')&&api.includes('minimumMetricObservationsPerSide:3'),'Session panel must provide a direct evidence-gated answer instead of forcing inference from subgroup cards');
 assert.ok(api.includes('function baselineGame')&&api.includes('peerDpmDelta:metric(peerRows')&&app.includes('Opponent-adjusted read:'),'Long-horizon direction must use direct same-role opponent deltas across match-only history');
-assert.ok(app.includes("spec('DPM vs ADC peer',t.peerDpmDelta")&&!app.includes("spec('Damage / min',t.dpm"),'ADC recent-direction graph must not score raw DPM as improvement/decline');
+assert.ok(app.includes("spec('DPM vs ADC peer',t.peerDpmDelta")&&app.includes("spec('CS/min vs ADC peer',t.peerCsMinDelta")&&app.includes("spec('Deaths vs ADC peer',t.peerDeathsDelta"),'ADC recent-direction graph must use direct-opponent output deltas rather than raw DPM/CS');
 assert.ok(html.includes('id="teamfightDecisionPanel"')&&app.includes('function renderTeamfightDecisionOverview(')&&api.includes('function fightArea('),'League decisions must expose fight geography and cross-map trade review');
 assert.ok(api.includes('crossMapTradeSupported')&&api.includes('joinReviewPriority')&&api.includes('tradeWindowSec:90'),'Skipped-fight review must use bounded compensation evidence and explicit join-review triage');
 
