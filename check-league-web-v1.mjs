@@ -408,7 +408,7 @@ assert.ok(decisionUi.includes('d?.deepGames')&&decisionUi.includes('d?.historyGa
 assert.ok(decisionUi.includes('There is not enough repeated matchup evidence to rank best versus worst'),'Single repeated matchup must not be labeled both best and worst');
 
 assert.ok(decisionBackend.includes('v!==null && v!==undefined && v!=="" && Number.isFinite(Number(v))'),'Decision intelligence must reject null/empty numeric evidence instead of coercing it to zero');
-assert.ok(decisionBackend.includes('n(x.e.teamFightKills)>n(x.e.enemyFightKills)'),'Fight-win conversion must require a strict team-kill win and must not classify tied clusters as wins');
+assert.ok(decisionBackend.includes('n(e.teamFightKills)>n(e.enemyFightKills)')&&!decisionBackend.includes('n(e.teamFightKills)>=n(e.enemyFightKills)'),'Fight-win follow-up must require a strict team-kill win and must not classify tied clusters as wins');
 assert.ok(decisionBackend.includes('n(eventMin(o))>end'),'Post-fight kill follow-up must exclude kills already inside the fight cluster endpoint');
 assert.ok(decisionBackend.includes('historyInput:any[]=gamesInput')&&decisionBackend.includes('performanceResidualRows(history)'),'Match-level residual and requeue context must be allowed to use longer role history without widening timeline-dependent analytics');
 assert.ok(decisionBackend.includes('actualApproachLeadSec')&&decisionBackend.includes('for(const requestedSec of [90,60,30])')&&decisionBackend.includes('approachSamples'),'Objective setup must use distinct coarse pre-objective route samples and retain actual sampled lead times');
