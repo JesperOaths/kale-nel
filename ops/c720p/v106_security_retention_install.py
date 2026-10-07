@@ -18,8 +18,8 @@ def install(url,dst):
     backup(dst);data=fetch(url);Path(dst).write_bytes(data);Path(dst).chmod(0o755);py_compile.compile(str(dst),doraise=True)
 
 install("https://raw.githubusercontent.com/JesperOaths/kale-nel/ba683aa57c50a7164042a382eecc42793f896d57/ops/c720p/v106_local_retention.py",TRIM)
-install("https://raw.githubusercontent.com/JesperOaths/kale-nel/9c80844afe313c4b383b80817edb45df54eb3df9/ops/c720p/v106_drive_retention.py",RET)
-install("https://raw.githubusercontent.com/JesperOaths/kale-nel/d5ae7c25b2c1f47c57fa6fcadb6cd6c086157b17/ops/c720p/v106_saved_thumbnailer.py",THUMB)
+install("https://raw.githubusercontent.com/JesperOaths/kale-nel/71b838672623ddbcfe223dd861bea725ff548e95/ops/c720p/v106_drive_retention.py",RET)
+install("https://raw.githubusercontent.com/JesperOaths/kale-nel/b901090ae88274f69920502c9b78ff3e7ff36d7c/ops/c720p/v106_saved_thumbnailer.py",THUMB)
 
 # Saved archive listing must reconcile remote Drive deletions on every user refresh,
 # not serve a 5-minute-stale inventory.
@@ -33,8 +33,11 @@ SERVER.write_text(ss);py_compile.compile(str(SERVER),doraise=True)
 # Upgrade Saved Clips UI: filter tombstones immediately and prefer motion-aware
 # three-frame strips generated from the clip. Existing snapshot remains fallback.
 backup(UI);s=UI.read_text()
+# Only real, verified remote clips are eligible to render.
 s=s.replace("events=Array.isArray(d.events)?d.events:[];",
             "events=(Array.isArray(d.events)?d.events:[]).filter(e=>e&&(!e.state||e.state==='verified'));",1)
+# Fix the old Delete button payload mismatch: server expects remote_name.
+s=s.replace("JSON.stringify({name:e.remote_name})","JSON.stringify({remote_name:e.remote_name})")
 
 old_badges=re.search(r"function badges\(e\)\{.*?\}\nasync function selectClip",s,re.S)
 if old_badges:
@@ -72,7 +75,7 @@ if "C720P_SAVED_RETENTION_V106" not in s:s=s.replace("</head>",extra_css+"\n</he
 s=s.replace("const el=document.createElement('article');el.className='clip';",
             "const el=document.createElement('article');el.className='clip';if(String(e.person_status||'')==='confirmed_person')el.dataset.confirmedPerson='1';",1)
 # Periodically reconcile remotely deleted clips while the page remains open.
-auto='''<script id="C720P_SAVED_RECONCILE_V106">setInterval(()=>{try{if(document.visibilityState==='visible'&&typeof load==='function')load()}catch(_){}},60000);</script>'''
+auto='''<script id="C720P_SAVED_RECONCILE_V106">setInterval(()=>{try{if(document.visibilityState==='visible'&&typeof load==='function'){if(typeof savedThumbManifest!=='undefined')savedThumbManifest=null;load()}}catch(_){}},60000);</script>'''
 if "C720P_SAVED_RECONCILE_V106" not in s:s=s.replace("</body>",auto+"\n</body>",1)
 UI.write_text(s)
 
