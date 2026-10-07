@@ -231,7 +231,7 @@ h2 { margin: 0 0 28px; font-family: Georgia, serif; font-size: clamp(2.4rem, 6vw
   .rule-number { margin: 1px 0 0; }
   .image-stage { aspect-ratio: 4 / 5; max-height: 56vh; }
   .answer-row { grid-template-columns: 1fr; }
-  .primary-button.compact { width: 100%; }
+  .primary-button>compact { width: 100%; }
   .answer-tools { align-items: flex-start; flex-direction: column; }
   .reveal-grid { grid-template-columns: 1fr; }
   .bruis-stamp { right: -14px; bottom: -54px; width: 142px; }
@@ -240,3 +240,5 @@ h2 { margin: 0 0 28px; font-family: Georgia, serif; font-size: clamp(2.4rem, 6vw
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; animation-delay: 0ms !important; transition-duration: .001ms !important; }
 }
+
+.version { position: relative; z-index: 5; padding: 12px 24px 18px; text-align: center; color: #806b75; font-size: .68rem; letter-spacing: .09em; text-transform: uppercase; }
