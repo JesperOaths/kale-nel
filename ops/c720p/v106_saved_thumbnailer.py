@@ -62,6 +62,30 @@ def hstack(imgs,out):
     r=subprocess.run(cmd,text=True,capture_output=True,timeout=45)
     return r.returncode==0 and out.is_file() and out.stat().st_size>4000
 
+def detection_for(e):
+    arch=load(ARCH,{"items":[]}); det=load(DET,{"items":{}})
+    name=pathlib.Path(str(e.get("remote_name") or "")).name
+    row=next((x for x in arch.get("items",[]) if x.get("camera")=="new" and pathlib.Path(str(x.get("remote_name") or "")).name==name),{})
+    local=pathlib.Path(str(row.get("local_clip_name") or "")).name
+    return (det.get("items") or {}).get("new:"+local,{}) if local else {}
+
+def person_times(di,dur):
+    scores=di.get("person_frame_scores")
+    if not isinstance(scores,list):return []
+    vals=[]
+    for i,x in enumerate(scores[:len(SAMPLE_FRACTIONS)]):
+        try:score=float(x)
+        except:continue
+        vals.append((score,dur*SAMPLE_FRACTIONS[i]))
+    vals.sort(reverse=True)
+    picked=[]
+    for score,t in vals:
+        if score<=0:continue
+        if all(abs(t-p[1])>max(.6,dur*.10) for p in picked):
+            picked.append((score,t))
+        if len(picked)>=3:break
+    return [t for _,t in picked]
+
 def generate(e,out):
     name=pathlib.Path(str(e["remote_name"])).name
     url=PLAY+urllib.parse.quote(name)
@@ -71,29 +95,33 @@ def generate(e,out):
     with tempfile.TemporaryDirectory(prefix="c720p-thumb-v106-") as td:
         t=pathlib.Path(td)
         scene_times,_=scene_candidates(url,t)
-        # Use strongest changes first; fill with spread-out points. Person clips use
-        # a wider temporal spread to increase the chance the person is visible.
-        base=[dur*.16,dur*.50,dur*.84] if status in ("confirmed_person","likely_person") else [dur*.22,dur*.50,dur*.78]
-        times=[]
-        for x in scene_times+base:
-            x=max(.05,min(dur-.05,x))
-            if all(abs(x-y)>max(.4,dur*.08) for y in times):times.append(x)
-            if len(times)>=3:break
-        while len(times)<3:times.append(base[len(times)])
-        times=sorted(times[:3])
+        # Person-positive clips use the detector's 12 sampled person scores.
+        # Put the strongest person-evidence moment in the CENTER panel, with
+        # scene-change/context frames before and after it when possible.
+        di=detection_for(e)
+        pt=person_times(di,dur) if status in ("confirmed_person","likely_person") else []
+        best_person=pt[0] if pt else None
+        base=[dur*.18,dur*.50,dur*.82] if status in ("confirmed_person","likely_person") else [dur*.22,dur*.50,dur*.78]
+        if best_person is not None:
+            left=next((x for x in sorted(scene_times+pt[1:]+base) if x<best_person-max(.4,dur*.06)),max(.05,best_person-dur*.18))
+            right=next((x for x in sorted(scene_times+pt[1:]+base) if x>best_person+max(.4,dur*.06)),min(dur-.05,best_person+dur*.18))
+            times=[left,best_person,right]
+        else:
+            times=[]
+            for x in scene_times+base:
+                x=max(.05,min(dur-.05,x))
+                if all(abs(x-y)>max(.4,dur*.08) for y in times):times.append(x)
+                if len(times)>=3:break
+            while len(times)<3:times.append(base[len(times)])
+            times=sorted(times[:3])
         imgs=[]
-        # If the event snapshot exists and this is a confirmed-person clip, use it
-        # as the middle panel: it is the detector-selected evidence frame.
-        snap=SNAPS/pathlib.Path(str(e.get("snapshot_name") or "")).name
         for i,x in enumerate(times):
             dst=t/f"pick-{i}.jpg"
-            if i==1 and status=="confirmed_person" and snap.is_file():
-                dst.write_bytes(snap.read_bytes())
-            elif not frame(url,x,dst):
+            if not frame(url,x,dst):
                 return False,{"error":"frame","time":x}
             imgs.append(dst)
         if not hstack(imgs,out):return False,{"error":"stack"}
-        return True,{"duration":round(dur,2),"times":[round(x,2) for x in times],"person_status":status}
+        return True,{"duration":round(dur,2),"times":[round(x,2) for x in times],"person_status":status,"person_score_guided":bool(best_person is not None),"best_person_time":round(best_person,2) if best_person is not None else None}
 
 def main():
     rows=api()
