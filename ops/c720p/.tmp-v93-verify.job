@@ -1,0 +1,1 @@
+bash -lc 'set -e; curl -fsSL --max-time 30 https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p/v93_verify.py -o /tmp/v93_verify.py; python3 /tmp/v93_verify.py'
