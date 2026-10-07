@@ -445,7 +445,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     {rows:objTrade},objTrade));
 
 
-  // 18. Repeated geographical review clusters
+  // 18. Geographical review locations with coarse exposure context
   const geo=new Map<string,{zone:string,count:number,joinMiss:number,badDeaths:number,matches:Set<string>}>();
   const geoMapEvents:any[]=[];
   for(const {g,e} of abs){
@@ -459,10 +459,18 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     r.count++;r.badDeaths++;r.matches.add(g.matchId);geo.set(k,r);
     if(finite(d?.x)&&finite(d?.y))geoMapEvents.push({matchId:g.matchId,minute:round(d.time,1),zone:k,type:"bad_death",position:{x:n(d.x),y:n(d.y)}});
   }
-  const geoRows=[...geo.values()].map(x=>({...x,matches:[...x.matches]})).sort((a,b)=>b.count-a.count);
-  analytics.push(metric("geographical_clusters","Repeated geographical review clusters",geoRows.length?"supported":"unavailable",sum(geoRows,x=>x.count),
-    geoRows.length?`Highest repeated map-relative review zone: ${geoRows[0].zone} (${geoRows[0].count} supported high-risk-death / missed-join review signals).`:"No repeated supported geography cluster.",
-    {rows:geoRows.slice(0,12),mapEvents:geoMapEvents.slice(0,40)}));
+  const exposure=sampledZoneExposure(games);
+  const geoRows=[...geo.values()].map(x=>{
+    const exposureMin=round(exposure.get(x.zone)||0,1);
+    return {...x,matches:[...x.matches],sampledExposureMin:exposureMin,
+      signalsPer30SampledMin:finite(exposureMin)&&n(exposureMin)>=5?round(30*x.count/n(exposureMin),2):null};
+  }).sort((a,b)=>b.count-a.count);
+  const rawTop=geoRows[0]||null,rateTop=geoRows.filter(x=>finite(x.signalsPer30SampledMin)&&n(x.sampledExposureMin)>=5&&x.count>=2)
+    .sort((a,b)=>n(b.signalsPer30SampledMin)-n(a.signalsPer30SampledMin))[0]||null;
+  analytics.push(metric("geographical_clusters","Geographical review locations",geoRows.length?"proxy":"unavailable",sum(geoRows,x=>x.count),
+    geoRows.length?`Most raw review signals occurred in ${rawTop.zone} (${rawTop.count}). ${rateTop?`After coarse timeline-frame exposure adjustment, ${rateTop.zone} is highest at ${rateTop.signalsPer30SampledMin} signals per 30 sampled minutes. `:""}Exposure is estimated from roughly minute-spaced position frames, so this identifies places to inspect rather than proving a zone is intrinsically risky.`:"No repeated supported geography cluster.",
+    {exposureBasis:"team-relative fight-zone minutes approximated from timeline frame intervals; rate requires ≥5 sampled minutes and ≥2 signals",
+      rawTopZone:rawTop?.zone||null,rateTopZone:rateTop?.zone||null,rows:geoRows.slice(0,12),mapEvents:geoMapEvents.slice(0,40)}));
 
   // 19. Champion-specific decision tendencies
   const champs=championGroup(games),champEligible=champs.filter(x=>x.games>=3);
@@ -577,7 +585,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
 
 
   return {
-    version:"decision-intelligence-v5",
+    version:"decision-intelligence-v6",
     generatedFromGames:games.length,
     deepGames:games.length,
     historyGames:history.length,
