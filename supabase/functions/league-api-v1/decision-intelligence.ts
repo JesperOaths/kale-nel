@@ -394,20 +394,34 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
       highUnspentRate:round(richHighUnspentRate,1),highUnspentKnown:richHighUnspentKnown.length,rows:rich.slice(0,18)},rich));
 
 
-  // 15. After fight wins: 90-second follow-up
+  // 15. After fight wins: next-fight-bounded follow-up
   const winFightRows:any[]=[];
-  for(const {g,e} of fights.filter(x=>x.e?.active===true&&finite(x.e?.teamFightKills)&&finite(x.e?.enemyFightKills)&&n(x.e.teamFightKills)>n(x.e.enemyFightKills))){
-    const end=n(e?.endMin??e?.startMin),to=end+1.5,teamId=n(g?.teamId||0);
-    const rawObjectives=arr(g?.objectives).filter((o:any)=>finite(eventMin(o))&&n(eventMin(o))>=end&&n(eventMin(o))<=to&&(!teamId||n(o?.ownerTeam||0)===teamId));
-    const neutral=rawObjectives.filter((o:any)=>txt(o?.type)==="ELITE_MONSTER_KILL").length;
-    const structures=rawObjectives.filter((o:any)=>txt(o?.type)==="BUILDING_KILL"||txt(o?.type)==="TURRET_PLATE_DESTROYED").length;
-    const playerFollowUpKills=arr(g?.involvedKills).filter((o:any)=>finite(eventMin(o))&&n(eventMin(o))>end&&n(eventMin(o))<=to).length;
-    const followUp=neutral+structures+playerFollowUpKills>0;
-    winFightRows.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,objectives:neutral,structures,playerFollowUpKills,followUp});
+  for(const g of games){
+    const tracked=[...fightEvents(g),...absenceEvents(g)].filter((e:any)=>finite(e?.startMin)).sort((a:any,b:any)=>n(a.startMin)-n(b.startMin));
+    const wins=fightEvents(g).filter((e:any)=>e?.active===true&&finite(e?.teamFightKills)&&finite(e?.enemyFightKills)&&n(e.teamFightKills)>n(e.enemyFightKills))
+      .sort((a:any,b:any)=>n(a.startMin)-n(b.startMin));
+    for(const e of wins){
+      const end=n(e?.endMin??e?.startMin),nextFight=tracked.find((x:any)=>n(x.startMin)>end+.01);
+      const to=Math.min(end+1.5,nextFight?Math.max(end,n(nextFight.startMin)):Infinity),teamId=n(g?.teamId||0);
+      if(!finite(to)||to<=end)continue;
+      const rawObjectives=arr(g?.objectives).filter((o:any)=>finite(eventMin(o))&&n(eventMin(o))>end&&n(eventMin(o))<=to&&(!teamId||n(o?.ownerTeam||0)===teamId));
+      const neutral=rawObjectives.filter((o:any)=>txt(o?.type)==="ELITE_MONSTER_KILL").length;
+      const towers=rawObjectives.filter((o:any)=>txt(o?.type)==="BUILDING_KILL").length;
+      const plates=rawObjectives.filter((o:any)=>txt(o?.type)==="TURRET_PLATE_DESTROYED").length;
+      const playerFollowUpKills=arr(g?.involvedKills).filter((o:any)=>finite(eventMin(o))&&n(eventMin(o))>end&&n(eventMin(o))<=to).length;
+      const followUp=neutral+towers+plates+playerFollowUpKills>0;
+      winFightRows.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,windowSec:round((to-end)*60,0),
+        objectives:neutral,towers,plates,playerFollowUpKills,followUp});
+    }
   }
-  analytics.push(metric("fight_lead_conversion","After fight wins: 90-second follow-up",winFightRows.length?"supported":"unavailable",winFightRows.length,
-    winFightRows.length?`${round(safeRate(count(winFightRows,x=>x.followUp),winFightRows.length),0)}% of strict tracked fight wins were followed within ~90 seconds by a same-team neutral objective/structure gain or a new reviewed-player kill/assist contribution. This is measured sequencing, not proof the fight caused the follow-up.`:"No strict active fight wins to evaluate.",
-    {followUpRate:round(safeRate(count(winFightRows,x=>x.followUp),winFightRows.length),1),rows:winFightRows},winFightRows));
+  const followUpWins=count(winFightRows,x=>x.followUp),objectiveFollowUps=count(winFightRows,x=>x.objectives>0),
+    towerFollowUps=count(winFightRows,x=>x.towers>0),plateFollowUps=count(winFightRows,x=>x.plates>0),
+    playerKillFollowUps=count(winFightRows,x=>x.playerFollowUpKills>0);
+  analytics.push(metric("fight_lead_conversion","After fight wins: before the next fight",winFightRows.length?"supported":"unavailable",winFightRows.length,
+    winFightRows.length?`${round(safeRate(followUpWins,winFightRows.length),0)}% of strict tracked fight wins had a measured follow-up before the next tracked fight or 90 seconds, whichever came first. ${objectiveFollowUps} windows included a neutral objective, ${towerFollowUps} a building, ${plateFollowUps} a plate and ${playerKillFollowUps} a new reviewed-player kill/assist contribution. Windows are non-overlapping by construction, so one later event cannot inflate several fight wins.`:"No strict active fight wins to evaluate.",
+    {followUpRate:round(safeRate(followUpWins,winFightRows.length),1),objectiveFollowUpWindows:objectiveFollowUps,
+      towerFollowUpWindows:towerFollowUps,plateFollowUpWindows:plateFollowUps,playerKillFollowUpWindows:playerKillFollowUps,
+      medianWindowSec:round(median(winFightRows.map(x=>x.windowSec)),0),windowRule:"ends at next tracked fight or 90 seconds",rows:winFightRows},winFightRows));
 
   // 16. After fight losses: extra high-risk deaths
   const lossRows:any[]=[];
