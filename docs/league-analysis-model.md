@@ -3678,3 +3678,31 @@ Spatial questions reuse the existing Summoner's Rift map projection and Data Dra
 Opponent-relative signed quantities use zero-centered diverging bars. Lead preservation and deficit recovery use paired 15-to-25 slope views. Wave/resource conflict and expected-performance residuals use scatterplots. Session components, requeue buckets and cross-map efficiency use comparative bars; issue recurrence uses an ordered game-by-game trend line. Champion tendencies and matchup context use champion portraits when Data Dragon assets are available. Objective setup paths show shop to approach zone to objective presence as a sequence.
 
 Every analytic card must contain three interpretation blocks: What it measures, Conclusion from this sample, and What to review. Conclusions are deterministic summaries of the same evidence already returned by the analyzer and must preserve the Measured / Proxy / Thin sample / No evidence distinction. A visual may make evidence easier to read; it must never raise the certainty of the underlying analytic.
+
+
+## v306 decision-intelligence correctness audit
+
+The v306 pass re-audits all 25 decision-intelligence analytics for evidence semantics and visualization correctness rather than only renderer coverage.
+
+### Corrections
+
+- Opportunity-cost and arrival-feasibility cards are explicitly **Proxy** outputs. Their values are replay-ranking aids, not measured economic totals or pathing counterfactuals.
+- Pre-fight positioning no longer pretends Riot minute-cadence frames can produce distinct literal 30/20/10-second positions. Requested checkpoints are deduplicated and the actual seconds-before-fight are displayed.
+- Numbers-aware participation preserves the previously omitted **down-one** local-number state instead of forcing fights into only ≥2-down versus even/ahead.
+- “Nothing gained” review time merges overlapping per-game 90-second windows before reporting minutes, preventing double-counted exposure.
+- Objective setup paths now carry the sampled approach position so the same Summoner’s Rift projection can show where successful and missed setups originated.
+- Lead-utilisation and deficit-recovery cards only promote paired 15→25 observations; eligible games without a usable 25-minute checkpoint do not masquerade as measured conversions.
+- Fight-win conversion now uses raw same-team neutral-objective / building events plus reviewed-player follow-up kill participation in the post-fight window. The unrelated solo-kill structure-conversion ledger is no longer used as a generic structure source.
+- Repeated geography uses one map-relative taxonomy for high-priority missed joins and high-risk deaths, and the map plots both event families.
+- Champion tendency rows expose skipped-fight and active-fight denominators; a champion table with no ≥3-game champion is Thin rather than Measured.
+- Expected-performance residuals are leave-one-out. A game can no longer contribute to the expectation against which that same game is scored.
+- Session-component visualization uses the existing evidence-gated `supportedSignals[].normalized` values. DPM, CS/min, Gold@15, risky deaths and first-impact timing are therefore compared on their own practical-change thresholds, with inverse metrics corrected before direction/color is assigned.
+- Requeue buckets show their sample size and remain proxy/context even when a best-supported bucket exists.
+- The former “mistake half-life” claim is removed. Without a defensible per-target intervention start point, the card is a **mistake recurrence trend** only.
+- Automatic replay ranking is explicitly a heuristic proxy. Objective-setup and repeat-death entries now retain event minutes when available so spatial/replay links point at real moments.
+- Scatterplots no longer assign arbitrary per-point colors. Semantic colors are used only when a legend defines them, zero/reference lines are drawn when meaningful, and expected-vs-actual residuals include a y=x reference line.
+- Matchup lane meters are zero-centered so negative and positive Gold@15 directions are visually distinct rather than differing only by color.
+
+### Evidence-state rule
+
+“Measured” means the displayed quantity is directly derived from supported Riot/report evidence. It does not mean the sample is large or causal. “Proxy” means the display combines measured inputs with a heuristic transformation. “Thin” means the analytic exists but does not clear its own promoted evidence floor. “No evidence” means the required paired/supported observations are absent.
