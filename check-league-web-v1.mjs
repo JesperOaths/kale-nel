@@ -456,6 +456,9 @@ assert.ok(decisionUi.includes("s==='supported'?'measured'")&&!decisionUi.include
 assert.ok(decisionUi.includes('Team-relative orientation · reviewed team base is bottom-left'),'Decision maps must disclose their team-relative orientation');
 assert.ok(css.includes('v310 — decision intelligence evidence/style coherence')&&css.includes('.di-card.tone-measured')&&css.includes('.di-interpretation .di-conclusion{background:#f5f1e9'),'Decision styling must align evidence states and conclusion cards with the main warm report system');
 assert.ok(html.includes('section-subhead decision-intelligence-subhead')&&!html.includes('<p class="eyebrow">Decision intelligence</p><h2>25 deeper ways'),'Decision intelligence must use the in-panel subhead hierarchy instead of nesting another report-level heading');
+assert.ok(decisionBackend.includes('"Ahead-state fight execution"')&&decisionBackend.includes('preContributionDeathRate')&&decisionBackend.includes('richHighUnspentRate'),'Ahead-state fight card must measure execution outcomes instead of tautological active-fight contribution');
+assert.ok(!decisionBackend.includes('aheadFightContributionRate'),'Retired tautological ahead-fight contribution rate must not return');
+assert.ok(decisionUi.includes("x.diedBeforeContribution?'negative':x.survived?'positive':'warn'"),'Ahead-state scatter must visually separate survived, contributed-then-died, and died-before-contribution outcomes');
 
 
 assert.ok(decisionUi.includes('Decision intelligence · visual review')&&decisionUi.includes("statusLabel")&&decisionUi.includes("Proxy"),'Decision intelligence UI must expose all 25 and visually distinguish proxy evidence');
