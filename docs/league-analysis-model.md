@@ -3632,3 +3632,38 @@ For a position-supported team-involved fight where the reviewed player is absent
 A high-priority “review whether you should join” cue requires all of the following: the team lost the fight, no supported cross-map compensation was found, the player began within roughly 6500 map units of the fight anchor, and the local-number snapshot is not already clearly two-or-more players down. Even then this is replay triage, not a counterfactual proof. Cooldowns, vision, wave state, path safety, teleport availability, champion roles and information outside the sampled frames can make the correct decision different.
 
 Skipped-fight events with supported cross-map value are also reviewable. The UI labels them as measurable compensation rather than automatically praising the skip; the replay question is whether the value genuinely depended on staying away and whether joining would have sacrificed guaranteed value.
+
+
+## v304 decision intelligence layer
+
+The report now contains one evidence-gated decision-intelligence layer with all 25 requested additions. The layer consumes the same selected-role deep-game objects as the rest of the coaching model; it never reintroduces off-role games.
+
+1. Fight decision opportunity-cost ledger: compares supported cross-map gains after a skipped fight with a transparent net-kill loss proxy. The proxy is for replay ranking only.
+2. Arrival feasibility: separates skipped fights that began inside the existing ~6500-unit reachability screen from fights that were already farther away.
+3. Pre-fight positioning: shows the nearest available Riot timeline-frame position around 30/20/10 seconds before a fight. Frame cadence is coarse and must be disclosed.
+4. Fight formation / entry distance: measures sampled distance from the reviewed player to the tracked fight anchor. It is not a true frontline/backline polygon.
+5. Numbers-aware participation: retains the local-number snapshot so participation is not rewarded when the fight was already heavily outnumbered.
+6. Cross-map efficiency: normalizes the transparent skipped-fight trade-value proxy over the bounded 90-second window.
+7. Wave-to-fight conflict: uses direct-role CS/gold movement as a resource-pressure proxy because Riot timelines do not expose exact live minion-wave size.
+8. Nothing-gained separation windows: counts skipped tracked fights with no supported 90-second compensation.
+9. Tempo after recall: pairs a shop visit with the next tracked fight/objective inside four minutes and reports the timing gap plus sampled approach zone.
+10. Objective setup path: reconstructs last shop timing and sampled approach zone before objective events.
+11. Lead utilisation: reviews ≥500g direct-role leads at 15 and their 25-minute state/conversion evidence.
+12. Deficit recovery: reviews ≤-500g states at 15 and direct-role movement to 25; it is team-context recovery and is not called solo recovery.
+13. Death chains: promotes repeat-death/recovery evidence as sequences rather than independent deaths.
+14. Pre-fight resource-to-impact: time-orders direct-role gold state at fight start before tracked contribution/survival.
+15. Fight-win conversion: looks for objective, structure or kill-conversion signals in the next ~90 seconds.
+16. Fight-loss containment: checks for additional classified bad deaths in the next ~90 seconds.
+17. Objective/structure trading: isolates skipped fights that produced a supported structure or neutral-objective gain.
+18. Geographical mistake clusters: groups high-priority skipped-fight reviews and supported bad-death zones.
+19. Champion-specific decision tendencies: groups only the reviewed account's own champion and compares decision/risk rates.
+20. Matchup-adjusted lane results: uses repeated own-champion × direct-opponent-champion cells from personal history; this is not a population matchup table.
+21. Expected-performance residuals: experimental within-history residuals based on direct-opponent DPM with champion, opposing champion and duration-bucket expectation. They are not a causal MMR model.
+22. Session change by component: exposes the individual opener→game-3+ opponent-adjusted/timeline signals behind the session headline.
+23. Requeue sweet spot: compares break-time buckets using a normalized direct-opponent composite when each bucket has enough games; association only.
+24. Mistake recurrence half-life: tracks supported issue load across games and estimates when a sustained ≤50% window first appears. This is a coaching-progress proxy, not a biological half-life.
+25. Automatic replay shortlist: ranks concrete skipped fights, fight-entry errors, objective-setup failures and repeat-death evidence by learning value and links back to the match.
+
+### Proxy policy
+
+A proxy must never be rendered as a measured fact. The frontend labels each analytic as Measured, Proxy, Thin sample or No evidence. Exact wave size, cooldown availability, hidden information, player intent and a true join-versus-skip counterfactual are not inferred when the Riot data does not expose them. The automatic shortlist is therefore a triage surface, not an automated verdict.
