@@ -9,6 +9,8 @@ import './check-league-spending-fights.mjs';
 const read=(p)=>fs.readFileSync(p,'utf8');
 const backend=read('supabase/functions/league-api-v1/index.ts');
 const app=read('league/app.js');
+const decisionUi=read('league/decision-intelligence.js');
+const decisionBackend=read('supabase/functions/league-api-v1/decision-intelligence.ts');
 const html=read('league/index.html');
 const css=read('league/styles.css');
 const migration=read('supabase/migrations/20261001043000_league_web_foundation_v1.sql');
@@ -177,6 +179,11 @@ ok(backend.includes('objectiveFamilyStats:{}')&&backend.includes('objectiveFamil
 ok(html.includes('id="objectiveFamilyOverview"')&&app.includes('function renderObjectiveFamilyOverview('), 'main decision surface must expose rules-aware objective-family context');
 ok(html.includes('id="teamfightDecisionPanel"')&&app.includes('function renderTeamfightDecisionOverview(')&&backend.includes('function fightArea('), 'teamfight geography must be rendered separately from objective-family identity');
 ok(backend.includes('crossMapTradeSupported')&&backend.includes('joinReviewPriority')&&backend.includes('tradeWindowSec:90'), 'skipped fights must retain bounded cross-map compensation and join-review evidence');
+ok(html.includes('id="decisionIntelligencePanel"')&&app.includes('window.renderDecisionIntelligence?.(r)')&&decisionUi.includes('All 25 additions'), 'all 25 requested decision analytics must be wired into the League report');
+ok((decisionBackend.match(/analytics\\.push\\(metric\\(/g)||[]).length===25, 'decision intelligence backend must expose exactly 25 analytic families');
+ok(decisionBackend.includes('wave_fight_conflict')&&decisionBackend.includes('objective_setup_path')&&decisionBackend.includes('lead_utilisation')&&decisionBackend.includes('deficit_recovery')&&decisionBackend.includes('mistake_recurrence'), 'decision intelligence must retain macro, recovery and recurrence families');
+ok(decisionBackend.includes('proxyPolicy')&&decisionUi.includes('Measured')&&decisionUi.includes('Proxy')&&decisionUi.includes('Thin sample'), 'decision intelligence must preserve explicit proxy/evidence labeling');
+ok(modelDoc.includes('## v304 decision intelligence layer')&&modelDoc.includes('Automatic replay shortlist'), 'analysis model must document the v304 decision intelligence policy');
 ok(backend.includes('peerDpmDelta:metric(peerRows')&&backend.includes('peerDeathsDelta:metric(peerRows')&&app.includes('Opponent-adjusted read:'), 'history direction must be direct-opponent adjusted instead of raw-output driven');
 ok(modelDoc.includes('## v303 opponent-adjusted history')&&modelDoc.includes('MMR-safe direction')&&modelDoc.includes('Teamfight geography and join-versus-trade review'), 'analysis model must document the v303 opponent-adjustment and teamfight decision policy');
 
@@ -227,7 +234,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.169'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.170'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
 ok(backend.includes('aboveOwnDeadTimeMedian:Number(g.damageRank)>2&&')&&backend.includes('aboveOwnTurretMedian:Number(g.damageRank)>2&&'), 'resource/output exemplar annotations must compute lower-damage state in their own callback scope');
 ok(backend.includes('highUnspentFightSamples')&&backend.includes('itemDisadvantageFightSamples')&&backend.includes('goldDeficitFightSamples')&&backend.includes('outnumberedFightSamples'), 'fight-state rates must use metric-specific supported-opportunity denominators');
 ok(backend.includes('const cleanOutcomeGames=games.filter(g=>g?.outcomeCompromised!==true)')&&backend.includes('afk_or_early_surrender_excluded_from_final_result_conversion'), 'final-result coaching must exclude compromised outcomes');
