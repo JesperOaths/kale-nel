@@ -136,23 +136,27 @@ def main():
             except:pass
             items.pop(n,None);removed+=1
     # Confirmed-person clips and newest clips first.
-    priority=sorted(rows,key=lambda e:(0 if str(e.get("person_status"))=="confirmed_person" else 1 if str(e.get("person_status"))=="likely_person" else 2, str(e.get("timestamp") or "")),reverse=False)
-    made=0;failed=[]
-    limit=int(os.environ.get("C720P_THUMB_LIMIT","24"))
+    # Stable two-pass sort: newest first within each evidence class, with
+    # confirmed-person clips ahead of likely-person and generic motion.
+    priority=sorted(rows,key=lambda e:str(e.get("timestamp") or ""),reverse=True)
+    priority.sort(key=lambda e:0 if str(e.get("person_status"))=="confirmed_person" else 1 if str(e.get("person_status"))=="likely_person" else 2)
+    made=0;attempts=0;failed=[]
+    limit=int(os.environ.get("C720P_THUMB_LIMIT","18"))
     for e in priority:
-        if made>=limit:break
+        if made>=limit or attempts>=max(12,limit*2):break
         n=pathlib.Path(str(e["remote_name"])).name
         key=hashlib.sha1(n.encode()).hexdigest()[:20]+".jpg"
         dst=OUT/key
         rec=items.get(n,{})
         if dst.is_file() and dst.stat().st_size>4000 and rec.get("version")=="v106":
             continue
+        attempts+=1
         ok,meta=generate(e,dst)
         if ok:
             items[n]={"file":key,"url":"/local/c720p-saved-thumbs/"+key,"version":"v106","generated_at":time.time(),**meta}
             made+=1
         else:failed.append({"name":n,**meta})
     atomic(MAN,{"version":"v106","updated_at":time.time(),"items":items})
-    print(json.dumps({"ok":True,"saved_events":len(rows),"manifest_items":len(items),"generated":made,"stale_removed":removed,"failed":failed[:12]},indent=2))
+    print(json.dumps({"ok":True,"saved_events":len(rows),"manifest_items":len(items),"generated":made,"attempts":attempts,"stale_removed":removed,"failed":failed[:12]},indent=2))
 
 if __name__=="__main__":main()
