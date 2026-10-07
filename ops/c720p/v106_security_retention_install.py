@@ -18,8 +18,8 @@ def install(url,dst):
     backup(dst);data=fetch(url);Path(dst).write_bytes(data);Path(dst).chmod(0o755);py_compile.compile(str(dst),doraise=True)
 
 install("https://raw.githubusercontent.com/JesperOaths/kale-nel/ba683aa57c50a7164042a382eecc42793f896d57/ops/c720p/v106_local_retention.py",TRIM)
-install("https://raw.githubusercontent.com/JesperOaths/kale-nel/71b838672623ddbcfe223dd861bea725ff548e95/ops/c720p/v106_drive_retention.py",RET)
-install("https://raw.githubusercontent.com/JesperOaths/kale-nel/b901090ae88274f69920502c9b78ff3e7ff36d7c/ops/c720p/v106_saved_thumbnailer.py",THUMB)
+install("https://raw.githubusercontent.com/JesperOaths/kale-nel/348fcc5f49f613274b100ecf11f1bfea62de4700/ops/c720p/v106_drive_retention.py",RET)
+install("https://raw.githubusercontent.com/JesperOaths/kale-nel/ba183353c8d860a46803fe9075e83422af2d5ab6/ops/c720p/v106_saved_thumbnailer.py",THUMB)
 
 # Saved archive listing must reconcile remote Drive deletions on every user refresh,
 # not serve a 5-minute-stale inventory.
@@ -82,7 +82,7 @@ UI.write_text(s)
 # Thumbnail worker timer.
 svc=UNIT/"c720p-saved-thumbnailer-v106.service";tim=UNIT/"c720p-saved-thumbnailer-v106.timer"
 for p in (svc,tim):backup(p)
-svc.write_text("""[Unit]\nDescription=C720P saved clip representative thumbnail generator\nAfter=c720p-drive-security-archive.service network-online.target\n[Service]\nType=oneshot\nEnvironment=C720P_THUMB_LIMIT=18\nExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/c720p-saved-thumbnailer-v106.py\nNice=10\nIOSchedulingClass=best-effort\nIOSchedulingPriority=7\n""")
+svc.write_text("""[Unit]\nDescription=C720P saved clip representative thumbnail generator\nAfter=c720p-drive-security-archive.service network-online.target\n[Service]\nType=oneshot\nEnvironment=C720P_THUMB_LIMIT=12\nExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/c720p-saved-thumbnailer-v106.py\nNice=10\nIOSchedulingClass=best-effort\nIOSchedulingPriority=7\n""")
 tim.write_text("""[Unit]\nDescription=C720P saved clip thumbnail refresh\n[Timer]\nOnBootSec=5min\nOnUnitActiveSec=20min\nRandomizedDelaySec=90\nPersistent=true\n[Install]\nWantedBy=timers.target\n""")
 
 # Cache bust Security -> Saved Clips iframe.
@@ -102,11 +102,11 @@ runs={}
 for name,cmd,timeout in [
  ("local_retention",["python3",str(TRIM)],120),
  ("drive_retention",["python3",str(RET)],180),
- ("thumbs",["env","C720P_THUMB_LIMIT=36","python3",str(THUMB)],600),
+ ("thumbs",["env","C720P_THUMB_LIMIT=12","python3",str(THUMB)],600),
 ]:
     r=subprocess.run(cmd,text=True,capture_output=True,timeout=timeout);runs[name]={"rc":r.returncode,"stdout":r.stdout[-12000:],"stderr":r.stderr[-3000:]}
     if r.returncode:raise SystemExit(name+"_failed:"+r.stderr[-1000:])
 
 subprocess.run(["systemctl","--user","restart","c720p-home-hub-kiosk.service"],check=False,timeout=25)
 
-print(json.dumps({"ok":True,"version":"v106","backup":str(BACK),"runs":runs},indent=2))
+print(json.dumps({"ok":True,"version":"v106.1","backup":str(BACK),"runs":runs},indent=2))
