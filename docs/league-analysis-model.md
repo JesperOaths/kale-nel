@@ -3883,3 +3883,56 @@ Minute-frame exposure normalization remains a proxy. The first v4.179 report sho
 ### Overlapping skipped-fight trade windows
 
 Skipped-fight structure/objective rows remain measured timing-overlap evidence, but nearby 90-second skipped-fight windows may overlap. The UI no longer sums row-level structure/objective counts into a purported unique total. Individual windows remain available for replay review.
+
+## v316 coaching synthesis, player review and multi-window development model
+
+Frontend 20261007-league-web-v316 and analyzer league-web-behavior-v4.181 add a report-level interpretation layer without changing the underlying decision-intelligence v7 evidence rules.
+
+### Coaching synthesis versus whole-player review
+
+The report now has two deliberately different synthesis surfaces:
+
+- **Coaching synthesis** is the short top-of-report synopsis. It promotes the current ranked coaching theme, one measured strength, recent direction and longer-history direction.
+- **Whole-player review** is the later narrative conclusion. It conceptualizes the selected-role sample as a playstyle only when role-relative signals clear their own evidence floors, then discusses where that style appears to help, where value appears to leak, development direction and an overall conclusion.
+
+Neither surface creates a new composite performance score. Claims must be traceable to existing priority themes, measured strength logic, direct-role opponent comparisons or explicitly identified decision-intelligence evidence. Language describes the **sample**, not a permanent player personality.
+
+### Evidence agreement
+
+The synthesis separately reports whether evidence is converging, mixed, single-channel or thin. A mixed set of recent/session/history metrics must stay mixed rather than being averaged into one form score. The primary coaching theme can be described as converging only when its existing theme model reports multiple independent evidence channels.
+
+### Purpose of all 25 decision analytics
+
+Every decision-intelligence card now declares one of three purposes:
+
+- **Act on this:** can directly change a replay or practice decision when supported.
+- **Useful context:** helps interpret performance but should not independently create a coaching target.
+- **Diagnostic / exploratory:** locates mechanisms or replay questions and is not a standalone performance verdict.
+
+Purpose is orthogonal to evidence status. A measured diagnostic can still be non-actionable, and an actionable analytic can remain Thin until its sample grows.
+
+### Longer-history trajectory
+
+longHorizon.trajectoryWindows exposes up to five non-overlapping 20-game windows from the newest 100 selected-role games. The exported metrics are direct-role-opponent deltas: peerCsMinDelta, peerDpmDelta, peerGpmDelta, peerDeathsDelta, plus role-relevant vision/KP deltas.
+
+The UI requires at least five valid observations for a metric in a window and at least two supported windows before making a direction comparison. This is intentionally not a raw-DPM/raw-CS trend: opponent-relative windows are used so increasing opponent strength does not automatically masquerade as deterioration.
+
+Timeline-only metrics such as Gold@15 remain in the deep-game layers because match-only historical rows cannot reconstruct timeline checkpoints.
+
+### 15→25 state-transition review
+
+For ADC/MID/TOP, the existing direct-role Gold@15→Gold@25 arc is now shown as a transition matrix. A deteriorating transition means:
+
+- ahead at 15 and no longer ahead at 25;
+- close at 15 and behind at 25; or
+- behind at both checkpoints with the role-gold deficit worsening by at least 500g.
+
+The review then counts supported events that occur **inside the 15→25 window**: high-risk deaths, repeat deaths, active-fight death before contribution, first allied death in an active fight, active fight starts with at least 1000 unspent gold, side-lane deaths before a neutral objective, and recent-shop objective absences. A signal is promoted only when it recurs in at least two deteriorating-transition games. Rates versus other comparable transitions are shown as co-occurrence context only; the UI explicitly forbids causal wording.
+
+Support and Jungle keep their role-specific sequence arcs instead of forcing this carry-lane gold-state model onto them.
+
+### Rendering performance
+
+The large 25-card decision dashboard and recent match-story list are no longer built synchronously during first report render. They are prepared as lightweight placeholders and rendered when their sections approach the viewport. Economy charts and spatial maps remain deferred as before.
+
+The frontend records initial and deferred render durations in state.reportRenderPerformance for regression diagnosis. Deferral changes presentation cost only; it does not change the report sample, analyzer calculations or saved data.

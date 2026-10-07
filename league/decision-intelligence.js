@@ -59,6 +59,14 @@
     automatic_replay_shortlist:{group:'Replay review',measure:'Ranks concrete moments with a transparent review-priority heuristic and diversity caps so one match or one event type cannot monopolize the list.',review:'Start here when you do not want to review every match. Priority is only an ordering aid, not measured severity, probability, causality or blame.'}
   };
   const GROUP_ORDER=['Fight decisions','Tempo & setup','Economy & conversion','Risk & recovery','Map patterns','Champion context','Lane & opponent context','Session patterns','Learning progress','Replay review'];
+  const PURPOSE={
+    lead_utilisation:'act',deficit_recovery:'act',death_chains:'act',resource_to_impact:'act',fight_lead_conversion:'act',fight_loss_containment:'act',objective_setup_path:'act',mistake_recurrence:'act',automatic_replay_shortlist:'act',
+    post_recall_tempo:'context',objective_trading:'context',geographical_clusters:'context',champion_tendencies:'context',matchup_adjusted_lane:'context',expected_performance_residual:'context',session_components:'context',requeue_sweet_spot:'context',cross_map_efficiency:'context',
+    fight_decision_ledger:'diagnostic',arrival_feasibility:'diagnostic',pre_fight_positioning:'diagnostic',fight_formation:'diagnostic',numbers_aware_participation:'diagnostic',wave_fight_conflict:'diagnostic',nothing_gained_isolation:'diagnostic'
+  };
+  const purposeLabel=id=>PURPOSE[id]==='act'?'Act on this':PURPOSE[id]==='context'?'Useful context':'Diagnostic / exploratory';
+  const purposeReason=id=>PURPOSE[id]==='act'?'Can directly change a replay or practice decision when the evidence is supported.':PURPOSE[id]==='context'?'Helps interpret performance but should not independently create a coaching target.':'Locates review questions or mechanisms; it is not a standalone performance verdict.';
+
 
   function simpleValue(v){
     if(v==null)return '—';
@@ -338,9 +346,9 @@
   function analyticCard(a,index,report){
     const info=INFO[a?.id]||{group:'Other',measure:a?.summary||'',review:'Open linked matches for context.'};
     const evidence=evidenceRows(a),visual=visualFor(a,report),con=conclusion(a);
-    return '<details class="di-card tone-'+statusTone(a?.status)+'" '+(index<2?'open':'')+'>'+
-      '<summary><span class="di-index">'+String(index+1).padStart(2,'0')+'</span><div><strong>'+esc(a?.title||'Analysis')+'</strong><small>'+esc(statusLabel(a?.status))+' · n='+esc(a?.sample??0)+' · '+esc(info.group)+'</small></div><i></i></summary>'+
-      '<div class="di-card-body"><div class="di-visual">'+visual+'</div>'+
+    return '<details class="di-card tone-'+statusTone(a?.status)+' purpose-'+esc(PURPOSE[a?.id]||'diagnostic')+'" '+(index<2?'open':'')+'>'+
+      '<summary><span class="di-index">'+String(index+1).padStart(2,'0')+'</span><div><strong>'+esc(a?.title||'Analysis')+'</strong><small><b class="di-purpose-badge">'+esc(purposeLabel(a?.id))+'</b> · '+esc(statusLabel(a?.status))+' · n='+esc(a?.sample??0)+' · '+esc(info.group)+'</small></div><i></i></summary>'+
+      '<div class="di-card-body"><div class="di-purpose-explainer"><b>'+esc(purposeLabel(a?.id))+'</b><span>'+esc(purposeReason(a?.id))+'</span></div><div class="di-visual">'+visual+'</div>'+
       '<div class="di-interpretation"><div><span>What it measures</span><p>'+esc(info.measure)+'</p></div><div class="di-conclusion"><span>Conclusion from this sample</span><p>'+esc(con)+'</p></div><div><span>What to review</span><p>'+esc(info.review)+'</p></div></div>'+
       scalarEvidence(a?.evidence)+(evidence?'<details class="di-evidence-details"><summary>Underlying evidence · up to 8 rows</summary><div class="di-evidence-list">'+evidence+'</div></details>':'')+
       '</div></details>';
@@ -368,6 +376,7 @@
     if(!analytics.length){panel.hidden=true;box.innerHTML='';return;}
     const h=d?.headline||{},short=Array.isArray(d?.replayShortlist)?d.replayShortlist:[];
     const measured=analytics.filter(a=>a.status==='supported').length,proxy=analytics.filter(a=>a.status==='proxy').length,available=analytics.filter(a=>a.status!=='unavailable').length;
+    const purposeCounts={act:analytics.filter(a=>PURPOSE[a.id]==='act').length,context:analytics.filter(a=>PURPOSE[a.id]==='context').length,diagnostic:analytics.filter(a=>(PURPOSE[a.id]||'diagnostic')==='diagnostic').length};
     let index=0;
     const groups=GROUP_ORDER.map(group=>{const count=analytics.filter(a=>(INFO[a.id]?.group||'Other')===group).length,html=groupHtml(group,analytics,report,index);index+=count;return html;}).join('');
     box.innerHTML=
@@ -375,6 +384,7 @@
         '<div class="di-headline-copy"><span>Decision intelligence · visual review</span><strong>'+esc(available)+' of 25 analytics currently have usable evidence</strong><p>Each card pairs evidence with a matching visual and a bounded conclusion. Timeline-heavy decisions use '+esc(d?.deepGames??d?.generatedFromGames??'—')+' deep games; eligible match-level context can use '+esc(d?.historyGames??d?.deepGames??d?.generatedFromGames??'—')+' same-role history games. Thin and unavailable evidence stays separate from measured and proxy results.</p></div>'+
         '<div class="di-headline-stats"><span><b>'+esc(measured)+'</b> measured</span><span><b>'+esc(proxy)+'</b> explicit proxies</span><span><b>'+esc(h.thin||0)+'</b> thin</span><span><b>'+esc(h.unavailable||0)+'</b> unavailable</span></div>'+
       '</div>'+
+      '<div class="di-purpose-key"><span class="act"><b>'+purposeCounts.act+'</b> Act on this</span><span class="context"><b>'+purposeCounts.context+'</b> Useful context</span><span class="diagnostic"><b>'+purposeCounts.diagnostic+'</b> Diagnostic / exploratory</span><p>Purpose labels answer a different question from evidence status: a measured diagnostic can still be non-actionable, while an actionable card can remain thin until its sample grows.</p></div>'+
       (short.length?'<section class="di-feature"><div class="section-subhead"><div><span>Start here</span><strong>Automatic replay shortlist</strong></div><small>The highest-priority current review moments under the transparent replay heuristic.</small></div><div class="di-shortlist-grid">'+short.slice(0,10).map((x,i)=>shortlistCard(x,i,report)).join('')+'</div>'+fightMap(report,'shortlist',short.slice(0,10))+'</section>':'')+
       groups+
       '<p class="source-note"><b>How to read this dashboard:</b> maps and charts are explanatory views of the same evidence already used by the analyzer. “Proxy” remains visibly separate from measured evidence. Exact live wave size, cooldown availability, hidden information, path safety and player intent are not invented when Riot data does not expose them.</p>';

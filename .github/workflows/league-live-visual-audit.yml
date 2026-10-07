@@ -1,0 +1,64 @@
+name: League live visual audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'league/**'
+      - 'supabase/functions/league-api-v1/**'
+      - 'scripts/check-league-live-visual-v316.mjs'
+      - '.github/workflows/league-live-visual-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: league-live-visual-audit-production
+  cancel-in-progress: true
+
+jobs:
+  league-visual:
+    if: github.repository == 'JesperOaths/kale-nel' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_URL: https://uiqntazgnrxwliaidkmy.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GEJAST_BASE_URL: https://kalenel.nl/
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Prepare deterministic Chrome runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_SERVICE_ROLE_KEY:-}" || { echo 'SUPABASE_SERVICE_ROLE_KEY missing'; exit 1; }
+          npm ci
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.55.0
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || true)"
+          test -n "$chrome"
+          echo "GEJAST_SYSTEM_CHROME=$chrome" >> "$GITHUB_ENV"
+          node --check scripts/check-league-live-visual-v316.mjs
+          "$chrome" --version
+
+      - name: Audit deployed League report at desktop and mobile widths
+        run: node scripts/check-league-live-visual-v316.mjs
+
+      - name: Upload League screenshots and measurements
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: league-live-visual-${{ github.run_id }}
+          path: league-visual-audit/
+          if-no-files-found: warn
+          retention-days: 14

@@ -813,11 +813,32 @@ function renderWhenNear(elementId,callback,rootMargin='700px'){
   },{root:null,rootMargin,threshold:0});
   observer.observe(node);heavyObservers.push(observer);
 }
+function prepareDecisionIntelligence(r){
+  const panel=$('decisionIntelligencePanel'),box=$('decisionIntelligence');if(!panel||!box)return;
+  const analytics=Array.isArray(r?.decisionIntelligence?.analytics)?r.decisionIntelligence.analytics:[];
+  if(!analytics.length){panel.hidden=true;box.innerHTML='';return;}
+  panel.hidden=false;box.innerHTML='<div class="deferred-report-placeholder"><strong>25-part decision review</strong><span>The detailed graphs and maps render when this section approaches the viewport.</span></div>';
+}
+function prepareMatchHistory(r){
+  const list=$('matchHistoryList'),summary=$('matchHistorySummary');if(!list||!summary)return;
+  const n=reportCoachingGames(r).filter(g=>gameIsCoachingContext(r,g)).length;
+  summary.innerHTML='<span><b>'+n+'</b> comparable matches</span><small>Rows render when this section approaches the viewport.</small>';
+  list.innerHTML='<div class="deferred-report-placeholder"><strong>Recent match stories</strong><span>Deferred to keep the report’s first paint responsive.</span></div>';
+}
+function measuredDeferredRender(name,fn){
+  const started=typeof performance!=='undefined'&&performance.now?performance.now():0;
+  fn();
+  const ended=typeof performance!=='undefined'&&performance.now?performance.now():0;
+  state.reportRenderPerformance=state.reportRenderPerformance||{};
+  if(started&&ended)state.reportRenderPerformance[name+'Ms']=Math.round((ended-started)*10)/10;
+}
 function scheduleHeavyReportRender(r){
   const ticket=++heavyRenderTicket;clearHeavyObservers();
-  const safe=fn=>()=>{if(ticket===heavyRenderTicket&&state.report===r)fn();};
-  renderWhenNear('lane-economy',safe(()=>renderCharts(r)),'900px');
-  renderWhenNear('spatialReview',safe(()=>renderSpatial(r)),'650px');
+  const safe=(name,fn)=>()=>{if(ticket===heavyRenderTicket&&state.report===r)measuredDeferredRender(name,fn);};
+  renderWhenNear('decisionIntelligencePanel',safe('decisionIntelligence',()=>window.renderDecisionIntelligence?.(r)),'1200px');
+  renderWhenNear('match-history',safe('matchHistory',()=>renderMatchHistory(r)),'1100px');
+  renderWhenNear('lane-economy',safe('economyCharts',()=>renderCharts(r)),'900px');
+  renderWhenNear('spatialReview',safe('spatialReview',()=>renderSpatial(r)),'650px');
 }
 function bindTechnicalMetrics(r){
   const details=$('technicalMetricsDetails');if(!details)return;
@@ -831,6 +852,7 @@ function bindTechnicalMetrics(r){
   details.addEventListener('toggle',()=>{if(details.open)render();},{once:true});
 }
 function renderReport(raw,sourceKind){
+  const renderStarted=typeof performance!=='undefined'&&performance.now?performance.now():0;
   const r=normalizeReport(raw);state.report=r;
   $('reportEmpty').hidden=true;$('report').hidden=false;
   const p=r.profile||{},s=r.summary||{};
@@ -848,6 +870,7 @@ function renderReport(raw,sourceKind){
   renderLongHorizon(r);
   renderReportDrivers(r);
   renderCurrentStrengths(r);
+  renderCoachingSynthesis(r);
   renderEvidenceHealth(r);
   renderKpis(r);
   renderMatchRhythm(r);
@@ -867,12 +890,13 @@ function renderReport(raw,sourceKind){
   renderVisualAnalytics(r);
   renderObjectiveFamilyOverview(r);
   renderTeamfightDecisionOverview(r);
-  window.renderDecisionIntelligence?.(r);
+  prepareDecisionIntelligence(r);
   renderPhaseDiagnostic(r);
   renderCompoundSignals(r);
   renderSessionHabits(r);
   renderGameArcs(r);
-  renderMatchHistory(r);
+  renderPlayerReview(r);
+  prepareMatchHistory(r);
   renderGames(r);
   renderReplayReviewQueue(r);
   renderBreakdowns(r);
@@ -884,6 +908,10 @@ function renderReport(raw,sourceKind){
   $('chartGrid').innerHTML='<div class="chart-empty">Charts load when this section approaches the viewport.</div>';
   $('deathMap').innerHTML='<div class="spatial-empty">Map loads when this section approaches the viewport.</div>';
   $('wardMap').innerHTML='<div class="spatial-empty">Map loads when this section approaches the viewport.</div>';
+  if(renderStarted&&typeof performance!=='undefined'&&performance.now){
+    state.reportRenderPerformance={initialMs:Math.round((performance.now()-renderStarted)*10)/10};
+    $('report').dataset.initialRenderMs=String(state.reportRenderPerformance.initialMs);
+  }
   scheduleHeavyReportRender(r);
 }
 
@@ -978,6 +1006,170 @@ function recentDirectionSummary(r){
   const value=primary?(primary.label+' · '+(primary.state==='good'?'improving':primary.state==='bad'?'slipping':'stable')):'Latest 5 stable';
   const copy=[describe(primary),secondary?describe(secondary):''].filter(Boolean).join('. ')+'.';
   return{tone,value,copy,meta:good.length+' improving · '+bad.length+' slipping · '+stable.length+' inside practical-change bands · latest 5 versus the preceding valid sample'};
+}
+
+
+function decisionAnalytic(r,id){
+  return (Array.isArray(r?.decisionIntelligence?.analytics)?r.decisionIntelligence.analytics:[]).find(x=>String(x?.id||'')===String(id))||null;
+}
+function evidenceValue(value,unit='num'){
+  if(!hasNum(value))return'n/a';
+  const v=Number(value);
+  if(unit==='gold')return signed(v,0)+'g';
+  if(unit==='dpm')return signed(v,0)+' DPM';
+  if(unit==='csmin')return signed(v,2)+' CS/min';
+  if(unit==='percent')return signed(v,1)+' pp';
+  if(unit==='minutes')return signed(v,1)+'m';
+  return signed(v,2);
+}
+function directionalEvidence(label,value,n,unit,threshold,inverse,href,detail,minN=5){
+  if(!hasNum(value)||Number(n||0)<minN)return null;
+  const v=Number(value),signal=(inverse?-1:1)*v,tone=Math.abs(v)<Number(threshold||0)?'neutral':signal>0?'good':'bad';
+  return{label,value:evidenceValue(v,unit),raw:v,n:Number(n),tone,href,detail};
+}
+function boundedEvidence(label,value,n,goodMax,badMin,unit,href,detail,minN=5){
+  if(!hasNum(value)||Number(n||0)<minN)return null;
+  const v=Number(value),tone=v<=goodMax?'good':v>=badMin?'bad':'neutral';
+  return{label,value:unit==='percent'?fmtPct(v):fmt(v,2),raw:v,n:Number(n),tone,href,detail};
+}
+function playerStyleEvidence(r){
+  const role=reportSelectedRole(r),p=r.peerComparison||{},b=r.behaviorSummary||{},rows=[];
+  if(['ADC','MID','TOP'].includes(role)){
+    rows.push(directionalEvidence('Gold @15 vs role opponent',p.avgGoldDiff15,p.laneGames15,'gold',150,false,'#lane-economy','Direct same-role Gold@15; ±150g is the practical-change band used elsewhere on the report.'));
+    rows.push(directionalEvidence('CS/min vs role opponent',p.avgCsMinDelta,p.csMinGames,'csmin',.15,false,'#long-horizon','Match-level farm pace relative to the actual same-role opponent.'));
+    rows.push(directionalEvidence('DPM vs role opponent',p.avgDpmDelta,p.dpmGames,'dpm',50,false,'#long-horizon','Champion damage per minute relative to the actual same-role opponent.'));
+  }else if(role==='JUNGLE'){
+    rows.push(directionalEvidence('CS/min vs Jungle opponent',p.avgCsMinDelta,p.csMinGames,'csmin',.15,false,'#long-horizon','Farm pace relative to the actual enemy Jungler.'));
+    rows.push(directionalEvidence('First impact vs Jungle opponent',p.avgImpactDeltaMin,p.impactGames,'minutes',1,true,'#decisions','Negative timing means the reviewed player reached the first tracked impact earlier.'));
+    rows.push(directionalEvidence('DPM vs Jungle opponent',p.avgDpmDelta,p.dpmGames,'dpm',50,false,'#long-horizon','Champion damage per minute relative to the actual enemy Jungler.'));
+  }else if(role==='SUPPORT'){
+    rows.push(directionalEvidence('Vision/min vs Support opponent',p.avgVpmDelta,p.vpmGames,'num',.15,false,'#long-horizon','Vision score per minute relative to the actual opposing Support.'));
+    rows.push(directionalEvidence('Objective-setup wards vs Support opponent',p.avgObjectiveSetupDelta,p.visionSetupGames,'num',.5,false,'#decisions','Supported pre-objective setup-ward difference versus the opposing Support.'));
+  }
+  rows.push(boundedEvidence('High-risk deaths / timeline game',b.badDeathsPerTimelineGame,b.timelineGames,.75,1.5,'num','#decisions','Analyzer-classified high-risk deaths per timeline-complete coaching game.'));
+  return rows.filter(Boolean);
+}
+function recentEvidenceBalance(r){
+  const rows=[];
+  for(const spec of roleRecentTrendSpecs(r)){
+    if(!recentTrendSpecReady(spec))continue;
+    const delta=Number(spec.obj.recent)-Number(spec.obj.prior),signal=(spec.inverse?-1:1)*delta,threshold=Math.max(.0001,Number(spec.threshold||0));
+    rows.push({label:spec.label,state:Math.abs(delta)<threshold?'stable':signal>0?'good':'bad'});
+  }
+  const good=rows.filter(x=>x.state==='good').length,bad=rows.filter(x=>x.state==='bad').length,stable=rows.filter(x=>x.state==='stable').length;
+  const state=!rows.length?'thin':good&&bad?'mixed':good?'good':bad?'bad':'stable';
+  return{state,good,bad,stable,total:rows.length,rows};
+}
+function longitudinalMetricSpecs(role){
+  if(role==='SUPPORT')return[
+    {key:'peerVpmDelta',label:'Vision/min vs Support',unit:'num',threshold:.12,inverse:false},
+    {key:'peerKpDelta',label:'KP vs Support',unit:'percent',threshold:3,inverse:false},
+    {key:'peerGpmDelta',label:'Gold/min vs Support',unit:'num',threshold:18,inverse:false},
+    {key:'peerDeathsDelta',label:'Deaths vs Support',unit:'num',threshold:.35,inverse:true}
+  ];
+  return[
+    {key:'peerCsMinDelta',label:'CS/min vs role opponent',unit:'csmin',threshold:.15,inverse:false},
+    {key:'peerDpmDelta',label:'DPM vs role opponent',unit:'dpm',threshold:60,inverse:false},
+    {key:'peerGpmDelta',label:'Gold/min vs role opponent',unit:'num',threshold:20,inverse:false},
+    {key:'peerDeathsDelta',label:'Deaths vs role opponent',unit:'num',threshold:.35,inverse:true}
+  ];
+}
+function longitudinalTrajectoryRead(r){
+  const windows=Array.isArray(r?.longHorizon?.trajectoryWindows)?r.longHorizon.trajectoryWindows:[],specs=longitudinalMetricSpecs(reportSelectedRole(r)),reads=[];
+  for(const spec of specs){
+    const valid=windows.filter(w=>hasNum(w?.[spec.key]?.value)&&Number(w?.[spec.key]?.n||0)>=5);
+    if(valid.length<2)continue;
+    const latest=valid[0],oldest=valid[valid.length-1],delta=Number(latest[spec.key].value)-Number(oldest[spec.key].value),signal=(spec.inverse?-1:1)*delta;
+    reads.push({...spec,latest,oldest,delta,state:Math.abs(delta)<spec.threshold?'stable':signal>0?'good':'bad'});
+  }
+  const good=reads.filter(x=>x.state==='good').length,bad=reads.filter(x=>x.state==='bad').length,stable=reads.filter(x=>x.state==='stable').length;
+  const state=!reads.length?'thin':good&&bad?'mixed':good?'good':bad?'bad':'stable';
+  return{state,good,bad,stable,reads,windows};
+}
+function synthesisAgreementModel(r){
+  const priority=topPracticeThemes(r)[0]||null,independent=Number(priority?.independentSupportCount||0),support=Number(priority?.supportCount||0),recent=recentEvidenceBalance(r),long=longitudinalTrajectoryRead(r);
+  return[
+    {label:'Main coaching priority',state:!priority?'thin':independent>=2?'converging':independent===1?'single':'thin',value:priority?(independent>=2?independent+' independent channels':independent===1?'1 independent channel':support+' supporting finding'+(support===1?'':'s')):'No promoted priority',copy:priority?String(priority.title||priority.label||'Priority'):'More evidence is needed before one theme should lead the plan.'},
+    {label:'Latest-five direction',state:recent.state==='mixed'?'mixed':recent.state==='thin'?'thin':'converging',value:recent.total?(recent.good+' better · '+recent.bad+' worse · '+recent.stable+' stable'):'Not enough evidence',copy:recent.state==='mixed'?'Recent metrics point in different directions, so the report should not collapse them into one “form” score.':'The currently measurable latest-five components are directionally coherent or stable.'},
+    {label:'Longer opponent-relative history',state:long.state==='mixed'?'mixed':long.state==='thin'?'thin':'converging',value:long.reads.length?(long.good+' better · '+long.bad+' worse · '+long.stable+' stable'):'Need ≥2 valid windows',copy:long.state==='mixed'?'Long-run opponent-relative components disagree; this is a mixed development profile.':long.state==='thin'?'The history does not yet contain two sufficiently sampled 20-game windows for multiple comparable metrics.':'The longer-history components mostly point the same way or stay inside practical-change bands.'}
+  ];
+}
+function renderCoachingSynthesis(r){
+  const lead=$('coachingSynthesisLead'),box=$('coachingSynthesis'),agreement=$('evidenceAgreement');if(!lead||!box||!agreement)return;
+  const priority=topPracticeThemes(r)[0]||null,strengths=currentStrengthFindings(r),strength=strengths[0]||null,recent=recentDirectionSummary(r),long=longitudinalTrajectoryRead(r),agreements=synthesisAgreementModel(r);
+  const independent=Number(priority?.independentSupportCount||0);
+  const longPhrase=long.state==='mixed'?'Longer-history evidence is mixed.':long.state==='good'?'Longer-history opponent-relative performance is leaning better.':long.state==='bad'?'Longer-history opponent-relative performance is leaning worse.':long.state==='stable'?'Longer-history opponent-relative performance is broadly stable.':'Longer-history direction is still thin.';
+  lead.innerHTML='<div><span>Current working model</span><strong>'+esc(priority?.title||priority?.label||'No single priority is established yet')+'</strong><p>'+esc(priority?String(priority.evidence||priority.summary||'This is the highest-ranked supported coaching theme in the current report.'):'The report does not yet have enough converging evidence to promote one improvement theme.')+'</p></div><div class="synthesis-lead-meta"><b>'+(priority?esc((independent>=2?independent+' independent evidence channels':'Evidence still developing')):'Evidence still developing')+'</b><span>'+esc(longPhrase)+'</span></div>';
+  const cards=[
+    {k:'act',label:'Act on this',title:priority?.title||priority?.label||'Keep gathering evidence',copy:priority?.action||'Do not manufacture a coaching target until a supported pattern repeats.',meta:priority?(Number(priority.supportCount||0)+' supporting finding'+(Number(priority.supportCount||0)===1?'':'s')):'No promoted theme',tone:priority?'bad':'neutral'},
+    {k:'keep',label:'Preserve this',title:strength?.title||'No established strength card yet',copy:strength?strength.keep:'Treat neutral evidence as neutral rather than inventing a positive story.',meta:strength?(strength.value+' · n='+strength.n):'Strength threshold not met',tone:strength?'good':'neutral'},
+    {k:'direction',label:'Recent direction',title:recent.value,copy:recent.copy,meta:recent.meta,tone:recent.tone},
+    {k:'history',label:'Long-run direction',title:longPhrase,copy:long.reads.length?'Compared across '+long.windows.length+' non-overlapping 20-game history windows using direct-role opponent-relative metrics.':'More selected-role history is needed for a multi-window read.',meta:long.reads.length?(long.good+' better · '+long.bad+' worse · '+long.stable+' stable components'):'No multi-window comparison',tone:long.state==='good'?'good':long.state==='bad'?'bad':'neutral'}
+  ];
+  box.innerHTML=cards.map(x=>'<article class="coaching-synthesis-card tone-'+x.tone+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.title)+'</strong><p>'+esc(x.copy||'')+'</p><small>'+esc(x.meta||'')+'</small></article>').join('');
+  agreement.innerHTML='<div class="section-subhead"><div><span>Evidence agreement</span><strong>Do independent parts of the report tell the same story?</strong></div><small>Disagreement is retained rather than averaged away.</small></div><div class="evidence-agreement-grid">'+agreements.map(x=>'<article class="evidence-agreement-card state-'+esc(x.state)+'"><span>'+esc(x.state==='converging'?'Converging':x.state==='mixed'?'Mixed evidence':x.state==='single'?'Single channel':'Thin evidence')+'</span><strong>'+esc(x.label)+'</strong><b>'+esc(x.value)+'</b><p>'+esc(x.copy)+'</p></article>').join('')+'</div>';
+}
+function playerStyleModel(r){
+  const role=reportSelectedRole(r),signals=playerStyleEvidence(r),good=signals.filter(x=>x.tone==='good'),bad=signals.filter(x=>x.tone==='bad'),neutral=signals.filter(x=>x.tone==='neutral');
+  const find=label=>signals.find(x=>x.label.toLowerCase().includes(label));
+  const farm=find('cs/min'),damage=find('dpm'),lane=find('gold @15'),risk=find('high-risk'),vision=find('vision/min'),impact=find('first impact');
+  const parts=[];
+  if(role==='SUPPORT'){
+    if(vision?.tone==='good')parts.push('vision-volume-forward');
+    else if(vision?.tone==='bad')parts.push('lower-vision-volume');
+  }else{
+    if(farm?.tone==='good')parts.push('farm-secure');
+    else if(farm?.tone==='bad')parts.push('lower-resource');
+    if(damage?.tone==='good')parts.push('output-positive');
+    else if(damage?.tone==='bad')parts.push('lower-output');
+    if(lane?.tone==='good')parts.push('early-economy-positive');
+    else if(lane?.tone==='bad')parts.push('early-economy-vulnerable');
+    if(impact?.tone==='good')parts.push('early-impact');
+  }
+  if(risk?.tone==='good')parts.push('controlled-risk');
+  else if(risk?.tone==='bad')parts.push('high-variance');
+  const headline=parts.length?('A '+parts.slice(0,3).join(', ')+' '+roleLabel(role)+' sample'):'No stable playstyle shorthand clears the evidence floor yet';
+  return{role,signals,good,bad,neutral,headline};
+}
+function reviewEvidenceChip(x){
+  if(!x)return'';
+  return '<a class="player-review-evidence tone-'+esc(x.tone||'neutral')+'" href="'+esc(x.href||'#overview')+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><small>n='+esc(String(x.n??''))+'</small></a>';
+}
+function decisionEvidenceChip(a,label,value,detail){
+  if(!a||a.status==='unavailable'||!value)return'';
+  return '<a class="player-review-evidence tone-neutral" href="#decisionIntelligencePanel"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small>'+esc(detail||('n='+String(a.sample||0)))+'</small></a>';
+}
+function renderPlayerReview(r){
+  const box=$('playerReview');if(!box)return;
+  const style=playerStyleModel(r),priority=topPracticeThemes(r)[0]||null,strength=currentStrengthFindings(r)[0]||null,recent=recentDirectionSummary(r),long=longitudinalTrajectoryRead(r);
+  const lead=decisionAnalytic(r,'lead_utilisation'),deficit=decisionAnalytic(r,'deficit_recovery'),chains=decisionAnalytic(r,'death_chains'),follow=decisionAnalytic(r,'fight_lead_conversion'),loss=decisionAnalytic(r,'fight_loss_containment');
+  const le=lead?.evidence||{},de=deficit?.evidence||{},ce=chains?.evidence||{},fe=follow?.evidence||{},loe=loss?.evidence||{};
+  const contextual=[];
+  if(lead&&Number(lead.sample||0)>=2)contextual.push(decisionEvidenceChip(lead,'Large-lead state at 25',String(le.stillAheadAt25??0)+' / '+String(lead.sample||0)+' still ahead','paired ≥500g leads'));
+  if(deficit&&Number(deficit.sample||0)>=2)contextual.push(decisionEvidenceChip(deficit,'Large-deficit recovery',String(de.narrowedGames??0)+' / '+String(deficit.sample||0)+' narrowed','median movement '+(hasNum(de.medianMovement)?signed(de.medianMovement,0)+'g':'n/a')));
+  if(chains&&hasNum(ce.repeatRateDeltaPp))contextual.push(decisionEvidenceChip(chains,'Repeat-death pace vs peer',signed(ce.repeatRateDeltaPp,1)+' pp','same 4-minute rule'));
+  if(follow&&hasNum(fe.followUpRate))contextual.push(decisionEvidenceChip(follow,'Fight-win follow-up',fmtPct(fe.followUpRate),'before next fight / 90s'));
+  if(loss&&hasNum(loe.noExtraRiskDeathRate))contextual.push(decisionEvidenceChip(loss,'After-loss extra-risk avoidance',fmtPct(loe.noExtraRiskDeathRate),'before next fight / 90s'));
+  const signalChips=style.signals.map(reviewEvidenceChip).join(''),contextChips=contextual.filter(Boolean).join('');
+  const styleCopy=style.signals.length
+    ?'The shorthand above is built only from role-relative or evidence-gated signals. It describes this sample, not a fixed personality. '+(style.good.length?'Favorable signals currently include '+style.good.map(x=>x.label.toLowerCase()).join(', ')+'. ':'')+(style.bad.length?'The main friction signals include '+style.bad.map(x=>x.label.toLowerCase()).join(', ')+'.':'')
+    :'There are not enough comparable role-relative signals to assign a useful playstyle shorthand. The review therefore stays focused on the promoted coaching evidence rather than guessing.';
+  const strengthCopy=strength?strength.copy+' '+strength.keep:'No positive pattern currently meets the page’s strength threshold, so the review does not invent one.';
+  const leakCopy=priority?(String(priority.evidence||'The highest-ranked supported theme is the current development focus.')+' '+String(priority.action||'')):'No recurring weakness has enough converging evidence to become a primary coaching claim.';
+  const trajectoryCopy=recent.copy+' '+(long.state==='mixed'?'The longer history is also mixed, which argues against a simple “getting better/worse” label.':long.state==='good'?'The longer opponent-relative windows lean favorable on balance.':long.state==='bad'?'The longer opponent-relative windows lean unfavorable on balance.':long.state==='stable'?'The longer opponent-relative windows are broadly stable.':'The longer history is still too thin for a multi-window direction claim.');
+  const practice=topPracticeThemes(r).slice(0,3);
+  const practiceHtml=practice.length?'<ol>'+practice.map((x,i)=>'<li><b>'+esc(String(x.title||x.label||('Priority '+(i+1))))+'</b><span>'+esc(String(x.action||x.evidence||'Review the supported examples and keep the intervention narrow.'))+'</span></li>').join('')+'</ol>':'<p>No evidence-backed three-part practice hierarchy is available yet.</p>';
+  const conclusion=priority
+    ?'The useful way to read this player is not as a collection of 25 scores. The current sample suggests a repeatable style with identifiable strengths, but the largest improvement opportunity is '+String(priority.title||priority.label||'the promoted coaching theme')+'. Preserve '+String(strength?.title||'the currently supported strengths')+' while testing that one change over the next measured games. '+(recent.tone==='neutral'?'Because recent signals are mixed or stable, judge the intervention by the individual tracked components rather than win rate alone.':'Use the next measured window to see whether the specific supporting metrics move, not merely whether the result column improves.')
+    :'The report is not yet justified in forcing a single playstyle conclusion. Keep collecting comparable games and use the evidence cards as review prompts until one theme earns enough independent support.';
+  box.innerHTML=
+    '<article class="player-review-section playstyle"><span>Playstyle read</span><h3>'+esc(style.headline)+'</h3><p>'+esc(styleCopy)+'</p><div class="player-review-evidence-row">'+(signalChips||'<span class="muted">No role-relative style evidence clears the minimum sample floor.</span>')+'</div></article>'+
+    '<div class="player-review-columns"><article class="player-review-section strength"><span>Where this style helps</span><h3>'+esc(strength?.title||'No promoted strength yet')+'</h3><p>'+esc(strengthCopy)+'</p>'+(strength?'<a class="button secondary small" href="#current-strengths">See measured strengths</a>':'')+'</article>'+
+    '<article class="player-review-section leak"><span>Where value leaks</span><h3>'+esc(priority?.title||priority?.label||'No promoted leak yet')+'</h3><p>'+esc(leakCopy)+'</p>'+(priority?'<a class="button secondary small" href="#practice-plan">Open Next-5 plan</a>':'')+'</article></div>'+
+    '<article class="player-review-section context"><span>How the game-state evidence changes the story</span><h3>Conversion, recovery and risk context</h3><p>These measurements qualify the playstyle read rather than being blended into a fake composite score. A player can be strong in one state and weak in another.</p><div class="player-review-evidence-row">'+(contextChips||'<span class="muted">No decision-state context currently clears the display floor.</span>')+'</div></article>'+
+    '<article class="player-review-section trajectory"><span>Development over time</span><h3>'+esc(recent.value)+'</h3><p>'+esc(trajectoryCopy)+'</p><a class="button secondary small" href="#long-horizon">Open history evidence</a></article>'+
+    '<article class="player-review-section plan"><span>Development direction</span><h3>Keep the intervention narrow</h3>'+practiceHtml+'<p class="player-review-caveat">These are evidence-backed practice cues, not causal diagnoses. Matchup, champion, draft, team state and Riot timeline resolution still constrain what can be inferred.</p></article>'+
+    '<article class="player-review-conclusion"><span>Overall conclusion</span><p>'+esc(conclusion)+'</p></article>';
 }
 
 function renderPriorityEvidenceChain(r){
@@ -1609,10 +1801,40 @@ function renderLongOutcomeFingerprint(h,role){
     else note.innerHTML='<b>Context only:</b> clean outcomes do not yet provide at least '+minSide+' wins and '+minSide+' losses. The cards show the broader result split without directional color so AFK/early-surrender contamination is not promoted into a coaching conclusion.';
   }
 }
+
+function trajectoryValueLabel(v,unit){
+  if(!hasNum(v))return'n/a';
+  if(unit==='dpm')return signed(v,0)+' DPM';
+  if(unit==='percent')return signed(v,1)+' pp';
+  if(unit==='csmin')return signed(v,2)+' CS/min';
+  return signed(v,2);
+}
+function trajectorySparkline(windows,spec){
+  const valid=windows.filter(w=>hasNum(w?.[spec.key]?.value)&&Number(w?.[spec.key]?.n||0)>=5).slice().reverse();
+  if(valid.length<2)return'<div class="trajectory-empty">Need at least two 20-game windows with ≥5 valid direct-role observations.</div>';
+  const width=620,height=152,left=42,right=18,top=18,bottom=34,plotW=width-left-right,plotH=height-top-bottom,maxAbs=Math.max(Number(spec.threshold||1)*2,...valid.map(w=>Math.abs(Number(w[spec.key].value))));
+  const x=i=>left+(valid.length===1?plotW/2:i*plotW/(valid.length-1)),y=v=>top+(maxAbs-Number(v))/(maxAbs*2)*plotH,zero=y(0);
+  const points=valid.map((w,i)=>x(i).toFixed(1)+','+y(w[spec.key].value).toFixed(1)).join(' ');
+  const dots=valid.map((w,i)=>'<g><circle cx="'+x(i).toFixed(1)+'" cy="'+y(w[spec.key].value).toFixed(1)+'" r="5"></circle><title>'+esc(w.label)+' · '+esc(trajectoryValueLabel(w[spec.key].value,spec.unit))+' · n='+Number(w[spec.key].n||0)+'</title></g>').join('');
+  const labels=valid.map((w,i)=>'<text x="'+x(i).toFixed(1)+'" y="'+(height-9)+'" text-anchor="middle">'+esc(w.label.replace('Games ','G'))+'</text>').join('');
+  return '<svg class="trajectory-svg" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(spec.label+' across non-overlapping 20-game windows')+'"><line class="trajectory-zero" x1="'+left+'" x2="'+(width-right)+'" y1="'+zero.toFixed(1)+'" y2="'+zero.toFixed(1)+'"></line><polyline class="trajectory-line" points="'+points+'"></polyline>'+dots+labels+'</svg>';
+}
+function renderLongitudinalProgress(r){
+  const box=$('longitudinalProgress');if(!box)return;
+  const windows=Array.isArray(r?.longHorizon?.trajectoryWindows)?r.longHorizon.trajectoryWindows:[],specs=longitudinalMetricSpecs(reportSelectedRole(r)),read=longitudinalTrajectoryRead(r);
+  if(windows.length<2){box.innerHTML='<div class="trajectory-empty">The selected-role history does not yet span two non-overlapping 20-game windows. No long-run direction is inferred.</div>';return;}
+  box.innerHTML='<div class="trajectory-grid">'+specs.map(spec=>{
+    const valid=windows.filter(w=>hasNum(w?.[spec.key]?.value)&&Number(w?.[spec.key]?.n||0)>=5),latest=valid[0],oldest=valid[valid.length-1],delta=latest&&oldest&&latest!==oldest?Number(latest[spec.key].value)-Number(oldest[spec.key].value):null,signal=hasNum(delta)?(spec.inverse?-1:1)*Number(delta):null,state=!hasNum(delta)?'thin':Math.abs(Number(delta))<spec.threshold?'stable':signal>0?'good':'bad';
+    const verdict=state==='good'?'Improved versus the oldest supported window':state==='bad'?'Worse versus the oldest supported window':state==='stable'?'Inside the practical-change band':'Not enough supported windows';
+    const values=valid.slice().reverse().map(w=>'<span><b>'+esc(w.label)+'</b> '+esc(trajectoryValueLabel(w[spec.key].value,spec.unit))+' <small>n='+Number(w[spec.key].n||0)+'</small></span>').join('');
+    return '<article class="trajectory-card state-'+state+'"><div class="trajectory-card-head"><span>'+esc(spec.label)+'</span><strong>'+esc(verdict)+'</strong></div>'+trajectorySparkline(windows,spec)+'<div class="trajectory-values">'+values+'</div><p>'+esc(hasNum(delta)?('Latest-minus-oldest supported-window change: '+trajectoryValueLabel(delta,spec.unit)+'.'):'Directional comparison withheld.')+' Windows are non-overlapping and opponent-relative; changing matchup/champion/team context can still affect them.</p></article>';
+  }).join('')+'</div><p class="trajectory-note"><b>How to read this:</b> this is the longer-history layer that raw DPM/CS cannot provide safely. Each point is reviewed-player minus the actual same-role opponent in that game, aggregated into non-overlapping windows. Gold@15 and other timeline-only coaching metrics remain in the deep-game sections because older match-only cache rows cannot reconstruct them.</p>';
+}
+
 function renderLongHorizon(r){
   const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),stability=$('historyStabilityTrend'),consistency=$('historyConsistency'),champions=$('historyChampionMix'),outcome=$('longOutcomeFingerprint'),outcomeNote=$('longOutcomeFingerprintNote'),note=$('longHorizonNote');if(!kpi||!trend)return;
   const s=h.summary||{},role=canonicalRole(h.selectedRole||r?.dataQuality?.selectedRole||state.selectedRole),games=Number(h.sampleGames||0);
-  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if($('longHorizonTrendGraph'))$('longHorizonTrendGraph').innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';if(outcome)outcome.innerHTML='';if(outcomeNote)outcomeNote.textContent='';if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
+  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if($('longHorizonTrendGraph'))$('longHorizonTrendGraph').innerHTML='';if($('longitudinalProgress'))$('longitudinalProgress').innerHTML='<div class="trajectory-empty">Run the 100-game scan to populate longer-history direction.</div>';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';if(outcome)outcome.innerHTML='';if(outcomeNote)outcomeNote.textContent='';if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
   const laner=['ADC','MID','TOP'].includes(role),roleCounts=h.roleCounts||{},otherRoleGames=Object.entries(roleCounts).reduce((n,[rk,count])=>n+(canonicalRole(rk)!==role?Number(count||0):0),0);
   const roleVolume=laner
     ?{label:'Lane minions @10',value:hasNum(s?.laneCs10?.value)?fmt(s.laneCs10.value,1):'n/a',sub:String(s?.laneCs10?.n||0)+' Riot match-level lane observations'}
@@ -1651,6 +1873,7 @@ function renderLongHorizon(r){
   ];
   renderLongHorizonDirectionGraph(specs);
   trend.innerHTML=specs.map(x=>historyTrendCard(x.label,x.obj,x.unit,x.inverse,x.threshold)).join('');
+  renderLongitudinalProgress(r);
   if(stability){
     const st=h.stabilityTrend||{},stabilitySpecs=role==='SUPPORT'?[
       {label:'Vision/min vs '+opponentLabel,obj:st.peerVpmDelta,unit:'num',inverse:false,medianThreshold:.12,iqrThreshold:.15},
@@ -3169,6 +3392,55 @@ function roleSequenceCoverageHtml(role,games){
   '</div>';
 }
 
+
+function transitionWindowSignals(g){
+  const out=new Set(),inside=v=>hasNum(v)&&Number(v)>15&&Number(v)<=25;
+  if((g.badDeaths||[]).some(x=>inside(x?.time)))out.add('High-risk death');
+  if((g.deathRecovery?.events||[]).some(x=>inside(x?.secondMin)))out.add('Repeat death within 4m');
+  if((g.fightProfile?.events||[]).some(x=>x?.active===true&&x?.diedBeforeContribution===true&&inside(x?.startMin)))out.add('Fight death before contribution');
+  if((g.fightProfile?.events||[]).some(x=>x?.active===true&&x?.firstAllyDeath===true&&inside(x?.startMin)))out.add('First allied death in active fight');
+  if((g.fightProfile?.events||[]).some(x=>x?.active===true&&hasNum(x?.currentGoldAtStart)&&Number(x.currentGoldAtStart)>=1000&&inside(x?.startMin)))out.add('Fight started with ≥1000g unspent');
+  if((g.sideLaneRisk?.events||[]).some(x=>x?.neutralObjectiveSoon===true&&inside(x?.time)))out.add('Side-lane death before neutral objective');
+  if((g.objectiveReadiness?.events||[]).some(x=>(x?.recentShopAbsence??x?.lateResetMiss)===true&&inside(x?.time)))out.add('Recent-shop objective absence');
+  return out;
+}
+function transitionQuality(t){
+  if(!t)return'neutral';
+  const from=t.from?.key,to=t.to?.key,swing=Number(t.swing||0);
+  if(from==='ahead'&&to!=='ahead')return'bad';
+  if(from==='close'&&to==='behind')return'bad';
+  if(from==='behind'&&to==='behind'&&swing<=-500)return'bad';
+  if(from==='behind'&&to!=='behind')return'good';
+  if(from==='close'&&to==='ahead')return'good';
+  if(from==='ahead'&&to==='ahead'&&swing>=-250)return'good';
+  return'neutral';
+}
+function transitionMatrixHtml(rows){
+  const states=['ahead','close','behind'],labels={ahead:'Ahead',close:'Close',behind:'Behind'},counts=new Map();
+  rows.forEach(x=>counts.set(x.t.key,(counts.get(x.t.key)||0)+1));
+  return '<div class="transition-matrix" role="table" aria-label="Direct-role gold state transitions from 15 to 25 minutes"><div class="transition-matrix-corner">15 → 25</div>'+states.map(s=>'<div class="transition-matrix-head">'+labels[s]+' @25</div>').join('')+
+    states.map(from=>'<div class="transition-matrix-head row">'+labels[from]+' @15</div>'+states.map(to=>{const n=Number(counts.get(from+'>'+to)||0),q=transitionQuality({from:{key:from},to:{key:to},swing:0});return '<div class="transition-matrix-cell tone-'+q+'"><strong>'+n+'</strong><span>'+labels[from]+' → '+labels[to]+'</span></div>';}).join('')).join('')+'</div>';
+}
+function renderTransitionPrecursors(r){
+  const box=$('gameArcPrecursors');if(!box)return;
+  const role=reportSelectedRole(r),games=reportCoachingGames(r);
+  if(['SUPPORT','JUNGLE'].includes(role)){
+    box.innerHTML='<div class="section-subhead"><strong>Transition-window precursors</strong><span>Not forced onto '+esc(roleLabel(role))+'</span></div><div class="bullet empty">The @15→@25 direct-role gold-state precursor model is intentionally withheld for '+esc(roleLabel(role))+' because the role-specific sequence model above is the more defensible frame.</div>';
+    return;
+  }
+  const transitions=games.map(g=>({g,t:gameArcTransition(g)})).filter(x=>x.t),bad=transitions.filter(x=>transitionQuality(x.t)==='bad'),other=transitions.filter(x=>transitionQuality(x.t)!=='bad');
+  const labels=['High-risk death','Repeat death within 4m','Fight death before contribution','First allied death in active fight','Fight started with ≥1000g unspent','Side-lane death before neutral objective','Recent-shop objective absence'];
+  const rows=labels.map(label=>{
+    const badN=bad.filter(x=>transitionWindowSignals(x.g).has(label)).length,otherN=other.filter(x=>transitionWindowSignals(x.g).has(label)).length,badRate=bad.length?100*badN/bad.length:null,otherRate=other.length?100*otherN/other.length:null;
+    return{label,badN,otherN,badRate,otherRate,delta:hasNum(badRate)&&hasNum(otherRate)?Number(badRate)-Number(otherRate):null};
+  }).filter(x=>x.badN>=2).sort((a,b)=>b.badN-a.badN||Number(b.delta||0)-Number(a.delta||0));
+  box.innerHTML='<div class="section-subhead"><div><span>State-transition analysis</span><strong>What happens between the @15 and @25 role states?</strong></div><small>Matrix + 15→25 event-window co-occurrence. Signals are not treated as causes.</small></div>'+
+    transitionMatrixHtml(transitions)+
+    '<div class="section-subhead transition-precursor-head"><div><span>Deteriorating-transition context</span><strong>Signals that recur inside the 15→25 window</strong></div><small>Deteriorating = lead lost, close→behind, or a behind state that worsens by ≥500g.</small></div>'+
+    (bad.length?'<div class="transition-precursor-grid">'+(rows.length?rows.map(x=>'<article class="transition-precursor-card"><span>'+x.badN+' / '+bad.length+' deteriorating transitions</span><strong>'+esc(x.label)+'</strong><p>'+esc(fmtPct(x.badRate))+' of deteriorating-transition games vs '+esc(other.length?fmtPct(x.otherRate):'no comparison cohort')+(hasNum(x.delta)?' · '+esc(signed(x.delta,1))+' pp difference':'')+'.</p><small>Co-occurrence only. Replay the event sequence before attributing the state change to this signal.</small></article>').join(''):'<div class="bullet empty">No single supported 15→25 event signal recurs in at least two deteriorating transitions.</div>')+'</div>':'<div class="bullet empty">No comparable game currently meets the deteriorating-transition definition.</div>')+
+    '<p class="source-note">This closes the gap between an aggregate transition and the events worth reviewing. It deliberately excludes after-25 signals and never says a flagged event caused the gold-state movement.</p>';
+}
+
 function renderGameArcs(r){
   const funnelBox=$('gameArcFunnels'),patternBox=$('gameArcPatterns'),turnBox=$('gameArcTurningPoints'),note=$('gameArcNote');if(!funnelBox||!patternBox||!turnBox)return;
   const games=reportCoachingGames(r),role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),roleSequence=['SUPPORT','JUNGLE'].includes(role);
@@ -3216,6 +3488,7 @@ function renderGameArcs(r){
       const association=x.associationReady?('Win rate '+fmtPct(x.withWr)+' with vs '+fmtPct(x.withoutWr)+' without · '+signed(x.winRateDelta,1)+' points'):(fmtPct(x.withWr)+' wins in '+x.count+' games with signal · comparison withheld ('+x.withoutCount+' without)');
       return '<article class="arc-turning-card tone-'+x.tone+'"><span>'+x.count+' / '+timelineGames.length+' timeline games</span><strong>'+esc(x.label)+'</strong><p>'+esc(x.why)+'</p><small>'+esc(association)+' · descriptive association only, not causation</small></article>';
     }).join('')+'</div>':'<div class="bullet empty">No defined turning-point signal repeats in at least two coaching-cohort games.</div>');
+  renderTransitionPrecursors(r);
   if(note)note.textContent=roleSequence
     ?'Coaching cohort: '+games.length+' '+roleLabel(role)+' games. Aggregate arc patterns use role-specific supported sequences instead of carry-lane gold states. Turning-point counts are games containing supported evidence, not raw event totals.'
     :'Coaching cohort: '+games.length+' games · comparable @15→@25 transitions: '+games.filter(g=>gameArcTransition(g)).length+'. Turning-point counts are games containing supported evidence, not raw event totals. Older-mechanics context-only games are excluded when the backend applies a mechanics cohort.';

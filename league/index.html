@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends analysis with a 100-game role scan, evidence-backed Last-20 deep coaching, long-horizon trends and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261007-league-web-v315">
+  <link rel="stylesheet" href="/league/styles.css?v=20261007-league-web-v316">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261002-public-bootstrap-r4"></script>
 </head>
@@ -137,7 +137,7 @@
           </div>
         </section>
 
-        <nav class="report-jump-nav" aria-label="Report sections"><a href="#overview">Overview</a><a href="#current-strengths">Strengths</a><a href="#practice-plan">Practice</a><a href="#long-horizon">History</a><a href="#rank-comparison">Rank</a><a href="#lane-economy" id="laneEconomyNav">Economy</a><a href="#decisions">Decisions</a><a href="#support-synergy" id="supportSynergyNav">Support picks</a><a href="#match-history">Matches</a><a href="#stat-guide">Stat guide</a></nav><section id="at-a-glance" class="panel sample-kpi-panel glance-panel">
+        <nav class="report-jump-nav" aria-label="Report sections"><a href="#overview">Overview</a><a href="#coaching-synthesis">Synthesis</a><a href="#current-strengths">Strengths</a><a href="#practice-plan">Practice</a><a href="#long-horizon">History</a><a href="#rank-comparison">Rank</a><a href="#lane-economy" id="laneEconomyNav">Economy</a><a href="#decisions">Decisions</a><a href="#player-review">Review</a><a href="#support-synergy" id="supportSynergyNav">Support picks</a><a href="#match-history">Matches</a><a href="#stat-guide">Stat guide</a></nav><section id="at-a-glance" class="panel sample-kpi-panel glance-panel">
           <div class="section-head compact-head">
             <div><p class="eyebrow">At a glance</p><h2>Your current coaching sample</h2></div>
             <span class="section-hint"><span id="glanceScope">Latest eligible games in the selected role.</span> <a href="#term-cohort" data-stat-term="cohort">What counts?</a></span>
@@ -155,6 +155,15 @@
             <div class="evidence-health-grid" id="evidenceHealth"></div>
             <button class="button secondary tiny evidence-health-link" type="button" id="evidenceHealthLink">Open full trust &amp; coverage</button>
           </div></details>
+        </section>
+        <section class="panel coaching-synthesis-panel" id="coaching-synthesis" aria-labelledby="coachingSynthesisTitle">
+          <div class="section-head">
+            <div><p class="eyebrow">Coaching synthesis</p><h2 id="coachingSynthesisTitle">What the whole report is saying</h2></div>
+            <span class="section-hint">A short evidence-weighted synopsis before the detailed review. Agreement is promoted; disagreement stays visible.</span>
+          </div>
+          <div class="coaching-synthesis-lead" id="coachingSynthesisLead"></div>
+          <div class="coaching-synthesis-grid" id="coachingSynthesis"></div>
+          <div class="evidence-agreement" id="evidenceAgreement"></div>
         </section>
         <section class="panel current-strengths-panel" id="current-strengths" aria-labelledby="currentStrengthsTitle">
           <div class="section-head">
@@ -302,6 +311,10 @@
             <div class="history-direction-graph" id="longHorizonTrendGraph"></div>
             <details class="report-disclosure"><summary>Exact latest-20 and previous-window averages</summary><div class="pulse-grid" id="longHorizonTrend"></div></details>
           </div>
+          <section class="longitudinal-progress-block" aria-labelledby="longitudinalProgressTitle">
+            <div class="section-subhead"><div><span>Development trajectory</span><strong id="longitudinalProgressTitle">Is opponent-relative performance moving over the longer history?</strong></div><small>Non-overlapping 20-game windows. Each metric keeps its own valid direct-role sample count.</small></div>
+            <div id="longitudinalProgress"></div>
+          </section>
           <details class="report-disclosure"><summary>Typical game, weaker games &amp; variation</summary><div class="consistency-summary-wrap">
             <div class="section-subhead"><div><span>Robust history shift</span><strong>Did the typical game, weak-game floor and variability change?</strong></div><small>Median, lower/upper quartile tail and middle-50% spread are shown separately; no composite “consistency score” is invented.</small></div>
             <div class="pulse-grid" id="historyStabilityTrend"></div>
@@ -364,12 +377,12 @@
 
         <section class="panel supporting-findings-panel">
           <div class="section-head">
-            <div><p class="eyebrow">Supporting coaching evidence</p><h2>What else supports or challenges the top read?</h2></div>
-            <span class="section-hint">The main action plan stays above. Open these only when you want the longer evidence list behind it.</span>
+            <div><p class="eyebrow">Evidence index</p><h2>Remaining analyzer findings</h2></div>
+            <span class="section-hint">Reference material only. This does not create a second coaching plan or outrank the synthesis and Next-5 focus above.</span>
           </div>
           <div class="supporting-findings-grid">
             <details class="supporting-findings-details">
-              <summary><span>Additional improvement findings</span><small>Open full ranked list</small></summary>
+              <summary><span>Additional ranked findings</span><small>Open evidence index</small></summary>
               <div id="recentFocus" class="bullet-list supporting-findings-body"></div>
             </details>
           </div>
@@ -427,9 +440,18 @@
           </div>
           <div class="game-arc-funnels" id="gameArcFunnels"></div>
           <div class="game-arc-patterns" id="gameArcPatterns"></div>
+          <div class="game-arc-precursors" id="gameArcPrecursors"></div>
           <div class="game-arc-turning-points" id="gameArcTurningPoints"></div>
           <p class="source-note" id="gameArcNote"></p>
         </section></details>
+
+        <section class="panel player-review-panel" id="player-review" aria-labelledby="playerReviewTitle">
+          <div class="section-head">
+            <div><p class="eyebrow">Whole-player review</p><h2 id="playerReviewTitle">What kind of player does this sample describe?</h2></div>
+            <span class="section-hint">A report-level discussion of playstyle, strengths, leaks and development direction. Every promoted claim must point back to supported evidence.</span>
+          </div>
+          <div class="player-review-body" id="playerReview"></div>
+        </section>
 
         <section class="panel match-history-panel" id="match-history">
           <div class="section-head">
@@ -576,8 +598,8 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark="">v817 - Made by Bruis</div>
-  <script src="/league/learning-review.js?v=20261007-league-web-v315" defer></script>
-  <script src="/league/decision-intelligence.js?v=20261007-league-web-v315" defer></script>
-  <script src="/league/app.js?v=20261007-league-web-v315" defer></script>
+  <script src="/league/learning-review.js?v=20261007-league-web-v316" defer></script>
+  <script src="/league/decision-intelligence.js?v=20261007-league-web-v316" defer></script>
+  <script src="/league/app.js?v=20261007-league-web-v316" defer></script>
 </body>
 </html>
