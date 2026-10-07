@@ -69,11 +69,39 @@ function valueProxy(e:any){
 function fightLossProxy(e:any){
   return Math.max(0,n(e?.enemyFightKills||0)-n(e?.teamFightKills||0))*300;
 }
+function issueComponents(g:any){
+  return {
+    riskyDeaths:n(g?.highRiskDeathCount||0),
+    preObjectiveDeaths:n(g?.preObjectiveDeathCount||0),
+    recentShopAbsences:n(g?.objectiveReadiness?.recentShopAbsences||0),
+    missedJoinReviews:count(absenceEvents(g),(e:any)=>e?.joinReviewPriority==="high")
+  };
+}
 function issueCount(g:any){
-  return n(g?.highRiskDeathCount||0)
-    + n(g?.preObjectiveDeathCount||0)
-    + n(g?.objectiveReadiness?.recentShopAbsences||0)
-    + count(absenceEvents(g),(e:any)=>e?.joinReviewPriority==="high");
+  const x=issueComponents(g);
+  return x.riskyDeaths+x.preObjectiveDeaths+x.recentShopAbsences+x.missedJoinReviews;
+}
+function mergedWindowMinutes(rows:any[]){
+  const grouped=new Map<string,Array<[number,number]>>();
+  for(const x of rows){
+    const id=txt(x?.g?.matchId||x?.matchId),start=finite(x?.e?.startMin)?n(x.e.startMin):finite(x?.minute)?n(x.minute):null;
+    const end=finite(x?.e?.endMin)?n(x.e.endMin)+1.5:finite(start)?n(start)+1.5:null;
+    if(!id||!finite(start)||!finite(end))continue;
+    if(!grouped.has(id))grouped.set(id,[]);
+    grouped.get(id)!.push([n(start),n(end)]);
+  }
+  let total=0;
+  for(const windows of grouped.values()){
+    windows.sort((a,b)=>a[0]-b[0]);
+    let s:number|null=null,e:number|null=null;
+    for(const [a,b] of windows){
+      if(s==null){s=a;e=b;continue;}
+      if(a<=Number(e)){e=Math.max(Number(e),b);}
+      else{total+=Number(e)-Number(s);s=a;e=b;}
+    }
+    if(s!=null)total+=Number(e)-Number(s);
+  }
+  return total;
 }
 function peerComposite(g:any){
   if(!directPeer(g)) return null;
@@ -98,7 +126,8 @@ function pathToObjectiveRow(g:any,e:any){
     minute:round(t,1),joined:e?.joined===true||e?.present===true||e?.playerJoined===true,
     lastShopMin:shop?round(shop?.lastMin??shop?.startMin,1):null,
     shopLeadMin:shop?round(n(t)-n(shop?.lastMin??shop?.startMin),1):null,
-    approachZone:txt(frame?.zone||"unknown")
+    approachZone:txt(frame?.zone||"unknown"),
+    approachPosition:frame?.position&&finite(frame.position.x)&&finite(frame.position.y)?{x:n(frame.position.x),y:n(frame.position.y)}:null
   };
 }
 function championGroup(games:any[]){
@@ -107,8 +136,10 @@ function championGroup(games:any[]){
   return [...m].map(([champ,gs])=>{
     const abs=gs.flatMap(g=>absenceEvents(g)),f=gs.flatMap(g=>fightEvents(g)),risk=sum(gs,g=>n(g?.highRiskDeathCount||0));
     const high=count(abs,e=>e?.joinReviewPriority==="high"),trades=count(abs,e=>e?.crossMapTradeSupported===true);
-    return {champion:champ,games:gs.length,joinableMissRate:safeRate(high,abs.length),crossMapTradeRate:safeRate(trades,abs.length),
-      activeFightSurvivalRate:safeRate(count(f,e=>e?.active===true&&!e?.playerDied),count(f,e=>e?.active===true)),
+    const active=count(f,e=>e?.active===true);
+    return {champion:champ,games:gs.length,skippedFightSamples:abs.length,activeFightSamples:active,
+      joinableMissRate:safeRate(high,abs.length),crossMapTradeRate:safeRate(trades,abs.length),
+      activeFightSurvivalRate:safeRate(count(f,e=>e?.active===true&&!e?.playerDied),active),
       riskyDeathsPerGame:gs.length?risk/gs.length:null,killConversionRate:mean(gs.map(g=>g?.killConversion?.rate))};
   }).sort((a,b)=>b.games-a.games);
 }
@@ -125,18 +156,22 @@ function matchupRows(games:any[]){
 }
 function performanceResidualRows(games:any[]){
   const valid=games.filter(g=>directPeer(g)&&finite(g?.peer?.dpmDelta));
-  const cells=new Map<string,number[]>();
+  const cells=new Map<string,any[]>();
   for(const g of valid){
     const k=[txt(g.champion),txt(g.peer?.champion||"Unknown"),durationBucket(g)].join("|");
     if(!cells.has(k))cells.set(k,[]);
-    cells.get(k)!.push(n(g.peer.dpmDelta));
+    cells.get(k)!.push(g);
   }
-  const global=median(valid.map(g=>g.peer.dpmDelta))??0;
   return valid.map(g=>{
-    const k=[txt(g.champion),txt(g.peer?.champion||"Unknown"),durationBucket(g)].join("|"),cell=cells.get(k)||[];
-    const expected=cell.length>=3?(median(cell)??global):global;
-    return {matchId:g.matchId,champion:g.champion,opponent:g.peer?.champion||"Unknown",durationBucket:durationBucket(g),actual:n(g.peer.dpmDelta),expected, residual:n(g.peer.dpmDelta)-expected,cellGames:cell.length};
-  });
+    const k=[txt(g.champion),txt(g.peer?.champion||"Unknown"),durationBucket(g)].join("|"),
+      peers=(cells.get(k)||[]).filter(x=>x.matchId!==g.matchId),
+      globalPeers=valid.filter(x=>x.matchId!==g.matchId),
+      contextual=peers.length>=2,
+      expected=contextual?(median(peers.map(x=>x.peer?.dpmDelta))??null):(median(globalPeers.map(x=>x.peer?.dpmDelta))??null);
+    return {matchId:g.matchId,champion:g.champion,opponent:g.peer?.champion||"Unknown",durationBucket:durationBucket(g),
+      actual:n(g.peer.dpmDelta),expected,residual:finite(expected)?n(g.peer.dpmDelta)-n(expected):null,
+      contextLevel:contextual?"champion_opponent_duration_leave_one_out":"global_leave_one_out",contextGames:contextual?peers.length:globalPeers.length};
+  }).filter(x=>finite(x.expected)&&finite(x.residual));
 }
 
 export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, primaryRole:string){
