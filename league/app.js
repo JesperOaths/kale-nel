@@ -867,6 +867,7 @@ function renderReport(raw,sourceKind){
   renderVisualAnalytics(r);
   renderObjectiveFamilyOverview(r);
   renderTeamfightDecisionOverview(r);
+  window.renderDecisionIntelligence?.(r);
   renderPhaseDiagnostic(r);
   renderCompoundSignals(r);
   renderSessionHabits(r);
