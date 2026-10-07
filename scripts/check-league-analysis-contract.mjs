@@ -217,6 +217,14 @@ ok(decisionBackend.includes('followUpRate')&&decisionBackend.includes('noExtraRi
 ok(decisionBackend.includes('"Skipped-fight structure/objective overlap"'), 'objective trading must remain timing overlap rather than causal claim');
 ok(decisionBackend.includes('recentResidualStatistic:"median"')&&decisionBackend.includes('recent.slice(0,20)'), 'residual headline must use latest-20 median');
 ok(decisionBackend.includes('supported:xs.length>=5')&&decisionBackend.includes('minimumBucketGames:5'), 'requeue promoted buckets must have at least five games');
+ok(!decisionBackend.includes('function peerComposite(')&&!decisionBackend.includes('avgRelativeComposite')&&decisionBackend.includes('"Requeue gap context"'), 'requeue context must not use a synthetic mixed-unit winner');
+ok(!decisionBackend.includes('retainedTo25')&&decisionBackend.includes('stillAheadAt25')&&decisionBackend.includes('medianMovement'), 'lead movement must avoid arbitrary percentage-retained success thresholds');
+ok(!decisionBackend.includes('recoveredToEven')&&decisionBackend.includes('crossedAheadAt25')&&decisionBackend.includes('deficitMedianMove'), 'deficit movement must use exact crossing and median movement');
+ok(decisionBackend.includes('"Consecutive deaths within 4 minutes"')&&decisionBackend.includes('totalRepeatOpps')&&decisionBackend.includes('repeatRate'), 'short-interval death timing must expose rule, denominator and rate without causal chain language');
+ok(!decisionBackend.includes('formationBand')&&decisionUi.includes("scatter(r,'sampleLeadSec','distanceToAnchor'"), 'pre-fight distance must retain raw timing/distance rather than arbitrary bands');
+ok(decisionBackend.includes('states:numberGroups')&&decisionUi.includes('function numbersVisual('), 'numbers-aware review must expose per-state outcomes');
+ok(decisionBackend.includes('sessionStatus')&&decisionUi.includes("Later-session read:"), 'session summary must synthesize opposing component directions');
+ok(css.includes('v311 — final decision audit')&&css.includes('.di-requeue-grid'), 'final decision views must remain in the League design system');
 ok(decisionBackend.includes('maxPrimaryPerMatch:2')&&decisionBackend.includes('maxPrimaryPerType:4'), 'replay shortlist must be diversity capped');
 ok(decisionUi.includes('teamRelativePoint')&&decisionUi.includes('Team-relative orientation · reviewed team base is bottom-left'), 'decision maps must use and disclose team-relative orientation');
 ok(decisionUi.includes("s==='supported'?'measured'")&&!decisionUi.includes("s==='supported'?'good'"), 'measured evidence styling must not encode positive performance');
@@ -276,7 +284,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.175'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.176'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
 ok(backend.includes('aboveOwnDeadTimeMedian:Number(g.damageRank)>2&&')&&backend.includes('aboveOwnTurretMedian:Number(g.damageRank)>2&&'), 'resource/output exemplar annotations must compute lower-damage state in their own callback scope');
 ok(backend.includes('highUnspentFightSamples')&&backend.includes('itemDisadvantageFightSamples')&&backend.includes('goldDeficitFightSamples')&&backend.includes('outnumberedFightSamples'), 'fight-state rates must use metric-specific supported-opportunity denominators');
 ok(backend.includes('const cleanOutcomeGames=games.filter(g=>g?.outcomeCompromised!==true)')&&backend.includes('afk_or_early_surrender_excluded_from_final_result_conversion'), 'final-result coaching must exclude compromised outcomes');
