@@ -67,7 +67,7 @@ assert.ok(css.includes('width:min(1760px,calc(100% - 32px))'),'Desktop League la
 assert.ok(app.includes("scrollIntoView({behavior:'auto'"),'League replay navigation must avoid costly smooth scrolling through the long report');
 assert.ok(html.includes('Your League review'),'League hero must present the tool as part of Kalenel rather than a detached desktop GUI');
 assert.ok(css.includes("--paper:#f7f2e9")&&!css.includes("site-bg-desktop.webp"),'League must retain the warm Kalenel palette without the costly scrolling background bitmap');
-assert.ok(css.includes('.site-credit-watermark')&&html.includes('v818 - Made by Bruis'),'League must keep the shared Kalenel version watermark treatment');
+assert.ok(css.includes('.site-credit-watermark')&&html.includes('v817 - Made by Bruis'),'League must keep the shared Kalenel version watermark treatment');
 assert.ok(!html.includes('brand-mark')&&!css.includes('--bg:#071018'),'League must not regress to the detached dark League-client shell');
 assert.ok(api.includes('x-riot-api-key'));
 assert.ok(api.includes('Access-Control-Allow-Headers'));
