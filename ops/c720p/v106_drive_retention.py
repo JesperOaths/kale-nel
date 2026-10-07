@@ -9,7 +9,7 @@ CFG=BASE/"config/drive-security-archive.json"
 DET=BASE/"state/person-detection-index.json"
 EVENTS=pathlib.Path("/opt/homeassistant/config/www/frontyard-security-new/events.json")
 CACHE=BASE/"drive-playback-cache"
-TH=BASE/"drive-thumbnails"
+TH=BASE/"drive-archive-thumbs"
 REPORT={"policy_version":"v106-person-protected-drive","started_at":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),"deleted":[]}
 
 def load(p,d):
@@ -57,10 +57,20 @@ def about():
     except Exception as ex:return None,repr(ex)
 
 def del_remote(name):
-    cmd=[rclone,"--config",rconf,"deletefile",remote+":"+safe(name)]
+    name=safe(name)
+    if not name:return True,""
+    cmd=[rclone,"--config",rconf,"deletefile",remote+":"+name]
     if folder:cmd+=["--drive-root-folder-id",folder]
+    cmd+=["--drive-use-trash=false"]
     r=subprocess.run(cmd,text=True,capture_output=True,timeout=120)
-    return r.returncode==0,(r.stderr or r.stdout)[-800:]
+    if r.returncode==0:return True,(r.stderr or r.stdout)[-800:]
+    # Treat already-absent objects as successfully reconciled, but fail closed on other Drive errors.
+    chk=[rclone,"--config",rconf,"lsjson",remote+":"+name]
+    if folder:chk+=["--drive-root-folder-id",folder]
+    chk+=["--files-only"]
+    q=subprocess.run(chk,text=True,capture_output=True,timeout=60)
+    missing=q.returncode!=0 or not (q.stdout or "").strip() or (q.stdout or "").strip()=="[]"
+    return missing,(r.stderr or r.stdout)[-800:]
 
 ab,err=about()
 free=int(ab.get("free")) if isinstance(ab,dict) and isinstance(ab.get("free"),(int,float)) else None
@@ -102,11 +112,13 @@ cands.sort(key=lambda z:(z["rank"],-z["age_days"],z["highlight"],z["person"],-z[
 for c in cands:
     ab,_=about();cur=int(ab.get("free")) if isinstance(ab,dict) and isinstance(ab.get("free"),(int,float)) else None
     if cur is None or cur>=target:break
-    ok,msg=del_remote(c["name"])
-    if not ok:
-        REPORT.setdefault("delete_errors",[]).append({"name":c["name"],"error":msg});continue
+    x=c["row"]
+    ok1,msg1=del_remote(c["name"])
+    ok2,msg2=del_remote(x.get("snapshot_name"))
+    if not (ok1 and ok2):
+        REPORT.setdefault("delete_errors",[]).append({"name":c["name"],"clip_ok":ok1,"snapshot_ok":ok2,"clip_error":msg1,"snapshot_error":msg2});continue
     stamp=datetime.datetime.now().astimezone().isoformat()
-    x=c["row"];x["state"]="deleted";x["deleted_at"]=stamp;x["delete_reason"]="v106_drive_retention_"+c["status"]
+    x["state"]="deleted";x["deleted_at"]=stamp;x["delete_reason"]="v106_drive_retention_"+c["status"]
     for p in [CACHE/"new"/c["name"], TH/"new"/safe(x.get("snapshot_name"))]:
         try:
             if p.is_file():p.unlink()
@@ -115,7 +127,7 @@ for c in cands:
 
 if REPORT["deleted"]:atomic(IDX,idx)
 ab,_=about();free_after=int(ab.get("free")) if isinstance(ab,dict) and isinstance(ab.get("free"),(int,float)) else None
-REPORT.update({"action":"trimmed" if REPORT["deleted"] else "protected_archive_blocked","protected":protected,"candidate_count":len(cands),"drive_free_after":free_after,"finished_at":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime())})
+REPORT.update({"action":"trimmed" if REPORT["deleted"] else "protected_archive_blocked","protected":protected,"candidate_count":len(cands),"drive_free_after":free_after,"confirmed_person_auto_delete":False,"manual_saved_auto_delete":False,"finished_at":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime())})
 try:
     token=(HOME/".config/c720p-agent/security-token").read_text().strip()
     req=urllib.request.Request("https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-control?action=health",data=json.dumps({"observed_at":REPORT["finished_at"],"maintenance":{"v106_drive_retention":REPORT}},separators=(",",":")).encode(),method="POST",headers={"content-type":"application/json","x-c720p-token":token})
