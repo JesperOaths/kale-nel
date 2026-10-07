@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 const SUPABASE_URL=process.env.SUPABASE_URL||'https://uiqntazgnrxwliaidkmy.supabase.co';
 const API_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||'';
 const BASE=(process.env.GEJAST_BASE_URL||'https://kalenel.nl/').replace(/\/+$/,'')+'/';
-const EXPECTED_FRONTEND='20261007-league-web-v316';
+const EXPECTED_FRONTEND='20261007-league-web-v317';
 const EXPECTED_ANALYZER='league-web-behavior-v4.181';
 const EDGE=SUPABASE_URL+'/functions/v1/printify-gildan-diff-diag-v1';
 const OUT='league-visual-audit';
