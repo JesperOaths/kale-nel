@@ -1,4 +1,4 @@
-/* 20261007-league-web-v321 · full review audit and decision-dashboard integration */
+/* 20261007-league-web-v322 · full review audit and decision-dashboard integration */
 (function(){
 'use strict';
 
@@ -1002,7 +1002,7 @@ function recentDirectionSummary(r){
   const moved=[...rows].filter(x=>x.state!=='stable').sort((a,b)=>b.strength-a.strength),good=rows.filter(x=>x.state==='good'),bad=rows.filter(x=>x.state==='bad'),stable=rows.filter(x=>x.state==='stable');
   const primary=moved[0]||[...rows].sort((a,b)=>b.strength-a.strength)[0],secondary=moved.find(x=>x!==primary&&x.state!==primary.state)||moved.find(x=>x!==primary)||null;
   const describe=x=>x?x.label+': '+format(x.recent,x.unit)+' latest 5 vs '+format(x.prior,x.unit)+' previous sample':'';
-  const tone=bad.length>good.length?'bad':good.length>bad.length?'good':'neutral';
+  const tone=primary?.state==='good'?'good':primary?.state==='bad'?'bad':'neutral';
   const value=primary?(primary.label+' · '+(primary.state==='good'?'improving':primary.state==='bad'?'slipping':'stable')):'Latest 5 stable';
   const copy=[describe(primary),secondary?describe(secondary):''].filter(Boolean).join('. ')+'.';
   return{tone,value,copy,meta:good.length+' improving · '+bad.length+' slipping · '+stable.length+' inside practical-change bands · latest 5 versus the preceding valid sample'};

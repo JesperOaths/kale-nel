@@ -3929,11 +3929,12 @@ For ADC/MID/TOP, the existing direct-role Gold@15→Gold@25 arc is now shown as 
 
 The review then counts supported events that occur **inside the 15→25 window**: high-risk deaths, repeat deaths, active-fight death before contribution, first allied death in an active fight, active fight starts with at least 1000 unspent gold, side-lane deaths before a neutral objective, and recent-shop objective absences. A signal is promoted only when it recurs in at least two deteriorating-transition games. Rates versus other comparable transitions are shown as co-occurrence context only; the UI explicitly forbids causal wording.
 
-### Full-page audit: frontend v321 / analyzer v4.182 / decision intelligence v8
+### Full-page audit: frontend v322 / analyzer v4.182 / decision intelligence v8
 
 The 7 October 2026 audit covers the new synthesis, whole-player review, longer-history charts, state-transition review, lazy sections and all 25 decision analytics, alongside the existing role, mechanics, benchmark, missing-data and learning contracts.
 
 - History verdicts use complete windows and the actual latest sample. Dates expose references from earlier seasons. Missing windows break graph lines; partial windows remain explicitly labelled context.
+- Recent-direction headline colors follow the metric described in the headline. A majority of improving components cannot turn a highlighted slipping metric green; overall agreement remains a separate evidence view.
 - Evidence agreement counts distinct views rather than independent trials. A classified risky-death rate does not establish high variance. Review conclusions cannot invent a strength or turn recurrence into proof of causation.
 - The transition matrix is a native table with row/column headers, thresholds and exact cell counts for favorable, deteriorating and other movement. A behind→behind cell can contain deterioration. Fight-death precursors require the player's actual death timestamp inside both the fight and the 15→25 window; fight-start timing is used only for start-state signals. Unverified fixed-checkpoint eligibility is withheld.
 - Local-number loss-rate comparisons use known outcomes and at least five fights per compared state. Conclusions report the observed spread instead of always asserting a flat outcome relationship. Single-frame fights cannot enter a paired pre-fight movement average.
