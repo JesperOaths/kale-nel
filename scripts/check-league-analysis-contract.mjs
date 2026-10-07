@@ -188,7 +188,7 @@ ok(decisionBackend.includes('v!==null && v!==undefined && v!=="" && Number.isFin
 ok(decisionBackend.includes('n(x.e.teamFightKills)>n(x.e.enemyFightKills)'), 'fight-win conversion must exclude tied fight clusters');
 ok(decisionBackend.includes('n(eventMin(o))>end'), 'post-fight follow-up kills must start after the cluster endpoint');
 ok(decisionBackend.includes('historyInput:any[]=gamesInput')&&decisionBackend.includes('performanceResidualRows(history)'), 'eligible match-level context analytics must use longer role history when available');
-ok(decisionBackend.includes('actualApproachLeadSec')&&decisionBackend.includes('n(t)-0.75'), 'objective setup must retain honest coarse pre-event timing');
+ok(decisionBackend.includes('actualApproachLeadSec')&&decisionBackend.includes('for(const requestedSec of [90,60,30])')&&decisionBackend.includes('approachSamples'), 'objective setup must retain honest distinct coarse pre-event route timing');
 ok(decisionBackend.includes('champEligible.length>=2?"supported"'), 'champion tendency comparisons need at least two meaningful champion samples');
 ok(decisionUi.includes('a?.moments)&&a.moments.length'), 'decision conclusions must not be computed from truncated evidence-preview rows');
 
