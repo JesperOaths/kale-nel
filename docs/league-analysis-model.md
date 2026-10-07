@@ -3801,3 +3801,18 @@ The previous UI used the same green accent for **Measured** evidence that other 
 Green/red remain available only where the chart itself has a directional performance meaning.
 
 The decision section also uses the same warm card background, border radius, shadow, typography and in-panel subheading hierarchy as the rest of the League report.
+
+
+## v311 final decision-intelligence audit
+
+A fresh production ADC report on analyzer v4.175 was used to re-check the conclusions, not only the source paths. The v311/v4.176 pass removes the remaining arbitrary success/ranking constructs where direct evidence is clearer.
+
+- **Fight-anchor distance:** no longer bins samples into invented “core / backline / far” bands. Usable ≤45-second samples are plotted as actual seconds-before-contact versus distance-to-anchor. No preferred ADC spacing distance is inferred.
+- **Local numbers:** each sampled state (down ≥2, down 1, even, ahead) now includes its own observed fight-loss rate. The 4.5k radius and Riot-frame age remain explicit proxy limitations.
+- **Lead movement:** the former “retained at least half the lead” threshold is removed. The report now states whether a ≥500g-at-15 direct-role lead is still ahead or has flipped behind by 25, plus the median signed Gold@15→25 movement.
+- **Deficit movement:** the fuzzy “roughly even at -100g” boundary and mean movement are removed. The report uses exact zero crossing, number of deficits that narrowed, and median movement so one large comeback cannot hide a generally worsening sample.
+- **Short-interval deaths:** “death chain” is replaced by **Consecutive deaths within 4 minutes**. The four-minute rule, number of consecutive-death opportunities, observed repeat rate and median gap are shown. Timing does not imply that the first death caused the second.
+- **Later-session components:** conclusions synthesize better, worse and below-threshold components together. The normalized practical-change scale is only for direction/magnitude; raw deltas and sample counts remain visible.
+- **Requeue gap context:** the synthetic DPM/CS/deaths/KP/GPM composite and “best break” ranking are removed. Each gap bucket reports those direct-opponent components separately in their native units. The relationship remains observational and non-causal.
+
+These changes preserve all 25 analytic families and the v310 warm visual integration while reducing false precision and interpretive overreach.
