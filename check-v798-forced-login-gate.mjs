@@ -50,9 +50,12 @@ assert(leagueBody.includes('index,follow'),'public League surface must remain in
 const boobsIndex='boobs/index.html';
 assert.ok(fs.existsSync(boobsIndex),'public /boobs quiz surface missing');
 const boobsBody=fs.readFileSync(boobsIndex,'utf8');
+const boobsAppPath='boobs/app.js';
+assert.ok(fs.existsSync(boobsAppPath),'public /boobs quiz runtime missing');
+const boobsApp=fs.readFileSync(boobsAppPath,'utf8');
 assert(!boobsBody.includes('/gejast-auth-gate.js?')&&!boobsBody.includes('/gejast-home-gate.js?'),'public /boobs quiz must not inherit Kalenel player-session gating');
-assert(boobsBody.includes('boobs_quiz_api_v1'),'public /boobs quiz must use its dedicated one-attempt backend boundary');
-assert(!/service[_-]?role/i.test(boobsBody),'public /boobs quiz browser surface must never contain a service-role credential');
+assert(boobsApp.includes('boobs_quiz_api_v1'),'public /boobs quiz must use its dedicated one-attempt backend boundary');
+assert(!/service[_-]?role/i.test(boobsBody+boobsApp),'public /boobs quiz browser surface must never contain a service-role credential');
 const worker=fs.readFileSync('cloudflare/workers/admin-gate/src/worker.js','utf8');
 assert(worker.includes("function isLeaguePublicPath(pathname)"),'Cloudflare perimeter must explicitly recognize League as public');
 assert(worker.includes("if (isLeaguePublicPath(url.pathname))"),'League public bypass must execute before generic protected/public routing');
