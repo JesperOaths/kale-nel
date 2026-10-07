@@ -166,7 +166,7 @@
     if(!pp.length&&!ll.length)return'<div class="di-visual-empty">No usable map coordinates for this analytic.</div>';
     const svgLines=ll.map(x=>'<line class="di-map-line '+esc(x.tone||'neutral')+'" x1="'+x.a.x.toFixed(1)+'" y1="'+x.a.y.toFixed(1)+'" x2="'+x.b.x.toFixed(1)+'" y2="'+x.b.y.toFixed(1)+'"><title>'+esc(x.title||'movement / decision link')+'</title></line>').join('');
     const svgPts=pp.map((x,i)=>'<g><circle class="di-map-point '+esc(x.tone||'neutral')+'" cx="'+x.p.x.toFixed(1)+'" cy="'+x.p.y.toFixed(1)+'" r="'+(x.r||7)+'"><title>'+esc(x.title||'map event')+'</title></circle>'+(x.label?'<text x="'+x.p.x.toFixed(1)+'" y="'+(x.p.y+3).toFixed(1)+'">'+esc(x.label)+'</text>':'')+'</g>').join('');
-    return '<div class="di-map-wrap"><div class="map-stage di-map-stage"><img loading="lazy" src="'+esc(mapImage())+'" data-map-fallback="'+esc(mapFallback())+'" alt="'+esc(aria)+'"><svg viewBox="0 0 512 512" preserveAspectRatio="none">'+svgLines+svgPts+'</svg></div>'+(legend?'<div class="di-map-legend">'+legend+'</div>':'')+'</div>';
+    return '<div class="di-map-wrap"><div class="map-stage di-map-stage"><img loading="lazy" src="'+esc(mapImage())+'" data-map-fallback="'+esc(mapFallback())+'" alt="'+esc(aria)+'"><svg viewBox="0 0 512 512" preserveAspectRatio="none">'+svgLines+svgPts+'</svg></div>'+(legend?'<div class="di-map-legend">'+legend+'</div>':'')+'<div class="di-map-basis">Team-relative orientation · reviewed team base is bottom-left</div></div>';
   }
   function fightMap(report,mode,shortlist=[]){
     const pts=[],lines=[];
@@ -175,55 +175,57 @@
       for(const e of all){
         if(!e?.fightPosition||!num(e.startMin))continue;
         const absent=(g?.fightProfile?.absenceEvents||[]).includes(e);
+        const fightPos=teamRelativePoint(g,e.fightPosition),playerPos=teamRelativePoint(g,e.playerPosition);
+        if(!fightPos)continue;
         if(mode==='pre'){
-          const fr=nearestFrame(g,n(e.startMin)-.5);
-          if(fr?.position){lines.push({a:fr.position,b:e.fightPosition,tone:absent?'warn':'good',title:g.champion+' · '+fmt(e.startMin,1)+'m · sampled ~30s route to '+(e.fightZone||'fight')});pts.push({position:fr.position,tone:'player',r:5,title:g.champion+' · sampled pre-fight position'});}
-          pts.push({position:e.fightPosition,tone:absent?'warn':'fight',r:7,title:(e.fightZone||'Fight')+' · '+fmt(e.startMin,1)+'m'});
+          const fr=nearestFrame(g,n(e.startMin)-.5),prePos=teamRelativePoint(g,fr?.position);
+          if(prePos){lines.push({a:prePos,b:fightPos,tone:absent?'warn':'neutral',title:g.champion+' · '+fmt(e.startMin,1)+'m · coarse pre-fight sample to '+(e.fightZone||'fight')});pts.push({position:prePos,tone:'player',r:5,title:g.champion+' · sampled pre-fight position'});}
+          pts.push({position:fightPos,tone:absent?'warn':'fight',r:7,title:(e.fightZone||'Fight')+' · '+fmt(e.startMin,1)+'m'});
         }else if(mode==='geo'){
-          if(absent&&e.joinReviewPriority==='high')pts.push({position:e.fightPosition,tone:'bad',r:9,title:'High-priority skipped fight · '+(e.fightZone||'')+' · '+fmt(e.startMin,1)+'m'});
-          else if(absent&&e.crossMapTradeSupported===true)pts.push({position:e.fightPosition,tone:'good',r:8,title:'Skipped fight with measurable trade · '+(e.fightZone||'')});
+          if(absent&&e.joinReviewPriority==='high')pts.push({position:fightPos,tone:'review',r:9,title:'High-priority skipped-fight review · '+(e.fightZone||'')+' · '+fmt(e.startMin,1)+'m'});
+          else if(absent&&e.crossMapTradeSupported===true)pts.push({position:fightPos,tone:'neutral',r:8,title:'Skipped fight with supported compensation · '+(e.fightZone||'')});
         }else if(mode==='trade'){
           if(absent&&(n(e.playerStructureGains||0)>0||n(e.playerNeutralObjectiveGains||0)>0)){
-            pts.push({position:e.fightPosition,tone:'fight',r:7,title:'Fight location · '+(e.fightZone||'')});
-            if(e.playerPosition){pts.push({position:e.playerPosition,tone:'player',r:7,title:'Your cross-map position'});lines.push({a:e.playerPosition,b:e.fightPosition,tone:'neutral',title:'Cross-map separation during supported trade window'});}
+            pts.push({position:fightPos,tone:'fight',r:7,title:'Fight location · '+(e.fightZone||'')});
+            if(playerPos){pts.push({position:playerPos,tone:'player',r:7,title:'Reviewed player position'});lines.push({a:playerPos,b:fightPos,tone:'neutral',title:'Separation during overlapping structure/objective window'});}
           }
         }else if(mode==='shortlist'){
           const wanted=shortlist.filter(x=>String(x.matchId)===String(g.matchId)&&num(x.minute));
-          for(const w of wanted)if(Math.abs(n(w.minute)-n(e.startMin))<.15)pts.push({position:e.fightPosition,tone:'review',r:10,label:String(shortlist.indexOf(w)+1),title:'#'+(shortlist.indexOf(w)+1)+' '+w.reason});
+          for(const w of wanted)if(Math.abs(n(w.minute)-n(e.startMin))<.15)pts.push({position:fightPos,tone:'review',r:10,label:String(shortlist.indexOf(w)+1),title:'#'+(shortlist.indexOf(w)+1)+' '+w.reason});
         }
       }
     }
-    const legends={pre:'<span><i class="player"></i>sampled player position</span><span><i class="fight"></i>fight anchor</span>',geo:'<span><i class="bad"></i>reachable missed join</span><span><i class="good"></i>measurable cross-map trade</span>',trade:'<span><i class="player"></i>your cross-map position</span><span><i class="fight"></i>fight location</span>',shortlist:'<span><i class="review"></i>ranked replay moment</span>'};
+    const legends={pre:'<span><i class="player"></i>sampled player position</span><span><i class="fight"></i>fight anchor</span>',geo:'<span><i class="review"></i>high-priority skipped-fight review</span><span><i class="neutral"></i>supported compensation</span>',trade:'<span><i class="player"></i>reviewed player position</span><span><i class="fight"></i>fight location</span>',shortlist:'<span><i class="review"></i>ranked replay moment</span>'};
     return mapStage(pts,{lines,legend:legends[mode]||'',aria:'Summoner’s Rift '+mode+' decision map'});
   }
-  function preFightMap(r){
-    const pts=[],lines=[];
+  function preFightMap(r,report){
+    const pts=[],lines=[],gm=gameMap(report);
     for(const row of r){
-      const fight=row?.fightPosition;if(!fight)continue;
+      const g=gm.get(String(row.matchId)),fight=teamRelativePoint(g,row?.fightPosition);if(!fight)continue;
       pts.push({position:fight,tone:'fight',r:8,title:(row.fightZone||'Fight')+' · '+fmt(row.minute,1)+'m'});
       const cp=(row.checkpoints||[]).filter(x=>x?.position&&num(x.actualLeadSec)).sort((a,b)=>n(b.actualLeadSec)-n(a.actualLeadSec));
-      for(const x of cp)pts.push({position:x.position,tone:'player',r:5,title:'Actual sample '+fmt(x.actualLeadSec,0)+'s before fight · '+(x.zone||'unknown')});
-      if(cp.length)lines.push({a:cp[0].position,b:fight,tone:'neutral',title:'Earliest distinct sampled pre-fight frame → fight anchor'});
+      const norm=cp.map(x=>({...x,normalizedPosition:teamRelativePoint(g,x.position)})).filter(x=>x.normalizedPosition);
+      for(const x of norm)pts.push({position:x.normalizedPosition,tone:'player',r:5,title:'Actual sample '+fmt(x.actualLeadSec,0)+'s before fight · '+(x.zone||'unknown')});
+      if(norm.length)lines.push({a:norm[0].normalizedPosition,b:fight,tone:'neutral',title:'Earliest distinct sampled pre-fight frame → fight anchor'});
     }
     return mapStage(pts,{lines,legend:'<span><i class="player"></i>distinct sampled pre-fight frame</span><span><i class="fight"></i>fight anchor</span>',aria:'Summoner’s Rift pre-fight positioning map'});
   }
-
   function formationVisual(r){
     const bands=[...new Set(r.map(x=>x.formationBand).filter(Boolean))];
     if(!bands.length)return'<div class="di-visual-empty">No formation bands to graph.</div>';
     return '<div class="di-formation-grid">'+bands.map(b=>{const xs=r.filter(x=>x.formationBand===b),con=xs.filter(x=>x.contributed).length,surv=xs.filter(x=>x.survived).length;return'<article><strong>'+esc(b)+'</strong><span><b>'+xs.length+'</b> fights</span><span><b>'+fmt(pct(con,xs.length),0)+'%</b> contribution</span><span><b>'+fmt(pct(surv,xs.length),0)+'%</b> survival</span></article>';}).join('')+'</div>';
   }
-  function objectivePathMap(r){
-    const pts=[],lines=[];
+  function objectivePathMap(r,report){
+    const pts=[],lines=[],gm=gameMap(report);
     for(const row of r){
+      const g=gm.get(String(row.matchId));
       const samples=(Array.isArray(row?.approachSamples)?row.approachSamples:[])
-        .filter(x=>x?.position&&num(x.actualLeadSec))
-        .slice().sort((a,b)=>n(b.actualLeadSec)-n(a.actualLeadSec));
+        .filter(x=>x?.position&&num(x.actualLeadSec)).slice().sort((a,b)=>n(b.actualLeadSec)-n(a.actualLeadSec));
       if(!samples.length&&row?.approachPosition)samples.push({position:row.approachPosition,zone:row.approachZone,actualLeadSec:row.actualApproachLeadSec});
-      samples.forEach((x,i)=>pts.push({position:x.position,tone:row.joined?'player':'warn',r:i===samples.length-1?7:5,
+      const norm=samples.map(x=>({...x,normalizedPosition:teamRelativePoint(g,x.position)})).filter(x=>x.normalizedPosition);
+      norm.forEach((x,i)=>pts.push({position:x.normalizedPosition,tone:row.joined?'player':'warn',r:i===norm.length-1?7:5,
         title:(row.objective||'objective')+' · '+(num(x.actualLeadSec)?fmt(x.actualLeadSec,0)+'s before · ':'')+(x.zone||'unknown')+' · '+(row.joined?'present':'absent')}));
-      for(let i=1;i<samples.length;i++)lines.push({a:samples[i-1].position,b:samples[i].position,tone:row.joined?'neutral':'warn',
-        title:(row.objective||'objective')+' · coarse sampled setup route'});
+      for(let i=1;i<norm.length;i++)lines.push({a:norm[i-1].normalizedPosition,b:norm[i].normalizedPosition,tone:row.joined?'neutral':'warn',title:(row.objective||'objective')+' · coarse sampled setup route'});
     }
     return mapStage(pts,{lines,legend:'<span><i class="player"></i>sampled route · present</span><span><i class="warn"></i>sampled route · absent</span>',aria:'Summoner’s Rift objective setup route map'});
   }
