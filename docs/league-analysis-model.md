@@ -3801,3 +3801,17 @@ The previous UI used the same green accent for **Measured** evidence that other 
 Green/red remain available only where the chart itself has a directional performance meaning.
 
 The decision section also uses the same warm card background, border radius, shadow, typography and in-panel subheading hierarchy as the rest of the League report.
+
+
+## v311 ahead-state fight execution correction
+
+A fresh v4.175 production report exposed one remaining tautology in the decision-intelligence layer. The earlier “pre-fight gold state vs tracked contribution” card filtered to **active fights**, while an active fight is itself defined by tracked contribution or player death. Reporting the contribution rate within that already-selected cohort therefore added much less information than the percentage implied.
+
+v311 replaces that statistic with **Ahead-state fight execution**. It considers active fights started at least +300g versus the direct role opponent and reports:
+
+- death before tracked kill/assist contribution;
+- fight survival;
+- whether current gold at fight start was at least 1000;
+- pre-fight direct-role gold difference and unspent gold for the scatterplot.
+
+The visualization distinguishes **survived**, **contributed then died**, and **died before contribution**. These are measured execution/state outcomes; they do not claim total damage efficiency, target quality, or that taking the fight was correct.

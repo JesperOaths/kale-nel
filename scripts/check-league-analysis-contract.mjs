@@ -221,6 +221,9 @@ ok(decisionBackend.includes('maxPrimaryPerMatch:2')&&decisionBackend.includes('m
 ok(decisionUi.includes('teamRelativePoint')&&decisionUi.includes('Team-relative orientation · reviewed team base is bottom-left'), 'decision maps must use and disclose team-relative orientation');
 ok(decisionUi.includes("s==='supported'?'measured'")&&!decisionUi.includes("s==='supported'?'good'"), 'measured evidence styling must not encode positive performance');
 ok(css.includes('v310 — decision intelligence evidence/style coherence')&&html.includes('decision-intelligence-subhead'), 'decision visuals must remain within the main League report design system');
+ok(decisionBackend.includes('"Ahead-state fight execution"')&&decisionBackend.includes('preContributionDeathRate')&&decisionBackend.includes('richHighUnspentRate'), 'ahead-state fight card must use non-tautological execution outcomes');
+ok(!decisionBackend.includes('aheadFightContributionRate'), 'retired tautological ahead-fight contribution rate must stay removed');
+ok(decisionUi.includes("x.diedBeforeContribution?'negative':x.survived?'positive':'warn'"), 'ahead-state visual must encode meaningful execution outcomes');
 
 
 ok(decisionBackend.includes('wave_fight_conflict')&&decisionBackend.includes('objective_setup_path')&&decisionBackend.includes('lead_utilisation')&&decisionBackend.includes('deficit_recovery')&&decisionBackend.includes('mistake_recurrence'), 'decision intelligence must retain macro, recovery and recurrence families');
@@ -276,7 +279,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.175'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.176'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
 ok(backend.includes('aboveOwnDeadTimeMedian:Number(g.damageRank)>2&&')&&backend.includes('aboveOwnTurretMedian:Number(g.damageRank)>2&&'), 'resource/output exemplar annotations must compute lower-damage state in their own callback scope');
 ok(backend.includes('highUnspentFightSamples')&&backend.includes('itemDisadvantageFightSamples')&&backend.includes('goldDeficitFightSamples')&&backend.includes('outnumberedFightSamples'), 'fight-state rates must use metric-specific supported-opportunity denominators');
 ok(backend.includes('const cleanOutcomeGames=games.filter(g=>g?.outcomeCompromised!==true)')&&backend.includes('afk_or_early_surrender_excluded_from_final_result_conversion'), 'final-result coaching must exclude compromised outcomes');
