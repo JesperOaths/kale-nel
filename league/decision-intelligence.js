@@ -49,10 +49,10 @@
     champion_tendencies:{group:'Champion context',measure:'Groups only your own games by champion and compares decision/risk tendencies rather than teammate performance.',review:'Use this to identify champion-specific habits: e.g. safer fight entry on one ADC but more empty cross-map time on another.'},
     matchup_adjusted_lane:{group:'Lane & opponent context',measure:'Builds personal-history own-champion × direct-opponent-champion cells for lane gold and DPM-vs-peer context.',review:'Only treat repeated cells as useful. A single matchup result is an example, not a matchup rule.'},
     expected_performance_residual:{group:'Lane & opponent context',measure:'Compares actual opponent-adjusted DPM with your own champion/opponent/duration expectation and graphs the residual.',review:'Use residuals to find unexpectedly strong/weak games after controlling some obvious context. They are not a causal skill estimate.'},
-    session_components:{group:'Session patterns',measure:'Breaks the opener→game-3+ session answer into its individual opponent-adjusted and timeline-supported components.',review:'Find which component moves first. If only one metric changes, fix that behavior rather than concluding the entire session deteriorates.'},
+    session_components:{group:'Session patterns',measure:'Breaks the opener→game-3+ answer into evidence-gated signals normalized by each metric’s practical-change threshold. Unlike units are never plotted on one raw scale.',review:'Look for the largest normalized shift, then use the raw delta and sample counts to identify the behavior that actually changed.'},
     requeue_sweet_spot:{group:'Session patterns',measure:'Compares break-time buckets using the normalized direct-opponent performance composite.',review:'Only use buckets with enough games. Treat the best bucket as scheduling context, not a causal prescription.'},
-    mistake_recurrence:{group:'Learning progress',measure:'Tracks supported issue load game by game and estimates when a sustained ≤50% window first appears after the peak.',review:'Use the line to see whether a problem is actually disappearing, fluctuating, or recurring after a short improvement.'},
-    automatic_replay_shortlist:{group:'Replay review',measure:'Ranks concrete moments by learning value using skipped-fight, fight-entry, objective-setup and repeat-death evidence.',review:'Start here when you do not want to review every match. The score ranks learning value; it is not a severity or blame score.'}
+    mistake_recurrence:{group:'Learning progress',measure:'Tracks supported issue-signal load game by game by category. It does not claim a target-linked half-life without a defensible target start point.',review:'Use the line and category counts to see whether risky deaths, pre-objective deaths, reset absences or missed-join reviews are actually receding.'},
+    automatic_replay_shortlist:{group:'Replay review',measure:'Ranks concrete moments with a transparent heuristic built from skipped-fight, fight-entry, objective-setup and repeat-death evidence.',review:'Start here when you do not want to review every match. The heuristic priority is not measured severity, probability or blame.'}
   };
   const GROUP_ORDER=['Fight decisions','Tempo & setup','Economy & conversion','Risk & recovery','Map patterns','Champion context','Lane & opponent context','Session patterns','Learning progress','Replay review'];
 
@@ -85,8 +85,8 @@
     const r=rows(a),e=a?.evidence||{};
     switch(a?.id){
       case'fight_decision_ledger':{const pos=r.filter(x=>num(x.netProxyG)&&n(x.netProxyG)>0).length,neg=r.filter(x=>num(x.netProxyG)&&n(x.netProxyG)<0).length;return r.length?pos+' skipped fights had a positive value-minus-fight-cost proxy and '+neg+' were negative. Focus on the largest negative reachable examples first.':'No skipped-fight ledger is available.';}
-      case'arrival_feasibility':return r.length?String(e.reachable??r.filter(x=>x.feasible).length)+' of '+r.length+' skipped fights began inside the reachability screen. Reachable misses are more useful review targets than distant fights.':'No position-supported skipped fights.';
-      case'pre_fight_positioning':{const d30=r.map(x=>x.checkpoints?.find(y=>y.sec===30)?.distance),d10=r.map(x=>x.checkpoints?.find(y=>y.sec===10)?.distance),a30=avg(d30),a10=avg(d10);return num(a30)&&num(a10)?'Average sampled distance to the fight anchor moves from '+fmt(a30,0)+'u at ~30s to '+fmt(a10,0)+'u at ~10s ('+signed(n(a10)-n(a30),0)+'u). '+(n(a10)<n(a30)?'The sample generally closes toward fights.':'The sample does not consistently close toward fights before contact.'):'The available frames are too sparse for one aggregate distance conclusion; use the map examples.';}
+      case'arrival_feasibility':return r.length?String((e.near||0)+(e.borderline||0))+' of '+r.length+' skipped fights began within the 6.5k straight-line screen ('+String(e.near||0)+' near, '+String(e.borderline||0)+' borderline). This does not prove arrival was possible through terrain/vision.':'No position-supported skipped fights.';
+      case'pre_fight_positioning':{const earliest=r.map(x=>x.checkpoints?.slice().sort((a,b)=>n(b.actualLeadSec)-n(a.actualLeadSec))[0]).filter(Boolean),latest=r.map(x=>x.checkpoints?.slice().sort((a,b)=>n(a.actualLeadSec)-n(b.actualLeadSec))[0]).filter(Boolean),a0=avg(earliest.map(x=>x.distance)),a1=avg(latest.map(x=>x.distance)),lead0=avg(earliest.map(x=>x.actualLeadSec)),lead1=avg(latest.map(x=>x.actualLeadSec));return num(a0)&&num(a1)?'Across fights with distinct pre-fight frames, the earliest retained sample averages '+fmt(a0,0)+'u away at '+fmt(lead0,0)+'s before contact and the latest averages '+fmt(a1,0)+'u away at '+fmt(lead1,0)+'s. Actual sample times are shown because Riot frames are too coarse for literal 30/20/10 tracking.':'The available frames are too sparse for one aggregate distance conclusion; use the map examples.';}
       case'fight_formation':{const c={};r.forEach(x=>c[x.formationBand]=(c[x.formationBand]||0)+1);const top=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];return top?'Most tracked entries start in “'+top[0]+'” ('+top[1]+'/'+r.length+'). Compare contribution and survival inside each band.':'No formation sample.';}
       case'numbers_aware_participation':return r.length?(String(e.outnumberedStarts||0)+' fights began down ≥2, '+String(e.downOneStarts||0)+' down one, '+String((e.evenStarts||0)+(e.aheadStarts||0))+' even/ahead. The ≥2-down group lost '+(num(e.outnumberedLossRate)?fmt(e.outnumberedLossRate,0)+'%':'—')+' of measured fights.'):'No local-number sample.';
       case'cross_map_efficiency':return num(e.medianValuePerMin)?'Typical supported trade-value proxy is '+fmt(e.medianValuePerMin,0)+' per minute. The spread matters more than the average: compare high-value and near-zero windows.':a.summary;
@@ -202,10 +202,20 @@
     return mapStage(pts,{lines,legend:'<span><i class="player"></i>distinct sampled pre-fight frame</span><span><i class="fight"></i>fight anchor</span>',aria:'Summoner’s Rift pre-fight positioning map'});
   }
 
+  function formationVisual(r){
+    const bands=[...new Set(r.map(x=>x.formationBand).filter(Boolean))];
+    if(!bands.length)return'<div class="di-visual-empty">No formation bands to graph.</div>';
+    return '<div class="di-formation-grid">'+bands.map(b=>{const xs=r.filter(x=>x.formationBand===b),con=xs.filter(x=>x.contributed).length,surv=xs.filter(x=>x.survived).length;return'<article><strong>'+esc(b)+'</strong><span><b>'+xs.length+'</b> fights</span><span><b>'+fmt(pct(con,xs.length),0)+'%</b> contribution</span><span><b>'+fmt(pct(surv,xs.length),0)+'%</b> survival</span></article>';}).join('')+'</div>';
+  }
+  function objectivePathMap(r){
+    const pts=r.filter(x=>x?.approachPosition).map(x=>({position:x.approachPosition,tone:x.joined?'good':'bad',r:7,title:(x.objective||'objective')+' · sampled approach '+(x.approachZone||'unknown')+' · '+(x.joined?'present':'absent')}));
+    return mapStage(pts,{legend:'<span><i class="good"></i>present at contested objective</span><span><i class="bad"></i>absent</span>',aria:'Summoner’s Rift objective approach map'});
+  }
+
   function championVisual(r){
     if(!r.length)return'<div class="di-visual-empty">No champion-conditioned sample.</div>';
     const maxRisk=Math.max(...r.map(x=>n(x.riskyDeathsPerGame||0)),1);
-    return '<div class="di-champion-grid">'+r.slice(0,8).map(x=>{const src=champIcon(x.champion);return'<article><div class="di-champ-head">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="'+esc(x.champion)+' portrait">':'')+'<div><strong>'+esc(x.champion)+'</strong><small>'+x.games+' games</small></div></div><div class="di-mini-metrics"><span><b>'+fmt(x.riskyDeathsPerGame,2)+'</b> risky deaths/g</span><span><b>'+fmt(x.crossMapTradeRate,0)+'%</b> trade rate</span><span><b>'+fmt(x.activeFightSurvivalRate,0)+'%</b> fight survival</span></div><div class="di-risk-meter"><i style="width:'+clamp(n(x.riskyDeathsPerGame||0)/maxRisk*100,0,100)+'%"></i></div></article>';}).join('')+'</div>';
+    return '<div class="di-champion-grid">'+r.slice(0,8).map(x=>{const src=champIcon(x.champion);return'<article><div class="di-champ-head">'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="'+esc(x.champion)+' portrait">':'')+'<div><strong>'+esc(x.champion)+'</strong><small>'+x.games+' games</small></div></div><div class="di-mini-metrics"><span><b>'+fmt(x.riskyDeathsPerGame,2)+'</b> risky deaths/g</span><span><b>'+fmt(x.crossMapTradeRate,0)+'%</b> trade · n='+fmt(x.skippedFightSamples,0)+'</span><span><b>'+fmt(x.activeFightSurvivalRate,0)+'%</b> survival · n='+fmt(x.activeFightSamples,0)+'</span></div><div class="di-risk-meter"><i style="width:'+clamp(n(x.riskyDeathsPerGame||0)/maxRisk*100,0,100)+'%"></i></div></article>';}).join('')+'</div>';
   }
   function matchupVisual(r){
     if(!r.length)return'<div class="di-visual-empty">No direct-opponent matchup cells.</div>';
@@ -214,7 +224,7 @@
   }
   function replayCards(report,short){
     const gm=gameMap(report);
-    return'<div class="di-replay-visual-grid">'+short.slice(0,10).map((x,i)=>{const g=gm.get(String(x.matchId)),src=g?champIcon(g.champion):'';return'<article><div class="di-replay-rank">#'+(i+1)+'</div>'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<div><span>'+esc(x.type||'Replay')+(num(x.minute)?' · '+fmt(x.minute,1)+'m':'')+'</span><strong>'+esc(x.reason||'Review this moment')+'</strong><small>'+esc(x.zone||'')+' · learning score '+fmt(x.score,0)+'</small><div class="di-score-meter"><i style="width:'+clamp(n(x.score||0),0,100)+'%"></i></div></div><button class="button secondary tiny di-open-match" type="button" data-match-id="'+esc(x.matchId)+'">Open</button></article>';}).join('')+'</div>';
+    return'<div class="di-replay-visual-grid">'+short.slice(0,10).map((x,i)=>{const g=gm.get(String(x.matchId)),src=g?champIcon(g.champion):'';return'<article><div class="di-replay-rank">#'+(i+1)+'</div>'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<div><span>'+esc(x.type||'Replay')+(num(x.minute)?' · '+fmt(x.minute,1)+'m':'')+'</span><strong>'+esc(x.reason||'Review this moment')+'</strong><small>'+esc(x.zone||'')+' · heuristic priority '+fmt(x.score,0)+'</small><div class="di-score-meter"><i style="width:'+clamp(n(x.score||0),0,100)+'%"></i></div></div><button class="button secondary tiny di-open-match" type="button" data-match-id="'+esc(x.matchId)+'">Open</button></article>';}).join('')+'</div>';
   }
 
   function visualFor(a,report){
@@ -223,13 +233,13 @@
       case'fight_decision_ledger':return barRows([...r].sort((x,y)=>Math.abs(n(y.netProxyG||0))-Math.abs(n(x.netProxyG||0))),{label:x=>(x.zone||'fight')+' · '+fmt(x.minute,1)+'m',value:'netProxyG',suffix:'g proxy',diverging:true});
       case'arrival_feasibility':return shareVisual([{label:'Near ≤4k',value:n(e.near||0)},{label:'Borderline 4–6.5k',value:n(e.borderline||0)},{label:'Far >6.5k',value:n(e.far||0)}]);
       case'pre_fight_positioning':return preFightMap(r);
-      case'fight_formation':return barRows(Object.entries(r.reduce((m,x)=>(m[x.formationBand]=(m[x.formationBand]||0)+1,m),{})).map(([label,value])=>({label,value})),{value:'value'});
+      case'fight_formation':return formationVisual(r);
       case'numbers_aware_participation':return shareVisual([{label:'Down ≥2',value:n(e.outnumberedStarts||0)},{label:'Down 1',value:n(e.downOneStarts||0)},{label:'Even',value:n(e.evenStarts||0)},{label:'Ahead',value:n(e.aheadStarts||0)}]);
       case'cross_map_efficiency':return barRows([...r].sort((a,b)=>n(b.valuePerMin||0)-n(a.valuePerMin||0)),{label:x=>(x.zone||'fight')+' '+fmt(x.minute,1)+'m',value:'valuePerMin',suffix:'/min'});
       case'wave_fight_conflict':return scatter(r,'csSwing','goldSwing',{xLabel:'CS movement vs role',yLabel:'Gold movement vs role',labelKey:'zone',toneFn:x=>x.fightLost?'negative':'positive',legend:'<span><i class="negative"></i>team lost tracked fight</span><span><i class="positive"></i>team did not lose tracked fight</span>'});
       case'nothing_gained_isolation':return shareVisual([{label:'High-priority',value:n(e.highPriority||0)},{label:'Other uncompensated',value:Math.max(0,r.length-n(e.highPriority||0))}]);
       case'post_recall_tempo':return barRows([...r].sort((a,b)=>n(a.gapMin||0)-n(b.gapMin||0)),{label:x=>(x.nextKind||'event')+' · '+(x.approachZone||'unknown'),value:'gapMin',suffix:'m'});
-      case'objective_setup_path':return shareVisual([{label:'Present',value:r.filter(x=>x.joined).length},{label:'Absent',value:r.filter(x=>!x.joined).length}])+'<div class="di-path-chips">'+r.slice(0,8).map(x=>'<span><b>'+esc(x.objective||'objective')+'</b><i>shop '+(num(x.shopLeadMin)?fmt(x.shopLeadMin,1)+'m before':'?')+'</i><em>→</em><i>'+esc(x.approachZone||'unknown')+'</i><em>→</em><i>'+esc(x.joined?'present':'absent')+'</i></span>').join('')+'</div>';
+      case'objective_setup_path':return shareVisual([{label:'Present',value:r.filter(x=>x.joined).length},{label:'Absent',value:r.filter(x=>!x.joined).length}])+objectivePathMap(r)+'<div class="di-path-chips">'+r.slice(0,8).map(x=>'<span><b>'+esc(x.objective||'objective')+'</b><i>shop '+(num(x.shopLeadMin)?fmt(x.shopLeadMin,1)+'m before':'?')+'</i><em>→</em><i>'+esc(x.approachZone||'unknown')+'</i><em>→</em><i>'+esc(x.joined?'present':'absent')+'</i></span>').join('')+'</div>';
       case'lead_utilisation':return slope(r,'gold15','gold25',{startLabel:'Gold@15',endLabel:'Gold@25'});
       case'deficit_recovery':return slope(r,'gold15','gold25',{startLabel:'Gold@15',endLabel:'Gold@25'});
       case'death_chains':{const rr=(e.repeatGames||[]).map(x=>({label:shortMatch(x.matchId),value:n(x.repeatDeaths||0)}));return barRows(rr,{value:'value',suffix:' repeat'});}
@@ -264,7 +274,7 @@
   }
   function shortlistCard(x,index,report){
     const g=gameMap(report).get(String(x.matchId)),src=g?champIcon(g.champion):'';
-    return '<article class="di-shortlist-card"><div class="di-shortlist-rank">'+(index+1)+'</div>'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<div><span>'+esc(x.type||'Replay')+(num(x.minute)?' · '+fmt(x.minute,1)+'m':'')+'</span><strong>'+esc(x.reason||'Review this moment')+'</strong><small>'+esc(x.zone||'')+(num(x.score)?' · learning score '+fmt(x.score,0):'')+'</small></div>'+(x.matchId?'<button class="button secondary tiny di-open-match" type="button" data-match-id="'+esc(x.matchId)+'">Open</button>':'')+'</article>';
+    return '<article class="di-shortlist-card"><div class="di-shortlist-rank">'+(index+1)+'</div>'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<div><span>'+esc(x.type||'Replay')+(num(x.minute)?' · '+fmt(x.minute,1)+'m':'')+'</span><strong>'+esc(x.reason||'Review this moment')+'</strong><small>'+esc(x.zone||'')+(num(x.score)?' · heuristic priority '+fmt(x.score,0):'')+'</small></div>'+(x.matchId?'<button class="button secondary tiny di-open-match" type="button" data-match-id="'+esc(x.matchId)+'">Open</button>':'')+'</article>';
   }
   function bind(box){
     box.querySelectorAll('.di-open-match').forEach(btn=>btn.addEventListener('click',()=>{
