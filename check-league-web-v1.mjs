@@ -425,7 +425,7 @@ assert.ok(decisionUi.includes('heuristic priority')&&!decisionUi.includes('highe
 assert.ok(css.includes('v307 — decision intelligence coherence pass')&&css.includes('.di-interpretation p{font-size:.98rem'),'Decision intelligence must retain readable typography aligned with the visual analytics system');
 
 assert.ok(decisionBackend.includes('ledger.length?"proxy":"unavailable"')&&decisionBackend.includes('arrival.length?"proxy":"unavailable"'),'Heuristic opportunity-cost and reachability analytics must be labeled as proxies');
-assert.ok(decisionBackend.includes('downOneStarts')&&decisionUi.includes("label:'Down 1'"),'Numbers-aware participation must not drop one-player-disadvantage fights from the visualization');
+assert.ok(decisionBackend.includes('downOneStarts')&&decisionBackend.includes('{key:"down1",label:"Down 1"')&&decisionBackend.includes('states:numberGroups')&&decisionUi.includes('function numbersVisual('),'Numbers-aware participation must retain down-one fights and render all state labels/rates from one backend contract');
 assert.ok(decisionBackend.includes('mergedWindowMinutes(nothing)'),'Nothing-gained review time must de-duplicate overlapping 90-second windows');
 assert.ok(decisionBackend.includes('g?.objectives')&&decisionBackend.includes('ownerTeam')&&decisionBackend.includes('playerFollowUpKills'),'Fight-win conversion must use real raw team structure/objective events plus player follow-up involvement');
 assert.ok(api.includes('teamId:Number(p?.teamId||0)||null')&&api.includes('fightZone:fightArea(mapId,pos,teamId)'),'Decision intelligence must receive reviewed-team identity and common map-relative death zones');
