@@ -21,7 +21,7 @@ const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=100;
 const ANALYSIS_HISTORY_TARGET_GAMES=100;
-const ANALYZER_VERSION="league-web-behavior-v4.178";
+const ANALYZER_VERSION="league-web-behavior-v4.179";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -867,7 +867,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
   for(const fr of frames){
     const mine=frameStats(fr,pid),frameMinute=Number(fr?.timestamp||0)/60000,rolePeerFrame=rolePeerId?frameStats(fr,rolePeerId):null;
     if(rules.lane15Comparable!==false&&mine&&rolePeerFrame&&frameMinute>=3&&frameMinute<15&&hasNum(mine.gold)&&hasNum(rolePeerFrame.gold))earlyRoleGoldSamples.push({time:frameMinute,goldDiff:Number(mine.gold)-Number(rolePeerFrame.gold)});
-    if(mine){const sample={time:frameMinute,totalGold:mine.gold,currentGold:mine.currentGold,cs:mine.cs,xp:mine.xp,level:mine.level,position:mine.position,zone:zoneFor(mapId,mine.position,teamId)};out.frameSamples.push(sample);if(mine.gold!=null)out.goldSeries.push({minute:sample.time,totalGold:mine.gold,currentGold:mine.currentGold});}
+    if(mine){const sample={time:frameMinute,totalGold:mine.gold,currentGold:mine.currentGold,cs:mine.cs,xp:mine.xp,level:mine.level,position:mine.position,zone:zoneFor(mapId,mine.position,teamId),fightZone:fightArea(mapId,mine.position,teamId)};out.frameSamples.push(sample);if(mine.gold!=null)out.goldSeries.push({minute:sample.time,totalGold:mine.gold,currentGold:mine.currentGold});}
     for(const e of(Array.isArray(fr?.events)?fr.events:[])){
       const pxy=xy(e.position),tMs=Number(e.timestamp||0),tMin=tMs/60000;
       if(e.type==="CHAMPION_KILL"){
