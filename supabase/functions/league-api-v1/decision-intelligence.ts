@@ -93,6 +93,21 @@ function mergedWindowMinutes(rows:any[]){
   }
   return total;
 }
+function sampledZoneExposure(games:any[]){
+  const out=new Map<string,number>();
+  for(const g of games){
+    const fs=arr(g?.frameSamples).filter((x:any)=>finite(x?.time)&&txt(x?.fightZone)!=="")
+      .sort((a:any,b:any)=>n(a.time)-n(b.time));
+    for(let i=0;i<fs.length;i++){
+      const cur=fs[i],z=txt(cur?.fightZone||"unknown");
+      if(!z||z==="unknown"||z.includes("base"))continue;
+      const next=fs[i+1],dt=next?clamp(n(next.time)-n(cur.time),0,1.5):clamp(n(g?.durationMinutes||0)-n(cur.time),0,1);
+      if(dt<=0)continue;
+      out.set(z,(out.get(z)||0)+dt);
+    }
+  }
+  return out;
+}
 function nextEventAfter(g:any, minute:number){
   const rows:any[]=[];
   for(const e of fightEvents(g)) { const t=eventMin(e); if(finite(t)&&n(t)>=minute) rows.push({kind:"fight",t:n(t),raw:e}); }
@@ -298,7 +313,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     resetRows.push({matchId:g.matchId,shopMin:round(sm,1),nextKind:next.kind,eventMin:round(next.t,1),gapMin:round(next.t-sm,1),approachZone:fr?.zone||"unknown"});
   }
   const pairedShopRate=safeRate(resetRows.length,totalShopVisits);
-  analytics.push(metric("post_recall_tempo","Tempo after recall",resetRows.length?"supported":"unavailable",resetRows.length,
+  analytics.push(metric("post_recall_tempo","Recall-to-next-action timing",resetRows.length?"supported":"unavailable",resetRows.length,
     resetRows.length?`Among ${resetRows.length} of ${totalShopVisits} measured shop visits with a tracked fight/objective inside four minutes, the median shop→event gap is ${round(median(resetRows.map(x=>x.gapMin)),1)} minutes. Visits without tracked action inside four minutes are outside this timing distribution.`:"No shop visit could be paired with a fight/objective inside four minutes.",
     {totalShopVisits,pairedEventVisits:resetRows.length,pairedVisitRate:round(pairedShopRate,1),medianGapMin:round(median(resetRows.map(x=>x.gapMin)),1),rows:resetRows.slice(0,16)},resetRows));
 
@@ -339,7 +354,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
       crossedAheadAt25:count(measuredDefRows,x=>x.crossedAheadAt25===true),medianMovement:round(deficitMedianMove,0),rows:measuredDefRows},measuredDefRows));
 
 
-  // 13. Short-interval consecutive deaths
+  // 13. Short-interval consecutive deaths vs direct-role opponent
   const repeatWindowMin=4;
   const chainRows=games.flatMap(g=>arr(g?.deathRecovery?.events).map((e:any)=>({
     matchId:g.matchId,champion:g.champion,minute:round(e?.secondMin??eventMin(e),1),gapMin:finite(e?.gapSec)?round(n(e.gapSec)/60,2):null,...e
@@ -349,13 +364,19 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     repeatDeaths:n(g?.deathRecovery?.repeatDeaths||0),
     repeatRate:round(safeRate(n(g?.deathRecovery?.repeatDeaths||0),n(g?.deathRecovery?.opportunities||0)),1)
   })).filter(x=>x.opportunities>0);
+  const opponentRepeatRows=games.filter(g=>directPeer(g)).map(g=>({
+    matchId:g.matchId,opportunities:n(g?.opponentDeathRecovery?.opportunities||0),
+    repeatDeaths:n(g?.opponentDeathRecovery?.repeatDeaths||0)
+  })).filter(x=>x.opportunities>0);
   const repeatGames=repeatGameRows.filter(x=>x.repeatDeaths>0),totalRepeatOpps=sum(repeatGameRows,x=>x.opportunities);
-  const repeatRate=round(safeRate(chainRows.length,totalRepeatOpps),1);
+  const opponentRepeatOpps=sum(opponentRepeatRows,x=>x.opportunities),opponentRepeatEvents=sum(opponentRepeatRows,x=>x.repeatDeaths);
+  const repeatRate=round(safeRate(chainRows.length,totalRepeatOpps),1),opponentRepeatRate=round(safeRate(opponentRepeatEvents,opponentRepeatOpps),1);
+  const repeatRateDelta=finite(repeatRate)&&finite(opponentRepeatRate)?round(n(repeatRate)-n(opponentRepeatRate),1):null;
   analytics.push(metric("death_chains","Consecutive deaths within 4 minutes",chainRows.length||repeatGames.length?"supported":"unavailable",chainRows.length,
-    chainRows.length?`${chainRows.length} of ${totalRepeatOpps} consecutive-death opportunities (${repeatRate}%) had the next death within ${repeatWindowMin} minutes across ${repeatGames.length} of ${games.length} deep games; median gap was ${round(median(chainRows.map(x=>x.gapSec)),0)??"—"} seconds. Timing alone does not show that the first death caused the second.`:"No consecutive deaths fell inside the four-minute review window.",
+    chainRows.length?`${chainRows.length} of ${totalRepeatOpps} player consecutive-death opportunities (${repeatRate}%) had the next death within ${repeatWindowMin} minutes. The direct-role opponents were ${opponentRepeatEvents} of ${opponentRepeatOpps} (${opponentRepeatRate??"—"}%) in the same deep games${finite(repeatRateDelta)?`, a ${repeatRateDelta>=0?"+":""}${repeatRateDelta} percentage-point player-minus-opponent difference`:""}. Median player gap was ${round(median(chainRows.map(x=>x.gapSec)),0)??"—"} seconds. This is a pacing/risk comparison, not proof one death caused the next.`:"No consecutive deaths fell inside the four-minute review window.",
     {windowMinutes:repeatWindowMin,totalOpportunities:totalRepeatOpps,repeatEvents:chainRows.length,repeatRate,
+      opponentOpportunities:opponentRepeatOpps,opponentRepeatEvents,opponentRepeatRate,repeatRateDeltaPp:repeatRateDelta,
       gamesWithRepeat:repeatGames.length,medianGapSec:round(median(chainRows.map(x=>x.gapSec)),0),gameRows:repeatGameRows,rows:chainRows.slice(0,18)},chainRows));
-
 
   // 14. Ahead-state fight execution
   const ri=fights.filter(x=>x.e?.active===true&&finite(x.e?.goldDiffAtStart)).map(({g,e})=>({
