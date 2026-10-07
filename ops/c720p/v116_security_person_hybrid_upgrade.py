@@ -438,18 +438,25 @@ for p in (HYBRID,DETECT,LOCAL_REVIEW,DRIVE_REVIEW):
     r=subprocess.run([str(VENV),"-m","py_compile",str(p)],text=True,capture_output=True)
     if r.returncode:raise SystemExit(f"COMPILE_FAILED {p}: {r.stderr[-1200:]}")
 
-# Shadow test the new ensemble on three newest local clips before switching services.
-sys.path.insert(0,str(BIN))
+# Shadow test the new ensemble in the detector venv before switching services.
+HYBRID_MODEL_ID="hybrid-mobilenetssd+yolov5n-v116"
+shadow_code=r"""
+import json,pathlib,time
 from importlib.machinery import SourceFileLoader
-hy=SourceFileLoader('c720p_person_hybrid_v116_shadow',str(HYBRID)).load_module()
-root=Path("/opt/homeassistant/config/www/frontyard-security-new")
-clips=sorted((root/"clips").glob("*.mp4"),key=lambda p:p.stat().st_mtime,reverse=True)[:3]
-shadow=[]
-detector=hy.HybridDetector()
+BASE=pathlib.Path('/home/jespern/c720p-home-hub')
+hy=SourceFileLoader('c720p_person_hybrid_v116_shadow',str(BASE/'bin/c720p-person-hybrid-v116.py')).load_module()
+root=pathlib.Path('/opt/homeassistant/config/www/frontyard-security-new')
+clips=sorted((root/'clips').glob('*.mp4'),key=lambda p:p.stat().st_mtime,reverse=True)[:3]
+detector=hy.HybridDetector();shadow=[]
 for p in clips:
-    st=time.time();res=detector.analyze_clip(p,"quick")
-    shadow.append({"clip":p.name,"status":res["status"],"mobile":res["mobile_peak"],"yolo":res["yolo_peak"],"seconds":round(time.time()-st,1)})
-if clips and not shadow:raise SystemExit("V116_SHADOW_FAILED")
+    st=time.time();res=detector.analyze_clip(p,'quick')
+    shadow.append({'clip':p.name,'status':res['status'],'mobile':res['mobile_peak'],'yolo':res['yolo_peak'],'seconds':round(time.time()-st,1)})
+print(json.dumps({'model':hy.MODEL_ID,'shadow':shadow}))
+"""
+sr=subprocess.run([str(VENV),"-c",shadow_code],text=True,capture_output=True,timeout=240)
+if sr.returncode:raise SystemExit("V116_SHADOW_FAILED:"+sr.stderr[-1600:])
+shadow_payload=json.loads(sr.stdout);shadow=shadow_payload.get("shadow",[])
+if shadow_payload.get("model")!=HYBRID_MODEL_ID:raise SystemExit("V116_SHADOW_MODEL_MISMATCH")
 
 # Switch the live units only after model load, compile and inference all succeeded.
 def replace_exec(p,cmd):
@@ -491,7 +498,7 @@ run=subprocess.run(["systemctl","--user","start",DETECT_SU.name],text=True,captu
 if run.returncode:raise SystemExit("V116_LIVE_DETECT_FAILED:"+run.stderr[-1000:])
 
 idx=json.loads((BASE/"state/person-detection-index.json").read_text())
-newrows=[v for k,v in idx.get("items",{}).items() if k.startswith("new:") and v.get("model")==hy.MODEL_ID]
+newrows=[v for k,v in idx.get("items",{}).items() if k.startswith("new:") and v.get("model")==HYBRID_MODEL_ID]
 newrows.sort(key=lambda x:str(x.get("timestamp") or ""),reverse=True)
 
 print(json.dumps({
