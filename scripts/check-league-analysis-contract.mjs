@@ -175,6 +175,11 @@ ok(backend.includes('contestedObjectives>=3&&contestedJoins===0'), 'per-game obj
 ok(app.includes('ADC-vs-ADC lane movement')&&app.includes('direct-role lane movement'), 'frontend must disclose the role-correct roam lane-cost basis');
 ok(backend.includes('objectiveFamilyStats:{}')&&backend.includes('objectiveFamilySummary'), 'objective-family control/presence must remain exported');
 ok(html.includes('id="objectiveFamilyOverview"')&&app.includes('function renderObjectiveFamilyOverview('), 'main decision surface must expose rules-aware objective-family context');
+ok(html.includes('id="teamfightDecisionPanel"')&&app.includes('function renderTeamfightDecisionOverview(')&&backend.includes('function fightArea('), 'teamfight geography must be rendered separately from objective-family identity');
+ok(backend.includes('crossMapTradeSupported')&&backend.includes('joinReviewPriority')&&backend.includes('tradeWindowSec:90'), 'skipped fights must retain bounded cross-map compensation and join-review evidence');
+ok(backend.includes('peerDpmDelta:metric(peerRows')&&backend.includes('peerDeathsDelta:metric(peerRows')&&app.includes('Opponent-adjusted read:'), 'history direction must be direct-opponent adjusted instead of raw-output driven');
+ok(modelDoc.includes('## v303 opponent-adjusted history')&&modelDoc.includes('MMR-safe direction')&&modelDoc.includes('Teamfight geography and join-versus-trade review'), 'analysis model must document the v303 opponent-adjustment and teamfight decision policy');
+
 ok(html.includes('data-history-filter="objective-family"')&&app.includes('function objectiveFamilyMatchIds('), 'objective-family context must link to the exact recent matches containing supported contested windows');
 ok(app.includes('gameObjectiveFamilyRow(g,key)?.contestedEncounters')&&app.includes("filter==='objective-family'"), 'objective-family review must use backend family identity and remain a visibility-only match-history filter');
 ok(modelDoc.includes('### Objective-family match linkage')&&modelDoc.includes('never recomputes the report sample or coaching aggregates'), 'objective-family review linkage must remain non-mutating and documented');
@@ -209,7 +214,7 @@ ok(backend.includes('function outcomeStreakSummary('), 'Last-20 result streak he
 ok(backend.includes('outcomeStreaks=outcomeStreakSummary(games)'), 'result streaks must use the eligible displayed Last-20 sample');
 ok(app.includes('Longest win / loss streak')&&app.includes('Current result streak'), 'descriptive result streaks must remain visible');
 ok(app.includes('not treated as evidence of tilt, momentum, or player psychology'), 'result streaks must remain explicitly non-causal and non-psychological');
-ok(backend.includes('timelineGames:timeline.length')&&backend.includes('minGamesPerComparedGroup:2')&&backend.includes('laneReady(')&&backend.includes('timelineReady('), 'session deltas must require metric-specific paired coverage instead of one-game subgroup comparisons');
+ok(backend.includes('timelineGames:timeline.length')&&backend.includes('peerDpmGames:peerDpmGames.length')&&backend.includes('minGamesPerHeadlineMetricGroup:3'), 'session answer must require metric-specific peer-adjusted coverage instead of one-game subgroup comparisons');
 ok(app.includes('function sessionPairReady(')&&app.includes('Thin subgroups shown for traceability only'), 'session UI must independently gate stale saved-report deltas and label thin subgroups');
 ok(modelDoc.includes('One-game subgroup differences must never be promoted to an observed session/requeue pattern'), 'session sample minimum must remain explicit in the analysis model');
 ok(backend.includes('objectiveSetupDeltaVsOpponent'), 'objective-setup vision comparison must remain in analyzer');
@@ -222,7 +227,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.168'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.169'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
 ok(backend.includes('aboveOwnDeadTimeMedian:Number(g.damageRank)>2&&')&&backend.includes('aboveOwnTurretMedian:Number(g.damageRank)>2&&'), 'resource/output exemplar annotations must compute lower-damage state in their own callback scope');
 ok(backend.includes('highUnspentFightSamples')&&backend.includes('itemDisadvantageFightSamples')&&backend.includes('goldDeficitFightSamples')&&backend.includes('outnumberedFightSamples'), 'fight-state rates must use metric-specific supported-opportunity denominators');
 ok(backend.includes('const cleanOutcomeGames=games.filter(g=>g?.outcomeCompromised!==true)')&&backend.includes('afk_or_early_surrender_excluded_from_final_result_conversion'), 'final-result coaching must exclude compromised outcomes');
@@ -768,7 +773,7 @@ ok(app.includes("First tracked impact vs Jungle")&&app.includes("peerComparison.
 ok(app.includes("Pre-objective side-lane deaths / game")&&app.includes("behaviorSummary.preNeutralObjectiveSideLaneDeathsPerGame"), 'Top progress comparison must retain side-lane risk evidence');
 ok(modelDoc.includes('## Role-specific rolling progress comparison'), 'analysis documentation must preserve role-specific rolling progress semantics');
 ok(backend.includes('kpGames:kpGames.length')&&backend.includes('vpmGames:vpmGames.length'), 'session model must retain per-metric KP/VPM evidence counts');
-ok(backend.includes('game3PlusKpDelta')&&backend.includes('postLossVpmDelta')&&backend.includes('minMetricGamesPerComparedGroup:2'), 'session model must gate new role deltas on paired valid observations');
+ok(backend.includes('game3PlusPeerKpDelta')&&backend.includes('postLossPeerVpmDelta')&&backend.includes('minMetricGamesPerComparedGroup:2'), 'session model must gate new role deltas on paired valid observations');
 ok(app.includes("role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole)")&&app.includes("if(role==='SUPPORT'){")&&app.includes("game 3+ vision/min")&&app.includes("}else if(role==='JUNGLE'){")&&app.includes("game 3+ CS/min"), 'session presentation must follow the canonical selected role with distinct Support and Jungle metrics');
 ok(modelDoc.includes('## Role-aware session habit model'), 'analysis documentation must preserve role-aware session semantics');
 ok(backend.includes('g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false'), 'session Gold @15 must require a trusted direct-role peer');
@@ -952,22 +957,22 @@ ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&lead25Games.leng
 ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&midRoutingGames.length>=4'), 'direct-role mid-routing coaching must remain carry-role scoped');
 ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&firstResetCleanGames.length>=4'), 'first-reset direct-role economy coaching must remain carry-role scoped');
 ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&recentTrend.goldDiff15.recentN>=4'), 'recent Gold@15 coaching must remain carry-role scoped');
-ok(backend.includes('["ADC","MID","TOP","JUNGLE"].includes(primaryRole)&&recentTrend.csMin.recentN>=4'), 'recent CS/min coaching must exclude Support while retaining Jungle farm tempo');
+ok(backend.includes('["ADC","MID","TOP","JUNGLE"].includes(primaryRole)&&recentTrend.peerCsMinDelta.recentN>=4'), 'recent farming coaching must use direct-role-opponent CS/min deltas');
 ok(modelDoc.includes('## v242 carry-lane coaching boundary'), 'analysis documentation must preserve carry-lane coaching role safety');
 
-ok(backend.includes('primaryRole==="SUPPORT"')&&backend.includes('game3PlusVpmDelta')&&backend.includes('postLossVpmDelta'), 'Support session coaching must use role-specific VPM/KP');
-ok(backend.includes('primaryRole==="JUNGLE"')&&backend.includes('game3PlusCsMinDelta')&&backend.includes('postLossCsMinDelta'), 'Jungle session coaching must use role-specific CS/KP');
+ok(backend.includes('primaryRole==="SUPPORT"')&&backend.includes('game3PlusPeerVpmDelta')&&backend.includes('postLossPeerVpmDelta'), 'Support session coaching must use role-specific VPM/KP');
+ok(backend.includes('primaryRole==="JUNGLE"')&&backend.includes('game3PlusPeerCsMinDelta')&&backend.includes('postLossPeerCsMinDelta'), 'Jungle session coaching must use role-specific CS/KP');
 ok(backend.includes('sessionMetricReady')&&backend.includes('Number(a?.[field]||0)>=3&&Number(b?.[field]||0)>=3'), 'session coaching must enforce metric-specific evidence in both compared groups');
 ok(backend.includes('The timing association does not identify fatigue, focus or any other cause.'), 'session coaching must avoid unmeasured causal/mental-state explanations');
 ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&higherRankGames.length>=3&&higherLane.length>=3'), 'higher-rank lane-gold coaching must remain carry-role scoped');
 ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&lowerRankStats.laneGames>=3'), 'lower-rank lane-gold coaching must remain carry-role scoped');
 ok(modelDoc.includes('## v243 role-specific session coaching'), 'analysis documentation must preserve v243 session/rank role safety');
 
-ok(backend.includes('"sessionBehavior.game3PlusVpmDelta":["sessionBehavior.firstGame.vpmGames","sessionBehavior.game3Plus.vpmGames"]')&&backend.includes('"sessionBehavior.postLossKpDelta":["sessionBehavior.quickAfterLoss.kpGames","sessionBehavior.quickAfterWin.kpGames"]'), 'session target registry must include paired VPM/KP/CS denominators');
-ok(backend.includes('"sessionBehavior.game3PlusCsMinDelta":["sessionBehavior.firstGame.csMinGames","sessionBehavior.game3Plus.csMinGames"]')&&app.includes("'sessionBehavior.postLossCsMinDelta':['sessionBehavior.quickAfterLoss.csMinGames','sessionBehavior.quickAfterWin.csMinGames']"), 'session target backend/frontend registries must retain CS-min parity');
-ok(backend.includes('primaryRole==="SUPPORT"')&&backend.includes('"Game 3+ vision/min delta"')&&backend.includes('"Quick post-loss kill-participation delta"'), 'Support consistency targets must remain role-specific');
-ok(backend.includes('primaryRole==="JUNGLE"')&&backend.includes('"Game 3+ CS/min delta"')&&backend.includes('"Quick post-loss CS/min delta"'), 'Jungle consistency targets must remain role-specific');
-ok(backend.includes('Number(sessionModel.game3PlusGoldDelta)<=-300')&&backend.includes('Number(sessionModel.game3PlusCsMinDelta)<=-0.3'), 'carry consistency targets must require a materially unfavorable session delta');
+ok(backend.includes('"sessionBehavior.game3PlusPeerVpmDelta":["sessionBehavior.firstGame.peerVpmGames","sessionBehavior.game3Plus.peerVpmGames"]')&&backend.includes('"sessionBehavior.postLossPeerKpDelta":["sessionBehavior.quickAfterLoss.peerKpGames","sessionBehavior.quickAfterWin.peerKpGames"]'), 'session target registry must include paired VPM/KP/CS denominators');
+ok(backend.includes('"sessionBehavior.game3PlusPeerCsMinDelta":["sessionBehavior.firstGame.peerCsMinGames","sessionBehavior.game3Plus.peerCsMinGames"]')&&app.includes("'sessionBehavior.postLossPeerCsMinDelta':['sessionBehavior.quickAfterLoss.peerCsMinGames','sessionBehavior.quickAfterWin.peerCsMinGames']"), 'session target backend/frontend registries must retain CS-min parity');
+ok(backend.includes('primaryRole==="SUPPORT"')&&backend.includes('"Game 3+ vision/min vs opponent delta"')&&backend.includes('"Quick post-loss KP vs opponent delta"'), 'Support consistency targets must remain role-specific');
+ok(backend.includes('primaryRole==="JUNGLE"')&&backend.includes('"Game 3+ CS/min vs opponent delta"')&&backend.includes('"Quick post-loss CS/min vs opponent delta"'), 'Jungle consistency targets must remain role-specific');
+ok(backend.includes('Number(sessionModel.game3PlusGoldDelta)<=-300')&&backend.includes('Number(sessionModel.game3PlusPeerCsMinDelta)<=-0.3'), 'carry consistency targets must require a materially unfavorable session delta');
 ok(app.includes("if(unit==='vpm')return signed(n,2)+' VPM'"), 'frontend must format VPM session targets explicitly');
 ok(modelDoc.includes('## v244 role-specific session practice targets'), 'analysis documentation must preserve role-specific session target semantics');
 
