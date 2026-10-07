@@ -310,14 +310,16 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   // 15. Fight lead conversion
   const winFightRows:any[]=[];
   for(const {g,e} of fights.filter(x=>x.e?.active===true&&x.e?.lostFight===false)){
-    const end=n(e?.endMin??e?.startMin),to=end+1.5;
-    const obj=count(objectiveEvents(g),o=>finite(eventMin(o))&&n(eventMin(o))>=end&&n(eventMin(o))<=to&&(o?.teamSecured===true||o?.secured===true||o?.won===true));
-    const structs=count(structureEvents(g),o=>finite(eventMin(o))&&n(eventMin(o))>=end&&n(eventMin(o))<=to);
-    const conv=count(arr(g?.killConversion?.events),o=>finite(eventMin(o))&&n(eventMin(o))>=end&&n(eventMin(o))<=to);
-    winFightRows.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,objectives:obj,structures:structs,conversionSignals:conv,converted:obj+structs+conv>0});
+    const end=n(e?.endMin??e?.startMin),to=end+1.5,teamId=n(g?.teamId||0);
+    const rawObjectives=arr(g?.objectives).filter((o:any)=>finite(eventMin(o))&&n(eventMin(o))>=end&&n(eventMin(o))<=to&&(!teamId||n(o?.ownerTeam||0)===teamId));
+    const neutral=rawObjectives.filter((o:any)=>txt(o?.type)==="ELITE_MONSTER_KILL").length;
+    const structures=rawObjectives.filter((o:any)=>txt(o?.type)==="BUILDING_KILL"||txt(o?.type)==="TURRET_PLATE_DESTROYED").length;
+    const playerFollowUpKills=arr(g?.involvedKills).filter((o:any)=>finite(eventMin(o))&&n(eventMin(o))>=end&&n(eventMin(o))<=to).length;
+    const converted=neutral+structures+playerFollowUpKills>0;
+    winFightRows.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,objectives:neutral,structures,playerFollowUpKills,converted});
   }
   analytics.push(metric("fight_lead_conversion","Fight-win conversion",winFightRows.length?"supported":"unavailable",winFightRows.length,
-    winFightRows.length?`${round(safeRate(count(winFightRows,x=>x.converted),winFightRows.length),0)}% of tracked active fight wins had a supported objective/structure/kill-conversion signal in the following ~90 seconds.`:"No active fight wins to evaluate.",
+    winFightRows.length?`${round(safeRate(count(winFightRows,x=>x.converted),winFightRows.length),0)}% of tracked active fight wins had a same-team neutral objective/structure gain or a reviewed-player follow-up kill contribution in the following ~90 seconds.`:"No active fight wins to evaluate.",
     {conversionRate:round(safeRate(count(winFightRows,x=>x.converted),winFightRows.length),1),rows:winFightRows},winFightRows));
 
   // 16. Fight loss containment
@@ -340,12 +342,22 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
 
   // 18. Repeated geographical mistake clusters
   const geo=new Map<string,{zone:string,count:number,joinMiss:number,badDeaths:number,matches:Set<string>}>();
-  for(const {g,e} of abs){if(e?.joinReviewPriority!=="high")continue;const k=txt(e?.fightZone||"unknown");const r=geo.get(k)||{zone:k,count:0,joinMiss:0,badDeaths:0,matches:new Set()};r.count++;r.joinMiss++;r.matches.add(g.matchId);geo.set(k,r);}
-  for(const g of games)for(const [k,v] of Object.entries(g?.badDeathZones||{})){const r=geo.get(k)||{zone:k,count:0,joinMiss:0,badDeaths:0,matches:new Set()};r.count+=n(v);r.badDeaths+=n(v);r.matches.add(g.matchId);geo.set(k,r);}
+  const geoMapEvents:any[]=[];
+  for(const {g,e} of abs){
+    if(e?.joinReviewPriority!=="high")continue;
+    const k=txt(e?.fightZone||"unknown"),r=geo.get(k)||{zone:k,count:0,joinMiss:0,badDeaths:0,matches:new Set()};
+    r.count++;r.joinMiss++;r.matches.add(g.matchId);geo.set(k,r);
+    if(e?.fightPosition)geoMapEvents.push({matchId:g.matchId,minute:round(e.startMin,1),zone:k,type:"missed_join",position:e.fightPosition});
+  }
+  for(const g of games)for(const d of badDeathEvents(g)){
+    const k=txt(d?.fightZone||d?.zone||"unknown"),r=geo.get(k)||{zone:k,count:0,joinMiss:0,badDeaths:0,matches:new Set()};
+    r.count++;r.badDeaths++;r.matches.add(g.matchId);geo.set(k,r);
+    if(finite(d?.x)&&finite(d?.y))geoMapEvents.push({matchId:g.matchId,minute:round(d.time,1),zone:k,type:"bad_death",position:{x:n(d.x),y:n(d.y)}});
+  }
   const geoRows=[...geo.values()].map(x=>({...x,matches:[...x.matches]})).sort((a,b)=>b.count-a.count);
   analytics.push(metric("geographical_clusters","Repeated geographical mistake clusters",geoRows.length?"supported":"unavailable",sum(geoRows,x=>x.count),
-    geoRows.length?`Highest repeated review zone: ${geoRows[0].zone} (${geoRows[0].count} supported mistake/review signals).`:"No repeated supported geography cluster.",
-    {rows:geoRows.slice(0,12)}));
+    geoRows.length?`Highest repeated map-relative review zone: ${geoRows[0].zone} (${geoRows[0].count} supported mistake/review signals).`:"No repeated supported geography cluster.",
+    {rows:geoRows.slice(0,12),mapEvents:geoMapEvents.slice(0,40)}));
 
   // 19. Champion-specific decision tendencies
   const champs=championGroup(games);
@@ -362,23 +374,19 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
 
   // 21. Expected-performance residuals
   const residuals=performanceResidualRows(games),recentResidual=residuals.filter(x=>recent.slice(0,8).some(g=>g.matchId===x.matchId));
+  const contextualResiduals=residuals.filter(x=>x.contextLevel==="champion_opponent_duration_leave_one_out");
   analytics.push(metric("expected_performance_residual","Expected-performance residuals",residuals.length>=5?"proxy":"thin",residuals.length,
-    residuals.length>=5?`Recent opponent-adjusted DPM residual averages ${round(mean(recentResidual.map(x=>x.residual)),0)} relative to the player's own champion/opponent/duration expectation. This is an experimental within-history residual, not a causal MMR model.`:"Not enough direct-opponent DPM history for a residual model.",
-    {recentResidual:round(mean(recentResidual.map(x=>x.residual)),1),rows:residuals.slice(-20)}));
+    residuals.length>=5?`Recent leave-one-out opponent-adjusted DPM residual averages ${round(mean(recentResidual.map(x=>x.residual)),0)}. ${contextualResiduals.length} rows use repeated champion×opponent×duration context; the remainder fall back to a leave-one-out global expectation.`:"Not enough direct-opponent DPM history for a residual model.",
+    {recentResidual:round(mean(recentResidual.map(x=>x.residual)),1),contextualRows:contextualResiduals.length,rows:residuals.slice(-20)}));
 
   // 22. Session degradation by component
-  const sm=sessionModel||{};
-  const componentRows=[
-    ["DPM vs peer",sm.game3PlusPeerDpmDelta],
-    ["CS/min vs peer",sm.game3PlusPeerCsMinDelta],
-    ["Gold @15",sm.game3PlusGoldDelta],
-    ["KP vs peer",sm.game3PlusPeerKpDelta],
-    ["VPM vs peer",sm.game3PlusPeerVpmDelta],
-    ["Risky deaths",sm.game3PlusBadDeathDelta],
-    ["First impact",sm.game3PlusImpactDelta]
-  ].filter(x=>finite(x[1])).map(([label,value])=>({label,value:round(value,2)}));
+  const supportedSessionSignals=arr(sessionModel?.answer?.supportedSignals);
+  const componentRows=supportedSessionSignals.map((s:any)=>({
+    label:txt(s?.label),rawDelta:round(s?.delta,2),normalized:round(s?.normalized,2),threshold:round(s?.threshold,2),inverse:s?.inverse===true,
+    recentN:n(s?.recentN||0),baselineN:n(s?.baselineN||0)
+  })).filter((x:any)=>finite(x.normalized));
   analytics.push(metric("session_components","Session change by component",componentRows.length?"supported":"unavailable",componentRows.length,
-    componentRows.length?"Breaks the opener→game-3+ answer into the individual opponent-adjusted / timeline-supported components so you can see what changes first.":"No session component has enough paired evidence.",
+    componentRows.length?"Shows each evidence-gated opener→game-3+ signal on its own practical-change scale. Positive normalized values mean better later-session performance even for inverse metrics such as risky deaths or first-impact timing.":"No session component has enough evidence.",
     {rows:componentRows}));
 
   // 23. Requeue sweet spot
@@ -390,24 +398,24 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     const bucket=gap<10?"<10m":gap<25?"10–25m":gap<45?"25–45m":"45m+";
     gaps.push({matchId:g.matchId,gapMin:round(gap,1),bucket,relativeComposite:round(score,3)});
   }
-  const gapRows=["<10m","10–25m","25–45m","45m+"].map(bucket=>{const xs=gaps.filter(x=>x.bucket===bucket);return{bucket,games:xs.length,avgRelativeComposite:round(mean(xs.map(x=>x.relativeComposite)),3)};});
-  const bestGap=gapRows.filter(x=>x.games>=3&&finite(x.avgRelativeComposite)).sort((a,b)=>n(b.avgRelativeComposite)-n(a.avgRelativeComposite))[0]||null;
+  const gapRows=["<10m","10–25m","25–45m","45m+"].map(bucket=>{const xs=gaps.filter(x=>x.bucket===bucket);return{bucket,games:xs.length,avgRelativeComposite:round(mean(xs.map(x=>x.relativeComposite)),3),supported:xs.length>=3};});
+  const bestGap=gapRows.filter(x=>x.supported&&finite(x.avgRelativeComposite)).sort((a,b)=>n(b.avgRelativeComposite)-n(a.avgRelativeComposite))[0]||null;
   analytics.push(metric("requeue_sweet_spot","Requeue sweet spot",gaps.length?"proxy":"unavailable",gaps.length,
     bestGap?`Best-supported break bucket is ${bestGap.bucket} across ${bestGap.games} games on a normalized direct-opponent composite. Treat as scheduling context, not proof the break caused performance.`:"No break-time bucket has at least three direct-opponent comparable games yet.",
-    {rows:gapRows,best:bestGap}));
+    {rows:gapRows,best:bestGap,compositeDefinition:"mean of available opponent-relative DPM, CS/min, deaths (inverted), KP and GPM after fixed scaling"}));
 
-  // 24. Mistake recurrence / half-life
-  const issues=games.map(g=>({matchId:g.matchId,start:gameStart(g),issues:issueCount(g)}));
-  const peak=Math.max(0,...issues.map(x=>x.issues)),half=peak/2;
-  let halfLifeGames:null|number=null;
-  if(peak>0){
-    const pi=issues.findIndex(x=>x.issues===peak);
-    for(let i=pi+1;i<issues.length;i++){const w=issues.slice(i,Math.min(issues.length,i+3));if(w.length>=2&&mean(w.map(x=>x.issues))!<=half){halfLifeGames=i-pi;break;}}
-  }
+  // 24. Mistake recurrence trend
+  const issues=games.map(g=>({matchId:g.matchId,start:gameStart(g),issues:issueCount(g),...issueComponents(g)}));
   const recentIssues=mean(issues.slice(-5).map(x=>x.issues)),priorIssues=mean(issues.slice(Math.max(0,issues.length-10),Math.max(0,issues.length-5)).map(x=>x.issues));
-  analytics.push(metric("mistake_recurrence","Mistake recurrence half-life",issues.length?"proxy":"unavailable",issues.length,
-    peak>0?`Peak supported issue load was ${peak} in one game; the first sustained ≤50% window arrived after ${halfLifeGames??"not yet observed"} game(s). Recent five-game issue rate: ${round(recentIssues,2)} per game.`:"No supported issue events in this sample.",
-    {peak,halfLifeGames,recentFive:round(recentIssues,2),priorFive:round(priorIssues,2),rows:issues.slice(-20)}));
+  const recentByType={
+    riskyDeaths:mean(issues.slice(-5).map(x=>x.riskyDeaths)),
+    preObjectiveDeaths:mean(issues.slice(-5).map(x=>x.preObjectiveDeaths)),
+    recentShopAbsences:mean(issues.slice(-5).map(x=>x.recentShopAbsences)),
+    missedJoinReviews:mean(issues.slice(-5).map(x=>x.missedJoinReviews))
+  };
+  analytics.push(metric("mistake_recurrence","Mistake recurrence trend",issues.length?"proxy":"unavailable",issues.length,
+    issues.length?`Latest five-game supported issue-signal load is ${round(recentIssues,2)} per game versus ${round(priorIssues,2)??"—"} in the prior five. This is not a target-linked half-life because the current analyzer does not have a defensible per-target start point.`:"No supported issue events in this sample.",
+    {targetLinked:false,recentFive:round(recentIssues,2),priorFive:round(priorIssues,2),recentByType,rows:issues.slice(-20)}));
 
   // 25. Automatic replay shortlist
   const candidates:any[]=[];
@@ -415,7 +423,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     let score=e?.joinReviewPriority==="high"?80:e?.lostFight?45:20;
     if(e?.crossMapTradeSupported===true)score+=25;
     candidates.push({matchId:g.matchId,minute:round(e.startMin,1),type:"Skipped fight",zone:e.fightZone,score,
-      reason:e?.joinReviewPriority==="high"?"Lost, reachable, no supported compensation":e?.crossMapTradeSupported?"Cross-map trade worth validating":"Skipped fight with incomplete counterfactual"});
+      reason:e?.joinReviewPriority==="high"?"Lost, straight-line reachable, no supported compensation":e?.crossMapTradeSupported?"Cross-map trade worth validating":"Skipped fight with incomplete counterfactual"});
   }
   for(const {g,e} of fights){
     if(e?.firstAllyDeath) candidates.push({matchId:g.matchId,minute:round(e.startMin,1),type:"Fight entry",zone:e.fightZone,score:70,reason:"First allied death in tracked active fight"});
@@ -423,13 +431,15 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     if(e?.outnumberedAtFirstKill&&e?.lostFight) candidates.push({matchId:g.matchId,minute:round(e.startMin,1),type:"Numbers check",zone:e.fightZone,score:65,reason:"Entered a locally outnumbered fight that was lost"});
   }
   for(const g of games){
-    if(n(g?.preObjectiveDeathCount||0)>0)candidates.push({matchId:g.matchId,minute:null,type:"Objective setup",zone:null,score:72,reason:`${n(g.preObjectiveDeathCount)} pre-objective death(s)`});
-    if(n(g?.deathRecovery?.repeatDeaths||0)>0)candidates.push({matchId:g.matchId,minute:null,type:"Death chain",zone:null,score:68,reason:`${n(g.deathRecovery.repeatDeaths)} repeat death(s) in tracked recovery windows`});
+    const preDeaths=arr(g?.preObjectiveDeaths);
+    for(const d of preDeaths.slice(0,2))candidates.push({matchId:g.matchId,minute:round(eventMin(d),1),type:"Objective setup",zone:d?.fightZone||d?.zone||null,score:72,reason:"Pre-objective death"});
+    const repeats=arr(g?.deathRecovery?.events).filter((x:any)=>finite(x?.secondMin));
+    for(const d of repeats.slice(0,2))candidates.push({matchId:g.matchId,minute:round(d.secondMin,1),type:"Death chain",zone:null,score:d?.highRisk?72:68,reason:"Repeat death inside the tracked recovery window"});
   }
   const shortlist=candidates.sort((a,b)=>b.score-a.score).filter((x,i,a)=>a.findIndex(y=>y.matchId===x.matchId&&y.type===x.type&&y.minute===x.minute)===i).slice(0,10);
-  analytics.push(metric("automatic_replay_shortlist","Automatic replay shortlist",shortlist.length?"supported":"unavailable",shortlist.length,
-    shortlist.length?`Top ${shortlist.length} moments are ranked by learning value from fight entry, skipped-fight opportunity cost, objective setup and repeat-death evidence.`:"No high-value replay moment crossed the current rules.",
-    {rows:shortlist},shortlist));
+  analytics.push(metric("automatic_replay_shortlist","Automatic replay shortlist",shortlist.length?"proxy":"unavailable",shortlist.length,
+    shortlist.length?`Top ${shortlist.length} moments are ranked by a transparent heuristic for learning value from fight entry, skipped-fight opportunity cost, objective setup and repeat-death evidence.`:"No high-value replay moment crossed the current rules.",
+    {heuristicPriority:true,rows:shortlist},shortlist));
 
   return {
     version:"decision-intelligence-v1",
