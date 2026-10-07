@@ -429,7 +429,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     label:txt(s?.label),rawDelta:round(s?.delta,2),normalized:round(s?.normalized,2),threshold:round(s?.threshold,2),inverse:s?.inverse===true,
     recentN:n(s?.recentN||0),baselineN:n(s?.baselineN||0)
   })).filter((x:any)=>finite(x.normalized));
-  analytics.push(metric("session_components","Session change by component",componentRows.length?"supported":"unavailable",componentRows.length,
+  analytics.push(metric("session_components","Session change by component",componentRows.length?"proxy":"unavailable",componentRows.length,
     componentRows.length?"Shows each evidence-gated opener→game-3+ signal on its own practical-change scale. Positive normalized values mean better later-session performance even for inverse metrics such as risky deaths or first-impact timing.":"No session component has enough evidence.",
     {rows:componentRows}));
 
@@ -501,7 +501,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
 
 
   return {
-    version:"decision-intelligence-v3",
+    version:"decision-intelligence-v4",
     generatedFromGames:games.length,
     deepGames:games.length,
     historyGames:history.length,
