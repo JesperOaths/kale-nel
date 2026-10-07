@@ -76,7 +76,7 @@ async function converge(){
 
 const metric=(value,n)=>({value,n});
 function buildGames(){
-  const champs=['Jinx','KaiSa','Ashe','Caitlyn','Jinx','KaiSa','Jinx','Ashe','Caitlyn','Jinx','KaiSa','Ashe','Jinx','Caitlyn','KaiSa','Jinx','Ashe','KaiSa','Jinx','Caitlyn'];
+  const champs=['Jinx','Kaisa','Ashe','Caitlyn','Jinx','Kaisa','Jinx','Ashe','Caitlyn','Jinx','Kaisa','Ashe','Jinx','Caitlyn','Kaisa','Jinx','Ashe','Kaisa','Jinx','Caitlyn'];
   const opponents=['Ezreal','Jhin','MissFortune','Sivir','Varus','Lucian','Xayah','Smolder','Aphelios','Jhin','Ezreal','Sivir','Varus','Lucian','Xayah','Smolder','Aphelios','MissFortune','Jhin','Ezreal'];
   const g15=[900,720,610,520,350,210,80,-50,-180,-420,-650,-900,500,260,-300,-760,680,-120,40,-540];
   const g25=[1100,850,300,-120,700,100,-250,180,-600,-200,-900,-1250,950,400,-80,-350,720,-300,260,-980];
@@ -151,7 +151,8 @@ function buildGames(){
 }
 
 function analytic(id,title,evidence={},rows=[],status='supported'){
-  return{id,title,status,sample:Math.max(rows.length,Number(evidence.sample||0),5),summary:title+' visual fixture.',evidence:{...evidence,rows}};
+  const sample=evidence.sample??evidence.totalOpportunities??(Array.isArray(evidence.states)?evidence.states.reduce((n,s)=>n+Number(s.fights||0),0):rows.length);
+  return{id,title,status,sample:Number(sample),summary:title+' visual fixture.',evidence:{...evidence,rows}};
 }
 function buildDecisionIntelligence(games){
   const m=id=>games[Math.max(0,Math.min(games.length-1,id))].matchId;
@@ -187,7 +188,7 @@ function buildDecisionIntelligence(games){
     analytic('fight_loss_containment','Post-loss risk before next fight',{noExtraRiskDeathRate:92},[1,3,5,7,9,11,13,15,17,19].map((i,j)=>({matchId:m(i),noExtraRiskDeath:j!==4}))),
     analytic('objective_trading','Objective / structure overlap after skipped fights',{sample:tradeRows.length},tradeRows.map(x=>({...x,fightZone:x.zone}))),
     analytic('geographical_clusters','Geographical review clusters',{mapEvents:[{matchId:m(3),type:'bad_death',zone:'their mid outer-tower area',minute:19.1,position:{x:9800,y:8200}},{matchId:m(7),type:'bad_death',zone:'bot lane central',minute:18.4,position:{x:7200,y:4800}},{matchId:m(14),type:'missed_join',zone:'their mid outer-tower area',minute:22.2,position:{x:10100,y:8400}}]},[{zone:'their mid outer-tower area',count:6,sampledExposureMin:15.2,signalsPer30SampledMin:11.84},{zone:'bot lane central',count:9,sampledExposureMin:42.5,signalsPer30SampledMin:6.35},{zone:'mid river',count:5,sampledExposureMin:28.4,signalsPer30SampledMin:5.28}],'proxy'),
-    analytic('champion_tendencies','Champion tendencies',{sample:3},[{champion:'Jinx',games:8,riskyDeathsPerGame:1.1,crossMapTradeRate:55,skippedFightSamples:9,activeFightSurvivalRate:68,activeFightSamples:12},{champion:'KaiSa',games:6,riskyDeathsPerGame:.8,crossMapTradeRate:48,skippedFightSamples:6,activeFightSurvivalRate:73,activeFightSamples:9},{champion:'Ashe',games:4,riskyDeathsPerGame:1.3,crossMapTradeRate:60,skippedFightSamples:5,activeFightSurvivalRate:64,activeFightSamples:7}],'thin'),
+    analytic('champion_tendencies','Champion tendencies',{sample:3},[{champion:'Jinx',games:8,riskyDeathsPerGame:1.1,crossMapTradeRate:55,skippedFightSamples:9,activeFightSurvivalRate:68,activeFightSamples:12},{champion:'Kaisa',games:6,riskyDeathsPerGame:.8,crossMapTradeRate:48,skippedFightSamples:6,activeFightSurvivalRate:73,activeFightSamples:9},{champion:'Ashe',games:4,riskyDeathsPerGame:1.3,crossMapTradeRate:60,skippedFightSamples:5,activeFightSurvivalRate:64,activeFightSamples:7}],'thin'),
     analytic('matchup_adjusted_lane','Matchup-adjusted lane context',{sample:2},[{matchup:'Jinx vs Jhin',games:4,avgGold15:-120,avgDpmVsPeer:85},{matchup:'KaiSa vs Ezreal',games:3,avgGold15:180,avgDpmVsPeer:40},{matchup:'Ashe vs Sivir',games:3,avgGold15:-260,avgDpmVsPeer:62}],'thin'),
     analytic('expected_performance_residual','Expected-performance residual',{recentResidual:28,recentResidualGames:10,recentResidualStatistic:'median'},residual),
     analytic('session_components','Later-session components',{sample:4},[{label:'Gold@15 vs role',rawDelta:-310,baselineN:8,recentN:7,normalized:-2.1},{label:'CS/min vs role',rawDelta:.23,baselineN:8,recentN:7,normalized:1.5},{label:'DPM vs role',rawDelta:72,baselineN:8,recentN:7,normalized:1.2},{label:'Deaths vs role',rawDelta:.18,baselineN:8,recentN:7,normalized:-.7}]),
@@ -251,10 +252,10 @@ function buildFixtureReport(){
       trajectoryWindows:trajectory,
       championHistory:[
         {champion:'Jinx',games:36,cleanGames:34,cleanWinRate:56,historyShare:42,csMin:metric(7.4,36),dpm:metric(720,36),deaths:metric(5.1,36),laneCs10:metric(80,34),recentDpm:metric(748,12),priorDpm:metric(690,12)},
-        {champion:'KaiSa',games:24,cleanGames:23,cleanWinRate:52,historyShare:28,csMin:metric(7.2,24),dpm:metric(682,24),deaths:metric(4.8,24),laneCs10:metric(76,23),recentDpm:metric(700,8),priorDpm:metric(665,8)},
+        {champion:'Kaisa',games:24,cleanGames:23,cleanWinRate:52,historyShare:28,csMin:metric(7.2,24),dpm:metric(682,24),deaths:metric(4.8,24),laneCs10:metric(76,23),recentDpm:metric(700,8),priorDpm:metric(665,8)},
         {champion:'Ashe',games:14,cleanGames:14,cleanWinRate:50,historyShare:16,csMin:metric(7.0,14),dpm:metric(645,14),deaths:metric(5.0,14),laneCs10:metric(74,14),recentDpm:metric(660,5),priorDpm:metric(630,5)}
       ],
-      topChampions:[{champion:'Jinx',games:36},{champion:'KaiSa',games:24},{champion:'Ashe',games:14}]
+      topChampions:[{champion:'Jinx',games:36},{champion:'Kaisa',games:24},{champion:'Ashe',games:14}]
     },
     decisionIntelligence,
     replayReviewQueue,
