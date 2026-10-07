@@ -280,17 +280,19 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   const leadRows=leads.map(g=>({matchId:g.matchId,gold15:round(g.goldDiff15,0),gold25:round(g.goldDiff25,0),
     retainedTo25:finite(g.goldDiff25)?n(g.goldDiff25)>=n(g.goldDiff15)*.5:null,killConversionRate:g?.killConversion?.rate??null,
     structureEvents:arr(g?.structurePressure?.events).length}));
-  analytics.push(metric("lead_utilisation","Lead utilisation curve",leadRows.length?"supported":"unavailable",leadRows.length,
+  const measuredLeadRows=leadRows.filter(x=>finite(x.gold25));
+  analytics.push(metric("lead_utilisation","Lead utilisation curve",measuredLeadRows.length>=2?"supported":measuredLeadRows.length?"thin":"unavailable",measuredLeadRows.length,
     leadRows.length?`${count(leadRows,x=>x.retainedTo25===true)} of ${count(leadRows,x=>x.retainedTo25!==null)} ≥500g-at-15 games retained at least half of that direct-role lead to 25 when 25-minute evidence existed.`:"No ≥500g direct-role lead at 15 in the current deep sample.",
-    {rows:leadRows},leadRows));
+    {eligibleLeadGames:leadRows.length,rows:measuredLeadRows},measuredLeadRows));
 
   // 12. Deficit recovery quality
   const deficits=games.filter(g=>finite(g?.goldDiff15)&&n(g.goldDiff15)<=-500);
   const defRows=deficits.map(g=>({matchId:g.matchId,gold15:round(g.goldDiff15,0),gold25:round(g.goldDiff25,0),
     recovery:finite(g.goldDiff25)?round(n(g.goldDiff25)-n(g.goldDiff15),0):null,recoveredToEven:finite(g.goldDiff25)&&n(g.goldDiff25)>=-100}));
-  analytics.push(metric("deficit_recovery","Deficit recovery quality",defRows.length?"supported":"unavailable",defRows.length,
+  const measuredDefRows=defRows.filter(x=>finite(x.gold25));
+  analytics.push(metric("deficit_recovery","Deficit recovery quality",measuredDefRows.length>=2?"supported":measuredDefRows.length?"thin":"unavailable",measuredDefRows.length,
     defRows.length?`Average 15→25 direct-role recovery from ≥500g deficits: ${round(mean(defRows.map(x=>x.recovery)),0)}g. This is team-context recovery, not proof it was achieved without teammate help.`:"No ≥500g deficit-at-15 games with this role.",
-    {rows:defRows},defRows));
+    {eligibleDeficitGames:defRows.length,rows:measuredDefRows},measuredDefRows));
 
   // 13. Death chain analysis
   const chainRows=games.flatMap(g=>arr(g?.deathRecovery?.events).map((e:any)=>({matchId:g.matchId,champion:g.champion,minute:round(eventMin(e),1),...e})));
@@ -361,7 +363,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
 
   // 19. Champion-specific decision tendencies
   const champs=championGroup(games);
-  analytics.push(metric("champion_tendencies","Champion-specific decision tendencies",champs.length?"supported":"unavailable",games.length,
+  analytics.push(metric("champion_tendencies","Champion-specific decision tendencies",champs.some(x=>x.games>=3)?"supported":champs.length?"thin":"unavailable",games.length,
     champs.length?"Groups the reviewed account only by its own champion and compares skipped-fight, survival, risky-death and conversion tendencies.":"No champion sample.",
     {rows:champs.slice(0,12)}));
 
@@ -375,7 +377,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   // 21. Expected-performance residuals
   const residuals=performanceResidualRows(games),recentResidual=residuals.filter(x=>recent.slice(0,8).some(g=>g.matchId===x.matchId));
   const contextualResiduals=residuals.filter(x=>x.contextLevel==="champion_opponent_duration_leave_one_out");
-  analytics.push(metric("expected_performance_residual","Expected-performance residuals",residuals.length>=5?"proxy":"thin",residuals.length,
+  analytics.push(metric("expected_performance_residual","Expected-performance residuals",residuals.length>=5?"proxy":residuals.length?"thin":"unavailable",residuals.length,
     residuals.length>=5?`Recent leave-one-out opponent-adjusted DPM residual averages ${round(mean(recentResidual.map(x=>x.residual)),0)}. ${contextualResiduals.length} rows use repeated champion×opponent×duration context; the remainder fall back to a leave-one-out global expectation.`:"Not enough direct-opponent DPM history for a residual model.",
     {recentResidual:round(mean(recentResidual.map(x=>x.residual)),1),contextualRows:contextualResiduals.length,rows:residuals.slice(-20)}));
 
