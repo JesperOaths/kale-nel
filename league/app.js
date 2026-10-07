@@ -2126,12 +2126,12 @@ const PRACTICE_TARGET_SAMPLE_PATHS={
   'behaviorSummary.meanGameSupportRoamAdcLaneMovementCs':['behaviorSummary.supportRoamAdcLaneMovementGames'],
   'sessionBehavior.game3PlusGoldDelta':['sessionBehavior.firstGame.lane15Games','sessionBehavior.game3Plus.lane15Games'],
   'sessionBehavior.postLossGoldDelta':['sessionBehavior.quickAfterLoss.lane15Games','sessionBehavior.quickAfterWin.lane15Games'],
-  'sessionBehavior.game3PlusVpmDelta':['sessionBehavior.firstGame.vpmGames','sessionBehavior.game3Plus.vpmGames'],
-  'sessionBehavior.postLossVpmDelta':['sessionBehavior.quickAfterLoss.vpmGames','sessionBehavior.quickAfterWin.vpmGames'],
-  'sessionBehavior.game3PlusKpDelta':['sessionBehavior.firstGame.kpGames','sessionBehavior.game3Plus.kpGames'],
-  'sessionBehavior.postLossKpDelta':['sessionBehavior.quickAfterLoss.kpGames','sessionBehavior.quickAfterWin.kpGames'],
-  'sessionBehavior.game3PlusCsMinDelta':['sessionBehavior.firstGame.csMinGames','sessionBehavior.game3Plus.csMinGames'],
-  'sessionBehavior.postLossCsMinDelta':['sessionBehavior.quickAfterLoss.csMinGames','sessionBehavior.quickAfterWin.csMinGames']
+  'sessionBehavior.game3PlusPeerVpmDelta':['sessionBehavior.firstGame.peerVpmGames','sessionBehavior.game3Plus.peerVpmGames'],
+  'sessionBehavior.postLossPeerVpmDelta':['sessionBehavior.quickAfterLoss.peerVpmGames','sessionBehavior.quickAfterWin.peerVpmGames'],
+  'sessionBehavior.game3PlusPeerKpDelta':['sessionBehavior.firstGame.peerKpGames','sessionBehavior.game3Plus.peerKpGames'],
+  'sessionBehavior.postLossPeerKpDelta':['sessionBehavior.quickAfterLoss.peerKpGames','sessionBehavior.quickAfterWin.peerKpGames'],
+  'sessionBehavior.game3PlusPeerCsMinDelta':['sessionBehavior.firstGame.peerCsMinGames','sessionBehavior.game3Plus.peerCsMinGames'],
+  'sessionBehavior.postLossPeerCsMinDelta':['sessionBehavior.quickAfterLoss.peerCsMinGames','sessionBehavior.quickAfterWin.peerCsMinGames']
 };
 function practiceTargetMetricPath(t){
   const p=String(t?.metricPath||'');
