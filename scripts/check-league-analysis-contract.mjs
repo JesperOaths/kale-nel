@@ -202,7 +202,7 @@ ok(backend.includes('decisionIntelligence:cm.decisionIntelligence'), 'top-level 
 ok(decisionUi.includes('report?.decisionIntelligence'), 'frontend must consume the top-level decision intelligence field');
 ok(decisionUi.includes('actualLeadSec')&&!decisionUi.includes("x.sec+'s:'"), 'pre-fight evidence labels must use actual sampled timing');
 
-ok(decisionBackend.includes('downOneStarts'), 'numbers-aware participation must retain down-one fights');
+ok(decisionBackend.includes('downOneStarts')&&decisionBackend.includes('{key:"down1",label:"Down 1"')&&decisionBackend.includes('states:numberGroups')&&decisionUi.includes('function numbersVisual('), 'numbers-aware participation must retain down-one fights and expose all state outcomes through one contract');
 ok(decisionBackend.includes('mergedWindowMinutes(nothing)'), 'nothing-gained exposure must de-duplicate overlapping windows');
 ok(decisionBackend.includes('playerFollowUpKills')&&decisionBackend.includes('g?.objectives'), 'fight-win conversion must use raw post-fight objectives/structures rather than solo-kill structure events');
 ok(decisionBackend.includes('champion_opponent_duration_leave_one_out'), 'expected-performance residual must be leave-one-out');
