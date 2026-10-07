@@ -22,7 +22,7 @@
     .error{padding:14px 16px;border:1px solid #713b3b;background:#261515;border-radius:14px;color:#ffd0d0;margin-bottom:14px}.login-card{max-width:660px;margin:42px auto;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}.login-card h2{margin:0 0 6px}.login-card p{color:var(--muted);margin:0 0 16px}.login-grid{display:grid;gap:10px}.login-grid input{width:100%;padding:12px;border-radius:11px;border:1px solid var(--line);background:#071018;color:var(--text);font:inherit}.hidden{display:none!important}.watermark{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:20;padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:#071018e8;color:#7f929f;font-size:11px;letter-spacing:.05em}
     @media(max-width:900px){.clips{grid-template-columns:repeat(2,minmax(0,1fr))}.top{align-items:stretch;flex-direction:column}.status,.pill{align-self:flex-start}.livegrid{grid-template-columns:1fr}}@media(max-width:560px){body{padding:12px;padding-bottom:68px}.clips{grid-template-columns:1fr}.title{font-size:26px}.live-meta{flex-direction:column;gap:3px}.nav .spacer{display:none}.control-row{grid-template-columns:105px minmax(0,1fr)}}
   </style>
-<script>window.GEJAST_PAGE_VERSION='v818';</script></head>
+<script>window.GEJAST_PAGE_VERSION='v817';</script></head>
 <body>
   <main class="wrap">
     <header class="top">
@@ -56,7 +56,7 @@
     </section>
   </main>
   <dialog id="viewer"><div class="modal-head"><strong id="viewerTitle">Recording</strong><button id="closeViewer" class="close" type="button" aria-label="Close">×</button></div><video id="player" class="player" controls playsinline preload="metadata"></video><div id="viewerMeta" class="modal-meta"></div></dialog>
-  <div class="watermark">v818 - Kalenel Security · S9+ only · synchronized Drive archive</div>
+  <div class="watermark">v817 - Kalenel Security · S9+ only · synchronized Drive archive</div>
 <script>
 (() => {
   'use strict';
@@ -136,6 +136,6 @@
   async function boot(){const camera=clipCamera||'new';const {res}=await readJson(await fetch(`/security/${camera}/api/status`,{credentials:'same-origin',cache:'no-store'}));if(res.status===401){showInnerLogin();return}if(!res.ok){showInnerLogin('Security service is temporarily unavailable.');return}showApp();await refresh()}boot();
 })();
 </script>
-<div class="site-credit-watermark" data-version-watermark style="position:fixed;left:50%;transform:translateX(-50%);bottom:10px;z-index:2147483646;padding:6px 10px;border-radius:999px;background:rgba(17,17,17,.78);color:#f3e0ad;font:700 12px/1.2 system-ui,sans-serif;letter-spacing:.03em;pointer-events:none">v818  -  Made by Bruis</div>
+<div class="site-credit-watermark" data-version-watermark style="position:fixed;left:50%;transform:translateX(-50%);bottom:10px;z-index:2147483646;padding:6px 10px;border-radius:999px;background:rgba(17,17,17,.78);color:#f3e0ad;font:700 12px/1.2 system-ui,sans-serif;letter-spacing:.03em;pointer-events:none">v817  -  Made by Bruis</div>
 </body>
 </html>
