@@ -1,8 +1,8 @@
 {
   "enabled": true,
-  "id": 990032,
-  "lease_token": "f1e6a9f3-3c38-4dbd-8b4a-990032000001",
+  "id": 990048,
+  "lease_token": "e59d8bc9-1af4-4c93-9900-480000000001",
   "timeout_seconds": 240,
   "attempts": 1,
-  "command": "bash -lc 'LOCK=/tmp/c720p-job-990032.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; curl -fsSL --max-time 30 https://raw.githubusercontent.com/JesperOaths/kale-nel/main/ops/c720p/run-v868-storage-mail-diag-20260928.py -o /tmp/run-v868-storage-mail-diag-20260928.py && python3 /tmp/run-v868-storage-mail-diag-20260928.py'"
+  "command": "bash -lc 'LOCK=/tmp/c720p-job-990048.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; URL=https://raw.githubusercontent.com/JesperOaths/kale-nel/65c56c6407e7d7545bd92c67b49ea2b7a0507997/ops/c720p/patch-s5-http-persistent-apk-v115-20261007.py; curl -fsSL --max-time 30 \"$URL\" -o /tmp/s5-v115.py && python3 /tmp/s5-v115.py > /tmp/s5-v115-emergency.out 2>&1; RC=$?; curl -sS --max-time 8 \"https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-run-ok?diag=S5_HTTP_V115_EMERGENCY_RC_${RC}\" >/dev/null 2>&1 || true; exit $RC'"
 }
