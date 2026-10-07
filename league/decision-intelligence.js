@@ -244,32 +244,64 @@
     return'<div class="di-replay-visual-grid">'+short.slice(0,10).map((x,i)=>{const g=gm.get(String(x.matchId)),src=g?champIcon(g.champion):'';return'<article><div class="di-replay-rank">#'+(i+1)+'</div>'+(src?'<img loading="lazy" src="'+esc(src)+'" alt="">':'')+'<div><span>'+esc(x.type||'Replay')+(num(x.minute)?' · '+fmt(x.minute,1)+'m':'')+'</span><strong>'+esc(x.reason||'Review this moment')+'</strong><small>'+esc(x.zone||'')+' · heuristic priority '+fmt(x.score,0)+'</small><div class="di-score-meter"><i style="width:'+clamp(n(x.score||0),0,100)+'%"></i></div></div><button class="button secondary tiny di-open-match" type="button" data-match-id="'+esc(x.matchId)+'">Open</button></article>';}).join('')+'</div>';
   }
 
+  function miniStats(items){
+    return '<div class="di-mini-summary">'+items.filter(x=>x&&x.value!==undefined&&x.value!==null).map(x=>'<span><b>'+esc(x.value)+'</b><small>'+esc(x.label)+'</small></span>').join('')+'</div>';
+  }
+  function tradeEvidenceVisual(r,e){
+    const supported=r.filter(x=>x.tradeSupported===true).length,unsupported=Math.max(0,r.length-supported);
+    const bars=[...r].filter(x=>num(x.goldSwing)).sort((a,b)=>{
+      const pr=x=>x.joinReviewPriority==='high'?3:x.joinReviewPriority==='medium'?2:1;
+      return pr(b)-pr(a)||Math.abs(n(b.goldSwing))-Math.abs(n(a.goldSwing));
+    });
+    return shareVisual([{label:'Compensation rule met',value:supported,tone:'neutral'},{label:'No supported compensation',value:unsupported,tone:'muted'}])+
+      miniStats([
+        {value:fmt(e.supportedTrades??supported,0),label:'supported windows'},
+        {value:fmt(e.unsupportedTrades??unsupported,0),label:'unsupported windows'},
+        {value:'separate',label:'gold / CS / structures / objectives'}
+      ])+
+      barRows(bars,{label:x=>(x.zone||'fight')+' · '+fmt(x.minute,1)+'m',value:'goldSwing',suffix:'g vs role',diverging:true,maxRows:8});
+  }
+  function crossCompVisual(r,e){
+    return shareVisual([{label:'Compensation rule met',value:n(e.supportedWindows||0),tone:'neutral'},{label:'No supported compensation',value:n(e.unsupportedWindows||0),tone:'muted'}])+
+      miniStats([
+        {value:fmt(e.medianGoldSwing,0)+'g',label:'median role-gold movement'},
+        {value:signed(e.medianCsSwing,1),label:'median CS movement'},
+        {value:fmt(e.structureWindows,0),label:'windows with structure involvement'},
+        {value:fmt(e.objectiveWindows,0),label:'windows with neutral-objective involvement'},
+        {value:fmt(e.economyOnlyWindows,0),label:'economy-only compensated windows'}
+      ]);
+  }
+  function recallTempoVisual(r,e){
+    const other=Math.max(0,n(e.totalShopVisits||0)-n(e.pairedEventVisits||0));
+    return shareVisual([{label:'Tracked fight/objective ≤4m',value:n(e.pairedEventVisits||0),tone:'neutral'},{label:'No tracked event ≤4m',value:other,tone:'muted'}])+
+      barRows([...r].sort((a,b)=>n(a.gapMin||0)-n(b.gapMin||0)),{label:x=>(x.nextKind||'event')+' · '+(x.approachZone||'unknown'),value:'gapMin',suffix:'m',maxRows:8});
+  }
   function visualFor(a,report){
     const r=rows(a),e=a?.evidence||{};
     switch(a?.id){
-      case'fight_decision_ledger':return barRows([...r].sort((x,y)=>Math.abs(n(y.netProxyG||0))-Math.abs(n(x.netProxyG||0))),{label:x=>(x.zone||'fight')+' · '+fmt(x.minute,1)+'m',value:'netProxyG',suffix:'g proxy',diverging:true});
+      case'fight_decision_ledger':return tradeEvidenceVisual(r,e);
       case'arrival_feasibility':return shareVisual([{label:'Near ≤4k',value:n(e.near||0),tone:'warn'},{label:'Borderline 4–6.5k',value:n(e.borderline||0),tone:'neutral'},{label:'Far >6.5k',value:n(e.far||0),tone:'muted'}]);
-      case'pre_fight_positioning':return preFightMap(r.slice(0,36));
+      case'pre_fight_positioning':return preFightMap(r.slice(0,36),report);
       case'fight_formation':return formationVisual(r);
       case'numbers_aware_participation':return shareVisual([{label:'Down ≥2',value:n(e.outnumberedStarts||0),tone:'bad'},{label:'Down 1',value:n(e.downOneStarts||0),tone:'warn'},{label:'Even',value:n(e.evenStarts||0),tone:'neutral'},{label:'Ahead',value:n(e.aheadStarts||0),tone:'good'}]);
-      case'cross_map_efficiency':return barRows([...r].sort((a,b)=>n(b.valuePerMin||0)-n(a.valuePerMin||0)),{label:x=>(x.zone||'fight')+' '+fmt(x.minute,1)+'m',value:'valuePerMin',suffix:'/min'});
+      case'cross_map_efficiency':return crossCompVisual(r,e);
       case'wave_fight_conflict':return scatter(r,'csSwing','goldSwing',{xLabel:'CS movement vs role',yLabel:'Gold movement vs role',labelKey:'zone',toneFn:x=>x.fightLost?'negative':'positive',legend:'<span><i class="negative"></i>team lost tracked fight</span><span><i class="positive"></i>team did not lose tracked fight</span>'});
       case'nothing_gained_isolation':return shareVisual([{label:'High-priority review',value:n(e.highPriority||0),tone:'bad'},{label:'Other uncompensated',value:Math.max(0,r.length-n(e.highPriority||0)),tone:'warn'}]);
-      case'post_recall_tempo':return barRows([...r].sort((a,b)=>n(a.gapMin||0)-n(b.gapMin||0)),{label:x=>(x.nextKind||'event')+' · '+(x.approachZone||'unknown'),value:'gapMin',suffix:'m'});
-      case'objective_setup_path':return shareVisual([{label:'Present',value:r.filter(x=>x.joined).length,tone:'neutral'},{label:'Absent',value:r.filter(x=>!x.joined).length,tone:'warn'}])+objectivePathMap(r.slice(0,40))+'<div class="di-path-chips">'+r.slice(0,8).map(x=>'<span><b>'+esc(x.objective||'objective')+'</b><i>shop '+(num(x.shopLeadMin)?fmt(x.shopLeadMin,1)+'m before':'?')+'</i><em>→</em><i>'+esc(x.approachZone||'unknown')+(num(x.actualApproachLeadSec)?' · '+fmt(x.actualApproachLeadSec,0)+'s before':'')+(Array.isArray(x.approachSamples)&&x.approachSamples.length>1?' · '+x.approachSamples.length+' route samples':'')+'</i><em>→</em><i>'+esc(x.joined?'present':'absent')+'</i></span>').join('')+'</div>';
+      case'post_recall_tempo':return recallTempoVisual(r,e);
+      case'objective_setup_path':return shareVisual([{label:'Present',value:r.filter(x=>x.joined).length,tone:'neutral'},{label:'Absent',value:r.filter(x=>!x.joined).length,tone:'warn'}])+objectivePathMap(r.slice(0,40),report)+'<div class="di-path-chips">'+r.slice(0,8).map(x=>'<span><b>'+esc(x.objective||'objective')+'</b><i>shop '+(num(x.shopLeadMin)?fmt(x.shopLeadMin,1)+'m before':'?')+'</i><em>→</em><i>'+esc(x.approachZone||'unknown')+(num(x.actualApproachLeadSec)?' · '+fmt(x.actualApproachLeadSec,0)+'s before':'')+(Array.isArray(x.approachSamples)&&x.approachSamples.length>1?' · '+x.approachSamples.length+' route samples':'')+'</i><em>→</em><i>'+esc(x.joined?'present':'absent')+'</i></span>').join('')+'</div>';
       case'lead_utilisation':return slope(r,'gold15','gold25',{startLabel:'Gold@15',endLabel:'Gold@25'});
       case'deficit_recovery':return slope(r,'gold15','gold25',{startLabel:'Gold@15',endLabel:'Gold@25'});
       case'death_chains':{const rr=(e.repeatGames||[]).map(x=>({label:shortMatch(x.matchId),value:n(x.repeatDeaths||0)}));return barRows(rr,{value:'value',suffix:' repeat'});}
       case'resource_to_impact':return scatter(r,'goldDiffAtStart','currentGold',{xLabel:'Gold diff vs role',yLabel:'Unspent gold',labelKey:'matchId',toneFn:x=>x.contributed?'positive':'negative',legend:'<span><i class="positive"></i>tracked contribution</span><span><i class="negative"></i>no tracked contribution</span>'});
-      case'fight_lead_conversion':return shareVisual([{label:'Tracked follow-up',value:r.filter(x=>x.converted).length,tone:'good'},{label:'No tracked follow-up',value:r.filter(x=>!x.converted).length,tone:'neutral'}]);
-      case'fight_loss_containment':return shareVisual([{label:'Contained',value:r.filter(x=>x.contained).length,tone:'good'},{label:'Compounded',value:r.filter(x=>!x.contained).length,tone:'bad'}]);
+      case'fight_lead_conversion':return shareVisual([{label:'Tracked follow-up',value:r.filter(x=>x.followUp).length,tone:'neutral'},{label:'No tracked follow-up',value:r.filter(x=>!x.followUp).length,tone:'muted'}]);
+      case'fight_loss_containment':return shareVisual([{label:'No extra flagged death',value:r.filter(x=>x.noExtraRiskDeath).length,tone:'neutral'},{label:'Extra flagged death ≤90s',value:r.filter(x=>!x.noExtraRiskDeath).length,tone:'bad'}]);
       case'objective_trading':return fightMap(report,'trade')+barRows(r,{label:x=>(x.fightZone||'trade')+' '+fmt(x.minute,1)+'m',value:'goldSwing',suffix:'g',diverging:true});
-      case'geographical_clusters':{const mapEvents=Array.isArray(e.mapEvents)?e.mapEvents:[];const pts=mapEvents.map(x=>({position:x.position,tone:x.type==='bad_death'?'bad':'review',r:x.type==='bad_death'?7:9,title:(x.type==='bad_death'?'High-risk death':'High-priority missed join')+' · '+(x.zone||'unknown')+' · '+fmt(x.minute,1)+'m'}));return mapStage(pts,{legend:'<span><i class="bad"></i>high-risk death</span><span><i class="review"></i>high-priority missed join</span>',aria:'Summoner’s Rift repeated decision locations'})+barRows(r,{label:'zone',value:'count',suffix:' signals'});}
+      case'geographical_clusters':{const mapEvents=Array.isArray(e.mapEvents)?e.mapEvents:[],gm=gameMap(report);const pts=mapEvents.map(x=>{const g=gm.get(String(x.matchId));return{position:teamRelativePoint(g,x.position),tone:x.type==='bad_death'?'bad':'review',r:x.type==='bad_death'?7:9,title:(x.type==='bad_death'?'High-risk death':'High-priority missed-join review')+' · '+(x.zone||'unknown')+' · '+fmt(x.minute,1)+'m'};}).filter(x=>x.position);return mapStage(pts,{legend:'<span><i class="bad"></i>high-risk death</span><span><i class="review"></i>high-priority missed-join review</span>',aria:'Summoner’s Rift repeated decision locations'})+barRows(r,{label:'zone',value:'count',suffix:' signals'});}
       case'champion_tendencies':return championVisual(r);
       case'matchup_adjusted_lane':return matchupVisual(r);
       case'expected_performance_residual':return scatter(r,'expected','actual',{xLabel:'Expected DPM vs role',yLabel:'Actual DPM vs role',labelKey:'champion',diagonal:true,toneFn:x=>n(x.residual)>=0?'positive':'negative',legend:'<span><i class="positive"></i>above leave-one-out expectation</span><span><i class="negative"></i>below expectation</span>'})+barRows(r.slice(-12),{label:x=>(x.champion||'champ')+' vs '+(x.opponent||'opp'),value:'residual',suffix:' DPM',diverging:true});
       case'session_components':return barRows(r,{label:x=>x.label+' · raw '+signed(x.rawDelta,2)+' · n '+x.baselineN+'→'+x.recentN,value:'normalized',suffix:'× threshold',diverging:true});
-      case'requeue_sweet_spot':return barRows(r.filter(x=>x.games>0),{label:x=>x.bucket+' · n='+x.games+(x.supported?'':' · thin'),value:'avgRelativeComposite',diverging:true});
+      case'requeue_sweet_spot':return barRows(r.filter(x=>x.games>0),{label:x=>x.bucket+' · n='+x.games+(x.supported?'':' · <5'),value:'avgRelativeComposite',diverging:true});
       case'mistake_recurrence':return sparkline(r,'issues',{labelKey:'matchId'});
       case'automatic_replay_shortlist':return replayCards(report,r)+fightMap(report,'shortlist',r);
       default:return'<div class="di-visual-empty">Visual renderer unavailable for this metric.</div>';
