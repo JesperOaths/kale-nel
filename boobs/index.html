@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none">
+  <meta name="theme-color" content="#16070f">
+  <title>Wiens tieten zijn dit?</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="ambient" aria-hidden="true">
+    <span class="orb orb-a"></span>
+    <span class="orb orb-b"></span>
+    <span class="orb orb-c"></span>
+    <span class="grain"></span>
+  </div>
+
+  <main class="game-shell" id="gameShell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Terug naar kalenel.nl">kalenel.nl</a>
+      <div class="round-pill" id="roundPill">After Dark</div>
+      <div class="score-pill" id="scorePill" aria-live="polite">0 / 10</div>
+    </header>
+
+    <section class="slide is-active intro-slide" id="introSlide" aria-labelledby="gameTitle">
+      <div class="eyebrow">BRUIS PRESENTEERT</div>
+      <h1 id="gameTitle">Wiens tieten zijn dit?</h1>
+      <p class="lede">Tien foto’s. Tien actrices. Eén vraag: hoe goed ken jij je klassiekers?</p>
+
+      <div class="rules-card">
+        <div class="rule">
+          <span class="rule-number">01</span>
+          <div><strong>Raad de actrice</strong><span>Typ per foto de naam van de actrice die volgens jou bij de afbeelding hoort.</span></div>
+        </div>
+        <div class="rule">
+          <span class="rule-number">02</span>
+          <div><strong>1 hint per foto</strong><span>De hint geeft de eerste 3 letters van haar voornaam. Gebruik je hem, dan is die ronde maximaal <b>0,5 punt</b> waard.</span></div>
+        </div>
+        <div class="rule">
+          <span class="rule-number">03</span>
+          <div><strong>Spelling hoeft niet perfect</strong><span>Hoofdletters, accenten en leestekens tellen niet zwaar mee. Kleine typefouten worden vergeven.</span></div>
+        </div>
+      </div>
+
+      <div class="grade-legend" aria-label="Cijferverdeling">
+        <span><b>F</b> 0–2</span>
+        <span><b>D</b> 3–4</span>
+        <span><b>C</b> 5–6</span>
+        <span><b>B</b> 7–8</span>
+        <span><b>A</b> 8,5–9,5</span>
+        <span><b>S+</b> 10</span>
+      </div>
+
+      <p class="fine-print">Gebruik uitsluitend beelden van volwassenen (18+) waarvoor je toestemming of gebruiksrechten hebt.</p>
+      <button class="primary-button" id="startButton" type="button">Start het spel <span>→</span></button>
+    </section>
+
+    <section class="slide guess-slide" id="guessSlide" aria-labelledby="guessHeading" hidden>
+      <div class="slide-meta">
+        <span id="guessRoundLabel">RONDE 1 VAN 10</span>
+        <span id="guessValueLabel">1 PUNT</span>
+      </div>
+      <h2 id="guessHeading">Van wie is deze foto?</h2>
+
+      <div class="image-stage" id="imageStage">
+        <img id="questionImage" alt="Quizafbeelding" hidden>
+        <div class="image-placeholder" id="imagePlaceholder">
+          <div class="placeholder-mark">?</div>
+          <div><strong id="placeholderTitle">Afbeelding 01</strong><span>Hier komt later de quizfoto.</span></div>
+        </div>
+        <div class="image-vignette" aria-hidden="true"></div>
+      </div>
+
+      <form class="answer-form" id="answerForm" novalidate>
+        <label for="answerInput">Naam van de actrice</label>
+        <div class="answer-row">
+          <input id="answerInput" name="answer" type="text" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Typ je antwoord…">
+          <button class="primary-button compact" id="submitAnswer" type="submit">Antwoord</button>
+        </div>
+        <div class="answer-tools">
+          <button class="hint-button" id="hintButton" type="button">✦ Gebruik hint <span>−0,5 punt</span></button>
+          <div class="hint-reveal" id="hintReveal" aria-live="polite" hidden></div>
+        </div>
+        <p class="form-message" id="formMessage" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="slide reveal-slide" id="revealSlide" aria-labelledby="revealHeading" hidden>
+      <div class="slide-meta">
+        <span id="revealRoundLabel">RONDE 1</span>
+        <span id="roundPointsLabel">+1 PUNT</span>
+      </div>
+      <div class="reveal-kicker" id="revealKicker">Het antwoord was…</div>
+      <h2 id="revealHeading">Nog niet ingesteld</h2>
+      <div class="reveal-divider"></div>
+      <div class="reveal-grid">
+        <div class="reveal-stat">
+          <span>Jouw antwoord</span>
+          <strong id="playerAnswerLabel">—</strong>
+        </div>
+        <div class="reveal-stat">
+          <span>Beoordeling</span>
+          <strong id="answerVerdict">Nog niet ingesteld</strong>
+        </div>
+        <div class="reveal-stat">
+          <span>Totaalscore</span>
+          <strong id="runningScore">0 / 10</strong>
+        </div>
+      </div>
+      <button class="primary-button" id="nextButton" type="button">Volgende ronde <span>→</span></button>
+    </section>
+
+    <section class="slide end-slide" id="endSlide" aria-labelledby="endHeading" hidden>
+      <div class="eyebrow">EINDUITSLAG</div>
+      <h2 id="endHeading">Jouw score</h2>
+      <div class="score-display"><strong id="finalScore">0</strong><span>/ 10</span></div>
+
+      <div class="grade-stage" id="gradeStage" aria-live="polite">
+        <div class="grade-label">GRADE</div>
+        <div class="grade" id="finalGrade">F</div>
+        <div class="grade-caption" id="gradeCaption">Er is ruimte voor studie.</div>
+
+        <div class="bruis-stamp" id="bruisStamp" hidden aria-label="Seal of approval from Bruis">
+          <img src="./bruis-seal.svg" alt="Seal of approval from Bruis">
+          <span class="stamp-grade" id="stampGrade">A</span>
+        </div>
+      </div>
+
+      <p class="approval-copy" id="approvalCopy"></p>
+      <button class="secondary-button" id="restartButton" type="button">Nog een keer</button>
+    </section>
+  </main>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
