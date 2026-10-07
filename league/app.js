@@ -1822,7 +1822,7 @@ function trajectoryDateRange(w){
 function trajectorySparkline(windows,spec){
   const ordered=windows.slice().reverse(),valid=ordered.filter(w=>trajectoryMetricReady(w,spec));
   if(valid.length<2)return'<div class="trajectory-empty">Need two history windows with ≥5 valid direct-role observations. Partial windows remain context only.</div>';
-  const width=700,height=186,left=74,right=38,top=22,bottom=40,plotW=width-left-right,plotH=height-top-bottom,maxAbs=Math.max(Number(spec.threshold||1)*2,...valid.map(w=>Math.abs(Number(w[spec.key].value))))*1.12;
+  const width=700,height=186,left=104,right=38,top=22,bottom=40,plotW=width-left-right,plotH=height-top-bottom,maxAbs=Math.max(Number(spec.threshold||1)*2,...valid.map(w=>Math.abs(Number(w[spec.key].value))))*1.12;
   const x=i=>left+i*plotW/Math.max(1,ordered.length-1),y=v=>top+(maxAbs-Number(v))/(maxAbs*2)*plotH,zero=y(0),segments=[];let run=[];
   ordered.forEach((w,i)=>{if(trajectoryMetricReady(w,spec))run.push(x(i).toFixed(1)+','+y(w[spec.key].value).toFixed(1));else{if(run.length>1)segments.push(run);run=[];}});if(run.length>1)segments.push(run);
   const lines=segments.map(points=>'<polyline class="trajectory-line" points="'+points.join(' ')+'"></polyline>').join('');

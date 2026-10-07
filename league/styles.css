@@ -3145,3 +3145,6 @@ table.transition-matrix{display:table;width:100%;min-width:620px;border-collapse
 .transition-matrix-cell.tone-mixed{background:var(--panel-soft)}
 .di-chart-coverage{margin:8px 0 0;color:var(--muted);font-size:.86rem;line-height:1.5}
 .di-state-grid article.thin{opacity:.8;background:var(--panel-soft)}
+.di-svg-chart{min-width:0;max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain}
+.di-svg-chart svg{min-width:500px;max-height:none}
+.di-svg-chart text{font-size:16px}.di-svg-chart .di-axis-value{font-size:14px!important}

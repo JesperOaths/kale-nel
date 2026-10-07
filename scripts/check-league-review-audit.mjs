@@ -90,6 +90,7 @@ assert.ok(view.barRows(Array.from({length:10},(_,i)=>({label:i,value:i}))).inclu
 assert.ok(view.scatter(Array.from({length:35},(_,i)=>({x:i,y:i})),'x','y').includes('Showing 30 of 35'));
 assert.ok(view.slope(Array.from({length:13},(_,i)=>({matchId:'g'+i,a:-500,b:100})),'a','b').includes('Showing 12 of 13'));
 assert.ok(view.slope([{matchId:'g',a:-500,b:100}],'a','b').includes('shared gold scale'));
+assert.ok(view.slope([{matchId:'g',a:-500,b:100}],'a','b').includes('tabindex="0"'),'scrollable charts must be keyboard accessible');
 const pre={id:'pre_fight_positioning',moments:[{checkpoints:[{actualLeadSec:60,distance:1000},{actualLeadSec:10,distance:500}]},{checkpoints:[{actualLeadSec:10,distance:10000}]}]};
 assert.ok(view.conclusion(pre).includes('Across 1 fights'));
 assert.ok(view.conclusion(pre).includes('averages 500u'),'single-frame fights cannot dilute a paired distance change');
