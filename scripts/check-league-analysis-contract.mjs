@@ -213,7 +213,7 @@ ok(!decisionBackend.includes('function valueProxy(')&&!decisionBackend.includes(
 ok(decisionBackend.includes('"Skipped-fight trade evidence"')&&decisionBackend.includes('"Cross-map compensation profile"'), 'skipped-fight cards must expose separate evidence and compensation coverage');
 ok(backend.includes('numberSampleLeadSec')&&decisionBackend.includes('medianNumberSampleLeadSec'), 'local-number snapshots must disclose timeline-frame age');
 ok(decisionBackend.includes('totalShopVisits')&&decisionBackend.includes('pairedEventVisits'), 'post-recall timing must disclose conditional-sample coverage');
-ok(decisionBackend.includes('followUpRate')&&decisionBackend.includes('noExtraRiskDeathRate'), 'fight follow-up/loss cards must expose their narrow measured outcomes');
+ok(decisionBackend.includes('followUpRate')&&decisionBackend.includes('"After fight losses: before the next fight"')&&decisionBackend.includes('noExtraRiskDeathRate')&&decisionBackend.includes('windowRule:"ends at next tracked fight or 90 seconds"'), 'fight follow-up/loss cards must use narrow next-fight-bounded measured outcomes');
 ok(decisionBackend.includes('"Skipped-fight structure/objective overlap"'), 'objective trading must remain timing overlap rather than causal claim');
 ok(decisionUi.includes('Row-level counts are window evidence, not unique event totals'), 'overlapping skipped-fight windows must not be summed as unique structure/objective events');
 ok(decisionBackend.includes('version:"decision-intelligence-v7"'), 'decision intelligence must expose the v7 final evidence contract');
