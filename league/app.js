@@ -1,4 +1,4 @@
-/* 20261007-league-web-v319 · full review audit and decision-dashboard integration */
+/* 20261007-league-web-v320 · full review audit and decision-dashboard integration */
 (function(){
 'use strict';
 
@@ -1841,7 +1841,7 @@ function renderLongitudinalProgress(r){
     const values=windows.slice().reverse().map(w=>'<span><b>'+esc(w.label)+(Number(w.games)===20?'':' · partial')+'</b> '+esc(trajectoryMetricReady(w,spec)?trajectoryValueLabel(w[spec.key].value,spec.unit):'not enough evidence')+' <small>'+Number(w.games||0)+' games · n='+Number(w?.[spec.key]?.n||0)+' · '+esc(trajectoryDateRange(w))+'</small></span>').join('');
     const change=comparison?'Latest 20 minus '+comparison.oldest.label+': '+trajectoryValueLabel(delta,spec.unit)+'.':'Directional comparison withheld; the latest complete window and an older complete window each need five observations.';
     return '<article class="trajectory-card state-'+state+'"><div class="trajectory-card-head"><span>'+esc(spec.label)+'</span><strong>'+esc(verdict)+'</strong></div>'+trajectorySparkline(windows,spec)+'<div class="trajectory-values">'+values+'</div><p>'+esc(change)+' The oldest complete window is a historical reference, not the immediately preceding window or a fitted trend. Matchup, champion and team context can still affect the difference.</p></article>';
-  }).join('')+'</div><p class="trajectory-note"><b>How to read this:</b> each point averages reviewed-player minus the actual same-role opponent. * Partial windows are shown as context and never determine the long-run verdict. Missing or thin observations keep their chronological position and break the line. Comparing with the role opponent reduces raw-output bias; it does not fully adjust for MMR, champion or matchup. Timeline-only metrics stay in the deep-game sections.</p>';
+  }).join('')+'</div><p class="trajectory-note"><b>How to read this:</b> each point averages reviewed-player minus the actual same-role opponent. * Partial windows are shown as context and never determine the long-run verdict. Missing or thin observations keep their chronological position and break the line. On narrow screens, scroll the graph sideways to see every window. Comparing with the role opponent reduces raw-output bias; it does not fully adjust for MMR, champion or matchup. Timeline-only metrics stay in the deep-game sections.</p>';
 }
 function renderLongHorizon(r){
   const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),stability=$('historyStabilityTrend'),consistency=$('historyConsistency'),champions=$('historyChampionMix'),outcome=$('longOutcomeFingerprint'),outcomeNote=$('longOutcomeFingerprintNote'),note=$('longHorizonNote');if(!kpi||!trend)return;
