@@ -325,12 +325,16 @@ async function auditViewport(browser,report,width,height,label){
   assert(before.decisionPlaceholder,label+': deferred decision placeholder missing on initial paint');
   assert(before.matchPlaceholder,label+': deferred match-history placeholder missing on initial paint');
 
-  await page.locator('#decisions').evaluate(el=>{if(el.tagName==='DETAILS')el.open=true;});
-  await page.locator('#decisionIntelligencePanel').scrollIntoViewIfNeeded();
+  const decisions=page.locator('#decisions');
+  if(!(await decisions.evaluate(el=>el.open===true)))await decisions.locator('summary').click();
+  await page.waitForTimeout(160);
+  await page.locator('#decisionIntelligencePanel').evaluate(el=>el.scrollIntoView({block:'center',inline:'nearest'}));
+  await page.waitForTimeout(320);
   await page.waitForFunction(()=>document.querySelectorAll('#decisionIntelligence .di-card').length===25,{timeout:20000});
-  await page.locator('#match-history').scrollIntoViewIfNeeded();
+  await page.locator('#match-history').evaluate(el=>el.scrollIntoView({block:'center',inline:'nearest'}));
+  await page.waitForTimeout(320);
   await page.waitForFunction(()=>document.querySelectorAll('#matchHistoryList .match-history-row').length>0,{timeout:20000});
-  await page.locator('#player-review').scrollIntoViewIfNeeded();
+  await page.locator('#player-review').evaluate(el=>el.scrollIntoView({block:'center',inline:'nearest'}));
   await page.waitForTimeout(350);
 
   const metrics=await page.evaluate(()=>{
