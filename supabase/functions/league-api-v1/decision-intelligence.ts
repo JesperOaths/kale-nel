@@ -208,7 +208,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     {near:count(arrival,x=>x.reachabilityBand==="near"),borderline:count(arrival,x=>x.reachabilityBand==="borderline"),far:count(arrival,x=>x.reachabilityBand==="far"),medianPositionSampleDeltaSec:round(arrivalSampleDelta,0),rows:arrival.slice(0,12)},arrival));
 
 
-  // 3. Pre-fight positioning quality
+  // 3. Pre-fight sampled positioning
   const pre:any[]=[];
   for(const {g,e} of [...fights,...abs]){
     const t=n(e?.startMin); if(!finite(t)||!e?.fightPosition)continue;
@@ -223,7 +223,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     checkpoints.sort((a,b)=>b.actualLeadSec-a.actualLeadSec);
     if(checkpoints.length)pre.push({matchId:g.matchId,minute:round(t,1),fightZone:e.fightZone,fightPosition:e.fightPosition,checkpoints});
   }
-  analytics.push(metric("pre_fight_positioning","Pre-fight positioning quality",pre.length?"proxy":"unavailable",pre.length,
+  analytics.push(metric("pre_fight_positioning","Pre-fight sampled positioning",pre.length?"proxy":"unavailable",pre.length,
     pre.length?"Uses distinct Riot timeline frames requested around 30/20/10 seconds before fights, but displays the actual seconds-before-fight for each retained frame. Duplicate minute-cadence frames are collapsed rather than pretending they are separate observations.":"No usable pre-fight frame/coordinate pairs.",
     {frameCadenceCaveat:true,rows:pre.slice(0,12)},pre));
 
@@ -252,10 +252,14 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     {key:"ahead",label:"Ahead",rows:numF.filter(x=>n(x.e.numbersDelta)>=1)}
   ].map(x=>({key:x.key,label:x.label,fights:x.rows.length,lossRate:round(safeRate(count(x.rows,y=>y.e?.lostFight===true),x.rows.length),1)}));
   const numberLead=median(numF.map(x=>x.e?.numberSampleLeadSec));
+  const numberLossRates=numberGroups.map(x=>x.lossRate).filter(finite).map(n);
+  const numberLossMin=numberLossRates.length?Math.min(...numberLossRates):null,numberLossMax=numberLossRates.length?Math.max(...numberLossRates):null;
+  const numberLossRange=finite(numberLossMin)&&finite(numberLossMax)?n(numberLossMax)-n(numberLossMin):null;
   analytics.push(metric("numbers_aware_participation","Local-number snapshot at fight start",numF.length?"proxy":"unavailable",numF.length,
-    numF.length?`Local-number states are shown with their observed fight-loss rate, using a 4.5k-unit radius on the latest Riot timeline frame at or before the first kill (median frame age ${round(numberLead,0)??"—"}s). These are coarse snapshots, not exact commitment-state counts.`:"No active fights with local-number evidence.",
+    numF.length?`Local-number states are shown with their observed fight-loss rate, using a 4.5k-unit radius on the latest Riot timeline frame at or before the first kill (median frame age ${round(numberLead,0)??"—"}s). Across populated states the observed loss rates span ${round(numberLossMin,1)??"—"}–${round(numberLossMax,1)??"—"}% (range ${round(numberLossRange,1)??"—"} percentage points), so this descriptive sample does not show a clear directional outcome separation by the coarse numbers state.`:"No active fights with local-number evidence.",
     {states:numberGroups,outnumberedStarts:numberGroups[0].fights,downOneStarts:numberGroups[1].fights,evenStarts:numberGroups[2].fights,aheadStarts:numberGroups[3].fights,
-      medianNumberSampleLeadSec:round(numberLead,0),outnumberedLossRate:numberGroups[0].lossRate}));
+      medianNumberSampleLeadSec:round(numberLead,0),outnumberedLossRate:numberGroups[0].lossRate,
+      minStateLossRate:round(numberLossMin,1),maxStateLossRate:round(numberLossMax,1),stateLossRateRangePp:round(numberLossRange,1)}));
 
   // 6. Cross-map compensation profile
   const supportedCross=ledger.filter(x=>x.tradeSupported===true),unsupportedCross=ledger.filter(x=>x.tradeSupported!==true);
