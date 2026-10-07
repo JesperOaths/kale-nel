@@ -121,19 +121,28 @@ function pathToObjectiveRow(g:any,e:any){
   const t=eventMin(e); if(!finite(t)) return null;
   const shops=arr(g?.shopVisits).filter((s:any)=>finite(s?.startMin)&&n(s.startMin)<=n(t)).sort((a:any,b:any)=>n(b.startMin)-n(a.startMin));
   const shop=shops[0]||null;
-  // Use a frame requested ~45s before the event instead of the nearest frame at
-  // the event itself. Riot timeline frames are coarse, so retain the actual
-  // seconds-before-event and never present this as second-perfect pathing.
-  const frame=nearestFrameBefore(g,n(t)-0.75,1.0);
-  const actualApproachLeadSec=frame&&finite(frame.time)?Math.max(0,Math.round((n(t)-n(frame.time))*60)):null;
+  // Build a coarse setup route from distinct Riot timeline frames requested
+  // around 90/60/30 seconds before the objective. Frame cadence is coarse,
+  // so actual seconds-before-event are always retained and duplicate frames
+  // are collapsed.
+  const seen=new Set<string>(),approachSamples:any[]=[];
+  for(const requestedSec of [90,60,30]){
+    const fr=nearestFrameBefore(g,n(t)-requestedSec/60,.9);
+    if(!fr?.position||!finite(fr.time)||!finite(fr.position.x)||!finite(fr.position.y))continue;
+    const key=String(fr.time);if(seen.has(key))continue;seen.add(key);
+    approachSamples.push({requestedSec,actualLeadSec:Math.max(0,Math.round((n(t)-n(fr.time))*60)),
+      zone:txt(fr.zone||"unknown"),sampleMinute:round(fr.time,2),position:{x:n(fr.position.x),y:n(fr.position.y)}});
+  }
+  approachSamples.sort((a,b)=>n(b.actualLeadSec)-n(a.actualLeadSec));
+  const latest=approachSamples[approachSamples.length-1]||null;
   return {
     matchId:g.matchId,champion:g.champion,objective:txt(e?.type||e?.objectiveType||e?.monsterType||"objective"),
     minute:round(t,1),joined:e?.joined===true||e?.present===true||e?.playerJoined===true,
     lastShopMin:shop?round(shop?.lastMin??shop?.startMin,1):null,
     shopLeadMin:shop?round(n(t)-n(shop?.lastMin??shop?.startMin),1):null,
-    approachZone:txt(frame?.zone||"unknown"),actualApproachLeadSec,
+    approachZone:txt(latest?.zone||"unknown"),actualApproachLeadSec:latest?.actualLeadSec??null,
     objectiveSetupLeadSec:finite(e?.setupLeadSec)?round(e.setupLeadSec,0):null,
-    approachPosition:frame?.position&&finite(frame.position.x)&&finite(frame.position.y)?{x:n(frame.position.x),y:n(frame.position.y)}:null
+    approachPosition:latest?.position||null,approachSamples
   };
 }
 function championGroup(games:any[]){
@@ -279,8 +288,8 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
 
   // 10. Objective setup path
   const paths=games.flatMap(g=>objectiveEvents(g).map(e=>pathToObjectiveRow(g,e)).filter(Boolean));
-  analytics.push(metric("objective_setup_path","Objective setup path",paths.length?"proxy":"unavailable",paths.length,
-    paths.length?"Pairs measured shop/objective timing with a coarse pre-objective position sample. The sampled point is requested ~45 seconds before the event, but Riot frame cadence is coarse and the actual lead time is retained.":"No objective events with usable timing.",
+  analytics.push(metric("objective_setup_path","Objective setup route context",paths.length?"proxy":"unavailable",paths.length,
+    paths.length?"Pairs measured shop/objective timing with distinct coarse position samples requested around 90/60/30 seconds before the event. Duplicate timeline frames are collapsed and actual seconds-before-objective are retained.":"No objective events with usable timing.",
     {rows:paths.slice(0,18)},paths));
 
   // 11. Lead utilisation curve
@@ -313,8 +322,8 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   const ri=fights.filter(x=>x.e?.active===true&&finite(x.e?.goldDiffAtStart)).map(({g,e})=>({matchId:g.matchId,minute:round(e.startMin,1),goldDiffAtStart:round(e.goldDiffAtStart,0),currentGold:round(e.currentGoldAtStart,0),
     contributed:e.contributed===true,survived:e.survived===true,lostFight:e.lostFight===true}));
   const rich=ri.filter(x=>n(x.goldDiffAtStart)>=300),richImpact=safeRate(count(rich,x=>x.contributed),rich.length);
-  analytics.push(metric("resource_to_impact","Pre-fight resource-to-impact efficiency",ri.length?"supported":"unavailable",ri.length,
-    ri.length?`Among ${rich.length} active fights started ≥300g ahead of the direct role opponent, tracked contribution occurred in ${round(richImpact,0)??"—"}%.`:"No active fights with direct-role gold-at-start evidence.",
+  analytics.push(metric("resource_to_impact","Pre-fight gold state vs tracked contribution",ri.length?"supported":"unavailable",ri.length,
+    ri.length?`Among ${rich.length} active fights started ≥300g ahead of the direct role opponent, the reviewed player registered a tracked kill/assist contribution in ${round(richImpact,0)??"—"}%. This does not measure damage dealt, target quality or whether the fight choice was correct.`:"No active fights with direct-role gold-at-start evidence.",
     {aheadFightContributionRate:round(richImpact,1),rows:ri.slice(0,18)},ri));
 
   // 15. Fight lead conversion
@@ -328,8 +337,8 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     const converted=neutral+structures+playerFollowUpKills>0;
     winFightRows.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,objectives:neutral,structures,playerFollowUpKills,converted});
   }
-  analytics.push(metric("fight_lead_conversion","Fight-win conversion",winFightRows.length?"supported":"unavailable",winFightRows.length,
-    winFightRows.length?`${round(safeRate(count(winFightRows,x=>x.converted),winFightRows.length),0)}% of tracked active fight wins had a same-team neutral objective/structure gain or a reviewed-player follow-up kill contribution in the following ~90 seconds.`:"No active fight wins to evaluate.",
+  analytics.push(metric("fight_lead_conversion","After fight wins: tracked follow-up",winFightRows.length?"supported":"unavailable",winFightRows.length,
+    winFightRows.length?`${round(safeRate(count(winFightRows,x=>x.converted),winFightRows.length),0)}% of strict tracked fight wins were followed within ~90 seconds by a same-team neutral objective/structure gain or a new reviewed-player kill/assist contribution.`:"No strict active fight wins to evaluate.",
     {conversionRate:round(safeRate(count(winFightRows,x=>x.converted),winFightRows.length),1),rows:winFightRows},winFightRows));
 
   // 16. Fight loss containment
@@ -425,7 +434,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     missedJoinReviews:mean(issues.slice(-5).map(x=>x.missedJoinReviews))
   };
   analytics.push(metric("mistake_recurrence","Review-signal recurrence trend",issues.length?"proxy":"unavailable",issues.length,
-    issues.length?`Latest five-game supported issue-signal load is ${round(recentIssues,2)} per game versus ${round(priorIssues,2)??"—"} in the prior five. This is not a target-linked half-life because the current analyzer does not have a defensible per-target start point.`:"No supported issue events in this sample.",
+    issues.length?`Latest five-game supported review-signal load is ${round(recentIssues,2)} per game versus ${round(priorIssues,2)??"—"} in the prior five. Signal categories can overlap within one event, so this is not a unique-mistake count or a target-linked half-life.`:"No supported review signals in this sample.",
     {targetLinked:false,recentFive:round(recentIssues,2),priorFive:round(priorIssues,2),recentByType,rows:issues.slice(-20)}));
 
   // 25. Automatic replay shortlist
