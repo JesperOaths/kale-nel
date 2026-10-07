@@ -229,6 +229,9 @@ ok(decisionBackend.includes('maxPrimaryPerMatch:2')&&decisionBackend.includes('m
 ok(decisionUi.includes('teamRelativePoint')&&decisionUi.includes('Team-relative orientation · reviewed team base is bottom-left'), 'decision maps must use and disclose team-relative orientation');
 ok(decisionUi.includes("s==='supported'?'measured'")&&!decisionUi.includes("s==='supported'?'good'"), 'measured evidence styling must not encode positive performance');
 ok(css.includes('v310 — decision intelligence evidence/style coherence')&&html.includes('decision-intelligence-subhead'), 'decision visuals must remain within the main League report design system');
+ok(decisionBackend.includes('"Ahead-state fight execution"')&&decisionBackend.includes('preContributionDeathRate')&&decisionBackend.includes('richHighUnspentRate'), 'ahead-state fight card must use non-tautological execution outcomes');
+ok(!decisionBackend.includes('aheadFightContributionRate'), 'retired tautological ahead-fight contribution rate must stay removed');
+ok(decisionUi.includes("x.diedBeforeContribution?'negative':x.survived?'positive':'warn'"), 'ahead-state visual must encode meaningful execution outcomes');
 
 
 ok(decisionBackend.includes('wave_fight_conflict')&&decisionBackend.includes('objective_setup_path')&&decisionBackend.includes('lead_utilisation')&&decisionBackend.includes('deficit_recovery')&&decisionBackend.includes('mistake_recurrence'), 'decision intelligence must retain macro, recovery and recurrence families');
