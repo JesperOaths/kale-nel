@@ -19,6 +19,6 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsS --retry 2 --connect-timeout 10 --max-time 45 \
-            'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-control?v106_action=audit'
+            'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-control?v106_action=status&id=8131'
 
-# trigger-2
+# status-8131
