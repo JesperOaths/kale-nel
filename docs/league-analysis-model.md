@@ -3866,3 +3866,20 @@ This exposure denominator is deliberately labeled **Proxy** because minute-space
 The old “Tempo after recall” title is now “Recall-to-next-action timing” because the conditional shop→fight/objective interval is context, not an intrinsic quality score. The four-minute selection denominator remains explicit.
 
 Decision-intelligence explanation text, evidence rows and group headings are also larger in v314 so the section matches the readable warm-card hierarchy used elsewhere on the League report instead of reverting to dense small dashboard copy.
+
+
+## v315 final decision-evidence cleanup
+
+A second fresh-production review of the v4.179 output found three remaining denominator/overlap issues.
+
+### Post-loss windows
+
+The high-risk-death follow-up after a lost fight now uses the same non-overlapping window rule as post-win follow-up: the window ends at the next tracked fight or 90 seconds, whichever comes first. A death in a later fight can therefore no longer be attributed back to multiple earlier lost fights.
+
+### Geographical rate promotion floor
+
+Minute-frame exposure normalization remains a proxy. The first v4.179 report showed that a 5–6 minute denominator could produce an eye-catching per-30-sampled-minutes headline from only a few signals. Exposure-adjusted geographical rates are now withheld unless the zone has at least **15 sampled minutes and 3 review signals**. Raw counts remain visible for thinner zones.
+
+### Overlapping skipped-fight trade windows
+
+Skipped-fight structure/objective rows remain measured timing-overlap evidence, but nearby 90-second skipped-fight windows may overlap. The UI no longer sums row-level structure/objective counts into a purported unique total. Individual windows remain available for replay review.
