@@ -3667,3 +3667,14 @@ The report now contains one evidence-gated decision-intelligence layer with all 
 ### Proxy policy
 
 A proxy must never be rendered as a measured fact. The frontend labels each analytic as Measured, Proxy, Thin sample or No evidence. Exact wave size, cooldown availability, hidden information, player intent and a true join-versus-skip counterfactual are not inferred when the Riot data does not expose them. The automatic shortlist is therefore a triage surface, not an automated verdict.
+
+
+## v305 visual decision-intelligence presentation
+
+The 25 decision-intelligence families now render with question-specific visual forms rather than one generic evidence table. Presentation does not change analyzer thresholds or evidence classification.
+
+Spatial questions reuse the existing Summoner's Rift map projection and Data Dragon map asset. Pre-fight routing, high-priority geography clusters, objective/structure trades and the automatic replay shortlist can render on the same map coordinate system already used by deaths, wards and roam paths.
+
+Opponent-relative signed quantities use zero-centered diverging bars. Lead preservation and deficit recovery use paired 15-to-25 slope views. Wave/resource conflict and expected-performance residuals use scatterplots. Session components, requeue buckets and cross-map efficiency use comparative bars; issue recurrence uses an ordered game-by-game trend line. Champion tendencies and matchup context use champion portraits when Data Dragon assets are available. Objective setup paths show shop to approach zone to objective presence as a sequence.
+
+Every analytic card must contain three interpretation blocks: What it measures, Conclusion from this sample, and What to review. Conclusions are deterministic summaries of the same evidence already returned by the analyzer and must preserve the Measured / Proxy / Thin sample / No evidence distinction. A visual may make evidence easier to read; it must never raise the certainty of the underlying analytic.
