@@ -980,6 +980,170 @@ function recentDirectionSummary(r){
   return{tone,value,copy,meta:good.length+' improving · '+bad.length+' slipping · '+stable.length+' inside practical-change bands · latest 5 versus the preceding valid sample'};
 }
 
+
+function decisionAnalytic(r,id){
+  return (Array.isArray(r?.decisionIntelligence?.analytics)?r.decisionIntelligence.analytics:[]).find(x=>String(x?.id||'')===String(id))||null;
+}
+function evidenceValue(value,unit='num'){
+  if(!hasNum(value))return'n/a';
+  const v=Number(value);
+  if(unit==='gold')return signed(v,0)+'g';
+  if(unit==='dpm')return signed(v,0)+' DPM';
+  if(unit==='csmin')return signed(v,2)+' CS/min';
+  if(unit==='percent')return signed(v,1)+' pp';
+  if(unit==='minutes')return signed(v,1)+'m';
+  return signed(v,2);
+}
+function directionalEvidence(label,value,n,unit,threshold,inverse,href,detail,minN=5){
+  if(!hasNum(value)||Number(n||0)<minN)return null;
+  const v=Number(value),signal=(inverse?-1:1)*v,tone=Math.abs(v)<Number(threshold||0)?'neutral':signal>0?'good':'bad';
+  return{label,value:evidenceValue(v,unit),raw:v,n:Number(n),tone,href,detail};
+}
+function boundedEvidence(label,value,n,goodMax,badMin,unit,href,detail,minN=5){
+  if(!hasNum(value)||Number(n||0)<minN)return null;
+  const v=Number(value),tone=v<=goodMax?'good':v>=badMin?'bad':'neutral';
+  return{label,value:unit==='percent'?fmtPct(v):fmt(v,2),raw:v,n:Number(n),tone,href,detail};
+}
+function playerStyleEvidence(r){
+  const role=reportSelectedRole(r),p=r.peerComparison||{},b=r.behaviorSummary||{},rows=[];
+  if(['ADC','MID','TOP'].includes(role)){
+    rows.push(directionalEvidence('Gold @15 vs role opponent',p.avgGoldDiff15,p.laneGames15,'gold',150,false,'#lane-economy','Direct same-role Gold@15; ±150g is the practical-change band used elsewhere on the report.'));
+    rows.push(directionalEvidence('CS/min vs role opponent',p.avgCsMinDelta,p.csMinGames,'csmin',.15,false,'#long-horizon','Match-level farm pace relative to the actual same-role opponent.'));
+    rows.push(directionalEvidence('DPM vs role opponent',p.avgDpmDelta,p.dpmGames,'dpm',50,false,'#long-horizon','Champion damage per minute relative to the actual same-role opponent.'));
+  }else if(role==='JUNGLE'){
+    rows.push(directionalEvidence('CS/min vs Jungle opponent',p.avgCsMinDelta,p.csMinGames,'csmin',.15,false,'#long-horizon','Farm pace relative to the actual enemy Jungler.'));
+    rows.push(directionalEvidence('First impact vs Jungle opponent',p.avgImpactDeltaMin,p.impactGames,'minutes',1,true,'#decisions','Negative timing means the reviewed player reached the first tracked impact earlier.'));
+    rows.push(directionalEvidence('DPM vs Jungle opponent',p.avgDpmDelta,p.dpmGames,'dpm',50,false,'#long-horizon','Champion damage per minute relative to the actual enemy Jungler.'));
+  }else if(role==='SUPPORT'){
+    rows.push(directionalEvidence('Vision/min vs Support opponent',p.avgVpmDelta,p.vpmGames,'num',.15,false,'#long-horizon','Vision score per minute relative to the actual opposing Support.'));
+    rows.push(directionalEvidence('Objective-setup wards vs Support opponent',p.avgObjectiveSetupDelta,p.visionSetupGames,'num',.5,false,'#decisions','Supported pre-objective setup-ward difference versus the opposing Support.'));
+  }
+  rows.push(boundedEvidence('High-risk deaths / timeline game',b.badDeathsPerTimelineGame,b.timelineGames,.75,1.5,'num','#decisions','Analyzer-classified high-risk deaths per timeline-complete coaching game.'));
+  return rows.filter(Boolean);
+}
+function recentEvidenceBalance(r){
+  const rows=[];
+  for(const spec of roleRecentTrendSpecs(r)){
+    if(!recentTrendSpecReady(spec))continue;
+    const delta=Number(spec.obj.recent)-Number(spec.obj.prior),signal=(spec.inverse?-1:1)*delta,threshold=Math.max(.0001,Number(spec.threshold||0));
+    rows.push({label:spec.label,state:Math.abs(delta)<threshold?'stable':signal>0?'good':'bad'});
+  }
+  const good=rows.filter(x=>x.state==='good').length,bad=rows.filter(x=>x.state==='bad').length,stable=rows.filter(x=>x.state==='stable').length;
+  const state=!rows.length?'thin':good&&bad?'mixed':good?'good':bad?'bad':'stable';
+  return{state,good,bad,stable,total:rows.length,rows};
+}
+function longitudinalMetricSpecs(role){
+  if(role==='SUPPORT')return[
+    {key:'peerVpmDelta',label:'Vision/min vs Support',unit:'num',threshold:.12,inverse:false},
+    {key:'peerKpDelta',label:'KP vs Support',unit:'percent',threshold:3,inverse:false},
+    {key:'peerGpmDelta',label:'Gold/min vs Support',unit:'num',threshold:18,inverse:false},
+    {key:'peerDeathsDelta',label:'Deaths vs Support',unit:'num',threshold:.35,inverse:true}
+  ];
+  return[
+    {key:'peerCsMinDelta',label:'CS/min vs role opponent',unit:'csmin',threshold:.15,inverse:false},
+    {key:'peerDpmDelta',label:'DPM vs role opponent',unit:'dpm',threshold:60,inverse:false},
+    {key:'peerGpmDelta',label:'Gold/min vs role opponent',unit:'num',threshold:20,inverse:false},
+    {key:'peerDeathsDelta',label:'Deaths vs role opponent',unit:'num',threshold:.35,inverse:true}
+  ];
+}
+function longitudinalTrajectoryRead(r){
+  const windows=Array.isArray(r?.longHorizon?.trajectoryWindows)?r.longHorizon.trajectoryWindows:[],specs=longitudinalMetricSpecs(reportSelectedRole(r)),reads=[];
+  for(const spec of specs){
+    const valid=windows.filter(w=>hasNum(w?.[spec.key]?.value)&&Number(w?.[spec.key]?.n||0)>=5);
+    if(valid.length<2)continue;
+    const latest=valid[0],oldest=valid[valid.length-1],delta=Number(latest[spec.key].value)-Number(oldest[spec.key].value),signal=(spec.inverse?-1:1)*delta;
+    reads.push({...spec,latest,oldest,delta,state:Math.abs(delta)<spec.threshold?'stable':signal>0?'good':'bad'});
+  }
+  const good=reads.filter(x=>x.state==='good').length,bad=reads.filter(x=>x.state==='bad').length,stable=reads.filter(x=>x.state==='stable').length;
+  const state=!reads.length?'thin':good&&bad?'mixed':good?'good':bad?'bad':'stable';
+  return{state,good,bad,stable,reads,windows};
+}
+function synthesisAgreementModel(r){
+  const priority=topPracticeThemes(r)[0]||null,independent=Number(priority?.independentSupportCount||0),support=Number(priority?.supportCount||0),recent=recentEvidenceBalance(r),long=longitudinalTrajectoryRead(r);
+  return[
+    {label:'Main coaching priority',state:!priority?'thin':independent>=2?'converging':independent===1?'single':'thin',value:priority?(independent>=2?independent+' independent channels':independent===1?'1 independent channel':support+' supporting finding'+(support===1?'':'s')):'No promoted priority',copy:priority?String(priority.title||priority.label||'Priority'):'More evidence is needed before one theme should lead the plan.'},
+    {label:'Latest-five direction',state:recent.state==='mixed'?'mixed':recent.state==='thin'?'thin':'converging',value:recent.total?(recent.good+' better · '+recent.bad+' worse · '+recent.stable+' stable'):'Not enough evidence',copy:recent.state==='mixed'?'Recent metrics point in different directions, so the report should not collapse them into one “form” score.':'The currently measurable latest-five components are directionally coherent or stable.'},
+    {label:'Longer opponent-relative history',state:long.state==='mixed'?'mixed':long.state==='thin'?'thin':'converging',value:long.reads.length?(long.good+' better · '+long.bad+' worse · '+long.stable+' stable'):'Need ≥2 valid windows',copy:long.state==='mixed'?'Long-run opponent-relative components disagree; this is a mixed development profile.':long.state==='thin'?'The history does not yet contain two sufficiently sampled 20-game windows for multiple comparable metrics.':'The longer-history components mostly point the same way or stay inside practical-change bands.'}
+  ];
+}
+function renderCoachingSynthesis(r){
+  const lead=$('coachingSynthesisLead'),box=$('coachingSynthesis'),agreement=$('evidenceAgreement');if(!lead||!box||!agreement)return;
+  const priority=topPracticeThemes(r)[0]||null,strengths=currentStrengthFindings(r),strength=strengths[0]||null,recent=recentDirectionSummary(r),long=longitudinalTrajectoryRead(r),agreements=synthesisAgreementModel(r);
+  const independent=Number(priority?.independentSupportCount||0);
+  const longPhrase=long.state==='mixed'?'Longer-history evidence is mixed.':long.state==='good'?'Longer-history opponent-relative performance is leaning better.':long.state==='bad'?'Longer-history opponent-relative performance is leaning worse.':long.state==='stable'?'Longer-history opponent-relative performance is broadly stable.':'Longer-history direction is still thin.';
+  lead.innerHTML='<div><span>Current working model</span><strong>'+esc(priority?.title||priority?.label||'No single priority is established yet')+'</strong><p>'+esc(priority?String(priority.evidence||priority.summary||'This is the highest-ranked supported coaching theme in the current report.'):'The report does not yet have enough converging evidence to promote one improvement theme.')+'</p></div><div class="synthesis-lead-meta"><b>'+(priority?esc((independent>=2?independent+' independent evidence channels':'Evidence still developing')):'Evidence still developing')+'</b><span>'+esc(longPhrase)+'</span></div>';
+  const cards=[
+    {k:'act',label:'Act on this',title:priority?.title||priority?.label||'Keep gathering evidence',copy:priority?.action||'Do not manufacture a coaching target until a supported pattern repeats.',meta:priority?(Number(priority.supportCount||0)+' supporting finding'+(Number(priority.supportCount||0)===1?'':'s')):'No promoted theme',tone:priority?'bad':'neutral'},
+    {k:'keep',label:'Preserve this',title:strength?.title||'No established strength card yet',copy:strength?strength.keep:'Treat neutral evidence as neutral rather than inventing a positive story.',meta:strength?(strength.value+' · n='+strength.n):'Strength threshold not met',tone:strength?'good':'neutral'},
+    {k:'direction',label:'Recent direction',title:recent.value,copy:recent.copy,meta:recent.meta,tone:recent.tone},
+    {k:'history',label:'Long-run direction',title:longPhrase,copy:long.reads.length?'Compared across '+long.windows.length+' non-overlapping 20-game history windows using direct-role opponent-relative metrics.':'More selected-role history is needed for a multi-window read.',meta:long.reads.length?(long.good+' better · '+long.bad+' worse · '+long.stable+' stable components'):'No multi-window comparison',tone:long.state==='good'?'good':long.state==='bad'?'bad':'neutral'}
+  ];
+  box.innerHTML=cards.map(x=>'<article class="coaching-synthesis-card tone-'+x.tone+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.title)+'</strong><p>'+esc(x.copy||'')+'</p><small>'+esc(x.meta||'')+'</small></article>').join('');
+  agreement.innerHTML='<div class="section-subhead"><div><span>Evidence agreement</span><strong>Do independent parts of the report tell the same story?</strong></div><small>Disagreement is retained rather than averaged away.</small></div><div class="evidence-agreement-grid">'+agreements.map(x=>'<article class="evidence-agreement-card state-'+esc(x.state)+'"><span>'+esc(x.state==='converging'?'Converging':x.state==='mixed'?'Mixed evidence':x.state==='single'?'Single channel':'Thin evidence')+'</span><strong>'+esc(x.label)+'</strong><b>'+esc(x.value)+'</b><p>'+esc(x.copy)+'</p></article>').join('')+'</div>';
+}
+function playerStyleModel(r){
+  const role=reportSelectedRole(r),signals=playerStyleEvidence(r),good=signals.filter(x=>x.tone==='good'),bad=signals.filter(x=>x.tone==='bad'),neutral=signals.filter(x=>x.tone==='neutral');
+  const find=label=>signals.find(x=>x.label.toLowerCase().includes(label));
+  const farm=find('cs/min'),damage=find('dpm'),lane=find('gold @15'),risk=find('high-risk'),vision=find('vision/min'),impact=find('first impact');
+  const parts=[];
+  if(role==='SUPPORT'){
+    if(vision?.tone==='good')parts.push('vision-volume-forward');
+    else if(vision?.tone==='bad')parts.push('lower-vision-volume');
+  }else{
+    if(farm?.tone==='good')parts.push('farm-secure');
+    else if(farm?.tone==='bad')parts.push('lower-resource');
+    if(damage?.tone==='good')parts.push('output-positive');
+    else if(damage?.tone==='bad')parts.push('lower-output');
+    if(lane?.tone==='good')parts.push('early-economy-positive');
+    else if(lane?.tone==='bad')parts.push('early-economy-vulnerable');
+    if(impact?.tone==='good')parts.push('early-impact');
+  }
+  if(risk?.tone==='good')parts.push('controlled-risk');
+  else if(risk?.tone==='bad')parts.push('high-variance');
+  const headline=parts.length?('A '+parts.slice(0,3).join(', ')+' '+roleLabel(role)+' sample'):'No stable playstyle shorthand clears the evidence floor yet';
+  return{role,signals,good,bad,neutral,headline};
+}
+function reviewEvidenceChip(x){
+  if(!x)return'';
+  return '<a class="player-review-evidence tone-'+esc(x.tone||'neutral')+'" href="'+esc(x.href||'#overview')+'"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><small>n='+esc(String(x.n??''))+'</small></a>';
+}
+function decisionEvidenceChip(a,label,value,detail){
+  if(!a||a.status==='unavailable'||!value)return'';
+  return '<a class="player-review-evidence tone-neutral" href="#decisionIntelligencePanel"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong><small>'+esc(detail||('n='+String(a.sample||0)))+'</small></a>';
+}
+function renderPlayerReview(r){
+  const box=$('playerReview');if(!box)return;
+  const style=playerStyleModel(r),priority=topPracticeThemes(r)[0]||null,strength=currentStrengthFindings(r)[0]||null,recent=recentDirectionSummary(r),long=longitudinalTrajectoryRead(r);
+  const lead=decisionAnalytic(r,'lead_utilisation'),deficit=decisionAnalytic(r,'deficit_recovery'),chains=decisionAnalytic(r,'death_chains'),follow=decisionAnalytic(r,'fight_lead_conversion'),loss=decisionAnalytic(r,'fight_loss_containment');
+  const le=lead?.evidence||{},de=deficit?.evidence||{},ce=chains?.evidence||{},fe=follow?.evidence||{},loe=loss?.evidence||{};
+  const contextual=[];
+  if(lead&&Number(lead.sample||0)>=2)contextual.push(decisionEvidenceChip(lead,'Large-lead state at 25',String(le.stillAheadAt25??0)+' / '+String(lead.sample||0)+' still ahead','paired ≥500g leads'));
+  if(deficit&&Number(deficit.sample||0)>=2)contextual.push(decisionEvidenceChip(deficit,'Large-deficit recovery',String(de.narrowedGames??0)+' / '+String(deficit.sample||0)+' narrowed','median movement '+(hasNum(de.medianMovement)?signed(de.medianMovement,0)+'g':'n/a')));
+  if(chains&&hasNum(ce.repeatRateDeltaPp))contextual.push(decisionEvidenceChip(chains,'Repeat-death pace vs peer',signed(ce.repeatRateDeltaPp,1)+' pp','same 4-minute rule'));
+  if(follow&&hasNum(fe.followUpRate))contextual.push(decisionEvidenceChip(follow,'Fight-win follow-up',fmtPct(fe.followUpRate),'before next fight / 90s'));
+  if(loss&&hasNum(loe.noExtraRiskDeathRate))contextual.push(decisionEvidenceChip(loss,'After-loss extra-risk avoidance',fmtPct(loe.noExtraRiskDeathRate),'before next fight / 90s'));
+  const signalChips=style.signals.map(reviewEvidenceChip).join(''),contextChips=contextual.filter(Boolean).join('');
+  const styleCopy=style.signals.length
+    ?'The shorthand above is built only from role-relative or evidence-gated signals. It describes this sample, not a fixed personality. '+(style.good.length?'Favorable signals currently include '+style.good.map(x=>x.label.toLowerCase()).join(', ')+'. ':'')+(style.bad.length?'The main friction signals include '+style.bad.map(x=>x.label.toLowerCase()).join(', ')+'.':'')
+    :'There are not enough comparable role-relative signals to assign a useful playstyle shorthand. The review therefore stays focused on the promoted coaching evidence rather than guessing.';
+  const strengthCopy=strength?strength.copy+' '+strength.keep:'No positive pattern currently meets the page’s strength threshold, so the review does not invent one.';
+  const leakCopy=priority?(String(priority.evidence||'The highest-ranked supported theme is the current development focus.')+' '+String(priority.action||'')):'No recurring weakness has enough converging evidence to become a primary coaching claim.';
+  const trajectoryCopy=recent.copy+' '+(long.state==='mixed'?'The longer history is also mixed, which argues against a simple “getting better/worse” label.':long.state==='good'?'The longer opponent-relative windows lean favorable on balance.':long.state==='bad'?'The longer opponent-relative windows lean unfavorable on balance.':long.state==='stable'?'The longer opponent-relative windows are broadly stable.':'The longer history is still too thin for a multi-window direction claim.');
+  const practice=topPracticeThemes(r).slice(0,3);
+  const practiceHtml=practice.length?'<ol>'+practice.map((x,i)=>'<li><b>'+esc(String(x.title||x.label||('Priority '+(i+1))))+'</b><span>'+esc(String(x.action||x.evidence||'Review the supported examples and keep the intervention narrow.'))+'</span></li>').join('')+'</ol>':'<p>No evidence-backed three-part practice hierarchy is available yet.</p>';
+  const conclusion=priority
+    ?'The useful way to read this player is not as a collection of 25 scores. The current sample suggests a repeatable style with identifiable strengths, but the largest improvement opportunity is '+String(priority.title||priority.label||'the promoted coaching theme')+'. Preserve '+String(strength?.title||'the currently supported strengths')+' while testing that one change over the next measured games. '+(recent.tone==='neutral'?'Because recent signals are mixed or stable, judge the intervention by the individual tracked components rather than win rate alone.':'Use the next measured window to see whether the specific supporting metrics move, not merely whether the result column improves.')
+    :'The report is not yet justified in forcing a single playstyle conclusion. Keep collecting comparable games and use the evidence cards as review prompts until one theme earns enough independent support.';
+  box.innerHTML=
+    '<article class="player-review-section playstyle"><span>Playstyle read</span><h3>'+esc(style.headline)+'</h3><p>'+esc(styleCopy)+'</p><div class="player-review-evidence-row">'+(signalChips||'<span class="muted">No role-relative style evidence clears the minimum sample floor.</span>')+'</div></article>'+
+    '<div class="player-review-columns"><article class="player-review-section strength"><span>Where this style helps</span><h3>'+esc(strength?.title||'No promoted strength yet')+'</h3><p>'+esc(strengthCopy)+'</p>'+(strength?'<a class="button secondary small" href="#current-strengths">See measured strengths</a>':'')+'</article>'+
+    '<article class="player-review-section leak"><span>Where value leaks</span><h3>'+esc(priority?.title||priority?.label||'No promoted leak yet')+'</h3><p>'+esc(leakCopy)+'</p>'+(priority?'<a class="button secondary small" href="#practice-plan">Open Next-5 plan</a>':'')+'</article></div>'+
+    '<article class="player-review-section context"><span>How the game-state evidence changes the story</span><h3>Conversion, recovery and risk context</h3><p>These measurements qualify the playstyle read rather than being blended into a fake composite score. A player can be strong in one state and weak in another.</p><div class="player-review-evidence-row">'+(contextChips||'<span class="muted">No decision-state context currently clears the display floor.</span>')+'</div></article>'+
+    '<article class="player-review-section trajectory"><span>Development over time</span><h3>'+esc(recent.value)+'</h3><p>'+esc(trajectoryCopy)+'</p><a class="button secondary small" href="#long-horizon">Open history evidence</a></article>'+
+    '<article class="player-review-section plan"><span>Development direction</span><h3>Keep the intervention narrow</h3>'+practiceHtml+'<p class="player-review-caveat">These are evidence-backed practice cues, not causal diagnoses. Matchup, champion, draft, team state and Riot timeline resolution still constrain what can be inferred.</p></article>'+
+    '<article class="player-review-conclusion"><span>Overall conclusion</span><p>'+esc(conclusion)+'</p></article>';
+}
+
 function renderPriorityEvidenceChain(r){
   const box=$('priorityEvidenceChain');if(!box)return;
   const theme=topPracticeThemes(r)[0]||null;
