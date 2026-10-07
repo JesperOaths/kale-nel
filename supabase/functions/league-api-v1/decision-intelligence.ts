@@ -183,30 +183,38 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   // 1. Fight decision score / opportunity-cost ledger
   const ledger=abs.map(({g,e})=>({matchId:g.matchId,champion:g.champion,minute:round(e.startMin,1),zone:e.fightZone||"unknown",
     valueG:round(valueProxy(e),0),fightCostG:round(fightLossProxy(e),0),netProxyG:round(valueProxy(e)-fightLossProxy(e),0),
+    goldSwing:round(e.crossMapGoldSwingVsPeer,0),csSwing:round(e.crossMapCsSwingVsPeer,1),
+    structures:n(e.playerStructureGains||0),neutralObjectives:n(e.playerNeutralObjectiveGains||0),
     tradeSupported:e.crossMapTradeSupported===true,joinReviewPriority:e.joinReviewPriority||"context"}));
-  analytics.push(metric("fight_decision_ledger","Fight decision opportunity-cost ledger",ledger.length?"supported":"unavailable",ledger.length,
-    ledger.length?"Skipped fights now show measured cross-map value beside a transparent fight-loss proxy; use this to choose replays, not as proof of the correct counterfactual.":"No position-supported skipped fights in the current deep sample.",
-    {proxy:"cross-map gold + 20g/CS + 450/structure + 600/neutral objective versus 300g per net fight kill",rows:ledger.slice().sort((a,b)=>Math.abs(n(b.netProxyG))-Math.abs(n(a.netProxyG))).slice(0,12)},ledger));
+  analytics.push(metric("fight_decision_ledger","Fight decision opportunity-cost ledger",ledger.length?"proxy":"unavailable",ledger.length,
+    ledger.length?"Skipped fights show a transparent cross-map-value proxy beside a net-kill fight-cost proxy. It ranks replay questions; it is not an economic total or a counterfactual verdict.":"No position-supported skipped fights in the current deep sample.",
+    {proxy:"direct-role gold swing + 20g/CS + 450/structure involvement + 600/neutral-objective involvement, minus 300g per net kill lost",rows:ledger.slice().sort((a,b)=>Math.abs(n(b.netProxyG))-Math.abs(n(a.netProxyG))).slice(0,12)},ledger));
 
   // 2. Arrival feasibility
   const arrival=abs.map(({g,e})=>({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,distance:e.playerDistanceToFight,
-    feasible:e.joinReachable===true,priority:e.joinReviewPriority||"context",numbersDelta:e.numbersDelta}));
-  analytics.push(metric("arrival_feasibility","Arrival feasibility",arrival.length?"supported":"unavailable",arrival.length,
-    arrival.length?`${count(arrival,x=>x.feasible)} of ${arrival.length} skipped position-supported fights began inside the current ~6.5k-unit reachability screen.`:"No skipped-fight position evidence available.",
-    {reachable:count(arrival,x=>x.feasible),rows:arrival.filter(x=>x.feasible).slice(0,12)},arrival));
+    feasible:e.joinReachable===true,priority:e.joinReviewPriority||"context",numbersDelta:e.numbersDelta,
+    reachabilityBand:!finite(e.playerDistanceToFight)?"unknown":n(e.playerDistanceToFight)<=4000?"near":n(e.playerDistanceToFight)<=6500?"borderline":"far"}));
+  analytics.push(metric("arrival_feasibility","Arrival feasibility",arrival.length?"proxy":"unavailable",arrival.length,
+    arrival.length?`${count(arrival,x=>x.feasible)} of ${arrival.length} skipped position-supported fights began inside the current ~6.5k-unit straight-line screen. Terrain, movement speed, cooldowns and path safety remain unknown.`:"No skipped-fight position evidence available.",
+    {near:count(arrival,x=>x.reachabilityBand==="near"),borderline:count(arrival,x=>x.reachabilityBand==="borderline"),far:count(arrival,x=>x.reachabilityBand==="far"),rows:arrival.slice(0,12)},arrival));
 
   // 3. Pre-fight positioning quality
   const pre:any[]=[];
   for(const {g,e} of [...fights,...abs]){
     const t=n(e?.startMin); if(!finite(t)||!e?.fightPosition)continue;
-    const checkpoints=[30,20,10].map(sec=>{
-      const fr=nearestFrameBefore(g,t-sec/60,1.15),d=fr?.position?distance(fr.position,e.fightPosition):null;
-      return {sec,zone:fr?.zone||"unknown",distance:round(d,0),sampleMinute:fr?round(fr.time,1):null};
-    });
-    if(checkpoints.some(x=>finite(x.distance)))pre.push({matchId:g.matchId,minute:round(t,1),fightZone:e.fightZone,checkpoints});
+    const seen=new Set<string>(),checkpoints:any[]=[];
+    for(const requestedSec of [30,20,10]){
+      const fr=nearestFrameBefore(g,t-requestedSec/60,1.15);
+      if(!fr?.position||!finite(fr.time)||!finite(fr.position.x)||!finite(fr.position.y))continue;
+      const key=String(fr.time);if(seen.has(key))continue;seen.add(key);
+      const d=distance(fr.position,e.fightPosition),actualLeadSec=Math.max(0,Math.round((t-n(fr.time))*60));
+      checkpoints.push({requestedSec,actualLeadSec,zone:fr.zone||"unknown",distance:round(d,0),sampleMinute:round(fr.time,2),position:{x:n(fr.position.x),y:n(fr.position.y)}});
+    }
+    checkpoints.sort((a,b)=>b.actualLeadSec-a.actualLeadSec);
+    if(checkpoints.length)pre.push({matchId:g.matchId,minute:round(t,1),fightZone:e.fightZone,fightPosition:e.fightPosition,checkpoints});
   }
   analytics.push(metric("pre_fight_positioning","Pre-fight positioning quality",pre.length?"proxy":"unavailable",pre.length,
-    pre.length?"Shows the nearest Riot timeline-frame position around 30/20/10 seconds before tracked fights. Timeline frames are coarse, so this is a routing clue rather than second-perfect movement tracking.":"No usable pre-fight frame/coordinate pairs.",
+    pre.length?"Uses distinct Riot timeline frames requested around 30/20/10 seconds before fights, but displays the actual seconds-before-fight for each retained frame. Duplicate minute-cadence frames are collapsed rather than pretending they are separate observations.":"No usable pre-fight frame/coordinate pairs.",
     {frameCadenceCaveat:true,rows:pre.slice(0,12)},pre));
 
   // 4. Fight formation map
@@ -222,10 +230,10 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
 
   // 5. Numbers-aware participation
   const numF=fights.filter(x=>x.e?.active===true&&finite(x.e?.numbersDelta));
-  const badNum=count(numF,x=>n(x.e.numbersDelta)<=-2),goodNum=count(numF,x=>n(x.e.numbersDelta)>=0);
+  const badNum=count(numF,x=>n(x.e.numbersDelta)<=-2),downOne=count(numF,x=>n(x.e.numbersDelta)===-1),evenNum=count(numF,x=>n(x.e.numbersDelta)===0),aheadNum=count(numF,x=>n(x.e.numbersDelta)>=1);
   analytics.push(metric("numbers_aware_participation","Numbers-aware participation",numF.length?"supported":"unavailable",numF.length,
-    numF.length?`${badNum} active fights began at a local ≥2-player disadvantage; ${goodNum} began even or ahead in the sampled local-number snapshot.`:"No active fights with local-number evidence.",
-    {outnumberedStarts:badNum,evenOrBetterStarts:goodNum,outnumberedLossRate:safeRate(count(numF,x=>n(x.e.numbersDelta)<=-2&&x.e.lostFight),badNum)}));
+    numF.length?`${badNum} active fights began at a local ≥2-player disadvantage; ${downOne} began down one; ${evenNum+aheadNum} began even or ahead in the sampled local-number snapshot.`:"No active fights with local-number evidence.",
+    {outnumberedStarts:badNum,downOneStarts:downOne,evenStarts:evenNum,aheadStarts:aheadNum,outnumberedLossRate:safeRate(count(numF,x=>n(x.e.numbersDelta)<=-2&&x.e.lostFight),badNum)}));
 
   // 6. Cross-map efficiency
   const cross=ledger.filter(x=>finite(x.valueG)).map(x=>({...x,valuePerMin:round(n(x.valueG)/1.5,0)}));
@@ -242,10 +250,10 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     {resourceConflictWindows:count(wave,x=>x.likelyResourceConflict),rows:wave.slice(0,12)},wave));
 
   // 8. Nothing-gained isolation time
-  const nothing=abs.filter(x=>x.e?.crossMapTradeSupported!==true);
+  const nothing=abs.filter(x=>x.e?.crossMapTradeSupported!==true),uniqueNothingMinutes=mergedWindowMinutes(nothing);
   analytics.push(metric("nothing_gained_isolation","Nothing-gained separation windows",nothing.length?"supported":"unavailable",nothing.length,
-    nothing.length?`${nothing.length} skipped tracked fights produced no supported 90-second structure/objective/+250g/+6CS compensation; about ${round(nothing.length*1.5,1)} minutes of reviewable separation windows.`:"No uncompensated skipped-fight windows.",
-    {reviewableMinutes:round(nothing.length*1.5,1),highPriority:count(nothing,x=>x.e?.joinReviewPriority==="high"),
+    nothing.length?`${nothing.length} skipped tracked fights produced no supported 90-second structure/objective/+250g/+6CS compensation. Their de-duplicated review windows cover about ${round(uniqueNothingMinutes,1)} minutes.`:"No uncompensated skipped-fight windows.",
+    {reviewableMinutes:round(uniqueNothingMinutes,1),windowCount:nothing.length,highPriority:count(nothing,x=>x.e?.joinReviewPriority==="high"),
       rows:nothing.slice(0,12).map(({g,e})=>({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,priority:e.joinReviewPriority}))},
     nothing.map(({g,e})=>({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone}))));
 
