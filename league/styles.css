@@ -2773,3 +2773,31 @@ body{background:var(--paper);line-height:1.55;padding:18px 16px 74px}
   .teamfight-decision-card{grid-template-columns:1fr}
   .teamfight-decision-card .button{justify-self:start}
 }
+
+
+/* v304 — 25-part decision intelligence */
+.decision-intelligence-panel{margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
+.di-headline{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,.8fr);gap:16px;align-items:stretch;margin-bottom:18px}
+.di-headline>div:first-child{border:1px solid var(--line);border-radius:18px;padding:18px 20px;background:rgba(255,255,255,.62)}
+.di-headline span,.di-all-head span,.di-shortlist .section-subhead span{font-size:.82rem;font-weight:800;letter-spacing:.055em;text-transform:uppercase;color:var(--muted)}
+.di-headline strong{display:block;font-size:clamp(1.2rem,2vw,1.65rem);margin:3px 0 7px}.di-headline p{margin:0;line-height:1.55}
+.di-headline-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.di-headline-stats span{border:1px solid var(--line);border-radius:14px;padding:14px;background:rgba(255,255,255,.55);text-transform:none;letter-spacing:0;font-size:.88rem}
+.di-headline-stats b{display:block;font-size:1.45rem;color:var(--ink)}
+.di-shortlist{margin:18px 0 22px}.di-shortlist-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.di-shortlist-card{border:1px solid var(--line);border-radius:15px;padding:14px;background:rgba(255,255,255,.56);display:grid;gap:7px}
+.di-shortlist-card>span{font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.di-shortlist-card>strong{font-size:1.02rem;line-height:1.35}.di-shortlist-card>small{line-height:1.4;color:var(--muted)}.di-shortlist-card .button{justify-self:start}
+.di-all-head{display:flex;align-items:end;justify-content:space-between;gap:14px;margin:18px 0 10px}.di-all-head strong{display:block;font-size:1.2rem}.di-all-head small{color:var(--muted)}
+.di-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.di-card{border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.5);overflow:hidden}
+.di-card>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:15px 16px}
+.di-card>summary::-webkit-details-marker{display:none}.di-card>summary div{display:grid;gap:2px}.di-card>summary strong{font-size:1.02rem;line-height:1.25}.di-card>summary small{color:var(--muted)}
+.di-card>summary i{width:9px;height:9px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:.15s}.di-card[open]>summary i{transform:rotate(225deg)}
+.di-index{font:800 .78rem/1 ui-monospace,SFMono-Regular,Consolas,monospace;border:1px solid var(--line);border-radius:999px;padding:7px;color:var(--muted)}
+.di-card.tone-good{box-shadow:inset 4px 0 0 rgba(44,130,87,.64)}.di-card.tone-warn{box-shadow:inset 4px 0 0 rgba(179,126,34,.7)}.di-card.tone-neutral{box-shadow:inset 4px 0 0 rgba(80,105,140,.5)}.di-card.tone-muted{opacity:.78}
+.di-card-body{padding:0 16px 16px;display:grid;gap:10px}.di-card-body>p{margin:0;line-height:1.55}
+.di-evidence-chips{display:flex;flex-wrap:wrap;gap:7px}.di-evidence-chips>span{border:1px solid var(--line);border-radius:999px;padding:6px 9px;font-size:.82rem;background:rgba(255,255,255,.68)}.di-proxy-note{border-radius:10px!important;flex-basis:100%;line-height:1.4}
+.di-evidence-list{display:grid;gap:7px}.di-evidence-row{border-top:1px solid var(--line);padding-top:8px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}.di-evidence-row>div{display:flex;flex-wrap:wrap;gap:7px}.di-evidence-row span{font-size:.82rem}.di-evidence-row small{flex-basis:100%;color:var(--muted)}
+@media(max-width:980px){.di-grid{grid-template-columns:1fr}.di-headline{grid-template-columns:1fr}}
+@media(max-width:620px){.di-headline-stats{grid-template-columns:repeat(2,1fr)}.di-all-head{display:grid}.di-evidence-row{grid-template-columns:1fr}.di-evidence-row .button{justify-self:start}}

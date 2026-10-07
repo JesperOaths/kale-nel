@@ -40,5 +40,6 @@ jobs:
           fi
           mkdir -p supabase/functions/printify-gildan-diff-diag-v1
           cp supabase/functions/league-api-v1/index.ts supabase/functions/printify-gildan-diff-diag-v1/index.ts
+          cp supabase/functions/league-api-v1/decision-intelligence.ts supabase/functions/printify-gildan-diff-diag-v1/decision-intelligence.ts
           npx --yes supabase@2.117.0 --version
           npx --yes supabase@2.117.0 functions deploy printify-gildan-diff-diag-v1             --project-ref "$PROJECT_REF"             --no-verify-jwt
