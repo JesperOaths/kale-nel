@@ -1,4 +1,4 @@
-/* 20261007-league-web-v307 · decision-intelligence integration and visual coherence */
+/* 20261007-league-web-v308 · decision-intelligence integration and visual coherence */
 (function(){
 'use strict';
 

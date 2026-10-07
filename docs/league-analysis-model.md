@@ -3706,3 +3706,19 @@ The v306 pass re-audits all 25 decision-intelligence analytics for evidence sema
 ### Evidence-state rule
 
 “Measured” means the displayed quantity is directly derived from supported Riot/report evidence. It does not mean the sample is large or causal. “Proxy” means the display combines measured inputs with a heuristic transformation. “Thin” means the analytic exists but does not clear its own promoted evidence floor. “No evidence” means the required paired/supported observations are absent.
+
+
+## v308 real-data decision-intelligence audit
+
+The v308 pass was driven by a fresh production analysis over the saved account's cloned 88-match cache rather than by source inspection alone. It corrects issues that were only obvious once the real report values were inspected.
+
+- Decision-intelligence numeric guards reject null/undefined/empty values before Number conversion. Missing Gold@25 can no longer become a false zero.
+- Visual conclusions use the full stored `moments` set when available; `evidence.rows` remains a deliberately short disclosure preview only.
+- Fight-win conversion requires a strict kill-cluster win (`teamFightKills > enemyFightKills`). Tied clusters are not wins, and follow-up kills must occur after the cluster endpoint.
+- Objective setup uses distinct coarse position samples requested around 90/60/30 seconds before the event, collapses duplicate Riot frames, reports actual seconds-before-event, and remains explicitly a Proxy rather than second-perfect pathing.
+- Repeated map locations are called review clusters, not mistake clusters.
+- Champion tendency comparison is Thin unless at least two champions have >=3 deep games.
+- Opponent-adjusted DPM residuals use the longest valid same-role match history and hierarchical leave-one-out context: champion+opponent+duration, champion+duration, champion, duration, then global personal history.
+- Requeue-gap comparison uses longer same-role history because it needs match timing/opponent metrics but not timelines; timeline-dependent decision metrics remain limited to deep games.
+- Nothing-gained separation remains a Proxy because its compensation decision uses explicit +250g/+6CS thresholds.
+- Categorical colors are semantic: red=adverse/review, gold=warning/context, blue=neutral/context, green=favorable measured direction. Objective absence is not colored as a proven error.

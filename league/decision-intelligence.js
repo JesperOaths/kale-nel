@@ -5,7 +5,7 @@
   const fmt=(v,d=1)=>num(v)?Number(v).toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:0}):'—';
   const pct=(a,b)=>b?100*a/b:null;
   const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
-  const rows=a=>Array.isArray(a?.evidence?.rows)?a.evidence.rows:[];
+  const rows=a=>Array.isArray(a?.moments)&&a.moments.length?a.moments:(Array.isArray(a?.evidence?.rows)?a.evidence.rows:[]);
   const statusLabel=s=>({supported:'Measured',proxy:'Proxy',thin:'Thin sample',unavailable:'No evidence'}[s]||s||'Context');
   const statusTone=s=>s==='supported'?'good':s==='proxy'?'warn':s==='thin'?'neutral':'muted';
   const gameMap=report=>new Map((report?.games||[]).map(g=>[String(g.matchId),g]));
@@ -37,21 +37,21 @@
     wave_fight_conflict:{group:'Fight decisions',measure:'Uses direct-role CS and gold movement as a resource-pressure proxy when a fight begins elsewhere. Exact live wave size is not available.',review:'When CS gain was real but the team lost heavily, check whether the wave could have been pushed or abandoned earlier.'},
     nothing_gained_isolation:{group:'Fight decisions',measure:'Counts skipped tracked fights where the next 90 seconds show no supported structure, objective, +250g or +6 CS compensation.',review:'These are the cleanest “what were you doing instead?” review windows. Prioritize high-priority reachable examples.'},
     post_recall_tempo:{group:'Tempo & setup',measure:'Measures the time from a completed shop to the next tracked fight/objective and shows where you were sampled on the approach.',review:'Look for recalls that finish shortly before action but still leave you on the wrong side of the map.'},
-    objective_setup_path:{group:'Tempo & setup',measure:'Reconstructs the sequence from last shop → sampled approach zone → contested objective.',review:'For missed objectives, move the review start one minute earlier. The important mistake often happens before the objective appears on screen.'},
+    objective_setup_path:{group:'Tempo & setup',measure:'Pairs the last measured shop with distinct coarse position samples requested around 90/60/30 seconds before a contested objective. Duplicate Riot frames are collapsed and actual seconds-before-objective are shown.',review:'For missed objectives, review the sampled setup route before contact rather than only the objective event. The route is coarse timeline context, not second-perfect movement tracking.'},
     lead_utilisation:{group:'Economy & conversion',measure:'Tracks ≥500g direct-role leads at 15 into the 25-minute state when both checkpoints exist.',review:'Compare leads that remain substantial with leads that shrink. Review resets, deaths, map trades and objective conversion; a smaller lead is not automatically a mistake because game state can legitimately compress it.'},
     deficit_recovery:{group:'Economy & conversion',measure:'Tracks paired games starting ≥500g behind at 15 and measures how the direct-role gold difference changes by 25.',review:'Review the strongest recoveries and identify whether they came from safe farm, picks, objective fights or opponent mistakes. Improvement is descriptive and does not assign individual credit.'},
     death_chains:{group:'Risk & recovery',measure:'Treats repeat deaths as sequences instead of independent events, using the existing post-death recovery windows.',review:'Start at the first death in the chain. The second death is often the symptom; the useful question is why the reset/re-entry after the first death failed.'},
-    resource_to_impact:{group:'Fight decisions',measure:'Time-orders direct-role gold state before a fight and then records tracked contribution/survival.',review:'If being ahead does not translate into contribution, inspect positioning, unspent gold, arrival timing and target access rather than damage totals alone.'},
-    fight_lead_conversion:{group:'Economy & conversion',measure:'Checks whether a won active fight is followed by a supported structure, objective or kill-conversion signal within roughly 90 seconds.',review:'Open fight wins with no conversion. Check whether the right call was reset, push, objective, invade, or simply not overstay.'},
+    resource_to_impact:{group:'Fight decisions',measure:'Time-orders direct-role gold state before an active fight and records whether the reviewed player registered a tracked kill/assist contribution and survived.',review:'For ahead-without-contribution examples, inspect positioning, unspent gold, arrival timing and target access. This metric does not measure total fight damage or prove the fight should have been taken.'},
+    fight_lead_conversion:{group:'Economy & conversion',measure:'Checks strict tracked fight wins only, then looks for a same-team structure/neutral-objective gain or a new reviewed-player kill/assist contribution in the following ~90 seconds.',review:'Open strict fight wins with no tracked follow-up. A reset can still be correct, so use these as macro review windows rather than automatic conversion failures.'},
     fight_loss_containment:{group:'Risk & recovery',measure:'Checks whether a lost fight is followed by another classified bad death within roughly 90 seconds.',review:'Review compounded losses. The practical goal is to stop one lost fight from becoming two separate losses.'},
-    objective_trading:{group:'Tempo & setup',measure:'Isolates skipped fights that produced a supported structure or neutral-objective gain elsewhere.',review:'Validate that the trade was actually dependent on staying away and that the enemy did not receive much more guaranteed value.'},
-    geographical_clusters:{group:'Map patterns',measure:'Combines high-priority skipped-fight locations and supported bad-death areas to expose repeated map locations that deserve replay attention.',review:'Repeated location is a habit clue, not a verdict. Check whether the same pathing/vision/spacing decision repeats inside that zone.'},
+    objective_trading:{group:'Tempo & setup',measure:'Isolates skipped fights that coincide with a supported structure or neutral-objective gain elsewhere in the same bounded trade window.',review:'Validate whether staying away was actually necessary for the gain and compare it with what the team conceded. Timing association is not proof of causation.'},
+    geographical_clusters:{group:'Map patterns',measure:'Combines high-priority skipped-fight review locations and supported high-risk-death areas to expose repeated map locations that deserve replay attention.',review:'Repeated location is a review clue, not proof of a mistake. Check whether the same pathing, vision or spacing decision actually repeats inside that zone.'},
     champion_tendencies:{group:'Champion context',measure:'Groups only your own games by champion and compares decision/risk tendencies rather than teammate performance.',review:'Use this to identify champion-specific habits: e.g. safer fight entry on one ADC but more empty cross-map time on another.'},
     matchup_adjusted_lane:{group:'Lane & opponent context',measure:'Builds personal-history own-champion × direct-opponent-champion cells for lane gold and DPM-vs-peer context.',review:'Only treat repeated cells as useful. A single matchup result is an example, not a matchup rule.'},
-    expected_performance_residual:{group:'Lane & opponent context',measure:'Compares actual opponent-adjusted DPM with a leave-one-out personal-history expectation based on champion/opponent/duration where repeated context exists, otherwise a leave-one-out global baseline.',review:'Use residuals to find unexpectedly strong or weak games relative to your own history. They are not a causal skill estimate and do not fully control draft, lane state or team context.'},
+    expected_performance_residual:{group:'Lane & opponent context',measure:'Compares actual opponent-adjusted DPM with a leave-one-out personal-history expectation. It uses the most specific supported context available: champion+opponent+duration, champion+duration, champion, duration, then global history.',review:'Use residuals to find games that differ from your own comparable history. The model is descriptive; it does not fully control draft, lane state, team state or MMR.'},
     session_components:{group:'Session patterns',measure:'Breaks the opener→game-3+ answer into evidence-gated signals normalized by each metric’s practical-change threshold. Unlike units are never plotted on one raw scale.',review:'Look for the largest normalized shift, then use the raw delta and sample counts to identify the behavior that actually changed.'},
-    requeue_sweet_spot:{group:'Session patterns',measure:'Compares break-time buckets using the normalized direct-opponent performance composite.',review:'Only use buckets with enough games. Treat the best bucket as scheduling context, not a causal prescription.'},
-    mistake_recurrence:{group:'Learning progress',measure:'Tracks supported issue-signal load game by game by category. It does not claim a target-linked half-life without a defensible target start point.',review:'Use the line and category counts to see whether risky deaths, pre-objective deaths, reset absences or missed-join reviews are actually receding.'},
+    requeue_sweet_spot:{group:'Session patterns',measure:'Compares requeue-gap buckets using a normalized direct-opponent performance composite from the longer same-role history when available.',review:'Only use buckets with enough games. The highest observed bucket is descriptive scheduling context, not evidence that a particular break length improves performance.'},
+    mistake_recurrence:{group:'Learning progress',measure:'Tracks supported review-signal load game by game by category. It does not call every signal a mistake and does not claim a target-linked half-life without a defensible intervention start point.',review:'Use the line and category counts to see whether risky deaths, pre-objective deaths, reset absences or missed-join reviews are actually receding.'},
     automatic_replay_shortlist:{group:'Replay review',measure:'Ranks concrete moments with a transparent review-priority heuristic built from skipped-fight, fight-entry, objective-setup and repeat-death evidence.',review:'Start here when you do not want to review every match. The priority number is only an ordering aid; it is not measured severity, probability, causality or blame.'}
   };
   const GROUP_ORDER=['Fight decisions','Tempo & setup','Economy & conversion','Risk & recovery','Map patterns','Champion context','Lane & opponent context','Session patterns','Learning progress','Replay review'];
@@ -73,7 +73,8 @@
       bits.map(([k,v])=>'<span><b>'+esc(k.replace(/([A-Z])/g,' $1').replace(/_/g,' '))+'</b> '+esc(simpleValue(v))+'</span>').join('')+'</div>';
   }
   function evidenceRows(a){
-    return rows(a).slice(0,8).map(row=>{
+    const evidenceRows=Array.isArray(a?.evidence?.rows)?a.evidence.rows:[];
+    return evidenceRows.slice(0,8).map(row=>{
       const bits=Object.entries(row||{}).filter(([k,v])=>!['matchId','checkpoints'].includes(k)&&v!=null&&typeof v!=='object').slice(0,5)
         .map(([k,v])=>'<span><b>'+esc(k.replace(/([A-Z])/g,' $1').replace(/_/g,' '))+'</b> '+esc(simpleValue(v))+'</span>').join('');
       const checkpoints=Array.isArray(row?.checkpoints)?'<small>'+row.checkpoints.map(x=>esc((num(x.actualLeadSec)?fmt(x.actualLeadSec,0)+'s before':num(x.requestedSec)?'requested '+fmt(x.requestedSec,0)+'s':'sample')+': '+(x.zone||'unknown')+(num(x.distance)?' · '+fmt(x.distance,0)+'u':''))).join(' · ')+'</small>':'';
@@ -97,17 +98,17 @@
       case'lead_utilisation':{const known=r.filter(x=>x.retainedTo25!==null&&x.retainedTo25!==undefined),kept=known.filter(x=>x.retainedTo25===true).length;return known.length?kept+'/'+known.length+' measured ≥500g-at-15 leads retained at least half the lead by 25. Review the shrinking-lead examples for context rather than assuming every reduction is a conversion mistake.':'No lead-preservation sample reaches 25 minutes.';}
       case'deficit_recovery':{const known=r.filter(x=>num(x.recovery)),even=known.filter(x=>x.recoveredToEven).length;return known.length?even+'/'+known.length+' measured large deficits recovered to roughly even by 25; mean movement is '+signed(avg(known.map(x=>x.recovery)),0)+'g.':'No large-deficit game has a usable 25-minute checkpoint.';}
       case'death_chains':return a.summary||'No repeat-death chains.';
-      case'resource_to_impact':return num(e.aheadFightContributionRate)?'When starting ≥300g ahead, tracked contribution occurred in '+fmt(e.aheadFightContributionRate,0)+'% of measured active fights. Review ahead-without-impact examples first.':a.summary;
-      case'fight_lead_conversion':return num(e.conversionRate)?'Tracked fight wins converted within ~90s at '+fmt(e.conversionRate,0)+'%. Non-conversions are the best macro review clips.':a.summary;
+      case'resource_to_impact':return num(e.aheadFightContributionRate)?'When starting ≥300g ahead, a tracked kill/assist contribution occurred in '+fmt(e.aheadFightContributionRate,0)+'% of measured active fights. Review ahead-without-contribution examples, but do not read this as total damage or fight-quality efficiency.':a.summary;
+      case'fight_lead_conversion':return num(e.conversionRate)?fmt(e.conversionRate,0)+'% of strict tracked fight wins had a supported follow-up within ~90 seconds. The remaining wins are macro review clips, not automatically failed conversions.':a.summary;
       case'fight_loss_containment':return num(e.containmentRate)?'After lost fights, '+fmt(e.containmentRate,0)+'% avoided another classified bad death in the next ~90s. The remainder are compound-loss reviews.':a.summary;
-      case'objective_trading':{const s=r.reduce((q,x)=>q+n(x.structures||0),0),o=r.reduce((q,x)=>q+n(x.objectives||0),0);return r.length?'Skipped fights produced '+s+' tracked structure gain(s) and '+o+' neutral-objective gain(s). Validate whether those trades outweighed what the team conceded.':'No structure/objective trade was supported.';}
-      case'geographical_clusters':{const top=r[0];return top?'The densest repeated review zone is '+top.zone+' with '+top.count+' supported signal(s). Treat this as a route/vision habit to inspect, not as a dangerous zone by definition.':'No repeated geography cluster.';}
-      case'champion_tendencies':{const eligible=r.filter(x=>n(x.games)>=3);if(!eligible.length)return'Champion rows are visible, but none has three games yet for a useful tendency conclusion.';const safest=[...eligible].filter(x=>num(x.riskyDeathsPerGame)).sort((a,b)=>n(a.riskyDeathsPerGame)-n(b.riskyDeathsPerGame))[0];return safest?safest.champion+' currently has the lowest risky-death rate among champions with ≥3 games ('+fmt(safest.riskyDeathsPerGame,2)+'/game). Compare its spacing/routing with the others.':'Champion samples are still mixed.';}
+      case'objective_trading':{const s=r.reduce((q,x)=>q+n(x.structures||0),0),o=r.reduce((q,x)=>q+n(x.objectives||0),0);return r.length?r.length+' skipped-fight windows coincided with '+s+' tracked structure gain(s) and '+o+' neutral-objective gain(s). Review whether staying away enabled those gains and whether the exchange was favorable.':'No structure/objective trade was supported.';}
+      case'geographical_clusters':{const top=r[0];return top?'The densest repeated review zone is '+top.zone+' with '+top.count+' supported signal(s). Treat this as a place to inspect repeated decisions, not proof that the zone itself or every event there was a mistake.':'No repeated geography cluster.';}
+      case'champion_tendencies':{const eligible=r.filter(x=>n(x.games)>=3);if(eligible.length<2)return eligible.length===1?eligible[0].champion+' is the only champion with ≥3 deep games, so this card is descriptive for that champion and cannot support a cross-champion tendency comparison.':'No champion has three deep games yet for a useful tendency comparison.';const safest=[...eligible].filter(x=>num(x.riskyDeathsPerGame)).sort((a,b)=>n(a.riskyDeathsPerGame)-n(b.riskyDeathsPerGame))[0];return safest?safest.champion+' currently has the lowest risky-death rate among champions with ≥3 games ('+fmt(safest.riskyDeathsPerGame,2)+'/game). Compare its spacing/routing with the others.':'Champion samples are still mixed.';}
       case'matchup_adjusted_lane':{const s=r.filter(x=>n(x.games)>=3&&num(x.avgGold15));if(!s.length)return'No matchup cell has three comparable lane samples yet; keep this contextual.';const best=[...s].sort((a,b)=>n(b.avgGold15)-n(a.avgGold15))[0],worst=[...s].sort((a,b)=>n(a.avgGold15)-n(b.avgGold15))[0];return'Among repeated personal-history cells, '+best.matchup+' is strongest at 15 ('+signed(best.avgGold15,0)+'g) and '+worst.matchup+' is weakest ('+signed(worst.avgGold15,0)+'g).';}
       case'expected_performance_residual':return num(e.recentResidual)?'Recent residual is '+signed(e.recentResidual,0)+' DPM versus the leave-one-out personal-history expectation. Positive means above that model’s expectation; it does not mean “better than MMR” or isolate individual skill.':a.summary;
       case'session_components':{if(!r.length)return'No session component has enough evidence.';const biggest=[...r].sort((a,b)=>Math.abs(n(b.normalized))-Math.abs(n(a.normalized)))[0];return'Largest practical-change shift is '+biggest.label+' at '+signed(biggest.normalized,2)+'× its threshold ('+signed(biggest.rawDelta,2)+' raw). Positive normalized values mean better later-session performance after inverse metrics are corrected.';}
-      case'requeue_sweet_spot':{const b=e.best;return b?'Best-supported break bucket is '+b.bucket+' across '+b.games+' comparable games. Keep it descriptive until the bucket has a larger sample.':'No requeue bucket has at least three comparable games.';}
-      case'mistake_recurrence':{if(!num(e.recentFive))return a.summary;const delta=num(e.priorFive)?n(e.recentFive)-n(e.priorFive):null;return'Latest five-game supported issue-signal load is '+fmt(e.recentFive,2)+'/game'+(num(delta)?' ('+signed(delta,2)+' versus the prior five).':'')+' This is a recurrence trend, not a target-linked half-life.';}
+      case'requeue_sweet_spot':{const b=e.best;return b?'The highest observed opponent-relative composite is in the '+b.bucket+' gap bucket across '+b.games+' comparable games. This is descriptive scheduling context, not evidence that this break length caused better play.':'No requeue bucket has at least three comparable games.';}
+      case'mistake_recurrence':{if(!num(e.recentFive))return a.summary;const delta=num(e.priorFive)?n(e.recentFive)-n(e.priorFive):null;return'Latest five-game supported review-signal load is '+fmt(e.recentFive,2)+'/game'+(num(delta)?' ('+signed(delta,2)+' versus the prior five).':'')+' This is a recurrence trend, not proof that every signal is a mistake and not a target-linked half-life.';}
       case'automatic_replay_shortlist':{const top=r[0];return top?'Highest-ranked current replay is '+(top.type||'review')+(num(top.minute)?' at '+fmt(top.minute,1)+'m':'')+': '+top.reason+'.':'No replay moment crossed the current rules.';}
       default:return a?.summary||'No conclusion available.';
     }
@@ -125,8 +126,9 @@
   function shareVisual(parts){
     const valid=parts.filter(x=>num(x.value)&&n(x.value)>=0),total=valid.reduce((s,x)=>s+n(x.value),0);if(!total)return'<div class="di-visual-empty">No categorical evidence to graph.</div>';
     let acc=0;
-    const segs=valid.map((x,i)=>{const p=n(x.value)/total*100,start=acc;acc+=p;return'<i class="seg s'+(i%5)+'" style="left:'+start+'%;width:'+p+'%"></i>';}).join('');
-    return '<div class="di-share"><div class="di-share-bar">'+segs+'</div><div class="di-share-legend">'+valid.map((x,i)=>'<span><i class="s'+(i%5)+'"></i><b>'+esc(x.label)+'</b> '+fmt(n(x.value)/total*100,0)+'%</span>').join('')+'</div></div>';
+    const cls=(x,i)=>esc(x.tone||('s'+(i%5)));
+    const segs=valid.map((x,i)=>{const p=n(x.value)/total*100,start=acc;acc+=p;return'<i class="seg '+cls(x,i)+'" style="left:'+start+'%;width:'+p+'%"></i>';}).join('');
+    return '<div class="di-share"><div class="di-share-bar">'+segs+'</div><div class="di-share-legend">'+valid.map((x,i)=>'<span><i class="'+cls(x,i)+'"></i><b>'+esc(x.label)+'</b> '+fmt(n(x.value)/total*100,0)+'%</span>').join('')+'</div></div>';
   }
   function scatter(data,xKey,yKey,{xLabel='',yLabel='',labelKey=null,maxRows=30,toneFn=null,diagonal=false,legend=''}={}){
     const xs=data.filter(x=>num(x?.[xKey])&&num(x?.[yKey])).slice(0,maxRows);if(xs.length<2)return'<div class="di-visual-empty">Need at least two numeric observations for a scatterplot.</div>';
@@ -146,7 +148,7 @@
     let min=Math.min(...xs.flatMap(x=>[n(x[startKey]),n(x[endKey])])),max=Math.max(...xs.flatMap(x=>[n(x[startKey]),n(x[endKey])]));if(min===max){min-=1;max+=1;}
     const py=v=>176-(n(v)-min)/(max-min)*138;
     const lines=xs.map((x,i)=>'<g><line class="'+(n(x[endKey])>=n(x[startKey])?'up':'down')+'" x1="100" y1="'+py(x[startKey]).toFixed(1)+'" x2="400" y2="'+py(x[endKey]).toFixed(1)+'"/><circle cx="100" cy="'+py(x[startKey]).toFixed(1)+'" r="4"/><circle cx="400" cy="'+py(x[endKey]).toFixed(1)+'" r="4"><title>'+esc(shortMatch(x.matchId)+' · '+signed(x[startKey],0)+' → '+signed(x[endKey],0))+'</title></circle></g>').join('');
-    return '<div class="di-svg-chart"><svg viewBox="0 0 500 210" role="img"><line class="di-zero-line" x1="55" y1="'+py(0).toFixed(1)+'" x2="445" y2="'+py(0).toFixed(1)+'"/>'+lines+'<text x="100" y="202">'+esc(startLabel)+'</text><text x="400" y="202">'+esc(endLabel)+'</text></svg></div>';
+    const zero=min<=0&&max>=0?'<line class="di-zero-line" x1="55" y1="'+py(0).toFixed(1)+'" x2="445" y2="'+py(0).toFixed(1)+'"/>':'';return '<div class="di-svg-chart"><svg viewBox="0 0 500 210" role="img">'+zero+lines+'<text x="100" y="202">'+esc(startLabel)+'</text><text x="400" y="202">'+esc(endLabel)+'</text></svg></div>';
   }
   function sparkline(data,valueKey,{labelKey=null,maxRows=30}={}){
     const xs=data.filter(x=>num(x?.[valueKey])).slice(-maxRows);if(xs.length<2)return'<div class="di-visual-empty">Need at least two games for a trend line.</div>';
@@ -179,7 +181,7 @@
         }else if(mode==='trade'){
           if(absent&&(n(e.playerStructureGains||0)>0||n(e.playerNeutralObjectiveGains||0)>0)){
             pts.push({position:e.fightPosition,tone:'fight',r:7,title:'Fight location · '+(e.fightZone||'')});
-            if(e.playerPosition){pts.push({position:e.playerPosition,tone:'good',r:7,title:'Your cross-map position'});lines.push({a:e.playerPosition,b:e.fightPosition,tone:'trade',title:'Cross-map trade decision'});}
+            if(e.playerPosition){pts.push({position:e.playerPosition,tone:'player',r:7,title:'Your cross-map position'});lines.push({a:e.playerPosition,b:e.fightPosition,tone:'neutral',title:'Cross-map separation during supported trade window'});}
           }
         }else if(mode==='shortlist'){
           const wanted=shortlist.filter(x=>String(x.matchId)===String(g.matchId)&&num(x.minute));
@@ -187,7 +189,7 @@
         }
       }
     }
-    const legends={pre:'<span><i class="player"></i>sampled player position</span><span><i class="fight"></i>fight anchor</span>',geo:'<span><i class="bad"></i>reachable missed join</span><span><i class="good"></i>measurable cross-map trade</span>',trade:'<span><i class="good"></i>your cross-map position</span><span><i class="fight"></i>fight location</span>',shortlist:'<span><i class="review"></i>ranked replay moment</span>'};
+    const legends={pre:'<span><i class="player"></i>sampled player position</span><span><i class="fight"></i>fight anchor</span>',geo:'<span><i class="bad"></i>reachable missed join</span><span><i class="good"></i>measurable cross-map trade</span>',trade:'<span><i class="player"></i>your cross-map position</span><span><i class="fight"></i>fight location</span>',shortlist:'<span><i class="review"></i>ranked replay moment</span>'};
     return mapStage(pts,{lines,legend:legends[mode]||'',aria:'Summoner’s Rift '+mode+' decision map'});
   }
   function preFightMap(r){
@@ -208,10 +210,19 @@
     return '<div class="di-formation-grid">'+bands.map(b=>{const xs=r.filter(x=>x.formationBand===b),con=xs.filter(x=>x.contributed).length,surv=xs.filter(x=>x.survived).length;return'<article><strong>'+esc(b)+'</strong><span><b>'+xs.length+'</b> fights</span><span><b>'+fmt(pct(con,xs.length),0)+'%</b> contribution</span><span><b>'+fmt(pct(surv,xs.length),0)+'%</b> survival</span></article>';}).join('')+'</div>';
   }
   function objectivePathMap(r){
-    const pts=r.filter(x=>x?.approachPosition).map(x=>({position:x.approachPosition,tone:x.joined?'good':'bad',r:7,title:(x.objective||'objective')+' · sampled approach '+(x.approachZone||'unknown')+' · '+(x.joined?'present':'absent')}));
-    return mapStage(pts,{legend:'<span><i class="good"></i>present at contested objective</span><span><i class="bad"></i>absent</span>',aria:'Summoner’s Rift objective approach map'});
+    const pts=[],lines=[];
+    for(const row of r){
+      const samples=(Array.isArray(row?.approachSamples)?row.approachSamples:[])
+        .filter(x=>x?.position&&num(x.actualLeadSec))
+        .slice().sort((a,b)=>n(b.actualLeadSec)-n(a.actualLeadSec));
+      if(!samples.length&&row?.approachPosition)samples.push({position:row.approachPosition,zone:row.approachZone,actualLeadSec:row.actualApproachLeadSec});
+      samples.forEach((x,i)=>pts.push({position:x.position,tone:row.joined?'player':'warn',r:i===samples.length-1?7:5,
+        title:(row.objective||'objective')+' · '+(num(x.actualLeadSec)?fmt(x.actualLeadSec,0)+'s before · ':'')+(x.zone||'unknown')+' · '+(row.joined?'present':'absent')}));
+      for(let i=1;i<samples.length;i++)lines.push({a:samples[i-1].position,b:samples[i].position,tone:row.joined?'neutral':'warn',
+        title:(row.objective||'objective')+' · coarse sampled setup route'});
+    }
+    return mapStage(pts,{lines,legend:'<span><i class="player"></i>sampled route · present</span><span><i class="warn"></i>sampled route · absent</span>',aria:'Summoner’s Rift objective setup route map'});
   }
-
   function championVisual(r){
     if(!r.length)return'<div class="di-visual-empty">No champion-conditioned sample.</div>';
     const maxRisk=Math.max(...r.map(x=>n(x.riskyDeathsPerGame||0)),1);
@@ -231,21 +242,21 @@
     const r=rows(a),e=a?.evidence||{};
     switch(a?.id){
       case'fight_decision_ledger':return barRows([...r].sort((x,y)=>Math.abs(n(y.netProxyG||0))-Math.abs(n(x.netProxyG||0))),{label:x=>(x.zone||'fight')+' · '+fmt(x.minute,1)+'m',value:'netProxyG',suffix:'g proxy',diverging:true});
-      case'arrival_feasibility':return shareVisual([{label:'Near ≤4k',value:n(e.near||0)},{label:'Borderline 4–6.5k',value:n(e.borderline||0)},{label:'Far >6.5k',value:n(e.far||0)}]);
-      case'pre_fight_positioning':return preFightMap(r);
+      case'arrival_feasibility':return shareVisual([{label:'Near ≤4k',value:n(e.near||0),tone:'warn'},{label:'Borderline 4–6.5k',value:n(e.borderline||0),tone:'neutral'},{label:'Far >6.5k',value:n(e.far||0),tone:'muted'}]);
+      case'pre_fight_positioning':return preFightMap(r.slice(0,36));
       case'fight_formation':return formationVisual(r);
-      case'numbers_aware_participation':return shareVisual([{label:'Down ≥2',value:n(e.outnumberedStarts||0)},{label:'Down 1',value:n(e.downOneStarts||0)},{label:'Even',value:n(e.evenStarts||0)},{label:'Ahead',value:n(e.aheadStarts||0)}]);
+      case'numbers_aware_participation':return shareVisual([{label:'Down ≥2',value:n(e.outnumberedStarts||0),tone:'bad'},{label:'Down 1',value:n(e.downOneStarts||0),tone:'warn'},{label:'Even',value:n(e.evenStarts||0),tone:'neutral'},{label:'Ahead',value:n(e.aheadStarts||0),tone:'good'}]);
       case'cross_map_efficiency':return barRows([...r].sort((a,b)=>n(b.valuePerMin||0)-n(a.valuePerMin||0)),{label:x=>(x.zone||'fight')+' '+fmt(x.minute,1)+'m',value:'valuePerMin',suffix:'/min'});
       case'wave_fight_conflict':return scatter(r,'csSwing','goldSwing',{xLabel:'CS movement vs role',yLabel:'Gold movement vs role',labelKey:'zone',toneFn:x=>x.fightLost?'negative':'positive',legend:'<span><i class="negative"></i>team lost tracked fight</span><span><i class="positive"></i>team did not lose tracked fight</span>'});
-      case'nothing_gained_isolation':return shareVisual([{label:'High-priority',value:n(e.highPriority||0)},{label:'Other uncompensated',value:Math.max(0,r.length-n(e.highPriority||0))}]);
+      case'nothing_gained_isolation':return shareVisual([{label:'High-priority review',value:n(e.highPriority||0),tone:'bad'},{label:'Other uncompensated',value:Math.max(0,r.length-n(e.highPriority||0)),tone:'warn'}]);
       case'post_recall_tempo':return barRows([...r].sort((a,b)=>n(a.gapMin||0)-n(b.gapMin||0)),{label:x=>(x.nextKind||'event')+' · '+(x.approachZone||'unknown'),value:'gapMin',suffix:'m'});
-      case'objective_setup_path':return shareVisual([{label:'Present',value:r.filter(x=>x.joined).length},{label:'Absent',value:r.filter(x=>!x.joined).length}])+objectivePathMap(r)+'<div class="di-path-chips">'+r.slice(0,8).map(x=>'<span><b>'+esc(x.objective||'objective')+'</b><i>shop '+(num(x.shopLeadMin)?fmt(x.shopLeadMin,1)+'m before':'?')+'</i><em>→</em><i>'+esc(x.approachZone||'unknown')+'</i><em>→</em><i>'+esc(x.joined?'present':'absent')+'</i></span>').join('')+'</div>';
+      case'objective_setup_path':return shareVisual([{label:'Present',value:r.filter(x=>x.joined).length,tone:'neutral'},{label:'Absent',value:r.filter(x=>!x.joined).length,tone:'warn'}])+objectivePathMap(r.slice(0,40))+'<div class="di-path-chips">'+r.slice(0,8).map(x=>'<span><b>'+esc(x.objective||'objective')+'</b><i>shop '+(num(x.shopLeadMin)?fmt(x.shopLeadMin,1)+'m before':'?')+'</i><em>→</em><i>'+esc(x.approachZone||'unknown')+(num(x.actualApproachLeadSec)?' · '+fmt(x.actualApproachLeadSec,0)+'s before':'')+(Array.isArray(x.approachSamples)&&x.approachSamples.length>1?' · '+x.approachSamples.length+' route samples':'')+'</i><em>→</em><i>'+esc(x.joined?'present':'absent')+'</i></span>').join('')+'</div>';
       case'lead_utilisation':return slope(r,'gold15','gold25',{startLabel:'Gold@15',endLabel:'Gold@25'});
       case'deficit_recovery':return slope(r,'gold15','gold25',{startLabel:'Gold@15',endLabel:'Gold@25'});
       case'death_chains':{const rr=(e.repeatGames||[]).map(x=>({label:shortMatch(x.matchId),value:n(x.repeatDeaths||0)}));return barRows(rr,{value:'value',suffix:' repeat'});}
       case'resource_to_impact':return scatter(r,'goldDiffAtStart','currentGold',{xLabel:'Gold diff vs role',yLabel:'Unspent gold',labelKey:'matchId',toneFn:x=>x.contributed?'positive':'negative',legend:'<span><i class="positive"></i>tracked contribution</span><span><i class="negative"></i>no tracked contribution</span>'});
-      case'fight_lead_conversion':return shareVisual([{label:'Converted',value:r.filter(x=>x.converted).length},{label:'No tracked conversion',value:r.filter(x=>!x.converted).length}]);
-      case'fight_loss_containment':return shareVisual([{label:'Contained',value:r.filter(x=>x.contained).length},{label:'Compounded',value:r.filter(x=>!x.contained).length}]);
+      case'fight_lead_conversion':return shareVisual([{label:'Tracked follow-up',value:r.filter(x=>x.converted).length,tone:'good'},{label:'No tracked follow-up',value:r.filter(x=>!x.converted).length,tone:'neutral'}]);
+      case'fight_loss_containment':return shareVisual([{label:'Contained',value:r.filter(x=>x.contained).length,tone:'good'},{label:'Compounded',value:r.filter(x=>!x.contained).length,tone:'bad'}]);
       case'objective_trading':return fightMap(report,'trade')+barRows(r,{label:x=>(x.fightZone||'trade')+' '+fmt(x.minute,1)+'m',value:'goldSwing',suffix:'g',diverging:true});
       case'geographical_clusters':{const mapEvents=Array.isArray(e.mapEvents)?e.mapEvents:[];const pts=mapEvents.map(x=>({position:x.position,tone:x.type==='bad_death'?'bad':'review',r:x.type==='bad_death'?7:9,title:(x.type==='bad_death'?'High-risk death':'High-priority missed join')+' · '+(x.zone||'unknown')+' · '+fmt(x.minute,1)+'m'}));return mapStage(pts,{legend:'<span><i class="bad"></i>high-risk death</span><span><i class="review"></i>high-priority missed join</span>',aria:'Summoner’s Rift repeated decision locations'})+barRows(r,{label:'zone',value:'count',suffix:' signals'});}
       case'champion_tendencies':return championVisual(r);
@@ -261,7 +272,7 @@
   function analyticCard(a,index,report){
     const info=INFO[a?.id]||{group:'Other',measure:a?.summary||'',review:'Open linked matches for context.'};
     const evidence=evidenceRows(a),visual=visualFor(a,report),con=conclusion(a);
-    return '<details class="di-card tone-'+statusTone(a?.status)+'" '+(index<4?'open':'')+'>'+
+    return '<details class="di-card tone-'+statusTone(a?.status)+'" '+(index<2?'open':'')+'>'+
       '<summary><span class="di-index">'+String(index+1).padStart(2,'0')+'</span><div><strong>'+esc(a?.title||'Analysis')+'</strong><small>'+esc(statusLabel(a?.status))+' · n='+esc(a?.sample??0)+' · '+esc(info.group)+'</small></div><i></i></summary>'+
       '<div class="di-card-body"><div class="di-visual">'+visual+'</div>'+
       '<div class="di-interpretation"><div><span>What it measures</span><p>'+esc(info.measure)+'</p></div><div class="di-conclusion"><span>Conclusion from this sample</span><p>'+esc(con)+'</p></div><div><span>What to review</span><p>'+esc(info.review)+'</p></div></div>'+

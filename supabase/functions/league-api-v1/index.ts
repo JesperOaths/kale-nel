@@ -21,7 +21,7 @@ const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=100;
 const ANALYSIS_HISTORY_TARGET_GAMES=100;
-const ANALYZER_VERSION="league-web-behavior-v4.172";
+const ANALYZER_VERSION="league-web-behavior-v4.173";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -2773,7 +2773,7 @@ function report(profile:any,rows:any[],catalog:any,requestedRole:any=null){
   const coachingLifetime=patchBaselineReady?{...makeSummary(olderSamePatchRoleGames),patchKey:currentPatchKey,baselineKind:"older_same_patch"}:null;
   const patchRecentSummary=currentPatchRoleGames.length?{...makeSummary(currentPatchRoleGames),patchKey:currentPatchKey,publicPatchKey:currentPublicPatchKey}:null;
   const baselineContext={patchKey:currentPatchKey,displayPatchKey:currentPublicPatchKey||currentPatchKey,recentGames:currentPatchRoleGames.length,olderGames:olderSamePatchRoleGames.length,recentSummary:patchRecentSummary,ready:patchBaselineReady};
-  const cm=coachingModel(coachingGames,coachingSummary,coachingLifetime,primaryRole,profile.rank_snapshot||null,baselineContext);cm.sessionModel=sessionBehaviorModel(coachingAllGames,primaryRole);const championModel=championBehaviorModel(coachingGames,coachingSummary,cm.behaviorSummary,primaryRole,cm.peerComparison),matchupModel=opponentMatchupBehaviorModel(coachingGames,coachingSummary,cm.behaviorSummary,primaryRole,cm.peerComparison);
+  const cm=coachingModel(coachingGames,coachingSummary,coachingLifetime,primaryRole,profile.rank_snapshot||null,baselineContext);cm.sessionModel=sessionBehaviorModel(coachingAllGames,primaryRole);cm.decisionIntelligence=buildDecisionIntelligence(coachingGames,cm.sessionModel,primaryRole,coachingAllGames);const championModel=championBehaviorModel(coachingGames,coachingSummary,cm.behaviorSummary,primaryRole,cm.peerComparison),matchupModel=opponentMatchupBehaviorModel(coachingGames,coachingSummary,cm.behaviorSummary,primaryRole,cm.peerComparison);
   cm.recentFocus.push(...championModel.focus,...matchupModel.focus);cm.highlights.push(...championModel.highlights,...matchupModel.highlights);cm.recentFocus.sort((a:any,b:any)=>Number(a.priority||9)-Number(b.priority||9));cm.highlights.sort((a:any,b:any)=>Number(a.priority||9)-Number(b.priority||9));cm.coaching=[...cm.recentFocus,...cm.highlights];
   const priorityThemes=synthesizePriorityThemes(cm.recentFocus);
   const replayReviewQueue=buildReplayReviewQueue(coachingGames);

@@ -2928,3 +2928,15 @@ body{background:var(--paper);line-height:1.55;padding:18px 16px 74px}
   .di-card-body{padding:0 15px 15px}
   .di-bar-row{grid-template-columns:minmax(95px,1fr) minmax(110px,1.5fr) auto;font-size:.84rem}
 }
+
+
+/* v308 — real-data decision audit */
+.di-share-bar .seg.good,.di-share-legend i.good{background:rgba(44,130,87,.76)}
+.di-share-bar .seg.bad,.di-share-legend i.bad{background:rgba(176,72,64,.76)}
+.di-share-bar .seg.warn,.di-share-legend i.warn{background:rgba(179,126,34,.78)}
+.di-share-bar .seg.neutral,.di-share-legend i.neutral{background:rgba(73,111,163,.72)}
+.di-share-bar .seg.muted,.di-share-legend i.muted{background:rgba(120,126,138,.58)}
+.di-map-legend i.warn{background:rgba(179,126,34,.92)}
+.di-map-legend i.neutral{background:rgba(73,111,163,.78)}
+.di-card.tone-muted{opacity:1;background:#faf8f3}
+.di-card.tone-muted>summary{color:var(--ink-soft)}
