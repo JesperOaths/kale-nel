@@ -344,7 +344,7 @@ async function auditViewport(browser,report,width,height,label){
       overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,
       decisionCards:document.querySelectorAll('#decisionIntelligence .di-card').length,
       purposeBadges:document.querySelectorAll('#decisionIntelligence .di-purpose-badge').length,
-      purposeLegend:(document.querySelector('.di-purpose-key')?.innerText||'').trim(),
+      purposeLegend:(document.querySelector('.di-purpose-key')?.textContent||'').trim(),
       synthesisCards:cards.length,
       agreementCards:document.querySelectorAll('.evidence-agreement-card').length,
       trajectoryCards:document.querySelectorAll('.trajectory-card').length,
@@ -362,7 +362,7 @@ async function auditViewport(browser,report,width,height,label){
 
   assert(metrics.overflow<=4,label+': horizontal page overflow '+metrics.overflow+'px');
   assert(metrics.decisionCards===25&&metrics.purposeBadges===25,label+': expected all 25 decision cards and purpose badges');
-  assert(/Act on this/i.test(metrics.purposeLegend)&&/Useful context/i.test(metrics.purposeLegend)&&/Diagnostic \/ exploratory/i.test(metrics.purposeLegend),label+': coaching-purpose legend incomplete');
+  assert(/Act on this/i.test(metrics.purposeLegend)&&/Useful context/i.test(metrics.purposeLegend)&&/Diagnostic \/ exploratory/i.test(metrics.purposeLegend),label+': coaching-purpose legend incomplete: '+metrics.purposeLegend);
   assert(metrics.synthesisCards===4&&metrics.agreementCards===3,label+': synthesis/evidence-agreement surface incomplete');
   assert(metrics.trajectoryCards===4,label+': expected four longer-history trajectory cards');
   assert(metrics.transitionMatrix,label+': 15→25 transition matrix missing');
