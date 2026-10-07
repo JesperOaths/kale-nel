@@ -258,7 +258,7 @@ for f in ["unsigned.apk","aligned.apk","s5-http-companion.apk","classes.dex"]:
 subprocess.run([str(AAPT),"package","-f","-M",str(APP/"AndroidManifest.xml"),
                 "-S",str(APP/"res"),"-I",str(ANDROID_JAR),"-F",str(BUILD/"unsigned.apk")],
                check=True,timeout=60)
-subprocess.run([str(JAVAC),"-source","1.7","-target","1.7","-bootclasspath",str(ANDROID_JAR),
+subprocess.run([str(JAVAC),"-source","1.8","-target","1.8","-bootclasspath",str(ANDROID_JAR),
                 "-d",str(classes),str(SRC/"BridgeService.java"),str(SRC/"BootReceiver.java")],
                check=True,timeout=60)
 
