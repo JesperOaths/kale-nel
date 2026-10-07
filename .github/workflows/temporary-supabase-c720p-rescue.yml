@@ -35,4 +35,4 @@ jobs:
       - name: Wait for database restart
         run: sleep 75
 
-# rescue-trigger-20261001-login-shop-outage
+# rescue-trigger-20261007-league-db-origin-down-0500utc
