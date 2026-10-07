@@ -34,6 +34,7 @@ const ADMIN_PAGE_VERSION = SITE_VERSION;
 const PUBLIC_AUTH_ORIGIN_BUILD = '20261002-login-static-r17';
 const PUBLIC_SHOP_ORIGIN_BUILD = '20261002-shop-static-r13';
 const PUBLIC_LEAGUE_ORIGIN_BUILD = '20261002-league-public-r4';
+const PUBLIC_BOOBS_ORIGIN_BUILD = '20261007-boobs-public-r1';
 const PUBLIC_CRITICAL_ASSET_BUILD = '20261002-worker-bundle-first-r2';
 const PUBLIC_LOGIN_BOOTSTRAP_ASSETS = new Set([
   '/login.html',
@@ -81,6 +82,13 @@ function isLeaguePublicPath(pathname) {
 }
 function isLeagueDocument(pathname) {
   return pathname === '/league' || pathname === '/league/' || pathname === '/league/index.html';
+}
+function isBoobsPublicPath(pathname) {
+  const p = String(pathname || '');
+  return p === '/boobs' || p === '/boobs/' || p.startsWith('/boobs/');
+}
+function isBoobsDocument(pathname) {
+  return pathname === '/boobs' || pathname === '/boobs/' || pathname === '/boobs/index.html';
 }
 function criticalPublicAssetPath(pathname) {
   const p=String(pathname||'');
@@ -188,6 +196,13 @@ async function handlePublicApex(request, env, url) {
   if (isLeaguePublicPath(url.pathname)) {
     const freshDocument = (request.method === 'GET' || request.method === 'HEAD') && isLeagueDocument(url.pathname);
     return await publicOriginResponse(request, url, { noStore: freshDocument, cacheBustKey: freshDocument ? '__kalenel_league_public' : '', cacheBustValue: PUBLIC_LEAGUE_ORIGIN_BUILD });
+  }
+
+  // The /boobs quiz is intentionally public and has its own server-side
+  // one-attempt-per-IP boundary. It must never inherit the player login gate.
+  if (isBoobsPublicPath(url.pathname)) {
+    const freshDocument = (request.method === 'GET' || request.method === 'HEAD') && isBoobsDocument(url.pathname);
+    return await publicOriginResponse(request, url, { noStore: freshDocument, cacheBustKey: freshDocument ? '__kalenel_boobs_public' : '', cacheBustValue: PUBLIC_BOOBS_ORIGIN_BUILD });
   }
 
   if (!isProtectedPublicPath(url.pathname)) {

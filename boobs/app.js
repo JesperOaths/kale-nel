@@ -257,8 +257,7 @@
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "apikey": API_KEY,
-        "Authorization": "Bearer " + API_KEY
+        "apikey": API_KEY
       },
       body: JSON.stringify({
         action_input: action,

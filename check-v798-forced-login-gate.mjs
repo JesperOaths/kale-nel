@@ -15,7 +15,7 @@ assert(target.includes("'./index.html?scope=family'"),'family login must land on
 assert(!target.includes('return_to'),'successful login must not deep-link around the main page');
 const ignoredDirs=new Set(['.git','node_modules','dist','build','.next','.vercel','coverage','tmp','temp','patch_bundles','repo','mnt','cloudflare']);
 const authPublic=new Set(['login.html','request.html','activate.html']);
-const intentionalPublic=new Set(['shop/index.html','c720p-drive-oauth/index.html','c720p-drive-oauth/privacy.html','oauth/inbox-triage/index.html','oauth/inbox-triage/privacy.html','oauth/inbox-triage/terms.html','oauth/inbox-triage/data-deletion.html','oauth/inbox-triage/support.html','inbox-triage/index.html','inbox-triage/privacy.html']);
+const intentionalPublic=new Set(['shop/index.html','boobs/index.html','c720p-drive-oauth/index.html','c720p-drive-oauth/privacy.html','oauth/inbox-triage/index.html','oauth/inbox-triage/privacy.html','oauth/inbox-triage/terms.html','oauth/inbox-triage/data-deletion.html','oauth/inbox-triage/support.html','inbox-triage/index.html','inbox-triage/privacy.html']);
 function isIntentionalPublic(r){return intentionalPublic.has(r)||r.startsWith('league/');}
 const redirectOnly=new Set(['score.html','pikken_spectator.html','klaverjas_live_v596.html','familie/index.html','familie/login.html','familie/scorer.html','familie/leaderboard.html','familie/player.html']);
 function walk(dir,out=[]){for(const ent of fs.readdirSync(dir,{withFileTypes:true})){if(ent.isDirectory()){if(!ignoredDirs.has(ent.name))walk(path.join(dir,ent.name),out);}else if(ent.name.toLowerCase().endsWith('.html'))out.push(path.join(dir,ent.name));}return out;}
@@ -47,6 +47,12 @@ assert.ok(fs.existsSync(leagueIndex),'public League surface missing');
 const leagueBody=fs.readFileSync(leagueIndex,'utf8');
 assert(!leagueBody.includes('/gejast-auth-gate.js?')&&!leagueBody.includes('/gejast-home-gate.js?')&&!leagueBody.includes('requireMatchEntrySession'),'public League surface must not inherit Kalenel player-session gating');
 assert(leagueBody.includes('index,follow'),'public League surface must remain indexable/followable');
+const boobsIndex='boobs/index.html';
+assert.ok(fs.existsSync(boobsIndex),'public /boobs quiz surface missing');
+const boobsBody=fs.readFileSync(boobsIndex,'utf8');
+assert(!boobsBody.includes('/gejast-auth-gate.js?')&&!boobsBody.includes('/gejast-home-gate.js?'),'public /boobs quiz must not inherit Kalenel player-session gating');
+assert(boobsBody.includes('boobs_quiz_api_v1'),'public /boobs quiz must use its dedicated one-attempt backend boundary');
+assert(!/service[_-]?role/i.test(boobsBody),'public /boobs quiz browser surface must never contain a service-role credential');
 const worker=fs.readFileSync('cloudflare/workers/admin-gate/src/worker.js','utf8');
 assert(worker.includes("function isLeaguePublicPath(pathname)"),'Cloudflare perimeter must explicitly recognize League as public');
 assert(worker.includes("if (isLeaguePublicPath(url.pathname))"),'League public bypass must execute before generic protected/public routing');
@@ -68,6 +74,10 @@ assert(worker.includes("if(p.startsWith('/shop/') || p.startsWith('/league/')) r
 assert(worker.includes("const bundled=await publicBundledFirstResponse(request,env,url)"),'critical public bundle path must run before protected redirect logic');
 assert(worker.includes("cacheBustValue = ADMIN_BUILD"),'public origin helper must accept an explicit cache-bust value');
 assert(worker.includes("cacheBustValue: PUBLIC_LEAGUE_ORIGIN_BUILD"),'League document refresh must not inherit the admin build identity');
+assert(worker.includes("function isBoobsPublicPath(pathname)"),'Cloudflare perimeter must explicitly recognize /boobs as public');
+assert(worker.includes("if (isBoobsPublicPath(url.pathname))"),'/boobs public bypass must execute before generic protected/public routing');
+assert(worker.indexOf("if (isBoobsPublicPath(url.pathname))") < worker.indexOf("if (!isProtectedPublicPath(url.pathname))"),'/boobs public bypass must precede generic protected/public routing');
+assert(worker.includes("cacheBustValue: PUBLIC_BOOBS_ORIGIN_BUILD"),'/boobs document refresh must use an independent public cache identity');
 assert(worker.includes("cacheBustValue: isShopDocument ? PUBLIC_SHOP_ORIGIN_BUILD : PUBLIC_AUTH_ORIGIN_BUILD"),'shop/login document refreshes must use their own public build identities');
 assert(worker.includes("return new Response(method === 'HEAD' ? null : response.body"),'public responses must forward the origin stream at most once and keep HEAD bodyless');
 const missing=[]; const leaked=[]; const publicGateLeaks=[]; let protectedCount=0;
