@@ -180,7 +180,7 @@ ok(html.includes('id="objectiveFamilyOverview"')&&app.includes('function renderO
 ok(html.includes('id="teamfightDecisionPanel"')&&app.includes('function renderTeamfightDecisionOverview(')&&backend.includes('function fightArea('), 'teamfight geography must be rendered separately from objective-family identity');
 ok(backend.includes('crossMapTradeSupported')&&backend.includes('joinReviewPriority')&&backend.includes('tradeWindowSec:90'), 'skipped fights must retain bounded cross-map compensation and join-review evidence');
 ok(html.includes('id="decisionIntelligencePanel"')&&app.includes('window.renderDecisionIntelligence?.(r)')&&decisionUi.includes('All 25 additions'), 'all 25 requested decision analytics must be wired into the League report');
-ok((decisionBackend.match(/analytics\\.push\\(metric\\(/g)||[]).length===25, 'decision intelligence backend must expose exactly 25 analytic families');
+ok((decisionBackend.split('analytics.push(metric(').length-1)===25, 'decision intelligence backend must expose exactly 25 analytic families');
 ok(decisionBackend.includes('wave_fight_conflict')&&decisionBackend.includes('objective_setup_path')&&decisionBackend.includes('lead_utilisation')&&decisionBackend.includes('deficit_recovery')&&decisionBackend.includes('mistake_recurrence'), 'decision intelligence must retain macro, recovery and recurrence families');
 ok(decisionBackend.includes('proxyPolicy')&&decisionUi.includes('Measured')&&decisionUi.includes('Proxy')&&decisionUi.includes('Thin sample'), 'decision intelligence must preserve explicit proxy/evidence labeling');
 ok(modelDoc.includes('## v304 decision intelligence layer')&&modelDoc.includes('Automatic replay shortlist'), 'analysis model must document the v304 decision intelligence policy');
