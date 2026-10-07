@@ -3831,3 +3831,13 @@ A fresh production ADC analysis on v4.175 was used to inspect the actual 25-card
 - **Ahead-state execution:** the v311 replacement for the tautological resource-impact card is retained: ahead-state fights report death-before-contribution, survival and high-unspent-gold rates.
 
 The 25 analytic family IDs remain stable for report compatibility. Decision-intelligence contract is v5, analyzer v4.177 and frontend v312.
+
+
+## v313 final wording/evidence polish
+
+The post-v312 fresh production report exposed two remaining wording/evidence mismatches.
+
+- **Pre-fight sampled positioning:** the former title “Pre-fight positioning quality” is retired. Coarse Riot timeline positions can describe sampled routing/spacing context, but they do not define positioning quality by themselves.
+- **Local-number snapshot:** the card now reports the minimum/maximum observed loss rate across down ≥2, down 1, even and ahead states plus the percentage-point range. When those descriptive rates are tightly clustered, the conclusion explicitly says the sample does not show a clear directional outcome separation by this coarse local-number state. This is descriptive wording only; no significance test is implied.
+
+No analytic family is added or removed. Decision-intelligence remains contract v5; analyzer v4.178 and frontend v313 identify the production-verification pass.
