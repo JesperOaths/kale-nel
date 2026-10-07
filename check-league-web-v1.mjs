@@ -415,7 +415,7 @@ assert.ok(decisionBackend.includes('actualApproachLeadSec')&&decisionBackend.inc
 assert.ok(decisionBackend.includes('paths.length?"proxy":"unavailable"'),'Objective setup path must remain a proxy because its route point is timeline-frame sampled');
 assert.ok(decisionBackend.includes('champEligible.length>=2?"supported"'),'Champion tendencies must not be promoted as a comparison when only one champion has a meaningful sample');
 assert.ok(decisionUi.includes('a?.moments)&&a.moments.length'),'Visual conclusions must prefer full analytic moments rather than truncated evidence preview rows');
-assert.ok(decisionUi.includes("tone:'bad'")&&decisionUi.includes("tone:'warn'")&&decisionUi.includes("tone:'good'"),'Categorical decision visuals must use semantic colors rather than positional palette order');
+assert.ok(decisionUi.includes("tone:'bad'")&&decisionUi.includes("tone:'warn'")&&decisionUi.includes("tone:'neutral'")&&decisionUi.includes("tone:'muted'"),'Categorical decision visuals must use semantic review-state colors rather than positional palette order or automatic green=good performance');
 assert.ok(!decisionBackend.includes('"Repeated geographical mistake clusters"'),'Map clusters must not label review locations as proven mistakes');
 
 assert.ok(api.includes('decisionIntelligence:cm.decisionIntelligence'),'The top-level report must export decision intelligence so the frontend can actually render the 25 analytics');
