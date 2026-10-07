@@ -191,7 +191,7 @@ ok(decisionBackend.includes('matchupSupported.length>=2?"proxy"'), 'repeated mat
 ok(decisionBackend.includes('deepGames:games.length')&&decisionBackend.includes('historyGames:history.length'), 'decision intelligence must disclose deep/history sample scopes');
 
 ok(decisionBackend.includes('v!==null && v!==undefined && v!=="" && Number.isFinite(Number(v))'), 'decision intelligence numeric helper must reject null/empty values');
-ok(decisionBackend.includes('n(x.e.teamFightKills)>n(x.e.enemyFightKills)'), 'fight-win conversion must exclude tied fight clusters');
+ok(decisionBackend.includes('n(e.teamFightKills)>n(e.enemyFightKills)')&&!decisionBackend.includes('n(e.teamFightKills)>=n(e.enemyFightKills)'), 'fight-win follow-up must exclude tied fight clusters');
 ok(decisionBackend.includes('n(eventMin(o))>end'), 'post-fight follow-up kills must start after the cluster endpoint');
 ok(decisionBackend.includes('historyInput:any[]=gamesInput')&&decisionBackend.includes('performanceResidualRows(history)'), 'eligible match-level context analytics must use longer role history when available');
 ok(decisionBackend.includes('actualApproachLeadSec')&&decisionBackend.includes('for(const requestedSec of [90,60,30])')&&decisionBackend.includes('approachSamples'), 'objective setup must retain honest distinct coarse pre-event route timing');
