@@ -126,8 +126,9 @@
   function shareVisual(parts){
     const valid=parts.filter(x=>num(x.value)&&n(x.value)>=0),total=valid.reduce((s,x)=>s+n(x.value),0);if(!total)return'<div class="di-visual-empty">No categorical evidence to graph.</div>';
     let acc=0;
-    const segs=valid.map((x,i)=>{const p=n(x.value)/total*100,start=acc;acc+=p;return'<i class="seg s'+(i%5)+'" style="left:'+start+'%;width:'+p+'%"></i>';}).join('');
-    return '<div class="di-share"><div class="di-share-bar">'+segs+'</div><div class="di-share-legend">'+valid.map((x,i)=>'<span><i class="s'+(i%5)+'"></i><b>'+esc(x.label)+'</b> '+fmt(n(x.value)/total*100,0)+'%</span>').join('')+'</div></div>';
+    const cls=(x,i)=>esc(x.tone||('s'+(i%5)));
+    const segs=valid.map((x,i)=>{const p=n(x.value)/total*100,start=acc;acc+=p;return'<i class="seg '+cls(x,i)+'" style="left:'+start+'%;width:'+p+'%"></i>';}).join('');
+    return '<div class="di-share"><div class="di-share-bar">'+segs+'</div><div class="di-share-legend">'+valid.map((x,i)=>'<span><i class="'+cls(x,i)+'"></i><b>'+esc(x.label)+'</b> '+fmt(n(x.value)/total*100,0)+'%</span>').join('')+'</div></div>';
   }
   function scatter(data,xKey,yKey,{xLabel='',yLabel='',labelKey=null,maxRows=30,toneFn=null,diagonal=false,legend=''}={}){
     const xs=data.filter(x=>num(x?.[xKey])&&num(x?.[yKey])).slice(0,maxRows);if(xs.length<2)return'<div class="di-visual-empty">Need at least two numeric observations for a scatterplot.</div>';
@@ -147,7 +148,7 @@
     let min=Math.min(...xs.flatMap(x=>[n(x[startKey]),n(x[endKey])])),max=Math.max(...xs.flatMap(x=>[n(x[startKey]),n(x[endKey])]));if(min===max){min-=1;max+=1;}
     const py=v=>176-(n(v)-min)/(max-min)*138;
     const lines=xs.map((x,i)=>'<g><line class="'+(n(x[endKey])>=n(x[startKey])?'up':'down')+'" x1="100" y1="'+py(x[startKey]).toFixed(1)+'" x2="400" y2="'+py(x[endKey]).toFixed(1)+'"/><circle cx="100" cy="'+py(x[startKey]).toFixed(1)+'" r="4"/><circle cx="400" cy="'+py(x[endKey]).toFixed(1)+'" r="4"><title>'+esc(shortMatch(x.matchId)+' · '+signed(x[startKey],0)+' → '+signed(x[endKey],0))+'</title></circle></g>').join('');
-    return '<div class="di-svg-chart"><svg viewBox="0 0 500 210" role="img"><line class="di-zero-line" x1="55" y1="'+py(0).toFixed(1)+'" x2="445" y2="'+py(0).toFixed(1)+'"/>'+lines+'<text x="100" y="202">'+esc(startLabel)+'</text><text x="400" y="202">'+esc(endLabel)+'</text></svg></div>';
+    const zero=min<=0&&max>=0?'<line class="di-zero-line" x1="55" y1="'+py(0).toFixed(1)+'" x2="445" y2="'+py(0).toFixed(1)+'"/>':'';return '<div class="di-svg-chart"><svg viewBox="0 0 500 210" role="img">'+zero+lines+'<text x="100" y="202">'+esc(startLabel)+'</text><text x="400" y="202">'+esc(endLabel)+'</text></svg></div>';
   }
   function sparkline(data,valueKey,{labelKey=null,maxRows=30}={}){
     const xs=data.filter(x=>num(x?.[valueKey])).slice(-maxRows);if(xs.length<2)return'<div class="di-visual-empty">Need at least two games for a trend line.</div>';
@@ -180,7 +181,7 @@
         }else if(mode==='trade'){
           if(absent&&(n(e.playerStructureGains||0)>0||n(e.playerNeutralObjectiveGains||0)>0)){
             pts.push({position:e.fightPosition,tone:'fight',r:7,title:'Fight location · '+(e.fightZone||'')});
-            if(e.playerPosition){pts.push({position:e.playerPosition,tone:'good',r:7,title:'Your cross-map position'});lines.push({a:e.playerPosition,b:e.fightPosition,tone:'trade',title:'Cross-map trade decision'});}
+            if(e.playerPosition){pts.push({position:e.playerPosition,tone:'player',r:7,title:'Your cross-map position'});lines.push({a:e.playerPosition,b:e.fightPosition,tone:'neutral',title:'Cross-map separation during supported trade window'});}
           }
         }else if(mode==='shortlist'){
           const wanted=shortlist.filter(x=>String(x.matchId)===String(g.matchId)&&num(x.minute));
@@ -188,7 +189,7 @@
         }
       }
     }
-    const legends={pre:'<span><i class="player"></i>sampled player position</span><span><i class="fight"></i>fight anchor</span>',geo:'<span><i class="bad"></i>reachable missed join</span><span><i class="good"></i>measurable cross-map trade</span>',trade:'<span><i class="good"></i>your cross-map position</span><span><i class="fight"></i>fight location</span>',shortlist:'<span><i class="review"></i>ranked replay moment</span>'};
+    const legends={pre:'<span><i class="player"></i>sampled player position</span><span><i class="fight"></i>fight anchor</span>',geo:'<span><i class="bad"></i>reachable missed join</span><span><i class="good"></i>measurable cross-map trade</span>',trade:'<span><i class="player"></i>your cross-map position</span><span><i class="fight"></i>fight location</span>',shortlist:'<span><i class="review"></i>ranked replay moment</span>'};
     return mapStage(pts,{lines,legend:legends[mode]||'',aria:'Summoner’s Rift '+mode+' decision map'});
   }
   function preFightMap(r){
@@ -209,8 +210,8 @@
     return '<div class="di-formation-grid">'+bands.map(b=>{const xs=r.filter(x=>x.formationBand===b),con=xs.filter(x=>x.contributed).length,surv=xs.filter(x=>x.survived).length;return'<article><strong>'+esc(b)+'</strong><span><b>'+xs.length+'</b> fights</span><span><b>'+fmt(pct(con,xs.length),0)+'%</b> contribution</span><span><b>'+fmt(pct(surv,xs.length),0)+'%</b> survival</span></article>';}).join('')+'</div>';
   }
   function objectivePathMap(r){
-    const pts=r.filter(x=>x?.approachPosition).map(x=>({position:x.approachPosition,tone:x.joined?'good':'bad',r:7,title:(x.objective||'objective')+' · sampled approach '+(x.approachZone||'unknown')+' · '+(x.joined?'present':'absent')}));
-    return mapStage(pts,{legend:'<span><i class="good"></i>present at contested objective</span><span><i class="bad"></i>absent</span>',aria:'Summoner’s Rift objective approach map'});
+    const pts=r.filter(x=>x?.approachPosition).map(x=>({position:x.approachPosition,tone:x.joined?'player':'warn',r:7,title:(x.objective||'objective')+' · sampled '+(num(x.actualApproachLeadSec)?fmt(x.actualApproachLeadSec,0)+'s before · ':'')+(x.approachZone||'unknown')+' · '+(x.joined?'present':'absent')}));
+    return mapStage(pts,{legend:'<span><i class="player"></i>present at contested objective</span><span><i class="warn"></i>absent</span>',aria:'Summoner’s Rift objective approach map'});
   }
 
   function championVisual(r){
@@ -232,21 +233,21 @@
     const r=rows(a),e=a?.evidence||{};
     switch(a?.id){
       case'fight_decision_ledger':return barRows([...r].sort((x,y)=>Math.abs(n(y.netProxyG||0))-Math.abs(n(x.netProxyG||0))),{label:x=>(x.zone||'fight')+' · '+fmt(x.minute,1)+'m',value:'netProxyG',suffix:'g proxy',diverging:true});
-      case'arrival_feasibility':return shareVisual([{label:'Near ≤4k',value:n(e.near||0)},{label:'Borderline 4–6.5k',value:n(e.borderline||0)},{label:'Far >6.5k',value:n(e.far||0)}]);
+      case'arrival_feasibility':return shareVisual([{label:'Near ≤4k',value:n(e.near||0),tone:'warn'},{label:'Borderline 4–6.5k',value:n(e.borderline||0),tone:'neutral'},{label:'Far >6.5k',value:n(e.far||0),tone:'muted'}]);
       case'pre_fight_positioning':return preFightMap(r.slice(0,36));
       case'fight_formation':return formationVisual(r);
-      case'numbers_aware_participation':return shareVisual([{label:'Down ≥2',value:n(e.outnumberedStarts||0)},{label:'Down 1',value:n(e.downOneStarts||0)},{label:'Even',value:n(e.evenStarts||0)},{label:'Ahead',value:n(e.aheadStarts||0)}]);
+      case'numbers_aware_participation':return shareVisual([{label:'Down ≥2',value:n(e.outnumberedStarts||0),tone:'bad'},{label:'Down 1',value:n(e.downOneStarts||0),tone:'warn'},{label:'Even',value:n(e.evenStarts||0),tone:'neutral'},{label:'Ahead',value:n(e.aheadStarts||0),tone:'good'}]);
       case'cross_map_efficiency':return barRows([...r].sort((a,b)=>n(b.valuePerMin||0)-n(a.valuePerMin||0)),{label:x=>(x.zone||'fight')+' '+fmt(x.minute,1)+'m',value:'valuePerMin',suffix:'/min'});
       case'wave_fight_conflict':return scatter(r,'csSwing','goldSwing',{xLabel:'CS movement vs role',yLabel:'Gold movement vs role',labelKey:'zone',toneFn:x=>x.fightLost?'negative':'positive',legend:'<span><i class="negative"></i>team lost tracked fight</span><span><i class="positive"></i>team did not lose tracked fight</span>'});
-      case'nothing_gained_isolation':return shareVisual([{label:'High-priority',value:n(e.highPriority||0)},{label:'Other uncompensated',value:Math.max(0,r.length-n(e.highPriority||0))}]);
+      case'nothing_gained_isolation':return shareVisual([{label:'High-priority review',value:n(e.highPriority||0),tone:'bad'},{label:'Other uncompensated',value:Math.max(0,r.length-n(e.highPriority||0)),tone:'warn'}]);
       case'post_recall_tempo':return barRows([...r].sort((a,b)=>n(a.gapMin||0)-n(b.gapMin||0)),{label:x=>(x.nextKind||'event')+' · '+(x.approachZone||'unknown'),value:'gapMin',suffix:'m'});
-      case'objective_setup_path':return shareVisual([{label:'Present',value:r.filter(x=>x.joined).length},{label:'Absent',value:r.filter(x=>!x.joined).length}])+objectivePathMap(r.slice(0,40))+'<div class="di-path-chips">'+r.slice(0,8).map(x=>'<span><b>'+esc(x.objective||'objective')+'</b><i>shop '+(num(x.shopLeadMin)?fmt(x.shopLeadMin,1)+'m before':'?')+'</i><em>→</em><i>'+esc(x.approachZone||'unknown')+(num(x.actualApproachLeadSec)?' · '+fmt(x.actualApproachLeadSec,0)+'s before':'')+'</i><em>→</em><i>'+esc(x.joined?'present':'absent')+'</i></span>').join('')+'</div>';
+      case'objective_setup_path':return shareVisual([{label:'Present',value:r.filter(x=>x.joined).length,tone:'neutral'},{label:'Absent',value:r.filter(x=>!x.joined).length,tone:'warn'}])+objectivePathMap(r.slice(0,40))+'<div class="di-path-chips">'+r.slice(0,8).map(x=>'<span><b>'+esc(x.objective||'objective')+'</b><i>shop '+(num(x.shopLeadMin)?fmt(x.shopLeadMin,1)+'m before':'?')+'</i><em>→</em><i>'+esc(x.approachZone||'unknown')+(num(x.actualApproachLeadSec)?' · '+fmt(x.actualApproachLeadSec,0)+'s before':'')+'</i><em>→</em><i>'+esc(x.joined?'present':'absent')+'</i></span>').join('')+'</div>';
       case'lead_utilisation':return slope(r,'gold15','gold25',{startLabel:'Gold@15',endLabel:'Gold@25'});
       case'deficit_recovery':return slope(r,'gold15','gold25',{startLabel:'Gold@15',endLabel:'Gold@25'});
       case'death_chains':{const rr=(e.repeatGames||[]).map(x=>({label:shortMatch(x.matchId),value:n(x.repeatDeaths||0)}));return barRows(rr,{value:'value',suffix:' repeat'});}
       case'resource_to_impact':return scatter(r,'goldDiffAtStart','currentGold',{xLabel:'Gold diff vs role',yLabel:'Unspent gold',labelKey:'matchId',toneFn:x=>x.contributed?'positive':'negative',legend:'<span><i class="positive"></i>tracked contribution</span><span><i class="negative"></i>no tracked contribution</span>'});
-      case'fight_lead_conversion':return shareVisual([{label:'Converted',value:r.filter(x=>x.converted).length},{label:'No tracked conversion',value:r.filter(x=>!x.converted).length}]);
-      case'fight_loss_containment':return shareVisual([{label:'Contained',value:r.filter(x=>x.contained).length},{label:'Compounded',value:r.filter(x=>!x.contained).length}]);
+      case'fight_lead_conversion':return shareVisual([{label:'Tracked follow-up',value:r.filter(x=>x.converted).length,tone:'good'},{label:'No tracked follow-up',value:r.filter(x=>!x.converted).length,tone:'neutral'}]);
+      case'fight_loss_containment':return shareVisual([{label:'Contained',value:r.filter(x=>x.contained).length,tone:'good'},{label:'Compounded',value:r.filter(x=>!x.contained).length,tone:'bad'}]);
       case'objective_trading':return fightMap(report,'trade')+barRows(r,{label:x=>(x.fightZone||'trade')+' '+fmt(x.minute,1)+'m',value:'goldSwing',suffix:'g',diverging:true});
       case'geographical_clusters':{const mapEvents=Array.isArray(e.mapEvents)?e.mapEvents:[];const pts=mapEvents.map(x=>({position:x.position,tone:x.type==='bad_death'?'bad':'review',r:x.type==='bad_death'?7:9,title:(x.type==='bad_death'?'High-risk death':'High-priority missed join')+' · '+(x.zone||'unknown')+' · '+fmt(x.minute,1)+'m'}));return mapStage(pts,{legend:'<span><i class="bad"></i>high-risk death</span><span><i class="review"></i>high-priority missed join</span>',aria:'Summoner’s Rift repeated decision locations'})+barRows(r,{label:'zone',value:'count',suffix:' signals'});}
       case'champion_tendencies':return championVisual(r);
@@ -262,7 +263,7 @@
   function analyticCard(a,index,report){
     const info=INFO[a?.id]||{group:'Other',measure:a?.summary||'',review:'Open linked matches for context.'};
     const evidence=evidenceRows(a),visual=visualFor(a,report),con=conclusion(a);
-    return '<details class="di-card tone-'+statusTone(a?.status)+'" '+(index<4?'open':'')+'>'+
+    return '<details class="di-card tone-'+statusTone(a?.status)+'" '+(index<2?'open':'')+'>'+
       '<summary><span class="di-index">'+String(index+1).padStart(2,'0')+'</span><div><strong>'+esc(a?.title||'Analysis')+'</strong><small>'+esc(statusLabel(a?.status))+' · n='+esc(a?.sample??0)+' · '+esc(info.group)+'</small></div><i></i></summary>'+
       '<div class="di-card-body"><div class="di-visual">'+visual+'</div>'+
       '<div class="di-interpretation"><div><span>What it measures</span><p>'+esc(info.measure)+'</p></div><div class="di-conclusion"><span>Conclusion from this sample</span><p>'+esc(con)+'</p></div><div><span>What to review</span><p>'+esc(info.review)+'</p></div></div>'+
