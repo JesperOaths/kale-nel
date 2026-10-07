@@ -866,6 +866,7 @@ function renderReport(raw,sourceKind){
   renderSpendingFightComparison(r);
   renderVisualAnalytics(r);
   renderObjectiveFamilyOverview(r);
+  renderTeamfightDecisionOverview(r);
   renderPhaseDiagnostic(r);
   renderCompoundSignals(r);
   renderSessionHabits(r);
@@ -946,10 +947,10 @@ function roleRecentTrendSpecs(r){
     spec('High-risk deaths',t.badDeaths,'num',true,.2)
   ];
   return[
-    spec('CS / min',t.csMin,'csminRaw',false,.15),
     spec('Gold @15 vs ADC peer',t.goldDiff15,'gold',false,150),
-    spec('Damage / min',t.dpm,'dpm',false,50),
-    spec('Kill participation',t.kp,'percent',false,2),
+    spec('CS/min vs ADC peer',t.peerCsMinDelta,'csmin',false,.15),
+    spec('DPM vs ADC peer',t.peerDpmDelta,'dpm',false,50),
+    spec('Deaths vs ADC peer',t.peerDeathsDelta,'num',true,.25),
     spec('High-risk deaths',t.badDeaths,'num',true,.2)
   ];
 }
@@ -1635,26 +1636,29 @@ function renderLongHorizon(r){
     {label:'Turret damage / min',value:hasNum(s?.turretDamagePerMin?.value)?fmtInt(s.turretDamagePerMin.value):'n/a',sub:'direct structure pressure from match data'}
   ];
   kpi.innerHTML=rows.map(x=>'<article class="kpi-card tone-neutral"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><small>'+esc(x.sub)+'</small></article>').join('');
-  const roleTrend=laner
-    ?{label:'Lane minions @10',obj:h?.trend?.laneCs10,unit:'cs',inverse:false,threshold:1.5}
-    :role==='SUPPORT'
-      ?{label:'Vision actions / min',obj:h?.trend?.visionActionsPerMin,unit:'num',inverse:false,threshold:.05}
-      :{label:'Enemy-jungle monsters / game',obj:h?.trend?.enemyJungleMonsters,unit:'num',inverse:false,threshold:1};
-  const supportVisionTrend=role==='SUPPORT'?{label:'Team vision share',obj:h?.trend?.visionShare,unit:'percent',inverse:false,threshold:3}:null;
-  const specs=[{label:'CS / min',obj:h?.trend?.csMin,unit:'csmin',inverse:false,threshold:.08},roleTrend,...(supportVisionTrend?[supportVisionTrend]:[]),{label:'Damage / min',obj:h?.trend?.dpm,unit:'dpm',inverse:false,threshold:60},{label:'Death downtime',obj:h?.trend?.deadTimePct,unit:'percent',inverse:true,threshold:1.5},{label:'Damage share − gold share',obj:h?.trend?.damageEfficiencyPp,unit:'pp',inverse:false,threshold:1.5},{label:'Turret damage / min',obj:h?.trend?.turretDamagePerMin,unit:'dpm',inverse:false,threshold:35}];
+  const opponentLabel=roleLabel(role)+' opponent';
+  const specs=role==='SUPPORT'?[
+    {label:'Vision/min vs '+opponentLabel,obj:h?.trend?.peerVpmDelta,unit:'num',inverse:false,threshold:.12},
+    {label:'Kill participation vs '+opponentLabel,obj:h?.trend?.peerKpDelta,unit:'pp',inverse:false,threshold:3},
+    {label:'Deaths vs '+opponentLabel,obj:h?.trend?.peerDeathsDelta,unit:'num',inverse:true,threshold:.35},
+    {label:'Gold/min vs '+opponentLabel,obj:h?.trend?.peerGpmDelta,unit:'num',inverse:false,threshold:18}
+  ]:[
+    {label:'CS/min vs '+opponentLabel,obj:h?.trend?.peerCsMinDelta,unit:'csmin',inverse:false,threshold:.15},
+    {label:'Damage/min vs '+opponentLabel,obj:h?.trend?.peerDpmDelta,unit:'dpm',inverse:false,threshold:60},
+    {label:'Gold/min vs '+opponentLabel,obj:h?.trend?.peerGpmDelta,unit:'num',inverse:false,threshold:20},
+    {label:'Deaths vs '+opponentLabel,obj:h?.trend?.peerDeathsDelta,unit:'num',inverse:true,threshold:.35}
+  ];
   renderLongHorizonDirectionGraph(specs);
   trend.innerHTML=specs.map(x=>historyTrendCard(x.label,x.obj,x.unit,x.inverse,x.threshold)).join('');
   if(stability){
-    const st=h.stabilityTrend||{},roleStability=laner
-      ?{label:'Lane minions @10',obj:st.laneCs10,unit:'cs',inverse:false,medianThreshold:1.5,iqrThreshold:1}
-      :role==='SUPPORT'
-        ?{label:'Vision actions / min',obj:st.visionActionsPerMin,unit:'num',inverse:false,medianThreshold:.05,iqrThreshold:.05}
-        :{label:'Enemy-jungle monsters / game',obj:st.enemyJungleMonsters,unit:'num',inverse:false,medianThreshold:1,iqrThreshold:1};
-    const stabilitySpecs=[
-      {label:'CS / min',obj:st.csMin,unit:'csmin',inverse:false,medianThreshold:.08,iqrThreshold:.15},
-      roleStability,
-      {label:'Damage / min',obj:st.dpm,unit:'dpm',inverse:false,medianThreshold:60,iqrThreshold:60},
-      {label:'Death downtime',obj:st.deadTimePct,unit:'percent',inverse:true,medianThreshold:1.5,iqrThreshold:1.5}
+    const st=h.stabilityTrend||{},stabilitySpecs=role==='SUPPORT'?[
+      {label:'Vision/min vs '+opponentLabel,obj:st.peerVpmDelta,unit:'num',inverse:false,medianThreshold:.12,iqrThreshold:.15},
+      {label:'KP vs '+opponentLabel,obj:st.peerKpDelta,unit:'pp',inverse:false,medianThreshold:3,iqrThreshold:4},
+      {label:'Deaths vs '+opponentLabel,obj:st.peerDeathsDelta,unit:'num',inverse:true,medianThreshold:.35,iqrThreshold:.5}
+    ]:[
+      {label:'CS/min vs '+opponentLabel,obj:st.peerCsMinDelta,unit:'csmin',inverse:false,medianThreshold:.15,iqrThreshold:.2},
+      {label:'Damage/min vs '+opponentLabel,obj:st.peerDpmDelta,unit:'dpm',inverse:false,medianThreshold:60,iqrThreshold:80},
+      {label:'Deaths vs '+opponentLabel,obj:st.peerDeathsDelta,unit:'num',inverse:true,medianThreshold:.35,iqrThreshold:.5}
     ];
     stability.innerHTML=stabilitySpecs.map(x=>historyStabilityCard(x.label,x.obj,x.unit,x.inverse,x.medianThreshold,x.iqrThreshold)).join('');
   }
@@ -1929,7 +1933,7 @@ function renderObjectiveFamilyOverview(r){
   })).filter(x=>x.encounters>0||x.contested>0).sort((a,b)=>b.contested-a.contested||b.encounters-a.encounters||a.label.localeCompare(b.label));
   if(!rows.length){box.innerHTML='';return;}
   const reviewable=rows.filter(x=>x.contested>=3),mostMissed=reviewable.slice().sort((a,b)=>(a.presence??101)-(b.presence??101)||b.contested-a.contested)[0]||null;
-  box.innerHTML='<div class="section-subhead objective-family-head"><div><span>Objective families</span><strong>Where do the contested windows actually occur?</strong></div><small>Family presence is descriptive context, not a role-grade by itself.</small></div>'+
+  box.innerHTML='<div class="section-subhead objective-family-head"><div><span>Objective families</span><strong>Which objective types create contested windows?</strong></div><small>This answers objective type. Teamfight map location is analyzed separately below.</small></div>'+
     '<div class="objective-family-grid">'+rows.map(x=>{
       const interval=wilsonInterval(x.joined,x.contested),thin=x.contested<3,matchCount=objectiveFamilyMatchIds(r,x.key).size;
       return '<article class="objective-family-card '+(thin?'thin-evidence':'')+'"><span>'+esc(x.label)+'</span><strong>'+(x.presence==null?'n/a':esc(fmtPct(x.presence)))+' contested presence</strong>'+
@@ -1945,6 +1949,32 @@ function renderObjectiveFamilyOverview(r){
     state.matchHistoryFilter='objective-family';state.matchHistoryLimit=10;renderMatchHistory(r);
     $('match-history')?.scrollIntoView({behavior:'auto',block:'start'});
   }));
+}
+
+function renderTeamfightDecisionOverview(r){
+  const box=$('teamfightDecisionOverview'),panel=$('teamfightDecisionPanel');if(!box||!panel)return;
+  const windows=[];
+  for(const g of reportCoachingGames(r)){
+    for(const ev of g?.fightProfile?.events||[])if(ev?.fightZone&&ev.fightZone!=='unknown')windows.push({...ev,matchId:g.matchId,champion:g.champion,joined:true});
+    for(const ev of g?.fightProfile?.absenceEvents||[])if(ev?.fightZone&&ev.fightZone!=='unknown')windows.push({...ev,matchId:g.matchId,champion:g.champion,joined:false});
+  }
+  if(!windows.length){panel.hidden=true;box.innerHTML='';return;}
+  const groups=new Map();
+  for(const x of windows){const k=String(x.fightZone),row=groups.get(k)||{zone:k,total:0,joined:0,absent:0,trades:0,joinReview:0};row.total++;if(x.joined)row.joined++;else{row.absent++;if(x.crossMapTradeSupported===true)row.trades++;if(x.joinReviewPriority==='high')row.joinReview++;}groups.set(k,row);}
+  const zones=[...groups.values()].sort((a,b)=>b.total-a.total||b.absent-a.absent||a.zone.localeCompare(b.zone));
+  const absences=windows.filter(x=>!x.joined).sort((a,b)=>(a.joinReviewPriority==='high'?0:a.crossMapTradeSupported?2:1)-(b.joinReviewPriority==='high'?0:b.crossMapTradeSupported?2:1)||Number(b.startMin||0)-Number(a.startMin||0)).slice(0,10);
+  const verdict=x=>x.crossMapTradeSupported===true?{tone:'good',label:'Measurable cross-map trade'}:x.decisionReview==='team_won_without_player'?{tone:'neutral',label:'Team won without you'}:x.joinReviewPriority==='high'?{tone:'bad',label:'Review whether you should join'}:x.lostFight?{tone:'neutral',label:'Lost fight · joinability unclear'}:{tone:'neutral',label:'No automatic join claim'};
+  const tradeEvidence=x=>[
+    hasNum(x.crossMapGoldSwingVsPeer)?signed(x.crossMapGoldSwingVsPeer,0)+'g vs role':'',
+    hasNum(x.crossMapCsSwingVsPeer)?signed(x.crossMapCsSwingVsPeer,1)+' CS vs role':'',
+    Number(x.playerStructureGains||0)?Number(x.playerStructureGains)+' structure gain'+(Number(x.playerStructureGains)===1?'':'s'):'',
+    Number(x.playerNeutralObjectiveGains||0)?Number(x.playerNeutralObjectiveGains)+' neutral objective gain'+(Number(x.playerNeutralObjectiveGains)===1?'':'s'):''
+  ].filter(Boolean).join(' · ')||'No supported 90s compensation tracked';
+  box.innerHTML='<div class="teamfight-zone-grid">'+zones.map(x=>'<article class="teamfight-zone-card"><span>'+esc(x.zone)+'</span><strong>'+x.total+' fight window'+(x.total===1?'':'s')+'</strong><p>Joined '+x.joined+' · away '+x.absent+(x.absent?' · '+x.trades+' away window'+(x.trades===1?'':'s')+' with measurable trade':'')+'.</p>'+(x.joinReview?'<small>'+x.joinReview+' high-priority skipped-fight review'+(x.joinReview===1?'':'s')+'</small>':'<small>No high-priority skipped-fight call in this area.</small>')+'</article>').join('')+'</div>'+
+    (absences.length?'<div class="teamfight-absence-list"><div class="section-subhead"><div><span>When you were elsewhere</span><strong>Did staying cross-map buy anything?</strong></div><small>Fight outcome + direct-role economy/structure/objective compensation.</small></div>'+absences.map(x=>{const v=verdict(x);return '<article class="teamfight-decision-card tone-'+v.tone+'"><div><span>'+esc(x.fightZone)+' · '+esc(fmt(x.startMin,1))+'m</span><strong>'+esc(v.label)+'</strong><p>Fight kills '+Number(x.teamFightKills||0)+'–'+Number(x.enemyFightKills||0)+(hasNum(x.playerDistanceToFight)?' · ~'+fmt(Number(x.playerDistanceToFight)/1000,1)+'k map units away':'')+(hasNum(x.numbersDelta)?' · local numbers '+signed(x.numbersDelta,0):'')+'</p><small>'+esc(tradeEvidence(x))+'</small></div><button class="button secondary tiny" type="button" data-fight-review="'+esc(x.matchId||'')+'">Open match</button></article>';}).join('')+'</div>':'<div class="teamfight-decision-empty">No position-supported skipped teamfight windows in the current deep sample.</div>')+
+    '<p class="source-note"><b>How this works:</b> fights are Riot multi-kill clusters grouped by time and coordinates. Map names are coarse, team-relative coordinate zones—not exact turret detection. A skipped fight gets “measurable cross-map trade” only when the next ~90 seconds show a supported structure/neutral-objective gain or at least +250g / +6 CS movement versus the direct role opponent. “Review whether you should join” additionally requires a lost fight, no supported compensation and a roughly reachable start position. These labels rank replay questions; they do not prove the counterfactual.</p>';
+  box.querySelectorAll('[data-fight-review]').forEach(btn=>btn.addEventListener('click',()=>{const id=btn.dataset.fightReview;if(id)openReplayReviewMatch(id,'fights');}));
+  panel.hidden=false;
 }
 
 function renderPhaseDiagnostic(r){
@@ -2096,12 +2126,12 @@ const PRACTICE_TARGET_SAMPLE_PATHS={
   'behaviorSummary.meanGameSupportRoamAdcLaneMovementCs':['behaviorSummary.supportRoamAdcLaneMovementGames'],
   'sessionBehavior.game3PlusGoldDelta':['sessionBehavior.firstGame.lane15Games','sessionBehavior.game3Plus.lane15Games'],
   'sessionBehavior.postLossGoldDelta':['sessionBehavior.quickAfterLoss.lane15Games','sessionBehavior.quickAfterWin.lane15Games'],
-  'sessionBehavior.game3PlusVpmDelta':['sessionBehavior.firstGame.vpmGames','sessionBehavior.game3Plus.vpmGames'],
-  'sessionBehavior.postLossVpmDelta':['sessionBehavior.quickAfterLoss.vpmGames','sessionBehavior.quickAfterWin.vpmGames'],
-  'sessionBehavior.game3PlusKpDelta':['sessionBehavior.firstGame.kpGames','sessionBehavior.game3Plus.kpGames'],
-  'sessionBehavior.postLossKpDelta':['sessionBehavior.quickAfterLoss.kpGames','sessionBehavior.quickAfterWin.kpGames'],
-  'sessionBehavior.game3PlusCsMinDelta':['sessionBehavior.firstGame.csMinGames','sessionBehavior.game3Plus.csMinGames'],
-  'sessionBehavior.postLossCsMinDelta':['sessionBehavior.quickAfterLoss.csMinGames','sessionBehavior.quickAfterWin.csMinGames']
+  'sessionBehavior.game3PlusPeerVpmDelta':['sessionBehavior.firstGame.peerVpmGames','sessionBehavior.game3Plus.peerVpmGames'],
+  'sessionBehavior.postLossPeerVpmDelta':['sessionBehavior.quickAfterLoss.peerVpmGames','sessionBehavior.quickAfterWin.peerVpmGames'],
+  'sessionBehavior.game3PlusPeerKpDelta':['sessionBehavior.firstGame.peerKpGames','sessionBehavior.game3Plus.peerKpGames'],
+  'sessionBehavior.postLossPeerKpDelta':['sessionBehavior.quickAfterLoss.peerKpGames','sessionBehavior.quickAfterWin.peerKpGames'],
+  'sessionBehavior.game3PlusPeerCsMinDelta':['sessionBehavior.firstGame.peerCsMinGames','sessionBehavior.game3Plus.peerCsMinGames'],
+  'sessionBehavior.postLossPeerCsMinDelta':['sessionBehavior.quickAfterLoss.peerCsMinGames','sessionBehavior.quickAfterWin.peerCsMinGames']
 };
 function practiceTargetMetricPath(t){
   const p=String(t?.metricPath||'');
@@ -2523,66 +2553,56 @@ function renderProgressComparison(current,previous,previousAt){
 }
 function sessionCard(title,sample,role){
   if(!sample||!Number(sample.games))return '';
-  const games=Number(sample.games||0),laneN=Number(sample.lane15Games||0),timelineN=Number(sample.timelineGames??(hasNum(sample.badDeaths)?games:0)),dpmN=Number(sample.dpmGames??(hasNum(sample.dpm)?games:0)),csN=Number(sample.csMinGames??(hasNum(sample.csMin)?games:0)),kpN=Number(sample.kpGames??(hasNum(sample.kp)?games:0)),vpmN=Number(sample.vpmGames??(hasNum(sample.vpm)?games:0)),thin=games<3,r=canonicalRole(role);
-  const risk=timelineN>0&&hasNum(sample.badDeaths)?'Risky deaths '+fmt(sample.badDeaths,1)+'/game · '+timelineN+'/'+games+' timelines':'Risky deaths n/a · 0/'+games+' timelines';
-  let lines;
+  const games=Number(sample.games||0),laneN=Number(sample.lane15Games||0),timelineN=Number(sample.timelineGames||0),dpmN=Number(sample.peerDpmGames||0),csN=Number(sample.peerCsMinGames||0),vpmN=Number(sample.peerVpmGames||0),kpN=Number(sample.peerKpGames||0),thin=games<3,r=canonicalRole(role);
+  const risk=timelineN>0&&hasNum(sample.badDeaths)?'Risky deaths '+fmt(sample.badDeaths,1)+'/game · '+timelineN+' timeline games':'Risky deaths n/a';
+  let lines=[];
   if(r==='SUPPORT'){
     lines=[
-      'KP '+fmtPct(sample.kp)+' · n='+kpN,
-      'Vision/min '+fmt(sample.vpm,2)+' · n='+vpmN,
-      risk
-    ];
-  }else if(r==='JUNGLE'){
-    lines=[
-      'CS/min '+fmt(sample.csMin,2)+' · n='+csN+' · KP '+fmtPct(sample.kp)+' · n='+kpN,
-      'Vision/min '+fmt(sample.vpm,2)+' · n='+vpmN,
+      hasNum(sample.peerVpmDelta)?'Vision/min vs Support opponent '+signed(sample.peerVpmDelta,2)+' · n='+vpmN:'Vision/min vs Support opponent n/a',
+      hasNum(sample.peerKpDelta)?'KP vs Support opponent '+signed(sample.peerKpDelta,1)+' points · n='+kpN:'',
       risk
     ];
   }else{
-    const lane=laneN>0&&hasNum(sample.goldDiff15)?'Gold @15 '+signed(sample.goldDiff15,0)+'g · '+laneN+'/'+games+' comparable':'Gold @15 n/a · '+laneN+'/'+games+' comparable';
-    const output='DPM '+fmtInt(sample.dpm)+' · n='+dpmN+' · CS/min '+fmt(sample.csMin,2)+' · n='+csN;
-    lines=[lane,risk,output];
+    if(laneN>0&&hasNum(sample.goldDiff15))lines.push('Gold @15 vs '+roleLabel(r)+' opponent '+signed(sample.goldDiff15,0)+'g · n='+laneN);
+    lines.push(hasNum(sample.peerDpmDelta)?'DPM vs '+roleLabel(r)+' opponent '+signed(sample.peerDpmDelta,0)+' · n='+dpmN:'DPM vs opponent n/a');
+    lines.push(hasNum(sample.peerCsMinDelta)?'CS/min vs '+roleLabel(r)+' opponent '+signed(sample.peerCsMinDelta,2)+' · n='+csN:'CS/min vs opponent n/a');
+    if(r==='JUNGLE'&&hasNum(sample.impactDeltaVsOpponent))lines.push('First impact vs Jungle opponent '+signed(sample.impactDeltaVsOpponent,1)+'m · n='+Number(sample.impactGames||0));
+    lines.push(risk);
   }
-  return '<div class="quality-card session-sample-card '+(thin?'thin-sample':'')+'"><span>'+esc(title)+(thin?' <em>thin sample</em>':'')+'</span><strong>'+esc(String(games))+' games</strong>'+
-    '<small>'+lines.map(esc).join('<br>')+'</small></div>';
+  return '<div class="quality-card session-sample-card '+(thin?'thin-sample':'')+'"><span>'+esc(title)+(thin?' <em>thin sample</em>':'')+'</span><strong>'+esc(String(games))+' games</strong><small>'+lines.filter(Boolean).map(esc).join('<br>')+'</small></div>';
 }
-function sessionPairReady(a,b,countField='games'){
-  return Number(a?.games||0)>=2&&Number(b?.games||0)>=2&&Number(a?.[countField]??a?.games??0)>=2&&Number(b?.[countField]??b?.games??0)>=2;
+function sessionPairReady(a,b,countField='games',min=2){
+  return Number(a?.games||0)>=2&&Number(b?.games||0)>=2&&Number(a?.[countField]??a?.games??0)>=min&&Number(b?.[countField]??b?.games??0)>=min;
 }
 function renderSessionHabits(r){
-  const s=r.sessionBehavior||r.sessionModel||{},first=s.firstGame||{},late=s.game3Plus||{},afterLoss=s.quickAfterLoss||{},afterWin=s.quickAfterWin||{},role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole);
+  const s=r.sessionBehavior||r.sessionModel||{},first=s.firstGame||{},second=s.secondGame||{},late=s.game3Plus||{},afterLoss=s.quickAfterLoss||{},afterWin=s.quickAfterWin||{},role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole),answer=s.answer||{};
   const cards=[
     sessionCard('Session-opening game',first,role),
+    sessionCard('Game 2 in session',second,role),
     sessionCard('Game 3+ in session',late,role),
     sessionCard('Quick requeue after loss',afterLoss,role),
     sessionCard('Quick requeue after win',afterWin,role)
   ].filter(Boolean);
-  if(!cards.length){
-    $('sessionHabitsPanel').hidden=true;return;
-  }
+  if(!cards.length){$('sessionHabitsPanel').hidden=true;return;}
   $('sessionHabits').innerHTML=cards.join('');
+  const answerBox=$('sessionHabitsAnswer');
+  if(answerBox){
+    const tone=answer.status==='better'?'good':answer.status==='worse'?'bad':'neutral',signals=Array.isArray(answer.supportedSignals)?answer.supportedSignals:[];
+    const signalText=signals.map(x=>esc(String(x.label||'Signal'))+' '+esc(signed(x.delta,Math.abs(Number(x.delta))<10?2:0))+' <small>n='+Number(x.recentN||0)+' vs '+Number(x.baselineN||0)+'</small>').join('');
+    answerBox.innerHTML='<article class="session-answer-card tone-'+tone+'"><span>Direct answer</span><strong>'+esc(answer.headline||'Session-position evidence is still developing')+'</strong><p>'+(answer.status==='insufficient'?'At least two role-relevant metrics need three valid opener and game-3+ observations before this section makes a directional call.':'The call below compares game 3+ with session openers using opponent-adjusted or timeline-risk evidence, not raw scoreboard output.')+'</p>'+(signalText?'<div class="session-answer-signals">'+signalText+'</div>':'')+'<small>Descriptive association only. It does not diagnose fatigue, tilt or causation.</small></article>';
+  }
   const deltas=[];
   if(sessionPairReady(late,first,'timelineGames')&&hasNum(s.game3PlusBadDeathDelta))deltas.push('game 3+ risky deaths '+signed(s.game3PlusBadDeathDelta,1)+'/game');
-  if(sessionPairReady(afterLoss,afterWin,'timelineGames')&&hasNum(s.postLossBadDeathDelta))deltas.push('quick post-loss risky deaths '+signed(s.postLossBadDeathDelta,1)+'/game');
-  if(role==='SUPPORT'){
-    if(sessionPairReady(late,first,'vpmGames')&&hasNum(s.game3PlusVpmDelta))deltas.push('game 3+ vision/min '+signed(s.game3PlusVpmDelta,2)+' vs opener');
-    if(sessionPairReady(late,first,'kpGames')&&hasNum(s.game3PlusKpDelta))deltas.push('game 3+ KP '+signed(s.game3PlusKpDelta,1)+' points vs opener');
-    if(sessionPairReady(afterLoss,afterWin,'vpmGames')&&hasNum(s.postLossVpmDelta))deltas.push('quick post-loss vision/min '+signed(s.postLossVpmDelta,2)+' vs quick post-win');
-    if(sessionPairReady(afterLoss,afterWin,'kpGames')&&hasNum(s.postLossKpDelta))deltas.push('quick post-loss KP '+signed(s.postLossKpDelta,1)+' points vs quick post-win');
-  }else if(role==='JUNGLE'){
-    if(sessionPairReady(late,first,'csMinGames')&&hasNum(s.game3PlusCsMinDelta))deltas.push('game 3+ CS/min '+signed(s.game3PlusCsMinDelta,2)+' vs opener');
-    if(sessionPairReady(late,first,'kpGames')&&hasNum(s.game3PlusKpDelta))deltas.push('game 3+ KP '+signed(s.game3PlusKpDelta,1)+' points vs opener');
-    if(sessionPairReady(afterLoss,afterWin,'csMinGames')&&hasNum(s.postLossCsMinDelta))deltas.push('quick post-loss CS/min '+signed(s.postLossCsMinDelta,2)+' vs quick post-win');
-    if(sessionPairReady(afterLoss,afterWin,'kpGames')&&hasNum(s.postLossKpDelta))deltas.push('quick post-loss KP '+signed(s.postLossKpDelta,1)+' points vs quick post-win');
-  }else{
-    if(sessionPairReady(late,first,'lane15Games')&&hasNum(s.game3PlusGoldDelta))deltas.push('game 3+ gold@15 '+signed(s.game3PlusGoldDelta,0)+'g vs opener');
-    if(sessionPairReady(late,first,'dpmGames')&&hasNum(s.game3PlusDpmDelta))deltas.push('game 3+ DPM '+signed(s.game3PlusDpmDelta,0)+' vs opener');
-    if(sessionPairReady(late,first,'csMinGames')&&hasNum(s.game3PlusCsMinDelta))deltas.push('game 3+ CS/min '+signed(s.game3PlusCsMinDelta,2)+' vs opener');
-    if(sessionPairReady(afterLoss,afterWin,'lane15Games')&&hasNum(s.postLossGoldDelta))deltas.push('quick post-loss gold@15 '+signed(s.postLossGoldDelta,0)+'g vs quick post-win');
-  }
-  const thin=[['opener',first],['game 3+',late],['post-loss',afterLoss],['post-win',afterWin]].filter(([,x])=>Number(x?.games||0)>0&&Number(x.games)<3).map(([label,x])=>label+' n='+Number(x.games));
-  const base=s.definition||'Session grouping uses game timing. Deltas require at least two valid observations in both compared groups.';
-  $('sessionHabitsNote').textContent=base+(deltas.length?' Supported observed '+roleLabel(role)+' deltas: '+deltas.join(' · ')+'.':' No role-relevant comparison currently has enough paired evidence for a supported delta.')+(thin.length?' Thin subgroups shown for traceability only: '+thin.join(', ')+'.':'');
+  if(sessionPairReady(late,first,'peerDpmGames')&&hasNum(s.game3PlusPeerDpmDelta))deltas.push('game 3+ DPM-vs-peer '+signed(s.game3PlusPeerDpmDelta,0));
+  if(sessionPairReady(late,first,'peerCsMinGames')&&hasNum(s.game3PlusPeerCsMinDelta))deltas.push('game 3+ CS/min-vs-peer '+signed(s.game3PlusPeerCsMinDelta,2));
+  if(role==='SUPPORT'&&sessionPairReady(late,first,'peerVpmGames')&&hasNum(s.game3PlusPeerVpmDelta))deltas.push('game 3+ vision/min-vs-peer '+signed(s.game3PlusPeerVpmDelta,2));
+  if(['ADC','MID','TOP'].includes(role)&&sessionPairReady(late,first,'lane15Games')&&hasNum(s.game3PlusGoldDelta))deltas.push('game 3+ gold@15-vs-peer '+signed(s.game3PlusGoldDelta,0)+'g');
+  if(role==='JUNGLE'&&sessionPairReady(late,first,'impactGames')&&hasNum(s.game3PlusImpactDelta))deltas.push('game 3+ first-impact-vs-peer '+signed(s.game3PlusImpactDelta,1)+'m');
+  if(sessionPairReady(afterLoss,afterWin,'peerDpmGames')&&hasNum(s.postLossPeerDpmDelta))deltas.push('quick post-loss DPM-vs-peer '+signed(s.postLossPeerDpmDelta,0)+' vs post-win');
+  if(sessionPairReady(afterLoss,afterWin,'peerCsMinGames')&&hasNum(s.postLossPeerCsMinDelta))deltas.push('quick post-loss CS/min-vs-peer '+signed(s.postLossPeerCsMinDelta,2)+' vs post-win');
+  const thin=[['opener',first],['game 2',second],['game 3+',late],['post-loss',afterLoss],['post-win',afterWin]].filter(([,x])=>Number(x?.games||0)>0&&Number(x.games)<3).map(([label,x])=>label+' n='+Number(x.games));
+  const base=s.definition||'Session grouping uses game timing and opponent-adjusted comparisons.';
+  $('sessionHabitsNote').textContent=base+(deltas.length?' Supported observed '+roleLabel(role)+' deltas: '+deltas.join(' · ')+'.':' No role-relevant comparison currently has enough paired evidence for an observed delta.')+(thin.length?' Thin subgroups shown for traceability only: '+thin.join(', ')+'.':'');
   $('sessionHabitsPanel').hidden=false;
 }
 function practiceTargetValue(v,unit){
@@ -3994,7 +4014,7 @@ function renderLongHorizonDirectionGraph(specs){
   const strongest=rows[0],observed=Math.max(...rows.map(x=>Math.abs(Number(x.value)))),bound=Math.max(2.5,niceCeil(Math.max(observed*1.14,2.5),.5)),scale='±'+fmt(bound,bound%1?1:0)+'×';
   box.innerHTML='<div class="recent-direction-summary history-direction-summary"><span><b>Strongest 20-vs-20 shift</b><strong class="tone-'+esc(strongest.tone)+'">'+esc(strongest.label)+' '+esc(strongest.valueLabel)+'</strong></span><span><b>Dynamic chart range</b><strong>'+esc(scale)+'</strong></span><span><b>Window</b><strong>Latest 20 vs previous up to 20</strong></span></div>'+
     visualDivergingSvg(rows,{rowDetails:true,thresholdBand:true,axisSuffix:'×',ariaLabel:'Long-horizon latest twenty versus previous twenty normalized direction',leftLabel:'slipping',rightLabel:'improving'})+
-    '<p class="visual-graph-reading"><b>Long-horizon read:</b> this uses match-level history rather than the deep Last-5 pulse. Each bar is normalized by that metric’s existing practical-change threshold; raw latest/prior values and valid-game counts are printed underneath. This is descriptive history movement, not a causal trend test.</p>';
+    '<p class="visual-graph-reading"><b>Opponent-adjusted read:</b> directional bars use your value minus the actual direct same-role opponent in each match. Raw DPM, CS/min and similar totals are deliberately excluded here because stronger MMR/opponents can lower those totals without meaning you played worse. A positive DPM-vs-peer value means you still out-damaged the counterpart you actually faced. Each bar is normalized by a practical-change threshold; this remains descriptive, not causal.</p>';
 }
 function visualRecentSeverity(signal){
   const magnitude=Math.abs(Number(signal));

@@ -8,7 +8,7 @@
   <title>Bruisienator · League analysis</title>
   <meta name="description" content="Public Bruisienator League of Legends analysis with a 100-game role scan, evidence-backed Last-20 deep coaching, long-horizon trends and replay review.">
   <link rel="canonical" href="https://kalenel.nl/league/">
-  <link rel="stylesheet" href="/league/styles.css?v=20261007-league-web-v302">
+  <link rel="stylesheet" href="/league/styles.css?v=20261007-league-web-v303">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
   <script src="/gejast-config.js?v817&rev=20261002-public-bootstrap-r4"></script>
 </head>
@@ -200,7 +200,7 @@
           </div>
           <details class="report-disclosure"><summary>Compare with your actual role opponent</summary><div class="quick-read-grid" id="quickRead"></div></details>
           <div class="recent-pulse"><article id="visual-analytics" class="primary-chart">
-              <div class="visual-graph-head"><div><span>Recent direction</span><h3>What changed in your latest games?</h3></div><small>Bars compare changes on one scale. <a href="#term-threshold" data-stat-term="threshold">Explain the scale</a></small></div>
+              <div class="visual-graph-head"><div><span>Recent direction</span><h3>What changed relative to the opponent you actually faced?</h3></div><small>ADC output bars use direct-opponent deltas rather than raw DPM/CS. <a href="#term-threshold" data-stat-term="threshold">Explain the scale</a></small></div>
               <div id="recentFormGraph"></div>
             </article>
 
@@ -259,6 +259,13 @@
               <div class="visual-graph-head"><div><span>Objective families</span><h3>How often do you join contested objectives?</h3></div><small>Dot = measured rate · line = uncertainty. <a href="#term-wilson" data-stat-term="wilson">Explain the range</a></small></div>
               <div id="objectiveFamilyGraph"></div>
             </article><div class="objective-family-overview" id="objectiveFamilyOverview"></div>
+          <section class="teamfight-decision-panel" id="teamfightDecisionPanel" hidden>
+            <div class="section-subhead">
+              <div><span>Teamfight geography</span><strong>Where do fights happen, and was skipping them actually compensated?</strong></div>
+              <small>Map-relative fight zones + join/skip replay triage. Counterfactual conclusions are deliberately withheld.</small>
+            </div>
+            <div id="teamfightDecisionOverview"></div>
+          </section>
         </section><details class="report-disclosure"><summary>Risk by game phase</summary><section class="panel phase-diagnostic-panel" id="phase-diagnostic">
           <div class="section-head">
             <div><p class="eyebrow">Phase diagnosis</p><h2>Where does decision risk concentrate?</h2></div>
@@ -284,7 +291,7 @@
           </div>
           <details class="report-disclosure"><summary>All history averages &amp; resource statistics</summary><div class="kpi-grid" id="longHorizonKpis"></div></details>
           <div class="recent-pulse">
-            <div class="recent-pulse-head"><div><span>History direction</span><strong>Latest 20 vs previous up to 20</strong></div><small>Five valid observations are required on both sides. The graph normalizes movement by each metric’s existing practical-change threshold; cards remain below for exact metric context.</small></div>
+            <div class="recent-pulse-head"><div><span>Opponent-adjusted history direction</span><strong>Latest 20 vs previous up to 20</strong></div><small>Five direct same-role opponent observations are required on both sides. Raw DPM/CS totals are excluded from directional scoring because changing MMR changes the difficulty of producing those totals.</small></div>
             <div class="history-direction-graph" id="longHorizonTrendGraph"></div>
             <details class="report-disclosure"><summary>Exact latest-20 and previous-window averages</summary><div class="pulse-grid" id="longHorizonTrend"></div></details>
           </div>
@@ -382,6 +389,7 @@
             <div><p class="eyebrow">Session patterns</p><h2>Does performance change later in a session?</h2></div>
             <span class="section-hint">Descriptive pattern only — never treated as a diagnosis.</span>
           </div>
+          <div id="sessionHabitsAnswer" class="session-habits-answer"></div>
           <div class="quality-grid" id="sessionHabits"></div>
           <div class="source-note" id="sessionHabitsNote"></div>
         </section>
@@ -561,7 +569,7 @@
   </main>
 
   <div class="site-credit-watermark" data-version-watermark="">v817 - Made by Bruis</div>
-  <script src="/league/learning-review.js?v=20261007-league-web-v302" defer></script>
-  <script src="/league/app.js?v=20261007-league-web-v302" defer></script>
+  <script src="/league/learning-review.js?v=20261007-league-web-v303" defer></script>
+  <script src="/league/app.js?v=20261007-league-web-v303" defer></script>
 </body>
 </html>
