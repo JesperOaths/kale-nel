@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none">
   <meta name="theme-color" content="#16070f">
   <title>Wiens tieten zijn dit?</title>
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v817b">
   <script>window.GEJAST_PAGE_VERSION='v817';</script>
 </head>
 <body>
@@ -43,6 +43,10 @@
           <span class="rule-number">03</span>
           <div><strong>Spelling hoeft niet perfect</strong><span>Hoofdletters, accenten en leestekens tellen niet zwaar mee. Kleine typefouten worden vergeven.</span></div>
         </div>
+        <div class="rule">
+          <span class="rule-number">04</span>
+          <div><strong>Één poging per IP-adres</strong><span>Zodra je start, is die openbare internetverbinding gebruikt. Refresh, incognito of een tweede apparaat geeft geen nieuwe poging.</span></div>
+        </div>
       </div>
 
       <div class="grade-legend" aria-label="Cijferverdeling">
@@ -54,8 +58,9 @@
         <span><b>S+</b> 10</span>
       </div>
 
-      <p class="fine-print">Gebruik uitsluitend beelden van volwassenen (18+) waarvoor je toestemming of gebruiksrechten hebt.</p>
-      <button class="primary-button" id="startButton" type="button">Start het spel <span>→</span></button>
+      <p class="fine-print">Gebruik uitsluitend beelden van volwassenen (18+) waarvoor je toestemming of gebruiksrechten hebt. Voor de één-poging-regel wordt geen rauw IP-adres opgeslagen; alleen een server-side salted hash. Mensen op hetzelfde openbare IP delen daardoor één poging.</p>
+      <p class="intro-status" id="introStatus" role="status" aria-live="polite">Poging controleren…</p>
+      <button class="primary-button" id="startButton" type="button" disabled>Poging controleren…</button>
     </section>
 
     <section class="slide guess-slide" id="guessSlide" aria-labelledby="guessHeading" hidden>
@@ -67,9 +72,8 @@
 
       <div class="image-stage" id="imageStage">
         <img id="questionImage" alt="Quizafbeelding" hidden>
-        <div class="image-placeholder" id="imagePlaceholder">
+        <div class="image-placeholder" id="imagePlaceholder" aria-hidden="true">
           <div class="placeholder-mark">?</div>
-          <div><strong id="placeholderTitle">Afbeelding 01</strong><span>Hier komt later de quizfoto.</span></div>
         </div>
         <div class="image-vignette" aria-hidden="true"></div>
       </div>
@@ -128,6 +132,28 @@
       <button class="primary-button" id="bonusContinueButton" type="button">Bekijk eindscore <span>→</span></button>
     </section>
 
+    <section class="slide locked-slide" id="lockedSlide" aria-labelledby="lockedHeading" hidden>
+      <div class="eyebrow">POGING GEBRUIKT</div>
+      <h2 id="lockedHeading">Deze verbinding heeft al gespeeld</h2>
+      <p class="locked-copy" id="lockedCopy">Per openbaar IP-adres is één poging toegestaan.</p>
+
+      <div class="highscore-panel compact-highscores">
+        <div class="highscore-heading">
+          <span>TOP 20</span>
+          <strong>Highscores</strong>
+        </div>
+        <div class="highscore-table-wrap">
+          <table class="highscore-table">
+            <thead><tr><th>#</th><th>Naam</th><th>Score</th><th>Grade</th></tr></thead>
+            <tbody id="lockedHighscoreBody"></tbody>
+          </table>
+          <p class="highscore-empty" id="lockedHighscoreEmpty">Nog geen highscores.</p>
+        </div>
+      </div>
+
+      <a class="secondary-button inline-link" href="/">Terug naar kalenel.nl</a>
+    </section>
+
     <section class="slide end-slide" id="endSlide" aria-labelledby="endHeading" hidden>
       <div class="eyebrow">EINDUITSLAG</div>
       <h2 id="endHeading">Jouw score</h2>
@@ -139,17 +165,39 @@
         <div class="grade-caption" id="gradeCaption">Er is ruimte voor studie.</div>
 
         <div class="bruis-stamp" id="bruisStamp" hidden aria-label="Seal of approval from Bruis">
-          <img src="./bruis-seal.svg" alt="Seal of approval from Bruis">
+          <img src="./bruis-seal.svg?v817b" alt="Bruis Seal of Approval">
           <span class="stamp-grade" id="stampGrade">A</span>
         </div>
       </div>
 
       <p class="approval-copy" id="approvalCopy"></p>
-      <button class="secondary-button" id="restartButton" type="button">Nog een keer</button>
+
+      <div class="highscore-panel">
+        <div class="highscore-heading">
+          <span>TOP 20</span>
+          <strong>Highscores</strong>
+        </div>
+        <form class="highscore-form" id="highscoreForm" novalidate>
+          <label for="highscoreName">Jouw naam</label>
+          <div class="highscore-entry-row">
+            <input id="highscoreName" name="highscoreName" type="text" maxlength="24" autocomplete="nickname" placeholder="Naam voor de ranglijst">
+            <button class="primary-button compact" id="highscoreSubmit" type="submit">Zet mij in de highscores</button>
+          </div>
+          <p class="highscore-message" id="highscoreMessage" role="status" aria-live="polite"></p>
+        </form>
+
+        <div class="highscore-table-wrap">
+          <table class="highscore-table">
+            <thead><tr><th>#</th><th>Naam</th><th>Score</th><th>Grade</th></tr></thead>
+            <tbody id="highscoreBody"></tbody>
+          </table>
+          <p class="highscore-empty" id="highscoreEmpty">Nog geen highscores.</p>
+        </div>
+      </div>
     </section>
     <footer class="version">v817 - Made by Bruis</footer>
   </main>
 
-  <script src="./app.js" defer></script>
+  <script src="./app.js?v817b" defer></script>
 </body>
 </html>

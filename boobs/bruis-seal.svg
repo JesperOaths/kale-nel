@@ -1,22 +1,50 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-labelledby="t d">
-  <title id="t">Seal of Approval from Bruis</title>
-  <desc id="d">Decorative burgundy and gold approval stamp.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-labelledby="t d">
+  <title id="t">Bruis Seal of Approval</title>
+  <desc id="d">Premium burgundy wax seal with gold detailing.</desc>
   <defs>
-    <radialGradient id="wax" cx="40%" cy="30%" r="75%">
-      <stop offset="0" stop-color="#f1c4cf"/>
-      <stop offset="0.45" stop-color="#d2718d"/>
-      <stop offset="1" stop-color="#9d3b5d"/>
+    <radialGradient id="wax" cx="38%" cy="28%" r="76%">
+      <stop offset="0" stop-color="#ef9db7"/>
+      <stop offset=".28" stop-color="#cf6388"/>
+      <stop offset=".66" stop-color="#8b274c"/>
+      <stop offset="1" stop-color="#541229"/>
     </radialGradient>
-    <filter id="rough" x="-10%" y="-10%" width="120%" height="120%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="8" result="noise"/>
-      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3"/>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff0b5"/>
+      <stop offset=".32" stop-color="#e1bc68"/>
+      <stop offset=".62" stop-color="#9d7230"/>
+      <stop offset="1" stop-color="#f2d88f"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="9" flood-color="#16040b" flood-opacity=".55"/>
+    </filter>
+    <filter id="texture" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency=".018" numOctaves="2" seed="19" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.7"/>
     </filter>
   </defs>
-  <path fill="url(#wax)" stroke="#f3d9a0" stroke-width="4" filter="url(#rough)" d="M120 9l13 9 16-5 10 14 17 1 6 16 16 7 1 17 14 10-5 16 9 13-9 13 5 16-14 10-1 17-16 7-6 16-17 1-10 14-16-5-13 9-13-9-16 5-10-14-17-1-6-16-16-7-1-17-14-10 5-16-9-13 9-13-5-16 14-10 1-17 16-7 6-16 17-1 10-14 16 5z"/>
-  <circle cx="120" cy="120" r="82" fill="none" stroke="#4c1022" stroke-width="4" opacity=".75"/>
-  <circle cx="120" cy="120" r="70" fill="none" stroke="#f2ddb0" stroke-width="2" stroke-dasharray="3 7"/>
-  <path d="M85 112l23 23 49-54" fill="none" stroke="#4c1022" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" opacity=".88"/>
-  <text x="120" y="54" text-anchor="middle" fill="#4c1022" font-family="Georgia,serif" font-size="17" font-weight="700" letter-spacing="2">BRUIS</text>
-  <text x="120" y="188" text-anchor="middle" fill="#4c1022" font-family="Arial,sans-serif" font-size="10" font-weight="800" letter-spacing="1.4">SEAL OF APPROVAL</text>
-  <circle cx="60" cy="120" r="4" fill="#f2ddb0"/><circle cx="180" cy="120" r="4" fill="#f2ddb0"/>
+
+  <g filter="url(#shadow)">
+    <path d="M160 10
+      l15 12 19-6 11 17 20 1 7 18 19 7 2 20 17 10-4 20 14 14-9 18 10 17-13 15 5 20-17 10-1 20-19 7-7 19-20 1-11 17-19-6-15 12-15-12-19 6-11-17-20-1-7-19-19-7-1-20-17-10 5-20-13-15 10-17-9-18 14-14-4-20 17-10 2-20 19-7 7-18 20-1 11-17 19 6z"
+      fill="url(#wax)" stroke="url(#gold)" stroke-width="5" stroke-linejoin="round" filter="url(#texture)"/>
+
+    <circle cx="160" cy="160" r="116" fill="none" stroke="#3a0919" stroke-width="8" opacity=".6"/>
+    <circle cx="160" cy="160" r="104" fill="none" stroke="url(#gold)" stroke-width="3.5"/>
+    <circle cx="160" cy="160" r="91" fill="none" stroke="#f7dc97" stroke-width="1.5" stroke-dasharray="2.5 7" opacity=".78"/>
+
+    <path d="M88 160h33" stroke="url(#gold)" stroke-width="3" stroke-linecap="round"/>
+    <path d="M199 160h33" stroke="url(#gold)" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="78" cy="160" r="4.5" fill="url(#gold)"/>
+    <circle cx="242" cy="160" r="4.5" fill="url(#gold)"/>
+
+    <text x="160" y="94" text-anchor="middle" fill="#3a0919" font-family="Georgia, serif" font-size="27" font-weight="700" letter-spacing="6">BRUIS</text>
+    <text x="160" y="225" text-anchor="middle" fill="#3a0919" font-family="Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="3.4">SEAL OF APPROVAL</text>
+
+    <g transform="translate(160 153)">
+      <path d="M-33 4 l18 18 43-48" fill="none" stroke="#f9e6ae" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".92"/>
+      <path d="M-33 4 l18 18 43-48" fill="none" stroke="#4b0d21" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <path d="M111 247c14 8 31 12 49 12s35-4 49-12" fill="none" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round" opacity=".75"/>
+  </g>
 </svg>

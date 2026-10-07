@@ -278,3 +278,266 @@ h2 { margin: 0 0 28px; font-family: Georgia, serif; font-size: clamp(2.4rem, 6vw
 @media (max-width:760px) {
   .bonus-video-stage { border-radius:22px; }
 }
+
+/* v817b quiz flow + single-attempt highscores */
+button:disabled { cursor: not-allowed; opacity: .58; }
+.intro-status {
+  min-height: 22px;
+  margin: 0 0 16px;
+  color: #a9959e;
+  font-size: .82rem;
+  line-height: 1.45;
+}
+.intro-status[data-tone="ok"] { color: #d8c08d; }
+.intro-status[data-tone="error"] { color: #ef9eb3; }
+
+@media (min-width: 761px) {
+  .intro-slide .rules-card { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.image-placeholder {
+  color: transparent;
+}
+.image-placeholder .placeholder-mark {
+  color: rgba(244,182,200,.72);
+}
+.image-stage img {
+  position: relative;
+  z-index: 1;
+}
+.image-vignette {
+  z-index: 2;
+}
+
+.highscore-panel {
+  width: min(760px, 100%);
+  margin: 34px auto 0;
+  padding: 22px;
+  border: 1px solid rgba(244,182,200,.16);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(208,113,141,.12), transparent 38%),
+    rgba(255,255,255,.026);
+  box-shadow: inset 0 1px rgba(255,255,255,.035);
+  text-align: left;
+}
+.highscore-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.highscore-heading span {
+  color: var(--gold);
+  font-size: .7rem;
+  font-weight: 850;
+  letter-spacing: .18em;
+}
+.highscore-heading strong {
+  color: #fff3ef;
+  font-family: Georgia, serif;
+  font-size: 1.55rem;
+  font-weight: 500;
+}
+.highscore-form {
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.highscore-form label {
+  display: block;
+  margin-bottom: 8px;
+  color: #c8b6bd;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.highscore-entry-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+.highscore-entry-row input {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.15);
+  outline: 0;
+  border-radius: 999px;
+  padding: 14px 18px;
+  color: #fff8f3;
+  background: rgba(4,2,3,.34);
+}
+.highscore-entry-row input:focus {
+  border-color: rgba(244,182,200,.55);
+  box-shadow: 0 0 0 4px rgba(208,113,141,.08);
+}
+.highscore-entry-row input:disabled { opacity: .62; }
+.highscore-message {
+  min-height: 20px;
+  margin: 8px 4px 0;
+  color: #d8c08d;
+  font-size: .8rem;
+}
+.highscore-table-wrap {
+  position: relative;
+  overflow-x: auto;
+}
+.highscore-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.highscore-table th,
+.highscore-table td {
+  padding: 11px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.highscore-table th {
+  color: #8f7c85;
+  font-size: .66rem;
+  letter-spacing: .09em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.highscore-table td {
+  color: #eadce1;
+  font-size: .9rem;
+}
+.highscore-table th:first-child,
+.highscore-table td:first-child {
+  width: 44px;
+  color: var(--gold);
+  text-align: center;
+}
+.highscore-table th:nth-child(3),
+.highscore-table td:nth-child(3),
+.highscore-table th:nth-child(4),
+.highscore-table td:nth-child(4) {
+  text-align: right;
+  white-space: nowrap;
+}
+.highscore-table tbody tr:first-child td {
+  color: #fff5e0;
+  font-weight: 800;
+}
+.highscore-empty {
+  margin: 14px 0 2px;
+  color: #8e7a83;
+  text-align: center;
+  font-size: .82rem;
+}
+.highscore-empty[hidden] { display: none; }
+
+.locked-slide {
+  text-align: center;
+  align-items: center;
+}
+.locked-slide h2 {
+  max-width: 760px;
+  margin: 12px auto 14px;
+}
+.locked-copy {
+  max-width: 650px;
+  margin: 0 auto 6px;
+  color: #c7b4bc;
+  line-height: 1.65;
+}
+.compact-highscores { margin-top: 26px; }
+.inline-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+/* Premium Bruis wax seal */
+.bruis-stamp {
+  right: -78px;
+  bottom: -54px;
+  width: 218px;
+  opacity: 0;
+  transform: translateY(-300px) scale(1.55) rotate(-19deg);
+  transform-origin: 50% 55%;
+  filter: drop-shadow(0 28px 28px rgba(0,0,0,.55));
+  isolation: isolate;
+}
+.bruis-stamp img {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: saturate(1.05) contrast(1.04);
+}
+.bruis-stamp .stamp-grade {
+  z-index: 3;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%) rotate(-7deg);
+  font-family: Georgia, serif;
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: -.05em;
+  color: #ffe7a7;
+  text-shadow:
+    0 1px 0 rgba(72,10,29,.8),
+    0 0 12px rgba(255,219,132,.22);
+}
+.bruis-stamp::before,
+.bruis-stamp::after {
+  content: "";
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.bruis-stamp::before {
+  z-index: 0;
+  background: radial-gradient(circle, rgba(224,129,158,.52), rgba(216,178,106,.18) 38%, transparent 70%);
+  filter: blur(18px);
+  opacity: 0;
+}
+.bruis-stamp::after {
+  z-index: 1;
+  border: 2px solid rgba(232,193,112,.62);
+  opacity: 0;
+  transform: scale(.6);
+}
+.bruis-stamp.stamp-in {
+  display: block !important;
+  animation: stampInPremium .78s cubic-bezier(.16,.84,.22,1.16) .95s forwards;
+}
+.bruis-stamp.stamp-in::before {
+  animation: sealGlow .72s ease-out 1.2s forwards;
+}
+.bruis-stamp.stamp-in::after {
+  animation: sealRing .62s ease-out 1.18s forwards;
+}
+@keyframes stampInPremium {
+  0% { opacity: 0; transform: translateY(-300px) scale(1.55) rotate(-19deg); filter: drop-shadow(0 42px 40px rgba(0,0,0,.18)); }
+  56% { opacity: 1; transform: translateY(12px) scale(.9) rotate(-7deg); filter: drop-shadow(0 10px 10px rgba(0,0,0,.58)); }
+  72% { transform: translateY(-7px) scale(1.08) rotate(-7deg); }
+  86% { transform: translateY(2px) scale(.985) rotate(-7deg); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(-7deg); filter: drop-shadow(0 22px 22px rgba(0,0,0,.48)); }
+}
+@keyframes sealGlow {
+  0% { opacity: 0; transform: scale(.7); }
+  35% { opacity: 1; }
+  100% { opacity: .28; transform: scale(1.25); }
+}
+@keyframes sealRing {
+  0% { opacity: .9; transform: scale(.55); }
+  100% { opacity: 0; transform: scale(1.55); }
+}
+
+@media (max-width: 760px) {
+  .highscore-panel { padding: 17px 14px; border-radius: 22px; }
+  .highscore-entry-row { grid-template-columns: 1fr; }
+  .highscore-entry-row .primary-button { width: 100%; }
+  .highscore-table th,
+  .highscore-table td { padding: 10px 7px; font-size: .78rem; }
+  .bruis-stamp { right: -18px; bottom: -50px; width: 168px; }
+  .bruis-stamp .stamp-grade { font-size: 2.35rem; }
+}
