@@ -6,6 +6,7 @@
 
 import "jsr:@supabase/functions-js@2.4.4/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { buildDecisionIntelligence } from "./decision-intelligence.ts";
 
 const SUPABASE_URL = String(Deno.env.get("SUPABASE_URL") || "");
 const SERVICE_KEY = String(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "");
@@ -20,7 +21,7 @@ const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=100;
 const ANALYSIS_HISTORY_TARGET_GAMES=100;
-const ANALYZER_VERSION="league-web-behavior-v4.169";
+const ANALYZER_VERSION="league-web-behavior-v4.170";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1769,6 +1770,7 @@ function finiteGames(games:any[],fn:(g:any)=>any){return games.filter(g=>hasNum(
 function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,playerRank:any=null,baselineContext:any=null){
   const recentFocus:any[]=[],highlights:any[]=[],coaching:any[]=[];
   const sessionModel=sessionBehaviorModel(games);
+  const decisionIntelligence=buildDecisionIntelligence(games,sessionModel,primaryRole);
   const conf=(n:number)=>n>=10?"high":n>=5?"medium":"low";
   const push=(arr:any[],category:string,title:string,evidence:string,action:string,confidence:string="medium",priority:number=2,comparison:string="")=>arr.push({category,title,evidence,action,confidence,priority,comparison,text:title+" — "+evidence+(action?" "+action:"")});
   const cleanOutcomeGames=games.filter(g=>g?.outcomeCompromised!==true),wins=cleanOutcomeGames.filter(g=>g.win),losses=cleanOutcomeGames.filter(g=>!g.win),validTimeline=games.filter(g=>g.timelineAvailable),directPeerGames=games.filter(g=>g.directPeerComparable===true),validDirectPeerTimeline=validTimeline.filter(g=>g.directPeerComparable===true),
@@ -2170,7 +2172,7 @@ function coachingModel(games:any[],summary:any,lifetime:any,primaryRole:string,p
     recentFocus,highlights,coaching,
     peerComparison:{sameRoleGames:peerGames.length,csMinGames:peerCsGames.length,dpmGames:peerDpmGames.length,vpmGames:peerVpmGames.length,rankedPeerGames:rankedPeerGames.length,rankContextExcludedGames,rankComparisonQueueCounts,higherRankPeerGames:higherRankGames.length,sameRankPeerGames:sameRankGames.length,lowerRankPeerGames:lowerRankGames.length,rankBands:{higher:higherRankStats,same:sameRankStats,lower:lowerRankStats,definition:"Tier/division band from a shared Riot ranked queue snapshot; Solo matches use Solo/Duo, Flex uses Flex, other supported queues use the first ladder both players share; LP differences within a division are ignored"},laneGames15:lane15.length,midgameComparableGames:midgameGames.length,avgGoldSwing15to25:avgSwing15to25,leadGames15to25:leadMidgame.length,avgLeadSwing15to25:leadSwing15to25,deficitGames15to25:deficitMidgame.length,avgDeficitSwing15to25:deficitSwing15to25,avgGoldDiff15:avgG15,avgCsDiff15:avgC15,laneAheadPct:laneAhead,gold15OutperformPct:peerGoldWin,avgCsMinDelta:peerCs,csMinOutperformPct:peerCsWin,avgDpmDelta:peerDpm,dpmOutperformPct:peerDpmWin,avgVpmDelta:peerVpm,vpmOutperformPct:peerVpmWin,visionSetupGames:visionSetupGames.length,avgObjectiveSetupDelta,objectiveSetupOutperformPct,visionWardTotal,visionSetupTotal,objectiveSetupWardRate,peerMatchedVisionWardTotal,peerMatchedVisionSetupTotal,peerMatchedObjectiveSetupWardRate,opponentVisionWardTotal,opponentVisionSetupTotal,opponentObjectiveSetupWardRate,objectiveSetupWardRateDelta,repeatDeathRate:repeatDeathRate,peerMatchedRepeatDeathRate,opponentRepeatDeathRate:opponentRepeatDeathRate,repeatDeathRateDelta:repeatDeathRateDelta,majorItemGames:itemGames.length,avgMajorItemDeltaMin:itemDelta,majorItemFasterPct:peerItemFaster,majorReadinessGames:majorReadinessGames.length,avgMajorCompletionDelayMin,delayedMajorCompletionGames:delayedMajorCompletionGames.length,majorReadinessPeerGames:majorReadinessPeerGames.length,avgMajorCompletionDelayVsPeerMin,itemSpikeEligibleWindows:itemSpikeEligibleWindows,itemSpikeUtilizedWindows:itemSpikeUtilizedWindows,itemSpikeUtilizationRate:itemSpikeUtilizationRate,itemSpikeDeathsBeforeImpact:itemSpikeDeathsBeforeImpact,avgItemSpikeLeadSec:avgItemSpikeLeadSec,impactGames:impactGames.length,avgImpactDeltaMin:avgImpactDelta,impactEarlierPct,higherRankAvgGoldDiff15:higherGold,higherRankGoldOutperformPct:higherGoldWin,higherRankAvgDpmDelta:higherDpm,higherRankMajorItemGames:higherItemGames,higherRankAvgMajorItemDeltaMin:higherItemDelta,higherRankMajorItemFasterPct:higherItemFaster,definition:"Same-role opponent from each analyzed match"},
     conversion:{laneLeadGames:laneLeads.length,laneLeadWinRate:laneLeadWr,laneDeficitGames:laneDeficits.length,laneDeficitWinRate:laneDeficitWr,lead25Games:lead25Games.length,lead25WinRate,deficit25Games:deficit25Games.length,deficit25WinRate,excludedCompromisedOutcomeGames:games.length-cleanOutcomeGames.length,outcomePolicy:"afk_or_early_surrender_excluded_from_final_result_conversion"},
-    winLoss,recentTrend,sessionModel,
+    winLoss,recentTrend,sessionModel,decisionIntelligence,
     behaviorSummary:{
       timelineGames:validTimeline.length,
       directPeerTimelineGames,
