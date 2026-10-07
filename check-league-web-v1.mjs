@@ -403,7 +403,7 @@ assert.ok(decisionBackend.includes('v!==null && v!==undefined && v!=="" && Numbe
 assert.ok(decisionBackend.includes('n(x.e.teamFightKills)>n(x.e.enemyFightKills)'),'Fight-win conversion must require a strict team-kill win and must not classify tied clusters as wins');
 assert.ok(decisionBackend.includes('n(eventMin(o))>end'),'Post-fight kill follow-up must exclude kills already inside the fight cluster endpoint');
 assert.ok(decisionBackend.includes('historyInput:any[]=gamesInput')&&decisionBackend.includes('performanceResidualRows(history)'),'Match-level residual and requeue context must be allowed to use longer role history without widening timeline-dependent analytics');
-assert.ok(decisionBackend.includes('actualApproachLeadSec')&&decisionBackend.includes('n(t)-0.75'),'Objective setup position must be sampled before the objective and retain the actual sampled lead time');
+assert.ok(decisionBackend.includes('actualApproachLeadSec')&&decisionBackend.includes('for(const requestedSec of [90,60,30])')&&decisionBackend.includes('approachSamples'),'Objective setup must use distinct coarse pre-objective route samples and retain actual sampled lead times');
 assert.ok(decisionBackend.includes('paths.length?"proxy":"unavailable"'),'Objective setup path must remain a proxy because its route point is timeline-frame sampled');
 assert.ok(decisionBackend.includes('champEligible.length>=2?"supported"'),'Champion tendencies must not be promoted as a comparison when only one champion has a meaningful sample');
 assert.ok(decisionUi.includes('a?.moments)&&a.moments.length'),'Visual conclusions must prefer full analytic moments rather than truncated evidence preview rows');
