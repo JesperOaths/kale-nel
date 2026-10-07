@@ -217,6 +217,8 @@ ok(decisionBackend.includes('followUpRate')&&decisionBackend.includes('"After fi
 ok(decisionBackend.includes('"Skipped-fight structure/objective overlap"'), 'objective trading must remain timing overlap rather than causal claim');
 ok(decisionUi.includes('Row-level counts are window evidence, not unique event totals'), 'overlapping skipped-fight windows must not be summed as unique structure/objective events');
 ok(decisionBackend.includes('version:"decision-intelligence-v7"'), 'decision intelligence must expose the v7 final evidence contract');
+ok(decisionUi.includes('const PURPOSE={')&&decisionUi.includes('Act on this')&&decisionUi.includes('Useful context')&&decisionUi.includes('Diagnostic / exploratory'), 'decision cards must classify coaching purpose independently from evidence status');
+ok((decisionUi.match(/:'act'/g)||[]).length+(decisionUi.match(/:'context'/g)||[]).length+(decisionUi.match(/:'diagnostic'/g)||[]).length===25, 'decision purpose contract must classify all 25 analytic families exactly once');
 ok(decisionBackend.includes('recentResidualStatistic:"median"')&&decisionBackend.includes('recent.slice(0,20)'), 'residual headline must use latest-20 median');
 ok(decisionBackend.includes('supported:xs.length>=5')&&decisionBackend.includes('minimumBucketGames:5'), 'requeue promoted buckets must have at least five games');
 ok(!decisionBackend.includes('function peerComposite(')&&!decisionBackend.includes('avgRelativeComposite')&&decisionBackend.includes('"Requeue gap context"'), 'requeue context must not use a synthetic mixed-unit winner');
@@ -294,7 +296,17 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.180'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.181'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
+ok(backend.includes('trajectoryWindows=Array.from({length:5}')&&backend.includes('history.slice(start,start+20)'), 'long-horizon model must expose up to five non-overlapping 20-game trajectory windows');
+ok(backend.includes('peerCsMinDelta:p.peerCsMinDelta')&&backend.includes('peerDpmDelta:p.peerDpmDelta')&&backend.includes('peerDeathsDelta:p.peerDeathsDelta'), 'trajectory windows must retain direct-role opponent-relative metric objects and exact sample counts');
+ok(app.includes('function renderLongitudinalProgress(')&&app.includes('function longitudinalTrajectoryRead('), 'frontend must render and summarize the multi-window opponent-relative trajectory');
+ok(app.includes('function synthesisAgreementModel(')&&app.includes('function renderCoachingSynthesis('), 'frontend coaching synopsis must preserve agreement/disagreement across evidence channels');
+ok(app.includes('function playerStyleModel(')&&app.includes('function renderPlayerReview('), 'whole-player review must be generated from evidence-gated sample signals');
+ok(app.includes('function transitionWindowSignals(')&&app.includes('Number(v)>15&&Number(v)<=25')&&app.includes('function renderTransitionPrecursors('), 'transition precursor review must use only the 15→25 event window');
+ok(app.includes('Co-occurrence only. Replay the event sequence before attributing the state change'), 'transition precursor wording must remain explicitly non-causal');
+ok(modelDoc.includes('## v316 coaching synthesis, player review and multi-window development model')&&modelDoc.includes('Purpose is orthogonal to evidence status'), 'analysis model must document v316 synthesis and purpose semantics');
+ok(modelDoc.includes('longHorizon.trajectoryWindows')&&modelDoc.includes('non-overlapping 20-game windows'), 'analysis model must document long-horizon trajectory windowing');
+ok(modelDoc.includes('15→25 state-transition review')&&modelDoc.includes('co-occurrence context only'), 'analysis model must document bounded transition precursor semantics');
 ok(backend.includes('aboveOwnDeadTimeMedian:Number(g.damageRank)>2&&')&&backend.includes('aboveOwnTurretMedian:Number(g.damageRank)>2&&'), 'resource/output exemplar annotations must compute lower-damage state in their own callback scope');
 ok(backend.includes('highUnspentFightSamples')&&backend.includes('itemDisadvantageFightSamples')&&backend.includes('goldDeficitFightSamples')&&backend.includes('outnumberedFightSamples'), 'fight-state rates must use metric-specific supported-opportunity denominators');
 ok(backend.includes('const cleanOutcomeGames=games.filter(g=>g?.outcomeCompromised!==true)')&&backend.includes('afk_or_early_surrender_excluded_from_final_result_conversion'), 'final-result coaching must exclude compromised outcomes');
