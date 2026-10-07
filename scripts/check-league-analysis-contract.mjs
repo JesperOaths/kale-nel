@@ -774,7 +774,7 @@ ok(app.includes("Pre-objective side-lane deaths / game")&&app.includes("behavior
 ok(modelDoc.includes('## Role-specific rolling progress comparison'), 'analysis documentation must preserve role-specific rolling progress semantics');
 ok(backend.includes('kpGames:kpGames.length')&&backend.includes('vpmGames:vpmGames.length'), 'session model must retain per-metric KP/VPM evidence counts');
 ok(backend.includes('game3PlusPeerKpDelta')&&backend.includes('postLossPeerVpmDelta')&&backend.includes('minMetricGamesPerComparedGroup:2'), 'session model must gate new role deltas on paired valid observations');
-ok(app.includes("role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole)")&&app.includes("if(role==='SUPPORT'){")&&app.includes("game 3+ vision/min")&&app.includes("}else if(role==='JUNGLE'){")&&app.includes("game 3+ CS/min"), 'session presentation must follow the canonical selected role with distinct Support and Jungle metrics');
+ok(app.includes("role=canonicalRole(r?.dataQuality?.selectedRole||r?.coachingSummary?.primaryRole||r?.summary?.primaryRole||state.selectedRole)")&&app.includes("if(r==='SUPPORT'){")&&app.includes("game 3+ vision/min-vs-peer")&&app.includes("r==='JUNGLE'")&&app.includes("game 3+ CS/min-vs-peer"), 'session presentation must follow the canonical selected role with distinct opponent-adjusted Support and Jungle metrics');
 ok(modelDoc.includes('## Role-aware session habit model'), 'analysis documentation must preserve role-aware session semantics');
 ok(backend.includes('g.directPeerComparable===true&&g?.phaseRules?.lane15Comparable!==false'), 'session Gold @15 must require a trusted direct-role peer');
 ok(app.includes("role=canonicalRole(current?.dataQuality?.selectedRole||current?.coachingSummary?.primaryRole||current?.summary?.primaryRole)"), 'rolling progress must use the canonical selected coaching role');
@@ -947,7 +947,7 @@ ok(backend.includes('conf(visionActionGames)')&&backend.includes('conf(visionSet
 ok(modelDoc.includes('## v240 cross-game vision coaching'), 'analysis documentation must preserve v240 vision spread safeguards');
 
 ok(backend.includes('peerDpm)>=120&&["ADC","MID","TOP"].includes(primaryRole)'), 'positive direct-peer DPM highlight must stay carry-role scoped');
-ok(backend.includes('d>=120&&["ADC","MID","TOP"].includes(primaryRole)'), 'recent positive DPM trend must stay carry-role scoped');
+ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&recentTrend.peerDpmDelta.recentN>=4'), 'recent direct-opponent DPM trend must stay carry-role scoped');
 ok(backend.includes('["ADC","MID","TOP"].includes(primaryRole)&&topDamage>=Math.max'), 'top-team-damage highlight must stay carry-role scoped');
 ok(modelDoc.includes('## v241 carry-role damage headline safety'), 'analysis documentation must preserve carry-role damage headline safety');
 
@@ -1106,7 +1106,7 @@ ok(backend.includes('visionLeaderRate:boolRate')&&backend.includes('visionShare:
 ok(app.includes("detailCard('Team gold rank'")&&app.includes("detailCard('Team vision rank'"), 'per-game detail must expose existing team rank metrics');
 ok(app.includes('Previous report withheld.')&&app.includes('previousScope=reportRoleScopeViolations(previous,role)'), 'progress comparison must never compare against a cross-role previous report');
 ok(modelDoc.includes('## v268 role-specific unused-metric promotion'), 'analysis documentation must preserve v268 role-specific metric decisions');
-ok(backend.includes('stabilityTrend:{csMin:stability')&&backend.includes('recentIqr:ai')&&backend.includes('priorIqr:bi'), 'long-horizon model must expose robust median and IQR shifts');
+ok(backend.includes('stabilityTrend:{peerCsMinDelta:stability')&&backend.includes('recentIqr:ai')&&backend.includes('priorIqr:bi'), 'long-horizon model must expose robust opponent-adjusted median and IQR shifts');
 ok(backend.includes('championHistory=[')&&backend.includes('historyShare:pct(list.length,history.length)')&&app.includes('history-champion-card'), 'long-horizon model must group only reviewed-account performance by own champion with metric denominators');
 ok(backend.includes('longOutcomeFingerprint={')&&backend.includes('directionalEligible:useCleanOutcome')&&html.includes('id="longOutcomeFingerprint"')&&app.includes('function renderLongOutcomeFingerprint'), '100-game outcome fingerprint must be visible and clean-outcome gated');
 ok(backend.includes('baseWindowGames:5')&&backend.includes('maxWindowGames:20')&&backend.includes('windowPolicy:"minimum_5_extend_until_evidence_max_20"')&&app.includes("'extended for fresh evidence'")&&app.includes("'inconclusive — fresh evidence floor not reached'"), 'practice target evaluation must support evidence-aware extension from 5 to at most 20 new games');
