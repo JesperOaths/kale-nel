@@ -1,15 +1,30 @@
 (() => {
   "use strict";
 
-  // Fill these ten entries once the images and answers are supplied.
-  // image can be a local path such as "./images/01.webp".
-  // aliases can contain accepted stage names / alternate spellings.
-  const ROUNDS = Array.from({ length: 10 }, (_, index) => ({
-    image: "",
-    answer: "",
-    aliases: [],
-    label: `Afbeelding ${String(index + 1).padStart(2, "0")}`
-  }));
+  // The answer labels below are supplied by the quiz owner; the app does not infer identity from images.
+  const ROUNDS = [
+    { image: "./media/01.webp", answer: "Alexandra Daddario", aliases: [], label: "Afbeelding 01" },
+    { image: "./media/02.webp", answer: "Margot Robbie", aliases: [], label: "Afbeelding 02" },
+    { image: "./media/03.webp", answer: "Kate Upton", aliases: [], label: "Afbeelding 03" },
+    { image: "./media/04.webp", answer: "Sofia Vergara", aliases: ["Sofía Vergara"], label: "Afbeelding 04" },
+    { image: "./media/05.webp", answer: "Sydney Sweeney", aliases: [], label: "Afbeelding 05" },
+    { image: "./media/06.webp", answer: "Pamela Anderson", aliases: [], label: "Afbeelding 06" },
+    { image: "./media/07.webp", answer: "Salma Hayek", aliases: [], label: "Afbeelding 07" },
+    { image: "./media/08.webp", answer: "Scarlett Johansson", aliases: [], label: "Afbeelding 08" },
+    { image: "./media/09.webp", answer: "Ana de Armas", aliases: [], label: "Afbeelding 09" },
+    { image: "./media/10.webp", answer: "Mia Khalifa", aliases: [], label: "Afbeelding 10" }
+  ];
+
+  const BONUS_PARTS = [
+    "./media/bonus/part-00a.b64",
+    "./media/bonus/part-00b.b64",
+    "./media/bonus/part-01.b64",
+    "./media/bonus/part-02.b64",
+    "./media/bonus/part-03.b64",
+    "./media/bonus/part-04.b64"
+  ];
+
+  let bonusVideoUrl = "";
 
   const state = {
     round: 0,
@@ -23,7 +38,11 @@
     intro: $("introSlide"),
     guess: $("guessSlide"),
     reveal: $("revealSlide"),
+    bonus: $("bonusSlide"),
     end: $("endSlide"),
+    bonusVideo: $("bonusVideo"),
+    bonusVideoStatus: $("bonusVideoStatus"),
+    bonusContinueButton: $("bonusContinueButton"),
     roundPill: $("roundPill"),
     scorePill: $("scorePill"),
     guessRoundLabel: $("guessRoundLabel"),
@@ -134,7 +153,7 @@
   }
 
   function showSlide(target) {
-    [els.intro, els.guess, els.reveal, els.end].forEach((slide) => {
+    [els.intro, els.guess, els.reveal, els.bonus, els.end].forEach((slide) => {
       const active = slide === target;
       slide.hidden = !active;
       slide.classList.toggle("is-active", active);
@@ -227,9 +246,45 @@
     showSlide(els.reveal);
   }
 
+  async function loadBonusVideo() {
+    if (bonusVideoUrl) {
+      els.bonusVideo.src = bonusVideoUrl;
+      els.bonusVideoStatus.hidden = true;
+      return;
+    }
+
+    els.bonusVideoStatus.hidden = false;
+    els.bonusVideoStatus.textContent = "Video laden…";
+
+    try {
+      const parts = await Promise.all(BONUS_PARTS.map(async (path) => {
+        const response = await fetch(path, { cache: "force-cache" });
+        if (!response.ok) throw new Error(`Bonusdeel kon niet laden: ${path}`);
+        return (await response.text()).trim();
+      }));
+      const binary = atob(parts.join(""));
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      bonusVideoUrl = URL.createObjectURL(new Blob([bytes], { type: "video/mp4" }));
+      els.bonusVideo.src = bonusVideoUrl;
+      els.bonusVideoStatus.hidden = true;
+    } catch (error) {
+      els.bonusVideoStatus.hidden = false;
+      els.bonusVideoStatus.textContent = "De bonusvideo kon niet worden geladen.";
+      console.error(error);
+    }
+  }
+
+  function showBonus() {
+    updateTopbar();
+    els.roundPill.textContent = "Bonus";
+    showSlide(els.bonus);
+    loadBonusVideo();
+  }
+
   function nextRound() {
     if (state.round >= 9) {
-      finishGame();
+      showBonus();
       return;
     }
     state.round += 1;
@@ -271,6 +326,10 @@
     els.finalGrade.classList.remove("grade-pop");
     els.bruisStamp.classList.remove("stamp-in");
     els.bruisStamp.hidden = true;
+    if (els.bonusVideo) {
+      els.bonusVideo.pause();
+      els.bonusVideo.currentTime = 0;
+    }
     updateTopbar();
     showSlide(els.intro);
   }
@@ -285,7 +344,12 @@
   els.hintButton.addEventListener("click", useHint);
   els.answerForm.addEventListener("submit", submitRound);
   els.nextButton.addEventListener("click", nextRound);
+  els.bonusContinueButton.addEventListener("click", finishGame);
   $("restartButton").addEventListener("click", restart);
+
+  window.addEventListener("beforeunload", () => {
+    if (bonusVideoUrl) URL.revokeObjectURL(bonusVideoUrl);
+  });
 
   updateTopbar();
 })();
