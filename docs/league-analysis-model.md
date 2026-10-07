@@ -3591,3 +3591,44 @@ Executable regression fixtures cover matching, equal game/phase weighting,
 selected-role/mechanics filtering, duplicate evidence, missing data, valid zero
 gold, compromised outcomes, phase boundaries including Swiftplay, opportunity and
 direction gates, and independence from final team gold/damage rank.
+
+
+## v303 opponent-adjusted history, session position, and teamfight geography
+
+### MMR-safe direction
+
+Raw DPM, CS/min, GPM and similar scoreboard totals are useful descriptions of a match, but they are not rank-neutral performance measures. As the reviewed account faces stronger opposition, those raw totals can fall because access to waves, uptime, fight duration and punish windows become harder. The history-direction surface therefore no longer treats a raw DPM/CS decline as evidence that the player is getting worse.
+
+For match-level history, the analyzer resolves the actual direct same-role opponent from Riot participant-role evidence. When both player and opponent roles are high-confidence, the history row now stores player-minus-opponent deltas for DPM, CS/min, GPM, deaths, KP and VPM. This works without a timeline, so the lightweight portion of the 100-match scan can participate instead of forcing the direction graph back to raw totals.
+
+The long-horizon directional graph uses only these direct-opponent deltas. For example, +80 DPM versus the ADC opponent means the reviewed ADC dealt 80 more champion damage per minute than the actual opposing ADC in that match. If later games occur at higher MMR and both ADCs produce less raw damage, that does not automatically appear as decline. Raw totals remain available elsewhere as descriptive context and are explicitly not rank-neutral.
+
+The same principle applies to the ADC recent-direction graph. Gold @15 remains direct-role relative, while CS/min, DPM and deaths use direct-opponent differences instead of raw totals.
+
+This is opponent adjustment, not a perfect causal MMR model. Champion matchup, draft, game state, team composition and role expression can still change direct-peer differences. The analysis must therefore remain descriptive and must not call a peer-relative change proof of underlying skill change.
+
+### Does performance change later in a session?
+
+A session continues while the gap after the previous eligible game end is at most 90 minutes. Quick-requeue comparisons use at most 45 minutes. Session position is split into opener, game 2 and game 3+; quick post-loss and quick post-win groups remain separate.
+
+The direct answer compares game 3+ with session openers. It deliberately excludes raw DPM, raw CS/min and other MMR-sensitive scoreboard totals. Role-relevant signals are built from direct same-role-opponent deltas plus timeline-only risky-death evidence where available:
+
+- ADC / MID / TOP: DPM vs role opponent, CS/min vs role opponent, direct-role gold @15, and risky deaths.
+- JUNGLE: DPM and CS/min vs Jungle opponent, first-impact timing vs Jungle opponent, and risky deaths.
+- SUPPORT: vision/min and kill participation versus the Support opponent, plus risky deaths.
+
+Each headline signal needs at least three valid opener observations and three valid game-3+ observations. At least two supported signals are required before the page says later-session performance is higher, lower, stable or mixed. Thinner groups are shown for traceability but do not drive the headline. One-game subgroup differences must never be promoted to an observed session/requeue pattern.
+
+Session deltas are behavioral context only. They must not be framed as fatigue, tilt, mental-state diagnosis or causation. A later-session decline is a replay/testing cue, not a diagnosis.
+
+### Teamfight geography and join-versus-trade review
+
+Objective family and fight location are separate questions. The objective-family section answers which neutral-objective types create contested windows. The teamfight-geography section answers where tracked multi-kill fight clusters occur on Summoner's Rift.
+
+Fight coordinates are converted into coarse team-relative areas such as our red-side jungle, our blue-side jungle, their red-side jungle, their blue-side jungle, top/bot river, central lane, and our/their inner- or outer-tower lane areas. The labels are coordinate heuristics for replay navigation; they are not exact turret-object identity and must never be presented as pixel-perfect map classification.
+
+For a position-supported team-involved fight where the reviewed player is absent, the analyzer measures a bounded ~90-second compensation window. A skipped fight is marked as having measurable cross-map compensation only when at least one supported signal is present: a structure involvement, a neutral-objective gain, at least +250 gold movement versus the direct role opponent, or at least +6 CS movement versus the direct role opponent.
+
+A high-priority “review whether you should join” cue requires all of the following: the team lost the fight, no supported cross-map compensation was found, the player began within roughly 6500 map units of the fight anchor, and the local-number snapshot is not already clearly two-or-more players down. Even then this is replay triage, not a counterfactual proof. Cooldowns, vision, wave state, path safety, teleport availability, champion roles and information outside the sampled frames can make the correct decision different.
+
+Skipped-fight events with supported cross-map value are also reviewable. The UI labels them as measurable compensation rather than automatically praising the skip; the replay question is whether the value genuinely depended on staying away and whether joining would have sacrificed guaranteed value.
