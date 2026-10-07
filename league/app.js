@@ -1773,10 +1773,40 @@ function renderLongOutcomeFingerprint(h,role){
     else note.innerHTML='<b>Context only:</b> clean outcomes do not yet provide at least '+minSide+' wins and '+minSide+' losses. The cards show the broader result split without directional color so AFK/early-surrender contamination is not promoted into a coaching conclusion.';
   }
 }
+
+function trajectoryValueLabel(v,unit){
+  if(!hasNum(v))return'n/a';
+  if(unit==='dpm')return signed(v,0)+' DPM';
+  if(unit==='percent')return signed(v,1)+' pp';
+  if(unit==='csmin')return signed(v,2)+' CS/min';
+  return signed(v,2);
+}
+function trajectorySparkline(windows,spec){
+  const valid=windows.filter(w=>hasNum(w?.[spec.key]?.value)&&Number(w?.[spec.key]?.n||0)>=5).slice().reverse();
+  if(valid.length<2)return'<div class="trajectory-empty">Need at least two 20-game windows with ≥5 valid direct-role observations.</div>';
+  const width=620,height=152,left=42,right=18,top=18,bottom=34,plotW=width-left-right,plotH=height-top-bottom,maxAbs=Math.max(Number(spec.threshold||1)*2,...valid.map(w=>Math.abs(Number(w[spec.key].value))));
+  const x=i=>left+(valid.length===1?plotW/2:i*plotW/(valid.length-1)),y=v=>top+(maxAbs-Number(v))/(maxAbs*2)*plotH,zero=y(0);
+  const points=valid.map((w,i)=>x(i).toFixed(1)+','+y(w[spec.key].value).toFixed(1)).join(' ');
+  const dots=valid.map((w,i)=>'<g><circle cx="'+x(i).toFixed(1)+'" cy="'+y(w[spec.key].value).toFixed(1)+'" r="5"></circle><title>'+esc(w.label)+' · '+esc(trajectoryValueLabel(w[spec.key].value,spec.unit))+' · n='+Number(w[spec.key].n||0)+'</title></g>').join('');
+  const labels=valid.map((w,i)=>'<text x="'+x(i).toFixed(1)+'" y="'+(height-9)+'" text-anchor="middle">'+esc(w.label.replace('Games ','G'))+'</text>').join('');
+  return '<svg class="trajectory-svg" viewBox="0 0 '+width+' '+height+'" role="img" aria-label="'+esc(spec.label+' across non-overlapping 20-game windows')+'"><line class="trajectory-zero" x1="'+left+'" x2="'+(width-right)+'" y1="'+zero.toFixed(1)+'" y2="'+zero.toFixed(1)+'"></line><polyline class="trajectory-line" points="'+points+'"></polyline>'+dots+labels+'</svg>';
+}
+function renderLongitudinalProgress(r){
+  const box=$('longitudinalProgress');if(!box)return;
+  const windows=Array.isArray(r?.longHorizon?.trajectoryWindows)?r.longHorizon.trajectoryWindows:[],specs=longitudinalMetricSpecs(reportSelectedRole(r)),read=longitudinalTrajectoryRead(r);
+  if(windows.length<2){box.innerHTML='<div class="trajectory-empty">The selected-role history does not yet span two non-overlapping 20-game windows. No long-run direction is inferred.</div>';return;}
+  box.innerHTML='<div class="trajectory-grid">'+specs.map(spec=>{
+    const valid=windows.filter(w=>hasNum(w?.[spec.key]?.value)&&Number(w?.[spec.key]?.n||0)>=5),latest=valid[0],oldest=valid[valid.length-1],delta=latest&&oldest&&latest!==oldest?Number(latest[spec.key].value)-Number(oldest[spec.key].value):null,signal=hasNum(delta)?(spec.inverse?-1:1)*Number(delta):null,state=!hasNum(delta)?'thin':Math.abs(Number(delta))<spec.threshold?'stable':signal>0?'good':'bad';
+    const verdict=state==='good'?'Improved versus the oldest supported window':state==='bad'?'Worse versus the oldest supported window':state==='stable'?'Inside the practical-change band':'Not enough supported windows';
+    const values=valid.slice().reverse().map(w=>'<span><b>'+esc(w.label)+'</b> '+esc(trajectoryValueLabel(w[spec.key].value,spec.unit))+' <small>n='+Number(w[spec.key].n||0)+'</small></span>').join('');
+    return '<article class="trajectory-card state-'+state+'"><div class="trajectory-card-head"><span>'+esc(spec.label)+'</span><strong>'+esc(verdict)+'</strong></div>'+trajectorySparkline(windows,spec)+'<div class="trajectory-values">'+values+'</div><p>'+esc(hasNum(delta)?('Latest-minus-oldest supported-window change: '+trajectoryValueLabel(delta,spec.unit)+'.'):'Directional comparison withheld.')+' Windows are non-overlapping and opponent-relative; changing matchup/champion/team context can still affect them.</p></article>';
+  }).join('')+'</div><p class="trajectory-note"><b>How to read this:</b> this is the longer-history layer that raw DPM/CS cannot provide safely. Each point is reviewed-player minus the actual same-role opponent in that game, aggregated into non-overlapping windows. Gold@15 and other timeline-only coaching metrics remain in the deep-game sections because older match-only cache rows cannot reconstruct them.</p>';
+}
+
 function renderLongHorizon(r){
   const h=r.longHorizon||{},kpi=$('longHorizonKpis'),trend=$('longHorizonTrend'),stability=$('historyStabilityTrend'),consistency=$('historyConsistency'),champions=$('historyChampionMix'),outcome=$('longOutcomeFingerprint'),outcomeNote=$('longOutcomeFingerprintNote'),note=$('longHorizonNote');if(!kpi||!trend)return;
   const s=h.summary||{},role=canonicalRole(h.selectedRole||r?.dataQuality?.selectedRole||state.selectedRole),games=Number(h.sampleGames||0);
-  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if($('longHorizonTrendGraph'))$('longHorizonTrendGraph').innerHTML='';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';if(outcome)outcome.innerHTML='';if(outcomeNote)outcomeNote.textContent='';if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
+  if(!games){kpi.innerHTML='<div class="bullet empty">No longer-horizon selected-role history is available yet.</div>';trend.innerHTML='';if($('longHorizonTrendGraph'))$('longHorizonTrendGraph').innerHTML='';if($('longitudinalProgress'))$('longitudinalProgress').innerHTML='<div class="trajectory-empty">Run the 100-game scan to populate longer-history direction.</div>';if(stability)stability.innerHTML='';if(consistency)consistency.innerHTML='';if(champions)champions.innerHTML='';if(outcome)outcome.innerHTML='';if(outcomeNote)outcomeNote.textContent='';if(note)note.textContent='Run the 100-game scan to populate this section.';return;}
   const laner=['ADC','MID','TOP'].includes(role),roleCounts=h.roleCounts||{},otherRoleGames=Object.entries(roleCounts).reduce((n,[rk,count])=>n+(canonicalRole(rk)!==role?Number(count||0):0),0);
   const roleVolume=laner
     ?{label:'Lane minions @10',value:hasNum(s?.laneCs10?.value)?fmt(s.laneCs10.value,1):'n/a',sub:String(s?.laneCs10?.n||0)+' Riot match-level lane observations'}
@@ -1815,6 +1845,7 @@ function renderLongHorizon(r){
   ];
   renderLongHorizonDirectionGraph(specs);
   trend.innerHTML=specs.map(x=>historyTrendCard(x.label,x.obj,x.unit,x.inverse,x.threshold)).join('');
+  renderLongitudinalProgress(r);
   if(stability){
     const st=h.stabilityTrend||{},stabilitySpecs=role==='SUPPORT'?[
       {label:'Vision/min vs '+opponentLabel,obj:st.peerVpmDelta,unit:'num',inverse:false,medianThreshold:.12,iqrThreshold:.15},
