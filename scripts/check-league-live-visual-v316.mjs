@@ -325,9 +325,6 @@ async function auditViewport(browser,report,width,height,label){
   assert(before.decisionPlaceholder,label+': deferred decision placeholder missing on initial paint');
   assert(before.matchPlaceholder,label+': deferred match-history placeholder missing on initial paint');
 
-  const decisions=page.locator('#decisions');
-  if(!(await decisions.evaluate(el=>el.open===true)))await page.locator('#decisions > summary').click();
-  await page.waitForTimeout(160);
   await page.locator('#decisionIntelligencePanel').evaluate(el=>el.scrollIntoView({block:'center',inline:'nearest'}));
   await page.waitForTimeout(320);
   await page.waitForFunction(()=>document.querySelectorAll('#decisionIntelligence .di-card').length===25,{timeout:20000});
