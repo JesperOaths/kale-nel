@@ -1,8 +1,8 @@
 {
   "enabled": true,
-  "id": 990052,
-  "lease_token": "ab5208d1-7e1d-4d7c-9900-520000000001",
+  "id": 990053,
+  "lease_token": "c37b5931-5322-4c8d-9900-530000000001",
   "timeout_seconds": 120,
   "attempts": 1,
-  "command": "bash -lc 'set -e; curl -fsSL --max-time 30 https://raw.githubusercontent.com/JesperOaths/kale-nel/2c5904c6e63d577e06a88f581c59f4019116d063/ops/c720p/patch-tv-surround-s5-status-v25b-20261007.py -o /tmp/tv-s5-v25b.py; python3 /tmp/tv-s5-v25b.py'"
+  "command": "bash -lc 'set -e; curl -fsSL --max-time 30 https://raw.githubusercontent.com/JesperOaths/kale-nel/2c5904c6e63d577e06a88f581c59f4019116d063/ops/c720p/patch-tv-surround-s5-status-v25b-20261007.py -o /tmp/tv-s5-v25b.py; python3 /tmp/tv-s5-v25b.py; curl -fsS --max-time 10 -A c720p-tv-s5-v25b-emergency https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-run-ok >/dev/null'"
 }
