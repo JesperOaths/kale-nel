@@ -184,6 +184,14 @@ ok(decisionUi.includes('What it measures')&&decisionUi.includes('Conclusion from
 ok(decisionUi.includes('function preFightMap(')&&decisionUi.includes('function objectivePathMap(')&&decisionUi.includes("fightMap(report,'trade')")&&decisionUi.includes("fightMap(report,'shortlist'"), 'decision analytics must reuse the Summoner’s Rift map for spatially meaningful reviews');
 ok(decisionUi.includes("scatter(r,'csSwing','goldSwing'")&&decisionUi.includes("slope(r,'gold15','gold25'")&&decisionUi.includes("sparkline(r,'issues'"), 'decision analytics must expose question-appropriate scatter, slope and recurrence charts');
 ok((decisionBackend.split('analytics.push(metric(').length-1)===25, 'decision intelligence backend must expose exactly 25 analytic families');
+ok(decisionBackend.includes('v!==null && v!==undefined && v!=="" && Number.isFinite(Number(v))'), 'decision intelligence numeric helper must reject null/empty values');
+ok(decisionBackend.includes('n(x.e.teamFightKills)>n(x.e.enemyFightKills)'), 'fight-win conversion must exclude tied fight clusters');
+ok(decisionBackend.includes('n(eventMin(o))>end'), 'post-fight follow-up kills must start after the cluster endpoint');
+ok(decisionBackend.includes('historyInput:any[]=gamesInput')&&decisionBackend.includes('performanceResidualRows(history)'), 'eligible match-level context analytics must use longer role history when available');
+ok(decisionBackend.includes('actualApproachLeadSec')&&decisionBackend.includes('n(t)-0.75'), 'objective setup must retain honest coarse pre-event timing');
+ok(decisionBackend.includes('champEligible.length>=2?"supported"'), 'champion tendency comparisons need at least two meaningful champion samples');
+ok(decisionUi.includes('a?.moments)&&a.moments.length'), 'decision conclusions must not be computed from truncated evidence-preview rows');
+
 ok(backend.includes('decisionIntelligence:cm.decisionIntelligence'), 'top-level report must export decision intelligence for live and persisted reports');
 ok(decisionUi.includes('report?.decisionIntelligence'), 'frontend must consume the top-level decision intelligence field');
 ok(decisionUi.includes('actualLeadSec')&&!decisionUi.includes("x.sec+'s:'"), 'pre-fight evidence labels must use actual sampled timing');
@@ -249,7 +257,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.172'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.173'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
 ok(backend.includes('aboveOwnDeadTimeMedian:Number(g.damageRank)>2&&')&&backend.includes('aboveOwnTurretMedian:Number(g.damageRank)>2&&'), 'resource/output exemplar annotations must compute lower-damage state in their own callback scope');
 ok(backend.includes('highUnspentFightSamples')&&backend.includes('itemDisadvantageFightSamples')&&backend.includes('goldDeficitFightSamples')&&backend.includes('outnumberedFightSamples'), 'fight-state rates must use metric-specific supported-opportunity denominators');
 ok(backend.includes('const cleanOutcomeGames=games.filter(g=>g?.outcomeCompromised!==true)')&&backend.includes('afk_or_early_surrender_excluded_from_final_result_conversion'), 'final-result coaching must exclude compromised outcomes');
