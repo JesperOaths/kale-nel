@@ -8,7 +8,7 @@ WWW=pathlib.Path("/opt/homeassistant/config/www")
 OUT=WWW/"c720p-saved-thumbs"
 MAN=OUT/"manifest.json"
 API="http://127.0.0.1:8795/new/api/saved"
-PLAY="http://127.0.0.1:8795/new/saved/clip/"
+PLAY="http://127.0.0.1:8795/new/clip/"
 SNAPS=WWW/"frontyard-security-new"/"snapshots"
 OUT.mkdir(parents=True,exist_ok=True)
 
