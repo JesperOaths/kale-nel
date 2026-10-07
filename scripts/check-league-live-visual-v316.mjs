@@ -357,11 +357,23 @@ async function auditViewport(browser,report,width,height,label){
       fonts:{decision:font('.di-interpretation p'),review:font('.player-review-section p'),synthesis:font('.coaching-synthesis-card p')},
       initialMs:Number(document.querySelector('#report')?.dataset.initialRenderMs||0),
       perf:globalThis.state?.reportRenderPerformance||{},
-      overlaps
+      overlaps,
+      overflowOffenders:[...document.querySelectorAll('body *')].map(el=>{
+        const r=el.getBoundingClientRect(),cs=getComputedStyle(el);
+        let clipped=false;
+        for(let p=el.parentElement;p&&p!==document.body;p=p.parentElement){
+          const ps=getComputedStyle(p),ov=ps.overflowX;
+          if((ov==='auto'||ov==='scroll'||ov==='hidden'||ov==='clip')&&p.scrollWidth>p.clientWidth+2){clipped=true;break;}
+        }
+        return{tag:el.tagName.toLowerCase(),id:el.id||'',cls:String(el.className||'').slice(0,180),left:Math.round(r.left),right:Math.round(r.right),width:Math.round(r.width),minWidth:cs.minWidth,overflowX:cs.overflowX,clipped};
+      }).filter(x=>!x.clipped&&x.right>document.documentElement.clientWidth+4&&x.width>4).sort((a,b)=>b.right-a.right).slice(0,24)
     };
   });
 
-  assert(metrics.overflow<=4,label+': horizontal page overflow '+metrics.overflow+'px');
+  if(metrics.overflow>4){
+    await page.screenshot({path:path.join(OUT,'league-'+label+'-overflow.png'),fullPage:true});
+    throw new Error(label+': horizontal page overflow '+metrics.overflow+'px · offenders='+JSON.stringify(metrics.overflowOffenders));
+  }
   assert(metrics.decisionCards===25&&metrics.purposeBadges===25,label+': expected all 25 decision cards and purpose badges');
   assert(/Act on this/i.test(metrics.purposeLegend)&&/Useful context/i.test(metrics.purposeLegend)&&/Diagnostic \/ exploratory/i.test(metrics.purposeLegend),label+': coaching-purpose legend incomplete: '+metrics.purposeLegend);
   assert(metrics.synthesisCards===4&&metrics.agreementCards===3,label+': synthesis/evidence-agreement surface incomplete');
