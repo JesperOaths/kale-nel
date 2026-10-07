@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 const SUPABASE_URL=process.env.SUPABASE_URL||'https://uiqntazgnrxwliaidkmy.supabase.co';
 const API_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||'';
 const BASE=(process.env.GEJAST_BASE_URL||'https://kalenel.nl/').replace(/\/+$/,'')+'/';
-const EXPECTED_FRONTEND='20261007-league-web-v318';
+const EXPECTED_FRONTEND='20261007-league-web-v319';
 const EXPECTED_ANALYZER='league-web-behavior-v4.182';
 const EDGE=SUPABASE_URL+'/functions/v1/printify-gildan-diff-diag-v1';
 const OUT='league-visual-audit';
@@ -409,6 +409,7 @@ async function auditViewport(browser,report,width,height,label){
     const card=page.locator('#decisionIntelligence .di-card').nth(i);
     if(!await card.evaluate(el=>el.open))await card.locator(':scope > summary').click();
     await card.scrollIntoViewIfNeeded();
+    await page.waitForFunction(index=>[...document.querySelectorAll('#decisionIntelligence .di-card')][index]?.querySelectorAll('.map-stage img').length===0||[...[...document.querySelectorAll('#decisionIntelligence .di-card')][index].querySelectorAll('.map-stage img')].every(img=>img.complete&&img.naturalWidth>0),i,{timeout:15000});
     const visual=await card.evaluate(el=>({title:el.querySelector('summary strong')?.textContent||'',visual:!!el.querySelector('.di-visual'),conclusion:!!el.querySelector('.di-conclusion p')?.textContent?.trim(),invalid:/\b(?:NaN|Infinity|undefined)\b/.test(el.textContent),overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,smallestAxisPx:Math.min(...[...el.querySelectorAll('.di-svg-chart svg text')].map(t=>parseFloat(getComputedStyle(t).fontSize)*Math.hypot(t.getScreenCTM().a,t.getScreenCTM().b)),Infinity)}));
     assert(visual.visual&&visual.conclusion&&!visual.invalid,label+': incomplete analytic card: '+visual.title);
     assert(visual.overflow<=4,label+': open analytic caused page overflow: '+visual.title);
