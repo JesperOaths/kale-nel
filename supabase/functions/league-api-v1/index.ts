@@ -21,7 +21,7 @@ const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=100;
 const ANALYSIS_HISTORY_TARGET_GAMES=100;
-const ANALYZER_VERSION="league-web-behavior-v4.174";
+const ANALYZER_VERSION="league-web-behavior-v4.175";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -984,6 +984,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
     const teamInvolved=events.some((e:any)=>Number(e.killerTeam)===teamId||Number(e.victimTeam)===teamId),positionEvidence=events.map((e:any)=>{if(!hasNum(e.x)||!hasNum(e.y))return null;const frame=frameNearestMs(frames,Number(e.tMs||0),35000),player=frameStats(frame,pid);return player?.position?{event:e,frame,player}:null;}).find(Boolean)||null,positionAnchor=positionEvidence?.event||null,positionFrame=positionEvidence?.frame||null,positionMe=positionEvidence?.player||null,positionSupported=teamInvolved&&!!positionAnchor&&!!positionMe?.position;
     const anchor=positionAnchor&&hasNum(positionAnchor.x)&&hasNum(positionAnchor.y)?{x:Number(positionAnchor.x),y:Number(positionAnchor.y)}:(hasNum(first.x)&&hasNum(first.y)?{x:Number(first.x),y:Number(first.y)}:me?.position);
     const fightZone=anchor?fightArea(mapId,anchor,teamId):"unknown";
+    const numberSampleLeadSec=fr&&hasNum(first?.tMs)&&hasNum(fr?.timestamp)?Math.max(0,Math.round((Number(first.tMs)-Number(fr.timestamp))/1000)):null;
     let alliesNear=null,enemiesNear=null,numbersDelta=null;
     if(anchor&&fr?.participantFrames){
       alliesNear=0;enemiesNear=0;
@@ -1009,7 +1010,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
       const joinReachable=hasNum(playerDistanceToFight)&&Number(playerDistanceToFight)<=6500,joinReviewPriority=lostFight&&!crossMapTradeSupported&&joinReachable&&(numbersDelta==null||Number(numbersDelta)>=-1)?"high":lostFight&&!crossMapTradeSupported?"medium":"context";
       const decisionReview=crossMapTradeSupported?"cross_map_trade_supported":teamFightKills>enemyFightKills?"team_won_without_player":joinReviewPriority==="high"?"join_review_high":lostFight?"join_review_context":"no_clear_join_claim";
       out.fightProfile.trackedAbsentTeamFights++;
-      out.fightProfile.absenceEvents.push({startMin:first.tMin,endMin:last.tMin,kills:events.length,fightZone,fightPosition:anchor?{x:Number(anchor.x),y:Number(anchor.y)}:null,positionEvidenceDeltaSec:Math.abs(Number(positionFrame?.timestamp||0)-Number(positionAnchor?.tMs||0))/1000,playerPosition:{x:Number(positionMe.position.x),y:Number(positionMe.position.y)},playerDistanceToFight:hasNum(playerDistanceToFight)?Math.round(Number(playerDistanceToFight)):null,alliesNear,enemiesNear,numbersDelta,teamFightKills,enemyFightKills,lostFight,crossMapGoldSwingVsPeer,crossMapCsSwingVsPeer,playerStructureGains,playerNeutralObjectiveGains,crossMapTradeSupported,joinReachable,joinReviewPriority,decisionReview,tradeWindowSec:90,definition:"team-involved multi-kill cluster with event coordinates and a player position frame within 35s; no tracked player death/contribution and no <=5000 proximity evidence. Cross-map compensation looks for a supported structure/objective gain or a +250g/+6CS direct-role swing within ~90s. This is replay triage, not proof that joining or skipping was correct."});
+      out.fightProfile.absenceEvents.push({startMin:first.tMin,endMin:last.tMin,kills:events.length,fightZone,fightPosition:anchor?{x:Number(anchor.x),y:Number(anchor.y)}:null,positionEvidenceDeltaSec:Math.abs(Number(positionFrame?.timestamp||0)-Number(positionAnchor?.tMs||0))/1000,playerPosition:{x:Number(positionMe.position.x),y:Number(positionMe.position.y)},playerDistanceToFight:hasNum(playerDistanceToFight)?Math.round(Number(playerDistanceToFight)):null,alliesNear,enemiesNear,numbersDelta,numberSampleLeadSec,teamFightKills,enemyFightKills,lostFight,crossMapGoldSwingVsPeer,crossMapCsSwingVsPeer,playerStructureGains,playerNeutralObjectiveGains,crossMapTradeSupported,joinReachable,joinReviewPriority,decisionReview,tradeWindowSec:90,definition:"team-involved multi-kill cluster with event coordinates and a player position frame within 35s; no tracked player death/contribution and no <=5000 proximity evidence. Cross-map compensation looks for a supported structure/objective gain or a +250g/+6CS direct-role swing within ~90s. This is replay triage, not proof that joining or skipping was correct."});
     }
     if(!present)continue;
     const alliedDeaths=events.filter((e:any)=>Number(e.victimTeam)===teamId).sort((a:any,b:any)=>a.tMs-b.tMs);
@@ -1029,7 +1030,7 @@ function timelineFacts(match:any,timeline:any,p:any,catalog:any,catalogContext:a
     const outnumberedAtFirstKill=hasNum(numbersDelta)&&Number(numbersDelta)<=-2;
     if(active&&hasNum(numbersDelta))out.fightProfile.outnumberedFightSamples++;if(active&&outnumberedAtFirstKill){out.fightProfile.outnumberedStarts++;if(lostFight)out.fightProfile.lostOutnumberedStarts++;}
     if(active&&rolePeerNear){out.fightProfile.rolePeerFightStarts++;if(roleLevelDisadvantage)out.fightProfile.roleLevelDisadvantageStarts++;}
-    out.fightProfile.events.push({startMin:first.tMin,endMin:last.tMin,kills:events.length,fightZone,fightPosition:anchor?{x:Number(anchor.x),y:Number(anchor.y)}:null,present,active,proximityOnly,playerDied:!!playerDeath,firstAllyDeath,diedBeforeContribution,contributed,survived:active&&!playerDeath,currentGoldAtStart:me?.currentGold??null,goldDiffAtStart,levelDiffAtStart,alliesNear,enemiesNear,numbersDelta,outnumberedAtFirstKill:active&&outnumberedAtFirstKill,teamFightKills,enemyFightKills,lostFight,rolePeerNear:active&&rolePeerNear,roleLevelDisadvantage:active&&roleLevelDisadvantage});
+    out.fightProfile.events.push({startMin:first.tMin,endMin:last.tMin,kills:events.length,fightZone,fightPosition:anchor?{x:Number(anchor.x),y:Number(anchor.y)}:null,present,active,proximityOnly,playerDied:!!playerDeath,firstAllyDeath,diedBeforeContribution,contributed,survived:active&&!playerDeath,currentGoldAtStart:me?.currentGold??null,goldDiffAtStart,levelDiffAtStart,alliesNear,enemiesNear,numbersDelta,numberSampleLeadSec,outnumberedAtFirstKill:active&&outnumberedAtFirstKill,teamFightKills,enemyFightKills,lostFight,rolePeerNear:active&&rolePeerNear,roleLevelDisadvantage:active&&roleLevelDisadvantage});
   }
   if(out.fightProfile.active>0){
     out.fightProfile.firstAllyDeathRate=100*out.fightProfile.firstAllyDeaths/out.fightProfile.active;

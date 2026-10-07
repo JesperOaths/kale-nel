@@ -59,16 +59,6 @@ const badDeathEvents = (g:any) => arr(g?.badDeaths);
 const allFightRows = (games:any[]) => games.flatMap(g=>fightEvents(g).map((e:any)=>({g,e})));
 const allAbsenceRows = (games:any[]) => games.flatMap(g=>absenceEvents(g).map((e:any)=>({g,e})));
 
-function valueProxy(e:any){
-  // Transparent opportunity-cost proxy. Not an economic truth.
-  return (finite(e?.crossMapGoldSwingVsPeer)?n(e.crossMapGoldSwingVsPeer):0)
-    + 20*(finite(e?.crossMapCsSwingVsPeer)?n(e.crossMapCsSwingVsPeer):0)
-    + 450*n(e?.playerStructureGains||0)
-    + 600*n(e?.playerNeutralObjectiveGains||0);
-}
-function fightLossProxy(e:any){
-  return Math.max(0,n(e?.enemyFightKills||0)-n(e?.teamFightKills||0))*300;
-}
 function issueComponents(g:any){
   return {
     riskyDeaths:n(g?.badDeathCount??g?.highRiskDeathCount??0),
@@ -196,23 +186,35 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   const abs=allAbsenceRows(games),fights=allFightRows(games);
   const analytics:any[]=[];
 
-  // 1. Fight decision score / opportunity-cost ledger
-  const ledger=abs.map(({g,e})=>({matchId:g.matchId,champion:g.champion,minute:round(e.startMin,1),zone:e.fightZone||"unknown",
-    valueG:round(valueProxy(e),0),fightCostG:round(fightLossProxy(e),0),netProxyG:round(valueProxy(e)-fightLossProxy(e),0),
+  // 1. Skipped-fight trade evidence
+  const ledger=abs.map(({g,e})=>({
+    matchId:g.matchId,champion:g.champion,minute:round(e.startMin,1),zone:e.fightZone||"unknown",
     goldSwing:round(e.crossMapGoldSwingVsPeer,0),csSwing:round(e.crossMapCsSwingVsPeer,1),
     structures:n(e.playerStructureGains||0),neutralObjectives:n(e.playerNeutralObjectiveGains||0),
-    tradeSupported:e.crossMapTradeSupported===true,joinReviewPriority:e.joinReviewPriority||"context"}));
-  analytics.push(metric("fight_decision_ledger","Fight decision opportunity-cost ledger",ledger.length?"proxy":"unavailable",ledger.length,
-    ledger.length?"Skipped fights show a transparent cross-map-value proxy beside a net-kill fight-cost proxy. It ranks replay questions; it is not an economic total or a counterfactual verdict.":"No position-supported skipped fights in the current deep sample.",
-    {proxy:"direct-role gold swing + 20g/CS + 450/structure involvement + 600/neutral-objective involvement, minus 300g per net kill lost",rows:ledger.slice().sort((a,b)=>Math.abs(n(b.netProxyG))-Math.abs(n(a.netProxyG))).slice(0,12)},ledger));
+    teamFightKills:n(e.teamFightKills||0),enemyFightKills:n(e.enemyFightKills||0),
+    fightKillDelta:n(e.teamFightKills||0)-n(e.enemyFightKills||0),
+    tradeSupported:e.crossMapTradeSupported===true,joinReviewPriority:e.joinReviewPriority||"context",
+    positionEvidenceDeltaSec:round(e.positionEvidenceDeltaSec,0)
+  }));
+  const reviewRank=(x:any)=>(x.joinReviewPriority==="high"?300:x.joinReviewPriority==="medium"?200:100)+(x.tradeSupported?0:50)+Math.max(0,-n(x.fightKillDelta||0))*10;
+  const ledgerPreview=[...ledger].sort((a,b)=>reviewRank(b)-reviewRank(a)).slice(0,12);
+  const supportedTrades=count(ledger,x=>x.tradeSupported===true);
+  analytics.push(metric("fight_decision_ledger","Skipped-fight trade evidence",ledger.length?"proxy":"unavailable",ledger.length,
+    ledger.length?`${supportedTrades} of ${ledger.length} skipped-fight windows met the current compensation rule. Gold movement, CS movement, structure/objective involvement and the fight kill result are shown separately; no gold-equivalent value is invented.`:"No position-supported skipped fights in the current deep sample.",
+    {compensationRule:"structure/objective involvement or +250g/+6CS direct-role movement within ~90s",supportedTrades,unsupportedTrades:ledger.length-supportedTrades,rows:ledgerPreview},ledger));
 
-  // 2. Arrival feasibility
-  const arrival=abs.map(({g,e})=>({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,distance:e.playerDistanceToFight,
-    feasible:e.joinReachable===true,priority:e.joinReviewPriority||"context",numbersDelta:e.numbersDelta,
-    reachabilityBand:!finite(e.playerDistanceToFight)?"unknown":n(e.playerDistanceToFight)<=4000?"near":n(e.playerDistanceToFight)<=6500?"borderline":"far"}));
-  analytics.push(metric("arrival_feasibility","Arrival feasibility",arrival.length?"proxy":"unavailable",arrival.length,
-    arrival.length?`${count(arrival,x=>x.feasible)} of ${arrival.length} skipped position-supported fights began inside the current ~6.5k-unit straight-line screen. Terrain, movement speed, cooldowns and path safety remain unknown.`:"No skipped-fight position evidence available.",
-    {near:count(arrival,x=>x.reachabilityBand==="near"),borderline:count(arrival,x=>x.reachabilityBand==="borderline"),far:count(arrival,x=>x.reachabilityBand==="far"),rows:arrival.slice(0,12)},arrival));
+  // 2. Fight-distance screen
+  const arrival=abs.map(({g,e})=>({
+    matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,distance:e.playerDistanceToFight,
+    insideScreen:e.joinReachable===true,feasible:e.joinReachable===true,priority:e.joinReviewPriority||"context",
+    numbersDelta:e.numbersDelta,positionEvidenceDeltaSec:round(e.positionEvidenceDeltaSec,0),
+    reachabilityBand:!finite(e.playerDistanceToFight)?"unknown":n(e.playerDistanceToFight)<=4000?"near":n(e.playerDistanceToFight)<=6500?"borderline":"far"
+  }));
+  const arrivalSampleDelta=median(arrival.map(x=>x.positionEvidenceDeltaSec));
+  analytics.push(metric("arrival_feasibility","Fight-distance screen",arrival.length?"proxy":"unavailable",arrival.length,
+    arrival.length?`${count(arrival,x=>x.insideScreen)} of ${arrival.length} skipped-fight position samples were within the current 6.5k-unit straight-line screen. The player-position frame is only guaranteed to be within 35 seconds of a fight event anchor, so this is not a travel-time or join-feasibility model.`:"No skipped-fight position evidence available.",
+    {near:count(arrival,x=>x.reachabilityBand==="near"),borderline:count(arrival,x=>x.reachabilityBand==="borderline"),far:count(arrival,x=>x.reachabilityBand==="far"),medianPositionSampleDeltaSec:round(arrivalSampleDelta,0),rows:arrival.slice(0,12)},arrival));
+
 
   // 3. Pre-fight positioning quality
   const pre:any[]=[];
@@ -233,58 +235,70 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     pre.length?"Uses distinct Riot timeline frames requested around 30/20/10 seconds before fights, but displays the actual seconds-before-fight for each retained frame. Duplicate minute-cadence frames are collapsed rather than pretending they are separate observations.":"No usable pre-fight frame/coordinate pairs.",
     {frameCadenceCaveat:true,rows:pre.slice(0,12)},pre));
 
-  // 4. Fight formation map
-  const formation:any[]=[];
+  // 4. Fight-anchor distance at a recent pre-fight frame
+  const formation:any[]=[];let formationTooCoarse=0;
   for(const {g,e} of fights.filter(x=>x.e?.active===true)){
     const fr=nearestFrameBefore(g,n(e.startMin),1.1),d=fr?.position&&e?.fightPosition?distance(fr.position,e.fightPosition):null;
-    if(!finite(d))continue;
-    const band=n(d)<1700?"inside fight core":n(d)<3500?"edge / backline distance":"far edge / late entry proxy";
-    formation.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,distanceToAnchor:round(d,0),sampleLeadSec:fr&&finite(fr.time)?Math.max(0,Math.round((n(e.startMin)-n(fr.time))*60)):null,formationBand:band,numbersDelta:e.numbersDelta,contributed:e.contributed===true,survived:e.survived===true});
+    if(!finite(d)||!fr||!finite(fr.time))continue;
+    const sampleLeadSec=Math.max(0,Math.round((n(e.startMin)-n(fr.time))*60));
+    if(sampleLeadSec>45){formationTooCoarse++;continue;}
+    const band=n(d)<1700?"inside fight core":n(d)<3500?"edge / backline distance":"far from fight anchor";
+    formation.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,distanceToAnchor:round(d,0),sampleLeadSec,
+      formationBand:band,numbersDelta:e.numbersDelta,contributed:e.contributed===true,survived:e.survived===true});
   }
-  analytics.push(metric("fight_formation","Fight-anchor distance at sampled pre-fight frame",formation.length?"proxy":"unavailable",formation.length,
-    formation.length?"Classifies the reviewed player's distance to the fight anchor at the nearest usable pre-fight timeline frame and retains the actual sample lead time. It is a spacing/routing proxy, not literal entry position or a frontline polygon.":"No active fights with usable position evidence.",
-    {rows:formation.slice(0,16)},formation));
+  analytics.push(metric("fight_formation","Fight-anchor distance near contact",formation.length?"proxy":"unavailable",formation.length,
+    formation.length?`Uses only sampled player positions no more than 45 seconds before tracked active fights. ${formationTooCoarse} active fights with older pre-fight frames are withheld from the distance bands rather than treated as entry position.`:"No active fights have a usable player-position frame within 45 seconds of contact.",
+    {maxSampleLeadSec:45,withheldCoarseFrames:formationTooCoarse,rows:formation.slice(0,16)},formation));
 
   // 5. Numbers-aware participation
   const numF=fights.filter(x=>x.e?.active===true&&finite(x.e?.numbersDelta));
   const badNum=count(numF,x=>n(x.e.numbersDelta)<=-2),downOne=count(numF,x=>n(x.e.numbersDelta)===-1),evenNum=count(numF,x=>n(x.e.numbersDelta)===0),aheadNum=count(numF,x=>n(x.e.numbersDelta)>=1);
-  analytics.push(metric("numbers_aware_participation","Numbers-aware participation",numF.length?"supported":"unavailable",numF.length,
-    numF.length?`${badNum} active fights began at a local ≥2-player disadvantage; ${downOne} began down one; ${evenNum+aheadNum} began even or ahead in the sampled local-number snapshot.`:"No active fights with local-number evidence.",
-    {outnumberedStarts:badNum,downOneStarts:downOne,evenStarts:evenNum,aheadStarts:aheadNum,outnumberedLossRate:safeRate(count(numF,x=>n(x.e.numbersDelta)<=-2&&x.e.lostFight),badNum)}));
+  const numberLead=median(numF.map(x=>x.e?.numberSampleLeadSec));
+  analytics.push(metric("numbers_aware_participation","Local-number snapshot at fight start",numF.length?"proxy":"unavailable",numF.length,
+    numF.length?`${badNum} active fights were sampled at a local ≥2-player disadvantage; ${downOne} down one; ${evenNum+aheadNum} even or ahead. Counts use a 4.5k-unit radius on the latest Riot timeline frame at or before the first kill (median frame age ${round(numberLead,0)??"—"}s), so they are a coarse local-numbers proxy.`:"No active fights with local-number evidence.",
+    {outnumberedStarts:badNum,downOneStarts:downOne,evenStarts:evenNum,aheadStarts:aheadNum,medianNumberSampleLeadSec:round(numberLead,0),outnumberedLossRate:safeRate(count(numF,x=>n(x.e.numbersDelta)<=-2&&x.e.lostFight),badNum)}));
 
-  // 6. Cross-map efficiency
-  const cross=ledger.filter(x=>finite(x.valueG)).map(x=>({...x,valuePerMin:round(n(x.valueG)/1.5,0)}));
-  analytics.push(metric("cross_map_efficiency","Cross-map efficiency",cross.length?"proxy":"unavailable",cross.length,
-    cross.length?`Median measured trade-value proxy: ${round(median(cross.map(x=>x.valuePerMin)),0)} per minute across skipped-fight windows.`:"No measurable skipped-fight windows.",
-    {medianValuePerMin:round(median(cross.map(x=>x.valuePerMin)),0),rows:cross.slice().sort((a,b)=>n(b.valuePerMin)-n(a.valuePerMin)).slice(0,10)}));
+  // 6. Cross-map compensation profile
+  const supportedCross=ledger.filter(x=>x.tradeSupported===true),unsupportedCross=ledger.filter(x=>x.tradeSupported!==true);
+  const structureWindows=count(ledger,x=>n(x.structures)>0),objectiveWindows=count(ledger,x=>n(x.neutralObjectives)>0);
+  const economyOnlyWindows=count(ledger,x=>x.tradeSupported===true&&n(x.structures)===0&&n(x.neutralObjectives)===0);
+  const supportedRate=safeRate(supportedCross.length,ledger.length);
+  analytics.push(metric("cross_map_efficiency","Cross-map compensation profile",ledger.length?"proxy":"unavailable",ledger.length,
+    ledger.length?`${round(supportedRate,0)}% of skipped-fight windows met at least one current compensation rule. Across all skipped windows, median direct-role movement was ${round(median(ledger.map(x=>x.goldSwing)),0)??"—"}g and ${round(median(ledger.map(x=>x.csSwing)),1)??"—"} CS; these signals are reported separately to avoid double-counting.`:"No measurable skipped-fight windows.",
+    {supportedRate:round(supportedRate,1),supportedWindows:supportedCross.length,unsupportedWindows:unsupportedCross.length,
+      medianGoldSwing:round(median(ledger.map(x=>x.goldSwing)),0),medianCsSwing:round(median(ledger.map(x=>x.csSwing)),1),
+      structureWindows,objectiveWindows,economyOnlyWindows,rows:ledgerPreview}));
+
 
   // 7. Wave-to-fight conflict review
   const wave=abs.filter(x=>finite(x.e?.crossMapCsSwingVsPeer)).map(({g,e})=>({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,
     csSwing:round(e.crossMapCsSwingVsPeer,1),goldSwing:round(e.crossMapGoldSwingVsPeer,0),fightLost:e.lostFight===true,
     likelyResourceConflict:n(e.crossMapCsSwingVsPeer)>=4}));
   analytics.push(metric("wave_fight_conflict","Wave-to-fight conflict review",wave.length?"proxy":"unavailable",wave.length,
-    wave.length?"Uses direct-role CS/gold movement after a skipped fight as a resource/wave-pressure proxy; Riot timeline data does not expose exact live minion-wave size.":"No skipped fights with peer CS movement.",
-    {resourceConflictWindows:count(wave,x=>x.likelyResourceConflict),rows:wave.slice(0,12)},wave));
+    wave.length?"Uses direct-role CS/gold movement after a skipped fight as a resource-pressure proxy. The review flag uses ≥4 CS movement; Riot timeline data does not expose exact live minion-wave size.":"No skipped fights with peer CS movement.",
+    {csConflictThreshold:4,resourceConflictWindows:count(wave,x=>x.likelyResourceConflict),rows:wave.slice(0,12)},wave));
 
   // 8. Nothing-gained isolation time
   const nothing=abs.filter(x=>x.e?.crossMapTradeSupported!==true),uniqueNothingMinutes=mergedWindowMinutes(nothing);
-  analytics.push(metric("nothing_gained_isolation","Nothing-gained separation windows",nothing.length?"proxy":"unavailable",nothing.length,
+  analytics.push(metric("nothing_gained_isolation","Skipped fights without supported compensation",nothing.length?"proxy":"unavailable",nothing.length,
     nothing.length?`${nothing.length} skipped tracked fights produced no supported 90-second structure/objective/+250g/+6CS compensation. Their de-duplicated review windows cover about ${round(uniqueNothingMinutes,1)} minutes.`:"No uncompensated skipped-fight windows.",
     {reviewableMinutes:round(uniqueNothingMinutes,1),windowCount:nothing.length,highPriority:count(nothing,x=>x.e?.joinReviewPriority==="high"),
       rows:nothing.slice(0,12).map(({g,e})=>({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,priority:e.joinReviewPriority}))},
     nothing.map(({g,e})=>({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone}))));
 
   // 9. Tempo after recall
-  const resetRows:any[]=[];
+  const resetRows:any[]=[];let totalShopVisits=0;
   for(const g of games)for(const s of arr(g?.shopVisits)){
-    const sm=n(s?.lastMin??s?.startMin); if(!finite(sm))continue;
+    const sm=n(s?.lastMin??s?.startMin); if(!finite(sm))continue;totalShopVisits++;
     const next=nextEventAfter(g,sm); if(!next||next.t-sm>4)continue;
     const fr=nearestFrameBefore(g,next.t,1.4);
     resetRows.push({matchId:g.matchId,shopMin:round(sm,1),nextKind:next.kind,eventMin:round(next.t,1),gapMin:round(next.t-sm,1),approachZone:fr?.zone||"unknown"});
   }
+  const pairedShopRate=safeRate(resetRows.length,totalShopVisits);
   analytics.push(metric("post_recall_tempo","Tempo after recall",resetRows.length?"supported":"unavailable",resetRows.length,
-    resetRows.length?`Median shop-to-next tracked fight/objective gap is ${round(median(resetRows.map(x=>x.gapMin)),1)} minutes.`:"No shop visit could be paired with a fight/objective inside four minutes.",
-    {medianGapMin:round(median(resetRows.map(x=>x.gapMin)),1),rows:resetRows.slice(0,16)},resetRows));
+    resetRows.length?`Among ${resetRows.length} of ${totalShopVisits} measured shop visits with a tracked fight/objective inside four minutes, the median shop→event gap is ${round(median(resetRows.map(x=>x.gapMin)),1)} minutes. Visits without tracked action inside four minutes are outside this timing distribution.`:"No shop visit could be paired with a fight/objective inside four minutes.",
+    {totalShopVisits,pairedEventVisits:resetRows.length,pairedVisitRate:round(pairedShopRate,1),medianGapMin:round(median(resetRows.map(x=>x.gapMin)),1),rows:resetRows.slice(0,16)},resetRows));
+
 
   // 10. Objective setup path
   const paths=games.flatMap(g=>objectiveEvents(g).map(e=>pathToObjectiveRow(g,e)).filter(Boolean));
@@ -295,28 +309,34 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   // 11. Lead utilisation curve
   const leads=games.filter(g=>finite(g?.goldDiff15)&&n(g.goldDiff15)>=500);
   const leadRows=leads.map(g=>({matchId:g.matchId,gold15:round(g.goldDiff15,0),gold25:round(g.goldDiff25,0),
+    leadBand:n(g.goldDiff15)>=1500?"1500g+":n(g.goldDiff15)>=1000?"1000–1499g":"500–999g",
     retainedTo25:finite(g.goldDiff25)?n(g.goldDiff25)>=n(g.goldDiff15)*.5:null,killConversionRate:g?.killConversion?.rate??null,
     structureEvents:arr(g?.structurePressure?.events).length}));
   const measuredLeadRows=leadRows.filter(x=>finite(x.gold25));
-  analytics.push(metric("lead_utilisation","Lead utilisation curve",measuredLeadRows.length>=2?"supported":measuredLeadRows.length?"thin":"unavailable",measuredLeadRows.length,
-    leadRows.length?`${count(leadRows,x=>x.retainedTo25===true)} of ${count(leadRows,x=>x.retainedTo25!==null)} ≥500g-at-15 games retained at least half of that direct-role lead to 25 when 25-minute evidence existed.`:"No ≥500g direct-role lead at 15 in the current deep sample.",
-    {eligibleLeadGames:leadRows.length,rows:measuredLeadRows},measuredLeadRows));
+  const leadBands={"500–999g":count(leadRows,x=>x.leadBand==="500–999g"),"1000–1499g":count(leadRows,x=>x.leadBand==="1000–1499g"),"1500g+":count(leadRows,x=>x.leadBand==="1500g+")};
+  analytics.push(metric("lead_utilisation","Lead movement from 15→25",measuredLeadRows.length>=2?"supported":measuredLeadRows.length?"thin":"unavailable",measuredLeadRows.length,
+    measuredLeadRows.length?`${count(measuredLeadRows,x=>x.retainedTo25===true)} of ${measuredLeadRows.length} paired ≥500g-at-15 games retained at least half of that direct-role lead to 25. The card reports movement by explicit starting-lead bands; it does not equate preserved gold difference with correct lead utilization.`:"No ≥500g-at-15 game has a usable 25-minute checkpoint.",
+    {eligibleLeadGames:leadRows.length,leadBands,rows:measuredLeadRows},measuredLeadRows));
 
-  // 12. Deficit recovery quality
+  // 12. Deficit movement from 15→25
   const deficits=games.filter(g=>finite(g?.goldDiff15)&&n(g.goldDiff15)<=-500);
   const defRows=deficits.map(g=>({matchId:g.matchId,gold15:round(g.goldDiff15,0),gold25:round(g.goldDiff25,0),
     recovery:finite(g.goldDiff25)?round(n(g.goldDiff25)-n(g.goldDiff15),0):null,recoveredToEven:finite(g.goldDiff25)&&n(g.goldDiff25)>=-100}));
   const measuredDefRows=defRows.filter(x=>finite(x.gold25));
   analytics.push(metric("deficit_recovery","Deficit movement from 15→25",measuredDefRows.length>=2?"supported":measuredDefRows.length?"thin":"unavailable",measuredDefRows.length,
-    defRows.length?`Average 15→25 direct-role gold-difference change from ≥500g deficits: ${round(mean(defRows.map(x=>x.recovery)),0)}g. Positive narrows the deficit; negative deepens it. This is team-context movement, not individual credit.`:"No ≥500g deficit-at-15 games with this role.",
+    measuredDefRows.length?`Average 15→25 direct-role gold-difference change across ${measuredDefRows.length} paired ≥500g-deficit games was ${round(mean(measuredDefRows.map(x=>x.recovery)),0)}g. Positive narrows the deficit; negative deepens it. This is team-context movement, not individual credit.`:"No ≥500g deficit-at-15 game has a usable 25-minute checkpoint.",
     {eligibleDeficitGames:defRows.length,rows:measuredDefRows},measuredDefRows));
 
   // 13. Death chain analysis
-  const chainRows=games.flatMap(g=>arr(g?.deathRecovery?.events).map((e:any)=>({matchId:g.matchId,champion:g.champion,minute:round(eventMin(e),1),...e})));
+  const chainRows=games.flatMap(g=>arr(g?.deathRecovery?.events).map((e:any)=>({
+    matchId:g.matchId,champion:g.champion,minute:round(e?.secondMin??eventMin(e),1),gapMin:finite(e?.gapSec)?round(n(e.gapSec)/60,2):null,...e
+  })));
   const repeatGames=games.filter(g=>n(g?.deathRecovery?.repeatDeaths||0)>0);
-  analytics.push(metric("death_chains","Death chain analysis",chainRows.length||repeatGames.length?"supported":"unavailable",chainRows.length||repeatGames.length,
-    repeatGames.length?`${repeatGames.length} games contain tracked repeat-death sequences; review them as chains rather than independent deaths.`:"No repeat-death chain evidence in the current deep sample.",
-    {repeatGames:repeatGames.map(g=>({matchId:g.matchId,repeatDeaths:g.deathRecovery?.repeatDeaths,opportunities:g.deathRecovery?.opportunities})).slice(0,12),rows:chainRows.slice(0,18)},chainRows));
+  analytics.push(metric("death_chains","Death chain analysis",chainRows.length||repeatGames.length?"supported":"unavailable",chainRows.length,
+    chainRows.length?`${chainRows.length} repeat-death events occurred across ${repeatGames.length} of ${games.length} deep games; the median first→second death gap was ${round(median(chainRows.map(x=>x.gapSec)),0)??"—"} seconds.`:"No repeat-death chain evidence in the current deep sample.",
+    {repeatGames:repeatGames.map(g=>({matchId:g.matchId,repeatDeaths:g.deathRecovery?.repeatDeaths,opportunities:g.deathRecovery?.opportunities})).slice(0,12),
+      medianGapSec:round(median(chainRows.map(x=>x.gapSec)),0),rows:chainRows.slice(0,18)},chainRows));
+
 
   // 14. Resource-to-impact efficiency
   const ri=fights.filter(x=>x.e?.active===true&&finite(x.e?.goldDiffAtStart)).map(({g,e})=>({matchId:g.matchId,minute:round(e.startMin,1),goldDiffAtStart:round(e.goldDiffAtStart,0),currentGold:round(e.currentGoldAtStart,0),
@@ -326,7 +346,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     ri.length?`Among ${rich.length} active fights started ≥300g ahead of the direct role opponent, the reviewed player registered a tracked kill/assist contribution in ${round(richImpact,0)??"—"}%. This does not measure damage dealt, target quality or whether the fight choice was correct.`:"No active fights with direct-role gold-at-start evidence.",
     {aheadFightContributionRate:round(richImpact,1),rows:ri.slice(0,18)},ri));
 
-  // 15. Fight lead conversion
+  // 15. After fight wins: 90-second follow-up
   const winFightRows:any[]=[];
   for(const {g,e} of fights.filter(x=>x.e?.active===true&&finite(x.e?.teamFightKills)&&finite(x.e?.enemyFightKills)&&n(x.e.teamFightKills)>n(x.e.enemyFightKills))){
     const end=n(e?.endMin??e?.startMin),to=end+1.5,teamId=n(g?.teamId||0);
@@ -334,30 +354,34 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     const neutral=rawObjectives.filter((o:any)=>txt(o?.type)==="ELITE_MONSTER_KILL").length;
     const structures=rawObjectives.filter((o:any)=>txt(o?.type)==="BUILDING_KILL"||txt(o?.type)==="TURRET_PLATE_DESTROYED").length;
     const playerFollowUpKills=arr(g?.involvedKills).filter((o:any)=>finite(eventMin(o))&&n(eventMin(o))>end&&n(eventMin(o))<=to).length;
-    const converted=neutral+structures+playerFollowUpKills>0;
-    winFightRows.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,objectives:neutral,structures,playerFollowUpKills,converted});
+    const followUp=neutral+structures+playerFollowUpKills>0;
+    winFightRows.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,objectives:neutral,structures,playerFollowUpKills,followUp});
   }
-  analytics.push(metric("fight_lead_conversion","After fight wins: tracked follow-up",winFightRows.length?"supported":"unavailable",winFightRows.length,
-    winFightRows.length?`${round(safeRate(count(winFightRows,x=>x.converted),winFightRows.length),0)}% of strict tracked fight wins were followed within ~90 seconds by a same-team neutral objective/structure gain or a new reviewed-player kill/assist contribution.`:"No strict active fight wins to evaluate.",
-    {conversionRate:round(safeRate(count(winFightRows,x=>x.converted),winFightRows.length),1),rows:winFightRows},winFightRows));
+  analytics.push(metric("fight_lead_conversion","After fight wins: 90-second follow-up",winFightRows.length?"supported":"unavailable",winFightRows.length,
+    winFightRows.length?`${round(safeRate(count(winFightRows,x=>x.followUp),winFightRows.length),0)}% of strict tracked fight wins were followed within ~90 seconds by a same-team neutral objective/structure gain or a new reviewed-player kill/assist contribution. This is measured sequencing, not proof the fight caused the follow-up.`:"No strict active fight wins to evaluate.",
+    {followUpRate:round(safeRate(count(winFightRows,x=>x.followUp),winFightRows.length),1),rows:winFightRows},winFightRows));
 
-  // 16. Fight loss containment
+  // 16. After fight losses: extra high-risk deaths
   const lossRows:any[]=[];
   for(const {g,e} of fights.filter(x=>x.e?.active===true&&x.e?.lostFight===true)){
     const end=n(e?.endMin??e?.startMin),to=end+1.5;
     const extraDeaths=count(badDeathEvents(g),d=>finite(eventMin(d))&&n(eventMin(d))>end&&n(eventMin(d))<=to);
-    lossRows.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,extraRiskDeaths90s:extraDeaths,contained:extraDeaths===0});
+    lossRows.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,extraRiskDeaths90s:extraDeaths,noExtraRiskDeath:extraDeaths===0});
   }
-  analytics.push(metric("fight_loss_containment","Fight-loss containment",lossRows.length?"supported":"unavailable",lossRows.length,
-    lossRows.length?`${round(safeRate(count(lossRows,x=>x.contained),lossRows.length),0)}% of tracked active fight losses had no additional classified bad death in the following ~90 seconds.`:"No active lost fights to evaluate.",
-    {containmentRate:round(safeRate(count(lossRows,x=>x.contained),lossRows.length),1),rows:lossRows},lossRows));
+  analytics.push(metric("fight_loss_containment","After fight losses: extra high-risk deaths",lossRows.length?"supported":"unavailable",lossRows.length,
+    lossRows.length?`${round(safeRate(count(lossRows,x=>x.noExtraRiskDeath),lossRows.length),0)}% of tracked active fight losses had no additional classified high-risk death in the following ~90 seconds. This card does not claim the broader game-state loss was contained.`:"No active lost fights to evaluate.",
+    {noExtraRiskDeathRate:round(safeRate(count(lossRows,x=>x.noExtraRiskDeath),lossRows.length),1),rows:lossRows},lossRows));
 
-  // 17. Objective trading intelligence
-  const objTrade=abs.filter(x=>x.e?.playerNeutralObjectiveGains>0||x.e?.playerStructureGains>0).map(({g,e})=>({matchId:g.matchId,minute:round(e.startMin,1),fightZone:e.fightZone,
-    structures:n(e.playerStructureGains||0),objectives:n(e.playerNeutralObjectiveGains||0),goldSwing:round(e.crossMapGoldSwingVsPeer,0),csSwing:round(e.crossMapCsSwingVsPeer,1)}));
-  analytics.push(metric("objective_trading","Objective / structure trading intelligence",objTrade.length?"supported":"unavailable",objTrade.length,
-    objTrade.length?`${objTrade.length} skipped fights coincided with a tracked structure or neutral-objective gain in the same ~90-second trade window.`:"No skipped fight coincided with a tracked structure/objective trade.",
+  // 17. Skipped-fight structure/objective overlap
+  const objTrade=abs.filter(x=>x.e?.playerNeutralObjectiveGains>0||x.e?.playerStructureGains>0).map(({g,e})=>({
+    matchId:g.matchId,minute:round(e.startMin,1),fightZone:e.fightZone,
+    structures:n(e.playerStructureGains||0),objectives:n(e.playerNeutralObjectiveGains||0),
+    goldSwing:round(e.crossMapGoldSwingVsPeer,0),csSwing:round(e.crossMapCsSwingVsPeer,1)
+  }));
+  analytics.push(metric("objective_trading","Skipped-fight structure/objective overlap",objTrade.length?"supported":"unavailable",objTrade.length,
+    objTrade.length?`${objTrade.length} skipped-fight windows also contained reviewed-player-supported structure or neutral-objective involvement within ~90 seconds. The timing overlap is measured; whether skipping the fight caused or justified that gain remains a replay question.`:"No skipped-fight window overlapped a tracked structure/objective gain.",
     {rows:objTrade},objTrade));
+
 
   // 18. Repeated geographical review clusters
   const geo=new Map<string,{zone:string,count:number,joinMiss:number,badDeaths:number,matches:Set<string>}>();
@@ -391,13 +415,15 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     matchupSupported.length>=2?"Uses repeated own-champion × direct-opponent-champion cells as personal-history context. It is not a population matchup table.":matchupSupported.length===1?`Only ${matchupSupported[0].matchup} has at least three comparable lane samples, so this is repeated-matchup context rather than a best/worst matchup comparison.`:"No matchup has at least three comparable lane samples yet.",
     {rows:matchups.slice(0,16),supportedCells:matchupSupported.length}));
 
-  // 21. Expected-performance residuals
-  const residuals=performanceResidualRows(history),recentResidual=residuals.filter(x=>recent.slice(0,8).some(g=>g.matchId===x.matchId));
+  // 21. Context-adjusted DPM residuals
+  const residuals=performanceResidualRows(history),recentResidual=residuals.filter(x=>recent.slice(0,20).some(g=>g.matchId===x.matchId));
   const contextCounts=residuals.reduce((m:any,x:any)=>(m[x.contextLevel]=(m[x.contextLevel]||0)+1,m),{});
   const contextualRows=residuals.filter(x=>x.contextLevel!=="global_leave_one_out").length;
+  const recentResidualMedian=median(recentResidual.map(x=>x.residual));
   analytics.push(metric("expected_performance_residual","Context-adjusted DPM residuals",residuals.length>=5?"proxy":residuals.length?"thin":"unavailable",residuals.length,
-    residuals.length>=5?`Recent leave-one-out opponent-adjusted DPM residual averages ${round(mean(recentResidual.map(x=>x.residual)),0)}. ${contextualRows} of ${residuals.length} rows use champion and/or duration context; the rest use the leave-one-out global personal baseline.`:"Not enough direct-opponent DPM history for a residual model.",
-    {recentResidual:round(mean(recentResidual.map(x=>x.residual)),1),contextualRows,contextCounts,rows:residuals.slice(-20)}));
+    residuals.length>=5?`Median residual across the latest ${recentResidual.length} comparable deep games is ${round(recentResidualMedian,0)} DPM versus the leave-one-out personal context baseline. ${contextualRows} of ${residuals.length} history rows use champion and/or duration context; this is descriptive within-history adjustment, not a predictive MMR model.`:"Not enough direct-opponent DPM history for a residual model.",
+    {recentResidual:round(recentResidualMedian,1),recentResidualStatistic:"median",recentResidualGames:recentResidual.length,contextualRows,contextCounts,rows:residuals.slice(-20)}));
+
 
   // 22. Session degradation by component
   const supportedSessionSignals=arr(sessionModel?.answer?.supportedSignals);
@@ -405,11 +431,11 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     label:txt(s?.label),rawDelta:round(s?.delta,2),normalized:round(s?.normalized,2),threshold:round(s?.threshold,2),inverse:s?.inverse===true,
     recentN:n(s?.recentN||0),baselineN:n(s?.baselineN||0)
   })).filter((x:any)=>finite(x.normalized));
-  analytics.push(metric("session_components","Session change by component",componentRows.length?"supported":"unavailable",componentRows.length,
+  analytics.push(metric("session_components","Session change by component",componentRows.length?"proxy":"unavailable",componentRows.length,
     componentRows.length?"Shows each evidence-gated opener→game-3+ signal on its own practical-change scale. Positive normalized values mean better later-session performance even for inverse metrics such as risky deaths or first-impact timing.":"No session component has enough evidence.",
     {rows:componentRows}));
 
-  // 23. Requeue sweet spot
+  // 23. Requeue gap comparison
   const gaps:any[]=[];
   for(let i=1;i<history.length;i++){
     const prev=history[i-1],g=history[i],gap=(gameStart(g)-gameEnd(prev))/60000;
@@ -418,11 +444,12 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     const bucket=gap<10?"<10m":gap<25?"10–25m":gap<45?"25–45m":"45m+";
     gaps.push({matchId:g.matchId,gapMin:round(gap,1),bucket,relativeComposite:round(score,3)});
   }
-  const gapRows=["<10m","10–25m","25–45m","45m+"].map(bucket=>{const xs=gaps.filter(x=>x.bucket===bucket);return{bucket,games:xs.length,avgRelativeComposite:round(mean(xs.map(x=>x.relativeComposite)),3),supported:xs.length>=3};});
+  const gapRows=["<10m","10–25m","25–45m","45m+"].map(bucket=>{const xs=gaps.filter(x=>x.bucket===bucket);return{bucket,games:xs.length,avgRelativeComposite:round(mean(xs.map(x=>x.relativeComposite)),3),supported:xs.length>=5};});
   const bestGap=gapRows.filter(x=>x.supported&&finite(x.avgRelativeComposite)).sort((a,b)=>n(b.avgRelativeComposite)-n(a.avgRelativeComposite))[0]||null;
   analytics.push(metric("requeue_sweet_spot","Requeue gap comparison",gaps.length?"proxy":"unavailable",gaps.length,
-    bestGap?`Highest observed opponent-relative composite is in the ${bestGap.bucket} gap bucket across ${bestGap.games} games. This is scheduling context only; it does not show that the break length caused performance.`:"No break-time bucket has at least three direct-opponent comparable games yet.",
-    {rows:gapRows,best:bestGap,compositeDefinition:"mean of available opponent-relative DPM, CS/min, deaths (inverted), KP and GPM after fixed scaling"}));
+    bestGap?`Highest observed opponent-relative composite among buckets with at least five games is ${bestGap.bucket} (n=${bestGap.games}). This is descriptive scheduling context only; no uncertainty or causal break effect is inferred.`:"No break-time bucket has at least five direct-opponent comparable games yet.",
+    {minimumBucketGames:5,rows:gapRows,best:bestGap,compositeDefinition:"mean of available opponent-relative DPM, CS/min, deaths (inverted), KP and GPM after fixed scaling"}));
+
 
   // 24. Mistake recurrence trend
   const issues=games.map(g=>({matchId:g.matchId,start:gameStart(g),issues:issueCount(g),...issueComponents(g)}));
@@ -443,26 +470,40 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     let score=e?.joinReviewPriority==="high"?80:e?.lostFight?45:20;
     if(e?.crossMapTradeSupported===true)score+=25;
     candidates.push({matchId:g.matchId,minute:round(e.startMin,1),type:"Skipped fight",zone:e.fightZone,score,
-      reason:e?.joinReviewPriority==="high"?"Lost, straight-line reachable, no supported compensation":e?.crossMapTradeSupported?"Cross-map trade worth validating":"Skipped fight with incomplete counterfactual"});
+      reason:e?.joinReviewPriority==="high"?"Lost, inside distance screen, no supported compensation":e?.crossMapTradeSupported?"Cross-map compensation worth validating":"Skipped fight with incomplete counterfactual"});
   }
   for(const {g,e} of fights){
-    if(e?.firstAllyDeath) candidates.push({matchId:g.matchId,minute:round(e.startMin,1),type:"Fight entry",zone:e.fightZone,score:70,reason:"First allied death in tracked active fight"});
-    if(e?.diedBeforeContribution) candidates.push({matchId:g.matchId,minute:round(e.startMin,1),type:"Fight entry",zone:e.fightZone,score:75,reason:"Died before tracked contribution"});
-    if(e?.outnumberedAtFirstKill&&e?.lostFight) candidates.push({matchId:g.matchId,minute:round(e.startMin,1),type:"Numbers check",zone:e.fightZone,score:65,reason:"Entered a locally outnumbered fight that was lost"});
+    if(e?.firstAllyDeath)candidates.push({matchId:g.matchId,minute:round(e.startMin,1),type:"Fight entry",zone:e.fightZone,score:70,reason:"First allied death in tracked active fight"});
+    if(e?.diedBeforeContribution)candidates.push({matchId:g.matchId,minute:round(e.startMin,1),type:"Fight entry",zone:e.fightZone,score:75,reason:"Died before tracked kill/assist contribution"});
+    if(e?.outnumberedAtFirstKill&&e?.lostFight)candidates.push({matchId:g.matchId,minute:round(e.startMin,1),type:"Numbers check",zone:e.fightZone,score:65,reason:"Locally outnumbered snapshot in a lost fight"});
   }
   for(const g of games){
-    const preDeaths=arr(g?.preObjectiveDeaths);
-    for(const d of preDeaths.slice(0,2))candidates.push({matchId:g.matchId,minute:round(eventMin(d),1),type:"Objective setup",zone:d?.fightZone||d?.zone||null,score:72,reason:"Pre-objective death"});
-    const repeats=arr(g?.deathRecovery?.events).filter((x:any)=>finite(x?.secondMin));
-    for(const d of repeats.slice(0,2))candidates.push({matchId:g.matchId,minute:round(d.secondMin,1),type:"Death chain",zone:null,score:d?.highRisk?72:68,reason:"Repeat death inside the tracked recovery window"});
+    for(const d of arr(g?.preObjectiveDeaths).slice(0,2))candidates.push({matchId:g.matchId,minute:round(eventMin(d),1),type:"Objective setup",zone:d?.fightZone||d?.zone||null,score:72,reason:"Death shortly before enemy objective conversion"});
+    for(const d of arr(g?.deathRecovery?.events).filter((x:any)=>finite(x?.secondMin)).slice(0,2))candidates.push({matchId:g.matchId,minute:round(d.secondMin,1),type:"Death chain",zone:null,score:d?.highRisk?72:68,reason:"Repeat death inside the tracked recovery window"});
   }
-  const shortlist=candidates.sort((a,b)=>b.score-a.score).filter((x,i,a)=>a.findIndex(y=>y.matchId===x.matchId&&y.type===x.type&&y.minute===x.minute)===i).slice(0,10);
+  const ranked=candidates.sort((a,b)=>b.score-a.score).filter((x,i,a)=>a.findIndex(y=>y.matchId===x.matchId&&y.type===x.type&&y.minute===x.minute)===i);
+  const shortlist:any[]=[],perMatch=new Map<string,number>(),perType=new Map<string,number>();
+  for(const x of ranked){
+    const mid=txt(x.matchId),typ=txt(x.type);
+    if((perMatch.get(mid)||0)>=2||(perType.get(typ)||0)>=4)continue;
+    shortlist.push(x);perMatch.set(mid,(perMatch.get(mid)||0)+1);perType.set(typ,(perType.get(typ)||0)+1);
+    if(shortlist.length>=10)break;
+  }
+  if(shortlist.length<10){
+    for(const x of ranked){
+      if(shortlist.includes(x))continue;
+      const mid=txt(x.matchId);if((perMatch.get(mid)||0)>=3)continue;
+      shortlist.push(x);perMatch.set(mid,(perMatch.get(mid)||0)+1);
+      if(shortlist.length>=10)break;
+    }
+  }
   analytics.push(metric("automatic_replay_shortlist","Automatic replay shortlist",shortlist.length?"proxy":"unavailable",shortlist.length,
-    shortlist.length?`Top ${shortlist.length} moments are ranked by a transparent review-priority heuristic using fight entry, skipped-fight opportunity cost, objective setup and repeat-death evidence.`:"No replay moment crossed the current review-priority rules.",
-    {heuristicPriority:true,rows:shortlist},shortlist));
+    shortlist.length?`Top ${shortlist.length} moments use a transparent review-priority heuristic with diversity caps so one match or one event type cannot dominate the entire shortlist.`:"No replay moment crossed the current review-priority rules.",
+    {heuristicPriority:true,maxPrimaryPerMatch:2,maxPrimaryPerType:4,rows:shortlist},shortlist));
+
 
   return {
-    version:"decision-intelligence-v3",
+    version:"decision-intelligence-v4",
     generatedFromGames:games.length,
     deepGames:games.length,
     historyGames:history.length,

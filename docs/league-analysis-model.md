@@ -3734,3 +3734,70 @@ The v309 pass audits the wording and interpretation of the corrected v4.173 real
 - Deficit analysis reports signed Gold@15→Gold@25 movement. Positive narrows the deficit and negative deepens it; a negative mean is not described as “recovery.”
 - Repeated matchup best/worst ranking requires at least two matchup cells with at least three games. One repeated cell is descriptive context only.
 - The decision-intelligence header discloses separate deep-timeline and longer same-role history scopes so a 20-game fight metric and an 80+ game residual/requeue metric do not appear contradictory.
+
+
+## v310 decision-intelligence quality pass
+
+This pass was driven by a fresh production ADC analysis over the current cached cohort rather than by source inspection alone. The audit found several remaining cases where the numbers were technically generated but the presentation or inference was stronger than the evidence justified.
+
+### Removed pseudo-currency from skipped-fight analysis
+
+The earlier opportunity-cost layer added direct-role gold movement, an arbitrary CS-to-gold conversion, structure constants, objective constants and a net-kill constant into one score. Those inputs overlap economically, so the resulting number could double-count the same advantage and looked more precise than it was.
+
+v310 removes that additive score entirely. Skipped-fight review now keeps these signals separate:
+
+- direct-role gold movement;
+- direct-role CS movement;
+- reviewed-player-supported structure involvement;
+- reviewed-player-supported neutral-objective involvement;
+- the tracked fight kill result;
+- whether the explicit compensation rule was met.
+
+The compensation rule remains a **Proxy** because its thresholds are coaching heuristics, not a counterfactual valuation model.
+
+### Distance is not arrival feasibility
+
+The skipped-fight distance card is now a **fight-distance screen**, not an arrival model. Player position is based on a Riot timeline frame within the supported event-position window, so terrain, movement speed, fog, path safety and exact commitment timing are not known. The frame/event timing delta is disclosed.
+
+### Coarse frames are withheld rather than relabeled
+
+Fight-anchor distance bands now accept only player-position frames within 45 seconds of contact. Older frames are counted as withheld rather than described as entry position.
+
+Local ally/enemy numbers remain a proxy. The analyzer now exposes the age of the timeline frame used for the 4.5k local-number snapshot, and the card discloses the median frame age.
+
+### Conditional recall timing exposes its denominator
+
+Shop→fight/objective timing is conditioned on a tracked fight/objective occurring within four minutes of the shop. v310 exports both the total measured shop visits and the number entering that conditional timing sample so the median cannot be mistaken for a typical recall across all shops.
+
+### Narrower fight follow-up claims
+
+- Fight wins now report **90-second tracked follow-up** rather than “conversion.” The sequence is measured; causation is not.
+- Fight losses report whether another classified high-risk death followed within ~90 seconds. This does not claim that broader gold/objective loss was contained.
+- Skipped-fight structure/objective review is labeled temporal **overlap**, not proof of a favorable trade.
+
+### Robust residual and requeue summaries
+
+The recent context-adjusted DPM headline uses the **median** residual across the latest 20 comparable deep games rather than a mean over eight games, reducing sensitivity to extreme games.
+
+A requeue-gap bucket now needs at least five comparable games before it can be promoted in the descriptive comparison. No uncertainty-adjusted or causal break effect is claimed.
+
+### Replay diversity
+
+The replay shortlist remains a heuristic Proxy. Its primary selection pass is capped at two moments per match and four moments per event type, preventing one match or one repeated rule from filling the entire review queue.
+
+### Team-relative map orientation
+
+All cross-game decision maps normalize red-side coordinates to the reviewed team perspective before plotting. “Our” and “their” zone labels therefore correspond to the same visual side of Summoner’s Rift across games. The map explicitly states that the reviewed team base is shown bottom-left.
+
+### Evidence state is not performance direction
+
+The previous UI used the same green accent for **Measured** evidence that other League surfaces use for favorable performance. v310 separates these meanings:
+
+- Measured = neutral/blue evidence-confidence accent;
+- Proxy = gold accent;
+- Thin = neutral gray accent;
+- No evidence = muted accent.
+
+Green/red remain available only where the chart itself has a directional performance meaning.
+
+The decision section also uses the same warm card background, border radius, shadow, typography and in-panel subheading hierarchy as the rest of the League report.
