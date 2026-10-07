@@ -3815,3 +3815,19 @@ v311 replaces that statistic with **Ahead-state fight execution**. It considers 
 - pre-fight direct-role gold difference and unspent gold for the scatterplot.
 
 The visualization distinguishes **survived**, **contributed then died**, and **died before contribution**. These are measured execution/state outcomes; they do not claim total damage efficiency, target quality, or that taking the fight was correct.
+
+
+## v312 final decision-intelligence audit
+
+A fresh production ADC analysis on v4.175 was used to inspect the actual 25-card output after the v310/v311 corrections. This pass removes the remaining arbitrary thresholds and mixed-unit ranking constructs while preserving the non-tautological ahead-state fight execution model from v311.
+
+- **Pre-fight distance:** raw sample-age versus fight-anchor distance replaces invented “core/backline/far” bands. Samples older than 45 seconds remain withheld and no preferred ADC distance is inferred.
+- **Local numbers:** down ≥2, down 1, even and ahead states each expose their own observed fight-loss rate. The 4.5k radius and Riot-frame age remain explicit limitations.
+- **Lead movement:** the “retained half the lead” rule is removed. Paired ≥500g-at-15 games report whether the direct-role lead is still positive or has flipped behind at 25 plus median signed movement.
+- **Deficit movement:** the fuzzy -100g “roughly even” threshold and arithmetic mean are removed. The card reports whether the deficit narrowed, whether it crossed exact zero, and median movement so one large comeback cannot mask the typical direction.
+- **Consecutive deaths:** “death chain” is replaced by **Consecutive deaths within 4 minutes**. The four-minute review rule, consecutive-death opportunity denominator, observed rate and median time gap are explicit. Timing is not treated as causation.
+- **Later-session components:** the conclusion reports better, worse and below-threshold components together. Normalized practical-change values are used only for direction/magnitude; raw units and sample counts remain visible.
+- **Requeue gap context:** the synthetic mixed-unit DPM/CS/deaths/KP/GPM composite and “best break” ranking are removed. Each bucket shows those direct-opponent components separately in native units and remains observational rather than causal.
+- **Ahead-state execution:** the v311 replacement for the tautological resource-impact card is retained: ahead-state fights report death-before-contribution, survival and high-unspent-gold rates.
+
+The 25 analytic family IDs remain stable for report compatibility. Decision-intelligence contract is v5, analyzer v4.177 and frontend v312.
