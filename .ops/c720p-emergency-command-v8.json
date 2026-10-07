@@ -1,8 +1,8 @@
 {
-  "enabled": true,
+  "enabled": false,
   "id": 990051,
   "lease_token": "5a31f6b2-9960-4f4c-9900-510000000001",
   "timeout_seconds": 120,
   "attempts": 1,
-  "command": "bash -lc 'LOCK=/tmp/c720p-job-990051.lock; mkdir \"$LOCK\" 2>/dev/null || exit 0; OUT=/tmp/tv-final-990051.out; : > \"$OUT\"; echo ===TV_ON=== >>\"$OUT\"; curl -sS --max-time 40 -X POST http://127.0.0.1:8789/grundig-tv/on >>\"$OUT\" 2>&1 || true; echo >>\"$OUT\"; sleep 2; echo ===HDMI3=== >>\"$OUT\"; curl -sS --max-time 25 -X POST http://127.0.0.1:8789/grundig-tv/hdmi3-fast >>\"$OUT\" 2>&1 || true; echo >>\"$OUT\"; sleep 1; echo ===TV_FINAL=== >>\"$OUT\"; curl -sS --max-time 12 http://127.0.0.1:8789/grundig-tv/power-state >>\"$OUT\" 2>&1 || true; echo >>\"$OUT\"; echo ===S5_FINAL=== >>\"$OUT\"; curl -sS --max-time 12 http://127.0.0.1:8789/health >>\"$OUT\" 2>&1 || true; python3 - <<'\"'\"'PY'\"'\"'\nimport json,pathlib,time,urllib.request\nout=pathlib.Path(\"/tmp/tv-final-990051.out\").read_text(errors=\"ignore\")[-16000:]\ntoken=pathlib.Path(\"/home/jespern/.config/c720p-agent/security-token\").read_text().strip()\npayload={\"observed_at\":time.strftime(\"%Y-%m-%dT%H:%M:%SZ\",time.gmtime()),\"maintenance\":{\"tv_surround_final_990051\":{\"ok\":('\"is_on\": true' in out or '\"state\": \"on\"' in out),\"output\":out}}}\nreq=urllib.request.Request(\"https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/c720p-security-control?action=health\",data=json.dumps(payload,separators=(\",\",\":\")).encode(),method=\"POST\",headers={\"content-type\":\"application/json\",\"x-c720p-token\":token})\ntry:\n r=urllib.request.urlopen(req,timeout=15); print(\"HEALTH_POST\",r.status);r.close()\nexcept Exception as e: print(\"HEALTH_POST_ERR\",repr(e))\nPY'"
+  "command": ""
 }
