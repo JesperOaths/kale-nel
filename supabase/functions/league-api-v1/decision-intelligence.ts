@@ -120,13 +120,19 @@ function nextEventAfter(g:any, minute:number){
 function pathToObjectiveRow(g:any,e:any){
   const t=eventMin(e); if(!finite(t)) return null;
   const shops=arr(g?.shopVisits).filter((s:any)=>finite(s?.startMin)&&n(s.startMin)<=n(t)).sort((a:any,b:any)=>n(b.startMin)-n(a.startMin));
-  const shop=shops[0]||null,frame=nearestFrameBefore(g,n(t),1.5);
+  const shop=shops[0]||null;
+  // Use a frame requested ~45s before the event instead of the nearest frame at
+  // the event itself. Riot timeline frames are coarse, so retain the actual
+  // seconds-before-event and never present this as second-perfect pathing.
+  const frame=nearestFrameBefore(g,n(t)-0.75,1.0);
+  const actualApproachLeadSec=frame&&finite(frame.time)?Math.max(0,Math.round((n(t)-n(frame.time))*60)):null;
   return {
     matchId:g.matchId,champion:g.champion,objective:txt(e?.type||e?.objectiveType||e?.monsterType||"objective"),
     minute:round(t,1),joined:e?.joined===true||e?.present===true||e?.playerJoined===true,
     lastShopMin:shop?round(shop?.lastMin??shop?.startMin,1):null,
     shopLeadMin:shop?round(n(t)-n(shop?.lastMin??shop?.startMin),1):null,
-    approachZone:txt(frame?.zone||"unknown"),
+    approachZone:txt(frame?.zone||"unknown"),actualApproachLeadSec,
+    objectiveSetupLeadSec:finite(e?.setupLeadSec)?round(e.setupLeadSec,0):null,
     approachPosition:frame?.position&&finite(frame.position.x)&&finite(frame.position.y)?{x:n(frame.position.x),y:n(frame.position.y)}:null
   };
 }
@@ -156,21 +162,21 @@ function matchupRows(games:any[]){
 }
 function performanceResidualRows(games:any[]){
   const valid=games.filter(g=>directPeer(g)&&finite(g?.peer?.dpmDelta));
-  const cells=new Map<string,any[]>();
-  for(const g of valid){
-    const k=[txt(g.champion),txt(g.peer?.champion||"Unknown"),durationBucket(g)].join("|");
-    if(!cells.has(k))cells.set(k,[]);
-    cells.get(k)!.push(g);
-  }
+  const peersFor=(g:any,fn:(x:any)=>boolean)=>valid.filter(x=>x.matchId!==g.matchId&&fn(x));
   return valid.map(g=>{
-    const k=[txt(g.champion),txt(g.peer?.champion||"Unknown"),durationBucket(g)].join("|"),
-      peers=(cells.get(k)||[]).filter(x=>x.matchId!==g.matchId),
-      globalPeers=valid.filter(x=>x.matchId!==g.matchId),
-      contextual=peers.length>=2,
-      expected=contextual?(median(peers.map(x=>x.peer?.dpmDelta))??null):(median(globalPeers.map(x=>x.peer?.dpmDelta))??null);
-    return {matchId:g.matchId,champion:g.champion,opponent:g.peer?.champion||"Unknown",durationBucket:durationBucket(g),
+    const champ=txt(g.champion),opp=txt(g.peer?.champion||"Unknown"),dur=durationBucket(g);
+    const candidates=[
+      {level:"champion_opponent_duration_leave_one_out",rows:peersFor(g,x=>txt(x.champion)===champ&&txt(x.peer?.champion||"Unknown")===opp&&durationBucket(x)===dur),min:2},
+      {level:"champion_duration_leave_one_out",rows:peersFor(g,x=>txt(x.champion)===champ&&durationBucket(x)===dur),min:2},
+      {level:"champion_leave_one_out",rows:peersFor(g,x=>txt(x.champion)===champ),min:3},
+      {level:"duration_leave_one_out",rows:peersFor(g,x=>durationBucket(x)===dur),min:4},
+      {level:"global_leave_one_out",rows:peersFor(g,_=>true),min:1}
+    ];
+    const chosen=candidates.find(x=>x.rows.length>=x.min)||candidates[candidates.length-1];
+    const expected=median(chosen.rows.map(x=>x.peer?.dpmDelta));
+    return {matchId:g.matchId,champion:g.champion,opponent:g.peer?.champion||"Unknown",durationBucket:dur,
       actual:n(g.peer.dpmDelta),expected,residual:finite(expected)?n(g.peer.dpmDelta)-n(expected):null,
-      contextLevel:contextual?"champion_opponent_duration_leave_one_out":"global_leave_one_out",contextGames:contextual?peers.length:globalPeers.length};
+      contextLevel:chosen.level,contextGames:chosen.rows.length};
   }).filter(x=>finite(x.expected)&&finite(x.residual));
 }
 
@@ -221,7 +227,8 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   const formation:any[]=[];
   for(const {g,e} of fights.filter(x=>x.e?.active===true)){
     const fr=nearestFrameBefore(g,n(e.startMin),1.1),d=fr?.position&&e?.fightPosition?distance(fr.position,e.fightPosition):null;
-    const band=finite(d)?n(d)<1700?"inside fight core":n(d)<3500?"edge / backline distance":"far edge / late entry proxy":"unknown";
+    if(!finite(d))continue;
+    const band=n(d)<1700?"inside fight core":n(d)<3500?"edge / backline distance":"far edge / late entry proxy";
     formation.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,distanceToAnchor:round(d,0),formationBand:band,numbersDelta:e.numbersDelta,contributed:e.contributed===true,survived:e.survived===true});
   }
   analytics.push(metric("fight_formation","Fight formation / entry distance",formation.length?"proxy":"unavailable",formation.length,
@@ -271,8 +278,8 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
 
   // 10. Objective setup path
   const paths=games.flatMap(g=>objectiveEvents(g).map(e=>pathToObjectiveRow(g,e)).filter(Boolean));
-  analytics.push(metric("objective_setup_path","Objective setup path",paths.length?"supported":"unavailable",paths.length,
-    paths.length?"Reconstructs last shop timing and sampled approach zone before tracked neutral-objective events so missed setups can be traced back earlier than the objective spawn/fight itself.":"No objective events with usable timing.",
+  analytics.push(metric("objective_setup_path","Objective setup path",paths.length?"proxy":"unavailable",paths.length,
+    paths.length?"Pairs measured shop/objective timing with a coarse pre-objective position sample. The sampled point is requested ~45 seconds before the event, but Riot frame cadence is coarse and the actual lead time is retained.":"No objective events with usable timing.",
     {rows:paths.slice(0,18)},paths));
 
   // 11. Lead utilisation curve
@@ -311,7 +318,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
 
   // 15. Fight lead conversion
   const winFightRows:any[]=[];
-  for(const {g,e} of fights.filter(x=>x.e?.active===true&&x.e?.lostFight===false)){
+  for(const {g,e} of fights.filter(x=>x.e?.active===true&&finite(x.e?.teamFightKills)&&finite(x.e?.enemyFightKills)&&n(x.e.teamFightKills)>n(x.e.enemyFightKills))){
     const end=n(e?.endMin??e?.startMin),to=end+1.5,teamId=n(g?.teamId||0);
     const rawObjectives=arr(g?.objectives).filter((o:any)=>finite(eventMin(o))&&n(eventMin(o))>=end&&n(eventMin(o))<=to&&(!teamId||n(o?.ownerTeam||0)===teamId));
     const neutral=rawObjectives.filter((o:any)=>txt(o?.type)==="ELITE_MONSTER_KILL").length;
@@ -342,7 +349,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     objTrade.length?`${objTrade.length} skipped fights converted into a tracked structure or neutral-objective gain in the same ~90-second trade window.`:"No skipped fight produced a tracked structure/objective trade.",
     {rows:objTrade},objTrade));
 
-  // 18. Repeated geographical mistake clusters
+  // 18. Repeated geographical review clusters
   const geo=new Map<string,{zone:string,count:number,joinMiss:number,badDeaths:number,matches:Set<string>}>();
   const geoMapEvents:any[]=[];
   for(const {g,e} of abs){
@@ -357,8 +364,8 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     if(finite(d?.x)&&finite(d?.y))geoMapEvents.push({matchId:g.matchId,minute:round(d.time,1),zone:k,type:"bad_death",position:{x:n(d.x),y:n(d.y)}});
   }
   const geoRows=[...geo.values()].map(x=>({...x,matches:[...x.matches]})).sort((a,b)=>b.count-a.count);
-  analytics.push(metric("geographical_clusters","Repeated geographical mistake clusters",geoRows.length?"supported":"unavailable",sum(geoRows,x=>x.count),
-    geoRows.length?`Highest repeated map-relative review zone: ${geoRows[0].zone} (${geoRows[0].count} supported mistake/review signals).`:"No repeated supported geography cluster.",
+  analytics.push(metric("geographical_clusters","Repeated geographical review clusters",geoRows.length?"supported":"unavailable",sum(geoRows,x=>x.count),
+    geoRows.length?`Highest repeated map-relative review zone: ${geoRows[0].zone} (${geoRows[0].count} supported high-risk-death / missed-join review signals).`:"No repeated supported geography cluster.",
     {rows:geoRows.slice(0,12),mapEvents:geoMapEvents.slice(0,40)}));
 
   // 19. Champion-specific decision tendencies
@@ -376,10 +383,11 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
 
   // 21. Expected-performance residuals
   const residuals=performanceResidualRows(games),recentResidual=residuals.filter(x=>recent.slice(0,8).some(g=>g.matchId===x.matchId));
-  const contextualResiduals=residuals.filter(x=>x.contextLevel==="champion_opponent_duration_leave_one_out");
-  analytics.push(metric("expected_performance_residual","Expected-performance residuals",residuals.length>=5?"proxy":residuals.length?"thin":"unavailable",residuals.length,
-    residuals.length>=5?`Recent leave-one-out opponent-adjusted DPM residual averages ${round(mean(recentResidual.map(x=>x.residual)),0)}. ${contextualResiduals.length} rows use repeated champion×opponent×duration context; the remainder fall back to a leave-one-out global expectation.`:"Not enough direct-opponent DPM history for a residual model.",
-    {recentResidual:round(mean(recentResidual.map(x=>x.residual)),1),contextualRows:contextualResiduals.length,rows:residuals.slice(-20)}));
+  const contextCounts=residuals.reduce((m:any,x:any)=>(m[x.contextLevel]=(m[x.contextLevel]||0)+1,m),{});
+  const contextualRows=residuals.filter(x=>x.contextLevel!=="global_leave_one_out").length;
+  analytics.push(metric("expected_performance_residual","Context-adjusted DPM residuals",residuals.length>=5?"proxy":residuals.length?"thin":"unavailable",residuals.length,
+    residuals.length>=5?`Recent leave-one-out opponent-adjusted DPM residual averages ${round(mean(recentResidual.map(x=>x.residual)),0)}. ${contextualRows} of ${residuals.length} rows use champion and/or duration context; the rest use the leave-one-out global personal baseline.`:"Not enough direct-opponent DPM history for a residual model.",
+    {recentResidual:round(mean(recentResidual.map(x=>x.residual)),1),contextualRows,contextCounts,rows:residuals.slice(-20)}));
 
   // 22. Session degradation by component
   const supportedSessionSignals=arr(sessionModel?.answer?.supportedSignals);
@@ -440,11 +448,11 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   }
   const shortlist=candidates.sort((a,b)=>b.score-a.score).filter((x,i,a)=>a.findIndex(y=>y.matchId===x.matchId&&y.type===x.type&&y.minute===x.minute)===i).slice(0,10);
   analytics.push(metric("automatic_replay_shortlist","Automatic replay shortlist",shortlist.length?"proxy":"unavailable",shortlist.length,
-    shortlist.length?`Top ${shortlist.length} moments are ranked by a transparent heuristic for learning value from fight entry, skipped-fight opportunity cost, objective setup and repeat-death evidence.`:"No high-value replay moment crossed the current rules.",
+    shortlist.length?`Top ${shortlist.length} moments are ranked by a transparent review-priority heuristic using fight entry, skipped-fight opportunity cost, objective setup and repeat-death evidence.`:"No replay moment crossed the current review-priority rules.",
     {heuristicPriority:true,rows:shortlist},shortlist));
 
   return {
-    version:"decision-intelligence-v1",
+    version:"decision-intelligence-v2",
     generatedFromGames:games.length,
     selectedRole:txt(primaryRole).toUpperCase(),
     proxyPolicy:"Proxy outputs are explicitly labeled and may rank replay questions; they must not be presented as causal proof or exact counterfactual value.",
