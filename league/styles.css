@@ -3128,3 +3128,20 @@ body{background:var(--paper);line-height:1.55;padding:18px 16px 74px}
   #report .visual-benchmark-grid,
   #report .radar-layout{grid-template-columns:minmax(0,1fr)}
 }
+
+/* v318: exact-value graphs and real transition classifications. */
+.trajectory-plot{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;border-radius:10px}
+.trajectory-plot .trajectory-svg{min-width:560px;overflow:hidden}
+.trajectory-svg text{font-size:14px}.trajectory-svg .trajectory-axis-value{font-size:12px}
+.trajectory-svg circle.partial{stroke-dasharray:2 2;fill:var(--panel-soft)}
+.trajectory-svg .trajectory-missing text{fill:var(--muted);font-size:13px}
+.transition-matrix-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain}
+table.transition-matrix{display:table;width:100%;min-width:620px;border-collapse:separate;border-spacing:6px;table-layout:fixed}
+.transition-matrix caption{text-align:left;padding:8px 12px;font-size:.88rem;line-height:1.5;color:var(--muted)}
+.transition-matrix th{padding:10px;background:#fff;border-radius:10px;font-size:.88rem;line-height:1.4;text-align:center}
+.transition-matrix th:first-child{width:110px}.transition-matrix td.transition-matrix-cell{display:table-cell;text-align:center;vertical-align:middle}
+.transition-matrix-cell strong,.transition-matrix-cell span,.transition-matrix-cell small{display:block}
+.transition-matrix-cell small{margin-top:5px;font-size:.76rem;line-height:1.45;color:var(--muted)}
+.transition-matrix-cell.tone-mixed{background:var(--panel-soft)}
+.di-chart-coverage{margin:8px 0 0;color:var(--muted);font-size:.86rem;line-height:1.5}
+.di-state-grid article.thin{opacity:.8;background:var(--panel-soft)}

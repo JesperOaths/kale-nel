@@ -6,8 +6,8 @@ import { chromium } from 'playwright';
 const SUPABASE_URL=process.env.SUPABASE_URL||'https://uiqntazgnrxwliaidkmy.supabase.co';
 const API_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||'';
 const BASE=(process.env.GEJAST_BASE_URL||'https://kalenel.nl/').replace(/\/+$/,'')+'/';
-const EXPECTED_FRONTEND='20261007-league-web-v317';
-const EXPECTED_ANALYZER='league-web-behavior-v4.181';
+const EXPECTED_FRONTEND='20261007-league-web-v318';
+const EXPECTED_ANALYZER='league-web-behavior-v4.182';
 const EDGE=SUPABASE_URL+'/functions/v1/printify-gildan-diff-diag-v1';
 const OUT='league-visual-audit';
 const PROFILE_ID='00000000-0000-4000-8000-000000000316';
@@ -195,7 +195,7 @@ function buildDecisionIntelligence(games){
     analytic('mistake_recurrence','Review-signal recurrence',{sample:10},games.slice(0,10).map((g,i)=>({matchId:g.matchId,issues:Math.max(0,4-Math.floor(i/3))}))),
     analytic('automatic_replay_shortlist','Automatic replay shortlist',{sample:shortlist.length},shortlist)
   ];
-  return{version:'decision-intelligence-v7',generatedFromGames:20,deepGames:20,historyGames:86,headline:{thin:4,unavailable:0},analytics,replayShortlist:shortlist};
+  return{version:'decision-intelligence-v8',generatedFromGames:20,deepGames:20,historyGames:86,headline:{thin:4,unavailable:0},analytics,replayShortlist:shortlist};
 }
 
 function buildFixtureReport(){
@@ -208,6 +208,7 @@ function buildFixtureReport(){
     {label:'Games 61–80',games:20,peerCsMinDelta:metric(.06,20),peerDpmDelta:metric(14,20),peerGpmDelta:metric(5,20),peerDeathsDelta:metric(-.04,20)},
     {label:'Games 81–86',games:6,peerCsMinDelta:metric(.02,6),peerDpmDelta:metric(5,6),peerGpmDelta:metric(2,6),peerDeathsDelta:metric(-.08,6)}
   ];
+  trajectory.forEach((w,i)=>{w.newestGameStartTimestamp=Date.now()-i*40*3600000;w.oldestGameStartTimestamp=w.newestGameStartTimestamp-(w.games-1)*2*3600000;});
   return{
     analyzerVersion:EXPECTED_ANALYZER,
     generatedAt:new Date().toISOString(),
@@ -386,6 +387,10 @@ async function auditViewport(browser,report,width,height,label){
   assert(metrics.fonts.decision>=16,label+': decision explanation text below 16px');
   assert(metrics.fonts.review>=16,label+': player-review body text below 16px');
   assert(metrics.fonts.synthesis>=15,label+': synthesis body text below 15px');
+  assert(await page.locator('table.transition-matrix caption').count()===1,label+': semantic transition table/caption missing');
+  assert(await page.locator('table.transition-matrix th[scope="row"]').count()===3,label+': transition row headers missing');
+  assert(await page.locator('.trajectory-svg circle.partial').count()===4,label+': partial history markers missing');
+  assert((await page.locator('#evidenceAgreement').innerText()).includes('does not establish statistical independence'),label+': overlapping evidence caveat missing');
   assert(pageErrors.length===0,label+': page errors: '+pageErrors.join(' | '));
 
   await page.screenshot({path:path.join(OUT,'league-'+label+'-full.png'),fullPage:true});
@@ -397,8 +402,45 @@ async function auditViewport(browser,report,width,height,label){
       await loc.screenshot({path:path.join(OUT,'league-'+label+'-'+name+'.png')});
     }
   }
+  const interactions={};
+  await page.locator('.report-jump-nav a[href="#long-horizon"]').click();
+  assert(await page.evaluate(()=>location.hash==='#long-horizon'),label+': history navigation failed');
+  interactions.historyNavigation=true;
+  for(const selector of ['.trajectory-plot','.transition-matrix-scroll']){
+    const region=page.locator(selector).first();
+    const scrollable=await region.evaluate(el=>el.scrollWidth>el.clientWidth+4);
+    if(scrollable){
+      await region.focus();await page.keyboard.press('ArrowRight');await page.waitForTimeout(220);
+      assert(await region.evaluate(el=>el.scrollLeft>0),label+': keyboard chart/table scrolling failed: '+selector);
+      await region.evaluate(el=>{el.scrollLeft=0;});
+    }
+    interactions[selector]={scrollable,keyboardVerified:scrollable};
+  }
+  await page.locator('#matchHistoryToggle').click();
+  assert(await page.locator('#matchHistoryList .match-history-row').count()===20,label+': expand all matches failed');
+  await page.locator('[data-history-filter="win"]').click();
+  assert(await page.locator('#matchHistoryList .match-history-row.tone-bad').count()===0,label+': wins filter retained losses');
+  assert(await page.locator('[data-history-filter="win"]').getAttribute('aria-pressed')==='true',label+': filter active state missing');
+  await page.locator('[data-history-filter="all"]').click();
+  const matchToggle=page.locator('#matchHistoryList .match-history-toggle').first();
+  await matchToggle.click();
+  assert(await matchToggle.getAttribute('aria-expanded')==='true',label+': match story did not expand');
+  assert(await page.locator('#matchHistoryList .match-history-detail:not([hidden])').count()===1,label+': match story content missing');
+  interactions.matchFiltersAndStory=true;
+  const card=page.locator('#decisionIntelligence .di-card').nth(4);
+  if(!await card.evaluate(el=>el.open))await card.locator(':scope > summary').click();
+  assert(await card.evaluate(el=>el.open),label+': analytic disclosure did not open');
+  const replay=page.locator('.di-shortlist-card .di-open-match').first(),targetMatch=await replay.getAttribute('data-match-id');
+  await replay.click();
+  assert(await page.locator('#gamesBody .game-row[aria-expanded="true"]').getAttribute('data-match')===targetMatch,label+': replay link opened the wrong match');
+  assert(await page.locator('.details-shell [data-tab="fights"].active').count()===1,label+': replay link did not open fight evidence');
+  await page.locator('.details-shell [data-tab="deaths"]').click();
+  assert(await page.locator('.details-shell [data-tab="deaths"].active').count()===1,label+': evidence tab switch failed');
+  interactions.analyticDisclosureAndReplayTabs=true;
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth)<=4,label+': interactive evidence caused page overflow');
+  assert(pageErrors.length===0,label+': interaction page errors: '+pageErrors.join(' | '));
   await context.close();
-  return{label,before,...metrics,pageErrors,consoleErrors};
+  return{label,before,...metrics,interactions,pageErrors,consoleErrors};
 }
 
 let browser,primary=null;
