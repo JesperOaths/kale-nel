@@ -71,7 +71,7 @@ function fightLossProxy(e:any){
 }
 function issueComponents(g:any){
   return {
-    riskyDeaths:n(g?.highRiskDeathCount||0),
+    riskyDeaths:n(g?.badDeathCount??g?.highRiskDeathCount??0),
     preObjectiveDeaths:n(g?.preObjectiveDeathCount||0),
     recentShopAbsences:n(g?.objectiveReadiness?.recentShopAbsences||0),
     missedJoinReviews:count(absenceEvents(g),(e:any)=>e?.joinReviewPriority==="high")
@@ -149,7 +149,7 @@ function championGroup(games:any[]){
   const m=new Map<string,any[]>();
   for(const g of games){const k=zone(g); if(!m.has(k))m.set(k,[]);m.get(k)!.push(g);}
   return [...m].map(([champ,gs])=>{
-    const abs=gs.flatMap(g=>absenceEvents(g)),f=gs.flatMap(g=>fightEvents(g)),risk=sum(gs,g=>n(g?.highRiskDeathCount||0));
+    const abs=gs.flatMap(g=>absenceEvents(g)),f=gs.flatMap(g=>fightEvents(g)),risk=sum(gs,g=>n(g?.badDeathCount??g?.highRiskDeathCount??0));
     const high=count(abs,e=>e?.joinReviewPriority==="high"),trades=count(abs,e=>e?.crossMapTradeSupported===true);
     const active=count(f,e=>e?.active===true);
     return {champion:champ,games:gs.length,skippedFightSamples:abs.length,activeFightSamples:active,
@@ -239,10 +239,10 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     const fr=nearestFrameBefore(g,n(e.startMin),1.1),d=fr?.position&&e?.fightPosition?distance(fr.position,e.fightPosition):null;
     if(!finite(d))continue;
     const band=n(d)<1700?"inside fight core":n(d)<3500?"edge / backline distance":"far edge / late entry proxy";
-    formation.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,distanceToAnchor:round(d,0),formationBand:band,numbersDelta:e.numbersDelta,contributed:e.contributed===true,survived:e.survived===true});
+    formation.push({matchId:g.matchId,minute:round(e.startMin,1),zone:e.fightZone,distanceToAnchor:round(d,0),sampleLeadSec:fr&&finite(fr.time)?Math.max(0,Math.round((n(e.startMin)-n(fr.time))*60)):null,formationBand:band,numbersDelta:e.numbersDelta,contributed:e.contributed===true,survived:e.survived===true});
   }
-  analytics.push(metric("fight_formation","Fight formation / entry distance",formation.length?"proxy":"unavailable",formation.length,
-    formation.length?"Classifies the reviewed player's sampled distance to the fight anchor at entry; useful for repeated too-far-forward/too-late patterns, but not a true frontline polygon.":"No active fights with usable position evidence.",
+  analytics.push(metric("fight_formation","Fight-anchor distance at sampled pre-fight frame",formation.length?"proxy":"unavailable",formation.length,
+    formation.length?"Classifies the reviewed player's distance to the fight anchor at the nearest usable pre-fight timeline frame and retains the actual sample lead time. It is a spacing/routing proxy, not literal entry position or a frontline polygon.":"No active fights with usable position evidence.",
     {rows:formation.slice(0,16)},formation));
 
   // 5. Numbers-aware participation
@@ -307,8 +307,8 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   const defRows=deficits.map(g=>({matchId:g.matchId,gold15:round(g.goldDiff15,0),gold25:round(g.goldDiff25,0),
     recovery:finite(g.goldDiff25)?round(n(g.goldDiff25)-n(g.goldDiff15),0):null,recoveredToEven:finite(g.goldDiff25)&&n(g.goldDiff25)>=-100}));
   const measuredDefRows=defRows.filter(x=>finite(x.gold25));
-  analytics.push(metric("deficit_recovery","Deficit recovery quality",measuredDefRows.length>=2?"supported":measuredDefRows.length?"thin":"unavailable",measuredDefRows.length,
-    defRows.length?`Average 15→25 direct-role recovery from ≥500g deficits: ${round(mean(defRows.map(x=>x.recovery)),0)}g. This is team-context recovery, not proof it was achieved without teammate help.`:"No ≥500g deficit-at-15 games with this role.",
+  analytics.push(metric("deficit_recovery","Deficit movement from 15→25",measuredDefRows.length>=2?"supported":measuredDefRows.length?"thin":"unavailable",measuredDefRows.length,
+    defRows.length?`Average 15→25 direct-role gold-difference change from ≥500g deficits: ${round(mean(defRows.map(x=>x.recovery)),0)}g. Positive narrows the deficit; negative deepens it. This is team-context movement, not individual credit.`:"No ≥500g deficit-at-15 games with this role.",
     {eligibleDeficitGames:defRows.length,rows:measuredDefRows},measuredDefRows));
 
   // 13. Death chain analysis
@@ -387,8 +387,8 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
   // 20. Matchup-adjusted lane results
   const matchups=matchupRows(games);
   const matchupSupported=matchups.filter(x=>x.games>=3);
-  analytics.push(metric("matchup_adjusted_lane","Matchup-adjusted lane results",matchupSupported.length?"proxy":matchups.length?"thin":"unavailable",matchups.reduce((s,x)=>s+x.games,0),
-    matchupSupported.length?"Uses repeated own-champion × direct-opponent-champion cells as an empirical expectation. It is personal-history adjustment, not a population matchup table.":"No matchup has at least three comparable lane samples yet.",
+  analytics.push(metric("matchup_adjusted_lane","Repeated matchup lane context",matchupSupported.length>=2?"proxy":matchups.length?"thin":"unavailable",matchups.reduce((s,x)=>s+x.games,0),
+    matchupSupported.length>=2?"Uses repeated own-champion × direct-opponent-champion cells as personal-history context. It is not a population matchup table.":matchupSupported.length===1?`Only ${matchupSupported[0].matchup} has at least three comparable lane samples, so this is repeated-matchup context rather than a best/worst matchup comparison.`:"No matchup has at least three comparable lane samples yet.",
     {rows:matchups.slice(0,16),supportedCells:matchupSupported.length}));
 
   // 21. Expected-performance residuals
@@ -462,8 +462,10 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
     {heuristicPriority:true,rows:shortlist},shortlist));
 
   return {
-    version:"decision-intelligence-v2",
+    version:"decision-intelligence-v3",
     generatedFromGames:games.length,
+    deepGames:games.length,
+    historyGames:history.length,
     selectedRole:txt(primaryRole).toUpperCase(),
     proxyPolicy:"Proxy outputs are explicitly labeled and may rank replay questions; they must not be presented as causal proof or exact counterfactual value.",
     analytics,

@@ -3722,3 +3722,15 @@ The v308 pass was driven by a fresh production analysis over the saved account's
 - Requeue-gap comparison uses longer same-role history because it needs match timing/opponent metrics but not timelines; timeline-dependent decision metrics remain limited to deep games.
 - Nothing-gained separation remains a Proxy because its compensation decision uses explicit +250g/+6CS thresholds.
 - Categorical colors are semantic: red=adverse/review, gold=warning/context, blue=neutral/context, green=favorable measured direction. Objective absence is not colored as a proven error.
+
+
+## v309 conclusion-level decision audit
+
+The v309 pass audits the wording and interpretation of the corrected v4.173 real report rather than only its calculations.
+
+- Per-game risky-death inputs use `badDeathCount`; the old decision-layer reference to a non-existent `highRiskDeathCount` was producing false zeros in champion and recurrence cards.
+- Later-session headline logic calls opposing strong normalized shifts **mixed** even when their arithmetic mean approximately cancels out. “Stable” is reserved for components that are all below the practical-change threshold.
+- Fight-anchor spacing is explicitly a nearest pre-fight frame proxy and reports actual seconds-before-contact; it is not called literal entry distance.
+- Deficit analysis reports signed Gold@15→Gold@25 movement. Positive narrows the deficit and negative deepens it; a negative mean is not described as “recovery.”
+- Repeated matchup best/worst ranking requires at least two matchup cells with at least three games. One repeated cell is descriptive context only.
+- The decision-intelligence header discloses separate deep-timeline and longer same-role history scopes so a 20-game fight metric and an 80+ game residual/requeue metric do not appear contradictory.

@@ -21,7 +21,7 @@ const ANALYSIS_DEEP_TARGET_GAMES=20;
 const ANALYSIS_DEEP_BATCH_SIZE=20;
 const ANALYSIS_BASELINE_MAX_ROWS=100;
 const ANALYSIS_HISTORY_TARGET_GAMES=100;
-const ANALYZER_VERSION="league-web-behavior-v4.173";
+const ANALYZER_VERSION="league-web-behavior-v4.174";
 const ALLOWED_ORIGINS = new Set(["https://kalenel.nl","https://www.kalenel.nl","https://admin.kalenel.nl","https://jesperoaths.github.io"]);
 const text=(v:any)=>String(v??"").trim();
 const hasNum=(v:any)=>v!==null&&v!==undefined&&v!==""&&Number.isFinite(Number(v));
@@ -1754,9 +1754,11 @@ function sessionBehaviorModel(games:any[],primaryRole:string="GENERIC"){
     ];
   const supportedSignals=roleSignals.filter(Boolean) as any[];
   const score=supportedSignals.length?supportedSignals.reduce((n:number,x:any)=>n+Math.max(-3,Math.min(3,Number(x.normalized))),0)/supportedSignals.length:null;
-  const status=supportedSignals.length<2?"insufficient":Number(score)<=-.6?"worse":Number(score)>=.6?"better":Math.abs(Number(score))<.25?"stable":"mixed";
+  const strongPositiveSignals=supportedSignals.filter((x:any)=>Number(x.normalized)>=.6).length,strongNegativeSignals=supportedSignals.filter((x:any)=>Number(x.normalized)<=-.6).length;
+  const allSmall=supportedSignals.length>0&&supportedSignals.every((x:any)=>Math.abs(Number(x.normalized))<.6);
+  const status=supportedSignals.length<2?"insufficient":strongPositiveSignals>0&&strongNegativeSignals>0?"mixed":Number(score)<=-.6?"worse":Number(score)>=.6?"better":allSmall?"stable":"mixed";
   const headline=status==="worse"?"Performance is lower in game 3+ in this sample":status==="better"?"Performance is higher in game 3+ in this sample":status==="stable"?"No clear later-session performance change":status==="mixed"?"Later-session performance is mixed":"Not enough repeated session-position evidence yet";
-  const answer={status,headline,score,supportedSignals,minimumMetricObservationsPerSide:3,comparison:"game 3+ versus session opener",definition:"Headline uses only role-relevant direct-opponent deltas plus timeline risk where available. Raw DPM, CS/min and other scoreboard totals are deliberately excluded from the directional answer because opponent strength and MMR can change those totals."};
+  const answer={status,headline,score,strongPositiveSignals,strongNegativeSignals,supportedSignals,minimumMetricObservationsPerSide:3,comparison:"game 3+ versus session opener",definition:"Headline uses only role-relevant direct-opponent deltas plus timeline risk where available. Opposing strong component shifts are called mixed even when their average approximately cancels out. Raw DPM, CS/min and other scoreboard totals are deliberately excluded from the directional answer because opponent strength and MMR can change those totals."};
   return{
     firstGame:firstP,secondGame:secondP,game3Plus:lateP,quickAfterLoss:lossP,quickAfterWin:winP,answer,
     game3PlusGoldDelta,game3PlusBadDeathDelta,game3PlusPeerDpmDelta,game3PlusPeerCsMinDelta,game3PlusPeerGpmDelta,game3PlusPeerVpmDelta,game3PlusPeerKpDelta,game3PlusImpactDelta,
