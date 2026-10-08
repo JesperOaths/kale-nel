@@ -75,7 +75,7 @@ def initial_tags():
 def publish(tags,start_ts,last_any,scanner_ok,reason=''):
     now=int(time.time())
     obj={
-      'version':'c720p-tag-presence-v4-hcitool',
+      'version':'c720p-tag-presence-v5-hcitool-reset',
       'updated_at':now,
       'scanner_ok':bool(scanner_ok),
       'scanner_reason':reason,
@@ -105,6 +105,13 @@ def main():
     start=time.time(); last_any=0.0
     publish(tags,start,last_any,False,'starting_hcitool')
     cleanup_hcitool()
+    # hcitool can leave the controller in a stale LE scan state after an
+    # interrupted scan. Reset hci0 from the already-privileged HA container
+    # before starting our long-lived scan.
+    subprocess.run(
+        ['docker','exec','homeassistant','sh','-lc','hciconfig hci0 reset'],
+        stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10)
+    time.sleep(1.0)
     cmd=[
       'docker','exec','homeassistant','sh','-lc',
       'exec hcitool lescan --duplicates'
@@ -171,7 +178,7 @@ log=subprocess.run(['tail','-50',str(BASE if False else HOME/'c720p-home-hub/log
                    text=True,capture_output=True,timeout=10).stdout
 print(json.dumps({
   'ok':True,
-  'version':'tag-presence-v4-hcitool',
+  'version':'tag-presence-v5-hcitool-reset',
   'backup':str(BACKUP),
   'service':svc,
   'state':state,
