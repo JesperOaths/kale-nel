@@ -2,12 +2,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
+import { buildDecisionIntelligence as buildMeasuredDecisionIntelligence } from '../supabase/functions/league-api-v1/decision-intelligence.ts';
 
 const SUPABASE_URL=process.env.SUPABASE_URL||'https://uiqntazgnrxwliaidkmy.supabase.co';
 const API_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||'';
 const BASE=(process.env.GEJAST_BASE_URL||'https://kalenel.nl/').replace(/\/+$/,'')+'/';
-const EXPECTED_FRONTEND='20261007-league-web-v322';
-const EXPECTED_ANALYZER='league-web-behavior-v4.182';
+const EXPECTED_FRONTEND='20261008-league-web-v323';
+const EXPECTED_ANALYZER='league-web-behavior-v4.183';
 const EDGE=SUPABASE_URL+'/functions/v1/printify-gildan-diff-diag-v1';
 const OUT='league-visual-audit';
 const PROFILE_ID='00000000-0000-4000-8000-000000000316';
@@ -189,14 +190,14 @@ function buildDecisionIntelligence(games){
     analytic('objective_trading','Objective / structure overlap after skipped fights',{sample:tradeRows.length},tradeRows.map(x=>({...x,fightZone:x.zone}))),
     analytic('geographical_clusters','Geographical review clusters',{mapEvents:[{matchId:m(3),type:'bad_death',zone:'their mid outer-tower area',minute:19.1,position:{x:9800,y:8200}},{matchId:m(7),type:'bad_death',zone:'bot lane central',minute:18.4,position:{x:7200,y:4800}},{matchId:m(14),type:'missed_join',zone:'their mid outer-tower area',minute:22.2,position:{x:10100,y:8400}}]},[{zone:'their mid outer-tower area',count:6,sampledExposureMin:15.2,signalsPer30SampledMin:11.84},{zone:'bot lane central',count:9,sampledExposureMin:42.5,signalsPer30SampledMin:6.35},{zone:'mid river',count:5,sampledExposureMin:28.4,signalsPer30SampledMin:5.28}],'proxy'),
     analytic('champion_tendencies','Champion tendencies',{sample:3},[{champion:'Jinx',games:8,riskyDeathsPerGame:1.1,crossMapTradeRate:55,skippedFightSamples:9,activeFightSurvivalRate:68,activeFightSamples:12},{champion:'Kaisa',games:6,riskyDeathsPerGame:.8,crossMapTradeRate:48,skippedFightSamples:6,activeFightSurvivalRate:73,activeFightSamples:9},{champion:'Ashe',games:4,riskyDeathsPerGame:1.3,crossMapTradeRate:60,skippedFightSamples:5,activeFightSurvivalRate:64,activeFightSamples:7}],'thin'),
-    analytic('matchup_adjusted_lane','Matchup-adjusted lane context',{sample:2},[{matchup:'Jinx vs Jhin',games:4,avgGold15:-120,avgDpmVsPeer:85},{matchup:'KaiSa vs Ezreal',games:3,avgGold15:180,avgDpmVsPeer:40},{matchup:'Ashe vs Sivir',games:3,avgGold15:-260,avgDpmVsPeer:62}],'thin'),
+    analytic('matchup_adjusted_lane','Matchup-adjusted lane context',{sample:10},[{matchup:'Jinx vs Jhin',games:4,laneGames15:4,dpmGames:4,avgGold15:-120,avgDpmVsPeer:85},{matchup:'Kaisa vs Ezreal',games:3,laneGames15:3,dpmGames:3,avgGold15:180,avgDpmVsPeer:40},{matchup:'Ashe vs Sivir',games:3,laneGames15:3,dpmGames:3,avgGold15:-260,avgDpmVsPeer:62}],'proxy'),
     analytic('expected_performance_residual','Expected-performance residual',{recentResidual:28,recentResidualGames:10,recentResidualStatistic:'median'},residual),
     analytic('session_components','Later-session components',{sample:4},[{label:'Gold@15 vs role',rawDelta:-310,baselineN:8,recentN:7,normalized:-2.1},{label:'CS/min vs role',rawDelta:.23,baselineN:8,recentN:7,normalized:1.5},{label:'DPM vs role',rawDelta:72,baselineN:8,recentN:7,normalized:1.2},{label:'Deaths vs role',rawDelta:.18,baselineN:8,recentN:7,normalized:-.7}]),
     analytic('requeue_sweet_spot','Requeue-gap context',{rows:[{bucket:'<10m',games:6,supported:true,metricSamples:{dpmDelta:6,csMinDelta:6,deathsDelta:6,kpDelta:6,gpmDelta:6},dpmDelta:75,csMinDelta:.26,deathsDelta:.35,kpDelta:1.2,gpmDelta:8},{bucket:'10–25m',games:7,supported:true,metricSamples:{dpmDelta:7,csMinDelta:7,deathsDelta:7,kpDelta:7,gpmDelta:7},dpmDelta:48,csMinDelta:.18,deathsDelta:.05,kpDelta:2.1,gpmDelta:14},{bucket:'25–45m',games:4,supported:false,metricSamples:{dpmDelta:4,csMinDelta:4,deathsDelta:4,kpDelta:4,gpmDelta:4},dpmDelta:20,csMinDelta:.09,deathsDelta:-.1,kpDelta:.5,gpmDelta:4}]},[],'thin'),
     analytic('mistake_recurrence','Review-signal recurrence',{sample:10,recentGameN:5,priorGameN:5,recentFive:1.4,priorFive:3.6},games.slice(0,10).map((g,i)=>({matchId:g.matchId,issues:Math.max(0,4-Math.floor(i/3))}))),
     analytic('automatic_replay_shortlist','Automatic replay shortlist',{sample:shortlist.length},shortlist)
   ];
-  return{version:'decision-intelligence-v8',generatedFromGames:20,deepGames:20,historyGames:86,headline:{thin:4,unavailable:0},analytics,replayShortlist:shortlist};
+  return{version:'decision-intelligence-v9',generatedFromGames:20,deepGames:20,historyGames:86,headline:{thin:4,unavailable:0},analytics,replayShortlist:shortlist};
 }
 
 function buildFixtureReport(){
@@ -273,16 +274,63 @@ function buildFixtureReport(){
   };
 }
 
-function apiFixtureResponse(action,report){
+function buildRoleFixtureReport(base,role,{empty=false}={}){
+  const report=structuredClone(base),pool={ADC:['Jinx','Ashe'],TOP:['Garen','Ornn'],MID:['Ahri','Orianna'],JUNGLE:['Vi','LeeSin'],SUPPORT:['Lulu','Nami']}[role];
+  const selected=empty?[]:base.games.slice(0,role==='TOP'?2:20);
+  const games=selected.map((original,i)=>{
+    const g=structuredClone(original);g.role=role;g.matchId='EUW1_ROLE_'+role+'_'+i;g.champion=pool[i%pool.length];g.peer.champion=pool[(i+1)%pool.length];
+    if(role==='TOP'){
+      const matchOnly={};
+      for(const key of ['matchId','gameStartTimestamp','queueId','queueLabel','role','champion','durationMinutes','teamId','win','outcomeCompromised','csMin','dpm','gpm','kp','kda','deaths','directPeerComparable','peer'])matchOnly[key]=g[key];
+      matchOnly.timelineAvailable=false;return matchOnly;
+    }
+    return g;
+  });
+  const count=games.length,wins=games.filter(g=>g.win===true).length,deep=games.filter(g=>g.timelineAvailable===true).length;
+  report.profile.displayName='Visual QA · '+role+' report';
+  report.summary={games:count,wins,winRate:count?100*wins/count:null,primaryRole:role};
+  report.coachingSummary={...report.summary};
+  report.dataQuality={selectedRole:role,analyzedGames:count,timelineGames:deep,deepTimelineGames:deep,deepRoleScopeViolations:0,historyRoleScopeViolations:0};
+  report.games=games;report.byRole={[role]:{games:count}};
+  report.longHorizon={selectedRole:role,sampleGames:count,deepTimelineGames:deep,roleCounts:count?{[role]:count}:{},summary:{},trend:{},trajectoryWindows:[],championHistory:[],topChampions:[]};
+  for(const champ of pool){const group=games.filter(g=>g.champion===champ);if(group.length)report.longHorizon.championHistory.push({champion:champ,games:group.length,cleanGames:group.length,cleanWins:group.filter(g=>g.win===true).length});}
+  report.peerComparison={sameRoleGames:count};report.behaviorSummary={timelineGames:deep};report.recentTrend={};
+  report.priorityThemes=[];report.recentFocus=[];report.overallHighlights=[];report.practiceTargets=[];report.sessionBehavior={};report.supportChampions=[];report.advanced={};
+  report.decisionIntelligence=buildMeasuredDecisionIntelligence(games,null,role,games);
+  report.replayReviewQueue=report.decisionIntelligence.replayShortlist;
+  return report;
+}
+
+function buildPartialSavedFixture(base){
+  const report=structuredClone(base);report.analyzerVersion='league-web-behavior-v4.181';report.decisionIntelligence.version='decision-intelligence-v7';
+  const replace=(id,rows,evidence={})=>{const a=report.decisionIntelligence.analytics.find(x=>x.id===id);a.evidence={...evidence,rows};a.sample=rows.length;delete a.moments;};
+  const partial=[{joined:true,followUp:true,noExtraRiskDeath:true,csSwing:2,goldSwing:50,fightLost:false},{joined:false,followUp:false,noExtraRiskDeath:false,csSwing:4,goldSwing:100,fightLost:true},{joined:null,followUp:null,noExtraRiskDeath:null,csSwing:6,goldSwing:150,fightLost:null}];
+  for(const id of ['objective_setup_path','fight_lead_conversion','fight_loss_containment','wave_fight_conflict'])replace(id,partial);
+  replace('matchup_adjusted_lane',[{matchup:'Jinx vs Ashe',games:5,avgGold15:0},{matchup:'Ashe vs Jinx',games:5,avgGold15:null}]);
+  replace('mistake_recurrence',[{matchId:'older',issues:0},{matchId:'missing',issues:null},{matchId:'newer',issues:2}]);
+  replace('requeue_sweet_spot',[{bucket:'legacy',games:8,supported:true,dpmDelta:20,csMinDelta:.2}],{supportedBuckets:1,minimumBucketGames:5});
+  return report;
+}
+
+function apiFixtureResponse(action,report,body={},scenario=null){
+  const role=body.target_role||'ADC',selected=scenario?.reports?.[role]||report;
+  if(scenario)scenario.requests.push({action,role});
   const profile={id:PROFILE_ID,profile_key:'visual-qa-v316',display_name:'Visual QA · ADC report',game_name:'VisualQA',tag_line:'V316',platform_region:'euw1',routing_region:'europe',notes:'role=ADC',puuid:'visual-fixture-puuid',updated_at:new Date().toISOString()};
   if(action==='health')return{ok:true,analyzer_version:EXPECTED_ANALYZER,public_workspace:true,riot_configured:false,server_riot_key:false,player:'Visual QA workspace',site_scope:'friends'};
   if(action==='profiles_list')return{ok:true,profiles:[profile]};
-  if(action==='cache_status')return{ok:true,cached_games:86,selected_role_cached_games:86,role_counts:{ADC:86},last_game_at:new Date().toISOString()};
-  if(action==='report_latest')return{ok:true,analysis:{id:'visual-fixture-analysis-v316',report_data:report,data_quality:report.dataQuality,created_at:new Date().toISOString()},previous:null};
+  if(action==='cache_status'){
+    const counts=scenario?Object.fromEntries(Object.entries(scenario.reports).map(([r,x])=>[r,scenario.cacheCounts?.[r]??x.games.length])):{ADC:86};
+    return{ok:true,cached_games:Object.values(counts).reduce((a,b)=>a+b,0),selected_role_cached_games:counts[role]||0,role_counts:counts,last_game_at:new Date().toISOString()};
+  }
+  if(action==='report_latest'){
+    const current=scenario?.staleRoles?.includes(role)&&!scenario.refreshed.includes(role)?{...selected,analyzerVersion:'league-web-behavior-v4.181'}:selected;
+    return{ok:true,analysis:{id:'visual-fixture-analysis-'+role,report_data:current,data_quality:current.dataQuality,created_at:new Date().toISOString()},previous:null};
+  }
+  if(action==='analyze_basic'&&scenario){scenario.refreshed.push(role);return{ok:true,analysis_id:'visual-fixture-refreshed-'+role,report:selected};}
   return{ok:false,error:'visual_fixture_unhandled_action_'+String(action||'unknown')};
 }
 
-async function installFixtureApi(page,report){
+async function installFixtureApi(page,report,scenario=null){
   await page.route('**/functions/v1/printify-gildan-diff-diag-v1',async route=>{
     const req=route.request();
     const cors={
@@ -298,7 +346,7 @@ async function installFixtureApi(page,report){
     }
     let body={};
     try{body=req.postData()?JSON.parse(req.postData()):{};}catch{}
-    const payload=apiFixtureResponse(body.action,report);
+    const payload=apiFixtureResponse(body.action,report,body,scenario);
     await route.fulfill({status:payload.ok===false?400:200,headers:cors,body:JSON.stringify(payload)});
   });
 }
@@ -471,6 +519,79 @@ async function auditViewport(browser,report,width,height,label){
   return{label,before,...metrics,analyticVisuals,interactions,pageErrors,consoleErrors};
 }
 
+async function auditRoleSwitching(browser,base,width,height,label){
+  const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:1}),page=await context.newPage(),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  const reports=Object.fromEntries(['ADC','TOP','MID','JUNGLE','SUPPORT'].map(role=>[role,buildRoleFixtureReport(base,role)]));
+  const scenario={reports,requests:[],staleRoles:['ADC'],refreshed:[]};
+  await installFixtureApi(page,base,scenario);
+  await page.addInitScript(({workspace,profile})=>{localStorage.setItem('bruisienator_public_workspace_v1',workspace);localStorage.setItem('bruisienator_saved_profile_selection_v1',profile);},{workspace:WORKSPACE_ID,profile:PROFILE_ID});
+  await page.goto(BASE+'league/?league_role_audit='+Date.now(),{waitUntil:'domcontentloaded',timeout:30000});
+  await page.waitForFunction(()=>document.querySelector('#sourceState')?.textContent?.includes('refreshed to'),{timeout:30000});
+  assert(scenario.requests.filter(x=>x.action==='analyze_basic'&&x.role==='ADC').length===1,label+': stale saved ADC report was not rebuilt exactly once from its role cache');
+  const results=[];
+  for(const role of ['ADC','JUNGLE','SUPPORT','MID','TOP']){
+    if(role!=='ADC')await page.locator('#requestRole').selectOption(role);
+    const count=reports[role].games.length;
+    await page.waitForFunction(({count,role})=>!document.querySelector('#report').hidden&&document.querySelector('#reportSubtitle')?.textContent?.includes(count+' '+(role==='ADC'?'ADC':role[0]+role.slice(1).toLowerCase())+' deep games'),{count,role},{timeout:30000});
+    await page.locator('#decisionIntelligencePanel').evaluate(el=>el.scrollIntoView({block:'center'}));
+    await page.waitForFunction(()=>document.querySelectorAll('#decisionIntelligence .di-card').length===25,{timeout:20000});
+    await page.locator('#gameArcFunnels').evaluate(el=>{for(let p=el;p;p=p.parentElement)if(p.tagName==='DETAILS')p.open=true;el.scrollIntoView({block:'center'});});
+    const metrics=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,subtitle:document.querySelector('#reportSubtitle').textContent,arc:document.querySelector('#gameArcFunnels').textContent,transitionTables:document.querySelectorAll('.transition-matrix').length,analyticCards:document.querySelectorAll('#decisionIntelligence .di-card').length,invalid:/\b(?:NaN|Infinity|undefined)\b/.test(document.querySelector('#report').textContent.replaceAll('Infinity Edge',''))}));
+    assert(metrics.overflow<=4,label+' '+role+': role switch caused overflow '+metrics.overflow);
+    assert(!metrics.invalid,label+' '+role+': missing fields produced invalid text');
+    if(['JUNGLE','SUPPORT'].includes(role))assert(metrics.arc.includes('sequence coverage')&&metrics.transitionTables===0,label+' '+role+': carry-lane matrix leaked into role-specific sequences');
+    if(role==='TOP')assert(!metrics.arc.includes('100%')&&await page.locator('#decisionIntelligence .tone-muted').count()>=20,label+': match-only thin role invented timeline findings');
+    await page.locator('#coaching-synthesis').screenshot({path:path.join(OUT,'league-'+label+'-role-'+role.toLowerCase()+'.png')});
+    results.push({role,games:count,...metrics});
+  }
+  scenario.reports.MID=buildRoleFixtureReport(base,'MID',{empty:true});
+  await page.locator('#requestRole').selectOption('MID');
+  await page.waitForFunction(()=>!document.querySelector('#report').hidden&&document.querySelector('#reportSubtitle').textContent.includes('0 Mid deep games'),{timeout:20000});
+  await page.locator('#decisionIntelligencePanel').evaluate(el=>el.scrollIntoView({block:'center'}));
+  await page.waitForFunction(()=>document.querySelectorAll('#decisionIntelligence .di-card').length===25,{timeout:20000});
+  assert(await page.locator('#decisionIntelligence .di-card.tone-muted').count()===25,label+': empty role invented measured analytic cards');
+  assert(!/identifiable strengths|Preserve the measured strength:/.test(await page.locator('#player-review').textContent()),label+': empty role invented a measured strength');
+  assert(errors.length===0,label+': role-switch errors '+errors.join(' | '));
+  await context.close();
+  return{roles:results,staleRefresh:true,emptyRole:true,requests:scenario.requests,pageErrors:errors};
+}
+
+async function auditSavedCompatibility(browser,base,width,height,label){
+  const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:1}),page=await context.newPage(),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  const legacy=buildPartialSavedFixture(base),scenario={reports:{ADC:legacy},cacheCounts:{ADC:0},requests:[],refreshed:[]};
+  await installFixtureApi(page,base,scenario);
+  await page.addInitScript(({workspace,profile})=>{localStorage.setItem('bruisienator_public_workspace_v1',workspace);localStorage.setItem('bruisienator_saved_profile_selection_v1',profile);},{workspace:WORKSPACE_ID,profile:PROFILE_ID});
+  await page.goto(BASE+'league/?league_saved_audit='+Date.now(),{waitUntil:'domcontentloaded',timeout:30000});
+  await page.waitForSelector('#report:not([hidden])',{timeout:30000});
+  await page.locator('#decisionIntelligencePanel').evaluate(el=>el.scrollIntoView({block:'center'}));
+  await page.waitForFunction(()=>document.querySelectorAll('#decisionIntelligence .di-card').length===25,{timeout:20000});
+  await page.locator('#decisionIntelligence .di-card').evaluateAll(cards=>cards.forEach(el=>el.open=true));
+  const findCard=async id=>{
+    const analytic=legacy.decisionIntelligence.analytics.find(x=>x.id===id);
+    return page.locator('#decisionIntelligence .di-card').filter({has:page.getByText(analytic.title,{exact:true})});
+  };
+  const matchup=await findCard('matchup_adjusted_lane');
+  assert(await matchup.locator('.di-matchup-meter i').count()===1,label+': missing matchup value still drew a bar');
+  assert(await matchup.locator('.di-matchup-meter i').evaluate(el=>el.style.width)==='0%',label+': known zero matchup still drew visible movement');
+  assert((await matchup.textContent()).includes('coverage unverified')&&!(await matchup.locator('.di-interpretation').textContent()).includes('strongest'),label+': stale matchup counts promoted a ranking');
+  const recurrence=await findCard('mistake_recurrence');
+  assert(await recurrence.locator('polyline').count()===0&&await recurrence.locator('.di-spark-gap').count()===1,label+': recurrence line bridged missing evidence');
+  assert(await recurrence.locator('svg[aria-label]').count()===1&&await recurrence.locator('.di-axis-value').count()>=2,label+': recurrence value scale or accessible description missing');
+  for(const id of ['objective_setup_path','fight_lead_conversion','fight_loss_containment'])assert((await (await findCard(id)).textContent()).includes('Unknown'),label+': unknown '+id+' classified as measured');
+  assert(await (await findCard('wave_fight_conflict')).locator('.di-scatter-dot.neutral').count()===1,label+': unknown fight outcome colored as favorable');
+  assert(await (await findCard('requeue_sweet_spot')).locator('.di-requeue-grid article.thin').count()===1,label+': stale requeue support flag bypassed metric evidence gates');
+  assert(!scenario.requests.some(x=>x.action==='analyze_basic'),label+': no-cache stale fallback unexpectedly attempted analysis');
+  for(const id of ['matchup_adjusted_lane','mistake_recurrence','objective_setup_path'])await (await findCard(id)).screenshot({path:path.join(OUT,'league-'+label+'-saved-'+id+'.png')});
+  const contaminated=structuredClone(legacy);contaminated.games[0].role='TOP';scenario.reports.ADC=contaminated;
+  await page.locator('#openSavedReportBtn').click();
+  await page.waitForFunction(()=>document.querySelector('#report').hidden&&document.querySelector('#reportEmpty h2').textContent==='Could not open the saved report',{timeout:20000});
+  assert(errors.length===0,label+': saved-compatibility errors '+errors.join(' | '));
+  await context.close();
+  return{missingGraphs:true,noCacheFallback:true,contaminatedReportBlocked:true,pageErrors:errors};
+}
+
 let browser,primary=null;
 try{
   mark('production_convergence');
@@ -485,7 +606,12 @@ try{
   mark('mobile_render');
   const mobile=await auditViewport(browser,report,430,932,'430x932');
   mark('mobile_pass',{initialMs:mobile.initialMs,deferred:mobile.perf,trajectoryCards:mobile.trajectoryCards,transitionPrecursorCards:mobile.transitionPrecursorCards});
-  const result={ok:true,production,fixtureBasis:'deterministic ADC report injected only at the browser League-API boundary',desktop,mobile,generatedAt:new Date().toISOString()};
+  mark('role_and_saved_compatibility');
+  const roleDesktop=await auditRoleSwitching(browser,report,1920,1080,'1920x1080');
+  const roleMobile=await auditRoleSwitching(browser,report,430,932,'430x932');
+  const savedDesktop=await auditSavedCompatibility(browser,report,1920,1080,'1920x1080');
+  const savedMobile=await auditSavedCompatibility(browser,report,430,932,'430x932');
+  const result={ok:true,production,fixtureBasis:'deterministic ADC, all-role, thin, empty and legacy reports injected only at the browser League-API boundary; additional role analytics use the real pure backend builder',desktop,mobile,roleDesktop,roleMobile,savedDesktop,savedMobile,generatedAt:new Date().toISOString()};
   fs.writeFileSync(path.join(OUT,'report.json'),JSON.stringify(result,null,2));
   mark('audit_complete',{production,desktop:{initialMs:desktop.initialMs,deferred:desktop.perf,pageErrors:desktop.pageErrors.length,consoleErrors:desktop.consoleErrors.length},mobile:{initialMs:mobile.initialMs,deferred:mobile.perf,pageErrors:mobile.pageErrors.length,consoleErrors:mobile.consoleErrors.length}});
   console.log('LEAGUE_VISUAL_AUDIT_PASS '+JSON.stringify(diagnostic));
