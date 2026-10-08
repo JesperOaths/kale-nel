@@ -87,7 +87,7 @@ assert.ok(app.includes('This section analyzes only the reviewed account.'),'Supp
 assert.ok(app.includes("x.sampleTier==='developing'")&&app.includes('Developing support sample'),'Frontend must keep 3–4 game support-champion samples neutral/contextual rather than presenting them as established');
 assert.ok(!api.includes('allySupportPuuid'),'Support-player analysis must not expose allied PUUIDs in the report contract');
 assert.ok(app.includes('function renderSupportSynergy')&&app.includes('Recent form · latest 5 vs prior games'),'Frontend must expose support synergy and concrete recent-form evidence');
-assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261008-league-web-v323'),'Support synergy panel and frontend cache-bust must be present');
+assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261008-league-web-v324'),'Support synergy panel and frontend cache-bust must be present');
 assert.ok(html.includes('id="visual-analytics"')&&html.includes('id="recentFormGraph"')&&html.includes('id="phaseRiskGraph"')&&html.includes('id="outcomeEffectGraph"')&&html.includes('id="objectiveFamilyGraph"')&&html.includes('id="championHistoryGraph"'),'League report must expose the visual analytics dashboard with five distinct graph surfaces');
 assert.ok(app.includes('function renderVisualAnalytics')&&app.includes('function visualDivergingSvg')&&app.includes('function visualPercentBarSvg')&&app.includes('function visualGroupedBarsSvg'),'Visual analytics must use explicit reusable graph renderers rather than decorative static markup');
 assert.ok(app.includes("valueLabel:signed(signal,1)+'×'")&&app.includes("spec.inverse?-1:1")&&app.includes("Number(x.games||0)>=5&&Number(x.exposureMinutes||0)>=20"),'Recent-form and phase-risk graphs must preserve practical-change direction and the existing phase evidence floor');
@@ -396,7 +396,7 @@ assert.ok(html.includes('id="sessionHabitsAnswer"')&&app.includes('answer.headli
 assert.ok(api.includes('function baselineGame')&&api.includes('peerDpmDelta:metric(peerRows')&&app.includes('Opponent-adjusted read:'),'Long-horizon direction must use direct same-role opponent deltas across match-only history');
 assert.ok(app.includes("spec('DPM vs ADC peer',t.peerDpmDelta")&&app.includes("spec('CS/min vs ADC peer',t.peerCsMinDelta")&&app.includes("spec('Deaths vs ADC peer',t.peerDeathsDelta"),'ADC recent-direction graph must use direct-opponent output deltas rather than raw DPM/CS');
 assert.ok(html.includes('id="teamfightDecisionPanel"')&&app.includes('function renderTeamfightDecisionOverview(')&&api.includes('function fightArea('),'League decisions must expose fight geography and cross-map trade review');
-assert.ok(html.includes('id="decisionIntelligencePanel"')&&html.includes('/league/decision-intelligence.js?v=20261008-league-web-v323')&&app.includes("renderWhenNear('decisionIntelligencePanel'")&&app.includes('prepareDecisionIntelligence(r)'),'Decision intelligence panel must be wired through deferred near-viewport rendering');
+assert.ok(html.includes('id="decisionIntelligencePanel"')&&html.includes('/league/decision-intelligence.js?v=20261008-league-web-v324')&&app.includes("renderWhenNear('decisionIntelligencePanel'")&&app.includes('prepareDecisionIntelligence(r)'),'Decision intelligence panel must be wired through deferred near-viewport rendering');
 assert.ok(!app.includes('window.renderDecisionIntelligence?.(r);'),'The 25-card decision dashboard must not run synchronously in the first report-render path');
 assert.ok(app.includes("renderWhenNear('match-history'")&&app.includes('prepareMatchHistory(r)'),'Expanded match-story rendering must also be deferred until near the viewport');
 assert.ok(decisionBackend.includes('fight_decision_ledger')&&decisionBackend.includes('automatic_replay_shortlist')&&decisionBackend.includes('requeue_sweet_spot')&&decisionBackend.includes('expected_performance_residual'),'Decision intelligence backend must retain the requested decision, residual, requeue and replay families');
@@ -969,7 +969,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261008-league-web-v323'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261008-league-web-v324'),'League assets must cache-bust the current frontend');
 assert.ok(html.includes('id="coaching-synthesis"')&&html.includes('id="coachingSynthesis"')&&app.includes('function renderCoachingSynthesis('),'Report must expose the top-level coaching synthesis');
 assert.ok(app.includes('function synthesisAgreementModel(')&&html.includes('id="evidenceAgreement"'),'Coaching synthesis must preserve evidence agreement/disagreement instead of averaging signals away');
 assert.ok(html.includes('id="player-review"')&&app.includes('function renderPlayerReview(')&&app.includes('function playerStyleModel('),'Report must expose an evidence-gated whole-player playstyle review and conclusion');

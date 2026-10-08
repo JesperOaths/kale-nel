@@ -7,7 +7,7 @@ import { buildDecisionIntelligence as buildMeasuredDecisionIntelligence } from '
 const SUPABASE_URL=process.env.SUPABASE_URL||'https://uiqntazgnrxwliaidkmy.supabase.co';
 const API_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||'';
 const BASE=(process.env.GEJAST_BASE_URL||'https://kalenel.nl/').replace(/\/+$/,'')+'/';
-const EXPECTED_FRONTEND='20261008-league-web-v323';
+const EXPECTED_FRONTEND='20261008-league-web-v324';
 const EXPECTED_ANALYZER='league-web-behavior-v4.183';
 const EDGE=SUPABASE_URL+'/functions/v1/printify-gildan-diff-diag-v1';
 const OUT='league-visual-audit';
@@ -528,6 +528,7 @@ async function auditRoleSwitching(browser,base,width,height,label){
   await page.addInitScript(({workspace,profile})=>{localStorage.setItem('bruisienator_public_workspace_v1',workspace);localStorage.setItem('bruisienator_saved_profile_selection_v1',profile);},{workspace:WORKSPACE_ID,profile:PROFILE_ID});
   await page.goto(BASE+'league/?league_role_audit='+Date.now(),{waitUntil:'domcontentloaded',timeout:30000});
   await page.waitForFunction(()=>document.querySelector('#sourceState')?.textContent?.includes('refreshed to'),{timeout:30000});
+  assert(await page.locator('#reportCompatibilityNote').isHidden(),label+': successfully refreshed report still shows an outdated-report warning');
   assert(scenario.requests.filter(x=>x.action==='analyze_basic'&&x.role==='ADC').length===1,label+': stale saved ADC report was not rebuilt exactly once from its role cache');
   const results=[];
   for(const role of ['ADC','JUNGLE','SUPPORT','MID','TOP']){
@@ -565,6 +566,9 @@ async function auditSavedCompatibility(browser,base,width,height,label){
   await page.addInitScript(({workspace,profile})=>{localStorage.setItem('bruisienator_public_workspace_v1',workspace);localStorage.setItem('bruisienator_saved_profile_selection_v1',profile);},{workspace:WORKSPACE_ID,profile:PROFILE_ID});
   await page.goto(BASE+'league/?league_saved_audit='+Date.now(),{waitUntil:'domcontentloaded',timeout:30000});
   await page.waitForSelector('#report:not([hidden])',{timeout:30000});
+  assert(await page.locator('#reportCompatibilityNote').isVisible()&&(await page.locator('#reportCompatibilityNote').textContent()).includes('remain older context'),label+': no-cache older report lacks a visible compatibility warning');
+  assert((await page.locator('#reportSourceBadge').textContent()).includes('older analyzer'),label+': outdated saved report badge looks current');
+  await page.locator('#overview').screenshot({path:path.join(OUT,'league-'+label+'-saved-compatibility.png')});
   await page.locator('#decisionIntelligencePanel').evaluate(el=>el.scrollIntoView({block:'center'}));
   await page.waitForFunction(()=>document.querySelectorAll('#decisionIntelligence .di-card').length===25,{timeout:20000});
   await page.locator('#decisionIntelligence .di-card').evaluateAll(cards=>cards.forEach(el=>el.open=true));
@@ -589,7 +593,7 @@ async function auditSavedCompatibility(browser,base,width,height,label){
   await page.waitForFunction(()=>document.querySelector('#report').hidden&&document.querySelector('#reportEmpty h2').textContent==='Could not open the saved report',{timeout:20000});
   assert(errors.length===0,label+': saved-compatibility errors '+errors.join(' | '));
   await context.close();
-  return{missingGraphs:true,noCacheFallback:true,contaminatedReportBlocked:true,pageErrors:errors};
+  return{missingGraphs:true,noCacheFallback:true,visibleCompatibilityWarning:true,contaminatedReportBlocked:true,pageErrors:errors};
 }
 
 let browser,primary=null;
