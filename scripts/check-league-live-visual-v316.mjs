@@ -7,7 +7,7 @@ import { buildDecisionIntelligence as buildMeasuredDecisionIntelligence } from '
 const SUPABASE_URL=process.env.SUPABASE_URL||'https://uiqntazgnrxwliaidkmy.supabase.co';
 const API_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||'';
 const BASE=(process.env.GEJAST_BASE_URL||'https://kalenel.nl/').replace(/\/+$/,'')+'/';
-const EXPECTED_FRONTEND='20261008-league-web-v324';
+const EXPECTED_FRONTEND='20261008-league-web-v325';
 const EXPECTED_ANALYZER='league-web-behavior-v4.183';
 const EDGE=SUPABASE_URL+'/functions/v1/printify-gildan-diff-diag-v1';
 const OUT='league-visual-audit';
@@ -568,6 +568,13 @@ async function auditSavedCompatibility(browser,base,width,height,label){
   await page.waitForSelector('#report:not([hidden])',{timeout:30000});
   assert(await page.locator('#reportCompatibilityNote').isVisible()&&(await page.locator('#reportCompatibilityNote').textContent()).includes('remain older context'),label+': no-cache older report lacks a visible compatibility warning');
   assert((await page.locator('#reportSourceBadge').textContent()).includes('older analyzer'),label+': outdated saved report badge looks current');
+  const noticeContrast=await page.locator('#reportCompatibilityNote').evaluate(el=>{
+    const cs=getComputedStyle(el),channels=value=>value.match(/[\d.]+/g).map(Number),fg=channels(cs.color),bg=channels(cs.backgroundColor);
+    const luminance=rgb=>rgb.slice(0,3).map(x=>x/255).map(x=>x<=.04045?x/12.92:Math.pow((x+.055)/1.055,2.4)).reduce((s,x,i)=>s+x*[.2126,.7152,.0722][i],0);
+    const a=luminance(fg),b=luminance(bg);
+    return{ratio:(Math.max(a,b)+.05)/(Math.min(a,b)+.05),backgroundAlpha:bg[3]??1};
+  });
+  assert(noticeContrast.backgroundAlpha===1&&noticeContrast.ratio>=4.5,label+': saved-report notice lacks readable contrast: '+JSON.stringify(noticeContrast));
   await page.locator('#overview').screenshot({path:path.join(OUT,'league-'+label+'-saved-compatibility.png')});
   await page.locator('#decisionIntelligencePanel').evaluate(el=>el.scrollIntoView({block:'center'}));
   await page.waitForFunction(()=>document.querySelectorAll('#decisionIntelligence .di-card').length===25,{timeout:20000});
@@ -593,7 +600,7 @@ async function auditSavedCompatibility(browser,base,width,height,label){
   await page.waitForFunction(()=>document.querySelector('#report').hidden&&document.querySelector('#reportEmpty h2').textContent==='Could not open the saved report',{timeout:20000});
   assert(errors.length===0,label+': saved-compatibility errors '+errors.join(' | '));
   await context.close();
-  return{missingGraphs:true,noCacheFallback:true,visibleCompatibilityWarning:true,contaminatedReportBlocked:true,pageErrors:errors};
+  return{missingGraphs:true,noCacheFallback:true,visibleCompatibilityWarning:true,noticeContrast,contaminatedReportBlocked:true,pageErrors:errors};
 }
 
 let browser,primary=null;
