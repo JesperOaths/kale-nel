@@ -1,4 +1,4 @@
-/* 20261008-league-web-v323 · full review audit and decision-dashboard integration */
+/* 20261008-league-web-v324 · full review audit and decision-dashboard integration */
 (function(){
 'use strict';
 
@@ -864,7 +864,12 @@ function renderReport(raw,sourceKind){
   const reportRange=reportTimes.length?(new Date(reportTimes[0]).toLocaleDateString(undefined,{day:'numeric',month:'short'})+' → '+new Date(reportTimes[reportTimes.length-1]).toLocaleDateString(undefined,{day:'numeric',month:'short'})):'';
   $('reportSubtitle').textContent=(riotId?riotId+' · ':'')+(rank?rank+' · ':'')+(s.games??r.games.length)+' '+roleLabel(reportRole)+' deep games · '+coachingN+' coaching-comparable'+(historyN>Number(s.games??r.games.length)?' · '+historyN+'-game history':'')+(reportRange?' · '+reportRange:'');
   if($('rankRadarPanel'))$('rankRadarPanel').hidden=reportRole!=='ADC';
-  $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':sourceKind==='saved_server'?'Saved Kalenel report':(r.analyzerVersion||'Web analysis');
+  const liveAnalyzer=String(state.backendAnalyzerVersion||''),savedAnalyzer=String(r.analyzerVersion||''),olderAnalyzer=sourceKind==='saved_server'&&!!liveAnalyzer&&savedAnalyzer!==liveAnalyzer;
+  if($('reportCompatibilityNote')){
+    $('reportCompatibilityNote').hidden=!olderAnalyzer;
+    $('reportCompatibilityNote').textContent=olderAnalyzer?'This saved report uses '+(savedAnalyzer||'an unknown analyzer version')+'; the current analyzer is '+liveAnalyzer+'. It could not be refreshed from cached role data, so these findings remain older context. Run a new analysis when match data is available.':'';
+  }
+  $('reportSourceBadge').textContent=sourceKind==='legacy_import'?'Imported current report':sourceKind==='saved_server'?(olderAnalyzer?'Saved report · older analyzer':'Saved Kalenel report'):(r.analyzerVersion||'Web analysis');
   renderQuickRead(r);
   renderRecentPulse(r);
   renderLongHorizon(r);
