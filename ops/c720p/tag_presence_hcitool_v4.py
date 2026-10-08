@@ -107,7 +107,7 @@ def main():
     cleanup_hcitool()
     cmd=[
       'docker','exec','homeassistant','sh','-lc',
-      'exec stdbuf -oL -eL hcitool lescan --duplicates'
+      'exec hcitool lescan --duplicates'
     ]
     log('START privileged continuous LE scan via Home Assistant container')
     child=subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
