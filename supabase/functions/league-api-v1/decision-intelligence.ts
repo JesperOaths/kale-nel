@@ -158,12 +158,13 @@ function championGroup(games:any[]){
 function matchupRows(games:any[]){
   const groups=new Map<string,any[]>();
   for(const g of games){
-    if(!directPeer(g)||!finite(g?.goldDiff15))continue;
+    if(!directPeer(g)||g?.phaseRules?.lane15Comparable!==true||!finite(g?.goldDiff15))continue;
     const k=txt(g.champion)+" vs "+txt(g.peer?.champion||"Unknown");
     if(!groups.has(k))groups.set(k,[]);
     groups.get(k)!.push(g);
   }
-  return [...groups].map(([matchup,gs])=>({matchup,games:gs.length,avgGold15:mean(gs.map(g=>g.goldDiff15)),avgDpmVsPeer:mean(gs.map(g=>g.peer?.dpmDelta))}))
+  return [...groups].map(([matchup,gs])=>({matchup,games:gs.length,laneGames15:gs.length,
+    dpmGames:count(gs,g=>finite(g.peer?.dpmDelta)),avgGold15:mean(gs.map(g=>g.goldDiff15)),avgDpmVsPeer:mean(gs.map(g=>g.peer?.dpmDelta))}))
     .sort((a,b)=>b.games-a.games);
 }
 function performanceResidualRows(games:any[]){
@@ -585,7 +586,7 @@ export function buildDecisionIntelligence(gamesInput:any[], sessionModel:any, pr
 
 
   return {
-    version:"decision-intelligence-v8",
+    version:"decision-intelligence-v9",
     generatedFromGames:games.length,
     deepGames:games.length,
     historyGames:history.length,

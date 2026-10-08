@@ -1,4 +1,4 @@
-/* 20261007-league-web-v322 · full review audit and decision-dashboard integration */
+/* 20261008-league-web-v323 · full review audit and decision-dashboard integration */
 (function(){
 'use strict';
 
@@ -3223,22 +3223,37 @@ const ARC_TURNING_POINT_DEFS=[
   {key:'late_risk',label:'Late high-risk / costly death evidence',tone:'bad',test:g=>Number(g.closing25?.highRiskDeaths||0)>0||Number(g.closing25?.costlyDeaths||0)>0,why:'At least one high-risk or measured costly death occurred after 25 minutes.'}
 ];
 
+function arcOutcomeContext(games){
+  const clean=games.filter(g=>typeof g.win==='boolean'&&g.outcomeCompromised!==true),wins=clean.filter(g=>g.win===true).length;
+  return {wins,knownGames:clean.length,excludedGames:games.length-clean.length,winRate:clean.length?100*wins/clean.length:null};
+}
+function arcOutcomeLabel(games){
+  const x=arcOutcomeContext(games);
+  return x.knownGames?x.wins+'/'+x.knownGames+' clean known wins'+(x.excludedGames?' · '+x.excludedGames+' outcomes excluded':''):'Outcome not measurable';
+}
+function arcTurningPointContext(games,definition){
+  const hit=games.filter(g=>definition.test(g)),miss=games.filter(g=>!definition.test(g)),withOutcome=arcOutcomeContext(hit),withoutOutcome=arcOutcomeContext(miss);
+  const associationReady=withOutcome.knownGames>=3&&withoutOutcome.knownGames>=3;
+  return {...definition,count:hit.length,wins:withOutcome.wins,knownGames:withOutcome.knownGames,excludedGames:withOutcome.excludedGames,
+    withoutCount:miss.length,withoutWins:withoutOutcome.wins,withoutKnownGames:withoutOutcome.knownGames,withoutExcludedGames:withoutOutcome.excludedGames,
+    withWr:withOutcome.winRate,withoutWr:withoutOutcome.winRate,associationReady,winRateDelta:associationReady?Number(withOutcome.winRate)-Number(withoutOutcome.winRate):null};
+}
 function arcFunnelCard(kind,label,games,transitions){
-  const n=games.length,wins=games.filter(g=>g.win).length,valid=transitions.length,lateRisk=games.filter(g=>Number(g.closing25?.highRiskDeaths||0)>0||Number(g.closing25?.costlyDeaths||0)>0).length;
+  const n=games.length,outcome=arcOutcomeLabel(games),valid=transitions.length,lateRisk=games.filter(g=>Number(g.closing25?.highRiskDeaths||0)>0||Number(g.closing25?.costlyDeaths||0)>0).length;
   if(!n)return '<article class="game-arc-funnel tone-neutral"><span>'+esc(label)+'</span><strong>No games</strong><p>No coaching-cohort game begins in this @15 role-gold band.</p></article>';
   let headline='',facts=[];
   if(kind==='ahead'){
     const retained=transitions.filter(x=>x.t.to.key==='ahead').length,lost=valid-retained;
     headline=valid?fmtPct(100*retained/valid)+' still ahead @25':'No comparable @25 follow-up';
-    facts=[wins+'/'+n+' wins',retained+'/'+valid+' retained @25',lost+'/'+valid+' no longer ahead',lateRisk+'/'+n+' late-risk evidence'];
+    facts=[outcome,retained+'/'+valid+' retained @25',lost+'/'+valid+' no longer ahead',lateRisk+'/'+n+' late-risk evidence'];
   }else if(kind==='behind'){
     const recovered=transitions.filter(x=>x.t.to.key!=='behind').length;
     headline=valid?fmtPct(100*recovered/valid)+' recovered out of behind':'No comparable @25 follow-up';
-    facts=[wins+'/'+n+' wins',recovered+'/'+valid+' recovered by @25',lateRisk+'/'+n+' late-risk evidence'];
+    facts=[outcome,recovered+'/'+valid+' recovered by @25',lateRisk+'/'+n+' late-risk evidence'];
   }else{
     const ahead=transitions.filter(x=>x.t.to.key==='ahead').length,behind=transitions.filter(x=>x.t.to.key==='behind').length,close=transitions.filter(x=>x.t.to.key==='close').length;
     headline=valid?(ahead+' ahead · '+close+' close · '+behind+' behind @25'):'No comparable @25 follow-up';
-    facts=[wins+'/'+n+' wins',ahead+'/'+valid+' created lead',behind+'/'+valid+' fell behind',lateRisk+'/'+n+' late-risk evidence'];
+    facts=[outcome,ahead+'/'+valid+' created lead',behind+'/'+valid+' fell behind',lateRisk+'/'+n+' late-risk evidence'];
   }
   return '<article class="game-arc-funnel tone-'+(kind==='ahead'?'good':kind==='behind'?'bad':'neutral')+'"><span>'+esc(label)+' · '+n+' game'+(n===1?'':'s')+'</span><strong>'+esc(headline)+'</strong><div>'+facts.map(x=>'<b>'+esc(x)+'</b>').join('')+'</div><p>Descriptive selected-role state conversion; @15 and @25 refer to direct-role gold, not total team gold.</p></article>';
 }
@@ -3467,8 +3482,8 @@ function renderGameArcs(r){
     const repeated=[...groups.values()].filter(x=>x.games.length>=2).sort((a,b)=>b.games.length-a.games.length||String(a.label).localeCompare(String(b.label))).slice(0,6);
     funnelBox.innerHTML='<div class="section-subhead"><strong>'+esc(roleLabel(role))+' sequence coverage</strong><span>Role-relevant evidence replaces the carry-lane @15→@25 gold funnel</span></div>'+roleSequenceCoverageHtml(role,games)+'<div class="section-subhead arc-repeat-head"><strong>Repeated '+esc(roleLabel(role))+' sequences</strong><span>Only shown when the same role-specific sequence appears in at least 2 games</span></div>';
     patternBox.innerHTML=repeated.length?repeated.map(x=>{
-      const wins=x.games.filter(g=>g.win).length,wr=100*wins/x.games.length,timeline=x.games.filter(g=>g.timelineAvailable===true).length;
-      return '<article class="game-arc-pattern"><span>Repeated role sequence · '+x.games.length+' games</span><strong>'+esc(x.label)+'</strong><div class="arc-pattern-stats"><b>'+esc(fmtPct(wr))+' wins</b><b>'+timeline+'/'+x.games.length+' timelines</b></div><p>This sequence combines role-relevant supported states. Outcome is context only; the sequence is not treated as a cause of the result.</p><button class="button secondary small arc-review-button" type="button" data-review-arc="'+esc(x.key)+'">Review these '+x.games.length+' games</button></article>';
+      const timeline=x.games.filter(g=>g.timelineAvailable===true).length;
+      return '<article class="game-arc-pattern"><span>Repeated role sequence · '+x.games.length+' games</span><strong>'+esc(x.label)+'</strong><div class="arc-pattern-stats"><b>'+esc(arcOutcomeLabel(x.games))+'</b><b>'+timeline+'/'+x.games.length+' timelines</b></div><p>This sequence combines role-relevant supported states. Outcome is context only; the sequence is not treated as a cause of the result.</p><button class="button secondary small arc-review-button" type="button" data-review-arc="'+esc(x.key)+'">Review these '+x.games.length+' games</button></article>';
     }).join(''):'<div class="bullet empty">No '+esc(roleLabel(role))+' role sequence repeats at least twice with enough supported components yet.</div>';
     patternBox.querySelectorAll('[data-review-arc]').forEach(btn=>btn.addEventListener('click',()=>{
       state.matchHistoryArcKey=String(btn.dataset.reviewArc||'');state.matchHistoryFilter='arc';state.matchHistoryLimit=10;renderMatchHistory(r);
@@ -3485,8 +3500,8 @@ function renderGameArcs(r){
     transitions.forEach(({g,t})=>{const row=groups.get(t.key)||{key:t.key,label:t.label,games:[],swings:[]};row.games.push(g);row.swings.push(t.swing);groups.set(t.key,row);});
     const repeated=[...groups.values()].filter(x=>x.games.length>=2).sort((a,b)=>b.games.length-a.games.length||String(a.label).localeCompare(String(b.label))).slice(0,6);
     patternBox.innerHTML=repeated.length?repeated.map(x=>{
-      const wins=x.games.filter(g=>g.win).length,wr=100*wins/x.games.length,avgSwing=x.swings.reduce((a,b)=>a+b,0)/x.swings.length,lateRiskGames=x.games.filter(g=>Number(g.closing25?.highRiskDeaths||0)>0||Number(g.closing25?.costlyDeaths||0)>0).length;
-      return '<article class="game-arc-pattern"><span>Repeated transition · '+x.games.length+' games</span><strong>'+esc(x.label)+'</strong><div class="arc-pattern-stats"><b>'+esc(fmtPct(wr))+' wins</b><b>'+esc(signed(avgSwing,0))+'g avg 15→25 swing</b><b>'+lateRiskGames+' late-risk game'+(lateRiskGames===1?'':'s')+'</b></div><p>Outcome and risk are shown as context. The transition itself is direct-role gold state, not whole-team game state.</p><button class="button secondary small arc-review-button" type="button" data-review-arc="'+esc(x.key)+'">Review these '+x.games.length+' games</button></article>';
+      const avgSwing=x.swings.reduce((a,b)=>a+b,0)/x.swings.length,lateRiskGames=x.games.filter(g=>Number(g.closing25?.highRiskDeaths||0)>0||Number(g.closing25?.costlyDeaths||0)>0).length;
+      return '<article class="game-arc-pattern"><span>Repeated transition · '+x.games.length+' games</span><strong>'+esc(x.label)+'</strong><div class="arc-pattern-stats"><b>'+esc(arcOutcomeLabel(x.games))+'</b><b>'+esc(signed(avgSwing,0))+'g avg 15→25 swing</b><b>'+lateRiskGames+' late-risk game'+(lateRiskGames===1?'':'s')+'</b></div><p>Outcome and risk are shown as context. The transition itself is direct-role gold state, not whole-team game state.</p><button class="button secondary small arc-review-button" type="button" data-review-arc="'+esc(x.key)+'">Review these '+x.games.length+' games</button></article>';
     }).join(''):'<div class="bullet empty">No @15→@25 role-state transition repeats at least twice inside the current coaching cohort yet.</div>';
     patternBox.querySelectorAll('[data-review-arc]').forEach(btn=>btn.addEventListener('click',()=>{
       state.matchHistoryArcKey=String(btn.dataset.reviewArc||'');state.matchHistoryFilter='arc';state.matchHistoryLimit=10;renderMatchHistory(r);
@@ -3495,15 +3510,12 @@ function renderGameArcs(r){
   }
 
   const timelineGames=games.filter(g=>g.timelineAvailable===true);
-  const turning=ARC_TURNING_POINT_DEFS.map(d=>{
-    const hit=timelineGames.filter(g=>d.test(g)),miss=timelineGames.filter(g=>!d.test(g)),wins=hit.filter(g=>g.win).length,missWins=miss.filter(g=>g.win).length;
-    const withWr=hit.length?100*wins/hit.length:null,withoutWr=miss.length?100*missWins/miss.length:null,associationReady=hit.length>=3&&miss.length>=3,winRateDelta=associationReady?Number(withWr)-Number(withoutWr):null;
-    return {...d,count:hit.length,wins,withoutCount:miss.length,withoutWins:missWins,withWr,withoutWr,associationReady,winRateDelta};
-  }).filter(x=>x.count>=2).sort((a,b)=>b.count-a.count||String(a.label).localeCompare(String(b.label))).slice(0,7);
-  turnBox.innerHTML='<div class="section-subhead"><strong>Recurring turning-point evidence</strong><span>Recurring at ≥2 games · outcome association needs ≥3 with and ≥3 without</span></div>'+
+  const turning=ARC_TURNING_POINT_DEFS.map(d=>arcTurningPointContext(timelineGames,d)).filter(x=>x.count>=2).sort((a,b)=>b.count-a.count||String(a.label).localeCompare(String(b.label))).slice(0,7);
+  turnBox.innerHTML='<div class="section-subhead"><strong>Recurring turning-point evidence</strong><span>Recurring at ≥2 games · outcome association needs ≥3 clean known outcomes with and without</span></div>'+
     (turning.length?'<div class="arc-turning-grid">'+turning.map(x=>{
-      const association=x.associationReady?('Win rate '+fmtPct(x.withWr)+' with vs '+fmtPct(x.withoutWr)+' without · '+signed(x.winRateDelta,1)+' points'):(fmtPct(x.withWr)+' wins in '+x.count+' games with signal · comparison withheld ('+x.withoutCount+' without)');
-      return '<article class="arc-turning-card tone-'+x.tone+'"><span>'+x.count+' / '+timelineGames.length+' timeline games</span><strong>'+esc(x.label)+'</strong><p>'+esc(x.why)+'</p><small>'+esc(association)+' · descriptive association only, not causation</small></article>';
+      const association=x.associationReady?('Win rate '+fmtPct(x.withWr)+' with (n='+x.knownGames+') vs '+fmtPct(x.withoutWr)+' without (n='+x.withoutKnownGames+') · '+signed(x.winRateDelta,1)+' points'):(x.knownGames?fmtPct(x.withWr)+' wins across '+x.knownGames+' clean known outcomes with signal · comparison withheld ('+x.withoutKnownGames+' clean known without)':'Outcome not measurable; comparison withheld');
+      const exclusions=x.excludedGames+x.withoutExcludedGames?' · '+(x.excludedGames+x.withoutExcludedGames)+' unknown or compromised outcomes excluded':'';
+      return '<article class="arc-turning-card tone-'+x.tone+'"><span>'+x.count+' / '+timelineGames.length+' timeline games</span><strong>'+esc(x.label)+'</strong><p>'+esc(x.why)+'</p><small>'+esc(association+exclusions)+' · descriptive association only, not causation</small></article>';
     }).join('')+'</div>':'<div class="bullet empty">No defined turning-point signal repeats in at least two coaching-cohort games.</div>');
   renderTransitionPrecursors(r);
   if(note)note.textContent=roleSequence

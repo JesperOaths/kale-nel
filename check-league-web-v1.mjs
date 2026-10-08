@@ -76,7 +76,7 @@ assert.ok(api.includes('fightProfile'));
 assert.ok(api.includes('killConversionWindows'));
 assert.ok(api.includes('recentShopObjectiveAbsenceRate')&&api.includes('lateResetObjectiveMissRate'),'Recent-shop absence must own the primary metric while the old late-reset field remains compatibility-only');
 assert.ok(api.includes('playerSupportedConverted')&&api.includes('teamConverted'),'Post-kill conversion must distinguish individual supported conversion from team-only context');
-assert.ok(api.includes('league-web-behavior-v4.182'),'League backend contract must identify the current runtime-certified role-aware champion/matchup analyzer revision');
+assert.ok(api.includes('league-web-behavior-v4.183'),'League backend contract must identify the current runtime-certified role-aware champion/matchup analyzer revision');
 assert.ok(api.includes('aboveOwnDeadTimeMedian:Number(g.damageRank)>2&&')&&api.includes('aboveOwnTurretMedian:Number(g.damageRank)>2&&'),'Resource/output exemplar annotations must compute lower-damage status inside their own map callback');
 assert.ok(api.includes('highUnspentFightSamples')&&api.includes('itemDisadvantageFightSamples')&&api.includes('goldDeficitFightSamples')&&api.includes('outnumberedFightSamples'),'Fight-state rates must retain metric-specific supported-opportunity denominators');
 assert.ok(api.includes('const cleanOutcomeGames=games.filter(g=>g?.outcomeCompromised!==true)')&&api.includes('afk_or_early_surrender_excluded_from_final_result_conversion'),'Outcome-linked coaching must exclude compromised AFK/early-surrender results');
@@ -87,7 +87,7 @@ assert.ok(app.includes('This section analyzes only the reviewed account.'),'Supp
 assert.ok(app.includes("x.sampleTier==='developing'")&&app.includes('Developing support sample'),'Frontend must keep 3–4 game support-champion samples neutral/contextual rather than presenting them as established');
 assert.ok(!api.includes('allySupportPuuid'),'Support-player analysis must not expose allied PUUIDs in the report contract');
 assert.ok(app.includes('function renderSupportSynergy')&&app.includes('Recent form · latest 5 vs prior games'),'Frontend must expose support synergy and concrete recent-form evidence');
-assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261007-league-web-v322'),'Support synergy panel and frontend cache-bust must be present');
+assert.ok(html.includes('id="supportSynergyPanel"')&&html.includes('20261008-league-web-v323'),'Support synergy panel and frontend cache-bust must be present');
 assert.ok(html.includes('id="visual-analytics"')&&html.includes('id="recentFormGraph"')&&html.includes('id="phaseRiskGraph"')&&html.includes('id="outcomeEffectGraph"')&&html.includes('id="objectiveFamilyGraph"')&&html.includes('id="championHistoryGraph"'),'League report must expose the visual analytics dashboard with five distinct graph surfaces');
 assert.ok(app.includes('function renderVisualAnalytics')&&app.includes('function visualDivergingSvg')&&app.includes('function visualPercentBarSvg')&&app.includes('function visualGroupedBarsSvg'),'Visual analytics must use explicit reusable graph renderers rather than decorative static markup');
 assert.ok(app.includes("valueLabel:signed(signal,1)+'×'")&&app.includes("spec.inverse?-1:1")&&app.includes("Number(x.games||0)>=5&&Number(x.exposureMinutes||0)>=20"),'Recent-form and phase-risk graphs must preserve practical-change direction and the existing phase evidence floor');
@@ -396,7 +396,7 @@ assert.ok(html.includes('id="sessionHabitsAnswer"')&&app.includes('answer.headli
 assert.ok(api.includes('function baselineGame')&&api.includes('peerDpmDelta:metric(peerRows')&&app.includes('Opponent-adjusted read:'),'Long-horizon direction must use direct same-role opponent deltas across match-only history');
 assert.ok(app.includes("spec('DPM vs ADC peer',t.peerDpmDelta")&&app.includes("spec('CS/min vs ADC peer',t.peerCsMinDelta")&&app.includes("spec('Deaths vs ADC peer',t.peerDeathsDelta"),'ADC recent-direction graph must use direct-opponent output deltas rather than raw DPM/CS');
 assert.ok(html.includes('id="teamfightDecisionPanel"')&&app.includes('function renderTeamfightDecisionOverview(')&&api.includes('function fightArea('),'League decisions must expose fight geography and cross-map trade review');
-assert.ok(html.includes('id="decisionIntelligencePanel"')&&html.includes('/league/decision-intelligence.js?v=20261007-league-web-v322')&&app.includes("renderWhenNear('decisionIntelligencePanel'")&&app.includes('prepareDecisionIntelligence(r)'),'Decision intelligence panel must be wired through deferred near-viewport rendering');
+assert.ok(html.includes('id="decisionIntelligencePanel"')&&html.includes('/league/decision-intelligence.js?v=20261008-league-web-v323')&&app.includes("renderWhenNear('decisionIntelligencePanel'")&&app.includes('prepareDecisionIntelligence(r)'),'Decision intelligence panel must be wired through deferred near-viewport rendering');
 assert.ok(!app.includes('window.renderDecisionIntelligence?.(r);'),'The 25-card decision dashboard must not run synchronously in the first report-render path');
 assert.ok(app.includes("renderWhenNear('match-history'")&&app.includes('prepareMatchHistory(r)'),'Expanded match-story rendering must also be deferred until near the viewport');
 assert.ok(decisionBackend.includes('fight_decision_ledger')&&decisionBackend.includes('automatic_replay_shortlist')&&decisionBackend.includes('requeue_sweet_spot')&&decisionBackend.includes('expected_performance_residual'),'Decision intelligence backend must retain the requested decision, residual, requeue and replay families');
@@ -447,7 +447,7 @@ assert.ok(decisionBackend.includes('"After fight wins: before the next fight"')&
 assert.ok(decisionBackend.includes('"After fight losses: before the next fight"')&&decisionBackend.includes('nextFight=tracked.find')&&decisionBackend.includes('noExtraRiskDeathRate')&&decisionBackend.includes('windowRule:"ends at next tracked fight, 90 seconds or game end"'),'Fight-loss follow-up must use the same non-overlapping next-fight / 90s boundary as fight-win follow-up');
 assert.ok(decisionBackend.includes('"Skipped-fight structure/objective overlap"'),'Objective-trade card must label measured timing overlap rather than causal trade quality');
 assert.ok(decisionUi.includes('Row-level counts are window evidence, not unique event totals'),'Objective-trade conclusion must not sum overlapping window counts into fake unique totals');
-assert.ok(decisionBackend.includes('version:"decision-intelligence-v8"'),'Decision intelligence contract must identify the final v7 evidence rules');
+assert.ok(decisionBackend.includes('version:"decision-intelligence-v9"'),'Decision intelligence contract must identify the v9 verified-checkpoint and missing-data evidence rules');
 assert.ok(decisionBackend.includes('recentResidualStatistic:"median"')&&decisionBackend.includes('recent.slice(0,20)'),'Residual headline must use a robust latest-20 median');
 assert.ok(decisionBackend.includes('metricSamples[key]>=5')&&decisionBackend.includes('minimumBucketGames:5'),'Requeue gap comparisons must require at least five games per promoted bucket');
 assert.ok(!decisionBackend.includes('function peerComposite(')&&!decisionBackend.includes('avgRelativeComposite')&&decisionBackend.includes('"Requeue gap context"'),'Requeue analysis must keep opponent-relative components in their own units and must not rank a synthetic composite');
@@ -470,7 +470,7 @@ assert.ok(css.includes('v310 — decision intelligence evidence/style coherence'
 assert.ok(html.includes('section-subhead decision-intelligence-subhead')&&!html.includes('<p class="eyebrow">Decision intelligence</p><h2>25 deeper ways'),'Decision intelligence must use the in-panel subhead hierarchy instead of nesting another report-level heading');
 assert.ok(decisionBackend.includes('"Ahead-state fight execution"')&&decisionBackend.includes('preContributionDeathRate')&&decisionBackend.includes('richHighUnspentRate'),'Ahead-state fight card must measure execution outcomes instead of tautological active-fight contribution');
 assert.ok(!decisionBackend.includes('aheadFightContributionRate'),'Retired tautological ahead-fight contribution rate must not return');
-assert.ok(decisionUi.includes("x.diedBeforeContribution?'negative':x.survived?'positive':'warn'"),'Ahead-state scatter must visually separate survived, contributed-then-died, and died-before-contribution outcomes');
+assert.ok(decisionUi.includes("x.diedBeforeContribution===true?'negative':x.survived===true?'positive':x.survived===false&&x.contributed===true?'warn':'neutral'"),'Ahead-state scatter must visually separate known execution outcomes and preserve unverified outcomes');
 
 
 assert.ok(decisionUi.includes('Decision intelligence · visual review')&&decisionUi.includes("statusLabel")&&decisionUi.includes("Proxy"),'Decision intelligence UI must expose all 25 and visually distinguish proxy evidence');
@@ -650,7 +650,7 @@ assert.ok(app.includes('function jungleGameArcStages(')&&app.includes("label:'Fa
 assert.ok(app.includes('lateHighRisk')&&app.includes('lateCostly')&&app.includes('categories can overlap')&&!app.includes('Number(closing.highRiskDeaths||0)+Number(closing.costlyDeaths||0)'),'Game arcs must not add overlapping high-risk and costly late-death categories as unique deaths');
 assert.ok(modelDoc.includes('## Overlapping late-risk categories')&&modelDoc.includes('must never add them together'),'Late-risk overlap semantics must remain documented');
 assert.ok(app.includes("filter(x=>x.games.length>=2)")&&app.includes("filter(x=>x.count>=2)"),'Game-arc UI must require at least two games before labeling a transition or turning point recurring');
-assert.ok(app.includes('associationReady=hit.length>=3&&miss.length>=3')&&app.includes('descriptive association only, not causation'),'Turning-point outcome comparison must require ≥3 games with and without the signal and remain explicitly non-causal');
+assert.ok(app.includes('associationReady=withOutcome.knownGames>=3&&withoutOutcome.knownGames>=3')&&app.includes('descriptive association only, not causation'),'Turning-point outcome comparison must require ≥3 games with and without the signal and remain explicitly non-causal');
 assert.ok(app.includes('sort((a,b)=>b.count-a.count'),'Turning points must remain recurrence-sorted rather than ranked by noisy outcome association');
 assert.ok(modelDoc.includes('## Turning-point outcome association')&&modelDoc.includes('must withhold the with-vs-without difference'),'Turning-point association minimums must remain documented');
 assert.ok(app.includes('reportCoachingGames(r)')&&app.includes('gameArcDescriptor(g)')&&app.includes('roleSequenceArc(g)'),'Game-arc aggregation must stay inside the same mechanics-filtered coaching cohort and use role-aware descriptors');
@@ -969,7 +969,7 @@ assert.ok(app.includes('Array.isArray(g.objectives)?g.objectives.length:Number(g
 assert.ok(app.includes('shopCount=Array.isArray(g.shopVisits)?g.shopVisits.length:Number(g.shopVisitCount||0)'),'Saved reports must render shop counts after raw shop ledgers are omitted');
 assert.ok(!app.includes("['AGOR'"));
 assert.ok(html.includes('id="spatialReview"'));
-assert.ok(html.includes('20261007-league-web-v322'),'League assets must cache-bust the current frontend');
+assert.ok(html.includes('20261008-league-web-v323'),'League assets must cache-bust the current frontend');
 assert.ok(html.includes('id="coaching-synthesis"')&&html.includes('id="coachingSynthesis"')&&app.includes('function renderCoachingSynthesis('),'Report must expose the top-level coaching synthesis');
 assert.ok(app.includes('function synthesisAgreementModel(')&&html.includes('id="evidenceAgreement"'),'Coaching synthesis must preserve evidence agreement/disagreement instead of averaging signals away');
 assert.ok(html.includes('id="player-review"')&&app.includes('function renderPlayerReview(')&&app.includes('function playerStyleModel('),'Report must expose an evidence-gated whole-player playstyle review and conclusion');

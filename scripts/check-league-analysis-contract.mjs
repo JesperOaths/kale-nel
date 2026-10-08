@@ -217,7 +217,7 @@ ok(decisionBackend.includes('totalShopVisits')&&decisionBackend.includes('paired
 ok(decisionBackend.includes('followUpRate')&&decisionBackend.includes('"After fight losses: before the next fight"')&&decisionBackend.includes('noExtraRiskDeathRate')&&decisionBackend.includes('windowRule:"ends at next tracked fight, 90 seconds or game end"'), 'fight follow-up/loss cards must use narrow next-fight-bounded measured outcomes');
 ok(decisionBackend.includes('"Skipped-fight structure/objective overlap"'), 'objective trading must remain timing overlap rather than causal claim');
 ok(decisionUi.includes('Row-level counts are window evidence, not unique event totals'), 'overlapping skipped-fight windows must not be summed as unique structure/objective events');
-ok(decisionBackend.includes('version:"decision-intelligence-v8"'), 'decision intelligence must expose the v8 audited evidence contract');
+ok(decisionBackend.includes('version:"decision-intelligence-v9"'), 'decision intelligence must expose the v9 audited evidence contract');
 ok(decisionUi.includes('const PURPOSE={')&&decisionUi.includes('Act on this')&&decisionUi.includes('Useful context')&&decisionUi.includes('Diagnostic / exploratory'), 'decision cards must classify coaching purpose independently from evidence status');
 ok((decisionUi.match(/:'act'/g)||[]).length+(decisionUi.match(/:'context'/g)||[]).length+(decisionUi.match(/:'diagnostic'/g)||[]).length===25, 'decision purpose contract must classify all 25 analytic families exactly once');
 ok(decisionBackend.includes('recentResidualStatistic:"median"')&&decisionBackend.includes('recent.slice(0,20)'), 'residual headline must use latest-20 median');
@@ -241,7 +241,7 @@ ok(decisionUi.includes("s==='supported'?'measured'")&&!decisionUi.includes("s===
 ok(css.includes('v310 — decision intelligence evidence/style coherence')&&html.includes('decision-intelligence-subhead'), 'decision visuals must remain within the main League report design system');
 ok(decisionBackend.includes('"Ahead-state fight execution"')&&decisionBackend.includes('preContributionDeathRate')&&decisionBackend.includes('richHighUnspentRate'), 'ahead-state fight card must use non-tautological execution outcomes');
 ok(!decisionBackend.includes('aheadFightContributionRate'), 'retired tautological ahead-fight contribution rate must stay removed');
-ok(decisionUi.includes("x.diedBeforeContribution?'negative':x.survived?'positive':'warn'"), 'ahead-state visual must encode meaningful execution outcomes');
+ok(decisionUi.includes("x.diedBeforeContribution===true?'negative':x.survived===true?'positive':x.survived===false&&x.contributed===true?'warn':'neutral'"), 'ahead-state visual must encode known execution outcomes and keep missing evidence neutral');
 
 
 ok(decisionBackend.includes('wave_fight_conflict')&&decisionBackend.includes('objective_setup_path')&&decisionBackend.includes('lead_utilisation')&&decisionBackend.includes('deficit_recovery')&&decisionBackend.includes('mistake_recurrence'), 'decision intelligence must retain macro, recovery and recurrence families');
@@ -297,7 +297,7 @@ ok(backend.includes('cause=text(diagnosis?.primaryExplanation??diagnosis?.primar
 ok(modelDoc.includes('evidence specificity')&&modelDoc.includes('recent-shop timing associations'), 'analysis model must document objective clue specificity ordering');
 ok(backend.includes('evidencePriority')&&backend.includes('evidenceClass')&&backend.includes('objectiveRootCauses.sort'), 'objective clues must be ranked by evidence specificity rather than mixed-unit numeric severity');
 ok(backend.includes('playerSupportedConverted')&&backend.includes('teamConverted'), 'post-kill conversion must separate supported player credit from team context');
-ok(backend.includes('league-web-behavior-v4.182'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
+ok(backend.includes('league-web-behavior-v4.183'), 'analysis provenance must identify the current runtime-certified role-aware champion/matchup revision');
 ok(backend.includes('trajectoryWindows=Array.from({length:5}')&&backend.includes('history.slice(start,start+20)'), 'long-horizon model must expose up to five non-overlapping 20-game trajectory windows');
 ok(backend.includes('peerCsMinDelta:p.peerCsMinDelta')&&backend.includes('peerDpmDelta:p.peerDpmDelta')&&backend.includes('peerDeathsDelta:p.peerDeathsDelta'), 'trajectory windows must retain direct-role opponent-relative metric objects and exact sample counts');
 ok(app.includes('function renderLongitudinalProgress(')&&app.includes('function longitudinalTrajectoryRead('), 'frontend must render and summarize the multi-window opponent-relative trajectory');
@@ -683,7 +683,7 @@ ok(modelDoc.includes('## Match-story filters')&&modelDoc.includes('must never en
 ok(modelDoc.includes('## Game-arc reconstruction')&&modelDoc.includes('For **SUPPORT**')&&modelDoc.includes('For **JUNGLE**')&&modelDoc.includes('direct-role gold differential > +100g'), 'analysis documentation must lock role-aware arc semantics and carry-role bands');
 ok(app.includes("openReplayReviewMatch(matchId,tab)"), 'match-level replay cues must retain their evidence-tab routing');
 ok(app.includes("filter(x=>x.games.length>=2)")&&app.includes("filter(x=>x.count>=2)"), 'game-arc recurrence must require evidence in at least two coaching-cohort games');
-ok(app.includes('associationReady=hit.length>=3&&miss.length>=3')&&app.includes('descriptive association only, not causation'), 'turning-point win-rate association must require balanced minimum samples and remain non-causal');
+ok(app.includes('associationReady=withOutcome.knownGames>=3&&withoutOutcome.knownGames>=3')&&app.includes('descriptive association only, not causation'), 'turning-point win-rate association must require balanced minimum samples and remain non-causal');
 ok(modelDoc.includes('## Turning-point outcome association')&&modelDoc.includes('ordered by recurrence, not by observed win-rate difference'), 'analysis model must prevent outcome-association ranking inflation');
 ok(app.includes('reportCoachingGames(r)')&&app.includes('gameArcDescriptor(g)')&&app.includes('roleSequenceArc(g)'), 'game-arc aggregation must inherit the mechanics-cohort boundary and role-aware descriptor model');
 ok(app.includes('not a proven reset cause'), 'game-arc objective timing language must remain association-only');

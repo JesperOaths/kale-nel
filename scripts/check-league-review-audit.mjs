@@ -29,7 +29,7 @@ const nodes=new Map(),context={
   playerStyleEvidence:r=>r.styleSignals||[],decisionEvidenceChip:()=>''
 };
 vm.createContext(context);
-const names=['hasNum','fmt','fmtPct','signed','wilsonInterval','renderObjectiveFamilyGraph','renderChampionHistoryGraph','renderSupportSynergyGraph','gameTimestampMs','longitudinalMetricSpecs','trajectoryMetricReady','trajectoryComparison','longitudinalTrajectoryRead','trajectoryValueLabel','trajectoryDateRange','trajectorySparkline','renderLongitudinalProgress','transitionWindowSignals','transitionQuality','transitionMatrixHtml','synthesisAgreementModel','playerStyleModel','reviewEvidenceChip','decisionAnalytic','renderPlayerReview'];
+const names=['hasNum','fmt','fmtPct','signed','wilsonInterval','renderObjectiveFamilyGraph','renderChampionHistoryGraph','renderSupportSynergyGraph','gameTimestampMs','longitudinalMetricSpecs','trajectoryMetricReady','trajectoryComparison','longitudinalTrajectoryRead','trajectoryValueLabel','trajectoryDateRange','trajectorySparkline','renderLongitudinalProgress','transitionWindowSignals','transitionQuality','transitionMatrixHtml','arcOutcomeContext','arcOutcomeLabel','arcTurningPointContext','synthesisAgreementModel','playerStyleModel','reviewEvidenceChip','decisionAnalytic','renderPlayerReview'];
 vm.runInContext(names.map(source).join('\n'),context);
 const plain=x=>JSON.parse(JSON.stringify(x));
 const directionContext={hasNum:context.hasNum,fmt:context.fmt,fmtPct:context.fmtPct,signed:context.signed,fmtInt:v=>Math.round(Number(v)),roleRecentTrendSpecs:r=>r.specs};
@@ -116,6 +116,13 @@ assert.ok(context.transitionWindowSignals(deathFight(14.9,15.3,15.1)).has('Fight
 assert.ok(!context.transitionWindowSignals(deathFight(24.9,25.3,25.1)).has('Fight death before contribution'));
 assert.ok(!context.transitionWindowSignals(deathFight(15,16,null)).has('First allied death in active fight'));
 assert.ok(!context.transitionWindowSignals(deathFight(14.5,15,15)).has('Fight death before contribution'));
+assert.deepEqual(plain(context.arcOutcomeContext([{win:true},{win:false},{win:null},{win:true,outcomeCompromised:true}])),{wins:1,knownGames:2,excludedGames:2,winRate:50});
+assert.equal(context.arcOutcomeLabel([{win:null}]),'Outcome not measurable');
+const arcDef={test:g=>g.signal===true};
+let arc=context.arcTurningPointContext([{signal:true,win:true},{signal:true,win:false},{signal:true,win:null},{signal:true,win:true,outcomeCompromised:true},...Array.from({length:3},()=>({signal:false,win:true}))],arcDef);
+assert.equal(arc.count,4);assert.equal(arc.knownGames,2);assert.equal(arc.withWr,50);assert.equal(arc.associationReady,false);assert.equal(arc.winRateDelta,null,'unknown and compromised outcomes cannot meet an association minimum');
+arc=context.arcTurningPointContext([...Array.from({length:3},()=>({signal:true,win:false})),...Array.from({length:3},()=>({signal:false,win:true}))],arcDef);
+assert.equal(arc.associationReady,true);assert.equal(arc.winRateDelta,-100,'known zero wins remain a real outcome rate');
 
 // A risky-death rate is not a variance estimate; no strength is manufactured by the conclusion.
 assert.ok(!context.playerStyleModel({styleSignals:[{label:'High-risk deaths',tone:'bad'}]}).headline.includes('variance'));
@@ -127,7 +134,7 @@ const agreement=plain(context.synthesisAgreementModel({priority:{title:'Review r
 assert.equal(agreement[0].value,'2 additional evidence views');
 assert.ok(agreement[1].copy.includes('does not yet have enough'));
 
-const uiSource=fs.readFileSync('league/decision-intelligence.js','utf8').replace('  window.renderDecisionIntelligence=function(report){','  window.audit={conclusion,barRows,scatter,slope,numbersVisual,requeueContextVisual};\n  window.renderDecisionIntelligence=function(report){');
+const uiSource=fs.readFileSync('league/decision-intelligence.js','utf8').replace('  window.renderDecisionIntelligence=function(report){','  window.audit={conclusion,barRows,scatter,slope,sparkline,matchupVisual,visualFor,numbersVisual,requeueContextVisual};\n  window.renderDecisionIntelligence=function(report){');
 const ui={window:{},document:{getElementById:()=>null}};vm.createContext(ui);vm.runInContext(uiSource,ui);
 const view=ui.window.audit;
 html=view.barRows([{label:'Zero',value:0},{label:'Positive',value:10}]);
@@ -137,17 +144,46 @@ assert.ok(view.scatter(Array.from({length:35},(_,i)=>({x:i,y:i})),'x','y').inclu
 assert.ok(view.slope(Array.from({length:13},(_,i)=>({matchId:'g'+i,a:-500,b:100})),'a','b').includes('Showing 12 of 13'));
 assert.ok(view.slope([{matchId:'g',a:-500,b:100}],'a','b').includes('shared gold scale'));
 assert.ok(view.slope([{matchId:'g',a:-500,b:100}],'a','b').includes('tabindex="0"'),'scrollable charts must be keyboard accessible');
+html=view.matchupVisual([{matchup:'Zero vs Peer',games:3,laneGames15:3,avgGold15:0},{matchup:'Missing vs Peer',games:3,avgGold15:null},{matchup:'Small vs Peer',games:3,laneGames15:3,avgGold15:1},{matchup:'Large vs Peer',games:3,laneGames15:3,avgGold15:1000}]);
+assert.ok(html.includes('width:0%'),'an exactly even matchup must draw zero movement');
+assert.ok(html.includes('Gold@15 not measurable'),'missing lane gold must stay visibly missing');
+assert.ok(html.includes('width:0.05%'),'small matchup differences must retain their exact proportional size');
+const legacyMatchups={id:'matchup_adjusted_lane',evidence:{rows:[{matchup:'A vs B',games:8,avgGold15:900},{matchup:'C vs D',games:8,avgGold15:-900}]}};
+assert.ok(!view.conclusion(legacyMatchups).includes('strongest'),'total games without verified lane counts cannot rank saved-report matchups');
+html=view.sparkline([{matchId:'older',issues:2},{matchId:'gap',issues:null},{matchId:'newer',issues:4}],'issues',{labelKey:'matchId',valueLabel:'Review signals / game'});
+assert.ok(!html.includes('<polyline'),'unknown recurrence observations must break the chronological line');
+assert.ok(html.includes('gap')&&html.includes('not measurable'),'missing chronological observations remain labelled');
+assert.ok(html.includes('di-axis-value')&&html.includes('Review signals / game'),'recurrence graphs need a numeric value scale and unit');
+assert.ok(view.sparkline([{issues:0},{issues:0}],'issues').includes('<polyline'),'known zero recurrence remains measurable');
+assert.ok(view.sparkline(Array.from({length:35},(_,i)=>({issues:i})),'issues').includes('Showing latest 30 of 35'),'truncated recurrence history must disclose coverage');
+const partialBooleanRows=[{joined:true,followUp:true,noExtraRiskDeath:true,csSwing:2,goldSwing:50,fightLost:false},{joined:false,followUp:false,noExtraRiskDeath:false,csSwing:4,goldSwing:100,fightLost:true},{joined:null,followUp:null,noExtraRiskDeath:null,csSwing:6,goldSwing:150,fightLost:null}];
+for(const id of ['objective_setup_path','fight_lead_conversion','fight_loss_containment']){
+  html=view.visualFor({id,moments:partialBooleanRows},{});
+  assert.ok(html.includes('Unknown')&&html.includes('33%'),'unknown '+id+' outcomes need their own category');
+}
+assert.ok(view.conclusion({id:'objective_setup_path',moments:partialBooleanRows}).includes('1/2 known'),'objective presence excludes unknown observations from its rate');
+assert.ok(view.visualFor({id:'wave_fight_conflict',moments:partialBooleanRows},{}).includes('di-scatter-dot neutral'),'unknown fight outcomes cannot be colored as favorable');
+assert.ok(!view.visualFor({id:'wave_fight_conflict',moments:partialBooleanRows},{}).includes('undefined'),'partial saved rows cannot leak missing labels into graph text');
+assert.ok(view.visualFor({id:'expected_performance_residual',moments:[{expected:100,actual:120,residual:null},{expected:110,actual:100,residual:-10}]},{}).includes('di-scatter-dot neutral'),'unknown residuals cannot be colored as above expectation');
+assert.ok(view.visualFor({id:'resource_to_impact',moments:[{goldDiffAtStart:400,currentGold:800},{goldDiffAtStart:500,currentGold:900,survived:true}]},{}).includes('di-scatter-dot neutral'),'missing survival/contribution evidence cannot be labeled as contributed then died');
+assert.ok(view.requeueContextVisual({rows:[{bucket:'legacy',games:8,supported:true,dpmDelta:20,csMinDelta:.2}]}).includes('article class="thin"'),'a saved bucket support flag cannot override missing metric denominators');
 const pre={id:'pre_fight_positioning',moments:[{checkpoints:[{actualLeadSec:60,distance:1000},{actualLeadSec:10,distance:500}]},{checkpoints:[{actualLeadSec:10,distance:10000}]}]};
 assert.ok(view.conclusion(pre).includes('Across 1 fights'));
 assert.ok(view.conclusion(pre).includes('averages 500u'),'single-frame fights cannot dilute a paired distance change');
 
 const game=(id,extra={})=>({matchId:'g'+id,champion:'Jinx',role:'ADC',teamId:100,timelineAvailable:true,directPeerComparable:true,
   gameStartTimestamp:1700000000000+id*35*60000,durationMinutes:30,
-  phaseRules:{fixed15to25Comparable:true},peer:{champion:'Ashe',dpmDelta:id*10,gpmDelta:20},
+  phaseRules:{fixed15to25Comparable:true,lane15Comparable:true},peer:{champion:'Ashe',dpmDelta:id*10,gpmDelta:20},
   fightProfile:{events:[],absenceEvents:[]},deathRecovery:{deaths:0,opportunities:0,repeatDeaths:0,events:[]},...extra});
 const games=(n,extra={})=>Array.from({length:n},(_,i)=>game(i,extra));
 const build=(gs,history=gs)=>buildDecisionIntelligence(gs,null,'ADC',history);
 const analytic=(d,id)=>d.analytics.find(a=>a.id===id);
+let matchup=analytic(build(games(3,{goldDiff15:0})),'matchup_adjusted_lane');
+assert.equal(matchup.sample,3);assert.equal(matchup.evidence.rows[0].laneGames15,3);assert.equal(matchup.evidence.rows[0].dpmGames,3);
+assert.equal(matchup.evidence.rows[0].avgGold15,0);
+for(const phaseRules of [{lane15Comparable:false},{}])assert.equal(analytic(build(games(6,{goldDiff15:1000,phaseRules})),'matchup_adjusted_lane').sample,0,'ineligible or unverified checkpoints cannot enter matchup comparisons');
+matchup=analytic(build(games(3,{goldDiff15:200,peer:{champion:'Ashe',dpmDelta:null}})),'matchup_adjusted_lane');
+assert.equal(matchup.evidence.rows[0].dpmGames,0);assert.equal(matchup.evidence.rows[0].avgDpmVsPeer,null);
 let d=build(games(10));
 assert.equal(d.analytics.length,25);
 assert.equal(new Set(d.analytics.map(a=>a.id)).size,25);
