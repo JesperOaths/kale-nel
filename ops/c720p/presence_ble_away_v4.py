@@ -176,14 +176,21 @@ automation:
             target:
               entity_id: media_player.hub_noordbruis
 '''
-PKG.write_text(content)
+tmp_pkg=pathlib.Path("/tmp/c720p_presence_eco_v1.yaml")
+tmp_pkg.write_text(content)
+cp=subprocess.run(["docker","cp",str(tmp_pkg),"homeassistant:/config/packages/c720p_presence_eco_v1.yaml"],
+                  text=True,capture_output=True,timeout=30)
+if cp.returncode:
+    raise SystemExit("docker cp package failed: "+(cp.stdout+cp.stderr)[-2000:])
 
 check=subprocess.run(
     ["docker","exec","homeassistant","python","-m","homeassistant","--script","check_config","-c","/config"],
     text=True,capture_output=True,timeout=180)
 if check.returncode:
-    if (BACKUP/(PKG.name+".before")).exists():
-        shutil.copy2(BACKUP/(PKG.name+".before"),PKG)
+    old=BACKUP/(PKG.name+".before")
+    if old.exists():
+        subprocess.run(["docker","cp",str(old),"homeassistant:/config/packages/c720p_presence_eco_v1.yaml"],
+                       stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=30)
     raise SystemExit("HA config check failed: "+(check.stdout+check.stderr)[-5000:])
 
 subprocess.run(["systemctl","--user","enable","--now","c720p-tag-presence.service"],
