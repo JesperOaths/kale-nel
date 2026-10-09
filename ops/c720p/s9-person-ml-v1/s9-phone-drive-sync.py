@@ -101,7 +101,7 @@ def ts_from_name(n):
 
 def thumb_from_phone(name):
     photo=SNAP/(name+".thumb.jpg")
-    if photo.is_file() and 4000<=photo.stat().st_size<=MAX_THUMB:return photo
+    # Read the tiny phone JPEG again because person-aware thumbnails can improve after capture.
     try:
         data=adb_bytes(SD+"/"+name+".thumb.jpg",MAX_THUMB)
         if not(data[:3]==b"\xff\xd8\xff" and len(data)>4000):return None
@@ -181,6 +181,39 @@ def main():
         photo=thumb_from_phone(name)
         info["thumbnail"]=f"s9-phone-thumbs/{name}.thumb.jpg" if photo else None
         summary["phone_recordings"].append(info)
+      # Refresh upgraded thumbnails independently of the already verified MP4.
+      for name in names:
+        if name not in have:continue
+        photo=thumb_from_phone(name)
+        if not photo:continue
+        row=have[name]
+        remote_name=str(row.get("remote_name") or "")
+        if not remote_name:continue
+        candidate="S9PHONE_"+name+".jpg"
+        original=THUMB/candidate
+        newhash=md5(photo)
+        if original.is_file() and md5(original)==newhash and row.get("snapshot_name")==candidate:
+          continue
+        try:
+          if free-reserve<photo.stat().st_size+32*1024*1024:continue
+          result=sp.run([c["rclone"],"--config",c["rclone_config"],
+              "copyto",str(photo),c["remote"]+":"+candidate,
+              "--drive-root-folder-id",str(c["folders"]["new"]["id"]),"--retries","2"],
+              stdout=sp.DEVNULL,stderr=sp.DEVNULL,timeout=95)
+          if result.returncode or not verified_remote(c,candidate,photo.stat().st_size,newhash):
+            summary["errors"].append("thumbnail_refresh_failed_"+name);continue
+          THUMB.mkdir(parents=True,exist_ok=True)
+          original.write_bytes(photo.read_bytes())
+          index2=json.loads(INDEX.read_text())
+          for item in index2.get("items",[]):
+            if item.get("camera")=="new" and item.get("remote_name")==remote_name and item.get("state")=="verified":
+              item["snapshot_name"]=candidate
+          atomic(INDEX,index2)
+          have[name]["snapshot_name"]=candidate
+          summary.setdefault("thumbnails_refreshed",[]).append(name)
+          free-=photo.stat().st_size
+        except Exception as exc:
+          summary["errors"].append("thumbnail_refresh:"+type(exc).__name__)
       count=0
       for name in names:
         if name in have:continue
