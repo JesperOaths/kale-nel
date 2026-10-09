@@ -42,6 +42,8 @@ public final class EdgeService extends Service {
     captureEnabled=i.getBooleanExtra("pilot_recording",false);
     captureStatus=captureEnabled?"pilot_armed":"disabled";
     Log.i(TAG,"RECORD_PILOT="+captureEnabled);
+    if(captureEnabled&&i.getBooleanExtra("test_recording_once",false))
+     maybeCapture(SystemClock.elapsedRealtime(),true,18);
    }
    return START_STICKY;
   }
