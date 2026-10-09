@@ -21,7 +21,9 @@ jobs:
         run: |
           set -Eeuo pipefail
           curl -fLsS --retry 3 https://repo.maven.apache.org/maven2/org/tensorflow/tensorflow-lite/2.14.0/tensorflow-lite-2.14.0.aar -o /tmp/tflite.aar
+          curl -fLsS --retry 3 https://repo.maven.apache.org/maven2/org/tensorflow/tensorflow-lite-api/2.14.0/tensorflow-lite-api-2.14.0.aar -o /tmp/tflite-api.aar
           unzip -p /tmp/tflite.aar classes.jar > /tmp/tflite.jar
+          unzip -p /tmp/tflite-api.aar classes.jar > /tmp/tflite-api.jar
           mkdir -p /tmp/s9compiled
-          javac -source 8 -target 8 -cp "$ANDROID_HOME/platforms/android-35/android.jar:/tmp/tflite.jar" \
+          javac -source 8 -target 8 -cp "$ANDROID_HOME/platforms/android-35/android.jar:/tmp/tflite.jar:/tmp/tflite-api.jar" \
             -d /tmp/s9compiled ops/c720p/s9-detector-benchmark/src/nl/kalenel/s9benchmark/BenchmarkService.java
