@@ -415,13 +415,26 @@ public final class CameraService extends Service {
   out.write(bytes);out.flush();
  }
  private void shutdown(){
+  // Normal service destruction must finish a 4K MP4, rather than silently
+  // discarding the MediaRecorder output without its verified manifest.
+  if("recording".equals(mode)){
+   Log.i(TAG,"FINALIZE_ACTIVE_RECORDING_ON_SHUTDOWN");
+   stopRecording("service_shutdown");
+  }
+  if("starting".equals(mode))Log.w(TAG,"SHUTDOWN_DURING_RECORDER_PREPARE_PARTIAL_PRESERVED");
   running=false;mode="stopped";
   if(recorder!=null){try{recorder.stop();}catch(Exception ignored){}try{recorder.release();}catch(Exception ignored){}recorder=null;}
   closeSession();
   if(camera!=null){camera.close();camera=null;}
   if(preview!=null){preview.close();preview=null;}
-  if(classifier!=null)classifier.close();
-  if(reviewer!=null)reviewer.shutdown();
+  // GPU delegates may be thread-affine. Never close one while a queued clip
+  // review is still using it; release it on the review executor last.
+  if(reviewer!=null){
+   final ClipClassifier toClose=classifier;
+   try{if(toClose!=null)reviewer.execute(new Runnable(){public void run(){toClose.close();}});}
+   catch(java.util.concurrent.RejectedExecutionException e){Log.w(TAG,"classifier_close_deferred",e);}
+   reviewer.shutdown();reviewer=null;classifier=null;
+  }else if(classifier!=null){classifier.close();classifier=null;}
   try{if(apiSocket!=null)apiSocket.close();}catch(Exception ignored){}
   if(pilotHandoff){
    try{

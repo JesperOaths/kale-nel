@@ -1,0 +1,20 @@
+name: S9 Native Security Source Safety
+on:
+  pull_request:
+    paths:
+      - "ops/c720p/s9-native-security/**"
+      - ".github/workflows/s9-native-security-source.yml"
+  push:
+    paths:
+      - "ops/c720p/s9-native-security/**"
+      - ".github/workflows/s9-native-security-source.yml"
+jobs:
+  source-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shell syntax and source safety contracts
+        run: |
+          set -euo pipefail
+          for file in ops/c720p/s9-native-security/*.sh; do bash -n "$file"; done
+          python3 ops/c720p/s9-native-security/test_pipeline_contract.py
