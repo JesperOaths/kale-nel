@@ -5,7 +5,7 @@ umask 077
 ROOT="$HOME/c720p-home-hub"
 UNIT="$HOME/.config/systemd/user"
 mkdir -p "$ROOT/bin" "$UNIT"
-SOURCE="https://raw.githubusercontent.com/JesperOaths/kale-nel/18c0f48340fca11f50bc70ef72e65907ac120b50/ops/c720p/s9-person-ml-v1/clean-verified-ipwebcam-source.py"
+SOURCE="https://raw.githubusercontent.com/JesperOaths/kale-nel/cc2d5915d3695829cfdd26b2dee772660ec3a3f2/ops/c720p/s9-person-ml-v1/clean-verified-ipwebcam-source.py"
 curl -fsSL "$SOURCE" -o "$ROOT/bin/c720p-s9-staging-cleanup.py.new"
 python3 -m py_compile "$ROOT/bin/c720p-s9-staging-cleanup.py.new"
 mv "$ROOT/bin/c720p-s9-staging-cleanup.py.new" "$ROOT/bin/c720p-s9-staging-cleanup.py"
