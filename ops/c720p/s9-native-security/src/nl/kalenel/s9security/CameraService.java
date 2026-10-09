@@ -38,7 +38,7 @@ public final class CameraService extends Service {
  private final Object stateLock=new Object();
  private ServerSocket apiSocket;
  private Thread apiThread;
- private volatile boolean temporaryTest=false;
+ private volatile boolean temporaryTest=false,pilotStarted=false,pilotHandoff=false;
  private int recoveryCount=0;
  private static final long QUIET_MS=8500,MAX_MS=50000,COOLDOWN_MS=6500;
  @Override public IBinder onBind(Intent intent){return null;}
@@ -49,11 +49,13 @@ public final class CameraService extends Service {
   }
   boolean allow=intent!=null&&intent.getBooleanExtra("enable_native_camera",false);
   boolean test=intent!=null&&intent.getBooleanExtra("pilot_only",false);
+  boolean validate=intent!=null&&intent.getBooleanExtra("validate_dual_stream",false);
   if(allow&&!test)getSharedPreferences("native",MODE_PRIVATE).edit().putBoolean("enabled",true).apply();
   boolean persisted=getSharedPreferences("native",MODE_PRIVATE).getBoolean("enabled",false);
   if(!allow&&!persisted){Log.w(TAG,"Service disabled until explicitly armed");stopSelf();return START_NOT_STICKY;}
   pilotOnly=test||!persisted;
-  temporaryTest=test;
+  temporaryTest=test&&validate;
+  pilotHandoff=test;
   if(running){Log.i(TAG,"Already running mode="+mode);return START_STICKY;}
   startForeground(8228,notification());
   running=true;
@@ -61,7 +63,16 @@ public final class CameraService extends Service {
   classifier=new ClipClassifier(this);
   cameraThread=new HandlerThread("native-security-camera");cameraThread.start();
   cameraHandler=new Handler(cameraThread.getLooper());
-  cameraHandler.post(new Runnable(){public void run(){prepare();}});
+  cameraHandler.post(new Runnable(){public void run(){
+   if(pilotHandoff){
+    try{
+     Intent stop=new Intent("com.pas.webcam.CONTROL");
+     stop.setPackage("com.pas.webcam.pro");stop.putExtra("action","stop");
+     sendBroadcast(stop);Log.i(TAG,"PILOT_PAUSE_IP_WEBCAM");
+    }catch(Exception e){failure("pilot_handoff_failed",e);}
+    cameraHandler.postDelayed(new Runnable(){public void run(){prepare();}},4500);
+   }else prepare();
+  }});
   startApi();
   return START_STICKY;
  }
@@ -116,6 +127,9 @@ public final class CameraService extends Service {
      if(frame==null)return;
      frames++;lastFrameAt=SystemClock.elapsedRealtime();
      boolean change=motion.analyze(frame);
+     if(temporaryTest&&!pilotStarted&&frames>12&&"watching".equals(mode)){
+      pilotStarted=true;startRecording();
+     }
      if(change){
       motionEvents++;
       lastMovementAt=lastFrameAt;
@@ -167,7 +181,7 @@ public final class CameraService extends Service {
   }catch(Exception e){failure("preview_setup_failed",e);scheduleRecover();}
  }
  private void startRecording(){
-  if(!running||pilotOnly||!"watching".equals(mode))return;
+  if(!running||(pilotOnly&&!temporaryTest)||!"watching".equals(mode))return;
   if(temperature()>=415||folder.getUsableSpace()<1024L*1024*1024)return;
   mode="starting";lastMovementAt=SystemClock.elapsedRealtime();
   try{
@@ -238,7 +252,8 @@ public final class CameraService extends Service {
    if(recorder!=null){try{recorder.release();}catch(Exception ignored){}recorder=null;}
    closeSession();
    cooldownUntil=SystemClock.elapsedRealtime()+COOLDOWN_MS;
-   cameraHandler.postDelayed(new Runnable(){public void run(){configurePreview();}},700);
+   if(temporaryTest)cameraHandler.postDelayed(new Runnable(){public void run(){shutdown();}},800);
+   else cameraHandler.postDelayed(new Runnable(){public void run(){configurePreview();}},700);
   }
  }
  private void abortRecording(){
@@ -344,6 +359,13 @@ public final class CameraService extends Service {
   if(classifier!=null)classifier.close();
   if(reviewer!=null)reviewer.shutdown();
   try{if(apiSocket!=null)apiSocket.close();}catch(Exception ignored){}
+  if(pilotHandoff){
+   try{
+    Intent resume=new Intent("com.pas.webcam.CONTROL");resume.setPackage("com.pas.webcam.pro");
+    resume.putExtra("action","start");sendBroadcast(resume);Log.i(TAG,"PILOT_IP_WEBCAM_RESTORED");
+   }catch(Exception e){Log.e(TAG,"PILOT_RESTORE_FAILED",e);}
+   pilotHandoff=false;
+  }
   stopForeground(true);stopSelf();
  }
  @Override public void onDestroy(){
