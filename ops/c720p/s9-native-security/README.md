@@ -51,3 +51,11 @@ GitHub Actions checks shell syntax, source/build safety invariants and compiles 
 - **Limits:** Camera2 settings, TensorFlow Lite model, thermal threshold (41.5°C), minimum SD reserve (15 GiB), and existing active motion thresholds are not changed. Actual people-vs-false-trigger accuracy remains to be evaluated with labeled day and night evidence. The hourly cap may still result in missed full-quality videos in extremely busy periods.
 
 This stage does not claim named-person recognition, automated deletion of forensic evidence, or guaranteed playback of corrupted unfinalized MP4 files.
+
+## S9+ suppressed-motion still images — secure Security gallery
+
+New fallback still images (\`preview_motion_<milliseconds>.jpg\`) are indexed separately from video. The private metadata index is at \`~/c720p-home-hub/state/s9-fallback-evidence.json\` (mode 0600). The JPEG **bytes remain exclusively on S9+ microSD** and are read via ADB only upon authenticated image requests. The authenticated archive endpoint \`/new/api/saved\` retains \`events\` for playable video and adds a separate \`fallback_previews\` array; \`/new/saved/still/<name>.jpg\` verifies the indexed size + SHA-256 before serving \`image/jpeg\`. It is never an MP4 and never implies an identified person.
+
+The hub Security \`clips.html\` gains a separate “S9+ motion preview evidence” gallery using the existing \`C720PSecureRelay\`. It shows the reason each still was retained, displays “not person-identified”, and opens the still in a photo dialog rather than attempting MP4 playback. When no preview events have occurred, an empty category is shown.
+
+Deploy with \`deploy-fallback-evidence.py --staging <staged-files-directory>\` after staging all three required scripts and the test from the same pinned Git commit (see commit history). It backs up the existing catalog, authenticated archive extension and Security HTML, reruns tests, refreshes the catalog, restarts only the archive service, validates the videos remain visible and auto-rolls back on failure. It never reinstalls the camera APK or changes Drive settings. Existing microSD originals are not deleted or copied to the hub.

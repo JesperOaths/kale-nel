@@ -5,6 +5,9 @@ from pathlib import Path
 ADDR="192.168.178.250:5555"
 SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9edge/files/SecurityClips"
 ROOT=Path("/opt/homeassistant/config/www/frontyard-security-new")
+# Metadata only. Preview image bytes stay exclusively on S9+ microSD.
+PRIVATE_FALLBACK=Path("/home/jespern/c720p-home-hub/state/s9-fallback-evidence.json")
+RE_PREVIEW=re.compile(r"^preview_motion_([0-9]{13})[.]jpg$")
 NAMES=re.compile(r"^rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}\.mp4$")
 def adb(*args):
  p=subprocess.run(["adb","-s",ADDR,*args],capture_output=True,timeout=32)
@@ -83,7 +86,10 @@ def main():
  native_security="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4K"
  try:
   recorded=adb("shell","ls","-1",native_security).decode().splitlines()
- except Exception:recorded=[]
+  native_listing_ok=True
+ except Exception:
+  recorded=[]
+  native_listing_ok=False
  for name in recorded:
   if not re.fullmatch(r"motion_[0-9]{13}[.]mp4",name):continue
   try:
@@ -116,6 +122,53 @@ def main():
      "content_categories":m.get("categories",[]),
      "storage":"S9 native 4K Security microSD"})
   except Exception as error:problems.append(name+":"+type(error).__name__)
+
+ # Still-image evidence from a motion event when a full 4K clip was blocked.
+ # Never call these frames "video" or infer that a person is present.
+ # Do not mirror JPEG bytes to the hub: the secure media proxy reads microSD.
+ if native_listing_ok:
+  previews=[]
+  for name in sorted(recorded,reverse=True):
+   match=RE_PREVIEW.fullmatch(name)
+   if not match:continue
+   if len(previews)>=250:break
+   try:
+    stamp=int(match.group(1))
+    sidecar=adb("exec-out","cat",native_security+"/"+name+".json")
+    if not 30<len(sidecar)<4096:raise ValueError("preview_sidecar_size")
+    m=json.loads(sidecar)
+    if m.get("name")!=name or m.get("kind")!="preview_only_motion_evidence":
+     raise ValueError("preview_manifest_kind")
+    if m.get("archive")!="S9_microSD_only" or m.get("person_identity")!="not_evaluated":
+     raise ValueError("preview_not_sd_only")
+    if int(m.get("width",0))!=640 or int(m.get("height",0))!=480:
+     raise ValueError("preview_dimensions")
+    if abs(int(m.get("captured_at_ms",0))-stamp)>1500:
+     raise ValueError("preview_timestamp")
+    size=int(adb("shell","stat","-c","%s",native_security+"/"+name).strip())
+    if not 3000<size<2500000:raise ValueError("preview_size")
+    # Digest is calculated on the phone, avoiding a second permanent copy.
+    checksum=adb("shell","sha256sum",native_security+"/"+name).decode().split()[0].lower()
+    if not re.fullmatch(r"[0-9a-f]{64}",checksum):raise ValueError("preview_sha256")
+    reason=str(m.get("reason") or "motion_event")
+    if reason not in ("recording_budget_rejected","cooldown_motion",
+                       "thermal_or_space_guard","recording_safety_guard"):
+     reason="motion_event"
+    when=datetime.datetime.fromtimestamp(stamp/1000)
+    previews.append({"name":name,"kind":"preview_only_motion_evidence",
+       "timestamp":when.strftime("%Y-%m-%d %H:%M:%S"),
+       "captured_at_ms":stamp,"reason":reason,"size":size,"sha256":checksum,
+       "sd_verified":True,"sd_only":True,"width":640,"height":480,
+       "person_status":"not_evaluated","scene_category":"preview_only"})
+   except Exception as e:
+    problems.append("preview:"+name+":"+type(e).__name__)
+  PRIVATE_FALLBACK.parent.mkdir(parents=True,exist_ok=True)
+  preview_index={"archive_mode":"S9-microSD-only","kind":"fallback_previews",
+                 "count":len(previews),"previews":previews}
+  tmp=PRIVATE_FALLBACK.with_suffix(".json.tmp")
+  tmp.write_text(json.dumps(preview_index,separators=(",",":"))+"\n")
+  os.chmod(tmp,0o600)
+  os.replace(tmp,PRIVATE_FALLBACK)
  out={"storage_policy":"local_microSD","phone_recordings":sorted(rows,key=lambda r:r["timestamp"]),
       "total_phone_files":len(rows),"archived_total":len(rows),"errors":problems}
  dest=ROOT/"s9-phone-events.json"

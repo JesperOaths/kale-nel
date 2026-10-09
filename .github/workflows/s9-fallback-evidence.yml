@@ -1,0 +1,29 @@
+name: S9 SD Fallback Evidence
+on:
+  pull_request:
+    paths:
+      - "ops/c720p/s9-native-security/patch-fallback-preview-ui.py"
+      - "ops/c720p/s9-native-security/test-fallback-evidence.py"
+      - "ops/c720p/s9-person-ml-v1/local-sd-catalog.py"
+      - "ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py"
+      - ".github/workflows/s9-fallback-evidence.yml"
+  push:
+    paths:
+      - "ops/c720p/s9-native-security/patch-fallback-preview-ui.py"
+      - "ops/c720p/s9-native-security/test-fallback-evidence.py"
+      - "ops/c720p/s9-person-ml-v1/local-sd-catalog.py"
+      - "ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py"
+      - ".github/workflows/s9-fallback-evidence.yml"
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Python parse and fallback-evidence unit tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            ops/c720p/s9-native-security/patch-fallback-preview-ui.py \
+            ops/c720p/s9-person-ml-v1/local-sd-catalog.py \
+            ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py
+          python3 ops/c720p/s9-native-security/test-fallback-evidence.py
