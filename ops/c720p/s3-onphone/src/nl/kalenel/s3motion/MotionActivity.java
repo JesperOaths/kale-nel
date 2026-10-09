@@ -48,7 +48,11 @@ public final class MotionActivity extends Activity
     private long session=System.currentTimeMillis();
     private TextView status;
     private boolean holderReady=false;
-    private int cameraId=1, blackFrames=0;
+    // User-specified main/rear lens. Never switch silently to the selfie camera.
+    private int cameraId=0, blackFrames=0;
+    private long lastRearRecovery=0;
+    private float lastContrast=0f;
+    private boolean previewValid=false;
     private SensorManager lightManager;
     private Sensor ambientLightSensor;
     private volatile float ambientLux=-1f;
@@ -83,7 +87,7 @@ public final class MotionActivity extends Activity
         if(lightManager!=null)ambientLightSensor=lightManager.getDefaultSensor(Sensor.TYPE_LIGHT);
         Log.i(TAG,"AMBIENT_SENSOR available="+(ambientLightSensor!=null)+
                 " darkBelow="+LUX_DARK_BELOW+" brightAbove="+LUX_BRIGHT_ABOVE);
-        Log.i(TAG,"APP_START session="+session+" version=4 lux_gating=true"+
+        Log.i(TAG,"APP_START session="+session+" version=5 rear_only=true lux_gating=true"+
                " direct_events="+(!webhookUrl.isEmpty())+" on_phone=true");
     }
     @Override protected void onNewIntent(Intent intent){
@@ -182,6 +186,12 @@ public final class MotionActivity extends Activity
                     !=PackageManager.PERMISSION_GRANTED) {
                 Log.e(TAG,"CAMERA_PERMISSION_MISSING");status.setText("Camera permission required");return;
             }
+            int cameras=Camera.getNumberOfCameras();
+            if(cameras<=cameraId)throw new IllegalStateException("rear camera ID unavailable");
+            Camera.CameraInfo info=new Camera.CameraInfo();
+            Camera.getCameraInfo(cameraId,info);
+            if(info.facing!=Camera.CameraInfo.CAMERA_FACING_BACK)
+                throw new IllegalStateException("camera ID 0 is not back-facing");
             camera=Camera.open(cameraId);
             Camera.Parameters p=camera.getParameters();
             Camera.Size best=null;
@@ -206,10 +216,11 @@ public final class MotionActivity extends Activity
             camera.addCallbackBuffer(buffer);
             camera.setPreviewCallbackWithBuffer(this);
             camera.startPreview();
-            initialized=false;frames=0;recent=0;hitCount=0;missCount=0;
+            initialized=false;frames=0;recent=0;hitCount=0;missCount=0;blackFrames=0;previewValid=false;lastContrast=0f;
             previousMean=-1;lastRead=0;lastLog=0;prevCx=-1;prevCy=-1;
             session=System.currentTimeMillis();
-            Log.i(TAG,"READY session="+session+" camera="+cameraWidth+"x"+cameraHeight+" camera_id="+cameraId);
+            Log.i(TAG,"READY session="+session+" camera="+cameraWidth+"x"+cameraHeight+
+                  " camera_id="+cameraId+" facing=rear preview_format=NV21");
             status.setText("S3 motion active – on-phone detection");
         }catch(Exception e){
             Log.e(TAG,"CAMERA_ERROR "+e.getClass().getSimpleName()+" "+e.getMessage());
@@ -237,7 +248,7 @@ public final class MotionActivity extends Activity
         }
     }
     private void analyze(byte[] y,long now){
-        long total=0;
+        long total=0,totalSquares=0;
         for(int j=0;j<GY;j++){
             int sy=(j*cameraHeight/GY+cameraHeight/(GY*2));
             int offset=sy*cameraWidth;
@@ -247,24 +258,32 @@ public final class MotionActivity extends Activity
                 int at=j*GX+i;
                 sample[at]=v;
                 total+=v;
+                totalSquares+=(long)v*v;
             }
         }
         float mean=(float)total/N;
-        if(mean<5.0f)blackFrames++;else blackFrames=0;
-        if(blackFrames>=25 && cameraId==0){
-            Log.w(TAG,"BLACK_PREVIEW switching_to_front_camera");
+        // Diagnose an unlit/black preview without misclassifying fixed sensor noise as motion.
+        float variance=Math.max(0f,(float)totalSquares/N-mean*mean);
+        lastContrast=(float)Math.sqrt(variance);
+        previewValid=(mean>=12.0f || lastContrast>=7.0f);
+        if(!previewValid)blackFrames++;else blackFrames=0;
+        if(blackFrames==25) {
+            Log.e(TAG,"REAR_PREVIEW_UNUSABLE luma="+Math.round(mean)+
+                      " contrast="+Math.round(lastContrast)+" camera_id=0");
+            status.setText("Rear camera image too dark – motion paused");
+        }
+        if(blackFrames>=30 && now-lastRearRecovery>60000L) {
+            lastRearRecovery=now;
             blackFrames=0;
+            Log.w(TAG,"REAR_CAMERA_RECOVERY restarting_rear_only");
             runOnUiThread(new Runnable(){
                 @Override public void run(){
                     stopCamera();
-                    cameraId=1;
-                    startCamera(surface.getHolder());
+                    if(holderReady)startCamera(surface.getHolder());
                 }
             });
             return;
         }
-        if(blackFrames==25 && cameraId==1)
-            Log.e(TAG,"BLACK_PREVIEW front_camera_also_blank");
 
         boolean luxValid=(ambientLux>=0f && SystemClock.elapsedRealtime()-lastLuxAt<120000L);
         if(luxValid){
@@ -276,6 +295,12 @@ public final class MotionActivity extends Activity
             else if(mean<=73)dark=true;
         }
         frames++;
+        if(!previewValid){
+            initialized=false;recent=0;hitCount=0;missCount=0;prevCx=-1;prevCy=-1;
+            frames++;
+            heartbeat(now,mean,0,0);
+            return;
+        }
         if(!initialized){
             for(int k=0;k<N;k++)background[k]=sample[k];
             previousMean=mean;initialized=true;
@@ -343,7 +368,7 @@ public final class MotionActivity extends Activity
         lastLog=now;
         Log.i(TAG,"HEARTBEAT session="+session+" luma="+Math.round(mean)+
                 " lux="+(ambientLux>=0f?Math.round(ambientLux):-1)+
-                " dark="+(dark?1:0)+" changed="+Math.round(changed*100)+
+                " dark="+(dark?1:0)+" camera_id="+cameraId+" valid="+(previewValid?1:0)+" contrast="+Math.round(lastContrast)+" changed="+Math.round(changed*100)+
                 " largest="+Math.round(largest)+" frames="+frames);
     }
 }
