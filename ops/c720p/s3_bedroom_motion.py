@@ -71,7 +71,7 @@ def active_camera_client(endpoint):
     try:
         r = adb(endpoint, "shell", "dumpsys", "media.camera", timeout=9)
         text = r.stdout.decode(errors="replace")
-        return "Active Camera Clients:" in text and "Active Camera Clients:\\n[]" not in text
+        return "Active Camera Clients:" in text and "Active Camera Clients:\n[]" not in text
     except (OSError, subprocess.TimeoutExpired):
         return False
 
