@@ -1,6 +1,8 @@
 package nl.kalenel.s3motion;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.hardware.Camera;
@@ -20,6 +22,9 @@ import android.graphics.Color;
 import android.view.Gravity;
 import java.util.List;
 import java.util.Arrays;
+import java.net.URL;
+import java.net.HttpURLConnection;
+import java.io.OutputStream;
 
 /* All motion analysis occurs ON the Galaxy S3. Only small events go to logcat.
  * No screenshots, image uploads, IP camera server, Internet permission, or recording.
@@ -48,6 +53,9 @@ public final class MotionActivity extends Activity
     private Sensor ambientLightSensor;
     private volatile float ambientLux=-1f;
     private volatile long lastLuxAt=0;
+    private String webhookUrl="";
+    private static final String PREFS="s3_motion_config";
+    private static final String ALLOWED_WEBHOOK="http://192.168.178.141:8123/api/webhook/";
     private static final float LUX_DARK_BELOW=35f;
     private static final float LUX_BRIGHT_ABOVE=85f;
 
@@ -68,12 +76,80 @@ public final class MotionActivity extends Activity
         FrameLayout.LayoutParams label=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM);
         root.addView(status,label);
         setContentView(root);
+        webhookUrl=getSharedPreferences(PREFS,MODE_PRIVATE).getString("webhook","");
+        configureWebhook(getIntent());
         surface.getHolder().addCallback(this);
         lightManager=(SensorManager)getSystemService(SENSOR_SERVICE);
         if(lightManager!=null)ambientLightSensor=lightManager.getDefaultSensor(Sensor.TYPE_LIGHT);
         Log.i(TAG,"AMBIENT_SENSOR available="+(ambientLightSensor!=null)+
                 " darkBelow="+LUX_DARK_BELOW+" brightAbove="+LUX_BRIGHT_ABOVE);
-        Log.i(TAG,"APP_START session="+session+" version=3 lux_gating=true on_phone=true");
+        Log.i(TAG,"APP_START session="+session+" version=4 lux_gating=true"+
+               " direct_events="+(!webhookUrl.isEmpty())+" on_phone=true");
+    }
+    @Override protected void onNewIntent(Intent intent){
+        super.onNewIntent(intent);
+        setIntent(intent);
+        configureWebhook(intent);
+    }
+    private void configureWebhook(Intent intent){
+        if(intent==null)return;
+        String candidate=intent.getStringExtra("webhook");
+        if(candidate!=null && candidate.startsWith(ALLOWED_WEBHOOK)
+                && candidate.length()<240){
+            webhookUrl=candidate;
+            getSharedPreferences(PREFS,MODE_PRIVATE).edit().putString("webhook",candidate).apply();
+            Log.i(TAG,"WEBHOOK_CONFIGURED true");
+        }
+        if(intent.getBooleanExtra("verify_webhook_only",false))
+            verifyWebhook();
+    }
+    private void verifyWebhook(){
+        final String url=webhookUrl;
+        if(url.isEmpty()){Log.e(TAG,"WEBHOOK_VERIFY not_configured");return;}
+        new Thread(new Runnable(){
+            @Override public void run(){
+                HttpURLConnection conn=null;
+                try {
+                    conn=(HttpURLConnection)new URL(url).openConnection();
+                    conn.setRequestMethod("GET");
+                    conn.setConnectTimeout(4000);conn.setReadTimeout(4000);
+                    int code=conn.getResponseCode();
+                    Log.i(TAG,"WEBHOOK_VERIFY HTTP="+code+" expected=405");
+                }catch(Exception e){Log.e(TAG,"WEBHOOK_VERIFY_ERROR "+e.getClass().getSimpleName());}
+                finally{if(conn!=null)conn.disconnect();}
+            }
+        },"S3WebhookProbe").start();
+    }
+    private void postMotion(final long sess,final long seq){
+        final String url=webhookUrl;
+        if(url.isEmpty()){Log.w(TAG,"DIRECT_NOT_CONFIGURED");return;}
+        new Thread(new Runnable(){
+            @Override public void run(){
+                for(int attempt=1;attempt<=3;attempt++){
+                    HttpURLConnection conn=null;
+                    try {
+                        conn=(HttpURLConnection)new URL(url).openConnection();
+                        conn.setConnectTimeout(4000);conn.setReadTimeout(4000);
+                        conn.setRequestMethod("POST");
+                        conn.setDoOutput(true);
+                        conn.setRequestProperty("Content-Type","application/json");
+                        byte[] bytes=("{\"source\":\"s3-direct\",\"motion\":true,\"session\":\""+
+                           sess+"\",\"seq\":"+seq+"}").getBytes("UTF-8");
+                        conn.setFixedLengthStreamingMode(bytes.length);
+                        try(OutputStream out=conn.getOutputStream()){out.write(bytes);}
+                        int code=conn.getResponseCode();
+                        if(code>=200&&code<300){
+                            Log.i(TAG,"DIRECT_SENT session="+sess+" seq="+seq+" status="+code);
+                            return;
+                        }
+                        Log.w(TAG,"DIRECT_HTTP_ERROR status="+code+" attempt="+attempt);
+                    }catch(Exception e){
+                        Log.w(TAG,"DIRECT_SEND_ERROR "+e.getClass().getSimpleName()+" attempt="+attempt);
+                    }finally{if(conn!=null)conn.disconnect();}
+                    try{Thread.sleep(1300L*attempt);}catch(InterruptedException e){return;}
+                }
+            }
+        },"S3MotionWebhook").start();
     }
     @Override public void surfaceCreated(SurfaceHolder h){holderReady=true; startCamera(h);}
     @Override public void surfaceChanged(SurfaceHolder h,int fmt,int w,int hgt){}
@@ -257,6 +333,7 @@ public final class MotionActivity extends Activity
                     " luma="+Math.round(mean)+" changed="+Math.round(fraction*100)+
                     " cluster="+Math.round(largestArea)+" lux="+
                     (ambientLux>=0f?Math.round(ambientLux):-1)+" dark=1");
+            postMotion(session,sequence);
             status.setText("S3 motion detected (phone processed)");
         }
         heartbeat(now,mean,fraction,largestArea);
