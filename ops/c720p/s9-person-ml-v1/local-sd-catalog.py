@@ -11,7 +11,9 @@ def adb(*args):
  if p.returncode:raise OSError("phone_adb_offline")
  return p.stdout
 def main():
- subprocess.run(["adb","connect",ADDR],capture_output=True,timeout=12)
+ state=subprocess.run(["adb","-s",ADDR,"get-state"],capture_output=True,timeout=6)
+ if state.returncode or state.stdout.strip()!=b"device":
+  subprocess.run(["adb","connect",ADDR],capture_output=True,timeout=12)
  names=adb("shell","ls","-1",SD).decode().splitlines()
  rows=[];problems=[]
  for name in sorted(names,reverse=True):
