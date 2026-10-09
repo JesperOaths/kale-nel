@@ -109,10 +109,22 @@ try:
  restart=run(['systemctl','--user','restart','ht-e6500-surround.service'],timeout=25)
  if restart.returncode:raise RuntimeError(restart.stderr)
  time.sleep(1.3)
- with urllib.request.urlopen('http://127.0.0.1:8789/health',timeout=15) as resp:
-  h=json.load(resp)
+ # USB reconnect/discovery jobs can briefly reset adbd while a verified network
+ # session is establishing. Retry identity-verified wireless transport before
+ # deciding this deployment failed.
+ h={}
+ for attempt in range(7):
+  adb('connect',TARGET,t=9)
+  try:
+   with urllib.request.urlopen('http://127.0.0.1:8789/health',timeout=15) as resp:
+    h=json.load(resp)
+  except Exception as exc:
+   h={'error':str(exc)}
+  if h.get('s5_transport')=='adb_network' and h.get('s5_connected'):
+   break
+  time.sleep(2)
  if h.get('s5_transport')!='adb_network' or not h.get('s5_connected'):
-  raise RuntimeError('Live S5 IPv6 network transport not verified: '+str({k:h.get(k) for k in ('s5_transport','s5_connected','configured_target')}))
+  raise RuntimeError('Live S5 IPv6 network transport not verified: '+str({k:h.get(k) for k in ('s5_transport','s5_connected','configured_target','error')}))
  assert h.get('configured_target')==TARGET, h.get('configured_target')
  print(json.dumps({'ok':True,'identity':who,'target':TARGET,
   's5_connected':h['s5_connected'],'s5_transport':h['s5_transport'],
