@@ -109,6 +109,16 @@ def main(stage):
     d=app()
     try:
         start=snapshot(d)
+        if start.get("uiLoaded") and not start.get("uiVersion"):
+            # Refresh the parent iframe; an older embedded document can survive
+            # despite current widget source files already being installed.
+            d.execute_script(LOCATE + """
+if(weather) weather.src='/local/c720p-weather-row.html?v=TVQA_HOT_REFRESH_V127_'+Date.now();
+""")
+            for _ in range(8):
+                time.sleep(2)
+                start=snapshot(d)
+                if start.get("uiVersion"): break
         if not start.get("uiLoaded"):
             print(json.dumps({"ok":False,"stage":stage,"error":"C720P TV iframe missing","snapshot":start},indent=2));return 3
         inst=instrument(d)
