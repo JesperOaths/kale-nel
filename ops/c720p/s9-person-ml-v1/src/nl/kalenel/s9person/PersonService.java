@@ -8,6 +8,7 @@ import android.util.Log;
 import org.tensorflow.lite.Interpreter;
 import org.tensorflow.lite.gpu.GpuDelegate;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import java.io.*;
 import java.net.*;
 import java.nio.*;
@@ -17,7 +18,8 @@ public final class PersonService extends Service {
  private static final String TAG="S9PERSON";
  private volatile boolean running=false,ready=false,mlReady=false,personConfirmed=false;
  private volatile long frames=0,modelRuns=0,snapshotErrors=0,modelErrors=0,events=0;
- private volatile long latestFrame=0,lastInferenceMs=0,lastPersonMs=0,startedMs=0;
+ private volatile long latestFrame=0,lastInferenceMs=0,lastPersonMs=0,startedMs=0,lastEventMs=0;
+ private volatile double lastEventConfidence=0;
  private volatile double inferenceLatencyMs=0,personScore=0,topScore=0;
  private volatile int rawTopClass=-1,rawPersonClass=-1,personStreak=0,tempDeciC=0;
  private volatile String backend="none",failure="",modelName="ssd-mobilenet-v1-coco-quant";
@@ -153,6 +155,8 @@ public final class PersonService extends Service {
   }else personStreak=Math.max(0,personStreak-1);
   if(personStreak>=2&&!personConfirmed){
    events++;
+   lastEventMs=now;
+   lastEventConfidence=bestPerson;
    if(now-lastLogAt>10000){
     Log.i(TAG,"PERSON_EVENT seq="+events+" confidence="+bestPerson+" backend="+backend+" latency_ms="+inferenceLatencyMs);
     lastLogAt=now;
@@ -195,7 +199,7 @@ public final class PersonService extends Service {
      if(snapshotErrors>=12&&modelRuns==0)throw new IOException("repeated_initial_failure",err);
     }
     long elapsed=SystemClock.elapsedRealtime()-start;
-    long sleep=tempDeciC>=385?Math.max(1500,2500-elapsed):Math.max(300,1200-elapsed);
+    long sleep=tempDeciC>=385?Math.max(1500,2500-elapsed):Math.max(200,850-elapsed);
     Thread.sleep(sleep);
    }
   }catch(Throwable e){
@@ -221,8 +225,11 @@ public final class PersonService extends Service {
    j.put("person_confirmed",personConfirmed);
    j.put("person_streak",personStreak);
    j.put("person_events",events);
+   j.put("person_event_age_ms",lastEventMs==0?-1:now-lastEventMs);
+   j.put("person_event_confidence",Math.round(lastEventConfidence*1000.0)/1000.0);
    j.put("person_recent_age_ms",lastPersonMs==0?-1:now-lastPersonMs);
-   j.put("person_box_milli",new int[]{personBoxTop,personBoxLeft,personBoxBottom,personBoxRight});
+   JSONArray area=new JSONArray();area.put(personBoxTop);area.put(personBoxLeft);area.put(personBoxBottom);area.put(personBoxRight);
+   j.put("person_box_milli",area);
    j.put("top_detection_class",rawTopClass);j.put("top_detection_confidence",Math.round(topScore*1000.0)/1000.0);
    j.put("person_class_index",0);
    j.put("temperature_c",tempDeciC/10.0);
