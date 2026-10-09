@@ -56,7 +56,9 @@ def categorize(frames,phone):
  people=max((f.get("people_050",0) for f in frames),default=0)
  car=max((f.get("vehicle_max",0) for f in frames),default=0)
  animal=max((f.get("animal_max",0) for f in frames),default=0)
- if (stable or very_strong) and people>=2:kind="multiple_people_candidate"
+ group_frames=sum(f.get("people_050",0)>=2 for f in frames)
+ if (stable or very_strong) and group_frames>=2:kind="multiple_people_candidate"
+ elif group_frames==1:kind="possible_multiple_people_needs_review"
  elif stable or very_strong:kind="person_likely_candidate"
  elif possible:kind="possible_person_needs_review"
  elif car>=.5:kind="vehicle_candidate"
@@ -67,11 +69,23 @@ def categorize(frames,phone):
   "person_score":round(max((f.get("person_max",0) for f in frames),default=0),4),
   "vehicle_score":round(car,4),"animal_score":round(animal,4),
   "simultaneous_people":people,
+  "frames_with_multiple_person_boxes":group_frames,
   "person_samples_above_048":sum(f.get("person_max",0)>=.48 for f in frames),
   "motion_priority":bool(phone.get("priority_motion")),
   "motion_events_since_service_start":int(phone.get("motion_events") or 0),
   "identity":"not_evaluated",
   "source":"S9+ Camera2 YUV native JPEG via ADB localhost"}
+
+def overlaps(a,b):
+ # 4 normalized coordinates [top,left,bottom,right].
+ top=max(a[0],b[0]);left=max(a[1],b[1])
+ bottom=min(a[2],b[2]);right=min(a[3],b[3])
+ intersection=max(0,bottom-top)*max(0,right-left)
+ a_area=max(0,a[2]-a[0])*max(0,a[3]-a[1])
+ b_area=max(0,b[2]-b[0])*max(0,b[3]-b[1])
+ total=a_area+b_area-intersection
+ if total>0 and intersection/total>=.45:return True
+ return abs((a[1]+a[3]-b[1]-b[3])/2)<.05 and abs((a[0]+a[2]-b[0]-b[2])/2)<.05
 
 def infer(net,frame):
  from PIL import Image
@@ -90,17 +104,19 @@ def infer(net,frame):
  scores=net.get_tensor(names["TFLite_Detection_PostProcess:2"])
  num=net.get_tensor(names["TFLite_Detection_PostProcess:3"])
  n=min(10,max(0,int(round(float(num.flat[0])))))
- person=0.0;vehicle=0.0;animal=0.0;people=0
+ person=0.0;vehicle=0.0;animal=0.0;people_boxes=[]
  for i in range(n):
   score=float(scores[0,i]);category=int(round(float(classes[0,i])))
   if not 0<=score<=1:continue
   if category==0:
    person=max(person,score)
-   if score>=.50:people+=1
+   if score>=.50:
+    box=[float(v) for v in boxes[0,i].tolist()]
+    if not any(overlaps(box,prior) for prior in people_boxes):people_boxes.append(box)
   elif category in (1,2,3,5,6,7):vehicle=max(vehicle,score)
   elif category in (14,15,16,17,18,19,20,21,22,23):animal=max(animal,score)
  return {"person_max":round(person,5),"vehicle_max":round(vehicle,5),
-  "animal_max":round(animal,5),"people_050":people}
+  "animal_max":round(animal,5),"people_050":len(people_boxes)}
 
 def main():
  import numpy as np
