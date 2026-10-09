@@ -32,7 +32,7 @@ def install_local_sd(H):
   if match:
    name=match.group(1);item=data.get(name)
    if item:return play_sd(self,name,item)
-  snap=re.fullmatch(r"/new/saved/snap/(rec_20[0-9-]+_[0-9-]+[.]mp4[.]thumb[.]jpg)",path)
+  snap=re.fullmatch(r"/new/saved/snap/([A-Za-z0-9._-]+[.]mp4[.]thumb[.]jpg)",path)
   if snap:
    name=snap.group(1)
    source=BASE/"s9-phone-thumbs"/name
