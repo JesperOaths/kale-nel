@@ -38,7 +38,7 @@ def main():
   print("DEFER_NATIVE_4K_RECORDING_BUSY");return
  print("CAMERA_IDLE_NATIVE_4K_TEST_START",flush=True)
  try:
-  out=adb("shell","am","start","-n","nl.kalenel.s9nativefourk/.CameraActivity","--ez","start_test","true","--ei","seconds","8",timeout=20)
+  # Samsung task reuse can bring an old Activity forward without delivering extras.\n  # Force-stop *only this isolated test app* before invoking onCreate with the test flag.\n  adb("shell","am","force-stop","nl.kalenel.s9nativefourk",timeout=12)\n  out=adb("shell","am","start","-n","nl.kalenel.s9nativefourk/.CameraActivity","--ez","start_test","true","--ei","seconds","8",timeout=20)
   print("STARTED_NATIVE_ACTIVITY",out[-400:],flush=True)
   time.sleep(21)
   result=json.loads(adb("exec-out","cat",SD,timeout=22))
