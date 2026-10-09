@@ -47,11 +47,11 @@ def main():
     args=ap.parse_args()
     stage=args.staging.resolve()
     mapping={
-      CAT:stage/"local-sd-catalog.py",
-      PROXY:stage/"s9_sd_proxy_extension.py",
+      CAT:stage/"s9-person-ml-v1/local-sd-catalog.py",
+      PROXY:stage/"s9-person-ml-v1/s9_sd_proxy_extension.py",
     }
-    patcher=stage/"patch-fallback-preview-ui.py"
-    tests=stage/"test-fallback-evidence.py"
+    patcher=stage/"s9-native-security/patch-fallback-preview-ui.py"
+    tests=stage/"s9-native-security/test-fallback-evidence.py"
     for p in [CAT,PROXY,PAGE,ARCHIVE]:
         if not p.is_file():raise RuntimeError("missing_production_file:"+str(p))
     for p in list(mapping.values())+[patcher,tests]:
