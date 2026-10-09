@@ -24,6 +24,8 @@ SNIPPET=r'''
 (()=>{
 'use strict';
 const url='/new/api/drive-person-review',hostId='s9-drive-person-review';
+let page=0;
+const pageSize=30;
 const txt=(tag,value,cl)=>{
  const e=document.createElement(tag);
  if(value!==undefined)e.textContent=String(value);
@@ -54,7 +56,9 @@ function render(data){
    (data.reviewed_single_person_links||0)+' human-confirmed visitor links.';
  const list=host.querySelector('.s9-drive-records');
  list.replaceChildren();
- const rows=Array.isArray(data.clips)?data.clips.slice(0,45):[];
+ const all=Array.isArray(data.clips)?data.clips:[];
+ page=Math.min(page,Math.max(0,Math.ceil(all.length/pageSize)-1));
+ const rows=all.slice(page*pageSize,(page+1)*pageSize);
  if(!rows.length){list.append(txt('p','No archived recordings classified yet.'));return;}
  for(const row of rows){
   const card=txt('div',undefined,'s9-review-entry');
@@ -112,7 +116,17 @@ function render(data){
   }else card.append(txt('small','Group, vehicle-only, or unresolved recordings cannot receive a single visitor ID.'));
   list.append(card);
  }
- if(data.clips.length>45)list.append(txt('small','Displaying the 45 strongest classified clips. Remaining items are kept in the complete private catalog.'));
+ if(all.length>pageSize){
+  const control=txt('div');
+  const previous=txt('button','Previous '+pageSize);previous.type='button';
+  previous.disabled=page===0;
+  previous.addEventListener('click',()=>{page--;render(data)});
+  control.append(previous,txt('span',' Page '+(page+1)+' of '+Math.ceil(all.length/pageSize)+' '));
+  const next=txt('button','Next '+pageSize);next.type='button';
+  next.disabled=(page+1)*pageSize>=all.length;
+  next.addEventListener('click',()=>{page++;render(data)});
+  control.append(next);list.append(control);
+ }
 }
 async function refresh(){
  if(!window.C720PSecureRelay?.fetch)return;
