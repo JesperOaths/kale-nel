@@ -76,7 +76,7 @@ public final class ClipClassifier {
    ArrayList<Detection> found=new ArrayList<>();
    int total=Math.min(10,Math.max(0,Math.round(count[0])));
    for(int i=0;i<total;i++){
-    float confidence=scores[0][i];if(confidence<0.50f)continue;
+    float confidence=scores[0][i];if(confidence<0.30f)continue;
     Detection d=new Detection();
     d.label=label(Math.round(classes[0][i]));
     d.score=confidence;d.box=boxes[0][i].clone();
@@ -94,6 +94,10 @@ public final class ClipClassifier {
   result.put("auto_identity_status","appearance_based_identity_not_verified");
   MediaMetadataRetriever media=new MediaMetadataRetriever();
   int persons=0,animals=0,vehicles=0;
+  int strongPersonFrames=0,possiblePersonFrames=0,validFrames=0;
+  long firstStrongAt=-1,lastStrongAt=-1;
+  final JSONArray frameEvidence=new JSONArray();
+  final LinkedHashSet<String> animalsSeen=new LinkedHashSet<>(),vehiclesSeen=new LinkedHashSet<>();
   double maxPerson=0,maxAnimal=0,maxVehicle=0;
   Bitmap best=null;double bestScore=-1;
   long duration=0;
@@ -104,22 +108,47 @@ public final class ClipClassifier {
    result.put("width",Integer.parseInt(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)));
    result.put("height",Integer.parseInt(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)));
    init();
-   int frames=(int)Math.max(2,Math.min(6,duration/2400L));
+   // Denser temporal coverage catches short walk-bys that a handful of keyframes miss.
+   // Cap decoding/inference to 12 samples per clip to protect device thermals.
+   int frames=(int)Math.min(12,Math.max(6,(duration+1799L)/1800L));
    for(int n=0;n<frames;n++){
     long micros=(long)(((n+0.5)/(double)frames)*duration*1000);
     Bitmap bitmap=media.getFrameAtTime(micros,MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
     if(bitmap==null)continue;
     try{
      List<Detection> found=detect(bitmap);
-     int p=0,a=0,v=0;double confidence=0;
+     validFrames++;
+     int p=0,a=0,v=0,weakPerson=0;
+     double confidence=0,framePersonMax=0;
      for(Detection d:found){
-      if("person".equals(d.label)){p++;maxPerson=Math.max(maxPerson,d.score);confidence=Math.max(confidence,d.score);}
-      else if("cat".equals(d.label)||"dog".equals(d.label)||"bird".equals(d.label)||"horse".equals(d.label)
-          ||"sheep".equals(d.label)||"cow".equals(d.label)){a++;maxAnimal=Math.max(maxAnimal,d.score);}
-      else if("car".equals(d.label)||"truck".equals(d.label)||"bus".equals(d.label)||"motorcycle".equals(d.label)
-          ||"bicycle".equals(d.label)){v++;maxVehicle=Math.max(maxVehicle,d.score);}
+      if("person".equals(d.label)){
+       maxPerson=Math.max(maxPerson,d.score);
+       framePersonMax=Math.max(framePersonMax,d.score);
+       if(d.score>=.50f){p++;confidence=Math.max(confidence,d.score);}
+       else weakPerson++;
+      }else if(d.score>=.50f && ("cat".equals(d.label)||"dog".equals(d.label)||"bird".equals(d.label)
+           ||"horse".equals(d.label)||"sheep".equals(d.label)||"cow".equals(d.label)
+           ||"elephant".equals(d.label)||"bear".equals(d.label)||"zebra".equals(d.label)
+           ||"giraffe".equals(d.label))){
+       a++;maxAnimal=Math.max(maxAnimal,d.score);animalsSeen.add(d.label);
+      }else if(d.score>=.50f && ("car".equals(d.label)||"truck".equals(d.label)||"bus".equals(d.label)
+           ||"motorcycle".equals(d.label)||"bicycle".equals(d.label)
+           ||"train".equals(d.label))){
+       v++;maxVehicle=Math.max(maxVehicle,d.score);vehiclesSeen.add(d.label);
+      }
      }
+     if(p>0){
+      strongPersonFrames++;
+      if(firstStrongAt<0)firstStrongAt=micros/1000;
+      lastStrongAt=micros/1000;
+     }
+     if(p>0||weakPerson>0)possiblePersonFrames++;
      persons=Math.max(persons,p);animals=Math.max(animals,a);vehicles=Math.max(vehicles,v);
+     JSONObject sample=new JSONObject();
+     sample.put("time_ms",micros/1000).put("people_at_050",p)
+       .put("person_peak_score",Math.round(framePersonMax*1000)/1000.0)
+       .put("vehicles_at_050",v).put("animals_at_050",a);
+     frameEvidence.put(sample);
      double quality=confidence*2.0+0.05*(p+a+v);
      if(quality>bestScore){
       if(best!=null)best.recycle();
@@ -134,6 +163,25 @@ public final class ClipClassifier {
    if(vehicles>0)categories.put("vehicle");
    if(animals>0)categories.put("animal");
    if(categories.length()==0)categories.put("other_motion");
+   String personEvent="no_person_model_detection";
+   if(persons>=2)personEvent="multiple_people_candidate";
+   else if(strongPersonFrames>=2)personEvent="single_person_repeated_candidate";
+   else if(strongPersonFrames==1)personEvent="single_frame_person_candidate";
+   else if(possiblePersonFrames>=2)personEvent="possible_person_below_standard_threshold";
+   result.put("person_event_category",personEvent);
+   result.put("person_review_priority",persons>=2||strongPersonFrames>=2?"high":
+      possiblePersonFrames>0?"review":"non_person_or_unresolved");
+   result.put("sampled_frame_count",validFrames);
+   result.put("person_frames_at_050",strongPersonFrames);
+   result.put("possible_person_frames_at_030",possiblePersonFrames);
+   result.put("person_first_sample_ms",firstStrongAt>=0?firstStrongAt:JSONObject.NULL);
+   result.put("person_last_sample_ms",lastStrongAt>=0?lastStrongAt:JSONObject.NULL);
+   result.put("person_sample_timeline",frameEvidence);
+   result.put("animal_subcategories",new JSONArray(animalsSeen));
+   result.put("vehicle_subcategories",new JSONArray(vehiclesSeen));
+   result.put("person_count_is_max_simultaneous_detections",true);
+   result.put("person_identity","not_evaluated");
+   result.put("human_reviewed",false);
    result.put("scene_category",scene);
    result.put("content_group",scene);
    result.put("categories",categories);
