@@ -2,7 +2,7 @@
 set -euo pipefail
 ROOT=/home/jespern/c720p-home-hub
 UNITS=/home/jespern/.config/systemd/user
-SRC=https://raw.githubusercontent.com/JesperOaths/kale-nel/b84b02912225feb6b5bc7aafdcc04b5f2189e8cc/ops/c720p/s3-onphone/adb-motion-relay.py
+SRC=https://raw.githubusercontent.com/JesperOaths/kale-nel/e28cc2297bb17f42494ac2b16cabb70f8f8ced01/ops/c720p/s3-onphone/adb-motion-relay.py
 mkdir -p "$ROOT/bin" "$UNITS"
 curl -fsSL "$SRC" -o "$ROOT/bin/s3-bedroom-onphone-relay.py"
 chmod 755 "$ROOT/bin/s3-bedroom-onphone-relay.py"
