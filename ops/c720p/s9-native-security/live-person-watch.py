@@ -123,7 +123,7 @@ def main():
     raise RuntimeError("native_camera_not_healthy")
    if phone.get("snapshot_ready") is not True or float(phone.get("temperature_c",100))>=39:
     raise RuntimeError("no_fresh_jpeg_or_thermal_guard")
-   if int(phone.get("snapshot_age_ms") or 50000)>5500:
+   if int(phone.get("snapshot_age_ms",50000))>5500:
     raise RuntimeError("camera_snapshot_stale")
    raw=retrieve(JPEG,1500000)
    if not raw.startswith(b"\xff\xd8\xff") or not raw.endswith(b"\xff\xd9"):
