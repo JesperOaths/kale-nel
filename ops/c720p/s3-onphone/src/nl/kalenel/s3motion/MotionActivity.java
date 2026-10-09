@@ -39,6 +39,7 @@ public final class MotionActivity extends Activity
     private long session=System.currentTimeMillis();
     private TextView status;
     private boolean holderReady=false;
+    private int cameraId=0, blackFrames=0;
 
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
@@ -74,7 +75,7 @@ public final class MotionActivity extends Activity
                     !=PackageManager.PERMISSION_GRANTED) {
                 Log.e(TAG,"CAMERA_PERMISSION_MISSING");status.setText("Camera permission required");return;
             }
-            camera=Camera.open(0);
+            camera=Camera.open(cameraId);
             Camera.Parameters p=camera.getParameters();
             Camera.Size best=null;
             for(Camera.Size s:p.getSupportedPreviewSizes()){
@@ -101,7 +102,7 @@ public final class MotionActivity extends Activity
             initialized=false;frames=0;recent=0;hitCount=0;missCount=0;
             previousMean=-1;lastRead=0;lastLog=0;prevCx=-1;prevCy=-1;
             session=System.currentTimeMillis();
-            Log.i(TAG,"READY session="+session+" camera="+cameraWidth+"x"+cameraHeight);
+            Log.i(TAG,"READY session="+session+" camera="+cameraWidth+"x"+cameraHeight+" camera_id="+cameraId);
             status.setText("S3 motion active – on-phone detection");
         }catch(Exception e){
             Log.e(TAG,"CAMERA_ERROR "+e.getClass().getSimpleName()+" "+e.getMessage());
@@ -142,6 +143,22 @@ public final class MotionActivity extends Activity
             }
         }
         float mean=(float)total/N;
+        if(mean<5.0f)blackFrames++;else blackFrames=0;
+        if(blackFrames>=25 && cameraId==0){
+            Log.w(TAG,"BLACK_PREVIEW switching_to_front_camera");
+            blackFrames=0;
+            runOnUiThread(new Runnable(){
+                @Override public void run(){
+                    stopCamera();
+                    cameraId=1;
+                    startCamera(surface.getHolder());
+                }
+            });
+            return;
+        }
+        if(blackFrames==25 && cameraId==1)
+            Log.e(TAG,"BLACK_PREVIEW front_camera_also_blank");
+
         if(mean>=100)dark=false;
         else if(mean<=73)dark=true;
         frames++;
