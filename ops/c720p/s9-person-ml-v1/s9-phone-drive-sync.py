@@ -63,7 +63,7 @@ def md5(path):
 def stream_phone_file(path,rclone,conf,remote,folder,expected,expected_sha):
     command=[rclone,"--config",conf,"rcat",remote,
          "--drive-root-folder-id",folder,"--drive-chunk-size","8M",
-         "--retries","2","--low-level-retries","3"]
+         "--retries","2","--low-level-retries","3","--size",str(expected)]
     video=sp.Popen(["adb","-s",ADB,"exec-out","cat",path],stdout=sp.PIPE,stderr=sp.PIPE)
     upload=sp.Popen(command,stdin=sp.PIPE,stdout=sp.DEVNULL,stderr=sp.PIPE)
     hh=hashlib.sha256();mm=hashlib.md5();n=0
