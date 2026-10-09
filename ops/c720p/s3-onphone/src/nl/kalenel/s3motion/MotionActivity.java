@@ -53,6 +53,9 @@ public final class MotionActivity extends Activity
     private long lastRearRecovery=0;
     private float lastContrast=0f;
     private boolean previewValid=false;
+    private String cameraNightMode="untested";
+    private long lastActualChangeAt=0;
+    private long stagnantFrames=0;
     private SensorManager lightManager;
     private Sensor ambientLightSensor;
     private volatile float ambientLux=-1f;
@@ -87,7 +90,7 @@ public final class MotionActivity extends Activity
         if(lightManager!=null)ambientLightSensor=lightManager.getDefaultSensor(Sensor.TYPE_LIGHT);
         Log.i(TAG,"AMBIENT_SENSOR available="+(ambientLightSensor!=null)+
                 " darkBelow="+LUX_DARK_BELOW+" brightAbove="+LUX_BRIGHT_ABOVE);
-        Log.i(TAG,"APP_START session="+session+" version=5 rear_only=true lux_gating=true"+
+        Log.i(TAG,"APP_START session="+session+" version=6 rear_only=true night_profile=true lux_gating=true"+
                " direct_events="+(!webhookUrl.isEmpty())+" on_phone=true");
     }
     @Override protected void onNewIntent(Intent intent){
@@ -209,14 +212,51 @@ public final class MotionActivity extends Activity
             }
             if(fpsChoice!=null)p.setPreviewFpsRange(fpsChoice[0],fpsChoice[1]);
             p.setPreviewFormat(android.graphics.ImageFormat.NV21);
-            camera.setParameters(p);
+            // Give the rear sensor its best chance to see people in low light.
+            // Avoid assuming this older Exynos HAL supports any particular setting.
+            String nightState="unsupported";
+            try {
+                List<String> scenes=p.getSupportedSceneModes();
+                if(scenes!=null && scenes.contains(Camera.Parameters.SCENE_MODE_NIGHT)){
+                    p.setSceneMode(Camera.Parameters.SCENE_MODE_NIGHT);
+                    nightState="night";
+                }
+                int maxExposure=p.getMaxExposureCompensation();
+                if(maxExposure>0)p.setExposureCompensation(maxExposure);
+                String choices=p.get("iso-values");
+                if(choices!=null){
+                    // Use only a setting reported by the device; prefer higher gain.
+                    for(String iso:new String[]{"ISO1600","1600","ISO800","800","ISO400","400"}){
+                        if(Arrays.asList(choices.split(",")).contains(iso)){
+                            p.set("iso",iso);
+                            break;
+                        }
+                    }
+                }
+                camera.setParameters(p);
+                cameraNightMode=nightState;
+            }catch(RuntimeException nightError){
+                Log.w(TAG,"NIGHT_PARAMETERS_REJECTED "+nightError.getClass().getSimpleName());
+                Camera.Parameters safe=camera.getParameters();
+                safe.setPreviewSize(cameraWidth,cameraHeight);
+                safe.setPreviewFormat(android.graphics.ImageFormat.NV21);
+                camera.setParameters(safe);
+                cameraNightMode="safe_fallback";
+            }
+            Camera.Parameters applied=camera.getParameters();
+            Log.i(TAG,"REAR_SETTINGS scene="+applied.getSceneMode()+
+                    " exposure="+applied.getExposureCompensation()+
+                    " max_exposure="+applied.getMaxExposureCompensation()+
+                    " iso="+applied.get("iso")+
+                    " fps_range="+Arrays.toString(new int[]{applied.getPreviewFrameRate()})+
+                    " profile="+cameraNightMode);
             camera.setDisplayOrientation(90);
             buffer=new byte[cameraWidth*cameraHeight*3/2];
             camera.setPreviewDisplay(holder);
             camera.addCallbackBuffer(buffer);
             camera.setPreviewCallbackWithBuffer(this);
             camera.startPreview();
-            initialized=false;frames=0;recent=0;hitCount=0;missCount=0;blackFrames=0;previewValid=false;lastContrast=0f;
+            initialized=false;frames=0;recent=0;hitCount=0;missCount=0;blackFrames=0;previewValid=false;lastContrast=0f;lastActualChangeAt=SystemClock.elapsedRealtime();stagnantFrames=0;
             previousMean=-1;lastRead=0;lastLog=0;prevCx=-1;prevCy=-1;
             session=System.currentTimeMillis();
             Log.i(TAG,"READY session="+session+" camera="+cameraWidth+"x"+cameraHeight+
@@ -315,6 +355,8 @@ public final class MotionActivity extends Activity
             if(diff)changed++;
         }
         float fraction=(float)changed/N;
+        if(changed>1){lastActualChangeAt=now;stagnantFrames=0;}
+        else stagnantFrames++;
         float largestArea=0,cx=-1,cy=-1;
         // Connected-component check rejects isolated noisy pixels.
         boolean[] seen=new boolean[N];
@@ -368,7 +410,7 @@ public final class MotionActivity extends Activity
         lastLog=now;
         Log.i(TAG,"HEARTBEAT session="+session+" luma="+Math.round(mean)+
                 " lux="+(ambientLux>=0f?Math.round(ambientLux):-1)+
-                " dark="+(dark?1:0)+" camera_id="+cameraId+" valid="+(previewValid?1:0)+" contrast="+Math.round(lastContrast)+" changed="+Math.round(changed*100)+
+                " dark="+(dark?1:0)+" camera_id="+cameraId+" valid="+(previewValid?1:0)+" contrast="+Math.round(lastContrast)+" stale_sec="+Math.round((now-lastActualChangeAt)/1000f)+" profile="+cameraNightMode+" changed="+Math.round(changed*100)+
                 " largest="+Math.round(largest)+" frames="+frames);
     }
 }
