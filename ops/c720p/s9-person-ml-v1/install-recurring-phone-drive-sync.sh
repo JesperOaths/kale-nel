@@ -4,7 +4,7 @@ umask 077
 ROOT="$HOME/c720p-home-hub"
 UNIT="$HOME/.config/systemd/user"
 mkdir -p "$ROOT/bin" "$UNIT"
-SRC="https://raw.githubusercontent.com/JesperOaths/kale-nel/109ce8a1252e2ee91738ce1814ffb155fd2a6b65/ops/c720p/s9-person-ml-v1/s9-phone-drive-sync.py"
+SRC="https://raw.githubusercontent.com/JesperOaths/kale-nel/827df5923ca4ce170f282b6643eda550eee8ddc9/ops/c720p/s9-person-ml-v1/s9-phone-drive-sync.py"
 curl -fsSL --retry 2 "$SRC" -o "$ROOT/bin/c720p-s9-phone-drive-sync.py.new"
 python3 -m py_compile "$ROOT/bin/c720p-s9-phone-drive-sync.py.new"
 mv "$ROOT/bin/c720p-s9-phone-drive-sync.py.new" "$ROOT/bin/c720p-s9-phone-drive-sync.py"
