@@ -31,9 +31,14 @@ class Tests(unittest.TestCase):
   self.assertEqual(m.report()["counts"]["unreviewed"],1)
   self.assertEqual(len(m.AUDIT.read_text().splitlines()),2)
  def test_provenance_and_no_premature_rates(self):
-  m=self.m;m.BENCH.write_text(json.dumps({"per_image":{
-   "ssd":{"model_sha256":m.MODEL_SHAS["ssd"],"frames":{self.file:{"input_sha256":self.digest,"person_score":0.81}}},
-   "lite0":{"model_sha256":m.MODEL_SHAS["lite0"],"frames":{self.file:{"input_sha256":"0"*64,"person_score":0.99}}}}))
+  m=self.m
+  example={"per_image":{
+   "ssd":{"model_sha256":m.MODEL_SHAS["ssd"],
+          "frames":{self.file:{"input_sha256":self.digest,"person_score":0.81}}},
+   "lite0":{"model_sha256":m.MODEL_SHAS["lite0"],
+            "frames":{self.file:{"input_sha256":"0"*64,"person_score":0.99}}}
+  }}
+  m.BENCH.write_text(json.dumps(example))
   self.assertEqual(m.report()["images"][0]["person_scores"],{"ssd":0.81})
   self.assertEqual(m.save_label(self.name,self.digest,"no_person_visible")[0],200)
   stats=m.report()["metrics"]["ssd"]
