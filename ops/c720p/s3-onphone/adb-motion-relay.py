@@ -74,6 +74,7 @@ def main():
                  bufsize=1,text=True)
             last_heartbeat=time.monotonic()
             current_session=None
+            sensor_valid=False
             state(ok=True,status="waiting_for_on_phone_heartbeat",
                   last_motion_id=last_motion_id)
             while not QUIT:
@@ -88,15 +89,17 @@ def main():
                     if "READY " in event or "HEARTBEAT " in event:
                         current_session=sess or current_session
                         last_heartbeat=time.monotonic()
-                        state(ok=True,status="armed_on_device",
+                        luma=attr(event,"luma")
+                        sensor_valid=bool(luma and float(luma)>6.0)
+                        state(ok=sensor_valid,status="armed_on_device" if sensor_valid else "camera_blank",
                               session=current_session,
-                              luma=attr(event,"luma"),
+                              luma=luma,
                               dark=attr(event,"dark"),
                               last_motion_id=last_motion_id)
                     elif "MOTION " in event and sess==current_session:
                         seq=attr(event,"seq")
                         motion_id=f"{sess}:{seq}"
-                        if motion_id!=last_motion_id and attr(event,"dark")=="1":
+                        if sensor_valid and motion_id!=last_motion_id and attr(event,"dark")=="1":
                             try:
                                 sent=send(webhook,sess,seq)
                             except Exception:
