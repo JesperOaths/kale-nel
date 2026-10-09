@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Delete ONLY verified, finalized IP Webcam internal staging MP4s.
 
-Kept copies: S9 microSD SHA256 + Drive archive MD5/size.
+Kept copy: S9 microSD SHA256-verified original. No cloud required.
 Never deletes: S9 SD archives, Drive objects, unverified clips, current recordings.
 """
 import fcntl,hashlib,importlib.util,json,os,re,subprocess as sp,sys,time,urllib.request,urllib.parse
@@ -49,14 +49,11 @@ def atomic(obj):
  os.replace(tmp,LOG)
 def main():
  dry="--apply" not in sys.argv
- result={"time":time.time(),"dry_run":dry,"eligible":[],"removed":[],"skipped":{}}
+ result={"time":time.time(),"dry_run":dry,"archive_policy":"S9_microSD_only","eligible":[],"removed":[],"skipped":{}}
  LOCK.parent.mkdir(parents=True,exist_ok=True)
  with open(LOCK,"a+") as lock:
   fcntl.flock(lock,fcntl.LOCK_EX)
-  c=json.loads(CFG.read_text())
-  spec=importlib.util.spec_from_file_location("s9_original_archive",UPLOAD)
-  mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
-  if not mod.remote_ready(c):raise RuntimeError("pinned_drive_credentials_not_healthy")
+  # MicroSD is now the sole required archive; never contact Drive.
   run(["adb","connect",ADB],timeout=12)
   s=local_status()
   if not s.get("ok") or s.get("recording_in_progress") or s.get("recording_orphan_present"):
@@ -64,30 +61,22 @@ def main():
   if get("/status.json").get("video_status",{}).get("enabled"):
    raise RuntimeError("IP_Webcam_recorder_is_active")
   catalog=get("/list_videos")
-  idx=json.loads(IDX.read_text())
-  verified={str(i.get("local_clip_name")):i for i in idx.get("items",[])
-   if i.get("camera")=="new" and i.get("method")=="s9-phone-original-verified"
-   and i.get("state")=="verified" and i.get("phone_verified_sd")}
-  # New archive entries use 'phone_verified_sd' True. All original MP4/SD files preserved.
+  # Require each finalized SD MP4 and verified SHA256 manifest instead.
   count=0
   for item in sorted(catalog,key=lambda v:int(v.get("mtime") or 0)):
    name=str(item.get("name") or "")
    if not NAME.fullmatch(name) or str(item.get("path") or "")!="":continue
    if time.time()-int(item.get("mtime") or 0)<600:
     result["skipped"][name]="too_recent";continue
-   row=verified.get(name)
-   if not row:
-    result["skipped"][name]="drive_archive_missing_or_not_verified";continue
    manifest=app_manifest(name)
    if not manifest:
     result["skipped"][name]="sd_manifest_missing";continue
    size=int(manifest["bytes"])
-   if size!=int(item.get("size") or -1) or size!=int(row.get("size") or -1):
+   if size!=int(item.get("size") or -1):
     result["skipped"][name]="size_mismatch";continue
    if not compare_sd(name,manifest["sha256"],size):
     result["skipped"][name]="sd_sha256_failed";continue
-   if not remote_meta(mod,c,row):
-    result["skipped"][name]="drive_checksum_unavailable";continue
+   # Never delete the on-card original. Only remove IP Webcam's staging copy.
    result["eligible"].append({"name":name,"bytes":size})
    if dry or count>=2:continue
    # IP Webcam's own Video archive UI issues POST /remove/<filename>.
