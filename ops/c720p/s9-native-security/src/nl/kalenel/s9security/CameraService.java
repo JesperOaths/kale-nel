@@ -34,6 +34,11 @@ public final class CameraService extends Service {
  private String cameraId="",mode="stopped",lastFailure="",lastClip="",lastReview="",backend="pending";
  private volatile boolean running=false,pilotOnly=true;
  private volatile long frames=0,motionEvents=0,completed=0,reviewed=0,failed=0,suppressedByRate=0;
+ private volatile long reserveUsed=0,fallbackEvidenceSaved=0,fallbackEvidenceFailed=0;
+ private volatile long recoveredPartials=0,recoveredReviews=0,recoveryUnplayable=0;
+ private volatile boolean recoveryQueued=false;
+ private long lastFallbackAt=0;
+ private String captureTier="normal";
  private long lastFrameAt=0,lastMovementAt=0,lastRecordAt=0,cooldownUntil=0,lastStart=0;
  private final Object stateLock=new Object();
  private ServerSocket apiSocket;
@@ -43,7 +48,7 @@ public final class CameraService extends Service {
  private volatile long lastJpegAt=0;
  private int recoveryCount=0;
  private static final long QUIET_MS=8500,MAX_MS=30000,COOLDOWN_MS=25000;
- private static final int MAX_4K_CLIPS_PER_HOUR=12;
+ private static final int MAX_4K_CLIPS_PER_HOUR=RecordingRate.TOTAL_PER_HOUR;
  @Override public IBinder onBind(Intent intent){return null;}
  @Override public int onStartCommand(Intent intent,int flags,int id){
   if(intent!=null&&"STOP".equals(intent.getAction())){
@@ -109,6 +114,7 @@ public final class CameraService extends Service {
  private void prepare(){
   try{
    folder=sd();
+   queueArchiveRecovery();
    if(checkSelfPermission("android.permission.CAMERA")!=PackageManager.PERMISSION_GRANTED)
     throw new SecurityException("camera_permission_required");
    CameraManager manager=(CameraManager)getSystemService(CAMERA_SERVICE);
@@ -144,8 +150,12 @@ public final class CameraService extends Service {
      if(change){
       motionEvents++;
       lastMovementAt=lastFrameAt;
-      if(!pilotOnly&&"watching".equals(mode)&&lastFrameAt>=cooldownUntil
-       &&temperature()<415&&folder.getUsableSpace()>1024L*1024*1024)startRecording();
+      if(!pilotOnly&&"watching".equals(mode)){
+       if(lastFrameAt<cooldownUntil)saveFallbackEvidence("cooldown_motion");
+       else if(temperature()<415 && folder.getUsableSpace()>15L*1024*1024*1024)
+        startRecording();
+       else saveFallbackEvidence("thermal_or_space_guard");
+      }
      }
      if("recording".equals(mode)&&lastFrameAt-lastStart>2500&&
         (lastFrameAt-lastStart>MAX_MS||lastFrameAt-lastMovementAt>QUIET_MS))stopRecording("motion_completed");
@@ -191,7 +201,7 @@ public final class CameraService extends Service {
    },cameraHandler);
   }catch(Exception e){failure("preview_setup_failed",e);scheduleRecover();}
  }
- private boolean rateAllowed(){
+ private boolean rateAllowed(boolean sustainedCoherent){
   if(temporaryTest)return true;
   android.content.SharedPreferences prefs=getSharedPreferences("native",MODE_PRIVATE);
   long now=System.currentTimeMillis(),start=prefs.getLong("record_rate_start",0L);
@@ -199,21 +209,28 @@ public final class CameraService extends Service {
    prefs.edit().putLong("record_rate_start",now).putInt("record_rate_count",0).apply();
    return true;
   }
-  return prefs.getInt("record_rate_count",0)<MAX_4K_CLIPS_PER_HOUR;
+  return RecordingRate.allow(prefs.getInt("record_rate_count",0),sustainedCoherent);
  }
  private void noteRecordingStarted(){
   if(temporaryTest)return;
   android.content.SharedPreferences prefs=getSharedPreferences("native",MODE_PRIVATE);
-  prefs.edit().putInt("record_rate_count",prefs.getInt("record_rate_count",0)+1).apply();
+  int count=prefs.getInt("record_rate_count",0);
+  captureTier=RecordingRate.reserve(count)?"priority_reserve":"normal";
+  if(RecordingRate.reserve(count))reserveUsed++;
+  prefs.edit().putInt("record_rate_count",count+1).apply();
  }
  private void startRecording(){
   if(!running||(pilotOnly&&!temporaryTest)||!"watching".equals(mode))return;
-  if(!rateAllowed()){
-   if(suppressedByRate++%140==0)Log.w(TAG,"4K_RATE_GUARD_12_PER_HOUR");
-   cooldownUntil=SystemClock.elapsedRealtime()+25000;
+  if(!rateAllowed(motion.strong)){
+   if(suppressedByRate++%140==0)Log.w(TAG,"4K_RATE_GUARD_PRIORITY_RESERVE_EXHAUSTED_OR_WEAK");
+   saveFallbackEvidence("recording_budget_rejected");
+   cooldownUntil=SystemClock.elapsedRealtime()+12000;
    return;
   }
-  if(temperature()>=415||folder.getUsableSpace()<15L*1024*1024*1024)return;
+  if(temperature()>=415||folder.getUsableSpace()<15L*1024*1024*1024){
+   saveFallbackEvidence("recording_safety_guard");
+   return;
+  }
   mode="starting";lastMovementAt=SystemClock.elapsedRealtime();
   try{
    closeSession();
@@ -276,7 +293,8 @@ public final class CameraService extends Service {
    completed++;lastClip=candidate.getName();
    Log.i(TAG,"FINALIZED_TRUE_4K name="+lastClip+" bytes="+candidate.length());
    final File saved=candidate;final long motionAtSave=motionEvents;
-   reviewer.submit(new Runnable(){public void run(){review(saved,reason,motionAtSave);}});
+   final String reviewTrigger=reason+"_"+captureTier;
+   reviewer.submit(new Runnable(){public void run(){review(saved,reviewTrigger,motionAtSave);}});
   }catch(Exception e){
    failure("finalize_failed_"+e.getClass().getSimpleName(),e);
    // Keep the raw .recording file for forensic recovery, never delete incomplete footage.
@@ -306,6 +324,89 @@ public final class CameraService extends Service {
    failure("review_"+e.getClass().getSimpleName()+":"+e.getMessage(),e);
    // Preserve original movie even when classifier fails. A later recovery job can retry.
   }
+ }
+ // Keep an SD-only low-resolution evidence frame if the 4K budget, cooldown,
+ // thermal or free-space guard prevents a recording. Rate-limit independently
+ // so a flickering light cannot fill the microSD with preview images.
+ private void saveFallbackEvidence(String why){
+  long now=SystemClock.elapsedRealtime();
+  if(now-lastFallbackAt<45000L || latestJpeg.length<2000 || folder==null || reviewer==null)return;
+  lastFallbackAt=now;
+  final byte[] jpeg=latestJpeg.clone();
+  final File archive=folder;
+  final long timestamp=System.currentTimeMillis();
+  final String reason=why;
+  try{
+   reviewer.execute(new Runnable(){public void run(){
+    String name="preview_motion_"+timestamp+".jpg";
+    File target=new File(archive,name);
+    File temp=new File(archive,name+".partial");
+    try{
+     try(FileOutputStream out=new FileOutputStream(temp)){
+      out.write(jpeg);
+      out.getFD().sync();
+     }
+     if(!temp.renameTo(target))throw new IOException("preview_evidence_rename_failed");
+     JSONObject meta=new JSONObject();
+     meta.put("name",name).put("kind","preview_only_motion_evidence")
+         .put("reason",reason).put("captured_at_ms",timestamp)
+         .put("width",640).put("height",480)
+         .put("archive","S9_microSD_only")
+         .put("person_identity","not_evaluated");
+     ClipClassifier.writeJson(new File(archive,name+".json"),meta);
+     fallbackEvidenceSaved++;
+    }catch(Exception e){fallbackEvidenceFailed++;Log.w(TAG,"fallback_evidence_failed",e);}
+   }});
+  }catch(java.util.concurrent.RejectedExecutionException e){
+   fallbackEvidenceFailed++;
+  }
+ }
+ private static boolean validCompleted4K(File movie){
+  if(!movie.isFile() || movie.length()<200000)return false;
+  MediaMetadataRetriever reader=new MediaMetadataRetriever();
+  try{
+   reader.setDataSource(movie.getAbsolutePath());
+   return "3840".equals(reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH))
+       && "2160".equals(reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT))
+       && Long.parseLong(reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))>=1000;
+  }catch(Exception e){return false;}
+  finally{try{reader.release();}catch(Exception ignored){}}
+ }
+ // Interrupted MP4s are never deleted. Only promote a fully readable 4K
+ // recording; opaque/truncated remnants stay at their original path.
+ private void queueArchiveRecovery(){
+  if(recoveryQueued || reviewer==null || folder==null)return;
+  recoveryQueued=true;
+  final File archive=folder;
+  try{reviewer.execute(new Runnable(){public void run(){recoverArchive(archive);}});}
+  catch(java.util.concurrent.RejectedExecutionException e){recoveryQueued=false;}
+ }
+ private void recoverArchive(File archive){
+  try{
+   File[] originals=archive.listFiles();
+   if(originals==null)return;
+   Arrays.sort(originals,(a,b)->Long.compare(b.lastModified(),a.lastModified()));
+   int inspected=0;
+   for(File existing:originals){
+    if(!running || inspected>=100)break;
+    String filename=existing.getName();
+    if(!filename.startsWith("motion_") || !(filename.endsWith(".mp4.recording")||filename.endsWith(".mp4")))continue;
+    inspected++;
+    if(filename.endsWith(".mp4.recording")){
+     if(existing.equals(partial) && ("recording".equals(mode)||"starting".equals(mode)))continue;
+     if(!validCompleted4K(existing)){recoveryUnplayable++;continue;}
+     File promoted=new File(archive,filename.substring(0,filename.length()-".recording".length()));
+     if(promoted.exists() || !existing.renameTo(promoted)){recoveryUnplayable++;continue;}
+     recoveredPartials++;
+     if(!new File(archive,promoted.getName()+".verified.json").exists()){
+      review(promoted,"startup_recovered_4k",0);recoveredReviews++;
+     }
+    }else if(!new File(archive,filename+".verified.json").exists()){
+     if(!validCompleted4K(existing)){recoveryUnplayable++;continue;}
+     review(existing,"startup_missing_review_repaired",0);recoveredReviews++;
+    }
+   }
+  }catch(Exception e){failure("archive_recovery_scan_failed",e);}
  }
  private void closeSession(){
   if(session!=null){try{session.stopRepeating();}catch(Exception ignored){}
@@ -343,7 +444,7 @@ public final class CameraService extends Service {
    d.put("pilot_only",pilotOnly);
    d.put("takeover_completed",!pilotOnly&&running&&lastFrameAt>0);
    d.put("recorder","camera2_3840x2160_h264");
-   d.put("motion_detector","regional_yuv_adaptive_v1");
+   d.put("motion_detector","regional_yuv_adaptive_v2_priority");
    d.put("review_model","ssd_mobilenet_coco_gpu_cpu_v1");
    d.put("mic",false);d.put("cloud_upload",false);
    d.put("storage","removable_microSD_only");
@@ -351,6 +452,15 @@ public final class CameraService extends Service {
    d.put("frames",frames);d.put("motion_events",motionEvents);
    d.put("motion_rate_suppressed",suppressedByRate);
    d.put("recording_rate_max_per_hour",MAX_4K_CLIPS_PER_HOUR);
+   d.put("recording_rate_standard_per_hour",RecordingRate.BASE_PER_HOUR);
+   d.put("recording_rate_priority_reserve",RecordingRate.PRIORITY_RESERVE_PER_HOUR);
+   d.put("priority_motion",motion.strong);
+   d.put("priority_reserve_used",reserveUsed);
+   d.put("fallback_evidence_saved",fallbackEvidenceSaved);
+   d.put("fallback_evidence_failed",fallbackEvidenceFailed);
+   d.put("recovery_partials_finalized",recoveredPartials);
+   d.put("recovery_missing_reviews_repaired",recoveredReviews);
+   d.put("recovery_unplayable_preserved",recoveryUnplayable);
    d.put("recordings_this_hour",getSharedPreferences("native",MODE_PRIVATE).getInt("record_rate_count",0));
    d.put("changed_ratio",motion.changedRatio);d.put("coherent_cells",motion.coherent);
    d.put("brightness",motion.lighting);

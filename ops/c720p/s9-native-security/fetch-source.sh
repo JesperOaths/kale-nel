@@ -14,7 +14,7 @@ SHA="$(curl -fsSL --retry 3 --connect-timeout 10 --max-time 45 \
 mkdir -p "$ROOT/src/nl/kalenel/s9security"
 TEMP="$(mktemp -d "$ROOT/.s9-source.XXXXXXXX")"
 trap 'rm -rf "$TEMP"' EXIT
-for file in CameraActivity CameraService MotionGrid ClipClassifier PreviewJpeg Boot; do
+for file in CameraActivity CameraService MotionGrid ClipClassifier PreviewJpeg Boot RecordingRate; do
   curl -fsSL --retry 3 --connect-timeout 10 --max-time 45 \
     "https://raw.githubusercontent.com/$REPO/$SHA/ops/c720p/s9-native-security/src/nl/kalenel/s9security/$file.java" \
     -o "$TEMP/$file.java"
