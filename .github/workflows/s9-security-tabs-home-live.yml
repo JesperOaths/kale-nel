@@ -5,12 +5,18 @@ on:
       - "ops/c720p/s9-native-security/patch-today-native-and-home-live.py"
       - "ops/c720p/s9-native-security/deploy-security-tabs-and-bottom-live.py"
       - "ops/c720p/s9-native-security/test-security-tabs-home-live.py"
+      - "ops/c720p/s9-native-security/patch-security-live-mjpeg-stable.py"
+      - "ops/c720p/s9-native-security/deploy-security-live-mjpeg-stable.py"
+      - "ops/c720p/s9-native-security/test-security-live-mjpeg-stable.py"
       - ".github/workflows/s9-security-tabs-home-live.yml"
   pull_request:
     paths:
       - "ops/c720p/s9-native-security/patch-today-native-and-home-live.py"
       - "ops/c720p/s9-native-security/deploy-security-tabs-and-bottom-live.py"
       - "ops/c720p/s9-native-security/test-security-tabs-home-live.py"
+      - "ops/c720p/s9-native-security/patch-security-live-mjpeg-stable.py"
+      - "ops/c720p/s9-native-security/deploy-security-live-mjpeg-stable.py"
+      - "ops/c720p/s9-native-security/test-security-live-mjpeg-stable.py"
       - ".github/workflows/s9-security-tabs-home-live.yml"
 jobs:
   verify:
@@ -22,6 +28,8 @@ jobs:
           set -Eeuo pipefail
           python3 -m py_compile ops/c720p/s9-native-security/patch-today-native-and-home-live.py ops/c720p/s9-native-security/deploy-security-tabs-and-bottom-live.py
           python3 ops/c720p/s9-native-security/test-security-tabs-home-live.py
+          python3 -m py_compile ops/c720p/s9-native-security/patch-security-live-mjpeg-stable.py ops/c720p/s9-native-security/deploy-security-live-mjpeg-stable.py
+          python3 ops/c720p/s9-native-security/test-security-live-mjpeg-stable.py
           python3 - <<'PY'
           import importlib.util,re
           from pathlib import Path
