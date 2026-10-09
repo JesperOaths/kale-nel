@@ -1,0 +1,27 @@
+name: S9 Read-only Detector Benchmark
+on:
+  push:
+    paths:
+      - "ops/c720p/s9-detector-benchmark/**"
+      - ".github/workflows/s9-detector-benchmark.yml"
+  pull_request:
+    paths:
+      - "ops/c720p/s9-detector-benchmark/**"
+      - ".github/workflows/s9-detector-benchmark.yml"
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Check read-only contract and Bash
+        run: |
+          python3 ops/c720p/s9-detector-benchmark/test_contract.py
+          bash -n ops/c720p/s9-detector-benchmark/build-only.sh
+      - name: Compile against Android platform and TFLite
+        run: |
+          set -Eeuo pipefail
+          curl -fLsS --retry 3 https://repo.maven.apache.org/maven2/org/tensorflow/tensorflow-lite/2.14.0/tensorflow-lite-2.14.0.aar -o /tmp/tflite.aar
+          unzip -p /tmp/tflite.aar classes.jar > /tmp/tflite.jar
+          mkdir -p /tmp/s9compiled
+          javac -source 8 -target 8 -cp "$ANDROID_HOME/platforms/android-35/android.jar:/tmp/tflite.jar" \
+            -d /tmp/s9compiled ops/c720p/s9-detector-benchmark/src/nl/kalenel/s9benchmark/BenchmarkService.java
