@@ -91,6 +91,7 @@ def run(model,paths,results):
         maximum=max(confident,default=0.0)
         assert 0<=maximum<=1.01
         rows[p.name]={
+            "input_sha256":hashlib.sha256(p.read_bytes()).hexdigest(),
             "person_score":round(maximum,5),
             "inference_ms":round(elapsed,2),
             "positive_at":{str(t):bool(maximum>=t) for t in THRESHOLDS}
