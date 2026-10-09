@@ -39,6 +39,8 @@ public final class CameraService extends Service {
  private ServerSocket apiSocket;
  private Thread apiThread;
  private volatile boolean temporaryTest=false,pilotStarted=false,pilotHandoff=false;
+ private volatile byte[] latestJpeg=new byte[0];
+ private volatile long lastJpegAt=0;
  private int recoveryCount=0;
  private static final long QUIET_MS=8500,MAX_MS=50000,COOLDOWN_MS=6500;
  @Override public IBinder onBind(Intent intent){return null;}
@@ -126,6 +128,12 @@ public final class CameraService extends Service {
      frame=reader.acquireLatestImage();
      if(frame==null)return;
      frames++;lastFrameAt=SystemClock.elapsedRealtime();
+     if(lastFrameAt-lastJpegAt>=1200){
+      try{
+       byte[] jpg=PreviewJpeg.encode(frame,72);
+       latestJpeg=jpg;lastJpegAt=lastFrameAt;
+      }catch(Exception e){Log.w(TAG,"preview_jpeg_failed",e);}
+     }
      boolean change=motion.analyze(frame);
      if(temporaryTest&&!pilotStarted&&frames>12&&"watching".equals(mode)){
       pilotStarted=true;startRecording();
@@ -323,32 +331,60 @@ public final class CameraService extends Service {
    d.put("review_backend",backend);d.put("last_error",lastFailure);
    d.put("temperature_c",temperature()/10.0);
    d.put("last_frame_age_ms",lastFrameAt==0?-1:SystemClock.elapsedRealtime()-lastFrameAt);
+   d.put("snapshot_ready",latestJpeg.length>1000);
+   d.put("snapshot_age_ms",lastJpegAt==0?-1:SystemClock.elapsedRealtime()-lastJpegAt);
    d.put("privacy","scene_tags_no_verified_cross_recording_identity");
   }catch(Exception ignored){}
   return d;
  }
  private void startApi(){
   apiThread=new Thread(new Runnable(){public void run(){
-   try(ServerSocket s=new ServerSocket(8808,4,InetAddress.getByName("127.0.0.1"))){
+   try(ServerSocket s=new ServerSocket(8808,5,InetAddress.getByName("127.0.0.1"))){
     apiSocket=s;s.setSoTimeout(5000);
     while(running){
-     try(Socket peer=s.accept()){
-      peer.setSoTimeout(2500);
-      BufferedReader in=new BufferedReader(new InputStreamReader(peer.getInputStream(),"UTF-8"));
-      String line=in.readLine();
-      if(line==null)continue;
-      String body=state().toString();
-      byte[] bytes=body.getBytes("UTF-8");
-      OutputStream o=peer.getOutputStream();
-      o.write(("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: "+bytes.length+
-       "\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n").getBytes("UTF-8"));
-      o.write(bytes);o.flush();
+     try{
+      final Socket peer=s.accept();
+      Thread t=new Thread(new Runnable(){public void run(){serve(peer);}},"native-security-http");
+      t.setDaemon(true);t.start();
      }catch(SocketTimeoutException ignored){}
-      catch(Exception e){if(running)Log.w(TAG,"status_api",e);}
+      catch(Exception e){if(running)Log.w(TAG,"http_accept",e);}
     }
-   }catch(Exception e){if(running)Log.e(TAG,"status_service",e);}
-  }},"S9-native-security-status");
+   }catch(Exception e){if(running)Log.e(TAG,"http_listener",e);}
+  }},"native-security-status");
   apiThread.setDaemon(true);apiThread.start();
+ }
+ private void serve(Socket peer){
+  try(Socket socket=peer){
+   socket.setSoTimeout(6000);
+   BufferedReader in=new BufferedReader(new InputStreamReader(socket.getInputStream(),"UTF-8"));
+   String line=in.readLine();if(line==null)return;
+   OutputStream out=socket.getOutputStream();
+   if(line.startsWith("GET /shot.jpg ")){
+    byte[] jpg=latestJpeg;
+    if(jpg.length<1000){send(out,503,"text/plain","camera_preview_not_ready".getBytes("UTF-8"));return;}
+    send(out,200,"image/jpeg",jpg);
+   }else if(line.startsWith("GET /mjpeg ")||line.startsWith("GET /video ")
+         ||line.startsWith("GET /videofeed ")){
+    out.write(("HTTP/1.1 200 OK\r\nContent-Type: multipart/x-mixed-replace; boundary=frame\r\n"+
+      "Cache-Control: no-store\r\nConnection: close\r\n\r\n").getBytes("UTF-8"));
+    while(running){
+     byte[] img=latestJpeg;
+     if(img.length>1000){
+      out.write(("--frame\r\nContent-Type: image/jpeg\r\nContent-Length: "+img.length+"\r\n\r\n").getBytes("UTF-8"));
+      out.write(img);out.write("\r\n".getBytes("UTF-8"));out.flush();
+     }
+     try{Thread.sleep(950);}catch(InterruptedException e){return;}
+    }
+   }else if(line.startsWith("GET /status")||line.startsWith("GET / ")){
+    send(out,200,"application/json",state().toString().getBytes("UTF-8"));
+   }else send(out,404,"text/plain","not_found".getBytes("UTF-8"));
+  }catch(Exception e){if(running&&!(e instanceof java.net.SocketException))Log.w(TAG,"http_client",e);}
+ }
+ private static void send(OutputStream out,int code,String contentType,byte[] bytes)throws IOException{
+  out.write(("HTTP/1.1 "+code+(code==200?" OK":code==503?" Service Unavailable":" Not Found")+
+   "\r\nContent-Type: "+contentType+"\r\nContent-Length: "+bytes.length+
+   "\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n").getBytes("UTF-8"));
+  out.write(bytes);out.flush();
  }
  private void shutdown(){
   running=false;mode="stopped";
