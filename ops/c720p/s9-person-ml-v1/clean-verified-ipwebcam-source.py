@@ -54,7 +54,9 @@ def main():
  with open(LOCK,"a+") as lock:
   fcntl.flock(lock,fcntl.LOCK_EX)
   # MicroSD is now the sole required archive; never contact Drive.
-  run(["adb","connect",ADB],timeout=12)
+  state=sp.run(["adb","-s",ADB,"get-state"],capture_output=True,timeout=7)
+  if state.returncode or state.stdout.strip()!=b"device":
+   run(["adb","connect",ADB],timeout=12)
   s=local_status()
   if not s.get("ok") or s.get("recording_in_progress") or s.get("recording_orphan_present"):
    raise RuntimeError("s9_recorder_not_idle")
