@@ -5,7 +5,7 @@ BASE=Path("/opt/homeassistant/config/www/frontyard-security-new")
 CAT=BASE/"s9-phone-events.json"
 SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9edge/files/SecurityClips"
 PHONE="192.168.178.250:5555"
-RE_NAME=re.compile(r"rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}\\.mp4")
+RE_NAME=re.compile(r"rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}[.]mp4")
 BLOCK=65536
 def rows():
  try:
@@ -26,11 +26,11 @@ def install_local_sd(H):
       "size":r.get("size"),"person_status":"unreviewed","scene_category":r.get("scene_category","unreviewed")})
    self.js(200,{"ok":True,"camera":"new","archive_mode":"S9-microSD-only","drive_ready":False,"events":events})
    return
-  match=re.fullmatch(r"/new/saved/clip/(rec_20[0-9-]+_[0-9-]+\\.mp4)",path)
+  match=re.fullmatch(r"/new/saved/clip/(rec_20[0-9-]+_[0-9-]+[.]mp4)",path)
   if match:
    name=match.group(1);item=data.get(name)
    if item:return play_sd(self,name,item)
-  snap=re.fullmatch(r"/new/saved/snap/(rec_20[0-9-]+_[0-9-]+\\.mp4\\.thumb\\.jpg)",path)
+  snap=re.fullmatch(r"/new/saved/snap/(rec_20[0-9-]+_[0-9-]+[.]mp4[.]thumb[.]jpg)",path)
   if snap:
    name=snap.group(1)
    source=BASE/"s9-phone-thumbs"/name
@@ -45,7 +45,7 @@ def play_sd(handler,name,record):
  header=handler.headers.get("Range","").strip()
  first=0;last=size-1;code=200
  if header:
-  match=re.fullmatch(r"bytes=(\\d*)-(\\d*)",header)
+  match=re.fullmatch(r"bytes=([0-9]*)-([0-9]*)",header)
   if not match:
    handler.send_response(416);handler.send_header("Content-Range",f"bytes */{size}");handler.end_headers();return
   a,b=match.groups()
