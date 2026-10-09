@@ -6,6 +6,9 @@ import android.graphics.*;
 import android.os.*;
 import android.util.Log;
 import org.json.JSONObject;
+import org.json.JSONArray;
+import java.security.MessageDigest;
+import java.util.Locale;
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -159,7 +162,7 @@ public final class EdgeService extends Service {
   try{
    long now=SystemClock.elapsedRealtime();
    o.put("ok",ready&&lastFrameMs>0&&now-lastFrameMs<4000);
-   o.put("algorithm","s9-local-coherent-v1");
+   o.put("algorithm","s9-local-coherent-v2");
    o.put("frames",frames);o.put("errors",failedFrames);
    o.put("frame_age_ms",lastFrameMs==0?-1:now-lastFrameMs);
    o.put("active",active);o.put("candidate",candidate);o.put("person_shape_candidate",personCandidate);
@@ -175,6 +178,97 @@ public final class EdgeService extends Service {
   }catch(Exception e){Log.e(TAG,"JSON",e);}
   return o;
  }
+
+ // Only copies explicitly named, completed IP Webcam videos to removable SD.
+ // Never deletes or modifies the source; every copy is byte-counted, hashed,
+ // and fsynced before being exposed as complete.
+ private JSONObject archiveNamed(String filename) {
+  JSONObject reply=new JSONObject();
+  try {
+   if(filename==null||!filename.matches("rec_[A-Za-z0-9._-]{5,100}\\.mp4")
+        ||filename.contains(".."))throw new IOException("invalid_file_name");
+   File targetBase=null;
+   File[] candidates=getExternalFilesDirs(null);
+   if(candidates!=null)for(File candidate:candidates){
+    if(candidate!=null&&candidate.getAbsolutePath().startsWith("/storage/9C33-6BBD/")){
+     targetBase=candidate;break;
+    }
+   }
+   if(targetBase==null)throw new IOException("removable_sd_missing");
+   File directory=new File(targetBase,"SecurityClips");
+   if(!directory.isDirectory()&&!directory.mkdirs())throw new IOException("sd_directory_unavailable");
+   StatFs free=new StatFs(directory.getAbsolutePath());
+   if(free.getAvailableBytes()<10L*1024*1024*1024)throw new IOException("sd_free_floor");
+   long expected=-1;
+   HttpURLConnection list=(HttpURLConnection)new URL("http://127.0.0.1:8080/list_videos").openConnection();
+   list.setConnectTimeout(2000);list.setReadTimeout(4000);
+   ByteArrayOutputStream bout=new ByteArrayOutputStream();
+   try(InputStream input=list.getInputStream()){
+    byte[] b=new byte[4096];int n;
+    while((n=input.read(b))>=0){bout.write(b,0,n);if(bout.size()>100000)throw new IOException("index_too_large");}
+   }finally{list.disconnect();}
+   JSONArray rows=new JSONArray(bout.toString("UTF-8"));
+   for(int i=0;i<rows.length();i++){
+    JSONObject j=rows.getJSONObject(i);
+    if(filename.equals(j.optString("name"))){expected=j.optLong("size",-1);break;}
+   }
+   if(expected<10000||expected>256L*1024*1024)throw new IOException("source_not_indexed_or_oversize");
+   File completed=new File(directory,filename);
+   File partial=new File(directory,filename+".partial");
+   if(completed.isFile()&&completed.length()==expected){
+    reply.put("ok",true);reply.put("already_archived",true);reply.put("bytes",expected);reply.put("path",completed.getAbsolutePath());return reply;
+   }
+   if(completed.exists())throw new IOException("archive_conflict");
+   HttpURLConnection video=(HttpURLConnection)new URL("http://127.0.0.1:8080/v/"+filename).openConnection();
+   video.setConnectTimeout(2000);video.setReadTimeout(7000);
+   long transferred=0;String digest="";
+   try {
+    if(video.getResponseCode()!=200||video.getContentLengthLong()!=expected)throw new IOException("source_length_mismatch");
+    MessageDigest md=MessageDigest.getInstance("SHA-256");
+    try(InputStream in=video.getInputStream();FileOutputStream out=new FileOutputStream(partial)){
+     byte[] buf=new byte[65536];int count;
+     while((count=in.read(buf))>=0){
+      if(count==0)continue;
+      transferred+=count;
+      if(transferred>expected)throw new IOException("source_grew_during_copy");
+      out.write(buf,0,count);md.update(buf,0,count);
+     }
+     out.getFD().sync();
+    }
+    if(transferred!=expected||partial.length()!=expected)throw new IOException("short_copy");
+    byte[] signature=md.digest();
+    StringBuilder hex=new StringBuilder();
+    for(byte part:signature)hex.append(String.format(Locale.US,"%02x",part&255));
+    digest=hex.toString();
+    // Read-back check ensures SD file bytes match those received over localhost.
+    MessageDigest verify=MessageDigest.getInstance("SHA-256");
+    try(FileInputStream check=new FileInputStream(partial)){
+     byte[] b=new byte[65536];int count;
+     while((count=check.read(b))>=0){if(count>0)verify.update(b,0,count);}
+    }
+    if(!MessageDigest.isEqual(signature,verify.digest()))throw new IOException("sd_readback_mismatch");
+    if(!partial.renameTo(completed))throw new IOException("sd_finalize_failed");
+    JSONObject manifest=new JSONObject();
+    manifest.put("name",filename);manifest.put("bytes",expected);
+    manifest.put("sha256",digest);manifest.put("created_at_ms",System.currentTimeMillis());
+    manifest.put("source","ipwebcam-local-copy");manifest.put("source_retained",true);
+    File mf=new File(directory,filename+".verified.json");
+    try(FileOutputStream output=new FileOutputStream(mf)){
+     output.write(manifest.toString().getBytes("UTF-8"));output.getFD().sync();
+    }
+    reply.put("ok",true);reply.put("bytes",expected);
+    reply.put("sha256",digest);reply.put("path",completed.getAbsolutePath());reply.put("source_retained",true);
+   } finally {
+    video.disconnect();
+    if(partial.isFile()&&!completed.isFile())partial.delete();
+   }
+  }catch(Exception e){
+   try{reply.put("ok",false);reply.put("error",e.getClass().getSimpleName()+":"+e.getMessage());}
+   catch(Exception ignored){}
+  }
+  return reply;
+ }
+
  private void serve(){
   try {
    server=new ServerSocket();server.setReuseAddress(true);
@@ -186,7 +280,13 @@ public final class EdgeService extends Service {
      BufferedReader r=new BufferedReader(new InputStreamReader(c.getInputStream(),"UTF-8"));
      String first=r.readLine();
      if(first!=null && first.startsWith("GET /")){
-      byte[] data=state().toString().getBytes("UTF-8");
+      JSONObject answer=state();
+      if(first.startsWith("GET /archive?name=")){
+       int sep=first.indexOf(" HTTP/");
+       String n=sep>0?first.substring("GET /archive?name=".length(),sep):"";
+       answer=archiveNamed(URLDecoder.decode(n,"UTF-8"));
+      }
+      byte[] data=answer.toString().getBytes("UTF-8");
       OutputStream out=c.getOutputStream();
       out.write(("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nCache-Control: no-store\r\nContent-Length: "+data.length+"\r\nConnection: close\r\n\r\n").getBytes("UTF-8"));
       out.write(data);out.flush();
