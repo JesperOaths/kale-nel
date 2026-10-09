@@ -22,7 +22,10 @@ public final class PersonService extends Service {
  private volatile double lastEventConfidence=0;
  private volatile double inferenceLatencyMs=0,personScore=0,topScore=0;
  private volatile int rawTopClass=-1,rawPersonClass=-1,personStreak=0,tempDeciC=0;
- private volatile String backend="none",failure="",modelName="ssd-mobilenet-v1-coco-quant-person-tracking-v4";
+ private volatile long zoomModelRuns=0;
+ private volatile double zoomLastConfidence=0,zoomInferenceMs=0;
+ private volatile boolean zoomPersonUsed=false;
+ private volatile String backend="none",failure="",modelName="ssd-mobilenet-v1-coco-quant-hires-zoom-v5";
  private volatile int personBoxTop=0,personBoxLeft=0,personBoxRight=0,personBoxBottom=0;
  private Thread worker,api;
  private ServerSocket socket;
@@ -178,6 +181,41 @@ public final class PersonService extends Service {
   modelInput=ByteBuffer.allocateDirect(300*300*3).order(ByteOrder.nativeOrder());
   mlReady=true;
  }
+ private float[] inferCenterZoom(Bitmap original) throws Exception{
+  int ow=original.getWidth(),oh=original.getHeight();
+  if(ow<600||oh<350)return null;
+  // Crop central 64%: distant people appear 1.56x larger to the detector.
+  int cw=Math.round(ow*0.64f),ch=Math.round(oh*0.64f);
+  int x=(ow-cw)/2,y=(oh-ch)/2;
+  Bitmap crop=Bitmap.createBitmap(original,x,y,cw,ch);
+  Bitmap small=Bitmap.createScaledBitmap(crop,300,300,true);
+  if(small!=crop)crop.recycle();
+  try{
+   int[] px=new int[300*300];small.getPixels(px,0,300,0,0,300,300);
+   modelInput.rewind();
+   for(int q:px){modelInput.put((byte)((q>>16)&255));modelInput.put((byte)((q>>8)&255));modelInput.put((byte)(q&255));}
+   modelInput.rewind();
+   Map<Integer,Object> out=new HashMap<Integer,Object>();
+   out.put(0,boxes);out.put(1,classes);out.put(2,scores);out.put(3,detections);
+   long at=SystemClock.elapsedRealtimeNanos();
+   interpreter.runForMultipleInputsOutputs(new Object[]{modelInput},out);
+   zoomInferenceMs=(SystemClock.elapsedRealtimeNanos()-at)/1000000.0;
+   zoomModelRuns++;modelRuns++;
+   int count=Math.min(10,Math.max(0,Math.round(detections[0])));
+   float best=0;int id=-1;
+   for(int i=0;i<count;i++)
+    if(Math.round(classes[0][i])==0&&scores[0][i]>best){best=scores[0][i];id=i;}
+   zoomLastConfidence=best;
+   if(id<0)return null;
+   // Map crop coordinates back to full-frame coordinates.
+   return new float[]{best,
+    (y+Math.max(0,boxes[0][id][0])*ch)/(float)oh,
+    (x+Math.max(0,boxes[0][id][1])*cw)/(float)ow,
+    (y+Math.min(1,boxes[0][id][2])*ch)/(float)oh,
+    (x+Math.min(1,boxes[0][id][3])*cw)/(float)ow};
+  }finally{small.recycle();}
+ }
+
  private void analyze(Bitmap original,boolean publish) throws Exception{
   Bitmap b=Bitmap.createScaledBitmap(original,300,300,true);
   int[] pixels=new int[300*300]; b.getPixels(pixels,0,300,0,0,300,300);
@@ -202,6 +240,20 @@ public final class PersonService extends Service {
    int category=Math.round(classes[0][i]);
    if(category==0&&scores[0][i]>bestPerson){bestPerson=scores[0][i];bestId=i;}
   }
+  float[] zoomBox=null;
+  zoomPersonUsed=false;
+  if(publish&&bestPerson<0.60f&&original.getWidth()>=600&&
+      original.getHeight()>=350&&tempDeciC<385){
+   try{
+    float[] zoom=inferCenterZoom(original);
+    if(zoom!=null&&zoom[0]>=0.68f&&zoom[0]>bestPerson){
+     zoomBox=zoom;bestPerson=zoom[0];bestId=-2;
+     zoomPersonUsed=true;
+    }
+   }catch(Exception exception){
+    Log.w(TAG,"center-zoom fallback failed; full frame remains usable",exception);
+   }
+  }
   if(!publish){
    validationPersonScore=bestPerson;
    validationTopScore=bestOverall;
@@ -210,7 +262,12 @@ public final class PersonService extends Service {
    validationStatus="ok";
    return;
   }
-  updateAnonymousTracks(count);
+  if(zoomBox==null)updateAnonymousTracks(count);
+  else{
+   anonymousPersonCount=1;
+   personTracks.clear();
+   recentPersonsJson="[]";
+  }
   rawTopClass=bestOverallId;
   topScore=bestOverall;rawPersonClass=bestId>=0?0:-1;
   personScore=bestPerson;
@@ -218,6 +275,12 @@ public final class PersonService extends Service {
   if(bestPerson>=0.60f){
    personStreak=Math.min(6,personStreak+1);
    lastPersonMs=now;
+   if(zoomBox!=null){
+    personBoxTop=Math.round(zoomBox[1]*1000);
+    personBoxLeft=Math.round(zoomBox[2]*1000);
+    personBoxBottom=Math.round(zoomBox[3]*1000);
+    personBoxRight=Math.round(zoomBox[4]*1000);
+   }
    if(bestId>=0){
     personBoxTop=Math.round(boxes[0][bestId][0]*1000);
     personBoxLeft=Math.round(boxes[0][bestId][1]*1000);
@@ -282,7 +345,7 @@ public final class PersonService extends Service {
      HttpURLConnection c=(HttpURLConnection)new URL("http://127.0.0.1:8080/shot.jpg").openConnection();
      c.setConnectTimeout(1600);c.setReadTimeout(2300);
      BitmapFactory.Options options=new BitmapFactory.Options();
-     options.inSampleSize=4;options.inPreferredConfig=Bitmap.Config.RGB_565;
+     options.inSampleSize=1;options.inPreferredConfig=Bitmap.Config.RGB_565;
      Bitmap b;
      try(InputStream in=c.getInputStream()){b=BitmapFactory.decodeStream(in,null,options);}
      finally{c.disconnect();}
@@ -323,6 +386,11 @@ public final class PersonService extends Service {
    j.put("person_confidence",Math.round(personScore*1000.0)/1000.0);
    j.put("person_confirmed",personConfirmed);
    j.put("person_streak",personStreak);
+   j.put("zoom_model_runs",zoomModelRuns);
+   j.put("zoom_inference_ms",Math.round(zoomInferenceMs*10.0)/10.0);
+   j.put("zoom_person_score",Math.round(zoomLastConfidence*1000.0)/1000.0);
+   j.put("person_zoom_used",zoomPersonUsed);
+   j.put("camera_snapshot_sampling","native-resolution-then-300px-inference+center-zoom");
    j.put("visible_people",anonymousPersonCount);
    j.put("tracking_scope","within_current_scene_only");
    j.put("person_tracks",new JSONArray(recentPersonsJson));
