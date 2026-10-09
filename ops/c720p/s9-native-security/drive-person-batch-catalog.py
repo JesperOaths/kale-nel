@@ -25,8 +25,8 @@ LOCK=ROOT/"state/s9-legacy-person-catalog.lock"
 SOURCE=ROOT/"state/drive-security-archive.json"
 CONFIG=ROOT/"config/drive-security-archive.json"
 MODEL_CODE=Path(__file__).with_name("legacy-drive-person-corpus.py")
-NAME=re.compile(r"(?:NEW|S3)_[A-Za-z0-9._-]{15,165}[.]mp4\Z")
-CAMERAS={"new":"NEW_","s3":"S3_"}
+NAME=re.compile(r"(?:NEW|S3|S9PHONE)_[A-Za-z0-9._-]{8,165}[.]mp4\Z")
+CAMERAS={"new":("NEW_","S9PHONE_"),"s3":("S3_",)}
 MAX_SIZE=650*1024*1024
 VERSION=1
 
