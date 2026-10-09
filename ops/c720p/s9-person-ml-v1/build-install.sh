@@ -5,7 +5,7 @@ umask 077
 BASE="$HOME/c720p-home-hub/build/s9-person-ml-v1"
 LIB="$BASE/deps"
 SRC="$BASE/src"
-REP="https://raw.githubusercontent.com/JesperOaths/kale-nel/33d42bd3a1e97f974b2d2a6f5d11ed0ed41019a1/ops/c720p/s9-person-ml-v1"
+REP="https://raw.githubusercontent.com/JesperOaths/kale-nel/6d4eb8e2c845b100f7c369a37082bd7a88f0d800/ops/c720p/s9-person-ml-v1"
 mkdir -p "$LIB" "$SRC/nl/kalenel/s9person" "$BASE/classes" "$BASE/dex" "$BASE/pkg/lib/arm64-v8a" "$BASE/assets"
 curl -fsSL --retry 2 "$REP/AndroidManifest.xml" -o "$BASE/AndroidManifest.xml"
 for name in PersonActivity Boot PersonService; do
