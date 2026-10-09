@@ -28,12 +28,23 @@ public final class EdgeService extends Service {
  private int streak=0;
  private long lastTrigger=0;
  private Thread analyzer,api,archiver;
+ private final ArrayDeque<Long> captureTimes=new ArrayDeque<Long>();
+ private volatile boolean captureEnabled=false,captureBusy=false;
+ private volatile long captureCount=0,captureFailures=0,lastCaptureMs=0;
+ private volatile String captureStatus="disabled";
  private volatile long archivedClips=0, archiveErrors=0, lastArchiveMs=0;
  private volatile String lastArchiveResult="idle";
  private ServerSocket server;
 
  @Override public IBinder onBind(Intent i) { return null; }
- @Override public int onStartCommand(Intent i,int flags,int id) {return START_STICKY;}
+ @Override public int onStartCommand(Intent i,int flags,int id) {
+   if(i!=null&&i.hasExtra("pilot_recording")){
+    captureEnabled=i.getBooleanExtra("pilot_recording",false);
+    captureStatus=captureEnabled?"pilot_armed":"disabled";
+    Log.i(TAG,"RECORD_PILOT="+captureEnabled);
+   }
+   return START_STICKY;
+  }
  @Override public void onCreate() {
   super.onCreate();
   run=true;startedMs=SystemClock.elapsedRealtime();
@@ -154,6 +165,7 @@ public final class EdgeService extends Service {
   if(streak>=4&&now-lastTrigger>=7000){
    if(!active) {events++;lastTrigger=now;lastEventMs=now;
     Log.i(TAG,"MOTION seq="+events+" pct="+changedPct+" coherent="+best+" personShape="+personShape);
+    maybeCapture(now,personShape,best);
    }
    active=true;
   }
@@ -163,12 +175,111 @@ public final class EdgeService extends Service {
    bg[i]=bg[i]*(1-rate)+cur[i]*rate;prev[i]=cur[i];
   }
  }
+
+ // A bounded phone-only recording pilot. No deletion, no hub encoding.
+ // Feature flag is OFF until an explicit local ADB command enables it.
+ // Stored only in memory, so app/phone restart fails closed by default.
+ private synchronized void maybeCapture(long now,boolean personShape,int coherentCells){
+  if(!captureEnabled||captureBusy)return;
+  if(!personShape&&coherentCells<16)return;
+  if(!sdReady||temperatureDeciC>=405){
+   captureStatus="blocked_sd_or_temperature";return;
+  }
+  if(lastCaptureMs>0&&now-lastCaptureMs<105000)return;
+  while(!captureTimes.isEmpty()&&now-captureTimes.peekFirst()>3600000)
+   captureTimes.removeFirst();
+  if(captureTimes.size()>=8){captureStatus="hourly_rate_guard";return;}
+  captureBusy=true;
+  lastCaptureMs=now;
+  captureTimes.addLast(now);
+  Thread t=new Thread(new Runnable(){public void run(){captureShortClip();}},"s9-record");
+  t.start();
+ }
+ private JSONObject jsonFrom(String path,int timeout) throws Exception {
+  HttpURLConnection c=(HttpURLConnection)new URL("http://127.0.0.1:8080"+path).openConnection();
+  c.setConnectTimeout(2000);c.setReadTimeout(timeout);
+  ByteArrayOutputStream out=new ByteArrayOutputStream();
+  try(InputStream in=c.getInputStream()){
+   byte[] b=new byte[2048];int n;
+   while((n=in.read(b))>=0){
+    if(n>0)out.write(b,0,n);
+    if(out.size()>200000)throw new IOException("api_response_too_large");
+   }
+  }finally{c.disconnect();}
+  return new JSONObject(out.toString("UTF-8"));
+ }
+ private boolean captureBudgetOk() {
+  try{
+   StatFs internal=new StatFs(getFilesDir().getAbsolutePath());
+   if(internal.getAvailableBytes()<1250L*1024*1024)return false;
+   if(!sdReady||temperatureDeciC>=405)return false;
+   File sd=new File(sdDirectory);
+   if(new StatFs(sd.getAbsolutePath()).getAvailableBytes()<15L*1024*1024*1024)return false;
+   HttpURLConnection c=(HttpURLConnection)new URL("http://127.0.0.1:8080/list_videos").openConnection();
+   c.setConnectTimeout(2000);c.setReadTimeout(3500);
+   ByteArrayOutputStream out=new ByteArrayOutputStream();
+   try(InputStream input=c.getInputStream()){
+    byte[] b=new byte[4096];int n;
+    while((n=input.read(b))>=0){if(n>0)out.write(b,0,n);
+     if(out.size()>200000)throw new IOException("record_list_too_large");}
+   }finally{c.disconnect();}
+   JSONArray files=new JSONArray(out.toString("UTF-8"));
+   long bytes=0;
+   for(int i=0;i<files.length();i++)bytes+=Math.max(0,files.getJSONObject(i).optLong("size",0));
+   return bytes<300L*1024*1024;
+  }catch(Exception e){
+   captureStatus="budget_check_error";Log.w(TAG,"capture budget",e);return false;
+  }
+ }
+ private void captureShortClip(){
+  boolean owned=false;
+  String filename="";
+  try{
+   if(!captureBudgetOk()){captureStatus="source_storage_budget_blocked";return;}
+   JSONObject before=jsonFrom("/status.json",5000);
+   JSONObject vs=before.optJSONObject("video_status");
+   if(vs!=null&&vs.optBoolean("enabled",false)){
+    captureStatus="existing_recording_left_alone";return;
+   }
+   // Start on the phone; allow IP Webcam hardware encoder to do its work.
+   JSONObject started=jsonFrom("/startvideo",9000);
+   if(!"started".equals(started.optString("result"))) {
+    captureStatus="native_recorder_busy_or_failed";return;
+   }
+   owned=true;
+   filename=started.optString("fname");
+   if(!filename.matches("rec_[A-Za-z0-9._-]{5,100}\\.mp4")){
+    captureStatus="invalid_native_filename";return;
+   }
+   captureStatus="recording";
+   long until=SystemClock.elapsedRealtime()+18000L;
+   while(run&&SystemClock.elapsedRealtime()<until){
+    Thread.sleep(500);
+    if(batteryTemperature()>=430){captureStatus="thermal_stop";break;}
+   }
+  }catch(Exception e){
+   captureFailures++;captureStatus=e.getClass().getSimpleName()+":"+e.getMessage();
+   Log.e(TAG,"recording",e);
+  }finally{
+   if(owned){
+    try{
+     JSONObject stopped=jsonFrom("/stopvideo",9000);
+     if("stopped".equals(stopped.optString("result"))){
+      captureCount++;
+      captureStatus="finalized_awaiting_sd_archive";
+     }else{captureFailures++;captureStatus="stop_failed";}
+    }catch(Exception e){captureFailures++;captureStatus="stop_exception";}
+   }
+   captureBusy=false;
+  }
+ }
+
  private JSONObject state(){
   JSONObject o=new JSONObject();
   try{
    long now=SystemClock.elapsedRealtime();
    o.put("ok",ready&&lastFrameMs>0&&now-lastFrameMs<4000);
-   o.put("algorithm","s9-local-coherent-v4");
+   o.put("algorithm","s9-local-coherent-v5");
    o.put("frames",frames);o.put("errors",failedFrames);
    o.put("frame_age_ms",lastFrameMs==0?-1:now-lastFrameMs);
    o.put("active",active);o.put("candidate",candidate);o.put("person_shape_candidate",personCandidate);
@@ -179,7 +290,12 @@ public final class EdgeService extends Service {
    o.put("event_seq",events);o.put("last_event_age_ms",lastEventMs==0?-1:now-lastEventMs);
    o.put("temperature_c",temperatureDeciC/10.0);o.put("sd_ready",sdReady);
    o.put("sd_dir",sdDirectory);
-   o.put("recording_enabled",false);
+   o.put("recording_enabled",captureEnabled);
+   o.put("recording_in_progress",captureBusy);
+   o.put("recording_count",captureCount);
+   o.put("recording_failures",captureFailures);
+   o.put("recording_status",captureStatus);
+   o.put("last_capture_age_ms",lastCaptureMs==0?-1:now-lastCaptureMs);
    o.put("auto_sd_archive_enabled",true);
    o.put("auto_sd_archive_count",archivedClips);
    o.put("auto_sd_archive_errors",archiveErrors);
