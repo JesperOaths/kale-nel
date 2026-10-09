@@ -6,7 +6,11 @@ PLATFORM="$SDK/platforms/android-36/android.jar"
 ROOT="/home/jespern/c720p-home-hub"
 WORK="$ROOT/build/s3-onphone"
 STATE="$ROOT/state"
-BASE_URL="https://raw.githubusercontent.com/JesperOaths/kale-nel/6e4fe0479ecc9fd2a1f55fa497b435df9af8ada2/ops/c720p/s3-onphone"
+ADB_TARGET="192.168.178.47:5555"
+adb connect "$ADB_TARGET" >/dev/null
+[[ "$(adb -s "$ADB_TARGET" shell getprop ro.serialno | tr -d "\\r")" == "3230cf48843b9027" ]] || { echo "Wrong device serial" >&2; exit 3; }
+[[ "$(adb -s "$ADB_TARGET" shell getprop ro.product.model | tr -d "\\r")" == "GT-I9300" ]] || { echo "Wrong device model" >&2; exit 3; }
+BASE_URL="https://raw.githubusercontent.com/JesperOaths/kale-nel/b355af0aa8641ab222928770e4e72103fd26e911/ops/c720p/s3-onphone"
 mkdir -p "$WORK/classes" "$WORK/dex" "$WORK/src/nl/kalenel/s3motion" "$STATE"
 curl -fsSL "$BASE_URL/AndroidManifest.xml" -o "$WORK/AndroidManifest.xml"
 curl -fsSL "$BASE_URL/src/nl/kalenel/s3motion/MotionActivity.java" -o "$WORK/src/nl/kalenel/s3motion/MotionActivity.java"
@@ -33,6 +37,6 @@ cp "$WORK/s3-motion-unsigned.apk" "$WORK/s3-bedroom-motion.apk"
     --ks-pass "file:$PASSFILE" \
     --min-sdk-version 19 "$WORK/s3-bedroom-motion.apk"
 "$TOOLS/apksigner" verify --verbose "$WORK/s3-bedroom-motion.apk"
-adb -s 3230cf48843b9027 install -r -g "$WORK/s3-bedroom-motion.apk"
-adb -s 3230cf48843b9027 shell pm grant nl.kalenel.s3motion android.permission.CAMERA || true
+adb -s "$ADB_TARGET" install -r -g "$WORK/s3-bedroom-motion.apk"
+adb -s "$ADB_TARGET" shell pm grant nl.kalenel.s3motion android.permission.CAMERA || true
 echo "S3_ONPHONE_APP_INSTALLED"

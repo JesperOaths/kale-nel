@@ -48,7 +48,16 @@ public final class MotionActivity extends Activity
     private long session=System.currentTimeMillis();
     private TextView status;
     private boolean holderReady=false;
-    private int cameraId=1, blackFrames=0;
+    // User-specified main/rear lens. Never switch silently to the selfie camera.
+    private int cameraId=0, blackFrames=0;
+    private long lastRearRecovery=0;
+    private float lastContrast=0f;
+    private boolean previewValid=false;
+    private String cameraNightMode="untested";
+    private long lastActualChangeAt=0;
+    private long stagnantFrames=0;
+    private long illuminationHoldUntil=0;
+    private float lastIlluminationLux=-1f;
     private SensorManager lightManager;
     private Sensor ambientLightSensor;
     private volatile float ambientLux=-1f;
@@ -83,7 +92,7 @@ public final class MotionActivity extends Activity
         if(lightManager!=null)ambientLightSensor=lightManager.getDefaultSensor(Sensor.TYPE_LIGHT);
         Log.i(TAG,"AMBIENT_SENSOR available="+(ambientLightSensor!=null)+
                 " darkBelow="+LUX_DARK_BELOW+" brightAbove="+LUX_BRIGHT_ABOVE);
-        Log.i(TAG,"APP_START session="+session+" version=4 lux_gating=true"+
+        Log.i(TAG,"APP_START session="+session+" version=7 rear_only=true night_profile=true light_transition_guard=true lux_gating=true"+
                " direct_events="+(!webhookUrl.isEmpty())+" on_phone=true");
     }
     @Override protected void onNewIntent(Intent intent){
@@ -182,6 +191,12 @@ public final class MotionActivity extends Activity
                     !=PackageManager.PERMISSION_GRANTED) {
                 Log.e(TAG,"CAMERA_PERMISSION_MISSING");status.setText("Camera permission required");return;
             }
+            int cameras=Camera.getNumberOfCameras();
+            if(cameras<=cameraId)throw new IllegalStateException("rear camera ID unavailable");
+            Camera.CameraInfo info=new Camera.CameraInfo();
+            Camera.getCameraInfo(cameraId,info);
+            if(info.facing!=Camera.CameraInfo.CAMERA_FACING_BACK)
+                throw new IllegalStateException("camera ID 0 is not back-facing");
             camera=Camera.open(cameraId);
             Camera.Parameters p=camera.getParameters();
             Camera.Size best=null;
@@ -199,17 +214,57 @@ public final class MotionActivity extends Activity
             }
             if(fpsChoice!=null)p.setPreviewFpsRange(fpsChoice[0],fpsChoice[1]);
             p.setPreviewFormat(android.graphics.ImageFormat.NV21);
-            camera.setParameters(p);
+            // Give the rear sensor its best chance to see people in low light.
+            // Avoid assuming this older Exynos HAL supports any particular setting.
+            String nightState="unsupported";
+            try {
+                List<String> scenes=p.getSupportedSceneModes();
+                if(scenes!=null && scenes.contains(Camera.Parameters.SCENE_MODE_NIGHT)){
+                    p.setSceneMode(Camera.Parameters.SCENE_MODE_NIGHT);
+                    nightState="night";
+                }
+                int maxExposure=p.getMaxExposureCompensation();
+                if(maxExposure>0)p.setExposureCompensation(maxExposure);
+                String choices=p.get("iso-values");
+                if(choices!=null){
+                    // Use only a setting reported by the device; prefer higher gain.
+                    for(String iso:new String[]{"ISO1600","1600","ISO800","800","ISO400","400"}){
+                        if(Arrays.asList(choices.split(",")).contains(iso)){
+                            p.set("iso",iso);
+                            break;
+                        }
+                    }
+                }
+                camera.setParameters(p);
+                cameraNightMode=nightState;
+            }catch(RuntimeException nightError){
+                Log.w(TAG,"NIGHT_PARAMETERS_REJECTED "+nightError.getClass().getSimpleName());
+                Camera.Parameters safe=camera.getParameters();
+                safe.setPreviewSize(cameraWidth,cameraHeight);
+                safe.setPreviewFormat(android.graphics.ImageFormat.NV21);
+                camera.setParameters(safe);
+                cameraNightMode="safe_fallback";
+            }
+            Camera.Parameters applied=camera.getParameters();
+            Log.i(TAG,"REAR_SETTINGS scene="+applied.getSceneMode()+
+                    " exposure="+applied.getExposureCompensation()+
+                    " max_exposure="+applied.getMaxExposureCompensation()+
+                    " iso="+applied.get("iso")+
+                    " fps_range="+Arrays.toString(new int[]{applied.getPreviewFrameRate()})+
+                    " profile="+cameraNightMode);
             camera.setDisplayOrientation(90);
             buffer=new byte[cameraWidth*cameraHeight*3/2];
             camera.setPreviewDisplay(holder);
             camera.addCallbackBuffer(buffer);
             camera.setPreviewCallbackWithBuffer(this);
             camera.startPreview();
-            initialized=false;frames=0;recent=0;hitCount=0;missCount=0;
+            initialized=false;frames=0;recent=0;hitCount=0;missCount=0;blackFrames=0;previewValid=false;lastContrast=0f;lastActualChangeAt=SystemClock.elapsedRealtime();stagnantFrames=0;
             previousMean=-1;lastRead=0;lastLog=0;prevCx=-1;prevCy=-1;
+            illuminationHoldUntil=SystemClock.elapsedRealtime()+5000L;
+            lastIlluminationLux=-1f;
             session=System.currentTimeMillis();
-            Log.i(TAG,"READY session="+session+" camera="+cameraWidth+"x"+cameraHeight+" camera_id="+cameraId);
+            Log.i(TAG,"READY session="+session+" camera="+cameraWidth+"x"+cameraHeight+
+                  " camera_id="+cameraId+" facing=rear preview_format=NV21");
             status.setText("S3 motion active – on-phone detection");
         }catch(Exception e){
             Log.e(TAG,"CAMERA_ERROR "+e.getClass().getSimpleName()+" "+e.getMessage());
@@ -237,7 +292,7 @@ public final class MotionActivity extends Activity
         }
     }
     private void analyze(byte[] y,long now){
-        long total=0;
+        long total=0,totalSquares=0;
         for(int j=0;j<GY;j++){
             int sy=(j*cameraHeight/GY+cameraHeight/(GY*2));
             int offset=sy*cameraWidth;
@@ -247,24 +302,32 @@ public final class MotionActivity extends Activity
                 int at=j*GX+i;
                 sample[at]=v;
                 total+=v;
+                totalSquares+=(long)v*v;
             }
         }
         float mean=(float)total/N;
-        if(mean<5.0f)blackFrames++;else blackFrames=0;
-        if(blackFrames>=25 && cameraId==0){
-            Log.w(TAG,"BLACK_PREVIEW switching_to_front_camera");
+        // Diagnose an unlit/black preview without misclassifying fixed sensor noise as motion.
+        float variance=Math.max(0f,(float)totalSquares/N-mean*mean);
+        lastContrast=(float)Math.sqrt(variance);
+        previewValid=(mean>=12.0f || lastContrast>=7.0f);
+        if(!previewValid)blackFrames++;else blackFrames=0;
+        if(blackFrames==25) {
+            Log.e(TAG,"REAR_PREVIEW_UNUSABLE luma="+Math.round(mean)+
+                      " contrast="+Math.round(lastContrast)+" camera_id=0");
+            status.setText("Rear camera image too dark – motion paused");
+        }
+        if(blackFrames>=30 && now-lastRearRecovery>60000L) {
+            lastRearRecovery=now;
             blackFrames=0;
+            Log.w(TAG,"REAR_CAMERA_RECOVERY restarting_rear_only");
             runOnUiThread(new Runnable(){
                 @Override public void run(){
                     stopCamera();
-                    cameraId=1;
-                    startCamera(surface.getHolder());
+                    if(holderReady)startCamera(surface.getHolder());
                 }
             });
             return;
         }
-        if(blackFrames==25 && cameraId==1)
-            Log.e(TAG,"BLACK_PREVIEW front_camera_also_blank");
 
         boolean luxValid=(ambientLux>=0f && SystemClock.elapsedRealtime()-lastLuxAt<120000L);
         if(luxValid){
@@ -276,12 +339,40 @@ public final class MotionActivity extends Activity
             else if(mean<=73)dark=true;
         }
         frames++;
+        if(!previewValid){
+            initialized=false;recent=0;hitCount=0;missCount=0;prevCx=-1;prevCy=-1;
+            heartbeat(now,mean,0,0);
+            return;
+        }
         if(!initialized){
             for(int k=0;k<N;k++)background[k]=sample[k];
             previousMean=mean;initialized=true;
+            if(luxValid)lastIlluminationLux=ambientLux;
             heartbeat(now,mean,0,0);return;
         }
         float shift=mean-previousMean;
+        // A lamp switching off/on changes nearly the whole scene at once. Do not let
+        // the old illuminated background decay slowly into a false "moving blob".
+        boolean luxStep=luxValid && lastIlluminationLux>=0f &&
+                ((lastIlluminationLux>=7f && ambientLux<=3f) ||
+                 (lastIlluminationLux<=3f && ambientLux>=7f));
+        if(luxValid)lastIlluminationLux=ambientLux;
+        if(Math.abs(shift)>=26f || luxStep) {
+            for(int k=0;k<N;k++)background[k]=sample[k];
+            previousMean=mean;hitCount=0;recent=0;missCount=0;prevCx=-1;prevCy=-1;
+            illuminationHoldUntil=now+12000L;
+            Log.i(TAG,"ILLUMINATION_REBASE delta_luma="+Math.round(shift)+
+                  " lux="+Math.round(ambientLux)+" lux_step="+(luxStep?1:0)+
+                  " hold_ms=12000");
+            heartbeat(now,mean,0,0);
+            return;
+        }
+        if(now<illuminationHoldUntil) {
+            for(int k=0;k<N;k++)background[k]+=(sample[k]-background[k])*.23f;
+            previousMean=mean;hitCount=0;recent=0;missCount=0;prevCx=-1;prevCy=-1;
+            heartbeat(now,mean,0,0);
+            return;
+        }
         int changed=0;
         for(int k=0;k<N;k++){
             // Compensate exposure globally rather than treating it as movement.
@@ -290,6 +381,8 @@ public final class MotionActivity extends Activity
             if(diff)changed++;
         }
         float fraction=(float)changed/N;
+        if(changed>1){lastActualChangeAt=now;stagnantFrames=0;}
+        else stagnantFrames++;
         float largestArea=0,cx=-1,cy=-1;
         // Connected-component check rejects isolated noisy pixels.
         boolean[] seen=new boolean[N];
@@ -343,7 +436,7 @@ public final class MotionActivity extends Activity
         lastLog=now;
         Log.i(TAG,"HEARTBEAT session="+session+" luma="+Math.round(mean)+
                 " lux="+(ambientLux>=0f?Math.round(ambientLux):-1)+
-                " dark="+(dark?1:0)+" changed="+Math.round(changed*100)+
+                " dark="+(dark?1:0)+" camera_id="+cameraId+" valid="+(previewValid?1:0)+" contrast="+Math.round(lastContrast)+" stale_sec="+Math.round((now-lastActualChangeAt)/1000f)+" profile="+cameraNightMode+" changed="+Math.round(changed*100)+
                 " largest="+Math.round(largest)+" frames="+frames);
     }
 }
