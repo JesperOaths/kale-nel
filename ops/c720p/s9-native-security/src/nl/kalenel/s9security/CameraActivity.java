@@ -39,6 +39,7 @@ public final class CameraActivity extends Activity {
   i.putExtra("enable_native_camera",true);
   i.putExtra("pilot_only",pilot);
   i.putExtra("validate_dual_stream",pilot);
+  i.putExtra("takeover_ipwebcam",!pilot);
   startForegroundService(i);
  }
 }
