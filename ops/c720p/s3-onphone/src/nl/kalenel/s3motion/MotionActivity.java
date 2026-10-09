@@ -4,6 +4,10 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.hardware.Camera;
+import android.hardware.Sensor;
+import android.hardware.SensorManager;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
 import android.content.pm.PackageManager;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -22,7 +26,7 @@ import java.util.Arrays;
  */
 @SuppressWarnings("deprecation")
 public final class MotionActivity extends Activity
-        implements SurfaceHolder.Callback, Camera.PreviewCallback {
+        implements SurfaceHolder.Callback, Camera.PreviewCallback, SensorEventListener {
     private static final String TAG="S3MOTION";
     private final int GX=24, GY=18, N=432;
     private SurfaceView surface;
@@ -40,6 +44,12 @@ public final class MotionActivity extends Activity
     private TextView status;
     private boolean holderReady=false;
     private int cameraId=1, blackFrames=0;
+    private SensorManager lightManager;
+    private Sensor ambientLightSensor;
+    private volatile float ambientLux=-1f;
+    private volatile long lastLuxAt=0;
+    private static final float LUX_DARK_BELOW=35f;
+    private static final float LUX_BRIGHT_ABOVE=85f;
 
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
@@ -59,13 +69,34 @@ public final class MotionActivity extends Activity
         root.addView(status,label);
         setContentView(root);
         surface.getHolder().addCallback(this);
-        Log.i(TAG,"APP_START session="+session+" version=2 on_phone=true");
+        lightManager=(SensorManager)getSystemService(SENSOR_SERVICE);
+        if(lightManager!=null)ambientLightSensor=lightManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+        Log.i(TAG,"AMBIENT_SENSOR available="+(ambientLightSensor!=null)+
+                " darkBelow="+LUX_DARK_BELOW+" brightAbove="+LUX_BRIGHT_ABOVE);
+        Log.i(TAG,"APP_START session="+session+" version=3 lux_gating=true on_phone=true");
     }
     @Override public void surfaceCreated(SurfaceHolder h){holderReady=true; startCamera(h);}
     @Override public void surfaceChanged(SurfaceHolder h,int fmt,int w,int hgt){}
     @Override public void surfaceDestroyed(SurfaceHolder h){holderReady=false;stopCamera();}
-    @Override public void onResume(){super.onResume();if(holderReady && camera==null)startCamera(surface.getHolder());}
-    @Override public void onPause(){stopCamera();super.onPause();}
+    @Override public void onResume(){
+        super.onResume();
+        if(lightManager!=null && ambientLightSensor!=null)
+            lightManager.registerListener(this,ambientLightSensor,SensorManager.SENSOR_DELAY_NORMAL);
+        if(holderReady && camera==null)startCamera(surface.getHolder());
+    }
+    @Override public void onPause(){
+        if(lightManager!=null)lightManager.unregisterListener(this);
+        stopCamera();
+        super.onPause();
+    }
+    @Override public void onAccuracyChanged(Sensor sensor,int accuracy){}
+    @Override public void onSensorChanged(SensorEvent event){
+        if(event.sensor.getType()!=Sensor.TYPE_LIGHT || event.values.length==0)return;
+        float v=event.values[0];
+        if(Float.isNaN(v)||v<0f||v>150000f)return;
+        ambientLux=(ambientLux<0f)?v:ambientLux*.75f+v*.25f;
+        lastLuxAt=SystemClock.elapsedRealtime();
+    }
     @Override public void onDestroy(){stopCamera();super.onDestroy();}
 
     private void startCamera(SurfaceHolder holder){
@@ -159,8 +190,15 @@ public final class MotionActivity extends Activity
         if(blackFrames==25 && cameraId==1)
             Log.e(TAG,"BLACK_PREVIEW front_camera_also_blank");
 
-        if(mean>=100)dark=false;
-        else if(mean<=73)dark=true;
+        boolean luxValid=(ambientLux>=0f && SystemClock.elapsedRealtime()-lastLuxAt<120000L);
+        if(luxValid){
+            // Native ambient light sensor is not fooled by camera auto-exposure.
+            if(ambientLux>=LUX_BRIGHT_ABOVE)dark=false;
+            else if(ambientLux<=LUX_DARK_BELOW)dark=true;
+        }else{
+            if(mean>=100)dark=false;
+            else if(mean<=73)dark=true;
+        }
         frames++;
         if(!initialized){
             for(int k=0;k<N;k++)background[k]=sample[k];
@@ -217,7 +255,8 @@ public final class MotionActivity extends Activity
             sequence++;
             Log.i(TAG,"MOTION session="+session+" seq="+sequence+
                     " luma="+Math.round(mean)+" changed="+Math.round(fraction*100)+
-                    " cluster="+Math.round(largestArea)+" dark=1");
+                    " cluster="+Math.round(largestArea)+" lux="+
+                    (ambientLux>=0f?Math.round(ambientLux):-1)+" dark=1");
             status.setText("S3 motion detected (phone processed)");
         }
         heartbeat(now,mean,fraction,largestArea);
@@ -226,6 +265,7 @@ public final class MotionActivity extends Activity
         if(now-lastLog<10000)return;
         lastLog=now;
         Log.i(TAG,"HEARTBEAT session="+session+" luma="+Math.round(mean)+
+                " lux="+(ambientLux>=0f?Math.round(ambientLux):-1)+
                 " dark="+(dark?1:0)+" changed="+Math.round(changed*100)+
                 " largest="+Math.round(largest)+" frames="+frames);
     }
