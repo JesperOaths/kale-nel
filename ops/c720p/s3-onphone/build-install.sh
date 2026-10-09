@@ -6,14 +6,15 @@ PLATFORM="$SDK/platforms/android-36/android.jar"
 ROOT="/home/jespern/c720p-home-hub"
 WORK="$ROOT/build/s3-onphone"
 STATE="$ROOT/state"
-BASE_URL="https://raw.githubusercontent.com/JesperOaths/kale-nel/fd9b679011f41b4218668f5329f61c021e4d6594/ops/c720p/s3-onphone"
+BASE_URL="https://raw.githubusercontent.com/JesperOaths/kale-nel/6e4fe0479ecc9fd2a1f55fa497b435df9af8ada2/ops/c720p/s3-onphone"
 mkdir -p "$WORK/classes" "$WORK/dex" "$WORK/src/nl/kalenel/s3motion" "$STATE"
 curl -fsSL "$BASE_URL/AndroidManifest.xml" -o "$WORK/AndroidManifest.xml"
 curl -fsSL "$BASE_URL/src/nl/kalenel/s3motion/MotionActivity.java" -o "$WORK/src/nl/kalenel/s3motion/MotionActivity.java"
+curl -fsSL "$BASE_URL/src/nl/kalenel/s3motion/BootReceiver.java" -o "$WORK/src/nl/kalenel/s3motion/BootReceiver.java"
 javac -source 8 -target 8 -cp "$PLATFORM" -d "$WORK/classes" \
-    "$WORK/src/nl/kalenel/s3motion/MotionActivity.java"
+    "$WORK/src/nl/kalenel/s3motion/MotionActivity.java" "$WORK/src/nl/kalenel/s3motion/BootReceiver.java"
 "$TOOLS/d8" --min-api 19 --lib "$PLATFORM" --output "$WORK/dex" \
-    "$WORK/classes/nl/kalenel/s3motion/MotionActivity.class"
+    "$WORK"/classes/nl/kalenel/s3motion/*.class
 "$TOOLS/aapt" package -f -M "$WORK/AndroidManifest.xml" -I "$PLATFORM" \
     -F "$WORK/s3-motion-unsigned.apk"
 (cd "$WORK/dex"; zip -q -u "$WORK/s3-motion-unsigned.apk" classes.dex)
