@@ -53,6 +53,19 @@ def verified(endpoint):
     except (OSError, subprocess.TimeoutExpired):
         return False
 
+def stop_legacy_webcam(endpoint):
+    """Only after GT-I9300 serial verification; never touch the S5 or S9+."""
+    try:
+        r = adb(endpoint, "shell", "pm", "list", "packages", timeout=8)
+        for line in r.stdout.decode(errors="replace").splitlines():
+            if not line.startswith("package:"):
+                continue
+            pkg = line.removeprefix("package:").strip()
+            if pkg.startswith("com.pas.webcam"):
+                adb(endpoint, "shell", "am", "force-stop", pkg, timeout=6)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
 def screenshot(endpoint):
     try:
         r = adb(endpoint, "exec-out", "screencap", "-p", timeout=7)
@@ -177,6 +190,7 @@ def main():
                 continue
         if not camera_started:
             try:
+                stop_legacy_webcam(endpoint)
                 adb(endpoint,"shell","am","start","-a",
                     "android.media.action.STILL_IMAGE_CAMERA",timeout=8)
                 camera_started=True
