@@ -25,7 +25,12 @@ class Tests(unittest.TestCase):
   self.assertEqual(result["person_activity"],"bounding_box_position_changed_across_samples_not_identity")
   self.assertEqual(result["identity"],"not_evaluated")
   frames[1]["persons_050"]=2
+  self.assertEqual(mod.categorize(frames)["event_category"],"possible_group_needs_frame_review")
+  frames[2]["persons_050"]=2
   self.assertEqual(mod.categorize(frames)["event_category"],"multiple_people_candidate")
+  # Duplicated/overlapping detector boxes are never counted as two people.
+  self.assertTrue(mod.overlaps_same_object([.1,.1,.6,.6],[.12,.12,.58,.58]))
+  self.assertFalse(mod.overlaps_same_object([.1,.1,.3,.3],[.6,.6,.9,.9]))
   weak=[dict(frames[0],persons_050=0,person_score=.38,centers=[])]
   self.assertEqual(mod.categorize(weak)["event_category"],"unresolved_motion_or_non_person")
   self.assertEqual(mod.categorize(weak+weak)["event_category"],"possible_person_needs_review")
