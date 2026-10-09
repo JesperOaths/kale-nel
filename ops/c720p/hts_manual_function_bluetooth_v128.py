@@ -15,7 +15,7 @@ if MARK in s:
 assert s.count('SOURCE_CYCLES=8')==1
 assert s.count('--es command source_input')==1
 assert s.count('HTS custom-input-cycle')==1
-assert s.count('bluetoothctl --timeout 45 scan bredr')==1
+assert s.count('bluetoothctl --timeout 45 scan bredr')==2
 s=s.replace('SOURCE_CYCLES=8', '''# C720P_HTS_MANUAL_FUNCTION_BT_V128
 # The HT-E6500's documented pairing sequence uses FUNCTION until BT, WAIT,
 # READY, never the SOURCE_INPUT code. Keep POWER strictly separate.
@@ -28,7 +28,7 @@ s=s.replace('''  # Give the HT-E6500 its proven source-settle / BT WAIT -> READY
   # Allow READY to advertise before scanning/connecting.
   sleep 2.6''',1)
 s=s.replace('bluetoothctl --timeout 45 scan bredr',
-'''bluetoothctl --timeout 155 scan bredr''',1)
+'''bluetoothctl --timeout 155 scan bredr''')
 # Never require a *new scan line* from an already paired speaker.
 # Some BlueZ versions suppress discovery announcements for cached devices,
 # even while a fresh RFCOMM/A2DP connection becomes possible.
@@ -47,7 +47,7 @@ s=s.replace('''        if wait_live_seen 6 && connect_seen_device; then
         fi''',1)
 assert '--es command source_input' not in s
 assert s.count(MARK)==1
-assert 'bluetoothctl --timeout 155 scan bredr' in s
+assert s.count('bluetoothctl --timeout 155 scan bredr')==2
 if '--dry-run' in sys.argv:
  print(json.dumps({'ok':True,'dry_run':True,'function_source':True,
    'scan_remains_active':True,'tries_cached_paired_mac':True,'no_hts_power':True}))
