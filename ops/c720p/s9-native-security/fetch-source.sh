@@ -26,7 +26,7 @@ curl -fsSL --retry 3 --connect-timeout 10 --max-time 45 \
   -o "$TEMP/AndroidManifest.xml"
 grep -Fq 'package="nl.kalenel.s9security"' "$TEMP/AndroidManifest.xml"
 # Publish only after the complete source set has been fetched and validated.
-for file in CameraActivity CameraService MotionGrid ClipClassifier PreviewJpeg Boot; do
+for file in CameraActivity CameraService MotionGrid ClipClassifier PreviewJpeg Boot RecordingRate; do
   mv -f "$TEMP/$file.java" "$ROOT/src/nl/kalenel/s9security/$file.java"
 done
 mv -f "$TEMP/AndroidManifest.xml" "$ROOT/AndroidManifest.xml"
