@@ -61,6 +61,19 @@ public final class ClipClassifier {
  private static final class Detection {
   String label;float score;float[] box;
  }
+ private static boolean samePersonBox(float[] a,float[] b){
+  if(a==null||b==null||a.length!=4||b.length!=4)return false;
+  float top=Math.max(a[0],b[0]),left=Math.max(a[1],b[1]);
+  float bottom=Math.min(a[2],b[2]),right=Math.min(a[3],b[3]);
+  float intersection=Math.max(0,bottom-top)*Math.max(0,right-left);
+  float areaA=Math.max(0,a[2]-a[0])*Math.max(0,a[3]-a[1]);
+  float areaB=Math.max(0,b[2]-b[0])*Math.max(0,b[3]-b[1]);
+  float union=areaA+areaB-intersection;
+  if(union>0&&intersection/union>=0.45f)return true;
+  float ax=(a[1]+a[3])/2,ay=(a[0]+a[2])/2;
+  float bx=(b[1]+b[3])/2,by=(b[0]+b[2])/2;
+  return Math.abs(ax-bx)<0.05f&&Math.abs(ay-by)<0.05f;
+ }
  private List<Detection> detect(Bitmap original)throws Exception{
   Bitmap scaled=Bitmap.createScaledBitmap(original,300,300,true);
   try{
@@ -95,6 +108,7 @@ public final class ClipClassifier {
   MediaMetadataRetriever media=new MediaMetadataRetriever();
   int persons=0,animals=0,vehicles=0;
   int strongPersonFrames=0,possiblePersonFrames=0,validFrames=0;
+  int framesWithMultiplePeople=0;
   long firstStrongAt=-1,lastStrongAt=-1;
   final JSONArray frameEvidence=new JSONArray();
   final LinkedHashSet<String> animalsSeen=new LinkedHashSet<>(),vehiclesSeen=new LinkedHashSet<>();
@@ -119,13 +133,18 @@ public final class ClipClassifier {
      List<Detection> found=detect(bitmap);
      validFrames++;
      int p=0,a=0,v=0,weakPerson=0;
+     final ArrayList<float[]> distinctPersonBoxes=new ArrayList<>();
      double confidence=0,framePersonMax=0;
      for(Detection d:found){
       if("person".equals(d.label)){
        maxPerson=Math.max(maxPerson,d.score);
        framePersonMax=Math.max(framePersonMax,d.score);
-       if(d.score>=.50f){p++;confidence=Math.max(confidence,d.score);}
-       else weakPerson++;
+       if(d.score>=.50f){
+        boolean duplicate=false;
+        for(float[] box:distinctPersonBoxes)if(samePersonBox(d.box,box)){duplicate=true;break;}
+        if(!duplicate){distinctPersonBoxes.add(d.box);p++;}
+        confidence=Math.max(confidence,d.score);
+       }else weakPerson++;
       }else if(d.score>=.50f && ("cat".equals(d.label)||"dog".equals(d.label)||"bird".equals(d.label)
            ||"horse".equals(d.label)||"sheep".equals(d.label)||"cow".equals(d.label)
            ||"elephant".equals(d.label)||"bear".equals(d.label)||"zebra".equals(d.label)
@@ -137,6 +156,7 @@ public final class ClipClassifier {
        v++;maxVehicle=Math.max(maxVehicle,d.score);vehiclesSeen.add(d.label);
       }
      }
+     if(p>=2)framesWithMultiplePeople++;
      if(p>0){
       strongPersonFrames++;
       if(firstStrongAt<0)firstStrongAt=micros/1000;
@@ -159,20 +179,28 @@ public final class ClipClassifier {
    }
    JSONArray categories=new JSONArray();
    String scene="motion_other";
-   if(persons>0){scene=persons>=2?"multiple_people":"one_person";categories.put("person");}
+   // An isolated multi-box frame is not reliable evidence for two people.
+   if(persons>0){
+    scene=framesWithMultiplePeople>=2?"multiple_people":
+      framesWithMultiplePeople==1?"unreviewed":"one_person";
+    categories.put("person");
+   }
    if(vehicles>0)categories.put("vehicle");
    if(animals>0)categories.put("animal");
    if(categories.length()==0)categories.put("other_motion");
    String personEvent="no_person_model_detection";
-   if(persons>=2)personEvent="multiple_people_candidate";
+   if(framesWithMultiplePeople>=2)personEvent="multiple_people_candidate";
+   else if(framesWithMultiplePeople==1)personEvent="possible_group_needs_frame_review";
    else if(strongPersonFrames>=2)personEvent="single_person_repeated_candidate";
    else if(strongPersonFrames==1)personEvent="single_frame_person_candidate";
    else if(possiblePersonFrames>=2)personEvent="possible_person_below_standard_threshold";
    result.put("person_event_category",personEvent);
-   result.put("person_review_priority",persons>=2||strongPersonFrames>=2?"high":
+   result.put("person_review_priority",framesWithMultiplePeople>=2||strongPersonFrames>=2?"high":
       possiblePersonFrames>0?"review":"non_person_or_unresolved");
    result.put("sampled_frame_count",validFrames);
    result.put("person_frames_at_050",strongPersonFrames);
+   result.put("frames_with_distinct_multiple_person_boxes",framesWithMultiplePeople);
+   result.put("person_box_deduplication","iou_045_or_center_distance_005");
    result.put("possible_person_frames_at_030",possiblePersonFrames);
    result.put("person_first_sample_ms",firstStrongAt>=0?firstStrongAt:JSONObject.NULL);
    result.put("person_last_sample_ms",lastStrongAt>=0?lastStrongAt:JSONObject.NULL);
