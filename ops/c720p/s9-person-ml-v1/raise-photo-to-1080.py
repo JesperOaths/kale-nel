@@ -16,8 +16,9 @@ def main():
  old=get(CAM+"/camera-controls")["controls"]
  before=old["photo_size"]["value"],old["quality"]["value"]
  print("ORIGINAL_PHOTO",before,flush=True)
- if before[0]=="1920x1080":print("ALREADY_1080_PHOTOS");return
- assert before[0]=="960x540","unexpected_camera_photo_source"
+ if before[0]=="1920x1080" and before[1]=="75" and d.get("camera_photo_size")=="1920x1080":
+  print("ALREADY_1080_PHOTOS_CONFIGURED");return
+ assert before[0] in ("960x540","1920x1080"),"unexpected_camera_photo_source"
  baseline=get(GPU)
  assert baseline["ok"] and baseline["model_ready"] and baseline["backend"]=="gpu","GPU not healthy"
  edge=get(EDGE)
