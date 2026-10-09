@@ -1,8 +1,10 @@
 """S9 microSD replay extension for the existing C720P secure archive proxy."""
-import json,re,urllib.parse,subprocess
+import json,re,urllib.parse,subprocess,hashlib
 from pathlib import Path
 BASE=Path("/opt/homeassistant/config/www/frontyard-security-new")
 CAT=BASE/"s9-phone-events.json"
+PREVIEW_CAT=Path("/home/jespern/c720p-home-hub/state/s9-fallback-evidence.json")
+PREVIEW_NAME=re.compile(r"preview_motion_[0-9]{13}[.]jpg")
 SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9edge/files/SecurityClips"
 NATIVE_SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9nativefourk/files/Native4K"
 SECURITY_SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4K"
@@ -14,20 +16,61 @@ def rows():
   d=json.loads(CAT.read_text())
   return {r["name"]:r for r in d.get("phone_recordings",[]) if RE_NAME.fullmatch(str(r.get("name",""))) and r.get("sd_verified")}
  except Exception:return {}
+def preview_rows():
+ try:
+  d=json.loads(PREVIEW_CAT.read_text())
+  return {r["name"]:r for r in d.get("previews",[]) if
+    PREVIEW_NAME.fullmatch(str(r.get("name",""))) and
+    r.get("kind")=="preview_only_motion_evidence" and
+    r.get("sd_verified") is True and r.get("sd_only") is True and
+    r.get("person_status")=="not_evaluated" and
+    3000<int(r.get("size",0))<2500000 and
+    re.fullmatch(r"[0-9a-f]{64}",str(r.get("sha256","")))}
+ except (ValueError,TypeError,OSError,KeyError):return {}
+
+def serve_preview(handler,name,item):
+ # Only the authenticated archive relay can reach this handler externally.
+ # Source bytes are read fresh from the phone; no JPEG is stored on the hub.
+ expected=int(item["size"])
+ try:
+  p=subprocess.run(["adb","-s",PHONE,"exec-out","cat",SECURITY_SD+"/"+name],
+                   stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=16,check=True)
+  blob=p.stdout
+  if (len(blob)!=expected or
+      hashlib.sha256(blob).hexdigest()!=item["sha256"] or
+      not (blob.startswith(b"\\xff\\xd8\\xff") and blob.endswith(b"\\xff\\xd9"))):
+   raise ValueError("preview_integrity_mismatch")
+ except (OSError,ValueError,subprocess.SubprocessError):
+  handler.js(503,{"ok":False,"error":"preview_unavailable_or_mismatch"});return
+ handler.send_response(200)
+ handler.send_header("Content-Type","image/jpeg")
+ handler.send_header("Content-Length",str(len(blob)))
+ handler.send_header("Cache-Control","private,no-store")
+ handler.send_header("X-Content-Type-Options","nosniff")
+ handler.end_headers()
+ if handler.command!="HEAD":handler.wfile.write(blob)
+
 def install_local_sd(H):
  original=H.go
  def go(self):
   url=urllib.parse.urlsplit(self.path)
   path=url.path
   data=rows()
+  previews=preview_rows()
   if path=="/new/api/saved":
    events=[]
    for name,r in sorted(data.items(),reverse=True):
     events.append({"camera":"new","clip_no":name,"timestamp":r.get("timestamp"),"reason":"S9+ microSD local recording",
       "method":"s9-microSD","remote_name":name,"snapshot_name":(name+".thumb.jpg" if r.get("thumbnail") else None),
       "size":r.get("size"),"person_status":r.get("scene_category","unreviewed"),"scene_category":r.get("scene_category","unreviewed"),"content_categories":r.get("content_categories",[])})
-   self.js(200,{"ok":True,"camera":"new","archive_mode":"S9-microSD-only","drive_ready":False,"events":events})
+   self.js(200,{"ok":True,"camera":"new","archive_mode":"S9-microSD-only","drive_ready":False,
+     "events":events,"fallback_previews":list(previews.values())})
    return
+  still=re.fullmatch(r"/new/saved/still/(preview_motion_[0-9]{13}[.]jpg)",path)
+  if still:
+   name=still.group(1);item=previews.get(name)
+   if item:return serve_preview(self,name,item)
+   self.js(404,{"ok":False,"error":"preview_not_indexed"});return
   match=re.fullmatch(r"/new/saved/clip/([A-Za-z0-9._-]+[.]mp4)",path)
   if match:
    name=match.group(1);item=data.get(name)
