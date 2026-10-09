@@ -18,7 +18,7 @@ def healthy(target):
   n=get("http://127.0.0.1:18808/status")
   if not n.get("native_4k_enabled") or not n.get("ok") or not n.get("snapshot_ready"):
    return False,n
-  if target and n.get("recording_rate_max_per_hour")!=12:return False,n
+  if target and n.get("recording_rate_max_per_hour")!=24:return False,n
   return n.get("mode") in ("watching","recording","starting"),n
  except Exception:return False,{}
 def launch():

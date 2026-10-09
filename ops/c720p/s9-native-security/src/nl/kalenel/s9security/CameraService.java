@@ -313,16 +313,18 @@ public final class CameraService extends Service {
   cooldownUntil=SystemClock.elapsedRealtime()+20000;
   cameraHandler.postDelayed(new Runnable(){public void run(){configurePreview();}},1300);
  }
- private void review(File f,String reason,long count){
+ private boolean review(File f,String reason,long count){
   try{
    JSONObject j=classifier.process(f,folder,f.getName(),reason,count);
    backend=j.optString("backend","unknown");
    reviewed++;
    lastReview=j.optString("scene_category")+" people="+j.optInt("person_count");
    Log.i(TAG,"REVIEW "+f.getName()+" "+lastReview);
+   return true;
   }catch(Exception e){
    failure("review_"+e.getClass().getSimpleName()+":"+e.getMessage(),e);
    // Preserve original movie even when classifier fails. A later recovery job can retry.
+   return false;
   }
  }
  // Keep an SD-only low-resolution evidence frame if the 4K budget, cooldown,
@@ -399,11 +401,11 @@ public final class CameraService extends Service {
      if(promoted.exists() || !existing.renameTo(promoted)){recoveryUnplayable++;continue;}
      recoveredPartials++;
      if(!new File(archive,promoted.getName()+".verified.json").exists()){
-      review(promoted,"startup_recovered_4k",0);recoveredReviews++;
+      if(review(promoted,"startup_recovered_4k",0))recoveredReviews++;
      }
     }else if(!new File(archive,filename+".verified.json").exists()){
      if(!validCompleted4K(existing)){recoveryUnplayable++;continue;}
-     review(existing,"startup_missing_review_repaired",0);recoveredReviews++;
+     if(review(existing,"startup_missing_review_repaired",0))recoveredReviews++;
     }
    }
   }catch(Exception e){failure("archive_recovery_scan_failed",e);}
