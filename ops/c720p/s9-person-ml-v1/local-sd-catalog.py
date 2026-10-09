@@ -79,6 +79,43 @@ def main():
     "resolution":"3840x2160","codec":"H.264","storage":"S9+ native 4K microSD"})
  except Exception as e:
   if type(e).__name__!="OSError":problems.append("native_4k:"+type(e).__name__)
+ # Standalone Camera2 motion-triggered 4K recordings, independently classified on S9.
+ native_security="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4K"
+ try:
+  recorded=adb("shell","ls","-1",native_security).decode().splitlines()
+ except Exception:recorded=[]
+ for name in recorded:
+  if not re.fullmatch(r"motion_[0-9]{13}[.]mp4",name):continue
+  try:
+   m=json.loads(adb("exec-out","cat",native_security+"/"+name+".verified.json"))
+   size=int(m.get("bytes",0));digest=str(m.get("sha256","")).lower()
+   if m.get("name")!=name or not re.fullmatch(r"[a-f0-9]{64}",digest) or not 100000<size<800000000:
+    raise ValueError("security_manifest_invalid")
+   if int(m.get("width",0))!=3840 or int(m.get("height",0))!=2160:
+    raise ValueError("not_verified_2160p")
+   actual=int(adb("shell","stat","-c","%s",native_security+"/"+name).strip())
+   if size!=actual:raise ValueError("incomplete_sd_mp4")
+   group=str(m.get("scene_category","motion_other"))
+   if group not in ("one_person","multiple_people","motion_other"):
+    group="unreviewed"
+   thumb=None
+   try:
+    raw=adb("exec-out","cat",native_security+"/"+name+".thumb.jpg")
+    if 4000<len(raw)<2200000 and raw[:3]==bytes([255,216,255]):
+     dest=ROOT/"s9-phone-thumbs"/(name+".thumb.jpg")
+     dest.parent.mkdir(parents=True,exist_ok=True)
+     if not dest.is_file() or dest.read_bytes()!=raw:
+      t=dest.with_suffix(".jpg.partial");t.write_bytes(raw);os.replace(t,dest)
+     thumb="s9-phone-thumbs/"+dest.name
+   except Exception:pass
+   when=datetime.datetime.fromtimestamp(int(name.split("_")[1].split(".")[0])/1000.0)
+   rows.append({"name":name,"timestamp":when.strftime("%Y-%m-%d %H:%M"),
+     "size":size,"drive_verified":False,"sd_verified":True,"sd_only":True,
+     "scene_category":group,"person_count":int(m.get("person_count",0)),
+     "thumbnail":thumb,"resolution":"3840x2160","codec":"H.264",
+     "content_categories":m.get("categories",[]),
+     "storage":"S9 native 4K Security microSD"})
+  except Exception as error:problems.append(name+":"+type(error).__name__)
  out={"storage_policy":"local_microSD","phone_recordings":sorted(rows,key=lambda r:r["timestamp"]),
       "total_phone_files":len(rows),"archived_total":len(rows),"errors":problems}
  dest=ROOT/"s9-phone-events.json"
