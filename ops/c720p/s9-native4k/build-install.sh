@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 umask 077
 ROOT="$HOME/c720p-home-hub/build/s9-native4k"
-REPO="https://raw.githubusercontent.com/JesperOaths/kale-nel/5d6e3336b17055c8cca6f52f9e2746b3ce5a25f6/ops/c720p/s9-native4k"
+REPO="https://raw.githubusercontent.com/JesperOaths/kale-nel/3cc1908d92bb4df3ebe2b2aaec1f75b04987caf2/ops/c720p/s9-native4k"
 mkdir -p "$ROOT/src/nl/kalenel/s9nativefourk" "$ROOT/classes" "$ROOT/dex"
 curl -fsSL "$REPO/AndroidManifest.xml" -o "$ROOT/AndroidManifest.xml"
 for class in CameraActivity CameraService; do
