@@ -142,6 +142,7 @@ def detect(raw,net,input_index,output,shape):
     "person_score":round(person_max,4),
     "centers":[[round((p[1][1]+p[1][3])/2,3),
                 round((p[1][0]+p[1][2])/2,3)] for p in strong],
+    "single_person_box":[round(float(z),5) for z in strong[0][1]] if len(strong)==1 else None,
     "vehicle_max":round(max(vehicles,default=0),4),
     "animal_max":round(max(animals,default=0),4)})
  return evidence

@@ -1,0 +1,35 @@
+name: S9 Security Three Views and Home LIVE
+on:
+  push:
+    paths:
+      - "ops/c720p/s9-native-security/patch-today-native-and-home-live.py"
+      - "ops/c720p/s9-native-security/deploy-security-tabs-and-bottom-live.py"
+      - "ops/c720p/s9-native-security/test-security-tabs-home-live.py"
+      - ".github/workflows/s9-security-tabs-home-live.yml"
+  pull_request:
+    paths:
+      - "ops/c720p/s9-native-security/patch-today-native-and-home-live.py"
+      - "ops/c720p/s9-native-security/deploy-security-tabs-and-bottom-live.py"
+      - "ops/c720p/s9-native-security/test-security-tabs-home-live.py"
+      - ".github/workflows/s9-security-tabs-home-live.yml"
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Static contracts and JS syntax
+        run: |
+          set -Eeuo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/patch-today-native-and-home-live.py ops/c720p/s9-native-security/deploy-security-tabs-and-bottom-live.py
+          python3 ops/c720p/s9-native-security/test-security-tabs-home-live.py
+          python3 - <<'PY'
+          import importlib.util,re
+          from pathlib import Path
+          p=Path("ops/c720p/s9-native-security/patch-today-native-and-home-live.py")
+          spec=importlib.util.spec_from_file_location("s9tabs",p)
+          m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          scripts=re.findall(r'<script[^>]+>(.*?)</script>',m.TODAY,re.S)
+          assert len(scripts)==1
+          Path('/tmp/s9-today-camera-clips.js').write_text(scripts[0])
+          PY
+          node --check /tmp/s9-today-camera-clips.js
