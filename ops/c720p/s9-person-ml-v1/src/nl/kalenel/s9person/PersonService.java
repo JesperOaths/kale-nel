@@ -22,7 +22,7 @@ public final class PersonService extends Service {
  private volatile double lastEventConfidence=0;
  private volatile double inferenceLatencyMs=0,personScore=0,topScore=0;
  private volatile int rawTopClass=-1,rawPersonClass=-1,personStreak=0,tempDeciC=0;
- private volatile String backend="none",failure="",modelName="ssd-mobilenet-v1-coco-quant";
+ private volatile String backend="none",failure="",modelName="ssd-mobilenet-v1-coco-quant-person-tracking-v4";
  private volatile int personBoxTop=0,personBoxLeft=0,personBoxRight=0,personBoxBottom=0;
  private Thread worker,api;
  private ServerSocket socket;
@@ -33,6 +33,66 @@ public final class PersonService extends Service {
  private final float[][] classes=new float[1][10],scores=new float[1][10];
  private final float[] detections=new float[1];
  private long lastLogAt=0;
+ // Short-lived, within-incident geometry tracking. No face templates, cross-day IDs,
+ // demographic inference, identity inference, or persistent visitor database.
+ private static final class PersonTrack {
+  int id;float[] box=new float[4];long lastSeen;
+  float confidence;boolean assigned;
+ }
+ private final ArrayList<PersonTrack> personTracks=new ArrayList<PersonTrack>();
+ private volatile String recentPersonsJson="[]";
+ private volatile int anonymousPersonCount=0;
+ private int nextAnonymousId=1;
+ private float iou(float[] a,float[] b){
+  float t=Math.max(a[0],b[0]),l=Math.max(a[1],b[1]);
+  float bt=Math.min(a[2],b[2]),r=Math.min(a[3],b[3]);
+  float ix=Math.max(0,r-l),iy=Math.max(0,bt-t),cross=ix*iy;
+  float aa=Math.max(0,a[3]-a[1])*Math.max(0,a[2]-a[0]);
+  float bb=Math.max(0,b[3]-b[1])*Math.max(0,b[2]-b[0]);
+  return cross/(aa+bb-cross+0.000001f);
+ }
+ private void updateAnonymousTracks(int count){
+  long now=SystemClock.elapsedRealtime();
+  Iterator<PersonTrack> it=personTracks.iterator();
+  while(it.hasNext())if(now-it.next().lastSeen>7000)it.remove();
+  if(personTracks.isEmpty())nextAnonymousId=1;
+  for(PersonTrack t:personTracks)t.assigned=false;
+  int detected=0;
+  for(int i=0;i<count;i++){
+   int cls=Math.round(classes[0][i]);
+   float conf=scores[0][i];
+   if(cls!=0||conf<0.48f)continue;
+   detected++;
+   float[] box=boxes[0][i];
+   PersonTrack best=null;float overlap=0.18f;
+   for(PersonTrack t:personTracks){
+    if(t.assigned)continue;
+    float score=iou(box,t.box);
+    if(score>overlap){overlap=score;best=t;}
+   }
+   if(best==null){
+    best=new PersonTrack();best.id=nextAnonymousId++;
+    personTracks.add(best);
+   }
+   System.arraycopy(box,0,best.box,0,4);
+   best.lastSeen=now;best.confidence=conf;best.assigned=true;
+  }
+  JSONArray rows=new JSONArray();
+  for(PersonTrack t:personTracks){
+   if(!t.assigned)continue;
+   JSONObject row=new JSONObject();
+   try{
+    row.put("track_id","within_scene_"+t.id);
+    row.put("confidence",Math.round(t.confidence*1000f)/1000f);
+    JSONArray b=new JSONArray();
+    for(float x:t.box)b.put(Math.max(0,Math.min(1000,Math.round(x*1000f))));
+    row.put("box_milli",b);
+   }catch(Exception ignored){}
+   rows.put(row);
+  }
+  recentPersonsJson=rows.toString();
+  anonymousPersonCount=detected;
+ }
  private volatile String validationRequested="",validationStatus="idle",validationLast="";
  private volatile double validationPersonScore=0,validationTopScore=0;
  private volatile int validationTopClass=-1,validationCount=0;
@@ -150,6 +210,7 @@ public final class PersonService extends Service {
    validationStatus="ok";
    return;
   }
+  updateAnonymousTracks(count);
   rawTopClass=bestOverallId;
   topScore=bestOverall;rawPersonClass=bestId>=0?0:-1;
   personScore=bestPerson;
@@ -262,6 +323,9 @@ public final class PersonService extends Service {
    j.put("person_confidence",Math.round(personScore*1000.0)/1000.0);
    j.put("person_confirmed",personConfirmed);
    j.put("person_streak",personStreak);
+   j.put("visible_people",anonymousPersonCount);
+   j.put("tracking_scope","within_current_scene_only");
+   j.put("person_tracks",new JSONArray(recentPersonsJson));
    j.put("person_events",events);
    j.put("person_event_age_ms",lastEventMs==0?-1:now-lastEventMs);
    j.put("person_event_confidence",Math.round(lastEventConfidence*1000.0)/1000.0);
