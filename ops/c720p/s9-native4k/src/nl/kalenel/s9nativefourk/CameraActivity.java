@@ -23,6 +23,7 @@ public final class CameraActivity extends Activity {
    if(checkSelfPermission("android.permission.CAMERA")!=PackageManager.PERMISSION_GRANTED){Log.e("S9_NATIVE4K","CAMERA_PERMISSION_MISSING");return;}
    Intent i=new Intent(this,CameraService.class);
    i.putExtra("seconds",Math.min(12,Math.max(4,getIntent().getIntExtra("seconds",8))));
+   i.putExtra("manage_ipwebcam",true);
    startForegroundService(i);
   }
  }
