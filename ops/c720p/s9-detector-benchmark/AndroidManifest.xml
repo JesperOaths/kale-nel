@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="nl.kalenel.s9benchmark" android:versionCode="1" android:versionName="1">
+<uses-sdk android:minSdkVersion="26" android:targetSdkVersion="28"/>
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+<uses-permission android:name="android.permission.INTERNET"/>
+<application android:label="Offline Detector Test" android:allowBackup="false" android:usesCleartextTraffic="true" android:requestLegacyExternalStorage="true">
+<service android:name=".BenchmarkService" android:exported="true"/>
+</application>
+</manifest>
