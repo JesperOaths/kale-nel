@@ -3,7 +3,7 @@ set -Eeuo pipefail
 ROOT="$HOME/c720p-home-hub/build/s9-native-security"
 LIB="$HOME/c720p-home-hub/build/s9-person-ml-v1/deps"
 SRC="$ROOT/src/nl/kalenel/s9security"
-REP="https://raw.githubusercontent.com/JesperOaths/kale-nel/c634bb316ba713304ce263fb5d00fe46bb0efad2/ops/c720p/s9-native-security"
+REP="https://raw.githubusercontent.com/JesperOaths/kale-nel/4c6d226df22443327c9f9327c868a94bfb9120f1/ops/c720p/s9-native-security"
 mkdir -p "$SRC" "$ROOT/classes"
 for class in CameraActivity CameraService MotionGrid ClipClassifier Boot;do
  curl -fsSL "$REP/src/nl/kalenel/s9security/$class.java" -o "$SRC/$class.java"
