@@ -1,0 +1,44 @@
+name: S9 Native Security Source Safety
+on:
+  pull_request:
+    paths:
+      - "ops/c720p/s9-native-security/**"
+      - ".github/workflows/s9-native-security-source.yml"
+  push:
+    paths:
+      - "ops/c720p/s9-native-security/**"
+      - ".github/workflows/s9-native-security-source.yml"
+jobs:
+  source-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Shell syntax and source safety contracts
+        run: |
+          set -euo pipefail
+          for file in ops/c720p/s9-native-security/*.sh; do bash -n "$file"; done
+          python3 ops/c720p/s9-native-security/test_pipeline_contract.py
+      - name: Compile Camera2 and offline TFLite classifier against Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="$(printenv ANDROID_HOME || true)"
+          test -n "$SDK_ROOT" || SDK_ROOT="/usr/local/lib/android/sdk"
+          ANDROID_JAR="$(find "$SDK_ROOT/platforms" -name android.jar | sort -V | tail -1)"
+          test -s "$ANDROID_JAR"
+          WORK="$(mktemp -d)"
+          trap 'rm -rf "$WORK"' EXIT
+          mkdir -p "$WORK/lib" "$WORK/classes"
+          for part in tensorflow-lite tensorflow-lite-api tensorflow-lite-gpu tensorflow-lite-gpu-api; do
+            curl -fLsS --retry 2 --max-time 60 \
+              "https://repo.maven.apache.org/maven2/org/tensorflow/$part/2.14.0/$part-2.14.0.aar" \
+              -o "$WORK/lib/$part.aar"
+            unzip -p "$WORK/lib/$part.aar" classes.jar > "$WORK/lib/$part.jar"
+            test -s "$WORK/lib/$part.jar"
+          done
+          CLASSPATH="$ANDROID_JAR:$WORK/lib/tensorflow-lite.jar:$WORK/lib/tensorflow-lite-api.jar:$WORK/lib/tensorflow-lite-gpu.jar:$WORK/lib/tensorflow-lite-gpu-api.jar"
+          javac -source 8 -target 8 -cp "$CLASSPATH" -d "$WORK/classes" \
+            ops/c720p/s9-native-security/src/nl/kalenel/s9security/*.java
+          test -s "$WORK/classes/nl/kalenel/s9security/CameraService.class"
+          test -s "$WORK/classes/nl/kalenel/s9security/PreviewJpeg.class"
+          echo "S9_NATIVE_SECURITY_ALL_SIX_JAVA_CLASSES_COMPILE_OK"

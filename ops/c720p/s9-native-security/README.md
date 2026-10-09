@@ -23,3 +23,21 @@ Current detector is a COCO quantized SSD MobileNet v1. Its individual labels and
 A better mobile detector (for example EfficientDet-Lite0 or Lite2) needs device-specific A/B testing for precision, misses, inference latency, GPU delegate compatibility, and sustained temperature before replacing this model. Benchmark on real low-light garden clips and negative triggers; do not infer accuracy merely from the model name or a benchmark from another device. The hourly event cap protects storage but must be tested against real daytime/night-time walk-bys to ensure important activity is not suppressed.
 
 For recovery, preserve older SD app-specific video directories. Do not uninstall legacy apps until their files have been copied to neutral storage.
+
+## Reproducible APK builds and safe upgrades
+
+The build pipeline resolves one immutable Git commit (default: current main; override with `S9_SECURITY_REF=<full SHA>`). It fetches all six Java classes, including `PreviewJpeg`, and the matching AndroidManifest.xml from that exact revision. Source and compiled revision stamps must agree before packaging.
+
+From the C720P build directory:
+
+```bash
+bash ./build-install.sh    # compile + sign only; does NOT install
+cat "$HOME/c720p-home-hub/build/s9-native-security/s9-native-security.apk.source-commit"
+sha256sum -c "$HOME/c720p-home-hub/build/s9-native-security/s9-native-security.apk.sha256"
+```
+
+`S9_INSTALL_SHADOW=1` is intended only for a phone that does not already have this app installed; the script now refuses **all existing installations**, even stopped ones, because Android's MY_PACKAGE_REPLACED receiver may re-arm a previously enabled recorder. Existing installations require the separate `safe-night-guard-upgrade.py` backup/rollback procedure and compatible APK signing keys.
+
+An orderly service shutdown now attempts to finalize and locally review an active 4K clip. An OS kill, power loss or camera fault can still leave a `.recording` file; preserve it for forensic recovery. TensorFlow Lite delegate cleanup is serialized after queued review jobs.
+
+GitHub Actions checks shell syntax, source/build safety invariants and compiles six Java classes against Android SDK and TensorFlow Lite 2.14. **This is not on-device validation.** Before a live upgrade verify the rollback APK, safe idle interval, SD space, native JPEG/MJPEG, ranged playback, SHA-256 manifests, frame cadence, temperature and clip-review completion. Do not re-enable Drive uploads or IP Webcam.

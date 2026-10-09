@@ -1,14 +1,21 @@
 #!/usr/bin/env bash
+# Compile a coherent S9 native source revision without installing the APK.
 set -Eeuo pipefail
+BASE="$(cd "$(dirname "$0")" && pwd)"
+"$BASE/fetch-source.sh"
 ROOT="$HOME/c720p-home-hub/build/s9-native-security"
 LIB="$HOME/c720p-home-hub/build/s9-person-ml-v1/deps"
 SRC="$ROOT/src/nl/kalenel/s9security"
-REP="https://raw.githubusercontent.com/JesperOaths/kale-nel/f94479a826198f84dc7e5395aed8fb9842ed58b3/ops/c720p/s9-native-security"
-mkdir -p "$SRC" "$ROOT/classes"
-for class in CameraActivity CameraService MotionGrid ClipClassifier PreviewJpeg Boot;do
- curl -fsSL "$REP/src/nl/kalenel/s9security/$class.java" -o "$SRC/$class.java"
+JAR="$(find /usr/lib/android-sdk/platforms -name android.jar | sort -V | tail -1)"
+test -s "$JAR" || { echo "ANDROID_SDK_PLATFORM_MISSING" >&2; exit 4; }
+for name in tensorflow-lite tensorflow-lite-api tensorflow-lite-gpu tensorflow-lite-gpu-api; do
+  test -s "$LIB/$name.jar" || { echo "MISSING_TFLITE_DEPENDENCY=$name" >&2; exit 4; }
 done
-ANDROID_JAR="$(find /usr/lib/android-sdk/platforms -name android.jar | sort -V | tail -1)"
-CLASSPATH="$ANDROID_JAR:$LIB/tensorflow-lite.jar:$LIB/tensorflow-lite-api.jar:$LIB/tensorflow-lite-gpu.jar:$LIB/tensorflow-lite-gpu-api.jar"
+mkdir -p "$ROOT/classes"
+find "$ROOT/classes" -type f -name '*.class' -delete
+CLASSPATH="$JAR:$LIB/tensorflow-lite.jar:$LIB/tensorflow-lite-api.jar:$LIB/tensorflow-lite-gpu.jar:$LIB/tensorflow-lite-gpu-api.jar"
 javac -source 8 -target 8 -cp "$CLASSPATH" -d "$ROOT/classes" "$SRC"/*.java
-echo "S9_NATIVE_SECURITY_JAVA_COMPILE_OK"
+test -s "$ROOT/classes/nl/kalenel/s9security/PreviewJpeg.class"
+test -s "$ROOT/classes/nl/kalenel/s9security/CameraService.class"
+cp "$ROOT/.source-commit" "$ROOT/.compiled-commit"
+echo "S9_NATIVE_SECURITY_COMPILED_REVISION=$(cat "$ROOT/.compiled-commit")"
