@@ -33,6 +33,9 @@ public final class PersonService extends Service {
  private final float[][] classes=new float[1][10],scores=new float[1][10];
  private final float[] detections=new float[1];
  private long lastLogAt=0;
+ private volatile String validationRequested="",validationStatus="idle",validationLast="";
+ private volatile double validationPersonScore=0,validationTopScore=0;
+ private volatile int validationTopClass=-1,validationCount=0;
 
  @Override public IBinder onBind(Intent i){return null;}
  @Override public int onStartCommand(Intent i,int flags,int id){return START_STICKY;}
@@ -115,7 +118,7 @@ public final class PersonService extends Service {
   modelInput=ByteBuffer.allocateDirect(300*300*3).order(ByteOrder.nativeOrder());
   mlReady=true;
  }
- private void analyze(Bitmap original) throws Exception{
+ private void analyze(Bitmap original,boolean publish) throws Exception{
   Bitmap b=Bitmap.createScaledBitmap(original,300,300,true);
   int[] pixels=new int[300*300]; b.getPixels(pixels,0,300,0,0,300,300);
   if(b!=original)b.recycle();
@@ -138,6 +141,14 @@ public final class PersonService extends Service {
    // labelmap.txt index 0 is "???" and index 1 is "person" (offset +1).
    int category=Math.round(classes[0][i]);
    if(category==0&&scores[0][i]>bestPerson){bestPerson=scores[0][i];bestId=i;}
+  }
+  if(!publish){
+   validationPersonScore=bestPerson;
+   validationTopScore=bestOverall;
+   validationTopClass=bestOverallId;
+   validationCount++;
+   validationStatus="ok";
+   return;
   }
   rawTopClass=bestOverallId;
   topScore=bestOverall;rawPersonClass=bestId>=0?0:-1;
@@ -166,6 +177,32 @@ public final class PersonService extends Service {
   if(personConfirmed&&now-lastPersonMs>8000)personConfirmed=false;
   lastInferenceMs=now;
  }
+
+ private void runValidationIfRequested(){
+  String name=validationRequested;
+  if(name==null||name.isEmpty())return;
+  validationRequested="";
+  validationStatus="loading";
+  try{
+   File dir=new File(getExternalFilesDir(null),"validation");
+   File image=new File(dir,name);
+   if(!image.getCanonicalPath().startsWith(dir.getCanonicalPath()+File.separator))
+    throw new IOException("validation_path_invalid");
+   if(!image.isFile()||image.length()>9000000L)
+    throw new IOException("validation_image_missing_or_large");
+   Bitmap test=BitmapFactory.decodeFile(image.getAbsolutePath());
+   if(test==null)throw new IOException("validation_image_decode_failed");
+   try{analyze(test,false);}
+   finally{test.recycle();}
+   validationLast=name;
+   Log.i(TAG,"VALIDATION name="+name+" score="+validationPersonScore+
+    " top_class="+validationTopClass+" top_score="+validationTopScore);
+  }catch(Exception e){
+   validationStatus=e.getClass().getSimpleName()+":"+e.getMessage();
+   Log.w(TAG,"validation",e);
+  }
+ }
+
  private int temperature(){
   Intent i=registerReceiver(null,new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
   return i==null?0:i.getIntExtra("temperature",0);
@@ -190,7 +227,8 @@ public final class PersonService extends Service {
      finally{c.disconnect();}
      if(b==null)throw new IOException("snapshot_empty");
      frames++;latestFrame=SystemClock.elapsedRealtime();
-     analyze(b);b.recycle();
+     analyze(b,true);b.recycle();
+     runValidationIfRequested();
      failure="";
     }catch(Throwable err){
      snapshotErrors++;personStreak=0;personConfirmed=false;
@@ -233,6 +271,12 @@ public final class PersonService extends Service {
    j.put("top_detection_class",rawTopClass);j.put("top_detection_confidence",Math.round(topScore*1000.0)/1000.0);
    j.put("person_class_index",0);
    j.put("temperature_c",tempDeciC/10.0);
+   j.put("validation_status",validationStatus);
+   j.put("validation_name",validationLast);
+   j.put("validation_person_score",Math.round(validationPersonScore*1000.0)/1000.0);
+   j.put("validation_top_class",validationTopClass);
+   j.put("validation_top_score",Math.round(validationTopScore*1000.0)/1000.0);
+   j.put("validation_count",validationCount);
    j.put("captures_triggered",false);
    j.put("recording_integrated",false);
    j.put("error",failure);
@@ -250,6 +294,14 @@ public final class PersonService extends Service {
      BufferedReader r=new BufferedReader(new InputStreamReader(client.getInputStream(),"UTF-8"));
      String first=r.readLine();
      if(first!=null&&first.startsWith("GET /")){
+      if(first.startsWith("GET /validate?name=")){
+       int end=first.indexOf(" HTTP/");
+       String requested=end>0?first.substring("GET /validate?name=".length(),end):"";
+       if(requested.matches("(person|negative)[0-9]{1,2}\\.jpg")){
+        validationStatus="queued";
+        validationRequested=requested;
+       }else validationStatus="invalid_validation_name";
+      }
       byte[] body=state().toString().getBytes("UTF-8");
       OutputStream out=client.getOutputStream();
       out.write(("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nCache-Control: no-store\r\nContent-Length: "+body.length+"\r\nConnection: close\r\n\r\n").getBytes("UTF-8"));
