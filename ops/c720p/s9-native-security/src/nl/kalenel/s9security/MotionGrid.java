@@ -52,7 +52,7 @@ public final class MotionGrid {
   shift/=N;
   int nChange=0;
   for(int i=0;i<N;i++){
-   boolean c=Math.abs(nowCells[i]-background[i]-shift)>16.5f;
+   boolean c=Math.abs(nowCells[i]-background[i]-shift)>(lighting<42?27.0f:18.5f);
    changed[i]=c;
    if(c)nChange++;
   }
@@ -64,22 +64,21 @@ public final class MotionGrid {
    stack[tail++]=i;seen[i]=true;
    while(head<tail){
     int j=stack[head++],x=j%W,z=j/W;
-    if(x>0)push(j-1,tail); // handled via iterative adjacency below
     int[] near=new int[]{x>0?j-1:-1,x<W-1?j+1:-1,z>0?j-W:-1,z<H-1?j+W:-1};
     for(int k:near)if(k>=0&&changed[k]&&!seen[k]){seen[k]=true;stack[tail++]=k;}
    }
    coherent=Math.max(coherent,tail);
   }
   // Sudden global exposure/camera adjustment should not count as an intruder.
-  boolean meaningful=changedRatio>=0.019&&changedRatio<0.51&&coherent>=6
-      &&Math.abs(shift)<28.0;
+  boolean dim=lighting<42;
+  boolean meaningful=changedRatio>=(dim?0.038:0.022)&&changedRatio<0.46
+      &&coherent>=(dim?10:7)&&Math.abs(shift)<(dim?18:26);
   votes.addLast(meaningful);
-  while(votes.size()>5)votes.removeFirst();
+  while(votes.size()>7)votes.removeFirst();
   int positive=0;for(Boolean yes:votes)if(yes)positive++;
-  motion=positive>=3;
+  motion=positive>=(lighting<42?5:4);
   float alpha=motion?0.008f:0.045f;
   for(int i=0;i<N;i++)background[i]=background[i]*(1-alpha)+nowCells[i]*alpha;
   return motion;
  }
- private void push(int i,int tail){} // adjacency performed in analyze; no recursion
 }
