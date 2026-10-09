@@ -10,7 +10,7 @@ ADB_TARGET="192.168.178.47:5555"
 adb connect "$ADB_TARGET" >/dev/null
 [[ "$(adb -s "$ADB_TARGET" shell getprop ro.serialno | tr -d "\\r")" == "3230cf48843b9027" ]] || { echo "Wrong device serial" >&2; exit 3; }
 [[ "$(adb -s "$ADB_TARGET" shell getprop ro.product.model | tr -d "\\r")" == "GT-I9300" ]] || { echo "Wrong device model" >&2; exit 3; }
-BASE_URL="https://raw.githubusercontent.com/JesperOaths/kale-nel/4ef18aec459bf70c7e7131fc632214fb500061c6/ops/c720p/s3-onphone"
+BASE_URL="https://raw.githubusercontent.com/JesperOaths/kale-nel/b355af0aa8641ab222928770e4e72103fd26e911/ops/c720p/s3-onphone"
 mkdir -p "$WORK/classes" "$WORK/dex" "$WORK/src/nl/kalenel/s3motion" "$STATE"
 curl -fsSL "$BASE_URL/AndroidManifest.xml" -o "$WORK/AndroidManifest.xml"
 curl -fsSL "$BASE_URL/src/nl/kalenel/s3motion/MotionActivity.java" -o "$WORK/src/nl/kalenel/s3motion/MotionActivity.java"
