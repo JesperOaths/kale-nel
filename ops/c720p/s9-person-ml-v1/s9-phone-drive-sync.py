@@ -170,6 +170,9 @@ def main():
       have={str(item.get("local_clip_name")):item for item in original.get("items",[])
        if item.get("camera")=="new" and item.get("method")=="s9-phone-original-verified"
        and item.get("state")=="verified"}
+      tombstones={str(item.get("local_clip_name")) for item in original.get("items",[])
+       if item.get("camera")=="new" and item.get("method")=="s9-phone-original-verified"
+       and item.get("state")=="deleted"}
       summary={"updated_at":dt.datetime.now().astimezone().isoformat(),"source":"s9-phone-SD",
           "total_phone_files":len(names),"drive_free_bytes":free,"reserve_bytes":reserve,
           "uploaded_this_run":[],"pending":[],"errors":[],"phone_recordings":[]}
@@ -177,6 +180,7 @@ def main():
         info={"name":name,"timestamp":ts_from_name(name)}
         rec=have.get(name)
         info["drive_verified"]=bool(rec)
+        info["deleted_from_drive"]=name in tombstones
         info["remote_name"]=rec.get("remote_name") if rec else None
         photo=thumb_from_phone(name)
         info["thumbnail"]=f"s9-phone-thumbs/{name}.thumb.jpg" if photo else None
@@ -216,7 +220,7 @@ def main():
           summary["errors"].append("thumbnail_refresh:"+type(exc).__name__)
       count=0
       for name in names:
-        if name in have:continue
+        if name in have or name in tombstones:continue
         if count>=MAX_CLIPS_RUN:
             summary["pending"].append(name);continue
         try:
