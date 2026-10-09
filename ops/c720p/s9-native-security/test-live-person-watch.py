@@ -22,7 +22,10 @@ class Tests(unittest.TestCase):
   self.assertEqual(m.categorize([moderate],p)["kind"],"possible_person_needs_review")
   self.assertEqual(m.categorize([moderate,moderate],p)["kind"],"person_likely_candidate")
   strong={"person_max":.83,"people_050":2,"vehicle_max":0,"animal_max":0}
-  self.assertEqual(m.categorize([strong],p)["kind"],"multiple_people_candidate")
+  self.assertEqual(m.categorize([strong],p)["kind"],"possible_multiple_people_needs_review")
+  self.assertEqual(m.categorize([strong,strong],p)["kind"],"multiple_people_candidate")
+  self.assertTrue(m.overlaps([.1,.1,.6,.6],[.12,.12,.58,.58]))
+  self.assertFalse(m.overlaps([.1,.1,.3,.3],[.6,.6,.9,.9]))
   self.assertEqual(m.categorize([{"person_max":0,"people_050":0,"vehicle_max":.81,"animal_max":0}],p)["kind"],"vehicle_candidate")
   self.assertEqual(m.categorize([{"person_max":0,"people_050":0,"vehicle_max":0,"animal_max":.68}],p)["kind"],"animal_candidate")
   self.assertEqual(m.categorize([],dict(p,priority_motion=True))["kind"],"other_motion_detected")
