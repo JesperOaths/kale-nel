@@ -92,6 +92,19 @@ def active_camera():
   raise RuntimeError("camera_busy_or_hot")
  return s
 
+def overlaps_same_object(a,b):
+ # COCO boxes use [top,left,bottom,right], normalized 0..1.
+ top=max(a[0],b[0]);left=max(a[1],b[1])
+ bottom=min(a[2],b[2]);right=min(a[3],b[3])
+ inter=max(0,bottom-top)*max(0,right-left)
+ area_a=max(0,a[2]-a[0])*max(0,a[3]-a[1])
+ area_b=max(0,b[2]-b[0])*max(0,b[3]-b[1])
+ union=area_a+area_b-inter
+ if union>0 and inter/union>=.45:return True
+ cx_a=(a[1]+a[3])/2;cy_a=(a[0]+a[2])/2
+ cx_b=(b[1]+b[3])/2;cy_b=(b[0]+b[2])/2
+ return abs(cx_a-cx_b)<.05 and abs(cy_a-cy_b)<.05
+
 def detect(raw,net,input_index,output,shape):
  import numpy as np
  from PIL import Image
@@ -117,7 +130,13 @@ def detect(raw,net,input_index,output,shape):
    if cls==0:persons.append((score,[float(v) for v in boxes[0,j].tolist()]))
    elif cls in (1,2,3,5,6,7):vehicles.append(score)
    elif cls in (14,15,16,17,18,19,20,21,22,23):animals.append(score)
-  strong=[p for p in persons if p[0]>=.50]
+  # Suppress highly overlapping model boxes before counting distinct
+  # simultaneously visible person candidates. Not identity tracking.
+  strong=[]
+  for candidate in sorted((p for p in persons if p[0]>=.50),reverse=True):
+   if any(overlaps_same_object(candidate[1],existing[1]) for existing in strong):
+    continue
+   strong.append(candidate)
   person_max=max((p[0] for p in persons),default=0)
   evidence.append({"t_sec":2*i,"persons_050":len(strong),
     "person_score":round(person_max,4),
@@ -132,7 +151,9 @@ def categorize(evidence):
  mid=[x for x in evidence if x["person_score"]>=.3]
  peak=max((x["person_score"] for x in evidence),default=0)
  simultaneous=max((x["persons_050"] for x in evidence),default=0)
- if simultaneous>=2:category="multiple_people_candidate"
+ multiple_frames=sum(x["persons_050"]>=2 for x in evidence)
+ if multiple_frames>=2:category="multiple_people_candidate"
+ elif multiple_frames==1:category="possible_group_needs_frame_review"
  elif len(pos)>=2:category="single_person_event_candidate"
  elif len(pos)==1 or len(mid)>=2:category="possible_person_needs_review"
  else:category="unresolved_motion_or_non_person"
@@ -146,7 +167,8 @@ def categorize(evidence):
    activity="bounding_box_position_changed_across_samples_not_identity"
  return {"event_category":category,"person_observed_frames_050":len(pos),
   "person_possible_frames_030":len(mid),"person_peak_score":round(peak,4),
-  "max_simultaneous_detections":simultaneous,"animal_score_peak":max((x["animal_max"] for x in evidence),default=0),
+  "max_simultaneous_detections":simultaneous,
+  "frames_with_multiple_person_boxes":multiple_frames,"animal_score_peak":max((x["animal_max"] for x in evidence),default=0),
   "vehicle_score_peak":max((x["vehicle_max"] for x in evidence),default=0),
   "sampled_frames":len(evidence),"person_activity":activity,
   "identity":"not_evaluated","ground_truth":"not_independently_labeled"}
