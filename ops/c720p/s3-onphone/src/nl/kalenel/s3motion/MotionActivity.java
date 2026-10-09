@@ -56,6 +56,8 @@ public final class MotionActivity extends Activity
     private String cameraNightMode="untested";
     private long lastActualChangeAt=0;
     private long stagnantFrames=0;
+    private long illuminationHoldUntil=0;
+    private float lastIlluminationLux=-1f;
     private SensorManager lightManager;
     private Sensor ambientLightSensor;
     private volatile float ambientLux=-1f;
@@ -90,7 +92,7 @@ public final class MotionActivity extends Activity
         if(lightManager!=null)ambientLightSensor=lightManager.getDefaultSensor(Sensor.TYPE_LIGHT);
         Log.i(TAG,"AMBIENT_SENSOR available="+(ambientLightSensor!=null)+
                 " darkBelow="+LUX_DARK_BELOW+" brightAbove="+LUX_BRIGHT_ABOVE);
-        Log.i(TAG,"APP_START session="+session+" version=6 rear_only=true night_profile=true lux_gating=true"+
+        Log.i(TAG,"APP_START session="+session+" version=7 rear_only=true night_profile=true light_transition_guard=true lux_gating=true"+
                " direct_events="+(!webhookUrl.isEmpty())+" on_phone=true");
     }
     @Override protected void onNewIntent(Intent intent){
@@ -258,6 +260,8 @@ public final class MotionActivity extends Activity
             camera.startPreview();
             initialized=false;frames=0;recent=0;hitCount=0;missCount=0;blackFrames=0;previewValid=false;lastContrast=0f;lastActualChangeAt=SystemClock.elapsedRealtime();stagnantFrames=0;
             previousMean=-1;lastRead=0;lastLog=0;prevCx=-1;prevCy=-1;
+            illuminationHoldUntil=SystemClock.elapsedRealtime()+5000L;
+            lastIlluminationLux=-1f;
             session=System.currentTimeMillis();
             Log.i(TAG,"READY session="+session+" camera="+cameraWidth+"x"+cameraHeight+
                   " camera_id="+cameraId+" facing=rear preview_format=NV21");
@@ -337,16 +341,38 @@ public final class MotionActivity extends Activity
         frames++;
         if(!previewValid){
             initialized=false;recent=0;hitCount=0;missCount=0;prevCx=-1;prevCy=-1;
-            frames++;
             heartbeat(now,mean,0,0);
             return;
         }
         if(!initialized){
             for(int k=0;k<N;k++)background[k]=sample[k];
             previousMean=mean;initialized=true;
+            if(luxValid)lastIlluminationLux=ambientLux;
             heartbeat(now,mean,0,0);return;
         }
         float shift=mean-previousMean;
+        // A lamp switching off/on changes nearly the whole scene at once. Do not let
+        // the old illuminated background decay slowly into a false "moving blob".
+        boolean luxStep=luxValid && lastIlluminationLux>=0f &&
+                ((lastIlluminationLux>=7f && ambientLux<=3f) ||
+                 (lastIlluminationLux<=3f && ambientLux>=7f));
+        if(luxValid)lastIlluminationLux=ambientLux;
+        if(Math.abs(shift)>=26f || luxStep) {
+            for(int k=0;k<N;k++)background[k]=sample[k];
+            previousMean=mean;hitCount=0;recent=0;missCount=0;prevCx=-1;prevCy=-1;
+            illuminationHoldUntil=now+12000L;
+            Log.i(TAG,"ILLUMINATION_REBASE delta_luma="+Math.round(shift)+
+                  " lux="+Math.round(ambientLux)+" lux_step="+(luxStep?1:0)+
+                  " hold_ms=12000");
+            heartbeat(now,mean,0,0);
+            return;
+        }
+        if(now<illuminationHoldUntil) {
+            for(int k=0;k<N;k++)background[k]+=(sample[k]-background[k])*.23f;
+            previousMean=mean;hitCount=0;recent=0;missCount=0;prevCx=-1;prevCy=-1;
+            heartbeat(now,mean,0,0);
+            return;
+        }
         int changed=0;
         for(int k=0;k<N;k++){
             // Compensate exposure globally rather than treating it as movement.
