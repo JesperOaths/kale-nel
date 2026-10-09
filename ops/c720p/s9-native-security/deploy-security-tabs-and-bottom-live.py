@@ -19,6 +19,8 @@ HOME=Path("/home/jespern/c720p-home-hub")
 WWW=Path("/opt/homeassistant/config/www")
 CLIPS=WWW/"frontyard-security-new/clips.html"
 HOME_LIVE=WWW/"c720p-release/home-live-primary-v2.html"
+WRAPPER=WWW/"c720p-extra-row-v85.html"
+NEW_LIVE=WWW/"frontyard-security-new/home-live-native-s9-v4.html"
 BOTTOM=WWW/"c720p-scenes-compact-v7b.html"
 SECURITY=WWW/"c720p-surveillance.html"
 SAVED=WWW/"c720p-drive-saved.html"
@@ -30,7 +32,7 @@ def get(url,first=500000):
   return reply,reply.read(first)
 
 def preflight():
- required=(CLIPS,HOME_LIVE,BOTTOM,SECURITY,SAVED)
+ required=(CLIPS,HOME_LIVE,WRAPPER,BOTTOM,SECURITY,SAVED)
  if any(not p.is_file() for p in required):
   raise RuntimeError("required_current_security_files_missing")
  scene=BOTTOM.read_text()
@@ -77,41 +79,63 @@ def main(stage):
  spec=importlib.util.spec_from_file_location("s9_tabs_patch",patcher)
  p=importlib.util.module_from_spec(spec);spec.loader.exec_module(p)
  baseline=preflight()
- before={CLIPS:CLIPS.read_text(),HOME_LIVE:HOME_LIVE.read_text()}
- after={CLIPS:p.patch_clips(before[CLIPS]),HOME_LIVE:p.patch_home(before[HOME_LIVE])}
+ original_live=HOME_LIVE.read_text()
+ original_sha=__import__("hashlib").sha256(original_live.encode()).hexdigest()
+ before={CLIPS:CLIPS.read_text(),WRAPPER:WRAPPER.read_text()}
+ old_route="/local/c720p-release/home-live-primary-v2.html"
+ new_route="/local/frontyard-security-new/home-live-native-s9-v4.html"
+ if before[WRAPPER].count(old_route)!=1:
+  if before[WRAPPER].count(new_route)!=1:raise RuntimeError("unexpected_active_home_wrapper")
+  new_wrapper=before[WRAPPER]
+ else:
+  new_wrapper=before[WRAPPER].replace(old_route,new_route,1)
+ if 'PHOTO_AUTO_' not in new_wrapper or 'c720p-photo-live-big' not in new_wrapper:
+  raise RuntimeError("live_photo_wrapper_changed")
+ patched_live=p.patch_home(original_live)
+ after={CLIPS:p.patch_clips(before[CLIPS]),WRAPPER:new_wrapper,NEW_LIVE:patched_live}
  if "s9-native-today-clips-script-v1" not in after[CLIPS]:
   raise RuntimeError("today_4K_section_missing")
- if "C720P_S9_HOME_LIVE_RETAIN_TOGGLE_V1" not in after[HOME_LIVE]:
+ if "C720P_S9_HOME_LIVE_RETAIN_TOGGLE_V1" not in after[NEW_LIVE]:
   raise RuntimeError("LIVE_toggle_patch_missing")
  stamp=datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
  backup=BACK/stamp
  backup.mkdir(parents=True,exist_ok=False)
  for dest in before:shutil.copy2(dest,backup/dest.name)
+ if NEW_LIVE.is_file():shutil.copy2(NEW_LIVE,backup/NEW_LIVE.name)
+ existed=NEW_LIVE.is_file()
  changed=[]
  try:
   for dest,data in after.items():
-   if data==before[dest]:continue
+   if dest!=NEW_LIVE and data==before[dest]:continue
+   if dest==NEW_LIVE and dest.is_file() and dest.read_text()==data:continue
    staged=dest.with_name(dest.name+".s9native-tabs-stage")
    staged.write_text(data)
-   os.chmod(staged,dest.stat().st_mode&0o777)
+   os.chmod(staged,0o644 if dest==NEW_LIVE else dest.stat().st_mode&0o777)
    os.replace(staged,dest)
    changed.append(dest)
   again=preflight()
   assert again["saved_count"]>=baseline["saved_count"]
   assert again["native_recordings"]>=baseline["native_recordings"]
   assert p.patch_clips(CLIPS.read_text())==CLIPS.read_text()
-  assert p.patch_home(HOME_LIVE.read_text())==HOME_LIVE.read_text()
+  assert p.patch_home(NEW_LIVE.read_text())==NEW_LIVE.read_text()
+  assert new_route in WRAPPER.read_text()
+  assert __import__("hashlib").sha256(HOME_LIVE.read_text().encode()).hexdigest()==original_sha
   print("S9_SECURITY_3VIEWS_AND_BOTTOM_LIVE_UI_PASS",json.dumps({
    "native_MJPEG":"200 stream actual JPEG bytes",
    "camera_clips":"today_native_S9_SD_pinned_first",
    "saved_clips":again["saved_count"],
    "clip_catalog":again["native_recordings"],
    "home_LIVE_toggle":"retained_and_native_S9_stream",
+   "legacy_readonly_live_release":"unchanged",
+   "home_live_new_asset":str(NEW_LIVE),
    "backup":str(backup),"phone_APK_changed":False
   }),flush=True)
  except Exception:
   for dest in reversed(changed):
    old=backup/dest.name
+   if dest==NEW_LIVE and not existed:
+    dest.unlink(missing_ok=True)
+    continue
    staged=dest.with_name(dest.name+".s9native-restore")
    shutil.copy2(old,staged)
    os.replace(staged,dest)
