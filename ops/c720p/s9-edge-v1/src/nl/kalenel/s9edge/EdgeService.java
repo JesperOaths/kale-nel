@@ -32,6 +32,7 @@ public final class EdgeService extends Service {
  private volatile boolean captureEnabled=false,captureBusy=false;
  private volatile long captureCount=0,captureFailures=0,lastCaptureMs=0;
  private volatile String captureStatus="disabled";
+ private android.content.SharedPreferences prefs;
  private volatile long archivedClips=0, archiveErrors=0, lastArchiveMs=0;
  private volatile String lastArchiveResult="idle";
  private ServerSocket server;
@@ -41,6 +42,7 @@ public final class EdgeService extends Service {
    if(i!=null&&i.hasExtra("pilot_recording")){
     captureEnabled=i.getBooleanExtra("pilot_recording",false);
     captureStatus=captureEnabled?"pilot_armed":"disabled";
+    prefs.edit().putBoolean("record_pilot",captureEnabled).apply();
     Log.i(TAG,"RECORD_PILOT="+captureEnabled);
     if(captureEnabled&&i.getBooleanExtra("test_recording_once",false))
      maybeCapture(SystemClock.elapsedRealtime(),true,18);
@@ -50,6 +52,13 @@ public final class EdgeService extends Service {
  @Override public void onCreate() {
   super.onCreate();
   run=true;startedMs=SystemClock.elapsedRealtime();
+  prefs=getSharedPreferences("security_capture",MODE_PRIVATE);
+  captureEnabled=prefs.getBoolean("record_pilot",false);
+  captureCount=prefs.getLong("complete_total",0);
+  captureStatus=captureEnabled?"armed_persistent":"disabled";
+  if(!prefs.getString("pending_filename","").isEmpty()){
+   captureEnabled=false;captureStatus="orphan_capture_requires_inspection";
+  }
   if(Build.VERSION.SDK_INT>=26){
    NotificationChannel c=new NotificationChannel("motion","S9+ edge motion",NotificationManager.IMPORTANCE_LOW);
    ((NotificationManager)getSystemService(NOTIFICATION_SERVICE)).createNotificationChannel(c);
@@ -187,6 +196,29 @@ public final class EdgeService extends Service {
   if(!sdReady||temperatureDeciC>=405){
    captureStatus="blocked_sd_or_temperature";return;
   }
+  long wall=System.currentTimeMillis();
+  long lastWall=prefs.getLong("last_start_wall",0);
+  if(lastWall>0 && wall>=lastWall && wall-lastWall<105000L){
+   captureStatus="post_reboot_cooldown";return;
+  }
+  String history=prefs.getString("hour_history","");
+  StringBuilder keep=new StringBuilder();
+  int count=0;
+  for(String item:history.split(",")){
+   try{
+    long t=Long.parseLong(item);
+    if(t>0&&t<=wall&&wall-t<3600000L){
+     count++;
+     if(keep.length()>0)keep.append(",");
+     keep.append(t);
+    }
+   }catch(Exception ignored){}
+  }
+  if(count>=8){captureStatus="persistent_hourly_rate_guard";return;}
+  if(keep.length()>0)keep.append(",");
+  keep.append(wall);
+  prefs.edit().putString("hour_history",keep.toString())
+    .putLong("last_start_wall",wall).commit();
   if(lastCaptureMs>0&&now-lastCaptureMs<105000)return;
   while(!captureTimes.isEmpty()&&now-captureTimes.peekFirst()>3600000)
    captureTimes.removeFirst();
@@ -250,6 +282,8 @@ public final class EdgeService extends Service {
    }
    owned=true;
    filename=started.optString("fname");
+   prefs.edit().putString("pending_filename",filename)
+     .putLong("pending_start_wall",System.currentTimeMillis()).commit();
    if(!filename.matches("rec_[A-Za-z0-9._-]{5,100}\\.mp4")){
     captureStatus="invalid_native_filename";return;
    }
@@ -268,6 +302,8 @@ public final class EdgeService extends Service {
      JSONObject stopped=jsonFrom("/stopvideo",9000);
      if("stopped".equals(stopped.optString("result"))){
       captureCount++;
+      prefs.edit().remove("pending_filename").remove("pending_start_wall")
+        .putLong("complete_total",captureCount).commit();
       captureStatus="finalized_awaiting_sd_archive";
      }else{captureFailures++;captureStatus="stop_failed";}
     }catch(Exception e){captureFailures++;captureStatus="stop_exception";}
@@ -281,7 +317,7 @@ public final class EdgeService extends Service {
   try{
    long now=SystemClock.elapsedRealtime();
    o.put("ok",ready&&lastFrameMs>0&&now-lastFrameMs<4000);
-   o.put("algorithm","s9-local-coherent-v5");
+   o.put("algorithm","s9-local-coherent-v6");
    o.put("frames",frames);o.put("errors",failedFrames);
    o.put("frame_age_ms",lastFrameMs==0?-1:now-lastFrameMs);
    o.put("active",active);o.put("candidate",candidate);o.put("person_shape_candidate",personCandidate);
@@ -297,6 +333,11 @@ public final class EdgeService extends Service {
    o.put("recording_count",captureCount);
    o.put("recording_failures",captureFailures);
    o.put("recording_status",captureStatus);
+   o.put("recording_armed_persistent",prefs!=null&&prefs.getBoolean("record_pilot",false));
+   o.put("recording_orphan_present",prefs!=null&&!prefs.getString("pending_filename","").isEmpty());
+   o.put("source_storage_limit_mb",300);
+   o.put("internal_min_free_mb",1250);
+   o.put("sd_min_free_gb",15);
    o.put("last_capture_age_ms",lastCaptureMs==0?-1:now-lastCaptureMs);
    o.put("auto_sd_archive_enabled",true);
    o.put("auto_sd_archive_count",archivedClips);
