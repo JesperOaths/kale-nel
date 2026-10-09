@@ -66,6 +66,15 @@ def stop_legacy_webcam(endpoint):
     except (OSError, subprocess.TimeoutExpired):
         pass
 
+def active_camera_client(endpoint):
+    """Do not arm on a static camera-app window with no physical camera session."""
+    try:
+        r = adb(endpoint, "shell", "dumpsys", "media.camera", timeout=9)
+        text = r.stdout.decode(errors="replace")
+        return "Active Camera Clients:" in text and "Active Camera Clients:\\n[]" not in text
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
 def screenshot(endpoint):
     try:
         r = adb(endpoint, "exec-out", "screencap", "-p", timeout=7)
@@ -172,6 +181,10 @@ def main():
     last_retry=0
     camera_started=False
     failures=0
+    last_camera_check=0.0
+    hardware_live=False
+    last_frame_bytes=None
+    identical_count=0
     while not STOP:
         now=time.monotonic()
         if not verified(endpoint):
@@ -191,13 +204,36 @@ def main():
         if not camera_started:
             try:
                 stop_legacy_webcam(endpoint)
-                adb(endpoint,"shell","am","start","-a",
-                    "android.media.action.STILL_IMAGE_CAMERA",timeout=8)
+                adb(endpoint,"shell","monkey","-p","net.sourceforge.opencamera",
+                    "-c","android.intent.category.LAUNCHER","1",timeout=8)
                 camera_started=True
             except (OSError, subprocess.TimeoutExpired):
                 time.sleep(3)
                 continue
+        if now-last_camera_check > 12 or last_camera_check == 0:
+            last_camera_check=now
+            hardware_live=active_camera_client(endpoint)
+        if not hardware_live:
+            atomic_state({"ok":False,"source":"S3 ADB camera",
+                          "status":"camera_session_unavailable",
+                          "updated_at":time.time()})
+            if args.probe:
+                return 5
+            time.sleep(4)
+            continue
         frame=screenshot(endpoint)
+        if frame is not None:
+            frame_bytes=frame.tobytes()
+            identical_count=identical_count+1 if frame_bytes == last_frame_bytes else 0
+            last_frame_bytes=frame_bytes
+            if identical_count >= 8:
+                atomic_state({"ok":False,"source":"S3 ADB camera",
+                              "status":"frozen_camera_preview",
+                              "updated_at":time.time()})
+                if args.probe:
+                    return 6
+                time.sleep(2)
+                continue
         if frame is None:
             failures+=1
             camera_started=failures < 5
