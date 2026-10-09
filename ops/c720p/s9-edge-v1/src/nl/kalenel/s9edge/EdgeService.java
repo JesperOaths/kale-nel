@@ -3,6 +3,7 @@ package nl.kalenel.s9edge;
 import android.app.*;
 import android.content.*;
 import android.graphics.*;
+import android.media.MediaMetadataRetriever;
 import android.os.*;
 import android.util.Log;
 import org.json.JSONObject;
@@ -167,7 +168,7 @@ public final class EdgeService extends Service {
   try{
    long now=SystemClock.elapsedRealtime();
    o.put("ok",ready&&lastFrameMs>0&&now-lastFrameMs<4000);
-   o.put("algorithm","s9-local-coherent-v3");
+   o.put("algorithm","s9-local-coherent-v4");
    o.put("frames",frames);o.put("errors",failedFrames);
    o.put("frame_age_ms",lastFrameMs==0?-1:now-lastFrameMs);
    o.put("active",active);o.put("candidate",candidate);o.put("person_shape_candidate",personCandidate);
@@ -187,6 +188,62 @@ public final class EdgeService extends Service {
    o.put("error",error);
   }catch(Exception e){Log.e(TAG,"JSON",e);}
   return o;
+ }
+
+
+ private float focusScore(Bitmap image){
+  int w=image.getWidth(),h=image.getHeight(),sum=0,steps=0;
+  for(int y=12;y<h-12;y+=12)for(int x=12;x<w-12;x+=12){
+   int current=grey(image.getPixel(x,y));
+   sum+=Math.abs(current-grey(image.getPixel(x+4,y)))
+       +Math.abs(current-grey(image.getPixel(x,y+4)));
+   steps++;
+  }
+  return steps==0?0:sum/(float)steps;
+ }
+ private boolean ensureThumbnail(File completed){
+  File output=new File(completed.getAbsolutePath()+".thumb.jpg");
+  if(output.isFile()&&output.length()>4000)return true;
+  if(temperatureDeciC>=430)return false;
+  MediaMetadataRetriever retriever=new MediaMetadataRetriever();
+  Bitmap selected=null;
+  float selectedScore=-1;
+  try{
+   retriever.setDataSource(completed.getAbsolutePath());
+   long duration=0;
+   try{duration=Long.parseLong(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));}
+   catch(Exception ignored){}
+   if(duration<500)duration=5000;
+   for(double frac:new double[]{0.25,0.55,0.8}){
+    long us=(long)(duration*1000*frac);
+    Bitmap frame=null;
+    try{frame=retriever.getFrameAtTime(us,MediaMetadataRetriever.OPTION_CLOSEST_SYNC);}catch(Exception ignored){}
+    if(frame==null)continue;
+    int width=Math.min(720,frame.getWidth());
+    int height=Math.max(1,(int)Math.round(frame.getHeight()*width/(double)Math.max(1,frame.getWidth())));
+    Bitmap small=Bitmap.createScaledBitmap(frame,width,height,true);
+    if(small!=frame)frame.recycle();
+    float score=focusScore(small);
+    if(score>selectedScore){
+     if(selected!=null)selected.recycle();
+     selected=small;selectedScore=score;
+    }else small.recycle();
+   }
+   if(selected==null)return false;
+   File tmp=new File(output.getAbsolutePath()+".partial");
+   try(FileOutputStream o=new FileOutputStream(tmp)){
+    if(!selected.compress(Bitmap.CompressFormat.JPEG,85,o))throw new IOException("jpeg_encoding_failed");
+    o.getFD().sync();
+   }
+   if(tmp.length()<4000){tmp.delete();throw new IOException("thumbnail_small");}
+   if(!tmp.renameTo(output))throw new IOException("thumbnail_rename_failed");
+   return true;
+  }catch(Exception e){
+   Log.w(TAG,"thumbnail generation",e);return false;
+  }finally{
+   if(selected!=null)selected.recycle();
+   try{retriever.release();}catch(Exception ignored){}
+  }
  }
 
  // Only copies explicitly named, completed IP Webcam videos to removable SD.
@@ -268,6 +325,8 @@ public final class EdgeService extends Service {
    File completed=new File(directory,filename);
    File partial=new File(directory,filename+".partial");
    if(completed.isFile()&&completed.length()==expected){
+    boolean hasThumb=ensureThumbnail(completed);
+    reply.put("thumbnail_ready",hasThumb);
     reply.put("ok",true);reply.put("already_archived",true);reply.put("bytes",expected);reply.put("path",completed.getAbsolutePath());return reply;
    }
    if(completed.exists())throw new IOException("archive_conflict");
@@ -304,11 +363,15 @@ public final class EdgeService extends Service {
     manifest.put("name",filename);manifest.put("bytes",expected);
     manifest.put("sha256",digest);manifest.put("created_at_ms",System.currentTimeMillis());
     manifest.put("source","ipwebcam-local-copy");manifest.put("source_retained",true);
+    boolean hasThumb=ensureThumbnail(completed);
+    manifest.put("thumbnail_ready",hasThumb);
+    if(hasThumb)manifest.put("thumbnail_name",filename+".thumb.jpg");
     File mf=new File(directory,filename+".verified.json");
     try(FileOutputStream output=new FileOutputStream(mf)){
      output.write(manifest.toString().getBytes("UTF-8"));output.getFD().sync();
     }
     reply.put("ok",true);reply.put("bytes",expected);
+    reply.put("thumbnail_ready",hasThumb);
     reply.put("sha256",digest);reply.put("path",completed.getAbsolutePath());reply.put("source_retained",true);
    } finally {
     video.disconnect();
