@@ -4,7 +4,7 @@ set -Eeuo pipefail
 umask 077
 BASE="$HOME/c720p-home-hub/build/s9-edge-v1"
 SRC="$BASE/src"
-REP="https://raw.githubusercontent.com/JesperOaths/kale-nel/5f08c5e7e5f16e0d7e636afbd5818b74f126668e/ops/c720p/s9-edge-v1"
+REP="https://raw.githubusercontent.com/JesperOaths/kale-nel/69a6fa45ec5cb1faabd5f3b5b1634ee0d6031f11/ops/c720p/s9-edge-v1"
 mkdir -p "$SRC/nl/kalenel/s9edge" "$BASE/classes" "$BASE/dex"
 curl -fsSL --retry 2 "$REP/AndroidManifest.xml" -o "$BASE/AndroidManifest.xml"
 curl -fsSL --retry 2 "$REP/src/nl/kalenel/s9edge/EdgeActivity.java" -o "$SRC/nl/kalenel/s9edge/EdgeActivity.java"
@@ -38,10 +38,14 @@ apksigner verify --verbose "$BASE/s9-edge-v1.apk" | head -8
 adb connect 192.168.178.250:5555
 adb -s 192.168.178.250:5555 install -r -g "$BASE/s9-edge-v1.apk"
 adb -s 192.168.178.250:5555 shell am start -n nl.kalenel.s9edge/.EdgeActivity
-sleep 5
+sleep 7
 adb -s 192.168.178.250:5555 forward tcp:18798 tcp:8798
 echo "COMPANION_STATUS:"
-curl -fsS --max-time 5 http://127.0.0.1:18798/status
+for attempt in 1 2 3 4 5; do
+ if curl -fsS --max-time 5 http://127.0.0.1:18798/status; then break; fi
+ sleep 3
+ if [ "$attempt" = 5 ]; then exit 4; fi
+done
 echo
 echo "CAMERA_HEALTH:"
 curl -fsS --max-time 5 http://127.0.0.1:8793/health.json | python3 -c 'import sys,json;v=json.load(sys.stdin);print({"ok":v.get("camera_ok"),"recording":v.get("recording"),"version":v.get("version")})'
