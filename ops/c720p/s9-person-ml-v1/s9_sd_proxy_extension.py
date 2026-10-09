@@ -38,7 +38,7 @@ def serve_preview(handler,name,item):
   blob=p.stdout
   if (len(blob)!=expected or
       hashlib.sha256(blob).hexdigest()!=item["sha256"] or
-      not (blob.startswith(b"\\xff\\xd8\\xff") and blob.endswith(b"\\xff\\xd9"))):
+      not (blob.startswith(b"\xff\xd8\xff") and blob.endswith(b"\xff\xd9"))):
    raise ValueError("preview_integrity_mismatch")
  except (OSError,ValueError,subprocess.SubprocessError):
   handler.js(503,{"ok":False,"error":"preview_unavailable_or_mismatch"});return
