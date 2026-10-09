@@ -94,11 +94,6 @@ s=exact(s,'''def hts_bluetooth_mode_fast():
     return {"ok":False,"state":"manual_bt_ready_confirmation_required",
             "error":"HTS_INPUT_NOT_VERIFIED","emitted_ir":False}
     power = ensure_hts_power(True)''',name="fast bluetooth path")
-# block the GET form of the legacy long 7 FUNCTION sweep. This is not the
-# explicit, manually initiated power button.
-s=exact(s,'''        if path in {"/ht-e6500/surround-bluetooth", "/ht-e6500/open-home-theatre-auto-mac"}:
-            result = surround_bluetooth()''','''        if path in {"/ht-e6500/surround-bluetooth", "/ht-e6500/open-home-theatre-auto-mac"}:
-            result = surround_bluetooth()''',name="no op GET route",expected=1)
 t=c.read_text()
 t=exact(t,'''SOURCE_CYCLES=8''','''# C720P_TV_HTS_VERIFIED_INPUT_GUARDS_V131
 # source_input IR code is *identical to AUX*; FUNCTION was reported to
