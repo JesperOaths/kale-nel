@@ -35,14 +35,15 @@ try:
   if last.get('disabledCount')==0 and 'Checking TV and surround paths' not in str(last.get('status')) and 'S5 over wireless' not in str(last.get('status')):
    break
  aftertv=state()
+ unintended_tv_on=aftertv is True
  if aftertv is not False:
   try:
    req=urllib.request.Request(BASE+'/grundig-tv/off',method='POST')
    with urllib.request.urlopen(req,timeout=35): pass
   except Exception: pass
   aftertv=state()
- print(json.dumps({'ok':last.get('disabledCount')==0 and aftertv is False,
-                   'original_tv_off':True,'tv_remained_off':aftertv is False,
+ print(json.dumps({'ok':last.get('disabledCount')==0 and aftertv is False and not unintended_tv_on,
+                   'original_tv_off':True,'tv_remained_off':not unintended_tv_on,'tv_restored_off':aftertv is False,
                    'before':before,'clicked':clicked,'after':last,
                    'all_buttons_reenabled':last.get('disabledCount')==0},ensure_ascii=False))
 finally:
