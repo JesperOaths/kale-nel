@@ -27,7 +27,12 @@ public final class EdgeService extends Service {
  private float previousLight=-1;
  private int streak=0;
  private long lastTrigger=0;
- private Thread analyzer,api,archiver;
+ private Thread analyzer,api,archiver,mlWatcher;
+ private volatile boolean personMlHealthy=false;
+ private volatile String personMlBackend="none",personMlStatus="not_connected";
+ private volatile long personMlFrameAgeMs=-1,personMlEventSeq=0,personMlEventsAccepted=0,personMlLastSeen=0;
+ private volatile double personMlLastConfidence=0;
+ private long personMlPreviousSeq=-1;
  private final ArrayDeque<Long> captureTimes=new ArrayDeque<Long>();
  private volatile boolean captureEnabled=false,captureBusy=false;
  private volatile long captureCount=0,captureFailures=0,lastCaptureMs=0;
@@ -73,6 +78,8 @@ public final class EdgeService extends Service {
   analyzer.start();api.start();
   archiver=new Thread(new Runnable(){public void run(){archiveLoop();}},"edge-sd-archiver");
   archiver.start();
+  mlWatcher=new Thread(new Runnable(){public void run(){personMlLoop();}},"s9-person-ml-link");
+  mlWatcher.start();
   Log.i(TAG,"START local_only=true sdk="+Build.VERSION.SDK_INT);
  }
  @Override public void onDestroy(){
@@ -81,6 +88,7 @@ public final class EdgeService extends Service {
   if(analyzer!=null)analyzer.interrupt();
   if(api!=null)api.interrupt();
   if(archiver!=null)archiver.interrupt();
+  if(mlWatcher!=null)mlWatcher.interrupt();
   super.onDestroy();
  }
  private void checkSd(){
@@ -107,6 +115,11 @@ public final class EdgeService extends Service {
  private static int grey(int c){return ((c>>16&255)*30+(c>>8&255)*59+(c&255)*11)/100;}
  private void analyzeLoop(){
   while(run){
+   // When real on-phone person ML is healthy, suspend the older pixel detector.
+   if(personMlHealthy&&SystemClock.elapsedRealtime()-personMlLastSeen<5500){
+    try{Thread.sleep(1250);}catch(InterruptedException ignored){}
+    continue;
+   }
    long start=SystemClock.elapsedRealtime();
    try{
     HttpURLConnection c=(HttpURLConnection)new URL("http://127.0.0.1:8080/shot.jpg").openConnection();
@@ -176,7 +189,8 @@ public final class EdgeService extends Service {
   if(streak>=4&&now-lastTrigger>=7000){
    if(!active) {events++;lastTrigger=now;lastEventMs=now;
     Log.i(TAG,"MOTION seq="+events+" pct="+changedPct+" coherent="+best+" personShape="+personShape);
-    maybeCapture(now,personShape,best);
+    // Geometric fallback only; neural model drives recordings when healthy.
+    if(!personMlHealthy)maybeCapture(now,personShape,best);
    }
    active=true;
   }
@@ -184,6 +198,62 @@ public final class EdgeService extends Service {
   for(int i=0;i<N;i++){
    float rate=illumination?0.35f:(mask[i]?0.002f:0.035f);
    bg[i]=bg[i]*(1-rate)+cur[i]*rate;prev[i]=cur[i];
+  }
+ }
+
+
+ // S9-to-S9 person inference bridge. No camera images/video leave the phone:
+ // only fresh person-event metadata is consumed via phone-local loopback.
+ private void personMlLoop(){
+  while(run){
+   try{
+    long now=SystemClock.elapsedRealtime();
+    HttpURLConnection c=(HttpURLConnection)new URL("http://127.0.0.1:8799/status").openConnection();
+    c.setConnectTimeout(850);c.setReadTimeout(1100);
+    ByteArrayOutputStream bytes=new ByteArrayOutputStream();
+    try(InputStream stream=c.getInputStream()){
+     byte[] buf=new byte[2048];int n;
+     while((n=stream.read(buf))>=0){
+      if(n>0)bytes.write(buf,0,n);
+      if(bytes.size()>16000)throw new IOException("ml_status_oversized");
+     }
+    }finally{c.disconnect();}
+    JSONObject state=new JSONObject(bytes.toString("UTF-8"));
+    long age=state.optLong("frame_age_ms",-1);
+    boolean valid=state.optBoolean("ok",false)&&state.optBoolean("model_ready",false)
+     &&age>=0&&age<2500&&state.optLong("model_errors",0)==0
+     &&state.optLong("inferences",0)>=3;
+    if(!valid){
+     personMlStatus="model_not_healthy";personMlHealthy=false;
+    }else{
+     personMlFrameAgeMs=age;
+     personMlBackend=state.optString("backend","unknown");
+     personMlLastSeen=now;
+     personMlHealthy=true;personMlStatus="healthy";
+     long seq=state.optLong("person_events",0);
+     personMlEventSeq=seq;
+     if(personMlPreviousSeq<0||seq<personMlPreviousSeq){
+      personMlPreviousSeq=seq;
+     }else if(seq>personMlPreviousSeq){
+      personMlPreviousSeq=seq;
+      double confidence=state.optDouble("person_event_confidence",0);
+      long evtAge=state.optLong("person_event_age_ms",-1);
+      personMlLastConfidence=confidence;
+      // Event comes from the ML app, not from a geometric motion event.
+      if(evtAge>=0&&evtAge<5500&&confidence>=0.60){
+       personMlEventsAccepted++;
+       maybeCapture(SystemClock.elapsedRealtime(),true,18);
+       Log.i(TAG,"PERSON_ML_EVENT seq="+seq+" confidence="+confidence+" backend="+personMlBackend);
+      }
+     }
+    }
+   }catch(Exception e){
+    if(SystemClock.elapsedRealtime()-personMlLastSeen>4500){
+     personMlHealthy=false;
+     personMlStatus="model_unreachable:"+e.getClass().getSimpleName();
+    }
+   }
+   try{Thread.sleep(950);}catch(InterruptedException ignored){}
   }
  }
 
@@ -317,7 +387,16 @@ public final class EdgeService extends Service {
   try{
    long now=SystemClock.elapsedRealtime();
    o.put("ok",ready&&lastFrameMs>0&&now-lastFrameMs<4000);
-   o.put("algorithm","s9-local-coherent-v6");
+   o.put("algorithm","s9-ml-linked-v7");
+   o.put("person_ml_healthy",personMlHealthy);
+   o.put("person_ml_backend",personMlBackend);
+   o.put("person_ml_status",personMlStatus);
+   o.put("person_ml_events_seen",personMlEventSeq);
+   o.put("person_ml_events_accepted",personMlEventsAccepted);
+   o.put("person_ml_last_confidence",Math.round(personMlLastConfidence*1000.0)/1000.0);
+   o.put("person_ml_frame_age_ms",personMlFrameAgeMs);
+   o.put("geometry_fallback_active",!personMlHealthy);
+   o.put("ml_capture_link_enabled",true);
    o.put("frames",frames);o.put("errors",failedFrames);
    o.put("frame_age_ms",lastFrameMs==0?-1:now-lastFrameMs);
    o.put("active",active);o.put("candidate",candidate);o.put("person_shape_candidate",personCandidate);
