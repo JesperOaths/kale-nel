@@ -18,6 +18,21 @@ jobs:
           set -euo pipefail
           for file in ops/c720p/s9-native-security/*.sh; do bash -n "$file"; done
           python3 ops/c720p/s9-native-security/test_pipeline_contract.py
+          python3 ops/c720p/s9-native-security/test-historical-event-categories.py
+          python3 ops/c720p/s9-native-security/test-live-person-watch.py
+          python3 -m py_compile ops/c720p/s9-native-security/legacy-drive-person-corpus.py ops/c720p/s9-native-security/live-person-watch.py ops/c720p/s9-native-security/patch-live-person-watch-ui.py
+          python3 - <<'PY'
+          import re
+          import importlib.util
+          from pathlib import Path
+          p=Path("ops/c720p/s9-native-security/patch-live-person-watch-ui.py")
+          spec=importlib.util.spec_from_file_location("s9_watch",p)
+          m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          scripts=re.findall(r'<script[^>]+>(.*?)</script>',m.SNIPPET,re.S)
+          assert len(scripts)==1
+          Path("/tmp/s9-live-person-watch.js").write_text(scripts[0])
+          PY
+          node --check /tmp/s9-live-person-watch.js
       - name: Compile Camera2 and offline TFLite classifier against Android SDK
         shell: bash
         run: |
