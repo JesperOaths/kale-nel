@@ -4,15 +4,16 @@ set -Eeuo pipefail
 umask 077
 BASE="$HOME/c720p-home-hub/build/s9-edge-v1"
 SRC="$BASE/src"
-REP="https://raw.githubusercontent.com/JesperOaths/kale-nel/69a6fa45ec5cb1faabd5f3b5b1634ee0d6031f11/ops/c720p/s9-edge-v1"
+REP="https://raw.githubusercontent.com/JesperOaths/kale-nel/b0a134489eeb719de86308423646efeab3843b55/ops/c720p/s9-edge-v1"
 mkdir -p "$SRC/nl/kalenel/s9edge" "$BASE/classes" "$BASE/dex"
 curl -fsSL --retry 2 "$REP/AndroidManifest.xml" -o "$BASE/AndroidManifest.xml"
 curl -fsSL --retry 2 "$REP/src/nl/kalenel/s9edge/EdgeActivity.java" -o "$SRC/nl/kalenel/s9edge/EdgeActivity.java"
 curl -fsSL --retry 2 "$REP/src/nl/kalenel/s9edge/EdgeService.java" -o "$SRC/nl/kalenel/s9edge/EdgeService.java"
+curl -fsSL --retry 2 "$REP/src/nl/kalenel/s9edge/EdgeBootReceiver.java" -o "$SRC/nl/kalenel/s9edge/EdgeBootReceiver.java"
 ANDROID_JAR="$(find /usr/lib/android-sdk/platforms -name android.jar | sort -V | tail -1)"
 [ -n "$ANDROID_JAR" ] || { echo "ERROR=no_android_jar";exit 5; }
 for tool in javac aapt d8 apksigner keytool adb;do command -v "$tool" >/dev/null;done
-javac -source 8 -target 8 -cp "$ANDROID_JAR" -d "$BASE/classes" "$SRC/nl/kalenel/s9edge/EdgeActivity.java" "$SRC/nl/kalenel/s9edge/EdgeService.java"
+javac -source 8 -target 8 -cp "$ANDROID_JAR" -d "$BASE/classes" "$SRC/nl/kalenel/s9edge/EdgeActivity.java" "$SRC/nl/kalenel/s9edge/EdgeService.java" "$SRC/nl/kalenel/s9edge/EdgeBootReceiver.java"
 d8 --min-api 26 --lib "$ANDROID_JAR" --output "$BASE/dex" "$BASE"/classes/nl/kalenel/s9edge/*.class
 aapt package -f -M "$BASE/AndroidManifest.xml" -I "$ANDROID_JAR" -F "$BASE/s9-edge-unsigned.apk"
 (cd "$BASE/dex" && aapt add "$BASE/s9-edge-unsigned.apk" classes.dex)
