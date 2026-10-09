@@ -83,6 +83,9 @@ def install_local_sd(H):
     return self.local_file(source,"image/jpeg")
   return original(self)
  H.go=go
+ # Review writes use the same signed relay but never affect video/playback.
+ import s9_human_thumbnail_review
+ s9_human_thumbnail_review.install(H)
 def play_sd(handler,name,record):
  size=int(record.get("size") or 0)
  if size<10000 or size>4*1024*1024*1024:

@@ -113,6 +113,7 @@ def report():
  counts={"person_visible":0,"no_person_visible":0,"uncertain":0,"unreviewed":0}
  for name,src in sorted(frames.items(),key=lambda t:t[0],reverse=True)[:120]:
   found=labels.get(name,{})
+  if not isinstance(found,dict):found={}
   chosen=found.get("label") if found.get("sha256")==src["sha256"] else None
   if chosen not in CHOICES:chosen=None
   counts[chosen or "unreviewed"]+=1
@@ -140,7 +141,7 @@ def save_label(name,digest,label):
   return 400,{"ok":False,"error":"invalid_clip_name"}
  if not isinstance(digest,str) or not re.fullmatch("[a-f0-9]{64}",digest):
   return 400,{"ok":False,"error":"invalid_thumbnail_digest"}
- if label not in CHOICES and label!="clear":
+ if not isinstance(label,str) or (label not in CHOICES and label!="clear"):
   return 400,{"ok":False,"error":"invalid_label"}
  with WRITE_LOCK:
   frames=eligible()

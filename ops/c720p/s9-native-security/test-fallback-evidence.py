@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """No-network regression tests for S9 preview-only catalog/proxy/HTML."""
-import hashlib, importlib.util, io, json, pathlib, tempfile, unittest
+import hashlib, importlib.util, io, json, pathlib, tempfile, unittest, sys
 from unittest.mock import patch as mockpatch
 
 BASE=pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(BASE/'s9-person-ml-v1'))
 def load(filename):
     path=BASE / filename
     spec=importlib.util.spec_from_file_location(filename.replace("/","_").replace(".","_"),path)
@@ -37,6 +38,7 @@ class Tests(unittest.TestCase):
                 class Handler:
                     def __init__(self,path):self.path=path;self.command="GET";self.headers={};self.output=io.BytesIO();self.wfile=self.output;self.code=None;self.body=None
                     def go(self):self.code=418
+                    def do_POST(self):self.code=418
                     def js(self,status,body):self.code=status;self.body=body
                     def send_response(self,status):self.code=status
                     def send_header(self,*args):pass
