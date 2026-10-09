@@ -19,12 +19,22 @@ public final class CameraActivity extends Activity {
   } catch(Exception e){report.append(" error=").append(e);}
   Log.i("S9_NATIVE4K_CAPS",report.toString());
   TextView t=new TextView(this);t.setText("Native S9+ 4K capability audit\n"+report.toString());t.setTextSize(16);setContentView(t);
-  if(getIntent().getBooleanExtra("start_test",false)){
-   if(checkSelfPermission("android.permission.CAMERA")!=PackageManager.PERMISSION_GRANTED){Log.e("S9_NATIVE4K","CAMERA_PERMISSION_MISSING");return;}
-   Intent i=new Intent(this,CameraService.class);
-   i.putExtra("seconds",Math.min(12,Math.max(4,getIntent().getIntExtra("seconds",8))));
-   i.putExtra("manage_ipwebcam",true);
-   startForegroundService(i);
+  maybeStart(getIntent());
+ }
+ @Override protected void onNewIntent(Intent i){
+  super.onNewIntent(i);setIntent(i);
+  Log.i("S9_NATIVE4K","ACTIVITY_REUSED_NEW_INTENT");
+  maybeStart(i);
+ }
+ private void maybeStart(Intent intent){
+  if(intent==null||!intent.getBooleanExtra("start_test",false))return;
+  if(checkSelfPermission("android.permission.CAMERA")!=PackageManager.PERMISSION_GRANTED){
+   Log.e("S9_NATIVE4K","CAMERA_PERMISSION_MISSING");return;
   }
+  Intent start=new Intent(this,CameraService.class);
+  start.putExtra("seconds",Math.min(12,Math.max(4,intent.getIntExtra("seconds",8))));
+  start.putExtra("manage_ipwebcam",true);
+  Log.i("S9_NATIVE4K","REQUESTED_FOREGROUND_4K_SERVICE");
+  startForegroundService(start);
  }
 }
