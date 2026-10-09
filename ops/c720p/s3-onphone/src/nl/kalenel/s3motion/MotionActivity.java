@@ -39,7 +39,7 @@ public final class MotionActivity extends Activity
     private long session=System.currentTimeMillis();
     private TextView status;
     private boolean holderReady=false;
-    private int cameraId=0, blackFrames=0;
+    private int cameraId=1, blackFrames=0;
 
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
