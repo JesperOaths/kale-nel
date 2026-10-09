@@ -4,7 +4,7 @@ set -Eeuo pipefail
 umask 077
 BASE="$HOME/c720p-home-hub/build/s9-edge-v1"
 SRC="$BASE/src"
-REP="https://raw.githubusercontent.com/JesperOaths/kale-nel/b4cbd6fbba3888afaa1fd82f54ab57d8c5494f2b/ops/c720p/s9-edge-v1"
+REP="https://raw.githubusercontent.com/JesperOaths/kale-nel/59c726a5fa001b3a89bcddc2b6ea9c98da5eed12/ops/c720p/s9-edge-v1"
 mkdir -p "$SRC/nl/kalenel/s9edge" "$BASE/classes" "$BASE/dex"
 curl -fsSL --retry 2 "$REP/AndroidManifest.xml" -o "$BASE/AndroidManifest.xml"
 curl -fsSL --retry 2 "$REP/src/nl/kalenel/s9edge/EdgeActivity.java" -o "$SRC/nl/kalenel/s9edge/EdgeActivity.java"
