@@ -37,7 +37,8 @@ setInterval(()=>{enforceRoute();if(active==='live'&&securityRouteActive())stream
  def test_deploy_only_live_UI_and_no_phone(self):
   text=(BASE/"deploy-security-live-mjpeg-stable.py").read_text()
   self.assertIn('s9-live-mjpeg',text)
-  self.assertIn('camera_ok',text)
+  self.assertIn('phone_camera_unhealthy',text)
+  self.assertIn('microSD_archive_unavailable',text)
   self.assertNotIn('adb ',text)
   self.assertNotIn('chmod -R',text)
 if __name__=="__main__":unittest.main(verbosity=2)
