@@ -129,7 +129,7 @@ def verified_remote(c,name,size,md5hash):
     actual=str(next((v for k,v in hashes.items() if k.lower()=="md5"),"")).lower()
     return bool(actual and actual==md5hash)
 
-def save_row(name,size,hashmd5,snap_name,remote_name):
+def save_row(name,size,hashmd5,snap_name,remote_name,manifest=None):
     # Caller holds the same archive lock as the original Drive uploader.
     d=json.loads(INDEX.read_text()) if INDEX.exists() else {"version":1,"items":[]}
     for item in d.get("items",[]):
@@ -148,6 +148,14 @@ def save_row(name,size,hashmd5,snap_name,remote_name):
       archive_profile="s9-original-quality-unmodified",source_size=size,archive_transcoded=False,
       local_clip_name=name,local_snapshot_name="",local_cleaned=True,
       source_retained_on_phone=True,phone_verified_sd=True,state="verified"))
+    # Categories are anonymous scene-content classes, never individual identities.
+    if isinstance(manifest,dict):
+      x=rows[-1]
+      group=str(manifest.get("content_group") or "unreviewed")
+      if group not in ("one_person","multiple_people","unreviewed"):group="unreviewed"
+      x["scene_category"]=group
+      x["person_count_at_trigger"]=min(20,max(0,int(manifest.get("ai_person_count_at_trigger") or 0)))
+      x["scene_category_source"]="S9_GPU_scene_metadata_unverified"
     atomic(INDEX,d)
 
 def main():
@@ -182,6 +190,8 @@ def main():
         info["drive_verified"]=bool(rec)
         info["deleted_from_drive"]=name in tombstones
         info["remote_name"]=rec.get("remote_name") if rec else None
+        info["scene_category"]=rec.get("scene_category","unreviewed") if rec else "unreviewed"
+        info["person_count"]=rec.get("person_count_at_trigger") if rec else None
         photo=thumb_from_phone(name)
         info["thumbnail"]=f"s9-phone-thumbs/{name}.thumb.jpg" if photo else None
         summary["phone_recordings"].append(info)
@@ -252,7 +262,7 @@ def main():
                THUMB.mkdir(parents=True,exist_ok=True)
                dest=THUMB/candidate
                if not dest.exists():dest.write_bytes(thumb.read_bytes())
-          save_row(name,size,filemd5,snap_name,remote_name)
+          save_row(name,size,filemd5,snap_name,remote_name,manifest)
           count+=1
           summary["uploaded_this_run"].append(name)
           free-=size+(thumb.stat().st_size if thumb else 0)
