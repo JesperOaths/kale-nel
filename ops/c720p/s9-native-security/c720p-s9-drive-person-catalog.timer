@@ -1,0 +1,12 @@
+[Unit]
+Description=Run bounded S9/S3 verified Drive classification batches
+
+[Timer]
+OnBootSec=5min
+OnUnitInactiveSec=15min
+AccuracySec=1min
+Persistent=true
+Unit=c720p-s9-drive-person-catalog.service
+
+[Install]
+WantedBy=timers.target

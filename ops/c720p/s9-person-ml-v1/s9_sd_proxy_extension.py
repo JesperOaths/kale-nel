@@ -111,6 +111,9 @@ def install_local_sd(H):
  # Review writes use the same signed relay but never affect video/playback.
  import s9_human_thumbnail_review
  s9_human_thumbnail_review.install(H)
+ # Historical Drive people are listed privately; visitor IDs require explicit human linking.
+ import s9_drive_visitor_review
+ s9_drive_visitor_review.install(H)
 def play_sd(handler,name,record):
  size=int(record.get("size") or 0)
  if size<10000 or size>4*1024*1024*1024:
