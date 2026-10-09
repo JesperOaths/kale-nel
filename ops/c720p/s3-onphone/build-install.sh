@@ -6,7 +6,7 @@ PLATFORM="$SDK/platforms/android-36/android.jar"
 ROOT="/home/jespern/c720p-home-hub"
 WORK="$ROOT/build/s3-onphone"
 STATE="$ROOT/state"
-BASE_URL="https://raw.githubusercontent.com/JesperOaths/kale-nel/184c02a1e2725faf3f339fc1f35381b46d93729e/ops/c720p/s3-onphone"
+BASE_URL="https://raw.githubusercontent.com/JesperOaths/kale-nel/d62f8591201b5ce13f495cac8199fee7440f3d15/ops/c720p/s3-onphone"
 mkdir -p "$WORK/classes" "$WORK/dex" "$WORK/src/nl/kalenel/s3motion" "$STATE"
 curl -fsSL "$BASE_URL/AndroidManifest.xml" -o "$WORK/AndroidManifest.xml"
 curl -fsSL "$BASE_URL/src/nl/kalenel/s3motion/MotionActivity.java" -o "$WORK/src/nl/kalenel/s3motion/MotionActivity.java"
@@ -29,7 +29,7 @@ if [[ ! -f "$KEYSTORE" ]]; then
 fi
 cp "$WORK/s3-motion-unsigned.apk" "$WORK/s3-bedroom-motion.apk"
 "$TOOLS/apksigner" sign --ks "$KEYSTORE" --ks-key-alias s3motion \
-    --ks-pass "file:$PASSFILE" --key-pass "file:$PASSFILE" \
+    --ks-pass "file:$PASSFILE" \
     --min-sdk-version 19 "$WORK/s3-bedroom-motion.apk"
 "$TOOLS/apksigner" verify --verbose "$WORK/s3-bedroom-motion.apk"
 adb -s 3230cf48843b9027 install -r -g "$WORK/s3-bedroom-motion.apk"
