@@ -28,3 +28,5 @@ assert "RecordingRate.java" in (ROOT / "fetch-source.sh").read_text() or "Record
 assert "startup_recovered" in source and "recoverArchive" in source
 assert "fallback_evidence_saved" in source
 assert "priority_reserve" in source
+
+assert fetch.count("PreviewJpeg Boot RecordingRate; do") == 2, "new classes must be both downloaded and published"
