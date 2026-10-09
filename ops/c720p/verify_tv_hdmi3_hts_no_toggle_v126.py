@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-import importlib.util,json,tempfile
+import json,tempfile,types
 from pathlib import Path
 p="/home/jespern/c720p-home-hub/bin/c720p-bluetooth-helper-server.py"
-s=importlib.util.spec_from_file_location("hts_regression",p)
-m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
+m=types.ModuleType("hts_regression")
+source=Path(p).read_text()
+entry="ThreadingHTTPServer((\'127.0.0.1\', PORT), Handler).serve_forever()"
+assert source.count(entry)==1
+exec(compile(source.split(entry)[0],p,"exec"),m.__dict__)
 m.bt_connected_info=lambda:{"connected":False}
 m.post_json=lambda *a,**k:(_ for _ in ()).throw(AssertionError("Power endpoint invoked"))
 m.run=lambda *a,**k:{"ok":False,"stdout":"","stderr":"simulated","returncode":1}
