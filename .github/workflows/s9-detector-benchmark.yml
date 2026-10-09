@@ -17,6 +17,7 @@ jobs:
         run: |
           python3 ops/c720p/s9-detector-benchmark/test_contract.py
           bash -n ops/c720p/s9-detector-benchmark/build-only.sh
+          python3 -m py_compile ops/c720p/s9-detector-benchmark/hub-readonly-compare.py
       - name: Compile against Android platform and TFLite
         run: |
           set -Eeuo pipefail
