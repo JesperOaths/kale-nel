@@ -39,6 +39,16 @@ const stream="/new/live.mjpg";
   self.assertIn("c720p-live-camera-toggle",new)
   self.assertIn("/new/live.mjpg",new)
   with self.assertRaises(ValueError):P.patch_home("<body></body>")
+ def test_deploy_keeps_readonly_release_intact(self):
+  script=(HERE/"deploy-security-tabs-and-bottom-live.py").read_text()
+  self.assertIn('NEW_LIVE=WWW/"frontyard-security-new/home-live-native-s9-v4.html"',script)
+  self.assertIn('WRAPPER=WWW/"c720p-extra-row-v85.html"',script)
+  self.assertIn('original_sha',script)
+  self.assertIn('HOME_LIVE.read_text()',script)
+  self.assertNotIn('HOME_LIVE.write_text(',script)
+  self.assertIn('new_route="/local/frontyard-security-new/home-live-native-s9-v4.html"',script)
+  self.assertIn('S9_TABS_UI_AUTO_ROLLBACK',script)
+
  def test_js_parse_targets_are_distinct(self):
   scripts=re.findall(r'<script[^>]*>(.*?)</script>',P.TODAY,re.S)
   self.assertEqual(len(scripts),1)
