@@ -42,3 +42,11 @@ jobs:
           test -s "$WORK/classes/nl/kalenel/s9security/CameraService.class"
           test -s "$WORK/classes/nl/kalenel/s9security/PreviewJpeg.class"
           echo "S9_NATIVE_SECURITY_ALL_SIX_JAVA_CLASSES_COMPILE_OK"
+      - name: Test evidence budget decisions
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORK="$(mktemp -d)"
+          trap 'rm -rf "$WORK"' EXIT
+          javac -d "$WORK"             ops/c720p/s9-native-security/src/nl/kalenel/s9security/RecordingRate.java             ops/c720p/s9-native-security/tests/RecordingRateTest.java
+          java -cp "$WORK" nl.kalenel.s9security.RecordingRateTest

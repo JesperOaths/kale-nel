@@ -16,6 +16,8 @@ public final class MotionGrid {
  public double changedRatio=0,lighting=0;
  public int coherent=0;
  public boolean motion=false;
+ public boolean strong=false;
+ private int sustainedEvidence=0;
  public boolean analyze(Image frame) {
   long t=SystemClock.elapsedRealtime();
   if(t-lastSample<190)return motion;
@@ -45,7 +47,7 @@ public final class MotionGrid {
   if(init<7){
    if(init==0)System.arraycopy(nowCells,0,background,0,N);
    else for(int i=0;i<N;i++)background[i]=0.75f*background[i]+0.25f*nowCells[i];
-   init++;motion=false;return false;
+   init++;motion=false;strong=false;return false;
   }
   float shift=0;
   for(int i=0;i<N;i++)shift+=nowCells[i]-background[i];
@@ -77,6 +79,11 @@ public final class MotionGrid {
   while(votes.size()>7)votes.removeFirst();
   int positive=0;for(Boolean yes:votes)if(yes)positive++;
   motion=positive>=(lighting<42?5:4);
+  // Priority evidence must be coherent and sustained, not a single flash.
+  boolean priority=meaningful && changedRatio>=(dim?0.055:0.035)
+      && coherent>=(dim?13:9) && Math.abs(shift)<(dim?16:23);
+  sustainedEvidence=priority?Math.min(8,sustainedEvidence+1):Math.max(0,sustainedEvidence-2);
+  strong=motion && sustainedEvidence>=3;
   float alpha=motion?0.008f:0.045f;
   for(int i=0;i<N;i++)background[i]=background[i]*(1-alpha)+nowCells[i]*alpha;
   return motion;

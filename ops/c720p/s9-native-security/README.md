@@ -5,7 +5,7 @@
 This standalone Android application replaces IP Webcam Pro for camera acquisition, motion detection, clip storage and post-recording classification. Verified on Samsung SM-G965F (Android API 29) with native Camera2 rear camera.
 
 - **Video:** 3840 × 2160, H.264 at 30 fps and 36 Mb/s, encoded directly to removable SD using MediaRecorder. The actual sample MP4 was independently verified through Android metadata (not merely a requested setting).
-- **Motion:** independent 640 × 480 YUV_420_888 Camera2 stream, adaptive regional luma comparison, temporal voting, connected component filtering, and global-exposure suppression. Native service includes thermal, free-space and recording-duration safety limits; the deployed version also reported a 12-per-hour recording cap.
+- **Motion:** independent 640 × 480 YUV_420_888 Camera2 stream, adaptive regional luma comparison, temporal voting, connected component filtering, and global-exposure suppression. Native service includes thermal, free-space and recording-duration safety limits; the baseline version had a 12-per-hour recording cap. Version 2 retains 12 ordinary slots and reserves 12 additional 4K slots for sustained coherent motion (24 maximum/hour).
 - **Offline review:** TensorFlow Lite GPU / CPU fallback, six sample frames from completed MP4s, COCO-style classes (people, animals, vehicles), SHA-256 verification manifest and JPEG thumbnail. One-person, multiple-people, vehicles, animals, other motion and unreviewed groups are visible in Security.
 - **Storage:** microSD `Android/data/nl.kalenel.s9security/files/Security4K`, with MP4, `.verified.json`, `.thumb.jpg`. MP4s are finalized through a temporary `.recording` rename. Nothing is sent to Google Drive.
 - **Local-only live:** Camera2 YUV JPEG at `127.0.0.1:8808/shot.jpg`, multipart MJPEG at `/mjpeg`, diagnostics at `/status`. C720P ADB forwards to `127.0.0.1:18808`; authenticated relay on C720P `8794/new/live.mjpg` serves the Security interface.
@@ -41,3 +41,13 @@ sha256sum -c "$HOME/c720p-home-hub/build/s9-native-security/s9-native-security.a
 An orderly service shutdown now attempts to finalize and locally review an active 4K clip. An OS kill, power loss or camera fault can still leave a `.recording` file; preserve it for forensic recovery. TensorFlow Lite delegate cleanup is serialized after queued review jobs.
 
 GitHub Actions checks shell syntax, source/build safety invariants and compiles six Java classes against Android SDK and TensorFlow Lite 2.14. **This is not on-device validation.** Before a live upgrade verify the rollback APK, safe idle interval, SD space, native JPEG/MJPEG, ranged playback, SHA-256 manifests, frame cadence, temperature and clip-review completion. Do not re-enable Drive uploads or IP Webcam.
+
+## Evidence-preservation continuation
+
+- **Recording admission:** the first 12 captures in a one-hour window are accepted as before; the next 12 are reserved for coherent, sustained motion (not a verified person-identification decision). Quota exhaustion does not disable low-resolution analysis.
+- **Suppression evidence:** if a motion event cannot start video due to quota, cooldown, temperature or free-space safeguards, save a throttled 640×480 JPEG and JSON sidecar directly on microSD (at most one every 45 seconds). These preview files are **not 4K clips, are not classed as identified people, and are not yet listed by the MP4-only Security video catalog**.
+- **Crash recovery:** on startup, scan a bounded set of recent native clips for missing review manifests. Only rename a leftover `.mp4.recording` to `.mp4` when it is verified as a readable 3840×2160 video of at least one second. Leave unreadable files untouched, and queue review and thumbnail generation on the phone.
+- **Diagnostics:** `/status` shows priority motion, reserve usage, suppressed recordings, fallback evidence totals and recovery outcomes.
+- **Limits:** Camera2 settings, TensorFlow Lite model, thermal threshold (41.5°C), minimum SD reserve (15 GiB), and existing active motion thresholds are not changed. Actual people-vs-false-trigger accuracy remains to be evaluated with labeled day and night evidence. The hourly cap may still result in missed full-quality videos in extremely busy periods.
+
+This stage does not claim named-person recognition, automated deletion of forensic evidence, or guaranteed playback of corrupted unfinalized MP4 files.
