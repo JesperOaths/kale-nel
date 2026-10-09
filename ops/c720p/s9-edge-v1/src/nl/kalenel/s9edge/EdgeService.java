@@ -26,7 +26,9 @@ public final class EdgeService extends Service {
  private float previousLight=-1;
  private int streak=0;
  private long lastTrigger=0;
- private Thread analyzer,api;
+ private Thread analyzer,api,archiver;
+ private volatile long archivedClips=0, archiveErrors=0, lastArchiveMs=0;
+ private volatile String lastArchiveResult="idle";
  private ServerSocket server;
 
  @Override public IBinder onBind(Intent i) { return null; }
@@ -46,6 +48,8 @@ public final class EdgeService extends Service {
   analyzer=new Thread(new Runnable(){public void run(){analyzeLoop();}},"edge-motion");
   api=new Thread(new Runnable(){public void run(){serve();}},"edge-api");
   analyzer.start();api.start();
+  archiver=new Thread(new Runnable(){public void run(){archiveLoop();}},"edge-sd-archiver");
+  archiver.start();
   Log.i(TAG,"START local_only=true sdk="+Build.VERSION.SDK_INT);
  }
  @Override public void onDestroy(){
@@ -53,6 +57,7 @@ public final class EdgeService extends Service {
   try{if(server!=null)server.close();}catch(Exception ignored){}
   if(analyzer!=null)analyzer.interrupt();
   if(api!=null)api.interrupt();
+  if(archiver!=null)archiver.interrupt();
   super.onDestroy();
  }
  private void checkSd(){
@@ -140,12 +145,12 @@ public final class EdgeService extends Service {
   }
   coherent=best;componentWidth=bw;componentHeight=bh;componentRatio=bw==0?0.0:(double)bh/bw;
   boolean vehicleShape=bw>=8&&bh<=3&&by>=3&&by<=10&&bw>=bh*2.6;
-  boolean personShape=best>=3&&bh>=3&&bw>=1&&bh>=bw*0.72&&!vehicleShape;
-  boolean generic=best>=6&&hits>=9&&!vehicleShape;
+  boolean personShape=best>=6&&bh>=4&&bw>=2&&bh>=bw*1.1&&!vehicleShape;
+  boolean generic=best>=13&&hits>=18&&bh>=3&&!vehicleShape;
   candidate=!illumination&&(personShape||generic);
   personCandidate=!illumination&&personShape;
   streak=candidate?Math.min(10,streak+1):Math.max(0,streak-1);
-  if(streak>=2&&now-lastTrigger>=2500){
+  if(streak>=4&&now-lastTrigger>=7000){
    if(!active) {events++;lastTrigger=now;lastEventMs=now;
     Log.i(TAG,"MOTION seq="+events+" pct="+changedPct+" coherent="+best+" personShape="+personShape);
    }
@@ -162,7 +167,7 @@ public final class EdgeService extends Service {
   try{
    long now=SystemClock.elapsedRealtime();
    o.put("ok",ready&&lastFrameMs>0&&now-lastFrameMs<4000);
-   o.put("algorithm","s9-local-coherent-v2");
+   o.put("algorithm","s9-local-coherent-v3");
    o.put("frames",frames);o.put("errors",failedFrames);
    o.put("frame_age_ms",lastFrameMs==0?-1:now-lastFrameMs);
    o.put("active",active);o.put("candidate",candidate);o.put("person_shape_candidate",personCandidate);
@@ -174,6 +179,11 @@ public final class EdgeService extends Service {
    o.put("temperature_c",temperatureDeciC/10.0);o.put("sd_ready",sdReady);
    o.put("sd_dir",sdDirectory);
    o.put("recording_enabled",false);
+   o.put("auto_sd_archive_enabled",true);
+   o.put("auto_sd_archive_count",archivedClips);
+   o.put("auto_sd_archive_errors",archiveErrors);
+   o.put("last_archive_result",lastArchiveResult);
+   o.put("last_archive_age_ms",lastArchiveMs==0?-1:now-lastArchiveMs);
    o.put("error",error);
   }catch(Exception e){Log.e(TAG,"JSON",e);}
   return o;
@@ -182,6 +192,48 @@ public final class EdgeService extends Service {
  // Only copies explicitly named, completed IP Webcam videos to removable SD.
  // Never deletes or modifies the source; every copy is byte-counted, hashed,
  // and fsynced before being exposed as complete.
+
+ // Copy finalized recordings automatically ON THE S9+, never through the hub.
+ // Originals are preserved so the recording pipeline cannot silently discard evidence.
+ private void archiveLoop(){
+  while(run){
+   try{
+    temperatureDeciC=batteryTemperature();
+    checkSd();
+    if(sdReady&&temperatureDeciC<430){
+     HttpURLConnection conn=(HttpURLConnection)new URL("http://127.0.0.1:8080/list_videos").openConnection();
+     conn.setConnectTimeout(1800);conn.setReadTimeout(4000);
+     ByteArrayOutputStream out=new ByteArrayOutputStream();
+     try(InputStream input=conn.getInputStream()){
+      byte[] buf=new byte[4096];int n;
+      while((n=input.read(buf))>=0){if(n>0)out.write(buf,0,n);if(out.size()>100000)throw new IOException("video_index_too_large");}
+     }finally{conn.disconnect();}
+     JSONArray files=new JSONArray(out.toString("UTF-8"));
+     int inspected=0;
+     for(int i=0;i<files.length()&&inspected<8&&run;i++){
+      JSONObject clip=files.getJSONObject(i);
+      String name=clip.optString("name"),sizeText=clip.optString("size");
+      long size=0;
+      try{size=Long.parseLong(sizeText);}catch(Exception ignored){}
+      long epoch=0;
+      try{epoch=Long.parseLong(clip.optString("mtime"));}catch(Exception ignored){}
+      if(!name.matches("rec_[A-Za-z0-9._-]{5,100}\\.mp4")||name.contains("..")
+         ||size<10000||size>256L*1024*1024)continue;
+      if(epoch>0&&System.currentTimeMillis()/1000-epoch<45)continue;
+      inspected++;
+      File sd=new File(new File(sdDirectory,"SecurityClips"),name);
+      if(sd.isFile()&&sd.length()==size&&new File(sd.getAbsolutePath()+".verified.json").isFile())continue;
+      JSONObject result=archiveNamed(name);
+      lastArchiveMs=SystemClock.elapsedRealtime();
+      if(result.optBoolean("ok")){archivedClips++;lastArchiveResult="verified";}
+      else{archiveErrors++;lastArchiveResult=result.optString("error","archive_failed");break;}
+     }
+    }
+   }catch(Exception e){archiveErrors++;lastArchiveResult=e.getClass().getSimpleName()+":"+e.getMessage();}
+   try{Thread.sleep(60000);}catch(InterruptedException ignored){}
+  }
+ }
+
  private JSONObject archiveNamed(String filename) {
   JSONObject reply=new JSONObject();
   try {
