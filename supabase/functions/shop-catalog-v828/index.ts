@@ -27,6 +27,7 @@ const HIDDEN_PUBLIC_PRODUCT_IDS = new Set([
 // These deliberately describe the artwork/product itself and replace the
 // retired legacy aliases that mislabeled several animals and plants.
 const PUBLIC_PRODUCT_NAMES: Record<string, string> = {
+  "6ac6b4c1d17baf6af80feb20": "Black Bat Flower",
   "6ab1204d20563fc58009e1a9": "White Fringed Orchid",
   "6ab11fcc793a18c49f0d3301": "Tiger Lily",
   "6ab11f47937bf873f309905c": "Snake's Head Fritillary",
