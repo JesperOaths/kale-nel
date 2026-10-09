@@ -32,7 +32,7 @@ fi
 # apksigner consumes the keystore and key passwords as two separate lines.
 python3 -c 'from pathlib import Path;import sys;p=Path(sys.argv[1]);v=p.read_text().splitlines()[0];p.write_text((v+"\n")*12)' "$PASS"
 apksigner sign --ks "$KEY" --ks-key-alias s9edge \
- --ks-pass "file:$PASS" --key-pass "file:$PASS" \
+ --ks-pass "file:$PASS" \
  --out "$BASE/s9-edge-v1.apk" "$BASE/s9-edge-unsigned.apk"
 apksigner verify --verbose "$BASE/s9-edge-v1.apk" | head -8
 adb connect 192.168.178.250:5555
