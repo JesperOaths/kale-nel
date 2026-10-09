@@ -386,7 +386,8 @@ public final class EdgeService extends Service {
   JSONObject o=new JSONObject();
   try{
    long now=SystemClock.elapsedRealtime();
-   o.put("ok",ready&&lastFrameMs>0&&now-lastFrameMs<4000);
+   o.put("ok",(personMlHealthy&&personMlLastSeen>0&&now-personMlLastSeen<5500)
+     ||(ready&&lastFrameMs>0&&now-lastFrameMs<4000));
    o.put("algorithm","s9-ml-linked-v7");
    o.put("person_ml_healthy",personMlHealthy);
    o.put("person_ml_backend",personMlBackend);
@@ -398,7 +399,7 @@ public final class EdgeService extends Service {
    o.put("geometry_fallback_active",!personMlHealthy);
    o.put("ml_capture_link_enabled",true);
    o.put("frames",frames);o.put("errors",failedFrames);
-   o.put("frame_age_ms",lastFrameMs==0?-1:now-lastFrameMs);
+   o.put("frame_age_ms",personMlHealthy?personMlFrameAgeMs:(lastFrameMs==0?-1:now-lastFrameMs));
    o.put("active",active);o.put("candidate",candidate);o.put("person_shape_candidate",personCandidate);
    o.put("changed_percent",Math.round(changedPct*100.0)/100.0);
    o.put("coherent_cells",coherent);o.put("box_w",componentWidth);o.put("box_h",componentHeight);
