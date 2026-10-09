@@ -22,7 +22,7 @@ s=s.replace('FRONTCAM_MOTION_V11 stopped','FRONTCAM_MOTION_V12 stopped')
 old_diff='''        if prev is None:
             prev=g.copy()
         tdiff=cv2.absdiff(g,prev)
-        temporal_delta=max(2,th["delta"]-1) if th["mode"]=="dark" else th["delta"]
+        temporal_delta=1 if th["mode"]=="dark" else max(2,th["delta"]-1) if th["mode"]=="dim" else th["delta"]
         tmask=(tdiff>=temporal_delta).astype(np.uint8)*255
         if th["mode"]=="normal":
             tmask=cv2.morphologyEx(tmask,cv2.MORPH_OPEN,np.ones((2,2),np.uint8))
