@@ -61,10 +61,21 @@ def main():
   if actual!=size:raise ValueError("native_4k_size_mismatch")
   digest=adb("shell","sha256sum",native+"/"+name).decode().split()[0].lower()
   if sha!=digest:raise ValueError("native_4k_sha256_mismatch")
+  thumb=None
+  try:
+   img=adb("exec-out","cat",native+"/"+name+".thumb.jpg")
+   if img[:3]==bytes([255,216,255]) and 4000<len(img)<2200000:
+    dest=ROOT/"s9-phone-thumbs"/(name+".thumb.jpg")
+    dest.parent.mkdir(parents=True,exist_ok=True)
+    if not dest.is_file() or dest.read_bytes()!=img:
+     part=dest.with_suffix(".jpg.tmp")
+     part.write_bytes(img);os.replace(part,dest)
+    thumb="s9-phone-thumbs/"+dest.name
+  except Exception:pass
   stamp=datetime.datetime.fromtimestamp(int(name.split("_")[1].split(".")[0])/1000.0)
   rows.append({"name":name,"timestamp":stamp.strftime("%Y-%m-%d %H:%M"),"size":size,
     "drive_verified":False,"sd_verified":True,"sd_only":True,
-    "scene_category":"unreviewed","person_count":0,"thumbnail":None,
+    "scene_category":"unreviewed","person_count":0,"thumbnail":thumb,
     "resolution":"3840x2160","codec":"H.264","storage":"S9+ native 4K microSD"})
  except Exception as e:
   if type(e).__name__!="OSError":problems.append("native_4k:"+type(e).__name__)
