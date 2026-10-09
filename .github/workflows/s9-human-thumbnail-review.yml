@@ -1,0 +1,42 @@
+name: S9 Human Thumbnail Review
+on:
+  push:
+    paths:
+      - "ops/c720p/s9-native-security/test-thumbnail-review.py"
+      - "ops/c720p/s9-native-security/patch-thumbnail-review-ui.py"
+      - "ops/c720p/s9-person-ml-v1/s9_human_thumbnail_review.py"
+      - "ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py"
+      - "ops/c720p/s9-native-security/test-fallback-evidence.py"
+      - "ops/c720p/s9-detector-benchmark/hub-readonly-compare.py"
+      - ".github/workflows/s9-human-thumbnail-review.yml"
+  pull_request:
+    paths:
+      - "ops/c720p/s9-native-security/**"
+      - "ops/c720p/s9-person-ml-v1/s9_human_thumbnail_review.py"
+      - "ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py"
+      - "ops/c720p/s9-detector-benchmark/hub-readonly-compare.py"
+      - ".github/workflows/s9-human-thumbnail-review.yml"
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Python contracts and regression suite
+        run: |
+          set -Eeuo pipefail
+          python3 -m py_compile ops/c720p/s9-person-ml-v1/s9_human_thumbnail_review.py ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py ops/c720p/s9-native-security/patch-thumbnail-review-ui.py ops/c720p/s9-detector-benchmark/hub-readonly-compare.py
+          python3 ops/c720p/s9-native-security/test-thumbnail-review.py
+          python3 ops/c720p/s9-native-security/test-fallback-evidence.py
+      - name: Browser JavaScript parser
+        run: |
+          python3 - <<'PY'
+          import importlib.util,re
+          from pathlib import Path
+          p=Path("ops/c720p/s9-native-security/patch-thumbnail-review-ui.py")
+          spec=importlib.util.spec_from_file_location("review",p)
+          m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          scripts=re.findall(r'<script[^>]+>(.*?)</script>',m.SNIPPET,re.S)
+          assert len(scripts)==1
+          Path("/tmp/s9-review-ui.js").write_text(scripts[0])
+          PY
+          node --check /tmp/s9-review-ui.js
