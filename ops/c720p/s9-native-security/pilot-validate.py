@@ -35,11 +35,15 @@ def main():
   adb("shell","am","start","-n","nl.kalenel.s9security/.CameraActivity",
     "--ez","enable_native_camera","true","--ez","pilot_only","true",timeout=20)
   adb("forward","tcp:18808","tcp:8808",timeout=10)
-  last=None;history=[]
+  last=None;history=[];snapshot_ok=False
   end=time.monotonic()+75
   while time.monotonic()<end:
    try:
     last=get(NATIVE,timeout=4)
+    if last.get("snapshot_ready") and not snapshot_ok:
+     with urllib.request.urlopen(NATIVE+"/shot.jpg",timeout=5) as j:
+      blob=j.read()
+      snapshot_ok=blob[:3]==bytes([255,216,255]) and len(blob)>4000
     cur=(last.get("mode"),last.get("recorded"),last.get("reviewed"),last.get("last_error"))
     if not history or history[-1]!=cur:history.append(cur)
     if last.get("recorded",0)>0 and last.get("reviewed",0)>0:break
@@ -49,6 +53,8 @@ def main():
   print("PILOT_STATUS_HISTORY",history,flush=True)
   if last is None:raise RuntimeError("no_native_camera_status")
   print("PILOT_FINAL_STATUS",last,flush=True)
+  print("NATIVE_JPEG_SNAPSHOT_VALIDATED",snapshot_ok,flush=True)
+  if not snapshot_ok:raise RuntimeError("native_preview_jpeg_not_available")
   if last.get("recorded",0)<1:raise RuntimeError("no_4k_pilot_recording")
   clip=last.get("last_file")
   if not clip or not clip.startswith("motion_"):raise RuntimeError("no_verified_pilot_name")
