@@ -10,10 +10,12 @@ public final class CameraService extends Service {
  private CameraDevice camera;private CameraCaptureSession session;private MediaRecorder recorder;
  private File pending,finished,dir;
  private volatile boolean started=false,done=false;
+ private boolean manageWebcam=false;
  private int seconds=8;private long began=0;
  @Override public IBinder onBind(Intent i){return null;}
  @Override public int onStartCommand(Intent intent,int flags,int id){
   seconds=Math.max(4,Math.min(12,intent==null?8:intent.getIntExtra("seconds",8)));
+  manageWebcam=intent!=null&&intent.getBooleanExtra("manage_ipwebcam",false);
   startForeground(8129,notification("Camera recording test"));
   thread=new HandlerThread("s9-native-4k-camera");thread.start();handler=new Handler(thread.getLooper());
   handler.post(new Runnable(){public void run(){begin();}});
@@ -36,6 +38,18 @@ public final class CameraService extends Service {
   throw new IllegalStateException("removable_SD_app_folder_unavailable");
  }
  private void begin(){
+  if(manageWebcam){
+   try{
+    Intent stop=new Intent("com.pas.webcam.CONTROL");
+    stop.setPackage("com.pas.webcam.pro");
+    stop.putExtra("action","stop");
+    sendBroadcast(stop);
+    Log.i(TAG,"REQUESTED_WEBCAM_RELEASE");
+   }catch(Exception e){Log.e(TAG,"CAMERA_RELEASE_FAILED",e);complete("webcam_release_failed",e);return;}
+   handler.postDelayed(new Runnable(){public void run(){beginCamera();}},4000);
+  }else beginCamera();
+ }
+ private void beginCamera(){
   try{
    dir=externalSD();
    CameraManager m=(CameraManager)getSystemService(CAMERA_SERVICE);
@@ -144,6 +158,15 @@ public final class CameraService extends Service {
   try{if(session!=null)session.close();}catch(Exception ignored){}
   try{if(camera!=null)camera.close();}catch(Exception ignored){}
   try{if(recorder!=null)recorder.release();}catch(Exception ignored){}
+  if(manageWebcam){
+   try{
+    Intent resume=new Intent("com.pas.webcam.CONTROL");
+    resume.setPackage("com.pas.webcam.pro");
+    resume.putExtra("action","start");
+    sendBroadcast(resume);
+    Log.i(TAG,"REQUESTED_WEBCAM_RESTART");
+   }catch(Exception e){Log.e(TAG,"WEBCAM_RESTART_FAILED",e);}
+  }
   stopForeground(true);stopSelf();
   if(thread!=null)thread.quitSafely();
  }
