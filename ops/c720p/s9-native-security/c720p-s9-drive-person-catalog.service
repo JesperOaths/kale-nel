@@ -1,0 +1,18 @@
+[Unit]
+Description=S9/S3 private, read-only classification of verified historical Drive clips
+After=network-online.target c720p-s9-live-person-watch.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/jespern/c720p-home-hub
+Environment=OPENBLAS_NUM_THREADS=1
+Environment=OMP_NUM_THREADS=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/jespern/c720p-home-hub/build/s9-detector-benchmark/venv/bin/python /home/jespern/c720p-home-hub/bin/s9-drive-person-catalog.py --max-clips 3
+Nice=17
+CPUQuota=30%
+MemoryMax=600M
+NoNewPrivileges=true
+PrivateTmp=true
+TimeoutStartSec=540
