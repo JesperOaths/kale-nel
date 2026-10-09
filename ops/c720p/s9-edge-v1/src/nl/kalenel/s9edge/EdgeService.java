@@ -32,6 +32,8 @@ public final class EdgeService extends Service {
  private volatile String personMlBackend="none",personMlStatus="not_connected";
  private volatile long personMlFrameAgeMs=-1,personMlEventSeq=0,personMlEventsAccepted=0,personMlLastSeen=0;
  private volatile double personMlLastConfidence=0;
+ private volatile int personMlCurrentCount=0;
+ private volatile boolean eventFromMl=false;
  private volatile String lastMlPersonBox="";
  private long personMlPreviousSeq=-1;
  private final ArrayDeque<Long> captureTimes=new ArrayDeque<Long>();
@@ -233,6 +235,7 @@ public final class EdgeService extends Service {
      personMlHealthy=true;personMlStatus="healthy";
      long seq=state.optLong("person_events",0);
      personMlEventSeq=seq;
+     personMlCurrentCount=Math.max(0,state.optInt("visible_people",0));
      if(personMlPreviousSeq<0||seq<personMlPreviousSeq){
       personMlPreviousSeq=seq;
      }else if(seq>personMlPreviousSeq){
@@ -247,6 +250,7 @@ public final class EdgeService extends Service {
       // Event comes from the ML app, not from a geometric motion event.
       if(evtAge>=0&&evtAge<5500&&confidence>=0.60){
        personMlEventsAccepted++;
+       eventFromMl=true;
        maybeCapture(SystemClock.elapsedRealtime(),true,18);
        Log.i(TAG,"PERSON_ML_EVENT seq="+seq+" confidence="+confidence+" backend="+personMlBackend);
       }
@@ -357,6 +361,10 @@ public final class EdgeService extends Service {
    }
    owned=true;
    filename=started.optString("fname");
+   if(personMlHealthy&&eventFromMl){
+    prefs.edit().putInt("clip_people_"+filename,Math.max(1,personMlCurrentCount))
+      .putFloat("clip_ai_score_"+filename,(float)personMlLastConfidence).apply();
+   }
    if(personMlHealthy&&lastMlPersonBox.length()>3)
     prefs.edit().putString("clipbox_"+filename,lastMlPersonBox)
       .putFloat("clip_person_score_"+filename,(float)personMlLastConfidence).apply();
@@ -403,6 +411,7 @@ public final class EdgeService extends Service {
    o.put("person_ml_status",personMlStatus);
    o.put("person_ml_events_seen",personMlEventSeq);
    o.put("person_ml_events_accepted",personMlEventsAccepted);
+   o.put("person_ml_visible_people",personMlCurrentCount);
    o.put("person_ml_last_confidence",Math.round(personMlLastConfidence*1000.0)/1000.0);
    o.put("person_ml_frame_age_ms",personMlFrameAgeMs);
    o.put("geometry_fallback_active",!personMlHealthy);
@@ -681,6 +690,15 @@ public final class EdgeService extends Service {
      manifest.put("person_model_confidence",prefs.getFloat("clip_person_score_"+filename,0));
     }
     manifest.put("thumbnail_pipeline","person-context-focus-v2");
+    int persons=prefs.getInt("clip_people_"+filename,-1);
+    if(persons>=1){
+     manifest.put("ai_person_count_at_trigger",persons);
+     manifest.put("ai_person_score_at_trigger",prefs.getFloat("clip_ai_score_"+filename,0));
+     manifest.put("content_group",persons>=2?"multiple_people":"one_person");
+     manifest.put("content_group_source","s9_gpu_detector_inferred_not_identity");
+    }else{
+     manifest.put("content_group","unreviewed");
+    }
     boolean hasThumb=ensureThumbnail(completed);
     manifest.put("thumbnail_ready",hasThumb);
     if(hasThumb)manifest.put("thumbnail_name",filename+".thumb.jpg");
