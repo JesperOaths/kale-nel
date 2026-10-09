@@ -151,10 +151,13 @@ def main():
   api=get("http://127.0.0.1:8794/new/api/saved",timeout=10)
   if not api.get("ok") or len(api.get("events",[]))<12:
    raise RuntimeError("SD_recordings_not_available_after_cutover")
-  h=old_scene()
-  if h.get("recording") or h.get("last_motion_source") not in (
-     "s9-native-camera2-on-phone","s9-native-phone-unreachable"):
-   # Non-triggering hub and correct source are essential to avoid duplicate clips.
+  h=None
+  for check in range(12):
+   h=old_scene()
+   if (not h.get("recording") and h.get("last_motion_source")=="s9-native-camera2-on-phone"
+       and h.get("camera_ok")):break
+   time.sleep(2)
+  else:
    raise RuntimeError("hub_native_ownership_not_confirmed_"+str(h.get("last_motion_source")))
   report.update(stage="native_4k_active",
                 clips=len(api.get("events",[])),native_status=n,
