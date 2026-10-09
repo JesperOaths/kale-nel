@@ -1,0 +1,23 @@
+[Unit]
+Description=S9+ local read-only live person/vehicle/animal candidate sensing
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/jespern/c720p-home-hub/build/s9-detector-benchmark/venv/bin/python /home/jespern/c720p-home-hub/bin/s9-live-person-watch.py
+WorkingDirectory=/home/jespern/c720p-home-hub
+Environment=OPENBLAS_NUM_THREADS=1
+Environment=OMP_NUM_THREADS=1
+Environment=PYTHONUNBUFFERED=1
+Restart=on-failure
+RestartSec=12
+Nice=16
+CPUQuota=30%
+MemoryMax=400M
+NoNewPrivileges=true
+PrivateTmp=true
+TimeoutStopSec=15
+
+[Install]
+WantedBy=default.target

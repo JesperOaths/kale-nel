@@ -20,7 +20,11 @@ public final class MotionGrid {
  private int sustainedEvidence=0;
  public boolean analyze(Image frame) {
   long t=SystemClock.elapsedRealtime();
-  if(t-lastSample<190)return motion;
+  // A 30-fps ImageReader can call us several times between 190-ms
+  // analysis windows. Re-emitting the previous true vote made one event
+  // look like ~6 new motion events and extended the quiet window. Only
+  // fresh sampled evidence is an actionable trigger.
+  if(t-lastSample<190)return false;
   lastSample=t;
   Image.Plane p=frame.getPlanes()[0];
   ByteBuffer y=p.getBuffer();
