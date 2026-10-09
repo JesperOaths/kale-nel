@@ -99,6 +99,7 @@ assert.match(store, /function readCartSafe\(\)/, 'corrupt browser cart state mus
 assert.match(store, /localStorage\.removeItem\(cartKey\)/, 'invalid saved cart JSON must be discarded safely');
 assert.match(store, /cache: 'default'/, 'background catalog reconciliation must allow browser HTTP caching instead of forcing no-store');
 assert.match(refresh, /const SHARED_MIN_REFRESH_MS = 20 \* 60 \* 1000;/, 'automatic refreshes must share a cross-tab lease');
+assert.match(catalogEdge, /"6ac6b4c1d17baf6af80feb20": "Black Bat Flower"/, 'Black Bat Flower product must use a clean customer-facing name instead of the Printify SEO title');
 assert.match(catalogEdge, /const refreshRequested = url\.searchParams\.has\("ops_refresh"\) \|\| url\.searchParams\.has\("refresh"\)/, 'catalog refresh work must require an explicit control-plane request');
 assert.match(catalogEdge, /stale && refreshRequested && !refreshLeaseActive/, 'stale public reads must not schedule Printify refresh work');
 assert.doesNotMatch(catalogEdge, /stale && !refreshLeaseActive && !refreshFailureCooldown\) refreshScheduled = scheduleCatalogRefreshNonBlocking/, 'plain stale GETs must never trigger background refresh');
