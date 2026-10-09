@@ -46,6 +46,7 @@ public final class CameraService extends Service {
  @Override public IBinder onBind(Intent intent){return null;}
  @Override public int onStartCommand(Intent intent,int flags,int id){
   if(intent!=null&&"STOP".equals(intent.getAction())){
+   getSharedPreferences("native",MODE_PRIVATE).edit().putBoolean("enabled",false).apply();
    if(cameraHandler!=null)cameraHandler.post(new Runnable(){public void run(){shutdown();}});
    return START_NOT_STICKY;
   }
@@ -58,6 +59,7 @@ public final class CameraService extends Service {
   pilotOnly=test||!persisted;
   temporaryTest=test&&validate;
   pilotHandoff=test;
+  boolean takeover=intent!=null&&intent.getBooleanExtra("takeover_ipwebcam",false)&&!pilotOnly;
   if(running){Log.i(TAG,"Already running mode="+mode);return START_STICKY;}
   startForeground(8228,notification());
   running=true;
@@ -66,11 +68,11 @@ public final class CameraService extends Service {
   cameraThread=new HandlerThread("native-security-camera");cameraThread.start();
   cameraHandler=new Handler(cameraThread.getLooper());
   cameraHandler.post(new Runnable(){public void run(){
-   if(pilotHandoff){
+   if(pilotHandoff||takeover){
     try{
      Intent stop=new Intent("com.pas.webcam.CONTROL");
      stop.setPackage("com.pas.webcam.pro");stop.putExtra("action","stop");
-     sendBroadcast(stop);Log.i(TAG,"PILOT_PAUSE_IP_WEBCAM");
+     sendBroadcast(stop);Log.i(TAG,takeover?"NATIVE_SECURITY_CAMERA_TAKEOVER":"PILOT_PAUSE_IP_WEBCAM");
     }catch(Exception e){failure("pilot_handoff_failed",e);}
     cameraHandler.postDelayed(new Runnable(){public void run(){prepare();}},4500);
    }else prepare();
@@ -317,6 +319,7 @@ public final class CameraService extends Service {
    d.put("ok",running&&lastFrameAt>0&&SystemClock.elapsedRealtime()-lastFrameAt<9000);
    d.put("mode",mode);d.put("native_4k_enabled",!pilotOnly);
    d.put("pilot_only",pilotOnly);
+   d.put("takeover_completed",!pilotOnly&&running&&lastFrameAt>0);
    d.put("recorder","camera2_3840x2160_h264");
    d.put("motion_detector","regional_yuv_adaptive_v1");
    d.put("review_model","ssd_mobilenet_coco_gpu_cpu_v1");
