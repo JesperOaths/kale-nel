@@ -18,7 +18,7 @@ start=ui.index('e.macro.onclick=async()=>{')
 end=ui.index('\nrefresh().catch',start)
 old=ui[start:end]
 assert old.count('if(!irReady&&!mediaReady)')==1
-assert old.count('    busy=false;await refresh();')==1
+assert old.count('  busy=false;await refresh();')==1
 assert 'TV on · HDMI 3 selected · S5 ADB offline' in old
 assert 'const until=Date.now()+100000;' in old
 new = '''// C720P_TV_SURROUND_MACRO_S5_PREFLIGHT_V26
@@ -81,7 +81,7 @@ oldrow=re.search(r'/local/c720p-tv-surround-v21\.html\?v=[^"]+',row)
 assert oldrow, 'live TV iframe link missing'
 row=row[:oldrow.start()]+('/local/c720p-tv-surround-v21.html?v=TV_S5_NETWORK_GUARD_V26_'+now)+row[oldrow.end():]
 assert ui.count(MARK)==1
-assert '    busy=false;await refresh();' not in ui[ui.index(MARK):ui.index('\nrefresh().catch',ui.index(MARK))]
+assert '  busy=false;await refresh();' not in ui[ui.index(MARK):ui.index('\nrefresh().catch',ui.index(MARK))]
 assert 'finally{' in ui[ui.index(MARK):ui.index('\nrefresh().catch',ui.index(MARK))]
 assert '/grundig-tv/hdmi3-fast' in ui
 assert ui.count('e.tv.onclick=')==1 and ui.count('e.hts.onclick=')==1
