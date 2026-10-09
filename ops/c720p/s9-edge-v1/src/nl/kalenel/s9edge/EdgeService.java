@@ -32,6 +32,7 @@ public final class EdgeService extends Service {
  private volatile String personMlBackend="none",personMlStatus="not_connected";
  private volatile long personMlFrameAgeMs=-1,personMlEventSeq=0,personMlEventsAccepted=0,personMlLastSeen=0;
  private volatile double personMlLastConfidence=0;
+ private volatile String lastMlPersonBox="";
  private long personMlPreviousSeq=-1;
  private final ArrayDeque<Long> captureTimes=new ArrayDeque<Long>();
  private volatile boolean captureEnabled=false,captureBusy=false;
@@ -239,6 +240,10 @@ public final class EdgeService extends Service {
       double confidence=state.optDouble("person_event_confidence",0);
       long evtAge=state.optLong("person_event_age_ms",-1);
       personMlLastConfidence=confidence;
+      JSONArray detected=state.optJSONArray("person_box_milli");
+      if(detected!=null&&detected.length()==4){
+       lastMlPersonBox=detected.toString();
+      }
       // Event comes from the ML app, not from a geometric motion event.
       if(evtAge>=0&&evtAge<5500&&confidence>=0.60){
        personMlEventsAccepted++;
@@ -352,6 +357,9 @@ public final class EdgeService extends Service {
    }
    owned=true;
    filename=started.optString("fname");
+   if(personMlHealthy&&lastMlPersonBox.length()>3)
+    prefs.edit().putString("clipbox_"+filename,lastMlPersonBox)
+      .putFloat("clip_person_score_"+filename,(float)personMlLastConfidence).apply();
    prefs.edit().putString("pending_filename",filename)
      .putLong("pending_start_wall",System.currentTimeMillis()).commit();
    if(!filename.matches("rec_[A-Za-z0-9._-]{5,100}\\.mp4")){
@@ -388,7 +396,8 @@ public final class EdgeService extends Service {
    long now=SystemClock.elapsedRealtime();
    o.put("ok",(personMlHealthy&&personMlLastSeen>0&&now-personMlLastSeen<5500)
      ||(ready&&lastFrameMs>0&&now-lastFrameMs<4000));
-   o.put("algorithm","s9-ml-linked-v7");
+   o.put("algorithm","s9-ml-linked-v8");
+   o.put("thumbnail_pipeline","person-context-focus-v2");
    o.put("person_ml_healthy",personMlHealthy);
    o.put("person_ml_backend",personMlBackend);
    o.put("person_ml_status",personMlStatus);
@@ -430,55 +439,119 @@ public final class EdgeService extends Service {
  }
 
 
+
  private float focusScore(Bitmap image){
-  int w=image.getWidth(),h=image.getHeight(),sum=0,steps=0;
-  for(int y=12;y<h-12;y+=12)for(int x=12;x<w-12;x+=12){
-   int current=grey(image.getPixel(x,y));
-   sum+=Math.abs(current-grey(image.getPixel(x+4,y)))
-       +Math.abs(current-grey(image.getPixel(x,y+4)));
-   steps++;
+  int w=image.getWidth(),h=image.getHeight();float sum=0;int n=0;
+  for(int y=8;y<h-8;y+=10)for(int x=8;x<w-8;x+=10){
+   int v=grey(image.getPixel(x,y));
+   sum+=Math.abs(v-grey(image.getPixel(x+3,y)))+
+        Math.abs(v-grey(image.getPixel(x,y+3)));
+   n++;
   }
-  return steps==0?0:sum/(float)steps;
+  return n==0?0:sum/n;
+ }
+ private float scoreFrame(Bitmap b,JSONArray personBox){
+  float base=focusScore(b);
+  int w=b.getWidth(),h=b.getHeight(),sum=0,n=0,low=0,high=0;
+  for(int y=10;y<h;y+=24)for(int x=10;x<w;x+=24){
+   int v=grey(b.getPixel(x,y));
+   sum+=v;n++;
+   if(v<20)low++;if(v>245)high++;
+  }
+  float mean=n>0?sum/(float)n:100f;
+  float clipped=n>0?((low+high)/(float)n):0;
+  float illumination=mean<32?0.62f:mean>215?0.78f:1.0f;
+  float score=base*illumination*(1f-Math.min(0.55f,clipped*0.5f));
+  if(personBox!=null&&personBox.length()==4){
+   try{
+    int x0=Math.max(0,personBox.optInt(1)*w/1000);
+    int x1=Math.min(w,personBox.optInt(3)*w/1000);
+    int y0=Math.max(0,personBox.optInt(0)*h/1000);
+    int y1=Math.min(h,personBox.optInt(2)*h/1000);
+    if(x1-x0>35&&y1-y0>40){
+     // Score detail around the detected person rather than prioritizing foliage.
+     int margin=Math.min(45,Math.max(5,(x1-x0)/6));
+     int sx=Math.max(0,x0-margin),sy=Math.max(0,y0-margin);
+     int sw=Math.min(w-sx,x1+margin-sx),sh=Math.min(h-sy,y1+margin-sy);
+     Bitmap person=Bitmap.createBitmap(b,sx,sy,sw,sh);
+     score=score*0.43f+focusScore(person)*0.57f;
+     if(person!=b)person.recycle();
+    }
+   }catch(Exception ignored){}
+  }
+  return score;
+ }
+ private Bitmap frameForThumbnail(Bitmap b,JSONArray personBox){
+  if(personBox==null||personBox.length()!=4)return b;
+  int w=b.getWidth(),h=b.getHeight();
+  try{
+   double left=Math.max(0,personBox.optInt(1))/1000.0;
+   double right=Math.min(1000,personBox.optInt(3))/1000.0;
+   double top=Math.max(0,personBox.optInt(0))/1000.0;
+   double bottom=Math.min(1000,personBox.optInt(2))/1000.0;
+   if(right<=left||bottom<=top)return b;
+   // Only a modest crop; preserve context around the incident as evidence.
+   double targetW=Math.max(0.72,Math.min(1.0,(right-left)*2.7));
+   if(targetW>=0.99)return b;
+   int cutW=(int)(w*targetW);
+   int cutH=(int)(h*targetW);
+   int centerX=(int)(w*(left+right)/2),centerY=(int)(h*(top+bottom)/2);
+   int sx=Math.max(0,Math.min(w-cutW,centerX-cutW/2));
+   int sy=Math.max(0,Math.min(h-cutH,centerY-cutH/2));
+   return Bitmap.createBitmap(b,sx,sy,cutW,cutH);
+  }catch(Exception e){return b;}
  }
  private boolean ensureThumbnail(File completed){
   File output=new File(completed.getAbsolutePath()+".thumb.jpg");
-  if(output.isFile()&&output.length()>4000)return true;
-  if(temperatureDeciC>=430)return false;
+  File marker=new File(output.getAbsolutePath()+".v2");
+  if(output.isFile()&&output.length()>4000&&marker.isFile())return true;
+  if(temperatureDeciC>=415)return false;
   MediaMetadataRetriever retriever=new MediaMetadataRetriever();
   Bitmap selected=null;
   float selectedScore=-1;
   try{
+   JSONArray personBox=null;
+   String box=prefs.getString("clipbox_"+completed.getName(),"");
+   if(box.startsWith("[")){try{personBox=new JSONArray(box);}catch(Exception ignored){}}
    retriever.setDataSource(completed.getAbsolutePath());
    long duration=0;
    try{duration=Long.parseLong(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));}
    catch(Exception ignored){}
    if(duration<500)duration=5000;
-   for(double frac:new double[]{0.25,0.55,0.8}){
+   for(double frac:new double[]{0.08,0.19,0.30,0.42,0.54,0.66,0.78,0.90}){
+    if(batteryTemperature()>=415)break;
     long us=(long)(duration*1000*frac);
     Bitmap frame=null;
     try{frame=retriever.getFrameAtTime(us,MediaMetadataRetriever.OPTION_CLOSEST_SYNC);}catch(Exception ignored){}
     if(frame==null)continue;
-    int width=Math.min(720,frame.getWidth());
+    int width=Math.min(960,frame.getWidth());
     int height=Math.max(1,(int)Math.round(frame.getHeight()*width/(double)Math.max(1,frame.getWidth())));
     Bitmap small=Bitmap.createScaledBitmap(frame,width,height,true);
     if(small!=frame)frame.recycle();
-    float score=focusScore(small);
+    float score=scoreFrame(small,personBox);
     if(score>selectedScore){
      if(selected!=null)selected.recycle();
      selected=small;selectedScore=score;
     }else small.recycle();
    }
-   if(selected==null)return false;
+   if(selected==null)return output.isFile()&&output.length()>4000;
+   Bitmap best=frameForThumbnail(selected,personBox);
    File tmp=new File(output.getAbsolutePath()+".partial");
    try(FileOutputStream o=new FileOutputStream(tmp)){
-    if(!selected.compress(Bitmap.CompressFormat.JPEG,85,o))throw new IOException("jpeg_encoding_failed");
+    if(!best.compress(Bitmap.CompressFormat.JPEG,91,o))throw new IOException("jpeg_encoding_failed");
     o.getFD().sync();
    }
-   if(tmp.length()<4000){tmp.delete();throw new IOException("thumbnail_small");}
+   if(best!=selected)best.recycle();
+   if(tmp.length()<4000){tmp.delete();throw new IOException("thumbnail_too_small");}
    if(!tmp.renameTo(output))throw new IOException("thumbnail_rename_failed");
+   try(FileOutputStream version=new FileOutputStream(marker)){
+    version.write("s9-person-context-focus-v2".getBytes("UTF-8"));version.getFD().sync();
+   }
    return true;
   }catch(Exception e){
-   Log.w(TAG,"thumbnail generation",e);return false;
+   Log.w(TAG,"thumbnail generation",e);
+   // Retain any existing thumbnail if processing or thermal guard fails.
+   return output.isFile()&&output.length()>4000;
   }finally{
    if(selected!=null)selected.recycle();
    try{retriever.release();}catch(Exception ignored){}
@@ -602,6 +675,12 @@ public final class EdgeService extends Service {
     manifest.put("name",filename);manifest.put("bytes",expected);
     manifest.put("sha256",digest);manifest.put("created_at_ms",System.currentTimeMillis());
     manifest.put("source","ipwebcam-local-copy");manifest.put("source_retained",true);
+    String personBox=prefs.getString("clipbox_"+filename,"");
+    if(personBox.startsWith("[")){
+     try{manifest.put("person_box_milli",new JSONArray(personBox));}catch(Exception ignored){}
+     manifest.put("person_model_confidence",prefs.getFloat("clip_person_score_"+filename,0));
+    }
+    manifest.put("thumbnail_pipeline","person-context-focus-v2");
     boolean hasThumb=ensureThumbnail(completed);
     manifest.put("thumbnail_ready",hasThumb);
     if(hasThumb)manifest.put("thumbnail_name",filename+".thumb.jpg");
