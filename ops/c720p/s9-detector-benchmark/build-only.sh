@@ -12,7 +12,7 @@ curl -fLsS --retry 2 "$ORIGIN/$REV/ops/c720p/s9-detector-benchmark/src/nl/kalene
 curl -fLsS --retry 2 "$ORIGIN/$REV/ops/c720p/s9-detector-benchmark/AndroidManifest.xml" -o "$ROOT/AndroidManifest.xml"
 cp "$HOME/c720p-home-hub/build/s9-person-ml-v1/assets/detect.tflite" "$ROOT/assets/baseline.tflite"
 curl -fLsS --retry 3 --connect-timeout 12 --max-time 120 \
- "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/int8/latest/efficientdet_lite0.tflite" \
+ "https://tfhub.dev/tensorflow/lite-model/efficientdet/lite0/detection/metadata/1?lite-format=tflite" \
  -o "$ROOT/assets/efficientdet_lite0_int8.tflite"
 python3 - "$ROOT/assets" <<'PY'
 from pathlib import Path
@@ -21,7 +21,11 @@ p=Path(sys.argv[1])
 for name in ['baseline.tflite','efficientdet_lite0_int8.tflite']:
  b=(p/name).read_bytes()
  assert 1000000<len(b)<15000000 and b[4:8]==b'TFL3',(name,len(b))
- print("BENCH_MODEL",name,len(b),hashlib.sha256(b).hexdigest())
+ sha=hashlib.sha256(b).hexdigest()
+ if name=='efficientdet_lite0_int8.tflite':
+  expected='2e04c53bfeac0ac2a30c057c7e2a777594ce39baaac35a92f74fb1e8c4fc4e0b'
+  assert sha==expected,'model_provenance_or_output_format_changed'
+ print("BENCH_MODEL",name,len(b),sha)
 PY
 JAR="$(find /usr/lib/android-sdk/platforms -name android.jar | sort -V | tail -1)"
 test -s "$JAR"

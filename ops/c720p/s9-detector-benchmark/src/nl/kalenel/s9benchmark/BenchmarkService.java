@@ -96,21 +96,32 @@ public final class BenchmarkService extends Service {
    signature.put("model_sha256",sha(bytes)).put("input_shape",Arrays.toString(dims))
     .put("input_dtype",t.dataType().toString());
    if(net.getOutputTensorCount()!=4)throw new IOException("unexpected_output_count");
-   int[] shape=net.getOutputTensor(0).shape();
-   if(shape.length!=3||shape[0]!=1||shape[2]!=4||shape[1]>100)
-    throw new IOException("unexpected_box_shape");
-   num=shape[1];
-   if(!Arrays.equals(net.getOutputTensor(1).shape(),new int[]{1,num})||
-      !Arrays.equals(net.getOutputTensor(2).shape(),new int[]{1,num})||
-      !Arrays.equals(net.getOutputTensor(3).shape(),new int[]{1}))
-     throw new IOException("unexpected_detector_layout");
+   // SSD and TFHub Lite0 expose the same four semantic tensors in
+   // different name/order layouts. Resolve by verified tensor names, never
+   // assume output index 0 is boxes.
+   String base="baseline.tflite".equals(filename)?"TFLite_Detection_PostProcess":"StatefulPartitionedCall";
+   String[] roles="baseline.tflite".equals(filename)?
+     new String[]{base,base+":1",base+":2",base+":3"}:
+     new String[]{base+":3",base+":2",base+":1",base+":0"};
+   int[] indices=new int[]{-1,-1,-1,-1};
    for(int i=0;i<4;i++){
     Tensor o=net.getOutputTensor(i);
     if(o.dataType()!=DataType.FLOAT32)throw new IOException("unexpected_output_dtype");
     signature.put("output_"+i,o.name()+" "+Arrays.toString(o.shape()));
+    for(int j=0;j<4;j++)if(roles[j].equals(o.name()))indices[j]=i;
    }
+   for(int i:indices)if(i<0)throw new IOException("unknown_model_output_semantics");
+   int[] shape=net.getOutputTensor(indices[0]).shape();
+   if(shape.length!=3||shape[0]!=1||shape[2]!=4||shape[1]>100)
+    throw new IOException("unexpected_box_shape");
+   num=shape[1];
+   if(!Arrays.equals(net.getOutputTensor(indices[1]).shape(),new int[]{1,num})||
+      !Arrays.equals(net.getOutputTensor(indices[2]).shape(),new int[]{1,num})||
+      !Arrays.equals(net.getOutputTensor(indices[3]).shape(),new int[]{1}))
+     throw new IOException("unexpected_detector_layout");
    boxes=new float[1][num][4];classes=new float[1][num];scores=new float[1][num];
-   out.put(0,boxes);out.put(1,classes);out.put(2,scores);out.put(3,count);
+   out.put(indices[0],boxes);out.put(indices[1],classes);
+   out.put(indices[2],scores);out.put(indices[3],count);
   }
   JSONObject test(Bitmap bitmap)throws Exception{
    Bitmap scaled=Bitmap.createScaledBitmap(bitmap,w,h,true);
@@ -196,8 +207,16 @@ public final class BenchmarkService extends Service {
   save(report);
  }
  private void save(JSONObject result)throws Exception{
-  File dir=new File(getExternalFilesDir(null),"bench-results");
-  if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("no_result_dir");
+  File removable=null;
+  File[] volumes=getExternalFilesDirs(null);
+  if(volumes!=null)for(File candidate:volumes){
+   if(candidate!=null && candidate.getAbsolutePath().startsWith("/storage/9C33-6BBD/")){
+    removable=candidate;break;
+   }
+  }
+  if(removable==null)throw new IOException("removable_SD_results_path_unavailable");
+  File dir=new File(removable,"bench-results");
+  if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("no_SD_result_dir");
   File output=new File(dir,"compare-"+System.currentTimeMillis()+".json");
   try(FileOutputStream stream=new FileOutputStream(output)){
    stream.write(result.toString(2).getBytes("UTF-8"));stream.getFD().sync();
