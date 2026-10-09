@@ -33,7 +33,7 @@ public final class CameraService extends Service {
  private File folder,partial,finished;
  private String cameraId="",mode="stopped",lastFailure="",lastClip="",lastReview="",backend="pending";
  private volatile boolean running=false,pilotOnly=true;
- private volatile long frames=0,motionEvents=0,completed=0,reviewed=0,failed=0;
+ private volatile long frames=0,motionEvents=0,completed=0,reviewed=0,failed=0,suppressedByRate=0;
  private long lastFrameAt=0,lastMovementAt=0,lastRecordAt=0,cooldownUntil=0,lastStart=0;
  private final Object stateLock=new Object();
  private ServerSocket apiSocket;
@@ -42,7 +42,8 @@ public final class CameraService extends Service {
  private volatile byte[] latestJpeg=new byte[0];
  private volatile long lastJpegAt=0;
  private int recoveryCount=0;
- private static final long QUIET_MS=8500,MAX_MS=50000,COOLDOWN_MS=6500;
+ private static final long QUIET_MS=8500,MAX_MS=30000,COOLDOWN_MS=25000;
+ private static final int MAX_4K_CLIPS_PER_HOUR=12;
  @Override public IBinder onBind(Intent intent){return null;}
  @Override public int onStartCommand(Intent intent,int flags,int id){
   if(intent!=null&&"STOP".equals(intent.getAction())){
@@ -190,9 +191,29 @@ public final class CameraService extends Service {
    },cameraHandler);
   }catch(Exception e){failure("preview_setup_failed",e);scheduleRecover();}
  }
+ private boolean rateAllowed(){
+  if(temporaryTest)return true;
+  android.content.SharedPreferences prefs=getSharedPreferences("native",MODE_PRIVATE);
+  long now=System.currentTimeMillis(),start=prefs.getLong("record_rate_start",0L);
+  if(start<=0||start>now||now-start>=3600000L){
+   prefs.edit().putLong("record_rate_start",now).putInt("record_rate_count",0).apply();
+   return true;
+  }
+  return prefs.getInt("record_rate_count",0)<MAX_4K_CLIPS_PER_HOUR;
+ }
+ private void noteRecordingStarted(){
+  if(temporaryTest)return;
+  android.content.SharedPreferences prefs=getSharedPreferences("native",MODE_PRIVATE);
+  prefs.edit().putInt("record_rate_count",prefs.getInt("record_rate_count",0)+1).apply();
+ }
  private void startRecording(){
   if(!running||(pilotOnly&&!temporaryTest)||!"watching".equals(mode))return;
-  if(temperature()>=415||folder.getUsableSpace()<1024L*1024*1024)return;
+  if(!rateAllowed()){
+   if(suppressedByRate++%140==0)Log.w(TAG,"4K_RATE_GUARD_12_PER_HOUR");
+   cooldownUntil=SystemClock.elapsedRealtime()+25000;
+   return;
+  }
+  if(temperature()>=415||folder.getUsableSpace()<15L*1024*1024*1024)return;
   mode="starting";lastMovementAt=SystemClock.elapsedRealtime();
   try{
    closeSession();
@@ -220,6 +241,7 @@ public final class CameraService extends Service {
       b.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO);
       s.setRepeatingRequest(b.build(),null,cameraHandler);
       recorder.start();
+      noteRecordingStarted();
       lastStart=SystemClock.elapsedRealtime();
       lastRecordAt=lastStart;
       mode="recording";
@@ -327,6 +349,9 @@ public final class CameraService extends Service {
    d.put("storage","removable_microSD_only");
    d.put("sd_free_bytes",folder==null?0:folder.getUsableSpace());
    d.put("frames",frames);d.put("motion_events",motionEvents);
+   d.put("motion_rate_suppressed",suppressedByRate);
+   d.put("recording_rate_max_per_hour",MAX_4K_CLIPS_PER_HOUR);
+   d.put("recordings_this_hour",getSharedPreferences("native",MODE_PRIVATE).getInt("record_rate_count",0));
    d.put("changed_ratio",motion.changedRatio);d.put("coherent_cells",motion.coherent);
    d.put("brightness",motion.lighting);
    d.put("recorded",completed);d.put("reviewed",reviewed);
