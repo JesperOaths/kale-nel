@@ -6,9 +6,9 @@
   if(window.__BRUIS_LIVE_CATALOG_REFRESH_V818_R5__) return;
   window.__BRUIS_LIVE_CATALOG_REFRESH_V818_R5__ = true;
 
-  // Public storefront reconciliation is explicit-only. The generated catalog
-  // snapshot is the first-paint source and checkout revalidates price/availability.
-  // Automatic timers/focus polling previously amplified Supabase catalog traffic.
+  // Render the generated catalog immediately, then reconcile its product list
+  // against the authoritative Printify cache after first paint and while browsing.
+  // One request per browser every 20 minutes maximum; hidden tabs do not poll.
   const SHARED_MIN_REFRESH_MS = 20 * 60 * 1000;
   const SHARED_CHECK_KEY = 'bruisCatalogLiveCheckAtV4';
   const SHARED_OWNER_KEY = 'bruisCatalogLiveCheckOwnerV4';
@@ -121,6 +121,7 @@
 
   function applyCatalog(live){
     products = sortByShirtBase(live);
+    saveLastGoodCatalog(products);
     updateCollectionCounts();
     reconcileCart();
     if(selectedCollection) renderProducts();
@@ -154,17 +155,28 @@
         applyCatalog(live);
       }
     } catch {
-      // Keep the already-rendered catalog. The next poll retries automatically.
+      // Keep the already-rendered catalog. A later visibility check retries.
     } finally {
       checking = false;
     }
   }
 
-  // No automatic setTimeout/setInterval/focus/visibility catalog requests.
-  // Admin/ops code owns freshness; public browsers render the generated snapshot.
+  // Initial reconciliation is deferred until after the first page render.
+  // The shared lease limits repeated network traffic across tabs.
+  function startAutomaticReconciliation(){
+    void checkCatalog();
+    window.setInterval(() => { void checkCatalog(); }, SHARED_MIN_REFRESH_MS);
+  }
+  if(document.readyState === 'complete') startAutomaticReconciliation();
+  else window.addEventListener('load', startAutomaticReconciliation, { once:true });
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible') void checkCatalog();
+  });
+  window.addEventListener('online', () => { void checkCatalog(); });
+
   window.BRUIS_LIVE_CATALOG_REFRESH_V818 = Object.freeze({
     refreshNow: () => checkCatalog(),
-    mode: 'explicit-only-static-first-r8'
+    mode: 'static-first-automatic-20m-r9'
   });
   window.addEventListener('storage', event => {
     if(event.key !== catalogCacheKey || !event.newValue) return;

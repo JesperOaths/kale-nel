@@ -58,7 +58,7 @@ async function buildPlan(sb,force=false){
   const state=await getState(sb),hour=localHour(),day=localDate(),week=localWeekKey();
   return {
     costs:force||hoursSince(state.last_cost_refresh_at)>=6,
-    catalog:force||hoursSince(state.last_catalog_check_at)>=6,
+    catalog:force||hoursSince(state.last_catalog_check_at)>=1,
     orders:true,
     backup:force||hoursSince(state.last_backup_at)>=23,
     daily_brief:force||(hour>=7&&state.last_daily_brief_date!==day),
@@ -111,7 +111,7 @@ async function runOperations(sb,force=false){
       result.costs=await refreshCostsAndCheck(sb,settings,state,ANALYTICS_URL,SERVICE_KEY);
       newAlerts.push(...(result.costs.new_alerts||[]));
     }
-    if(force||hoursSince(state.last_catalog_check_at)>=6){
+    if(force||hoursSince(state.last_catalog_check_at)>=1){
       result.catalog=await refreshCatalogAndCheck(sb,state,CATALOG_URL);
       newAlerts.push(...(result.catalog.new_alerts||[]));
     }
