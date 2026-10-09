@@ -5,8 +5,9 @@ BASE=Path("/opt/homeassistant/config/www/frontyard-security-new")
 CAT=BASE/"s9-phone-events.json"
 SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9edge/files/SecurityClips"
 NATIVE_SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9nativefourk/files/Native4K"
+SECURITY_SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4K"
 PHONE="192.168.178.250:5555"
-RE_NAME=re.compile(r"(?:rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}|native4k_[0-9]{13})[.]mp4")
+RE_NAME=re.compile(r"(?:rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}|native4k_[0-9]{13}|motion_[0-9]{13})[.]mp4")
 BLOCK=65536
 def rows():
  try:
@@ -24,7 +25,7 @@ def install_local_sd(H):
    for name,r in sorted(data.items(),reverse=True):
     events.append({"camera":"new","clip_no":name,"timestamp":r.get("timestamp"),"reason":"S9+ microSD local recording",
       "method":"s9-microSD","remote_name":name,"snapshot_name":(name+".thumb.jpg" if r.get("thumbnail") else None),
-      "size":r.get("size"),"person_status":"unreviewed","scene_category":r.get("scene_category","unreviewed")})
+      "size":r.get("size"),"person_status":r.get("scene_category","unreviewed"),"scene_category":r.get("scene_category","unreviewed"),"content_categories":r.get("content_categories",[])})
    self.js(200,{"ok":True,"camera":"new","archive_mode":"S9-microSD-only","drive_ready":False,"events":events})
    return
   match=re.fullmatch(r"/new/saved/clip/([A-Za-z0-9._-]+[.]mp4)",path)
@@ -60,7 +61,7 @@ def play_sd(handler,name,record):
   return media_headers(handler,code,size,first,last,count)
  shift=first%BLOCK
  chunks=last//BLOCK-first//BLOCK+1
- root=NATIVE_SD if name.startswith("native4k_") else SD
+ root=SECURITY_SD if name.startswith("motion_") else NATIVE_SD if name.startswith("native4k_") else SD
  args=["adb","-s",PHONE,"exec-out","dd","if="+root+"/"+name,
        "bs="+str(BLOCK),"skip="+str(first//BLOCK),"count="+str(chunks)]
  try:proc=subprocess.Popen(args,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
