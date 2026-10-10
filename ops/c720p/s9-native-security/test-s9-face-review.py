@@ -62,6 +62,7 @@ class FaceReviewTests(unittest.TestCase):
    def __init__(self):
     self.path="/new/api/saved";self.result=None
    def go(self):raise AssertionError("missing wrapped handler")
+   def do_POST(self):raise AssertionError("unexpected POST")
    def js(self,code,result):self.result=(code,result)
   self.proxy.install_local_sd(Handler)
   k="motion_1791600000000.mp4"
