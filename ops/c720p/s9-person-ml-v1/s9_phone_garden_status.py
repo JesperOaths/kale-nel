@@ -1,6 +1,6 @@
 """Read-only S9+ on-phone GPU person-gate metadata for authenticated Security.
 
-No image/video bytes, TensorFlow model, PIL, CPU inference or ADB on C720P.
+No image/video bytes or local image-model inference are processed on C720P.
 The on-phone Camera2 app owns all actual garden-region model inference.
 """
 import json
