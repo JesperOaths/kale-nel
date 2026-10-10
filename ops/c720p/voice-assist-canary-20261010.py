@@ -269,6 +269,14 @@ def test_intent_tts(ws, text: str, pipeline_id: str | None, timeout: float = 45)
         "end_reason": end_reason,
         "events": seen,
         "event_ms": marks,
+        "stage_duration_ms": {
+            stage: marks[end] - marks[start_name]
+            for stage, start_name, end in (
+                ("intent", "intent-start", "intent-end"),
+                ("tts", "tts-start", "tts-end"),
+            )
+            if start_name in marks and end in marks
+        },
         "error_codes": errors,
         "intent_response_type": response_type,
         "tts_generated": "tts-end" in seen,
