@@ -63,7 +63,8 @@ SNIPPET = r'''
   const h=Math.max(1,Number(v.videoHeight)||720);
   const quarter=state.angle===90||state.angle===270;
   const outerW=quarter?h:w,outerH=quarter?w:h;
-  const maxW=Math.max(120,Math.min((document.documentElement.clientWidth||800)*.88,1100));
+  const maxW=Math.max(120,Math.min(state.shell.getBoundingClientRect().width||
+    (document.documentElement.clientWidth||800)*.88,1100));
   const maxH=Math.max(130,Math.min((window.innerHeight||800)*.68,760));
   const factor=Math.min(maxW/outerW,maxH/outerH);
   const n=x=>Math.max(1,Math.round(x*factor))+'px';
@@ -72,17 +73,19 @@ SNIPPET = r'''
   v.style.setProperty('width',n(w),'important');
   v.style.setProperty('height',n(h),'important');
   v.style.setProperty('transform','translate(-50%,-50%) rotate('+state.angle+'deg)','important');
-  state.bar.hidden=!state.name;
+  state.bar.hidden=!(v.getAttribute('src')||v.currentSrc||v.querySelector('source'));
   state.label.textContent='Display correction '+state.angle+'° · '+
-   (state.name?(state.persisted?'saved in this browser':'browser storage unavailable'):'MP4 filename unavailable');
+   (state.name?(state.persisted?'saved in this browser':'browser storage unavailable'):'this viewing only; filename unavailable');
  }
  function refresh(state){
   const name=getName(state.video);
-  if(name!==state.name){
+  const source=String(state.video.getAttribute('src')||state.video.currentSrc||'');
+  if(name!==state.name || (!name && source!==state.source)){
    state.name=name;
    state.angle=restored(name);
    state.persisted=Boolean(name);
   }
+  state.source=source;
   setView(state);
  }
  function attach(video){
@@ -100,7 +103,7 @@ SNIPPET = r'''
    el.addEventListener('click',()=>change());bar.append(el);
   }
   const stage=document.createElement('div');stage.className='s9-rotation-stage';
-  const state={video,bar,stage,label,name:null,angle:0,persisted:false};
+  const state={video,shell,bar,stage,label,name:null,source:'',angle:0,persisted:false};
   button('↶ 90°',()=>turn(state,-90));
   button('↷ 90°',()=>turn(state,90));
   button('Reset',()=>turn(state,0,true));
@@ -114,7 +117,6 @@ SNIPPET = r'''
  }
  function turn(state,delta,reset=false){
   refresh(state);
-  if(!state.name)return;
   state.angle=reset?0:(state.angle+delta+360)%360;
   state.persisted=save(state.name,state.angle);
   setView(state);
@@ -171,8 +173,11 @@ def main():
         print("S9_ORIENTATION_ALREADY_PRESENT")
         return
     stamp=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-    backup=args.page.with_name(args.page.name+".before-orientation-"+stamp)
+    backup_root=Path("/home/jespern/c720p-home-hub/backups/s9-orientation")
+    backup_root.mkdir(parents=True,exist_ok=True)
+    backup=backup_root/("clips.html.before-orientation-"+stamp)
     shutil.copy2(args.page,backup)
+    os.chmod(backup,0o600)
     stage=args.page.with_name(args.page.name+".orientation-stage")
     try:
         stage.write_text(after)
