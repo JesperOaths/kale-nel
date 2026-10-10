@@ -12,6 +12,7 @@ test -s "$ROOT/AndroidManifest.xml"
 test -s "$ROOT/classes/nl/kalenel/s9security/PreviewJpeg.class"
 test -s "$ROOT/classes/nl/kalenel/s9security/CameraService.class"
 test -s "$ROOT/classes/nl/kalenel/s9security/CameraOrientation.class"
+test -s "$ROOT/classes/nl/kalenel/s9security/S9FaceReview.class"
 JAR="$(find /usr/lib/android-sdk/platforms -name android.jar | sort -V | tail -1)"
 test -s "$JAR"
 mkdir -p "$ROOT/assets" "$ROOT/dex" "$ROOT/pkg/lib/arm64-v8a"
@@ -20,6 +21,18 @@ for name in detect.tflite labelmap.txt; do
   cp "$REFERENCE/$name" "$ROOT/assets/$name"
 done
 test "$(stat -c '%s' "$ROOT/assets/detect.tflite")" -gt 1000000
+# Optional model provided and checksum-pinned by the deployer; no network retrieval.
+FACE_MODEL="${S9_FACE_EMBEDDING_MODEL:-$REFERENCE/face_embedding.tflite}"
+if [[ -f "$FACE_MODEL" ]]; then
+  size="$(stat -c '%s' "$FACE_MODEL")"
+  [[ "$size" -ge 100000 && "$size" -le 12000000 ]] || { echo "FACE_MODEL_SIZE_INVALID" >&2; exit 4; }
+  test -n "${S9_FACE_MODEL_SHA256:-}" || { echo "S9_FACE_MODEL_SHA256_REQUIRED" >&2; exit 4; }
+  echo "${S9_FACE_MODEL_SHA256}  $FACE_MODEL" | sha256sum -c - >/dev/null || { echo "FACE_MODEL_SHA256_MISMATCH" >&2; exit 4; }
+  cp "$FACE_MODEL" "$ROOT/assets/face_embedding.tflite"
+else
+  rm -f "$ROOT/assets/face_embedding.tflite"
+  echo "S9_FACE_REVIEW_SNAPSHOTS_ONLY: no verified embedding model provided"
+fi
 unzip -p "$LIB/tensorflow-lite.aar" jni/arm64-v8a/libtensorflowlite_jni.so > "$ROOT/pkg/lib/arm64-v8a/libtensorflowlite_jni.so"
 unzip -p "$LIB/tensorflow-lite-gpu.aar" jni/arm64-v8a/libtensorflowlite_gpu_jni.so > "$ROOT/pkg/lib/arm64-v8a/libtensorflowlite_gpu_jni.so"
 test -s "$ROOT/pkg/lib/arm64-v8a/libtensorflowlite_jni.so"
