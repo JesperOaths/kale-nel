@@ -44,15 +44,22 @@ SNIPPET = r'''
   return match?match[0]:null;
  }
  function restored(name){
-  if(!name)return 0;
+  if(!name)return null;
   try{
    const value=localStorage.getItem(PREFIX+name);
-   if(value===null)return 0;
+   if(value===null)return null;
    const angle=Number(value);
-   return [0,90,180,270].includes(angle)?angle:0;
-  }catch(_){return 0}
+   return [0,90,180,270].includes(angle)?angle:null;
+  }catch(_){return null}
  }
- function save(name,angle){
+ // Native 4K Camera2 files contain 3840x2160 landscape pixels. If Android
+ // added a -90 MP4 matrix, the browser exposes portrait video dimensions.
+ // Undo that display rotation for native clips only; preserve all originals.
+ const autoAngle=(name,video)=>
+  /^motion_[0-9]{13}[.]mp4$/.test(String(name||'')) &&
+  Number(video.videoWidth)>0 &&
+  Number(video.videoHeight)>Number(video.videoWidth)*1.3 ? 90 : 0;
+  function save(name,angle){
   if(!name)return false;
   try{localStorage.setItem(PREFIX+name,String(angle));return true}
   catch(_){return false}
@@ -74,24 +81,31 @@ SNIPPET = r'''
   v.style.setProperty('height',n(h),'important');
   v.style.setProperty('transform','translate(-50%,-50%) rotate('+state.angle+'deg)','important');
   state.bar.hidden=!(v.getAttribute('src')||v.currentSrc||v.querySelector('source'));
-  const label='Display correction '+state.angle+'° · '+
-   (state.name?(state.persisted?'saved in this browser':'browser storage unavailable'):'this viewing only; filename unavailable');
-  // MutationObserver tracks newly created video dialogs: avoid a self-triggering
+  const provenance=state.auto?
+   (state.angle===90?'automatic native 4K correction · review visually':'automatic original orientation'):
+   (state.persisted?'manual correction saved in this browser':'temporary manual correction');
+  const label='Display correction '+state.angle+'° · '+provenance;
+   // MutationObserver tracks newly created video dialogs: avoid a self-triggering
   // childList loop when the existing label text is already up to date.
   if(state.label.textContent!==label)state.label.textContent=label;
  }
  function refresh(state){
   const name=getName(state.video);
   const source=String(state.video.getAttribute('src')||state.video.currentSrc||'');
-  if(name!==state.name || (!name && source!==state.source)){
+  if(name!==state.name || source!==state.source){
+   const stored=restored(name);
    state.name=name;
-   state.angle=restored(name);
-   state.persisted=Boolean(name);
+   state.auto=stored===null;
+   state.persisted=stored!==null;
+   state.angle=state.auto?autoAngle(name,state.video):stored;
+  }else if(state.auto){
+   // Metadata may load after the source: update the angle from dimensions.
+   state.angle=autoAngle(name,state.video);
   }
   state.source=source;
   setView(state);
  }
- function attach(video){
+  function attach(video){
   if(states.has(video))return;
   // Only actual user-facing media players; leave snapshots and MJPEG alone.
   if(!video.controls)return;
@@ -106,11 +120,12 @@ SNIPPET = r'''
    el.addEventListener('click',()=>change());bar.append(el);
   }
   const stage=document.createElement('div');stage.className='s9-rotation-stage';
-  const state={video,shell,bar,stage,label,name:null,source:'',angle:0,persisted:false};
+  const state={video,shell,bar,stage,label,name:null,source:'',angle:0,auto:true,persisted:false};
   button('↶ 90°',()=>turn(state,-90));
   button('↷ 90°',()=>turn(state,90));
-  button('Reset',()=>turn(state,0,true));
-  bar.append(label);
+  button('Reset to 0°',()=>turn(state,0,true));
+  button('Auto',()=>automatic(state));
+   bar.append(label);
   parent.insertBefore(shell,video);
   shell.append(bar,stage);stage.append(video);
   states.set(video,state);active.add(state);
@@ -121,10 +136,19 @@ SNIPPET = r'''
  function turn(state,delta,reset=false){
   refresh(state);
   state.angle=reset?0:(state.angle+delta+360)%360;
+  state.auto=false;
   state.persisted=save(state.name,state.angle);
   setView(state);
  }
- function scan(){
+ function automatic(state){
+  refresh(state);
+  if(state.name)try{localStorage.removeItem(PREFIX+state.name)}catch(_){}
+  state.auto=true;
+  state.persisted=false;
+  state.angle=autoAngle(state.name,state.video);
+  setView(state);
+ }
+  function scan(){
   for(const video of document.querySelectorAll('video[controls]')){
    if(!states.has(video))attach(video);
    else refresh(states.get(video));
@@ -155,7 +179,19 @@ def patch(html: str) -> str:
     if STYLE in html:
         if html.count(STYLE) != 1 or html.count(SCRIPT) != 1:
             raise ValueError("duplicated_orientation_widget")
-        return html
+        import re
+        expression=r'<script id="s9-video-orientation-script-v1">[\s\S]*?</script>'
+        old=re.findall(expression,html)
+        expected=re.findall(expression,SNIPPET)
+        if len(old)!=1 or len(expected)!=1:
+            raise ValueError("missing_orientation_script")
+        if old[0]==expected[0]:
+            return html
+        if not all(key in old[0] for key in
+                   ('const PREFIX=', 'function getName(video)', 'function setView(state)',
+                    'state.label.textContent!==label')):
+            raise ValueError("unknown_orientation_widget_version")
+        return html.replace(old[0],expected[0],1)
     return html.replace("</body>", SNIPPET+"\n</body>", 1)
 
 def main():

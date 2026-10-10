@@ -48,6 +48,35 @@ class Tests(unittest.TestCase):
         with self.assertRaises(ValueError):
             module.patch(full.replace("</body>",module.SNIPPET+"</body>"))
 
+    def test_native_auto_rotation_scoped_and_upgradable(self):
+        updated=module.patch(self.page())
+        self.assertIn('const autoAngle=',updated)
+        self.assertIn("button('Auto'",updated)
+        self.assertIn("loadedmetadata",updated)
+        self.assertIn("state.auto?autoAngle",updated)
+        self.assertIn("if(state.label.textContent!==label)",updated)
+        # A previously installed version-one widget must be upgradeable
+        # without duplicating styles, controls, or rewriting its parent page.
+        stale=updated.replace("const autoAngle=", "const oldAutoAngle=", 1)
+        repaired=module.patch(stale)
+        self.assertEqual(repaired,updated)
+        self.assertEqual(repaired.count(module.STYLE),1)
+        self.assertEqual(repaired.count(module.SCRIPT),1)
+        node=shutil.which('node')
+        if node:
+            match=re.search(r'(const autoAngle=[\s\S]*?\? 90 : 0;)',updated)
+            self.assertIsNotNone(match)
+            checks="""
+const v=(w,h)=>({videoWidth:w,videoHeight:h});
+if(autoAngle('motion_1791600000000.mp4',v(2160,3840))!==90)throw Error('native portrait');
+if(autoAngle('motion_1791600000000.mp4',v(3840,2160))!==0)throw Error('native landscape');
+if(autoAngle('rec_2026-10-09_16-25.mp4',v(1080,1920))!==0)throw Error('legacy never automatically rotated');
+if(autoAngle('motion_1791600000000.mp4',v(0,0))!==0)throw Error('before metadata');
+"""
+            result=subprocess.run([node,'-e',match.group(1)+chr(10)+checks],
+                                  capture_output=True,text=True,timeout=15)
+            self.assertEqual(result.returncode,0,result.stderr)
+
     def test_javascript_parses(self):
         node=shutil.which('node')
         if not node:
