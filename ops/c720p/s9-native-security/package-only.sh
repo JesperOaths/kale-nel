@@ -11,6 +11,7 @@ cmp -s "$ROOT/.source-commit" "$ROOT/.compiled-commit" || { echo "APK_SOURCE_COM
 test -s "$ROOT/AndroidManifest.xml"
 test -s "$ROOT/classes/nl/kalenel/s9security/PreviewJpeg.class"
 test -s "$ROOT/classes/nl/kalenel/s9security/CameraService.class"
+test -s "$ROOT/classes/nl/kalenel/s9security/CameraOrientation.class"
 JAR="$(find /usr/lib/android-sdk/platforms -name android.jar | sort -V | tail -1)"
 test -s "$JAR"
 mkdir -p "$ROOT/assets" "$ROOT/dex" "$ROOT/pkg/lib/arm64-v8a"
