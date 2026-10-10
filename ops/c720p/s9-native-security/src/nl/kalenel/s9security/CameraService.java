@@ -654,6 +654,8 @@ public final class CameraService extends Service {
    BufferedReader in=new BufferedReader(new InputStreamReader(socket.getInputStream(),"UTF-8"));
    String line=in.readLine();if(line==null)return;
    OutputStream out=socket.getOutputStream();
+   // Read-only native microSD streaming; C720P stays a thin signed relay.
+   if(PhoneMediaRange.handle(in,out,line,folder))return;
    if(line.startsWith("GET /shot.jpg ")){
     byte[] jpg=latestJpeg;
     if(jpg.length<1000){send(out,503,"text/plain","camera_preview_not_ready".getBytes("UTF-8"));return;}
