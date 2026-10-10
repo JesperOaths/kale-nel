@@ -153,6 +153,8 @@ class Tests(unittest.TestCase):
         self.assertIn("FRAME_METRICS_ROLLBACK",source)
         self.assertIn("http_range",source)
         self.assertIn("concurrent_security_page_update",source)
+        self.assertIn("missing_staged_import",source)
+        self.assertIn("s9_native_camera_controls.py",source)
 
     def test_ui_idempotence_and_refusal_on_unknown_page(self):
         original='<html><script id="c720p-s9-phone-clips-ui-v1"></script></body></html>'
