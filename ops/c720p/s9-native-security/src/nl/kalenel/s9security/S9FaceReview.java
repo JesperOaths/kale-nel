@@ -136,7 +136,7 @@ final class S9FaceReview implements AutoCloseable {
   }
   return length>.97&&length<1.03?result:null;
  }
- private static JSONArray writeVector(float[] v){
+ private static JSONArray writeVector(float[] v)throws Exception{
   JSONArray j=new JSONArray();for(float a:v)j.put((double)a);return j;
  }
  private File index(){return new File(app.getFilesDir(),"s9-face-index-v1.json");}
