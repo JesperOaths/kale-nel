@@ -75,8 +75,9 @@ jobs:
           javac -source 8 -target 8 -cp "$CLASSPATH" -d "$WORK/classes" \
             ops/c720p/s9-native-security/src/nl/kalenel/s9security/*.java
           test -s "$WORK/classes/nl/kalenel/s9security/CameraService.class"
+          test -s "$WORK/classes/nl/kalenel/s9security/AnonymousClipTracks.class"
           test -s "$WORK/classes/nl/kalenel/s9security/PreviewJpeg.class"
-          echo "S9_NATIVE_SECURITY_ALL_SIX_JAVA_CLASSES_COMPILE_OK"
+          echo "S9_NATIVE_SECURITY_ANDROID_CLASSES_COMPILE_OK"
       - name: Test evidence budget decisions
         shell: bash
         run: |
@@ -85,3 +86,17 @@ jobs:
           trap 'rm -rf "$WORK"' EXIT
           javac -d "$WORK"             ops/c720p/s9-native-security/src/nl/kalenel/s9security/RecordingRate.java             ops/c720p/s9-native-security/tests/RecordingRateTest.java
           java -cp "$WORK" nl.kalenel.s9security.RecordingRateTest
+
+  anonymous-tracklets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Test clip-scoped anonymous tracklets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/s9-anonymous-test
+          javac -d /tmp/s9-anonymous-test \\
+            ops/c720p/s9-native-security/src/nl/kalenel/s9security/AnonymousClipTracks.java \\
+            ops/c720p/s9-native-security/tests/AnonymousClipTracksTest.java
+          java -cp /tmp/s9-anonymous-test nl.kalenel.s9security.AnonymousClipTracksTest
