@@ -363,7 +363,224 @@ public final class CameraService extends Service {
       out.write(jpeg);
       out.getFD().sync();
      }
-     if(…2806 tokens truncated…e){return;}
+     if(!temp.renameTo(target))throw new IOException("preview_evidence_rename_failed");
+     JSONObject meta=new JSONObject();
+     meta.put("name",name).put("kind","preview_only_motion_evidence")
+         .put("reason",reason).put("captured_at_ms",timestamp)
+         .put("width",640).put("height",480)
+         .put("archive","S9_microSD_only")
+         .put("person_identity","not_evaluated");
+     ClipClassifier.writeJson(new File(archive,name+".json"),meta);
+     fallbackEvidenceSaved++;
+    }catch(Exception e){fallbackEvidenceFailed++;Log.w(TAG,"fallback_evidence_failed",e);}
+   }});
+  }catch(java.util.concurrent.RejectedExecutionException e){
+   fallbackEvidenceFailed++;
+  }
+ }
+ private static boolean validCompleted4K(File movie){
+  if(!movie.isFile() || movie.length()<200000)return false;
+  MediaMetadataRetriever reader=new MediaMetadataRetriever();
+  try{
+   reader.setDataSource(movie.getAbsolutePath());
+   return "3840".equals(reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH))
+       && "2160".equals(reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT))
+       && Long.parseLong(reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))>=1000;
+  }catch(Exception e){return false;}
+  finally{try{reader.release();}catch(Exception ignored){}}
+ }
+ // Interrupted MP4s are never deleted. Only promote a fully readable 4K
+ // recording; opaque/truncated remnants stay at their original path.
+ private void queueArchiveRecovery(){
+  if(recoveryQueued || reviewer==null || folder==null)return;
+  recoveryQueued=true;
+  final File archive=folder;
+  try{reviewer.execute(new Runnable(){public void run(){recoverArchive(archive);}});}
+  catch(java.util.concurrent.RejectedExecutionException e){recoveryQueued=false;}
+ }
+ private void recoverArchive(File archive){
+  try{
+   File[] originals=archive.listFiles();
+   if(originals==null)return;
+   Arrays.sort(originals,(a,b)->Long.compare(b.lastModified(),a.lastModified()));
+   int inspected=0;
+   for(File existing:originals){
+    if(!running || inspected>=100)break;
+    String filename=existing.getName();
+    if(!filename.startsWith("motion_") || !(filename.endsWith(".mp4.recording")||filename.endsWith(".mp4")))continue;
+    inspected++;
+    if(filename.endsWith(".mp4.recording")){
+     if(existing.equals(partial) && ("recording".equals(mode)||"starting".equals(mode)))continue;
+     if(!validCompleted4K(existing)){recoveryUnplayable++;continue;}
+     File promoted=new File(archive,filename.substring(0,filename.length()-".recording".length()));
+     if(promoted.exists() || !existing.renameTo(promoted)){recoveryUnplayable++;continue;}
+     recoveredPartials++;
+     if(!new File(archive,promoted.getName()+".verified.json").exists()){
+      if(review(promoted,"startup_recovered_4k",0))recoveredReviews++;
+     }
+    }else if(!new File(archive,filename+".verified.json").exists()){
+     if(!validCompleted4K(existing)){recoveryUnplayable++;continue;}
+     if(review(existing,"startup_missing_review_repaired",0))recoveredReviews++;
+    }
+   }
+  }catch(Exception e){failure("archive_recovery_scan_failed",e);}
+ }
+ private void closeSession(){
+  activeCameraRequest=null;
+  if(session!=null){try{session.stopRepeating();}catch(Exception ignored){}
+   try{session.close();}catch(Exception ignored){}session=null;}
+ }
+ private void scheduleRecover(){
+  if(!running)return;
+  if(recoveryCount++>=3){Log.e(TAG,"CAMERA_RECOVERY_EXHAUSTED");shutdown();return;}
+  cameraHandler.postDelayed(new Runnable(){public void run(){
+   if(!running)return;
+   closeSession();
+   if(camera!=null){camera.close();camera=null;}
+   if(preview!=null){preview.close();preview=null;}
+   prepare();
+  }},3000L*recoveryCount);
+ }
+ private void watchdog(){
+  if(!running)return;
+  long n=SystemClock.elapsedRealtime();
+  if("recording".equals(mode)&&n-lastStart>MAX_MS+8000)stopRecording("watchdog_cap");
+  else if("watching".equals(mode)&&lastFrameAt>0&&n-lastFrameAt>9000){
+   failure("stalled_YUV_camera",null);scheduleRecover();
+  }
+  cameraHandler.postDelayed(new Runnable(){public void run(){watchdog();}},4500);
+ }
+ private void failure(String text,Throwable e){
+  lastFailure=text;failed++;
+  if(e==null)Log.w(TAG,text);else Log.e(TAG,text,e);
+ }
+ private JSONObject state(){
+  JSONObject d=new JSONObject();
+  try{
+   d.put("ok",running&&lastFrameAt>0&&SystemClock.elapsedRealtime()-lastFrameAt<9000);
+   d.put("mode",mode);d.put("native_4k_enabled",!pilotOnly);
+   d.put("pilot_only",pilotOnly);
+   d.put("takeover_completed",!pilotOnly&&running&&lastFrameAt>0);
+   d.put("recorder","camera2_3840x2160_h264");
+   d.put("motion_detector","regional_yuv_adaptive_v2_priority");
+   d.put("review_model","ssd_mobilenet_coco_gpu_cpu_v1");
+   d.put("mic",false);d.put("cloud_upload",false);
+   d.put("storage","removable_microSD_only");
+   d.put("sd_free_bytes",folder==null?0:folder.getUsableSpace());
+   d.put("frames",frames);d.put("motion_events",motionEvents);
+   d.put("motion_rate_suppressed",suppressedByRate);
+   d.put("recording_rate_max_per_hour",MAX_4K_CLIPS_PER_HOUR);
+   d.put("recording_rate_standard_per_hour",RecordingRate.BASE_PER_HOUR);
+   d.put("recording_rate_priority_reserve",RecordingRate.PRIORITY_RESERVE_PER_HOUR);
+   d.put("priority_motion",motion.strong);
+   d.put("priority_reserve_used",reserveUsed);
+   d.put("fallback_evidence_saved",fallbackEvidenceSaved);
+   d.put("fallback_evidence_failed",fallbackEvidenceFailed);
+   d.put("recovery_partials_finalized",recoveredPartials);
+   d.put("recovery_missing_reviews_repaired",recoveredReviews);
+   d.put("recovery_unplayable_preserved",recoveryUnplayable);
+   d.put("recordings_this_hour",getSharedPreferences("native",MODE_PRIVATE).getInt("record_rate_count",0));
+   d.put("changed_ratio",motion.changedRatio);d.put("coherent_cells",motion.coherent);
+   d.put("brightness",motion.lighting);
+   d.put("recorded",completed);d.put("reviewed",reviewed);
+   d.put("failed",failed);d.put("last_file",lastClip);d.put("last_review",lastReview);
+   d.put("review_backend",backend);d.put("last_error",lastFailure);
+   d.put("temperature_c",temperature()/10.0);
+   d.put("last_frame_age_ms",lastFrameAt==0?-1:SystemClock.elapsedRealtime()-lastFrameAt);
+   d.put("snapshot_ready",latestJpeg.length>1000);
+   d.put("snapshot_age_ms",lastJpegAt==0?-1:SystemClock.elapsedRealtime()-lastJpegAt);
+   d.put("privacy","scene_tags_no_verified_cross_recording_identity");
+   d.put("camera_controls_available",cameraControls!=null && "watching".equals(mode));
+  }catch(Exception ignored){}
+  return d;
+ }
+ private JSONObject controlsStatus()throws Exception {
+  JSONObject result=new JSONObject();
+  result.put("ok",cameraControls!=null);
+  result.put("mode",mode);
+  result.put("read_only",false);
+  result.put("changing_controls_while_recording",false);
+  result.put("controls",cameraControls==null?new JSONObject():cameraControls.status());
+  return result;
+ }
+ private JSONObject updateControl(String key,String value)throws Exception {
+  FutureTask<JSONObject> job=new FutureTask<>(()->{
+   JSONObject response=new JSONObject();
+   if(!"watching".equals(mode)||session==null||activeCameraRequest==null||cameraControls==null){
+    return response.put("ok",false).put("error","control_unavailable_during_recording_or_camera_transition");
+   }
+   JSONObject old=cameraControls.status();
+   try {
+    cameraControls.select(key,value);
+    cameraControls.apply(activeCameraRequest);
+    session.setRepeatingRequest(activeCameraRequest.build(),null,cameraHandler);
+    // Refresh the motion model after a deliberate camera setting change.
+    // Without this reset a changed crop/torch/exposure can look like an intruder.
+    motion.resetForCameraControl();
+    cameraControlSettleUntil=SystemClock.elapsedRealtime()+2500L;
+    if("focus".equals(key)&&cameraControls.isAutoFocus()){
+     CaptureRequest.Builder focus=camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+     focus.addTarget(preview.getSurface());
+     cameraControls.apply(focus);
+     focus.set(CaptureRequest.CONTROL_AF_TRIGGER,CaptureRequest.CONTROL_AF_TRIGGER_START);
+     session.capture(focus.build(),null,cameraHandler);
+    }
+    return response.put("ok",true).put("key",key)
+      .put("value",cameraControls.status().getJSONObject(key).get("value"))
+      .put("mode",mode);
+   }catch(Exception e){
+    try {
+     if(old.has(key)){
+      cameraControls.select(key,old.getJSONObject(key).getString("value"));
+      cameraControls.apply(activeCameraRequest);
+      session.setRepeatingRequest(activeCameraRequest.build(),null,cameraHandler);
+     }
+    }catch(Exception ignored){}
+    return response.put("ok",false).put("error",e instanceof IllegalArgumentException?
+       "unsupported_or_invalid_control":"camera2_control_apply_failed");
+   }
+  });
+  if(cameraHandler==null)throw new IllegalStateException("camera_handler_unavailable");
+  cameraHandler.post(job);
+  return job.get(4,TimeUnit.SECONDS);
+ }
+ private void startApi(){
+  apiThread=new Thread(new Runnable(){public void run(){
+   try(ServerSocket s=new ServerSocket(8808,5,InetAddress.getByName("127.0.0.1"))){
+    apiSocket=s;s.setSoTimeout(5000);
+    while(running){
+     try{
+      final Socket peer=s.accept();
+      Thread t=new Thread(new Runnable(){public void run(){serve(peer);}},"native-security-http");
+      t.setDaemon(true);t.start();
+     }catch(SocketTimeoutException ignored){}
+      catch(Exception e){if(running)Log.w(TAG,"http_accept",e);}
+    }
+   }catch(Exception e){if(running)Log.e(TAG,"http_listener",e);}
+  }},"native-security-status");
+  apiThread.setDaemon(true);apiThread.start();
+ }
+ private void serve(Socket peer){
+  try(Socket socket=peer){
+   socket.setSoTimeout(6000);
+   BufferedReader in=new BufferedReader(new InputStreamReader(socket.getInputStream(),"UTF-8"));
+   String line=in.readLine();if(line==null)return;
+   OutputStream out=socket.getOutputStream();
+   if(line.startsWith("GET /shot.jpg ")){
+    byte[] jpg=latestJpeg;
+    if(jpg.length<1000){send(out,503,"text/plain","camera_preview_not_ready".getBytes("UTF-8"));return;}
+    send(out,200,"image/jpeg",jpg);
+   }else if(line.startsWith("GET /mjpeg ")||line.startsWith("GET /video ")
+         ||line.startsWith("GET /videofeed ")){
+    out.write(("HTTP/1.1 200 OK\r\nContent-Type: multipart/x-mixed-replace; boundary=frame\r\n"+
+      "Cache-Control: no-store\r\nConnection: close\r\n\r\n").getBytes("UTF-8"));
+    while(running){
+     byte[] img=latestJpeg;
+     if(img.length>1000){
+      out.write(("--frame\r\nContent-Type: image/jpeg\r\nContent-Length: "+img.length+"\r\n\r\n").getBytes("UTF-8"));
+      out.write(img);out.write("\r\n".getBytes("UTF-8"));out.flush();
+     }
+     try{Thread.sleep(950);}catch(InterruptedException e){return;}
     }
    }else if(line.startsWith("GET /controls ")){
     try{send(out,200,"application/json",controlsStatus().toString().getBytes("UTF-8"));}
