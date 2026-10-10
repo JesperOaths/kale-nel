@@ -71,6 +71,32 @@ def local_stream(cfg,source,target):
  if total!=expected:raise RuntimeError("drive_stream_size_mismatch")
  return h.hexdigest()
 
+def normalize_gpu_input(original,target):
+ """Decode damaged legacy H264 on hub; phone only runs TFLite on a tiny clean MP4."""
+ details=json.loads(execute([
+  "ffprobe","-v","error","-show_entries","format=duration","-of","json",str(original)],22))
+ duration=float(details["format"]["duration"])
+ if not 1<=duration<=120:raise RuntimeError("unsupported_historical_duration")
+ rate=12.0/duration
+ cmd=["ffmpeg","-y","-nostdin","-v","error","-threads","1",
+      "-err_detect","ignore_err","-i",str(original),"-an","-sn",
+      "-vf",f"fps={rate:.6f},scale=960:540","-frames:v","12",
+      "-c:v","libx264","-preset","ultrafast","-crf","17",
+      "-profile:v","baseline","-pix_fmt","yuv420p","-g","1","-bf","0",
+      "-movflags","+faststart",str(target)]
+ execute(cmd,150)
+ n=target.stat().st_size
+ if not 100000<n<10000000:raise RuntimeError("invalid_normalized_import_size")
+ probe=json.loads(execute(["ffprobe","-v","error","-count_frames",
+           "-show_entries","stream=codec_name,width,height,nb_read_frames",
+           "-of","json",str(target)],25))
+ streams=probe.get("streams",[])
+ if len(streams)!=1 or streams[0].get("codec_name")!="h264" or \
+    (streams[0].get("width"),streams[0].get("height"))!=(960,540) or \
+    not 2<=int(streams[0].get("nb_read_frames") or 0)<=12:
+  raise RuntimeError("normalization_decode_validation_failed")
+ return hashlib.sha256(target.read_bytes()).hexdigest()
+
 def stage_one():
  import urllib.request
  with urllib.request.urlopen(APP_STATUS,timeout=9) as res:
@@ -102,14 +128,19 @@ def stage_one():
  with tempfile.TemporaryDirectory(prefix="s9-history-") as tmp:
   folder=Path(tmp);src=folder/("history_"+key+".mp4")
   cfg=json.loads(m.CONFIG.read_text())
-  sha=local_stream(cfg,source,src)
+  original_sha=local_stream(cfg,source,src)
+  gpu_mp4=folder/"gpu_input.mp4"
+  gpu_sha=normalize_gpu_input(src,gpu_mp4)
   destination=INBOX+"/history_"+key
-  execute(["adb","-s",PHONE,"push",str(src),destination+".mp4.partial"],180)
+  execute(["adb","-s",PHONE,"push",str(gpu_mp4),destination+".mp4.partial"],180)
   phone("mv",destination+".mp4.partial",destination+".mp4",timeout=18)
   meta={
    "clip_id":key,"camera":source["camera"],
-   "source_remote_name":source["remote_name"],"bytes":src.stat().st_size,
-   "source_sha256":sha,"source":"verified_historical_google_drive",
+   "source_remote_name":source["remote_name"],"bytes":gpu_mp4.stat().st_size,
+   "source_sha256":gpu_sha,"original_source_sha256":original_sha,
+   "original_source_size":src.stat().st_size,
+   "derivative_transcode":"ffmpeg_h264_960x540_all_intra_12samples",
+   "source":"verified_historical_google_drive",
    "requires_gpu_or_cpu_on_phone":True,
    "identity_claim":"none","original_drive_read_only":True}
   ready=folder/"ready.json"
@@ -117,7 +148,8 @@ def stage_one():
   execute(["adb","-s",PHONE,"push",str(ready),destination+".ready.json.partial"],25)
   phone("mv",destination+".ready.json.partial",destination+".ready.json",timeout=12)
  print("S9_HISTORY_STAGED",json.dumps({"clip_id_prefix":key[:12],
-        "size":source["size"],"source_camera":source["camera"],
+        "size":source["size"],"gpu_input_bytes":gpu_mp4.stat().st_size,
+        "source_camera":source["camera"],
         "native_archive_touched":False,"cloud_writes":False}))
 
 def category_from_phone(result):
@@ -136,7 +168,7 @@ def category_from_phone(result):
  if float(result.get("animal_confidence") or 0)>=.50:return "animal_candidate"
  return "unresolved_motion"
 
-def validate_result(result,verified):
+def validate_result(result,verified,descriptor=None):
  key=result.get("source_clip_id")
  if not isinstance(key,str) or not SAFE_ID.fullmatch(key) or key not in verified:
   raise ValueError("unknown_verified_clip")
@@ -162,6 +194,16 @@ def validate_result(result,verified):
   raise ValueError("invalid_sampled_detection_metrics")
  backend=result.get("backend")
  if backend not in ("gpu","cpu"):raise ValueError("unrecognized_phone_backend")
+ if descriptor is not None:
+  if (descriptor.get("clip_id")!=key or
+      descriptor.get("source_remote_name")!=src["remote_name"] or
+      descriptor.get("camera")!=src["camera"] or
+      descriptor.get("source_sha256")!=media_hash or
+      descriptor.get("original_source_size")!=src["size"] or
+      descriptor.get("derivative_transcode")!="ffmpeg_h264_960x540_all_intra_12samples" or
+      not isinstance(descriptor.get("original_source_sha256"),str) or
+      not SAFE_ID.fullmatch(descriptor["original_source_sha256"])):
+   raise ValueError("original_drive_and_gpu_input_provenance_mismatch")
  return {
   "clip_id":key,"camera":src["camera"],"remote_name":src["remote_name"],
   "status":"classified","category":category_from_phone(result),
@@ -174,7 +216,10 @@ def validate_result(result,verified):
   "model_kind":"S9_Android_TFLite_SSD_MobileNet_COCO_v1",
   "model_sha256":model,"review_backend":backend,
   "analysis_device":"S9_plus_GPU_or_CPU_fallback",
-  "source_sha256":media_hash,"source_clip_sampling":"up_to_12_s9_keyframes",
+  "source_sha256":media_hash,"analysis_input_sha256":media_hash,
+  "original_source_sha256":descriptor.get("original_source_sha256") if descriptor else None,
+  "analysis_input_preprocessing":descriptor.get("derivative_transcode") if descriptor else "legacy_direct_clip",
+  "source_clip_sampling":"up_to_12_s9_keyframes",
   "human_review":"pending","identity_status":"not_verified",
   "appearance_quality":"not_evaluated",
   "processed_at_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -200,10 +245,14 @@ def collect():
   raw=execute(["adb","-s",PHONE,"exec-out","cat",INBOX+"/"+name],30)
   if len(raw)>180000:raise ValueError("result_too_large")
   result=json.loads(raw)
+  ready_name=name.replace(".result.json",".ready.json")
+  ready_text=execute(["adb","-s",PHONE,"exec-out","cat",INBOX+"/"+ready_name],30)
+  if len(ready_text)>4096:raise ValueError("ready_descriptor_too_large")
+  ready=json.loads(ready_text)
   with m.LOCK.open("a") as lock:
    fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
    verified=m.original_verified()
-   entry=validate_result(result,verified)
+   entry=validate_result(result,verified,ready)
    cat=m.read_catalog()
    prev=cat["items"].get(entry["clip_id"],{})
    if prev.get("status")=="classified":
