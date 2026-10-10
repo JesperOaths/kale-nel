@@ -24,13 +24,13 @@ class Tests(unittest.TestCase):
   results={"ok":True,"mode":"watching","controls":{
    "zoom":{"available":["1.0","2.0","300.0"],"value":"2.0"},
    "torch":{"available":["off","on"],"value":"off"},
-   "recording_rotation":{"available":["0","90","180","270","45"],"value":"90"},
+   "recording_rotation":{"available":["auto","0","90","180","270","45"],"value":"auto"},
    "intrusive_legacy_camera_control":{"available":["anything"],"value":"anything"}}}
   with mock.patch.object(self.a,"local",return_value=(200,results)):
    h=self.H("/new/camera-controls");h.go()
   self.assertEqual(h.status,200)
   self.assertEqual(sorted(h.data["controls"]),["recording_rotation","torch","zoom"])
-  self.assertEqual(h.data["controls"]["recording_rotation"]["available"],["0","90","180","270"])
+  self.assertEqual(h.data["controls"]["recording_rotation"]["available"],["auto","0","90","180","270"])
   self.assertEqual(h.data["controls"]["zoom"]["available"],["1.0","2.0"])
  def test_explicit_intent_body_options_and_origin(self):
   body=json.dumps({"key":"zoom","value":"2.0"}).encode()
@@ -51,6 +51,11 @@ class Tests(unittest.TestCase):
   h["Content-Length"]=str(len(rotation))
   with mock.patch.object(self.a,"local",return_value=(200,{"ok":True,"value":"270"})):
    x=self.H("/new/camera-control",rotation,h);x.do_POST()
+  self.assertEqual(x.status,200)
+  automatic=json.dumps({"key":"recording_rotation","value":"auto"}).encode()
+  h["Content-Length"]=str(len(automatic))
+  with mock.patch.object(self.a,"local",return_value=(200,{"ok":True,"value":"auto"})):
+   x=self.H("/new/camera-control",automatic,h);x.do_POST()
   self.assertEqual(x.status,200)
   bad=json.dumps({"key":"recording_rotation","value":"45"}).encode()
   h["Content-Length"]=str(len(bad))
@@ -75,6 +80,9 @@ class Tests(unittest.TestCase):
   self.assertIn('recorder.setOrientationHint(recordingRotation())',source)
   self.assertIn('recording_rotation_degrees',source)
   self.assertIn('future_recordings_only',source)
+  self.assertIn('CameraOrientation.recordingHint',source)
+  self.assertIn('SENSOR_ORIENTATION',source)
+  self.assertIn('.put("auto")',source)
   self.assertIn('CaptureRequest.SCALER_CROP_REGION',cls)
   self.assertIn('CONTROL_AE_EXPOSURE_COMPENSATION',cls)
   self.assertIn('FLASH_MODE_TORCH',cls)
