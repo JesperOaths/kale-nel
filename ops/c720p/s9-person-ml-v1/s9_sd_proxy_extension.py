@@ -129,7 +129,11 @@ def install_local_sd(H):
       "anonymous_track_count":len(tracks) if track_status=="sampled_tracks_available" else
         (0 if track_status=="none_detected_in_sampled_frames" else None),
       "anonymous_tracks":tracks,
-      "anonymous_id_scope":"clip_only_never_across_recordings",**detection_metrics(r)})
+      "anonymous_id_scope":"clip_only_never_across_recordings",
+      "face_review_status":r.get("face_review_status","not_available_in_original_review"),
+      "face_review_sampled_frames":r.get("face_review_sampled_frames"),
+      "face_snapshots_saved":r.get("face_snapshots_saved",0),
+      "face_candidates":r.get("face_candidates",[]),**detection_metrics(r)})
    self.js(200,{"ok":True,"camera":"new","archive_mode":"S9-microSD-only","drive_ready":False,
      "events":events,"fallback_previews":list(previews.values())})
    return
