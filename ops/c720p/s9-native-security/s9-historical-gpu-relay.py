@@ -189,6 +189,7 @@ def clean_import_copy(key):
  for name in (base+".mp4",base+".mp4.verified.json",
               base+".mp4.thumb.jpg",base+".ready.json"):
   phone("rm","-f",name,timeout=12)
+ phone("mv",base+".result.json",base+".ack.json",timeout=12)
 
 def collect():
  m=cpu_catalog()
@@ -207,21 +208,21 @@ def collect():
    prev=cat["items"].get(entry["clip_id"],{})
    if prev.get("status")=="classified":
     print("S9_HISTORY_ALREADY_CLASSIFIED",entry["clip_id"][:12])
-    clean_import_copy(entry["clip_id"])
-    continue
-   cat["items"][entry["clip_id"]]=entry
-   # Preserve the existing CPU catalog model fingerprint; each phone row carries its own model SHA.
-   cat["updated_at_utc"]=datetime.datetime.now(datetime.timezone.utc).isoformat()
-   cat["summary"]=m.create_stats(cat,verified)
-   cat["private_metadata_only"]=True
-   cat["media_saved_on_hub"]=False
-   cat["biometric_identification"]=False
-   m.write_catalog(cat)
-   accepted+=1
-   clean_import_copy(entry["clip_id"])
-   print("S9_HISTORY_MERGED",json.dumps({"clip_id_prefix":entry["clip_id"][:12],
+   else:
+    cat["items"][entry["clip_id"]]=entry
+    # Preserve the CPU catalog's global model fingerprint. Each phone row has its own.
+    cat["updated_at_utc"]=datetime.datetime.now(datetime.timezone.utc).isoformat()
+    cat["summary"]=m.create_stats(cat,verified)
+    cat["private_metadata_only"]=True
+    cat["media_saved_on_hub"]=False
+    cat["biometric_identification"]=False
+    m.write_catalog(cat)
+    accepted+=1
+    print("S9_HISTORY_MERGED",json.dumps({"clip_id_prefix":entry["clip_id"][:12],
        "classification":entry["category"],"backend":entry["review_backend"],
        "progress":cat["summary"]["processed"],"source_preserved":True}))
+  # Clean imported TEMPORARY phone copy only after the catalog lock was released.
+  clean_import_copy(entry["clip_id"])
  print("S9_HISTORY_COLLECT_COMPLETE",accepted)
 
 def cycle():
