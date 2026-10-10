@@ -85,7 +85,7 @@ class FaceReviewTests(unittest.TestCase):
   from types import SimpleNamespace
   key="motion_1791600000000.mp4"
   filename="motion_1791600000000__unknown_00001__1600_0.jpg"
-  jpeg=b"\\xff\\xd8\\xff"+b"A"*2400+b"\\xff\\xd9"
+  jpeg=b"\xff\xd8\xff"+b"A"*2400+b"\xff\xd9"
   manifest={"name":key,"face_review_version":"s9_face_review_v1",
     "face_review_status":"face_embedding_unavailable_snapshots_only",
     "face_review_sampled_frames":12,
