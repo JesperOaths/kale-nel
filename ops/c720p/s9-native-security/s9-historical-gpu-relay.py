@@ -144,6 +144,7 @@ def stage_one():
   original_sha=local_stream(cfg,source,src)
   gpu_mp4=folder/"gpu_input.mp4"
   gpu_sha=normalize_gpu_input(src,gpu_mp4)
+  gpu_input_bytes=gpu_mp4.stat().st_size
   destination=INBOX+"/history_"+key
   execute(["adb","-s",PHONE,"push",str(gpu_mp4),destination+".mp4.partial"],180)
   phone("mv",destination+".mp4.partial",destination+".mp4",timeout=18)
@@ -161,7 +162,7 @@ def stage_one():
   execute(["adb","-s",PHONE,"push",str(ready),destination+".ready.json.partial"],25)
   phone("mv",destination+".ready.json.partial",destination+".ready.json",timeout=12)
  print("S9_HISTORY_STAGED",json.dumps({"clip_id_prefix":key[:12],
-        "size":source["size"],"gpu_input_bytes":gpu_mp4.stat().st_size,
+        "size":source["size"],"gpu_input_bytes":gpu_input_bytes,
         "source_camera":source["camera"],
         "native_archive_touched":False,"cloud_writes":False}))
 
