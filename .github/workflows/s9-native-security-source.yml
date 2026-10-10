@@ -21,6 +21,7 @@ jobs:
           python3 ops/c720p/s9-native-security/test-historical-event-categories.py
           python3 ops/c720p/s9-native-security/test-live-person-watch.py
           python3 ops/c720p/s9-native-security/test-native-camera-controls.py
+          python3 ops/c720p/s9-native-security/test-phone-native-media-range-proxy.py
           python3 ops/c720p/s9-native-security/test-appearance-review.py
           python3 ops/c720p/s9-native-security/test-stage-verified-deployment.py
           python3 ops/c720p/s9-native-security/test-anonymous-index-ui.py
