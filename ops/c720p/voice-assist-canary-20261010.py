@@ -200,12 +200,19 @@ def repair(ws, original, agents):
     payload["conversation_engine"] = "homeassistant"
     ws.cmd("assist_pipeline/pipeline/update", **payload)
     readback = choose_preferred(ws.cmd("assist_pipeline/pipeline/list"))
-    if readback and readback.get("id") == original_id and readback.get("conversation_engine") == "homeassistant":
+    if (readback and readback.get("id") == original_id
+            and readback.get("conversation_engine") == "homeassistant"
+            and all(readback.get(k) == original.get(k) for k in REPAIR_FIELDS
+                    if k != "conversation_engine" and k in original)):
         return "repaired_and_verified"
     payload["conversation_engine"] = previous
     try:
         ws.cmd("assist_pipeline/pipeline/update", **payload)
-        return "verification_failed_rollback_submitted"
+        restored = choose_preferred(ws.cmd("assist_pipeline/pipeline/list"))
+        if restored and all(restored.get(k) == original.get(k)
+                            for k in REPAIR_FIELDS if k in original):
+            return "verification_failed_rollback_verified"
+        return "verification_failed_rollback_unverified"
     except Exception:
         return "verification_failed_rollback_failed"
 
