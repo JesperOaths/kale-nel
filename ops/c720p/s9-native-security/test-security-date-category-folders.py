@@ -57,7 +57,7 @@ class TestFolders(unittest.TestCase):
     def test_native4k_and_legacy_filenames_accepted_in_actual_js(self):
         node=shutil.which('node')
         if not node:self.skipTest('Node unavailable')
-        js=re.findall(r'<script id="s9-saved-virtual-folders-script-v1">([\\s\\S]*?)</script>',module.SNIPPET)[0]
+        js=module.SNIPPET.split('<script id="s9-saved-virtual-folders-script-v1">',1)[1].split('</script>',1)[0]
         native=next(x.strip() for x in js.splitlines() if x.strip().startswith('const native='))
         safe=next(x.strip() for x in js.splitlines() if x.strip().startswith('const safe='))
         checks="""
@@ -67,7 +67,7 @@ for(const name of ['../../etc/passwd','native4k_bad.mp4','motion_123.mp4'])
  if(safe.test(name))throw Error('unsafe clip '+name);
 if(!native.test('native4k_1791576078307.mp4'))throw Error('native4k date grouping');
 """
-        result=subprocess.run([node,'-e',native+'\\n'+safe+'\\n'+checks],
+        result=subprocess.run([node,'-e',native+chr(10)+safe+chr(10)+checks],
             capture_output=True,text=True,timeout=15)
         self.assertEqual(result.returncode,0,result.stderr)
 
