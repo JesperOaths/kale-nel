@@ -145,7 +145,12 @@ SNIPPET=r'''
   let host=document.getElementById(ID);
   if(!host){host=tag('section');host.id=ID;root.prepend(host)}
   // Do not repopulate while the user is expanding a date/category.
-  const signature=data.map(x=>nameOf(x)+String(x.scene_category||'')).join('|');
+  // A person-model review can change while the filename/scene label stays
+  // unchanged. Include detector evidence so live category folders refresh.
+  const signature=data.map(x=>[
+   nameOf(x),x.scene_category||'',x.person_event_category||'',
+   Number(x.person_count)||0,Array.isArray(x.content_categories)?x.content_categories.join(','):''
+  ].join(':')).join('|');
   if(host.dataset.signature===signature)return;
   const open=new Set([...host.querySelectorAll('details[open]')].map(x=>x.dataset.folderKey));
   host.replaceChildren();
