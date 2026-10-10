@@ -40,6 +40,8 @@ NATIVE=[
  "patch-anonymous-tracks-ui.py",
  "test-anonymous-index-ui.py",
  "deploy-anonymous-clips-index.py",
+ "patch-s9-face-review-ui.py",
+ "test-s9-face-review.py",
 ]
 PROXY=[
  "s9_native_camera_controls.py",
@@ -47,10 +49,10 @@ PROXY=[
  "s9_drive_visitor_review.py",
  "local-sd-catalog.py",
 ]
-ANDROID=["CameraService.java","CameraControls.java","MotionGrid.java","ClipClassifier.java","OutfitEvidence.java","AnonymousClipTracks.java","CameraOrientation.java","HistoricalImportWorker.java"]
+ANDROID=["CameraService.java","CameraControls.java","MotionGrid.java","ClipClassifier.java","OutfitEvidence.java","AnonymousClipTracks.java","CameraOrientation.java","HistoricalImportWorker.java","S9FaceReview.java"]
 TESTS=["test-native-camera-controls.py","test-drive-person-batch-catalog.py",
        "test-drive-visitor-review.py","test-appearance-review.py",
-       "test-anonymous-index-ui.py"]
+       "test-anonymous-index-ui.py","test-s9-face-review.py"]
 SAFE_SHA=re.compile(r"[a-f0-9]{40}\Z")
 
 def revision(build=BUILD):
@@ -129,7 +131,10 @@ def check_ui(stage):
    "Possible repeat outfit"),
   ("s9-native-security/patch-anonymous-tracks-ui.py",
    "/opt/homeassistant/config/www/frontyard-security-new/clips.html",
-   "s9-anonymous-clips-script-v1")
+   "s9-anonymous-clips-script-v1"),
+  ("s9-native-security/patch-s9-face-review-ui.py",
+   "/opt/homeassistant/config/www/frontyard-security-new/clips.html",
+   "s9-face-review-script-v1")
  ]
  summary=[]
  for module,html,marker in patches:
