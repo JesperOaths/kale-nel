@@ -50,6 +50,27 @@ def serve_preview(handler,name,item):
  handler.end_headers()
  if handler.command!="HEAD":handler.wfile.write(blob)
 
+def detection_metrics(row):
+ """Bounded model evidence. Never expose person identity or appearance vectors."""
+ import math
+ s=row.get("person_score")
+ if isinstance(s,bool) or not isinstance(s,(int,float)) or not math.isfinite(s) or not 0<=s<=1:
+  s=None
+ n=row.get("sampled_frames")
+ if isinstance(n,bool) or not isinstance(n,int) or not 0<=n<=32:n=None
+ duration=row.get("duration_ms")
+ if isinstance(duration,bool) or not isinstance(duration,int) or not 0<duration<=120000:duration=None
+ backend=row.get("review_backend")
+ if backend not in ("cpu","gpu"):backend=None
+ event=row.get("person_event_category")
+ allowed={"single_person_repeated_candidate","single_frame_person_candidate",
+  "multiple_people_candidate","possible_group_needs_frame_review",
+  "possible_person_below_standard_threshold","no_person_model_detection"}
+ if event not in allowed:event=None
+ return {"person_score":round(float(s),3) if s is not None else None,
+         "sampled_frames":n,"duration_ms":duration,
+         "review_backend":backend,"person_event_category":event}
+
 def install_local_sd(H):
  original=H.go
  def go(self):
@@ -103,7 +124,7 @@ def install_local_sd(H):
       "anonymous_track_count":len(tracks) if track_status=="sampled_tracks_available" else
         (0 if track_status=="none_detected_in_sampled_frames" else None),
       "anonymous_tracks":tracks,
-      "anonymous_id_scope":"clip_only_never_across_recordings"})
+      "anonymous_id_scope":"clip_only_never_across_recordings",**detection_metrics(r)})
    self.js(200,{"ok":True,"camera":"new","archive_mode":"S9-microSD-only","drive_ready":False,
      "events":events,"fallback_previews":list(previews.values())})
    return

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """S9 microSD security catalog. No Google Drive access or MP4 hub caching."""
-import json,subprocess,os,re,datetime
+import json,subprocess,os,re,datetime,math
 from pathlib import Path
 ADDR="192.168.178.250:5555"
 SD="/storage/9C33-6BBD/Android/data/nl.kalenel.s9edge/files/SecurityClips"
@@ -64,6 +64,32 @@ def anonymous_clip_metadata(manifest):
   return {**status,"anonymous_tracking_status":"invalid_tracking_manifest"}
  return {"anonymous_tracking_status":"sampled_tracks_available" if tracks else "none_detected_in_sampled_frames",
          "anonymous_track_count":len(tracks),"anonymous_tracks":tracks}
+
+def safe_native_detection_stats(manifest):
+ """Whitelisted, non-biometric detection provenance from S9 signed manifests."""
+ value=manifest.get("person_confidence")
+ try:
+  score=float(value)
+  if not math.isfinite(score) or not 0<=score<=1:score=None
+ except (TypeError,ValueError,OverflowError):score=None
+ try:
+  frames=int(manifest.get("sampled_frame_count"))
+  if not 0<=frames<=32:frames=None
+ except (TypeError,ValueError,OverflowError):frames=None
+ try:
+  duration=int(manifest.get("duration_ms"))
+  if not 0<duration<=120000:duration=None
+ except (TypeError,ValueError,OverflowError):duration=None
+ backend=manifest.get("backend")
+ if backend not in ("gpu","cpu"):backend=None
+ category=manifest.get("person_event_category")
+ if category not in ("single_person_repeated_candidate","single_frame_person_candidate",
+                      "multiple_people_candidate","possible_group_needs_frame_review",
+                      "possible_person_below_standard_threshold","no_person_model_detection"):
+  category=None
+ return {"person_score":round(score,3) if score is not None else None,
+         "sampled_frames":frames,"duration_ms":duration,
+         "review_backend":backend,"person_event_category":category}
 
 def adb(*args):
  p=subprocess.run(["adb","-s",ADDR,*args],capture_output=True,timeout=32)
@@ -174,6 +200,7 @@ def main():
    rows.append({"name":name,"timestamp":when.strftime("%Y-%m-%d %H:%M"),
      "size":size,"drive_verified":False,"sd_verified":True,"sd_only":True,
      "scene_category":group,"person_count":int(m.get("person_count",0)),
+     **safe_native_detection_stats(m),
      "thumbnail":thumb,"resolution":"3840x2160","codec":"H.264",
      "content_categories":m.get("categories",[]),
      **anonymous_clip_metadata(m),

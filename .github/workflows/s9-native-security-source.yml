@@ -24,6 +24,8 @@ jobs:
           python3 ops/c720p/s9-native-security/test-appearance-review.py
           python3 ops/c720p/s9-native-security/test-stage-verified-deployment.py
           python3 ops/c720p/s9-native-security/test-anonymous-index-ui.py
+          python3 ops/c720p/s9-native-security/test-s9-integrated-security-ui.py
+          python3 -m py_compile ops/c720p/s9-native-security/patch-s9-integrated-security-ui.py
           python3 -m py_compile ops/c720p/s9-native-security/deploy-anonymous-clips-index.py ops/c720p/s9-native-security/patch-anonymous-tracks-ui.py ops/c720p/s9-person-ml-v1/local-sd-catalog.py ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py
           python3 -m py_compile ops/c720p/s9-native-security/stage-verified-deployment.py
           python3 ops/c720p/s9-native-security/test-drive-person-batch-catalog.py
