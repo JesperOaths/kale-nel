@@ -145,6 +145,15 @@ class Tests(unittest.TestCase):
         m["person_event_category"]="recognized_john"
         self.assertIsNone(self.catalog.safe_native_detection_stats(m)["person_event_category"])
 
+    def test_metrics_release_script_is_syntax_valid_and_guarded(self):
+        script=HERE/"deploy-s9-frame-metrics.py"
+        source=script.read_text()
+        compile(source,str(script),"exec")
+        self.assertIn("DRY_RUN_NO_PRODUCTION_CHANGES",source)
+        self.assertIn("FRAME_METRICS_ROLLBACK",source)
+        self.assertIn("http_range",source)
+        self.assertIn("concurrent_security_page_update",source)
+
     def test_ui_idempotence_and_refusal_on_unknown_page(self):
         original='<html><script id="c720p-s9-phone-clips-ui-v1"></script></body></html>'
         patched=self.ui.patch_text(original)
@@ -153,6 +162,10 @@ class Tests(unittest.TestCase):
         self.assertIn("C720PSecureRelay",patched)
         self.assertIn("Watch original recording",patched)
         self.assertEqual(self.ui.patch_text(patched),patched)
+        stale=patched.replace('Person presence in sampled frames: not measurable for this clip',
+                              'Previous release without frame coverage',1)
+        self.assertNotEqual(stale,patched)
+        self.assertEqual(self.ui.patch_text(stale),patched)
         with self.assertRaises(ValueError):
             self.ui.patch_text("<html><body></body></html>")
         with self.assertRaises(ValueError):

@@ -201,7 +201,19 @@ SNIPPET = r'''
 
 def patch_text(html: str) -> str:
     if STYLE_ID in html and SCRIPT_ID in html:
-        return html
+        import re
+        pattern = r'<script id="s9-anonymous-clips-script-v1">.*?</script>'
+        installed = re.findall(pattern, html, flags=re.S)
+        expected = re.findall(pattern, SNIPPET, flags=re.S)
+        if len(installed) != 1 or len(expected) != 1:
+            raise ValueError("ambiguous_anonymous_tracking_script")
+        if installed[0] == expected[0]:
+            return html
+        if not all(marker in installed[0] for marker in
+                   ("S9+ anonymous tracks & clothing colours", "C720PSecureRelay",
+                    "Watch original recording")):
+            raise ValueError("unknown_anonymous_tracking_script_version")
+        return html.replace(installed[0], expected[0], 1)
     if (STYLE_ID in html) != (SCRIPT_ID in html):
         raise ValueError("incomplete_anonymous_tracking_panel")
     if html.count("</body>") != 1 or 'c720p-s9-phone-clips-ui-v1' not in html:
