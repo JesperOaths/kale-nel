@@ -59,3 +59,32 @@ New fallback still images (\`preview_motion_<milliseconds>.jpg\`) are indexed se
 The hub Security \`clips.html\` gains a separate “S9+ motion preview evidence” gallery using the existing \`C720PSecureRelay\`. It shows the reason each still was retained, displays “not person-identified”, and opens the still in a photo dialog rather than attempting MP4 playback. When no preview events have occurred, an empty category is shown.
 
 Deploy with \`deploy-fallback-evidence.py --staging <staged-files-directory>\` after staging all three required scripts and the test from the same pinned Git commit (see commit history). It backs up the existing catalog, authenticated archive extension and Security HTML, reruns tests, refreshes the catalog, restarts only the archive service, validates the videos remain visible and auto-rolls back on failure. It never reinstalls the camera APK or changes Drive settings. Existing microSD originals are not deleted or copied to the hub.
+
+
+## Anonymous per-clip tracks (10 October 2026)
+
+The native `ClipClassifier` now attaches **temporary** `Person 1`, `Person 2`, etc. tracklets to completed 4K clips. It follows detected bounding boxes across **at most 12 sampled frames**, not all frames. Upper-clothing-colour tags are coarse RGB estimates excluding the head/face and may be unavailable under low light. The track count is **not** a count of distinct people; losing and regaining the detection may produce two track IDs for one person. Track IDs reset for every clip. No named recognition, face embeddings, or automated cross-recording identity links are produced.
+
+The on-phone `motion_<milliseconds>.mp4.verified.json` sidecar contains `anonymous_tracking_version=sampled_box_tracklets_v1`, `anonymous_track_scope=this_recording_only`, `anonymous_track_count` and an `anonymous_tracks` array. The existing 4K MP4, SHA-256 evidence, thumbnail and SD-only retention policy are unchanged.
+
+The C720P `local-sd-catalog.py` exports only allowlisted anonymized fields, rejecting malformed track IDs or timing. The authenticated `/new/api/saved` route exposes the clip-scoped data; the `patch-anonymous-tracks-ui.py` Security panel adds filtering by approximate clothing colour, grouped scenes, vehicles or animals and opens the original recording through the existing authenticated playback path. Old manifests are explicitly labelled `not_available_in_original_review`. The update **does not retroactively re-analyse** historical MP4s or create face-linked identity records.
+
+### Guarded deployment runbook (requires authorized C720P shell/ADB)
+
+Do not mistake repository merging, CI compilation or immutable staging for on-device activation. The device must be reachable and in a healthy non-recording window. Keep the current signed APK and original SD content for rollback.
+
+From a checkout of the *same immutable release revision* on the C720P:
+
+```bash
+export S9_SECURITY_REF="$(git rev-parse HEAD)"
+bash ops/c720p/s9-native-security/compile-only.sh
+bash ops/c720p/s9-native-security/package-only.sh
+python3 ops/c720p/s9-native-security/stage-verified-deployment.py
+python3 ops/c720p/s9-native-security/deploy-anonymous-clips-index.py \
+  --staging "$HOME/c720p-home-hub/build/s9-controls-validated/$S9_SECURITY_REF"
+python3 ops/c720p/s9-native-security/safe-night-guard-upgrade.py
+```
+
+`stage-verified-deployment.py` requires matching source/compile/APK commit stamps and a signed package, validates all staged inputs from that pinned commit and tests Security HTML patching. `deploy-anonymous-clips-index.py` backs up the C720P catalog/proxy/page/index, restarts only the archive service, verifies that indexed video records and stills are not lost, and rolls back on failure. `safe-night-guard-upgrade.py` separately backs up the installed phone APK and performs a guarded update with automatic old-APK restore on failure.
+
+**Live acceptance:** confirm Camera2 returns to `watching`, snapshots and 4K recording are healthy, temperature/SD safeguards remain active, `/new/api/saved` still lists existing video and fallback stills, and a newly completed 4K recording has an anonymous-track manifest with the expected local-only scope. `anonymous_track_count=0` on an analyzed clip means no people were detected **in the sampled frames**, not necessarily no people in the video. Until those acceptance checks pass on the phone and hub, the source implementation is **not deployed**.

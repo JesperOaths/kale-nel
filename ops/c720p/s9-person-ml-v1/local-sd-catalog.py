@@ -9,6 +9,62 @@ ROOT=Path("/opt/homeassistant/config/www/frontyard-security-new")
 PRIVATE_FALLBACK=Path("/home/jespern/c720p-home-hub/state/s9-fallback-evidence.json")
 RE_PREVIEW=re.compile(r"^preview_motion_([0-9]{13})[.]jpg$")
 NAMES=re.compile(r"^rec_20[0-9]{2}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}\.mp4$")
+# Only clip-scoped, on-phone predictions are mirrored as metadata. Never copy images,
+# appearance vectors, face features, names or cross-clip matching suggestions.
+TRACK_VERSION="sampled_box_tracklets_v1"
+COLOURS={"black","white","gray","red","orange","yellow","green","blue","purple_or_pink","brown","uncertain"}
+def anonymous_clip_metadata(manifest):
+ status={"anonymous_tracking_status":"not_available_in_original_review",
+         "anonymous_track_count":None,"anonymous_tracks":[]}
+ if manifest.get("anonymous_tracking_version")!=TRACK_VERSION:
+  return status
+ if manifest.get("anonymous_track_scope")!="this_recording_only":
+  return {**status,"anonymous_tracking_status":"invalid_tracking_scope"}
+ raw=manifest.get("anonymous_tracks")
+ if not isinstance(raw,list) or len(raw)>64:
+  return {**status,"anonymous_tracking_status":"invalid_tracking_manifest"}
+ duration=manifest.get("duration_ms",0)
+ try:
+  duration=int(duration)
+ except (ValueError,TypeError,OverflowError):
+  duration=0
+ if not 0<duration<=120000:
+  return {**status,"anonymous_tracking_status":"invalid_tracking_duration"}
+ tracks=[]
+ seen=set()
+ try:
+  for entry in raw:
+   if not isinstance(entry,dict):raise ValueError("invalid_track")
+   index=entry.get("temporary_track_id")
+   if isinstance(index,bool) or not isinstance(index,int) or not 1<=index<=64 or index in seen:
+    raise ValueError("invalid_track_id")
+   if entry.get("id")!=f"Person {index}" or entry.get("cross_recording_identity")!="not_attempted":
+    raise ValueError("invalid_identity_scope")
+   first,last=entry.get("first_sample_ms"),entry.get("last_sample_ms")
+   samples=entry.get("sample_count")
+   peak=entry.get("peak_detection_score")
+   colour=entry.get("upper_clothing_colour")
+   if any(isinstance(v,bool) for v in (first,last,samples,peak)):
+    raise ValueError("invalid_track_fields")
+   if not isinstance(first,int) or not isinstance(last,int) or not 0<=first<=last<=duration+100:
+    raise ValueError("invalid_sample_timing")
+   if not isinstance(samples,int) or not 1<=samples<=12:
+    raise ValueError("invalid_sample_count")
+   if not isinstance(peak,(int,float)) or not .5<=peak<=1:
+    raise ValueError("invalid_peak_score")
+   if colour not in COLOURS:colour="uncertain"
+   tracks.append({"id":f"Person {index}","temporary_track_id":index,
+    "first_sample_ms":first,"last_sample_ms":last,"sample_count":samples,
+    "peak_detection_score":round(float(peak),3),"upper_clothing_colour":colour})
+   seen.add(index)
+  claimed=manifest.get("anonymous_track_count")
+  if isinstance(claimed,bool) or not isinstance(claimed,int) or claimed!=len(tracks):
+   raise ValueError("track_count_mismatch")
+ except (ValueError,TypeError,OverflowError):
+  return {**status,"anonymous_tracking_status":"invalid_tracking_manifest"}
+ return {"anonymous_tracking_status":"sampled_tracks_available" if tracks else "none_detected_in_sampled_frames",
+         "anonymous_track_count":len(tracks),"anonymous_tracks":tracks}
+
 def adb(*args):
  p=subprocess.run(["adb","-s",ADDR,*args],capture_output=True,timeout=32)
  if p.returncode:raise OSError("phone_adb_offline")
@@ -120,6 +176,7 @@ def main():
      "scene_category":group,"person_count":int(m.get("person_count",0)),
      "thumbnail":thumb,"resolution":"3840x2160","codec":"H.264",
      "content_categories":m.get("categories",[]),
+     **anonymous_clip_metadata(m),
      "storage":"S9 native 4K Security microSD"})
   except Exception as error:problems.append(name+":"+type(error).__name__)
 

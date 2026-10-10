@@ -85,9 +85,25 @@ def install_local_sd(H):
   if path=="/new/api/saved":
    events=[]
    for name,r in sorted(data.items(),reverse=True):
+    tracks=r.get("anonymous_tracks",[])
+    valid_statuses={"not_available_in_original_review","invalid_tracking_scope","invalid_tracking_manifest",
+      "invalid_tracking_duration","sampled_tracks_available","none_detected_in_sampled_frames"}
+    track_status=r.get("anonymous_tracking_status","not_available_in_original_review")
+    if track_status not in valid_statuses:track_status="invalid_tracking_manifest"
+    if not isinstance(tracks,list) or len(tracks)>64:tracks=[];track_status="invalid_tracking_manifest"
+    if track_status!="sampled_tracks_available":tracks=[]
+    tracks=[t for t in tracks if isinstance(t,dict) and
+      isinstance(t.get("id"),str) and re.fullmatch(r"Person (?:[1-9]|[1-5][0-9]|6[0-4])",t["id"])]
     events.append({"camera":"new","clip_no":name,"timestamp":r.get("timestamp"),"reason":"S9+ microSD local recording",
       "method":"s9-microSD","remote_name":name,"snapshot_name":(name+".thumb.jpg" if r.get("thumbnail") else None),
-      "size":r.get("size"),"person_status":r.get("scene_category","unreviewed"),"scene_category":r.get("scene_category","unreviewed"),"content_categories":r.get("content_categories",[])})
+      "size":r.get("size"),"person_status":r.get("scene_category","unreviewed"),
+      "scene_category":r.get("scene_category","unreviewed"),"content_categories":r.get("content_categories",[]),
+      "person_count":r.get("person_count",0),
+      "anonymous_tracking_status":track_status,
+      "anonymous_track_count":len(tracks) if track_status=="sampled_tracks_available" else
+        (0 if track_status=="none_detected_in_sampled_frames" else None),
+      "anonymous_tracks":tracks,
+      "anonymous_id_scope":"clip_only_never_across_recordings"})
    self.js(200,{"ok":True,"camera":"new","archive_mode":"S9-microSD-only","drive_ready":False,
      "events":events,"fallback_previews":list(previews.values())})
    return
