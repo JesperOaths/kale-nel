@@ -32,7 +32,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(new.count(module.MARKER),1)
         self.assertIn("function refreshPhoneBatteries(){}",new)
         self.assertIn("cameraLive",new)
-        self.assertIn("C720PSecureRelay.fetch('/new/live.mjpg'",new)
+        self.assertIn("relay.fetch('/new/live.mjpg'",new)
         self.assertIn("C720PSecureRelay.url('/new/live.mjpg'",new)
         self.assertIn('AbortController',new)
         self.assertIn('multipart/x-mixed-replace',new)
