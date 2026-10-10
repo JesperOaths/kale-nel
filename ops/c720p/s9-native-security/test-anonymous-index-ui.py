@@ -103,6 +103,27 @@ class Tests(unittest.TestCase):
         self.assertIsNone(one.get("duration_ms"))
         self.assertIsNone(one.get("review_backend"))
 
+    def test_sampled_person_presence_is_distinct_from_peak_score(self):
+        m={"person_confidence":.91,"sampled_frame_count":12,
+           "person_frames_at_050":3,"duration_ms":20000,"backend":"gpu"}
+        stats=self.catalog.safe_native_detection_stats(m)
+        self.assertEqual(stats["person_score"],.91)
+        self.assertEqual(stats["person_detected_frames_050"],3)
+        self.assertEqual(stats["person_presence_percent"],25.0)
+        exposed=self.proxy.detection_metrics(stats)
+        self.assertEqual(exposed["person_presence_percent"],25.0)
+        self.assertEqual(exposed["person_detected_frames_050"],3)
+        m["person_frames_at_050"]=0
+        self.assertEqual(self.catalog.safe_native_detection_stats(m)["person_presence_percent"],0.0)
+        for invalid in (-1,13,True,"3",None):
+            m["person_frames_at_050"]=invalid
+            self.assertIsNone(self.catalog.safe_native_detection_stats(m)["person_presence_percent"])
+        m["sampled_frame_count"]=0
+        m["person_frames_at_050"]=0
+        self.assertIsNone(self.catalog.safe_native_detection_stats(m)["person_presence_percent"])
+        m.pop("person_frames_at_050")
+        self.assertIsNone(self.catalog.safe_native_detection_stats(m)["person_presence_percent"])
+
     def test_public_s9_person_scores_are_bounded(self):
         m={"person_confidence":.93445,"sampled_frame_count":12,
            "duration_ms":25678,"backend":"gpu",
