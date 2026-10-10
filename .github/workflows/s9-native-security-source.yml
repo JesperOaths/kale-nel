@@ -21,6 +21,8 @@ jobs:
           python3 ops/c720p/s9-native-security/test-historical-event-categories.py
           python3 ops/c720p/s9-native-security/test-live-person-watch.py
           python3 ops/c720p/s9-native-security/test-native-camera-controls.py
+          python3 ops/c720p/s9-native-security/test-native-garden-phone-status.py
+          python3 -m py_compile ops/c720p/s9-person-ml-v1/s9_phone_garden_status.py ops/c720p/s9-native-security/patch-native-garden-watch-ui.py
           python3 ops/c720p/s9-native-security/test-phone-native-media-range-proxy.py
           python3 ops/c720p/s9-native-security/test-appearance-review.py
           python3 ops/c720p/s9-native-security/test-stage-verified-deployment.py
