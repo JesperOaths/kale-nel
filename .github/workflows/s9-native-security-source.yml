@@ -36,6 +36,8 @@ jobs:
           python3 ops/c720p/s9-native-security/test-security-live-fetch-fallback.py
           python3 ops/c720p/s9-native-security/test-native-preview-8fps.py
           python3 ops/c720p/s9-native-security/test-async-preview-jpeg.py
+          python3 ops/c720p/s9-native-security/test-phone-sensor-telemetry.py
+          python3 -m py_compile ops/c720p/s9-native-security/patch-security-sensor-timing-ui.py
           python3 -m py_compile ops/c720p/s9-native-security/patch-security-live-8fps-display.py
           python3 ops/c720p/s9-native-security/test-security-saved-tab-date-nav.py
           python3 -m py_compile ops/c720p/s9-native-security/patch-security-saved-tab-date-nav.py

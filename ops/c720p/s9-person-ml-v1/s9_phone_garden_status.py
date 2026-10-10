@@ -4,6 +4,7 @@ No image/video bytes or local image-model inference are processed on C720P.
 The on-phone Camera2 app owns all actual garden-region model inference.
 """
 import json
+import math
 import threading
 import time
 import urllib.request
@@ -12,6 +13,12 @@ _URL="http://127.0.0.1:18808/status"
 _LOCK=threading.Lock()
 _LAST_COUNT=None
 _LAST_CHANGED_AT=0
+
+def _sensor_value(value,lowest,highest):
+    # Telemetry is optional on older Camera2 APKs, never fabricate 30 FPS.
+    if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value):
+        return None
+    return value if lowest<=value<=highest else None
 
 def from_phone(phone,now_ms=None):
     global _LAST_COUNT,_LAST_CHANGED_AT
@@ -47,6 +54,18 @@ def from_phone(phone,now_ms=None):
       "motion_coherent_cells":phone.get("coherent_cells"),
       "garden_zone":phone.get("garden_zone","unknown"),
       "model_check_age_ms":age,
+      "camera_sensor":{
+        "fps":_sensor_value(phone.get("sensor_result_fps"),0,120),
+        "exposure_ms":_sensor_value(phone.get("sensor_exposure_ms"),0,1000),
+        "frame_duration_ms":_sensor_value(phone.get("sensor_frame_duration_ms"),0,1000),
+        "iso":_sensor_value(phone.get("sensor_iso"),1,50000),
+        "ae_state":phone.get("sensor_ae_state") if phone.get("sensor_ae_state") in
+          ("inactive","searching","converged","locked","flash_required","precapture") else "unknown",
+        "ae_target_fps_min":_sensor_value(phone.get("sensor_ae_target_fps_min"),1,120),
+        "ae_target_fps_max":_sensor_value(phone.get("sensor_ae_target_fps_max"),1,120),
+        "capture_result_age_ms":_sensor_value(phone.get("sensor_capture_result_age_ms"),0,9000),
+        "long_exposure":phone.get("sensor_lowlight_long_exposure") is True
+      },
       "status":{
         "kind":"person_likely_candidate" if likely else
           ("no_object_detected" if recent else "garden_waiting_for_motion"),
