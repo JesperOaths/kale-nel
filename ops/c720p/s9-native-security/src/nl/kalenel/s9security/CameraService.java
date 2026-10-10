@@ -40,6 +40,9 @@ public final class CameraService extends Service {
  private volatile long reserveUsed=0,fallbackEvidenceSaved=0,fallbackEvidenceFailed=0;
  private volatile long recoveredPartials=0,recoveredReviews=0,recoveryUnplayable=0;
  private volatile boolean recoveryQueued=false;
+ private volatile boolean historicalQueued=false;
+ private volatile long historicalReviewed=0,historicalErrors=0,lastHistoricalScan=0;
+ private volatile String lastHistoricalError="";
  private long lastFallbackAt=0;
  private String captureTier="normal";
  private long lastFrameAt=0,lastMovementAt=0,lastRecordAt=0,cooldownUntil=0,lastStart=0;
@@ -451,6 +454,30 @@ public final class CameraService extends Service {
    prepare();
   }},3000L*recoveryCount);
  }
+ private void maybeHistoricalImport(){
+  long now=SystemClock.elapsedRealtime();
+  if(!running||historicalQueued||now-lastHistoricalScan<60000||folder==null||classifier==null||reviewer==null||
+     !"watching".equals(mode)||temperature()>=370||folder.getUsableSpace()<20L*1024*1024*1024)return;
+  historicalQueued=true;
+  final File sandbox=folder.getParentFile();
+  final ClipClassifier model=classifier;
+  try{
+   reviewer.execute(new Runnable(){public void run(){
+    try{
+     if(!running||!"watching".equals(mode)||temperature()>=370)return;
+     int done=new HistoricalImportWorker(sandbox,model).processOne();
+     if(done>0){historicalReviewed+=done;Log.i(TAG,"HISTORICAL_IMPORT_REVIEW_COMPLETED "+done);}
+    }catch(Exception e){
+     historicalErrors++;
+     lastHistoricalError=e.getClass().getSimpleName();
+     Log.w(TAG,"HISTORICAL_IMPORT_REVIEW_FAILED",e);
+    }finally{
+     lastHistoricalScan=SystemClock.elapsedRealtime();
+     historicalQueued=false;
+    }
+   }});
+  }catch(java.util.concurrent.RejectedExecutionException e){historicalQueued=false;}
+ }
  private void watchdog(){
   if(!running)return;
   long n=SystemClock.elapsedRealtime();
@@ -458,6 +485,7 @@ public final class CameraService extends Service {
   else if("watching".equals(mode)&&lastFrameAt>0&&n-lastFrameAt>9000){
    failure("stalled_YUV_camera",null);scheduleRecover();
   }
+  maybeHistoricalImport();
   cameraHandler.postDelayed(new Runnable(){public void run(){watchdog();}},4500);
  }
  private void failure(String text,Throwable e){
@@ -489,6 +517,11 @@ public final class CameraService extends Service {
    d.put("recovery_partials_finalized",recoveredPartials);
    d.put("recovery_missing_reviews_repaired",recoveredReviews);
    d.put("recovery_unplayable_preserved",recoveryUnplayable);
+   d.put("historical_gpu_import_version","isolated_drive_import_v1");
+   d.put("historical_import_reviewed",historicalReviewed);
+   d.put("historical_import_errors",historicalErrors);
+   d.put("historical_import_last_error_type",lastHistoricalError);
+   d.put("historical_import_queued",historicalQueued);
    d.put("recordings_this_hour",getSharedPreferences("native",MODE_PRIVATE).getInt("record_rate_count",0));
    d.put("changed_ratio",motion.changedRatio);d.put("coherent_cells",motion.coherent);
    d.put("brightness",motion.lighting);

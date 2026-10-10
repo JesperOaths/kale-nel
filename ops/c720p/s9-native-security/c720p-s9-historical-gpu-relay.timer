@@ -1,0 +1,12 @@
+[Unit]
+Description=Safely feed one historical Drive clip to S9+ after phone GPU upgrade
+
+[Timer]
+OnBootSec=5min
+OnUnitInactiveSec=3min
+AccuracySec=30s
+Persistent=true
+Unit=c720p-s9-historical-gpu-relay.service
+
+[Install]
+WantedBy=timers.target

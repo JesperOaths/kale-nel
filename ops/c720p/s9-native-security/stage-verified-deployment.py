@@ -47,7 +47,7 @@ PROXY=[
  "s9_drive_visitor_review.py",
  "local-sd-catalog.py",
 ]
-ANDROID=["CameraService.java","CameraControls.java","MotionGrid.java","ClipClassifier.java","OutfitEvidence.java","AnonymousClipTracks.java","CameraOrientation.java"]
+ANDROID=["CameraService.java","CameraControls.java","MotionGrid.java","ClipClassifier.java","OutfitEvidence.java","AnonymousClipTracks.java","CameraOrientation.java","HistoricalImportWorker.java"]
 TESTS=["test-native-camera-controls.py","test-drive-person-batch-catalog.py",
        "test-drive-visitor-review.py","test-appearance-review.py",
        "test-anonymous-index-ui.py"]
