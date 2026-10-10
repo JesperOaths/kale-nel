@@ -59,6 +59,17 @@ class CatalogTests(unittest.TestCase):
   event=m.categorize_evidence(Fake,[{}])
   self.assertEqual(event["event_category"],"vehicle_candidate")
   self.assertNotIn("identity",event)
+ def test_camera_busy_at_end_does_not_invalidate_completed_batch(self):
+  class Model:
+   def active_camera(self):
+    raise RuntimeError("camera_busy_or_hot")
+  self.assertEqual(m.report_camera_mode_safe(Model()),"paused_camera_busy_hot_or_unavailable")
+  class Healthy:
+   def active_camera(self):
+    return {"mode":"watching"}
+  self.assertEqual(m.report_camera_mode_safe(Healthy()),"watching")
+  self.assertIn("report_camera_mode_safe(m)",Path(m.__file__).read_text())
+
  def test_dry_run_has_no_classification_or_media(self):
   with mock.patch.object(m,"reader",side_effect=AssertionError("model_should_not_load")):
    m.run(2,True)
