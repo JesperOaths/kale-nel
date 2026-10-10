@@ -41,6 +41,8 @@ EXTRA=(
     "s9-native-security/test-drive-visitor-review.py",
     "s9-native-security/s9_appearance_review.py",
     "s9-native-security/drive-person-batch-catalog.py",
+    "s9-native-security/patch-s9-saved-video-orientation.py",
+    "s9-native-security/test-s9-saved-video-orientation.py",
 )
 
 def run(args, timeout=60):
@@ -108,7 +110,8 @@ def install(ref,apply):
         if relative.endswith(".py"):
             run([sys.executable,"-m","py_compile",str(stage/relative)],15)
     env={**os.environ,"PYTHONPATH":str(stage/"s9-native-security")}
-    for name in ("test-anonymous-index-ui.py","test-drive-visitor-review.py"):
+    for name in ("test-anonymous-index-ui.py","test-drive-visitor-review.py",
+                 "test-s9-saved-video-orientation.py"):
         test=stage/"s9-native-security"/name
         result=subprocess.run([sys.executable,str(test)],env=env,capture_output=True,text=True,timeout=45)
         if result.returncode:raise RuntimeError(name+" failed: "+result.stderr[-900:])
@@ -122,9 +125,12 @@ def install(ref,apply):
         raise RuntimeError("unexpected_security_page")
     visitor=load(stage/"s9-native-security/patch-drive-visitor-review-ui.py","s9_visitor_metrics")
     anon=load(stage/"s9-native-security/patch-anonymous-tracks-ui.py","s9_native_metrics")
-    page_new=anon.patch_text(visitor.patch(page_before))
-    if page_new!=anon.patch_text(visitor.patch(page_new)):
+    orientation=load(stage/"s9-native-security/patch-s9-saved-video-orientation.py","s9_orientation")
+    page_new=orientation.patch(anon.patch_text(visitor.patch(page_before)))
+    if page_new!=orientation.patch(anon.patch_text(visitor.patch(page_new))):
         raise RuntimeError("ui_patches_not_idempotent")
+    if "s9-video-orientation-script-v1" not in page_new:
+        raise RuntimeError("orientation_controls_missing")
     if "person_presence_percent" not in page_new:
         raise RuntimeError("new_analytics_widget_missing")
     print("PREFLIGHT",json.dumps({"indexed_videos":len(old_names),
