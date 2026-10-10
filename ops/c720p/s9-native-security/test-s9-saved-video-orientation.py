@@ -64,7 +64,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(repaired.count(module.SCRIPT),1)
         node=shutil.which('node')
         if node:
-            match=re.search(r'(const autoAngle=[\\s\\S]*?\\? 90 : 0;)',updated)
+            match=re.search(r'(const autoAngle=[\s\S]*?\? 90 : 0;)',updated)
             self.assertIsNotNone(match)
             checks="""
 const v=(w,h)=>({videoWidth:w,videoHeight:h});
@@ -73,7 +73,7 @@ if(autoAngle('motion_1791600000000.mp4',v(3840,2160))!==0)throw Error('native la
 if(autoAngle('rec_2026-10-09_16-25.mp4',v(1080,1920))!==0)throw Error('legacy never automatically rotated');
 if(autoAngle('motion_1791600000000.mp4',v(0,0))!==0)throw Error('before metadata');
 """
-            result=subprocess.run([node,'-e',match.group(1)+'\\n'+checks],
+            result=subprocess.run([node,'-e',match.group(1)+chr(10)+checks],
                                   capture_output=True,text=True,timeout=15)
             self.assertEqual(result.returncode,0,result.stderr)
 
