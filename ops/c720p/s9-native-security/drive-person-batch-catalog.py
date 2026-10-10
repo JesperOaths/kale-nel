@@ -166,6 +166,17 @@ def process_one(m,net,index,output,shape,cfg,src):
   "drive_read_only":True,
   "processed_at_utc":datetime.datetime.now(datetime.timezone.utc).isoformat()}
 
+def report_camera_mode_safe(model):
+ """A busy/hot camera is a valid reason to pause, not a catalog failure.
+
+ Do not turn a correctly checkpointed batch into a systemd failure because the
+ live recorder entered 4K capture between the guard and summary reporting.
+ This is reporting only; the actual preflight and per-clip guards remain strict.
+ """
+ try:return model.active_camera()["mode"]
+ except (RuntimeError,OSError,ValueError,KeyError,TypeError):
+  return "paused_camera_busy_hot_or_unavailable"
+
 def run(max_clips,dry_run):
  LOCK.parent.mkdir(parents=True,exist_ok=True)
  with LOCK.open("a") as lock:
@@ -224,7 +235,7 @@ def run(max_clips,dry_run):
    write_catalog(cat)
   final=create_stats(cat,verified)
   print("S9_DRIVE_PERSON_CATALOG_BATCH_COMPLETE",json.dumps({
-   "this_batch":done,**final,"camera_mode":m.active_camera()["mode"],
+   "this_batch":done,**final,"camera_mode":report_camera_mode_safe(m),
    "metadata_path":str(DATA),"cloud_writes":False}),flush=True)
 
 if __name__=="__main__":
