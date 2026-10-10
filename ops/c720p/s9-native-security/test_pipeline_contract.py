@@ -29,4 +29,4 @@ assert "startup_recovered" in source and "recoverArchive" in source
 assert "fallback_evidence_saved" in source
 assert "priority_reserve" in source
 
-assert fetch.count("PreviewJpeg Boot RecordingRate; do") == 2, "new classes must be both downloaded and published"
+assert fetch.count("PreviewJpeg Boot RecordingRate CameraControls; do") == 2, "all Camera2 classes must be both downloaded and published"
