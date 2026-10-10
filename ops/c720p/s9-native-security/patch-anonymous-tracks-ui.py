@@ -142,9 +142,14 @@ SNIPPET = r'''
     const list=node('ul',undefined,'s9-anon-people');
     for(const track of (Array.isArray(rec.anonymous_tracks)?rec.anonymous_tracks:[]).slice(0,64)){
      if(!/^Person (?:[1-9]|[1-5][0-9]|6[0-4])$/.test(String(track.id||'')))continue;
+     const peak=Number(track.peak_detection_score);
+     const evidence=track.peak_detection_score!==null && track.peak_detection_score!==undefined &&
+       Number.isFinite(peak) && peak>=0.5 && peak<=1
+       ? ' · peak model score '+peak.toFixed(3) : '';
      list.append(node('li',track.id+' · upper clothing: '+
        displayColour(track.upper_clothing_colour)+' · '+
-       track.sample_count+' samples · '+seconds(track.first_sample_ms)+'–'+seconds(track.last_sample_ms)));
+       track.sample_count+' samples · '+seconds(track.first_sample_ms)+'–'+seconds(track.last_sample_ms)+
+       evidence+' · unverified candidate'));
     }
     card.append(list);
    }else if(status==='none_detected_in_sampled_frames'){
