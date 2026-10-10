@@ -9,6 +9,8 @@ import tempfile
 import unittest
 
 HERE=Path(__file__).resolve().parent
+import sys
+sys.path.insert(0,str(HERE))  # native outfit-review helper shares stage with test
 REVIEW=HERE.parent/"s9-person-ml-v1/s9_drive_visitor_review.py"
 PATCH=HERE/"patch-drive-visitor-review-ui.py"
 
