@@ -18,6 +18,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 
 ROOT=Path("/home/jespern/c720p-home-hub")
 BIN=ROOT/"bin"
@@ -27,6 +28,18 @@ INBOX="/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/HistoricalDri
 SAFE_ID=re.compile(r"[a-f0-9]{64}\Z")
 MAX_BYTES=650*1024*1024
 APP_STATUS="http://127.0.0.1:18808/status"
+
+def wait_for_catalog_lock(lock,seconds=200):
+ """Share the CPU classifier's lock; another healthy batch is not a failure."""
+ deadline=time.monotonic()+seconds
+ while True:
+  try:
+   fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+   return
+  except BlockingIOError:
+   if time.monotonic()>=deadline:
+    raise RuntimeError("historical_catalog_busy_retry_next_timer")
+   time.sleep(1.0)
 
 def cpu_catalog():
  spec=importlib.util.spec_from_file_location("hist_cpu_catalog",MODEL)
@@ -108,7 +121,7 @@ def stage_one():
   raise RuntimeError("phone_camera_not_idle_or_cool")
  m=cpu_catalog()
  with m.LOCK.open("a") as lock:
-  fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+  wait_for_catalog_lock(lock)
   verified=m.original_verified()
   options=m.sorted_candidates(verified,m.read_catalog()["items"])
   # CPU runner takes the beginning. Pilot the opposite end to avoid contention.
@@ -250,7 +263,7 @@ def collect():
   if len(ready_text)>4096:raise ValueError("ready_descriptor_too_large")
   ready=json.loads(ready_text)
   with m.LOCK.open("a") as lock:
-   fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+   wait_for_catalog_lock(lock)
    verified=m.original_verified()
    entry=validate_result(result,verified,ready)
    cat=m.read_catalog()
@@ -289,7 +302,7 @@ def cycle():
  try:stage_one()
  except RuntimeError as error:
   if str(error) in ("phone_camera_not_idle_or_cool","phone_historical_worker_not_installed",
-                     "hub_disk_space_guard"):
+                     "hub_disk_space_guard","historical_catalog_busy_retry_next_timer"):
    print("S9_HISTORY_DEFERRED",str(error))
   else:raise
 
