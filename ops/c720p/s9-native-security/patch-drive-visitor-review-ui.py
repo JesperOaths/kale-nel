@@ -164,13 +164,16 @@ setInterval(()=>{if(!document.hidden)refresh()},60000);
 '''
 def patch(html):
  if STYLE_ID in html and SCRIPT_ID in html:
-  if "Possible repeat outfit — NOT confirmed" in html:return html
   import re
-  old=r'<script id="s9-drive-person-review-script-v1">.*?</script>'
-  found=re.findall(old,html,flags=re.S)
-  new=re.findall(old,SNIPPET,flags=re.S)
-  if len(found)!=1 or len(new)!=1:raise ValueError("unknown_visitor_review_script")
-  return re.sub(old,lambda _:new[0],html,count=1,flags=re.S)
+  expression=r'<script id="s9-drive-person-review-script-v1">.*?</script>'
+  found=re.findall(expression,html,flags=re.S)
+  expected=re.findall(expression,SNIPPET,flags=re.S)
+  if len(found)!=1 or len(expected)!=1:raise ValueError("ambiguous_visitor_review_script")
+  if found[0]==expected[0]:return html
+  if not all(marker in found[0] for marker in
+             ("Possible repeat outfit", "C720PSecureRelay", "manual-confirmed-visitor-v1")):
+   raise ValueError("unknown_visitor_review_script_version")
+  return html.replace(found[0],expected[0],1)
  if html.count("</body>")!=1 or 'c720p-s9-phone-clips-ui-v1' not in html:
   raise ValueError("unknown_security_page")
  return html.replace("</body>",SNIPPET+"\n</body>",1)
