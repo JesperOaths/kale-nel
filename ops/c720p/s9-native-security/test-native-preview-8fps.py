@@ -16,7 +16,10 @@ class Tests(unittest.TestCase):
   s=FILE.read_text()
   for contract in [
    'jpegEvery="recording".equals(mode)?250L:120L',
-   'PreviewJpeg.encode(frame,58)',
+   'PreviewJpeg.encode(copied,58)',
+   'PreviewJpeg.snapshot(frame)',
+   'jpegEncoder.execute(new Runnable()',
+   'jpegEncoder.shutdownNow()',
    'Thread.sleep(75)',
    'preview_jpeg_interval_ms","recording".equals(mode)?250:120',
    'recorder.setVideoSize(3840,2160)',

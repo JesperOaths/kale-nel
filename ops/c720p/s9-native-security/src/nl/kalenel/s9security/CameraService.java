@@ -33,6 +33,11 @@ public final class CameraService extends Service {
  private final MotionGrid motion=new MotionGrid();
  private ClipClassifier classifier;
  private ExecutorService reviewer;
+ // Separate lower-priority phone worker: JPEG compression must never stall
+ // Camera2's callback, which also drives motion and recording transitions.
+ private ExecutorService jpegEncoder;
+ private volatile boolean jpegBusy=false;
+ private volatile long jpegRequestedAt=0,jpegEncoded=0,jpegErrors=0;
  private File folder,partial,finished;
  private String cameraId="",mode="stopped",lastFailure="",lastClip="",lastReview="",backend="pending";
  private volatile boolean running=false,pilotOnly=true;
@@ -86,6 +91,12 @@ public final class CameraService extends Service {
   startForeground(8228,notification());
   running=true;
   reviewer=Executors.newSingleThreadExecutor();
+  jpegEncoder=Executors.newSingleThreadExecutor(job->{
+   Thread thread=new Thread(job,"s9-onphone-preview-jpeg");
+   thread.setPriority(Math.max(Thread.MIN_PRIORITY,Thread.NORM_PRIORITY-2));
+   thread.setDaemon(true);
+   return thread;
+  });
   classifier=new ClipClassifier(this);
   cameraThread=new HandlerThread("native-security-camera");cameraThread.start();
   cameraHandler=new Handler(cameraThread.getLooper());
@@ -157,11 +168,26 @@ public final class CameraService extends Service {
      if(frame==null)return;
      frames++;lastFrameAt=SystemClock.elapsedRealtime();
      long jpegEvery="recording".equals(mode)?250L:120L;
-     if(lastFrameAt-lastJpegAt>=jpegEvery){
+     if(!jpegBusy&&jpegEncoder!=null&&lastFrameAt-jpegRequestedAt>=jpegEvery){
+      // Copy the YUV planes while Image is valid, then immediately return
+      // control to motion processing; no Bitmap/JPEG on the camera thread.
+      jpegBusy=true;
+      jpegRequestedAt=lastFrameAt;
       try{
-       byte[] jpg=PreviewJpeg.encode(frame,58);
-       latestJpeg=jpg;lastJpegAt=lastFrameAt;
-      }catch(Exception e){Log.w(TAG,"preview_jpeg_failed",e);}
+       final PreviewJpeg.Snapshot copied=PreviewJpeg.snapshot(frame);
+       jpegEncoder.execute(new Runnable(){public void run(){
+        try{
+         byte[] jpg=PreviewJpeg.encode(copied,58);
+         if(running){latestJpeg=jpg;lastJpegAt=SystemClock.elapsedRealtime();jpegEncoded++;}
+        }catch(Throwable jpegError){
+         jpegErrors++;
+         Log.w(TAG,"preview_jpeg_worker_failed",jpegError);
+        }finally{jpegBusy=false;}
+       }});
+      }catch(Exception enqueueError){
+       jpegBusy=false;jpegErrors++;
+       Log.w(TAG,"preview_jpeg_submit_failed",enqueueError);
+      }
      }
      boolean change=motion.analyze(frame);
      if(temporaryTest&&!pilotStarted&&frames>12&&"watching".equals(mode)){
@@ -577,6 +603,10 @@ public final class CameraService extends Service {
    d.put("garden_zone",motion.gardenZone());
    d.put("garden_roi_top_fraction",motion.topBoundary());
    d.put("preview_jpeg_interval_ms","recording".equals(mode)?250:120);
+   d.put("preview_jpeg_async",jpegEncoder!=null);
+   d.put("preview_jpeg_worker_busy",jpegBusy);
+   d.put("preview_jpeg_encoded",jpegEncoded);
+   d.put("preview_jpeg_worker_errors",jpegErrors);
    d.put("post_record_cooldown_ms",COOLDOWN_MS);
    d.put("changed_ratio",motion.changedRatio);d.put("coherent_cells",motion.coherent);
    d.put("brightness",motion.lighting);
@@ -775,6 +805,8 @@ public final class CameraService extends Service {
   }
   if("starting".equals(mode))Log.w(TAG,"SHUTDOWN_DURING_RECORDER_PREPARE_PARTIAL_PRESERVED");
   running=false;mode="stopped";
+  if(jpegEncoder!=null){jpegEncoder.shutdownNow();jpegEncoder=null;}
+  jpegBusy=false;
   if(recorder!=null){try{recorder.stop();}catch(Exception ignored){}try{recorder.release();}catch(Exception ignored){}recorder=null;}
   closeSession();
   if(camera!=null){camera.close();camera=null;}
