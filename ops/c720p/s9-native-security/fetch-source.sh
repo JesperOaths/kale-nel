@@ -14,7 +14,7 @@ SHA="$(curl -fsSL --retry 3 --connect-timeout 10 --max-time 45 \
 mkdir -p "$ROOT/src/nl/kalenel/s9security"
 TEMP="$(mktemp -d "$ROOT/.s9-source.XXXXXXXX")"
 trap 'rm -rf "$TEMP"' EXIT
-for file in CameraActivity CameraService MotionGrid ClipClassifier PreviewJpeg Boot RecordingRate CameraControls OutfitEvidence; do
+for file in CameraActivity CameraService MotionGrid ClipClassifier PreviewJpeg Boot RecordingRate CameraControls OutfitEvidence AnonymousClipTracks; do
   curl -fsSL --retry 3 --connect-timeout 10 --max-time 45 \
     "https://raw.githubusercontent.com/$REPO/$SHA/ops/c720p/s9-native-security/src/nl/kalenel/s9security/$file.java" \
     -o "$TEMP/$file.java"
@@ -26,7 +26,7 @@ curl -fsSL --retry 3 --connect-timeout 10 --max-time 45 \
   -o "$TEMP/AndroidManifest.xml"
 grep -Fq 'package="nl.kalenel.s9security"' "$TEMP/AndroidManifest.xml"
 # Publish only after the complete source set has been fetched and validated.
-for file in CameraActivity CameraService MotionGrid ClipClassifier PreviewJpeg Boot RecordingRate CameraControls OutfitEvidence; do
+for file in CameraActivity CameraService MotionGrid ClipClassifier PreviewJpeg Boot RecordingRate CameraControls OutfitEvidence AnonymousClipTracks; do
   mv -f "$TEMP/$file.java" "$ROOT/src/nl/kalenel/s9security/$file.java"
 done
 mv -f "$TEMP/AndroidManifest.xml" "$ROOT/AndroidManifest.xml"
