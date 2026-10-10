@@ -16,7 +16,8 @@ import java.util.regex.Pattern;
 
 /** S9-only face snapshots and *unverified* embedding similarity suggestions.
  * Never transfers embeddings to the C720P or makes security decisions.
- * The face embedder is an OPTIONAL packaged TFLite asset (112x112 RGB float32 -> 128 float32).
+ * The optional TFLite encoder takes two identical 112x112 RGB NCHW float32 inputs
+ * and returns two 128D embeddings, which must pass an on-phone self-consistency check.
  * If it is absent/incompatible, snapshots still work but identities are never guessed.
  */
 final class S9FaceReview implements AutoCloseable {
@@ -68,11 +69,16 @@ final class S9FaceReview implements AutoCloseable {
    ByteBuffer model=ByteBuffer.allocateDirect(source.length).order(ByteOrder.nativeOrder());
    model.put(source);model.rewind();
    net=new Interpreter(model,new Interpreter.Options().setNumThreads(2));
-   if(!Arrays.equals(net.getInputTensor(0).shape(),new int[]{1,SIDE,SIDE,3})||
-      !Arrays.equals(net.getOutputTensor(0).shape(),new int[]{1,EMBED})||
+   // Qualcomm MobileFaceNet v0.62.2 TFLite is a paired verification model:
+   // two channel-first RGB inputs, output is two distinct 128D embeddings.
+   if(net.getInputTensorCount()!=2||net.getOutputTensorCount()!=1||
+      !Arrays.equals(net.getInputTensor(0).shape(),new int[]{1,3,SIDE,SIDE})||
+      !Arrays.equals(net.getInputTensor(1).shape(),new int[]{1,3,SIDE,SIDE})||
+      !Arrays.equals(net.getOutputTensor(0).shape(),new int[]{2,EMBED})||
       net.getInputTensor(0).dataType()!=org.tensorflow.lite.DataType.FLOAT32||
+      net.getInputTensor(1).dataType()!=org.tensorflow.lite.DataType.FLOAT32||
       net.getOutputTensor(0).dataType()!=org.tensorflow.lite.DataType.FLOAT32)
-    throw new IOException("unsupported_face_embedding_tensor_contract");
+    throw new IOException("unsupported_paired_mobilefacenet_tensor_contract");
    modelReady=true;
   }catch(Exception | LinkageError ex){
    if(net!=null){try{net.close();}catch(Exception ignored){}net=null;}
@@ -110,19 +116,31 @@ final class S9FaceReview implements AutoCloseable {
   try{
    int[] px=new int[SIDE*SIDE];square.getPixels(px,0,SIDE,0,0,SIDE,SIDE);
    ByteBuffer input=ByteBuffer.allocateDirect(SIDE*SIDE*3*4).order(ByteOrder.nativeOrder());
-   for(int p:px){
-    input.putFloat((((p>>16)&255)-127.5f)/128f);
-    input.putFloat((((p>>8)&255)-127.5f)/128f);
-    input.putFloat(((p&255)-127.5f)/128f);
+   // Model input is NCHW, not NHWC. Each channel has 112*112 float samples.
+   for(int channel=0;channel<3;channel++)for(int p:px){
+    int raw=channel==0?(p>>16)&255:channel==1?(p>>8)&255:p&255;
+    input.putFloat((raw-127.5f)/128f);
    }
    input.rewind();
-   float[][] output=new float[1][EMBED];
-   net.run(input,output);
-   float[] v=output[0];double length=0;
-   for(float a:v){if(!Float.isFinite(a))throw new IOException("nonfinite_embedding");length+=a*a;}
-   if(length<1e-8)throw new IOException("zero_embedding");
-   for(int i=0;i<v.length;i++)v[i]/=(float)Math.sqrt(length);
-   return v;
+   ByteBuffer second=ByteBuffer.allocateDirect(input.capacity()).order(ByteOrder.nativeOrder());
+   second.put(input.duplicate());second.rewind();
+   float[][] output=new float[2][EMBED];
+   Map<Integer,Object> targets=new HashMap<>();
+   targets.put(0,output);
+   net.runForMultipleInputsOutputs(new Object[]{input,second},targets);
+   // Both inputs were deliberately identical. Reject a model if its paired
+   // embeddings are not consistent before publishing any similarity result.
+   double agreement=0;
+   for(int k=0;k<2;k++){
+    double length=0;
+    for(float a:output[k]){if(!Float.isFinite(a))throw new IOException("nonfinite_embedding");length+=a*a;}
+    if(length<1e-8)throw new IOException("zero_embedding");
+    float norm=(float)Math.sqrt(length);
+    for(int j=0;j<EMBED;j++)output[k][j]/=norm;
+   }
+   for(int j=0;j<EMBED;j++)agreement+=output[0][j]*output[1][j];
+   if(!Double.isFinite(agreement)||agreement<.99)throw new IOException("paired_embedding_self_check_failed");
+   return output[0];
   }finally{if(square!=face)square.recycle();}
  }
  private static double similarity(float[] a,float[] b){
