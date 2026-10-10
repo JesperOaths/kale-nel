@@ -72,6 +72,7 @@ def audit_line(entry):
  os.chmod(AUDIT,0o600)
 
 def report():
+ import s9_appearance_review
  rows,summary=source_rows()
  doc=registry()
  links=doc["links"]
@@ -86,15 +87,19 @@ def report():
  for key,r in sorted(rows.items(),key=lambda p:(p[1].get("person_score",0),p[1].get("remote_name","")),reverse=True):
   who=links.get(key)
   if who not in doc["visitors"]:who=None
+  suggestions=s9_appearance_review.candidates(r,rows.values(),max_result=3)
   out.append({"clip_id":key,"camera":r.get("camera"),
     "remote_name":r.get("remote_name"),"category":r.get("category"),
     "person_score":r.get("person_score"),
     "max_simultaneous_person_boxes":r.get("max_simultaneous_person_boxes"),
-    "visitor_id":who,"eligible_for_one_person_link":r.get("category") in ALLOWED,
+    "visitor_id":who,"appearance_quality":r.get("appearance_quality","not_evaluated"),
+    "possible_same_outfit_clips":suggestions,
+    "eligible_for_one_person_link":r.get("category") in ALLOWED,
     "human_confirmed":bool(who),"model_prediction_not_ground_truth":True})
  return {"ok":True,"version":1,"scope":"verified_legacy_drive_clips_only",
   "model_identities_are_not_verified":True,
   "persistent_visitor_ids_require_manual_clip_confirmation":True,
+  "automatic_identity":"not_available_outfit_similarity_review_only",
   "processed":len(rows),"summary":summary,
   "drive_folders":folders,
   "visitor_ids":sorted(doc["visitors"]),
