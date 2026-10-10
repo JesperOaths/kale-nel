@@ -35,9 +35,12 @@ public final class MotionGrid {
     "near".equals(gardenZone)?0.42f:
     "wide".equals(gardenZone)?0.28f:0f;
  }
- public boolean insideGarden(float x,float y){
-  float margin="strict".equals(gardenZone)?0.09f:
+ public float sideMargin(){
+  return "strict".equals(gardenZone)?0.09f:
     "near".equals(gardenZone)?0.045f:0f;
+ }
+ public boolean insideGarden(float x,float y){
+  float margin=sideMargin();
   return x>=margin&&x<=1f-margin&&y>=topBoundary()&&y<=1f;
  }
 
