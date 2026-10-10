@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Offline, synthetic contracts for the optional S9+ historical import path."""
 import importlib.util
+import fcntl
+import threading
+import tempfile
+import time
 import json
 from pathlib import Path
 import unittest
@@ -23,6 +27,22 @@ class HistoricalGpuReviewTests(unittest.TestCase):
    "sampled_frame_count":8,"person_frames_at_050":2,"person_confidence":.83,
    "person_event_category":"single_person_repeated_candidate",
    "vehicle_confidence":0.1,"animal_confidence":0.0,"backend":"gpu"}
+ def test_waits_for_existing_catalog_lock(self):
+  with tempfile.TemporaryDirectory() as root:
+   location=Path(root)/"lock"
+   with location.open("a") as owner,location.open("a") as contender:
+    fcntl.flock(owner,fcntl.LOCK_EX|fcntl.LOCK_NB)
+    outcomes=[]
+    worker=threading.Thread(target=lambda:outcomes.append(m.wait_for_catalog_lock(contender,3)))
+    worker.start()
+    time.sleep(.12)
+    self.assertTrue(worker.is_alive())
+    fcntl.flock(owner,fcntl.LOCK_UN)
+    worker.join(timeout=3)
+    self.assertFalse(worker.is_alive())
+    self.assertEqual(outcomes,[None])
+    fcntl.flock(contender,fcntl.LOCK_UN)
+
  def test_valid_phone_result_provenance_and_sampling(self):
   result=m.validate_result(self.result,self.verified)
   self.assertEqual(result["category"],"single_person_event_candidate")
