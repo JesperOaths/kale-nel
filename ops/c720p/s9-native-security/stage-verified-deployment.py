@@ -40,6 +40,7 @@ NATIVE=[
  "patch-anonymous-tracks-ui.py",
  "test-anonymous-index-ui.py",
  "deploy-anonymous-clips-index.py",
+ "deploy-s9-frame-metrics.py",
  "patch-s9-face-review-ui.py",
  "test-s9-face-review.py",
 ]
@@ -48,6 +49,8 @@ PROXY=[
  "s9_sd_proxy_extension.py",
  "s9_drive_visitor_review.py",
  "local-sd-catalog.py",
+ "s9_human_thumbnail_review.py",
+ "s9_phone_garden_status.py",
 ]
 ANDROID=["CameraService.java","CameraControls.java","MotionGrid.java","ClipClassifier.java","OutfitEvidence.java","AnonymousClipTracks.java","CameraOrientation.java","HistoricalImportWorker.java","S9FaceReview.java"]
 TESTS=["test-native-camera-controls.py","test-drive-person-batch-catalog.py",
