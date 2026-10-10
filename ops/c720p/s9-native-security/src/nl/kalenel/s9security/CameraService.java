@@ -9,6 +9,7 @@ import android.media.*;
 import android.os.*;
 import android.util.*;
 import android.view.Surface;
+import android.view.WindowManager;
 import org.json.*;
 import java.io.*;
 import java.net.*;
@@ -226,12 +227,21 @@ public final class CameraService extends Service {
   if(RecordingRate.reserve(count))reserveUsed++;
   prefs.edit().putInt("record_rate_count",count+1).apply();
  }
- // MediaRecorder writes a playback display matrix rather than rotating pixels.
- // This is a stationary camera: preserve 90-degree default until the user
- // explicitly selects the mounted orientation through Security Controls.
+ // Preserve the installed Camera2 APK's sensor/display-aware recording hint.
+ // Manual overrides are for a verified fixed mounting angle only.
  private int recordingRotation(){
-  int angle=getSharedPreferences("native",MODE_PRIVATE).getInt("recording_rotation_degrees",90);
-  return angle==0||angle==90||angle==180||angle==270?angle:90;
+  int override=getSharedPreferences("native",MODE_PRIVATE).getInt("recording_rotation_degrees",-1);
+  if(override==0||override==90||override==180||override==270)return override;
+  CameraManager manager=(CameraManager)getSystemService(Context.CAMERA_SERVICE);
+  WindowManager display=(WindowManager)getSystemService(Context.WINDOW_SERVICE);
+  try{
+   Integer sensor=manager.getCameraCharacteristics(cameraId).get(CameraCharacteristics.SENSOR_ORIENTATION);
+   if(sensor==null||display==null)throw new IllegalStateException("orientation_sensor_unavailable");
+   return CameraOrientation.recordingHint(sensor,display.getDefaultDisplay().getRotation());
+  }catch(Exception problem){
+   Log.w(TAG,"auto_orientation_fallback",problem);
+   return 90;
+  }
  }
  private void startRecording(){
   if(!running||(pilotOnly&&!temporaryTest)||!"watching".equals(mode))return;
