@@ -166,7 +166,7 @@ def agent_ids(data):
 def classify_unavailable_agent(pipeline, agents):
     if not pipeline or not agents:
         return False
-    return pipeline.get("conversation_engine") not in agents and "homeassistant" in agents
+    return pipeline.get("conversation_engine") not in agents and "conversation.home_assistant" in agents
 
 def sanitize_pipeline(data):
     preferred = choose_preferred(data)
@@ -197,11 +197,11 @@ def repair(ws, original, agents):
     payload = {k: original[k] for k in REPAIR_FIELDS if k in original}
     payload["pipeline_id"] = original_id
     previous = payload["conversation_engine"]
-    payload["conversation_engine"] = "homeassistant"
+    payload["conversation_engine"] = "conversation.home_assistant"
     ws.cmd("assist_pipeline/pipeline/update", **payload)
     readback = choose_preferred(ws.cmd("assist_pipeline/pipeline/list"))
     if (readback and readback.get("id") == original_id
-            and readback.get("conversation_engine") == "homeassistant"
+            and readback.get("conversation_engine") == "conversation.home_assistant"
             and all(readback.get(k) == original.get(k) for k in REPAIR_FIELDS
                     if k != "conversation_engine" and k in original)):
         return "repaired_and_verified"
@@ -263,7 +263,8 @@ def test_intent_tts(ws, text: str, pipeline_id: str | None, timeout: float = 45)
             errors.append(str(stage.get("code") or "pipeline_error"))
             end_reason = "pipeline_error"
         if name == "run-end":
-            end_reason = "finished"
+            if not errors:
+                end_reason = "finished"
             break
     return {
         "end_reason": end_reason,
@@ -280,6 +281,9 @@ def test_intent_tts(ws, text: str, pipeline_id: str | None, timeout: float = 45)
         "error_codes": errors,
         "intent_response_type": response_type,
         "tts_generated": "tts-end" in seen,
+        "passed": (end_reason == "finished" and not errors
+                   and response_type is not None and response_type != "error"
+                   and "tts-end" in seen),
         "transcript_saved": False,
     }
 
@@ -313,7 +317,7 @@ def main():
         out["pipelines"] = sanitize_pipeline(pipelines)
         agents_response = ws.cmd("conversation/agent/list")
         agents = agent_ids(agents_response)
-        out["agents"] = {"count": len(agents), "built_in_available": "homeassistant" in agents}
+        out["agents"] = {"count": len(agents), "built_in_available": "conversation.home_assistant" in agents}
         original = choose_preferred(pipelines)
         out["preferred_agent_available"] = bool(original and original.get("conversation_engine") in agents)
         if args.repair_unavailable_agent:
@@ -340,7 +344,7 @@ def main():
     if "error_type" in out:
         return 2
     test = out["test"]
-    if isinstance(test, dict) and (test.get("end_reason") != "finished" or not test.get("tts_generated")):
+    if isinstance(test, dict) and not test.get("passed"):
         return 1
     return 0
 
