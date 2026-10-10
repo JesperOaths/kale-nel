@@ -41,6 +41,8 @@ public final class CameraService extends Service {
  private volatile long recoveredPartials=0,recoveredReviews=0,recoveryUnplayable=0;
  private volatile boolean recoveryQueued=false;
  private volatile boolean historicalQueued=false;
+ private volatile boolean faceBackfillQueued=false;
+ private volatile long faceBackfillDone=0,faceBackfillErrors=0,lastFaceBackfillScan=0;
  private volatile long historicalReviewed=0,historicalErrors=0,lastHistoricalScan=0;
  private volatile String lastHistoricalError="";
  private long lastFallbackAt=0;
@@ -478,6 +480,48 @@ public final class CameraService extends Service {
    }});
   }catch(java.util.concurrent.RejectedExecutionException e){historicalQueued=false;}
  }
+ /** Scan finalized Security4K person recordings at idle: one clip per phone-local pass. */
+ private void maybeFaceBackfill(){
+  long now=SystemClock.elapsedRealtime();
+  if(!running||faceBackfillQueued||now-lastFaceBackfillScan<180000||
+     folder==null||reviewer==null||classifier==null||
+     !"watching".equals(mode)||temperature()>=370||
+     folder.getUsableSpace()<20L*1024*1024*1024)return;
+  faceBackfillQueued=true;
+  final File target=folder;
+  try{
+   reviewer.execute(new Runnable(){public void run(){
+    try{
+     if(!running||!"watching".equals(mode)||temperature()>=370)return;
+     File[] manifests=target.listFiles((d,n)->n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
+     if(manifests==null)return;
+     Arrays.sort(manifests,Comparator.comparing(File::getName));
+     for(File manifest:manifests){
+      if(!running||!"watching".equals(mode)||temperature()>=370)return;
+      if(manifest.length()<100||manifest.length()>28000)continue;
+      String mp4name=manifest.getName().replace(".verified.json","");
+      File video=new File(target,mp4name);
+      if(!video.isFile()||video.length()<100000||video.length()>800000000)continue;
+      try{
+       byte[] bytes=new byte[(int)manifest.length()];
+       try(InputStream in=new FileInputStream(manifest)){
+        int off=0;while(off<bytes.length){int n=in.read(bytes,off,bytes.length-off);if(n<0)throw new EOFException();off+=n;}
+       }
+       JSONObject meta=new JSONObject(new String(bytes,"UTF-8"));
+       if(meta.optInt("person_count",0)<=0||meta.has("face_review_version"))continue;
+       if(!mp4name.equals(meta.optString("name"))||meta.optLong("bytes",-1)!=video.length())continue;
+       if(review(video,"onphone_face_backfill",0))faceBackfillDone++;
+       else faceBackfillErrors++;
+       return;
+      }catch(Exception e){faceBackfillErrors++;Log.w(TAG,"face_backfill_manifest_skip",e);}
+     }
+    }finally{
+     lastFaceBackfillScan=SystemClock.elapsedRealtime();
+     faceBackfillQueued=false;
+    }
+   }});
+  }catch(java.util.concurrent.RejectedExecutionException e){faceBackfillQueued=false;}
+ }
  private void watchdog(){
   if(!running)return;
   long n=SystemClock.elapsedRealtime();
@@ -486,6 +530,7 @@ public final class CameraService extends Service {
    failure("stalled_YUV_camera",null);scheduleRecover();
   }
   maybeHistoricalImport();
+  maybeFaceBackfill();
   cameraHandler.postDelayed(new Runnable(){public void run(){watchdog();}},4500);
  }
  private void failure(String text,Throwable e){
@@ -522,6 +567,10 @@ public final class CameraService extends Service {
    d.put("historical_import_errors",historicalErrors);
    d.put("historical_import_last_error_type",lastHistoricalError);
    d.put("historical_import_queued",historicalQueued);
+   d.put("face_review_engine","s9_native_face_review_v1");
+   d.put("face_backfill_queued",faceBackfillQueued);
+   d.put("face_backfill_completed",faceBackfillDone);
+   d.put("face_backfill_errors",faceBackfillErrors);
    d.put("recordings_this_hour",getSharedPreferences("native",MODE_PRIVATE).getInt("record_rate_count",0));
    d.put("changed_ratio",motion.changedRatio);d.put("coherent_cells",motion.coherent);
    d.put("brightness",motion.lighting);
