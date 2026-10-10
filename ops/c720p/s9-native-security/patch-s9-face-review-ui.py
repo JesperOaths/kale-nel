@@ -12,6 +12,8 @@ SNIPPET=r"""
 #s9-face-review .s9-face-list{display:grid;gap:9px;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}
 #s9-face-review article{padding:11px;background:#1c3544;border:1px solid #446273;border-radius:9px;font-size:13px}
 #s9-face-review .s9-face-muted{font-size:12px;color:#bdcfdb}
+#s9-face-review button{font:inherit;font-size:12px;padding:5px 9px;border-radius:7px;background:#325d77;border:1px solid #6996b3;color:white;cursor:pointer;margin:6px 0}
+#s9-face-review img{display:block;max-width:160px;max-height:160px;object-fit:contain;border:1px solid #617e8c;border-radius:7px;margin-top:7px}
 </style>
 <section id="s9-face-review" aria-label="S9 face review">
   <h3>S9+ face snapshots and candidate identities</h3>
@@ -57,6 +59,24 @@ SNIPPET=r"""
      const time=Number.isFinite(Number(entry.time_ms))?(Number(entry.time_ms)/1000).toFixed(1)+'s':'';
      card.append(make('div',label+' · '+time));
      card.append(make('div',String(entry.match_status||'unverified').replaceAll('_',' '),'s9-face-muted'));
+     const snap=String(entry.snapshot_name||'');
+     if(entry.snapshot_on_s9===true &&
+        /^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/.test(snap) &&
+        rec.clip_no===snap.split('__',1)[0]+'.mp4'){
+       const button=make('button','View face crop');
+       button.type='button';
+       button.addEventListener('click',async()=>{
+         if(typeof relay.url!=='function')return;
+         button.disabled=true;
+         try{
+           const signed=await relay.url('/new/saved/face/'+encodeURIComponent(snap));
+           const image=make('img');image.alt='S9 face crop for visual review, not identity proof';
+           image.loading='lazy';image.src=signed;
+           button.replaceWith(image);
+         }catch(e){button.disabled=false;button.textContent='Face crop unavailable';}
+       });
+       card.append(button);
+     }
     }
     card.append(make('div','Snapshots stored on S9+ microSD · original clip retained','s9-face-muted'));
     list.append(card);
