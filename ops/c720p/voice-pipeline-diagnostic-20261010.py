@@ -115,16 +115,16 @@ def wyoming_describe(port: int) -> dict:
     try:
         with socket.create_connection(("127.0.0.1", port), timeout=2) as conn:
             conn.settimeout(2)
-            conn.sendall(b'{"type":"describe","data":{}}\\n')
+            conn.sendall(b'{"type":"describe","data":{}}\n')
             payload = bytearray()
             while len(payload) < 65536:
                 chunk = conn.recv(1024)
                 if not chunk:
                     break
                 payload.extend(chunk)
-                if b"\\n" in payload:
+                if b"\n" in payload:
                     break
-        first = bytes(payload).split(b"\\n", 1)[0]
+        first = bytes(payload).split(b"\n", 1)[0]
         msg = json.loads(first)
         capabilities = msg.get("data") or {}
         return {
