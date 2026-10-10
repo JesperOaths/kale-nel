@@ -131,6 +131,15 @@ SNIPPET = r'''
    const n=Number(rec.sampled_frames);
    if(Number.isInteger(n)&&n>0)card.append(node('div',
      'Reviewed '+n+' sampled frames · detection is not a continuous identity track','s9-anon-muted'));
+   const presence=Number(rec.person_presence_percent);
+   if(rec.person_presence_percent!==null && rec.person_presence_percent!==undefined &&
+      Number.isFinite(presence) && presence>=0 && presence<=100){
+    card.append(node('div','Person detected in '+presence.toFixed(1)+
+      '% of sampled frames at 0.50 threshold ('+rec.person_detected_frames_050+'/'+n+
+      '); not a whole-video percentage','s9-anon-muted'));
+   }else{
+    card.append(node('div','Person presence in sampled frames: not measurable for this clip','s9-anon-muted'));
+   }
    card.append(node('strong',rec.timestamp||'Date unavailable'));
    card.append(node('div',name,'s9-anon-muted'));
    const concurrent=Number(rec.person_count||0);
