@@ -64,6 +64,26 @@ def deploy(stage):
  vp=load(stage/"s9-native-security/patch-drive-visitor-review-ui.py")
  for f in [*mappings.values(),*tests]:
   if not f.is_file():raise RuntimeError("staging_incomplete_"+f.name)
+ # Runtime regression tests inspect the actual Android Java sources. The
+ # separately staged relay bundle does not itself contain the Android tree.
+ # Copy ONLY from the coherently compiled/signed local build: never mix APKs.
+ build=ROOT/"build/s9-native-security"
+ stamps=[build/".source-commit",build/".compiled-commit",
+         build/"s9-native-security.apk.source-commit"]
+ if any(not f.is_file() for f in stamps):raise RuntimeError("APK_build_source_revision_missing")
+ revisions=[f.read_text().strip() for f in stamps]
+ if len(set(revisions))!=1 or not __import__("re").fullmatch(r"[0-9a-f]{40}",revisions[0]):
+  raise RuntimeError("APK_signed_compiled_source_revision_mismatch")
+ java_dst=stage/"s9-native-security/src/nl/kalenel/s9security"
+ java_src=build/"src/nl/kalenel/s9security"
+ java_dst.mkdir(parents=True,exist_ok=True)
+ for filename in ("CameraService.java","CameraControls.java","MotionGrid.java"):
+  original=java_src/filename
+  if not original.is_file():raise RuntimeError("compiled_camera_java_missing_"+filename)
+  staged=java_dst/filename
+  if staged.exists() and staged.read_bytes()!=original.read_bytes():
+   raise RuntimeError("staged_java_does_not_match_signed_APK_"+filename)
+  if not staged.exists():shutil.copy2(original,staged)
  for t in tests:
   subprocess.run(["python3",str(t)],check=True,capture_output=True,text=True,timeout=50,
      env={**os.environ,"PYTHONPATH":str(stage/"s9-native-security")})
