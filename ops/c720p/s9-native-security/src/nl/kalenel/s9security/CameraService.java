@@ -508,7 +508,13 @@ public final class CameraService extends Service {
         int off=0;while(off<bytes.length){int n=in.read(bytes,off,bytes.length-off);if(n<0)throw new EOFException();off+=n;}
        }
        JSONObject meta=new JSONObject(new String(bytes,"UTF-8"));
-       if(meta.optInt("person_count",0)<=0||meta.has("face_review_version"))continue;
+       if(meta.optInt("person_count",0)<=0)continue;
+       // After a validated model is installed, retry old snapshot-only reviews once.
+       // Without a model do not repeatedly re-decode the same MP4s.
+       if(meta.has("face_review_version")){
+        if(!("face_embedding_unavailable_snapshots_only".equals(meta.optString("face_review_status"))
+           &&S9FaceReview.hasEmbeddingModel(CameraService.this)))continue;
+       }
        if(!mp4name.equals(meta.optString("name"))||meta.optLong("bytes",-1)!=video.length())continue;
        if(review(video,"onphone_face_backfill",0))faceBackfillDone++;
        else faceBackfillErrors++;
