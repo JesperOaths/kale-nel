@@ -29,4 +29,6 @@ assert "startup_recovered" in source and "recoverArchive" in source
 assert "fallback_evidence_saved" in source
 assert "priority_reserve" in source
 
-assert fetch.count("PreviewJpeg Boot RecordingRate CameraControls OutfitEvidence AnonymousClipTracks CameraOrientation; do") == 2, "all Camera2 and on-phone appearance classes must be both downloaded and published"
+assert fetch.count("PreviewJpeg Boot RecordingRate CameraControls OutfitEvidence AnonymousClipTracks CameraOrientation HistoricalImportWorker; do") == 2, "complete camera, appearance and historical import sources required"
+assert "new HistoricalImportWorker(" in source
+assert 'historical_import_queued' in source
