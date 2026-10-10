@@ -39,7 +39,7 @@ class Tests(unittest.TestCase):
   if not node:self.skipTest('Node unavailable')
   with tempfile.TemporaryDirectory() as td:
    js=Path(td)/'saved.js'
-   parts=re.findall(r'<script id="s9-saved-tab-folders-script-v1">([\\s\\S]*?)</script>',m.JS)
+   parts=[m.JS.split('<script id="s9-saved-tab-folders-script-v1">',1)[1].split('</script>',1)[0]]
    self.assertEqual(len(parts),1)
    js.write_text(parts[0])
    r=subprocess.run([node,'--check',str(js)],capture_output=True,text=True,timeout=15)
