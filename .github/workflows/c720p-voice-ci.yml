@@ -10,6 +10,7 @@ on:
       - 'ops/c720p/tests/test_voice_diagnostic.py'
       - 'ops/c720p/tests/test_c720p_storage_safety.py'
       - 'ops/c720p/reclaim-safe-cache-20261010.py'
+      - 'ops/c720p/apply-heygoogle-calibrated-threshold-v62.py'
       - 'ops/c720p/stage-c720p-clips-on-s9-microsd-20261010.py'
       - '.github/workflows/c720p-voice-ci.yml'
   workflow_dispatch:
@@ -28,5 +29,5 @@ jobs:
           python-version: '3.13'
       - name: Syntax and offline protocol/repair regression tests
         run: |
-          python -m py_compile ops/c720p/voice-assist-canary-20261010.py ops/c720p/voice-pipeline-diagnostic-20261010.py ops/c720p/reclaim-safe-cache-20261010.py ops/c720p/stage-c720p-clips-on-s9-microsd-20261010.py
+          python -m py_compile ops/c720p/voice-assist-canary-20261010.py ops/c720p/voice-pipeline-diagnostic-20261010.py ops/c720p/reclaim-safe-cache-20261010.py ops/c720p/stage-c720p-clips-on-s9-microsd-20261010.py ops/c720p/apply-heygoogle-calibrated-threshold-v62.py
           python -m unittest discover -s ops/c720p/tests -p 'test_*.py' -v

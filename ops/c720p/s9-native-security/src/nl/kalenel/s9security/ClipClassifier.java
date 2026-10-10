@@ -2,6 +2,7 @@ package nl.kalenel.s9security;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.os.SystemClock;
 import android.util.Log;
@@ -103,6 +104,31 @@ public final class ClipClassifier {
    }
    return found;
   }finally{if(scaled!=original)scaled.recycle();}
+ }
+
+ /** Preview-only per-event person gate. The same 300x300 MobileNet detector,
+  * shared with post-record classification on the serialized review worker.
+  * No face recognition, cross-recording identification, or persistent IDs.
+  */
+ public synchronized float personScoreInGarden(byte[] jpeg,float top,float margin)throws Exception{
+  if(jpeg==null||jpeg.length<1000||top<0||top>1||margin<0||margin>.3f)
+   throw new IllegalArgumentException("invalid_preview_or_region");
+  init();
+  Bitmap bitmap=BitmapFactory.decodeByteArray(jpeg,0,jpeg.length);
+  if(bitmap==null)throw new IOException("invalid_preview_jpeg");
+  try{
+   float highest=0f;
+   for(Detection detection:detect(bitmap)){
+    if(!"person".equals(detection.label))continue;
+    float[] b=detection.box;
+    if(b==null||b.length!=4)continue;
+    float center=(b[1]+b[3])*0.5f;
+    float feet=b[2];
+    if(center<margin||center>1f-margin||feet<top||feet>1.02f)continue;
+    highest=Math.max(highest,detection.score);
+   }
+   return highest;
+  }finally{bitmap.recycle();}
  }
 
  /** Lightweight RGB upper-torso tag; deliberately excludes face and has no identity features. */

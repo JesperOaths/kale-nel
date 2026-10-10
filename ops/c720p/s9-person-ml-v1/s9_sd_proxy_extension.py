@@ -1,5 +1,5 @@
 """S9 microSD replay extension for the existing C720P secure archive proxy."""
-import json,re,urllib.parse,subprocess,hashlib
+import json,re,urllib.parse,urllib.request,urllib.error,subprocess,hashlib
 from pathlib import Path
 BASE=Path("/opt/homeassistant/config/www/frontyard-security-new")
 CAT=BASE/"s9-phone-events.json"
@@ -114,29 +114,12 @@ def install_local_sd(H):
   data=rows()
   previews=preview_rows()
   if path=="/new/api/live-person-watch":
-   # Read-only aggregate detector status through the existing signed relay;
-   # never serve raw frames, person embeddings or unauthorized write routes.
-   from pathlib import Path
-   import time
-   state_file=Path("/home/jespern/c720p-home-hub/state/s9-live-person-watch.json")
-   try:
-    d=json.loads(state_file.read_text())
-    if d.get("version")!="s9-live-ssd-watch-v1" or not isinstance(d.get("status"),dict):
-     raise ValueError("invalid_live_person_status")
-    age=max(0,int(time.time()*1000)-int(d.get("last_sample_at_ms",0)))
-    if age>17000:
-     d={"ok":False,"status":{"kind":"sensor_stale","identity":"not_evaluated"},
-        "last_sample_age_ms":age,"read_only":True}
-    else:
-     # Limit published fields to the documented aggregate model contract.
-     d={k:d.get(k) for k in ("ok","version","read_only","label_is_ground_truth",
-      "last_sample_at_ms","samples","failures","camera_mode","camera_temperature_c",
-      "motion_changed_ratio","motion_coherent_cells","status","recent_candidate_transitions")}
-     d["last_sample_age_ms"]=age
-    self.js(200,d)
-   except (OSError,TypeError,ValueError,OverflowError):
-    self.js(200,{"ok":False,"read_only":True,"status":{"kind":"sensor_not_started",
-      "identity":"not_evaluated"}})
+   # S9+ owns the person model, GPU inference, and garden ROI. The hub only
+   # forwards metadata from the already-authenticated Camera2 loopback API.
+   import s9_phone_garden_status
+   try:self.js(200,s9_phone_garden_status.read_report())
+   except (OSError,TypeError,ValueError,OverflowError,urllib.error.URLError):
+    self.js(200,s9_phone_garden_status.unavailable())
    return
   if path=="/new/api/saved":
    events=[]
@@ -220,6 +203,10 @@ def play_sd(handler,name,record):
  count=last-first+1
  if handler.command=="HEAD":
   return media_headers(handler,code,size,first,last,count)
+ # Native Camera2 MP4s can now be served from the phone's loopback Range API
+ # without starting ADB dd per seek. Old installed builds still 404/fallback.
+ if name.startswith("motion_") and phone_video_range(handler,name,size,first,last,count,code):
+  return
  shift=first%BLOCK
  chunks=last//BLOCK-first//BLOCK+1
  root=SECURITY_SD if name.startswith("motion_") else NATIVE_SD if name.startswith("native4k_") else SD
@@ -246,9 +233,46 @@ def play_sd(handler,name,record):
  except (BrokenPipeError,ConnectionResetError):pass
  finally:
   if proc.poll() is None:proc.terminate()
-def media_headers(handler,code,size,start,end,length):
+def phone_video_range(handler,name,size,start,end,count,code):
+ """No MP4 decoding or seeks on C720P: transparently copy S9+ byte ranges.
+
+ A 404 means the older Camera2 APK is still installed; keep the ADB
+ compatibility path until an on-device rollout verifies the native endpoint.
+ """
+ request=urllib.request.Request("http://127.0.0.1:18808/clip/"+name,
+     headers={"Range":f"bytes={start}-{end}","Accept":"video/mp4"})
+ try:
+  response=urllib.request.urlopen(request,timeout=11)
+ except urllib.error.HTTPError as error:
+  if error.code==404:return False
+  handler.js(503,{"ok":False,"error":"native_phone_range_unavailable"});return True
+ except Exception:
+  handler.js(503,{"ok":False,"error":"native_phone_range_offline"});return True
+ with response:
+  try:
+   expected=f"bytes {start}-{end}/{size}"
+   if (response.status!=206 or
+       response.headers.get("Content-Range")!=expected or
+       int(response.headers.get("Content-Length","-1"))!=count or
+       "video/mp4" not in response.headers.get("Content-Type","")):
+    handler.js(503,{"ok":False,"error":"native_phone_range_header_mismatch"});return True
+   first_chunk=response.read(min(count,65536))
+   if not first_chunk:
+    handler.js(503,{"ok":False,"error":"native_phone_range_empty"});return True
+   media_headers(handler,code,size,start,end,count,source="phone-microSD-range")
+   remaining=count
+   handler.wfile.write(first_chunk);remaining-=len(first_chunk)
+   while remaining>0:
+    chunk=response.read(min(65536,remaining))
+    if not chunk:break
+    handler.wfile.write(chunk);remaining-=len(chunk)
+  except (BrokenPipeError,ConnectionResetError,OSError):pass
+ return True
+
+def media_headers(handler,code,size,start,end,length,source="adb-legacy"):
  handler.send_response(code)
  handler.send_header("Content-Type","video/mp4")
+ handler.send_header("X-S9-Media-Source",source)
  handler.send_header("Accept-Ranges","bytes")
  handler.send_header("Content-Length",str(length))
  handler.send_header("Cache-Control","private,no-store")

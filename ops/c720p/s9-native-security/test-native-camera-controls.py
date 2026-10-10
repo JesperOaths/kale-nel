@@ -25,11 +25,12 @@ class Tests(unittest.TestCase):
    "zoom":{"available":["1.0","2.0","300.0"],"value":"2.0"},
    "torch":{"available":["off","on"],"value":"off"},
    "recording_rotation":{"available":["auto","0","90","180","270","45"],"value":"auto"},
+   "garden_zone":{"available":["strict","near","wide","all","road"],"value":"near"},
    "intrusive_legacy_camera_control":{"available":["anything"],"value":"anything"}}}
   with mock.patch.object(self.a,"local",return_value=(200,results)):
    h=self.H("/new/camera-controls");h.go()
   self.assertEqual(h.status,200)
-  self.assertEqual(sorted(h.data["controls"]),["recording_rotation","torch","zoom"])
+  self.assertEqual(sorted(h.data["controls"]),["garden_zone","recording_rotation","torch","zoom"])
   self.assertEqual(h.data["controls"]["recording_rotation"]["available"],["auto","0","90","180","270"])
   self.assertEqual(h.data["controls"]["zoom"]["available"],["1.0","2.0"])
  def test_explicit_intent_body_options_and_origin(self):
@@ -56,6 +57,11 @@ class Tests(unittest.TestCase):
   h["Content-Length"]=str(len(automatic))
   with mock.patch.object(self.a,"local",return_value=(200,{"ok":True,"value":"auto"})):
    x=self.H("/new/camera-control",automatic,h);x.do_POST()
+  self.assertEqual(x.status,200)
+  allowedGarden=json.dumps({"key":"garden_zone","value":"near"}).encode()
+  h["Content-Length"]=str(len(allowedGarden))
+  with mock.patch.object(self.a,"local",return_value=(200,{"ok":True,"value":"near"})):
+   x=self.H("/new/camera-control",allowedGarden,h);x.do_POST()
   self.assertEqual(x.status,200)
   bad=json.dumps({"key":"recording_rotation","value":"45"}).encode()
   h["Content-Length"]=str(len(bad))
