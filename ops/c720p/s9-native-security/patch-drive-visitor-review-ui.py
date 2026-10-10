@@ -64,6 +64,18 @@ function render(data){
   const card=txt('div',undefined,'s9-review-entry');
   card.append(txt('strong',row.remote_name||row.clip_id.slice(0,16)));
   card.append(txt('small',(row.category||'unknown')+' · '+Math.round(Number(row.person_score||0)*100)+'% model score · '+(row.visitor_id||'No verified visitor ID')));
+  const possible=Array.isArray(row.possible_same_outfit_clips)?row.possible_same_outfit_clips:[];
+  if(possible.length){
+   card.append(txt('small','Possible repeat outfit — NOT confirmed as the same person:'));
+   for(const suggestion of possible){
+    const candidate=(Array.isArray(data.clips)?data.clips:[]).find(v=>v.clip_id===suggestion.clip_id);
+    if(!candidate)continue;
+    const item=txt('small',String(Math.round(Number(suggestion.appearance_similarity)*100))+
+      '% clothing-color similarity · '+String(candidate.remote_name||candidate.clip_id.slice(0,12)));
+    card.append(item);
+   }
+   card.append(txt('small','Compare both original recordings manually before assigning a persistent visitor ID.'));
+  }
   const folder=data.drive_folders?.[row.camera];
   if(typeof folder==='string' && /^https:\/\/drive\.google\.com\/drive\/folders\//.test(folder)){
    const a=txt('a','Open original video folder in Drive');a.href=folder;a.target='_blank';a.rel='noopener noreferrer';card.append(a);
