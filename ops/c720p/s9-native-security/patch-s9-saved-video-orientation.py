@@ -74,8 +74,11 @@ SNIPPET = r'''
   v.style.setProperty('height',n(h),'important');
   v.style.setProperty('transform','translate(-50%,-50%) rotate('+state.angle+'deg)','important');
   state.bar.hidden=!(v.getAttribute('src')||v.currentSrc||v.querySelector('source'));
-  state.label.textContent='Display correction '+state.angle+'° · '+
+  const label='Display correction '+state.angle+'° · '+
    (state.name?(state.persisted?'saved in this browser':'browser storage unavailable'):'this viewing only; filename unavailable');
+  // MutationObserver tracks newly created video dialogs: avoid a self-triggering
+  // childList loop when the existing label text is already up to date.
+  if(state.label.textContent!==label)state.label.textContent=label;
  }
  function refresh(state){
   const name=getName(state.video);
