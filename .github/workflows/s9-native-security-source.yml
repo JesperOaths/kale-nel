@@ -103,6 +103,10 @@ jobs:
           trap 'rm -rf "$WORK"' EXIT
           javac -d "$WORK"             ops/c720p/s9-native-security/src/nl/kalenel/s9security/RecordingRate.java             ops/c720p/s9-native-security/tests/RecordingRateTest.java
           java -cp "$WORK" nl.kalenel.s9security.RecordingRateTest
+          javac -d "$WORK" \
+            ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraOrientation.java \
+            ops/c720p/s9-native-security/tests/CameraOrientationTest.java
+          java -cp "$WORK" nl.kalenel.s9security.CameraOrientationTest
 
   anonymous-tracklets:
     runs-on: ubuntu-latest
