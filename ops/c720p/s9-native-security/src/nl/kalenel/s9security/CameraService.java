@@ -56,7 +56,7 @@ public final class CameraService extends Service {
  private volatile byte[] latestJpeg=new byte[0];
  private volatile long lastJpegAt=0;
  private int recoveryCount=0;
- private static final long QUIET_MS=8500,MAX_MS=30000,COOLDOWN_MS=25000;
+ private static final long QUIET_MS=8500,MAX_MS=30000,COOLDOWN_MS=12000;
  private static final int MAX_4K_CLIPS_PER_HOUR=RecordingRate.TOTAL_PER_HOUR;
  @Override public IBinder onBind(Intent intent){return null;}
  @Override public int onStartCommand(Intent intent,int flags,int id){
@@ -140,6 +140,8 @@ public final class CameraService extends Service {
    }
    if(cameraId.isEmpty())throw new IOException("camera_has_no_3840_2160_30fps_profile");
    cameraControls=new CameraControls(manager.getCameraCharacteristics(cameraId));
+   String region=getSharedPreferences("native",MODE_PRIVATE).getString("garden_zone","near");
+   motion.setGardenZone(MotionGrid.validGardenZone(region)?region:"near");
    preview=ImageReader.newInstance(640,480,ImageFormat.YUV_420_888,3);
    preview.setOnImageAvailableListener(reader->{
     Image frame=null;
@@ -147,9 +149,10 @@ public final class CameraService extends Service {
      frame=reader.acquireLatestImage();
      if(frame==null)return;
      frames++;lastFrameAt=SystemClock.elapsedRealtime();
-     if(lastFrameAt-lastJpegAt>=1200){
+     long jpegEvery="recording".equals(mode)?550L:280L;
+     if(lastFrameAt-lastJpegAt>=jpegEvery){
       try{
-       byte[] jpg=PreviewJpeg.encode(frame,72);
+       byte[] jpg=PreviewJpeg.encode(frame,64);
        latestJpeg=jpg;lastJpegAt=lastFrameAt;
       }catch(Exception e){Log.w(TAG,"preview_jpeg_failed",e);}
      }
@@ -523,6 +526,10 @@ public final class CameraService extends Service {
    d.put("historical_import_last_error_type",lastHistoricalError);
    d.put("historical_import_queued",historicalQueued);
    d.put("recordings_this_hour",getSharedPreferences("native",MODE_PRIVATE).getInt("record_rate_count",0));
+   d.put("garden_zone",motion.gardenZone());
+   d.put("garden_roi_top_fraction",motion.topBoundary());
+   d.put("preview_jpeg_interval_ms","recording".equals(mode)?550:280);
+   d.put("post_record_cooldown_ms",COOLDOWN_MS);
    d.put("changed_ratio",motion.changedRatio);d.put("coherent_cells",motion.coherent);
    d.put("brightness",motion.lighting);
    d.put("recorded",completed);d.put("reviewed",reviewed);
@@ -550,6 +557,10 @@ public final class CameraService extends Service {
     for(int angle:new int[]{0,90,180,270})choices.put(String.valueOf(angle));
     int saved=getSharedPreferences("native",MODE_PRIVATE).getInt("recording_rotation_degrees",-1);
     String selected=saved==0||saved==90||saved==180||saved==270?String.valueOf(saved):"auto";
+    options.put("garden_zone",new JSONObject()
+      .put("value",motion.gardenZone())
+      .put("available",new JSONArray().put("strict").put("near").put("wide").put("all"))
+      .put("description","Near garden excludes the upper road region"));
     options.put("recording_rotation",new JSONObject()
       .put("value",selected).put("available",choices)
       .put("effective_degrees",recordingRotation()));
@@ -563,7 +574,18 @@ public final class CameraService extends Service {
    if(!"watching".equals(mode)||session==null||activeCameraRequest==null||cameraControls==null){
     return response.put("ok",false).put("error","control_unavailable_during_recording_or_camera_transition");
    }
-   if("recording_rotation".equals(key)){
+   if("garden_zone".equals(key)){
+     if(!MotionGrid.validGardenZone(value))
+      return response.put("ok",false).put("error","unsupported_garden_region");
+     if(!getSharedPreferences("native",MODE_PRIVATE).edit()
+         .putString("garden_zone",value).commit())
+      return response.put("ok",false).put("error","failed_to_save_garden_region");
+     motion.setGardenZone(value);
+     cameraControlSettleUntil=SystemClock.elapsedRealtime()+2500L;
+     return response.put("ok",true).put("key",key).put("value",motion.gardenZone())
+       .put("top_fraction",motion.topBoundary()).put("mode",mode);
+    }
+    if("recording_rotation".equals(key)){
      // Future-recordings-only MP4 hint, without a capture session restart.
      if(!("auto".equals(value)||"0".equals(value)||"90".equals(value)||
           "180".equals(value)||"270".equals(value)))
@@ -640,13 +662,15 @@ public final class CameraService extends Service {
          ||line.startsWith("GET /videofeed ")){
     out.write(("HTTP/1.1 200 OK\r\nContent-Type: multipart/x-mixed-replace; boundary=frame\r\n"+
       "Cache-Control: no-store\r\nConnection: close\r\n\r\n").getBytes("UTF-8"));
+    byte[] lastSent=null;
     while(running){
      byte[] img=latestJpeg;
-     if(img.length>1000){
+     if(img.length>1000 && img!=lastSent){
+      lastSent=img;
       out.write(("--frame\r\nContent-Type: image/jpeg\r\nContent-Length: "+img.length+"\r\n\r\n").getBytes("UTF-8"));
       out.write(img);out.write("\r\n".getBytes("UTF-8"));out.flush();
      }
-     try{Thread.sleep(950);}catch(InterruptedException e){return;}
+     try{Thread.sleep(165);}catch(InterruptedException e){return;}
     }
    }else if(line.startsWith("GET /controls ")){
     try{send(out,200,"application/json",controlsStatus().toString().getBytes("UTF-8"));}
