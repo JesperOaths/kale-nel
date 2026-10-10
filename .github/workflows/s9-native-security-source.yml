@@ -22,6 +22,8 @@ jobs:
           python3 ops/c720p/s9-native-security/test-live-person-watch.py
           python3 ops/c720p/s9-native-security/test-native-camera-controls.py
           python3 ops/c720p/s9-native-security/test-appearance-review.py
+          python3 ops/c720p/s9-native-security/test-stage-verified-deployment.py
+          python3 -m py_compile ops/c720p/s9-native-security/stage-verified-deployment.py
           python3 ops/c720p/s9-native-security/test-drive-person-batch-catalog.py
           python3 ops/c720p/s9-native-security/test-drive-visitor-review.py
           python3 -m py_compile ops/c720p/s9-native-security/s9_appearance_review.py
