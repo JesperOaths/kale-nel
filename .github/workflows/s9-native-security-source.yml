@@ -24,6 +24,7 @@ jobs:
           python3 ops/c720p/s9-native-security/test-appearance-review.py
           python3 ops/c720p/s9-native-security/test-stage-verified-deployment.py
           python3 ops/c720p/s9-native-security/test-anonymous-index-ui.py
+          python3 ops/c720p/s9-native-security/test-s9-face-review.py
           python3 ops/c720p/s9-native-security/test-s9-historical-gpu-relay.py
           python3 -m py_compile ops/c720p/s9-native-security/s9-historical-gpu-relay.py
           python3 ops/c720p/s9-native-security/test-s9-integrated-security-ui.py
@@ -80,6 +81,17 @@ jobs:
           Path("/tmp/s9-anonymous-tracks.js").write_text(scripts[0])
           PY
           node --check /tmp/s9-anonymous-tracks.js
+          python3 - <<'PY'
+          import importlib.util,re
+          from pathlib import Path
+          p=Path("ops/c720p/s9-native-security/patch-s9-face-review-ui.py")
+          spec=importlib.util.spec_from_file_location("s9_face_widget",p)
+          mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+          js=re.findall(r'<script[^>]+>(.*?)</script>',mod.SNIPPET,re.S)
+          assert len(js)==1
+          Path("/tmp/s9-face-review.js").write_text(js[0])
+          PY
+          node --check /tmp/s9-face-review.js
       - name: Compile Camera2 and offline TFLite classifier against Android SDK
         shell: bash
         run: |
