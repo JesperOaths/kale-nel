@@ -114,6 +114,9 @@ def install_local_sd(H):
  # Historical Drive people are listed privately; visitor IDs require explicit human linking.
  import s9_drive_visitor_review
  s9_drive_visitor_review.install(H)
+ # Camera2 control writes are bounded and require an explicit signed relay header.
+ import s9_native_camera_controls
+ s9_native_camera_controls.install(H)
 def play_sd(handler,name,record):
  size=int(record.get("size") or 0)
  if size<10000 or size>4*1024*1024*1024:

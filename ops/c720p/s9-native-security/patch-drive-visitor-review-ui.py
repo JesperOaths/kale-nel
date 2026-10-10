@@ -64,6 +64,18 @@ function render(data){
   const card=txt('div',undefined,'s9-review-entry');
   card.append(txt('strong',row.remote_name||row.clip_id.slice(0,16)));
   card.append(txt('small',(row.category||'unknown')+' · '+Math.round(Number(row.person_score||0)*100)+'% model score · '+(row.visitor_id||'No verified visitor ID')));
+  const possible=Array.isArray(row.possible_same_outfit_clips)?row.possible_same_outfit_clips:[];
+  if(possible.length){
+   card.append(txt('small','Possible repeat outfit — NOT confirmed as the same person:'));
+   for(const suggestion of possible){
+    const candidate=(Array.isArray(data.clips)?data.clips:[]).find(v=>v.clip_id===suggestion.clip_id);
+    if(!candidate)continue;
+    const item=txt('small',String(Math.round(Number(suggestion.appearance_similarity)*100))+
+      '% clothing-color similarity · '+String(candidate.remote_name||candidate.clip_id.slice(0,12)));
+    card.append(item);
+   }
+   card.append(txt('small','Compare both original recordings manually before assigning a persistent visitor ID.'));
+  }
   const folder=data.drive_folders?.[row.camera];
   if(typeof folder==='string' && /^https:\/\/drive\.google\.com\/drive\/folders\//.test(folder)){
    const a=txt('a','Open original video folder in Drive');a.href=folder;a.target='_blank';a.rel='noopener noreferrer';card.append(a);
@@ -145,7 +157,14 @@ setInterval(()=>{if(!document.hidden)refresh()},60000);
 </script>
 '''
 def patch(html):
- if STYLE_ID in html and SCRIPT_ID in html:return html
+ if STYLE_ID in html and SCRIPT_ID in html:
+  if "Possible repeat outfit — NOT confirmed" in html:return html
+  import re
+  old=r'<script id="s9-drive-person-review-script-v1">.*?</script>'
+  found=re.findall(old,html,flags=re.S)
+  new=re.findall(old,SNIPPET,flags=re.S)
+  if len(found)!=1 or len(new)!=1:raise ValueError("unknown_visitor_review_script")
+  return re.sub(old,lambda _:new[0],html,count=1,flags=re.S)
  if html.count("</body>")!=1 or 'c720p-s9-phone-clips-ui-v1' not in html:
   raise ValueError("unknown_security_page")
  return html.replace("</body>",SNIPPET+"\n</body>",1)

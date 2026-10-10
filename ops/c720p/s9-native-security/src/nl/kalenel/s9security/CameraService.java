@@ -27,6 +27,8 @@ public final class CameraService extends Service {
  private CameraCaptureSession session;
  private ImageReader preview;
  private MediaRecorder recorder;
+ private CameraControls cameraControls;
+ private CaptureRequest.Builder activeCameraRequest;
  private final MotionGrid motion=new MotionGrid();
  private ClipClassifier classifier;
  private ExecutorService reviewer;
@@ -130,6 +132,7 @@ public final class CameraService extends Service {
     }
    }
    if(cameraId.isEmpty())throw new IOException("camera_has_no_3840_2160_30fps_profile");
+   cameraControls=new CameraControls(manager.getCameraCharacteristics(cameraId));
    preview=ImageReader.newInstance(640,480,ImageFormat.YUV_420_888,3);
    preview.setOnImageAvailableListener(reader->{
     Image frame=null;
@@ -190,7 +193,8 @@ public final class CameraService extends Service {
      try{
       CaptureRequest.Builder r=camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
       r.addTarget(preview.getSurface());
-      r.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO);
+      cameraControls.apply(r);
+      activeCameraRequest=r;
       s.setRepeatingRequest(r.build(),null,cameraHandler);
       mode="watching";Log.i(TAG,"YUV_PREVIEW_ACTIVE 640x480 mode="+(pilotOnly?"pilot":"motion_record"));
      }catch(Exception e){failure("preview_request_failed",e);scheduleRecover();}
@@ -255,7 +259,8 @@ public final class CameraService extends Service {
      try{
       CaptureRequest.Builder b=camera.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
       b.addTarget(video);b.addTarget(preview.getSurface());
-      b.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO);
+      cameraControls.apply(b);
+      activeCameraRequest=b;
       s.setRepeatingRequest(b.build(),null,cameraHandler);
       recorder.start();
       noteRecordingStarted();
@@ -411,6 +416,7 @@ public final class CameraService extends Service {
   }catch(Exception e){failure("archive_recovery_scan_failed",e);}
  }
  private void closeSession(){
+  activeCameraRequest=null;
   if(session!=null){try{session.stopRepeating();}catch(Exception ignored){}
    try{session.close();}catch(Exception ignored){}session=null;}
  }
@@ -474,8 +480,55 @@ public final class CameraService extends Service {
    d.put("snapshot_ready",latestJpeg.length>1000);
    d.put("snapshot_age_ms",lastJpegAt==0?-1:SystemClock.elapsedRealtime()-lastJpegAt);
    d.put("privacy","scene_tags_no_verified_cross_recording_identity");
+   d.put("camera_controls_available",cameraControls!=null && "watching".equals(mode));
   }catch(Exception ignored){}
   return d;
+ }
+ private JSONObject controlsStatus()throws Exception {
+  JSONObject result=new JSONObject();
+  result.put("ok",cameraControls!=null);
+  result.put("mode",mode);
+  result.put("read_only",false);
+  result.put("changing_controls_while_recording",false);
+  result.put("controls",cameraControls==null?new JSONObject():cameraControls.status());
+  return result;
+ }
+ private JSONObject updateControl(String key,String value)throws Exception {
+  FutureTask<JSONObject> job=new FutureTask<>(()->{
+   JSONObject response=new JSONObject();
+   if(!"watching".equals(mode)||session==null||activeCameraRequest==null||cameraControls==null){
+    return response.put("ok",false).put("error","control_unavailable_during_recording_or_camera_transition");
+   }
+   JSONObject old=cameraControls.status();
+   try {
+    cameraControls.select(key,value);
+    cameraControls.apply(activeCameraRequest);
+    session.setRepeatingRequest(activeCameraRequest.build(),null,cameraHandler);
+    if("focus".equals(key)&&cameraControls.isAutoFocus()){
+     CaptureRequest.Builder focus=camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+     focus.addTarget(preview.getSurface());
+     cameraControls.apply(focus);
+     focus.set(CaptureRequest.CONTROL_AF_TRIGGER,CaptureRequest.CONTROL_AF_TRIGGER_START);
+     session.capture(focus.build(),null,cameraHandler);
+    }
+    return response.put("ok",true).put("key",key)
+      .put("value",cameraControls.status().getJSONObject(key).get("value"))
+      .put("mode",mode);
+   }catch(Exception e){
+    try {
+     if(old.has(key)){
+      cameraControls.select(key,old.getJSONObject(key).getString("value"));
+      cameraControls.apply(activeCameraRequest);
+      session.setRepeatingRequest(activeCameraRequest.build(),null,cameraHandler);
+     }
+    }catch(Exception ignored){}
+    return response.put("ok",false).put("error",e instanceof IllegalArgumentException?
+       "unsupported_or_invalid_control":"camera2_control_apply_failed");
+   }
+  });
+  if(cameraHandler==null)throw new IllegalStateException("camera_handler_unavailable");
+  cameraHandler.post(job);
+  return job.get(4,TimeUnit.SECONDS);
  }
  private void startApi(){
   apiThread=new Thread(new Runnable(){public void run(){
@@ -515,13 +568,46 @@ public final class CameraService extends Service {
      }
      try{Thread.sleep(950);}catch(InterruptedException e){return;}
     }
+   }else if(line.startsWith("GET /controls ")){
+    try{send(out,200,"application/json",controlsStatus().toString().getBytes("UTF-8"));}
+    catch(Exception e){send(out,503,"application/json","{\"ok\":false,\"error\":\"controls_unavailable\"}".getBytes("UTF-8"));}
+   }else if(line.startsWith("POST /control ")){
+    int length=-1;boolean jsonType=false;
+    for(int lineCount=0;lineCount<24;lineCount++){
+     String header=in.readLine();
+     if(header==null)break;
+     if(header.isEmpty())break;
+     int colon=header.indexOf(':');
+     if(colon<1)continue;
+     String name=header.substring(0,colon).trim().toLowerCase(Locale.ROOT);
+     String hv=header.substring(colon+1).trim();
+     if("content-length".equals(name)){try{length=Integer.parseInt(hv);}catch(NumberFormatException ignored){}}
+     if("content-type".equals(name)&&hv.toLowerCase(Locale.ROOT).startsWith("application/json"))jsonType=true;
+    }
+    if(!jsonType||length<2||length>256){
+     send(out,400,"application/json","{\"ok\":false,\"error\":\"invalid_camera_control_request\"}".getBytes("UTF-8"));return;
+    }
+    char[] content=new char[length];int bytes=0;
+    while(bytes<length){int n=in.read(content,bytes,length-bytes);if(n<0)break;bytes+=n;}
+    if(bytes!=length){send(out,400,"application/json","{\"ok\":false,\"error\":\"short_request_body\"}".getBytes("UTF-8"));return;}
+    JSONObject response;
+    try {
+     JSONObject request=new JSONObject(new String(content));
+     if(request.length()!=2||!request.has("key")||!request.has("value"))
+      throw new IllegalArgumentException("bad_request_fields");
+     String key=request.getString("key");
+     String value=request.getString("value");
+     if(key.length()>30||value.length()>20)throw new IllegalArgumentException("control_field_length");
+     response=updateControl(key,value);
+    }catch(Exception e){response=new JSONObject().put("ok",false).put("error","invalid_or_unavailable_control");}
+    send(out,response.optBoolean("ok")?200:409,"application/json",response.toString().getBytes("UTF-8"));
    }else if(line.startsWith("GET /status")||line.startsWith("GET / ")){
     send(out,200,"application/json",state().toString().getBytes("UTF-8"));
    }else send(out,404,"text/plain","not_found".getBytes("UTF-8"));
   }catch(Exception e){if(running&&!(e instanceof java.net.SocketException))Log.w(TAG,"http_client",e);}
  }
  private static void send(OutputStream out,int code,String contentType,byte[] bytes)throws IOException{
-  out.write(("HTTP/1.1 "+code+(code==200?" OK":code==503?" Service Unavailable":" Not Found")+
+  out.write(("HTTP/1.1 "+code+(code==200?" OK":code==503?" Service Unavailable":code==409?" Conflict":code==400?" Bad Request":" Not Found")+
    "\r\nContent-Type: "+contentType+"\r\nContent-Length: "+bytes.length+
    "\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n").getBytes("UTF-8"));
   out.write(bytes);out.flush();
