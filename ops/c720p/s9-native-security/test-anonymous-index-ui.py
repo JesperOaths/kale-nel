@@ -153,6 +153,10 @@ class Tests(unittest.TestCase):
         self.assertIn("C720PSecureRelay",patched)
         self.assertIn("Watch original recording",patched)
         self.assertEqual(self.ui.patch_text(patched),patched)
+        stale=patched.replace('Person presence in sampled frames: not measurable for this clip',
+                              'Previous release without frame coverage',1)
+        self.assertNotEqual(stale,patched)
+        self.assertEqual(self.ui.patch_text(stale),patched)
         with self.assertRaises(ValueError):
             self.ui.patch_text("<html><body></body></html>")
         with self.assertRaises(ValueError):
