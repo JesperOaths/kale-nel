@@ -60,9 +60,8 @@ class Tests(unittest.TestCase):
             f.write_text(script[0])
             p=subprocess.run([node,"--check",str(f)],capture_output=True,text=True,timeout=15)
             self.assertEqual(p.returncode,0,p.stderr)
-        regex=re.search(r'const match=(/.+?/);',script[0])
-        self.assertIsNotNone(regex)
-        assertions=String = r'''
+        regexline=next(line for line in script[0].splitlines() if line.strip().startswith('const match='))
+        assertions = r'''
 const accepts=(name)=>match.test(name);
 if(!accepts('/local/frontyard-security-new/s9-phone-thumbs/motion_1791634574261.mp4.thumb.jpg'))throw Error('native not matched');
 for(const path of [
@@ -72,7 +71,7 @@ for(const path of [
  '/new/saved/clip/motion_1791634574261.mp4'
 ])if(accepts(path))throw Error('inappropriate image '+path);
 '''
-        result=subprocess.run([node,"-e","const match="+regex.group(1)+";\n"+assertions],
+        result=subprocess.run([node,"-e","regexline+"\n"+assertions],
                               capture_output=True,text=True,timeout=15)
         self.assertEqual(result.returncode,0,result.stderr)
 
