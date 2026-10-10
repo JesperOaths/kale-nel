@@ -733,7 +733,7 @@ public final class CameraService extends Service {
    try {
     cameraControls.select(key,value);
     cameraControls.apply(activeCameraRequest);
-    session.setRepeatingRequest(activeCameraRequest.build(),null,cameraHandler);
+    session.setRepeatingRequest(activeCameraRequest.build(),sensorTelemetry,cameraHandler);
     // Refresh the motion model after a deliberate camera setting change.
     // Without this reset a changed crop/torch/exposure can look like an intruder.
     motion.resetForCameraControl();
@@ -753,7 +753,7 @@ public final class CameraService extends Service {
      if(old.has(key)){
       cameraControls.select(key,old.getJSONObject(key).getString("value"));
       cameraControls.apply(activeCameraRequest);
-      session.setRepeatingRequest(activeCameraRequest.build(),null,cameraHandler);
+      session.setRepeatingRequest(activeCameraRequest.build(),sensorTelemetry,cameraHandler);
      }
     }catch(Exception ignored){}
     return response.put("ok",false).put("error",e instanceof IllegalArgumentException?
