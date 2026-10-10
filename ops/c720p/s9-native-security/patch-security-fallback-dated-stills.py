@@ -178,6 +178,9 @@ SCRIPT=r'''
 </script>
 '''
 
+# Avoid introducing fresh blank lines on each upgrade pass.
+SCRIPT=SCRIPT.strip()
+
 def script_from(source: str) -> str:
     if source.count(SCRIPT_OPEN)!=1:
         raise ValueError("unknown_or_duplicate_fallback_widget")
