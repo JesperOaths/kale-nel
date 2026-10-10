@@ -109,6 +109,9 @@ class Tests(unittest.TestCase):
   before='<html><script id="c720p-s9-phone-clips-ui-v1"></script></body></html>'
   after=p.patch(before)
   self.assertEqual(p.patch(after),after)
+  stale=after.replace("Peak person-detection score:","Previous model score:",1)
+  self.assertNotEqual(stale,after)
+  self.assertEqual(p.patch(stale),after)
   self.assertIn("manual-confirmed-visitor-v1",after)
   self.assertIn("person",after)
   with self.assertRaises(ValueError):p.patch("<html></body></html>")
