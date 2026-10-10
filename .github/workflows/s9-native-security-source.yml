@@ -20,6 +20,7 @@ jobs:
           python3 ops/c720p/s9-native-security/test_pipeline_contract.py
           python3 ops/c720p/s9-native-security/test-historical-event-categories.py
           python3 ops/c720p/s9-native-security/test-live-person-watch.py
+          python3 ops/c720p/s9-native-security/test-native-camera-controls.py
           python3 ops/c720p/s9-native-security/test-drive-person-batch-catalog.py
           python3 ops/c720p/s9-native-security/test-drive-visitor-review.py
           python3 -m py_compile ops/c720p/s9-native-security/drive-person-batch-catalog.py ops/c720p/s9-person-ml-v1/s9_drive_visitor_review.py
@@ -34,6 +35,7 @@ jobs:
           Path("/tmp/s9-drive-review-ui.js").write_text(scripts[0])
           PY
           node --check /tmp/s9-drive-review-ui.js
+          python3 -m py_compile ops/c720p/s9-person-ml-v1/s9_native_camera_controls.py ops/c720p/s9-native-security/patch-native-camera-controls-ui.py
           python3 -m py_compile ops/c720p/s9-native-security/legacy-drive-person-corpus.py ops/c720p/s9-native-security/live-person-watch.py ops/c720p/s9-native-security/patch-live-person-watch-ui.py
           python3 - <<'PY'
           import re
