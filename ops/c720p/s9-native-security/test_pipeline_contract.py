@@ -29,6 +29,7 @@ assert "startup_recovered" in source and "recoverArchive" in source
 assert "fallback_evidence_saved" in source
 assert "priority_reserve" in source
 
-assert fetch.count("PreviewJpeg Boot RecordingRate CameraControls OutfitEvidence AnonymousClipTracks CameraOrientation HistoricalImportWorker; do") == 2, "complete camera, appearance and historical import sources required"
+assert fetch.count("PreviewJpeg Boot RecordingRate CameraControls OutfitEvidence AnonymousClipTracks CameraOrientation HistoricalImportWorker PhoneMediaRange; do") == 2, "complete camera, appearance and historical import sources required"
 assert "new HistoricalImportWorker(" in source
 assert 'historical_import_queued' in source
+assert "PhoneMediaRange.handle" in source
