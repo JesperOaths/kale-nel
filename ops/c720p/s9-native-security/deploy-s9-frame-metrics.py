@@ -179,7 +179,8 @@ def install(ref,apply):
             atomic_file(PAGE,page_new.encode("utf-8"))
             changed.append(PAGE)
         changed.append(INDEX)
-        run(["systemctl","--user","start","c720p-s9-local-sd-catalog.service"],260)
+        # An already running oneshot ignores start; rebuild with the newly installed parser.
+        run(["systemctl","--user","restart","c720p-s9-local-sd-catalog.service"],380)
         run(["systemctl","--user","restart","c720p-drive-security-archive.service"],65)
         fresh=None
         for retry in range(7):
