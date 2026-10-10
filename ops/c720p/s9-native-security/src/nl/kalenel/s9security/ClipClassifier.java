@@ -20,6 +20,7 @@ public final class ClipClassifier {
  private GpuDelegate delegate;
  private ByteBuffer input;
  private String backend="uninitialized";
+ private String modelSha256="";
  private final float[][][] boxes=new float[1][10][4];
  private final float[][] classes=new float[1][10],scores=new float[1][10];
  private final float[] count=new float[1];
@@ -38,8 +39,13 @@ public final class ClipClassifier {
     if(bytes.size()>10000000)throw new IOException("ML_asset_too_large");
    }
   }
+  byte[] modelBytes=bytes.toByteArray();
+  MessageDigest modelMd=MessageDigest.getInstance("SHA-256");
+  StringBuilder fingerprint=new StringBuilder();
+  for(byte x:modelMd.digest(modelBytes))fingerprint.append(String.format(Locale.US,"%02x",x&255));
+  modelSha256=fingerprint.toString();
   ByteBuffer model=ByteBuffer.allocateDirect(bytes.size()).order(ByteOrder.nativeOrder());
-  model.put(bytes.toByteArray());model.rewind();
+  model.put(modelBytes);model.rewind();
   try{
    delegate=new GpuDelegate();
    net=new Interpreter(model,new Interpreter.Options().addDelegate(delegate).setNumThreads(2));
@@ -176,6 +182,7 @@ public final class ClipClassifier {
    result.put("width",Integer.parseInt(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)));
    result.put("height",Integer.parseInt(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)));
    init();
+   result.put("model_sha256",modelSha256);
    // Denser temporal coverage catches short walk-bys that a handful of keyframes miss.
    // Cap decoding/inference to 12 samples per clip to protect device thermals.
    int frames=(int)Math.min(12,Math.max(6,(duration+1799L)/1800L));
