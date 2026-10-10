@@ -192,7 +192,7 @@ def patch(html: str) -> str:
                     'state.label.textContent!==label')):
             raise ValueError("unknown_orientation_widget_version")
         return html.replace(old[0],expected[0],1)
-     return html.replace("</body>", SNIPPET+"\n</body>", 1)
+    return html.replace("</body>", SNIPPET+"\n</body>", 1)
 
 def main():
     parser=argparse.ArgumentParser()
