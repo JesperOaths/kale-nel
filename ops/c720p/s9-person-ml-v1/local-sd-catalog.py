@@ -108,7 +108,7 @@ def safe_face_review_metadata(m):
    "face_index_read_error")
  result["face_review_status"]=status if status in valid else "invalid_face_review_status"
  n=m.get("face_review_sampled_frames")
- if type(n) is int and 0<=n<=5:result["face_review_sampled_frames"]=n
+ if type(n) is int and 0<=n<=12:result["face_review_sampled_frames"]=n
  rows=m.get("face_candidates")
  if not isinstance(rows,list) or len(rows)>8:return result
  out=[]
@@ -126,9 +126,23 @@ def safe_face_review_metadata(m):
   if not isinstance(label,str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 _.-]{0,55}",label):label=None
   score=row.get("cosine_similarity")
   if type(score) not in (float,int) or not math.isfinite(score) or not -1<=score<=1:score=None
+  # A face JPEG can be requested on demand only if this verified manifest
+  # gives its exact basename, expected size and digest.
+  snap=row.get("snapshot")
+  base=m.get("name","").removesuffix(".mp4")
+  valid_snapshot=(isinstance(base,str) and re.fullmatch(r"motion_[0-9]{13}",base)
+      and isinstance(snap,str) and re.fullmatch(
+       r"motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg",snap)
+      and snap.startswith(base+"__"))
+  size=row.get("snapshot_size_bytes")
+  digest=row.get("snapshot_sha256")
+  if not (valid_snapshot and type(size) is int and 2000<=size<=2200000
+          and isinstance(digest,str) and re.fullmatch(r"[a-f0-9]{64}",digest)):
+   snap=None;size=None;digest=None
   out.append({"person_id":key,"candidate_name":label,"match_status":status,
     "time_ms":ms,"cosine_similarity":round(score,3) if score is not None else None,
-    "snapshot_on_s9":True})
+    "snapshot_on_s9":snap is not None,
+    "snapshot_name":snap,"snapshot_size":size,"snapshot_sha256":digest})
  result["face_candidates"]=out
  result["face_snapshots_saved"]=len(out)
  return result
