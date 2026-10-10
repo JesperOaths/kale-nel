@@ -111,27 +111,41 @@ def integrations() -> dict:
         return {"found": True, "parse_error": type(exc).__name__}
 
 def wyoming_describe(port: int) -> dict:
-    """Check Wyoming protocol response rather than merely an open TCP socket."""
+    """Verify Wyoming's full info frame (JSON header + data_length body)."""
     try:
-        with socket.create_connection(("127.0.0.1", port), timeout=2) as conn:
-            conn.settimeout(2)
+        with socket.create_connection(("127.0.0.1", port), timeout=3) as conn:
+            conn.settimeout(3)
             conn.sendall(b'{"type":"describe","data":{}}\n')
-            payload = bytearray()
-            while len(payload) < 65536:
-                chunk = conn.recv(1024)
+            data = bytearray()
+            while b"\n" not in data and len(data) < 4096:
+                chunk = conn.recv(4096)
                 if not chunk:
-                    break
-                payload.extend(chunk)
-                if b"\n" in payload:
-                    break
-        first = bytes(payload).split(b"\n", 1)[0]
-        msg = json.loads(first)
-        capabilities = msg.get("data") or {}
+                    raise ConnectionError("no_response")
+                data.extend(chunk)
+            head, sep, remaining = bytes(data).partition(b"\n")
+            if not sep:
+                raise ValueError("missing_wyoming_delimiter")
+            meta = json.loads(head)
+            amount = meta.get("data_length", 0)
+            if isinstance(amount, bool) or not isinstance(amount, int) or not 0 <= amount <= 262144:
+                raise ValueError("invalid_wyoming_data_length")
+            body = bytearray(remaining[:amount])
+            while len(body) < amount:
+                next_chunk = conn.recv(min(8192, amount - len(body)))
+                if not next_chunk:
+                    raise ConnectionError("truncated_wyoming_data")
+                body.extend(next_chunk)
+        info = json.loads(body) if amount else (meta.get("data") or {})
+        if not isinstance(info, dict):
+            raise ValueError("invalid_wyoming_info")
+        names = ("asr", "tts", "wake", "mic", "snd", "handle")
+        capabilities = [key for key in names if key in info and info[key]]
         return {
-            "responded": msg.get("type") == "info",
-            "response_type": msg.get("type"),
-            "capabilities": sorted(k for k in ("asr", "tts", "wake", "mic", "snd", "handle")
-                                   if k in capabilities),
+            "responded": meta.get("type") == "info" and bool(capabilities),
+            "header_ok": meta.get("type") == "info",
+            "response_type": meta.get("type"),
+            "capabilities": capabilities,
+            "data_length": amount,
         }
     except Exception as exc:
         return {"responded": False, "error_type": type(exc).__name__}
