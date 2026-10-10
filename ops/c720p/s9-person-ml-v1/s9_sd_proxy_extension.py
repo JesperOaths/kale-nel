@@ -84,29 +84,12 @@ def install_local_sd(H):
   data=rows()
   previews=preview_rows()
   if path=="/new/api/live-person-watch":
-   # Read-only aggregate detector status through the existing signed relay;
-   # never serve raw frames, person embeddings or unauthorized write routes.
-   from pathlib import Path
-   import time
-   state_file=Path("/home/jespern/c720p-home-hub/state/s9-live-person-watch.json")
-   try:
-    d=json.loads(state_file.read_text())
-    if d.get("version")!="s9-live-ssd-watch-v1" or not isinstance(d.get("status"),dict):
-     raise ValueError("invalid_live_person_status")
-    age=max(0,int(time.time()*1000)-int(d.get("last_sample_at_ms",0)))
-    if age>17000:
-     d={"ok":False,"status":{"kind":"sensor_stale","identity":"not_evaluated"},
-        "last_sample_age_ms":age,"read_only":True}
-    else:
-     # Limit published fields to the documented aggregate model contract.
-     d={k:d.get(k) for k in ("ok","version","read_only","label_is_ground_truth",
-      "last_sample_at_ms","samples","failures","camera_mode","camera_temperature_c",
-      "motion_changed_ratio","motion_coherent_cells","status","recent_candidate_transitions")}
-     d["last_sample_age_ms"]=age
-    self.js(200,d)
-   except (OSError,TypeError,ValueError,OverflowError):
-    self.js(200,{"ok":False,"read_only":True,"status":{"kind":"sensor_not_started",
-      "identity":"not_evaluated"}})
+   # S9+ owns the person model, GPU inference, and garden ROI. The hub only
+   # forwards metadata from the already-authenticated Camera2 loopback API.
+   import s9_phone_garden_status
+   try:self.js(200,s9_phone_garden_status.read_report())
+   except (OSError,TypeError,ValueError,OverflowError,urllib.error.URLError):
+    self.js(200,s9_phone_garden_status.unavailable())
    return
   if path=="/new/api/saved":
    events=[]
