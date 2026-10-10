@@ -98,6 +98,31 @@ class Tests(unittest.TestCase):
         self.assertEqual(one["person_count"],2)
         self.assertNotIn("appearance_vector",json.dumps(one))
         self.assertNotIn("verified_same_person",json.dumps(one))
+        self.assertIsNone(one.get("person_score"))
+        self.assertIsNone(one.get("sampled_frames"))
+        self.assertIsNone(one.get("duration_ms"))
+        self.assertIsNone(one.get("review_backend"))
+
+    def test_public_s9_person_scores_are_bounded(self):
+        m={"person_confidence":.93445,"sampled_frame_count":12,
+           "duration_ms":25678,"backend":"gpu",
+           "person_event_category":"single_person_repeated_candidate",
+           "appearance_vector":[.9]*48,"person_identity":"not_evaluated"}
+        metrics=self.catalog.safe_native_detection_stats(m)
+        self.assertEqual(metrics["person_score"],.934)
+        self.assertEqual(metrics["sampled_frames"],12)
+        self.assertEqual(metrics["review_backend"],"gpu")
+        out=self.proxy.detection_metrics(metrics)
+        self.assertEqual(out["person_score"],.934)
+        self.assertEqual(out["duration_ms"],25678)
+        self.assertNotIn("person_identity",out)
+        self.assertNotIn("appearance_vector",out)
+        m["person_confidence"]=float('nan')
+        self.assertIsNone(self.catalog.safe_native_detection_stats(m)["person_score"])
+        m["person_confidence"]=1.4
+        self.assertIsNone(self.catalog.safe_native_detection_stats(m)["person_score"])
+        m["person_event_category"]="recognized_john"
+        self.assertIsNone(self.catalog.safe_native_detection_stats(m)["person_event_category"])
 
     def test_ui_idempotence_and_refusal_on_unknown_page(self):
         original='<html><script id="c720p-s9-phone-clips-ui-v1"></script></body></html>'
