@@ -226,6 +226,13 @@ public final class CameraService extends Service {
   if(RecordingRate.reserve(count))reserveUsed++;
   prefs.edit().putInt("record_rate_count",count+1).apply();
  }
+ // MediaRecorder writes a playback display matrix rather than rotating pixels.
+ // This is a stationary camera: preserve 90-degree default until the user
+ // explicitly selects the mounted orientation through Security Controls.
+ private int recordingRotation(){
+  int angle=getSharedPreferences("native",MODE_PRIVATE).getInt("recording_rotation_degrees",90);
+  return angle==0||angle==90||angle==180||angle==270?angle:90;
+ }
  private void startRecording(){
   if(!running||(pilotOnly&&!temporaryTest)||!"watching".equals(mode))return;
   if(!rateAllowed(motion.strong)){
@@ -251,7 +258,7 @@ public final class CameraService extends Service {
    recorder.setVideoSize(3840,2160);
    recorder.setVideoFrameRate(30);
    recorder.setVideoEncodingBitRate(36000000);
-   recorder.setOrientationHint(90);
+   recorder.setOrientationHint(recordingRotation());
    recorder.setOutputFile(partial.getAbsolutePath());
    recorder.prepare();
    Surface video=recorder.getSurface();
@@ -484,6 +491,7 @@ public final class CameraService extends Service {
    d.put("snapshot_age_ms",lastJpegAt==0?-1:SystemClock.elapsedRealtime()-lastJpegAt);
    d.put("privacy","scene_tags_no_verified_cross_recording_identity");
    d.put("camera_controls_available",cameraControls!=null && "watching".equals(mode));
+    d.put("recording_orientation_hint_degrees",recordingRotation());
   }catch(Exception ignored){}
   return d;
  }
@@ -493,7 +501,14 @@ public final class CameraService extends Service {
   result.put("mode",mode);
   result.put("read_only",false);
   result.put("changing_controls_while_recording",false);
-  result.put("controls",cameraControls==null?new JSONObject():cameraControls.status());
+  JSONObject options=cameraControls==null?new JSONObject():cameraControls.status();
+   if(cameraControls!=null){
+    JSONArray choices=new JSONArray();
+    for(int angle:new int[]{0,90,180,270})choices.put(String.valueOf(angle));
+    options.put("recording_rotation",new JSONObject()
+      .put("value",String.valueOf(recordingRotation())).put("available",choices));
+   }
+   result.put("controls",options);
   return result;
  }
  private JSONObject updateControl(String key,String value)throws Exception {
@@ -502,7 +517,16 @@ public final class CameraService extends Service {
    if(!"watching".equals(mode)||session==null||activeCameraRequest==null||cameraControls==null){
     return response.put("ok",false).put("error","control_unavailable_during_recording_or_camera_transition");
    }
-   JSONObject old=cameraControls.status();
+   if("recording_rotation".equals(key)){
+     // Future-recordings-only MP4 hint, without a capture session restart.
+     if(!("0".equals(value)||"90".equals(value)||"180".equals(value)||"270".equals(value)))
+      return response.put("ok",false).put("error","unsupported_or_invalid_control");
+     boolean stored=getSharedPreferences("native",MODE_PRIVATE).edit()
+       .putInt("recording_rotation_degrees",Integer.parseInt(value)).commit();
+     return response.put("ok",stored).put("key",key).put("value",value)
+       .put("mode",mode).put("future_recordings_only",true);
+    }
+    JSONObject old=cameraControls.status();
    try {
     cameraControls.select(key,value);
     cameraControls.apply(activeCameraRequest);
