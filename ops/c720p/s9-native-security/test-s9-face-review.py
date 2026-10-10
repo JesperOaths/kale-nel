@@ -79,6 +79,57 @@ class FaceReviewTests(unittest.TestCase):
   self.assertEqual(row["face_review_sampled_frames"],4)
   self.assertNotIn("embedding",json.dumps(row))
 
+
+ def test_authenticated_face_preview_served_on_demand_with_verified_digest(self):
+  import hashlib
+  from types import SimpleNamespace
+  key="motion_1791600000000.mp4"
+  filename="motion_1791600000000__unknown_00001__1600_0.jpg"
+  jpeg=b"\\xff\\xd8\\xff"+b"A"*2400+b"\\xff\\xd9"
+  manifest={"name":key,"face_review_version":"s9_face_review_v1",
+    "face_review_status":"face_embedding_unavailable_snapshots_only",
+    "face_review_sampled_frames":12,
+    "face_candidates":[{"match_status":"new_anonymous_candidate","person_id":"unknown_00001",
+       "snapshot":filename,"snapshot_size_bytes":len(jpeg),
+       "snapshot_sha256":hashlib.sha256(jpeg).hexdigest(),"time_ms":1600}]}
+  safe=self.catalog.safe_face_review_metadata(manifest)
+  self.assertTrue(safe["face_candidates"][0]["snapshot_on_s9"])
+  self.assertEqual(safe["face_candidates"][0]["snapshot_name"],filename)
+  class Handler:
+   def __init__(self,path):
+    import io
+    self.path=path;self.command="GET";self.result=None;self.body=None
+    self.wfile=io.BytesIO();self.headers={}
+   def go(self):pass
+   def do_POST(self):pass
+   def js(self,code,data):self.result=code;self.body=data
+   def send_response(self,code):self.result=code
+   def send_header(self,key,val):self.headers[key]=val
+   def end_headers(self):pass
+  row={"name":key,"size":250000,"timestamp":"2026-10-10 09:20",
+       "sd_verified":True,**safe}
+  self.proxy.install_local_sd(Handler)
+  request=Handler("/new/saved/face/"+filename)
+  with mock.patch.object(self.proxy,"rows",return_value={key:row}),mock.patch.object(
+    self.proxy,"preview_rows",return_value={}),mock.patch.object(
+    self.proxy.subprocess,"run",return_value=SimpleNamespace(stdout=jpeg)):
+   request.go()
+  self.assertEqual(request.result,200)
+  self.assertEqual(request.headers["Content-Type"],"image/jpeg")
+  self.assertEqual(request.wfile.getvalue(),jpeg)
+  tampered=Handler("/new/saved/face/"+filename)
+  with mock.patch.object(self.proxy,"rows",return_value={key:row}),mock.patch.object(
+    self.proxy,"preview_rows",return_value={}),mock.patch.object(
+    self.proxy.subprocess,"run",return_value=SimpleNamespace(stdout=b"bad image")):
+   tampered.go()
+  self.assertEqual(tampered.result,503)
+  self.assertEqual(tampered.wfile.getvalue(),b"")
+  unindexed=Handler("/new/saved/face/motion_1791600000000__unknown_00002__1600_0.jpg")
+  with mock.patch.object(self.proxy,"rows",return_value={key:row}),mock.patch.object(
+    self.proxy,"preview_rows",return_value={}):
+   unindexed.go()
+  self.assertEqual(unindexed.result,404)
+
  def test_ui_is_idempotent_and_requires_security_page(self):
   page='<html><script id="c720p-s9-phone-clips-ui-v1"></script></body></html>'
   once=self.ui.patch_text(page)
