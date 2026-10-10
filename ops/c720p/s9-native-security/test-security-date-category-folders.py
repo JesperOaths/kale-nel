@@ -39,6 +39,58 @@ class TestFolders(unittest.TestCase):
         self.assertNotIn('localStorage.setItem',module.SNIPPET)
         self.assertNotIn('fetch("/new/saved/clip/',module.SNIPPET)
 
+    def test_upgrade_previous_live_folder_widget_and_keep_all_clips(self):
+        updated=module.patch(self.page())
+        self.assertIn('(?:motion|native4k)_',updated)
+        stale=updated.replace(
+            'const native=/^(?:motion|native4k)_([0-9]{13})[.]mp4$/;',
+            'const native=/^motion_([0-9]{13})[.]mp4$/;',1)
+        stale=stale.replace(
+            'const safe=/^(?:(?:motion|native4k)_[0-9]{13}|',
+            'const safe=/^(?:motion_[0-9]{13}|',1)
+        self.assertNotEqual(stale,updated)
+        repaired=module.patch(stale)
+        self.assertEqual(repaired,updated)
+        self.assertEqual(repaired.count(module.MARKER),1)
+        self.assertEqual(module.patch(repaired),repaired)
+
+    def test_native4k_and_legacy_filenames_accepted_in_actual_js(self):
+        node=shutil.which('node')
+        if not node:self.skipTest('Node unavailable')
+        js=module.SNIPPET.split('<script id="s9-saved-virtual-folders-script-v1">',1)[1].split('</script>',1)[0]
+        native=next(x.strip() for x in js.splitlines() if x.strip().startswith('const native='))
+        safe=next(x.strip() for x in js.splitlines() if x.strip().startswith('const safe='))
+        checks="""
+for(const name of ['motion_1791653043670.mp4','native4k_1791576078307.mp4','rec_2026-10-09_22-40.mp4'])
+ if(!safe.test(name))throw Error('missing clip '+name);
+for(const name of ['../../etc/passwd','native4k_bad.mp4','motion_123.mp4'])
+ if(safe.test(name))throw Error('unsafe clip '+name);
+if(!native.test('native4k_1791576078307.mp4'))throw Error('native4k date grouping');
+"""
+        result=subprocess.run([node,'-e',native+chr(10)+safe+chr(10)+checks],
+            capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stderr)
+
+    def test_possible_person_evidence_is_visible_but_not_automatically_confirmed(self):
+        node=shutil.which('node')
+        if not node:self.skipTest('Node unavailable')
+        source=module.SNIPPET
+        start=source.index(' const category=r=>{')
+        end=source.index(' const tag=',start)
+        body=source[start:end]
+        checks="""
+const possible={scene_category:'motion_other',person_count:0,
+ person_event_category:'possible_person_below_standard_threshold',
+ content_categories:['vehicle']};
+if(category(possible)!=='possible')throw Error('low-confidence person hidden by vehicle');
+if(category({scene_category:'one_person',person_count:1})!=='person')throw Error('strong person label');
+if(category({scene_category:'motion_other',content_categories:['vehicle'],person_event_category:'no_person_model_detection'})!=='vehicle')throw Error('vehicle label');
+if(category({scene_category:'unreviewed'})!=='unreviewed')throw Error('unknown recording label');
+"""
+        result=subprocess.run([node,'-e',body+chr(10)+checks],
+            capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stderr)
+
     def test_refuses_unknown_pages(self):
         with self.assertRaises(ValueError):module.patch("<body></body>")
         with self.assertRaises(ValueError):module.patch(self.page().replace('s9-video-orientation-script-v1','unknown'))

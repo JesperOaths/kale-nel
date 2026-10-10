@@ -36,12 +36,13 @@ SNIPPET=r'''
 (()=>{
  'use strict';
  const ID='s9-date-folders', BASE='/local/frontyard-security-new/';
- const native=/^motion_([0-9]{13})[.]mp4$/;
+ const native=/^(?:motion|native4k)_([0-9]{13})[.]mp4$/;
  const legacy=/^rec_([0-9]{4}-[0-9]{2}-[0-9]{2})_([0-9]{2}-[0-9]{2})[.]mp4$/;
- const safe=/^(?:motion_[0-9]{13}|rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2})[.]mp4$/;
+ const safe=/^(?:(?:motion|native4k)_[0-9]{13}|rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2})[.]mp4$/;
  const groups=[
   ['multiple','Multiple people candidates'],
   ['person','Person detected / likely'],
+  ['possible','Possible person · needs review'],
   ['vehicle','Vehicle motion'],
   ['animal','Animal motion'],
   ['other','Other motion'],
@@ -65,6 +66,11 @@ SNIPPET=r'''
   const tags=Array.isArray(r.content_categories)?r.content_categories:[];
   if(g==='multiple_people'||String(r.person_event_category||'')==='multiple_people_candidate')return 'multiple';
   if(g==='one_person'||g==='single_person_event_candidate'||g==='single_person_repeated_candidate'||(Number(r.person_count)||0)>0)return 'person';
+  // Keep weak model evidence visible for human review without claiming an
+  // actual person was present. A 0.30–0.49 TFLite candidate is not verified.
+  const event=String(r.person_event_category||'');
+  if(['single_frame_person_candidate','possible_group_needs_frame_review',
+      'possible_person_below_standard_threshold'].includes(event))return 'possible';
   if(tags.includes('vehicle'))return 'vehicle';
   if(tags.includes('animal'))return 'animal';
   if(g==='unreviewed'||g==='unknown'||g==='')return 'unreviewed';
@@ -139,7 +145,12 @@ SNIPPET=r'''
   let host=document.getElementById(ID);
   if(!host){host=tag('section');host.id=ID;root.prepend(host)}
   // Do not repopulate while the user is expanding a date/category.
-  const signature=data.map(x=>nameOf(x)+String(x.scene_category||'')).join('|');
+  // A person-model review can change while the filename/scene label stays
+  // unchanged. Include detector evidence so live category folders refresh.
+  const signature=data.map(x=>[
+   nameOf(x),x.scene_category||'',x.person_event_category||'',
+   Number(x.person_count)||0,Array.isArray(x.content_categories)?x.content_categories.join(','):''
+  ].join(':')).join('|');
   if(host.dataset.signature===signature)return;
   const open=new Set([...host.querySelectorAll('details[open]')].map(x=>x.dataset.folderKey));
   host.replaceChildren();
@@ -219,7 +230,24 @@ def patch(text: str) -> str:
     if MARKER in text:
         if text.count(MARKER)!=1 or text.count(STYLE)!=1:
             raise ValueError("duplicate_date_folder_widget")
-        return text
+        def existing(content, opening, closing):
+            if content.count(opening)!=1:
+                raise ValueError("unexpected_widget_opening")
+            start=content.index(opening)
+            end=content.find(closing,start+len(opening))
+            if end<0:
+                raise ValueError("widget_missing_closing")
+            return content[start:end+len(closing)]
+        style_open='<style id="s9-saved-virtual-folders-style-v1">'
+        script_open='<script id="s9-saved-virtual-folders-script-v1">'
+        old_style=existing(text,style_open,'</style>')
+        old_script=existing(text,script_open,'</script>')
+        new_style=existing(SNIPPET,style_open,'</style>')
+        new_script=existing(SNIPPET,script_open,'</script>')
+        if not all(k in old_script for k in
+                   ('const native=', 'const safe=', 'function render(data)', 'function openClip(r)')):
+            raise ValueError("unrecognized_existing_folder_widget")
+        return text.replace(old_style,new_style,1).replace(old_script,new_script,1)
     return text.replace("</body>",SNIPPET+"\n</body>",1)
 
 def main():
