@@ -71,6 +71,26 @@ if(!native.test('native4k_1791576078307.mp4'))throw Error('native4k date groupin
             capture_output=True,text=True,timeout=15)
         self.assertEqual(result.returncode,0,result.stderr)
 
+    def test_possible_person_evidence_is_visible_but_not_automatically_confirmed(self):
+        node=shutil.which('node')
+        if not node:self.skipTest('Node unavailable')
+        source=module.SNIPPET
+        start=source.index(' const category=r=>{')
+        end=source.index(' const tag=',start)
+        body=source[start:end]
+        checks="""
+const possible={scene_category:'motion_other',person_count:0,
+ person_event_category:'possible_person_below_standard_threshold',
+ content_categories:['vehicle']};
+if(category(possible)!=='possible')throw Error('low-confidence person hidden by vehicle');
+if(category({scene_category:'one_person',person_count:1})!=='person')throw Error('strong person label');
+if(category({scene_category:'motion_other',content_categories:['vehicle'],person_event_category:'no_person_model_detection'})!=='vehicle')throw Error('vehicle label');
+if(category({scene_category:'unreviewed'})!=='unreviewed')throw Error('unknown recording label');
+"""
+        result=subprocess.run([node,'-e',body+chr(10)+checks],
+            capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stderr)
+
     def test_refuses_unknown_pages(self):
         with self.assertRaises(ValueError):module.patch("<body></body>")
         with self.assertRaises(ValueError):module.patch(self.page().replace('s9-video-orientation-script-v1','unknown'))
