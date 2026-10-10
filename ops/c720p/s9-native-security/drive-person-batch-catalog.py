@@ -103,7 +103,8 @@ def sorted_candidates(verified,stored):
  for k,src in verified.items():
   old=stored.get(k,{})
   if old.get("status")=="classified" and old.get("model_sha256") is not None:
-   continue
+   if old.get("category") not in ("single_person_event_candidate","possible_person_needs_review") or "appearance_quality" in old:
+    continue
   if old.get("status")=="error" and int(old.get("attempts",0))>=2:
    continue
   pending.append(src)
@@ -136,6 +137,8 @@ def process_one(m,net,index,output,shape,cfg,src):
  cc["folders"]["new"]=cfg["folders"][cam]
  raw=m.decode_frames(cc,name,110)
  evidence=m.detect(raw,net,index,output,shape)
+ import s9_appearance_review
+ appearance=s9_appearance_review.descriptor(raw,evidence)
  del raw
  if len(evidence)<2:raise RuntimeError("too_few_frames_to_categorize")
  labels=categorize_evidence(m,evidence)
@@ -152,6 +155,10 @@ def process_one(m,net,index,output,shape,cfg,src):
   "vehicle_score":labels["vehicle_score_peak"],
   "animal_score":labels["animal_score_peak"],
   "motion_observation":labels["person_activity"],
+  "appearance_quality":appearance["quality"],
+  "appearance_samples":appearance["sample_frames"],
+  "appearance_vector":appearance["vector"],
+  "appearance_claim":"similar_outfit_only_not_identified_person",
   "identity_status":"not_verified",
   "visitor_id":None,
   "human_review":"pending",
