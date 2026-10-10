@@ -110,6 +110,32 @@ def integrations() -> dict:
     except (OSError, ValueError, TypeError) as exc:
         return {"found": True, "parse_error": type(exc).__name__}
 
+def wyoming_describe(port: int) -> dict:
+    """Check Wyoming protocol response rather than merely an open TCP socket."""
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=2) as conn:
+            conn.settimeout(2)
+            conn.sendall(b'{"type":"describe","data":{}}\\n')
+            payload = bytearray()
+            while len(payload) < 65536:
+                chunk = conn.recv(1024)
+                if not chunk:
+                    break
+                payload.extend(chunk)
+                if b"\\n" in payload:
+                    break
+        first = bytes(payload).split(b"\\n", 1)[0]
+        msg = json.loads(first)
+        capabilities = msg.get("data") or {}
+        return {
+            "responded": msg.get("type") == "info",
+            "response_type": msg.get("type"),
+            "capabilities": sorted(k for k in ("asr", "tts", "wake", "mic", "snd", "handle")
+                                   if k in capabilities),
+        }
+    except Exception as exc:
+        return {"responded": False, "error_type": type(exc).__name__}
+
 def host_audio() -> dict:
     result = {}
     for name, argv in [
@@ -166,7 +192,7 @@ def main() -> None:
         "listeners": {str(p): connected(p) for p in PORTS},
         "disk": {"free_mb": round(usage.free / 1048576, 1),
                  "used_percent": round(100 * usage.used / usage.total, 1)},
-        "ha_http": ha_http(),
+        "wyoming_protocol": {str(p): wyoming_describe(p) for p in (10200, 10300, 10400, 10701)},\n        "ha_http": ha_http(),
         "audio": host_audio(),
         "pipelines": pipeline_config(),
         "integrations": integrations(),
