@@ -37,15 +37,20 @@ NATIVE=[
  "patch-drive-visitor-review-ui.py",
  "c720p-s9-drive-person-catalog.service",
  "c720p-s9-drive-person-catalog.timer",
+ "patch-anonymous-tracks-ui.py",
+ "test-anonymous-index-ui.py",
+ "deploy-anonymous-clips-index.py",
 ]
 PROXY=[
  "s9_native_camera_controls.py",
  "s9_sd_proxy_extension.py",
  "s9_drive_visitor_review.py",
+ "local-sd-catalog.py",
 ]
 ANDROID=["CameraService.java","CameraControls.java","MotionGrid.java","ClipClassifier.java","OutfitEvidence.java","AnonymousClipTracks.java"]
 TESTS=["test-native-camera-controls.py","test-drive-person-batch-catalog.py",
-       "test-drive-visitor-review.py","test-appearance-review.py"]
+       "test-drive-visitor-review.py","test-appearance-review.py",
+       "test-anonymous-index-ui.py"]
 SAFE_SHA=re.compile(r"[a-f0-9]{40}\Z")
 
 def revision(build=BUILD):
@@ -121,7 +126,10 @@ def check_ui(stage):
    "S9_NATIVE_CAMERA2_SECURITY_CONTROLS_V1"),
   ("s9-native-security/patch-drive-visitor-review-ui.py",
    "/opt/homeassistant/config/www/frontyard-security-new/clips.html",
-   "Possible repeat outfit")
+   "Possible repeat outfit"),
+  ("s9-native-security/patch-anonymous-tracks-ui.py",
+   "/opt/homeassistant/config/www/frontyard-security-new/clips.html",
+   "s9-anonymous-clips-script-v1")
  ]
  summary=[]
  for module,html,marker in patches:
@@ -130,8 +138,9 @@ def check_ui(stage):
    "s9_checked_"+source.stem.replace("-","_"),source)
   m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
   raw=Path(html).read_text()
-  updated=m.patch(raw)
-  if m.patch(updated)!=updated or marker not in updated:
+  method=m.patch_text if hasattr(m,"patch_text") else m.patch
+  updated=method(raw)
+  if method(updated)!=updated or marker not in updated:
    raise RuntimeError("security_ui_patch_not_idempotent_"+module)
   summary.append({"page":Path(html).name,"stage_ready":True,
                   "currently_updated":marker in raw})
