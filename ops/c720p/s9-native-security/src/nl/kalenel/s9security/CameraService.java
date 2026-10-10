@@ -248,7 +248,7 @@ public final class CameraService extends Service {
      gardenPersonGateMatches++;
      // Do not start recording on stale detections, if the camera has moved
      // into a new capture session, or after a deliberate controls change.
-     if(!running||!"watching".equals(mode)||lastFrameAt-now>3500||
+     if(!running||!"watching".equals(mode)||SystemClock.elapsedRealtime()-now>3500||
          lastFrameAt<cameraControlSettleUntil)return;
      if(lastFrameAt<cooldownUntil)saveFallbackEvidence("cooldown_person_candidate");
      else if(temperature()<415 && folder!=null&&
