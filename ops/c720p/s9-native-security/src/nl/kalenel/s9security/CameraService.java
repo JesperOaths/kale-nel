@@ -42,6 +42,9 @@ public final class CameraService extends Service {
  private long lastFallbackAt=0;
  private String captureTier="normal";
  private long lastFrameAt=0,lastMovementAt=0,lastRecordAt=0,cooldownUntil=0,lastStart=0;
+ // Ignore detector triggers from deliberate user changes of zoom, torch or exposure.
+ // Seven fresh motion-grid samples first recalibrate the scene.
+ private long cameraControlSettleUntil=0;
  private final Object stateLock=new Object();
  private ServerSocket apiSocket;
  private Thread apiThread;
@@ -150,7 +153,7 @@ public final class CameraService extends Service {
      if(temporaryTest&&!pilotStarted&&frames>12&&"watching".equals(mode)){
       pilotStarted=true;startRecording();
      }
-     if(change){
+     if(change && lastFrameAt>=cameraControlSettleUntil){
       motionEvents++;
       lastMovementAt=lastFrameAt;
       if(!pilotOnly&&"watching".equals(mode)){
@@ -504,6 +507,10 @@ public final class CameraService extends Service {
     cameraControls.select(key,value);
     cameraControls.apply(activeCameraRequest);
     session.setRepeatingRequest(activeCameraRequest.build(),null,cameraHandler);
+    // Refresh the motion model after a deliberate camera setting change.
+    // Without this reset a changed crop/torch/exposure can look like an intruder.
+    motion.resetForCameraControl();
+    cameraControlSettleUntil=SystemClock.elapsedRealtime()+2500L;
     if("focus".equals(key)&&cameraControls.isAutoFocus()){
      CaptureRequest.Builder focus=camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
      focus.addTarget(preview.getSurface());
