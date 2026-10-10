@@ -96,6 +96,57 @@ def safe_native_detection_stats(manifest):
          "person_presence_percent":coverage,"duration_ms":duration,
          "review_backend":backend,"person_event_category":category}
 
+def safe_face_review_metadata(m):
+ """Strictly allowlisted human-readable phone metadata. Never copy embeddings or JPEGs."""
+ result={"face_review_status":"not_available_in_original_review",
+         "face_review_sampled_frames":None,"face_snapshots_saved":0,"face_candidates":[]}
+ if m.get("face_review_version")!="s9_face_review_v1":return result
+ status=m.get("face_review_status")
+ valid=("no_frontal_face_in_samples","face_embedding_unavailable_snapshots_only",
+   "face_embedding_failed_snapshots_only","face_review_failed",
+   "review_complete_unverified_matches","face_model_changed_requires_reenrollment",
+   "face_index_read_error")
+ result["face_review_status"]=status if status in valid else "invalid_face_review_status"
+ n=m.get("face_review_sampled_frames")
+ if type(n) is int and 0<=n<=12:result["face_review_sampled_frames"]=n
+ rows=m.get("face_candidates")
+ if not isinstance(rows,list) or len(rows)>8:return result
+ out=[]
+ for row in rows:
+  if not isinstance(row,dict):continue
+  status=row.get("match_status")
+  if status not in ("not_comparable_model_unavailable","reference_similarity_unverified",
+    "anonymous_similarity_unverified","new_anonymous_candidate","face_model_changed_requires_reenrollment",
+    "face_index_read_error","face_database_unavailable","face_index_capacity_reached"):continue
+  ms=row.get("time_ms")
+  if type(ms) is not int or not 0<=ms<=3600000:continue
+  key=row.get("person_id")
+  if not isinstance(key,str) or not re.fullmatch(r"(?:unknown_[0-9]{5}|known_candidate_[A-Za-z0-9_.-]{1,56})",key):key=None
+  label=row.get("candidate_name")
+  if not isinstance(label,str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 _.-]{0,55}",label):label=None
+  score=row.get("cosine_similarity")
+  if type(score) not in (float,int) or not math.isfinite(score) or not -1<=score<=1:score=None
+  # A face JPEG can be requested on demand only if this verified manifest
+  # gives its exact basename, expected size and digest.
+  snap=row.get("snapshot")
+  base=m.get("name","").removesuffix(".mp4")
+  valid_snapshot=(isinstance(base,str) and re.fullmatch(r"motion_[0-9]{13}",base)
+      and isinstance(snap,str) and re.fullmatch(
+       r"motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg",snap)
+      and snap.startswith(base+"__"))
+  size=row.get("snapshot_size_bytes")
+  digest=row.get("snapshot_sha256")
+  if not (valid_snapshot and type(size) is int and 2000<=size<=2200000
+          and isinstance(digest,str) and re.fullmatch(r"[a-f0-9]{64}",digest)):
+   snap=None;size=None;digest=None
+  out.append({"person_id":key,"candidate_name":label,"match_status":status,
+    "time_ms":ms,"cosine_similarity":round(score,3) if score is not None else None,
+    "snapshot_on_s9":snap is not None,
+    "snapshot_name":snap,"snapshot_size":size,"snapshot_sha256":digest})
+ result["face_candidates"]=out
+ result["face_snapshots_saved"]=len(out)
+ return result
+
 def adb(*args):
  p=subprocess.run(["adb","-s",ADDR,*args],capture_output=True,timeout=32)
  if p.returncode:raise OSError("phone_adb_offline")
@@ -209,6 +260,7 @@ def main():
      "thumbnail":thumb,"resolution":"3840x2160","codec":"H.264",
      "content_categories":m.get("categories",[]),
      **anonymous_clip_metadata(m),
+     **safe_face_review_metadata(m),
      "storage":"S9 native 4K Security microSD"})
   except Exception as error:problems.append(name+":"+type(error).__name__)
 

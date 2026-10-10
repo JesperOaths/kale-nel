@@ -88,3 +88,36 @@ python3 ops/c720p/s9-native-security/safe-night-guard-upgrade.py
 `stage-verified-deployment.py` requires matching source/compile/APK commit stamps and a signed package, validates all staged inputs from that pinned commit and tests Security HTML patching. `deploy-anonymous-clips-index.py` backs up the C720P catalog/proxy/page/index, restarts only the archive service, verifies that indexed video records and stills are not lost, and rolls back on failure. `safe-night-guard-upgrade.py` separately backs up the installed phone APK and performs a guarded update with automatic old-APK restore on failure.
 
 **Live acceptance:** confirm Camera2 returns to `watching`, snapshots and 4K recording are healthy, temperature/SD safeguards remain active, `/new/api/saved` still lists existing video and fallback stills, and a newly completed 4K recording has an anonymous-track manifest with the expected local-only scope. `anonymous_track_count=0` on an analyzed clip means no people were detected **in the sampled frames**, not necessarily no people in the video. Until those acceptance checks pass on the phone and hub, the source implementation is **not deployed**.
+
+
+## S9+ on-device face snapshots for Home Assistant Security (feature staged 10 October 2026)
+
+**Source-only change — not deployed by a Git commit.** The phone's existing Camera2 service remains the only owner of motion recording and inference. The input folder is **the actual S9 motion-detection output**:
+`/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files/Security4K/motion_<epoch-ms>.mp4`.
+No other camera directory is polled. This is not the older vacation-folder Python OpenCV/`face_recognition` watcher: native Android uses its existing MediaMetadataRetriever, person detector and the built-in Android FaceDetector, with optional 128-D TFLite embedding on the S9. There are no SSH video transfers to the C720P, no hub Python face recognition, no Drive uploads, and no additional continuous C720P inference.
+
+**Processing flow.** After a motion clip is finalized and verified as 3840×2160, the S9's serialized background reviewer samples up to twelve frames, estimates person presence and checks each candidate frame for sufficiently frontal face(s). It saves at most eight acceptable JPEG crops to `Security4K/FaceSnapshots/` and records each crop's **size + SHA-256** in the S9-generated `.verified.json`. Face pose, exposure, size, and flat-image checks filter low-quality crops. This is a sampled-frame analysis; faces visible only between samples may be missed. No unfinalized `.recording` video is processed.
+
+**Idle backfill.** The running S9 service scans only already finalized `motion_*.mp4.verified.json` manifests with `person_count > 0`. At most one older recording is re-reviewed per 180 seconds while camera mode is `watching`, phone battery temperature is below 37°C, and SD has at least 20 GiB free. This uses the **phone's own** reviewer executor, does not rewrite source MP4s, and leaves files it cannot validate untouched. A previously reviewed snapshot-only clip is eligible again after a face embedding model is installed.
+
+**Optional identity suggestions.** The APK can package a **checksum-pinned** `face_embedding.tflite` with FLOAT32 NHWC input `[1,112,112,3]` (RGB rescaled to approximately [-1,1]) and FLOAT32 output `[1,128]`. It generates a normalized embedding on the phone, compares with photo labels in `Security4K/KnownFaces/<person>.jpg`, and creates local provisional `unknown_00001`-style aliases. Anonymous embeddings persist in the Android application's private `getFilesDir()` and are not exported through the hub/API. No face model binary is bundled by default. If none is validated and supplied, the feature **only creates snapshots**, while matching remains disabled; it does not invent known/unknown identifications. Thresholds are provisional and must be calibrated with S9 daytime/nighttime images and real false-match negatives before use; a suggestion is *never* proof of a person's identity. For an enrolled name, reference images should be an accurately cropped, approximately frontal face. Changing embedding models must never mix the two incompatible vector galleries.
+
+**Home Assistant.** The C720P microSD catalog exports an allowlist of clip name, timestamp, review status, sampled-frame counts, optional provisional labels and **hashed snapshot references**. The existing authenticated `/new/api/saved` route exposes that metadata. The `clips.html` Security page shows a new "S9+ face snapshots and candidate identities" section. Clicking "View face crop" obtains a signed URL to `/new/saved/face/<snapshot-basename>`. The C720P archive server fetches only that JPEG from the phone on demand via ADB, verifies its recorded size, SHA-256 and JPEG markers, and returns it with `private,no-store`. It never saves the JPEG or handles embeddings on the hub. The original S9 recordings and playback controls remain unchanged. The relay must stay authenticated.
+
+**Guarded release, not a CI deployment.** Resolve a single immutable source revision and use the existing S9 build and staging pipeline:
+
+```bash
+export S9_SECURITY_REF="<40-character reviewed release commit>"
+bash ops/c720p/s9-native-security/compile-only.sh
+# Optional, only for a validated model: export S9_FACE_EMBEDDING_MODEL=...
+# export S9_FACE_MODEL_SHA256="<verified 64-digit hash>"
+bash ops/c720p/s9-native-security/package-only.sh
+python3 ops/c720p/s9-native-security/stage-verified-deployment.py
+python3 ops/c720p/s9-native-security/deploy-anonymous-clips-index.py \
+  --staging "$HOME/c720p-home-hub/build/s9-controls-validated/$S9_SECURITY_REF"
+python3 ops/c720p/s9-native-security/safe-night-guard-upgrade.py
+```
+
+The C720P scripts above must run on the C720P against a checkout of the reviewed commit; the S9 APK installer must be run only after preserving the existing signed APK and verifying the camera is not actively recording. The UI-only update is backed up and rolls back on failure. After APK replacement, verify that Camera2 resumes `watching`, native 4K recording and `/shot.jpg` work, the SD path is unchanged, sample clips gain `face_review_version=s9_face_review_v1`, snapshots exist on phone SD, the hub's signed image endpoint serves only indexed crops, and no original clips vanished. Confirm thermal and battery use before enabling historical backfill at scale. **GitHub Actions Java compilation and mock Python/UI tests do not verify any of these on-device conditions.**
+
+**Privacy/accuracy:** Face matching may confuse people or be wrong with hats, distant faces, occlusion or changing lighting. Keep the name status visibly provisional, do not trigger door locks, alarms or irreversible actions from matches alone, and provide an option to disable or erase locally stored biometric data if the household requires it. Existing clip-local Person 1/2 tracks remain independent and are not retroactively relabeled as verified named individuals.

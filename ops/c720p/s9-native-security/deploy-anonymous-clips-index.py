@@ -28,6 +28,7 @@ ARCHIVE=LIVE_BIN/"c720p-drive-security-archive.py"
 BACKUP_ROOT=HOME/"backups/s9-anonymous-index"
 STYLE='id="s9-anonymous-clips-style-v1"'
 SCRIPT='id="s9-anonymous-clips-script-v1"'
+FACE_SCRIPT='id="s9-face-review-script-v1"'
 
 def run(command,seconds=45):
     return subprocess.run(command,check=True,capture_output=True,text=True,timeout=seconds)
@@ -58,6 +59,8 @@ def main():
     }
     patch_file=stage/"s9-native-security/patch-anonymous-tracks-ui.py"
     tests=stage/"s9-native-security/test-anonymous-index-ui.py"
+    face_patch=stage/"s9-native-security/patch-s9-face-review-ui.py"
+    face_tests=stage/"s9-native-security/test-s9-face-review.py"
     if len(stage.name)!=40 or any(c not in "0123456789abcdef" for c in stage.name):
         raise RuntimeError("immutable_sha_named_stage_required")
     stamps=[HOME/"build/s9-native-security/.source-commit",
@@ -65,18 +68,24 @@ def main():
             HOME/"build/s9-native-security/s9-native-security.apk.source-commit"]
     if any(not f.is_file() or f.read_text().strip()!=stage.name for f in stamps):
         raise RuntimeError("stage_and_signed_camera_build_revision_mismatch")
-    for path in [CAT,PROXY,ARCHIVE,PAGE]+list(sources.values())+[patch_file,tests]:
+    for path in [CAT,PROXY,ARCHIVE,PAGE]+list(sources.values())+[patch_file,tests,face_patch,face_tests]:
         if not path.is_file():raise RuntimeError("required_file_missing:"+str(path))
     if "s9_sd_proxy_extension.install_local_sd(H)" not in ARCHIVE.read_text():
         raise RuntimeError("expected_auth_archive_extension_missing")
-    for path in list(sources.values())+[patch_file,tests]:
+    for path in list(sources.values())+[patch_file,tests,face_patch,face_tests]:
         run([sys.executable,"-m","py_compile",str(path)],15)
     checks=run([sys.executable,str(tests)],30)
     print("ANONYMOUS_STAGING_TESTS",checks.stderr.strip()[-900:],flush=True)
+    run([sys.executable,str(face_tests)],30)
     spec=importlib.util.spec_from_file_location("anon_panel",patch_file)
     patcher=importlib.util.module_from_spec(spec);spec.loader.exec_module(patcher)
     old_html=PAGE.read_text()
     updated_html=patcher.patch_text(old_html)
+    face_spec=importlib.util.spec_from_file_location("s9_face_ui",face_patch)
+    face_mod=importlib.util.module_from_spec(face_spec);face_spec.loader.exec_module(face_mod)
+    updated_html=face_mod.patch_text(updated_html)
+    if face_mod.patch_text(updated_html)!=updated_html or FACE_SCRIPT not in updated_html:
+        raise RuntimeError("face_review_ui_patch_failed")
     if not (STYLE in updated_html and SCRIPT in updated_html):
         raise RuntimeError("anonymous_panel_not_in_updated_html")
     if patcher.patch_text(updated_html)!=updated_html:
@@ -120,7 +129,7 @@ def main():
         if not old_names.issubset(names):raise RuntimeError("existing_video_disappeared")
         if len(now.get("fallback_previews",[]))<old_stills:
             raise RuntimeError("existing_fallback_stills_disappeared")
-        if not (STYLE in PAGE.read_text() and SCRIPT in PAGE.read_text()):
+        if not (STYLE in PAGE.read_text() and SCRIPT in PAGE.read_text() and FACE_SCRIPT in PAGE.read_text()):
             raise RuntimeError("security_ui_not_live")
         for rec in now["events"]:
             if rec.get("clip_no","").startswith("motion_"):

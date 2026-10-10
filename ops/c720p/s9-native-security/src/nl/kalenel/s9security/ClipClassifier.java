@@ -14,7 +14,7 @@ import java.nio.*;
 import java.util.*;
 import java.security.MessageDigest;
 
-/** Offline after-motion clip classification. No cloud or biometric face recognition. */
+/** Offline after-motion clip classification. Optional local face review; no cloud. */
 public final class ClipClassifier {
  private final Context app;
  private Interpreter net;
@@ -197,6 +197,7 @@ public final class ClipClassifier {
   final JSONArray frameEvidence=new JSONArray();
   final OutfitEvidence outfit=new OutfitEvidence();
   final AnonymousClipTracks anonymousTracks=new AnonymousClipTracks();
+  final S9FaceReview faceReview=new S9FaceReview(app,folder,name);
   final LinkedHashSet<String> animalsSeen=new LinkedHashSet<>(),vehiclesSeen=new LinkedHashSet<>();
   double maxPerson=0,maxAnimal=0,maxVehicle=0;
   Bitmap best=null;double bestScore=-1;
@@ -252,6 +253,7 @@ public final class ClipClassifier {
      if(p==1&&framePersonMax>=.65f&&distinctPersonBoxes.size()==1)
       outfit.add(bitmap,distinctPersonBoxes.get(0),(float)framePersonMax);
      anonymousTracks.addFrame(micros/1000,anonymousPeople);
+     if(p>0)faceReview.sample(bitmap,micros/1000);
      if(p>=2)framesWithMultiplePeople++;
      if(p>0){
       strongPersonFrames++;
@@ -324,6 +326,7 @@ public final class ClipClassifier {
    result.put("vehicle_confidence",Math.round(maxVehicle*1000)/1000.0);
    result.put("backend",backend);
    outfit.publish(result,folder,name,persons==1&&framesWithMultiplePeople==0);
+   faceReview.publish(result);
    result.put("processing_elapsed_ms",SystemClock.elapsedRealtime()-begin);
    if(best!=null){
     File thumb=new File(folder,name+".thumb.jpg");
@@ -337,6 +340,7 @@ public final class ClipClassifier {
    }
   }finally{
    if(best!=null)best.recycle();
+   faceReview.close();
    try{media.release();}catch(Exception ignored){}
   }
   writeJson(new File(folder,name+".verified.json"),result);
