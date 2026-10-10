@@ -80,6 +80,10 @@ def safe_native_detection_stats(manifest):
   duration=int(manifest.get("duration_ms"))
   if not 0<duration<=120000:duration=None
  except (TypeError,ValueError,OverflowError):duration=None
+ hits=manifest.get("person_frames_at_050")
+ if isinstance(hits,bool) or not isinstance(hits,int) or frames is None or frames<1 or not 0<=hits<=frames:
+  hits=None
+ coverage=round(100*hits/frames,1) if hits is not None else None
  backend=manifest.get("backend")
  if backend not in ("gpu","cpu"):backend=None
  category=manifest.get("person_event_category")
@@ -88,7 +92,8 @@ def safe_native_detection_stats(manifest):
                       "possible_person_below_standard_threshold","no_person_model_detection"):
   category=None
  return {"person_score":round(score,3) if score is not None else None,
-         "sampled_frames":frames,"duration_ms":duration,
+         "sampled_frames":frames,"person_detected_frames_050":hits,
+         "person_presence_percent":coverage,"duration_ms":duration,
          "review_backend":backend,"person_event_category":category}
 
 def adb(*args):

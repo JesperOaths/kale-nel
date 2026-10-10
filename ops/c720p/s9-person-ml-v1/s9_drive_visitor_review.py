@@ -71,6 +71,15 @@ def audit_line(entry):
   f.flush();os.fsync(f.fileno())
  os.chmod(AUDIT,0o600)
 
+def sampled_person_presence_percent(row):
+ """Share of sampled frames with a >=0.50 person detection, not continuous coverage."""
+ frames=row.get("sampled_frames")
+ observed=row.get("person_frame_count")
+ if (isinstance(frames,bool) or not isinstance(frames,int) or frames<1 or frames>120 or
+     isinstance(observed,bool) or not isinstance(observed,int) or not 0<=observed<=frames):
+  return None
+ return round(100*observed/frames,1)
+
 def report():
  import s9_appearance_review
  rows,summary=source_rows()
@@ -91,6 +100,9 @@ def report():
   out.append({"clip_id":key,"camera":r.get("camera"),
     "remote_name":r.get("remote_name"),"category":r.get("category"),
     "person_score":r.get("person_score"),
+    "sampled_frames":r.get("sampled_frames"),
+    "person_detected_frames_050":r.get("person_frame_count"),
+    "person_presence_percent":sampled_person_presence_percent(r),
     "max_simultaneous_person_boxes":r.get("max_simultaneous_person_boxes"),
     "visitor_id":who,"appearance_quality":r.get("appearance_quality","not_evaluated"),
     "possible_same_outfit_clips":suggestions,

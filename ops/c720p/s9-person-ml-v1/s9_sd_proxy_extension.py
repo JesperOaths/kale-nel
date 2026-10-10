@@ -67,8 +67,13 @@ def detection_metrics(row):
   "multiple_people_candidate","possible_group_needs_frame_review",
   "possible_person_below_standard_threshold","no_person_model_detection"}
  if event not in allowed:event=None
+ hits=row.get("person_detected_frames_050")
+ if isinstance(hits,bool) or not isinstance(hits,int) or n is None or n<1 or not 0<=hits<=n:
+  hits=None
+ coverage=round(100*hits/n,1) if hits is not None else None
  return {"person_score":round(float(s),3) if s is not None else None,
-         "sampled_frames":n,"duration_ms":duration,
+         "sampled_frames":n,"person_detected_frames_050":hits,
+         "person_presence_percent":coverage,"duration_ms":duration,
          "review_backend":backend,"person_event_category":event}
 
 def install_local_sd(H):
