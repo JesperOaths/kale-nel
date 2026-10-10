@@ -23,6 +23,8 @@ jobs:
           python3 ops/c720p/s9-native-security/test-native-camera-controls.py
           python3 ops/c720p/s9-native-security/test-appearance-review.py
           python3 ops/c720p/s9-native-security/test-stage-verified-deployment.py
+          python3 ops/c720p/s9-native-security/test-anonymous-index-ui.py
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-anonymous-clips-index.py ops/c720p/s9-native-security/patch-anonymous-tracks-ui.py ops/c720p/s9-person-ml-v1/local-sd-catalog.py ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py
           python3 -m py_compile ops/c720p/s9-native-security/stage-verified-deployment.py
           python3 ops/c720p/s9-native-security/test-drive-person-batch-catalog.py
           python3 ops/c720p/s9-native-security/test-drive-visitor-review.py
@@ -53,6 +55,17 @@ jobs:
           Path("/tmp/s9-live-person-watch.js").write_text(scripts[0])
           PY
           node --check /tmp/s9-live-person-watch.js
+          python3 - <<'PY'
+          import importlib.util,re
+          from pathlib import Path
+          p=Path("ops/c720p/s9-native-security/patch-anonymous-tracks-ui.py")
+          spec=importlib.util.spec_from_file_location("anon_panel",p)
+          mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+          scripts=re.findall(r'<script[^>]+>(.*?)</script>',mod.SNIPPET,re.S)
+          assert len(scripts)==1
+          Path("/tmp/s9-anonymous-tracks.js").write_text(scripts[0])
+          PY
+          node --check /tmp/s9-anonymous-tracks.js
       - name: Compile Camera2 and offline TFLite classifier against Android SDK
         shell: bash
         run: |
