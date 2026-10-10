@@ -219,16 +219,24 @@ def patch(text: str) -> str:
     if MARKER in text:
         if text.count(MARKER)!=1 or text.count(STYLE)!=1:
             raise ValueError("duplicate_date_folder_widget")
-        old_style=re.findall(r'<style id="s9-saved-virtual-folders-style-v1">[\\s\\S]*?</style>',text)
-        old_script=re.findall(r'<script id="s9-saved-virtual-folders-script-v1">[\\s\\S]*?</script>',text)
-        new_style=re.findall(r'<style id="s9-saved-virtual-folders-style-v1">[\\s\\S]*?</style>',SNIPPET)
-        new_script=re.findall(r'<script id="s9-saved-virtual-folders-script-v1">[\\s\\S]*?</script>',SNIPPET)
-        if not all(len(v)==1 for v in (old_style,old_script,new_style,new_script)):
-            raise ValueError("incomplete_date_folder_widget")
-        if not all(k in old_script[0] for k in
+        def existing(content, opening, closing):
+            if content.count(opening)!=1:
+                raise ValueError("unexpected_widget_opening")
+            start=content.index(opening)
+            end=content.find(closing,start+len(opening))
+            if end<0:
+                raise ValueError("widget_missing_closing")
+            return content[start:end+len(closing)]
+        style_open='<style id="s9-saved-virtual-folders-style-v1">'
+        script_open='<script id="s9-saved-virtual-folders-script-v1">'
+        old_style=existing(text,style_open,'</style>')
+        old_script=existing(text,script_open,'</script>')
+        new_style=existing(SNIPPET,style_open,'</style>')
+        new_script=existing(SNIPPET,script_open,'</script>')
+        if not all(k in old_script for k in
                    ('const native=', 'const safe=', 'function render(data)', 'function openClip(r)')):
             raise ValueError("unrecognized_existing_folder_widget")
-        return text.replace(old_style[0],new_style[0],1).replace(old_script[0],new_script[0],1)
+        return text.replace(old_style,new_style,1).replace(old_script,new_script,1)
     return text.replace("</body>",SNIPPET+"\n</body>",1)
 
 def main():
