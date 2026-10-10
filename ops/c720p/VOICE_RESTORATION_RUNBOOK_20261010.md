@@ -1,3 +1,37 @@
+## Storage-first continuation (2026-10-10)
+
+Latest confirmed health report at 20:15 CEST: root free 101.4 MiB,
+94.3% used; three ADB devices; voice listeners report open ports. No
+C720P cleanup or S9+ transfer has been executed from the current session.
+
+Prioritize the audited `reclaim-safe-cache-20261010.py`:
+- Default invocation is read-only and shows candidate sizes and directory usage.
+- `--apply` deletes only exact allowlisted regenerable cache trees when idle,
+  plus best-effort `sudo -n apt-get clean` and old journal vacuum.
+- Browser login state, S9+ SD, security recordings, all HA databases and
+  configuration, archived clips, user documents and backups remain untouched.
+- Compare `free_before_bytes` and `free_after_bytes` from the same device.
+- If free space is still below 900 MiB, inspect reported top directories
+  before any additional removals; do not delete protected clips automatically.
+
+Optional `stage-c720p-clips-on-s9-microsd-20261010.py`:
+- Default is inventory only; `--copy` targets only verified
+  Samsung S9+ SM-G965F at `192.168.178.250:5555`, on mounted SD
+  `/storage/9C33-6BBD`, preserving a 15 GiB reserve.
+- Only finalized clips referenced by the existing C720P event index are
+  candidates. Copied bytes are SHA-256 verified on-device.
+- It writes to an isolated `C720PMigrated` folder and **never** deletes
+  originals. Imported clips are not automatically in the current S9+ playback
+  catalog; integrate/verify playable URLs before any source retirement.
+- Thus `copied_bytes` is not `reclaimed_bytes`. Do not claim space freed
+  from transfer alone.
+
+After disk health has improved, run the Assist diagnostic then query-only
+intent/TTS canary, then actual microphone and light-command acceptance.
+Avoid restarting live camera or Home Assistant services for a voice probe.
+
+---
+
 # C720P voice restoration — execution and verification
 
 Status: staged in GitHub, **not installed on the device**. Preserve existing
