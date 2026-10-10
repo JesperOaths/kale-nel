@@ -103,6 +103,16 @@ class Tests(unittest.TestCase):
         self.assertIsNone(one.get("duration_ms"))
         self.assertIsNone(one.get("review_backend"))
 
+    def test_old_and_new_s9_manifests_have_truthful_percentages(self):
+        older=self.catalog.safe_native_detection_stats(
+            {"person_confidence":.656,"backend":"gpu","duration_ms":8862})
+        self.assertIsNone(older["person_presence_percent"])
+        recent=self.catalog.safe_native_detection_stats(
+            {"person_confidence":.547,"sampled_frame_count":11,"person_frames_at_050":1,
+             "backend":"gpu","duration_ms":19657})
+        self.assertEqual(recent["person_presence_percent"],9.1)
+        self.assertEqual(self.proxy.detection_metrics(recent)["person_presence_percent"],9.1)
+
     def test_sampled_person_presence_is_distinct_from_peak_score(self):
         m={"person_confidence":.91,"sampled_frame_count":12,
            "person_frames_at_050":3,"duration_ms":20000,"backend":"gpu"}
@@ -154,6 +164,8 @@ class Tests(unittest.TestCase):
         self.assertIn("http_range",source)
         self.assertIn("concurrent_security_page_update",source)
         self.assertIn("missing_staged_import",source)
+        self.assertIn('"restart","c720p-s9-local-sd-catalog.service"',source)
+        self.assertNotIn('"start","c720p-s9-local-sd-catalog.service"',source)
         self.assertIn("s9_native_camera_controls.py",source)
 
     def test_ui_idempotence_and_refusal_on_unknown_page(self):
