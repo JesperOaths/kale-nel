@@ -18,5 +18,6 @@ javac -source 8 -target 8 -cp "$CLASSPATH" -d "$ROOT/classes" "$SRC"/*.java
 test -s "$ROOT/classes/nl/kalenel/s9security/PreviewJpeg.class"
 test -s "$ROOT/classes/nl/kalenel/s9security/CameraService.class"
 test -s "$ROOT/classes/nl/kalenel/s9security/AnonymousClipTracks.class"
+test -s "$ROOT/classes/nl/kalenel/s9security/CameraOrientation.class"
 cp "$ROOT/.source-commit" "$ROOT/.compiled-commit"
 echo "S9_NATIVE_SECURITY_COMPILED_REVISION=$(cat "$ROOT/.compiled-commit")"
