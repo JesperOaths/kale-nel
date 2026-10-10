@@ -202,9 +202,9 @@ SNIPPET = r'''
 def patch_text(html: str) -> str:
     if STYLE_ID in html and SCRIPT_ID in html:
         import re
-        pattern = r'<script id="s9-anonymous-clips-script-v1">[\\s\\S]*?</script>'
-        installed = re.findall(pattern, html)
-        expected = re.findall(pattern, SNIPPET)
+        pattern = r'<script id="s9-anonymous-clips-script-v1">.*?</script>'
+        installed = re.findall(pattern, html, flags=re.S)
+        expected = re.findall(pattern, SNIPPET, flags=re.S)
         if len(installed) != 1 or len(expected) != 1:
             raise ValueError("ambiguous_anonymous_tracking_script")
         if installed[0] == expected[0]:
