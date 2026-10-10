@@ -113,3 +113,15 @@ jobs:
           mkdir -p /tmp/s9-anonymous-test
           javac -d /tmp/s9-anonymous-test ops/c720p/s9-native-security/src/nl/kalenel/s9security/AnonymousClipTracks.java ops/c720p/s9-native-security/tests/AnonymousClipTracksTest.java
           java -cp /tmp/s9-anonymous-test nl.kalenel.s9security.AnonymousClipTracksTest
+
+  recording-orientation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Test recording orientation and clip-bound review corrections
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORK="$(mktemp -d)"
+          javac -d "$WORK" ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraOrientation.java ops/c720p/s9-native-security/tests/CameraOrientationTest.java
+          java -cp "$WORK" nl.kalenel.s9security.CameraOrientationTest

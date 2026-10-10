@@ -2,6 +2,7 @@ package nl.kalenel.s9security;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Matrix;
 import android.media.MediaMetadataRetriever;
 import android.os.SystemClock;
 import android.util.Log;
@@ -150,6 +151,25 @@ public final class ClipClassifier {
   return output;
  }
 
+ private static int reviewRotation(File folder,String name,String sha)throws Exception{
+  File override=new File(folder,name+".orientation-review.json");
+  if(!override.exists())return 0;
+  if(!override.isFile()||override.length()<2||override.length()>4096)
+   throw new IOException("invalid_clip_orientation_override_size");
+  ByteArrayOutputStream data=new ByteArrayOutputStream();
+  try(InputStream in=new FileInputStream(override)){
+   byte[] chunk=new byte[1024];int count;
+   while((count=in.read(chunk))>0){
+    data.write(chunk,0,count);
+    if(data.size()>4096)throw new IOException("clip_orientation_override_too_large");
+   }
+  }
+  JSONObject correction=new JSONObject(new String(data.toByteArray(),"UTF-8"));
+  return CameraOrientation.reviewOverride(correction.getInt("analysis_rotation_degrees"),
+    correction.getString("version"),correction.getString("scope"),
+    correction.getString("clip_sha256"),sha);
+ }
+
  public synchronized JSONObject process(File mp4, File folder, String name, String trigger, long motionEvents)throws Exception{
   long begin=SystemClock.elapsedRealtime();
   JSONObject result=new JSONObject();
@@ -157,6 +177,8 @@ public final class ClipClassifier {
   result.put("archive","S9_microSD_only").put("review_version","ssd_mobilenet_coco_v1_post4k_v2_outfit_review");
   result.put("motion_trigger",trigger).put("motion_events",motionEvents);
   result.put("auto_identity_status","appearance_based_identity_not_verified");
+  final int analysisRotation=reviewRotation(folder,name,result.getString("sha256"));
+  result.put("analysis_rotation_correction_degrees",analysisRotation);
   MediaMetadataRetriever media=new MediaMetadataRetriever();
   int persons=0,animals=0,vehicles=0;
   int strongPersonFrames=0,possiblePersonFrames=0,validFrames=0;
@@ -171,6 +193,8 @@ public final class ClipClassifier {
   long duration=0;
   try{
    media.setDataSource(mp4.getAbsolutePath());
+   String sourceRotation=media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION);
+   result.put("video_rotation_degrees",sourceRotation==null?0:Integer.parseInt(sourceRotation));
    duration=Long.parseLong(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
    result.put("duration_ms",duration);
    result.put("width",Integer.parseInt(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)));
@@ -183,6 +207,12 @@ public final class ClipClassifier {
     long micros=(long)(((n+0.5)/(double)frames)*duration*1000);
     Bitmap bitmap=media.getFrameAtTime(micros,MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
     if(bitmap==null)continue;
+    if(analysisRotation!=0){
+     Matrix transform=new Matrix();transform.postRotate(analysisRotation);
+     Bitmap upright=Bitmap.createBitmap(bitmap,0,0,bitmap.getWidth(),bitmap.getHeight(),transform,true);
+     if(upright!=bitmap)bitmap.recycle();
+     bitmap=upright;
+    }
     try{
      List<Detection> found=detect(bitmap);
      validFrames++;

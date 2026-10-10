@@ -9,6 +9,7 @@ import android.media.*;
 import android.os.*;
 import android.util.*;
 import android.view.Surface;
+import android.view.WindowManager;
 import org.json.*;
 import java.io.*;
 import java.net.*;
@@ -251,7 +252,13 @@ public final class CameraService extends Service {
    recorder.setVideoSize(3840,2160);
    recorder.setVideoFrameRate(30);
    recorder.setVideoEncodingBitRate(36000000);
-   recorder.setOrientationHint(90);
+   CameraManager orientationManager=(CameraManager)getSystemService(Context.CAMERA_SERVICE);
+   Integer sensorOrientation=orientationManager.getCameraCharacteristics(cameraId)
+     .get(CameraCharacteristics.SENSOR_ORIENTATION);
+   if(sensorOrientation==null)throw new IOException("camera_sensor_orientation_missing");
+   int displayRotation=((WindowManager)getSystemService(Context.WINDOW_SERVICE))
+     .getDefaultDisplay().getRotation();
+   recorder.setOrientationHint(CameraOrientation.recordingHint(sensorOrientation,displayRotation));
    recorder.setOutputFile(partial.getAbsolutePath());
    recorder.prepare();
    Surface video=recorder.getSurface();
