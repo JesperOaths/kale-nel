@@ -63,7 +63,13 @@ function render(data){
  for(const row of rows){
   const card=txt('div',undefined,'s9-review-entry');
   card.append(txt('strong',row.remote_name||row.clip_id.slice(0,16)));
-  card.append(txt('small',(row.category||'unknown')+' · '+Math.round(Number(row.person_score||0)*100)+'% model score · '+(row.visitor_id||'No verified visitor ID')));
+  const peak=Number(row.person_score);
+  const validPeak=row.person_score!==null && row.person_score!==undefined && Number.isFinite(peak) && peak>=0 && peak<=1;
+  const percent=Number(row.person_presence_percent);
+  const validPercent=row.person_presence_percent!==null && row.person_presence_percent!==undefined && Number.isFinite(percent) && percent>=0 && percent<=100;
+  card.append(txt('small',(row.category||'unknown')+' · '+(row.visitor_id||'No verified visitor ID')));
+  card.append(txt('small',validPeak ? 'Peak person-detection score: '+Math.round(peak*100)+'% (uncalibrated)' : 'Peak person-detection score: not measured'));
+  card.append(txt('small',validPercent ? 'Person detected in '+percent.toFixed(1)+'% of sampled frames at 0.50 threshold ('+row.person_detected_frames_050+'/'+row.sampled_frames+'); not continuous coverage' : 'Sampled-frame person presence: not measured'));
   const possible=Array.isArray(row.possible_same_outfit_clips)?row.possible_same_outfit_clips:[];
   if(possible.length){
    card.append(txt('small','Possible repeat outfit — NOT confirmed as the same person:'));
