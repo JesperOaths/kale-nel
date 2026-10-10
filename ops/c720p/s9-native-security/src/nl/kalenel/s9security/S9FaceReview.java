@@ -40,6 +40,11 @@ final class S9FaceReview implements AutoCloseable {
   Entry(String id,float[] vector){this.id=id;this.vector=vector;}
  }
  S9FaceReview(Context app,File sd,String clip){this.app=app;this.sd=sd;this.clip=clip;}
+ static boolean hasEmbeddingModel(Context ctx){
+  try(InputStream in=ctx.getAssets().open("face_embedding.tflite")){
+   return in.read()>=0;
+  }catch(IOException ignored){return false;}
+ }
  private static String hash(byte[] data)throws Exception{
   byte[] value=MessageDigest.getInstance("SHA-256").digest(data);
   StringBuilder b=new StringBuilder();
