@@ -34,9 +34,9 @@ python3 ops/c720p/s9-native-security/patch-s9-saved-video-orientation.py
 python3 ops/c720p/s9-native-security/patch-s9-saved-video-orientation.py --apply
 ```
 
-The patch writes only `clips.html`, creates a timestamped
-`clips.html.before-orientation-...` rollback copy, and performs an atomic
-replace. It does not restart Home Assistant, the signed archive, or Camera2.
+The patch writes only `clips.html`, creates a timestamped private backup
+under `/home/jespern/c720p-home-hub/backups/s9-orientation/` (mode 0600),
+and performs an atomic replace. It does not restart Home Assistant, the signed archive, or Camera2.
 Only run `--apply` from an authorized C720P shell after checking the page
 contract and ensuring no concurrent HTML deployment.
 
