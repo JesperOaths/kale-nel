@@ -96,7 +96,5 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/s9-anonymous-test
-          javac -d /tmp/s9-anonymous-test \\
-            ops/c720p/s9-native-security/src/nl/kalenel/s9security/AnonymousClipTracks.java \\
-            ops/c720p/s9-native-security/tests/AnonymousClipTracksTest.java
+          javac -d /tmp/s9-anonymous-test ops/c720p/s9-native-security/src/nl/kalenel/s9security/AnonymousClipTracks.java ops/c720p/s9-native-security/tests/AnonymousClipTracksTest.java
           java -cp /tmp/s9-anonymous-test nl.kalenel.s9security.AnonymousClipTracksTest
