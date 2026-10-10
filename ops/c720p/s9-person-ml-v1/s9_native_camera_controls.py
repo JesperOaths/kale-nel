@@ -14,7 +14,8 @@ PATH_POST="/new/camera-control"
 VALUES={"zoom":re.compile(r"(?:1(?:[.]0|[.]25|[.]5)?|2(?:[.]0)?|3(?:[.]0)?|4(?:[.]0)?)\Z"),
         "exposure_ev":re.compile(r"-?[0-3]\Z"),
         "torch":re.compile(r"(?:on|off)\Z"),
-        "focus":re.compile(r"(?:auto|continuous)\Z")}
+        "focus":re.compile(r"(?:auto|continuous)\Z"),
+        "recording_rotation":re.compile(r"(?:0|90|180|270)\Z")}
 ORIGIN=re.compile(r"(?:(?:https://(?:www[.])?kalenel[.]nl)|(?:http://(?:localhost|127[.]0[.]0[.]1|homeassistant[.]local|192[.]168[.]178[.][0-9]{1,3}):8123))\Z")
 
 def local(path,body=None):

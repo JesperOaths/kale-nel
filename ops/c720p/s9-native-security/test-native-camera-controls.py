@@ -24,11 +24,13 @@ class Tests(unittest.TestCase):
   results={"ok":True,"mode":"watching","controls":{
    "zoom":{"available":["1.0","2.0","300.0"],"value":"2.0"},
    "torch":{"available":["off","on"],"value":"off"},
+   "recording_rotation":{"available":["0","90","180","270","45"],"value":"90"},
    "intrusive_legacy_camera_control":{"available":["anything"],"value":"anything"}}}
   with mock.patch.object(self.a,"local",return_value=(200,results)):
    h=self.H("/new/camera-controls");h.go()
   self.assertEqual(h.status,200)
-  self.assertEqual(sorted(h.data["controls"]),["torch","zoom"])
+  self.assertEqual(sorted(h.data["controls"]),["recording_rotation","torch","zoom"])
+  self.assertEqual(h.data["controls"]["recording_rotation"]["available"],["0","90","180","270"])
   self.assertEqual(h.data["controls"]["zoom"]["available"],["1.0","2.0"])
  def test_explicit_intent_body_options_and_origin(self):
   body=json.dumps({"key":"zoom","value":"2.0"}).encode()
@@ -44,6 +46,15 @@ class Tests(unittest.TestCase):
   body=json.dumps({"key":"torch","value":"reboot"}).encode()
   h["Content-Length"]=str(len(body))
   x=self.H("/new/camera-control",body,h);x.do_POST();self.assertEqual(x.status,400)
+  # A playback/display hint is allowed only at exact quarter turns.
+  rotation=json.dumps({"key":"recording_rotation","value":"270"}).encode()
+  h["Content-Length"]=str(len(rotation))
+  with mock.patch.object(self.a,"local",return_value=(200,{"ok":True,"value":"270"})):
+   x=self.H("/new/camera-control",rotation,h);x.do_POST()
+  self.assertEqual(x.status,200)
+  bad=json.dumps({"key":"recording_rotation","value":"45"}).encode()
+  h["Content-Length"]=str(len(bad))
+  x=self.H("/new/camera-control",bad,h);x.do_POST();self.assertEqual(x.status,400)
   x=self.H("/new/api/saved");x.go();self.assertEqual(x.status,418)
   x=self.H("/new/saved/clip/clip.mp4");x.do_POST();self.assertEqual(x.status,418)
  def test_ui_idempotency_and_only_intent_change(self):
@@ -61,6 +72,9 @@ class Tests(unittest.TestCase):
   self.assertIn('cameraHandler.post(job)',source)
   self.assertIn('!"watching".equals(mode)',source)
   self.assertIn('session.setRepeatingRequest',source)
+  self.assertIn('recorder.setOrientationHint(recordingRotation())',source)
+  self.assertIn('recording_rotation_degrees',source)
+  self.assertIn('future_recordings_only',source)
   self.assertIn('CaptureRequest.SCALER_CROP_REGION',cls)
   self.assertIn('CONTROL_AE_EXPOSURE_COMPENSATION',cls)
   self.assertIn('FLASH_MODE_TORCH',cls)
