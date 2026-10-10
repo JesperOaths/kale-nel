@@ -159,6 +159,7 @@ class Tests(unittest.TestCase):
             {"id": 1, "type":"event","event":{"type":"intent-end","data":{
                 "intent_output":{"response":{"response_type":"query_answer",
                                              "speech":{"plain":{"speech":"private"}}}}}}},
+            {"id": 1, "type":"event","event":{"type":"tts-start","data":{}}},
             {"id": 1, "type":"event","event":{"type":"tts-end","data":{"token":"private"}}},
             {"id": 1, "type":"event","event":{"type":"run-end","data":{}}},
         ])
@@ -166,6 +167,8 @@ class Tests(unittest.TestCase):
         self.assertEqual(result["end_reason"],"finished")
         self.assertTrue(result["tts_generated"])
         self.assertEqual(result["intent_response_type"],"query_answer")
+        self.assertGreaterEqual(result["stage_duration_ms"]["intent"],0)
+        self.assertGreaterEqual(result["stage_duration_ms"]["tts"],0)
         self.assertNotIn("private",json.dumps(result))
         self.assertEqual(ws.sent["start_stage"],"intent")
         self.assertEqual(ws.sent["end_stage"],"tts")
