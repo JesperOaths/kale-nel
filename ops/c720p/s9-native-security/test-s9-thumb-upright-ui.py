@@ -71,7 +71,7 @@ for(const path of [
  '/new/saved/clip/motion_1791634574261.mp4'
 ])if(accepts(path))throw Error('inappropriate image '+path);
 '''
-        result=subprocess.run([node,"-e","regexline+"\n"+assertions],
+        result=subprocess.run([node,"-e",regexline+chr(10)+assertions],
                               capture_output=True,text=True,timeout=15)
         self.assertEqual(result.returncode,0,result.stderr)
 
