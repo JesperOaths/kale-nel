@@ -18,6 +18,32 @@ public final class MotionGrid {
  public boolean motion=false;
  public boolean strong=false;
  private int sustainedEvidence=0;
+ // Foreground garden is near the camera; road traffic should not trigger it.
+ // Presets remain adjustable when the outdoor camera's view changes.
+ private String gardenZone="near";
+ public String gardenZone(){return gardenZone;}
+ public static boolean validGardenZone(String value){
+  return "near".equals(value)||"strict".equals(value)||
+    "wide".equals(value)||"all".equals(value);
+ }
+ public void setGardenZone(String value){
+  if(!validGardenZone(value))throw new IllegalArgumentException("invalid_garden_region");
+  if(!gardenZone.equals(value)){gardenZone=value;resetForCameraControl();}
+ }
+ public float topBoundary(){
+  return "strict".equals(gardenZone)?0.58f:
+    "near".equals(gardenZone)?0.42f:
+    "wide".equals(gardenZone)?0.28f:0f;
+ }
+ public float sideMargin(){
+  return "strict".equals(gardenZone)?0.09f:
+    "near".equals(gardenZone)?0.045f:0f;
+ }
+ public boolean insideGarden(float x,float y){
+  float margin=sideMargin();
+  return x>=margin&&x<=1f-margin&&y>=topBoundary()&&y<=1f;
+ }
+
  /** Restart temporal voting after an intentional Camera2 scene/exposure adjustment.
   *  Do not carry votes from the pre-control view into a new crop or lighting state.
   *  Called only from CameraService's cameraHandler; never deletes video evidence.
@@ -68,18 +94,28 @@ public final class MotionGrid {
    init++;motion=false;strong=false;return false;
   }
   float shift=0;
-  for(int i=0;i<N;i++)shift+=nowCells[i]-background[i];
-  shift/=N;
+  int validCells=0;
+  for(int i=0;i<N;i++){
+   int gx=i%W,gy=i/W;
+   if(insideGarden((gx+.5f)/W,(gy+.5f)/H)){
+    shift+=nowCells[i]-background[i];validCells++;
+   }
+  }
+  if(validCells==0)return false;
+  shift/=validCells;
   int nChange=0;
   for(int i=0;i<N;i++){
    // Slightly more responsive to people crossing a dim fixed-camera view,
    // while retaining temporal voting, coherent-region and exposure guards.
    // Bright daylight threshold is unchanged; low-light threshold 27 -> 23.
    boolean c=Math.abs(nowCells[i]-background[i]-shift)>(lighting<42?23.0f:18.5f);
+   // Motion outside the garden cannot vote or join connected regions.
+   int gx=i%W,gy=i/W;
+   c=c&&insideGarden((gx+.5f)/W,(gy+.5f)/H);
    changed[i]=c;
    if(c)nChange++;
   }
-  changedRatio=nChange/(double)N;
+  changedRatio=nChange/(double)validCells;
   coherent=0;
   java.util.Arrays.fill(seen,false);
   for(int i=0;i<N;i++)if(changed[i]&&!seen[i]){

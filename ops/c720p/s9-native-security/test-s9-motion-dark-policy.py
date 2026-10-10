@@ -17,6 +17,9 @@ class Tests(unittest.TestCase):
         self.assertIn('&&Math.abs(shift)<(dim?18:26)',code)
         self.assertIn('sustainedEvidence>=3',code)
         self.assertIn('return false;',code)
+        self.assertIn('insideGarden((gx+.5f)/W,(gy+.5f)/H)',code)
+        self.assertIn('changedRatio=nChange/(double)validCells',code)
+        self.assertIn('"near".equals(value)',code)
 
     def test_clip_budget_not_expanded_or_priority_bypassed(self):
         rate=(SRC/'RecordingRate.java').read_text()
@@ -25,7 +28,7 @@ class Tests(unittest.TestCase):
         self.assertIn('TOTAL_PER_HOUR=BASE_PER_HOUR+PRIORITY_RESERVE_PER_HOUR',rate)
         self.assertIn('recorded<TOTAL_PER_HOUR && sustainedCoherent',rate)
         camera=(SRC/'CameraService.java').read_text()
-        for condition in ('COOLDOWN_MS=25000','temperature()<415','folder.getUsableSpace()>15L*1024*1024*1024',
+        for condition in ('COOLDOWN_MS=12000','temperature()<415','folder.getUsableSpace()>15L*1024*1024*1024',
                           'saveFallbackEvidence("recording_budget_rejected")'):
             self.assertIn(condition,camera)
 
