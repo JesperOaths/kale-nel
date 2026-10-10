@@ -154,6 +154,8 @@ class Tests(unittest.TestCase):
         self.assertIn("http_range",source)
         self.assertIn("concurrent_security_page_update",source)
         self.assertIn("missing_staged_import",source)
+        self.assertIn('"restart","c720p-s9-local-sd-catalog.service"',source)
+        self.assertNotIn('"start","c720p-s9-local-sd-catalog.service"',source)
         self.assertIn("s9_native_camera_controls.py",source)
 
     def test_ui_idempotence_and_refusal_on_unknown_page(self):
