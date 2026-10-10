@@ -570,7 +570,7 @@ public final class CameraService extends Service {
     }
    }else if(line.startsWith("GET /controls ")){
     try{send(out,200,"application/json",controlsStatus().toString().getBytes("UTF-8"));}
-    catch(Exception e){send(out,503,"application/json","{\\"ok\\":false,\"error\":\"controls_unavailable\"}".getBytes("UTF-8"));}
+    catch(Exception e){send(out,503,"application/json","{\"ok\":false,\"error\":\"controls_unavailable\"}".getBytes("UTF-8"));}
    }else if(line.startsWith("POST /control ")){
     int length=-1;boolean jsonType=false;
     for(int lineCount=0;lineCount<24;lineCount++){
@@ -585,11 +585,11 @@ public final class CameraService extends Service {
      if("content-type".equals(name)&&hv.toLowerCase(Locale.ROOT).startsWith("application/json"))jsonType=true;
     }
     if(!jsonType||length<2||length>256){
-     send(out,400,"application/json","{\\"ok\\":false,\"error\":\"invalid_camera_control_request\"}".getBytes("UTF-8"));return;
+     send(out,400,"application/json","{\"ok\":false,\"error\":\"invalid_camera_control_request\"}".getBytes("UTF-8"));return;
     }
     char[] content=new char[length];int bytes=0;
     while(bytes<length){int n=in.read(content,bytes,length-bytes);if(n<0)break;bytes+=n;}
-    if(bytes!=length){send(out,400,"application/json","{\\"ok\\":false,\"error\":\"short_request_body\"}".getBytes("UTF-8"));return;}
+    if(bytes!=length){send(out,400,"application/json","{\"ok\":false,\"error\":\"short_request_body\"}".getBytes("UTF-8"));return;}
     JSONObject response;
     try {
      JSONObject request=new JSONObject(new String(content));
