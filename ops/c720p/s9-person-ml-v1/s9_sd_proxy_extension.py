@@ -68,7 +68,7 @@ def serve_face_snapshot(handler,name,record):
   data=p.stdout
   if (len(data)!=evidence["snapshot_size"] or
       hashlib.sha256(data).hexdigest()!=evidence["snapshot_sha256"] or
-      not (data.startswith(b"\\xff\\xd8\\xff") and data.endswith(b"\\xff\\xd9"))):
+      not (data.startswith(b"\xff\xd8\xff") and data.endswith(b"\xff\xd9"))):
    raise ValueError("face_snapshot_integrity_mismatch")
  except (OSError,ValueError,subprocess.SubprocessError):
   handler.js(503,{"ok":False,"error":"phone_face_snapshot_unavailable"});return
