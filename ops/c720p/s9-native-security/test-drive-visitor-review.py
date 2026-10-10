@@ -89,6 +89,21 @@ class Tests(unittest.TestCase):
   self.assertEqual(x.code,200);self.assertEqual(x.reply["reviewed_single_person_links"],1)
   x=H("/new/api/saved");x.go();self.assertEqual(x.code,418)
   x=H("/new/api/saved/delete");x.do_POST();self.assertEqual(x.code,418)
+ def test_sampled_frame_coverage_in_drive_review(self):
+  m=self.m
+  doc=json.loads(m.CAT.read_text())
+  doc["items"][self.key1].update({"sampled_frames":20,"person_frame_count":5})
+  doc["items"][self.key2].update({"sampled_frames":20,"person_frame_count":0})
+  doc["items"][self.key3].update({"sampled_frames":0,"person_frame_count":0})
+  m.CAT.write_text(json.dumps(doc))
+  result=m.report()["clips"]
+  by_id={row["clip_id"]:row for row in result}
+  self.assertEqual(by_id[self.key1]["person_presence_percent"],25.0)
+  self.assertEqual(by_id[self.key1]["person_detected_frames_050"],5)
+  self.assertEqual(by_id[self.key2]["person_presence_percent"],0.0)
+  self.assertIsNone(by_id[self.key3]["person_presence_percent"])
+  self.assertNotIn("face_embeddings",json.dumps(result))
+
  def test_idempotent_ui_and_no_media(self):
   p=load(PATCH,"review_patch_test")
   before='<html><script id="c720p-s9-phone-clips-ui-v1"></script></body></html>'
