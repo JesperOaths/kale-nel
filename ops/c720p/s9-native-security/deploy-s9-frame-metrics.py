@@ -5,6 +5,7 @@ Dry-run by default. --apply installs only Python metadata/API and HTML widgets
 from an immutable GitHub commit after tests, health checks and local backups.
 """
 import argparse
+import ast
 import datetime
 import fcntl
 import hashlib
@@ -111,6 +112,17 @@ def install(ref,apply):
         hashes[relative]=fetch(ref,relative,stage/relative)
         if relative.endswith(".py"):
             run([sys.executable,"-m","py_compile",str(stage/relative)],15)
+    # Audit the complete local s9_* import closure before executing staged tests.
+    for relative in tuple(FILES)+EXTRA:
+        path=stage/relative
+        for node in ast.walk(ast.parse(path.read_text())):
+            if not isinstance(node,ast.Import):continue
+            for alias in node.names:
+                if not alias.name.startswith("s9_"):continue
+                locations=(stage/"s9-native-security"/(alias.name+".py"),
+                           stage/"s9-person-ml-v1"/(alias.name+".py"))
+                if not any(candidate.is_file() for candidate in locations):
+                    raise RuntimeError("missing_staged_import:"+alias.name)
     env={**os.environ,"PYTHONPATH":str(stage/"s9-native-security")}
     for name in ("test-anonymous-index-ui.py","test-drive-visitor-review.py",
                  "test-s9-saved-video-orientation.py"):
