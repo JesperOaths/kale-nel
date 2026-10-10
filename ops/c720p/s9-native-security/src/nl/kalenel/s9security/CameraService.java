@@ -156,10 +156,10 @@ public final class CameraService extends Service {
      frame=reader.acquireLatestImage();
      if(frame==null)return;
      frames++;lastFrameAt=SystemClock.elapsedRealtime();
-     long jpegEvery="recording".equals(mode)?550L:280L;
+     long jpegEvery="recording".equals(mode)?250L:120L;
      if(lastFrameAt-lastJpegAt>=jpegEvery){
       try{
-       byte[] jpg=PreviewJpeg.encode(frame,64);
+       byte[] jpg=PreviewJpeg.encode(frame,58);
        latestJpeg=jpg;lastJpegAt=lastFrameAt;
       }catch(Exception e){Log.w(TAG,"preview_jpeg_failed",e);}
      }
@@ -576,7 +576,7 @@ public final class CameraService extends Service {
    d.put("garden_person_gate_last_score",gardenPersonGateScore);
    d.put("garden_zone",motion.gardenZone());
    d.put("garden_roi_top_fraction",motion.topBoundary());
-   d.put("preview_jpeg_interval_ms","recording".equals(mode)?550:280);
+   d.put("preview_jpeg_interval_ms","recording".equals(mode)?250:120);
    d.put("post_record_cooldown_ms",COOLDOWN_MS);
    d.put("changed_ratio",motion.changedRatio);d.put("coherent_cells",motion.coherent);
    d.put("brightness",motion.lighting);
@@ -720,7 +720,7 @@ public final class CameraService extends Service {
       out.write(("--frame\r\nContent-Type: image/jpeg\r\nContent-Length: "+img.length+"\r\n\r\n").getBytes("UTF-8"));
       out.write(img);out.write("\r\n".getBytes("UTF-8"));out.flush();
      }
-     try{Thread.sleep(165);}catch(InterruptedException e){return;}
+     try{Thread.sleep(75);}catch(InterruptedException e){return;}
     }
    }else if(line.startsWith("GET /controls ")){
     try{send(out,200,"application/json",controlsStatus().toString().getBytes("UTF-8"));}
