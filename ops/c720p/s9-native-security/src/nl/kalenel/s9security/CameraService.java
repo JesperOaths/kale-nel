@@ -513,10 +513,13 @@ public final class CameraService extends Service {
   result.put("changing_controls_while_recording",false);
   JSONObject options=cameraControls==null?new JSONObject():cameraControls.status();
    if(cameraControls!=null){
-    JSONArray choices=new JSONArray();
+    JSONArray choices=new JSONArray().put("auto");
     for(int angle:new int[]{0,90,180,270})choices.put(String.valueOf(angle));
+    int saved=getSharedPreferences("native",MODE_PRIVATE).getInt("recording_rotation_degrees",-1);
+    String selected=saved==0||saved==90||saved==180||saved==270?String.valueOf(saved):"auto";
     options.put("recording_rotation",new JSONObject()
-      .put("value",String.valueOf(recordingRotation())).put("available",choices));
+      .put("value",selected).put("available",choices)
+      .put("effective_degrees",recordingRotation()));
    }
    result.put("controls",options);
   return result;
@@ -529,11 +532,14 @@ public final class CameraService extends Service {
    }
    if("recording_rotation".equals(key)){
      // Future-recordings-only MP4 hint, without a capture session restart.
-     if(!("0".equals(value)||"90".equals(value)||"180".equals(value)||"270".equals(value)))
+     if(!("auto".equals(value)||"0".equals(value)||"90".equals(value)||
+          "180".equals(value)||"270".equals(value)))
       return response.put("ok",false).put("error","unsupported_or_invalid_control");
+     int desired="auto".equals(value)?-1:Integer.parseInt(value);
      boolean stored=getSharedPreferences("native",MODE_PRIVATE).edit()
-       .putInt("recording_rotation_degrees",Integer.parseInt(value)).commit();
+       .putInt("recording_rotation_degrees",desired).commit();
      return response.put("ok",stored).put("key",key).put("value",value)
+       .put("effective_degrees",recordingRotation())
        .put("mode",mode).put("future_recordings_only",true);
     }
     JSONObject old=cameraControls.status();
