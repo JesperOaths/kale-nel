@@ -30,7 +30,7 @@ class HistoricalGpuReviewTests(unittest.TestCase):
  def test_captures_gpu_stage_size_before_temp_cleanup(self):
   source=(HERE/"s9-historical-gpu-relay.py").read_text()
   self.assertIn("gpu_input_bytes=gpu_mp4.stat().st_size",source)
-  self.assertIn("gpu_input_bytes",source.split("print(")[-4])
+  self.assertIn('"gpu_input_bytes":gpu_input_bytes',source)
   
  def test_waits_for_existing_catalog_lock(self):
   with tempfile.TemporaryDirectory() as root:
