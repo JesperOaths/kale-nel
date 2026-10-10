@@ -18,6 +18,20 @@ public final class MotionGrid {
  public boolean motion=false;
  public boolean strong=false;
  private int sustainedEvidence=0;
+ /** Restart temporal voting after an intentional Camera2 scene/exposure adjustment.
+  *  Do not carry votes from the pre-control view into a new crop or lighting state.
+  *  Called only from CameraService's cameraHandler; never deletes video evidence.
+  */
+ public void resetForCameraControl(){
+  init=0;lastSample=0;sustainedEvidence=0;
+  votes.clear();
+  java.util.Arrays.fill(background,0f);
+  java.util.Arrays.fill(nowCells,0f);
+  java.util.Arrays.fill(changed,false);
+  java.util.Arrays.fill(seen,false);
+  changedRatio=0;coherent=0;lighting=0;
+  motion=false;strong=false;
+ }
  public boolean analyze(Image frame) {
   long t=SystemClock.elapsedRealtime();
   // A 30-fps ImageReader can call us several times between 190-ms
