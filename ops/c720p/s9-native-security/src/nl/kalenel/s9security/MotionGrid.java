@@ -72,7 +72,10 @@ public final class MotionGrid {
   shift/=N;
   int nChange=0;
   for(int i=0;i<N;i++){
-   boolean c=Math.abs(nowCells[i]-background[i]-shift)>(lighting<42?27.0f:18.5f);
+   // Slightly more responsive to people crossing a dim fixed-camera view,
+   // while retaining temporal voting, coherent-region and exposure guards.
+   // Bright daylight threshold is unchanged; low-light threshold 27 -> 23.
+   boolean c=Math.abs(nowCells[i]-background[i]-shift)>(lighting<42?23.0f:18.5f);
    changed[i]=c;
    if(c)nChange++;
   }
