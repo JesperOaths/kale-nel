@@ -53,6 +53,7 @@ def start(stage):
   BIN/"legacy-drive-person-corpus.py":stage/"s9-native-security/legacy-drive-person-corpus.py",
   BIN/"s9_appearance_review.py":stage/"s9-native-security/s9_appearance_review.py",
   BIN/"s9_drive_visitor_review.py":stage/"s9-person-ml-v1/s9_drive_visitor_review.py",
+  BIN/"s9_native_camera_controls.py":stage/"s9-person-ml-v1/s9_native_camera_controls.py",
   BIN/"s9_sd_proxy_extension.py":stage/"s9-person-ml-v1/s9_sd_proxy_extension.py",
   UNITDIR/SERVICE:stage/"s9-native-security/c720p-s9-drive-person-catalog.service",
   UNITDIR/TIMER:stage/"s9-native-security/c720p-s9-drive-person-catalog.timer"}
