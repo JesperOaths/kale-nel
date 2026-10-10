@@ -30,16 +30,16 @@ class FakeWS:
     def __init__(self, data):
         self.data = copy.deepcopy(data)
         self.calls = []
-    def cmd(self, name, **kw):
-        self.calls.append((name, copy.deepcopy(kw)))
-        if name == "assist_pipeline/pipeline/update":
+    def cmd(self, command_type, **kw):
+        self.calls.append((command_type, copy.deepcopy(kw)))
+        if command_type == "assist_pipeline/pipeline/update":
             self.data["pipelines"][0].update({
                 k: v for k, v in kw.items() if k != "pipeline_id"
             })
             return {}
-        if name == "assist_pipeline/pipeline/list":
+        if command_type == "assist_pipeline/pipeline/list":
             return self.data
-        raise AssertionError(name)
+        raise AssertionError(command_type)
 
 class Tests(unittest.TestCase):
     def test_pipeline_selection(self):
