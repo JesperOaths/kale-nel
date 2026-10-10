@@ -67,6 +67,23 @@ class Tests(unittest.TestCase):
         self.assertIsNone(malicious["camera_sensor"]["fps"])
         self.assertEqual(malicious["camera_sensor"]["ae_state"],"unknown")
 
+    def test_readonly_phone_fps_benchmark_classifies_night_exposure(self):
+        bench=load(ROOT/'check-s9-camera-fps.py','phone_fps_measure')
+        self.assertEqual(
+            bench.diagnosis(14.7,14.2,63.0),
+            'nighttime_exposure_likely_limits_physical_sensor_fps')
+        self.assertEqual(
+            bench.diagnosis(30.0,14.0,15.0),
+            'YUV_callback_processing_or_frame_drop_suspected')
+        self.assertEqual(
+            bench.diagnosis(None,13.5,None),
+            'sensor_metadata_not_available')
+        code=(ROOT/'check-s9-camera-fps.py').read_text()
+        for excluded in ('import cv2','import tensorflow','import PIL',
+                         'ffmpeg','ffprobe','decodeVideo','open_camera'):
+            self.assertNotIn(excluded,code)
+        self.assertIn('http://127.0.0.1:18808/status',code)
+
     def test_live_tab_only_with_existing_signed_relay(self):
         mod=load(UI,'s9_live_telemetry_patch')
         page=('<html><head></head><body>'
