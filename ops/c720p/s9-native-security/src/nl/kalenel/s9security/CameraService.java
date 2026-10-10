@@ -31,6 +31,48 @@ public final class CameraService extends Service {
  private CameraControls cameraControls;
  private CaptureRequest.Builder activeCameraRequest;
  private final MotionGrid motion=new MotionGrid();
+ // Read-only Camera2 metadata distinguishes night exposure from callback load.
+ private volatile long sensorCaptureResults=0,lastSensorTimestampNs=0,lastSensorCaptureAt=0;
+ private volatile float sensorResultFps=0f,sensorExposureMs=-1f,sensorFrameDurationMs=-1f;
+ private volatile int sensorIso=-1,sensorAeState=-1,sensorAeMinFps=-1,sensorAeMaxFps=-1;
+ private final CameraCaptureSession.CaptureCallback sensorTelemetry=
+   new CameraCaptureSession.CaptureCallback(){
+    @Override public void onCaptureCompleted(CameraCaptureSession capture,
+      CaptureRequest request,TotalCaptureResult result){
+     sensorCaptureResults++;
+     lastSensorCaptureAt=SystemClock.elapsedRealtime();
+     Long stamp=result.get(CaptureResult.SENSOR_TIMESTAMP);
+     if(stamp!=null&&stamp>0){
+      long interval=stamp-lastSensorTimestampNs;
+      if(lastSensorTimestampNs>0&&interval>4000000L&&interval<1000000000L){
+       float hz=1000000000f/interval;
+       sensorResultFps=sensorResultFps>0?0.85f*sensorResultFps+0.15f*hz:hz;
+      }
+      lastSensorTimestampNs=stamp;
+     }
+     Long exposure=result.get(CaptureResult.SENSOR_EXPOSURE_TIME);
+     if(exposure!=null&&exposure>0)sensorExposureMs=exposure/1000000f;
+     Long duration=result.get(CaptureResult.SENSOR_FRAME_DURATION);
+     if(duration!=null&&duration>0)sensorFrameDurationMs=duration/1000000f;
+     Integer iso=result.get(CaptureResult.SENSOR_SENSITIVITY);
+     if(iso!=null)sensorIso=iso;
+     Integer ae=result.get(CaptureResult.CONTROL_AE_STATE);
+     if(ae!=null)sensorAeState=ae;
+     Range<Integer> target=result.get(CaptureResult.CONTROL_AE_TARGET_FPS_RANGE);
+     if(target!=null){sensorAeMinFps=target.getLower();sensorAeMaxFps=target.getUpper();}
+    }
+   };
+ private static String aeStateLabel(int state){
+  switch(state){
+   case CaptureResult.CONTROL_AE_STATE_INACTIVE:return "inactive";
+   case CaptureResult.CONTROL_AE_STATE_SEARCHING:return "searching";
+   case CaptureResult.CONTROL_AE_STATE_CONVERGED:return "converged";
+   case CaptureResult.CONTROL_AE_STATE_LOCKED:return "locked";
+   case CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED:return "flash_required";
+   case CaptureResult.CONTROL_AE_STATE_PRECAPTURE:return "precapture";
+   default:return "unknown";
+  }
+ }
  private ClipClassifier classifier;
  private ExecutorService reviewer;
  // Separate lower-priority phone worker: JPEG compression must never stall
@@ -237,7 +279,7 @@ public final class CameraService extends Service {
       r.addTarget(preview.getSurface());
       cameraControls.apply(r);
       activeCameraRequest=r;
-      s.setRepeatingRequest(r.build(),null,cameraHandler);
+      s.setRepeatingRequest(r.build(),sensorTelemetry,cameraHandler);
       mode="watching";Log.i(TAG,"YUV_PREVIEW_ACTIVE 640x480 mode="+(pilotOnly?"pilot":"motion_record"));
      }catch(Exception e){failure("preview_request_failed",e);scheduleRecover();}
     }
@@ -356,7 +398,7 @@ public final class CameraService extends Service {
       b.addTarget(video);b.addTarget(preview.getSurface());
       cameraControls.apply(b);
       activeCameraRequest=b;
-      s.setRepeatingRequest(b.build(),null,cameraHandler);
+      s.setRepeatingRequest(b.build(),sensorTelemetry,cameraHandler);
       recorder.start();
       noteRecordingStarted();
       lastStart=SystemClock.elapsedRealtime();
@@ -578,6 +620,18 @@ public final class CameraService extends Service {
    d.put("storage","removable_microSD_only");
    d.put("sd_free_bytes",folder==null?0:folder.getUsableSpace());
    d.put("frames",frames);d.put("motion_events",motionEvents);
+   long age=lastSensorCaptureAt==0?-1:SystemClock.elapsedRealtime()-lastSensorCaptureAt;
+   d.put("sensor_capture_result_frames",sensorCaptureResults);
+   d.put("sensor_capture_result_age_ms",age);
+   d.put("sensor_result_fps",age>=0&&age<5000?Math.round(sensorResultFps*100f)/100f:null);
+   d.put("sensor_exposure_ms",sensorExposureMs>0?Math.round(sensorExposureMs*100f)/100f:null);
+   d.put("sensor_frame_duration_ms",sensorFrameDurationMs>0?
+      Math.round(sensorFrameDurationMs*100f)/100f:null);
+   d.put("sensor_iso",sensorIso>0?sensorIso:null);
+   d.put("sensor_ae_state",aeStateLabel(sensorAeState));
+   d.put("sensor_ae_target_fps_min",sensorAeMinFps>0?sensorAeMinFps:null);
+   d.put("sensor_ae_target_fps_max",sensorAeMaxFps>0?sensorAeMaxFps:null);
+   d.put("sensor_lowlight_long_exposure",sensorExposureMs>=45f);
    d.put("motion_rate_suppressed",suppressedByRate);
    d.put("recording_rate_max_per_hour",MAX_4K_CLIPS_PER_HOUR);
    d.put("recording_rate_standard_per_hour",RecordingRate.BASE_PER_HOUR);
