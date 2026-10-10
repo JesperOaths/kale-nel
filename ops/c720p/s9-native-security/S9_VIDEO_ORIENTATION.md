@@ -20,10 +20,14 @@ in that browser's localStorage. It is not an edit to the phone, microSD, signed
 manifest, video, or Home Assistant API; browser storage does not synchronize
 between different browsers or devices. Old MP4s remain verifiable and unmodified.
 
-The code does not inspect or infer scene orientation automatically. An operator
-must view each clip and choose its upright angle. Clips that already display
-upright should remain at 0° correction. CSS display rotation may not apply when
-the player enters a browser/OS-managed fullscreen mode.
+The first production player (deployed 10 October 2026) provides manual, per-clip
+rotation controls. A subsequent source revision (PR #442) additionally suggests
+a +90° CSS correction for native `motion_*.mp4` clips that Chromium reports as
+portrait despite 3840×2160 landscape pixels; manual per-clip choices override it.
+**Do not claim that the PR #442 auto-correction is deployed until an actual
+Home Assistant browser confirms it.** Legacy `rec_*.mp4` clips are never
+auto-rotated. CSS display rotation may not apply inside browser/OS-managed
+fullscreen playback.
 
 The tool defaults to a dry run. On the C720P, after reviewing source pinned to
 a specific revision and running the regression test:
@@ -42,19 +46,52 @@ contract and ensuring no concurrent HTML deployment.
 
 ## Fixing future recordings
 
-The source now supports an explicit `recording_rotation` Camera2 control
-with exact values `0`, `90`, `180`, or `270` degrees, retained by Android
-SharedPreferences. The default stays **90°** for backward compatibility until
-the correct stationary camera mounting orientation has been visually verified.
-Changing this option while watching affects **future MP4 display matrices only**,
-not the current preview, frames, motion detection, stored clips, or stream.
-It is disabled while recording.
+The native Camera2 source supports `recording_rotation` values `auto`, `0`,
+`90`, `180` and `270`, retained in Android SharedPreferences. `auto` uses the
+rear-camera sensor and Android display orientation; it was **not reliable for
+this stationary S9+**, where multiple real 3840×2160 clips carried a `-90°`
+display matrix. Locking Android's display to landscape did **not** fix it and
+was reverted. The correct stationary-camera setting is **`0°`**, verified
+through the native `/controls` and `/status` APIs. Changes apply to future
+MP4 display matrices only; old recordings, thumbnails, classifiers and stored
+files remain untouched. Control changes are refused during active recording.
 
 **A repository change is not a live APK install.** Deploy Camera2 changes only
 with the previously verified signed-APK rollback procedure in a healthy idle
 window. Then record a short controlled test clip with a recognizable vertical
 reference and review playback. If the orientation is wrong, adjust the control
 and create another test clip; do not rewrite earlier evidence.
+
+## Verified 10 October 2026 production actions
+
+- Merged PR #440 (manual playback rotation) and PR #441 (restored source
+  sensor-aware default); the HTML-only patch was deployed and browser-rendered
+  successfully on the C720P
+- Inspected eight saved-video frames: four native Camera2 and four legacy S9+.
+  Three of the four native examples appeared sideways/portrait; four legacy
+  examples appeared upright
+- Direct `ffprobe` on the faulty native samples found `rotation: -90`, while
+  their encoded dimensions remained 3840 × 2160
+- Reverted a trial Android landscape lock after two **post-lock** recordings
+  still contained the same faulty rotation matrix
+- Fixed immutable APK source fetch/staging to include CameraOrientation.java
+  in PR #445, then built and signed source `8488f25bc8cecd0d7985d233a7733a9064288624`
+- Installed APK SHA-256
+  `b4f8e95ca9a7019860f876ef3338922b15ca0232deb9ea4fc785d38ac1f592e7`
+  with matching existing signing certificate, rollback APK saved, camera and
+  GPU pipeline healthy
+- Saved `recording_rotation=0` through the new Camera2 native control API;
+  both `/controls` and `/status` reported effective 0°
+- Preserve original MP4 bytes and manifests. A fresh post-override recorded
+  MP4 must still be checked for a zero rotation matrix before declaring
+  complete end-to-end capture acceptance
+
+On the C720P only, read the current effective native rotation without a
+restart via `http://127.0.0.1:18808/controls`; the same loopback bridge
+provides `/status`. The native `/control` endpoint accepts a bounded JSON
+POST with `{"key":"recording_rotation","value":"0"}` while the camera is in
+`watching` mode. Keep this endpoint on local authenticated/trusted paths
+only, never expose it publicly.
 
 ## Metadata inspection and genuinely embedded wrong rotation
 
