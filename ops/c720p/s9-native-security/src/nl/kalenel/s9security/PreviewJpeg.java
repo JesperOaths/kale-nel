@@ -1,41 +1,82 @@
 package nl.kalenel.s9security;
+
+import android.graphics.ImageFormat;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
 import android.media.Image;
-import android.graphics.Bitmap;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
-/** Throttled on-phone YUV_420_888 to JPEG preview. No cloud and no 4K readback. */
+
+/** Encode low-resolution camera preview entirely on the S9+, off cameraHandler.
+
+ * snapshot(Image) copies ONLY the three YUV planes while Camera2 owns the Image.
+ * encode(Snapshot) runs on a separate, lower-priority Java worker and never
+ * touches an Image whose camera callback has already closed it.
+ */
 public final class PreviewJpeg {
  private PreviewJpeg(){}
- public static byte[] encode(Image image,int quality){
-  int w=image.getWidth(),h=image.getHeight();
-  Image.Plane[] p=image.getPlanes();
-  ByteBuffer y=p[0].getBuffer(),u=p[1].getBuffer(),v=p[2].getBuffer();
-  int ys=p[0].getRowStride(),yps=p[0].getPixelStride();
-  int us=p[1].getRowStride(),ups=p[1].getPixelStride();
-  int vs=p[2].getRowStride(),vps=p[2].getPixelStride();
-  int[] pixels=new int[w*h];
-  for(int row=0;row<h;row++){
-   int yr=row*ys,ur=(row/2)*us,vr=(row/2)*vs;
-   for(int col=0;col<w;col++){
-    int ly=y.get(Math.min(y.limit()-1,yr+col*yps))&255;
-    int uu=(u.get(Math.min(u.limit()-1,ur+(col/2)*ups))&255)-128;
-    int vv=(v.get(Math.min(v.limit()-1,vr+(col/2)*vps))&255)-128;
-    int c=Math.max(0,ly-16);
-    int red=(298*c+409*vv+128)>>8;
-    int green=(298*c-100*uu-208*vv+128)>>8;
-    int blue=(298*c+516*uu+128)>>8;
-    red=Math.max(0,Math.min(255,red));
-    green=Math.max(0,Math.min(255,green));
-    blue=Math.max(0,Math.min(255,blue));
-    pixels[row*w+col]=0xff000000|(red<<16)|(green<<8)|blue;
-   }
+
+ public static final class Snapshot {
+  final int width,height;
+  final byte[][] planes;
+  final int[] rowStrides,pixelStrides;
+  private Snapshot(int w,int h,byte[][] p,int[] rs,int[] ps){
+   width=w;height=h;planes=p;rowStrides=rs;pixelStrides=ps;
   }
-  Bitmap bitmap=Bitmap.createBitmap(pixels,w,h,Bitmap.Config.ARGB_8888);
-  try{
-   ByteArrayOutputStream out=new ByteArrayOutputStream(60000);
-   if(!bitmap.compress(Bitmap.CompressFormat.JPEG,quality,out))
-    throw new IllegalStateException("jpeg_encode_failed");
-   return out.toByteArray();
-  }finally{bitmap.recycle();}
+ }
+
+ public static Snapshot snapshot(Image image){
+  int w=image.getWidth(),h=image.getHeight();
+  if(w<=0||h<=0||w>1280||h>720||(w&1)!=0||(h&1)!=0)
+   throw new IllegalArgumentException("unsupported_preview_dimensions");
+  if(image.getFormat()!=ImageFormat.YUV_420_888)
+   throw new IllegalArgumentException("preview_must_be_YUV_420_888");
+  Image.Plane[] source=image.getPlanes();
+  if(source.length!=3)throw new IllegalArgumentException("invalid_YUV_plane_count");
+  byte[][] planes=new byte[3][];
+  int[] rowStrides=new int[3],pixelStrides=new int[3];
+  for(int n=0;n<3;n++){
+   ByteBuffer buffer=source[n].getBuffer().duplicate();
+   buffer.position(0);
+   planes[n]=new byte[buffer.remaining()];
+   buffer.get(planes[n]);
+   rowStrides[n]=source[n].getRowStride();
+   pixelStrides[n]=source[n].getPixelStride();
+   if(rowStrides[n]<=0||pixelStrides[n]<=0)
+    throw new IllegalArgumentException("invalid_YUV_strides");
+  }
+  return new Snapshot(w,h,planes,rowStrides,pixelStrides);
+ }
+
+ private static int at(Snapshot s,int plane,int row,int col){
+  long offset=(long)row*s.rowStrides[plane]+(long)col*s.pixelStrides[plane];
+  if(offset<0||offset>=s.planes[plane].length)
+   throw new IllegalArgumentException("YUV_plane_out_of_bounds");
+  return s.planes[plane][(int)offset]&255;
+ }
+
+ public static byte[] encode(Snapshot s,int quality){
+  if(quality<10||quality>95)throw new IllegalArgumentException("JPEG_quality_out_of_range");
+  int width=s.width,height=s.height;
+  byte[] nv21=new byte[width*height*3/2];
+  for(int y=0;y<height;y++)
+   for(int x=0;x<width;x++)
+    nv21[y*width+x]=(byte)at(s,0,y,x);
+  int base=width*height;
+  for(int y=0;y<height/2;y++)for(int x=0;x<width/2;x++){
+   int pos=base+y*width+x*2;
+   nv21[pos]=(byte)at(s,2,y,x);   // NV21 VU, not I420 UV.
+   nv21[pos+1]=(byte)at(s,1,y,x);
+  }
+  YuvImage image=new YuvImage(nv21,ImageFormat.NV21,width,height,null);
+  ByteArrayOutputStream out=new ByteArrayOutputStream(50000);
+  if(!image.compressToJpeg(new Rect(0,0,width,height),quality,out))
+   throw new IllegalStateException("JPEG_encoding_failed");
+  return out.toByteArray();
+ }
+
+ /** Compatibility: do not keep Android Image beyond the caller's callback. */
+ public static byte[] encode(Image frame,int quality){
+  return encode(snapshot(frame),quality);
  }
 }
