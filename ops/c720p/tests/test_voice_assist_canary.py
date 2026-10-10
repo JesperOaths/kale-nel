@@ -84,6 +84,23 @@ class Tests(unittest.TestCase):
                          "unsupported_pipeline_fields_no_change")
         self.assertEqual(ws.calls, [])
 
+    def test_repair_rolls_back_unexpected_setting_change(self):
+        class DistortingWS(FakeWS):
+            updates = 0
+            def cmd(self, command_type, **kw):
+                result = super().cmd(command_type, **kw)
+                if command_type == "assist_pipeline/pipeline/update":
+                    self.updates += 1
+                    if self.updates == 1:
+                        self.data["pipelines"][0]["tts_voice"] = "unexpected_voice"
+                return result
+        ws = DistortingWS(SAMPLE)
+        before = copy.deepcopy(SAMPLE["pipelines"][0])
+        status = canary.repair(ws, before, {"homeassistant"})
+        self.assertEqual(status, "verification_failed_rollback_verified")
+        self.assertEqual(ws.data["pipelines"][0], before)
+        self.assertEqual(ws.updates, 2)
+
     def test_client_masking(self):
         one, two = socket.socketpair()
         try:
