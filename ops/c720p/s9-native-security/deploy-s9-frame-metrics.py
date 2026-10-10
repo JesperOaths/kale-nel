@@ -42,6 +42,7 @@ EXTRA=(
     "s9-native-security/s9_appearance_review.py",
     "s9-native-security/drive-person-batch-catalog.py",
     "s9-person-ml-v1/s9_human_thumbnail_review.py",
+    "s9-person-ml-v1/s9_native_camera_controls.py",
     "s9-native-security/patch-s9-saved-video-orientation.py",
     "s9-native-security/test-s9-saved-video-orientation.py",
 )
