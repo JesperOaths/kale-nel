@@ -98,6 +98,58 @@ public final class ClipClassifier {
    return found;
   }finally{if(scaled!=original)scaled.recycle();}
  }
+
+ /** Lightweight RGB upper-torso tag; deliberately excludes face and has no identity features. */
+ private static String upperClothingColour(Bitmap image,float[] b){
+  if(image==null||b==null||b.length!=4)return "uncertain";
+  int w=image.getWidth(),h=image.getHeight();
+  int x0=Math.max(0,Math.min(w-1,(int)(w*(b[1]+.26f*(b[3]-b[1])))));
+  int x1=Math.max(0,Math.min(w,(int)(w*(b[1]+.74f*(b[3]-b[1])))));
+  int y0=Math.max(0,Math.min(h-1,(int)(h*(b[0]+.27f*(b[2]-b[0])))));
+  int y1=Math.max(0,Math.min(h,(int)(h*(b[0]+.52f*(b[2]-b[0])))));
+  if(x1-x0<5||y1-y0<5)return "uncertain";
+  int[] votes=new int[11];int readable=0;
+  for(int yy=0;yy<12;yy++)for(int xx=0;xx<12;xx++){
+   int px=x0+(int)((xx+.5)*(x1-x0)/12),py=y0+(int)((yy+.5)*(y1-y0)/12);
+   int c=image.getPixel(Math.min(w-1,px),Math.min(h-1,py));
+   int rr=(c>>16)&255,gg=(c>>8)&255,bb=c&255;
+   int hi=Math.max(rr,Math.max(gg,bb)),lo=Math.min(rr,Math.min(gg,bb));
+   int delta=hi-lo;
+   if(hi<28)continue; // too dark for a useful clothing estimate
+   int slot;
+   if(delta<22)slot=hi>205?1:hi<72?0:2; // white, black, gray
+   else if(rr>gg*1.38&&rr>bb*1.35)slot=3; // red
+   else if(rr>gg*1.15&&gg>bb*1.35)slot=4; // orange
+   else if(rr>175&&gg>155&&bb<gg*.70)slot=5; // yellow
+   else if(gg>rr*1.18&&gg>bb*1.09)slot=6; // green
+   else if(bb>rr*1.2&&bb>gg*1.12)slot=7; // blue
+   else if(rr>gg*1.13&&bb>gg*1.13)slot=8; // purple/pink
+   else if(rr>65&&gg>35&&rr>bb*1.24)slot=9; // brown
+   else slot=10;
+   votes[slot]++;readable++;
+  }
+  if(readable<35)return "uncertain";
+  int winner=10;
+  for(int i=0;i<votes.length;i++)if(votes[i]>votes[winner])winner=i;
+  if(votes[winner]<readable*.38)return "uncertain";
+  String[] names={"black","white","gray","red","orange","yellow","green","blue","purple_or_pink","brown","uncertain"};
+  return names[winner];
+ }
+ private static JSONArray anonymousTracksJson(AnonymousClipTracks all)throws JSONException{
+  JSONArray output=new JSONArray();
+  for(AnonymousClipTracks.Track t:all.tracks()){
+   JSONObject item=new JSONObject();
+   item.put("id","Person "+t.id).put("temporary_track_id",t.id)
+    .put("first_sample_ms",t.firstMs).put("last_sample_ms",t.lastMs)
+    .put("sample_count",t.samples)
+    .put("peak_detection_score",Math.round(t.peakConfidence*1000)/1000.0)
+    .put("upper_clothing_colour",t.colour())
+    .put("cross_recording_identity","not_attempted");
+   output.put(item);
+  }
+  return output;
+ }
+
  public synchronized JSONObject process(File mp4, File folder, String name, String trigger, long motionEvents)throws Exception{
   long begin=SystemClock.elapsedRealtime();
   JSONObject result=new JSONObject();
@@ -112,6 +164,7 @@ public final class ClipClassifier {
   long firstStrongAt=-1,lastStrongAt=-1;
   final JSONArray frameEvidence=new JSONArray();
   final OutfitEvidence outfit=new OutfitEvidence();
+  final AnonymousClipTracks anonymousTracks=new AnonymousClipTracks();
   final LinkedHashSet<String> animalsSeen=new LinkedHashSet<>(),vehiclesSeen=new LinkedHashSet<>();
   double maxPerson=0,maxAnimal=0,maxVehicle=0;
   Bitmap best=null;double bestScore=-1;
@@ -135,6 +188,7 @@ public final class ClipClassifier {
      validFrames++;
      int p=0,a=0,v=0,weakPerson=0;
      final ArrayList<float[]> distinctPersonBoxes=new ArrayList<>();
+     final ArrayList<AnonymousClipTracks.Hit> anonymousPeople=new ArrayList<>();
      double confidence=0,framePersonMax=0;
      for(Detection d:found){
       if("person".equals(d.label)){
@@ -143,7 +197,10 @@ public final class ClipClassifier {
        if(d.score>=.50f){
         boolean duplicate=false;
         for(float[] box:distinctPersonBoxes)if(samePersonBox(d.box,box)){duplicate=true;break;}
-        if(!duplicate){distinctPersonBoxes.add(d.box);p++;}
+        if(!duplicate){
+         distinctPersonBoxes.add(d.box);p++;
+         anonymousPeople.add(new AnonymousClipTracks.Hit(d.box,d.score,upperClothingColour(bitmap,d.box)));
+        }
         confidence=Math.max(confidence,d.score);
        }else weakPerson++;
       }else if(d.score>=.50f && ("cat".equals(d.label)||"dog".equals(d.label)||"bird".equals(d.label)
@@ -161,6 +218,7 @@ public final class ClipClassifier {
      // The sampled crop excludes head/face; no persistent identity assignment.
      if(p==1&&framePersonMax>=.65f&&distinctPersonBoxes.size()==1)
       outfit.add(bitmap,distinctPersonBoxes.get(0),(float)framePersonMax);
+     anonymousTracks.addFrame(micros/1000,anonymousPeople);
      if(p>=2)framesWithMultiplePeople++;
      if(p>0){
       strongPersonFrames++;
@@ -212,6 +270,12 @@ public final class ClipClassifier {
    result.put("person_sample_timeline",frameEvidence);
    result.put("animal_subcategories",new JSONArray(animalsSeen));
    result.put("vehicle_subcategories",new JSONArray(vehiclesSeen));
+   result.put("anonymous_tracking_version","sampled_box_tracklets_v1");
+   result.put("anonymous_track_scope","this_recording_only");
+   result.put("anonymous_id_not_verified_person",true);
+   result.put("anonymous_track_count",anonymousTracks.appearances());
+   result.put("anonymous_track_count_is_not_unique_people",true);
+   result.put("anonymous_tracks",anonymousTracksJson(anonymousTracks));
    result.put("person_count_is_max_simultaneous_detections",true);
    result.put("person_identity","not_evaluated");
    result.put("human_reviewed",false);
