@@ -27,6 +27,11 @@ class HistoricalGpuReviewTests(unittest.TestCase):
    "sampled_frame_count":8,"person_frames_at_050":2,"person_confidence":.83,
    "person_event_category":"single_person_repeated_candidate",
    "vehicle_confidence":0.1,"animal_confidence":0.0,"backend":"gpu"}
+ def test_captures_gpu_stage_size_before_temp_cleanup(self):
+  source=(HERE/"s9-historical-gpu-relay.py").read_text()
+  self.assertIn("gpu_input_bytes=gpu_mp4.stat().st_size",source)
+  self.assertIn("gpu_input_bytes",source.split("print(")[-4])
+  
  def test_waits_for_existing_catalog_lock(self):
   with tempfile.TemporaryDirectory() as root:
    location=Path(root)/"lock"
