@@ -7,6 +7,7 @@ on:
       - 'ops/c720p/voice-assist-canary-20261010.py'
       - 'ops/c720p/voice-pipeline-diagnostic-20261010.py'
       - 'ops/c720p/tests/test_voice_assist_canary.py'
+      - 'ops/c720p/tests/test_voice_diagnostic.py'
       - '.github/workflows/c720p-voice-ci.yml'
   workflow_dispatch:
 
@@ -25,4 +26,4 @@ jobs:
       - name: Syntax and offline protocol/repair regression tests
         run: |
           python -m py_compile ops/c720p/voice-assist-canary-20261010.py ops/c720p/voice-pipeline-diagnostic-20261010.py
-          python -m unittest discover -s ops/c720p/tests -p 'test_voice_assist_canary.py' -v
+          python -m unittest discover -s ops/c720p/tests -p 'test_voice_*.py' -v
