@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
  */
 final class S9FaceReview implements AutoCloseable {
  static final String VERSION="s9_face_review_v1";
- private static final int MAX_FRAMES=5,MAX_FACES=3,MAX_CAPTURES=8,EMBED=128,SIDE=112;
+ private static final int MAX_FRAMES=12,MAX_FACES=3,MAX_CAPTURES=8,EMBED=128,SIDE=112;
  private static final Pattern FILE=Pattern.compile("motion_[0-9]{13}[.]mp4");
  private static final Pattern PERSON=Pattern.compile("[A-Za-z0-9][A-Za-z0-9 _.-]{0,55}");
  private static final double KNOWN_FLOOR=.84,UNKNOWN_FLOOR=.88,MIN_MARGIN=.045;
@@ -138,6 +138,16 @@ final class S9FaceReview implements AutoCloseable {
  }
  private static JSONArray writeVector(float[] v)throws Exception{
   JSONArray j=new JSONArray();for(float a:v)j.put((double)a);return j;
+ }
+ private static String fileHash(File source)throws Exception{
+  MessageDigest md=MessageDigest.getInstance("SHA-256");
+  try(InputStream in=new FileInputStream(source)){
+   byte[] chunk=new byte[16384];int n;
+   while((n=in.read(chunk))>0)md.update(chunk,0,n);
+  }
+  StringBuilder b=new StringBuilder();
+  for(byte x:md.digest())b.append(String.format(Locale.US,"%02x",x&255));
+  return b.toString();
  }
  private File index(){return new File(app.getFilesDir(),"s9-face-index-v1.json");}
  private void readIndex(){
@@ -271,7 +281,9 @@ final class S9FaceReview implements AutoCloseable {
      }
      if(!tmp.renameTo(target))throw new IOException("face_jpeg_move_failed");
      saved++;
-     match.put("snapshot",image).put("time_ms",ms).put("frontal_candidate",true)
+     match.put("snapshot",image).put("snapshot_size_bytes",target.length())
+      .put("snapshot_sha256",fileHash(target))
+      .put("time_ms",ms).put("frontal_candidate",true)
       .put("yaw_degrees",Math.round(yaw)).put("roll_degrees",Math.round(roll));
      captures.put(match);
      if(modelReady&&!status.equals("face_model_changed_requires_reenrollment"))
