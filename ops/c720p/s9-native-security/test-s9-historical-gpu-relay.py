@@ -46,6 +46,27 @@ class HistoricalGpuReviewTests(unittest.TestCase):
    case=dict(self.result);case[name]=value
    with self.subTest(name=name),self.assertRaises(ValueError):
     m.validate_result(case,self.verified)
+ def test_normalized_video_provenance_is_not_confused_with_original(self):
+  ready={"clip_id":self.id,"camera":"new","source_remote_name":self.name,
+         "source_sha256":self.hash,"original_source_sha256":"d"*64,
+         "original_source_size":500000,
+         "derivative_transcode":"ffmpeg_h264_960x540_all_intra_12samples"}
+  accepted=m.validate_result(self.result,self.verified,ready)
+  self.assertEqual(accepted["analysis_input_sha256"],self.hash)
+  self.assertEqual(accepted["original_source_sha256"],"d"*64)
+  self.assertEqual(accepted["analysis_input_preprocessing"],ready["derivative_transcode"])
+  for key,bad in (("clip_id","e"*64),("camera","s3"),
+                  ("source_sha256","f"*64),("original_source_sha256","bogus"),
+                  ("original_source_size",900000),
+                  ("derivative_transcode","unverified")):
+   changed=dict(ready);changed[key]=bad
+   with self.subTest(key=key),self.assertRaises(ValueError):
+    m.validate_result(self.result,self.verified,changed)
+  code=(HERE/"s9-historical-gpu-relay.py").read_text()
+  self.assertIn("normalization_decode_validation_failed",code)
+  self.assertIn("original_source_sha256",code)
+  self.assertIn("gpu_input_bytes",code)
+
  def test_animal_vehicle_and_unresolved(self):
   for confidence,expected in [("vehicle_confidence","vehicle_candidate"),
                                ("animal_confidence","animal_candidate"),
