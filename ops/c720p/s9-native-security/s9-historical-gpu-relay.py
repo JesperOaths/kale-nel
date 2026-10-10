@@ -194,7 +194,7 @@ def collect():
     print("S9_HISTORY_ALREADY_CLASSIFIED",entry["clip_id"][:12])
     continue
    cat["items"][entry["clip_id"]]=entry
-   cat["model_sha256"]=entry["model_sha256"]
+   # Preserve the existing CPU catalog model fingerprint; each phone row carries its own model SHA.
    cat["updated_at_utc"]=datetime.datetime.now(datetime.timezone.utc).isoformat()
    cat["summary"]=m.create_stats(cat,verified)
    cat["private_metadata_only"]=True
