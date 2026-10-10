@@ -93,6 +93,12 @@ def stage_one():
  key=source["clip_id"]
  if not SAFE_ID.fullmatch(key):raise RuntimeError("invalid_source_clip_id")
  execute(["adb","-s",PHONE,"shell","mkdir","-p",INBOX],20)
+ names=phone("ls","-1",INBOX,timeout=15).splitlines()
+ inflight=[n for n in names if re.fullmatch(r"history_[a-f0-9]{64}[.]ready[.]json",n)
+           and n.replace(".ready.json",".result.json") not in names]
+ if inflight:
+  print("S9_HISTORY_PHONE_STILL_PROCESSING",len(inflight))
+  return
  with tempfile.TemporaryDirectory(prefix="s9-history-") as tmp:
   folder=Path(tmp);src=folder/("history_"+key+".mp4")
   cfg=json.loads(m.CONFIG.read_text())
@@ -175,6 +181,15 @@ def validate_result(result,verified):
   "drive_read_only":True,"source_preserved_in_drive":True,"attempts":1,
  }
 
+def clean_import_copy(key):
+ """Only remove the disposable staging copy after trusted catalog reconciliation."""
+ if not SAFE_ID.fullmatch(key):raise ValueError("invalid_cleanup_key")
+ base=INBOX+"/history_"+key
+ # Retain result JSON as an audit record. Never touch Security4K or Google Drive.
+ for name in (base+".mp4",base+".mp4.verified.json",
+              base+".mp4.thumb.jpg",base+".ready.json"):
+  phone("rm","-f",name,timeout=12)
+
 def collect():
  m=cpu_catalog()
  listing=phone("ls","-1",INBOX,timeout=20)
@@ -192,6 +207,7 @@ def collect():
    prev=cat["items"].get(entry["clip_id"],{})
    if prev.get("status")=="classified":
     print("S9_HISTORY_ALREADY_CLASSIFIED",entry["clip_id"][:12])
+    clean_import_copy(entry["clip_id"])
     continue
    cat["items"][entry["clip_id"]]=entry
    # Preserve the existing CPU catalog model fingerprint; each phone row carries its own model SHA.
@@ -202,16 +218,38 @@ def collect():
    cat["biometric_identification"]=False
    m.write_catalog(cat)
    accepted+=1
+   clean_import_copy(entry["clip_id"])
    print("S9_HISTORY_MERGED",json.dumps({"clip_id_prefix":entry["clip_id"][:12],
        "classification":entry["category"],"backend":entry["review_backend"],
        "progress":cat["summary"]["processed"],"source_preserved":True}))
  print("S9_HISTORY_COLLECT_COMPLETE",accepted)
+
+def cycle():
+ import urllib.request
+ try:
+  with urllib.request.urlopen(APP_STATUS,timeout=9) as res:status=json.load(res)
+ except Exception as error:
+  print("S9_HISTORY_DEFERRED_CAMERA_UNAVAILABLE",type(error).__name__)
+  return
+ if status.get("historical_gpu_import_version")!="isolated_drive_import_v1":
+  print("S9_HISTORY_DEFERRED_PHONE_APK_NOT_UPGRADED")
+  return
+ execute(["adb","-s",PHONE,"shell","mkdir","-p",INBOX],20)
+ collect()
+ try:stage_one()
+ except RuntimeError as error:
+  if str(error) in ("phone_camera_not_idle_or_cool","phone_historical_worker_not_installed",
+                     "hub_disk_space_guard"):
+   print("S9_HISTORY_DEFERRED",str(error))
+  else:raise
 
 if __name__=="__main__":
  parser=argparse.ArgumentParser(description=__doc__)
  group=parser.add_mutually_exclusive_group(required=True)
  group.add_argument("--stage-one",action="store_true")
  group.add_argument("--collect",action="store_true")
+ group.add_argument("--cycle",action="store_true")
  options=parser.parse_args()
  if options.stage_one:stage_one()
- else:collect()
+ elif options.collect:collect()
+ else:cycle()
