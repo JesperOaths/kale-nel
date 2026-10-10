@@ -47,7 +47,9 @@ case "${1:-status}" in
     # Spotify is interactive; background dashboard/voice/archive work must yield
     # CPU and I/O while it is open. Recording remains active.
     set_weight c720p-home-hub-kiosk.service 25 25
-    set_weight c720p-openwakeword-v53e.service 100 100
+    # Keep the lightweight always-on wake detector responsive even when
+    # Spotify is active. CPUWeight is proportional only under contention.
+    set_weight c720p-openwakeword-v53e.service 10000 1000
     set_weight c720p-drive-security-archive.service 10 10
     set_weight c720p-security-web.service 50 50
     set_weight c720p-security-tunnel.service 50 50
