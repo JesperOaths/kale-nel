@@ -40,6 +40,7 @@ class Tests(unittest.TestCase):
   self.assertIn("s9_appearance_review.py",module.NATIVE)
   self.assertIn("test-appearance-review.py",module.NATIVE)
   self.assertIn("CameraControls.java",module.ANDROID)
+  self.assertIn("CameraOrientation.java",module.ANDROID)
   self.assertIn("OutfitEvidence.java",module.ANDROID)
   self.assertIn("ClipClassifier.java",module.ANDROID)
   self.assertIn("s9_native_camera_controls.py",module.PROXY)
