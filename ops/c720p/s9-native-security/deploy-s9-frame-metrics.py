@@ -40,6 +40,7 @@ EXTRA=(
     "s9-native-security/patch-drive-visitor-review-ui.py",
     "s9-native-security/test-anonymous-index-ui.py",
     "s9-native-security/test-drive-visitor-review.py",
+    "s9-native-security/deploy-s9-frame-metrics.py",
     "s9-native-security/s9_appearance_review.py",
     "s9-native-security/drive-person-batch-catalog.py",
     "s9-person-ml-v1/s9_human_thumbnail_review.py",
