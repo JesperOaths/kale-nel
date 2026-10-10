@@ -42,6 +42,7 @@ SNIPPET=r'''
  const groups=[
   ['multiple','Multiple people candidates'],
   ['person','Person detected / likely'],
+  ['possible','Possible person · needs review'],
   ['vehicle','Vehicle motion'],
   ['animal','Animal motion'],
   ['other','Other motion'],
@@ -65,6 +66,11 @@ SNIPPET=r'''
   const tags=Array.isArray(r.content_categories)?r.content_categories:[];
   if(g==='multiple_people'||String(r.person_event_category||'')==='multiple_people_candidate')return 'multiple';
   if(g==='one_person'||g==='single_person_event_candidate'||g==='single_person_repeated_candidate'||(Number(r.person_count)||0)>0)return 'person';
+  // Keep weak model evidence visible for human review without claiming an
+  // actual person was present. A 0.30–0.49 TFLite candidate is not verified.
+  const event=String(r.person_event_category||'');
+  if(['single_frame_person_candidate','possible_group_needs_frame_review',
+      'possible_person_below_standard_threshold'].includes(event))return 'possible';
   if(tags.includes('vehicle'))return 'vehicle';
   if(tags.includes('animal'))return 'animal';
   if(g==='unreviewed'||g==='unknown'||g==='')return 'unreviewed';
