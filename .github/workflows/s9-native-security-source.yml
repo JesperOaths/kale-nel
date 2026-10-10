@@ -28,6 +28,8 @@ jobs:
           python3 -m py_compile ops/c720p/s9-native-security/s9-historical-gpu-relay.py
           python3 ops/c720p/s9-native-security/test-s9-integrated-security-ui.py
           python3 ops/c720p/s9-native-security/test-s9-saved-video-orientation.py
+          python3 ops/c720p/s9-native-security/test-s9-thumb-upright-ui.py
+          python3 -m py_compile ops/c720p/s9-native-security/patch-s9-thumb-upright-ui.py
           python3 -m py_compile ops/c720p/s9-native-security/patch-s9-saved-video-orientation.py
           python3 -m py_compile ops/c720p/s9-native-security/patch-s9-integrated-security-ui.py
           python3 -m py_compile ops/c720p/s9-native-security/deploy-anonymous-clips-index.py ops/c720p/s9-native-security/patch-anonymous-tracks-ui.py ops/c720p/s9-person-ml-v1/local-sd-catalog.py ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py
