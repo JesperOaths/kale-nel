@@ -33,6 +33,8 @@ jobs:
           python3 ops/c720p/s9-native-security/test-security-saved-tab-date-nav.py
           python3 -m py_compile ops/c720p/s9-native-security/patch-security-saved-tab-date-nav.py
           python3 ops/c720p/s9-native-security/test-security-date-category-folders.py
+          python3 ops/c720p/s9-native-security/test-security-fallback-dated-stills.py
+          python3 -m py_compile ops/c720p/s9-native-security/patch-security-fallback-dated-stills.py
           python3 -m py_compile ops/c720p/s9-native-security/patch-security-live-fetch-fallback.py ops/c720p/s9-native-security/patch-security-date-category-folders.py
           python3 -m py_compile ops/c720p/s9-native-security/patch-s9-saved-video-orientation.py
           python3 -m py_compile ops/c720p/s9-native-security/patch-s9-integrated-security-ui.py
