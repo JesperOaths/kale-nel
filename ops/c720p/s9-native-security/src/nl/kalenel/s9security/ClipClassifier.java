@@ -102,7 +102,7 @@ public final class ClipClassifier {
   long begin=SystemClock.elapsedRealtime();
   JSONObject result=new JSONObject();
   result.put("name",name).put("bytes",mp4.length()).put("sha256",digest(mp4));
-  result.put("archive","S9_microSD_only").put("review_version","ssd_mobilenet_coco_v1_post4k_v1");
+  result.put("archive","S9_microSD_only").put("review_version","ssd_mobilenet_coco_v1_post4k_v2_outfit_review");
   result.put("motion_trigger",trigger).put("motion_events",motionEvents);
   result.put("auto_identity_status","appearance_based_identity_not_verified");
   MediaMetadataRetriever media=new MediaMetadataRetriever();
@@ -111,6 +111,7 @@ public final class ClipClassifier {
   int framesWithMultiplePeople=0;
   long firstStrongAt=-1,lastStrongAt=-1;
   final JSONArray frameEvidence=new JSONArray();
+  final OutfitEvidence outfit=new OutfitEvidence();
   final LinkedHashSet<String> animalsSeen=new LinkedHashSet<>(),vehiclesSeen=new LinkedHashSet<>();
   double maxPerson=0,maxAnimal=0,maxVehicle=0;
   Bitmap best=null;double bestScore=-1;
@@ -156,6 +157,10 @@ public final class ClipClassifier {
        v++;maxVehicle=Math.max(maxVehicle,d.score);vehiclesSeen.add(d.label);
       }
      }
+     // Use GPU-detected isolated persons to perform bounded on-phone outfit analysis.
+     // The sampled crop excludes head/face; no persistent identity assignment.
+     if(p==1&&framePersonMax>=.65f&&distinctPersonBoxes.size()==1)
+      outfit.add(bitmap,distinctPersonBoxes.get(0),(float)framePersonMax);
      if(p>=2)framesWithMultiplePeople++;
      if(p>0){
       strongPersonFrames++;
@@ -221,6 +226,7 @@ public final class ClipClassifier {
    result.put("animal_confidence",Math.round(maxAnimal*1000)/1000.0);
    result.put("vehicle_confidence",Math.round(maxVehicle*1000)/1000.0);
    result.put("backend",backend);
+   outfit.publish(result,folder,name,persons==1&&framesWithMultiplePeople==0);
    result.put("processing_elapsed_ms",SystemClock.elapsedRealtime()-begin);
    if(best!=null){
     File thumb=new File(folder,name+".thumb.jpg");

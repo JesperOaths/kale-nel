@@ -77,7 +77,7 @@ def deploy(stage):
  java_dst=stage/"s9-native-security/src/nl/kalenel/s9security"
  java_src=build/"src/nl/kalenel/s9security"
  java_dst.mkdir(parents=True,exist_ok=True)
- for filename in ("CameraService.java","CameraControls.java","MotionGrid.java"):
+ for filename in ("CameraService.java","CameraControls.java","MotionGrid.java","ClipClassifier.java","OutfitEvidence.java"):
   original=java_src/filename
   if not original.is_file():raise RuntimeError("compiled_camera_java_missing_"+filename)
   staged=java_dst/filename

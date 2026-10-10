@@ -43,7 +43,7 @@ PROXY=[
  "s9_sd_proxy_extension.py",
  "s9_drive_visitor_review.py",
 ]
-ANDROID=["CameraService.java","CameraControls.java","MotionGrid.java"]
+ANDROID=["CameraService.java","CameraControls.java","MotionGrid.java","ClipClassifier.java","OutfitEvidence.java"]
 TESTS=["test-native-camera-controls.py","test-drive-person-batch-catalog.py",
        "test-drive-visitor-review.py","test-appearance-review.py"]
 SAFE_SHA=re.compile(r"[a-f0-9]{40}\Z")
