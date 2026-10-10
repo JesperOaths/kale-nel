@@ -1,0 +1,16 @@
+[Unit]
+Description=Transfer and reconcile isolated S9+ historical Drive GPU reviews
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/jespern/c720p-home-hub
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/s9-historical-gpu-relay.py --cycle
+Nice=17
+CPUQuota=20%
+MemoryMax=350M
+NoNewPrivileges=true
+PrivateTmp=true
+TimeoutStartSec=900
