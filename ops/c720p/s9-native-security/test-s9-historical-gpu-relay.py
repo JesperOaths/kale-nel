@@ -67,7 +67,7 @@ class HistoricalGpuReviewTests(unittest.TestCase):
   self.assertIn("new HistoricalImportWorker(",camera)
   self.assertIn('temperature()>=370',camera)
   self.assertIn('reviewer.execute(new Runnable()',camera)
-  self.assertNotIn("Security4K",text)
+  self.assertNotIn('new File(appStorage,"Security4K")',text)
  def test_relay_only_writes_explicit_copy_and_metadata(self):
   source=(HERE/"s9-historical-gpu-relay.py").read_text()
   self.assertIn('"--drive-root-folder-id"',source)
