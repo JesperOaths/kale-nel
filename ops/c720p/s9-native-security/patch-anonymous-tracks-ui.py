@@ -30,7 +30,15 @@ SNIPPET = r'''
  const hostId='s9-anonymous-clips-v1';
  const colors=['black','white','gray','red','orange','yellow','green','blue','purple_or_pink','brown'];
  let lastEvents=[],filterValue='all',fetching=false;
- const relay=()=>window.C720PSecureRelay;
+ const relay=()=>{
+  // Nested Security iframe: share ONLY the same-origin signed parent relay.
+  if(window.C720PSecureRelay?.fetch)return window.C720PSecureRelay;
+  try{
+   if(window.parent!==window && window.parent.location.origin===location.origin &&
+      window.parent.C720PSecureRelay?.fetch)return window.parent.C720PSecureRelay;
+  }catch(_){}
+  return null;
+ };
  const parent=()=>document.getElementById('list');
  const node=(tag,text,className)=>{
   const e=document.createElement(tag);
@@ -38,7 +46,7 @@ SNIPPET = r'''
   if(className)e.className=className;
   return e;
  };
- const validName=name=>/^motion_[0-9]{13}\.mp4$/.test(String(name||''));
+ const validName=name=>/^motion_[0-9]{13}[.]mp4$/.test(String(name||''));
  const displayColour=colour=>String(colour||'uncertain').replaceAll('_',' ');
  const seconds=ms=>(Math.max(0,Number(ms)||0)/1000).toFixed(1)+' s';
  function root(){
@@ -115,6 +123,14 @@ SNIPPET = r'''
    const name=rec.clip_no;
    if(!validName(name))continue;
    const card=node('article',undefined,'s9-anon-card');
+   const score=Number(rec.person_score);
+   if(rec.person_score!==null && rec.person_score!==undefined && Number.isFinite(score) &&
+      score>=0 && score<=1)card.append(node('div',
+       'Peak person-detector score '+Math.round(score*100)+
+       '% · uncalibrated model score, not verified accuracy','s9-anon-muted'));
+   const n=Number(rec.sampled_frames);
+   if(Number.isInteger(n)&&n>0)card.append(node('div',
+     'Reviewed '+n+' sampled frames · detection is not a continuous identity track','s9-anon-muted'));
    card.append(node('strong',rec.timestamp||'Date unavailable'));
    card.append(node('div',name,'s9-anon-muted'));
    const concurrent=Number(rec.person_count||0);
@@ -145,7 +161,13 @@ SNIPPET = r'''
   host.append(details);
  }
  async function refresh(){
-  if(fetching||!relay()?.fetch)return;
+  if(fetching)return;
+  if(!relay()?.fetch){
+   const section=root();
+   if(section && !section.querySelector('.s9-relay-warning'))
+    section.append(node('p','Signed camera relay unavailable in this frame. Open in Home Assistant.','s9-relay-warning'));
+   return;
+  }
   fetching=true;
   try{
    const result=await relay().fetch('/new/api/saved',{cache:'no-store'});
