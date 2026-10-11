@@ -53,8 +53,22 @@ def main():
  with tempfile.TemporaryDirectory(prefix="s9-playback-jpeg-test-") as t:
   temp=pathlib.Path(t)
   frames,src,meta=derive_frames(temp)
+  sizes=[p.stat().st_size for p in frames]
+  offsets=[0]
+  for size in sizes:offsets.append(offsets[-1]+size)
+  packed=b"".join(p.read_bytes() for p in frames)
+  if len(packed)!=offsets[-1]:raise RuntimeError("frame_pack_size_mismatch")
   class Handler(BaseHTTPRequestHandler):
    def do_GET(self):
+    if self.path=="/pack":
+     self.send_response(200)
+     self.send_header("Content-Type","application/octet-stream")
+     self.send_header("Content-Length",str(len(packed)))
+     self.send_header("Access-Control-Allow-Origin","http://localhost:8123")
+     self.send_header("Cache-Control","no-store")
+     self.end_headers()
+     self.wfile.write(packed)
+     return
     if not self.path.startswith("/frame/"):self.send_error(404);return
     try:index=int(self.path.removeprefix("/frame/"))
     except ValueError:self.send_error(404);return
@@ -92,16 +106,19 @@ def main():
     browser.call("Target.activateTarget",{"targetId":target})
     expression=r"""(async()=>{
       const count=__COUNT__,port=__PORT__;
-      const src='http://127.0.0.1:'+port+'/frame/';
+      const base='http://127.0.0.1:'+port;
+      const offsets=__OFFSETS__;
       let bitmaps=[];
       try{
         const started=performance.now();
+        const response=await fetch(base+'/pack',{cache:'no-store'});
+        if(!response.ok)throw new Error('jpeg_pack_http_'+response.status);
+        const packed=await response.arrayBuffer();
+        if(packed.byteLength!==offsets[offsets.length-1])throw new Error('jpeg_pack_bounds');
         for(let start=0;start<count;start+=12){
           const segment=Array.from({length:Math.min(12,count-start)},(_,i)=>start+i);
           const batch=await Promise.all(segment.map(async i=>{
-            const r=await fetch(src+i,{cache:'no-store'});
-            if(!r.ok)throw new Error('jpeg_http_'+r.status);
-            const data=await r.blob();
+            const data=new Blob([packed.slice(offsets[i],offsets[i+1])],{type:'image/jpeg'});
             return createImageBitmap(data);
           }));
           bitmaps.push(...batch);
@@ -140,12 +157,12 @@ def main():
       }finally{
        for(const bitmap of bitmaps)bitmap.close();
       }
-    })()""".replace("__COUNT__",str(len(frames))).replace("__PORT__",str(port))
+    })()""".replace("__COUNT__",str(len(frames))).replace("__PORT__",str(port)).replace("__OFFSETS__",json.dumps(offsets))
     answer=page.call("Runtime.evaluate",{"expression":expression,"awaitPromise":True,"returnByValue":True})
     value=answer.get("result",{}).get("value",answer)
     print("S9_C720P_JPEG_PILOT",json.dumps({"result":value,"source_bytes":src.stat().st_size,
       "source_decoder":meta.get("decoder"),"source_frames":len(frames),"source_index":int(os.environ.get("S9_JPEG_SOURCE_INDEX","0")),
-      "private_loopback_only":True,"production_ui_modified":False},sort_keys=True),flush=True)
+      "private_loopback_only":True,"packed_bytes":len(packed),"production_ui_modified":False},sort_keys=True),flush=True)
    finally:page.close()
   finally:
    if original:
