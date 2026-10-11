@@ -176,14 +176,17 @@ def backend_with_tmpfs(text):
     if "C720P_DRIVE_RAM_THUMB_V1" in text:return text
     marker="if root in f.parents and f.is_file():self.local_file(f,'image/jpeg');return"
     if text.count(marker)!=1:raise RuntimeError("archive snapshot route anchor changed")
-    replacement=marker+"""
-    # C720P_DRIVE_RAM_THUMB_V1: validated transient Drive JPEGs; original files
-    # stay in Google Drive and the existing persistent thumbnail cache.
-    if cam=="new":
-     ram_root=pathlib.Path("/tmp/c720p-drive-archive-thumbs-new").resolve()
-     ram=(ram_root/n).resolve()
-     if ram_root in ram.parents and ram.is_file() and not ram.is_symlink() and 2500<=ram.stat().st_size<=8_000_000:
-      self.local_file(ram,'image/jpeg');return"""
+    index=text.index(marker)
+    indent=text[:index].rsplit("\n",1)[-1]
+    if not indent or indent.strip():raise RuntimeError("invalid archive route indentation")
+    deeper=indent+" "
+    replacement=marker+"\n"+(
+        indent+"# C720P_DRIVE_RAM_THUMB_V1: temporary Drive JPEGs; originals untouched.\n"+
+        indent+'if cam=="new":'+"\n"+
+        deeper+'ram_root=pathlib.Path("/tmp/c720p-drive-archive-thumbs-new").resolve()'+"\n"+
+        deeper+"ram=(ram_root/n).resolve()"+"\n"+
+        deeper+"if ram_root in ram.parents and ram.is_file() and not ram.is_symlink() and 2500<=ram.stat().st_size<=8_000_000:"+"\n"+
+        deeper+" self.local_file(ram,'image/jpeg');return")
     data=text.replace(marker,replacement,1)
     compile(data,str(BACKEND),"exec")
     return data
