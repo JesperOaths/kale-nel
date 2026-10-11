@@ -14,6 +14,7 @@ import re
 import subprocess
 import threading
 import time
+import urllib.error
 import urllib.parse
 
 ROOT=Path("/tmp/c720p-security-rgb565")
@@ -23,7 +24,7 @@ HEIGHT=180
 FPS=25
 BYTES_PER_FRAME=WIDTH*HEIGHT*2
 CHUNK_SECONDS=5
-MAX_CHUNKS=36
+MAX_CHUNKS=60
 MAX_TOTAL_BYTES=450*1024*1024
 TTL_SECONDS=3600
 LOCK=threading.Lock()
