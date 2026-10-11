@@ -106,29 +106,44 @@ public final class ClipClassifier {
   }finally{if(scaled!=original)scaled.recycle();}
  }
 
- /** Preview-only per-event person gate. The same 300x300 MobileNet detector,
-  * shared with post-record classification on the serialized review worker.
-  * No face recognition, cross-recording identification, or persistent IDs.
+ /** Person candidate anchored to the front garden; never an identity. */
+ public static final class GardenPersonEvidence {
+  public final float score,centerX,feetY,height;
+  public GardenPersonEvidence(float score,float centerX,float feetY,float height){
+   this.score=score;this.centerX=centerX;this.feetY=feetY;this.height=height;
+  }
+ }
+ /** One on-phone SSD MobileNet pass, preferring a person whose lower body
+  * belongs to the near-camera garden. Traffic outside this region cannot pass.
   */
- public synchronized float personScoreInGarden(byte[] jpeg,float top,float margin)throws Exception{
+ public synchronized GardenPersonEvidence personEvidenceInGarden(byte[] jpeg,float top,float margin)throws Exception{
   if(jpeg==null||jpeg.length<1000||top<0||top>1||margin<0||margin>.3f)
    throw new IllegalArgumentException("invalid_preview_or_region");
   init();
   Bitmap bitmap=BitmapFactory.decodeByteArray(jpeg,0,jpeg.length);
   if(bitmap==null)throw new IOException("invalid_preview_jpeg");
   try{
-   float highest=0f;
-   for(Detection detection:detect(bitmap)){
-    if(!"person".equals(detection.label))continue;
-    float[] b=detection.box;
+   GardenPersonEvidence best=new GardenPersonEvidence(0f,0f,0f,0f);
+   for(Detection d:detect(bitmap)){
+    if(!"person".equals(d.label)||d.score<.30f)continue;
+    float[] b=d.box;
     if(b==null||b.length!=4)continue;
-    float center=(b[1]+b[3])*0.5f;
-    float feet=b[2];
-    if(center<margin||center>1f-margin||feet<top||feet>1.02f)continue;
-    highest=Math.max(highest,detection.score);
+    boolean valid=true;for(float coord:b)if(!Float.isFinite(coord))valid=false;
+    if(!valid)continue;
+    float left=Math.max(0,b[1]),right=Math.min(1,b[3]);
+    float head=Math.max(0,b[0]),feet=Math.min(1,b[2]);
+    float cx=(left+right)*.5f,bodyHeight=feet-head;
+    if(right<=left||bodyHeight<.115f||cx<margin||cx>1f-margin
+       ||feet<top+.015f||feet>1.005f)continue;
+    // Require lower-body overlap: tiny road silhouettes near the line are not garden people.
+    if((feet-Math.max(head,top))/Math.max(.01f,bodyHeight)<.22f)continue;
+    if(d.score>best.score)best=new GardenPersonEvidence(d.score,cx,feet,bodyHeight);
    }
-   return highest;
+   return best;
   }finally{bitmap.recycle();}
+ }
+ public synchronized float personScoreInGarden(byte[] jpeg,float top,float margin)throws Exception{
+  return personEvidenceInGarden(jpeg,top,margin).score;
  }
 
  /** Lightweight RGB upper-torso tag; deliberately excludes face and has no identity features. */
