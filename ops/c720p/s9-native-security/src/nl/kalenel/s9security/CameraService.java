@@ -119,6 +119,7 @@ public final class CameraService extends Service {
  private volatile long gardenPersonGateChecks=0,gardenPersonGateMatches=0;
  private volatile long gardenPersonGateRejects=0,gardenPersonGateErrors=0;
  private volatile float gardenPersonGateScore=0f;
+ private volatile float gardenPersonGateAnyScore=0f;
  private long gardenPersonGatePreviousPositiveJpegAt=0;
  private volatile long gardenPersonDuplicateJpegRejects=0;
  private int gardenPersonGatePositiveStreak=0;
@@ -393,13 +394,17 @@ public final class CameraService extends Service {
   try{
    gardenGateExecutor.execute(new Runnable(){public void run(){
     final long gateStarted=SystemClock.elapsedRealtime();
-    float value=0;boolean failed=false;
-    try{value=gardenGateClassifier.personScoreInGarden(jpg,top,margin);}
+    float value=0,wholeFrameScore=0;boolean failed=false;
+    try{
+     value=gardenGateClassifier.personScoreInGarden(jpg,top,margin);
+     wholeFrameScore=gardenGateClassifier.lastPersonScoreAnywhere();
+    }
     catch(Throwable issue){
      failed=true;
      Log.w(TAG,"garden_person_gate_"+issue.getClass().getSimpleName());
     }
     final float score=value;
+    final float anyScore=wholeFrameScore;
     final boolean error=failed;
     if(cameraHandler==null)return;
     cameraHandler.post(new Runnable(){public void run(){
@@ -407,6 +412,7 @@ public final class CameraService extends Service {
      gardenPersonGateQueueWaitMs=Math.max(0,gateStarted-now);
      gardenPersonGateChecks++;
      gardenPersonGateScore=score;
+     gardenPersonGateAnyScore=anyScore;
      if(error){
       gardenPersonGateErrors++;
       saveFallbackEvidence("realtime_person_detector_failed");
@@ -942,6 +948,7 @@ public final class CameraService extends Service {
    d.put("garden_person_gate_rejected",gardenPersonGateRejects);
    d.put("garden_person_gate_errors",gardenPersonGateErrors);
    d.put("garden_person_gate_last_score",gardenPersonGateScore);
+    d.put("garden_person_gate_last_anywhere_score",gardenPersonGateAnyScore);
     d.put("garden_person_followup_version","motion_armed_4500ms_unique_jpeg_v5");
     d.put("garden_person_candidate_window_ms",GARDEN_PERSON_CANDIDATE_MS);
     d.put("garden_person_motion_windows",gardenPersonMotionWindows);
