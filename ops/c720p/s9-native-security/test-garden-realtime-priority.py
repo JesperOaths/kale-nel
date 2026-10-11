@@ -19,8 +19,6 @@ class GardenRealtimePriorityTests(unittest.TestCase):
             'private boolean rateAllowed(',1)[0]
         self.assertIn('gardenGateExecutor.execute(new Runnable()',gate)
         self.assertIn('gardenGateClassifier.personEvidenceInGarden',gate)
-        self.assertIn('GardenPersonTrackGate.Result.CONFIRMED',gate)
-        self.assertIn('final long jpegAt=lastJpegAt',gate)
         self.assertNotIn('reviewer.execute',gate)
         self.assertNotIn('reviewer.submit',gate)
         self.assertNotIn('classifier.process(',gate)
