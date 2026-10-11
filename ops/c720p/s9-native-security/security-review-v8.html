@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><head><script src="/gejast-auth-gate.js?v817"></script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet"><meta http-equiv="Cache-Control" content="no-store">
 <title>Security · Recordings & Evidence</title>
 <style>
@@ -82,7 +82,7 @@ async function open(rec){
  host.append(video);state.activeVideo=video;
  const quality=text('div','Loading media details…','');quality.id='quality';host.append(quality);
  const mf=text('div','','');mf.id='metrics';host.append(mf);
- const scores=Number(rec.person_score);
+ const scores=rec.person_score===null||rec.person_score===undefined?NaN:Number(rec.person_score);
  const samples=Number(rec.sampled_frames)||0,positives=Number(rec.person_detected_frames_050)||0;
  metric(mf,Number.isFinite(scores)?(scores*100).toFixed(0)+'%':'—','Peak uncalibrated person-detector score');
  metric(mf,samples||'—','Frames reviewed (sampled, not continuous)');
@@ -137,7 +137,7 @@ function render(){
   card.setAttribute('aria-selected',String(state.selected===name(rec)));pic(rec,card);
   const labels=text('div','','clip-label');labels.append(text('strong',fmt(rec)),text('small',label(rec)));
   const cs=text('div','','chips');cs.append(text('span',Number(rec.sampled_frames||0)>0?'Reviewed '+rec.sampled_frames+' frames':'Unreviewed','chip'));
-  if(Number.isFinite(Number(rec.person_score)))cs.append(text('span','Peak '+(Number(rec.person_score)*100).toFixed(0)+'%','chip'));
+  if(rec.person_score!==null&&rec.person_score!==undefined&&Number.isFinite(Number(rec.person_score)))cs.append(text('span','Peak '+(Number(rec.person_score)*100).toFixed(0)+'%','chip'));
   labels.append(cs);card.append(labels);card.onclick=()=>open(rec);host.append(card);
  }
  if(state.selected&&!result.some(x=>name(x)===state.selected))playbackStop();
