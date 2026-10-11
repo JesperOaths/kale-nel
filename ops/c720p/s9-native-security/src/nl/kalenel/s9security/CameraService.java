@@ -539,6 +539,7 @@ public final class CameraService extends Service {
       +" event="+eventSegment.eventId+" segment="+eventSegment.sequence);
     final File saved=candidate;final long motionAtSave=motionEvents;
     final String reviewTrigger=reason+"_"+captureTier;
+    writeCaptureEvidenceAsync(saved,eventSegment);
     reviewer.submit(new Runnable(){public void run(){review(saved,reviewTrigger,motionAtSave,eventSegment);}});
   }catch(Exception e){
    failure("finalize_failed_"+e.getClass().getSimpleName(),e);
@@ -558,6 +559,35 @@ public final class CameraService extends Service {
   failed++;
   cooldownUntil=SystemClock.elapsedRealtime()+20000;
   cameraHandler.postDelayed(new Runnable(){public void run(){configurePreview();}},1300);
+ }
+ private void writeCaptureEvidenceAsync(File video,CaptureContinuity.Segment segment){
+  final ExecutorService output=evidenceWriter;
+  if(output==null)return;
+  try{
+   output.execute(new Runnable(){public void run(){
+    try{
+     JSONObject evidence=new JSONObject();
+     evidence.put("version",CaptureContinuity.VERSION);
+     evidence.put("kind","recording_segment_event_evidence");
+     evidence.put("name",video.getName());
+     evidence.put("capture_event_id",segment.eventId);
+     evidence.put("capture_segment_index",segment.sequence);
+     evidence.put("capture_previous_segment",
+       segment.previousClip.isEmpty()?JSONObject.NULL:segment.previousClip);
+     evidence.put("capture_transition_reason",segment.transitionReason);
+     evidence.put("capture_end_reason",segment.stopReason);
+     evidence.put("physical_reconfigure_gap_ms",segment.gapMs<0?JSONObject.NULL:segment.gapMs);
+     evidence.put("auto_resume_armed",segment.autoResumeArmed);
+     evidence.put("timestamp_basis","Android_elapsedRealtime_not_wall_clock");
+     evidence.put("video_continuity_is_gapless",false);
+     evidence.put("classifier_human_verified",false);
+     ClipClassifier.writeJson(
+       new File(video.getParentFile(),video.getName()+".capture.json"),evidence);
+    }catch(Exception problem){
+     Log.w(TAG,"recording_capture_evidence_write_failed",problem);
+    }
+   }});
+  }catch(RejectedExecutionException ignored){}
  }
  private boolean review(File f,String reason,long count){
   return review(f,reason,count,null);
