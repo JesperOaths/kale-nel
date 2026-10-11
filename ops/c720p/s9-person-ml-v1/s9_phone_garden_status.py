@@ -71,6 +71,8 @@ def from_phone(phone,now_ms=None):
       "hub_frame_decoding":False,"last_sample_at_ms":now_ms,
       "last_sample_age_ms":0,"samples":checked,"failures":failures,
       "camera_mode":phone["mode"],"camera_temperature_c":phone.get("temperature_c"),
+      # S9+ removable microSD capacity is measured on the phone, never guessed by the hub.
+      "sd_free_bytes":_sensor_value(phone.get("sd_free_bytes"),0,1000000000000000),
       "motion_changed_ratio":phone.get("changed_ratio"),
       "motion_coherent_cells":phone.get("coherent_cells"),
       "garden_zone":phone.get("garden_zone","unknown"),
