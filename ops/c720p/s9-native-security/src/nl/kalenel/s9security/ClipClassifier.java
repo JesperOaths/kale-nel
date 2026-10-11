@@ -202,6 +202,11 @@ public final class ClipClassifier {
   // requires the model and direct ByteBuffer to have been initialized.
   // This is the S9+ review worker, not the real-time camera callback.
   init();
+  // The archive-review worker can reach thumbnail backfill before a
+  // fresh 4K video calls process(). Ensure this independent entrypoint
+  // prepares its own TFLite input and output buffers before detect().
+  // The serialized phone-side reviewer owns this ClipClassifier instance.
+  init();
   MediaMetadataRetriever media=new MediaMetadataRetriever();
   Bitmap bitmap=null;
   try{
