@@ -21,6 +21,7 @@ public final class CaptureContinuityTest {
   CaptureContinuity.Segment e=c.stopped(146000,"motion_1791690160000.mp4","quiet_end");
   ok(e.sequence==1&&!e.eventId.equals(a.eventId),"distant visitor new event");
   c.evidence(160000);c.started(160100,1791690190000L);
+  c.evidence(168000);
   CaptureContinuity.Segment x=c.stopped(170000,"motion_1791690190000.mp4","max_segment");
   ok(x.autoResumeArmed,"fresh max cap resumable");
   ok(!c.continuationReady(180000),"expired event cannot resurrect");
