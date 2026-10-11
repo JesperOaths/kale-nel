@@ -112,6 +112,9 @@ public final class CameraService extends Service {
  private volatile long gardenPersonGateChecks=0,gardenPersonGateMatches=0;
  private volatile long gardenPersonGateRejects=0,gardenPersonGateErrors=0;
  private volatile float gardenPersonGateScore=0f;
+ private int gardenPersonGatePositiveStreak=0;
+ private long gardenPersonGatePreviousPositiveAt=0;
+ private volatile long gardenPersonGateConfirmedStarts=0;
  private String captureTier="normal";
  private long lastFrameAt=0,lastMovementAt=0,lastRecordAt=0,cooldownUntil=0,lastStart=0;
  // Ignore detector triggers from deliberate user changes of zoom, torch or exposure.
@@ -378,19 +381,26 @@ public final class CameraService extends Service {
       saveFallbackEvidence("realtime_person_detector_failed");
       return;
      }
-     if(score<0.44f){gardenPersonGateRejects++;return;}
+     if(score<0.44f){gardenPersonGateRejects++;gardenPersonGatePositiveStreak=0;return;}
      gardenPersonGateMatches++;
      // Do not start recording on stale detections, if the camera has moved
      // into a new capture session, or after a deliberate controls change.
      if(!running||!"watching".equals(mode)||SystemClock.elapsedRealtime()-now>3500||
          lastFrameAt<cameraControlSettleUntil){
       gardenPersonGateStale++;
+      gardenPersonGatePositiveStreak=0;
       if(running&&"watching".equals(mode))
        saveFallbackEvidence("stale_person_result_skipped");
       return;
      }
+     if(gardenPersonGatePreviousPositiveAt>0 && now-gardenPersonGatePreviousPositiveAt<=3000L)
+      gardenPersonGatePositiveStreak=Math.min(2,gardenPersonGatePositiveStreak+1);
+     else gardenPersonGatePositiveStreak=1;
+     gardenPersonGatePreviousPositiveAt=now;
+     if(gardenPersonGatePositiveStreak<2)return;
+     gardenPersonGatePositiveStreak=0;
      if(temperature()<415 && folder!=null&&
-             folder.getUsableSpace()>15L*1024*1024*1024)startRecording();
+             folder.getUsableSpace()>15L*1024*1024*1024){gardenPersonGateConfirmedStarts++;startRecording();}
      else saveFallbackEvidence("thermal_or_space_guard");
     }});
    }});
@@ -751,7 +761,7 @@ public final class CameraService extends Service {
    d.put("pilot_only",pilotOnly);
    d.put("takeover_completed",!pilotOnly&&running&&lastFrameAt>0);
    d.put("recorder","camera2_3840x2160_h264");
-   d.put("motion_detector","garden_roi_gpu_person_gate_v1");
+   d.put("motion_detector","garden_roi_gpu_two_frame_person_gate_v2");
    d.put("review_model","ssd_mobilenet_coco_gpu_cpu_v1");
    d.put("mic",false);d.put("cloud_upload",false);
    d.put("storage","removable_microSD_only");
@@ -815,6 +825,8 @@ public final class CameraService extends Service {
    d.put("garden_person_gate_stale_dropped",gardenPersonGateStale);
    d.put("garden_person_gate_checked",gardenPersonGateChecks);
    d.put("garden_person_gate_matches",gardenPersonGateMatches);
+   d.put("garden_person_gate_required_positive_frames",2);
+   d.put("garden_person_gate_confirmed_starts",gardenPersonGateConfirmedStarts);
    d.put("garden_person_gate_rejected",gardenPersonGateRejects);
    d.put("garden_person_gate_errors",gardenPersonGateErrors);
    d.put("garden_person_gate_last_score",gardenPersonGateScore);
