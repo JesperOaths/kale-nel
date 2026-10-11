@@ -18,7 +18,7 @@ BASE='/storage/9C33-6BBD/Android/data/nl.kalenel.s9security/files'
 Q=BASE+'/Security4K_quarantine_garden_review/'
 OUT=Path('/home/jespern/c720p-home-hub/state/s9-permanent-empty-clip-purge')
 FILE=re.compile(r'motion_[0-9]{13}[.]mp4\Z')
-SHA=re.compile(r'[0-9a-f]{64}\\Z')
+SHA=re.compile(r'[0-9a-f]{64}\Z')
 SUFFIX=('.garden-retention.json','.verified.json','.thumb.jpg')
 MIN_AGE=6*3600*1000
 
