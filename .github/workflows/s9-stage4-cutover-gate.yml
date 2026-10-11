@@ -4,11 +4,15 @@ on:
     paths:
       - 'ops/c720p/s9-native-security/audit-stage4-readonly.py'
       - 'ops/c720p/s9-native-security/test-stage4-readonly.py'
+      - 'ops/c720p/s9-native-security/stage4-cutover-decision.py'
+      - 'ops/c720p/s9-native-security/test-stage4-cutover-decision.py'
       - '.github/workflows/s9-stage4-cutover-gate.yml'
   pull_request:
     paths:
       - 'ops/c720p/s9-native-security/audit-stage4-readonly.py'
       - 'ops/c720p/s9-native-security/test-stage4-readonly.py'
+      - 'ops/c720p/s9-native-security/stage4-cutover-decision.py'
+      - 'ops/c720p/s9-native-security/test-stage4-cutover-decision.py'
       - '.github/workflows/s9-stage4-cutover-gate.yml'
 permissions:
   contents: read
@@ -23,5 +27,6 @@ jobs:
           set -euo pipefail
           python3 -m py_compile ops/c720p/s9-native-security/audit-stage4-readonly.py
           python3 ops/c720p/s9-native-security/test-stage4-readonly.py
+          python3 ops/c720p/s9-native-security/test-stage4-cutover-decision.py
           test -s ops/c720p/s9-detector-benchmark/ON_PHONE_BENCHMARK_20261011.md
           test -s ops/c720p/s9-native-security/RECORDING_EVENT_V3.md
