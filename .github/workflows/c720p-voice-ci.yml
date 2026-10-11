@@ -15,6 +15,7 @@ on:
       - 'ops/c720p/deploy-fast-time-variants-voice-20261011.py'
       - 'ops/c720p/voice-acoustic-canary-20261011.py'
       - 'ops/c720p/s5-office-voice-playback-canary-20261011.py'
+      - 'ops/c720p/s5-office-acoustic-three-step-20261011.py'
       - 'ops/c720p/stage-c720p-clips-on-s9-microsd-20261010.py'
       - '.github/workflows/c720p-voice-ci.yml'
   workflow_dispatch:
@@ -33,7 +34,7 @@ jobs:
           python-version: '3.13'
       - name: Syntax and offline protocol/repair regression tests
         run: |
-          python -m py_compile ops/c720p/voice-assist-canary-20261010.py ops/c720p/voice-pipeline-diagnostic-20261010.py ops/c720p/reclaim-safe-cache-20261010.py ops/c720p/stage-c720p-clips-on-s9-microsd-20261010.py ops/c720p/apply-heygoogle-calibrated-threshold-v62.py ops/c720p/deploy-fast-time-voice-20261011.py ops/c720p/deploy-fast-time-variants-voice-20261011.py ops/c720p/voice-acoustic-canary-20261011.py ops/c720p/s5-office-voice-playback-canary-20261011.py
+          python -m py_compile ops/c720p/voice-assist-canary-20261010.py ops/c720p/voice-pipeline-diagnostic-20261010.py ops/c720p/reclaim-safe-cache-20261010.py ops/c720p/stage-c720p-clips-on-s9-microsd-20261010.py ops/c720p/apply-heygoogle-calibrated-threshold-v62.py ops/c720p/deploy-fast-time-voice-20261011.py ops/c720p/deploy-fast-time-variants-voice-20261011.py ops/c720p/voice-acoustic-canary-20261011.py ops/c720p/s5-office-voice-playback-canary-20261011.py ops/c720p/s5-office-acoustic-three-step-20261011.py
           python -m unittest discover -s ops/c720p/tests -p 'test_*.py' -v
       - name: Compile Galaxy S5 AudioTrack playback runner for Android
         shell: bash
@@ -63,3 +64,33 @@ jobs:
           javac -source 8 -target 8 -bootclasspath "$ANDROID_JAR" -d /tmp/s5-audio-ci/classes /tmp/s5-audio-ci/S5Play.java
           "$D8" --lib "$ANDROID_JAR" --min-api 23 --output /tmp/s5-audio-ci/dex /tmp/s5-audio-ci/classes/com/bruis/s5audio/S5Play.class
           test -s /tmp/s5-audio-ci/dex/classes.dex
+      - name: Validate acoustic on-off-on sequence and timing probes
+        shell: bash
+        run: |
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+          p=Path("ops/c720p/s5-office-acoustic-three-step-20261011.py")
+          m=ast.parse(p.read_text())
+          profile_assignment=next(
+              n for n in m.body
+              if isinstance(n,ast.Assign)
+              and any(isinstance(t,ast.Name) and t.id=="PROFILES" for t in n.targets)
+          )
+          profiles=ast.literal_eval(profile_assignment.value)
+          assert len(profiles)==3
+          assert [p["text"].lower() for p in profiles]==[
+              "hey google turn on the office lights",
+              "hey google turn the office lights off",
+              "hey google turn the office lights on"]
+          assert all(0<p["volume"]<15 for p in profiles)
+          assert len(set(p["piper_voice"] for p in profiles))>=2
+          functions={n.name:n for n in m.body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))}
+          assert {"LiveHA","play_one","wake_log_since","build_runner","main"}.issubset(functions)
+          text=p.read_text()
+          assert "state_transition_observed" in text
+          assert "state_change_seconds_after_launch" in text
+          assert "command_audio_start_after_launch_s" in text
+          assert "no_direct_light_service_calls" in text
+          print("S5 on-off-on voice and timing static checks PASS")
+          PY
