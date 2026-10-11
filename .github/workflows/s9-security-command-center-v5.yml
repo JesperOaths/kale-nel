@@ -12,6 +12,9 @@ on:
       - 'ops/c720p/s9-native-security/security-archive-v7.html'
       - 'ops/c720p/s9-native-security/security-tracks-v7.html'
       - 'ops/c720p/s9-native-security/test-security-v7.py'
+      - 'ops/c720p/s9-native-security/security-review-v8.html'
+      - 'ops/c720p/s9-native-security/deploy-security-audit-v8.py'
+      - 'ops/c720p/s9-native-security/test-security-v8.py'
       - 'ops/c720p/s9-native-security/repair-live-loop-v2.py'
       - 'ops/c720p/s9-native-security/harden-live-retry-v3.py'
       - 'ops/c720p/s9-native-security/test-live-loop-v3.py'
@@ -28,6 +31,9 @@ on:
       - 'ops/c720p/s9-native-security/security-archive-v7.html'
       - 'ops/c720p/s9-native-security/security-tracks-v7.html'
       - 'ops/c720p/s9-native-security/test-security-v7.py'
+      - 'ops/c720p/s9-native-security/security-review-v8.html'
+      - 'ops/c720p/s9-native-security/deploy-security-audit-v8.py'
+      - 'ops/c720p/s9-native-security/test-security-v8.py'
       - 'ops/c720p/s9-native-security/repair-live-loop-v2.py'
       - 'ops/c720p/s9-native-security/harden-live-retry-v3.py'
       - 'ops/c720p/s9-native-security/test-live-loop-v3.py'
@@ -49,5 +55,6 @@ jobs:
           python3 "$P/test-security-v6-minimal.py"
           python3 -m py_compile "$P/deploy-security-v7.py"
           python3 "$P/test-security-v7.py"
+          python3 "$P/test-security-v8.py"
           python3 "$P/test-live-loop-v3.py"
           echo S9_SECURITY_V5_SOURCE_AND_ROLLBACK_PASS
