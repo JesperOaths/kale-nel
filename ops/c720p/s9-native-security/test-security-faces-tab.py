@@ -27,6 +27,8 @@ class Tests(unittest.TestCase):
               'id="panel-faces"','s9SavedFolderFrame','s9FacesGalleryFrame'):
    self.assertIn(key,output)
   self.assertEqual(output.count('data-tab="faces"'),2)
+  self.assertIn('class="tab" data-tab="faces"',output)
+  self.assertIn("tab.classList.add('active')",output)
   self.assertIn('queueMicrotask',output)
   self.assertNotIn('window.location.href=',output)
  def test_guard_against_unsupported_markup(self):
