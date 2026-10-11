@@ -115,7 +115,7 @@ class V5Tests(unittest.TestCase):
              'frontyard-security-new/clips.html':clips(),
              'frontyard-security-new/face-appearances.html':face(),
              'c720p-drive-saved.html':archive()}
-   for p,contents in fixtures.items():(root/p).write_text(contents*8)
+   for p,contents in fixtures.items():(root/p).write_text(contents+'\n<!-- '+('test-padding-'*75)+' -->')
    originals={p:(root/p).read_bytes() for p in fixtures}
    changes=deploy.build(root,HERE)
    self.assertEqual(len(changes),4)
