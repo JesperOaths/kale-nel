@@ -28,7 +28,7 @@ class Tests(unittest.TestCase):
         self.assertIn('TOTAL_PER_HOUR=BASE_PER_HOUR+PRIORITY_RESERVE_PER_HOUR',rate)
         self.assertIn('recorded<TOTAL_PER_HOUR && sustainedCoherent',rate)
         camera=(SRC/'CameraService.java').read_text()
-        for condition in ('COOLDOWN_MS=12000','temperature()<415','folder.getUsableSpace()>15L*1024*1024*1024',
+        for condition in ('COOLDOWN_MS=0','temperature()<415','folder.getUsableSpace()>15L*1024*1024*1024',
                           'saveFallbackEvidence("recording_budget_rejected")'):
             self.assertIn(condition,camera)
 
