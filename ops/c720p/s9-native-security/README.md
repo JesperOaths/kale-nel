@@ -177,3 +177,22 @@ day/night garden walk-by events versus empty-scene/foliage/street negatives.
 Higher person confidence reduces some false positives but can miss distant
 people. Do not declare accuracy improvements proven or delete any recordings
 on model evidence alone. The permanent-deletion policy remains disabled.
+
+
+## V4 event-first detector, gallery and thumbnails (11 October 2026)
+
+**Source stage, not a confirmed device deployment.** V4 retains Camera2 native 3840x2160 30-fps H264, local SD storage, verified manifests, signed local media playback, and the currently deployed-in-code SSD MobileNet TFLite model. The production inference model has NOT yet been replaced with YOLO/NCNN or EfficientDet. The independent s9-detector-benchmark package already exists for a read-only EfficientDet-Lite0 comparison, but S9+ sustained latency, day/night recall and false-positive behavior require on-device testing with labeled actual garden footage before choosing a model.
+
+PersonEventTracker.java associates three distinct, spatially plausible person detections with two >=0.60 strong outputs within 4.5 seconds; a single score cannot confirm a person. On-phone periodic person inference runs approximately every 1.65 seconds when still, 650ms when motion is active, and 1.35 seconds during recording, under thermal and JPEG freshness guards. Foreground motion is scheduling evidence, not a person prediction. Valid tracks extend recording for standing people and can prompt a new 4K segment when the two-minute cap is reached. The MediaRecorder teardown/reconfigure interval is not gapless or equivalent to an encoded pre-roll.
+
+V4 thumbnail regeneration on the S9+ scores a bounded set of up to 10 video frame positions: strong foreground-garden person evidence first, then luminance detail, exposure and genuine near-garden movement. It saves 640x360 JPEG previews, publishes timestamp and thumbnail strategy in the verified sidecar and preserves a preexisting thumb for rollback when possible. An idle-only backfill attempts one verified SD clip at a time while the garden is quiet, with a cool phone (<34.5C) and adequate SD reserve. This is not a bulk scan completed merely by updating source.
+
+V4 Saved/Camera Clips UI has a horizontal date strip, clip colour marks per date, a six-colour legend (person likely, possible person, animal, vehicle, other motion and unreviewed), direct playback cards and a real player maximum 360x220px on desktop. The live preview is bounded to 70% of the viewport. Existing signed media relay and the other face/archive widgets remain.
+
+### Source-to-device rollout order
+
+On the C720P, after fetching and validating ONE immutable successful GitHub commit, run patch-security-date-category-folders.py, patch-s9-saved-video-orientation.py, patch-security-compact-layout.py for saved and live, and patch-detector-version-badges.py. Start with their dry-run modes and retain timestamped HTML backups. Validate the real rendered Security UI and signed MP4 Range playback with both landscape and rotated recordings.
+
+Build and sign the coherent APK with the validated current production model and signed key; check active recorder state, thermal, SD reserve, existing APK signature compatibility and rollback APK before invoking the guarded safe-night-guard-upgrade.py procedure. Do not stop or replace active surveillance solely because CI passed. Verify garden day/night walks, standing people, empty scenes, road traffic, tree movement, latency, battery temperature and storage after the actual upgrade.
+
+**Still pending beyond this phase:** device install, observed source/production cutover, edit-in-browser polygon ROI, independently labeled S9+ SSD-vs-Lite0-vs-YOLO benchmark, alternative detector deployment, multi-object ByteTrack-class tracking, pre-event encoded 4K buffer, demonstrated high recall and false-positive metrics. Preserve all original recordings and rollback options.
