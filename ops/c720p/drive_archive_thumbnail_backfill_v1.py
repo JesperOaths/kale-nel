@@ -67,8 +67,8 @@ def ready(snapshot):
     return valid(DISK_CACHE/snapshot) or valid(CACHE/snapshot)
 
 def coverage(rows):
-    ready=sum(ready(row["snapshot_name"]) for row in rows)
-    return {"verified_clips":len(rows),"thumbnails_ready":ready,"remaining":len(rows)-ready}
+    ready_count=sum(ready(row["snapshot_name"]) for row in rows)
+    return {"verified_clips":len(rows),"thumbnails_ready":ready_count,"remaining":len(rows)-ready_count}
 
 def atomic_status(data):
     STATUS.parent.mkdir(parents=True,exist_ok=True)
