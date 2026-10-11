@@ -35,7 +35,7 @@ aside{padding:26px 18px 28px 24px;border-right:1px solid #273947;overflow-y:auto
 .card{border:1px solid #304451;background:var(--panel);border-radius:13px;overflow:hidden;min-width:0}
 .card:hover{border-color:#5d938d}
 .image{display:block;position:relative;aspect-ratio:16/9;background:#1e303d;overflow:hidden}
-.image img{width:100%;height:100%;object-fit:cover;position:relative}
+.image img{width:100%;height:100%;object-fit:contain;object-position:center;position:relative}
 .image .fallback{display:grid;place-items:center;position:absolute;inset:0;color:#617e8d;font-size:35px}
 .card-body{padding:13px 15px 15px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -47,7 +47,8 @@ aside{padding:26px 18px 28px 24px;border-right:1px solid #273947;overflow-y:auto
 .details{font-size:11px;color:var(--muted);min-height:18px}
 .open{margin-top:14px;width:100%;background:#1d3c43;color:#d8f8f0;border:1px solid #3b6462;padding:9px;border-radius:8px}
 .open:hover{background:#2c5156}
-#more{display:block;margin:28px auto 0;background:#203844;border:1px solid #47616d;padding:11px 22px;border-radius:9px}
+#more:not([hidden]){display:block;margin:28px auto 0;background:#203844;border:1px solid #47616d;padding:11px 22px;border-radius:9px}
+#more[hidden],#noResults[hidden]{display:none!important}
 #noResults{padding:50px;text-align:center;color:var(--muted)}
 dialog{width:min(820px,94vw);max-height:88dvh;padding:15px;border:1px solid #3f5968;background:#12202c;color:var(--ink);border-radius:14px}
 dialog::backdrop{background:#03070cdb}
@@ -117,7 +118,7 @@ const wrap=make('div','tracks'),tracks=Array.isArray(r.anonymous_tracks)?r.anony
 for(const track of tracks.slice(0,9))if(/^Person (?:[1-9]|[1-5][0-9]|6[0-4])$/.test(String(track.id||'')))wrap.append(colourPill(track));
 if(!wrap.children.length)wrap.append(make('span','kind',isReviewed(r)?'No tracks in sampled frames':'Awaiting track scan'));
 body.append(wrap);
-const stats=make('div','details',((Number(r.person_count)||0)+' people max')+'  ·  '+(Number(r.sampled_frames)||0)+' sampled frames');
+const stats=make('div','details',(Number(r.person_count)||0)+' '+((Number(r.person_count)||0)===1?'person':'people')+' max · '+(Number(r.sampled_frames)||0)+' sampled frames');
 body.append(stats);
 const open=make('button','open','Play clip');open.type='button';open.addEventListener('click',()=>play(r));body.append(open);
 el.append(body);thumbnail(img,r);return el}
@@ -132,12 +133,15 @@ function render(){let entries=state.all.filter(matches);
 entries.sort((a,b)=>state.order==='tracks'?trackCount(b)-trackCount(a)||b.clip_no.localeCompare(a.clip_no):
 state.order==='old'?a.clip_no.localeCompare(b.clip_no):b.clip_no.localeCompare(a.clip_no));
 const grid=$('grid');grid.replaceChildren();
-for(const r of entries.slice(0,state.limit))grid.append(card(r));
-$('more').hidden=entries.length<=state.limit;
-$('more').textContent='Show more · '+(entries.length-state.limit)+' left';
+const visible=Math.min(entries.length,Math.max(0,state.limit));
+for(const r of entries.slice(0,visible))grid.append(card(r));
+const remaining=Math.max(0,entries.length-visible);
+$('more').hidden=remaining===0;
+$('more').textContent=remaining?('Show next '+Math.min(48,remaining)+' · '+remaining+' remaining'):'';
 $('noResults').hidden=entries.length!==0;
 $('count').textContent=entries.length+' clips';
 }
+function resetFilteredScroll(){const scroller=$('results');if(scroller)scroller.scrollTop=0}
 function dayOptions(){const select=$('day'),days=[...new Set(state.all.map(dayOf))].sort().reverse();select.replaceChildren();
 const all=make('option','','All dates');all.value='all';select.append(all);
 for(const d of days){const opt=make('option','',d);opt.value=d;select.append(opt)}
@@ -154,14 +158,14 @@ catch(_){$('count').textContent='Archive unavailable';if(!state.all.length)$('no
 finally{state.busy=false}}
 const colours=$('colours'),all=make('button','swatch');all.type='button';all.title='All colours';all.setAttribute('aria-label','All clothing colours');all.setAttribute('aria-pressed','true');all.dataset.colour='all';colours.append(all);
 for(const [name,paint] of Object.entries(palette)){const el=make('button','swatch');el.type='button';el.title=fmtColour(name);el.setAttribute('aria-label',fmtColour(name));el.setAttribute('aria-pressed','false');el.dataset.colour=name;el.style.setProperty('--paint',paint);colours.append(el)}
-colours.addEventListener('click',e=>{const b=e.target.closest('button[data-colour]');if(!b)return;state.colour=b.dataset.colour;state.limit=48;
+colours.addEventListener('click',e=>{const b=e.target.closest('button[data-colour]');if(!b)return;state.colour=b.dataset.colour;state.limit=48;resetFilteredScroll();
 for(const x of colours.querySelectorAll('button'))x.setAttribute('aria-pressed',String(x===b));render()});
-$('categories').addEventListener('click',e=>{const b=e.target.closest('button[data-kind]');if(!b)return;state.kind=b.dataset.kind;state.limit=48;
+$('categories').addEventListener('click',e=>{const b=e.target.closest('button[data-kind]');if(!b)return;state.kind=b.dataset.kind;state.limit=48;resetFilteredScroll();
 for(const x of $('categories').querySelectorAll('button'))x.setAttribute('aria-pressed',String(x===b));render()});
-$('reviewed').addEventListener('change',e=>{state.reviewed=e.target.checked;state.limit=48;render()});
-$('day').addEventListener('change',e=>{state.day=e.target.value;state.limit=48;render()});
+$('reviewed').addEventListener('change',e=>{state.reviewed=e.target.checked;state.limit=48;resetFilteredScroll();render()});
+$('day').addEventListener('change',e=>{state.day=e.target.value;state.limit=48;resetFilteredScroll();render()});
 $('order').addEventListener('change',e=>{state.order=e.target.value;render()});
-$('search').addEventListener('input',e=>{state.query=e.target.value.toLowerCase().trim().slice(0,100);state.limit=48;render()});
+$('search').addEventListener('input',e=>{state.query=e.target.value.toLowerCase().trim().slice(0,100);state.limit=48;resetFilteredScroll();render()});
 $('more').addEventListener('click',()=>{state.limit+=48;render()});
 $('close').addEventListener('click',()=>$('viewer').close());
 $('viewer').addEventListener('close',()=>{++playerToken;const v=$('video');v.pause();v.removeAttribute('src');v.load()});
