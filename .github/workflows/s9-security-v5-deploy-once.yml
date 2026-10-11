@@ -31,3 +31,5 @@ jobs:
           assert result.get('job',{}).get('id')
           print('SECURITY_V5_READONLY_RENDER_JOB_ACCEPTED',result['job'])
           PY
+
+# visual-probe-jpeg-20261011
