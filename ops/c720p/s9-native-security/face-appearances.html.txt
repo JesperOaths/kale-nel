@@ -49,9 +49,9 @@ h2{font-size:16px;margin:0 0 8px}p{margin:5px 0 12px;color:var(--muted)}
 .swatch{display:inline-block;width:9px;height:9px;border-radius:50%;border:1px solid #bfd4db;margin-right:4px;vertical-align:middle}
 .actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:auto;padding-top:7px}.actions button{font-size:12px;padding:7px 9px}
 .empty{border:1px dashed #486982;padding:28px 16px;border-radius:12px;text-align:center;grid-column:1/-1;color:var(--muted)}
-.more{display:block;margin:18px auto}
-dialog{color:var(--ink);background:#102332;border:1px solid #6992aa;border-radius:13px;width:min(1100px,95vw);max-height:92vh;padding:12px}
-dialog::backdrop{background:#000d}dialog video{width:100%;max-height:75vh;background:black;display:block;margin:8px 0}
+.more{display:block;margin:18px auto}.more[hidden]{display:none!important}
+dialog{color:var(--ink);background:#102332;border:1px solid #6992aa;border-radius:13px;width:min(820px,94vw);max-width:100%;max-height:88dvh;padding:14px;overflow:auto}
+dialog::backdrop{background:#000d}dialog video{width:100%;max-height:min(52dvh,450px);aspect-ratio:16/9;object-fit:contain;background:#050a0e;display:block;margin:8px 0}
 .modal-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
 .watermark{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#a7c6d4;background:#0a2234ee;border:1px solid #45677d;border-radius:999px;padding:3px 9px;z-index:8;white-space:nowrap}
 footer{font-size:11px;color:#a8c0d1;margin:25px 0 8px}
@@ -92,6 +92,7 @@ footer{font-size:11px;color:#a8c0d1;margin:25px 0 8px}
 <dialog id="playerDialog" aria-label="Original S9 camera recording">
  <div class="modal-head"><strong id="playerLabel">Original recording</strong><button id="closePlayer" type="button">Close</button></div>
  <video id="player" controls playsinline preload="metadata"></video>
+ <div id="playerState" class="subtle" aria-live="polite">Waiting for recording…</div>
  <div class="subtle">Played directly from the S9+ microSD through the authenticated relay. Person identities have not been confirmed.</div>
 </dialog>
 <footer>Faces and video stay in the phone's existing microSD archive. Face crops are streamed only when visible and are not permanently cached by this page. Original 4K recordings are preserved.</footer>
@@ -188,6 +189,7 @@ async function play(rec,at,button){
   const url=await r.url('/new/saved/clip/'+encodeURIComponent(rec.clip_no));
   const vid=$('player'),dlg=$('playerDialog');
   $('playerLabel').textContent=displayTime(rec)+' · '+rec.clip_no;
+  $('playerState').textContent='Loading original recording…';
   vid.src=url;vid.load();
   const atSeconds=Number(at)/1000;
   if(Number.isFinite(atSeconds)&&atSeconds>0)vid.addEventListener('loadedmetadata',()=>{
@@ -250,7 +252,7 @@ async function loadImage(img){
  img.dataset.loaded='1';
  const path=img.dataset.relayPath;
  if(!path||!/^\/new\/saved\/(face|snap)\/[A-Za-z0-9._-]+$/.test(path))return;
- try{const r=relay();if(!r?.url)throw Error('relay');const signed=await r.url(path);if(img.isConnected)img.src=signed;}
+ try{const r=relay();if(!r?.url)throw Error('relay');const signed=await r.url(path);if(img.isConnected){img.addEventListener('error',()=>{const host=img.parentElement;if(host){img.remove();host.append(make('small','Preview unavailable · open the original recording'))}},{once:true});img.src=signed;}}
  catch(_){if(img.isConnected){img.remove();}}
 }
 async function refresh(){
@@ -282,7 +284,9 @@ for(const [id] of Object.entries(colours)){
 }
 $('refresh').addEventListener('click',refresh);
 $('more').addEventListener('click',()=>{state.page++;render();});
-function stopVideo(){const v=$('player');v.pause();v.removeAttribute('src');v.load();}
+function stopVideo(){const v=$('player');v.pause();v.removeAttribute('src');v.load();$('playerState').textContent='Waiting for recording…';}
+$('player').addEventListener('loadedmetadata',()=>{$('playerState').textContent='Recording loaded · '+(Number.isFinite($('player').duration)?$('player').duration.toFixed(1)+' seconds':'duration unknown')});
+$('player').addEventListener('error',()=>{$('playerState').textContent='Video could not be decoded here. Original recording remains saved on the S9+.'});
 $('closePlayer').addEventListener('click',()=>$('playerDialog').close());
 $('playerDialog').addEventListener('close',stopVideo);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopVideo();else refresh();});
