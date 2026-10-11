@@ -55,6 +55,13 @@ public final class PhoneMediaRangeTest {
    check(head.length==split(head),"HEAD has no bytes");
    byte[] invalid=serve(root,"GET /clip/"+name+" HTTP/1.1\r\nRange: bytes=145678-145679\r\n\r\n");
    check(headers(invalid).contains("416 Range Not Satisfiable"),"reject bad ranges");
+   String preName=name+".preroll.mp4";
+   File preroll=new File(root,preName);
+   try(FileOutputStream preOut=new FileOutputStream(preroll)){preOut.write(data);}
+   byte[] prerollPart=serve(root,"GET /clip/"+preName+" HTTP/1.1\r\nRange: bytes=0-4095\r\n\r\n");
+   check(headers(prerollPart).contains("206 Partial Content"),"preroll 206");
+   check(prerollPart.length-split(prerollPart)==4096,"preroll exact range");
+   preroll.delete();
    byte[] traversal=serve(root,"GET /clip/../secrets HTTP/1.1\r\n\r\n");
    check(headers(traversal).contains("404 Not Found"),"no traversal");
    byte[] unfinished=serve(root,"GET /clip/"+name+".recording HTTP/1.1\r\n\r\n");
