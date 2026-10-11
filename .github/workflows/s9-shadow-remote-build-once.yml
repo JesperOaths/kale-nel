@@ -1,4 +1,4 @@
-name: S9 Shadow v2 isolated APK build once
+name: S9 Shadow v2 guarded on-phone benchmark
 on:
   push:
     branches: [feat/s9-detector-shadow-benchmark-v2-20261011]
@@ -19,7 +19,7 @@ jobs:
           mkdir -p /tmp/shadow-unit
           javac -d /tmp/shadow-unit ops/c720p/s9-detector-benchmark/src/nl/kalenel/s9benchmark/GardenShadowPipeline.java ops/c720p/s9-detector-benchmark/tests/GardenShadowPipelineTest.java
           java -cp /tmp/shadow-unit nl.kalenel.s9benchmark.GardenShadowPipelineTest
-      - name: Queue separate signed APK build on C720P
+      - name: Queue guarded separate package on-phone benchmark
         shell: bash
         env:
           TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -30,11 +30,11 @@ jobs:
             'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-v868-maintenance' \
             -H "Authorization: Bearer ${TOKEN}" \
             -H 'Content-Type: application/json' \
-            --data '{"operation":"shadow_detector_build_only"}')"
+            --data '{"operation":"shadow_detector_onphone_benchmark"}')"
           RESULT="$result" python3 - <<'PY'
           import json,os
           data=json.loads(os.environ['RESULT'])
-          assert data.get('ok') is True and data.get('operation')=='shadow_detector_build_only'
-          assert data.get('ref')=='786546fc5c846a957eadb7b2dd57a7f0a9726ef0'
-          print('S9_SHADOW_BUILD_QUEUED',data['job'])
+          assert data.get('ok') is True and data.get('operation')=='shadow_detector_onphone_benchmark'
+          assert data.get('job',{}).get('id')
+          print('S9_SHADOW_PHONE_TEST_QUEUED',data['job'])
           PY
