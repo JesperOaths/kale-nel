@@ -28,6 +28,10 @@ def number(s,name):
  return int(m.group(1)) if m else None
 def parse():
  now=time.time()
+ # The aging S3 clock can drift from the C720P by >60 seconds. Logcat
+ # timestamps are relative to the PHONE wall clock, not the hub.
+ phone_now=int(adb("shell","date","+%s").strip())
+ skew=round(phone_now-now,1)
  logs=adb("logcat","-d","-v","epoch","-s","S3MOTION:I","*:S")
  hearts=[x for x in logs.splitlines() if "S3MOTION: HEARTBEAT session=" in x]
  cams=[x for x in logs.splitlines() if "S3MOTION: MOTION session=" in x]
@@ -39,8 +43,8 @@ def parse():
   m=re.search(r"\b"+re.escape(key)+r"=([^ ]+)",latest)
   return m.group(1) if m else None
  htime=float(ts.group(1))
- age=round(max(0.,now-htime),1)
- if htime>now+60:raise RuntimeError("S3 device clock unreliable")
+ age=round(max(0.,phone_now-htime),1)
+ if htime>phone_now+60:raise RuntimeError("S3 log timestamp ahead of device clock")
  power=adb("shell","dumpsys","power")
  camera=adb("shell","dumpsys","media.camera")
  batt=adb("shell","dumpsys","battery")
@@ -62,8 +66,8 @@ def parse():
  event_last=None
  if cams:
   mt=re.search(r"^\s*([0-9]{10}\.[0-9]+)\s+",cams[-1])
-  if mt and float(mt.group(1))<=now+60:
-   event_last=dt.datetime.fromtimestamp(float(mt.group(1)),dt.timezone.utc).isoformat()
+  if mt and float(mt.group(1))<=phone_now+60:
+   event_last=dt.datetime.fromtimestamp(float(mt.group(1))-skew,dt.timezone.utc).isoformat()
  return {
   "sensor":"Galaxy S3 bedroom on-phone rear-camera motion",
   "checked_at_utc":dt.datetime.now(dt.timezone.utc).isoformat(),
@@ -72,6 +76,7 @@ def parse():
   "camera_active":owned,
   "motion_analysis_active":age<=35 and owned,
   "camera_heartbeat_age_seconds":age,
+  "phone_clock_ahead_seconds":skew,
   "camera_frames_since_app_start":asint(tag("frames")),
   "camera_session_id":tag("session"),
   "ambient_lux":asint(tag("lux")),
