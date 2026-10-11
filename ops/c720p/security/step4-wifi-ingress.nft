@@ -1,0 +1,23 @@
+# STAGED, NOT DEPLOYED. C720P host network boundary (2026-10-11).
+# Replaces /etc/c720p-security/firewall.nft only after a privileged
+# rollback-capable activation on the host.
+table inet c720p_security {
+  chain input {
+    type filter hook input priority -10; policy accept;
+
+    # Outbound Supabase maintenance + Cloudflare tunnel keep working.
+    ct state established,related accept
+    iifname "lo" accept
+
+    # Home LAN browser, Home Assistant, Wi-Fi ADB management and discovery.
+    iifname "wlp1s0" ip saddr 192.168.178.0/24 accept
+    iifname "wlp1s0" ip6 saddr { fd00::/8, fe80::/10 } accept
+
+    # New unsolicited traffic from elsewhere cannot reach host listeners.
+    # Includes IPv6 globally routable source addresses and non-local UDP.
+    iifname "wlp1s0" counter drop
+
+    # Preserve previous SSH + Home Assistant safety for other interfaces.
+    tcp dport { 22, 8123 } drop
+  }
+}
