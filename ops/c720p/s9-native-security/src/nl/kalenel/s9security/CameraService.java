@@ -88,6 +88,10 @@ public final class CameraService extends Service {
  // Separate lower-priority phone worker: JPEG compression must never stall
  // Camera2's callback, which also drives motion and recording transitions.
  private ExecutorService jpegEncoder;
+ // On-phone low-bitrate H.264 memory ring: frozen only after a verified 4K trigger.
+ private GardenPreRoll preRoll;
+ private GardenPreRoll.Frozen frozenPreRoll;
+ private volatile long preRollLastFrameAt=0;
  private volatile boolean jpegBusy=false;
  private volatile long jpegRequestedAt=0,jpegEncoded=0,jpegErrors=0;
  private File folder,partial,finished;
@@ -175,6 +179,8 @@ public final class CameraService extends Service {
    t.setPriority(Math.max(Thread.MIN_PRIORITY,Thread.NORM_PRIORITY-1));
    return t;
   });
+  // Failure of this independent worker never affects the native 4K recorder.
+  if(!pilotOnly)preRoll=new GardenPreRoll();
   jpegEncoder=Executors.newSingleThreadExecutor(job->{
    Thread thread=new Thread(job,"s9-onphone-preview-jpeg");
    thread.setPriority(Math.max(Thread.MIN_PRIORITY,Thread.NORM_PRIORITY-2));
@@ -277,6 +283,17 @@ public final class CameraService extends Service {
       }catch(Exception enqueueError){
        jpegBusy=false;jpegErrors++;
        Log.w(TAG,"preview_jpeg_submit_failed",enqueueError);
+      }
+     }
+     // Store compressed PRE-EVENT video in phone RAM without writing any
+     // untriggered clips to microSD. The encoder worker never blocks cameraHandler.
+     if(preRoll!=null&&!preRoll.failed()&&"watching".equals(mode)&&
+         temperature()<375&&lastFrameAt-preRollLastFrameAt>=44L){
+      preRollLastFrameAt=lastFrameAt;
+      if(!preRoll.busy()){
+       try{preRoll.offer(PreviewJpeg.snapshot(frame),
+                 SystemClock.elapsedRealtimeNanos()/1000L);}
+       catch(Throwable prerollFailure){Log.w(TAG,"prebuffer_frame_skipped",prerollFailure);}
       }
      }
      boolean change=motion.analyze(frame);
@@ -504,6 +521,10 @@ public final class CameraService extends Service {
    saveFallbackEvidence("recording_safety_guard");
    return;
   }
+
+  // Capture previous H.264 frames BEFORE recorder reconfigures the camera.
+  // A failed/missing preroll never blocks the full-quality event recording.
+  frozenPreRoll=preRoll==null?null:preRoll.freeze();
   mode="starting";lastMovementAt=SystemClock.elapsedRealtime();
   try{
    closeSession();
@@ -571,6 +592,8 @@ public final class CameraService extends Service {
     Log.i(TAG,"FINALIZED_TRUE_4K name="+lastClip+" bytes="+candidate.length()
       +" event="+eventSegment.eventId+" segment="+eventSegment.sequence);
     final File saved=candidate;final long motionAtSave=motionEvents;
+    if(preRoll!=null&&frozenPreRoll!=null)preRoll.saveAsync(saved,frozenPreRoll);
+    frozenPreRoll=null;
     final String reviewTrigger=reason+"_"+captureTier;
     writeCaptureEvidenceAsync(saved,eventSegment);
     reviewer.submit(new Runnable(){public void run(){review(saved,reviewTrigger,motionAtSave,eventSegment);}});
@@ -587,6 +610,7 @@ public final class CameraService extends Service {
   }
  }
  private void abortRecording(){
+  frozenPreRoll=null;
   if(recorder!=null){try{recorder.release();}catch(Exception ignored){}recorder=null;}
   closeSession();
   failed++;
@@ -872,6 +896,17 @@ public final class CameraService extends Service {
    d.put("pilot_only",pilotOnly);
    d.put("takeover_completed",!pilotOnly&&running&&lastFrameAt>0);
    d.put("recorder","camera2_3840x2160_h264");
+   d.put("preroll_version",GardenPreRoll.VERSION);
+   d.put("preroll_enabled",preRoll!=null&&!pilotOnly);
+   d.put("preroll_ready",preRoll!=null&&preRoll.ready());
+   d.put("preroll_buffered_frames",preRoll==null?0:preRoll.cachedFrames());
+   d.put("preroll_buffered_ms",preRoll==null?0:preRoll.cachedDurationMs());
+   d.put("preroll_encoded_frames",preRoll==null?0:preRoll.framesOutput);
+   d.put("preroll_dropped_frames",preRoll==null?0:preRoll.dropped);
+   d.put("preroll_files_saved",preRoll==null?0:preRoll.filesSaved);
+   d.put("preroll_last_name",preRoll==null?"":preRoll.lastSavedName);
+   d.put("preroll_last_duration_ms",preRoll==null?0:preRoll.lastSavedDurationMs);
+   d.put("preroll_last_error",preRoll==null?"not_started":preRoll.lastError);
    d.put("motion_detector",GardenPersonTrackGate.VERSION);
     d.put("capture_event_version",CaptureContinuity.VERSION);
     d.put("capture_event_id",eventChain.eventId());
@@ -1175,6 +1210,7 @@ public final class CameraService extends Service {
   }
   if("starting".equals(mode))Log.w(TAG,"SHUTDOWN_DURING_RECORDER_PREPARE_PARTIAL_PRESERVED");
   running=false;mode="stopped";
+  if(preRoll!=null){preRoll.stop();preRoll=null;frozenPreRoll=null;}
   if(jpegEncoder!=null){jpegEncoder.shutdownNow();jpegEncoder=null;}
   jpegBusy=false;
   if(evidenceWriter!=null){evidenceWriter.shutdown();evidenceWriter=null;}
