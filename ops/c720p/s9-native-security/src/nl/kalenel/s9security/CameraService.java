@@ -100,6 +100,10 @@ public final class CameraService extends Service {
  private volatile long faceBackfillDone=0,faceBackfillErrors=0,lastFaceBackfillScan=0;
  private volatile long historicalReviewed=0,historicalErrors=0,lastHistoricalScan=0;
  private volatile String lastHistoricalError="";
+ private volatile long gardenTriageQuarantined=0,gardenTriagePreserved=0,gardenTriageErrors=0;
+ private volatile long gardenTriageLastScan=0;
+ private volatile boolean gardenTriageQueued=false;
+ private long gardenTriageCutoffMs=0;
  private long lastFallbackAt=0;
  // Near-camera person gate executes on the S9+ review worker, never on C720P.
  // Only cameraHandler can start/stop the native MediaRecorder.
@@ -208,6 +212,12 @@ public final class CameraService extends Service {
  private void prepare(){
   try{
    folder=sd();
+   android.content.SharedPreferences retentionPrefs=getSharedPreferences("native",MODE_PRIVATE);
+   gardenTriageCutoffMs=retentionPrefs.getLong("garden_roi_archive_cutoff_ms",0L);
+   if(gardenTriageCutoffMs<=0){
+    gardenTriageCutoffMs=System.currentTimeMillis();
+    retentionPrefs.edit().putLong("garden_roi_archive_cutoff_ms",gardenTriageCutoffMs).commit();
+   }
    queueArchiveRecovery();
    if(checkSelfPermission("android.permission.CAMERA")!=PackageManager.PERMISSION_GRANTED)
     throw new SecurityException("camera_permission_required");
@@ -675,6 +685,40 @@ public final class CameraService extends Service {
    }});
   }catch(java.util.concurrent.RejectedExecutionException e){faceBackfillQueued=false;}
  }
+ /** Offloaded archived-video retention review. Runs on the S9+ only,
+  * never downloads/decodes videos on C720P. Quarantine is reversible and
+  * never purges permanently based on an uncertain night model prediction.
+  */
+ private void maybeGardenArchiveTriage(){
+  long now=SystemClock.elapsedRealtime();
+  if(!running||gardenTriageQueued||now-gardenTriageLastScan<60000L||
+     folder==null||classifier==null||reviewer==null||
+     !"watching".equals(mode)||faceBackfillQueued||historicalQueued||
+     temperature()>=370||folder.getUsableSpace()<20L*1024*1024*1024)return;
+  gardenTriageQueued=true;
+  final File media=folder;
+  final long cutoff=gardenTriageCutoffMs;
+  final float roiTop=motion.topBoundary(),roiMargin=motion.sideMargin();
+  try{
+   reviewer.execute(new Runnable(){public void run(){
+    try{
+     if(!running||!"watching".equals(mode)||temperature()>=370)return;
+     int changed=new GardenArchiveTriage(media,classifier,roiTop,roiMargin,cutoff).processOne();
+     if(changed==1)gardenTriageQuarantined++;
+     if(changed==2)gardenTriagePreserved++;
+    }catch(Exception ex){
+     gardenTriageErrors++;
+     Log.w(TAG,"garden_archive_retention_pass_failed",ex);
+    }finally{
+     gardenTriageLastScan=SystemClock.elapsedRealtime();
+     gardenTriageQueued=false;
+    }
+   }});
+  }catch(RejectedExecutionException reject){
+   gardenTriageErrors++;
+   gardenTriageQueued=false;
+  }
+ }
  private void watchdog(){
   if(!running)return;
   long n=SystemClock.elapsedRealtime();
@@ -684,6 +728,7 @@ public final class CameraService extends Service {
   }
   maybeHistoricalImport();
   maybeFaceBackfill();
+  maybeGardenArchiveTriage();
   cameraHandler.postDelayed(new Runnable(){public void run(){watchdog();}},4500);
  }
  private void failure(String text,Throwable e){
@@ -739,6 +784,12 @@ public final class CameraService extends Service {
    d.put("historical_import_queued",historicalQueued);
    d.put("face_review_engine","s9_native_face_review_v1");
    d.put("face_backfill_queued",faceBackfillQueued);
+    d.put("garden_archive_triage_version","onphone_24frame_reversible_quarantine_v1");
+    d.put("garden_archive_triage_queued",gardenTriageQueued);
+    d.put("garden_archive_quarantined_since_start",gardenTriageQuarantined);
+    d.put("garden_archive_preserved_since_start",gardenTriagePreserved);
+    d.put("garden_archive_triage_errors",gardenTriageErrors);
+    d.put("garden_archive_triage_permanent_deletion_enabled",false);
    d.put("face_backfill_completed",faceBackfillDone);
    d.put("face_backfill_errors",faceBackfillErrors);
    d.put("recordings_this_hour",getSharedPreferences("native",MODE_PRIVATE).getInt("record_rate_count",0));
