@@ -1,18 +1,16 @@
-name: C720P v875 run once
+name: Retired legacy C720P workflow - c720p-v875-run-once.yml
+
 on:
-  push:
-    branches: [main]
-    paths:
-      - "ops/c720p/.tmp-v875.trigger"
+  workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
-  run:
+  retired:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
     steps:
-      - name: Invoke C720P one-shot enqueue
+      - name: Redirect to authenticated maintenance
         run: |
-          set -euo pipefail
-          curl -fsS --retry 2 --connect-timeout 10 --max-time 30 \
-            https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-v874-tv-hts-once
+          echo "::warning::This old anonymous one-shot workflow has been retired."
+          echo "Use the C720P secure maintenance workflow to enqueue allowlisted diagnostics."
