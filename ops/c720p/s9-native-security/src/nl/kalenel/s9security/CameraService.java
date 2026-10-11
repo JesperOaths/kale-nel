@@ -78,6 +78,8 @@ public final class CameraService extends Service {
  // Live visitor checks cannot queue behind 4K decode or face-backfill jobs.
  private ClipClassifier gardenGateClassifier;
  private ExecutorService gardenGateExecutor;
+ // Local SD evidence writes must not wait behind a multi-second archive review.
+ private ExecutorService evidenceWriter;
  private volatile boolean gardenGateReady=false;
  private volatile long gardenGatePrepareErrors=0,gardenPersonGateQueueWaitMs=0;
  private volatile long gardenPersonGateStale=0;
@@ -151,6 +153,11 @@ public final class CameraService extends Service {
   gardenGateClassifier=new ClipClassifier(this);
   warmGardenGateAsync();
 
+  evidenceWriter=Executors.newSingleThreadExecutor(job->{
+   Thread t=new Thread(job,"s9-microsd-motion-evidence");
+   t.setPriority(Math.max(Thread.MIN_PRIORITY,Thread.NORM_PRIORITY-1));
+   return t;
+  });
   jpegEncoder=Executors.newSingleThreadExecutor(job->{
    Thread thread=new Thread(job,"s9-onphone-preview-jpeg");
    thread.setPriority(Math.max(Thread.MIN_PRIORITY,Thread.NORM_PRIORITY-2));
@@ -531,14 +538,14 @@ public final class CameraService extends Service {
  // so a flickering light cannot fill the microSD with preview images.
  private void saveFallbackEvidence(String why){
   long now=SystemClock.elapsedRealtime();
-  if(now-lastFallbackAt<45000L || latestJpeg.length<2000 || folder==null || reviewer==null)return;
+  if(now-lastFallbackAt<45000L || latestJpeg.length<2000 || folder==null || evidenceWriter==null)return;
   lastFallbackAt=now;
   final byte[] jpeg=latestJpeg.clone();
   final File archive=folder;
   final long timestamp=System.currentTimeMillis();
   final String reason=why;
   try{
-   reviewer.execute(new Runnable(){public void run(){
+   evidenceWriter.execute(new Runnable(){public void run(){
     String name="preview_motion_"+timestamp+".jpg";
     File target=new File(archive,name);
     File temp=new File(archive,name+".partial");
@@ -977,6 +984,7 @@ public final class CameraService extends Service {
   running=false;mode="stopped";
   if(jpegEncoder!=null){jpegEncoder.shutdownNow();jpegEncoder=null;}
   jpegBusy=false;
+  if(evidenceWriter!=null){evidenceWriter.shutdown();evidenceWriter=null;}
   gardenGateReady=false;
   if(gardenGateExecutor!=null){
    final ClipClassifier gateClose=gardenGateClassifier;
