@@ -114,6 +114,8 @@ public final class CameraService extends Service {
  private volatile float gardenPersonGateScore=0f;
  private int gardenPersonGatePositiveStreak=0;
  private ClipClassifier.PersonGateObservation gardenPersonGatePreviousObservation=null;
+ private final PersonEventTracker personEvents=new PersonEventTracker();
+ private long lastPersonGateJpegStamp=0;
  private long gardenPersonGatePreviousPositiveAt=0;
  private volatile long gardenPersonGateConfirmedStarts=0;
  private volatile long deepFaceScanned=0,deepFaceErrors=0;
@@ -278,14 +280,16 @@ public final class CameraService extends Service {
      }
      if(change && lastFrameAt>=cameraControlSettleUntil){
       motionEvents++;
-      lastMovementAt=lastFrameAt;
-      if(!pilotOnly&&"watching".equals(mode)){
-       // Motion merely requests on-device person inference. Vehicles on the
-       // road and non-person garden motion do not start new videos.
-       if(!gardenGateReady)
-        saveFallbackEvidence("realtime_person_detector_warming_or_unavailable");
-       else evaluateGardenPersonAsync();
-      }
+      // Motion is candidate evidence, not a person or recording decision.
+      // Do not extend a person's video just because a tree moved.
+     }
+     if(!pilotOnly&&lastFrameAt>=cameraControlSettleUntil&&
+        ("watching".equals(mode)||"recording".equals(mode))){
+      // Periodic inference must also run when the garden is visually still:
+      // a stationary visitor must not disappear from tracking.
+      if(!gardenGateReady){
+       if(change)saveFallbackEvidence("realtime_person_detector_warming_or_unavailable");
+      }else evaluateGardenPersonAsync();
      }
      if("recording".equals(mode)&&lastFrameAt-lastStart>2500&&
         (lastFrameAt-lastStart>MAX_MS||lastFrameAt-lastMovementAt>QUIET_MS))stopRecording("motion_completed");
@@ -356,10 +360,16 @@ public final class CameraService extends Service {
  }
  private void evaluateGardenPersonAsync(){
   final long now=SystemClock.elapsedRealtime();
-  if(gardenPersonGateBusy||now-gardenPersonGateLastAt<900||latestJpeg.length<1000||
-      now-lastJpegAt>1200||gardenGateExecutor==null||gardenGateClassifier==null||
-      !gardenGateReady)return;
+  // A quiet garden still receives person inference. Motion increases cadence,
+  // not the probability of being a person. Recording uses a moderate cadence.
+  final long interval="recording".equals(mode)?1350L:(motion.motion?650L:1650L);
+  final long jpegStamp=lastJpegAt;
+  if(gardenPersonGateBusy||now-gardenPersonGateLastAt<interval||
+      jpegStamp<=lastPersonGateJpegStamp||latestJpeg.length<1000||
+      now-jpegStamp>1300||gardenGateExecutor==null||gardenGateClassifier==null||
+      !gardenGateReady||temperature()>=410)return;
   gardenPersonGateBusy=true;gardenPersonGateLastAt=now;
+  lastPersonGateJpegStamp=jpegStamp;
   final byte[] jpg=latestJpeg.clone();
   final float top=motion.topBoundary(),margin=motion.sideMargin();
   try{
@@ -382,37 +392,34 @@ public final class CameraService extends Service {
      gardenPersonGateScore=score;
      if(error){
       gardenPersonGateErrors++;
-      gardenPersonGatePositiveStreak=0;
-      gardenPersonGatePreviousObservation=null;
       saveFallbackEvidence("realtime_person_detector_failed");
       return;
      }
-     if(score<0.58f){gardenPersonGateRejects++;gardenPersonGatePositiveStreak=0;
-      gardenPersonGatePreviousObservation=null;return;}
-     gardenPersonGateMatches++;
-     // Do not start recording on stale detections, if the camera has moved
-     // into a new capture session, or after a deliberate controls change.
-     if(!running||!"watching".equals(mode)||SystemClock.elapsedRealtime()-now>3500||
-         lastFrameAt<cameraControlSettleUntil){
+     // Discard stale inference after a preview restart or manual camera control.
+     if(!running||(!"watching".equals(mode)&&!"recording".equals(mode))||
+        SystemClock.elapsedRealtime()-now>3500||lastFrameAt<cameraControlSettleUntil){
       gardenPersonGateStale++;
-      gardenPersonGatePositiveStreak=0;
-      gardenPersonGatePreviousObservation=null;
-      if(running&&"watching".equals(mode))
-       saveFallbackEvidence("stale_person_result_skipped");
       return;
      }
-     if(gardenPersonGatePreviousPositiveAt>0 && now-gardenPersonGatePreviousPositiveAt<=3000L &&
-        detected.consistentWith(gardenPersonGatePreviousObservation))
-      gardenPersonGatePositiveStreak=Math.min(2,gardenPersonGatePositiveStreak+1);
-     else gardenPersonGatePositiveStreak=1;
-     gardenPersonGatePreviousObservation=detected;
-     gardenPersonGatePreviousPositiveAt=now;
-     if(gardenPersonGatePositiveStreak<2)return;
-     gardenPersonGatePositiveStreak=0;
-     gardenPersonGatePreviousObservation=null;
-     if(temperature()<415 && folder!=null&&
-             folder.getUsableSpace()>15L*1024*1024*1024){gardenPersonGateConfirmedStarts++;startRecording();}
-     else saveFallbackEvidence("thermal_or_space_guard");
+     float[] box=detected==null?null:new float[]{
+       Math.max(0f,detected.top),Math.max(0f,detected.left),
+       Math.min(1f,detected.bottom),Math.min(1f,detected.right)};
+     PersonEventTracker.Decision event=personEvents.observe(now,score,box);
+     gardenPersonGatePositiveStreak=event.associatedFrames;
+     if(!event.candidate)gardenPersonGateRejects++;
+     else gardenPersonGateMatches++;
+     if("recording".equals(mode)){
+      // Track confirmation or continued presence prolongs the current 4K
+      // event, including when no significant pixel motion remains.
+      if(event.active)lastMovementAt=SystemClock.elapsedRealtime();
+      return;
+     }
+     if(!event.confirmedNow)return;
+     if(temperature()<415&&folder!=null&&
+         folder.getUsableSpace()>15L*1024*1024*1024){
+      gardenPersonGateConfirmedStarts++;
+      startRecording();
+     }else saveFallbackEvidence("thermal_or_space_guard");
     }});
    }});
   }catch(RejectedExecutionException exc){
@@ -769,9 +776,14 @@ public final class CameraService extends Service {
    d.put("pilot_only",pilotOnly);
    d.put("takeover_completed",!pilotOnly&&running&&lastFrameAt>0);
    d.put("recorder","camera2_3840x2160_h264");
-   d.put("motion_detector","garden_roi_adaptive_noise_consistent_person_gate_v3");
-   d.put("person_gate_min_confidence",0.58);
-   d.put("person_gate_spatial_confirmation_frames",2);
+   d.put("motion_detector","person_first_periodic_temporal_track_v4");
+   d.put("person_tracker_version",PersonEventTracker.VERSION);
+   d.put("person_track_confirmed_events",personEvents.confirmedEvents);
+   d.put("person_track_last_seen_ms",personEvents.lastPersonSeenAt());
+   d.put("person_track_observations",personEvents.observations);
+   d.put("person_gate_min_confidence",0.60);
+   d.put("person_gate_periodic_without_motion",true);
+   d.put("person_gate_spatial_confirmation_frames",3);
    d.put("previous_detector_version","garden_roi_gpu_person_gate_v1");
    d.put("review_model","ssd_mobilenet_coco_gpu_cpu_v1");
    d.put("mic",false);d.put("cloud_upload",false);
