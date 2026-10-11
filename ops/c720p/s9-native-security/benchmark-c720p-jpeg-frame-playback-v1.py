@@ -8,6 +8,7 @@ Nothing changes on S9+ or in the Home Assistant production UI.
 """
 import importlib.util
 import json
+import os
 import pathlib
 import subprocess
 import tempfile
@@ -32,7 +33,9 @@ def derive_frames(directory):
   except (OSError,ValueError):pass
  if not sources:raise RuntimeError("no_prepared_360p_playback_file")
  sources.sort(reverse=True)
- clip=sources[0][1]
+ index=int(os.environ.get('S9_JPEG_SOURCE_INDEX','0'))
+ if index<0 or index>=min(5,len(sources)):raise RuntimeError('selected_derived_clip_unavailable')
+ clip=sources[index][1]
  command=["/usr/bin/nice","-n","12","ffmpeg","-hide_banner","-nostdin",
    "-loglevel","error","-y","-i",str(clip),"-t","5.1",
    "-vf","fps=25","-q:v","5","-start_number","0",
@@ -43,7 +46,7 @@ def derive_frames(directory):
  if len(frames)<95:raise RuntimeError("insufficient_valid_jpeg_frames")
  if any(f.stat().st_size<2000 or f.stat().st_size>400000 for f in frames):
   raise RuntimeError("invalid_jpeg_file_size")
- return frames,clip,sources[0][2]
+ return frames,clip,sources[index][2]
 
 def main():
  m=import_cdp()
@@ -141,7 +144,7 @@ def main():
     answer=page.call("Runtime.evaluate",{"expression":expression,"awaitPromise":True,"returnByValue":True})
     value=answer.get("result",{}).get("value",answer)
     print("S9_C720P_JPEG_PILOT",json.dumps({"result":value,"source_bytes":src.stat().st_size,
-      "source_decoder":meta.get("decoder"),"source_frames":len(frames),
+      "source_decoder":meta.get("decoder"),"source_frames":len(frames),"source_index":int(os.environ.get("S9_JPEG_SOURCE_INDEX","0")),
       "private_loopback_only":True,"production_ui_modified":False},sort_keys=True),flush=True)
    finally:page.close()
   finally:
