@@ -104,7 +104,7 @@ class Tests(unittest.TestCase):
   self.assertIn('if(checked++>=250)break',outfit)
   self.assertIn('motion.resetForCameraControl()',source)
   self.assertIn('cameraControlSettleUntil=SystemClock.elapsedRealtime()+2500L',source)
-  self.assertIn('change && lastFrameAt>=cameraControlSettleUntil',source)
+  self.assertIn('boolean freshMotion=change&&lastFrameAt>=cameraControlSettleUntil',source)
   grid=(ROOT/"src/nl/kalenel/s9security/MotionGrid.java").read_text()
   self.assertIn('public void resetForCameraControl()',grid)
   self.assertIn('votes.clear()',grid)
