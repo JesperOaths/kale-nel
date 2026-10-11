@@ -35,7 +35,7 @@ TIMER=UNIT/"c720p-drive-archive-thumb-backfill-v1.timer"
 SAFE_JPG=re.compile(r"^[A-Za-z0-9._-]{1,180}\.jpe?g$",re.I)
 SAFE_MP4=re.compile(r"^[A-Za-z0-9._-]{1,180}\.mp4$",re.I)
 VERSION="C720P_DRIVE_ARCHIVE_THUMB_BACKFILL_V1"
-MAX_VIDEO_BYTES=170*1024*1024
+MAX_VIDEO_BYTES=85*1024*1024
 
 def read_json(path,default=None):
     try:return json.loads(Path(path).read_text())
@@ -110,25 +110,38 @@ def batch(max_items,video_limit):
         if key not in cfg:raise RuntimeError("Drive config missing "+key)
     remote=remote_inventory(cfg)
     pending=[row for row in rows if not valid(CACHE/row["snapshot_name"])]
+    # Prefer small remote JPEGs before downloading any legacy videos.
+    pending.sort(key=lambda row:row["snapshot_name"] not in remote)
     before=coverage(rows)
     success=[];errors=[];videos=0
     for row in pending:
         if len(success)+len(errors)>=max_items:break
+        if shutil.disk_usage(CACHE).free<60_000_000:
+            errors.append({"clip":"<disk>","reason":"root_reserve_below_60mb"})
+            break
         snap=row["snapshot_name"];clip=row["remote_name"]
         with tempfile.TemporaryDirectory(prefix=".drive-thumb-",dir=CACHE) as t:
-            tmp=Path(t);jpg=tmp/"preview.jpg";clipfile=tmp/"source.mp4"
+            tmp=Path(t);jpg=tmp/"preview.jpg"
             method=None
             try:
                 if snap in remote and 0<remote[snap]<=8_000_000:
                     if rclone_copy(cfg,snap,jpg,limit=65) and valid(jpg):method="remote_jpeg"
                 if method is None and clip in remote and videos<video_limit:
                     length=remote[clip]
-                    free=shutil.disk_usage(CACHE).free
-                    if not (0<length<=MAX_VIDEO_BYTES and free>=length+600_000_000):
-                        errors.append({"clip":clip,"reason":"insufficient_disk_or_oversized_video"})
+                    tmpfs=Path("/tmp")
+                    free_tmp=shutil.disk_usage(tmpfs).free
+                    free_root=shutil.disk_usage(CACHE).free
+                    if not (0<length<=MAX_VIDEO_BYTES and free_tmp>=length+250_000_000
+                            and free_root>=60_000_000):
+                        errors.append({"clip":clip,"reason":"insufficient_temp_space_or_oversized_video"})
                         continue
                     videos+=1
-                    if rclone_copy(cfg,clip,clipfile,limit=150) and video_frame(clipfile,jpg):method="video_frame"
+                    # /tmp is a separate tmpfs on C720P: the video is deleted at
+                    # the end of this block and never fills its root filesystem.
+                    with tempfile.TemporaryDirectory(prefix="drive-thumb-video-",dir=tmpfs) as vd:
+                        clipfile=Path(vd)/"source.mp4"
+                        if rclone_copy(cfg,clip,clipfile,limit=150) and video_frame(clipfile,jpg):
+                            method="video_frame"
                 if method is None:
                     errors.append({"clip":clip,"reason":"preview_source_not_accessible"})
                     continue
