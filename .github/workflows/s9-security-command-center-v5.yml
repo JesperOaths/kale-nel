@@ -8,6 +8,10 @@ on:
       - 'ops/c720p/s9-native-security/test-security-command-center-v5.py'
       - 'ops/c720p/s9-native-security/deploy-security-v6-minimal.py'
       - 'ops/c720p/s9-native-security/test-security-v6-minimal.py'
+      - 'ops/c720p/s9-native-security/deploy-security-v7.py'
+      - 'ops/c720p/s9-native-security/security-archive-v7.html'
+      - 'ops/c720p/s9-native-security/security-tracks-v7.html'
+      - 'ops/c720p/s9-native-security/test-security-v7.py'
       - '.github/workflows/s9-security-command-center-v5.yml'
   push:
     paths:
@@ -17,6 +21,10 @@ on:
       - 'ops/c720p/s9-native-security/test-security-command-center-v5.py'
       - 'ops/c720p/s9-native-security/deploy-security-v6-minimal.py'
       - 'ops/c720p/s9-native-security/test-security-v6-minimal.py'
+      - 'ops/c720p/s9-native-security/deploy-security-v7.py'
+      - 'ops/c720p/s9-native-security/security-archive-v7.html'
+      - 'ops/c720p/s9-native-security/security-tracks-v7.html'
+      - 'ops/c720p/s9-native-security/test-security-v7.py'
       - '.github/workflows/s9-security-command-center-v5.yml'
 permissions:
   contents: read
@@ -33,4 +41,6 @@ jobs:
           python3 -m py_compile "$P/patch-security-command-center-v5.py" "$P/patch-security-secondary-pages-v5.py" "$P/deploy-security-command-center-v5.py" "$P/deploy-security-v6-minimal.py"
           python3 "$P/test-security-command-center-v5.py"
           python3 "$P/test-security-v6-minimal.py"
+          python3 -m py_compile "$P/deploy-security-v7.py"
+          python3 "$P/test-security-v7.py"
           echo S9_SECURITY_V5_SOURCE_AND_ROLLBACK_PASS
