@@ -26,7 +26,7 @@ def system(*cmd,timeout=45):
  if p.returncode:raise RuntimeError('service_command_failed: '+p.stderr[-300:])
  return p.stdout.strip()
 def request(url,timeout=7):
- with urllib.request.urlopen(url,timeout=timeout) as r:return r.status,r.read(200000)
+ with urllib.request.urlopen(url,timeout=timeout) as r:return r.status,r.read(1000000)
 def await_service():
  for n in range(35):
   try:
