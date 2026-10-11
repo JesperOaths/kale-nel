@@ -197,6 +197,11 @@ public final class ClipClassifier {
   if(video==null||!video.isFile()||manifest==null||
      "foreground_garden_motion".equals(manifest.optString("thumbnail_focus")))
    return false;
+  // Archive triage can run before the first newly recorded clip was
+  // reviewed. The background classifier is then still cold; detect()
+  // requires the model and direct ByteBuffer to have been initialized.
+  // This is the S9+ review worker, not the real-time camera callback.
+  init();
   MediaMetadataRetriever media=new MediaMetadataRetriever();
   Bitmap bitmap=null;
   try{
