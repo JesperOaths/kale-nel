@@ -30,8 +30,15 @@ if [[ -f "$FACE_MODEL" ]]; then
   echo "${S9_FACE_MODEL_SHA256}  $FACE_MODEL" | sha256sum -c - >/dev/null || { echo "FACE_MODEL_SHA256_MISMATCH" >&2; exit 4; }
   cp "$FACE_MODEL" "$ROOT/assets/face_embedding.tflite"
 else
+  # Production must not silently remove the previously validated on-device
+  # face model when a rebuild is launched without explicit environment setup.
+  # Developer snapshots-only packages require an intentional opt-out.
+  if [[ "${S9_ALLOW_FACE_SNAPSHOTS_ONLY:-0}" != "1" ]]; then
+    echo "S9_FACE_MODEL_REQUIRED_FOR_PRODUCTION: set S9_FACE_EMBEDDING_MODEL and S9_FACE_MODEL_SHA256, or explicit dev opt-out" >&2
+    exit 4
+  fi
   rm -f "$ROOT/assets/face_embedding.tflite"
-  echo "S9_FACE_REVIEW_SNAPSHOTS_ONLY: no verified embedding model provided"
+  echo "S9_FACE_REVIEW_SNAPSHOTS_ONLY_EXPLICIT_DEV_BUILD"
 fi
 unzip -p "$LIB/tensorflow-lite.aar" jni/arm64-v8a/libtensorflowlite_jni.so > "$ROOT/pkg/lib/arm64-v8a/libtensorflowlite_jni.so"
 unzip -p "$LIB/tensorflow-lite-gpu.aar" jni/arm64-v8a/libtensorflowlite_gpu_jni.so > "$ROOT/pkg/lib/arm64-v8a/libtensorflowlite_gpu_jni.so"
