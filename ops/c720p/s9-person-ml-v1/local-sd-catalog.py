@@ -99,7 +99,8 @@ def safe_native_detection_stats(manifest):
 def safe_face_review_metadata(m):
  """Strictly allowlisted human-readable phone metadata. Never copy embeddings or JPEGs."""
  result={"face_review_status":"not_available_in_original_review",
-         "face_review_sampled_frames":None,"face_snapshots_saved":0,"face_candidates":[]}
+         "face_review_sampled_frames":None,"face_snapshots_saved":0,"face_candidates":[],
+         "face_deep_review_version":None}
  if m.get("face_review_version")!="s9_face_review_v1":return result
  status=m.get("face_review_status")
  valid=("no_frontal_face_in_samples","face_embedding_unavailable_snapshots_only",
@@ -108,7 +109,9 @@ def safe_face_review_metadata(m):
    "face_index_read_error")
  result["face_review_status"]=status if status in valid else "invalid_face_review_status"
  n=m.get("face_review_sampled_frames")
- if type(n) is int and 0<=n<=12:result["face_review_sampled_frames"]=n
+ if type(n) is int and 0<=n<=48:result["face_review_sampled_frames"]=n
+ if m.get("face_deep_review_version")=="s9_onphone_36_samples_v1" and n==36:
+  result["face_deep_review_version"]="s9_onphone_36_samples_v1"
  rows=m.get("face_candidates")
  if not isinstance(rows,list) or len(rows)>8:return result
  out=[]
