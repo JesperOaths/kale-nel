@@ -691,10 +691,18 @@ public final class CameraService extends Service {
   */
  private void maybeGardenArchiveTriage(){
   long now=SystemClock.elapsedRealtime();
-  if(!running||gardenTriageQueued||now-gardenTriageLastScan<60000L||
+  // Increase archive throughput ONLY when the garden has been quiet for
+  // 30 seconds, the realtime person GPU gate is idle, and the phone is cool.
+  // If warm, fall back to the original low-impact one-per-minute cadence.
+  int batteryTenths=temperature();
+  long archiveWait=batteryTenths<310?18000L:
+                  batteryTenths<335?40000L:60000L;
+  if(!running||gardenTriageQueued||now-gardenTriageLastScan<archiveWait||
      folder==null||classifier==null||reviewer==null||
      !"watching".equals(mode)||faceBackfillQueued||historicalQueued||
-     temperature()>=370||folder.getUsableSpace()<20L*1024*1024*1024)return;
+     gardenPersonGateBusy||
+     (lastMovementAt>0&&now-lastMovementAt<30000L)||
+     batteryTenths>=370||folder.getUsableSpace()<20L*1024*1024*1024)return;
   gardenTriageQueued=true;
   final File media=folder;
   final long cutoff=gardenTriageCutoffMs;
@@ -789,6 +797,12 @@ public final class CameraService extends Service {
     d.put("garden_archive_quarantined_since_start",gardenTriageQuarantined);
     d.put("garden_archive_preserved_since_start",gardenTriagePreserved);
     d.put("garden_archive_triage_errors",gardenTriageErrors);
+    int archiveTemp=temperature();
+    d.put("garden_archive_target_interval_ms",
+      archiveTemp<310?18000:archiveTemp<335?40000:60000);
+    d.put("garden_archive_requires_quiet_ms",30000);
+    d.put("garden_archive_latest_motion_age_ms",lastMovementAt<=0?
+      JSONObject.NULL:Math.max(0,SystemClock.elapsedRealtime()-lastMovementAt));
     d.put("garden_archive_triage_permanent_deletion_enabled",false);
    d.put("face_backfill_completed",faceBackfillDone);
    d.put("face_backfill_errors",faceBackfillErrors);
