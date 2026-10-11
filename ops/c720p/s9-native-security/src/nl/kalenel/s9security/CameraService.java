@@ -75,6 +75,12 @@ public final class CameraService extends Service {
  }
  private ClipClassifier classifier;
  private ExecutorService reviewer;
+ // Live visitor checks cannot queue behind 4K decode or face-backfill jobs.
+ private ClipClassifier gardenGateClassifier;
+ private ExecutorService gardenGateExecutor;
+ private volatile boolean gardenGateReady=false;
+ private volatile long gardenGatePrepareErrors=0,gardenPersonGateQueueWaitMs=0;
+ private volatile long gardenPersonGateStale=0;
  // Separate lower-priority phone worker: JPEG compression must never stall
  // Camera2's callback, which also drives motion and recording transitions.
  private ExecutorService jpegEncoder;
@@ -134,7 +140,21 @@ public final class CameraService extends Service {
   if(running){Log.i(TAG,"Already running mode="+mode);return START_STICKY;}
   startForeground(8228,notification());
   running=true;
-  reviewer=Executors.newSingleThreadExecutor();
+  reviewer=Executors.newSingleThreadExecutor(job->{
+   Thread t=new Thread(job,"s9-background-4k-review");
+   t.setPriority(Math.max(Thread.MIN_PRIORITY,Thread.NORM_PRIORITY-2));return t;
+  });
+  gardenGateExecutor=Executors.newSingleThreadExecutor(job->{
+   Thread t=new Thread(job,"s9-realtime-garden-person");
+   t.setPriority(Math.min(Thread.MAX_PRIORITY,Thread.NORM_PRIORITY+1));return t;
+  });
+  gardenGateClassifier=new ClipClassifier(this);
+  final ClipClassifier liveGate=gardenGateClassifier;
+  gardenGateExecutor.execute(new Runnable(){public void run(){
+   try{liveGate.warmPersonGate();gardenGateReady=true;}
+   catch(Throwable e){gardenGatePrepareErrors++;Log.w(TAG,"realtime_garden_gate_init_failed",e);}
+  }});
+
   jpegEncoder=Executors.newSingleThreadExecutor(job->{
    Thread thread=new Thread(job,"s9-onphone-preview-jpeg");
    thread.setPriority(Math.max(Thread.MIN_PRIORITY,Thread.NORM_PRIORITY-2));
@@ -294,14 +314,16 @@ public final class CameraService extends Service {
  private void evaluateGardenPersonAsync(){
   final long now=SystemClock.elapsedRealtime();
   if(gardenPersonGateBusy||now-gardenPersonGateLastAt<900||latestJpeg.length<1000||
-      now-lastJpegAt>1200||reviewer==null||classifier==null)return;
+      now-lastJpegAt>1200||gardenGateExecutor==null||gardenGateClassifier==null||
+      !gardenGateReady)return;
   gardenPersonGateBusy=true;gardenPersonGateLastAt=now;
   final byte[] jpg=latestJpeg.clone();
   final float top=motion.topBoundary(),margin=motion.sideMargin();
   try{
-   reviewer.execute(new Runnable(){public void run(){
+   gardenGateExecutor.execute(new Runnable(){public void run(){
+    final long gateStarted=SystemClock.elapsedRealtime();
     float value=0;boolean failed=false;
-    try{value=classifier.personScoreInGarden(jpg,top,margin);}
+    try{value=gardenGateClassifier.personScoreInGarden(jpg,top,margin);}
     catch(Throwable issue){
      failed=true;
      Log.w(TAG,"garden_person_gate_"+issue.getClass().getSimpleName());
@@ -311,6 +333,7 @@ public final class CameraService extends Service {
     if(cameraHandler==null)return;
     cameraHandler.post(new Runnable(){public void run(){
      gardenPersonGateBusy=false;
+     gardenPersonGateQueueWaitMs=Math.max(0,gateStarted-now);
      gardenPersonGateChecks++;
      gardenPersonGateScore=score;
      if(error){gardenPersonGateErrors++;return;}
@@ -319,7 +342,9 @@ public final class CameraService extends Service {
      // Do not start recording on stale detections, if the camera has moved
      // into a new capture session, or after a deliberate controls change.
      if(!running||!"watching".equals(mode)||SystemClock.elapsedRealtime()-now>3500||
-         lastFrameAt<cameraControlSettleUntil)return;
+         lastFrameAt<cameraControlSettleUntil){
+      gardenPersonGateStale++;return;
+     }
      if(lastFrameAt<cooldownUntil)saveFallbackEvidence("cooldown_person_candidate");
      else if(temperature()<415 && folder!=null&&
              folder.getUsableSpace()>15L*1024*1024*1024)startRecording();
@@ -704,6 +729,12 @@ public final class CameraService extends Service {
    d.put("face_backfill_completed",faceBackfillDone);
    d.put("face_backfill_errors",faceBackfillErrors);
    d.put("recordings_this_hour",getSharedPreferences("native",MODE_PRIVATE).getInt("record_rate_count",0));
+   d.put("garden_person_gate_ready",gardenGateReady);
+   d.put("garden_person_gate_backend",gardenGateClassifier==null?
+     "unavailable":gardenGateClassifier.inferenceBackend());
+   d.put("garden_person_gate_prepare_errors",gardenGatePrepareErrors);
+   d.put("garden_person_gate_last_queue_wait_ms",gardenPersonGateQueueWaitMs);
+   d.put("garden_person_gate_stale_dropped",gardenPersonGateStale);
    d.put("garden_person_gate_checked",gardenPersonGateChecks);
    d.put("garden_person_gate_matches",gardenPersonGateMatches);
    d.put("garden_person_gate_rejected",gardenPersonGateRejects);
@@ -916,6 +947,15 @@ public final class CameraService extends Service {
   running=false;mode="stopped";
   if(jpegEncoder!=null){jpegEncoder.shutdownNow();jpegEncoder=null;}
   jpegBusy=false;
+  gardenGateReady=false;
+  if(gardenGateExecutor!=null){
+   final ClipClassifier gateClose=gardenGateClassifier;
+   try{
+    if(gateClose!=null)gardenGateExecutor.execute(new Runnable(){public void run(){gateClose.close();}});
+   }catch(RejectedExecutionException e){Log.w(TAG,"garden_gate_close_deferred",e);}
+   gardenGateExecutor.shutdown();
+   gardenGateExecutor=null;gardenGateClassifier=null;
+  }
   if(recorder!=null){try{recorder.stop();}catch(Exception ignored){}try{recorder.release();}catch(Exception ignored){}recorder=null;}
   closeSession();
   if(camera!=null){camera.close();camera=null;}
