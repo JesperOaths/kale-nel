@@ -1,21 +1,16 @@
-name: C720P v924 readback once # activity
+name: Retired legacy C720P workflow - c720p-v924-readback-once.yml
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/c720p-v924-readback-once.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  trigger:
+  retired:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
     steps:
-      - name: Trigger bounded Tuya Smart login hint probe
-        shell: bash
+      - name: Redirect to authenticated maintenance
         run: |
-          set -euo pipefail
-          curl -fsS --max-time 110 https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-tuya-smart-session-probe-v1
+          echo "::warning::This old anonymous one-shot workflow has been retired."
+          echo "Use the C720P secure maintenance workflow to enqueue allowlisted diagnostics."
