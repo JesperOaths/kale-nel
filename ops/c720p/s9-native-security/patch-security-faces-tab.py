@@ -7,8 +7,16 @@ URL="/local/frontyard-security-new/face-appearances.html"
 
 def patch(html):
     if MARKER in html:
-        if html.count('id="panel-faces"')!=1 or html.count('id="s9FacesGalleryFrame"')!=1:
+        if html.count('id="panel-faces"')!=1 or html.count('id="s9FacesGalleryFrame"')!=1 or html.count('data-tab="faces"')<1:
             raise ValueError("partial_faces_tab")
+        # In-place correction for the earliest deployed tab, without
+        # re-inserting panels/scripts or disturbing the existing Security page.
+        old='<button type="button" data-tab="faces" aria-selected="false">'
+        new='<button type="button" class="tab" data-tab="faces" aria-selected="false">'
+        if old in html:
+            html=html.replace(old,new,1)
+        html=html.replace("tab.classList.add('selected')","tab.classList.add('active')")
+        html=html.replace("tab.classList.remove('selected')","tab.classList.remove('active')")
         return html
     if html.count('</body>')!=1 or html.count('data-tab="saved"')!=1 or html.count('id="panel-saved"')!=1:
         raise ValueError("unexpected_security_tab_structure")
