@@ -24,10 +24,10 @@ def main():
  old_timer,old_player,old_page=(p.read_text() for p in (TIMER,PLAYER,PAGE))
  if "OnUnitInactiveSec=3min" not in old_timer or "OnUnitInactiveSec=4h" in old_timer:
   raise RuntimeError("full_catalog_timer_changed")
- if "'Smooth · 720p / 30 fps'" not in old_player and "Smooth \\u00b7 720p / 30 fps" not in old_player:
+ if "Smooth playback · 720p / 30 fps" not in old_player:
   raise RuntimeError("player_label_anchor_changed")
  new_timer=old_timer.replace("OnUnitInactiveSec=3min","OnUnitInactiveSec=4h")
- new_player=old_player.replace("Smooth · 720p / 30 fps","Smooth · 480p / 30 fps")
+ new_player=old_player.replace("Smooth playback · 720p / 30 fps","Smooth playback · 480p / 30 fps")
  new_player=new_player.replace("Smooth \\u00b7 720p / 30 fps","Smooth \\u00b7 480p / 30 fps")
  new_player=new_player.replace("state.mode==='original'?'original':'720p30'","state.mode==='original'?'original':'480p30'")
  if new_player==old_player:raise RuntimeError("player_labels_no_change")
