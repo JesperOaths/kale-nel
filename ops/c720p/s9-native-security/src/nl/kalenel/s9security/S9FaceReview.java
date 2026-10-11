@@ -29,6 +29,7 @@ final class S9FaceReview implements AutoCloseable {
  private final Context app;
  private final File sd;
  private final String clip;
+ private final int frameLimit;
  private final JSONArray captures=new JSONArray();
  private final Map<String,float[]> known=new LinkedHashMap<>();
  private final List<Entry> unknown=new ArrayList<>();
@@ -40,7 +41,11 @@ final class S9FaceReview implements AutoCloseable {
   final String id; final float[] vector;
   Entry(String id,float[] vector){this.id=id;this.vector=vector;}
  }
- S9FaceReview(Context app,File sd,String clip){this.app=app;this.sd=sd;this.clip=clip;}
+ S9FaceReview(Context app,File sd,String clip){this(app,sd,clip,MAX_FRAMES);}
+ S9FaceReview(Context app,File sd,String clip,int frameLimit){
+  this.app=app;this.sd=sd;this.clip=clip;
+  this.frameLimit=Math.max(1,Math.min(48,frameLimit));
+ }
  static boolean hasEmbeddingModel(Context ctx){
   try(InputStream in=ctx.getAssets().open("face_embedding.tflite")){
    return in.read()>=0;
@@ -269,7 +274,7 @@ final class S9FaceReview implements AutoCloseable {
   return result.put("person_id",id).put("match_status","new_anonymous_candidate");
  }
  void sample(Bitmap frame,long ms){
-  if(!FILE.matcher(clip).matches()||frames>=MAX_FRAMES||captures.length()>=MAX_CAPTURES)return;
+  if(!FILE.matcher(clip).matches()||frames>=frameLimit||captures.length()>=MAX_CAPTURES)return;
   frames++;
   Bitmap scaled=null,rgb=null;
   try{
