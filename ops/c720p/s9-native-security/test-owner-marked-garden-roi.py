@@ -46,7 +46,7 @@ class MarkedGardenTest(unittest.TestCase):
         self.assertIn('MotionGrid.insideZone(zone,center,feet)',P)
         self.assertIn('personScoreInGarden(byte[] jpeg,float top,float margin,String zone)',P)
         self.assertIn('final String selectedZone=motion.gardenZone();',C)
-        self.assertIn('personScoreInGarden(jpg,top,margin,selectedZone);',C)
+        self.assertIn('personEvidenceInGarden(jpg,top,margin,selectedZone);',C)
         self.assertIn('garden_roi_gates_person_inference",true',C)
         self.assertIn('garden_roi_top_left_fraction',C)
         self.assertIn('garden_roi_top_right_fraction',C)
