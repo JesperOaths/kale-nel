@@ -485,11 +485,13 @@ public final class ClipClassifier {
      float personInGarden=0f;
      float[] gardenPersonBox=null;
      for(Detection detected:found){
-      if(!"person".equals(detected.label)||detected.score<.30f)continue;
+      if(!"person".equals(detected.label)||detected.score<.58f)continue;
       float[] box=detected.box;
       if(box==null||box.length!=4)continue;
       float center=(box[1]+box[3])*.5f;
-      if(box[2]>=gardenTop&&center>=margin&&center<=1f-margin
+      float width=box[3]-box[1],height=box[2]-box[0];
+      if(box[2]>=gardenTop+.035f&&center>=margin&&center<=1f-margin
+          &&height>=.115f&&width>=.032f&&width/height<=.92f
           &&detected.score>personInGarden){
        personInGarden=detected.score;
        gardenPersonBox=box;
