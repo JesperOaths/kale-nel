@@ -47,7 +47,7 @@ class SpeechGate:
 
 def status(mode,**kwargs):
  RUNTIME.mkdir(parents=True,exist_ok=True)
- payload={"version":"c720p-gemini-live-v2-wake-gated","mode":mode,"at":time.time(),**kwargs}
+ payload={"version":"c720p-gemini-live-v3-continuous-wake-gated","mode":mode,"at":time.time(),**kwargs}
  temp=RUNTIME/"gemini_live_status.json.tmp";temp.write_text(json.dumps(payload))
  temp.replace(RUNTIME/"gemini_live_status.json")
 
@@ -208,53 +208,88 @@ async def local_wake_transcript(pcm):
  return ""
 
 
+async def verify_while_recording(pcm, proc, gate, pending):
+ """Keep the mic pipe drained while slow local Whisper checks a phrase.
+ Pending utterances remain local and bounded; nothing goes to cloud here.
+ """
+ task=asyncio.create_task(local_wake_transcript(pcm))
+ try:
+  while not task.done():
+   try:
+    frame=await asyncio.wait_for(proc.stdout.readexactly(FRAME_BYTES),timeout=.3)
+   except asyncio.TimeoutError:
+    continue
+   found=gate.feed(frame)
+   if found:
+    pending.append(found)
+  return await task
+ finally:
+  if not task.done():
+   task.cancel()
+   with contextlib.suppress(asyncio.CancelledError):
+    await task
+
+
 async def run(dry=False,seconds=0):
  import webrtcvad
  gate=SpeechGate(webrtcvad.Vad(2));ha=KioskHA()
- attempts=collections.deque(maxlen=4);speech_checks=collections.deque(maxlen=10);armed_until=0.;started=time.monotonic()
- status("ready",cloud_enabled=not dry,privacy="only_wake_prefixed_speech_can_reach_google",wake_required=True,model=MODEL)
+ attempts=collections.deque(maxlen=4)
+ speech_checks=collections.deque(maxlen=10)
+ armed_until=0.
+ started=time.monotonic()
+ status("ready",cloud_enabled=not dry,privacy="wake_gated_local_whisper",wake_required=True,model=MODEL)
  while not seconds or time.monotonic()-started<seconds:
   proc=await asyncio.create_subprocess_exec("parec","--device="+SOURCE,"--raw","--format=s16le",
      "--rate=16000","--channels=1","--latency-msec=80",
      stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL)
   capture_drained=False
-  status("listening",cloud_enabled=not dry,model=MODEL)
+  pending=collections.deque(maxlen=4)
+  status("listening",cloud_enabled=not dry,model=MODEL,wake_required=True)
   try:
    while not seconds or time.monotonic()-started<seconds:
-    frame=await asyncio.wait_for(proc.stdout.readexactly(FRAME_BYTES),timeout=5)
-    if MUTE.exists():gate.reset();continue
-    utterance=gate.feed(frame)
-    if utterance is None:continue
-    # Stop microphone capture before cloud inference or speech playback.
-    await stop_capture(proc)
-    capture_drained=True
+    if pending:
+     utterance=pending.popleft()
+    else:
+     frame=await asyncio.wait_for(proc.stdout.readexactly(FRAME_BYTES),timeout=5)
+     if MUTE.exists():
+      gate.reset();pending.clear();armed_until=0.
+      continue
+     utterance=gate.feed(frame)
+    if utterance is None:
+     continue
     now=time.monotonic()
-    while speech_checks and now-speech_checks[0]>60:speech_checks.popleft()
+    while speech_checks and now-speech_checks[0]>60:
+     speech_checks.popleft()
     if len(speech_checks)>=10 or (speech_checks and now-speech_checks[-1]<1.0):
-     status("ignored",reason="wake_check_rate_limit",cloud_enabled=False)
-     break
+     status("listening",ignored="wake_check_rate_limit",cloud_enabled=not dry)
+     continue
     speech_checks.append(now)
     status("checking_wake_locally",cloud_enabled=False)
-    transcript=await local_wake_transcript(utterance)
+    transcript=await verify_while_recording(utterance,proc,gate,pending)
+    now=time.monotonic()
     was_armed=now<armed_until
     decision,remainder=wake_intent(transcript,armed=was_armed)
     if decision=="ignore":
      if was_armed:armed_until=0.
-     status("ignored",reason="no_wake_phrase",cloud_enabled=False)
-     break
+     status("listening",ignored="not_addressed",cloud_enabled=not dry)
+     continue
     if decision=="arm":
-     armed_until=time.monotonic()+10
+     armed_until=now+10.
      status("armed",wake_window_seconds=10,cloud_enabled=False)
-     break
+     continue
     armed_until=0.
-    while attempts and now-attempts[0]>60:attempts.popleft()
+    while attempts and now-attempts[0]>60:
+     attempts.popleft()
     if len(attempts)>=4:
-     status("ignored",reason="cloud_turn_rate_limit",cloud_enabled=False)
-     break
+     status("listening",ignored="cloud_turn_rate_limit",cloud_enabled=not dry)
+     continue
     attempts.append(now)
     if dry:
      status("dry_run_wake_accepted",audio_seconds=round(len(utterance)/32000,2),cloud_enabled=False)
-     break
+     continue
+    await stop_capture(proc)
+    capture_drained=True
+    pending.clear()
     status("cloud_speech_turn",audio_seconds=round(len(utterance)/32000,2),provider="google",wake_verified=True)
     try:
      reply,calls,elapsed=await cloud(utterance,ha)
@@ -263,15 +298,16 @@ async def run(dry=False,seconds=0):
      status("ready",last_cloud_seconds=elapsed,tool_calls=calls)
     except Exception as e:
      status("cloud_error",error_type=type(e).__name__)
-     await asyncio.sleep(5)
+     await asyncio.sleep(4)
     gate.reset();await asyncio.sleep(.7)
-    break # Flush stale mic data; don't recognize our own spoken reply.
+    break # Fresh capture after any audible response to avoid hearing itself.
   except (asyncio.TimeoutError,asyncio.IncompleteReadError):
    status("microphone_restart")
   finally:
-   if not capture_drained:await stop_capture(proc)
+   if not capture_drained:
+    await stop_capture(proc)
    gate.reset()
-  await asyncio.sleep(.5)
+  await asyncio.sleep(.4)
 
 def selftest():
  class Stub:
