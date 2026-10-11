@@ -1,0 +1,35 @@
+name: S9 Event V3 isolated production-signature build once
+on:
+  push:
+    branches: [feat/s9-event-continuity-thumbnails-v3-20261011]
+    paths: ['.github/workflows/s9-event-v3-build-once.yml']
+permissions:
+  contents: read
+jobs:
+  pinned-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Safety regression
+        run: |
+          python3 ops/c720p/s9-native-security/test-recording-event-v3-contract.py
+          python3 ops/c720p/s9-native-security/test_pipeline_contract.py
+          python3 ops/c720p/s9-native-security/test-garden-only-retention.py
+      - name: Queue C720P immutable build with existing face model preservation
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "${TOKEN:-}" || { echo 'Missing project-management credential'; exit 2; }
+          response="$(curl -fsS --connect-timeout 10 --max-time 40 -X POST \
+            'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-v868-maintenance' \
+            -H "Authorization: Bearer ${TOKEN}" -H 'Content-Type: application/json' \
+            --data '{"operation":"s9_event_v3_build_only"}')"
+          RESPONSE="$response" python3 - <<'PY'
+          import json,os
+          r=json.loads(os.environ['RESPONSE'])
+          assert r.get('ok') is True and r.get('operation')=='s9_event_v3_build_only'
+          print('S9_EVENT_V3_REMOTE_BUILD_ACCEPTED',r['job'])
+          PY
