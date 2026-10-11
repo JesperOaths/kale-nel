@@ -41,7 +41,7 @@ def main():
    # Make a bounded 8-second visible video test in the temporary Security tab.
    # The 1,920px-wide 4K source remains unmodified on the S9+.
    browser.call("Target.activateTarget",{"targetId":target})
-   script="""(async()=>{{
+   script="""(async()=>{
     const clip=__CLIP__;
     const url=await window.C720PSecureRelay.url('/new/saved/clip/'+clip);
     const v=document.createElement('video');
@@ -60,14 +60,14 @@ def main():
       fetchProbe={ok:fetched.ok,http:fetched.status,bytes:bytes.byteLength,type:fetched.headers.get('Content-Type')};
     }catch(e){fetchProbe={error:String(e)};}
     let frames=0;let firstVideoFrame=0;let lastVideoFrame=0;
-    const cb=(now,m)=>{{frames++;if(!firstVideoFrame)firstVideoFrame=now;lastVideoFrame=now;seen.push(m.mediaTime);if(v.isConnected)v.requestVideoFrameCallback(cb)}};
+    const cb=(now,m)=>{frames++;if(!firstVideoFrame)firstVideoFrame=now;lastVideoFrame=now;seen.push(m.mediaTime);if(v.isConnected)v.requestVideoFrameCallback(cb)};
     v.requestVideoFrameCallback(cb);
-    try{{await Promise.race([v.play(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('play_timeout')),4000))]);
-      await new Promise(resolve=>setTimeout(resolve,8500));}}
-    catch(err){{errors.push(String(err))}}
+    try{await Promise.race([v.play(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('play_timeout')),4000))]);
+      await new Promise(resolve=>setTimeout(resolve,8500));}
+    catch(err){errors.push(String(err))}
     const q=v.getVideoPlaybackQuality?.();
     const secs=firstVideoFrame?Math.max(.001,(lastVideoFrame-firstVideoFrame)/1000):0;
-    const result={{clip,frames,span_seconds:secs,observed_fps:secs?frames/secs:0,
+    const result={clip,frames,span_seconds:secs,observed_fps:secs?frames/secs:0,
       currentTime:v.currentTime,videoWidth:v.videoWidth,videoHeight:v.videoHeight,
       droppedFrames:q?.droppedVideoFrames,totalFrames:q?.totalVideoFrames,
       readyState:v.readyState,networkState:v.networkState,errors,
@@ -76,10 +76,10 @@ def main():
       mediaError:v.error?.message??null,isConnected:v.isConnected,
       srcLength:String(v.currentSrc||v.src).length,paused:v.paused,
       sourceUrlStart:String(v.currentSrc||v.src).slice(0,135),
-      mediaCapabilities:typeof navigator.mediaCapabilities}};
+      mediaCapabilities:typeof navigator.mediaCapabilities};
     v.pause();v.removeAttribute('src');v.load();v.remove();
     return result;
-   }})()""".replace("__CLIP__",json.dumps(clip)).replace("{{","{").replace("}}","}")
+   })()""".replace("__CLIP__",json.dumps(clip))
    r=evaluate(tab,script,True)
    print("S9_REAL_KIOSK_4K_PLAYBACK_PERF",json.dumps(r.get("value",r),sort_keys=True),flush=True)
   finally:
