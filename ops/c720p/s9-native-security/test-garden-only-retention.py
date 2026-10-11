@@ -42,7 +42,7 @@ class Tests(unittest.TestCase):
         s=(SRC/'ClipClassifier.java').read_text()
         for token in ('sampleGardenLuma(bitmap,gardenTop)',
                       'gardenFrameDifference(previousGardenLuma,currentGardenLuma)',
-                      'personInGarden>0f?1000.0',
+                      'EventFrameRanker.rank(',
                       'bestMotionTimeMs=micros/1000',
                       'makeGardenThumbnail(bitmap,gardenPersonBox)',
                       'thumbnail_focus","foreground_garden_motion"',
