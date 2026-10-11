@@ -120,7 +120,13 @@ public final class ClipClassifier {
  // Read only after the same worker's personScoreInGarden() call.
  public float lastPersonScoreAnywhere(){return lastPersonAnywhere;}
  public synchronized float personScoreInGarden(byte[] jpeg,float top,float margin)throws Exception{
-  if(jpeg==null||jpeg.length<1000||top<0||top>1||margin<0||margin>.3f)
+  // Compatibility overload for legacy consumers. The live S9 path supplies
+  // the precise named mask so it agrees with the motion grid.
+  return personScoreInGarden(jpeg,top,margin,null);
+ }
+ public synchronized float personScoreInGarden(byte[] jpeg,float top,float margin,String zone)throws Exception{
+  if(jpeg==null||jpeg.length<1000||top<0||top>1||margin<0||margin>.3f||
+      (zone!=null&&!MotionGrid.validGardenZone(zone)))
    throw new IllegalArgumentException("invalid_preview_or_region");
   init();
   Bitmap bitmap=BitmapFactory.decodeByteArray(jpeg,0,jpeg.length);
@@ -135,7 +141,11 @@ public final class ClipClassifier {
     if(b==null||b.length!=4)continue;
     float center=(b[1]+b[3])*0.5f;
     float feet=b[2];
-    if(center<margin||center>1f-margin||feet<top||feet>1.02f)continue;
+    // The same sloping, image-normalized polygon as MotionGrid. For "near"
+    // this includes the owner's marked garden above the old 64% cutoff.
+    if(zone!=null){
+     if(!MotionGrid.insideZone(zone,center,feet))continue;
+    }else if(center<margin||center>1f-margin||feet<top||feet>1.02f)continue;
     highest=Math.max(highest,detection.score);
    }
    lastPersonAnywhere=any;
