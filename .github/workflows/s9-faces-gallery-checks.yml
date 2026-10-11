@@ -1,0 +1,45 @@
+name: S9 Home Assistant Faces Gallery Checks
+on:
+  push:
+    paths:
+      - "ops/c720p/s9-native-security/face-appearances.html.txt"
+      - "ops/c720p/s9-native-security/patch-security-faces-tab.py"
+      - "ops/c720p/s9-native-security/test-security-faces-tab.py"
+      - "ops/c720p/s9-native-security/deploy-security-faces-tab.py"
+      - ".github/workflows/s9-faces-gallery-checks.yml"
+  pull_request:
+    paths:
+      - "ops/c720p/s9-native-security/face-appearances.html.txt"
+      - "ops/c720p/s9-native-security/patch-security-faces-tab.py"
+      - "ops/c720p/s9-native-security/test-security-faces-tab.py"
+      - "ops/c720p/s9-native-security/deploy-security-faces-tab.py"
+      - ".github/workflows/s9-faces-gallery-checks.yml"
+jobs:
+  validate-gallery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Test HA navigation and gallery source contracts
+        run: |
+          set -euo pipefail
+          cd ops/c720p/s9-native-security
+          python3 -m py_compile patch-security-faces-tab.py deploy-security-faces-tab.py
+          python3 test-security-faces-tab.py
+          python3 - <<'PY'
+          import importlib.util, re
+          from pathlib import Path
+          p=Path('patch-security-faces-tab.py')
+          spec=importlib.util.spec_from_file_location('t',p)
+          module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+          changed=module.patch('<body><button data-tab="saved">Saved</button><section id="panel-saved" class="panel"></section></body>')
+          snippets=re.findall(r'<script[^>]*>(.*?)</script>',changed,re.S)
+          assert len(snippets)==1
+          Path('/tmp/ha-faces-nav.js').write_text(snippets[0])
+          page=Path('face-appearances.html.txt').read_text()
+          snippets=re.findall(r'<script[^>]*>(.*?)</script>',page,re.S)
+          assert len(snippets)==1
+          Path('/tmp/ha-faces-gallery.js').write_text(snippets[0])
+          assert 'v817 - Made by Bruis' in page
+          PY
+          node --check /tmp/ha-faces-nav.js
+          node --check /tmp/ha-faces-gallery.js
