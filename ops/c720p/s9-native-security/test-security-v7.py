@@ -33,6 +33,23 @@ class V7Tests(unittest.TestCase):
   self.assertIn('s9v7-tracks-pane',v7.ROOT_JS)
   self.assertIn('cameraSavedFrame',v7.ROOT_JS)
   self.assertIn('security-archive-v7.html',v7.ROOT_JS)
+ def test_drive_and_micro_sd_are_both_available_in_archive(self):
+  page=(HERE/'security-archive-v7.html').read_text()
+  self.assertIn('id="driveTab"',page)
+  self.assertIn('id="localTab"',page)
+  self.assertIn('role="tablist"',page)
+  self.assertIn('aria-selected="true" aria-controls="driveLibrary"',page)
+  self.assertIn('data-src="/local/c720p-drive-saved.html?camera=camera&amp;',page)
+  self.assertIn("showSource('drive');",page)
+  self.assertIn('window.parent.C720PSecureRelay',page)
+  self.assertIn("if(!localLoaded){localLoaded=true;refresh();}",page)
+  self.assertIn("a.fetch('/new/api/saved'",page)
+  self.assertIn("a.url('/new/saved/clip/'",page)
+  self.assertIn("a.url('/new/saved/snap/'",page)
+  # Video bytes remain on their existing storage services.
+  self.assertNotIn('drive.google.com/uc',page)
+  self.assertNotIn('drive.google.com/file',page)
+
  def test_js_syntax(self):
   if not shutil.which("node"):self.skipTest("Node unavailable")
   sources=[v7.ROOT_JS]
