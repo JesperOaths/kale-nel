@@ -1,0 +1,12 @@
+[Unit]
+Description=Periodic passive S3 bedroom motion health telemetry
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=5min
+AccuracySec=1min
+Persistent=true
+Unit=c720p-s3-motion-health.service
+
+[Install]
+WantedBy=timers.target
