@@ -3,7 +3,13 @@ r=Path(__file__).parent
 src=(r/'src/nl/kalenel/s9benchmark/BenchmarkService.java').read_text()
 manifest=(r/'AndroidManifest.xml').read_text()
 build=(r/'build-only.sh').read_text()
-assert 'MAX_FILES=8, FRAMES=3, MAX_TEMP=37' in src
+assert 'MAX_FILES=6, FRAMES=15, MAX_TEMP=37' in src
+assert 'MAX_SESSION_MS=6*60*1000L' in src
+assert 'GardenShadowPipeline' in src
+assert 'shadow_pipeline_active_on_camera",false' in src
+assert 'ground_truth_person_labels",JSONObject.NULL' in src
+assert 'android.permission.DUMP' in manifest
+assert 'GardenShadowPipeline.java' in build
 assert 'new MediaMetadataRetriever()' in src
 assert 'DataType.UINT8' in src
 assert 'camera_not_idle' in src

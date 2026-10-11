@@ -9,6 +9,7 @@ DEPEND="$HOME/c720p-home-hub/build/s9-person-ml-v1/deps"
 mkdir -p "$SRC" "$ROOT/assets" "$ROOT/classes" "$ROOT/dex" "$ROOT/pkg/lib/arm64-v8a"
 ORIGIN="https://raw.githubusercontent.com/JesperOaths/kale-nel"
 curl -fLsS --retry 2 "$ORIGIN/$REV/ops/c720p/s9-detector-benchmark/src/nl/kalenel/s9benchmark/BenchmarkService.java" -o "$SRC/BenchmarkService.java"
+curl -fLsS --retry 2 "$ORIGIN/$REV/ops/c720p/s9-detector-benchmark/src/nl/kalenel/s9benchmark/GardenShadowPipeline.java" -o "$SRC/GardenShadowPipeline.java"
 curl -fLsS --retry 2 "$ORIGIN/$REV/ops/c720p/s9-detector-benchmark/AndroidManifest.xml" -o "$ROOT/AndroidManifest.xml"
 cp "$HOME/c720p-home-hub/build/s9-person-ml-v1/assets/detect.tflite" "$ROOT/assets/baseline.tflite"
 curl -fLsS --retry 3 --connect-timeout 12 --max-time 120 \
@@ -33,7 +34,7 @@ CP="$JAR:$DEPEND/tensorflow-lite.jar:$DEPEND/tensorflow-lite-api.jar"
 test -s "$DEPEND/tensorflow-lite.jar"
 rm -rf "$ROOT/classes" "$ROOT/dex"
 mkdir -p "$ROOT/classes" "$ROOT/dex"
-javac -source 8 -target 8 -cp "$CP" -d "$ROOT/classes" "$SRC/BenchmarkService.java"
+javac -source 8 -target 8 -cp "$CP" -d "$ROOT/classes" "$SRC/BenchmarkService.java" "$SRC/GardenShadowPipeline.java"
 d8 --min-api 26 --lib "$JAR" --output "$ROOT/dex" \
  "$ROOT/classes/nl/kalenel/s9benchmark/"*.class \
  "$DEPEND/tensorflow-lite.jar" "$DEPEND/tensorflow-lite-api.jar"
