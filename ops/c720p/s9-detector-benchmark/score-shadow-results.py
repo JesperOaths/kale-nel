@@ -74,8 +74,12 @@ def score(report, labels=None):
  # "accuracy verified" from a selection of only motion-triggered clips.
  summary['ssd_on_labeled_subset']=stats('ssd')
  summary['lite0_on_labeled_subset']=stats('lite0')
- summary['model_accuracy_verified']=(
+ summary['labeled_subset_minimum_met']=(
   summary['human_positive_clips']>=20 and summary['human_negative_clips']>=20)
+ # This dataset consists solely of clips admitted by the existing detector.
+ # Missing visitors that were NEVER recorded cannot enter this corpus.
+ # Precision/recall are descriptive ONLY within the sampled recorded clips.
+ summary['model_accuracy_verified']=False
  summary['label_sampling_limitation']='Only already-recorded motion clips; no missed-person negatives from non-recorded intervals.'
  return summary
 
