@@ -28,6 +28,8 @@ public final class CameraService extends Service {
  private CameraCaptureSession session;
  private ImageReader preview;
  private MediaRecorder recorder;
+ private volatile LiveVideoEncoder liveVideo;
+ private volatile String liveVideoFailure="";
  private CameraControls cameraControls;
  private CaptureRequest.Builder activeCameraRequest;
  private final MotionGrid motion=new MotionGrid();
@@ -239,6 +241,17 @@ public final class CameraService extends Service {
    }
    if(cameraId.isEmpty())throw new IOException("camera_has_no_3840_2160_30fps_profile");
    cameraControls=new CameraControls(manager.getCameraCharacteristics(cameraId));
+   liveVideoFailure="";
+   try{
+    liveVideo=new LiveVideoEncoder(cameraControls.captureFps(),new Runnable(){public void run(){
+     if(cameraHandler!=null)cameraHandler.post(new Runnable(){public void run(){disableLiveVideo();}});
+    }});
+    liveVideo.start();
+   }catch(Exception unavailable){
+    liveVideoFailure="live_setup_"+unavailable.getClass().getSimpleName();
+    if(liveVideo!=null)liveVideo.close();liveVideo=null;
+    Log.w(TAG,"hardware_live_video_unavailable",unavailable);
+   }
    String region=getSharedPreferences("native",MODE_PRIVATE).getString("garden_zone","near");
    motion.setGardenZone(MotionGrid.validGardenZone(region)?region:"near");
    preview=ImageReader.newInstance(640,480,ImageFormat.YUV_420_888,3);
@@ -311,13 +324,16 @@ public final class CameraService extends Service {
   if(!running||camera==null||preview==null)return;
   mode="configuring_preview";
   try{
-   camera.createCaptureSession(Collections.singletonList(preview.getSurface()),new CameraCaptureSession.StateCallback(){
+   List<Surface> outputs=new ArrayList<>();outputs.add(preview.getSurface());
+   if(liveVideo!=null)outputs.add(liveVideo.surface());
+   camera.createCaptureSession(outputs,new CameraCaptureSession.StateCallback(){
     @Override public void onConfigured(CameraCaptureSession s){
      if(!running){s.close();return;}
      session=s;
      try{
       CaptureRequest.Builder r=camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
       r.addTarget(preview.getSurface());
+      if(liveVideo!=null)r.addTarget(liveVideo.surface());
       cameraControls.apply(r);
       activeCameraRequest=r;
       s.setRepeatingRequest(r.build(),sensorTelemetry,cameraHandler);
@@ -325,10 +341,25 @@ public final class CameraService extends Service {
      }catch(Exception e){failure("preview_request_failed",e);scheduleRecover();}
     }
     @Override public void onConfigureFailed(CameraCaptureSession s){
+     s.close();
+     if(liveVideo!=null){disableLiveVideo();configurePreview();return;}
      failure("preview_session_failed",null);scheduleRecover();
     }
    },cameraHandler);
   }catch(Exception e){failure("preview_setup_failed",e);scheduleRecover();}
+ }
+ // A failed optional preview encoder must not stall the garden detector or
+ // recorder. Remove its target before releasing its input surface.
+ private void disableLiveVideo(){
+  LiveVideoEncoder failing=liveVideo;if(failing==null)return;
+  liveVideoFailure="hardware_live_video_disabled";
+  try{
+   if(activeCameraRequest!=null&&session!=null){
+    activeCameraRequest.removeTarget(failing.surface());
+    session.setRepeatingRequest(activeCameraRequest.build(),sensorTelemetry,cameraHandler);
+   }
+  }catch(Exception ignored){Log.w(TAG,"live_target_detach_failed",ignored);}
+  liveVideo=null;failing.close();
  }
  // Retry occasional GPU delegate initialization failures without blocking the
  // camera callback or leaving the detector permanently unarmed.
@@ -472,13 +503,16 @@ public final class CameraService extends Service {
    recorder.setOutputFile(partial.getAbsolutePath());
    recorder.prepare();
    Surface video=recorder.getSurface();
-   camera.createCaptureSession(Arrays.asList(preview.getSurface(),video),new CameraCaptureSession.StateCallback(){
+   List<Surface> outputs=new ArrayList<>();outputs.add(preview.getSurface());outputs.add(video);
+   if(liveVideo!=null)outputs.add(liveVideo.surface());
+   camera.createCaptureSession(outputs,new CameraCaptureSession.StateCallback(){
     @Override public void onConfigured(CameraCaptureSession s){
      if(!running){s.close();return;}
      session=s;
      try{
       CaptureRequest.Builder b=camera.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
       b.addTarget(video);b.addTarget(preview.getSurface());
+      if(liveVideo!=null)b.addTarget(liveVideo.surface());
       cameraControls.apply(b);
       activeCameraRequest=b;
       s.setRepeatingRequest(b.build(),sensorTelemetry,cameraHandler);
@@ -492,6 +526,14 @@ public final class CameraService extends Service {
      }catch(Exception e){failure("recorder_start_failed",e);abortRecording();}
     }
     @Override public void onConfigureFailed(CameraCaptureSession s){
+     // Restore surveillance first; live status explicitly reports unsupported
+     // three-output sessions rather than sacrificing the original 4K capture.
+     s.close();
+     if(liveVideo!=null){
+      disableLiveVideo();
+      try{camera.createCaptureSession(Arrays.asList(preview.getSurface(),video),this,cameraHandler);return;}
+      catch(Exception retryFailed){failure("4k_session_without_live_failed",retryFailed);abortRecording();return;}
+     }
      failure("4k_plus_yuv_unsupported",null);abortRecording();
     }
    },cameraHandler);
@@ -620,6 +662,7 @@ public final class CameraService extends Service {
    if(!running)return;
    closeSession();
    if(camera!=null){camera.close();camera=null;}
+   if(liveVideo!=null){liveVideo.close();liveVideo=null;}
    if(preview!=null){preview.close();preview=null;}
    prepare();
   }},3000L*recoveryCount);
@@ -789,6 +832,11 @@ public final class CameraService extends Service {
    d.put("sensor_ae_target_fps_min",sensorAeMinFps>0?sensorAeMinFps:null);
    d.put("sensor_ae_target_fps_max",sensorAeMaxFps>0?sensorAeMaxFps:null);
    d.put("sensor_lowlight_long_exposure",sensorExposureMs>=45f);
+   d.put("capture_minimum_fps",CaptureCadence.MIN_FPS);
+   d.put("capture_target_fps",cameraControls==null?JSONObject.NULL:cameraControls.captureFps());
+   d.put("capture_cadence_ok",age>=0&&age<2000&&sensorResultFps>=24f);
+   d.put("live_video",liveVideo==null?
+     new JSONObject().put("enabled",false).put("error",liveVideoFailure):liveVideo.status());
    d.put("motion_rate_suppressed",suppressedByRate);
    d.put("recording_rate_max_per_hour",MAX_4K_CLIPS_PER_HOUR);
    d.put("recording_rate_standard_per_hour",RecordingRate.BASE_PER_HOUR);
@@ -980,6 +1028,9 @@ public final class CameraService extends Service {
     byte[] jpg=latestJpeg;
     if(jpg.length<1000){send(out,503,"text/plain","camera_preview_not_ready".getBytes("UTF-8"));return;}
     send(out,200,"image/jpeg",jpg);
+   }else if(line.startsWith("GET /live.h264 ")){
+    LiveVideoEncoder live=liveVideo;
+    if(live==null||!live.stream(socket))send(out,503,"text/plain","hardware_live_video_unavailable".getBytes("UTF-8"));
    }else if(line.startsWith("GET /mjpeg ")||line.startsWith("GET /video ")
          ||line.startsWith("GET /videofeed ")){
     out.write(("HTTP/1.1 200 OK\r\nContent-Type: multipart/x-mixed-replace; boundary=frame\r\n"+
@@ -1062,6 +1113,7 @@ public final class CameraService extends Service {
   if(recorder!=null){try{recorder.stop();}catch(Exception ignored){}try{recorder.release();}catch(Exception ignored){}recorder=null;}
   closeSession();
   if(camera!=null){camera.close();camera=null;}
+  if(liveVideo!=null){liveVideo.close();liveVideo=null;}
   if(preview!=null){preview.close();preview=null;}
   // GPU delegates may be thread-affine. Never close one while a queued clip
   // review is still using it; release it on the review executor last.

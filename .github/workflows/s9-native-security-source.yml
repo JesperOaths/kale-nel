@@ -3,10 +3,14 @@ on:
   pull_request:
     paths:
       - "ops/c720p/s9-native-security/**"
+      - "ops/c720p/s9-person-ml-v1/s9_hub_playback.py"
+      - "ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py"
       - ".github/workflows/s9-native-security-source.yml"
   push:
     paths:
       - "ops/c720p/s9-native-security/**"
+      - "ops/c720p/s9-person-ml-v1/s9_hub_playback.py"
+      - "ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py"
       - ".github/workflows/s9-native-security-source.yml"
 jobs:
   source-contract:
@@ -25,7 +29,6 @@ jobs:
           python3 ops/c720p/s9-native-security/test-garden-realtime-priority.py
           python3 -m py_compile ops/c720p/s9-native-security/check-s9-garden-priority.py
           python3 -m py_compile ops/c720p/s9-person-ml-v1/s9_phone_garden_status.py ops/c720p/s9-native-security/patch-native-garden-watch-ui.py
-          python3 ops/c720p/s9-native-security/test-phone-native-media-range-proxy.py
           python3 ops/c720p/s9-native-security/test-appearance-review.py
           python3 ops/c720p/s9-native-security/test-stage-verified-deployment.py
           python3 ops/c720p/s9-native-security/test-anonymous-index-ui.py
@@ -107,6 +110,100 @@ jobs:
           Path("/tmp/s9-face-review.js").write_text(js[0])
           PY
           node --check /tmp/s9-face-review.js
+      - name: Test smooth recorded playback and original byte ranges
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -euo pipefail
+          python3 ops/c720p/s9-native-security/test-hub-smooth-playback.py
+          python3 ops/c720p/s9-native-security/test-phone-native-media-range-proxy.py
+          python3 -m py_compile \
+            ops/c720p/s9-person-ml-v1/s9_hub_playback.py \
+            ops/c720p/s9-person-ml-v1/s9_sd_proxy_extension.py \
+            ops/c720p/s9-native-security/patch-smooth-security-video.py \
+            ops/c720p/s9-native-security/patch-smooth-live-relay.py
+          node --check ops/c720p/s9-native-security/security-video-playback.js
+          node --check ops/c720p/s9-native-security/test-smooth-security-video.cjs
+      - name: Check smooth playback patch idempotence and authenticated routing
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util
+          import re
+          import subprocess
+          import tempfile
+          import urllib.parse
+          from pathlib import Path
+
+          root = Path("ops/c720p/s9-native-security")
+          def load(filename):
+              spec = importlib.util.spec_from_file_location(filename, root / filename)
+              module = importlib.util.module_from_spec(spec)
+              spec.loader.exec_module(module)
+              return module
+
+          ui = load("patch-smooth-security-video.py")
+          client = '<script src="/local/c720p-secure-relay-client.js"></script>'
+          bodies = {
+              "security": '<script>/* S9_SECURITY_LIVE_V4_AUTHENTICATED_MJPEG_FETCH_FALLBACK */async function streams(on){}function refreshPhoneBatteries(){}</script>',
+              "home": '<script>function isOn(){return true}async function setSource(_kind,_url,badge,msg){}async function selectSource(){}</script>',
+              "clips": '<video id="player" controls></video><script>const path="/new/saved/clip/test.mp4";</script>',
+              "saved": '<video id="player" controls></video><script>const path="/new/saved/clip/test.mp4";</script>',
+              "faces": '<div id="s9-faces-appearances-gallery-v1"></div><video id="player" controls></video><script>const client=window.parent.C720PSecureRelay;const path="/new/saved/clip/test.mp4";</script>',
+          }
+          with tempfile.TemporaryDirectory() as temporary:
+              for kind, body in bodies.items():
+                  before = "<html><head>" + ("" if kind == "faces" else client) + "</head><body>" + body + "</body></html>"
+                  after = ui.patch(before, kind)
+                  assert ui.patch(after, kind) == after, kind + " patch must be idempotent"
+                  assert after.count(ui.SCRIPT) == 1, kind + " must load shared playback once"
+                  for index, script in enumerate(re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', after, re.S)):
+                      path = Path(temporary) / (kind + str(index) + ".js")
+                      path.write_text(script)
+                      subprocess.run(["node", "--check", str(path)], check=True)
+              try:
+                  ui.patch("<html><head></head><body></body></html>", "clips")
+              except ValueError:
+                  pass
+              else:
+                  raise AssertionError("missing authenticated relay must reject UI patch")
+
+          relay = load("patch-smooth-live-relay.py")
+          before = '''import urllib.parse, urllib.request
+          class Handler:
+           def do_HEAD(self): self.go(True)
+           def empty(self,status):return status
+           def go(self,head=False):
+            path=urllib.parse.urlsplit(self.path).path
+            if not self.authorized:return self.empty(401)
+            if path=='/phone-batteries.json':return self.empty(200)
+           def archive(self,cam,subpath):
+            url=f'http://127.0.0.1:8795/{cam}{subpath}';req=urllib.request.Request(url)
+            return req.full_url
+          '''
+          after = relay.patch(before)
+          assert relay.patch(after) == after, "relay patch must be idempotent"
+          namespace = {}
+          exec(compile(after, "patched-relay-test", "exec"), namespace)
+          handler = namespace["Handler"]()
+          calls = []
+          handler.smooth_live = lambda head=False: calls.append(head)
+          handler.path = "/new/live.mp4"
+          handler.authorized = False
+          assert handler.go() == 401 and calls == [], "unauthenticated live request must reject"
+          handler.authorized = True
+          handler.go(True)
+          assert calls == [True], "authenticated HEAD must select fixed live route"
+          for mode in ("prepare", "hub", "https://untrusted.test/video.mp4"):
+              handler.path = "/new/saved/clip/test.mp4?auth=private&playback=" + urllib.parse.quote(mode, safe="")
+              expected = "http://127.0.0.1:8795/new/saved/clip/test.mp4"
+              if mode in ("prepare", "hub"):
+                  expected += "?playback=" + mode
+              assert handler.archive("new", "/saved/clip/test.mp4") == expected, "only playback modes may reach fixed archive upstream"
+          print("SMOOTH_PLAYBACK_PATCH_CONTRACTS_OK")
+          PY
       - name: Compile Camera2 and offline TFLite classifier against Android SDK
         shell: bash
         run: |
@@ -148,6 +245,11 @@ jobs:
             ops/c720p/s9-native-security/src/nl/kalenel/s9security/PhoneMediaRange.java \
             ops/c720p/s9-native-security/tests/PhoneMediaRangeTest.java
           java -cp "$WORK" nl.kalenel.s9security.PhoneMediaRangeTest
+          javac -d "$WORK" \
+            ops/c720p/s9-native-security/src/nl/kalenel/s9security/CaptureCadence.java \
+            ops/c720p/s9-native-security/src/nl/kalenel/s9security/H264AnnexB.java \
+            ops/c720p/s9-native-security/tests/LiveVideoPrimitivesTest.java
+          java -cp "$WORK" nl.kalenel.s9security.LiveVideoPrimitivesTest
 
   anonymous-tracklets:
     runs-on: ubuntu-latest
