@@ -125,6 +125,13 @@ public final class GardenShadowPipeline {
   for(float[] d:candidates){
    if(!validBox(d))continue;
    if(!gardenBox(d)){rejectedOffGarden++;continue;}
+   // Multiple overlapping detections in ONE frame are not independent
+   // temporal evidence. Suppress these before spawning extra tracklets.
+   boolean sameFrameDuplicate=false;
+   for(Track t:tracks)if(t.matched&&similarity(t.box,d)>=2.35f){
+    sameFrameDuplicate=true;break;
+   }
+   if(sameFrameDuplicate)continue;
    Track best=null;float max=0;
    for(Track t:tracks)if(!t.matched){
     float score=similarity(t.box,d);
