@@ -7,7 +7,7 @@ This is a reversible fallback until on-phone hardware transcoding is production 
 """
 from pathlib import Path
 from datetime import datetime,timezone
-import importlib.util,json,os,shutil,subprocess,time,urllib.request
+import importlib.util,json,os,shutil,subprocess,time,urllib.request,socket
 SRC=Path('/home/jespern/c720p-home-hub/bin/s9_hub_playback.py')
 BACK=Path('/home/jespern/c720p-home-hub/backups/security-playback-performance')
 SERVICE='c720p-frontyard-security-new.service'
@@ -30,15 +30,12 @@ def request(url,timeout=7):
 def await_service():
  for n in range(35):
   try:
-   s,body=request('http://127.0.0.1:8793/status',timeout=4)
-   if s==200:return
-  except Exception:pass
-  try:
-   s,_=request('http://127.0.0.1:8793/new/api/saved',timeout=4)
-   if s==200:return
-  except Exception:pass
+   with socket.create_connection(('127.0.0.1',8793),timeout=2):
+    if system('systemctl','--user','is-active',SERVICE)=='active':return
+  except (OSError,RuntimeError):pass
   time.sleep(.6)
- raise RuntimeError('camera_relay_never_returned')
+ raise RuntimeError('camera_relay_listener_never_returned')
+
 def main():
  if not SRC.is_file() or SRC.is_symlink():raise RuntimeError('playback_source_missing')
  orig=SRC.read_text()
