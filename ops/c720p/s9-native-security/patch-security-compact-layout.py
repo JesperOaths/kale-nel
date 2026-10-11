@@ -109,7 +109,7 @@ LIVE_SNIPPET=r"""
 """
 
 def _replace_tag_once(source: str, tag: str, marker: str, replacement: str) -> str:
-    expression=r'<'+tag+r' '+re.escape(marker)+r'>[\\s\\S]*?</'+tag+r'>'
+    expression=r'<'+tag+r' '+re.escape(marker)+r'>(?s:.*?)</'+tag+r'>'
     matches=list(re.finditer(expression,source))
     if len(matches)!=1:raise ValueError('missing_or_duplicate_existing_'+tag)
     old=matches[0].group(0)
