@@ -69,6 +69,7 @@ class GardenRealtimePriorityTests(unittest.TestCase):
           'garden_person_gate_ready':True,
           'garden_person_gate_backend':'gpu',
           'garden_zone':'near','recording_rate_max_per_hour':-1,
+          'recording_hourly_quota_enabled':False,
           'temperature_c':26.0,'sd_free_bytes':79000000000,
           'garden_person_gate_last_queue_wait_ms':85,
           'garden_person_gate_prepare_errors':0,
