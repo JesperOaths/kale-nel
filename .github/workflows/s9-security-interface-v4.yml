@@ -1,0 +1,69 @@
+name: S9 Security UI V4 isolated
+on:
+  pull_request:
+    paths:
+      - "ops/c720p/s9-native-security/patch-security-date-category-folders.py"
+      - "ops/c720p/s9-native-security/patch-security-compact-layout.py"
+      - "ops/c720p/s9-native-security/patch-s9-saved-video-orientation.py"
+      - "ops/c720p/s9-native-security/patch-detector-version-badges.py"
+      - "ops/c720p/s9-native-security/deploy-security-ui-v4.py"
+      - "ops/c720p/s9-native-security/test-security-date-category-folders.py"
+      - "ops/c720p/s9-native-security/test-security-compact-layout.py"
+      - "ops/c720p/s9-native-security/test-deploy-security-ui-v4.py"
+      - ".github/workflows/s9-security-interface-v4.yml"
+  push:
+    paths:
+      - "ops/c720p/s9-native-security/patch-security-date-category-folders.py"
+      - "ops/c720p/s9-native-security/patch-security-compact-layout.py"
+      - "ops/c720p/s9-native-security/patch-s9-saved-video-orientation.py"
+      - "ops/c720p/s9-native-security/patch-detector-version-badges.py"
+      - "ops/c720p/s9-native-security/deploy-security-ui-v4.py"
+      - "ops/c720p/s9-native-security/test-security-date-category-folders.py"
+      - "ops/c720p/s9-native-security/test-security-compact-layout.py"
+      - "ops/c720p/s9-native-security/test-deploy-security-ui-v4.py"
+      - ".github/workflows/s9-security-interface-v4.yml"
+permissions:
+  contents: read
+jobs:
+  html-only-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Compile Python and parse injected JavaScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          S=ops/c720p/s9-native-security
+          for p in patch-security-date-category-folders.py patch-security-compact-layout.py patch-s9-saved-video-orientation.py patch-detector-version-badges.py deploy-security-ui-v4.py; do
+            python3 -m py_compile "$S/$p"
+          done
+          python3 - <<'PY'
+          import importlib.util,re,subprocess,tempfile
+          from pathlib import Path
+          root=Path('ops/c720p/s9-native-security')
+          for file,attributes in [
+            ('patch-security-date-category-folders.py',['SNIPPET']),
+            ('patch-security-compact-layout.py',['SAVED_SNIPPET']),
+            ('patch-s9-saved-video-orientation.py',['SNIPPET']),
+            ('patch-detector-version-badges.py',['SCRIPT']),
+          ]:
+            spec=importlib.util.spec_from_file_location('patch_'+file.replace('-','_').replace('.','_'),root/file)
+            module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+            for attr in attributes:
+              code=getattr(module,attr)
+              for i,script in enumerate(re.findall(r'<script[^>]*>([\s\S]*?)</script>',code)):
+                with tempfile.NamedTemporaryFile('w',suffix='.js') as out:
+                  out.write(script);out.flush()
+                  subprocess.run(['node','--check',out.name],check=True)
+          PY
+      - name: Regression and transaction tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          S=ops/c720p/s9-native-security
+          python3 "$S/test-security-date-category-folders.py"
+          python3 "$S/test-security-compact-layout.py"
+          python3 "$S/test-s9-saved-video-orientation.py"
+          python3 "$S/test-deploy-security-ui-v4.py"
+          echo "SECURITY_UI_V4_ISOLATED_TESTS_PASSED"
