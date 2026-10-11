@@ -330,12 +330,12 @@ public final class CameraService extends Service {
        // MediaRecorder needs a new physical file; preserve logical lineage.
        // Never bypass existing thermal/SD checks or claim gapless MP4 bytes.
        if(!pilotOnly&&!temporaryTest&&eventChain.continuationReady(SystemClock.elapsedRealtime())){
-        eventChain.cancelContinuation();segmentResumeAttempts++;
+        segmentResumeAttempts++;
         if(temperature()<415&&folder!=null&&folder.getUsableSpace()>15L*1024*1024*1024){
          cameraHandler.postDelayed(new Runnable(){public void run(){
           if(running&&"watching".equals(mode))startRecording();
          }},180);
-        }else{segmentResumeDenied++;saveFallbackEvidence("event_continuation_guard");}
+        }else{segmentResumeDenied++;eventChain.cancelContinuation();saveFallbackEvidence("event_continuation_guard");}
        }
      }catch(Exception e){failure("preview_request_failed",e);scheduleRecover();}
     }
