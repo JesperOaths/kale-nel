@@ -35,7 +35,7 @@ assert 'Number(rec.sampled_frames)' in TEMPLATE
 assert 'person_detected_frames_050' in TEMPLATE
 assert 'uncalibrated model outputs' in TEMPLATE
 assert 'gejast-auth-gate.js' in TEMPLATE
-assert 'original 4K retained' in TEMPLATE.lower()
+assert 'original 4k retained' in TEMPLATE.lower()
 assert '.replaceAll' in TEMPLATE
 with tempfile.TemporaryDirectory(prefix="security-v8-parse-") as directory:
  d=Path(directory)
