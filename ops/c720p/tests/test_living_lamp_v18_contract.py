@@ -57,6 +57,19 @@ class LivingLampV18Contract(unittest.TestCase):
         self.assertIn("BACKUP", PATCH.read_text())
         self.assertIn("shutil.copy2(BACKUP,SOURCE)", PATCH.read_text())
 
+    def test_startup_waits_for_two_fresh_writes(self):
+        text = PATCH.read_text()
+        self.assertIn("startup_deadline=time.monotonic()+35.0", text)
+        self.assertIn("healthy_samples>=2", text)
+        self.assertIn("sample_ts>restart_started_at", text)
+        self.assertIn('state.get("version")=="frontcam-motion-v18"', text)
+
+    def test_previous_rollback_backup_is_reused_only_if_verified(self):
+        text = PATCH.read_text()
+        self.assertIn("existing_backup_sha=hashlib.sha256(BACKUP.read_bytes()).hexdigest()", text)
+        self.assertIn("existing_backup_sha!=EXPECTED_SHA", text)
+        self.assertIn("shutil.copy2(BACKUP,SOURCE)", text)
+
     def test_requires_explicit_operator_action(self):
         source = PATCH.read_text()
         self.assertIn('parser.add_argument("--apply"', source)
