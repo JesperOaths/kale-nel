@@ -34,7 +34,7 @@ public final class GardenShadowPipeline {
   float[] box;
   Track(int id,long time,float[] v){
    this.id=id;first=time;last=time;frames=1;
-   strong=v[4]>=STRONG?1:0;box=v.clone();
+   strong=v[4]>=STRONG?1:0;box=v.clone();matched=true;
   }
  }
  public static final class Result {
