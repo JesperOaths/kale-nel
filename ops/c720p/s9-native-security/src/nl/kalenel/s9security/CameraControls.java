@@ -22,12 +22,20 @@ final class CameraControls {
  private final boolean torchSupported;
  private final boolean autoFocusSupported;
  private final boolean continuousSupported;
+ private final Range<Integer> captureFps;
  private float zoom=1f;
  private int exposureSteps=0;
  private boolean torch=false;
  private boolean autoFocus=false;
 
  CameraControls(CameraCharacteristics info) {
+  Range<Integer>[] advertised=info.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+  int[][] ranges=advertised==null?null:new int[advertised.length][2];
+  if(advertised!=null)for(int i=0;i<advertised.length;i++){
+   ranges[i][0]=advertised[i].getLower();ranges[i][1]=advertised[i].getUpper();
+  }
+  int fixed=CaptureCadence.choose(ranges);
+  captureFps=new Range<>(fixed,fixed);
   Rect r=info.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
   if(r==null||r.width()<100||r.height()<100)throw new IllegalArgumentException("sensor_crop_unavailable");
   sensor=new Rect(r);
@@ -101,6 +109,9 @@ final class CameraControls {
   }else throw new IllegalArgumentException("unknown_camera_control");
  }
  void apply(CaptureRequest.Builder builder){
+  // A 70-ms low-light exposure physically cannot supply 24 distinct frames/s.
+  // Use an advertised fixed cadence; AE retains control of ISO and shutter.
+  builder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,captureFps);
   builder.set(CaptureRequest.CONTROL_AF_MODE,autoFocus?
     CaptureRequest.CONTROL_AF_MODE_AUTO:CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO);
   int w=Math.max(2,Math.round(sensor.width()/zoom));
@@ -114,4 +125,5 @@ final class CameraControls {
     CaptureRequest.FLASH_MODE_TORCH:CaptureRequest.FLASH_MODE_OFF);
  }
  boolean isAutoFocus(){return autoFocus;}
+ int captureFps(){return captureFps.getUpper();}
 }

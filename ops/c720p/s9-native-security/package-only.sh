@@ -2,7 +2,7 @@
 # Sign an APK built from the same immutable revision as its compiled classes.
 set -Eeuo pipefail
 umask 077
-ROOT="$HOME/c720p-home-hub/build/s9-native-security"
+ROOT="${S9_BUILD_ROOT:-$HOME/c720p-home-hub/build/s9-native-security}"
 LIB="$HOME/c720p-home-hub/build/s9-person-ml-v1/deps"
 REFERENCE="$HOME/c720p-home-hub/build/s9-person-ml-v1/assets"
 test -s "$ROOT/.source-commit"
@@ -13,6 +13,9 @@ test -s "$ROOT/classes/nl/kalenel/s9security/PreviewJpeg.class"
 test -s "$ROOT/classes/nl/kalenel/s9security/CameraService.class"
 test -s "$ROOT/classes/nl/kalenel/s9security/CameraOrientation.class"
 test -s "$ROOT/classes/nl/kalenel/s9security/S9FaceReview.class"
+test -s "$ROOT/classes/nl/kalenel/s9security/LiveVideoEncoder.class"
+test -s "$ROOT/classes/nl/kalenel/s9security/H264AnnexB.class"
+test -s "$ROOT/classes/nl/kalenel/s9security/CaptureCadence.class"
 JAR="$(find /usr/lib/android-sdk/platforms -name android.jar | sort -V | tail -1)"
 test -s "$JAR"
 mkdir -p "$ROOT/assets" "$ROOT/dex" "$ROOT/pkg/lib/arm64-v8a"
