@@ -1,0 +1,12 @@
+[Unit]
+Description=Remove twice-reviewed empty S9+ quarantined clips while camera idle
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/run-cool-idle-quarantine-purge.py
+TimeoutStartSec=220
+Nice=15
+CPUQuota=12%
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
