@@ -44,9 +44,23 @@ def from_phone(phone,now_ms=None):
         age=now_ms-_LAST_CHANGED_AT if _LAST_CHANGED_AT else None
     recent=age is not None and 0<=age<=9000
     likely=recent and score>=0.44
+    backend=phone.get("garden_person_gate_backend","unknown")
+    if backend not in ("gpu","cpu","uninitialized","unavailable"):
+        backend="unknown"
+    ready=phone.get("garden_person_gate_ready")
+    if not isinstance(ready,bool):
+        ready=None
     return {
       "ok":True,"version":"s9-phone-garden-gpu-v2","read_only":True,
-      "label_is_ground_truth":False,"on_phone_gpu_inference":True,
+      "label_is_ground_truth":False,
+      "on_phone_gpu_inference":backend=="gpu" if backend!="unknown" else None,
+      "on_phone_person_inference":True,
+      "person_inference_backend":backend,
+      "person_inference_ready":ready,
+      "person_gate_queue_wait_ms":_sensor_value(
+          phone.get("garden_person_gate_last_queue_wait_ms"),0,600000),
+      "person_gate_stale_results":_sensor_value(
+          phone.get("garden_person_gate_stale_dropped"),0,1000000000),
       "hub_frame_decoding":False,"last_sample_at_ms":now_ms,
       "last_sample_age_ms":0,"samples":checked,"failures":failures,
       "camera_mode":phone["mode"],"camera_temperature_c":phone.get("temperature_c"),
