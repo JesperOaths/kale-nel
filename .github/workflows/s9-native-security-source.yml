@@ -18,6 +18,7 @@ jobs:
           set -euo pipefail
           for file in ops/c720p/s9-native-security/*.sh; do bash -n "$file"; done
           python3 ops/c720p/s9-native-security/test_pipeline_contract.py
+          python3 ops/c720p/s9-native-security/test-preroll-diagnostic-v1.py
           python3 ops/c720p/s9-native-security/test-historical-event-categories.py
           python3 ops/c720p/s9-native-security/test-live-person-watch.py
           python3 ops/c720p/s9-native-security/test-phone-detector-version-contract.py
