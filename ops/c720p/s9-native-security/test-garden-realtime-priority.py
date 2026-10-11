@@ -26,7 +26,7 @@ class GardenRealtimePriorityTests(unittest.TestCase):
         self.assertIn('!gardenGateReady',s)
         self.assertIn('realtime_person_detector_warming_or_unavailable',s)
         self.assertIn('realtime_person_detector_failed',gate)
-        self.assertIn('stale_person_result_skipped',gate)
+        self.assertIn('gardenPersonGateStale++',gate)
         self.assertIn('gardenPersonGateBusy',gate)
 
     def test_separate_pre_warmed_gpu_model_still_on_phone(self):
@@ -103,7 +103,7 @@ class GardenRealtimePriorityTests(unittest.TestCase):
             'PhoneMediaRange.handle',
             'PreviewJpeg.encode(copied,58)',
             'sensor_exposure_ms',
-            'garden_roi_adaptive_noise_consistent_person_gate_v3',
+            'person_first_periodic_temporal_track_v4',
             'Math.max(0,gateStarted-now)',
         ):
             self.assertIn(required,s)
