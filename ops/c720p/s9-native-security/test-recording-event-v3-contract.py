@@ -36,7 +36,7 @@ class Contract(unittest.TestCase):
     'thumbnail_nearest_frame_attempts', 'thumbnail_selection_human_verified',
     'thumbnail_source_time_ms', 'person_sample_timeline',
     'best.compress(Bitmap.CompressFormat.JPEG,92,o)',
-    'result.put("sha256",digest(mp4))'):
+    '.put("sha256",digest(mp4))'):
    self.assertIn(anchor,s)
   self.assertIn('writeJson(new File(folder,name+".verified.json"),result)',s)
   self.assertIn('if(best!=null)best.recycle()',s)
