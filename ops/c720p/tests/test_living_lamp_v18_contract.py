@@ -5,7 +5,7 @@ import runpy
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 PATCH = ROOT / "frontcam_motion_v18_normal_light_patch.py"
 
 class LivingLampV18Contract(unittest.TestCase):
