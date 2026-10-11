@@ -166,7 +166,25 @@ let driveRecords=[],driveOpenDays=new Set(),driveMonth='all',driveRendered=false
 async function drivePreview(img,r){
  const n=String(r.snapshot_name||''),a=relay();
  if(!n||!/^[A-Za-z0-9._-]{1,180}[.]jpg$/i.test(n)||n.includes('..')||!a?.url)return;
- try{const src=await a.url('/new/drive/saved/snap/'+encodeURIComponent(n));if(img.isConnected)img.src=src}catch(_){}
+ // DRIVE_PREVIEW_RETRY_V1: the C720P rebuilds historical Drive JPEG previews
+ // on a low-priority timer. Recover missing thumbnails without a page reload.
+ let tries=0,timer=null;
+ const schedule=()=>{
+  if(tries>=16||!img.isConnected||img.dataset.drivePreviewReady==='1')return;
+  if(timer!==null)clearTimeout(timer);
+  timer=setTimeout(fetchPreview,45000);
+ };
+ const fetchPreview=async()=>{
+  if(!img.isConnected||img.dataset.drivePreviewReady==='1')return;
+  tries++;
+  try{
+   const src=await a.url('/new/drive/saved/snap/'+encodeURIComponent(n));
+   if(img.isConnected)img.src=src;
+  }catch(_){schedule()}
+ };
+ img.onload=()=>{img.dataset.drivePreviewReady='1';if(timer!==null)clearTimeout(timer)};
+ img.onerror=()=>{img.removeAttribute('src');schedule()};
+ fetchPreview();
 }
 function driveCard(r){
  const btn=create('button','clip');btn.type='button';

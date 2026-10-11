@@ -1,0 +1,45 @@
+name: C720P Historical Drive Thumbnail Preview Retry
+
+on:
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/security-archive-v7.html'
+      - 'ops/c720p/s9-native-security/deploy-drive-preview-retry-v1.py'
+      - '.github/workflows/c720p-drive-preview-retry-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/security-archive-v7.html'
+      - 'ops/c720p/s9-native-security/deploy-drive-preview-retry-v1.py'
+      - '.github/workflows/c720p-drive-preview-retry-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Check historical Drive Archive JS syntax, bounded retries and pinned live patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-drive-preview-retry-v1.py
+          python3 - <<'PY'
+          import pathlib,re
+          page=pathlib.Path("ops/c720p/s9-native-security/security-archive-v7.html").read_text()
+          assert page.count("DRIVE_PREVIEW_RETRY_V1")==1
+          assert "tries>=16" in page
+          assert "setTimeout(fetchPreview,45000)" in page
+          assert "img.dataset.drivePreviewReady='1'" in page
+          assert "a.url('/new/drive/saved/snap/'" in page
+          scripts=re.findall(r"<script(?:\s+[^>]*)?>([\s\S]*?)</script>",page,re.I)
+          assert scripts
+          for i,src in enumerate(scripts):
+              pathlib.Path("/tmp/c720p-drive-archive-script-"+str(i)+".js").write_text(src)
+          pathlib.Path("/tmp/c720p-drive-archive-script-count").write_text(str(len(scripts)))
+          PY
+          for js in /tmp/c720p-drive-archive-script-*.js; do node --check "$js"; done
+          echo "DRIVE_ARCHIVE_THUMB_RETRY_V1_JS_PASS"
