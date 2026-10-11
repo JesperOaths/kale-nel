@@ -382,9 +382,10 @@ public final class CameraService extends Service {
    return 90;
   }
  }
- private void startRecording(){
+ private void startRecording(){startRecording(false);}
+ private void startRecording(boolean confirmedGardenPerson){
   if(!running||(pilotOnly&&!temporaryTest)||!"watching".equals(mode))return;
-  if(!rateAllowed(motion.strong)){
+  if(!rateAllowed(motion.strong||confirmedGardenPerson)){
    if(suppressedByRate++%140==0)Log.w(TAG,"4K_RATE_GUARD_PRIORITY_RESERVE_EXHAUSTED_OR_WEAK");
    saveFallbackEvidence("recording_budget_rejected");
    cooldownUntil=SystemClock.elapsedRealtime()+12000;
@@ -425,6 +426,7 @@ public final class CameraService extends Service {
       noteRecordingStarted();
       lastStart=SystemClock.elapsedRealtime();
       lastRecordAt=lastStart;
+      if(confirmedGardenPerson)gardenPresence.videoStarted(lastStart);
       mode="recording";
       Log.i(TAG,"START_MOTION_4K "+finished.getName());
       if(temporaryTest)cameraHandler.postDelayed(new Runnable(){public void run(){if("recording".equals(mode))stopRecording("pilot_short");}},9000);
@@ -788,6 +790,7 @@ public final class CameraService extends Service {
          .putString("garden_zone",value).commit())
       return response.put("ok",false).put("error","failed_to_save_garden_region");
      motion.setGardenZone(value);
+     gardenPresence.reset();
      cameraControlSettleUntil=SystemClock.elapsedRealtime()+2500L;
      return response.put("ok",true).put("key",key).put("value",motion.gardenZone())
        .put("top_fraction",motion.topBoundary()).put("mode",mode);
@@ -812,6 +815,7 @@ public final class CameraService extends Service {
     // Refresh the motion model after a deliberate camera setting change.
     // Without this reset a changed crop/torch/exposure can look like an intruder.
     motion.resetForCameraControl();
+    gardenPresence.reset();
     cameraControlSettleUntil=SystemClock.elapsedRealtime()+2500L;
     if("focus".equals(key)&&cameraControls.isAutoFocus()){
      CaptureRequest.Builder focus=camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
