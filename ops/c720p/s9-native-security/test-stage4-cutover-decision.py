@@ -60,7 +60,7 @@ class Gate(unittest.TestCase):
   self.assertIn("candidate_false_alarms_increase_night",d["blockers"])
   rows=gold()
   for r in rows:
-   if r["lighting"]=="night" and r["person_present"]=="yes" and r["window_id"].endswith("-0"):
+   if r["lighting"]=="night" and r["person_present"]=="yes" and int(r["window_id"].rsplit("-",1)[1])<=10:
     r["candidate_alarm"]="no"
   self.assertFalse(mod.evaluate(rows,health())["eligible_for_guarded_shadow_cutover"])
  def test_matched_annotated_windows_required(self):
