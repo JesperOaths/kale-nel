@@ -263,7 +263,9 @@ public final class CameraService extends Service {
       if(!pilotOnly&&"watching".equals(mode)){
        // Motion merely requests on-device person inference. Vehicles on the
        // road and non-person garden motion do not start new videos.
-       evaluateGardenPersonAsync();
+       if(!gardenGateReady)
+        saveFallbackEvidence("realtime_person_detector_warming_or_unavailable");
+       else evaluateGardenPersonAsync();
       }
      }
      if("recording".equals(mode)&&lastFrameAt-lastStart>2500&&
@@ -336,14 +338,21 @@ public final class CameraService extends Service {
      gardenPersonGateQueueWaitMs=Math.max(0,gateStarted-now);
      gardenPersonGateChecks++;
      gardenPersonGateScore=score;
-     if(error){gardenPersonGateErrors++;return;}
+     if(error){
+      gardenPersonGateErrors++;
+      saveFallbackEvidence("realtime_person_detector_failed");
+      return;
+     }
      if(score<0.44f){gardenPersonGateRejects++;return;}
      gardenPersonGateMatches++;
      // Do not start recording on stale detections, if the camera has moved
      // into a new capture session, or after a deliberate controls change.
      if(!running||!"watching".equals(mode)||SystemClock.elapsedRealtime()-now>3500||
          lastFrameAt<cameraControlSettleUntil){
-      gardenPersonGateStale++;return;
+      gardenPersonGateStale++;
+      if(running&&"watching".equals(mode))
+       saveFallbackEvidence("stale_person_result_skipped");
+      return;
      }
      if(lastFrameAt<cooldownUntil)saveFallbackEvidence("cooldown_person_candidate");
      else if(temperature()<415 && folder!=null&&
@@ -351,7 +360,10 @@ public final class CameraService extends Service {
      else saveFallbackEvidence("thermal_or_space_guard");
     }});
    }});
-  }catch(RejectedExecutionException exc){gardenPersonGateBusy=false;gardenPersonGateErrors++;}
+  }catch(RejectedExecutionException exc){
+   gardenPersonGateBusy=false;gardenPersonGateErrors++;
+   saveFallbackEvidence("realtime_person_detector_queue_unavailable");
+  }
  }
  private boolean rateAllowed(boolean sustainedCoherent){
   if(temporaryTest)return true;
