@@ -39,6 +39,11 @@ public final class GardenPersonTrackGateTest{
   check(GardenPersonTrackGate.samePerson(person,moved),"moving cross-frame object");
   check(!GardenPersonTrackGate.valid(new float[]{.2f,.2f,.2f,.9f}),"reject flat box");
   check(!GardenPersonTrackGate.valid(new float[]{.2f,Float.NaN,.6f,.9f}),"reject NaN");
+  gate.reset();
+  eq(gate.offer(16000,15900,.52f,person,1),GardenPersonTrackGate.Decision.FIRST,"brief person begins");
+  eq(gate.offer(16800,16700,.24f,person,0),GardenPersonTrackGate.Decision.WEAK,"lowlight frame dropout");
+  eq(gate.offer(17700,17650,.55f,moved,2),GardenPersonTrackGate.Decision.CONFIRMED,
+      "intermediate weak frame does not lose real walker");
   System.out.println("S9_PERSON_SPATIAL_MOTION_V7_PASS "+assertions);
  }
 }
