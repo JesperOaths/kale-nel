@@ -62,7 +62,7 @@ def main():
   status=json.loads(statepath.read_text())
   if status.get("test_recording_triggered") is not False:raise RuntimeError("validation_not_read_only")
   ctl("daemon-reload");ctl("enable","--now",TIMER)
-  if ctl("is-active",TIMER)!="active":raise RuntimeError("local_timer_inactive")
+  if ctl("is-active",TIMER.name)!="active":raise RuntimeError("local_timer_inactive")
   print("C720P_LOCAL_PREROLL_VERIFICATION_ACTIVE",json.dumps({"timer":"5 minutes",
     "initial_status":status.get("status"),"first_run":run.stdout[-400:],
     "archive_count":status.get("archive_clips"),"backup":str(backup),
