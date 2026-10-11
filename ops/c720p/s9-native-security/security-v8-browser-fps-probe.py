@@ -24,7 +24,10 @@ def main():
   tab=None
   for i in range(40):
    d=next((x for x in mod.get("json/list") if x.get("id")==target),None)
-   if d and d.get("webSocketDebuggerUrl"):tab=mod.Socket(d["webSocketDebuggerUrl"]);break
+   if d and d.get("webSocketDebuggerUrl"):
+    tab=mod.Socket(d["webSocketDebuggerUrl"])
+    tab.sock.settimeout(45)
+    break
    time.sleep(.25)
   if tab is None:raise RuntimeError("CDP_background_tab_missing")
   try:
