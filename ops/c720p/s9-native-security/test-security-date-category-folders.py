@@ -33,7 +33,7 @@ class TestFolders(unittest.TestCase):
         self.assertIn('content_categories',updated)
         self.assertIn("C720PSecureRelay",updated)
         self.assertIn("onClick" if False else "addEventListener('click'",updated)
-        self.assertIn('model estimates',updated)
+        self.assertIn('model suggestions',updated)
         self.assertNotIn('DELETE',module.SNIPPET)
         self.assertNotIn('unlink(',module.SNIPPET)
         self.assertNotIn('localStorage.setItem',module.SNIPPET)
