@@ -4,7 +4,7 @@
 Returns the hub to its original active tab after a bounded short 4K test.
 Does not record video, touch camera controls or change hub browser settings.
 """
-import importlib.util,json,time,urllib.request
+import importlib.util,json,os,time,urllib.request
 from pathlib import Path
 LIB=Path("/home/jespern/c720p-home-hub/build/security-v8/security-v8-real-browser-probe.py")
 spec=importlib.util.spec_from_file_location("security_cdp",LIB)
@@ -15,7 +15,8 @@ def main():
  with urllib.request.urlopen("http://127.0.0.1:8795/new/api/saved",timeout=12) as r:archive=json.load(r)
  clips=sorted((str(x.get("clip_no","")) for x in archive["events"] if str(x.get("clip_no","")).startswith("motion_")),reverse=True)
  if not clips:raise RuntimeError("no_native_clips_for_probe")
- clip=clips[0]
+ clip=os.environ.get("S9_TEST_CLIP",clips[0])
+ if clip not in clips:raise RuntimeError("test_clip_not_indexed")
  browser=mod.Socket(mod.get("json/version")["webSocketDebuggerUrl"])
  original=next((x for x in mod.get("json/list") if x.get("type")=="page" and "c720p-hub" in x.get("url","")),None)
  target=None
