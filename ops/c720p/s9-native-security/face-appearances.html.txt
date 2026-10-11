@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<meta http-equiv="Cache-Control" content="no-store,max-age=0">
+<meta http-equiv="Referrer-Policy" content="no-referrer">
+<title>S9+ Faces &amp; Appearances</title>
+<style>
+:root{color-scheme:dark;--bg:#081824;--surface:#102b3d;--raised:#1a394d;--line:#41627b;--ink:#f0faff;--muted:#b9d0de;--cyan:#86def2;--amber:#ffca84}
+*{box-sizing:border-box}
+body{font:14px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;margin:0;padding:18px;background:var(--bg);color:var(--ink)}
+a{color:var(--cyan)}button,input,select{font:inherit}
+button{border:1px solid #6997ac;background:#244b62;border-radius:9px;color:var(--ink);padding:8px 12px;cursor:pointer}
+button:hover{background:#32647f}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #b9effd;outline-offset:2px}
+button:disabled{opacity:.5;cursor:default}h1{font-size:clamp(22px,3vw,31px);margin:0 0 3px;line-height:1.15;letter-spacing:-.03em}
+h2{font-size:16px;margin:0 0 8px}p{margin:5px 0 12px;color:var(--muted)}
+.heading{display:flex;flex-wrap:wrap;justify-content:space-between;gap:13px;align-items:flex-start}
+.kicker{font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--cyan)}
+.version{font-size:11px;color:#adcada;margin-top:7px}.state{border:1px solid var(--line);background:var(--surface);padding:7px 10px;border-radius:999px;font-size:12px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:17px 0}
+.stat{padding:13px;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.stat strong{display:block;font-size:26px;line-height:1.15;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.notice{border:1px solid #706341;background:#262619;padding:11px 13px;border-radius:11px;font-size:12px;color:#f7dfb5;margin-bottom:14px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.filters button[aria-pressed="true"]{background:#e3f7ff;color:#102334;border-color:#e3f7ff;font-weight:800}
+.filters input{min-width:190px;flex:1;border:1px solid var(--line);background:#122c3c;color:var(--ink);border-radius:9px;padding:9px 10px}
+.filters select{background:#122c3c;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px}
+.count{font-size:12px;color:var(--muted);margin-bottom:11px}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,235px),1fr));gap:12px;align-items:stretch}
+.card{border:1px solid var(--line);background:var(--surface);border-radius:14px;overflow:hidden;min-width:0;display:flex;flex-direction:column}
+.visual{height:195px;display:flex;align-items:center;justify-content:center;background:linear-gradient(140deg,#213b49,#0a202c);position:relative}
+.visual img{width:100%;height:100%;object-fit:contain}
+.visual small{font-size:12px;color:#cbd9e2;text-align:center;padding:16px}
+.visual .type{position:absolute;top:9px;left:9px;border:1px solid #83a4b5;background:#0a1b25e8;border-radius:7px;padding:3px 7px;font-weight:750;font-size:11px}
+.card-body{padding:12px;display:flex;flex-direction:column;gap:5px;flex:1}
+.card h3{font-size:14px;margin:0;overflow-wrap:anywhere}
+.subtle{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin:4px 0}
+.chip{border:1px solid #577b92;border-radius:999px;padding:2px 7px;font-size:11px;color:#dfedf8}
+.chip.warn{border-color:#a27d49;color:#f6d6a8}
+.swatch{display:inline-block;width:9px;height:9px;border-radius:50%;border:1px solid #bfd4db;margin-right:4px;vertical-align:middle}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:auto;padding-top:7px}.actions button{font-size:12px;padding:7px 9px}
+.empty{border:1px dashed #486982;padding:28px 16px;border-radius:12px;text-align:center;grid-column:1/-1;color:var(--muted)}
+.more{display:block;margin:18px auto}
+dialog{color:var(--ink);background:#102332;border:1px solid #6992aa;border-radius:13px;width:min(1100px,95vw);max-height:92vh;padding:12px}
+dialog::backdrop{background:#000d}dialog video{width:100%;max-height:75vh;background:black;display:block;margin:8px 0}
+.modal-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.watermark{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#a7c6d4;background:#0a2234ee;border:1px solid #45677d;border-radius:999px;padding:3px 9px;z-index:8;white-space:nowrap}
+footer{font-size:11px;color:#a8c0d1;margin:25px 0 8px}
+@media(max-width:720px){body{padding:12px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.visual{height:210px}}
+</style>
+</head>
+<body>
+<div class="heading">
+ <div><div class="kicker">S9+ · on-phone visual evidence</div><h1>Faces &amp; Appearances</h1>
+ <p>A visual timeline of sampled faces, temporary person tracks, and clothing clues.</p></div>
+ <span id="state" class="state" aria-live="polite">Connecting to camera archive…</span>
+</div>
+<section class="stats" aria-label="Visual evidence counters">
+ <div class="stat"><strong id="facesCount">—</strong><span>Face snapshots</span></div>
+ <div class="stat"><strong id="sightingsCount">—</strong><span>Appearance observations</span></div>
+ <div class="stat"><strong id="personClipsCount">—</strong><span>Clips with person evidence</span></div>
+ <div class="stat"><strong id="waitingCount">—</strong><span>Clips awaiting face review</span></div>
+</section>
+<div class="notice">Facial matches and clothing colours are <b>unverified suggestions</b>. A repeated anonymous number does not prove the same individual across videos. Confidence is a model score, not identification accuracy. This page does not upload or store face images on the C720P.</div>
+<div class="filters" id="filters" aria-label="Gallery filters">
+ <button type="button" data-kind="all" aria-pressed="true">All evidence</button>
+ <button type="button" data-kind="face" aria-pressed="false">Face snapshots</button>
+ <button type="button" data-kind="appearance" aria-pressed="false">Clothing &amp; tracks</button>
+ <button type="button" data-kind="review" aria-pressed="false">Needs review</button>
+ <input id="search" type="search" autocomplete="off" placeholder="Search ID, clothing colour, date…" aria-label="Search appearance evidence">
+ <select id="colorFilter" aria-label="Filter by clothing colour"><option value="">All clothing colours</option></select>
+ <button id="refresh" type="button">Refresh</button>
+</div>
+<div id="count" class="count" role="status"></div>
+<main id="gallery" class="gallery" aria-live="polite"><div class="empty">Loading saved S9+ recording metadata…</div></main>
+<button id="more" class="more" type="button" hidden>Show more evidence</button>
+<dialog id="playerDialog" aria-label="Original S9 camera recording">
+ <div class="modal-head"><strong id="playerLabel">Original recording</strong><button id="closePlayer" type="button">Close</button></div>
+ <video id="player" controls playsinline preload="metadata"></video>
+ <div class="subtle">Played directly from the S9+ microSD through the authenticated relay. Person identities have not been confirmed.</div>
+</dialog>
+<footer>Faces and video stay in the phone's existing microSD archive. Face crops are streamed only when visible and are not permanently cached by this page. Original 4K recordings are preserved.</footer>
+<script id="s9-faces-appearances-gallery-v1">
+window.GEJAST_PAGE_VERSION='v817';
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const clipOK=/^motion_[0-9]{13}[.]mp4$/;
+const cropOK=/^motion_[0-9]{13}__[A-Za-z0-9_-]{1,65}__[0-9]{1,9}_[0-2][.]jpg$/;
+const types={face:'Face crop',appearance:'Appearance',review:'Person clip'};
+const colours={black:'#252d34',white:'#eff4fa',gray:'#94a3b8',red:'#d45757',orange:'#e5964b',yellow:'#ecd05d',green:'#59ae7e',blue:'#5694d2',purple_or_pink:'#ae8ccc',brown:'#97715b'};
+const state={data:[],items:[],kind:'all',page:1,query:'',color:'',busy:false,observer:null};
+const make=(tag,value,cls)=>{const e=document.createElement(tag);if(value!==undefined)e.textContent=String(value);if(cls)e.className=cls;return e;};
+const relay=()=>{
+ if(window.C720PSecureRelay?.fetch && window.C720PSecureRelay?.url)return window.C720PSecureRelay;
+ try{if(window.parent!==window&&window.parent.location.origin===window.location.origin&&window.parent.C720PSecureRelay?.fetch&&window.parent.C720PSecureRelay?.url)return window.parent.C720PSecureRelay;}catch(_){}
+ return null;
+};
+function safeSnap(rec,snap){return clipOK.test(String(rec.clip_no||'')) && cropOK.test(String(snap||'')) && String(snap).startsWith(rec.clip_no.slice(0,-4)+'__');}
+function clipStamp(rec){const name=String(rec.clip_no||'');return clipOK.test(name)?Number(name.slice(7,20)):0;}
+function displayTime(rec){
+ const ms=clipStamp(rec);
+ if(ms){try{return new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(ms));}catch(_){}}
+ return String(rec.timestamp||'Unknown date');
+}
+function addChip(host,name,klass){
+ const b=make('span',name,'chip'+(klass?' '+klass:''));host.append(b);return b;
+}
+function read(){
+ const items=[];
+ for(const rec of state.data){
+  const timestamp=clipStamp(rec),tracks=Array.isArray(rec.anonymous_tracks)?rec.anonymous_tracks:[];
+  const faces=Array.isArray(rec.face_candidates)?rec.face_candidates:[];
+  for(const f of faces.slice(0,8)){
+   const snap=safeSnap(rec,f.snapshot_name)?f.snapshot_name:null;
+   if(!snap)continue;
+   items.push({kind:'face',rec,face:f,snap,timestamp,search:[rec.clip_no,f.person_id,f.candidate_name,f.match_status,rec.timestamp].join(' ').toLowerCase()});
+  }
+  for(const t of tracks.slice(0,64)){
+   const id=String(t.id||'');
+   if(!/^Person (?:[1-9]|[1-5][0-9]|6[0-4])$/.test(id))continue;
+   const colour=Object.hasOwn(colours,t.upper_clothing_colour)?t.upper_clothing_colour:'';
+   items.push({kind:'appearance',rec,track:t,colour,timestamp,search:[rec.clip_no,rec.timestamp,id,colour].join(' ').toLowerCase()});
+  }
+  // A missing frontal face is a review opportunity, not an identified person.
+  if(Number(rec.person_count)>0 && faces.every(f=>!safeSnap(rec,f.snapshot_name))){
+   items.push({kind:'review',rec,timestamp,search:[rec.clip_no,rec.timestamp,rec.face_review_status,'needs review'].join(' ').toLowerCase()});
+  }
+ }
+ items.sort((a,b)=>b.timestamp-a.timestamp || (a.kind==='face'?-1:1));
+ state.items=items;
+ const faceCount=items.filter(x=>x.kind==='face').length;
+ const appearanceCount=items.filter(x=>x.kind==='appearance').length;
+ const personClips=state.data.filter(x=>Number(x.person_count)>0).length;
+ const waiting=state.data.filter(x=>Number(x.person_count)>0 && !(x.face_candidates||[]).some(f=>safeSnap(x,f.snapshot_name))).length;
+ $('facesCount').textContent=String(faceCount);
+ $('sightingsCount').textContent=String(appearanceCount);
+ $('personClipsCount').textContent=String(personClips);
+ $('waitingCount').textContent=String(waiting);
+}
+function addVisual(card,item){
+ const v=make('div',undefined,'visual');const badge=make('span',types[item.kind],'type');v.append(badge);
+ const snap=item.kind==='face'?item.snap:
+   item.rec.snapshot_name && /^motion_[0-9]{13}[.]mp4[.]thumb[.]jpg$/.test(String(item.rec.snapshot_name))?item.rec.snapshot_name:null;
+ if(snap){
+  const img=make('img');img.alt=item.kind==='face'?'Frontal face crop, unverified person candidate':'Video scene thumbnail, NOT an isolated face';
+  img.loading='lazy';img.decoding='async';img.dataset.relayPath=item.kind==='face'?'/new/saved/face/'+snap:'/new/saved/snap/'+snap;
+  v.append(img);state.observer?.observe(img);
+ }else v.append(make('small',item.kind==='face'?'Face image unavailable':'No isolated face crop. View original video for context.'));
+ card.append(v);
+}
+function addTrackClues(card,item){
+ const tr=item.track,clips=make('div',undefined,'chips');
+ addChip(clips,String(tr.id||'Person (clip only)'));
+ if(item.colour){
+  const badge=addChip(clips,'Clothing: '+item.colour.replaceAll('_',' '));
+  const swatch=make('i',undefined,'swatch');swatch.style.backgroundColor=colours[item.colour];badge.prepend(swatch);
+ }
+ card.append(clips);
+ card.append(make('div','Observed from '+Number(tr.sample_count||0)+' sampled frames · '+(Number(tr.first_sample_ms||0)/1000).toFixed(1)+'–'+(Number(tr.last_sample_ms||0)/1000).toFixed(1)+' s','subtle'));
+}
+async function play(rec,at,button){
+ const r=relay();if(!r||!clipOK.test(String(rec.clip_no||'')))return;
+ button.disabled=true;
+ try{
+  const url=await r.url('/new/saved/clip/'+encodeURIComponent(rec.clip_no));
+  const vid=$('player'),dlg=$('playerDialog');
+  $('playerLabel').textContent=displayTime(rec)+' · '+rec.clip_no;
+  vid.src=url;vid.load();
+  const atSeconds=Number(at)/1000;
+  if(Number.isFinite(atSeconds)&&atSeconds>0)vid.addEventListener('loadedmetadata',()=>{
+   try{vid.currentTime=Math.max(0,Math.min(atSeconds,Math.max(0,vid.duration-0.25)));}catch(_){}
+  },{once:true});
+  dlg.showModal();
+ }catch(_){button.textContent='Recording unavailable';}
+ finally{button.disabled=false;}
+}
+function cardFor(item){
+ const rec=item.rec,card=make('article',undefined,'card');addVisual(card,item);
+ const body=make('div',undefined,'card-body');
+ body.append(make('h3',item.kind==='face'
+  ?(typeof item.face.candidate_name==='string'&&item.face.candidate_name?'Candidate: '+item.face.candidate_name:'Anonymous face candidate')
+  :item.kind==='appearance'?'Clothing & movement clue':'Person detected · face not captured'));
+ body.append(make('div',displayTime(rec),'subtle'));
+ if(item.kind==='face'){
+  const chips=make('div',undefined,'chips');
+  addChip(chips,String(item.face.person_id||'Anonymous candidate'));
+  addChip(chips,'Unverified similarity','warn');
+  body.append(chips);
+  if(item.face.match_status)body.append(make('div',String(item.face.match_status).replaceAll('_',' '),'subtle'));
+  if(Number.isFinite(item.face.time_ms))body.append(make('div','Captured at '+(item.face.time_ms/1000).toFixed(1)+' s of clip','subtle'));
+ }else if(item.kind==='appearance')addTrackClues(body,item);
+ else{
+  const chips=make('div',undefined,'chips');addChip(chips,'Needs face review','warn');body.append(chips);
+  body.append(make('div','No suitable frontal crop in sampled frames. The video may still show a person.','subtle'));
+ }
+ body.append(make('div',rec.clip_no,'subtle'));
+ const actions=make('div',undefined,'actions'),watch=make('button','Play original clip');
+ watch.type='button';watch.addEventListener('click',()=>play(rec,item.kind==='face'?item.face.time_ms:item.kind==='appearance'?item.track.first_sample_ms:0,watch));
+ actions.append(watch);body.append(actions);card.append(body);return card;
+}
+function filtered(){
+ return state.items.filter(x=>(state.kind==='all'||state.kind===x.kind) &&
+   (!state.color||x.colour===state.color) && (!state.query||x.search.includes(state.query)));
+}
+function render(){
+ state.observer?.disconnect();
+ state.observer=('IntersectionObserver' in window)?new IntersectionObserver(entries=>{
+  for(const e of entries){if(!e.isIntersecting)continue;state.observer.unobserve(e.target);loadImage(e.target);}
+ },{rootMargin:'200px'}):null;
+ const matches=filtered(),limit=state.page*24,chosen=matches.slice(0,limit),gallery=$('gallery');
+ gallery.replaceChildren();
+ if(!chosen.length){
+  const note=state.kind==='face'?'No saved frontal-face crops match these filters. S9+ person videos remain available in Appearance and Needs review.':
+    'No matching evidence. Try another filter or review newer S9+ motion clips.';
+  gallery.append(make('div',note,'empty'));
+ }
+ for(const item of chosen)gallery.append(cardFor(item));
+ $('count').textContent='Showing '+chosen.length+' of '+matches.length+' evidence entries. Entries are not counts of unique people.';
+ $('more').hidden=chosen.length>=matches.length;
+ if(!state.observer)for(const img of gallery.querySelectorAll('img[data-relay-path]'))loadImage(img);
+}
+async function loadImage(img){
+ if(!img.isConnected||img.dataset.loaded==='1')return;
+ img.dataset.loaded='1';
+ const path=img.dataset.relayPath;
+ if(!path||!/^\/new\/saved\/(face|snap)\/[A-Za-z0-9._-]+$/.test(path))return;
+ try{const r=relay();if(!r?.url)throw Error('relay');const signed=await r.url(path);if(img.isConnected)img.src=signed;}
+ catch(_){if(img.isConnected){img.remove();}}
+}
+async function refresh(){
+ if(state.busy)return;state.busy=true;
+ $('state').textContent='Reading S9+ microSD index…';
+ try{
+  const r=relay();if(!r?.fetch)throw Error('authenticated_relay_unavailable');
+  const response=await r.fetch('/new/api/saved',{cache:'no-store'});
+  if(!response.ok)throw Error('archive_unavailable');
+  const payload=await response.json();
+  if(payload.archive_mode!=='S9-microSD-only'||!Array.isArray(payload.events))throw Error('archive_contract_invalid');
+  state.data=payload.events.filter(e=>clipOK.test(String(e.clip_no||'')));
+  read();render();$('state').textContent='S9+ archive connected · '+state.data.length+' clips';
+ }catch(_){
+  $('state').textContent='Camera archive unavailable';
+  if(!state.items.length)$('gallery').replaceChildren(make('div','The authenticated archive cannot be reached. Original recording continues independently.','empty'));
+ }finally{state.busy=false;}
+}
+$('filters').addEventListener('click',event=>{
+ const b=event.target.closest('button[data-kind]');if(!b)return;
+ state.kind=b.dataset.kind;state.page=1;
+ for(const n of document.querySelectorAll('button[data-kind]'))n.setAttribute('aria-pressed',String(n===b));
+ render();
+});
+$('search').addEventListener('input',e=>{state.query=String(e.target.value||'').toLowerCase().trim().slice(0,120);state.page=1;render();});
+$('colorFilter').addEventListener('change',e=>{state.color=e.target.value;state.page=1;render();});
+for(const [id] of Object.entries(colours)){
+ const opt=make('option',id.replaceAll('_',' '));opt.value=id;$('colorFilter').append(opt);
+}
+$('refresh').addEventListener('click',refresh);
+$('more').addEventListener('click',()=>{state.page++;render();});
+function stopVideo(){const v=$('player');v.pause();v.removeAttribute('src');v.load();}
+$('closePlayer').addEventListener('click',()=>$('playerDialog').close());
+$('playerDialog').addEventListener('close',stopVideo);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopVideo();else refresh();});
+window.addEventListener('pagehide',stopVideo);
+refresh();
+window.setInterval(()=>{if(!document.hidden)refresh();},90000);
+})();
+</script>
+<div class="watermark">v817 - Made by Bruis</div>
+</body>
+</html>
