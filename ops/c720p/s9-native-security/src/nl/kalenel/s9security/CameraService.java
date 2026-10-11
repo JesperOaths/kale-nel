@@ -104,6 +104,8 @@ public final class CameraService extends Service {
  private volatile long gardenTriageLastScan=0;
  private volatile boolean gardenTriageQueued=false;
  private long gardenTriageCutoffMs=0;
+ private volatile boolean thumbnailV4Queued=false;
+ private volatile long thumbnailV4LastAt=0,thumbnailV4Updated=0,thumbnailV4Errors=0;
  private long lastFallbackAt=0;
  // Near-camera person gate executes on the S9+ review worker, never on C720P.
  // Only cameraHandler can start/stop the native MediaRecorder.
@@ -761,6 +763,61 @@ public final class CameraService extends Service {
    gardenTriageQueued=false;
   }
  }
+ /** One on-phone event-thumbnail backfill per cool/idle interval.
+  * Historic manifests may already carry earlier "garden" thumbs; V4 reranks
+  * up to ten video frames before marking the newer thumb in the manifest.
+  * No decoding, transcoding or classification occurs on the C720P.
+  */
+ private void maybeThumbnailV4Backfill(){
+  final long now=SystemClock.elapsedRealtime();
+  if(!running||thumbnailV4Queued||now-thumbnailV4LastAt<75000L||
+     folder==null||classifier==null||reviewer==null||
+     !"watching".equals(mode)||temperature()>=345||
+     gardenPersonGateBusy||historicalQueued||faceBackfillQueued||gardenTriageQueued||
+     motion.motion||personEvents.isActive(now)||
+     (personEvents.lastPersonSeenAt()>0&&now-personEvents.lastPersonSeenAt()<60000L)||
+     (lastMovementAt>0&&now-lastMovementAt<60000L)||
+     folder.getUsableSpace()<20L*1024*1024*1024)return;
+  thumbnailV4Queued=true;
+  final File media=folder;
+  try{
+   reviewer.execute(new Runnable(){public void run(){
+    try{
+     if(!running||!"watching".equals(mode)||temperature()>=345)return;
+     File[] manifests=media.listFiles((d,n)->n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
+     if(manifests==null)return;
+     Arrays.sort(manifests,Comparator.comparing(File::getName).reversed());
+     int inspected=0;
+     for(File manifest:manifests){
+      if(++inspected>800||!running||!"watching".equals(mode)||temperature()>=345||
+         gardenPersonGateBusy)return;
+      if(manifest.length()<100||manifest.length()>250000)continue;
+      String name=manifest.getName().replace(".verified.json","");
+      File movie=new File(media,name);
+      if(!movie.isFile()||movie.length()<200000||movie.length()>850000000)continue;
+      try{
+       JSONObject meta=new JSONObject(new String(
+        java.nio.file.Files.readAllBytes(manifest.toPath()),"UTF-8"));
+       if(!name.equals(meta.optString("name"))||
+          meta.optLong("bytes",-1)!=movie.length()||
+          !"S9_microSD_only".equals(meta.optString("archive"))||
+          "v4_best_event_frame".equals(meta.optString("thumbnail_focus")))continue;
+       if(classifier.rebuildGardenThumbnail(movie,media,meta))thumbnailV4Updated++;
+       return;
+      }catch(Exception problem){
+       thumbnailV4Errors++;
+       Log.w(TAG,"thumbnail_v4_backfill_skip",problem);
+      }
+     }
+    }finally{
+     thumbnailV4LastAt=SystemClock.elapsedRealtime();
+     thumbnailV4Queued=false;
+    }
+   }});
+  }catch(RejectedExecutionException e){
+   thumbnailV4Queued=false;thumbnailV4Errors++;
+  }
+ }
  private void watchdog(){
   if(!running)return;
   long n=SystemClock.elapsedRealtime();
@@ -771,6 +828,7 @@ public final class CameraService extends Service {
   maybeHistoricalImport();
   maybeFaceBackfill();
   maybeGardenArchiveTriage();
+  maybeThumbnailV4Backfill();
   cameraHandler.postDelayed(new Runnable(){public void run(){watchdog();}},4500);
  }
  private void failure(String text,Throwable e){
@@ -791,6 +849,10 @@ public final class CameraService extends Service {
    d.put("person_track_last_seen_ms",personEvents.lastPersonSeenAt());
    d.put("person_track_observations",personEvents.observations);
    d.put("person_segment_continuation_pending",pendingPersonSegment);
+   d.put("thumbnail_v4_worker","s9_local_sd_subject_best_frame_v4");
+   d.put("thumbnail_v4_backfill_queued",thumbnailV4Queued);
+   d.put("thumbnail_v4_backfilled",thumbnailV4Updated);
+   d.put("thumbnail_v4_errors",thumbnailV4Errors);
    d.put("person_gate_min_confidence",0.60);
    d.put("person_gate_periodic_without_motion",true);
    d.put("person_gate_spatial_confirmation_frames",3);
