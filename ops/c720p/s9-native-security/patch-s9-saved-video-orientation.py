@@ -72,7 +72,7 @@ SNIPPET = r'''
   const outerW=quarter?h:w,outerH=quarter?w:h;
   const maxW=Math.max(120,Math.min(state.shell.getBoundingClientRect().width||
     (document.documentElement.clientWidth||800)*.88,1100));
-  const maxH=Math.max(130,Math.min((window.innerHeight||800)*.68,760));
+  const maxH=Math.max(130,Math.min((window.innerHeight||800)*.56,560));
   const factor=Math.min(maxW/outerW,maxH/outerH);
   const n=x=>Math.max(1,Math.round(x*factor))+'px';
   state.stage.style.width=n(outerW);
