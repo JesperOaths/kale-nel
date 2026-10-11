@@ -1,0 +1,40 @@
+name: S9 Shadow v2 isolated APK build once
+on:
+  push:
+    branches: [feat/s9-detector-shadow-benchmark-v2-20261011]
+    paths: ['.github/workflows/s9-shadow-remote-build-once.yml']
+permissions:
+  contents: read
+jobs:
+  build-on-c720p:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate shadow motion and camera isolation
+        run: |
+          set -euo pipefail
+          python3 ops/c720p/s9-detector-benchmark/test_contract.py
+          bash -n ops/c720p/s9-detector-benchmark/build-only.sh
+          mkdir -p /tmp/shadow-unit
+          javac -d /tmp/shadow-unit ops/c720p/s9-detector-benchmark/src/nl/kalenel/s9benchmark/GardenShadowPipeline.java ops/c720p/s9-detector-benchmark/tests/GardenShadowPipelineTest.java
+          java -cp /tmp/shadow-unit nl.kalenel.s9benchmark.GardenShadowPipelineTest
+      - name: Queue separate signed APK build on C720P
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "${TOKEN:-}" || { echo 'Missing management credential'; exit 2; }
+          result="$(curl -fsS --connect-timeout 10 --max-time 40 -X POST \
+            'https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-v868-maintenance' \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H 'Content-Type: application/json' \
+            --data '{"operation":"shadow_detector_build_only"}')"
+          RESULT="$result" python3 - <<'PY'
+          import json,os
+          data=json.loads(os.environ['RESULT'])
+          assert data.get('ok') is True and data.get('operation')=='shadow_detector_build_only'
+          assert data.get('ref')=='786546fc5c846a957eadb7b2dd57a7f0a9726ef0'
+          print('S9_SHADOW_BUILD_QUEUED',data['job'])
+          PY
