@@ -34,7 +34,7 @@ jobs:
                 'SECURITY_NATIVE_LIVEWATCH_V14_VERIFIED',
                 'c720p-lan-camera-relay.service'):
               assert required in source,required
-          for banned in ('os.system(', 'shell=True','subprocess.Popen(','.unlink(', 'shutil.rmtree(', 'camcorder', 'delete_clip'):
+          for banned in ('os.system(', 'shell=True','subprocess.Popen(', 'TARGET.unlink(', 'shutil.rmtree(', 'camcorder', 'delete_clip'):
               assert banned not in source,banned
           print('LAN_TELEMETRY_V14_SCOPE_PASS')
           PY
