@@ -1,0 +1,12 @@
+[Unit]
+Description=Read-only Samsung S3 motion and ambient light health snapshot
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/jespern/c720p-home-hub/bin/c720p-s3-motion-readonly-health.py
+TimeoutStartSec=75
+Nice=15
+CPUQuota=12%
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
