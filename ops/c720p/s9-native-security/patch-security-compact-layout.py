@@ -18,17 +18,17 @@ MARK_LIVE='id="s9-live-viewport-fit-v1"'
 SAVED_SNIPPET=r"""
 <style id="s9-compact-recordings-v1">
 /* The original list remains present until the signed S9 folder index loads. */
-#s9-compact-layout{display:grid;grid-template-columns:minmax(260px,.85fr) minmax(360px,1.35fr);
+#s9-compact-layout{display:grid;grid-template-columns:minmax(290px,370px) minmax(0,1fr);
   align-items:start;gap:14px;max-width:100%;min-width:0;margin:9px 0 14px}
 #s9-compact-layout .s9-playback-pane,#s9-compact-layout .s9-selector-pane{
   box-sizing:border-box;min-width:0;padding:10px;border:1px solid #35576b;
   background:#102431;border-radius:12px}
-#s9-compact-layout .s9-playback-pane{position:sticky;top:8px}
+#s9-compact-layout .s9-playback-pane{position:sticky;top:8px;max-width:380px}
 #s9-compact-layout .s9-pane-heading{font-size:15px;font-weight:800;color:#edf9ff;margin:0 0 8px}
 #s9-compact-layout #player{display:block;max-width:100%;background:#000;border-radius:8px}
-#s9-compact-layout .s9-rotation-shell{margin:0!important}
+#s9-compact-layout .s9-rotation-shell{margin:0!important;width:min(100%,360px)!important;max-width:360px!important}
 #s9-compact-layout .s9-rotation-stage{margin-left:0!important;margin-right:0!important}
-#s9-compact-layout #list{min-width:0;max-height:calc(100dvh - 165px);overflow-y:auto;
+#s9-compact-layout #list{min-width:0;max-height:calc(100dvh - 125px);overflow-y:auto;
   overflow-x:hidden;scrollbar-width:thin;overscroll-behavior:contain;padding-right:3px}
 #list.s9-curated-ready > :not(#s9-date-folders){display:none!important}
 #s9-compact-layout #s9-date-folders{margin:0!important;border:0!important;
@@ -84,13 +84,13 @@ LIVE_SNIPPET=r"""
   padding:8px!important;gap:6px!important}
 #panel-live .c720p-s9-live-only .cam{
   box-sizing:border-box!important;flex:none!important;
-  width:min(100%,calc((100dvh - 165px) * 4 / 3),1120px)!important;
+  width:min(100%,calc(70dvh * 4 / 3),1120px)!important;
   max-width:100%!important;height:auto!important;
-  max-height:calc(100dvh - 165px)!important;
+  max-height:70dvh!important;
   min-height:0!important;aspect-ratio:4 / 3!important;margin:0 auto!important}
 #panel-live #cameraLive{
   display:block!important;width:100%!important;height:100%!important;
-  max-height:calc(100dvh - 165px)!important;aspect-ratio:4 / 3!important;
+  max-height:70dvh!important;aspect-ratio:4 / 3!important;
   object-fit:contain!important}
 @media(max-height:640px){
  #panel-live .c720p-s9-live-only .cam,#panel-live #cameraLive{
