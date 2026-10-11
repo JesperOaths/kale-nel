@@ -246,25 +246,29 @@ WantedBy=timers.target
         subprocess.run(["/usr/bin/python3","-m","py_compile",str(SCRIPT),str(BACKEND)],check=True,timeout=12)
         subprocess.run(["systemctl","--user","restart","c720p-drive-security-archive.service"],check=True,timeout=25)
         subprocess.run(["systemctl","--user","daemon-reload"],check=True,timeout=20)
+
+        # Prove one new Google Drive preview is really served from the tmpfs
+        # fallback before enabling ongoing background work.
+        batch(1,0)
+        new_cached=next((row for row in rows if valid(CACHE/row["snapshot_name"])),None)
+        if not new_cached:raise RuntimeError("Drive worker failed to populate a fresh preview")
+        sample_url="http://127.0.0.1:8794/new/saved/snap/"+new_cached["snapshot_name"]
+        with urllib.request.urlopen(urllib.request.Request(sample_url,method="HEAD"),timeout=12) as response:
+            if response.status!=200 or "image/jpeg" not in response.headers.get("Content-Type",""):
+                raise RuntimeError("Archive HTTP thumbnail readback failed")
+
         subprocess.run(["systemctl","--user","enable","--now",TIMER.name],check=True,timeout=30)
         t=subprocess.run(["systemctl","--user","is-active",TIMER.name],capture_output=True,text=True,timeout=8)
         if t.stdout.strip()!="active":raise RuntimeError("backfill timer failed to activate")
     except Exception:
+        if originals[TIMER] is None:
+            subprocess.run(["systemctl","--user","disable","--now",TIMER.name],capture_output=True,timeout=20)
         for path,contents in originals.items():
             if contents is None:path.unlink(missing_ok=True)
             else:path.write_bytes(contents)
         subprocess.run(["systemctl","--user","daemon-reload"],timeout=20)
         subprocess.run(["systemctl","--user","restart","c720p-drive-security-archive.service"],timeout=25)
         raise
-    # A first small sample confirms the authenticated Drive JPEG route, new
-    # tmpfs cache and archive-serving fallback all function together.
-    batch(1,0)
-    new_cached=next((row for row in rows if valid(CACHE/row["snapshot_name"])),None)
-    if not new_cached:raise RuntimeError("Drive worker failed to populate a fresh preview")
-    sample_url="http://127.0.0.1:8794/new/saved/snap/"+new_cached["snapshot_name"]
-    with urllib.request.urlopen(urllib.request.Request(sample_url,method="HEAD"),timeout=12) as response:
-        if response.status!=200 or "image/jpeg" not in response.headers.get("Content-Type",""):
-            raise RuntimeError("Archive HTTP thumbnail readback failed")
     print(json.dumps({"installed":True,"version":VERSION,"verified_drive_clips":len(rows),
                       "coverage":coverage(rows),"http_preview_verified":True,
                       "timer_active":True,"backup":str(backup)},separators=(",",":")))
