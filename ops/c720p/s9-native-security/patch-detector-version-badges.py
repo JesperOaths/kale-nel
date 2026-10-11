@@ -94,8 +94,8 @@ def patch(content):
  found=content.count(MARK)
  if found==1:
   if content.count('id="s9-detector-version-badges-style-v1"')!=1:raise ValueError('partial_badge_install')
-  style=re.search(r'<style id="s9-detector-version-badges-style-v1">[\\s\\S]*?</style>',content)
-  script=re.search(r'<script id="s9-detector-version-badges-v1">[\\s\\S]*?</script>',content)
+  style=re.search(r'<style id="s9-detector-version-badges-style-v1">.*?</style>',content,re.S)
+  script=re.search(r'<script id="s9-detector-version-badges-v1">.*?</script>',content,re.S)
   if not style or not script:raise ValueError('badge_source_tags_missing')
   return content.replace(style.group(0),STYLES,1).replace(script.group(0),SCRIPT,1)
  if found:raise ValueError('duplicate_badge_install')
