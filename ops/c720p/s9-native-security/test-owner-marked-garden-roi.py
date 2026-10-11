@@ -53,7 +53,7 @@ class MarkedGardenTest(unittest.TestCase):
     def test_existing_recording_safety(self):
         for t in ('recorder.setVideoSize(3840,2160);',
                   'recorder.setVideoFrameRate(30);',
-                  'gardenPersonGatePositiveStreak<2',
+                  'GardenPersonTrackGate.Decision.CONFIRMED',
                   'garden_person_candidate_window_ms',
                   'folder.getUsableSpace()>15L*1024*1024*1024'):
             self.assertIn(t,C)
