@@ -1,4 +1,4 @@
-name: C720P Security V5 one-time rollout
+name: C720P Security V5 read-only render check
 on:
   push:
     branches: [design/security-command-center-v5-20261011]
@@ -23,11 +23,11 @@ jobs:
           response="$(curl -fsS --connect-timeout 10 --max-time 40 -X POST \
             https://uiqntazgnrxwliaidkmy.supabase.co/functions/v1/ops-c720p-v868-maintenance \
             -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" \
-            --data '{"operation":"deploy_security_v5"}')"
+            --data '{"operation":"s9_v5_render_probe"}')"
           RESPONSE="$response" python3 - <<'PY'
           import json,os
           result=json.loads(os.environ['RESPONSE'])
-          assert result.get('ok') is True and result.get('operation')=='deploy_security_v5'
-          assert result.get('source_ref')=='34dd6dcef35c124c5daa7d7bb2764b4e88f1898d'
-          print('SECURITY_V5_RELEASE_JOB_ACCEPTED',result['job'])
+          assert result.get('ok') is True and result.get('probe')=='s9_v5_render_probe'
+          assert result.get('job',{}).get('id')
+          print('SECURITY_V5_READONLY_RENDER_JOB_ACCEPTED',result['job'])
           PY
