@@ -86,7 +86,8 @@ jobs:
           assert all(0<p["volume"]<15 for p in profiles)
           assert len(set(p["piper_voice"] for p in profiles))>=2
           functions={n.name:n for n in m.body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))}
-          assert {"LiveHA","play_one","wake_log_since","build_runner","main"}.issubset(functions)
+          assert {"play_one","wake_log_since","build_runner","main"}.issubset(functions)
+          assert any(isinstance(n,ast.ClassDef) and n.name=="LiveHA" for n in m.body)
           text=p.read_text()
           assert "state_transition_observed" in text
           assert "state_change_seconds_after_launch" in text
