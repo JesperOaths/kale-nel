@@ -30,7 +30,7 @@ assert 's9-phone-thumbs' in mod.change_face(
   + '</body></html>')
 assert '/new/api/saved' in TEMPLATE
 assert 'Europe/Amsterdam' in TEMPLATE
-assert 'mode===\\'today\\'' in TEMPLATE
+assert "mode==='today'" in TEMPLATE
 assert 'Number(rec.sampled_frames)' in TEMPLATE
 assert 'person_detected_frames_050' in TEMPLATE
 assert 'uncalibrated model outputs' in TEMPLATE
