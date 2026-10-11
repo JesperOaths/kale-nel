@@ -28,12 +28,17 @@ class TestFolders(unittest.TestCase):
         self.assertEqual(updated.count(module.MARKER),1)
         self.assertEqual(updated.count(module.STYLE),1)
         self.assertIn('id="player"',updated)
+        self.assertIn("selectedFilter='all'",updated)
+        self.assertIn("root.classList.add('s9-curated-ready')",updated)
         self.assertIn('s9-date-folders',updated)
+        self.assertIn('s9-v4-date-dots',updated)
+        self.assertIn('s9-v4-legend',updated)
+        self.assertIn('s9-v4-clip',updated)
         self.assertIn("Europe/Amsterdam",updated)
         self.assertIn('content_categories',updated)
         self.assertIn("C720PSecureRelay",updated)
-        self.assertIn("onClick" if False else "addEventListener('click'",updated)
-        self.assertIn('model estimates',updated)
+        self.assertIn("addEventListener('click'",updated)
+        self.assertIn('classifications are estimates',updated)
         self.assertNotIn('DELETE',module.SNIPPET)
         self.assertNotIn('unlink(',module.SNIPPET)
         self.assertNotIn('localStorage.setItem',module.SNIPPET)
@@ -75,8 +80,8 @@ if(!native.test('native4k_1791576078307.mp4'))throw Error('native4k date groupin
         node=shutil.which('node')
         if not node:self.skipTest('Node unavailable')
         source=module.SNIPPET
-        start=source.index(' const category=r=>{')
-        end=source.index(' const tag=',start)
+        start=source.index('function category(r){')
+        end=source.index('function duration(r){',start)
         body=source[start:end]
         checks="""
 const possible={scene_category:'motion_other',person_count:0,
@@ -84,6 +89,9 @@ const possible={scene_category:'motion_other',person_count:0,
  content_categories:['vehicle']};
 if(category(possible)!=='possible')throw Error('low-confidence person hidden by vehicle');
 if(category({scene_category:'one_person',person_count:1})!=='person')throw Error('strong person label');
+if(category({scene_category:'one_person',person_count:1,person_event_category:'single_frame_person_candidate'})!=='possible')throw Error('single-frame candidate falsely confirmed');
+if(category({scene_category:'unreviewed',person_count:1,person_event_category:'single_frame_person_candidate'})!=='possible')throw Error('uncertain human invisible');
+if(category({scene_category:'one_person',person_count:1,person_event_category:'single_person_repeated_candidate'})!=='person')throw Error('repeated person not grouped');
 if(category({scene_category:'motion_other',content_categories:['vehicle'],person_event_category:'no_person_model_detection'})!=='vehicle')throw Error('vehicle label');
 if(category({scene_category:'unreviewed'})!=='unreviewed')throw Error('unknown recording label');
 """
