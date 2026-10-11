@@ -91,6 +91,10 @@ public final class CameraService extends Service {
  // On-phone low-bitrate H.264 memory ring: frozen only after a verified 4K trigger.
  private GardenPreRoll preRoll;
  private GardenPreRoll.Frozen frozenPreRoll;
+ // One-shot, explicitly labelled on-phone validation clip. Never treated as
+ // an ordinary person detection or indexed surveillance event.
+ private boolean diagnosticPrerollActive=false,diagnosticPrerollUsed=false;
+ private volatile String diagnosticPrerollClip="",diagnosticPrerollResult="not_tested";
  private volatile long preRollLastFrameAt=0;
  private volatile boolean jpegBusy=false;
  private volatile long jpegRequestedAt=0,jpegEncoded=0,jpegErrors=0;
@@ -528,7 +532,8 @@ public final class CameraService extends Service {
   mode="starting";lastMovementAt=SystemClock.elapsedRealtime();
   try{
    closeSession();
-   String name="motion_"+System.currentTimeMillis()+".mp4";
+   String name=(diagnosticPrerollActive?"diagnostic_preroll_":"motion_")+
+      System.currentTimeMillis()+".mp4";
    partial=new File(folder,name+".recording");
    finished=new File(folder,name);
    recorder=new MediaRecorder();
@@ -559,7 +564,10 @@ public final class CameraService extends Service {
        eventChain.started(lastStart,System.currentTimeMillis());
        mode="recording";
       Log.i(TAG,"START_MOTION_4K "+finished.getName());
-      if(temporaryTest)cameraHandler.postDelayed(new Runnable(){public void run(){if("recording".equals(mode))stopRecording("pilot_short");}},9000);
+      if(temporaryTest||diagnosticPrerollActive)
+       cameraHandler.postDelayed(new Runnable(){public void run(){
+        if("recording".equals(mode))stopRecording(diagnosticPrerollActive?"diagnostic_short":"pilot_short");
+       }},9000);
      }catch(Exception e){failure("recorder_start_failed",e);abortRecording();}
     }
     @Override public void onConfigureFailed(CameraCaptureSession s){
@@ -586,6 +594,20 @@ public final class CameraService extends Service {
     int h=Integer.parseInt(m.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT));
     if(w!=3840||h!=2160)throw new IOException("encoded_resolution_"+w+"x"+h);
    }finally{m.release();}
+   if(diagnosticPrerollActive){
+    // No classification, no person labels, no indexed motion rows. A test
+    // harness reads both MP4s over authorized ADB and deletes them afterward.
+    diagnosticPrerollClip=candidate.getName();
+    diagnosticPrerollResult="4k_finalized_preroll_writing";
+    final GardenPreRoll.Frozen diagnosticFrozen=frozenPreRoll;
+    frozenPreRoll=null;
+    diagnosticPrerollActive=false;
+    eventChain.reset();
+    if(preRoll!=null&&diagnosticFrozen!=null)preRoll.saveAsync(candidate,diagnosticFrozen);
+    else diagnosticPrerollResult="4k_finalized_preroll_snapshot_missing";
+    Log.i(TAG,"PREROLL_DIAGNOSTIC_4K_SAVED "+candidate.getName());
+    return;
+   }
    completed++;lastClip=candidate.getName();
     final CaptureContinuity.Segment eventSegment=eventChain.stopped(
       SystemClock.elapsedRealtime(),lastClip,reason);
@@ -610,6 +632,10 @@ public final class CameraService extends Service {
   }
  }
  private void abortRecording(){
+  if(diagnosticPrerollActive){
+   diagnosticPrerollResult="diagnostic_recording_aborted";
+   diagnosticPrerollActive=false;
+  }
   frozenPreRoll=null;
   if(recorder!=null){try{recorder.release();}catch(Exception ignored){}recorder=null;}
   closeSession();
@@ -907,6 +933,10 @@ public final class CameraService extends Service {
    d.put("preroll_last_name",preRoll==null?"":preRoll.lastSavedName);
    d.put("preroll_last_duration_ms",preRoll==null?0:preRoll.lastSavedDurationMs);
    d.put("preroll_last_error",preRoll==null?"not_started":preRoll.lastError);
+   d.put("preroll_diagnostic_used",diagnosticPrerollUsed);
+   d.put("preroll_diagnostic_active",diagnosticPrerollActive);
+   d.put("preroll_diagnostic_clip",diagnosticPrerollClip);
+   d.put("preroll_diagnostic_result",diagnosticPrerollResult);
    d.put("motion_detector",GardenPersonTrackGate.VERSION);
     d.put("capture_event_version",CaptureContinuity.VERSION);
     d.put("capture_event_id",eventChain.eventId());
@@ -1057,6 +1087,25 @@ public final class CameraService extends Service {
    if(!"watching".equals(mode)||session==null||activeCameraRequest==null||cameraControls==null){
     return response.put("ok",false).put("error","control_unavailable_during_recording_or_camera_transition");
    }
+   if("preroll_diagnostic".equals(key)){
+     if(!"record_once".equals(value)||diagnosticPrerollUsed||diagnosticPrerollActive||
+        pilotOnly||preRoll==null||!preRoll.ready()||
+        preRoll.cachedDurationMs()<3500||temperature()>=375||
+        folder==null||folder.getUsableSpace()<15L*1024*1024*1024){
+      return response.put("ok",false).put("error","diagnostic_prebuffer_not_ready_or_already_used");
+     }
+     diagnosticPrerollUsed=true;
+     diagnosticPrerollActive=true;
+     diagnosticPrerollResult="starting";
+     startRecording();
+     if(!"starting".equals(mode)){
+      diagnosticPrerollActive=false;diagnosticPrerollResult="recording_start_guard_denied";
+      return response.put("ok",false).put("error",diagnosticPrerollResult);
+     }
+     return response.put("ok",true).put("mode","diagnostic_preroll_4k")
+       .put("excluded_from_security_archive",true)
+       .put("requested_duration_ms",9000);
+    }
    if("garden_zone".equals(key)){
      if(!MotionGrid.validGardenZone(value))
       return response.put("ok",false).put("error","unsupported_garden_region");
