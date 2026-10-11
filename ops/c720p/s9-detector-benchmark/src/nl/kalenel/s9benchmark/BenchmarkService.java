@@ -186,40 +186,104 @@ public final class BenchmarkService extends Service {
    .put("camera_changes",0).put("cloud_upload",false).put("ground_truth_available",false)
    .put("temperature_before_c",initial.optDouble("temperature_c"))
    .put("started_ms",System.currentTimeMillis());
-  JSONArray frames=new JSONArray(),issues=new JSONArray();
+  JSONArray frames=new JSONArray(),issues=new JSONArray(),clipSummary=new JSONArray();
+  long began=SystemClock.elapsedRealtime();
+  int compared=0,disagreements=0,motionFrames=0,baselineEvents=0,contenderEvents=0;
+  final String shadowVersion=GardenShadowPipeline.VERSION;
   try(Detector baseline=new Detector(this,"baseline.tflite","production_ssd_cpu");
       Detector contender=new Detector(this,"efficientdet_lite0_int8.tflite","efficientdet_lite0_cpu")){
    for(int file=0;file<Math.min(MAX_FILES,clips.length);file++){
+    if(SystemClock.elapsedRealtime()-began>MAX_SESSION_MS){
+     issues.put("time_budget_reached");break;
+    }
     File clip=clips[file];safe();
+    GardenShadowPipeline ssdShadow=new GardenShadowPipeline();
+    GardenShadowPipeline liteShadow=new GardenShadowPipeline();
+    int paired=0,clipDifferences=0;
+    long lastSampleMs=-1;
     MediaMetadataRetriever media=new MediaMetadataRetriever();
     try{
      media.setDataSource(clip.getAbsolutePath());
      long duration=Long.parseLong(media.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
-     if(duration<1500||duration>90000)continue;
+     if(duration<6500||duration>120000){issues.put("duration_out_of_range_"+file);continue;}
      for(int k=0;k<FRAMES;k++){
+      if(SystemClock.elapsedRealtime()-began>MAX_SESSION_MS){
+       issues.put("time_budget_reached_during_"+file);break;
+      }
       safe();
-      long at=(long)((k+0.5)/FRAMES*duration*1000.0);
-      Bitmap img=media.getFrameAtTime(at,MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+      // Three temporal windows per clip, 5 images 650ms apart.
+      int window=k/5,within=k%5;
+      double anchor=(window==0?.05:(window==1?.43:.79));
+      long atMs=Math.min(duration-250L,(long)(duration*anchor)+within*650L);
+      if(atMs<=lastSampleMs)continue;
+      lastSampleMs=atMs;
+      long at=atMs*1000L;
+      Bitmap img=media.getFrameAtTime(at,MediaMetadataRetriever.OPTION_CLOSEST);
       if(img==null){issues.put("frame_unavailable_"+file+"_"+k);continue;}
       try{
-       JSONObject row=new JSONObject().put("clip",clip.getName()).put("sample",k);
-       try{row.put("ssd",baseline.test(img));}catch(Exception e){baseline.errorCount++;row.put("ssd_error",e.toString());}
-       try{row.put("efficientdet",contender.test(img));}catch(Exception e){contender.errorCount++;row.put("efficientdet_error",e.toString());}
+       JSONObject row=new JSONObject().put("clip",clip.getName()).put("sample",k)
+        .put("clip_offset_ms",atMs).put("window",window).put("frame_source","closest_decoded");
+       Bitmap mini=Bitmap.createScaledBitmap(img,240,140,true);
+       int[] argb=new int[240*140];mini.getPixels(argb,0,240,0,0,240,140);
+       if(mini!=img)mini.recycle();
+       float[] luma=GardenShadowPipeline.grid(argb,240,140);
+       Detector.Observation a=null,b=null;
+       try{a=baseline.test(img);row.put("ssd",a.metrics);}
+       catch(Exception e){baseline.errorCount++;row.put("ssd_error",e.toString());}
+       try{b=contender.test(img);row.put("efficientdet",b.metrics);}
+       catch(Exception e){contender.errorCount++;row.put("efficientdet_error",e.toString());}
+       GardenShadowPipeline.Result base=ssdShadow.observe(atMs,luma,a==null?null:a.personBoxes);
+       GardenShadowPipeline.Result next=liteShadow.observe(atMs,luma,b==null?null:b.personBoxes);
+       row.put("adaptive_motion",base.motion).put("adaptive_motion_strong",base.strongMotion)
+        .put("garden_changed_ratio",base.changedRatio)
+        .put("garden_coherent_cells",base.largestComponent)
+        .put("garden_exposure_shift",base.exposureShift)
+        .put("ssd_new_person_events",base.newPersonEvents)
+        .put("lite0_new_person_events",next.newPersonEvents)
+        .put("ssd_active_person_tracks",base.activeTracks)
+        .put("lite0_active_person_tracks",next.activeTracks);
+       if(base.motion)motionFrames++;
+       if(a!=null&&b!=null){
+        paired++;compared++;
+        if((base.activeTracks>0)!=(next.activeTracks>0)){
+         clipDifferences++;disagreements++;
+        }
+       }
        frames.put(row);
       }finally{img.recycle();}
       SystemClock.sleep(125);
      }
     }catch(Exception e){issues.put("clip_"+file+":"+e.getClass().getSimpleName());}
     finally{media.release();}
+    baselineEvents+=ssdShadow.confirmedEvents;
+    contenderEvents+=liteShadow.confirmedEvents;
+    clipSummary.put(new JSONObject().put("clip",clip.getName())
+     .put("frames_observed",ssdShadow.frames).put("paired_comparisons",paired)
+     .put("temporal_disagreement_frames",clipDifferences)
+     .put("adaptive_motion_frames",ssdShadow.motionFrames)
+     .put("strong_motion_frames",ssdShadow.strongMotionFrames)
+     .put("exposure_flash_suppressions",ssdShadow.exposureSuppressions)
+     .put("ssd_confirmed_track_events",ssdShadow.confirmedEvents)
+     .put("lite0_confirmed_track_events",liteShadow.confirmedEvents)
+     .put("ssd_off_garden_rejections",ssdShadow.rejectedOffGarden)
+     .put("lite0_off_garden_rejections",liteShadow.rejectedOffGarden));
    }
    report.put("ssd",baseline.summary()).put("efficientdet",contender.summary());
   }
   JSONObject end=status();
   report.put("frames",frames).put("sampled_frames",frames.length()).put("issues",issues)
+    .put("clip_summary",clipSummary).put("shadow_engine",shadowVersion)
+    .put("shadow_pipeline_active_on_camera",false)
+    .put("ground_truth_person_labels",JSONObject.NULL)
+    .put("paired_model_frames",compared)
+    .put("temporal_model_disagreement_frames",disagreements)
+    .put("motion_positive_frames",motionFrames)
+    .put("ssd_confirmed_track_events",baselineEvents)
+    .put("lite0_confirmed_track_events",contenderEvents)
     .put("temperature_after_c",end.optDouble("temperature_c"))
     .put("camera_mode_after",end.optString("mode"))
     .put("elapsed_ms",System.currentTimeMillis()-report.optLong("started_ms"));
-  report.put("ok",frames.length()>0&&"watching".equals(end.optString("mode")));
+  report.put("ok",compared>0&&"watching".equals(end.optString("mode")));
   save(report);
  }
  private void save(JSONObject result)throws Exception{
