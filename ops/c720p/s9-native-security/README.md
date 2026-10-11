@@ -121,3 +121,59 @@ python3 ops/c720p/s9-native-security/safe-night-guard-upgrade.py
 The C720P scripts above must run on the C720P against a checkout of the reviewed commit; the S9 APK installer must be run only after preserving the existing signed APK and verifying the camera is not actively recording. The UI-only update is backed up and rolls back on failure. After APK replacement, verify that Camera2 resumes `watching`, native 4K recording and `/shot.jpg` work, the SD path is unchanged, sample clips gain `face_review_version=s9_face_review_v1`, snapshots exist on phone SD, the hub's signed image endpoint serves only indexed crops, and no original clips vanished. Confirm thermal and battery use before enabling historical backfill at scale. **GitHub Actions Java compilation and mock Python/UI tests do not verify any of these on-device conditions.**
 
 **Privacy/accuracy:** Face matching may confuse people or be wrong with hats, distant faces, occlusion or changing lighting. Keep the name status visibly provisional, do not trigger door locks, alarms or irreversible actions from matches alone, and provide an option to disable or erase locally stored biometric data if the household requires it. Existing clip-local Person 1/2 tracks remain independent and are not retroactively relabeled as verified named individuals.
+
+
+## Compact Security playback and garden detection V3 (11 October 2026 — source release)
+
+The Camera2 app's prior `post_record_cooldown_ms=0` setting did not remove
+its `RecordingRate` admission cap (16 ordinary + 8 priority clips/hour).
+The V3 service stops consulting that cap. The phone starts another recording
+when a new two-frame person gate succeeds and the recorder returns to
+`watching`; the 4K capture still has a single camera owner. Native recovery,
+41.5 °C battery-temperature guard, 15 GiB free-SD guard, 120-second maximum
+clip duration and original-MP4 retention remain in force.
+
+Foreground motion now uses a median garden brightness offset and per-tile
+adaptive noise floors, while the realtime S9+ person gate requires two
+spatially consistent, plausibly shaped person boxes at ≥0.58 confidence
+within three seconds. A model failure clears pending positives. The
+completed-video classifier keeps isolated 0.50 person hits as *needs review*
+instead of calling the recording a confirmed-person category; the raw
+max-person count and per-frame evidence are still retained. Thumbnail
+selection ignores 0.30–0.57 person boxes and favors actual garden motion.
+
+The HA Saved Clips view now defaults to all recordings, grouped by date
+(with no second-level folder maze). Opening a clip uses the existing
+authenticated S9+ SD playback URL. A compact left video player sits beside a
+wider, scrollable recordings selector; old duplicate lists are only hidden
+after the curated index is ready. The S9 live 4:3 image is constrained by
+the iframe's dynamic viewport height. Original clips, Drive archives, labels
+and the authenticated access route are not changed by these HTML patches.
+
+### Safe HTML rollout (on C720P, after syncing the reviewed commit)
+
+First run both commands without `--apply` to confirm the page shapes match.
+The apply mode creates an immutable-timestamped rollback copy for each page
+and restores it automatically on write or post-write verification failure.
+
+```bash
+python3 ops/c720p/s9-native-security/patch-security-date-category-folders.py --apply
+python3 ops/c720p/s9-native-security/patch-s9-saved-video-orientation.py --apply
+python3 ops/c720p/s9-native-security/patch-security-compact-layout.py --kind saved --apply
+python3 ops/c720p/s9-native-security/patch-security-compact-layout.py --kind live --apply
+```
+
+The saved-date and orientation patchers are incremental upgrades of already
+installed widgets; install them before the compact layout. The phone APK must
+**separately** be compiled, signed, and guardedly upgraded through the existing
+`compile-only.sh`, `package-only.sh`, `stage-verified-deployment.py`
+and `safe-night-guard-upgrade.py` path. An HTML deployment is not proof of a
+working phone APK.
+
+**Acceptance is empirical, not source-only:** verify a fresh 4K clip and SD
+manifest; live + rotated-video playback; next clip after completion with no
+hourly rejection; battery temperature and SD guard telemetry; and annotated
+day/night garden walk-by events versus empty-scene/foliage/street negatives.
+Higher person confidence reduces some false positives but can miss distant
+people. Do not declare accuracy improvements proven or delete any recordings
+on model evidence alone. The permanent-deletion policy remains disabled.
