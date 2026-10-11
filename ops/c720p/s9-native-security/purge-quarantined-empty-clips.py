@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import re
+import random
 import subprocess
 import time
 
@@ -91,6 +92,9 @@ def main():
  if len(names)>4000:raise RuntimeError('unexpected_quarantine_listing')
  now=int(time.time()*1000)
  candidates=[n for n in names if FILE.fullmatch(n)]
+ # Fairly rotate the bounded metadata audit each timer interval; protected
+ # older clips must never prevent newer eligible files from being examined.
+ random.Random(int(now//(45*60*1000))).shuffle(candidates)
  records=[]
  freed=0
  for name in candidates:
