@@ -1,0 +1,87 @@
+name: Publish C720P Camera2 control relay V18
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/c720p-camera-controls-relay-v18.yml'
+      - 'ops/c720p/s9-native-security/deploy-camera-controls-relay-v18.py'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/c720p/s9-native-security/deploy-camera-controls-relay-v18.py'
+permissions:
+  contents: read
+concurrency:
+  group: c720p-native-controls-relay-v18
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Verify read-only Drive catalog/media paths, checksum and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/deploy-camera-controls-relay-v18.py
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path('ops/c720p/s9-native-security/deploy-camera-controls-relay-v18.py').read_text()
+          for required in ('S9_CAMERA_CONTROLS_RELAY_V18_VERIFIED',
+                'S9_CAMERA_CONTROLS_RELAY_V18_ROLLED_BACK',
+                'explicit-user-selection-v1','origin_ok()',
+                'http://127.0.0.1:8795/new/camera-control',
+                'http://127.0.0.1:{port}{route}', 'no_commands_sent',
+                'backup_or_concurrent_relay_edit'):
+              assert required in source,required
+          for banned in ('os.system(', 'shell=True','subprocess.Popen(', 'TARGET.unlink(', 'shutil.rmtree(', 'camcorder', 'delete_clip'):
+              assert banned not in source,banned
+          print('CAMERA_CONTROLS_RELAY_V18_SCOPE_PASS')
+          PY
+  deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'JesperOaths/kale-nel'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      PGCONNECT_TIMEOUT: '12'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Checksum-verify and apply guarded LAN relay route patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || { echo 'Private C720P gateway unavailable'; exit 1; }
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client >/dev/null
+          fi
+          path="ops/c720p/s9-native-security/deploy-camera-controls-relay-v18.py"
+          digest="$(sha256sum "$path" | cut -d' ' -f1)"
+          [[ "$digest" =~ ^[a-f0-9]{64}$ && "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          origin="https://raw.githubusercontent.com/JesperOaths/kale-nel/${GITHUB_SHA}/${path}"
+          temp="/tmp/security-controls-v18-${GITHUB_SHA:0:12}.py"
+          cmd="curl -fSsL --max-time 30 '${origin}' -o '${temp}' && printf '%s  %s\\n' '${digest}' '${temp}' | sha256sum -c - >/dev/null && /usr/bin/python3 '${temp}'"
+          idem="security-controls-lan-v18-${GITHUB_SHA:0:24}-${GITHUB_RUN_ATTEMPT}"
+          id="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -v cmd="$cmd" -v idem="$idem" <<'SQL'
+          select job_id from c720p_agent.submit_management_job_v1(
+            'github-actions-camera-controls-v18','deployment',:'cmd',220,:'idem'
+          );
+          SQL
+          )"
+          [[ "$id" =~ ^[0-9]+$ ]] || { echo 'No authenticated deployment job accepted'; exit 1; }
+          echo "CAMERA_CONTROLS_V18_JOB=$id"
+          for i in $(seq 1 46); do
+            state="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select state || '|' || coalesce(exit_code::text,'') from c720p_agent.jobs where id=${id}" | head -n 1)"
+            if [[ "$state" == done\|* || "$state" == failed\|* || "$state" == error\|* ]]; then
+              result="$(psql "$SUPABASE_DB_URL" -X -qAt -v ON_ERROR_STOP=1 -c "select coalesce(stdout,'') from c720p_agent.jobs where id=${id}" | head -c 7500)"
+              echo "$result"
+              [[ "$state" == 'done|0' ]] || { echo 'Deployment failed; check rollback marker'; exit 1; }
+              grep -q 'S9_CAMERA_CONTROLS_RELAY_V18_VERIFIED' <<< "$result" || exit 1
+              echo "CAMERA_CONTROLS_V18_HUB_PASS"
+              exit 0
+            fi
+            sleep 8
+          done
+          echo "C720P verification not completed";exit 1
