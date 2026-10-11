@@ -54,7 +54,7 @@ def main():
  before=a.file.read_text()
  after=patch(before)
  if patch(after)!=after:raise RuntimeError('non_idempotent')
- temp=a.file.with_name(a.file.name+'.deep-review-stage')
+ temp=a.file.with_name(a.file.name+'.deep-review-stage.py')
  try:
   temp.write_text(after)
   os.chmod(temp,stat.S_IMODE(a.file.stat().st_mode))
