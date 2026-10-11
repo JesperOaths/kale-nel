@@ -69,6 +69,9 @@ final class GardenArchiveTriage {
    // misses them. Protect person's footage from a model false negative.
    if(meta.optInt("person_frames_at_050",0)>0||
        meta.optInt("person_count",0)>0){
+    // Backfill only when an original recording is known to show someone.
+    // This uses the S9+ MediaMetadataRetriever, never C720P decoding.
+    detector.rebuildGardenThumbnail(movie,live,meta);
     ClipClassifier.writeJson(evaluated,new JSONObject()
       .put("outcome","preserve_original_person_evidence")
       .put("candidate_model_only",true));
@@ -80,6 +83,7 @@ final class GardenArchiveTriage {
        .put("reviewed_at_ms",now).put("permanently_deleted",false)
        .put("human_verified",false);
    if(!"no_garden_person_evidence".equals(decision)){
+    detector.rebuildGardenThumbnail(movie,live,meta);
     ClipClassifier.writeJson(evaluated,evidence.put("outcome",
       "preserve_uncertain_or_garden_person"));
     return 2;
