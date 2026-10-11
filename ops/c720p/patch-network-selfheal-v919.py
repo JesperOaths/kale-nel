@@ -104,6 +104,14 @@ busy=0
 pgrep -af '/home/jespern/.cache/c720p-agent/jobs/[0-9]+\.sh' >/dev/null 2>&1 && busy=1
 log(){ printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG"; }
 
+# STEP1_20261011_PRESERVE_INFLIGHT_AGENT_JOB
+# A stale heartbeat during a running shell job is not permission to interrupt it.
+# The existing watchdog retries once the job process has exited.
+if [ "$busy" -eq 1 ] && { [ "$state" != active ] || [ "$age" -gt 90 ]; }; then
+  log "AGENT_SELF_WATCHDOG=DEFER_ACTIVE_JOB state=$state heartbeat_age=${age}s"
+  exit 0
+fi
+
 if [ "$state" != active ] || [ "$age" -gt 90 ]; then
   log "AGENT_SELF_WATCHDOG=RECOVER state=$state heartbeat_age=${age}s busy=$busy"
   timeout 70 "$DNS" >/dev/null 2>&1 || true
