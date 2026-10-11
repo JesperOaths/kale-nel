@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<meta http-equiv="Cache-Control" content="no-store,max-age=0">
+<title>S9+ · Camera controls</title>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;padding:clamp(16px,2.5vw,34px);background:#0e1721;color:#f5fcff;font:14px/1.6 system-ui,"Segoe UI",sans-serif}
+h1{font-size:clamp(23px,2vw,29px);letter-spacing:-.03em;line-height:1.2;margin:0 0 8px}
+h2{font-size:17px;margin:0 0 13px}
+p{margin:0;color:#a7c4d1}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:24px}
+.kicker{font-size:10px;color:#86e7da;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+button,select{font:inherit}
+button{background:#244653;border:1px solid #5e8d9c;border-radius:9px;color:#f5fcff;padding:9px 14px;cursor:pointer}
+button:hover{background:#2b6270}
+button:focus-visible,select:focus-visible{outline:2px solid #b0ffeb;outline-offset:3px}
+.stat{color:#b6d4db;border:1px solid #416071;padding:7px 11px;border-radius:999px;background:#152c3b;font-size:12px}
+.card{background:#142532;border:1px solid #385164;border-radius:15px;padding:clamp(18px,2vw,27px);max-width:1180px}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,215px),1fr));gap:14px}
+.control{display:flex;flex-direction:column;gap:6px;padding:16px;border:1px solid #385b6e;border-radius:11px;background:#1b3443;min-width:0}
+.control label{font-size:13px;font-weight:750;text-transform:capitalize}
+.control small{font-size:11px;color:#aac5d1}
+select{width:100%;border:1px solid #5b8599;background:#0f2533;color:#edf9ff;border-radius:9px;padding:11px;min-width:0}
+select:disabled{opacity:.55}
+#state{margin:20px 0 0;font-size:12px;color:#a8c3d1;min-height:20px}
+.note{max-width:1180px;border:1px solid #5c6759;border-radius:12px;background:#222920;margin-top:15px;padding:13px 16px;color:#cbd9c5;font-size:12px}
+.empty{border:1px dashed #466a7c;border-radius:10px;padding:24px;grid-column:1/-1;color:#bed6e0}
+</style>
+</head>
+<body>
+<header>
+ <div><div class="kicker">S9+ · native Camera2 · read live settings</div><h1>Camera controls</h1><p>Adjust the installed camera safely without interrupting the recording archive.</p></div>
+ <div style="display:flex;gap:10px;align-items:center"><span id="health" class="stat">Connecting…</span><button id="refresh" type="button">Refresh controls</button></div>
+</header>
+<div class="card">
+<h2>Camera settings</h2>
+<div id="controls" class="controls"><p class="empty">Connecting to the S9+ native Camera2 controls…</p></div>
+<div id="state" role="status" aria-live="polite"></div>
+</div>
+<p class="note">Changes are sent only when you explicitly select a setting. Available options come from the running S9+ camera, not from hard-coded camera assumptions. Video originals and motion detection are not altered by loading this page.</p>
+<script id="security-standalone-native-controls-v22">
+(()=>{
+'use strict';
+const $=x=>document.getElementById(x);
+const keys=['zoom','exposure_ev','focus','torch'];
+const names={zoom:'Zoom',exposure_ev:'Exposure (EV)',focus:'Focus',torch:'Torch'};
+const descriptions={zoom:'Digital camera zoom',exposure_ev:'Adjust the sensor exposure',focus:'Autofocus mode',torch:'Built-in light'};
+let current=null,loading=false;
+function relay(){
+ try{
+  if(window.C720PSecureRelay?.fetch)return window.C720PSecureRelay;
+  if(window.parent!==window&&window.parent.C720PSecureRelay?.fetch)return window.parent.C720PSecureRelay;
+ }catch(_){}
+ return null;
+}
+function label(text,tag='span'){
+ const el=document.createElement(tag);el.textContent=String(text);return el;
+}
+function render(data){
+ const host=$('controls');host.replaceChildren();
+ const entries=data?.controls;
+ if(!entries||typeof entries!=='object'){host.append(label('Camera control metadata was not returned.','p'));return}
+ let found=0;
+ for(const key of keys){
+  const d=entries[key];if(!d)continue;found++;
+  const card=label('','div');card.className='control';
+  const controlLabel=label(names[key],'label');controlLabel.htmlFor='control-'+key;
+  const select=document.createElement('select');select.id='control-'+key;
+  const possible=Array.isArray(d.available)?d.available:Array.isArray(d.options)?d.options:[];
+  for(const raw of possible){
+   const value=String(raw);const option=new Option(value.replaceAll('_',' '),value);
+   select.add(option);
+  }
+  const v=String(d.value??'');
+  if(!possible.map(String).includes(v)&&v){select.add(new Option(v,v))}
+  select.value=v;select.disabled=possible.length===0;
+  select.addEventListener('change',()=>change(key,select,v));
+  const hint=label(descriptions[key],'small');
+  card.append(controlLabel,select,hint);host.append(card);
+ }
+ if(!found)host.append(label('No supported native camera controls are currently available.','p'));
+ $('state').textContent=found+' controls available · '+String(data.mode||'Camera state unknown');
+}
+async function load(){
+ if(loading)return;loading=true;
+ $('health').textContent='Checking camera…';
+ try{
+  const r=relay();if(!r)throw Error('Signed Home Assistant camera relay missing');
+  const response=await r.fetch('/new/camera-controls',{cache:'no-store'});
+  if(!response.ok)throw Error('HTTP '+response.status);
+  const doc=await response.json();
+  if(doc.ok!==true||!doc.controls)throw Error('Camera control metadata invalid');
+  current=doc;render(doc);
+  $('health').textContent='Camera connected';
+ }catch(e){
+  $('health').textContent='Camera settings unavailable';
+  $('controls').replaceChildren(label('The camera is online but the controls endpoint could not be loaded. '+String(e.message||e).slice(0,85),'p'));
+  $('state').textContent='Refresh to retry. The camera and recordings are unaffected.';
+ }finally{loading=false}
+}
+async function change(key,select,previous){
+ if(!current)return;
+ const value=select.value;select.disabled=true;
+ $('state').textContent='Applying '+names[key]+'…';
+ try{
+  const r=relay();if(!r)throw Error('Authenticated relay unavailable');
+  const res=await r.fetch('/new/camera-control',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','X-S9-Camera-Control-Intent':'explicit-user-selection-v1'},
+   body:JSON.stringify({key,value})
+  });
+  const reply=await res.json();
+  if(!res.ok||reply.ok!==true)throw Error(String(reply.error||'Camera rejected this setting'));
+  $('state').textContent=names[key]+' updated to '+value;
+  current.controls[key].value=value;
+ }catch(e){
+  select.value=previous;
+  $('state').textContent=names[key]+' unchanged · '+String(e.message||e).slice(0,80);
+ }finally{select.disabled=false}
+}
+$('refresh').addEventListener('click',load);
+window.addEventListener('pageshow',load);
+load();
+})();
+</script>
+</body>
+</html>
