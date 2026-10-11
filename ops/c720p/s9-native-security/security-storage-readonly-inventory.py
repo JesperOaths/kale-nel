@@ -61,4 +61,38 @@ for label,path,depth,timeout in TOP_AREAS:
                 "largest":sorted(items,key=lambda x:-x["mb"])[:17]}
  except Exception as exc:broad[label]={"status":type(exc).__name__}
 payload["disk_rootcause"]=broad
+# A large root-level file (often swap) is not printed as a du child directory.
+# Report the allocated bytes, not just the logical length of sparse files.
+topfiles=[]
+for p in pathlib.Path("/").iterdir():
+ try:
+  if p.is_symlink() or not p.is_file():continue
+  st=p.stat()
+  topfiles.append({"file":p.name[:60],"allocated_mb":round(st.st_blocks*512/(1024**2),1),
+                   "logical_mb":round(st.st_size/(1024**2),1)})
+ except OSError:continue
+payload["root_regular_files"]=sorted(topfiles,key=lambda x:-x["allocated_mb"])[:12]
+try:
+ lines=pathlib.Path("/proc/swaps").read_text().splitlines()[1:]
+ rows=[]
+ for line in lines:
+  fields=line.split()
+  if len(fields)>=5:
+   rows.append({"device":pathlib.Path(fields[0]).name,"type":fields[1],
+                "total_mb":round(int(fields[2])/1024,1),
+                "used_mb":round(int(fields[3])/1024,1),
+                "priority":int(fields[4])})
+ payload["active_swap"]=rows
+except Exception as exc:payload["active_swap_error"]=type(exc).__name__
+try:
+ wanted={"MemTotal","MemAvailable","SwapTotal","SwapFree","Cached"}
+ vals={}
+ for line in pathlib.Path("/proc/meminfo").read_text().splitlines():
+  key,_,rest=line.partition(":")
+  if key in wanted:
+   vals[key+"_mb"]=round(int(rest.strip().split()[0])/1024,1)
+ payload["memory"]=vals
+except Exception as exc:payload["memory_error"]=type(exc).__name__
+v=__import__("os").statvfs("/")
+payload["filesystem_reserved_mb"]=round((v.f_bfree-v.f_bavail)*v.f_frsize/(1024**2),1)
 print("C720P_SAFE_STORAGE_INVENTORY_V1 "+json.dumps(payload,separators=(",",":"),sort_keys=True),flush=True)
