@@ -54,6 +54,11 @@ def replace_once(src,old,new,name):
  if src.count(old)!=1:raise RuntimeError("unexpected_"+name+"_anchor")
  return src.replace(old,new,1)
 
+def replace_all_bounded(src,old,new,name):
+ found=src.count(old)
+ if found<1 or found>24:raise RuntimeError("unexpected_"+name+"_count="+str(found))
+ return src.replace(old,new)
+
 def req(path,timeout=30,headers=None):
  request=urllib.request.Request(HOST+path,headers=headers or {})
  with urllib.request.urlopen(request,timeout=timeout) as response:
@@ -123,8 +128,8 @@ def main():
   return
  proxy=replace_once(proxy,OLD_ROUTE,NEW_ROUTE+OLD_ROUTE,"proxy")
  drive=replace_once(drive,"/api/saved?t=","/api/drive-saved?t=","drive_index")
- drive=replace_once(drive,"/saved/clip/","/drive/saved/clip/","drive_clip")
- drive=replace_once(drive,"/saved/snap/","/drive/saved/snap/","drive_snap")
+ drive=replace_all_bounded(drive,"/saved/clip/","/drive/saved/clip/","drive_clip")
+ drive=replace_all_bounded(drive,"/saved/snap/","/drive/saved/snap/","drive_snap")
  archive=replace_once(archive,OLD_IFRAME,NEW_IFRAME,"archive_embed")
  root=replace_once(root,OLD_ROOT,NEW_ROOT,"root_embed")
  new={PROXY:proxy.encode(),DRIVE:drive.encode(),ARCHIVE:archive.encode(),ROOT:root.encode()}
