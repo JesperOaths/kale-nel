@@ -316,6 +316,47 @@ public final class ClipClassifier {
    .put("decision",frames<20?"uncertain_incomplete_samples":
       personFrames>0?"retain_possible_garden_person":"no_garden_person_evidence");
  }
+ /** Older person-positive archive only: examine more temporal positions for a
+  * frontal face. 4K MP4 remains untouched, review happens entirely on S9+.
+  * A negative face scan means no suitable face in these samples, NOT no person.
+  */
+ public synchronized boolean deepFaceReview(File mp4,File folder,String name,JSONObject manifest)throws Exception{
+  if(!name.matches("motion_[0-9]{13}[.]mp4")||mp4==null||!mp4.isFile()||
+     !mp4.getParentFile().getCanonicalFile().equals(folder.getCanonicalFile())||
+     manifest.optInt("person_count",0)<=0||
+     manifest.optInt("face_snapshots_saved",0)>0||
+     manifest.has("face_deep_review_version")||
+     !name.equals(manifest.optString("name"))||
+     mp4.length()!=manifest.optLong("bytes",-1))
+   return false;
+  if(Long.parseLong(name.substring(7,20))>=1791687597000L)return false;
+  final String fingerprint=manifest.optString("sha256","");
+  if(fingerprint.length()!=64||!fingerprint.equalsIgnoreCase(digest(mp4)))
+   throw new IOException("deep_face_original_sha_mismatch");
+  MediaMetadataRetriever decoder=new MediaMetadataRetriever();
+  final S9FaceReview faces=new S9FaceReview(app,folder,name,36);
+  int decoded=0;
+  try{
+   decoder.setDataSource(mp4.getAbsolutePath());
+   long duration=Long.parseLong(decoder.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
+   if(duration<1000L||duration>180000L)throw new IOException("face_deep_unsupported_duration");
+   for(int i=0;i<36;i++){
+    long at=(long)(((i+0.5)/36.0)*duration*1000);
+    Bitmap frame=decoder.getFrameAtTime(at,MediaMetadataRetriever.OPTION_CLOSEST);
+    if(frame==null)continue;
+    try{faces.sample(frame,at/1000);decoded++;}finally{frame.recycle();}
+   }
+   // Only replace the manifest once all reads have completed and evidence
+   // has been recorded. Do not erase or re-encode the source recording.
+   faces.publish(manifest);
+   manifest.put("face_deep_review_version","s9_onphone_36_samples_v1");
+   manifest.put("face_deep_decoded_frames",decoded);
+   manifest.put("face_deep_review_human_verified",false);
+   manifest.put("face_deep_review_no_face_is_not_no_person",true);
+   writeJson(new File(folder,name+".verified.json"),manifest);
+   return true;
+  }finally{faces.close();decoder.release();}
+ }
  public synchronized JSONObject process(File mp4, File folder, String name, String trigger, long motionEvents)throws Exception{
   long begin=SystemClock.elapsedRealtime();
   JSONObject result=new JSONObject();
