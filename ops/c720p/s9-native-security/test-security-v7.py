@@ -29,7 +29,7 @@ class V7Tests(unittest.TestCase):
   self.assertIn('scrollbar-gutter:stable',new)
   self.assertIn('flex:1 1 0%',new)
  def test_new_navigation_and_archive_link(self):
-  self.assertIn('data.view=',v7.ROOT_JS)
+  self.assertIn('dataset.view=',v7.ROOT_JS)
   self.assertIn('s9v7-tracks-pane',v7.ROOT_JS)
   self.assertIn('cameraSavedFrame',v7.ROOT_JS)
   self.assertIn('security-archive-v7.html',v7.ROOT_JS)
