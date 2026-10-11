@@ -11,7 +11,7 @@ BACK=pathlib.Path("/home/jespern/c720p-home-hub/backups/s9-playback-profile-v9")
 UNIT="c720p-frontyard-security-new.service"
 OLD='PROFILE = "720p30-v2"'
 NEW='PROFILE = "480p30-v3-verified"'
-ANCHOR='        if data.get("key") != src["key"] or not 10000 <= path.stat().st_size <= FILE_MAX:'
+ANCHOR='        if data.get("key") != src["key"] or not 10000 <= path.stat().st_size <= FILE_MAX:\n            return None'
 GUARD='        if (data.get("profile") != "480p30" or int(data.get("width") or 0)>854 or\n                int(data.get("height") or 0)>480 or float(data.get("fps") or 0)<29.9):\n            return None'
 def check(url):
  with urllib.request.urlopen(url,timeout=14) as r:return r.status
