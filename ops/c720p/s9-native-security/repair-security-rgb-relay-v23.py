@@ -69,6 +69,7 @@ def check(min_count):
   raise RuntimeError("rgb_pack_non_json_not_ready")
  if code not in (200,409):
   raise RuntimeError("rgb_pack_unexpected_status_"+str(code))
+ pack_code=code
  code,ctype,payload=request(path+"?playback=prepare")
  if code!=200 or not ctype.startswith("application/json"):
   raise RuntimeError("standard_prepare_regressed")
@@ -76,7 +77,7 @@ def check(min_count):
  if code!=206 or not ctype.startswith("video/mp4") or len(payload)!=1024:
   raise RuntimeError("original_byte_seek_regressed")
  return {"indexed_clips":len(data["events"]), "rgb_prepare_state":result["state"],
-         "rgb_pack_http":200 if ctype.startswith("application/octet-stream") else code,
+         "rgb_pack_http":pack_code,
          "standard_prepare":True,"original_byte_seek":True}
 
 def atomic(data,st):
