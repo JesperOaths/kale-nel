@@ -64,7 +64,7 @@ try:
     controller:!!document.querySelector('#s9v8-evidence iframe').contentWindow.C720PSecurityVideo}
   })()""")
   print('V9_CDP_EVIDENCE_CHOSEN',json.dumps(prepared),flush=True)
-  time.sleep(2)
+  time.sleep(5)
   readback=read("""(()=>{
     const f=document.querySelector('#s9v8-evidence iframe');
     const video=f.contentDocument?.querySelector('#detail video');
@@ -79,6 +79,35 @@ try:
       iframeSecurityOrigin:f.contentWindow.location.origin};
   })()""")
   print('V9_CDP_EVIDENCE_PLAYER',json.dumps(readback),flush=True)
+  if readback and readback.get('controllerPresent'):
+   begin=read("""(()=>{
+    const f=document.querySelector('#s9v8-evidence iframe');
+    const v=f.contentDocument.querySelector('#detail video');
+    const st={frames:0,first:0,last:0,error:null};
+    f.contentWindow.__s9fps=st;
+    v.muted=true;
+    v.requestVideoFrameCallback(function step(now){
+      st.frames++;if(!st.first)st.first=now;st.last=now;
+      if(v.isConnected)v.requestVideoFrameCallback(step);
+    });
+    v.play().catch(e=>{st.error=String(e)});
+    return {start:v.currentTime,ready:v.readyState,src:v.currentSrc||null};
+   })()""")
+   print('V9_CDP_EVIDENCE_VIDEO_START',json.dumps(begin),flush=True)
+   time.sleep(7)
+   end=read("""(()=>{
+    const f=document.querySelector('#s9v8-evidence iframe');
+    const v=f.contentDocument.querySelector('#detail video');
+    const st=f.contentWindow.__s9fps||{},quality=v.getVideoPlaybackQuality?.()||{};
+    const sec=st.first?Math.max(.001,(st.last-st.first)/1000):0;
+    const result={played:v.currentTime,ready:v.readyState,src:v.currentSrc||null,
+      resolution:[v.videoWidth,v.videoHeight],profile:v.dataset.securityProfile,
+      displayedFps:sec?st.frames/sec:0,framesPresented:st.frames,
+      dropped:quality.droppedVideoFrames,totalFrames:quality.totalVideoFrames,
+      error:st.error||v.error?.message||null};
+    v.pause();return result;
+   })()""")
+   print('V9_CDP_EVIDENCE_VIDEO_FPS',json.dumps(end),flush=True)
 finally:
  if page:page.close()
  if home:
