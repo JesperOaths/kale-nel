@@ -48,6 +48,19 @@ jobs:
           python3 ops/c720p/s9-native-security/test-security-saved-tab-date-nav.py
           python3 -m py_compile ops/c720p/s9-native-security/patch-security-saved-tab-date-nav.py
           python3 ops/c720p/s9-native-security/test-security-date-category-folders.py
+          python3 ops/c720p/s9-native-security/test-security-compact-layout.py
+          python3 -m py_compile ops/c720p/s9-native-security/patch-security-compact-layout.py
+          python3 - <<'PY'
+          import importlib.util,re
+          from pathlib import Path
+          p=Path("ops/c720p/s9-native-security/patch-security-compact-layout.py")
+          spec=importlib.util.spec_from_file_location("compact",p)
+          mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+          scripts=re.findall(r'<script[^>]+>(.*?)</script>',mod.SAVED_SNIPPET,re.S)
+          assert len(scripts)==1
+          Path("/tmp/s9-compact-recordings.js").write_text(scripts[0])
+          PY
+          node --check /tmp/s9-compact-recordings.js
           python3 ops/c720p/s9-native-security/test-security-fallback-dated-stills.py
           python3 ops/c720p/s9-native-security/test-legacy-stills-optin-ui.py
           python3 -m py_compile ops/c720p/s9-native-security/patch-security-fallback-dated-stills.py
@@ -129,6 +142,7 @@ jobs:
           javac -source 8 -target 8 -cp "$CLASSPATH" -d "$WORK/classes" \
             ops/c720p/s9-native-security/src/nl/kalenel/s9security/*.java
           test -s "$WORK/classes/nl/kalenel/s9security/CameraService.class"
+          test -s "$WORK/classes/nl/kalenel/s9security/PersonEventTracker.class"
           test -s "$WORK/classes/nl/kalenel/s9security/AnonymousClipTracks.class"
           test -s "$WORK/classes/nl/kalenel/s9security/PreviewJpeg.class"
           echo "S9_NATIVE_SECURITY_ANDROID_CLASSES_COMPILE_OK"
@@ -140,6 +154,10 @@ jobs:
           trap 'rm -rf "$WORK"' EXIT
           javac -d "$WORK"             ops/c720p/s9-native-security/src/nl/kalenel/s9security/RecordingRate.java             ops/c720p/s9-native-security/tests/RecordingRateTest.java
           java -cp "$WORK" nl.kalenel.s9security.RecordingRateTest
+          javac -d "$WORK" \
+            ops/c720p/s9-native-security/src/nl/kalenel/s9security/PersonEventTracker.java \
+            ops/c720p/s9-native-security/tests/PersonEventTrackerTest.java
+          java -cp "$WORK" nl.kalenel.s9security.PersonEventTrackerTest
           javac -d "$WORK" \
             ops/c720p/s9-native-security/src/nl/kalenel/s9security/CameraOrientation.java \
             ops/c720p/s9-native-security/tests/CameraOrientationTest.java

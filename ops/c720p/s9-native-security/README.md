@@ -121,3 +121,78 @@ python3 ops/c720p/s9-native-security/safe-night-guard-upgrade.py
 The C720P scripts above must run on the C720P against a checkout of the reviewed commit; the S9 APK installer must be run only after preserving the existing signed APK and verifying the camera is not actively recording. The UI-only update is backed up and rolls back on failure. After APK replacement, verify that Camera2 resumes `watching`, native 4K recording and `/shot.jpg` work, the SD path is unchanged, sample clips gain `face_review_version=s9_face_review_v1`, snapshots exist on phone SD, the hub's signed image endpoint serves only indexed crops, and no original clips vanished. Confirm thermal and battery use before enabling historical backfill at scale. **GitHub Actions Java compilation and mock Python/UI tests do not verify any of these on-device conditions.**
 
 **Privacy/accuracy:** Face matching may confuse people or be wrong with hats, distant faces, occlusion or changing lighting. Keep the name status visibly provisional, do not trigger door locks, alarms or irreversible actions from matches alone, and provide an option to disable or erase locally stored biometric data if the household requires it. Existing clip-local Person 1/2 tracks remain independent and are not retroactively relabeled as verified named individuals.
+
+
+## Compact Security playback and garden detection V3 (11 October 2026 — source release)
+
+The Camera2 app's prior `post_record_cooldown_ms=0` setting did not remove
+its `RecordingRate` admission cap (16 ordinary + 8 priority clips/hour).
+The V3 service stops consulting that cap. The phone starts another recording
+when a new two-frame person gate succeeds and the recorder returns to
+`watching`; the 4K capture still has a single camera owner. Native recovery,
+41.5 °C battery-temperature guard, 15 GiB free-SD guard, 120-second maximum
+clip duration and original-MP4 retention remain in force.
+
+Foreground motion now uses a median garden brightness offset and per-tile
+adaptive noise floors, while the realtime S9+ person gate requires two
+spatially consistent, plausibly shaped person boxes at ≥0.58 confidence
+within three seconds. A model failure clears pending positives. The
+completed-video classifier keeps isolated 0.50 person hits as *needs review*
+instead of calling the recording a confirmed-person category; the raw
+max-person count and per-frame evidence are still retained. Thumbnail
+selection ignores 0.30–0.57 person boxes and favors actual garden motion.
+
+The HA Saved Clips view now defaults to all recordings, grouped by date
+(with no second-level folder maze). Opening a clip uses the existing
+authenticated S9+ SD playback URL. A compact left video player sits beside a
+wider, scrollable recordings selector; old duplicate lists are only hidden
+after the curated index is ready. The S9 live 4:3 image is constrained by
+the iframe's dynamic viewport height. Original clips, Drive archives, labels
+and the authenticated access route are not changed by these HTML patches.
+
+### Safe HTML rollout (on C720P, after syncing the reviewed commit)
+
+First run both commands without `--apply` to confirm the page shapes match.
+The apply mode creates an immutable-timestamped rollback copy for each page
+and restores it automatically on write or post-write verification failure.
+
+```bash
+python3 ops/c720p/s9-native-security/patch-security-date-category-folders.py --apply
+python3 ops/c720p/s9-native-security/patch-s9-saved-video-orientation.py --apply
+python3 ops/c720p/s9-native-security/patch-security-compact-layout.py --kind saved --apply
+python3 ops/c720p/s9-native-security/patch-security-compact-layout.py --kind live --apply
+```
+
+The saved-date and orientation patchers are incremental upgrades of already
+installed widgets; install them before the compact layout. The phone APK must
+**separately** be compiled, signed, and guardedly upgraded through the existing
+`compile-only.sh`, `package-only.sh`, `stage-verified-deployment.py`
+and `safe-night-guard-upgrade.py` path. An HTML deployment is not proof of a
+working phone APK.
+
+**Acceptance is empirical, not source-only:** verify a fresh 4K clip and SD
+manifest; live + rotated-video playback; next clip after completion with no
+hourly rejection; battery temperature and SD guard telemetry; and annotated
+day/night garden walk-by events versus empty-scene/foliage/street negatives.
+Higher person confidence reduces some false positives but can miss distant
+people. Do not declare accuracy improvements proven or delete any recordings
+on model evidence alone. The permanent-deletion policy remains disabled.
+
+
+## V4 event-first detector, gallery and thumbnails (11 October 2026)
+
+**Source stage, not a confirmed device deployment.** V4 retains Camera2 native 3840x2160 30-fps H264, local SD storage, verified manifests, signed local media playback, and the currently deployed-in-code SSD MobileNet TFLite model. The production inference model has NOT yet been replaced with YOLO/NCNN or EfficientDet. The independent s9-detector-benchmark package already exists for a read-only EfficientDet-Lite0 comparison, but S9+ sustained latency, day/night recall and false-positive behavior require on-device testing with labeled actual garden footage before choosing a model.
+
+PersonEventTracker.java associates three distinct, spatially plausible person detections with two >=0.60 strong outputs within 4.5 seconds; a single score cannot confirm a person. On-phone periodic person inference runs approximately every 1.65 seconds when still, 650ms when motion is active, and 1.35 seconds during recording, under thermal and JPEG freshness guards. Foreground motion is scheduling evidence, not a person prediction. Valid tracks extend recording for standing people and can prompt a new 4K segment when the two-minute cap is reached. The MediaRecorder teardown/reconfigure interval is not gapless or equivalent to an encoded pre-roll.
+
+V4 thumbnail regeneration on the S9+ scores a bounded set of up to 10 video frame positions: strong foreground-garden person evidence first, then luminance detail, exposure and genuine near-garden movement. It saves 640x360 JPEG previews, publishes timestamp and thumbnail strategy in the verified sidecar and preserves a preexisting thumb for rollback when possible. An idle-only backfill attempts one verified SD clip at a time while the garden is quiet, with a cool phone (<34.5C) and adequate SD reserve. This is not a bulk scan completed merely by updating source.
+
+V4 Saved/Camera Clips UI has a horizontal date strip, clip colour marks per date, a six-colour legend (person likely, possible person, animal, vehicle, other motion and unreviewed), direct playback cards and a real player maximum 360x220px on desktop. The live preview is bounded to 70% of the viewport. Existing signed media relay and the other face/archive widgets remain.
+
+### Source-to-device rollout order
+
+On the C720P, after fetching and validating ONE immutable successful GitHub commit, run patch-security-date-category-folders.py, patch-s9-saved-video-orientation.py, patch-security-compact-layout.py for saved and live, and patch-detector-version-badges.py. Start with their dry-run modes and retain timestamped HTML backups. Validate the real rendered Security UI and signed MP4 Range playback with both landscape and rotated recordings.
+
+Build and sign the coherent APK with the validated current production model and signed key; check active recorder state, thermal, SD reserve, existing APK signature compatibility and rollback APK before invoking the guarded safe-night-guard-upgrade.py procedure. Do not stop or replace active surveillance solely because CI passed. Verify garden day/night walks, standing people, empty scenes, road traffic, tree movement, latency, battery temperature and storage after the actual upgrade.
+
+**Still pending beyond this phase:** device install, observed source/production cutover, edit-in-browser polygon ROI, independently labeled S9+ SSD-vs-Lite0-vs-YOLO benchmark, alternative detector deployment, multi-object ByteTrack-class tracking, pre-event encoded 4K buffer, demonstrated high recall and false-positive metrics. Preserve all original recordings and rollback options.

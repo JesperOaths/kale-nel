@@ -104,6 +104,8 @@ public final class CameraService extends Service {
  private volatile long gardenTriageLastScan=0;
  private volatile boolean gardenTriageQueued=false;
  private long gardenTriageCutoffMs=0;
+ private volatile boolean thumbnailV4Queued=false;
+ private volatile long thumbnailV4LastAt=0,thumbnailV4Updated=0,thumbnailV4Errors=0;
  private long lastFallbackAt=0;
  // Near-camera person gate executes on the S9+ review worker, never on C720P.
  // Only cameraHandler can start/stop the native MediaRecorder.
@@ -113,6 +115,11 @@ public final class CameraService extends Service {
  private volatile long gardenPersonGateRejects=0,gardenPersonGateErrors=0;
  private volatile float gardenPersonGateScore=0f;
  private int gardenPersonGatePositiveStreak=0;
+ private ClipClassifier.PersonGateObservation gardenPersonGatePreviousObservation=null;
+ private final PersonEventTracker personEvents=new PersonEventTracker();
+ private long lastPersonGateJpegStamp=0;
+ private boolean pendingPersonSegment=false;
+ private long pendingPersonSegmentAt=0;
  private long gardenPersonGatePreviousPositiveAt=0;
  private volatile long gardenPersonGateConfirmedStarts=0;
  private volatile long deepFaceScanned=0,deepFaceErrors=0;
@@ -129,7 +136,8 @@ public final class CameraService extends Service {
  private volatile long lastJpegAt=0;
  private int recoveryCount=0;
  private static final long QUIET_MS=8500,MAX_MS=120000,COOLDOWN_MS=0;
- private static final int MAX_4K_CLIPS_PER_HOUR=RecordingRate.TOTAL_PER_HOUR;
+ // -1 explicitly means no artificial hourly quota. Thermal/SD guards remain.
+ private static final int MAX_4K_CLIPS_PER_HOUR=-1;
  @Override public IBinder onBind(Intent intent){return null;}
  @Override public int onStartCommand(Intent intent,int flags,int id){
   if(intent!=null&&"STOP".equals(intent.getAction())){
@@ -276,14 +284,16 @@ public final class CameraService extends Service {
      }
      if(change && lastFrameAt>=cameraControlSettleUntil){
       motionEvents++;
-      lastMovementAt=lastFrameAt;
-      if(!pilotOnly&&"watching".equals(mode)){
-       // Motion merely requests on-device person inference. Vehicles on the
-       // road and non-person garden motion do not start new videos.
-       if(!gardenGateReady)
-        saveFallbackEvidence("realtime_person_detector_warming_or_unavailable");
-       else evaluateGardenPersonAsync();
-      }
+      // Motion is candidate evidence, not a person or recording decision.
+      // Do not extend a person's video just because a tree moved.
+     }
+     if(!pilotOnly&&lastFrameAt>=cameraControlSettleUntil&&
+        ("watching".equals(mode)||"recording".equals(mode))){
+      // Periodic inference must also run when the garden is visually still:
+      // a stationary visitor must not disappear from tracking.
+      if(!gardenGateReady){
+       if(change)saveFallbackEvidence("realtime_person_detector_warming_or_unavailable");
+      }else evaluateGardenPersonAsync();
      }
      if("recording".equals(mode)&&lastFrameAt-lastStart>2500&&
         (lastFrameAt-lastStart>MAX_MS||lastFrameAt-lastMovementAt>QUIET_MS))stopRecording("motion_completed");
@@ -354,22 +364,29 @@ public final class CameraService extends Service {
  }
  private void evaluateGardenPersonAsync(){
   final long now=SystemClock.elapsedRealtime();
-  if(gardenPersonGateBusy||now-gardenPersonGateLastAt<900||latestJpeg.length<1000||
-      now-lastJpegAt>1200||gardenGateExecutor==null||gardenGateClassifier==null||
-      !gardenGateReady)return;
+  // A quiet garden still receives person inference. Motion increases cadence,
+  // not the probability of being a person. Recording uses a moderate cadence.
+  final long interval="recording".equals(mode)?1350L:(motion.motion?650L:1650L);
+  final long jpegStamp=lastJpegAt;
+  if(gardenPersonGateBusy||now-gardenPersonGateLastAt<interval||
+      jpegStamp<=lastPersonGateJpegStamp||latestJpeg.length<1000||
+      now-jpegStamp>1300||gardenGateExecutor==null||gardenGateClassifier==null||
+      !gardenGateReady||temperature()>=410)return;
   gardenPersonGateBusy=true;gardenPersonGateLastAt=now;
+  lastPersonGateJpegStamp=jpegStamp;
   final byte[] jpg=latestJpeg.clone();
   final float top=motion.topBoundary(),margin=motion.sideMargin();
   try{
    gardenGateExecutor.execute(new Runnable(){public void run(){
     final long gateStarted=SystemClock.elapsedRealtime();
-    float value=0;boolean failed=false;
-    try{value=gardenGateClassifier.personScoreInGarden(jpg,top,margin);}
+    ClipClassifier.PersonGateObservation observation=null;boolean failed=false;
+    try{observation=gardenGateClassifier.personObservationInGarden(jpg,top,margin);}
     catch(Throwable issue){
      failed=true;
      Log.w(TAG,"garden_person_gate_"+issue.getClass().getSimpleName());
     }
-    final float score=value;
+    final ClipClassifier.PersonGateObservation detected=observation;
+    final float score=detected==null?0f:detected.score;
     final boolean error=failed;
     if(cameraHandler==null)return;
     cameraHandler.post(new Runnable(){public void run(){
@@ -382,27 +399,35 @@ public final class CameraService extends Service {
       saveFallbackEvidence("realtime_person_detector_failed");
       return;
      }
-     if(score<0.44f){gardenPersonGateRejects++;gardenPersonGatePositiveStreak=0;return;}
-     gardenPersonGateMatches++;
-     // Do not start recording on stale detections, if the camera has moved
-     // into a new capture session, or after a deliberate controls change.
-     if(!running||!"watching".equals(mode)||SystemClock.elapsedRealtime()-now>3500||
-         lastFrameAt<cameraControlSettleUntil){
+     // Discard stale inference after a preview restart or manual camera control.
+     if(!running||(!"watching".equals(mode)&&!"recording".equals(mode))||
+        SystemClock.elapsedRealtime()-now>3500||lastFrameAt<cameraControlSettleUntil){
       gardenPersonGateStale++;
-      gardenPersonGatePositiveStreak=0;
-      if(running&&"watching".equals(mode))
-       saveFallbackEvidence("stale_person_result_skipped");
       return;
      }
-     if(gardenPersonGatePreviousPositiveAt>0 && now-gardenPersonGatePreviousPositiveAt<=3000L)
-      gardenPersonGatePositiveStreak=Math.min(2,gardenPersonGatePositiveStreak+1);
-     else gardenPersonGatePositiveStreak=1;
-     gardenPersonGatePreviousPositiveAt=now;
-     if(gardenPersonGatePositiveStreak<2)return;
-     gardenPersonGatePositiveStreak=0;
-     if(temperature()<415 && folder!=null&&
-             folder.getUsableSpace()>15L*1024*1024*1024){gardenPersonGateConfirmedStarts++;startRecording();}
-     else saveFallbackEvidence("thermal_or_space_guard");
+     float[] box=detected==null?null:new float[]{
+       Math.max(0f,detected.top),Math.max(0f,detected.left),
+       Math.min(1f,detected.bottom),Math.min(1f,detected.right)};
+     PersonEventTracker.Decision event=personEvents.observe(now,score,box);
+     gardenPersonGatePositiveStreak=event.associatedFrames;
+     if(!event.candidate)gardenPersonGateRejects++;
+     else gardenPersonGateMatches++;
+     if("recording".equals(mode)){
+      // Track confirmation or continued presence prolongs the current 4K
+      // event, including when no significant pixel motion remains.
+      if(event.active)lastMovementAt=SystemClock.elapsedRealtime();
+      return;
+     }
+     if(pendingPersonSegment && now-pendingPersonSegmentAt>8000L)pendingPersonSegment=false;
+     // After a 4K segment reaches its duration cap, restart for the same
+     // confirmed visible visitor rather than waiting for a new entrant.
+     if(!event.confirmedNow && !(pendingPersonSegment&&event.active))return;
+     pendingPersonSegment=false;
+     if(temperature()<415&&folder!=null&&
+         folder.getUsableSpace()>15L*1024*1024*1024){
+      gardenPersonGateConfirmedStarts++;
+      startRecording();
+     }else saveFallbackEvidence("thermal_or_space_guard");
     }});
    }});
   }catch(RejectedExecutionException exc){
@@ -410,23 +435,17 @@ public final class CameraService extends Service {
    saveFallbackEvidence("realtime_person_detector_queue_unavailable");
   }
  }
- private boolean rateAllowed(boolean sustainedCoherent){
-  if(temporaryTest)return true;
-  android.content.SharedPreferences prefs=getSharedPreferences("native",MODE_PRIVATE);
-  long now=System.currentTimeMillis(),start=prefs.getLong("record_rate_start",0L);
-  if(start<=0||start>now||now-start>=3600000L){
-   prefs.edit().putLong("record_rate_start",now).putInt("record_rate_count",0).apply();
-   return true;
-  }
-  return RecordingRate.allow(prefs.getInt("record_rate_count",0),sustainedCoherent);
- }
+ // Telemetry only: never reject a legitimate new event because earlier
+ // clips were saved in the same hour. MediaRecorder remains single-owner.
  private void noteRecordingStarted(){
   if(temporaryTest)return;
   android.content.SharedPreferences prefs=getSharedPreferences("native",MODE_PRIVATE);
-  int count=prefs.getInt("record_rate_count",0);
-  captureTier=RecordingRate.reserve(count)?"priority_reserve":"normal";
-  if(RecordingRate.reserve(count))reserveUsed++;
-  prefs.edit().putInt("record_rate_count",count+1).apply();
+  long now=System.currentTimeMillis(),window=prefs.getLong("record_rate_start",0L);
+  int count=(window<=0||window>now||now-window>=3600000L)?
+      0:prefs.getInt("record_rate_count",0);
+  captureTier="unrestricted";
+  prefs.edit().putLong("record_rate_start",count==0?now:window)
+      .putInt("record_rate_count",Math.min(Integer.MAX_VALUE-1,count)+1).apply();
  }
  // Preserve the installed Camera2 APK's sensor/display-aware recording hint.
  // Manual overrides are for a verified fixed mounting angle only.
@@ -446,11 +465,6 @@ public final class CameraService extends Service {
  }
  private void startRecording(){
   if(!running||(pilotOnly&&!temporaryTest)||!"watching".equals(mode))return;
-  if(!rateAllowed(motion.strong)){
-   if(suppressedByRate++%140==0)Log.w(TAG,"4K_RATE_GUARD_PRIORITY_RESERVE_EXHAUSTED_OR_WEAK");
-   saveFallbackEvidence("recording_budget_rejected");
-   return;
-  }
   if(temperature()>=415||folder.getUsableSpace()<15L*1024*1024*1024){
    saveFallbackEvidence("recording_safety_guard");
    return;
@@ -499,6 +513,8 @@ public final class CameraService extends Service {
  }
  private void stopRecording(String reason){
   if(!"recording".equals(mode))return;
+  pendingPersonSegment=personEvents.isActive(SystemClock.elapsedRealtime());
+  pendingPersonSegmentAt=SystemClock.elapsedRealtime();
   mode="stopping";
   File candidate=finished,unfinished=partial;
   try{
@@ -532,10 +548,11 @@ public final class CameraService extends Service {
   }
  }
  private void abortRecording(){
+  pendingPersonSegment=false;
   if(recorder!=null){try{recorder.release();}catch(Exception ignored){}recorder=null;}
   closeSession();
   failed++;
-  cooldownUntil=SystemClock.elapsedRealtime()+20000;
+  cooldownUntil=0; // Preserve recorder recovery delay, no admission cooldown.
   cameraHandler.postDelayed(new Runnable(){public void run(){configurePreview();}},1300);
  }
  private boolean review(File f,String reason,long count){
@@ -746,6 +763,61 @@ public final class CameraService extends Service {
    gardenTriageQueued=false;
   }
  }
+ /** One on-phone event-thumbnail backfill per cool/idle interval.
+  * Historic manifests may already carry earlier "garden" thumbs; V4 reranks
+  * up to ten video frames before marking the newer thumb in the manifest.
+  * No decoding, transcoding or classification occurs on the C720P.
+  */
+ private void maybeThumbnailV4Backfill(){
+  final long now=SystemClock.elapsedRealtime();
+  if(!running||thumbnailV4Queued||now-thumbnailV4LastAt<75000L||
+     folder==null||classifier==null||reviewer==null||
+     !"watching".equals(mode)||temperature()>=345||
+     gardenPersonGateBusy||historicalQueued||faceBackfillQueued||gardenTriageQueued||
+     motion.motion||personEvents.isActive(now)||
+     (personEvents.lastPersonSeenAt()>0&&now-personEvents.lastPersonSeenAt()<60000L)||
+     (lastMovementAt>0&&now-lastMovementAt<60000L)||
+     folder.getUsableSpace()<20L*1024*1024*1024)return;
+  thumbnailV4Queued=true;
+  final File media=folder;
+  try{
+   reviewer.execute(new Runnable(){public void run(){
+    try{
+     if(!running||!"watching".equals(mode)||temperature()>=345)return;
+     File[] manifests=media.listFiles((d,n)->n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
+     if(manifests==null)return;
+     Arrays.sort(manifests,Comparator.comparing(File::getName).reversed());
+     int inspected=0;
+     for(File manifest:manifests){
+      if(++inspected>800||!running||!"watching".equals(mode)||temperature()>=345||
+         gardenPersonGateBusy)return;
+      if(manifest.length()<100||manifest.length()>250000)continue;
+      String name=manifest.getName().replace(".verified.json","");
+      File movie=new File(media,name);
+      if(!movie.isFile()||movie.length()<200000||movie.length()>850000000)continue;
+      try{
+       JSONObject meta=new JSONObject(new String(
+        java.nio.file.Files.readAllBytes(manifest.toPath()),"UTF-8"));
+       if(!name.equals(meta.optString("name"))||
+          meta.optLong("bytes",-1)!=movie.length()||
+          !"S9_microSD_only".equals(meta.optString("archive"))||
+          "v4_best_event_frame".equals(meta.optString("thumbnail_focus")))continue;
+       if(classifier.rebuildGardenThumbnail(movie,media,meta))thumbnailV4Updated++;
+       return;
+      }catch(Exception problem){
+       thumbnailV4Errors++;
+       Log.w(TAG,"thumbnail_v4_backfill_skip",problem);
+      }
+     }
+    }finally{
+     thumbnailV4LastAt=SystemClock.elapsedRealtime();
+     thumbnailV4Queued=false;
+    }
+   }});
+  }catch(RejectedExecutionException e){
+   thumbnailV4Queued=false;thumbnailV4Errors++;
+  }
+ }
  private void watchdog(){
   if(!running)return;
   long n=SystemClock.elapsedRealtime();
@@ -756,6 +828,7 @@ public final class CameraService extends Service {
   maybeHistoricalImport();
   maybeFaceBackfill();
   maybeGardenArchiveTriage();
+  maybeThumbnailV4Backfill();
   cameraHandler.postDelayed(new Runnable(){public void run(){watchdog();}},4500);
  }
  private void failure(String text,Throwable e){
@@ -770,7 +843,19 @@ public final class CameraService extends Service {
    d.put("pilot_only",pilotOnly);
    d.put("takeover_completed",!pilotOnly&&running&&lastFrameAt>0);
    d.put("recorder","camera2_3840x2160_h264");
-   d.put("motion_detector","garden_roi_gpu_two_frame_person_gate_v2");
+   d.put("motion_detector","person_first_periodic_temporal_track_v4");
+   d.put("person_tracker_version",PersonEventTracker.VERSION);
+   d.put("person_track_confirmed_events",personEvents.confirmedEvents);
+   d.put("person_track_last_seen_ms",personEvents.lastPersonSeenAt());
+   d.put("person_track_observations",personEvents.observations);
+   d.put("person_segment_continuation_pending",pendingPersonSegment);
+   d.put("thumbnail_v4_worker","s9_local_sd_subject_best_frame_v4");
+   d.put("thumbnail_v4_backfill_queued",thumbnailV4Queued);
+   d.put("thumbnail_v4_backfilled",thumbnailV4Updated);
+   d.put("thumbnail_v4_errors",thumbnailV4Errors);
+   d.put("person_gate_min_confidence",0.60);
+   d.put("person_gate_periodic_without_motion",true);
+   d.put("person_gate_spatial_confirmation_frames",3);
    d.put("previous_detector_version","garden_roi_gpu_person_gate_v1");
    d.put("review_model","ssd_mobilenet_coco_gpu_cpu_v1");
    d.put("mic",false);d.put("cloud_upload",false);
@@ -791,8 +876,9 @@ public final class CameraService extends Service {
    d.put("sensor_lowlight_long_exposure",sensorExposureMs>=45f);
    d.put("motion_rate_suppressed",suppressedByRate);
    d.put("recording_rate_max_per_hour",MAX_4K_CLIPS_PER_HOUR);
-   d.put("recording_rate_standard_per_hour",RecordingRate.BASE_PER_HOUR);
-   d.put("recording_rate_priority_reserve",RecordingRate.PRIORITY_RESERVE_PER_HOUR);
+   d.put("recording_rate_standard_per_hour",-1);
+   d.put("recording_rate_priority_reserve",0);
+   d.put("recording_hourly_quota_enabled",false);
    d.put("priority_motion",motion.strong);
    d.put("priority_reserve_used",reserveUsed);
    d.put("fallback_evidence_saved",fallbackEvidenceSaved);
@@ -800,7 +886,8 @@ public final class CameraService extends Service {
     d.put("suppressed_video_without_stills",skippedRecordingsWithoutStill);
     d.put("post_record_cooldown_ms",COOLDOWN_MS);
     d.put("max_person_clip_ms",MAX_MS);
-    d.put("person_recording_extend_by_garden_motion",true);
+    d.put("person_recording_extend_by_garden_motion",false);
+   d.put("person_recording_extend_by_track",true);
    d.put("fallback_evidence_failed",fallbackEvidenceFailed);
    d.put("recovery_partials_finalized",recoveredPartials);
    d.put("recovery_missing_reviews_repaired",recoveredReviews);

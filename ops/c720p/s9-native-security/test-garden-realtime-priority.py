@@ -16,9 +16,9 @@ class GardenRealtimePriorityTests(unittest.TestCase):
     def test_live_motion_never_queues_behind_historical_archive_or_faces(self):
         s=CAMERA.read_text()
         gate=s.split('private void evaluateGardenPersonAsync(){',1)[1].split(
-            'private boolean rateAllowed(',1)[0]
+            'private void noteRecordingStarted(',1)[0]
         self.assertIn('gardenGateExecutor.execute(new Runnable()',gate)
-        self.assertIn('gardenGateClassifier.personScoreInGarden',gate)
+        self.assertIn('gardenGateClassifier.personObservationInGarden',gate)
         self.assertNotIn('reviewer.execute',gate)
         self.assertNotIn('reviewer.submit',gate)
         self.assertNotIn('classifier.process(',gate)
@@ -26,7 +26,7 @@ class GardenRealtimePriorityTests(unittest.TestCase):
         self.assertIn('!gardenGateReady',s)
         self.assertIn('realtime_person_detector_warming_or_unavailable',s)
         self.assertIn('realtime_person_detector_failed',gate)
-        self.assertIn('stale_person_result_skipped',gate)
+        self.assertIn('gardenPersonGateStale++',gate)
         self.assertIn('gardenPersonGateBusy',gate)
 
     def test_separate_pre_warmed_gpu_model_still_on_phone(self):
@@ -68,7 +68,8 @@ class GardenRealtimePriorityTests(unittest.TestCase):
           'ok':True,'mode':'watching','native_4k_enabled':True,
           'garden_person_gate_ready':True,
           'garden_person_gate_backend':'gpu',
-          'garden_zone':'near','recording_rate_max_per_hour':24,
+          'garden_zone':'near','recording_rate_max_per_hour':-1,
+          'recording_hourly_quota_enabled':False,
           'temperature_c':26.0,'sd_free_bytes':79000000000,
           'garden_person_gate_last_queue_wait_ms':85,
           'garden_person_gate_prepare_errors':0,
@@ -102,7 +103,7 @@ class GardenRealtimePriorityTests(unittest.TestCase):
             'PhoneMediaRange.handle',
             'PreviewJpeg.encode(copied,58)',
             'sensor_exposure_ms',
-            'garden_roi_gpu_two_frame_person_gate_v2',
+            'person_first_periodic_temporal_track_v4',
             'Math.max(0,gateStarted-now)',
         ):
             self.assertIn(required,s)

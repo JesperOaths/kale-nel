@@ -7,7 +7,7 @@ import java.util.ArrayDeque;
 /** Luma-based regional motion with exposure-change rejection and temporal voting. */
 public final class MotionGrid {
  private static final int W=24,H=14,N=W*H;
- private final float[] background=new float[N],nowCells=new float[N];
+ private final float[] background=new float[N],nowCells=new float[N],noise=new float[N];
  private final boolean[] changed=new boolean[N],seen=new boolean[N];
  private final int[] stack=new int[N];
  private long lastSample=0;
@@ -56,6 +56,7 @@ public final class MotionGrid {
   init=0;lastSample=0;sustainedEvidence=0;
   votes.clear();
   java.util.Arrays.fill(background,0f);
+  java.util.Arrays.fill(noise,0f);
   java.util.Arrays.fill(nowCells,0f);
   java.util.Arrays.fill(changed,false);
   java.util.Arrays.fill(seen,false);
@@ -97,22 +98,32 @@ public final class MotionGrid {
    else for(int i=0;i<N;i++)background[i]=0.75f*background[i]+0.25f*nowCells[i];
    init++;motion=false;strong=false;return false;
   }
+  // Median background offset rejects camera auto-exposure changes without
+  // letting a moving plant or person bias the full-garden baseline.
   float shift=0;
+  float[] offsets=new float[N];
   int validCells=0;
   for(int i=0;i<N;i++){
    int gx=i%W,gy=i/W;
    if(insideGarden((gx+.5f)/W,(gy+.5f)/H)){
-    shift+=nowCells[i]-background[i];validCells++;
+    offsets[validCells++]=nowCells[i]-background[i];
    }
   }
   if(validCells==0)return false;
-  shift/=validCells;
+  java.util.Arrays.sort(offsets,0,validCells);
+  shift=offsets[validCells/2];
   int nChange=0;
   for(int i=0;i<N;i++){
    // Slightly more responsive to people crossing a dim fixed-camera view,
    // while retaining temporal voting, coherent-region and exposure guards.
    // Bright daylight threshold is unchanged; low-light threshold 27 -> 23.
-   boolean c=Math.abs(nowCells[i]-background[i]-shift)>(lighting<42?23.0f:18.5f);
+   float residual=Math.abs(nowCells[i]-background[i]-shift);
+   // Wind-blown leaves and sensor grain raise only their own cell's noise
+   // floor; quiet cells remain sensitive to a person walking through.
+   float adaptiveThreshold=Math.max((lighting<42?23.0f:18.5f),noise[i]*3.4f);
+   boolean c=residual>adaptiveThreshold;
+   if(!c)noise[i]=Math.min(40f,noise[i]*.94f+residual*.06f);
+   else noise[i]=Math.min(40f,noise[i]*.998f+residual*.002f);
    // Motion outside the garden cannot vote or join connected regions.
    int gx=i%W,gy=i/W;
    c=c&&insideGarden((gx+.5f)/W,(gy+.5f)/H);
