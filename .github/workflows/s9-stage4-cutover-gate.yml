@@ -1,0 +1,27 @@
+name: S9 stage4 detector cutover gate
+on:
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/audit-stage4-readonly.py'
+      - 'ops/c720p/s9-native-security/test-stage4-readonly.py'
+      - '.github/workflows/s9-stage4-cutover-gate.yml'
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/audit-stage4-readonly.py'
+      - 'ops/c720p/s9-native-security/test-stage4-readonly.py'
+      - '.github/workflows/s9-stage4-cutover-gate.yml'
+permissions:
+  contents: read
+jobs:
+  audit-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Check readonly validation workflow
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/c720p/s9-native-security/audit-stage4-readonly.py
+          python3 ops/c720p/s9-native-security/test-stage4-readonly.py
+          test -s ops/c720p/s9-detector-benchmark/ON_PHONE_BENCHMARK_20261011.md
+          test -s ops/c720p/s9-native-security/RECORDING_EVENT_V3.md
