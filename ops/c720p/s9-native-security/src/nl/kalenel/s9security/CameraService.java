@@ -116,6 +116,8 @@ public final class CameraService extends Service {
  private ClipClassifier.PersonGateObservation gardenPersonGatePreviousObservation=null;
  private final PersonEventTracker personEvents=new PersonEventTracker();
  private long lastPersonGateJpegStamp=0;
+ private boolean pendingPersonSegment=false;
+ private long pendingPersonSegmentAt=0;
  private long gardenPersonGatePreviousPositiveAt=0;
  private volatile long gardenPersonGateConfirmedStarts=0;
  private volatile long deepFaceScanned=0,deepFaceErrors=0;
@@ -414,7 +416,11 @@ public final class CameraService extends Service {
       if(event.active)lastMovementAt=SystemClock.elapsedRealtime();
       return;
      }
-     if(!event.confirmedNow)return;
+     if(pendingPersonSegment && now-pendingPersonSegmentAt>8000L)pendingPersonSegment=false;
+     // After a 4K segment reaches its duration cap, restart for the same
+     // confirmed visible visitor rather than waiting for a new entrant.
+     if(!event.confirmedNow && !(pendingPersonSegment&&event.active))return;
+     pendingPersonSegment=false;
      if(temperature()<415&&folder!=null&&
          folder.getUsableSpace()>15L*1024*1024*1024){
       gardenPersonGateConfirmedStarts++;
@@ -505,6 +511,8 @@ public final class CameraService extends Service {
  }
  private void stopRecording(String reason){
   if(!"recording".equals(mode))return;
+  pendingPersonSegment=personEvents.isActive(SystemClock.elapsedRealtime());
+  pendingPersonSegmentAt=SystemClock.elapsedRealtime();
   mode="stopping";
   File candidate=finished,unfinished=partial;
   try{
@@ -538,6 +546,7 @@ public final class CameraService extends Service {
   }
  }
  private void abortRecording(){
+  pendingPersonSegment=false;
   if(recorder!=null){try{recorder.release();}catch(Exception ignored){}recorder=null;}
   closeSession();
   failed++;
@@ -781,6 +790,7 @@ public final class CameraService extends Service {
    d.put("person_track_confirmed_events",personEvents.confirmedEvents);
    d.put("person_track_last_seen_ms",personEvents.lastPersonSeenAt());
    d.put("person_track_observations",personEvents.observations);
+   d.put("person_segment_continuation_pending",pendingPersonSegment);
    d.put("person_gate_min_confidence",0.60);
    d.put("person_gate_periodic_without_motion",true);
    d.put("person_gate_spatial_confirmation_frames",3);
