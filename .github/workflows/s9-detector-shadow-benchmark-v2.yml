@@ -24,6 +24,7 @@ jobs:
           java -cp /tmp/s9-shadow nl.kalenel.s9benchmark.GardenShadowPipelineTest
           grep -q 'GardenShadowPipeline.java' "$P/build-only.sh"
           grep -q 'android.permission.DUMP' "$P/AndroidManifest.xml"
+          python3 "$P/test_score_shadow_results.py"
   android-benchmark-compile:
     runs-on: ubuntu-latest
     timeout-minutes: 8
