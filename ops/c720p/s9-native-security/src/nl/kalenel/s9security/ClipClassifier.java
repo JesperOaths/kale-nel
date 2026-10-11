@@ -207,6 +207,10 @@ public final class ClipClassifier {
   final LinkedHashSet<String> animalsSeen=new LinkedHashSet<>(),vehiclesSeen=new LinkedHashSet<>();
   double maxPerson=0,maxAnimal=0,maxVehicle=0;
   Bitmap best=null;double bestScore=-1;
+  long bestMotionTimeMs=-1;
+  boolean bestGardenPerson=false;
+  float bestGardenPersonScore=0f;
+  int[] previousGardenLuma=null;
   long duration=0;
   try{
    media.setDataSource(mp4.getAbsolutePath());
@@ -273,11 +277,34 @@ public final class ClipClassifier {
        .put("person_peak_score",Math.round(framePersonMax*1000)/1000.0)
        .put("vehicles_at_050",v).put("animals_at_050",a);
      frameEvidence.put(sample);
-     double quality=confidence*2.0+0.05*(p+a+v);
+     // Prioritize the actual foreground person or largest garden change.
+     // Cars on the road cannot dominate a saved thumbnail.
+     final float gardenTop=.64f,margin=.045f;
+     float personInGarden=0f;
+     float[] gardenPersonBox=null;
+     for(Detection detected:found){
+      if(!"person".equals(detected.label)||detected.score<.30f)continue;
+      float[] box=detected.box;
+      if(box==null||box.length!=4)continue;
+      float center=(box[1]+box[3])*.5f;
+      if(box[2]>=gardenTop&&center>=margin&&center<=1f-margin
+          &&detected.score>personInGarden){
+       personInGarden=detected.score;
+       gardenPersonBox=box;
+      }
+     }
+     int[] currentGardenLuma=sampleGardenLuma(bitmap,gardenTop);
+     double movement=previousGardenLuma==null?0.0:
+        gardenFrameDifference(previousGardenLuma,currentGardenLuma);
+     previousGardenLuma=currentGardenLuma;
+     double quality=personInGarden>0f?1000.0+personInGarden*100.0+movement:movement;
      if(quality>bestScore){
       if(best!=null)best.recycle();
-      best=Bitmap.createScaledBitmap(bitmap,1200,Math.max(2,(int)(bitmap.getHeight()*1200.0/bitmap.getWidth())),true);
+      best=makeGardenThumbnail(bitmap,gardenPersonBox);
       bestScore=quality;
+      bestMotionTimeMs=micros/1000;
+      bestGardenPerson=personInGarden>0f;
+      bestGardenPersonScore=personInGarden;
      }
     }finally{bitmap.recycle();}
    }
@@ -334,6 +361,10 @@ public final class ClipClassifier {
    outfit.publish(result,folder,name,persons==1&&framesWithMultiplePeople==0);
    faceReview.publish(result);
    result.put("processing_elapsed_ms",SystemClock.elapsedRealtime()-begin);
+   result.put("thumbnail_source_time_ms",bestMotionTimeMs>=0?bestMotionTimeMs:JSONObject.NULL);
+   result.put("thumbnail_focus","foreground_garden_motion");
+   result.put("thumbnail_person_candidate_in_garden",bestGardenPerson);
+   result.put("thumbnail_garden_person_confidence",Math.round(bestGardenPersonScore*1000f)/1000.0);
    if(best!=null){
     File thumb=new File(folder,name+".thumb.jpg");
     File temp=new File(folder,name+".thumb.partial");
@@ -351,6 +382,44 @@ public final class ClipClassifier {
   }
   writeJson(new File(folder,name+".verified.json"),result);
   return result;
+ }
+ /** Simple exposure-neutral 12x8 foreground motion sampling, on S9+ only. */
+ private static int[] sampleGardenLuma(Bitmap bitmap,float start){
+  int[] values=new int[96];
+  for(int y=0;y<8;y++)for(int x=0;x<12;x++){
+   int sx=Math.min(bitmap.getWidth()-1,(int)((x+.5f)*bitmap.getWidth()/12f));
+   int sy=Math.min(bitmap.getHeight()-1,(int)((start+(y+.5f)*(1-start)/8f)*bitmap.getHeight()));
+   int rgb=bitmap.getPixel(sx,sy);
+   values[y*12+x]=(77*((rgb>>16)&255)+150*((rgb>>8)&255)+29*(rgb&255))>>8;
+  }
+  return values;
+ }
+ private static double gardenFrameDifference(int[] old,int[] current){
+  double shift=0,delta=0;
+  for(int i=0;i<old.length;i++)shift+=current[i]-old[i];
+  shift/=old.length;
+  for(int i=0;i<old.length;i++)delta+=Math.abs(current[i]-old[i]-shift);
+  return delta/old.length;
+ }
+ /** Crop out distant traffic; where possible center a person in the garden. */
+ private static Bitmap makeGardenThumbnail(Bitmap bitmap,float[] box){
+  int w=bitmap.getWidth(),h=bitmap.getHeight();
+  float left=0f,right=1f,top=.42f;
+  if(box!=null){
+   float cx=(box[1]+box[3])*.5f;
+   float cw=Math.max(.48f,Math.min(.76f,(box[3]-box[1])*2.4f));
+   left=Math.max(0f,Math.min(1f-cw,cx-cw/2f));
+   right=left+cw;
+   top=Math.max(0f,Math.min(.5f,box[0]-.14f));
+  }
+  int x0=Math.min(w-2,Math.max(0,(int)(w*left)));
+  int x1=Math.max(x0+1,Math.min(w,(int)(w*right)));
+  int y0=Math.min(h-2,Math.max(0,(int)(h*top)));
+  Bitmap cropped=Bitmap.createBitmap(bitmap,x0,y0,x1-x0,h-y0);
+  try{
+   return Bitmap.createScaledBitmap(cropped,1200,
+       Math.max(2,(int)(cropped.getHeight()*1200.0/cropped.getWidth())),true);
+  }finally{if(cropped!=bitmap)cropped.recycle();}
  }
  private static String digest(File file)throws Exception{
   MessageDigest md=MessageDigest.getInstance("SHA-256");
