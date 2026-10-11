@@ -670,6 +670,7 @@ function securityUpstreamPath(pathname) {
     const prefix = `/security/${camera}`;
     if (pathname === `${prefix}/api/events`) return `/${camera}/api/events`;
     if (pathname === `${prefix}/api/saved`) return `/${camera}/api/saved`;
+    if (pathname === `${prefix}/api/drive-saved`) return `/${camera}/api/drive-saved`;
     if (pathname === `${prefix}/api/status`) return `/${camera}/api/status`;
     if (pathname === `${prefix}/api/controls`) return `/${camera}/api/controls`;
     if (pathname === `${prefix}/api/control`) return `/${camera}/api/control`;
@@ -681,6 +682,14 @@ function securityUpstreamPath(pathname) {
     if (pathname.startsWith(`${prefix}/clip/`)) {
       const name = cleanSecurityFilename(pathname.slice(`${prefix}/clip/`.length), '.mp4');
       return name ? `/${camera}/clip/${encodeURIComponent(name)}` : '';
+    }
+    if (pathname.startsWith(`${prefix}/drive/saved/snap/`)) {
+      const name = cleanSecurityFilename(pathname.slice(`${prefix}/drive/saved/snap/`.length), '.jpg');
+      return name ? `/${camera}/drive/saved/snap/${encodeURIComponent(name)}` : '';
+    }
+    if (pathname.startsWith(`${prefix}/drive/saved/clip/`)) {
+      const name = cleanSecurityFilename(pathname.slice(`${prefix}/drive/saved/clip/`.length), '.mp4');
+      return name ? `/${camera}/drive/saved/clip/${encodeURIComponent(name)}` : '';
     }
     if (pathname.startsWith(`${prefix}/saved/snap/`)) {
       const name = cleanSecurityFilename(pathname.slice(`${prefix}/saved/snap/`.length), '.jpg');
@@ -710,7 +719,7 @@ function securityProxyTarget(media, upstreamPath) {
   const token = String(media?.cameraToken || '');
   if (!/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i.test(origin) ||
       !/^[A-Za-z0-9_-]{16,1024}\.[A-Za-z0-9_-]{32,256}$/.test(token)) return '';
-  if (!/^\/(?:new|s3)\/(?:api\/(?:status|events|saved|controls|control)|live\.mjpg|snap\/[A-Za-z0-9._%-]+|clip\/[A-Za-z0-9._%-]+|saved\/(?:snap|clip)\/[A-Za-z0-9._%-]+)$/.test(String(upstreamPath || ''))) return '';
+  if (!/^\/(?:new|s3)\/(?:api\/(?:status|events|saved|drive-saved|controls|control)|live\.mjpg|snap\/[A-Za-z0-9._%-]+|clip\/[A-Za-z0-9._%-]+|(?:saved|drive\/saved)\/(?:snap|clip)\/[A-Za-z0-9._%-]+)$/.test(String(upstreamPath || ''))) return '';
   const u = new URL(origin + upstreamPath);
   u.searchParams.set('token', token);
   return u.toString();
@@ -718,11 +727,13 @@ function securityProxyTarget(media, upstreamPath) {
 function securityRelayTarget(upstreamPath) {
   const s = String(upstreamPath || '');
   let camera = '', kind = '', name = '';
-  let m = s.match(/^\/(new|s3)\/api\/(status|events|saved|controls|control)$/);
-  if (m) { camera=m[1]; kind=m[2]; }
+  let m = s.match(/^\/(new|s3)\/api\/(status|events|saved|drive-saved|controls|control)$/);
+  if (m) { camera=m[1]; kind=m[2]==='drive-saved'?'drivesaved':m[2]; }
   if (!m && (m=s.match(/^\/(new|s3)\/live\.mjpg$/))) { camera=m[1]; kind='live'; }
   if (!m && (m=s.match(/^\/(new|s3)\/snap\/([A-Za-z0-9._%-]+)$/))) { camera=m[1]; kind='snap'; try{name=decodeURIComponent(m[2])}catch{return '';} }
   if (!m && (m=s.match(/^\/(new|s3)\/clip\/([A-Za-z0-9._%-]+)$/))) { camera=m[1]; kind='clip'; try{name=decodeURIComponent(m[2])}catch{return '';} }
+  if (!m && (m=s.match(/^\/(new|s3)\/drive\/saved\/snap\/([A-Za-z0-9._%-]+)$/))) { camera=m[1]; kind='drivesnap'; try{name=decodeURIComponent(m[2])}catch{return '';} }
+  if (!m && (m=s.match(/^\/(new|s3)\/drive\/saved\/clip\/([A-Za-z0-9._%-]+)$/))) { camera=m[1]; kind='driveclip'; try{name=decodeURIComponent(m[2])}catch{return '';} }
   if (!m && (m=s.match(/^\/(new|s3)\/saved\/snap\/([A-Za-z0-9._%-]+)$/))) { camera=m[1]; kind='savedsnap'; try{name=decodeURIComponent(m[2])}catch{return '';} }
   if (!m && (m=s.match(/^\/(new|s3)\/saved\/clip\/([A-Za-z0-9._%-]+)$/))) { camera=m[1]; kind='savedclip'; try{name=decodeURIComponent(m[2])}catch{return '';} }
   if (!camera || !kind) return '';
