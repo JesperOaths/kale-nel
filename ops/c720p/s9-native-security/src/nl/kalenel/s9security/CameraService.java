@@ -111,10 +111,18 @@ public final class CameraService extends Service {
  // Only cameraHandler can start/stop the native MediaRecorder.
  private boolean gardenPersonGateBusy=false;
  private long gardenPersonGateLastAt=0;
+ // After a motion vote, collect several NEW preview observations for up to
+ // 4.5 s. Motion itself still cannot start the MediaRecorder.
+ private long gardenPersonCandidateUntil=0;
+ private volatile long gardenPersonMotionWindows=0,gardenPersonFollowupChecks=0;
+ private static final long GARDEN_PERSON_CANDIDATE_MS=4500L;
  private volatile long gardenPersonGateChecks=0,gardenPersonGateMatches=0;
  private volatile long gardenPersonGateRejects=0,gardenPersonGateErrors=0;
  private volatile float gardenPersonGateScore=0f;
- private final GardenPersonTrackGate gardenTrackGate=new GardenPersonTrackGate();
+ private volatile float gardenPersonGateAnyScore=0f;
+ private volatile long gardenPersonDuplicateJpegRejects=0;
+ private final GardenPersonTrackGate personTrackGate=new GardenPersonTrackGate();
+ private volatile int gardenPersonLastLocalMotionCells=0;
  private volatile long gardenPersonGateConfirmedStarts=0;
  private volatile long deepFaceScanned=0,deepFaceErrors=0;
  private String captureTier="normal";
@@ -284,9 +292,15 @@ public final class CameraService extends Service {
        // road and non-person garden motion do not start new videos.
        if(!gardenGateReady)
         saveFallbackEvidence("realtime_person_detector_warming_or_unavailable");
-       else evaluateGardenPersonAsync();
+       else {
+        if(gardenPersonCandidateUntil<=lastFrameAt)gardenPersonMotionWindows++;
+        gardenPersonCandidateUntil=lastFrameAt+GARDEN_PERSON_CANDIDATE_MS;
+       }
       }
      }
+     if(!pilotOnly&&"watching".equals(mode)&&gardenGateReady&&
+         lastFrameAt>=cameraControlSettleUntil&&lastFrameAt<gardenPersonCandidateUntil)
+      evaluateGardenPersonAsync();
      if("recording".equals(mode)&&lastFrameAt-lastStart>2500){
        if(lastFrameAt-lastStart>MAX_MS)stopRecording("max_segment");
        else if(lastFrameAt-lastMovementAt>QUIET_MS)stopRecording("quiet_end");
@@ -372,20 +386,27 @@ public final class CameraService extends Service {
       now-lastJpegAt>1200||gardenGateExecutor==null||gardenGateClassifier==null||
       !gardenGateReady)return;
   gardenPersonGateBusy=true;gardenPersonGateLastAt=now;
-  final byte[] jpg=latestJpeg.clone();
+  if(now>lastMovementAt+250)gardenPersonFollowupChecks++;
   final long jpegAt=lastJpegAt;
+  final byte[] jpg=latestJpeg.clone();
   final float top=motion.topBoundary(),margin=motion.sideMargin();
+  final String selectedZone=motion.gardenZone();
   try{
    gardenGateExecutor.execute(new Runnable(){public void run(){
     final long gateStarted=SystemClock.elapsedRealtime();
-    ClipClassifier.GardenPersonEvidence evidence=null;boolean failed=false;
-    try{evidence=gardenGateClassifier.personEvidenceInGarden(jpg,top,margin);}
+    ClipClassifier.GardenPersonEvidence evidence=null;
+    float wholeFrameScore=0;boolean failed=false;
+    try{
+     evidence=gardenGateClassifier.personEvidenceInGarden(jpg,top,margin,selectedZone);
+     wholeFrameScore=gardenGateClassifier.lastPersonScoreAnywhere();
+    }
     catch(Throwable issue){
      failed=true;
      Log.w(TAG,"garden_person_gate_"+issue.getClass().getSimpleName());
     }
     final float score=evidence==null?0f:evidence.score;
-    final float[] box=evidence==null?null:evidence.box;
+    final float[] personBox=evidence==null?null:evidence.box;
+    final float anyScore=wholeFrameScore;
     final boolean error=failed;
     if(cameraHandler==null)return;
     cameraHandler.post(new Runnable(){public void run(){
@@ -393,27 +414,40 @@ public final class CameraService extends Service {
      gardenPersonGateQueueWaitMs=Math.max(0,gateStarted-now);
      gardenPersonGateChecks++;
      gardenPersonGateScore=score;
+     gardenPersonGateAnyScore=anyScore;
      if(error){
       gardenPersonGateErrors++;
-      gardenTrackGate.reset();
+      personTrackGate.reset();
       saveFallbackEvidence("realtime_person_detector_failed");
       return;
      }
-     if(score>=GardenPersonTrackGate.MIN_SCORE)gardenPersonGateMatches++;
-     else gardenPersonGateRejects++;
-     // Do not start recording on stale detections, if the camera has moved
-     // into a new capture session, or after a deliberate controls change.
+     // A weak model prediction cannot form half of a valid two-frame track.
+     if(score<GardenPersonTrackGate.MIN_SCORE){
+      gardenPersonGateRejects++;
+      // Brief model dropout: keep last tracked positive within MAX_PAIR_MS
+      // but still require a later independent, associated detection.
+      personTrackGate.offer(now,jpegAt,score,null,0);
+      return;
+     }
+     gardenPersonGateMatches++;
      if(!running||!"watching".equals(mode)||SystemClock.elapsedRealtime()-now>3500||
          lastFrameAt<cameraControlSettleUntil){
       gardenPersonGateStale++;
-      gardenTrackGate.reset();
+      personTrackGate.reset();
       if(running&&"watching".equals(mode))
        saveFallbackEvidence("stale_person_result_skipped");
       return;
      }
-     // A second result only counts if a NEW JPEG sees a spatially coherent person.
-     GardenPersonTrackGate.Result verdict=gardenTrackGate.offer(now,jpegAt,score,box);
-     if(verdict!=GardenPersonTrackGate.Result.CONFIRMED)return;
+     // The motion grid retains 5s of accepted cells. A marginal person
+     // classification must overlap actual garden movement, not merely
+     // coincide with an unrelated passing vehicle or moving shrub.
+     int localCells=motion.recentMotionCellsInBox(personBox,SystemClock.elapsedRealtime());
+     gardenPersonLastLocalMotionCells=localCells;
+     GardenPersonTrackGate.Decision verdict=
+         personTrackGate.offer(now,jpegAt,score,personBox,localCells);
+     gardenPersonDuplicateJpegRejects=personTrackGate.duplicateFrames;
+     if(verdict!=GardenPersonTrackGate.Decision.CONFIRMED)return;
+     gardenPersonCandidateUntil=0;
      eventChain.evidence(SystemClock.elapsedRealtime());
      if(temperature()<415 && folder!=null&&
              folder.getUsableSpace()>15L*1024*1024*1024){gardenPersonGateConfirmedStarts++;startRecording();}
@@ -839,10 +873,6 @@ public final class CameraService extends Service {
    d.put("takeover_completed",!pilotOnly&&running&&lastFrameAt>0);
    d.put("recorder","camera2_3840x2160_h264");
    d.put("motion_detector",GardenPersonTrackGate.VERSION);
-     d.put("person_spatial_pair_required",true);
-     d.put("person_distinct_jpeg_required",true);
-     d.put("garden_person_gate_geometry_unrelated",gardenTrackGate.unrelated);
-     d.put("garden_person_gate_duplicate_jpeg",gardenTrackGate.duplicate);
     d.put("capture_event_version",CaptureContinuity.VERSION);
     d.put("capture_event_id",eventChain.eventId());
     d.put("capture_segment_index",eventChain.segmentNumber());
@@ -852,7 +882,7 @@ public final class CameraService extends Service {
     d.put("capture_segments_are_gapless",false);
     d.put("thumbnail_selector",EventFrameRanker.VERSION);
    d.put("previous_detector_version","garden_roi_gpu_two_frame_person_gate_v2");
-    d.put("legacy_detector_version","garden_roi_gpu_person_gate_v1");
+   d.put("legacy_detector_version","garden_roi_gpu_person_gate_v1");
    d.put("review_model","ssd_mobilenet_coco_gpu_cpu_v1");
    d.put("mic",false);d.put("cloud_upload",false);
    d.put("storage","removable_microSD_only");
@@ -919,13 +949,29 @@ public final class CameraService extends Service {
    d.put("garden_person_gate_checked",gardenPersonGateChecks);
    d.put("garden_person_gate_matches",gardenPersonGateMatches);
    d.put("garden_person_gate_required_positive_frames",2);
-    d.put("garden_person_gate_pair_window_ms",GardenPersonTrackGate.MAX_PAIR_INTERVAL_MS);
    d.put("garden_person_gate_confirmed_starts",gardenPersonGateConfirmedStarts);
    d.put("garden_person_gate_rejected",gardenPersonGateRejects);
    d.put("garden_person_gate_errors",gardenPersonGateErrors);
    d.put("garden_person_gate_last_score",gardenPersonGateScore);
+    d.put("garden_person_gate_last_anywhere_score",gardenPersonGateAnyScore);
+   d.put("garden_person_spatial_gate",true);
+   d.put("garden_person_motion_corroboration",true);
+   d.put("garden_person_last_local_motion_cells",gardenPersonLastLocalMotionCells);
+   d.put("garden_person_unrelated_boxes",personTrackGate.unrelatedBoxes);
+   d.put("garden_person_no_local_motion",personTrackGate.noLocalMotion);
+   d.put("garden_person_rejected_weak",personTrackGate.rejectedWeak);
+    d.put("garden_person_followup_version","motion_armed_4500ms_unique_jpeg_v5");
+    d.put("garden_person_candidate_window_ms",GARDEN_PERSON_CANDIDATE_MS);
+    d.put("garden_person_motion_windows",gardenPersonMotionWindows);
+    d.put("garden_person_followup_checks",gardenPersonFollowupChecks);
+    d.put("garden_person_duplicate_jpeg_rejects",gardenPersonDuplicateJpegRejects);
    d.put("garden_zone",motion.gardenZone());
    d.put("garden_roi_top_fraction",motion.topBoundary());
+   d.put("garden_roi_mask_version","near".equals(motion.gardenZone())?MotionGrid.NEAR_ROI_VERSION:"preset_horizontal_v1");
+   d.put("garden_roi_top_left_fraction",motion.topBoundaryAt(0f));
+   d.put("garden_roi_top_middle_fraction",motion.topBoundaryAt(.5f));
+   d.put("garden_roi_top_right_fraction",motion.topBoundaryAt(1f));
+   d.put("garden_roi_gates_person_inference",true);
    d.put("preview_jpeg_interval_ms","recording".equals(mode)?250:120);
    d.put("preview_jpeg_async",jpegEncoder!=null);
    d.put("preview_jpeg_worker_busy",jpegBusy);

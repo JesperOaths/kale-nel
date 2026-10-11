@@ -116,8 +116,16 @@ public final class ClipClassifier {
   * shared with post-record classification on the serialized review worker.
   * No face recognition, cross-recording identification, or persistent IDs.
   */
- /** A single independently decoded preview person box; the caller must still
-  * confirm it in a DIFFERENT JPEG with coherent geometry. No identity claim.
+ private volatile float lastPersonAnywhere=0f;
+ // Read only after the same worker's personScoreInGarden() call.
+ public float lastPersonScoreAnywhere(){return lastPersonAnywhere;}
+ public synchronized float personScoreInGarden(byte[] jpeg,float top,float margin)throws Exception{
+  // Compatibility overload for legacy consumers. The live S9 path supplies
+  // the precise named mask so it agrees with the motion grid.
+  return personScoreInGarden(jpeg,top,margin,null);
+ }
+ /** Best live SSD person candidate with coordinates. Still anonymous and
+  * only accepted by CameraService if a later *different* JPEG corroborates.
   */
  public static final class GardenPersonEvidence {
   public final float score;
@@ -126,33 +134,42 @@ public final class ClipClassifier {
    this.score=score;this.box=box.clone();
   }
  }
- public synchronized GardenPersonEvidence personEvidenceInGarden(byte[] jpeg,float top,float margin)throws Exception{
-  if(jpeg==null||jpeg.length<1000||top<0||top>1||margin<0||margin>.3f)
+ public synchronized GardenPersonEvidence personEvidenceInGarden(byte[] jpeg,float top,float margin,String zone)throws Exception{
+  if(jpeg==null||jpeg.length<1000||top<0||top>1||margin<0||margin>.3f||
+      (zone!=null&&!MotionGrid.validGardenZone(zone)))
    throw new IllegalArgumentException("invalid_preview_or_region");
   init();
   Bitmap bitmap=BitmapFactory.decodeByteArray(jpeg,0,jpeg.length);
   if(bitmap==null)throw new IOException("invalid_preview_jpeg");
   try{
-   Detection best=null;
+   float highest=0f,any=0f;
+   float[] bestBox=null;
+   lastPersonAnywhere=0f;
    for(Detection detection:detect(bitmap)){
     if(!"person".equals(detection.label))continue;
+    any=Math.max(any,detection.score);
     float[] b=detection.box;
-    if(b==null||b.length!=4||b[0]<0f||b[1]<0f||b[2]>1.02f||b[3]>1.02f||
-       b[2]<=b[0]||b[3]<=b[1])continue;
+    if(b==null||b.length!=4)continue;
     float center=(b[1]+b[3])*0.5f;
     float feet=b[2];
-    if(center<margin||center>1f-margin||feet<top||feet>1.02f)continue;
-    if(best==null||detection.score>best.score)best=detection;
+    // The same sloping, image-normalized polygon as MotionGrid. For "near"
+    // this includes the owner's marked garden above the old 64% cutoff.
+    if(zone!=null){
+     if(!MotionGrid.insideZone(zone,center,feet))continue;
+    }else if(center<margin||center>1f-margin||feet<top||feet>1.02f)continue;
+    if(GardenPersonTrackGate.valid(b)&&detection.score>highest){
+     highest=detection.score;bestBox=b;
+    }
    }
-   return best==null?null:new GardenPersonEvidence(best.score,best.box);
+   lastPersonAnywhere=any;
+   return bestBox==null?null:new GardenPersonEvidence(highest,bestBox);
   }finally{bitmap.recycle();}
  }
- // Preserve callers that need only the confidence, including existing audits.
- public synchronized float personScoreInGarden(byte[] jpeg,float top,float margin)throws Exception{
-  GardenPersonEvidence candidate=personEvidenceInGarden(jpeg,top,margin);
-  return candidate==null?0f:candidate.score;
- }
 
+ public synchronized float personScoreInGarden(byte[] jpeg,float top,float margin,String zone)throws Exception{
+  GardenPersonEvidence person=personEvidenceInGarden(jpeg,top,margin,zone);
+  return person==null?0f:person.score;
+ }
  /** Lightweight RGB upper-torso tag; deliberately excludes face and has no identity features. */
  private static String upperClothingColour(Bitmap image,float[] b){
   if(image==null||b==null||b.length!=4)return "uncertain";

@@ -13,14 +13,16 @@ TRIAGE=(ROOT/'src/nl/kalenel/s9security/GardenArchiveTriage.java').read_text()
 class Contract(unittest.TestCase):
  def test_two_separate_person_gate_checks(self):
   code=SOURCE.split('private void evaluateGardenPersonAsync(){',1)[1].split('private boolean rateAllowed',1)[0]
-  for required in ('now-gardenPersonGateLastAt<900','GardenPersonTrackGate.MIN_SCORE',
-                   'gardenTrackGate.offer(now,jpegAt,score,box)',
-                   'gardenTrackGate.reset()','GardenPersonTrackGate.Result.CONFIRMED',
-                   'gardenPersonGateConfirmedStarts++','startRecording()','gardenPersonGateStale++'):
+  for required in ('now-gardenPersonGateLastAt<900',
+                   'personEvidenceInGarden(jpg,top,margin,selectedZone)',
+                   'personTrackGate.offer(now,jpegAt,score,personBox,localCells)',
+                   'GardenPersonTrackGate.Decision.CONFIRMED',
+                   'gardenPersonGateConfirmedStarts++',
+                   'startRecording()','gardenPersonGateStale++'):
    self.assertIn(required,code)
-  self.assertLess(code.index('GardenPersonTrackGate.Result.CONFIRMED'),
+  self.assertLess(code.index('GardenPersonTrackGate.Decision.CONFIRMED'),
                   code.rindex('startRecording()'))
-  self.assertIn('garden_roi_gpu_two_frame_person_gate_v2',SOURCE)
+  self.assertIn('d.put("motion_detector",GardenPersonTrackGate.VERSION)',SOURCE)
  def test_native_deep_review_is_bounded_and_does_not_reencode(self):
   deep=CLASSIFIER.split('boolean deepFaceReview(',1)[1].split('public synchronized JSONObject process(',1)[0]
   for required in ('manifest.optInt("person_count",0)<=0','manifest.has("face_deep_review_version")',

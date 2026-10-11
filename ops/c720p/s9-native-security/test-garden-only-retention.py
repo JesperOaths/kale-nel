@@ -7,9 +7,11 @@ ROOT=Path(__file__).resolve().parent
 SRC=ROOT/'src/nl/kalenel/s9security'
 
 class Tests(unittest.TestCase):
-    def test_fixed_scene_excludes_street_and_bicycles(self):
+    def test_user_marked_sloped_garden_excludes_upper_street(self):
         src=(SRC/'MotionGrid.java').read_text()
-        self.assertIn('"near".equals(gardenZone)?0.64f',src)
+        self.assertIn('MARKED_X',src)
+        self.assertIn('MARKED_Y',src)
+        self.assertIn('if("near".equals(zone))return y>=markedTopAt(x);',src)
         self.assertIn('"strict".equals(gardenZone)?0.72f',src)
         self.assertIn('"wide".equals(gardenZone)?0.50f',src)
         self.assertIn('insideGarden((gx+.5f)/W,(gy+.5f)/H)',src)
