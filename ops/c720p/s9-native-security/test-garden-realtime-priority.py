@@ -78,6 +78,19 @@ class GardenRealtimePriorityTests(unittest.TestCase):
         self.assertFalse(tool.assess({**healthy,'garden_person_gate_last_queue_wait_ms':4400})['ok'])
         self.assertFalse(tool.assess({**healthy,'temperature_c':42})['ok'])
 
+    def test_fallback_evidence_never_waits_for_video_archive_review(self):
+        camera=CAMERA.read_text()
+        body=camera.split('private void saveFallbackEvidence(String why){',1)[1].split(
+            'private static boolean validCompleted4K(',1)[0]
+        self.assertIn('evidenceWriter.execute(new Runnable()',body)
+        self.assertNotIn('reviewer.execute(',body)
+        self.assertIn('now-lastFallbackAt<45000L',body)
+        self.assertIn('new FileOutputStream(temp)',body)
+        self.assertIn('out.getFD().sync()',body)
+        self.assertIn('ClipClassifier.writeJson(',body)
+        self.assertIn('evidenceWriter.shutdown()',camera)
+        self.assertIn('s9-microsd-motion-evidence',camera)
+
     def test_4k_and_thermal_guards_remain_intact(self):
         s=CAMERA.read_text()
         for required in (
