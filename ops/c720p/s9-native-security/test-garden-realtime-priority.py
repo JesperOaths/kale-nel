@@ -6,6 +6,7 @@ decoding. No CPU/image work is added to the Home Assistant C720P relay.
 """
 from pathlib import Path
 import unittest
+import importlib.util
 
 HERE=Path(__file__).resolve().parent
 CAMERA=(HERE/'src/nl/kalenel/s9security/CameraService.java')
@@ -52,6 +53,30 @@ class GardenRealtimePriorityTests(unittest.TestCase):
         self.assertIn('volatile String backend=',model)
         self.assertNotIn('http://',model)
         self.assertNotIn('Socket(',model)
+
+    def test_acceptance_probe_is_metadata_only_and_rejects_unready_gate(self):
+        probe=HERE/'check-s9-garden-priority.py'
+        source=probe.read_text()
+        for forbidden in ('import cv2','import tensorflow','import PIL',
+                          'ffmpeg','ffprobe','adb','subprocess',
+                          '/shot.jpg','/mjpeg'):
+            self.assertNotIn(forbidden,source)
+        spec=importlib.util.spec_from_file_location('s9_live_gate_probe',probe)
+        tool=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tool)
+        healthy={
+          'ok':True,'mode':'watching','native_4k_enabled':True,
+          'garden_person_gate_ready':True,
+          'garden_person_gate_backend':'gpu',
+          'garden_zone':'near','recording_rate_max_per_hour':24,
+          'temperature_c':26.0,'sd_free_bytes':79000000000,
+          'garden_person_gate_last_queue_wait_ms':85,
+          'garden_person_gate_prepare_errors':0,
+        }
+        self.assertTrue(tool.assess(healthy,{'events':[{'clip_no':'motion_1.mp4'}]})['ok'])
+        self.assertFalse(tool.assess({**healthy,'garden_person_gate_ready':False})['ok'])
+        self.assertFalse(tool.assess({**healthy,'garden_person_gate_last_queue_wait_ms':4400})['ok'])
+        self.assertFalse(tool.assess({**healthy,'temperature_c':42})['ok'])
 
     def test_4k_and_thermal_guards_remain_intact(self):
         s=CAMERA.read_text()
