@@ -49,7 +49,16 @@ def main():
     v.style.cssText='position:fixed;z-index:2147483600;bottom:0;right:0;width:480px;height:270px;object-fit:contain;background:#000';
     document.body.appendChild(v);
     v.src=url;
-    const start=performance.now(),seen=[],errors=[];
+    const start=performance.now(),seen=[],errors=[],events=[];
+    for(const e of ['loadstart','waiting','loadedmetadata','canplay','playing','stalled','suspend','emptied','error'])
+      v.addEventListener(e,()=>events.push({event:e,at:Math.round(performance.now()-start),code:v.error?.code||null}),{once:false});
+    let signedURL={length:String(url).length,starts:String(url).slice(0,130)};
+    let fetchProbe={};
+    try{
+      const fetched=await window.C720PSecureRelay.fetch('/new/saved/clip/'+clip,{method:'GET',headers:{Range:'bytes=0-1023'}});
+      const bytes=await fetched.arrayBuffer();
+      fetchProbe={ok:fetched.ok,http:fetched.status,bytes:bytes.byteLength,type:fetched.headers.get('Content-Type')};
+    }catch(e){fetchProbe={error:String(e)};}
     let frames=0;let firstVideoFrame=0;let lastVideoFrame=0;
     const cb=(now,m)=>{{frames++;if(!firstVideoFrame)firstVideoFrame=now;lastVideoFrame=now;seen.push(m.mediaTime);if(v.isConnected)v.requestVideoFrameCallback(cb)}};
     v.requestVideoFrameCallback(cb);
@@ -63,7 +72,11 @@ def main():
       droppedFrames:q?.droppedVideoFrames,totalFrames:q?.totalVideoFrames,
       readyState:v.readyState,networkState:v.networkState,errors,
       mediaTimeFirst:seen[0]??null,mediaTimeLast:seen.at(-1)??null,
-      duration_ms:performance.now()-start}};
+      duration_ms:performance.now()-start,events,fetchProbe,signedURL,
+      mediaError:v.error?.message??null,isConnected:v.isConnected,
+      srcLength:String(v.currentSrc||v.src).length,paused:v.paused,
+      sourceUrlStart:String(v.currentSrc||v.src).slice(0,135),
+      mediaCapabilities:typeof navigator.mediaCapabilities}};
     v.pause();v.removeAttribute('src');v.load();v.remove();
     return result;
    }})()"""
