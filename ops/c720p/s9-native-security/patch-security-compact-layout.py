@@ -128,7 +128,7 @@ def patch(source: str, kind: str) -> str:
         if MARK_SAVED in source:
             if source.count(MARK_SAVED)!=1 or source.count('id="s9-compact-recordings-script-v1"')!=1:
                 raise ValueError('partial_compact_recordings_widget')
-            newStyle=SAVED_SNIPPET.split('</style>',1)[0]+'</style>'
+            newStyle=(SAVED_SNIPPET.split('</style>',1)[0]+'</style>').strip()
             newScript='<script id="s9-compact-recordings-script-v1">'+SAVED_SNIPPET.split('<script id="s9-compact-recordings-script-v1">',1)[1]
             changed=_replace_tag_once(source,'style',MARK_SAVED,newStyle)
             changed=_replace_tag_once(changed,'script','id="s9-compact-recordings-script-v1"',newScript.strip())
