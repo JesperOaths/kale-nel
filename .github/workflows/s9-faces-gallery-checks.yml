@@ -37,8 +37,11 @@ jobs:
           Path('/tmp/ha-faces-nav.js').write_text(snippets[0])
           page=Path('face-appearances.html.txt').read_text()
           snippets=re.findall(r'<script[^>]*>(.*?)</script>',page,re.S)
-          assert len(snippets)==1
-          Path('/tmp/ha-faces-gallery.js').write_text(snippets[0])
+          assert len(snippets)==2
+          inline=re.findall(r'<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>',page,re.S)
+          assert len(inline)==1
+          assert re.search(r'<script defer src="/local/security-video-playback[.]js[?]v=[A-Za-z0-9_-]+"></script>',page)
+          Path('/tmp/ha-faces-gallery.js').write_text(inline[0])
           assert 'v817 - Made by Bruis' in page
           PY
           node --check /tmp/ha-faces-nav.js
