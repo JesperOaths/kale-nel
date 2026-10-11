@@ -145,6 +145,7 @@ def install_local_sd(H):
       "anonymous_id_scope":"clip_only_never_across_recordings",
       "face_review_status":r.get("face_review_status","not_available_in_original_review"),
       "face_review_sampled_frames":r.get("face_review_sampled_frames"),
+      "face_deep_review_version":r.get("face_deep_review_version"),
       "face_snapshots_saved":r.get("face_snapshots_saved",0),
       "face_candidates":r.get("face_candidates",[]),**detection_metrics(r)})
    self.js(200,{"ok":True,"camera":"new","archive_mode":"S9-microSD-only","drive_ready":False,
