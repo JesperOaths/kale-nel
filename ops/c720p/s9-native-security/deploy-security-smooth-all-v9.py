@@ -38,11 +38,12 @@ def html_patch(s,page):
  else:
   if 'gejast-auth-gate.js' not in s and page.name!='clips.html':
    raise RuntimeError('auth_gate_missing_'+page.name)
-  if 'C720PSecurityVideo' not in s and SCRIPT not in s:
+  has_import=re.search(r'/local/security-video-playback[.]js[?]v=[A-Za-z0-9_-]+',s)
+  if has_import:
+   s=re.sub(r'/local/security-video-playback[.]js[?]v=[A-Za-z0-9_-]+',SCRIPT,s)
+  elif SCRIPT not in s:
    if s.count('</head>')!=1:raise RuntimeError('invalid_head_'+page.name)
    s=s.replace('</head>','<script defer src="'+SCRIPT+'"></script>\n</head>',1)
-  elif SCRIPT not in s:
-   s=re.sub(r'/local/security-video-playback[.]js[?]v=[A-Za-z0-9_-]+',SCRIPT,s)
   if SCRIPT not in s:raise RuntimeError('playback_script_not_included_'+page.name)
  return s
 def main():
