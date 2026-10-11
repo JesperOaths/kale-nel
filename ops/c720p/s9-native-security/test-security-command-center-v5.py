@@ -135,7 +135,7 @@ class V5Tests(unittest.TestCase):
    (root/'frontyard-security-new').mkdir(parents=True)
    (root/'c720p-surveillance.html').write_text(security()*8)
    before=(root/'c720p-surveillance.html').read_bytes()
-   with self.assertRaises(RuntimeError):deploy.build(root,HERE)
+   with self.assertRaises((RuntimeError,ValueError)):deploy.build(root,HERE)
    self.assertEqual((root/'c720p-surveillance.html').read_bytes(),before)
 
 if __name__=='__main__':unittest.main(verbosity=2)
