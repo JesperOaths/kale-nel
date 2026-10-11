@@ -125,7 +125,7 @@ function openClip(r){
 }
 function clipCard(r){
  const name=nameOf(r),c=category(r),b=tag('button','s9-v4-clip');
- b.type='button';b.style.setProperty('--s9-colour',META[c].color);
+ b.type='button';b.dataset.clipNo=name;b.style.setProperty('--s9-colour',META[c].color);
  b.setAttribute('aria-pressed',String(name===selectedClip));
  b.setAttribute('aria-label',timeOf(r)+' '+META[c].label);
  const photo=tag('span','s9-v4-photo');
