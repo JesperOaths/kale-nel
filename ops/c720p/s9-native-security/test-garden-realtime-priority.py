@@ -18,7 +18,7 @@ class GardenRealtimePriorityTests(unittest.TestCase):
         gate=s.split('private void evaluateGardenPersonAsync(){',1)[1].split(
             'private boolean rateAllowed(',1)[0]
         self.assertIn('gardenGateExecutor.execute(new Runnable()',gate)
-        self.assertIn('gardenGateClassifier.personScoreInGarden',gate)
+        self.assertIn('gardenGateClassifier.personEvidenceInGarden',gate)
         self.assertNotIn('reviewer.execute',gate)
         self.assertNotIn('reviewer.submit',gate)
         self.assertNotIn('classifier.process(',gate)
