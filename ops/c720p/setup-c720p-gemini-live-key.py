@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """One-time private Gemini credential setup on the C720P; never prints the key."""
-import asyncio, getpass, os, pathlib, subprocess, sys
+import argparse, asyncio, getpass, os, pathlib, subprocess, sys
 from google import genai
 
 CONFIG=pathlib.Path.home()/".config/c720p-gemini-live.env"
@@ -16,13 +16,33 @@ async def verify(key):
         await client.aio.aclose()
 
 def main():
-    if not sys.stdin.isatty():
-        print("Requires an interactive terminal for secure key entry.")
+    parser=argparse.ArgumentParser(description="Configure a Gemini key without displaying or logging it")
+    parser.add_argument("--stdin", action="store_true", help="Read key from stdin (Windows clipboard over SSH)")
+    parser.add_argument("--test-input", action="store_true", help="Validate stdin transport; no cloud connection or file changes")
+    args=parser.parse_args()
+    if args.test_input and not args.stdin:
+        parser.error("--test-input requires --stdin")
+    if args.stdin:
+        # PowerShell Get-Clipboard -Raw pipes the clipboard to SSH stdin.
+        # No pseudo-TTY, terminal paste, echoed key, command-line secret, or file.
+        raw=sys.stdin.buffer.read(2049)
+        if len(raw)>2048:
+            print("Clipboard value is unexpectedly large; no changes made.")
+            return 2
+        try:
+            key=raw.decode("utf-8").strip()
+        except UnicodeDecodeError:
+            print("Clipboard is not a valid UTF-8 key; no changes made.")
+            return 2
+    elif sys.stdin.isatty():
+        key=getpass.getpass("Gemini API key (hidden): ").strip()
+    else:
+        print("Use --stdin when piping the Windows clipboard over SSH.")
         return 2
-    print("Get a Gemini API key from https://aistudio.google.com/api-keys")
-    print("Paste the key here. Input is hidden; it is not sent to ChatGPT or GitHub.")
-    key=getpass.getpass("Gemini API key: ").strip()
-    if not (20 <= len(key) <= 512 and "\n" not in key and "\r" not in key):
+    if args.test_input:
+        print("CLIPBOARD_TRANSPORT_PASS" if key=="TEST_CLIPBOARD_TRANSPORT_ONLY" else "CLIPBOARD_TRANSPORT_FAIL")
+        return 0 if key=="TEST_CLIPBOARD_TRANSPORT_ONLY" else 2
+    if not (20 <= len(key) <= 512 and "\n" not in key and "\r" not in key and "\0" not in key and "=" not in key):
         print("Key format invalid. No changes made.")
         return 2
     try:
