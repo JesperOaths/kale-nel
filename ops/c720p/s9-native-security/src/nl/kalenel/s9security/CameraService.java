@@ -115,6 +115,7 @@ public final class CameraService extends Service {
  private int gardenPersonGatePositiveStreak=0;
  private long gardenPersonGatePreviousPositiveAt=0;
  private volatile long gardenPersonGateConfirmedStarts=0;
+ private volatile long deepFaceScanned=0,deepFaceErrors=0;
  private String captureTier="normal";
  private long lastFrameAt=0,lastMovementAt=0,lastRecordAt=0,cooldownUntil=0,lastStart=0;
  // Ignore detector triggers from deliberate user changes of zoom, torch or exposure.
@@ -650,21 +651,22 @@ public final class CameraService extends Service {
  /** Scan finalized Security4K person recordings at idle: one clip per phone-local pass. */
  private void maybeFaceBackfill(){
   long now=SystemClock.elapsedRealtime();
-  if(!running||faceBackfillQueued||now-lastFaceBackfillScan<180000||
+  if(!running||faceBackfillQueued||now-lastFaceBackfillScan<60000||
      folder==null||reviewer==null||classifier==null||
-     !"watching".equals(mode)||temperature()>=370||
+     !"watching".equals(mode)||temperature()>=350||gardenPersonGateBusy||
+     (lastMovementAt>0&&now-lastMovementAt<45000L)||
      folder.getUsableSpace()<20L*1024*1024*1024)return;
   faceBackfillQueued=true;
   final File target=folder;
   try{
    reviewer.execute(new Runnable(){public void run(){
     try{
-     if(!running||!"watching".equals(mode)||temperature()>=370)return;
+     if(!running||!"watching".equals(mode)||temperature()>=350)return;
      File[] manifests=target.listFiles((d,n)->n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
      if(manifests==null)return;
      Arrays.sort(manifests,Comparator.comparing(File::getName));
      for(File manifest:manifests){
-      if(!running||!"watching".equals(mode)||temperature()>=370)return;
+      if(!running||!"watching".equals(mode)||temperature()>=350)return;
       if(manifest.length()<100||manifest.length()>28000)continue;
       String mp4name=manifest.getName().replace(".verified.json","");
       File video=new File(target,mp4name);
@@ -676,14 +678,21 @@ public final class CameraService extends Service {
        }
        JSONObject meta=new JSONObject(new String(bytes,"UTF-8"));
        if(meta.optInt("person_count",0)<=0)continue;
-       // After a validated model is installed, retry old snapshot-only reviews once.
-       // Without a model do not repeatedly re-decode the same MP4s.
-       if(meta.has("face_review_version")){
-        if(!("face_embedding_unavailable_snapshots_only".equals(meta.optString("face_review_status"))
-           &&S9FaceReview.hasEmbeddingModel(CameraService.this)))continue;
-       }
+       // Historical MP4s with person evidence get a second deeper on-device
+       // face-only review, rather than marking "no face in 12 frames" final.
+       // New-era clips stay on their standard real-time review path.
+       boolean hasReview=meta.has("face_review_version");
+       boolean deep=hasReview&&
+          meta.optInt("face_snapshots_saved",0)==0&&
+          !meta.has("face_deep_review_version")&&
+          Long.parseLong(mp4name.substring(7,20))<1791687597000L;
+       if(!deep&&hasReview)continue;
        if(!mp4name.equals(meta.optString("name"))||meta.optLong("bytes",-1)!=video.length())continue;
-       if(review(video,"onphone_face_backfill",0))faceBackfillDone++;
+       if(deep){
+        try{
+         if(classifier.deepFaceReview(video,target,mp4name,meta))deepFaceScanned++;
+        }catch(Exception e){deepFaceErrors++;Log.w(TAG,"face_deep_review",e);}
+       }else if(review(video,"onphone_face_backfill",0))faceBackfillDone++;
        else faceBackfillErrors++;
        return;
       }catch(Exception e){faceBackfillErrors++;Log.w(TAG,"face_backfill_manifest_skip",e);}
@@ -815,6 +824,8 @@ public final class CameraService extends Service {
       JSONObject.NULL:Math.max(0,SystemClock.elapsedRealtime()-lastMovementAt));
     d.put("garden_archive_triage_permanent_deletion_enabled",false);
    d.put("face_backfill_completed",faceBackfillDone);
+   d.put("face_deep_scanned",deepFaceScanned);
+   d.put("face_deep_errors",deepFaceErrors);
    d.put("face_backfill_errors",faceBackfillErrors);
    d.put("recordings_this_hour",getSharedPreferences("native",MODE_PRIVATE).getInt("record_rate_count",0));
    d.put("garden_person_gate_ready",gardenGateReady);
