@@ -23,6 +23,11 @@ h2{font-size:16px;margin:0 0 8px}p{margin:5px 0 12px;color:var(--muted)}
 .stat{padding:13px;background:var(--surface);border:1px solid var(--line);border-radius:14px}
 .stat strong{display:block;font-size:26px;line-height:1.15;font-variant-numeric:tabular-nums}
 .stat span{font-size:12px;color:var(--muted)}
+.scan-progress{border:1px solid #547a89;background:#123044;border-radius:12px;padding:12px 14px;margin:10px 0 14px}
+.scan-progress strong{display:block;font-size:15px;margin-bottom:5px}
+.scan-meter{height:9px;border:1px solid #496a7a;background:#071b26;border-radius:999px;overflow:hidden;margin:8px 0}
+.scan-meter div{background:#70c6b2;height:100%;width:0;transition:width .3s ease}
+.scan-progress small{display:block;color:#b9d0de;line-height:1.55}
 .notice{border:1px solid #706341;background:#262619;padding:11px 13px;border-radius:11px;font-size:12px;color:#f7dfb5;margin-bottom:14px}
 .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
 .filters button[aria-pressed="true"]{background:#e3f7ff;color:#102334;border-color:#e3f7ff;font-weight:800}
@@ -64,6 +69,11 @@ footer{font-size:11px;color:#a8c0d1;margin:25px 0 8px}
  <div class="stat"><strong id="sightingsCount">—</strong><span>Appearance observations</span></div>
  <div class="stat"><strong id="personClipsCount">—</strong><span>Clips with person evidence</span></div>
  <div class="stat"><strong id="waitingCount">—</strong><span>Clips awaiting face review</span></div>
+</section>
+<section class="scan-progress" aria-label="Historical face scan progress">
+ <strong id="scanSummary">Checking S9+ historical face-review progress…</strong>
+ <div class="scan-meter" role="progressbar" id="scanMeter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Eligible recordings rescanned"><div id="scanBar"></div></div>
+ <small id="scanCaption">The S9+ scans eligible older recordings with person evidence when cool and idle. No footage is uploaded to the C720P for analysis.</small>
 </section>
 <div class="notice">Facial matches and clothing colours are <b>unverified suggestions</b>. A repeated anonymous number does not prove the same individual across videos. Confidence is a model score, not identification accuracy. This page does not upload or store face images on the C720P.</div>
 <div class="filters" id="filters" aria-label="Gallery filters">
@@ -141,6 +151,13 @@ function read(){
  $('sightingsCount').textContent=String(appearanceCount);
  $('personClipsCount').textContent=String(personClips);
  $('waitingCount').textContent=String(waiting);
+ const older=state.data.filter(r=>Number(r.person_count)>0 && clipStamp(r)>0 && clipStamp(r)<1791687597000);
+ const deepDone=older.filter(r=>Number(r.face_review_sampled_frames||0)>=36).length;
+ const percent=older.length?Math.round(100*deepDone/older.length):0;
+ $('scanSummary').textContent='Historical face rescue · '+deepDone+' of '+older.length+' eligible recordings rescanned';
+ $('scanBar').style.width=percent+'%';
+ $('scanMeter').setAttribute('aria-valuenow',String(percent));
+ $('scanCaption').textContent='36 time positions per clip · '+(older.length-deepDone)+' remaining · scanned locally by the S9+ when cool and idle. A negative face scan does not prove the video lacks people.';
 }
 function addVisual(card,item){
  const v=make('div',undefined,'visual');const badge=make('span',types[item.kind],'type');v.append(badge);
@@ -195,8 +212,11 @@ function cardFor(item){
   if(Number.isFinite(item.face.time_ms))body.append(make('div','Captured at '+(item.face.time_ms/1000).toFixed(1)+' s of clip','subtle'));
  }else if(item.kind==='appearance')addTrackClues(body,item);
  else{
-  const chips=make('div',undefined,'chips');addChip(chips,'Needs face review','warn');body.append(chips);
-  body.append(make('div','No suitable frontal crop in sampled frames. The video may still show a person.','subtle'));
+  const chips=make('div',undefined,'chips');
+  const deep=Number(rec.face_review_sampled_frames||0)>=36;
+  addChip(chips,deep?'36-frame face scan complete':'Deep face scan pending',deep?'':'warn');
+  body.append(chips);
+  body.append(make('div',deep?'36 frame positions checked on the S9+. No suitable frontal face found; the clip may still contain someone.':'No suitable frontal crop in the initial sample. Awaiting a deeper on-phone review.','subtle'));
  }
  body.append(make('div',rec.clip_no,'subtle'));
  const actions=make('div',undefined,'actions'),watch=make('button','Play original clip');
