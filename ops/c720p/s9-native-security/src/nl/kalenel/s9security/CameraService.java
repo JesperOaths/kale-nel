@@ -382,6 +382,8 @@ public final class CameraService extends Service {
      gardenPersonGateScore=score;
      if(error){
       gardenPersonGateErrors++;
+      gardenPersonGatePositiveStreak=0;
+      gardenPersonGatePreviousObservation=null;
       saveFallbackEvidence("realtime_person_detector_failed");
       return;
      }
@@ -532,7 +534,7 @@ public final class CameraService extends Service {
   if(recorder!=null){try{recorder.release();}catch(Exception ignored){}recorder=null;}
   closeSession();
   failed++;
-  cooldownUntil=SystemClock.elapsedRealtime()+20000;
+  cooldownUntil=0; // Preserve recorder recovery delay, no admission cooldown.
   cameraHandler.postDelayed(new Runnable(){public void run(){configurePreview();}},1300);
  }
  private boolean review(File f,String reason,long count){
