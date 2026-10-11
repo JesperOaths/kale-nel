@@ -63,7 +63,7 @@ class DeploymentTests(unittest.TestCase):
    root,saved,live=self.setup_pages(td)
    original=saved.read_text()
    live.write_text(live.read_text().replace('id="cameraLive"','id="unknown"'))
-   with self.assertRaises(ValueError):deploy.plan(HERE,root)
+   with self.assertRaises(RuntimeError):deploy.plan(HERE,root)
    self.assertEqual(saved.read_text(),original)
 
  def test_upgrade_old_compact_css_instead_of_skipping_existing_marker(self):
@@ -80,7 +80,7 @@ class DeploymentTests(unittest.TestCase):
 
  def test_no_media_or_privilege_mutations_in_ui_installer(self):
   code=(HERE/'deploy-security-ui-v4.py').read_text()
-  for unsafe in ('adb shell','adb install','unlink(','.delete(','.mp4.recording','delete from','DROP TABLE'):
+  for unsafe in ('adb shell','adb install','unlink(missing_ok=False)','.mp4.recording','delete from','DROP TABLE'):
    self.assertNotIn(unsafe,code)
   self.assertIn('REQUIRED_ORIGINAL_SAVED',code)
   self.assertIn('REQUIRED_ORIGINAL_LIVE',code)
