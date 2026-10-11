@@ -25,7 +25,7 @@ class LayoutTests(unittest.TestCase):
   old=self.saved()
   new=compact.patch(old,'saved')
   self.assertEqual(compact.patch(new,'saved'),new)
-  self.assertIn('grid-template-columns:minmax(260px,.85fr) minmax(360px,1.35fr)',new)
+  self.assertIn('grid-template-columns:minmax(290px,370px) minmax(0,1fr)',new)
   self.assertIn("const player=video.closest('.s9-rotation-shell')||video;",new)
   self.assertIn('right.append(list)',new)
   self.assertIn('left.append(player)',new)
@@ -35,7 +35,7 @@ class LayoutTests(unittest.TestCase):
  def test_live_fits_viewport_without_touching_archive_or_encoding(self):
   original=self.live();after=compact.patch(original,'live')
   self.assertEqual(after,compact.patch(after,'live'))
-  self.assertIn('100dvh - 165px',after)
+  self.assertIn('70dvh',after)
   self.assertIn('object-fit:contain!important',after)
   self.assertIn('<section id="panel-saved">Keep Drive</section>',after)
   self.assertNotIn('MediaRecorder',after)
@@ -44,12 +44,13 @@ class LayoutTests(unittest.TestCase):
   with self.assertRaises(ValueError):compact.patch(self.live().replace('id="cameraLive"','id="lost"'),'live')
  def test_single_level_day_and_same_original_4k_player(self):
   gallery=(HERE/'patch-security-date-category-folders.py').read_text()
-  self.assertIn("date.append(tag('summary','',day+' · '+clips.length+' clips'))",gallery)
-  self.assertIn('clipsInto(date,sorted)',gallery)
+  self.assertIn("button.className" if False else "tag('button','s9-v4-date')",gallery)
+  self.assertIn('s9-v4-date-dots',gallery)
+  self.assertIn('s9-v4-legend',gallery)
   self.assertIn("root.classList.add('s9-curated-ready')",gallery)
   self.assertNotIn("folder.append(tag('summary'",gallery)
   orientation=(HERE/'patch-s9-saved-video-orientation.py').read_text()
-  self.assertIn('(window.innerHeight||800)*.56,560',orientation)
+  self.assertIn('(window.innerHeight||800)*.42,220',orientation)
 
 if __name__=='__main__':
  unittest.main(verbosity=2)
