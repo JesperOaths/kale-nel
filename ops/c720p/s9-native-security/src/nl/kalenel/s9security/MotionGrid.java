@@ -107,8 +107,8 @@ public final class MotionGrid {
   for(int i=0;i<N;i++){
    // Slightly more responsive to people crossing a dim fixed-camera view,
    // while retaining temporal voting, coherent-region and exposure guards.
-   // Bright daylight threshold is unchanged; low-light threshold 27 -> 23.
-   boolean c=Math.abs(nowCells[i]-background[i]-shift)>(lighting<42?23.0f:18.5f);
+   // Lower thresholds only request a local AI check, never a recording by themselves.
+   boolean c=Math.abs(nowCells[i]-background[i]-shift)>(lighting<42?19.0f:17.0f);
    // Motion outside the garden cannot vote or join connected regions.
    int gx=i%W,gy=i/W;
    c=c&&insideGarden((gx+.5f)/W,(gy+.5f)/H);
@@ -130,12 +130,12 @@ public final class MotionGrid {
   }
   // Sudden global exposure/camera adjustment should not count as an intruder.
   boolean dim=lighting<42;
-  boolean meaningful=changedRatio>=(dim?0.038:0.022)&&changedRatio<0.46
-      &&coherent>=(dim?10:7)&&Math.abs(shift)<(dim?18:26);
+  boolean meaningful=changedRatio>=(dim?0.025:0.017)&&changedRatio<0.46
+      &&coherent>=(dim?7:5)&&Math.abs(shift)<(dim?18:26);
   votes.addLast(meaningful);
   while(votes.size()>7)votes.removeFirst();
   int positive=0;for(Boolean yes:votes)if(yes)positive++;
-  motion=positive>=(lighting<42?5:4);
+  motion=positive>=(lighting<42?3:3);
   // Priority evidence must be coherent and sustained, not a single flash.
   boolean priority=meaningful && changedRatio>=(dim?0.055:0.035)
       && coherent>=(dim?13:9) && Math.abs(shift)<(dim?16:23);
