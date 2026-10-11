@@ -111,9 +111,16 @@ public final class CameraService extends Service {
  // Only cameraHandler can start/stop the native MediaRecorder.
  private boolean gardenPersonGateBusy=false;
  private long gardenPersonGateLastAt=0;
+ // After a motion vote, collect several NEW preview observations for up to
+ // 4.5 s. Motion itself still cannot start the MediaRecorder.
+ private long gardenPersonCandidateUntil=0;
+ private volatile long gardenPersonMotionWindows=0,gardenPersonFollowupChecks=0;
+ private static final long GARDEN_PERSON_CANDIDATE_MS=4500L;
  private volatile long gardenPersonGateChecks=0,gardenPersonGateMatches=0;
  private volatile long gardenPersonGateRejects=0,gardenPersonGateErrors=0;
  private volatile float gardenPersonGateScore=0f;
+ private long gardenPersonGatePreviousPositiveJpegAt=0;
+ private volatile long gardenPersonDuplicateJpegRejects=0;
  private int gardenPersonGatePositiveStreak=0;
  private long gardenPersonGatePreviousPositiveAt=0;
  private volatile long gardenPersonGateConfirmedStarts=0;
@@ -285,9 +292,15 @@ public final class CameraService extends Service {
        // road and non-person garden motion do not start new videos.
        if(!gardenGateReady)
         saveFallbackEvidence("realtime_person_detector_warming_or_unavailable");
-       else evaluateGardenPersonAsync();
+       else {
+        if(gardenPersonCandidateUntil<=lastFrameAt)gardenPersonMotionWindows++;
+        gardenPersonCandidateUntil=lastFrameAt+GARDEN_PERSON_CANDIDATE_MS;
+       }
       }
      }
+     if(!pilotOnly&&"watching".equals(mode)&&gardenGateReady&&
+         lastFrameAt>=cameraControlSettleUntil&&lastFrameAt<gardenPersonCandidateUntil)
+      evaluateGardenPersonAsync();
      if("recording".equals(mode)&&lastFrameAt-lastStart>2500){
        if(lastFrameAt-lastStart>MAX_MS)stopRecording("max_segment");
        else if(lastFrameAt-lastMovementAt>QUIET_MS)stopRecording("quiet_end");
@@ -373,6 +386,8 @@ public final class CameraService extends Service {
       now-lastJpegAt>1200||gardenGateExecutor==null||gardenGateClassifier==null||
       !gardenGateReady)return;
   gardenPersonGateBusy=true;gardenPersonGateLastAt=now;
+  if(now>lastMovementAt+250)gardenPersonFollowupChecks++;
+  final long jpegAt=lastJpegAt;
   final byte[] jpg=latestJpeg.clone();
   final float top=motion.topBoundary(),margin=motion.sideMargin();
   try{
@@ -397,7 +412,7 @@ public final class CameraService extends Service {
       saveFallbackEvidence("realtime_person_detector_failed");
       return;
      }
-     if(score<0.44f){gardenPersonGateRejects++;gardenPersonGatePositiveStreak=0;return;}
+     if(score<0.44f){gardenPersonGateRejects++;gardenPersonGatePositiveStreak=0;gardenPersonGatePreviousPositiveJpegAt=0;return;}
      gardenPersonGateMatches++;
      // Do not start recording on stale detections, if the camera has moved
      // into a new capture session, or after a deliberate controls change.
@@ -405,16 +420,24 @@ public final class CameraService extends Service {
          lastFrameAt<cameraControlSettleUntil){
       gardenPersonGateStale++;
       gardenPersonGatePositiveStreak=0;
+      gardenPersonGatePreviousPositiveJpegAt=0;
       if(running&&"watching".equals(mode))
        saveFallbackEvidence("stale_person_result_skipped");
       return;
+     }
+     // Two positive detections must originate from DIFFERENT JPEGs.
+     if(gardenPersonGatePreviousPositiveJpegAt>0&&
+         jpegAt<=gardenPersonGatePreviousPositiveJpegAt){
+      gardenPersonDuplicateJpegRejects++;return;
      }
      if(gardenPersonGatePreviousPositiveAt>0 && now-gardenPersonGatePreviousPositiveAt<=3000L)
       gardenPersonGatePositiveStreak=Math.min(2,gardenPersonGatePositiveStreak+1);
      else gardenPersonGatePositiveStreak=1;
      gardenPersonGatePreviousPositiveAt=now;
+     gardenPersonGatePreviousPositiveJpegAt=jpegAt;
      if(gardenPersonGatePositiveStreak<2)return;
       gardenPersonGatePositiveStreak=0;
+      gardenPersonCandidateUntil=0;
       eventChain.evidence(SystemClock.elapsedRealtime());
      if(temperature()<415 && folder!=null&&
              folder.getUsableSpace()>15L*1024*1024*1024){gardenPersonGateConfirmedStarts++;startRecording();}
@@ -919,6 +942,11 @@ public final class CameraService extends Service {
    d.put("garden_person_gate_rejected",gardenPersonGateRejects);
    d.put("garden_person_gate_errors",gardenPersonGateErrors);
    d.put("garden_person_gate_last_score",gardenPersonGateScore);
+    d.put("garden_person_followup_version","motion_armed_4500ms_unique_jpeg_v5");
+    d.put("garden_person_candidate_window_ms",GARDEN_PERSON_CANDIDATE_MS);
+    d.put("garden_person_motion_windows",gardenPersonMotionWindows);
+    d.put("garden_person_followup_checks",gardenPersonFollowupChecks);
+    d.put("garden_person_duplicate_jpeg_rejects",gardenPersonDuplicateJpegRejects);
    d.put("garden_zone",motion.gardenZone());
    d.put("garden_roi_top_fraction",motion.topBoundary());
    d.put("preview_jpeg_interval_ms","recording".equals(mode)?250:120);
