@@ -30,6 +30,11 @@ ADDITION = """# STEP_20261011_DARK_LAMP_ON_EVIDENCE_GUARD
 
 def main():
     original = SRC.read_text()
+    # A newer, tested V17 shape gate is already running on C720P. Never stack
+    # this historical V16 draft on top of V17 or overwrite its tuning.
+    if "NIGHT_SHAPE_GATE_V17_20261011" in original:
+        print("superseded_by_live_v17_night_shape_gate; no changes made")
+        return 0
     if MARKER in original:
         print("already_installed")
         return 0
