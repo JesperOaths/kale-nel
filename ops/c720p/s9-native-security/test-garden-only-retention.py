@@ -63,6 +63,17 @@ class Tests(unittest.TestCase):
         self.assertIn('reviewer.execute(new Runnable()',camera)
         self.assertIn('detector.rebuildGardenThumbnail(movie,live,meta)',(SRC/'GardenArchiveTriage.java').read_text())
 
+    def test_archive_thumbnail_backfill_initializes_detector_independently(self):
+        source=(SRC/'ClipClassifier.java').read_text()
+        method=source.split('boolean rebuildGardenThumbnail(',1)[1].split(
+            'public synchronized JSONObject gardenRetentionProbe(',1)[0]
+        first_detect=method.index('for(Detection d:detect(bitmap))')
+        first_init=method.index('init();')
+        self.assertLess(first_init,first_detect)
+        self.assertIn('MediaMetadataRetriever media=new MediaMetadataRetriever()',method)
+        self.assertIn('writeJson(new File(folder,name+".verified.json"),manifest)',method)
+        self.assertIn('thumb.previous-garden.jpg',method)
+
     def test_secondary_person_check_and_nonpermanent_quarantine(self):
         c=(SRC/'ClipClassifier.java').read_text()
         q=(SRC/'GardenArchiveTriage.java').read_text()
