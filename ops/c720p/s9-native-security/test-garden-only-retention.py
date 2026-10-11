@@ -22,7 +22,7 @@ class Tests(unittest.TestCase):
         self.assertIn('cooldownUntil=0',s)
         self.assertIn('fallback_stills_enabled",false',s)
         self.assertIn('max_person_clip_ms",MAX_MS',s)
-        self.assertIn('person_recording_extend_by_garden_motion",true',s)
+        self.assertIn('person_recording_extend_by_garden_motion",false',s)
         fallback=s[s.index('private void saveFallbackEvidence(String why)'):
                    s.index('private static boolean validCompleted4K',s.index('private void saveFallbackEvidence'))]
         self.assertNotIn('FileOutputStream',fallback)
