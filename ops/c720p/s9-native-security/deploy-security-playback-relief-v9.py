@@ -3,7 +3,7 @@
 while fast 1-minute metadata index persists. Correct misleading 720p UI
 for verified 480p30 derived playback. Never alter camera or recordings.
 """
-import datetime, json, os, pathlib, shutil, subprocess, urllib.request
+import datetime, json, os, pathlib, re, shutil, subprocess, urllib.request
 HOME=pathlib.Path("/home/jespern")
 TIMER=HOME/".config/systemd/user/c720p-s9-local-sd-catalog.timer"
 PLAYER=pathlib.Path("/opt/homeassistant/config/www/security-video-playback.js")
@@ -31,9 +31,9 @@ def main():
  new_player=new_player.replace("Smooth \\u00b7 720p / 30 fps","Smooth \\u00b7 480p / 30 fps")
  new_player=new_player.replace("state.mode==='original'?'original':'720p30'","state.mode==='original'?'original':'480p30'")
  if new_player==old_player:raise RuntimeError("player_labels_no_change")
- mark="C720P_SECURITY_NATIVE_MJPEG_STABLE_V3_20261011"
- if mark not in old_page:raise RuntimeError("page_cache_marker_changed")
- new_page=old_page.replace(mark,"C720P_SECURITY_MJPEG_AND_480P_V9_20261011")
+ active=re.findall(r"security-video-playback[.]js[?]v=([A-Za-z0-9_.-]+)",old_page)
+ if len(active)!=1:raise RuntimeError("page_cache_script_reference_changed")
+ new_page=old_page.replace(active[0],"C720P_SECURITY_MJPEG_AND_480P_V9_20261011",1)
  stamp=datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
  folder=BACK/stamp;folder.mkdir(parents=True,mode=0o700)
  originals={TIMER:old_timer,PLAYER:old_player,PAGE:old_page}
