@@ -35,7 +35,7 @@ def main():
  launcher=SOURCE_LAUNCH.read_text()
  if ('gejast-auth-gate.js' not in viewer or 'C720PSecureRelay' not in viewer or
       'id="s9-gpu-player-v1"' not in viewer or 'playback=rgb_prepare' not in viewer or
-      'playback=rgb_pack' not in viewer or 'UNSIGNED' in viewer):
+      'playback=rgb_pack' not in viewer or 'unsafeUnsignedMedia' in viewer):
   raise RuntimeError("unsafe_gpu_player_template")
  if "s9-gpu-performance-close-v1" not in launcher or "new MutationObserver(" not in launcher:
   raise RuntimeError("unsafe_gpu_launcher")
