@@ -2,7 +2,7 @@
 """C720P Gemini Live speech-only bridge. Opt-in cloud service, no permanent recordings.
 Independent of existing Wyoming assistant; only office lamp tools are exposed.
 """
-import argparse, asyncio, array, collections, contextlib, json, math, os, pathlib, subprocess, sys, time, urllib.request
+import argparse, asyncio, array, collections, contextlib, json, math, os, pathlib, re, subprocess, sys, time, urllib.request
 
 HOME=pathlib.Path.home()
 RUNTIME=HOME/"c720p-home-hub/runtime"
@@ -47,7 +47,7 @@ class SpeechGate:
 
 def status(mode,**kwargs):
  RUNTIME.mkdir(parents=True,exist_ok=True)
- payload={"version":"c720p-gemini-live-v1","mode":mode,"at":time.time(),**kwargs}
+ payload={"version":"c720p-gemini-live-v2-wake-gated","mode":mode,"at":time.time(),**kwargs}
  temp=RUNTIME/"gemini_live_status.json.tmp";temp.write_text(json.dumps(payload))
  temp.replace(RUNTIME/"gemini_live_status.json")
 
@@ -167,11 +167,46 @@ async def stop_capture(proc):
   with contextlib.suppress(Exception):proc._transport.close()
 
 
+def wake_intent(text, armed=False):
+ """Return (decision, remainder) without accepting background conversation."""
+ normalized=" ".join(re.findall(r"[a-z0-9]+",text.lower()))
+ tokens=normalized.split()
+ wake=len(tokens)>=2 and tokens[0] in ("hey","okay","ok") and tokens[1]=="google"
+ if wake:
+  remainder=" ".join(tokens[2:])
+  return ("command",remainder) if len(remainder.split())>=2 else ("arm","")
+ if armed and len(tokens)>=3:
+  return ("command",normalized)
+ return ("ignore","")
+
+
+async def local_wake_transcript(pcm):
+ """Perform Whisper recognition locally. Failure = no cloud transmission."""
+ from wyoming.client import AsyncTcpClient
+ from wyoming.audio import AudioStart,AudioChunk,AudioStop
+ from wyoming.asr import Transcribe,Transcript
+ try:
+  async with asyncio.timeout(17):
+   async with AsyncTcpClient("127.0.0.1",10300) as c:
+    await c.write_event(Transcribe(language="en").event())
+    await c.write_event(AudioStart(rate=RATE,width=2,channels=1).event())
+    for offset in range(0,len(pcm),12800):
+     await c.write_event(AudioChunk(rate=RATE,width=2,channels=1,audio=pcm[offset:offset+12800]).event())
+    await c.write_event(AudioStop().event())
+    for _ in range(16):
+     event=await c.read_event()
+     if not event:break
+     if event.type=="transcript":return (Transcript.from_event(event).text or "").strip()
+ except Exception:
+  pass
+ return ""
+
+
 async def run(dry=False,seconds=0):
  import webrtcvad
  gate=SpeechGate(webrtcvad.Vad(2));ha=KioskHA()
- attempts=collections.deque(maxlen=4);started=time.monotonic()
- status("ready",cloud_enabled=not dry,privacy="local_speech_detection_only_until_speech",model=MODEL)
+ attempts=collections.deque(maxlen=4);speech_checks=collections.deque(maxlen=10);armed_until=0.;started=time.monotonic()
+ status("ready",cloud_enabled=not dry,privacy="only_wake_prefixed_speech_can_reach_google",wake_required=True,model=MODEL)
  while not seconds or time.monotonic()-started<seconds:
   proc=await asyncio.create_subprocess_exec("parec","--device="+SOURCE,"--raw","--format=s16le",
      "--rate=16000","--channels=1","--latency-msec=80",
@@ -188,13 +223,33 @@ async def run(dry=False,seconds=0):
     await stop_capture(proc)
     capture_drained=True
     now=time.monotonic()
+    while speech_checks and now-speech_checks[0]>60:speech_checks.popleft()
+    if len(speech_checks)>=10 or (speech_checks and now-speech_checks[-1]<1.0):
+     status("ignored",reason="wake_check_rate_limit",cloud_enabled=False)
+     break
+    speech_checks.append(now)
+    status("checking_wake_locally",cloud_enabled=False)
+    transcript=await local_wake_transcript(utterance)
+    was_armed=now<armed_until
+    decision,remainder=wake_intent(transcript,armed=was_armed)
+    if decision=="ignore":
+     if was_armed:armed_until=0.
+     status("ignored",reason="no_wake_phrase",cloud_enabled=False)
+     break
+    if decision=="arm":
+     armed_until=time.monotonic()+10
+     status("armed",wake_window_seconds=10,cloud_enabled=False)
+     break
+    armed_until=0.
     while attempts and now-attempts[0]>60:attempts.popleft()
-    if len(attempts)>=4:status("rate_limited");continue
+    if len(attempts)>=4:
+     status("ignored",reason="cloud_turn_rate_limit",cloud_enabled=False)
+     break
     attempts.append(now)
     if dry:
-     status("dry_run_speech_detected",seconds=round(len(utterance)/32000,2),cloud_enabled=False)
-     continue
-    status("cloud_speech_turn",audio_seconds=round(len(utterance)/32000,2),provider="google")
+     status("dry_run_wake_accepted",audio_seconds=round(len(utterance)/32000,2),cloud_enabled=False)
+     break
+    status("cloud_speech_turn",audio_seconds=round(len(utterance)/32000,2),provider="google",wake_verified=True)
     try:
      reply,calls,elapsed=await cloud(utterance,ha)
      status("speaking",cloud_seconds=elapsed,tool_calls=calls)
@@ -223,6 +278,12 @@ def selftest():
  assert len(found)==1 and len(found[0])>30000
  assert asyncio.run(handle_tool(KioskHA(),"set_office_light",{"state":"unlock"}))["error"]=="tool_not_allowed"
  assert asyncio.run(handle_tool(KioskHA(),"shell",{}))["error"]=="tool_not_allowed"
+ assert wake_intent("Turn off the office light")[0]=="ignore"
+ assert wake_intent("The weather is nice in Groningen")[0]=="ignore"
+ assert wake_intent("Hey Google")[0]=="arm"
+ assert wake_intent("Hey Google, turn off the office light")[0]=="command"
+ assert wake_intent("Please turn off the office light",armed=True)[0]=="command"
+ assert wake_intent("a click",armed=True)[0]=="ignore"
  return {"pass":True,"utterance_s":round(len(found[0])/32000,2),"blocked_untrusted_tools":True,"cloud_audio_sent":False}
 
 def main():
@@ -238,7 +299,7 @@ def main():
   try:from google import genai;sdk=True
   except ImportError:sdk=False
   print(json.dumps({"gemini_api_key_configured":bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")),
-  "sdk_ready":sdk,"vad_ready":vad,"model":MODEL,"local_wakeword_required":False,
+  "sdk_ready":sdk,"vad_ready":vad,"model":MODEL,"local_wakeword_required":True,
   "cloud_microphone_active":False,"old_assistant_intact":True}));return
  if a.probe_ha:print(json.dumps(asyncio.run(KioskHA().office())));return
  if a.run and not (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")):
