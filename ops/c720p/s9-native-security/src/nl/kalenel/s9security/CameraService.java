@@ -687,7 +687,8 @@ public final class CameraService extends Service {
    d.put("pilot_only",pilotOnly);
    d.put("takeover_completed",!pilotOnly&&running&&lastFrameAt>0);
    d.put("recorder","camera2_3840x2160_h264");
-   d.put("motion_detector","garden_roi_temporal_person_presence_v2");
+   d.put("motion_detector","garden_roi_gpu_person_gate_v1");
+   d.put("garden_person_gate_version","temporal_periodic_v2");
    d.put("review_model","ssd_mobilenet_coco_gpu_cpu_v1");
    d.put("mic",false);d.put("cloud_upload",false);
    d.put("storage","removable_microSD_only");
