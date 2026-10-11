@@ -29,7 +29,12 @@ assert "startup_recovered" in source and "recoverArchive" in source
 assert "fallback_evidence_saved" in source
 assert "priority_reserve" in source
 
-assert fetch.count("PreviewJpeg Boot RecordingRate CameraControls OutfitEvidence AnonymousClipTracks CameraOrientation HistoricalImportWorker PhoneMediaRange GardenArchiveTriage S9FaceReview CaptureContinuity EventFrameRanker; do") == 2, "complete camera, appearance and historical import sources required"
+assert fetch.count("PreviewJpeg Boot RecordingRate CameraControls OutfitEvidence AnonymousClipTracks CameraOrientation HistoricalImportWorker PhoneMediaRange GardenArchiveTriage S9FaceReview CaptureContinuity EventFrameRanker GardenPersonTrackGate; do") == 2, "complete camera, appearance and historical import sources required"
 assert "new HistoricalImportWorker(" in source
 assert 'historical_import_queued' in source
 assert "PhoneMediaRange.handle" in source
+
+assert 'GardenPersonTrackGate' in fetch
+assert 'personEvidenceInGarden' in source
+assert 'GardenPersonTrackGate.Result.CONFIRMED' in source
+print('S9_SPATIAL_PERSON_GATE_SOURCE_CONTRACT_OK')
