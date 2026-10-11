@@ -52,7 +52,20 @@ def main():
     v.muted=true;v.playsInline=true;v.preload='auto';v.controls=false;
     v.style.cssText='position:fixed;z-index:2147483600;bottom:0;right:0;width:480px;height:270px;object-fit:contain;background:#000';
     document.body.appendChild(v);
-    v.src=url;
+    let prefetchDiagnostic=null,blobURL=null;
+    if(__PREFETCH__){
+      const started=performance.now();
+      try{
+        const response=await window.C720PSecureRelay.fetch('/new/saved/clip/'+clip+'?playback=hub',{method:'GET'});
+        const contentSize=Number(response.headers.get('content-length')||0);
+        if(!response.ok||contentSize>12*1024*1024)throw new Error('not_small_derived_clip_'+response.status);
+        const bytes=await response.arrayBuffer();
+        if(bytes.byteLength>12*1024*1024||bytes.byteLength<10000)throw new Error('derived_media_bytes_invalid');
+        blobURL=URL.createObjectURL(new Blob([bytes],{type:'video/mp4'}));
+        prefetchDiagnostic={ok:true,http:response.status,bytes:bytes.byteLength,loadMs:Math.round(performance.now()-started)};
+      }catch(error){prefetchDiagnostic={ok:false,error:String(error)};}
+    }
+    v.src=blobURL||url;
     const start=performance.now(),seen=[],errors=[],events=[];
     for(const e of ['loadstart','waiting','loadedmetadata','canplay','playing','stalled','suspend','emptied','error'])
       v.addEventListener(e,()=>events.push({event:e,at:Math.round(performance.now()-start),code:v.error?.code||null}),{once:false});
@@ -76,14 +89,14 @@ def main():
       droppedFrames:q?.droppedVideoFrames,totalFrames:q?.totalVideoFrames,
       readyState:v.readyState,networkState:v.networkState,errors,
       mediaTimeFirst:seen[0]??null,mediaTimeLast:seen.at(-1)??null,
-      duration_ms:performance.now()-start,events,fetchProbe,signedURL,
+      duration_ms:performance.now()-start,events,fetchProbe,signedURL,prefetchDiagnostic,
       mediaError:v.error?.message??null,isConnected:v.isConnected,
       srcLength:String(v.currentSrc||v.src).length,paused:v.paused,
       sourceUrlStart:String(v.currentSrc||v.src).slice(0,135),
       mediaCapabilities:typeof navigator.mediaCapabilities};
-    v.pause();v.removeAttribute('src');v.load();v.remove();
+    v.pause();v.removeAttribute('src');v.load();v.remove();if(blobURL)URL.revokeObjectURL(blobURL);
     return result;
-   })()""".replace("__CLIP__",json.dumps(clip))
+   })()""".replace("__CLIP__",json.dumps(clip)).replace("__PREFETCH__","true" if os.environ.get("S9_TEST_PREFETCH")=="1" else "false")
    r=evaluate(tab,script,True)
    print("S9_REAL_KIOSK_4K_PLAYBACK_PERF",json.dumps(r.get("value",r),sort_keys=True),flush=True)
   finally:
