@@ -27,7 +27,7 @@ class Tests(unittest.TestCase):
    'recorder.setVideoEncodingBitRate(36000000)',
    'PhoneMediaRange.handle',
    'garden_roi_gpu_person_gate_v1',
-   'lastFrameAt<cooldownUntil',
+   'COOLDOWN_MS=0',
    'garden_person_gate_checked',
   ]:self.assertIn(contract,s)
   self.assertNotIn('Thread.sleep(950)',s)
