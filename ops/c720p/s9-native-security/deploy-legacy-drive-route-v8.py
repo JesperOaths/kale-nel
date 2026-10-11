@@ -22,6 +22,7 @@ BASE=Path("/home/jespern/c720p-home-hub")
 PY=BASE/"bin/s9_sd_proxy_extension.py"
 HTML=Path("/opt/homeassistant/config/www/c720p-drive-saved.html")
 ARCHIVE=Path("/opt/homeassistant/config/www/frontyard-security-new/security-archive-v7.html")
+ROOT=Path("/opt/homeassistant/config/www/c720p-surveillance.html")
 BACKUPS=BASE/"backups/legacy-drive-catalog-v8"
 SVC="c720p-drive-security-archive.service"
 URL="http://127.0.0.1:8795/new/api/saved"
@@ -32,6 +33,8 @@ NEW='''  if path=="/new/api/saved":
     return original(self)'''
 OLD_FETCH="/api/saved?t="
 NEW_FETCH="/api/saved?archive=drive&t="
+OLD_ROOT="const ARCHIVE=\u0027/local/frontyard-security-new/security-archive-v7.html\u0027;"
+NEW_ROOT="const ARCHIVE=\u0027/local/frontyard-security-new/security-archive-v7.html?v=drive-v8-split\u0027;"
 
 def run(*args, timeout=35):
  return subprocess.run(args,check=True,capture_output=True,text=True,timeout=timeout).stdout.strip()
@@ -85,16 +88,18 @@ def check_video(events):
  return "HTTP_206_16_bytes"
 
 def main():
- if any(p.is_symlink() or not p.is_file() for p in (PY,HTML,ARCHIVE)):
+ if any(p.is_symlink() or not p.is_file() for p in (PY,HTML,ARCHIVE,ROOT)):
   raise RuntimeError("expected_security_files_missing")
  if 'id="driveTab"' not in ARCHIVE.read_text():
   raise RuntimeError("archive_v8_page_not_installed")
  original_py=PY.read_bytes()
  original_html=HTML.read_bytes()
+ original_root=ROOT.read_bytes()
  py=original_py.decode("utf-8")
  html=original_html.decode("utf-8")
+ root=original_root.decode("utf-8")
  old_sd=sd()
- if NEW in py and NEW_FETCH in html:
+ if NEW in py and NEW_FETCH in html and NEW_ROOT in root:
   rows=drive()
   print("ARCHIVE_DRIVE_CATALOG_V8_ALREADY_ACTIVE "+json.dumps({
     "drive_indexed":len(rows),"sd_indexed":old_sd,"range":check_video(rows)}),flush=True)
@@ -103,8 +108,11 @@ def main():
   raise RuntimeError("unexpected_proxy_source_anchor")
  if html.count(OLD_FETCH)!=1 or NEW_FETCH in html or "C720PSecureRelay" not in html:
   raise RuntimeError("unexpected_legacy_gallery_source_anchor")
+ if root.count(OLD_ROOT)!=1 or NEW_ROOT in root:
+  raise RuntimeError("unexpected_security_root_archive_iframe")
  new_py=py.replace(OLD,NEW,1)
  new_html=html.replace(OLD_FETCH,NEW_FETCH,1)
+ new_root=root.replace(OLD_ROOT,NEW_ROOT,1)
  if "urllib.parse.urlsplit(self.path)" not in py or "original=H.go" not in py:
   raise RuntimeError("unsupported_extension_version")
  if "saved/delete" in NEW_FETCH:
@@ -113,15 +121,16 @@ def main():
  os.chmod(BACKUPS,0o700)
  folder=BACKUPS/dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
  folder.mkdir(mode=0o700)
- for name,data in (("extension-before.py",original_py),("drive-gallery-before.html",original_html)):
+ for name,data in (("extension-before.py",original_py),("drive-gallery-before.html",original_html),("surveillance-before.html",original_root)):
   p=folder/name;p.write_bytes(data);os.chmod(p,0o600)
   if p.read_bytes()!=data:raise RuntimeError("backup_verification_failed")
- info_py,info_html=PY.stat(),HTML.stat()
+ info_py,info_html,info_root=PY.stat(),HTML.stat(),ROOT.stat()
  changed=[]
  try:
   atomic(new_py.encode(),PY,info_py);changed.append(PY)
   run("/usr/bin/python3","-m","py_compile",str(PY),timeout=20)
   atomic(new_html.encode(),HTML,info_html);changed.append(HTML)
+  atomic(new_root.encode(),ROOT,info_root);changed.append(ROOT)
   run("systemctl","--user","restart",SVC,timeout=45)
   for _ in range(5):
    try:
@@ -136,13 +145,16 @@ def main():
    html_live=rr.read(400000)
   if hashlib.sha256(html_live).digest()!=hashlib.sha256(new_html.encode()).digest():
    raise RuntimeError("home_assistant_gallery_not_published")
+  with urllib.request.urlopen("http://127.0.0.1:8123/local/c720p-surveillance.html?v=drive-v8-root",timeout=15) as rr:
+   if NEW_ROOT.encode() not in rr.read(1000000):
+    raise RuntimeError("root_archive_cache_buster_not_published")
   print("ARCHIVE_DRIVE_CATALOG_V8_VERIFIED "+json.dumps({
    "drive_indexed":len(rows),"sd_before":old_sd,"sd_after":new_sd,
    "drive_range":sample,"backup":str(folder),
    "camera_changed":False,"media_changed":False}),flush=True)
  except BaseException as e:
   for p in reversed(changed):
-   data,st=(original_py,info_py) if p==PY else (original_html,info_html)
+   data,st=(original_py,info_py) if p==PY else (original_html,info_html) if p==HTML else (original_root,info_root)
    atomic(data,p,st)
   try:run("systemctl","--user","restart",SVC,timeout=45)
   except Exception:pass
