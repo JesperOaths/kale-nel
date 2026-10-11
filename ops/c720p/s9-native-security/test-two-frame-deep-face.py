@@ -11,17 +11,20 @@ FACES=(ROOT/'src/nl/kalenel/s9security/S9FaceReview.java').read_text()
 TRIAGE=(ROOT/'src/nl/kalenel/s9security/GardenArchiveTriage.java').read_text()
 
 class Contract(unittest.TestCase):
- def test_two_separate_person_gate_checks(self):
+ def test_temporally_consistent_person_first_engine(self):
   code=SOURCE.split('private void evaluateGardenPersonAsync(){',1)[1].split('private void noteRecordingStarted',1)[0]
-  for required in ('now-gardenPersonGateLastAt<900','if(score<0.58f)',
-                   'gardenPersonGatePositiveStreak=0','now-gardenPersonGatePreviousPositiveAt<=3000L',
-                   'detected.consistentWith(gardenPersonGatePreviousObservation)',
-                   'gardenPersonGatePositiveStreak<2','gardenPersonGateConfirmedStarts++',
+  for required in ('PersonEventTracker.Decision event=personEvents.observe',
+                   'jpegStamp<=lastPersonGateJpegStamp',
+                   'motion.motion?650L:1650L',
+                   'event.confirmedNow',
+                   'pendingPersonSegment&&event.active',
+                   'gardenPersonGateConfirmedStarts++',
                    'startRecording()','gardenPersonGateStale++'):
    self.assertIn(required,code)
-  self.assertLess(code.index('gardenPersonGatePositiveStreak<2'),
-                  code.rindex('startRecording()'))
-  self.assertIn('garden_roi_adaptive_noise_consistent_person_gate_v3',SOURCE)
+  self.assertIn('person_first_periodic_temporal_track_v4',SOURCE)
+  self.assertIn('person_gate_periodic_without_motion",true',SOURCE)
+  self.assertIn('pendingPersonSegment=personEvents.isActive(',SOURCE)
+  self.assertIn('person_gate_spatial_confirmation_frames",3',SOURCE)
  def test_native_deep_review_is_bounded_and_does_not_reencode(self):
   deep=CLASSIFIER.split('boolean deepFaceReview(',1)[1].split('public synchronized JSONObject process(',1)[0]
   for required in ('manifest.optInt("person_count",0)<=0','manifest.has("face_deep_review_version")',
