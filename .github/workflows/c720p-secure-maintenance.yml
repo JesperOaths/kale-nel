@@ -1,6 +1,11 @@
 name: C720P secure maintenance
 
 on:
+  # Intentionally scoped one-time smoke test on main; no arbitrary code input.
+  push:
+    branches: [main]
+    paths:
+      - "ops/c720p/workflow-secure-maintenance-smoke-20261011.txt"
   workflow_dispatch:
     inputs:
       operation:
@@ -35,7 +40,7 @@ jobs:
     timeout-minutes: 5
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      REQUEST_OPERATION: ${{ inputs.operation }}
+      REQUEST_OPERATION: ${{ github.event_name == 'push' && 'agent-status' || inputs.operation }}
     steps:
       - name: Assert private connection and install PostgreSQL client
         shell: bash
