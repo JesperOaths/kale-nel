@@ -112,6 +112,10 @@ public final class CameraService extends Service {
  private volatile long gardenPersonGateChecks=0,gardenPersonGateMatches=0;
  private volatile long gardenPersonGateRejects=0,gardenPersonGateErrors=0;
  private volatile float gardenPersonGateScore=0f;
+ private int gardenPersonGatePositiveStreak=0;
+ private long gardenPersonGatePreviousPositiveAt=0;
+ private volatile long gardenPersonGateConfirmedStarts=0;
+ private volatile long deepFaceScanned=0,deepFaceErrors=0;
  private String captureTier="normal";
  private long lastFrameAt=0,lastMovementAt=0,lastRecordAt=0,cooldownUntil=0,lastStart=0;
  // Ignore detector triggers from deliberate user changes of zoom, torch or exposure.
@@ -378,19 +382,26 @@ public final class CameraService extends Service {
       saveFallbackEvidence("realtime_person_detector_failed");
       return;
      }
-     if(score<0.44f){gardenPersonGateRejects++;return;}
+     if(score<0.44f){gardenPersonGateRejects++;gardenPersonGatePositiveStreak=0;return;}
      gardenPersonGateMatches++;
      // Do not start recording on stale detections, if the camera has moved
      // into a new capture session, or after a deliberate controls change.
      if(!running||!"watching".equals(mode)||SystemClock.elapsedRealtime()-now>3500||
          lastFrameAt<cameraControlSettleUntil){
       gardenPersonGateStale++;
+      gardenPersonGatePositiveStreak=0;
       if(running&&"watching".equals(mode))
        saveFallbackEvidence("stale_person_result_skipped");
       return;
      }
+     if(gardenPersonGatePreviousPositiveAt>0 && now-gardenPersonGatePreviousPositiveAt<=3000L)
+      gardenPersonGatePositiveStreak=Math.min(2,gardenPersonGatePositiveStreak+1);
+     else gardenPersonGatePositiveStreak=1;
+     gardenPersonGatePreviousPositiveAt=now;
+     if(gardenPersonGatePositiveStreak<2)return;
+     gardenPersonGatePositiveStreak=0;
      if(temperature()<415 && folder!=null&&
-             folder.getUsableSpace()>15L*1024*1024*1024)startRecording();
+             folder.getUsableSpace()>15L*1024*1024*1024){gardenPersonGateConfirmedStarts++;startRecording();}
      else saveFallbackEvidence("thermal_or_space_guard");
     }});
    }});
@@ -640,21 +651,22 @@ public final class CameraService extends Service {
  /** Scan finalized Security4K person recordings at idle: one clip per phone-local pass. */
  private void maybeFaceBackfill(){
   long now=SystemClock.elapsedRealtime();
-  if(!running||faceBackfillQueued||now-lastFaceBackfillScan<180000||
+  if(!running||faceBackfillQueued||now-lastFaceBackfillScan<60000||
      folder==null||reviewer==null||classifier==null||
-     !"watching".equals(mode)||temperature()>=370||
+     !"watching".equals(mode)||temperature()>=350||gardenPersonGateBusy||
+     (lastMovementAt>0&&now-lastMovementAt<45000L)||
      folder.getUsableSpace()<20L*1024*1024*1024)return;
   faceBackfillQueued=true;
   final File target=folder;
   try{
    reviewer.execute(new Runnable(){public void run(){
     try{
-     if(!running||!"watching".equals(mode)||temperature()>=370)return;
+     if(!running||!"watching".equals(mode)||temperature()>=350)return;
      File[] manifests=target.listFiles((d,n)->n.matches("motion_[0-9]{13}[.]mp4[.]verified[.]json"));
      if(manifests==null)return;
      Arrays.sort(manifests,Comparator.comparing(File::getName));
      for(File manifest:manifests){
-      if(!running||!"watching".equals(mode)||temperature()>=370)return;
+      if(!running||!"watching".equals(mode)||temperature()>=350)return;
       if(manifest.length()<100||manifest.length()>28000)continue;
       String mp4name=manifest.getName().replace(".verified.json","");
       File video=new File(target,mp4name);
@@ -666,14 +678,21 @@ public final class CameraService extends Service {
        }
        JSONObject meta=new JSONObject(new String(bytes,"UTF-8"));
        if(meta.optInt("person_count",0)<=0)continue;
-       // After a validated model is installed, retry old snapshot-only reviews once.
-       // Without a model do not repeatedly re-decode the same MP4s.
-       if(meta.has("face_review_version")){
-        if(!("face_embedding_unavailable_snapshots_only".equals(meta.optString("face_review_status"))
-           &&S9FaceReview.hasEmbeddingModel(CameraService.this)))continue;
-       }
+       // Historical MP4s with person evidence get a second deeper on-device
+       // face-only review, rather than marking "no face in 12 frames" final.
+       // New-era clips stay on their standard real-time review path.
+       boolean hasReview=meta.has("face_review_version");
+       boolean deep=hasReview&&
+          meta.optInt("face_snapshots_saved",0)==0&&
+          !meta.has("face_deep_review_version")&&
+          Long.parseLong(mp4name.substring(7,20))<1791687597000L;
+       if(!deep&&hasReview)continue;
        if(!mp4name.equals(meta.optString("name"))||meta.optLong("bytes",-1)!=video.length())continue;
-       if(review(video,"onphone_face_backfill",0))faceBackfillDone++;
+       if(deep){
+        try{
+         if(classifier.deepFaceReview(video,target,mp4name,meta))deepFaceScanned++;
+        }catch(Exception e){deepFaceErrors++;Log.w(TAG,"face_deep_review",e);}
+       }else if(review(video,"onphone_face_backfill",0))faceBackfillDone++;
        else faceBackfillErrors++;
        return;
       }catch(Exception e){faceBackfillErrors++;Log.w(TAG,"face_backfill_manifest_skip",e);}
@@ -751,7 +770,8 @@ public final class CameraService extends Service {
    d.put("pilot_only",pilotOnly);
    d.put("takeover_completed",!pilotOnly&&running&&lastFrameAt>0);
    d.put("recorder","camera2_3840x2160_h264");
-   d.put("motion_detector","garden_roi_gpu_person_gate_v1");
+   d.put("motion_detector","garden_roi_gpu_two_frame_person_gate_v2");
+   d.put("previous_detector_version","garden_roi_gpu_person_gate_v1");
    d.put("review_model","ssd_mobilenet_coco_gpu_cpu_v1");
    d.put("mic",false);d.put("cloud_upload",false);
    d.put("storage","removable_microSD_only");
@@ -805,6 +825,8 @@ public final class CameraService extends Service {
       JSONObject.NULL:Math.max(0,SystemClock.elapsedRealtime()-lastMovementAt));
     d.put("garden_archive_triage_permanent_deletion_enabled",false);
    d.put("face_backfill_completed",faceBackfillDone);
+   d.put("face_deep_scanned",deepFaceScanned);
+   d.put("face_deep_errors",deepFaceErrors);
    d.put("face_backfill_errors",faceBackfillErrors);
    d.put("recordings_this_hour",getSharedPreferences("native",MODE_PRIVATE).getInt("record_rate_count",0));
    d.put("garden_person_gate_ready",gardenGateReady);
@@ -815,6 +837,8 @@ public final class CameraService extends Service {
    d.put("garden_person_gate_stale_dropped",gardenPersonGateStale);
    d.put("garden_person_gate_checked",gardenPersonGateChecks);
    d.put("garden_person_gate_matches",gardenPersonGateMatches);
+   d.put("garden_person_gate_required_positive_frames",2);
+   d.put("garden_person_gate_confirmed_starts",gardenPersonGateConfirmedStarts);
    d.put("garden_person_gate_rejected",gardenPersonGateRejects);
    d.put("garden_person_gate_errors",gardenPersonGateErrors);
    d.put("garden_person_gate_last_score",gardenPersonGateScore);
