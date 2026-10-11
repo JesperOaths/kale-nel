@@ -116,25 +116,41 @@ public final class ClipClassifier {
   * shared with post-record classification on the serialized review worker.
   * No face recognition, cross-recording identification, or persistent IDs.
   */
- public synchronized float personScoreInGarden(byte[] jpeg,float top,float margin)throws Exception{
+ /** A single independently decoded preview person box; the caller must still
+  * confirm it in a DIFFERENT JPEG with coherent geometry. No identity claim.
+  */
+ public static final class GardenPersonEvidence {
+  public final float score;
+  public final float[] box;
+  GardenPersonEvidence(float score,float[] box){
+   this.score=score;this.box=box.clone();
+  }
+ }
+ public synchronized GardenPersonEvidence personEvidenceInGarden(byte[] jpeg,float top,float margin)throws Exception{
   if(jpeg==null||jpeg.length<1000||top<0||top>1||margin<0||margin>.3f)
    throw new IllegalArgumentException("invalid_preview_or_region");
   init();
   Bitmap bitmap=BitmapFactory.decodeByteArray(jpeg,0,jpeg.length);
   if(bitmap==null)throw new IOException("invalid_preview_jpeg");
   try{
-   float highest=0f;
+   Detection best=null;
    for(Detection detection:detect(bitmap)){
     if(!"person".equals(detection.label))continue;
     float[] b=detection.box;
-    if(b==null||b.length!=4)continue;
+    if(b==null||b.length!=4||b[0]<0f||b[1]<0f||b[2]>1.02f||b[3]>1.02f||
+       b[2]<=b[0]||b[3]<=b[1])continue;
     float center=(b[1]+b[3])*0.5f;
     float feet=b[2];
     if(center<margin||center>1f-margin||feet<top||feet>1.02f)continue;
-    highest=Math.max(highest,detection.score);
+    if(best==null||detection.score>best.score)best=detection;
    }
-   return highest;
+   return best==null?null:new GardenPersonEvidence(best.score,best.box);
   }finally{bitmap.recycle();}
+ }
+ // Preserve callers that need only the confidence, including existing audits.
+ public synchronized float personScoreInGarden(byte[] jpeg,float top,float margin)throws Exception{
+  GardenPersonEvidence candidate=personEvidenceInGarden(jpeg,top,margin);
+  return candidate==null?0f:candidate.score;
  }
 
  /** Lightweight RGB upper-torso tag; deliberately excludes face and has no identity features. */
