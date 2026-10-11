@@ -27,8 +27,8 @@ public final class EventFrameRanker {
   mean/=grid.length;
   for(int y=1;y<height-1;y++)for(int x=1;x<width-1;x++){
    int i=y*width+x;
-   double dx=Math.abs(grid[i+1]-grid[i-1]);
-   double dy=Math.abs(grid[i+width]-grid[i-width]);
+   double dx=Math.abs(grid[i+1]-grid[i]);
+   double dy=Math.abs(grid[i+width]-grid[i]);
    edge+=dx+dy;
    contrast+=Math.abs(grid[i]-mean);
    n++;
