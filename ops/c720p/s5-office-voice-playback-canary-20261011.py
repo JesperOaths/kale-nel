@@ -156,7 +156,7 @@ def main():
         adb("push",str(sample),REMOTE_BASE+".raw",timeout=35)
         start=datetime.datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S")
         tic=time.monotonic()
-        result=adb("shell","sh","-c",
+        result=adb("shell",
           "CLASSPATH="+REMOTE_BASE+".jar app_process /system/bin "+
           "com.bruis.s5audio.S5Play "+REMOTE_BASE+".raw",timeout=65)
         report["s5_playback"]=result[-1300:]
