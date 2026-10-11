@@ -30,7 +30,7 @@ SAVED_SNIPPET=r"""
 #s9-compact-layout .s9-rotation-stage{margin-left:0!important;margin-right:0!important}
 #s9-compact-layout #list{min-width:0;max-height:calc(100dvh - 125px);overflow-y:auto;
   overflow-x:hidden;scrollbar-width:thin;overscroll-behavior:contain;padding-right:3px}
-#list.s9-curated-ready > :not(#s9-date-folders){display:none!important}
+#list.s9-curated-ready > :not(#s9-date-folders):not(#s9-human-review):not(#s9-face-review):not(#s9-fallback-section):not(#s9-anonymous-clips-v1):not(#s9-drive-person-review):not(#s9-live-person-watch){display:none!important}
 #s9-compact-layout #s9-date-folders{margin:0!important;border:0!important;
   padding:0!important;background:transparent!important}
 @media(max-width:900px){
