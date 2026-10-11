@@ -16,6 +16,7 @@ import time
 SERIAL="192.168.178.47:5555"
 WWW=Path("/opt/homeassistant/config/www")
 OUT=WWW/"s3-motion-health.json"
+HISTORY=WWW/"s3-motion-health-history.json"
 USERSTATE=Path("/home/jespern/c720p-home-hub/state/s3-motion-health.json")
 def adb(*args):
  p=subprocess.run(["adb","-s",SERIAL,*args],capture_output=True,
@@ -99,6 +100,30 @@ def save(path,data):
  staging.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n")
  staging.chmod(0o644)
  os.replace(staging,path)
+def update_history(data):
+ """Keep only small 24-hour aggregates; never camera frames or identities."""
+ now=time.time()
+ rows=[]
+ try:
+  previous=json.loads(HISTORY.read_text())
+  if isinstance(previous,list):rows=previous
+ except (FileNotFoundError,ValueError,TypeError):pass
+ rows=[x for x in rows if isinstance(x,dict) and
+       type(x.get("epoch")) in (int,float) and now-86400<=x["epoch"]<=now+60]
+ row={
+  "epoch":round(now),
+  "lux":data.get("ambient_lux") if data.get("healthy") else None,
+  "battery_percent":data.get("battery_percent"),
+  "battery_temperature_c":data.get("battery_temperature_c"),
+  "camera_active":data.get("camera_active"),
+  "healthy":data.get("healthy") is True
+ }
+ # Limit to 24h history of one sample per timer run. Preserve only latest
+ # reading if manual tests trigger multiple invocations in the same minute.
+ if rows and now-rows[-1]["epoch"]<60:rows[-1]=row
+ else:rows.append(row)
+ save(HISTORY,rows[-330:])
+
 def main():
  try: data=parse()
  except Exception as e:
@@ -112,6 +137,7 @@ def main():
   }
  for path in (USERSTATE,OUT):
   save(path,data)
+ update_history(data)
  print("S3_MOTION_HEALTH",json.dumps({
   "healthy":data["healthy"],
   "warnings":data["warnings"],
