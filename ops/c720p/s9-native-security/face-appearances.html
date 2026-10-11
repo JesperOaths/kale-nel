@@ -48,6 +48,7 @@ h2{font-size:16px;margin:0 0 8px}p{margin:5px 0 12px;color:var(--muted)}
 dialog{color:var(--ink);background:#102332;border:1px solid #6992aa;border-radius:13px;width:min(1100px,95vw);max-height:92vh;padding:12px}
 dialog::backdrop{background:#000d}dialog video{width:100%;max-height:75vh;background:black;display:block;margin:8px 0}
 .modal-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.watermark{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#a7c6d4;background:#0a2234ee;border:1px solid #45677d;border-radius:999px;padding:3px 9px;z-index:8;white-space:nowrap}
 footer{font-size:11px;color:#a8c0d1;margin:25px 0 8px}
 @media(max-width:720px){body{padding:12px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.visual{height:210px}}
 </style>
@@ -84,6 +85,7 @@ footer{font-size:11px;color:#a8c0d1;margin:25px 0 8px}
 </dialog>
 <footer>Faces and video stay in the phone's existing microSD archive. Face crops are streamed only when visible and are not permanently cached by this page. Original 4K recordings are preserved.</footer>
 <script id="s9-faces-appearances-gallery-v1">
+window.GEJAST_PAGE_VERSION='v817';
 (()=>{
 'use strict';
 const $=id=>document.getElementById(id);
@@ -268,5 +270,6 @@ refresh();
 window.setInterval(()=>{if(!document.hidden)refresh();},90000);
 })();
 </script>
+<div class="watermark">v817 - Made by Bruis</div>
 </body>
 </html>
