@@ -1,0 +1,19 @@
+[Unit]
+Description=C720P Gemini Live speech-triggered Google cloud bridge
+After=default.target network-online.target sound.target
+Wants=network-online.target
+ConditionPathExists=%h/.config/c720p-gemini-live.env
+
+[Service]
+Type=simple
+WorkingDirectory=%h/c720p-home-hub
+EnvironmentFile=%h/.config/c720p-gemini-live.env
+ExecStart=%h/c720p-home-hub/.venv-gemini-live/bin/python %h/c720p-home-hub/bin/c720p-gemini-live.py --run
+Restart=on-failure
+RestartSec=15
+UMask=0077
+NoNewPrivileges=true
+TimeoutStopSec=5
+
+[Install]
+WantedBy=default.target
