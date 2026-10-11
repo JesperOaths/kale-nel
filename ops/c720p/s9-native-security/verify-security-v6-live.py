@@ -51,10 +51,19 @@ if browser:
        (ROOT/"c720p-surveillance.html").resolve().as_uri()]
   p=subprocess.run(cmd,capture_output=True,text=True,timeout=22)
   dom=p.stdout
-  out["browser"]={"returncode":p.returncode,"shell_mounted":'id="s9v5-shell"' in dom,
-      "overview_button_removed":'data-view="overview"' not in dom,
-      "live_nav_present":'data-view="live"' in dom,
-      "recordings_nav_present":'data-view="saved"' in dom}
+  from html.parser import HTMLParser
+  class NavParser(HTMLParser):
+   def __init__(self):super().__init__();self.views=[];self.shell_view=None
+   def handle_starttag(self,tag,attrs):
+    a=dict(attrs)
+    if tag=="button" and a.get("data-view"):self.views.append(a["data-view"])
+    if a.get("id")=="s9v5-shell":self.shell_view=a.get("data-view")
+  parsed=NavParser();parsed.feed(dom)
+  out["browser"]={"returncode":p.returncode,"shell_mounted":parsed.shell_view is not None,
+      "overview_button_removed":"overview" not in parsed.views,
+      "live_nav_present":"live" in parsed.views,
+      "recordings_nav_present":"saved" in parsed.views,
+      "active_view":parsed.shell_view}
  except Exception as e:out["browser"]={"error":type(e).__name__}
 out["ok"]=all(all(value is True for key,value in checks.items() if key not in ("http_status","served_v6","http_error")) for checks in out["pages"].values()) and out["sd_index"].get("archive_mode")=="S9-microSD-only"
 print("SECURITY_V6_POST_INSTALL",json.dumps(out,sort_keys=True),flush=True)
