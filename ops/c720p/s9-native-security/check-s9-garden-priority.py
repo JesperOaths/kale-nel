@@ -32,7 +32,7 @@ def assess(phone,archive=None):
         "phone_live_model_ready":phone.get("garden_person_gate_ready") is True,
         "phone_model_backend_valid":backend in ("gpu","cpu"),
         "garden_filter_present":phone.get("garden_zone") in ("strict","near","wide","all"),
-        "max_24_4k_per_hour":numeric("recording_rate_max_per_hour")==24,
+        "no_hourly_recording_cap":numeric("recording_rate_max_per_hour")==-1 and phone.get("recording_hourly_quota_enabled") is False,
         "thermal_below_guard":numeric("temperature_c",100)<41.5,
         "microSD_reserve_available":numeric("sd_free_bytes",0)>15*1024*1024*1024,
         "live_model_not_stalled_in_long_queue":
