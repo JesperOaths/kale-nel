@@ -24,10 +24,23 @@ def get(url):
  with urllib.request.urlopen(url,timeout=15) as r:return r.status,r.read(260000)
 def parse_js(source):
  if not isinstance(source,str) or len(source)<1800:raise RuntimeError("javascript_too_small")
- p=BUILD/"__gpu_player_js_check__.js"
- p.write_text(source)
- try:subprocess.run(["node","--check",str(p)],check=True,capture_output=True,text=True,timeout=16)
- finally:p.unlink(missing_ok=True)
+ # C720P has no node binary. Compile, but do NOT execute, JS through its
+ # own active Chromium debugger, so the exact installed browser checks syntax.
+ import importlib.util
+ helper=BUILD/"security-v8-real-browser-probe.py"
+ if not helper.is_file():raise RuntimeError("chromium_cdp_helper_missing")
+ spec=importlib.util.spec_from_file_location("s9_security_js_checker",helper)
+ lib=importlib.util.module_from_spec(spec);spec.loader.exec_module(lib)
+ pages=lib.get("json/list")
+ page=next((p for p in pages if p.get("type")=="page" and p.get("webSocketDebuggerUrl")),None)
+ if not page:raise RuntimeError("chromium_cdp_not_available")
+ browser=lib.Socket(page["webSocketDebuggerUrl"])
+ try:
+  script="(()=>{try{new Function("+json.dumps(source)+");return {ok:true}}catch(e){return {ok:false,error:String(e)}}})()"
+  result=browser.call("Runtime.evaluate",{"expression":script,"returnByValue":True})
+  value=result.get("result",{}).get("value") or {}
+  if not value.get("ok"):raise RuntimeError("chromium_javascript_syntax_failed:"+str(value.get("error")))
+ finally:browser.close()
 def main():
  if not SOURCE_VIEW.is_file() or not SOURCE_LAUNCH.is_file():
   raise RuntimeError("gpu_viewer_staged_files_missing")
