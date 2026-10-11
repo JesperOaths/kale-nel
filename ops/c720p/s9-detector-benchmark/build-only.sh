@@ -34,7 +34,7 @@ CP="$JAR:$DEPEND/tensorflow-lite.jar:$DEPEND/tensorflow-lite-api.jar"
 test -s "$DEPEND/tensorflow-lite.jar"
 rm -rf "$ROOT/classes" "$ROOT/dex"
 mkdir -p "$ROOT/classes" "$ROOT/dex"
-javac -source 8 -target 8 -cp "$CP" -d "$ROOT/classes" "$SRC/BenchmarkService.java"
+javac -source 8 -target 8 -cp "$CP" -d "$ROOT/classes" "$SRC/BenchmarkService.java" "$SRC/GardenShadowPipeline.java"
 d8 --min-api 26 --lib "$JAR" --output "$ROOT/dex" \
  "$ROOT/classes/nl/kalenel/s9benchmark/"*.class \
  "$DEPEND/tensorflow-lite.jar" "$DEPEND/tensorflow-lite-api.jar"
