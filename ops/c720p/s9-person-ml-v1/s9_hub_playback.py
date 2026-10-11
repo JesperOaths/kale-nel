@@ -116,10 +116,10 @@ def source(camera, name, phone_rows):
             "name": name, "camera": camera, "route": route}
 
 
-def probe(url):
+def probe(url, timeout=30):
     result = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0",
         "-show_entries", "stream=codec_name,width,height,avg_frame_rate,duration:format=duration",
-        "-of", "json", str(url)], capture_output=True, text=True, timeout=30)
+        "-of", "json", str(url)], capture_output=True, text=True, timeout=timeout)
     if result.returncode:
         raise OSError("playback_video_probe_failed")
     data = json.loads(result.stdout)
@@ -177,10 +177,15 @@ def build(src):
     part = CACHE / (src["key"] + ".part")
     temporary_meta = CACHE / (src["key"] + ".json.part")
     started = time.monotonic()
+    def remaining(reserve=0):
+        seconds = JOB_TIMEOUT - (time.monotonic() - started) - reserve
+        if seconds <= 0:
+            raise OSError("playback_copy_deadline_exceeded")
+        return seconds
     try:
         if shutil.disk_usage(CACHE).free < 160 * 1024 * 1024:
             raise OSError("insufficient_temporary_playback_space")
-        original = probe(src["url"])
+        original = probe(src["url"], timeout=min(30, remaining()))
         if original["fps"] < 24:
             raise SourceFrameRateError(original["fps"])
         hardware = (Path("/dev/dri/renderD128").exists() and
@@ -191,7 +196,7 @@ def build(src):
             try:
                 result = subprocess.run(transcode_command(src, part, hardware=True),
                     stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, env=environment,
-                    timeout=min(JOB_TIMEOUT, max(45, original["duration"] * 3 + 30)))
+                    timeout=min(remaining(30), max(45, original["duration"] * 3 + 30)))
             except subprocess.TimeoutExpired:
                 result = None
             if result is not None and result.returncode == 0:
@@ -201,10 +206,10 @@ def build(src):
             # low-priority software path, never back into the original file.
             part.unlink(missing_ok=True)
             result = subprocess.run(transcode_command(src, part), stdout=subprocess.DEVNULL,
-                                    stderr=subprocess.PIPE, timeout=JOB_TIMEOUT)
+                                    stderr=subprocess.PIPE, timeout=remaining(30))
         if result.returncode or not part.is_file() or not 10000 <= part.stat().st_size <= FILE_MAX:
             raise OSError("playback_copy_generation_failed")
-        output = probe(part)
+        output = probe(part, timeout=min(30, remaining()))
         if (output["width"] > 1280 or output["height"] > 720 or output["fps"] < 29.9 or
                 abs(output["duration"] - original["duration"]) > max(.5, original["duration"] * .015)):
             raise OSError("playback_copy_validation_failed")
