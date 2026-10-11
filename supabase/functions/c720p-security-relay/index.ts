@@ -61,11 +61,14 @@ function path(u:URL){
   if(k==="status") return `/${c}/api/status`;
   if(k==="events") return `/${c}/api/events`;
   if(k==="saved") return `/${c}/api/saved`;
+  if(k==="drivesaved") return `/${c}/api/drive-saved`;
   if(k==="controls") return `/${c}/api/controls`;
   if(k==="control") return `/${c}/api/control`;
   if(k==="live") return `/${c}/live.mjpg`;
   if(k==="snap"){const n=clean(u.searchParams.get("name")||"");return n?`/${c}/snap/${encodeURIComponent(n)}`:""}
   if(k==="clip"){const n=clean(u.searchParams.get("name")||"",".mp4");return n?`/${c}/clip/${encodeURIComponent(n)}`:""}
+  if(k==="drivesnap"){const n=clean(u.searchParams.get("name")||"",".jpg");return n?`/${c}/drive/saved/snap/${encodeURIComponent(n)}`:""}
+  if(k==="driveclip"){const n=clean(u.searchParams.get("name")||"",".mp4");return n?`/${c}/drive/saved/clip/${encodeURIComponent(n)}`:""}
   if(k==="savedsnap"){const n=clean(u.searchParams.get("name")||"",".jpg");return n?`/${c}/saved/snap/${encodeURIComponent(n)}`:""}
   if(k==="savedclip"){const n=clean(u.searchParams.get("name")||"",".mp4");return n?`/${c}/saved/clip/${encodeURIComponent(n)}`:""}
   return "";
