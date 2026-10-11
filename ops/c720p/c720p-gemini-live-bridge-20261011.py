@@ -171,8 +171,14 @@ def wake_intent(text, armed=False):
  """Return (decision, remainder) without accepting background conversation."""
  normalized=" ".join(re.findall(r"[a-z0-9]+",text.lower()))
  tokens=normalized.split()
- wake=len(tokens)>=2 and tokens[0] in ("hey","okay","ok") and tokens[1]=="google"
- if wake:
+ wake=len(tokens)>=2 and tokens[1]=="google" and tokens[0] in ("hey","hay","hi","okay","ok","hello")
+ # With a full office-light request, allow a misheard first wake syllable,
+ # but never allow generic conversation about Google to open Gemini.
+ office_request=(len(tokens)>=5 and len(tokens)>1 and tokens[1]=="google"
+                 and "office" in tokens[2:]
+                 and any(t in tokens[2:] for t in ("light","lights"))
+                 and any(t in tokens[2:] for t in ("turn","on","off","what","is","state")))
+ if wake or office_request:
   remainder=" ".join(tokens[2:])
   return ("command",remainder) if len(remainder.split())>=2 else ("arm","")
  if armed and len(tokens)>=3:
@@ -281,6 +287,11 @@ def selftest():
  assert wake_intent("Turn off the office light")[0]=="ignore"
  assert wake_intent("The weather is nice in Groningen")[0]=="ignore"
  assert wake_intent("Hey Google")[0]=="arm"
+ assert wake_intent("Hi Google")[0]=="arm"
+ assert wake_intent("A Google what is the state of the office light")[0]=="command"
+ assert wake_intent("The Google search results are confusing")[0]=="ignore"
+ assert wake_intent("Someone said Google in passing")[0]=="ignore"
+ assert wake_intent("Google office light")[0]=="ignore"
  assert wake_intent("Hey Google, turn off the office light")[0]=="command"
  assert wake_intent("Please turn off the office light",armed=True)[0]=="command"
  assert wake_intent("a click",armed=True)[0]=="ignore"
