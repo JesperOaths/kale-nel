@@ -23,9 +23,9 @@ SNIPPET=r'''
 #s9-date-folders details{border:1px solid #375569;border-radius:9px;background:#193446;margin:7px 0;padding:4px 8px}
 #s9-date-folders details details{background:#203d50;border-color:#496c83;margin:7px 2px}
 #s9-date-folders summary{cursor:pointer;list-style:revert;font-weight:750;font-size:13px;padding:7px 3px;line-height:1.5;overflow-wrap:anywhere}
-#s9-date-folders .s9-folder-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:7px;padding-bottom:7px}
+#s9-date-folders .s9-folder-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,205px),1fr));gap:7px;padding-bottom:7px}
 #s9-date-folders .s9-folder-clip{border:1px solid #547b91;background:#294a5b;border-radius:8px;color:#eaf9ff;cursor:pointer;text-align:left;padding:7px;display:flex;gap:8px;align-items:center;font:inherit;min-width:0}
-#s9-date-folders .s9-folder-clip img{width:68px;height:48px;object-fit:contain;background:#08131d;border-radius:5px;flex:none}
+#s9-date-folders .s9-folder-clip img{width:78px;height:55px;object-fit:cover;background:#08131d;border-radius:5px;flex:none}
 #s9-date-folders .s9-folder-clip .s9-folder-copy{font-size:12px;min-width:0;overflow-wrap:anywhere}
 #s9-date-folders .s9-folder-clip small{font-size:11px;color:#bdd8e7;display:block;margin-top:3px}
 #s9-date-folders button:focus-visible{outline:2px solid #a8eaff;outline-offset:2px}
@@ -161,7 +161,7 @@ SNIPPET=r'''
   const visible=data.filter(r=>folderMode==='all'||
     (folderMode==='people'?['multiple','person'].includes(category(r)):
        !['multiple','person'].includes(category(r))));
-  host.append(tag('h3','', 'S9+ saved garden people · date folders'));
+  host.append(tag('h3','', 'Saved camera recordings'));
   const controls=tag('label','s9-people-filter');
   controls.append(tag('span','', 'Show recordings'));
   const select=tag('select');
@@ -176,7 +176,7 @@ SNIPPET=r'''
   select.addEventListener('change',()=>{folderMode=select.value;render(current)});
   controls.append(select);host.append(controls);
   host.append(tag('p','',
-   'Original videos stay on microSD. Folders are a searchable view, not file moves. Detection categories are model estimates; no verified identities.'));
+   'Newest first · original video on S9+ microSD · person labels are model suggestions.'));
   host.append(tag('p','s9-folder-refresh',visible.length+' shown · '+data.length+' indexed · newest dates first'));
   const byDay=new Map();
   for(const r of visible){
@@ -184,24 +184,23 @@ SNIPPET=r'''
    if(!byDay.has(day))byDay.set(day,[]);
    byDay.get(day).push(r);
   }
-  for(const [day,clips] of [...byDay.entries()].sort((a,b)=>b[0].localeCompare(a[0]))){
-   const date=tag('details');date.dataset.folderKey='date:'+day;
-   date.open=open.has(date.dataset.folderKey);
-   date.append(tag('summary','',day+' · '+clips.length+' recordings'));
-   for(const [key,title] of groups){
-    const selected=clips.filter(x=>category(x)===key).sort((a,b)=>nameOf(b).localeCompare(nameOf(a)));
-    if(!selected.length)continue;
-    const folder=tag('details');folder.dataset.folderKey='cat:'+day+':'+key;
-    folder.open=open.has(folder.dataset.folderKey);
-    folder.append(tag('summary','',title+' · '+selected.length));
-    let populated=false;
-    const load=()=>{if(populated)return;populated=true;clipsInto(folder,selected)};
-    folder.addEventListener('toggle',()=>{if(folder.open)load()});
-    if(folder.open)load();
-    date.append(folder);
-   }
+  const dates=[...byDay.entries()].sort((a,b)=>b[0].localeCompare(a[0]));
+  dates.forEach(([day,clips],index)=>{
+   const date=tag('details');
+   date.dataset.folderKey='date:'+day;
+   // Open the newest date by default. Avoid second-level category folders:
+   // every saved clip should be available in one click from its date.
+   date.open=open.has(date.dataset.folderKey)||(!open.size&&index===0);
+   date.append(tag('summary','',day+' · '+clips.length+' clips'));
+   const sorted=clips.sort((a,b)=>nameOf(b).localeCompare(nameOf(a)));
+   let populated=false;
+   const load=()=>{if(populated)return;populated=true;clipsInto(date,sorted)};
+   date.addEventListener('toggle',()=>{if(date.open)load()});
+   if(date.open)load();
    host.append(date);
-  }
+  });
+  root.classList.add('s9-curated-ready');
+
  }
  let current=[];
  async function reload(){
