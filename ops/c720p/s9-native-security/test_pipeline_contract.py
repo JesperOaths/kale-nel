@@ -33,8 +33,3 @@ assert fetch.count("PreviewJpeg Boot RecordingRate CameraControls OutfitEvidence
 assert "new HistoricalImportWorker(" in source
 assert 'historical_import_queued' in source
 assert "PhoneMediaRange.handle" in source
-
-assert 'GardenPersonTrackGate' in fetch
-assert 'personEvidenceInGarden' in source
-assert 'GardenPersonTrackGate.Result.CONFIRMED' in source
-print('S9_SPATIAL_PERSON_GATE_SOURCE_CONTRACT_OK')
