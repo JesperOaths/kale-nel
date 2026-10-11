@@ -214,11 +214,16 @@ public final class GardenPreRoll {
  private void disable(Throwable error){
   ready=false;failed=true;lastError=error.getClass().getSimpleName();
   Log.w("S9_PREROLL","pre_event_encoder_unavailable",error);
-  try{if(codec!=null){codec.stop();codec.release();}}catch(Throwable ignored){}
+  try{if(codec!=null)codec.stop();}catch(Throwable ignored){}
+  try{if(codec!=null)codec.release();}catch(Throwable ignored){}
   codec=null;
  }
  public void stop(){
-  closed=true;worker.shutdown();
-  try{worker.execute(()->{});}catch(RuntimeException ignored){}
+  closed=true;
+  try{worker.execute(()->{
+   try{if(codec!=null){codec.stop();codec.release();}}catch(Throwable ignored){}
+   codec=null;
+  });}catch(RuntimeException ignored){}
+  worker.shutdown();
  }
 }
