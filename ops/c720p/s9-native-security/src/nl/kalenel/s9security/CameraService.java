@@ -391,12 +391,13 @@ public final class CameraService extends Service {
   final long jpegAt=lastJpegAt;
   final byte[] jpg=latestJpeg.clone();
   final float top=motion.topBoundary(),margin=motion.sideMargin();
+  final String selectedZone=motion.gardenZone();
   try{
    gardenGateExecutor.execute(new Runnable(){public void run(){
     final long gateStarted=SystemClock.elapsedRealtime();
     float value=0,wholeFrameScore=0;boolean failed=false;
     try{
-     value=gardenGateClassifier.personScoreInGarden(jpg,top,margin);
+     value=gardenGateClassifier.personScoreInGarden(jpg,top,margin,selectedZone);
      wholeFrameScore=gardenGateClassifier.lastPersonScoreAnywhere();
     }
     catch(Throwable issue){
@@ -956,6 +957,11 @@ public final class CameraService extends Service {
     d.put("garden_person_duplicate_jpeg_rejects",gardenPersonDuplicateJpegRejects);
    d.put("garden_zone",motion.gardenZone());
    d.put("garden_roi_top_fraction",motion.topBoundary());
+   d.put("garden_roi_mask_version","near".equals(motion.gardenZone())?MotionGrid.NEAR_ROI_VERSION:"preset_horizontal_v1");
+   d.put("garden_roi_top_left_fraction",motion.topBoundaryAt(0f));
+   d.put("garden_roi_top_middle_fraction",motion.topBoundaryAt(.5f));
+   d.put("garden_roi_top_right_fraction",motion.topBoundaryAt(1f));
+   d.put("garden_roi_gates_person_inference",true);
    d.put("preview_jpeg_interval_ms","recording".equals(mode)?250:120);
    d.put("preview_jpeg_async",jpegEncoder!=null);
    d.put("preview_jpeg_worker_busy",jpegBusy);
