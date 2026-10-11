@@ -22,6 +22,8 @@ assert "REFUSING_SHADOW_INSTALL_EXISTING_NATIVE_PACKAGE" in installer
 assert 'stopRecording("service_shutdown")' in source
 assert 'reviewer.execute' in source and 'reviewer.shutdown()' in source
 assert 'cloud_upload",false' in source
+assert 'PersonEventTracker.class' in compile_script
+assert 'PersonEventTracker.class' in package_script
 print("S9_NATIVE_SECURITY_PIPELINE_SOURCE_CONTRACT_OK")
 
 assert "RecordingRate.java" in (ROOT / "fetch-source.sh").read_text() or "RecordingRate" in fetch
@@ -29,7 +31,7 @@ assert "startup_recovered" in source and "recoverArchive" in source
 assert "fallback_evidence_saved" in source
 assert "priority_reserve" in source
 
-assert fetch.count("PreviewJpeg Boot RecordingRate CameraControls OutfitEvidence AnonymousClipTracks CameraOrientation HistoricalImportWorker PhoneMediaRange GardenArchiveTriage S9FaceReview; do") == 2, "complete camera, appearance and historical import sources required"
+assert fetch.count("PreviewJpeg Boot RecordingRate CameraControls OutfitEvidence AnonymousClipTracks CameraOrientation HistoricalImportWorker PhoneMediaRange GardenArchiveTriage S9FaceReview PersonEventTracker; do") == 2, "complete camera, appearance and historical import sources required"
 assert "new HistoricalImportWorker(" in source
 assert 'historical_import_queued' in source
 assert "PhoneMediaRange.handle" in source
