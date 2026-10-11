@@ -38,7 +38,7 @@ SNIPPET=r'''
 (()=>{
  'use strict';
  const ID='s9-date-folders', BASE='/local/frontyard-security-new/';
- let folderMode='people';
+ let folderMode='all';
  const native=/^(?:motion|native4k)_([0-9]{13})[.]mp4$/;
  const legacy=/^rec_([0-9]{4}-[0-9]{2}-[0-9]{2})_([0-9]{2}-[0-9]{2})[.]mp4$/;
  const safe=/^(?:(?:motion|native4k)_[0-9]{13}|rec_[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2})[.]mp4$/;
@@ -67,13 +67,14 @@ SNIPPET=r'''
  const category=r=>{
   const g=String(r.scene_category||r.person_status||'');
   const tags=Array.isArray(r.content_categories)?r.content_categories:[];
-  if(g==='multiple_people'||String(r.person_event_category||'')==='multiple_people_candidate')return 'multiple';
-  if(g==='one_person'||g==='single_person_event_candidate'||g==='single_person_repeated_candidate'||(Number(r.person_count)||0)>0)return 'person';
-  // Keep weak model evidence visible for human review without claiming an
-  // actual person was present. A 0.30–0.49 TFLite candidate is not verified.
   const event=String(r.person_event_category||'');
+  // One positive frame or the raw max person_count alone is not a
+  // confirmed person, even in older scene_category manifests.
   if(['single_frame_person_candidate','possible_group_needs_frame_review',
       'possible_person_below_standard_threshold'].includes(event))return 'possible';
+  if(g==='multiple_people'||event==='multiple_people_candidate')return 'multiple';
+  if(g==='one_person'||event==='single_person_repeated_candidate')return 'person';
+  if((Number(r.person_count)||0)>0)return 'possible';
   if(tags.includes('vehicle'))return 'vehicle';
   if(tags.includes('animal'))return 'animal';
   if(g==='unreviewed'||g==='unknown'||g==='')return 'unreviewed';
