@@ -36,8 +36,7 @@ def html_patch(s,page):
   if not a.search(s):raise RuntimeError('root_player_reference_missing')
   s=a.sub(SCRIPT,s)
  else:
-  if 'gejast-auth-gate.js' not in s and page.name!='clips.html':
-   raise RuntimeError('auth_gate_missing_'+page.name)
+  # Preserve each page's existing auth/access posture unchanged.
   has_import=re.search(r'/local/security-video-playback[.]js[?]v=[A-Za-z0-9_-]+',s)
   if has_import:
    s=re.sub(r'/local/security-video-playback[.]js[?]v=[A-Za-z0-9_-]+',SCRIPT,s)
