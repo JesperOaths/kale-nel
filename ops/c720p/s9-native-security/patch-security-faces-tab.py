@@ -15,7 +15,7 @@ def patch(html):
     button=re.search(r'<button\b[^>]*data-tab="saved"[^>]*>.*?</button>',html,re.S)
     panel=re.search(r'<section\b(?=[^>]*id="panel-saved")[^>]*>',html)
     if not button or not panel:raise ValueError("tab_structure_not_found")
-    link='<button type="button" data-tab="faces" aria-selected="false">Faces &amp; appearances</button>'
+    link='<button type="button" class="tab" data-tab="faces" aria-selected="false">Faces &amp; appearances</button>'
     html=html[:button.end()]+link+html[button.end():]
     panel=re.search(r'<section\b(?=[^>]*id="panel-saved")[^>]*>',html)
     frame='<section class="panel" id="panel-faces" hidden><iframe id="s9FacesGalleryFrame" title="S9+ faces and appearance sightings" data-src="'+URL+'" loading="lazy" style="width:100%;height:calc(100vh - 190px);min-height:500px;border:0"></iframe></section>'
@@ -31,11 +31,11 @@ document.addEventListener('click',e=>{
   if(on){
    if(!frame.src)frame.src=frame.dataset.src;
    for(const p of panels)p.style.setProperty('display',p===panel?'block':'none','important');
-   panel.hidden=false;tab.classList.add('selected');tab.setAttribute('aria-selected','true');
+   panel.hidden=false;tab.classList.add('active');tab.setAttribute('aria-selected','true');
   }else{
    for(const p of panels)p.style.removeProperty('display');
    panel.style.display='none';panel.hidden=true;
-   tab.classList.remove('selected');tab.setAttribute('aria-selected','false');
+   tab.classList.remove('active');tab.setAttribute('aria-selected','false');
   }
  });
 });
