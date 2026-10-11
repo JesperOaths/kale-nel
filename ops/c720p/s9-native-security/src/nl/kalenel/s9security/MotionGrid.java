@@ -10,6 +10,23 @@ public final class MotionGrid {
  private final float[] background=new float[N],nowCells=new float[N];
  private final boolean[] changed=new boolean[N],seen=new boolean[N];
  private final int[] stack=new int[N];
+ // Recent accepted motion evidence per grid cell, aged by event time. Read
+ // only on the camera handler after GPU inference finishes.
+ private final long[] recentMotionAt=new long[N];
+ public int recentMotionCellsInBox(float[] box,long now){
+  if(!GardenPersonTrackGate.valid(box)||now<=0)return 0;
+  int count=0;
+  for(int i=0;i<N;i++){
+   int gx=i%W,gy=i/W;
+   float x=(gx+.5f)/W,y=(gy+.5f)/H;
+   // 1/2-grid-cell slack accommodates coarse 24x14 sampling and small people.
+   if(x<box[1]-.022f||x>box[3]+.022f||
+      y<box[0]-.037f||y>box[2]+.037f||!insideGarden(x,y))continue;
+   if(recentMotionAt[i]>0&&now>=recentMotionAt[i]&&
+      now-recentMotionAt[i]<=5000L)count++;
+  }
+  return count;
+ }
  private long lastSample=0;
  private int init=0;
  private final ArrayDeque<Boolean> votes=new ArrayDeque<>();
@@ -84,6 +101,7 @@ public final class MotionGrid {
   java.util.Arrays.fill(nowCells,0f);
   java.util.Arrays.fill(changed,false);
   java.util.Arrays.fill(seen,false);
+  java.util.Arrays.fill(recentMotionAt,0L);
   changedRatio=0;coherent=0;lighting=0;
   motion=false;strong=false;
  }
@@ -163,6 +181,10 @@ public final class MotionGrid {
   // 7-sample temporal vote and exposure-change rejection still apply.
   boolean meaningful=changedRatio>=(dim?0.030:0.020)&&changedRatio<0.46
       &&coherent>=(dim?8:6)&&Math.abs(shift)<(dim?18:26);
+  // "Motion here" must mean movement overlapping an SSD person box, not
+  // unrelated leaves/vehicles elsewhere in the owner's sloped garden mask.
+  if(meaningful)for(int i=0;i<N;i++)
+   if(changed[i])recentMotionAt[i]=t;
   votes.addLast(meaningful);
   while(votes.size()>7)votes.removeFirst();
   int positive=0;for(Boolean yes:votes)if(yes)positive++;
