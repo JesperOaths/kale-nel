@@ -26,7 +26,7 @@ class Tests(unittest.TestCase):
    'recorder.setVideoFrameRate(30)',
    'recorder.setVideoEncodingBitRate(36000000)',
    'PhoneMediaRange.handle',
-   'garden_roi_gpu_two_frame_person_gate_v2',
+   'garden_roi_adaptive_noise_consistent_person_gate_v3',
    'COOLDOWN_MS=0',
    'garden_person_gate_checked',
   ]:self.assertIn(contract,s)
