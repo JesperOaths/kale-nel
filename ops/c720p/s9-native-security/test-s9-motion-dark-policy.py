@@ -21,16 +21,17 @@ class Tests(unittest.TestCase):
         self.assertIn('changedRatio=nChange/(double)validCells',code)
         self.assertIn('"near".equals(value)',code)
 
-    def test_clip_budget_not_expanded_or_priority_bypassed(self):
-        rate=(SRC/'RecordingRate.java').read_text()
-        self.assertIn('BASE_PER_HOUR=16',rate)
-        self.assertIn('PRIORITY_RESERVE_PER_HOUR=8',rate)
-        self.assertIn('TOTAL_PER_HOUR=BASE_PER_HOUR+PRIORITY_RESERVE_PER_HOUR',rate)
-        self.assertIn('recorded<TOTAL_PER_HOUR && sustainedCoherent',rate)
+    def test_no_postclip_quota_with_thermal_and_storage_guards(self):
         camera=(SRC/'CameraService.java').read_text()
-        for condition in ('COOLDOWN_MS=0','temperature()<415','folder.getUsableSpace()>15L*1024*1024*1024',
-                          'saveFallbackEvidence("recording_budget_rejected")'):
-            self.assertIn(condition,camera)
+        for required in ('COOLDOWN_MS=0','MAX_4K_CLIPS_PER_HOUR=-1',
+                         'temperature()<415','folder.getUsableSpace()>15L*1024*1024*1024',
+                         'recording_hourly_quota_enabled",false',
+                         'captureTier="unrestricted"'):
+            self.assertIn(required,camera)
+        self.assertNotIn('if(!rateAllowed(',camera)
+        self.assertNotIn('recording_budget_rejected',camera)
+        self.assertIn('noise[i]*3.4f',(SRC/'MotionGrid.java').read_text())
+        self.assertIn('java.util.Arrays.sort(offsets,0,validCells)',(SRC/'MotionGrid.java').read_text())
 
 if __name__=="__main__":
     unittest.main(verbosity=2)
