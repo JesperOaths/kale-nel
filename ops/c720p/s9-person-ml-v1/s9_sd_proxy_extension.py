@@ -164,6 +164,22 @@ def install_local_sd(H):
    name=still.group(1);item=previews.get(name)
    if item:return serve_preview(self,name,item)
    self.js(404,{"ok":False,"error":"preview_not_indexed"});return
+  # Optional on-phone H.264 RAM-ring preroll, bound to a verified primary
+  # recording and never exposed by arbitrary filenames.
+  preroll=re.fullmatch(r"/new/saved/preroll/(motion_[0-9]{13}[.]mp4)",path)
+  if preroll:
+   original_name=preroll.group(1);item=data.get(original_name)
+   if not item:
+    self.js(404,{"ok":False,"error":"original_not_indexed"});return
+   companion=original_name+".preroll.mp4"
+   try:
+    request=urllib.request.Request("http://127.0.0.1:18808/clip/"+companion,method="HEAD")
+    with urllib.request.urlopen(request,timeout=8) as response:
+     size=int(response.headers.get("Content-Length","0"))
+    if not 10000<size<60000000:raise ValueError("preroll_size_invalid")
+    return play_sd(self,companion,{**item,"size":size})
+   except (ValueError,urllib.error.HTTPError,urllib.error.URLError,TimeoutError):
+    self.js(404,{"ok":False,"error":"no_verified_preroll_for_clip"});return
   match=re.fullmatch(r"/new/saved/clip/([A-Za-z0-9._-]+[.]mp4)",path)
   if match:
    name=match.group(1);item=data.get(name)
