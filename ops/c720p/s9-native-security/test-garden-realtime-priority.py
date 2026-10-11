@@ -34,7 +34,7 @@ class GardenRealtimePriorityTests(unittest.TestCase):
         for required in (
             'gardenGateExecutor=Executors.newSingleThreadExecutor(',
             'gardenGateClassifier=new ClipClassifier(this)',
-            'liveGate.warmPersonGate()',
+            'gate.warmPersonGate()',
             'new Thread(job,"s9-realtime-garden-person")',
             'new Thread(job,"s9-background-4k-review")',
             'gardenGateExecutor.shutdown()',
@@ -43,6 +43,8 @@ class GardenRealtimePriorityTests(unittest.TestCase):
             'garden_person_gate_stale_dropped',
             'garden_person_gate_last_queue_wait_ms',
             'garden_person_gate_prepare_errors',
+            'gardenGatePrepareErrors<5',
+            'warmGardenGateAsync()',
         ):
             self.assertIn(required,s)
         self.assertIn('synchronized void warmPersonGate()',model)
