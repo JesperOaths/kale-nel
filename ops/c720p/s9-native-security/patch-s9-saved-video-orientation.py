@@ -71,8 +71,8 @@ SNIPPET = r'''
   const quarter=state.angle===90||state.angle===270;
   const outerW=quarter?h:w,outerH=quarter?w:h;
   const maxW=Math.max(120,Math.min(state.shell.getBoundingClientRect().width||
-    (document.documentElement.clientWidth||800)*.88,1100));
-  const maxH=Math.max(130,Math.min((window.innerHeight||800)*.56,560));
+    (document.documentElement.clientWidth||800)*.88,360));
+  const maxH=Math.max(130,Math.min((window.innerHeight||800)*.42,220));
   const factor=Math.min(maxW/outerW,maxH/outerH);
   const n=x=>Math.max(1,Math.round(x*factor))+'px';
   state.stage.style.width=n(outerW);
