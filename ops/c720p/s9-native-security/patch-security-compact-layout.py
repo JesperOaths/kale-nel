@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import os
 import shutil
+import re
 
 SAVED=Path('/opt/homeassistant/config/www/frontyard-security-new/clips.html')
 LIVE=Path('/opt/homeassistant/config/www/c720p-surveillance.html')
@@ -26,6 +27,7 @@ SAVED_SNIPPET=r"""
 #s9-compact-layout .s9-playback-pane{position:sticky;top:8px;max-width:380px}
 #s9-compact-layout .s9-pane-heading{font-size:15px;font-weight:800;color:#edf9ff;margin:0 0 8px}
 #s9-compact-layout #player{display:block;max-width:100%;background:#000;border-radius:8px}
+#s9-compact-layout .s9-playback-pane > video#player{max-height:220px!important;width:100%!important;object-fit:contain!important}
 #s9-compact-layout .s9-rotation-shell{margin:0!important;width:min(100%,360px)!important;max-width:360px!important}
 #s9-compact-layout .s9-rotation-stage{margin-left:0!important;margin-right:0!important}
 #s9-compact-layout #list{min-width:0;max-height:calc(100dvh - 125px);overflow-y:auto;
@@ -106,27 +108,38 @@ LIVE_SNIPPET=r"""
 </style>
 """
 
+def _replace_tag_once(source: str, tag: str, marker: str, replacement: str) -> str:
+    expression=r'<'+tag+r' '+re.escape(marker)+r'>[\\s\\S]*?</'+tag+r'>'
+    matches=list(re.finditer(expression,source))
+    if len(matches)!=1:raise ValueError('missing_or_duplicate_existing_'+tag)
+    old=matches[0].group(0)
+    if marker=='id="s9-compact-recordings-script-v1"' and (
+        "function mount()" not in old or "s9-compact-layout" not in old):
+        raise ValueError('unknown_existing_layout_script')
+    return source[:matches[0].start()]+replacement+source[matches[0].end():]
+
 def patch(source: str, kind: str) -> str:
     if source.count('</head>')!=1:
         raise ValueError('unexpected_security_head')
     if kind=='saved':
         for anchor in ('id="player"','id="list"','s9-video-orientation-script-v1',
                        's9-saved-virtual-folders-script-v1'):
-            if anchor not in source:
-                raise ValueError('missing_saved_layout_anchor_'+anchor)
+            if anchor not in source:raise ValueError('missing_saved_layout_anchor_'+anchor)
         if MARK_SAVED in source:
             if source.count(MARK_SAVED)!=1 or source.count('id="s9-compact-recordings-script-v1"')!=1:
                 raise ValueError('partial_compact_recordings_widget')
-            return source
+            newStyle=SAVED_SNIPPET.split('</style>',1)[0]+'</style>'
+            newScript='<script id="s9-compact-recordings-script-v1">'+SAVED_SNIPPET.split('<script id="s9-compact-recordings-script-v1">',1)[1]
+            changed=_replace_tag_once(source,'style',MARK_SAVED,newStyle)
+            changed=_replace_tag_once(changed,'script','id="s9-compact-recordings-script-v1"',newScript.strip())
+            return changed
         return source.replace('</head>',SAVED_SNIPPET+'</head>',1)
     if kind=='live':
         for anchor in ('id="panel-live"','id="cameraLive"','c720p-s9-live-only'):
-            if anchor not in source:
-                raise ValueError('missing_live_layout_anchor_'+anchor)
+            if anchor not in source:raise ValueError('missing_live_layout_anchor_'+anchor)
         if MARK_LIVE in source:
-            if source.count(MARK_LIVE)!=1:
-                raise ValueError('partial_live_viewport_widget')
-            return source
+            if source.count(MARK_LIVE)!=1:raise ValueError('partial_live_viewport_widget')
+            return _replace_tag_once(source,'style',MARK_LIVE,LIVE_SNIPPET.strip())
         return source.replace('</head>',LIVE_SNIPPET+'</head>',1)
     raise ValueError('unknown_layout_kind')
 
