@@ -102,7 +102,7 @@ class GardenRealtimePriorityTests(unittest.TestCase):
             'PhoneMediaRange.handle',
             'PreviewJpeg.encode(copied,58)',
             'sensor_exposure_ms',
-            'garden_roi_gpu_person_gate_v1',
+            'garden_roi_gpu_two_frame_person_gate_v2',
             'Math.max(0,gateStarted-now)',
         ):
             self.assertIn(required,s)
