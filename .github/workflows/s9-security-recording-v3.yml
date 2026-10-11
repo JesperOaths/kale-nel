@@ -1,0 +1,73 @@
+name: S9 Event Capture V3
+on:
+  push:
+    paths:
+      - 'ops/c720p/s9-native-security/src/**'
+      - 'ops/c720p/s9-native-security/tests/CaptureContinuityTest.java'
+      - 'ops/c720p/s9-native-security/tests/EventFrameRankerTest.java'
+      - 'ops/c720p/s9-native-security/fetch-source.sh'
+      - 'ops/c720p/s9-native-security/compile-only.sh'
+      - 'ops/c720p/s9-native-security/package-only.sh'
+      - 'ops/c720p/s9-person-ml-v1/local-sd-catalog.py'
+      - '.github/workflows/s9-security-recording-v3.yml'
+  pull_request:
+    paths:
+      - 'ops/c720p/s9-native-security/src/**'
+      - 'ops/c720p/s9-native-security/tests/CaptureContinuityTest.java'
+      - 'ops/c720p/s9-native-security/tests/EventFrameRankerTest.java'
+      - 'ops/c720p/s9-native-security/fetch-source.sh'
+      - 'ops/c720p/s9-native-security/compile-only.sh'
+      - 'ops/c720p/s9-native-security/package-only.sh'
+      - 'ops/c720p/s9-person-ml-v1/local-sd-catalog.py'
+      - '.github/workflows/s9-security-recording-v3.yml'
+permissions:
+  contents: read
+jobs:
+  pure-event-transitions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Validate native source list and Pure Java transitions
+        shell: bash
+        run: |
+          set -euo pipefail
+          P=ops/c720p/s9-native-security
+          bash -n "$P/fetch-source.sh" "$P/compile-only.sh" "$P/package-only.sh"
+          python3 -m py_compile ops/c720p/s9-person-ml-v1/local-sd-catalog.py
+          mkdir -p /tmp/s9-event
+          javac -source 8 -target 8 -d /tmp/s9-event \
+            "$P/src/nl/kalenel/s9security/CaptureContinuity.java" \
+            "$P/tests/CaptureContinuityTest.java" \
+            "$P/src/nl/kalenel/s9security/EventFrameRanker.java" \
+            "$P/tests/EventFrameRankerTest.java"
+          java -cp /tmp/s9-event nl.kalenel.s9security.CaptureContinuityTest
+          java -cp /tmp/s9-event nl.kalenel.s9security.EventFrameRankerTest
+          python3 "$P/test-recording-event-v3-contract.py"
+  android-camera-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Compile entire Camera2 recorder against Android SDK and TFLite
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          JAR="$(find "$SDK/platforms" -name android.jar | sort -V | tail -1)"
+          test -s "$JAR"
+          WORK="$(mktemp -d)"
+          trap 'rm -rf "$WORK"' EXIT
+          mkdir -p "$WORK/classes"
+          for part in tensorflow-lite tensorflow-lite-api tensorflow-lite-gpu tensorflow-lite-gpu-api; do
+            curl -fsSL --retry 2 --max-time 75 "https://repo.maven.apache.org/maven2/org/tensorflow/$part/2.14.0/$part-2.14.0.aar" -o "$WORK/$part.aar"
+            unzip -p "$WORK/$part.aar" classes.jar > "$WORK/$part.jar"
+          done
+          CP="$JAR:$WORK/tensorflow-lite.jar:$WORK/tensorflow-lite-api.jar:$WORK/tensorflow-lite-gpu.jar:$WORK/tensorflow-lite-gpu-api.jar"
+          javac -source 8 -target 8 -cp "$CP" -d "$WORK/classes" \
+            ops/c720p/s9-native-security/src/nl/kalenel/s9security/*.java
+          test -s "$WORK/classes/nl/kalenel/s9security/CaptureContinuity.class"
+          test -s "$WORK/classes/nl/kalenel/s9security/EventFrameRanker.class"
+          test -s "$WORK/classes/nl/kalenel/s9security/CameraService.class"
+          test -s "$WORK/classes/nl/kalenel/s9security/ClipClassifier.class"
+          echo S9_RECORDING_V3_FULL_ANDROID_COMPILE_OK

@@ -47,6 +47,7 @@ SNIPPET=r'''
 #s9-date-folders .s9-v4-copy{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
 #s9-date-folders .s9-v4-copy strong{font-size:13px;line-height:1.15}
 #s9-date-folders .s9-v4-copy small{font-size:11px;color:#b5d6e7;line-height:1.25}
+#s9-date-folders .s9-v4-copy .s9-v4-continuation{font-size:10px;color:#98f3cf;line-height:1.2}
 #s9-date-folders .s9-v4-more{color:#e8f6ff;border:1px solid #638fa4;background:#25465c;border-radius:7px;
   padding:8px 12px;cursor:pointer;margin:8px 0}
 #s9-date-folders .s9-v4-count{font-size:11px;color:#b5d6e7;margin:3px 0 8px}
@@ -103,6 +104,15 @@ function duration(r){
  const ms=Number(r.duration_ms||0);if(!(ms>0))return '';
  const s=Math.round(ms/1000);return ' · '+String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
 }
+function continuityNote(r){
+ if(r.capture_evidence_status!=='recording_segment_verified')return '';
+ const n=Number(r.capture_segment_index);
+ if(!Number.isInteger(n)||n<1||n>250)return '';
+ if(n===1)return 'Event start · segment 1';
+ const gap=Number(r.capture_segment_gap_ms);
+ const delay=Number.isFinite(gap)&&gap>=0&&gap<=60000?' · '+(gap/1000).toFixed(1)+'s gap':'';
+ return 'Same event · segment '+n+delay;
+}
 function openClip(r){
  const name=nameOf(r);if(!safe.test(name))return;
  const video=document.getElementById('player');
@@ -119,7 +129,7 @@ function openClip(r){
   if(now)now.textContent='S9+ · '+dayOf(r)+' · '+timeOf(r);
   const big=document.getElementById('selectedBig');if(big)big.textContent='S9+ microSD · '+name;
   const small=document.getElementById('selectedSmall');
-  if(small)small.textContent='Original 4K · '+META[category(r)].label+' (AI estimate)';
+  if(small)small.textContent='Original 4K · '+META[category(r)].label+' (AI estimate)'+(continuityNote(r)?' · '+continuityNote(r):'');
   for(const id of ['save','delete']){const b=document.getElementById(id);if(b)b.disabled=true;}
  }).catch(()=>{if(now)now.textContent='Playback temporarily unavailable · '+name;});
 }
@@ -136,6 +146,7 @@ function clipCard(r){
  photo.append(img);
  const copy=tag('span','s9-v4-copy');
  copy.append(tag('strong','',timeOf(r)+duration(r)),tag('small','',META[c].label));
+ const continuity=continuityNote(r);if(continuity)copy.append(tag('small','s9-v4-continuation',continuity));
  b.append(photo,copy);b.addEventListener('click',()=>openClip(r));return b;
 }
 function render(data){
@@ -202,7 +213,7 @@ async function reload(){
   if(!r.ok)throw Error('signed archive unavailable');
   const body=await r.json();const records=(Array.isArray(body.events)?body.events:[]).filter(x=>safe.test(nameOf(x)));
   if(!records.length)throw Error('empty signed index');
-  const signature=JSON.stringify(records.map(r=>[nameOf(r),r.scene_category,r.person_event_category,r.person_count,r.content_categories,r.duration_ms]));
+  const signature=JSON.stringify(records.map(r=>[nameOf(r),r.scene_category,r.person_event_category,r.person_count,r.content_categories,r.duration_ms,r.capture_event_id,r.capture_segment_index,r.capture_segment_gap_ms,r.thumbnail_rank_version]));
   if(signature!==reload.last){reload.last=signature;current=records.sort((a,b)=>nameOf(b).localeCompare(nameOf(a)));render(current);}
  }catch(_){
   try{

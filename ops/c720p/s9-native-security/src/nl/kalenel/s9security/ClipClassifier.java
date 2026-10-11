@@ -376,6 +376,8 @@ public final class ClipClassifier {
   final LinkedHashSet<String> animalsSeen=new LinkedHashSet<>(),vehiclesSeen=new LinkedHashSet<>();
   double maxPerson=0,maxAnimal=0,maxVehicle=0;
   Bitmap best=null;double bestScore=-1;
+   EventFrameRanker.Rank bestFrameRank=null;
+   int rankedThumbnailCandidates=0;
   long bestMotionTimeMs=-1;
   boolean bestGardenPerson=false;
   float bestGardenPersonScore=0f;
@@ -466,8 +468,12 @@ public final class ClipClassifier {
      double movement=previousGardenLuma==null?0.0:
         gardenFrameDifference(previousGardenLuma,currentGardenLuma);
      previousGardenLuma=currentGardenLuma;
-     double quality=personInGarden>0f?1000.0+personInGarden*100.0+movement:movement;
-     if(quality>bestScore){
+     EventFrameRanker.Rank rank=EventFrameRanker.rank(
+        sampleSharpnessGarden(bitmap),48,27,personInGarden,movement);
+      rankedThumbnailCandidates++;
+      double quality=rank.value;
+      if(quality>bestScore){
+       bestFrameRank=rank;
       if(best!=null)best.recycle();
       best=makeGardenThumbnail(bitmap,gardenPersonBox);
       bestScore=quality;
@@ -477,6 +483,45 @@ public final class ClipClassifier {
      }
     }finally{bitmap.recycle();}
    }
+    // Closest-sync frames are efficient for classification, but may be
+    // keyframes distant from the triggering event. Inspect two bounded,
+    // actual-time nearest frames for the cover image only, preserving video.
+    int nearestFrameAttempts=0,nearestFrameDecoded=0;
+    if(bestMotionTimeMs>=0&&duration>700){
+     long[] offsets={0L,320L};
+     for(long offset:offsets){
+      long requested=Math.min(duration-1,Math.max(0,bestMotionTimeMs+offset));
+      nearestFrameAttempts++;
+      Bitmap near=null;
+      try{
+       near=media.getFrameAtTime(requested*1000,MediaMetadataRetriever.OPTION_CLOSEST);
+       if(near==null)continue;
+       nearestFrameDecoded++;
+       float[] candidateBox=null;float personScore=0;
+       for(Detection d:detect(near)){
+        if(!"person".equals(d.label)||d.score<.30f||d.box==null||d.box.length!=4)continue;
+        float center=(d.box[1]+d.box[3])*.5f;
+        if(d.box[2]>=.64f&&center>=.045f&&center<=.955f&&d.score>personScore){
+         personScore=d.score;candidateBox=d.box;
+        }
+       }
+       EventFrameRanker.Rank exactRank=EventFrameRanker.rank(
+           sampleSharpnessGarden(near),48,27,personScore,0);
+       rankedThumbnailCandidates++;
+       if(EventFrameRanker.better(exactRank,bestFrameRank)){
+        Bitmap cover=makeGardenThumbnail(near,candidateBox);
+        if(best!=null)best.recycle();
+        best=cover;bestFrameRank=exactRank;bestScore=exactRank.value;
+        bestMotionTimeMs=requested;
+        bestGardenPerson=candidateBox!=null;
+        bestGardenPersonScore=personScore;
+       }
+      }catch(Exception seekError){
+       Log.w("S9_NATIVE_SECURITY","thumbnail_nearest_frame_failed",seekError);
+      }finally{if(near!=null)near.recycle();}
+     }
+    }
+
    JSONArray categories=new JSONArray();
    String scene="motion_other";
    // An isolated multi-box frame is not reliable evidence for two people.
@@ -531,6 +576,15 @@ public final class ClipClassifier {
    faceReview.publish(result);
    result.put("processing_elapsed_ms",SystemClock.elapsedRealtime()-begin);
    result.put("thumbnail_source_time_ms",bestMotionTimeMs>=0?bestMotionTimeMs:JSONObject.NULL);
+    result.put("thumbnail_rank_version",EventFrameRanker.VERSION);
+    result.put("thumbnail_candidate_frames",rankedThumbnailCandidates);
+    result.put("thumbnail_nearest_frame_attempts",nearestFrameAttempts);
+    result.put("thumbnail_nearest_frame_decoded",nearestFrameDecoded);
+    result.put("thumbnail_accurate_seek_requested",nearestFrameAttempts>0);
+    result.put("thumbnail_focus_score",bestScore);
+    result.put("thumbnail_sharpness",bestFrameRank==null?JSONObject.NULL:bestFrameRank.sharpness);
+    result.put("thumbnail_contrast",bestFrameRank==null?JSONObject.NULL:bestFrameRank.contrast);
+    result.put("thumbnail_selection_human_verified",false);
    result.put("thumbnail_focus","foreground_garden_motion");
    result.put("thumbnail_person_candidate_in_garden",bestGardenPerson);
    result.put("thumbnail_garden_person_confidence",Math.round(bestGardenPersonScore*1000f)/1000.0);
@@ -538,7 +592,7 @@ public final class ClipClassifier {
     File thumb=new File(folder,name+".thumb.jpg");
     File temp=new File(folder,name+".thumb.partial");
     try(FileOutputStream o=new FileOutputStream(temp)){
-     best.compress(Bitmap.CompressFormat.JPEG,90,o);
+     best.compress(Bitmap.CompressFormat.JPEG,92,o);
      o.getFD().sync();
     }
     if(!temp.renameTo(thumb))throw new IOException("thumbnail_rename_failed");
@@ -551,6 +605,17 @@ public final class ClipClassifier {
   }
   writeJson(new File(folder,name+".verified.json"),result);
   return result;
+ }
+ /** Luma from foreground, 48x27 uniform samples for the sharp thumbnail ranker. */
+ private static int[] sampleSharpnessGarden(Bitmap bitmap){
+  int[] values=new int[48*27];
+  int w=bitmap.getWidth(),h=bitmap.getHeight();
+  for(int y=0;y<27;y++)for(int x=0;x<48;x++){
+   int px=Math.min(w-1,(int)((x+.5f)*w/48f));
+   int py=Math.min(h-1,(int)((.42f+(y+.5f)*.58f/27f)*h));
+   int rgb=bitmap.getPixel(px,py);
+   values[y*48+x]=(77*((rgb>>16)&255)+150*((rgb>>8)&255)+29*(rgb&255))>>8;
+  }return values;
  }
  /** Simple exposure-neutral 12x8 foreground motion sampling, on S9+ only. */
  private static int[] sampleGardenLuma(Bitmap bitmap,float start){

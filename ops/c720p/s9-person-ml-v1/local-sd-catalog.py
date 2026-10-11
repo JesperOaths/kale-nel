@@ -96,6 +96,46 @@ def safe_native_detection_stats(manifest):
          "person_presence_percent":coverage,"duration_ms":duration,
          "review_backend":backend,"person_event_category":category}
 
+def safe_capture_event_metadata(manifest, current_name):
+ """Expose bounded, non-biometric segment lineage and cover diagnostics."""
+ if manifest.get("capture_event_version")!="s9_logical_event_segments_v1":
+  return {"capture_evidence_status":"not_in_original_manifest"}
+ event=manifest.get("capture_event_id")
+ index=manifest.get("capture_segment_index")
+ transition=manifest.get("capture_segment_transition")
+ prior=manifest.get("capture_previous_segment")
+ if (not isinstance(event,str) or not re.fullmatch(r"garden_[0-9]{13}",event)
+     or isinstance(index,bool) or not isinstance(index,int) or not 1<=index<=250
+     or transition not in ("new_event","reentry_after_quiet","max_duration_continuation")
+     or (index==1 and transition!="new_event")):
+  return {"capture_evidence_status":"invalid_event_metadata"}
+ if index>1:
+  if not isinstance(prior,str) or not re.fullmatch(r"motion_[0-9]{13}[.]mp4",prior) or prior==current_name:
+   return {"capture_evidence_status":"invalid_event_link"}
+ else:
+  prior=None
+ gap=manifest.get("capture_segment_gap_from_previous_ms")
+ if index>1 and (isinstance(gap,bool) or not isinstance(gap,int) or not 0<=gap<=60000):
+  return {"capture_evidence_status":"invalid_segment_gap"}
+ rank=manifest.get("thumbnail_rank_version")
+ raw_quality=manifest.get("thumbnail_sharpness")
+ sharpness=None
+ if rank=="s9_event_frame_rank_v1":
+  try:
+   candidate=float(raw_quality)
+   if math.isfinite(candidate) and 0<=candidate<=510:sharpness=round(candidate,2)
+  except (ValueError,TypeError,OverflowError):pass
+ return {"capture_evidence_status":"recording_segment_verified",
+         "capture_event_id":event,
+         "capture_segment_index":index,
+         "capture_previous_segment":prior,
+         "capture_segment_transition":transition,
+         "capture_segment_gap_ms":gap if index>1 else None,
+         "capture_has_physical_transition_gaps":True,
+         "thumbnail_rank_version":rank if rank=="s9_event_frame_rank_v1" else None,
+         "thumbnail_sharpness":sharpness,
+         "thumbnail_model_evidence_not_human_verified":True}
+
 def safe_face_review_metadata(m):
  """Strictly allowlisted human-readable phone metadata. Never copy embeddings or JPEGs."""
  result={"face_review_status":"not_available_in_original_review",
@@ -260,6 +300,7 @@ def main():
      "size":size,"drive_verified":False,"sd_verified":True,"sd_only":True,
      "scene_category":group,"person_count":int(m.get("person_count",0)),
      **safe_native_detection_stats(m),
+     **safe_capture_event_metadata(m,name),
      "thumbnail":thumb,"resolution":"3840x2160","codec":"H.264",
      "content_categories":m.get("categories",[]),
      **anonymous_clip_metadata(m),
