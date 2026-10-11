@@ -145,7 +145,7 @@ SCRIPTS={
 <script id="s9v6-security-script">
 (()=>{'use strict';
 const start=()=>{const shell=document.getElementById('s9v5-shell');if(!shell)return false;
-const overview=shell.querySelector('#s9v5-overview');if(overview)overview.remove();
+const overview=shell.querySelector('#s9v5-overview');if(overview)overview.hidden=true;
 const nav=shell.querySelector('#s9v5-nav button[data-view="overview"]');if(nav)nav.remove();
 const logo=shell.querySelector('.s9v5-brand-word');if(logo)logo.firstChild.textContent='SECURITY';
 const live=shell.querySelector('#s9v5-nav button[data-view="live"]');
